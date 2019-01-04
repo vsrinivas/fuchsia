@@ -3,25 +3,21 @@
 // found in the LICENSE file.
 
 #include "nand.h"
-#include <errno.h>
-#include <fcntl.h>
-#include <stdint.h>
-#include <stdlib.h>
-#include <sys/param.h>
-#include <time.h>
-#include <unistd.h>
 
-#include <bits/limits.h>
+#include <algorithm>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/platform/device.h>
 
-#include <string.h>
+#include <fbl/algorithm.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/time.h>
 #include <zircon/assert.h>
-#include <zircon/process.h>
 #include <zircon/status.h>
+#include <zircon/threads.h>
 
 // TODO: Investigate elimination of unmap.
 // This code does vx_vmar_map/unmap and copies data in/out of the
@@ -30,58 +26,39 @@
 // exhaustion. Check to see if we can do something different - is vmo_read/write
 // cheaper than mapping and unmapping (which will cause TLB flushes) ?
 
-#define NAND_TXN_RECEIVED ZX_EVENT_SIGNALED
-#define NAND_SHUTDOWN ZX_USER_SIGNAL_0
+namespace nand {
+namespace {
 
-#define NAND_READ_RETRIES 3
+constexpr zx_signals_t kNandTxnReceived = ZX_EVENT_SIGNALED;
+constexpr zx_signals_t kNandShutdown = ZX_USER_SIGNAL_0;
 
-static void nand_io_complete(nand_io_t* io, zx_status_t status) {
-    io->completion_cb(io->cookie, status, &io->nand_op);
-}
+constexpr size_t kNandReadRetries = 3;
 
-// Calls controller specific read function.
-// data, oob: pointers to user oob/data buffers.
-// nand_page : NAND page address to read.
-// ecc_correct : Number of ecc corrected bitflips (< 0 indicates
-// ecc could not correct all bitflips - caller needs to check that).
-// retries : Retry logic may not be needed.
-zx_status_t nand_read_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page,
-                           uint32_t* corrected_bits, int retries) {
-    zx_status_t status;
+} // namespace
 
-    do {
-        status = raw_nand_read_page_hwecc(&dev->host, nand_page, data, dev->nand_info.page_size,
-                                          NULL, oob, dev->nand_info.oob_size, NULL, corrected_bits);
+zx_status_t NandDevice::ReadPage(void* data, void* oob, uint32_t nand_page,
+                                 uint32_t* corrected_bits, size_t retries) {
+    zx_status_t status = ZX_ERR_INTERNAL;
+
+    for (size_t retry = 0; status != ZX_OK && retry < retries; retry++) {
+        status = raw_nand_.ReadPageHwecc(nand_page, data, nand_info_.page_size, nullptr,
+                                         oob, nand_info_.oob_size, nullptr, corrected_bits);
         if (status != ZX_OK) {
             zxlogf(ERROR, "%s: Retrying Read@%u\n", __func__, nand_page);
         }
-    } while (status != ZX_OK && --retries >= 0);
+    }
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: Read error %d, exhausted all retries\n", __func__, status);
     }
     return status;
 }
 
-// Calls controller specific write function.
-// data, oob: pointers to user oob/data buffers.
-// nand_page : NAND page address to read.
-zx_status_t nand_write_page(nand_device_t* dev, void* data, void* oob, uint32_t nand_page) {
-    return raw_nand_write_page_hwecc(&dev->host, data, dev->nand_info.page_size, oob,
-                                     dev->nand_info.oob_size, nand_page);
-}
-
-// Calls controller specific erase function.
-// nand_page: NAND erase block address.
-zx_status_t nand_erase_block(nand_device_t* dev, uint32_t nand_page) {
-    return raw_nand_erase_block(&dev->host, nand_page);
-}
-
-zx_status_t nand_erase_op(nand_device_t* dev, nand_operation_t* nand_op) {
+zx_status_t NandDevice::EraseOp(nand_operation_t* nand_op) {
     uint32_t nand_page;
 
     for (uint32_t i = 0; i < nand_op->erase.num_blocks; i++) {
-        nand_page = (nand_op->erase.first_block + i) * dev->nand_info.pages_per_block;
-        zx_status_t status = nand_erase_block(dev, nand_page);
+        nand_page = (nand_op->erase.first_block + i) * nand_info_.pages_per_block;
+        zx_status_t status = raw_nand_.EraseBlock(nand_page);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Erase of block %u failed\n", nand_op->erase.first_block + i);
             return status;
@@ -90,226 +67,159 @@ zx_status_t nand_erase_op(nand_device_t* dev, nand_operation_t* nand_op) {
     return ZX_OK;
 }
 
-static zx_status_t nand_read_op(nand_device_t* dev, nand_operation_t* nand_op) {
-    uint8_t *aligned_vaddr_data = NULL;
-    uint8_t *aligned_vaddr_oob = NULL;
-    uint8_t *vaddr_data = NULL;
-    uint8_t *vaddr_oob = NULL;
-    size_t page_offset_bytes_data = 0;
-    size_t page_offset_bytes_oob = 0;
+zx_status_t NandDevice::MapVmos(const nand_operation_t& nand_op, fzl::VmoMapper* data,
+                                uint8_t** vaddr_data, fzl::VmoMapper* oob, uint8_t** vaddr_oob) {
     zx_status_t status;
-
-    // Map data.
-    if (nand_op->rw.data_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
-        page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
-        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
-        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                             0, nand_op->rw.data_vmo, aligned_offset_bytes,
-                             nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
-                             (uintptr_t*)&aligned_vaddr_data);
+    if (nand_op.rw.data_vmo != ZX_HANDLE_INVALID) {
+        const auto vmo = zx::unowned_vmo(nand_op.rw.data_vmo);
+        const size_t offset_bytes = nand_op.rw.offset_data_vmo * nand_info_.page_size;
+        const size_t page_offset_bytes = fbl::round_down(offset_bytes,
+                                                         static_cast<size_t>(PAGE_SIZE));
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes;
+        status = data->Map(*vmo, aligned_offset_bytes,
+                           nand_op.rw.length * nand_info_.page_size + page_offset_bytes,
+                           ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "nand read page: Cannot map data vmo\n");
+            zxlogf(ERROR, "nand: Cannot map data vmo\n");
             return status;
         }
-        vaddr_data = aligned_vaddr_data + page_offset_bytes_data;
+        *vaddr_data = reinterpret_cast<uint8_t*>(data->start()) + page_offset_bytes;
     }
 
     // Map oob.
-    if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
-        page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
-        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
-        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                             0, nand_op->rw.oob_vmo, aligned_offset_bytes,
-                             nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
-                             (uintptr_t*)&aligned_vaddr_oob);
+    if (nand_op.rw.oob_vmo != ZX_HANDLE_INVALID) {
+        const auto vmo = zx::unowned_vmo(nand_op.rw.oob_vmo);
+        const size_t offset_bytes = nand_op.rw.offset_oob_vmo * nand_info_.page_size;
+        const size_t page_offset_bytes = fbl::round_down(offset_bytes,
+                                                         static_cast<size_t>(PAGE_SIZE));
+        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes;
+        status = oob->Map(*vmo, aligned_offset_bytes,
+                          nand_op.rw.length * nand_info_.oob_size + page_offset_bytes,
+                          ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
         if (status != ZX_OK) {
-            zxlogf(ERROR, "nand read page: Cannot map oob vmo\n");
-            if (aligned_vaddr_data != NULL) {
-                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
-                                       dev->nand_info.page_size * nand_op->rw.length +
-                                           page_offset_bytes_data);
-            }
+            zxlogf(ERROR, "nand: Cannot map oob vmo\n");
             return status;
         }
-        vaddr_oob = aligned_vaddr_oob + page_offset_bytes_oob;
+        *vaddr_oob = reinterpret_cast<uint8_t*>(oob->start()) + page_offset_bytes;
+    }
+    return ZX_OK;
+}
+
+zx_status_t NandDevice::ReadOp(nand_operation_t* nand_op) {
+    fzl::VmoMapper data;
+    fzl::VmoMapper oob;
+    uint8_t* vaddr_data = nullptr;
+    uint8_t* vaddr_oob = nullptr;
+
+    zx_status_t status = MapVmos(*nand_op, &data, &vaddr_data, &oob, &vaddr_oob);
+    if (status != ZX_OK) {
+        return status;
     }
 
     uint32_t max_corrected_bits = 0;
     for (uint32_t i = 0; i < nand_op->rw.length; i++) {
         uint32_t ecc_correct = 0;
-        status = nand_read_page(dev, vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i,
-                                &ecc_correct, NAND_READ_RETRIES);
+        status = ReadPage(vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i,
+                          &ecc_correct, kNandReadRetries);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Read data error %d at page offset %u\n",
-                   status, nand_op->rw.offset_nand);
+                   status, nand_op->rw.offset_nand + i);
             break;
         } else {
-            max_corrected_bits = MAX(max_corrected_bits, ecc_correct);
+            max_corrected_bits = std::max(max_corrected_bits, ecc_correct);
         }
 
         if (vaddr_data) {
-            vaddr_data += dev->nand_info.page_size;
+            vaddr_data += nand_info_.page_size;
         }
         if (vaddr_oob) {
-            vaddr_oob += dev->nand_info.oob_size;
+            vaddr_oob += nand_info_.oob_size;
         }
     }
     nand_op->rw.corrected_bit_flips = max_corrected_bits;
 
-    if (aligned_vaddr_data != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
-                               dev->nand_info.page_size * nand_op->rw.length +
-                                   page_offset_bytes_data);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Read Cannot unmap data %d\n", status);
-        }
-    }
-    if (aligned_vaddr_oob != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(),
-                               (uintptr_t)aligned_vaddr_oob,
-                               nand_op->rw.length * dev->nand_info.oob_size +
-                                   page_offset_bytes_oob);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Read Cannot unmap oob %d\n", status);
-        }
-    }
     return status;
 }
 
-static zx_status_t nand_write_op(nand_device_t* dev, nand_operation_t* nand_op) {
-    uint8_t *aligned_vaddr_data = NULL;
-    uint8_t *aligned_vaddr_oob = NULL;
-    uint8_t *vaddr_data = NULL;
-    uint8_t *vaddr_oob = NULL;
-    size_t page_offset_bytes_data = 0;
-    size_t page_offset_bytes_oob = 0;
-    zx_status_t status;
+zx_status_t NandDevice::WriteOp(nand_operation_t* nand_op) {
+    fzl::VmoMapper data;
+    fzl::VmoMapper oob;
+    uint8_t* vaddr_data = nullptr;
+    uint8_t* vaddr_oob = nullptr;
 
-    // Map data.
-    if (nand_op->rw.data_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_data_vmo * dev->nand_info.page_size;
-        page_offset_bytes_data = offset_bytes & (PAGE_SIZE - 1);
-        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_data;
-        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                             0, nand_op->rw.data_vmo, aligned_offset_bytes,
-                             nand_op->rw.length * dev->nand_info.page_size + page_offset_bytes_data,
-                             (uintptr_t*)&aligned_vaddr_data);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand write page: Cannot map data vmo\n");
-            return status;
-        }
-        vaddr_data = aligned_vaddr_data + page_offset_bytes_data;
-    }
-
-    // Map oob.
-    if (nand_op->rw.oob_vmo != ZX_HANDLE_INVALID) {
-        const size_t offset_bytes = nand_op->rw.offset_oob_vmo * dev->nand_info.page_size;
-        page_offset_bytes_oob = offset_bytes & (PAGE_SIZE - 1);
-        const size_t aligned_offset_bytes = offset_bytes - page_offset_bytes_oob;
-        status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                             0, nand_op->rw.oob_vmo, aligned_offset_bytes,
-                             nand_op->rw.length * dev->nand_info.oob_size + page_offset_bytes_oob,
-                             (uintptr_t*)&aligned_vaddr_oob);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand write page: Cannot map oob vmo\n");
-            if (vaddr_data != NULL) {
-                status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
-                                       dev->nand_info.page_size * nand_op->rw.length +
-                                           page_offset_bytes_data);
-            }
-            return status;
-        }
-        vaddr_oob = aligned_vaddr_oob + page_offset_bytes_oob;
+    zx_status_t status = MapVmos(*nand_op, &data, &vaddr_data, &oob, &vaddr_oob);
+    if (status != ZX_OK) {
+        return status;
     }
 
     for (uint32_t i = 0; i < nand_op->rw.length; i++) {
-        status = nand_write_page(dev, vaddr_data, vaddr_oob, nand_op->rw.offset_nand + i);
+        status = raw_nand_.WritePageHwecc(vaddr_data, nand_info_.page_size, vaddr_oob,
+                                          nand_info_.oob_size, nand_op->rw.offset_nand + i);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: Write data error %d at page offset %u\n", status,
-                   nand_op->rw.offset_nand);
+                   nand_op->rw.offset_nand + i);
             break;
         }
 
         if (vaddr_data) {
-            vaddr_data += dev->nand_info.page_size;
+            vaddr_data += nand_info_.page_size;
         }
         if (vaddr_oob) {
-            vaddr_oob += dev->nand_info.oob_size;
+            vaddr_oob += nand_info_.oob_size;
         }
     }
 
-    if (aligned_vaddr_data != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_data,
-                               dev->nand_info.page_size * nand_op->rw.length +
-                                   page_offset_bytes_data);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Write Cannot unmap data %d\n", status);
-        }
-    }
-    if (aligned_vaddr_oob != NULL) {
-        status = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)aligned_vaddr_oob,
-                               nand_op->rw.length * dev->nand_info.oob_size +
-                                   page_offset_bytes_oob);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "nand: Write Cannot unmap oob %d\n", status);
-        }
-    }
     return status;
 }
 
-static void nand_do_io(nand_device_t* dev, nand_io_t* io) {
+void NandDevice::DoIo(Transaction* txn) {
     zx_status_t status = ZX_OK;
-    nand_operation_t* nand_op = &io->nand_op;
 
-    ZX_DEBUG_ASSERT(dev != NULL);
-    ZX_DEBUG_ASSERT(io != NULL);
-    switch (nand_op->command) {
+    ZX_DEBUG_ASSERT(txn != nullptr);
+    switch (txn->op.command) {
     case NAND_OP_READ:
-        status = nand_read_op(dev, nand_op);
+        status = ReadOp(&txn->op);
         break;
     case NAND_OP_WRITE:
-        status = nand_write_op(dev, nand_op);
+        status = WriteOp(&txn->op);
         break;
     case NAND_OP_ERASE:
-        status = nand_erase_op(dev, nand_op);
+        status = EraseOp(&txn->op);
         break;
     default:
         ZX_DEBUG_ASSERT(false); // Unexpected.
     }
-    nand_io_complete(io, status);
+    txn->Complete(status);
 }
 
 // Initialization is complete by the time the thread starts.
-static zx_status_t nand_worker_thread(void* arg) {
-    nand_device_t* dev = (nand_device_t*)arg;
+zx_status_t NandDevice::WorkerThread() {
     zx_status_t status;
 
     for (;;) {
-        // Don't loop until io_list is empty to check for NAND_SHUTDOWN
+        // Don't loop until txn_queue_ is empty to check for kNandShutdown
         // between each io.
-        mtx_lock(&dev->lock);
-        nand_io_t* io = list_remove_head_type(&dev->io_list, nand_io_t, node);
-
-        if (io) {
-            // Unlock if we execute the transaction.
-            mtx_unlock(&dev->lock);
-            nand_do_io(dev, io);
-        } else {
-            // Clear the "RECEIVED" flag under the lock.
-            zx_object_signal(dev->worker_event, NAND_TXN_RECEIVED, 0);
-            mtx_unlock(&dev->lock);
+        {
+            fbl::AutoLock al(&lock_);
+            Transaction* txn = txn_queue_.pop_front();
+            if (txn) {
+                // Unlock if we execute the transaction.
+                al.release();
+                DoIo(txn);
+            } else {
+                // Clear the "RECEIVED" flag under the lock.
+                worker_event_.signal(kNandTxnReceived, 0);
+            }
         }
 
-        uint32_t pending;
-        status = zx_object_wait_one(dev->worker_event, NAND_TXN_RECEIVED | NAND_SHUTDOWN,
-                                    ZX_TIME_INFINITE, &pending);
+        zx_signals_t pending;
+        status = worker_event_.wait_one(kNandTxnReceived | kNandShutdown,
+                                        zx::time::infinite(), &pending);
         if (status != ZX_OK) {
             zxlogf(ERROR, "nand: worker thread wait failed, retcode = %d\n", status);
             break;
         }
-        if (pending & NAND_SHUTDOWN) {
+        if (pending & kNandShutdown) {
             break;
         }
     }
@@ -318,203 +228,162 @@ static zx_status_t nand_worker_thread(void* arg) {
     return ZX_OK;
 }
 
-static void _nand_query(void* ctx, fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
-    nand_device_t* dev = (nand_device_t*)ctx;
-
-    memcpy(info_out, &dev->nand_info, sizeof(*info_out));
-    *nand_op_size_out = sizeof(nand_io_t);
+void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
+    memcpy(info_out, &nand_info_, sizeof(*info_out));
+    *nand_op_size_out = sizeof(Transaction);
 }
 
-static void _nand_queue(void* ctx, nand_operation_t* op, nand_queue_callback completion_cb,
-                       void* cookie) {
-    nand_device_t* dev = (nand_device_t*)ctx;
-    nand_io_t* io = containerof(op, nand_io_t, nand_op);
-
-    if (completion_cb == NULL) {
+void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
+    if (completion_cb == nullptr) {
         zxlogf(TRACE, "nand: nand op %p completion_cb unset!\n", op);
         zxlogf(TRACE, "nand: cannot queue command!\n");
         return;
     }
 
-    io->completion_cb = completion_cb;
-    io->cookie = cookie;
+    Transaction* txn = Transaction::FromOp(op, completion_cb, cookie);
 
-    switch (op->command) {
+    switch (txn->op.command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE: {
-        if (op->rw.offset_nand >= dev->num_nand_pages || !op->rw.length ||
-            (dev->num_nand_pages - op->rw.offset_nand) < op->rw.length) {
-            nand_io_complete(io, ZX_ERR_OUT_OF_RANGE);
+        if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
+            (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
+            txn->Complete(ZX_ERR_OUT_OF_RANGE);
             return;
         }
         if (op->rw.data_vmo == ZX_HANDLE_INVALID &&
             op->rw.oob_vmo == ZX_HANDLE_INVALID) {
-            nand_io_complete(io, ZX_ERR_BAD_HANDLE);
+            txn->Complete(ZX_ERR_BAD_HANDLE);
             return;
         }
         break;
     }
     case NAND_OP_ERASE:
         if (!op->erase.num_blocks ||
-            op->erase.first_block >= dev->nand_info.num_blocks ||
-            (op->erase.num_blocks > (dev->nand_info.num_blocks - op->erase.first_block))) {
-            nand_io_complete(io, ZX_ERR_OUT_OF_RANGE);
+            op->erase.first_block >= nand_info_.num_blocks ||
+            (op->erase.num_blocks > (nand_info_.num_blocks - op->erase.first_block))) {
+            txn->Complete(ZX_ERR_OUT_OF_RANGE);
             return;
         }
         break;
 
     default:
-        nand_io_complete(io, ZX_ERR_NOT_SUPPORTED);
+        txn->Complete(ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
-    mtx_lock(&dev->lock);
+    fbl::AutoLock al(&lock_);
     // TODO: UPDATE STATS HERE.
-    list_add_tail(&dev->io_list, &io->node);
+    txn_queue_.push_back(txn);
     // Wake up the worker thread (while locked, so they don't accidentally
     // clear the event).
-    zx_object_signal(dev->worker_event, 0, NAND_TXN_RECEIVED);
-    mtx_unlock(&dev->lock);
+    worker_event_.signal(0, kNandTxnReceived);
 }
 
-static zx_status_t _nand_get_factory_bad_block_list(void* ctx, uint32_t* bad_blocks,
-                                                   size_t bad_block_len,
-                                                   size_t* num_bad_blocks) {
+zx_status_t NandDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks,
+                                                   size_t bad_block_len, size_t* num_bad_blocks) {
     *num_bad_blocks = 0;
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-// Nand protocol.
-static nand_protocol_ops_t nand_proto = {
-    .query = _nand_query,
-    .queue = _nand_queue,
-    .get_factory_bad_block_list = _nand_get_factory_bad_block_list,
-};
-
-static void nand_unbind(void* ctx) {
-    auto* dev = static_cast<nand_device_t*>(ctx);
-
-    device_remove(dev->zxdev);
-}
-
-static void nand_release(void* ctx) {
-    auto* dev = static_cast<nand_device_t*>(ctx);
-
+void NandDevice::DdkRelease() {
     // Signal the worker thread and wait for it to terminate.
-    zx_object_signal(dev->worker_event, 0, NAND_SHUTDOWN);
-    thrd_join(dev->worker_thread, NULL);
-    mtx_lock(&dev->lock);
-    // Error out all pending requests.
-    nand_io_t* io = NULL;
-    list_for_every_entry (&dev->io_list, io, nand_io_t, node) {
-        mtx_unlock(&dev->lock);
-        nand_io_complete(io, ZX_ERR_BAD_STATE);
-        mtx_lock(&dev->lock);
+    worker_event_.signal(0, kNandShutdown);
+    thrd_join(worker_thread_, nullptr);
+
+    {
+        lock_.Acquire();
+        // Error out all pending requests.
+        for (auto& txn : txn_queue_) {
+            lock_.Release();
+            txn.Complete(ZX_ERR_BAD_STATE);
+            lock_.Acquire();
+        }
+        lock_.Release();
     }
-    mtx_unlock(&dev->lock);
-    if (dev->worker_event != ZX_HANDLE_INVALID) {
-        zx_handle_close(dev->worker_event);
-    }
-    free(dev);
+
+    delete this;
 }
 
-// Device protocol.
-static zx_protocol_device_t nand_device_proto = [](){
-    zx_protocol_device_t proto = {};
-    proto.version = DEVICE_OPS_VERSION;
-    proto.unbind = nand_unbind;
-    proto.release = nand_release;
-    return proto;
-}();
+// static
+zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
+    zxlogf(ERROR, "NandDevice::Create: Starting...!\n");
 
-static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
-    zxlogf(ERROR, "nand_bind: Starting...!\n");
+    zx::event worker_event;
+    zx_status_t status = zx::event::create(0, &worker_event);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "nand: failed to create event, retcode = %d\n", status);
+        return status;
+    }
 
-    auto* dev = static_cast<nand_device_t*>(calloc(1, sizeof(nand_device_t)));
-    if (!dev) {
+    fbl::AllocChecker ac;
+    fbl::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent, std::move(worker_event)));
+    if (!ac.check()) {
         zxlogf(ERROR, "nand: no memory to allocate nand device!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
-    dev->nand_proto.ops = &nand_proto;
-    dev->nand_proto.ctx = dev;
+    if ((status = dev->Init()) != ZX_OK) {
+        return status;
+    }
 
+    if ((status = dev->Bind()) != ZX_OK) {
+        dev.release()->DdkRelease();
+        return status;
+    }
 
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = dev.release();
+
+    return ZX_OK;
+}
+
+zx_status_t NandDevice::Init() {
+    if (!raw_nand_.is_valid()) {
+        zxlogf(ERROR, "nand: failed to get raw_nand protocol\n");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    zx_status_t status = raw_nand_.GetNandInfo(&nand_info_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "nand: get_nand_info returned error %d\n", status);
+        return status;
+    }
+
+    num_nand_pages_ = nand_info_.num_blocks * nand_info_.pages_per_block;
+
+    int rc = thrd_create_with_name(
+        &worker_thread_,
+        [](void* arg) { return static_cast<NandDevice*>(arg)->WorkerThread(); },
+        this, "nand-worker");
+
+    if (rc != thrd_success) {
+        return thrd_status_to_zx_status(rc);
+    }
+
+    return ZX_OK;
+}
+
+zx_status_t NandDevice::Bind() {
     zx_device_prop_t props[] = {
         {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
         {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
     };
 
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "nand";
-    args.ctx = dev;
-    args.ops = &nand_device_proto;
-    args.proto_id = ZX_PROTOCOL_NAND;
-    args.proto_ops = &nand_proto;
-    args.props = props;
-    args.prop_count = countof(props);
-
-    int rc;
-
-    zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_RAW_NAND, &dev->host);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "nand: failed to get raw_nand protocol %d\n", st);
-        st = ZX_ERR_NOT_SUPPORTED;
-        goto fail;
-    }
-
-    mtx_init(&dev->lock, mtx_plain);
-    list_initialize(&dev->io_list);
-
-    st = zx_event_create(0, &dev->worker_event);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "nand: failed to create event, retcode = %d\n", st);
-        goto fail;
-    }
-
-    if (dev->host.ops->get_nand_info == NULL) {
-        st = ZX_ERR_NOT_SUPPORTED;
-        zxlogf(ERROR, "nand: failed to get nand info, function does not exist\n");
-        goto fail;
-    }
-    st = raw_nand_get_nand_info(&dev->host, &dev->nand_info);
-    if (st != ZX_OK) {
-        zxlogf(ERROR, "nand: get_nand_info returned error %d\n", st);
-        goto fail;
-    }
-    dev->num_nand_pages = dev->nand_info.num_blocks * dev->nand_info.pages_per_block;
-
-    rc = thrd_create_with_name(&dev->worker_thread, nand_worker_thread, dev, "nand-worker");
-    if (rc != thrd_success) {
-        st = thrd_status_to_zx_status(rc);
-        goto fail_remove;
-    }
-
-    st = device_add(parent, &args, &dev->zxdev);
-    if (st != ZX_OK) {
-        goto fail;
-    }
-
-    return ZX_OK;
-
-fail_remove:
-    device_remove(dev->zxdev);
-fail:
-    free(dev);
-    return st;
+    return DdkAdd("nand", 0, props, fbl::count_of(props));
 }
 
-static zx_driver_ops_t nand_driver_ops = [](){
+static zx_driver_ops_t nand_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = nand_bind;
+    ops.bind = NandDevice::Create;
     return ops;
 }();
 
+} // namespace nand
+
 // The formatter does not play nice with these macros.
 // clang-format off
-ZIRCON_DRIVER_BEGIN(nand, nand_driver_ops, "zircon", "0.1", 1)
+ZIRCON_DRIVER_BEGIN(nand, nand::nand_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RAW_NAND),
 ZIRCON_DRIVER_END(nand)
-// clang-format on
+    // clang-format on
