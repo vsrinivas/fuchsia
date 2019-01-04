@@ -1005,7 +1005,7 @@
                 "event",
                 "port",
                 "interrupt",
-                "log",
+                "debuglog",
                 "socket",
                 "resource",
                 "eventpair",

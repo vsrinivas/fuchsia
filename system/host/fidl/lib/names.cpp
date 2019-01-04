@@ -141,7 +141,7 @@ std::string NameHandleSubtype(types::HandleSubtype subtype) {
     case types::HandleSubtype::kInterrupt:
         return "interrupt";
     case types::HandleSubtype::kLog:
-        return "log";
+        return "debuglog";
     case types::HandleSubtype::kSocket:
         return "socket";
     case types::HandleSubtype::kResource:
