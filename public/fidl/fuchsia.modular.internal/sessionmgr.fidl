@@ -19,30 +19,21 @@ interface Sessionmgr {
     // Launches a sessionmgr instance for a user identified by |user_id| and
     // specific TokenManager handles for ledger and agent_runner.
     // TODO(alhaad): Fold paramters into |UserContext|.
-    Initialize(fuchsia.modular.auth.Account? account,
-               fuchsia.modular.AppConfig session_shell,
-               fuchsia.modular.AppConfig story_shell,
-               fuchsia.auth.TokenManager? ledger_token_manager,
-               fuchsia.auth.TokenManager? agent_token_manager,
-               UserContext user_context,
-               request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
+    1: Initialize(fuchsia.modular.auth.Account? account,
+                  fuchsia.modular.AppConfig session_shell,
+                  fuchsia.modular.AppConfig story_shell,
+                  fuchsia.auth.TokenManager? ledger_token_manager,
+                  fuchsia.auth.TokenManager? agent_token_manager,
+                  UserContext user_context,
+                  request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner);
 
-    [Transitional]
-    Initialize2(fuchsia.modular.auth.Account? account,
-                fuchsia.modular.AppConfig session_shell,
-                fuchsia.modular.AppConfig story_shell,
-                fuchsia.auth.TokenManager? ledger_token_manager,
-                fuchsia.auth.TokenManager? agent_token_manager,
-                UserContext user_context,
-                handle<eventpair> session_shell_view_token);
-
-    SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
+    2: SwapSessionShell(fuchsia.modular.AppConfig session_shell) -> ();
 };
 
 // This interface is provided by basemgr to |Sessionmgr|.
 interface UserContext {
     // See detailed comments in SessionShellContext.Logout().
-    Logout();
+    1: Logout();
 
-    GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
+    2: GetPresentation(request<fuchsia.ui.policy.Presentation> presentation);
 };
