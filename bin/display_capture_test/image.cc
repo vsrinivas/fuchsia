@@ -66,7 +66,7 @@ void ImageImpl::AllocateVmoCallback(zx_status_t status, zx::vmo vmo) {
   zx_vaddr_t addr;
   uint32_t size = height_ * stride_ * kBytesPerPixel;
   status = zx::vmar::root_self()->map(
-      0, vmo, 0, size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &addr);
+      0, vmo, 0, size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &addr);
   ZX_ASSERT(status == ZX_OK);
 
   uint32_t* ptr = reinterpret_cast<uint32_t*>(addr);

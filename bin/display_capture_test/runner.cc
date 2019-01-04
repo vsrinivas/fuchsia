@@ -175,7 +175,7 @@ void Runner::GetFormatCallback(
     ZX_ASSERT(status == ZX_OK);
 
     status = zx::vmar::root_self()->map(
-        0, vmo, 0, buffer_size, ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE,
+        0, vmo, 0, buffer_size, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
         reinterpret_cast<zx_vaddr_t*>(camera_buffers_ + i));
     ZX_ASSERT(status == ZX_OK);
 

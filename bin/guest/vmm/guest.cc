@@ -113,7 +113,7 @@ zx_status_t Guest::Init(const std::vector<MemorySpec>& memory) {
     zx_gpaddr_t addr;
     status = vmar_.map(spec.base, vmo, 0, spec.size,
                        ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE |
-                           ZX_VM_SPECIFIC | ZX_VM_FLAG_REQUIRE_NON_RESIZABLE,
+                           ZX_VM_SPECIFIC | ZX_VM_REQUIRE_NON_RESIZABLE,
                        &addr);
     if (status != ZX_OK) {
       FXL_LOG(ERROR) << "Failed to map guest physical memory " << status;
