@@ -22,8 +22,7 @@ namespace a11y_manager {
 // See manager.fidl for documentation.
 class ManagerImpl : public fuchsia::accessibility::Manager {
  public:
-  explicit ManagerImpl(component::StartupContext* startup_context,
-                       SemanticTree* semantic_tree);
+  explicit ManagerImpl(SemanticTree* semantic_tree);
   ~ManagerImpl() = default;
 
   void AddBinding(
@@ -43,7 +42,6 @@ class ManagerImpl : public fuchsia::accessibility::Manager {
       int32_t id, fuchsia::accessibility::Node node,
       fuchsia::accessibility::Action action);
 
-  component::StartupContext* startup_context_;
   SemanticTree* const semantic_tree_;
 
   // Accessibility-focused means that there is a front-end semantics node that

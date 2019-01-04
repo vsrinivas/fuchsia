@@ -9,8 +9,7 @@ namespace a11y_manager {
 App::App()
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       semantic_tree_(std::make_unique<SemanticTree>()),
-      a11y_manager_(std::make_unique<ManagerImpl>(startup_context_.get(),
-                                                  semantic_tree_.get())),
+      a11y_manager_(std::make_unique<ManagerImpl>(semantic_tree_.get())),
       toggler_impl_(std::make_unique<TogglerImpl>()) {
   startup_context_->outgoing()
       .AddPublicService<fuchsia::accessibility::Manager>(

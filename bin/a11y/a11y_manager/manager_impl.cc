@@ -60,9 +60,8 @@ fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
   return point;
 }
 
-ManagerImpl::ManagerImpl(component::StartupContext* startup_context,
-                         SemanticTree* semantic_tree)
-    : startup_context_(startup_context), semantic_tree_(semantic_tree) {}
+ManagerImpl::ManagerImpl(SemanticTree* semantic_tree)
+    : semantic_tree_(semantic_tree) {}
 
 void ManagerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
@@ -73,27 +72,6 @@ void ManagerImpl::GetHitAccessibilityNode(
     fuchsia::ui::viewsv1::ViewTreeToken token,
     fuchsia::ui::input::PointerEvent input,
     GetHitAccessibilityNodeCallback callback) {
-  PointF point;
-  point.x = input.x;
-  point.y = input.y;
-  std::pair<Point3F, Point3F> ray = DefaultRayForHitTestingScreenPoint(point);
-  fuchsia::ui::viewsv1::AccessibilityViewInspector::PerformHitTestCallback
-      view_callback =
-          [this, callback = std::move(callback),
-           point = std::move(point)](std::vector<fuchsia::ui::gfx::Hit> hits) {
-            if (hits.empty()) {
-              callback(-1, nullptr);
-            } else {
-              std::pair<Point3F, Point3F> ray =
-                  DefaultRayForHitTestingScreenPoint(point);
-              callback(hits.front().tag_value /*view_id*/,
-                       semantic_tree_->GetHitAccessibilityNode(
-                           hits.front().tag_value,
-                           TransformPointerEvent(ray.first, ray.second,
-                                                 hits.front() /*node*/)));
-            }
-          };
-
   // TODO(SCN-1124): wire hit tests through scenic a11y component
 }
 
