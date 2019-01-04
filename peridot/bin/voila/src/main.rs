@@ -96,3 +96,11 @@ fn main() -> Result<(), Error> {
     let assistant = VoilaAppAssistant {};
     App::run(Box::new(assistant))
 }
+
+#[cfg(test)]
+mod tests {
+    #[test]
+    fn hello_world() {
+        assert_eq!(42, 42);
+    }
+}

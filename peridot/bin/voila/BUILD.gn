@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
+  with_unit_tests = true
 }
 
 package("voila") {
@@ -29,6 +30,18 @@ package("voila") {
     {
       path = rebase_path("meta/voila.cmx")
       dest = "voila.cmx"
+    },
+  ]
+}
+
+package("tests") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "voila_bin_test"
     },
   ]
 }
