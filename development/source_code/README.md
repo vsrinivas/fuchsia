@@ -27,16 +27,17 @@ use the `fx set-petal` command.
 
 Upon success, the bootstrap script should print a message recommending that you
 add the `.jiri_root/bin` directory to your PATH. This will add `jiri` to your
-PATH, which is strongly recommended and is assumed by other parts of the Fuchsia
+PATH, which is recommended and is assumed by other parts of the Fuchsia
 toolchain.
 
 Another tool in `.jiri_root/bin` is `fx`, which helps configuring, building,
 running and debugging Fuchsia. See `fx help` for all available commands.
 
-We also suggest sourcing `scripts/fx-env.sh`. It defines a few environment
-variables that are commonly used in the documentation, such as `$FUCHSIA_DIR`,
-and provides useful shell functions, for instance `fd` to change directories
-effectively. See comments in `scripts/fx-env.sh` for more details.
+You can also source `scripts/fx-env.sh`, but sourcing `fx-env.sh` is not
+required. It defines a few environment variables that are commonly used in the
+documentation, such as `$FUCHSIA_DIR`, and provides useful shell functions, for
+instance `fd` to change directories effectively. See comments in
+`scripts/fx-env.sh` for more details.
 
 ### Working without altering your PATH
 
