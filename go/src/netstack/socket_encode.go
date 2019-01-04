@@ -98,6 +98,15 @@ func (v *C.struct_ip_mreqn) Unmarshal(data []byte) error {
 	return nil
 }
 
+func (v *C.struct_ipv6_mreq) Unmarshal(data []byte) error {
+	const size = C.sizeof_struct_ipv6_mreq
+
+	if n := copy((*[size]byte)(unsafe.Pointer(v))[:], data); n < size {
+		return fmt.Errorf("short %T: %d/%d", v, n, size)
+	}
+	return nil
+}
+
 func (v *C.netc_if_info_t) MarshalTo(data []byte) (int, error) {
 	const size = C.sizeof_netc_if_info_t
 

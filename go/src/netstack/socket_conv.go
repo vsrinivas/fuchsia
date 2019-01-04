@@ -448,9 +448,26 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 		v := binary.LittleEndian.Uint32(optVal)
 		return ep.SetSockOpt(tcpip.V6OnlyOption(v))
 
+	case C.IPV6_ADD_MEMBERSHIP, C.IPV6_DROP_MEMBERSHIP:
+		var ipv6_mreq C.struct_ipv6_mreq
+		if err := ipv6_mreq.Unmarshal(optVal); err != nil {
+			return tcpip.ErrInvalidOptionValue
+		}
+
+		o := tcpip.MembershipOption{
+			NIC:           tcpip.NICID(ipv6_mreq.ipv6mr_interface),
+			MulticastAddr: tcpip.Address(ipv6_mreq.ipv6mr_multiaddr.Bytes()),
+		}
+		switch name {
+		case C.IPV6_ADD_MEMBERSHIP:
+			return ep.SetSockOpt(tcpip.AddMembershipOption(o))
+		case C.IPV6_DROP_MEMBERSHIP:
+			return ep.SetSockOpt(tcpip.RemoveMembershipOption(o))
+		default:
+			panic("unreachable")
+		}
+
 	case
-		C.IPV6_ADD_MEMBERSHIP,
-		C.IPV6_DROP_MEMBERSHIP,
 		C.IPV6_IPSEC_POLICY,
 		C.IPV6_JOIN_ANYCAST,
 		C.IPV6_LEAVE_ANYCAST,
