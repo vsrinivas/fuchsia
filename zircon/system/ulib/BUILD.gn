@@ -111,6 +111,7 @@ if (current_cpu != "") {
       "lockdep",
       "log",
       "log-writer-textfile",
+      "log-writer-logger",
       "logger",
       "memfs",
       "minfs",

@@ -2,21 +2,18 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("log") {
+library("log-writer-logger") {
+  shared = true
+  host = true
   sources = [
-    "main.c",
-    "log_test.c",
+    "log-writer-logger.cpp",
   ]
   deps = [
+    "$zx/system/fidl/fuchsia-logger:c",
     "$zx/system/ulib/c",
     "$zx/system/ulib/fbl",
     "$zx/system/ulib/fdio",
-    "$zx/system/ulib/fzl",
     "$zx/system/ulib/log",
-    "$zx/system/ulib/log-writer-logger",
-    "$zx/system/ulib/log-writer-textfile",
-    "$zx/system/ulib/unittest",
-    "$zx/system/ulib/zircon",
     "$zx/system/ulib/zx",
     "$zx/system/ulib/zxcpp",
   ]

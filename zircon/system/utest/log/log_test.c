@@ -7,6 +7,8 @@
 #include <fcntl.h>
 #include <zircon/syscalls.h>
 
+#include <lib/log-writer-logger/wire_format.h>
+#include <lib/log-writer-logger/log-writer-logger.h>
 #include <lib/log-writer-textfile/log-writer-textfile.h>
 #include <lib/log/log.h>
 
@@ -225,10 +227,122 @@ static bool log_to_file_varying_numbers_of_static_tags_test(void) {
     END_TEST;
 }
 
+static bool log_to_logger_with_severity_test(void) {
+    BEGIN_TEST;
+
+    for (int i = 0; i < 5; i++) {
+        log_writer_t* log_writer = log_create_logger_writer();
+
+        zx_handle_t writer_socket, server_socket;
+        EXPECT_EQ(ZX_OK, zx_socket_create(ZX_SOCKET_DATAGRAM,
+                                          &writer_socket, &server_socket),
+                  "failed to create socket");
+        log_set_logger_writer_socket(log_writer, writer_socket);
+
+        LOG_INITIALIZE(INFO, log_writer, "statictag");
+
+        log_level_t expected_level;
+        char expected_msg[file_size];
+        memset(expected_msg, 0, file_size);
+        const char* expected_tags[6] = { NULL, NULL, NULL, NULL, NULL, NULL };
+
+        switch (i) {
+            case 0:
+                expected_level = LOG_LEVEL_INFO;
+                LOGF(INFO)("test %s", "message");
+                strncpy(expected_msg, "test message", file_size);
+                expected_tags[0] = "statictag";
+                break;
+            case 1:
+                expected_level = LOG_LEVEL_WARNING;
+                LOGF(WARNING, "tag1")("test %s", "message");
+                strncpy(expected_msg, "test message", file_size);
+                expected_tags[0] = "statictag";
+                expected_tags[1] = "tag1";
+                break;
+            case 2:
+                expected_level = LOG_LEVEL_ERROR;
+                LOGF(ERROR, "tag1", "tag2")("test %s", "message");
+                strncpy(expected_msg, "test message", file_size);
+                expected_tags[0] = "statictag";
+                expected_tags[1] = "tag1";
+                expected_tags[2] = "tag2";
+                break;
+            case 3:
+                expected_level = LOG_LEVEL_FATAL;
+                LOGF(FATAL, "tag1", "tag2", "tag3")("test %s", "message");
+                strncpy(expected_msg, "test message", file_size);
+                expected_tags[0] = "statictag";
+                expected_tags[1] = "tag1";
+                expected_tags[2] = "tag2";
+                expected_tags[3] = "tag3";
+                break;
+            case 4:
+                expected_level = LOG_LEVEL_INFO;
+                LOGF(INFO, "tag1", "tag2", "tag3", "tag4")("test %s", "message");
+                strncpy(expected_msg, "test message", file_size);
+                expected_tags[0] = "statictag";
+                expected_tags[1] = "tag1";
+                expected_tags[2] = "tag2";
+                expected_tags[3] = "tag3";
+                expected_tags[4] = "tag4";
+                break;
+            default:
+                ASSERT_EQ(0, 1, "impossible");
+        }
+
+        uint8_t buf[LOG_MAX_DATAGRAM_LEN];
+        size_t actual;
+        ASSERT_EQ(ZX_OK,
+                  zx_object_wait_one(server_socket, ZX_SOCKET_READABLE,
+                      zx_time_add_duration(zx_clock_get_monotonic(),
+                      zx_duration_from_sec(1)), NULL), // wait for 1s
+                  "no message was written to the socket");
+        ASSERT_EQ(ZX_OK, zx_socket_read(server_socket, 0, buf,
+                                        LOG_MAX_DATAGRAM_LEN, &actual),
+                  "failed to read from socket");
+        EXPECT_EQ(ZX_OK, zx_handle_close(server_socket),
+                  "failed to close socket");
+
+        log_packet_t* packet = (log_packet_t*)buf;
+        EXPECT_EQ((uint32_t)0, packet->metadata.dropped_logs, "unexpected dropped logs");
+        EXPECT_EQ(expected_level, packet->metadata.level,
+                  "unexpected level");
+
+        char* data_ptr = packet->data;
+        const char** tag_iterator = expected_tags;
+        while (*tag_iterator != NULL) {
+            uint8_t tag_size = *data_ptr;
+            EXPECT_NE(0, tag_size, "reached the end of tags too soon");
+            data_ptr++;
+
+            char tag_buf[LOG_MAX_DATAGRAM_LEN];
+            memset(tag_buf, 0, LOG_MAX_DATAGRAM_LEN);
+
+            memcpy(tag_buf, data_ptr, tag_size);
+            data_ptr += tag_size;
+
+            EXPECT_STR_EQ(*tag_iterator, tag_buf,
+                          "tag in message doesn't match expected value");
+
+            tag_iterator++;
+        }
+        EXPECT_EQ(0, *data_ptr, "more tags than expected");
+        data_ptr++;
+        EXPECT_STR_EQ(expected_msg, data_ptr,
+                      "received message doesn't match expected value");
+
+        log_destroy_logger_writer(log_writer);
+    }
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(log_tests)
 RUN_TEST(log_to_file_with_severity_test);
 RUN_TEST(log_to_file_with_verbosity_test);
 RUN_TEST(set_min_level_test);
 RUN_TEST(set_max_verbosity_test);
 RUN_TEST(log_to_file_varying_numbers_of_static_tags_test);
+RUN_TEST(log_to_logger_with_severity_test);
 END_TEST_CASE(log_tests)
