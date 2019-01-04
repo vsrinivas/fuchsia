@@ -26,10 +26,6 @@ zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_N
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t fdio_default_sync(fdio_t* io) {
-    return ZX_ERR_NOT_SUPPORTED;
-}
-
 zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual) {
     return ZX_ERR_NOT_SUPPORTED;
 }

@@ -185,7 +185,6 @@ fdio_t* fdio_waitable_create(zx_handle_t h, zx_signals_t signals_in,
 // unsupported / do-nothing hooks shared by implementations
 zx_status_t fdio_default_get_token(fdio_t* io, zx_handle_t* out);
 zx_status_t fdio_default_set_attr(fdio_t* io, uint32_t flags, const fuchsia_io_NodeAttributes* attr);
-zx_status_t fdio_default_sync(fdio_t* io);
 zx_status_t fdio_default_readdir(fdio_t* io, void* ptr, size_t max, size_t* actual);
 zx_status_t fdio_default_rewind(fdio_t* io);
 zx_status_t fdio_default_unlink(fdio_t* io, const char* path, size_t len);

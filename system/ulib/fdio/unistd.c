@@ -1589,9 +1589,9 @@ int fsync(int fd) {
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    zx_status_t r = io->ops->sync(io);
+    zx_status_t status = zxio_sync(fdio_get_zxio(io));
     fdio_release(io);
-    return STATUS(r);
+    return STATUS(status);
 }
 
 __EXPORT

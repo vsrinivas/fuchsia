@@ -408,7 +408,6 @@ static fdio_ops_t dir_ops = {
     .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .set_attr = fdio_default_set_attr,
-    .sync = fdio_default_sync,
     .readdir = zxio_dir_readdir,
     .rewind = zxio_dir_rewind,
     .unlink = zxio_dir_unlink,
