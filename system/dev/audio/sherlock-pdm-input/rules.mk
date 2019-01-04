@@ -32,6 +32,7 @@ MODULE_STATIC_LIBS := \
   system/ulib/zxcpp \
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-platform-device \

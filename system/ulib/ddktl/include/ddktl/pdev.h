@@ -6,6 +6,7 @@
 
 #include <ddktl/i2c-channel.h>
 #include <ddktl/mmio.h>
+#include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/platform/device.h>
 
@@ -45,6 +46,7 @@ public:
 
     std::optional<I2cChannel> GetI2c(uint32_t index);
     std::optional<GpioProtocolClient> GetGpio(uint32_t index);
+    std::optional<ClkProtocolClient> GetClk(uint32_t index);
 };
 
 } // namespace ddk

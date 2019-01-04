@@ -24,6 +24,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
 MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-hidbus \
     system/banjo/ddk-protocol-i2c \

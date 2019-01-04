@@ -53,4 +53,14 @@ std::optional<GpioProtocolClient> PDev::GetGpio(uint32_t index) {
     return std::optional<GpioProtocolClient>(&gpio);
 }
 
+std::optional<ClkProtocolClient> PDev::GetClk(uint32_t index) {
+    clk_protocol_t clk;
+    size_t actual;
+    zx_status_t res = GetProtocol(ZX_PROTOCOL_CLK, index, &clk, sizeof(clk), &actual);
+    if (res != ZX_OK || actual != sizeof(clk)) {
+        return {};
+    }
+    return std::optional<ClkProtocolClient>(&clk);
+}
+
 } // namespace ddk
