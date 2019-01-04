@@ -49,6 +49,7 @@
         "garnet/packages/prod/mediasession",
         "garnet/packages/prod/memory_monitor",
         "garnet/packages/prod/net-cli",
+        "garnet/packages/prod/net_ctl",
         "garnet/packages/prod/netcfg",
         "garnet/packages/prod/netconnector",
         "garnet/packages/prod/netstack",
