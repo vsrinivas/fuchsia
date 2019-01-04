@@ -32,4 +32,6 @@ typedef struct teec_shared_memory_impl {
 } teec_shared_memory_impl_t;
 
 typedef struct teec_operation_impl {
+    /* This is just a placeholder so that the struct is not empty. */
+    char reserved;
 } teec_operation_impl_t;
