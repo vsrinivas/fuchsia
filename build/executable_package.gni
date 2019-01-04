@@ -33,7 +33,7 @@ template("executable_package") {
                              "meta",
                              "tests",
                              "resources",
-                             "deprecated_no_cmx",
+                             "deprecated_bare_package_url",
                            ])
     if (defined(deps)) {
       deps += [ ":${binary_rule}" ]

@@ -34,6 +34,8 @@ executable("common_null_module_bin") {
 }
 
 package("common_null_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [
@@ -71,6 +73,8 @@ executable("common_active_module_bin") {
 }
 
 package("common_active_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

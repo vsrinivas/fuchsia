@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("module_context_test_session_shell") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -38,6 +40,8 @@ executable_package("module_context_test_session_shell") {
 }
 
 executable_package("module_context_test_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -66,6 +70,8 @@ executable_package("module_context_test_module") {
 }
 
 executable_package("module_context_test_entity_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [

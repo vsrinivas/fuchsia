@@ -13,6 +13,8 @@ source_set("defs") {
 }
 
 executable_package("session_shell_test_session_shell") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [

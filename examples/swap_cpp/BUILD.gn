@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("swap_module1") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/swap_module1.cmx"
@@ -24,6 +26,8 @@ executable_package("swap_module1") {
 }
 
 executable_package("swap_module2") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/swap_module2.cmx"
@@ -60,6 +64,8 @@ source_set("module") {
 }
 
 executable_package("swap_recipe") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/swap_recipe.cmx"

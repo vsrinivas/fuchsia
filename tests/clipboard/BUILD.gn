@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("clipboard_test_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   sources = [

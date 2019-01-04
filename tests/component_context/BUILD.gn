@@ -6,6 +6,8 @@ import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("component_context_test_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
     meta = [
@@ -33,6 +35,8 @@ executable_package("component_context_test_module") {
 }
 
 executable_package("component_context_test_one_agent") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
     meta = [
@@ -60,6 +64,8 @@ executable_package("component_context_test_one_agent") {
 }
 
 executable_package("component_context_test_two_agent") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
     meta = [
@@ -84,6 +90,8 @@ executable_package("component_context_test_two_agent") {
 }
 
 executable_package("component_context_test_unstoppable_agent") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
     meta = [

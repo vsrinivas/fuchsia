@@ -13,6 +13,8 @@ source_set("defs") {
 }
 
 executable_package("link_passing_test_module1") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -38,6 +40,8 @@ executable_package("link_passing_test_module1") {
 }
 
 executable_package("link_passing_test_module2") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -63,6 +67,8 @@ executable_package("link_passing_test_module2") {
 }
 
 executable_package("link_passing_test_module3") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [

@@ -5,6 +5,8 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("sessionmgr") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/sessionmgr.cmx"
@@ -92,6 +94,8 @@ executable_package("sessionmgr") {
 }
 
 executable_package("dev_session_shell") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/dev_session_shell.cmx"

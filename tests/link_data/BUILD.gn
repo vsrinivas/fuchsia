@@ -13,6 +13,8 @@ source_set("defs") {
 }
 
 executable_package("link_data_test_session_shell") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   sources = [
@@ -45,6 +47,8 @@ executable_package("link_data_test_session_shell") {
 }
 
 executable_package("link_data_test_module0") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   sources = [
@@ -71,6 +75,8 @@ executable_package("link_data_test_module0") {
 }
 
 executable_package("link_data_test_module1") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   sources = [
@@ -97,6 +103,8 @@ executable_package("link_data_test_module1") {
 }
 
 executable_package("link_data_test_module2") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   sources = [

@@ -10,6 +10,8 @@ import("//peridot/bin/ledger/testing/sync_params.gni")
 visibility = [ "//peridot/*" ]
 
 package("ledger") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "app",
     "cobalt:ledger_metrics_registry",
@@ -41,6 +43,8 @@ package("ledger") {
 }
 
 package("ledger_tests") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

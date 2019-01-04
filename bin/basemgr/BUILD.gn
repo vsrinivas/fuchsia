@@ -13,6 +13,8 @@ flatbuffer("users") {
 }
 
 executable_package("basemgr") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/basemgr.cmx"
@@ -112,6 +114,8 @@ source_set("lib") {
 }
 
 executable_package("dev_base_shell") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/dev_base_shell.cmx"

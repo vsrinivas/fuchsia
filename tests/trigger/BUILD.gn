@@ -14,6 +14,8 @@ source_set("defs") {
 }
 
 executable_package("trigger_test_session_shell") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -43,6 +45,8 @@ executable_package("trigger_test_session_shell") {
 }
 
 executable_package("trigger_test_module") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [
@@ -70,6 +74,8 @@ executable_package("trigger_test_module") {
 }
 
 executable_package("trigger_test_agent") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   meta = [

@@ -6,6 +6,8 @@ import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 
 executable_package("suggestion_engine") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/suggestion_engine.cmx"
