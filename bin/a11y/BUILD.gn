@@ -60,26 +60,6 @@ package("a11y_toggler") {
   ]
 }
 
-package("a11y_touch_dispatcher") {
-  deps = [
-    "a11y_touch_dispatcher",
-  ]
-
-  binaries = [
-    {
-      name = "a11y_touch_dispatcher"
-      shell = true
-    },
-  ]
-
-  meta = [
-    {
-      path = rebase_path("meta/a11y_touch_dispatcher.cmx")
-      dest = "a11y_touch_dispatcher.cmx"
-    },
-  ]
-}
-
 package("talkback") {
   deps = [
     "talkback",
