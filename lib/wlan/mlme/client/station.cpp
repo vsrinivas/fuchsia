@@ -249,7 +249,10 @@ zx_status_t Station::Associate(Span<const uint8_t> rsne) {
     constexpr size_t max_frame_len =
         MgmtFrameHeader::max_len() + AssociationRequest::max_len() + reserved_ie_len;
     auto packet = GetWlanPacket(max_frame_len);
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    if (packet == nullptr) {
+        service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+        return ZX_ERR_NO_RESOURCES;
+    }
 
     BufferWriter w(*packet);
     auto mgmt_hdr = w.Write<MgmtFrameHeader>();
@@ -269,7 +272,15 @@ zx_status_t Station::Associate(Span<const uint8_t> rsne) {
 
     auto rates = BuildAssocReqSuppRates(join_ctx_->bss()->basic_rate_set,
                                         join_ctx_->bss()->op_rate_set, client_capability.rates);
-    if (!rates.has_value()) { return ZX_ERR_NOT_SUPPORTED; }
+    if (!rates.has_value()) {
+        service::SendAssocConfirm(device_,
+                                  wlan_mlme::AssociateResultCodes::REFUSED_BASIC_RATES_MISMATCH);
+        return ZX_ERR_NOT_SUPPORTED;
+    } else if (rates->empty()) {
+        service::SendAssocConfirm(device_,
+                                  wlan_mlme::AssociateResultCodes::REFUSED_CAPABILITIES_MISMATCH);
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     BufferWriter elem_w(w.RemainingBuffer());
     common::WriteSsid(&elem_w, *join_ctx_->bss()->ssid);

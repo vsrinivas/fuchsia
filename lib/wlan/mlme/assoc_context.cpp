@@ -60,7 +60,7 @@ std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
         std::count_if(rates.cbegin(), rates.cend(), [](auto& r) { return r.is_basic(); });
 
     if (num_basic_rates != basic.size()) {
-        errorf("Ap demands %zu basic rates. Client supports %zu.\n", basic.size(), rates.size());
+        errorf("Ap demands %zu basic rates. Client supports %zu.\n", basic.size(), num_basic_rates);
         return {};
     }
 
