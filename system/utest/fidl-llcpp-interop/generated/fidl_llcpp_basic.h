@@ -10,6 +10,7 @@
 #include <lib/fidl/llcpp/traits.h>
 
 #include <zircon/fidl.h>
+#include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 
 namespace fidl {
@@ -89,10 +90,8 @@ extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimp
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionResponseTable;
 
 // Test interface implemented by both C and LLCPP
-class TestInterface {
+class TestInterface final {
  public:
-  TestInterface();
-  virtual ~TestInterface();
 
   struct ConsumeSimpleStructResponse {
     FIDL_ALIGNDECL
@@ -119,18 +118,6 @@ class TestInterface {
     using ResponseType = ConsumeSimpleStructResponse;
   };
 
-  // Verifies that all the handles are valid channels, then returns
-  // ZX_OK and loops back the field member. Otherwise, returns an error.
-  zx_status_t ConsumeSimpleStruct(SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
-
-  // Verifies that all the handles are valid channels, then returns
-  // ZX_OK and loops back the field member. Otherwise, returns an error.
-  zx_status_t ConsumeSimpleStruct(::fidl::BytePart& request_buffer, ::fidl::BytePart& response_buffer, SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
-
-  // Verifies that all the handles are valid channels, then returns
-  // ZX_OK and loops back the field member. Otherwise, returns an error.
-  ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
-
   struct ConsumeSimpleUnionResponse {
     FIDL_ALIGNDECL
     fidl_message_header_t _hdr;
@@ -156,15 +143,51 @@ class TestInterface {
     using ResponseType = ConsumeSimpleUnionResponse;
   };
 
-  // Loops back the field which is set, along with its index.
-  zx_status_t ConsumeSimpleUnion(SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
 
-  // Loops back the field which is set, along with its index.
-  zx_status_t ConsumeSimpleUnion(::fidl::BytePart& request_buffer, ::fidl::BytePart& response_buffer, SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
 
-  // Loops back the field which is set, along with its index.
-  ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
+    ~SyncClient() {}
 
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    zx_status_t ConsumeSimpleStruct(SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    zx_status_t ConsumeSimpleStruct(::fidl::BytePart _request_buffer, ::fidl::BytePart _response_buffer, SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
+
+    // Verifies that all the handles are valid channels, then returns
+    // ZX_OK and loops back the field member. Otherwise, returns an error.
+    ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
+
+    // Loops back the field which is set, along with its index.
+    zx_status_t ConsumeSimpleUnion(SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
+
+    // Loops back the field which is set, along with its index.
+    zx_status_t ConsumeSimpleUnion(::fidl::BytePart _request_buffer, ::fidl::BytePart _response_buffer, SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
+
+    // Loops back the field which is set, along with its index.
+    ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
+
+   private:
+    ::zx::channel channel_;
+  };
+
+  // TBD
+  class AsyncClient final {
+   public:
+    AsyncClient() = default;
+    ~AsyncClient() = default;
+  };
+
+  // TBD
+  class Server {
+   public:
+    Server() = default;
+    virtual ~Server() = default;
+  };
 };
 
 }  // namespace basictypes
