@@ -6,7 +6,7 @@
 #define GARNET_BIN_KTRACE_PROVIDER_LOG_IMPORTER_H_
 
 #include <lib/async/cpp/wait.h>
-#include <lib/zx/log.h>
+#include <lib/zx/debuglog.h>
 #include <trace-engine/types.h>
 
 #include "lib/fxl/macros.h"
@@ -25,7 +25,7 @@ class LogImporter {
   void Handle(async_dispatcher_t* dispatcher, async::WaitBase* wait,
               zx_status_t status, const zx_packet_signal_t* signal);
 
-  zx::log log_;
+  zx::debuglog log_;
   zx_time_t start_time_;
   double time_scale_;
   async::WaitMethod<LogImporter, &LogImporter::Handle> wait_{this};
