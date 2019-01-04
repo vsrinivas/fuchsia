@@ -88,6 +88,11 @@ void JobScheduler::ValidateCanSwitchProtected()
         want_to_switch_to_nonprotected_ = false;
 }
 
+static bool HigherPriorityThan(const MsdArmAtom* a, const MsdArmAtom* b)
+{
+    return a->connection().lock() == b->connection().lock() && a->priority() > b->priority();
+}
+
 void JobScheduler::ScheduleRunnableAtoms()
 {
     // First try to preempt running atoms if necessary.
@@ -109,8 +114,7 @@ void JobScheduler::ScheduleRunnableAtoms()
         bool found_preempter = false;
         for (auto preempting = runnable.begin(); preempting != runnable.end(); ++preempting) {
             std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
-            if (preempting_atom->connection().lock() == atom->connection().lock() &&
-                preempting_atom->priority() > atom->priority()) {
+            if (HigherPriorityThan(preempting_atom.get(), atom.get())) {
                 found_preempter = true;
                 break;
             }
@@ -140,8 +144,7 @@ void JobScheduler::ScheduleRunnableAtoms()
         for (auto preempting = std::next(runnable.begin()); preempting != runnable.end();
              ++preempting) {
             std::shared_ptr<MsdArmAtom> preempting_atom = *preempting;
-            if (preempting_atom->connection().lock() == atom->connection().lock() &&
-                preempting_atom->priority() > atom->priority()) {
+            if (HigherPriorityThan(preempting_atom.get(), atom.get())) {
                 // Swap the lower priority atom to the current location so we
                 // don't change the ratio of atoms executed between connections.
                 std::swap(atom, *preempting);
@@ -192,6 +195,9 @@ void JobScheduler::ScheduleRunnableAtoms()
         }
 
         atom->SetExecutionStarted();
+        atom->SetTickStarted();
+        DASSERT(!atom->preempted());
+        DASSERT(!atom->soft_stopped());
         executing_atoms_[slot] = atom;
         runnable.erase(runnable.begin());
         std::shared_ptr<MsdArmConnection> connection = atom->connection().lock();
@@ -237,7 +243,12 @@ void JobScheduler::JobCompleted(uint64_t slot, ArmMaliResultCode result_code, ui
         // The tail is the first job executed that didn't complete. When continuing execution, skip
         // jobs before that in the job chain, or else kArmMaliResultDataInvalidFault is generated.
         atom->set_gpu_address(tail);
-        runnable_atoms_[slot].push_front(atom);
+        if (atom->preempted()) {
+            atom->set_preempted(false);
+            runnable_atoms_[slot].push_back(atom);
+        } else {
+            runnable_atoms_[slot].push_front(atom);
+        }
     }
     owner_->AtomCompleted(atom.get(), result_code);
     atom.reset();
@@ -287,10 +298,23 @@ JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration()
     for (auto& atom : executing_atoms_) {
         if (!atom || atom->hard_stopped())
             continue;
+
         auto atom_timeout_time =
             atom->execution_start_time() + std::chrono::milliseconds(timeout_duration_ms_);
+
         if (atom_timeout_time < timeout_time)
             timeout_time = atom_timeout_time;
+
+        bool may_want_to_preempt = !atom->is_protected() && !atom->soft_stopped() &&
+                                   !runnable_atoms_[atom->slot()].empty();
+
+        if (may_want_to_preempt) {
+            auto tick_timeout =
+                atom->tick_start_time() + std::chrono::milliseconds(job_tick_duration_ms_);
+            if (tick_timeout < timeout_time) {
+                timeout_time = tick_timeout;
+            }
+        }
     }
 
     for (auto& atom : waiting_atoms_) {
@@ -305,15 +329,46 @@ JobScheduler::Clock::duration JobScheduler::GetCurrentTimeoutDuration()
     return timeout_time - Clock::now();
 }
 
-void JobScheduler::KillTimedOutAtoms()
+void JobScheduler::HandleTimedOutAtoms()
 {
+    bool have_output_hang_message = false;
     auto now = Clock::now();
     for (auto& atom : executing_atoms_) {
         if (!atom || atom->hard_stopped())
             continue;
         if (atom->execution_start_time() + std::chrono::milliseconds(timeout_duration_ms_) <= now) {
+            if (!have_output_hang_message) {
+                have_output_hang_message = true;
+                owner_->OutputHangMessage();
+            }
+
             atom->set_hard_stopped();
             owner_->HardStopAtom(atom.get());
+        } else if (atom->tick_start_time() + std::chrono::milliseconds(job_tick_duration_ms_) <=
+                   now) {
+            // Reset tick time so we won't spin trying to stop this atom.
+            atom->SetTickStarted();
+
+            if (atom->soft_stopped() || atom->is_protected())
+                continue;
+            DASSERT(!atom->preempted());
+            bool want_to_preempt = false;
+            // Only preempt if there's another atom of equal or higher priority that could run.
+            for (auto& waiting_atom : runnable_atoms_[atom->slot()]) {
+                if (!HigherPriorityThan(atom.get(), waiting_atom.get())) {
+                    want_to_preempt = true;
+                    break;
+                }
+            }
+            if (want_to_preempt) {
+                DLOG("Preempting atom gpu addr: %lx\n", atom->gpu_address());
+                atom->set_soft_stopped(true);
+                atom->set_preempted(true);
+                // If the atom's soft-stopped its current state will be saved in the job chain
+                // so it will restart at the place it left off. When JobCompleted is received it
+                // will be requeued so it can run again, priority permitting.
+                owner_->SoftStopAtom(atom.get());
+            }
         }
     }
     bool removed_waiting_atoms = false;
@@ -322,6 +377,7 @@ void JobScheduler::KillTimedOutAtoms()
         auto atom_timeout_time = atom->execution_start_time() +
                                  std::chrono::milliseconds(semaphore_timeout_duration_ms_);
         if (atom_timeout_time <= now) {
+            magma::log(magma::LOG_WARNING, "Timing out hung semaphore");
             removed_waiting_atoms = true;
             owner_->AtomCompleted(atom.get(), kArmMaliResultTimedOut);
             // The semaphore wait on the port will be canceled by the closing of the event handle.

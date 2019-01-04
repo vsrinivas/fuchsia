@@ -249,11 +249,10 @@ void MsdArmDevice::DeregisterConnection()
 
 void MsdArmDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
-void MsdArmDevice::SuspectedGpuHang()
+void MsdArmDevice::OutputHangMessage()
 {
     magma::log(magma::LOG_WARNING, "Possible GPU hang\n");
     ProcessDumpStatusToLog();
-    scheduler_->KillTimedOutAtoms();
 }
 
 int MsdArmDevice::DeviceThreadLoop()
@@ -271,7 +270,7 @@ int MsdArmDevice::DeviceThreadLoop()
     while (!device_thread_quit_flag_) {
         auto timeout_duration = scheduler_->GetCurrentTimeoutDuration();
         if (timeout_duration <= JobScheduler::Clock::duration::zero()) {
-            SuspectedGpuHang();
+            scheduler_->HandleTimedOutAtoms();
             continue;
         }
         uint64_t key;

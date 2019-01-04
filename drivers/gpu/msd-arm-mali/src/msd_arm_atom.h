@@ -71,10 +71,19 @@ public:
     bool soft_stopped() const { return soft_stopped_; }
     void set_soft_stopped(bool stopped) { soft_stopped_ = stopped; }
     void SetExecutionStarted();
+    void SetTickStarted();
+
+    // Preempted by a timer interrupt (not by a higher priority atom)
+    bool preempted() const { return preempted_; }
+    void set_preempted(bool preempted) { preempted_ = preempted; }
 
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time() const
     {
         return execution_start_time_;
+    }
+    std::chrono::time_point<std::chrono::steady_clock> tick_start_time() const
+    {
+        return tick_start_time_;
     }
 
     // These methods should only be called on the device thread.
@@ -104,9 +113,11 @@ private:
     ArmMaliResultCode result_code_ = kArmMaliResultRunning;
     std::shared_ptr<AddressSlotMapping> address_slot_mapping_;
     std::chrono::time_point<std::chrono::steady_clock> execution_start_time_;
+    std::chrono::time_point<std::chrono::steady_clock> tick_start_time_;
     bool hard_stopped_ = false;
     bool soft_stopped_ = false;
     bool using_cycle_counter_ = false;
+    bool preempted_ = false;
 };
 
 // Soft atoms don't actually execute in hardware.

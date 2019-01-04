@@ -27,6 +27,7 @@ public:
         virtual bool IsInProtectedMode() = 0;
         virtual void EnterProtectedMode() = 0;
         virtual bool ExitProtectedMode() = 0;
+        virtual void OutputHangMessage() = 0;
     };
     using Clock = std::chrono::steady_clock;
 
@@ -48,7 +49,7 @@ public:
     // max if there's no timeout pending.
     Clock::duration GetCurrentTimeoutDuration();
 
-    void KillTimedOutAtoms();
+    void HandleTimedOutAtoms();
 
     void ReleaseMappingsForConnection(std::shared_ptr<MsdArmConnection> connection);
 
@@ -83,6 +84,10 @@ private:
     Owner* owner_;
 
     uint32_t job_slots_;
+
+    // This duration determines how often to check whether this atom should be preempted by another
+    // of the same priority.
+    uint64_t job_tick_duration_ms_ = 100;
 
     uint64_t timeout_duration_ms_ = 2000;
     // Semaphore timeout is longer because one semaphore may need to wait for a

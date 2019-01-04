@@ -15,6 +15,7 @@
 #include <string.h>
 
 #include <chrono>
+#include <future>
 #include <thread>
 #include <vector>
 
@@ -25,7 +26,7 @@ namespace {
 
 class VkPriorityTest {
 public:
-    VkPriorityTest() {}
+    explicit VkPriorityTest(bool different_priority) : different_priority_(different_priority) {}
 
     bool Initialize();
     bool Exec();
@@ -40,10 +41,12 @@ private:
     VkDevice vk_device_;
     VkQueue low_prio_vk_queue_;
     VkQueue high_prio_vk_queue_;
+    bool different_priority_;
 
     VkCommandPool vk_command_pool_;
     VkCommandBuffer low_prio_vk_command_buffer_;
     VkCommandBuffer high_prio_vk_command_buffer_;
+    uint32_t low_priority_execution_count_ = 1000;
 };
 
 bool VkPriorityTest::Initialize()
@@ -57,7 +60,7 @@ bool VkPriorityTest::Initialize()
     if (!InitCommandPool())
         return DRETF(false, "InitCommandPool failed");
 
-    if (!InitCommandBuffer(&low_prio_vk_command_buffer_, 1000))
+    if (!InitCommandBuffer(&low_prio_vk_command_buffer_, low_priority_execution_count_))
         return DRETF(false, "InitImage failed");
 
     if (!InitCommandBuffer(&high_prio_vk_command_buffer_, 1))
@@ -115,6 +118,15 @@ bool VkPriorityTest::InitVulkan()
         DLOG("deviceType 0x%x", properties.deviceType);
     }
 
+    VkPhysicalDeviceProperties properties;
+    vkGetPhysicalDeviceProperties(physical_devices[0], &properties);
+    if (properties.vendorID == 0x13b5 && properties.deviceID >= 0x1000) {
+        DLOG("Upping low priority execution count for ARM Bifrost GPU");
+        // With the default execution count the test completes too quickly and
+        // the commands won't be preempted.
+        low_priority_execution_count_ = 100000;
+    }
+
     uint32_t queue_family_count;
     vkGetPhysicalDeviceQueueFamilyProperties(physical_devices[0], &queue_family_count, nullptr);
 
@@ -139,7 +151,10 @@ bool VkPriorityTest::InitVulkan()
     if (queue_family_properties[queue_family_index].queueCount < 2)
         return DRETF(false, "Need 2 queues to use priorities");
 
-    float queue_priorities[2] = {0.0, 1.0};
+    float queue_priorities[2] = {1.0, 1.0};
+    if (different_priority_) {
+        queue_priorities[0] = 0.0;
+    }
 
     VkDeviceQueueCreateInfo queue_create_info = {.sType =
                                                      VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO,
@@ -305,6 +320,17 @@ bool VkPriorityTest::Exec()
     auto low_prio_start_time = std::chrono::steady_clock::now();
     if ((result = vkQueueSubmit(low_prio_vk_queue_, 1, &submit_info, VK_NULL_HANDLE)) != VK_SUCCESS)
         return DRETF(false, "vkQueueSubmit failed: %d", result);
+
+    std::chrono::steady_clock::time_point low_prio_end_time;
+    auto low_priority_future = std::async(std::launch::async, [this, &low_prio_end_time]() {
+        VkResult result;
+
+        if ((result = vkQueueWaitIdle(low_prio_vk_queue_)) != VK_SUCCESS) {
+            return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+        }
+        low_prio_end_time = std::chrono::steady_clock::now();
+        return true;
+    });
     // Should be enough time for the first queue to start executing.
     std::this_thread::sleep_for(std::chrono::milliseconds(10));
     VkSubmitInfo high_prio_submit_info = {
@@ -323,31 +349,50 @@ bool VkPriorityTest::Exec()
     if ((result = vkQueueSubmit(high_prio_vk_queue_, 1, &high_prio_submit_info, VK_NULL_HANDLE)) !=
         VK_SUCCESS)
         return DRETF(false, "vkQueueSubmit failed: %d", result);
-    if ((result = vkQueueWaitIdle(high_prio_vk_queue_)) != VK_SUCCESS) {
-        return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+    std::chrono::steady_clock::time_point high_prio_end_time;
+    auto high_priority_future = std::async(std::launch::async, [this, &high_prio_end_time]() {
+        VkResult result;
+        if ((result = vkQueueWaitIdle(high_prio_vk_queue_)) != VK_SUCCESS) {
+            return DRETF(false, "vkQueueWaitIdle failed: %d", result);
+        }
+        high_prio_end_time = std::chrono::steady_clock::now();
+        return true;
+    });
+
+    high_priority_future.wait();
+    low_priority_future.wait();
+    if (!high_priority_future.get() || !low_priority_future.get()) {
+        return DRETF(false, "Queue wait failed");
     }
-    auto high_prio_end_time = std::chrono::steady_clock::now();
     auto high_prio_duration = high_prio_end_time - high_prio_start_time;
     printf("first vkQueueWaitIdle finished duration: %lld\n",
            std::chrono::duration_cast<std::chrono::milliseconds>(high_prio_duration).count());
-
-    if ((result = vkQueueWaitIdle(low_prio_vk_queue_)) != VK_SUCCESS) {
-        return DRETF(false, "vkQueueWaitIdle failed: %d", result);
-    }
-    auto low_prio_end_time = std::chrono::steady_clock::now();
     auto low_prio_duration = low_prio_end_time - low_prio_start_time;
     printf("second vkQueueWaitIdle finished duration: %lld\n",
            std::chrono::duration_cast<std::chrono::milliseconds>(low_prio_duration).count());
 
-    // Depends on the precise scheduling, so may sometimes fail.
-    EXPECT_LE(high_prio_duration, low_prio_duration / 10);
+    if (different_priority_) {
+        // Depends on the precise scheduling, so may sometimes fail.
+        EXPECT_LE(high_prio_duration, low_prio_duration / 10);
+    } else {
+        // In this case they actually have equal priorities, but the "low priority" one has more
+        // work and should be context-switched away from.
+        EXPECT_LE(high_prio_duration, low_prio_duration);
+    }
 
     return true;
 }
 
 TEST(Vulkan, Priority)
 {
-    VkPriorityTest test;
+    VkPriorityTest test(true);
+    ASSERT_TRUE(test.Initialize());
+    ASSERT_TRUE(test.Exec());
+}
+
+TEST(Vulkan, EqualPriority)
+{
+    VkPriorityTest test(false);
     ASSERT_TRUE(test.Initialize());
     ASSERT_TRUE(test.Exec());
 }

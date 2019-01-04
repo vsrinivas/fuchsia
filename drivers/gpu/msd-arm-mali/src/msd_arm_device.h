@@ -153,7 +153,6 @@ private:
     void DisableInterrupts();
     bool InitializeHardware();
     void EnqueueDeviceRequest(std::unique_ptr<DeviceRequest> request, bool enqueue_front = false);
-    void SuspectedGpuHang();
     static void InitializeHardwareQuirks(GpuFeatures* features, magma::RegisterIo* registers);
     bool PowerDownL2();
     bool ResetDevice();
@@ -179,6 +178,7 @@ private:
     void EnterProtectedMode() override;
     bool ExitProtectedMode() override;
     bool IsInProtectedMode() override;
+    void OutputHangMessage() override;
 
     static const uint32_t kMagic = 0x64657669; //"devi"
 

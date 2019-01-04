@@ -11,6 +11,7 @@
 #include "msd_arm_connection.h"
 #include "platform_port.h"
 #include "gtest/gtest.h"
+#include <thread>
 
 namespace {
 
@@ -37,12 +38,14 @@ public:
         in_protected_mode_ = false;
         return true;
     }
+    void OutputHangMessage() override { hang_message_output_count_++; }
 
     std::vector<MsdArmAtom*>& run_list() { return run_list_; }
     std::vector<ResultPair>& completed_list() { return completed_list_; }
     std::vector<MsdArmAtom*>& stopped_atoms() { return stopped_atoms_; }
     std::vector<MsdArmAtom*>& soft_stopped_atoms() { return soft_stopped_atoms_; }
     bool gpu_active() { return gpu_active_; }
+    uint32_t hang_message_output_count() const { return hang_message_output_count_; }
 
 private:
     std::vector<MsdArmAtom*> run_list_;
@@ -52,6 +55,7 @@ private:
     std::unique_ptr<magma::PlatformPort> platform_port_;
     bool gpu_active_ = false;
     bool in_protected_mode_ = false;
+    uint32_t hang_message_output_count_ = 0;
 };
 
 class TestAddressSpaceObserver : public AddressSpaceObserver {
@@ -292,18 +296,20 @@ public:
         scheduler.TryToSchedule();
         DASSERT(scheduler.GetCurrentTimeoutDuration() <=
                 std::chrono::milliseconds(kTimeoutDurationMs));
+        EXPECT_EQ(0u, owner.hang_message_output_count());
         while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
             ;
         EXPECT_EQ(0u, owner.stopped_atoms().size());
-        scheduler.KillTimedOutAtoms();
+        scheduler.HandleTimedOutAtoms();
         EXPECT_EQ(1u, owner.stopped_atoms().size());
         EXPECT_EQ(atom_ptr, owner.stopped_atoms()[0]);
         EXPECT_EQ(atom_ptr, scheduler.executing_atom());
+        EXPECT_EQ(1u, owner.hang_message_output_count());
 
         // Second kill shouldn't do anything, since the atom has already been
         // stopped.
         EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
-        scheduler.KillTimedOutAtoms();
+        scheduler.HandleTimedOutAtoms();
         EXPECT_EQ(1u, owner.stopped_atoms().size());
 
         scheduler.JobCompleted(0, kArmMaliResultSuccess, 0u);
@@ -449,14 +455,16 @@ public:
         scheduler.TryToSchedule();
         EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <=
                     std::chrono::milliseconds(kTimeoutDurationMs));
+        EXPECT_EQ(0u, owner.hang_message_output_count());
         while (scheduler.GetCurrentTimeoutDuration() > JobScheduler::Clock::duration::zero())
             ;
-        scheduler.KillTimedOutAtoms();
+        scheduler.HandleTimedOutAtoms();
         EXPECT_EQ(kArmMaliResultTimedOut, atom->result_code());
         EXPECT_EQ(kArmMaliResultSuccess, atom2->result_code());
+        EXPECT_EQ(0u, owner.hang_message_output_count());
 
         EXPECT_EQ(scheduler.GetCurrentTimeoutDuration(), JobScheduler::Clock::duration::max());
-        scheduler.KillTimedOutAtoms();
+        scheduler.HandleTimedOutAtoms();
     }
 
     void TestCancelNull()
@@ -588,15 +596,15 @@ public:
         EXPECT_EQ(0u, owner.soft_stopped_atoms().size());
     }
 
-    void TestPreemption(bool normal_completion)
+    void TestPreemption(bool normal_completion, bool equal_priority)
     {
         TestOwner owner;
         TestConnectionOwner connection_owner;
         std::shared_ptr<MsdArmConnection> connection =
             MsdArmConnection::Create(0, &connection_owner);
         JobScheduler scheduler(&owner, 2);
-        auto atom1 =
-            std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), -1);
+        auto atom1 = std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(),
+                                                  equal_priority ? 0 : -1);
         scheduler.EnqueueAtom(atom1);
 
         scheduler.TryToSchedule();
@@ -607,6 +615,19 @@ public:
             std::make_shared<MsdArmAtom>(connection, 1u, 0, 0, magma_arm_mali_user_data(), 0);
         scheduler.EnqueueAtom(atom2);
         scheduler.TryToSchedule();
+
+        if (equal_priority) {
+            EXPECT_EQ(0u, owner.soft_stopped_atoms().size());
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+            EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() <=
+                        JobScheduler::Clock::duration::zero());
+            scheduler.HandleTimedOutAtoms();
+            EXPECT_EQ(0u, owner.hang_message_output_count());
+            // The hard stop deadline should still be active, but not the tick deadline.
+            EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() > std::chrono::milliseconds(100));
+            EXPECT_TRUE(scheduler.GetCurrentTimeoutDuration() !=
+                        JobScheduler::Clock::duration::max());
+        }
 
         EXPECT_EQ(1u, owner.soft_stopped_atoms().size());
         EXPECT_EQ(atom1.get(), owner.soft_stopped_atoms().back());
@@ -749,8 +770,15 @@ TEST(JobScheduler, MultipleSlots) { TestJobScheduler().TestMultipleSlots(); }
 
 TEST(JobScheduler, Priorities) { TestJobScheduler().TestPriorities(); }
 
-TEST(JobScheduler, Preemption) { TestJobScheduler().TestPreemption(false); }
+TEST(JobScheduler, Preemption) { TestJobScheduler().TestPreemption(false, false); }
 
-TEST(JobScheduler, PreemptionNormalCompletion) { TestJobScheduler().TestPreemption(true); }
+TEST(JobScheduler, PreemptionNormalCompletion) { TestJobScheduler().TestPreemption(true, false); }
+
+TEST(JobScheduler, PreemptionEqualPriority) { TestJobScheduler().TestPreemption(false, true); }
+
+TEST(JobScheduler, PreemptionNormalCompletionEqualPriority)
+{
+    TestJobScheduler().TestPreemption(true, true);
+}
 
 TEST(JobScheduler, ProtectedMode) { TestJobScheduler().TestProtectedMode(); }
