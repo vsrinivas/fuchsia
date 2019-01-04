@@ -1,0 +1,35 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### build, copy to and run a test on target which is a part of system image
+
+## usage: fx run-image-test TARGET [ARGS ...]
+## Builds the specified target (e.g., fxl_unittests), copies it to the
+## target, and executes it.
+## Before using this please consider moving your test to a package and then use fx run-test.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help run-image-test
+}
+
+function main {
+  if [[ $# -eq 0 ]]; then
+    usage
+    return 1
+  fi
+
+  target="$1"
+  fx-command-run build "${target}"
+  fx-command-run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
+  shift
+  fx-command-run shell "/tmp/${target}" "$@"
+}
+
+main "$@"

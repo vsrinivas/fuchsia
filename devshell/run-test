@@ -3,11 +3,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-### build, copy to and run a test on target
+### build a test package and run on target.
+### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 
-## usage: fx run-test TARGET [ARGS ...]
-## Builds the specified target (e.g., fxl_unittests), copies it to the
-## target, and executes it. Useful for tight iterations on unittests.
+## usage: fx run-test [-t|--test <test_name>] [-d|--device <device>] PKG_TARGET
+## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
+## target, and executes it.
+##
+## If using this command, please run 'fx build' again before paving your device
+## because 'fx build updates' used by this script does not build images so it
+## can leave paver in weird state.
+## Arguments:
+##   -t|--test    Test to run. If not specified, it will run all tests in PKG_TARGET.
+##                Only pass this flag when your test is a component.
+##   -d|--device  Target device.
 
 set -e
 
@@ -18,17 +27,75 @@ function usage {
   fx-command-help run-test
 }
 
+
 function main {
-  if [[ $# -eq 0 ]]; then
+
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  test=""
+  target=""
+  device_args=()
+
+  while (($#)); do
+    case $1 in
+      -t|--test)
+        shift  # name
+        if [[ -z "$1" ]]; then
+          echo "Missing parameter: <test_name>" >&2
+          usage
+          exit 1
+        fi
+        test="$1"
+        ;;
+      -d|--device)
+        shift  # name
+        if [[ -z "$1" ]]; then
+          echo "Missing parameter: <device>" >&2
+          fx-command-help
+          exit 1
+        fi
+        device_args=("-d" "$1")
+        ;;
+      *)
+        if [[ "$target" == "" ]]; then
+          target="$1"
+        else
+          usage
+          exit 1
+        fi
+        ;;
+    esac
+    shift  # value
+  done
+
+  if [[ $target == "" ]]; then
     usage
     return 1
   fi
 
-  target="$1"
-  fx-command-run build "${target}"
-  fx-command-run cp "${FUCHSIA_BUILD_DIR}/${target}" "/tmp/${target}"
-  shift
-  fx-command-run shell "/tmp/${target}" "$@"
+  if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
+    echo "WARNING: It looks like amber-srv is not running."
+    echo "WARNING: You probably need to start \"fx serve-updates\""
+    exit 1
+  fi
+
+  echo -e "Building ${target}"
+  # build all packages as there is no way to only build one and push it to
+  # update repository.
+  fx-command-run build updates
+  echo -e "\nPush package to device"
+  fx-command-run push-package "${device_args[@]}" "${target}"
+
+  if [[ "${test}" == "" ]]; then
+    echo -e "\nRun all tests in ${target}"
+    fx-command-run shell "${device_args[@]}" runtests "pkgfs/packages/${target}/0/test"
+  else
+    url="fuchsia-pkg://fuchsia.com/${target}#meta/${test}.cmx"
+    echo -e "\nRunning ${url}"
+    fx-command-run shell "${device_args[@]}" run_test_component "${url}"
+  fi
 }
+
 
 main "$@"
