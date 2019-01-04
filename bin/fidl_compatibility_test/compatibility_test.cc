@@ -869,7 +869,7 @@ void Initialize(Struct* s) {
   ASSERT_EQ(ZX_OK, zx::port::create(0u, &s->handles.port_handle));
   // TODO(kulakowski) Put this back once the debuglog->log transition
   // is complete.
-  // ASSERT_EQ(ZX_OK, zx::log::create(0u, &s->handles.log_handle));
+  // ASSERT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0u, &s->handles.log_handle));
 
   zx::socket socket1;
   ASSERT_EQ(ZX_OK, zx::socket::create(0u, &s->handles.socket_handle, &socket1));

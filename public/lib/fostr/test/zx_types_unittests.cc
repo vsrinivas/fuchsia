@@ -7,13 +7,13 @@
 #include <sstream>
 
 #include <zx/channel.h>
+#include <zx/debuglog.h>
 #include <zx/event.h>
 #include <zx/eventpair.h>
 #include <zx/fifo.h>
 #include <zx/guest.h>
 #include <zx/interrupt.h>
 #include <zx/job.h>
-#include <zx/log.h>
 #include <zx/port.h>
 #include <zx/process.h>
 #include <zx/resource.h>
@@ -201,20 +201,20 @@ TEST(ZxTypes, Job) {
   EXPECT_EQ(fsl::GetKoid(job->get()), koid);
 }
 
-// Tests invalid zx::log formatting.
+// Tests invalid zx::debuglog formatting.
 TEST(ZxTypes, InvalidLog) {
   std::ostringstream os;
-  zx::log log;
+  zx::debuglog log;
 
   os << log;
   EXPECT_EQ("<invalid>", os.str());
 }
 
-// Tests zx::log formatting.
+// Tests zx::debuglog formatting.
 TEST(ZxTypes, Log) {
   std::ostringstream os;
-  zx::log log;
-  EXPECT_EQ(ZX_OK, zx::log::create(0, &log));
+  zx::debuglog log;
+  EXPECT_EQ(ZX_OK, zx::debuglog::create(zx::resource(), 0, &log));
 
   os << log;
 

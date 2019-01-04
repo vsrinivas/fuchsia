@@ -123,7 +123,7 @@ const (
 	Event                   = "event"
 	Port                    = "port"
 	Interrupt               = "interrupt"
-	Log                     = "log"
+	Log                     = "debuglog"
 	Socket                  = "socket"
 	Resource                = "resource"
 	Eventpair               = "eventpair"
