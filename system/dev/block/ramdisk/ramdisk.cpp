@@ -3,15 +3,7 @@
 // found in the LICENSE file.
 
 #include <limits>
-
-#include <ddk/device.h>
-#include <ddk/driver.h>
-#include <ddk/binding.h>
-#include <ddk/protocol/block.h>
-#include <ddk/protocol/block/partition.h>
-
-#include <zircon/device/ramdisk.h>
-#include <lib/sync/completion.h>
+#include <memory>
 
 #include <assert.h>
 #include <inttypes.h>
@@ -21,15 +13,30 @@
 #include <string.h>
 #include <sys/param.h>
 #include <threads.h>
+
+#include <ddk/binding.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
+#include <ddk/protocol/block.h>
+#include <ddk/protocol/block/partition.h>
+#include <fbl/auto_lock.h>
+#include <fbl/mutex.h>
+#include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
+#include <zircon/device/ramdisk.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
+#include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
-#define MAX_TRANSFER_SIZE (1 << 19)
+namespace {
+
+constexpr uint64_t kMaxTransferSize = 1LLU << 19;
 
 typedef struct {
     zx_device_t* zxdev;
@@ -37,23 +44,44 @@ typedef struct {
 
 typedef struct ramdisk_device {
     zx_device_t* zxdev;
-    uintptr_t mapped_addr;
-    uint64_t blk_size;
-    uint64_t blk_count;
+
+    fzl::OwnedVmoMapper mapping;
+    uint64_t block_size;
+    uint64_t block_count;
     uint8_t type_guid[ZBI_PARTITION_GUID_LEN];
 
-    mtx_t lock;
+    // |signal| identifies when the worker thread should stop sleeping.
+    // This may occur when the device:
+    // - Is unbound,
+    // - Received a message on a queue,
+    // - Has |asleep| set to false.
     sync_completion_t signal;
-    list_node_t txn_list;
-    list_node_t deferred_list;
-    bool dead;
 
-    uint32_t flags;
-    zx_handle_t vmo;
+    // Guards fields of the ramdisk which may be accessed concurrently
+    // from a background worker thread.
+    fbl::Mutex lock_;
+    list_node_t txn_list TA_GUARDED(lock_);
+    list_node_t deferred_list TA_GUARDED(lock_);
 
-    bool asleep; // true if the ramdisk is "sleeping"
-    uint64_t sa_blk_count; // number of blocks to sleep after
-    ramdisk_blk_counts_t blk_counts; // current block counts
+    // Identifies if the device has been unbound.
+    bool dead TA_GUARDED(lock_);
+
+    // Flags modified by RAMDISK_SET_FLAGS.
+    //
+    // Supported flags:
+    // - RAMDISK_FLAG_RESUME_ON_WAKE: This flag identifies if requests which are
+    // sent to the ramdisk while it is considered "alseep" should be processed
+    // when the ramdisk wakes up. This is implemented by utilizing a "deferred
+    // list" of requests, which are immediately re-issued on wakeup.
+    uint32_t flags TA_GUARDED(lock_);
+
+    // True if the ramdisk is "sleeping", and deferring all upcoming requests,
+    // or dropping them if |RAMDISK_FLAG_RESUME_ON_WAKE| is not set.
+    bool asleep TA_GUARDED(lock_);
+    // The number of blocks-to-be-written that should be processed.
+    // When this reaches zero, the ramdisk will set |asleep| to true.
+    uint64_t pre_sleep_write_block_count TA_GUARDED(lock_);
+    ramdisk_blk_counts_t block_counts TA_GUARDED(lock_);
 
     thrd_t worker;
     char name[ZBI_PARTITION_NAME_LEN];
@@ -67,40 +95,40 @@ typedef struct {
 } ramdisk_txn_t;
 
 // The worker thread processes messages from iotxns in the background
-static int worker_thread(void* arg) {
+int worker_thread(void* arg) {
     zx_status_t status = ZX_OK;
     ramdisk_device_t* dev = (ramdisk_device_t*)arg;
-    ramdisk_txn_t* txn = NULL;
+    ramdisk_txn_t* txn = nullptr;
     bool dead, asleep, defer;
     uint64_t blocks = 0;
 
     for (;;) {
         for (;;) {
-            mtx_lock(&dev->lock);
-            txn = NULL;
-            dead = dev->dead;
-            asleep = dev->asleep;
-            defer = (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
-            blocks = dev->sa_blk_count;
+            {
+                fbl::AutoLock lock(&dev->lock_);
+                txn = nullptr;
+                dead = dev->dead;
+                asleep = dev->asleep;
+                defer = (dev->flags & RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
+                blocks = dev->pre_sleep_write_block_count;
 
-            if (!asleep) {
-                // If we are awake, try grabbing pending transactions from the deferred list.
-                txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
+                if (!asleep) {
+                    // If we are awake, try grabbing pending transactions from the deferred list.
+                    txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
+                }
+
+                if (txn == nullptr) {
+                    // If no transactions were available in the deferred list (or we are asleep),
+                    // grab one from the regular txn_list.
+                    txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
+                }
             }
-
-            if (txn == NULL) {
-                // If no transactions were available in the deferred list (or we are asleep),
-                // grab one from the regular txn_list.
-                txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
-            }
-
-            mtx_unlock(&dev->lock);
 
             if (dead) {
                 goto goodbye;
             }
 
-            if (txn == NULL) {
+            if (txn == nullptr) {
                 sync_completion_wait(&dev->signal, ZX_TIME_INFINITE);
             } else {
                 sync_completion_reset(&dev->signal);
@@ -111,17 +139,18 @@ static int worker_thread(void* arg) {
         uint64_t txn_blocks = txn->op.rw.length;
         if (txn->op.command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
             // If the ramdisk is not configured to sleep after x blocks, or the number of blocks in
-            // this transaction does not exceed the sa_blk_count, or we are performing a read
-            // operation, use the current transaction length.
+            // this transaction does not exceed the pre_sleep_write_block_count, or we are
+            // performing a read operation, use the current transaction length.
             blocks = txn_blocks;
         }
 
-        size_t length = blocks * dev->blk_size;
-        size_t dev_offset = txn->op.rw.offset_dev * dev->blk_size;
-        size_t vmo_offset = txn->op.rw.offset_vmo * dev->blk_size;
-        void* addr = reinterpret_cast<void*>(dev->mapped_addr + dev_offset);
+        size_t length = blocks * dev->block_size;
+        size_t dev_offset = txn->op.rw.offset_dev * dev->block_size;
+        size_t vmo_offset = txn->op.rw.offset_vmo * dev->block_size;
+        void* addr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(dev->mapping.start()) +
+                                             dev_offset);
 
-        if (length > MAX_TRANSFER_SIZE) {
+        if (length > kMaxTransferSize) {
             status = ZX_ERR_OUT_OF_RANGE;
         } else if (txn->op.command == BLOCK_OP_READ) {
             // A read operation should always succeed, even if the ramdisk is "asleep".
@@ -157,28 +186,29 @@ static int worker_thread(void* arg) {
         }
 
         if (txn->op.command == BLOCK_OP_WRITE) {
-            // Update the ramdisk block counts. Since we aren't failing read transactions,
-            // only include write transaction counts.
-            mtx_lock(&dev->lock);
-            // Increment the count based on the result of the last transaction.
-            if (status == ZX_OK) {
-                dev->blk_counts.successful += blocks;
+            {
+                // Update the ramdisk block counts. Since we aren't failing read transactions,
+                // only include write transaction counts.
+                fbl::AutoLock lock(&dev->lock_);
+                // Increment the count based on the result of the last transaction.
+                if (status == ZX_OK) {
+                    dev->block_counts.successful += blocks;
 
-                if (blocks != txn_blocks && !defer) {
-                    // If we are not deferring, then any excess blocks have failed.
-                    dev->blk_counts.failed += txn_blocks - blocks;
-                    status = ZX_ERR_UNAVAILABLE;
+                    if (blocks != txn_blocks && !defer) {
+                        // If we are not deferring, then any excess blocks have failed.
+                        dev->block_counts.failed += txn_blocks - blocks;
+                        status = ZX_ERR_UNAVAILABLE;
+                    }
+                } else {
+                    dev->block_counts.failed += txn_blocks;
                 }
-            } else {
-                dev->blk_counts.failed += txn_blocks;
-            }
 
-            // Put the ramdisk to sleep if we have reached the required # of blocks.
-            if (dev->sa_blk_count > 0) {
-                dev->sa_blk_count -= blocks;
-                dev->asleep = (dev->sa_blk_count == 0);
+                // Put the ramdisk to sleep if we have reached the required # of blocks.
+                if (dev->pre_sleep_write_block_count > 0) {
+                    dev->pre_sleep_write_block_count -= blocks;
+                    dev->asleep = (dev->pre_sleep_write_block_count == 0);
+                }
             }
-            mtx_unlock(&dev->lock);
 
             if (defer && blocks != txn_blocks && status == ZX_OK) {
                 // If we deferred partway through a transaction, hold off on returning the
@@ -193,50 +223,37 @@ static int worker_thread(void* arg) {
     }
 
 goodbye:
-    while (txn != NULL) {
+    while (txn != nullptr) {
         txn->completion_cb(txn->cookie, ZX_ERR_BAD_STATE, &txn->op);
         txn = list_remove_head_type(&dev->deferred_list, ramdisk_txn_t, node);
 
-        if (txn == NULL) {
-            mtx_lock(&dev->lock);
+        if (txn == nullptr) {
+            fbl::AutoLock lock(&dev->lock_);
             txn = list_remove_head_type(&dev->txn_list, ramdisk_txn_t, node);
-            mtx_unlock(&dev->lock);
         }
     }
     return 0;
 }
 
-static uint64_t sizebytes(ramdisk_device_t* rdev) {
-    return rdev->blk_size * rdev->blk_count;
-}
-
-static void ramdisk_get_info(void* ctx, block_info_t* info) {
-    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
-    memset(info, 0, sizeof(*info));
-    info->block_size = static_cast<uint32_t>(ramdev->blk_size);
-    info->block_count = ramdev->blk_count;
-    // Arbitrarily set, but matches the SATA driver for testing
-    info->max_transfer_size = MAX_TRANSFER_SIZE;
-    info->flags = ramdev->flags;
+uint64_t sizebytes(ramdisk_device_t* rdev) {
+    return rdev->block_size * rdev->block_count;
 }
 
 // implement device protocol:
 
-static void ramdisk_unbind(void* ctx) {
+void ramdisk_unbind(void* ctx) {
     ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
-    mtx_lock(&ramdev->lock);
-    ramdev->dead = true;
-    mtx_unlock(&ramdev->lock);
+    {
+        fbl::AutoLock lock(&ramdev->lock_);
+        ramdev->dead = true;
+    }
     sync_completion_signal(&ramdev->signal);
     device_remove(ramdev->zxdev);
 }
 
-static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd_len,
+zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmd_len,
                                  void* reply, size_t max, size_t* out_actual) {
     ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
-    if (ramdev->dead) {
-        return ZX_ERR_BAD_STATE;
-    }
 
     switch (op) {
     case IOCTL_RAMDISK_UNLINK: {
@@ -247,17 +264,17 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         if (cmd_len < sizeof(uint32_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        uint32_t* flags = (uint32_t*)cmd;
-        ramdev->flags = *flags;
+        const uint32_t flags = *static_cast<const uint32_t*>(cmd);
+        fbl::AutoLock lock(&ramdev->lock_);
+        ramdev->flags = flags;
         return ZX_OK;
     }
     case IOCTL_RAMDISK_WAKE_UP: {
         // Reset state and transaction counts
-        mtx_lock(&ramdev->lock);
+        fbl::AutoLock lock(&ramdev->lock_);
         ramdev->asleep = false;
-        memset(&ramdev->blk_counts, 0, sizeof(ramdev->blk_counts));
-        ramdev->sa_blk_count = 0;
-        mtx_unlock(&ramdev->lock);
+        memset(&ramdev->block_counts, 0, sizeof(ramdev->block_counts));
+        ramdev->pre_sleep_write_block_count = 0;
         sync_completion_signal(&ramdev->signal);
         return ZX_OK;
     }
@@ -265,25 +282,23 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         if (cmd_len < sizeof(uint64_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        uint64_t* blk_count = (uint64_t*)cmd;
-        mtx_lock(&ramdev->lock);
+        const uint64_t block_count = *static_cast<const uint64_t*>(cmd);
+        fbl::AutoLock lock(&ramdev->lock_);
         ramdev->asleep = false;
-        memset(&ramdev->blk_counts, 0, sizeof(ramdev->blk_counts));
-        ramdev->sa_blk_count = *blk_count;
+        memset(&ramdev->block_counts, 0, sizeof(ramdev->block_counts));
+        ramdev->pre_sleep_write_block_count = block_count;
 
-        if (*blk_count == 0) {
+        if (block_count == 0) {
             ramdev->asleep = true;
         }
-        mtx_unlock(&ramdev->lock);
         return ZX_OK;
     }
     case IOCTL_RAMDISK_GET_BLK_COUNTS: {
         if (max < sizeof(ramdisk_blk_counts_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        mtx_lock(&ramdev->lock);
-        memcpy(reply, &ramdev->blk_counts, sizeof(ramdisk_blk_counts_t));
-        mtx_unlock(&ramdev->lock);
+        fbl::AutoLock lock(&ramdev->lock_);
+        memcpy(reply, &ramdev->block_counts, sizeof(ramdisk_blk_counts_t));
         *out_actual = sizeof(ramdisk_blk_counts_t);
         return ZX_OK;
     }
@@ -292,7 +307,7 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
     }
 }
 
-static void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
+void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback completion_cb,
                           void* cookie) {
     ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
     ramdisk_txn_t* txn = containerof(bop, ramdisk_txn_t, op);
@@ -304,22 +319,24 @@ static void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback 
         read = true;
         __FALLTHROUGH;
     case BLOCK_OP_WRITE:
-        if ((txn->op.rw.offset_dev >= ramdev->blk_count) ||
-            ((ramdev->blk_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
+        if ((txn->op.rw.offset_dev >= ramdev->block_count) ||
+            ((ramdev->block_count - txn->op.rw.offset_dev) < txn->op.rw.length)) {
             completion_cb(cookie, ZX_ERR_OUT_OF_RANGE, bop);
             return;
         }
 
-        mtx_lock(&ramdev->lock);
-        if (!(dead = ramdev->dead)) {
-            if (!read) {
-                ramdev->blk_counts.received += txn->op.rw.length;
+        {
+            fbl::AutoLock lock(&ramdev->lock_);
+            if (!(dead = ramdev->dead)) {
+                if (!read) {
+                    ramdev->block_counts.received += txn->op.rw.length;
+                }
+                txn->completion_cb = completion_cb;
+                txn->cookie = cookie;
+                list_add_tail(&ramdev->txn_list, &txn->node);
             }
-            txn->completion_cb = completion_cb;
-            txn->cookie = cookie;
-            list_add_tail(&ramdev->txn_list, &txn->node);
         }
-        mtx_unlock(&ramdev->lock);
+
         if (dead) {
             completion_cb(cookie, ZX_ERR_BAD_STATE, bop);
         } else {
@@ -335,31 +352,30 @@ static void ramdisk_queue(void* ctx, block_op_t* bop, block_impl_queue_callback 
     }
 }
 
-static void ramdisk_query(void* ctx, block_info_t* bi, size_t* bopsz) {
-    ramdisk_get_info(ctx, bi);
+void ramdisk_query(void* ctx, block_info_t* info, size_t* bopsz) {
+    ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
+    memset(info, 0, sizeof(*info));
+    info->block_size = static_cast<uint32_t>(ramdev->block_size);
+    info->block_count = ramdev->block_count;
+    // Arbitrarily set, but matches the SATA driver for testing
+    info->max_transfer_size = kMaxTransferSize;
+    fbl::AutoLock lock(&ramdev->lock_);
+    info->flags = ramdev->flags;
     *bopsz = sizeof(ramdisk_txn_t);
 }
 
-static zx_off_t ramdisk_getsize(void* ctx) {
+zx_off_t ramdisk_getsize(void* ctx) {
     return sizebytes(static_cast<ramdisk_device_t*>(ctx));
 }
 
-static void ramdisk_release(void* ctx) {
+void ramdisk_release(void* ctx) {
     ramdisk_device_t* ramdev = static_cast<ramdisk_device_t*>(ctx);
 
     // Wake up the worker thread, in case it is sleeping
-    mtx_lock(&ramdev->lock);
-    ramdev->dead = true;
-    mtx_unlock(&ramdev->lock);
     sync_completion_signal(&ramdev->signal);
 
-    int r;
-    thrd_join(ramdev->worker, &r);
-    if (ramdev->vmo != ZX_HANDLE_INVALID) {
-        zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
-        zx_handle_close(ramdev->vmo);
-    }
-    free(ramdev);
+    thrd_join(ramdev->worker, nullptr);
+    delete ramdev;
 }
 
 static block_impl_protocol_ops_t block_ops = {
@@ -369,7 +385,7 @@ static block_impl_protocol_ops_t block_ops = {
 
 static_assert(ZBI_PARTITION_GUID_LEN == GUID_LENGTH, "GUID length mismatch");
 
-static zx_status_t ramdisk_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_guid) {
+zx_status_t ramdisk_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_guid) {
     if (guidtype != GUIDTYPE_TYPE) {
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -381,7 +397,7 @@ static zx_status_t ramdisk_get_guid(void* ctx, guidtype_t guidtype, guid_t* out_
 
 static_assert(ZBI_PARTITION_NAME_LEN <= MAX_PARTITION_NAME_LENGTH, "Name length mismatch");
 
-static zx_status_t ramdisk_get_name(void* ctx, char* out_name, size_t capacity) {
+zx_status_t ramdisk_get_name(void* ctx, char* out_name, size_t capacity) {
     if (capacity < ZBI_PARTITION_NAME_LEN) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
@@ -396,7 +412,7 @@ static block_partition_protocol_ops_t partition_ops = {
     .get_name = ramdisk_get_name,
 };
 
-static zx_status_t ramdisk_get_protocol(void* ctx, uint32_t proto_id, void* out) {
+zx_status_t ramdisk_get_protocol(void* ctx, uint32_t proto_id, void* out) {
     ramdisk_device_t* device = static_cast<ramdisk_device_t*>(ctx);
     switch (proto_id) {
     case ZX_PROTOCOL_BLOCK_IMPL: {
@@ -431,30 +447,19 @@ static zx_protocol_device_t ramdisk_instance_proto = []() {
 
 static uint64_t ramdisk_count = 0;
 
-// This always consumes the VMO handle.
-static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
-                                 uint64_t blk_size, uint64_t blk_count,
-                                 uint8_t* type_guid, void* reply, size_t max,
-                                 size_t* out_actual) {
-    zx_status_t status = ZX_ERR_INVALID_ARGS;
-    char* name = static_cast<char*>(reply);
-    ramdisk_device_t* ramdev = nullptr;
-    device_add_args_t args;
-    if (max < 32) {
-        goto fail;
+constexpr size_t kMaxRamdiskNameLength = 32;
+
+zx_status_t ramctl_config(ramctl_device_t* ramctl, zx::vmo vmo,
+                          uint64_t block_size, uint64_t block_count,
+                          uint8_t* type_guid, void* reply, size_t max,
+                          size_t* out_actual) {
+    if (max < kMaxRamdiskNameLength) {
+        return ZX_ERR_INVALID_ARGS;
     }
 
-    ramdev = static_cast<ramdisk_device_t*>(calloc(1, sizeof(ramdisk_device_t)));
-    if (!ramdev) {
-        status = ZX_ERR_NO_MEMORY;
-        goto fail;
-    }
-    if (mtx_init(&ramdev->lock, mtx_plain) != thrd_success) {
-        goto fail_free;
-    }
-    ramdev->vmo = vmo;
-    ramdev->blk_size = blk_size;
-    ramdev->blk_count = blk_count;
+    auto ramdev = std::make_unique<ramdisk_device_t>();
+    ramdev->block_size = block_size;
+    ramdev->block_count = block_count;
     if (type_guid) {
         memcpy(ramdev->type_guid, type_guid, ZBI_PARTITION_GUID_LEN);
     } else {
@@ -463,20 +468,20 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
     snprintf(ramdev->name, sizeof(ramdev->name),
              "ramdisk-%" PRIu64, ramdisk_count++);
 
-    status = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                         0, ramdev->vmo, 0, sizebytes(ramdev), &ramdev->mapped_addr);
+    zx_status_t status = ramdev->mapping.Map(std::move(vmo), sizebytes(ramdev.get()));
     if (status != ZX_OK) {
-        goto fail_mtx;
+        return status;
     }
     list_initialize(&ramdev->txn_list);
     list_initialize(&ramdev->deferred_list);
-    if (thrd_create(&ramdev->worker, worker_thread, ramdev) != thrd_success) {
-        goto fail_unmap;
+    if (thrd_create(&ramdev->worker, worker_thread, ramdev.get()) != thrd_success) {
+        return ZX_ERR_NO_MEMORY;
     }
 
+    device_add_args_t args;
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = ramdev->name;
-    args.ctx = ramdev;
+    args.ctx = ramdev.get();
     args.ops = &ramdisk_instance_proto;
     args.props = nullptr;
     args.prop_count = 0;
@@ -485,27 +490,20 @@ static zx_status_t ramctl_config(ramctl_device_t* ramctl, zx_handle_t vmo,
     args.proxy_args = nullptr;
     args.flags = 0;
 
+    char* name = static_cast<char*>(reply);
+    strcpy(name, ramdev->name);
+    size_t namelen = strlen(name);
+
     if ((status = device_add(ramctl->zxdev, &args, &ramdev->zxdev)) != ZX_OK) {
-        ramdisk_release(ramdev);
+        ramdisk_release(ramdev.release());
         return status;
     }
-    strcpy(name, ramdev->name);
-    *out_actual = strlen(name);
+    __UNUSED auto ptr = ramdev.release();
+    *out_actual = namelen;
     return ZX_OK;
-
-fail_unmap:
-    zx_vmar_unmap(zx_vmar_root_self(), ramdev->mapped_addr, sizebytes(ramdev));
-fail_mtx:
-    mtx_destroy(&ramdev->lock);
-fail_free:
-    free(ramdev);
-fail:
-    zx_handle_close(vmo);
-    return status;
-
 }
 
-static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
+zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
                                 size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
     ramctl_device_t* ramctl = static_cast<ramctl_device_t*>(ctx);
 
@@ -515,11 +513,10 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
             return ZX_ERR_INVALID_ARGS;
         }
         ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
-        zx_handle_t vmo;
-        zx_status_t status = zx_vmo_create(
-            config->blk_size * config->blk_count, 0, &vmo);
+        zx::vmo vmo;
+        zx_status_t status = zx::vmo::create( config->blk_size * config->blk_count, 0, &vmo);
         if (status == ZX_OK) {
-            status = ramctl_config(ramctl, vmo,
+            status = ramctl_config(ramctl, std::move(vmo),
                                    config->blk_size, config->blk_count,
                                    config->type_guid,
                                    reply, max, out_actual);
@@ -530,55 +527,55 @@ static zx_status_t ramctl_ioctl(void* ctx, uint32_t op, const void* cmd,
         if (cmdlen != sizeof(zx_handle_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
-        zx_handle_t* vmo = (zx_handle_t*)cmd;
+        zx::vmo vmo = zx::vmo(*reinterpret_cast<const zx_handle_t*>(cmd));
 
         // Ensure this is the last handle to this VMO; otherwise, the size
         // may change from underneath us.
         zx_info_handle_count_t info;
-        zx_status_t status = zx_object_get_info(*vmo, ZX_INFO_HANDLE_COUNT,
-                                                &info, sizeof(info),
-                                                NULL, NULL);
+        zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr,
+                                          nullptr);
         if (status != ZX_OK || info.handle_count != 1) {
-            zx_handle_close(*vmo);
             return ZX_ERR_INVALID_ARGS;
         }
 
         uint64_t vmo_size;
-        status = zx_vmo_get_size(*vmo, &vmo_size);
+        status = vmo.get_size(&vmo_size);
         if (status != ZX_OK) {
-            zx_handle_close(*vmo);
             return status;
         }
 
-        return ramctl_config(ramctl, *vmo,
+        return ramctl_config(ramctl, std::move(vmo),
                              PAGE_SIZE, (vmo_size + PAGE_SIZE - 1) / PAGE_SIZE,
-                             NULL, reply, max, out_actual);
+                             nullptr, reply, max, out_actual);
     }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
 
-static zx_protocol_device_t ramdisk_ctl_proto = []() {
+zx_protocol_device_t ramdisk_ctl_proto = []() {
     zx_protocol_device_t protocol = {};
     protocol.version = DEVICE_OPS_VERSION;
     protocol.ioctl = ramctl_ioctl;
     return protocol;
 }();
 
-static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent) {
-    ramctl_device_t* ramctl = static_cast<ramctl_device_t*>(calloc(1, sizeof(ramctl_device_t)));
-    if (ramctl == NULL) {
-        return ZX_ERR_NO_MEMORY;
-    }
+zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent) {
+    auto ramctl = std::make_unique<ramctl_device_t>();
 
     device_add_args_t args = {};
     args.version = DEVICE_ADD_ARGS_VERSION;
     args.name = "ramctl";
     args.ops = &ramdisk_ctl_proto;
-    args.ctx = ramctl;
+    args.ctx = ramctl.get();
 
-    return device_add(parent, &args, &ramctl->zxdev);
+    zx_status_t status = device_add(parent, &args, &ramctl->zxdev);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    __UNUSED auto ptr = ramctl.release();
+    return ZX_OK;
 }
 
 static zx_driver_ops_t ramdisk_driver_ops = []() {
@@ -587,6 +584,8 @@ static zx_driver_ops_t ramdisk_driver_ops = []() {
     ops.bind = ramdisk_driver_bind;
     return ops;
 }();
+
+} // namespace
 
 ZIRCON_DRIVER_BEGIN(ramdisk, ramdisk_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
