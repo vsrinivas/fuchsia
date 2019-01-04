@@ -145,17 +145,6 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
         *out_actual = sizeof(kDeviceName) - 1;
         return ZX_OK;
     }
-    case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = reinterpret_cast<block_info_t*>(out_buf);
-        if (out_len < sizeof(*info)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-
-        size_t dummy;
-        BlockImplQuery(info, &dummy);
-        *out_actual = sizeof(*info);
-        return ZX_OK;
-    }
     case IOCTL_BLOCK_GET_TYPE_GUID: {
         char* guid = reinterpret_cast<char*>(out_buf);
         if (out_len < ZBI_PARTITION_GUID_LEN) {

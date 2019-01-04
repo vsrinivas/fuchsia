@@ -141,23 +141,6 @@ bool IoctlGetNameTest() {
     END_TEST;
 }
 
-bool IoctlGetInfoTest() {
-    BEGIN_TEST;
-    ftl::BlockDevice device;
-    device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
-    ASSERT_EQ(ZX_OK, device.Init());
-
-    block_info_t info;
-    size_t info_len;
-
-    ASSERT_EQ(ZX_OK,
-              device.DdkIoctl(IOCTL_BLOCK_GET_INFO, nullptr, 0, &info, sizeof(info), &info_len));
-
-    EXPECT_EQ(sizeof(info), info_len);
-    ASSERT_EQ(0, memcmp(&info, &kInfo, sizeof(info)));
-    END_TEST;
-}
-
 bool IoctlGetTypeTest() {
     BEGIN_TEST;
     ftl::BlockDevice device;
@@ -475,7 +458,6 @@ RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(DdkLifetimeTest)
 RUN_TEST_SMALL(GetSizeTest)
 RUN_TEST_SMALL(IoctlGetNameTest)
-RUN_TEST_SMALL(IoctlGetInfoTest)
 RUN_TEST_SMALL(IoctlGetTypeTest)
 RUN_TEST_SMALL(QueryTest)
 RUN_TEST_SMALL(QueueOneTest)
