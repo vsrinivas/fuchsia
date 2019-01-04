@@ -21,11 +21,11 @@ executable_package("basemgr") {
   ]
 
   sources = [
+    "main.cc",
     "basemgr_impl.cc",
     "basemgr_impl.h",
     "basemgr_settings.cc",
     "basemgr_settings.h",
-    "main.cc",
   ]
 
   deps = [
@@ -33,7 +33,6 @@ executable_package("basemgr") {
     "//garnet/public/fidl/fuchsia.auth",
     "//garnet/public/fidl/fuchsia.devicesettings",
     "//garnet/public/fidl/fuchsia.sys",
-    "//garnet/public/fidl/fuchsia.ui.app",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/component/cpp",

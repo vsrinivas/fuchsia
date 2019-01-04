@@ -11,6 +11,7 @@
 #include <fuchsia/modular/internal/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
+#include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/async/cpp/future.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/array.h>
@@ -19,7 +20,6 @@
 #include <lib/fidl/cpp/interface_ptr_set.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/macros.h>
-#include <lib/zx/eventpair.h>
 
 #include "peridot/lib/fidl/app_client.h"
 #include "peridot/lib/fidl/environment.h"
@@ -46,7 +46,9 @@ class UserControllerImpl : fuchsia::modular::UserController,
       fuchsia::modular::AppConfig story_shell,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> ledger_token_manager,
       fidl::InterfaceHandle<fuchsia::auth::TokenManager> agent_token_manager,
-      fuchsia::modular::auth::AccountPtr account, zx::eventpair view_token,
+      fuchsia::modular::auth::AccountPtr account,
+      fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+          view_owner_request,
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> base_shell_services,
       fidl::InterfaceRequest<fuchsia::modular::UserController>
           user_controller_request,

@@ -24,23 +24,23 @@ interface UserProvider {
     //
     // |account| is NULL if there was an error during identification and
     // |error_code| is set.
-    AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
-        -> (fuchsia.modular.auth.Account? account, string? error_code);
+    1: AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
+           -> (fuchsia.modular.auth.Account? account, string? error_code);
 
     // Removes information of a user from the local user database.
     //
     // |account_id| is received from either AddUser() or PreviousUsers().
-    RemoveUser(string account_id) -> (string? error_code);
+    2: RemoveUser(string account_id) -> (string? error_code);
 
     // Uses the credentials provided in AddUser() to start a user session. This
     // would mean syncing with the user's ledger instance and displaying a user
     // shell with all of the user's stories.
     // TODO(alhaad): In the future, we want to protect Login() with a password,
     // Android lock pattern, etc.
-    Login(UserLoginParams user_login_params);
+    3: Login(UserLoginParams user_login_params);
 
     // List of all users who have authenticated to this device in the past.
-    PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
+    4: PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
 // Used to specify arguments to log into a user session.
@@ -49,11 +49,9 @@ struct UserLoginParams {
     // can be NULL which means logging-in in an incognito mode.
     string? account_id;
 
-    // |view_token| identifies the view for the |SessionShell| started for the newly
+    // |view_owner| is the view given to the |SessionShell| started for the newly
     // logged-in user.
-    // TODO(SCN-1018): Remove the deprecated |view_owner|.
-    handle<eventpair>? view_token;
-    request<fuchsia.ui.viewsv1token.ViewOwner>? view_owner;
+    request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
 
     // Services provided by the |BaseShell| that can be offered to the
     // |SessionShell| that is being logged into.
@@ -89,15 +87,15 @@ interface UserController {
     // Logs out a user by tearing down its sessionmgr. Returns once the
     // Sessionmgr has been torn down. This also triggers OnLogout() for
     // |UserWatcher|s.
-    Logout() -> ();
+    1: Logout() -> ();
 
     // Registers a watcher for the user's life cycle events.
-    Watch(UserWatcher watcher);
+    2: Watch(UserWatcher watcher);
 
     // Stops the currently running session shell and starts the one specified by
     // |session_shell_config|. This operation stops all stories before starting
     // the new shell.
-    SwapSessionShell(AppConfig session_shell_config) -> ();
+    3: SwapSessionShell(AppConfig session_shell_config) -> ();
 };
 
 // Implemented by a |BaseShell| implementation in order to receive
@@ -109,5 +107,5 @@ interface UserWatcher {
     //
     // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
     // possible to UserProvider.Login() the same user.
-    OnLogout();
+    1: OnLogout();
 };

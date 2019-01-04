@@ -12,7 +12,6 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fidl/cpp/interface_request.h>
-#include <lib/zx/eventpair.h>
 
 #include "peridot/bin/basemgr/user_controller_impl.h"
 
@@ -36,19 +35,24 @@ class UserProviderImpl : fuchsia::auth::AuthenticationContextProvider,
     // Called after UserProviderImpl successfully logs out a user.
     virtual void DidLogout() = 0;
 
-    // Enables the delegate to intercept the session shell's view token, so that
+    // Enables the delegate to intercept the session shell's view owner, so that
     // e.g. the delegate can embed it in a parent view or present it.
-    virtual zx::eventpair GetSessionShellViewToken(
-        zx::eventpair /*default_view_token*/) = 0;
+    // |default_view_owner| is the view owner request that's passed to
+    // UserProviderImpl from base shell. If you don't need to intercept the
+    // view owner, return it without modifying it.
+    virtual fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+    GetSessionShellViewOwner(
+        fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
+            default_view_owner) = 0;
 
     // Enables the delegate to supply a different service provider to the user
     // shell. |default_service_provider| is the service provider passed to the
     // session shell by the base shell. If you don't need to replace it, return
     // it without modifying it.
     virtual fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
-        GetSessionShellServiceProvider(
-            fidl::InterfaceHandle<
-                fuchsia::sys::ServiceProvider> /*default_services*/) = 0;
+    GetSessionShellServiceProvider(
+        fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
+            default_service_provider) = 0;
   };
 
   // |account_provider| and |delegate| must outlive UserProviderImpl.
