@@ -54,7 +54,7 @@ package("bt-gap") {
   ]
 }
 
-test_package("tests") {
+test_package("bt-gap-tests") {
   deps = [
     ":bin"
   ]
