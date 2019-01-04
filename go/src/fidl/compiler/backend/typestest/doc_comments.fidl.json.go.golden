@@ -144,7 +144,7 @@ func (_ *InterfaceMethodRequest) InlineSize() int {
 	return 0
 }
 
-type InterfaceInterface _bindings.Proxy
+type InterfaceInterface _bindings.ChannelProxy
 
 
 // method comment #1
@@ -153,7 +153,7 @@ type InterfaceInterface _bindings.Proxy
 func (p *InterfaceInterface) Method() error {
 	req_ := InterfaceMethodRequest{
 	}
-	err := ((*_bindings.Proxy)(p)).Send(InterfaceMethodOrdinal, &req_)
+	err := ((*_bindings.ChannelProxy)(p)).Send(InterfaceMethodOrdinal, &req_)
 	return err
 }
 
@@ -169,7 +169,6 @@ type Interface interface {
 }
 
 type InterfaceTransitionalBase struct {}
-
 
 
 type InterfaceInterfaceRequest _bindings.InterfaceRequest
@@ -195,7 +194,6 @@ func (s *InterfaceStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindi
 	}
 	return nil, _bindings.ErrUnknownOrdinal
 }
-
 type InterfaceService struct {
 	_bindings.BindingSet
 }
@@ -209,7 +207,7 @@ func (s *InterfaceService) EventProxyFor(key _bindings.BindingKey) (*InterfaceEv
 	return (*InterfaceEventProxy)(pxy), err
 }
 
-type InterfaceEventProxy _bindings.Proxy
+type InterfaceEventProxy _bindings.ChannelProxy
 
 
 

@@ -121,7 +121,7 @@ func (d *directoryWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) err
 	// Only send an OnOpen message if OpenFlagDescribe is set.
 	if flags&io.OpenFlagDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
-		pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
+		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 		info := &io.NodeInfo{
 			NodeInfoTag: io.NodeInfoDirectory,
 		}
@@ -192,7 +192,7 @@ func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.Nod
 
 	// Handle the case of a remote, and just forward.
 	if fsRemote != nil {
-		fwd := ((*io.DirectoryInterface)(&fidl.Proxy{Channel: fsRemote.Channel}))
+		fwd := ((*io.DirectoryInterface)(&fidl.ChannelProxy{Channel: fsRemote.Channel}))
 		flags, mode := openFlagsToFIDL(fsRemote.Flags)
 		if inFlags&io.OpenFlagDescribe != 0 {
 			flags |= io.OpenFlagDescribe
@@ -236,7 +236,7 @@ func (d *directoryWrapper) Open(inFlags, inMode uint32, path string, node io.Nod
 			}
 		}
 		c := fidl.InterfaceRequest(node).Channel
-		pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
+		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 		return pxy.OnOpen(zxErr, info)
 	}
 
@@ -434,7 +434,7 @@ func (f *fileWrapper) Clone(flags uint32, node io.NodeInterfaceRequest) error {
 	// Only send an OnOpen message if OpenFlagDescribe is set.
 	if flags&io.OpenFlagDescribe != 0 {
 		c := fidl.InterfaceRequest(node).Channel
-		pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
+		pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 		return pxy.OnOpen(zx.ErrOk, &io.NodeInfo{
 			NodeInfoTag: io.NodeInfoFile,
 			File: io.FileObject{

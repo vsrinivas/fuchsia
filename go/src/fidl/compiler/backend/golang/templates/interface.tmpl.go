@@ -22,7 +22,7 @@ const (
 {{- end }}
 {{- end }}
 
-type {{ .ProxyName }} _bindings.Proxy
+type {{ .ProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{range .DocComments}}
 //{{ . }}
@@ -59,13 +59,13 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 	{{- end }}
 	{{- if .Request }}
 		{{- if .Response }}
-	err := ((*_bindings.Proxy)(p)).Call({{ .OrdinalName }}, &req_, &resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Call({{ .OrdinalName }}, &req_, &resp_)
 		{{- else }}
-	err := ((*_bindings.Proxy)(p)).Send({{ .OrdinalName }}, &req_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, &req_)
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.Proxy)(p)).Recv({{ .OrdinalName }}, &resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, &resp_)
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -133,6 +133,7 @@ type {{.TransitionalBaseName}} struct {}
 	{{- end}}
 {{- end }}
 
+{{- if eq .ProxyType "ChannelProxy" }}
 type {{ .RequestName }} _bindings.InterfaceRequest
 
 func New{{ .RequestName }}() ({{ .RequestName }}, *{{ .ProxyName }}, error) {
@@ -150,6 +151,7 @@ func (c {{ .RequestName }}) ToChannel() _zx.Channel {
 }
 
 const {{ .ServiceNameConstant }} = {{ .ServiceNameString }}
+{{- end }}
 {{- end }}
 
 type {{ .StubName }} struct {
@@ -195,6 +197,7 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 	return nil, _bindings.ErrUnknownOrdinal
 }
 
+{{- if eq .ProxyType "ChannelProxy" }}
 type {{ .ServerName }} struct {
 	_bindings.BindingSet
 }
@@ -207,8 +210,9 @@ func (s *{{ .ServerName }}) EventProxyFor(key _bindings.BindingKey) (*{{ .EventP
 	pxy, err := s.BindingSet.ProxyFor(key)
 	return (*{{ .EventProxyName }})(pxy), err
 }
+{{- end }}
 
-type {{ .EventProxyName }} _bindings.Proxy
+type {{ .EventProxyName }} _bindings.{{ .ProxyType }}
 {{ range .Methods }}
 {{- if .IsEvent }}
 func (p *{{ $.EventProxyName }}) {{ .Name }}(
@@ -225,7 +229,7 @@ func (p *{{ $.EventProxyName }}) {{ .Name }}(
 		{{- end }}
 	}
 	{{- end }}
-	return ((*_bindings.Proxy)(p)).Send({{ .OrdinalName }}, &event_)
+	return ((*_bindings.{{ $.ProxyType }})(p)).Send({{ .OrdinalName }}, &event_)
 }
 {{- end }}
 {{- end }}

@@ -27,7 +27,7 @@ func (n *Namespace) Clone(flags uint32, req io.NodeInterfaceRequest) error {
 		return err
 	}
 	if flags&io.OpenFlagDescribe != 0 {
-		pxy := io.NodeEventProxy(fidl.Proxy{c})
+		pxy := io.NodeEventProxy(fidl.ChannelProxy{c})
 		info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 		return pxy.OnOpen(zx.ErrOk, info)
 	}
@@ -72,7 +72,7 @@ func (n *Namespace) Open(flags, _ uint32, path string, obj io.NodeInterfaceReque
 		if flags&io.OpenFlagDescribe != 0 {
 			info := &io.NodeInfo{NodeInfoTag: io.NodeInfoService}
 			c := fidl.InterfaceRequest(obj).Channel
-			pxy := io.NodeEventProxy(fidl.Proxy{Channel: c})
+			pxy := io.NodeEventProxy(fidl.ChannelProxy{Channel: c})
 			return pxy.OnOpen(status, info)
 		}
 		return nil

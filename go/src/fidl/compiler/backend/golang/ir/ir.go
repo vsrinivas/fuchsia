@@ -313,6 +313,9 @@ type Interface struct {
 	// ProxyName is the name of the proxy type for this FIDL interface.
 	ProxyName string
 
+	// ProxyType is concrete type of proxy used for this FIDL interface.
+	ProxyType string
+
 	// StubName is the name of the stub type for this FIDL interface.
 	StubName string
 
@@ -864,11 +867,16 @@ func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val 
 }
 
 func (c *compiler) compileInterface(val types.Interface) Interface {
+	proxyType := "ChannelProxy"
+	if val.Attributes.GetAttribute("Transport").Value == "SocketControl" {
+		proxyType = "SocketControlProxy"
+	}
 	r := Interface{
 		Attributes:           val.Attributes,
 		Name:                 c.compileCompoundIdentifier(val.Name, ""),
 		TransitionalBaseName: c.compileCompoundIdentifier(val.Name, TransitionalBaseSuffix),
 		ProxyName:            c.compileCompoundIdentifier(val.Name, ProxySuffix),
+		ProxyType:            proxyType,
 		StubName:             c.compileCompoundIdentifier(val.Name, StubSuffix),
 		RequestName:          c.compileCompoundIdentifier(val.Name, RequestSuffix),
 		EventProxyName:       c.compileCompoundIdentifier(val.Name, EventProxySuffix),
