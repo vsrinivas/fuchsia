@@ -194,6 +194,17 @@ struct Module {
   std::string build_id;
 };
 
+// Information on the linkage symbol table for a module.
+struct SymbolTable {
+  struct Symbol {
+    std::string name;
+    uint64_t value = 0;
+  };
+
+  std::string build_id;
+  std::vector<Symbol> symbols;
+};
+
 struct AddressRegion {
   std::string name;
   uint64_t base;

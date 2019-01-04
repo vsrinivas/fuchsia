@@ -37,6 +37,7 @@ struct MsgHeader {
     kQuitAgent,
     kReadMemory,
     kReadRegisters,
+    kSymbolTables,
     kWriteRegisters,
     kRemoveBreakpoint,
     kResume,
@@ -237,6 +238,13 @@ struct ModulesRequest {
 };
 struct ModulesReply {
   std::vector<Module> modules;
+};
+
+struct SymbolTablesRequest {
+  uint64_t process_koid = 0;
+};
+struct SymbolTablesReply {
+  std::vector<SymbolTable> symbol_tables;
 };
 
 // Request to set filter.

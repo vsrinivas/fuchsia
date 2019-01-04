@@ -75,6 +75,16 @@ void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.build_id);
 }
 
+void Serialize(const SymbolTable& symbols, MessageWriter* writer) {
+  writer->WriteString(symbols.build_id);
+  Serialize(symbols.symbols, writer);
+}
+
+void Serialize(const SymbolTable::Symbol& symbol, MessageWriter* writer) {
+  writer->WriteString(symbol.name);
+  writer->WriteUint64(symbol.value);
+}
+
 void Serialize(const RegisterCategory& reg_cat, MessageWriter* writer) {
   writer->WriteUint32(*reinterpret_cast<const uint32_t*>(&reg_cat.type));
   Serialize(reg_cat.registers, writer);
@@ -384,6 +394,23 @@ void WriteReply(const ModulesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kModules, transaction_id);
   Serialize(reply.modules, writer);
+}
+
+// Modules ---------------------------------------------------------------------
+
+bool ReadRequest(MessageReader* reader, SymbolTablesRequest* request,
+                 uint32_t* transaction_id) {
+  MsgHeader header;
+  if (!reader->ReadHeader(&header))
+    return false;
+  *transaction_id = header.transaction_id;
+  return reader->ReadBytes(sizeof(SymbolTablesRequest), request);
+}
+
+void WriteReply(const SymbolTablesReply& reply, uint32_t transaction_id,
+                MessageWriter* writer) {
+  writer->WriteHeader(MsgHeader::Type::kSymbolTables, transaction_id);
+  Serialize(reply.symbol_tables, writer);
 }
 
 // JobFilter ------------------------------------------------------------------

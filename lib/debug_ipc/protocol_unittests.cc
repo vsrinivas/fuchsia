@@ -438,6 +438,60 @@ TEST(Protocol, ModulesReply) {
   EXPECT_EQ(initial.modules[1].base, second.modules[1].base);
 }
 
+// Symbol tables ---------------------------------------------------------------
+
+TEST(Protocol, SymbolTablesRequest) {
+  SymbolTablesRequest initial;
+  initial.process_koid = 1234;
+
+  SymbolTablesRequest second;
+  ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
+
+  EXPECT_EQ(initial.process_koid, second.process_koid);
+}
+
+TEST(Protocol, SymbolTablesReply) {
+  SymbolTablesReply initial;
+  initial.symbol_tables.resize(2);
+  initial.symbol_tables[0].build_id = "abcdefghijkl";
+  initial.symbol_tables[0].symbols.resize(2);
+  initial.symbol_tables[0].symbols[0].name = "somefunc";
+  initial.symbol_tables[0].symbols[0].value = 0xbeefUL;
+  initial.symbol_tables[0].symbols[1].name = "wompwomp";
+  initial.symbol_tables[0].symbols[1].value = 0xb0efUL;
+  initial.symbol_tables[1].build_id = "h4sh3s";
+  initial.symbol_tables[1].symbols.resize(2);
+  initial.symbol_tables[1].symbols[0].name = "phresh";
+  initial.symbol_tables[1].symbols[0].value = 0xf00dUL;
+  initial.symbol_tables[1].symbols[1].name = "ackermann";
+  initial.symbol_tables[1].symbols[1].value = 0xb0b0b0b0UL;
+
+  SymbolTablesReply second;
+  ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
+
+  EXPECT_EQ(2u, second.symbol_tables.size());
+  EXPECT_EQ(initial.symbol_tables[0].build_id,
+            second.symbol_tables[0].build_id);
+  EXPECT_EQ(initial.symbol_tables[0].symbols[0].name,
+            second.symbol_tables[0].symbols[0].name);
+  EXPECT_EQ(initial.symbol_tables[0].symbols[0].value,
+            second.symbol_tables[0].symbols[0].value);
+  EXPECT_EQ(initial.symbol_tables[0].symbols[1].name,
+            second.symbol_tables[0].symbols[1].name);
+  EXPECT_EQ(initial.symbol_tables[0].symbols[1].value,
+            second.symbol_tables[0].symbols[1].value);
+  EXPECT_EQ(initial.symbol_tables[1].build_id,
+            second.symbol_tables[1].build_id);
+  EXPECT_EQ(initial.symbol_tables[1].symbols[0].name,
+            second.symbol_tables[1].symbols[0].name);
+  EXPECT_EQ(initial.symbol_tables[1].symbols[0].value,
+            second.symbol_tables[1].symbols[0].value);
+  EXPECT_EQ(initial.symbol_tables[1].symbols[1].name,
+            second.symbol_tables[1].symbols[1].name);
+  EXPECT_EQ(initial.symbol_tables[1].symbols[1].value,
+            second.symbol_tables[1].symbols[1].value);
+}
+
 // ASpace ----------------------------------------------------------------------
 
 TEST(Protocol, AspaceRequest) {

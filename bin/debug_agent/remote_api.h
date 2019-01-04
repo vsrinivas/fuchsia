@@ -79,6 +79,9 @@ class RemoteAPI {
 
   virtual void OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
                              debug_ipc::WriteMemoryReply* reply) = 0;
+
+  virtual void OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
+                              debug_ipc::SymbolTablesReply* reply) = 0;
 };
 
 }  // namespace debug_agent

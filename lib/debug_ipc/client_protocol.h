@@ -114,6 +114,12 @@ void WriteRequest(const ModulesRequest& request, uint32_t transaction_id,
 bool ReadReply(MessageReader* reader, ModulesReply* reply,
                uint32_t* transaction_id);
 
+// Symbol tables.
+void WriteRequest(const SymbolTablesRequest& request, uint32_t transaction_id,
+                  MessageWriter* writer);
+bool ReadReply(MessageReader* reader, SymbolTablesReply* reply,
+               uint32_t* transaction_id);
+
 // Address space.
 void WriteRequest(const AddressSpaceRequest& request, uint32_t transaction_id,
                   MessageWriter* writer);

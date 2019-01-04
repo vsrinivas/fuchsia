@@ -27,6 +27,8 @@ const char* MsgHeaderTypeToString(MsgHeader::Type type) {
       return "kDetach";
     case MsgHeader::Type::kModules:
       return "kModules";
+    case MsgHeader::Type::kSymbolTables:
+      return "kSymbolTables";
     case MsgHeader::Type::kPause:
       return "kPause";
     case MsgHeader::Type::kQuitAgent:
