@@ -7,13 +7,14 @@ use {
     fidl_fuchsia_net_dns::{DnsConfig, DnsPolicyRequest, DnsPolicyRequestStream, NetError, Status},
     fidl_fuchsia_netstack::NetstackProxy,
     fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_err,
     futures::{prelude::*, TryFutureExt},
 };
 
 pub fn spawn_net_dns_fidl_server(netstack: NetstackProxy, channel: fasync::Channel) {
     let stream = DnsPolicyRequestStream::from_channel(channel);
     let fut = serve_fidl_requests(netstack, stream)
-        .unwrap_or_else(|e| eprintln!("Error serving net dns FIDL call: {}", e));;
+        .unwrap_or_else(|e| fx_log_err!("failed to serve net dns FIDL call: {}", e));
     fasync::spawn(fut);
 }
 
@@ -43,7 +44,7 @@ fn set_dns_config(netstack: &NetstackProxy, config: DnsConfig) -> NetError {
         config.dns_servers.into_iter().map(Into::into).collect();
 
     if let Err(e) = netstack.set_name_servers(&mut parse_results.iter_mut()) {
-        eprintln!("Error setting DNS server for netstack: {}", e);
+        fx_log_err!("failed to set DNS server for netstack: {}", e);
         return NetError {
             status: Status::UnknownError,
         };
@@ -54,7 +55,7 @@ fn set_dns_config(netstack: &NetstackProxy, config: DnsConfig) -> NetError {
 
 fn get_dns_config() -> DnsConfig {
     // TODO(NET-1430): Add FIDL getters for current netcfg DNS server IP addresses.
-    eprintln!("netdns: unimplemented get_dns_config called!");
+    fx_log_err!("netdns: unimplemented get_dns_config called!");
     DnsConfig {
         dns_servers: vec![fidl_fuchsia_net::IpAddress::Ipv4(
             fidl_fuchsia_net::IPv4Address { addr: [0, 0, 0, 0] },
@@ -89,8 +90,6 @@ mod tests {
 
         // Set up real dns fidl server and client.
         let (dnspolicy_proxy, dnspolicy_server) =
-
-
             create_proxy::<DnsPolicyMarker>().expect("failed to create dnspolicy fidl");
 
         let dnspolicy_stream = dnspolicy_server
@@ -98,7 +97,7 @@ mod tests {
             .expect("failed to create a request stream.");
 
         let dnspolicy_service_task = serve_fidl_requests(netstack_proxy, dnspolicy_stream)
-            .unwrap_or_else(|e| eprintln!("Error serving dnspolicy FIDL call: {}", e));
+            .unwrap_or_else(|e| fx_log_err!("failed to serve dnspolicy FIDL call: {}", e));
 
         // Call dnspolicy FIDL call.
         let mut config = DnsConfig {

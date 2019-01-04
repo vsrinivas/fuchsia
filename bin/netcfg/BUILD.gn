@@ -12,14 +12,17 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
     "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
     "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
     "//garnet/public/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
+    "//garnet/public/fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
     "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
@@ -33,6 +36,7 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:tempfile",
     "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
     "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
   ]
 
   name = "netcfg"

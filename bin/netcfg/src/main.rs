@@ -10,12 +10,16 @@ use std::collections::HashMap;
 use std::fs;
 use std::os::unix::io::AsRawFd;
 use std::path;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 
 use failure::{self, ResultExt};
-use fidl::endpoints::ServiceMarker;
+use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_net_dns::DnsPolicyMarker;
+use fidl_fuchsia_net_policy::{ObserverMarker, ObserverRequestStream};
 use fuchsia_app::server::ServicesServer;
+use fuchsia_async as fasync;
+use fuchsia_syslog::{fx_log_err, fx_log_info};
+use futures::lock::Mutex;
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
 
@@ -23,6 +27,7 @@ mod device_id;
 mod dns_policy_service;
 mod interface;
 mod matchers;
+mod observer_service;
 
 #[derive(Debug, Deserialize)]
 pub struct DnsConfig {
@@ -63,7 +68,8 @@ fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> O
 static DEVICE_NAME_KEY: &str = "DeviceName";
 
 fn main() -> Result<(), failure::Error> {
-    println!("netcfg: started");
+    fuchsia_syslog::init_with_tags(&["netcfg"])?;
+    fx_log_info!("Started");
     let Config {
         device_name,
         dns_config: DnsConfig { servers },
@@ -72,6 +78,8 @@ fn main() -> Result<(), failure::Error> {
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
+    let stack = fuchsia_app::client::connect_to_service::<fidl_fuchsia_net_stack::StackMarker>()
+        .context("could not connect to stack")?;
     let netstack =
         fuchsia_app::client::connect_to_service::<fidl_fuchsia_netstack::NetstackMarker>()
             .context("could not connect to netstack")?;
@@ -116,13 +124,15 @@ fn main() -> Result<(), failure::Error> {
     };
 
     const ETHDIR: &str = "/dev/class/ethernet";
+    let mut interface_ids = HashMap::new();
+    // TODO(chunyingw): Add the loopback interfaces through netcfg
+    // Remove the following hardcoded nic id 1.
+    interface_ids.insert("lo".to_owned(), 1);
+    let interface_ids = Arc::new(Mutex::new(interface_ids));
 
     let ethdir = fs::File::open(ETHDIR).with_context(|_| format!("could not open {}", ETHDIR))?;
     let mut watcher = fuchsia_vfs_watcher::Watcher::new(&ethdir)
         .with_context(|_| format!("could not watch {}", ETHDIR))?;
-
-    let interface_ids = Arc::new(Mutex::new(HashMap::new()));
-
     let ethernet_device = async {
         while let Some(fuchsia_vfs_watcher::WatchMessage { event, filename }) =
             await!(watcher.try_next()).with_context(|_| format!("watching {}", ETHDIR))?
@@ -185,7 +195,6 @@ fn main() -> Result<(), failure::Error> {
                             &topological_path,
                             &default_config_rules,
                         );
-
                         let nic_id = await!(netstack.add_ethernet_device(
                             &topological_path,
                             &mut derived_interface_config,
@@ -199,10 +208,10 @@ fn main() -> Result<(), failure::Error> {
                                 filename.display()
                             )
                         })?;
-                        interface_ids
-                            .lock()
-                            .unwrap()
-                            .insert(derived_interface_config.name, nic_id);
+                        // TODO(chunyingw): when netcfg switches to stack.add_ethernet_interface,
+                        // remove casting nic_id to u64.
+                        await!(interface_ids.lock())
+                            .insert(derived_interface_config.name, nic_id as u64);
                     }
                 }
 
@@ -216,13 +225,25 @@ fn main() -> Result<(), failure::Error> {
         Ok(())
     };
 
+    let interface_ids = interface_ids.clone();
     let netstack_service = netstack.clone();
 
     let fidl_service_fut = ServicesServer::new()
         .add_service((DnsPolicyMarker::NAME, move |channel| {
             dns_policy_service::spawn_net_dns_fidl_server(netstack_service.clone(), channel);
         }))
-        .start()?;
+        .add_service((ObserverMarker::NAME, move |channel| {
+            fasync::spawn(
+                observer_service::serve_fidl_requests(
+                    stack.clone(),
+                    ObserverRequestStream::from_channel(channel),
+                    interface_ids.clone(),
+                )
+                .unwrap_or_else(|e| fx_log_err!("failed to serve_fidl_requests:{}", e)),
+            );
+        }))
+        .start()
+        .context("error starting netcfg services server")?;
 
     let (_success, (), ()) =
         executor.run_singlethreaded(device_name.try_join3(ethernet_device, fidl_service_fut))?;

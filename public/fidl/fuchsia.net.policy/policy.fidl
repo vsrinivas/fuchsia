@@ -78,10 +78,10 @@ interface BridgeInterfaceController : BaseInterfaceController {
 // and the first-class clients like sysUI and net_ctl.
 interface Observer {
     /// Retrieve info of all the interfaces.
-    ListInterfaces() -> (vector<InterfaceInfo> info);
+    ListInterfaces() -> (vector<InterfaceInfo>? infos, zx.status status);
 
     /// Retrieve info of a specific interface.
-    GetInterfaceInfo(string name) -> (InterfaceInfo?info, zx.status status);
+    GetInterfaceInfo(string name) -> (InterfaceInfo? info, zx.status status);
 
     -> OnChange(string interface, Events events);
 };
