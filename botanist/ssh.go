@@ -74,11 +74,14 @@ func network(address net.Addr) (string, error) {
 
 	// We need these type assertions because the net package (annoyingly) doesn't provide
 	// an interface for objects that have an IP address.
-	if udp, ok := address.(*net.UDPAddr); ok {
-		ip = &udp.IP
-	} else if tcp, ok := address.(*net.TCPAddr); ok {
-		ip = &tcp.IP
-	} else {
+	switch addr := address.(type) {
+	case *net.UDPAddr:
+		ip = &addr.IP
+	case *net.TCPAddr:
+		ip = &addr.IP
+	case *net.IPAddr:
+		ip = &addr.IP
+	default:
 		return "", fmt.Errorf("unsupported address type: %T", address)
 	}
 
