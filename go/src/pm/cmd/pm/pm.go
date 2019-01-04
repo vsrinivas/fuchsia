@@ -36,6 +36,7 @@ Package Commands:
     init     - initialize a package meta directory in the standard form
     genkey   - generate a new private key
     build    - perform update, sign and seal in order
+    install  - install a package from an archive
     update   - update the merkle roots in meta/contents
     sign     - sign a package with the given key
     seal     - seal package metadata into a signed meta.far
