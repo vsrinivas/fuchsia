@@ -1361,24 +1361,28 @@ int fcntl(int fd, int cmd, ...) {
 #undef GET_INT_ARG
 }
 
+static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
+static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
+static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
+
 __EXPORT
 off_t lseek(int fd, off_t offset, int whence) {
     fdio_t* io = fd_to_io(fd);
     if (io == NULL) {
         return ERRNO(EBADF);
     }
-    off_t r = io->ops->seek(io, offset, whence);
-    if (r == ZX_ERR_WRONG_TYPE) {
+    size_t result = 0u;
+    zx_status_t status = zxio_seek(fdio_get_zxio(io), offset, whence, &result);
+    if (status == ZX_ERR_WRONG_TYPE) {
         // Although 'ESPIPE' is a bit of a misnomer, it is the valid errno
         // for any fd which does not implement seeking (i.e., for pipes,
         // sockets, etc).
-        errno = ESPIPE;
-        r = -1;
-    } else if (r < 0) {
-        r = ERROR(r);
+        fdio_release(io);
+        return ERRNO(ESPIPE);
+    } else {
+        fdio_release(io);
+        return status != ZX_OK ? STATUS(status) : (off_t)result;
     }
-    fdio_release(io);
-    return r;
 }
 
 #define READDIR_CMD_NONE  0

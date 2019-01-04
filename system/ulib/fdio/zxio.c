@@ -127,17 +127,6 @@ static ssize_t fdio_zxio_write_at(fdio_t* io, const void* data, size_t len, off_
     return status != ZX_OK ? status : (ssize_t)actual;
 }
 
-static_assert(SEEK_SET == fuchsia_io_SeekOrigin_START, "");
-static_assert(SEEK_CUR == fuchsia_io_SeekOrigin_CURRENT, "");
-static_assert(SEEK_END == fuchsia_io_SeekOrigin_END, "");
-
-static off_t fdio_zxio_seek(fdio_t* io, off_t offset, int whence) {
-    zxio_t* z = fdio_get_zxio(io);
-    size_t result = 0u;
-    zx_status_t status = zxio_seek(z, offset, whence, &result);
-    return status != ZX_OK ? status : (ssize_t)result;
-}
-
 static zx_status_t fdio_zxio_truncate(fdio_t* io, off_t off) {
     zxio_t* z = fdio_get_zxio(io);
     return zxio_truncate(z, off);
@@ -156,7 +145,6 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 // Generic ---------------------------------------------------------------------
 
 fdio_ops_t fdio_zxio_ops = {
-    .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
@@ -398,7 +386,6 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
 }
 
 static fdio_ops_t fdio_zxio_remote_ops = {
-    .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_zxio_remote_open,
@@ -527,7 +514,6 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
 }
 
 fdio_ops_t fdio_zxio_vmofile_ops = {
-    .seek = fdio_zxio_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
@@ -720,7 +706,6 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
-    .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
@@ -837,7 +822,6 @@ static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
 }
 
 static fdio_ops_t fdio_zxio_debuglog_ops = {
-    .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,

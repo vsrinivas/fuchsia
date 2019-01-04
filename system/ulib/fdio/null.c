@@ -90,10 +90,6 @@ ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags) {
     return ZX_ERR_WRONG_TYPE;
 }
 
-off_t fdio_default_seek(fdio_t* io, off_t offset, int whence) {
-    return ZX_ERR_WRONG_TYPE;
-}
-
 zx_status_t fdio_default_misc(fdio_t* io, uint32_t op, int64_t off, uint32_t arg, void* data, size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }

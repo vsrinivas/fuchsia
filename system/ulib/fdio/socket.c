@@ -312,7 +312,6 @@ static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_socket_stream_ops = {
-    .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
@@ -343,7 +342,6 @@ static fdio_ops_t fdio_socket_stream_ops = {
 };
 
 static fdio_ops_t fdio_socket_dgram_ops = {
-    .seek = fdio_default_seek,
     .misc = fdio_default_misc,
     .close = zxsio_close,
     .open = fdio_default_open,
