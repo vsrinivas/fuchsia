@@ -123,9 +123,10 @@ std::vector<DebugService> FindAllSessions() {
   // See peridot/bin/sessionmgr/sessionmgr_impl.cc's definition of
   // kSessionCtlDir for "sessionctl". These must match.
   std::vector<DebugService> sessions;
-  FindDebugServicesForPath("/hub/c/sessionmgr.cmx/*/out/debug/sessionctl",
-                           kRegex, &sessions);
+  FindDebugServicesForPath(modular::kSessionCtlServiceGlobPath, kRegex,
+                           &sessions);
 
+  // Path to sessionctl service from a virtual console
   FindDebugServicesForPath(
       "/hub/r/sys/*/c/sessionmgr.cmx/*/out/debug/sessionctl", kRegex,
       &sessions);
@@ -148,8 +149,8 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   auto request = basemgr.NewRequest().TakeChannel();
 
   std::vector<DebugService> services;
-  FindDebugServicesForPath("/hub/c/basemgr.cmx/*/out/debug/basemgr",
-                           "basemgr.cmx", &services);
+  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, "basemgr.cmx",
+                           &services);
 
   if (services.empty()) {
     return nullptr;

@@ -26,6 +26,11 @@ constexpr char kStoryNameFlagString[] = "story_name";
 // Internal error string returned from SessionCtlApp.ExecuteCommand() if
 // the user does not set a required flag.
 constexpr char kGetUsageErrorString[] = "GetUsage";
+
+constexpr char kSessionCtlServiceGlobPath[] =
+    "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
+constexpr char kBasemgrDebugServiceGlobPath[] =
+    "/hub/c/basemgr.cmx/*/out/debug/basemgr";
 }  // namespace modular
 
 #endif  // PERIDOT_BIN_SESSIONCTL_SESSION_CTL_CONSTANTS_H_

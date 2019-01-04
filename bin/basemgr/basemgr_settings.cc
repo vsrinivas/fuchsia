@@ -16,12 +16,12 @@ namespace modular {
 BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   base_shell.url = command_line.GetOptionValueWithDefault(
       "base_shell",
-      "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/userpicker_base_shell.cmx");
+      "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/"
+      "userpicker_base_shell.cmx");
   story_shell.url =
       command_line.GetOptionValueWithDefault("story_shell", "mondrian");
   sessionmgr.url = command_line.GetOptionValueWithDefault(
-      "sessionmgr",
-      "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx");
+      "sessionmgr", "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx");
   session_shell.url = command_line.GetOptionValueWithDefault(
       "session_shell", "ermine_session_shell");
   account_provider.url = command_line.GetOptionValueWithDefault(
@@ -30,6 +30,11 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
   test = command_line.HasOption("test");
+  run_base_shell_with_test_runner =
+      command_line.GetOptionValueWithDefault("run_base_shell_with_test_runner",
+                                             "true") == "true"
+          ? true
+          : false;
   enable_presenter = command_line.HasOption("enable_presenter");
 
   ParseShellArgs(command_line.GetOptionValueWithDefault("base_shell_args", ""),
@@ -46,7 +51,9 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       &session_shell.args);
 
   if (test) {
-    base_shell.args.push_back("--test");
+    if (run_base_shell_with_test_runner) {
+      base_shell.args.push_back("--test");
+    }
     story_shell.args.push_back("--test");
     sessionmgr.args.push_back("--test");
     session_shell.args.push_back("--test");

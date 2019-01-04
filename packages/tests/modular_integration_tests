@@ -36,6 +36,7 @@
         "//peridot/tests/trigger:trigger_test_agent",
         "//peridot/tests/trigger:trigger_test_module",
         "//peridot/tests/trigger:trigger_test_session_shell",
-        "//peridot/tests/session_shell:session_shell_test_session_shell"
+        "//peridot/tests/session_shell:session_shell_test_session_shell",
+        "//peridot/tests/sessionctl:sessionctl_integration_tests"
     ]
 }

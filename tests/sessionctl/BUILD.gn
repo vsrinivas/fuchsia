@@ -1,0 +1,35 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/tests_package.gni")
+
+executable("sessionctl_test") {
+  testonly = true
+  output_name = "sessionctl_test"
+
+  sources = [
+    "sessionctl_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/test_runner/cpp",
+    "//peridot/bin/sessionctl:lib",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+hermetic_tests_package("sessionctl_integration_tests") {
+  deps = [
+    ":sessionctl_test",
+  ]
+}
