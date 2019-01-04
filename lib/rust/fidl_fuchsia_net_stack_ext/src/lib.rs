@@ -192,12 +192,8 @@ impl std::fmt::Display for InterfaceProperties {
             write!(f, "  mac: {}\n", mac)?;
         }
         write!(f, "  mtu: {}\n", mtu)?;
-        write!(f, "  features:\n    {:?}\n", features)?;
-        write!(
-            f,
-            "  status:\n    {} | {}\n",
-            enablement_status, physical_status
-        )?;
+        write!(f, "  features: {:?}\n", features)?;
+        write!(f, "  status: {} | {}\n", enablement_status, physical_status)?;
         write!(f, "  Addresses:")?;
         for address in addresses {
             write!(f, "\n    {}", address)?;
@@ -243,12 +239,20 @@ fn test_display_interfaceinfo() {
                     features: fidl_fuchsia_hardware_ethernet_ext::EthernetFeatures::all(),
                     enablement_status: EnablementStatus::ENABLED,
                     physical_status: PhysicalStatus::UP,
-                    addresses: vec![InterfaceAddress {
-                        ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
-                            std::net::Ipv4Addr::new(255, 255, 255, 0),
-                        ),),
-                        prefix_len: 4,
-                    }],
+                    addresses: vec![
+                        InterfaceAddress {
+                            ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
+                                std::net::Ipv4Addr::new(255, 255, 255, 0),
+                            ),),
+                            prefix_len: 4,
+                        },
+                        InterfaceAddress {
+                            ip_address: fidl_fuchsia_net_ext::IpAddress(std::net::IpAddr::V4(
+                                std::net::Ipv4Addr::new(255, 255, 255, 1),
+                            ),),
+                            prefix_len: 4,
+                        }
+                    ],
                 }
             }
         ),
@@ -257,11 +261,10 @@ fn test_display_interfaceinfo() {
   path: /all/the/way/home
   mac: 00:01:02:ff:fe:fd
   mtu: 1500
-  features:
-    WLAN | SYNTHETIC | LOOPBACK
-  status:
-    ENABLED | LINK_UP
+  features: WLAN | SYNTHETIC | LOOPBACK
+  status: ENABLED | LINK_UP
   Addresses:
-    255.255.255.0/4"#
+    255.255.255.0/4
+    255.255.255.1/4"#
     );
 }
