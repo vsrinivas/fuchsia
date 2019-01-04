@@ -21,6 +21,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/paradise.c \
     $(LOCAL_DIR)/samsung.c \
     $(LOCAL_DIR)/ltr-578als.c \
+    $(LOCAL_DIR)/bma253.c \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := hid

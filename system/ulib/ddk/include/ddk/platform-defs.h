@@ -35,6 +35,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_DUMMY_DISPLAY      22  // Dummy display
 #define PDEV_DID_FOCALTOUCH         23  // FocalTech touch device
 #define PDEV_DID_LITE_ON_ALS        24  // Lite-On ambient light sensor
+#define PDEV_DID_BOSCH_BMA253       25  // Bosch BMA253 acceleration sensor
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
