@@ -1,6 +1,13 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+            }
+        }
+    },
     "program": {
-        "binary": "test/vkpriority"
+        "binary": "test/disabled/vkpriority"
     },
     "sandbox": {
         "features": [
@@ -9,12 +16,5 @@
         "services": [
             "fuchsia.vulkan.loader.Loader"
         ]
-    },
-    "facets": {
-        "fuchsia.test": {
-            "injected-services": {
-                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
-            }
-        }
     }
 }
