@@ -12,11 +12,15 @@
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/frame_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/register_dwarf.h"
 #include "garnet/bin/zxdb/client/remote_api.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
-#include "garnet/public/lib/fxl/logging.h"
+#include "garnet/bin/zxdb/symbols/process_symbols.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "lib/fxl/logging.h"
 
 namespace zxdb {
 
@@ -120,6 +124,47 @@ void ThreadImpl::ContinueWith(std::unique_ptr<ThreadController> controller,
         }
         on_continue(err);
       });
+}
+
+void ThreadImpl::JumpTo(uint64_t new_address,
+                        std::function<void(const Err&)> cb) {
+  // The register to set.
+  debug_ipc::Register reg;
+  reg.id = GetSpecialRegisterID(session()->arch(), SpecialRegisterType::kIP);
+  reg.data.resize(sizeof(new_address));
+  memcpy(&reg.data[0], &new_address, sizeof(new_address));
+
+  debug_ipc::WriteRegistersRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+  request.registers.push_back(std::move(reg));
+
+  // The "jump" command updates the thread's location so we need to recompute
+  // the stack. So once the jump is complete we re-request the thread's
+  // status.
+  //
+  // This could be made faster by requesting status immediately after sending
+  // the update so we don't have to wait for two round-trips, but that
+  // complicates the callback logic and this feature is not performance-
+  // sensitive.
+  session()->remote_api()->WriteRegisters(request, [
+    thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)
+  ](const Err& err, debug_ipc::WriteRegistersReply reply) {
+    if (err.has_error()) {
+      cb(err);  // Transport error.
+    } else if (reply.status != 0) {
+      cb(Err("Could not set thread instruction pointer. Error %" PRIu64
+             " (%s).",
+             reply.status,
+             debug_ipc::ZxStatusToString(static_cast<uint32_t>(reply.status))
+                 .c_str()));
+    } else if (!thread) {
+      cb(Err("Thread destroyed."));
+    } else {
+      // Success, update the current stack before issuing the callback.
+      thread->SyncFramesForStack([cb = std::move(cb)]() { cb(Err()); });
+    }
+  });
 }
 
 void ThreadImpl::NotifyControllerDone(ThreadController* controller) {

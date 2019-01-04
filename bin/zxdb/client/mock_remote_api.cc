@@ -35,7 +35,7 @@ void MockRemoteAPI::ThreadStatus(
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // Returns the canned response.
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [cb, response = thread_status_reply_]() {
+      FROM_HERE, [ cb, response = thread_status_reply_ ]() {
         cb(Err(), std::move(response));
       });
 }
@@ -43,12 +43,23 @@ void MockRemoteAPI::ThreadStatus(
 void MockRemoteAPI::Resume(
     const debug_ipc::ResumeRequest& request,
     std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
-  // Always returns success and then quits the message loop (we can make
-  // quitting an option in the future if some test doesn't want this).
+  // Always returns success and then quits the message loop (if other tests
+  // need this, the callabck should do the quit instead of this function).
   resume_count_++;
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
     cb(Err(), debug_ipc::ResumeReply());
     debug_ipc::MessageLoop::Current()->QuitNow();
+  });
+}
+
+void MockRemoteAPI::WriteRegisters(
+    const debug_ipc::WriteRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
+  last_write_registers_ = request;
+  debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
+    debug_ipc::WriteRegistersReply reply;
+    reply.status = 0;
+    cb(Err(), reply);
   });
 }
 

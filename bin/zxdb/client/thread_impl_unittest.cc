@@ -8,6 +8,7 @@
 #include "garnet/bin/zxdb/client/thread_controller.h"
 #include "garnet/bin/zxdb/client/thread_impl_test_support.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "gtest/gtest.h"
 
@@ -174,6 +175,60 @@ TEST_F(ThreadImplTest, ControllersWithGeneralException) {
   // a stop notification even though the controller said to continue.
   EXPECT_TRUE(got_stop);
   EXPECT_TRUE(thread_observer.got_stopped());
+}
+
+TEST_F(ThreadImplTest, JumpTo) {
+  constexpr uint64_t kProcessKoid = 1234;
+  InjectProcess(kProcessKoid);
+  constexpr uint64_t kThreadKoid = 5678;
+  Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
+
+  // Notify of thread stop.
+  constexpr uint64_t kAddress1 = 0x12345678;
+  constexpr uint64_t kStack = 0x7890;
+  debug_ipc::NotifyException notification;
+  notification.process_koid = kProcessKoid;
+  notification.type = debug_ipc::NotifyException::Type::kSoftware;
+  notification.thread.koid = kThreadKoid;
+  notification.thread.state = debug_ipc::ThreadRecord::State::kBlocked;
+  notification.thread.frames.resize(1);
+  notification.thread.frames[0].ip = kAddress1;
+  notification.thread.frames[0].sp = kStack;
+  InjectException(notification);
+
+  // Canned response for thread status.
+  constexpr uint64_t kDestAddress = 0x7828374510a;
+  debug_ipc::ThreadStatusReply status;
+  status.record = notification.thread;  // Copies existing frame.
+  status.record.stack_amount = debug_ipc::ThreadRecord::StackAmount::kFull;
+  status.record.frames[0].ip = kDestAddress;
+  mock_remote_api().set_thread_status_reply(status);
+
+  // Do jump.
+  bool called = false;
+  Err out_err;
+  thread->JumpTo(kDestAddress,
+                 [&called, &out_err](const Err& err) {
+                   called = true;
+                   out_err = err;
+                   debug_ipc::MessageLoop::Current()->QuitNow();
+                 });
+  EXPECT_FALSE(called);
+
+  // The command should have sent a request to write to the IP. There should
+  // be a single register with a value of the new address.
+  const auto& written = mock_remote_api().last_write_registers().registers;
+  ASSERT_EQ(1u, written.size());
+  ASSERT_EQ(sizeof(uint64_t), written[0].data.size());
+  EXPECT_EQ(0, memcmp(&kDestAddress, &written[0].data[0], sizeof(uint64_t)));
+
+  // The callback should be asynchronously received.
+  loop().Run();
+  EXPECT_TRUE(called);
+  EXPECT_FALSE(out_err.has_error());
+
+  // The thread should be in the new location.
+  EXPECT_EQ(kDestAddress, thread->GetStack().GetFrames()[0]->GetAddress());
 }
 
 }  // namespace zxdb

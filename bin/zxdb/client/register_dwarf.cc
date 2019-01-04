@@ -54,6 +54,43 @@ SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
   }
 }
 
+debug_ipc::RegisterID GetSpecialRegisterID(
+    debug_ipc::Arch arch, SpecialRegisterType type) {
+  switch (arch) {
+    case debug_ipc::Arch::kX64:
+      switch (type) {
+        case SpecialRegisterType::kNone:
+          break;
+        case SpecialRegisterType::kIP:
+          return debug_ipc::RegisterID::kX64_rip;
+        case SpecialRegisterType::kSP:
+          return debug_ipc::RegisterID::kX64_rsp;
+        case SpecialRegisterType::kBP:
+          return debug_ipc::RegisterID::kX64_rbp;
+      }
+      break;
+
+    case debug_ipc::Arch::kArm64:
+      switch (type) {
+        case SpecialRegisterType::kNone:
+          break;
+        case SpecialRegisterType::kIP:
+          return debug_ipc::RegisterID::kARMv8_pc;
+        case SpecialRegisterType::kSP:
+          return debug_ipc::RegisterID::kARMv8_sp;
+        case SpecialRegisterType::kBP:
+          return debug_ipc::RegisterID::kARMv8_x29;
+      }
+      break;
+
+    case debug_ipc::Arch::kUnknown:
+      break;
+  }
+
+  FXL_NOTREACHED();
+  return debug_ipc::RegisterID::kUnknown;
+}
+
 RegisterID GetX64DWARFRegisterID(uint32_t dwarf_reg_id) {
   // https://software.intel.com/sites/default/files/article/402129/mpx-linux64-abi.pdf
   // Page 62

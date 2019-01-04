@@ -96,6 +96,12 @@ void RemoteAPIImpl::ReadRegisters(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::WriteRegisters(
+      const debug_ipc::WriteRegistersRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::AddOrChangeBreakpoint(
     const debug_ipc::AddOrChangeBreakpointRequest& request,
     std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb) {

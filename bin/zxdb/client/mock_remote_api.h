@@ -43,6 +43,10 @@ class MockRemoteAPI : public RemoteAPI {
     return last_breakpoint_add_.breakpoint.locations[0].address;
   }
 
+  const debug_ipc::WriteRegistersRequest& last_write_registers() const {
+    return last_write_registers_;
+  }
+
   // RemoteAPI implementation.
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
@@ -59,6 +63,10 @@ class MockRemoteAPI : public RemoteAPI {
   void Resume(
       const debug_ipc::ResumeRequest& request,
       std::function<void(const Err&, debug_ipc::ResumeReply)> cb) override;
+  void WriteRegisters(
+      const debug_ipc::WriteRegistersRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
+      override;
 
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
@@ -67,6 +75,7 @@ class MockRemoteAPI : public RemoteAPI {
   int breakpoint_add_count_ = 0;
   int breakpoint_remove_count_ = 0;
   debug_ipc::AddOrChangeBreakpointRequest last_breakpoint_add_;
+  debug_ipc::WriteRegistersRequest last_write_registers_;
 };
 
 }  // namespace zxdb

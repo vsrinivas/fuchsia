@@ -285,6 +285,62 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// jump ------------------------------------------------------------------------
+
+const char kJumpShortHelp[] =
+    "jump / jmp: Set the instruction pointer to a different address.";
+const char kJumpHelp[] =
+    R"(jump <location>
+
+  Alias: "jmp"
+
+  Sets the instruction pointer of the thread to the given address. It does not
+  continue execution. You can "step" or "continue" from the new location.
+
+  You are responsible for what this means semantically since one can't
+  generally change the instruction flow and expect things to work.
+
+Location arguments
+
+)" LOCATION_ARG_HELP("jump");
+Err DoJump(ConsoleContext* context, const Command& cmd) {
+  Err err = AssertStoppedThreadCommand(context, cmd, false, "jump");
+  if (err.has_error())
+    return err;
+
+  if (cmd.args().size() != 1)
+    return Err("The 'jump' command requires one argument for the location.");
+
+  InputLocation input_location;
+  err = ParseInputLocation(cmd.frame(), cmd.args()[0], &input_location);
+  if (err.has_error())
+    return err;
+
+  Location location;
+  err = ResolveUniqueInputLocation(cmd.target()->GetProcess()->GetSymbols(),
+                                   input_location, true, &location);
+  if (err.has_error())
+    return err;
+
+  cmd.thread()->JumpTo(
+      location.address(), [thread = cmd.thread()->GetWeakPtr()](const Err& err) {
+        Console* console = Console::get();
+        if (err.has_error()) {
+          console->Output(err);
+        } else if (thread) {
+          // Reset the current stack frame to the top to reflect the location
+          // the user has just jumped to.
+          console->context().SetActiveFrameIdForThread(thread.get(), 0);
+
+          // Tell the user where they are.
+          console->context().OutputThreadContext(
+              thread.get(), debug_ipc::NotifyException::Type::kNone, {});
+        }
+      });
+
+  return Err();
+}
+
 // locals ----------------------------------------------------------------------
 
 const char kLocalsShortHelp[] =
@@ -316,7 +372,12 @@ Examples
       Prints locals with types.
 )";
 Err DoLocals(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
+  // Don't have AssertStoppedThreadCommand check nouns because we additionally
+  // allow "frame", which we manually validate below.
+  Err err = AssertStoppedThreadCommand(context, cmd, false, "locals");
+  if (err.has_error())
+    return err;
+  err = cmd.ValidateNouns({Noun::kProcess, Noun::kThread, Noun::kFrame});
   if (err.has_error())
     return err;
   if (!cmd.frame())
@@ -1092,6 +1153,8 @@ void AppendThreadVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kFinish] =
       VerbRecord(&DoFinish, {"finish", "fi"}, kFinishShortHelp, kFinishHelp,
                  CommandGroup::kStep);
+  (*verbs)[Verb::kJump] = VerbRecord(&DoJump, {"jump", "jmp"}, kJumpShortHelp,
+                                     kJumpHelp, CommandGroup::kStep);
 
   // locals
   VerbRecord locals(&DoLocals, {"locals"}, kLocalsShortHelp, kLocalsHelp,

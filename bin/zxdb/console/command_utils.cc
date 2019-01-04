@@ -307,23 +307,6 @@ const char* BreakpointTypeToString(debug_ipc::BreakpointType type) {
   }
 }
 
-std::string ExceptionTypeToString(debug_ipc::NotifyException::Type type) {
-  switch (type) {
-    case debug_ipc::NotifyException::Type::kGeneral:
-      return "General";
-    case debug_ipc::NotifyException::Type::kHardware:
-      return "Hardware";
-    case debug_ipc::NotifyException::Type::kSingleStep:
-      return "Single Step";
-    case debug_ipc::NotifyException::Type::kSoftware:
-      return "Software";
-    case debug_ipc::NotifyException::Type::kLast:
-      break;  // Fall through to assertion, this value shouldn't be used.
-  }
-  FXL_NOTREACHED();
-  return std::string();
-}
-
 std::string DescribeJobContext(const ConsoleContext* context,
                                const JobContext* job_context) {
   int id = context->IdForJobContext(job_context);

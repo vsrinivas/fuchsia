@@ -144,16 +144,16 @@ TEST(InputLocation, ResolveInputLocation) {
                                    &output);
   EXPECT_TRUE(err.has_error());
   EXPECT_EQ(R"(This resolves to more than one location. Could be:
- • file.cc:100
- • file.cc:101
- • file.cc:102
- • file.cc:103
- • file.cc:104
- • file.cc:105
- • file.cc:106
- • file.cc:107
- • file.cc:108
- • file.cc:109
+ • file.cc:100 = 0x12345000
+ • file.cc:101 = 0x12345001
+ • file.cc:102 = 0x12345002
+ • file.cc:103 = 0x12345003
+ • file.cc:104 = 0x12345004
+ • file.cc:105 = 0x12345005
+ • file.cc:106 = 0x12345006
+ • file.cc:107 = 0x12345007
+ • file.cc:108 = 0x12345008
+ • file.cc:109 = 0x12345009
 ...5 more omitted...
 )",
             err.msg());

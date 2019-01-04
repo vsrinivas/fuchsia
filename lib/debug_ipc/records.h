@@ -216,7 +216,7 @@ struct AddressRegion {
 
 // Value representing a particular register.
 struct Register {
-  RegisterID id;
+  RegisterID id = RegisterID::kUnknown;
 
   // This data is stored in the architecture native's endianness
   // (eg. the result of running memcpy over the data).

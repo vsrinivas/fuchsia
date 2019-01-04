@@ -31,6 +31,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   void Continue() override;
   void ContinueWith(std::unique_ptr<ThreadController> controller,
                     std::function<void(const Err&)> on_continue) override;
+  void JumpTo(uint64_t new_address,
+              std::function<void(const Err&)> cb) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
   const Stack& GetStack() const override;

@@ -61,6 +61,7 @@ enum class Verb {
   kFinish,
   kGet,
   kHelp,
+  kJump,
   kKill,
   kLibs,
   kList,

@@ -80,6 +80,8 @@ const char* MsgHeaderTypeToString(MsgHeader::Type type) {
 
 const char* NotifyException::TypeToString(NotifyException::Type type) {
   switch (type) {
+    case NotifyException::Type::kNone:
+      return "None";
     case NotifyException::Type::kGeneral:
       return "General";
     case NotifyException::Type::kHardware:

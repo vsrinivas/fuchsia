@@ -316,7 +316,10 @@ struct NotifyThread {
 // Data passed for exceptions.
 struct NotifyException {
   enum class Type : uint32_t {
-    kGeneral = 0,
+    // No current exception, used as placeholder or to indicate not set.
+    kNone = 0,
+
+    kGeneral,
 
     // Hardware breakpoints are issues by the CPU via debug registers.
     kHardware,
@@ -338,7 +341,7 @@ struct NotifyException {
   // moment of notification.
   ThreadRecord thread;
 
-  Type type = Type::kGeneral;
+  Type type = Type::kNone;
 
   // When the stop was caused by hitting a breakpoint, this vector will contain
   // the post-hit stats of every hit breakpoint (since there can be more than

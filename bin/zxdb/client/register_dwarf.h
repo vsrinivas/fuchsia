@@ -19,6 +19,10 @@ enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
 SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
     debug_ipc::Arch, uint32_t dwarf_reg_id);
 
+// Returns the register ID for the given special register.
+debug_ipc::RegisterID GetSpecialRegisterID(
+    debug_ipc::Arch, SpecialRegisterType);
+
 // Platform specific -----------------------------------------------------------
 
 debug_ipc::RegisterID GetARMv8DWARFRegisterID(uint32_t dwarf_reg_id);

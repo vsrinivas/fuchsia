@@ -59,6 +59,10 @@ class RemoteAPIImpl : public RemoteAPI {
       const debug_ipc::ReadRegistersRequest& request,
       std::function<void(const Err&, debug_ipc::ReadRegistersReply)> cb)
       override;
+  void WriteRegisters(
+      const debug_ipc::WriteRegistersRequest& request,
+      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
+      override;
   void AddOrChangeBreakpoint(
       const debug_ipc::AddOrChangeBreakpointRequest& request,
       std::function<void(const Err&, debug_ipc::AddOrChangeBreakpointReply)> cb)

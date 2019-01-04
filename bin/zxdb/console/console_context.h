@@ -82,6 +82,13 @@ class ConsoleContext : public ProcessObserver,
   void SetSourceAffinityForThread(const Thread* thread,
                                   SourceAffinity source_affinity);
 
+  // Outputs to the console information on the given stopped thread with the
+  // given reasons for stopping.
+  void OutputThreadContext(
+      const Thread* thread,
+      debug_ipc::NotifyException::Type type,
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) const;
+
   // Fills the current effective process, thread, etc. into the given Command
   // structure based on what the command specifies and the current context.
   // Returns an error if any of the referenced IDs are invalid.
@@ -139,7 +146,7 @@ class ConsoleContext : public ProcessObserver,
   // ThreadObserver implementation:
   void OnThreadStopped(
       Thread* thread, debug_ipc::NotifyException::Type type,
-      std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) override;
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
   void OnThreadFramesInvalidated(Thread* thread) override;
 
   // Returns the record for the given target, or null (+ assertion) if not

@@ -24,6 +24,7 @@ namespace zxdb {
 
 class Err;
 class Frame;
+struct InputLocation;
 class Process;
 class RegisterSet;
 class ThreadController;
@@ -72,6 +73,19 @@ class Thread : public ClientObject {
   // be continued.
   virtual void ContinueWith(std::unique_ptr<ThreadController> controller,
                             std::function<void(const Err&)> on_continue) = 0;
+
+  // Sets the thread's IP to the given location. This requires that the thread
+  // be stopped. It will not resume the thread.
+  //
+  // Setting the location is asynchronous. At the time of the callback being
+  // issued, the frames of the thread will be updated to the latest state.
+  //
+  // Resuming the thread after issuing but before the callback is executed will
+  // pick up the new location (if any) because the requests will be ordered.
+  // But because the jump request may fail, the caller isn't guaranteed what
+  // location will be resumed from unless it waits for the callback.
+  virtual void JumpTo(uint64_t new_address,
+                      std::function<void(const Err&)> cb) = 0;
 
   // Notification from a ThreadController that it has completed its job. The
   // thread controller should be removed from this thread and deleted.

@@ -26,7 +26,7 @@ TestThreadObserver::~TestThreadObserver() { thread_->RemoveObserver(this); }
 
 void TestThreadObserver::OnThreadStopped(
     Thread* thread, debug_ipc::NotifyException::Type type,
-    std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) {
+    const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
   EXPECT_EQ(thread_, thread);
   got_stopped_ = true;
   hit_breakpoints_ = hit_breakpoints;

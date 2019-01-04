@@ -40,7 +40,7 @@ class TestThreadObserver : public ThreadObserver {
 
   void OnThreadStopped(
       Thread* thread, debug_ipc::NotifyException::Type type,
-      std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) override;
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) override;
 
  private:
   Thread* thread_;

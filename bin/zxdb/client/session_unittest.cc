@@ -99,8 +99,9 @@ class SessionThreadObserver : public ThreadObserver {
   // The breakpoints that triggered from the last stop notification.
   const std::vector<Breakpoint*> breakpoints() const { return breakpoints_; }
 
-  void OnThreadStopped(Thread* thread, debug_ipc::NotifyException::Type type,
-                       std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) {
+  void OnThreadStopped(
+      Thread* thread, debug_ipc::NotifyException::Type type,
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
     stop_count_++;
     breakpoints_.clear();
     for (auto& bp : hit_breakpoints) {

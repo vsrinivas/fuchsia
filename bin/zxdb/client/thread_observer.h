@@ -22,7 +22,7 @@ class ThreadObserver {
   // breakpoints in response to this notification.
   virtual void OnThreadStopped(
       Thread* thread, debug_ipc::NotifyException::Type type,
-      std::vector<fxl::WeakPtr<Breakpoint>> hit_breakpoints) {}
+      const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {}
 
   // A thread's backtrace (consisting of a vector of Frames) will be static
   // as long as the thread is not running. When the thread is resumed, the
