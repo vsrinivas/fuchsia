@@ -21,5 +21,8 @@ pub use crate::{
         Canvas, Color, FontDescription, FontFace, Paint, PixelSink, Point, Rect,
         SharedBufferPixelSink, Size,
     },
-    view::{ViewAssistant, ViewAssistantPtr, ViewController, ViewKey, ViewMessages},
+    view::{
+        ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewController, ViewKey,
+        ViewMessages,
+    },
 };

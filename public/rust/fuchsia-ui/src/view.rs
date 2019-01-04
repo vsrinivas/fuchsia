@@ -23,84 +23,25 @@ pub enum ViewMessages {
     Update,
 }
 
+/// parameter struct passed to setup and update trait methods.
+#[allow(missing_docs)]
+pub struct ViewAssistantContext<'a> {
+    pub view_container: &'a mut fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
+    pub import_node: &'a ImportNode,
+    pub session: &'a SessionPtr,
+    pub key: ViewKey,
+    pub width: f32,
+    pub height: f32,
+}
+
 /// Trait that allows mod developers to customize the behavior of view controllers.
 pub trait ViewAssistant: Send {
     /// This method is called once when a view is created. It is a good point to create scenic
     /// commands that apply throughout the lifetime of the view.
-    /// # Example
-    /// ```
-    ///    fn setup(
-    ///        &mut self, import_node: &ImportNode, session: &SessionPtr, key: ViewKey,
-    ///    ) -> Result<(), Error> {
-    ///        // ahoy
-    ///        import_node
-    ///            .resource()
-    ///            .set_event_mask(gfx::METRICS_EVENT_MASK);
-    ///        import_node.add_child(&self.background_node);
-    ///        let material = Material::new(session.clone());
-    ///        material.set_color(ColorRgba {
-    ///            red: 0xb7,
-    ///            green: 0x41,
-    ///            blue: 0x0e,
-    ///            alpha: 0xff,
-    ///        });
-    ///        self.background_node.set_material(&material);
-    ///
-    ///        import_node.add_child(&self.spinning_square_node);
-    ///        let material = Material::new(session.clone());
-    ///        material.set_color(ColorRgba {
-    ///            red: 0xff,
-    ///            green: 0x00,
-    ///            blue: 0xff,
-    ///            alpha: 0xff,
-    ///        });
-    ///        self.spinning_square_node.set_material(&material);
-    ///        Self::setup_timer(key);
-    ///        Ok(())
-    ///    }
-    /// ```
-    fn setup(
-        &mut self, import_node: &ImportNode, session: &SessionPtr, key: ViewKey,
-    ) -> Result<(), Error>;
+    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
 
     /// This method is called when a view controller has been asked to update the view.
-    /// # Example
-    /// ```
-    ///    fn update(
-    ///        &mut self, _import_node: &ImportNode, session: &SessionPtr, width: f32, height: f32,
-    ///    ) -> Result<(), Error> {
-    ///        self.width = width;
-    ///        self.height = height;
-    ///        const SPEED: f32 = 0.25;
-    ///        const SECONDS_PER_NANOSECOND: f32 = 1e-9;
-    ///
-    ///        let center_x = self.width * 0.5;
-    ///        let center_y = self.height * 0.5;
-    ///        self.background_node
-    ///            .set_shape(&Rectangle::new(session.clone(), self.width, self.height));
-    ///        self.background_node
-    ///            .set_translation(center_x, center_y, 0.0);
-    ///        let square_size = self.width.min(self.height) * 0.6;
-    ///        let t = ((Time::get(ClockId::Monotonic).nanos() - self.start.nanos()) as f32
-    ///            * SECONDS_PER_NANOSECOND
-    ///            * SPEED)
-    ///            % 1.0;
-    ///        let angle = t * PI * 2.0;
-    ///        self.spinning_square_node.set_shape(&Rectangle::new(
-    ///            session.clone(),
-    ///            square_size,
-    ///            square_size,
-    ///        ));
-    ///        self.spinning_square_node
-    ///            .set_translation(center_x, center_y, 8.0);
-    ///        self.spinning_square_node
-    ///            .set_rotation(0.0, 0.0, (angle * 0.5).sin(), (angle * 0.5).cos());
-    ///        Ok(())
-    ///    }
-    /// ```
-    fn update(
-        &mut self, import_node: &ImportNode, session: &SessionPtr, width: f32, height: f32,
-    ) -> Result<(), Error>;
+    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error>;
 
     /// This method is called when `App::send_message` is called with the associated
     /// view controller's `ViewKey` and the view controller does not handle the message.
@@ -120,6 +61,7 @@ pub type ViewKey = u64;
 pub struct ViewController {
     #[allow(unused)]
     view: fidl_fuchsia_ui_viewsv1::ViewProxy,
+    view_container: fidl_fuchsia_ui_viewsv1::ViewContainerProxy,
     session: SessionPtr,
     import_node: ImportNode,
     width: f32,
@@ -167,13 +109,23 @@ impl ViewController {
 
         let mut import_node = ImportNode::new(session.clone(), mine);
 
-        view_assistant
-            .lock()
-            .borrow_mut()
-            .setup(&mut import_node, &session, key)?;
+        let (mut view_container, view_container_request) = create_proxy()?;
+
+        view.get_container(view_container_request)?;
+
+        let context = ViewAssistantContext {
+            view_container: &mut view_container,
+            import_node: &mut import_node,
+            session: &session,
+            key,
+            width: 0.0,
+            height: 0.0,
+        };
+        view_assistant.lock().borrow_mut().setup(&context)?;
 
         let view_controller = ViewController {
             view,
+            view_container: view_container,
             session,
             import_node,
             height: 0.0,
@@ -236,10 +188,18 @@ impl ViewController {
     }
 
     fn update(&mut self) {
+        let context = ViewAssistantContext {
+            view_container: &mut self.view_container,
+            import_node: &mut self.import_node,
+            session: &self.session,
+            key: self.key,
+            width: self.width,
+            height: self.height,
+        };
         self.assistant
             .lock()
             .borrow_mut()
-            .update(&self.import_node, &self.session, self.width, self.height)
+            .update(&context)
             .unwrap_or_else(|e| eprintln!("Update error: {:?}", e));
         self.present();
     }
@@ -274,18 +234,6 @@ impl ViewController {
     /// This method sends an arbitrary message to this view. If it is not
     /// handled directly by `ViewController::send_message` it will be forwarded
     /// to the view assistant.
-    /// ```
-    ///    fn handle_message(&mut self, message: &Any) {
-    ///        if let Some(custom_msg) = message.downcast_ref::<CustomMessages>() {
-    ///            match custom_msg {
-    ///                CustomMessages::Update => {
-    ///                    self.update();
-    ///                }
-    ///            }
-    ///        }
-    ///    }
-    /// ```
-
     pub fn send_message(&mut self, msg: &Any) {
         if let Some(view_msg) = msg.downcast_ref::<ViewMessages>() {
             match view_msg {

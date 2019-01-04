@@ -5,8 +5,11 @@
 use failure::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fuchsia_async::{self as fasync, Interval};
-use fuchsia_scenic::{ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_ui::{App, AppAssistant, ViewAssistant, ViewAssistantPtr, ViewKey, ViewMessages, APP};
+use fuchsia_scenic::{Material, Rectangle, SessionPtr, ShapeNode};
+use fuchsia_ui::{
+    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    ViewMessages, APP,
+};
 use fuchsia_zircon::{ClockId, Duration, Time};
 use futures::StreamExt;
 use parking_lot::Mutex;
@@ -54,14 +57,13 @@ impl SpinningSquareViewAssistant {
 }
 
 impl ViewAssistant for SpinningSquareViewAssistant {
-    fn setup(
-        &mut self, import_node: &ImportNode, session: &SessionPtr, key: ViewKey,
-    ) -> Result<(), Error> {
-        import_node
+    fn setup(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        context
+            .import_node
             .resource()
             .set_event_mask(gfx::METRICS_EVENT_MASK);
-        import_node.add_child(&self.background_node);
-        let material = Material::new(session.clone());
+        context.import_node.add_child(&self.background_node);
+        let material = Material::new(context.session.clone());
         material.set_color(ColorRgba {
             red: 0xb7,
             green: 0x41,
@@ -70,8 +72,8 @@ impl ViewAssistant for SpinningSquareViewAssistant {
         });
         self.background_node.set_material(&material);
 
-        import_node.add_child(&self.spinning_square_node);
-        let material = Material::new(session.clone());
+        context.import_node.add_child(&self.spinning_square_node);
+        let material = Material::new(context.session.clone());
         material.set_color(ColorRgba {
             red: 0xff,
             green: 0x00,
@@ -79,22 +81,23 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             alpha: 0xff,
         });
         self.spinning_square_node.set_material(&material);
-        Self::setup_timer(key);
+        Self::setup_timer(context.key);
         Ok(())
     }
 
-    fn update(
-        &mut self, _import_node: &ImportNode, session: &SessionPtr, width: f32, height: f32,
-    ) -> Result<(), Error> {
-        self.width = width;
-        self.height = height;
+    fn update(&mut self, context: &ViewAssistantContext) -> Result<(), Error> {
+        self.width = context.width;
+        self.height = context.height;
         const SPEED: f32 = 0.25;
         const SECONDS_PER_NANOSECOND: f32 = 1e-9;
 
         let center_x = self.width * 0.5;
         let center_y = self.height * 0.5;
-        self.background_node
-            .set_shape(&Rectangle::new(session.clone(), self.width, self.height));
+        self.background_node.set_shape(&Rectangle::new(
+            context.session.clone(),
+            self.width,
+            self.height,
+        ));
         self.background_node
             .set_translation(center_x, center_y, 0.0);
         let square_size = self.width.min(self.height) * 0.6;
@@ -104,7 +107,7 @@ impl ViewAssistant for SpinningSquareViewAssistant {
             % 1.0;
         let angle = t * PI * 2.0;
         self.spinning_square_node.set_shape(&Rectangle::new(
-            session.clone(),
+            context.session.clone(),
             square_size,
             square_size,
         ));

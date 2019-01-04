@@ -31,21 +31,6 @@ pub trait AppAssistant: Send {
     fn setup(&mut self) -> Result<(), Error>;
 
     /// Called when the Fuchsia view system requests that a view be created.
-    /// # Example
-    /// ```
-    ///    fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error> {
-    ///        Ok(Mutex::new(RefCell::new(Box::new(
-    ///            SpinningSquareViewAssistant {
-    ///                background_node: ShapeNode::new(session.clone()),
-    ///                spinning_square_node: ShapeNode::new(session.clone()),
-    ///                width: 0.0,
-    ///                height: 0.0,
-    ///                start: Time::get(ClockId::Monotonic),
-    ///            },
-    ///        ))))
-    ///    }
-    /// ```
-
     fn create_view_assistant(&mut self, session: &SessionPtr) -> Result<ViewAssistantPtr, Error>;
 }
 
