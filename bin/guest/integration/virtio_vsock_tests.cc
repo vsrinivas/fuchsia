@@ -122,7 +122,8 @@ class ZirconVsockGuestTest : public ZirconEnclosedGuest,
 
 using VsockGuestTest = GuestTest<ZirconVsockGuestTest>;
 
-TEST_F(VsockGuestTest, ConnectDisconnect) {
+// Disabled due to flake: MAC-237
+TEST_F(VsockGuestTest, DISABLED_ConnectDisconnect) {
   auto handle = std::async(std::launch::async,
                            [this] { this->GetEnclosedGuest()->TestThread(); });
 
