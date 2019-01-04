@@ -34,8 +34,6 @@ typedef struct fdio_namespace fdio_ns_t;
 // The NULL protocol absorbs writes and is never readable.
 
 typedef struct fdio_ops {
-    zx_status_t (*misc)(fdio_t* io, uint32_t op, int64_t off, uint32_t maxreply,
-                        void* data, size_t len);
     zx_status_t (*close)(fdio_t* io);
     zx_status_t (*open)(fdio_t* io, const char* path, uint32_t flags,
                         uint32_t mode, fdio_t** out);
@@ -209,8 +207,6 @@ ssize_t fdio_default_sendto(fdio_t* io, const void* _data, size_t len,
 ssize_t fdio_default_recvmsg(fdio_t* io, struct msghdr* msg, int flags);
 ssize_t fdio_default_sendmsg(fdio_t* io, const struct msghdr* msg, int flags);
 zx_status_t fdio_default_get_attr(fdio_t* io, fuchsia_io_NodeAttributes* out);
-zx_status_t fdio_default_misc(fdio_t* io, uint32_t op, int64_t off,
-                              uint32_t arg, void* data, size_t len);
 zx_status_t fdio_default_close(fdio_t* io);
 zx_status_t fdio_default_open(fdio_t* io, const char* path, uint32_t flags,
                               uint32_t mode, fdio_t** out);

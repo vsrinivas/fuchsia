@@ -397,7 +397,6 @@ static zx_status_t zxio_dir_unlink(fdio_t* io, const char* path, size_t len) {
 
 static fdio_ops_t dir_ops = {
     .get_attr = zxio_dir_get_attr,
-    .misc = fdio_default_misc,
     .close = zxio_dir_close,
     .open = zxio_dir_open,
     .clone = fdio_default_clone,

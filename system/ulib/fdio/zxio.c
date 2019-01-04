@@ -145,7 +145,6 @@ static zx_status_t fdio_zxio_set_flags(fdio_t* io, uint32_t flags) {
 // Generic ---------------------------------------------------------------------
 
 fdio_ops_t fdio_zxio_ops = {
-    .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
@@ -386,7 +385,6 @@ static zx_status_t fdio_zxio_remote_link(fdio_t* io, const char* src, size_t src
 }
 
 static fdio_ops_t fdio_zxio_remote_ops = {
-    .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_zxio_remote_open,
     .clone = fdio_zxio_clone,
@@ -514,7 +512,6 @@ static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
 }
 
 fdio_ops_t fdio_zxio_vmofile_ops = {
-    .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_clone,
@@ -706,7 +703,6 @@ static zx_status_t fdio_zxio_pipe_shutdown(fdio_t* io, int how) {
 }
 
 static fdio_ops_t fdio_zxio_pipe_ops = {
-    .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_pipe_clone,
@@ -822,7 +818,6 @@ static zx_status_t fdio_zxio_debuglog_clone(fdio_t* io, zx_handle_t* handles,
 }
 
 static fdio_ops_t fdio_zxio_debuglog_ops = {
-    .misc = fdio_default_misc,
     .close = fdio_zxio_close,
     .open = fdio_default_open,
     .clone = fdio_zxio_debuglog_clone,
