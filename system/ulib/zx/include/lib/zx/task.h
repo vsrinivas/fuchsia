@@ -31,9 +31,6 @@ public:
 
     zx_status_t kill() const { return zx_task_kill(object<T>::get()); }
 
-    // Deprecated: Use the variant that takes a suspend_token.
-    zx_status_t suspend() const { return zx_task_suspend(object<T>::get()); }
-
     zx_status_t suspend(suspend_token* result) const {
         // Assume |result| must refer to a different container than |this|, due
         // to strict aliasing.
