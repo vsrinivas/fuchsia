@@ -35,30 +35,27 @@ zx_status_t ServerManager::StartServer(ddk::BlockProtocolClient* protocol, zx::f
     if (IsFifoServerRunning()) {
         return ZX_ERR_ALREADY_BOUND;
     }
-
+    ZX_DEBUG_ASSERT(server_ == nullptr);
     BlockServer* server;
-    zx::fifo fifo;
-    zx_status_t status = blockserver_create(protocol, fifo.reset_and_get_address(), &server);
+    fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
+    zx_status_t status = BlockServer::Create(protocol, &fifo, &server);
     if (status != ZX_OK) {
         return status;
     }
-
-    ZX_DEBUG_ASSERT(server_ == nullptr);
-
     server_ = server;
     SetState(ThreadState::Running);
     if (thrd_create(&thread_, &RunServer, this) != thrd_success) {
         FreeServer();
         return ZX_ERR_NO_MEMORY;
     }
-    *out_fifo = std::move(fifo);
+    *out_fifo = zx::fifo(fifo.release());
     return ZX_OK;
 }
 
 zx_status_t ServerManager::CloseFifoServer() {
     switch (GetState()) {
     case ThreadState::Running:
-        blockserver_shutdown(server_);
+        server_->ShutDown();
         JoinServer();
         break;
     case ThreadState::Joinable:
@@ -75,12 +72,7 @@ zx_status_t ServerManager::AttachVmo(zx::vmo vmo, vmoid_t* out_vmoid) {
     if (server_ == nullptr) {
         return ZX_ERR_BAD_STATE;
     }
-
-    zx_status_t status = blockserver_attach_vmo(server_, vmo.release(), out_vmoid);
-    if (status != ZX_OK) {
-        return status;
-    }
-    return ZX_OK;
+    return server_->AttachVmo(std::move(vmo), out_vmoid);
 }
 
 void ServerManager::JoinServer() {
@@ -90,7 +82,7 @@ void ServerManager::JoinServer() {
 
 void ServerManager::FreeServer() {
     SetState(ThreadState::None);
-    blockserver_free(server_);
+    delete server_;
     server_ = nullptr;
 }
 
@@ -105,7 +97,7 @@ int ServerManager::RunServer(void* arg) {
     // The "manager->server_" pointer will only be nullified after thrd_join, because join
     // synchronizes-with the completion of this thread.
     ZX_DEBUG_ASSERT(manager->server_);
-    blockserver_serve(manager->server_);
+    manager->server_->Serve();
     manager->SetState(ThreadState::Joinable);
     return 0;
 }

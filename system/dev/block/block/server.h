@@ -213,21 +213,3 @@ private:
     fbl::WAVLTree<vmoid_t, fbl::RefPtr<IoBuffer>> tree_ TA_GUARDED(server_lock_);
     vmoid_t last_id_ TA_GUARDED(server_lock_);
 };
-
-// TODO(smklein): The following names should be converted to their canonical C++ versions.
-
-// Allocate a new blockserver + FIFO combo
-zx_status_t blockserver_create(ddk::BlockProtocolClient* bp, zx_handle_t* fifo_out,
-                               BlockServer** out);
-
-// Shut down the blockserver. It will stop serving requests.
-void blockserver_shutdown(BlockServer* bs);
-
-// Free the memory allocated to the blockserver.
-void blockserver_free(BlockServer* bs);
-
-// Use the current thread to block on incoming FIFO requests.
-zx_status_t blockserver_serve(BlockServer* bs);
-
-// Attach an IO buffer to the Block Server
-zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t vmo, vmoid_t* out);

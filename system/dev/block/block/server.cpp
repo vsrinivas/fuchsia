@@ -505,25 +505,3 @@ void BlockServer::ShutDown() {
     zx_signals_t seen;
     fifo_.wait_one(signals, zx::time::infinite(), &seen);
 }
-
-// C declarations
-zx_status_t blockserver_create(ddk::BlockProtocolClient* bp, zx_handle_t* fifo_out,
-                               BlockServer** out) {
-    fzl::fifo<block_fifo_request_t, block_fifo_response_t> fifo;
-    zx_status_t status = BlockServer::Create(bp, &fifo, out);
-    *fifo_out = fifo.release();
-    return status;
-}
-void blockserver_shutdown(BlockServer* bs) {
-    bs->ShutDown();
-}
-void blockserver_free(BlockServer* bs) {
-    delete bs;
-}
-zx_status_t blockserver_serve(BlockServer* bs) {
-    return bs->Serve();
-}
-zx_status_t blockserver_attach_vmo(BlockServer* bs, zx_handle_t raw_vmo, vmoid_t* out) {
-    zx::vmo vmo(raw_vmo);
-    return bs->AttachVmo(std::move(vmo), out);
-}
