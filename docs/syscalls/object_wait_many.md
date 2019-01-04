@@ -56,7 +56,7 @@ which is 8.  To wait on more things at once use [Ports](../objects/port.md).
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-Every entry of *items* must have a *handle* field with **ZX_RIGHT_TRANSFER**.
+Every entry of *items* must have a *handle* field with **ZX_RIGHT_WAIT**.
 
 ## RETURN VALUE
 

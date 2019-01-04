@@ -158,7 +158,7 @@ syscall object_wait_one blocking
     returns (zx_status_t, observed: zx_signals_t optional);
 
 #^ wait for signals on multiple objects
-#! Every entry of items must have a handle field with ZX_RIGHT_TRANSFER.
+#! Every entry of items must have a handle field with ZX_RIGHT_WAIT.
 syscall object_wait_many blocking
     (items: zx_wait_item_t[count] INOUT, count: size_t, deadline: zx_time_t)
     returns (zx_status_t);
