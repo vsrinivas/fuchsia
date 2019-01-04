@@ -14,7 +14,7 @@ import (
 	"fuchsia.googlesource.com/tools/tftp"
 )
 
-func TransferAndWriteFileToTar(client *tftp.Client, tftpAddr *net.UDPAddr, tw *tar.Writer, testResultsDir string, outputFile string) error {
+func FetchAndTar(client *tftp.Client, tftpAddr *net.UDPAddr, tw *tar.Writer, testResultsDir string, outputFile string) error {
 	writer, err := client.Receive(tftpAddr, path.Join(testResultsDir, outputFile))
 	if err != nil {
 		return fmt.Errorf("failed to receive file %s: %v\n", outputFile, err)

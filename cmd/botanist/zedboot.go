@@ -68,7 +68,7 @@ type ZedbootCommand struct {
 
 	// Host command to run after paving device
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
-	hackyHostCommand string
+	hostCmd string
 }
 
 func (*ZedbootCommand) Name() string {
@@ -93,11 +93,11 @@ func (cmd *ZedbootCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&cmd.propertiesFile, "properties", "/etc/botanist/config.json", "path to file of device properties")
 	f.StringVar(&cmd.cmdlineFile, "cmdline-file", "", "path to a file containing additional kernel command-line arguments")
 	f.StringVar(&cmd.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
-	f.StringVar(&cmd.hackyHostCommand, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
+	f.StringVar(&cmd.hostCmd, "hacky-host-cmd", "", "host command to run after paving. To be removed on completion of IN-831")
 }
 
-// Creates TAR archive from existing file or directory(recursive).
-func tarLocalFileOrDirectory(tw *tar.Writer, source string) error {
+// Creates tar archive from existing path - file or directory(recursive).
+func tarPath(tw *tar.Writer, source string) error {
 	info, err := os.Stat(source)
 	if err != nil {
 		return err
@@ -108,40 +108,41 @@ func tarLocalFileOrDirectory(tw *tar.Writer, source string) error {
 		baseDir = filepath.Base(source)
 	}
 
-	return filepath.Walk(source,
-		func(path string, info os.FileInfo, err error) error {
-			if err != nil {
-				return err
-			}
-			header, err := tar.FileInfoHeader(info, info.Name())
-			if err != nil {
-				return err
-			}
-
-			if baseDir != "" {
-				header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
-			}
-
-			if err := tw.WriteHeader(header); err != nil {
-				return err
-			}
-
-			if info.IsDir() {
-				return nil
-			}
-
-			file, err := os.Open(path)
-			if err != nil {
-				return err
-			}
-			defer file.Close()
-			_, err = io.Copy(tw, file)
+	return filepath.Walk(source, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
 			return err
-		})
+		}
+
+		file, err := os.Open(path)
+		if err != nil {
+			return err
+		}
+		defer file.Close()
+
+		header, err := tar.FileInfoHeader(info, info.Name())
+		if err != nil {
+			return err
+		}
+
+		if baseDir != "" {
+			header.Name = filepath.Join(baseDir, strings.TrimPrefix(path, source))
+		}
+
+		if err := tw.WriteHeader(header); err != nil {
+			return err
+		}
+
+		if info.IsDir() {
+			return nil
+		}
+
+		_, err = io.Copy(tw, file)
+		return err
+	})
 }
 
-// Writes a file to archive
-func writeFileToTar(tw *tar.Writer, content []byte, filepath string) error {
+// Writes a file to archive.
+func tarFile(tw *tar.Writer, content []byte, filepath string) error {
 	hdr := &tar.Header{
 		Name: filepath,
 		Size: int64(len(content)),
@@ -157,7 +158,7 @@ func writeFileToTar(tw *tar.Writer, content []byte, filepath string) error {
 }
 
 // Creates and returns archive file handle.
-func (cmd *ZedbootCommand) getOutputArchiveFile() (*os.File, error) {
+func (cmd *ZedbootCommand) createTarFile() (*os.File, error) {
 	file, err := os.OpenFile(cmd.outputArchive, os.O_WRONLY|os.O_CREATE, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create file %s: %v\n", cmd.outputArchive, err)
@@ -167,21 +168,20 @@ func (cmd *ZedbootCommand) getOutputArchiveFile() (*os.File, error) {
 }
 
 // Creates and returns Summary file object for Host Cmds.
-func (cmd *ZedbootCommand) getHostCmdSummaryBuffer(output []byte, err error) (*bytes.Buffer, error) {
-
+func (cmd *ZedbootCommand) hostSummaryJSON(err error) (*bytes.Buffer, error) {
 	var cmdResult runtests.TestResult
 
 	if err != nil {
 		cmdResult = runtests.TestFailure
-		log.Printf("Command failed! %v - %v", err, string(output))
+		log.Printf("Command failed! %v\n", err)
 	} else {
 		cmdResult = runtests.TestSuccess
-		log.Printf("Command succeeded! %v", string(output))
+		log.Printf("Command succeeded!\n")
 	}
 
 	// Create coarse-grained summary based on host command exit code
 	testDetail := runtests.TestDetails{
-		Name:       cmd.hackyHostCommand,
+		Name:       cmd.hostCmd,
 		OutputFile: runtests.TestOutputFilename,
 		Result:     cmdResult,
 	}
@@ -199,9 +199,9 @@ func (cmd *ZedbootCommand) getHostCmdSummaryBuffer(output []byte, err error) (*b
 	return buffer, nil
 }
 
-// Creates TAR archive from host command artifacts.
+// Creates tar archive from host command artifacts.
 func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte, outputDir string) error {
-	outFile, err := cmd.getOutputArchiveFile()
+	outFile, err := cmd.createTarFile()
 	if err != nil {
 		return err
 	}
@@ -210,17 +210,62 @@ func (cmd *ZedbootCommand) tarHostCmdArtifacts(summary []byte, cmdOutput []byte,
 	defer tw.Close()
 
 	// Write summary to archive
-	if err = writeFileToTar(tw, summary, cmd.summaryFilename); err != nil {
+	if err = tarFile(tw, summary, cmd.summaryFilename); err != nil {
 		return err
 	}
 
 	// Write combined stdout & stderr output to archive
-	if err = writeFileToTar(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
+	if err = tarFile(tw, cmdOutput, runtests.TestOutputFilename); err != nil {
 		return err
 	}
 
 	// Write all output files from the host cmd to the archive.
-	return tarLocalFileOrDirectory(tw, outputDir)
+	return tarPath(tw, outputDir)
+}
+
+// Executes host command and creates result tar from command output
+func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
+	// Create tmp directory to run host command out of
+	tmpDir, err := ioutil.TempDir("", "output")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tmpDir)
+
+	// Define multiwriters so cmd outputs to both stdout/stderr and respective buffers
+	// This allows users to see output on the fly while also storing results
+	var stdoutBuf, stderrBuf bytes.Buffer
+	stdoutWriter := io.MultiWriter(os.Stdout, &stdoutBuf)
+	stderrWriter := io.MultiWriter(os.Stdout, &stderrBuf)
+
+	// Define host command
+	hostCmd := exec.CommandContext(ctx, cmd.hostCmd)
+	hostCmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	hostCmd.Dir = tmpDir
+	hostCmd.Stdout = stdoutWriter
+	hostCmd.Stderr = stderrWriter
+
+	// Set timeout to clean up all subprocesses of original cmd
+	time.AfterFunc(60*time.Minute, func() {
+		syscall.Kill(-hostCmd.Process.Pid, syscall.SIGKILL)
+	})
+
+	// Execute host command
+	log.Printf("Executing command: %v", cmd.hostCmd)
+	hostCmd.Start()
+	hostCmdErr := hostCmd.Wait()
+
+	// Concatentate stderr after stdout
+	stdoutBuf.Write(stderrBuf.Bytes())
+
+	// Create summary JSON based on host command exit code
+	summaryBuffer, err := cmd.hostSummaryJSON(hostCmdErr)
+	if err != nil {
+		return err
+	}
+
+	// Create tar archive
+	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
 func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, nodename string, cmdlineArgs []string) error {
@@ -286,30 +331,10 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		return fmt.Errorf("cannot boot: %v\n", err)
 	}
 
-	// Handle host commands
+	// Handle host command
 	// TODO(IN-831): Remove when host-target-interaction infra is ready
-	if cmd.hackyHostCommand != "" {
-		// Create tmp directory to run host command out of
-		tmpDir, err := ioutil.TempDir("", "output")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(tmpDir)
-
-		// Execute host command
-		log.Printf("Executing command: %v", cmd.hackyHostCommand)
-		hostCmd := exec.Command(cmd.hackyHostCommand)
-		hostCmd.Dir = tmpDir
-		output, hostCmdErr := hostCmd.CombinedOutput()
-
-		// Create coarse-grained summary based on host command exit code
-		summaryBuffer, err := cmd.getHostCmdSummaryBuffer(output, hostCmdErr)
-		if err != nil {
-			return err
-		}
-
-		// Create TAR archive
-		return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), output, tmpDir)
+	if cmd.hostCmd != "" {
+		return cmd.runHostCmd(ctx)
 	}
 
 	log.Printf("waiting for \"%s\"\n", cmd.summaryFilename)
@@ -338,7 +363,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		return fmt.Errorf("cannot unmarshall test results: %v\n", err)
 	}
 
-	outFile, err := cmd.getOutputArchiveFile()
+	outFile, err := cmd.createTarFile()
 	if err != nil {
 		return err
 	}
@@ -347,7 +372,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	defer tw.Close()
 
 	// Write summary to archive
-	if err = writeFileToTar(tw, buffer.Bytes(), cmd.summaryFilename); err != nil {
+	if err = tarFile(tw, buffer.Bytes(), cmd.summaryFilename); err != nil {
 		return err
 	}
 
@@ -359,20 +384,20 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	go func() {
 		// Copy test output from the node.
 		for _, output := range result.Outputs {
-			if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
+			if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, output); err != nil {
 				c <- err
 				return
 			}
 		}
 		for _, test := range result.Tests {
-			if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
+			if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, test.OutputFile); err != nil {
 				c <- err
 				return
 			}
 			// Copy data sinks if any are present.
 			for _, sinks := range test.DataSinks {
 				for _, sink := range sinks {
-					if err = botanist.TransferAndWriteFileToTar(t, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
+					if err = botanist.FetchAndTar(t, tftpAddr, tw, cmd.testResultsDir, sink.File); err != nil {
 						c <- err
 						return
 					}
