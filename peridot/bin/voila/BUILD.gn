@@ -36,6 +36,7 @@ package("voila") {
 
 package("tests") {
   testonly = true
+  package_name = "voila-tests"
   deps = [
     ":bin",
   ]
