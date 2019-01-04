@@ -12,7 +12,7 @@ MODULE_TYPE := driver
 MODULE_NAME := nand
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/nand.c \
+    $(LOCAL_DIR)/nand.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

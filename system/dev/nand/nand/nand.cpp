@@ -392,13 +392,13 @@ static nand_protocol_ops_t nand_proto = {
 };
 
 static void nand_unbind(void* ctx) {
-    nand_device_t* dev = ctx;
+    auto* dev = static_cast<nand_device_t*>(ctx);
 
     device_remove(dev->zxdev);
 }
 
 static void nand_release(void* ctx) {
-    nand_device_t* dev = ctx;
+    auto* dev = static_cast<nand_device_t*>(ctx);
 
     // Signal the worker thread and wait for it to terminate.
     zx_object_signal(dev->worker_event, 0, NAND_SHUTDOWN);
@@ -419,16 +419,18 @@ static void nand_release(void* ctx) {
 }
 
 // Device protocol.
-static zx_protocol_device_t nand_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .unbind = nand_unbind,
-    .release = nand_release,
-};
+static zx_protocol_device_t nand_device_proto = [](){
+    zx_protocol_device_t proto = {};
+    proto.version = DEVICE_OPS_VERSION;
+    proto.unbind = nand_unbind;
+    proto.release = nand_release;
+    return proto;
+}();
 
 static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "nand_bind: Starting...!\n");
 
-    nand_device_t* dev = calloc(1, sizeof(*dev));
+    auto* dev = static_cast<nand_device_t*>(calloc(1, sizeof(nand_device_t)));
     if (!dev) {
         zxlogf(ERROR, "nand: no memory to allocate nand device!\n");
         return ZX_ERR_NO_MEMORY;
@@ -436,6 +438,24 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
 
     dev->nand_proto.ops = &nand_proto;
     dev->nand_proto.ctx = dev;
+
+
+    zx_device_prop_t props[] = {
+        {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
+        {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
+    };
+
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "nand";
+    args.ctx = dev;
+    args.ops = &nand_device_proto;
+    args.proto_id = ZX_PROTOCOL_NAND;
+    args.proto_ops = &nand_proto;
+    args.props = props;
+    args.prop_count = countof(props);
+
+    int rc;
 
     zx_status_t st = device_get_protocol(parent, ZX_PROTOCOL_RAW_NAND, &dev->host);
     if (st != ZX_OK) {
@@ -453,22 +473,6 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    zx_device_prop_t props[] = {
-        {BIND_PROTOCOL, 0, ZX_PROTOCOL_NAND},
-        {BIND_NAND_CLASS, 0, fuchsia_hardware_nand_Class_PARTMAP},
-    };
-
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "nand",
-        .ctx = dev,
-        .ops = &nand_device_proto,
-        .proto_id = ZX_PROTOCOL_NAND,
-        .proto_ops = &nand_proto,
-        .props = props,
-        .prop_count = countof(props),
-    };
-
     if (dev->host.ops->get_nand_info == NULL) {
         st = ZX_ERR_NOT_SUPPORTED;
         zxlogf(ERROR, "nand: failed to get nand info, function does not exist\n");
@@ -481,7 +485,7 @@ static zx_status_t nand_bind(void* ctx, zx_device_t* parent) {
     }
     dev->num_nand_pages = dev->nand_info.num_blocks * dev->nand_info.pages_per_block;
 
-    int rc = thrd_create_with_name(&dev->worker_thread, nand_worker_thread, dev, "nand-worker");
+    rc = thrd_create_with_name(&dev->worker_thread, nand_worker_thread, dev, "nand-worker");
     if (rc != thrd_success) {
         st = thrd_status_to_zx_status(rc);
         goto fail_remove;
@@ -501,10 +505,12 @@ fail:
     return st;
 }
 
-static zx_driver_ops_t nand_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = nand_bind,
-};
+static zx_driver_ops_t nand_driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = nand_bind;
+    return ops;
+}();
 
 // The formatter does not play nice with these macros.
 // clang-format off
