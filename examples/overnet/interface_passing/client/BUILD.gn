@@ -26,6 +26,8 @@ rustc_binary("bin") {
 }
 
 package("overnet-interface-passing-client") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

@@ -5,6 +5,8 @@
 import("//build/package.gni")
 
 package("intl_wisdom") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "//garnet/examples/intl/client:intl_wisdom_client",
     "//garnet/examples/intl/server:intl_wisdom_server",

@@ -40,6 +40,8 @@ executable("bin") {
 }
 
 package("trace_manager") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
     "//zircon/public/fidl/fuchsia-tracelink",

@@ -61,6 +61,8 @@ metrics_registry("cobalt_sw_delivery_registry") {
 }
 
 package("amber") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":amber_bin",
     ":cobalt_sw_delivery_registry",

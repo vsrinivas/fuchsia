@@ -23,6 +23,8 @@ rustc_binary("bin") {
 }
 
 package("xi_core") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = rebase_path("meta/xi_core.cmx")

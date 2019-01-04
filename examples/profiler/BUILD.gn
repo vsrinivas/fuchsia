@@ -20,6 +20,8 @@ executable("profiler_example_bin") {
 }
 
 package("profiler_example") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":profiler_example_bin",
   ]

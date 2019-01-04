@@ -29,6 +29,8 @@ rustc_binary("bin") {
 }
 
 package("network-speed-test") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/network-speed-test.cmx"

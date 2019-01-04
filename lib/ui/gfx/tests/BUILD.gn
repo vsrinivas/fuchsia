@@ -119,6 +119,8 @@ executable("mock_pose_buffer_provider_cc") {
 }
 
 package("mock_pose_buffer_provider") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/mock_pose_buffer_provider.cmx"

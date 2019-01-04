@@ -101,6 +101,8 @@ test("tests") {
 }
 
 package("service") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

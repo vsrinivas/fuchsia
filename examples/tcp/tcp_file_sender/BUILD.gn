@@ -17,6 +17,8 @@ rustc_binary("bin") {
 }
 
 package("tcp_file_sender") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

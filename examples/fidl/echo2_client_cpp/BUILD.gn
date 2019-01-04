@@ -36,6 +36,8 @@ executable("bin") {
 }
 
 package("echo2_client_cpp") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

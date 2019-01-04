@@ -21,6 +21,8 @@ executable("bin") {
 }
 
 package("run") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

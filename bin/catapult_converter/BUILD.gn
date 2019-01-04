@@ -43,6 +43,8 @@ executable("unittest") {
 }
 
 package("catapult_converter") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

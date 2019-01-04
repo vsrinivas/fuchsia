@@ -54,6 +54,8 @@ foreach(testpkg, test_packages) {
 }
 
 package("pkgsvr") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = rebase_path("meta/pkgsvr.cmx")

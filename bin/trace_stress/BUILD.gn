@@ -20,6 +20,8 @@ executable("bin") {
 }
 
 package("trace_stress") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = rebase_path("meta/trace_stress.cmx")

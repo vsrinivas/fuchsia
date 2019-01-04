@@ -70,6 +70,8 @@ executable("exiter_bin") {
 
 # Helper program for tests
 package("run_test_exiter") {
+  deprecated_bare_package_url = "//build"
+
   meta = [
     {
       path = "meta/run_test_exiter.cmx"
@@ -85,6 +87,8 @@ package("run_test_exiter") {
 }
 
 package("run_tests") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

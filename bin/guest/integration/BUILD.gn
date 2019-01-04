@@ -60,6 +60,8 @@ test_package("guest_integration_tests") {
 }
 
 package("guest_integration_tests_utils") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "virtio_block_test_util",
     "virtio_rng_test_util",

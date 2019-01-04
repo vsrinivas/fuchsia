@@ -100,6 +100,8 @@ executable("bin") {
 }
 
 package("debug_agent") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]
@@ -147,6 +149,8 @@ executable("tests") {
 }
 
 package("debug_agent_tests") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   package_name = "debug_agent_tests"

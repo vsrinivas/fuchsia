@@ -27,6 +27,8 @@ group("ui") {
 # NOTE: this depends on the shadertoy_client example, which is launched by
 # the hello_base_view binary.
 package("hello_base_view") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_base_view",
   ]
@@ -42,6 +44,8 @@ package("hello_base_view") {
 }
 
 package("hello_input") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_input",
   ]
@@ -57,6 +61,8 @@ package("hello_input") {
 }
 
 package("hello_input_child") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_input/child",
   ]
@@ -72,6 +78,8 @@ package("hello_input_child") {
 }
 
 package("hello_scenic") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_scenic",
   ]
@@ -87,6 +95,8 @@ package("hello_scenic") {
 }
 
 package("hello_views") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_views",
     "hello_views:hello_subview",
@@ -114,6 +124,8 @@ package("hello_views") {
 }
 
 package("hello_pose_buffer") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_pose_buffer",
   ]
@@ -149,6 +161,8 @@ package("hello_pose_buffer_provider") {
 }
 
 package("hello_stereo") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "hello_stereo",
   ]
@@ -164,6 +178,8 @@ package("hello_stereo") {
 }
 
 package("shadertoy_client") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "shadertoy/client",
   ]
@@ -179,6 +195,8 @@ package("shadertoy_client") {
 }
 
 package("shadertoy_service") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "shadertoy/service",
     "//third_party/vulkan_loader_and_validation_layers/layers",
@@ -199,6 +217,8 @@ package("shadertoy_service") {
 }
 
 package("shapes_view") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "shapes",
   ]
@@ -214,6 +234,8 @@ package("shapes_view") {
 }
 
 package("sketchy_client") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "sketchy",
   ]
@@ -229,6 +251,8 @@ package("sketchy_client") {
 }
 
 package("spinning_square_view") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "spinning_square",
   ]
@@ -244,6 +268,8 @@ package("spinning_square_view") {
 }
 
 package("tile_view") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "tile",
   ]
@@ -259,6 +285,8 @@ package("tile_view") {
 }
 
 package("video_display") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "video_display",
   ]
@@ -274,6 +302,8 @@ package("video_display") {
 }
 
 package("yuv_to_image_pipe") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "yuv_to_image_pipe",
   ]

@@ -33,6 +33,8 @@ executable("bin") {
 }
 
 package("simple_camera_server_cpp") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

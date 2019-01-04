@@ -11,6 +11,8 @@ import("//build/package.gni")
 # "run fuchsia-pkg://fuchsia.com/media_examples#meta/fx.cmx").
 
 package("fx") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "fx",
   ]
@@ -24,6 +26,8 @@ package("fx") {
 }
 
 package("simple_sine") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "simple_sine",
   ]
@@ -37,6 +41,8 @@ package("simple_sine") {
 }
 
 package("simple_sine_sync") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "simple_sine_sync",
   ]
@@ -50,6 +56,8 @@ package("simple_sine_sync") {
 }
 
 package("tones") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "tones",
   ]
@@ -63,6 +71,8 @@ package("tones") {
 }
 
 package("tts") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "tts",
   ]
@@ -76,6 +86,8 @@ package("tts") {
 }
 
 package("use_media_decoder") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     "use_media_decoder",
   ]
@@ -93,6 +105,8 @@ package("use_media_decoder") {
 #
 
 package("use_aac_decoder_test") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

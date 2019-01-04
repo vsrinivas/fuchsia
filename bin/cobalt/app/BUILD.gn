@@ -73,6 +73,8 @@ executable("app") {
 }
 
 package("cobalt") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":app",
     ":cobalt_internal_metrics_registry",

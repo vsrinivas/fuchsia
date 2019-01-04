@@ -30,6 +30,8 @@ go_library("lib") {
 }
 
 package("fidl_compatibility_test_server_go") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
   deps = [
     ":compatibility_test_server_go_bin",

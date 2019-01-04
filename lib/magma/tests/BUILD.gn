@@ -75,6 +75,8 @@ test_package("magma_abi_conformance_tests") {
 }
 
 package("vulkan-tests") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   if (have_libvulkan || use_vulkan_loader_for_tests) {

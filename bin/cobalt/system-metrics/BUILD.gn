@@ -27,6 +27,8 @@ metrics_registry("cobalt_system_metrics_registry") {
 }
 
 package("cobalt_system_metrics") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":cobalt_system_metrics_registry",
     ":system-metrics",

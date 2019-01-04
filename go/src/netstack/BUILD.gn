@@ -9,6 +9,8 @@ import("//build/go/toolchain.gni")
 import("//build/package.gni")
 
 package("netstack") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":netstack_bin",
   ]

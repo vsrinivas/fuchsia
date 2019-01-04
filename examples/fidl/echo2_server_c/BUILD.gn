@@ -19,6 +19,8 @@ executable("bin") {
 }
 
 package("echo2_server_c") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

@@ -36,6 +36,8 @@ rustc_binary("bin") {
 }
 
 package("bt-mgr") {
+  deprecated_bare_package_url = "//build"
+
   deps = [
     ":bin",
   ]

@@ -23,6 +23,8 @@ rustc_binary("bin") {
 }
 
 package("network_settings_server") {
+  deprecated_bare_package_url = "//build"
+
 
   deps = [
     ":bin",

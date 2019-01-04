@@ -54,6 +54,8 @@ executable("virtio_balloon_bin") {
 }
 
 package("virtio_balloon") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_balloon"
   deps = [
     ":virtio_balloon_bin",
@@ -96,6 +98,8 @@ executable("virtio_block_bin") {
 }
 
 package("virtio_block") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_block"
   deps = [
     ":virtio_block_bin",
@@ -121,6 +125,8 @@ executable("virtio_console_bin") {
 }
 
 package("virtio_console") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_console"
   deps = [
     ":virtio_console_bin",
@@ -146,6 +152,8 @@ executable("virtio_input_bin") {
 }
 
 package("virtio_input") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_input"
   deps = [
     ":virtio_input_bin",
@@ -179,6 +187,8 @@ executable("virtio_gpu_bin") {
 }
 
 package("virtio_gpu") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_gpu"
   deps = [
     ":virtio_gpu_bin",
@@ -208,6 +218,8 @@ executable("virtio_net_bin") {
 }
 
 package("virtio_net") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_net"
   deps = [
     ":virtio_net_bin",
@@ -233,6 +245,8 @@ executable("virtio_rng_bin") {
 }
 
 package("virtio_rng") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_rng"
   deps = [
     ":virtio_rng_bin",
@@ -263,6 +277,8 @@ executable("virtio_wl_bin") {
 }
 
 package("virtio_wl") {
+  deprecated_bare_package_url = "//build"
+
   binary = "virtio_wl"
   deps = [
     ":virtio_wl_bin",

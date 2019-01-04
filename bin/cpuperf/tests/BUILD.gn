@@ -50,6 +50,8 @@ executable("cpuperf_integration_tests") {
 }
 
 package("cpuperf_tests") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [

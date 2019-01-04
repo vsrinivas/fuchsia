@@ -25,6 +25,8 @@ package("vulkan_is_supported") {
 }
 
 package("scenic_benchmarks") {
+  deprecated_bare_package_url = "//build"
+
   testonly = true
 
   deps = [
