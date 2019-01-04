@@ -191,6 +191,14 @@ impl Circle {
     }
 }
 
+impl Deref for Circle {
+    type Target = Shape;
+
+    fn deref(&self) -> &Shape {
+        &self.0
+    }
+}
+
 pub struct Rectangle(Shape);
 
 impl Rectangle {
