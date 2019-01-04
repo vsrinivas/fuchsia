@@ -131,34 +131,6 @@ zx_status_t BlockDevice::Init() {
     return ZX_OK;
 }
 
-zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                  void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    // Block Protocol:
-    case IOCTL_BLOCK_GET_NAME: {
-        if (out_len < sizeof(kDeviceName)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        char* name = reinterpret_cast<char*>(out_buf);
-        memset(name, 0, sizeof(kDeviceName));
-        strncpy(name, kDeviceName, out_len);
-        *out_actual = sizeof(kDeviceName) - 1;
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_GET_TYPE_GUID: {
-        char* guid = reinterpret_cast<char*>(out_buf);
-        if (out_len < ZBI_PARTITION_GUID_LEN) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        memcpy(guid, guid_, ZBI_PARTITION_GUID_LEN);
-        *out_actual = ZBI_PARTITION_GUID_LEN;
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
 zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_block_Ftl_dispatch(this, txn, msg, &fidl_ops);
 }
@@ -167,6 +139,21 @@ zx_status_t BlockDevice::DdkSuspend(uint32_t flags) {
     zxlogf(INFO, "FTL: Suspend\n");
     LocalOperation operation(BLOCK_OP_FLUSH);
     return operation.Execute(this);
+}
+
+zx_status_t BlockDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+    auto* proto = static_cast<ddk::AnyProtocol*>(out_protocol);
+    proto->ctx = this;
+    switch (proto_id) {
+    case ZX_PROTOCOL_BLOCK_IMPL:
+        proto->ops = &block_impl_protocol_ops_;
+        return ZX_OK;
+    case ZX_PROTOCOL_BLOCK_PARTITION:
+        proto->ops = &block_partition_protocol_ops_;
+        return ZX_OK;
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 }
 
 void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
@@ -208,6 +195,23 @@ void BlockDevice::BlockImplQueue(block_op_t* operation, block_impl_queue_callbac
     } else {
         completion_cb(cookie, ZX_ERR_BAD_STATE, operation);
     }
+}
+
+zx_status_t BlockDevice::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {
+    if (guid_type != GUIDTYPE_TYPE) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    memcpy(out_guid, guid_, ZBI_PARTITION_GUID_LEN);
+    return ZX_OK;
+}
+
+zx_status_t BlockDevice::BlockPartitionGetName(char* out_name, size_t capacity) {
+    if (capacity < sizeof(kDeviceName)) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
+    }
+    strncpy(out_name, kDeviceName, capacity);
+    return ZX_OK;
 }
 
 bool BlockDevice::OnVolumeAdded(uint32_t page_size, uint32_t num_pages) {

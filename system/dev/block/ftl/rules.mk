@@ -40,6 +40,7 @@ MODULE_FIDL_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \
     system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-block-partition \
     system/banjo/ddk-protocol-nand \
 
 include make/module.mk
@@ -93,6 +94,7 @@ MODULE_FIDL_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-badblock \
     system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-block-partition \
     system/banjo/ddk-protocol-nand \
 
 MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)

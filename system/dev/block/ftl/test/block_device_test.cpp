@@ -122,40 +122,29 @@ bool GetSizeTest() {
     END_TEST;
 }
 
-bool IoctlGetNameTest() {
+bool GetNameTest() {
     BEGIN_TEST;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     ASSERT_EQ(ZX_OK, device.Init());
 
     char name[20];
-    size_t name_len;
+    ASSERT_EQ(ZX_OK, device.BlockPartitionGetName(name, sizeof(name)));
 
-    ASSERT_EQ(ZX_OK,
-              device.DdkIoctl(IOCTL_BLOCK_GET_NAME, nullptr, 0, &name, sizeof(name), &name_len));
-
-    EXPECT_GT(name_len, 0);
-    EXPECT_NE('\0', name[0]);
-    EXPECT_NE('\0', name[name_len - 1]);
-    EXPECT_EQ('\0', name[name_len]);
+    EXPECT_GT(strlen(name), 0);
     END_TEST;
 }
 
-bool IoctlGetTypeTest() {
+bool GetTypeTest() {
     BEGIN_TEST;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
     ASSERT_EQ(ZX_OK, device.Init());
 
-    char guid[ZBI_PARTITION_GUID_LEN];
-    size_t guid_len;
+    guid_t guid;
+    ASSERT_EQ(ZX_OK, device.BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
 
-    ASSERT_EQ(ZX_OK,
-              device.DdkIoctl(IOCTL_BLOCK_GET_TYPE_GUID, nullptr, 0, &guid, sizeof(guid),
-                              &guid_len));
-
-    EXPECT_EQ(sizeof(guid), guid_len);
-    EXPECT_TRUE(CheckPattern(guid, sizeof(guid), '\0'));  // No parent device.
+    EXPECT_TRUE(CheckPattern(&guid, sizeof(guid), '\0'));  // No parent device.
     END_TEST;
 }
 
@@ -457,8 +446,8 @@ BEGIN_TEST_CASE(BlockDeviceTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(DdkLifetimeTest)
 RUN_TEST_SMALL(GetSizeTest)
-RUN_TEST_SMALL(IoctlGetNameTest)
-RUN_TEST_SMALL(IoctlGetTypeTest)
+RUN_TEST_SMALL(GetNameTest)
+RUN_TEST_SMALL(GetTypeTest)
 RUN_TEST_SMALL(QueryTest)
 RUN_TEST_SMALL(QueueOneTest)
 RUN_TEST_SMALL(ReadWriteTest)

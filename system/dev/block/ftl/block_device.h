@@ -14,6 +14,7 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/badblock.h>
 #include <ddktl/protocol/block.h>
+#include <ddktl/protocol/block/partition.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <lib/ftl/volume.h>
@@ -44,12 +45,13 @@ struct FtlOp {
 };
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Ioctlable,
-                               ddk::Messageable, ddk::Suspendable, ddk::Resumable>;
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Messageable,
+                               ddk::Suspendable, ddk::Resumable, ddk::GetProtocolable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
-class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice>,
-                    public ftl::FtlInstance  {
+class BlockDevice : public DeviceType,
+                    public ddk::BlockImplProtocol<BlockDevice, ddk::base_protocol>,
+                    public ddk::BlockPartitionProtocol<BlockDevice>, public ftl::FtlInstance  {
   public:
     explicit BlockDevice(zx_device_t* parent = nullptr) : DeviceType(parent) {}
     ~BlockDevice();
@@ -63,16 +65,19 @@ class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice
 
     // Device protocol implementation.
     zx_off_t DdkGetSize() { return params_.GetSize(); }
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     zx_status_t DdkSuspend(uint32_t flags);
     zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
     // Block protocol implementation.
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
     void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                         void* cookie);
+
+    // Partition protocol implementation.
+    zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
+    zx_status_t BlockPartitionGetName(char* out_name, size_t capacity);
 
     // FtlInstance interface.
     bool OnVolumeAdded(uint32_t page_size, uint32_t num_pages) final;
