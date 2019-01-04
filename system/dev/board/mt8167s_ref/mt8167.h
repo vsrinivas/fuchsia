@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <ddk/protocol/gpioimpl.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/platform/bus.h>
@@ -22,6 +23,7 @@ enum {
     BTI_EMMC,
     BTI_SDIO,
     BTI_USB,
+    BTI_AUDIO_OUT,
 };
 
 class Mt8167;
@@ -56,9 +58,11 @@ private:
     zx_status_t TouchInit();
     zx_status_t SensorsInit();
     zx_status_t BacklightInit();
+    zx_status_t AudioInit();
     int Thread();
 
     ddk::PBusProtocolClient pbus_;
+    gpio_impl_protocol_t gpio_impl_;
     pdev_board_info_t board_info_;
     thrd_t thread_;
 };

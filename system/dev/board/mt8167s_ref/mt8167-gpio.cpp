@@ -6,7 +6,6 @@
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
@@ -51,6 +50,13 @@ zx_status_t Mt8167::GpioInit() {
         zxlogf(ERROR, "%s: ProtocolDeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
+
+    status = device_get_protocol(parent(), ZX_PROTOCOL_GPIO_IMPL, &gpio_impl_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: device_get_protocol failed %d\n", __func__, status);
+        return status;
+    }
+
 //#define GPIO_TEST
 #ifdef GPIO_TEST
     const pbus_gpio_t gpio_test_gpios[] = {

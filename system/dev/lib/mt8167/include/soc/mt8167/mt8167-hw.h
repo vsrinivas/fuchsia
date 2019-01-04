@@ -23,6 +23,9 @@
 #define MT8167_SOC_BASE                                     0x10200000
 #define MT8167_SOC_SIZE                                     0x1D00
 
+#define MT8167_PLL_BASE                                     0x10018000
+#define MT8167_PLL_SIZE                                     0x800
+
 #define MT8167_I2C0_BASE                                    0x11009000
 #define MT8167_I2C0_SIZE                                    0x8c
 
@@ -40,6 +43,9 @@
 
 #define MT8167_MSDC0_BASE                                   0x11120000
 #define MT8167_MSDC0_SIZE                                   0x22c
+
+#define MT8167_AUDIO_BASE                                   0x11140000
+#define MT8167_AUDIO_SIZE                                   0x1000
 
 #define MT8167_MSDC2_BASE                                   0x11170000
 #define MT8167_MSDC2_SIZE                                   0x22c

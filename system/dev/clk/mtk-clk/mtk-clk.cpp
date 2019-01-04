@@ -41,6 +41,10 @@ constexpr MtkClkGate kMtkClkGates[] = {
     [board_mt8167::kClkSlowMfg] = {.regs = kClkGatingCtrl8, .bit = 7},
     [board_mt8167::kClkAxiMfg] = {.regs = kClkGatingCtrl8, .bit = 6},
     [board_mt8167::kClkMfgMm] = {.regs = kClkGatingCtrl0, .bit = 2},
+    [board_mt8167::kClkAud1] = {.regs = kClkGatingCtrl8, .bit = 8},
+    [board_mt8167::kClkAud2] = {.regs = kClkGatingCtrl8, .bit = 9},
+    [board_mt8167::kClkAudEngen1] = {.regs = kClkGatingCtrl8, .bit = 10},
+    [board_mt8167::kClkAudEngen2] = {.regs = kClkGatingCtrl8, .bit = 11},
 };
 struct clock_info {
     uint32_t idx;
@@ -62,7 +66,13 @@ static struct clock_info clks[] = {
     {.idx = 18, .name = "mfg"},
     {.idx = 45, .name = "axi_mfg"},
     {.idx = 46, .name = "slow_mfg"},
+    {.idx = 47, .name = "aud1"},
+    {.idx = 48, .name = "aud2"},
+    {.idx = 49, .name = "aud engen1"},
+    {.idx = 50, .name = "aud engen2"},
     {.idx = 67, .name = "mmpll"},
+    {.idx = 69, .name = "aud1pll"},
+    {.idx = 70, .name = "aud2pll"},
 };
 
 namespace {

@@ -24,6 +24,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mt8167-touch.cpp \
     $(LOCAL_DIR)/mt8167-sensors.cpp \
     $(LOCAL_DIR)/mt8167-backlight.cpp \
+    $(LOCAL_DIR)/mt8167-audio.cpp \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/focaltech \

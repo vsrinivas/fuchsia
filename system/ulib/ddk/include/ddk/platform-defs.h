@@ -153,6 +153,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_MEDIATEK_GPU       6
 #define PDEV_DID_MEDIATEK_CLK       7
 #define PDEV_DID_MEDIATEK_THERMAL   8
+#define PDEV_DID_MEDIATEK_AUDIO_OUT 9
 
 // Sony
 #define PDEV_VID_SONY               14

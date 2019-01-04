@@ -17,6 +17,10 @@ enum Mt8167Clk {
     kClkSlowMfg,
     kClkAxiMfg,
     kClkMfgMm,
+    kClkAud1,
+    kClkAud2,
+    kClkAudEngen1,
+    kClkAudEngen2,
 };
 
 }  // namespace board_mt8167
