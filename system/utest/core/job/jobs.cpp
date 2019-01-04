@@ -19,7 +19,7 @@ static const char process_name[] = "job-test-p";
 
 extern zx_handle_t root_job;
 
-static bool basic_test(void) {
+static bool basic_test() {
     BEGIN_TEST;
 
     // Never close the launchpad job.
@@ -42,7 +42,7 @@ static bool basic_test(void) {
     END_TEST;
 }
 
-static bool create_test(void) {
+static bool create_test() {
     BEGIN_TEST;
 
     zx_handle_t job_parent = zx_job_default();
@@ -69,7 +69,7 @@ static bool create_test(void) {
     END_TEST;
 }
 
-static bool create_missing_rights_test(void) {
+static bool create_missing_rights_test() {
     BEGIN_TEST;
 
     zx_rights_t rights = ZX_DEFAULT_JOB_RIGHTS & ~ZX_RIGHT_WRITE & ~ZX_RIGHT_MANAGE_JOB;
@@ -85,7 +85,7 @@ static bool create_missing_rights_test(void) {
     END_TEST;
 }
 
-static bool policy_basic_test(void) {
+static bool policy_basic_test() {
     BEGIN_TEST;
 
     zx_handle_t job_parent = zx_job_default();
@@ -107,7 +107,7 @@ static bool policy_basic_test(void) {
     END_TEST;
 }
 
-static bool kill_test(void) {
+static bool kill_test() {
     BEGIN_TEST;
 
     zx_handle_t job_parent = zx_job_default();
@@ -145,7 +145,7 @@ static bool kill_test(void) {
     END_TEST;
 }
 
-static bool kill_job_no_child_test(void) {
+static bool kill_job_no_child_test() {
     BEGIN_TEST;
 
     zx_handle_t job_parent = zx_job_default();
@@ -170,7 +170,7 @@ static bool kill_job_no_child_test(void) {
     END_TEST;
 }
 
-static bool set_job_oom_kill_bit(void) {
+static bool set_job_oom_kill_bit() {
     BEGIN_TEST;
     // TODO(cpu): Other than trivial set/reset of the property this can't be
     // fully tested without de-establizing the system under test. The current
@@ -193,7 +193,7 @@ static bool set_job_oom_kill_bit(void) {
     END_TEST;
 }
 
-static bool wait_test(void) {
+static bool wait_test() {
     BEGIN_TEST;
 
     zx_handle_t job_parent = zx_job_default();
@@ -227,7 +227,7 @@ static bool wait_test(void) {
     END_TEST;
 }
 
-static bool info_task_stats_fails(void) {
+static bool info_task_stats_fails() {
     BEGIN_TEST;
     zx_info_task_stats_t info;
     ASSERT_NE(zx_object_get_info(zx_job_default(), ZX_INFO_TASK_STATS,
@@ -239,7 +239,7 @@ static bool info_task_stats_fails(void) {
 }
 
 // Show that there is a max job height.
-static bool max_height_smoke(void) {
+static bool max_height_smoke() {
     BEGIN_TEST;
 
     // Get our parent job.
@@ -247,9 +247,9 @@ static bool max_height_smoke(void) {
 
     // Stack of handles that we need to close.
     static const int kNumJobs = 128;
-    zx_handle_t *handles = calloc(kNumJobs, sizeof(*handles));
+    zx_handle_t* handles = static_cast<zx_handle_t*>(calloc(kNumJobs, sizeof(*handles)));
     ASSERT_NONNULL(handles, "");
-    zx_handle_t *htop = handles;
+    zx_handle_t* htop = handles;
 
     // Eat up our max height.
     while (true) {
