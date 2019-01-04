@@ -26,7 +26,7 @@ class PackageUpdatingLoader final : public component::PackageLoader {
   typedef fit::function<void(std::string)> DoneCallback;
 
   PackageUpdatingLoader(std::unordered_set<std::string> update_dependency_urls,
-                        fuchsia::pkg::PackageResolverPtr resolver,
+                        fuchsia::sys::ServiceProviderPtr service_provider,
                         async_dispatcher_t* dispatcher);
   ~PackageUpdatingLoader() override;
 
@@ -35,7 +35,11 @@ class PackageUpdatingLoader final : public component::PackageLoader {
  private:
   const std::unordered_set<std::string> update_dependency_urls_;
   fuchsia::pkg::PackageResolverPtr resolver_;
+  fuchsia::sys::ServiceProviderPtr service_provider_;
   async_dispatcher_t* const dispatcher_;  // Not owned.
+  bool needs_reconnect_;
+
+  void EnsureConnectedToResolver();
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PackageUpdatingLoader);
 };

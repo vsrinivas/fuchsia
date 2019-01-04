@@ -34,17 +34,17 @@ std::unique_ptr<DelegatingLoader>
 DelegatingLoader::MakeWithPackageUpdatingFallback(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
     std::unordered_set<std::string> update_dependency_urls,
-    fuchsia::pkg::PackageResolverPtr resolver) {
+    fuchsia::sys::ServiceProviderPtr env_services) {
   return std::unique_ptr<DelegatingLoader>(new DelegatingLoader(
       std::move(delegates), delegate_launcher, nullptr,
-      std::move(update_dependency_urls), std::move(resolver)));
+      std::move(update_dependency_urls), std::move(env_services)));
 }
 
 DelegatingLoader::DelegatingLoader(
     Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
     fuchsia::sys::LoaderPtr fallback,
     std::unordered_set<std::string> update_dependency_urls,
-    fuchsia::pkg::PackageResolverPtr resolver)
+    fuchsia::sys::ServiceProviderPtr env_services)
     : delegate_launcher_(delegate_launcher),
       parent_fallback_(std::move(fallback)) {
   for (auto& pair : delegates) {
@@ -52,9 +52,10 @@ DelegatingLoader::DelegatingLoader(
     record.launch_info = std::move(pair.second);
     delegates_by_scheme_[pair.first] = &record;
   }
-  if (resolver) {
+  if (env_services) {
+    fuchsia::pkg::PackageResolverPtr resolver;
     package_updating_fallback_ = std::make_unique<PackageUpdatingLoader>(
-        std::move(update_dependency_urls), std::move(resolver),
+        std::move(update_dependency_urls), std::move(env_services),
         async_get_default_dispatcher());
   }
 }

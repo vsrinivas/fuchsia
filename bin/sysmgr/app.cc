@@ -28,7 +28,8 @@ constexpr bool kAutoUpdatePackages = false;
 App::App(Config config)
     : startup_context_(component::StartupContext::CreateFromStartupInfo()),
       vfs_(async_get_default_dispatcher()),
-      svc_root_(fbl::AdoptRef(new fs::PseudoDir())) {
+      svc_root_(fbl::AdoptRef(new fs::PseudoDir())),
+      auto_updates_enabled_(kAutoUpdatePackages) {
   FXL_DCHECK(startup_context_);
 
   // The set of excluded services below are services that are the transitive
@@ -51,18 +52,16 @@ App::App(Config config)
   // won't happen until the next (first) message loop iteration, we'll be set up
   // by then.
   auto env_request = env_.NewRequest();
+  fuchsia::sys::ServiceProviderPtr env_services;
   env_->GetLauncher(env_launcher_.NewRequest());
-  env_->GetServices(env_services_.NewRequest());
+  env_->GetServices(env_services.NewRequest());
 
-  // Register the app loaders. First initialize and pass the resolver client if
-  // auto_update_packages is enabled. Note that we have to do this after
-  // |env_services_| is initialized.
-  fuchsia::pkg::PackageResolverPtr resolver;
-  if (kAutoUpdatePackages) {
-    static const char* const kResolverName = fuchsia::pkg::PackageResolver::Name_;
+  // check whether we should enable auto updates before we register app loaders.
+  if (auto_updates_enabled_) {
     const bool resolver_missing =
         std::find(update_dependencies.begin(), update_dependencies.end(),
-                  kResolverName) == update_dependencies.end();
+                  fuchsia::pkg::PackageResolver::Name_) ==
+        update_dependencies.end();
     // Check if any component urls that are excluded (dependencies of
     // PackageResolver/startup) were not registered from the above
     // configuration.
@@ -70,21 +69,25 @@ App::App(Config config)
     for (auto& dep : update_dependencies) {
       if (std::find(svc_names_->begin(), svc_names_->end(), dep) ==
           svc_names_->end()) {
-        FXL_LOG(WARNING) << "missing service required for auto updates: " << dep;
+        FXL_LOG(WARNING) << "missing service required for auto updates: "
+                         << dep;
         missing_services = true;
       }
     }
+
     if (resolver_missing || missing_services) {
       FXL_LOG(WARNING) << "auto_update_packages = true but some update "
                           "dependencies are missing in the sys environment. "
                           "Disabling auto-updates.";
-    } else {
-      env_services_->ConnectToService(kResolverName,
-                                      resolver.NewRequest().TakeChannel());
+      auto_updates_enabled_ = false;
     }
   }
-  RegisterAppLoaders(config.TakeAppLoaders(), std::move(update_dependency_urls),
-                     std::move(resolver));
+
+  // Register the app loaders. Note that we have to do this after
+  // |env_services_| is initialized because |env_services_| is used to
+  // initialize the package resolver if auto-updating is available.
+  RegisterAppLoaders(std::move(env_services), config.TakeAppLoaders(),
+                     std::move(update_dependency_urls));
 
   // Set up environment for the programs we will run.
   fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
@@ -167,13 +170,13 @@ void App::RegisterSingleton(std::string service_name,
 }
 
 void App::RegisterAppLoaders(
+    fuchsia::sys::ServiceProviderPtr env_services,
     Config::ServiceMap app_loaders,
-    std::unordered_set<std::string> update_dependency_urls,
-    fuchsia::pkg::PackageResolverPtr resolver) {
-  if (resolver) {
+    std::unordered_set<std::string> update_dependency_urls) {
+  if (auto_updates_enabled_) {
     app_loader_ = DelegatingLoader::MakeWithPackageUpdatingFallback(
         std::move(app_loaders), env_launcher_.get(),
-        std::move(update_dependency_urls), std::move(resolver));
+        std::move(update_dependency_urls), std::move(env_services));
   } else {
     app_loader_ = DelegatingLoader::MakeWithParentFallback(
         std::move(app_loaders), env_launcher_.get(),

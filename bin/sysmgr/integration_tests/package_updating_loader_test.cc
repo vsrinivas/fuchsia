@@ -30,8 +30,7 @@ namespace {
 
 class PackageResolverMock : public fuchsia::pkg::PackageResolver {
  public:
-  explicit PackageResolverMock(zx_status_t status)
-      : status_(status) {}
+  explicit PackageResolverMock(zx_status_t status) : status_(status) {}
 
   virtual void Resolve(::fidl::StringPtr package_uri,
                        ::fidl::VectorPtr<::fidl::StringPtr> selectors,
@@ -51,6 +50,8 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
     bindings_.AddBinding(this, std::move(req));
   }
 
+  void Unbind() { bindings_.CloseAll(); }
+
   typedef std::tuple<std::string, std::vector<std::string>,
                      fuchsia::pkg::UpdatePolicy>
       ArgsTuple;
@@ -63,17 +64,54 @@ class PackageResolverMock : public fuchsia::pkg::PackageResolver {
   fidl::BindingSet<fuchsia::pkg::PackageResolver> bindings_;
 };
 
+class ServiceProviderMock : fuchsia::sys::ServiceProvider {
+ public:
+  explicit ServiceProviderMock(PackageResolverMock* resolver_service)
+      : num_connections_made_(0), resolver_service_(resolver_service) {}
+
+  void ConnectToService(::fidl::StringPtr service_name,
+                        ::zx::channel channel) override {
+    if (service_name != fuchsia::pkg::PackageResolver::Name_) {
+      FXL_LOG(FATAL) << "ServiceProviderMock asked to connect to '"
+                     << service_name
+                     << "' but we can only connect to the package resolver.";
+      return;
+    }
+
+    FXL_DLOG(INFO) << "Adding a binding for the package resolver";
+    resolver_service_->AddBinding(
+        fidl::InterfaceRequest<fuchsia::pkg::PackageResolver>(
+            std::move(channel)));
+    num_connections_made_++;
+  }
+
+  void DisconnectAll() {
+    FXL_DLOG(INFO) << "Disconnecting package resolver mock clients.";
+    resolver_service_->Unbind();
+  }
+
+  fuchsia::sys::ServiceProviderPtr Bind() {
+    fuchsia::sys::ServiceProviderPtr env_services;
+    bindings_.AddBinding(this, env_services.NewRequest());
+    return env_services;
+  }
+
+  int num_connections_made_;
+
+ private:
+  PackageResolverMock* resolver_service_;
+  fidl::BindingSet<fuchsia::sys::ServiceProvider> bindings_;
+};
+
 constexpr char kRealm[] = "package_updating_loader_env";
 
 class PackageUpdatingLoaderTest
     : public component::testing::TestWithEnvironment {
  protected:
-  void Init(PackageResolverMock* resolver_service) {
-    fuchsia::pkg::PackageResolverPtr resolver;
-    resolver_service->AddBinding(resolver.NewRequest(dispatcher()));
+  void Init(ServiceProviderMock* provider_service) {
     loader_ = std::make_unique<PackageUpdatingLoader>(
-        std::unordered_set<std::string>{"my_resolver"}, std::move(resolver),
-        dispatcher());
+        std::unordered_set<std::string>{"my_resolver"},
+        provider_service->Bind(), dispatcher());
     loader_service_ =
         fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
           loader_->AddBinding(
@@ -108,7 +146,8 @@ class PackageUpdatingLoaderTest
 
 TEST_F(PackageUpdatingLoaderTest, Success) {
   PackageResolverMock resolver_service(ZX_OK);
-  Init(&resolver_service);
+  ServiceProviderMock provider_service(&resolver_service);
+  Init(&provider_service);
 
   // Launch a component in the environment, and prove it started successfully
   // by trying to use a service offered by it.
@@ -131,15 +170,15 @@ TEST_F(PackageUpdatingLoaderTest, Success) {
   policy.fetch_if_absent = true;
   constexpr char kResolvedUrl[] =
       "fuchsia-pkg://fuchsia.com/echo2_server_cpp/0";
-  EXPECT_EQ(
-      resolver_service.args(),
-      std::make_tuple(std::string(kResolvedUrl),
-                      std::vector<std::string>{}, std::move(policy)));
+  EXPECT_EQ(resolver_service.args(),
+            std::make_tuple(std::string(kResolvedUrl),
+                            std::vector<std::string>{}, std::move(policy)));
 }
 
 TEST_F(PackageUpdatingLoaderTest, Failure) {
   PackageResolverMock resolver_service(ZX_ERR_NOT_FOUND);
-  Init(&resolver_service);
+  ServiceProviderMock provider_service(&resolver_service);
+  Init(&provider_service);
 
   // Launch a component in the environment, and prove it started successfully
   // by trying to use a service offered by it. Note: launching the component
@@ -158,6 +197,91 @@ TEST_F(PackageUpdatingLoaderTest, Failure) {
   // Even though the update failed, the loader should load the component anyway.
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
       [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+}
+
+TEST_F(PackageUpdatingLoaderTest, HandleResolverDisconnectCorrectly) {
+  PackageResolverMock resolver_service(ZX_OK);
+  ServiceProviderMock service_provider(&resolver_service);
+  Init(&service_provider);
+
+  auto launch_url =
+      "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx";
+
+  {
+    // Launch a component in the environment, and prove it started successfully
+    // by trying to use a service offered by it.
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    auto launch_info = CreateLaunchInfo(launch_url, std::move(h2));
+    auto controller = env_->CreateComponent(std::move(launch_info));
+
+    fidl::examples::echo::EchoPtr echo;
+    ConnectToServiceAt(std::move(h1), echo.NewRequest());
+
+    const std::string message = "component launched";
+    fidl::StringPtr ret_msg = "";
+
+    echo->EchoString(message,
+                     [&](fidl::StringPtr retval) { ret_msg = retval; });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+  }
+
+  // since the connection to the package resolver is initiated lazily, we need
+  // to make sure that after a first successful connection we can still recover
+  // by reconnecting
+  service_provider.DisconnectAll();
+
+  {
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    FXL_LOG(INFO) << "serviceprovider disconnected, new echo channels created";
+    auto launch_info = CreateLaunchInfo(launch_url, std::move(h2));
+    auto controller = env_->CreateComponent(std::move(launch_info));
+
+    FXL_LOG(INFO) << "connecting to echo service the second.";
+    fidl::examples::echo::EchoPtr echo;
+    ConnectToServiceAt(std::move(h1), echo.NewRequest());
+
+    const std::string message = "component launched";
+    fidl::StringPtr ret_msg = "";
+
+    FXL_LOG(INFO) << "sending echo message.";
+    echo->EchoString(message,
+                     [&](fidl::StringPtr retval) { ret_msg = retval; });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+  }
+
+  // an initial connection and a retry
+  ASSERT_EQ(service_provider.num_connections_made_, 2);
+
+  // we'll go through one more time to make sure we're behaving as expected
+  service_provider.DisconnectAll();
+
+  {
+    zx::channel h1, h2;
+    ASSERT_EQ(ZX_OK, zx::channel::create(0, &h1, &h2));
+    FXL_LOG(INFO) << "serviceprovider disconnected, new echo channels created";
+    auto launch_info = CreateLaunchInfo(launch_url, std::move(h2));
+    auto controller = env_->CreateComponent(std::move(launch_info));
+
+    FXL_LOG(INFO) << "connecting to echo service the second.";
+    fidl::examples::echo::EchoPtr echo;
+    ConnectToServiceAt(std::move(h1), echo.NewRequest());
+
+    const std::string message = "component launched";
+    fidl::StringPtr ret_msg = "";
+
+    FXL_LOG(INFO) << "sending echo message.";
+    echo->EchoString(message,
+                     [&](fidl::StringPtr retval) { ret_msg = retval; });
+    ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+        [&] { return std::string(ret_msg) == message; }, zx::sec(10)));
+  }
+
+  // one more connection
+  ASSERT_EQ(service_provider.num_connections_made_, 3);
 }
 
 }  // namespace

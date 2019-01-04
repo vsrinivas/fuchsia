@@ -33,7 +33,7 @@ class DelegatingLoader : public fuchsia::sys::Loader {
   static std::unique_ptr<DelegatingLoader> MakeWithPackageUpdatingFallback(
       Config::ServiceMap delegates, fuchsia::sys::Launcher* delegate_launcher,
       std::unordered_set<std::string> update_dependency_urls,
-      fuchsia::pkg::PackageResolverPtr resolver);
+      fuchsia::sys::ServiceProviderPtr env_services);
   ~DelegatingLoader() override;
 
   // |Loader|:
@@ -45,7 +45,7 @@ class DelegatingLoader : public fuchsia::sys::Loader {
                    fuchsia::sys::Launcher* delegate_launcher,
                    fuchsia::sys::LoaderPtr fallback,
                    std::unordered_set<std::string> update_dependency_urls,
-                   fuchsia::pkg::PackageResolverPtr resolver);
+                   fuchsia::sys::ServiceProviderPtr env_services);
 
   struct LoaderRecord {
     fuchsia::sys::LaunchInfoPtr launch_info;

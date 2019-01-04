@@ -8,7 +8,6 @@
 #include <map>
 #include <memory>
 #include <string>
-#include <vector>
 #include <unordered_set>
 
 #include <fs/managed-vfs.h>
@@ -40,9 +39,10 @@ class App {
   void RegisterSingleton(std::string service_name,
                          fuchsia::sys::LaunchInfoPtr launch_info);
   void RegisterDefaultServiceConnector();
-  void RegisterAppLoaders(Config::ServiceMap app_loaders,
-                          std::unordered_set<std::string> update_dependency_urls,
-                          fuchsia::pkg::PackageResolverPtr resolver);
+  void RegisterAppLoaders(
+      fuchsia::sys::ServiceProviderPtr env_services,
+      Config::ServiceMap app_loaders,
+      std::unordered_set<std::string> update_dependency_urls);
   void LaunchApplication(fuchsia::sys::LaunchInfo launch_info);
 
   std::unique_ptr<component::StartupContext> startup_context_;
@@ -62,6 +62,8 @@ class App {
 
   std::unique_ptr<DelegatingLoader> app_loader_;
   fidl::BindingSet<fuchsia::sys::Loader> app_loader_bindings_;
+
+  bool auto_updates_enabled_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(App);
 };

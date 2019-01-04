@@ -27,15 +27,21 @@ namespace sysmgr {
 
 PackageUpdatingLoader::PackageUpdatingLoader(
     std::unordered_set<std::string> update_dependency_urls,
-    fuchsia::pkg::PackageResolverPtr resolver, async_dispatcher_t* dispatcher)
+    fuchsia::sys::ServiceProviderPtr service_provider,
+    async_dispatcher_t* dispatcher)
     : update_dependency_urls_(std::move(update_dependency_urls)),
-      resolver_(std::move(resolver)),
-      dispatcher_(dispatcher) {}
+      service_provider_(std::move(service_provider)),
+      dispatcher_(dispatcher),
+      needs_reconnect_(true) {
+  EnsureConnectedToResolver();
+}
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
 void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
                                     LoadUrlCallback callback) {
+  EnsureConnectedToResolver();
+
   // The updating loader can only update fuchsia-pkg URLs.
   component::FuchsiaPkgUrl fuchsia_url;
   bool parsed = false;
@@ -77,9 +83,33 @@ void PackageUpdatingLoader::LoadUrl(fidl::StringPtr url,
   update_policy.fetch_if_absent = true;
   fidl::VectorPtr<fidl::StringPtr> selectors;
   selectors.reset({});
+
+  // TODO: if the resolver became unavailable in between the start of this
+  // method and the following call to Resolve, our reconnection logic won't have
+  // had a chance to execute, so we'll still block our client's request
+  // indefinitely. to resolve this we'll maybe need to change the API or undergo
+  // some more significant refactoring.
   resolver_->Resolve(fuchsia_url.package_path(), std::move(selectors),
                      std::move(update_policy), std::move(dir_request),
                      std::move(done_cb));
+}
+
+void PackageUpdatingLoader::EnsureConnectedToResolver() {
+  if (needs_reconnect_) {
+    service_provider_->ConnectToService(fuchsia::pkg::PackageResolver::Name_,
+                                        resolver_.NewRequest().TakeChannel());
+
+    // the error handler is consumed when an error is encountered, so if we
+    // need to reconnect then it means we need to reinstall the handler too
+    resolver_.set_error_handler([this](zx_status_t status) {
+      FXL_LOG(ERROR) << "Package resolver error handler triggered, marking as "
+                        "needing reconnect. status="
+                     << status;
+      needs_reconnect_ = true;
+    });
+
+    needs_reconnect_ = false;
+  }
 }
 
 }  // namespace sysmgr
