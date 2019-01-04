@@ -34,11 +34,18 @@ struct BlockParams {
     uint32_t num_pages;
 };
 
-struct FtlOp;
+// Ftl version of block_op_t.
+// TODO(rvargas): Explore using c++ lists.
+struct FtlOp {
+    block_op_t op;
+    list_node_t node;
+    block_impl_queue_callback completion_cb;
+    void* cookie;
+};
 
 class BlockDevice;
-using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable,
-                               ddk::Ioctlable, ddk::Messageable>;
+using DeviceType = ddk::Device<BlockDevice, ddk::GetSizable, ddk::Unbindable, ddk::Ioctlable,
+                               ddk::Messageable, ddk::Suspendable, ddk::Resumable>;
 
 // Provides the bulk of the functionality for a FTL-backed block device.
 class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice>,
@@ -59,6 +66,8 @@ class BlockDevice : public DeviceType, public ddk::BlockImplProtocol<BlockDevice
     zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                          void* out_buf, size_t out_len, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+    zx_status_t DdkSuspend(uint32_t flags);
+    zx_status_t DdkResume(uint32_t flags) { return ZX_OK; }
 
     // Block protocol implementation.
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);

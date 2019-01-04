@@ -68,11 +68,11 @@ class FakeVolume : public ftl::Volume {
         return ZX_OK;
     }
     zx_status_t Mount() final { return ZX_OK; }
-    zx_status_t Unmount() final {
+    zx_status_t Unmount() final { return ZX_OK; }
+    zx_status_t Flush() final {
         flushed_ = true;
         return ZX_OK;
     }
-    zx_status_t Flush() final { return ZX_OK; }
     zx_status_t Trim(uint32_t first_page, uint32_t num_pages) final { return ZX_OK; }
     zx_status_t GarbageCollect() final { return ZX_OK; }
     zx_status_t GetStats(Stats* stats) final  { return ZX_OK; }
@@ -411,7 +411,7 @@ bool FlushTest() {
     ASSERT_TRUE(test.Wait());
     ASSERT_EQ(ZX_OK, operation.status());
 
-    EXPECT_FALSE(test.volume()->flushed());
+    EXPECT_TRUE(test.volume()->flushed());
     END_TEST;
 }
 
@@ -457,6 +457,17 @@ bool FormatTest() {
     END_TEST;
 }
 
+bool SuspendTest() {
+    BEGIN_TEST;
+    BlockDeviceTest test;
+    ftl::BlockDevice* device = test.device();
+    ASSERT_TRUE(device);
+
+    EXPECT_EQ(ZX_OK, device->DdkSuspend(0));
+    EXPECT_TRUE(test.volume()->flushed());
+    END_TEST;
+}
+
 }  // namespace
 
 BEGIN_TEST_CASE(BlockDeviceTests)
@@ -472,4 +483,5 @@ RUN_TEST_SMALL(ReadWriteTest)
 RUN_TEST_SMALL(FlushTest)
 RUN_TEST_SMALL(QueueMultipleTest)
 RUN_TEST_SMALL(FormatTest)
+RUN_TEST_SMALL(SuspendTest)
 END_TEST_CASE(BlockDeviceTests)

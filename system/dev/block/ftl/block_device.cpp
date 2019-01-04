@@ -26,16 +26,43 @@ fuchsia_hardware_block_Ftl_ops_t fidl_ops = {
     .Format = Format
 };
 
+// Encapsulates a block operation that is created by this device (so that it
+// goes through the worker thread).
+class LocalOperation {
+  public:
+    explicit LocalOperation(uint32_t command) {
+        operation_.op.command = command;
+    }
+
+    block_op_t* op() { return &operation_.op; }
+
+    // Waits for the completion of the operation. Returns the operation status.
+    zx_status_t Execute(ftl::BlockDevice* parent) {
+        parent->BlockImplQueue(&operation_.op, OnCompletion, this);
+        zx_status_t status = sync_completion_wait(&event_, ZX_SEC(60));
+        sync_completion_reset(&event_);
+        if (status != ZX_OK) {
+            return status;
+        }
+        return status_;
+    }
+
+  private:
+    static void OnCompletion(void* cookie, zx_status_t status, block_op_t* op) {
+        LocalOperation* operation = reinterpret_cast<LocalOperation*>(cookie);
+        ZX_DEBUG_ASSERT(operation);
+        operation->status_ = status;
+        sync_completion_signal(&operation->event_);
+    }
+
+    sync_completion_t event_;
+    zx_status_t status_ = ZX_ERR_BAD_STATE;
+    ftl::FtlOp operation_ = {};
+};
+
 }  // namespace
 
 namespace ftl {
-
-struct FtlOp {
-    block_op_t op;
-    list_node_t node;
-    block_impl_queue_callback completion_cb;
-    void* cookie;
-};
 
 BlockDevice::~BlockDevice() {
     if (thread_created_) {
@@ -145,6 +172,12 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len
 
 zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     return fuchsia_hardware_block_Ftl_dispatch(this, txn, msg, &fidl_ops);
+}
+
+zx_status_t BlockDevice::DdkSuspend(uint32_t flags) {
+    zxlogf(INFO, "FTL: Suspend\n");
+    LocalOperation operation(BLOCK_OP_FLUSH);
+    return operation.Execute(this);
 }
 
 void BlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
