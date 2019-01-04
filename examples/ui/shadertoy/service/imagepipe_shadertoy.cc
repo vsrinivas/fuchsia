@@ -71,8 +71,14 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     // passed to DrawFrame() as the 'framebuffer_ready' semaphore.
     release_semaphore_pair.second.signal(0u, escher::kFenceSignalled);
 
-    auto image = factory.NewImage(escher_image_info);
-    zx::vmo vmo = escher::ExportMemoryAsVmo(escher(), image->memory());
+    escher::GpuMemPtr memory;
+    auto image = factory.NewImage(escher_image_info, &memory);
+    // This code exports a VMO, so the VMO should only contain enough space for
+    // the require image, and not be part of some larger allocation.
+    FXL_DCHECK(memory->offset() == 0);
+    FXL_DCHECK(memory->size() == image->size());
+
+    zx::vmo vmo = escher::ExportMemoryAsVmo(escher(), memory);
     if (!vmo) {
       FXL_LOG(ERROR) << "OnSetResolution() failed.";
       ClearFramebuffers();
@@ -96,8 +102,7 @@ void ShadertoyStateForImagePipe::OnSetResolution() {
     image_info.tiling = fuchsia::images::Tiling::GPU_OPTIMAL;
 
     image_pipe_->AddImage(fb.image_pipe_id, std::move(image_info),
-                          std::move(vmo), image->memory()->offset(),
-                          image->memory()->size(),
+                          std::move(vmo), memory->offset(), memory->size(),
                           fuchsia::images::MemoryType::VK_DEVICE_MEMORY);
   }
 }

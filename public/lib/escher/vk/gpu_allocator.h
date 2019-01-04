@@ -47,7 +47,8 @@ class GpuAllocator {
       GpuMemPtr* out_ptr = nullptr) = 0;
 
   virtual ImagePtr AllocateImage(ResourceManager* manager,
-                                 const escher::ImageInfo& info) = 0;
+                                 const escher::ImageInfo& info,
+                                 GpuMemPtr* out_ptr = nullptr) = 0;
 
   virtual uint32_t GetTotalBytesAllocated() const = 0;
 

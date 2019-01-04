@@ -190,10 +190,10 @@ VK_TEST(BatchGpuUploader, ReadImageTest) {
   region.imageExtent.width = image->width();
   region.imageExtent.height = image->height();
   region.imageExtent.depth = 1;
-  region.bufferOffset = image->memory()->offset();
+  region.bufferOffset = 0;
 
   BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
-  auto reader = uploader->AcquireReader(image->memory()->size());
+  auto reader = uploader->AcquireReader(image->size());
   reader->ReadImage(image, region, SemaphorePtr());
 
   bool read_image_done = false;

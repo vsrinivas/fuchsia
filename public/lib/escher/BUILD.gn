@@ -273,6 +273,8 @@ source_set("escher") {
     "impl/image_cache.h",
     "impl/naive_buffer.cc",
     "impl/naive_buffer.h",
+    "impl/naive_image.cc",
+    "impl/naive_image.h",
     "impl/mesh_manager.cc",
     "impl/mesh_manager.h",
     "impl/mesh_shader_binding.cc",

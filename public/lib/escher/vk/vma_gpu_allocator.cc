@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "lib/escher/vk/vma_gpu_allocator.h"
+#include "lib/escher/util/image_utils.h"
 
 namespace {
 
@@ -38,15 +39,39 @@ class VmaBuffer : public escher::Buffer {
   VmaAllocation allocation_;
 };
 
-class VmaBufferGpuMem : public escher::GpuMem {
+// Vma objects (i.e., buffers, images) with mapped memory are cleaned up by
+// destroying the original object, not by destroying a separate memory
+// allocation object. However, we can request mapped pointers from vma objects.
+// Therefore, we implement an 'out_mem' GpuMem object by keeping a strong
+// reference to the original vma object, and wrapping only the mapped pointer,
+// offset, and size parameters.
+class VmaMappedGpuMem : public escher::GpuMem {
  public:
-  VmaBufferGpuMem(VmaAllocationInfo info, const escher::BufferPtr& buffer)
+  VmaMappedGpuMem(VmaAllocationInfo info,
+                  const fxl::RefPtr<escher::WaitableResource>& keep_alive)
       : GpuMem(info.deviceMemory, info.size, info.offset,
                static_cast<uint8_t*>(info.pMappedData)),
-        buffer_(buffer) {}
+        keep_alive_(keep_alive) {}
 
  private:
-  escher::BufferPtr buffer_;
+  const fxl::RefPtr<escher::WaitableResource> keep_alive_;
+};
+
+class VmaImage : public escher::Image {
+ public:
+  VmaImage(escher::ResourceManager* manager, escher::ImageInfo image_info,
+           vk::Image image, VmaAllocator allocator, VmaAllocation allocation,
+           VmaAllocationInfo allocation_info)
+      : Image(manager, image_info, image, allocation_info.size,
+              static_cast<uint8_t*>(allocation_info.pMappedData)),
+        allocator_(allocator),
+        allocation_(allocation) {}
+
+  ~VmaImage() { vmaDestroyImage(allocator_, vk(), allocation_); }
+
+ private:
+  VmaAllocator allocator_;
+  VmaAllocation allocation_;
 };
 
 }  // namespace
@@ -67,7 +92,7 @@ VmaGpuAllocator::~VmaGpuAllocator() { vmaDestroyAllocator(allocator_); }
 
 GpuMemPtr VmaGpuAllocator::AllocateMemory(vk::MemoryRequirements reqs,
                                           vk::MemoryPropertyFlags flags) {
-  // Needed so we can have a pointer to the C-style type.
+  // Needed so we have a pointer to the C-style type.
   VkMemoryRequirements c_reqs = reqs;
 
   // VMA specific allocation parameters.
@@ -136,15 +161,52 @@ BufferPtr VmaGpuAllocator::AllocateBuffer(
 
   if (out_ptr) {
     FXL_DCHECK(allocation_info.offset == 0);
-    *out_ptr = fxl::AdoptRef(new VmaBufferGpuMem(allocation_info, retval));
+    *out_ptr = fxl::AdoptRef(new VmaMappedGpuMem(allocation_info, retval));
   }
 
   return retval;
 }
 
 ImagePtr VmaGpuAllocator::AllocateImage(ResourceManager* manager,
-                                        const ImageInfo& info) {
-  return nullptr;
+                                        const ImageInfo& info,
+                                        GpuMemPtr* out_ptr) {
+  // Needed so we have a pointer to the C-style type.
+  VkImageCreateInfo c_image_info = image_utils::CreateVkImageCreateInfo(info);
+
+  VmaAllocationCreateInfo create_info = {
+      VMA_ALLOCATION_CREATE_MAPPED_BIT,
+      VMA_MEMORY_USAGE_UNKNOWN,
+      static_cast<VkMemoryPropertyFlags>(info.memory_flags),
+      0u,
+      0u,
+      VK_NULL_HANDLE,
+      nullptr};
+
+  if (out_ptr) {
+    create_info.flags |= VMA_ALLOCATION_CREATE_DEDICATED_MEMORY_BIT;
+  }
+
+  // Output structs.
+  VkImage image;
+  VmaAllocation allocation;
+  VmaAllocationInfo allocation_info;
+  auto status = vmaCreateImage(allocator_, &c_image_info, &create_info, &image,
+                               &allocation, &allocation_info);
+
+  FXL_DCHECK(status == VK_SUCCESS)
+      << "vmaAllocateMemory failed with status code " << status;
+  if (status != VK_SUCCESS)
+    return nullptr;
+
+  auto retval = fxl::AdoptRef(new VmaImage(manager, info, image, allocator_,
+                                           allocation, allocation_info));
+
+  if (out_ptr) {
+    FXL_DCHECK(allocation_info.offset == 0);
+    *out_ptr = fxl::AdoptRef(new VmaMappedGpuMem(allocation_info, retval));
+  }
+
+  return retval;
 }
 
 uint32_t VmaGpuAllocator::GetTotalBytesAllocated() const {

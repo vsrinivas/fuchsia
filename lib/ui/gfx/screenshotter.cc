@@ -40,7 +40,7 @@ void Screenshotter::OnCommandBufferDone(
   const size_t kImgVecElementSize = sizeof(decltype(imgvec)::value_type);
   imgvec.resize(kBytesPerPixel * width * height);
 
-  const uint8_t* row = image->memory()->mapped_ptr();
+  const uint8_t* row = image->host_ptr();
   FXL_CHECK(row != nullptr);
   row += sr_layout.offset;
   if (width == sr_layout.rowPitch) {

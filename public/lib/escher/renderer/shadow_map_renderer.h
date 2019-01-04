@@ -70,7 +70,6 @@ class ShadowMapRenderer : public Renderer {
   }
 
  private:
-  impl::ImageCache* image_cache_;
   vk::Format shadow_map_format_;
   vk::Format depth_format_;
   impl::ModelDataPtr model_data_;

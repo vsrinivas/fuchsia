@@ -229,14 +229,14 @@ void DumpVisitor::Visit(Material* r) {
     auto texture = r->escher_material()->texture();
     WriteProperty("texture.width") << texture->width();
     WriteProperty("texture.height") << texture->height();
-    WriteProperty("texture.size") << texture->image()->memory()->size();
+    WriteProperty("texture.size") << texture->image()->size();
   } else if (r->texture_image()) {
     auto image = r->texture_image()->GetEscherImage();
     if (image) {
       WriteProperty("texture.pending") << "true";
       WriteProperty("texture.width") << image->width();
       WriteProperty("texture.height") << image->height();
-      WriteProperty("texture.size") << image->memory()->size();
+      WriteProperty("texture.size") << image->size();
     } else {
       WriteProperty("texture") << "(null)";
     }

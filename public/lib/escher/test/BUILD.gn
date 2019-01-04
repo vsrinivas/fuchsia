@@ -25,6 +25,7 @@ if (is_mac) {
       "gpu_allocator_unittest.cc",
       "gpu_mem_unittest.cc",
       "impl/glsl_compiler_unittest.cc",
+      "impl/image_cache_unittest.cc",
       "impl/pipeline_cache_unittest.cc",
       "math/rotations_unittest.cc",
       "mesh_spec_unittest.cc",

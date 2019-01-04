@@ -5,10 +5,10 @@
 #include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/impl/gpu_mem_slab.h"
 #include "lib/escher/impl/naive_buffer.h"
+#include "lib/escher/impl/naive_image.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/util/trace_macros.h"
-#include "lib/escher/vk/image.h"
 
 namespace escher {
 
@@ -86,14 +86,19 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(
 }
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager,
-                                          const ImageInfo& info) {
+                                          const ImageInfo& info,
+                                          GpuMemPtr* out_ptr) {
   vk::Image image = image_utils::CreateVkImage(device_, info);
 
   // Allocate memory and bind it to the image.
   vk::MemoryRequirements reqs = device_.getImageMemoryRequirements(image);
-  escher::GpuMemPtr memory = AllocateMemory(reqs, info.memory_flags);
+  escher::GpuMemPtr mem = AllocateMemory(reqs, info.memory_flags);
+
+  if (out_ptr) {
+    *out_ptr = mem;
+  }
   ImagePtr escher_image =
-      Image::AdoptVkImage(manager, info, image, std::move(memory));
+      impl::NaiveImage::AdoptVkImage(manager, info, image, std::move(mem));
   FXL_CHECK(escher_image);
   return escher_image;
 }

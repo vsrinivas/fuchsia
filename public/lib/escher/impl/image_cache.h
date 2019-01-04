@@ -28,19 +28,23 @@ class GpuUploader;
 //
 // TODO(ES-7): this does not prune entries!!  Once a new Image is created, it
 // will live until the cache is destroyed!!
-class ImageCache : public ResourceManager, public ImageFactory {
+class ImageCache : public ImageFactory, private ResourceManager {
  public:
-  // The allocator is used to allocate memory for newly-created images.  If no
-  // allocator is provided, Escher's default allocator is used.
-  explicit ImageCache(EscherWeakPtr escher, GpuAllocator* allocator = nullptr);
+  // The allocator is used to allocate memory for newly-created images.
+  ImageCache(EscherWeakPtr escher, GpuAllocator* allocator);
   ~ImageCache() override;
 
+  // |ImageFactory|
+  //
   // Obtain an unused Image with the required properties.  A new Image might be
   // created, or an existing one reused.
-  ImagePtr NewImage(const ImageInfo& info) override;
+  ImagePtr NewImage(const ImageInfo& info,
+                    GpuMemPtr* out_ptr = nullptr) override;
 
  private:
-  // Implements Owner::OnReceiveOwnable().  Adds the image to unused_images_.
+  // |Owner|
+  //
+  //  Adds the image to unused_images_.
   void OnReceiveOwnable(std::unique_ptr<Resource> resource) override;
 
   // Try to find an unused image that meets the required specs.  If successful,

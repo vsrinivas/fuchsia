@@ -123,7 +123,7 @@ class PaperRenderer : public Renderer {
                           vk::Format lighting_pass_color_format);
 
   MeshPtr full_screen_;
-  impl::ImageCache* image_cache_;
+  ImageFactory* image_cache_;
   impl::ModelRenderPassPtr depth_pass_;
   impl::ModelRenderPassPtr no_shadow_lighting_pass_;
   impl::ModelRenderPassPtr ssdo_lighting_pass_;

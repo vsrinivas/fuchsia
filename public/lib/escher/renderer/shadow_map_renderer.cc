@@ -40,7 +40,6 @@ ShadowMapRenderer::ShadowMapRenderer(
     const impl::ModelRendererPtr& model_renderer,
     const impl::ModelRenderPassPtr& model_render_pass)
     : Renderer(std::move(weak_escher)),
-      image_cache_(escher()->image_cache()),
       shadow_map_format_(shadow_map_format),
       depth_format_(depth_format),
       model_data_(model_data),

@@ -148,8 +148,6 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
 fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     VulkanInstancePtr instance, Params params) {
   if (params.surface) {
-    // If the params contain a surface, then ensure that the swapchain extension
-    // is supported so that we can render to that surface.
     params.extension_names.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   }
 #if defined(OS_FUCHSIA)

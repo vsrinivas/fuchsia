@@ -12,6 +12,7 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/fence.h"
+#include "lib/escher/impl/naive_image.h"
 #include "lib/escher/util/fuchsia_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_mem.h"
@@ -191,10 +192,10 @@ bool DisplaySwapchain::InitializeFramebuffers(
     image_info.height = height_in_px;
     image_info.usage = image_usage;
 
-    // escher::Image::AdoptVkImage() binds the memory to the image.
-    buffer.escher_image =
-        escher::Image::AdoptVkImage(resource_recycler, image_info,
-                                    image_result.value, buffer.device_memory);
+    // escher::NaiveImage::AdoptVkImage() binds the memory to the image.
+    buffer.escher_image = escher::impl::NaiveImage::AdoptVkImage(
+        resource_recycler, image_info, image_result.value,
+        buffer.device_memory);
 
     if (!buffer.escher_image) {
       FXL_LOG(ERROR) << "Creating escher::EscherImage failed.";

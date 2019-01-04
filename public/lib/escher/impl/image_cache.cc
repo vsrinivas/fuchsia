@@ -14,28 +14,25 @@ namespace escher {
 namespace impl {
 
 ImageCache::ImageCache(EscherWeakPtr escher, GpuAllocator* allocator)
-    : ResourceManager(escher),
-      allocator_(allocator ? allocator : escher->gpu_allocator()) {}
+    : ResourceManager(escher), allocator_(allocator) {
+  FXL_DCHECK(allocator_);
+}
 
 ImageCache::~ImageCache() {}
 
-ImagePtr ImageCache::NewImage(const ImageInfo& info) {
+ImagePtr ImageCache::NewImage(const ImageInfo& info, GpuMemPtr* out_ptr) {
+  if (out_ptr) {
+    FXL_DCHECK(false) << "ImageCache does not support dedicated allocations, "
+                         "creating a non-cached image";
+    return allocator_->AllocateImage(escher()->resource_recycler(), info,
+                                     out_ptr);
+  }
+
   if (ImagePtr result = FindImage(info)) {
     return result;
   }
 
-  // Create a new vk::Image, since we couldn't find a suitable one.
-  vk::Image image = image_utils::CreateVkImage(vk_device(), info);
-
-  // Allocate memory and bind it to the image.
-  vk::MemoryRequirements reqs = vk_device().getImageMemoryRequirements(image);
-  GpuMemPtr memory = allocator_->AllocateMemory(reqs, info.memory_flags);
-
-  ImagePtr escher_image =
-      Image::AdoptVkImage(this, info, image, std::move(memory));
-  FXL_CHECK(escher_image);
-
-  return escher_image;
+  return allocator_->AllocateImage(this, info);
 }
 
 ImagePtr ImageCache::FindImage(const ImageInfo& info) {

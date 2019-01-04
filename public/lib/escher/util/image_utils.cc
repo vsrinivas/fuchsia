@@ -100,7 +100,7 @@ vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format) {
   }
 }
 
-vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
+vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info) {
   vk::ImageCreateInfo create_info;
   create_info.imageType = vk::ImageType::e2D;
   create_info.format = info.format;
@@ -112,7 +112,12 @@ vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
   create_info.usage = info.usage;
   create_info.sharingMode = vk::SharingMode::eExclusive;
   create_info.initialLayout = vk::ImageLayout::eUndefined;
-  vk::Image image = ESCHER_CHECKED_VK_RESULT(device.createImage(create_info));
+  return create_info;
+}
+
+vk::Image CreateVkImage(const vk::Device& device, ImageInfo info) {
+  vk::Image image = ESCHER_CHECKED_VK_RESULT(
+      device.createImage(CreateVkImageCreateInfo(info)));
   return image;
 }
 

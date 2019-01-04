@@ -48,6 +48,8 @@ std::pair<bool, bool> IsDepthStencilFormat(vk::Format format);
 // return eColor.
 vk::ImageAspectFlags FormatToColorOrDepthStencilAspectFlags(vk::Format format);
 
+vk::ImageCreateInfo CreateVkImageCreateInfo(ImageInfo info);
+
 // Helper function that creates a VkImage given the parameters in ImageInfo.
 // This does not bind the VkImage to memory; the caller must do that
 // separately after calling this function.

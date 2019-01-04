@@ -32,7 +32,8 @@ class VmaGpuAllocator : public GpuAllocator {
 
   // |GpuAllocator|
   ImagePtr AllocateImage(ResourceManager* manager,
-                         const escher::ImageInfo& info) override;
+                         const escher::ImageInfo& info,
+                         GpuMemPtr* out_ptr) override;
 
   // |GpuAllocator|
   uint32_t GetTotalBytesAllocated() const override;

@@ -4,6 +4,7 @@
 
 #include "lib/escher/test/fake_gpu_allocator.h"
 #include "gtest/gtest.h"
+#include "lib/escher/util/image_utils.h"
 
 namespace {
 
@@ -28,6 +29,17 @@ class FakeBuffer : public escher::Buffer {
  public:
   FakeBuffer(escher::ResourceManager* manager, const escher::GpuMemPtr& mem)
       : Buffer(manager, vk::Buffer(), mem->size(), mem->mapped_ptr()),
+        memory_(mem) {}
+
+ private:
+  escher::GpuMemPtr memory_;
+};
+
+class FakeImage : public escher::Image {
+ public:
+  FakeImage(escher::ResourceManager* manager, escher::ImageInfo info,
+            const escher::GpuMemPtr& mem)
+      : Image(manager, info, vk::Image(), mem->size(), mem->mapped_ptr()),
         memory_(mem) {}
 
  private:
@@ -60,8 +72,17 @@ BufferPtr FakeGpuAllocator::AllocateBuffer(
 }
 
 ImagePtr FakeGpuAllocator::AllocateImage(ResourceManager* manager,
-                                         const ImageInfo& info) {
-  return nullptr;
+                                         const ImageInfo& info,
+                                         GpuMemPtr* out_ptr) {
+  size_t bytes_per_pixel = image_utils::BytesPerPixel(info.format);
+  size_t size = info.width * info.height * info.sample_count * bytes_per_pixel;
+
+  auto memory = fxl::AdoptRef(new FakeGpuMem(size, this));
+
+  if (out_ptr)
+    *out_ptr = memory;
+
+  return fxl::AdoptRef(new FakeImage(manager, info, memory));
 }
 
 uint32_t FakeGpuAllocator::GetTotalBytesAllocated() const {

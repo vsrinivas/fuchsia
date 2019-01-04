@@ -8,6 +8,7 @@
 #include <memory>
 
 #include "lib/escher/forward_declarations.h"
+#include "lib/escher/impl/image_cache.h"
 #include "lib/escher/shape/mesh_builder_factory.h"
 #include "lib/escher/status.h"
 #include "lib/escher/util/hash.h"
@@ -126,7 +127,7 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
   }
   impl::GlslToSpirvCompiler* glsl_compiler() { return glsl_compiler_.get(); }
   shaderc::Compiler* shaderc_compiler() { return shaderc_compiler_.get(); }
-  impl::ImageCache* image_cache() { return image_cache_.get(); }
+  ImageFactory* image_cache() { return image_cache_.get(); }
   BufferCache* buffer_cache() { return buffer_cache_.get(); }
   impl::MeshManager* mesh_manager() { return mesh_manager_.get(); }
   impl::PipelineLayoutCache* pipeline_layout_cache() {

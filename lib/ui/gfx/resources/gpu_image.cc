@@ -6,6 +6,7 @@
 
 #include "garnet/lib/ui/gfx/engine/session.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
+#include "lib/escher/impl/naive_image.h"
 #include "lib/escher/util/image_utils.h"
 
 namespace scenic_impl {
@@ -18,7 +19,7 @@ const ResourceTypeInfo GpuImage::kTypeInfo = {
 GpuImage::GpuImage(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
                    escher::ImageInfo image_info, vk::Image vk_image)
     : Image(session, id, GpuImage::kTypeInfo) {
-  image_ = escher::Image::AdoptVkImage(
+  image_ = escher::impl::NaiveImage::AdoptVkImage(
       session->resource_context().escher_resource_recycler, image_info,
       vk_image, std::move(gpu_mem));
   FXL_CHECK(image_);

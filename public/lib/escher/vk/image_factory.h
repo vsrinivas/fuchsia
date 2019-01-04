@@ -18,7 +18,14 @@ namespace escher {
 class ImageFactory {
  public:
   virtual ~ImageFactory() = default;
-  virtual ImagePtr NewImage(const ImageInfo& info) = 0;
+
+  // Creates an Image, backed by a block of memory. If |out_ptr| is non-null,
+  // the image will be bound to a dedicated piece of memory (i.e.,
+  // VkMemoryDedicatedRequirements.requiresDedicatedAllocation
+  // == true). That memory must be accessable through the GpuMem returned in
+  // |out_ptr|.
+  virtual ImagePtr NewImage(const ImageInfo& info,
+                            GpuMemPtr* out_ptr = nullptr) = 0;
 };
 
 // This default implementation allocates memory and creates a new
@@ -32,9 +39,9 @@ class ImageFactoryAdapter final : public ImageFactory {
   ImageFactoryAdapter(GpuAllocator* allocator, ResourceManager* manager)
       : allocator_(allocator->GetWeakPtr()), manager_(manager) {}
 
-  ImagePtr NewImage(const ImageInfo& info) final {
+  ImagePtr NewImage(const ImageInfo& info, GpuMemPtr* out_ptr = nullptr) final {
     FXL_DCHECK(allocator_);
-    return allocator_->AllocateImage(manager_, info);
+    return allocator_->AllocateImage(manager_, info, out_ptr);
   }
 
  private:

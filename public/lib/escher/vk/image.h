@@ -48,19 +48,11 @@ class Image : public WaitableResource {
   static const ResourceTypeInfo kTypeInfo;
   const ResourceTypeInfo& type_info() const override { return kTypeInfo; }
 
-  // Constructor. Claims ownership of the vk::Image, and binds it to the
-  // provided GpuMemPtr.
-  static ImagePtr AdoptVkImage(ResourceManager* image_owner, ImageInfo info,
-                               vk::Image image, GpuMemPtr mem);
-
   // Constructor. Wraps an existing image without claiming ownership. Useful
   // when the image is owned/maintained by another system (e.g.,
   // vk::SwapchainKHR).
   static ImagePtr WrapVkImage(ResourceManager* image_owner, ImageInfo info,
                               vk::Image image);
-
-  // Returns image_ and mem_ to the owner.
-  ~Image() override;
 
   const ImageInfo& info() const { return info_; }
   vk::Image vk() const { return image_; }
@@ -72,7 +64,8 @@ class Image : public WaitableResource {
   bool has_depth() const { return has_depth_; }
   bool has_stencil() const { return has_stencil_; }
   bool is_transient() const { return info_.is_transient(); }
-  const GpuMemPtr& memory() const { return mem_; }
+  vk::DeviceSize size() const { return size_; }
+  uint8_t* host_ptr() const { return host_ptr_; }
 
   // TODO(ES-83): how does this interact with swapchain_layout_?
   // Should this be automatically set when various transitions are made, e.g.
@@ -97,14 +90,15 @@ class Image : public WaitableResource {
   // working with images associated with a vk::SwapchainKHR); this is done by
   // passing nullptr as the |mem| argument.
   Image(ResourceManager* image_owner, ImageInfo info, vk::Image image,
-        GpuMemPtr mem);
+        vk::DeviceSize size_, uint8_t* host_ptr_);
 
  private:
   const ImageInfo info_;
   const vk::Image image_;
-  GpuMemPtr mem_;
   bool has_depth_;
   bool has_stencil_;
+  const vk::DeviceSize size_;
+  uint8_t* const host_ptr_;
 
   // TODO(ES-83): consider allowing image to have an initial layout.
   vk::ImageLayout layout_ = vk::ImageLayout::eUndefined;
