@@ -59,11 +59,6 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		return Pass
 	}
 
-	// Lock the state maps.
-	// TODO: Improve concurrency with more granular locking.
-	f.states.mu.Lock()
-	defer f.states.mu.Unlock()
-
 	f.states.purgeExpiredEntries(f.portManager)
 
 	// Parse the network protocol header.
@@ -107,6 +102,10 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 		}
 		return Drop
 	}
+
+	lockKey := makeStatesLockKey(dir, srcAddr, dstAddr, transProto, transportHeader)
+	f.states.lock(lockKey, true)
+	defer f.states.unlock(lockKey, true)
 
 	switch transProto {
 	case header.ICMPv4ProtocolNumber:
