@@ -100,7 +100,7 @@ public:
     // transitions to |DEAD|.
     bool Kill();
 
-    // Set policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
+    // Set basic policy. |mode| is is either ZX_JOB_POL_RELATIVE or ZX_JOB_POL_ABSOLUTE and
     // in_policy is an array of |count| elements.
     //
     // It is an error to set policy on a non-empty job, i.e. a job with one or more sub-jobs or
@@ -108,6 +108,18 @@ public:
     zx_status_t SetBasicPolicy(uint32_t mode,
                                const zx_policy_basic* in_policy,
                                size_t policy_count);
+
+    // Set timer slack policy.
+    //
+    // |policy.min_slack| must be >= 0.
+    //
+    // |policy.default_mode| must be one of ZX_TIMER_SLACK_CENTER, ZX_TIMER_SLACK_EARLY,
+    // ZX_TIMER_SLACK_LATE.
+    //
+    // It is an error to set policy on a non-empty job, i.e. a job with one or more sub-jobs or
+    // processes.
+    zx_status_t SetTimerSlackPolicy(const zx_policy_timer_slack& policy);
+
     JobPolicy GetPolicy() const;
 
     // Calls the provided |zx_status_t func(JobDispatcher*)| on every
@@ -165,6 +177,8 @@ private:
 
     template <typename T>
     uint32_t ChildCountLocked() const TA_REQ(get_lock());
+
+    bool CanSetPolicy() TA_REQ(get_lock());
 
     fbl::Canary<fbl::magic("JOBD")> canary_;
 

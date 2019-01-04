@@ -347,22 +347,65 @@ bool JobDispatcher::Kill() {
     return true;
 }
 
+bool JobDispatcher::CanSetPolicy() TA_REQ(get_lock()) {
+    // Can't set policy when there are active processes or jobs. This constraint ensures that a
+    // process's policy cannot change over its lifetime.  Because a process's policy cannot change,
+    // the risk of TOCTOU bugs is reduced and we are free to apply policy at the ProcessDispatcher
+    // without having to walk up the tree to its containing job.
+    if (!procs_.is_empty() || !jobs_.is_empty()) {
+        return false;
+    }
+    return true;
+}
+
 zx_status_t JobDispatcher::SetBasicPolicy(
     uint32_t mode, const zx_policy_basic* in_policy, size_t policy_count) {
 
     Guard<fbl::Mutex> guard{get_lock()};
 
-    // Can't set policy when there are active processes or jobs. This constraint ensures that a
-    // process's policy cannot change over its lifetime.  Because a process's policy cannot change,
-    // the risk of TOCTOU bugs is reduced and we are free to apply policy at the ProcessDispatcher
-    // without having to walk up the tree to its containing job.
-    if (!procs_.is_empty() || !jobs_.is_empty())
+    if (!CanSetPolicy()) {
         return ZX_ERR_BAD_STATE;
+    }
 
     auto status = policy_.AddBasicPolicy(mode, in_policy, policy_count);
 
     if (status != ZX_OK)
         return status;
+
+    return ZX_OK;
+}
+
+zx_status_t JobDispatcher::SetTimerSlackPolicy(const zx_policy_timer_slack& policy) {
+    Guard<fbl::Mutex> guard{get_lock()};
+
+    if (!CanSetPolicy()) {
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // Is the policy valid?
+    if (policy.min_slack < 0) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    slack_mode new_mode;
+    switch (policy.default_mode) {
+    case ZX_TIMER_SLACK_CENTER:
+        new_mode = TIMER_SLACK_CENTER;
+        break;
+    case ZX_TIMER_SLACK_EARLY:
+        new_mode = TIMER_SLACK_EARLY;
+        break;
+    case ZX_TIMER_SLACK_LATE:
+        new_mode = TIMER_SLACK_LATE;
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    };
+
+    const TimerSlack old_slack = policy_.GetTimerSlack();
+    const zx_duration_t new_amount = fbl::max(old_slack.amount(), policy.min_slack);
+    const TimerSlack new_slack(new_amount, new_mode);
+
+    policy_.SetTimerSlack(new_slack);
 
     return ZX_OK;
 }

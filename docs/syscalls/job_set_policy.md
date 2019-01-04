@@ -35,8 +35,13 @@ the existing policies and the new policies is controlled by *options* values:
 After this call succeeds any new child process or child job will have the new
 effective policy applied to it.
 
-*topic* indicates the *policy* format. Supported value is **ZX_JOB_POL_BASIC**
-which indicates that *policy* is an array of *count* entries of:
+*topic* indicates the *policy* format. Supported values are **ZX_JOB_POL_BASIC**
+and **ZX_JOB_POL_TIMER_SLACK**.
+
+### **ZX_JOB_POL_BASIC**
+
+A *topic* of **ZX_JOB_POL_BASIC** indicates that *policy* is an array of *count*
+entries of:
 
 ```
 typedef struct zx_policy_basic {
@@ -91,6 +96,35 @@ Optionally it can be augmented via OR with
   resumed after the exception.
 + **ZX_POL_ACTION_KILL** terminate the process. It also
 implies **ZX_POL_ACTION_DENY**.
+
+### **ZX_JOB_POL_TIMER_SLACK**
+
+A *topic* of **ZX_JOB_POL_TIMER_SLACK** indicates that *policy* is:
+
+```
+typedef struct zx_policy_timer_slack {
+    zx_duration_t min_slack;
+    uint32_t default_mode;
+} zx_policy_timer_slack_t;
+
+```
+
+*min_slack* specifies the minimum amount of slack applied to timers and
+deadline-based events the job. Attempts to set a *min_slack* less than the
+parent job’s *min_slack* are ignored. In other words, a job’s *min_slack* is the
+maximum of the specified value and its parent job’s *min_slack*.
+
+*default_mode* specifies how slack will be applied when not otherwise indicated
+by the syscall arguments. A job’s *default_mode* may be set regardless of its
+parent job’s *default_mode*. The possible values for *default_mode* are:
++ **ZX_TIMER_SLACK_CENTER**
++ **ZX_TIMER_SLACK_EARLY**
++ **ZX_TIMER_SLACK_LATE**
+
+See [timer slack](timer_slack.md) for more information.
+
+When setting timer slack policy, *options* must be **ZX_JOB_POL_RELATIVE** and
+**count** must be 1.
 
 ## RIGHTS
 

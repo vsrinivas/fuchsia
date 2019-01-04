@@ -30,14 +30,13 @@ depending on other pending timers.
 
 The possible values are:
 
-+ **ZX_TIMER_SLACK_CENTER** coalescing is allowed with earlier and
-  later timers.
-+ **ZX_TIMER_SLACK_EARLY** coalescing is allowed only with earlier
-  timers.
-+ **ZX_TIMER_SLACK_LATE** coalescing is allowed only with later
-  timers.
++ **ZX_TIMER_SLACK_CENTER**
++ **ZX_TIMER_SLACK_EARLY**
++ **ZX_TIMER_SLACK_LATE**
 
 Passing 0 in options is equivalent to **ZX_TIMER_SLACK_CENTER**.
+
+See [timer slack](timer_slack.md) for more information.
 
 The returned handle has the **ZX_RIGHT_DUPLICATE**, **ZX_RIGHT_TRANSFER**,
 **ZX_RIGHT_READ** and **ZX_RIGHT_WRITE** right.

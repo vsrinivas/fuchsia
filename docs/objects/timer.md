@@ -35,6 +35,10 @@ The typical lifecycle is:
 + [timer_set] - set a timer
 + [timer_cancel] - cancel a timer
 
+## SEE ALSO
+
++ [timer slack](../timer_slack.md)
+
 [timer_create]: ../syscalls/timer_create.md
 [timer_set]: ../syscalls/timer_set.md
 [timer_cancel]: ../syscalls/timer_cancel.md

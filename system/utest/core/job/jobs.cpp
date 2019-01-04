@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/policy.h>
 
+#include <lib/zx/job.h>
 #include <mini-process/mini-process.h>
 #include <unittest/unittest.h>
 
@@ -85,14 +86,25 @@ static bool create_missing_rights_test() {
     END_TEST;
 }
 
+static bool policy_invalid_topic_test() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+
+    const uint32_t invalid_topic = 2u;
+    const uint32_t some_policy = 0;
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, invalid_topic, &some_policy, 1),
+              ZX_ERR_INVALID_ARGS, "");
+
+    END_TEST;
+}
+
 static bool policy_basic_test() {
     BEGIN_TEST;
 
-    zx_handle_t job_parent = zx_job_default();
-    ASSERT_NE(job_parent, ZX_HANDLE_INVALID, "");
-
-    zx_handle_t job_child;
-    ASSERT_EQ(zx_job_create(job_parent, 0u, &job_child), ZX_OK, "");
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
 
     zx_policy_basic_t policy[] = {
         { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_KILL },
@@ -100,10 +112,135 @@ static bool policy_basic_test() {
         { ZX_POL_NEW_FIFO, ZX_POL_ACTION_DENY },
     };
 
-    ASSERT_EQ(zx_job_set_policy(job_child, ZX_JOB_POL_RELATIVE,
-        ZX_JOB_POL_BASIC, policy, countof(policy)), ZX_OK, "");
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, policy, countof(policy)),
+              ZX_OK, "");
 
-    ASSERT_EQ(zx_handle_close(job_child), ZX_OK, "");
+    END_TEST;
+}
+
+static bool policy_timer_slack_invalid_options_test() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+
+    zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+
+    // Invalid.
+    uint32_t options = ZX_JOB_POL_ABSOLUTE;
+    ASSERT_EQ(job_child.set_policy(options, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Valid.
+    options = ZX_JOB_POL_RELATIVE;
+    ASSERT_EQ(job_child.set_policy(options, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
+              ZX_OK, "");
+
+    END_TEST;
+}
+
+static bool policy_timer_slack_invalid_count_test() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+
+    zx_policy_timer_slack policy[2] = {{ZX_MSEC(10), ZX_TIMER_SLACK_LATE},
+                                       {ZX_MSEC(10), ZX_TIMER_SLACK_LATE}};
+
+    // Too few.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 0),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Too many.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 2),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Just right.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
+    END_TEST;
+}
+
+static bool policy_timer_slack_invalid_policy_test() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+
+    // Null.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, nullptr, 1),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Negative amount.
+    zx_policy_timer_slack policy = {-ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // Invalid mode.
+    policy = {ZX_MSEC(10), 3};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
+              ZX_ERR_INVALID_ARGS, "");
+
+    // OK.
+    policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
+    END_TEST;
+}
+
+static bool policy_timer_slack_non_empty_test() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+    zx::job job_grandchild;
+    ASSERT_EQ(zx::job::create(job_child, 0u, &job_grandchild), ZX_OK, "");
+
+    zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+
+    // The job isn't empty.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1),
+              ZX_ERR_BAD_STATE, "");
+
+    job_grandchild.reset();
+
+    // Job is now empty.
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
+    END_TEST;
+}
+
+static bool policy_timer_slack_valid() {
+    BEGIN_TEST;
+
+    zx::job job_child;
+    ASSERT_EQ(zx::job::create(*zx::job::default_job(), 0u, &job_child), ZX_OK, "");
+
+    // All modes.
+    zx_policy_timer_slack policy = {ZX_MSEC(10), ZX_TIMER_SLACK_CENTER};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+    policy = {ZX_MSEC(10), ZX_TIMER_SLACK_EARLY};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+    policy = {ZX_MSEC(10), ZX_TIMER_SLACK_LATE};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
+    // Raise the minimium.
+    policy = {ZX_SEC(10), ZX_TIMER_SLACK_LATE};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
+    // Try to lower the minimium, no error.
+    policy = {ZX_USEC(5), ZX_TIMER_SLACK_CENTER};
+    ASSERT_EQ(job_child.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_TIMER_SLACK, &policy, 1), ZX_OK,
+              "");
+
     END_TEST;
 }
 
@@ -291,7 +428,15 @@ static bool max_height_smoke() {
 BEGIN_TEST_CASE(job_tests)
 RUN_TEST(basic_test)
 RUN_TEST(create_missing_rights_test)
+RUN_TEST(policy_invalid_topic_test)
 RUN_TEST(policy_basic_test)
+RUN_TEST(policy_timer_slack_invalid_options_test)
+RUN_TEST(policy_timer_slack_invalid_count_test)
+RUN_TEST(policy_timer_slack_invalid_policy_test)
+RUN_TEST(policy_timer_slack_non_empty_test)
+RUN_TEST(policy_timer_slack_valid)
+// For verifying timer slack correctness, see |timer_diag()| in kernel/tests/timer_tests.cpp or run
+// "k timer_diag".
 RUN_TEST(create_test)
 RUN_TEST(kill_test)
 RUN_TEST(kill_job_no_child_test)

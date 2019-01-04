@@ -663,36 +663,75 @@ zx_status_t sys_job_create(zx_handle_t parent_job, uint32_t options,
     return status;
 }
 
-// zx_status_t zx_job_set_policy
-zx_status_t sys_job_set_policy(zx_handle_t handle, uint32_t options,
-                               uint32_t topic, user_in_ptr<const void> _policy,
-                               uint32_t count) {
-
-    if ((options != ZX_JOB_POL_RELATIVE) && (options != ZX_JOB_POL_ABSOLUTE))
+static zx_status_t job_set_policy_basic(zx_handle_t handle, uint32_t options,
+                                        user_in_ptr<const void> _policy, uint32_t count) {
+    if ((options != ZX_JOB_POL_RELATIVE) && (options != ZX_JOB_POL_ABSOLUTE)) {
         return ZX_ERR_INVALID_ARGS;
-    if (!_policy || (count == 0u))
+    }
+    if (!_policy || (count == 0u)) {
         return ZX_ERR_INVALID_ARGS;
-
-    if (topic != ZX_JOB_POL_BASIC)
-        return ZX_ERR_INVALID_ARGS;
+    }
 
     fbl::AllocChecker ac;
     fbl::InlineArray<
         zx_policy_basic, kPolicyBasicInlineCount>
         policy(&ac, count);
-    if (!ac.check())
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     auto status = _policy.copy_array_from_user(policy.get(), sizeof(zx_policy_basic) * count);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return ZX_ERR_INVALID_ARGS;
+    }
 
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<JobDispatcher> job;
     status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SET_POLICY, &job);
-    if (status != ZX_OK)
+    if (status != ZX_OK) {
         return status;
+    }
 
     return job->SetBasicPolicy(options, policy.get(), policy.size());
+}
+
+static zx_status_t job_set_policy_timer_slack(zx_handle_t handle, uint32_t options,
+                                              user_in_ptr<const void> _policy, uint32_t count) {
+    if (options != ZX_JOB_POL_RELATIVE) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (!_policy || (count != 1u)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    zx_policy_timer_slack slack_policy;
+    auto status = _policy.reinterpret<const zx_policy_timer_slack>().copy_from_user(&slack_policy);
+    if (status != ZX_OK) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    auto up = ProcessDispatcher::GetCurrent();
+
+    fbl::RefPtr<JobDispatcher> job;
+    status = up->GetDispatcherWithRights(handle, ZX_RIGHT_SET_POLICY, &job);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return job->SetTimerSlackPolicy(slack_policy);
+}
+
+// zx_status_t zx_job_set_policy
+zx_status_t sys_job_set_policy(zx_handle_t handle, uint32_t options,
+                               uint32_t topic, user_in_ptr<const void> _policy,
+                               uint32_t count) {
+    switch (topic) {
+    case ZX_JOB_POL_BASIC:
+        return job_set_policy_basic(handle, options, _policy, count);
+    case ZX_JOB_POL_TIMER_SLACK:
+        return job_set_policy_timer_slack(handle, options, _policy, count);
+    default:
+        return ZX_ERR_INVALID_ARGS;
+    };
 }

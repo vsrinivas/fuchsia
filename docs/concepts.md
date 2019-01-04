@@ -157,6 +157,9 @@ to wait for a signal to be active on a single handle or
 signals on multiple handles.  Both calls allow for a timeout after
 which they'll return even if no signals are pending.
 
+Timeouts may deviate from the specified deadline according to timer
+slack. See [timer slack](timer_slack.md) for more information.
+
 If a Thread is going to wait on a large set of handles, it is more efficient to use
 a Port, which is an Object that other Objects may be bound to such that when signals
 are asserted on them, the Port receives a packet containing information about the

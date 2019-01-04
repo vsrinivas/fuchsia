@@ -19,6 +19,8 @@ __BEGIN_CDECLS
 
 // Basic policy topic.
 #define ZX_JOB_POL_BASIC                    0u
+// Timer slack policy topic.
+#define ZX_JOB_POL_TIMER_SLACK              1u
 
 // Input structure to use with ZX_JOB_POL_BASIC.
 typedef struct zx_policy_basic {
@@ -51,5 +53,11 @@ typedef struct zx_policy_basic {
 #define ZX_POL_ACTION_DENY                  1u
 #define ZX_POL_ACTION_EXCEPTION             2u
 #define ZX_POL_ACTION_KILL                  5u
+
+// Input structure to use with ZX_JOB_POL_TIMER_SLACK.
+typedef struct zx_policy_timer_slack {
+    zx_duration_t min_slack;
+    uint32_t default_mode;
+} zx_policy_timer_slack_t;
 
 __END_CDECLS
