@@ -10,27 +10,26 @@
 
 #include "vim.h"
 
-namespace vim {
 static pbus_mmio_t vim_video_mmios[] = {
     {
-        .base = S912_FULL_CBUS_BASE,
-        .length = S912_FULL_CBUS_LENGTH,
+        .base =     S912_FULL_CBUS_BASE,
+        .length =   S912_FULL_CBUS_LENGTH,
     },
     {
-        .base = S912_DOS_BASE,
-        .length = S912_DOS_LENGTH,
+        .base =     S912_DOS_BASE,
+        .length =   S912_DOS_LENGTH,
     },
     {
-        .base = S912_HIU_BASE,
-        .length = S912_HIU_LENGTH,
+        .base =     S912_HIU_BASE,
+        .length =   S912_HIU_LENGTH,
     },
     {
-        .base = S912_AOBUS_BASE,
-        .length = S912_AOBUS_LENGTH,
+        .base =     S912_AOBUS_BASE,
+        .length =   S912_AOBUS_LENGTH,
     },
     {
-        .base = S912_DMC_REG_BASE,
-        .length = S912_DMC_REG_LENGTH,
+        .base =     S912_DMC_REG_BASE,
+        .length =   S912_DMC_REG_LENGTH,
     },
 };
 
@@ -68,28 +67,28 @@ static const uint32_t vim_video_protocols[] = {
     ZX_PROTOCOL_AMLOGIC_CANVAS,
 };
 
-zx_status_t Vim::VideoInit() {
-    pbus_dev_t video_dev = {};
-    video_dev.name = "video";
-    video_dev.vid = PDEV_VID_AMLOGIC;
-    video_dev.pid = PDEV_PID_AMLOGIC_S912;
-    video_dev.did = PDEV_DID_AMLOGIC_VIDEO;
-    video_dev.mmio_list = vim_video_mmios;
-    video_dev.mmio_count = countof(vim_video_mmios);
-    video_dev.irq_list = vim_video_irqs;
-    video_dev.irq_count = countof(vim_video_irqs);
-    video_dev.bti_list = vim_video_btis;
-    video_dev.bti_count = countof(vim_video_btis);
-    video_dev.protocol_list = vim_video_protocols;
-    video_dev.protocol_count = countof(vim_video_protocols);
+static const pbus_dev_t video_dev = {
+    .name = "video",
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S912,
+    .did = PDEV_DID_AMLOGIC_VIDEO,
+    .mmio_list = vim_video_mmios,
+    .mmio_count = countof(vim_video_mmios),
+    .bti_list = vim_video_btis,
+    .bti_count = countof(vim_video_btis),
+    .irq_list = vim_video_irqs,
+    .irq_count = countof(vim_video_irqs),
+    .protocol_list = vim_video_protocols,
+    .protocol_count = countof(vim_video_protocols),
+};
 
+
+zx_status_t vim_video_init(vim_bus_t* bus) {
     zx_status_t status;
-
-    if ((status = pbus_.DeviceAdd(&video_dev)) != ZX_OK) {
-        zxlogf(ERROR, "VideoInit: pbus_device_add() failed for video: %d\n", status);
+    if ((status = pbus_device_add(&bus->pbus, &video_dev)) != ZX_OK) {
+        zxlogf(ERROR, "vim_video_init: pbus_device_add() failed for video: %d\n", status);
         return status;
     }
 
     return ZX_OK;
 }
-} //namespace vim
