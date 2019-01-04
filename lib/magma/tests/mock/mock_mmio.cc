@@ -8,7 +8,7 @@
 
 std::unique_ptr<MockMmio> MockMmio::Create(uint64_t size)
 {
-    void* addr = malloc(size);
+    void* addr = calloc(size, 1);
     return std::unique_ptr<MockMmio>(new MockMmio(addr, size));
 }
 
