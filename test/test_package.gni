@@ -130,6 +130,7 @@ template("test_package") {
                              "resources",
                              "drivers",
                              "loadable_modules",
+                             "package_name",
                            ])
   }
 }
