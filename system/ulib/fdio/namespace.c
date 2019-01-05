@@ -405,7 +405,6 @@ static fdio_ops_t dir_ops = {
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .set_attr = fdio_default_set_attr,
     .readdir = zxio_dir_readdir,

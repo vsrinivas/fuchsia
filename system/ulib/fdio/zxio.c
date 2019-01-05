@@ -153,7 +153,6 @@ fdio_ops_t fdio_zxio_ops = {
     .wait_end = fdio_zxio_wait_end,
     .unwrap = fdio_zxio_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -307,24 +306,6 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
     *_events = ((signals >> POLL_SHIFT) & POLL_MASK) | events;
 }
 
-static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
-    zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
-    zx_status_t io_status, status;
-    io_status = fuchsia_io_FileGetVmo(rio->control, flags, &status, &vmo);
-    if (io_status != ZX_OK) {
-        return io_status;
-    }
-    if (status != ZX_OK) {
-        return status;
-    }
-    if (vmo == ZX_HANDLE_INVALID) {
-        return ZX_ERR_IO;
-    }
-    *out_vmo = vmo;
-    return ZX_OK;
-}
-
 static zx_status_t fdio_zxio_remote_get_token(fdio_t* io, zx_handle_t* out_token) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
     zx_status_t io_status, status;
@@ -392,7 +373,6 @@ static fdio_ops_t fdio_zxio_remote_ops = {
     .wait_end = fdio_zxio_remote_wait_end,
     .unwrap = fdio_zxio_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_zxio_remote_get_vmo,
     .get_token = fdio_zxio_remote_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -479,36 +459,6 @@ static inline zxio_vmofile_t* fdio_get_zxio_vmofile(fdio_t* io) {
     return (zxio_vmofile_t*)fdio_get_zxio(io);
 }
 
-static zx_status_t fdio_zxio_vmofile_get_vmo(fdio_t* io, int flags,
-                                             zx_handle_t* out_vmo) {
-    zxio_vmofile_t* file = fdio_get_zxio_vmofile(io);
-
-    if (out_vmo == NULL) {
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    size_t length = file->end - file->off;
-    if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
-        // Why don't we consider file->off in this branch? It seems like we
-        // want to clone the part of the VMO from file->off to file->end rather
-        // than length bytes at the start of the VMO.
-        return zx_vmo_clone(file->vmo, ZX_VMO_CLONE_COPY_ON_WRITE, 0, length,
-                            out_vmo);
-    } else {
-        size_t vmo_length = 0;
-        if (file->off != 0 || zx_vmo_get_size(file->vmo, &vmo_length) != ZX_OK ||
-            length != vmo_length) {
-            return ZX_ERR_NOT_FOUND;
-        }
-        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
-                ZX_RIGHT_MAP;
-        rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
-        rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
-        rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-        return zx_handle_duplicate(file->vmo, rights, out_vmo);
-    }
-}
-
 fdio_ops_t fdio_zxio_vmofile_ops = {
     .close = fdio_zxio_close,
     .open = fdio_default_open,
@@ -518,7 +468,6 @@ fdio_ops_t fdio_zxio_vmofile_ops = {
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_zxio_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_zxio_vmofile_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -708,7 +657,6 @@ static fdio_ops_t fdio_zxio_pipe_ops = {
     .wait_end = fdio_zxio_wait_end,
     .unwrap = fdio_zxio_pipe_unwrap,
     .posix_ioctl = fdio_zxio_pipe_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_zxio_get_attr,
     .set_attr = fdio_zxio_set_attr,
@@ -822,7 +770,6 @@ static fdio_ops_t fdio_zxio_debuglog_ops = {
     .wait_end = fdio_default_wait_end,
     .unwrap = fdio_default_unwrap,
     .posix_ioctl = fdio_default_posix_ioctl,
-    .get_vmo = fdio_default_get_vmo,
     .get_token = fdio_default_get_token,
     .get_attr = fdio_default_get_attr,
     .set_attr = fdio_default_set_attr,

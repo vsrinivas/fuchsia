@@ -140,6 +140,43 @@ static zx_status_t zxio_vmofile_seek(zxio_t* io, size_t offset,
     return ZX_OK;
 }
 
+static zx_status_t zxio_vmofile_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size) {
+    zxio_vmofile_t* file = reinterpret_cast<zxio_vmofile_t*>(io);
+
+    if (out_vmo == NULL) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t length = file->end - file->off;
+    if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
+        // Why don't we consider file->off in this branch? It seems like we
+        // want to clone the part of the VMO from file->off to file->end rather
+        // than length bytes at the start of the VMO.
+        zx_status_t status = zx_vmo_clone(file->vmo, ZX_VMO_CLONE_COPY_ON_WRITE,
+                                          0, length, out_vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+    } else {
+        size_t vmo_length = 0;
+        if (file->off != 0 || zx_vmo_get_size(file->vmo, &vmo_length) != ZX_OK ||
+            length != vmo_length) {
+            return ZX_ERR_NOT_FOUND;
+        }
+        zx_rights_t rights = ZX_RIGHTS_BASIC | ZX_RIGHT_GET_PROPERTY |
+                ZX_RIGHT_MAP;
+        rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
+        rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
+        zx_status_t status = zx_handle_duplicate(file->vmo, rights, out_vmo);
+        if (status != ZX_OK) {
+            return status;
+        }
+    }
+    *out_size = length;
+    return ZX_OK;
+}
+
 static constexpr zxio_ops_t zxio_vmofile_ops = []() {
     zxio_ops_t ops = zxio_default_ops;
     ops.release = zxio_vmofile_release;
@@ -149,6 +186,7 @@ static constexpr zxio_ops_t zxio_vmofile_ops = []() {
     ops.read = zxio_vmofile_read;
     ops.read_at = zxio_vmofile_read_at;
     ops.seek = zxio_vmofile_seek;
+    ops.vmo_get = zxio_vmofile_vmo_get;
     return ops;
 }();
 
