@@ -347,7 +347,7 @@ You can all use `check-all` to run all tests, but keep in mind that this
 can take significant amount of time depending on the number of projects
 you have enabled in your build.
 
-### Building Fuchsia with custom Clang
+### Building Fuchsia with custom Clang locally
 
 You can start building test binaries right away by using the Clang in
 `${LLVM_OBJDIR}/bin/`, or in
@@ -387,6 +387,41 @@ adding the following line:
 ```bash
 export USE_CLANG=true CLANG_TOOLCHAIN_PREFIX=${LLVM_OBJDIR}/bin/
 ```
+
+### Building Fuchsia with custom Clang on bots (Googlers only)
+
+Fuchsia's infrastructure has support for using a non-default version of Clang
+to build. Only Clang instances that have been uploaded to CIPD or Isolate are
+available for this type of build, and so any local changes must land in
+upstream and be built by the CI or production toolchain bots.
+
+You will need the infra codebase and prebuilts. Directions for checkout are on
+the infra page.
+
+To trigger a bot build with a specific revision of Clang, you will need the Git
+revision of the Clang with which you want to build. This is on the [CIPD page](https://chrome-infra-packages.appspot.com/p/fuchsia/clang),
+or can be retrieved using the CIPD CLI. You can then run the following command:
+
+```bash
+export FUCHSIA_SOURCE=<path_to_fuchsia>
+export BUILDER=<builder_name>
+export REVISION=<clang_revision>
+
+export INFRA_PREBUILTS=${FUCHSIA_SOURCE}/fuchsia-infra/prebuilt/tools
+
+cd ${FUCHSIA_SOURCE}/fuchsia-infra/recipes
+
+${INFRA_PREBUILTS}/led get-builder 'luci.fuchsia.ci:${BUILDER}' | \
+${INFRA_PREBUILTS}/led edit-recipe-bundle -O | \
+jq '.userland.recipe_properties."$infra/fuchsia".clang_toolchain.type="cipd"' | \
+jq '.userland.recipe_properties."$infra/fuchsia".clang_toolchain.instance="git_revision:${REVISION}"' | \
+${INFRA_PREBUILTS}/led launch
+```
+
+It will provide you with a link to the BuildBucket page to track your build.
+
+You will need to run `led auth-login` prior to triggering any builds, and may need to
+file an infra ticket to request access to run led jobs.
 
 ## Additional Resources
 
