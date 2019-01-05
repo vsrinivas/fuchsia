@@ -12,8 +12,10 @@ config("compiler") {
   ldflags = [
     "-static-libstdc++",
 
-    # Generate build-id for all binaries so we can use the build-id directory
-    # scheme when using strip the same way we do for Fuchsia.
+    # Generate build ID for all binaries so we can use the .build-id directory
+    # scheme for debugging information. This flag is enabled by default for our
+    # toolchain and many native host toolchains, but we set it explicitly to
+    # support arbitrary host toolchains.
     "-Wl,--build-id",
 
     # Set rpath to find dynamically linked libraries placed next to executables
