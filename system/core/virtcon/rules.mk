@@ -32,6 +32,7 @@ LOCAL_LIBS := \
 LOCAL_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-display \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-input \
 
 # virtual-console

@@ -44,6 +44,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_PACKAGE := src
 
@@ -88,6 +89,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_SO_NAME := $(MODULE_NAME)
 MODULE_EXPORT := so

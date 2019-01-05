@@ -200,6 +200,7 @@ ZXFIDL_OPERATION(FileTruncate)
 ZXFIDL_OPERATION(FileGetFlags)
 ZXFIDL_OPERATION(FileSetFlags)
 ZXFIDL_OPERATION(FileGetVmo)
+ZXFIDL_OPERATION(FileGetBuffer)
 
 const fuchsia_io_File_ops kFileOps = {
     .Clone = NodeCloneOp,
@@ -218,6 +219,7 @@ const fuchsia_io_File_ops kFileOps = {
     .GetFlags = FileGetFlagsOp,
     .SetFlags = FileSetFlagsOp,
     .GetVmo = FileGetVmoOp,
+    .GetBuffer = FileGetBufferOp,
 };
 
 ZXFIDL_OPERATION(DirectoryOpen)
@@ -667,7 +669,7 @@ zx_status_t Connection::FileGetVmo(uint32_t flags, fidl_txn_t* txn) {
 
     if ((flags & fuchsia_io_VMO_FLAG_PRIVATE) && (flags & fuchsia_io_VMO_FLAG_EXACT)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_INVALID_ARGS, ZX_HANDLE_INVALID);
-    } else if ((flags_ & ZX_FS_FLAG_APPEND) && flags & fuchsia_io_VMO_FLAG_WRITE) {
+    } else if ((flags_ & ZX_FS_FLAG_APPEND) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
     } else if (!IsWritable(flags_) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
@@ -675,9 +677,31 @@ zx_status_t Connection::FileGetVmo(uint32_t flags, fidl_txn_t* txn) {
         return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_ACCESS_DENIED, ZX_HANDLE_INVALID);
     }
 
-    zx_handle_t handle = ZX_HANDLE_INVALID;
-    zx_status_t status = vnode_->GetVmo(flags, &handle);
-    return fuchsia_io_FileGetVmo_reply(txn, status, handle);
+    fuchsia_mem_Buffer buffer;
+    memset(&buffer, 0, sizeof(buffer));
+    zx_status_t status = vnode_->GetVmo(flags, &buffer.vmo, &buffer.size);
+    return fuchsia_io_FileGetVmo_reply(txn, status, buffer.vmo);
+}
+
+zx_status_t Connection::FileGetBuffer(uint32_t flags, fidl_txn_t* txn) {
+    if (IsPathOnly(flags_)) {
+        return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_BAD_HANDLE, nullptr);
+    }
+
+    if ((flags & fuchsia_io_VMO_FLAG_PRIVATE) && (flags & fuchsia_io_VMO_FLAG_EXACT)) {
+        return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_INVALID_ARGS, nullptr);
+    } else if ((flags_ & ZX_FS_FLAG_APPEND) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
+        return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
+    } else if (!IsWritable(flags_) && (flags & fuchsia_io_VMO_FLAG_WRITE)) {
+        return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
+    } else if (!IsReadable(flags_)) {
+        return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_ACCESS_DENIED, nullptr);
+    }
+
+    fuchsia_mem_Buffer buffer;
+    memset(&buffer, 0, sizeof(buffer));
+    zx_status_t status = vnode_->GetVmo(flags, &buffer.vmo, &buffer.size);
+    return fuchsia_io_FileGetBuffer_reply(txn, status, &buffer);
 }
 
 zx_status_t Connection::DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,

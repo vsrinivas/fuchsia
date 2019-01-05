@@ -154,7 +154,7 @@ private:
     zx_status_t Truncate(size_t len) final;
     zx_status_t QueryFilesystem(fuchsia_io_FilesystemInfo* out) final;
     zx_status_t GetDevicePath(size_t buffer_len, char* out_name, size_t* out_len) final;
-    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
     void Sync(SyncCallback closure) final;
 
     ////////////////
@@ -180,7 +180,7 @@ private:
     //
     // Monitors the current VMO, keeping a reference to the Vnode
     // alive while the |out| VMO (and any clones it may have) are open.
-    zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out);
+    zx_status_t CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out_size);
     void HandleNoClones(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
 

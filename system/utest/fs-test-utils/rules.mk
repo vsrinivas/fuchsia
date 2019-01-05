@@ -46,6 +46,7 @@ MODULE_LIBS := \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs-test/include \

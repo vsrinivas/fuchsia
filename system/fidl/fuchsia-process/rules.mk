@@ -13,6 +13,7 @@ MODULE_PACKAGE := fidl
 MODULE_FIDL_LIBRARY := fuchsia.process
 
 MODULE_FIDL_DEPS := \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-ldsvc \
 

@@ -20,6 +20,7 @@ MODULE_NAME := memfs-test
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async.cpp \

@@ -92,7 +92,7 @@ zx_status_t VnodeFile::Append(const void* data, size_t len, size_t* out_end,
     return status;
 }
 
-zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
+zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
     zx_status_t status;
     if (!vmo_.is_valid()) {
         // First access to the file? Allocate it.
@@ -106,24 +106,26 @@ zx_status_t VnodeFile::GetVmo(int flags, zx_handle_t* out) {
     rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & fuchsia_io_VMO_FLAG_WRITE) ? ZX_RIGHT_WRITE : 0;
     rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-    zx::vmo out_vmo;
+    zx::vmo result;
     if (flags & fuchsia_io_VMO_FLAG_PRIVATE) {
         if ((status = vmo_.clone(ZX_VMO_CLONE_COPY_ON_WRITE, 0, length_,
-                                 &out_vmo)) != ZX_OK) {
+                                 &result)) != ZX_OK) {
             return status;
         }
 
-        if ((status = out_vmo.replace(rights, &out_vmo)) != ZX_OK) {
+        if ((status = result.replace(rights, &result)) != ZX_OK) {
             return status;
         }
-        *out = out_vmo.release();
+        *out_vmo = result.release();
+        *out_size = length_;
         return ZX_OK;
     }
 
-    if ((status = vmo_.duplicate(rights, &out_vmo)) != ZX_OK) {
+    if ((status = vmo_.duplicate(rights, &result)) != ZX_OK) {
         return status;
     }
-    *out = out_vmo.release();
+    *out_vmo = result.release();
+    *out_size = length_;
     return ZX_OK;
 }
 

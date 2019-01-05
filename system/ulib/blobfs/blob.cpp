@@ -667,8 +667,8 @@ zx_status_t Blob::GetReadableEvent(zx_handle_t* out) {
     return sizeof(zx_handle_t);
 }
 
-zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
-    TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights, "out", out);
+zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out_vmo, size_t* out_size) {
+    TRACE_DURATION("blobfs", "Blobfs::CloneVmo", "rights", rights);
     if (GetState() != kBlobStateReadable) {
         return ZX_ERR_BAD_STATE;
     }
@@ -697,7 +697,8 @@ zx_status_t Blob::CloneVmo(zx_rights_t rights, zx_handle_t* out) {
     if ((status = clone.replace(rights, &clone)) != ZX_OK) {
         return status;
     }
-    *out = clone.release();
+    *out_vmo = clone.release();
+    *out_size = inode_.blob_size;
 
     if (clone_watcher_.object() == ZX_HANDLE_INVALID) {
         clone_watcher_.set_object(mapping_.vmo().get());
@@ -903,7 +904,7 @@ zx_status_t Blob::GetDevicePath(size_t buffer_len, char* out_name, size_t* out_l
 }
 #endif
 
-zx_status_t Blob::GetVmo(int flags, zx_handle_t* out) {
+zx_status_t Blob::GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) {
     TRACE_DURATION("blobfs", "Blob::GetVmo", "flags", flags);
 
     if (flags & fuchsia_io_VMO_FLAG_WRITE) {
@@ -919,7 +920,7 @@ zx_status_t Blob::GetVmo(int flags, zx_handle_t* out) {
     // the immutability of blobfs blobs.
     rights |= (flags & fuchsia_io_VMO_FLAG_READ) ? ZX_RIGHT_READ : 0;
     rights |= (flags & fuchsia_io_VMO_FLAG_EXEC) ? ZX_RIGHT_EXECUTE : 0;
-    return CloneVmo(rights, out);
+    return CloneVmo(rights, out_vmo, out_size);
 }
 
 void Blob::Sync(SyncCallback closure) {

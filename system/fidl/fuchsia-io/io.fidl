@@ -4,6 +4,7 @@
 
 library fuchsia.io;
 
+using fuchsia.mem;
 using zx;
 
 // Interfaces which may be returned by NodeInfo, an object
@@ -219,6 +220,7 @@ interface File : Node {
     // Acquire a VMO representing this file, if there is one, with the
     // requested access rights.
     GetVmo(uint32 flags) -> (zx.status s, handle<vmo>? vmo);
+    GetBuffer(uint32 flags) -> (zx.status s, fuchsia.mem.Buffer? buffer);
 };
 
 // Dirent type information associated with the results of ReadDirents.

@@ -88,7 +88,7 @@ private:
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-    zx_status_t GetVmo(int flags, zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
     // Ensure the underlying vmo is filled with zero from:
     // [start, round_up(end, PAGE_SIZE)).
@@ -150,7 +150,7 @@ private:
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
     zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
-    zx_status_t GetVmo(int flags,  zx_handle_t* out) final;
+    zx_status_t GetVmo(int flags, zx_handle_t* out_vmo, size_t* out_size) final;
 
     fs::RemoteContainer remoter_;
     fs::WatcherContainer watcher_;

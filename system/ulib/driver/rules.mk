@@ -36,6 +36,7 @@ endif
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-device-manager \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_STATIC_LIBS := \
     system/ulib/async \

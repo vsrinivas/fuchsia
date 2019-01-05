@@ -36,7 +36,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/zxcpp \
 
 MODULE_FIDL_LIBS := \
-    system/fidl/fuchsia-io
+    system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_LIBS := \
     system/ulib/async.default \

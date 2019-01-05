@@ -21,6 +21,7 @@ MODULE_SRCS += \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-net \
 
 MODULE_STATIC_LIBS := \

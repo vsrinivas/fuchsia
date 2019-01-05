@@ -47,6 +47,7 @@ MODULE_PACKAGE := src
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-block \
     system/fidl/fuchsia-hardware-skipblock \
 

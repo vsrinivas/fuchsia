@@ -18,6 +18,7 @@ MODULE_SRCS += \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 MODULE_HEADER_DEPS := \
     system/ulib/zircon-internal

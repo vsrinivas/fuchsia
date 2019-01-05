@@ -579,6 +579,10 @@ static zx_status_t fidl_file_getvmo(void* ctx, uint32_t flags, fidl_txn_t* txn) 
     return fuchsia_io_FileGetVmo_reply(txn, ZX_ERR_NOT_SUPPORTED, ZX_HANDLE_INVALID);
 }
 
+static zx_status_t fidl_file_getbuffer(void* ctx, uint32_t flags, fidl_txn_t* txn) {
+    return fuchsia_io_FileGetBuffer_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
 static const fuchsia_io_File_ops_t kFileOps = []() {
     fuchsia_io_File_ops_t ops;
     ops.Read = fidl_file_read;
@@ -590,6 +594,7 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
     ops.GetFlags = fidl_file_getflags;
     ops.SetFlags = fidl_file_setflags;
     ops.GetVmo = fidl_file_getvmo;
+    ops.GetBuffer = fidl_file_getbuffer;
     return ops;
 }();
 

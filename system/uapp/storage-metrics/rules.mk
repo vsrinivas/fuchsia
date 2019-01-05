@@ -23,7 +23,8 @@ MODULE_LIBS := system/ulib/fdio system/ulib/c system/ulib/zircon
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
-    system/fidl/fuchsia-minfs 
+    system/fidl/fuchsia-mem \
+    system/fidl/fuchsia-minfs \
 
 
 include make/module.mk
