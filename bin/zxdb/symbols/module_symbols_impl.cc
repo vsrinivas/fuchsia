@@ -117,8 +117,10 @@ Err ModuleSymbolsImpl::Load() {
   context_ = llvm::DWARFContext::create(
       *obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
-  compile_units_.addUnitsForSection(
-      *context_, context_->getDWARFObj().getInfoSection(), llvm::DW_SECT_INFO);
+  context_->getDWARFObj().forEachInfoSections(
+      [this](const llvm::DWARFSection& s) {
+        compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
+      });
 
   // We could consider creating a new binary/object file just for indexing.
   // The indexing will page all of the binary in, and most of it won't be

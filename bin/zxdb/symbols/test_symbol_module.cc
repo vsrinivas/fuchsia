@@ -84,8 +84,10 @@ bool TestSymbolModule::LoadSpecific(const std::string& path,
   context_ = llvm::DWARFContext::create(
       *obj, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
-  compile_units_.addUnitsForSection(
-      *context_, context_->getDWARFObj().getInfoSection(), llvm::DW_SECT_INFO);
+  context_->getDWARFObj().forEachInfoSections(
+      [this](const llvm::DWARFSection& s) {
+        compile_units_.addUnitsForSection(*context_, s, llvm::DW_SECT_INFO);
+      });
   return true;
 }
 

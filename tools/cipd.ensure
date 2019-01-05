@@ -6,7 +6,7 @@ $ParanoidMode CheckPresence
 
 # LLVM libraries
 @Subdir third_party/llvm
-fuchsia/lib/llvm/${platform} git_revision:0f9268a065638ba41af4b729ae3a70264a8acdbd
+fuchsia/lib/llvm/${platform} git_revision:fbcdc2beee9478261b95b162034c3c7582d1413e
 
 # Chromium media test data
 @Subdir test_data/media/third_party/chromium_media_test_data

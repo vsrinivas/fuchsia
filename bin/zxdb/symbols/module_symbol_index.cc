@@ -326,8 +326,10 @@ void ModuleSymbolIndex::CreateIndex(llvm::object::ObjectFile* object_file) {
       *object_file, nullptr, llvm::DWARFContext::defaultErrorHandler);
 
   llvm::DWARFUnitVector compile_units;
-  compile_units.addUnitsForSection(
-      *context, context->getDWARFObj().getInfoSection(), llvm::DW_SECT_INFO);
+  context->getDWARFObj().forEachInfoSections(
+      [&](const llvm::DWARFSection& s) {
+        compile_units.addUnitsForSection(*context, s, llvm::DW_SECT_INFO);
+      });
 
   for (unsigned i = 0; i < compile_units.size(); i++) {
     IndexCompileUnit(context.get(), compile_units[i].get(), i);
