@@ -97,8 +97,10 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
     return offset;
   }
 
-  bool GetMemory(uint64_t offset, std::vector<uint8_t>* out) {
+  bool GetMemory(uint64_t offset, size_t size, std::vector<uint8_t>* out) {
     const auto& start_iter = content_.begin() + offset;
+    out->clear();
+    out->resize(size);
 
     if (content_.size() < offset + out->size()) {
       return false;
@@ -109,12 +111,13 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
   }
 
   bool GetMappedMemory(uint64_t offset, uint64_t address,
+                       size_t size, size_t map_size,
                        std::vector<uint8_t>* out) {
     if (address != kAddrPoison) {
       return false;
     }
 
-    return GetMemory(offset, out);
+    return GetMemory(offset, size, out);
   }
 
  private:

@@ -33,9 +33,8 @@ std::unique_ptr<ElfLib> ElfLib::Create(
     std::unique_ptr<MemoryAccessor>&& memory) {
   std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
   std::vector<uint8_t> header_data;
-  header_data.resize(sizeof(Elf64_Ehdr));
 
-  if (!out->memory_->GetMemory(0, &header_data)) {
+  if (!out->memory_->GetMemory(0, sizeof(Elf64_Ehdr), &header_data)) {
     return std::unique_ptr<ElfLib>();
   }
 
@@ -52,9 +51,9 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   if (sections_.empty()) {
     std::vector<uint8_t> data;
-    data.resize(sizeof(Elf64_Shdr) * header_.e_shnum);
 
-    if (!memory_->GetMemory(header_.e_shoff, &data)) {
+    if (!memory_->GetMemory(header_.e_shoff,
+                            sizeof(Elf64_Shdr) * header_.e_shnum, &data)) {
       return nullptr;
     }
 
@@ -83,11 +82,10 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
     return nullptr;
   }
 
-  size_t count = header->sh_size;
   std::vector<uint8_t> data;
-  data.resize(count);
 
-  if (!memory_->GetMappedMemory(header->sh_offset, header->sh_addr, &data)) {
+  if (!memory_->GetMappedMemory(header->sh_offset, header->sh_addr,
+                                header->sh_size, header->sh_size, &data)) {
     return nullptr;
   }
 

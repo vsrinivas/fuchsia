@@ -23,17 +23,20 @@ class ElfLib {
    public:
     virtual ~MemoryAccessor() = default;
     // Get memory from the process relative to the base of this lib. That means
-    // offset 0 should point to the Elf64_Ehdr. The vector should be sized to
-    // the amount of data you want to read.
-    virtual bool GetMemory(uint64_t offset, std::vector<uint8_t>* out) = 0;
+    // offset 0 should point to the Elf64_Ehdr. The vector should be cleared and
+    // filled. Return true unless the memory could not be read.
+    virtual bool GetMemory(uint64_t offset, size_t size,
+                           std::vector<uint8_t>* out) = 0;
 
     // Get memory for a mapped area. This is the same as GetMemory except we
     // are also given the target address of the memory we want according to the
-    // ELF file. If we're reading ELF structures that have been mapped into a
-    // running process already we may want to check the mapped address instead.
+    // ELF file, and the expected mapped size. If we're reading ELF structures
+    // that have been mapped into a running process already we may want to
+    // check the mapped address instead.
     virtual bool GetMappedMemory(uint64_t offset, uint64_t mapped_address,
+                                 size_t file_size, size_t mapped_size,
                                  std::vector<uint8_t>* out) {
-      return GetMemory(offset, out);
+      return GetMemory(offset, file_size, out);
     }
   };
 
