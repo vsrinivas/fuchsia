@@ -65,24 +65,11 @@ bool vmofile_basic_test(void) {
     uint32_t flags = 0u;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_get(io, &flags));
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_flags_set(io, flags));
-
     zx_handle_t vmo = ZX_HANDLE_INVALID;
     size_t size = 0u;
-    ASSERT_EQ(ZX_OK, zxio_vmo_get_copy(io, &vmo, &size));
-    EXPECT_NE(vmo, ZX_HANDLE_INVALID);
-    EXPECT_EQ(size, len);
-    zx_handle_close(vmo);
-
-    vmo = ZX_HANDLE_INVALID;
-    size = 0u;
-    ASSERT_EQ(ZX_OK, zxio_vmo_get_clone(io, &vmo, &size));
-    EXPECT_NE(vmo, ZX_HANDLE_INVALID);
-    EXPECT_EQ(size, len);
-    zx_handle_close(vmo);
-
-    vmo = ZX_HANDLE_INVALID;
-    size = 0u;
-    ASSERT_EQ(ZX_ERR_NOT_FOUND, zxio_vmo_get_exact(io, &vmo, &size));
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_copy(io, &vmo, &size));
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_clone(io, &vmo, &size));
+    ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_vmo_get_exact(io, &vmo, &size));
 
     zxio_t* result = nullptr;
     ASSERT_EQ(ZX_ERR_NOT_SUPPORTED, zxio_open(io, 0u, 0u, "hello", &result));

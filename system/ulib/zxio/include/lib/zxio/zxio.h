@@ -211,11 +211,6 @@ zx_status_t zxio_vmo_get_clone(zxio_t* io, zx_handle_t* out_vmo, size_t* out_siz
 // of the file.
 zx_status_t zxio_vmo_get_exact(zxio_t* io, zx_handle_t* out_vmo, size_t* out_size);
 
-// Get a handle to a VMO used by the file system server to represent the file.
-//
-// The |flags| argument is a bitfield of fuchsia_io_VMO_FLAG_*.
-zx_status_t zxio_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size);
-
 // Directory
 
 // Open a new file relative to the given |directory|.

@@ -1014,8 +1014,7 @@ zx_status_t _mmap_file(size_t offset, size_t len, zx_vm_option_t zx_options, int
 
     int vflags = zx_options | (flags & MAP_PRIVATE ? fuchsia_io_VMO_FLAG_PRIVATE : 0);
     zx_handle_t vmo;
-    size_t size = 0u;
-    zx_status_t r = zxio_vmo_get(fdio_get_zxio(io), vflags, &vmo, &size);
+    zx_status_t r = io->ops->get_vmo(io, vflags, &vmo);
     fdio_release(io);
     if (r < 0) {
         return r;
