@@ -83,7 +83,7 @@ class InterfaceRequest {
     return *this;
   }
 
-  // Implicit conversion from nullptr to an |InterfaceRequest| without an
+  // Implicit conversion from nullptr to an |InterfaceRequest| with an
   // invalid |channel|.
   InterfaceRequest(std::nullptr_t) {}
 
