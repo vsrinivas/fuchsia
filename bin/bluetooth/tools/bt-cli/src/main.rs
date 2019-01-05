@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api)]
-#![deny(warnings)]
 
 use {
     failure::{bail, Error, ResultExt},

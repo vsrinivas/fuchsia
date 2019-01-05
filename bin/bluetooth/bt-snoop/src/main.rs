@@ -7,7 +7,6 @@
     await_macro,
     futures_api,
 )]
-#![deny(warnings)]
 
 use {
     failure::{err_msg, Error, ResultExt},

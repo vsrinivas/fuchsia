@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #![feature(futures_api, async_await, await_macro)]
-#![deny(warnings)]
 
 use {
     failure::{Error, Fail, ResultExt},
