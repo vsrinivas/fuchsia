@@ -177,7 +177,7 @@ class TestApp : public modular::testing::SessionShellBase {
 
   void TestStory1_GetActiveModules() {
     story_controller_->GetActiveModules(
-        nullptr, [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
+        [this](fidl::VectorPtr<fuchsia::modular::ModuleData> modules) {
           if (modules->size() == 0) {
             story1_get_active_modules_.Pass();
           } else {

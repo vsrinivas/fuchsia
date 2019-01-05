@@ -49,46 +49,20 @@ interface StoryController {
     // for the holder of a StoryController to provide a watcher.
     5: Watch(StoryWatcher watcher);
 
-    // Lists the active modules in the story. Active modules are those with a
-    // controller.
-    //
-    // Notifications for state changes on the module can be obtained through
-    // the ModuleController's OnStateChanged() event.
-    //
-    // Notifications for changes to this list are provided through
-    // StoryModulesWatcher.OnNewModule(), if a watcher is supplied in the call.
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
-    // (metadata about, and requesting changes to runtime state).
-    7: GetActiveModules(StoryModulesWatcher? watcher) -> (vector<ModuleData> module_data);
+    // DEPRECATED
+    7: GetActiveModules() -> (vector<ModuleData> module_data);
 
-    // Lists all known modules in the story, as recorded in the ledger.
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
-    // (metadata about, and requesting changes to runtime state).
+    // DEPRECATED
     8: GetModules() -> (vector<ModuleData> module_data);
 
-    // Obtains a ModuleController for the module at the given path. If no module
-    // exists at that path, the request is dropped. This is mostly to receive
-    // state update events.
-    //
-    // TODO(mesch): This is EXPERIMENTAL. We want something like this for story
-    // crafting, but giving the same module controller to the story crafting
-    // client as to the parent module or story runner might not be right yet.
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
+    // DEPRECATED
     // (metadata about, and requesting changes to runtime state).
     9: GetModuleController(vector<string> module_path, request<ModuleController> request);
 
     // DEPRECATED: MI4-1084
     10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
-    // Gets a connection to a link in the story with the specified |link_path|. If
-    // link does not exist yet, it is implicitly created when it is first
-    // accessed.
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
-    // (metadata about, and requesting changes to runtime state).
+    // DEPRECATED
     11: GetLink(LinkPath link_path, request<Link> link);
 };
 
@@ -98,41 +72,11 @@ interface StoryWatcher {
     // when the state changes.
     1: OnStateChange(StoryState new_state);
 
-    // Called when a module is added to a story.
-    //
-    // TODO(mesch): Remove, use StoryModulesWatcher instead.
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
-    // (metadata about, and requesting changes to runtime state).
+    // DEPRECATED
     2: OnModuleAdded(ModuleData module_data);
 
-    // Called when a module is focused in the story.
-    // EXPERIMENTAL
-    //
-    // DEPRECATED: StoryController is only to be used for Story concepts
-    // (metadata about, and requesting changes to runtime state).
+    // DEPRECATED
     3: OnModuleFocused(vector<string> module_path);
-};
-
-// Implemented by the client calling StoryController.GetActiveModules().
-//
-// DEPRECATED: StoryController is only to be used for Story concepts
-// (metadata about, and requesting changes to runtime state).
-interface StoryModulesWatcher {
-    // Called when a module becomes active in the story, i.e. when a module
-    // controller for it is created. After this notification, the ModuleController
-    // can be obtained with GetModuleController() and further notifications can be
-    // obtained from watchers and connection error handlers on the controller.
-    //
-    // This is EXPERIMENTAL. We certainly can make this simpler once we know it is
-    // what we need.
-    1: OnNewModule(ModuleData module_data);
-
-    // Called when a module becomes inactive in the story, i.e. when the module
-    // controller is destroyed because its parent or the story runner called
-    // Stop() for it. This is not called when modules are torn down because the
-    // story as a whole is stopped.
-    2: OnStopModule(ModuleData module_data);
 };
 
 // Implemented by the client calling StoryController.GetActiveLinks().

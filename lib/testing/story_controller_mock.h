@@ -38,9 +38,7 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void RequestStart() override {
-    FXL_NOTIMPLEMENTED();
-  }
+  void RequestStart() override { FXL_NOTIMPLEMENTED(); }
 
   // |fuchsia::modular::StoryController|
   void Stop(StopCallback done) override { FXL_NOTIMPLEMENTED(); }
@@ -59,9 +57,7 @@ class StoryControllerMock : public fuchsia::modular::StoryController {
   }
 
   // |fuchsia::modular::StoryController|
-  void GetActiveModules(
-      fidl::InterfaceHandle<fuchsia::modular::StoryModulesWatcher> watcher,
-      GetActiveModulesCallback callback) override {
+  void GetActiveModules(GetActiveModulesCallback callback) override {
     FXL_NOTIMPLEMENTED();
   }
 

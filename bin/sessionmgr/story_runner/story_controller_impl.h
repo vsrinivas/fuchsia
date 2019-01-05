@@ -31,8 +31,8 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
-#include "peridot/bin/sessionmgr/story/model/story_observer.h"
 #include "peridot/bin/sessionmgr/story/model/story_mutator.h"
+#include "peridot/bin/sessionmgr/story/model/story_observer.h"
 #include "peridot/bin/sessionmgr/story_runner/link_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/ongoing_activity_impl.h"
 #include "peridot/bin/sessionmgr/story_runner/story_shell_context_impl.h"
@@ -176,9 +176,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       TakeAndLoadSnapshotCallback done) override;
   void Watch(
       fidl::InterfaceHandle<fuchsia::modular::StoryWatcher> watcher) override;
-  void GetActiveModules(
-      fidl::InterfaceHandle<fuchsia::modular::StoryModulesWatcher> watcher,
-      GetActiveModulesCallback callback) override;
+  void GetActiveModules(GetActiveModulesCallback callback) override;
   void GetModules(GetModulesCallback callback) override;
   void GetModuleController(
       fidl::VectorPtr<fidl::StringPtr> module_path,
@@ -237,7 +235,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
 
   SessionStorage* const session_storage_;  // Not owned.
-  StoryStorage* const story_storage_;  // Not owned.
+  StoryStorage* const story_storage_;      // Not owned.
 
   std::unique_ptr<StoryMutator> story_mutator_;
   std::unique_ptr<StoryObserver> story_observer_;
@@ -254,8 +252,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Watcher for various aspects of the story.
   fidl::InterfacePtrSet<fuchsia::modular::StoryWatcher> watchers_;
-  fidl::InterfacePtrSet<fuchsia::modular::StoryModulesWatcher>
-      modules_watchers_;
   fidl::InterfacePtrSet<fuchsia::modular::StoryLinksWatcher> links_watchers_;
 
   // Everything for the story shell. Relationships between modules are conveyed

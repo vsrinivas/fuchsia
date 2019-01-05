@@ -255,7 +255,6 @@ class TestApp : public modular::testing::SessionShellBase {
       // Verify that the second module is still active, but the first one is
       // not.
       story_controller_->GetActiveModules(
-          nullptr,
           [this](fidl::VectorPtr<fuchsia::modular::ModuleData> module_data) {
             if (module_data->size() == 1) {
               second_module_active_.Pass();
@@ -297,7 +296,6 @@ class TestApp : public modular::testing::SessionShellBase {
     Await(kSecondModuleTerminated, [this] {
       // Verify that the second module is still active.
       story_controller_->GetActiveModules(
-          nullptr,
           [this](fidl::VectorPtr<fuchsia::modular::ModuleData> module_data) {
             if (module_data->empty()) {
               no_module_active_.Pass();

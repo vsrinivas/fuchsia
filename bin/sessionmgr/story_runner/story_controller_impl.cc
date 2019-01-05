@@ -242,12 +242,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
       (*i)->OnModuleAdded(std::move(module_data));
     }
 
-    for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
-      fuchsia::modular::ModuleData module_data;
-      module_data_.Clone(&module_data);
-      (*i)->OnNewModule(std::move(module_data));
-    }
-
     ReportModuleLaunchTime(
         module_data_.module_url,
         zx::duration(zx_clock_get(ZX_CLOCK_UTC) - start_time_));
@@ -346,14 +340,8 @@ class StoryControllerImpl::KillModuleCall : public Operation<> {
       // closed.
       //
       // Be aware that done_ is NOT the Done() callback of the Operation.
-      running_mod_info->module_controller_impl->Teardown([this, flow] {
-        for (auto& i : story_controller_impl_->modules_watchers_.ptrs()) {
-          fuchsia::modular::ModuleData module_data;
-          module_data_.Clone(&module_data);
-          (*i)->OnStopModule(std::move(module_data));
-        }
-        InvokeDone();
-      });
+      running_mod_info->module_controller_impl->Teardown(
+          [this, flow] { InvokeDone(); });
     });
   }
 
@@ -1506,19 +1494,12 @@ void StoryControllerImpl::Watch(
   watchers_.AddInterfacePtr(std::move(ptr));
 }
 
-void StoryControllerImpl::GetActiveModules(
-    fidl::InterfaceHandle<fuchsia::modular::StoryModulesWatcher> watcher,
-    GetActiveModulesCallback callback) {
+void StoryControllerImpl::GetActiveModules(GetActiveModulesCallback callback) {
   // We execute this in a SyncCall so that we are sure we don't fall in a
   // crack between a module being created and inserted in the connections
   // collection during some Operation.
-  operation_queue_.Add(new SyncCall(fxl::MakeCopyable(
-      [this, watcher = std::move(watcher), callback]() mutable {
-        if (watcher) {
-          auto ptr = watcher.Bind();
-          modules_watchers_.AddInterfacePtr(std::move(ptr));
-        }
-
+  operation_queue_.Add(
+      new SyncCall(fxl::MakeCopyable([this, callback]() mutable {
         fidl::VectorPtr<fuchsia::modular::ModuleData> result;
         result.resize(running_mod_infos_.size());
         for (size_t i = 0; i < running_mod_infos_.size(); i++) {
