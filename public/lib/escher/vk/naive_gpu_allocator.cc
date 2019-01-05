@@ -4,7 +4,6 @@
 
 #include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/impl/gpu_mem_slab.h"
-#include "lib/escher/impl/naive_buffer.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/util/trace_macros.h"
@@ -63,7 +62,6 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(
     vk::BufferUsageFlags usage_flags,
     vk::MemoryPropertyFlags memory_property_flags, GpuMemPtr* out_ptr) {
   TRACE_DURATION("gfx", "escher::NaiveGpuAllocator::AllocateBuffer");
-  // NaiveBuffer requires a real manager pointer to properly function.
   FXL_DCHECK(manager);
 
   // Create buffer.
@@ -81,8 +79,7 @@ BufferPtr NaiveGpuAllocator::AllocateBuffer(
   if (out_ptr) {
     *out_ptr = mem;
   }
-  return fxl::AdoptRef(
-      new impl::NaiveBuffer(manager, std::move(mem), vk_buffer));
+  return fxl::AdoptRef(new Buffer(manager, std::move(mem), vk_buffer));
 }
 
 ImagePtr NaiveGpuAllocator::AllocateImage(ResourceManager* manager,

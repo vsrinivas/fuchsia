@@ -11,6 +11,9 @@
 #include "lib/fxl/memory/ref_counted.h"
 
 namespace escher {
+namespace impl {
+class GpuMemSuballocation;
+}
 
 class GpuMem;
 typedef fxl::RefPtr<GpuMem> GpuMemPtr;

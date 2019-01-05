@@ -5,7 +5,6 @@
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 
 #include "garnet/lib/ui/gfx/engine/session.h"
-#include "garnet/public/lib/escher/impl/naive_buffer.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -16,7 +15,7 @@ Buffer::Buffer(Session* session, ResourceId id, escher::GpuMemPtr gpu_mem,
                ResourcePtr backing_resource)
     : Resource(session, id, Buffer::kTypeInfo),
       backing_resource_(std::move(backing_resource)),
-      escher_buffer_(escher::impl::NaiveBuffer::New(
+      escher_buffer_(escher::Buffer::New(
           session->resource_context().escher_resource_recycler,
           std::move(gpu_mem),
           vk::BufferUsageFlagBits::eTransferSrc |

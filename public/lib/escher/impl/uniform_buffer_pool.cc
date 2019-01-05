@@ -5,7 +5,6 @@
 #include "lib/escher/impl/uniform_buffer_pool.h"
 
 #include "lib/escher/escher.h"
-#include "lib/escher/impl/naive_buffer.h"
 #include "lib/escher/impl/vulkan_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
 
@@ -79,8 +78,7 @@ void UniformBufferPool::InternalAllocate() {
     // Workaround for dealing with RefPtr/Reffable Adopt() semantics.  Let the
     // RefPtr go out of scope immediately; the Buffer will be added to
     // free_buffers_ via OnReceiveOwnable().
-    fxl::MakeRefCounted<impl::NaiveBuffer>(this, std::move(mem),
-                                           new_buffers[i]);
+    fxl::MakeRefCounted<Buffer>(this, std::move(mem), new_buffers[i]);
   }
 
   is_allocating_ = false;

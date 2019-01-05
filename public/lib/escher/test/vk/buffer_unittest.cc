@@ -2,9 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/public/lib/escher/impl/naive_buffer.h"
-#include "garnet/public/lib/escher/resources/resource_recycler.h"
 #include "garnet/public/lib/escher/test/gtest_escher.h"
+
+#include "garnet/public/lib/escher/resources/resource_recycler.h"
+#include "garnet/public/lib/escher/vk/buffer.h"
 #include "garnet/public/lib/escher/vk/gpu_allocator.h"
 
 namespace escher {
@@ -39,8 +40,8 @@ VK_TEST(BufferTest, CreateWithPreExistingMemory) {
 
   // Allocate 2 buffers, one from the original allocation, and one from the
   // sub-allocation.
-  auto buf1 = impl::NaiveBuffer::New(recycler, mem1, kBufferUsageFlags);
-  auto buf2 = impl::NaiveBuffer::New(recycler, mem2, kBufferUsageFlags);
+  auto buf1 = Buffer::New(recycler, mem1, kBufferUsageFlags);
+  auto buf2 = Buffer::New(recycler, mem2, kBufferUsageFlags);
   EXPECT_EQ(mem1->mapped_ptr(), buf1->host_ptr());
   EXPECT_EQ(mem2->mapped_ptr(), buf2->host_ptr());
 }
