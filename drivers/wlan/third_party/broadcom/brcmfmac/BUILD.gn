@@ -106,7 +106,6 @@ source_set("brcmfmac_srcs") {
     "//zircon/public/lib/trace-engine",
     "//zircon/public/lib/usb",
     "//zircon/public/lib/zx",
-    "//zircon/public/lib/zxcpp",
   ]
 
   configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
@@ -117,6 +116,8 @@ driver_module("brcmfmac_driver") {
   deps = [
     ":brcmfmac_srcs",
   ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
 }
 
 if (internal_access) {
