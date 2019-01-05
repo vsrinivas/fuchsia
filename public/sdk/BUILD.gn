@@ -110,6 +110,7 @@ sdk("garnet") {
     "//garnet/lib/vulkan:vulkan_layers",
     "//garnet/public/fidl/fuchsia.bluetooth.gatt:fuchsia.bluetooth.gatt_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.bluetooth.le:fuchsia.bluetooth.le_sdk($fidl_toolchain)",
+    "//garnet/public/fidl/fuchsia.camera:fuchsia.camera_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.developer.tiles:fuchsia.developer.tiles_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.fonts:fuchsia.fonts_sdk($fidl_toolchain)",
     "//garnet/public/fidl/fuchsia.images:fuchsia.images_sdk($fidl_toolchain)",
