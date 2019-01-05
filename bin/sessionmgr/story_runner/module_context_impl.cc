@@ -98,15 +98,7 @@ void ModuleContextImpl::StartContainerInShell(
     std::vector<fuchsia::modular::ContainerLayout> layout,
     std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
     std::vector<fuchsia::modular::ContainerNode> nodes) {
-  std::vector<fuchsia::modular::ContainerNodePtr> node_ptrs;
-  node_ptrs.reserve(nodes.size());
-  for (auto& i : nodes) {
-    node_ptrs.push_back(fidl::MakeOptional(std::move(i)));
-  }
-  story_controller_impl_->StartContainerInShell(
-      module_data_->module_path, name,
-      fidl::MakeOptional(std::move(parent_relation)), std::move(layout),
-      std::move(relationships), std::move(node_ptrs));
+  FXL_LOG(ERROR) << "ModuleContext.StartContainerInShell() not implemented.";
 }
 
 void ModuleContextImpl::GetComponentContext(

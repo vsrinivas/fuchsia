@@ -130,15 +130,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
       fuchsia::modular::ModuleSource module_source,
       std::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
-  // Called by ModuleContextImpl.
-  void StartContainerInShell(
-      const std::vector<std::string>& parent_module_path,
-      std::string name,
-      fuchsia::modular::SurfaceRelationPtr parent_relation,
-      std::vector<fuchsia::modular::ContainerLayout> layout,
-      std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
-      std::vector<fuchsia::modular::ContainerNodePtr> nodes);
-
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
   void RemoveModuleFromStory(
@@ -337,7 +328,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   class OnModuleDataUpdatedCall;
   class ResolveParameterCall;
   class StartCall;
-  class StartContainerInShellCall;
   class StopCall;
   class StopModuleCall;
   class StopModuleAndStoryIfEmptyCall;

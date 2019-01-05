@@ -890,100 +890,6 @@ class StoryControllerImpl::AddIntentCall
   FXL_DISALLOW_COPY_AND_ASSIGN(AddIntentCall);
 };
 
-class StoryControllerImpl::StartContainerInShellCall : public Operation<> {
- public:
-  StartContainerInShellCall(
-      StoryControllerImpl* const story_controller_impl,
-      std::vector<std::string> parent_module_path,
-      std::string container_name,
-      fuchsia::modular::SurfaceRelationPtr parent_relation,
-      std::vector<fuchsia::modular::ContainerLayout> layout,
-      std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
-      std::vector<fuchsia::modular::ContainerNodePtr> nodes)
-      : Operation("StoryControllerImpl::StartContainerInShellCall", [] {}),
-        story_controller_impl_(story_controller_impl),
-        parent_module_path_(std::move(parent_module_path)),
-        container_name_(container_name),
-        parent_relation_(std::move(parent_relation)),
-        layout_(std::move(layout)),
-        relationships_(std::move(relationships)),
-        nodes_(std::move(nodes)) {
-    for (auto& relationship : relationships_) {
-      relation_map_[relationship.node_name] = CloneOptional(relationship);
-    }
-  }
-
- private:
-  void Run() override {
-    FlowToken flow{this};
-    // parent + container used as module path of requesting module for
-    // containers
-    std::vector<std::string> module_path = parent_module_path_;
-    // module_path.push_back(container_name_);
-    // Adding non-module 'container_name_' to the module path results in
-    // Ledger Client issuing a ReadData() call and failing with a fatal error
-    // when module_data cannot be found
-    // TODO(djmurphy): follow up, probably make containers modules
-    std::vector<FuturePtr<fuchsia::modular::StartModuleStatus>> did_add_intents;
-    did_add_intents.reserve(nodes_.size());
-
-    for (size_t i = 0; i < nodes_.size(); ++i) {
-      auto did_add_intent = Future<fuchsia::modular::StartModuleStatus>::Create(
-          "StoryControllerImpl.StartContainerInShellCall.Run.did_add_intent");
-      auto intent = fuchsia::modular::Intent::New();
-      nodes_.at(i)->intent.Clone(intent.get());
-      operation_queue_.Add(new AddIntentCall(
-          story_controller_impl_, parent_module_path_,
-          nodes_.at(i)->node_name, std::move(intent),
-          nullptr /* module_controller_request */,
-          fidl::MakeOptional(
-              relation_map_[nodes_.at(i)->node_name]->relationship),
-          nullptr /* view_owner_request */,
-          fuchsia::modular::ModuleSource::INTERNAL,
-          did_add_intent->Completer()));
-
-      did_add_intents.emplace_back(did_add_intent);
-    }
-
-    Wait<Future<>>("StoryControllerImpl.StartContainerInShellCall.Run.Wait",
-                   did_add_intents)
-        ->Then([this, flow] {
-          if (!story_controller_impl_->story_shell_) {
-            return;
-          }
-          std::vector<fuchsia::modular::ContainerView> views(nodes_.size());
-          for (size_t i = 0; i < nodes_.size(); i++) {
-            fuchsia::modular::ContainerView view;
-            view.node_name = nodes_.at(i)->node_name;
-            view.owner = std::move(node_views_[nodes_.at(i)->node_name]);
-            views.at(i) = std::move(view);
-          }
-          story_controller_impl_->story_shell_->AddContainer(
-              container_name_, ModulePathToSurfaceID(parent_module_path_),
-              std::move(*parent_relation_), std::move(layout_),
-              std::move(relationships_), std::move(views));
-        });
-  }
-
-  StoryControllerImpl* const story_controller_impl_;  // not owned
-  OperationQueue operation_queue_;
-  const std::vector<std::string> parent_module_path_;
-  const std::string container_name_;
-
-  fuchsia::modular::SurfaceRelationPtr parent_relation_;
-  std::vector<fuchsia::modular::ContainerLayout> layout_;
-  std::vector<fuchsia::modular::ContainerRelationEntry> relationships_;
-  const std::vector<fuchsia::modular::ContainerNodePtr> nodes_;
-  std::map<std::string, fuchsia::modular::ContainerRelationEntryPtr>
-      relation_map_;
-
-  // map of node_name to view_owners
-  std::map<std::string, fuchsia::ui::viewsv1token::ViewOwnerPtr>
-      node_views_;
-
-  FXL_DISALLOW_COPY_AND_ASSIGN(StartContainerInShellCall);
-};
-
 class StoryControllerImpl::StartCall : public Operation<> {
  public:
   StartCall(
@@ -1342,17 +1248,6 @@ void StoryControllerImpl::StartModule(
       std::move(module_controller_request), std::move(surface_relation),
       nullptr /* view_owner_request */, std::move(module_source),
       std::move(callback)));
-}
-
-void StoryControllerImpl::StartContainerInShell(
-    const std::vector<std::string>& parent_module_path,
-    std::string name, fuchsia::modular::SurfaceRelationPtr parent_relation,
-    std::vector<fuchsia::modular::ContainerLayout> layout,
-    std::vector<fuchsia::modular::ContainerRelationEntry> relationships,
-    std::vector<fuchsia::modular::ContainerNodePtr> nodes) {
-  operation_queue_.Add(new StartContainerInShellCall(
-      this, parent_module_path, name, std::move(parent_relation),
-      std::move(layout), std::move(relationships), std::move(nodes)));
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
