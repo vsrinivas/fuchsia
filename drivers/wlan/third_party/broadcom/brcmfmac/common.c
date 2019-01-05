@@ -46,12 +46,6 @@ const uint8_t ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 /* default boost value for RSSI_DELTA in preferred join selection */
 #define BRCMF_JOIN_PREF_RSSI_BOOST 8
 
-#define BRCMF_DEFAULT_TXGLOM_SIZE 32 /* max tx frames in glom chain */
-
-static int brcmf_sdiod_txglomsz = BRCMF_DEFAULT_TXGLOM_SIZE;
-module_param_named(txglomsz, brcmf_sdiod_txglomsz, int, 0);
-MODULE_PARM_DESC(txglomsz, "Maximum tx packet chain size [SDIO]");
-
 /* Debug level configuration. See debug.h for bits, sysfs modifiable */
 int brcmf_msg_filter;
 module_param_named(debug, brcmf_msg_filter, int, S_IRUSR | S_IWUSR);
@@ -443,7 +437,6 @@ struct brcmf_mp_device* brcmf_get_module_param(struct brcmf_device* dev,
         settings->bus.sdio.sd_sgentry_align = 0; // Use default
         settings->bus.sdio.sd_head_align = 0; // Use default
         settings->bus.sdio.drive_strength = 0; // Use default
-        settings->bus.sdio.txglomsz = brcmf_sdiod_txglomsz;
         settings->bus.sdio.oob_irq_supported = true;    // TODO(cphoenix): Always?
     }
 #ifdef USE_PLATFORM_DATA

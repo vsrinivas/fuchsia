@@ -517,7 +517,6 @@ struct brcmf_sdio {
     bool sleeping;
 
     uint8_t tx_hdrlen;      /* sdio bus header length for tx packet */
-    bool txglom;       /* host tx glomming enable flag */
     uint16_t head_align;    /* buffer pointer alignment */
     uint16_t sgentry_align; /* scatter-gather buffer alignment */
 };
@@ -1380,20 +1379,11 @@ static void brcmf_sdio_hdpack(struct brcmf_sdio* bus, uint8_t* header,
     brcmf_sdio_update_hwhdr(header, hd_info->len);
     hdr_offset = SDPCM_HWHDR_LEN;
 
-    if (bus->txglom) {
-        hdrval = (hd_info->len - hdr_offset) | (hd_info->lastfrm << 24);
-        *((uint32_t*)(header + hdr_offset)) = hdrval;
-        hdrval = (uint16_t)hd_info->tail_pad << 16;
-        *(((uint32_t*)(header + hdr_offset)) + 1) = hdrval;
-        hdr_offset += SDPCM_HWEXT_LEN;
-    }
-
     hdrval = hd_info->seq_num;
     hdrval |= (hd_info->channel << SDPCM_CHANNEL_SHIFT) & SDPCM_CHANNEL_MASK;
     hdrval |= (hd_info->dat_offset << SDPCM_DOFFSET_SHIFT) & SDPCM_DOFFSET_MASK;
     *((uint32_t*)(header + hdr_offset)) = hdrval;
     *(((uint32_t*)(header + hdr_offset)) + 1) = 0;
-    //trace_brcmf_sdpcm_hdr(SDPCM_TX + !!(bus->txglom), header);
 }
 
 static uint8_t brcmf_sdio_rxglom(struct brcmf_sdio* bus, uint8_t rxseq) {
@@ -1965,72 +1955,6 @@ static zx_status_t brcmf_sdio_txpkt_hdalign(struct brcmf_sdio* bus, struct brcmf
     return ZX_OK;
 }
 
-/*
- * struct brcmf_netbuf_workspace reserves the first two bytes in brcmf_netbuf.workspace for
- * bus layer usage.
- */
-/* flag marking a dummy netbuf added for DMA alignment requirement */
-#define ALIGN_NETBUF_FLAG 0x8000
-/* bit mask of data length chopped from the previous packet */
-#define ALIGN_NETBUF_CHOP_LEN_MASK 0x7fff
-
-static zx_status_t brcmf_sdio_txpkt_prep_sg(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq,
-                                            struct brcmf_netbuf* pkt, uint16_t total_len,
-                                            uint16_t* tail_pad_out) {
-    struct brcmf_sdio_dev* sdiodev;
-    struct brcmf_netbuf* pkt_pad;
-    uint16_t tail_pad, tail_chop, chain_pad, head_pad;
-    uint16_t blksize;
-    bool lastfrm;
-    int ntail;
-    zx_status_t ret;
-
-    sdiodev = bus->sdiodev;
-    sdio_get_block_size(&sdiodev->sdio_proto, SDIO_FN_2, &blksize);
-    /* sg entry alignment should be a divisor of block size */
-    WARN_ON(blksize % bus->sgentry_align);
-
-    /* Check tail padding */
-    lastfrm = brcmf_netbuf_list_peek_tail(pktq) == pkt;
-    tail_pad = 0;
-    tail_chop = pkt->len % bus->sgentry_align;
-    if (tail_chop) {
-        tail_pad = bus->sgentry_align - tail_chop;
-    }
-    chain_pad = (total_len + tail_pad) % blksize;
-    if (lastfrm && chain_pad) {
-        tail_pad += blksize - chain_pad;
-    }
-    if (brcmf_netbuf_tail_space(pkt) < tail_pad && pkt->len > blksize) {
-        pkt_pad = brcmu_pkt_buf_get_netbuf(tail_pad + tail_chop + bus->head_align);
-        if (pkt_pad == NULL) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        ret = brcmf_sdio_txpkt_hdalign(bus, pkt_pad, &head_pad);
-        if (unlikely(ret != ZX_OK)) {
-            brcmf_netbuf_free(pkt_pad);
-            return ret;
-        }
-        memcpy(pkt_pad->data, pkt->data + pkt->len - tail_chop, tail_chop);
-        *(uint16_t*)(pkt_pad->workspace) = ALIGN_NETBUF_FLAG + tail_chop;
-        brcmf_netbuf_reduce_length_to(pkt, pkt->len - tail_chop);
-        brcmf_netbuf_reduce_length_to(pkt_pad, tail_pad + tail_chop);
-        brcmf_netbuf_list_add_after(pktq, pkt, pkt_pad);
-    } else {
-        ntail = tail_pad - brcmf_netbuf_tail_space(pkt);
-        if (ntail > 0)
-            if (brcmf_netbuf_grow_realloc(pkt, 0, ntail)) {
-                return ZX_ERR_NO_MEMORY;
-            }
-        brcmf_netbuf_grow_tail(pkt, tail_pad);
-    }
-
-    if (tail_pad_out) {
-        *tail_pad_out = tail_pad;
-    }
-    return ZX_OK;
-}
-
 /**
  * brcmf_sdio_txpkt_prep - packet preparation for transmit
  * @bus: brcmf_sdio structure pointer
@@ -2054,15 +1978,6 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
     txseq = bus->tx_seq;
     total_len = 0;
     brcmf_netbuf_list_for_every(pktq, pkt_next) {
-        /* alignment packet inserted in previous
-         * loop cycle can be skipped as it is
-         * already properly aligned and does not
-         * need an sdpcm header.
-         */
-        if (*(uint16_t*)(pkt_next->workspace) & ALIGN_NETBUF_FLAG) {
-            continue;
-        }
-
         /* align packet data pointer */
         ret = brcmf_sdio_txpkt_hdalign(bus, pkt_next, &head_pad);
         if (ret != ZX_OK) {
@@ -2076,13 +1991,6 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
 
         hd_info.len = pkt_next->len;
         hd_info.lastfrm = brcmf_netbuf_list_peek_tail(pktq) == pkt_next;
-        if (bus->txglom && brcmf_netbuf_list_length(pktq) > 1) {
-            ret = brcmf_sdio_txpkt_prep_sg(bus, pktq, pkt_next, total_len, &hd_info.tail_pad);
-            if (ret != ZX_OK) {
-                return ret;
-            }
-            total_len += hd_info.tail_pad;
-        }
 
         hd_info.channel = chan;
         hd_info.dat_offset = head_pad + bus->tx_hdrlen;
@@ -2097,12 +2005,6 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
         } else if (BRCMF_HDRS_ON()) {
             brcmf_dbg_hex_dump(true, pkt_next->data, head_pad + bus->tx_hdrlen, "Tx Header:\n");
         }
-    }
-    /* Hardware length tag of the first packet should be total
-     * length of the chain (including padding)
-     */
-    if (bus->txglom) {
-        brcmf_sdio_update_hwhdr(brcmf_netbuf_list_peek_head(pktq)->data, total_len);
     }
     return ZX_OK;
 }
@@ -2119,32 +2021,14 @@ static zx_status_t brcmf_sdio_txpkt_prep(struct brcmf_sdio* bus, struct brcmf_ne
 static void brcmf_sdio_txpkt_postp(struct brcmf_sdio* bus, struct brcmf_netbuf_list* pktq) {
     uint8_t* hdr;
     uint32_t dat_offset;
-    uint16_t tail_pad;
-    uint16_t dummy_flags, chop_len;
     struct brcmf_netbuf* pkt_next;
     struct brcmf_netbuf* tmp;
-    struct brcmf_netbuf* pkt_prev;
 
     brcmf_netbuf_list_for_every_safe(pktq, pkt_next, tmp) {
-        dummy_flags = *(uint16_t*)(pkt_next->workspace);
-        if (dummy_flags & ALIGN_NETBUF_FLAG) {
-            chop_len = dummy_flags & ALIGN_NETBUF_CHOP_LEN_MASK;
-            if (chop_len) {
-                pkt_prev = brcmf_netbuf_list_prev(pktq, pkt_next);
-                brcmf_netbuf_grow_tail(pkt_prev, chop_len);
-            }
-            brcmf_netbuf_list_remove(pktq, pkt_next);
-            brcmu_pkt_buf_free_netbuf(pkt_next);
-        } else {
-            hdr = pkt_next->data + bus->tx_hdrlen - SDPCM_SWHDR_LEN;
-            dat_offset = *(uint32_t*)hdr;
-            dat_offset = (dat_offset & SDPCM_DOFFSET_MASK) >> SDPCM_DOFFSET_SHIFT;
-            brcmf_netbuf_shrink_head(pkt_next, dat_offset);
-            if (bus->txglom) {
-                tail_pad = *(uint16_t*)(hdr - 2);
-                brcmf_netbuf_reduce_length_to(pkt_next, pkt_next->len - tail_pad);
-            }
-        }
+        hdr = pkt_next->data + bus->tx_hdrlen - SDPCM_SWHDR_LEN;
+        dat_offset = *(uint32_t*)hdr;
+        dat_offset = (dat_offset & SDPCM_DOFFSET_MASK) >> SDPCM_DOFFSET_SHIFT;
+        brcmf_netbuf_shrink_head(pkt_next, dat_offset);
     }
 }
 
@@ -2202,9 +2086,6 @@ static uint brcmf_sdio_sendfromq(struct brcmf_sdio* bus, uint maxframes) {
     /* Send frames until the limit or some other event */
     for (cnt = 0; (cnt < maxframes) && data_ok(bus);) {
         pkt_num = 1;
-        if (bus->txglom) {
-            pkt_num = min_t(uint8_t, bus->tx_max - bus->tx_seq, bus->sdiodev->txglomsz);
-        }
         pkt_num = min_t(uint32_t, pkt_num, brcmu_pktq_mlen(&bus->txq, ~bus->flowcontrol));
         brcmf_netbuf_list_init(&pktq);
         //spin_lock_bh(&bus->txq_lock);
@@ -2293,10 +2174,6 @@ static zx_status_t brcmf_sdio_tx_ctrlframe(struct brcmf_sdio* bus, uint8_t* fram
     hd_info.lastfrm = true;
     hd_info.tail_pad = pad;
     brcmf_sdio_hdpack(bus, frame, &hd_info);
-
-    if (bus->txglom) {
-        brcmf_sdio_update_hwhdr(frame, len);
-    }
 
     brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_CTL_ON(), frame, len, "Tx Frame:\n");
     brcmf_dbg_hex_dump(!(BRCMF_BYTES_ON() && BRCMF_CTL_ON()) && BRCMF_HDRS_ON(), frame,
@@ -3315,6 +3192,8 @@ static zx_status_t brcmf_sdio_bus_preinit(struct brcmf_device* dev) {
         value = max(value, ALIGNMENT);
         err = brcmf_iovar_data_set(dev, "bus:txglomalign", &value, sizeof(uint32_t));
     }
+
+    // No support for txglomming, requires SDIO scatter/gather support (see WLAN-882)
 
     if (err != ZX_OK) {
         goto done;
