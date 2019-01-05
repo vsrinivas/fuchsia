@@ -55,6 +55,10 @@ import (
 	"fidl/fuchsia/hardware/ethernet"
 )
 
+// #cgo CFLAGS: -I${SRCDIR}/../../../zircon/public
+// #include <zircon/device/ethernet.h>
+import "C"
+
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
 var _ link.Controller = (*Client)(nil)
@@ -73,9 +77,9 @@ type Client struct {
 	state     link.State
 	stateFunc func(link.State)
 	arena     *Arena
-	tmpbuf    []ethernet.FifoEntry // used to fill rx and drain tx
-	recvbuf   []ethernet.FifoEntry // packets received
-	sendbuf   []ethernet.FifoEntry // packets ready to send
+	tmpbuf    []C.struct_eth_fifo_entry // used to fill rx and drain tx
+	recvbuf   []C.struct_eth_fifo_entry // packets received
+	sendbuf   []C.struct_eth_fifo_entry // packets ready to send
 
 	// These are counters for buffer management purpose.
 	txTotal    uint32
@@ -120,9 +124,9 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 		fifos:   *fifos,
 		path:    topo,
 		arena:   arena,
-		tmpbuf:  make([]ethernet.FifoEntry, 0, maxDepth),
-		recvbuf: make([]ethernet.FifoEntry, 0, fifos.RxDepth),
-		sendbuf: make([]ethernet.FifoEntry, 0, fifos.TxDepth),
+		tmpbuf:  make([]C.struct_eth_fifo_entry, 0, maxDepth),
+		recvbuf: make([]C.struct_eth_fifo_entry, 0, fifos.RxDepth),
+		sendbuf: make([]C.struct_eth_fifo_entry, 0, fifos.TxDepth),
 	}
 
 	c.mu.Lock()
@@ -291,19 +295,17 @@ func (c *Client) Free(b Buffer) {
 	c.arena.free(c, b)
 }
 
-const sizeof_fifo_entry = uint(unsafe.Sizeof(ethernet.FifoEntry{}))
-
-func fifoWrite(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
+func fifoWrite(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_write(handle, sizeof_fifo_entry, data, uint(len(b)), &actual)
+	status := zx.Sys_fifo_write(handle, C.sizeof_struct_eth_fifo_entry, data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 
-func fifoRead(handle zx.Handle, b []ethernet.FifoEntry) (zx.Status, uint32) {
+func fifoRead(handle zx.Handle, b []C.struct_eth_fifo_entry) (zx.Status, uint32) {
 	var actual uint
 	data := unsafe.Pointer((*reflect.SliceHeader)(unsafe.Pointer(&b)).Data)
-	status := zx.Sys_fifo_read(handle, sizeof_fifo_entry, data, uint(len(b)), &actual)
+	status := zx.Sys_fifo_read(handle, C.sizeof_struct_eth_fifo_entry, data, uint(len(b)), &actual)
 	return status, uint32(actual)
 }
 

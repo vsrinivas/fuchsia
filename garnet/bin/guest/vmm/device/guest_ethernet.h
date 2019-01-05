@@ -8,18 +8,18 @@
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
+#include <zircon/device/ethernet.h>
 
 // Interface for GuestEthernet to send a packet to the guest.
 struct GuestEthernetReceiver {
   virtual void Receive(uintptr_t addr, size_t length,
-                       const fuchsia::hardware::ethernet::FifoEntry& entry) = 0;
+                       const eth_fifo_entry_t& entry) = 0;
 };
 
 class GuestEthernet : public fuchsia::hardware::ethernet::Device {
  public:
-  using QueueTxFn = fit::function<zx_status_t(
-      uintptr_t addr, size_t length,
-      const fuchsia::hardware::ethernet::FifoEntry& entry)>;
+  using QueueTxFn = fit::function<zx_status_t(uintptr_t addr, size_t length,
+                                              const eth_fifo_entry_t& entry)>;
 
   GuestEthernet(GuestEthernetReceiver* receiver)
       : tx_fifo_wait_(this), receiver_(receiver) {}
@@ -30,7 +30,7 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
 
   // Interface for the virtio-net device to inform the netstack that a packet
   // has finished being transmitted.
-  void Complete(const fuchsia::hardware::ethernet::FifoEntry& entry);
+  void Complete(const eth_fifo_entry_t& entry);
 
   void OnTxFifoReadable(async_dispatcher_t* dispatcher, async::WaitBase* wait,
                         zx_status_t status, const zx_packet_signal_t* signal);
@@ -57,8 +57,7 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   void ListenStop(ListenStopCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
-  void SetClientName(std::string name,
-                     SetClientNameCallback callback) override;
+  void SetClientName(std::string name, SetClientNameCallback callback) override;
 
   // |fuchsia::hardware::ethernet::Device|
   void GetStatus(GetStatusCallback callback) override;
@@ -97,8 +96,8 @@ class GuestEthernet : public fuchsia::hardware::ethernet::Device {
   uintptr_t io_addr_;
   size_t io_size_;
 
-  std::vector<fuchsia::hardware::ethernet::FifoEntry> rx_entries_ =
-      std::vector<fuchsia::hardware::ethernet::FifoEntry>(kVirtioNetQueueSize);
+  std::vector<eth_fifo_entry_t> rx_entries_ =
+      std::vector<eth_fifo_entry_t>(kVirtioNetQueueSize);
   size_t rx_entries_count_ = 0;
 
   async::WaitMethod<GuestEthernet, &GuestEthernet::OnTxFifoReadable>

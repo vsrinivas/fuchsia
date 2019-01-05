@@ -7,7 +7,9 @@
 
 #include <fuchsia/hardware/ethernet/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
+#include <zircon/device/ethernet.h>
 #include <memory>
+
 #include "ethertap_types.h"
 
 namespace netemul {

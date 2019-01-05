@@ -66,10 +66,7 @@ impl std::str::FromStr for MacAddress {
                 .with_context(|_| format!("could not parse hex integer from {}", next_octet))?;
         }
         if iter.next().is_some() {
-            return Err(failure::format_err!(
-                "MAC address has more than six octets: {}",
-                s
-            ));
+            return Err(failure::format_err!("MAC address has more than six octets: {}", s));
         }
         Ok(MacAddress { octets })
     }
@@ -104,10 +101,7 @@ impl std::str::FromStr for EthernetFeatures {
             "synthetic" => Ok(Self::SYNTHETIC),
             "loopback" => Ok(Self::LOOPBACK),
             "wireless" => Ok(Self::WLAN),
-            s => Err(failure::format_err!(
-                "unknown network interface feature \"{}\"",
-                s
-            )),
+            s => Err(failure::format_err!("unknown network interface feature \"{}\"", s)),
         }
     }
 }
@@ -140,23 +134,6 @@ bitflags! {
     }
 }
 
-bitflags! {
-    /// Status flags describing the result of queueing a packet to an Ethernet device.
-    #[repr(transparent)]
-    pub struct EthernetQueueFlags: u16 {
-        /// The packet was received correctly.
-        const RX_OK = fidl::FIFO_RX_OK as u16;
-        /// The packet was transmitted correctly.
-        const TX_OK = fidl::FIFO_TX_OK as u16;
-        /// The packet was out of the bounds of the memory shared with the Ethernet device driver.
-        const INVALID = fidl::FIFO_INVALID as u16;
-        /// The received packet was sent by this host.
-        ///
-        /// This bit is only set after `tx_listen_start` is called.
-        const TX_ECHO = fidl::FIFO_RX_TX as u16;
-    }
-}
-
 #[cfg(test)]
 mod tests {
 
@@ -167,9 +144,7 @@ mod tests {
     #[test]
     fn mac_addr_from_str_with_valid_str_returns_mac_addr() {
         let result = MacAddress::from_str("AA:BB:CC:DD:EE:FF").unwrap();
-        let expected = MacAddress {
-            octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
-        };
+        let expected = MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] };
 
         assert_eq!(expected, result);
     }
@@ -207,12 +182,8 @@ mod tests {
         let result: Vec<MacAddress> =
             serde_json::from_str("[\"11:11:11:11:11:11\", \"AA:AA:AA:AA:AA:AA\"]").unwrap();
         let expected = vec![
-            MacAddress {
-                octets: [0x11, 0x11, 0x11, 0x11, 0x11, 0x11],
-            },
-            MacAddress {
-                octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA],
-            },
+            MacAddress { octets: [0x11, 0x11, 0x11, 0x11, 0x11, 0x11] },
+            MacAddress { octets: [0xAA, 0xAA, 0xAA, 0xAA, 0xAA, 0xAA] },
         ];
 
         assert_eq!(expected, result);
@@ -224,12 +195,8 @@ mod tests {
             serde_json::from_str("{\"11:22:33:44:55:66\": \"AA:BB:CC:DD:EE:FF\"}").unwrap();
         let mut expected = HashMap::new();
         expected.insert(
-            MacAddress {
-                octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
-            },
-            MacAddress {
-                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
-            },
+            MacAddress { octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66] },
+            MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
         );
 
         assert_eq!(expected, result);
@@ -239,12 +206,8 @@ mod tests {
     fn mac_addr_to_mac_addr_map_serializes_to_valid_json() {
         let mut mac_addr_map = HashMap::new();
         mac_addr_map.insert(
-            MacAddress {
-                octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66],
-            },
-            MacAddress {
-                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
-            },
+            MacAddress { octets: [0x11, 0x22, 0x33, 0x44, 0x55, 0x66] },
+            MacAddress { octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF] },
         );
 
         let result = serde_json::to_string(&mac_addr_map).unwrap();

@@ -5,7 +5,6 @@
 #![feature(async_await, await_macro)]
 
 use failure::{Error, ResultExt};
-use fidl_fuchsia_hardware_ethernet_ext::EthernetQueueFlags;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::prelude::*;
@@ -23,12 +22,8 @@ fn main() -> Result<(), Error> {
     let path = env::args().nth(1).expect("missing device argument");
     let dev = File::open(path)?;
     let fut = async {
-        let client = await!(ethernet::Client::from_file(
-            dev,
-            vmo,
-            ethernet::DEFAULT_BUFFER_SIZE,
-            "eth-rs"
-        ))?;
+        let client =
+            await!(ethernet::Client::from_file(dev, vmo, ethernet::DEFAULT_BUFFER_SIZE, "eth-rs"))?;
         println!("created client {:?}", client);
         println!("info: {:?}", await!(client.info())?);
         println!("status: {:?}", await!(client.get_status())?);
@@ -40,7 +35,7 @@ fn main() -> Result<(), Error> {
             if let ethernet::Event::Receive(rx, flags) = evt {
                 let mut buf = [0; 64];
                 let r = rx.read(&mut buf);
-                let is_tx_echo = flags.intersects(EthernetQueueFlags::TX_ECHO);
+                let is_tx_echo = flags.intersects(ethernet::EthernetQueueFlags::TX_ECHO);
                 println!(
                     "{} first {} bytes:\n{:02x?}",
                     if is_tx_echo { "TX_ECHO" } else { "RX     " },

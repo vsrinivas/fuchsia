@@ -238,7 +238,7 @@ void VirtioNetLegacy::Stream::OnFifoReadable(async_dispatcher_t* dispatcher,
 
   // Dequeue entries for the Ethernet device.
   size_t num_entries_read;
-  fuchsia_hardware_ethernet_FifoEntry entries[fifo_entries_.size()];
+  eth_fifo_entry_t entries[fifo_entries_.size()];
   status = zx_fifo_read(fifo_, sizeof(entries[0]), entries,
                         fifo_entries_.size(), &num_entries_read);
   if (status == ZX_ERR_SHOULD_WAIT) {

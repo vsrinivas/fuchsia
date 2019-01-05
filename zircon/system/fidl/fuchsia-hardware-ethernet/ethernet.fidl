@@ -10,12 +10,6 @@ struct MacAddress {
     array<uint8>:6 octets;
 };
 
-const uint32 DEFAULT_BUFFER_SIZE = 2048; // bytes
-/// When writing payload to a tx buffer, clients of a Device must skip this many bytes
-/// so that lower-layer drivers can fill in additional headers in that space.
-const uint32 MAC_HDR_MAX_SIZE    = 64;   // bytes, the closest power of 2 larger than 44, which is
-                                         // DataFrameHeader::max_size(36) + LlcHeader::max_size(8)
-
 // Info.features bits
 const uint32 INFO_FEATURE_WLAN = 0x00000001;
 const uint32 INFO_FEATURE_SYNTH = 0x00000002;
@@ -95,47 +89,4 @@ interface Device {
     // TODO(teisenbe): We should probably remove these?  They are only used for testing.
     14: ConfigMulticastTestFilter() -> (zx.status status);
     15: DumpRegisters() -> (zx.status status);
-};
-
-// Operation
-//
-// Packets are transmitted by writing data into the io_vmo and writing
-// an FifoEntry referencing that data (offset + length) into the tx fifo.
-// When the driver is done accessing the data, a FifoEntry with the same
-// cookie value (opaque to the driver) will be readable from the tx fifo.
-//
-// Packets are received by writing a FifoEntry referencing an available
-// buffer (offset + length) in the io vmo.  When a packet is received,
-// a FifoEntry with the same cookie value (opaque to the driver) will be
-// readable from the rx fifo.  The offset field will be the same as was
-// sent.  The length field will reflect the actual size of the received
-// packet.  The flags field will indicate success or a specific failure
-// condition.
-//
-// IMPORTANT: The driver *will not* buffer response messages.  It is the
-// client's responsibility to ensure that there is space in the reply side
-// of each fifo for each outstanding tx or rx request.  The fifo sizes
-// are returned along with the fifo handles from GetFifos().
-
-// flags values for request messages
-// - none -
-
-// flags values for response messages
-const uint16 FIFO_RX_OK   = 0x00000001; // packet received okay
-const uint16 FIFO_TX_OK   = 0x00000001; // packet transmitted okay
-const uint16 FIFO_INVALID = 0x00000002; // offset+length not within io_vmo bounds
-const uint16 FIFO_RX_TX   = 0x00000004; // received our own tx packet (when Listen enabled)
-
-struct FifoEntry {
-    // offset from start of io vmo to packet data
-    uint32 offset;
-
-    // length of packet data to tx or rx
-    uint16 length;
-
-    // FIFO_* flags as above
-    uint16 flags;
-
-    // opaque cookie
-    uint64 cookie;
 };

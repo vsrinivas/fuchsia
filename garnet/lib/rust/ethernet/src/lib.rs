@@ -8,8 +8,9 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
-use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetQueueFlags, EthernetStatus};
+use bitflags::bitflags;
 use fidl_fuchsia_hardware_ethernet as sys;
+use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus};
 use fuchsia_async as fasync;
 use fuchsia_zircon::{self as zx, AsHandleRef};
 use futures::{ready, task::LocalWaker, task::Waker, try_ready, FutureExt, Poll, Stream};
@@ -21,6 +22,24 @@ use std::pin::Pin;
 use std::sync::{Arc, Mutex};
 
 mod buffer;
+mod ethernet_sys;
+
+bitflags! {
+    /// Status flags describing the result of queueing a packet to an Ethernet device.
+    #[repr(transparent)]
+    pub struct EthernetQueueFlags: u16 {
+        /// The packet was received correctly.
+        const RX_OK   = ethernet_sys::ETH_FIFO_RX_OK as u16;
+        /// The packet was transmitted correctly.
+        const TX_OK   = ethernet_sys::ETH_FIFO_TX_OK as u16;
+        /// The packet was out of the bounds of the memory shared with the Ethernet device driver.
+        const INVALID = ethernet_sys::ETH_FIFO_INVALID as u16;
+        /// The received packet was sent by this host.
+        ///
+        /// This bit is only set after `tx_listen_start` is called.
+        const TX_ECHO = ethernet_sys::ETH_FIFO_RX_TX as u16;
+    }
+}
 
 /// Default buffer size communicating with Ethernet devices.
 ///
@@ -43,7 +62,10 @@ impl Client {
     /// TODO(tkilbourn): handle the buffer size better. How does the user of this crate know what
     /// to pass, before the device is opened?
     pub async fn new(
-        dev: sys::DeviceProxy, buf: zx::Vmo, buf_size: usize, name: &str,
+        dev: sys::DeviceProxy,
+        buf: zx::Vmo,
+        buf_size: usize,
+        name: &str,
     ) -> Result<Self, failure::Error> {
         zx::Status::ok(await!(dev.set_client_name(name))?)?;
         let (status, fifos) = await!(dev.get_fifos())?;
@@ -55,9 +77,7 @@ impl Client {
             await!(dev.set_io_buffer(buf))?;
         }
         let pool = Mutex::new(buffer::BufferPool::new(buf, buf_size)?);
-        Ok(Client {
-            inner: Arc::new(ClientInner::new(dev, pool, fifos)?),
-        })
+        Ok(Client { inner: Arc::new(ClientInner::new(dev, pool, fifos)?) })
     }
 
     /// Create a new Ethernet client for the device represented by the `dev` file.
@@ -69,7 +89,10 @@ impl Client {
     /// TODO(tkilbourn): handle the buffer size better. How does the user of this crate know what
     /// to pass, before the device is opened?
     pub async fn from_file(
-        dev: File, buf: zx::Vmo, buf_size: usize, name: &str,
+        dev: File,
+        buf: zx::Vmo,
+        buf_size: usize,
+        name: &str,
     ) -> Result<Self, failure::Error> {
         let dev = dev.as_raw_fd();
         let mut client = 0;
@@ -88,9 +111,7 @@ impl Client {
     /// This is a default implementation using the various "poll" methods on this `Client`; more
     /// sophisticated uses should use those methods directly to implement a `Future` or `Stream`.
     pub fn get_stream(&self) -> EventStream {
-        EventStream {
-            inner: Arc::clone(&self.inner),
-        }
+        EventStream { inner: Arc::clone(&self.inner) }
     }
 
     /// Retrieve information about the Ethernet device.
@@ -129,10 +150,7 @@ impl Client {
 
     /// Get the status of the Ethernet device.
     pub async fn get_status(&self) -> Result<EthernetStatus, fidl::Error> {
-        Ok(EthernetStatus::from_bits_truncate(await!(self
-            .inner
-            .dev
-            .get_status())?))
+        Ok(EthernetStatus::from_bits_truncate(await!(self.inner.dev.get_status())?))
     }
 
     /// Send a buffer with the Ethernet device.
@@ -161,7 +179,8 @@ impl Client {
 
     /// Poll the Ethernet client to complete any attempted packet transmissions.
     pub fn poll_complete_tx(
-        &self, cx: &LocalWaker,
+        &self,
+        cx: &LocalWaker,
     ) -> Poll<Result<EthernetQueueFlags, zx::Status>> {
         self.inner.poll_complete_tx(cx)
     }
@@ -173,7 +192,8 @@ impl Client {
 
     /// Poll the Ethernet client to receive a packet from the Ethernet device.
     pub fn poll_complete_rx(
-        &self, cx: &LocalWaker,
+        &self,
+        cx: &LocalWaker,
     ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         self.inner.poll_complete_rx(cx)
     }
@@ -257,14 +277,11 @@ struct ClientInner {
 
 impl ClientInner {
     fn new(
-        dev: sys::DeviceProxy, pool: Mutex<buffer::BufferPool>, fifos: sys::Fifos,
+        dev: sys::DeviceProxy,
+        pool: Mutex<buffer::BufferPool>,
+        fifos: sys::Fifos,
     ) -> Result<Self, zx::Status> {
-        let sys::Fifos {
-            rx,
-            tx,
-            rx_depth,
-            tx_depth,
-        } = fifos;
+        let sys::Fifos { rx, tx, rx_depth, tx_depth } = fifos;
         let rx_fifo = fasync::Fifo::from_fifo(rx)?;
         let tx_fifo = fasync::Fifo::from_fifo(tx)?;
         let signals = Mutex::new(fasync::OnSignals::new(&rx_fifo, zx::Signals::USER_0));
@@ -353,7 +370,8 @@ impl ClientInner {
 
     /// Receive a buffer from the Ethernet device representing a packet from the network.
     fn poll_complete_rx(
-        &self, lw: &LocalWaker,
+        &self,
+        lw: &LocalWaker,
     ) -> Poll<Result<(buffer::RxBuffer, EthernetQueueFlags), zx::Status>> {
         Poll::Ready(match try_ready!(self.rx_fifo.try_read(lw)) {
             Some(entry) => {

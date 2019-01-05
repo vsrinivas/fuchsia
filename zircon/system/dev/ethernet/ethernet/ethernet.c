@@ -11,6 +11,7 @@
 #include <fuchsia/hardware/ethernet/c/fidl.h>
 
 #include <zircon/assert.h>
+#include <zircon/device/ethernet.h>
 #include <zircon/listnode.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
@@ -24,7 +25,7 @@
 #include <threads.h>
 
 #define FIFO_DEPTH 256
-#define FIFO_ESIZE sizeof(fuchsia_hardware_ethernet_FifoEntry)
+#define FIFO_ESIZE sizeof(eth_fifo_entry_t)
 
 #define PAGE_MASK (PAGE_SIZE - 1)
 
@@ -101,7 +102,7 @@ typedef struct ethdev {
     uint32_t tx_depth;
     zx_handle_t rx_fifo;
     uint32_t rx_depth;
-    fuchsia_hardware_ethernet_FifoEntry rx_entries[FIFO_BATCH_SZ];
+    eth_fifo_entry_t rx_entries[FIFO_BATCH_SZ];
     size_t rx_entry_count;
 
     // io buffer
@@ -285,19 +286,19 @@ static void eth_handle_rx(ethdev_t* edev, const void* data, size_t len, uint32_t
         edev->rx_entry_count = count;
     }
 
-    fuchsia_hardware_ethernet_FifoEntry* e = &edev->rx_entries[--edev->rx_entry_count];
+    eth_fifo_entry_t* e = &edev->rx_entries[--edev->rx_entry_count];
     if ((e->offset >= edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
         // invalid offset/length. report error. drop packet
         e->length = 0;
-        e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
+        e->flags = ETH_FIFO_INVALID;
     } else if (len > e->length) {
         e->length = 0;
-        e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
+        e->flags = ETH_FIFO_INVALID;
     } else {
         // packet fits. deliver it
         memcpy(edev->io_buf + e->offset, data, len);
         e->length = len;
-        e->flags = fuchsia_hardware_ethernet_FIFO_RX_OK | extra;
+        e->flags = ETH_FIFO_RX_OK | extra;
     }
 
     if ((status = zx_fifo_write(edev->rx_fifo, sizeof(*e), e, 1, NULL)) < 0) {
@@ -331,12 +332,12 @@ static void eth0_status(void* cookie, uint32_t status) {
     mtx_unlock(&edev0->lock);
 }
 
-static int tx_fifo_write(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries,
+static int tx_fifo_write(ethdev_t* edev, eth_fifo_entry_t* entries,
                          size_t count) {
     zx_status_t status;
     size_t actual;
     // Writing should never fail, or fail to write all entries
-    status = zx_fifo_write(edev->tx_fifo, sizeof(fuchsia_hardware_ethernet_FifoEntry), entries,
+    status = zx_fifo_write(edev->tx_fifo, sizeof(eth_fifo_entry_t), entries,
                            count, &actual);
     if (status < 0) {
         zxlogf(ERROR, "eth [%s]: tx_fifo write failed %d\n", edev->name, status);
@@ -384,10 +385,10 @@ static void eth0_complete_tx(void* cookie, ethmac_netbuf_t* netbuf, zx_status_t 
     ethdev0_t* edev0 = cookie;
     tx_info_t* tx_info = netbuf_to_tx_info(edev0, netbuf);
     ethdev_t* edev = tx_info->edev;
-    fuchsia_hardware_ethernet_FifoEntry entry = {
+    eth_fifo_entry_t entry = {
         .offset = netbuf->data_buffer - edev->io_buf,
         .length = netbuf->data_size,
-        .flags = status == ZX_OK ? fuchsia_hardware_ethernet_FIFO_TX_OK : 0,
+        .flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0,
         .cookie = tx_info->fifo_cookie};
 
     // Now that we've copied all pertinent data from the netbuf, return it to the free list so
@@ -409,7 +410,7 @@ static void eth_tx_echo(ethdev0_t* edev0, const void* data, size_t len) {
     mtx_lock(&edev0->lock);
     list_for_every_entry(&edev0->list_active, edev, ethdev_t, node) {
         if (edev->state & ETHDEV_TX_LISTEN) {
-            eth_handle_rx(edev, data, len, fuchsia_hardware_ethernet_FIFO_RX_TX);
+            eth_handle_rx(edev, data, len, ETH_FIFO_RX_TX);
         }
     }
     mtx_unlock(&edev0->lock);
@@ -446,7 +447,7 @@ static zx_status_t eth_tx_listen_locked(ethdev_t* edev, bool yes) {
 }
 
 // The array of entries is invalidated after the call
-static int eth_send(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries, uint32_t count) {
+static int eth_send(ethdev_t* edev, eth_fifo_entry_t* entries, uint32_t count) {
     tx_info_t* tx_info = NULL;
     ethdev0_t* edev0 = edev->edev0;
     // The entries that we can't send back to the fifo immediately are filtered
@@ -455,9 +456,9 @@ static int eth_send(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries
     // will be written back to the fifo. The rest will be written later by
     // the eth0_complete_tx callback.
     uint32_t to_write = 0;
-    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count > 0; e++) {
+    for (eth_fifo_entry_t* e = entries; count > 0; e++) {
         if ((e->offset > edev->io_size) || ((e->length > (edev->io_size - e->offset)))) {
-            e->flags = fuchsia_hardware_ethernet_FIFO_INVALID;
+            e->flags = ETH_FIFO_INVALID;
             entries[to_write++] = *e;
         } else {
             zx_status_t status;
@@ -487,7 +488,7 @@ static int eth_send(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries
                 // Transmission completed. To avoid extra mutex locking/unlocking,
                 // we don't return the buffer to the pool immediately, but reuse
                 // it on the next iteration of the loop.
-                e->flags = status == ZX_OK ? fuchsia_hardware_ethernet_FIFO_TX_OK : 0;
+                e->flags = status == ZX_OK ? ETH_FIFO_TX_OK : 0;
                 entries[to_write++] = *e;
             } else {
                 // The ownership of the TX buffer is transferred to mac.ops->queue_tx().
@@ -508,7 +509,7 @@ static int eth_send(ethdev_t* edev, fuchsia_hardware_ethernet_FifoEntry* entries
 
 static int eth_tx_thread(void* arg) {
     ethdev_t* edev = (ethdev_t*)arg;
-    fuchsia_hardware_ethernet_FifoEntry entries[FIFO_DEPTH / 2];
+    eth_fifo_entry_t entries[FIFO_DEPTH / 2];
     zx_status_t status;
     size_t count;
 

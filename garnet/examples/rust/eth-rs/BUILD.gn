@@ -10,7 +10,6 @@ rustc_binary("bin") {
   edition = "2018"
   deps = [
     "//garnet/lib/rust/ethernet",
-    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
@@ -19,7 +18,6 @@ rustc_binary("bin") {
 }
 
 package("eth-rs") {
-
   deps = [
     ":bin",
   ]

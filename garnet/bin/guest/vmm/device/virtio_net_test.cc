@@ -9,6 +9,7 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/startup_context.h>
 #include <trace-provider/provider.h>
+#include <zircon/device/ethernet.h>
 
 #include <virtio/net.h>
 
@@ -52,8 +53,8 @@ class VirtioNetTest : public TestWithDevice,
   void BridgeInterfaces(::std::vector<uint32_t> nicids,
                         BridgeInterfacesCallback callback) override {}
 
-  void SetNameServers(
-      ::std::vector<fuchsia::net::IpAddress> servers) override {}
+  void SetNameServers(::std::vector<fuchsia::net::IpAddress> servers) override {
+  }
 
   void AddEthernetDevice(
       ::std::string topological_path,
@@ -158,7 +159,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
   vmo_.write(static_cast<const void*>(&expected_packet), 0,
              sizeof(expected_packet));
 
-  fuchsia::hardware::ethernet::FifoEntry entry{
+  eth_fifo_entry_t entry{
       .offset = 0,
       .length = packet_size,
       .flags = 0,
@@ -200,7 +201,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
 
   EXPECT_EQ(entry.offset, 0u);
   EXPECT_EQ(entry.length, packet_size);
-  EXPECT_EQ(entry.flags, fuchsia::hardware::ethernet::FIFO_TX_OK);
+  EXPECT_EQ(entry.flags, ETH_FIFO_TX_OK);
   EXPECT_EQ(entry.cookie, 0xdeadbeef);
 }
 
@@ -216,7 +217,7 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
   const uint8_t expected_packet[] = {0, 1, 2, 3, 4, 5, 6, 7, 8, 9};
   memcpy(reinterpret_cast<void*>(&data), expected_packet, packet_size);
 
-  fuchsia::hardware::ethernet::FifoEntry entry{
+  eth_fifo_entry_t entry{
       .offset = 0,
       .length = packet_size,
       .flags = 0,
@@ -250,6 +251,6 @@ TEST_F(VirtioNetTest, ReceiveFromGuest) {
 
   EXPECT_EQ(entry.offset, 0u);
   EXPECT_EQ(entry.length, packet_size);
-  EXPECT_EQ(entry.flags, fuchsia::hardware::ethernet::FIFO_RX_OK);
+  EXPECT_EQ(entry.flags, ETH_FIFO_RX_OK);
   EXPECT_EQ(entry.cookie, 0xdeadbeef);
 }

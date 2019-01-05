@@ -4,6 +4,7 @@
 
 #include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
+#include <zircon/device/ethernet.h>
 
 #include "mock_netstack.h"
 
@@ -55,13 +56,12 @@ void MockNetstack::AddEthernetDevice(
     return;
   }
 
-  fuchsia::hardware::ethernet::FifoEntry entry;
+  eth_fifo_entry_t entry;
   entry.offset = 0;
   entry.length = 100;
   entry.flags = 0;
   entry.cookie = 0;
-  status = rx_.write(sizeof(fuchsia::hardware::ethernet::FifoEntry), &entry, 1,
-                     nullptr);
+  status = rx_.write(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to write to rx fifo: " << status;
     return;
@@ -75,15 +75,14 @@ void MockNetstack::AddEthernetDevice(
 }
 
 zx_status_t MockNetstack::SendPacket(void* packet, size_t length) {
-  fuchsia::hardware::ethernet::FifoEntry entry;
+  eth_fifo_entry_t entry;
   entry.offset = 512;
   entry.length = length;
   entry.flags = 0;
   entry.cookie = 0;
   size_t count;
   memcpy(reinterpret_cast<void*>(io_addr_ + entry.offset), packet, length);
-  zx_status_t status = tx_.write(sizeof(fuchsia::hardware::ethernet::FifoEntry),
-                                 &entry, 1, &count);
+  zx_status_t status = tx_.write(sizeof(eth_fifo_entry_t), &entry, 1, &count);
   if (status != ZX_OK) {
     return status;
   }
@@ -100,12 +99,11 @@ zx_status_t MockNetstack::SendPacket(void* packet, size_t length) {
     return ZX_ERR_PEER_CLOSED;
   }
 
-  status = tx_.read(sizeof(fuchsia::hardware::ethernet::FifoEntry), &entry, 1,
-                    nullptr);
+  status = tx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     return status;
   }
-  if (entry.flags != fuchsia::hardware::ethernet::FIFO_TX_OK) {
+  if (entry.flags != ETH_FIFO_TX_OK) {
     return ZX_ERR_IO;
   }
 
@@ -113,7 +111,7 @@ zx_status_t MockNetstack::SendPacket(void* packet, size_t length) {
 }
 
 zx_status_t MockNetstack::ReceivePacket(void* packet, size_t length) {
-  fuchsia::hardware::ethernet::FifoEntry entry;
+  eth_fifo_entry_t entry;
 
   zx_signals_t pending = 0;
   zx_status_t status = rx_.wait_one(ZX_FIFO_READABLE | ZX_FIFO_PEER_CLOSED,
@@ -124,12 +122,11 @@ zx_status_t MockNetstack::ReceivePacket(void* packet, size_t length) {
     return ZX_ERR_PEER_CLOSED;
   }
 
-  status = rx_.read(sizeof(fuchsia::hardware::ethernet::FifoEntry), &entry, 1,
-                    nullptr);
+  status = rx_.read(sizeof(eth_fifo_entry_t), &entry, 1, nullptr);
   if (status != ZX_OK) {
     return status;
   }
-  if (entry.flags != fuchsia::hardware::ethernet::FIFO_RX_OK) {
+  if (entry.flags != ETH_FIFO_RX_OK) {
     return ZX_ERR_IO;
   }
   if (entry.length > length) {

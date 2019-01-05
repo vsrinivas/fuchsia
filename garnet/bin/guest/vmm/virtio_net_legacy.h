@@ -15,6 +15,7 @@
 #include <trace-engine/types.h>
 #include <virtio/net.h>
 #include <virtio/virtio_ids.h>
+#include <zircon/device/ethernet.h>
 
 #include "garnet/bin/guest/vmm/virtio_device.h"
 #include "garnet/bin/guest/vmm/virtio_queue_waiter.h"
@@ -110,7 +111,7 @@ class VirtioNetLegacy
     bool rx_ = false;
     IoBuffer* io_buf_;
 
-    std::vector<fuchsia_hardware_ethernet_FifoEntry> fifo_entries_;
+    std::vector<eth_fifo_entry_t> fifo_entries_;
     // Number of entries in |fifo_entries_| that have not yet been written
     // to the fifo.
     size_t fifo_num_entries_ = 0;

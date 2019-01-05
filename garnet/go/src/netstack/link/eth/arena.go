@@ -10,9 +10,11 @@ import (
 	"sync"
 	"syscall/zx"
 	"unsafe"
-
-	"fidl/fuchsia/hardware/ethernet"
 )
+
+// #cgo CFLAGS: -I${SRCDIR}/../../../zircon/public
+// #include <zircon/device/ethernet.h>
+import "C"
 
 // numBuffers is size of freebufs in arena
 // numBuffers should be greater or equal to numOfInterfaces * fifoSizeOfInterface
@@ -137,21 +139,21 @@ func (a *Arena) freeAll(c *Client) {
 	}
 }
 
-func (a *Arena) entry(b Buffer) ethernet.FifoEntry {
+func (a *Arena) entry(b Buffer) C.struct_eth_fifo_entry {
 	i := a.index(b)
 
-	entry := ethernet.FifoEntry{
-		Offset: uint32(i) * bufferSize,
-		Length: uint16(len(b)),
-		Cookie: (cookieMagic << 32) | uint64(i),
+	entry := C.struct_eth_fifo_entry{
+		offset: C.uint32_t(i) * bufferSize,
+		length: C.uint16_t(len(b)),
+		cookie: (cookieMagic << 32) | C.uint64_t(i),
 	}
 	return entry
 }
 
-func (a *Arena) bufferFromEntry(e ethernet.FifoEntry) Buffer {
-	i := int32(e.Cookie)
-	if e.Cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
-		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.Cookie))
+func (a *Arena) bufferFromEntry(e C.struct_eth_fifo_entry) Buffer {
+	i := int32(e.cookie)
+	if e.cookie>>32 != cookieMagic || i < 0 || i >= numBuffers {
+		panic(fmt.Sprintf("eth.Arena: buffer entry has bad cookie: %x", e.cookie))
 	}
 	a.mu.Lock()
 	isFree := a.mu.owner[i] == nil
@@ -159,7 +161,7 @@ func (a *Arena) bufferFromEntry(e ethernet.FifoEntry) Buffer {
 	if isFree {
 		panic(fmt.Sprintf("eth: buffer entry %d is on free list", i))
 	}
-	return a.buffer(int(i))[:e.Length]
+	return a.buffer(int(i))[:e.length]
 }
 
-const cookieMagic = 0x42420102 // used to fill top 32-bits of ethernet.FifoEntry.Cookie
+const cookieMagic = 0x42420102 // used to fill top 32-bits of C.struct_eth_fifo_entry.cookie

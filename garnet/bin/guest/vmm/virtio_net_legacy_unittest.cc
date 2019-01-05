@@ -31,12 +31,10 @@ class VirtioNetTest : public ::gtest::TestLoopFixture {
         queue_(net_.rx_queue(), kVirtioNetQueueSize) {}
 
   void SetUp() override {
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize,
-                             sizeof(fuchsia_hardware_ethernet_FifoEntry), 0,
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
                              &fifos_.rx, &fifo_[0]),
               ZX_OK);
-    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize,
-                             sizeof(fuchsia_hardware_ethernet_FifoEntry), 0,
+    ASSERT_EQ(zx_fifo_create(kVirtioNetQueueSize, sizeof(eth_fifo_entry_t), 0,
                              &fifos_.tx, &fifo_[1]),
               ZX_OK);
     fifos_.rx_depth = kVirtioNetQueueSize;
@@ -62,7 +60,7 @@ TEST_F(VirtioNetTest, DrainQueue) {
   // Drain the queue, this will pull a descriptor from the queue and deposit
   // an entry in the fifo.
   size_t count;
-  fuchsia_hardware_ethernet_FifoEntry entry[kVirtioNetQueueSize];
+  eth_fifo_entry_t entry[kVirtioNetQueueSize];
 
   // We should have no work at this point as all the buffers will be owned by
   // the ethernet device.
@@ -96,7 +94,7 @@ TEST_F(VirtioNetTest, HeaderOnDifferentBuffer) {
   RunLoopUntilIdle();
 
   size_t count;
-  fuchsia_hardware_ethernet_FifoEntry entry[kVirtioNetQueueSize];
+  eth_fifo_entry_t entry[kVirtioNetQueueSize];
 
   // Read the fifo entry.
   ASSERT_EQ(ZX_OK, zx_fifo_read(fifo_[0], sizeof(entry[0]), entry,
@@ -119,7 +117,7 @@ TEST_F(VirtioNetTest, InvalidDesc) {
 
   // Expect nothing is written to the FIFO.
   RunLoopUntilIdle();
-  fuchsia_hardware_ethernet_FifoEntry entry[kVirtioNetQueueSize];
+  eth_fifo_entry_t entry[kVirtioNetQueueSize];
   ASSERT_EQ(zx_fifo_read(fifo_[0], sizeof(entry[0]), entry, kVirtioNetQueueSize,
                          nullptr),
             ZX_ERR_SHOULD_WAIT);

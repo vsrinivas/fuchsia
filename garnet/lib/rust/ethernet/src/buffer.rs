@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_hardware_ethernet as sys;
+use crate::ethernet_sys as sys;
 use fuchsia_zircon as zx;
 use shared_buffer::SharedBuffer;
 use std::fmt;
@@ -19,31 +19,14 @@ pub struct FifoEntry {
 
 unsafe impl fuchsia_async::FifoEntry for FifoEntry {}
 
-impl From<sys::FifoEntry> for FifoEntry {
-    fn from(
-        sys::FifoEntry {
-            offset,
-            length,
-            flags,
-            cookie,
-        }: sys::FifoEntry,
-    ) -> Self {
-        Self {
-            offset,
-            length,
-            flags,
-            cookie,
-        }
+impl From<sys::eth_fifo_entry> for FifoEntry {
+    fn from(sys::eth_fifo_entry { offset, length, flags, cookie }: sys::eth_fifo_entry) -> Self {
+        Self { offset, length, flags, cookie }
     }
 }
 
 fn fifo_entry(offset: u32, length: u16) -> FifoEntry {
-    FifoEntry {
-        offset,
-        length,
-        flags: 0,
-        cookie: 0,
-    }
+    FifoEntry { offset, length, flags: 0, cookie: 0 }
 }
 
 pub struct RxBuffer {
@@ -91,12 +74,7 @@ impl<'a> TxBuffer<'a> {
     }
 
     pub fn entry(self) -> FifoEntry {
-        FifoEntry {
-            offset: self.offset as u32,
-            length: self.length as u16,
-            flags: 0,
-            cookie: 0,
-        }
+        FifoEntry { offset: self.offset as u32, length: self.length as u16, flags: 0, cookie: 0 }
     }
 }
 
@@ -132,7 +110,7 @@ pub struct BufferPool {
 // Additionally, since the VMO is expected to be shared with another process
 // anyways, we already expect it to be subject to unsynchronized manipulation.
 // TODO(tkilbourn): write more tests (and/or proofs) that we don't give out overlapping memory
-unsafe impl Send for BufferPool{}
+unsafe impl Send for BufferPool {}
 
 impl BufferPool {
     /// Create a new `BufferPool` out of the given VMO, with each buffer having length
@@ -238,9 +216,7 @@ impl fmt::Debug for BufferPool {
 impl Drop for BufferPool {
     fn drop(&mut self) {
         unsafe {
-            zx::Vmar::root_self()
-                .unmap(self.base as usize, self.len)
-                .unwrap();
+            zx::Vmar::root_self().unmap(self.base as usize, self.len).unwrap();
         }
     }
 }
@@ -258,10 +234,7 @@ impl BufferMap {
     fn new(size: usize) -> BufferMap {
         assert!(size < usize::max_value() - 63);
         let byte_size = (size + 63) / 64;
-        BufferMap {
-            map: vec![0; byte_size],
-            len: size,
-        }
+        BufferMap { map: vec![0; byte_size], len: size }
     }
 
     /// Set the given bit. Panics if the bit is out of the range.

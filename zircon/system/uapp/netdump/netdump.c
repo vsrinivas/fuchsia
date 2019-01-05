@@ -8,6 +8,7 @@
 #include <pretty/hexdump.h>
 #include <zircon/assert.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/device/ethernet.h>
 #include <zircon/process.h>
 #include <zircon/syscalls.h>
 
@@ -274,7 +275,7 @@ int write_packet(int fd, void* data, size_t len) {
 }
 
 void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options_t* options) {
-    fuchsia_hardware_ethernet_FifoEntry entries[count];
+    eth_fifo_entry_t entries[count];
 
     if (write_shb(options->dumpfile)) {
         return;
@@ -295,9 +296,9 @@ void handle_rx(zx_handle_t rx_fifo, char* iobuf, unsigned count, netdump_options
             return;
         }
 
-        fuchsia_hardware_ethernet_FifoEntry* e = entries;
+        eth_fifo_entry_t* e = entries;
         for (size_t i = 0; i < n; i++, e++) {
-            if (e->flags & fuchsia_hardware_ethernet_FIFO_RX_OK) {
+            if (e->flags & ETH_FIFO_RX_OK) {
                 if (options->raw) {
                     printf("---\n");
                     hexdump8_ex(iobuf + e->offset, e->length, 0);
@@ -465,7 +466,7 @@ int main(int argc, const char** argv) {
 
     // assign data chunks to ethbufs
     for (unsigned n = 0; n < count; n++) {
-        fuchsia_hardware_ethernet_FifoEntry entry = {
+        eth_fifo_entry_t entry = {
             .offset = n * BUFSIZE,
             .length = BUFSIZE,
             .flags = 0,

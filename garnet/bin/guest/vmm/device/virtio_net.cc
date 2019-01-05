@@ -10,6 +10,7 @@
 #include <lib/fit/defer.h>
 #include <trace-provider/provider.h>
 #include <virtio/net.h>
+#include <zircon/device/ethernet.h>
 #include <zx/fifo.h>
 
 #include "garnet/bin/guest/vmm/device/device_base.h"
@@ -76,13 +77,12 @@ class RxStream : public StreamBase {
       memcpy(phys_mem_->as<void>(offset, length),
              reinterpret_cast<void*>(pkt.addr), pkt.length);
       *chain_.Used() = pkt.length + sizeof(*header);
-      pkt.entry.flags = fuchsia::hardware::ethernet::FIFO_TX_OK;
+      pkt.entry.flags = ETH_FIFO_TX_OK;
       guest_ethernet_->Complete(pkt.entry);
     }
   }
 
-  void Receive(uintptr_t addr, size_t length,
-               const fuchsia::hardware::ethernet::FifoEntry& entry) {
+  void Receive(uintptr_t addr, size_t length, const eth_fifo_entry_t& entry) {
     packet_queue_.push(Packet{addr, length, entry});
     Notify();
   }
@@ -91,7 +91,7 @@ class RxStream : public StreamBase {
   struct Packet {
     uintptr_t addr;
     size_t length;
-    fuchsia::hardware::ethernet::FifoEntry entry;
+    eth_fifo_entry_t entry;
   };
 
   GuestEthernet* guest_ethernet_ = nullptr;
@@ -162,7 +162,7 @@ class VirtioNetImpl : public DeviceBase<VirtioNetImpl>,
   // Called by GuestEthernet to notify us when the netstack is trying to send a
   // packet to the guest.
   void Receive(uintptr_t addr, size_t length,
-               const fuchsia::hardware::ethernet::FifoEntry& entry) override {
+               const eth_fifo_entry_t& entry) override {
     rx_stream_.Receive(addr, length, entry);
   }
 

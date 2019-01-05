@@ -5,6 +5,7 @@
 #include "eth-client.h"
 
 #include <fuchsia/hardware/ethernet/c/fidl.h>
+#include <zircon/device/ethernet.h>
 #include <zircon/syscalls.h>
 
 #include <limits.h>
@@ -76,7 +77,7 @@ fail:
 
 zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
                          void* data, size_t len, uint32_t options) {
-    fuchsia_hardware_ethernet_FifoEntry e = {
+    eth_fifo_entry_t e = {
         .offset = data - eth->iobuf,
         .length = len,
         .flags = options,
@@ -90,7 +91,7 @@ zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
 
 zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
                          void* data, size_t len, uint32_t options) {
-    fuchsia_hardware_ethernet_FifoEntry e = {
+    eth_fifo_entry_t e = {
         .offset = data - eth->iobuf,
         .length = len,
         .flags = options,
@@ -103,7 +104,7 @@ zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
 
 zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
                             void (*func)(void* ctx, void* cookie)) {
-    fuchsia_hardware_ethernet_FifoEntry entries[eth->tx_size];
+    eth_fifo_entry_t entries[eth->tx_size];
     zx_status_t status;
     size_t count;
     if ((status = zx_fifo_read(eth->tx_fifo, sizeof(entries[0]), entries, countof(entries), &count)) < 0) {
@@ -114,7 +115,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
         }
     }
 
-    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
+    for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
         IORING_TRACE("eth:tx- c=0x%08lx o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie);
@@ -124,7 +125,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
 
 zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
                             void (*func)(void* ctx, void* cookie, size_t len, uint32_t flags)) {
-    fuchsia_hardware_ethernet_FifoEntry entries[eth->rx_size];
+    eth_fifo_entry_t entries[eth->rx_size];
     zx_status_t status;
     size_t count;
     if ((status = zx_fifo_read(eth->rx_fifo, sizeof(entries[0]), entries, countof(entries), &count)) < 0) {
@@ -135,7 +136,7 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
         }
     }
 
-    for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
+    for (eth_fifo_entry_t* e = entries; count-- > 0; e++) {
         IORING_TRACE("eth:rx- c=0x%08lx o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie, e->length, e->flags);

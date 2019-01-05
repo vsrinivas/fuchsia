@@ -21,6 +21,7 @@
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/device.h>
+#include <zircon/device/ethernet.h>
 #include <zircon/device/ethertap.h>
 #include <zircon/status.h>
 #include <zircon/types.h>
@@ -54,7 +55,7 @@ namespace {
 
 const char kEthernetDir[] = "/dev/class/ethernet";
 const char kTapctl[] = "/dev/misc/tapctl";
-const uint8_t kTapMac[] = { 0x12, 0x20, 0x30, 0x40, 0x50, 0x60 };
+const uint8_t kTapMac[] = {0x12, 0x20, 0x30, 0x40, 0x50, 0x60};
 
 const char* mxstrerror(zx_status_t status) {
     return zx_status_get_string(status);
@@ -93,8 +94,12 @@ zx_status_t CreateEthertap(uint32_t mtu, const char* name, zx::socket* sock) {
 }
 
 zx_status_t WatchCb(int dirfd, int event, const char* fn, void* cookie) {
-    if (event != WATCH_EVENT_ADD_FILE) return ZX_OK;
-    if (!strcmp(fn, ".") || !strcmp(fn, "..")) return ZX_OK;
+    if (event != WATCH_EVENT_ADD_FILE) {
+        return ZX_OK;
+    }
+    if (!strcmp(fn, ".") || !strcmp(fn, "..")) {
+        return ZX_OK;
+    }
 
     zx::channel svc;
     {
@@ -154,11 +159,12 @@ zx_status_t OpenEthertapDev(zx::channel* svc) {
 }
 
 struct FifoEntry : public fbl::SinglyLinkedListable<fbl::unique_ptr<FifoEntry>> {
-    fuchsia_hardware_ethernet_FifoEntry e;
+    eth_fifo_entry_t e;
 };
 
 struct EthernetOpenInfo {
-    EthernetOpenInfo(const char* name) : name(name) {}
+    EthernetOpenInfo(const char* name)
+        : name(name) {}
     // Special setup until we have IGMP: turn off multicast-promisc in init.
     bool multicast = false;
     const char* name;
@@ -239,7 +245,7 @@ public:
 
         uint32_t idx = 0;
         for (; idx < nbufs; idx++) {
-            fuchsia_hardware_ethernet_FifoEntry entry = {
+            eth_fifo_entry_t entry = {
                 .offset = idx * bufsize_,
                 .length = bufsize_,
                 .flags = 0,
@@ -257,7 +263,7 @@ public:
             entry->e.offset = idx * bufsize_;
             entry->e.length = bufsize_;
             entry->e.flags = 0;
-            entry->e.cookie = reinterpret_cast<uintptr_t>(mapped_) + entry->e.offset;
+            entry->e.cookie = mapped_ + entry->e.offset;
             tx_available_.push_front(std::move(entry));
         }
 
@@ -337,8 +343,8 @@ public:
         return call_status;
     }
 
-    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry>* tx_fifo() { return &tx_; }
-    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry>* rx_fifo() { return &rx_; }
+    fzl::fifo<eth_fifo_entry_t>* tx_fifo() { return &tx_; }
+    fzl::fifo<eth_fifo_entry_t>* rx_fifo() { return &rx_; }
     uint32_t tx_depth() { return tx_depth_; }
     uint32_t rx_depth() { return rx_depth_; }
 
@@ -346,9 +352,9 @@ public:
         return reinterpret_cast<uint8_t*>(mapped_) + offset;
     }
 
-    fuchsia_hardware_ethernet_FifoEntry* GetTxBuffer() {
+    eth_fifo_entry_t* GetTxBuffer() {
         auto entry_ptr = tx_available_.pop_front();
-        fuchsia_hardware_ethernet_FifoEntry* entry = nullptr;
+        eth_fifo_entry_t* entry = nullptr;
         if (entry_ptr != nullptr) {
             entry = &entry_ptr->e;
             tx_pending_.push_front(std::move(entry_ptr));
@@ -356,15 +362,15 @@ public:
         return entry;
     }
 
-    void ReturnTxBuffer(fuchsia_hardware_ethernet_FifoEntry* entry) {
+    void ReturnTxBuffer(eth_fifo_entry_t* entry) {
         auto entry_ptr = tx_pending_.erase_if(
-                [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
+            [entry](const FifoEntry& tx_entry) { return tx_entry.e.cookie == entry->cookie; });
         if (entry_ptr != nullptr) {
             tx_available_.push_front(std::move(entry_ptr));
         }
     }
 
-  private:
+private:
     zx::channel svc_;
 
     uint64_t vmo_size_ = 0;
@@ -373,8 +379,8 @@ public:
     uint32_t nbufs_ = 0;
     uint16_t bufsize_ = 0;
 
-    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry> tx_;
-    fzl::fifo<fuchsia_hardware_ethernet_FifoEntry> rx_;
+    fzl::fifo<eth_fifo_entry_t> tx_;
+    fzl::fifo<eth_fifo_entry_t> rx_;
     uint32_t tx_depth_ = 0;
     uint32_t rx_depth_ = 0;
 
@@ -383,7 +389,7 @@ public:
     fbl::SinglyLinkedList<FifoEntryPtr> tx_pending_;
 };
 
-}  // namespace
+} // namespace
 
 #define HEADER_SIZE (sizeof(ethertap_socket_header_t))
 #define READBUF_SIZE (ETHERTAP_MAX_MTU + HEADER_SIZE)
@@ -476,8 +482,8 @@ static bool AddClientHelper(zx::socket* sock,
 }
 
 static bool OpenFirstClientHelper(zx::socket* sock,
-                               EthernetClient* client,
-                               const EthernetOpenInfo& openInfo) {
+                                  EthernetClient* client,
+                                  const EthernetOpenInfo& openInfo) {
     // Create the ethertap device
     ASSERT_EQ(ZX_OK, CreateEthertapWithOption(1500, openInfo.name, sock, openInfo.options));
 
@@ -690,8 +696,8 @@ static bool EthernetMulticastSetsAddresses() {
     EthernetClient clientB;
     ASSERT_TRUE(AddClientHelper(&sock, &clientB, info));
 
-    uint8_t macA[] = {1,2,3,4,5,6};
-    uint8_t macB[] = {7,8,9,10,11,12};
+    uint8_t macA[] = {1, 2, 3, 4, 5, 6};
+    uint8_t macB[] = {7, 8, 9, 10, 11, 12};
     uint8_t data[] = {6, 12};
     ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(macA));
     ExpectSetParamRead(&sock, ETHMAC_SETPARAM_MULTICAST_FILTER, 1, 1, data, "first addr");
@@ -716,19 +722,19 @@ static bool EthernetMulticastPromiscOnOverflow() {
     EthernetClient clientB;
     info.name = "McPromOvB";
     ASSERT_TRUE(AddClientHelper(&sock, &clientB, info));
-    uint8_t mac[] = {1,2,3,4,5,0};
+    uint8_t mac[] = {1, 2, 3, 4, 5, 0};
     uint8_t data[MULTICAST_LIST_LIMIT];
     ASSERT_LT(MULTICAST_LIST_LIMIT, 255); // If false, add code to avoid duplicate mac addresses
-    uint8_t next_val = 0x11; // Any value works; starting at 0x11 makes the dump extra readable.
+    uint8_t next_val = 0x11;              // Any value works; starting at 0x11 makes the dump extra readable.
     uint32_t n_data = 0;
-    for (uint32_t i = 0; i < MULTICAST_LIST_LIMIT-1; i++) {
+    for (uint32_t i = 0; i < MULTICAST_LIST_LIMIT - 1; i++) {
         mac[5] = next_val;
         data[n_data++] = next_val++;
         ASSERT_EQ(ZX_OK, clientA.MulticastAddressAdd(mac));
         ASSERT_TRUE(ExpectSetParamRead(&sock, ETHMAC_SETPARAM_MULTICAST_FILTER,
                                        n_data, n_data, data, "loading filter"));
     }
-    ASSERT_EQ(n_data, MULTICAST_LIST_LIMIT-1); // There should be 1 space left
+    ASSERT_EQ(n_data, MULTICAST_LIST_LIMIT - 1); // There should be 1 space left
     mac[5] = next_val;
     data[n_data++] = next_val++;
     ASSERT_EQ(ZX_OK, clientB.MulticastAddressAdd(mac));
@@ -845,17 +851,17 @@ static bool EthernetDataTest_Send() {
     EXPECT_EQ(ZX_OK, client.tx_fifo()->wait_one(ZX_FIFO_READABLE, FAIL_TIMEOUT, &obs));
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
-    fuchsia_hardware_ethernet_FifoEntry return_entry;
+    eth_fifo_entry_t return_entry;
     ASSERT_EQ(ZX_OK, client.tx_fifo()->read_one(&return_entry));
 
     // Check the flags on the returned entry
-    EXPECT_TRUE(return_entry.flags & fuchsia_hardware_ethernet_FIFO_TX_OK);
+    EXPECT_TRUE(return_entry.flags & ETH_FIFO_TX_OK);
     return_entry.flags = 0;
 
     // Verify the bytes from the rest of the entry match what we wrote
     auto expected_entry = reinterpret_cast<uint8_t*>(entry);
     auto actual_entry = reinterpret_cast<uint8_t*>(&return_entry);
-    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(fuchsia_hardware_ethernet_FifoEntry), "");
+    EXPECT_BYTES_EQ(expected_entry, actual_entry, sizeof(eth_fifo_entry_t), "");
 
     // Return the buffer to our client; the client destructor will make sure no TXs are still
     // pending at the end of te test.
@@ -891,7 +897,7 @@ static bool EthernetDataTest_Recv() {
     ASSERT_TRUE(obs & ZX_FIFO_READABLE);
 
     // Read the RX fifo
-    fuchsia_hardware_ethernet_FifoEntry entry;
+    eth_fifo_entry_t entry;
     EXPECT_EQ(ZX_OK, client.rx_fifo()->read_one(&entry));
 
     // Check the bytes in the VMO compared to what we sent through the socket

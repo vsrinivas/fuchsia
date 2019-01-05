@@ -21,7 +21,7 @@
 namespace netemul {
 using ZDevice = fuchsia::hardware::ethernet::Device;
 using ZFifos = fuchsia::hardware::ethernet::Fifos;
-using ZFifoEntry = fuchsia::hardware::ethernet::FifoEntry;
+using ZFifoEntry = eth_fifo_entry_t;
 
 // WatchCbArgs is intended to be used *only* to capture context for fdio dir
 // watching. Note that base_dir and search_mac are references, not copies. That
@@ -163,7 +163,7 @@ class FifoHolder {
       if (tx_.read_one(&return_entry) != ZX_OK) {
         break;
       }
-      if (!(return_entry.flags & fuchsia::hardware::ethernet::FIFO_TX_OK)) {
+      if (!(return_entry.flags & ETH_FIFO_TX_OK)) {
         break;
       }
       ReturnTxBuffer(&return_entry);

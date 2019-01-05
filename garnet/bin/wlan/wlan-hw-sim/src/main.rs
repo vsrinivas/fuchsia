@@ -844,7 +844,6 @@ mod simulation_tests {
         client: &'a mut ethernet::Client,
         buf: &'a Vec<u8>,
     ) -> Result<(eth_frames::EthHeader, Vec<u8>), failure::Error> {
-        use fidl_fuchsia_hardware_ethernet_ext::EthernetQueueFlags;
         let mut client_stream = client.get_stream();
         client.send(&buf);
         loop {
@@ -854,7 +853,7 @@ mod simulation_tests {
                     await!(client.get_status()).expect("getting status");
                 }
                 ethernet::Event::Receive(buffer, flags) => {
-                    ensure!(flags.intersects(EthernetQueueFlags::RX_OK), "RX_OK not set");
+                    ensure!(flags.intersects(ethernet::EthernetQueueFlags::RX_OK), "RX_OK not set");
                     let mut eth_frame = vec![0u8; buffer.len()];
                     buffer.read(&mut eth_frame);
                     let mut cursor = io::Cursor::new(&eth_frame);

@@ -5,7 +5,6 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use ethernet as eth;
-use fidl_fuchsia_hardware_ethernet_ext::EthernetQueueFlags;
 use fuchsia_async as fasync;
 use fuchsia_zircon as zx;
 use futures::TryStreamExt;
@@ -34,12 +33,8 @@ async fn main() -> Result<(), failure::Error> {
         256 * eth::DEFAULT_BUFFER_SIZE as u64,
     )?;
 
-    let mut eth_client = await!(eth::Client::from_file(
-        dev,
-        vmo,
-        eth::DEFAULT_BUFFER_SIZE,
-        "test"
-    ))?;
+    let mut eth_client =
+        await!(eth::Client::from_file(dev, vmo, eth::DEFAULT_BUFFER_SIZE, "test"))?;
 
     await!(eth_client.start())?;
 
@@ -52,7 +47,7 @@ async fn main() -> Result<(), failure::Error> {
     while let Some(evt) = await!(events.try_next())? {
         match evt {
             eth::Event::Receive(rx, flags) => {
-                if flags == EthernetQueueFlags::RX_OK && rx.len() == config.length {
+                if flags == eth::EthernetQueueFlags::RX_OK && rx.len() == config.length {
                     rx.read(&mut buf);
                     break;
                 }
