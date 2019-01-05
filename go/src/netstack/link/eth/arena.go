@@ -103,11 +103,13 @@ func (a *Arena) alloc(c *Client) Buffer {
 }
 
 func (a *Arena) index(b Buffer) int {
-	bp := (*reflect.SliceHeader)(unsafe.Pointer(&b)).Data
-	ap := (*reflect.SliceHeader)(unsafe.Pointer(&a.iobuf)).Data
+	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bp := bh.Data
+	ah := (*reflect.SliceHeader)(unsafe.Pointer(&a.iobuf))
+	ap := ah.Data
 	i := (bp - ap) / bufferSize
 	if i < 0 || i >= numBuffers {
-		panic(fmt.Sprintf("eth.Arena: buffer 0x%x (len=%d, cap=%d) not in iobuf 0x%x", bp, len(b), cap(b), ap))
+		panic(fmt.Sprintf("eth.Arena: buffer %+v not in iobuf %+v", bh, ah))
 	}
 	return int(i)
 }
