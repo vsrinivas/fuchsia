@@ -9,7 +9,9 @@ use {
     failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth_gatt as gatt,
     fidl_fuchsia_power::{
-        PowerManagerMarker, PowerManagerWatcherMarker, PowerManagerWatcherRequest,
+        PowerManagerMarker,
+        PowerManagerWatcherMarker,
+        PowerManagerWatcherRequest,
         PowerManagerWatcherRequestStream,
     },
     fuchsia_app::client::connect_to_service,

@@ -4,9 +4,13 @@
 
 #![deny(warnings)]
 
-use failure::Error;
-use std::fs::{File, OpenOptions};
-use std::path::Path;
+use {
+    failure::Error,
+    std::{
+        fs::{File, OpenOptions},
+        path::Path,
+    },
+};
 
 pub fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
     OpenOptions::new()

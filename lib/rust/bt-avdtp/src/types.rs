@@ -5,6 +5,7 @@
 #![deny(warnings)]
 
 use {
+    failure::Fail,
     fuchsia_syslog::fx_log_warn,
     fuchsia_zircon as zx,
     std::{

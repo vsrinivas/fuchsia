@@ -8,16 +8,18 @@
 // This allows us to provide a camel-case module name to the `derive_opt_box` macro below.
 #![allow(non_snake_case)]
 
-use fidl_fuchsia_bluetooth_host::{
-    AddressType,
-    BondingData,
-    Key,
-    LeConnectionParameters,
-    LeData,
-    Ltk,
-    SecurityProperties
+use {
+    fidl_fuchsia_bluetooth_host::{
+        AddressType,
+        BondingData,
+        Key,
+        LeConnectionParameters,
+        LeData,
+        Ltk,
+        SecurityProperties
+    },
+    serde_derive::{Deserialize, Serialize},
 };
-use serde_derive::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize)]
 #[serde(remote = "LeConnectionParameters")]

@@ -4,7 +4,6 @@
 
 #![deny(warnings)]
 #![deny(missing_docs)]
-#![allow(stable_features)]
 
 //! Utilities for Bluetooth development.
 

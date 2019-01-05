@@ -2,14 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use {
+    fidl::{self, endpoints::RequestStream},
+    fidl_fuchsia_bluetooth_control::{*, PairingDelegateRequest::*},
+    fuchsia_async as fasync,
+    fuchsia_syslog::fx_log_warn,
+    futures::{Future, TryStreamExt},
+};
+
 use crate::host_dispatcher::HostDispatcher;
-use fidl;
-use fidl::endpoints::RequestStream;
-use fidl_fuchsia_bluetooth_control::*;
-use fidl_fuchsia_bluetooth_control::PairingDelegateRequest::*;
-use fuchsia_async as fasync;
-use fuchsia_syslog::fx_log_warn;
-use futures::{Future, TryStreamExt};
 
 // Number of concurrent requests allowed to the pairing delegate at a single time
 const MAX_CONCURRENT_REQUESTS: usize = 100;
@@ -23,7 +24,7 @@ async fn handler(
                 await!(handle_pairing_request( pd, device, method, displayed_passkey, responder)),
             OnPairingComplete { device_id, status, control_handle: _ } =>
                 handle_pairing_complete(pd, device_id, status),
-            OnRemoteKeypress { device_id, keypress, control_handle: _, } =>
+            OnRemoteKeypress { device_id, keypress, control_handle: _ } =>
                 handle_remote_keypress(pd, device_id, keypress),
         },
         None => match event {

@@ -2,25 +2,31 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::host_dispatcher::HostDispatcher;
-use crate::util::clone_host_state;
-use fidl;
-use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_bluetooth;
-use fidl_fuchsia_bluetooth::Status;
-use fidl_fuchsia_bluetooth_control::AdapterInfo;
-use fidl_fuchsia_bluetooth_control::PairingDelegateMarker;
-use fidl_fuchsia_bluetooth_control::{InputCapabilityType, OutputCapabilityType};
-use fidl_fuchsia_bluetooth_gatt::ClientProxy;
-use fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy};
-use fidl_fuchsia_bluetooth_le::CentralProxy;
-use fuchsia_bluetooth::bt_fidl_status;
-use fuchsia_syslog::{fx_log_err, fx_log_info};
-use futures::{Future, StreamExt};
-use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::path::PathBuf;
-use std::sync::Arc;
+use {
+    fidl::{self, endpoints::ClientEnd},
+    fidl_fuchsia_bluetooth::{self, Status},
+    fidl_fuchsia_bluetooth_control::{
+        AdapterInfo,
+        InputCapabilityType,
+        OutputCapabilityType,
+        PairingDelegateMarker,
+    },
+    fidl_fuchsia_bluetooth_gatt::ClientProxy,
+    fidl_fuchsia_bluetooth_host::{BondingData, HostEvent, HostProxy},
+    fidl_fuchsia_bluetooth_le::CentralProxy,
+    fuchsia_bluetooth::bt_fidl_status,
+    fuchsia_syslog::{fx_log_err, fx_log_info},
+    futures::{Future, StreamExt},
+    parking_lot::RwLock,
+    std::collections::HashMap,
+    std::path::PathBuf,
+    std::sync::Arc,
+};
+
+use crate::{
+    host_dispatcher::HostDispatcher,
+    util::clone_host_state,
+};
 
 pub struct HostDevice {
     pub path: PathBuf,

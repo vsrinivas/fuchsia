@@ -9,25 +9,21 @@ use {
     failure::{Error, Fail, ResultExt},
     fidl::encoding::OutOfLine,
     fidl_fuchsia_bluetooth_le::{CentralMarker, CentralProxy, ScanFilter},
-    fuchsia_bluetooth::{
-        assigned_numbers::find_service_uuid,
-        error::Error as BTError,
-    },
+    fuchsia_bluetooth::{assigned_numbers::find_service_uuid, error::Error as BTError},
     fuchsia_async::{
         self as fasync,
         temp::Either::{Left, Right},
     },
-    futures::{
-        future,
-        prelude::*,
-    },
+    futures::{future, prelude::*},
     getopts::Options,
 };
+
+use crate::central::{listen_central_events, CentralState};
 
 mod central;
 mod gatt;
 
-use crate::central::{listen_central_events, CentralState};
+
 
 fn do_scan(
     args: &[String], central: &CentralProxy,

@@ -2,12 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_bluetooth::types::Bool;
-use fuchsia_bluetooth::assigned_numbers::find_service_uuid;
-use fuchsia_bluetooth::util::clone_bt_fidl_bool;
-use fuchsia_bluetooth::util::clone_host_state;
-use fidl_fuchsia_bluetooth_control as fidl_control;
-use std::fmt::{self, Write};
+use {
+    fuchsia_bluetooth::{
+        assigned_numbers::find_service_uuid,
+        types::Bool,
+        util::{clone_bt_fidl_bool, clone_host_state},
+    },
+    fidl_fuchsia_bluetooth_control as fidl_control,
+    std::fmt::{self, Write},
+};
 
 pub struct AdapterInfo(fidl_control::AdapterInfo);
 

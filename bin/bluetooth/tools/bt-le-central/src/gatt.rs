@@ -12,18 +12,12 @@ use {
     },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BTError,
-    futures::{
-        TryFutureExt, TryStreamExt,
-    },
+    futures::{TryFutureExt, TryStreamExt},
     parking_lot::RwLock,
-    self::{
-        commands::Cmd,
-        types::Service,
-    },
-    std::{
-        sync::Arc,
-    },
+    std::{sync::Arc},
 };
+
+use self::{commands::Cmd, types::Service};
 
 pub mod commands;
 pub mod repl;

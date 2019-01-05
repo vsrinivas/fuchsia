@@ -3,20 +3,13 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        ClientId, DeviceId,
-    },
     failure::{bail, Error},
-    fidl_fuchsia_bluetooth_snoop::{
-        SnoopControlHandle,
-        SnoopPacket
-    },
+    fidl_fuchsia_bluetooth_snoop::{SnoopControlHandle, SnoopPacket},
     fuchsia_syslog::{fx_log_warn, fx_vlog},
-    std::{
-        collections::HashMap,
-        iter,
-    }
+    std::{collections::HashMap, iter},
 };
+
+use crate::{ClientId, DeviceId};
 
 /// `SubscriptionManager` tracks the client subscriptions for hci devices. It allows clients to be
 /// registered and degregistered as subscribers, clean up all clients registered to

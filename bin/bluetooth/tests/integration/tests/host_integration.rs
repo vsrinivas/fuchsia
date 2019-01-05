@@ -5,27 +5,33 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api)]
 
-use fidl_fuchsia_bluetooth::Bool;
-use fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType};
-use fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy};
-use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_bluetooth::error::Error as BtError;
-use fuchsia_bluetooth::util::clone_host_state;
-use fuchsia_bluetooth::{fake_hci::FakeHciDevice, host};
-use fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher};
-use fuchsia_zircon::DurationNum;
-use futures::{future, task, Future, FutureExt, Poll, TryFutureExt, TryStreamExt};
-
-use failure::{Error, ResultExt};
-use parking_lot::RwLock;
-use slab::Slab;
-use std::borrow::Borrow;
-use std::collections::HashMap;
-use std::fs::File;
-use std::io::{self, Write};
-use std::path::PathBuf;
-use std::pin::Pin;
-use std::sync::Arc;
+use {
+    failure::{Error, ResultExt},
+    fidl_fuchsia_bluetooth::Bool,
+    fidl_fuchsia_bluetooth_control::{AdapterInfo, AdapterState, RemoteDevice, TechnologyType},
+    fidl_fuchsia_bluetooth_host::{HostEvent, HostProxy},
+    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_bluetooth::{
+        error::Error as BtError,
+        fake_hci::FakeHciDevice,
+        host,
+        util::clone_host_state,
+    },
+    fuchsia_vfs_watcher::{WatchEvent as VfsWatchEvent, Watcher as VfsWatcher},
+    fuchsia_zircon::DurationNum,
+    futures::{future, task, Future, FutureExt, Poll, TryFutureExt, TryStreamExt},
+    parking_lot::RwLock,
+    slab::Slab,
+    std::{
+        borrow::Borrow,
+        collections::HashMap,
+        fs::File,
+        io::{self, Write},
+        path::PathBuf,
+        pin::Pin,
+        sync::Arc,
+    },
+};
 
 mod common;
 

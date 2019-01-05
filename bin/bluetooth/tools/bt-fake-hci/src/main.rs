@@ -3,10 +3,14 @@
 // found in the LICENSE file.
 
 #[deny(warnings)]
-use failure::{err_msg, Error};
-use fuchsia_bluetooth::hci;
-use std::fs::{File, OpenOptions};
-use std::path::Path;
+use {
+    failure::{err_msg, Error},
+    fuchsia_bluetooth::hci,
+    std::{
+        fs::{File, OpenOptions},
+        path::Path,
+    },
+};
 
 fn usage(appname: &str) {
     eprintln!("usage: {} add", appname);

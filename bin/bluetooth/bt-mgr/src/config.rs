@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth_control::ControlMarker;
-use fidl_fuchsia_bluetooth_control::InputCapabilityType;
-use fidl_fuchsia_bluetooth_control::OutputCapabilityType;
-use fuchsia_app::client::connect_to_service;
-use std::fs::OpenOptions;
-use std::io::Read;
-use serde_json;
-use failure::Error;
-use serde_derive::{Deserialize, Serialize};
+use {
+    failure::Error,
+    fidl_fuchsia_bluetooth_control::{ControlMarker, InputCapabilityType, OutputCapabilityType},
+    fuchsia_app::client::connect_to_service,
+    serde_derive::{Deserialize, Serialize},
+    serde_json,
+    std::{fs::OpenOptions, io::Read},
+};
 
 static CONFIG_FILE_PATH: &'static str = "/pkg/data/default.json";
 

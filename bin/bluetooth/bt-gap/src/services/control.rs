@@ -2,16 +2,19 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use {
+    failure::Error,
+    fidl::encoding::OutOfLine,
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_bluetooth,
+    fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream},
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::bt_fidl_status,
+    futures::prelude::*,
+    std::sync::Arc,
+};
+
 use crate::host_dispatcher::*;
-use failure::Error;
-use fidl::encoding::OutOfLine;
-use fidl::endpoints::RequestStream;
-use fidl_fuchsia_bluetooth;
-use fidl_fuchsia_bluetooth_control::{ControlRequest, ControlRequestStream};
-use fuchsia_async as fasync;
-use fuchsia_bluetooth::bt_fidl_status;
-use futures::prelude::*;
-use std::sync::Arc;
 
 struct ControlSession {
     discovery_token: Option<Arc<DiscoveryRequestToken>>,

@@ -1,13 +1,12 @@
 use {
-    super::*,
     fidl::Error as FidlError,
-    fidl_fuchsia_bluetooth_snoop::{
-        SnoopProxy, SnoopRequestStream,
-    },
+    fidl_fuchsia_bluetooth_snoop::{SnoopProxy, SnoopRequestStream},
     fuchsia_async::{Channel, Executor},
     fuchsia_zircon as zx,
     std::task::Poll,
 };
+
+use super::*;
 
 fn setup() -> (
     Executor,

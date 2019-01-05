@@ -2,47 +2,57 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::host_device::{self, HostDevice};
-use crate::services;
-use crate::store::stash::Stash;
-use crate::util;
-use failure::Error;
-use fidl;
-use fidl::encoding::OutOfLine;
-use fidl::endpoints::ServerEnd;
-use fidl_fuchsia_bluetooth;
-use fidl_fuchsia_bluetooth_control::{
-    AdapterInfo,
-    ControlControlHandle,
-    PairingDelegateMarker,
-    PairingDelegateProxy,
-    InputCapabilityType,
-    OutputCapabilityType,
-    RemoteDevice
+use {
+    failure::Error,
+    fidl::{
+        self,
+        encoding::OutOfLine,
+        endpoints::ServerEnd,
+    },
+    fidl_fuchsia_bluetooth,
+    fidl_fuchsia_bluetooth_control::{
+        AdapterInfo,
+        ControlControlHandle,
+        PairingDelegateMarker,
+        PairingDelegateProxy,
+        InputCapabilityType,
+        OutputCapabilityType,
+        RemoteDevice
+    },
+    fidl_fuchsia_bluetooth_bredr::ProfileMarker,
+    fidl_fuchsia_bluetooth_gatt::Server_Marker,
+    fidl_fuchsia_bluetooth_host::HostProxy,
+    fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fuchsia_bluetooth::{
+        self as bt,
+        bt_fidl_status,
+        error::Error as BTError,
+        util::clone_host_info,
+        util::clone_remote_device
+    },
+    fuchsia_async::{self as fasync, TimeoutExt},
+    fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog},
+    fuchsia_zircon::{self as zx, Duration},
+    futures::{
+        task::{LocalWaker, Waker},
+        Future,
+        Poll,
+        FutureExt,
+        TryFutureExt
+    },
+    parking_lot::RwLock,
+    slab::Slab,
+    std::collections::HashMap,
+    std::fs::File,
+    std::marker::Unpin,
+    std::path::PathBuf,
+    std::sync::{Arc, Weak},
 };
-use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
-use fidl_fuchsia_bluetooth_gatt::Server_Marker;
-use fidl_fuchsia_bluetooth_host::HostProxy;
-use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
-use fuchsia_bluetooth::{
-    self as bt,
-    bt_fidl_status,
-    error::Error as BTError,
-    util::clone_host_info,
-    util::clone_remote_device
+
+use crate::{
+    host_device::{self, HostDevice},
+    services, store::stash::Stash, util
 };
-use fuchsia_async::{self as fasync, TimeoutExt};
-use fuchsia_syslog::{fx_log_err, fx_log_info, fx_vlog};
-use fuchsia_zircon as zx;
-use fuchsia_zircon::Duration;
-use futures::{task::{LocalWaker, Waker}, Future, Poll, FutureExt, TryFutureExt};
-use parking_lot::RwLock;
-use slab::Slab;
-use std::collections::HashMap;
-use std::fs::File;
-use std::marker::Unpin;
-use std::path::PathBuf;
-use std::sync::{Arc, Weak};
 
 pub static HOST_INIT_TIMEOUT: i64 = 5; // Seconds
 

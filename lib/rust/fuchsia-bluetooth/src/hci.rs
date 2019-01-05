@@ -5,19 +5,20 @@
 #![deny(warnings)]
 #![allow(missing_docs)]
 
-use failure::{format_err, Error};
-use rand::{self, Rng};
-use std;
-use std::ffi::{CString, OsStr, OsString};
-use std::fs::{File, OpenOptions};
-use std::mem;
-use std::os::raw;
-use std::os::unix::ffi::OsStrExt;
-use std::path::Path;
-
-use fdio::{fdio_sys, ioctl, make_ioctl};
-use fidl_fuchsia_device_test::{CONTROL_DEVICE, DeviceSynchronousProxy, RootDeviceSynchronousProxy};
-use fuchsia_zircon::{self as zircon, Handle};
+use {
+    failure::{format_err, Error},
+    fdio::{fdio_sys, ioctl, make_ioctl},
+    fidl_fuchsia_device_test::{CONTROL_DEVICE, DeviceSynchronousProxy, RootDeviceSynchronousProxy},
+    fuchsia_zircon::{self as zircon, Handle},
+    rand::{self, Rng},
+    std::{
+        ffi::{CString, OsStr, OsString},
+        fs::{File, OpenOptions},
+        mem,
+        os::{raw, unix::ffi::OsStrExt},
+        path::Path,
+    },
+};
 
 pub const DEV_TEST: &str = CONTROL_DEVICE;
 pub const BTHCI_DRIVER_NAME: &str = "/system/driver/bthci-fake.so";
@@ -116,7 +117,7 @@ pub fn open_snoop_channel(device: &File) -> Result<zircon::Handle, Error> {
             IOCTL_BT_HCI_GET_SNOOP_CHANNEL,
             ::std::ptr::null_mut() as *mut raw::c_void,
             0,
-            &mut handle as *mut _ as *mut std::os::raw::c_void,
+            &mut handle as *mut _ as *mut raw::c_void,
             mem::size_of::<zircon::sys::zx_handle_t>(),
         ).map(|_| Handle::from_raw(handle))
         .map_err(|e| e.into())

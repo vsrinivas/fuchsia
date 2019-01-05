@@ -1,11 +1,14 @@
-use fuchsia_syslog::fx_log_warn;
-use fuchsia_vfs_watcher as vfs_watcher;
-use fuchsia_vfs_watcher::{WatchEvent, WatchMessage};
-use std::fs::File;
-use failure::Error;
-use std::io;
-use std::path::{Path, PathBuf};
-use futures::{Stream, TryStreamExt};
+use {
+    failure::Error,
+    fuchsia_syslog::fx_log_warn,
+    fuchsia_vfs_watcher::{self as vfs_watcher, WatchEvent, WatchMessage},
+    futures::{Stream, TryStreamExt},
+    std::{
+        fs::File,
+        io,
+        path::{Path, PathBuf}
+    },
+};
 
 // This module defines a watcher that subscribes to the device filesystem and
 // produces a stream of messages when bt-host devices are added or removed from

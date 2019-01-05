@@ -6,21 +6,16 @@
 #![allow(unreachable_code)]
 
 use {
-    crate::gatt::repl::start_gatt_loop,
     failure::Error,
     fidl::endpoints,
     fidl_fuchsia_bluetooth_le::{CentralEvent, CentralProxy, RemoteDevice},
     fuchsia_bluetooth::error::Error as BTError,
-    futures::{
-        prelude::*,
-    },
+    futures::{prelude::*},
     parking_lot::RwLock,
-    std::{
-        fmt,
-        process::exit,
-        sync::Arc,
-    },
+    std::{fmt, process::exit, sync::Arc},
 };
+
+use crate::gatt::repl::start_gatt_loop;
 
 type CentralStatePtr = Arc<RwLock<CentralState>>;
 

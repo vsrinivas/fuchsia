@@ -2,15 +2,18 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
-use fidl::endpoints::RequestStream;
-use fidl_fuchsia_bluetooth_control::{PairingDelegateRequest, PairingDelegateRequestStream,
-                                     PairingMethod};
-use fuchsia_async as fasync;
-use fuchsia_bluetooth::error::Error as BtError;
-use futures::prelude::*;
-use futures::Future;
-use std::io::{self, Read, Write};
+use {
+    failure::Error,
+    fidl::endpoints::RequestStream,
+    fidl_fuchsia_bluetooth_control::{
+        PairingDelegateRequest,
+        PairingDelegateRequestStream,
+        PairingMethod},
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::error::Error as BtError,
+    futures::prelude::*,
+    std::io::{self, Read, Write},
+};
 
 fn print_and_flush(msg: &str) {
     print!("{}", msg);

@@ -12,17 +12,24 @@
 // Macros used to serialize bonding data FIDL types for persistent storage.
 #[macro_use] extern crate serde_derive;
 
-use failure::{Error, ResultExt};
-use fidl::endpoints::{ServiceMarker};
-use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
-use fidl_fuchsia_bluetooth_control::ControlMarker;
-use fidl_fuchsia_bluetooth_gatt::Server_Marker;
-use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
-use fuchsia_app::server::ServicesServer;
-use fuchsia_async as fasync;
-use fuchsia_bluetooth::util;
-use fuchsia_syslog::{self as syslog, fx_log_info};
-use futures::{TryFutureExt, TryStreamExt};
+use {
+    failure::{Error, ResultExt},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_bluetooth_bredr::ProfileMarker,
+    fidl_fuchsia_bluetooth_control::ControlMarker,
+    fidl_fuchsia_bluetooth_gatt::Server_Marker,
+    fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fuchsia_app::server::ServicesServer,
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::util,
+    fuchsia_syslog::{self as syslog, fx_log_info},
+    futures::{TryFutureExt, TryStreamExt},
+};
+
+use crate::{
+    adapters::{*, AdapterEvent::*},
+    host_dispatcher::{*, HostService::*},
+};
 
 mod services;
 mod store;
@@ -30,11 +37,6 @@ mod store;
 mod adapters;
 mod host_device;
 mod host_dispatcher;
-
-use crate::adapters::*;
-use crate::adapters::AdapterEvent::*;
-use crate::host_dispatcher::*;
-use crate::host_dispatcher::HostService::*;
 
 const BT_GAP_COMPONENT_ID: &'static str = "bt-gap";
 

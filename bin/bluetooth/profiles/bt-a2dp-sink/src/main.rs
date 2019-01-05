@@ -5,20 +5,19 @@
 #![deny(warnings)]
 #![feature(futures_api, async_await, await_macro)]
 
-#[macro_use]
-extern crate failure;
-
-use bt_avdtp as avdtp;
-use failure::{Error, ResultExt};
-use fidl_fuchsia_bluetooth_bredr::*;
-use fuchsia_async as fasync;
-use fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog};
-use fuchsia_zircon as zx;
-use futures::{StreamExt, TryFutureExt};
-use parking_lot::RwLock;
-use std::collections::HashSet;
-use std::string::String;
-use std::sync::Arc;
+use {
+    bt_avdtp as avdtp,
+    failure::{Error, format_err, ResultExt},
+    fidl_fuchsia_bluetooth_bredr::*,
+    fuchsia_async as fasync,
+    fuchsia_syslog::{self, fx_log_info, fx_log_warn, fx_vlog},
+    fuchsia_zircon as zx,
+    futures::{StreamExt, TryFutureExt},
+    parking_lot::RwLock,
+    std::collections::HashSet,
+    std::string::String,
+    std::sync::Arc,
+};
 
 /// Make the SDP definition for the A2DP sink service.
 fn make_profile_service_definition() -> ServiceDefinition {

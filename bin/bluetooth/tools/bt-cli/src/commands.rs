@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::State,
     parking_lot::Mutex,
     rustyline::{
         completion::Completer,
@@ -19,6 +18,8 @@ use {
         sync::Arc,
     },
 };
+
+use crate::State;
 
 /// Macro to generate a command enum and its impl.
 macro_rules! gen_commands {

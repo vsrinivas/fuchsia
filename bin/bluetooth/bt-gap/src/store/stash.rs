@@ -2,27 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::store::{
-    keys::{
-        BONDING_DATA_PREFIX,
-        bonding_data_key,
-    },
-    serde::{
-        BondingDataDeserializer,
-        BondingDataSerializer,
-    }
-};
-
 use {
     failure::Error,
-    serde_json,
-    std::collections::HashMap,
-
-    // Fuchsia libraries
-    fuchsia_bluetooth::error::Error as BtError,
-    fuchsia_syslog::{fx_log_info, fx_log_err},
-
-    // FIDL services
     fidl::endpoints::create_proxy,
     fidl_fuchsia_bluetooth_host::BondingData,
     fidl_fuchsia_stash::{
@@ -31,7 +12,16 @@ use {
         StoreAccessorProxy,
         StoreMarker,
         Value,
-    }
+    },
+    fuchsia_bluetooth::error::Error as BtError,
+    fuchsia_syslog::{fx_log_info, fx_log_err},
+    serde_json,
+    std::collections::HashMap,
+};
+
+use crate::store::{
+    keys::{BONDING_DATA_PREFIX, bonding_data_key},
+    serde::{ BondingDataDeserializer, BondingDataSerializer},
 };
 
 /// Stash manages persistent data that is stored in bt-gap's component-specific storage.

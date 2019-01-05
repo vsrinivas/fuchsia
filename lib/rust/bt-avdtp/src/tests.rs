@@ -4,10 +4,11 @@
 
 #![deny(warnings)]
 
-use fuchsia_zircon::{self as zx, Status};
-use futures::executor::block_on;
-use futures::{future, StreamExt, TryStreamExt};
-use std::result;
+use {
+    fuchsia_zircon::{self as zx, Status},
+    futures::{executor::block_on, future, StreamExt, TryStreamExt},
+    std::result,
+};
 
 use crate::*;
 

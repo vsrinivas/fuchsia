@@ -3,10 +3,6 @@
 // found in the LICENSE file.
 
 use {
-    crate::{
-        bounded_queue::{BoundedQueue, CreatedAt, SizeOf},
-        DeviceId,
-    },
     fidl_fuchsia_bluetooth_snoop::SnoopPacket,
     std::{
         collections::{
@@ -16,6 +12,8 @@ use {
         time::Duration,
     },
 };
+
+use crate::{bounded_queue::{BoundedQueue, CreatedAt, SizeOf}, DeviceId};
 
 // Size for SnoopPacket must be implemented here because SnoopPacket is defined in generated code.
 impl SizeOf for SnoopPacket {

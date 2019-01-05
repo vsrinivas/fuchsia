@@ -2,19 +2,21 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_bluetooth::{self, Int8};
-use fidl_fuchsia_bluetooth_control::{
-    AdapterInfo,
-    AdapterState,
-    RemoteDevice,
-};
-use fidl_fuchsia_bluetooth_host::{
-    BondingData,
-    Key,
-    LeConnectionParameters,
-    LeData,
-    Ltk,
-    SecurityProperties,
+use {
+    fidl_fuchsia_bluetooth::{self, Int8},
+    fidl_fuchsia_bluetooth_control::{
+        AdapterInfo,
+        AdapterState,
+        RemoteDevice,
+    },
+    fidl_fuchsia_bluetooth_host::{
+        BondingData,
+        Key,
+        LeConnectionParameters,
+        LeData,
+        Ltk,
+        SecurityProperties,
+    },
 };
 
 /// Macro to help make cloning host dispatchers nicer

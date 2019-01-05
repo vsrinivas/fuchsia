@@ -5,9 +5,6 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api)]
 
-#[macro_use]
-extern crate failure;
-
 use {
     fuchsia_async as fasync,
     fuchsia_syslog::{fx_log_info, fx_log_warn, fx_vlog},
@@ -31,15 +28,15 @@ use {
     },
 };
 
-#[cfg(test)]
-mod tests;
-
-mod types;
-
 use crate::types::{
     Decodable, Encodable, ErrorCode, SignalIdentifier, SignalingHeader, SignalingMessageType,
     TryFrom, TxLabel,
 };
+
+#[cfg(test)]
+mod tests;
+
+mod types;
 
 pub use crate::types::{
     ContentProtectionType, EndpointType, Error, MediaCodecType, MediaType, Result,

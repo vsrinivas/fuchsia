@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fuchsia_bluetooth::assigned_numbers::{
-    find_characteristic_number,
-    find_descriptor_number,
-    find_service_uuid,
-};
 use {
     fidl_fuchsia_bluetooth_gatt::{
         self as fidl_gatt,
         Characteristic as FidlCharacteristic, ServiceInfo,
+    },
+    fuchsia_bluetooth::assigned_numbers::{
+        find_characteristic_number,
+        find_descriptor_number,
+        find_service_uuid,
     },
     std::fmt,
 };

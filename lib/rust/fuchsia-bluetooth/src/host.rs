@@ -2,15 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use failure::Error;
-use fdio::{fdio_sys, ioctl, make_ioctl};
-use fuchsia_zircon::{self as zircon, Handle};
-use std;
-use std::fs::read_dir;
-use std::fs::File;
-use std::mem;
-use std::os::raw;
-use std::path::PathBuf;
+use {
+    failure::Error,
+    fdio::{fdio_sys, ioctl, make_ioctl},
+    fuchsia_zircon::{self as zircon, Handle},
+    std::{
+        fs::{File, read_dir},
+        mem,
+        os::raw,
+        path::PathBuf,
+    },
+};
 
 /// Returns the filesystem paths to the all bt-host devices.
 pub fn list_host_devices() -> Vec<PathBuf> {
@@ -29,7 +31,7 @@ pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
             IOCTL_BT_HOST_OPEN_CHANNEL,
             ::std::ptr::null_mut() as *mut raw::c_void,
             0,
-            &mut handle as *mut _ as *mut std::os::raw::c_void,
+            &mut handle as *mut _ as *mut raw::c_void,
             mem::size_of::<zircon::sys::zx_handle_t>(),
         ).map(|_| Handle::from_raw(handle))
         .map_err(|e| e.into())

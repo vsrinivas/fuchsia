@@ -5,19 +5,21 @@
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api)]
 
-use fuchsia_bluetooth::make_clones;
-use fuchsia_async as fasync;
-use fuchsia_app::{server::ServicesServer, client::Launcher};
-use failure::{Error, ResultExt};
-use fidl::endpoints::ServiceMarker;
-use fidl_fuchsia_bluetooth_bredr::ProfileMarker;
-use fidl_fuchsia_bluetooth_control::ControlMarker;
-use fidl_fuchsia_bluetooth_gatt::Server_Marker;
-use fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker};
-use futures::TryFutureExt;
-use parking_lot::Mutex;
-use fuchsia_syslog::{self as syslog, fx_log_info};
-use std::sync::Arc;
+use {
+    failure::{Error, ResultExt},
+    fidl::endpoints::ServiceMarker,
+    fidl_fuchsia_bluetooth_bredr::ProfileMarker,
+    fidl_fuchsia_bluetooth_control::ControlMarker,
+    fidl_fuchsia_bluetooth_gatt::Server_Marker,
+    fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
+    fuchsia_app::{server::ServicesServer, client::Launcher},
+    fuchsia_async as fasync,
+    fuchsia_bluetooth::make_clones,
+    fuchsia_syslog::{self as syslog, fx_log_info},
+    futures::TryFutureExt,
+    parking_lot::Mutex,
+    std::sync::Arc,
+};
 
 mod config;
 

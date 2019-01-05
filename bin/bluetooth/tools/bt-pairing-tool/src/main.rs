@@ -5,11 +5,13 @@
 #![deny(warnings)]
 #![feature(futures_api)]
 
-use fuchsia_app::client::connect_to_service;
-use fuchsia_async as fasync;
-use fuchsia_zircon as zx;
-use failure::{format_err, Error, ResultExt};
-use fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker};
+use {
+    failure::{format_err, Error, ResultExt},
+    fidl_fuchsia_bluetooth_control::{ControlMarker, PairingDelegateMarker},
+    fuchsia_app::client::connect_to_service,
+    fuchsia_async as fasync,
+    fuchsia_zircon as zx,
+};
 
 mod pairing;
 

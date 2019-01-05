@@ -10,13 +10,12 @@ extern crate fuchsia_bluetooth;
 extern crate futures;
 extern crate rand;
 
-use failure::Error;
-use fidl_fuchsia_bluetooth_host::HostProxy;
-use fuchsia_bluetooth::fake_hci::FakeHciDevice;
-use fuchsia_bluetooth::hci;
-use fuchsia_bluetooth::host;
-use std::path::PathBuf;
-use std::{thread, time};
+use {
+    failure::Error,
+    fidl_fuchsia_bluetooth_host::HostProxy,
+    fuchsia_bluetooth::{fake_hci::FakeHciDevice, hci, host},
+    std::{path::PathBuf, thread, time},
+};
 
 mod common;
 

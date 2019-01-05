@@ -2,13 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-mod constants;
 use self::constants::{
     CHARACTERISTIC_NUMBERS,
     CUSTOM_SERVICE_UUIDS,
     DESCRIPTOR_NUMBERS,
     SERVICE_UUIDS,
 };
+
+mod constants;
 
 /// An assigned number, code, or identifier for a concept in the Bluetooth wireless standard.
 /// Includes an associated abbreviation and human-readable name for the number.

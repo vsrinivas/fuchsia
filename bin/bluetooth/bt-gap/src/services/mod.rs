@@ -5,5 +5,7 @@
 mod control;
 mod pairing_delegate;
 
-pub use self::control::start_control_service;
-pub use self::pairing_delegate::start_pairing_delegate;
+pub use self::{
+    control::start_control_service,
+    pairing_delegate::start_pairing_delegate,
+};

@@ -4,10 +4,12 @@
 
 #![deny(warnings)]
 
-use failure::Error;
+use {
+    failure::Error,
+    std::fs::File,
+};
 
 use crate::hci;
-use std::fs::File;
 
 /// Represents a fake bt-hci device. Closes the underlying device when it goes out of scope.
 pub struct FakeHciDevice(File);

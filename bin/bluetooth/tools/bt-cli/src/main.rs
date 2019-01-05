@@ -6,17 +6,8 @@
 #![deny(warnings)]
 
 use {
-    crate::{
-        commands::{Cmd, CmdHelper, ReplControl},
-        types::{AdapterInfo, RemoteDevice},
-    },
     failure::{bail, Error, ResultExt},
-    fidl_fuchsia_bluetooth_control::{
-        ControlEvent,
-        ControlEventStream,
-        ControlMarker,
-        ControlProxy,
-    },
+    fidl_fuchsia_bluetooth_control::{ControlEvent, ControlEventStream, ControlMarker, ControlProxy},
     fuchsia_app::client::connect_to_service,
     fuchsia_async::{self as fasync, futures::select},
     fuchsia_bluetooth::types::Status,
@@ -33,22 +24,14 @@ use {
     pin_utils::{pin_mut},
     parking_lot::Mutex,
     regex::Regex,
-    rustyline::{
-        error::ReadlineError,
-        CompletionType,
-        Config,
-        EditMode,
-        Editor,
-    },
-    std::{
-        collections::HashMap,
-        fmt::Write,
-        iter::FromIterator,
-        sync::Arc,
-        thread,
-    },
+    rustyline::{error::ReadlineError, CompletionType, Config, EditMode, Editor},
+    std::{collections::HashMap, fmt::Write, iter::FromIterator, sync::Arc, thread},
 };
 
+use crate::{
+    commands::{Cmd, CmdHelper, ReplControl},
+    types::{AdapterInfo, RemoteDevice},
+};
 
 mod commands;
 mod types;

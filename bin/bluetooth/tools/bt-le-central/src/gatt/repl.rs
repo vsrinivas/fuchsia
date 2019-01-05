@@ -22,21 +22,22 @@ use {
         Editor,
     },
     std::thread,
-    super::{
-        commands::{Cmd, CmdHelper},
-        do_list,
-        do_connect,
-        do_read_chr,
-        do_read_long_chr,
-        do_write_chr,
-        do_read_desc,
-        do_read_long_desc,
-        do_write_desc,
-        do_enable_notify,
-        do_disable_notify,
-        GattClient,
-        GattClientPtr,
-    }
+};
+
+use super::{
+    commands::{Cmd, CmdHelper},
+    do_list,
+    do_connect,
+    do_read_chr,
+    do_read_long_chr,
+    do_write_chr,
+    do_read_desc,
+    do_read_long_desc,
+    do_write_desc,
+    do_enable_notify,
+    do_disable_notify,
+    GattClient,
+    GattClientPtr,
 };
 
 const PROMPT: &str = "GATT> ";

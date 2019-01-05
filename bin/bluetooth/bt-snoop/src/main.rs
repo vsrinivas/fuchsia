@@ -10,11 +10,6 @@
 #![deny(warnings)]
 
 use {
-    crate::{
-        packet_logs::PacketLogs,
-        snooper::Snooper,
-        subscription_manager::SubscriptionManager,
-    },
     failure::{err_msg, Error, ResultExt},
     fidl::{
         endpoints::{RequestStream, ServiceMarker},
@@ -44,6 +39,8 @@ use {
     },
     structopt::StructOpt,
 };
+
+use crate::{packet_logs::PacketLogs, snooper::Snooper, subscription_manager::SubscriptionManager};
 
 mod bounded_queue;
 mod packet_logs;
