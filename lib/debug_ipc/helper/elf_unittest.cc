@@ -49,7 +49,7 @@ std::string GetSmallTestElfFileName() {
   } else {
     path.resize(last_slash + 1);
   }
-  path += "../../../garnet/lib/debug_ipc/helper/testdata/small_test_file.elf";
+  path += "test_data/elf_unittests/small_test_file.elf";
   return path;
 }
 
@@ -59,7 +59,7 @@ TEST(Elf, ExtractBuildID) {
   std::string small_test_file_name = GetSmallTestElfFileName();
 
   FILE* small_test_file = fopen(small_test_file_name.c_str(), "rb");
-  ASSERT_TRUE(small_test_file) << "Can't find small_test_file.elf";
+  ASSERT_TRUE(small_test_file) << small_test_file_name.c_str();
   std::string build_id = ExtractBuildID(small_test_file);
   fclose(small_test_file);
 

@@ -43,7 +43,7 @@ MinidumpTest::~MinidumpTest() { loop_.Cleanup(); }
 
 Err MinidumpTest::TryOpen(const std::string& filename) {
   static auto data_dir =
-      std::filesystem::path(GetSelfPath()).parent_path().parent_path() /
+      std::filesystem::path(GetSelfPath()).parent_path() /
       "test_data" / "zxdb";
 
   Err err;

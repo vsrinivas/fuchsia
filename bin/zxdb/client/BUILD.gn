@@ -122,9 +122,9 @@ static_library("client") {
     "//garnet/third_party/llvm:LLVMObject",
     "//third_party/crashpad/client",
     "//third_party/crashpad/compat",
-    "//third_party/crashpad/util",
-    "//third_party/crashpad/third_party/mini_chromium:base",
     "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium:base",
+    "//third_party/crashpad/util",
   ]
 }
 
@@ -157,7 +157,20 @@ copy("copy_test_data") {
   ]
 
   outputs = [
-    "$root_build_dir/test_data/zxdb/{{source_file_part}}",
+    "$root_out_dir/test_data/zxdb/{{source_file_part}}",
+  ]
+}
+
+# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
+# $root_build_dir/host_tests/.
+copy("copy_test_data_deprecated") {
+  sources = [
+    "test_example_minidump.dmp",
+    "test_example_minidump_with_aspace.dmp",
+  ]
+
+  outputs = [
+    "$root_build_dir/host_tests/test_data/zxdb/{{source_file_part}}",
   ]
 }
 
@@ -185,9 +198,13 @@ source_set("tests") {
     "thread_impl_unittest.cc",
   ]
 
+  data_deps = [
+    ":copy_test_data",
+    ":copy_test_data_deprecated",
+  ]
+
   deps = [
     ":client",
-    ":copy_test_data",
     ":test_support",
     "//garnet/bin/zxdb/symbols:test_support",
     "//garnet/bin/zxdb/symbols:tests",

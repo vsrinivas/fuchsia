@@ -21,27 +21,6 @@ shared_library("zxdb_symbol_test") {
   ]
 }
 
-# Copies the test library to the host build directory for zxdb tests to use.
-copy("copy_test_so") {
-  sources = [
-    "$root_out_dir/lib.unstripped/libzxdb_symbol_test.so",
-  ]
-
-  # Use "host_x64" for the output directory since all hosts are currently
-  # x64 so this name is consistent across platforms, and this avoids polluting
-  # the root toolchain with this test file.
-  #
-  # Use a ".targetso" extension because this isn't a library that can actually
-  # loaded on the host platform.
-  outputs = [
-    "$root_build_dir/test_data/zxdb/libzxdb_symbol_test.targetso",
-  ]
-
-  deps = [
-    ":zxdb_symbol_test",
-  ]
-}
-
 # NOT RUN BY BUILD, REFERENCE ONLY ---------------------------------------------
 
 # Generates a static line_lookup_test used in the ModuleSymbols tests.

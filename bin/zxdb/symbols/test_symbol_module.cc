@@ -40,19 +40,15 @@ inline std::string GetTestFilePath(const std::string& rel_path) {
   return path + rel_path;
 }
 
-// This test file will be copied over to this specific location at build time.
-const char kRelativeSharedLibPath[] = "../test_data/zxdb/";
-// The binary is located in $fuchsia_build_root
-const char kRelativeTestDataPath[] =
-    "../../../garnet/bin/zxdb/symbols/test_data/";
+// The test files will be copied over to this specific location at build time.
+const char kRelativeTestDataPath[] = "test_data/zxdb/";
 
 }  // namespace
 
 // static
 std::string TestSymbolModule::GetTestFileName() {
-  std::string path = GetTestFilePath(kRelativeSharedLibPath);
+  std::string path = GetTestFilePath(kRelativeTestDataPath);
   return path + "libzxdb_symbol_test.targetso";
-  return path;
 }
 
 std::string TestSymbolModule::GetCheckedInTestFileName() {

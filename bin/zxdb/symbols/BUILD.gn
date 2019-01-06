@@ -39,12 +39,12 @@ static_library("symbols") {
     "namespace.h",
     "process_symbols.h",
     "resolve_options.h",
-    "symbol_data_provider.h",
-    "system_symbols.h",
     "symbol.h",
     "symbol_context.h",
+    "symbol_data_provider.h",
     "symbol_factory.h",
     "symbol_utils.h",
+    "system_symbols.h",
     "target_symbols.h",
     "type.h",
     "type_utils.h",
@@ -91,10 +91,10 @@ static_library("symbols") {
     "module_symbols_impl.h",
     "namespace.cc",
     "process_symbols.cc",
-    "system_symbols.cc",
-    "target_symbols.cc",
     "symbol.cc",
     "symbol_utils.cc",
+    "system_symbols.cc",
+    "target_symbols.cc",
     "type.cc",
     "type_utils.cc",
     "value.cc",
@@ -153,6 +153,47 @@ static_library("test_support") {
   ]
 }
 
+# Copies the test libraries for zxdb tests to use when run on Linux or Mac.
+default_shared_out_dir =
+    get_label_info("//anything(${default_toolchain}-shared)", "root_out_dir")
+copy("copy_test_so") {
+  sources = [
+    "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
+    "test_data/libsymbol_test_so.targetso",
+  ]
+
+  # Use a ".targetso" extension because this isn't a library that can actually
+  # loaded on the host platform.
+  outputs = [
+    "$root_out_dir/test_data/zxdb/{{source_name_part}}.targetso",
+  ]
+
+  deps = [
+    "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
+  ]
+}
+
+# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
+# $root_build_dir/host_tests/.
+if (current_toolchain == default_toolchain) {
+  copy("copy_test_so_deprecated") {
+    sources = [
+      "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
+      "test_data/libsymbol_test_so.targetso",
+    ]
+
+    # Use a ".targetso" extension because this isn't a library that can actually
+    # loaded on the host platform.
+    outputs = [
+      "$root_build_dir/host_tests/test_data/zxdb/{{source_name_part}}.targetso",
+    ]
+
+    deps = [
+      "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
+    ]
+  }
+}
+
 source_set("tests") {
   testonly = true
 
@@ -168,8 +209,8 @@ source_set("tests") {
     "member_ptr_unittest.cc",
     "mock_symbol_data_provider_unittest.cc",
     "modified_type_unittest.cc",
-    "module_symbol_index_unittest.cc",
     "module_symbol_index_node_unittest.cc",
+    "module_symbol_index_unittest.cc",
     "module_symbols_impl_unittest.cc",
     "process_symbols_unittest.cc",
     "symbol_utils_unittest.cc",
@@ -182,13 +223,13 @@ source_set("tests") {
   deps = [
     ":symbols",
     ":test_support",
-    "//third_party/googletest:gtest",
     "//garnet/bin/zxdb/common:test_support",
     "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+    "//third_party/googletest:gtest",
   ]
 
-
   data_deps = [
-    "test_data:copy_test_so(${default_toolchain}-shared)",
+    ":copy_test_so",
+    ":copy_test_so_deprecated($default_toolchain)",
   ]
 }
