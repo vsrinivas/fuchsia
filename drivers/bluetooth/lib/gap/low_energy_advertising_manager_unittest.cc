@@ -10,22 +10,19 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/fake_connection.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
 #include "lib/gtest/test_loop_fixture.h"
 
 namespace btlib {
-
 namespace gap {
-
 namespace {
 
 constexpr size_t kDefaultMaxAds = 1;
 constexpr size_t kDefaultMaxAdSize = 23;
-
 constexpr size_t kDefaultFakeAdSize = 20;
-
 constexpr uint32_t kTestIntervalMs = 1000;
 
 struct AdvertisementStatus {
@@ -91,14 +88,19 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
     return true;
   }
 
-  void OnIncomingConnection(hci::ConnectionPtr link) override {
+  void OnIncomingConnection(
+      hci::ConnectionHandle handle, hci::Connection::Role role,
+      const common::DeviceAddress& peer_address,
+      const hci::LEConnectionParameters& conn_params) override {
     // Right now, we call the first callback, because we can't call any other
     // ones.
     // TODO(jamuraa): make this send it to the correct callback once we can
     // determine which one that is.
     const auto& cb = ads_->begin()->second.connect_cb;
     if (cb) {
-      cb(std::move(link));
+      cb(std::make_unique<hci::testing::FakeConnection>(
+          handle, hci::Connection::LinkType::kLE, role, ads_->begin()->first,
+          peer_address));
     }
   }
 
@@ -286,19 +288,15 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
 
 //  - It calls the connectable callback correctly when connected to
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
-  auto incoming_conn_cb = fit::bind_member(
-      advertiser(), &FakeLowEnergyAdvertiser::OnIncomingConnection);
   LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
   hci::ConnectionPtr link;
   std::string advertised_id = "not-a-uuid";
-  bool called = false;
 
-  auto connect_cb = [this, &advertised_id, &called](std::string connected_id,
-                                                    hci::ConnectionPtr link) {
-    called = true;
+  auto connect_cb = [&](std::string connected_id, hci::ConnectionPtr cb_link) {
+    link = std::move(cb_link);
     EXPECT_EQ(advertised_id, connected_id);
   };
 
@@ -310,9 +308,14 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
   EXPECT_TRUE(MoveLastStatus());
   advertised_id = last_ad_id();
 
-  incoming_conn_cb(std::move(link));
+  common::DeviceAddress peer_address(common::DeviceAddress::Type::kLEPublic,
+                                     "03:02:01:01:02:03");
+  advertiser()->OnIncomingConnection(1, hci::Connection::Role::kSlave,
+                                     peer_address,
+                                     hci::LEConnectionParameters());
 
   RunLoopUntilIdle();
+  EXPECT_TRUE(link);
 }
 
 //  - Error: Connectable and Anonymous at the same time

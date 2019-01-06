@@ -63,12 +63,15 @@ class LowEnergyAdvertiser {
   // asynchronous. Returns true if advertising will be stopped, false otherwise.
   virtual bool StopAdvertising(const common::DeviceAddress& address) = 0;
 
-  // Callback for an incoming connection.  |connection| should be an LE
-  // connection that has been remotely-initiated.  This function should be called
-  // in reaction to any connection that was not initiated locally.   This object
-  // will determine if it was a result of an active advertisement and call the
-  // appropriate callback.
-  virtual void OnIncomingConnection(ConnectionPtr connection) = 0;
+  // Callback for an incoming LE connection. This function should be called
+  // in reaction to any connection that was not initiated locally. This object
+  // will determine if it was a result of an active advertisement and route the
+  // connection accordingly.
+  // TODO(armansito): Require advertising handle.
+  virtual void OnIncomingConnection(
+      ConnectionHandle handle, Connection::Role role,
+      const common::DeviceAddress& peer_address,
+      const LEConnectionParameters& conn_params) = 0;
 };
 
 }  // namespace hci

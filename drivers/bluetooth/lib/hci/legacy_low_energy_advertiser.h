@@ -44,7 +44,9 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
 
   // Clears the advertising state before passing |link| on to
   // |connect_callback_|.
-  void OnIncomingConnection(ConnectionPtr link) override;
+  void OnIncomingConnection(ConnectionHandle handle, Connection::Role role,
+                            const common::DeviceAddress& peer_address,
+                            const LEConnectionParameters& conn_params) override;
 
  private:
   // Unconditionally stops advertising.

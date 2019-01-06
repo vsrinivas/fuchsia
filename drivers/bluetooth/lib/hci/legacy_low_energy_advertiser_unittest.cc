@@ -27,8 +27,8 @@ constexpr ConnectionHandle kHandle = 0x0001;
 const common::DeviceAddress kPublicAddress(
     common::DeviceAddress::Type::kLEPublic,
     "00:00:00:00:00:01");
-const common::DeviceAddress kPeerAddress(common::DeviceAddress::Type::kLERandom,
-                                         "00:00:00:00:00:02");
+const common::DeviceAddress kRandomAddress(
+    common::DeviceAddress::Type::kLERandom, "00:00:00:00:00:02");
 
 constexpr size_t kDefaultAdSize = 20;
 
@@ -43,6 +43,12 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
   // TestingBase overrides:
   void SetUp() override {
     TestingBase::SetUp();
+
+    // ACL data channel needs to be present for production hci::Connection
+    // objects.
+    TestingBase::InitializeACLDataChannel(
+        hci::DataBufferInfo(),
+        hci::DataBufferInfo(hci::kMaxACLPayloadSize, 10));
 
     FakeController::Settings settings;
     settings.ApplyLegacyLEConfig();
@@ -130,7 +136,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertisementSizeTest) {
 }
 
 // - Stops the advertisement when an incoming connection comes
-// - Calls the connectioncallback correctly when it's setup
+// - Calls the connection callback correctly when it's setup
 // - Checks that advertising state is cleaned up.
 // - Checks that it is possible to restart advertising.
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
@@ -139,31 +145,44 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, ConnectionTest) {
 
   ConnectionPtr link;
   auto conn_cb = [&link](auto cb_link) { link = std::move(cb_link); };
+
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
 
   // The connection manager will hand us a connection when one gets created.
-  advertiser()->OnIncomingConnection(std::make_unique<testing::FakeConnection>(
-      kHandle, Connection::LinkType::kLE, Connection::Role::kSlave,
-      kPublicAddress, kPeerAddress));
-
+  advertiser()->OnIncomingConnection(kHandle, Connection::Role::kSlave,
+                                     kRandomAddress, LEConnectionParameters());
   ASSERT_TRUE(link);
   EXPECT_EQ(kHandle, link->handle());
+  EXPECT_EQ(kPublicAddress, link->local_address());
+  EXPECT_EQ(kRandomAddress, link->peer_address());
   link->set_closed();
 
   // Advertising state should get cleared.
   RunLoopUntilIdle();
+
   // StopAdvertising() sends multiple HCI commands. We only check that the
   // first one succeeded. StartAdvertising cancels the rest of the sequence
   // below.
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
 
-  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, conn_cb, 1000,
+  // Restart advertising using kRandomAddress.
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, conn_cb, 1000,
                                  false, GetSuccessCallback());
   RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+
+  // Accept a connection from kPublicAddress. The local and peer addresses
+  // should get assigned correctly.
+  advertiser()->OnIncomingConnection(kHandle, Connection::Role::kSlave,
+                                     kPublicAddress, LEConnectionParameters());
+  ASSERT_TRUE(link);
+  EXPECT_EQ(kRandomAddress, link->local_address());
+  EXPECT_EQ(kPublicAddress, link->peer_address());
+  link->set_closed();
 }
 
 // Tests that advertising can be restarted right away in a connection callback.
@@ -197,9 +216,8 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
       },
       dispatcher());
 
-  advertiser()->OnIncomingConnection(std::make_unique<testing::FakeConnection>(
-      kHandle, Connection::LinkType::kLE, Connection::Role::kSlave,
-      kPublicAddress, kPeerAddress));
+  advertiser()->OnIncomingConnection(kHandle, Connection::Role::kSlave,
+                                     kRandomAddress, LEConnectionParameters());
 
   // Advertising should get disabled and re-enabled.
   RunLoopUntilIdle();
@@ -218,7 +236,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  common::DeviceAddress addr = kPeerAddress;
+  common::DeviceAddress addr = kRandomAddress;
 
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kIntervalMs,
                                  false, GetSuccessCallback());
@@ -245,7 +263,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
-  common::DeviceAddress addr = kPeerAddress;
+  common::DeviceAddress addr = kRandomAddress;
 
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
                                  [](auto, auto) {});
@@ -262,7 +280,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStopping) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
-  common::DeviceAddress addr = kPeerAddress;
+  common::DeviceAddress addr = kRandomAddress;
 
   // Get to a started state.
   advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, 1000, false,
@@ -302,7 +320,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
 
   RunLoopUntilIdle();
@@ -312,7 +330,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
-  EXPECT_EQ(kPeerAddress, test_device()->le_random_address());
+  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
 
   EXPECT_FALSE(advertiser()->StopAdvertising(kPublicAddress));
 
@@ -320,7 +338,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
 
-  EXPECT_TRUE(advertiser()->StopAdvertising(kPeerAddress));
+  EXPECT_TRUE(advertiser()->StopAdvertising(kRandomAddress));
 
   RunLoopUntilIdle();
 
@@ -334,7 +352,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
   RunLoopUntilIdle();
 
@@ -350,7 +368,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   ad[0] = before;
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
-  EXPECT_EQ(kPeerAddress, test_device()->le_random_address());
+  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
 }
@@ -360,7 +378,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
                                  false, GetSuccessCallback());
   RunLoopUntilIdle();
 
@@ -370,13 +388,13 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
       test_device()->le_advertising_state().advertised_view(), ad));
 
   ad[0] = 0xff;
-  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 2500,
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 2500,
                                  false, GetSuccessCallback());
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
-  EXPECT_EQ(kPeerAddress, test_device()->le_random_address());
+  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
   // 2500 ms = 4000 timeslices
@@ -388,7 +406,7 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  advertiser()->StartAdvertising(kPeerAddress, ad, scan_data, nullptr, 1000,
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr, 1000,
                                  true, GetErrorCallback());
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);

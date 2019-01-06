@@ -192,42 +192,40 @@ void LowEnergyConnector::OnConnectionCompleteEvent(const EventPacket& event) {
     return;
   }
 
-  // A new link layer connection was created. Create an object to track this
-  // connection.
+  ConnectionHandle handle = le16toh(params->connection_handle);
+  Connection::Role role = (params->role == ConnectionRole::kMaster)
+                              ? Connection::Role::kMaster
+                              : Connection::Role::kSlave;
   LEConnectionParameters connection_params(
       le16toh(params->conn_interval), le16toh(params->conn_latency),
       le16toh(params->supervision_timeout));
 
-  // TODO(armansito): If the connection is incoming, then obtain the advertised
-  // address and use that as the local address. We currently use the wrong
-  // address, so pairing as slave will fail! (NET-1045)
-  auto connection = Connection::CreateLE(
-      le16toh(params->connection_handle),
-      (params->role == ConnectionRole::kMaster) ? Connection::Role::kMaster
-                                                : Connection::Role::kSlave,
-      local_address_, peer_address, connection_params, hci_);
-
-  if (matches_pending_request) {
-    Status status;
-    if (pending_request_->timed_out) {
-      status = Status(HostError::kTimedOut);
-    } else if (pending_request_->canceled) {
-      status = Status(HostError::kCanceled);
-    }
-
-    // If we were requested to cancel the connection after the logical link
-    // is created we disconnect it.
-    if (!status) {
-      connection = nullptr;
-    }
-
-    OnCreateConnectionComplete(status, std::move(connection));
+  // If the connection did not match a pending request then we pass the
+  // information down to the incoming connection delegate.
+  if (!matches_pending_request) {
+    delegate_(handle, role, peer_address, connection_params);
     return;
   }
 
-  // Pass on to the incoming connection delegate if it didn't match the pending
-  // request.
-  delegate_(std::move(connection));
+  // A new link layer connection was created. Create an object to track this
+  // connection. Destroying this object will disconnect the link.
+  auto connection = Connection::CreateLE(handle, role, local_address_,
+                                         peer_address, connection_params, hci_);
+
+  if (pending_request_->timed_out) {
+    status = Status(HostError::kTimedOut);
+  } else if (pending_request_->canceled) {
+    status = Status(HostError::kCanceled);
+  } else {
+    status = Status();
+  }
+
+  // If we were requested to cancel the connection after the logical link
+  // is created we disconnect it.
+  if (!status) {
+    connection = nullptr;
+  }
+  OnCreateConnectionComplete(status, std::move(connection));
 }
 
 void LowEnergyConnector::OnCreateConnectionComplete(Status status,

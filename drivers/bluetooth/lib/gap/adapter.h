@@ -199,7 +199,8 @@ class Adapter final {
   // Called when a directed connectable advertisement is received from a bonded
   // LE device. This amounts to a connection request from a bonded peripheral
   // which is handled by routing the request to |le_connection_manager_| to
-  // initiate a Direct Connection Establishment procedure.
+  // initiate a Direct Connection Establishment procedure (Vol 3, Part C,
+  // 9.3.8).
   void OnLeAutoConnectRequest(const std::string& device_id);
 
   // Uniquely identifies this adapter on the current system.

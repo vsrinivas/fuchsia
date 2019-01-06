@@ -65,7 +65,8 @@ class LowEnergyConnectionManagerTest : public TestingBase {
     // TODO(armansito): Pass a fake connector here.
     connector_ = std::make_unique<hci::LowEnergyConnector>(
         transport(), kAddress0, dispatcher(),
-        [this](auto link) { OnIncomingConnection(std::move(link)); });
+        fit::bind_member(
+            this, &LowEnergyConnectionManagerTest::OnIncomingConnection));
 
     conn_mgr_ = std::make_unique<LowEnergyConnectionManager>(
         transport(), connector_.get(), dev_cache_.get(), l2cap_,
@@ -109,8 +110,17 @@ class LowEnergyConnectionManagerTest : public TestingBase {
 
  private:
   // Called by |connector_| when a new remote initiated connection is received.
-  void OnIncomingConnection(hci::ConnectionPtr link) {
-    last_remote_initiated_ = std::move(link);
+  void OnIncomingConnection(hci::ConnectionHandle handle,
+                            hci::Connection::Role role,
+                            const common::DeviceAddress& peer_address,
+                            const hci::LEConnectionParameters& conn_params) {
+    common::DeviceAddress local_address(common::DeviceAddress::Type::kLEPublic,
+                                        "03:02:01:01:02:03");
+
+    // Create a production connection object that can interact with the fake
+    // controller.
+    last_remote_initiated_ = hci::Connection::CreateLE(
+        handle, role, local_address, peer_address, conn_params, transport());
   }
 
   // Called by FakeController on connection events.

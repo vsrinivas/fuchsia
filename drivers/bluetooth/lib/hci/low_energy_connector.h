@@ -53,7 +53,9 @@ class LowEnergyConnector {
   //   - |delegate|: The delegate that will be notified when a new logical link
   //     is established due to an incoming request (remote initiated).
   using IncomingConnectionDelegate =
-      fit::function<void(ConnectionPtr connection)>;
+      fit::function<void(ConnectionHandle handle, Connection::Role role,
+                         const common::DeviceAddress& peer_address,
+                         const LEConnectionParameters& conn_params)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
                      const common::DeviceAddress& local_address,
                      async_dispatcher_t* dispatcher, IncomingConnectionDelegate delegate);

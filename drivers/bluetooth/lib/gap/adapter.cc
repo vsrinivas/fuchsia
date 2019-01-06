@@ -526,39 +526,22 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
     bt_log(WARN, "gap", "5.0 not yet supported; using legacy mode");
   }
 
-  // Called by |hci_le_connector_| when a connection was created due to an
-  // incoming connection. This callback routes the received |link| to
-  // |hci_le_advertiser_| for it to be matched to an advertisement instance.
-  auto self = weak_ptr_factory_.GetWeakPtr();
-  auto incoming_conn_cb = [self](std::unique_ptr<hci::Connection> link) {
-    if (self && self->hci_le_advertiser_) {
-      self->hci_le_advertiser_->OnIncomingConnection(std::move(link));
-    }
-  };
-
-  // Called by |le_discovery_manager_| when a directed connectable advertising
-  // event is received from a bonded device. We use this to auto-connect to the
-  // device using the "Direct Connection Establishment Procedure" (Vol 3, Part
-  // C, 9.3.8).
-  auto directed_conn_cb = [self](const auto& device_id) {
-    if (self) {
-      self->OnLeAutoConnectRequest(device_id);
-    }
-  };
+  // We use the public controller address as the local LE identity address.
+  common::DeviceAddress adapter_identity(common::DeviceAddress::Type::kLEPublic,
+                                         state_.controller_address());
 
   // Initialize the HCI adapters.
   hci_le_advertiser_ = std::make_unique<hci::LegacyLowEnergyAdvertiser>(hci_);
   hci_le_connector_ = std::make_unique<hci::LowEnergyConnector>(
-      hci_,
-      common::DeviceAddress(common::DeviceAddress::Type::kLEPublic,
-                            state_.controller_address()),
-      dispatcher_, std::move(incoming_conn_cb));
+      hci_, adapter_identity, dispatcher_,
+      fit::bind_member(hci_le_advertiser_.get(),
+                       &hci::LowEnergyAdvertiser::OnIncomingConnection));
 
   // Initialize the LE manager objects
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
   le_discovery_manager_->set_directed_connectable_callback(
-      std::move(directed_conn_cb));
+      fit::bind_member(this, &Adapter::OnLeAutoConnectRequest));
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
       hci_, hci_le_connector_.get(), &device_cache_, data_domain_, gatt_);
   le_advertising_manager_ =
@@ -601,7 +584,7 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
   SetClassOfDevice(dev_class, [](const auto&) {});
 
   // This completes the initialization sequence.
-  self->init_state_ = State::kInitialized;
+  init_state_ = State::kInitialized;
   callback(true);
 }
 

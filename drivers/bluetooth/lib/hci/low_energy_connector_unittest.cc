@@ -9,6 +9,7 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/drivers/bluetooth/lib/hci/defaults.h"
+#include "garnet/drivers/bluetooth/lib/hci/fake_connection.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
@@ -18,11 +19,11 @@ namespace btlib {
 namespace hci {
 namespace {
 
-using common::HostError;
-using testing::FakeController;
-using testing::FakeDevice;
-using TestingBase = testing::FakeControllerTest<FakeController>;
+using ::btlib::testing::FakeController;
+using ::btlib::testing::FakeDevice;
+using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
+using common::HostError;
 const common::DeviceAddress kLocalAddress(
     common::DeviceAddress::Type::kLEPublic, "00:00:00:00:00:FF");
 const common::DeviceAddress kTestAddress(common::DeviceAddress::Type::kLEPublic,
@@ -47,13 +48,12 @@ class LowEnergyConnectorTest : public TestingBase {
 
     connector_ = std::make_unique<LowEnergyConnector>(
         transport(), kLocalAddress, dispatcher(),
-        std::bind(&LowEnergyConnectorTest::OnIncomingConnectionCreated, this,
-                  std::placeholders::_1));
+        fit::bind_member(this,
+                         &LowEnergyConnectorTest::OnIncomingConnectionCreated));
 
     test_device()->SetConnectionStateCallback(
-        std::bind(&LowEnergyConnectorTest::OnConnectionStateChanged, this,
-                  std::placeholders::_1, std::placeholders::_2,
-                  std::placeholders::_3),
+        fit::bind_member(this,
+                         &LowEnergyConnectorTest::OnConnectionStateChanged),
         dispatcher());
     StartTestDevice();
   }
@@ -74,8 +74,13 @@ class LowEnergyConnectorTest : public TestingBase {
   LowEnergyConnector* connector() const { return connector_.get(); }
 
  private:
-  void OnIncomingConnectionCreated(std::unique_ptr<Connection> connection) {
-    in_connections_.push_back(std::move(connection));
+  void OnIncomingConnectionCreated(ConnectionHandle handle,
+                                   Connection::Role role,
+                                   const common::DeviceAddress& peer_address,
+                                   const LEConnectionParameters& conn_params) {
+    in_connections_.push_back(std::make_unique<testing::FakeConnection>(
+        handle, hci::Connection::LinkType::kLE, role, kLocalAddress,
+        peer_address));
   }
 
   void OnConnectionStateChanged(const common::DeviceAddress& address,

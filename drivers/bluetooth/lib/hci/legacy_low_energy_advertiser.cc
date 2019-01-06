@@ -303,7 +303,10 @@ void LegacyLowEnergyAdvertiser::StopAdvertisingInternal() {
   });
 }
 
-void LegacyLowEnergyAdvertiser::OnIncomingConnection(ConnectionPtr link) {
+void LegacyLowEnergyAdvertiser::OnIncomingConnection(
+    ConnectionHandle handle, Connection::Role role,
+    const common::DeviceAddress& peer_address,
+    const LEConnectionParameters& conn_params) {
   if (!advertising()) {
     bt_log(TRACE, "hci-le", "connection received without advertising!");
     return;
@@ -314,10 +317,15 @@ void LegacyLowEnergyAdvertiser::OnIncomingConnection(ConnectionPtr link) {
     return;
   }
 
+  // Assign the currently advertised address as the local address of the
+  // connection.
+  auto local_address = advertised_;
   auto callback = std::move(connect_callback_);
   StopAdvertisingInternal();
 
-  callback(std::move(link));
+  // Assign the |advertised_| address as the connection's local address.
+  callback(Connection::CreateLE(handle, role, local_address, peer_address,
+                                conn_params, hci_));
 }
 
 }  // namespace hci
