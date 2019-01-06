@@ -52,7 +52,7 @@ are validated against the expected values.
 
 ## RETURN VALUE
 
-Both forms of read returns **ZX_OK** on success, if *actual_bytes*
+Both forms of read return **ZX_OK** on success, if *actual_bytes*
 and *actual_handles* (if non-NULL), contain the exact number of bytes
 and count of handles read.
 
