@@ -9,7 +9,6 @@
 #include <lib/async/cpp/operation.h>
 
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/command_runner.h"
-#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -19,11 +18,8 @@ class AddModCommandRunner : public CommandRunner {
   // * ModuleResolver: used to resolve an intent into a module.
   // * EntityResolver: used to resolve an intent parameter's type, which is
   //   supplied to the module resolver for use in resolution.
-  // * ModuleFacetReader: used to read the module facet from the component
-  //   manifest.
   AddModCommandRunner(fuchsia::modular::ModuleResolver* const module_resolver,
-                      fuchsia::modular::EntityResolver* const entity_resolver,
-                      modular::ModuleFacetReader* const module_facet_reader);
+                      fuchsia::modular::EntityResolver* const entity_resolver);
   ~AddModCommandRunner() override;
 
   void Execute(
@@ -35,7 +31,6 @@ class AddModCommandRunner : public CommandRunner {
   OperationQueue operation_queue_;
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
 };
 
 }  // namespace modular

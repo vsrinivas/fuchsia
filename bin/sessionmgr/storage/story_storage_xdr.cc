@@ -131,7 +131,6 @@ void XdrModuleData_v1(XdrContext* const xdr,
 
   // In previous versions we did not have these fields.
   data->parameter_map.entries.resize(0);
-  data->module_manifest.reset();
 }
 
 void XdrModuleData_v2(XdrContext* const xdr,
@@ -145,9 +144,6 @@ void XdrModuleData_v2(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-
-  // In previous versions we did not have these fields.
-  data->module_manifest.reset();
 }
 
 void XdrModuleData_v3(XdrContext* const xdr,
@@ -161,7 +157,6 @@ void XdrModuleData_v3(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v1);
 }
 
 void XdrModuleData_v4(XdrContext* const xdr,
@@ -178,7 +173,6 @@ void XdrModuleData_v4(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v2);
 }
 
 void XdrModuleData_v5(XdrContext* const xdr,
@@ -195,7 +189,6 @@ void XdrModuleData_v5(XdrContext* const xdr,
   // NOTE: the JSON field naming doesn't match the FIDL struct naming because
   // the field name in FIDL was changed.
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
-  xdr->Field("module_manifest", &data->module_manifest, XdrModuleManifest_v2);
 }
 
 XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {

@@ -27,7 +27,6 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
-    modular::ModuleFacetReader* const module_facet_reader,
     // TODO(miguelfrde): we shouldn't create this dependency here. Instead
     // an interface similar to StoryStorage should be created for Runtime
     // use cases.
@@ -40,8 +39,7 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
       new SetFocusStateCommandRunner(std::move(focus_provider)));
   command_runners.emplace(
       fuchsia::modular::StoryCommand::Tag::kAddMod,
-      new AddModCommandRunner(module_resolver, entity_resolver,
-                              module_facet_reader));
+      new AddModCommandRunner(module_resolver, entity_resolver));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,

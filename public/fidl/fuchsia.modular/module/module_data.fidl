@@ -40,12 +40,6 @@ struct ModuleData {
     /// required once the framework is cleaned up enough to guarantee this
     /// statement.
     Intent? intent;
-
-    /// The manifest data of the module, resolved from the Intent above. If the
-    /// Module instance was not added with an Intent, or with an Intent that
-    /// contained a module URL directly, then there is no manifest and this field
-    /// is null.
-    ModuleManifest? module_manifest;
 };
 
 enum ModuleSource {

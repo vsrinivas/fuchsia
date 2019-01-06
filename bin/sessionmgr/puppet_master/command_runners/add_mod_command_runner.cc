@@ -11,14 +11,10 @@ namespace modular {
 
 AddModCommandRunner::AddModCommandRunner(
     fuchsia::modular::ModuleResolver* const module_resolver,
-    fuchsia::modular::EntityResolver* const entity_resolver,
-    modular::ModuleFacetReader* const module_facet_reader)
-    : module_resolver_(module_resolver),
-      entity_resolver_(entity_resolver),
-      module_facet_reader_(module_facet_reader) {
+    fuchsia::modular::EntityResolver* const entity_resolver)
+    : module_resolver_(module_resolver), entity_resolver_(entity_resolver) {
   FXL_DCHECK(module_resolver_);
   FXL_DCHECK(entity_resolver_);
-  FXL_DCHECK(module_facet_reader_);
 }
 
 AddModCommandRunner::~AddModCommandRunner() = default;
@@ -32,8 +28,7 @@ void AddModCommandRunner::Execute(
   auto& add_mod = command.add_mod();
   AddAddModOperation(
       &operation_queue_, story_storage, module_resolver_, entity_resolver_,
-      module_facet_reader_, std::move(add_mod.mod_name),
-      std::move(add_mod.intent),
+      std::move(add_mod.mod_name), std::move(add_mod.intent),
       std::make_unique<fuchsia::modular::SurfaceRelation>(
           std::move(add_mod.surface_relation)),
       std::move(add_mod.surface_parent_mod_name),

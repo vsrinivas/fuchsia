@@ -602,7 +602,6 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
   story_command_executor_ = MakeProductionStoryCommandExecutor(
       session_storage_.get(), std::move(focus_provider_puppet_master),
       module_resolver_service_.get(), entity_provider_runner_.get(),
-      static_cast<modular::ModuleFacetReader*>(module_facet_reader_.get()),
       std::move(module_focuser));
   story_provider_impl_->Connect(
       std::move(story_provider_puppet_master_request));

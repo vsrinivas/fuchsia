@@ -389,10 +389,18 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     operation_queue_.Add(new LaunchModuleCall(
         story_controller_impl_, fidl::Clone(module_data_),
         std::move(module_controller_request_), view_owner_.NewRequest(),
-        [this, flow] { Cont(flow); }));
+        [this, flow] { LoadModuleManifest(flow); }));
   }
 
-  void Cont(FlowToken flow) {
+  void LoadModuleManifest(FlowToken flow) {
+    story_controller_impl_->story_provider_impl_->module_facet_reader()->GetModuleManifest(
+        module_data_.module_url, [this, flow] (fuchsia::modular::ModuleManifestPtr manifest) {
+          module_manifest_ = std::move(manifest);
+          MaybeConnectViewToStoryShell(flow);
+        });
+  }
+
+  void MaybeConnectViewToStoryShell(FlowToken flow) {
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
     if (!story_controller_impl_->story_shell_) {
@@ -403,26 +411,26 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     // anchor is already known to story shell.
 
     if (module_data_.module_path.size() == 1) {
-      ConnectView(flow, "");
+      ConnectViewToStoryShell(flow, "");
       return;
     }
 
     auto* const running_mod_info =
         story_controller_impl_->FindRunningModInfo(module_data_.module_path);
-    FXL_CHECK(running_mod_info);  // Was just created.
+    FXL_CHECK(running_mod_info);  // This was just created in LaunchModuleCall.
 
     auto* const anchor = story_controller_impl_->FindAnchor(running_mod_info);
     if (anchor) {
       const auto anchor_surface_id =
           ModulePathToSurfaceID(anchor->module_data->module_path);
       if (story_controller_impl_->connected_views_.count(anchor_surface_id)) {
-        ConnectView(flow, anchor_surface_id);
+        ConnectViewToStoryShell(flow, anchor_surface_id);
         return;
       }
     }
 
     auto manifest_clone = fuchsia::modular::ModuleManifest::New();
-    fidl::Clone(module_data_.module_manifest, &manifest_clone);
+    fidl::Clone(module_manifest_, &manifest_clone);
     auto surface_relation_clone = fuchsia::modular::SurfaceRelation::New();
     module_data_.surface_relation->Clone(surface_relation_clone.get());
     story_controller_impl_->pending_views_.emplace(
@@ -432,7 +440,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
                     module_data_.module_source, std::move(view_owner_)});
   }
 
-  void ConnectView(FlowToken flow, fidl::StringPtr anchor_surface_id) {
+  void ConnectViewToStoryShell(FlowToken flow,
+                               fidl::StringPtr anchor_surface_id) {
     const auto surface_id = ModulePathToSurfaceID(module_data_.module_path);
 
     fuchsia::modular::ViewConnection view_connection;
@@ -442,7 +451,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
     fuchsia::modular::SurfaceInfo surface_info;
     surface_info.parent_id = anchor_surface_id;
     surface_info.surface_relation = std::move(module_data_.surface_relation);
-    surface_info.module_manifest = std::move(module_data_.module_manifest);
+    surface_info.module_manifest = std::move(module_manifest_);
     surface_info.module_source = std::move(module_data_.module_source);
     story_controller_impl_->story_shell_->AddSurface(std::move(view_connection),
                                                      std::move(surface_info));
@@ -459,6 +468,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
   fuchsia::modular::ModuleControllerPtr module_controller_;
   fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner_;
+
+  fuchsia::modular::ModuleManifestPtr module_manifest_;
 
   OperationQueue operation_queue_;
 
@@ -814,7 +825,6 @@ class StoryControllerImpl::AddIntentCall
         &operation_queue_, story_controller_impl_->story_storage_,
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
-        story_controller_impl_->story_provider_impl_->module_facet_reader(),
         std::vector<std::string>({module_name_}), std::move(*intent_),
         std::move(surface_relation_), std::move(requesting_module_path_),
         module_source_,

@@ -14,7 +14,6 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
 #include "peridot/lib/fidl/clone.h"
-#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -26,7 +25,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
   AddModCall(StoryStorage* const story_storage,
              fuchsia::modular::ModuleResolver* const module_resolver,
              fuchsia::modular::EntityResolver* const entity_resolver,
-             modular::ModuleFacetReader* const module_facet_reader,
              std::vector<std::string> mod_name,
              fuchsia::modular::Intent intent,
              fuchsia::modular::SurfaceRelationPtr surface_relation,
@@ -36,7 +34,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
         story_storage_(story_storage),
         module_resolver_(module_resolver),
         entity_resolver_(entity_resolver),
-        module_facet_reader_(module_facet_reader),
         mod_name_(std::move(mod_name)),
         intent_(std::move(intent)),
         surface_relation_(std::move(surface_relation)),
@@ -211,36 +208,16 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     out_module_data_.intent =
         std::make_unique<fuchsia::modular::Intent>(std::move(intent_));
 
-    auto write_to_storage_cont = [this, flow]() {
-      // Operation stays alive until flow goes out of scope.
-      fuchsia::modular::ModuleData module_data;
-      out_module_data_.Clone(&module_data);
-      story_storage_->WriteModuleData(std::move(module_data))
-          ->Then([this, flow] {});
-    };
-
-    // If the resolver gave us a module manifest (which is described in the
-    // module facet), we don't need to try and read it.
-    if (candidate_module_.manifest) {
-      fidl::Clone(candidate_module_.manifest,
-                  &out_module_data_.module_manifest);
-      write_to_storage_cont();
-      return;
-    }
-
-    module_facet_reader_->GetModuleManifest(
-        out_module_data_.module_url,
-        [this, flow,
-         write_to_storage_cont](fuchsia::modular::ModuleManifestPtr manifest) {
-          out_module_data_.module_manifest = std::move(manifest);
-          write_to_storage_cont();
-        });
+    // Operation stays alive until flow goes out of scope.
+    fuchsia::modular::ModuleData module_data;
+    out_module_data_.Clone(&module_data);
+    story_storage_->WriteModuleData(std::move(module_data))->Then([this, flow] {
+    });
   }
 
   StoryStorage* const story_storage_;                        // Not owned.
   fuchsia::modular::ModuleResolver* const module_resolver_;  // Not owned.
   fuchsia::modular::EntityResolver* const entity_resolver_;  // Not owned.
-  modular::ModuleFacetReader* const module_facet_reader_;    // Not owned.
   std::vector<std::string> mod_name_;
   fuchsia::modular::Intent intent_;
   fuchsia::modular::SurfaceRelationPtr surface_relation_;
@@ -265,7 +242,6 @@ void AddAddModOperation(
     OperationContainer* const container, StoryStorage* const story_storage,
     fuchsia::modular::ModuleResolver* const module_resolver,
     fuchsia::modular::EntityResolver* const entity_resolver,
-    modular::ModuleFacetReader* const module_facet_reader,
     std::vector<std::string> mod_name, fuchsia::modular::Intent intent,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
     std::vector<std::string> surface_parent_mod_name,
@@ -274,8 +250,8 @@ void AddAddModOperation(
                        fuchsia::modular::ModuleData)>
         done) {
   container->Add(new AddModCall(
-      story_storage, module_resolver, entity_resolver, module_facet_reader,
-      std::move(mod_name), std::move(intent), std::move(surface_relation),
+      story_storage, module_resolver, entity_resolver, std::move(mod_name),
+      std::move(intent), std::move(surface_relation),
       std::move(surface_parent_mod_name), module_source, std::move(done)));
 }
 

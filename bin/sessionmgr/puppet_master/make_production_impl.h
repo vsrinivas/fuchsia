@@ -8,7 +8,6 @@
 #include <memory>
 
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
-#include "peridot/lib/module_manifest/module_facet_reader.h"
 
 namespace modular {
 
@@ -20,7 +19,6 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
     fuchsia::modular::FocusProviderPtr focus_provider,
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
-    modular::ModuleFacetReader* module_facet_reader,
     fit::function<void(std::string, std::vector<std::string>)>
         module_focuser);
 

@@ -14,7 +14,6 @@
 #include "gtest/gtest.h"
 #include "peridot/lib/ledger_client/page_id.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
-#include "peridot/lib/testing/module_facet_reader_fake.h"
 #include "peridot/lib/testing/module_resolver_fake.h"
 #include "peridot/lib/testing/test_with_session_storage.h"
 
@@ -39,8 +38,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
     story_storage_ = GetStoryStorage(session_storage_.get(), story_id_);
     fake_module_resolver_->Connect(module_resolver_.NewRequest());
     fake_entity_resolver_->Connect(entity_resolver_.NewRequest());
-    runner_ = MakeRunner(module_resolver_.get(), entity_resolver_.get(),
-                         &fake_module_facet_reader_);
+    runner_ = MakeRunner(module_resolver_.get(), entity_resolver_.get());
   }
 
  protected:
@@ -125,10 +123,9 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
 
   std::unique_ptr<AddModCommandRunner> MakeRunner(
       fuchsia::modular::ModuleResolver* const module_resolver,
-      fuchsia::modular::EntityResolver* const entity_resolver,
-      modular::ModuleFacetReader* const module_facet_reader) {
-    return std::make_unique<AddModCommandRunner>(
-        module_resolver, entity_resolver, module_facet_reader);
+      fuchsia::modular::EntityResolver* const entity_resolver) {
+    return std::make_unique<AddModCommandRunner>(module_resolver,
+                                                 entity_resolver);
   }
 
   fuchsia::modular::StoryCommand MakeAddModCommand(
@@ -234,7 +231,6 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
       std::make_unique<ModuleResolverFake>();
   std::unique_ptr<EntityResolverFake> fake_entity_resolver_ =
       std::make_unique<EntityResolverFake>();
-  ModuleFacetReaderFake fake_module_facet_reader_;
 };
 
 TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
@@ -284,7 +280,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler) {
                   module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
         EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-        EXPECT_EQ(*manifest, *module_data->module_manifest);
         EXPECT_EQ(0u, module_data->parameter_map.entries.size());
         done = true;
       });
@@ -342,7 +337,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentWithIntentHandler_NoParent) {
                   module_data->module_source);
         EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
         EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-        EXPECT_EQ(*manifest, *module_data->module_manifest);
         EXPECT_EQ(0u, module_data->parameter_map.entries.size());
         done = true;
       });
@@ -418,7 +412,6 @@ TEST_F(AddModCommandRunnerTest, ExecuteIntentThatNeedsResolution) {
             module_data->module_source);
   EXPECT_EQ(0.5, module_data->surface_relation->emphasis);
   EXPECT_TRUE(AreIntentsEqual(intent, *module_data->intent));
-  EXPECT_EQ(*manifest, *module_data->module_manifest);
   EXPECT_EQ(3u, module_data->parameter_map.entries.size());
 
   // Verify parameters
@@ -660,38 +653,6 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
         done = true;
       });
   RunLoopUntil([&] { return done; });
-}
-
-TEST_F(AddModCommandRunnerTest, ReadModFacetIfNoResolverResponse) {
-  constexpr char kModUrl[] = "mod_url";
-
-  // Don't supply dummy answers to fake module resolver; this should trigger the
-  // module facet reader. Verify that it does.
-  fake_module_resolver_->SetStatus(
-      fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
-
-  bool mod_facet_reader_done = false;
-  fake_module_facet_reader_.SetGetModuleManifestSink(
-      [&](const std::string& mod_url,
-          ModuleFacetReader::GetModuleManifestCallback cb) {
-        EXPECT_EQ(kModUrl, mod_url);
-        mod_facet_reader_done = true;
-        cb({});
-      });
-
-  // Add a mod to begin with.
-  bool done = false;
-  runner_->Execute(
-      story_id_, story_storage_.get(),
-      MakeAddModCommand("mod_name", "parent_mod_name", 0.5,
-                        CreateEmptyIntent("intent_action", kModUrl)),
-      [&](fuchsia::modular::ExecuteResult result) {
-        ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK, result.status)
-            << result.error_message;
-        done = true;
-      });
-
-  RunLoopUntil([&] { return mod_facet_reader_done && done; });
 }
 
 }  // namespace
