@@ -148,11 +148,9 @@ impl Ime {
                             fx_log_warn!("error sending action to ImeClient: {:?}", e)
                         });
                     }
-                    // we're ignoring many editing keys right now, this is where they would
-                    // be added
                     _ => {
-                        // not an editing key we recognize, so do nothing
-                        ()
+                        // Not an editing key, forward the event to clients.
+                        state.did_update_state(keyboard_event);
                     }
                 }
             }
