@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/strings/string_printf.h>
 
@@ -35,6 +36,7 @@ zx_status_t EnclosedGuest::Start() {
   real_services_->ConnectToService(real_env_.NewRequest());
   auto services = component::testing::EnvironmentServices::Create(
       real_env_, loop_.dispatcher());
+
   fuchsia::sys::LaunchInfo launch_info;
   launch_info.url = kGuestManagerUrl;
   zx_status_t status = services->AddServiceWithLaunchInfo(
@@ -42,6 +44,9 @@ zx_status_t EnclosedGuest::Start() {
   if (status != ZX_OK) {
     return status;
   }
+
+  status = services->AddService(mock_netstack_.GetHandler(),
+                                fuchsia::netstack::Netstack::Name_);
 
   enclosing_environment_ = component::testing::EnclosingEnvironment::Create(
       kRealm, real_env_, std::move(services));

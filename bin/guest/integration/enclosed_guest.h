@@ -10,6 +10,7 @@
 #include <lib/component/cpp/environment_services_helper.h>
 #include <lib/component/cpp/testing/test_with_environment.h>
 
+#include "garnet/bin/guest/integration/mock_netstack.h"
 #include "garnet/bin/guest/integration/test_serial.h"
 
 static constexpr char kZirconGuestUrl[] =
@@ -63,6 +64,8 @@ class EnclosedGuest {
 
   uint32_t GetGuestCid() const { return guest_cid_; }
 
+  MockNetstack* GetNetstack() { return &mock_netstack_; }
+
  protected:
   // Provides guest specific |launch_info|, called by Start.
   virtual zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) = 0;
@@ -79,6 +82,7 @@ class EnclosedGuest {
   fuchsia::guest::EnvironmentManagerPtr environment_manager_;
   fuchsia::guest::EnvironmentControllerPtr environment_controller_;
   fuchsia::guest::InstanceControllerPtr instance_controller_;
+  MockNetstack mock_netstack_;
   TestSerial serial_;
   uint32_t guest_cid_;
   bool ready_ = false;

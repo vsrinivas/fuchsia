@@ -15,16 +15,21 @@ executable("bin") {
     "enclosed_guest.h",
     "guest_test.h",
     "main.cc",
+    "mock_netstack.cc",
+    "mock_netstack.h",
     "test_serial.cc",
     "test_serial.h",
     "virtio_block_tests.cc",
+    "virtio_net_tests.cc",
     "virtio_vsock_tests.cc",
   ]
 
   deps = [
     "//garnet/bin/guest/vmm/device",
     "//garnet/bin/guest/vmm/device:qcow_test_data",
+    "//garnet/lib/inet",
     "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/fidl/fuchsia.netstack",
     "//garnet/public/lib/component/cpp/testing",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
@@ -64,6 +69,7 @@ package("guest_integration_tests_utils") {
 
   deps = [
     "virtio_block_test_util",
+    "virtio_net_test_util",
     "virtio_rng_test_util",
     "virtio_vsock_test_util",
   ]
@@ -75,19 +81,26 @@ package("guest_integration_tests_utils") {
       dest = "virtio_block_test_util.cmx"
     },
     {
+      path = rebase_path("virtio_rng_test_util/meta/virtio_rng_test_util.cmx")
+      dest = "virtio_rng_test_util.cmx"
+    },
+    {
+      path = rebase_path("virtio_net_test_util/meta/virtio_net_test_util.cmx")
+      dest = "virtio_net_test_util.cmx"
+    },
+    {
       path =
           rebase_path("virtio_vsock_test_util/meta/virtio_vsock_test_util.cmx")
       dest = "virtio_vsock_test_util.cmx"
-    },
-    {
-      path = rebase_path("virtio_rng_test_util/meta/virtio_rng_test_util.cmx")
-      dest = "virtio_rng_test_util.cmx"
     },
   ]
 
   binaries = [
     {
       name = "virtio_block_test_util"
+    },
+    {
+      name = "virtio_net_test_util"
     },
     {
       name = "virtio_rng_test_util"
