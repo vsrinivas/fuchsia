@@ -2,7 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test.gni")
 
 # A collection of utilities useful to debuggers and similar programs.
 
@@ -12,10 +12,7 @@ static_library("elflib") {
   ]
 }
 
-executable("elflib_tests") {
-  testonly = true
-  output_name = "elflib_tests"
-
+test("elflib_tests") {
   sources = [
     "elflib_unittest.cc",
   ]

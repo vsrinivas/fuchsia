@@ -4,6 +4,7 @@
 
 import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 
 source_set("overnet") {
   public_deps = [
@@ -19,9 +20,7 @@ source_set("overnet") {
   ]
 }
 
-executable("overnet_unittests") {
-  testonly = true
-
+test("overnet_unittests") {
   deps = [
     "datagram_stream:tests",
     "endpoint:tests",
@@ -35,13 +34,6 @@ executable("overnet_unittests") {
     "testing:tests",
     "vocabulary:tests",
   ]
-}
-
-group("host_tests") {
-  deps = [
-    ":overnet_unittests($host_toolchain)",
-  ]
-  testonly = true
 }
 
 package("overnet_tests") {
@@ -59,7 +51,7 @@ package("overnet_tests") {
 }
 
 fuzz_package("overnet_fuzzers") {
-  targets = [ 
+  targets = [
     "datagram_stream:linearizer_fuzzer",
     "datagram_stream:receive_mode_fuzzer",
     "protocol:routable_message_fuzzer",

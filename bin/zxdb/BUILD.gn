@@ -5,6 +5,7 @@
 import("//build/cpp/sdk_executable.gni")
 import("//build/host.gni")
 import("//build/package.gni")
+import("//build/test.gni")
 
 # ZXDB currently only compiles for the host.
 if (current_toolchain == host_toolchain) {
@@ -21,12 +22,7 @@ if (current_toolchain == host_toolchain) {
     ]
   }
 
-  executable("zxdb_tests") {
-    testonly = true
-    output_name = "zxdb_tests"
-
-    sources = []
-
+  test("zxdb_tests") {
     deps = [
       "//garnet/bin/zxdb/client:tests",
       "//garnet/bin/zxdb/common:tests",

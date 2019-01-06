@@ -2,15 +2,11 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/host.gni")
+import("//build/test.gni")
 
-if (current_toolchain == host_toolchain) {
-  executable("system_monitor_tests") {
-    testonly = true
-
-    deps = [
-      "//garnet/lib/system_monitor/dockyard:tests",
-      "//third_party/googletest:gtest_main",
-    ]
-  }
+test("system_monitor_tests") {
+  deps = [
+    "//garnet/lib/system_monitor/dockyard:tests",
+    "//third_party/googletest:gtest_main",
+  ]
 }
