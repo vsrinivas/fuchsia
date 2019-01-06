@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <new>
 #include <stddef.h>
 
 namespace fbl {
@@ -31,6 +32,8 @@ private:
 };
 
 } // namespace fbl
+void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;
+void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept;
 
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept;
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept;

@@ -4,9 +4,9 @@
 
 #include <fbl/alloc_checker.h>
 
+#include <new>
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
-#include <new>
 
 namespace fbl {
 namespace {
@@ -68,21 +68,32 @@ bool AllocChecker::check() {
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
     return fbl::checked(size, ac, operator new(size, std::nothrow_t()));
 }
-
+void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
+    return fbl::checked(size, ac, operator new(size, align, std::nothrow_t()));
+}
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
     return fbl::checked(size, ac, operator new[](size, std::nothrow_t()));
 }
-
-#else // _KERNEL
+void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
+    return fbl::checked(size, ac, operator new[](size, align, std::nothrow_t()));
+}
+#else  // _KERNEL
 
 void* operator new(size_t size, fbl::AllocChecker* ac) noexcept {
     void* operator new(size_t s, void* caller, const std::nothrow_t&) noexcept;
     return fbl::checked(size, ac, operator new(size, __GET_CALLER(), std::nothrow_t()));
+}
+void* operator new(size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
+    void* operator new(size_t s, std::align_val_t align, void* caller, const std::nothrow_t&) noexcept;
+    return fbl::checked(size, ac, operator new(size, align, __GET_CALLER(), std::nothrow_t()));
 }
 
 void* operator new[](size_t size, fbl::AllocChecker* ac) noexcept {
     void* operator new[](size_t s, void* caller, const std::nothrow_t&) noexcept;
     return fbl::checked(size, ac, operator new[](size, __GET_CALLER(), std::nothrow_t()));
 }
-
+void* operator new[](size_t size, std::align_val_t align, fbl::AllocChecker* ac) noexcept {
+    void* operator new[](size_t s, std::align_val_t align, void* caller, const std::nothrow_t&) noexcept;
+    return fbl::checked(size, ac, operator new[](size, align, __GET_CALLER(), std::nothrow_t()));
+}
 #endif // !_KERNEL

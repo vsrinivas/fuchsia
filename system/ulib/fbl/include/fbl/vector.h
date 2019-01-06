@@ -48,6 +48,40 @@ struct DefaultAllocatorTraits {
     }
 };
 
+template <typename T>
+struct AlignedAllocatorTraits {
+    static constexpr bool NeedsCustomAlignment() {
+        return alignof(T)>__STDCPP_DEFAULT_NEW_ALIGNMENT__;
+    }
+    // Allocate receives a request for "size" contiguous bytes.
+    // size will always be greater than zero.
+    // The return value must be "nullptr" on error, or a non-null
+    // pointer on success. This same pointer may later be passed
+    // to deallocate when resizing.
+    static void* Allocate(size_t size) {
+        ZX_DEBUG_ASSERT(size > 0);
+        AllocChecker ac;
+        void* object;
+        if(NeedsCustomAlignment()) {
+            object = new (static_cast<std::align_val_t>(alignof(T)), &ac) char[size];
+        }else {
+            object = new (&ac) char[size];
+        }
+        return ac.check() ? object : nullptr;
+    }
+
+    // Deallocate receives a pointer to an object which is
+    // 1) Either a pointer provided by Allocate, or
+    // 2) nullptr.
+    // If the pointer is not null, deallocate must free
+    // the underlying memory used by the object.
+    static void Deallocate(void* object) {
+        if (object != nullptr) {
+            delete[] reinterpret_cast<char*>(object);
+        }
+    }
+};
+
 // Vector<> is an implementation of a dynamic array, implementing
 // a limited set of functionality of std::vector.
 //
@@ -59,7 +93,7 @@ struct DefaultAllocatorTraits {
 // This Vector supports O(1) indexing and O(1) (amortized) insertion and
 // deletion at the end (due to possible reallocations during push_back
 // and pop_back).
-template <typename T, typename AllocatorTraits = DefaultAllocatorTraits>
+template <typename T, typename AllocatorTraits = AlignedAllocatorTraits<T>>
 class Vector {
 public:
     // move semantics only
