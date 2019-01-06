@@ -50,6 +50,8 @@ static_library("console") {
     "nouns.h",
     "output_buffer.cc",
     "output_buffer.h",
+    "source_util.cc",
+    "source_util.h",
     "string_formatters.cc",
     "string_formatters.h",
     "string_util.cc",
@@ -102,6 +104,7 @@ source_set("tests") {
     "mock_format_value_process_context.h",
     "string_formatters_unittest.cc",
     "string_util_unittest.cc",
+    "source_util_unittest.cc",
   ]
 
   deps = [

@@ -17,6 +17,7 @@
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/console/string_util.h"
+#include "garnet/bin/zxdb/console/source_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -27,57 +28,6 @@ namespace {
 
 using LineInfo = std::pair<int, std::string>;  // Line #, Line contents.
 using LineVector = std::vector<LineInfo>;
-
-// Extracts the lines of context and returns them.
-// This can't use fxl::SplitString because we want to allow "<CR><LF>"
-// (greedy), or either <CR> or <LF> by itself to indicate EOL.
-LineVector ExtractSourceContext(const std::string& contents,
-                                const FormatSourceOpts& opts) {
-  LineVector result;
-
-  constexpr char kCR = 13;
-  constexpr char kLF = 10;
-
-  int cur_line = 1;
-  size_t line_begin = 0;  // Byte offset.
-  while (line_begin < contents.size() && cur_line <= opts.last_line) {
-    size_t cur = line_begin;
-
-    // Locate extent of current line.
-    size_t next_line_begin = contents.size();
-    size_t line_end = contents.size();
-    while (cur < contents.size()) {
-      if (contents[cur] == kCR) {
-        // Either CR or CR+LF
-        line_end = cur;
-        if (cur < contents.size() - 1 && contents[cur + 1] == kLF) {
-          next_line_begin = cur + 2;
-        } else {
-          next_line_begin = cur + 1;
-        }
-        break;
-      } else if (contents[cur] == kLF) {
-        // LF by itself.
-        line_end = cur;
-        next_line_begin = cur + 1;
-        break;
-      }
-      cur++;
-    }
-
-    if (cur_line >= opts.first_line && cur_line <= opts.last_line) {
-      result.emplace_back(
-          std::piecewise_construct, std::forward_as_tuple(cur_line),
-          std::forward_as_tuple(&contents[line_begin], line_end - line_begin));
-    }
-
-    // Advance to next line.
-    line_begin = next_line_begin;
-    cur_line++;
-  }
-
-  return result;
-}
 
 // Formats the given line, highlighting from the column to the end of the line.
 // The column is 1-based but we also accept 0.
@@ -178,22 +128,10 @@ Err OutputSourceContext(Process* process, const Location& location,
 Err FormatSourceFileContext(const std::string& file_name,
                             const std::string& build_dir,
                             const FormatSourceOpts& opts, OutputBuffer* out) {
-  // Search for the source file. If it's relative, try to find it relative to
-  // the build dir, and if that doesn't exist, try relative to the current
-  // directory).
   std::string contents;
-  if (IsPathAbsolute(file_name)) {
-    // Absolute path, expect it to be readable or fail.
-    if (!files::ReadFileToString(file_name, &contents))
-      return Err("Source file not found: " + file_name);
-  } else if (!files::ReadFileToString(CatPathComponents(build_dir, file_name),
-                                      &contents)) {
-    // Doesn't exist relative to build dir, fall back to trying to read it
-    // from the current dir.
-    if (!files::ReadFileToString(file_name, &contents))
-      return Err("Source file not found: " + file_name);
-  }
-
+  Err err = GetFileContents(file_name, build_dir, &contents);
+  if (err.has_error())
+    return err;
   return FormatSourceContext(file_name, contents, opts, out);
 }
 
@@ -204,35 +142,44 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
              (opts.active_line >= opts.first_line &&
               opts.active_line <= opts.last_line));
 
-  LineVector context = ExtractSourceContext(file_contents, opts);
+  // Allow the beginning to be out-of-range. This mirrors the end handling
+  // (clamped to end-of-file) so callers can blindly create offsets from
+  // a current line without clamping.
+  int first_line = std::max(1, opts.first_line);
+
+  std::vector<std::string> context = ExtractSourceLines(file_contents,
+      first_line, opts.last_line);
   if (context.empty()) {
     // No source found for this location. If highlight_line exists, assume
     // it's the one the user cares about.
-    int err_line = opts.highlight_line ? opts.highlight_line : opts.first_line;
+    int err_line = opts.highlight_line ? opts.highlight_line : first_line;
     return Err(fxl::StringPrintf("There is no line %d in the file %s", err_line,
                                  file_name_for_errors.c_str()));
   }
   if (opts.active_line != 0 && opts.require_active_line &&
-      context.back().first < opts.active_line) {
+      first_line + static_cast<int>(context.size()) < opts.active_line) {
     return Err(fxl::StringPrintf("There is no line %d in the file %s",
                                  opts.active_line,
                                  file_name_for_errors.c_str()));
   }
 
   std::vector<std::vector<OutputBuffer>> rows;
-  for (LineInfo& info : context) {
+  for (size_t i = 0; i < context.size(); i++) {
+    int line_number = first_line + i;
+    std::string& line_text = context[i];  // Moved out of.
+
     rows.emplace_back();
     std::vector<OutputBuffer>& row = rows.back();
 
     // Compute markers in the left margin.
     OutputBuffer margin;
-    auto found_bp = opts.bp_lines.find(info.first);
+    auto found_bp = opts.bp_lines.find(line_number);
     if (found_bp != opts.bp_lines.end()) {
       std::string breakpoint_marker = found_bp->second
                                           ? GetBreakpointMarker()
                                           : GetDisabledBreakpointMarker();
 
-      if (info.first == opts.active_line) {
+      if (line_number == opts.active_line) {
         // Active + breakpoint.
         margin.Append(Syntax::kError, breakpoint_marker);
         margin.Append(Syntax::kHeading, GetRightArrow());
@@ -241,7 +188,7 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
         margin.Append(Syntax::kError, " " + breakpoint_marker);
       }
     } else {
-      if (info.first == opts.active_line) {
+      if (line_number == opts.active_line) {
         // Active line.
         margin.Append(Syntax::kHeading, " " + GetRightArrow());
       } else {
@@ -251,18 +198,18 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
     }
     row.push_back(std::move(margin));
 
-    std::string number = fxl::StringPrintf("%d", info.first);
-    if (info.first == opts.highlight_line) {
+    std::string number = fxl::StringPrintf("%d", line_number);
+    if (line_number == opts.highlight_line) {
       // This is the line to mark.
       row.push_back(
           OutputBuffer::WithContents(Syntax::kHeading, std::move(number)));
       row.push_back(
-          HighlightLine(std::move(info.second), opts.highlight_column));
+          HighlightLine(std::move(line_text), opts.highlight_column));
     } else {
       // Normal context line.
       Syntax syntax = opts.dim_others ? Syntax::kComment : Syntax::kNormal;
       row.push_back(OutputBuffer::WithContents(syntax, std::move(number)));
-      row.push_back(OutputBuffer::WithContents(syntax, std::move(info.second)));
+      row.push_back(OutputBuffer::WithContents(syntax, std::move(line_text)));
     }
   }
 
