@@ -33,6 +33,14 @@
 
 namespace modular {
 
+namespace {
+#ifdef AUTO_LOGIN_TO_GUEST
+constexpr bool kAutoLoginToGuest = true;
+#else
+constexpr bool kAutoLoginToGuest = false;
+#endif
+}  // namespace
+
 BasemgrImpl::BasemgrImpl(
     const modular::BasemgrSettings& settings,
     const std::vector<SessionShellSettings>& session_shell_settings,
@@ -460,11 +468,17 @@ void BasemgrImpl::UpdateSessionShellConfig() {
 
 void BasemgrImpl::ShowSetupOrLogin() {
   auto show_setup_or_login = [this] {
-    // If the session shell settings specifies it, auto-login as the first
-    // authenticated user. Otherwise, start the base shell to launch setup.
-    if (active_session_shell_settings_index_ < session_shell_settings_.size() &&
-        session_shell_settings_[active_session_shell_settings_index_]
-            .auto_login) {
+    // If there are no session shell settings specified, default to showing
+    // setup.
+    if (active_session_shell_settings_index_ >=
+        session_shell_settings_.size()) {
+      StartBaseShell();
+      return;
+    }
+
+    if (kAutoLoginToGuest) {
+      user_provider_impl_->Login(fuchsia::modular::UserLoginParams());
+    } else {
       user_provider_impl_->PreviousUsers(
           [this](fidl::VectorPtr<fuchsia::modular::auth::Account> accounts) {
             if (accounts->empty()) {
@@ -475,8 +489,6 @@ void BasemgrImpl::ShowSetupOrLogin() {
               user_provider_impl_->Login(std::move(params));
             }
           });
-    } else {
-      StartBaseShell();
     }
   };
 

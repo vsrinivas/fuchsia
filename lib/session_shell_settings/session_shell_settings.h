@@ -23,10 +23,6 @@ struct SessionShellSettings {
   // The name of the session shell, e.g. "ermine".
   const std::string name;
 
-  // Whether the session shell should auto-login to the first authenticated
-  // user.
-  const bool auto_login;
-
   // The screen width & height in millimeters for the session shell's display.
   // Defaults to a signaling NaN so that any attempts to use it without checking
   // for NaN will trap.

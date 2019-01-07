@@ -2,9 +2,15 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//peridot/build/executable_package.gni")
 import("//peridot/build/tests_package.gni")
 import("//third_party/flatbuffers/flatbuffer.gni")
+
+declare_args() {
+  # Whether basemgr should automatically login as a guest user.
+  auto_login_to_guest = false
+}
 
 flatbuffer("users") {
   sources = [
@@ -111,6 +117,10 @@ source_set("lib") {
     "//peridot/public/fidl/fuchsia.modular.internal",
     "//zircon/public/lib/trace",
   ]
+
+  if (auto_login_to_guest) {
+    public_configs = [ ":auto_login_to_guest" ]
+  }
 }
 
 executable_package("dev_base_shell") {
@@ -156,4 +166,8 @@ executable("user_controller_impl_unittest") {
     "//peridot/lib/fidl:clone",
     "//third_party/googletest:gtest_main",
   ]
+}
+
+config("auto_login_to_guest") {
+  defines = [ "AUTO_LOGIN_TO_GUEST" ]
 }
