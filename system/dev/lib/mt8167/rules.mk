@@ -10,6 +10,7 @@ MODULE_TYPE := userlib
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mt8167-audio-out.cpp \
+    $(LOCAL_DIR)/mt8167-audio-in.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

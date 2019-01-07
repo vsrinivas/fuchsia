@@ -24,6 +24,7 @@ enum {
     BTI_SDIO,
     BTI_USB,
     BTI_AUDIO_OUT,
+    BTI_AUDIO_IN,
 };
 
 class Mt8167;

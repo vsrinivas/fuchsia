@@ -40,6 +40,26 @@ public:
     static auto Get() { return hwreg::RegisterAddr<CLK_SEL_9>(0x044); }
 };
 
+// Audio Clock Selection Register 1.
+class CLK_SEL_10 : public hwreg::RegisterBase<CLK_SEL_10, uint32_t> {
+public:
+    DEF_FIELD(31, 24, apll12_ck_div3);
+    DEF_FIELD(23, 16, apll12_ck_div2);
+    DEF_FIELD(15, 8, apll12_ck_div1);
+    DEF_FIELD(7, 0, apll12_ck_div0);
+    static auto Get() { return hwreg::RegisterAddr<CLK_SEL_10>(0x048); }
+};
+
+// Audio Clock Selection Register 2.
+class CLK_SEL_11 : public hwreg::RegisterBase<CLK_SEL_11, uint32_t> {
+public:
+    DEF_FIELD(31, 24, apll12_ck_div5b);
+    DEF_FIELD(23, 16, apll12_ck_div5);
+    DEF_FIELD(15, 8, apll12_ck_div4b);
+    DEF_FIELD(7, 0, apll12_ck_div4);
+    static auto Get() { return hwreg::RegisterAddr<CLK_SEL_11>(0x04C); }
+};
+
 // Set Clock Gating Control 1.
 class SET_CLK_GATING_CTRL1 : public hwreg::RegisterBase<SET_CLK_GATING_CTRL1, uint32_t> {
 public:

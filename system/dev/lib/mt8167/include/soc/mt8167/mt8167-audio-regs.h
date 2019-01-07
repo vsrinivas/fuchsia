@@ -18,6 +18,8 @@
 // Top Control Register 0.
 class AUDIO_TOP_CON0 : public hwreg::RegisterBase<AUDIO_TOP_CON0, uint32_t> {
 public:
+    DEF_BIT(20, PDN_HDMI_CK);
+    DEF_BIT(5, PDN_I2S);
     DEF_BIT(2, PDN_AFE);
     static auto Get() { return hwreg::RegisterAddr<AUDIO_TOP_CON0>(0x000); }
 };
@@ -171,6 +173,47 @@ public:
     static auto Get() { return hwreg::RegisterAddr<AFE_CONN2>(0x028); }
 };
 
+// AFE Connection Register 3.
+// _R Controls enabling the right shift 1 bit from Ixx to Oyy.
+// _S Controls turning on the path from Ixx to Oyy.
+class AFE_CONN3 : public hwreg::RegisterBase<AFE_CONN3, uint32_t> {
+public:
+    DEF_BIT(31, I16_O03_R);
+    DEF_BIT(30, I15_O03_R);
+    DEF_BIT(29, I16_O03_S);
+    DEF_BIT(28, I15_O03_S);
+
+    DEF_BIT(26, I16_O02_R);
+    DEF_BIT(25, I15_O02_R);
+    DEF_BIT(24, I16_O02_S);
+    DEF_BIT(23, I15_O02_S);
+
+    DEF_BIT(21, I16_O01_R);
+    DEF_BIT(20, I15_O01_R);
+    DEF_BIT(19, I16_O01_S);
+    DEF_BIT(18, I15_O01_S);
+
+    DEF_BIT(16, I16_O00_R);
+    DEF_BIT(15, I15_O00_R);
+    DEF_BIT(14, I16_O00_S);
+    DEF_BIT(13, I15_O00_S);
+
+    DEF_BIT(10, I08_O12_S);
+    DEF_BIT(9, I06_O12_S);
+    DEF_BIT(8, I07_O11_S);
+    DEF_BIT(7, I05_O11_S);
+    DEF_BIT(6, I02_O11_S);
+
+    DEF_BIT(5, I08_O10_S);
+    DEF_BIT(4, I06_O10_S);
+    DEF_BIT(3, I04_O10_S);
+
+    DEF_BIT(2, I07_O09_S);
+    DEF_BIT(1, I05_O09_S);
+    DEF_BIT(0, I03_O09_S);
+    static auto Get() { return hwreg::RegisterAddr<AFE_CONN3>(0x02C); }
+};
+
 // AFE I2S Control Register 1.
 class AFE_I2S_CON1 : public hwreg::RegisterBase<AFE_I2S_CON1, uint32_t> {
 public:
@@ -278,6 +321,24 @@ public:
     static auto Get() { return hwreg::RegisterAddr<AFE_CONN_24BIT>(0x06C); }
 };
 
+// AFE VUL Base Address Register.
+class AFE_VUL_BASE : public hwreg::RegisterBase<AFE_VUL_BASE, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_VUL_BASE>(0x080); }
+};
+
+// AFE VUL End Adress Register.
+class AFE_VUL_END : public hwreg::RegisterBase<AFE_VUL_END, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_VUL_END>(0x088); }
+};
+
+// AFE VUL Base Cursor Register.
+class AFE_VUL_CUR : public hwreg::RegisterBase<AFE_VUL_CUR, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_VUL_CUR>(0x08C); }
+};
+
 // AFE Uplink SRC Control Register.
 class AFE_ADDA_UL_SRC_CON0 : public hwreg::RegisterBase<AFE_ADDA_UL_SRC_CON0, uint32_t> {
 public:
@@ -306,6 +367,14 @@ class AFE_ADDA_DL_SRC2_CON0 : public hwreg::RegisterBase<AFE_ADDA_DL_SRC2_CON0, 
 public:
     DEF_BIT(0, dl_2_src_on_tmp_ctl_pre);
     static auto Get() { return hwreg::RegisterAddr<AFE_ADDA_DL_SRC2_CON0>(0x108); }
+};
+
+// AFE ADDA Top Control Register.
+class AFE_ADDA_TOP_CON0 : public hwreg::RegisterBase<AFE_ADDA_TOP_CON0, uint32_t> {
+public:
+    DEF_FIELD(15, 12, c_loop_back_mode_ctl);
+    DEF_BIT(0, c_ext_adc_ctl);
+    static auto Get() { return hwreg::RegisterAddr<AFE_ADDA_TOP_CON0>(0x108); }
 };
 
 // AFE Sine-wave Gen Config 0.  Called AFE_SINEGEN_CON0 in some of the docs.
@@ -339,6 +408,14 @@ public:
     static auto Get() { return hwreg::RegisterAddr<AFE_SINEGEN_CON_TDM>(0x1F8); }
 };
 
+// AFE TDMIN Connection Control.
+class AFE_CONN_TDMIN_CON : public hwreg::RegisterBase<AFE_CONN_TDMIN_CON, uint32_t> {
+public:
+    DEF_FIELD(5, 3, o_41_cfg);
+    DEF_FIELD(2, 0, o_40_cfg);
+    static auto Get() { return hwreg::RegisterAddr<AFE_CONN_TDMIN_CON>(0x39C); }
+};
+
 // AFE TDM Config 1.
 class AFE_TDM_CON1 : public hwreg::RegisterBase<AFE_TDM_CON1, uint32_t> {
 public:
@@ -354,4 +431,56 @@ public:
     DEF_BIT(20, TDM_I2S_LOOPBACK);
     DEF_BIT(16, TDM_FIX_VALUE_SEL);
     static auto Get() { return hwreg::RegisterAddr<AFE_TDM_CON2>(0x54C); }
+};
+
+// AFE TDM IN Control Register 0.
+class AFE_TDM_IN_CON1 : public hwreg::RegisterBase<AFE_TDM_IN_CON1, uint32_t> {
+public:
+    DEF_FIELD(31, 24, LRCK_TDM_WIDTH);
+    DEF_FIELD(22, 21, tdm_in_loopback_ch); // Datasheet says tdm_in_loopack_ch.
+    DEF_BIT(20, tdm_in_loopback);
+    DEF_FIELD(19, 16, disable_out);
+    DEF_FIELD(13, 12, fast_lrck_cycle_sel);
+    DEF_FIELD(11, 10, tdm_channel);
+    DEF_FIELD(9, 8, tdm_wlen);
+    DEF_BIT(4, tdm_lr_swap);
+    DEF_BIT(3, tdm_fmt);
+    DEF_BIT(2, tdm_lrck_inv);
+    DEF_BIT(1, tdm_bck_inv);
+    DEF_BIT(0, tdm_en);
+    static auto Get() { return hwreg::RegisterAddr<AFE_TDM_IN_CON1>(0x588); }
+};
+
+// AFE IRQ10 MCU Counter Register.
+class AFE_IRQ_MCU_CNT10 : public hwreg::RegisterBase<AFE_IRQ_MCU_CNT10, uint32_t> {
+public:
+    DEF_FIELD(17, 0, cnt);
+    static auto Get() { return hwreg::RegisterAddr<AFE_IRQ_MCU_CNT10>(0x8DC); }
+};
+
+// AFE HDMI_IN_2CH Config Register.
+class AFE_HDMI_IN_2CH_CON0 : public hwreg::RegisterBase<AFE_HDMI_IN_2CH_CON0, uint32_t> {
+public:
+    DEF_BIT(2, AFE_HDMI_IN_2CH_R_MONO);
+    DEF_BIT(1, AFE_HDMI_IN_2CH_DATA);
+    DEF_BIT(0, AFE_HDMI_IN_2CH_OUT_ON);
+    static auto Get() { return hwreg::RegisterAddr<AFE_HDMI_IN_2CH_CON0>(0x9C0); }
+};
+
+// AFE HDMI_IN_2CH Base Address Register.
+class AFE_HDMI_IN_2CH_BASE : public hwreg::RegisterBase<AFE_HDMI_IN_2CH_BASE, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_HDMI_IN_2CH_BASE>(0x9C4); }
+};
+
+// AFE HDMI_IN_2CH End Adress Register.
+class AFE_HDMI_IN_2CH_END : public hwreg::RegisterBase<AFE_HDMI_IN_2CH_END, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_HDMI_IN_2CH_END>(0x9C8); }
+};
+
+// AFE HDMI_IN_2CH Base Cursor Register.
+class AFE_HDMI_IN_2CH_CUR : public hwreg::RegisterBase<AFE_HDMI_IN_2CH_CUR, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<AFE_HDMI_IN_2CH_CUR>(0x9CC); }
 };
