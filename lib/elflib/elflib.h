@@ -10,8 +10,8 @@
 #include <optional>
 #include <vector>
 
-#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 #include "garnet/public/lib/fxl/macros.h"
+#include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
 
 namespace elflib {
 
@@ -26,18 +26,18 @@ class ElfLib {
     // Get memory from the process relative to the base of this lib. That means
     // offset 0 should point to the Elf64_Ehdr. The vector should be cleared and
     // filled. Return true unless the memory could not be read.
-    virtual bool GetMemory(uint64_t offset, size_t size,
-                           std::vector<uint8_t>* out) = 0;
+    virtual std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
+                                                          size_t size) = 0;
 
     // Get memory for a mapped area. This is the same as GetMemory except we
     // are also given the target address of the memory we want according to the
     // ELF file, and the expected mapped size. If we're reading ELF structures
     // that have been mapped into a running process already we may want to
     // check the mapped address instead.
-    virtual bool GetMappedMemory(uint64_t offset, uint64_t mapped_address,
-                                 size_t file_size, size_t mapped_size,
-                                 std::vector<uint8_t>* out) {
-      return GetMemory(offset, file_size, out);
+    virtual std::optional<std::vector<uint8_t>> GetMappedMemory(
+        uint64_t offset, uint64_t mapped_address, size_t file_size,
+        size_t mapped_size) {
+      return GetMemory(offset, file_size);
     }
   };
 
@@ -54,16 +54,17 @@ class ElfLib {
   const std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
                                                     uint64_t type);
 
-  // Get the stored value of a given symbol. Returns true unless the lookup
+  // Get the stored value of a given symbol. Returns nullopt if the lookup
   // failed.
-  bool GetSymbolValue(const std::string& name, uint64_t* out);
+  std::optional<uint64_t> GetSymbolValue(const std::string& name);
 
-  // Get a map of all symbols and their string names.
-  bool GetAllSymbols(std::map<std::string,Elf64_Sym>* out);
+  // Get a map of all symbols and their string names. Returns nullopt if the
+  // symbols could not be loaded.
+  std::optional<std::map<std::string, Elf64_Sym>> GetAllSymbols();
 
   // Create a new ElfLib object.
   static std::unique_ptr<ElfLib> Create(
-    std::unique_ptr<MemoryAccessor>&& memory);
+      std::unique_ptr<MemoryAccessor>&& memory);
 
  private:
   // Get the header for a section by its index. Return nullptr if the index is

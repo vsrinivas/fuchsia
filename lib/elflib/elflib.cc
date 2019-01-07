@@ -32,13 +32,13 @@ ElfLib::~ElfLib() = default;
 std::unique_ptr<ElfLib> ElfLib::Create(
     std::unique_ptr<MemoryAccessor>&& memory) {
   std::unique_ptr<ElfLib> out = std::make_unique<ElfLib>(std::move(memory));
-  std::vector<uint8_t> header_data;
+  auto header_data = out->memory_->GetMemory(0, sizeof(Elf64_Ehdr));
 
-  if (!out->memory_->GetMemory(0, sizeof(Elf64_Ehdr), &header_data)) {
+  if (!header_data) {
     return std::unique_ptr<ElfLib>();
   }
 
-  out->header_ = *reinterpret_cast<Elf64_Ehdr*>(header_data.data());
+  out->header_ = *reinterpret_cast<Elf64_Ehdr*>(header_data->data());
 
   // We don't support non-standard section header sizes.
   if (out->header_.e_shentsize != sizeof(Elf64_Shdr)) {
@@ -55,14 +55,14 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 
 const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   if (sections_.empty()) {
-    std::vector<uint8_t> data;
+    auto data = memory_->GetMemory(header_.e_shoff,
+                                   sizeof(Elf64_Shdr) * header_.e_shnum);
 
-    if (!memory_->GetMemory(header_.e_shoff,
-                            sizeof(Elf64_Shdr) * header_.e_shnum, &data)) {
+    if (!data) {
       return nullptr;
     }
 
-    Elf64_Shdr* header_array = reinterpret_cast<Elf64_Shdr*>(data.data());
+    Elf64_Shdr* header_array = reinterpret_cast<Elf64_Shdr*>(data->data());
 
     std::copy(header_array, header_array + header_.e_shnum,
               std::back_inserter(sections_));
@@ -80,14 +80,14 @@ bool ElfLib::LoadProgramHeaders() {
     return true;
   }
 
-  std::vector<uint8_t> data;
+  auto data =
+      memory_->GetMemory(header_.e_phoff, sizeof(Elf64_Phdr) * header_.e_phnum);
 
-  if (!memory_->GetMemory(header_.e_phoff, sizeof(Elf64_Phdr) * header_.e_phnum,
-                          &data)) {
+  if (!data) {
     return false;
   }
 
-  Elf64_Phdr* header_array = reinterpret_cast<Elf64_Phdr*>(data.data());
+  Elf64_Phdr* header_array = reinterpret_cast<Elf64_Phdr*>(data->data());
 
   std::copy(header_array, header_array + header_.e_phnum,
             std::back_inserter(segments_));
@@ -109,14 +109,14 @@ const std::vector<uint8_t>* ElfLib::GetSegmentData(size_t segment) {
 
   const Elf64_Phdr* header = &segments_[segment];
 
-  std::vector<uint8_t> data;
+  auto data = memory_->GetMappedMemory(header->p_offset, header->p_vaddr,
+                                       header->p_filesz, header->p_memsz);
 
-  if (!memory_->GetMappedMemory(header->p_offset, header->p_vaddr,
-                                header->p_filesz, header->p_memsz, &data)) {
+  if (!data) {
     return nullptr;
   }
 
-  segment_data_[segment] = data;
+  segment_data_[segment] = *data;
 
   return &segment_data_[segment];
 }
@@ -136,8 +136,7 @@ const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
     size_t namesz_padded;
     size_t descsz_padded;
 
-    for (const uint8_t* pos = data->data();
-         pos < data->data() + data->size();
+    for (const uint8_t* pos = data->data(); pos < data->data() + data->size();
          pos += sizeof(Elf64_Nhdr) + namesz_padded + descsz_padded) {
       header = reinterpret_cast<const Elf64_Nhdr*>(pos);
       namesz_padded = (header->n_namesz + 3) & ~3UL;
@@ -159,7 +158,7 @@ const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
     }
   }
 
-  return {};
+  return std::nullopt;
 }
 
 const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
@@ -174,14 +173,14 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {
     return nullptr;
   }
 
-  std::vector<uint8_t> data;
+  auto data = memory_->GetMappedMemory(header->sh_offset, header->sh_addr,
+                                       header->sh_size, header->sh_size);
 
-  if (!memory_->GetMappedMemory(header->sh_offset, header->sh_addr,
-                                header->sh_size, header->sh_size, &data)) {
+  if (!data) {
     return nullptr;
   }
 
-  section_data_[section] = data;
+  section_data_[section] = *data;
 
   return &section_data_[section];
 }
@@ -269,30 +268,32 @@ const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
   return nullptr;
 }
 
-bool ElfLib::GetAllSymbols(std::map<std::string,Elf64_Sym>* out) {
+std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
   if (!LoadSymbols()) {
-    return false;
+    return std::nullopt;
   }
+
+  std::map<std::string, Elf64_Sym> out;
 
   for (const auto& symbol : symbols_) {
     const std::string* got_name = GetString(symbol.st_name);
 
     if (got_name != nullptr) {
-      (*out)[*got_name] = symbol;
+      out[*got_name] = symbol;
     }
   }
 
-  return true;
+  return out;
 }
 
-bool ElfLib::GetSymbolValue(const std::string& name, uint64_t* out) {
+std::optional<uint64_t> ElfLib::GetSymbolValue(const std::string& name) {
   const Elf64_Sym* sym = GetSymbol(name);
 
   if (sym) {
-    *out = sym->st_value;
+    return sym->st_value;
   }
 
-  return sym != nullptr;
+  return std::nullopt;
 }
 
 }  // namespace elflib
