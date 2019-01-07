@@ -19,8 +19,7 @@ FinishThreadController::FinishThreadController(FromFrame, const Frame* frame)
 
 FinishThreadController::FinishThreadController(
     ToFrame, uint64_t to_address, const FrameFingerprint& to_frame_fingerprint)
-    : to_address_(to_address),
-      to_frame_fingerprint_(to_frame_fingerprint) {}
+    : to_address_(to_address), to_frame_fingerprint_(to_frame_fingerprint) {}
 
 FinishThreadController::~FinishThreadController() = default;
 
@@ -48,14 +47,14 @@ void FinishThreadController::InitWithThread(
     // Need to make sure the frames are available to find the fingerprint
     // (fingerprint computation requires both the destination frame and the
     // frame before the destination frame).
-    auto frames = thread->GetFrames();
-    if (thread->HasAllFrames()) {
+    auto frames = thread->GetStack().GetFrames();
+    if (thread->GetStack().has_all_frames()) {
       InitWithFrames(frames, std::move(cb));
     } else {
       // Need to asynchronously request the thread's frames. We can capture
       // |this| here since the thread owns this class.
-      thread->SyncFrames([ this, cb = std::move(cb) ]() {
-        InitWithFrames(this->thread()->GetFrames(), std::move(cb));
+      thread->GetStack().SyncFrames([ this, cb = std::move(cb) ]() {
+        InitWithFrames(this->thread()->GetStack().GetFrames(), std::move(cb));
       });
     }
   }
@@ -104,7 +103,8 @@ void FinishThreadController::InitWithFrames(
     cb(Err());
     return;
   }
-  to_frame_fingerprint_ = thread()->GetFrameFingerprint(step_to_index);
+  to_frame_fingerprint_ =
+      thread()->GetStack().GetFrameFingerprint(step_to_index);
   InitWithFingerprint(std::move(cb));
 }
 

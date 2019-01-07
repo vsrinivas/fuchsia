@@ -32,7 +32,7 @@ void StepOverThreadController::InitWithThread(
 
   // Save the info for the frame we're stepping inside of for future possible
   // stepping out.
-  frame_fingerprint_ = thread->GetFrameFingerprint(0);
+  frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
 
   // Stepping in the function itself is managed by the StepInto controller.
 
@@ -79,13 +79,14 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
 
   // If we get here the thread is no longer in range but could be in a sub-
   // frame that we need to step out of.
-  FrameFingerprint current_fingerprint = thread()->GetFrameFingerprint(0);
+  FrameFingerprint current_fingerprint =
+      thread()->GetStack().GetFrameFingerprint(0);
   if (!FrameFingerprint::Newer(current_fingerprint, frame_fingerprint_)) {
     Log("Neither in range nor in a newer frame.");
     return kStop;
   }
 
-  auto frames = thread()->GetFrames();
+  auto frames = thread()->GetStack().GetFrames();
   if (frames.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
     return kStop;

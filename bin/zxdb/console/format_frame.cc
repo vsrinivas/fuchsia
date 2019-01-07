@@ -38,7 +38,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
-  const auto& frames = thread->GetFrames();
+  const auto& frames = thread->GetStack().GetFrames();
   if (frames.empty()) {
     if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended ||
         !(thread->GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
@@ -65,8 +65,8 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       // Supply "-1" for the frame index to suppress printing (we already
       // did it above).
       if (long_format) {
-        FormatFrameLong(frames[i], include_params, helper.get(),
-                        format_options, -1);
+        FormatFrameLong(frames[i], include_params, helper.get(), format_options,
+                        -1);
       } else {
         OutputBuffer out;
         FormatFrame(frames[i], include_params, &out, -1);
@@ -86,8 +86,8 @@ void ListCompletedFrames(Thread* thread, bool include_params,
 void OutputFrameList(Thread* thread, bool include_params, bool long_format) {
   // Always request an up-to-date frame list from the agent. Various things
   // could have changed and the user is manually requesting a new list, so
-  // don't rely on the cached copy even if Thread::HasAllFrames() is true.
-  thread->SyncFrames(
+  // don't rely on the cached copy even if Stack::has_all_frames() is true.
+  thread->GetStack().SyncFrames(
       [ thread = thread->GetWeakPtr(), include_params, long_format ]() {
         Console* console = Console::get();
         if (thread)

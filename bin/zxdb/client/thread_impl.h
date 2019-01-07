@@ -14,7 +14,7 @@ class Breakpoint;
 class FrameImpl;
 class ProcessImpl;
 
-class ThreadImpl : public Thread {
+class ThreadImpl final : public Thread, public Stack::Delegate {
  public:
   ThreadImpl(ProcessImpl* process, const debug_ipc::ThreadRecord& record);
   ~ThreadImpl() override;
@@ -33,10 +33,8 @@ class ThreadImpl : public Thread {
                     std::function<void(const Err&)> on_continue) override;
   void NotifyControllerDone(ThreadController* controller) override;
   void StepInstruction() override;
-  const std::vector<Frame*>& GetFrames() const override;
-  bool HasAllFrames() const override;
-  void SyncFrames(std::function<void()> callback) override;
-  FrameFingerprint GetFrameFingerprint(size_t frame_index) const override;
+  const Stack& GetStack() const override;
+  Stack& GetStack() override;
   void ReadRegisters(
       std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)>) override;
@@ -60,11 +58,18 @@ class ThreadImpl : public Thread {
       const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints);
 
  private:
+  // Stack::Delegate implementation.
+  void SyncFramesForStack(std::function<void()> callback) override;
+  std::unique_ptr<Frame> MakeFrameForStack(
+      const debug_ipc::StackFrame& input) override;
+
   // Invalidates the cached frames.
   void ClearFrames();
 
   ProcessImpl* const process_;
   uint64_t koid_;
+
+  Stack stack_;
 
   // Register state queried from the DebugAgent.
   // NOTE: Depending on the request, it could be that the register set does
@@ -74,16 +79,6 @@ class ThreadImpl : public Thread {
   std::string name_;
   debug_ipc::ThreadRecord::State state_;
   debug_ipc::ThreadRecord::BlockedReason blocked_reason_;
-
-  std::vector<std::unique_ptr<FrameImpl>> frames_;
-  bool has_all_frames_ = false;
-
-  // Cached version of frames_ containing non-owning pointers to the base type.
-  // This is the backing store for GetFrames() which can be called frequently
-  // so we don't want to return a copy every time.
-  //
-  // When empty, it should be repopulated from frames_.
-  mutable std::vector<Frame*> frames_cache_;
 
   // Ordered list of ThreadControllers that apply to this thread. This is
   // a stack where back() is the topmost controller that applies first.

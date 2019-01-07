@@ -58,7 +58,7 @@ TEST_F(FinishThreadControllerTest, Finish) {
                                             kReturnBase);
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
-  auto frames = thread()->GetFrames();
+  auto frames = thread()->GetStack().GetFrames();
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
@@ -117,7 +117,7 @@ TEST_F(FinishThreadControllerTest, BottomStackFrame) {
       debug_ipc::ThreadRecord::StackAmount::kFull;
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
-  auto frames = thread()->GetFrames();
+  auto frames = thread()->GetStack().GetFrames();
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;

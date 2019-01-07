@@ -25,7 +25,7 @@ void StepThreadController::InitWithThread(Thread* thread,
                                           std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  auto frames = thread->GetFrames();
+  auto frames = thread->GetStack().GetFrames();
   FXL_DCHECK(!frames.empty());
   uint64_t ip = frames[0]->GetAddress();
 
@@ -35,7 +35,7 @@ void StepThreadController::InitWithThread(Thread* thread,
     file_line_ = line_details.file_line();
     current_range_ = line_details.GetExtent();
 
-    original_frame_fingerprint_ = thread->GetFrameFingerprint(0);
+    original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
 
     Log("Stepping in %s:%d [0x%" PRIx64 ", 0x%" PRIx64 ")",
         file_line_.file().c_str(), file_line_.line(), current_range_.begin(),
@@ -107,7 +107,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   // won't prematurely stop while executing a line of code. But the code could
   // crash or there could be a breakpoint in the middle, and those don't
   // count as leaving the range.
-  auto frames = thread()->GetFrames();
+  auto frames = thread()->GetStack().GetFrames();
   FXL_DCHECK(!frames.empty());
 
   uint64_t ip = frames[0]->GetAddress();
@@ -168,8 +168,9 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         Log("In function with no symbols, single-stepping.");
         current_range_ = AddressRange();  // No range = step by instruction.
         return kContinue;
-      } else if (FrameFingerprint::Newer(thread()->GetFrameFingerprint(0),
-                                         original_frame_fingerprint_)) {
+      } else if (FrameFingerprint::Newer(
+                     thread()->GetStack().GetFrameFingerprint(0),
+                     original_frame_fingerprint_)) {
         // Called a new stack frame that has no symbols. We need to "finish" to
         // step over the unsymbolized code to automatically step over the
         // unsymbolized code.

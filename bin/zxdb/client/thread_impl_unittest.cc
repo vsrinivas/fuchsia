@@ -52,8 +52,8 @@ TEST_F(ThreadImplTest, Frames) {
   Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
 
   // The thread should be in a running state with no frames.
-  EXPECT_TRUE(thread->GetFrames().empty());
-  EXPECT_FALSE(thread->HasAllFrames());
+  EXPECT_TRUE(thread->GetStack().GetFrames().empty());
+  EXPECT_FALSE(thread->GetStack().has_all_frames());
 
   // Notify of thread stop.
   constexpr uint64_t kAddress1 = 0x12345678;
@@ -69,15 +69,14 @@ TEST_F(ThreadImplTest, Frames) {
   InjectException(break_notification);
 
   // There should be one frame with the address of the stop.
-  EXPECT_FALSE(thread->HasAllFrames());
-  auto frames = thread->GetFrames();
+  EXPECT_FALSE(thread->GetStack().has_all_frames());
+  auto frames = thread->GetStack().GetFrames();
   ASSERT_EQ(1u, frames.size());
   EXPECT_EQ(kAddress1, frames[0]->GetAddress());
   EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
 
-  // Keep a weak pointer to the top stack frame. It should be preserved across
-  // the updates below.
-  fxl::WeakPtr<Frame> weak_top_stack = frames[0]->GetWeakPtr();
+  // The top stack frame object should be preserved across the updates below.
+  Frame* top_stack = frames[0];
   frames.clear();
 
   // Construct what the full stack will be returned to the thread. The top
@@ -92,12 +91,13 @@ TEST_F(ThreadImplTest, Frames) {
   mock_remote_api().set_thread_status_reply(expected_reply);
 
   // Asynchronously request the frames.
-  thread->SyncFrames([]() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+  thread->GetStack().SyncFrames(
+      []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // The thread should have the new stack we provided.
-  EXPECT_TRUE(thread->HasAllFrames());
-  frames = thread->GetFrames();
+  EXPECT_TRUE(thread->GetStack().has_all_frames());
+  frames = thread->GetStack().GetFrames();
   ASSERT_EQ(2u, frames.size());
   EXPECT_EQ(kAddress1, frames[0]->GetAddress());
   EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
@@ -105,14 +105,12 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kStack2, frames[1]->GetStackPointer());
 
   // The unchanged stack element @ index 0 should be the same Frame object.
-  EXPECT_TRUE(weak_top_stack);
-  EXPECT_EQ(weak_top_stack.get(), frames[0]);
+  EXPECT_EQ(top_stack, frames[0]);
 
   // Resuming the thread should be asynchronous so nothing should change.
   thread->Continue();
-  EXPECT_EQ(2u, thread->GetFrames().size());
-  EXPECT_TRUE(thread->HasAllFrames());
-  EXPECT_TRUE(weak_top_stack);
+  EXPECT_EQ(2u, thread->GetStack().GetFrames().size());
+  EXPECT_TRUE(thread->GetStack().has_all_frames());
   loop().Run();
 
   // After resuming we don't actually know what state the thread is in so
@@ -124,12 +122,12 @@ TEST_F(ThreadImplTest, Frames) {
   // we sent. Since the address didn't change from last time, it should be the
   // same frame object.
   InjectException(break_notification);
-  EXPECT_FALSE(thread->HasAllFrames());
-  frames = thread->GetFrames();
+  EXPECT_FALSE(thread->GetStack().has_all_frames());
+  frames = thread->GetStack().GetFrames();
   ASSERT_EQ(1u, frames.size());
   EXPECT_EQ(kAddress1, frames[0]->GetAddress());
   EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
-  EXPECT_EQ(weak_top_stack.get(), frames[0]);
+  EXPECT_EQ(top_stack, frames[0]);
 }
 
 // Tests that general exceptions still run thread controllers. If the exception

@@ -22,9 +22,7 @@ namespace zxdb {
 
 namespace {
 
-Err CallFrameDestroyedErr() {
-  return Err("Call frame destroyed.");
-}
+Err CallFrameDestroyedErr() { return Err("Call frame destroyed."); }
 
 }  // namespace
 
@@ -75,7 +73,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // stack frames.
   if (!frame_ || !IsTopFrame()) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [dwarf_register_number, cb = std::move(callback)]() {
+        FROM_HERE, [ dwarf_register_number, cb = std::move(callback) ]() {
           cb(Err(fxl::StringPrintf("Register %d unavailable.",
                                    dwarf_register_number)),
              0);
@@ -87,7 +85,7 @@ void FrameSymbolDataProvider::GetRegisterAsync(int dwarf_register_number,
   // TODO: Other categories will need to be supported here (eg. floating point).
   frame_->GetThread()->ReadRegisters(
       {debug_ipc::RegisterCategory::Type::kGeneral},
-      [dwarf_register_number, cb = std::move(callback)](
+      [ dwarf_register_number, cb = std::move(callback) ](
           const Err& err, const RegisterSet& regs) {
         uint64_t value = 0;
         if (err.has_error()) {
@@ -112,8 +110,7 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetFrameBase() {
 void FrameSymbolDataProvider::GetFrameBaseAsync(GetRegisterCallback cb) {
   if (!frame_) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE,
-        [cb = std::move(cb)]() { cb(CallFrameDestroyedErr(), 0); });
+        FROM_HERE, [cb = std::move(cb)]() { cb(CallFrameDestroyedErr(), 0); });
     return;
   }
 
@@ -136,7 +133,7 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
   // system. Prevent those.
   if (size > 1024 * 1024) {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [address, size, cb = std::move(callback)]() {
+        FROM_HERE, [ address, size, cb = std::move(callback) ]() {
           cb(Err(fxl::StringPrintf("Memory request for %u bytes at 0x%" PRIx64
                                    " is too large.",
                                    size, address)),
@@ -180,20 +177,22 @@ void FrameSymbolDataProvider::GetMemoryAsync(uint64_t address, uint32_t size,
       });
 }
 
-void FrameSymbolDataProvider::WriteMemory(uint64_t address, std::vector<uint8_t> data,
-      std::function<void(const Err&)> cb) {
+void FrameSymbolDataProvider::WriteMemory(uint64_t address,
+                                          std::vector<uint8_t> data,
+                                          std::function<void(const Err&)> cb) {
   if (!frame_) {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE,
-        [cb = std::move(cb)](){ cb(CallFrameDestroyedErr()); });
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb = std::move(cb)]() { cb(CallFrameDestroyedErr()); });
     return;
   }
-  frame_->GetThread()->GetProcess()->WriteMemory(address, std::move(data), std::move(cb));
+  frame_->GetThread()->GetProcess()->WriteMemory(address, std::move(data),
+                                                 std::move(cb));
 }
 
 bool FrameSymbolDataProvider::IsTopFrame() const {
   if (!frame_)
     return false;
-  auto frames = frame_->GetThread()->GetFrames();
+  const auto& frames = frame_->GetThread()->GetStack().GetFrames();
   if (frames.empty())
     return false;
   return frames[0] == frame_;

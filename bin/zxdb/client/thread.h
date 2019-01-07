@@ -13,6 +13,7 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/setting_store.h"
+#include "garnet/bin/zxdb/client/stack.h"
 #include "garnet/bin/zxdb/client/thread_observer.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
@@ -78,51 +79,9 @@ class Thread : public ClientObject {
 
   virtual void StepInstruction() = 0;
 
-  // Access to the stack frames for this thread at its current suspended
-  // or blocked-in-exception position. If a thread is running, blocked (not in
-  // an exception), or in any other state, the stack frames are not available.
-  //
-  // When a thread is suspended or blocked in an exception, it will have its
-  // 0th frame available (the current IP and stack position) and the 1st (the
-  // calling frame) if possible. So such threads will always have at least one
-  // result in the vector returned by GetFrames(), and normally two.
-  //
-  // If the full backtrace is needed, SyncFrames() can be called which will
-  // compute the full backtrace and issue the callback when complete. This
-  // backtrace will be cached until the thread is resumed. It has the side
-  // effect of updating other thread status information.
-  //
-  // HasAllFrames() will return true if the full backtrace is currently
-  // available (= true) or if only the current position is available (= false).
-  //
-  // Since the state of a thread isn't available synchronously in a non-racy
-  // manner, you can always request a Sync of the frames if the frames are not
-  // all available. If the thread is destroyed before the backtrace can be
-  // issued, the callback will not be executed.
-  //
-  // If the thread is running when the request is processed, the callback will
-  // be issued but a subsequent call to GetFrames() will return an empty vector
-  // and HasAllFrames() will return false. This call can race with other
-  // requests to resume a thread, so you can't make any assumptions about the
-  // availability of the stack from the callback.
-  //
-  // The pointers in the vector returned by GetFrames() can be cached if the
-  // code listens for ThreadObserver::OnThreadFramesInvalidated() and clears
-  // the cache at that point.
-  virtual const std::vector<Frame*>& GetFrames() const = 0;
-  virtual bool HasAllFrames() const = 0;
-  virtual void SyncFrames(std::function<void()> callback) = 0;
-
-  // Computes the stack frame fingerprint for the stack frame at the given
-  // index. This function requires that that the previous stack frame
-  // (frame_index + 1) by present since the stack base is the SP of the
-  // calling function.
-  //
-  // This function can always return the fingerprint for frame 0. Other
-  // frames requires HasAllFrames() == true or it will assert.
-  //
-  // See frame.h for a discussion on stack frames.
-  virtual FrameFingerprint GetFrameFingerprint(size_t frame_index) const = 0;
+  // Returns the stack object associated with this thread.
+  virtual const Stack& GetStack() const = 0;
+  virtual Stack& GetStack() = 0;
 
   // Obtains the state of the registers for a particular thread.
   // The thread must be stopped in order to get the values.

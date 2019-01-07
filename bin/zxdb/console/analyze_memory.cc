@@ -74,10 +74,10 @@ void MemoryAnalysis::Schedule(const AnalyzeMemoryOptions& opts) {
 
     // Request stack dump.
     if (!have_frames_) {
-      if (opts.thread->HasAllFrames()) {
+      if (opts.thread->GetStack().has_all_frames()) {
         OnFrames(opts.thread->GetWeakPtr());
       } else {
-        opts.thread->SyncFrames([
+        opts.thread->GetStack().SyncFrames([
           this_ref, weak_thread = opts.thread->GetWeakPtr()
         ]() { this_ref->OnFrames(weak_thread); });
       }
@@ -247,7 +247,7 @@ void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
   // the frame annotations.
   std::vector<Frame*> frames;
   if (thread)
-    frames = thread->GetFrames();
+    frames = thread->GetStack().GetFrames();
 
   SetFrames(frames);
 
@@ -319,8 +319,8 @@ std::string MemoryAnalysis::GetAnnotationsBetween(uint64_t address_begin,
 std::string MemoryAnalysis::GetPointedToAnnotation(uint64_t data) const {
   if (!process_)
     return std::string();
-  auto locations = process_->GetSymbols()->ResolveInputLocation(
-      InputLocation(data));
+  auto locations =
+      process_->GetSymbols()->ResolveInputLocation(InputLocation(data));
   FXL_DCHECK(locations.size() == 1);
 
   if (!locations[0].symbol()) {

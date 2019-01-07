@@ -28,17 +28,13 @@ class FrameImplTest : public RemoteAPITest {
   MockRemoteAPI* mock_remote_api_ = nullptr;  // Owned by System.
 };
 
-class MockThread : public Thread {
+class MockThread : public Thread, public Stack::Delegate {
  public:
   // The process and frame pointers must outlive this class.
   explicit MockThread(Process* process)
-      : Thread(process->session()), process_(process) {}
+      : Thread(process->session()), process_(process), stack_(this) {}
 
   RegisterSet& register_contents() { return register_contents_; }
-
-  // Sets the desired response for frame requests. Does not take ownership of
-  // the pointers.
-  void set_frames(std::vector<Frame*> f) { frames_ = std::move(f); }
 
   // Thread implementation:
   Process* GetProcess() const override { return process_; }
@@ -56,26 +52,31 @@ class MockThread : public Thread {
                     std::function<void(const Err&)> on_continue) override {}
   void NotifyControllerDone(ThreadController* controller) override {}
   void StepInstruction() override {}
-  const std::vector<Frame*>& GetFrames() const override { return frames_; }
-  bool HasAllFrames() const override { return true; }
-  void SyncFrames(std::function<void()> callback) override {
-    debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, callback);
-  }
-  FrameFingerprint GetFrameFingerprint(size_t frame_index) const override {
-    return FrameFingerprint();
-  }
+  const Stack& GetStack() const override { return stack_; }
+  Stack& GetStack() override { return stack_; }
   void ReadRegisters(
       std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
       std::function<void(const Err&, const RegisterSet&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
         FROM_HERE,
-        [registers = register_contents_, cb]() { cb(Err(), registers); });
+        [ registers = register_contents_, cb ]() { cb(Err(), registers); });
   }
 
  private:
+  // Stack::Delegate implementation.
+  void SyncFramesForStack(std::function<void()> callback) override {
+    FXL_NOTREACHED();  // All frames are available.
+  }
+  std::unique_ptr<Frame> MakeFrameForStack(
+      const debug_ipc::StackFrame& input) override {
+    FXL_NOTREACHED();  // Should not get called since we provide stack frames.
+    return std::unique_ptr<Frame>();
+  }
+
   std::string thread_name_ = "test thread";
   Process* process_;
-  std::vector<Frame*> frames_;
+
+  Stack stack_;
 
   RegisterSet register_contents_;
 };
@@ -113,16 +114,18 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
   MockThread thread(process);
   thread.register_contents().set_arch(debug_ipc::Arch::kX64);
 
-  FrameImpl frame(&thread, stack, location);
-  thread.set_frames({&frame});
+  std::vector<std::unique_ptr<Frame>> frames;
+  frames.push_back(std::make_unique<FrameImpl>(&thread, stack, location));
+  Frame* frame = frames[0].get();
+  thread.GetStack().SetFramesForTest(std::move(frames), true);
 
   // This should not be able to complete synchronously because reg0 isn't
   // available synchronously.
-  auto optional_base = frame.GetBasePointer();
+  auto optional_base = frame->GetBasePointer();
   EXPECT_FALSE(optional_base);
 
   uint64_t sync_base = 0;
-  frame.GetBasePointerAsync([&sync_base](uint64_t value) {
+  frame->GetBasePointerAsync([&sync_base](uint64_t value) {
     sync_base = value;
     debug_ipc::MessageLoop::Current()->QuitNow();
   });
@@ -135,8 +138,10 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
 
   // Now set the registers. Need a new frame because the old computed base
   // pointer will be cached.
-  FrameImpl frame2(&thread, stack, location);
-  thread.set_frames({&frame2});
+  frames.clear();
+  frames.push_back(std::make_unique<FrameImpl>(&thread, stack, location));
+  Frame* frame2 = frames[0].get();
+  thread.GetStack().SetFramesForTest(std::move(frames), true);
   auto& general_regs =
       thread.register_contents()
           .category_map()[debug_ipc::RegisterCategory::Type::kGeneral];
@@ -150,7 +155,8 @@ TEST_F(FrameImplTest, AsyncBasePointer) {
 
   general_regs.emplace_back(reg0_contents);
 
-  frame2.GetBasePointerAsync([&sync_base](uint64_t value) {
+  sync_base = 0;
+  frame2->GetBasePointerAsync([&sync_base](uint64_t value) {
     sync_base = value;
     debug_ipc::MessageLoop::Current()->QuitNow();
   });

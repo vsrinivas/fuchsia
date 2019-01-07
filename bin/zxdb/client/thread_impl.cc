@@ -25,6 +25,7 @@ ThreadImpl::ThreadImpl(ProcessImpl* process,
     : Thread(process->session()),
       process_(process),
       koid_(record.koid),
+      stack_(this),
       weak_factory_(this) {
   SetMetadata(record);
   settings_.set_fallback(&process_->target()->settings());
@@ -143,59 +144,9 @@ void ThreadImpl::StepInstruction() {
       request, [](const Err& err, debug_ipc::ResumeReply) {});
 }
 
-const std::vector<Frame*>& ThreadImpl::GetFrames() const {
-  if (frames_cache_.empty()) {
-    frames_cache_.reserve(frames_.size());
-    for (const auto& cur : frames_)
-      frames_cache_.push_back(cur.get());
-  } else {
-    FXL_DCHECK(frames_.size() == frames_cache_.size());
-  }
-  return frames_cache_;
-}
+const Stack& ThreadImpl::GetStack() const { return stack_; }
 
-bool ThreadImpl::HasAllFrames() const { return has_all_frames_; }
-
-void ThreadImpl::SyncFrames(std::function<void()> callback) {
-  debug_ipc::ThreadStatusRequest request;
-  request.process_koid = process_->GetKoid();
-  request.thread_koid = koid_;
-
-  session()->remote_api()->ThreadStatus(
-      request, [ callback, thread = weak_factory_.GetWeakPtr() ](
-                   const Err& err, debug_ipc::ThreadStatusReply reply) {
-        if (!thread)
-          return;
-        thread->SetMetadata(reply.record);
-        if (callback)
-          callback();
-      });
-}
-
-FrameFingerprint ThreadImpl::GetFrameFingerprint(size_t frame_index) const {
-  // See function comment in thread.h for more. We need to look at the next
-  // frame, so either we need to know we got them all or the caller wants the
-  // 0th one. We should always have the top two stack entries if available,
-  // so having only one means we got them all.
-  FXL_DCHECK(frame_index == 0 || HasAllFrames());
-
-  // Should reference a valid index in the array.
-  if (frame_index >= frames_.size()) {
-    FXL_NOTREACHED();
-    return FrameFingerprint();
-  }
-
-  // The frame address requires looking at the previous frame. When this is the
-  // last entry, we can't do that. This returns the frame base pointer instead
-  // which will at least identify the frame in some ways, and can be used to
-  // see if future frames are younger.
-  size_t prev_frame_index = frame_index + 1;
-  if (prev_frame_index == frames_.size())
-    return FrameFingerprint(frames_[frame_index]->GetStackPointer());
-
-  // Use the previous frame's stack pointer. See frame_fingerprint.h.
-  return FrameFingerprint(frames_[prev_frame_index]->GetStackPointer());
-}
+Stack& ThreadImpl::GetStack() { return stack_; }
 
 void ThreadImpl::ReadRegisters(
     std::vector<debug_ipc::RegisterCategory::Type> cats_to_get,
@@ -206,7 +157,7 @@ void ThreadImpl::ReadRegisters(
   request.categories = std::move(cats_to_get);
 
   session()->remote_api()->ReadRegisters(
-      request, [thread = weak_factory_.GetWeakPtr(), callback](
+      request, [ thread = weak_factory_.GetWeakPtr(), callback ](
                    const Err& err, debug_ipc::ReadRegistersReply reply) {
         thread->registers_ = std::make_unique<RegisterSet>(
             thread->session()->arch(), std::move(reply.categories));
@@ -222,34 +173,7 @@ void ThreadImpl::SetMetadata(const debug_ipc::ThreadRecord& record) {
   state_ = record.state;
   blocked_reason_ = record.blocked_reason;
 
-  // The goal is to preserve pointer identity for frames. If a frame is the
-  // same, weak pointers to it should remain valid.
-  using IpSp = std::pair<uint64_t, uint64_t>;
-  std::map<IpSp, std::unique_ptr<FrameImpl>> existing;
-  for (auto& cur : frames_) {
-    IpSp key(cur->GetAddress(), cur->GetStackPointer());
-    existing[key] = std::move(cur);
-  }
-
-  frames_.clear();
-  frames_cache_.clear();
-  for (size_t i = 0; i < record.frames.size(); i++) {
-    IpSp key(record.frames[i].ip, record.frames[i].sp);
-    auto found = existing.find(key);
-    if (found == existing.end()) {
-      // New frame we haven't seen.
-      frames_.push_back(std::make_unique<FrameImpl>(
-          this, record.frames[i],
-          Location(Location::State::kAddress, record.frames[i].ip)));
-    } else {
-      // Can re-use existing pointer.
-      frames_.push_back(std::move(found->second));
-      existing.erase(found);
-    }
-  }
-
-  has_all_frames_ =
-      record.stack_amount == debug_ipc::ThreadRecord::StackAmount::kFull;
+  stack_.SetFrames(record.stack_amount, record.frames);
 }
 
 void ThreadImpl::OnException(
@@ -327,16 +251,32 @@ void ThreadImpl::OnException(
   }
 }
 
+void ThreadImpl::SyncFramesForStack(std::function<void()> callback) {
+  debug_ipc::ThreadStatusRequest request;
+  request.process_koid = process_->GetKoid();
+  request.thread_koid = koid_;
+
+  session()->remote_api()->ThreadStatus(request, [
+    callback = std::move(callback), thread = weak_factory_.GetWeakPtr()
+  ](const Err& err, debug_ipc::ThreadStatusReply reply) {
+    if (!thread)
+      return;
+    thread->SetMetadata(reply.record);
+    callback();
+  });
+}
+
+std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(
+    const debug_ipc::StackFrame& input) {
+  return std::make_unique<FrameImpl>(
+      this, input, Location(Location::State::kAddress, input.ip));
+}
+
 void ThreadImpl::ClearFrames() {
-  has_all_frames_ = false;
-
-  if (frames_.empty())
-    return;  // Nothing to do.
-
-  frames_.clear();
-  frames_cache_.clear();
-  for (auto& observer : observers())
-    observer.OnThreadFramesInvalidated(this);
+  if (stack_.ClearFrames()) {
+    for (auto& observer : observers())
+      observer.OnThreadFramesInvalidated(this);
+  }
 }
 
 }  // namespace zxdb

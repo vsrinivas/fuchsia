@@ -12,7 +12,6 @@
 #include "garnet/bin/zxdb/client/client_object.h"
 #include "garnet/bin/zxdb/symbols/symbol_data_provider.h"
 #include "garnet/public/lib/fxl/macros.h"
-#include "garnet/public/lib/fxl/memory/weak_ptr.h"
 
 namespace zxdb {
 
@@ -27,8 +26,6 @@ class Frame : public ClientObject {
  public:
   explicit Frame(Session* session);
   virtual ~Frame();
-
-  fxl::WeakPtr<Frame> GetWeakPtr();
 
   // Guaranteed non-null.
   virtual Thread* GetThread() const = 0;
@@ -76,8 +73,6 @@ class Frame : public ClientObject {
   virtual fxl::RefPtr<ExprEvalContext> GetExprEvalContext() const = 0;
 
  private:
-  fxl::WeakPtrFactory<Frame> weak_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(Frame);
 };
 
