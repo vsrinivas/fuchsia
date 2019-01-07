@@ -51,6 +51,12 @@ table Table2 { 3: reserved
 ; 2: int64 x; 1: int64 y; 
 };
 
+table Table3 {
+/// Multiline
+/// doc comments should
+    1: int64 indent_correctly;
+};
+
 // This { should } not be indented
 // My interface is so wonderful.
     // It is the most wonderful interface of them all.

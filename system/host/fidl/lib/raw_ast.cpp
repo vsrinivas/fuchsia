@@ -231,11 +231,13 @@ void StructDeclaration::Accept(TreeVisitor& visitor) {
 
 void TableMember::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
-    visitor.OnOrdinal(*ordinal);
     if (maybe_used != nullptr) {
         if (maybe_used->attributes != nullptr) {
             visitor.OnAttributeList(maybe_used->attributes);
         }
+    }
+    visitor.OnOrdinal(*ordinal);
+    if (maybe_used != nullptr) {
         visitor.OnType(maybe_used->type);
         visitor.OnIdentifier(maybe_used->identifier);
         if (maybe_used->maybe_default_value != nullptr) {
