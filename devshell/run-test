@@ -6,7 +6,7 @@
 ### build a test package and run on target.
 ### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 
-## usage: fx run-test [-t|--test <test_name>] [-d|--device <device>] PKG_TARGET
+## usage: fx run-test [-t|--test <test_name>] PKG_TARGET -- [-args -to -test]
 ## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
 ## target, and executes it.
 ##
@@ -16,7 +16,6 @@
 ## Arguments:
 ##   -t|--test    Test to run. If not specified, it will run all tests in PKG_TARGET.
 ##                Only pass this flag when your test is a component.
-##   -d|--device  Target device.
 
 set -e
 
@@ -35,7 +34,7 @@ function main {
 
   test=""
   target=""
-  device_args=()
+  test_args=""
 
   while (($#)); do
     case $1 in
@@ -48,14 +47,10 @@ function main {
         fi
         test="$1"
         ;;
-      -d|--device)
-        shift  # name
-        if [[ -z "$1" ]]; then
-          echo "Missing parameter: <device>" >&2
-          fx-command-help
-          exit 1
-        fi
-        device_args=("-d" "$1")
+      --)
+        shift  # value
+        test_args="$@"
+        break
         ;;
       *)
         if [[ "$target" == "" ]]; then
@@ -85,15 +80,15 @@ function main {
   # update repository.
   fx-command-run build updates
   echo -e "\nPush package to device"
-  fx-command-run push-package "${device_args[@]}" "${target}"
+  fx-command-run push-package "${target}"
 
   if [[ "${test}" == "" ]]; then
     echo -e "\nRun all tests in ${target}"
-    fx-command-run shell "${device_args[@]}" runtests "pkgfs/packages/${target}/0/test"
+    fx-command-run shell runtests "pkgfs/packages/${target}/0/test" -- "$test_args"
   else
     url="fuchsia-pkg://fuchsia.com/${target}#meta/${test}.cmx"
     echo -e "\nRunning ${url}"
-    fx-command-run shell "${device_args[@]}" run_test_component "${url}"
+    fx-command-run shell run_test_component "${url}" "$test_args"
   fi
 }
 
