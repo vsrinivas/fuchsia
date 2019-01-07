@@ -63,7 +63,7 @@ func Run(cfg *build.Config, args []string) error {
 	config.ApplyDefaults()
 
 	if *repoDir == "" {
-		*repoDir = config.RepoDir
+		*repoDir = filepath.Join(config.RepoDir, "repository")
 	}
 
 	fi, err := os.Stat(*repoDir)
