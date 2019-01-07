@@ -217,6 +217,35 @@ zx_status_t Device::DdkGetProtocol(uint32_t proto_id, void* out) {
     }
 }
 
+zx_status_t Device::DdkIoctl(uint32_t op, const void* in, size_t in_len, void* out, size_t out_len,
+                             size_t* actual) {
+    LOG_ENTRY_ARGS("op=%0x" PRIx32 ", in=%p, in_len=%zu, out=%p, out_len=%zu, actual=%p", op, in,
+                   in_len, out, out_len, actual);
+    ZX_DEBUG_ASSERT(info_);
+    zx_status_t rc;
+    rc = device_ioctl(parent(), op, in, in_len, out, out_len, actual);
+    if (rc < 0) {
+        zxlogf(ERROR, "parent device returned failure for ioctl 0x%" PRIx32 ": %s\n", op,
+               zx_status_get_string(rc));
+        return rc;
+    }
+
+    // Modify outputs
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* mod = static_cast<block_info_t*>(out);
+        mod->block_count -= info_->reserved_blocks;
+        if (mod->max_transfer_size > kMaxTransferSize) {
+            mod->max_transfer_size = kMaxTransferSize;
+        }
+        break;
+    }
+    default:
+        break;
+    }
+    return ZX_OK;
+}
+
 zx_off_t Device::DdkGetSize() {
     LOG_ENTRY();
 
@@ -291,7 +320,6 @@ void Device::BlockImplQuery(block_info_t* out_info, size_t* out_op_size) {
 
     info_->block_protocol.Query(out_info, out_op_size);
     out_info->block_count -= info_->reserved_blocks;
-    out_info->max_transfer_size = fbl::min(kMaxTransferSize, out_info->max_transfer_size);
     *out_op_size = info_->op_size;
 }
 

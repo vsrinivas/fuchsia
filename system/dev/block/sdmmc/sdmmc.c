@@ -71,6 +71,25 @@ static zx_off_t sdmmc_get_size(void* ctx) {
     return dev->block_info.block_count * dev->block_info.block_size;
 }
 
+static zx_status_t sdmmc_ioctl(void* ctx, uint32_t op, const void* cmd,
+                               size_t cmdlen, void* reply, size_t max, size_t* out_actual) {
+    sdmmc_device_t* dev = ctx;
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        memcpy(info, &dev->block_info, sizeof(*info));
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    return 0;
+}
+
 static void sdmmc_unbind(void* ctx) {
     sdmmc_device_t* dev = ctx;
     SDMMC_LOCK(dev);
@@ -134,11 +153,13 @@ exit:
 
 static zx_protocol_device_t sdmmc_block_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .ioctl = sdmmc_ioctl,
     .get_size = sdmmc_get_size,
 };
 
 static zx_protocol_device_t sdmmc_sdio_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .ioctl = sdmmc_ioctl,
     .get_size = sdmmc_get_size,
 };
 

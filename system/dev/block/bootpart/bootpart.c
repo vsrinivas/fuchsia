@@ -55,6 +55,23 @@ static uint64_t get_lba_count(bootpart_device_t* dev) {
 
 // implement device protocol:
 
+static zx_status_t bootpart_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                                  void* reply, size_t max, size_t* out_actual) {
+    bootpart_device_t* device = ctx;
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        memcpy(info, &device->info, sizeof(*info));
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static void bootpart_query(void* ctx, block_info_t* bi, size_t* bopsz) {
     bootpart_device_t* bootpart = ctx;
     memcpy(bi, &bootpart->info, sizeof(block_info_t));
@@ -170,6 +187,7 @@ static zx_status_t bootpart_get_protocol(void* ctx, uint32_t proto_id, void* out
 static zx_protocol_device_t device_proto = {
     .version = DEVICE_OPS_VERSION,
     .get_protocol = bootpart_get_protocol,
+    .ioctl = bootpart_ioctl,
     .get_size = bootpart_get_size,
     .unbind = bootpart_unbind,
     .release = bootpart_release,

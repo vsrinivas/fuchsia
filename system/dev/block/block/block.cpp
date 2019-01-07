@@ -183,20 +183,23 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
     case IOCTL_BLOCK_RR_PART:
         return Rebind();
     case IOCTL_BLOCK_GET_INFO: {
-        block_info_t* info = static_cast<block_info_t*>(reply);
-        if (reply_len < sizeof(*info)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
+        size_t actual;
+        zx_status_t status = device_ioctl(parent(), op, cmd, cmd_len, reply, reply_len, &actual);
+        if (status == ZX_OK) {
+            if (actual >= sizeof(block_info_t)) {
+                block_info_t* info = (block_info_t*)reply;
+                // set or clear BLOCK_FLAG_BOOTPART appropriately
+                if (has_bootpart_) {
+                    info->flags |= BLOCK_FLAG_BOOTPART;
+                } else {
+                    info->flags &= ~BLOCK_FLAG_BOOTPART;
+                }
+            }
+            if (out_actual) {
+                *out_actual = actual;
+            }
         }
-        size_t block_op_size = 0;
-        parent_protocol_.Query(info, &block_op_size);
-        // set or clear BLOCK_FLAG_BOOTPART appropriately
-        if (has_bootpart_) {
-            info->flags |= BLOCK_FLAG_BOOTPART;
-        } else {
-            info->flags &= ~BLOCK_FLAG_BOOTPART;
-        }
-        *out_actual = sizeof(block_info_t);
-        return ZX_OK;
+        return status;
     }
     case IOCTL_BLOCK_GET_STATS: {
         return GetStats(cmd, cmd_len, reply, reply_len, out_actual);
@@ -328,9 +331,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         }
         return parent_volume_protocol_.Destroy();
     default:
-        // TODO(ZX-2674): This ioctl forwarding is used for two drivers: the
-        // FVM manager and the ramdisk driver. Since blind ioctl forwarding will be
-        // prohibited soon, new drivers should avoid relying on this behavior.
+        // TODO: this may no longer be necessary now that we handle IOCTL_BLOCK_GET_INFO here
         return device_ioctl(parent(), op, cmd, cmd_len, reply, reply_len, out_actual);
     }
 }

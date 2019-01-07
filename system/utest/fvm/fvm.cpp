@@ -496,6 +496,8 @@ bool CheckNoAccessBlock(int fd, size_t block, size_t count) {
 
 bool CheckDeadBlock(int fd) {
     BEGIN_HELPER;
+    block_info_t info;
+    ASSERT_LT(ioctl_block_get_info(fd, &info), 0);
     fbl::AllocChecker ac;
     constexpr size_t kBlksize = 8192;
     fbl::unique_ptr<uint8_t[]> buf(new (&ac) uint8_t[kBlksize]);

@@ -577,6 +577,24 @@ static void nvme_query(void* ctx, block_info_t* info_out, size_t* block_op_size_
     *block_op_size_out = sizeof(nvme_txn_t);
 }
 
+static zx_status_t nvme_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
+                              size_t max, size_t* out_actual) {
+    nvme_device_t* nvme = ctx;
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        if (max < sizeof(block_info_t)) {
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        }
+        size_t sz;
+        nvme_query(nvme, reply, &sz);
+        *out_actual = sizeof(block_info_t);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_off_t nvme_get_size(void* ctx) {
     nvme_device_t* nvme = ctx;
     return nvme->info.block_count * nvme->info.block_size;
@@ -630,6 +648,7 @@ static void nvme_release(void* ctx) {
 static zx_protocol_device_t device_ops = {
     .version = DEVICE_OPS_VERSION,
 
+    .ioctl = nvme_ioctl,
     .get_size = nvme_get_size,
 
     .suspend = nvme_suspend,

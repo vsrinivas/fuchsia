@@ -282,6 +282,15 @@ static zx_status_t ramdisk_ioctl(void* ctx, uint32_t op, const void* cmd, size_t
         *out_actual = sizeof(ramdisk_blk_counts_t);
         return ZX_OK;
     }
+    // Block Protocol
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        ramdisk_get_info(ramdev, info);
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }

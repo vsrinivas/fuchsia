@@ -187,6 +187,23 @@ static zx_status_t sata_device_identify(sata_device_t* dev, ahci_device_t* contr
 
 static zx_protocol_device_t sata_device_proto;
 
+static zx_status_t sata_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen, void* reply,
+                              size_t max, size_t* out_actual) {
+    sata_device_t* device = ctx;
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = reply;
+        if (max < sizeof(*info))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        memcpy(info, &device->info, sizeof(*info));
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_off_t sata_getsize(void* ctx) {
     sata_device_t* device = ctx;
     return device->info.block_count * device->info.block_size;
@@ -199,6 +216,7 @@ static void sata_release(void* ctx) {
 
 static zx_protocol_device_t sata_device_proto = {
     .version = DEVICE_OPS_VERSION,
+    .ioctl = sata_ioctl,
     .get_size = sata_getsize,
     .release = sata_release,
 };

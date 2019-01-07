@@ -27,6 +27,7 @@ class VPartition;
 
 using PartitionDeviceType = ddk::Device<VPartition,
                                         ddk::GetProtocolable,
+                                        ddk::Ioctlable,
                                         ddk::GetSizable,
                                         ddk::Unbindable>;
 
@@ -41,6 +42,8 @@ public:
                               fbl::unique_ptr<VPartition>* out);
     // Device Protocol
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
+    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max,
+                         size_t* out_actual);
     zx_off_t DdkGetSize();
     void DdkUnbind();
     void DdkRelease();

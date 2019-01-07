@@ -63,6 +63,25 @@ static block_impl_protocol_ops_t ums_block_ops = []() {
     return ops;
 }();
 
+static zx_status_t ums_block_ioctl(void* ctx, uint32_t op, const void* cmd, size_t cmdlen,
+                                   void* reply, size_t max, size_t* out_actual) {
+    ums_block_t* dev = static_cast<ums_block_t*>(ctx);
+
+    // TODO implement other block ioctls
+    switch (op) {
+    case IOCTL_BLOCK_GET_INFO: {
+        block_info_t* info = static_cast<block_info_t*>(reply);
+        if (max < sizeof(*info))
+            return ZX_ERR_BUFFER_TOO_SMALL;
+        ums_get_info(dev, info);
+        *out_actual = sizeof(*info);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 static zx_off_t ums_block_get_size(void* ctx) {
     ums_block_t* dev = static_cast<ums_block_t*>(ctx);
     ;
@@ -72,6 +91,7 @@ static zx_off_t ums_block_get_size(void* ctx) {
 static zx_protocol_device_t ums_block_proto = []() {
     zx_protocol_device_t ops = {};
     ops.version = DEVICE_OPS_VERSION;
+    ops.ioctl = ums_block_ioctl;
     ops.get_size = ums_block_get_size;
     return ops;
 }();
