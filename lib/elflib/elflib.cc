@@ -45,6 +45,11 @@ std::unique_ptr<ElfLib> ElfLib::Create(
     return std::unique_ptr<ElfLib>();
   }
 
+  // We don't support non-standard program header sizes.
+  if (out->header_.e_phentsize != sizeof(Elf64_Phdr)) {
+    return std::unique_ptr<ElfLib>();
+  }
+
   return out;
 }
 
@@ -68,6 +73,93 @@ const Elf64_Shdr* ElfLib::GetSectionHeader(size_t section) {
   }
 
   return &sections_[section];
+}
+
+bool ElfLib::LoadProgramHeaders() {
+  if (!segments_.empty()) {
+    return true;
+  }
+
+  std::vector<uint8_t> data;
+
+  if (!memory_->GetMemory(header_.e_phoff, sizeof(Elf64_Phdr) * header_.e_phnum,
+                          &data)) {
+    return false;
+  }
+
+  Elf64_Phdr* header_array = reinterpret_cast<Elf64_Phdr*>(data.data());
+
+  std::copy(header_array, header_array + header_.e_phnum,
+            std::back_inserter(segments_));
+
+  return true;
+}
+
+const std::vector<uint8_t>* ElfLib::GetSegmentData(size_t segment) {
+  const auto& iter = segment_data_.find(segment);
+  if (iter != segment_data_.end()) {
+    return &iter->second;
+  }
+
+  LoadProgramHeaders();
+
+  if (segment > segments_.size()) {
+    return nullptr;
+  }
+
+  const Elf64_Phdr* header = &segments_[segment];
+
+  std::vector<uint8_t> data;
+
+  if (!memory_->GetMappedMemory(header->p_offset, header->p_vaddr,
+                                header->p_filesz, header->p_memsz, &data)) {
+    return nullptr;
+  }
+
+  segment_data_[segment] = data;
+
+  return &segment_data_[segment];
+}
+
+const std::optional<std::vector<uint8_t>> ElfLib::GetNote(
+    const std::string& name, uint64_t type) {
+  LoadProgramHeaders();
+
+  for (size_t idx = 0; idx < segments_.size(); idx++) {
+    if (segments_[idx].p_type != PT_NOTE) {
+      continue;
+    }
+
+    auto data = GetSegmentData(idx);
+
+    const Elf64_Nhdr* header;
+    size_t namesz_padded;
+    size_t descsz_padded;
+
+    for (const uint8_t* pos = data->data();
+         pos < data->data() + data->size();
+         pos += sizeof(Elf64_Nhdr) + namesz_padded + descsz_padded) {
+      header = reinterpret_cast<const Elf64_Nhdr*>(pos);
+      namesz_padded = (header->n_namesz + 3) & ~3UL;
+      descsz_padded = (header->n_descsz + 3) & ~3UL;
+
+      if (header->n_type != type) {
+        continue;
+      }
+
+      auto name_data = pos + sizeof(Elf64_Nhdr);
+      std::string entry_name(reinterpret_cast<const char*>(name_data),
+                             header->n_namesz - 1);
+
+      if (entry_name == name) {
+        auto desc_data = name_data + namesz_padded;
+
+        return std::vector(desc_data, desc_data + header->n_descsz);
+      }
+    }
+  }
+
+  return {};
 }
 
 const std::vector<uint8_t>* ElfLib::GetSectionData(size_t section) {

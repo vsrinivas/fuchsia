@@ -14,6 +14,8 @@ namespace {
 
 constexpr uint64_t kAddrPoison = 0xdeadb33ff00db4b3;
 constexpr uint64_t kSymbolPoison = 0xb0bab0ba;
+constexpr uint64_t kNoteGnuBuildId = 3;
+constexpr uint64_t kMeaninglessNoteType = 42;
 
 class TestMemoryAccessor : public ElfLib::MemoryAccessor {
  public:
@@ -24,7 +26,9 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       .e_shoff = sizeof(Elf64_Ehdr),
       .e_ehsize = sizeof(Elf64_Ehdr),
       .e_shentsize = sizeof(Elf64_Shdr),
+      .e_phentsize = sizeof(Elf64_Phdr),
       .e_shnum = 4,
+      .e_phnum = 2,
       .e_shstrndx = 0,
     });
 
@@ -53,32 +57,57 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
       .sh_addr = kAddrPoison,
     });
 
-    DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset = content_.size();
-    const uint8_t* shstrtab_content =
-      reinterpret_cast<const uint8_t*>(
-        "\0.shstrtab\0.stuff\0.strtab\0.symtab\0");
-    std::copy(shstrtab_content, shstrtab_content + 34,
-              std::back_inserter(content_));
+    size_t phnote_hdr = PushData(Elf64_Phdr {
+      .p_type = PT_NOTE,
+      .p_vaddr = kAddrPoison,
+    });
+    DataAt<Elf64_Ehdr>(0)->e_phoff = phnote_hdr;
 
-    DataAt<Elf64_Shdr>(stuff_hdr)->sh_offset = content_.size();
-    const uint8_t* stuff_content =
-      reinterpret_cast<const uint8_t*>("This is a test.");
-    std::copy(stuff_content, stuff_content + 15,
-              std::back_inserter(content_));
+    DataAt<Elf64_Shdr>(shstrtab_hdr)->sh_offset =
+      PushData("\0.shstrtab\0.stuff\0.strtab\0.symtab\0", 34);
 
-    DataAt<Elf64_Shdr>(strtab_hdr)->sh_offset = content_.size();
-    const uint8_t* strtab_content =
-      reinterpret_cast<const uint8_t*>("\0zx_frob_handle\0");
-    std::copy(strtab_content, strtab_content + 16,
-              std::back_inserter(content_));
+    DataAt<Elf64_Shdr>(stuff_hdr)->sh_offset = PushData("This is a test.", 15);
 
-    DataAt<Elf64_Shdr>(symtab_hdr)->sh_offset = content_.size();
-    PushData(Elf64_Sym {
+    DataAt<Elf64_Shdr>(strtab_hdr)->sh_offset =
+      PushData("\0zx_frob_handle\0", 16);
+
+    DataAt<Elf64_Shdr>(symtab_hdr)->sh_offset = PushData(Elf64_Sym {
       .st_name = 1,
       .st_shndx = SHN_COMMON,
       .st_value = kSymbolPoison,
       .st_size = 0,
     });
+
+    size_t buildid_nhdr = PushData(Elf64_Nhdr {
+      .n_namesz = 4,
+      .n_descsz = 32,
+      .n_type = kNoteGnuBuildId
+    });
+
+    DataAt<Elf64_Phdr>(phnote_hdr)->p_offset = buildid_nhdr;
+
+    PushData("GNU\0", 4);
+
+    uint8_t desc_data[32] = {
+      0, 1, 2, 3, 4, 5, 6, 7,
+      0, 1, 2, 3, 4, 5, 6, 7,
+      0, 1, 2, 3, 4, 5, 6, 7,
+      0, 1, 2, 3, 4, 5, 6, 7,
+    };
+
+    PushData(desc_data, 32);
+
+    PushData(Elf64_Nhdr {
+      .n_namesz = 6,
+      .n_descsz = 3,
+      .n_type = kMeaninglessNoteType,
+    });
+
+    PushData("seven\0\0\0", 8);
+    PushData("foo\0", 4);
+
+    DataAt<Elf64_Phdr>(phnote_hdr)->p_filesz = Pos() - buildid_nhdr;
+    DataAt<Elf64_Phdr>(phnote_hdr)->p_memsz = Pos() - buildid_nhdr;
   }
 
   template<typename T>
@@ -88,13 +117,21 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
 
   template<typename T>
   size_t PushData(T data) {
-    uint8_t* start = reinterpret_cast<uint8_t*>(&data);
-    uint8_t* end = start + sizeof(data);
-    size_t offset = content_.size();
+    return PushData(reinterpret_cast<uint8_t*>(&data), sizeof(data));
+  }
 
-    std::copy(start, end, std::back_inserter(content_));
+  size_t PushData(const char* bytes, size_t size) {
+    return PushData(reinterpret_cast<const uint8_t*>(bytes), size);
+  }
 
+  size_t PushData(const uint8_t* bytes, size_t size) {
+    size_t offset = Pos();
+    std::copy(bytes, bytes + size, std::back_inserter(content_));
     return offset;
+  }
+
+  size_t Pos() {
+    return content_.size();
   }
 
   bool GetMemory(uint64_t offset, size_t size, std::vector<uint8_t>* out) {
@@ -174,6 +211,40 @@ TEST(ElfLib, GetAllSymbols) {
   EXPECT_EQ(0U, sym.st_size);
   EXPECT_EQ(SHN_COMMON, sym.st_shndx);
   EXPECT_EQ(kSymbolPoison, sym.st_value);
+}
+
+TEST(ElfLib, GetNote) {
+  std::unique_ptr<ElfLib> elf =
+    ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto got = elf->GetNote("GNU", kNoteGnuBuildId);
+
+  EXPECT_TRUE(got);
+  auto data = *got;
+
+  EXPECT_EQ(32U, data.size());
+
+  for (size_t i = 0; i < 32; i++) {
+    EXPECT_EQ(i % 8, data[i]);
+  }
+}
+
+TEST(ElfLib, GetIrregularNote) {
+  std::unique_ptr<ElfLib> elf =
+    ElfLib::Create(std::make_unique<TestMemoryAccessor>());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto got = elf->GetNote("seven", kMeaninglessNoteType);
+
+  EXPECT_TRUE(got);
+  auto data = *got;
+
+  EXPECT_EQ(3U, data.size());
+
+  EXPECT_EQ("foo", std::string(data.data(), data.data() + 3));
 }
 
 }  // namespace elflib

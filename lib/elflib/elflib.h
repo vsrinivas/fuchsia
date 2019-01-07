@@ -7,6 +7,7 @@
 
 #include <map>
 #include <memory>
+#include <optional>
 #include <vector>
 
 #include "garnet/third_party/llvm/include/llvm/BinaryFormat/ELF.h"
@@ -49,6 +50,10 @@ class ElfLib {
   // section by that name.
   const std::vector<uint8_t>* GetSectionData(const std::string& name);
 
+  // Get a note from the notes section.
+  const std::optional<std::vector<uint8_t>> GetNote(const std::string& name,
+                                                    uint64_t type);
+
   // Get the stored value of a given symbol. Returns true unless the lookup
   // failed.
   bool GetSymbolValue(const std::string& name, uint64_t* out);
@@ -65,9 +70,17 @@ class ElfLib {
   // invalid.
   const Elf64_Shdr* GetSectionHeader(size_t section);
 
+  // Load the program header table into the cache in segments_. Return true
+  // unless a read error occurred.
+  bool LoadProgramHeaders();
+
   // Get the contents of a section by its index. Return nullptr if the index is
   // invalid.
   const std::vector<uint8_t>* GetSectionData(size_t section);
+
+  // Get the contents of a segment by its index. Return nullptr if the index is
+  // invalid.
+  const std::vector<uint8_t>* GetSegmentData(size_t segment);
 
   // Get a string from the .strtab section. Return nullptr if the index is
   // invalid.
@@ -83,9 +96,11 @@ class ElfLib {
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;
   std::vector<Elf64_Shdr> sections_;
+  std::vector<Elf64_Phdr> segments_;
   std::vector<Elf64_Sym> symbols_;
   std::vector<std::string> strings_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
+  std::map<size_t, std::vector<uint8_t>> segment_data_;
   std::map<std::string, size_t> section_names_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ElfLib);
