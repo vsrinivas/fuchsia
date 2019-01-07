@@ -26,13 +26,33 @@ void AddModCommandRunner::Execute(
   FXL_CHECK(command.is_add_mod());
 
   auto& add_mod = command.add_mod();
+  if (add_mod.mod_name.size() == 0) {
+    fuchsia::modular::ExecuteResult result;
+    result.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
+    result.error_message = "A Module name must be specified";
+    done(result);
+    return;
+  }
+
+  AddModParams params;
+  params.parent_mod_path = std::move(add_mod.surface_parent_mod_name);
+  if (add_mod.mod_name.size() == 1) {
+    params.mod_name = add_mod.mod_name[0];
+  } else {
+    params.mod_name = add_mod.mod_name.back();
+
+    add_mod.mod_name.pop_back();
+    params.parent_mod_path = add_mod.mod_name;
+  }
+  params.is_embedded = false;
+  params.intent = std::move(add_mod.intent);
+  params.surface_relation = std::make_unique<fuchsia::modular::SurfaceRelation>(
+      std::move(add_mod.surface_relation));
+  params.module_source = fuchsia::modular::ModuleSource::EXTERNAL;
+
   AddAddModOperation(
       &operation_queue_, story_storage, module_resolver_, entity_resolver_,
-      std::move(add_mod.mod_name), std::move(add_mod.intent),
-      std::make_unique<fuchsia::modular::SurfaceRelation>(
-          std::move(add_mod.surface_relation)),
-      std::move(add_mod.surface_parent_mod_name),
-      fuchsia::modular::ModuleSource::EXTERNAL,
+      std::move(params),
       [done = std::move(done)](fuchsia::modular::ExecuteResult result,
                                fuchsia::modular::ModuleData module_data) {
         done(std::move(result));

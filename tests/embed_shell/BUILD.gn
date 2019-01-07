@@ -39,6 +39,35 @@ executable_package("embed_shell_test_child_module") {
   ]
 }
 
+executable_package("embed_shell_test_session_shell") {
+  deprecated_bare_package_url = "//build"
+
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/embed_shell_test_session_shell.cmx"
+      dest = "embed_shell_test_session_shell.cmx"
+    },
+  ]
+
+  sources = [
+    "embed_shell_test_session_shell.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/callback",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/lib/testing:component_main",
+    "//peridot/lib/testing:session_shell_base",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
 executable_package("embed_shell_test_parent_module") {
   deprecated_bare_package_url = "//build"
 

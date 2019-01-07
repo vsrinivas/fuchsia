@@ -17,6 +17,7 @@
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/component_context_impl.h"
+#include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 
 namespace modular {
 

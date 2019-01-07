@@ -51,7 +51,7 @@ class TestModule {
     auto check = [this, done = std::make_shared<int>(0)] {
       ++*done;
       if (*done == 2) {
-        Signal(modular::testing::kTestShutdown);
+        Signal(kParentModuleDoneSignal);
       }
     };
 

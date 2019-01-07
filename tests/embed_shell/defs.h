@@ -7,13 +7,23 @@
 
 namespace {
 
+constexpr char kStoryName[] = "story";
+
 constexpr char kChildModuleName[] = "child";
 
 // Package URLs of the test components used here.
 constexpr char kChildModuleUrl[] =
-    "fuchsia-pkg://fuchsia.com/embed_shell_test_child_module#meta/embed_shell_test_child_module.cmx";
+    "fuchsia-pkg://fuchsia.com/embed_shell_test_child_module#meta/"
+    "embed_shell_test_child_module.cmx";
 
+constexpr char kParentModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/embed_shell_test_parent_module#meta/"
+    "embed_shell_test_parent_module.cmx";
+
+constexpr char kParentModuleAction[] = "action";
 constexpr char kChildModuleAction[] = "action";
+
+constexpr char kParentModuleDoneSignal[] = "parent_module_done";
 
 }  // namespace
 

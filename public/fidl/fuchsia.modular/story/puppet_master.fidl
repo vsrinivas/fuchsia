@@ -18,8 +18,8 @@ enum ExecuteStatus {
     // either don't add one, or remove the last one.
     STORY_MUST_HAVE_MODS = 3;
 
-    // The mod specified in AddMod, RemoveMod or SendModCommand
-    // was not found.
+    // The mod name specified in AddMod, RemoveMod or SendModCommand
+    // was not found, or is invalid.
     INVALID_MOD = 4;
 
     // Resolution of the intent provided in AddMod returned zero results.

@@ -11,8 +11,8 @@
 #include <lib/fxl/strings/join_strings.h>
 
 #include "peridot/bin/sessionmgr/storage/constants_and_utils.h"
-#include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "peridot/bin/sessionmgr/story/systems/story_visibility_system.h"
+#include "peridot/bin/sessionmgr/story_runner/story_controller_impl.h"
 #include "peridot/lib/fidl/clone.h"
 
 namespace modular {
@@ -75,10 +75,16 @@ void ModuleContextImpl::EmbedModule(
         module_controller,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner> view_owner,
     EmbedModuleCallback callback) {
-  story_controller_impl_->EmbedModule(
-      module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
-      std::move(module_controller), std::move(view_owner),
-      fuchsia::modular::ModuleSource::INTERNAL, callback);
+  AddModParams params;
+  params.parent_mod_path = module_data_->module_path;
+  params.mod_name = name;
+  params.intent = std::move(intent);
+  params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
+  params.surface_relation = nullptr;
+  params.is_embedded = true;
+  story_controller_impl_->EmbedModule(std::move(params),
+                                      std::move(module_controller),
+                                      std::move(view_owner), callback);
 }
 
 void ModuleContextImpl::AddModuleToStory(
@@ -87,10 +93,15 @@ void ModuleContextImpl::AddModuleToStory(
         module_controller,
     fuchsia::modular::SurfaceRelationPtr surface_relation,
     AddModuleToStoryCallback callback) {
-  story_controller_impl_->StartModule(
-      module_data_->module_path, name, fidl::MakeOptional(std::move(intent)),
-      std::move(module_controller), std::move(surface_relation),
-      fuchsia::modular::ModuleSource::INTERNAL, callback);
+  AddModParams params;
+  params.parent_mod_path = module_data_->module_path;
+  params.mod_name = name;
+  params.intent = std::move(intent);
+  params.module_source = fuchsia::modular::ModuleSource::INTERNAL;
+  params.surface_relation = std::move(surface_relation);
+  params.is_embedded = false;
+  story_controller_impl_->AddModuleToStory(
+      std::move(params), std::move(module_controller), callback);
 }
 
 void ModuleContextImpl::StartContainerInShell(

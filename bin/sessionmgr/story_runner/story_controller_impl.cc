@@ -140,8 +140,7 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
         module_data_(std::move(module_data)),
         module_controller_request_(std::move(module_controller_request)),
         view_owner_request_(std::move(view_owner_request)),
-        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {
-  }
+        start_time_(zx_clock_get(ZX_CLOCK_UTC)) {}
 
  private:
   void Run() override {
@@ -393,11 +392,13 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
   }
 
   void LoadModuleManifest(FlowToken flow) {
-    story_controller_impl_->story_provider_impl_->module_facet_reader()->GetModuleManifest(
-        module_data_.module_url, [this, flow] (fuchsia::modular::ModuleManifestPtr manifest) {
-          module_manifest_ = std::move(manifest);
-          MaybeConnectViewToStoryShell(flow);
-        });
+    story_controller_impl_->story_provider_impl_->module_facet_reader()
+        ->GetModuleManifest(
+            module_data_.module_url,
+            [this, flow](fuchsia::modular::ModuleManifestPtr manifest) {
+              module_manifest_ = std::move(manifest);
+              MaybeConnectViewToStoryShell(flow);
+            });
   }
 
   void MaybeConnectViewToStoryShell(FlowToken flow) {
@@ -431,8 +432,13 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
 
     auto manifest_clone = fuchsia::modular::ModuleManifest::New();
     fidl::Clone(module_manifest_, &manifest_clone);
-    auto surface_relation_clone = fuchsia::modular::SurfaceRelation::New();
-    module_data_.surface_relation->Clone(surface_relation_clone.get());
+
+    fuchsia::modular::SurfaceRelationPtr surface_relation_clone;
+    if (module_data_.surface_relation) {
+      surface_relation_clone = fuchsia::modular::SurfaceRelation::New();
+      module_data_.surface_relation->Clone(surface_relation_clone.get());
+    }
+
     story_controller_impl_->pending_views_.emplace(
         ModulePathToSurfaceID(module_data_.module_path),
         PendingView{module_data_.module_path, std::move(manifest_clone),
@@ -716,8 +722,8 @@ class StoryControllerImpl::OnModuleDataUpdatedCall : public Operation<> {
     // we do not have the necessary capabilities (the ViewOwner). However,
     // mods added through ModuleContext.AddModuleToStory() can be started
     // automatically.
-    if (module_data_.module_source !=
-        fuchsia::modular::ModuleSource::EXTERNAL) {
+    if (module_data_.module_source ==
+        fuchsia::modular::ModuleSource::INTERNAL) {
       return;
     }
 
@@ -798,25 +804,17 @@ class StoryControllerImpl::AddIntentCall
     : public Operation<fuchsia::modular::StartModuleStatus> {
  public:
   AddIntentCall(StoryControllerImpl* const story_controller_impl,
-                std::vector<std::string> requesting_module_path,
-                const std::string& module_name,
-                fuchsia::modular::IntentPtr intent,
+                AddModParams add_mod_params,
                 fidl::InterfaceRequest<fuchsia::modular::ModuleController>
                     module_controller_request,
-                fuchsia::modular::SurfaceRelationPtr surface_relation,
                 fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
                     view_owner_request,
-                const fuchsia::modular::ModuleSource module_source,
                 ResultCall result_call)
       : Operation("StoryControllerImpl::AddIntentCall", std::move(result_call)),
         story_controller_impl_(story_controller_impl),
-        requesting_module_path_(std::move(requesting_module_path)),
-        module_name_(module_name),
-        intent_(std::move(intent)),
+        add_mod_params_(std::move(add_mod_params)),
         module_controller_request_(std::move(module_controller_request)),
-        surface_relation_(std::move(surface_relation)),
-        view_owner_request_(std::move(view_owner_request)),
-        module_source_(module_source) {}
+        view_owner_request_(std::move(view_owner_request)) {}
 
  private:
   void Run() {
@@ -825,9 +823,7 @@ class StoryControllerImpl::AddIntentCall
         &operation_queue_, story_controller_impl_->story_storage_,
         story_controller_impl_->story_provider_impl_->module_resolver(),
         story_controller_impl_->story_provider_impl_->entity_resolver(),
-        std::vector<std::string>({module_name_}), std::move(*intent_),
-        std::move(surface_relation_), std::move(requesting_module_path_),
-        module_source_,
+        std::move(add_mod_params_),
         [this, flow](fuchsia::modular::ExecuteResult result,
                      fuchsia::modular::ModuleData module_data) {
           if (result.status ==
@@ -842,11 +838,11 @@ class StoryControllerImpl::AddIntentCall
                 << "error response with message: " << result.error_message;
           }
           module_data_ = std::move(module_data);
-          MaybeLaunchModule(flow);
+          LaunchModuleIfStoryRunning(flow);
         });
   }
 
-  void MaybeLaunchModule(FlowToken flow) {
+  void LaunchModuleIfStoryRunning(FlowToken flow) {
     if (story_controller_impl_->IsRunning()) {
       // TODO(thatguy): Should we be checking surface_relation also?
       if (!view_owner_request_) {
@@ -879,17 +875,13 @@ class StoryControllerImpl::AddIntentCall
   OperationQueue operation_queue_;
   StoryControllerImpl* const story_controller_impl_;
 
-  // Arguments passed in from the constructor. Some are used to initialize
+  // Some of the fields in add_mod_params_ are used to initializel
   // module_data_ in AddModuleFromResult().
-  std::vector<std::string> requesting_module_path_;
-  const std::string module_name_;
-  fuchsia::modular::IntentPtr intent_;
+  AddModParams add_mod_params_;
   fidl::InterfaceRequest<fuchsia::modular::ModuleController>
       module_controller_request_;
-  fuchsia::modular::SurfaceRelationPtr surface_relation_;
   fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
       view_owner_request_;
-  const fuchsia::modular::ModuleSource module_source_;
 
   // Created by AddModuleFromResult, and ultimately written to story state.
   fuchsia::modular::ModuleData module_data_;
@@ -902,9 +894,8 @@ class StoryControllerImpl::AddIntentCall
 
 class StoryControllerImpl::StartCall : public Operation<> {
  public:
-  StartCall(
-      StoryControllerImpl* const story_controller_impl,
-      StoryStorage* const storage)
+  StartCall(StoryControllerImpl* const story_controller_impl,
+            StoryStorage* const storage)
       : Operation("StoryControllerImpl::StartCall", [] {}),
         story_controller_impl_(story_controller_impl),
         storage_(storage) {}
@@ -927,9 +918,10 @@ class StoryControllerImpl::StartCall : public Operation<> {
     storage_->ReadAllModuleData()->Then(
         [this, flow](std::vector<fuchsia::modular::ModuleData> data) {
           story_controller_impl_->InitStoryEnvironment();
-
           for (auto& module_data : data) {
-            if (module_data.module_deleted) {
+            // Don't start the module if it is embedded, or if it has been
+            // marked deleted.
+            if (module_data.module_deleted || module_data.is_embedded) {
               continue;
             }
             FXL_CHECK(module_data.intent);
@@ -1230,34 +1222,25 @@ fuchsia::modular::LinkPathPtr StoryControllerImpl::GetLinkPathForParameterName(
 }
 
 void StoryControllerImpl::EmbedModule(
-    const std::vector<std::string>& parent_module_path,
-    std::string module_name, fuchsia::modular::IntentPtr intent,
+    AddModParams add_mod_params,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request,
-    fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
-      this, parent_module_path, module_name, std::move(intent),
-      std::move(module_controller_request), nullptr /* surface_relation */,
-      std::move(view_owner_request), std::move(module_source),
-      std::move(callback)));
+      this, std::move(add_mod_params), std::move(module_controller_request),
+      std::move(view_owner_request), std::move(callback)));
 }
 
-void StoryControllerImpl::StartModule(
-    const std::vector<std::string>& parent_module_path,
-    std::string module_name, fuchsia::modular::IntentPtr intent,
+void StoryControllerImpl::AddModuleToStory(
+    AddModParams add_mod_params,
     fidl::InterfaceRequest<fuchsia::modular::ModuleController>
         module_controller_request,
-    fuchsia::modular::SurfaceRelationPtr surface_relation,
-    fuchsia::modular::ModuleSource module_source,
     std::function<void(fuchsia::modular::StartModuleStatus)> callback) {
   operation_queue_.Add(new AddIntentCall(
-      this, parent_module_path, module_name, std::move(intent),
-      std::move(module_controller_request), std::move(surface_relation),
-      nullptr /* view_owner_request */, std::move(module_source),
-      std::move(callback)));
+      this, std::move(add_mod_params), std::move(module_controller_request),
+      nullptr /* view_owner_request */, std::move(callback)));
 }
 
 void StoryControllerImpl::ProcessPendingViews() {
@@ -1328,7 +1311,6 @@ StoryControllerImpl::GetActiveLinksInternal() {
 
 void StoryControllerImpl::OnModuleDataUpdated(
     fuchsia::modular::ModuleData module_data) {
-  // Control reaching here means that this update came from a remote device.
   operation_queue_.Add(
       new OnModuleDataUpdatedCall(this, std::move(module_data)));
 }

@@ -46,15 +46,17 @@ class TestApp
   TestPoint add_surface_{"AddSurface root:child:child root"};
 
   // |fuchsia::modular::StoryShell|
-  void AddSurface(
-      fuchsia::modular::ViewConnection view_connection,
-       fuchsia::modular::SurfaceInfo surface_info) override {
-    FXL_LOG(INFO) << "surface_id=" << view_connection.surface_id << ", anchor_id=" << surface_info.parent_id;
-    if (view_connection.surface_id == "root:child:child" && surface_info.parent_id == "root") {
+  void AddSurface(fuchsia::modular::ViewConnection view_connection,
+                  fuchsia::modular::SurfaceInfo surface_info) override {
+    FXL_LOG(INFO) << "surface_id=" << view_connection.surface_id
+                  << ", anchor_id=" << surface_info.parent_id;
+    if (view_connection.surface_id == "root:child:child" &&
+        surface_info.parent_id == "root") {
       add_surface_.Pass();
       modular::testing::GetStore()->Put("story_shell_done", "1", [] {});
     } else {
-      FXL_LOG(WARNING) << "AddView " << view_connection.surface_id << " anchor " << surface_info.parent_id;
+      FXL_LOG(WARNING) << "AddView " << view_connection.surface_id << " anchor "
+                       << surface_info.parent_id;
     }
   }
 
@@ -63,7 +65,7 @@ class TestApp
 
   // |fuchsia::modular::StoryShell|
   void DefocusSurface(std::string /*surface_id*/,
-                   DefocusSurfaceCallback callback) override {
+                      DefocusSurfaceCallback callback) override {
     callback();
   }
 
@@ -72,19 +74,19 @@ class TestApp
       std::string /*container_name*/, fidl::StringPtr /*parent_id*/,
       fuchsia::modular::SurfaceRelation /*relation*/,
       std::vector<fuchsia::modular::ContainerLayout> /*layout*/,
-      std::vector<
-          fuchsia::modular::ContainerRelationEntry> /* relationships */,
+      std::vector<fuchsia::modular::ContainerRelationEntry> /* relationships */,
       std::vector<fuchsia::modular::ContainerView> /* views */) override {}
 
   // |fuchsia::modular::StoryShell|
   void RemoveSurface(std::string /*surface_id*/) override {}
 
   // |fuchsia::modular::StoryShell|
-  void ReconnectView(fuchsia::modular::ViewConnection view_connection) override {}
+  void ReconnectView(
+      fuchsia::modular::ViewConnection view_connection) override {}
 
   // |fuchsia::modular::StoryShell|
   void UpdateSurface(fuchsia::modular::ViewConnection view_connection,
-        fuchsia::modular::SurfaceInfo /*surface_info*/) override {};
+                     fuchsia::modular::SurfaceInfo /*surface_info*/) override{};
 
   fuchsia::modular::StoryShellContextPtr story_shell_context_;
 

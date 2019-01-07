@@ -191,8 +191,25 @@ void XdrModuleData_v5(XdrContext* const xdr,
   xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
 }
 
+void XdrModuleData_v6(XdrContext* const xdr,
+                      fuchsia::modular::ModuleData* const data) {
+  if (!xdr->Version(6)) {
+    return;
+  }
+  xdr->Field("url", &data->module_url);
+  xdr->Field("module_path", &data->module_path);
+  xdr->Field("module_source", &data->module_source);
+  xdr->Field("surface_relation", &data->surface_relation, XdrSurfaceRelation);
+  xdr->Field("module_deleted", &data->module_deleted);
+  xdr->Field("intent", &data->intent, XdrIntent);
+  // NOTE: the JSON field naming doesn't match the FIDL struct naming because
+  // the field name in FIDL was changed.
+  xdr->Field("chain_data", &data->parameter_map, XdrModuleParameterMap);
+  xdr->Field("is_embedded", &data->is_embedded);
+}
+
 XdrFilterType<fuchsia::modular::ModuleData> XdrModuleData[] = {
-    XdrModuleData_v5, XdrModuleData_v4, XdrModuleData_v3,
+    XdrModuleData_v6, XdrModuleData_v5, XdrModuleData_v4, XdrModuleData_v3,
     XdrModuleData_v2, XdrModuleData_v1, nullptr,
 };
 

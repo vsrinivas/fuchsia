@@ -14,6 +14,7 @@
         "//peridot/tests/component_context:component_context_test_unstoppable_agent",
         "//peridot/tests/embed_shell:embed_shell_test_child_module",
         "//peridot/tests/embed_shell:embed_shell_test_parent_module",
+        "//peridot/tests/embed_shell:embed_shell_test_session_shell",
         "//peridot/tests/embed_shell:embed_shell_test_story_shell",
         "//peridot/tests/intents:intent_test_parent_module",
         "//peridot/tests/intents:intent_test_child_module",

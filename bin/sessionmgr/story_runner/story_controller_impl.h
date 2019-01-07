@@ -30,6 +30,7 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/add_mod_call.h"
 #include "peridot/bin/sessionmgr/storage/session_storage.h"
 #include "peridot/bin/sessionmgr/story/model/story_mutator.h"
 #include "peridot/bin/sessionmgr/story/model/story_observer.h"
@@ -106,34 +107,27 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
 
   // Called by ModuleContextImpl.
   fuchsia::modular::LinkPathPtr GetLinkPathForParameterName(
-      const std::vector<std::string>& module_path,
-      std::string name);
+      const std::vector<std::string>& module_path, std::string name);
 
   // Called by ModuleContextImpl.
   void EmbedModule(
-      const std::vector<std::string>& parent_module_path,
-      std::string module_name, fuchsia::modular::IntentPtr intent,
+      AddModParams add_mod_params,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
       fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
           view_owner_request,
-      fuchsia::modular::ModuleSource module_source,
       std::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Called by ModuleContextImpl.
-  void StartModule(
-      const std::vector<std::string>& parent_module_path,
-      std::string module_name, fuchsia::modular::IntentPtr intent,
+  void AddModuleToStory(
+      AddModParams add_mod_params,
       fidl::InterfaceRequest<fuchsia::modular::ModuleController>
           module_controller_request,
-      fuchsia::modular::SurfaceRelationPtr surface_relation,
-      fuchsia::modular::ModuleSource module_source,
       std::function<void(fuchsia::modular::StartModuleStatus)> callback);
 
   // Stops the module at |module_path| in response to a call to
   // |ModuleContext.RemoveSelfFromStory|.
-  void RemoveModuleFromStory(
-      const std::vector<std::string>& module_path);
+  void RemoveModuleFromStory(const std::vector<std::string>& module_path);
 
   // Called by ModuleContextImpl.
   void StartOngoingActivity(
@@ -214,8 +208,8 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   const fidl::StringPtr story_id_;
 
   StoryProviderImpl* const story_provider_impl_;  // Not owned.
-  SessionStorage* const session_storage_;  // Not owned.
-  StoryStorage* const story_storage_;      // Not owned.
+  SessionStorage* const session_storage_;         // Not owned.
+  StoryStorage* const story_storage_;             // Not owned.
 
   std::unique_ptr<StoryMutator> story_mutator_;
   std::unique_ptr<StoryObserver> story_observer_;
@@ -250,7 +244,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // serialized module path) until its parent is connected to story shell. Story
   // shell cannot display views whose parents are not yet displayed.
   struct PendingView {
-   std::vector<std::string> module_path;
+    std::vector<std::string> module_path;
     fuchsia::modular::ModuleManifestPtr module_manifest;
     fuchsia::modular::SurfaceRelationPtr surface_relation;
     fuchsia::modular::ModuleSource module_source;

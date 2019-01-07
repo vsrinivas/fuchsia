@@ -40,16 +40,21 @@ struct ModuleData {
     /// required once the framework is cleaned up enough to guarantee this
     /// statement.
     Intent? intent;
+
+    /// If true, this module was started by a parent module using
+    /// ModuleContext.EmbedModule(), and its view is not managed by the
+    /// StoryShell.
+    bool is_embedded = false;
 };
 
 enum ModuleSource {
-    /// Module that was started from within the story by another module via
-    /// ModuleContext.StartModule() and ModuleContext.EmbedModule().
+    /// Module that was added to the story from within the story by another
+    /// module using ModuleContext.AddModuleToStory() or
+    /// ModuleContext.EmbedModule().
     INTERNAL = 0;
 
-    /// Module that was started from outside the story by Maxwell / SessionShell via
-    /// StoryController.AddModule() or StoryProvider.CreateStory() as first
-    /// module.
+    /// Module that was added to the story from outside the story using
+    /// PuppetMaster.
     EXTERNAL = 1;
 };
 

@@ -606,8 +606,8 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
   // Get the link path for the param of the mod we created.
   fuchsia::modular::LinkPath link_path;
   std::vector<std::string> full_path{"parent_mod", "mod"};
-  story_storage_->ReadModuleData(full_path)
-      ->Then([&](fuchsia::modular::ModuleDataPtr result) {
+  story_storage_->ReadModuleData(full_path)->Then(
+      [&](fuchsia::modular::ModuleDataPtr result) {
         for (auto& entry : result->parameter_map.entries) {
           if (entry.name == "param_json") {
             fidl::Clone(entry.link_path, &link_path);
