@@ -410,7 +410,6 @@ std::string DescribeArray(const uint8_t arr[], size_t size) {
     char buf[1024];
     buf[0] = 0;
     size_t offset = 0;
-    buf[0] = 0;
     for (size_t idx = 0; idx < size; idx++) {
         BUFFER("%02x", arr[idx]);
     }
@@ -421,7 +420,6 @@ std::string DescribeVector(const std::vector<uint8_t> vec) {
     char buf[1024];
     buf[0] = 0;
     size_t offset = 0;
-    buf[0] = 0;
     for (auto const& v : vec) {
         BUFFER("%02x", v);
     }
