@@ -786,6 +786,15 @@ void FakeController::OnCommandPacketReceived(
       break;
     }
     case hci::kLESetRandomAddress: {
+      if (le_advertising_state().enabled || le_scan_state().enabled) {
+        bt_log(INFO, "fake-hci",
+               "cannot set LE random address while scanning or advertising");
+        hci::SimpleReturnParams out_params;
+        out_params.status = hci::StatusCode::kCommandDisallowed;
+        RespondWithCommandComplete(opcode,
+                                   BufferView(&out_params, sizeof(out_params)));
+        return;
+      }
       const auto& in_params =
           command_packet.payload<hci::LESetRandomAddressCommandParams>();
       le_random_address_ = common::DeviceAddress(
@@ -814,6 +823,10 @@ void FakeController::OnCommandPacketReceived(
       // Just assign the average for the interval.
       le_adv_state_.interval = (interval_min + interval_max) / 2;
       le_adv_state_.adv_type = in_params.adv_type;
+      le_adv_state_.own_address_type = in_params.own_address_type;
+
+      bt_log(INFO, "fake-hci", "start advertising using address type: %d",
+             le_adv_state_.own_address_type);
 
       RespondWithSuccess(opcode);
       NotifyAdvertisingState();

@@ -62,16 +62,6 @@ std::unique_ptr<CommandPacket> BuildSetScanResponse(
   return packet;
 }
 
-std::unique_ptr<CommandPacket> BuildSetRandomAddress(
-    const common::DeviceAddress& address) {
-  auto packet = CommandPacket::New(kLESetRandomAddress,
-                                   sizeof(LESetRandomAddressCommandParams));
-  auto params = packet->mutable_view()
-                    ->mutable_payload<LESetRandomAddressCommandParams>();
-  params->random_address = address.value();
-  return packet;
-}
-
 std::unique_ptr<CommandPacket> BuildSetAdvertisingParams(
     LEAdvertisingType type, LEOwnAddressType own_address_type,
     uint16_t interval_slices) {
@@ -137,6 +127,10 @@ size_t LegacyLowEnergyAdvertiser::GetSizeLimit() {
   return kMaxLEAdvertisingDataLength;
 }
 
+bool LegacyLowEnergyAdvertiser::AllowsRandomAddressChange() const {
+  return !starting_ && !advertising();
+}
+
 void LegacyLowEnergyAdvertiser::StartAdvertising(
     const common::DeviceAddress& address, const common::ByteBuffer& data,
     const common::ByteBuffer& scan_rsp, ConnectionCallback connect_callback,
@@ -197,12 +191,6 @@ void LegacyLowEnergyAdvertiser::StartAdvertising(
   // will be cleared accordingly.
   hci_cmd_runner_->QueueCommand(BuildSetAdvertisingData(data));
   hci_cmd_runner_->QueueCommand(BuildSetScanResponse(scan_rsp));
-
-  // Set random address
-  if (!advertising() &&
-      (address.type() != common::DeviceAddress::Type::kLEPublic)) {
-    hci_cmd_runner_->QueueCommand(BuildSetRandomAddress(address));
-  }
 
   // Set advertising parameters
   uint16_t interval_slices = DurationToTimeslices(interval);

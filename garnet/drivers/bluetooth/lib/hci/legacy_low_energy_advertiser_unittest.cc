@@ -16,10 +16,12 @@
 
 namespace btlib {
 
+using common::BufferView;
+using testing::FakeController;
+
 namespace hci {
 namespace {
 
-using ::btlib::testing::FakeController;
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
 constexpr ConnectionHandle kHandle = 0x0001;
@@ -228,38 +230,52 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, RestartInConnectionCallback) {
   EXPECT_TRUE(adv_states[1]);
 }
 
-// - Starts the advertisement when asked and verifies that the parameters have
-//   been passed down correctly.
-// - Stops advertisement
-// - Uses the random address given and sets it.
+// Tests starting and stopping an advertisement.
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartAndStop) {
   constexpr zx::duration kInterval = zx::msec(500);
-  constexpr uint16_t kIntervalSlices = 800;
   common::DynamicByteBuffer ad = GetExampleData();
   common::DynamicByteBuffer scan_data;
 
-  common::DeviceAddress addr = kRandomAddress;
-
-  advertiser()->StartAdvertising(addr, ad, scan_data, nullptr, kInterval, false,
-                                 GetSuccessCallback());
-
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
 
+  EXPECT_TRUE(advertiser()->StopAdvertising(kRandomAddress));
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+}
+
+// Tests that an advertisement is configured with the correct parameters.
+TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertisingParameters) {
+  constexpr zx::duration kInterval = zx::msec(500);
+  constexpr uint16_t kIntervalSlices = 800;
+  auto ad = GetExampleData();
+  BufferView scan_data;
+
+  advertiser()->StartAdvertising(kRandomAddress, ad, scan_data, nullptr,
+                                 kInterval, false, GetSuccessCallback());
+  RunLoopUntilIdle();
   EXPECT_TRUE(MoveLastStatus());
 
-  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
-  EXPECT_EQ(addr, test_device()->le_random_address());
-  EXPECT_EQ(kIntervalSlices, test_device()->le_advertising_state().interval);
+  // Verify the fake controller state.
+  const auto& fake_adv_state = test_device()->le_advertising_state();
+  EXPECT_TRUE(fake_adv_state.enabled);
+  EXPECT_EQ(kIntervalSlices, fake_adv_state.interval);
+  EXPECT_EQ(fake_adv_state.advertised_view(), ad);
+  EXPECT_EQ(0u, fake_adv_state.scan_rsp_view().size());
+  EXPECT_EQ(hci::LEOwnAddressType::kRandom, fake_adv_state.own_address_type);
 
-  EXPECT_TRUE(ContainersEqual(
-      test_device()->le_advertising_state().advertised_view(), ad));
-  EXPECT_EQ(0u, test_device()->le_advertising_state().scan_rsp_view().size());
-
-  EXPECT_TRUE(advertiser()->StopAdvertising(addr));
-
+  // Restart advertising with a public address and verify that the configured
+  // local address type is correct.
+  EXPECT_TRUE(advertiser()->StopAdvertising(kRandomAddress));
+  advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr,
+                                 kInterval, false, GetSuccessCallback());
   RunLoopUntilIdle();
-
-  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(fake_adv_state.enabled);
+  EXPECT_EQ(hci::LEOwnAddressType::kPublic, fake_adv_state.own_address_type);
 }
 
 TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StartWhileStarting) {
@@ -333,8 +349,6 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, StopAdvertisingConditions) {
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
-  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
-
   EXPECT_FALSE(advertiser()->StopAdvertising(kPublicAddress));
 
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
@@ -363,15 +377,21 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAdvertiseTwice) {
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
+  EXPECT_EQ(hci::LEOwnAddressType::kRandom,
+            test_device()->le_advertising_state().own_address_type);
 
   uint8_t before = ad[0];
   ad[0] = 0xff;
   advertiser()->StartAdvertising(kPublicAddress, ad, scan_data, nullptr,
                                  kTestInterval, false, GetErrorCallback());
   ad[0] = before;
+  RunLoopUntilIdle();
+
+  // Should still be using the random address.
+  EXPECT_EQ(hci::LEOwnAddressType::kRandom,
+            test_device()->le_advertising_state().own_address_type);
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
-  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
 }
@@ -397,7 +417,6 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AdvertiseUpdate) {
 
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_TRUE(test_device()->le_advertising_state().enabled);
-  EXPECT_EQ(kRandomAddress, test_device()->le_random_address());
   EXPECT_TRUE(ContainersEqual(
       test_device()->le_advertising_state().advertised_view(), ad));
   // 2500 ms = 4000 timeslices
@@ -413,6 +432,34 @@ TEST_F(HCI_LegacyLowEnergyAdvertiserTest, NoAnonymous) {
                                  kTestInterval, true, GetErrorCallback());
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+}
+
+TEST_F(HCI_LegacyLowEnergyAdvertiserTest, AllowsRandomAddressChange) {
+  // The random address can be changed while not advertising.
+  EXPECT_TRUE(advertiser()->AllowsRandomAddressChange());
+
+  // The random address cannot be changed while starting to advertise.
+  advertiser()->StartAdvertising(kRandomAddress, GetExampleData(), BufferView(),
+                                 nullptr, zx::sec(1), false,
+                                 GetSuccessCallback());
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  EXPECT_FALSE(advertiser()->AllowsRandomAddressChange());
+
+  // The random address cannot be changed while advertising is enabled.
+  RunLoopUntilIdle();
+  EXPECT_TRUE(MoveLastStatus());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_FALSE(advertiser()->AllowsRandomAddressChange());
+
+  // The advertiser allows changing the address while advertising is getting
+  // stopped.
+  advertiser()->StopAdvertising(kRandomAddress);
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_TRUE(advertiser()->AllowsRandomAddressChange());
+
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  EXPECT_TRUE(advertiser()->AllowsRandomAddressChange());
 }
 
 }  // namespace

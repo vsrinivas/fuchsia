@@ -52,6 +52,8 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
 
   size_t GetMaxAdvertisements() const override { return max_ads_; }
 
+  bool AllowsRandomAddressChange() const override { return true; }
+
   void StartAdvertising(const common::DeviceAddress& address,
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,

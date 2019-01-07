@@ -29,6 +29,34 @@ class LowEnergyAdvertiser {
   // changes.  It should be checked before trying to add an advertisement.
   virtual size_t GetMaxAdvertisements() const = 0;
 
+  // Returns true if configuring the controller random address is allowed by
+  // this advertiser. This method should always return true for an advertiser
+  // that uses extended advertising.
+  virtual bool AllowsRandomAddressChange() const = 0;
+
+  // TODO(armansito): The |address| parameter of this function doesn't always
+  // correspond to the advertised device address as the local address for an
+  // advertisement cannot always be configured by the advertiser. This is the
+  // case especially in the following conditions:
+  //
+  //   1. The type of |address| is "LE Public". The advertised address always
+  //   corresponds to the controller's BD_ADDR. This is the case in both legacy
+  //   and extended advertising.
+  //
+  //   2. The type of |address| is "LE Random" and the advertiser implements
+  //   legacy advertising. Since the controller local address is shared between
+  //   scan, initiation, and advertising procedures, the advertiser cannot
+  //   configure this address without interfering with the state of other
+  //   ongoing procedures.
+  //
+  // We should either revisit this interface or update the documentation to
+  // reflect the fact that the |address| is sometimes a hint and may or may not
+  // end up being advertised. Currently the GAP layer decides which address to
+  // pass to this call but the layering should be revisited when we add support
+  // for extended advertising.
+  //
+  // -----
+  //
   // Attempt to start advertising |data| with scan response |scan_rsp| using
   // advertising address |address|.  If |anonymous| is set, |address| is
   // ignored.

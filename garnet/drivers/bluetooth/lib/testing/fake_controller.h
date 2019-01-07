@@ -100,6 +100,7 @@ class FakeController : public FakeControllerBase,
 
     bool enabled;
     hci::LEAdvertisingType adv_type;
+    hci::LEOwnAddressType own_address_type;
     uint16_t interval;
 
     uint8_t data_length;
@@ -149,19 +150,17 @@ class FakeController : public FakeControllerBase,
                                    async_dispatcher_t* dispatcher);
 
   // Sets a callback to be invoked on connection events.
-  using ConnectionStateCallback = fit::function<
-      void(const common::DeviceAddress&, bool connected, bool canceled)>;
+  using ConnectionStateCallback = fit::function<void(
+      const common::DeviceAddress&, bool connected, bool canceled)>;
   void SetConnectionStateCallback(ConnectionStateCallback callback,
                                   async_dispatcher_t* dispatcher);
 
   // Sets a callback to be invoked when LE connection parameters are updated for
   // a fake device.
-  using LEConnectionParametersCallback =
-      fit::function<void(const common::DeviceAddress&,
-                         const hci::LEConnectionParameters&)>;
+  using LEConnectionParametersCallback = fit::function<void(
+      const common::DeviceAddress&, const hci::LEConnectionParameters&)>;
   void SetLEConnectionParametersCallback(
-      LEConnectionParametersCallback callback,
-      async_dispatcher_t* dispatcher);
+      LEConnectionParametersCallback callback, async_dispatcher_t* dispatcher);
 
   // Sends a HCI event with the given parameters.
   void SendEvent(hci::EventCode event_code, const common::ByteBuffer& payload);
@@ -181,10 +180,8 @@ class FakeController : public FakeControllerBase,
 
   // Sends a L2CAP control frame over a signaling channel. If |is_le| is true,
   // then the LE signaling channel will be used.
-  void SendL2CAPCFrame(hci::ConnectionHandle handle,
-                       bool is_le,
-                       l2cap::CommandCode code,
-                       uint8_t id,
+  void SendL2CAPCFrame(hci::ConnectionHandle handle, bool is_le,
+                       l2cap::CommandCode code, uint8_t id,
                        const common::ByteBuffer& payload);
 
   void SendNumberOfCompletedPacketsEvent(hci::ConnectionHandle conn,
@@ -248,8 +245,7 @@ class FakeController : public FakeControllerBase,
   void NotifyAdvertisingState();
 
   // Notifies |conn_state_cb_| with the given parameters.
-  void NotifyConnectionState(const common::DeviceAddress& addr,
-                             bool connected,
+  void NotifyConnectionState(const common::DeviceAddress& addr, bool connected,
                              bool canceled = false);
 
   // Notifies |le_conn_params_cb_|

@@ -22,6 +22,7 @@ class LegacyLowEnergyAdvertiser final : public LowEnergyAdvertiser {
   // LowEnergyAdvertiser overrides:
   size_t GetSizeLimit() override;
   size_t GetMaxAdvertisements() const override { return 1; }
+  bool AllowsRandomAddressChange() const override;
 
   // LegacyLowEnergyAdvertiser supports only a single advertising instance,
   // hence it can report additional errors in the following conditions:
