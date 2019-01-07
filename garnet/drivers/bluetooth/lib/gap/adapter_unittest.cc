@@ -10,12 +10,15 @@
 #include <lib/zx/channel.h>
 
 #include "garnet/drivers/bluetooth/lib/data/fake_domain.h"
-#include "garnet/drivers/bluetooth/lib/gap/low_energy_discovery_manager.h"
 #include "garnet/drivers/bluetooth/lib/gatt/fake_layer.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_controller_test.h"
 #include "garnet/drivers/bluetooth/lib/testing/fake_device.h"
 #include "lib/fxl/macros.h"
+
+#include "low_energy_address_manager.h"
+#include "low_energy_advertising_manager.h"
+#include "low_energy_discovery_manager.h"
 
 namespace btlib {
 namespace gap {
@@ -23,7 +26,6 @@ namespace {
 
 using ::btlib::testing::FakeController;
 using ::btlib::testing::FakeDevice;
-
 using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 
 class AdapterTest : public TestingBase {
@@ -55,6 +57,7 @@ class AdapterTest : public TestingBase {
   void InitializeAdapter(Adapter::InitializeCallback callback) {
     adapter_->Initialize(std::move(callback),
                          [this] { transport_closed_called_ = true; });
+    RunLoopUntilIdle();
   }
 
  protected:
@@ -81,8 +84,6 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoFeaturesSupported) {
 
   // The controller supports nothing.
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(transport_closed_called());
@@ -103,8 +104,6 @@ TEST_F(GAP_AdapterTest, InitializeFailureNoBufferInfo) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(transport_closed_called());
@@ -129,8 +128,6 @@ TEST_F(GAP_AdapterTest, InitializeNoBREDR) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
@@ -157,8 +154,6 @@ TEST_F(GAP_AdapterTest, InitializeSuccess) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
@@ -183,8 +178,6 @@ TEST_F(GAP_AdapterTest, InitializeFailureHCICommandError) {
                                           hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_FALSE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_FALSE(adapter()->state().IsLowEnergySupported());
@@ -204,8 +197,6 @@ TEST_F(GAP_AdapterTest, TransportClosedCallback) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
   EXPECT_TRUE(adapter()->state().IsLowEnergySupported());
@@ -237,8 +228,6 @@ TEST_F(GAP_AdapterTest, SetNameError) {
                                           hci::StatusCode::kHardwareFailure);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
 
@@ -267,8 +256,6 @@ TEST_F(GAP_AdapterTest, SetNameSuccess) {
   test_device()->set_settings(settings);
 
   InitializeAdapter(std::move(init_cb));
-  RunLoopUntilIdle();
-
   EXPECT_TRUE(success);
   EXPECT_EQ(1, init_cb_count);
 
@@ -300,7 +287,6 @@ TEST_F(GAP_AdapterTest, LeAutoConnect) {
   test_device()->set_settings(settings);
 
   InitializeAdapter([](bool) {});
-  RunLoopUntilIdle();
   adapter()->le_discovery_manager()->set_scan_period(kTestScanPeriod);
 
   auto fake_dev = std::make_unique<FakeDevice>(kAddress, true, false);
@@ -329,6 +315,80 @@ TEST_F(GAP_AdapterTest, LeAutoConnect) {
   // The device should have been auto-connected.
   ASSERT_TRUE(conn);
   EXPECT_EQ(kDeviceId, conn->device_identifier());
+}
+
+// Tests the interactions between the advertising manager and the local address
+// manager when the controller uses legacy advertising.
+TEST_F(GAP_AdapterTest, LocalAddressForLegacyAdvertising) {
+  FakeController::Settings settings;
+  settings.ApplyLegacyLEConfig();
+  test_device()->set_settings(settings);
+  InitializeAdapter([](bool) {});
+
+  std::string adv_id;
+  auto adv_cb = [&](auto id, hci::Status status) {
+    adv_id = id;
+    EXPECT_TRUE(status);
+  };
+
+  // Advertising should use the public address by default.
+  AdvertisingData empty_data;
+  adapter()->le_advertising_manager()->StartAdvertising(
+      empty_data, empty_data, nullptr, zx::msec(60), false, adv_cb);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(hci::LEOwnAddressType::kPublic,
+            test_device()->le_advertising_state().own_address_type);
+
+  // Enable privacy. The random address should not configured while advertising
+  // is in progress.
+  adapter()->le_address_manager()->EnablePrivacy(true);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_random_address());
+
+  // Stop advertising.
+  adapter()->le_advertising_manager()->StopAdvertising(adv_id);
+  RunLoopUntilIdle();
+  EXPECT_FALSE(test_device()->le_advertising_state().enabled);
+  EXPECT_FALSE(test_device()->le_random_address());
+
+  // Restart advertising. This should configure the LE random address and
+  // advertise using it.
+  adapter()->le_advertising_manager()->StartAdvertising(
+      empty_data, empty_data, nullptr, zx::msec(60), false, adv_cb);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_random_address());
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(hci::LEOwnAddressType::kRandom,
+            test_device()->le_advertising_state().own_address_type);
+
+  // Advance time to force the random address to refresh. The update should be
+  // deferred while advertising.
+  auto last_random_addr = *test_device()->le_random_address();
+  RunLoopFor(kPrivateAddressTimeout);
+  EXPECT_EQ(last_random_addr, *test_device()->le_random_address());
+
+  // Restarting advertising should refresh the controller address.
+  adapter()->le_advertising_manager()->StopAdvertising(adv_id);
+  adapter()->le_advertising_manager()->StartAdvertising(
+      empty_data, empty_data, nullptr, zx::msec(60), false, adv_cb);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(hci::LEOwnAddressType::kRandom,
+            test_device()->le_advertising_state().own_address_type);
+  EXPECT_TRUE(test_device()->le_random_address());
+  EXPECT_NE(last_random_addr, test_device()->le_random_address());
+
+  // Disable privacy. The next time advertising gets started it should use a
+  // public address.
+  adapter()->le_address_manager()->EnablePrivacy(false);
+  adapter()->le_advertising_manager()->StopAdvertising(adv_id);
+  adapter()->le_advertising_manager()->StartAdvertising(
+      empty_data, empty_data, nullptr, zx::msec(60), false, adv_cb);
+  RunLoopUntilIdle();
+  EXPECT_TRUE(test_device()->le_advertising_state().enabled);
+  EXPECT_EQ(hci::LEOwnAddressType::kPublic,
+            test_device()->le_advertising_state().own_address_type);
 }
 
 }  // namespace

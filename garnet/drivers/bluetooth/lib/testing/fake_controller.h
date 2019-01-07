@@ -130,7 +130,7 @@ class FakeController : public FakeControllerBase,
     return le_adv_state_;
   }
 
-  const common::DeviceAddress& le_random_address() const {
+  const std::optional<common::DeviceAddress>& le_random_address() const {
     return le_random_address_;
   }
 
@@ -275,7 +275,7 @@ class FakeController : public FakeControllerBase,
 
   // Used for Advertising, Create Connection, and Active Scanning
   // Set by HCI_LE_Set_Random_Address
-  common::DeviceAddress le_random_address_;
+  std::optional<common::DeviceAddress> le_random_address_;
 
   // Used for BR/EDR Scans
   uint8_t bredr_scan_state_;

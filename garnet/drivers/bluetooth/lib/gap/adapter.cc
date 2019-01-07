@@ -19,6 +19,7 @@
 
 #include "bredr_connection_manager.h"
 #include "bredr_discovery_manager.h"
+#include "low_energy_address_manager.h"
 #include "low_energy_advertising_manager.h"
 #include "low_energy_connection_manager.h"
 #include "low_energy_discovery_manager.h"
@@ -539,14 +540,17 @@ void Adapter::InitializeStep4(InitializeCallback callback) {
                        &hci::LowEnergyAdvertiser::OnIncomingConnection));
 
   // Initialize the LE manager objects
+  le_address_manager_ = std::make_unique<LowEnergyAddressManager>(
+      adapter_identity,
+      fit::bind_member(this, &Adapter::IsLeRandomAddressChangeAllowed), hci_);
   le_discovery_manager_ = std::make_unique<LowEnergyDiscoveryManager>(
       Mode::kLegacy, hci_, &device_cache_);
   le_discovery_manager_->set_directed_connectable_callback(
       fit::bind_member(this, &Adapter::OnLeAutoConnectRequest));
   le_connection_manager_ = std::make_unique<LowEnergyConnectionManager>(
       hci_, hci_le_connector_.get(), &device_cache_, data_domain_, gatt_);
-  le_advertising_manager_ =
-      std::make_unique<LowEnergyAdvertisingManager>(hci_le_advertiser_.get());
+  le_advertising_manager_ = std::make_unique<LowEnergyAdvertisingManager>(
+      hci_le_advertiser_.get(), le_address_manager_.get());
 
   // Initialize the BR/EDR manager objects if the controller supports BR/EDR.
   if (state_.IsBREDRSupported()) {
@@ -653,6 +657,7 @@ void Adapter::CleanUp() {
   le_advertising_manager_ = nullptr;
   le_connection_manager_ = nullptr;
   le_discovery_manager_ = nullptr;
+  le_address_manager_ = nullptr;
 
   hci_le_connector_ = nullptr;
   hci_le_advertiser_ = nullptr;
@@ -692,6 +697,11 @@ void Adapter::OnLeAutoConnectRequest(const std::string& device_id) {
       self->auto_conn_cb_(std::move(conn));
     }
   });
+}
+
+bool Adapter::IsLeRandomAddressChangeAllowed() {
+  // TODO(BT-611): Query scan and connection states here as well.
+  return hci_le_advertiser_->AllowsRandomAddressChange();
 }
 
 }  // namespace gap

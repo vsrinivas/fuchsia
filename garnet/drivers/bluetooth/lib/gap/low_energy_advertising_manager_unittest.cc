@@ -11,6 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/fake_connection.h"
+#include "garnet/drivers/bluetooth/lib/hci/local_address_delegate.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/random/rand.h"
@@ -20,10 +21,15 @@ namespace btlib {
 namespace gap {
 namespace {
 
+using common::DeviceAddress;
+
 constexpr size_t kDefaultMaxAds = 1;
 constexpr size_t kDefaultMaxAdSize = 23;
 constexpr size_t kDefaultFakeAdSize = 20;
 constexpr zx::duration kTestInterval = zx::sec(1);
+
+const DeviceAddress kRandomAddress(DeviceAddress::Type::kLERandom,
+                                   "00:11:22:33:44:55");
 
 struct AdvertisementStatus {
   AdvertisingData data;
@@ -120,15 +126,23 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
 
 using TestingBase = ::gtest::TestLoopFixture;
 
-class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
+class GAP_LowEnergyAdvertisingManagerTest : public TestingBase,
+                                            public hci::LocalAddressDelegate {
  public:
   GAP_LowEnergyAdvertisingManagerTest() = default;
   ~GAP_LowEnergyAdvertisingManagerTest() override = default;
 
  protected:
-  void SetUp() override { MakeFakeAdvertiser(); }
+  void SetUp() override {
+    set_local_address(kRandomAddress);
+    MakeFakeAdvertiser();
+    MakeAdvertisingManager();
+  }
 
-  void TearDown() override {}
+  void TearDown() override {
+    adv_mgr_ = nullptr;
+    advertiser_ = nullptr;
+  }
 
   // Makes some fake advertising data of a specific |packed_size|
   AdvertisingData CreateFakeAdvertisingData(
@@ -171,6 +185,17 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
         max_ads, max_ad_size, &ad_store_);
   }
 
+  void MakeAdvertisingManager() {
+    adv_mgr_ =
+        std::make_unique<LowEnergyAdvertisingManager>(advertiser(), this);
+  }
+
+  // LocalAddressDelegate override:
+  void EnsureLocalAddress(AddressCallback callback) override {
+    callback(local_address_);
+  }
+
+  LowEnergyAdvertisingManager* adv_mgr() const { return adv_mgr_.get(); }
   const std::map<common::DeviceAddress, AdvertisementStatus>& ad_store() {
     return ad_store_;
   }
@@ -183,12 +208,17 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
   }
 
   FakeLowEnergyAdvertiser* advertiser() const { return advertiser_.get(); }
+  void set_local_address(const DeviceAddress& local_address) {
+    local_address_ = local_address;
+  }
 
  private:
   std::map<common::DeviceAddress, AdvertisementStatus> ad_store_;
   std::string last_ad_id_;
   std::optional<hci::Status> last_status_;
+  DeviceAddress local_address_;
   std::unique_ptr<FakeLowEnergyAdvertiser> advertiser_;
+  std::unique_ptr<LowEnergyAdvertisingManager> adv_mgr_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GAP_LowEnergyAdvertisingManagerTest);
 };
@@ -196,26 +226,28 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
 // Tests:
 //  - When the advertiser succeeds, the callback is called with the success
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, Success) {
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetSuccessCallback());
+  set_local_address(kRandomAddress);
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
+                              false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
-  EXPECT_EQ(1u, ad_store().size());
+  ASSERT_EQ(1u, ad_store().size());
+
+  // Verify that the advertiser uses the requested local address.
+  EXPECT_EQ(kRandomAddress, ad_store().begin()->first);
 }
 
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetSuccessCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
+                              false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
 
@@ -224,8 +256,8 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetErrorCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
+                              false /* anonymous */, GetErrorCallback());
 
   RunLoopUntilIdle();
 
@@ -233,55 +265,44 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, DataSize) {
   EXPECT_EQ(1u, ad_store().size());
 }
 
+// TODO(BT-742): Revise this test to use multiple advertising instances when
+// multi-advertising is supported.
 //  - Stopping one that is registered stops it in the advertiser
 //    (and stops the right address)
 //  - Stopping an advertisement that isn't registered retuns false
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   MakeFakeAdvertiser(2 /* ads available */);
-  LowEnergyAdvertisingManager am(advertiser());
+  MakeAdvertisingManager();
+
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  EXPECT_FALSE(am.StopAdvertising(""));
+  EXPECT_FALSE(adv_mgr()->StopAdvertising(""));
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetSuccessCallback());
-
-  RunLoopUntilIdle();
-
-  EXPECT_TRUE(MoveLastStatus());
-  EXPECT_EQ(1u, ad_store().size());
-
-  std::string first_ad_id = last_ad_id();
-  common::DeviceAddress first_ad_address = ad_store().begin()->first;
-
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetSuccessCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
+                              false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
-  EXPECT_EQ(2u, ad_store().size());
-
-  EXPECT_TRUE(am.StopAdvertising(first_ad_id));
-
   EXPECT_EQ(1u, ad_store().size());
-  EXPECT_TRUE(ad_store().find(first_ad_address) == ad_store().end());
 
-  EXPECT_FALSE(am.StopAdvertising(first_ad_id));
+  std::string id = last_ad_id();
+  EXPECT_TRUE(adv_mgr()->StopAdvertising(id));
+  EXPECT_TRUE(ad_store().empty());
 
-  EXPECT_EQ(1u, ad_store().size());
+  EXPECT_FALSE(adv_mgr()->StopAdvertising(id));
+  EXPECT_TRUE(ad_store().empty());
 }
 
 //  - When the advertiser returns an error, we return an error
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
   advertiser()->ErrorOnNext(hci::Status(hci::kInvalidHCICommandParameters));
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
-                      false /* anonymous */, GetErrorCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
+                              false /* anonymous */, GetErrorCallback());
 
   RunLoopUntilIdle();
 
@@ -290,7 +311,6 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, AdvertiserError) {
 
 //  - It calls the connectable callback correctly when connected to
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
@@ -301,36 +321,38 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
     link = std::move(cb_link);
     EXPECT_EQ(advertised_id, connected_id);
   };
-
-  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
-                      false /* anonymous */, GetSuccessCallback());
+  set_local_address(kRandomAddress);
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
+                              false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
 
   EXPECT_TRUE(MoveLastStatus());
   advertised_id = last_ad_id();
 
-  common::DeviceAddress peer_address(common::DeviceAddress::Type::kLEPublic,
-                                     "03:02:01:01:02:03");
+  DeviceAddress peer_address(DeviceAddress::Type::kLEPublic,
+                             "03:02:01:01:02:03");
   advertiser()->OnIncomingConnection(1, hci::Connection::Role::kSlave,
                                      peer_address,
                                      hci::LEConnectionParameters());
-
   RunLoopUntilIdle();
-  EXPECT_TRUE(link);
+  ASSERT_TRUE(link);
+
+  // Make sure that the link has the correct local and peer addresses assigned.
+  EXPECT_EQ(kRandomAddress, link->local_address());
+  EXPECT_EQ(peer_address, link->peer_address());
 }
 
 //  - Error: Connectable and Anonymous at the same time
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
   auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) {
   };
 
-  am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
-                      true /* anonymous */, GetErrorCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
+                              true /* anonymous */, GetErrorCallback());
 
   EXPECT_TRUE(MoveLastStatus());
 }
@@ -338,13 +360,12 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
 //  - Passes the values for the data on. (anonymous, data, scan_rsp,
 //  interval_ms)
 TEST_F(GAP_LowEnergyAdvertisingManagerTest, SendsCorrectData) {
-  LowEnergyAdvertisingManager am(advertiser());
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp = CreateFakeAdvertisingData(21 /* size of ad */);
 
   auto interval = zx::duration(fxl::RandUint64());
-  am.StartAdvertising(fake_ad, scan_rsp, nullptr, interval,
-                      false /* anonymous */, GetSuccessCallback());
+  adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, interval,
+                              false /* anonymous */, GetSuccessCallback());
 
   RunLoopUntilIdle();
 

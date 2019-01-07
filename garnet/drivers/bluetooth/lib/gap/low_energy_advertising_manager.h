@@ -17,6 +17,7 @@ namespace btlib {
 
 namespace hci {
 class Connection;
+class LocalAddressDelegate;
 class Transport;
 }  // namespace hci
 
@@ -24,7 +25,9 @@ namespace gap {
 
 class LowEnergyAdvertisingManager {
  public:
-  explicit LowEnergyAdvertisingManager(hci::LowEnergyAdvertiser* advertiser);
+  explicit LowEnergyAdvertisingManager(
+      hci::LowEnergyAdvertiser* advertiser,
+      hci::LocalAddressDelegate* local_addr_delegate);
   virtual ~LowEnergyAdvertisingManager();
 
   // Asynchronously attempts to start advertising a set of |data| with
@@ -78,6 +81,10 @@ class LowEnergyAdvertisingManager {
   // Used to communicate with the controller. |advertiser_| must outlive this
   // advertising manager.
   hci::LowEnergyAdvertiser* advertiser_;  // weak
+
+  // Used to obtain the local device address for advertising. Must outlive this
+  // advertising manager.
+  hci::LocalAddressDelegate* local_addr_delegate_;  // weak
 
   // Note: Should remain the last member so it'll be destroyed and
   // invalidate it's pointers before other members are destroyed.

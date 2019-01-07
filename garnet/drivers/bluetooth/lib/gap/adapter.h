@@ -36,6 +36,7 @@ namespace gap {
 class BrEdrConnectionManager;
 class BrEdrDiscoveryManager;
 class PairingDelegate;
+class LowEnergyAddressManager;
 class LowEnergyAdvertisingManager;
 class LowEnergyDiscoveryManager;
 
@@ -113,6 +114,12 @@ class Adapter final {
 
   // Returns this Adapter's SDP server.
   sdp::Server* sdp_server() const { return sdp_server_.get(); }
+
+  // Returns this Adapter's LE local address manager.
+  LowEnergyAddressManager* le_address_manager() const {
+    ZX_DEBUG_ASSERT(le_address_manager_);
+    return le_address_manager_.get();
+  }
 
   // Returns this Adapter's LE discovery manager.
   LowEnergyDiscoveryManager* le_discovery_manager() const {
@@ -204,6 +211,10 @@ class Adapter final {
   // 9.3.8).
   void OnLeAutoConnectRequest(const std::string& device_id);
 
+  // Called by |le_address_manager_| to query whether it is currently allowed to
+  // reconfigure the LE random address.
+  bool IsLeRandomAddressChangeAllowed();
+
   // Uniquely identifies this adapter on the current system.
   std::string identifier_;
 
@@ -249,6 +260,7 @@ class Adapter final {
   std::unique_ptr<hci::LowEnergyConnector> hci_le_connector_;
 
   // Objects that perform LE procedures.
+  std::unique_ptr<LowEnergyAddressManager> le_address_manager_;
   std::unique_ptr<LowEnergyDiscoveryManager> le_discovery_manager_;
   std::unique_ptr<LowEnergyConnectionManager> le_connection_manager_;
   std::unique_ptr<LowEnergyAdvertisingManager> le_advertising_manager_;

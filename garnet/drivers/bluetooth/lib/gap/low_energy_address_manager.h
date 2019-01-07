@@ -16,6 +16,7 @@
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
+#include "garnet/drivers/bluetooth/lib/hci/local_address_delegate.h"
 #include "garnet/drivers/bluetooth/lib/hci/status.h"
 
 namespace btlib {
@@ -63,7 +64,7 @@ namespace gap {
 // effect immediately if a scan, advertising, or connection procedure is in
 // progress. The requested address type (public or private) will apply
 // eventually when the controller allows it.
-class LowEnergyAddressManager final {
+class LowEnergyAddressManager final : public hci::LocalAddressDelegate {
  public:
   // Function called when privacy is in use to determine if it is allowed to
   // assign a new random address to the controller. This must return false if
@@ -94,8 +95,8 @@ class LowEnergyAddressManager final {
   // Returns the local address that should be used by the next LE procedure
   // after refreshing the local random address. |callback| is run to report the
   // address and may run either synchronously or asynchronously.
-  using AddressCallback = fit::function<void(const common::DeviceAddress&)>;
-  void EnsureLocalAddress(AddressCallback callback);
+  // LocalAddressDelegate override:
+  void EnsureLocalAddress(AddressCallback callback) override;
 
  private:
   // Return the current address.
