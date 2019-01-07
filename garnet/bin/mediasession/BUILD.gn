@@ -72,3 +72,45 @@ config_data("mediasession_config") {
     "service.config",
   ]
 }
+
+rustc_binary("mediasession_cli_tool_bin") {
+  name = "mediasession_cli_tool"
+  edition = "2018"
+  with_unit_tests = true
+
+  source_root = "cli_tool/cli_tool.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//sdk/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+  ]
+}
+
+package("mediasession_cli_tool") {
+  deps = [
+    ":mediasession_cli_tool_bin",
+  ]
+
+  binaries = [
+    {
+      name = "mediasession_cli_tool"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediasession_cli_tool.cmx")
+      dest = "mediasession_cli_tool.cmx"
+    },
+  ]
+}

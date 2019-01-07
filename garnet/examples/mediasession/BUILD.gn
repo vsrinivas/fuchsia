@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("sine_player_bin") {
+  name = "sine_player"
+  edition = "2018"
+  with_unit_tests = true
+
+  source_root = "src/sine_player.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//sdk/fidl/fuchsia.media:fuchsia.media-rustc",
+    "//sdk/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//sdk/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+  ]
+}
+
+package("sine_player") {
+  deps = [
+    ":sine_player_bin",
+  ]
+
+  binary = "sine_player"
+
+  meta = [
+    {
+      path = rebase_path("meta/sine_player.cmx")
+      dest = "sine_player.cmx"
+    },
+  ]
+}

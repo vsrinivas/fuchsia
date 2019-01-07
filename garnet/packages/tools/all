@@ -14,6 +14,7 @@
         "garnet/packages/tools/iperf",
         "garnet/packages/tools/make-efi",
         "garnet/packages/tools/make-fuchsia-vol",
+        "garnet/packages/tools/mediasession",
         "garnet/packages/tools/runmany",
         "garnet/packages/tools/scenic",
         "garnet/packages/tools/sl4f",
