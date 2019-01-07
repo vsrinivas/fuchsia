@@ -108,13 +108,13 @@ static void HandOffException(const crash_ctx& ctx, const zx_port_packet_t& packe
         zx::thread resume_thread;
         thread.duplicate(ZX_RIGHT_SAME_RIGHTS, &resume_thread);
 
-        zx_status_t analizer_status = ZX_ERR_INTERNAL;
+        zx_status_t analyzer_status = ZX_ERR_INTERNAL;
         auto status = fuchsia_crash_AnalyzerHandleNativeException(
             ctx.svc_request.get(), process.release(), thread.release(), port.release(),
-            &analizer_status);
+            &analyzer_status);
 
-        if ((status != ZX_OK) || (analizer_status != ZX_OK)) {
-            fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", status, analizer_status);
+        if ((status != ZX_OK) || (analyzer_status != ZX_OK)) {
+            fprintf(stderr, "crashsvc: analyzer failed, err (%d | %d)\n", status, analyzer_status);
             if (resume_thread) {
                 zx_task_resume_from_exception(
                     resume_thread.get(), ctx.exception_port.get(), ZX_RESUME_TRY_NEXT);
@@ -173,7 +173,7 @@ void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc) {
         auto status = fdio_service_connect_at(
             analyzer_svc, fuchsia_crash_Analyzer_Name, ch0.release());
         if (status != ZX_OK) {
-            fprintf(stderr, "svchost: to connect to analyzer service\n");
+            fprintf(stderr, "svchost: unable to connect to analyzer service\n");
             return;
         }
     }
@@ -186,7 +186,7 @@ void start_crashsvc(zx::job root_job, zx_handle_t analyzer_svc) {
 
     thrd_t t;
     if ((thrd_create_with_name(&t, crash_svc, ctx, "crash-svc")) == thrd_success) {
-      thrd_detach(t);
+        thrd_detach(t);
     } else {
         delete ctx;
     }
