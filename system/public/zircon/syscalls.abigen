@@ -172,13 +172,13 @@ syscall object_wait_async
     returns (zx_status_t);
 
 #^ signal an object
-#! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_SIGNAL.
+#! handle must have ZX_RIGHT_SIGNAL.
 syscall object_signal
     (handle: zx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
     returns (zx_status_t);
 
 #^ signal an object's peer
-#! handle must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_SIGNAL_PEER.
+#! handle must have ZX_RIGHT_SIGNAL_PEER.
 syscall object_signal_peer
     (handle: zx_handle_t, clear_mask: uint32_t, set_mask: uint32_t)
     returns (zx_status_t);

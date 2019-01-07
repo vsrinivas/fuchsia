@@ -39,7 +39,7 @@ The *clear_mask* is first used to clear any bits indicated, and then the
 
 <!-- Updated by update-docs-from-abigen, do not edit. -->
 
-*handle* must be of type **ZX_OBJ_TYPE_PROCESS** and have **ZX_RIGHT_SIGNAL**.
+*handle* must have **ZX_RIGHT_SIGNAL**.
 
 ## RETURN VALUE
 
