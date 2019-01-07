@@ -68,8 +68,15 @@ void TestController::SetTransactionCallback(
 
 void TestController::OnCommandPacketReceived(
     const common::PacketView<hci::CommandHeader>& command_packet) {
+  uint16_t opcode = command_packet.header().opcode;
+  uint8_t ogf = hci::GetOGF(opcode);
+  uint16_t ocf = hci::GetOCF(opcode);
+
+  // Note: we upcast ogf to uint16_t so that it does not get interpreted as a
+  // char for printing
   ASSERT_FALSE(cmd_transactions_.empty())
-      << "Received unexpected command packet";
+      << "Received unexpected command packet with OGF: 0x" << std::hex
+      << static_cast<uint16_t>(ogf) << ", OCF: 0x" << std::hex << ocf;
 
   auto& current = cmd_transactions_.front();
   ASSERT_TRUE(ContainersEqual(current.expected_, command_packet.data()));
