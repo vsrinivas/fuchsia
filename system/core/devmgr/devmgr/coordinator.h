@@ -50,6 +50,10 @@ struct Work {
         kDriverAdded = 2,
     } op = Op::kIdle;
     uint32_t arg = 0;
+    // The number of retries left for the task.
+    uint32_t retries = 4;
+    // The backoff between each retry. This grows exponentially.
+    zx::duration backoff = zx::msec(250);
     Device* owner;
 };
 

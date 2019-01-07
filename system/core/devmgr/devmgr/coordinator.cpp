@@ -20,6 +20,7 @@
 #include <fuchsia/io/c/fidl.h>
 #include <launchpad/launchpad.h>
 #include <lib/async/cpp/receiver.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/io.h>
@@ -1008,7 +1009,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
             while (!dh->devices().is_empty()) {
                 next = &dh->devices().front();
                 if (last == next) {
-                    // This shouldn't be possbile, but let's not infinite-loop if it happens
+                    // This shouldn't be possible, but let's not infinite-loop if it happens
                     log(ERROR, "devcoord: fatal: failed to remove dev %p from devhost\n", next);
                     exit(1);
                 }
@@ -1051,8 +1052,15 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
 
-                    //TODO: introduce timeout, exponential backoff
-                    QueueWork(&parent->work, Work::Op::kDeviceAdded, 0);
+                    Work* work = &parent->work;
+                    if (work->retries > 0) {
+                        // Add device with an exponential backoff.
+                        async::PostDelayedTask(DcAsyncLoop()->dispatcher(), [this, work]{
+                            QueueWork(work, Work::Op::kDeviceAdded, 0);
+                        }, work->backoff);
+                        work->backoff *= 2;
+                        work->retries--;
+                    }
                 }
             }
         }
