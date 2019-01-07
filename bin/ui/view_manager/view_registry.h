@@ -102,10 +102,6 @@ class ViewRegistry : public ViewInspector,
                               uint32_t child_key, float width_change_factor,
                               float size_change_factor);
 
-  // Make child the first responder
-  // Destroys |container_state| if an error occurs.
-  void RequestFocus(ViewContainerState* container_state, uint32_t child_key);
-
   void RequestSnapshotHACK(
       ViewContainerState* container_state, uint32_t child_key,
       fit::function<void(::fuchsia::mem::Buffer)> callback);
@@ -130,11 +126,6 @@ class ViewRegistry : public ViewInspector,
                const fuchsia::math::Point3F& ray_origin,
                const fuchsia::math::Point3F& ray_direction,
                HitTestCallback callback) override;
-  void ResolveFocusChain(::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-                         ResolveFocusChainCallback callback) override;
-  void ActivateFocusChain(uint32_t view_token,
-                          ActivateFocusChainCallback callback) override;
-  void HasFocus(uint32_t view_token, HasFocusCallback callback) override;
   void GetImeService(uint32_t view_token,
                      fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
                          ime_service) override;

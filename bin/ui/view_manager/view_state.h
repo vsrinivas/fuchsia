@@ -104,13 +104,6 @@ class ViewState : public ViewContainerState {
   const std::string& label() const { return label_; }
   const std::string& FormattedLabel() const override;
 
-  const FocusChain* focus_chain() {
-    // TODO(jpoichet) Focus chain should be built when view tree is modified
-    // or by a focus chain management API.
-    RebuildFocusChain();
-    return focus_chain_.get();
-  }
-
   fuchsia::sys::ServiceProvider* GetServiceProviderIfSupports(
       std::string service_name);
 
@@ -119,8 +112,6 @@ class ViewState : public ViewContainerState {
       fidl::VectorPtr<fidl::StringPtr> service_names);
 
  private:
-  void RebuildFocusChain();
-
   ViewRegistry* const registry_;
   uint32_t view_token_;
   ::fuchsia::ui::viewsv1::ViewListenerPtr view_listener_;
@@ -138,7 +129,6 @@ class ViewState : public ViewContainerState {
 
   uint32_t invalidation_flags_ = 0u;
 
-  std::unique_ptr<FocusChain> focus_chain_;
   fuchsia::sys::ServiceProviderPtr service_provider_;
   fidl::VectorPtr<fidl::StringPtr> service_names_;
 

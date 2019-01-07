@@ -86,10 +86,6 @@ void ViewTreeImpl::SendSizeChangeHintHACK(uint32_t child_key,
                                     height_change_factor);
 };
 
-void ViewTreeImpl::RequestFocus(uint32_t child_key) {
-  registry_->RequestFocus(state_, child_key);
-}
-
 void ViewTreeImpl::RequestSnapshotHACK(uint32_t child_key,
                                        RequestSnapshotHACKCallback callback) {
   registry_->RequestSnapshotHACK(state_, child_key, std::move(callback));

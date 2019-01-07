@@ -45,17 +45,6 @@ ViewStub* ViewTreeState::GetRoot() const {
 
 ViewTreeState* ViewTreeState::AsViewTreeState() { return this; }
 
-void ViewTreeState::RequestFocus(ViewStub* child_stub) {
-  FXL_DCHECK(child_stub != nullptr);
-  if (child_stub->is_unavailable())
-    return;
-  focused_view_ = child_stub->GetWeakPtr();
-}
-
-const FocusChain* ViewTreeState::focus_chain() {
-  return focused_view_ ? focused_view_->state()->focus_chain() : nullptr;
-}
-
 const std::string& ViewTreeState::FormattedLabel() const {
   if (formatted_label_cache_.empty()) {
     formatted_label_cache_ =
