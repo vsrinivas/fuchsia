@@ -30,18 +30,47 @@ fx-config-read || exit $?
 
 dr_mac() {
   local status=0
-  # TODO actually check the need for this
+  local xcode_path=$(xcode-select --print-path)
+  local expected_path='/Library/Developer/CommandLineTools'
+  local required_subpath='usr/include/c++'
 
-  info "Make sure you've run \`xcode-select install\`"
+  if [[ ! -d "${xcode_path}/${required_subpath}" ]]; then
+    if [[ "${xcode_path}" != "${expected_path}" ]] && \
+       [[ -d "${expected_path}/${required_subpath}" ]]; then
+      warn "You may need to run \`sudo xcode-select --switch \"${expected_path}\"\`"
+    else
+      warn "Make sure you've run \`sudo xcode-select --install\`"
+    fi
 
-  details << EOF
+    details << EOF
 A common issue with Fuchsia development on macOS is needing to
-re-run the \`xcode-select install\` step. The typical symptom is
+re-run the \`xcode-select\` command. The typical symptom is
 failure to find system C or C++ headers after a reboot or update.
+
+If the XCode Command Line Tools are missing, install them with:
+
+EOF
+    code << EOF
+sudo xcode-select --install
+EOF
+    details << EOF
+
+If the XCode Command Line Tools are already installed, but XCode
+is configured to use the wrong path (e.g., an Xcode application
+directory, instead of the "CommandLineTools", which you can
+verify with \`xcode-select --print-path\`) then you may need to
+"switch" to the CommandLineTools, using:
+
+EOF
+    code << EOF
+sudo xcode-select --switch "${expected_path}"
+EOF
+    details << EOF
 
 See $(link 'https://fuchsia.googlesource.com/docs/getting_started.md#macos')
 for more details.
 EOF
+  fi
 
   return ${status}
 }
@@ -94,6 +123,9 @@ main() {
       ;;
   esac
   dr_all || status=$?
+  if (( ${status} == 0 )); then
+    info "No known issues were found. You appear to be in good health!"
+  fi
   return ${status}
 }
 
