@@ -113,10 +113,13 @@ class ZirconVsockGuestTest : public ZirconEnclosedGuest,
     // Keep writing until we get peer closed
     zx_status_t status;
     do {
-      uint8_t buf[1000];
-      size_t actual = 0;
-      status = socket1.write(0, buf, sizeof(buf), &actual);
-    } while (status != ZX_ERR_PEER_CLOSED);
+      socket1.wait_one(ZX_SOCKET_PEER_CLOSED | ZX_SOCKET_WRITABLE, zx::time::infinite(), &pending);
+      if((pending & ZX_SOCKET_WRITABLE) != 0) {
+        uint8_t buf[1000];
+        size_t actual = 0;
+        status = socket1.write(0, buf, sizeof(buf), &actual);
+      }
+    } while (status != ZX_ERR_PEER_CLOSED && (pending & ZX_SOCKET_PEER_CLOSED) == 0);
   }
 };
 
