@@ -328,10 +328,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         }
         return parent_volume_protocol_.Destroy();
     default:
-        // TODO(ZX-2674): This ioctl forwarding is used for two drivers: the
-        // FVM manager and the ramdisk driver. Since blind ioctl forwarding will be
-        // prohibited soon, new drivers should avoid relying on this behavior.
-        return device_ioctl(parent(), op, cmd, cmd_len, reply, reply_len, out_actual);
+        return ZX_ERR_NOT_SUPPORTED;
     }
 }
 

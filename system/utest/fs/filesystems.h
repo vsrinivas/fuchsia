@@ -10,6 +10,7 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
+#include <fs-management/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
@@ -40,8 +41,8 @@ extern const char* kMountPath;
 // Path to the mounted filesystem's backing store (if it exists)
 extern char test_disk_path[];
 
-// Path to the mounted filesystems's backing ramdisk (if it exists).
-extern char* ramdisk_path;
+// The mounted filesystems's backing ramdisk (if it exists).
+extern ramdisk_client_t* test_ramdisk;
 
 // Identify if a real disk is being tested instead of a ramdisk.
 extern bool use_real_disk;

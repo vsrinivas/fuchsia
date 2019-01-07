@@ -181,24 +181,24 @@ class BlockDevice {
 public:
     static bool Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device) {
         BEGIN_HELPER;
-        fbl::String path(PATH_MAX, '\0');
+        ramdisk_client_t* client;
         ASSERT_EQ(create_ramdisk_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
-                                           const_cast<char*>(path.data())),
+                                           &client),
                   ZX_OK);
-        ASSERT_TRUE(InsertTestDevices(path.ToStringPiece()));
-        device->reset(new BlockDevice(std::move(path)));
+        ASSERT_TRUE(InsertTestDevices(ramdisk_get_path(client)));
+        device->reset(new BlockDevice(client));
         END_HELPER;
     }
 
     ~BlockDevice() {
-        destroy_ramdisk(path_.data());
+        ramdisk_destroy(client_);
     }
 
 private:
-    BlockDevice(fbl::String path)
-        : path_(std::move(path)) {}
+    BlockDevice(ramdisk_client_t* client)
+        : client_(client) {}
 
-    fbl::String path_;
+    ramdisk_client_t* client_;
 };
 
 void CreateBadBlockMap(void* buffer) {

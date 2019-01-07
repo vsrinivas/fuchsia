@@ -238,25 +238,26 @@ bool BlobfsTest::Init(FsTestState state) {
                 "Could not create mount point for test filesystems");
 
     if (gUseRealDisk) {
-        strncpy(ramdisk_path_, gRealDiskInfo.disk_path, PATH_MAX);
+        strncpy(device_path_, gRealDiskInfo.disk_path, PATH_MAX);
         blk_size_ = gRealDiskInfo.blk_size;
         blk_count_ = gRealDiskInfo.blk_count;
     } else {
-        ASSERT_EQ(create_ramdisk(blk_size_, blk_count_, ramdisk_path_), ZX_OK,
+        ASSERT_EQ(create_ramdisk(blk_size_, blk_count_, &ramdisk_), ZX_OK,
                   "Blobfs: Could not create ramdisk");
+        strlcpy(device_path_, ramdisk_get_path(ramdisk_), sizeof(device_path_));
     }
 
     if (type_ == FsTestType::kFvm) {
         ASSERT_EQ(kTestFvmSliceSize % blobfs::kBlobfsBlockSize, 0);
 
-        fbl::unique_fd fd(open(ramdisk_path_, O_RDWR));
+        fbl::unique_fd fd(open(device_path_, O_RDWR));
         ASSERT_TRUE(fd, "[FAILED]: Could not open test disk");
         ASSERT_EQ(fvm_init(fd.get(), kTestFvmSliceSize), ZX_OK,
                   "[FAILED]: Could not format disk with FVM");
         ASSERT_GE(ioctl_device_bind(fd.get(), FVM_DRIVER_LIB, STRLEN(FVM_DRIVER_LIB)), 0,
                   "[FAILED]: Could not bind disk to FVM driver");
 
-        snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", ramdisk_path_);
+        snprintf(fvm_path_, sizeof(fvm_path_), "%s/fvm", device_path_);
         ASSERT_EQ(wait_for_device(fvm_path_, ZX_SEC(3)), ZX_OK,
                   "[FAILED]: FVM driver never appeared");
         fd.reset();
@@ -279,14 +280,14 @@ bool BlobfsTest::Init(FsTestState state) {
         fd.reset(fvm_allocate_partition(fvm_fd.get(), &request));
         ASSERT_TRUE(fd, "[FAILED]: Could not allocate FVM partition");
         fvm_fd.reset();
-        fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, ramdisk_path_));
+        fd.reset(open_partition(kTestUniqueGUID, kTestPartGUID, 0, device_path_));
         ASSERT_TRUE(fd, "[FAILED]: Could not locate FVM partition");
         fd.reset();
     }
 
     if (state != FsTestState::kMinimal) {
         ASSERT_EQ(state, FsTestState::kRunning);
-        ASSERT_EQ(mkfs(ramdisk_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
+        ASSERT_EQ(mkfs(device_path_, DISK_FORMAT_BLOBFS, launch_stdio_sync, &default_mkfs_options),
                   ZX_OK);
         ASSERT_TRUE(Mount());
     }
@@ -302,7 +303,7 @@ bool BlobfsTest::Remount() {
     auto error = fbl::MakeAutoCall([this](){ state_ = FsTestState::kError; });
     ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount blobfs");
     LaunchCallback launch = stdio_ ? launch_stdio_sync : launch_silent_sync;
-    ASSERT_EQ(fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch), ZX_OK,
+    ASSERT_EQ(fsck(device_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch), ZX_OK,
               "Filesystem fsck failed");
     ASSERT_TRUE(Mount(), "Failed to mount blobfs");
     error.cancel();
@@ -316,7 +317,7 @@ bool BlobfsTest::ForceRemount(zx_status_t* fsck_result) {
     umount(MOUNT_PATH);
 
     if (fsck_result != nullptr) {
-        *fsck_result = fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options,
+        *fsck_result = fsck(device_path_, DISK_FORMAT_BLOBFS, &test_fsck_options,
                             launch_silent_sync);
     }
 
@@ -337,7 +338,7 @@ bool BlobfsTest::Teardown() {
         ASSERT_EQ(state_, FsTestState::kRunning);
         ASSERT_TRUE(CheckInfo());
         ASSERT_EQ(umount(MOUNT_PATH), ZX_OK, "Failed to unmount filesystem");
-        ASSERT_EQ(fsck(ramdisk_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync),
+        ASSERT_EQ(fsck(device_path_, DISK_FORMAT_BLOBFS, &test_fsck_options, launch_stdio_sync),
                   ZX_OK, "Filesystem fsck failed");
     }
 
@@ -346,11 +347,7 @@ bool BlobfsTest::Teardown() {
             ASSERT_EQ(fvm_destroy(fvm_path_), ZX_OK);
         }
     } else {
-        if (type_ == FsTestType::kFvm) {
-            ASSERT_EQ(destroy_ramdisk(fvm_path_), ZX_OK);
-        } else {
-            ASSERT_EQ(destroy_ramdisk(ramdisk_path_), ZX_OK);
-        }
+        ASSERT_EQ(ramdisk_destroy(ramdisk_), ZX_OK);
     }
 
     error.cancel();
@@ -386,7 +383,7 @@ bool BlobfsTest::GetDevicePath(char* path, size_t len) const {
             }
         }
     } else {
-        strlcpy(path, ramdisk_path_, len);
+        strlcpy(path, device_path_, len);
     }
     END_HELPER;
 }
@@ -405,11 +402,7 @@ bool BlobfsTest::ForceReset() {
             ASSERT_EQ(fvm_destroy(fvm_path_), ZX_OK);
         }
     } else {
-        if (type_ == FsTestType::kFvm) {
-            ASSERT_EQ(destroy_ramdisk(fvm_path_), 0);
-        } else {
-            ASSERT_EQ(destroy_ramdisk(ramdisk_path_), 0);
-        }
+        ASSERT_EQ(ramdisk_destroy(ramdisk_), ZX_OK);
     }
 
     FsTestState old_state = state_;
@@ -422,19 +415,12 @@ bool BlobfsTest::ForceReset() {
 bool BlobfsTest::ToggleSleep(uint64_t blk_count) {
     BEGIN_HELPER;
 
-    char* ramdisk_path;
-    if (type_ == FsTestType::kNormal) {
-        ramdisk_path = ramdisk_path_;
-    } else {
-        ramdisk_path = fvm_path_;
-    }
-
     if (asleep_) {
         // If the ramdisk is asleep, wake it up.
-        ASSERT_EQ(wake_ramdisk(ramdisk_path), ZX_OK);
+        ASSERT_EQ(ramdisk_wake(ramdisk_), ZX_OK);
     } else {
         // If the ramdisk is active, put it to sleep after the specified block count.
-        ASSERT_EQ(sleep_ramdisk(ramdisk_path, blk_count), ZX_OK);
+        ASSERT_EQ(ramdisk_sleep_after(ramdisk_, blk_count), ZX_OK);
     }
 
     asleep_ = !asleep_;
@@ -445,16 +431,7 @@ bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
     BEGIN_HELPER;
     ramdisk_blk_counts_t counts;
 
-    switch (type_) {
-    case FsTestType::kNormal:
-        ASSERT_EQ(get_ramdisk_blocks(ramdisk_path_, &counts), ZX_OK);
-        break;
-    case FsTestType::kFvm:
-        ASSERT_EQ(get_ramdisk_blocks(fvm_path_, &counts), ZX_OK);
-        break;
-    default:
-        ASSERT_TRUE(false);
-    }
+    ASSERT_EQ(ramdisk_get_block_counts(ramdisk_, &counts), ZX_OK);
 
     *blk_count = counts.received;
     END_HELPER;
@@ -491,7 +468,7 @@ bool BlobfsTest::Mount() {
     BEGIN_HELPER;
     int flags = read_only_ ? O_RDONLY : O_RDWR;
 
-    fbl::unique_fd fd(open(ramdisk_path_, flags));
+    fbl::unique_fd fd(open(device_path_, flags));
     ASSERT_TRUE(fd.get(), "Could not open ramdisk");
 
     mount_options_t options = default_mount_options;

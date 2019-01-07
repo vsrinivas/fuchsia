@@ -83,15 +83,6 @@ static zx_duration_t iotime_posix(int is_read, int fd, size_t total, size_t bufs
 }
 
 
-static int make_ramdisk(size_t blocks) {
-    char ramdisk_path[PATH_MAX];
-    if (create_ramdisk(512, blocks / 512, ramdisk_path) != ZX_OK) {
-        return -1;
-    }
-
-    return open(ramdisk_path, O_RDWR);
-}
-
 static zx_duration_t iotime_block(int is_read, int fd, size_t total, size_t bufsz) {
     if ((total % 4096) || (bufsz % 4096)) {
         fprintf(stderr, "error: total and buffer size must be multiples of 4K\n");
@@ -181,20 +172,24 @@ int main(int argc, char** argv) {
     size_t total = number(argv[4]);
     size_t bufsz = number(argv[5]);
 
+    int r = -1;
+    ramdisk_client_t* ramdisk = NULL;
     int fd;
     if (!strcmp(argv[3], "--ramdisk")) {
         if (strcmp(argv[2], "block")) {
             fprintf(stderr, "ramdisk only supported for block\n");
-            return -1;
+            goto done;
         }
-        if ((fd = make_ramdisk(total)) < 0) {
+        zx_status_t status = create_ramdisk(512, total / 512, &ramdisk);
+        if (status != ZX_OK) {
             fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
-            return -1;
+            goto done;
         }
+        fd = ramdisk_get_block_fd(ramdisk);
     } else {
         if ((fd = open(argv[3], is_read ? O_RDONLY : O_WRONLY)) < 0) {
             fprintf(stderr, "error: cannot open '%s'\n", argv[3]);
-            return -1;
+            goto done;
         }
     }
 
@@ -207,14 +202,21 @@ int main(int argc, char** argv) {
         res = iotime_fifo(argv[3], is_read, fd, total, bufsz);
     } else {
         fprintf(stderr, "error: unknown mode '%s'\n", argv[2]);
-        return -1;
+        goto done;
     }
 
     if (res != ZX_TIME_INFINITE) {
         fprintf(stderr, "%s %zu bytes in %zu ns: ", is_read ? "read" : "write", total, res);
         bytes_per_second(total, res);
-        return 0;
+        r = 0;
+        goto done;
     } else {
-        return -1;
+        goto done;
     }
+
+done:
+    if (ramdisk != NULL) {
+        ramdisk_destroy(ramdisk);
+    }
+    return r;
 }

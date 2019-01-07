@@ -17,14 +17,14 @@ namespace {
 // measurement tool).  It runs biotime on a ramdisk and just checks that it
 // returns a success status.
 bool run_biotime(fbl::Vector<const char*>&& args) {
-    char ramdisk_path[PATH_MAX];
-    ASSERT_EQ(create_ramdisk(1024, 100, ramdisk_path), ZX_OK);
+    ramdisk_client_t* ramdisk;
+    ASSERT_EQ(create_ramdisk(1024, 100, &ramdisk), ZX_OK);
     auto ac = fbl::MakeAutoCall([&] {
-        EXPECT_EQ(destroy_ramdisk(ramdisk_path), 0);
+        EXPECT_EQ(ramdisk_destroy(ramdisk), 0);
     });
 
     args.insert(0, "/boot/bin/biotime");
-    args.push_back(ramdisk_path);
+    args.push_back(ramdisk_get_path(ramdisk));
     args.push_back(nullptr); // fdio_spawn() wants a null-terminated array.
 
     zx::process process;

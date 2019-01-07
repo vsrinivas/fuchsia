@@ -13,38 +13,56 @@
 
 __BEGIN_CDECLS
 
+struct ramdisk_client;
+typedef struct ramdisk_client ramdisk_client_t;
+
 // Wait for a device at "path" to become available.
 //
 // Returns ZX_OK if the device is ready to be opened, or ZX_ERR_TIMED_OUT if
 // the device is not available after "timeout" has elapsed.
 zx_status_t wait_for_device(const char* path, zx_duration_t timeout);
 
-// Creates a ramdisk  returns the full path to the ramdisk in ramdisk_path_out.
+// Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
-zx_status_t create_ramdisk(uint64_t blk_size, uint64_t blk_count, char* out_path);
+zx_status_t create_ramdisk(uint64_t blk_size, uint64_t blk_count, ramdisk_client_t** out);
 
-// Creates a ramdisk  returns the full path to the ramdisk in ramdisk_path_out.
+// Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
 zx_status_t create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count,
-                                     const uint8_t* type_guid, size_t guid_len, char* out_path);
+                                     const uint8_t* type_guid, size_t guid_len,
+                                     ramdisk_client_t** out);
 
 // Same but uses an existing VMO as the ramdisk.
 // The handle is always consumed, and must be the only handle to this VMO.
-zx_status_t create_ramdisk_from_vmo(zx_handle_t vmo, char* out_path);
+zx_status_t create_ramdisk_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
+
+// Returns the file descriptor to the block device interface of the client.
+//
+// Does not transfer ownership of the file descriptor.
+int ramdisk_get_block_fd(const ramdisk_client_t* client);
+
+// Returns the path to the full block device interface of the ramdisk.
+const char* ramdisk_get_path(const ramdisk_client_t* client);
 
 // Puts the ramdisk at |ramdisk_path| to sleep after |blk_count| blocks written.
 // After this, transactions will no longer be immediately persisted to disk.
 // If the |RAMDISK_FLAG_RESUME_ON_WAKE| flag has been set, transactions will
-// be processed when |wake_ramdisk| is called, otherwise they will fail immediately.
-zx_status_t sleep_ramdisk(const char* ramdisk_path, uint64_t blk_count);
+// be processed when |ramdisk_wake| is called, otherwise they will fail immediately.
+zx_status_t ramdisk_sleep_after(const ramdisk_client_t* client, uint64_t blk_count);
 
 // Wake the ramdisk at |ramdisk_path| from a sleep state.
-zx_status_t wake_ramdisk(const char* ramdisk_path);
+zx_status_t ramdisk_wake(const ramdisk_client_t* client);
 
 // Returns the ramdisk's current failed, successful, and total block counts as |counts|.
-zx_status_t get_ramdisk_blocks(const char* ramdisk_path, ramdisk_blk_counts_t* counts);
+zx_status_t ramdisk_get_block_counts(const ramdisk_client_t* client, ramdisk_blk_counts_t* counts);
 
-// Destroys a ramdisk, given the "ramdisk_path" returned from "create_ramdisk".
-zx_status_t destroy_ramdisk(const char* ramdisk_path);
+// Sets flags on a ramdisk. Flags are plumbed directly through IPC interface.
+zx_status_t ramdisk_set_flags(const ramdisk_client_t* client, uint32_t flags);
+
+// Rebinds a ramdisk.
+zx_status_t ramdisk_rebind(ramdisk_client_t* client);
+
+// Destroys a ramdisk, given the "ramdisk_client" returned from "create_ramdisk".
+zx_status_t ramdisk_destroy(ramdisk_client_t* client);
 
 __END_CDECLS

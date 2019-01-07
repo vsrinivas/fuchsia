@@ -147,6 +147,10 @@ private:
     // Create and use ramdisk instead of a physical disk.
     bool use_ramdisk_;
 
+    // An optional ramdisk structure, which is only non-nullptr if
+    // |use_ramdisk_| is true.
+    struct ramdisk_client* ramdisk_ = nullptr;
+
     // usable start block offset.
     uint64_t usable_start_block_ = UINT64_MAX;
 

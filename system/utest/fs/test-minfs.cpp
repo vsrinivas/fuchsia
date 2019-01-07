@@ -488,7 +488,7 @@ bool TestUnlinkFail(void) {
 
     // Put the ramdisk to sleep and close all the fds. This will cause file purge to fail,
     // and all unlinked files will be left intact (on disk).
-    ASSERT_EQ(sleep_ramdisk(ramdisk_path, 0), 0);
+    ASSERT_EQ(ramdisk_sleep_after(test_ramdisk, 0), 0);
 
     for (unsigned i = first_fd + 1; i < last_fd; i++) {
         if (i != mid_fd) {
@@ -505,7 +505,7 @@ bool TestUnlinkFail(void) {
     ASSERT_EQ(current_blocks, original_blocks);
 
     // Remount Minfs, which should cause leftover unlinked files to be removed.
-    ASSERT_EQ(wake_ramdisk(ramdisk_path), 0);
+    ASSERT_EQ(ramdisk_wake(test_ramdisk), 0);
     ASSERT_TRUE(check_remount());
 
     // Check that the block count has been reverted to the value before any files were added.

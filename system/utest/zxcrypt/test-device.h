@@ -14,6 +14,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
+#include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/zx/vmo.h>
 #include <zircon/compiler.h>
@@ -57,7 +58,8 @@ public:
     // Returns a duplicated file descriptor representing the zxcrypt volume's underlying device;
     // that is, the ramdisk or FVM partition.
     fbl::unique_fd parent() const {
-        return fbl::unique_fd(dup(fvm_part_ ? fvm_part_.get() : ramdisk_.get()));
+        return fbl::unique_fd(dup(fvm_part_ ? fvm_part_.get() :
+                                              ramdisk_get_block_fd(ramdisk_)));
     }
 
     // Returns a duplicated file descriptor representing t the zxcrypt volume.
@@ -163,9 +165,6 @@ private:
     // Destroys the ramdisk, killing any active transactions
     void DestroyRamdisk();
 
-    // Waits until idle, rebinds a ramdisk, and waits until it has been removed.
-    static zx_status_t RebindWatcher(int dirfd, int event, const char* fn, void* cookie);
-
     // Creates a ramdisk of with enough blocks of |block_size| bytes to hold both FVM metadata and
     // an FVM partition of at least |device_size| bytes.  It formats the ramdisk to be an FVM
     // device, and allocates a partition with a single slice of size FVM_BLOCK_SIZE.
@@ -180,12 +179,11 @@ private:
     // Thread body to wake up the underlying ramdisk.
     static int WakeThread(void* arg);
 
-    // The pathname of the ramdisk
-    char ramdisk_path_[PATH_MAX];
+    // The ramdisk client
+    ramdisk_client_t* ramdisk_;
+
     // The pathname of the FVM partition.
     char fvm_part_path_[PATH_MAX];
-    // File descriptor for the underlying ramdisk.
-    fbl::unique_fd ramdisk_;
     // File descriptor for the (optional) underlying FVM partition.
     fbl::unique_fd fvm_part_;
     // File descriptor for the zxcrypt volume.

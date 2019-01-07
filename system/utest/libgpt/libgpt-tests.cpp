@@ -330,14 +330,14 @@ bool LibGptTest::InitDisk(const char* disk_path) {
 
 bool LibGptTest::InitRamDisk() {
     BEGIN_HELPER;
-    ASSERT_EQ(create_ramdisk(GetBlockSize(), GetBlockCount(), disk_path_),
+    ASSERT_EQ(create_ramdisk(GetBlockSize(), GetBlockCount(), &ramdisk_),
               ZX_OK, "Could not create ramdisk");
-    int fd = open(disk_path_, O_RDWR);
-    if (fd < 0) {
+    strlcpy(disk_path_, ramdisk_get_path(ramdisk_), sizeof(disk_path_));
+    fd_.reset(open(disk_path_, O_RDWR));
+    if (!fd_) {
         return false;
     }
 
-    fd_.reset(fd);
     END_HELPER;
 }
 
@@ -378,7 +378,7 @@ bool LibGptTest::TearDownDisk() {
 
 bool LibGptTest::TearDownRamDisk() {
     BEGIN_HELPER;
-    ASSERT_EQ(destroy_ramdisk(disk_path_), ZX_OK);
+    ASSERT_EQ(ramdisk_destroy(ramdisk_), ZX_OK);
     END_HELPER;
 }
 

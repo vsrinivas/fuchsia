@@ -231,14 +231,14 @@ bool UseBlockDeviceIsOk() {
     options.use_ramdisk = false;
 
     // Create a Ramdisk which will be passed as the 'block_device'.
-    char block_device[kPathSize];
+    ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
-                             options.ramdisk_block_count, block_device),
+                             options.ramdisk_block_count, &ramdisk),
               ZX_OK);
-    options.block_device_path = block_device;
+    options.block_device_path = ramdisk_get_path(ramdisk);
 
-    auto clean_up = fbl::MakeAutoCall([&options]() {
-        destroy_ramdisk(options.block_device_path.c_str());
+    auto clean_up = fbl::MakeAutoCall([&ramdisk]() {
+        ramdisk_destroy(ramdisk);
     });
 
     mkfs_options_t mkfs_options = default_mkfs_options;
@@ -279,14 +279,14 @@ bool UseBlockDeviceWithFvmIsOk() {
     options.use_fvm = true;
 
     // Create a Ramdisk which will be passed as the 'block_device'.
-    char block_device[kPathSize];
+    ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
-                             options.ramdisk_block_count, block_device),
+                             options.ramdisk_block_count, &ramdisk),
               ZX_OK);
-    options.block_device_path = block_device;
+    options.block_device_path = ramdisk_get_path(ramdisk);
 
-    auto clean_up = fbl::MakeAutoCall([&options]() {
-        destroy_ramdisk(options.block_device_path.c_str());
+    auto clean_up = fbl::MakeAutoCall([&ramdisk]() {
+        ramdisk_destroy(ramdisk);
     });
 
     mkfs_options_t mkfs_options = default_mkfs_options;
@@ -333,14 +333,14 @@ bool SkipFormatIsOk() {
     options.fs_format = false;
 
     // Create a Ramdisk which will be passed as the 'block_device'.
-    char block_device[kPathSize];
+    ramdisk_client_t* ramdisk = nullptr;
     ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
-                             options.ramdisk_block_count, block_device),
+                             options.ramdisk_block_count, &ramdisk),
               ZX_OK);
-    options.block_device_path = block_device;
+    options.block_device_path = ramdisk_get_path(ramdisk);
 
-    auto clean_up = fbl::MakeAutoCall([&options]() {
-        destroy_ramdisk(options.block_device_path.c_str());
+    auto clean_up = fbl::MakeAutoCall([&ramdisk]() {
+        ramdisk_destroy(ramdisk);
     });
 
     mkfs_options_t mkfs_options = default_mkfs_options;

@@ -12,6 +12,7 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
+#include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/zx/time.h>
 #include <zircon/status.h>
@@ -186,6 +187,9 @@ private:
         kAllocated,
         kFreed,
     };
+
+    // The ramdisk, if it exists.
+    ramdisk_client_t* ramdisk_ = nullptr;
 
     // Path to the block device hosting the mounted FS.
     fbl::String block_device_path_;

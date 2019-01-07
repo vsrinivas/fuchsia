@@ -28,7 +28,7 @@ const char* kMountPath = "/fs-test-tmp/mount";
 bool use_real_disk = false;
 block_info_t test_disk_info;
 char test_disk_path[PATH_MAX];
-char* ramdisk_path;
+ramdisk_client_t* test_ramdisk = nullptr;
 fs_info_t* test_info;
 
 static char fvm_disk_path[PATH_MAX];
@@ -70,17 +70,15 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
         exit(-1);
     }
 
-    ramdisk_path = nullptr;
-
     if (!use_real_disk) {
-        if (create_ramdisk(disk.block_size, disk.block_count, test_disk_path) != ZX_OK) {
+        if (create_ramdisk(disk.block_size, disk.block_count, &test_ramdisk) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }
 
         test_disk_info.block_size = static_cast<uint32_t>(disk.block_size);
         test_disk_info.block_count = disk.block_count;
-        ramdisk_path = test_disk_path;
+        strlcpy(test_disk_path, ramdisk_get_path(test_ramdisk), sizeof(test_disk_path));
     }
 
     if (test_class == FS_TEST_FVM) {
@@ -134,7 +132,6 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
         // Restore the "fvm_disk_path" to the containing disk, so it can
         // be destroyed when the test completes
         fvm_disk_path[strlen(fvm_disk_path) - strlen("/fvm")] = 0;
-        ramdisk_path = fvm_disk_path;
     }
 
     if (test_info->mkfs(test_disk_path)) {
@@ -173,7 +170,7 @@ void teardown_fs_test(fs_test_type_t test_class) {
     }
 
     if (!use_real_disk) {
-        if (destroy_ramdisk(test_disk_path)) {
+        if (ramdisk_destroy(test_ramdisk)) {
             fprintf(stderr, "[FAILED]: Error destroying ramdisk\n");
             exit(-1);
         }

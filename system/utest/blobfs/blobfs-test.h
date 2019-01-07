@@ -63,7 +63,7 @@ public:
     }
 
     int GetFd() const {
-        return open(ramdisk_path_, O_RDWR);
+        return open(device_path_, O_RDWR);
     }
 
     off_t GetDiskSize() const {
@@ -129,7 +129,8 @@ private:
     FsTestState state_ = FsTestState::kInit;
     uint64_t blk_size_ = 512;
     uint64_t blk_count_ = 1 << 20;
-    char ramdisk_path_[PATH_MAX];
+    ramdisk_client_t* ramdisk_ = nullptr;
+    char device_path_[PATH_MAX];
     char fvm_path_[PATH_MAX];
     bool read_only_ = false;
     bool asleep_ = false;
