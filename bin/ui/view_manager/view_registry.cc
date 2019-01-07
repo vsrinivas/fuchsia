@@ -79,19 +79,6 @@ std::string SanitizeLabel(fidl::StringPtr label) {
   return label.get().substr(0, ::fuchsia::ui::viewsv1::kLabelMaxLength);
 }
 
-std::unique_ptr<FocusChain> CopyFocusChain(const FocusChain* chain) {
-  std::unique_ptr<FocusChain> new_chain = nullptr;
-  if (chain) {
-    new_chain = std::make_unique<FocusChain>();
-    new_chain->version = chain->version;
-    new_chain->chain.resize(chain->chain.size());
-    for (size_t index = 0; index < chain->chain.size(); ++index) {
-      new_chain->chain[index] = chain->chain[index];
-    }
-  }
-  return new_chain;
-}
-
 fuchsia::math::Transform ToTransform(const fuchsia::ui::gfx::mat4& matrix) {
   // Note: mat4 is column-major but transform is row-major
   fuchsia::math::Transform transform;
@@ -408,37 +395,6 @@ void ViewRegistry::SetChildProperties(
   if (child_stub->state()) {
     InvalidateView(child_stub->state(),
                    ViewState::INVALIDATION_PROPERTIES_CHANGED);
-  }
-}
-
-void ViewRegistry::RequestFocus(ViewContainerState* container_state,
-                                uint32_t child_key) {
-  FXL_DCHECK(IsViewContainerStateRegisteredDebug(container_state));
-  FXL_VLOG(1) << "RequestFocus: container=" << container_state
-              << ", child_key=" << child_key;
-
-  // Check whether the child key exists in the container.
-  auto child_it = container_state->children().find(child_key);
-  if (child_it == container_state->children().end()) {
-    FXL_LOG(ERROR) << "Attempted to modify child with an invalid key: "
-                   << "container=" << container_state
-                   << ", child_key=" << child_key;
-    UnregisterViewContainer(container_state);
-    return;
-  }
-
-  // Immediately discard requests on unavailable views.
-  ViewStub* child_stub = child_it->second.get();
-  if (child_stub->is_unavailable() || child_stub->is_pending()) {
-    FXL_VLOG(1) << "RequestFocus called for view that is currently "
-                << (child_stub->is_unavailable() ? "unavailable" : "pending");
-    return;
-  }
-
-  // Set active focus chain for this view tree
-  ViewTreeState* tree_state = child_stub->tree();
-  if (tree_state) {
-    tree_state->RequestFocus(child_stub);
   }
 }
 
@@ -825,60 +781,6 @@ void ViewRegistry::HitTest(
           }));
 }
 
-void ViewRegistry::ResolveFocusChain(
-    ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-    ResolveFocusChainCallback callback) {
-  FXL_VLOG(1) << "ResolveFocusChain: view_tree_token=" << view_tree_token;
-
-  auto it = view_trees_by_token_.find(view_tree_token.value);
-  if (it != view_trees_by_token_.end()) {
-    callback(CopyFocusChain(it->second->focus_chain()));
-  } else {
-    callback(nullptr);
-  }
-}
-
-void ViewRegistry::ActivateFocusChain(uint32_t view_token,
-                                      ActivateFocusChainCallback callback) {
-  FXL_VLOG(1) << "ActivateFocusChain: view_token=" << view_token;
-
-  if (!IsViewFocusable(view_token)) {
-    return;
-  }
-
-  ViewState* view = FindView(view_token);
-  if (!view || !view->view_stub()) {
-    callback(nullptr);
-    return;
-  }
-
-  RequestFocus(view->view_stub()->container(), view->view_stub()->key());
-  auto tree_state = view->view_stub()->tree();
-  std::unique_ptr<FocusChain> new_chain =
-      CopyFocusChain(tree_state->focus_chain());
-  callback(std::move(new_chain));
-}
-
-void ViewRegistry::HasFocus(uint32_t view_token, HasFocusCallback callback) {
-  FXL_VLOG(1) << "HasFocus: view_token=" << view_token;
-  ViewState* view_state = FindView(view_token);
-  if (!view_state) {
-    callback(false);
-    return;
-  }
-  auto tree_state = view_state->view_stub()->tree();
-  auto chain = tree_state->focus_chain();
-  if (chain) {
-    for (size_t index = 0; index < chain->chain.size(); ++index) {
-      if (chain->chain[index] == view_token) {
-        callback(true);
-        return;
-      }
-    }
-  }
-  callback(false);
-}
-
 fuchsia::sys::ServiceProvider* ViewRegistry::FindViewServiceProvider(
     ViewState* view_state, std::string service_name) {
   if (!view_state) {
@@ -1033,24 +935,6 @@ void ViewRegistry::PerformHitTest(
            ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
             callback(std::move(hits));
           }));
-}
-
-// Not focusable if this view or any ancestor is unfocusable.
-bool ViewRegistry::IsViewFocusable(uint32_t view_token) {
-  ViewState* view = FindView(view_token);
-  if (!view) {
-    return false;
-  }
-  while (view && view->view_stub()) {
-    if (view->view_stub()->properties() &&
-        view->view_stub()->properties()->custom_focus_behavior &&
-        !view->view_stub()->properties()->custom_focus_behavior->allow_focus) {
-      return false;
-    }
-    view = view->view_stub()->parent();
-  }
-  // reached top of tree
-  return true;
 }
 
 }  // namespace view_manager
