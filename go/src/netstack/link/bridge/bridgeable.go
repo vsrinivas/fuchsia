@@ -17,9 +17,11 @@ type BridgeableEndpoint struct {
 	}
 }
 
-func (e *BridgeableEndpoint) Wrap(linkID tcpip.LinkEndpointID) tcpip.LinkEndpointID {
-	e.LinkEndpoint = stack.FindLinkEndpoint(linkID)
-	return stack.RegisterLinkEndpoint(e)
+func NewEndpoint(lower tcpip.LinkEndpointID) (tcpip.LinkEndpointID, *BridgeableEndpoint) {
+	e := &BridgeableEndpoint{
+		LinkEndpoint: stack.FindLinkEndpoint(lower),
+	}
+	return stack.RegisterLinkEndpoint(e), e
 }
 
 func (e *BridgeableEndpoint) IsAttached() bool {

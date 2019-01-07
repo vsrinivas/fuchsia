@@ -34,10 +34,9 @@ func TestEndpointAttributes(t *testing.T) {
 
 	linkID1, _ := channel.New(1, 101, "")
 	linkID2, _ := channel.New(1, 100, "")
-	var ep1, ep2 bridge.BridgeableEndpoint
-	ep1.Wrap(linkID1)
-	ep2.Wrap(linkID2)
-	bridge := bridge.New([]*bridge.BridgeableEndpoint{&ep1, &ep2})
+	linkID1, ep1 := bridge.NewEndpoint(linkID1)
+	linkID2, ep2 := bridge.NewEndpoint(linkID2)
+	bridge := bridge.New([]*bridge.BridgeableEndpoint{ep1, ep2})
 	if bridge.MTU() != 100 {
 		t.Errorf("got bridge.MTU() == %d but want 100", bridge.MTU())
 	}
@@ -268,9 +267,8 @@ func (e *endpoint) LinkAddress() tcpip.LinkAddress {
 
 func makeStackWithEndpoint(ep *endpoint, addr tcpip.Address) (*stack.Stack, error) {
 	s := stack.New([]string{ipv4.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
-	var b bridge.BridgeableEndpoint
 	id := stack.RegisterLinkEndpoint(ep)
-	id = b.Wrap(id)
+	id, _ = bridge.NewEndpoint(id)
 	if err := s.CreateNIC(1, id); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
@@ -286,16 +284,17 @@ func makeStackWithEndpoint(ep *endpoint, addr tcpip.Address) (*stack.Stack, erro
 func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*stack.Stack, error) {
 	linkID1 := stack.RegisterLinkEndpoint(ep1)
 	linkID2 := stack.RegisterLinkEndpoint(ep2)
-	var bep1, bep2 bridge.BridgeableEndpoint
+	linkID1, bep1 := bridge.NewEndpoint(linkID1)
+	linkID2, bep2 := bridge.NewEndpoint(linkID2)
 
 	stk := stack.New([]string{ipv4.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
-	if err := stk.CreateNIC(1, bep1.Wrap(linkID1)); err != nil {
+	if err := stk.CreateNIC(1, linkID1); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	if err := stk.CreateNIC(2, bep2.Wrap(linkID2)); err != nil {
+	if err := stk.CreateNIC(2, linkID2); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
-	bridge := bridge.New([]*bridge.BridgeableEndpoint{&bep1, &bep2})
+	bridge := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
 	bID := tcpip.NICID(3)
 	if err := stk.CreateNIC(bID, stack.RegisterLinkEndpoint(bridge)); err != nil {
 		return nil, fmt.Errorf("CreateNIC failed: %s", err)

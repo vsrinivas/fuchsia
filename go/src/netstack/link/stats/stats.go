@@ -34,12 +34,14 @@ type StatsEndpoint struct {
 	Nic   *netiface.NIC
 }
 
-func (e *StatsEndpoint) Wrap(lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
-	e.lower = stack.FindLinkEndpoint(lower)
-	e.Stats = nsfidl.NetInterfaceStats{
-		UpSince: time.Now().Unix(),
+func NewEndpoint(lower tcpip.LinkEndpointID) (tcpip.LinkEndpointID, *StatsEndpoint) {
+	e := &StatsEndpoint{
+		lower: stack.FindLinkEndpoint(lower),
+		Stats: nsfidl.NetInterfaceStats{
+			UpSince: time.Now().Unix(),
+		},
 	}
-	return stack.RegisterLinkEndpoint(e)
+	return stack.RegisterLinkEndpoint(e), e
 }
 
 // DeliverNetworkPacket handles incoming packet from the lower layer.

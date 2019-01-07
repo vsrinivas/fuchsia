@@ -20,7 +20,6 @@ type endpoint struct {
 }
 
 // New creates a new Filter endpoint by wrapping a lower LinkEndpoint.
-// The lower endpoint must implement stack.BufferWritingLinkEndpoint.
 func NewEndpoint(filter *Filter, lower tcpip.LinkEndpointID) tcpip.LinkEndpointID {
 	return stack.RegisterLinkEndpoint(&endpoint{
 		filter:       filter,

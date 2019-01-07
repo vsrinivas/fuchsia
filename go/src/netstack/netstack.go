@@ -87,10 +87,14 @@ type ifState struct {
 	// TODO(porce): Consider replacement with //third_party/netstack/tcpip/stack/stack.go
 	nic *netiface.NIC
 
-	// LinkEndpoint responsible to track traffic statistics
-	statsEP stats.StatsEndpoint
+	// The "outermost" LinkEndpoint implementation (the composition of link
+	// endpoint functionality happens by wrapping other link endpoints).
+	endpoint stack.LinkEndpoint
 
-	bridgeable bridge.BridgeableEndpoint
+	// statsEP and bridgeable are wrapper LinkEndpoint implementations that need
+	// to be accessed by their concrete type.
+	statsEP    *stats.StatsEndpoint
+	bridgeable *bridge.BridgeableEndpoint
 }
 
 func defaultRouteTable(nicid tcpip.NICID, gateway tcpip.Address) []tcpip.Route {
@@ -412,7 +416,6 @@ func (ns *Netstack) addLoopback() error {
 		nic:    nic,
 		state:  eth.StateStarted,
 	}
-	ifs.statsEP.Nic = ifs.nic
 
 	ns.mu.Lock()
 	if len(ns.ifStates) > 0 {
@@ -427,7 +430,8 @@ func (ns *Netstack) addLoopback() error {
 	if debug {
 		linkID = sniffer.New(linkID)
 	}
-	linkID = ifs.statsEP.Wrap(linkID)
+	linkID, ifs.statsEP = stats.NewEndpoint(linkID)
+	ifs.statsEP.Nic = ifs.nic
 
 	if err := ns.mu.stack.CreateNIC(nicid, linkID); err != nil {
 		return fmt.Errorf("loopback: could not create interface: %v", err)
@@ -455,7 +459,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		if err := nic.eth.SetPromiscuousMode(true); err != nil {
 			return nil, err
 		}
-		links = append(links, &nic.bridgeable)
+		links = append(links, nic.bridgeable)
 	}
 
 	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
@@ -513,7 +517,6 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 		},
 		state: eth.StateUnknown,
 	}
-	ifs.statsEP.Nic = ifs.nic
 
 	ep, err := makeEndpoint(ifs)
 	if err != nil {
@@ -532,8 +535,10 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	}
 
 	linkID = filter.NewEndpoint(ns.filter, linkID)
-	linkID = ifs.statsEP.Wrap(linkID)
-	linkID = ifs.bridgeable.Wrap(linkID)
+	linkID, ifs.statsEP = stats.NewEndpoint(linkID)
+	ifs.statsEP.Nic = ifs.nic
+	linkID, ifs.bridgeable = bridge.NewEndpoint(linkID)
+	ifs.endpoint = ifs.bridgeable
 
 	ns.mu.Lock()
 	ifs.nic.Ipv6addrs = []tcpip.Address{lladdr}
