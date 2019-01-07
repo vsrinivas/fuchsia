@@ -200,7 +200,7 @@ private:
         using SignalHandler =
             fbl::Function<void(zx_status_t, const zx_packet_signal_t*, fbl::RefPtr<Connection>)>;
         Connection(const ConnectionKey& key, zx::socket data, SignalHandler wait_handler,
-                   uint32_t cid);
+                   uint32_t cid, fbl::Mutex& lock);
         ~Connection() {}
 
         bool PendingTx();
@@ -236,7 +236,7 @@ private:
 
         // Close a connection indicating no more data shall be sent and received and
         // it should enter the zombie state until it gets fully deleted.
-        void Close();
+        void Close(async_dispatcher_t* dispatcher);
 
         // Performs any outstanding TX for this connection by filling the providing
         // ring with descriptors. This may generate credit requests and HasPendingOp
@@ -297,6 +297,9 @@ private:
                                async_dispatcher_t* dispatcher);
         void BeginWait(async_dispatcher_t* disp);
         uint32_t GetPeerFree(bool request_credit);
+
+        // Reference to the lock that we will hold when performing BeginWait.
+        fbl::Mutex& lock_;
 
         ConnectionKey key_;
 

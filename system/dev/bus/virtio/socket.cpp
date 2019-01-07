@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/task.h>
 #include <pretty/hexdump.h>
 #include <virtio/virtio.h>
 #include <zircon/assert.h>
@@ -196,7 +197,7 @@ zx_status_t SocketDevice::MessageSendRequest(const ConnectionKey& key, zx::socke
     fbl::AllocChecker ac;
     auto conn = fbl::MakeRefCountedChecked<Connection>(
         &ac, key, std::move(data), fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled),
-        cid_);
+        cid_, lock_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -217,7 +218,7 @@ zx_status_t SocketDevice::MessageSendResponse(const ConnectionKey& key, zx::sock
     fbl::AllocChecker ac;
     auto conn = fbl::MakeRefCountedChecked<Connection>(
         &ac, key, std::move(data), fbl::BindMember(this, &SocketDevice::ConnectionSocketSignalled),
-        cid_);
+        cid_, lock_);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -460,7 +461,7 @@ void SocketDevice::RxOpLocked(ConnectionIterator conn, const ConnectionKey& key,
         if (conn != connections_.end()) {
             // Shutdown and move into the zombie state until the service
             // confirms shutdown by sending the RST
-            conn->Close();
+            conn->Close(dispatch_loop_.dispatcher());
             DequeueTxLocked(conn.CopyPointer());
             DequeueOpLocked(conn.CopyPointer());
         }
@@ -552,7 +553,7 @@ void SocketDevice::SendRstLocked(const ConnectionKey& key) {
 }
 
 void SocketDevice::CleanupConLocked(fbl::RefPtr<Connection> conn) {
-    conn->Close();
+    conn->Close(dispatch_loop_.dispatcher());
     DequeueTxLocked(conn);
     DequeueOpLocked(conn);
     connections_.erase(*conn);
@@ -576,7 +577,7 @@ void SocketDevice::CleanupConAndRstLocked(const ConnectionKey& key) {
 void SocketDevice::RemoveCallbacksLocked() {
     for (auto it = connections_.begin(); it != connections_.end(); it++) {
         SendOpLocked(it.CopyPointer(), VIRTIO_VSOCK_OP_RST);
-        it->Close();
+        it->Close(dispatch_loop_.dispatcher());
     }
     connections_.clear();
     callback_closed_handler_.Cancel();
@@ -691,8 +692,9 @@ void SocketDevice::UpdateCidLocked() {
 void SocketDevice::ReleaseLocked() {
     RemoveCallbacksLocked();
     has_pending_op_.clear();
-    timer_wait_handler_.Cancel();
 
+    // Shutting down the dispatch loop will remove any existing wait handlers for
+    // things like timer_wait_handler_.
     dispatch_loop_.Shutdown();
     rx_.FreeBuffers();
     tx_.FreeBuffers();
@@ -704,7 +706,7 @@ void SocketDevice::TransportResetLocked() {
     // shit this is complicated, just reload the cid for now
     zxlogf(INFO, "%s: Received transport reset!\n", tag());
     for (auto& it : connections_) {
-        it.Close();
+        it.Close(dispatch_loop_.dispatcher());
     }
     connections_.clear();
     has_pending_tx_.clear();
@@ -860,9 +862,9 @@ template <typename F> void SocketDevice::TxIoBufferRing::ProcessDescriptors(F fu
 }
 
 SocketDevice::Connection::Connection(const ConnectionKey& key, zx::socket data,
-                                     SignalHandler wait_handler, uint32_t cid)
-    : key_(key), state_(CON_WAIT_RESPONSE), tx_count_(0), rx_count_(0), buf_alloc_(0), fwd_cnt_(0),
-      data_(std::move(data)),
+                                     SignalHandler wait_handler, uint32_t cid, fbl::Mutex& lock)
+    : lock_(lock), key_(key), state_(CON_WAIT_RESPONSE), tx_count_(0), rx_count_(0), buf_alloc_(0),
+      fwd_cnt_(0), data_(std::move(data)),
       wait_handler_(data_.get(), ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
                     async::Wait::Handler([this, wait_handler = std::move(wait_handler)](
                                              async_dispatcher_t* dispatcher, async::Wait* wait,
@@ -943,12 +945,15 @@ virtio_vsock_hdr_t SocketDevice::Connection::MakeHdr(uint16_t op) {
     return make_hdr(key_.addr_, op, cid_, GetCreditInfo());
 }
 
-void SocketDevice::Connection::Close() {
+void SocketDevice::Connection::Close(async_dispatcher_t* dispatcher) {
     state_ = CON_ZOMBIE;
-    zx_status_t status = wait_handler_.Cancel();
-    if (status == ZX_OK) {
-        wait_handler_ref_.reset();
-    }
+    zx_status_t __UNUSED status = async::PostTask(dispatcher, [this] {
+        zx_status_t status = wait_handler_.Cancel();
+        if (status == ZX_OK) {
+            wait_handler_ref_.reset();
+        };
+    });
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 zx_status_t SocketDevice::Connection::ContinueTx(bool force_credit_request, TxIoBufferRing& tx,
@@ -963,6 +968,8 @@ zx_status_t SocketDevice::Connection::ContinueTx(bool force_credit_request, TxIo
     }
     if (SocketTxPending()) {
         return DoSocketTx(force_credit_request, tx, dispatcher);
+    } else {
+        BeginWait(dispatcher);
     }
     return ZX_OK;
 }
@@ -1117,19 +1124,29 @@ zx_status_t SocketDevice::Connection::DoSocketTx(bool force_credit_request, TxIo
     } while (status == ZX_OK);
     if (status == ZX_ERR_SHOULD_WAIT) {
         BeginWait(dispatcher);
+        // We have received all the data off the socket, so the correct thing to return
+        // to the caller is ZX_OK so that it doesn't think there is still TX pending.
+        return ZX_OK;
     }
 
     return status;
 }
 
 void SocketDevice::Connection::BeginWait(async_dispatcher_t* disp) {
-    if (!wait_handler_.is_pending()) {
-        wait_handler_ref_ = fbl::WrapRefPtr(this);
-        zx_status_t status = wait_handler_.Begin(disp);
-        if (status != ZX_OK) {
-            wait_handler_ref_.reset();
+    fbl::RefPtr<Connection> wait_ref = fbl::WrapRefPtr(this);
+    zx_status_t __UNUSED status = async::PostTask(disp, [wait_ref, disp] {
+        fbl::AutoLock lock(&wait_ref->lock_);
+
+        if (!wait_ref->wait_handler_.is_pending()) {
+            wait_ref->wait_handler_ref_ = wait_ref;
+            zx_status_t status = wait_ref->wait_handler_.Begin(disp);
+            if (status != ZX_OK) {
+                ZX_DEBUG_ASSERT(status == ZX_ERR_BAD_STATE);
+                wait_ref->wait_handler_ref_.reset();
+            }
         }
-    }
+    });
+    ZX_DEBUG_ASSERT(status == ZX_OK);
 }
 
 uint32_t SocketDevice::Connection::GetPeerFree(bool request_credit) {
