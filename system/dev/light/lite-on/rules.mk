@@ -16,7 +16,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fit \
     system/ulib/hid \
+    system/ulib/simplehid \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \

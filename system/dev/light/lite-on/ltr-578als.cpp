@@ -7,7 +7,6 @@
 #include <ddktl/pdev.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <zircon/threads.h>
 
 namespace {
 
@@ -85,48 +84,6 @@ zx_status_t Ltr578Als::GetInputReport(ltr_578als_input_rpt_t* report) {
     return ZX_OK;
 }
 
-int Ltr578Als::Thread() {
-    zx::time deadline = zx::time::infinite();
-
-    while (1) {
-        zx_port_packet_t packet;
-        zx_status_t status = port_.wait(deadline, &packet);
-        if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
-            return thrd_error;
-        }
-
-        if (status == ZX_ERR_TIMED_OUT) {
-            packet.key = kPacketKeyPoll;
-        }
-
-        switch (packet.key) {
-        case kPacketKeyStop:
-            return thrd_success;
-
-        case kPacketKeyPoll:
-            ltr_578als_input_rpt_t report;
-            if (GetInputReport(&report) == ZX_OK) {
-                fbl::AutoLock lock(&client_lock_);
-                if (client_.is_valid()) {
-                    client_.IoQueue(&report, sizeof(report));
-                }
-            }
-
-            __FALLTHROUGH;
-
-        case kPacketKeyConfigure:
-            fbl::AutoLock lock(&feature_report_lock_);
-            if (feature_report_.interval_ms == 0) {
-                deadline = zx::time::infinite();
-            } else {
-                deadline = zx::deadline_after(zx::msec(feature_report_.interval_ms));
-            }
-        }
-    }
-
-    return thrd_success;
-}
-
 zx_status_t Ltr578Als::Create(zx_device_t* parent) {
     ddk::PDev pdev(parent);
     if (!pdev.is_valid()) {
@@ -180,13 +137,7 @@ zx_status_t Ltr578Als::Init() {
         }
     }
 
-    return thrd_status_to_zx_status(thrd_create_with_name(
-        &thread_,
-        [](void* arg) -> int {
-            return reinterpret_cast<Ltr578Als*>(arg)->Thread();
-        },
-        this,
-        "ltr578als-thread"));
+    return ZX_OK;
 }
 
 zx_status_t Ltr578Als::HidbusQuery(uint32_t options, hid_info_t* out_info) {
@@ -194,29 +145,6 @@ zx_status_t Ltr578Als::HidbusQuery(uint32_t options, hid_info_t* out_info) {
     out_info->device_class = HID_DEVICE_CLASS_OTHER;
     out_info->boot_device = false;
     return ZX_OK;
-}
-
-zx_status_t Ltr578Als::HidbusStart(const hidbus_ifc_t* ifc) {
-    fbl::AutoLock lock(&client_lock_);
-
-    if (client_.is_valid()) {
-        return ZX_ERR_ALREADY_BOUND;
-    }
-
-    client_ = ddk::HidbusIfcClient(ifc);
-    return ZX_OK;
-}
-
-void Ltr578Als::HidbusStop() {
-    zx_port_packet_t packet = {kPacketKeyStop, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    if (port_.queue(&packet) != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to queue packet\n", __FILE__);
-    }
-
-    thrd_join(thread_, nullptr);
-
-    fbl::AutoLock lock(&client_lock_);
-    client_.clear();
 }
 
 zx_status_t Ltr578Als::HidbusGetDescriptor(hid_description_type_t desc_type, void** out_data_buffer,
@@ -256,10 +184,10 @@ zx_status_t Ltr578Als::HidbusGetReport(hid_report_type_t rpt_type, uint8_t rpt_i
             return ZX_ERR_INVALID_ARGS;
         }
 
-        {
-            fbl::AutoLock lock(&feature_report_lock_);
-            *reinterpret_cast<ltr_578als_feature_rpt_t*>(out_data_buffer) = feature_report_;
-        }
+        ltr_578als_feature_rpt_t* report =
+            reinterpret_cast<ltr_578als_feature_rpt_t*>(out_data_buffer);
+        report->rpt_id = LTR_578ALS_RPT_ID_FEATURE;
+        report->interval_ms = simple_hid_.GetReportInterval();
 
         *out_data_actual = sizeof(ltr_578als_feature_rpt_t);
     } else {
@@ -281,19 +209,7 @@ zx_status_t Ltr578Als::HidbusSetReport(hid_report_type_t rpt_type, uint8_t rpt_i
 
     const ltr_578als_feature_rpt_t* report =
         reinterpret_cast<const ltr_578als_feature_rpt_t*>(data_buffer);
-
-    {
-        fbl::AutoLock lock(&feature_report_lock_);
-        feature_report_ = *report;
-    }
-
-    zx_port_packet packet = {kPacketKeyConfigure, ZX_PKT_TYPE_USER, ZX_OK, {}};
-    zx_status_t status = port_.queue(&packet);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: Failed to queue packet\n", __FILE__);
-    }
-
-    return status;
+    return simple_hid_.SetReportInterval(report->interval_ms);
 }
 
 zx_status_t Ltr578Als::HidbusGetIdle(uint8_t rpt_id, uint8_t* out_duration) {
