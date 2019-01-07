@@ -61,7 +61,7 @@ fn build_discover() -> Message {
     disc.chaddr = MacAddr { octets: TEST_MAC };
     disc.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPDISCOVER as u8],
+        value: vec![MessageType::DHCPDISCOVER.into()],
     });
     disc
 }
@@ -73,7 +73,7 @@ fn build_request(offer: Message) -> Message {
     req.chaddr = MacAddr { octets: TEST_MAC };
     req.options.push(ConfigOption {
         code: OptionCode::DhcpMessageType,
-        value: vec![MessageType::DHCPREQUEST as u8],
+        value: vec![MessageType::DHCPREQUEST.into()],
     });
     let server_id = offer
         .get_config_option(OptionCode::ServerId)
