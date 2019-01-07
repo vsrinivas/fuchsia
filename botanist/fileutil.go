@@ -100,13 +100,13 @@ func ArchiveBuffer(tw *tar.Writer, buf []byte, path string) error {
 
 // FetchAndArchiveFile fetches a remote file via TFTP from a given node, and
 // writes it an archive.
-func FetchAndArchiveFile(t *tftp.Client, addr *net.UDPAddr, tw *tar.Writer, path string) error {
+func FetchAndArchiveFile(t *tftp.Client, addr *net.UDPAddr, tw *tar.Writer, path, name string) error {
 	receiver, err := t.Receive(addr, path)
 	if err != nil {
 		return fmt.Errorf("failed to receive file %s: %v\n", path, err)
 	}
 	hdr := &tar.Header{
-		Name: filepath.Base(path),
+		Name: name,
 		Size: receiver.(tftp.Session).Size(),
 		Mode: 0666,
 	}

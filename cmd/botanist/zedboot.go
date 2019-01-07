@@ -317,14 +317,14 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 		// Copy test output from the node.
 		for _, output := range result.Outputs {
 			remote := filepath.Join(cmd.testResultsDir, output)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
+			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, output); err != nil {
 				c <- err
 				return
 			}
 		}
 		for _, test := range result.Tests {
 			remote := filepath.Join(cmd.testResultsDir, test.OutputFile)
-			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
+			if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, test.OutputFile); err != nil {
 				c <- err
 				return
 			}
@@ -332,7 +332,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 			for _, sinks := range test.DataSinks {
 				for _, sink := range sinks {
 					remote := filepath.Join(cmd.testResultsDir, sink.File)
-					if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote); err != nil {
+					if err = botanist.FetchAndArchiveFile(t, tftpAddr, tw, remote, sink.File); err != nil {
 						c <- err
 						return
 					}
