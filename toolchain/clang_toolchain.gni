@@ -206,7 +206,10 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+              " && $strip --strip-all" +
+              " --build-id-link-dir=.build-id" +
+              " --build-id-link-input=.debug" + " --build-id-link-output=" +
+              " \"$unstripped_outfile\" \"$outfile\""
         }
       }
       description = "SOLINK $outfile"
@@ -243,7 +246,10 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all \"$unstripped_outfile\" \"$outfile\""
+              " && $strip --strip-all" +
+              " --build-id-link-dir=.build-id" +
+              " --build-id-link-input=.debug" + " --build-id-link-output=" +
+              " \"$unstripped_outfile\" \"$outfile\""
         }
       }
       description = "SOLINK $outfile"
