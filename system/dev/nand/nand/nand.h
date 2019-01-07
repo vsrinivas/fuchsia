@@ -27,10 +27,12 @@ using DeviceType = ddk::Device<NandDevice, ddk::GetSizable, ddk::Unbindable>;
 class NandDevice : public DeviceType,
                    public ddk::NandProtocol<NandDevice, ddk::base_protocol> {
 public:
-    explicit NandDevice(zx_device_t* parent, zx::event event)
-        : DeviceType(parent), raw_nand_(parent), worker_event_(std::move(event)) {}
+    explicit NandDevice(zx_device_t* parent)
+        : DeviceType(parent), raw_nand_(parent) {}
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
+
+    ~NandDevice();
 
     static zx_status_t Create(void* ctx, zx_device_t* parent);
     zx_status_t Bind();

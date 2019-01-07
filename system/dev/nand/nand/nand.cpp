@@ -286,6 +286,10 @@ zx_status_t NandDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks,
 }
 
 void NandDevice::DdkRelease() {
+    delete this;
+}
+
+NandDevice::~NandDevice() {
     // Signal the worker thread and wait for it to terminate.
     worker_event_.signal(0, kNandShutdown);
     thrd_join(worker_thread_, nullptr);
@@ -300,28 +304,20 @@ void NandDevice::DdkRelease() {
         }
         lock_.Release();
     }
-
-    delete this;
 }
 
 // static
 zx_status_t NandDevice::Create(void* ctx, zx_device_t* parent) {
     zxlogf(ERROR, "NandDevice::Create: Starting...!\n");
 
-    zx::event worker_event;
-    zx_status_t status = zx::event::create(0, &worker_event);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "nand: failed to create event, retcode = %d\n", status);
-        return status;
-    }
-
     fbl::AllocChecker ac;
-    fbl::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent, std::move(worker_event)));
+    fbl::unique_ptr<NandDevice> dev(new (&ac) NandDevice(parent));
     if (!ac.check()) {
         zxlogf(ERROR, "nand: no memory to allocate nand device!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
+    zx_status_t status;
     if ((status = dev->Init()) != ZX_OK) {
         return status;
     }
@@ -351,6 +347,12 @@ zx_status_t NandDevice::Init() {
 
     num_nand_pages_ = nand_info_.num_blocks * nand_info_.pages_per_block;
 
+    status = zx::event::create(0, &worker_event_);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "nand: failed to create event, retcode = %d\n", status);
+        return status;
+    }
+
     int rc = thrd_create_with_name(
         &worker_thread_,
         [](void* arg) { return static_cast<NandDevice*>(arg)->WorkerThread(); },
@@ -372,18 +374,22 @@ zx_status_t NandDevice::Bind() {
     return DdkAdd("nand", 0, props, fbl::count_of(props));
 }
 
+#ifndef TEST
 static zx_driver_ops_t nand_driver_ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = NandDevice::Create;
     return ops;
 }();
+#endif
 
 } // namespace nand
 
+#ifndef TEST
 // The formatter does not play nice with these macros.
 // clang-format off
 ZIRCON_DRIVER_BEGIN(nand, nand::nand_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_RAW_NAND),
 ZIRCON_DRIVER_END(nand)
-    // clang-format on
+// clang-format on
+#endif
