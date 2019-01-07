@@ -183,10 +183,11 @@ static const pbus_dev_t i2c_test_dev = {
 };
 #endif
 
-static const pbus_dev_t dummy_display_dev = {
-    .name = "dummy-display",
+static const pbus_dev_t hi_display_dev = {
+    .name = "hi-display",
     .vid = PDEV_VID_GENERIC,
-    .did = PDEV_DID_DUMMY_DISPLAY,
+    .pid = PDEV_PID_GENERIC,
+    .did = PDEV_DID_HI_DISPLAY,
 };
 
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
@@ -221,8 +222,8 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     }
 #endif
 
-    if ((status = pbus_device_add(&hikey->pbus, &dummy_display_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add dummy_display_dev: %d\n", status);
+    if ((status = pbus_device_add(&hikey->pbus, &hi_display_dev)) != ZX_OK) {
+        zxlogf(ERROR, "hikey960_add_devices could not add hi_display_dev: %d\n", status);
     }
 
     return ZX_OK;
