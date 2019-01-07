@@ -17,6 +17,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <hid/ft3x27.h>
+#include <hid/ft6336.h>
 
 #include <lib/zx/interrupt.h>
 #include <zircon/compiler.h>
@@ -59,10 +60,10 @@ enum {
 // clang-format on
 
 namespace ft {
-class Ft3x27Device : public ddk::Device<Ft3x27Device, ddk::Unbindable>,
-                     public ddk::HidbusProtocol<Ft3x27Device, ddk::base_protocol> {
+class FtDevice : public ddk::Device<FtDevice, ddk::Unbindable>,
+                 public ddk::HidbusProtocol<FtDevice, ddk::base_protocol> {
 public:
-    Ft3x27Device(zx_device_t* device);
+    FtDevice(zx_device_t* device);
 
     static zx_status_t Create(zx_device_t* device);
 
@@ -84,7 +85,7 @@ public:
     zx_status_t HidbusQuery(uint32_t options, hid_info_t* info) __TA_EXCLUDES(client_lock_);
 
 private:
-    /* Note: the ft3x27 device is connected via i2c and is NOT a HID
+    /* Note: the focaltouch device is connected via i2c and is NOT a HID
         device.  This driver reads a collection of data from the data and
         parses it into a message which will be sent up the stack.  This message
         complies with a HID descriptor that manually scripted (i.e. - not
@@ -118,5 +119,8 @@ private:
 
     fbl::Mutex client_lock_;
     ddk::HidbusIfcClient client_ __TA_GUARDED(client_lock_);
+
+    const uint8_t* descriptor_ = nullptr;
+    size_t descriptor_len_ = 0;
 };
 }

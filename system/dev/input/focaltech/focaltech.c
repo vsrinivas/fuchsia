@@ -6,11 +6,11 @@
 #include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 
-extern zx_status_t ft3x27_bind(void* ctx, zx_device_t* parent);
+extern zx_status_t ft_device_bind(void* ctx, zx_device_t* parent);
 
 static zx_driver_ops_t focaltech_driver_ops = {
     .version = DRIVER_OPS_VERSION,
-    .bind = ft3x27_bind,
+    .bind = ft_device_bind,
 };
 
 // clang-format off

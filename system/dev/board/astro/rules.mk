@@ -30,6 +30,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
+    system/dev/lib/focaltech \
     system/ulib/ddk \
     system/ulib/sync \
     system/dev/lib/broadcom \

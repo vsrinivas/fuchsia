@@ -6,11 +6,13 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/mmio.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
+#include <lib/focaltech/focaltech.h>
 #include <soc/mt8167/mt8167-hw.h>
 
 #include "mt8167.h"
@@ -69,6 +71,16 @@ zx_status_t Mt8167::TouchInit() {
         },
     };
 
+    static constexpr uint32_t kDeviceId = FOCALTECH_DEVICE_FT6336;
+
+    static const pbus_metadata_t touch_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &kDeviceId,
+            .data_size = sizeof(kDeviceId)
+        },
+    };
+
     pbus_dev_t touch_dev = {};
     touch_dev.name = "touch";
     touch_dev.vid = PDEV_VID_GENERIC;
@@ -77,6 +89,8 @@ zx_status_t Mt8167::TouchInit() {
     touch_dev.i2c_channel_count = countof(touch_i2cs);
     touch_dev.gpio_list = touch_gpios;
     touch_dev.gpio_count = countof(touch_gpios);
+    touch_dev.metadata_list = touch_metadata;
+    touch_dev.metadata_count = countof(touch_metadata);
 
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> pmic_mmio;

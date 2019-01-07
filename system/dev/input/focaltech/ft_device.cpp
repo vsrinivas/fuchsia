@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddk/debug.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/i2c-lib.h>
 #include <fbl/algorithm.h>
@@ -12,20 +13,21 @@
 #include <fbl/ref_ptr.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+#include <lib/focaltech/focaltech.h>
 #include <zircon/compiler.h>
 
 #include <stdio.h>
 #include <string.h>
 
-#include "ft3x27.h"
+#include "ft_device.h"
 
 namespace ft {
 
-Ft3x27Device::Ft3x27Device(zx_device_t* device)
-    : ddk::Device<Ft3x27Device, ddk::Unbindable>(device) {
+FtDevice::FtDevice(zx_device_t* device)
+    : ddk::Device<FtDevice, ddk::Unbindable>(device) {
 }
 
-void Ft3x27Device::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
+void FtDevice::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
     rpt->x = static_cast<uint16_t>(((buf[0] & 0x0f) << 8) + buf[1]);
     rpt->y = static_cast<uint16_t>(((buf[2] & 0x0f) << 8) + buf[3]);
     rpt->finger_id = static_cast<uint8_t>(
@@ -33,16 +35,16 @@ void Ft3x27Device::ParseReport(ft3x27_finger_t* rpt, uint8_t* buf) {
         (((buf[0] & 0xC0) == 0x80) ? 1 : 0));
 }
 
-int Ft3x27Device::Thread() {
+int FtDevice::Thread() {
     zx_status_t status;
-    zxlogf(INFO, "ft3x27: entering irq thread\n");
+    zxlogf(INFO, "focaltouch: entering irq thread\n");
     while (true) {
         status = irq_.wait(nullptr);
         if (!running_.load()) {
             return ZX_OK;
         }
         if (status != ZX_OK) {
-            zxlogf(ERROR, "ft3x27: Interrupt error %d\n", status);
+            zxlogf(ERROR, "focaltouch: Interrupt error %d\n", status);
         }
         uint8_t i2c_buf[kMaxPoints * kFingerRptSize + 1];
         status = Read(FTS_REG_CURPOINT, i2c_buf, kMaxPoints * kFingerRptSize + 1);
@@ -57,24 +59,24 @@ int Ft3x27Device::Thread() {
                 client_.IoQueue(reinterpret_cast<uint8_t*>(&ft_rpt_), sizeof(ft3x27_touch_t));
             }
         } else {
-            zxlogf(ERROR, "ft3x27: i2c read error\n");
+            zxlogf(ERROR, "focaltouch: i2c read error\n");
         }
     }
-    zxlogf(INFO, "ft3x27: exiting\n");
+    zxlogf(INFO, "focaltouch: exiting\n");
 }
 
-zx_status_t Ft3x27Device::InitPdev() {
+zx_status_t FtDevice::InitPdev() {
     pdev_protocol_t pdev;
 
     zx_status_t status = device_get_protocol(parent_, ZX_PROTOCOL_PDEV, &pdev);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ft3x27: failed to acquire pdev\n");
+        zxlogf(ERROR, "focaltouch: failed to acquire pdev\n");
         return status;
     }
 
     status = device_get_protocol(parent_, ZX_PROTOCOL_I2C, &i2c_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ft3x27: failed to acquire i2c\n");
+        zxlogf(ERROR, "focaltouch: failed to acquire i2c\n");
         return status;
     }
 
@@ -96,22 +98,40 @@ zx_status_t Ft3x27Device::InitPdev() {
         return status;
     }
 
+    uint32_t device_id;
+    size_t actual;
+    status = device_get_metadata(parent_, DEVICE_METADATA_PRIVATE, &device_id, sizeof(device_id),
+                                 &actual);
+    if (status != ZX_OK || sizeof(device_id) != actual) {
+        zxlogf(ERROR, "focaltouch: failed to read metadata\n");
+        return status == ZX_OK ? ZX_ERR_INTERNAL : status;
+    }
+
+    if (device_id == FOCALTECH_DEVICE_FT3X27) {
+        descriptor_len_ = get_ft3x27_report_desc(&descriptor_);
+    } else if (device_id == FOCALTECH_DEVICE_FT6336) {
+        descriptor_len_ = get_ft6336_report_desc(&descriptor_);
+    } else {
+        zxlogf(ERROR, "focaltouch: unknown device ID %u\n", device_id);
+        return ZX_ERR_INTERNAL;
+    }
+
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::Create(zx_device_t* device) {
+zx_status_t FtDevice::Create(zx_device_t* device) {
 
-    zxlogf(INFO, "ft3x27: driver started...\n");
+    zxlogf(INFO, "focaltouch: driver started...\n");
 
-    auto ft_dev = fbl::make_unique<Ft3x27Device>(device);
+    auto ft_dev = fbl::make_unique<FtDevice>(device);
     zx_status_t status = ft_dev->InitPdev();
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ft3x27: Driver bind failed %d\n", status);
+        zxlogf(ERROR, "focaltouch: Driver bind failed %d\n", status);
         return status;
     }
 
     auto thunk = [](void* arg) -> int {
-        return reinterpret_cast<Ft3x27Device*>(arg)->Thread();
+        return reinterpret_cast<FtDevice*>(arg)->Thread();
     };
 
     auto cleanup = fbl::MakeAutoCall([&]() { ft_dev->ShutDown(); });
@@ -119,15 +139,15 @@ zx_status_t Ft3x27Device::Create(zx_device_t* device) {
     ft_dev->running_.store(true);
     int ret = thrd_create_with_name(&ft_dev->thread_, thunk,
                                     reinterpret_cast<void*>(ft_dev.get()),
-                                    "ft3x27-thread");
+                                    "focaltouch-thread");
     ZX_DEBUG_ASSERT(ret == thrd_success);
 
-    status = ft_dev->DdkAdd("ft3x27 HidDevice");
+    status = ft_dev->DdkAdd("focaltouch HidDevice");
     if (status != ZX_OK) {
-        zxlogf(ERROR, "ft3x27: Could not create hid device: %d\n", status);
+        zxlogf(ERROR, "focaltouch: Could not create hid device: %d\n", status);
         return status;
     } else {
-        zxlogf(INFO, "ft3x27: Added hid device\n");
+        zxlogf(INFO, "focaltouch: Added hid device\n");
     }
 
     cleanup.cancel();
@@ -138,7 +158,7 @@ zx_status_t Ft3x27Device::Create(zx_device_t* device) {
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidbusQuery(uint32_t options, hid_info_t* info) {
+zx_status_t FtDevice::HidbusQuery(uint32_t options, hid_info_t* info) {
     if (!info) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -149,16 +169,16 @@ zx_status_t Ft3x27Device::HidbusQuery(uint32_t options, hid_info_t* info) {
     return ZX_OK;
 }
 
-void Ft3x27Device::DdkRelease() {
+void FtDevice::DdkRelease() {
     delete this;
 }
 
-void Ft3x27Device::DdkUnbind() {
+void FtDevice::DdkUnbind() {
     ShutDown();
     DdkRemove();
 }
 
-zx_status_t Ft3x27Device::ShutDown() {
+zx_status_t FtDevice::ShutDown() {
     running_.store(false);
     irq_.destroy();
     thrd_join(thread_, NULL);
@@ -169,73 +189,71 @@ zx_status_t Ft3x27Device::ShutDown() {
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
+zx_status_t FtDevice::HidbusGetDescriptor(uint8_t desc_type, void** data, size_t* len) {
 
-    const uint8_t* desc_ptr;
-    uint8_t* buf;
-    *len = get_ft3x27_report_desc(&desc_ptr);
     fbl::AllocChecker ac;
-    buf = new (&ac) uint8_t[*len];
+    uint8_t* buf = new (&ac) uint8_t[descriptor_len_];
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
-    memcpy(buf, desc_ptr, *len);
+    memcpy(buf, descriptor_, descriptor_len_);
     *data = buf;
+    *len = descriptor_len_;
     return ZX_OK;
 }
 
-zx_status_t Ft3x27Device::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
+zx_status_t FtDevice::HidbusGetReport(uint8_t rpt_type, uint8_t rpt_id, void* data,
                                           size_t len, size_t* out_len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
+zx_status_t FtDevice::HidbusSetReport(uint8_t rpt_type, uint8_t rpt_id, const void* data,
                                           size_t len) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
+zx_status_t FtDevice::HidbusGetIdle(uint8_t rpt_id, uint8_t* duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
+zx_status_t FtDevice::HidbusSetIdle(uint8_t rpt_id, uint8_t duration) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidbusGetProtocol(uint8_t* protocol) {
+zx_status_t FtDevice::HidbusGetProtocol(uint8_t* protocol) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
-zx_status_t Ft3x27Device::HidbusSetProtocol(uint8_t protocol) {
+zx_status_t FtDevice::HidbusSetProtocol(uint8_t protocol) {
     return ZX_OK;
 }
 
-void Ft3x27Device::HidbusStop() {
+void FtDevice::HidbusStop() {
     fbl::AutoLock lock(&client_lock_);
     client_.clear();
 }
 
-zx_status_t Ft3x27Device::HidbusStart(const hidbus_ifc_t* ifc) {
+zx_status_t FtDevice::HidbusStart(const hidbus_ifc_t* ifc) {
     fbl::AutoLock lock(&client_lock_);
     if (client_.is_valid()) {
-        zxlogf(ERROR, "ft3x27: Already bound!\n");
+        zxlogf(ERROR, "focaltouch: Already bound!\n");
         return ZX_ERR_ALREADY_BOUND;
     } else {
         client_ = ddk::HidbusIfcClient(ifc);
-        zxlogf(INFO, "ft3x27: started\n");
+        zxlogf(INFO, "focaltouch: started\n");
     }
     return ZX_OK;
 }
 
 // simple i2c read for reading one register location
 //  intended mostly for debug purposes
-uint8_t Ft3x27Device::Read(uint8_t addr) {
+uint8_t FtDevice::Read(uint8_t addr) {
     uint8_t rbuf;
     i2c_write_read_sync(&i2c_, &addr, 1, &rbuf, 1);
     return rbuf;
 }
 
-zx_status_t Ft3x27Device::Read(uint8_t addr, uint8_t* buf, size_t len) {
+zx_status_t FtDevice::Read(uint8_t addr, uint8_t* buf, size_t len) {
     // TODO(bradenkell): Remove this workaround when transfers of more than 8 bytes are supported on
     // the MT8167.
     while (len > 0) {
@@ -256,6 +274,6 @@ zx_status_t Ft3x27Device::Read(uint8_t addr, uint8_t* buf, size_t len) {
 }
 } //namespace ft
 
-extern "C" zx_status_t ft3x27_bind(void* ctx, zx_device_t* device, void** cookie) {
-    return ft::Ft3x27Device::Create(device);
+extern "C" zx_status_t ft_device_bind(void* ctx, zx_device_t* device, void** cookie) {
+    return ft::FtDevice::Create(device);
 }

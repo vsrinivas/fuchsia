@@ -4,9 +4,11 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
+#include <lib/focaltech/focaltech.h>
 #include <soc/aml-s905d2/s905d2-gpio.h>
 #include <soc/aml-s905d2/s905d2-hw.h>
 #include <limits.h>
@@ -31,6 +33,15 @@ static const pbus_i2c_channel_t ft3x27_touch_i2c[] = {
     },
 };
 
+static const uint32_t device_id = FOCALTECH_DEVICE_FT3X27;
+static const pbus_metadata_t ft3x27_touch_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &device_id,
+        .data_size = sizeof(device_id)
+    },
+};
+
 static pbus_dev_t ft3x27_touch_dev = {
     .name = "ft3x27-touch",
     .vid = PDEV_VID_GENERIC,
@@ -39,6 +50,8 @@ static pbus_dev_t ft3x27_touch_dev = {
     .i2c_channel_count = countof(ft3x27_touch_i2c),
     .gpio_list = touch_gpios,
     .gpio_count = countof(touch_gpios),
+    .metadata_list = ft3x27_touch_metadata,
+    .metadata_count = countof(ft3x27_touch_metadata),
 };
 
 static const pbus_i2c_channel_t gt92xx_touch_i2c[] = {

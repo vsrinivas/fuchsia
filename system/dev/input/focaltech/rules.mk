@@ -10,9 +10,10 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/focaltech.c \
-    $(LOCAL_DIR)/ft3x27.cpp \
+    $(LOCAL_DIR)/ft_device.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/focaltech \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/hid \
