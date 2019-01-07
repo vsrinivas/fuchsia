@@ -56,6 +56,9 @@ class Bind {
     // parent device.
     void SetProtocols(fbl::Array<ProtocolEntry>&& protocols);
 
+    // Sets an optional size that the ddk should return for the parent device.
+    void SetSize(zx_off_t size);
+
     static Bind* Instance() { return instance_; }
 
     // Internal fake implementation of ddk functionality.
@@ -77,6 +80,9 @@ class Bind {
     // Internal fake implementation of ddk functionality.
     const char* DeviceGetName(zx_device_t* device);
 
+    // Internal fake implementation of ddk functionality.
+    zx_off_t DeviceGetSize(zx_device_t* device);
+
   private:
     static Bind* instance_;
 
@@ -89,6 +95,7 @@ class Bind {
     int add_metadata_calls_ = 0;
     size_t metadata_length_ = 0;
     const void* metadata_ = nullptr;
+    zx_off_t size_ = 0;
 
     fbl::Array<ProtocolEntry> protocols_;
 };

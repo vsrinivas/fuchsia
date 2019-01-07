@@ -46,6 +46,10 @@ void Bind::SetProtocols(fbl::Array<ProtocolEntry>&& protocols) {
     protocols_ = std::move(protocols);
 }
 
+void Bind::SetSize(zx_off_t size) {
+    size_ = size;
+}
+
 zx_status_t Bind::DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
                             device_add_args_t* args, zx_device_t** out) {
     if (parent != kFakeParent) {
@@ -114,6 +118,13 @@ const char* Bind::DeviceGetName(zx_device_t* device) {
     return "";
 }
 
+zx_off_t Bind::DeviceGetSize(zx_device_t* device) {
+    if (device != kFakeParent) {
+        bad_device_ = true;
+    }
+    return size_;
+}
+
 }  // namespace fake_ddk
 
 zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
@@ -158,6 +169,13 @@ const char* device_get_name(zx_device_t* device) {
         return nullptr;
     }
     return fake_ddk::Bind::Instance()->DeviceGetName(device);
+}
+
+zx_off_t device_get_size(zx_device_t* device) {
+    if (!fake_ddk::Bind::Instance()) {
+        return 0;
+    }
+    return fake_ddk::Bind::Instance()->DeviceGetSize(device);
 }
 
 extern "C" void driver_printf(uint32_t flags, const char* fmt, ...) {}
