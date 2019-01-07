@@ -51,6 +51,7 @@ The workflow for re-building and re-deploying using `fx` is slightly different:
     Fetches the latest code.
 1.  `fx full-build`
     Builds Zircon, then the rest of Fuchsia.
+1.  `fx setup-macos` Sets up firewall rules (Mac users ONLY)
 1.  `fx serve`
     Starts a development package server on the host.
 1.  Boot the device *without* Zedboot USB attached.
