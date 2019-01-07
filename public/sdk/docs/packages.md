@@ -43,7 +43,7 @@ pm -o $PACKAGE_DIR -n $PACKAGE_NAME init
 In order to create the package, a signing key is required. You may provide your
 own key or generate one at `$SIGNING_KEY` with:
 ```
-pm -o $PACKAGE_DIR -k $SIGNING_KEY genkey
+pm -k $SIGNING_KEY genkey
 ```
 _TODO: add more details about signing keys, possibly in pm's help_
 
