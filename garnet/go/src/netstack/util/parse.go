@@ -11,12 +11,30 @@ import (
 	"github.com/google/netstack/tcpip"
 )
 
+func IsAny(a tcpip.Address) bool {
+	// An empty address is not the same as ANY.
+	if len(a) == 0 {
+		return false
+	}
+	for _, n := range a {
+		if n != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func ApplyMask(addr tcpip.Address, mask tcpip.AddressMask) tcpip.Address {
 	return tcpip.Address(net.IP(addr).Mask(net.IPMask(mask)))
 }
 
 func CIDRMask(ones, bits int) tcpip.AddressMask {
 	return tcpip.AddressMask(net.CIDRMask(ones, bits))
+}
+
+func PrefixLength(mask tcpip.AddressMask) int {
+	bits, _ := net.IPMask(mask).Size()
+	return bits
 }
 
 func ipToAddress(ip net.IP) tcpip.Address {

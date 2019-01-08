@@ -11,6 +11,7 @@ import (
 	"syscall/zx/fidl"
 	"testing"
 
+	"fidl/fuchsia/hardware/ethernet"
 	netfidl "fidl/fuchsia/net"
 	"fidl/fuchsia/netstack"
 
@@ -45,7 +46,19 @@ func MakeNetstackService() netstackImpl {
 func TestRouteTableTransactions(t *testing.T) {
 	go fidl.Serve()
 	t.Run("no contentions", func(t *testing.T) {
-		netstackServiceImpl := MakeNetstackService()
+		// Create a basic netstack instance with a single interface. We need at
+		// least one interface in order to add routes.
+		netstackServiceImpl := netstackImpl{ns: newNetstack(t)}
+		eth := deviceForAddEth(ethernet.Info{}, t)
+		ifs, err := netstackServiceImpl.ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: "testdevice"}, &eth)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		var originalTable []netstack.RouteTableEntry2
+		originalTable, err = netstackServiceImpl.GetRouteTable2()
+		AssertNoError(t, err)
+
 		req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
 		AssertNoError(t, err)
 
@@ -57,28 +70,66 @@ func TestRouteTableTransactions(t *testing.T) {
 			t.Errorf("can't start a transaction")
 		}
 
-		rs, err := transactionInterface.GetRouteTable()
-		AssertNoError(t, err)
-
 		destinationAddress, destinationSubnet, err := net.ParseCIDR("1.2.3.4/24")
 		AssertNoError(t, err)
-		gatewayAddress, _, err := net.ParseCIDR("5.6.7.8/32")
-		newRouteTableEntry := netstack.RouteTableEntry{
+		gatewayAddress := net.ParseIP("5.6.7.8")
+		if gatewayAddress == nil {
+			t.Fatal("Cannot create gateway IP")
+		}
+		gateway := toIpAddress(gatewayAddress)
+		newRouteTableEntry2 := netstack.RouteTableEntry2{
 			Destination: toIpAddress(destinationAddress),
 			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
-			Gateway:     toIpAddress(gatewayAddress),
+			Gateway:     &gateway,
+			Nicid:       uint32(ifs.mu.nic.ID),
+			Metric:      100,
 		}
 
-		newRouteTable := append(rs, newRouteTableEntry)
-		AssertNoError(t, transactionInterface.SetRouteTable(newRouteTable))
-
-		_, err = transactionInterface.Commit()
+		success, err = transactionInterface.AddRoute(newRouteTableEntry2)
 		AssertNoError(t, err)
+		if zx.Status(success) != zx.ErrOk {
+			t.Fatal("can't add new route entry")
+		}
 
-		actual, err := netstackServiceImpl.GetRouteTable()
+		// New table should contain the one route we just added.
+		actualTable2, err := netstackServiceImpl.GetRouteTable2()
 		AssertNoError(t, err)
-		if diff := cmp.Diff(actual, newRouteTable, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+		if diff := cmp.Diff(actualTable2[0], newRouteTableEntry2, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
 			t.Errorf("(-want +got)\n%s", diff)
+		}
+
+		// Verify deprecated GetRouteTable() function returns equal entries.
+		expectedRouteTableEntry := netstack.RouteTableEntry{
+			Destination: newRouteTableEntry2.Destination,
+			Netmask:     newRouteTableEntry2.Netmask,
+			Gateway:     *newRouteTableEntry2.Gateway,
+			Nicid:       newRouteTableEntry2.Nicid,
+			// no metric
+		}
+		actualTable, err := netstackServiceImpl.GetRouteTable()
+		AssertNoError(t, err)
+		if diff := cmp.Diff(actualTable[0], expectedRouteTableEntry, cmpopts.IgnoreTypes(struct{}{})); diff != "" {
+			t.Errorf("(-want +got)\n%s", diff)
+		}
+
+		success, err = transactionInterface.DelRoute(newRouteTableEntry2)
+		AssertNoError(t, err)
+		if zx.Status(success) != zx.ErrOk {
+			t.Error("can't delete route entry")
+		}
+
+		// New table should be empty.
+		actualTable2, err = netstackServiceImpl.GetRouteTable2()
+		AssertNoError(t, err)
+		if len(actualTable2) != len(originalTable) {
+			t.Errorf("got %v, want <nothing>", actualTable2)
+		}
+
+		// Same for deprecated route table.
+		actualTable, err = netstackServiceImpl.GetRouteTable()
+		AssertNoError(t, err)
+		if len(actualTable) != len(originalTable) {
+			t.Errorf("got %v, want <nothing>", actualTable)
 		}
 	})
 

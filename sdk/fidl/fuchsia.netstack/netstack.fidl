@@ -111,6 +111,23 @@ struct NetInterface {
     vector<uint8> hwaddr;
 };
 
+// New version that includes a metric value.
+// TODO(NET-2078): Move this to NetInterface once Chromium stops using
+// netstack.fidl.
+struct NetInterface2 {
+    uint32 id;
+    uint32 flags;
+    uint32 features;
+    uint32 configuration;
+    uint32 metric;
+    string name;
+    fuchsia.net.IpAddress addr;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress broadaddr;
+    vector<fuchsia.net.Subnet> ipv6addrs;
+    vector<uint8> hwaddr;
+};
+
 // Flags for NetInterface.flags.
 const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
 const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
@@ -120,6 +137,17 @@ struct RouteTableEntry {
     fuchsia.net.IpAddress netmask;
     fuchsia.net.IpAddress gateway;
     uint32 nicid;
+};
+
+// New version that includes a metric value.
+// TODO(NET-2078): Move this to NetInterface once Chromium stops using
+// netstack.fidl.
+struct RouteTableEntry2 {
+    fuchsia.net.IpAddress destination;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress? gateway;
+    uint32 nicid;
+    uint32 metric;
 };
 
 struct SocketAddress {
@@ -141,13 +169,15 @@ interface Netstack {
 
     // Returns the list of registered network interfaces.
     GetInterfaces() -> (vector<NetInterface> interfaces);
+    GetInterfaces2() -> (vector<NetInterface2> interfaces);
 
     // DEPRECATED: see devicesettings.fidl
     // Returns the netstack's node name.
     // 5: GetNodeName() -> (string node_name);
 
-    // Don't use this for read-modify-write.  Use StartRouteTableTransaction instead.
+    // Returns current route table.
     GetRouteTable() -> (vector<RouteTableEntry> rt);
+    GetRouteTable2() -> (vector<RouteTableEntry2> rt);
 
     // TODO (porce): Separate interfaces.
     GetStats(uint32 nicid) -> (NetInterfaceStats stats);
@@ -158,9 +188,6 @@ interface Netstack {
     // Sets the status (up or down) for the interface with the given nicid.
     SetInterfaceStatus(uint32 nicid, bool enabled);
 
-    // DEPRECATED: Use StartRouteTableTransaction and SetRouteTable from there.
-    // 9: SetRouteTable(vector<RouteTableEntry> rt);
-
     // Sets the address for the interface with the given nicid.
     // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
@@ -168,6 +195,9 @@ interface Netstack {
     // Removes the address for the interface with the given nicid.
     // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
     RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
+
+    // Sets the route metric for the interface with the given nicid.
+    SetInterfaceMetric(uint32 nicid, uint32 metric) -> (NetErr result);
 
     SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
 
@@ -183,15 +213,11 @@ interface Netstack {
     StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
 
     -> OnInterfacesChanged(vector<NetInterface> interfaces);
+    -> OnInterfacesChanged2(vector<NetInterface2> interfaces);
 };
 
-// When Commit is called, the most recent SetRouteTable will be
-// committed to the route tables.  Commit may be called multiple times.
 [Discoverable]
 interface RouteTableTransaction {
-    GetRouteTable() -> (vector<RouteTableEntry> rt);
-
-    SetRouteTable(vector<RouteTableEntry> rt);
-
-    Commit() -> (zx.status status);
+    AddRoute(RouteTableEntry2 r) -> (zx.status status);
+    DelRoute(RouteTableEntry2 r) -> (zx.status status);
 };

@@ -30,8 +30,10 @@ class VirtioNetTest : public TestWithDevice,
                   GetAddressCallback callback) override {}
 
   void GetInterfaces(GetInterfacesCallback callback) override {}
+  void GetInterfaces2(GetInterfaces2Callback callback) override {}
 
   void GetRouteTable(GetRouteTableCallback callback) override {}
+  void GetRouteTable2(GetRouteTable2Callback callback) override {}
 
   void GetStats(uint32_t nicid, GetStatsCallback callback) override {}
 
@@ -46,6 +48,9 @@ class VirtioNetTest : public TestWithDevice,
   void RemoveInterfaceAddress(
       uint32_t nicid, fuchsia::net::IpAddress addr, uint8_t prefixLen,
       RemoveInterfaceAddressCallback callback) override {}
+
+  void SetInterfaceMetric(uint32_t nicid, uint32_t metric,
+                          SetInterfaceMetricCallback callback) override {}
 
   void SetDhcpClientStatus(uint32_t nicid, bool enabled,
                            SetDhcpClientStatusCallback callback) override {}
