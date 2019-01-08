@@ -382,8 +382,8 @@ struct Driver {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-// Access the devcoordinator's async event loop
-async::Loop* DcAsyncLoop();
+// Access the devcoordinator's async dispatcher.
+async_dispatcher_t* DcAsyncDispatcher();
 
 zx_status_t devfs_publish(Device* parent, Device* dev);
 void devfs_unpublish(Device* dev);

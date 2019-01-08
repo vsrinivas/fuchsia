@@ -174,14 +174,22 @@ namespace {
 
 Coordinator g_coordinator;
 
-// Handle ID to use for the root job when spawning devhosts.  This number must match the
-// value used in system/dev/misc/sysinfo/sysinfo.c
+// Handle ID to use for the root job when spawning devhosts. This number must
+// match the value used in system/dev/misc/sysinfo/sysinfo.c.
 constexpr uint32_t kIdHJobRoot = 4;
 
 constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
 zx::vmo bootdata_vmo;
+
+async::Loop* DcAsyncLoop() {
+    // The constructor of this asserts that the loop allocation succeeds. This
+    // is fine, since if we can't successfully heap alloc during process
+    // startup, the devcoordinator is not going to make it very far.
+    static async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    return &loop;
+}
 
 } // namespace
 
@@ -192,13 +200,8 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
 
-// Access the devcoordinator's async event loop
-async::Loop* DcAsyncLoop() {
-    // The constructor of this asserts that the loop allocation succeeds.  This
-    // is fine, since if we can't successfully heap alloc during process
-    // startup, the devcoordinator is not going to make it very far.
-    static async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    return &loop;
+async_dispatcher_t* DcAsyncDispatcher() {
+    return DcAsyncLoop()->dispatcher();
 }
 
 bool Coordinator::InSuspend() const {
@@ -861,7 +864,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
 
     dev->wait.set_object(dev->hrpc.get());
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+    if ((r = dev->wait.Begin(DcAsyncDispatcher())) != ZX_OK) {
         devfs_unpublish(dev.get());
         return r;
     }
@@ -884,7 +887,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        r = dev->publish_task.Post(DcAsyncLoop()->dispatcher());
+        r = dev->publish_task.Post(DcAsyncDispatcher());
         if (r != ZX_OK) {
             return r;
         }
@@ -902,7 +905,7 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        zx_status_t r = dev->publish_task.Post(DcAsyncLoop()->dispatcher());
+        zx_status_t r = dev->publish_task.Post(DcAsyncDispatcher());
         if (r != ZX_OK) {
             return r;
         }
@@ -1010,7 +1013,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
 
                     if (parent->retries > 0) {
                         // Add device with an exponential backoff.
-                        zx_status_t r = parent->publish_task.PostDelayed(DcAsyncLoop()->dispatcher(), parent->backoff);
+                        zx_status_t r = parent->publish_task.PostDelayed(DcAsyncDispatcher(), parent->backoff);
                         if (r != ZX_OK) {
                             return r;
                         }
@@ -1641,7 +1644,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     dev->wait.set_object(hrpc.get());
     dev->hrpc = std::move(hrpc);
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncLoop()->dispatcher())) != ZX_OK) {
+    if ((r = dev->wait.Begin(DcAsyncDispatcher())) != ZX_OK) {
         return r;
     }
     dev->host = dh;
@@ -2130,7 +2133,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-    async::PostTask(DcAsyncLoop()->dispatcher(), [this, drv] { BindDriver(drv); });
+    async::PostTask(DcAsyncDispatcher(), [this, drv] { BindDriver(drv); });
 }
 
 Device* coordinator_init(const zx::job& root_job) {
@@ -2212,7 +2215,7 @@ void Coordinator::ControlEvent(async_dispatcher_t* dispatcher, async::Receiver* 
         ScanSystem();
         break;
     case kCtlAddSystem:
-        async::PostTask(DcAsyncLoop()->dispatcher(), [this]() mutable {
+        async::PostTask(DcAsyncDispatcher(), [this]() mutable {
             // Add system drivers to the new list.
             for (Driver& drv : system_drivers_) {
                 BindDriver(&drv);
@@ -2258,7 +2261,7 @@ static int system_driver_loader(void* arg) {
 
     zx_packet_user_t pkt = {};
     pkt.u32[0] = kCtlAddSystem;
-    control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
+    control_handler.QueuePacket(DcAsyncDispatcher(), &pkt);
     return 0;
 }
 
@@ -2267,7 +2270,7 @@ void load_system_drivers() {
 
     zx_packet_user_t pkt = {};
     pkt.u32[0] = kCtlScanSystem;
-    control_handler.QueuePacket(DcAsyncLoop()->dispatcher(), &pkt);
+    control_handler.QueuePacket(DcAsyncDispatcher(), &pkt);
 }
 
 void coordinator(DevmgrArgs args) {

@@ -561,7 +561,7 @@ zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
     }
 
     ios->set_channel(std::move(*ipc));
-    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncLoop()->dispatcher());
+    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncDispatcher());
     if (status != ZX_OK) {
         // Take the handle back from |ios| so it doesn't close it when it's
         // destroyed
