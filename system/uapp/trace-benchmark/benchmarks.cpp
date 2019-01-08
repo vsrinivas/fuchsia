@@ -49,7 +49,8 @@ public:
         } else {
             // For the disabled benchmarks we just use the default number
             // of iterations.
-            RunAndMeasure(name, spec_->name, benchmark, []() {}, []() {});
+            RunAndMeasure(
+                name, spec_->name, benchmark, []() {}, []() {});
         }
     }
 
@@ -59,61 +60,68 @@ private:
     const BenchmarkSpec* spec_;
 };
 
-#define DURATION_TEST(DURATION_MACRO, category_literal)               \
-    runner.Run(#DURATION_MACRO " macro with 0 arguments", [] {        \
-        DURATION_MACRO(category_literal, "name");                     \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 1 int32 argument", [] {   \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1);                                      \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 1 double argument", [] {  \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1.);                                     \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 1 string argument", [] {  \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", "string1");                              \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 4 int32 arguments", [] {  \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1, "k2", 2, "k3", 3, "k4", 4);           \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 4 double arguments", [] { \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1., "k2", 2., "k3", 3., "k4", 4.);       \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 4 string arguments", [] { \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", "string1", "k2", "string2", "k3",        \
-                       "string3", "k4", "string4");                   \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 8 int32 arguments", [] {  \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1, "k2", 2, "k3", 3, "k4", 4,            \
-                       "k5", 5, "k6", 6, "k7", 7, "k8", 8);           \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 8 double arguments", [] { \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", 1., "k2", 2., "k3", 3., "k4", 4.,        \
-                       "k5", 4., "k6", 5., "k7", 7., "k8", 8.);       \
-    });                                                               \
-                                                                      \
-    runner.Run(#DURATION_MACRO " macro with 8 string arguments", [] { \
-        DURATION_MACRO(category_literal, "name",                      \
-                       "k1", "string1", "k2", "string2",              \
-                       "k3", "string3", "k4", "string4",              \
-                       "k5", "string5", "k6", "string6",              \
-                       "k7", "string7", "k8", "string8");             \
-    });
+#define RUN_NILADIC_DURATION_TEST(test_name, DURATION_MACRO, category_literal)     \
+    do {                                                                           \
+        runner.Run(#DURATION_MACRO " macro with " test_name ": " category_literal, \
+                   [] {                                                            \
+                       DURATION_MACRO(category_literal, "name");                   \
+                   });                                                             \
+    } while (0)
+
+#define RUN_DURATION_TEST(test_name, DURATION_MACRO, category_literal, ...)        \
+    do {                                                                           \
+        runner.Run(#DURATION_MACRO " macro with " test_name ": " category_literal, \
+                   [] {                                                            \
+                       DURATION_MACRO(category_literal, "name",                    \
+                                      __VA_ARGS__);                                \
+                   });                                                             \
+    } while (0)
+
+#define DURATION_TEST(DURATION_MACRO, category_literal)          \
+    RUN_NILADIC_DURATION_TEST("0 arguments",                     \
+                              DURATION_MACRO, category_literal); \
+                                                                 \
+    RUN_DURATION_TEST("1 int32 argument",                        \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1);                                  \
+                                                                 \
+    RUN_DURATION_TEST("1 double argument",                       \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1.);                                 \
+                                                                 \
+    RUN_DURATION_TEST("1 string argument",                       \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", "string1");                          \
+                                                                 \
+    RUN_DURATION_TEST("4 int32 arguments",                       \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1, "k2", 2, "k3", 3, "k4", 4);       \
+                                                                 \
+    RUN_DURATION_TEST("4 double arguments",                      \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1., "k2", 2., "k3", 3., "k4", 4.);   \
+                                                                 \
+    RUN_DURATION_TEST("4 string arguments",                      \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", "string1", "k2", "string2",          \
+                      "k3", "string3", "k4", "string4");         \
+                                                                 \
+    RUN_DURATION_TEST("8 int32 arguments",                       \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1, "k2", 2, "k3", 3, "k4", 4,        \
+                      "k5", 5, "k6", 6, "k7", 7, "k8", 8);       \
+                                                                 \
+    RUN_DURATION_TEST("8 double arguments",                      \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", 1., "k2", 2., "k3", 3., "k4", 4.,    \
+                      "k5", 4., "k6", 5., "k7", 7., "k8", 8.);   \
+                                                                 \
+    RUN_DURATION_TEST("8 string arguments",                      \
+                      DURATION_MACRO, category_literal,          \
+                      "k1", "string1", "k2", "string2",          \
+                      "k3", "string3", "k4", "string4",          \
+                      "k5", "string5", "k6", "string6",          \
+                      "k7", "string7", "k8", "string8");
 
 void RunBenchmarks(bool tracing_enabled, const BenchmarkSpec* spec) {
     Runner runner(tracing_enabled, spec);
