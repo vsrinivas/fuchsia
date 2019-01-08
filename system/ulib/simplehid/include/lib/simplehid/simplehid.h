@@ -116,7 +116,7 @@ private:
             case kPacketKeyStop:
                 return thrd_success;
 
-            case kPacketKeyPoll:
+            case kPacketKeyPoll: {
                 InputReportType report;
                 if (get_input_report_(&report) == ZX_OK) {
                     fbl::AutoLock lock(&client_lock_);
@@ -126,6 +126,7 @@ private:
                 }
 
                 __FALLTHROUGH;
+            }
 
             case kPacketKeyConfigure:
                 fbl::AutoLock lock(&interval_lock_);
