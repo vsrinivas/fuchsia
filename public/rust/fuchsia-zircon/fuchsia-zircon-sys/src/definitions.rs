@@ -540,20 +540,6 @@ extern {
         handle: zx_handle_t
         );
 
-    pub fn zx_log_write(
-        handle: zx_handle_t,
-        len: u32,
-        buffer: *const u8,
-        options: u32
-        ) -> zx_status_t;
-
-    pub fn zx_log_read(
-        handle: zx_handle_t,
-        len: u32,
-        buffer: *mut u8,
-        options: u32
-    ) -> zx_status_t;
-
     pub fn zx_debuglog_create(
         resource: zx_handle_t,
         options: u32,

@@ -14,7 +14,7 @@ use fuchsia_zircon as zx;
 use futures::{future, stream, TryFutureExt, TryStreamExt};
 
 const ZX_LOG_FLAG_READABLE: u32 = 0x40000000;
-const ZX_LOG_RECORD_MAX: u32 = 256;
+const ZX_LOG_RECORD_MAX: usize = 256;
 
 pub fn add_listener<F>(callback: F) -> Result<(), zx::Status>
 where
@@ -35,11 +35,11 @@ where
             loop {
                 let mut buf = [0; ZX_LOG_RECORD_MAX as usize];
                 let status = unsafe {
-                    zx::sys::zx_log_read(
+                    zx::sys::zx_debuglog_read(
                         handle.raw_handle(),
-                        ZX_LOG_RECORD_MAX,
-                        buf.as_mut_ptr(),
                         0,
+                        buf.as_mut_ptr(),
+                        ZX_LOG_RECORD_MAX,
                     )
                 };
 
