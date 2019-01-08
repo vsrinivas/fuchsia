@@ -17,6 +17,7 @@
 #endif
 
 #ifdef SCENIC_ENABLE_INPUT_SUBSYSTEM
+#include "garnet/lib/ui/a11y_input/a11y_input_system.h"
 #include "garnet/lib/ui/input/input_system.h"
 #endif
 
@@ -43,6 +44,9 @@ App::App(component::StartupContext* app_context, fit::closure quit_callback)
 #ifdef SCENIC_ENABLE_GFX_SUBSYSTEM
   auto input = scenic_->RegisterSystem<input::InputSystem>(gfx);
   FXL_DCHECK(input);
+
+  auto a11y_input = scenic_->RegisterSystem<a11y_input::A11yInputSystem>(gfx);
+  FXL_DCHECK(a11y_input);
 #else
 #error InputSystem requires gfx::GfxSystem.
 #endif

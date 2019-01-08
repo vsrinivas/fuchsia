@@ -55,8 +55,9 @@ class System {
     kSketchy = 1,
     kVectorial = 2,
     kInput = 3,
-    kDummySystem = 4,
-    kMaxSystems = 5,
+    kA11yInput = 4,
+    kDummySystem = 5,
+    kMaxSystems = 6,
     kInvalid = kMaxSystems,
   };
 
@@ -117,6 +118,8 @@ inline System::TypeId SystemTypeForCmd(
     case fuchsia::ui::scenic::Command::Tag::kGfx:
       return System::TypeId::kGfx;
     case fuchsia::ui::scenic::Command::Tag::kInput:
+      // TODO(SCN-1124): Provide a way to route input to a11y_input here when
+      // applicable.
       return System::TypeId::kInput;
     case fuchsia::ui::scenic::Command::Tag::kVectorial:
       return System::TypeId::kVectorial;
