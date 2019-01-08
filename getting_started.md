@@ -198,10 +198,11 @@ Re-build and push the rolldice package to a running Fuchsia device with:
 fx build-push rolldice
 ```
 
-From a shell prompt on the Fuchsia device, run the updated package with:
+From a shell prompt on the Fuchsia device, run the updated rolldice component
+with:
 
 ```
-run rolldice
+rolldice
 ```
 
 ### Select a tab
