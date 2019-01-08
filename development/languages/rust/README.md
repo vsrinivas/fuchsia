@@ -20,8 +20,10 @@ IDEs such as Intellij and VSCode, and for using the [`fargo`][fargo] tool to bui
 and test targets without going through a full GN build and run cycle each time.
 
 You can also run unit tests on connected devices using `fx`, with the
-`fx run-test {package name}_{bin or lib}_test` command, assuming your
-package in `BUILD.gn` has `with_unit_tests = true`.
+`fx run-test {package name}` command, assuming your package in `BUILD.gn` has
+`with_unit_tests = true`. 
+Note that in order to use `fx run-test`, you can't override `package_name="..."` in your `package` 
+or `test_package` declaration. This issue is tracked by BLD-338.
 
 ## Style
 
