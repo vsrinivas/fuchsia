@@ -2,15 +2,19 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "voila"
   edition = "2018"
   deps = [
+    "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",
     "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-scenic",
     "//garnet/public/rust/fuchsia-ui",
     "//third_party/rust-crates/rustc_deps:failure",

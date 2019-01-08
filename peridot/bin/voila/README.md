@@ -11,5 +11,5 @@ responsible for running the story multiple times.
 To run tests:
 
 ```
-fx run-test voila_bin_test
+fx run-image-test voila_bin_test
 ```
