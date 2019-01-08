@@ -5,6 +5,7 @@
 #include "promise_example2.h"
 
 #include <algorithm>
+#include <memory>
 #include <string>
 
 #include <lib/fit/promise.h>
@@ -14,6 +15,33 @@
 
 namespace promise_example2 {
 
+// State for a two player game.
+//
+// Players do battle by simultaneously rolling dice in order to inflict
+// damage upon their opponent over the course of several rounds until one
+// or both players' hit points are depleted to 0.
+//
+// Players start with 100 hit points.  During each round, each player first
+// rolls a Damage die (numbered 0 to 9) and an Effect die (numbered 0 to 3).
+// If the Effect die comes up 0, the player casts a lightning spell and
+// rolls an Effect Multiplier die (numbered 0 to 4) to determine the
+// strength of the effect.
+//
+// The following calculation determines the damage dealt to the player's
+// opponent:
+//
+//   if Damage die value is non-zero,
+//     then opponent HP -= value of Damage die
+//   if Effect die is zero (cast lighting),
+//     then opponent HP -= value of Effect Multiplier die * 2 + 3
+//
+// Any dice that fly off the table during especially vigorous rolls are
+// rerolled before damage is tallied.
+struct game_state {
+    int red_hp = 100;
+    int blue_hp = 100;
+};
+
 // Rolls a die and waits for it to settle down then returns its value.
 // This task might fail so the caller needs to be prepared to re-roll.
 //
@@ -22,19 +50,21 @@ namespace promise_example2 {
 auto roll_die(std::string player, std::string type, int number_of_sides) {
     return fit::make_promise([player, type, number_of_sides](fit::context& context)
                                  -> fit::result<int> {
+        // Simulate the outcome of rolling a die.
+        // Either the die will settle, keep rolling, or fall off the table.
         int event = rand() % 6;
         if (event == 0) {
-            // Imagine that the die flew off the table!
+            // The die flew off the table!
             printf("    %s's '%s' die flew right off the table!\n",
                    player.c_str(), type.c_str());
             return fit::error();
         }
         if (event < 3) {
-            // Imagine that the die is still rolling around.
+            // The die is still rolling around.  Need to wait for it to settle.
             utils::resume_in_a_little_while(context.suspend_task());
             return fit::pending();
         }
-        // Imagine that the die has finished rolling.
+        // The die has finished rolling, determine how it landed.
         int value = rand() % number_of_sides;
         printf("    %s rolled %d for '%s'\n", player.c_str(), value, type.c_str());
         return fit::ok(value);
@@ -48,6 +78,7 @@ fit::promise<int> roll_die_until_successful(
     std::string player, std::string type, int number_of_sides) {
     return roll_die(player, type, number_of_sides)
         .or_else([player, type, number_of_sides] {
+            // An error occurred while rolling the die.  Recurse to try again.
             return roll_die_until_successful(player, type, number_of_sides);
         });
 }
@@ -67,8 +98,11 @@ auto roll_for_damage(std::string player) {
          effect = fit::future<int>(roll_die_until_successful(player, "effect", 4)),
          effect_multiplier = fit::future<int>()](fit::context& context) mutable
         -> fit::result<int> {
+            // Evaluate the damage die roll future.
             bool damage_ready = damage(context);
 
+            // Evaluate the effect die roll future.
+            // If the player rolled lightning, begin rolling the multiplier.
             bool effect_ready = effect(context);
             if (effect_ready) {
                 if (effect.value() == 0) {
@@ -78,9 +112,12 @@ auto roll_for_damage(std::string player) {
                 }
             }
 
+            // If we're still waiting for the dice to settle, return pending.
+            // The task will be resumed once it can make progress.
             if (!effect_ready || !damage_ready)
                 return fit::pending();
 
+            // Calculate the result and describe what happened.
             if (damage.value() == 0)
                 printf("%s swings wildly and completely misses their opponent\n",
                        player.c_str());
@@ -100,37 +137,26 @@ auto roll_for_damage(std::string player) {
                            player.c_str(), effect_bonus);
                 }
             }
+
             return fit::ok(damage.value() + effect_bonus);
         });
 }
 
 // Plays one round of the game.
 // Both players roll dice simultaneously to determine the damage dealt
-// to their opponent.  Returns true if the game is over.
+// to their opponent.
 //
 // This function demonstrates joining the results of concurrently executed
 // tasks as a new task which produces a tuple.
-auto play_round(int* red_hp, int* blue_hp) {
+auto play_round(const std::shared_ptr<game_state>& state) {
     return fit::join_promises(roll_for_damage("Red"), roll_for_damage("Blue"))
         .and_then(
-            [red_hp, blue_hp](
-                std::tuple<fit::result<int>, fit::result<int>> damages) mutable
-            -> fit::result<bool> {
-                *blue_hp = std::max(*blue_hp - std::get<0>(damages).value(), 0);
-                *red_hp = std::max(*red_hp - std::get<1>(damages).value(), 0);
-                printf("Hit-points remaining: red %d, blue %d\n", *red_hp, *blue_hp);
-                if (*red_hp != 0 && *blue_hp != 0)
-                    return fit::ok(false);
-
-                // Game over.
-                puts("Game over...");
-                if (*red_hp == 0 && *blue_hp == 0)
-                    puts("Both players lose!");
-                else if (*red_hp != 0)
-                    puts("Red wins!");
-                else
-                    puts("Blue wins!");
-                return fit::ok(true);
+            [state](std::tuple<fit::result<int>, fit::result<int>> damages) {
+                // Damage tallies are ready, apply them to the game state.
+                state->blue_hp = std::max(state->blue_hp - std::get<0>(damages).value(), 0);
+                state->red_hp = std::max(state->red_hp - std::get<1>(damages).value(), 0);
+                printf("Hit-points remaining: red %d, blue %d\n",
+                       state->red_hp, state->blue_hp);
             });
 }
 
@@ -140,27 +166,30 @@ auto play_round(int* red_hp, int* blue_hp) {
 // their opponent.  If at the end of the round one player's hit-points reaches
 // 0, that player loses.  If both players' hit-points reach 0, they both lose.
 auto play_game() {
-    return fit::make_promise([red_hp = 100, blue_hp = 100](fit::context& context) mutable {
-        puts("Red and Blue are playing a game...");
+    puts("Red and Blue are playing a game...");
+    return fit::make_promise(
+        [state = std::make_shared<game_state>(),
+         round = fit::future<>()](fit::context& context) mutable
+        -> fit::result<> {
+            // Repeatedly play rounds until the game ends.
+            while (state->red_hp != 0 && state->blue_hp != 0) {
+                if (!round)
+                    round = play_round(state);
+                if (!round(context))
+                    return fit::pending();
+                round = nullptr;
+            }
 
-        // TODO: We might benefit from some kind of loop combinator here.
-        return fit::make_promise(
-            [&red_hp, &blue_hp,
-             round = fit::future<bool>()](fit::context& context) mutable
-            -> fit::result<> {
-                for (;;) {
-                    if (!round)
-                        round = play_round(&red_hp, &blue_hp);
-                    if (!round(context))
-                        return fit::pending();
-
-                    bool game_over = round.value();
-                    if (game_over)
-                        return fit::ok();
-                    round = nullptr;
-                }
-            });
-    });
+            // Game over.
+            puts("Game over...");
+            if (state->red_hp == 0 && state->blue_hp == 0)
+                puts("Both players lose!");
+            else if (state->red_hp != 0)
+                puts("Red wins!");
+            else
+                puts("Blue wins!");
+            return fit::ok();
+        });
 }
 
 void run() {
