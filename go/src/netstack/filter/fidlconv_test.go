@@ -122,14 +122,14 @@ func TestToDirection(t *testing.T) {
 func TestFromTransProto(t *testing.T) {
 	var tests = []struct {
 		transProto    tcpip.TransportProtocolNumber
-		netTransProto net.SocketProtocol
+		netTransProto filter.SocketProtocol
 		err           error
 	}{
-		{header.ICMPv4ProtocolNumber, net.SocketProtocolIcmp, nil},
-		{header.ICMPv6ProtocolNumber, net.SocketProtocolIcmpv6, nil},
-		{header.TCPProtocolNumber, net.SocketProtocolTcp, nil},
-		{header.UDPProtocolNumber, net.SocketProtocolUdp, nil},
-		{tcpip.TransportProtocolNumber(9999), net.SocketProtocol(0), ErrUnknownProtocol},
+		{header.ICMPv4ProtocolNumber, filter.SocketProtocolIcmp, nil},
+		{header.ICMPv6ProtocolNumber, filter.SocketProtocolIcmpv6, nil},
+		{header.TCPProtocolNumber, filter.SocketProtocolTcp, nil},
+		{header.UDPProtocolNumber, filter.SocketProtocolUdp, nil},
+		{tcpip.TransportProtocolNumber(9999), filter.SocketProtocol(0), ErrUnknownProtocol},
 	}
 
 	for _, test := range tests {
@@ -148,17 +148,17 @@ func TestFromTransProto(t *testing.T) {
 
 func TestToTransProto(t *testing.T) {
 	var tests = []struct {
-		netTransProto net.SocketProtocol
+		netTransProto filter.SocketProtocol
 		transProto    tcpip.TransportProtocolNumber
 		err           error
 	}{
-		{net.SocketProtocolIp, tcpip.TransportProtocolNumber(0), ErrBadProtocol},
-		{net.SocketProtocolIpv6, tcpip.TransportProtocolNumber(0), ErrBadProtocol},
-		{net.SocketProtocolTcp, header.TCPProtocolNumber, nil},
-		{net.SocketProtocolUdp, header.UDPProtocolNumber, nil},
-		{net.SocketProtocolIcmp, header.ICMPv4ProtocolNumber, nil},
-		{net.SocketProtocolIcmpv6, header.ICMPv6ProtocolNumber, nil},
-		{net.SocketProtocol(9999), tcpip.TransportProtocolNumber(0), ErrUnknownProtocol},
+		{filter.SocketProtocolIp, tcpip.TransportProtocolNumber(0), ErrBadProtocol},
+		{filter.SocketProtocolIpv6, tcpip.TransportProtocolNumber(0), ErrBadProtocol},
+		{filter.SocketProtocolTcp, header.TCPProtocolNumber, nil},
+		{filter.SocketProtocolUdp, header.UDPProtocolNumber, nil},
+		{filter.SocketProtocolIcmp, header.ICMPv4ProtocolNumber, nil},
+		{filter.SocketProtocolIcmpv6, header.ICMPv6ProtocolNumber, nil},
+		{filter.SocketProtocol(9999), tcpip.TransportProtocolNumber(0), ErrUnknownProtocol},
 	}
 
 	for _, test := range tests {

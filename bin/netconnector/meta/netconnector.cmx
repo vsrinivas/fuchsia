@@ -6,6 +6,7 @@
         "services": [
             "fuchsia.mdns.Controller",
             "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.netstack.Netstack",
             "fuchsia.sys.Environment"

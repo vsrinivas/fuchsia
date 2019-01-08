@@ -3,10 +3,14 @@
         "binary": "bin/sshd-host"
     },
     "sandbox": {
-        "features": [ "shell", "build-info" ],
+        "features": [
+            "shell",
+            "build-info"
+        ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.net.LegacySocketProvider"
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider"
         ]
     }
 }

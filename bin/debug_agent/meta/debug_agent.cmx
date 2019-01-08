@@ -8,6 +8,7 @@
         ],
         "services": [
             "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider",
             "fuchsia.process.Launcher",
             "fuchsia.process.Resolver",
             "fuchsia.sysinfo.Device"

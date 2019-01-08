@@ -10,6 +10,7 @@ package netstack
 import (
 	"encoding/binary"
 	"fmt"
+	"reflect"
 	"unsafe"
 
 	"github.com/google/netstack/tcpip"
@@ -26,6 +27,26 @@ import (
 // #include <netinet/tcp.h>
 // #include <lib/netstack/c/netconfig.h>
 import "C"
+
+// copyAsBytes exists because of a combination of issues:
+//
+// 1: cgo omits bitfields of sizes that don't have a corresponding Go type.
+// Note that padding is still consistent with C, which is why reflect.Type.Size
+// produces the correct result.
+//
+// 2: encoding/binary.{Size,Write} ignores padding.
+//
+// Therefore, since we know our endianness is the same as the decoder's, we can
+// do a terrible thing and just interpret the struct as a byte array.
+func copyAsBytes(b []byte, val interface{}) int {
+	l := int(reflect.TypeOf(val).Size())
+	v := reflect.Indirect(reflect.ValueOf(&val))
+	return copy(b, *(*[]byte)(unsafe.Pointer(&reflect.SliceHeader{
+		Data: v.InterfaceData()[1],
+		Len:  l,
+		Cap:  l,
+	})))
+}
 
 func (v *C.struct_fdio_socket_msg) Unmarshal(data []byte) error {
 	const size = C.FDIO_SOCKET_MSG_HEADER_SIZE
@@ -105,6 +126,16 @@ func (v *C.struct_ipv6_mreq) Unmarshal(data []byte) error {
 		return fmt.Errorf("short %T: %d/%d", v, n, size)
 	}
 	return nil
+}
+
+func (v *C.netc_if_info_t) Marshal() []byte {
+	const size = C.sizeof_netc_if_info_t
+
+	b := make([]byte, size)
+	if n := copy(b, (*[size]byte)(unsafe.Pointer(v))[:]); n < size {
+		panic(fmt.Sprintf("short %T: %d/%d", v, n, size))
+	}
+	return b
 }
 
 func (v *C.netc_if_info_t) MarshalTo(data []byte) (int, error) {
@@ -212,4 +243,10 @@ func (v *C.struct_sockaddr_storage) Encode(netProto tcpip.NetworkProtocolNumber,
 	default:
 		panic(fmt.Sprintf("unknown network protocol number: %v", netProto))
 	}
+}
+
+func encodeAddr(netProto tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) []uint8 {
+	var v C.struct_sockaddr_storage
+	n := v.Encode(netProto, addr)
+	return (*[C.sizeof_struct_sockaddr_storage]byte)(unsafe.Pointer(&v))[:n]
 }

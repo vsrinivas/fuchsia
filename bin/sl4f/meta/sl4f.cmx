@@ -12,6 +12,7 @@
             "fuchsia.logger.Log",
             "fuchsia.logger.LogSink",
             "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider",
             "fuchsia.net.stack.Stack",
             "fuchsia.tracelink.Registry",
             "fuchsia.wlan.device.service.DeviceService"

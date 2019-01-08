@@ -23,12 +23,16 @@ import (
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/ulib/musl/include
+// #include <errno.h>
 // #include <lib/zxs/protocol.h>
 import "C"
 
 type socketProviderImpl struct {
 	ns *Netstack
 }
+
+var _ net.LegacySocketProvider = (*socketProviderImpl)(nil)
 
 func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	switch typ {
@@ -77,18 +81,54 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 			}
 			return zx.Socket(zx.HandleInvalid), int32(zx.ErrInternal), nil
 		}
-		{
-			peerS, err := newIostate(sp.ns, netProto, transProto, wq, ep, false)
-			if err != nil {
-				if debug {
-					log.Printf("socket: new iostate: %v", err)
-				}
-				return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
-			}
+		return newIostate(sp.ns, netProto, transProto, wq, ep, false, true), int32(zx.ErrOk), nil
+	}
+}
 
-			return peerS, 0, nil
+var _ net.SocketProvider = (*socketProviderImpl)(nil)
+
+func toTransProto(typ, protocol int16) (int16, tcpip.TransportProtocolNumber) {
+	switch {
+	case typ&C.SOCK_STREAM != 0:
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_TCP:
+			return 0, tcp.ProtocolNumber
+		}
+	case typ&C.SOCK_DGRAM != 0:
+		switch protocol {
+		case C.IPPROTO_IP, C.IPPROTO_UDP:
+			return 0, udp.ProtocolNumber
+		case C.IPPROTO_ICMP:
+			return 0, ping.ProtocolNumber4
 		}
 	}
+	return C.EPROTONOSUPPORT, 0
+}
+
+func (sp *socketProviderImpl) Socket(domain, typ, protocol int16) (int16, zx.Socket, error) {
+	var netProto tcpip.NetworkProtocolNumber
+	switch domain {
+	case C.AF_INET:
+		netProto = ipv4.ProtocolNumber
+	case C.AF_INET6:
+		netProto = ipv6.ProtocolNumber
+	default:
+		return C.EPFNOSUPPORT, zx.Socket(zx.HandleInvalid), nil
+	}
+
+	code, transProto := toTransProto(typ, protocol)
+	if code != 0 {
+		return code, zx.Socket(zx.HandleInvalid), nil
+	}
+
+	wq := new(waiter.Queue)
+	sp.ns.mu.Lock()
+	ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+	sp.ns.mu.Unlock()
+	if err != nil {
+		return tcpipErrorToCode(err), zx.Socket(zx.HandleInvalid), nil
+	}
+	return 0, newIostate(sp.ns, netProto, transProto, wq, ep, false, false), nil
 }
 
 func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, uint32, [4]net.AddrInfo, error) {

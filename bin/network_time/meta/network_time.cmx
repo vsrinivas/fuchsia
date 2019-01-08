@@ -3,10 +3,13 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "dev": [
+            "class/rtc/000"
+        ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.net.LegacySocketProvider"
-        ],
-        "dev": [ "class/rtc/000" ]
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider"
+        ]
     }
 }

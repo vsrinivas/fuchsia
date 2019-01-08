@@ -62,34 +62,34 @@ func toDirection(o filter.Direction) (Direction, error) {
 	}
 }
 
-func fromTransProto(o tcpip.TransportProtocolNumber) (net.SocketProtocol, error) {
+func fromTransProto(o tcpip.TransportProtocolNumber) (filter.SocketProtocol, error) {
 	switch o {
 	case header.ICMPv4ProtocolNumber:
-		return net.SocketProtocolIcmp, nil
+		return filter.SocketProtocolIcmp, nil
 	case header.TCPProtocolNumber:
-		return net.SocketProtocolTcp, nil
+		return filter.SocketProtocolTcp, nil
 	case header.UDPProtocolNumber:
-		return net.SocketProtocolUdp, nil
+		return filter.SocketProtocolUdp, nil
 	case header.ICMPv6ProtocolNumber:
-		return net.SocketProtocolIcmpv6, nil
+		return filter.SocketProtocolIcmpv6, nil
 	default:
-		return net.SocketProtocol(0), ErrUnknownProtocol
+		return filter.SocketProtocol(0), ErrUnknownProtocol
 	}
 }
 
-func toTransProto(o net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
+func toTransProto(o filter.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
 	switch o {
-	case net.SocketProtocolIp:
+	case filter.SocketProtocolIp:
 		return tcpip.TransportProtocolNumber(0), ErrBadProtocol
-	case net.SocketProtocolIcmp:
+	case filter.SocketProtocolIcmp:
 		return header.ICMPv4ProtocolNumber, nil
-	case net.SocketProtocolTcp:
+	case filter.SocketProtocolTcp:
 		return header.TCPProtocolNumber, nil
-	case net.SocketProtocolUdp:
+	case filter.SocketProtocolUdp:
 		return header.UDPProtocolNumber, nil
-	case net.SocketProtocolIpv6:
+	case filter.SocketProtocolIpv6:
 		return tcpip.TransportProtocolNumber(0), ErrBadProtocol
-	case net.SocketProtocolIcmpv6:
+	case filter.SocketProtocolIcmpv6:
 		return header.ICMPv6ProtocolNumber, nil
 	default:
 		return tcpip.TransportProtocolNumber(0), ErrUnknownProtocol

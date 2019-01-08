@@ -5,21 +5,25 @@
 package netstack
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log"
+	"reflect"
+	"runtime"
+	"sync"
 	"syscall/zx"
 	"syscall/zx/fdio"
+	"syscall/zx/fidl"
 	"syscall/zx/mxerror"
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
+
+	"fidl/fuchsia/net"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/network/ipv4"
 	"github.com/google/netstack/tcpip/network/ipv6"
-	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 	"github.com/google/netstack/waiter"
@@ -27,8 +31,11 @@ import (
 
 // #cgo CFLAGS: -D_GNU_SOURCE
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
-// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include/
+// #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/third_party/ulib/musl/include
 // #cgo CFLAGS: -I${SRCDIR}/../../../public
+// #include <errno.h>
+// #include <fcntl.h>
+// #include <lib/netstack/c/netconfig.h>
 // #include <lib/zxs/protocol.h>
 // #include <netinet/tcp.h>
 // #include <lib/netstack/c/netconfig.h>
@@ -56,12 +63,18 @@ type iostate struct {
 	netProto   tcpip.NetworkProtocolNumber   // IPv4 or IPv6
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
 
-	dataHandle zx.Socket // used to communicate with libc
+	dataHandle         zx.Socket // used to communicate with libc
+	incomingAssertedMu sync.Mutex
 
-	loopWriteDone  chan struct{} // report that loopWrite finished
-	loopListenDone chan struct{} // report that loopListen finished
+	loopWriteDone chan struct{} // report that loopWrite finished
 
 	closing chan struct{}
+}
+
+type legacyIostate struct {
+	*iostate
+
+	loopListenDone chan struct{} // report that loopListen finished
 }
 
 // loopWrite connects libc write to the network stack.
@@ -114,10 +127,6 @@ func (ios *iostate) loopWrite() error {
 			return err
 		}
 
-		if debug {
-			log.Printf("%p: loopWrite: sending packet n=%d, v=%q", ios, len(v), v)
-		}
-
 		var opts tcpip.WriteOptions
 		if ios.transProto != tcp.ProtocolNumber {
 			var fdioSocketMsg C.struct_fdio_socket_msg
@@ -148,9 +157,7 @@ func (ios *iostate) loopWrite() error {
 				continue
 			}
 			if err == tcpip.ErrWouldBlock {
-				switch ios.transProto {
-				case tcp.ProtocolNumber:
-				default:
+				if ios.transProto != tcp.ProtocolNumber {
 					panic(fmt.Sprintf("UDP writes are nonblocking; saw %d/%d", n, len(v)))
 				}
 				// Note that Close should not interrupt this wait.
@@ -179,7 +186,7 @@ func (ios *iostate) loopWrite() error {
 }
 
 // loopRead connects libc read to the network stack.
-func (ios *iostate) loopRead() error {
+func (ios *legacyIostate) loopRead() error {
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING
 
@@ -223,9 +230,9 @@ func (ios *iostate) loopRead() error {
 				}
 
 				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
-				case zx.ErrOk, zx.ErrBadHandle:
+				case zx.ErrOk, zx.ErrPeerClosed:
 				default:
-					log.Printf("%p: SignalPeer(0, %b): %s", ios, signals, err)
+					panic(err)
 				}
 			}
 			switch err {
@@ -247,20 +254,12 @@ func (ios *iostate) loopRead() error {
 			break
 		}
 		ios.wq.EventUnregister(&inEntry)
-		if debug {
-			log.Printf("%p: loopRead: received packet n=%d, v=%q", ios, len(v), v)
-		}
 
 		if ios.transProto != tcp.ProtocolNumber {
 			out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
-			if err := func() error {
-				var fdioSocketMsg C.struct_fdio_socket_msg
-				fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
-				if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
-					return err
-				}
-				return nil
-			}(); err != nil {
+			var fdioSocketMsg C.struct_fdio_socket_msg
+			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
+			if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
 				return err
 			}
 			if n := copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v); n < len(v) {
@@ -315,7 +314,7 @@ func (ios *iostate) loopRead() error {
 	}
 }
 
-func (ios *iostate) loopControl() {
+func (ios *legacyIostate) loopControl() {
 	synthesizeClose := true
 	defer func() {
 		if synthesizeClose {
@@ -371,16 +370,240 @@ func (ios *iostate) loopControl() {
 	}
 }
 
-func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (zx.Socket, error) {
-	var t uint32
-	switch transProto {
-	case tcp.ProtocolNumber:
+// loopRead connects libc read to the network stack.
+func (ios *iostate) loopRead() error {
+	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
+		zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING
+
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	defer ios.wq.EventUnregister(&inEntry)
+
+	outEntry, outCh := waiter.NewChannelEntry(nil)
+	connected := ios.transProto != tcp.ProtocolNumber
+	if !connected {
+		ios.wq.EventRegister(&outEntry, waiter.EventOut)
+		defer ios.wq.EventUnregister(&outEntry)
+	}
+
+	var sender tcpip.FullAddress
+	for {
+		var v []byte
+
+		ios.wq.EventRegister(&inEntry, waiter.EventIn)
+		for {
+			var err *tcpip.Error
+			v, _, err = ios.ep.Read(&sender)
+			if err == tcpip.ErrClosedForReceive {
+				return ios.dataHandle.Shutdown(zx.SocketShutdownWrite)
+			}
+			if err == tcpip.ErrInvalidEndpointState {
+				if connected {
+					panic(fmt.Sprintf("connected endpoint returned %s", err))
+				}
+				select {
+				case <-ios.closing:
+					return nil
+				case <-inCh:
+					// We got an incoming connection; we must be a listening socket.
+					ios.wq.EventUnregister(&outEntry)
+
+					ios.incomingAssertedMu.Lock()
+					switch err := ios.dataHandle.Handle().SignalPeer(0, ZXSIO_SIGNAL_INCOMING); mxerror.Status(err) {
+					case zx.ErrOk, zx.ErrPeerClosed:
+					default:
+						panic(err)
+					}
+					ios.incomingAssertedMu.Unlock()
+					continue
+				case <-outCh:
+					// We became connected; the next Read will reflect this.
+					continue
+				}
+			} else if !connected {
+				var signals zx.Signals = ZXSIO_SIGNAL_OUTGOING
+				switch err {
+				case nil, tcpip.ErrWouldBlock:
+					connected = true
+					ios.wq.EventUnregister(&outEntry)
+
+					signals |= ZXSIO_SIGNAL_CONNECTED
+				}
+
+				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
+				case zx.ErrOk, zx.ErrBadHandle:
+				default:
+					panic(err)
+				}
+			}
+			switch err {
+			case nil:
+			case tcpip.ErrConnectionRefused:
+				// Linux allows sockets with connection errors to be reused. If the
+				// client calls connect() again (and the underlying Endpoint correctly
+				// permits the attempt), we need to wait for an outbound event again.
+				select {
+				case <-outCh:
+					continue
+				case <-ios.closing:
+					return nil
+				}
+			case tcpip.ErrWouldBlock:
+				select {
+				case <-inCh:
+					continue
+				case <-ios.closing:
+					return nil
+				}
+			default:
+				return fmt.Errorf("Endpoint.Read(): %s", err)
+			}
+			break
+		}
+		ios.wq.EventUnregister(&inEntry)
+
+		if ios.transProto != tcp.ProtocolNumber {
+			out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
+			var fdioSocketMsg C.struct_fdio_socket_msg
+			fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
+			if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
+				return err
+			}
+			if n := copy(out[C.FDIO_SOCKET_MSG_HEADER_SIZE:], v); n < len(v) {
+				panic(fmt.Sprintf("copied %d/%d bytes", n, len(v)))
+			}
+			v = out
+		}
+
+	writeLoop:
+		for {
+			switch n, err := ios.dataHandle.Write(v, 0); mxerror.Status(err) {
+			case zx.ErrOk:
+				if ios.transProto != tcp.ProtocolNumber {
+					if n < len(v) {
+						panic(fmt.Sprintf("UDP disallows short writes; saw: %d/%d", n, len(v)))
+					}
+				}
+				v = v[n:]
+				if len(v) == 0 {
+					break writeLoop
+				}
+			case zx.ErrBadState:
+				// This side of the socket is closed.
+				if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
+					return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
+				}
+				return nil
+			case zx.ErrShouldWait:
+				switch obs, err := zxwait.Wait(zx.Handle(ios.dataHandle), sigs, zx.TimensecInfinite); mxerror.Status(err) {
+				case zx.ErrOk:
+					switch {
+					case obs&zx.SignalSocketWriteDisabled != 0:
+					// The next Write will return zx.BadState.
+					case obs&zx.SignalSocketWritable != 0:
+						continue
+					case obs&zx.SignalSocketPeerClosed != 0:
+						return nil
+					case obs&LOCAL_SIGNAL_CLOSING != 0:
+						return nil
+					}
+				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+					return nil
+				default:
+					return err
+				}
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+				return nil
+			default:
+				return err
+			}
+		}
+	}
+}
+
+func (ios *iostate) loopControl() error {
+	synthesizeClose := true
+	defer func() {
+		if synthesizeClose {
+			if code, err := ios.Close(); err != nil {
+				log.Printf("synethsize close failed: %v", err)
+			} else if code != 0 {
+				log.Printf("synethsize close failed: %d", code)
+
+				if err := ios.dataHandle.Close(); err != nil {
+					log.Printf("dataHandle.Close() failed: %v", err)
+				}
+			}
+		}
+	}()
+
+	stub := net.SocketControlStub{Impl: ios}
+	var respb [zx.ChannelMaxMessageBytes]byte
+	for {
+		switch err := func() error {
+			nb, err := ios.dataHandle.Read(respb[:], zx.SocketControl)
+			if err != nil {
+				return err
+			}
+
+			msg := respb[:nb]
+			var header fidl.MessageHeader
+			if err := fidl.UnmarshalHeader(msg, &header); err != nil {
+				return err
+			}
+
+			p, err := stub.Dispatch(header.Ordinal, msg[fidl.MessageHeaderSize:], nil)
+			if err != nil {
+				return err
+			}
+			cnb, _, err := fidl.MarshalMessage(&header, p, respb[:], nil)
+			if err != nil {
+				return err
+			}
+			respb := respb[:cnb]
+			for len(respb) > 0 {
+				if n, err := ios.dataHandle.Write(respb, zx.SocketControl); err != nil {
+					return err
+				} else {
+					respb = respb[n:]
+				}
+			}
+			return nil
+		}(); mxerror.Status(err) {
+		case zx.ErrOk:
+		case zx.ErrBadState:
+			return nil // This side of the socket is closed.
+		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			return nil
+		case zx.ErrShouldWait:
+			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+				zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
+				zx.TimensecInfinite)
+			switch mxerror.Status(err) {
+			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+				return nil
+			case zx.ErrOk:
+				switch {
+				case obs&zx.SignalSocketControlReadable != 0:
+					continue
+				case obs&LOCAL_SIGNAL_CLOSING != 0:
+					synthesizeClose = false
+					return nil
+				case obs&zx.SignalSocketPeerClosed != 0:
+					return nil
+				}
+			default:
+				return err
+			}
+		default:
+			return err
+		}
+	}
+}
+
+func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool, legacy bool) zx.Socket {
+	var t uint32 = zx.SocketDatagram
+	if transProto == tcp.ProtocolNumber {
 		t = zx.SocketStream
-	case udp.ProtocolNumber:
-		t = zx.SocketDatagram
-	case ping.ProtocolNumber4, ping.ProtocolNumber6:
-	default:
-		panic(fmt.Sprintf("unknown transport protocol number: %v", transProto))
 	}
 	t |= zx.SocketHasControl
 	if !isAccept {
@@ -388,7 +611,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 	}
 	localS, peerS, err := zx.NewSocket(t)
 	if err != nil {
-		return zx.Socket(zx.HandleInvalid), err
+		panic(err)
 	}
 	ios := &iostate{
 		netProto:      netProto,
@@ -401,21 +624,44 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		closing:       make(chan struct{}),
 	}
 
-	go ios.loopControl()
-	go func() {
-		if err := ios.loopRead(); err != nil {
-			log.Printf("%p: loopRead: %s", ios, err)
+	if legacy {
+		ios := legacyIostate{
+			iostate: ios,
 		}
-	}()
-	go func() {
-		defer close(ios.loopWriteDone)
+		go ios.loopControl()
+		go func() {
+			if err := ios.loopRead(); err != nil {
+				log.Printf("%p: loopRead: %s", ios, err)
+			}
+		}()
+		go func() {
+			defer close(ios.loopWriteDone)
 
-		if err := ios.loopWrite(); err != nil {
-			log.Printf("%p: loopWrite: %s", ios, err)
-		}
-	}()
+			if err := ios.loopWrite(); err != nil {
+				log.Printf("%p: loopWrite: %s", ios, err)
+			}
+		}()
+	} else {
+		go func() {
+			if err := ios.loopControl(); err != nil {
+				log.Printf("%p: loopControl: %s", ios, err)
+			}
+		}()
+		go func() {
+			if err := ios.loopRead(); err != nil {
+				log.Printf("%p: loopRead: %s", ios, err)
+			}
+		}()
+		go func() {
+			defer close(ios.loopWriteDone)
 
-	return peerS, nil
+			if err := ios.loopWrite(); err != nil {
+				log.Printf("%p: loopWrite: %s", ios, err)
+			}
+		}()
+	}
+
+	return peerS
 }
 
 func errStatus(err error) zx.Status {
@@ -495,7 +741,7 @@ func zxNetError(e *tcpip.Error) zx.Status {
 	}
 }
 
-func (ios *iostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
+func (ios *legacyIostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
 	var reqReply C.struct_zxrio_sockopt_req_reply
 	if err := reqReply.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -503,22 +749,17 @@ func (ios *iostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
 		}
 		return errStatus(err)
 	}
-	val, err := GetSockOpt(ios.ep, ios.transProto, int16(reqReply.level), int16(reqReply.optname))
+	val, err := GetSockOpt(ios.ep, ios.transProto, int16(reqReply.level), int16(reqReply.optname), true)
 	if err != nil {
 		return zxNetError(err)
 	}
-	buf := bytes.NewBuffer(reqReply.opt()[:0])
-	if err := binary.Write(buf, binary.LittleEndian, val); err != nil {
-		panic(err)
-	}
-	b := buf.Bytes()
-	n := copy(reqReply.opt(), b)
+	n := copyAsBytes(reqReply.opt(), val)
 	if _, ok := val.(C.struct_tcp_info); ok {
 		// TODO(tamird): why are we encoding 144 bytes into a 128 byte buffer?
 		n += 16
 	}
-	if n < len(b) {
-		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
+	if size := reflect.TypeOf(val).Size(); n < int(size) {
+		panic(fmt.Sprintf("short %T: %d/%d", val, n, size))
 	} else {
 		reqReply.optlen = C.socklen_t(n)
 	}
@@ -532,7 +773,7 @@ func (ios *iostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (ios *iostate) opSetSockOpt(msg *zxsocket.Msg) zx.Status {
+func (ios *legacyIostate) opSetSockOpt(msg *zxsocket.Msg) zx.Status {
 	var reqReply C.struct_zxrio_sockopt_req_reply
 	if err := reqReply.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
@@ -548,7 +789,7 @@ func (ios *iostate) opSetSockOpt(msg *zxsocket.Msg) zx.Status {
 	return zx.ErrOk
 }
 
-func (ios *iostate) opBind(msg *zxsocket.Msg) (status zx.Status) {
+func (ios *legacyIostate) opBind(msg *zxsocket.Msg) (status zx.Status) {
 	// TODO(tamird): are we really sending raw sockaddr_storage here? why aren't we using
 	// zxrio_sockaddr_reply? come to think of it, why does zxrio_sockaddr_reply exist?
 	addr, err := func() (tcpip.FullAddress, error) {
@@ -631,7 +872,7 @@ var (
 // a race condition if the interface list changes between calls to ioctlNetcGetIfInfoAt.
 var lastIfInfo *C.netc_get_if_info_t
 
-func (ios *iostate) opIoctl(msg *zxsocket.Msg) zx.Status {
+func (ios *legacyIostate) opIoctl(msg *zxsocket.Msg) zx.Status {
 	switch msg.IoctlOp() {
 	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
 	case ioctlNetcGetNumIfs:
@@ -696,7 +937,7 @@ func fdioSockAddrReply(netProto tcpip.NetworkProtocolNumber, addr tcpip.FullAddr
 	return zx.ErrOk
 }
 
-func (ios *iostate) opGetSockName(msg *zxsocket.Msg) zx.Status {
+func (ios *legacyIostate) opGetSockName(msg *zxsocket.Msg) zx.Status {
 	a, err := ios.ep.GetLocalAddress()
 	if err != nil {
 		return zxNetError(err)
@@ -716,7 +957,7 @@ func (ios *iostate) opGetSockName(msg *zxsocket.Msg) zx.Status {
 	return fdioSockAddrReply(ios.netProto, a, msg)
 }
 
-func (ios *iostate) opGetPeerName(msg *zxsocket.Msg) (status zx.Status) {
+func (ios *legacyIostate) opGetPeerName(msg *zxsocket.Msg) (status zx.Status) {
 	a, err := ios.ep.GetRemoteAddress()
 	if err != nil {
 		return zxNetError(err)
@@ -780,21 +1021,14 @@ func (ios *iostate) loopListen(inCh chan struct{}) error {
 				log.Printf("%p: TCP accept: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 			}
 
-			{
-				peerS, err := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true)
-				if err != nil {
-					return err
-				}
-
-				if err := ios.dataHandle.Share(zx.Handle(peerS)); err != nil {
-					return err
-				}
+			if err := ios.dataHandle.Share(zx.Handle(newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true, true))); err != nil {
+				return err
 			}
 		}
 	}
 }
 
-func (ios *iostate) opListen(msg *zxsocket.Msg) (status zx.Status) {
+func (ios *legacyIostate) opListen(msg *zxsocket.Msg) (status zx.Status) {
 	d := msg.Data[:msg.Datalen]
 	if len(d) != 4 {
 		if debug {
@@ -834,7 +1068,7 @@ func (ios *iostate) opListen(msg *zxsocket.Msg) (status zx.Status) {
 	return zx.ErrOk
 }
 
-func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
+func (ios *legacyIostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 	if msg.Datalen == 0 {
 		if ios.transProto == udp.ProtocolNumber {
 			// connect() can be called with no address to
@@ -886,9 +1120,9 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 	if err := ios.ep.Connect(addr); err != nil {
 		if err == tcpip.ErrConnectStarted {
 			switch err := ios.dataHandle.Handle().SignalPeer(ZXSIO_SIGNAL_OUTGOING, 0); mxerror.Status(err) {
-			case zx.ErrOk, zx.ErrBadHandle:
+			case zx.ErrOk, zx.ErrPeerClosed:
 			default:
-				log.Printf("%p: SignalPeer(%b, 0): %s", ios, ZXSIO_SIGNAL_OUTGOING, err)
+				panic(err)
 			}
 		}
 		if debug {
@@ -902,7 +1136,7 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 	return zx.ErrOk
 }
 
-func (ios *iostate) opClose(cookie int64) zx.Status {
+func (ios *legacyIostate) opClose(cookie int64) zx.Status {
 	// Signal that we're about to close. This tells the various message loops to finish
 	// processing, and let us know when they're done.
 	err := mxerror.Status(ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING))
@@ -921,10 +1155,10 @@ func (ios *iostate) opClose(cookie int64) zx.Status {
 	return err
 }
 
-func (ios *iostate) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookie int64) zx.Status {
+func (ios *legacyIostate) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookie int64) zx.Status {
 	op := msg.Op()
 	if debug {
-		log.Printf("zxsocketHandler: op=%v, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
+		log.Printf("zxsocketHandler: op=%x, len=%d, arg=%v, hcount=%d", op, msg.Datalen, msg.Arg, msg.Hcount)
 	}
 
 	switch op {
@@ -947,8 +1181,242 @@ func (ios *iostate) zxsocketHandler(msg *zxsocket.Msg, rh zx.Socket, cookie int6
 	case zxsocket.OpSetSockOpt:
 		return ios.opSetSockOpt(msg)
 	default:
-		log.Printf("zxsocketHandler: unknown socket op: %v", op)
+		log.Printf("zxsocketHandler: unknown socket op: %x", op)
 		return zx.ErrNotSupported
 	}
 	// TODO do_halfclose
+}
+
+var _ net.SocketControl = (*iostate)(nil)
+
+func tcpipErrorToCode(err *tcpip.Error) int16 {
+	if debug {
+		errStr := err.String()
+		if pc, _, _, ok := runtime.Caller(1); ok {
+			errStr = runtime.FuncForPC(pc).Name() + ": " + errStr
+		}
+		if err := log.Output(2, err.String()); err != nil {
+			panic(err)
+		}
+	}
+	switch err {
+	case tcpip.ErrUnknownProtocol:
+		return C.EINVAL
+	case tcpip.ErrUnknownNICID:
+		return C.EINVAL
+	case tcpip.ErrUnknownProtocolOption:
+		return C.ENOPROTOOPT
+	case tcpip.ErrDuplicateNICID:
+		return C.EEXIST
+	case tcpip.ErrDuplicateAddress:
+		return C.EEXIST
+	case tcpip.ErrNoRoute:
+		return C.EHOSTUNREACH
+	case tcpip.ErrBadLinkEndpoint:
+		return C.EINVAL
+	case tcpip.ErrAlreadyBound:
+		return C.EINVAL
+	case tcpip.ErrInvalidEndpointState:
+		return C.EINVAL
+	case tcpip.ErrAlreadyConnecting:
+		return C.EALREADY
+	case tcpip.ErrAlreadyConnected:
+		return C.EISCONN
+	case tcpip.ErrNoPortAvailable:
+		return C.EAGAIN
+	case tcpip.ErrPortInUse:
+		return C.EADDRINUSE
+	case tcpip.ErrBadLocalAddress:
+		return C.EADDRNOTAVAIL
+	case tcpip.ErrClosedForSend:
+		return C.EPIPE
+	case tcpip.ErrClosedForReceive:
+		return C.EAGAIN
+	case tcpip.ErrWouldBlock:
+		return C.EWOULDBLOCK
+	case tcpip.ErrConnectionRefused:
+		return C.ECONNREFUSED
+	case tcpip.ErrTimeout:
+		return C.ETIMEDOUT
+	case tcpip.ErrAborted:
+		return C.EPIPE
+	case tcpip.ErrConnectStarted:
+		return C.EINPROGRESS
+	case tcpip.ErrDestinationRequired:
+		return C.EDESTADDRREQ
+	case tcpip.ErrNotSupported:
+		return C.EOPNOTSUPP
+	case tcpip.ErrQueueSizeNotSupported:
+		return C.ENOTTY
+	case tcpip.ErrNotConnected:
+		return C.ENOTCONN
+	case tcpip.ErrConnectionReset:
+		return C.ECONNRESET
+	case tcpip.ErrConnectionAborted:
+		return C.ECONNABORTED
+	case tcpip.ErrNoSuchFile:
+		return C.ENOENT
+	case tcpip.ErrInvalidOptionValue:
+		return C.EINVAL
+	case tcpip.ErrNoLinkAddress:
+		return C.EHOSTDOWN
+	case tcpip.ErrBadAddress:
+		return C.EFAULT
+	case tcpip.ErrNetworkUnreachable:
+		return C.ENETUNREACH
+	case tcpip.ErrMessageTooLong:
+		return C.EMSGSIZE
+	case tcpip.ErrNoBufferSpace:
+		return C.ENOBUFS
+	default:
+		panic(fmt.Sprintf("unknown error %v", err))
+	}
+}
+
+func (ios *iostate) Connect(sockaddr []uint8) (int16, error) {
+	addr, err := decodeAddr(sockaddr)
+	if err != nil {
+		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
+	}
+	if err := ios.ep.Connect(addr); err != nil {
+		return tcpipErrorToCode(err), nil
+	}
+	return 0, nil
+}
+
+func (ios *iostate) Bind(sockaddr []uint8) (int16, error) {
+	addr, err := decodeAddr(sockaddr)
+	if err != nil {
+		return tcpipErrorToCode(tcpip.ErrBadAddress), nil
+	}
+	if err := ios.ep.Bind(addr, nil); err != nil {
+		return tcpipErrorToCode(err), nil
+	}
+	return 0, nil
+}
+
+func (ios *iostate) Listen(backlog int16) (int16, error) {
+	if err := ios.ep.Listen(int(backlog)); err != nil {
+		return tcpipErrorToCode(err), nil
+	}
+
+	return 0, nil
+}
+
+func (ios *iostate) Accept(flags int16) (int16, error) {
+	ep, wq, err := ios.ep.Accept()
+	// NB: we need to do this before checking the error, or the incoming signal
+	// will never be cleared.
+	//
+	// We lock here to ensure that no incoming connection changes readiness
+	// while we clear the signal.
+	ios.incomingAssertedMu.Lock()
+	if ios.ep.Readiness(waiter.EventIn) == 0 {
+		if err := ios.dataHandle.Handle().SignalPeer(ZXSIO_SIGNAL_INCOMING, 0); err != nil {
+			panic(err)
+		}
+	}
+	ios.incomingAssertedMu.Unlock()
+	if err != nil {
+		return tcpipErrorToCode(err), nil
+	}
+	if err := ios.dataHandle.Share(zx.Handle(newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true, false))); err != nil {
+		panic(err)
+	}
+	return 0, nil
+}
+
+func (ios *iostate) GetSockOpt(level, optName int16) (int16, []uint8, error) {
+	val, err := GetSockOpt(ios.ep, ios.transProto, level, optName, false)
+	if err != nil {
+		return tcpipErrorToCode(err), nil, nil
+	}
+	b := make([]byte, reflect.TypeOf(val).Size())
+	n := copyAsBytes(b, val)
+	if n < len(b) {
+		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
+	}
+	return 0, b, nil
+}
+
+func (ios *iostate) SetSockOpt(level, optName int16, optVal []uint8) (int16, error) {
+	if err := SetSockOpt(ios.ep, level, optName, optVal); err != nil {
+		return tcpipErrorToCode(err), nil
+	}
+	return 0, nil
+}
+
+func (ios *iostate) GetSockName() (int16, []uint8, error) {
+	addr, err := ios.ep.GetLocalAddress()
+	if err != nil {
+		return tcpipErrorToCode(err), nil, nil
+	}
+	return 0, encodeAddr(ios.netProto, addr), nil
+}
+
+func (ios *iostate) GetPeerName() (int16, []uint8, error) {
+	addr, err := ios.ep.GetRemoteAddress()
+	if err != nil {
+		return tcpipErrorToCode(err), nil, nil
+	}
+	return 0, encodeAddr(ios.netProto, addr), nil
+}
+
+func (ios *iostate) Ioctl(req int16, in []uint8) (int16, []uint8, error) {
+	switch uint32(req) {
+	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
+	case ioctlNetcGetNumIfs:
+		lastIfInfo = ios.buildIfInfos()
+		var b [4]byte
+		binary.LittleEndian.PutUint32(b[:], uint32(lastIfInfo.n_info))
+		return 0, b[:], nil
+
+	// TODO(ZX-766): remove when dart/runtime/bin/socket_base_fuchsia.cc uses getifaddrs().
+	case ioctlNetcGetIfInfoAt:
+		if lastIfInfo == nil {
+			log.Printf("ioctlNetcGetIfInfoAt: called before ioctlNetcGetNumIfs")
+			return tcpipErrorToCode(tcpip.ErrInvalidEndpointState), nil, nil
+		}
+		if len(in) != 4 {
+			log.Printf("ioctlNetcGetIfInfoAt: bad input length %d", len(in))
+			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
+		}
+		requestedIndex := binary.LittleEndian.Uint32(in)
+		if requestedIndex >= uint32(lastIfInfo.n_info) {
+			log.Printf("ioctlNetcGetIfInfoAt: index out of range (%d vs %d)", requestedIndex, lastIfInfo.n_info)
+			return tcpipErrorToCode(tcpip.ErrInvalidOptionValue), nil, nil
+		}
+		return 0, lastIfInfo.info[requestedIndex].Marshal(), nil
+
+	case ioctlNetcGetNodename:
+		return 0, append([]byte(ios.ns.getNodeName()), 0), nil
+
+	default:
+		return 0, nil, fmt.Errorf("opIoctl req=0x%x, in=%x", req, in)
+	}
+}
+
+func decodeAddr(addr []uint8) (tcpip.FullAddress, error) {
+	var sockaddrStorage C.struct_sockaddr_storage
+	if err := sockaddrStorage.Unmarshal(addr); err != nil {
+		return tcpip.FullAddress{}, err
+	}
+	return sockaddrStorage.Decode()
+}
+
+func (ios *iostate) Close() (int16, error) {
+	// Signal that we're about to close. This tells the various message loops to finish
+	// processing, and let us know when they're done.
+	if err := ios.dataHandle.Handle().Signal(0, LOCAL_SIGNAL_CLOSING); err != nil {
+		panic(err)
+	}
+
+	close(ios.closing)
+	if ios.loopWriteDone != nil {
+		<-ios.loopWriteDone
+	}
+
+	ios.ep.Close()
+
+	return 0, nil
 }

@@ -7,6 +7,9 @@
 #include <string>
 #include <utility>
 
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
 #include <fuchsia/sys/cpp/fidl.h>
 
 #include "gmock/gmock.h"
@@ -242,8 +245,11 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   "facets": {
     "fuchsia.test": {
       "system-services": [
-        "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
-        "fuchsia.net.Connectivity", "fuchsia.net.stack.Stack"
+        "fuchsia.net.Connectivity",
+        "fuchsia.net.LegacySocketProvider",
+        "fuchsia.net.SocketProvider",
+        "fuchsia.net.stack.Stack",
+        "fuchsia.netstack.Netstack"
       ]
     }
   })");
@@ -251,20 +257,23 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 4u);
-    EXPECT_THAT(tm.system_services(),
-                ::testing::ElementsAre("fuchsia.netstack.Netstack",
-                                       "fuchsia.net.LegacySocketProvider",
-                                       "fuchsia.net.Connectivity",
-                                       "fuchsia.net.stack.Stack"));
+    EXPECT_EQ(tm.system_services().size(), 5u);
+    EXPECT_THAT(
+        tm.system_services(),
+        ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
+                               fuchsia::net::LegacySocketProvider::Name_,
+                               fuchsia::net::SocketProvider::Name_,
+                               fuchsia::net::stack::Stack::Name_,
+                               fuchsia::netstack::Netstack::Name_));
   }
 
   json = CreateManifestJson(R"(
   "facets": {
     "fuchsia.test": {
       "system-services": [
-        "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
-        "fuchsia.net.Connectivity"
+        "fuchsia.net.Connectivity",
+        "fuchsia.net.SocketProvider",
+        "fuchsia.netstack.Netstack"
       ]
     }
   })");
@@ -273,9 +282,9 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
     EXPECT_TRUE(ParseFrom(&tm, json));
     EXPECT_EQ(tm.system_services().size(), 3u);
     EXPECT_THAT(tm.system_services(),
-                ::testing::ElementsAre("fuchsia.netstack.Netstack",
-                                       "fuchsia.net.LegacySocketProvider",
-                                       "fuchsia.net.Connectivity"));
+                ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
+                                       fuchsia::net::SocketProvider::Name_,
+                                       fuchsia::netstack::Netstack::Name_));
   }
 }
 

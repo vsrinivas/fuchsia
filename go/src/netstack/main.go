@@ -124,11 +124,19 @@ func Main() {
 		return err
 	})
 
-	var socketProvider net.LegacySocketProviderService
-	ctx.OutgoingService.AddService(net.LegacySocketProviderName, func(c zx.Channel) error {
-		_, err := socketProvider.Add(&socketProviderImpl{ns: ns}, c, nil)
-		return err
-	})
+	{
+		impl := socketProviderImpl{ns: ns}
+		var socketProvider net.SocketProviderService
+		ctx.OutgoingService.AddService(net.SocketProviderName, func(c zx.Channel) error {
+			_, err := socketProvider.Add(&impl, c, nil)
+			return err
+		})
+		var legacySocketProvider net.LegacySocketProviderService
+		ctx.OutgoingService.AddService(net.LegacySocketProviderName, func(c zx.Channel) error {
+			_, err := legacySocketProvider.Add(&impl, c, nil)
+			return err
+		})
+	}
 	if err := connectivity.AddOutgoingService(ctx); err != nil {
 		log.Fatal(err)
 	}

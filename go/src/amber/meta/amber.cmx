@@ -3,12 +3,17 @@
         "binary": "bin/amber"
     },
     "sandbox": {
-        "features": [ "shell", "persistent-storage", "system-temp" ],
+        "features": [
+            "shell",
+            "persistent-storage",
+            "system-temp"
+        ],
         "services": [
             "fuchsia.amber.Control",
             "fuchsia.cobalt.LoggerFactory",
             "fuchsia.logger.LogSink",
             "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider",
             "fuchsia.sys.Launcher"
         ]
     }

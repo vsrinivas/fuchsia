@@ -5,7 +5,8 @@
     "sandbox": {
         "services": [
             "fuchsia.tracelink.Registry",
-            "fuchsia.net.LegacySocketProvider"
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider"
         ]
     }
 }

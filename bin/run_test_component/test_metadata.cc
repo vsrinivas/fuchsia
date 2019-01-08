@@ -9,6 +9,10 @@
 #include "garnet/lib/cmx/cmx.h"
 #include "lib/fxl/strings/substitute.h"
 
+#include <fuchsia/net/cpp/fidl.h>
+#include <fuchsia/net/stack/cpp/fidl.h>
+#include <fuchsia/netstack/cpp/fidl.h>
+
 namespace run {
 namespace {
 
@@ -18,9 +22,12 @@ constexpr char kInjectedServices[] = "injected-services";
 constexpr char kSystemServices[] = "system-services";
 
 const std::unordered_set<std::string> kAllowedSystemServices = {
-    "fuchsia.netstack.Netstack", "fuchsia.net.LegacySocketProvider",
-    "fuchsia.net.Connectivity", "fuchsia.net.stack.Stack"};
-
+    fuchsia::net::Connectivity::Name_,
+    fuchsia::net::LegacySocketProvider::Name_,
+    fuchsia::net::SocketProvider::Name_,
+    fuchsia::net::stack::Stack::Name_,
+    fuchsia::netstack::Netstack::Name_,
+};
 }  // namespace
 
 TestMetadata::TestMetadata() {}
