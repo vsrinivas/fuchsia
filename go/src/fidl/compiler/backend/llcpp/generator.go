@@ -11,7 +11,8 @@ import (
 	"text/template"
 
 	"fidl/compiler/backend/cpp/ir"
-	"fidl/compiler/backend/llcpp/templates"
+	"fidl/compiler/backend/llcpp/templates/files"
+	"fidl/compiler/backend/llcpp/templates/fragments"
 	"fidl/compiler/backend/types"
 )
 
@@ -20,17 +21,25 @@ type FidlGenerator struct {
 }
 
 func NewFidlGenerator() *FidlGenerator {
-	tmpls := template.New("CPPTemplates").Funcs(template.FuncMap{
+	tmpls := template.New("LLCPPTemplates").Funcs(template.FuncMap{
 		"Kinds": func() interface{} { return ir.Kinds },
 		"Eq": func(a interface{}, b interface{}) bool { return a == b },
 	})
-	template.Must(tmpls.Parse(templates.Const))
-	template.Must(tmpls.Parse(templates.Enum))
-	template.Must(tmpls.Parse(templates.Header))
-	template.Must(tmpls.Parse(templates.Implementation))
-	template.Must(tmpls.Parse(templates.Interface))
-	template.Must(tmpls.Parse(templates.Struct))
-	template.Must(tmpls.Parse(templates.Union))
+	templates := []string {
+		fragments.Const,
+		fragments.Enum,
+		fragments.Interface,
+		fragments.SyncRequestCFlavor,
+		fragments.SyncRequestCallerAllocate,
+		fragments.SyncRequestInPlace,
+		fragments.Struct,
+		fragments.Union,
+		files.Header,
+		files.Source,
+	}
+	for _, t := range templates {
+		template.Must(tmpls.Parse(t))
+	}
 	return &FidlGenerator{
 		tmpls: tmpls,
 	}
@@ -43,7 +52,7 @@ func (gen *FidlGenerator) GenerateHeader(wr io.Writer, tree ir.Root) error {
 
 // GenerateSource generates the C++ bindings source, i.e. implementation.
 func (gen *FidlGenerator) GenerateSource(wr io.Writer, tree ir.Root) error {
-	return gen.tmpls.ExecuteTemplate(wr, "Implementation", tree)
+	return gen.tmpls.ExecuteTemplate(wr, "Source", tree)
 }
 
 // GenerateFidl generates all files required for the C++ bindings.

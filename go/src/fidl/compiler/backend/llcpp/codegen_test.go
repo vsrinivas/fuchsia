@@ -23,8 +23,31 @@ func (s example) source() string {
 	return fmt.Sprintf("%s.llcpp.cpp.golden", s)
 }
 
-func TestCodegenHeader(t *testing.T) {
+var excludedCases = map[string]bool{
+	"tables.fidl.json": true,
+	"xunion.fidl.json": true,
+}
+var cases = func() []string {
+	var (
+		filtered []string
+		excluded = 0
+	)
 	for _, filename := range typestest.AllExamples() {
+		if excludedCases[filename] {
+			excluded++
+		} else {
+			filtered = append(filtered, filename)
+		}
+	}
+	if len(excludedCases) != excluded {
+		panic(fmt.Sprintf("Wrong. Nonexistent excluded case!"))
+	}
+	return filtered
+}()
+
+
+func TestCodegenHeader(t *testing.T) {
+	for _, filename := range cases {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(filename)
 			tree := ir.Compile(fidl)
@@ -41,7 +64,7 @@ func TestCodegenHeader(t *testing.T) {
 	}
 }
 func TestCodegenSource(t *testing.T) {
-	for _, filename := range typestest.AllExamples() {
+	for _, filename := range cases {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(filename)
 			tree := ir.Compile(fidl)

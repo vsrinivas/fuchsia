@@ -2,71 +2,40 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package fragments
 
 const Interface = `
 {{- define "InterfaceForwardDeclaration" }}
 class {{ .Name }};
 {{- end }}
 
-{{- define "Params" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.LLDecl }}& {{ $param.Name }}
-  {{- end -}}
+{{- define "RequestCodingTable" -}}
+{{- if .LLProps.EncodeRequest -}}
+&{{ .RequestTypeName }}
+{{- else -}}
+nullptr
+{{- end }}
 {{- end }}
 
-{{- define "CallerBufferParams" -}}
-{{- if . -}}
-::fidl::BytePart& request_buffer, ::fidl::BytePart& response_buffer, {{ range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.LLDecl }}& {{ $param.Name }}
-  {{- end -}}
-{{- end -}}
+{{- define "ResponseCodingTable" -}}
+{{- if .LLProps.DecodeResponse -}}
+&{{ .ResponseTypeName }}
+{{- else -}}
+nullptr
 {{- end }}
-
-{{- define "OutParams" -}}
-  {{- range $index, $param := . -}}
-    {{- if $index }}, {{ end -}}{{ $param.Type.LLDecl }}* out_{{ $param.Name }}
-  {{- end -}}
-{{- end }}
-
-{{- define "AsyncRequestMethodSignature" -}}
-
-{{- end }}
-
-{{- define "EventMethodSignature" -}}
-
-{{- end }}
-
-{{- define "SyncRequestMethodSignature" -}}
-  {{- if .Response -}}
-{{ .Name }}({{ template "Params" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
-  {{- else -}}
-{{ .Name }}({{ template "Params" .Request }})
-  {{- end -}}
-{{- end }}
-
-{{- define "SyncCallerBufferRequestMethodSignature" -}}
-  {{- if .Response -}}
-{{ .Name }}({{ template "CallerBufferParams" .Request }}{{ if .Request }}, {{ end }}{{ template "OutParams" .Response }})
-  {{- else -}}
-{{ .Name }}({{ template "CallerBufferParams" .Request }})
-  {{- end -}}
-{{- end }}
-
-{{- define "SyncInPlaceRequestMethodSignature" -}}
-{{ .Name }}({{ if .HasRequest }}::fidl::DecodedMessage<{{ .Name }}Request> params{{ if .HasResponse }}, {{ end }}{{ end }}{{ if .HasResponse }}::fidl::BytePart response_buffer{{ end }})
 {{- end }}
 
 {{- define "InterfaceDeclaration" }}
 {{ "" }}
   {{- range .Methods }}
-    {{- if and .HasRequest .Request }}
+    {{- if .LLProps.EncodeRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
     {{- end }}
-    {{- if and .HasResponse .Response }}
+    {{- if .LLProps.DecodeResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
     {{- end }}
   {{- end }}
+
   {{- /* Trailing line feed after encoding tables. */}}
   {{- range .Methods }}
     {{- if and .HasRequest .Request -}}
@@ -78,73 +47,101 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
 {{ break }}
     {{- end }}
   {{- end }}
+  {{- /* End trailing line feed after encoding tables. */}}
+
 {{- range .DocComments }}
 //{{ . }}
 {{- end }}
-class {{ .Name }} {
+class {{ .Name }} final {
  public:
-  {{ .Name }}();
-  virtual ~{{ .Name }}();
 {{ "" }}
-
   {{- range .Methods }}
-    {{- if and .HasResponse .Response }}
+
+    {{- if .HasResponse }}
+      {{- if .Response }}
   struct {{ .Name }}Response {
     FIDL_ALIGNDECL
-    {{- /* Add underscore to prevent name collision */}}
+        {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
-    {{- range $index, $param := .Response }}
+        {{- range $index, $param := .Response }}
     {{ $param.Type.LLDecl }} {{ $param.Name }};
-    {{- end }}
+        {{- end }}
 
-    static constexpr const fidl_type_t* Type = &{{ .ResponseTypeName }};
+    static constexpr const fidl_type_t* Type = {{ template "ResponseCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .ResponseMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .ResponseSize }};
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = {{ .ResponseMaxOutOfLine }};
   };
+      {{- else }}
+  using {{ .Name }}Response = ::fidl::AnyZeroArgMessage;
+      {{- end }}
     {{- end }}
-    {{- if and .HasRequest .Request }}
+
+    {{- if .HasRequest }}
+      {{- if .Request }}
   struct {{ .Name }}Request {
     FIDL_ALIGNDECL
-    {{- /* Add underscore to prevent name collision */}}
+        {{- /* Add underscore to prevent name collision */}}
     fidl_message_header_t _hdr;
-    {{- range $index, $param := .Request }}
+        {{- range $index, $param := .Request }}
     {{ $param.Type.LLDecl }} {{ $param.Name }};
-    {{- end }}
+        {{- end }}
 
-    static constexpr const fidl_type_t* Type = &{{ .RequestTypeName }};
+    static constexpr const fidl_type_t* Type = {{ template "RequestCodingTable" . }};
     static constexpr uint32_t MaxNumHandles = {{ .RequestMaxHandles }};
     static constexpr uint32_t PrimarySize = {{ .RequestSize }};
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = {{ .RequestMaxOutOfLine }};
 
-    {{- if and .HasResponse .Response }}
+        {{- if and .HasResponse .Response }}
     using ResponseType = {{ .Name }}Response;
-    {{- end }}
+        {{- end }}
   };
 {{ "" }}
-    {{- end }}
-    {{- range .DocComments }}
-  //{{ . }}
-    {{- end }}
-  zx_status_t {{ template "SyncRequestMethodSignature" . }};
+      {{- else }}
+  using {{ .Name }}Request = ::fidl::AnyZeroArgMessage;
 {{ "" }}
-    {{- if or .Request .Response }}
-      {{- range .DocComments }}
-  //{{ . }}
       {{- end }}
-  zx_status_t {{ template "SyncCallerBufferRequestMethodSignature" . }};
-{{ "" }}
     {{- end }}
-    {{- if or .Request .Response }}
-      {{- range .DocComments }}
-  //{{ . }}
-      {{- end }}
-  {{ if .HasResponse }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "SyncInPlaceRequestMethodSignature" . }};
-{{ "" }}
-    {{- end }}
+
   {{- end }}
+
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+{{ "" }}
+    {{- range .Methods }}
+      {{- /* Client-calling functions do not apply to events. */}}
+      {{- if not .HasRequest -}} {{ continue }} {{- end -}}
+      {{- if .LLProps.CBindingCompatible }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    zx_status_t {{ template "SyncRequestCFlavorMethodSignature" . }};
+      {{- end }}
+{{ "" }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t {{ template "SyncRequestCallerAllocateMethodSignature" . }};
+{{ "" }}
+      {{- end }}
+      {{- if or .Request .Response }}
+        {{- range .DocComments }}
+    //{{ . }}
+        {{- end }}
+    // Messages are encoded and decoded in-place.
+    {{ if .Response }}::fidl::DecodeResult<{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ template "SyncRequestInPlaceMethodSignature" . }};
+{{ "" }}
+      {{- end }}
+    {{- end }}
+   private:
+    ::zx::channel channel_;
+  };
+
 };
 
 {{- end }}
@@ -180,50 +177,50 @@ static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $me
 {{- end }}
 {{- end }}
 
+{{- define "FillRequestStructMembers" }}
+{{- range $param := . }}
+  _request.{{ $param.Name }} = std::move({{ $param.Name }});
+{{- end }}
+{{- end }}
+
+{{- define "ReturnResponseStructMembers" }}
+{{- range $param := . }}
+  *out_{{ $param.Name }} = std::move(_response.{{ $param.Name }});
+{{- end }}
+{{- end }}
+
 {{- define "InterfaceDefinition" }}
 
 namespace {
 {{ $interface := . -}}
 
-{{ range .Methods }}
+{{- range .Methods }}
 [[maybe_unused]]
 constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
-  {{- if .HasRequest }}
+  {{- if .LLProps.EncodeRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
   {{- end }}
-  {{- if .HasResponse }}
+  {{- if .LLProps.DecodeResponse }}
 extern "C" const fidl_type_t {{ .ResponseTypeName }};
   {{- end }}
 {{- end }}
 
 }  // namespace
 
-{{ .Name }}::{{ .Name }}() = default;
-{{ .Name }}::~{{ .Name }}() = default;
-
-{{- $interface := . }}
-
 {{- range .Methods }}
+  {{- /* Client-calling functions do not apply to events. */}}
+  {{- if not .HasRequest -}} {{ continue }} {{- end }}
+  {{- if .LLProps.CBindingCompatible }}
 {{ "" }}
-zx_status_t {{ $interface.Name }}::{{ template "SyncRequestMethodSignature" . }} {
-  return ZX_ERR_NOT_SUPPORTED;
-}
-  {{- if or .Request .Response }}
-{{ "" }}
-zx_status_t {{ $interface.Name }}::{{ template "SyncCallerBufferRequestMethodSignature" . }} {
-  return ZX_ERR_NOT_SUPPORTED;
-}
+    {{- template "SyncRequestCFlavorMethodDefinition" . }}
   {{- end }}
   {{- if or .Request .Response }}
 {{ "" }}
-{{ if .HasResponse }}::fidl::DecodeResult<{{ $interface.Name }}::{{ .Name }}Response>{{ else }}zx_status_t{{ end }} {{ $interface.Name }}::{{ template "SyncInPlaceRequestMethodSignature" . }} {
-{{- if .HasResponse }}
-  ::fidl::DecodeResult<{{ $interface.Name }}::{{ .Name }}Response> result;
-  return result;
-{{- else -}}
-  return ZX_ERR_NOT_SUPPORTED;
-{{- end }}
-}
+    {{- template "SyncRequestCallerAllocateMethodDefinition" . }}
+  {{- end }}
+  {{- if or .Request .Response }}
+{{ "" }}
+    {{- template "SyncRequestInPlaceMethodDefinition" . }}
   {{- end }}
 {{ "" }}
 {{- end }}

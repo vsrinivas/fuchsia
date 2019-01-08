@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package fragments
 
 const Union = `
 {{- define "UnionForwardDeclaration" }}
@@ -77,6 +77,8 @@ void {{ .Namespace }}::{{ .Name }}::SizeAndOffsetAssertionHelper() {
 
 {{- define "UnionTraits" }}
 
+template <>
+struct IsFidlType<{{ .Namespace }}::{{ .Name }}> : public std::true_type {};
 static_assert(std::is_standard_layout_v<{{ .Namespace }}::{{ .Name }}>);
 {{- end }}
 `

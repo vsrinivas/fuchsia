@@ -8,7 +8,6 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
-
 #include <zircon/fidl.h>
 
 namespace test {
@@ -78,6 +77,8 @@ struct Union {
 
 namespace fidl {
 
+template <>
+struct IsFidlType<::test::name::Union> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::test::name::Union>);
 
 }  // namespace fidl

@@ -19,6 +19,8 @@ import (
 var legacyCallbacks = flag.Bool("cpp-legacy-callbacks", false,
 	"use std::function instead of fit::function in C++ callbacks")
 
+const llcppMaxStackAllocSize = 512
+
 // These are used in header/impl templates to select the correct type-specific template
 type constKind struct{}
 type enumKind struct{}
@@ -160,6 +162,10 @@ type StructMember struct {
 	Offset       int
 }
 
+func (s Struct) NeedsEncodeDecode() bool {
+	return s.MaxHandles > 0 || s.MaxOutOfLine > 0
+}
+
 type Interface struct {
 	types.Attributes
 	Namespace       string
@@ -198,6 +204,18 @@ type Method struct {
 	ResponseHandlerType  string
 	ResponderType        string
 	Transitional         bool
+	LLProps              LLProps
+}
+
+// LLProps contain properties of a method specific to llcpp
+type LLProps struct {
+	InterfaceName      string
+	CBindingCompatible bool
+	NeedToLinearize    bool
+	StackAllocRequest  bool
+	StackAllocResponse bool
+	EncodeRequest      bool
+	DecodeResponse     bool
 }
 
 type Parameter struct {
@@ -609,6 +627,20 @@ func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
 	}
 }
 
+func (m Method) NewLLProps(r Interface) LLProps {
+	return LLProps{
+		InterfaceName:      r.Name,
+		// If the response is not inline, then we cannot generate an out-parameter-style binding,
+		// because the out-of-line pointers would outlive their underlying managed storage.
+		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
+		NeedToLinearize:    len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
+		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize + m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize + m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
+		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0,
+		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0,
+	}
+}
+
 func (c *compiler) compileInterface(val types.Interface) Interface {
 	r := Interface{
 		Attributes:      val.Attributes,
@@ -636,29 +668,30 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		}
 		_, transitional := v.LookupAttribute("Transitional")
 		m := Method{
-			v.Attributes,
-			v.Ordinal,
-			fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
-			v.GenOrdinal,
-			fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
-			name,
-			v.HasRequest,
-			c.compileParameterArray(v.Request),
-			v.RequestSize,
-			fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
-			c.maxHandlesFromParameterArray(v.Request),
-			c.maxOutOfLineFromParameterArray(v.Request),
-			v.HasResponse,
-			c.compileParameterArray(v.Response),
-			v.ResponseSize,
-			fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
-			c.maxHandlesFromParameterArray(v.Response),
-			c.maxOutOfLineFromParameterArray(v.Response),
-			callbackType,
-			fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
-			fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
-			transitional,
+			Attributes:           v.Attributes,
+			Ordinal:              v.Ordinal,
+			OrdinalName:          fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+			GenOrdinal:           v.GenOrdinal,
+			GenOrdinalName:       fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
+			Name:                 name,
+			HasRequest:           v.HasRequest,
+			Request:              c.compileParameterArray(v.Request),
+			RequestSize:          v.RequestSize,
+			RequestTypeName:      fmt.Sprintf("%s_%s%sRequestTable", c.symbolPrefix, r.Name, v.Name),
+			RequestMaxHandles:    c.maxHandlesFromParameterArray(v.Request),
+			RequestMaxOutOfLine:  c.maxOutOfLineFromParameterArray(v.Request),
+			HasResponse:          v.HasResponse,
+			Response:             c.compileParameterArray(v.Response),
+			ResponseSize:         v.ResponseSize,
+			ResponseTypeName:     fmt.Sprintf("%s_%s%s%s", c.symbolPrefix, r.Name, v.Name, responseTypeNameSuffix),
+			ResponseMaxHandles:   c.maxHandlesFromParameterArray(v.Response),
+			ResponseMaxOutOfLine: c.maxOutOfLineFromParameterArray(v.Response),
+			CallbackType:         callbackType,
+			ResponseHandlerType:  fmt.Sprintf("%s_%s_ResponseHandler", r.Name, v.Name),
+			ResponderType:        fmt.Sprintf("%s_%s_Responder", r.Name, v.Name),
+			Transitional:         transitional,
 		}
+		m.LLProps = m.NewLLProps(r)
 		r.Methods = append(r.Methods, m)
 	}
 
@@ -910,11 +943,17 @@ func Compile(r types.Root) Root {
 		root.LLHeaders = append(root.LLHeaders, h)
 	}
 
+	// zx::channel is always referenced by the interfaces in llcpp bindings API
+	if len(r.Interfaces) > 0 {
+		c.handleTypes["channel"] = true
+	}
+
 	// find all unique handle types referenced by the library
 	var handleTypes []string
 	for k := range c.handleTypes {
 		handleTypes = append(handleTypes, string(k))
 	}
+	sort.Sort(sort.StringSlice(handleTypes))
 	root.HandleTypes = handleTypes
 
 	return root

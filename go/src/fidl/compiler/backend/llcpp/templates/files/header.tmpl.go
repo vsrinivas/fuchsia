@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package templates
+package files
 
 const Header = `
 {{- define "Header" -}}
@@ -16,14 +16,15 @@ const Header = `
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
-
+{{ range .HandleTypes -}}
+#include <lib/zx/{{ . }}.h>
+{{ end -}}
+#include <zircon/fidl.h>
+{{ if .LLHeaders -}}
+{{ "" }}
 {{ range .LLHeaders -}}
 #include <{{ . }}>
 {{ end -}}
-
-#include <zircon/fidl.h>
-{{ range .HandleTypes -}}
-#include <lib/zx/{{ . }}.h>
 {{ end -}}
 
 {{- range .Library }}

@@ -8,7 +8,7 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
-
+#include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
 namespace test {
@@ -16,18 +16,29 @@ namespace name {
 
 class SwitchingOrdinals;
 
-class SwitchingOrdinals {
+class SwitchingOrdinals final {
  public:
-  SwitchingOrdinals();
-  virtual ~SwitchingOrdinals();
 
-  zx_status_t OrdinalFive();
+  using OrdinalFiveRequest = ::fidl::AnyZeroArgMessage;
 
-  zx_status_t OnlyGeneratedOrdinal();
+  using OnlyGeneratedOrdinalRequest = ::fidl::AnyZeroArgMessage;
 
-  zx_status_t EventOrdinalFifteen();
+  using EventOrdinalFifteenResponse = ::fidl::AnyZeroArgMessage;
+  using EventOnlyGeneratedOrdinalResponse = ::fidl::AnyZeroArgMessage;
 
-  zx_status_t EventOnlyGeneratedOrdinal();
+  class SyncClient final {
+   public:
+    SyncClient(::zx::channel channel) : channel_(std::move(channel)) {}
+
+    ~SyncClient() {}
+
+    zx_status_t OrdinalFive();
+
+    zx_status_t OnlyGeneratedOrdinal();
+
+   private:
+    ::zx::channel channel_;
+  };
 
 };
 
