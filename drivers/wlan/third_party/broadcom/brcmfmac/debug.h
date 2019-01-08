@@ -51,19 +51,9 @@
 #define pr_fmt(fmt) KBUILD_MODNAME ": " fmt
 
 __PRINTFLIKE(2, 3) void __brcmf_err(const char* func, const char* fmt, ...);
-/* Macro for error messages. When debugging / tracing the driver all error
- * messages are important to us.
- */
-// TODO(cphoenix): Add rate limiting
-#define brcmf_err(fmt, ...)                                                             \
-    do {                                                                                \
-        if (IS_ENABLED(CONFIG_BRCMFMAC_DBG)) __brcmf_err(__func__, fmt, ##__VA_ARGS__); \
-    } while (0)
+#define brcmf_err(fmt, ...) __brcmf_err(__func__, fmt, ##__VA_ARGS__)
 
 #if defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG)
-
-/* For debug/tracing purposes treat info messages as errors */
-#define brcmf_info brcmf_err
 
 __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...);
 #define brcmf_dbg(filter, fmt, ...)                                      \
@@ -90,11 +80,6 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 #define BRCMF_SCAN_ON()  (brcmf_msg_filter & BRCMF_SCAN_VAL)
 
 #else /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
-
-#define brcmf_info(fmt, ...)                          \
-    do {                                              \
-        pr_info("%s: " fmt, __func__, ##__VA_ARGS__); \
-    } while (0)
 
 #define brcmf_dbg(level, fmt, ...)
 

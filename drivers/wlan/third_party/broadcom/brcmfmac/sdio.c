@@ -4004,7 +4004,7 @@ static void brcmf_sdio_firmware_callback(struct brcmf_device* dev, zx_status_t e
     bus->clkstate = CLK_NONE; // TODO(cphoenix): TEMP FOR DEBUG
     brcmf_sdio_clkctl(bus, CLK_AVAIL, false);
     if (bus->clkstate != CLK_AVAIL) {
-        brcmf_err("Bad clockstate %d, should be %d", bus->clkstate, CLK_AVAIL);
+        brcmf_err("Bad clockstate %d, should be %d\n", bus->clkstate, CLK_AVAIL);
         goto release;
     }
 
@@ -4092,10 +4092,10 @@ release:
     sdio_release_host(sdiodev->func1);
 fail:
     brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), err);
-    // TODO(cphoenix): Do the right calls here to release the driver
-    brcmf_err("* * Used to call device_release_driver(&sdiodev->func2->dev);");
-    brcmf_err("* * Used to call device_release_driver(dev);");
-
+    brcmf_err("Need to implement driver release logic (WLAN-888)\n");
+    // TODO(WLAN-888)
+    // device_release_driver(&sdiodev->func2->dev);
+    // device_release_driver(dev);
 }
 
 struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
@@ -4152,7 +4152,7 @@ struct brcmf_sdio* brcmf_sdio_probe(struct brcmf_sdio_dev* sdiodev) {
     atomic_store(&bus->watchdog_should_stop, false);
     thread_result = pthread_create(&bus->watchdog_tsk, NULL, brcmf_sdio_watchdog_thread, bus);
     if (thread_result != 0) {
-        brcmf_err("brcmf_watchdog thread failed to start: error %d", thread_result);
+        brcmf_err("brcmf_watchdog thread failed to start: error %d\n", thread_result);
         bus->watchdog_tsk = NULL;
     }
     /* Initialize DPC thread */

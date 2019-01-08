@@ -34,8 +34,7 @@ void brcm_dbg_clear_err() { __brcm_dbg_err_flag = false; }
 #if CONFIG_BRCMFMAC_DBG
 
 void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
-    if (true || brcmf_msg_filter & filter) {
-        // TODO(cphoenix): After bringup: Re-enable filter check
+    if (brcmf_msg_filter & filter) {
         char msg[512]; // Same value hard-coded throughout devhost.c
         va_list args;
         va_start(args, fmt);
@@ -50,6 +49,12 @@ void __brcmf_dbg(uint32_t filter, const char* func, const char* fmt, ...) {
     }
 }
 
+#else
+
+void __brcmf_dbg(uint32_t filter, const char* fucn, const char* fmt, ...) {}
+
+#endif  // CONFIG_BRCMFMAC_DBG
+
 void __brcmf_err(const char* func, const char* fmt, ...) {
     char msg[512]; // Same value hard-coded throughout devhost.c
     va_list args;
@@ -58,19 +63,10 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
     va_end(args);
     if (n_printed < 0) {
         snprintf(msg, 512, "(Formatting error from string '%s')", fmt);
-    } else if (n_printed > 0 && msg[n_printed - 1] == '\n') {
-        msg[--n_printed] = 0;
     }
     __brcm_dbg_set_err();
-    zxlogf(ERROR, "brcmfmac (%s): '%s'\n", func, msg);
+    zxlogf(ERROR, "brcmfmac (%s): %s", func, msg);
 }
-
-#else
-
-void __brcmf_dbg(uint32_t filter, const char* fucn, const char* fmt, ...) {}
-void __brcmf_err(const char* func, const char* fmt, ...) {}
-
-#endif  // CONFIG_BRCMFMAC_DBG
 
 void brcmf_hexdump(const void* buf, size_t len) {
     if (!(brcmf_msg_filter & BRCMF_INFO_VAL)) {

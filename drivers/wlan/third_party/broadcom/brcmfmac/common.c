@@ -180,8 +180,9 @@ static zx_status_t brcmf_c_process_clm_blob(struct brcmf_if* ifp) {
     err = ZX_ERR_INTERNAL;
 //    err = request_firmware(&clm, clm_name, dev);
     if (err != ZX_OK) {
-        brcmf_info("no clm_blob available(err=%d), device may have limited channels available\n",
-                   err);
+        brcmf_dbg(INFO,
+                  "no clm_blob available(err=%d), device may have limited channels available\n",
+                  err);
         return ZX_OK;
     }
 
@@ -334,7 +335,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     strsep(&ptr, "\n");
 
     /* Print fw version info */
-    brcmf_info("Firmware version = %s\n", buf);
+    brcmf_dbg(INFO, "Firmware version = %s\n", buf);
 
     /* locate firmware version number for ethtool */
     ptr = strrchr((char*)buf, ' ') + 1;

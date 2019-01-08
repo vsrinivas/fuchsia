@@ -220,13 +220,13 @@ static void brcmf_usb_init_urb(struct brcmf_urb* urb, struct brcmf_usbdev_info* 
                                        usb_complete_cb complete, void* context, bool out,
                                        uint8_t ep_address) {
     if (urb == NULL) {
-        brcmf_err("NULL URB");
+        brcmf_err("NULL URB\n");
         assert(0);
         return;
     }
     usb_request_t* zxurb = urb->zxurb;
     if (zxurb == NULL) {
-        brcmf_err("NULL ZX_URB, urb %p", urb);
+        brcmf_err("NULL ZX_URB, urb %p\n", urb);
         assert(0);
         return;
     }
@@ -1373,7 +1373,9 @@ static void brcmf_usb_probe_phase2(struct brcmf_device* dev, zx_status_t ret,
 error:
     brcmf_dbg(TRACE, "failed: dev=%s, err=%d\n", device_get_name(dev->zxdev), ret);
     mtx_unlock(&devinfo->dev_init_lock);
-    brcmf_err("TODO(cphoenix): Used to call device_release_driver(dev);");
+    brcmf_err("Need to implement driver release logic (WLAN-888)\n");
+    // TODO(WLAN-888)
+    // device_release_driver(dev);
 }
 
 static zx_status_t brcmf_usb_probe_cb(struct brcmf_usbdev_info* devinfo) {
