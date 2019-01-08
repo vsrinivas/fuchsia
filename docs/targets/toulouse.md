@@ -66,7 +66,11 @@ tune these to taste, if you know what you're doing.)
 The other settings may be left at their default values.
 
 ### Example Linux serial consoles (assumes a serial device at /dev/ttyUSB0)
-* screen /dev/ttyUSB0 115200'
+* screen /dev/ttyUSB0 115200
 * picocom -b 115200 /dev/ttyUSB0
 * miniterm.py /dev/ttyUSB0 115200
 * minicom -o -t vt100 -b 115200 -D /dev/ttyUSB0  (Supports control chars. Use Ctrl+a q to quit)
+
+### Serial console on MacOS
+Serial console will be at `/dev/tty.usbserial-XXXXXXXX` (eg. `/dev/tty.usbserial-AO003IN2`).
+`screen` is available by default. picocom and minicom can be installed through homebrew.
