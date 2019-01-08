@@ -30,6 +30,10 @@ static_library("helper") {
     "//garnet/public/lib/fxl",
   ]
 
+  deps = [
+    "//garnet/lib/elflib",
+  ]
+
   if (current_toolchain == host_toolchain) {
     # Host toolchain.
     sources += [
