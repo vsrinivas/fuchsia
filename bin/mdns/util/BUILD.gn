@@ -11,7 +11,12 @@ package("util") {
     ":bin",
   ]
 
-  binary = "mdns_util"
+  binaries = [
+    {
+      name = "mdns_util"
+      shell = true
+    },
+  ]
 
   package_name = "mdns_util"
 
