@@ -472,4 +472,72 @@ zx_status_t RxrpcHook(const zx::channel& c, const fuchsia_device_mock_HookInvoca
     return ParseActions<ResponseType>(kResponseTable, &response, actions_out);
 }
 
+zx_status_t SendAddDeviceDone(const zx::channel& c, uint64_t action_id) {
+    using RequestType = fuchsia_device_mock_MockDeviceAddDeviceDoneRequest;
+    const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceAddDeviceDoneOrdinal;
+
+    FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
+    fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+    auto req = builder.New<RequestType>();
+    ZX_ASSERT(req != nullptr);
+    req->hdr.ordinal = kRequestOrdinal;
+    req->hdr.txid = 0;
+    req->action_id = action_id;
+
+    fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+    return msg.Write(c.get(), 0);
+}
+
+zx_status_t SendRemoveDeviceDone(const zx::channel& c, uint64_t action_id) {
+    using RequestType = fuchsia_device_mock_MockDeviceRemoveDeviceDoneRequest;
+    const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceRemoveDeviceDoneOrdinal;
+
+    FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
+    fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+    auto req = builder.New<RequestType>();
+    ZX_ASSERT(req != nullptr);
+    req->hdr.ordinal = kRequestOrdinal;
+    req->hdr.txid = 0;
+    req->action_id = action_id;
+
+    fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+    return msg.Write(c.get(), 0);
+}
+
+zx_status_t SendAddDeviceDoneFromThread(const zx::channel& c, uint64_t action_id) {
+    using RequestType = fuchsia_device_mock_MockDeviceThreadAddDeviceDoneRequest;
+    const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceThreadAddDeviceDoneOrdinal;
+
+    FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
+    fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+    auto req = builder.New<RequestType>();
+    ZX_ASSERT(req != nullptr);
+    req->hdr.ordinal = kRequestOrdinal;
+    req->hdr.txid = 0;
+    req->action_id = action_id;
+
+    fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+    return msg.Write(c.get(), 0);
+}
+
+zx_status_t SendRemoveDeviceDoneFromThread(const zx::channel& c, uint64_t action_id) {
+    using RequestType = fuchsia_device_mock_MockDeviceThreadRemoveDeviceDoneRequest;
+    const auto& kRequestOrdinal = fuchsia_device_mock_MockDeviceThreadRemoveDeviceDoneOrdinal;
+
+    FIDL_ALIGNDECL char wr_bytes[sizeof(RequestType)];
+    fidl::Builder builder(wr_bytes, sizeof(wr_bytes));
+
+    auto req = builder.New<RequestType>();
+    ZX_ASSERT(req != nullptr);
+    req->hdr.ordinal = kRequestOrdinal;
+    req->hdr.txid = 0;
+    req->action_id = action_id;
+
+    fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
+    return msg.Write(c.get(), 0);
+}
+
 } // namespace mock_device

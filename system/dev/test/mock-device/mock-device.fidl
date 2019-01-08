@@ -17,12 +17,18 @@ struct HookInvocation {
 };
 
 /// Marker struct for remove action
-struct RemoveDeviceAction { };
+struct RemoveDeviceAction {
+    /// Value that will be echoed back in the completion message
+    uint64 action_id;
+};
 
 const uint32 MAX_NAME_LEN = 32;
 
 /// Request to add a new child device
 struct AddDeviceAction {
+    /// Value that will be echoed back in the completion message
+    uint64 action_id;
+
     /// If true, will let the device go through the bind protocol.
     /// Otherwise, will just create another mock device and skip binding.
     bool do_bind;
@@ -78,6 +84,10 @@ interface MockDevice {
     Ioctl(HookInvocation record, uint32 op, vector<uint8>:MAX_WRITE_BYTES in, uint64 out_count) -> (vector<Action>:MAX_ACTIONS actions);
     Message(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
     Rxrpc(HookInvocation record) -> (vector<Action>:MAX_ACTIONS actions);
+
+    /// Notification that the requested action was done
+    AddDeviceDone(uint64 action_id);
+    RemoveDeviceDone(uint64 action_id);
 };
 
 /// Interface for requesting a mock device thread do something.  The mock device implements
@@ -85,4 +95,8 @@ interface MockDevice {
 interface MockDeviceThread {
     /// Perform the actions in the given list.  Threads may not create other threads.
     PerformActions(vector<Action>:MAX_ACTIONS actions);
+
+    /// Notification that the requested action was done
+    AddDeviceDone(uint64 action_id);
+    RemoveDeviceDone(uint64 action_id);
 };

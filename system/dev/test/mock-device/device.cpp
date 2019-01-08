@@ -81,9 +81,16 @@ private:
 };
 
 struct ProcessActionsContext {
-    ProcessActionsContext(bool has_hook_status, MockDevice* mock_device, zx_device_t* device)
-        : has_hook_status(has_hook_status), mock_device(mock_device), device(device) {
+    ProcessActionsContext(const zx::channel& channel, bool has_hook_status, MockDevice* mock_device,
+                          zx_device_t* device)
+        : channel(zx::unowned_channel(channel)), has_hook_status(has_hook_status),
+          mock_device(mock_device), device(device) {
     }
+
+    // IN: The channel that these actions came from.  Used for acknowledging
+    // add/remove device requests.
+    zx::unowned_channel channel;
+
     bool has_hook_status = false;
     // OUT: What should be returned by the hook
     zx_status_t hook_status = ZX_ERR_INTERNAL;;
@@ -176,7 +183,7 @@ zx_status_t MockDevice::DdkGetProtocol(uint32_t proto_id, void* out) {
     zx_status_t status = GetProtocolHook(controller_, ConstructHookInvocation(),
                                          proto_id, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -186,7 +193,7 @@ zx_status_t MockDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = OpenHook(controller_, ConstructHookInvocation(), flags, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -197,7 +204,7 @@ zx_status_t MockDevice::DdkOpenAt(zx_device_t** dev_out, const char* path, uint3
     zx_status_t status = OpenAtHook(controller_, ConstructHookInvocation(), fbl::StringPiece(path),
                                     flags, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -207,7 +214,7 @@ zx_status_t MockDevice::DdkClose(uint32_t flags) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = CloseHook(controller_, ConstructHookInvocation(), flags, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -217,7 +224,7 @@ void MockDevice::DdkUnbind() {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = UnbindHook(controller_, ConstructHookInvocation(), &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(false, this, zxdev());
+    ProcessActionsContext ctx(controller_, false, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
 }
@@ -226,7 +233,7 @@ zx_status_t MockDevice::DdkRead(void* buf, size_t count, zx_off_t off, size_t* a
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = ReadHook(controller_, ConstructHookInvocation(), count, off, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     ctx.associated_buf = buf,
     ctx.associated_buf_count = count,
     status = ProcessActions(std::move(actions), &ctx);
@@ -240,7 +247,7 @@ zx_status_t MockDevice::DdkWrite(const void* buf, size_t count, zx_off_t off, si
     zx_status_t status = WriteHook(controller_, ConstructHookInvocation(),
                                    static_cast<const uint8_t*>(buf), count, off, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     *actual = count;
@@ -251,7 +258,7 @@ zx_off_t MockDevice::DdkGetSize() {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = GetSizeHook(controller_, ConstructHookInvocation(), &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(false, this, zxdev());
+    ProcessActionsContext ctx(controller_, false, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
 
@@ -266,7 +273,7 @@ zx_status_t MockDevice::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
                                    static_cast<const uint8_t*>(in_buf), in_len,
                                    out_len, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     ctx.associated_buf = out_buf;
     ctx.associated_buf_count = out_len;
     status = ProcessActions(std::move(actions), &ctx);
@@ -279,7 +286,7 @@ zx_status_t MockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = MessageHook(controller_, ConstructHookInvocation(), &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -289,7 +296,7 @@ zx_status_t MockDevice::DdkSuspend(uint32_t flags) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = SuspendHook(controller_, ConstructHookInvocation(), flags, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -299,7 +306,7 @@ zx_status_t MockDevice::DdkResume(uint32_t flags) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = ResumeHook(controller_, ConstructHookInvocation(), flags, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -309,7 +316,7 @@ zx_status_t MockDevice::DdkRxrpc(zx_handle_t channel) {
     fbl::Array<const fuchsia_device_mock_Action> actions;
     zx_status_t status = RxrpcHook(controller_, ConstructHookInvocation(), &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext ctx(true, this, zxdev());
+    ProcessActionsContext ctx(controller_, true, this, zxdev());
     status = ProcessActions(std::move(actions), &ctx);
     ZX_ASSERT(status == ZX_OK);
     return ctx.hook_status;
@@ -363,6 +370,9 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
         }
         case fuchsia_device_mock_ActionTag_remove_device: {
             device_remove(ctx->device);
+            zx_status_t status = SendRemoveDeviceDone(*ctx->channel,
+                                                      action.remove_device.action_id);
+            ZX_ASSERT(status == ZX_OK);
             break;
         }
         case fuchsia_device_mock_ActionTag_add_device: {
@@ -388,6 +398,9 @@ zx_status_t ProcessActions(fbl::Array<const fuchsia_device_mock_Action> actions,
             }
             // Devmgr now owns this
             __UNUSED auto ptr = dev.release();
+
+            status = SendAddDeviceDone(*ctx->channel, action.add_device.action_id);
+            ZX_ASSERT(status == ZX_OK);
             break;
         }
         }
@@ -417,7 +430,7 @@ zx_status_t MockDeviceBind(void* ctx, zx_device_t* parent) {
     auto invoc = MockDevice::ConstructHookInvocation(reinterpret_cast<uintptr_t>(parent));
     status = BindHook(c, invoc, &actions);
     ZX_ASSERT(status == ZX_OK);
-    ProcessActionsContext pac_ctx(true, nullptr, parent);
+    ProcessActionsContext pac_ctx(c, true, nullptr, parent);
     status = ProcessActions(std::move(actions), &pac_ctx);
     ZX_ASSERT(status == ZX_OK);
     return pac_ctx.hook_status;

@@ -48,6 +48,11 @@ zx_status_t MessageHook(const zx::channel& c, const fuchsia_device_mock_HookInvo
 zx_status_t RxrpcHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
                       fbl::Array<const fuchsia_device_mock_Action>* actions_out);
 
+zx_status_t SendAddDeviceDone(const zx::channel& c, uint64_t action_id);
+zx_status_t SendRemoveDeviceDone(const zx::channel& c, uint64_t action_id);
+
+zx_status_t SendAddDeviceDoneFromThread(const zx::channel& c, uint64_t action_id);
+zx_status_t SendRemoveDeviceDoneFromThread(const zx::channel& c, uint64_t action_id);
 
 } // namespace mock_device
 
