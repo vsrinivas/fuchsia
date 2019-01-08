@@ -7,6 +7,8 @@
 #include <string.h>
 #include <time.h>
 
+#include <vector>
+
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <runtests-utils/posix-run-test.h>
@@ -37,9 +39,21 @@ private:
 
 } // namespace
 
-int main(int argc, char** argv) {
+int main(int argc, char* argv[]) {
     PosixStopwatch stopwatch;
-    return runtests::DiscoverAndRunTests(&runtests::PosixRunTest, argc, argv,
+    // TODO(IN-819): Temporary work-around: shared objects need to be copied
+    // into $root_build_dir/host_tests, but at the same time they cannot be run.
+    std::vector<const char*> so_filters = {
+      "-t", "libfostr_shared.so",
+      "-t", "libfostr_shared.dylib",
+    };
+    std::vector<const char*> argv_with_so_filters(argv, argv + argc);
+    argv_with_so_filters.insert(argv_with_so_filters.end(),
+                                so_filters.begin(), so_filters.end());
+
+    return runtests::DiscoverAndRunTests(&runtests::PosixRunTest,
+                                         argv_with_so_filters.size(),
+                                         argv_with_so_filters.data(),
                                          /*default_test_dirs=*/{}, &stopwatch,
                                          /*syslog_file_name=*/"");
 }
