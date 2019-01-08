@@ -58,7 +58,7 @@ zx_status_t sys_resource_create(zx_handle_t parent_rsrc,
     }
 
     // Extract the name from userspace if one was provided.
-    char name[ZX_MAX_NAME_LEN];
+    char name[ZX_MAX_NAME_LEN] = {0};
     size_t namesize = MIN(name_size,  ZX_MAX_NAME_LEN - 1);
     if (name_size > 0) {
         if (user_name.copy_array_from_user(name, namesize) != ZX_OK) {
