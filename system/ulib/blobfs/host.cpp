@@ -199,11 +199,7 @@ zx_status_t blobfs_create(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd) {
         return status;
     }
 
-    fbl::AllocChecker ac;
-    fbl::Array<size_t> extent_lengths(new (&ac) size_t[kExtentCount], kExtentCount);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::Array<size_t> extent_lengths(new size_t[kExtentCount], kExtentCount);
 
     extent_lengths[0] = BlockMapStartBlock(info_block.info) * kBlobfsBlockSize;
     extent_lengths[1] = BlockMapBlocks(info_block.info) * kBlobfsBlockSize;
@@ -250,11 +246,7 @@ zx_status_t blobfs_create_sparse(fbl::unique_ptr<Blobfs>* out, fbl::unique_fd fd
         return status;
     }
 
-    fbl::AllocChecker ac;
-    fbl::Array<size_t> extent_lengths(new (&ac) size_t[kExtentCount], kExtentCount);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::Array<size_t> extent_lengths(new size_t[kExtentCount], kExtentCount);
 
     extent_lengths[0] = extent_vector[0];
     extent_lengths[1] = extent_vector[1];
@@ -432,15 +424,10 @@ zx_status_t Blobfs::NewBlob(const Digest& digest, fbl::unique_ptr<InodeBlock>* o
         return status;
     }
 
-    fbl::AllocChecker ac;
     Inode* inodes = reinterpret_cast<Inode*>(cache_.blk);
 
     fbl::unique_ptr<InodeBlock> ino_block(
-        new (&ac) InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
-
-    if (!ac.check()) {
-        return ZX_ERR_INTERNAL;
-    }
+        new InodeBlock(bno, &inodes[ino % kBlobfsInodesPerBlock], digest));
 
     dirty_ = true;
     info_.alloc_inode_count++;

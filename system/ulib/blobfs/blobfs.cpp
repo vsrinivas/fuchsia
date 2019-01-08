@@ -575,7 +575,6 @@ zx_status_t Blobfs::Create(fbl::unique_fd fd, const MountOptions& options, const
         return status;
     }
 
-    fbl::AllocChecker ac;
     auto fs = fbl::unique_ptr<Blobfs>(new Blobfs(std::move(fd), info));
     fs->SetReadonly(options.readonly);
     fs->Cache().SetCachePolicy(options.cache_policy);
@@ -724,12 +723,7 @@ zx_status_t Blobfs::Reload() {
 }
 
 zx_status_t Blobfs::OpenRootNode(fbl::RefPtr<Directory>* out) {
-    fbl::AllocChecker ac;
-    fbl::RefPtr<Directory> vn = fbl::AdoptRef(new (&ac) Directory(this));
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::RefPtr<Directory> vn = fbl::AdoptRef(new Directory(this));
 
     zx_status_t status = vn->Open(0, nullptr);
     if (status != ZX_OK) {

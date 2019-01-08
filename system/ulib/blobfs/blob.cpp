@@ -768,12 +768,7 @@ zx_status_t Blob::QueueUnlink() {
 zx_status_t Blob::VerifyBlob(Blobfs* bs, uint32_t node_index) {
     Inode* inode = bs->GetNode(node_index);
     Digest digest(inode->merkle_root_hash);
-    fbl::AllocChecker ac;
-    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new (&ac) Blob(bs, digest));
-
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
+    fbl::RefPtr<Blob> vn = fbl::AdoptRef(new Blob(bs, digest));
 
     vn->PopulateInode(node_index);
 
