@@ -5,8 +5,10 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"log"
 	"net"
 	"os"
@@ -47,6 +49,12 @@ type RunCommand struct {
 
 	// CmdOutput is the file to which the command's stdout will be redirected.
 	cmdOutput string
+
+	// sshPubKey is the path to a public SSH user key.
+	sshPubKey string
+
+	// sshPrivKey is the path to a private SSH user key.
+	sshPrivKey string
 }
 
 func (*RunCommand) Name() string {
@@ -73,9 +81,11 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
 	f.StringVar(&r.cmdOutput, "output", "", "file to redirect the command's stdout into")
+	f.StringVar(&r.sshPubKey, "ssh-pub", "", "file containing public SSH user key; if not provided, a SSH key pair will be generated.")
+	f.StringVar(&r.sshPrivKey, "ssh-priv", "", "file containing private SSH user key; if not provided, a SSH key pair will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename string, args []string) error {
+func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename string, args []string, pubKey, privKey []byte) error {
 	// Find the node address UDP address.
 	n := netboot.NewClient(time.Second)
 	var addr *net.UDPAddr
@@ -122,7 +132,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 	} else {
 		bootMode = botanist.ModePave
 	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, ""); err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, pubKey); err != nil {
 		return err
 	}
 
@@ -147,6 +157,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 		Env: append(
 			os.Environ(),
 			fmt.Sprintf("NODENAME=%s", nodename),
+			fmt.Sprintf("SSH_PKEY=%s", privKey),
 		),
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
@@ -181,6 +192,25 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	imgs, err := botanist.LoadImages(r.imageManifests...)
 	if err != nil {
 		return fmt.Errorf("failed to load images: %v", err)
+	}
+
+	var pubKey, privKey []byte
+	if r.sshPubKey == "" && r.sshPrivKey == "" {
+		pubKey, privKey, err = botanist.GenerateKeyPair()
+		if err != nil {
+			return err
+		}
+	} else if r.sshPubKey != "" && r.sshPrivKey != "" {
+		pubKey, err = ioutil.ReadFile(r.sshPubKey)
+		if err != nil {
+			return err
+		}
+		privKey, err = ioutil.ReadFile(r.sshPrivKey)
+		if err != nil {
+			return err
+		}
+	} else {
+		return errors.New("-ssh-pub and -ssh-priv must either be both set or both unset")
 	}
 
 	var properties botanist.DeviceProperties
@@ -225,7 +255,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 				return
 			}
 		}
-		errs <- r.runCmd(ctx, imgs, properties.Nodename, args)
+		errs <- r.runCmd(ctx, imgs, properties.Nodename, args, pubKey, privKey)
 	}()
 
 	select {

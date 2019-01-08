@@ -255,7 +255,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	} else {
 		bootMode = botanist.ModePave
 	}
-	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, ""); err != nil {
+	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, nil); err != nil {
 		return err
 	}
 

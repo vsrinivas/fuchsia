@@ -31,8 +31,8 @@ const (
 )
 
 // GenerateKeyPair generates a pair of private/public keys.
-func GenerateKeyPair(bitSize int) ([]byte, []byte, error) {
-	key, err := rsa.GenerateKey(rand.Reader, bitSize)
+func GenerateKeyPair() ([]byte, []byte, error) {
+	key, err := rsa.GenerateKey(rand.Reader, RSAKeySize)
 	if err != nil {
 		return nil, nil, err
 	}

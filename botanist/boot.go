@@ -30,7 +30,6 @@ const (
 const (
 	// Special image names recognized by fuchsia's netsvc.
 	cmdlineNetsvcName = "<<netboot>>cmdline"
-	sshNetsvcName     = "<<netboot>>authorized_keys"
 	kernelNetsvcName  = "<<netboot>>kernel.bin"
 	fvmNetsvcName     = "<<image>>sparse.fvm"
 	efiNetsvcName     = "<<image>>efi.img"
@@ -38,6 +37,7 @@ const (
 	zirconANetsvcName = "<<image>>zircona.img"
 	zirconBNetsvcName = "<<image>>zirconb.img"
 	zirconRNetsvcName = "<<image>>zirconr.img"
+	sshNetsvcName     = "<<image>>authorized_keys"
 )
 
 // The order in which bootserver serves images to netsvc.
@@ -80,7 +80,7 @@ func containsBootSwitch(strs []string) bool {
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, sshKey string) error {
+func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, sshKey []byte) error {
 	var ramKernel *Image
 	var paveImgs []Image
 	if bootMode == ModePave {
@@ -150,7 +150,7 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 
 // Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
 // address.
-func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, sshKey string) error {
+func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, sshKey []byte) error {
 	// Prepare all files to be tranferred, minding the order, which follows that of the
 	// bootserver host tool.
 	netsvcFiles := []*netsvcFile{}
@@ -181,12 +181,12 @@ func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *I
 		netsvcFiles = append(netsvcFiles, imgNetsvcFile)
 	}
 
-	if sshKey != "" {
-		sshNetsvcFile, err := openNetsvcFile(sshKey, sshNetsvcName)
-		if err != nil {
-			return err
+	if len(sshKey) > 0 {
+		sshNetsvcFile := &netsvcFile{
+			reader: bytes.NewReader(sshKey),
+			size: int64(len(sshKey)),
+			name: sshNetsvcName,
 		}
-		defer sshNetsvcFile.close()
 		netsvcFiles = append(netsvcFiles, sshNetsvcFile)
 	}
 
