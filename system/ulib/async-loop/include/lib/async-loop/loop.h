@@ -37,7 +37,7 @@ typedef struct async_loop_config {
     // the same thread).
     //
     // If false, the loop will not do this.  The loop's creator is then
-    // resposible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
+    // responsible for retrieving the loop's dispatcher using |async_loop_get_dispatcher()|
     // and passing it around explicitly or calling |async_set_default_dispatcher()| as needed.
     //
     // Note that the loop can be used even without setting it as the current
@@ -81,7 +81,7 @@ extern const async_loop_config_t kAsyncLoopConfigNoAttachToThread;
 zx_status_t async_loop_create(const async_loop_config_t* config,
                               async_loop_t** out_loop);
 
-// Gets the the message loop's asynchronous dispatch interface.
+// Gets the message loop's asynchronous dispatch interface.
 async_dispatcher_t* async_loop_get_dispatcher(async_loop_t* loop);
 
 // Gets the message loop associated with the specified asynchronous dispatch interface

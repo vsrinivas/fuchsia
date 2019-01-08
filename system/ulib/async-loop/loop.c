@@ -754,7 +754,7 @@ zx_status_t async_loop_start_thread(async_loop_t* loop, const char* name, thrd_t
     ZX_DEBUG_ASSERT(loop);
 
     // This check is inherently racy.  The client should not be racing shutdown
-    // with attemps to start new threads.  This is mainly a sanity check.
+    // with attempts to start new threads.  This is mainly a sanity check.
     async_loop_state_t state = atomic_load_explicit(&loop->state, memory_order_acquire);
     if (state == ASYNC_LOOP_SHUTDOWN)
         return ZX_ERR_BAD_STATE;
