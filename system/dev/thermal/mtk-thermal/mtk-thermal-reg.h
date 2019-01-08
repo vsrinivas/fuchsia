@@ -115,6 +115,90 @@ public:
     DEF_FIELD(9, 0, sen_interval);
 };
 
+class TempMonInt : public hwreg::RegisterBase<TempMonInt, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempMonInt>(0x0c); }
+
+    DEF_BIT(31, stage_3_en);
+    DEF_BIT(30, stage_2_en);
+    DEF_BIT(29, stage_1_en);
+
+    DEF_BIT(14, hot_to_normal_en_2);
+    DEF_BIT(13, high_offset_en_2);
+    DEF_BIT(12, low_offset_en_2);
+    DEF_BIT(11, hot_en_2);
+    DEF_BIT(10, cold_en_2);
+
+    DEF_BIT(9, hot_to_normal_en_1);
+    DEF_BIT(8, high_offset_en_1);
+    DEF_BIT(7, low_offset_en_1);
+    DEF_BIT(6, hot_en_1);
+    DEF_BIT(5, cold_en_1);
+
+    DEF_BIT(4, hot_to_normal_en_0);
+    DEF_BIT(3, high_offset_en_0);
+    DEF_BIT(2, low_offset_en_0);
+    DEF_BIT(1, hot_en_0);
+    DEF_BIT(0, cold_en_0);
+};
+
+class TempMonIntStatus : public hwreg::RegisterBase<TempMonIntStatus, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempMonIntStatus>(0x10); }
+
+    DEF_BIT(31, stage_3);
+    DEF_BIT(30, stage_2);
+    DEF_BIT(29, stage_1);
+
+    DEF_BIT(14, hot_to_normal_2);
+    DEF_BIT(13, high_offset_2);
+    DEF_BIT(12, low_offset_2);
+    DEF_BIT(11, hot_2);
+    DEF_BIT(10, cold_2);
+
+    DEF_BIT(9, hot_to_normal_1);
+    DEF_BIT(8, high_offset_1);
+    DEF_BIT(7, low_offset_1);
+    DEF_BIT(6, hot_1);
+    DEF_BIT(5, cold_1);
+
+    DEF_BIT(4, hot_to_normal_0);
+    DEF_BIT(3, high_offset_0);
+    DEF_BIT(2, low_offset_0);
+    DEF_BIT(1, hot_0);
+    DEF_BIT(0, cold_0);
+};
+
+class TempHotToNormalThreshold : public hwreg::RegisterBase<TempHotToNormalThreshold, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempHotToNormalThreshold>(0x24); }
+    DEF_FIELD(11, 0, threshold);
+};
+
+class TempHotThreshold : public hwreg::RegisterBase<TempHotThreshold, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempHotThreshold>(0x28); }
+    DEF_FIELD(11, 0, threshold);
+};
+
+class TempColdThreshold : public hwreg::RegisterBase<TempColdThreshold, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempColdThreshold>(0x2c); }
+    DEF_FIELD(11, 0, threshold);
+};
+
+class TempOffsetHighThreshold : public hwreg::RegisterBase<TempOffsetHighThreshold, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempOffsetHighThreshold>(0x30); }
+    DEF_FIELD(11, 0, threshold);
+};
+
+class TempOffsetLowThreshold : public hwreg::RegisterBase<TempOffsetLowThreshold, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempOffsetLowThreshold>(0x30); }
+    DEF_FIELD(11, 0, threshold);
+};
+
 class TempMsrCtl0 : public hwreg::RegisterBase<TempMsrCtl0, uint32_t> {
 public:
     static auto Get() { return hwreg::RegisterAddr<TempMsrCtl0>(0x38); }
@@ -130,6 +214,30 @@ public:
     DEF_FIELD(8, 6, msrctl2);
     DEF_FIELD(5, 3, msrctl1);
     DEF_FIELD(2, 0, msrctl0);
+};
+
+class TempMsrCtl1 : public hwreg::RegisterBase<TempMsrCtl1, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempMsrCtl1>(0x3c); }
+
+    DEF_BIT(8, pause_3);
+    DEF_BIT(3, pause_2);
+    DEF_BIT(2, pause_1);
+    DEF_BIT(1, pause_0);
+
+    TempMsrCtl1& pause_real() {
+        set_pause_0(1);
+        set_pause_1(1);
+        set_pause_2(1);
+        return *this;
+    }
+
+    TempMsrCtl1& resume_real() {
+        set_pause_0(0);
+        set_pause_1(0);
+        set_pause_2(0);
+        return *this;
+    }
 };
 
 class TempAhbPoll : public hwreg::RegisterBase<TempAhbPoll, uint32_t> {
@@ -224,6 +332,26 @@ public:
 
     DEF_BIT(15, valid);
     DEF_FIELD(11, 0, reading);
+};
+
+class TempProtCtl : public hwreg::RegisterBase<TempProtCtl, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempProtCtl>(0xc0); }
+
+    static constexpr uint32_t kStrategyAverage  = 0;
+    static constexpr uint32_t kStrategyMaximum  = 1;
+    static constexpr uint32_t kStrategySelected = 2;
+
+    DEF_FIELD(19, 18, sensor);
+    DEF_FIELD(17, 16, strategy);
+    DEF_FIELD(11, 0, offset);
+};
+
+class TempProtStage3 : public hwreg::RegisterBase<TempProtStage3, uint32_t> {
+public:
+    static auto Get() { return hwreg::RegisterAddr<TempProtStage3>(0xcc); }
+
+    DEF_FIELD(11, 0, threshold);
 };
 
 class TempSpare : public hwreg::RegisterBase<TempSpare, uint32_t> {

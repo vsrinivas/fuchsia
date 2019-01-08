@@ -46,14 +46,45 @@ constexpr pbus_clk_t thermal_clks[] = {
     }
 };
 
+constexpr pbus_irq_t thermal_irqs[] = {
+    {
+        .irq = MT8167_IRQ_PTP_THERM,
+        .mode = ZX_INTERRUPT_MODE_EDGE_HIGH
+    }
+};
+
+constexpr uint32_t CToKTenths(uint32_t temp_c) {
+    constexpr uint32_t kKelvinOffset = 2732;  // Units: 0.1 degrees C
+    return (temp_c * 10) + kKelvinOffset;
+}
+
+constexpr thermal_temperature_info_t TripPoint(uint32_t temp_c, int32_t opp) {
+    constexpr uint32_t kHysteresis = 2;
+
+    return {
+        .up_temp = CToKTenths(temp_c + kHysteresis),
+        .down_temp = CToKTenths(temp_c - kHysteresis),
+        .fan_level = 0,
+        .big_cluster_dvfs_opp = opp,
+        .little_cluster_dvfs_opp = 0,
+        .gpu_clk_freq_source = 0
+    };
+}
+
 constexpr thermal_device_info_t thermal_dev_info = {
     .active_cooling = false,
     .passive_cooling = true,
     .gpu_throttling = true,
-    .num_trip_points = 0,
+    .num_trip_points = 5,
     .big_little = false,
-    .critical_temp = 0,
-    .trip_point_info = {},
+    .critical_temp = CToKTenths(120),
+    .trip_point_info = {
+        TripPoint(55, 4),
+        TripPoint(65, 3),
+        TripPoint(75, 2),
+        TripPoint(85, 1),
+        TripPoint(95, 0),
+    },
     .opps = {
         [BIG_CLUSTER_POWER_DOMAIN] = {
             // See section 3.6 (MTCMOS Domains) of the functional specification document.
@@ -109,8 +140,9 @@ const pbus_dev_t thermal_dev = []() {
     thermal_dev.clk_count = countof(thermal_clks);
     thermal_dev.metadata_list = thermal_metadata;
     thermal_dev.metadata_count = countof(thermal_metadata);
+    thermal_dev.irq_list = thermal_irqs;
+    thermal_dev.irq_count = countof(thermal_irqs);
     thermal_dev.bti_count = 0;
-    thermal_dev.irq_count = 0;
     thermal_dev.gpio_count = 0;
     return thermal_dev;
 }();

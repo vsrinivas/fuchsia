@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/mtk-thermal.cpp \
 
 MODULE_STATIC_LIBS := \
