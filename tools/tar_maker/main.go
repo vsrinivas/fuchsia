@@ -14,22 +14,49 @@ import (
 	"io"
 	"log"
 	"os"
+	"path/filepath"
 	"strings"
 )
 
 var output = flag.String("output", "", "Path to the generated tarball")
 var manifest = flag.String("manifest", "", "Path to the file containing a description of the tarball's contents")
 
-func writeToArchive(archive *tar.Writer, path string) error {
-	file, err := os.Open(path)
+func archiveFile(tw *tar.Writer, src, dest string) error {
+	file, err := os.Open(src)
 	if err != nil {
 		return err
 	}
 	defer file.Close()
-	if _, err = io.Copy(archive, file); err != nil {
+	info, err := file.Stat()
+	if err != nil {
 		return err
 	}
-	return nil
+
+	hdr, err := tar.FileInfoHeader(info, info.Name())
+	if err != nil {
+		return err
+	}
+	hdr.Name = dest
+	hdr.Uid = 0
+	hdr.Gid = 0
+	if err := tw.WriteHeader(hdr); err != nil {
+		return err
+	}
+	_, err = io.Copy(tw, file)
+	return err
+}
+
+func archiveDirectory(tw *tar.Writer, src, dest string) error {
+	return filepath.Walk(src, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.IsDir() {
+			return nil
+		}
+		fileDest := filepath.Join(dest, path[len(src)+1:])
+		return archiveFile(tw, path, fileDest)
+	})
 }
 
 func createTar(archive string, mappings map[string]string) error {
@@ -49,21 +76,12 @@ func createTar(archive string, mappings map[string]string) error {
 		if err != nil {
 			return err
 		}
-
-		header, err := tar.FileInfoHeader(info, info.Name())
+		if info.IsDir() {
+			err = archiveDirectory(tw, src, dest)
+		} else {
+			err = archiveFile(tw, src, dest)
+		}
 		if err != nil {
-			return err
-		}
-		header.Name = dest
-		header.Uid = 0
-		header.Gid = 0
-		if err = tw.WriteHeader(header); err != nil {
-			return err
-		}
-
-		// Using a separate function for this step to ensure copied files are closed
-		// in a timely manner.
-		if err = writeToArchive(tw, src); err != nil {
 			return err
 		}
 	}
@@ -104,10 +122,7 @@ func generateArchive(manifest string, output string) error {
 	if err != nil {
 		return err
 	}
-	if err = createTar(output, mappings); err != nil {
-		return err
-	}
-	return nil
+	return createTar(output, mappings)
 }
 
 func main() {
@@ -116,7 +131,7 @@ func main() {
 
 This tool creates a tarball whose contents are described in a file manifest.
 Each line in the manifest should be of the form:
-    <path in tarball>=<path to source file>
+    <path in tarball>=<path to source file or dir>
 
 The tarball is compressed using gzip.
 `)
