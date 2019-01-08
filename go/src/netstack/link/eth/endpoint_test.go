@@ -52,7 +52,7 @@ func TestEndpoint_WritePacket(t *testing.T) {
 			return int32(zx.ErrOk), &ethernet.Fifos{}, nil
 		},
 	}
-	c, err := eth.NewClient(t.Name(), "topo", &d, arena, nil)
+	c, err := eth.NewClient(t.Name(), "topo", &d, arena)
 	if err != nil {
 		t.Fatal(err)
 	}

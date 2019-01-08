@@ -58,7 +58,7 @@ func getInterfaceInfo(nicid tcpip.NICID, ifs *ifState) *stack.InterfaceInfo {
 	if eth := ifs.eth; eth != nil {
 		mac = &ethernet.MacAddress{}
 		copy(mac.Octets[:], ifs.statsEP.LinkAddress())
-		path = eth.Path
+		path = eth.Path()
 	}
 
 	return &stack.InterfaceInfo{
@@ -101,8 +101,10 @@ func (ns *Netstack) addInterface(topologicalPath string, device ethernet.DeviceI
 
 func (ns *Netstack) delInterface(id uint64) *stack.Error {
 	if ifs, ok := ns.ifStates[tcpip.NICID(id)]; ok {
-		// TODO(stijlist): propagate errors from Close
-		ifs.eth.Close()
+		if err := ifs.eth.Close(); err != nil {
+			log.Printf("ifs.eth.Close() failed: %v", err)
+			return &stack.Error{Type: stack.ErrorTypeInternal}
+		}
 		return nil
 
 	}

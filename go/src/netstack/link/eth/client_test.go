@@ -37,7 +37,7 @@ func TestClient_AllocForSend(t *testing.T) {
 		},
 	}
 
-	saturateArena := func() (func(), uint32) {
+	saturateArena := func() (func() error, uint32) {
 		// This value must be large enough to allow us to saturate the arena, but small enough to
 		// avoid running the system out of memory (the client allocates buffers of this length).
 		const txDepth = math.MaxUint16
@@ -51,7 +51,7 @@ func TestClient_AllocForSend(t *testing.T) {
 		d.StopImpl = func() error {
 			return nil
 		}
-		c, err := eth.NewClient(t.Name(), "topo", &d, arena, nil)
+		c, err := eth.NewClient(t.Name(), "topo", &d, arena)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -74,7 +74,7 @@ func TestClient_AllocForSend(t *testing.T) {
 				TxDepth: txDepth,
 			}, nil
 		}
-		return eth.NewClient(t.Name(), "topo", &d, arena, func(eth.State) {})
+		return eth.NewClient(t.Name(), "topo", &d, arena)
 	}()
 	if err != nil {
 		t.Fatal(err)
@@ -84,7 +84,9 @@ func TestClient_AllocForSend(t *testing.T) {
 		t.Fatalf("AllocForSend() = %v, want = %v (arena should be saturated)", got, nil)
 	}
 
-	freeArena()
+	if err := freeArena(); err != nil {
+		t.Fatal(err)
+	}
 
 	for i := uint32(0); i < txDepth; i++ {
 		if c.AllocForSend() == nil {

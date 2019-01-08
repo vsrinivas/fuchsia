@@ -56,15 +56,17 @@ import (
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
+var _ Controller = (*Client)(nil)
+
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
 // The protocol is described in system/fidl/fuchsia-hardware-ethernet/ethernet.fidl.
 type Client struct {
-	Path string
 	Info ethernet.Info
 
 	device ethernet.Device
 	fifos  ethernet.Fifos
+	path   string
 
 	mu        sync.Mutex
 	state     State
@@ -89,7 +91,7 @@ func checkStatus(status int32, text string) error {
 }
 
 // NewClient creates a new ethernet Client.
-func NewClient(clientName string, topo string, device ethernet.Device, arena *Arena, stateFunc func(State)) (*Client, error) {
+func NewClient(clientName string, topo string, device ethernet.Device, arena *Arena) (*Client, error) {
 	if status, err := device.SetClientName(clientName); err != nil {
 		return nil, err
 	} else if err := checkStatus(status, "SetClientName"); err != nil {
@@ -112,15 +114,14 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	}
 
 	c := &Client{
-		Path:      topo,
-		Info:      info,
-		device:    device,
-		fifos:     *fifos,
-		stateFunc: stateFunc,
-		arena:     arena,
-		tmpbuf:    make([]ethernet.FifoEntry, 0, maxDepth),
-		recvbuf:   make([]ethernet.FifoEntry, 0, fifos.RxDepth),
-		sendbuf:   make([]ethernet.FifoEntry, 0, fifos.TxDepth),
+		Info:    info,
+		device:  device,
+		fifos:   *fifos,
+		path:    topo,
+		arena:   arena,
+		tmpbuf:  make([]ethernet.FifoEntry, 0, maxDepth),
+		recvbuf: make([]ethernet.FifoEntry, 0, fifos.RxDepth),
+		sendbuf: make([]ethernet.FifoEntry, 0, fifos.TxDepth),
 	}
 
 	c.mu.Lock()
@@ -145,6 +146,16 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	}
 
 	return c, nil
+}
+
+func (c *Client) SetOnStateChange(f func(State)) {
+	c.mu.Lock()
+	defer c.mu.Unlock()
+	c.stateFunc = f
+}
+
+func (c *Client) Path() string {
+	return c.path
 }
 
 func (c *Client) changeStateLocked(s State) {
@@ -184,19 +195,19 @@ func (c *Client) Down() error {
 }
 
 // Close closes a Client, releasing any held resources.
-func (c *Client) Close() {
+func (c *Client) Close() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	c.closeLocked()
+	return c.closeLocked()
 }
 
-func (c *Client) closeLocked() {
+func (c *Client) closeLocked() error {
 	if c.state == StateClosed {
-		return
+		return nil
 	}
-
-	if err := c.device.Stop(); err != nil {
-		log.Printf("Failed to close ethernet path %s, error: %s", c.Path, err)
+	err := c.device.Stop()
+	if err != nil {
+		err = fmt.Errorf("fuchsia.hardware.ethernet.Device.Stop() for path %q failed: %v", c.path, err)
 	}
 
 	c.fifos.Tx.Close()
@@ -206,6 +217,8 @@ func (c *Client) closeLocked() {
 	c.sendbuf = c.sendbuf[:0]
 	c.arena.freeAll(c)
 	c.changeStateLocked(StateClosed)
+
+	return err
 }
 
 func (c *Client) SetPromiscuousMode(enabled bool) error {

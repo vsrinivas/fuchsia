@@ -78,7 +78,7 @@ type ifState struct {
 	ns     *Netstack
 	ctx    context.Context
 	cancel context.CancelFunc
-	eth    *eth.Client
+	eth    eth.Controller
 	state  eth.State
 	dhcpState
 
@@ -476,10 +476,11 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 	var client *eth.Client
 	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
 		var err error
-		client, err = eth.NewClient("netstack", topological_path, device, ns.arena, ifs.stateChange)
+		client, err = eth.NewClient("netstack", topological_path, device, ns.arena)
 		if err != nil {
 			return nil, err
 		}
+		client.SetOnStateChange(ifs.stateChange)
 		ifs.eth = client
 		ifs.nic.Features = client.Info.Features
 		ifs.nic.Name = config.Name
