@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PLATFORM_SEMAPHORE_H
-#define PLATFORM_SEMAPHORE_H
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_SEMAPHORE_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_SEMAPHORE_H_
 
 #include <memory>
 
@@ -35,6 +35,7 @@ class PlatformSemaphore : public PlatformObject {
 public:
     static std::unique_ptr<PlatformSemaphore> Create();
 
+    // Imports and takes ownership of |handle|.
     static std::unique_ptr<PlatformSemaphore> Import(uint32_t handle);
 
     virtual ~PlatformSemaphore() {}
@@ -72,4 +73,4 @@ public:
 
 } // namespace magma
 
-#endif // PLATFORM_SEMAPHORE_H
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_SEMAPHORE_H_

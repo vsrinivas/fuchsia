@@ -108,8 +108,8 @@ void magma_commit_buffer(magma_connection_t* connection, magma_buffer_t buffer,
 magma_status_t magma_export(magma_connection_t* connection, magma_buffer_t buffer,
                             uint32_t* buffer_handle_out);
 
-// Imports the buffer referred to by |buffer_handle| into the given |connection| and makes it
-// accessible via |buffer_out|.
+// Imports and takes ownership of the buffer referred to by |buffer_handle| into the given
+// |connection| and makes it accessible via |buffer_out|.
 magma_status_t magma_import(magma_connection_t* connection, uint32_t buffer_handle,
                             magma_buffer_t* buffer_out);
 
@@ -160,8 +160,8 @@ magma_status_t magma_wait_semaphores(const magma_semaphore_t* semaphores, uint32
 magma_status_t magma_export_semaphore(magma_connection_t* connection, magma_semaphore_t semaphore,
                                       uint32_t* semaphore_handle_out);
 
-// Imports the semaphore referred to by |semaphore_handle| into the given |connection| and makes it
-// accessible via |semaphore_out|.
+// Imports and takes ownership of the semaphore referred to by |semaphore_handle| into the given
+// |connection| and makes it accessible via |semaphore_out|.
 magma_status_t magma_import_semaphore(magma_connection_t* connection, uint32_t semaphore_handle,
                                       magma_semaphore_t* semaphore_out);
 
@@ -178,4 +178,4 @@ magma_status_t magma_read_notification_channel(magma_connection_t* connection, v
 }
 #endif
 
-#endif /* _MAGMA_H_ */
+#endif // GARNET_LIB_MAGMA_INCLUDE_MAGMA_ABI_MAGMA_H_

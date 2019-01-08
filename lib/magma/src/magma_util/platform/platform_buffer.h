@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PLATFORM_BUFFER_H
-#define PLATFORM_BUFFER_H
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_BUFFER_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_BUFFER_H_
 
 #include "magma_common_defs.h"
 #include "magma_util/dlog.h"
@@ -20,17 +20,17 @@ public:
 
     virtual ~PlatformBuffer() {}
 
-    // returns the size of the buffer
+    // Returns the size of the buffer.
     virtual uint64_t size() const = 0;
 
-    // returns a unique, immutable id for the underlying memory object
+    // Returns a unique, immutable id for the underlying memory object.
     virtual uint64_t id() const = 0;
 
-    // on success, duplicate of the underlying handle which is owned by the caller
+    // On success, duplicate of the underlying handle which is owned by the caller.
     virtual bool duplicate_handle(uint32_t* handle_out) const = 0;
 
-    // ensures the specified pages are backed by real memory
-    // note: the implementation of this function is required to be threadsafe
+    // Ensures the specified pages are backed by real memory.
+    // note: the implementation of this function is required to be threadsafe.
     virtual bool CommitPages(uint32_t start_page_index, uint32_t page_count) const = 0;
 
     // If |alignment| isn't 0, it must be a power of 2 and page-aligned. It's
@@ -53,4 +53,4 @@ public:
 
 } // namespace magma
 
-#endif // PLATFORM_BUFFER_H
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_BUFFER_H_
