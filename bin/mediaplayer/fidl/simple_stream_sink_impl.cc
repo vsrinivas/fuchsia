@@ -68,7 +68,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
                                             zx::vmo payload_buffer) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  if (id < payload_vmo_infos_.size() && payload_vmo_infos_[id].vmo_) {
+  if (payload_vmo_infos_by_id_.find(id) != payload_vmo_infos_by_id_.end()) {
     FXL_LOG(ERROR) << "AddPayloadBuffer: payload buffer with id " << id
                    << " already exists. Closing connection.";
     binding_.Unbind();
@@ -83,12 +83,7 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
     return;
   }
 
-  if (id >= payload_vmo_infos_.size()) {
-    payload_vmo_infos_.resize(id + 1);
-  }
-
-  payload_vmo_infos_[id].vmo_ = payload_vmo;
-  FXL_DCHECK(payload_vmo_infos_[id].packet_count_ == 0);
+  payload_vmo_infos_by_id_.emplace(id, PayloadVmoInfo{.vmo_ = payload_vmo});
 
   ProvideOutputVmos().AddVmo(payload_vmo);
 }
@@ -96,14 +91,16 @@ void SimpleStreamSinkImpl::AddPayloadBuffer(uint32_t id,
 void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 
-  if (id >= payload_vmo_infos_.size() || !payload_vmo_infos_[id].vmo_) {
+  auto iter = payload_vmo_infos_by_id_.find(id);
+  if (iter == payload_vmo_infos_by_id_.end()) {
     FXL_LOG(ERROR) << "RemovePayloadBuffer: no payload buffer with id " << id
                    << " exists. Closing connection.";
     binding_.Unbind();
     return;
   }
 
-  auto& payload_vmo_info = payload_vmo_infos_[id];
+  auto& payload_vmo_info = iter->second;
+
   if (payload_vmo_info.packet_count_ != 0) {
     FXL_LOG(ERROR) << "RemovePayloadBuffer: payload buffer " << id
                    << " has pending StreamPackets. Closing connection.";
@@ -112,7 +109,7 @@ void SimpleStreamSinkImpl::RemovePayloadBuffer(uint32_t id) {
   }
 
   ProvideOutputVmos().RemoveVmo(payload_vmo_info.vmo_);
-  payload_vmo_info.vmo_ = nullptr;
+  payload_vmo_infos_by_id_.erase(iter);
 }
 
 void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
@@ -132,14 +129,15 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   uint32_t vmo_id = packet.payload_buffer_id;
   int64_t payload_offset = packet.payload_offset;
 
-  if (vmo_id >= payload_vmo_infos_.size() || !payload_vmo_infos_[vmo_id].vmo_) {
+  auto iter = payload_vmo_infos_by_id_.find(vmo_id);
+  if (iter == payload_vmo_infos_by_id_.end()) {
     FXL_LOG(ERROR) << "SendPacket: no payload buffer with id " << vmo_id
                    << " exists. Closing connection.";
     binding_.Unbind();
     return;
   }
 
-  auto& payload_vmo_info = payload_vmo_infos_[vmo_id];
+  auto& payload_vmo_info = iter->second;
 
   if (payload_offset + packet.payload_size > payload_vmo_info.vmo_->size()) {
     FXL_LOG(ERROR) << "SendPacket: packet offset/size out of range.";
@@ -152,10 +150,11 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
   auto payload_buffer = PayloadBuffer::Create(
       packet.payload_size, payload_vmo_info.vmo_->at_offset(payload_offset),
       payload_vmo_info.vmo_, payload_offset,
-      [this, vmo_id,
+      [this, shared_this = shared_from_this(), vmo_id,
        callback = std::move(callback)](PayloadBuffer* payload_buffer) {
-        FXL_DCHECK(vmo_id < payload_vmo_infos_.size());
-        auto& payload_vmo_info = payload_vmo_infos_[vmo_id];
+        auto iter = payload_vmo_infos_by_id_.find(vmo_id);
+        FXL_DCHECK(iter != payload_vmo_infos_by_id_.end());
+        auto& payload_vmo_info = iter->second;
         FXL_DCHECK(payload_vmo_info.vmo_);
         FXL_DCHECK(payload_vmo_info.packet_count_ != 0);
 

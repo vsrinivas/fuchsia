@@ -6,7 +6,7 @@
 #define GARNET_BIN_MEDIAPLAYER_FIDL_SIMPLE_STREAM_SINK_IMPL_H_
 
 #include <fuchsia/mediaplayer/cpp/fidl.h>
-#include <vector>
+#include <unordered_map>
 #include "garnet/bin/mediaplayer/graph/nodes/node.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -73,7 +73,7 @@ class SimpleStreamSinkImpl : public Node,
   media::TimelineRate pts_rate_;
   fidl::Binding<fuchsia::media::SimpleStreamSink> binding_;
   int64_t pts_ = 0;
-  std::vector<PayloadVmoInfo> payload_vmo_infos_;
+  std::unordered_map<uint32_t, PayloadVmoInfo> payload_vmo_infos_by_id_;
   bool flushing_ = false;
 
   // Disallow copy and assign.
