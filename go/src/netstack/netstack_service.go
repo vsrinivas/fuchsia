@@ -134,26 +134,25 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 			l = len(route.Destination)
 		} else if len(route.Mask) > 0 {
 			l = len(route.Destination)
-		} else if len(route.Gateway) > 0 {
-			l = len(route.Gateway)
 		}
 		dest := route.Destination
 		mask := route.Mask
-		gateway := route.Gateway
 		if len(dest) == 0 {
 			dest = tcpip.Address(strings.Repeat("\x00", l))
 		}
 		if len(mask) == 0 {
 			mask = tcpip.AddressMask(strings.Repeat("\x00", l))
 		}
-		if len(gateway) == 0 {
-			gateway = tcpip.Address(strings.Repeat("\x00", l))
-		}
 
+		var gatewayPtr *net.IpAddress
+		if len(route.Gateway) != 0 {
+			gateway := fidlconv.ToNetIpAddress(route.Gateway)
+			gatewayPtr = &gateway
+		}
 		out = append(out, netstack.RouteTableEntry{
 			Destination: fidlconv.ToNetIpAddress(dest),
 			Netmask:     fidlconv.ToNetIpAddress(tcpip.Address(mask)),
-			Gateway:     fidlconv.ToNetIpAddress(gateway),
+			Gateway:     gatewayPtr,
 			Nicid:       uint32(route.NIC),
 		})
 	}
@@ -163,10 +162,14 @@ func nsToRouteTable(table []tcpip.Route) (out []netstack.RouteTableEntry, err er
 func routeTableToNs(rt []netstack.RouteTableEntry) []tcpip.Route {
 	routes := make([]tcpip.Route, 0, len(rt))
 	for _, r := range rt {
+		var gateway tcpip.Address
+		if r.Gateway != nil {
+			gateway = fidlconv.ToTCPIPAddress(*r.Gateway)
+		}
 		routes = append(routes, tcpip.Route{
 			Destination: fidlconv.ToTCPIPAddress(r.Destination),
 			Mask:        tcpip.AddressMask(fidlconv.ToTCPIPAddress(r.Netmask)),
-			Gateway:     fidlconv.ToTCPIPAddress(r.Gateway),
+			Gateway:     gateway,
 			NIC:         tcpip.NICID(r.Nicid),
 		})
 	}

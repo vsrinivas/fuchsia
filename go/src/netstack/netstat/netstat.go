@@ -147,13 +147,20 @@ func dumpRouteTables(a *netstatApp) {
 		return
 	}
 	for _, entry := range entries {
+		if entry.Gateway != nil && netAddressZero(*entry.Gateway) {
+			panic("Gateway IP cannot be ANY ('0.0.0.0' or '::'")
+		}
 		if netAddressZero(entry.Destination) {
-			fmt.Printf("default via %s, ", netAddressToString(entry.Gateway))
+			if entry.Gateway != nil {
+				fmt.Printf("default via %s, ", netAddressToString(*entry.Gateway))
+			} else {
+				fmt.Printf("default through ")
+			}
 		} else {
 			fmt.Printf("Destination: %s, ", netAddressToString(entry.Destination))
 			fmt.Printf("Mask: %s, ", netAddressToString(entry.Netmask))
-			if !netAddressZero(entry.Gateway) {
-				fmt.Printf("Gateway: %s, ", netAddressToString(entry.Gateway))
+			if entry.Gateway != nil {
+				fmt.Printf("Gateway: %s, ", netAddressToString(*entry.Gateway))
 			}
 		}
 		fmt.Printf("NICID: %d\n", entry.Nicid)

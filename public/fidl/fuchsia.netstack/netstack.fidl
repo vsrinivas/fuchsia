@@ -118,7 +118,7 @@ const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
 struct RouteTableEntry {
     fuchsia.net.IpAddress destination;
     fuchsia.net.IpAddress netmask;
-    fuchsia.net.IpAddress gateway;
+    fuchsia.net.IpAddress? gateway;
     uint32 nicid;
 };
 

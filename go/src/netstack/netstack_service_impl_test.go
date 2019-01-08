@@ -63,10 +63,12 @@ func TestRouteTableTransactions(t *testing.T) {
 		destinationAddress, destinationSubnet, err := net.ParseCIDR("1.2.3.4/24")
 		AssertNoError(t, err)
 		gatewayAddress, _, err := net.ParseCIDR("5.6.7.8/32")
+		AssertNoError(t, err)
+		gateway := toIpAddress(gatewayAddress)
 		newRouteTableEntry := netstack.RouteTableEntry{
 			Destination: toIpAddress(destinationAddress),
 			Netmask:     toIpAddress(net.IP(destinationSubnet.Mask)),
-			Gateway:     toIpAddress(gatewayAddress),
+			Gateway:     &gateway,
 		}
 
 		newRouteTable := append(rs, newRouteTableEntry)

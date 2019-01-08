@@ -97,7 +97,7 @@ func TestOutput(t *testing.T) {
 		if err == nil {
 			t.Errorf("ifconfig route add returned success with neither gateway or iface specified. output: \n%s", out)
 		}
-		expected = "Error adding route"
+		expected = "Error parsing route"
 		if !strings.Contains(string(out), expected) {
 			t.Errorf("want `ifconfig route add` to print \"%s\", got \"%s\"", expected, out)
 		}
