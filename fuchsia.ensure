@@ -13,7 +13,7 @@ $ParanoidMode CheckPresence
 $ResolvedVersions fuchsia.versions
 
 # GN
-gn/gn/${platform} git_revision:bdb0fd02324b120cacde634a9235405061c8ea06
+gn/gn/${platform} git_revision:45314e29d54cc2e4a6501eaec860f1b09740eb9c
 
 # Ninja
 infra/ninja/${platform} version:1.8.2
