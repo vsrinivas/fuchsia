@@ -1,4 +1,4 @@
-#![allow(dead_code, unused, unused_mut)]
+#![deny(warnings)]
 
 //! # Reading, Writing and Listing Fuchsia Archives (FAR) Data
 //!
@@ -52,41 +52,45 @@
 //!
 //! ```
 
-use bincode::{deserialize_from, serialize_into, Infinite};
-use failure::Error;
+use bincode::{deserialize_from, serialize_into};
+use failure::{format_err, Error};
+use serde_derive::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::fs;
 use std::fs::File;
-use std::io::{copy, Cursor, Read, Seek, SeekFrom, Write};
+use std::io::{copy, Read, Seek, SeekFrom, Write};
+use std::mem;
 use std::str;
 
 const MAGIC_INDEX_VALUE: [u8; 8] = [0xc8, 0xbf, 0x0b, 0x48, 0xad, 0xab, 0xc5, 0x11];
 
 type ChunkType = u64;
 
-const HASH_CHUNK: ChunkType = 0;
 const DIR_HASH_CHUNK: ChunkType = 0x2d_48_53_41_48_52_49_44; // "DIRHASH-"
 const DIR_CHUNK: ChunkType = 0x2d_2d_2d_2d_2d_52_49_44; // "DIR-----"
 const DIR_NAMES_CHUNK: ChunkType = 0x53_45_4d_41_4e_52_49_44; // "DIRNAMES"
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Copy, Clone)]
+#[repr(C)]
 struct Index {
     magic: [u8; 8],
     length: u64,
 }
 
-const INDEX_LEN: u64 = 8 + 8;
+const INDEX_LEN: u64 = mem::size_of::<Index>() as u64;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Copy, Clone)]
+#[repr(C)]
 struct IndexEntry {
     chunk_type: ChunkType,
     offset: u64,
     length: u64,
 }
 
-const INDEX_ENTRY_LEN: u64 = 8 + 8 + 8;
+const INDEX_ENTRY_LEN: u64 = mem::size_of::<IndexEntry>() as u64;
 
-#[derive(Serialize, Deserialize, PartialEq, Debug, Clone)]
+#[derive(Serialize, Deserialize, PartialEq, Debug, Copy, Clone)]
+#[repr(C)]
 struct DirectoryEntry {
     name_offset: u32,
     name_length: u16,
@@ -96,7 +100,7 @@ struct DirectoryEntry {
     reserved2: u64,
 }
 
-const DIRECTORY_ENTRY_LEN: u64 = 4 + 2 + 2 + 8 + 8 + 8;
+const DIRECTORY_ENTRY_LEN: u64 = mem::size_of::<DirectoryEntry>() as u64;
 const CONTENT_ALIGNMENT: u64 = 4096;
 
 fn write_zeros<T>(target: &mut T, count: usize) -> Result<(), Error>
@@ -109,7 +113,7 @@ where
 }
 
 /// Write a FAR-formatted archive to the target.
-pub fn write<T>(target: &mut T, inputs: &mut Iterator<Item = (&str, &str)>) -> Result<(), Error>
+pub fn write<T>(mut target: &mut T, inputs: &mut Iterator<Item = (&str, &str)>) -> Result<(), Error>
 where
     T: Write,
 {
@@ -149,18 +153,18 @@ where
         length: align(path_data.len() as u64, 8),
     };
 
-    serialize_into(target, &index, Infinite)?;
+    serialize_into(&mut target, &index)?;
 
-    serialize_into(target, &dir_index, Infinite)?;
+    serialize_into(&mut target, &dir_index)?;
 
-    serialize_into(target, &name_index, Infinite)?;
+    serialize_into(&mut target, &name_index)?;
 
     let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
 
     for entry in &mut entries {
         entry.data_offset = content_offset;
         content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
-        serialize_into(target, &entry, Infinite)?;
+        serialize_into(&mut target, &entry)?;
     }
 
     target.write_all(&path_data)?;
@@ -188,10 +192,7 @@ where
     T: Read + Seek,
 {
     source: &'a mut T,
-    dir_index: IndexEntry,
-    dir_name_index: IndexEntry,
-    directory_entries: Vec<DirectoryEntry>,
-    path_data: Vec<u8>,
+    directory_entries: BTreeMap<String, DirectoryEntry>,
 }
 
 impl<'a, T> Reader<'a, T>
@@ -199,55 +200,49 @@ where
     T: Read + Seek,
 {
     /// Create a new Reader for the provided source.
-    pub fn new(source: &'a mut T) -> Result<Reader<'a, T>, Error> {
+    pub fn new(mut source: &'a mut T) -> Result<Reader<'a, T>, Error> {
         let index = Reader::<T>::read_index(source)?;
 
         let (dir_index, dir_name_index) =
             Reader::<T>::read_index_entries(source, index.length / INDEX_ENTRY_LEN, &index)?;
-        if dir_index.is_none() {
-            return Err(format_err!("Invalid archive, missing directory index"));
-        }
-        let dir_index = dir_index.unwrap();
 
-        if dir_name_index.is_none() {
-            return Err(format_err!("Invalid archive, missing directory name index"));
-        }
-        let dir_name_index = dir_name_index.unwrap();
+        let dir_index = dir_index.ok_or(format_err!("Invalid archive, missing directory index"))?;
+        let dir_name_index =
+            dir_name_index.ok_or(format_err!("Invalid archive, missing directory name index"))?;
 
         let dir_entry_count = dir_index.length / DIRECTORY_ENTRY_LEN;
-        let mut dir_entires = vec![];
-        for i in 0..dir_entry_count {
-            dir_entires.push(deserialize_from(source, Infinite)?);
+        let mut dir_entries: Vec<DirectoryEntry> = Vec::with_capacity(dir_entry_count as usize);
+        for _ in 0..dir_entry_count {
+            dir_entries.push(deserialize_from(&mut source)?);
         }
 
         source.seek(SeekFrom::Start(dir_name_index.offset))?;
         let mut path_data = vec![0; dir_name_index.length as usize];
         source.read_exact(&mut path_data)?;
 
+        let mut directory_entries = BTreeMap::new();
+        for entry in dir_entries {
+            let name_start = entry.name_offset as usize;
+            let after_name_end = name_start + entry.name_length as usize;
+            let file_name_str = str::from_utf8(&path_data[name_start..after_name_end])?;
+            let file_name = String::from(file_name_str);
+
+            directory_entries.insert(file_name, entry);
+        }
+
         Ok(Reader {
             source,
-            dir_index,
-            dir_name_index,
-            directory_entries: dir_entires,
-            path_data,
+            directory_entries,
         })
     }
 
     /// Return a list of the items in the archive
-    pub fn list(&self) -> Result<Vec<String>, Error> {
-        let mut file_names = vec![];
-        for entry in &self.directory_entries {
-            let name_start = entry.name_offset as usize;
-            let after_name_end = name_start + entry.name_length as usize;
-            let file_name_str = str::from_utf8(&self.path_data[name_start..after_name_end])?;
-            let file_name = String::from(file_name_str);
-            file_names.push(file_name);
-        }
-        Ok(file_names)
+    pub fn list(&self) -> Vec<&str> {
+        self.directory_entries.keys().map(String::as_str).collect()
     }
 
-    fn read_index(source: &mut T) -> Result<Index, Error> {
-        let decoded_index: Index = deserialize_from(source, Infinite)?;
+    fn read_index(mut source: &mut T) -> Result<Index, Error> {
+        let decoded_index: Index = deserialize_from(&mut source)?;
         if decoded_index.magic != MAGIC_INDEX_VALUE {
             Err(format_err!("Invalid archive, bad magic"))
         } else if decoded_index.length % INDEX_ENTRY_LEN != 0 {
@@ -258,13 +253,13 @@ where
     }
 
     fn read_index_entries(
-        source: &mut T, count: u64, index: &Index,
+        mut source: &mut T, count: u64, index: &Index,
     ) -> Result<(Option<IndexEntry>, Option<IndexEntry>), Error> {
         let mut dir_index: Option<IndexEntry> = None;
         let mut dir_name_index: Option<IndexEntry> = None;
         let mut last_chunk_type: Option<ChunkType> = None;
-        for i in 0..count {
-            let entry: IndexEntry = deserialize_from(source, Infinite)?;
+        for _ in 0..count {
+            let entry: IndexEntry = deserialize_from(&mut source)?;
 
             match last_chunk_type {
                 None => {}
@@ -297,21 +292,15 @@ where
         Ok((dir_index, dir_name_index))
     }
 
-    fn find_directory_entry(&self, archive_path: &str) -> Result<DirectoryEntry, Error> {
-        for entry in &self.directory_entries {
-            let name_start = entry.name_offset as usize;
-            let after_name_end = name_start + entry.name_length as usize;
-            let file_name_str = str::from_utf8(&self.path_data[name_start..after_name_end])?;
-            if file_name_str == archive_path {
-                return Ok(entry.clone());
-            }
-        }
-        Err(format_err!("Path '{}' not found in archive", archive_path))
+    fn find_directory_entry(&self, archive_path: &str) -> Result<&DirectoryEntry, Error> {
+        self.directory_entries
+            .get(archive_path)
+            .ok_or(format_err!("Path '{}' not found in archive", archive_path))
     }
 
     /// Create an EntryReader for an entry with the specified name.
     pub fn open(&mut self, archive_path: &str) -> Result<EntryReader<T>, Error> {
-        let directory_entry = self.find_directory_entry(archive_path)?;
+        let directory_entry = *self.find_directory_entry(archive_path)?;
 
         Ok(EntryReader {
             source: self.source,
@@ -373,7 +362,11 @@ fn align(unrounded_value: u64, multiple: u64) -> u64 {
 
 #[cfg(test)]
 mod tests {
-    use bincode::{deserialize_from, serialize_into, Infinite};
+    use super::{
+        align, write, DirectoryEntry, Index, IndexEntry, Reader, DIRECTORY_ENTRY_LEN, DIR_CHUNK,
+        INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE,
+    };
+    use bincode::{deserialize_from, serialize_into};
     use failure::Error;
     use itertools::assert_equal;
     use std::collections::HashMap;
@@ -382,8 +375,6 @@ mod tests {
     use std::io::{Cursor, Seek, SeekFrom, Write};
     use std::str;
     use tempfile::TempDir;
-    use {align, write, DirectoryEntry, Index, IndexEntry, Reader, DIRECTORY_ENTRY_LEN, DIR_CHUNK,
-         INDEX_ENTRY_LEN, INDEX_LEN, MAGIC_INDEX_VALUE};
 
     fn create_test_files(file_names: &[&str]) -> Result<TempDir, Error> {
         let tmp_dir = TempDir::new()?;
@@ -469,7 +460,8 @@ mod tests {
         write(
             &mut target,
             &mut inputs.iter().map(|(a, b)| (a.as_str(), b.as_str())),
-        ).unwrap();
+        )
+        .unwrap();
         assert!(target.get_ref()[0..8] == MAGIC_INDEX_VALUE);
         let example_archive = example_archive();
         let target_ref = target.get_ref();
@@ -484,11 +476,11 @@ mod tests {
             magic: MAGIC_INDEX_VALUE,
             length: 2 * INDEX_ENTRY_LEN as u64,
         };
-        serialize_into(&mut target, &index, Infinite).unwrap();
+        serialize_into(&mut target, &index).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();
 
-        let decoded_index: Index = deserialize_from(&mut target, Infinite).unwrap();
+        let decoded_index: Index = deserialize_from(&mut target).unwrap();
         assert_eq!(index, decoded_index);
     }
 
@@ -500,11 +492,11 @@ mod tests {
             offset: 999,
             length: 444,
         };
-        serialize_into(&mut target, &index_entry, Infinite).unwrap();
+        serialize_into(&mut target, &index_entry).unwrap();
         assert_eq!(target.get_ref().len() as u64, INDEX_ENTRY_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();
 
-        let decoded_index_entry: IndexEntry = deserialize_from(&mut target, Infinite).unwrap();
+        let decoded_index_entry: IndexEntry = deserialize_from(&mut target).unwrap();
         assert_eq!(index_entry, decoded_index_entry);
     }
 
@@ -519,12 +511,19 @@ mod tests {
             data_length: 1011,
             reserved2: 0,
         };
-        serialize_into(&mut target, &index_entry, Infinite).unwrap();
+        serialize_into(&mut target, &index_entry).unwrap();
         assert_eq!(target.get_ref().len() as u64, DIRECTORY_ENTRY_LEN);
         target.seek(SeekFrom::Start(0)).unwrap();
 
-        let decoded_index_entry: DirectoryEntry = deserialize_from(&mut target, Infinite).unwrap();
+        let decoded_index_entry: DirectoryEntry = deserialize_from(&mut target).unwrap();
         assert_eq!(index_entry, decoded_index_entry);
+    }
+
+    #[test]
+    fn test_struct_sizes() {
+        assert_eq!(INDEX_LEN, 8 + 8);
+        assert_eq!(INDEX_ENTRY_LEN, 8 + 8 + 8);
+        assert_eq!(DIRECTORY_ENTRY_LEN, 4 + 2 + 2 + 8 + 8 + 8);
     }
 
     #[test]
@@ -548,21 +547,21 @@ mod tests {
         let v: u64 = 1;
         let mut cursor = Cursor::new(b);
         cursor.seek(SeekFrom::Start(8)).unwrap();
-        serialize_into(&mut cursor, &v, Infinite).unwrap();
+        serialize_into(&mut cursor, &v).unwrap();
     }
 
     fn corrupt_dir_index_type(b: &mut Vec<u8>) {
         let v: u8 = 255;
         let mut cursor = Cursor::new(b);
         cursor.seek(SeekFrom::Start(INDEX_LEN)).unwrap();
-        serialize_into(&mut cursor, &v, Infinite).unwrap();
+        serialize_into(&mut cursor, &v).unwrap();
     }
 
     #[test]
     fn test_reader() {
         let example = example_archive();
         let mut example_cursor = Cursor::new(&example);
-        let mut reader = Reader::new(&mut example_cursor).unwrap();
+        assert!(Reader::new(&mut example_cursor).is_ok());
 
         let corrupters = [corrupt_magic, corrupt_index_length, corrupt_dir_index_type];
         let mut index = 0;
@@ -570,7 +569,7 @@ mod tests {
             let mut example = example_archive();
             corrupter(&mut example);
             let mut example_cursor = Cursor::new(&mut example);
-            let mut reader = Reader::new(&mut example_cursor);
+            let reader = Reader::new(&mut example_cursor);
             assert!(reader.is_err(), "corrupter index = {}", index);
             index += 1;
         }
@@ -580,11 +579,10 @@ mod tests {
     fn test_list_files() {
         let example = example_archive();
         let mut example_cursor = Cursor::new(&example);
-        let mut reader = Reader::new(&mut example_cursor).unwrap();
+        let reader = Reader::new(&mut example_cursor).unwrap();
 
-        let mut files = reader.list().unwrap();
+        let files = reader.list();
         let want = ["a", "b", "dir/c"];
-        files.sort();
         assert_equal(want.iter(), &files);
     }
 
@@ -647,10 +645,7 @@ mod tests {
     fn test_read_empty() {
         let empty = empty_archive();
         let mut empty_cursor = Cursor::new(&empty);
-        let mut reader = Reader::new(&mut empty_cursor);
+        let reader = Reader::new(&mut empty_cursor);
         assert!(reader.is_err(), "Expected error for empty archive");
     }
-
-    #[test]
-    fn test_is_far() {}
 }
