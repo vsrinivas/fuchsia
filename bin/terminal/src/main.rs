@@ -23,6 +23,9 @@ use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
 use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, Point, Size};
 use fuchsia_zircon::{EventPair, Handle};
+use term_model::term::{SizeInfo, Term};
+use term_model::config::{Config};
+use term_model::ansi::{Handler};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use std::env;
 use std::sync::{Arc, Mutex};
@@ -40,6 +43,7 @@ struct ViewController {
     image_cycler: HostImageCycler,
     metrics: Option<gfx::Metrics>,
     logical_size: Option<SizeF>,
+    term: Option<Term>,
 }
 
 type ViewControllerPtr = Arc<Mutex<ViewController>>;
@@ -61,6 +65,7 @@ impl ViewController {
             image_cycler: HostImageCycler::new(session.clone()),
             metrics: None,
             logical_size: None,
+            term: None,
         };
         view_controller.setup_scene();
         view_controller.present();
@@ -101,7 +106,7 @@ impl ViewController {
                         view_controller
                             .lock()
                             .unwrap()
-                            .handle_properies_changed(properties);
+                            .handle_properties_changed(properties);
                         responder
                             .send()
                             .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
@@ -150,21 +155,6 @@ impl ViewController {
                 .expect("failed to allocate buffer");
             let mut face = self.face.lock().unwrap();
             let mut canvas = Canvas::new(guard.image().buffer(), stride);
-            let paint = Paint {
-                fg: Color {
-                    r: 0xFF,
-                    g: 0xDE,
-                    b: 0xAD,
-                    a: 0xFF,
-                },
-                bg: Color {
-                    r: 0x00,
-                    g: 0x00,
-                    b: 0x8b,
-                    a: 0xFF,
-                },
-            };
-            let point = Point { x: 0, y: 0 };
             let size = Size {
                 width: 14,
                 height: 22,
@@ -174,7 +164,31 @@ impl ViewController {
                 size: 20,
                 baseline: 18,
             };
-            canvas.fill_text("$ echo \"hello, world!\"", point, size, &mut font, &paint);
+            let term = self.term.get_or_insert_with(||
+                Term::new(&Config::default(), SizeInfo {
+                    width: physical_width as f32,
+                    height: physical_height as f32,
+                    cell_width: size.width as f32,
+                    cell_height: size.height as f32,
+                    padding_x: 0.,
+                    padding_y: 0.,
+                })
+            );
+            for c in "$ echo \"hello, world!\"".chars() {
+                term.input(c);
+            }
+            for cell in term.renderable_cells(&Config::default(), None, true) {
+                let mut buffer: [u8; 4] = [0, 0, 0, 0];
+                canvas.fill_text(
+                    cell.c.encode_utf8(&mut buffer),
+                    Point { x: size.width * cell.column.0 as u32, y: size.height * cell.line.0 as u32 },
+                    size, &mut font,
+                    &Paint {
+                        fg: Color { r: cell.fg.r, g: cell.fg.g, b: cell.fg.b, a: 0xFF },
+                        bg: Color { r: cell.bg.r, g: cell.bg.g, b: cell.bg.b, a: 0xFF },
+                    }
+                )
+            }
         }
 
         let node = self.image_cycler.node();
@@ -197,7 +211,7 @@ impl ViewController {
         });
     }
 
-    fn handle_properies_changed(&mut self, properties: ViewProperties) {
+    fn handle_properties_changed(&mut self, properties: ViewProperties) {
         if let Some(view_properties) = properties.view_layout {
             self.logical_size = Some(view_properties.size);
             self.invalidate();
