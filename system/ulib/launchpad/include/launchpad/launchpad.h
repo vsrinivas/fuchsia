@@ -127,7 +127,7 @@ typedef struct launchpad_start_data {
     // The base address of the vDSO to pass to the process on startup.
     zx_vaddr_t vdso_base;
 
-    // The base load address of the the ELF file loaded.
+    // The base load address of the ELF file loaded.
     zx_vaddr_t base;
 } launchpad_start_data_t;
 
@@ -250,7 +250,7 @@ zx_status_t launchpad_clone_fd(launchpad_t* lp, int fd, int target_fd);
 
 // Attempt to transfer local descriptor fd into target_fd in the
 // new process.  Returns ZX_ERR_BAD_HANDLE if fd is not a valid fd,
-// ERR_UNAVILABLE if fd has been duplicated or is in use in an
+// ERR_UNAVAILABLE if fd has been duplicated or is in use in an
 // io operation, or ZX_ERR_NOT_SUPPORTED if it's not possible to transfer
 // this fd.
 // Upon success, from the point of view of the calling process, the fd
