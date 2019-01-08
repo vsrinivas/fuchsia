@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/fastboot"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -256,6 +257,16 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, 
 	}
 	if err = botanist.Boot(ctx, addr, bootMode, imgs, cmdlineArgs, ""); err != nil {
 		return err
+	}
+
+	// TODO(IN-892): Necessary to continue back to fuchsia after rebooting.
+	if cmd.fastboot != "" {
+		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
+		defer cancel()
+		f := fastboot.Fastboot{cmd.fastboot}
+		if _, err := f.Continue(ctx); err != nil {
+			return err
+		}
 	}
 
 	// Handle host commands
