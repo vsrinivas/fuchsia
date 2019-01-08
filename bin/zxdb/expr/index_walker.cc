@@ -23,7 +23,7 @@ namespace {
 // does "Foo < Bar>" stop considering the name at the space.
 inline bool IsNameEnd(char ch) { return isspace(ch) || ch == '<'; }
 
-}  // namespce
+}  // namespace
 
 IndexWalker::IndexWalker(const ModuleSymbolIndex* index) {
   path_.push_back(&index->root());
@@ -153,7 +153,7 @@ bool IndexWalker::IsIndexStringBeyondName(std::string_view index_name,
 
   // When the first name.size() characters of the index string aren't the
   // same as the name, we don't need to worry about templates or anything
-  // and can just reutrn that comparison.
+  // and can just return that comparison.
   std::string_view index_prefix = index_name.substr(0, name.size());
   int prefix_compare = index_prefix.compare(name);
   if (prefix_compare != 0)
