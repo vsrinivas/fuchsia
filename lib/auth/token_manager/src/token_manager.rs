@@ -2,16 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::{
-    AuthContextSupplier, AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError,
-};
+use crate::{AuthProviderSupplier, ResultExt, TokenManagerContext, TokenManagerError};
 use auth_cache::{AuthCacheError, CacheKey, FirebaseAuthToken, OAuthToken, TokenCache};
 use auth_store::file::AuthDbFile;
 use auth_store::{AuthDb, AuthDbError, CredentialKey, CredentialValue};
 use failure::format_err;
 use fidl;
 use fidl::encoding::OutOfLine;
-use fidl::endpoints::ClientEnd;
+use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_auth::{
     AppConfig, AssertionJwtParams, AttestationJwtParams, AttestationSignerMarker,
     AuthProviderProxy, AuthProviderStatus, AuthenticationUiContextMarker, CredentialEcKey, Status,
@@ -36,11 +34,9 @@ type TokenManagerResult<T> = Result<T, TokenManagerError>;
 
 /// The supplier references and mutable state used to create, store, and cache authentication
 /// tokens for a particular user across a range of third party services.
-pub struct TokenManager<P: AuthProviderSupplier, C: AuthContextSupplier> {
-    /// An object capable of supplying AuthProviders connection.
-    auth_provider_supplier: P,
-    /// An object capable of supplying AuthenticationUIContexts.
-    auth_context_supplier: C,
+pub struct TokenManager<T: AuthProviderSupplier> {
+    /// An object capable of supplying AuthProvider connections.
+    auth_provider_supplier: T,
     /// A cache of proxies for previously used connections to AuthProviders.
     auth_providers: Mutex<HashMap<String, Arc<AuthProviderProxy>>>,
     /// A persistent store of long term credentials.
@@ -49,18 +45,15 @@ pub struct TokenManager<P: AuthProviderSupplier, C: AuthContextSupplier> {
     token_cache: Mutex<TokenCache>,
 }
 
-impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
+impl<T: AuthProviderSupplier> TokenManager<T> {
     /// Creates a new TokenManager.
-    pub fn new(
-        db_path: &Path, auth_provider_supplier: P, auth_context_supplier: C,
-    ) -> Result<Self, failure::Error> {
+    pub fn new(db_path: &Path, auth_provider_supplier: T) -> Result<Self, failure::Error> {
         let token_store = AuthDbFile::new(db_path)
             .map_err(|err| format_err!("Error creating AuthDb at {:?}, {:?}", db_path, err))?;
         let token_cache = TokenCache::new(CACHE_SIZE);
 
         Ok(TokenManager {
             auth_provider_supplier,
-            auth_context_supplier,
             auth_providers: Mutex::new(HashMap::new()),
             token_store: Mutex::new(Box::new(token_store)),
             token_cache: Mutex::new(token_cache),
@@ -80,10 +73,9 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
     /// Handles a single request to the TokenManager by dispatching to more specific functions for
     /// each method.
     pub async fn handle_request<'a>(
-        &'a self, _context: &'a TokenManagerContext, req: TokenManagerRequest,
+        &'a self, context: &'a TokenManagerContext, req: TokenManagerRequest,
     ) -> Result<(), failure::Error> {
-        // TODO(jsankey): The C++ implmentation ignores application_url. We supply it via the
-        // context, but should decide how to handle it.
+        // TODO(jsankey): Determine how best to enforce the application_url in context.
         match req {
             TokenManagerRequest::Authorize {
                 app_config,
@@ -93,6 +85,7 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
                 auth_code,
                 responder,
             } => responder.send_result(await!(self.authorize(
+                context,
                 app_config,
                 auth_ui_context,
                 user_profile_id,
@@ -143,16 +136,16 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         }
     }
 
-    /// Performs initial authorization for a user_profile.
-    /// TODO: |app_scopes| will be used in the future for Authenticators.
-    async fn authorize(
-        &self, app_config: AppConfig,
+    /// Implements the FIDL TokenManager.Authorize method.
+    async fn authorize<'a>(
+        &'a self, context: &'a TokenManagerContext, app_config: AppConfig,
         _auth_ui_context: Option<ClientEnd<AuthenticationUiContextMarker>>,
         user_profile_id: Option<String>, app_scopes: Vec<String>, auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
-        // TODO(jsankey): Once we're closer to Topaz actually supplying it, pass through
-        // auth_ui_context and use it as an alternative to the auth UI context supplied at
-        // token manager construction (AUTH-110).
+        // TODO(jsankey): Currently auth_ui_context is neither supplied by Topaz nor allowed to
+        // override the auth UI context supplied at token manager construction (AUTH-110).
+        // Depending on the outcome of design discussions either pass it through or remove it
+        // entirely.
         // TODO(ukode, jsankey): This iotid check against the auth_provider_type is brittle and is
         // only a short-term solution. Eventually, this information will be coming from the
         // AuthProviderConfig params in some form.
@@ -161,28 +154,38 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
             .to_ascii_lowercase()
             .contains("iotid")
         {
-            await!(self.handle_iotid_authorize(app_config, user_profile_id, app_scopes, auth_code))
+            await!(self.handle_iotid_authorize(
+                context,
+                app_config,
+                user_profile_id,
+                app_scopes,
+                auth_code
+            ))
         } else {
-            await!(self.handle_authorize(app_config, user_profile_id, app_scopes, auth_code))
+            await!(self.handle_authorize(context, app_config, user_profile_id, app_scopes))
         }
     }
 
-    /// Performs authorization for connected devices flow for the supplied 'AppConfig' and returns
-    /// an 'UserProfileInfo' on successful user consent.
-    async fn handle_iotid_authorize(
-        &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
-        auth_code: Option<String>,
+    /// Implements the FIDL TokenManager.Authorize method using an AuthProvider that supports
+    /// IoT ID.
+    async fn handle_iotid_authorize<'a>(
+        &'a self, context: &'a TokenManagerContext, app_config: AppConfig,
+        user_profile_id: Option<String>, _app_scopes: Vec<String>, auth_code: Option<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
-        let ui_context = self.auth_context_supplier.get()?;
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
+        let (ui_context_client_end, ui_context_server_end) =
+            create_endpoints().token_manager_status(Status::UnknownError)?;
+        context
+            .auth_ui_context_provider
+            .get_authentication_ui_context(ui_context_server_end)
+            .token_manager_status(Status::InvalidAuthContext)?;
+
         // TODO(ukode): Create a new attestation signer handle for each request using the device
         // attestation key with better error handling.
-        let (_server_chan, client_chan) = zx::Channel::create()
-            .token_manager_status(Status::UnknownError)
-            .expect("Failed to create attestation_signer");
-        let attestation_signer = ClientEnd::<AttestationSignerMarker>::new(client_chan);
+        let (attestation_signer_client_end, _) =
+            create_endpoints().token_manager_status(Status::UnknownError)?;
 
         // TODO(ukode): Add product root certificates and device attestation certificate to this
         // certificate chain.
@@ -204,9 +207,9 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
 
         let (status, credential, _access_token, auth_challenge, user_profile_info) = await!(
             auth_provider_proxy.get_persistent_credential_from_attestation_jwt(
-                attestation_signer,
+                attestation_signer_client_end,
                 &mut attestation_jwt_params,
-                Some(ui_context),
+                Some(ui_context_client_end),
                 user_profile_id.as_ref().map(|x| &**x),
             )
         )
@@ -236,18 +239,27 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         }
     }
 
-    /// Performs OAuth authorization for the supplied 'AppConfig' and returns an 'UserProfileInfo'
-    /// on successful user consent.
-    async fn handle_authorize(
-        &self, app_config: AppConfig, user_profile_id: Option<String>, _app_scopes: Vec<String>,
-        _auth_code: Option<String>,
+    /// Implements the FIDL TokenManager.Authorize method using an AuthProvider that does not
+    /// support IoT ID.
+    async fn handle_authorize<'a>(
+        &'a self, context: &'a TokenManagerContext, app_config: AppConfig,
+        user_profile_id: Option<String>, _app_scopes: Vec<String>,
     ) -> TokenManagerResult<UserProfileInfo> {
-        let ui_context = self.auth_context_supplier.get()?;
         let auth_provider_type = &app_config.auth_provider_type;
         let auth_provider_proxy = await!(self.get_auth_provider_proxy(auth_provider_type))?;
 
+        let (ui_context_client_end, ui_context_server_end) =
+            create_endpoints().token_manager_status(Status::UnknownError)?;
+        context
+            .auth_ui_context_provider
+            .get_authentication_ui_context(ui_context_server_end)
+            .token_manager_status(Status::InvalidAuthContext)?;
+
         let (status, credential, user_profile_info) = await!(auth_provider_proxy
-            .get_persistent_credential(Some(ui_context), user_profile_id.as_ref().map(|x| &**x),))
+            .get_persistent_credential(
+                Some(ui_context_client_end),
+                user_profile_id.as_ref().map(|x| &**x),
+            ))
         .map_err(|err| {
             self.discard_auth_provider_proxy(auth_provider_type);
             TokenManagerError::new(Status::AuthProviderServerError).with_cause(err)
@@ -269,7 +281,7 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         }
     }
 
-    /// Sends a downscoped OAuth access token for a given `AppConfig`, user, and set of scopes.
+    /// Implements the FIDL TokenManager.GetAccessToken method.
     async fn get_access_token(
         &self, app_config: AppConfig, user_profile_id: String, app_scopes: Vec<String>,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
@@ -309,8 +321,8 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         }
     }
 
-    /// Exchanges an existing user grant for supplied 'AppConfig' to a shortlived access token
-    /// 'AuthToken' using the connected devices flow.
+    /// Implements the FIDL TokenManager.GetAccessToken method using an auth provider that supports
+    /// IoT ID.
     async fn handle_iotid_get_access_token(
         &self, app_config: AppConfig, user_profile_id: String, refresh_token: String,
         app_scopes: Vec<String>, cache_key: CacheKey,
@@ -382,8 +394,8 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         }
     }
 
-    /// Exchanges an existing user grant for supplied 'AppConfig' to a shortlived access token
-    /// 'AuthToken' using the traditional OAuth flow.
+    /// Implements the FIDL TokenManager.GetAccessToken method using an auth provider that does not
+    /// support IoT ID.
     async fn handle_get_access_token(
         &self, app_config: AppConfig, refresh_token: String, app_scopes: Vec<String>,
         cache_key: CacheKey,
@@ -410,7 +422,7 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         Ok(native_token)
     }
 
-    /// Returns a JWT Identity token for a given `AppConfig`, user, and audience.
+    /// Implements the FIDL TokenManager.GetIdToken method.
     async fn get_id_token(
         &self, app_config: AppConfig, user_profile_id: String, audience: Option<String>,
     ) -> TokenManagerResult<Arc<OAuthToken>> {
@@ -447,8 +459,7 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         Ok(native_token)
     }
 
-    /// Returns a Firebase a given `AppConfig`, user, audience, and Firebase API key, creating an
-    /// ID token if necessary.
+    /// Implements the FIDL TokenManager.GetFirebaseToken method.
     async fn get_firebase_token(
         &self, app_config: AppConfig, user_profile_id: String, audience: String, api_key: String,
     ) -> TokenManagerResult<Arc<FirebaseAuthToken>> {
@@ -484,7 +495,10 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         Ok(native_token)
     }
 
-    /// Deletes any existing tokens for a user in both the database and cache.
+    /// Implements the FIDL TokenManager.DeleteAllTokens method.
+    ///
+    /// This deletes any existing tokens for a user in both the database and cache and requests
+    /// that the service provider revoke them.
     async fn delete_all_tokens(
         &self, app_config: AppConfig, user_profile_id: String,
     ) -> TokenManagerResult<()> {
@@ -530,7 +544,8 @@ impl<P: AuthProviderSupplier, C: AuthContextSupplier> TokenManager<P, C> {
         Ok(())
     }
 
-    /// Returns a vector of all known accounts matching the supplied auth_provider_type.
+
+    /// Implements the FIDL TokenManager.ListProfileIds method.
     fn list_profile_ids(&self, app_config: AppConfig) -> TokenManagerResult<Vec<String>> {
         let token_store = self.token_store.lock();
         Ok(token_store

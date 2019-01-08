@@ -17,7 +17,6 @@
 #![deny(missing_docs)]
 #![feature(async_await, await_macro, futures_api)]
 
-mod auth_context_supplier;
 mod auth_provider_supplier;
 mod token_manager_factory;
 

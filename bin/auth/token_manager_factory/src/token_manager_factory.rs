@@ -2,13 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::auth_context_supplier::AuthContextSupplier;
 use crate::auth_provider_supplier::AuthProviderSupplier;
 use failure::{Error, ResultExt};
-use fidl::endpoints::ClientEnd;
 use fidl_fuchsia_auth::{
-    AuthProviderConfig, AuthenticationContextProviderMarker, TokenManagerFactoryRequest,
-    TokenManagerFactoryRequestStream,
+    AuthProviderConfig, TokenManagerFactoryRequest, TokenManagerFactoryRequestStream,
 };
 use fuchsia_async as fasync;
 use futures::prelude::*;
@@ -24,7 +21,7 @@ const DB_DIR: &str = "/data/auth";
 // The file suffix to use for token manager databases. This string is appended to the user id.
 const DB_SUFFIX: &str = "_token_store.json";
 
-type TokenManager = token_manager::TokenManager<AuthProviderSupplier, AuthContextSupplier>;
+type TokenManager = token_manager::TokenManager<AuthProviderSupplier>;
 
 /// A factory to create instances of the TokenManager for individual users.
 pub struct TokenManagerFactory {
@@ -91,12 +88,15 @@ impl TokenManagerFactory {
                 };
 
                 let token_manager = self
-                    .get_token_manager(user_id, auth_provider_configs, auth_context_provider)
+                    .get_token_manager(user_id, auth_provider_configs)
                     .context("Error creating TokenManager")?;
-                let context = TokenManagerContext { application_url };
+                let context = TokenManagerContext {
+                    application_url,
+                    auth_ui_context_provider: auth_context_provider.into_proxy()?,
+                };
                 let stream = token_manager_server_end
                     .into_stream()
-                    .context("Error creation request stream")?;
+                    .context("Error creating request stream")?;
 
                 fasync::spawn(
                     async move {
@@ -148,7 +148,6 @@ impl TokenManagerFactory {
     /// and added to the map if not.
     fn get_token_manager(
         &self, user_id: String, auth_provider_configs: Vec<AuthProviderConfig>,
-        auth_context_provider: ClientEnd<AuthenticationContextProviderMarker>,
     ) -> Result<Arc<TokenManager>, Error> {
         let mut user_to_token_manager = self.user_to_token_manager.lock();
         if let Some(token_manager) = user_to_token_manager.get(&user_id) {
@@ -160,7 +159,6 @@ impl TokenManagerFactory {
         let token_manager = Arc::new(TokenManager::new(
             &db_path,
             self.get_auth_provider_supplier(auth_provider_configs)?,
-            AuthContextSupplier::from_client_end(auth_context_provider)?,
         )?);
         user_to_token_manager.insert(user_id, Arc::clone(&token_manager));
         Ok(token_manager)

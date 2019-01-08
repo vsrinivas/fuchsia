@@ -16,7 +16,7 @@
 #![feature(async_await, await_macro, futures_api)]
 
 use fidl::endpoints::ClientEnd;
-use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationUiContextMarker};
+use fidl_fuchsia_auth::{AuthProviderMarker, AuthenticationContextProviderProxy};
 use futures::future::FutureObj;
 
 mod auth_provider_connection;
@@ -32,6 +32,9 @@ pub use crate::token_manager::TokenManager;
 pub struct TokenManagerContext {
     /// The application that this request is being sent on behalf of.
     pub application_url: String,
+    /// An `AuthenticationContextProviderProxy` capable of generating new `AuthenticationUiContext`
+    /// channels.
+    pub auth_ui_context_provider: AuthenticationContextProviderProxy,
 }
 
 /// A type capable of supplying channels to communicate with components implementing the
@@ -42,11 +45,4 @@ pub trait AuthProviderSupplier {
     fn get<'a>(
         &'a self, auth_provider_type: &'a str,
     ) -> FutureObj<'a, Result<ClientEnd<AuthProviderMarker>, TokenManagerError>>;
-}
-
-/// A type capable of supplying channels to communicate with `AuthenticationUiContext` instances.
-pub trait AuthContextSupplier {
-    /// Creates a new `AuthenticationUiContext` and returns the `ClientEnd` for communicating with
-    /// it.
-    fn get(&self) -> Result<ClientEnd<AuthenticationUiContextMarker>, TokenManagerError>;
 }
