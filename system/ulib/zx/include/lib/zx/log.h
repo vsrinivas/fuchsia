@@ -30,11 +30,13 @@ public:
     static zx_status_t create(uint32_t flags, log* result);
 
     zx_status_t write(uint32_t len, const void* buffer, uint32_t flags) const {
-        return zx_log_write(get(), len, buffer, flags);
+        // TODO(ZX-2184): log versions being removed.
+        return zx_debuglog_write(get(), flags, buffer, len);
     }
 
     zx_status_t read(uint32_t len, void* buffer, uint32_t flags) const {
-        return zx_log_read(get(), len, buffer, flags);
+        // TODO(ZX-2184): log versions being removed.
+        return zx_debuglog_read(get(), flags, buffer, len);
     }
 };
 

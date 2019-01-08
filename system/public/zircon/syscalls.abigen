@@ -763,16 +763,6 @@ syscall futex_wake_handle_close_thread_exit vdsocall noreturn
 
 # Logging
 
-#! handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_WRITE.
-syscall log_write
-    (handle: zx_handle_t, len: uint32_t, buffer: any[len] IN, options: uint32_t)
-    returns (zx_status_t);
-
-#! handle must be of type ZX_OBJ_TYPE_LOG and have ZX_RIGHT_READ.
-syscall log_read
-    (handle: zx_handle_t, len: uint32_t, buffer: any[len] OUT, options: uint32_t)
-    returns (zx_status_t);
-
 # TODO(ZX-2967): handle == ZX_HANDLE_INVALID accepted.
 #! resource must have resource kind ZX_RSRC_KIND_ROOT.
 syscall debuglog_create

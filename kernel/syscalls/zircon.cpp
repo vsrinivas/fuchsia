@@ -249,16 +249,6 @@ zx_status_t sys_debuglog_read(zx_handle_t log_handle, uint32_t options,
     return static_cast<zx_status_t>(actual);
 }
 
-// zx_status_t zx_log_write
-zx_status_t sys_log_write(zx_handle_t log_handle, uint32_t len, user_in_ptr<const void> ptr, uint32_t options) {
-    return sys_debuglog_write(log_handle, options, ptr, len);
-}
-
-// zx_status_t zx_log_read
-zx_status_t sys_log_read(zx_handle_t log_handle, uint32_t len, user_out_ptr<void> ptr, uint32_t options) {
-    return sys_debuglog_read(log_handle, options, ptr, len);
-}
-
 // zx_status_t zx_cprng_draw_once
 zx_status_t sys_cprng_draw_once(user_out_ptr<void> buffer, size_t len) {
     if (len > kMaxCPRNGDraw)
