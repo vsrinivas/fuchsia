@@ -211,7 +211,7 @@ impl Client {
     }
 }
 
-/// A `TaskQueue` enables asyncronous operations to post tasks back to the
+/// A `TaskQueue` enables asynchronous operations to post tasks back to the
 /// `Client`.
 ///
 /// Ex:
@@ -225,7 +225,7 @@ impl Client {
 pub struct TaskQueue(mpsc::UnboundedSender<Task>);
 
 impl TaskQueue {
-    /// Posts the closure to be run as soon as possilbe.
+    /// Posts the closure to be run as soon as possible.
     pub fn post<F>(&self, f: F)
     where
         F: FnMut(&mut Client) -> Result<(), Error> + 'static,

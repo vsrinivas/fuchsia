@@ -15,7 +15,7 @@ use crate::object::MessageReceiver;
 /// A proper registry implementation can support adding and removing |Global|s
 /// at runtime. Since we do not yet support these features, we will only allow
 /// |Global|s to be added at initialization time and then leave the |Registry|
-/// immutatble.
+/// immutable.
 ///
 /// Note: the |Registry| only works for single-threaded event loops.
 ///

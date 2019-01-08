@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 ///! This module provides types for managing the set of wayland objects for a
 ///! connection. The |ObjectMap| associates a numeric object id with a
-///! |MessageReceiver| that can intepret the message and provide the logic to
+///! |MessageReceiver| that can interpret the message and provide the logic to
 ///! implement the interface contract for that object.
 ///!
 ///! At a high level, the |RequestReceiver<I:Interface>| trait allows for a
@@ -28,7 +28,7 @@ use crate::client::Client;
 /// The |ObjectMap| holds the state of active objects for a single connection.
 ///
 /// When a new connection is established, the server should populate the
-/// |ObjectMap| with the "wl_display" singleton object. From the the client can
+/// |ObjectMap| with the "wl_display" singleton object. From the client can
 /// query the registry and bind new objects to the interfaces the client
 /// understands.
 pub(crate) struct ObjectMap {
@@ -99,7 +99,7 @@ impl ObjectMap {
         }
     }
 
-    /// Looks up the recevier function and the message structure from the map.
+    /// Looks up the receiver function and the message structure from the map.
     pub(crate) fn lookup_internal(
         &self, header: &wl::MessageHeader,
     ) -> Result<(MessageReceiverFn, &'static wl::MessageSpec), Error> {

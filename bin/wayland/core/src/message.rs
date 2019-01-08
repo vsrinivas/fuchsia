@@ -128,7 +128,7 @@ fn compute_padding(size: u64) -> usize {
 }
 
 impl Message {
-    /// Initalize an empty Message.
+    /// Initialize an empty Message.
     pub fn new() -> Self {
         Message {
             byte_buf: io::Cursor::new(Vec::new()),
@@ -167,7 +167,7 @@ impl Message {
         (self.byte_buf.into_inner(), self.handle_buf)
     }
 
-    /// Converts the value in |arg| into the appopriate wire format
+    /// Converts the value in |arg| into the appropriate wire format
     /// serialization.
     pub fn write_arg(&mut self, arg: Arg) -> io::Result<()> {
         match arg {
@@ -400,7 +400,7 @@ mod tests {
     fn string_test() {
         let mut message = Message::new();
 
-        // 4 bytes length + 1 null termating byte + 3 pad bytes
+        // 4 bytes length + 1 null terminating byte + 3 pad bytes
         let s0 = "";
         message.clear();
         assert!(message.write_arg(Arg::String(s0.to_owned())).is_ok());
@@ -409,7 +409,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s0));
 
-        // 4 bytes length + 1 char + 1 null termating byte + 2 pad bytes
+        // 4 bytes length + 1 char + 1 null terminating byte + 2 pad bytes
         let s1 = "1";
         message.clear();
         assert!(message.write_arg(Arg::String(s1.to_owned())).is_ok());
@@ -418,7 +418,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s1));
 
-        // 4 bytes length + 2 char + 1 null termating byte + 1 pad bytes
+        // 4 bytes length + 2 char + 1 null terminating byte + 1 pad bytes
         let s2 = "22";
         message.clear();
         assert!(message.write_arg(Arg::String(s2.to_owned())).is_ok());
@@ -427,7 +427,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s2));
 
-        // 4 bytes length + 3 char + 1 null termating byte + 0 pad bytes
+        // 4 bytes length + 3 char + 1 null terminating byte + 0 pad bytes
         let s3 = "333";
         message.clear();
         assert!(message.write_arg(Arg::String(s3.to_owned())).is_ok());
@@ -436,7 +436,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s3));
 
-        // 4 bytes length + 4 char + 1 null termating byte + 3 pad bytes
+        // 4 bytes length + 4 char + 1 null terminating byte + 3 pad bytes
         let s4 = "4444";
         message.clear();
         assert!(message.write_arg(Arg::String(s4.to_owned())).is_ok());
@@ -445,7 +445,7 @@ mod tests {
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s4));
 
-        // 4 bytes length + 5 char + 1 null termating byte + 2 pad bytes
+        // 4 bytes length + 5 char + 1 null terminating byte + 2 pad bytes
         let s5 = "55555";
         message.clear();
         assert!(message.write_arg(Arg::String(s5.to_owned())).is_ok());

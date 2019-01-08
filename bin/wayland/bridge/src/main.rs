@@ -43,7 +43,7 @@ use crate::subcompositor::*;
 #[cfg(test)]
 mod test_protocol;
 
-/// The main FIDL server that listens for incomming client connection
+/// The main FIDL server that listens for incoming client connection
 /// requests.
 struct WaylandDispatcher {
     /// The display handles the creation of new clients. Must be

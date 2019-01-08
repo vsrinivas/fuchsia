@@ -8,7 +8,7 @@ use fuchsia_wayland_core as wl;
 use crate::client::Client;
 use crate::object::{ObjectRef, RequestReceiver};
 
-///! An example of a simple wayland interface that uses the primives in this
+///! An example of a simple wayland interface that uses the primitives in this
 ///! crate.
 
 /// For simplicity, our test interface uses the same enum for both requests and

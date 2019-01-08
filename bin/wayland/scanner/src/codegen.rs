@@ -104,7 +104,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Me
     }
 
     /// Emits an enum that describes the set of messages for a single interface.
-    /// Each interface will have a message enum for both Reqests and Events.
+    /// Each interface will have a message enum for both Requests and Events.
     ///
     /// Ex:
     ///  pub enum MyInterfaceRequest {
@@ -177,7 +177,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Me
 
             // We're using format strings to build a format string, so this is
             // a little confusing. |message_args| are the set of strings that
-            // will be joined to form the format string litteral. |format_args|
+            // will be joined to form the format string literal. |format_args|
             // are the rust expressions that will be used by the format string.
             //
             // Anytime we put a '{{}}' into |message_args|, we'll need a
