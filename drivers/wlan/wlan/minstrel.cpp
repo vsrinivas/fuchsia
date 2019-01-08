@@ -13,7 +13,7 @@ namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
 // If the data rate is too low, do not probe more than twice per update interval
 static constexpr uint8_t kMaxSlowProbe = 2;
-// If succcess rate is below (1 - kProbabilityThreshold), only probe once every this many cycles.
+// If success rate is below (1 - kProbabilityThreshold), only probe once every this many cycles.
 static constexpr uint8_t kDeadProbeCycleCount = 32;
 
 zx::duration HeaderTxTimeErp() {
@@ -536,7 +536,7 @@ bool MinstrelRateSelector::IsActive() const {
 }
 
 namespace debug {
-// This macro requires char buf[] and size_t offset variable defintions
+// This macro requires char buf[] and size_t offset variable definitions
 // in each function.
 #define BUFFER(args...)                                                   \
     do {                                                                  \

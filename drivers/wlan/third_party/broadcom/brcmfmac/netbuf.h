@@ -40,7 +40,7 @@ extern bool error_happened;
 /*
  * Fields:
  *
- * protcol - Set on RX from the 2 bytes following the MAC addresses in the Ethernet-format packet.
+ * protocol - Set on RX from the 2 bytes following the MAC addresses in the Ethernet-format packet.
  * priority - The priority of this packet
  * len - The length of data stored
  * data - Pointer to the start of data - may be moved by shrink_head/grow_head

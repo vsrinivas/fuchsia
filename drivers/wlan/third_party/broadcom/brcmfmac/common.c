@@ -317,7 +317,7 @@ zx_status_t brcmf_c_preinit_dcmds(struct brcmf_if* ifp) {
     strcpy((char*)buf, "ver");
     err = brcmf_fil_iovar_data_get(ifp, "ver", buf, sizeof(buf));
     if (err != ZX_OK) {
-        brcmf_err("Retreiving version information failed, %d\n", err);
+        brcmf_err("Retrieving version information failed, %d\n", err);
         goto done;
     }
     ptr = (char*)buf;

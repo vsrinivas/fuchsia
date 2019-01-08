@@ -847,7 +847,7 @@ static int ath10k_sdio_mbox_proc_pending_irqs(struct ath10k* ar, bool* done) {
 
 out:
     /* An optimization to bypass reading the IRQ status registers
-     * unecessarily which can re-wake the target, if upper layers
+     * unnecessarily which can re-wake the target, if upper layers
      * determine that we are in a low-throughput mode, we can rely on
      * taking another interrupt rather than re-checking the status
      * registers which can re-wake the target.
@@ -1021,7 +1021,7 @@ static int ath10k_sdio_bmi_exchange_msg(struct ath10k* ar, void* req, uint32_t r
      *        Wait for first 4 bytes to be in FIFO
      *        If CONSERVATIVE_BMI_READ is enabled, also wait for
      *        a BMI command credit, which indicates that the ENTIRE
-     *        response is available in the the FIFO
+     *        response is available in the FIFO
      *
      *  CASE 3: length > 128
      *        Wait for the first 4 bytes to be in FIFO

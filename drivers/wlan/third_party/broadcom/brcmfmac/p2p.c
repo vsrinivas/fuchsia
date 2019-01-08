@@ -169,7 +169,7 @@ struct brcmf_p2p_pub_act_frame {
  * @OUI[3]: OUI - P2P_OUI
  * @type: OUI Type - P2P_VER
  * @subtype: OUI Subtype - P2P_AF_*
- * @dialog_token: nonzero, identifies req/resp tranaction
+ * @dialog_token: nonzero, identifies req/resp transaction
  * @elts[1]: Variable length information elements.
  */
 struct brcmf_p2p_action_frame {
@@ -557,7 +557,7 @@ exit:
 /**
  * brcmf_p2p_notify_listen_complete() - p2p listen has completed.
  *
- * @ifp: interfac control.
+ * @ifp: interface control.
  * @e: event message. Not used, to make it usable for fweh event dispatcher.
  * @data: payload of message. Not used.
  *
@@ -585,7 +585,7 @@ zx_status_t brcmf_p2p_notify_listen_complete(struct brcmf_if* ifp, const struct 
 /**
  * brcmf_p2p_cancel_remain_on_channel() - cancel p2p listen state.
  *
- * @ifp: interfac control.
+ * @ifp: interface control.
  *
  */
 void brcmf_p2p_cancel_remain_on_channel(struct brcmf_if* ifp) {
@@ -742,11 +742,11 @@ static void brcmf_p2p_stop_wait_next_action_frame(struct brcmf_cfg80211_info* cf
 }
 
 /**
- * brcmf_p2p_gon_req_collision() - Check if go negotiaton collission
+ * brcmf_p2p_gon_req_collision() - Check if go negotiation collision
  *
  * @p2p: p2p device info struct.
  *
- * return true if recevied action frame is to be dropped.
+ * return true if received action frame is to be dropped.
  */
 static bool brcmf_p2p_gon_req_collision(struct brcmf_p2p_info* p2p, uint8_t* mac) {
     struct brcmf_cfg80211_info* cfg = p2p->cfg;
@@ -792,7 +792,7 @@ static bool brcmf_p2p_gon_req_collision(struct brcmf_p2p_info* p2p, uint8_t* mac
 /**
  * brcmf_p2p_notify_action_frame_rx() - received action frame.
  *
- * @ifp: interfac control.
+ * @ifp: interface control.
  * @e: event message. Not used, to make it usable for fweh event dispatcher.
  * @data: payload of message, containing action frame data.
  *
@@ -889,7 +889,7 @@ zx_status_t brcmf_p2p_notify_action_frame_rx(struct brcmf_if* ifp, const struct 
 /**
  * brcmf_p2p_notify_action_tx_complete() - transmit action frame complete
  *
- * @ifp: interfac control.
+ * @ifp: interface control.
  * @e: event message. Not used, to make it usable for fweh event dispatcher.
  * @data: not used.
  *
@@ -1212,7 +1212,7 @@ exit:
     brcmf_clear_bit_in_array(BRCMF_P2P_STATUS_SENDING_ACT_FRAME, &p2p->status);
 
     /* WAR: sometimes dongle does not keep the dwell time of 'actframe'.
-     * if we coundn't get the next action response frame and dongle does
+     * if we couldn't get the next action response frame and dongle does
      * not keep the dwell time, go to listen state again to get next action
      * response frame.
      */
@@ -1331,7 +1331,7 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
     if_request.chspec = chanspec;
     memcpy(if_request.addr, p2p->int_addr, sizeof(if_request.addr));
 
-    // Every code path but this one returns ZX_ERR_UNAVAILBLE if another event was left armed.
+    // Every code path but this one returns ZX_ERR_UNAVAILABLE if another event was left armed.
     // It may be a bug that the test was omitted here, or maybe this is a special case that
     // needs to be concurrent (but I doubt it, because the code doesn't support concurrency
     // at all). After we get the wlan-generic driver, and see whether we need to support

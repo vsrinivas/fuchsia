@@ -19,7 +19,7 @@ namespace debug {
 const size_t kBytesLenLimit = 16;
 
 // This macro is local within wlan::debug namespace,
-// and requires char buf[] and size_t offset variable defintions
+// and requires char buf[] and size_t offset variable definitions
 // in each function.
 #define BUFFER(args...)                                                   \
     do {                                                                  \

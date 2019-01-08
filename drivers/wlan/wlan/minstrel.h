@@ -40,7 +40,7 @@ struct TxStats {
     float probability =
         1.0f - kMinstrelProbabilityThreshold;  // Moving Average Probability of success.
     float cur_tp = 0.0;                        // Expected average throughput.
-    size_t success_total = 0;                  // cumulative succcess counts.
+    size_t success_total = 0;                  // cumulative success counts.
     size_t attempts_total = 0;                 // cumulative attempts.
     size_t probes_total = 0;
     // Delay probe if probability < (1 - kMinstrelProbabilityThreshold).
