@@ -99,17 +99,15 @@ void DeauthenticatedState::FailAuthentication(const status_code::StatusCode st_c
 AuthenticatingState::AuthenticatingState(RemoteClient* client) : BaseState(client) {}
 
 void AuthenticatingState::OnEnter() {
-    auto deadline = client_->DeadlineAfterTus(kAuthenticatingTimeoutTu);
-    client_->ScheduleTimer(deadline, &auth_timeout_);
+    client_->ScheduleTimer(kAuthenticatingTimeoutTu, &auth_timeout_);
 }
 
 void AuthenticatingState::OnExit() {
-    auth_timeout_.Cancel();
+    client_->CancelTimer(auth_timeout_);
 }
 
-void AuthenticatingState::HandleTimeout(zx::time now) {
-    if (auth_timeout_.Triggered(now)) {
-        auth_timeout_.Cancel();
+void AuthenticatingState::HandleTimeout(TimeoutId id) {
+    if (auth_timeout_ == id) {
         warnf("[client] [%s] timed out authenticating\n", client_->addr().ToString().c_str());
         MoveToState<DeauthenticatedState>(DeauthenticatedState::MoveReason::FAILED_AUTH);
     }
@@ -120,7 +118,7 @@ zx_status_t AuthenticatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         ZX_DEBUG_ASSERT(client_->addr() ==
                         common::MacAddr(auth_resp->body()->peer_sta_address.data()));
         // Received request which we've been waiting for. Timer can get canceled.
-        auth_timeout_.Cancel();
+        client_->CancelTimer(auth_timeout_);
 
         status_code::StatusCode st_code = ToStatusCode(auth_resp->body()->result_code);
         return FinalizeAuthenticationAttempt(st_code);
@@ -149,17 +147,15 @@ AuthenticatedState::AuthenticatedState(RemoteClient* client) : BaseState(client)
 
 void AuthenticatedState::OnEnter() {
     // Start timeout and wait for Association requests.
-    auto deadline = client_->DeadlineAfterTus(kAuthenticationTimeoutTu);
-    client_->ScheduleTimer(deadline, &auth_timeout_);
+    client_->ScheduleTimer(kAuthenticationTimeoutTu, &auth_timeout_);
 }
 
 void AuthenticatedState::OnExit() {
-    auth_timeout_.Cancel();
+    client_->CancelTimer(auth_timeout_);
 }
 
-void AuthenticatedState::HandleTimeout(zx::time now) {
-    if (auth_timeout_.Triggered(now)) {
-        auth_timeout_.Cancel();
+void AuthenticatedState::HandleTimeout(TimeoutId id) {
+    if (auth_timeout_ == id) {
         bool send_deauth_frame = true;
         MoveToState<DeauthenticatingState>(wlan_mlme::ReasonCode::REASON_INACTIVITY,
                                            send_deauth_frame);
@@ -221,8 +217,8 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
 
     if (!ssid) { return; }
 
-    // Received a valid association request. Timer can get canceled.
-    auth_timeout_.Cancel();
+    // Received a valid association request. We can cancel the timer now.
+    client_->CancelTimer(auth_timeout_);
     zx_status_t status = service::SendAssocIndication(
         client_->device(), client_->addr(), frame.body()->listen_interval, *ssid, rsn_body);
     if (status != ZX_OK) {
@@ -237,17 +233,15 @@ void AuthenticatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&
 AssociatingState::AssociatingState(RemoteClient* client) : BaseState(client) {}
 
 void AssociatingState::OnEnter() {
-    auto deadline = client_->DeadlineAfterTus(kAssociatingTimeoutTu);
-    client_->ScheduleTimer(deadline, &assoc_timeout_);
+    client_->ScheduleTimer(kAssociatingTimeoutTu, &assoc_timeout_);
 }
 
 void AssociatingState::OnExit() {
-    assoc_timeout_.Cancel();
+    client_->CancelTimer(assoc_timeout_);
 }
 
-void AssociatingState::HandleTimeout(zx::time now) {
-    if (assoc_timeout_.Triggered(now)) {
-        assoc_timeout_.Cancel();
+void AssociatingState::HandleTimeout(TimeoutId id) {
+    if (assoc_timeout_ == id) {
         warnf("[client] [%s] timed out associating\n", client_->addr().ToString().c_str());
         MoveToState<AuthenticatedState>();
     }
@@ -258,7 +252,7 @@ zx_status_t AssociatingState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
         ZX_DEBUG_ASSERT(client_->addr() ==
                         common::MacAddr(assoc_resp->body()->peer_sta_address.data()));
         // Received request which we've been waiting for. Timer can get canceled.
-        assoc_timeout_.Cancel();
+        client_->CancelTimer(assoc_timeout_);
 
         std::optional<uint16_t> aid = {};
         status_code::StatusCode st_code = ToStatusCode(assoc_resp->body()->result_code);
@@ -351,8 +345,7 @@ void AssociatedState::HandleAssociationRequest(MgmtFrame<AssociationRequest>&& f
 void AssociatedState::OnEnter() {
     debugbss("[client] [%s] acquired AID: %u\n", client_->addr().ToString().c_str(), aid_);
 
-    auto deadline = client_->DeadlineAfterTus(kInactivityTimeoutTu);
-    client_->ScheduleTimer(deadline, &inactive_timeout_);
+    client_->ScheduleTimer(kInactivityTimeoutTu, &inactive_timeout_);
     debugbss("[client] [%s] started inactivity timer\n", client_->addr().ToString().c_str());
 
     if (client_->bss()->IsRsn()) {
@@ -456,7 +449,7 @@ std::optional<DataFrame<LlcHeader>> AssociatedState::EthToDataFrame(const EthFra
 }
 
 void AssociatedState::OnExit() {
-    inactive_timeout_.Cancel();
+    client_->CancelTimer(inactive_timeout_);
 
     client_->device()->ClearAssoc(client_->addr());
 
@@ -536,9 +529,8 @@ zx_status_t AssociatedState::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     }
 }
 
-void AssociatedState::HandleTimeout(zx::time now) {
-    if (!inactive_timeout_.Triggered(now)) { return; }
-    inactive_timeout_.Cancel();
+void AssociatedState::HandleTimeout(TimeoutId id) {
+    if (inactive_timeout_ != id) { return; }
 
     if (active_) {
         active_ = false;
@@ -546,8 +538,7 @@ void AssociatedState::HandleTimeout(zx::time now) {
         // Client was active, restart timer.
         debugbss("[client] [%s] client is active; reset inactive timer\n",
                  client_->addr().ToString().c_str());
-        auto deadline = client_->DeadlineAfterTus(kInactivityTimeoutTu);
-        client_->ScheduleTimer(deadline, &inactive_timeout_);
+        client_->ScheduleTimer(kInactivityTimeoutTu, &inactive_timeout_);
     } else {
         active_ = false;
 
@@ -706,15 +697,13 @@ bool AssociatedState::HasBufferedFrames() const {
 
 // RemoteClient implementation.
 
-RemoteClient::RemoteClient(DeviceInterface* device, TimerManager&& timer_mgr, BssInterface* bss,
+RemoteClient::RemoteClient(DeviceInterface* device, BssInterface* bss,
                            RemoteClient::Listener* listener, const common::MacAddr& addr)
     : listener_(listener),
       device_(device),
       bss_(bss),
-      addr_(addr),
-      timer_mgr_(std::move(timer_mgr)) {
+      addr_(addr) {
     ZX_DEBUG_ASSERT(device_ != nullptr);
-    ZX_DEBUG_ASSERT(timer_mgr_.timer() != nullptr);
     ZX_DEBUG_ASSERT(bss_ != nullptr);
     debugbss("[client] [%s] spawned\n", addr_.ToString().c_str());
 
@@ -746,9 +735,8 @@ void RemoteClient::MoveToState(fbl::unique_ptr<BaseState> to) {
     state_->OnEnter();
 }
 
-void RemoteClient::HandleTimeout() {
-    zx::time now = timer_mgr_.HandleTimeout();
-    state_->HandleTimeout(now);
+void RemoteClient::HandleTimeout(TimeoutId id) {
+    state_->HandleTimeout(id);
 }
 
 void RemoteClient::HandleAnyEthFrame(EthFrame&& frame) {
@@ -771,12 +759,12 @@ zx_status_t RemoteClient::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     return state_->HandleMlmeMsg(msg);
 }
 
-zx_status_t RemoteClient::ScheduleTimer(zx::time deadline, TimedEvent* event) {
-    return timer_mgr_.Schedule(deadline, event);
+zx_status_t RemoteClient::ScheduleTimer(wlan_tu_t tus, TimeoutId* id) {
+    return bss_->ScheduleTimeout(tus, addr_, id);
 }
 
-zx::time RemoteClient::DeadlineAfterTus(wlan_tu_t tus) {
-    return timer_mgr_.Now() + WLAN_TU(tus);
+void RemoteClient::CancelTimer(TimeoutId id) {
+    return bss_->CancelTimeout(id);
 }
 
 zx_status_t RemoteClient::SendAuthentication(status_code::StatusCode result) {

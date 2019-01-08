@@ -6,6 +6,7 @@
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_AP_REMOTE_CLIENT_INTERFACE_H_
 
 #include <wlan/mlme/service.h>
+#include <wlan/mlme/timer_manager.h>
 
 namespace wlan {
 
@@ -17,7 +18,7 @@ class RemoteClientInterface {
    public:
     virtual ~RemoteClientInterface() = default;
 
-    virtual void HandleTimeout() = 0;
+    virtual void HandleTimeout(TimeoutId id) = 0;
     virtual void HandleAnyEthFrame(EthFrame&&) = 0;
     virtual void HandleAnyMgmtFrame(MgmtFrame<>&&) = 0;
     virtual void HandleAnyDataFrame(DataFrame<>&&) = 0;

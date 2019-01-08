@@ -27,6 +27,13 @@ namespace {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 struct MockBss : public BssInterface {
+    zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
+                                TimeoutId* id) {
+        return ZX_OK;
+    }
+
+    void CancelTimeout(TimeoutId id) { }
+
     const common::MacAddr& bssid() const { return bssid_; }
     uint64_t timestamp() { return 0; }
 

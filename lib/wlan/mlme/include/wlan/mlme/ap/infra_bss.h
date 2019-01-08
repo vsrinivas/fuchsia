@@ -30,7 +30,7 @@ template <typename T> class MlmeMsg;
 class InfraBss : public BssInterface, public RemoteClient::Listener {
    public:
     InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
-             const common::MacAddr& bssid);
+             const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer);
     virtual ~InfraBss();
 
     // Starts the BSS. Beacons will be sent and incoming frames are processed.
@@ -44,7 +44,11 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     void HandleAnyFrame(fbl::unique_ptr<Packet>);
     // Entry point for MLME messages except START-/STOP.request which are handled in the `ApMlme`.
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg);
-    zx_status_t HandleTimeout(const common::MacAddr& client_addr);
+
+    zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
+                                TimeoutId* id) override;
+    void CancelTimeout(TimeoutId id) override;
+    zx_status_t HandleTimeout();
 
     // BssInterface implementation
     const common::MacAddr& bssid() const override;
@@ -98,8 +102,6 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
 
     void StopTrackingClient(const common::MacAddr& client_addr);
 
-    zx_status_t CreateClientTimer(const common::MacAddr& client_addr,
-                                  fbl::unique_ptr<Timer>* out_timer);
     // Returns `true` if a frame with the given destination should get buffered.
     bool ShouldBufferFrame(const common::MacAddr& dest) const;
     zx_status_t BufferFrame(fbl::unique_ptr<Packet> packet);
@@ -119,6 +121,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     // MLME-START.request holds all information required to correctly configure
     // and start a BSS.
     ::fuchsia::wlan::mlme::StartRequest start_req_;
+    TimerManager2<common::MacAddr> timer_mgr_;
 };
 
 }  // namespace wlan

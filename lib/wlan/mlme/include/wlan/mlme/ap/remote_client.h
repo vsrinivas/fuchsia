@@ -34,12 +34,12 @@ class RemoteClient : public RemoteClientInterface {
                                           size_t bu_count) = 0;
     };
 
-    RemoteClient(DeviceInterface* device, TimerManager&& timer_mgr, BssInterface* bss,
-                 Listener* listener, const common::MacAddr& addr);
+    RemoteClient(DeviceInterface* device, BssInterface* bss, Listener* listener,
+                 const common::MacAddr& addr);
     ~RemoteClient();
 
     // RemoteClientInterface implementation
-    void HandleTimeout() override;
+    void HandleTimeout(TimeoutId id) override;
     void HandleAnyEthFrame(EthFrame&& frame) override;
     void HandleAnyMgmtFrame(MgmtFrame<>&& frame) override;
     void HandleAnyDataFrame(DataFrame<>&& frame) override;
@@ -62,8 +62,8 @@ class RemoteClient : public RemoteClientInterface {
     void ReportDeauthentication();
     void ReportDisassociation(aid_t aid);
 
-    zx_status_t ScheduleTimer(zx::time deadline, TimedEvent* event);
-    zx::time DeadlineAfterTus(wlan_tu_t tus);
+    zx_status_t ScheduleTimer(wlan_tu_t tus, TimeoutId* id);
+    void CancelTimer(TimeoutId id);
 
     DeviceInterface* device() { return device_; }
     BssInterface* bss() { return bss_; }
@@ -74,7 +74,6 @@ class RemoteClient : public RemoteClientInterface {
     DeviceInterface* const device_;
     BssInterface* const bss_;
     const common::MacAddr addr_;
-    TimerManager timer_mgr_;
     // Queue which holds buffered ethernet frames while the client is dozing.
     std::queue<EthFrame> bu_queue_;
     fbl::unique_ptr<BaseState> state_;
@@ -87,7 +86,7 @@ class BaseState {
 
     virtual void OnEnter() {}
     virtual void OnExit() {}
-    virtual void HandleTimeout(zx::time now) {}
+    virtual void HandleTimeout(TimeoutId id) {}
     virtual zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) { return ZX_OK; }
     virtual void HandleAnyDataFrame(DataFrame<>&&) {}
     virtual void HandleAnyMgmtFrame(MgmtFrame<>&&) {}
@@ -156,7 +155,7 @@ class AuthenticatingState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
-    void HandleTimeout(zx::time now) override;
+    void HandleTimeout(TimeoutId id) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
 
     inline const char* name() const override { return kName; }
@@ -167,7 +166,7 @@ class AuthenticatingState : public BaseState {
 
     zx_status_t FinalizeAuthenticationAttempt(const status_code::StatusCode st_code);
 
-    TimedEvent auth_timeout_;
+    TimeoutId auth_timeout_;
 };
 
 class AuthenticatedState : public BaseState {
@@ -177,7 +176,7 @@ class AuthenticatedState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
-    void HandleTimeout(zx::time now) override;
+    void HandleTimeout(TimeoutId id) override;
     void HandleAnyMgmtFrame(MgmtFrame<>&&) override;
 
     inline const char* name() const override { return kName; }
@@ -192,7 +191,7 @@ class AuthenticatedState : public BaseState {
     void HandleAssociationRequest(MgmtFrame<AssociationRequest>&&);
     void HandleDeauthentication(MgmtFrame<Deauthentication>&&);
 
-    TimedEvent auth_timeout_;
+    TimeoutId auth_timeout_;
 };
 
 class AssociatingState : public BaseState {
@@ -202,7 +201,7 @@ class AssociatingState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
-    void HandleTimeout(zx::time now) override;
+    void HandleTimeout(TimeoutId id) override;
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
 
     inline const char* name() const override { return kName; }
@@ -214,7 +213,7 @@ class AssociatingState : public BaseState {
     zx_status_t FinalizeAssociationAttempt(std::optional<uint16_t> aid,
                                            status_code::StatusCode st_code);
 
-    TimedEvent assoc_timeout_;
+    TimeoutId assoc_timeout_;
 };
 
 class AssociatedState : public BaseState {
@@ -224,7 +223,7 @@ class AssociatedState : public BaseState {
     void OnEnter() override;
     void OnExit() override;
 
-    void HandleTimeout(zx::time now) override;
+    void HandleTimeout(TimeoutId id) override;
 
     zx_status_t HandleMlmeMsg(const BaseMlmeMsg& msg) override;
     void HandleAnyDataFrame(DataFrame<>&&) override;
@@ -266,7 +265,7 @@ class AssociatedState : public BaseState {
     bool HasBufferedFrames() const;
 
     const uint16_t aid_;
-    TimedEvent inactive_timeout_;
+    TimeoutId inactive_timeout_;
     // `true` if the client was active during the last inactivity timeout.
     bool active_ = false;
     // `true` if the client entered Power Saving mode's doze state.

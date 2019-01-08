@@ -14,6 +14,7 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/mlme/service.h>
 
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 
 namespace wlan {
@@ -21,8 +22,9 @@ namespace wlan {
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 InfraBss::InfraBss(DeviceInterface* device, fbl::unique_ptr<BeaconSender> bcn_sender,
-                   const common::MacAddr& bssid)
-    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)), started_at_(0) {
+                   const common::MacAddr& bssid, fbl::unique_ptr<Timer> timer)
+    : bssid_(bssid), device_(device), bcn_sender_(std::move(bcn_sender)), started_at_(0),
+      timer_mgr_(std::move(timer)) {
     ZX_DEBUG_ASSERT(bcn_sender_ != nullptr);
 }
 
@@ -192,11 +194,25 @@ void InfraBss::HandleAnyCtrlFrame(CtrlFrame<>&& frame) {
     }
 }
 
-zx_status_t InfraBss::HandleTimeout(const common::MacAddr& client_addr) {
-    auto client = GetClient(client_addr);
-    ZX_DEBUG_ASSERT(client != nullptr);
-    if (client != nullptr) { client->HandleTimeout(); }
-    return ZX_OK;
+zx_status_t InfraBss::ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
+                                      TimeoutId* id) {
+    return timer_mgr_.Schedule(timer_mgr_.Now() + WLAN_TU(tus), client_addr, id);
+}
+
+void InfraBss::CancelTimeout(TimeoutId id) {
+    timer_mgr_.Cancel(id);
+}
+
+zx_status_t InfraBss::HandleTimeout() {
+    zx_status_t status = timer_mgr_.HandleTimeout([&] (auto _now, auto addr, auto timeout_id) {
+        if (auto client = GetClient(addr)) {
+            client->HandleTimeout(timeout_id);
+        }
+    });
+    if (status != ZX_OK) {
+        errorf("[infra-bss] failed to rearm the timer: %s\n", zx_status_get_string(status));
+    }
+    return status;
 }
 
 void InfraBss::HandleEthFrame(EthFrame&& eth_frame) {
@@ -244,18 +260,11 @@ void InfraBss::HandleNewClientAuthAttempt(const MgmtFrameView<Authentication>& f
              client_addr.ToString().c_str());
 
     // Else, create a new remote client instance.
-    fbl::unique_ptr<Timer> timer = nullptr;
-    auto status = CreateClientTimer(client_addr, &timer);
-    if (status == ZX_OK) {
-        auto client = fbl::make_unique<RemoteClient>(device_, TimerManager(std::move(timer)),
-                                                     this,  // bss
-                                                     this,  // client listener
-                                                     client_addr);
-        clients_.emplace(client_addr, std::move(client));
-    } else {
-        errorf("[infra-bss] [%s] could not create client timer: %d\n", bssid_.ToString().c_str(),
-               status);
-    }
+    auto client = fbl::make_unique<RemoteClient>(device_,
+                                                 this,  // bss
+                                                 this,  // client listener
+                                                 client_addr);
+    clients_.emplace(client_addr, std::move(client));
 }
 
 zx_status_t InfraBss::HandleMlmeSetKeysReq(const MlmeMsg<wlan_mlme::SetKeysRequest>& req) {
@@ -339,22 +348,6 @@ RemoteClientInterface* InfraBss::GetClient(const common::MacAddr& addr) {
     auto iter = clients_.find(addr);
     if (iter == clients_.end()) { return nullptr; }
     return iter->second.get();
-}
-
-zx_status_t InfraBss::CreateClientTimer(const common::MacAddr& client_addr,
-                                        fbl::unique_ptr<Timer>* out_timer) {
-    ObjectId timer_id;
-    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kBss));
-    timer_id.set_mac(client_addr.ToU64());
-    zx_status_t status =
-        device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), out_timer);
-    if (status != ZX_OK) {
-        errorf("[infra-bss] [%s] could not create bss timer: %d\n", bssid_.ToString().c_str(),
-               status);
-        return status;
-    }
-    return ZX_OK;
 }
 
 bool InfraBss::ShouldBufferFrame(const common::MacAddr& receiver_addr) const {

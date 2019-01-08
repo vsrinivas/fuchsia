@@ -11,6 +11,7 @@
 #include <wlan/mlme/ht.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/ps_cfg.h>
+#include <wlan/mlme/timer_manager.h>
 
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
@@ -26,6 +27,9 @@ template <typename T> class MlmeMsg;
 
 class BssInterface {
    public:
+    virtual zx_status_t ScheduleTimeout(wlan_tu_t tus, const common::MacAddr& client_addr,
+                                        TimeoutId* id) = 0;
+    virtual void CancelTimeout(TimeoutId id) = 0;
     virtual const common::MacAddr& bssid() const = 0;
     virtual uint64_t timestamp() = 0;
 

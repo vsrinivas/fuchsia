@@ -8,6 +8,8 @@
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
 
+#include <zircon/status.h>
+
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -30,8 +32,7 @@ zx_status_t ApMlme::HandleTimeout(const ObjectId id) {
 
     switch (id.target()) {
     case to_enum_type(ObjectTarget::kBss): {
-        common::MacAddr client_addr(id.mac());
-        return bss_->HandleTimeout(client_addr);
+        return bss_->HandleTimeout();
     }
     default:
         ZX_DEBUG_ASSERT(false);
@@ -66,6 +67,16 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
             device_, wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
     }
 
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kBss));
+    fbl::unique_ptr<Timer> timer;
+    zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+    if (status != ZX_OK) {
+        errorf("Could not create bss timer: %s\n", zx_status_get_string(status));
+        return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::INTERNAL_ERROR);
+    }
+
     // Configure BSS in driver.
     auto& bssid = device_->GetState()->address();
     wlan_bss_config_t cfg{
@@ -77,7 +88,7 @@ zx_status_t ApMlme::HandleMlmeStartReq(const MlmeMsg<wlan_mlme::StartRequest>& r
 
     // Create and start BSS.
     auto bcn_sender = fbl::make_unique<BeaconSender>(device_);
-    bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid));
+    bss_.reset(new InfraBss(device_, std::move(bcn_sender), bssid, std::move(timer)));
     bss_->Start(req);
 
     return service::SendStartConfirm(device_, wlan_mlme::StartResultCodes::SUCCESS);
