@@ -23,7 +23,7 @@ const uint32 CAMERA_CTRL_INPUT_STREAM  = 0x8;
 //  Indicates what 'permissions' you are requesting for the Stream.
 struct CameraAccessRequest {
   // The camera_id corresponds to the camera_id that is given in the DeviceInfo
-  // recieved from GetDevices.
+  // received from GetDevices.
   uint64 camera_id;
   uint32 control; // CameraControlType
   // The requested video format.  Note that this is field is necessary to

@@ -35,7 +35,7 @@ struct BlockDevice {
     BlockMode mode;
     // The data format of the backing file.
     BlockFormat format;
-    // The underlying file that stores the the drive contents.
+    // The underlying file that stores the drive contents.
     fuchsia.io.File file;
 };
 

@@ -36,7 +36,7 @@ interface Peripheral {
                      bool connectable, uint32 interval_ms, bool anonymous)
         -> (fuchsia.bluetooth.Status status, string? advertisement_id);
 
-    // Stop a an advertising session that was previously started by this application.
+    // Stop an advertising session that was previously started by this application.
     StopAdvertising(string advertisement_id) -> (fuchsia.bluetooth.Status status);
 
     // Called when a remote central device has connected to a connectable advertisement.

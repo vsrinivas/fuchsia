@@ -8,7 +8,7 @@ library fuchsia.sys2;
 table ChildDecl {
     /// The name assigned to the child by its parent.
     ///
-    /// Must be non-empty and unique among all sibings.
+    /// Must be non-empty and unique among all siblings.
     1: string:MAX_CHILD_NAME_LENGTH name;
 
     /// The child component's URI.

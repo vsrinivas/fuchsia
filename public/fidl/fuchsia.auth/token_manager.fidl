@@ -27,18 +27,18 @@ enum Status {
   // The requested user profile could not be found in the database. The request
   // should not be retried.
   USER_NOT_FOUND = 6;
-  // A local error occured such as disk I/O or memory allocation. Retry, after
+  // A local error occurred such as disk I/O or memory allocation. Retry, after
   // a delay, is recommended.
   IO_ERROR = 7;
-  // Some other problem occured that cannot be classified using one of the more
-  // specic statuses. Retry is optional.
+  // Some other problem occurred that cannot be classified using one of the more
+  // specific statuses. Retry is optional.
   UNKNOWN_ERROR = 8;
   // The auth server requires that the user reauthenticate. The client should
   // call the Authorize method.
   REAUTH_REQUIRED = 9;
   // The user cancelled the flow. User consent is required before any retry.
   USER_CANCELLED = 10;
-  // A network error occured while communicating with the auth server. Retry,
+  // A network error occurred while communicating with the auth server. Retry,
   // after a delay, is recommended.
   NETWORK_ERROR = 11;
 };

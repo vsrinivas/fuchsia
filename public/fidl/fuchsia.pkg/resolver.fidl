@@ -13,14 +13,14 @@ using zx;
 /// repository administration tools.
 [Discoverable]
 interface PackageResolver {
-    /// Populates or updates the the cache of a package with the given selectors as specified by the
+    /// Populates or updates the cache of a package with the given selectors as specified by the
     /// update policy.
     ///
     /// Ensures that a package is on the local filesystem.
     ///
     /// Arguments:
     /// * |package_uri| The package URI for a package (TODO: link to docs).
-    /// * |selectors| are the the package selectors (TODO: link to docs).
+    /// * |selectors| are the package selectors (TODO: link to docs).
     /// * |dir| is a request for a directory that will be resolved when the package has been
     ///   successfully cached.
     ///

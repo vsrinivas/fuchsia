@@ -10,7 +10,7 @@ interface Audio {
 
     // Create an AudioCapturer which either captures from the current default
     // audio input device, or loops-back from the current default audio output
-    // device based on value passed for the the loopback flag.
+    // device based on value passed for the loopback flag.
     //
     // TODO(mpuryear): Get rid of the loopback flag ASAP. Routing decisions (and
     // security surrounding routing decisions) should be much more sophisticated

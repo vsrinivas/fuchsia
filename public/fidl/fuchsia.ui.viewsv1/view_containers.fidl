@@ -72,7 +72,7 @@ interface ViewContainer {
   //
   // If |child_view_owner| refers to a view which already has a container or is
   // the root of a view tree then an |OnChildUnavailable()| message will
-  // be sent to its old container or root and the the view will be
+  // be sent to its old container or root and the view will be
   // (re-)added to its new container as usual.  This special case also
   // applies when the specified view is already a child of this view, in which
   // case the behavior is similar to the view having been transferred to

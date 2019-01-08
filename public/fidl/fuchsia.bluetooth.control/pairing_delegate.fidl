@@ -54,7 +54,7 @@ enum PairingKeypressType {
 
 interface PairingDelegate {
     // Called for most pairing requests. The delegate must respond with “true” or “false” to
-    // either accept or reject the pairing request. If the the pairing method requires a passkey
+    // either accept or reject the pairing request. If the pairing method requires a passkey
     // this is returned as well.
     //
     // Any response from this method will be ignored if the OnPairingComplete

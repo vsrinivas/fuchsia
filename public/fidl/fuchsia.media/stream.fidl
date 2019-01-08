@@ -85,12 +85,12 @@ struct StreamPacket {
     uint32 flags = 0;
 
     // The buffer configuration associated with this packet. The semantics of
-    // this field depend on the the interface with which this struct is used.
+    // this field depend on the interface with which this struct is used.
     // In many contexts, this field is not used.
     uint64 buffer_config = 0;
 
     // The stream associated with this packet. The semantics of this field
-    // depend on the the interface with which this struct is used. In many
+    // depend on the interface with which this struct is used. In many
     // contexts, this field is not used.
     uint64 stream_id = 0;
 };
