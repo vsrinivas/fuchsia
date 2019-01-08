@@ -18,11 +18,6 @@ const char* VolumeImpl::Init(std::unique_ptr<NdmDriver> driver) {
         return "Module initialization failed";
     }
 
-    const char* error = driver_->Init();
-    if (error) {
-        return error;
-    }
-
     return Attach();
 }
 

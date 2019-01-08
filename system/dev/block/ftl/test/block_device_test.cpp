@@ -7,6 +7,7 @@
 #include <memory>
 #include <utility>
 
+#include <ddktl/protocol/nand.h>
 #include <fbl/array.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <lib/ftl/volume.h>
@@ -18,6 +19,7 @@ namespace {
 constexpr uint32_t kPageSize = 1024;
 constexpr uint32_t kNumPages = 20;
 constexpr char kMagic = 'f';
+constexpr uint8_t kGuid[ZBI_PARTITION_GUID_LEN] = {'g', 'u', 'i', 'd'};
 
 block_info_t kInfo = {kNumPages, kPageSize, BLOCK_MAX_TRANSFER_UNBOUNDED, 0, 0};
 
@@ -30,6 +32,32 @@ bool CheckPattern(const void* buffer, size_t size, char pattern = kMagic) {
     }
     return true;
 }
+
+class FakeNand : public ddk::NandProtocol<FakeNand> {
+  public:
+    FakeNand() : proto_({&nand_protocol_ops_, this}) {}
+
+    nand_protocol_t* proto() { return &proto_; }
+
+    // Nand protocol:
+    void NandQuery(fuchsia_hardware_nand_Info* out_info, size_t* out_nand_op_size) {
+        *out_info = {};
+        out_info->oob_size = 8;
+        memcpy(out_info->partition_guid, kGuid, sizeof(kGuid));
+        *out_nand_op_size = 0;
+    }
+
+    void NandQueue(nand_operation_t* operation, nand_queue_callback callback, void* cookie) {
+    }
+
+    zx_status_t NandGetFactoryBadBlockList(uint32_t* out_bad_blocks_list, size_t bad_blocks_count,
+                                           size_t* out_bad_blocks_actual) {
+      return ZX_ERR_BAD_STATE;
+    }
+
+  private:
+    nand_protocol_t proto_;
+};
 
 class FakeVolume : public ftl::Volume {
   public:
@@ -88,8 +116,10 @@ class FakeVolume : public ftl::Volume {
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
+    FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    device.SetNandParentForTest(*nand.proto());
     ASSERT_EQ(ZX_OK, device.Init());
     END_TEST;
 }
@@ -99,9 +129,10 @@ bool DdkLifetimeTest() {
     ftl::BlockDevice* device(new ftl::BlockDevice(fake_ddk::kFakeParent));
     device->SetVolumeForTest(std::make_unique<FakeVolume>(device));
 
+    FakeNand nand;
     fake_ddk::Bind ddk;
     fbl::Array<fake_ddk::ProtocolEntry> protocols(new fake_ddk::ProtocolEntry[1], 1);
-    protocols[0] = {ZX_PROTOCOL_NAND, {nullptr, nullptr}};
+    protocols[0] = {ZX_PROTOCOL_NAND, {nand.proto()->ops, nand.proto()->ctx}};
     ddk.SetProtocols(std::move(protocols));
 
     ASSERT_EQ(ZX_OK, device->Bind());
@@ -115,8 +146,10 @@ bool DdkLifetimeTest() {
 
 bool GetSizeTest() {
     BEGIN_TEST;
+    FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    device.SetNandParentForTest(*nand.proto());
     ASSERT_EQ(ZX_OK, device.Init());
     EXPECT_EQ(kPageSize * kNumPages, device.DdkGetSize());
     END_TEST;
@@ -124,8 +157,10 @@ bool GetSizeTest() {
 
 bool GetNameTest() {
     BEGIN_TEST;
+    FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    device.SetNandParentForTest(*nand.proto());
     ASSERT_EQ(ZX_OK, device.Init());
 
     char name[20];
@@ -137,21 +172,25 @@ bool GetNameTest() {
 
 bool GetTypeTest() {
     BEGIN_TEST;
+    FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    device.SetNandParentForTest(*nand.proto());
     ASSERT_EQ(ZX_OK, device.Init());
 
     guid_t guid;
     ASSERT_EQ(ZX_OK, device.BlockPartitionGetGuid(GUIDTYPE_TYPE, &guid));
 
-    EXPECT_TRUE(CheckPattern(&guid, sizeof(guid), '\0'));  // No parent device.
+    EXPECT_EQ(0, memcmp(&guid, kGuid, sizeof(guid)));
     END_TEST;
 }
 
 bool QueryTest() {
     BEGIN_TEST;
+    FakeNand nand;
     ftl::BlockDevice device;
     device.SetVolumeForTest(std::make_unique<FakeVolume>(&device));
+    device.SetNandParentForTest(*nand.proto());
     ASSERT_EQ(ZX_OK, device.Init());
 
     block_info_t info;
@@ -272,12 +311,14 @@ class BlockDeviceTest {
     int num_completed_ = 0;
     std::unique_ptr<ftl::BlockDevice> device_;
     size_t op_size_;
+    FakeNand nand_;
     FakeVolume* volume_ = nullptr;  // Object owned by device_.
 };
 
 BlockDeviceTest::BlockDeviceTest() : device_(new ftl::BlockDevice()) {
     volume_ = new FakeVolume(device_.get());
     device_->SetVolumeForTest(std::unique_ptr<FakeVolume>(volume_));
+    device_->SetNandParentForTest(*nand_.proto());
 
     block_info_t info;
     device_->BlockImplQuery(&info, &op_size_);

@@ -41,6 +41,7 @@ class Volume {
 
     // Performs the object initialization. Returns an error string, or nullptr
     // on success. Will synchronously call FtlInstance::OnVolumeAdded on success.
+    // The |driver| must be fully initialized when passed to this method.
     virtual const char* Init(std::unique_ptr<NdmDriver> driver) = 0;
 
     // Removes the volume and re-attaches to it. This is roughly equivalent to

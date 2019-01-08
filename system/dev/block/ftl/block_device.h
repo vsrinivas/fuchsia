@@ -89,6 +89,10 @@ class BlockDevice : public DeviceType,
         volume_ = std::move(volume);
     }
 
+    void SetNandParentForTest(const nand_protocol_t& nand) {
+        parent_ = nand;
+    }
+
     DISALLOW_COPY_ASSIGN_AND_MOVE(BlockDevice);
 
   private:

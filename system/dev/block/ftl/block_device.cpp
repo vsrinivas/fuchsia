@@ -230,13 +230,18 @@ zx_status_t BlockDevice::Format() {
 
 bool BlockDevice::InitFtl() {
     std::unique_ptr<NandDriver> driver = NandDriver::Create(&parent_, &bad_block_);
+    const char* error = driver->Init();
+    if (error) {
+        zxlogf(ERROR, "FTL: %s\n", error);
+        return false;
+    }
     memcpy(guid_, driver->info().partition_guid, ZBI_PARTITION_GUID_LEN);
 
     if (!volume_) {
         volume_ = std::make_unique<ftl::VolumeImpl>(this);
     }
 
-    const char* error = volume_->Init(std::move(driver));
+    error = volume_->Init(std::move(driver));
     if (error) {
         zxlogf(ERROR, "FTL: %s\n", error);
         return false;

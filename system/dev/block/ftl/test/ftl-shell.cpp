@@ -7,7 +7,12 @@
 #include <memory>
 
 bool FtlShell::Init(const ftl::VolumeOptions& options) {
-    const char* error = volume_.Init(std::make_unique<NdmRamDriver>(options));
+    auto driver = std::make_unique<NdmRamDriver>(options);
+    const char* error = driver->Init();
+    if (error) {
+        return false;
+    }
+    error = volume_.Init(std::move(driver));
     return error ? false : true;
 }
 
