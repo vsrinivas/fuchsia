@@ -1,7 +1,9 @@
 # zxdb: Fuchsia native debugger user guide
 
-This is the command usage guide for zxdb. Please see the [setup and
-troubleshooting guide](debugger.md) to get running.
+This is the command usage guide for zxdb. Please see also:
+
+  * The [setup and troubleshooting guide](debugger.md).
+  * The [zxdb codelab](http://go/zxdb-codelab) (Googlers only).
 
 ## Quick start
 
