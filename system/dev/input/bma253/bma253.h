@@ -40,7 +40,7 @@ public:
     zx_status_t HidbusGetProtocol(hid_protocol_t* out_protocol);
     zx_status_t HidbusSetProtocol(hid_protocol_t protocol);
 
-private:
+    // Visible for testing.
     Bma253(zx_device_t* parent, ddk::I2cChannel i2c, zx::port port)
         : DeviceType(parent), i2c_(i2c) {
         simple_hid_ = simplehid::SimpleHid<bma253_input_rpt_t>(
@@ -51,7 +51,10 @@ private:
         );
     }
 
+    // Visible for testing.
     zx_status_t Init();
+
+private:
     zx_status_t GetInputReport(bma253_input_rpt_t* report);
 
     fbl::Mutex i2c_lock_;

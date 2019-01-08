@@ -35,3 +35,41 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
 
 include make/module.mk
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_NAME := bma253-test
+
+MODULE_TYPE := usertest
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/bma253.cpp \
+    $(LOCAL_DIR)/bma253-test.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/dev/lib/mock-hidbus-ifc \
+    system/dev/lib/mock-i2c \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/fit \
+    system/ulib/hid \
+    system/ulib/simplehid \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/c \
+    system/ulib/unittest \
+    system/ulib/zircon \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-clk \
+    system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-hidbus \
+    system/banjo/ddk-protocol-i2c \
+    system/banjo/ddk-protocol-platform-device \
+
+include make/module.mk
