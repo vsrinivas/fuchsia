@@ -34,7 +34,7 @@ BlobCache& Directory::Cache() {
 
 Directory::~Directory() = default;
 
-zx_status_t Directory::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Directory::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     info->tag = fuchsia_io_NodeInfoTag_directory;
     return ZX_OK;
 }

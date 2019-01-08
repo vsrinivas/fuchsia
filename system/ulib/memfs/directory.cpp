@@ -113,7 +113,7 @@ zx_status_t VnodeDir::Getattr(vnattr_t* attr) {
     return ZX_OK;
 }
 
-zx_status_t VnodeDir::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeDir::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     info->tag = fuchsia_io_NodeInfoTag_directory;
     return ZX_OK;
 }

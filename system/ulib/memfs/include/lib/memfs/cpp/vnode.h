@@ -87,7 +87,7 @@ private:
                        size_t* out_actual) final;
     zx_status_t Truncate(size_t len) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     zx_status_t GetVmo(int flags, zx_handle_t* out) final;
 
     // Ensure the underlying vmo is filled with zero from:
@@ -149,7 +149,7 @@ private:
                        bool dst_must_be_dir) final;
     zx_status_t Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> target) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     zx_status_t GetVmo(int flags,  zx_handle_t* out) final;
 
     fs::RemoteContainer remoter_;
@@ -166,7 +166,7 @@ public:
 private:
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Getattr(vnattr_t* a) final;
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
 
     zx_handle_t vmo_;
     zx_off_t offset_;

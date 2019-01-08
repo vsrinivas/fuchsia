@@ -39,9 +39,9 @@ void WriteDescribeError(zx::channel channel, zx_status_t status) {
 zx_status_t GetNodeInfo(const fbl::RefPtr<Vnode>& vn, uint32_t flags,
                         fuchsia_io_NodeInfo* info) {
     if (IsPathOnly(flags)) {
-        return vn->Vnode::GetHandles(flags, info);
+        return vn->Vnode::GetNodeInfo(flags, info);
     } else {
-        return vn->GetHandles(flags, info);
+        return vn->GetNodeInfo(flags, info);
     }
 }
 

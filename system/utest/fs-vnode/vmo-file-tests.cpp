@@ -356,7 +356,7 @@ bool TestGetattr() {
     END_TEST;
 }
 
-bool TestGetHandles() {
+bool TestGetNodeInfo() {
     BEGIN_TEST;
 
     // sharing = VmoSharing::NONE
@@ -366,7 +366,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::NONE);
-        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetHandles(ZX_FS_RIGHT_READABLE, &info));
+        EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
     }
 
     // sharing = VmoSharing::DUPLICATE, read only
@@ -376,7 +376,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, false, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -397,7 +397,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -425,7 +425,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_1 - 5u, 23u, true, fs::VmoFile::VmoSharing::DUPLICATE);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_WRITABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -450,7 +450,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, false, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -471,7 +471,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_WRITABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -498,7 +498,7 @@ bool TestGetHandles() {
 
         fuchsia_io_NodeInfo info;
         fs::VmoFile file(abc, PAGE_2 - 5u, 23u, true, fs::VmoFile::VmoSharing::CLONE_COW);
-        EXPECT_EQ(ZX_OK, file.GetHandles(ZX_FS_RIGHT_WRITABLE, &info));
+        EXPECT_EQ(ZX_OK, file.GetNodeInfo(ZX_FS_RIGHT_WRITABLE, &info));
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
@@ -526,5 +526,5 @@ RUN_TEST(TestOpen)
 RUN_TEST(TestRead)
 RUN_TEST(TestWrite)
 RUN_TEST(TestGetattr)
-RUN_TEST(TestGetHandles)
+RUN_TEST(TestGetNodeInfo)
 END_TEST_CASE(vmo_file_tests)

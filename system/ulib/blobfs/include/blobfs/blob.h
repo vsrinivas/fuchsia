@@ -143,7 +143,7 @@ private:
     ////////////////
     // fs::Vnode interface.
 
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Read(void* data, size_t len, size_t off, size_t* out_actual) final;
     zx_status_t Write(const void* data, size_t len, size_t offset,

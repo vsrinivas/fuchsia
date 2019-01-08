@@ -817,7 +817,7 @@ zx_status_t Blob::ValidateFlags(uint32_t flags) {
     return ZX_OK;
 }
 
-zx_status_t Blob::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t Blob::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     info->tag = fuchsia_io_NodeInfoTag_file;
     zx_status_t r = GetReadableEvent(&info->file.event);
     if (r < 0) {

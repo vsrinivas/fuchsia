@@ -35,7 +35,7 @@ private:
     ////////////////
     // fs::Vnode interface.
 
-    zx_status_t GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) final;
+    zx_status_t GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) final;
     zx_status_t ValidateFlags(uint32_t flags) final;
     zx_status_t Readdir(fs::vdircookie_t* cookie, void* dirents, size_t len,
                         size_t* out_actual) final;

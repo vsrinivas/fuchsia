@@ -108,7 +108,7 @@ zx_status_t VmoFile::Write(const void* data, size_t length, size_t offset, size_
     return status;
 }
 
-zx_status_t VmoFile::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VmoFile::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     ZX_DEBUG_ASSERT(!IsWritable(flags) || writable_); // checked by the VFS
 
     zx::vmo vmo;

@@ -81,7 +81,7 @@ zx_status_t BootfsService::Open(const char* path, zx::vmo* vmo, size_t* size) {
     ZX_ASSERT(path_out.size() == 0);
 
     fuchsia_io_NodeInfo info;
-    status = node->GetHandles(ZX_FS_RIGHT_READABLE, &info);
+    status = node->GetNodeInfo(ZX_FS_RIGHT_READABLE, &info);
     if (status != ZX_OK) {
         return status;
     }

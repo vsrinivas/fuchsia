@@ -2073,7 +2073,7 @@ zx_status_t VnodeMinfs::Link(fbl::StringPiece name, fbl::RefPtr<fs::Vnode> _targ
 }
 
 #ifdef __Fuchsia__
-zx_status_t VnodeMinfs::GetHandles(uint32_t flags, fuchsia_io_NodeInfo* info) {
+zx_status_t VnodeMinfs::GetNodeInfo(uint32_t flags, fuchsia_io_NodeInfo* info) {
     if (IsDirectory()) {
         info->tag = fuchsia_io_NodeInfoTag_directory;
     } else {
