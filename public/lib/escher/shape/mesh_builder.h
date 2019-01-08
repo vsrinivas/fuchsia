@@ -11,7 +11,7 @@
 namespace escher {
 
 // MeshBuilder is used by Escher clients to generate Meshes.  Clients should
-// obtain one via Esher::NewMeshBuilder(), repeatedly call AddVertex() and
+// obtain one via Escher::NewMeshBuilder(), repeatedly call AddVertex() and
 // AddIndex() to add data for the Mesh, and then call Build() once all data has
 // been added.
 class MeshBuilder : public fxl::RefCountedThreadSafe<MeshBuilder> {

@@ -65,7 +65,7 @@ constexpr char g_sampler_fragment_src[] = R"GLSL(
     // A description of the directional key light:
     //
     //  * theta, phi: The direction from which the light is received. The first
-    //    coordinate is theta (the the azimuthal angle, in radians) and the second
+    //    coordinate is theta (the azimuthal angle, in radians) and the second
     //    coordinate is phi (the polar angle, in radians).
     //  * dispersion: The angular variance in the light, in radians.
     //  * intensity: The amount of light emitted.

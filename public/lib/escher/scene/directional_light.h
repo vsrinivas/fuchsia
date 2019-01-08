@@ -30,7 +30,7 @@ class DirectionalLight {
   const vec3& direction() const { return direction_; }
 
   // The direction from which the light is received. The first coordinate is
-  // theta (the the azimuthal angle, in radians) and the second coordinate is
+  // theta (the azimuthal angle, in radians) and the second coordinate is
   // phi (the polar angle, in radians).
   const vec2& polar_direction() const { return polar_direction_; }
 
