@@ -3,6 +3,7 @@
         "garnet/packages/tools/audio",
         "garnet/packages/tools/bluetooth",
         "garnet/packages/tools/curl",
+        "garnet/packages/tools/dockyard_host",
         "garnet/packages/tools/fidlmerge",
         "garnet/packages/tools/iperf",
         "garnet/packages/tools/make-efi",

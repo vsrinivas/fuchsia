@@ -10,6 +10,7 @@
     "garnet/packages/prod/ssh",
     "garnet/packages/prod/tracing",
     "garnet/packages/products/base",
+    "garnet/packages/tools/dockyard_host",
     "garnet/packages/tools/zxdb"
   ]
 }
