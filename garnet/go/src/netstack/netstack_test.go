@@ -212,7 +212,7 @@ func TestWLANStaticIPConfiguration(t *testing.T) {
 			arp.ProtocolName,
 		}, nil, tcpipstack.Options{})
 
-	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
+	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	addr := fidlconv.ToNetIpAddress(testIpAddress)
 	ifAddr := stack.InterfaceAddress{IpAddress: addr, PrefixLen: 32}
 	d := deviceForAddEth(ethernet.Info{Features: ethernet.InfoFeatureWlan}, t)
@@ -246,7 +246,7 @@ func newNetstack(t *testing.T) *Netstack {
 			arp.ProtocolName,
 		}, nil, tcpipstack.Options{})
 
-	ns.OnInterfacesChanged = func([]netstack.NetInterface) {}
+	ns.OnInterfacesChanged = func([]netstack.NetInterface2) {}
 	return ns
 }
 

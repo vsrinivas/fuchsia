@@ -80,8 +80,11 @@ func Main() {
 
 	var netstackService netstack.NetstackService
 
-	ns.OnInterfacesChanged = func(interfaces []netstack.NetInterface) {
-		connectivity.InferAndNotify(interfaces)
+	ns.OnInterfacesChanged = func(interfaces2 []netstack.NetInterface2) {
+		connectivity.InferAndNotify(interfaces2)
+		// TODO(NET-2078): Switch to the new NetInterface struct once Chromium stops
+		// using netstack.fidl.
+		interfaces := interfaces2ListToInterfacesList(interfaces2)
 		for _, key := range netstackService.BindingKeys() {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
@@ -112,7 +115,8 @@ func Main() {
 		// Prevents clients from having to race GetInterfaces / InterfacesChanged.
 		if p, ok := netstackService.EventProxyFor(k); ok {
 			ns.mu.Lock()
-			interfaces := ns.getInterfacesLocked()
+			interfaces2 := ns.getNetInterfaces2Locked()
+			interfaces := interfaces2ListToInterfacesList(interfaces2)
 			ns.mu.Unlock()
 
 			if err := p.OnInterfacesChanged(interfaces); err != nil {
