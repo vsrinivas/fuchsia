@@ -1,0 +1,12 @@
+{
+  "program": {
+    "binary": "test/debug_agent_integration_tests"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.process.Launcher"
+    ],
+    "system": [ "bin" ],
+    "dev": [ "misc" ]
+  }
+}

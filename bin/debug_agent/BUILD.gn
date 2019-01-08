@@ -117,9 +117,9 @@ package("debug_agent") {
   binary = "debug_agent"
 }
 
-executable("tests") {
+executable("unit_tests") {
   testonly = true
-  output_name = "debug_agent_tests"
+  output_name = "debug_agent_unit_tests"
 
   sources = [
     "breakpoint_unittest.cc",
@@ -141,14 +141,6 @@ executable("tests") {
   deps = [
     ":lib",
     "//garnet/lib/debug_ipc:tests",
-
-    # TODO(DX-879): Some HW capabilities (like HW breakpoints) are not well
-    #               emulated by QEMU without KVM. This will sometimes make tests
-    #               fail or even crash QEMU.
-    #               The tests will be re-enabled when there is way to express
-    #               that these test must not run on QEMU.
-    # "//garnet/bin/debug_agent/integration_tests",
-    "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
     "//third_party/googletest:gtest",
@@ -156,70 +148,82 @@ executable("tests") {
 }
 
 package("debug_agent_tests") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   package_name = "debug_agent_tests"
+  deprecated_bare_package_url = "//build"
+
+  # TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
+  #               emulated by QEMU without KVM. This will sometimes make tests
+  #               fail or even crash QEMU.
+  #               The tests will be re-enabled when there is way to express
+  #               that these test must not run on QEMU.
+  add_integration_tests = false
 
   deps = [
-    ":tests",
-    "//garnet/bin/debug_agent/test_data:debug_agent_so_test_exe",
-    "//garnet/bin/debug_agent/test_data:debug_agent_test_so",
+    ":unit_tests",
+    "//garnet/bin/debug_agent/test_data:breakpoint_test_exe",
+    "//garnet/bin/debug_agent/test_data:debug_agent_test_loadable_module",
     "//garnet/bin/debug_agent/test_data:process_loop",
     "//garnet/bin/debug_agent/test_data:process_spawner",
   ]
 
-  # Test binaries
-  binaries = [
-    {
-      shell = true
-      name = "debug_agent_so_test"
-    },
-    {
-      name = "process_loop"
-    },
-    {
-      name = "process_spawner"
-    },
-  ]
-
-  # Add the platform specific test binaries
-
-  if (current_cpu == "x64") {
-    deps += [ "//garnet/bin/debug_agent/test_data:write_register_test_exe" ]
-    binaries += [
-      {
-        name = "write_register_test_exe"
-      },
+  if (add_integration_tests) {
+    deps += [
+      "//garnet/bin/debug_agent/integration_tests",
     ]
   }
 
-  loadable_modules = [
-    {
-      name = "debug_agent_test_so.so"
-    },
-  ]
+  tests = [{
+    name = "debug_agent_unit_tests"
+  }]
 
-  tests = [
-    {
-      name = "debug_agent_tests"
-    },
-  ]
+  if (add_integration_tests) {
+    tests += [{
+      name = "debug_agent_integration_tests"
+    }]
+  }
 
-  meta = [
-    {
-      path = "meta/debug_agent_tests.cmx"
-      dest = "debug_agent_tests.cmx"
-    },
-  ]
+  # Test binaries
+  binaries = [{
+    shell = true
+    name = "breakpoint_test_exe"
+  }, {
+    name = "process_loop"
+  }, {
+    name = "process_spawner"
+  }]
+
+  # Add the platform specific test binaries
+  if (current_cpu == "x64") {
+    deps += [ "//garnet/bin/debug_agent/test_data:write_register_test_exe" ]
+
+    binaries += [{
+      shell = true
+      name = "write_register_test_exe"
+    }]
+  }
+
+  loadable_modules = [{
+    name = "debug_agent_test_so.so"
+  }]
+
+  meta = [{
+    path = "meta/debug_agent_unit_tests.cmx"
+    dest = "debug_agent_unit_tests.cmx"
+  }]
+  if (add_integration_tests) {
+    meta+= [{
+      path = "meta/debug_agent_integration_tests.cmx"
+      dest = "debug_agent_integration_tests.cmx"
+    }]
+  }
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]
-    tests += [
-      {
-        name = "zxdb_test_app"
-      },
-    ]
+
+    binaries += [{
+      name = "zxdb_test_app"
+    }]
   }
 }

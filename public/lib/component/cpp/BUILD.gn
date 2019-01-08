@@ -43,7 +43,7 @@ source_set("environment_services") {
     "//garnet/bin/appmgr:bin",
     "//garnet/bin/debug_agent/integration_tests",
     "//garnet/bin/debug_agent:bin",
-    "//garnet/bin/debug_agent:tests",
+    "//garnet/bin/debug_agent:integration_tests",
     "//garnet/bin/debugserver:bin",
     "//garnet/bin/developer/tiles_ctl:bin",
     "//garnet/bin/insntrace:bin",

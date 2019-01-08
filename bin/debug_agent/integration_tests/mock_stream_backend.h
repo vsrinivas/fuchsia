@@ -10,9 +10,6 @@
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 
-#include "garnet/public/lib/fxl/logging.h"
-
-
 namespace debug_ipc {
 class MessageReader;
 }  // namespace debug_ipc
@@ -40,6 +37,7 @@ class MockStreamBackend : public debug_ipc::StreamBuffer::Writer {
   virtual void HandleNotifyException(debug_ipc::MessageReader*) {}
   virtual void HandleNotifyProcessExiting(debug_ipc::MessageReader*) {}
   virtual void HandleNotifyThreadStarting(debug_ipc::MessageReader*) {}
+  virtual void HandleNotifyThreadExiting(debug_ipc::MessageReader*) {}
 
   // The stream will call this function to send the data to whatever backend it
   // is connected to. It returns how much of the input message it could actually

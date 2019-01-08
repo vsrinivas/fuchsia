@@ -11,7 +11,7 @@ namespace debug_ipc {
 
 constexpr uint32_t kProtocolVersion = 4;
 
-enum class Arch { kUnknown = 0, kX64, kArm64 };
+enum class Arch : uint32_t { kUnknown = 0, kX64, kArm64 };
 
 #pragma pack(push, 8)
 
@@ -55,6 +55,7 @@ struct MsgHeader {
 
     kNumMessages
   };
+  static const char* TypeToString(Type);
 
   MsgHeader() = default;
   explicit MsgHeader(Type t) : type(t) {}
@@ -71,8 +72,6 @@ struct MsgHeader {
 
   static constexpr uint32_t kSerializedHeaderSize = sizeof(uint32_t) * 3;
 };
-
-const char* MsgHeaderTypeToString(MsgHeader::Type type);
 
 struct HelloRequest {};
 struct HelloReply {

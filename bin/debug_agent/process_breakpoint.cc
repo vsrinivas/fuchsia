@@ -310,6 +310,7 @@ void ProcessBreakpoint::SoftwareBreakpoint::Uninstall() {
     fprintf(stderr, "Warning: unable to remove breakpoint at %" PRIX64 ".",
             address);
   }
+
   installed_ = false;
 }
 

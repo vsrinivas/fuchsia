@@ -36,7 +36,9 @@ zx_status_t RemoveHWBreakpoint(uint64_t address, zx_thread_state_debug_regs_t*);
 zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>&,
                                   zx_thread_state_general_regs_t*);
 
-// Useful function for debugging to keep around.
+// Debug functions -------------------------------------------------------------
+
+void PrintGeneralRegisters(const zx_thread_state_general_regs&);
 void PrintDebugRegisters(const zx_thread_state_debug_regs_t&);
 
 }  // namespace arch

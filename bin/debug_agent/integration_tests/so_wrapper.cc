@@ -61,4 +61,16 @@ uint64_t SoWrapper::GetSymbolAddress(const char* symbol_name) const {
   return reinterpret_cast<uint64_t>(symbol);
 }
 
+uint64_t SoWrapper::GetSymbolOffset(const char* module, const char* symbol) const {
+  uint64_t module_start = GetModuleStartAddress(module);
+  if (module_start == 0)
+    return 0;
+
+  uint64_t symbol_address = GetSymbolAddress(symbol);
+  if (symbol_address == 0)
+    return 0;
+
+  return symbol_address - module_start;
+}
+
 }  // namespace debug_agent

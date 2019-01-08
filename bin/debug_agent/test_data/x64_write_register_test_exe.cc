@@ -2,66 +2,38 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
+#include "garnet/bin/debug_agent/test_data/test_so_symbols.h"
+
 #include <stdio.h>
+#include <string.h>
 
 // This program is setup so that it needs to have registers written at key
 // points so that it passes successfully.
 //
 // Scenarios:
 //
-// 1. RAX branch
+// 1. RAX branch.
+// 2. PC jump.
 
-static bool passed_ok = false;
+// Main ------------------------------------------------------------------------
 
-extern "C" {
-  void Success() {
-    passed_ok = true;
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    fprintf(stderr, "Wrong amount of arguments. Usage: <exe> <test\n");
+    return 1;
   }
 
-  void Failure() {
-    assert(false);
+  // Check the test.
+  const char* test = argv[1];
+  if (strcmp(test, "branch_on_rax") == 0) {
+    Test_BranchOnRAX();
+  } else if (strcmp(test, "pc_jump") == 0) {
+    Test_PCJump();
+  } else {
+    fprintf(stderr, "Unknown test: %s\n", test);
+    return 1;
   }
 
-  void BranchOnRAX();
-}
-
-// RAX Branch
-//
-// This will hardcode a SW breakpoint just before comparing RAX to 0. If 0, it
-// will call Failure. The debug agent must write RAX at this point in order for
-// the software to call Success.
-__asm__(R"(
-  .pushsection .text, "ax", @progbits
-  .global BranchOnRAX
-
-BranchOnRAX:
-    /* Function preamble. */
-    pushq %rbp
-    movq %rsp, %rbp
-
-    movq $0, %rax
-    int $3
-
-    /* Compare variable set here. */
-    /* Changing RAX != 1 will branch to the success case. */
-    cmp $0, %rax
-
-    je .CALL_FAILURE
-    call Success()
-    jmp .END
-
-.CALL_FAILURE:
-    call Failure()
-
-.END:
-    nop
-    leave
-    ret
-  .popsection)");
-
-int main() {
-  BranchOnRAX();
-
-  return passed_ok ? 0 : 1;
+  // Every test marks this boolean to see if it passed or not.
+  return gTestPassed ? 0 : 1;
 }

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <cstdint>
+#include <stdint.h>
 
 // Holds constant description values for all the register data for all the
 // supported architectures.
@@ -13,9 +13,16 @@
 
 namespace debug_ipc {
 
+enum class Arch : uint32_t;         // Forward declaration
 enum class RegisterID : uint32_t;   // Forward declaration.
 
+enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
+
 const char* RegisterIDToString(debug_ipc::RegisterID);
+
+// Returns the register ID for the given special register.
+debug_ipc::RegisterID GetSpecialRegisterID(debug_ipc::Arch,
+                                           SpecialRegisterType);
 
 // These ranges permit to make transformation from registerID to category and
 // make some formal verifications.

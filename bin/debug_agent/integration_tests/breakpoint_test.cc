@@ -10,6 +10,7 @@
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -41,7 +42,7 @@ namespace {
 // 6. Success!
 
 // The exported symbol we're going to put the breakpoint on.
-const char* kExportedFunctionName = "ExportedFunction";
+const char* kExportedFunctionName = "InsertBreakpointFunction";
 
 // The test .so we load in order to search the offset of the exported symbol
 // within it.
@@ -50,15 +51,19 @@ const char* kTestSo = "debug_agent_test_so.so";
 // The test executable the debug agent is going to launch. This is linked with
 // |kTestSo|, meaning that the offset within that .so will be valid into the
 // loaded module of this executable.
-const char* kTestExecutableName = "debug_agent_so_test";
-const char* kTestExecutablePath = "/pkg/bin/debug_agent_so_test";
+/* const char* kTestExecutableName = "breakpoint_test_exe"; */
+const char* kTestExecutablePath = "/pkg/bin/breakpoint_test_exe";
+const char* kModuleToSearch = "libdebug_agent_test_so.so";
 
 class BreakpointStreamBackend : public MockStreamBackend {
  public:
   BreakpointStreamBackend(debug_ipc::MessageLoop* loop) : loop_(loop) {}
 
   uint64_t so_test_base_addr() const { return so_test_base_addr_; }
-  debug_ipc::NotifyException exception() const { return exception_; }
+  const debug_ipc::NotifyException& exception() const { return exception_; }
+  const debug_ipc::NotifyThread& thread_notification() const {
+    return thread_notification_;
+  }
 
   // The messages we're interested in handling ---------------------------------
 
@@ -68,7 +73,7 @@ class BreakpointStreamBackend : public MockStreamBackend {
     if (!debug_ipc::ReadNotifyModules(reader, &modules))
       return;
     for (auto& module : modules.modules) {
-      if (module.name.find(kTestExecutableName) != std::string::npos) {
+      if (module.name == kModuleToSearch) {
         so_test_base_addr_ = module.base;
         break;
       }
@@ -85,10 +90,19 @@ class BreakpointStreamBackend : public MockStreamBackend {
     loop_->QuitNow();
   }
 
+  void HandleNotifyThreadExiting(debug_ipc::MessageReader* reader) override {
+    debug_ipc::NotifyThread thread;
+    if (!debug_ipc::ReadNotifyThread(reader, &thread))
+      return;
+    thread_notification_ = thread;
+    loop_->QuitNow();
+  }
+
  private:
   debug_ipc::MessageLoop* loop_;
   uint64_t so_test_base_addr_ = 0;
   debug_ipc::NotifyException exception_ = {};
+  debug_ipc::NotifyThread thread_notification_ = {};
 };
 
 }  // namespace
@@ -98,13 +112,9 @@ TEST(BreakpointIntegration, SWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t module_base = so_wrapper.GetModuleStartAddress(kTestSo);
-  ASSERT_NE(module_base, 0u);
-
-  uint64_t symbol_addr = so_wrapper.GetSymbolAddress(kExportedFunctionName);
-  ASSERT_NE(symbol_addr, 0u);
-
-  uint64_t function_offset = symbol_addr - module_base;
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo,
+                                                      kExportedFunctionName);
+  ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
   {
@@ -119,7 +129,9 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK));
+    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
+        << "Expected ZX_OK, Got: "
+        << debug_ipc::ZxStatusToString(launch_reply.status);
 
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
@@ -131,7 +143,7 @@ TEST(BreakpointIntegration, SWBreakpoint) {
 
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
-    uint64_t module_function = module_base + function_offset;
+    uint64_t module_function = module_base + symbol_offset;
 
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
@@ -143,10 +155,8 @@ TEST(BreakpointIntegration, SWBreakpoint) {
     breakpoint_request.breakpoint.breakpoint_id = kBreakpointId;
     breakpoint_request.breakpoint.one_shot = true;
     breakpoint_request.breakpoint.locations.push_back(location);
-
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
-    remote_api->OnAddOrChangeBreakpoint(breakpoint_request,
-                                                   &breakpoint_reply);
+    remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
     ASSERT_EQ(breakpoint_reply.status, static_cast<uint32_t>(ZX_OK));
 
     // Resume the process now that the breakpoint is installed.
@@ -183,13 +193,9 @@ TEST(BreakpointIntegration, HWBreakpoint) {
   SoWrapper so_wrapper;
   ASSERT_TRUE(so_wrapper.Init(kTestSo)) << "Could not load so " << kTestSo;
 
-  uint64_t module_base = so_wrapper.GetModuleStartAddress(kTestSo);
-  ASSERT_NE(module_base, 0u);
-
-  uint64_t symbol_addr = so_wrapper.GetSymbolAddress(kExportedFunctionName);
-  ASSERT_NE(symbol_addr, 0u);
-
-  uint64_t function_offset = symbol_addr - module_base;
+  uint64_t symbol_offset = so_wrapper.GetSymbolOffset(kTestSo,
+                                                      kExportedFunctionName);
+  ASSERT_NE(symbol_offset, 0u);
 
   MessageLoopWrapper loop_wrapper;
   {
@@ -205,7 +211,9 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     launch_request.argv.push_back(kTestExecutablePath);
     debug_ipc::LaunchReply launch_reply;
     remote_api->OnLaunch(launch_request, &launch_reply);
-    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK));
+    ASSERT_EQ(launch_reply.status, static_cast<uint32_t>(ZX_OK))
+        << "Expected ZX_OK, Got: "
+        << debug_ipc::ZxStatusToString(launch_reply.status);
 
     // We run the look to get the notifications sent by the agent.
     // The stream backend will stop the loop once it has received the modules
@@ -217,7 +225,7 @@ TEST(BreakpointIntegration, HWBreakpoint) {
 
     // We get the offset of the loaded function within the process space.
     uint64_t module_base = mock_stream_backend.so_test_base_addr();
-    uint64_t module_function = module_base + function_offset;
+    uint64_t module_function = module_base + symbol_offset;
 
     // We add a breakpoint in that address.
     constexpr uint32_t kBreakpointId = 1234u;
@@ -230,10 +238,8 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     breakpoint_request.breakpoint.one_shot = true;
     breakpoint_request.breakpoint.type = debug_ipc::BreakpointType::kHardware;
     breakpoint_request.breakpoint.locations.push_back(location);
-
     debug_ipc::AddOrChangeBreakpointReply breakpoint_reply;
-    remote_api->OnAddOrChangeBreakpoint(breakpoint_request,
-                                                   &breakpoint_reply);
+    remote_api->OnAddOrChangeBreakpoint(breakpoint_request, &breakpoint_reply);
     ASSERT_EQ(breakpoint_reply.status, static_cast<uint32_t>(ZX_OK))
         << "Received: " << debug_ipc::ZxStatusToString(breakpoint_reply.status);
 
@@ -258,6 +264,17 @@ TEST(BreakpointIntegration, HWBreakpoint) {
     EXPECT_EQ(breakpoint.breakpoint_id, kBreakpointId);
     EXPECT_EQ(breakpoint.hit_count, 1u);
     EXPECT_TRUE(breakpoint.should_delete);
+
+    // Resume the thread again.
+    remote_api->OnResume(resume_request, &resume_reply);
+    loop->Run();
+
+    // We verify that the thread exited.
+    auto& thread_notification = mock_stream_backend.thread_notification();
+    ASSERT_EQ(thread_notification.process_koid, launch_reply.process_koid);
+    auto& record = thread_notification.record;
+    ASSERT_EQ(record.state, debug_ipc::ThreadRecord::State::kDead)
+        << "Got: " << debug_ipc::ThreadRecord::StateToString(record.state);
   }
 }
 

@@ -3,8 +3,9 @@
 # found in the LICENSE file.
 
 
-source_set("integration_tests") {
+executable("integration_tests") {
   testonly = true
+  output_name = "debug_agent_integration_tests"
 
   sources = [
     "message_loop_wrapper.cc",
@@ -26,6 +27,7 @@ source_set("integration_tests") {
     "//garnet/lib/debug_ipc:client",
     "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/svc/cpp",
     "//third_party/googletest:gtest",
     "//zircon/public/lib/zx",

@@ -1,6 +1,6 @@
 {
   "program": {
-    "binary": "test/debug_agent_tests"
+    "binary": "test/debug_agent_unit_tests"
   },
   "sandbox": {
     "services": [

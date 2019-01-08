@@ -23,72 +23,35 @@ debug_ipc::RegisterID GetDWARFRegisterID(debug_ipc::Arch arch,
   }
 }
 
-SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
+debug_ipc::SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
     debug_ipc::Arch arch, uint32_t dwarf_reg_id) {
   switch (arch) {
     case debug_ipc::Arch::kX64:
       switch (GetX64DWARFRegisterID(dwarf_reg_id)) {
         case RegisterID::kX64_rip:
-          return SpecialRegisterType::kIP;
+          return debug_ipc::SpecialRegisterType::kIP;
         case RegisterID::kX64_rsp:
-          return SpecialRegisterType::kSP;
+          return debug_ipc::SpecialRegisterType::kSP;
         case RegisterID::kX64_rbp:
-          return SpecialRegisterType::kBP;
+          return debug_ipc::SpecialRegisterType::kBP;
         default:
-          return SpecialRegisterType::kNone;
+          return debug_ipc::SpecialRegisterType::kNone;
       }
     case debug_ipc::Arch::kArm64:
       switch (GetX64DWARFRegisterID(dwarf_reg_id)) {
         case RegisterID::kARMv8_pc:
-          return SpecialRegisterType::kIP;
+          return debug_ipc::SpecialRegisterType::kIP;
         case RegisterID::kARMv8_sp:
-          return SpecialRegisterType::kSP;
+          return debug_ipc::SpecialRegisterType::kSP;
         case RegisterID::kARMv8_x29:
-          return SpecialRegisterType::kBP;
+          return debug_ipc::SpecialRegisterType::kBP;
         default:
-          return SpecialRegisterType::kNone;
+          return debug_ipc::SpecialRegisterType::kNone;
       }
     case debug_ipc::Arch::kUnknown:
       FXL_NOTREACHED() << "Architecture should be known for DWARF mapping.";
-      return SpecialRegisterType::kNone;
+      return debug_ipc::SpecialRegisterType::kNone;
   }
-}
-
-debug_ipc::RegisterID GetSpecialRegisterID(
-    debug_ipc::Arch arch, SpecialRegisterType type) {
-  switch (arch) {
-    case debug_ipc::Arch::kX64:
-      switch (type) {
-        case SpecialRegisterType::kNone:
-          break;
-        case SpecialRegisterType::kIP:
-          return debug_ipc::RegisterID::kX64_rip;
-        case SpecialRegisterType::kSP:
-          return debug_ipc::RegisterID::kX64_rsp;
-        case SpecialRegisterType::kBP:
-          return debug_ipc::RegisterID::kX64_rbp;
-      }
-      break;
-
-    case debug_ipc::Arch::kArm64:
-      switch (type) {
-        case SpecialRegisterType::kNone:
-          break;
-        case SpecialRegisterType::kIP:
-          return debug_ipc::RegisterID::kARMv8_pc;
-        case SpecialRegisterType::kSP:
-          return debug_ipc::RegisterID::kARMv8_sp;
-        case SpecialRegisterType::kBP:
-          return debug_ipc::RegisterID::kARMv8_x29;
-      }
-      break;
-
-    case debug_ipc::Arch::kUnknown:
-      break;
-  }
-
-  FXL_NOTREACHED();
-  return debug_ipc::RegisterID::kUnknown;
 }
 
 RegisterID GetX64DWARFRegisterID(uint32_t dwarf_reg_id) {

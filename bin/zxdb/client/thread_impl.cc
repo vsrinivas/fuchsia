@@ -130,7 +130,8 @@ void ThreadImpl::JumpTo(uint64_t new_address,
                         std::function<void(const Err&)> cb) {
   // The register to set.
   debug_ipc::Register reg;
-  reg.id = GetSpecialRegisterID(session()->arch(), SpecialRegisterType::kIP);
+  reg.id = GetSpecialRegisterID(session()->arch(),
+                                debug_ipc::SpecialRegisterType::kIP);
   reg.data.resize(sizeof(new_address));
   memcpy(&reg.data[0], &new_address, sizeof(new_address));
 

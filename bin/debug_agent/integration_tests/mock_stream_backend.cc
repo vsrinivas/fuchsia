@@ -6,6 +6,7 @@
 
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "lib/component/cpp/environment_services_helper.h"
+#include "lib/fxl/logging.h"
 
 namespace debug_agent {
 
@@ -24,13 +25,15 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
   const debug_ipc::MsgHeader* header =
       reinterpret_cast<const debug_ipc::MsgHeader*>(data);
 
-  // Buffer for the message.
+  // Buffer for the message and create a reader.
   std::vector<char> msg_buffer;
   msg_buffer.reserve(len);
   msg_buffer.insert(msg_buffer.end(), data, data + len);
+  debug_ipc::MessageReader reader(std::move(msg_buffer));
 
   // Dispatch the messages we find interesting.
-  debug_ipc::MessageReader reader(std::move(msg_buffer));
+  // NOTE: Here is where you add more notification handlers as they are sent by
+  //       the debug agent.
   switch (header->type) {
     case debug_ipc::MsgHeader::Type::kNotifyModules:
       HandleNotifyModules(&reader);
@@ -44,9 +47,12 @@ size_t MockStreamBackend::ConsumeStreamBufferData(const char* data,
     case debug_ipc::MsgHeader::Type::kNotifyThreadStarting:
       HandleNotifyThreadStarting(&reader);
       break;
+    case debug_ipc::MsgHeader::Type::kNotifyThreadExiting:
+      HandleNotifyThreadExiting(&reader);
+      break;
     default:
-      // NOTE: Here is where you add more notification handlers as they are
-      //       sent by the debug agent.
+      FXL_NOTREACHED() << "Unhandled notification: "
+                       << debug_ipc::MsgHeader::TypeToString(header->type);
       break;
   }
 

@@ -15,13 +15,8 @@ debug_ipc::RegisterID GetDWARFRegisterID(debug_ipc::Arch,
 
 // Some registers have special meaning. This function returns whether and what
 // speciual meaning the given DWARF register ID has on the given platform.
-enum class SpecialRegisterType { kNone, kIP, kSP, kBP };
-SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
+debug_ipc::SpecialRegisterType GetSpecialRegisterTypeFromDWARFRegisterID(
     debug_ipc::Arch, uint32_t dwarf_reg_id);
-
-// Returns the register ID for the given special register.
-debug_ipc::RegisterID GetSpecialRegisterID(
-    debug_ipc::Arch, SpecialRegisterType);
 
 // Platform specific -----------------------------------------------------------
 

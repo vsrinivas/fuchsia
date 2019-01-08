@@ -4,9 +4,48 @@
 
 #include "garnet/lib/debug_ipc/register_desc.h"
 
+
+#include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/logging.h"
 
 namespace debug_ipc {
+
+debug_ipc::RegisterID GetSpecialRegisterID(
+    debug_ipc::Arch arch, SpecialRegisterType type) {
+  switch (arch) {
+    case debug_ipc::Arch::kX64:
+      switch (type) {
+        case SpecialRegisterType::kNone:
+          break;
+        case SpecialRegisterType::kIP:
+          return debug_ipc::RegisterID::kX64_rip;
+        case SpecialRegisterType::kSP:
+          return debug_ipc::RegisterID::kX64_rsp;
+        case SpecialRegisterType::kBP:
+          return debug_ipc::RegisterID::kX64_rbp;
+      }
+      break;
+
+    case debug_ipc::Arch::kArm64:
+      switch (type) {
+        case SpecialRegisterType::kNone:
+          break;
+        case SpecialRegisterType::kIP:
+          return debug_ipc::RegisterID::kARMv8_pc;
+        case SpecialRegisterType::kSP:
+          return debug_ipc::RegisterID::kARMv8_sp;
+        case SpecialRegisterType::kBP:
+          return debug_ipc::RegisterID::kARMv8_x29;
+      }
+      break;
+
+    case debug_ipc::Arch::kUnknown:
+      break;
+  }
+
+  FXL_NOTREACHED();
+  return debug_ipc::RegisterID::kUnknown;
+}
 
 const char* RegisterIDToString(RegisterID id) {
   switch (id) {

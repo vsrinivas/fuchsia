@@ -13,67 +13,68 @@ constexpr uint32_t MsgHeader::kSerializedHeaderSize;
 constexpr uint64_t HelloReply::kStreamSignature;
 constexpr uint32_t HelloReply::kCurrentVersion;
 
-const char* MsgHeaderTypeToString(MsgHeader::Type type) {
+const char* MsgHeader::TypeToString(MsgHeader::Type type) {
   switch (type) {
     case MsgHeader::Type::kNone:
-      return "kNone";
+      return "None";
     case MsgHeader::Type::kHello:
-      return "kHello";
+      return "Hello";
     case MsgHeader::Type::kLaunch:
-      return "kLaunch";
+      return "Launch";
     case MsgHeader::Type::kKill:
-      return "kKill";
+      return "Kill";
     case MsgHeader::Type::kAttach:
-      return "kAttach";
+      return "Attach";
     case MsgHeader::Type::kDetach:
-      return "kDetach";
+      return "Detach";
     case MsgHeader::Type::kModules:
-      return "kModules";
+      return "Modules";
     case MsgHeader::Type::kSymbolTables:
-      return "kSymbolTables";
+      return "SymbolTables";
     case MsgHeader::Type::kPause:
-      return "kPause";
+      return "Pause";
     case MsgHeader::Type::kQuitAgent:
-      return "kQuitAgent";
+      return "QuitAgent";
     case MsgHeader::Type::kResume:
-      return "kResume";
+      return "Resume";
     case MsgHeader::Type::kProcessTree:
-      return "kProcessTree";
+      return "ProcessTree";
     case MsgHeader::Type::kThreads:
-      return "kThreads";
+      return "Threads";
     case MsgHeader::Type::kReadMemory:
-      return "kReadMemory";
+      return "ReadMemory";
     case MsgHeader::Type::kWriteMemory:
-      return "kWriteMemory";
+      return "WriteMemory";
     case MsgHeader::Type::kReadRegisters:
-      return "kReadRegisters";
+      return "ReadRegisters";
     case MsgHeader::Type::kWriteRegisters:
-      return "kWriteRegisters";
+      return "WriteRegisters";
     case MsgHeader::Type::kAddOrChangeBreakpoint:
-      return "kAddOrChangeBreakpoint";
+      return "AddOrChangeBreakpoint";
     case MsgHeader::Type::kRemoveBreakpoint:
-      return "kRemoveBreakpoint";
+      return "RemoveBreakpoint";
     case MsgHeader::Type::kThreadStatus:
-      return "kThreadStatus";
+      return "ThreadStatus";
     case MsgHeader::Type::kAddressSpace:
-      return "kAddressSpace";
+      return "AddressSpace";
     case MsgHeader::Type::kJobFilter:
-      return "kJobFilter";
+      return "JobFilter";
     case MsgHeader::Type::kNotifyProcessExiting:
-      return "kNotifyProcessExiting";
+      return "NotifyProcessExiting";
     case MsgHeader::Type::kNotifyProcessStarting:
-      return "kNotifyProcessStarting";
+      return "NotifyProcessStarting";
     case MsgHeader::Type::kNotifyThreadStarting:
-      return "kNotifyThreadStarting";
+      return "NotifyThreadStarting";
     case MsgHeader::Type::kNotifyThreadExiting:
-      return "kNotifyThreadExiting";
+      return "NotifyThreadExiting";
     case MsgHeader::Type::kNotifyException:
-      return "kNotifyException";
+      return "NotifyException";
     case MsgHeader::Type::kNotifyModules:
-      return "kNotifyModules";
+      return "NotifyModules";
     case MsgHeader::Type::kNumMessages:
-      return "kNumMessages";
+      return "NumMessages";
   }
+
   FXL_NOTREACHED();
   return "";
 }

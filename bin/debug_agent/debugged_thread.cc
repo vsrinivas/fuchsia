@@ -187,6 +187,10 @@ zx_status_t DebuggedThread::WriteRegisters(
   std::map<debug_ipc::RegisterCategory::Type, debug_ipc::RegisterCategory>
       categories;
 
+  bool rip_change = false;
+  debug_ipc::RegisterID rip_id = GetSpecialRegisterID(
+      arch::ArchProvider::Get().GetArch(), debug_ipc::SpecialRegisterType::kIP);
+
   // We append each register to the correct category to be changed.
   for (const debug_ipc::Register& reg : regs) {
     auto cat_type = debug_ipc::RegisterCategory::RegisterIDToCategory(reg.id);
@@ -195,6 +199,12 @@ zx_status_t DebuggedThread::WriteRegisters(
                        << RegisterIDToString(reg.id);
       continue;
     }
+
+    // We are changing the RIP, meaning that we're not going to jump over a
+    // breakpoint.
+    if (reg.id == rip_id)
+      rip_change = true;
+
     auto& category = categories[cat_type];
     category.type = cat_type;
     category.registers.push_back(reg);
@@ -204,12 +214,18 @@ zx_status_t DebuggedThread::WriteRegisters(
     FXL_DCHECK(cat_type != debug_ipc::RegisterCategory::Type::kNone);
     zx_status_t res = arch::ArchProvider::Get().WriteRegisters(cat, &thread_);
     if (res != ZX_OK) {
-      FXL_LOG(ERROR) << "Could not write category "
-                     << debug_ipc::RegisterCategory::TypeToString(cat_type)
-                     << ": " << debug_ipc::ZxStatusToString(res);
+      FXL_LOG(WARNING) << "Could not write category "
+                       << debug_ipc::RegisterCategory::TypeToString(cat_type)
+                       << ": " << debug_ipc::ZxStatusToString(res);
     }
   }
-
+  // If the debug agent wrote to the thread IP directly, then current state is
+  // no longer valid. Specifically, if we're currently on a breakpoint, we have
+  // to now know the fact that we're no longer in a breakpoint.
+  //
+  // This is necessary to avoid the single-stepping logic that the thread does
+  // when resuming from a breakpoint.
+  current_breakpoint_ = nullptr;
   return ZX_OK;
 }
 
@@ -356,6 +372,7 @@ void DebuggedThread::UpdateForHitProcessBreakpoint(
 }
 
 void DebuggedThread::ResumeForRunMode() {
+  // If we jumped, once we resume we reset the status.
   if (suspend_reason_ == SuspendReason::kException) {
     // Note: we could have a valid suspend token here in addition to the
     // exception if the suspension races with the delivery of the exception.

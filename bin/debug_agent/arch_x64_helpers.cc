@@ -115,6 +115,30 @@ zx_status_t WriteGeneralRegisters(const std::vector<debug_ipc::Register>& regs,
   return ZX_OK;
 }
 
+// Debug functions -------------------------------------------------------------
+
+void PrintGeneralRegisters(const zx_thread_state_general_regs& regs) {
+  FXL_LOG(INFO) << "General regs: " << std::endl
+                << "rax: 0x" << std::hex << regs.rax << std::endl
+                << "rbx: 0x" << std::hex << regs.rbx << std::endl
+                << "rcx: 0x" << std::hex << regs.rcx << std::endl
+                << "rdx: 0x" << std::hex << regs.rdx << std::endl
+                << "rsi: 0x" << std::hex << regs.rsi << std::endl
+                << "rdi: 0x" << std::hex << regs.rdi << std::endl
+                << "rbp: 0x" << std::hex << regs.rbp << std::endl
+                << "rsp: 0x" << std::hex << regs.rsp << std::endl
+                << "r8: 0x" << std::hex << regs.r8 << std::endl
+                << "r9: 0x" << std::hex << regs.r9 << std::endl
+                << "r10: 0x" << std::hex << regs.r10 << std::endl
+                << "r11: 0x" << std::hex << regs.r11 << std::endl
+                << "r12: 0x" << std::hex << regs.r12 << std::endl
+                << "r13: 0x" << std::hex << regs.r13 << std::endl
+                << "r14: 0x" << std::hex << regs.r14 << std::endl
+                << "r15: 0x" << std::hex << regs.r15 << std::endl
+                << "rip: 0x" << std::hex << regs.rip << std::endl
+                << "rflags: 0x" << std::hex << regs.rflags;
+}
+
 void PrintDebugRegisters(const zx_thread_state_debug_regs_t& regs) {
   FXL_LOG(INFO) << "Regs: " << std::endl
                 << "DR0: 0x" << std::hex << regs.dr[0] << std::endl

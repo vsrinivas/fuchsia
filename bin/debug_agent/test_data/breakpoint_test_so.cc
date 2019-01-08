@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/debug_agent/test_data/debug_agent_test_so.h"
+#include "garnet/bin/debug_agent/test_data/test_so_symbols.h"
 
-int main() {
-  ExportedFunction();
+#include <stdio.h>
+
+void InsertBreakpointFunction() {
+  printf("Breakpoint function!\n");
 }

@@ -31,6 +31,9 @@ class SoWrapper {
   bool Init(std::string so_name);
   ~SoWrapper();
 
+  // GetSymbolAddress - GetModuleStartAddress.
+  uint64_t GetSymbolOffset(const char* module, const char* symbol) const;
+
   // Gets the start address of a module loaded in the current process.
   // Returns 0 if not found.
   uint64_t GetModuleStartAddress(const char* module_name) const;

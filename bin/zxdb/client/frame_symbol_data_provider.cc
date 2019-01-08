@@ -44,13 +44,13 @@ std::optional<uint64_t> FrameSymbolDataProvider::GetRegister(
   // Some common registers are known without having to do a register request.
   switch (GetSpecialRegisterTypeFromDWARFRegisterID(frame_->session()->arch(),
                                                     dwarf_register_number)) {
-    case SpecialRegisterType::kIP:
+    case debug_ipc::SpecialRegisterType::kIP:
       return frame_->GetAddress();
-    case SpecialRegisterType::kSP:
+    case debug_ipc::SpecialRegisterType::kSP:
       return frame_->GetStackPointer();
-    case SpecialRegisterType::kBP:
+    case debug_ipc::SpecialRegisterType::kBP:
       return frame_->GetBasePointerRegister();
-    case SpecialRegisterType::kNone:
+    case debug_ipc::SpecialRegisterType::kNone:
       break;
   }
 
