@@ -6,9 +6,7 @@ import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
 # We have a separate package for each example to clarify the dependencies of
-# each example, and to make them easier to run ("run fx" instead of
-# "run media_examples#meta/fx.cmx" or
-# "run fuchsia-pkg://fuchsia.com/media_examples#meta/fx.cmx").
+# each example.
 
 package("fx") {
   deprecated_bare_package_url = "//build"
@@ -16,7 +14,14 @@ package("fx") {
   deps = [
     "fx",
   ]
-  binary = "fx"
+
+  binaries = [
+    {
+      name = "fx"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("fx/meta/fx.cmx")
@@ -31,7 +36,14 @@ package("simple_sine") {
   deps = [
     "simple_sine",
   ]
-  binary = "simple_sine"
+
+  binaries = [
+    {
+      name = "simple_sine"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("simple_sine/meta/simple_sine.cmx")
@@ -46,7 +58,14 @@ package("simple_sine_sync") {
   deps = [
     "simple_sine_sync",
   ]
-  binary = "simple_sine_sync"
+
+  binaries = [
+    {
+      name = "simple_sine_sync"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("simple_sine_sync/meta/simple_sine_sync.cmx")
@@ -61,7 +80,14 @@ package("tones") {
   deps = [
     "tones",
   ]
-  binary = "tones"
+
+  binaries = [
+    {
+      name = "tones"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("tones/meta/tones.cmx")
@@ -76,7 +102,14 @@ package("tts") {
   deps = [
     "tts",
   ]
-  binary = "tts"
+
+  binaries = [
+    {
+      name = "tts"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("tts/meta/tts.cmx")
@@ -91,7 +124,14 @@ package("use_media_decoder") {
   deps = [
     "use_media_decoder",
   ]
-  binary = "use_media_decoder"
+
+  binaries = [
+    {
+      name = "use_media_decoder"
+      shell = true
+    },
+  ]
+
   meta = [
     {
       path = rebase_path("use_media_decoder/meta/use_media_decoder.cmx")

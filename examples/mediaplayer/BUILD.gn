@@ -7,7 +7,6 @@ import("//build/package.gni")
 
 package("mediaplayer") {
   package_name = "mediaplayer_examples"
-  deprecated_system_image = true
 
   deps = [
     "audio_player",
@@ -17,10 +16,12 @@ package("mediaplayer") {
   binaries = [
     {
       name = "audio_player"
+      shell = true
     },
     {
       name = "rust_crates/audio_player_rust"
       dest = "audio_player_rust"
+      shell = true
     },
   ]
 }
