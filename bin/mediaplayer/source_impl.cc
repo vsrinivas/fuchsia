@@ -213,7 +213,7 @@ StreamSourceImpl::StreamSourceImpl(
   // careful about that.
   stream_source_segment_raw_ptr_ = stream_source_segment_.get();
 
-  AddBinding(std::move(request));
+  AddBindingInternal(std::move(request));
 
   bindings_.set_empty_set_handler([this]() { Remove(); });
 }
@@ -257,6 +257,13 @@ void StreamSourceImpl::AddStream(
 }
 
 void StreamSourceImpl::AddBinding(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
+        stream_source_request) {
+  FXL_DCHECK(stream_source_request);
+  AddBindingInternal(std::move(stream_source_request));
+}
+
+void StreamSourceImpl::AddBindingInternal(
     fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
         stream_source_request) {
   FXL_DCHECK(stream_source_request);

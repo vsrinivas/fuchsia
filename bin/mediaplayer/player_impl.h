@@ -111,6 +111,11 @@ class PlayerImpl : public fuchsia::mediaplayer::Player {
 
   static const char* ToString(State value);
 
+  // Adds a binding to |bindings_| and fires the |OnStatusChanged| for the new
+  // binding.
+  void AddBindingInternal(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request);
+
   // Begins the process of setting a new source.
   void BeginSetSource(std::unique_ptr<SourceImpl> source);
 

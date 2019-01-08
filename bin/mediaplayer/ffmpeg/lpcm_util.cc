@@ -131,6 +131,7 @@ void LpcmUtilImpl<T>::Interleave(const void* in, size_t in_byte_count,
 
   uint32_t channels = stream_type_.channels();
   FXL_DCHECK(channels);
+  FXL_DCHECK(stream_type_.bytes_per_frame() != 0);
   FXL_DCHECK(in_byte_count % stream_type_.bytes_per_frame() == 0);
   FXL_DCHECK(in_byte_count >= frame_count * stream_type_.bytes_per_frame());
   uint64_t in_channel_stride = in_byte_count / stream_type_.bytes_per_frame();

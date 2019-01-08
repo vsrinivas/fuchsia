@@ -179,6 +179,7 @@ void Builder::AddTransformsForCompressedAudio(
         // No transform needed.
         type_ = audio_type.Clone();
         Succeed();
+        return;
       }
       // TODO(dalesat): Support a different compressed output type by
       // transcoding.

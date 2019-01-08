@@ -121,7 +121,7 @@ PlayerImpl::PlayerImpl(
       })));
 
   UpdateStatus();
-  AddBinding(std::move(request));
+  AddBindingInternal(std::move(request));
 
   bindings_.set_empty_set_handler([this]() { quit_callback_(); });
 
@@ -415,6 +415,15 @@ void PlayerImpl::SetFileSource(zx::channel file_channel) {
       CreateSource(FileReader::Create(std::move(file_channel)), nullptr));
 }
 
+void PlayerImpl::AddBindingInternal(
+    fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) {
+  FXL_DCHECK(request);
+  bindings_.AddBinding(this, std::move(request));
+
+  // Fire |OnStatusChanged| event for the new client.
+  bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status_));
+}
+
 void PlayerImpl::BeginSetSource(std::unique_ptr<SourceImpl> source) {
   // Note the pending source change and advance the state machine. When the old
   // source (if any) is shut down, the state machine will call
@@ -516,10 +525,7 @@ void PlayerImpl::BindGainControl(
 void PlayerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::mediaplayer::Player> request) {
   FXL_DCHECK(request);
-  bindings_.AddBinding(this, std::move(request));
-
-  // Fire |OnStatusChanged| event for the new client.
-  bindings_.bindings().back()->events().OnStatusChanged(fidl::Clone(status_));
+  AddBindingInternal(std::move(request));
 }
 
 void PlayerImpl::CreateHttpSource(

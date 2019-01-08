@@ -349,7 +349,7 @@ void FfmpegDemuxImpl::Worker() {
     }
 
     if (packet_requested) {
-      size_t stream_index;
+      size_t stream_index{};
       PacketPtr packet = PullPacket(&stream_index);
       FXL_DCHECK(packet);
 

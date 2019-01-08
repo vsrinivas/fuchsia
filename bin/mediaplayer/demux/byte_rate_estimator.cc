@@ -44,6 +44,7 @@ std::optional<float> ByteRateEstimator::Estimate() {
     numerator += samples_[i] * (n - i);
   }
   int64_t denominator = n * (n + 1) / 2;
+  FXL_DCHECK(denominator != 0);
   zx::duration time_per_byte = numerator / denominator;
   return float(ZX_SEC(1)) / float(time_per_byte.to_nsecs());
 }

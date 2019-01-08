@@ -144,6 +144,10 @@ class StreamSourceImpl : public SourceImpl,
                       stream_source_request) override;
 
  private:
+  void AddBindingInternal(
+      fidl::InterfaceRequest<fuchsia::mediaplayer::StreamSource>
+          stream_source_request);
+
   fidl::BindingSet<fuchsia::mediaplayer::StreamSource> bindings_;
 
   std::unique_ptr<StreamSourceSegment> stream_source_segment_;
