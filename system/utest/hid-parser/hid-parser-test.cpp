@@ -9,6 +9,7 @@
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
 #include <hid-parser/report.h>
+#include <hid-parser/units.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>
@@ -1117,6 +1118,281 @@ static bool extract_tests() {
 
 }
 
+static bool unit_tests() {
+    BEGIN_TEST;
+    hid::Unit unit_in;
+    hid::Unit unit_out;
+    bool ret;
+    double val_out;
+
+    // Test the unit type setting/getting.
+    {
+        unit_in.type = 0;
+        hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+        hid::unit::SetLengthExp(unit_in, 2);
+        hid::unit::SetMassExp(unit_in, 3);
+        hid::unit::SetTimeExp(unit_in, 7);
+        hid::unit::SetTemperatureExp(unit_in, -1);
+        hid::unit::SetCurrentExp(unit_in, -2);
+        hid::unit::SetLuminousExp(unit_in, -8);
+
+        auto sys = hid::unit::GetSystem(unit_in);
+        EXPECT_EQ(sys, hid::unit::System::si_linear);
+
+        int exp = hid::unit::GetLengthExp(unit_in);
+        EXPECT_EQ(exp, 2);
+        exp = hid::unit::GetMassExp(unit_in);
+        EXPECT_EQ(exp, 3);
+        exp = hid::unit::GetTimeExp(unit_in);
+        EXPECT_EQ(exp, 7);
+        exp = hid::unit::GetTemperatureExp(unit_in);
+        EXPECT_EQ(exp, -1);
+        exp = hid::unit::GetCurrentExp(unit_in);
+        EXPECT_EQ(exp, -2);
+        exp = hid::unit::GetLuminousExp(unit_in);
+        EXPECT_EQ(exp, -8);
+    }
+
+    // Test same units convert to lower exponent.
+    // 1 * 10^0 cm = 100 * 10^-1 cm
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = -2;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 100);
+
+    // Test same units convert to higher exponent.
+    // 100 * 10^0 cm = 1 * 10^2 cm
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 2;
+
+    ret = hid::unit::ConvertUnits(100, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 1);
+
+    // Distance Conversion Tests.
+
+    // 100 * 10^1 inches == 25 * 10^2 cm
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 1;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 2;
+
+    ret = hid::unit::ConvertUnits(100, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 25);
+
+    // 1 * 10^2 cm == 39 * 10^0 in
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 2;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 39);
+
+    // 100 * 10^0 cm^3 == 6 * 10^0 in^3
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 3);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 3);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(100, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 6);
+
+    // 1 * 10^0 in^3 == 16 * 10^0 cm^3
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 3);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 3);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 16);
+
+    // 180 degrees = 3 radians
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_rotation, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_rotation, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(180, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 3);
+
+    // 3 radians = 171 degrees
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_rotation, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_rotation, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(3, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 171);
+
+    // Mass Converson Tests.
+    // 1 slug = 14593 grams
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetMassExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetMassExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 14593);
+
+    // 200000 grams = 13 slugs
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetMassExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_out);
+    hid::unit::SetMassExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(200000, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 13);
+
+    // Temperature Conversion Tests.
+    // 32 F = 273 K
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetTemperatureExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetTemperatureExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(32, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 273);
+
+    // 273 K = 31 F
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetTemperatureExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_out);
+    hid::unit::SetTemperatureExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(273, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 31);
+
+    // Misc Tests.
+    // SlugUnits to Newtons (Force conversion).
+    // 100 * 10^0 slug * in / seconds^2 == 37 * 10^5 g * cm / seconds^2
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetMassExp(unit_in, 1);
+    hid::unit::SetLengthExp(unit_in, 1);
+    hid::unit::SetTimeExp(unit_in, -2);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetMassExp(unit_out, 1);
+    hid::unit::SetLengthExp(unit_out, 1);
+    hid::unit::SetTimeExp(unit_out, -2);
+    unit_out.exp = 5;
+
+    ret = hid::unit::ConvertUnits(100, unit_in, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 37);
+
+    // Failure Tests.
+    // Can't convert between different units.
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_linear, unit_in);
+    hid::unit::SetMassExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetMassExp(unit_out, 2);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_FALSE(ret);
+
+    // Can't convert between rotation and linear distance.
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::eng_rotation, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = 0;
+
+    ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
+    EXPECT_FALSE(ret);
+
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(hidparser_tests)
 RUN_TEST(itemize_acer12_rpt1)
 RUN_TEST(itemize_eve_tablet_rpt)
@@ -1133,6 +1409,7 @@ RUN_TEST(usage_helper)
 RUN_TEST(minmax_operators)
 RUN_TEST(usage_operators)
 RUN_TEST(extract_tests)
+RUN_TEST(unit_tests)
 END_TEST_CASE(hidparser_tests)
 
 int main(int argc, char** argv) {
