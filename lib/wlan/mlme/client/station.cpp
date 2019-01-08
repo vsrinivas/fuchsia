@@ -39,7 +39,7 @@ using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-Station::Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched,
+Station::Station(DeviceInterface* device, TimerManager2<>&& timer_mgr, ChannelScheduler* chan_sched,
                  JoinContext* join_ctx)
     : device_(device),
       timer_mgr_(std::move(timer_mgr)),
@@ -52,9 +52,7 @@ void Station::Reset() {
     debugfn();
 
     state_ = WlanState::kIdle;
-    auth_timeout_.Cancel();
-    assoc_timeout_.Cancel();
-    signal_report_timeout_.Cancel();
+    timer_mgr_.CancelAll();
     bu_queue_.clear();
 }
 
@@ -176,7 +174,7 @@ zx_status_t Station::Authenticate(wlan_mlme::AuthenticationTypes auth_type, uint
     auth->status_code = 0;  // Reserved: explicitly set to 0
 
     zx::time deadline = deadline_after_bcn_period(timeout);
-    auto status = timer_mgr_.Schedule(deadline, &auth_timeout_);
+    auto status = timer_mgr_.Schedule(deadline, {}, &auth_timeout_);
     if (status != ZX_OK) {
         errorf("could not set authentication timeout event: %s\n", zx_status_get_string(status));
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -334,7 +332,7 @@ zx_status_t Station::Associate(Span<const uint8_t> rsne) {
     // TODO(NET-500): Add association timeout to MLME-ASSOCIATE.request just like
     // JOIN and AUTHENTICATE requests do.
     zx::time deadline = deadline_after_bcn_period(kAssocBcnCountTimeout);
-    status = timer_mgr_.Schedule(deadline, &assoc_timeout_);
+    status = timer_mgr_.Schedule(deadline, {}, &assoc_timeout_);
     if (status != ZX_OK) {
         errorf("could not set auth timedout event: %d\n", status);
         // This is the wrong result code, but we need to define our own codes at some later time.
@@ -382,7 +380,7 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     }
 
     // Authentication notification received. Cancel pending timeout.
-    auth_timeout_.Cancel();
+    timer_mgr_.Cancel(auth_timeout_);
 
     auto auth = frame.body();
     if (auth->auth_algorithm_number != auth_alg_) {
@@ -453,7 +451,7 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
     }
 
     // Receive association response, cancel association timeout.
-    assoc_timeout_.Cancel();
+    timer_mgr_.Cancel(assoc_timeout_);
 
     auto assoc = frame.body();
     if (assoc->status_code != status_code::kSuccess) {
@@ -483,13 +481,13 @@ zx_status_t Station::HandleAssociationResponse(MgmtFrame<AssociationResponse>&& 
 
     // Initiate RSSI reporting to Wlanstack.
     zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-    timer_mgr_.Schedule(deadline, &signal_report_timeout_);
+    timer_mgr_.Schedule(deadline, {}, &signal_report_timeout_);
     avg_rssi_dbm_.reset();
     avg_rssi_dbm_.add(dBm(frame.View().rx_info()->rssi_dbm));
     service::SendSignalReportIndication(device_, common::dBm(frame.View().rx_info()->rssi_dbm));
 
     remaining_auto_deauth_timeout_ = FullAutoDeauthDuration();
-    status = timer_mgr_.Schedule(timer_mgr_.Now() + remaining_auto_deauth_timeout_,
+    status = timer_mgr_.Schedule(timer_mgr_.Now() + remaining_auto_deauth_timeout_, {},
                                  &auto_deauth_timeout_);
     if (status != ZX_OK) { warnf("could not set auto-deauthentication timeout event\n"); }
 
@@ -531,7 +529,7 @@ zx_status_t Station::HandleDisassociation(MgmtFrame<Disassociation>&& frame) {
     device_->ClearAssoc(join_ctx_->bssid());
     device_->SetStatus(0);
     controlled_port_ = eapol::PortState::kBlocked;
-    signal_report_timeout_.Cancel();
+    timer_mgr_.Cancel(signal_report_timeout_);
     bu_queue_.clear();
 
     return service::SendDisassociateIndication(device_, join_ctx_->bssid(), disassoc->reason_code);
@@ -792,61 +790,59 @@ zx_status_t Station::HandleEthFrame(EthFrame&& eth_frame) {
 
 zx_status_t Station::HandleTimeout() {
     debugfn();
-    zx::time now = timer_mgr_.HandleTimeout();
 
-    if (auth_timeout_.Triggered(now)) {
-        debugjoin("auth timed out; moving back to idle state\n");
-        auth_timeout_.Cancel();
-        state_ = WlanState::kIdle;
-        service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                                 wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
-    } else if (assoc_timeout_.Triggered(now)) {
-        debugjoin("assoc timed out; moving back to authenticated\n");
-        assoc_timeout_.Cancel();
-        // TODO(tkilbourn): need a better error code for this
-        service::SendAssocConfirm(device_, wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
-    }
-
-    if (signal_report_timeout_.Triggered(now)) {
-        signal_report_timeout_.Cancel();
-
-        if (state_ == WlanState::kAssociated) {
-            service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
-
-            zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
-            timer_mgr_.Schedule(deadline, &signal_report_timeout_);
-        }
-    }
-
-    if (auto_deauth_timeout_.Triggered(now)) {
-        auto_deauth_timeout_.Cancel();
-
-        debugclt("now: %lu\n", now.get());
-        debugclt("remaining auto-deauth timeout: %lu\n", remaining_auto_deauth_timeout_.get());
-        debugclt("auto-deauth last accounted time: %lu\n", auto_deauth_last_accounted_.get());
-
-        if (!chan_sched_->OnChannel()) {
-            ZX_DEBUG_ASSERT("auto-deauth timeout should not trigger while off channel\n");
-        } else if (remaining_auto_deauth_timeout_ > now - auto_deauth_last_accounted_) {
-            // Update the remaining auto-deauth timeout with the unaccounted time
-            remaining_auto_deauth_timeout_ -= now - auto_deauth_last_accounted_;
-            auto_deauth_last_accounted_ = now;
-            timer_mgr_.Schedule(now + remaining_auto_deauth_timeout_, &auto_deauth_timeout_);
-        } else if (state_ == WlanState::kAssociated) {
-            infof("lost BSS; deauthenticating...\n");
+    zx_status_t status = timer_mgr_.HandleTimeout([&](auto now, auto _event, auto timeout_id) {
+        if (timeout_id == auth_timeout_) {
+            debugjoin("auth timed out; moving back to idle state\n");
             state_ = WlanState::kIdle;
-            device_->ClearAssoc(join_ctx_->bssid());
-            device_->SetStatus(0);
-            controlled_port_ = eapol::PortState::kBlocked;
+            service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                     wlan_mlme::AuthenticateResultCodes::AUTH_FAILURE_TIMEOUT);
+        } else if (timeout_id == assoc_timeout_) {
+            debugjoin("assoc timed out; moving back to authenticated\n");
+            // TODO(tkilbourn): need a better error code for this
+            service::SendAssocConfirm(device_,
+                                      wlan_mlme::AssociateResultCodes::REFUSED_TEMPORARILY);
+        } else if (timeout_id == signal_report_timeout_) {
+            if (state_ == WlanState::kAssociated) {
+                service::SendSignalReportIndication(device_, common::to_dBm(avg_rssi_dbm_.avg()));
 
-            auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
-            service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
-            auto status = SendDeauthFrame(reason_code);
-            if (status != ZX_OK) { errorf("could not send deauth packet: %d\n", status); }
+                zx::time deadline = deadline_after_bcn_period(kSignalReportBcnCountTimeout);
+                timer_mgr_.Schedule(deadline, {}, &signal_report_timeout_);
+            }
+        } else if (timeout_id == auto_deauth_timeout_) {
+            debugclt("now: %lu\n", now.get());
+            debugclt("remaining auto-deauth timeout: %lu\n", remaining_auto_deauth_timeout_.get());
+            debugclt("auto-deauth last accounted time: %lu\n", auto_deauth_last_accounted_.get());
+
+            if (!chan_sched_->OnChannel()) {
+                ZX_DEBUG_ASSERT("auto-deauth timeout should not trigger while off channel\n");
+            } else if (remaining_auto_deauth_timeout_ > now - auto_deauth_last_accounted_) {
+                // Update the remaining auto-deauth timeout with the unaccounted time
+                remaining_auto_deauth_timeout_ -= now - auto_deauth_last_accounted_;
+                auto_deauth_last_accounted_ = now;
+                timer_mgr_.Schedule(now + remaining_auto_deauth_timeout_, {},
+                                    &auto_deauth_timeout_);
+            } else if (state_ == WlanState::kAssociated) {
+                infof("lost BSS; deauthenticating...\n");
+                state_ = WlanState::kIdle;
+                device_->ClearAssoc(join_ctx_->bssid());
+                device_->SetStatus(0);
+                controlled_port_ = eapol::PortState::kBlocked;
+
+                auto reason_code = wlan_mlme::ReasonCode::LEAVING_NETWORK_DEAUTH;
+                service::SendDeauthIndication(device_, join_ctx_->bssid(), reason_code);
+                auto status = SendDeauthFrame(reason_code);
+                if (status != ZX_OK) { errorf("could not send deauth packet: %d\n", status); }
+            }
         }
+    });
+
+    if (status != ZX_OK) {
+        errorf("failed to rearm the timer after handling the timeout: %s",
+               zx_status_get_string(status));
     }
 
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t Station::SendKeepAliveResponse() {
@@ -1021,7 +1017,7 @@ void Station::PreSwitchOffChannel() {
     if (state_ == WlanState::kAssociated) {
         SetPowerManagementMode(true);
 
-        auto_deauth_timeout_.Cancel();
+        timer_mgr_.Cancel(auto_deauth_timeout_);
         zx::duration unaccounted_time = timer_mgr_.Now() - auto_deauth_last_accounted_;
         if (remaining_auto_deauth_timeout_ > unaccounted_time) {
             remaining_auto_deauth_timeout_ -= unaccounted_time;
@@ -1038,7 +1034,7 @@ void Station::BackToMainChannel() {
 
         zx::time now = timer_mgr_.Now();
         auto deadline = now + std::max(remaining_auto_deauth_timeout_, WLAN_TU(1u));
-        timer_mgr_.Schedule(deadline, &auto_deauth_timeout_);
+        timer_mgr_.Schedule(deadline, {}, &auto_deauth_timeout_);
         auto_deauth_last_accounted_ = now;
 
         SendBufferedUnits();

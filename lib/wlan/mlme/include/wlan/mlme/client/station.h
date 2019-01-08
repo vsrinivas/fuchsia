@@ -36,7 +36,7 @@ class Packet;
 
 class Station : public ClientInterface {
    public:
-    Station(DeviceInterface* device, TimerManager&& timer_mgr, ChannelScheduler* chan_sched,
+    Station(DeviceInterface* device, TimerManager2<>&& timer_mgr, ChannelScheduler* chan_sched,
             JoinContext* join_ctx);
     ~Station() = default;
 
@@ -129,16 +129,16 @@ class Station : public ClientInterface {
     zx_status_t NotifyAssocContext();
 
     DeviceInterface* device_;
-    TimerManager timer_mgr_;
+    TimerManager2<> timer_mgr_;
     ChannelScheduler* chan_sched_;
     Sequence seq_;
     JoinContext* join_ctx_;
 
     WlanState state_ = WlanState::kIdle;
-    TimedEvent auth_timeout_;
-    TimedEvent assoc_timeout_;
-    TimedEvent signal_report_timeout_;
-    TimedEvent auto_deauth_timeout_;
+    TimeoutId auth_timeout_;
+    TimeoutId assoc_timeout_;
+    TimeoutId signal_report_timeout_;
+    TimeoutId auto_deauth_timeout_;
     // The remaining time we'll wait for a beacon before deauthenticating (while we are on channel)
     // Note: Off-channel time does not count against `remaining_auto_deauth_timeout_`
     zx::duration remaining_auto_deauth_timeout_ = zx::duration::infinite();
