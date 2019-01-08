@@ -12,7 +12,6 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/set_focus_state_command_runner.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/set_kind_of_proto_story_option_command_runner.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/set_link_value_command_runner.h"
-#include "peridot/bin/sessionmgr/puppet_master/command_runners/update_mod_command_runner.h"
 #include "peridot/bin/sessionmgr/puppet_master/dispatch_story_command_executor.h"
 
 namespace modular {
@@ -45,8 +44,6 @@ std::unique_ptr<StoryCommandExecutor> MakeProductionStoryCommandExecutor(
                               module_facet_reader));
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kFocusMod,
                           new FocusModCommandRunner(std::move(module_focuser)));
-  command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kUpdateMod,
-                          new UpdateModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kRemoveMod,
                           new RemoveModCommandRunner());
   command_runners.emplace(fuchsia::modular::StoryCommand::Tag::kSetLinkValue,

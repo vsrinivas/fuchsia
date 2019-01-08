@@ -61,7 +61,6 @@ double ModPairRankingFeature::ComputeFeatureInternal(
       case fuchsia::modular::StoryCommand::Tag::kSetFocusState:
       case fuchsia::modular::StoryCommand::Tag::kFocusMod:
       case fuchsia::modular::StoryCommand::Tag::kSetLinkValue:
-      case fuchsia::modular::StoryCommand::Tag::kUpdateMod:
       case fuchsia::modular::StoryCommand::Tag::kRemoveMod:
       case fuchsia::modular::StoryCommand::Tag::Invalid:
         continue;

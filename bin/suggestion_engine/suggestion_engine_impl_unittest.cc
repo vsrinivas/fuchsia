@@ -194,24 +194,6 @@ class SuggestionEngineTest : public testing::TestWithSessionStorage {
     proposal->on_selected.push_back(std::move(command));
   }
 
-  void AddUpdateModuleAction(fuchsia::modular::Proposal* proposal,
-                             const std::string& mod_name,
-                             const std::string& json_param_name,
-                             const std::string& json_param_value) {
-    fuchsia::modular::IntentParameter parameter;
-    parameter.name = json_param_name;
-    fsl::SizedVmo vmo;
-    FXL_CHECK(fsl::VmoFromString(json_param_value, &vmo));
-    parameter.data.set_json(std::move(vmo).ToTransport());
-    fuchsia::modular::UpdateMod update_mod;
-    update_mod.mod_name.push_back(mod_name);
-    update_mod.parameters.push_back(std::move(parameter));
-
-    fuchsia::modular::StoryCommand command;
-    command.set_update_mod(std::move(update_mod));
-    proposal->on_selected.push_back(std::move(command));
-  }
-
   void AddSetLinkValueAction(fuchsia::modular::Proposal* proposal,
                              const std::string& mod_name,
                              const std::string& link_name,
@@ -510,7 +492,6 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   AddAddModuleAction(&proposal, "mod_name", "mod_url");
   AddFocusStoryAction(&proposal);
   AddFocusModuleAction(&proposal, "mod_name");
-  AddUpdateModuleAction(&proposal, "mod_name", "json_param", "1");
   AddSetLinkValueAction(&proposal, "mod_name", "foo_link_name", "foo_value");
   proposal_publisher_->Propose(std::move(proposal));
 
@@ -532,12 +513,11 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   auto story_id = test_executor_.last_story_id();
 
   auto& commands = test_executor_.last_commands();
-  ASSERT_EQ(5u, commands.size());
+  ASSERT_EQ(4u, commands.size());
   EXPECT_TRUE(commands.at(0).is_add_mod());
   EXPECT_TRUE(commands.at(1).is_set_focus_state());
   EXPECT_TRUE(commands.at(2).is_focus_mod());
-  EXPECT_TRUE(commands.at(3).is_update_mod());
-  EXPECT_TRUE(commands.at(4).is_set_link_value());
+  EXPECT_TRUE(commands.at(3).is_set_link_value());
 
   auto& add_mod = commands.at(0).add_mod();
   ASSERT_EQ(1u, add_mod.mod_name->size());
@@ -551,16 +531,7 @@ TEST_F(SuggestionEngineTest, NotifyInteractionSelected) {
   ASSERT_EQ(1u, focus_mod.mod_name->size());
   EXPECT_EQ("mod_name", focus_mod.mod_name->at(0));
 
-  auto& update_mod = commands.at(3).update_mod();
-  ASSERT_EQ(1u, update_mod.mod_name->size());
-  EXPECT_EQ("mod_name", update_mod.mod_name->at(0));
-  EXPECT_EQ("json_param", update_mod.parameters->at(0).name);
-  std::string json_value;
-  FXL_CHECK(fsl::StringFromVmo(update_mod.parameters->at(0).data.json(),
-                               &json_value));
-  EXPECT_EQ("1", json_value);
-
-  auto& set_link_value = commands.at(4).set_link_value();
+  auto& set_link_value = commands.at(3).set_link_value();
   ASSERT_EQ(1u, set_link_value.path.module_path->size());
   EXPECT_EQ("mod_name", set_link_value.path.module_path->at(0));
   EXPECT_EQ("foo_link_name", set_link_value.path.link_name);

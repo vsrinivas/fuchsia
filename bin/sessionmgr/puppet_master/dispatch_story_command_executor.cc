@@ -152,8 +152,6 @@ DispatchStoryCommandExecutor::DispatchStoryCommandExecutor(
            "StoryCommand::AddMod"},
           {fuchsia::modular::StoryCommand::Tag::kFocusMod,
            "StoryCommand::FocusMod"},
-          {fuchsia::modular::StoryCommand::Tag::kUpdateMod,
-           "StoryCommand::UpdateMod"},
           {fuchsia::modular::StoryCommand::Tag::kRemoveMod,
            "StoryCommand::RemoveMod"},
           {fuchsia::modular::StoryCommand::Tag::kSetLinkValue,

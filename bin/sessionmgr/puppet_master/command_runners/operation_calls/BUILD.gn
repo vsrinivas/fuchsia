@@ -23,7 +23,6 @@ source_set("add_mod_call") {
     ":get_link_path_for_parameter_name_call",
     ":get_types_from_entity_call",
     ":initialize_chain_call",
-    ":update_mod_call",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
@@ -112,18 +111,3 @@ source_set("set_link_value_call") {
   ]
 }
 
-source_set("update_mod_call") {
-  sources = [
-    "update_mod_call.cc",
-    "update_mod_call.h",
-  ]
-
-  deps = [
-    ":set_link_value_call",
-    "//peridot/bin/sessionmgr/storage:story_storage",
-    "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/async/cpp:operation",
-    "//peridot/public/lib/entity/cpp:json",
-  ]
-}

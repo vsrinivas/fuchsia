@@ -13,7 +13,6 @@
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_link_path_for_parameter_name_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/get_types_from_entity_call.h"
 #include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/initialize_chain_call.h"
-#include "peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls/update_mod_call.h"
 #include "peridot/lib/fidl/clone.h"
 #include "peridot/lib/module_manifest/module_facet_reader.h"
 

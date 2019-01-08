@@ -21,9 +21,6 @@ union StoryCommand {
     // Adds a Mod.
     AddMod add_mod;
 
-    // Updates mod link params.
-    UpdateMod update_mod;
-
     // Removes an existing Mod.
     RemoveMod remove_mod;
 
@@ -57,15 +54,6 @@ struct AddMod {
     // mod at |surface_parent_mod_name|.
     SurfaceRelation surface_relation;
     vector<string>? surface_parent_mod_name;
-};
-
-// Updates a mod link values through its parameters.
-struct UpdateMod {
-    vector<string> mod_name;
-
-    // For every entry |p| in |parameters|, update the value of the link
-    // backing |p.name| to that specified in |p.data|.
-    vector<IntentParameter> parameters;
 };
 
 // Removes the mod under |mod_name| from the story.

@@ -49,40 +49,6 @@ executable("set_link_value_command_runner_unittest") {
   ]
 }
 
-source_set("update_mod_command_runner") {
-  sources = [
-    "update_mod_command_runner.cc",
-    "update_mod_command_runner.h",
-  ]
-
-  deps = [
-    "//garnet/public/lib/fsl",
-    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:update_mod_call",
-  ]
-
-  public_deps = [
-    ":command_runner",
-    "//peridot/public/lib/async/cpp:operation",
-  ]
-}
-
-executable("update_mod_command_runner_unittest") {
-  testonly = true
-
-  sources = [
-    "update_mod_command_runner_unittest.cc",
-  ]
-
-  deps = [
-    ":update_mod_command_runner",
-    "//garnet/public/lib/gtest",
-    "//peridot/lib/testing:test_with_session_storage",
-    "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/entity/cpp:json",
-    "//third_party/googletest:gtest_main",
-  ]
-}
-
 source_set("add_mod_command_runner") {
   sources = [
     "add_mod_command_runner.cc",

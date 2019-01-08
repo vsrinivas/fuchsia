@@ -15,7 +15,6 @@ tests_package("puppet_master_unittests") {
     "command_runners:set_focus_state_command_runner_unittest",
     "command_runners:set_kind_of_proto_story_option_command_runner_unittest",
     "command_runners:set_link_value_command_runner_unittest",
-    "command_runners:update_mod_command_runner_unittest",
   ]
 }
 
@@ -128,6 +127,5 @@ source_set("make_production_impl") {
     "//peridot/bin/sessionmgr/puppet_master/command_runners:set_focus_state_command_runner",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:set_kind_of_proto_story_option_command_runner",
     "//peridot/bin/sessionmgr/puppet_master/command_runners:set_link_value_command_runner",
-    "//peridot/bin/sessionmgr/puppet_master/command_runners:update_mod_command_runner",
   ]
 }
