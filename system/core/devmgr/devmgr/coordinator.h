@@ -11,6 +11,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
+#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
@@ -27,35 +28,9 @@
 namespace devmgr {
 
 class Coordinator;
-struct Device;
 class Devhost;
 struct Devnode;
 class SuspendContext;
-
-struct Work {
-    Work() : owner(nullptr) { }
-    explicit Work(Device* dev) : owner(dev) { }
-
-    fbl::DoublyLinkedListNodeState<Work*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Work*>& node_state(
-            Work& obj) {
-            return obj.node;
-        }
-    };
-
-    enum struct Op : uint32_t {
-        kIdle = 0,
-        kDeviceAdded = 1,
-        kDriverAdded = 2,
-    } op = Op::kIdle;
-    uint32_t arg = 0;
-    // The number of retries left for the task.
-    uint32_t retries = 4;
-    // The backoff between each retry. This grows exponentially.
-    zx::duration backoff = zx::msec(250);
-    Device* owner;
-};
 
 class PendingOperation {
 public:
@@ -87,7 +62,7 @@ private:
 #define DEV_HOST_SUSPEND 2
 
 struct Device {
-    Device();
+    explicit Device(Coordinator* coordinator);
     ~Device();
 
     // Begins waiting in |dispatcher| on |dev->wait|.  This transfers a
@@ -116,22 +91,26 @@ struct Device {
                           const zx_packet_signal_t* signal);
 
     zx::channel hrpc;
-    uint32_t flags;
+    uint32_t flags = 0;
 
     async::WaitMethod<Device, &Device::HandleRpcEntry> wait{this};
+    async::TaskClosure publish_task;
 
-    Devhost* host;
-    const char* name;
-    const char* libname;
+    Devhost* host = nullptr;
+    const char* name = nullptr;
+    const char* libname = nullptr;
     fbl::unique_ptr<const char[]> args;
-    Work work;
-    mutable int32_t refcount_;
-    uint32_t protocol_id;
-    uint32_t prop_count;
-    Devnode* self;
-    Devnode* link;
-    Device* parent;
-    Device* proxy;
+    // The backoff between each driver retry. This grows exponentially.
+    zx::duration backoff = zx::msec(250);
+    // The number of retries left for the driver.
+    uint32_t retries = 4;
+    mutable int32_t refcount_ = 0;
+    uint32_t protocol_id = 0;
+    uint32_t prop_count = 0;
+    Devnode* self = nullptr;
+    Devnode* link = nullptr;
+    Device* parent = nullptr;
+    Device* proxy = nullptr;
 
     // listnode for this device in its parent's
     // list-of-children

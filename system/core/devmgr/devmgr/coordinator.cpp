@@ -57,7 +57,6 @@ public:
 
     Coordinator() = default;
 
-
     zx_status_t InitializeCoreDevices();
 
     zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
@@ -72,10 +71,6 @@ public:
     void DumpDeviceProps(const Device* dev) const;
     void DumpGlobalDeviceProps() const;
     void DumpDrivers() const;
-
-    void QueueWork(Work* work, Work::Op op, uint32_t arg);
-    void CancelWork(Work* work);
-    void ProcessWork(Work* work);
 
     zx_status_t GetTopoPath(const Device* dev, char* out, size_t max) const;
 
@@ -106,7 +101,6 @@ public:
     zx_status_t AttemptBind(const Driver* drv, Device* dev);
 
     void HandleNewDevice(Device* dev);
-    void HandleNewDriver();
 
     void ScanSystem();
     void ControlEvent(async_dispatcher_t* dispatcher, async::Receiver* receiver,
@@ -127,7 +121,6 @@ public:
     fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; };
     fbl::DoublyLinkedList<Driver*, Driver::Node>& fallback_drivers() { return fallback_drivers_; }
     fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
-    fbl::DoublyLinkedList<Work*, Work::Node>& pending_work() { return pending_work_; }
 
     Device& root_device() { return root_device_; }
     Device& misc_device() { return misc_device_; }
@@ -150,9 +143,6 @@ private:
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
 
-    // Drivers to add to All Drivers
-    fbl::DoublyLinkedList<Driver*, Driver::Node> new_drivers_;
-
     // Drivers to try last
     fbl::DoublyLinkedList<Driver*, Driver::Node> fallback_drivers_;
 
@@ -165,13 +155,10 @@ private:
     // All DevHosts
     fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
 
-    Device root_device_;
-    Device misc_device_;
-    Device sys_device_;
-    Device test_device_;
-
-    fbl::DoublyLinkedList<Work*, Work::Node> pending_work_;
-    Work new_driver_work_;
+    Device root_device_{this};
+    Device misc_device_{this};
+    Device sys_device_{this};
+    Device test_device_{this};
 
     SuspendContext suspend_context_;
 
@@ -574,39 +561,6 @@ void Coordinator::DumpDrivers() const {
     }
 }
 
-void Coordinator::QueueWork(Work* work, Work::Op op, uint32_t arg) {
-    ZX_ASSERT(work->op == Work::Op::kIdle);
-    work->op = op;
-    work->arg = arg;
-    pending_work_.push_back(work);
-}
-
-void Coordinator::CancelWork(Work* work) {
-    if (work->op != Work::Op::kIdle) {
-        pending_work_.erase(*work);
-        work->op = Work::Op::kIdle;
-    }
-}
-
-void Coordinator::ProcessWork(Work* work) {
-    Work::Op op = work->op;
-    work->op = Work::Op::kIdle;
-
-    switch (op) {
-    case Work::Op::kDeviceAdded: {
-        Device* dev = work->owner;
-        HandleNewDevice(dev);
-        break;
-    }
-    case Work::Op::kDriverAdded: {
-        HandleNewDriver();
-        break;
-    }
-    default:
-        log(ERROR, "devcoord: unknown work: op=%u\n", static_cast<uint32_t>(op));
-    }
-}
-
 static const char* get_devhost_bin() {
     // If there are any ASan drivers, use the ASan-supporting devhost for
     // all drivers because even a devhost launched initially with just a
@@ -798,8 +752,6 @@ void Coordinator::ReleaseDevice(Device* dev) {
     }
     dev->host = nullptr;
 
-    CancelWork(&dev->work);
-
     fbl::unique_ptr<Metadata> md;
     while ((md = dev->metadata.pop_front()) != nullptr) {
         if (md->has_path) {
@@ -815,12 +767,8 @@ void Coordinator::ReleaseDevice(Device* dev) {
     delete dev;
 }
 
-Device::Device()
-    : flags(0), host(nullptr),
-      name(nullptr), libname(nullptr), work(this), refcount_(0), protocol_id(0), prop_count(0),
-      self(nullptr), link(nullptr), parent(nullptr), proxy(nullptr), node({}), dhnode({}),
-      anode({}) {
-}
+Device::Device(Coordinator* coordinator)
+    : publish_task([this, coordinator] { coordinator->HandleNewDevice(this); }) {}
 
 Device::~Device() {
     // TODO: cancel any pending rpc responses.  This clear is a hack to prevent
@@ -851,7 +799,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
     log(RPC_IN, "devcoord: rpc: add-device '%.*s' args='%.*s'\n",
         static_cast<int>(name.size()), name.data(), static_cast<int>(args.size()), args.data());
 
-    auto dev = fbl::make_unique<Device>();
+    auto dev = fbl::make_unique<Device>(this);
     if (!dev) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -936,7 +884,10 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        QueueWork(&dev->work, Work::Op::kDeviceAdded, 0);
+        r = dev->publish_task.Post(DcAsyncLoop()->dispatcher());
+        if (r != ZX_OK) {
+            return r;
+        }
     }
     // TODO(teisenbe/kulakowski): This should go away once we switch to refptrs
     // here
@@ -951,7 +902,10 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        QueueWork(&dev->work, Work::Op::kDeviceAdded, 0);
+        zx_status_t r = dev->publish_task.Post(DcAsyncLoop()->dispatcher());
+        if (r != ZX_OK) {
+            return r;
+        }
     }
     return ZX_OK;
 }
@@ -1054,14 +1008,14 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
 
-                    Work* work = &parent->work;
-                    if (work->retries > 0) {
+                    if (parent->retries > 0) {
                         // Add device with an exponential backoff.
-                        async::PostDelayedTask(DcAsyncLoop()->dispatcher(), [this, work]{
-                            QueueWork(work, Work::Op::kDeviceAdded, 0);
-                        }, work->backoff);
-                        work->backoff *= 2;
-                        work->retries--;
+                        zx_status_t r = parent->publish_task.PostDelayed(DcAsyncLoop()->dispatcher(), parent->backoff);
+                        if (r != ZX_OK) {
+                            return r;
+                        }
+                        parent->backoff *= 2;
+                        parent->retries--;
                     }
                 }
             }
@@ -1696,7 +1650,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     return ZX_OK;
 }
 
-static zx_status_t dc_create_proxy(Device* parent) {
+static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
     static constexpr const char kLibSuffix[] = ".so";
     static constexpr const char kProxyLibSuffix[] = ".proxy.so";
     static constexpr size_t kLibSuffixLen = sizeof(kLibSuffix) - 1;
@@ -1722,7 +1676,7 @@ static zx_status_t dc_create_proxy(Device* parent) {
         liblen = liblen - kLibSuffixLen + kProxyLibSuffixLen;
     }
 
-    auto dev = fbl::make_unique<Device>();
+    auto dev = fbl::make_unique<Device>(coordinator);
     if (dev == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -1800,7 +1754,7 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
     snprintf(devhostname, sizeof(devhostname), "devhost:%.*s", (int) arg0len, arg0);
 
     zx_status_t r;
-    if ((r = dc_create_proxy(dev)) < 0) {
+    if ((r = dc_create_proxy(this, dev)) < 0) {
         log(ERROR, "devcoord: cannot create proxy device: %d\n", r);
         return r;
     }
@@ -2162,7 +2116,7 @@ static bool is_root_driver(Driver* drv) {
 void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
     if (version[0] == '*') {
         // fallback driver, load only if all else fails
-        fallback_drivers_.push_back(drv);
+        fallback_drivers_.push_front(drv);
     } else if (version[0] == '!') {
         // debugging / development hack
         // prioritize drivers with version "!..." over others
@@ -2176,10 +2130,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-    new_drivers_.push_back(drv);
-    if (new_driver_work_.op == Work::Op::kIdle) {
-        QueueWork(&new_driver_work_, Work::Op::kDriverAdded, 0);
-    }
+    async::PostTask(DcAsyncLoop()->dispatcher(), [this, drv] { BindDriver(drv); });
 }
 
 Device* coordinator_init(const zx::job& root_job) {
@@ -2233,14 +2184,6 @@ void Coordinator::BindDriver(Driver* drv) {
     }
 }
 
-void Coordinator::HandleNewDriver() {
-    Driver* drv;
-    while ((drv = new_drivers_.pop_front()) != nullptr) {
-        drivers_.push_back(drv);
-        BindDriver(drv);
-    }
-}
-
 static constexpr uint32_t kCtlScanSystem = 1u;
 static constexpr uint32_t kCtlAddSystem = 2u;
 
@@ -2268,23 +2211,21 @@ void Coordinator::ControlEvent(async_dispatcher_t* dispatcher, async::Receiver* 
     case kCtlScanSystem:
         ScanSystem();
         break;
-    case kCtlAddSystem: {
-        Driver* drv;
-        // Add system drivers to the new list
-        while ((drv = system_drivers_.pop_front()) != nullptr) {
-            new_drivers_.push_back(drv);
-        }
-        // Add any remaining fallback drivers to the new list
-        while ((drv = fallback_drivers_.pop_back()) != nullptr) {
-            printf("devcoord: fallback driver '%s' is available\n", drv->name.c_str());
-            new_drivers_.push_back(drv);
-        }
-        // Queue Driver Added work if not already queued
-        if (new_driver_work_.op == Work::Op::kIdle) {
-            QueueWork(&new_driver_work_, Work::Op::kDriverAdded, 0);
-        }
+    case kCtlAddSystem:
+        async::PostTask(DcAsyncLoop()->dispatcher(), [this]() mutable {
+            // Add system drivers to the new list.
+            for (Driver& drv : system_drivers_) {
+                BindDriver(&drv);
+            }
+            system_drivers_.clear();
+            // Add any remaining fallback drivers to the new list.
+            for (Driver& drv : fallback_drivers_) {
+                printf("devcoord: fallback driver '%s' is available\n", drv.name.c_str());
+                BindDriver(&drv);
+            }
+            fallback_drivers_.clear();
+        });
         break;
-    }
     }
 }
 
@@ -2390,7 +2331,7 @@ void coordinator(DevmgrArgs args) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         Driver* drv;
-        while ((drv = g_coordinator.fallback_drivers().pop_back()) != nullptr) {
+        while ((drv = g_coordinator.fallback_drivers().pop_front()) != nullptr) {
             g_coordinator.drivers().push_back(drv);
         }
     }
@@ -2401,22 +2342,9 @@ void coordinator(DevmgrArgs args) {
     }
 
     g_coordinator.set_running(true);
-
-    for (;;) {
-        zx_status_t status;
-        if (g_coordinator.pending_work().is_empty()) {
-            status = DcAsyncLoop()->Run(zx::time::infinite(), true /* once */);
-        } else {
-            status = DcAsyncLoop()->Run(zx::time(), true /* once */);
-            if (status == ZX_ERR_TIMED_OUT) {
-                auto work = g_coordinator.pending_work().pop_front();
-                g_coordinator.ProcessWork(work);
-                continue;
-            }
-        }
-        if (status != ZX_OK) {
-            log(ERROR, "devcoord: port dispatch ended: %d\n", status);
-        }
+    status = DcAsyncLoop()->Run();
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: port dispatch ended: %d\n", status);
     }
 }
 
