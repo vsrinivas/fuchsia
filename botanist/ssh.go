@@ -13,6 +13,7 @@ import (
 	"net"
 	"time"
 
+	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 
 	"golang.org/x/crypto/ssh"
@@ -24,6 +25,9 @@ const (
 
 	// Default RSA key size.
 	RSAKeySize = 2048
+
+	// The default timeout for IO operations.
+	defaultIOTimeout = 5 * time.Second
 )
 
 // GenerateKeyPair generates a pair of private/public keys.
@@ -66,6 +70,18 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 	}
 
 	return client, nil
+}
+
+// SSHIntoNode connects to the device with the given nodename.
+func SSHIntoNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	netbootClient := netboot.NewClient(defaultIOTimeout)
+	address, err := netbootClient.Discover(nodename, true)
+	if err != nil {
+		return nil, err
+	}
+
+	address.Port = SSHPort
+	return ConnectSSH(ctx, address, config)
 }
 
 // Returns the network to use to SSH into a device.
