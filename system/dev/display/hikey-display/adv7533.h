@@ -10,7 +10,7 @@
 #include <zircon/listnode.h>
 #include <zircon/types.h>
 #include <threads.h>
-#include "dsi.h"
+#include "hi-display.h"
 
 #define ADV7533_REG_CHIP_REVISION           0x00
 #define ADV7533_REG_POWER                   0x41
@@ -71,10 +71,10 @@
 #define REG_HDCP_HDMI_CFG_ENB_AVI           (REG_HDCP_HDMI_CFG_DEFAULT | \
                                                 REG_HDCP_HDMI_CFG_AVI_MODE)
 
-static void adv7533_mainchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2);
-static void adv7533_mainchn_read(dsi_t* dsi, uint8_t d1, uint8_t len);
-static void adv7533_cecchn_write(dsi_t* dsi, uint8_t d1, uint8_t d2);
-static void adv7533_edidchn_read(dsi_t* dsi, uint8_t d1, uint8_t len);
-zx_status_t adv7533_init(dsi_t* dsi);
-void hdmi_init(dsi_t* dsi);
+static void adv7533_mainchn_write(display_t* display, uint8_t d1, uint8_t d2);
+static void adv7533_mainchn_read(display_t* display, uint8_t d1, uint8_t len);
+static void adv7533_cecchn_write(display_t* display, uint8_t d1, uint8_t d2);
+static void adv7533_edidchn_read(display_t* display, uint8_t d1, uint8_t len);
+zx_status_t adv7533_init(display_t* display);
+void hdmi_init(display_t* display);
 uint8_t* adv7533_get_edid_buffer(void);

@@ -11,6 +11,7 @@
 #include <zircon/types.h>
 #include <threads.h>
 #include "edid.h"
+#include "hi-display.h"
 
 #define DW_DSI_READ32(a)        readl(dsi->mmio.vaddr + a)
 #define DW_DSI_WRITE32(a, v)    writel(v, dsi->mmio.vaddr + a)
@@ -157,35 +158,10 @@
                 ((x) % (y) * 10 / (y) >= 5 ? 1 : 0))
 #define ROUND1(x, y)    ((x) / (y) + ((x) % (y)  ? 1 : 0))
 
-typedef enum {
-    GPIO_MUX,
-    GPIO_PD,
-    GPIO_INT,
-    GPIO_COUNT,
-} hdmi_gpio_if_t;
-
-typedef struct {
-    zx_device_t* zdev;
-    i2c_protocol_t i2c_main;
-    i2c_protocol_t i2c_cec;
-    i2c_protocol_t i2c_edid;
-} adv7533_i2c_t;
-
-
-typedef struct {
-    zx_device_t* zxdev;
-    gpio_protocol_t gpios[GPIO_COUNT];
-} hdmi_gpio_t;
-
-
 typedef struct {
     zx_device_t*                        zxdev;
-    pdev_protocol_t          pdev;
     zx_device_t*                        parent;
     mmio_buffer_t                       mmio;
-
-    adv7533_i2c_t                       i2c_dev;        // ADV7533 I2C device
-    hdmi_gpio_t                         hdmi_gpio;      // ADV7533-related GPIOs
 
     char                                write_buf[64];  // scratch buffer used for the i2c driver
 

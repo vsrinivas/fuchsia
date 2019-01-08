@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/dsi.c \
+    $(LOCAL_DIR)/hi3660-dsi.c \
     $(LOCAL_DIR)/adv7533.c \
     $(LOCAL_DIR)/edid.c \
     $(LOCAL_DIR)/ddk-interface.cpp \

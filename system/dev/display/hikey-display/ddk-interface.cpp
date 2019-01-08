@@ -6,7 +6,16 @@
 #include <fbl/auto_call.h>
 #include <lib/zx/pmt.h>
 #include <zircon/pixelformat.h>
+#include <hw/reg.h>
+#include <ddk/protocol/i2c.h>
+#include <ddk/protocol/i2c-lib.h>
+#include <ddk/protocol/gpio.h>
 #include "ddk-interface.h"
+#include "hi-display.h"
+
+extern "C" zx_status_t adv7533_init(display_t* display);
+extern "C" zx_status_t dsi_init(display_t* display);
+extern "C" void hdmi_init(display_t* display);
 
 namespace hi_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -197,7 +206,15 @@ zx_status_t HiDisplay::Bind() {
 
 } // namespace hi_display
 
-extern "C" zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
+static void hdmi_gpio_init(display_t* display) {
+    gpio_protocol_t* gpios = display->hdmi_gpio.gpios;
+    gpio_config_out(&gpios[GPIO_MUX], 0);
+    gpio_config_out(&gpios[GPIO_PD], 0);
+    gpio_config_in(&gpios[GPIO_INT], GPIO_NO_PULL);
+    gpio_write(&gpios[GPIO_MUX], 0);
+}
+
+static zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
     fbl::AllocChecker ac;
     auto dev = fbl::make_unique_checked<hi_display::HiDisplay>(&ac, parent);
     if (!ac.check()) {
@@ -210,6 +227,59 @@ extern "C" zx_status_t hikey_display_bind(void* ctx, zx_device_t* parent) {
         __UNUSED auto ptr = dev.release();
     }
 
+    display_t* display = (display_t *)calloc(1, sizeof(display_t));
+    if (!display) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &display->pdev);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+    display->parent = parent;
+
+    status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &display->mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "display_bind: pdev_map_mmio_buffer failed\n");
+        goto fail;
+    }
+
+    /* Obtain the I2C devices */
+    size_t actual;
+    if ((status = pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 0, &display->i2c_dev.i2c_main,
+                          sizeof(display->i2c_dev.i2c_main), &actual)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+        goto fail;
+    }
+    if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 1, &display->i2c_dev.i2c_cec,
+                          sizeof(display->i2c_dev.i2c_cec), &actual) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+        goto fail;
+    }
+    if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_I2C, 2, &display->i2c_dev.i2c_edid,
+                          sizeof(display->i2c_dev.i2c_edid), &actual) != ZX_OK) {
+        zxlogf(ERROR, "%s: Could not obtain I2C Protocol\n", __FUNCTION__);
+        goto fail;
+    }
+
+    /* Obtain the GPIO devices */
+    for (uint32_t i = 0; i < countof(display->hdmi_gpio.gpios); i++) {
+        if (pdev_get_protocol(&display->pdev, ZX_PROTOCOL_GPIO, i, &display->hdmi_gpio.gpios[i],
+                              sizeof(display->hdmi_gpio.gpios[i]), &actual) != ZX_OK) {
+            zxlogf(ERROR, "%s: Could not obtain GPIO Protocol\n", __FUNCTION__);
+            goto fail;
+        }
+    }
+
+    hdmi_gpio_init(display);
+
+    if ( (status = adv7533_init(display)) != ZX_OK) {
+        zxlogf(ERROR, "%s: Error in ADV7533 Initialization %d\n", __FUNCTION__, status);
+        goto fail;
+    }
+    dsi_init(display);
+fail:
     return status;
 }
 

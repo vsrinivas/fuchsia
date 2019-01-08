@@ -6,25 +6,21 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <soc/hi3660/hi3660-hw.h>
-
 #include <stdio.h>
-
 #include "hikey960.h"
 #include "hikey960-hw.h"
 
 // #define GPIO_TEST 1
 // #define I2C_TEST 1
-#define DSI_ENABLE 1
 
-#ifdef DSI_ENABLE
-static const pbus_mmio_t dsi_mmios[] = {
+static const pbus_mmio_t display_mmios[] = {
     {
         .base = MMIO_DSI_BASE,
         .length = MMIO_DSI_LENGTH,
     },
 };
 
-static const pbus_i2c_channel_t dsi_i2c_channel_list[] = {
+static const pbus_i2c_channel_t display_i2c_channel_list[] = {
     {
         // HDMI_MAIN
         .bus_id = DW_I2C_1,
@@ -42,7 +38,7 @@ static const pbus_i2c_channel_t dsi_i2c_channel_list[] = {
     },
 };
 
-static const pbus_gpio_t dsi_gpios[] = {
+static const pbus_gpio_t display_gpios[] = {
     {
         .gpio = GPIO_HDMI_MUX,
     },
@@ -54,28 +50,12 @@ static const pbus_gpio_t dsi_gpios[] = {
     },
 };
 
-static const pbus_bti_t dsi_btis[] = {
+static const pbus_bti_t display_btis[] = {
     {
         .iommu_index = 0,
         .bti_id = BTI_DSI,
     },
 };
-
-static const pbus_dev_t dsi_dev = {
-    .name = "dsi",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_DSI,
-    .mmio_list = dsi_mmios,
-    .mmio_count = countof(dsi_mmios),
-    .i2c_channel_list = dsi_i2c_channel_list,
-    .i2c_channel_count = countof(dsi_i2c_channel_list),
-    .gpio_list = dsi_gpios,
-    .gpio_count = countof(dsi_gpios),
-    .bti_list = dsi_btis,
-    .bti_count = countof(dsi_btis),
-};
-#endif
 
 static const pbus_mmio_t mali_mmios[] = {
     {
@@ -188,6 +168,14 @@ static const pbus_dev_t hi_display_dev = {
     .vid = PDEV_VID_GENERIC,
     .pid = PDEV_PID_GENERIC,
     .did = PDEV_DID_HI_DISPLAY,
+    .mmio_list = display_mmios,
+    .mmio_count = countof(display_mmios),
+    .i2c_channel_list = display_i2c_channel_list,
+    .i2c_channel_count = countof(display_i2c_channel_list),
+    .gpio_list = display_gpios,
+    .gpio_count = countof(display_gpios),
+    .bti_list = display_btis,
+    .bti_count = countof(display_btis),
 };
 
 zx_status_t hikey960_add_devices(hikey960_t* hikey) {
@@ -204,11 +192,6 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
         zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d\n", status);
         return status;
     }
-#ifdef DSI_ENABLE
-    if ((status = pbus_device_add(&hikey->pbus, &dsi_dev)) != ZX_OK) {
-        zxlogf(ERROR, "hikey960_add_devices could not add dsi_dev: %d\n", status);
-    }
-#endif
 
 #if GPIO_TEST
     if ((status = pbus_device_add(&hikey->pbus, &gpio_test_dev)) != ZX_OK) {

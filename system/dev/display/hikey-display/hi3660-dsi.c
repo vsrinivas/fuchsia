@@ -15,7 +15,7 @@
 #include <ddk/protocol/i2c.h>
 #include <ddk/protocol/gpio.h>
 
-#include "dsi.h"
+#include "hi3660-dsi.h"
 #include "adv7533.h"
 
 static zx_status_t dsi_get_display_timing(dsi_t* dsi) {
@@ -111,14 +111,6 @@ static void dsi_configure_dphy_pll(dsi_t* dsi) {
         tmp = 0x37 + (i << 4);
         dsi_dphy_write(dsi, tmp, 0x4);
     }
-}
-
-static void hdmi_gpio_init(dsi_t* dsi) {
-    gpio_protocol_t* gpios = dsi->hdmi_gpio.gpios;
-    gpio_config_out(&gpios[GPIO_MUX], 0);
-    gpio_config_out(&gpios[GPIO_PD], 0);
-    gpio_config_in(&gpios[GPIO_INT], GPIO_NO_PULL);
-    gpio_write(&gpios[GPIO_MUX], 0);
 }
 
 static zx_status_t dsi_mipi_test(dsi_t* dsi) {
@@ -324,6 +316,27 @@ static zx_status_t dsi_mipi_init(dsi_t* dsi) {
 
     /* Generate High Speed clock, Continuous clock */
     DW_DSI_SET_BITS32(DW_DSI_LPCLK_CTRL, 0x1, 2, 0);
+
+    return ZX_OK;
+}
+
+zx_status_t dsi_init(display_t* display) {
+    dsi_t* dsi = calloc(1, sizeof(dsi_t));
+    if (!dsi) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    zx_status_t status = pdev_map_mmio_buffer2(&display->pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &dsi->mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "dsi_bind: pdev_map_mmio_buffer failed\n");
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    dsi_get_display_timing(dsi);
+    dsi_mipi_init(dsi);
+    dsi_mipi_test(dsi);
+    zxlogf(INFO, "MIPI Initialized. Version is 0x%x\n", readl(dsi->mmio.vaddr));
 
     return ZX_OK;
 }
