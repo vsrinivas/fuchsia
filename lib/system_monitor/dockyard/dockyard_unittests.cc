@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/system_monitor/dockyard/dockyard.h"
+#include "garnet/lib/system_monitor/dockyard/test_sample_generator.h"
 
 #include "gtest/gtest.h"
 
