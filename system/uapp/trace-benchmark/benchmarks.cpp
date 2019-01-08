@@ -185,7 +185,5 @@ void RunTracingDisabledBenchmarks() {
 }
 
 void RunTracingEnabledBenchmarks(const BenchmarkSpec* spec) {
-    // No trailing \n on purpose. The extra blank line is provided by
-    // BenchmarkHandler.Start().
     RunBenchmarks(true, spec);
 }
