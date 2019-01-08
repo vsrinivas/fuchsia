@@ -85,7 +85,7 @@ public:
     constexpr optional(nullopt_t)
         : has_value_(false) {}
 
-    explicit constexpr optional(T value)
+    constexpr optional(T value)
         : has_value_(true), value_(std::move(value)) {}
 
     optional(const optional& other)

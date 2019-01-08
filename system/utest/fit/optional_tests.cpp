@@ -140,6 +140,21 @@ bool construct_move() {
 }
 
 template <typename T>
+T get_value(fit::optional<T> opt) {
+    return opt.value();
+}
+
+bool construct_with_implicit_conversion() {
+    BEGIN_TEST;
+
+    // get_value expects a value of type fit::optional<T> but we pass 3
+    // so this exercises the converting constructor
+    EXPECT_EQ(3, get_value<int>(3));
+
+    END_TEST;
+}
+
+template <typename T>
 bool accessors() {
     BEGIN_TEST;
 
@@ -402,6 +417,7 @@ bool balance() {
 } // namespace
 
 BEGIN_TEST_CASE(optional_tests)
+RUN_TEST(construct_with_implicit_conversion)
 RUN_TEST(construct_without_value<slot<false>>)
 RUN_TEST(construct_without_value<slot<true>>)
 RUN_TEST(construct_with_value<slot<false>>)
