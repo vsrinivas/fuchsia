@@ -15,12 +15,17 @@ namespace hid {
 // structure. When not needed it can be freed via FreeDeviceDescriptor().
 //
 // The DeviceDescriptor data is organized at the first level by the
-// array |report[rep_count]| in which each entry points to the first
-// field of each report and how many fields are expected on each report.
+// three arrays which correspond to the feature fields for the input,
+// output, and feature reports. Input, ouput, and feature reports each
+// have their own length and fields: they are logically connected only
+// because they share a report_id. The arrays of report features are of
+// length {type}_count. Eg: the input_fields array has input_size ReportField
+// structures.
 //
-// report[0].first_field --->  ReportField
+// report[0].input_fields --->  ReportField
 //                              +report_id
-//                              +field_type
+//                              +field_type == kInput
+//                              +attr
 //                              +col -------> Collection
 //                                            +type
 //                                            +parent ---> Collection
@@ -28,67 +33,57 @@ namespace hid {
 // The structure describes all the information returned by the device;
 // no information present in the original stream is lost.
 //
-// When using it to parse reports sent by the device, two scenarios
-// are important:
-//   1 -  |rep_count| is 1 and report[0]->report_id is 0:
-//      in this case the reports don't have a report id tag and the
-//      first byte in the stream contains the first field.
-//   2 - report[0]->report_id is not 0:
-//      in this case each report first byte is the report_id tag
-//      and must be matched to properly decode the report.
-//
-// Once the right starting ReportField has been matched then extracting
-// each field is done by inspecting bit_sz and flags and using |next|
-// to move to the following field. Reaching |next| == null means the
-// end of the report.
+// The attr field of the ReportField contains all information to parse
+// a report sent by the device. The ExtractUint functions will use the
+// offset in the attribute to extract the necessary data.
 //
 // An example will enlighten. Assume |report| array as follows,
 // with most fields omitted for brevity:
 //
 //    report[0]
-//    .first_field--> [0] report_id:      1
-//                        usage           button,1
-//                        flags           data,var
-//                        bit_sz          1
-//                        // For descriptors that have more than 1 report,
-//                        // the first 8 bits are always the report id
-//                        offset          8
+//    .input_fields---> [0] report_id:      1
+//                          usage           button,1
+//                          flags           data,var
+//                          bit_sz          1
+//                          // For descriptors that have more than 1 report,
+//                          // the first 8 bits are always the report id
+//                          offset          8
 //
-//                    [1] report_id:      1
-//                        usage           button,2
-//                        flags           data,var
-//                        bit_sz          1
-//                        offset          9
+//                      [1] report_id:      1
+//                          usage           button,2
+//                          flags           data,var
+//                          bit_sz          1
+//                          offset          9
 //
-//                    [2] report_id:      1
-//                        usage           button,none
-//                        flags           const
-//                        bit_sz          6
-//                        offset          10
+//                      [2] report_id:      1
+//                          usage           button,none
+//                          flags           const
+//                          bit_sz          6
+//                          offset          10
 //    report[1]
-//    .first_field--> [3] report_id:      3
-//                        usage           desktop,X
-//                        flags           data,var
-//                        bit_sz          8
-//                        offset          8
+//    .input_fields---> [3] report_id:      3
+//                          usage           desktop,X
+//                          flags           data,var
+//                          bit_sz          8
+//                          offset          8
 //
-//                    [4] report_id:      3
-//                        usage           desktop,Y
-//                        flags           data,var
-//                        bit_sz          8
-//                        offset          16
+//                      [4] report_id:      3
+//                          usage           desktop,Y
+//                          flags           data,var
+//                          bit_sz          8
+//                          offset          16
 //    report[2]
-//    .first_field--> [5] report_id:      4
-//                        usage           desktop,wheel
-//                        flags           data,var
-//                        bit_sz          5
-//                        offset          8
+//    .input_fields---> [5] report_id:      4
+//                          usage           desktop,wheel
+//                          flags           data,var
+//                          bit_sz          5
+//                          offset          8
 //
-//                    [6] report_id:      4
-//                        usage           desktop,none
-//                        flags           const
-//                        bit_sz          3
-//                        offset          13
+//                      [6] report_id:      4
+//                          usage           desktop,none
+//                          flags           const
+//                          bit_sz          3
+//                          offset          13
 //
 // Now given the following report stream, with byte-order
 // left to right:
@@ -118,6 +113,9 @@ namespace hid {
 //       6a is Y-coord/desktop  (8-bits)
 //
 //
+// Input, Output, and Feature reports are all sent over unique channels, which
+// is how they are distingushed. This is important because they can share the
+// same report id.
 
 // Logical minimum and maximum per hid spec.
 struct MinMax {
@@ -216,8 +214,27 @@ struct ReportField {
 
 struct ReportDescriptor {
     uint8_t report_id;
+
+    size_t input_byte_sz;
+    size_t input_count;
+    ReportField* input_fields;
+
+    size_t output_byte_sz;
+    size_t output_count;
+    ReportField* output_fields;
+
+    size_t feature_byte_sz;
+    size_t feature_count;
+    ReportField* feature_fields;
+
+    // TODO(dgilhooley) - Remove all of these fields below, they
+    // were created before input, output, feature fields and are now
+    // depreciated.
+
+    // This is the byte_sz of the input fields only
     size_t byte_sz;
     size_t count;
+    // The array of all fields (input, output, and feature)
     ReportField* first_field;
 };
 
