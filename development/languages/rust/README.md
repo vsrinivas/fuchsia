@@ -63,6 +63,6 @@ For Googler-only channels, see [go/fuchsia-rust-googlers].
 [fargo]: https://fuchsia.googlesource.com/fargo
 [rustfmt-install]: https://github.com/rust-lang-nursery/rustfmt#quick-start
 [rustfmt-toml]: https://fuchsia.googlesource.com/garnet/+/master/rustfmt.toml
-[fidl-tutorial]: https://fuchsia.googlesource.com/docs/+/HEAD/development/languages/fidl/tutorial/README.md#server-in-rust
+[fidl-tutorial]: ../fidl/tutorial/tutorial-rust.md
 [rust@fuchsia.com]: https://groups.google.com/a/fuchsia.com/forum/#!forum/rust-fuchsia
 [go/fuchsia-rust-googlers]: https://goto.google.com/fuchsia-rust-googlers

@@ -15,7 +15,7 @@ The reference section provides the following material:
 ### Readability rubric
 
 Fuchsia has adopted a
-[readability rubric](https://fuchsia.googlesource.com/docs/+/master/development/api/fidl.md)
+[readability rubric](../../../api/fidl.md)
 for FIDL libraries.
 
 ## Bindings

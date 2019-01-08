@@ -3,7 +3,7 @@
 This document is a specification of the Fuchsia Interface Definition Language
 (**FIDL**) syntax.
 
-See [Overview](index.md) for more information about FIDL's overall
+See [Overview](../README.md) for more information about FIDL's overall
 purpose, goals, and requirements, as well as links to related documents.
 
 You can find a modified [EBNF description of the FIDL grammar here](grammar.md).
@@ -74,7 +74,7 @@ struct struct { };
 
 > Note that while using keywords as identifiers is supported, it can lead to confusion,
 > and should the be considered on a case-by-case basis. See the `Names` section of the
-> [Readability Rubric](https://fuchsia.googlesource.com/docs/+/master/development/api/fidl.md#Names)
+> [Readability Rubric](../../../api/fidl.md#Names)
 
 #### Qualified Identifiers
 

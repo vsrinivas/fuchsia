@@ -30,7 +30,7 @@
 
 * [fuchsia-merkle/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/fuchsia-merkle/)
 
-    Protect and verify data blobs using [Merkle Trees](https://fuchsia.googlesource.com/docs/+/master/the-book/merkleroot.md)
+    Protect and verify data blobs using [Merkle Trees](../../../the-book/merkleroot.md)
 
 * [fuchsia-scenic/](https://fuchsia.googlesource.com/garnet/+/master/public/rust/fuchsia-scenic/)
 

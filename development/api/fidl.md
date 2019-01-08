@@ -5,7 +5,7 @@
 ## General Advice
 
 This section contains some general advice about defining interfaces in the
-[Fuchsia Interface Definition Language](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
+[Fuchsia Interface Definition Language](../languages/fidl/README.md).
 
 ### Protocols not objects
 

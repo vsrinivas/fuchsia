@@ -23,7 +23,7 @@ extend to allow you to build what you need.
 ## TL;DR
 
 Read this all before? See the
-[quickstart guide](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/build_and_pave_quickstart.md)
+[quickstart guide](build_and_pave_quickstart.md)
 for a workflow summary.
 
 ## Building
