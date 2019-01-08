@@ -6,22 +6,30 @@ import (
 	"hash/fnv"
 	"sort"
 	"strings"
+	"sync"
+
+	"netstack/link/eth"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
 	"github.com/google/netstack/tcpip/stack"
 )
 
-var _ stack.LinkEndpoint = (*endpoint)(nil)
-var _ stack.NetworkDispatcher = (*endpoint)(nil)
+var _ stack.LinkEndpoint = (*Endpoint)(nil)
+var _ stack.NetworkDispatcher = (*Endpoint)(nil)
+var _ eth.Controller = (*Endpoint)(nil)
 
-type endpoint struct {
+type Endpoint struct {
 	links           map[tcpip.LinkAddress]*BridgeableEndpoint
 	dispatcher      stack.NetworkDispatcher
 	mtu             uint32
 	capabilities    stack.LinkEndpointCapabilities
 	maxHeaderLength uint16
 	linkAddress     tcpip.LinkAddress
+	mu              struct {
+		sync.Mutex
+		onStateChange func(eth.State)
+	}
 }
 
 // New creates a new link from a list of BridgeableEndpoints that bridges
@@ -30,11 +38,11 @@ type endpoint struct {
 // The new link will have the minumum of the MTUs, the maximum of the max
 // header lengths, and minimum set of the capabilities.  This function takes
 // ownership of `links`.
-func New(links []*BridgeableEndpoint) stack.LinkEndpoint {
+func New(links []*BridgeableEndpoint) *Endpoint {
 	sort.Slice(links, func(i, j int) bool {
 		return strings.Compare(string(links[i].LinkAddress()), string(links[j].LinkAddress())) > 0
 	})
-	ep := &endpoint{links: make(map[tcpip.LinkAddress]*BridgeableEndpoint)}
+	ep := &Endpoint{links: make(map[tcpip.LinkAddress]*BridgeableEndpoint)}
 	h := fnv.New64()
 	if len(links) > 0 {
 		l := links[0]
@@ -66,6 +74,93 @@ func New(links []*BridgeableEndpoint) stack.LinkEndpoint {
 	return ep
 }
 
+// Up calls SetBridge(bridge) on all the constituent links of a bridge.
+//
+// This causes each constituent link to delegate dispatch to the bridge,
+// meaning that received packets will be written out of or dispatched back up
+// the stack for another constituent link.
+func (ep *Endpoint) Up() error {
+	for _, l := range ep.links {
+		l.SetBridge(ep)
+	}
+
+	ep.mu.Lock()
+	onStateChange := ep.mu.onStateChange
+	ep.mu.Unlock()
+
+	if onStateChange != nil {
+		onStateChange(eth.StateStarted)
+	}
+
+	return nil
+}
+
+// Down calls SetBridge(nil) on all the constituent links of a bridge.
+//
+// This causes each bridgeable endpoint to go back to its state before
+// bridging, dispatching up the stack to the default NetworkDispatcher
+// implementation directly.
+//
+// Down and Close are the same, except they call the OnStateChange callback
+// with eth.StateDown and eth.StateClose respectively.
+func (ep *Endpoint) Down() error {
+	for _, l := range ep.links {
+		l.SetBridge(nil)
+	}
+
+	ep.mu.Lock()
+	onStateChange := ep.mu.onStateChange
+	ep.mu.Unlock()
+
+	if onStateChange != nil {
+		onStateChange(eth.StateDown)
+	}
+
+	return nil
+}
+
+// Close calls SetBridge(nil) on all the constituent links of a bridge.
+//
+// This causes each bridgeable endpoint to go back to its state before
+// bridging, dispatching up the stack to the default NetworkDispatcher
+// implementation directly.
+//
+// Down and Close are the same, except they call the OnStateChange callback
+// with eth.StateDown and eth.StateClose respectively.
+func (ep *Endpoint) Close() error {
+	for _, l := range ep.links {
+		l.SetBridge(nil)
+	}
+
+	ep.mu.Lock()
+	onStateChange := ep.mu.onStateChange
+	ep.mu.Unlock()
+
+	if onStateChange != nil {
+		onStateChange(eth.StateClosed)
+	}
+
+	return nil
+}
+
+func (ep *Endpoint) SetOnStateChange(f func(eth.State)) {
+	ep.mu.Lock()
+	defer ep.mu.Unlock()
+
+	ep.mu.onStateChange = f
+}
+
+func (ep *Endpoint) Path() string {
+	return "bridge"
+}
+
+// SetPromiscuousMode on a bridge is a no-op, since all of the constituent
+// links on a bridge need to already be in promiscuous mode for bridging to
+// work.
+func (ep *Endpoint) SetPromiscuousMode(bool) error {
+	return nil
+}
+
 // CombineCapabilities returns the capabilities restricted by the most
 // restrictive of the inputs.
 func CombineCapabilities(a, b stack.LinkEndpointCapabilities) stack.LinkEndpointCapabilities {
@@ -77,23 +172,23 @@ func CombineCapabilities(a, b stack.LinkEndpointCapabilities) stack.LinkEndpoint
 	return newCapabilities
 }
 
-func (ep *endpoint) MTU() uint32 {
+func (ep *Endpoint) MTU() uint32 {
 	return ep.mtu
 }
 
-func (ep *endpoint) Capabilities() stack.LinkEndpointCapabilities {
+func (ep *Endpoint) Capabilities() stack.LinkEndpointCapabilities {
 	return ep.capabilities
 }
 
-func (ep *endpoint) MaxHeaderLength() uint16 {
+func (ep *Endpoint) MaxHeaderLength() uint16 {
 	return ep.maxHeaderLength
 }
 
-func (ep *endpoint) LinkAddress() tcpip.LinkAddress {
+func (ep *Endpoint) LinkAddress() tcpip.LinkAddress {
 	return ep.linkAddress
 }
 
-func (ep *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
+func (ep *Endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload buffer.VectorisedView, protocol tcpip.NetworkProtocolNumber) *tcpip.Error {
 	for _, l := range ep.links {
 		if err := l.WritePacket(r, hdr, payload, protocol); err != nil {
 			return err
@@ -102,20 +197,15 @@ func (ep *endpoint) WritePacket(r *stack.Route, hdr buffer.Prependable, payload 
 	return nil
 }
 
-func (ep *endpoint) Attach(d stack.NetworkDispatcher) {
-	// The value passed to attach is the bridge's own network dispatcher.
-	// Packets addressed to the bridge's link address should be delegated to it.
+func (ep *Endpoint) Attach(d stack.NetworkDispatcher) {
 	ep.dispatcher = d
-	for _, l := range ep.links {
-		l.SetBridge(ep)
-	}
 }
 
-func (ep *endpoint) IsAttached() bool {
+func (ep *Endpoint) IsAttached() bool {
 	return ep.dispatcher != nil
 }
 
-func (ep *endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
+func (ep *Endpoint) DeliverNetworkPacket(rxEP stack.LinkEndpoint, srcLinkAddr, dstLinkAddr tcpip.LinkAddress, p tcpip.NetworkProtocolNumber, vv buffer.VectorisedView) {
 	broadcast := false
 
 	switch dstLinkAddr {

@@ -449,7 +449,6 @@ func (ns *Netstack) addLoopback() error {
 }
 
 func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
-	// TODO(stijlist): save bridge in netstack state as NetInterface
 	links := make([]*bridge.BridgeableEndpoint, 0, len(nics))
 	for _, nicid := range nics {
 		nic, ok := ns.ifStates[nicid]
@@ -462,8 +461,10 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		links = append(links, nic.bridgeable)
 	}
 
-	return ns.addEndpoint(func(*ifState) (stack.LinkEndpoint, error) {
-		return bridge.New(links), nil
+	return ns.addEndpoint(func(ifs *ifState) (stack.LinkEndpoint, error) {
+		b := bridge.New(links)
+		ifs.eth = b
+		return b, nil
 	}, func(ifs *ifState) error {
 		if len(ifs.nic.Name) == 0 {
 			ifs.nic.Name = fmt.Sprintf("br%d", ifs.nic.ID)
@@ -480,7 +481,6 @@ func (ns *Netstack) addEth(topological_path string, config netstack.InterfaceCon
 		if err != nil {
 			return nil, err
 		}
-		client.SetOnStateChange(ifs.stateChange)
 		ifs.eth = client
 		ifs.nic.Features = client.Info.Features
 		ifs.nic.Name = config.Name
@@ -523,6 +523,10 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 	if err != nil {
 		return nil, err
 	}
+	if ifs.eth == nil {
+		return nil, fmt.Errorf("makeEndpoint func did not set ifs.eth")
+	}
+	ifs.eth.SetOnStateChange(ifs.stateChange)
 	linkID := stack.RegisterLinkEndpoint(ep)
 	linkAddr := ep.LinkAddress()
 	lladdr := header.LinkLocalAddr(linkAddr)

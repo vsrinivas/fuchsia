@@ -19,6 +19,12 @@ import (
 	"github.com/google/netstack/waiter"
 )
 
+var (
+	timeoutReceiveReady    error = fmt.Errorf("receiveready")
+	timeoutSendReady       error = fmt.Errorf("sendready")
+	timeoutPayloadReceived error = fmt.Errorf("payloadreceived")
+)
+
 func TestEndpointAttributes(t *testing.T) {
 	resolutionRequired := stack.LinkEndpointCapabilities(stack.CapabilityResolutionRequired)
 	var resolutionNotRequired stack.LinkEndpointCapabilities
@@ -64,8 +70,12 @@ func TestBridge(t *testing.T) {
 	}
 
 	baddr := tcpip.Address([]byte{2, 2, 2, 2})
-	sb, err := makeStackWithBridgedEndpoints(ep2, ep3, baddr)
+	sb, b, err := makeStackWithBridgedEndpoints(ep2, ep3, baddr)
 	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := b.Up(); err != nil {
 		t.Fatal(err)
 	}
 
@@ -201,6 +211,60 @@ func TestBridge(t *testing.T) {
 			}
 		})
 	}
+
+	if err := b.Close(); err != nil {
+		t.Fatal(err)
+	}
+
+	// verify that the endpoint from the constituent link on sb is still accessible
+	// and the bridge endpoint and endpoint on s2 are no longer accessible from s1
+	noLongerConnectable := map[tcpip.Address]*stack.Stack{
+		s2addr: s2,
+		baddr:  sb,
+	}
+
+	stillConnectable := map[tcpip.Address]*stack.Stack{
+		bcaddr: sb,
+	}
+
+	for ipaddr, toStack := range noLongerConnectable {
+		senderWaitQueue := new(waiter.Queue)
+		sender, err := s1.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, senderWaitQueue)
+		if err != nil {
+			t.Fatalf("NewEndpoint failed: %s", err)
+		}
+		defer sender.Close()
+
+		receiverWaitQueue := new(waiter.Queue)
+		receiver, err := toStack.NewEndpoint(tcp.ProtocolNumber, ipv4.ProtocolNumber, receiverWaitQueue)
+		if err != nil {
+			t.Fatalf("NewEndpoint failed: %s", err)
+		}
+		defer receiver.Close()
+
+		fulladdr := tcpip.FullAddress{Addr: ipaddr, Port: 2}
+		if err := receiver.Bind(fulladdr, nil); err != nil {
+			t.Fatalf("bind failed: %s", err)
+		}
+		if err := receiver.Listen(1); err != nil {
+			t.Fatalf("listen failed: %s", err)
+		}
+
+		if err := connect(sender, fulladdr, senderWaitQueue, receiverWaitQueue); err != timeoutSendReady {
+			t.Errorf("expected timeout sendready, got nil error connecting to addr %s", ipaddr)
+		}
+	}
+
+	for ipaddr, toStack := range stillConnectable {
+		recvd, err := connectAndWrite(s1, toStack, ipaddr, payload)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if got := string(recvd); got != payload {
+			t.Errorf("got Read(...) = %v, want = %v", got, payload)
+		}
+	}
 }
 
 // pipe mints two linked endpoints with the given link addresses.
@@ -281,7 +345,7 @@ func makeStackWithEndpoint(ep *endpoint, addr tcpip.Address) (*stack.Stack, erro
 	return s, nil
 }
 
-func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*stack.Stack, error) {
+func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*stack.Stack, *bridge.Endpoint, error) {
 	linkID1 := stack.RegisterLinkEndpoint(ep1)
 	linkID2 := stack.RegisterLinkEndpoint(ep2)
 	linkID1, bep1 := bridge.NewEndpoint(linkID1)
@@ -289,24 +353,24 @@ func makeStackWithBridgedEndpoints(ep1, ep2 *endpoint, baddr tcpip.Address) (*st
 
 	stk := stack.New([]string{ipv4.ProtocolName, arp.ProtocolName}, []string{tcp.ProtocolName}, stack.Options{})
 	if err := stk.CreateNIC(1, linkID1); err != nil {
-		return nil, fmt.Errorf("CreateNIC failed: %s", err)
+		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := stk.CreateNIC(2, linkID2); err != nil {
-		return nil, fmt.Errorf("CreateNIC failed: %s", err)
+		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	bridge := bridge.New([]*bridge.BridgeableEndpoint{bep1, bep2})
 	bID := tcpip.NICID(3)
 	if err := stk.CreateNIC(bID, stack.RegisterLinkEndpoint(bridge)); err != nil {
-		return nil, fmt.Errorf("CreateNIC failed: %s", err)
+		return nil, nil, fmt.Errorf("CreateNIC failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.IPv4ProtocolNumber, baddr); err != nil {
-		return nil, fmt.Errorf("AddAddress failed: %s", err)
+		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 	if err := stk.AddAddress(bID, header.ARPProtocolNumber, arp.ProtocolAddress); err != nil {
-		return nil, fmt.Errorf("AddAddress failed: %s", err)
+		return nil, nil, fmt.Errorf("AddAddress failed: %s", err)
 	}
 
-	return stk, nil
+	return stk, bridge, nil
 }
 
 func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, addr tcpip.Address, payload string) ([]byte, error) {
@@ -324,7 +388,7 @@ func connectAndWrite(fromStack *stack.Stack, toStack *stack.Stack, addr tcpip.Ad
 	}
 	defer receiver.Close()
 
-	fulladdr := tcpip.FullAddress{Addr: addr, Port: 8081}
+	fulladdr := tcpip.FullAddress{Addr: addr, Port: 1}
 	if err := receiver.Bind(fulladdr, nil); err != nil {
 		return nil, fmt.Errorf("bind failed: %s", err)
 	}
@@ -362,7 +426,7 @@ func write(sender tcpip.Endpoint, s2fulladdr tcpip.FullAddress, payload string, 
 	select {
 	case <-payloadReceivedNotifyCh:
 	case <-time.After(1 * time.Second):
-		return fmt.Errorf("timeout payloadreceived")
+		return timeoutPayloadReceived
 	}
 	return nil
 }
@@ -383,12 +447,12 @@ func connect(sender tcpip.Endpoint, addr tcpip.FullAddress, senderWaitQueue, rec
 	select {
 	case <-sendReadyNotifyCh:
 	case <-time.After(1 * time.Second):
-		return fmt.Errorf("timeout sendready")
+		return timeoutSendReady
 	}
 	select {
 	case <-receiveReadyNotifyCh:
 	case <-time.After(1 * time.Second):
-		return fmt.Errorf("timeout receiveready")
+		return timeoutReceiveReady
 	}
 
 	return nil

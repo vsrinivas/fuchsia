@@ -13,7 +13,7 @@ type BridgeableEndpoint struct {
 	dispatcher stack.NetworkDispatcher
 	mu         struct {
 		sync.RWMutex
-		bridge *endpoint
+		bridge *Endpoint
 	}
 }
 
@@ -28,7 +28,7 @@ func (e *BridgeableEndpoint) IsAttached() bool {
 	return e.dispatcher != nil
 }
 
-func (e *BridgeableEndpoint) SetBridge(b *endpoint) {
+func (e *BridgeableEndpoint) SetBridge(b *Endpoint) {
 	e.mu.Lock()
 	e.mu.bridge = b
 	e.mu.Unlock()
