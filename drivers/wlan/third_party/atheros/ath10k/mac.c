@@ -1854,7 +1854,7 @@ static zx_status_t ath10k_mac_vif_fix_hidden_ssid(struct ath10k_vif* arvif) {
     return ZX_OK;
 }
 
-static void ath10k_control_beaconing(struct ath10k_vif* arvif) {
+static zx_status_t ath10k_control_beaconing(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
     zx_status_t ret;
 
@@ -1885,7 +1885,7 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif) {
     ret = ath10k_wmi_vdev_up(ar, arvif->vdev_id, arvif->aid, arvif->bssid);
     if (ret != ZX_OK) {
         ath10k_err("failed to bring up vdev %d: %s\n", arvif->vdev_id, zx_status_get_string(ret));
-        return;
+        return ret;
     }
 
     arvif->is_up = true;
@@ -1894,10 +1894,11 @@ static void ath10k_control_beaconing(struct ath10k_vif* arvif) {
     if (ret != ZX_OK) {
         ath10k_warn("failed to fix hidden ssid for vdev %i, expect trouble: %s\n",
                     arvif->vdev_id, zx_status_get_string(ret));
-        return;
+        return ret;
     }
 
     ath10k_dbg(ar, ATH10K_DBG_MAC, "mac vdev %d up\n", arvif->vdev_id);
+    return ZX_OK;
 }
 
 zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
@@ -1934,7 +1935,11 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
         return ret;
     }
 
-    ath10k_control_beaconing(arvif);
+    ret = ath10k_control_beaconing(arvif);
+    if (ret != ZX_OK) {
+        ath10k_err("controlling beaconing failed: %s\n", zx_status_get_string(ret));
+        return ret;
+    }
 
     // In the protected AP mode, the firmware requires a broadcast peer existed before the group key
     // (WLAN_KEY_TYPE_GROUP) can be added. Otherwise, the firmware will reject that key.
