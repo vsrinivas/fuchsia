@@ -15,7 +15,6 @@
 #include <memory>
 
 #include "magma_util/macros.h"
-#include "platform_trace.h"
 #include "sys_driver/magma_driver.h"
 #include "sys_driver/magma_system_device.h"
 
@@ -165,9 +164,6 @@ static zx_status_t driver_bind(void* context, zx_device_t* parent)
     if (!gpu)
         return ZX_ERR_NO_MEMORY;
     gpu->parent_device = parent;
-
-    if (magma::PlatformTrace::Get())
-        magma::PlatformTrace::Get()->Initialize();
 
     gpu->magma_driver = MagmaDriver::Create();
 

@@ -12,6 +12,7 @@
 #endif
 
 #include "platform_trace.h"
+#include <memory>
 #include <vector>
 
 namespace magma {
@@ -23,14 +24,22 @@ public:
 
     bool Initialize() override;
 
-    // Can only have one observer
-    void SetObserver(std::function<void(bool)> callback) override;
-
-    zx_ticks_t GetCurrentTicks() override;
-
 private:
     async::Loop loop_;
     trace::TraceProvider trace_provider_;
+};
+
+class ZirconPlatformTraceObserver : public PlatformTraceObserver {
+public:
+    ZirconPlatformTraceObserver();
+
+    bool Initialize() override;
+
+    // Can only have one observer
+    void SetObserver(std::function<void(bool)> callback) override;
+
+private:
+    async::Loop loop_;
     trace::TraceObserver observer_;
     bool enabled_;
 };

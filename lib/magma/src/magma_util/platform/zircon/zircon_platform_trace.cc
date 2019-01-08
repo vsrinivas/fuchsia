@@ -28,7 +28,27 @@ bool ZirconPlatformTrace::Initialize()
     return true;
 }
 
-void ZirconPlatformTrace::SetObserver(std::function<void(bool)> callback)
+PlatformTrace* PlatformTrace::Get()
+{
+    if (!g_platform_trace)
+        g_platform_trace = std::make_unique<ZirconPlatformTrace>();
+    return g_platform_trace.get();
+}
+
+ZirconPlatformTraceObserver::ZirconPlatformTraceObserver()
+    : loop_(&kAsyncLoopConfigNoAttachToThread)
+{
+}
+
+bool ZirconPlatformTraceObserver::Initialize()
+{
+    zx_status_t status = loop_.StartThread();
+    if (status != ZX_OK)
+        return DRETF(false, "Failed to start async loop");
+    return true;
+}
+
+void ZirconPlatformTraceObserver::SetObserver(std::function<void(bool)> callback)
 {
     observer_.Stop();
     enabled_ = false;
@@ -42,13 +62,13 @@ void ZirconPlatformTrace::SetObserver(std::function<void(bool)> callback)
     });
 }
 
-zx_ticks_t ZirconPlatformTrace::GetCurrentTicks() { return zx_ticks_get(); }
-
-PlatformTrace* PlatformTrace::Get()
+// static
+std::unique_ptr<PlatformTraceObserver> PlatformTraceObserver::Create()
 {
-    if (!g_platform_trace)
-        g_platform_trace = std::make_unique<ZirconPlatformTrace>();
-    return g_platform_trace.get();
+    auto observer = std::make_unique<ZirconPlatformTraceObserver>();
+    if (!observer->Initialize())
+        return nullptr;
+    return observer;
 }
 
 #else
@@ -56,5 +76,8 @@ PlatformTrace* PlatformTrace::Get()
 PlatformTrace* PlatformTrace::Get() { return nullptr; }
 
 #endif
+
+// static
+uint64_t PlatformTrace::GetCurrentTicks() { return zx_ticks_get(); }
 
 } // namespace magma

@@ -22,6 +22,7 @@
 #include "msd_intel_connection.h"
 #include "msd_intel_pci_device.h"
 #include "platform_semaphore.h"
+#include "platform_trace.h"
 #include "sequencer.h"
 
 class MsdIntelDevice : public msd_device_t,
@@ -216,6 +217,7 @@ private:
         std::atomic_bool tracing_enabled{false};
     };
     std::shared_ptr<FreqMonitorContext> freq_monitor_context_;
+    std::unique_ptr<magma::PlatformTraceObserver> trace_observer_;
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;

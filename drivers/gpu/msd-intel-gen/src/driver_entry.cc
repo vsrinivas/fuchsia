@@ -22,7 +22,6 @@
 
 #include "magma_util/dlog.h"
 #include "msd_intel_pci_device.h"
-#include "platform_trace.h"
 #include "sys_driver/magma_driver.h"
 
 #if MAGMA_TEST_DRIVER
@@ -164,9 +163,6 @@ static zx_status_t sysdrv_bind(void* ctx, zx_device_t* zx_device)
         device_get_protocol(zx_device, ZX_PROTOCOL_INTEL_GPU_CORE, &device->gpu_core_protocol);
     if (status != ZX_OK)
         return DRET_MSG(status, "device_get_protocol failed: %d", status);
-
-    if (magma::PlatformTrace::Get())
-        magma::PlatformTrace::Get()->Initialize();
 
     device->magma_driver = MagmaDriver::Create();
     if (!device->magma_driver)

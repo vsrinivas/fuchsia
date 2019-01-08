@@ -286,9 +286,10 @@ void MsdIntelDevice::StartDeviceThread()
         freq_monitor_context_ = std::make_shared<FreqMonitorContext>();
         freq_monitor_device_thread_ =
             std::thread([this] { this->FrequencyMonitorDeviceThreadLoop(); });
+        trace_observer_ = magma::PlatformTraceObserver::Create();
 
-        magma::PlatformTrace::Get()->SetObserver([weak_context = std::weak_ptr<FreqMonitorContext>(
-                                                      freq_monitor_context_)](bool is_enabled) {
+        trace_observer_->SetObserver([weak_context = std::weak_ptr<FreqMonitorContext>(
+                                          freq_monitor_context_)](bool is_enabled) {
             auto context = weak_context.lock();
             if (context && context->tracing_enabled != is_enabled) {
                 context->tracing_enabled = is_enabled;

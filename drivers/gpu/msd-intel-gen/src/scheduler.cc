@@ -53,7 +53,7 @@ std::shared_ptr<MsdIntelContext> FifoScheduler::ScheduleContext()
         if (current_context_ == nullptr) {
             auto connection = context->connection().lock();
             uint64_t current_id = connection ? connection->client_id() : 0;
-            uint64_t current_ticks = magma::PlatformTrace::Get()->GetCurrentTicks();
+            uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
             TRACE_VTHREAD_DURATION_BEGIN("magma", "Context Exec", "GPU", gpu_vthread_id_,
                                          current_ticks, "id", current_id);
@@ -74,7 +74,7 @@ void FifoScheduler::CommandBufferCompleted(std::shared_ptr<MsdIntelContext> cont
     if (--current_count_ == 0) {
         auto connection = context->connection().lock();
         uint64_t current_id = connection ? connection->client_id() : 0;
-        uint64_t current_ticks = magma::PlatformTrace::Get()->GetCurrentTicks();
+        uint64_t current_ticks = magma::PlatformTrace::GetCurrentTicks();
 
         TRACE_VTHREAD_DURATION_END("magma", "Context Exec", "GPU", gpu_vthread_id_, current_ticks,
                                    "id", current_id);

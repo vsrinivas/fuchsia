@@ -36,14 +36,23 @@ public:
 
     virtual bool Initialize() = 0;
 
-    // Invokes the given |callback| (on a different thread) when the tracing state changes.
-    virtual void SetObserver(std::function<void(bool trace_enabled)> callback) = 0;
-
     // Returns the current time in ticks.
-    virtual uint64_t GetCurrentTicks() = 0;
+    static uint64_t GetCurrentTicks();
 
     // Returns null if tracing is not enabled.
     static PlatformTrace* Get();
+};
+
+class PlatformTraceObserver {
+public:
+    virtual ~PlatformTraceObserver() {}
+
+    static std::unique_ptr<PlatformTraceObserver> Create();
+
+    virtual bool Initialize() = 0;
+
+    // Invokes the given |callback| (on a different thread) when the tracing state changes.
+    virtual void SetObserver(std::function<void(bool trace_enabled)> callback) = 0;
 };
 
 } // namespace magma
