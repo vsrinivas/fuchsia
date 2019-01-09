@@ -48,6 +48,7 @@ executable("netbuf_test") {
   ]
 
   deps = [
+    "//garnet/lib/wlan/protocol",
     "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_srcs",
     "//third_party/googletest:gtest_main",
     "//third_party/googletest:gtest_main",

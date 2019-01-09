@@ -217,63 +217,6 @@ uint8_t nl80211_band_to_fwil(enum nl80211_band band) {
     return 0;
 }
 
-static uint16_t chandef_to_chanspec(struct brcmu_d11inf* d11inf, struct cfg80211_chan_def* ch) {
-    struct brcmu_chan ch_inf;
-    int32_t primary_offset;
-
-    brcmf_dbg(TRACE, "chandef: control %d center %d width %d\n", ch->chan->center_freq,
-              ch->center_freq1, ch->width);
-    ch_inf.chnum = ieee80211_frequency_to_channel(ch->center_freq1);
-    primary_offset = ch->chan->center_freq - ch->center_freq1;
-    switch (ch->width) {
-    case NL80211_CHAN_WIDTH_20:
-    case NL80211_CHAN_WIDTH_20_NOHT:
-        ch_inf.bw = BRCMU_CHAN_BW_20;
-        WARN_ON(primary_offset != 0);
-        break;
-    case NL80211_CHAN_WIDTH_40:
-        ch_inf.bw = BRCMU_CHAN_BW_40;
-        if (primary_offset > 0) {
-            ch_inf.sb = BRCMU_CHAN_SB_U;
-        } else {
-            ch_inf.sb = BRCMU_CHAN_SB_L;
-        }
-        break;
-    case NL80211_CHAN_WIDTH_80:
-        ch_inf.bw = BRCMU_CHAN_BW_80;
-        if (primary_offset == -30) {
-            ch_inf.sb = BRCMU_CHAN_SB_LL;
-        } else if (primary_offset == -10) {
-            ch_inf.sb = BRCMU_CHAN_SB_LU;
-        } else if (primary_offset == 10) {
-            ch_inf.sb = BRCMU_CHAN_SB_UL;
-        } else {
-            ch_inf.sb = BRCMU_CHAN_SB_UU;
-        }
-        break;
-    case NL80211_CHAN_WIDTH_80P80:
-    case NL80211_CHAN_WIDTH_160:
-    case NL80211_CHAN_WIDTH_5:
-    case NL80211_CHAN_WIDTH_10:
-    default:
-        WARN_ON_ONCE(1);
-    }
-    switch (ch->chan->band) {
-    case NL80211_BAND_2GHZ:
-        ch_inf.band = BRCMU_CHAN_BAND_2G;
-        break;
-    case NL80211_BAND_5GHZ:
-        ch_inf.band = BRCMU_CHAN_BAND_5G;
-        break;
-    case NL80211_BAND_60GHZ:
-    default:
-        WARN_ON_ONCE(1);
-    }
-    d11inf->encchspec(&ch_inf);
-
-    return ch_inf.chspec;
-}
-
 uint16_t channel_to_chanspec(struct brcmu_d11inf* d11inf, wlan_channel_t* ch) {
     struct brcmu_chan ch_inf;
 
@@ -3856,14 +3799,14 @@ static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_devic
     const struct brcmf_vs_tlv* wpa_ie;
     struct brcmf_join_params join_params;
     uint16_t dev_role;
-    uint16_t chanspec = chandef_to_chanspec(&cfg->d11inf, &settings->chandef);
+    uint16_t chanspec = channel_to_chanspec(&cfg->d11inf, settings->chan);
     bool mbss;
     int is_11d;
     bool supports_11d;
 
-    brcmf_dbg(TRACE, "ctrlchn=%d, center=%d, bw=%d, beacon_interval=%d, dtim_period=%d,\n",
-              settings->chandef.chan->hw_value, settings->chandef.center_freq1,
-              settings->chandef.width, settings->beacon_interval, settings->dtim_period);
+    brcmf_dbg(TRACE, "primary=%d, cbw=%d, secondary=%d, beacon_interval=%d, dtim_period=%d,\n",
+              settings->chan->primary, settings->chan->cbw, settings->chan->secondary80,
+              settings->beacon_interval, settings->dtim_period);
     brcmf_dbg(TRACE, "ssid=%s(%zu), auth_type=%d, inactivity_timeout=%d\n", settings->ssid,
               settings->ssid_len, settings->auth_type, settings->inactivity_timeout);
     dev_role = ifp->vif->wdev.iftype;
@@ -4315,68 +4258,6 @@ exit:
     return err;
 }
 
-static zx_status_t brcmf_cfg80211_get_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
-                                              struct cfg80211_chan_def* chandef) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct net_device* ndev = wdev->netdev;
-    struct brcmf_if* ifp;
-    struct brcmu_chan ch;
-    enum nl80211_band band = 0; // TODO(cphoenix): init to the right enum value
-    enum nl80211_chan_width width = 0; // TODO(cphoenix): init to the right enum value
-    uint32_t chanspec;
-    int freq;
-    zx_status_t err;
-
-    if (!ndev) {
-        return ZX_ERR_IO_NOT_PRESENT;
-    }
-    ifp = ndev_to_if(ndev);
-
-    err = brcmf_fil_iovar_int_get(ifp, "chanspec", &chanspec);
-    if (err != ZX_OK) {
-        brcmf_err("chanspec failed (%d)\n", err);
-        return err;
-    }
-
-    ch.chspec = chanspec;
-    cfg->d11inf.decchspec(&ch);
-
-    switch (ch.band) {
-    case BRCMU_CHAN_BAND_2G:
-        band = NL80211_BAND_2GHZ;
-        break;
-    case BRCMU_CHAN_BAND_5G:
-        band = NL80211_BAND_5GHZ;
-        break;
-    }
-
-    switch (ch.bw) {
-    case BRCMU_CHAN_BW_80:
-        width = NL80211_CHAN_WIDTH_80;
-        break;
-    case BRCMU_CHAN_BW_40:
-        width = NL80211_CHAN_WIDTH_40;
-        break;
-    case BRCMU_CHAN_BW_20:
-        width = NL80211_CHAN_WIDTH_20;
-        break;
-    case BRCMU_CHAN_BW_80P80:
-        width = NL80211_CHAN_WIDTH_80P80;
-        break;
-    case BRCMU_CHAN_BW_160:
-        width = NL80211_CHAN_WIDTH_160;
-        break;
-    }
-
-    freq = ieee80211_channel_to_frequency(ch.control_ch_num, band);
-    chandef->chan = ieee80211_get_channel(wiphy, freq);
-    chandef->width = width;
-    chandef->center_freq1 = ieee80211_channel_to_frequency(ch.chnum, band);
-    chandef->center_freq2 = 0;
-
-    return ZX_OK;
-}
-
 static zx_status_t brcmf_cfg80211_crit_proto_start(struct wiphy* wiphy, struct wireless_dev* wdev,
                                                    enum nl80211_crit_proto_id proto,
                                                    uint16_t duration) {
@@ -4583,7 +4464,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .mgmt_tx = brcmf_cfg80211_mgmt_tx,
     .remain_on_channel = brcmf_p2p_remain_on_channel,
     .cancel_remain_on_channel = brcmf_cfg80211_cancel_remain_on_channel,
-    .get_channel = brcmf_cfg80211_get_channel,
     .start_p2p_device = brcmf_p2p_start_device,
     .stop_p2p_device = brcmf_p2p_stop_device,
     .crit_proto_start = brcmf_cfg80211_crit_proto_start,

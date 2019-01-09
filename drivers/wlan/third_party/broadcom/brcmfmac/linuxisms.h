@@ -33,6 +33,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <sys/types.h>
+#include <wlan/protocol/info.h>
 #include <zircon/assert.h>
 #include <zircon/listnode.h>
 #include <zircon/syscalls.h>
@@ -392,16 +393,6 @@ enum nl80211_tx_power_setting {
 enum nl80211_key_type {
     NL80211_KEYTYPE_GROUP,
     NL80211_KEYTYPE_PAIRWISE,
-};
-enum nl80211_chan_width {
-    NL80211_CHAN_WIDTH_20,
-    NL80211_CHAN_WIDTH_20_NOHT,
-    NL80211_CHAN_WIDTH_40,
-    NL80211_CHAN_WIDTH_80,
-    NL80211_CHAN_WIDTH_80P80,
-    NL80211_CHAN_WIDTH_160,
-    NL80211_CHAN_WIDTH_5,
-    NL80211_CHAN_WIDTH_10,
 };
 
 enum nl80211_auth_type { FOONLAT };
@@ -790,7 +781,7 @@ struct cfg80211_beacon_data {
 };
 
 struct cfg80211_ap_settings {
-    struct cfg80211_chan_def chandef;
+    wlan_channel_t* chan;
     int beacon_interval;
     int dtim_period;
     void* ssid;
@@ -856,7 +847,6 @@ struct cfg80211_ops { // Most of these return zx_status_t
     void* mgmt_tx;
     void* remain_on_channel;
     void* cancel_remain_on_channel;
-    void* get_channel;
     void* start_p2p_device;
     void* stop_p2p_device;
     void* crit_proto_start;
