@@ -14,6 +14,7 @@ enum {
     BTI_USB_DWC3,
     BTI_DSI,
     BTI_MALI,
+    BTI_UFS_DWC3,
 };
 
 typedef struct {

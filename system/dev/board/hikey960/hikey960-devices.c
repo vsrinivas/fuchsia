@@ -57,6 +57,35 @@ static const pbus_bti_t display_btis[] = {
     },
 };
 
+static const pbus_mmio_t ufs_mmios[] = {
+    {
+        .base = MMIO_UFS_CFG_BASE,
+        .length = MMIO_UFS_CFG_LENGTH,
+    },
+    {
+        .base = MMIO_UFS_SYS_CTRL_BASE,
+        .length = MMIO_UFS_SYS_CTRL_LENGTH,
+    },
+};
+
+static const pbus_bti_t ufs_btis[] = {
+    {
+        .iommu_index = 0,
+        .bti_id = BTI_UFS_DWC3,
+    },
+};
+
+static const pbus_dev_t ufs_dev = {
+    .name = "ufs",
+    .vid = PDEV_VID_96BOARDS,
+    .pid = PDEV_PID_HIKEY960,
+    .did = PDEV_DID_HISILICON_UFS,
+    .mmio_list = ufs_mmios,
+    .mmio_count = countof(ufs_mmios),
+    .bti_list = ufs_btis,
+    .bti_count = countof(ufs_btis),
+};
+
 static const pbus_mmio_t mali_mmios[] = {
     {
         .base = MMIO_G3D_BASE,
@@ -188,6 +217,12 @@ zx_status_t hikey960_add_devices(hikey960_t* hikey) {
     if ((status = hikey960_usb_init(hikey)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_usb_init failed: %d\n", status);
     }
+
+    if ((status = pbus_device_add(&hikey->pbus, &ufs_dev)) != ZX_OK) {
+        zxlogf(ERROR, "hikey960_add_devices could not add ufs_dev: %d\n", status);
+        return status;
+    }
+
     if ((status = pbus_device_add(&hikey->pbus, &mali_dev)) != ZX_OK) {
         zxlogf(ERROR, "hikey960_add_devices could not add mali_dev: %d\n", status);
         return status;

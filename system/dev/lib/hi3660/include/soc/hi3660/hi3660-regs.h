@@ -21,6 +21,17 @@
 #define PERI_CRG_IP_RST_USB3OTG_MUX             (1 << 8)
 #define PERI_CRG_ISODIS_REFCLK_ISO_EN           (1 << 25)
 
+#define PERI_CRG_UFS_ISODIS                     0x424
+#define PERI_CRG_UFS_ISOEN                      0x420
+#define PERI_CRG_UFS_RSTEN3                     0x84
+#define PERI_CRG_UFS_RSTDIS3                    0x88
+#define PERI_CRG_UFS_CLKDIV16                   0xE8
+#define PERI_CRG_UFS_CLKDIV17                   0xEC
+
+#define PERI_CRG_UFS_IO                         (1 << 14)
+#define PERI_CRG_UFS_RST                        (1 << 12)
+#define PERI_CRG_UFS_ARST                       (1 << 7)
+
 // PCTRL registers
 #define PCTRL_CTRL3                             0x10
 #define PCTRL_CTRL24                            0x064
@@ -28,6 +39,35 @@
 #define PCTRL_CTRL3_USB_TCXO_EN                 (1 << 1)
 #define PCTRL_CTRL3_MSK_START                   16
 #define PCTRL_CTRL24_SC_CLK_USB3PHY_3MUX1_SEL   (1 << 25)
+
+//UFS Sysctrl registers
+#define UFS_SCTRL_PSW_PWR_CTRL                  0x04
+#define UFS_SCTRL_PHY_ISO_EN                    0x08
+#define UFS_SCTRL_HC_LP_CTRL                    0x0C
+#define UFS_SCTRL_PHY_CLK_CTRL                  0x10
+#define UFS_SCTRL_PSW_CLK_CTRL                  0x14
+#define UFS_SCTRL_CLK_GATE_BYPASS               0x18
+#define UFS_SCTRL_RST_CTRL_EN                   0x1C
+#define UFS_SCTRL_SYSCTRL                       0x5C
+#define UFS_SCTRL_DEV_RST_CTRL                  0x60
+
+#define UFS_SCTRL_CLK_FREQ_CFG                  0x39
+#define UFS_SCTRL_REF_CLK_SEL_MASK              (3 << 8)
+#define UFS_SCTRL_CLK_FREQ_MASK                 0xFF
+#define UFS_SCTRL_CLK_GATE_BYPASS_MASK          0x3F
+#define UFS_SCTRL_SYSCTRL_BYPASS_MASK           (0x3F << 16)
+#define UFS_SCTRL_REF_CLK_SRC_SEl               (1 << 0)
+#define UFS_SCTRL_REF_CLK_ISO_EN                (1 << 16)
+#define UFS_SCTRL_REF_CLK_EN                    (1 << 24)
+#define UFS_SCTRL_PSW_MTCMOS_EN                 (1 << 0)
+#define UFS_SCTRL_PSW_CLK_EN                    (1 << 4)
+#define UFS_SCTRL_PSW_ISO_CTRL                  (1 << 16)
+#define UFS_SCTRL_PHY_ISO_CTRL                  (1 << 0)
+#define UFS_SCTRL_LP_ISOL_EN                    (1 << 16)
+#define UFS_SCTRL_LP_RSTN                       (1 << 0)
+#define UFS_SCTRL_PWR_READY                     (1 << 8)
+#define UFS_SCTRL_MASK_DEV_RST                  (1 << 16)
+#define UFS_SCTRL_MASK_UFS_RST                  (1 << 0)
 
 // USBOTG_BC registers
 #define USB3OTG_CTRL0                           0x00

@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hi3660-usb.c \
     $(LOCAL_DIR)/hi3660-i2c.c \
     $(LOCAL_DIR)/hi3660-dsi.c \
+    $(LOCAL_DIR)/hi3660-ufs.c \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

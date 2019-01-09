@@ -55,6 +55,9 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
          (status = mmio_buffer_init_physical(&hi3660->iomcu, MMIO_IOMCU_CONFIG_BASE,
                                            MMIO_IOMCU_CONFIG_LENGTH, resource,
+                                           ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK ||
+         (status = mmio_buffer_init_physical(&hi3660->ufs_sctrl, MMIO_UFS_SYS_CTRL_BASE,
+                                           MMIO_UFS_SYS_CTRL_LENGTH, resource,
                                            ZX_CACHE_POLICY_UNCACHED_DEVICE)) != ZX_OK) {
         goto fail;
     }
@@ -64,6 +67,11 @@ zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out) {
         goto fail;
     }
     status = hi3660_usb_init(hi3660);
+    if (status != ZX_OK) {
+        goto fail;
+    }
+
+    status = hi3660_ufs_init(hi3660);
     if (status != ZX_OK) {
         goto fail;
     }
@@ -110,5 +118,6 @@ void hi3660_release(hi3660_t* hi3660) {
     mmio_buffer_release(&hi3660->iomg_pmx4);
     mmio_buffer_release(&hi3660->pmu_ssio);
     mmio_buffer_release(&hi3660->iomcu);
+    mmio_buffer_release(&hi3660->ufs_sctrl);
     free(hi3660);
 }

@@ -1,0 +1,439 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <ddk/device.h>
+#include <ddk/io-buffer.h>
+#include <ddk/mmio-buffer.h>
+#include <ddk/protocol/platform/bus.h>
+
+#include <zircon/compiler.h>
+
+#ifndef __BYTE_ORDER__
+#error Compiler does not provide __BYTE_ORDER__
+#endif
+static inline uint32_t SWAP_32(uint32_t x) {
+    return __builtin_bswap32(x);
+}
+
+static inline uint16_t SWAP_16(uint16_t x) {
+    return __builtin_bswap16(x);
+}
+
+// standard swap macros
+#if BYTE_ORDER == BIG_ENDIAN
+#define LE64(val) SWAP_64(val)
+#define LE32(val) SWAP_32(val)
+#define LE16(val) SWAP_16(val)
+#define BE64(val) (val)
+#define BE32(val) (val)
+#define BE16(val) (val)
+#else
+#define LE64(val) (val)
+#define LE32(val) (val)
+#define LE16(val) (val)
+#define BE64(val) SWAP_64(val)
+#define BE32(val) SWAP_32(val)
+#define BE16(val) SWAP_16(val)
+#endif
+
+#define UFS_BIT(x) (1L << (x))
+#define LOWER_32_BITS(x) ((uint32_t)((x)&0xFFFFFFFFUL))
+#define UPPER_32_BITS(x) ((uint32_t)((x) >> 32))
+#define clr_bits(v, a) writel(readl(a) & (uint32_t) ~(v), (a))
+
+#define UFS_ERROR(fmt, ...) zxlogf(ERROR, "[%s:%d]" fmt, __func__, \
+                                   __LINE__, ##__VA_ARGS__)
+#define UFS_WARN(fmt, ...) zxlogf(WARN, "[%s:%d]" fmt, __func__, \
+                                  __LINE__, ##__VA_ARGS__)
+#define UFS_TRACE(fmt, ...) zxlogf(TRACE, "[%s:%d]" fmt, __func__, \
+                                   __LINE__, ##__VA_ARGS__)
+
+// HCE - Host Controller Enable 34h
+#define CONTROLLER_ENABLE  UFS_BIT(0)
+#define CONTROLLER_DISABLE 0x0
+
+#define UFS_HCS_DP_BIT UFS_BIT(3)
+#define UFS_HCS_UCRDY  UFS_BIT(3)
+
+// HCE Interrupt status control
+#define UFS_IS_UE_BIT   UFS_BIT(2)
+#define UFS_IS_ULSS_BIT UFS_BIT(8)
+#define UFS_IS_UCCS_BIT UFS_BIT(10)
+#define UFS_UTP_RUN_BIT UFS_BIT(0)
+
+#define UIC_LINK_STARTUP_CMD   0x16
+#define UFS_HCLKDIV_NORMAL_VAL 0xE4
+#define UFS_AHT_AH8ITV_MASK    0x3FF
+#define UFS_AHT_AH8_TIMER      0x1001
+
+#define UFS_SCTRL_CLK_GATE_BYPASS_MASK 0x3F
+#define UFS_SCTRL_SYSCTRL_BYPASS_MASK  (0x3F << 16)
+#define UFS_SCTRL_CLK_GATE_BYPASS 0x18
+#define UFS_SCTRL_SYSCTRL         0x5C
+
+// UFS Command codes
+#define READ_FLAG_OPCODE 0x05
+#define SET_FLAG_OPCODE  0x06
+
+#define FLAG_ID_FDEVICE_INIT 0x01
+
+// Descriptor Idns
+#define STANDARD_RD_REQ 0x01
+#define STANDARD_WR_REQ 0x81
+
+#define ALIGNED_UPIU_SIZE 512
+
+// UFSHC UPRO configurations
+#define UPRO_MPHY_CTRL      0xD0C10000
+#define UPRO_MPHY_FSM_TX0   0x00410000
+#define UPRO_MPHY_FSM_TX1   0x00410001
+#define UPRO_PA_TX_LCC_CTRL 0x155E0000
+#define UPRO_MK2_EXTN_SUP   0xD0AB0000
+#define UPRO_ERR_PA_IND     0xD0610000
+
+#define MPHY_ATTR_DEMPH_ADDR1 0x1002
+#define MPHY_ATTR_DEMPH_ADDR2 0x1102
+#define MPHY_ATTR_DEMPH_ADDR3 0x1003
+#define MPHY_ATTR_DEMPH_ADDR4 0x1103
+#define MPHY_ATTR_DEMPH_VAL1  0xAC78
+#define MPHY_ATTR_DEMPH_VAL2  0x2440
+
+#define MPHY_ATTR_DEMPH_ADDR_MSB 0x81170000
+#define MPHY_ATTR_DEMPH_ADDR_LSB 0x81160000
+#define MPHY_ATTR_DEMPH_VAL_MSB  0x81190000
+#define MPHY_ATTR_DEMPH_VAL_LSB  0x81180000
+#define MPHY_ATTR_DEMPH_CTRL     0x811C0000
+
+#define BAD_SLOT 0x55
+#define NOP_RETRY_COUNT 20
+#define MPHY_TX_FSM_RETRY_COUNT 500
+#define LINK_STARTUP_UCCS_RETRY_COUNT 200
+
+// UFS HC Register Offsets
+enum {
+    REG_CONTROLLER_CAPABILITIES           = 0x00,
+    REG_UFS_VERSION                       = 0x08,
+    REG_CONTROLLER_DEV_ID                 = 0x10,
+    REG_CONTROLLER_PROD_ID                = 0x14,
+    REG_CONTROLLER_AHIT                   = 0x18,
+    REG_INTERRUPT_STATUS                  = 0x20,
+    REG_INTERRUPT_ENABLE                  = 0x24,
+    REG_CONTROLLER_STATUS                 = 0x30,
+    REG_CONTROLLER_ENABLE                 = 0x34,
+    REG_UIC_ERROR_CODE_PHY_ADAPTER_LAYER  = 0x38,
+    REG_UIC_ERROR_CODE_DATA_LINK_LAYER    = 0x3C,
+    REG_UIC_ERROR_CODE_NETWORK_LAYER      = 0x40,
+    REG_UIC_ERROR_CODE_TRANSPORT_LAYER    = 0x44,
+    REG_UIC_ERROR_CODE_DME                = 0x48,
+    REG_UTP_TRANSFER_REQ_INT_AGG_CONTROL  = 0x4C,
+    REG_UTP_TRANSFER_REQ_LIST_BASE_L      = 0x50,
+    REG_UTP_TRANSFER_REQ_LIST_BASE_H      = 0x54,
+    REG_UTP_TRANSFER_REQ_DOOR_BELL        = 0x58,
+    REG_UTP_TRANSFER_REQ_LIST_CLEAR       = 0x5C,
+    REG_UTP_TRANSFER_REQ_LIST_RUN_STOP    = 0x60,
+    REG_UTP_TASK_REQ_LIST_BASE_L          = 0x70,
+    REG_UTP_TASK_REQ_LIST_BASE_H          = 0x74,
+    REG_UTP_TASK_REQ_DOOR_BELL            = 0x78,
+    REG_UTP_TASK_REQ_LIST_CLEAR           = 0x7C,
+    REG_UTP_TASK_REQ_LIST_RUN_STOP        = 0x80,
+    REG_UIC_COMMAND                       = 0x90,
+    REG_UIC_COMMAND_ARG_1                 = 0x94,
+    REG_UIC_COMMAND_ARG_2                 = 0x98,
+    REG_UIC_COMMAND_ARG_3                 = 0x9C,
+    REG_UFS_HCLKDIV_OFF                   = 0xFC,
+};
+
+// UFS status / Error codes used as return values
+enum {
+    UFS_LINK_STARTUP_FAIL     = -0x01,
+    UFS_UTRD_DOORBELL_TIMEOUT = -0x02,
+    UFS_NOP_RESP_FAIL         = -0x03,
+    UFS_NOP_OUT_OCS_FAIL      = -0x04,
+    UFS_INVALID_NOP_IN        = -0x05,
+};
+
+enum {
+    MMIO_UFSHC,
+    MMIO_UFS_SCTRL,
+};
+
+// Rate
+enum {
+    UFS_RATE_A =  1,
+    UFS_RATE_B,
+};
+
+// Controller capability masks
+enum {
+    MASK_TRANSFER_REQUESTS_SLOTS       = 0x0000001F,
+    MASK_TASK_MANAGEMENT_REQUEST_SLOTS = 0x00070000,
+};
+
+enum uic_dme_type {
+    // Configuration
+    DME_GET = 0x01,
+    DME_SET = 0x02,
+    // Control
+    DME_ENABLE = 0x12,
+};
+
+enum ufs_link_change_stage {
+    PRE_CHANGE,
+    POST_CHANGE,
+};
+
+// UFSHCI PRD Entry
+typedef struct {
+    uint32_t base_addr;
+    uint32_t upper_addr;
+    uint32_t res1;
+    uint32_t size;
+} ufshcd_prd_t;
+
+// NOP OUT UPIU
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t res1;
+    uint8_t task_tag;
+    uint32_t res2;
+    uint8_t tot_ehs_len;
+    uint8_t res3;
+    uint16_t data_seg_len;
+    uint8_t res4[20];
+} ufs_nop_req_upiu_t;
+
+// NOP IN UPIU
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t res1;
+    uint8_t task_tag;
+    uint8_t res2_0;
+    uint8_t res2_1;
+    uint8_t resp;
+    uint8_t res3;
+    uint8_t tot_ehs_len;
+    uint8_t device_info;
+    uint16_t data_seg_len;
+    uint8_t res4[20];
+} ufs_nop_resp_upiu_t;
+
+// Query UPIU
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t res1;
+    uint8_t task_tag;
+    uint8_t res2;
+    uint8_t query_func;
+    uint8_t query_resp;
+    uint8_t res3;
+    uint8_t tot_ehs_len;
+    uint8_t res4;
+    uint16_t data_seg_len;
+    uint8_t tsf[16];
+    uint32_t res5;
+} ufs_query_req_upiu_t;
+
+// UFS Command Descriptor structure
+typedef struct {
+    uint8_t cmd_upiu[ALIGNED_UPIU_SIZE];
+    uint8_t resp_upiu[ALIGNED_UPIU_SIZE];
+    ufshcd_prd_t prd_table[128];
+} utp_tfr_cmd_desc_t;
+
+// Command UPIU structure
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t lun;
+    uint8_t task_tag;
+    uint8_t cmd_set_type;
+    uint8_t res1_0;
+    uint8_t res1_1;
+    uint8_t res1_2;
+    uint8_t tot_ehs_len;
+    uint8_t res2;
+    uint16_t data_seg_len;
+    uint32_t exp_data_xfer_len;
+    uint8_t cdb[16];
+} ufs_utp_cmd_upiu_t;
+
+// Response UPIU structure
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t lun;
+    uint8_t task_tag;
+    uint8_t cmd_set_type;
+    uint8_t res1;
+    uint8_t resp;
+    uint8_t status;
+    uint8_t tot_ehs_len;
+    uint8_t device_info;
+    uint16_t data_seg_len;
+    uint32_t resd_xfer_count;
+    uint32_t res2;
+    uint32_t res3;
+    uint32_t res4;
+    uint32_t res5;
+    uint16_t sense_data_len;
+    uint8_t sense_data[18];
+} ufs_utp_resp_upiu_t;
+
+// UTRD structure
+typedef struct {
+    uint8_t crypt_cci;
+    uint8_t res1_0;
+    uint8_t crypt_en;
+    uint8_t ct_flags;
+    uint32_t dunl;
+    uint8_t ocs;
+    uint8_t res3_0;
+    uint8_t res3_1;
+    uint8_t res3_2;
+    uint32_t dunu;
+    uint32_t ucdba;
+    uint32_t ucdbau;
+    uint16_t resp_upiu_len;
+    uint16_t resp_upiu_off;
+    uint16_t prd_table_len;
+    uint16_t prd_table_off;
+} utp_tfr_req_desc_t;
+
+// Task Manage request
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t lun;
+    uint8_t res1;
+    uint8_t tm_fn;
+    uint8_t res2_0;
+    uint8_t res2_1;
+    uint8_t tot_ehs_len;
+    uint8_t res3;
+    uint16_t data_seg_len;
+    uint32_t ip_param_1;
+    uint32_t ip_param_2;
+    uint32_t ip_param_3;
+    uint32_t res4;
+    uint32_t res5;
+} ufs_tm_req_upiu_t;
+
+// Task Manage response
+typedef struct {
+    uint8_t trans_type;
+    uint8_t flags;
+    uint8_t lun;
+    uint8_t task_tag;
+    uint8_t res1_0;
+    uint8_t res1_1;
+    uint8_t resp;
+    uint8_t res2;
+    uint8_t tot_ehs_len;
+    uint8_t res3;
+    uint16_t data_seg_len;
+    uint32_t ip_param_1;
+    uint32_t ip_param_2;
+    uint32_t res4;
+    uint32_t res5;
+    uint32_t res6;
+} ufs_tm_resp_upiu_t;
+
+// UTMRD structure
+typedef struct {
+    uint8_t res1_0;
+    uint8_t res1_1;
+    uint8_t res1_2;
+    uint8_t intr_flag;
+    uint32_t res2;
+    uint8_t ocs;
+    uint8_t res3_0;
+    uint8_t res3_1;
+    uint8_t res3_2;
+    uint32_t res4;
+    ufs_tm_req_upiu_t tm_req_upiu;
+    ufs_tm_resp_upiu_t tm_resp_upiu;
+} utp_task_req_desc_t;
+
+// Local reference block
+typedef struct {
+    uint8_t cmd_type;
+    uint8_t data_direction;
+    uint8_t rw_flags;
+    uint8_t ocs;
+    uint8_t xfer_cmd_status;
+    uint32_t tfr_size;
+    uint8_t task_tag;
+    uint32_t lun;
+    utp_tfr_req_desc_t* utrd;
+    ufs_utp_cmd_upiu_t* cmd_upiu;
+    ufs_utp_resp_upiu_t* resp_upiu;
+    ufshcd_prd_t* prdt;
+    uint16_t sense_buf_len;
+    uint8_t sense_buf;
+} ufs_hcd_lrb_t;
+
+struct ufs_hba;
+
+typedef struct {
+    const char* name;
+    zx_status_t (*link_startup)(volatile void* regs, uint8_t status);
+} ufs_hba_variant_ops_t;
+
+// UFS Host bus adaptor
+typedef struct ufs_hba {
+    uint8_t nutmrs;
+    uint8_t nutrs;
+    uint32_t caps;
+    uint32_t ufs_version;
+
+    // UFS Command descriptor
+    io_buffer_t ucdl_dma_buf;
+    // UTP Transfer request descriptor
+    io_buffer_t utrl_dma_buf;
+    // UTP Task management descriptor
+    io_buffer_t utmrl_dma_buf;
+    utp_tfr_cmd_desc_t* cmd_desc;
+    utp_tfr_req_desc_t* tfr_desc;
+    utp_task_req_desc_t* req_desc;
+    ufs_hcd_lrb_t* lrb_buf;
+    ulong outstanding_xfer_reqs;
+    ulong outstanding_tm_tasks;
+    zx_time_t timeout;
+    ufs_hba_variant_ops_t* vops;
+} ufs_hba_t;
+
+// UFS device
+typedef struct {
+    pdev_protocol_t pdev;
+    zx_device_t* zxdev;
+    mmio_buffer_t ufshc_mmio;
+    zx_handle_t bti;
+    ufs_hba_t ufs_hba;
+} ufshc_dev_t;
+
+static inline int32_t find_first_zero_bit(ulong* addr, uint8_t bits) {
+    ulong* value = addr;
+    int32_t i;
+
+    for (i = 0; i < bits; i++) {
+        if (0 == (*value & (1 << i)))
+            return i;
+    }
+
+    return -1;
+}
+
+zx_status_t ufshc_send_uic_command(volatile void* regs,
+                                   uint32_t command,
+                                   uint32_t arg1,
+                                   uint32_t arg3);
+uint32_t ufshc_uic_cmd_read(volatile void* regs, uint32_t command, uint32_t arg1);
+void ufshc_disable_auto_h8(volatile void* regs);
+void ufshc_check_h8(volatile void* regs);
+zx_status_t ufshc_init(ufshc_dev_t* dev, ufs_hba_variant_ops_t* ufs_hi3660_vops);

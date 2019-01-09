@@ -18,6 +18,7 @@ typedef struct {
     mmio_buffer_t iomg_pmx4;
     mmio_buffer_t iocfg_pmx9;
     mmio_buffer_t pmu_ssio;
+    mmio_buffer_t ufs_sctrl;
 } hi3660_t;
 
 zx_status_t hi3660_init(zx_handle_t resource, hi3660_t** out);
@@ -38,3 +39,6 @@ zx_status_t hi3660_enable_ldo(hi3660_t* hi3660);
 
 // hi3660-dsi.c
 zx_status_t hi3660_dsi_init(hi3660_t* hi3660);
+
+// hi3660-ufs.c
+zx_status_t hi3660_ufs_init(hi3660_t* hi3660);
