@@ -29,6 +29,7 @@ class RunnerImpl : public fuchsia::sys::Runner {
   std::unique_ptr<component::StartupContext> context_;
   fuchsia::sys::LauncherPtr launcher_;
   fidl::BindingSet<fuchsia::sys::Runner> bindings_;
+  fs::SynchronousVfs vfs_;
 };
 
 }  // namespace guest_runner

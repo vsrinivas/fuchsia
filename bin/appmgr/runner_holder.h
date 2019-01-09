@@ -29,8 +29,8 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   ~RunnerHolder();
 
   void StartComponent(
-      fuchsia::sys::Package package, fuchsia::sys::StartupInfo startup_info,
-      fxl::RefPtr<Namespace> ns,
+      ExportedDirType dir_type, fuchsia::sys::Package package,
+      fuchsia::sys::StartupInfo startup_info, fxl::RefPtr<Namespace> ns,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller,
       TerminationCallback termination_callback);
 

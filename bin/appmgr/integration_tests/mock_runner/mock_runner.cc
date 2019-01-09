@@ -55,7 +55,7 @@ void FakeSubComponent::PublishService(::std::string service_name,
   // publish to root as appmgr assumes that all the components started by
   // runners publish services using legacy style
   std::string sname = service_name;
-  startup_context_->outgoing().root_dir()->AddEntry(
+  startup_context_->outgoing().public_dir()->AddEntry(
       sname.c_str(),
       fbl::AdoptRef(new fs::Service([sname, this](zx::channel channel) {
         fdio_service_connect_at(service_dir_.get(), sname.c_str(),

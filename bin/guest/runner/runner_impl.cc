@@ -4,7 +4,10 @@
 
 #include "garnet/bin/guest/runner/runner_impl.h"
 
+#include <fs/pseudo-dir.h>
+#include <fs/remote-dir.h>
 #include <fuchsia/guest/vmm/cpp/fidl.h>
+#include <lib/async/default.h>
 #include <memory>
 
 #include "lib/fxl/logging.h"
@@ -13,7 +16,8 @@
 namespace guest_runner {
 
 RunnerImpl::RunnerImpl()
-    : context_(component::StartupContext::CreateFromStartupInfo()) {
+    : context_(component::StartupContext::CreateFromStartupInfo()),
+      vfs_(async_get_default_dispatcher()) {
   context_->environment()->GetLauncher(launcher_.NewRequest());
   context_->outgoing().AddPublicService(bindings_.GetHandler(this));
 }
@@ -23,11 +27,20 @@ void RunnerImpl::StartComponent(
     ::fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller) {
   fuchsia::sys::LaunchInfo launch_info;
 
-  // Pass-through our arguments directly to the vmm package.
+  // Create a bridge between directory_request that we got and vmm's
+  // directory_request.
+  fbl::RefPtr<fs::PseudoDir> dir = fbl::AdoptRef(new fs::PseudoDir());
+  fuchsia::io::DirectoryPtr public_dir;
+  launch_info.directory_request = public_dir.NewRequest().TakeChannel();
+  dir->AddEntry(
+      "public",
+      fbl::AdoptRef(new fs::RemoteDir(public_dir.Unbind().TakeChannel())));
+  vfs_.ServeDirectory(std::move(dir),
+                      std::move(startup_info.launch_info.directory_request));
+
+  // Pass-through some arguments directly to the vmm package.
   launch_info.url = "fuchsia-pkg://fuchsia.com/vmm#meta/vmm.cmx";
   launch_info.arguments = std::move(startup_info.launch_info.arguments);
-  launch_info.directory_request =
-      std::move(startup_info.launch_info.directory_request);
   launch_info.flat_namespace = fuchsia::sys::FlatNamespace::New();
   for (size_t i = 0; i < startup_info.flat_namespace.paths.size(); ++i) {
     const auto& path = startup_info.flat_namespace.paths[i];
