@@ -582,15 +582,12 @@ images += [
       name = "zircon-a"
       type = "zbi"
 
-      bootserver_pave = []
+      # TODO(IN-892): Although we wish to minimize the usage of mexec (ZX-2069),
+      # the infrastructure currently requires it for vim2 lifecycle management.
+      # (`fastboot continue` does not continue back to fuchsia after paving and
+      # rebooting in the case we do not mexec a kernel.)
+      bootserver_pave = [ "--boot" ]
 
-      # On arm64 systems where `fx reboot -r` works, and users don't default
-      # into zedboot, we prefer not to use mexec, but instead to reboot after
-      # paving. x64 will follow suit once all of the relevant plumbing is done
-      # (ZX-2220).
-      if (current_cpu != "arm64") {
-        bootserver_pave += [ "--boot" ]
-      }
       if (custom_signing_script == "") {
         bootserver_pave += [
           "--zircona",
