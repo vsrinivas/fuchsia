@@ -6,15 +6,13 @@
 #![deny(warnings)]
 
 use failure::{Error, ResultExt};
+use files_async;
 use fuchsia_app::client::Launcher;
 use fuchsia_async as fasync;
 use fidl_fuchsia_pkg::{PackageCacheMarker, PackageResolverMarker, UpdatePolicy};
 use fidl_fuchsia_pkg_ext::BlobId;
 use fuchsia_zircon as zx;
 use structopt::StructOpt;
-use crate::dir::readdir_recursive;
-
-mod dir;
 
 #[derive(StructOpt)]
 #[structopt(name = "pkgctl")]
@@ -93,7 +91,7 @@ fn main() -> Result<(), Error> {
                 ))?;
                 zx::Status::ok(res)?;
 
-                let entries = await!(readdir_recursive(dir))?;
+                let entries = await!(files_async::readdir_recursive(dir))?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{:?}", entry);
@@ -125,7 +123,7 @@ fn main() -> Result<(), Error> {
                 ))?;
                 zx::Status::ok(res)?;
 
-                let entries = await!(readdir_recursive(dir))?;
+                let entries = await!(files_async::readdir_recursive(dir))?;
                 println!("package contents:");
                 for entry in entries {
                     println!("/{:?}", entry);

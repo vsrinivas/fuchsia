@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
 use failure::Error;
 use fidl_fuchsia_io::{DirectoryProxy, MAX_BUF};
 use fuchsia_zircon as zx;
@@ -10,7 +12,7 @@ use std::fmt;
 use std::mem;
 
 #[derive(Eq, Ord, PartialOrd, PartialEq, Clone, Copy)]
-enum DirentType {
+pub enum DirentType {
     Unknown,
     Directory,
     BlockDevice,
@@ -20,8 +22,8 @@ enum DirentType {
 }
 
 impl From<u8> for DirentType {
-    fn from(_type: u8) -> Self {
-        match _type {
+    fn from(dir_type: u8) -> Self {
+        match dir_type {
             fidl_fuchsia_io::DIRENT_TYPE_DIRECTORY => DirentType::Directory,
             fidl_fuchsia_io::DIRENT_TYPE_BLOCK_DEVICE => DirentType::BlockDevice,
             fidl_fuchsia_io::DIRENT_TYPE_FILE => DirentType::File,
@@ -33,20 +35,20 @@ impl From<u8> for DirentType {
 }
 
 #[derive(Eq, Ord, PartialOrd, PartialEq)]
-pub(crate) struct DirEntry {
-    name: String,
-    _type: DirentType,
+pub struct DirEntry {
+    pub name: String,
+    pub dir_type: DirentType,
 }
 
 impl DirEntry {
     fn is_dir(&self) -> bool {
-        self._type == DirentType::Directory
+        self.dir_type == DirentType::Directory
     }
 
     fn chain(&self, subentry: &DirEntry) -> DirEntry {
         DirEntry {
             name: format!("{}/{}", self.name, subentry.name),
-            _type: subentry._type,
+            dir_type: subentry.dir_type,
         }
     }
 }
@@ -57,7 +59,7 @@ impl fmt::Debug for DirEntry {
     }
 }
 
-pub(crate) async fn readdir_recursive(dir: DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+pub async fn readdir_recursive(dir: DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     let mut directories: VecDeque<DirEntry> = VecDeque::new();
     let mut entries: Vec<DirEntry> = Vec::new();
 
@@ -101,7 +103,7 @@ pub(crate) async fn readdir_recursive(dir: DirectoryProxy) -> Result<Vec<DirEntr
     Ok(entries)
 }
 
-async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
+pub async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
     #[repr(packed)]
     struct Dirent {
         _ino: u64,
@@ -138,7 +140,7 @@ async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
                 DirEntry {
                     // Package resolver paths are always utf8.
                     name: String::from_utf8(rest[..size].to_vec())?,
-                    _type: _type.into(),
+                    dir_type: _type.into(),
                 }
             };
 
@@ -152,3 +154,6 @@ async fn readdir(dir: &DirectoryProxy) -> Result<Vec<DirEntry>, Error> {
 
     Ok(entries)
 }
+
+// TODO: Add tests
+
