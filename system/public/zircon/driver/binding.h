@@ -17,8 +17,6 @@ __BEGIN_CDECLS;
 #define OP_ABORT  0x0 // if (cond) return no-match
 #define OP_MATCH  0x1 // if (cond) return match
 #define OP_GOTO   0x2 // if (cond) advance to next LABEL(paramA)
-#define OP_SET    0x3 // if (cond) flags |= paramA
-#define OP_CLEAR  0x4 // if (cond) flags &= (~paramA)
 #define OP_LABEL  0x5 // no-op, labels line with paramA
 
 #define COND_AL   0x0 // true
@@ -28,8 +26,6 @@ __BEGIN_CDECLS;
 #define COND_LT   0x4 // bind(paramB) < Value
 #define COND_GE   0x5 // bind(paramB) >= Value
 #define COND_LE   0x6 // bind(paramB) <= Value
-#define COND_MASK 0x7 // (bind(paramB) & Value) != 0
-#define COND_BITS 0x8 // (bind(paramB) & Value) == Value
 
 // branches are forward-only
 // branches always go to the first matching LABEL
@@ -49,15 +45,11 @@ __BEGIN_CDECLS;
 #define BI_ABORT()            BINDINST(COND_AL,OP_ABORT,0,0,0)
 #define BI_MATCH()            BINDINST(COND_AL,OP_MATCH,0,0,0)
 #define BI_GOTO(n)            BINDINST(COND_AL,OP_GOTO,n,0,0)
-#define BI_SET(f)             BINDINST(COND_AL,OP_SET,f,0,0)
-#define BI_CLEAR(f)           BINDINST(COND_AL,OP_CLEAR,f,0,0)
 #define BI_LABEL(n)           BINDINST(COND_AL,OP_LABEL,n,0,0)
 
 #define BI_ABORT_IF(c,b,v)    BINDINST(COND_##c,OP_ABORT,0,b,v)
 #define BI_MATCH_IF(c,b,v)    BINDINST(COND_##c,OP_MATCH,0,b,v)
 #define BI_GOTO_IF(c,b,v,n)   BINDINST(COND_##c,OP_GOTO,n,b,v)
-#define BI_SET_IF(c,b,v,f)    BINDINST(COND_##c,OP_SET,f,b,v)
-#define BI_CLEAR_IF(c,b,v,f)  BINDINST(COND_##c,OP_CLEAR,f,b,v)
 
 // for drivers that only want to be bound on user request
 #define BI_ABORT_IF_AUTOBIND  BI_ABORT_IF(NE, BIND_AUTOBIND, 0)

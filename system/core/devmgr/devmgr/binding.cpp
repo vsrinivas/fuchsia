@@ -84,12 +84,6 @@ bool is_bindable(BindProgramContext* ctx) {
             case COND_GE:
                 cond = (pval >= value);
                 break;
-            case COND_MASK:
-                cond = ((pval & value) != 0);
-                break;
-            case COND_BITS:
-                cond = ((pval & value) == value);
-                break;
             default:
                 // illegal instruction: abort
                 printf("devmgr: driver '%s' illegal bindinst 0x%08x\n", ctx->name, inst);
@@ -116,12 +110,6 @@ bool is_bindable(BindProgramContext* ctx) {
                 printf("devmgr: driver '%s' illegal GOTO\n", ctx->name);
                 return false;
             }
-            case OP_SET:
-                flags |= BINDINST_PA(inst);
-                break;
-            case OP_CLEAR:
-                flags &= ~(BINDINST_PA(inst));
-                break;
             case OP_LABEL:
                 // no op
                 break;

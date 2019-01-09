@@ -192,8 +192,6 @@ void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len) {
     case OP_ABORT:
     case OP_MATCH:
     case OP_GOTO:
-    case OP_SET:
-    case OP_CLEAR:
         break;
     case OP_LABEL:
         snprintf(buf + off, buf_len - off, "L.%u:", pa);
@@ -234,12 +232,6 @@ void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len) {
         case COND_LE:
             off += snprintf(buf + off, buf_len - off, " <= 0x%08x", b->arg);
             break;
-        case COND_MASK:
-            off += snprintf(buf + off, buf_len - off, " & 0x%08x != 0", b->arg);
-            break;
-        case COND_BITS:
-            off += snprintf(buf + off, buf_len - off, " & 0x%08x == 0x%08x", b->arg, b->arg);
-            break;
         default:
             off += snprintf(buf + off, buf_len - off,
                             " ?(0x%x) 0x%08x", cc, b->arg);
@@ -257,12 +249,6 @@ void di_dump_bind_inst(const zx_bind_inst_t* b, char* buf, size_t buf_len) {
         break;
     case OP_GOTO:
         off += snprintf(buf + off, buf_len - off, "goto L.%u;", b->arg);
-        break;
-    case OP_SET:
-        off += snprintf(buf + off, buf_len - off, "flags |= 0x%02x;", pa);
-        break;
-    case OP_CLEAR:
-        off += snprintf(buf + off, buf_len - off, "flags &= 0x%02x;", ~pa & 0xFF);
         break;
     }
 }
