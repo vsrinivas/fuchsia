@@ -4,14 +4,21 @@
 
 #include "garnet/bin/crashpad/crashpad_analyzer_impl.h"
 
+#include <algorithm>
+#include <string>
 #include <utility>
+#include <vector>
 
 #include <fuchsia/crash/cpp/fidl.h>
 #include <fuchsia/mem/cpp/fidl.h>
+#include <gmock/gmock.h>
 #include <gtest/gtest.h>
 #include <lib/fdio/spawn.h>
 #include <lib/fsl/vmo/strings.h>
+#include <lib/fxl/files/directory.h>
+#include <lib/fxl/files/file.h>
 #include <lib/fxl/files/scoped_temp_dir.h>
+#include <lib/fxl/strings/concatenate.h>
 #include <lib/syslog/cpp/logger.h>
 #include <lib/zx/job.h>
 #include <lib/zx/port.h>
@@ -34,9 +41,38 @@ class CrashpadAnalyzerImplTest : public ::testing::Test {
   }
 
  protected:
+  void CheckAttachments(const std::vector<std::string>& expected_attachments) {
+    const std::string attachments_dir = database_path_.path() + "/attachments";
+
+    std::vector<std::string> subdirs;
+    ASSERT_TRUE(files::ReadDirContents(attachments_dir, &subdirs));
+    RemoveCurrentDirectory(&subdirs);
+    // We expect a single crash report to have been generated.
+    ASSERT_EQ(subdirs.size(), 1u);
+
+    std::vector<std::string> attachments;
+    const std::string report_attachments_dir =
+        attachments_dir + "/" + subdirs[0];
+    ASSERT_TRUE(files::ReadDirContents(report_attachments_dir, &attachments));
+    RemoveCurrentDirectory(&attachments);
+    EXPECT_THAT(attachments,
+                testing::UnorderedElementsAreArray(expected_attachments));
+    for (const std::string& attachment : attachments) {
+      uint64_t size;
+      ASSERT_TRUE(
+          files::GetFileSize(report_attachments_dir + "/" + attachment, &size));
+      EXPECT_GT(size, 0u) << "attachment file '" << attachment
+                          << "' shouldn't be empty";
+    }
+  }
+
   std::unique_ptr<CrashpadAnalyzerImpl> analyzer_;
 
  private:
+  void RemoveCurrentDirectory(std::vector<std::string>* dirs) {
+    dirs->erase(std::remove(dirs->begin(), dirs->end(), "."), dirs->end());
+  }
+
   files::ScopedTempDir database_path_;
 };
 
@@ -93,6 +129,7 @@ TEST_F(CrashpadAnalyzerImplTest, HandleNativeException_C_Basic) {
       std::move(process), std::move(thread), std::move(exception_port),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
+  CheckAttachments({"build.snapshot", "kernel_log"});
 
   // The parent job just swallows the exception, i.e. not RESUME_TRY_NEXT it,
   // to not trigger the real crash analyzer attached to the root job.
@@ -116,6 +153,7 @@ TEST_F(CrashpadAnalyzerImplTest, HandleManagedRuntimeException_Dart_Basic) {
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
+  CheckAttachments({"build.snapshot", "DartError"});
 }
 
 TEST_F(CrashpadAnalyzerImplTest,
@@ -128,6 +166,7 @@ TEST_F(CrashpadAnalyzerImplTest,
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
+  CheckAttachments({"build.snapshot", "DartError"});
 }
 
 TEST_F(CrashpadAnalyzerImplTest,
@@ -140,6 +179,7 @@ TEST_F(CrashpadAnalyzerImplTest,
       std::move(stack_trace),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
+  CheckAttachments({"build.snapshot", "stack_trace"});
 }
 
 TEST_F(CrashpadAnalyzerImplTest, ProcessKernelPanicCrashlog_Basic) {
@@ -150,6 +190,7 @@ TEST_F(CrashpadAnalyzerImplTest, ProcessKernelPanicCrashlog_Basic) {
       std::move(crashlog),
       [&out_status](zx_status_t status) { out_status = status; });
   EXPECT_EQ(out_status, ZX_OK);
+  CheckAttachments({"build.snapshot", "log"});
 }
 
 }  // namespace
