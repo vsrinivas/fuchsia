@@ -11,6 +11,7 @@ package("rust-crates-tests") {
     "fdio",
     "fuchsia-async",
     "fuchsia-cobalt",
+    "fuchsia-component",
     "fuchsia-hyper",
     "fuchsia-syslog",
     "fuchsia-framebuffer",
