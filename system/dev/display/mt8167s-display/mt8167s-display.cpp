@@ -179,8 +179,9 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
     fbl::AutoLock lock(&display_lock_);
     auto* config = display_configs[0];
     if (display_count == 1 && config->layer_count) {
-        // First stop the overlay engine
+        // First stop the overlay engine, followed by the DISP RDMA Engine
         ovl_->Stop();
+        disp_rdma_->Stop();
         for (size_t j = 0; j < config->layer_count; j++) {
             const primary_layer_t& layer = config->layer_list[j]->cfg.primary;
             zx_paddr_t addr = reinterpret_cast<zx_paddr_t>(layer.image.handle);
@@ -198,9 +199,11 @@ void Mt8167sDisplay::DisplayControllerImplApplyConfiguration(
             ovl_->Config(static_cast<uint8_t>(j), cfg);
         }
         // All configurations are done. Re-start the engine
+        disp_rdma_->Start();
         ovl_->Start();
     } else {
         ovl_->Restart();
+        disp_rdma_->Restart();
     }
 }
 
@@ -242,6 +245,47 @@ int Mt8167sDisplay::VSyncThread() {
     return ZX_OK;
 }
 
+zx_status_t Mt8167sDisplay::DisplaySubsystemInit() {
+
+    // Create and initialize ovl object
+    fbl::AllocChecker ac;
+    ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize ovl object
+    auto status = ovl_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize OVL object\n");
+        return status;
+    }
+
+    // Create and initialize Display RDMA object
+    disp_rdma_ = fbl::make_unique_checked<mt8167s_display::DispRdma>(&ac, height_, width_);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    // Initialize disp rdma object
+    status = disp_rdma_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize DISP RDMA object\n");
+        return status;
+    }
+
+    // Reset and start the various subsytems. Order matters
+    ovl_->Reset();
+    disp_rdma_->Reset();
+    // TODO(payamm): configuring the display RDMA engine does take into account height and width
+    // of the display destination frame. However, it is not clear right now how to program
+    // these if various layers have different destination dimensions. For now, we will configure
+    // the display rdma to the display's height and width. However, this may need fine-tuning later
+    // on.
+    disp_rdma_->Config();
+    ovl_->Start();
+    disp_rdma_->Start();
+    return ZX_OK;
+}
+
 void Mt8167sDisplay::Shutdown() {
     vsync_irq_.destroy();
     thrd_join(vsync_thread_, nullptr);
@@ -276,23 +320,12 @@ zx_status_t Mt8167sDisplay::Bind() {
         return status;
     }
 
-    // TODO(payamm): Move to a separate function
-    // Create internal ovl object
-    fbl::AllocChecker ac;
-    ovl_ = fbl::make_unique_checked<mt8167s_display::Ovl>(&ac, height_, width_);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    // Initialize ovl object
-    status = ovl_->Init(parent_);
+    // Initialize Display Subsystem
+    status = DisplaySubsystemInit();
     if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize OVL object\n");
+        DISP_ERROR("Could not initialize Display Subsystem\n");
         return status;
     }
-
-    // Reset the Overlay engine and start it.
-    ovl_->Reset();
-    ovl_->Start();
 
     auto start_thread = [](void* arg) { return static_cast<Mt8167sDisplay*>(arg)->VSyncThread(); };
     status = thrd_create_with_name(&vsync_thread_, start_thread, this, "vsync_thread");

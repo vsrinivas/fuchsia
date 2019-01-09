@@ -19,6 +19,11 @@ zx_status_t Mt8167::DisplayInit() {
             .base = MT8167_DISP_OVL_BASE,
             .length = MT8167_DISP_OVL_SIZE,
         },
+        // Display RDMA
+        {
+            .base = MT8167_DISP_RDMA_BASE,
+            .length = MT8167_DISP_RDMA_SIZE,
+        },
     };
 
     const pbus_bti_t display_btis[] = {

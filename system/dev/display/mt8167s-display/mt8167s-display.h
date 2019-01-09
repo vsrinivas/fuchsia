@@ -23,6 +23,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 
 #include "ovl.h"
+#include "disp-rdma.h"
 
 namespace mt8167s_display {
 
@@ -65,6 +66,10 @@ private:
 
     void Shutdown();
 
+    // This function initializes the various components within the display subsytem such as
+    // Overlay Engine, RDMA Engine, DSI, HDMI, etc
+    zx_status_t DisplaySubsystemInit();
+
     // Zircon handles
     zx::bti bti_;
 
@@ -92,7 +97,8 @@ private:
     ddk::DisplayControllerInterfaceClient dc_intf_ TA_GUARDED(display_lock_);
 
     // Objects
-    fbl::unique_ptr<mt8167s_display::Ovl>                 ovl_;
+    fbl::unique_ptr<mt8167s_display::Ovl>                   ovl_;
+    fbl::unique_ptr<mt8167s_display::DispRdma>              disp_rdma_;
 };
 
 } // namespace mt8167s_display

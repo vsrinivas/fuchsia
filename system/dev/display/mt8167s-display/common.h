@@ -15,6 +15,7 @@
 // Should match display_mmios table in board driver
 enum {
     MMIO_DISP_OVL,
+    MMIO_DISP_RDMA,
 };
 
 constexpr uint8_t PANEL_DISPLAY_ID = 1;
@@ -22,6 +23,10 @@ constexpr uint8_t PANEL_DISPLAY_ID = 1;
 // mt8167s_ref Display dimension
 constexpr uint32_t DISPLAY_WIDTH = 720;
 constexpr uint32_t DISPLAY_HEIGHT = 1280;
+
+// This is the absolute maximum height and width supported by the Display Subsystem
+constexpr uint16_t kMaxWidth = 4095;
+constexpr uint16_t kMaxHeight = 4095;
 
 struct OvlConfig {
     zx_pixel_format_t   format;

@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/mt8167s-display.cpp \
     $(LOCAL_DIR)/ovl.cpp \
+    $(LOCAL_DIR)/disp-rdma.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \

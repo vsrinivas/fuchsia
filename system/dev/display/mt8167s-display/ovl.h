@@ -28,9 +28,6 @@ namespace mt8167s_display {
 // RGB565, RGB888, ARGB8888, PARGB8888, XRGB, YUV422
 // Single Ovl object will manage all four layers
 //
-
-constexpr uint16_t kMaxWidth = 4095;
-constexpr uint16_t kMaxHeight = 4095;
 constexpr uint32_t kMaxLayer = 4;
 
 class Ovl {
@@ -38,8 +35,8 @@ public:
     // Contructor
     Ovl(uint32_t height, uint32_t width)
         : height_(height), width_(width) {
-        ZX_DEBUG_ASSERT(height_ < kMaxHeight);
-        ZX_DEBUG_ASSERT(width_ < kMaxWidth);
+        ZX_ASSERT(height_ < kMaxHeight);
+        ZX_ASSERT(width_ < kMaxWidth);
     }
 
     // Init
