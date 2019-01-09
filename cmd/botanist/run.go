@@ -18,7 +18,6 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
-	"fuchsia.googlesource.com/tools/fastboot"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -134,16 +133,6 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 	}
 	if err = botanist.Boot(ctx, addr, bootMode, imgs, r.zirconArgs, pubKey); err != nil {
 		return err
-	}
-
-	// TODO(IN-892): Necessary to continue back to fuchsia after rebooting.
-	if r.fastboot != "" {
-		ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
-		defer cancel()
-		f := fastboot.Fastboot{r.fastboot}
-		if _, err := f.Continue(ctx); err != nil {
-			return err
-		}
 	}
 
 	// Run command.
