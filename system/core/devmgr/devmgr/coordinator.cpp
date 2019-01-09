@@ -2131,7 +2131,10 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-    async::PostTask(DcAsyncDispatcher(), [this, drv] { BindDriver(drv); });
+    async::PostTask(DcAsyncDispatcher(), [this, drv] {
+        drivers_.push_back(drv);
+        BindDriver(drv);
+    });
 }
 
 Device* coordinator_init(const zx::job& root_job) {
@@ -2204,17 +2207,18 @@ void Coordinator::ScanSystemDrivers() {
 }
 
 void Coordinator::BindSystemDrivers() {
+    Driver* drv;
     // Bind system drivers.
-    for (Driver& drv : system_drivers_) {
-        BindDriver(&drv);
+    while ((drv = system_drivers_.pop_front()) != nullptr ) {
+        drivers_.push_back(drv);
+        BindDriver(drv);
     }
-    system_drivers_.clear();
     // Bind remaining fallback drivers.
-    for (Driver& drv : fallback_drivers_) {
-        printf("devcoord: fallback driver '%s' is available\n", drv.name.c_str());
-        BindDriver(&drv);
+    while ((drv = fallback_drivers_.pop_front()) != nullptr ) {
+        printf("devcoord: fallback driver '%s' is available\n", drv->name.c_str());
+        drivers_.push_back(drv);
+        BindDriver(drv);
     }
-    fallback_drivers_.clear();
 }
 
 void Coordinator::BindDrivers() {
