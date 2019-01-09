@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"net"
 	"regexp"
+	"time"
 )
 
 var (
@@ -99,6 +100,7 @@ func sendMagicPacket(localAddr, remoteAddr *net.UDPAddr, remoteHwAddr net.Hardwa
 		if err != nil {
 			return err
 		}
+		time.Sleep(1 * time.Second)
 	}
 
 	return nil
