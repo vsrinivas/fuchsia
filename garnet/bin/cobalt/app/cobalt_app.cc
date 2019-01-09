@@ -49,6 +49,10 @@ constexpr char kLegacyObservationStorePath[] =
 
 constexpr char kObservationStorePath[] = "/data/cobalt_observation_store";
 
+constexpr char kLocalAggregateProtoStorePath[] =
+    "/data/cobalt_local_aggregate_store";
+constexpr char kObsHistoryProtoStorePath[] = "/data/cobalt_obs_history_store";
+
 CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
                      std::chrono::seconds schedule_interval,
                      std::chrono::seconds min_interval,
@@ -67,6 +71,9 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       // makes sense to use MAX_BYTES_PER_EVENT as the value of
       // max_bytes_per_observation. But when we start implementing non-immediate
       // observations this needs to be revisited.
+      // TODO(pesk): Observations for UniqueActives reports are of comparable
+      // to the events logged for them, so no change is needed now. Update this
+      // comment as we add more non-immediate report types.
       legacy_observation_store_(
           fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
           kMaxBytesTotal, std::make_unique<PosixFileSystem>(),
@@ -97,14 +104,26 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
               kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
                                      &network_wrapper_, dispatcher))),
       timer_manager_(dispatcher),
+      local_aggregate_proto_store_(kLocalAggregateProtoStorePath,
+                                   std::make_unique<PosixFileSystem>()),
+      obs_history_proto_store_(kObsHistoryProtoStorePath,
+                               std::make_unique<PosixFileSystem>()),
       logger_encoder_(getClientSecret(), &system_data_),
       observation_writer_(&observation_store_, &clearcut_shipping_manager_,
                           &encrypt_to_analyzer_),
+      // Construct an EventAggregator using default values for the snapshot
+      // intervals and the number of backfill days.
+      // TODO(pesk): consider using non-default values for these arguments; in
+      // particular, a non-zero number of backfill days.
+      event_aggregator_(&logger_encoder_, &observation_writer_,
+                        &local_aggregate_proto_store_,
+                        &obs_history_proto_store_),
       controller_impl_(new CobaltControllerImpl(
           dispatcher,
           {&legacy_shipping_manager_, &clearcut_shipping_manager_})) {
   legacy_shipping_manager_.Start();
   clearcut_shipping_manager_.Start();
+  event_aggregator_.Start();
 
   // Load the global metrics registry.
   std::ifstream registry_file_stream;
@@ -139,8 +158,8 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
   logger_factory_impl_.reset(new LoggerFactoryImpl(
       getClientSecret(), &legacy_observation_store_,
       &legacy_encrypt_to_analyzer_, &legacy_shipping_manager_, &system_data_,
-      &timer_manager_, &logger_encoder_, &observation_writer_, client_config_,
-      project_configs_));
+      &timer_manager_, &logger_encoder_, &observation_writer_,
+      &event_aggregator_, client_config_, project_configs_));
 
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

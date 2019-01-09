@@ -51,6 +51,7 @@ source_set("lib") {
     "//third_party/cobalt/config:cobalt_registry_proto",
     "//third_party/cobalt/encoder",
     "//third_party/cobalt/logger",
+    "//third_party/cobalt/logger:event_aggregator",
     "//third_party/cobalt/util:pem_util",
     "//third_party/cobalt/util:posix_file_system",
     "//third_party/grpc:grpc++",

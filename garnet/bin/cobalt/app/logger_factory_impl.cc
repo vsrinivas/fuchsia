@@ -99,6 +99,7 @@ LoggerFactoryImpl::LoggerFactoryImpl(
     const encoder::SystemData* system_data, TimerManager* timer_manager,
     logger::Encoder* logger_encoder,
     logger::ObservationWriter* observation_writer,
+    logger::EventAggregator* event_aggregator,
     std::shared_ptr<config::ClientConfig> client_config,
     std::shared_ptr<ProjectConfigs> project_configs)
     : client_secret_(std::move(client_secret)),
@@ -109,6 +110,7 @@ LoggerFactoryImpl::LoggerFactoryImpl(
       timer_manager_(timer_manager),
       logger_encoder_(logger_encoder),
       observation_writer_(observation_writer),
+      event_aggregator_(event_aggregator),
       client_config_(client_config),
       project_configs_(project_configs) {
   ProjectProfile profile;
@@ -119,9 +121,9 @@ LoggerFactoryImpl::LoggerFactoryImpl(
   auto [legacy_project_context, project_context] =
       CreateProjectContexts(std::move(profile));
   internal_project_context_ = std::move(project_context);
-  internal_logger_.reset(
-      new logger::Logger(logger_encoder_, observation_writer_,
-                         internal_project_context_.get(), nullptr));
+  internal_logger_.reset(new logger::Logger(
+      logger_encoder_, event_aggregator_, observation_writer_,
+      internal_project_context_.get(), nullptr));
 }
 
 void LoggerFactoryImpl::CreateLogger(
@@ -140,9 +142,9 @@ void LoggerFactoryImpl::CreateLogger(
     callback(Status::OK);
   } else if (project_context) {
     logger_bindings_.AddBinding(
-        std::make_unique<LoggerImpl>(std::move(project_context),
-                                     logger_encoder_, observation_writer_,
-                                     timer_manager_, internal_logger_.get()),
+        std::make_unique<LoggerImpl>(
+            std::move(project_context), logger_encoder_, event_aggregator_,
+            observation_writer_, timer_manager_, internal_logger_.get()),
         std::move(request));
     callback(Status::OK);
   } else {
@@ -167,9 +169,9 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     callback(Status::OK);
   } else if (project_context) {
     logger_simple_bindings_.AddBinding(
-        std::make_unique<LoggerImpl>(std::move(project_context),
-                                     logger_encoder_, observation_writer_,
-                                     timer_manager_, internal_logger_.get()),
+        std::make_unique<LoggerImpl>(
+            std::move(project_context), logger_encoder_, event_aggregator_,
+            observation_writer_, timer_manager_, internal_logger_.get()),
         std::move(request));
     callback(Status::OK);
   } else {
@@ -194,8 +196,9 @@ void LoggerFactoryImpl::CreateLoggerFromProjectName(
 
   logger_bindings_.AddBinding(
       std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
-                                   logger_encoder_, observation_writer_,
-                                   timer_manager_, internal_logger_.get()),
+                                   logger_encoder_, event_aggregator_,
+                                   observation_writer_, timer_manager_,
+                                   internal_logger_.get()),
       std::move(request));
   callback(Status::OK);
 }
@@ -217,8 +220,9 @@ void LoggerFactoryImpl::CreateLoggerSimpleFromProjectName(
 
   logger_simple_bindings_.AddBinding(
       std::make_unique<LoggerImpl>(project_context_or.ConsumeValueOrDie(),
-                                   logger_encoder_, observation_writer_,
-                                   timer_manager_, internal_logger_.get()),
+                                   logger_encoder_, event_aggregator_,
+                                   observation_writer_, timer_manager_,
+                                   internal_logger_.get()),
       std::move(request));
   callback(Status::OK);
 }

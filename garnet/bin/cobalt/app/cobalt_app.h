@@ -28,7 +28,9 @@
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/encoder/shuffler_client.h"
 #include "third_party/cobalt/logger/encoder.h"
+#include "third_party/cobalt/logger/event_aggregator.h"
 #include "third_party/cobalt/logger/observation_writer.h"
+#include "third_party/cobalt/util/consistent_proto_store.h"
 
 namespace cobalt {
 
@@ -73,8 +75,12 @@ class CobaltApp {
   encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;
   TimerManager timer_manager_;
 
+  util::ConsistentProtoStore local_aggregate_proto_store_;
+  util::ConsistentProtoStore obs_history_proto_store_;
+
   logger::Encoder logger_encoder_;
   logger::ObservationWriter observation_writer_;
+  logger::EventAggregator event_aggregator_;
 
   std::shared_ptr<config::ClientConfig> client_config_;
   std::shared_ptr<config::ProjectConfigs> project_configs_;

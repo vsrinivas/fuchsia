@@ -17,6 +17,7 @@
 #include "third_party/cobalt/encoder/observation_store.h"
 #include "third_party/cobalt/encoder/shipping_manager.h"
 #include "third_party/cobalt/logger/encoder.h"
+#include "third_party/cobalt/logger/event_aggregator.h"
 #include "third_party/cobalt/logger/observation_writer.h"
 #include "third_party/cobalt/util/encrypted_message_util.h"
 
@@ -32,6 +33,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
                     TimerManager* timer_manager,
                     logger::Encoder* logger_encoder,
                     logger::ObservationWriter* observation_writer,
+                    logger::EventAggregator* event_aggregator,
                     std::shared_ptr<config::ClientConfig> client_config,
                     std::shared_ptr<config::ProjectConfigs> project_configs);
 
@@ -87,6 +89,7 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   TimerManager* timer_manager_;                              // not owned
   logger::Encoder* logger_encoder_;                          // not owned
   logger::ObservationWriter* observation_writer_;            // not owned
+  logger::EventAggregator* event_aggregator_;                // not owned
 
   // Used for cobalt v0.1 clients.
   std::shared_ptr<config::ClientConfig> client_config_;
