@@ -566,17 +566,6 @@ struct cfg80211_ssid {
     char* ssid;
 };
 
-struct cfg80211_scan_request {
-    int n_ssids;
-    int n_channels;
-    uint8_t* ie;
-    struct wireless_dev* wdev;
-    int ie_len;
-    struct ieee80211_channel* channels[555];
-    struct cfg80211_ssid* ssids;
-    struct wiphy* wiphy;
-};
-
 enum nl80211_iftype {
     NL80211_IFTYPE_P2P_GO,
     NL80211_IFTYPE_P2P_CLIENT,

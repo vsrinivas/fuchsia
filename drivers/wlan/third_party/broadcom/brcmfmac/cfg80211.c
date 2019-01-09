@@ -2726,9 +2726,7 @@ static struct brcmf_pno_net_info_le* brcmf_get_netinfo_array(
 
 /* PFN result doesn't have all the info which are required by the supplicant
  * (For e.g IEs) Do a target Escan so that sched scan results are reported
- * via wl_inform_single_bss in the required format. Escan does require the
- * scan request in the form of cfg80211_scan_request. For timebeing, create
- * cfg80211_scan_request one out of the received PNO event.
+ * via wl_inform_single_bss in the required format.
  */
 static zx_status_t brcmf_notify_sched_scan_results(struct brcmf_if* ifp,
                                                    const struct brcmf_event_msg* e, void* data) {

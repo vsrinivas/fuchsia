@@ -162,8 +162,6 @@ zx_status_t brcmf_p2p_ifchange(struct brcmf_cfg80211_info* cfg,
 void brcmf_p2p_ifp_removed(struct brcmf_if* ifp, bool rtnl_locked);
 zx_status_t brcmf_p2p_start_device(struct wiphy* wiphy, struct wireless_dev* wdev);
 void brcmf_p2p_stop_device(struct wiphy* wiphy, struct wireless_dev* wdev);
-zx_status_t brcmf_p2p_scan_prep(struct wiphy* wiphy, struct cfg80211_scan_request* request,
-                                struct brcmf_cfg80211_vif* vif);
 zx_status_t brcmf_p2p_remain_on_channel(struct wiphy* wiphy, struct wireless_dev* wdev,
                                         struct ieee80211_channel* channel, unsigned int duration,
                                         uint64_t* cookie);
