@@ -31,16 +31,12 @@ enum Condition {
     LessThan(u32, u32),
     GreaterThanEqual(u32, u32),
     LessThanEqual(u32, u32),
-    Mask(u32, u32),
-    Bits(u32, u32),
 }
 
 enum Instruction {
     Abort(Condition),
     Match(Condition),
     Goto(Condition, u32),
-    Set(Condition, u32),
-    Clear(Condition, u32),
     Label(u32),
 }
 
@@ -53,8 +49,6 @@ fn to_raw_condition(condition: Condition) -> (u32, u32, u32) {
         Condition::LessThan(b, v) => (4, b, v),
         Condition::GreaterThanEqual(b, v) => (5, b, v),
         Condition::LessThanEqual(b, v) => (6, b, v),
-        Condition::Mask(b, v) => (7, b, v),
-        Condition::Bits(b, v) => (8, b, v),
     }
 }
 
@@ -71,14 +65,6 @@ fn to_raw_instruction(instruction: Instruction) -> RawInstruction<[u32; 2]> {
         Instruction::Goto(condition, a) => {
             let (c, b, v) = to_raw_condition(condition);
             (c, 2, a, b, v)
-        }
-        Instruction::Set(condition, a) => {
-            let (c, b, v) = to_raw_condition(condition);
-            (c, 3, a, b, v)
-        }
-        Instruction::Clear(condition, a) => {
-            let (c, b, v) = to_raw_condition(condition);
-            (c, 4, a, b, v)
         }
         Instruction::Label(a) => (0, 5, a, 0, 0),
     };
@@ -180,24 +166,6 @@ mod tests {
     }
 
     #[test]
-    fn test_set_value() {
-        let instruction = Instruction::Set(Condition::Always, 0);
-        let raw_instruction = to_raw_instruction(instruction);
-        assert_eq!(raw_instruction.0[0], 3 << 4);
-        assert_eq!(raw_instruction.0[1], 0);
-        assert_eq!(raw_instruction.operation(), 3)
-    }
-
-    #[test]
-    fn test_clear_value() {
-        let instruction = Instruction::Clear(Condition::Always, 0);
-        let raw_instruction = to_raw_instruction(instruction);
-        assert_eq!(raw_instruction.0[0], 4 << 4);
-        assert_eq!(raw_instruction.0[1], 0);
-        assert_eq!(raw_instruction.operation(), 4)
-    }
-
-    #[test]
     fn test_label_value() {
         let instruction = Instruction::Label(0);
         let raw_instruction = to_raw_instruction(instruction);
@@ -208,12 +176,12 @@ mod tests {
 
     #[test]
     fn test_complicated_value() {
-        let instruction = Instruction::Set(Condition::LessThan(23, 1234), 42);
+        let instruction = Instruction::Goto(Condition::LessThan(23, 1234), 42);
         let raw_instruction = to_raw_instruction(instruction);
-        assert_eq!(raw_instruction.0[0], 4 | (3 << 4) | (42 << 8) | (23 << 16));
+        assert_eq!(raw_instruction.0[0], 4 | (2 << 4) | (42 << 8) | (23 << 16));
         assert_eq!(raw_instruction.0[1], 1234);
         assert_eq!(raw_instruction.condition(), 4);
-        assert_eq!(raw_instruction.operation(), 3);
+        assert_eq!(raw_instruction.operation(), 2);
         assert_eq!(raw_instruction.parameter_a(), 42);
         assert_eq!(raw_instruction.parameter_b(), 23);
         assert_eq!(raw_instruction.value(), 1234)
