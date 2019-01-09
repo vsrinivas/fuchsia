@@ -8,5 +8,8 @@
 
 namespace magma {
 
+// TODO(MA-537): remove this
 void GetSecureRandomBytes(void* buffer, size_t size) { zx_cprng_draw(buffer, size); }
 } // namespace magma
+
+void magma_platform_GetSecureRandomBytes(void* buffer, uint64_t size) { zx_cprng_draw(buffer, size); }
