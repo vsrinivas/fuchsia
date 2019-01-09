@@ -30,7 +30,9 @@ package("recovery_netstack") {
     ":bin",
   ]
 
-  binary = "rust_crates/recovery_netstack"
+  binaries = [{
+    name = "recovery_netstack"
+  }]
 
   meta = [
     {
