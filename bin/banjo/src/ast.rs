@@ -711,43 +711,43 @@ impl BanjoAst {
     }
 
     fn type_to_decl(&self, ty: &Ty) -> Option<&Decl> {
-	match ty {
-	    Ty::Array{ref ty, ..} => {
-		self.type_to_decl(ty)
-	    }
-	    Ty::Vector{ref ty, ..} => {
-		self.type_to_decl(ty)
-	    }
-	    Ty::Ident{id, ..} => {
-		// check if FQ
-		let v: Vec<&str> = id.rsplitn(2, '.').collect();
-		let (namespace, ident) =  if v.len() > 1 {
-		    (v[1], v[0])
-		} else {
-		    (self.primary_namespace.as_str(), id.as_str())
-		};
-		for decl in self.namespaces[namespace].iter() {
-		    match decl {
-			Decl::Interface {name, ..} |
-			Decl::Struct {name, ..} |
-			Decl::Union {name, ..} |
-			Decl::Enum {name, ..} |
-			Decl::Constant {name, ..} => {
-			    if name == ident {
-				return Some(decl);
-			    }
-			},
-			Decl::Alias (to, from) => {
-			    if to == ident {
-				return self.type_to_decl(&self.id_to_type(from));
-			    }
-			},
-		    }
-		}
-		None
-	    }
-	    _ => None,
-	}
+        match ty {
+            Ty::Array{ref ty, ..} => {
+                self.type_to_decl(ty)
+            }
+            Ty::Vector{ref ty, ..} => {
+                self.type_to_decl(ty)
+            }
+            Ty::Ident{id, ..} => {
+                // check if FQ
+                let v: Vec<&str> = id.rsplitn(2, '.').collect();
+                let (namespace, ident) =  if v.len() > 1 {
+                    (v[1], v[0])
+                } else {
+                    (self.primary_namespace.as_str(), id.as_str())
+                };
+                for decl in self.namespaces[namespace].iter() {
+                    match decl {
+                        Decl::Interface {name, ..} |
+                        Decl::Struct {name, ..} |
+                        Decl::Union {name, ..} |
+                        Decl::Enum {name, ..} |
+                        Decl::Constant {name, ..} => {
+                            if name == ident {
+                                return Some(decl);
+                            }
+                        },
+                        Decl::Alias (to, from) => {
+                            if to == ident {
+                                return self.type_to_decl(&self.id_to_type(from));
+                            }
+                        },
+                    }
+                }
+                None
+            }
+            _ => None,
+        }
     }
 
     // An edge from D1 to D2 means that a C needs to see the declaration
@@ -757,101 +757,101 @@ impl BanjoAst {
     // D1 has an edge pointing to D2. Note that struct and union pointers,
     // unlike inline structs or unions, do not have dependency edges.
     fn decl_dependencies(&self, decl: &Decl) -> Result<HashSet<&Decl>, ParseError> {
-	let mut edges = HashSet::new();
+        let mut edges = HashSet::new();
 
-	let mut maybe_add_decl = |ty| {
-	    if let Some(type_decl) = self.type_to_decl(ty) {
-		edges.insert(type_decl);
-	    }
-	};
+        let mut maybe_add_decl = |ty| {
+            if let Some(type_decl) = self.type_to_decl(ty) {
+                edges.insert(type_decl);
+            }
+        };
 
-	match decl {
-	    Decl::Interface { methods, ..} => {
-		for method in methods {
-		    for (_, ty) in method.in_params.iter() {
-			maybe_add_decl(&ty);
-		    }
-		    for (_, ty) in method.out_params.iter() {
-			maybe_add_decl(&ty);
-		    }
-		}
-	    }
-	    Decl::Struct { fields, ..} => {
-		for field in fields {
-		    maybe_add_decl(&field.ty);
-		}
-	    }
-	    Decl::Union {fields, ..} => {
-		for field in fields {
-		    maybe_add_decl(&field.ty);
-		}
-	    }
-	    Decl::Alias (_to, from) =>  {
-		maybe_add_decl(&self.id_to_type(from));
-	    }
-	    // TODO(surajmalhtora): Implement constant.
-	    Decl::Constant {..} => (),
-	    // Enum cannot have dependencies.
-	    Decl::Enum {..} => (),
-	};
+        match decl {
+            Decl::Interface { methods, ..} => {
+                for method in methods {
+                    for (_, ty) in method.in_params.iter() {
+                        maybe_add_decl(&ty);
+                    }
+                    for (_, ty) in method.out_params.iter() {
+                        maybe_add_decl(&ty);
+                    }
+                }
+            }
+            Decl::Struct { fields, ..} => {
+                for field in fields {
+                    maybe_add_decl(&field.ty);
+                }
+            }
+            Decl::Union {fields, ..} => {
+                for field in fields {
+                    maybe_add_decl(&field.ty);
+                }
+            }
+            Decl::Alias (_to, from) =>  {
+                maybe_add_decl(&self.id_to_type(from));
+            }
+            // TODO(surajmalhtora): Implement constant.
+            Decl::Constant {..} => (),
+            // Enum cannot have dependencies.
+            Decl::Enum {..} => (),
+        };
 
-	Ok(edges)
+        Ok(edges)
     }
 
     // Validates that the declarations are cycle free.
     fn validate_declaration_deps(&self) -> Result<(), ParseError> {
-	// The number of undelcared dependencies for each decl.
-	let mut degrees: HashMap<&Decl, u32> = HashMap::new();
-	// Records the decls that depend on each other.
-	let mut inverse_dependencies: HashMap<&Decl, Vec<&Decl>> = HashMap::new();
+        // The number of undelcared dependencies for each decl.
+        let mut degrees: HashMap<&Decl, u32> = HashMap::new();
+        // Records the decls that depend on each other.
+        let mut inverse_dependencies: HashMap<&Decl, Vec<&Decl>> = HashMap::new();
 
-	for decl in self.namespaces.iter().flat_map(|(_, decls)| decls.iter()) {
-	    degrees.insert(&decl, 0);
-	}
+        for decl in self.namespaces.iter().flat_map(|(_, decls)| decls.iter()) {
+            degrees.insert(&decl, 0);
+        }
 
-	for decl in self.namespaces.iter().flat_map(|(_, decls)| decls.iter()) {
-	    let deps = self.decl_dependencies(&decl)?;
-	    for dep in deps.iter().filter(|&dep| dep != &decl) {
-		let entry = degrees.get_mut(&decl).unwrap();
-		*entry += 1;
-		let entry = inverse_dependencies.entry(&dep).or_insert(Vec::new());
-		entry.push(&decl);
-	    }
-	}
-	// Remove mutability.
-	let inverse_dependencies = inverse_dependencies;
+        for decl in self.namespaces.iter().flat_map(|(_, decls)| decls.iter()) {
+            let deps = self.decl_dependencies(&decl)?;
+            for dep in deps.iter().filter(|&dep| dep != &decl) {
+                let entry = degrees.get_mut(&decl).unwrap();
+                *entry += 1;
+                let entry = inverse_dependencies.entry(&dep).or_insert(Vec::new());
+                entry.push(&decl);
+            }
+        }
+        // Remove mutability.
+        let inverse_dependencies = inverse_dependencies;
 
-	// Start with all decls that have no incoming edges.
-	let mut decls_without_deps = degrees.iter()
-	                                    .filter(|(_, &degrees)| degrees == 0)
-					    .map(|(&decl, _)| decl)
-					    .collect::<VecDeque<_>>();
+        // Start with all decls that have no incoming edges.
+        let mut decls_without_deps = degrees.iter()
+                                            .filter(|(_, &degrees)| degrees == 0)
+                                            .map(|(&decl, _)| decl)
+                                            .collect::<VecDeque<_>>();
 
-	let mut decl_order = Vec::new();
-	// Pull one out of the queue.
-	while let Some(decl) = decls_without_deps.pop_front() {
-	    assert_eq!(degrees.get(decl), Some(&0));
-	    decl_order.push(decl);
+        let mut decl_order = Vec::new();
+        // Pull one out of the queue.
+        while let Some(decl) = decls_without_deps.pop_front() {
+            assert_eq!(degrees.get(decl), Some(&0));
+            decl_order.push(decl);
 
-	    // Decrement the incoming degree of all other decls it points to.
-	    if let Some(inverse_deps) = inverse_dependencies.get(decl) {
-		for inverse_dep in inverse_deps {
-		    let degree = degrees.get_mut(inverse_dep).unwrap();
-		    assert_ne!(*degree, 0);
-		    *degree -= 1;
-		    if *degree == 0 {
-			decls_without_deps.push_back(inverse_dep);
-		    }
-		}
-	    }
-	}
+            // Decrement the incoming degree of all other decls it points to.
+            if let Some(inverse_deps) = inverse_dependencies.get(decl) {
+                for inverse_dep in inverse_deps {
+                    let degree = degrees.get_mut(inverse_dep).unwrap();
+                    assert_ne!(*degree, 0);
+                    *degree -= 1;
+                    if *degree == 0 {
+                        decls_without_deps.push_back(inverse_dep);
+                    }
+                }
+            }
+        }
 
-	if decl_order.len() != degrees.len() {
-	    // We didn't visit all the edges! There was a cycle.
-	    return Err(ParseError::InvalidDeps(String::from("There is a cycle in the declarations")));
-	}
+        if decl_order.len() != degrees.len() {
+            // We didn't visit all the edges! There was a cycle.
+            return Err(ParseError::InvalidDeps(String::from("There is a cycle in the declarations")));
+        }
 
-	Ok(())
+        Ok(())
     }
 
     pub fn parse(pair_vec: Vec<Pairs<'_, Rule>>) -> Result<Self, ParseError> {
@@ -924,8 +924,8 @@ impl BanjoAst {
             primary_namespace: primary_namespace.unwrap(),
             namespaces,
         };
-	ast.validate_declaration_deps()?;
+        ast.validate_declaration_deps()?;
 
-	Ok(ast)
+        Ok(ast)
     }
 }
