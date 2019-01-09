@@ -71,7 +71,7 @@ while piping the output back to your workstation terminal. Slick!
 Make sure your device is running (hit Ctrl-D to boot an existing image) and
 connected to your workstation.
 If your target device is a QEMU emulator, then it needs networking to receive
-the test package. Start your emulator with `fx run -- -N`.
+the test package. Start your emulator with `fx run -N`.
 
 From your workstation, `fx run-test scenic_unittests`. The argument to
 `run-test` is the name of the test program as defined in `BUILD.gn`, for

@@ -121,21 +121,12 @@ disk image:
 fx run
 ```
 
-The `fx run` command will prepare a QEMU disk image, then call `run-zircon` to
-boot Zircon. To specify the disk size, use the `-S` option:
-* `-S` sets QEMU's disk size. Units can be specified by suffix as "k", "K", "M",
-  "G", and "T".
-
-Use `fx run -h` to see all available options for `fx run`, and `fx run -- -h` to
-see all available options for `run-zircon`.
-
-There are various flags to control QEMU's configuration. As these flags must be
-forwarded to `run-zircon`, they must follow after a `--`.
+There are various flags for `fx run` to control QEMU's configuration:
 * `-m` sets QEMU's memory size in MB.
 * `-g` enables graphics (see below).
 * `-N` enables networking (see below).
 
-Example: `fx run -S 2G -- -g`
+Use `fx run -h` to see all available options.
 
 #### QEMU tips
 
@@ -150,7 +141,7 @@ support. Only the Zircon UI renders.
 To enable graphics under QEMU, add the `-g` flag to `fx run`:
 
 ```
-fx run -- -g
+fx run -g
 ```
 
 #### Enabling Network
@@ -161,7 +152,7 @@ a virtual interface for QEMU's use.
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
 
 ```
-fx run -- -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
+fx run -N -u $FUCHSIA_SCRIPTS_DIR/start-dhcp-server.sh
 ```
 
 The `-u` flag runs a script that sets up a local DHCP server and NAT to
