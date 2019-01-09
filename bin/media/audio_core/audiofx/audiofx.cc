@@ -4,8 +4,6 @@
 
 #include "lib/media/audio_dfx/audio_device_fx.h"
 
-#include <cstring>
-
 #include "lib/fxl/logging.h"
 
 //
@@ -43,7 +41,7 @@ bool fuchsia_audio_dfx_get_info(uint32_t effect_id,
     return false;
   }
 
-  std::strcpy(fx_desc->name, "Pass-thru");
+  strlcpy(fx_desc->name, "Pass-thru", sizeof(fx_desc->name));
   fx_desc->num_controls = 0;
   fx_desc->incoming_channels = FUCHSIA_AUDIO_DFX_CHANNELS_ANY;
   fx_desc->outgoing_channels = FUCHSIA_AUDIO_DFX_CHANNELS_SAME_AS_IN;

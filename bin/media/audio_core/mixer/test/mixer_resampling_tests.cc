@@ -479,6 +479,7 @@ void TestInterpolation(uint32_t source_frames_per_second,
   // src offset 0.5, should mix 50/50
   float source1[] = {-1.0f, -0.999999880790710f};  // BF800000, BF7FFFFE
   float expect1 = -0.999999940395355f;             // BF7FFFFF
+  uint32_t frac_src_frames = (fbl::count_of(source1)) << kPtsFractionalBits;
   int32_t frac_src_offset = 1 << (kPtsFractionalBits - 1);  // 0x1000 (2000==1)
   uint32_t dest_offset = 0;
   float accum_result = 0xCAFE;  // value will be overwritten
@@ -489,9 +490,8 @@ void TestInterpolation(uint32_t source_frames_per_second,
       dest_frames_per_second;
   int32_t expected_src_offset = frac_src_offset + info.step_size;
 
-  bool mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source1,
-                               (fbl::count_of(source1)) << kPtsFractionalBits,
-                               &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect1, accum_result);
@@ -509,9 +509,8 @@ void TestInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source1,
-                          (fbl::count_of(source1)) << kPtsFractionalBits,
-                          &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source1, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect1, accum_result);
@@ -519,16 +518,16 @@ void TestInterpolation(uint32_t source_frames_per_second,
   //
   // Base check: interpolated value is exactly calculated, no rounding.
   // src offset 0.5, should mix 50/50
-  float source2[] = {0.999999880790710f, 1.0f};     // 3F7FFFFE, 3F800000
-  float expect2 = 0.999999940395355f;               // 3F7FFFFF
+  float source2[] = {0.999999880790710f, 1.0f};  // 3F7FFFFE, 3F800000
+  float expect2 = 0.999999940395355f;            // 3F7FFFFF
+  frac_src_frames = (fbl::count_of(source2)) << kPtsFractionalBits;
   frac_src_offset = 1 << (kPtsFractionalBits - 1);  // 0x1000 (2000==1.0)
   expected_src_offset = frac_src_offset + info.step_size;
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source2,
-                          (fbl::count_of(source2)) << kPtsFractionalBits,
-                          &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect2, accum_result);
@@ -546,9 +545,8 @@ void TestInterpolation(uint32_t source_frames_per_second,
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source2,
-                          (fbl::count_of(source2)) << kPtsFractionalBits,
-                          &frac_src_offset, false, &info);
+  mixer->Mix(&accum_result, 1, &dest_offset, source2, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect2, accum_result);
@@ -562,15 +560,14 @@ void TestInterpolation(uint32_t source_frames_per_second,
   // 'round even' convention), so we expect 3F3FEC00, which is 0.74969482421875.
   float source3[] = {0.0f, 0.999755859375f};
   float expect3 = 0.74969482421875f;
+  frac_src_frames = (fbl::count_of(source3)) << kPtsFractionalBits;
   frac_src_offset = (3 << (kPtsFractionalBits - 2)) - 1;  // 0x17FF (2000==1.0)
   expected_src_offset = frac_src_offset + info.step_size;
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source3,
-                          (fbl::count_of(source3)) << kPtsFractionalBits,
-                          &frac_src_offset, false, &info);
-
+  mixer->Mix(&accum_result, 1, &dest_offset, source3, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect3, accum_result);
@@ -584,15 +581,14 @@ void TestInterpolation(uint32_t source_frames_per_second,
   // 'round even' convention), so we expect BF3FEC00: -0.74969482421875.
   float source4[] = {-0.999755859375f, 0.0f};
   float expect4 = -0.74969482421875f;
+  frac_src_frames = (fbl::count_of(source4)) << kPtsFractionalBits;
   frac_src_offset = (1 << (kPtsFractionalBits - 2)) + 1;  // 0x0801 (2000==1.0)
   expected_src_offset = frac_src_offset + info.step_size;
   dest_offset = 0;
   accum_result = 0xCAFE;  // Value will be overwritten.
 
-  mix_result = mixer->Mix(&accum_result, 1, &dest_offset, source4,
-                          (fbl::count_of(source4)) << kPtsFractionalBits,
-                          &frac_src_offset, false, &info);
-
+  mixer->Mix(&accum_result, 1, &dest_offset, source4, frac_src_frames,
+             &frac_src_offset, false, &info);
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(expected_src_offset, frac_src_offset);
   EXPECT_EQ(expect4, accum_result);
@@ -665,8 +661,8 @@ TEST(Resampling, FilterWidth_Linear) {
 }
 
 // Verify LinearSampler::Reset clears out any cached "previous edge" values.
-// Earlier test (Position_Fractional_Linear) already validates
-// that LinearSampler correctly caches edge values, so just validate Reset.
+// Earlier test (Position_Fractional_Linear) already validates that
+// LinearSampler correctly caches edge values, so just validate Reset.
 TEST(Resampling, Reset_Linear) {
   Bookkeeping info;
   info.mixer = SelectMixer(fuchsia::media::AudioSampleFormat::SIGNED_16, 1,
@@ -685,9 +681,9 @@ TEST(Resampling, Reset_Linear) {
   NormalizeInt28ToPipelineBitwidth(accum, fbl::count_of(accum));
   NormalizeInt28ToPipelineBitwidth(expect, fbl::count_of(expect));
 
-  bool mix_result =
-      info.mixer->Mix(accum, 4, &dest_offset, source, 3 << kPtsFractionalBits,
-                      &frac_src_offset, true, &info);
+  EXPECT_TRUE(info.mixer->Mix(accum, 4, &dest_offset, source,
+                              3 << kPtsFractionalBits, &frac_src_offset, true,
+                              &info));
   EXPECT_EQ(4u, dest_offset);
   EXPECT_EQ(5 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
@@ -704,9 +700,9 @@ TEST(Resampling, Reset_Linear) {
   expect[0] = 0x000D8000;  // Mix(:1B0)=D8 to [0]. W/out Reset, = (28E:1B0)=21F.
   NormalizeInt28ToPipelineBitwidth(&expect[0], 1);
 
-  mix_result =
-      info.mixer->Mix(accum, 1, &dest_offset, source, 2 << kPtsFractionalBits,
-                      &frac_src_offset, false, &info);
+  EXPECT_FALSE(info.mixer->Mix(accum, 1, &dest_offset, source,
+                               2 << kPtsFractionalBits, &frac_src_offset, false,
+                               &info));
   EXPECT_EQ(1u, dest_offset);
   EXPECT_EQ(1 << (kPtsFractionalBits - 1), frac_src_offset);
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));

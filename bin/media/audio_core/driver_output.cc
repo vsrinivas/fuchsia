@@ -6,10 +6,10 @@
 
 #include <audio-proto-utils/format-utils.h>
 #include <dispatcher-pool/dispatcher-channel.h>
-#include <iomanip>
 #include <lib/fit/defer.h>
-#include <optional>
 #include <zircon/process.h>
+#include <iomanip>
+#include <optional>
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/lib/media/wav_writer/wav_writer.h"

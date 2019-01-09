@@ -140,7 +140,10 @@ OutputProducer::OutputProducer(const fuchsia::media::AudioStreamTypePtr& format,
 // the output producer.
 OutputProducerPtr OutputProducer::Select(
     const fuchsia::media::AudioStreamTypePtr& format) {
-  FXL_DCHECK(format);
+  if (!format || format->channels == 0u) {
+    FXL_LOG(ERROR) << "Invalid output format";
+    return nullptr;
+  }
 
   switch (format->sample_format) {
     case fuchsia::media::AudioSampleFormat::UNSIGNED_8:

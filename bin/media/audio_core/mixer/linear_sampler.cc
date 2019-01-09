@@ -25,7 +25,7 @@ inline float Interpolate(float A, float B, uint32_t alpha) {
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
 class LinearSamplerImpl : public LinearSampler {
  public:
-  LinearSamplerImpl() : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) { Reset(); }
+  LinearSamplerImpl() : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1) {}
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
            const void* src, uint32_t frac_src_frames, int32_t* frac_src_offset,
@@ -40,7 +40,7 @@ class LinearSamplerImpl : public LinearSampler {
                   const void* src, uint32_t frac_src_frames,
                   int32_t* frac_src_offset, Bookkeeping* info);
 
-  float filter_data_[2 * DestChanCount];
+  float filter_data_[2 * DestChanCount] = {0.0f};
 };
 
 // TODO(mpuryear): MTWN-75 factor to minimize LinearSamplerImpl code duplication
@@ -50,7 +50,9 @@ class NxNLinearSamplerImpl : public LinearSampler {
   NxNLinearSamplerImpl(size_t channelCount)
       : LinearSampler(FRAC_ONE - 1, FRAC_ONE - 1), chan_count_(channelCount) {
     filter_data_u_ = std::make_unique<float[]>(2 * chan_count_);
-    Reset();
+
+    ::memset(filter_data_u_.get(), 0,
+             2 * chan_count_ * sizeof(filter_data_u_[0]));
   }
 
   bool Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,

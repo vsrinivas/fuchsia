@@ -192,8 +192,9 @@ zx_status_t StandardOutputBase::InitializeSourceLink(const AudioLinkPtr& link) {
 void StandardOutputBase::SetupMixBuffer(uint32_t max_mix_frames) {
   FXL_DCHECK(output_producer_->channels() > 0u);
   FXL_DCHECK(max_mix_frames > 0u);
-  FXL_DCHECK(max_mix_frames <= std::numeric_limits<uint32_t>::max() /
-                                   output_producer_->channels());
+  FXL_DCHECK(static_cast<uint64_t>(max_mix_frames) *
+                 output_producer_->channels() <=
+             std::numeric_limits<uint32_t>::max());
 
   mix_buf_frames_ = max_mix_frames;
   mix_buf_.reset(new float[mix_buf_frames_ * output_producer_->channels()]);
