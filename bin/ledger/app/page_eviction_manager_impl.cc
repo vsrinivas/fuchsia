@@ -118,38 +118,39 @@ Status PageEvictionManagerImpl::Init() {
   // Initializing the DB and marking pages as closed are slow operations and we
   // shouldn't wait for them to finish, before returning from initialization:
   // Start these operations and finalize the initialization completer when done.
-  coroutine_manager_.StartCoroutine(
-      [this](coroutine::CoroutineHandler* handler) {
-        ExpiringToken token = NewExpiringToken();
-        if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
-          initialization_completer_.Complete(Status::IO_ERROR);
-          return;
-        }
-        storage::Status storage_status;
-        std::unique_ptr<storage::Db> db_instance;
-        if (coroutine::SyncCall(
-                handler,
-                [this](fit::function<void(storage::Status,
-                                          std::unique_ptr<storage::Db>)>
-                           callback) {
-                  db_factory_->GetOrCreateDb(std::move(db_path_),
-                                             std::move(callback));
-                },
-                &storage_status,
-                &db_instance) == coroutine::ContinuationStatus::INTERRUPTED) {
-          initialization_completer_.Complete(Status::INTERNAL_ERROR);
-          return;
-        }
-        if (storage_status != storage::Status::OK) {
-          initialization_completer_.Complete(
-              PageUtils::ConvertStatus(storage_status));
-          return;
-        }
-        db_ = std::make_unique<PageUsageDb>(environment_->clock(),
-                                            std::move(db_instance));
-        Status status = db_->MarkAllPagesClosed(handler);
-        initialization_completer_.Complete(status);
-      });
+  coroutine_manager_.StartCoroutine([this](
+                                        coroutine::CoroutineHandler* handler) {
+    ExpiringToken token = NewExpiringToken();
+    if (!files::CreateDirectoryAt(db_path_.root_fd(), db_path_.path())) {
+      initialization_completer_.Complete(Status::IO_ERROR);
+      return;
+    }
+    storage::Status storage_status;
+    std::unique_ptr<storage::Db> db_instance;
+    if (coroutine::SyncCall(
+            handler,
+            [this](fit::function<void(storage::Status,
+                                      std::unique_ptr<storage::Db>)>
+                       callback) {
+              db_factory_->GetOrCreateDb(
+                  std::move(db_path_), storage::DbFactory::OnDbNotFound::CREATE,
+                  std::move(callback));
+            },
+            &storage_status,
+            &db_instance) == coroutine::ContinuationStatus::INTERRUPTED) {
+      initialization_completer_.Complete(Status::INTERNAL_ERROR);
+      return;
+    }
+    if (storage_status != storage::Status::OK) {
+      initialization_completer_.Complete(
+          PageUtils::ConvertStatus(storage_status));
+      return;
+    }
+    db_ = std::make_unique<PageUsageDb>(environment_->clock(),
+                                        std::move(db_instance));
+    Status status = db_->MarkAllPagesClosed(handler);
+    initialization_completer_.Complete(status);
+  });
   return Status::OK;
 }
 

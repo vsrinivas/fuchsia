@@ -75,7 +75,7 @@ void LedgerStorageImpl::CreatePageStorage(
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_create_page_storage");
   GetOrCreateDb(GetPathFor(page_id), std::move(page_id),
-                std::move(timed_callback));
+                DbFactory::OnDbNotFound::CREATE, std::move(timed_callback));
 }
 
 void LedgerStorageImpl::GetPageStorage(
@@ -83,13 +83,8 @@ void LedgerStorageImpl::GetPageStorage(
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   auto timed_callback = TRACE_CALLBACK(std::move(callback), "ledger",
                                        "ledger_storage_get_page_storage");
-  ledger::DetachedPath path = GetPathFor(page_id);
-  if (!files::IsDirectoryAt(path.root_fd(), path.path())) {
-    timed_callback(Status::NOT_FOUND, nullptr);
-    return;
-  }
-
-  GetOrCreateDb(std::move(path), std::move(page_id), std::move(timed_callback));
+  GetOrCreateDb(GetPathFor(page_id), std::move(page_id),
+                DbFactory::OnDbNotFound::RETURN, std::move(timed_callback));
 }
 
 void LedgerStorageImpl::DeletePageStorage(
@@ -167,9 +162,10 @@ void LedgerStorageImpl::InitializePageStorage(
 
 void LedgerStorageImpl::GetOrCreateDb(
     ledger::DetachedPath path, PageId page_id,
+    DbFactory::OnDbNotFound on_db_not_found,
     fit::function<void(Status, std::unique_ptr<PageStorage>)> callback) {
   db_factory_->GetOrCreateDb(
-      std::move(path),
+      std::move(path), on_db_not_found,
       callback::MakeScoped(
           weak_factory_.GetWeakPtr(),
           [this, page_id = std::move(page_id), callback = std::move(callback)](

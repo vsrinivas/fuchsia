@@ -103,13 +103,17 @@ void LevelDbFactory::Init() {
 }
 
 void LevelDbFactory::GetOrCreateDb(
-    ledger::DetachedPath db_path,
+    ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
     fit::function<void(Status, std::unique_ptr<Db>)> callback) {
   if (files::IsDirectoryAt(db_path.root_fd(), db_path.path())) {
     // If the path exists, there is a LevelDb instance already there. Open and
     // return it.
     GetOrCreateDbAtPath(std::move(db_path), CreateInStagingPath::NO,
                         std::move(callback));
+    return;
+  }
+  if (on_db_not_found == DbFactory::OnDbNotFound::RETURN) {
+    callback(Status::NOT_FOUND, nullptr);
     return;
   }
   // If creating the pre-cached db failed at some point it will likely fail

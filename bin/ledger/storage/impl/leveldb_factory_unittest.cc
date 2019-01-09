@@ -60,7 +60,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   std::unique_ptr<Db> db;
   bool called;
   db_factory_.GetOrCreateDb(
-      db_path_.SubPath("db"),
+      db_path_.SubPath("db"), DbFactory::OnDbNotFound::CREATE,
       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -77,7 +77,7 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
   // Close the previous instance and open it again.
   db.reset();
   db_factory_.GetOrCreateDb(
-      db_path_.SubPath("db"),
+      db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
       callback::Capture(callback::SetWhenCalled(&called), &status, &db));
   RunLoopUntilIdle();
   ASSERT_TRUE(called);
@@ -89,6 +89,20 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDb) {
     EXPECT_EQ(Status::OK, db->Get(handler, "key", &value));
     EXPECT_EQ("value", value);
   });
+}
+
+TEST_F(LevelDbFactoryTest, GetDbOnNotFound) {
+  // Try to get a non existing Db and expect a |NOT_FOUND| status.
+  Status status;
+  std::unique_ptr<Db> db;
+  bool called;
+  db_factory_.GetOrCreateDb(
+      db_path_.SubPath("db"), DbFactory::OnDbNotFound::RETURN,
+      callback::Capture(callback::SetWhenCalled(&called), &status, &db));
+  RunLoopUntilIdle();
+  ASSERT_TRUE(called);
+  EXPECT_EQ(Status::NOT_FOUND, status);
+  EXPECT_EQ(nullptr, db);
 }
 
 TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
@@ -104,7 +118,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbs) {
     EXPECT_FALSE(files::IsDirectoryAt(path.root_fd(), path.path()));
 
     db_factory_.GetOrCreateDb(
-        path,
+        path, DbFactory::OnDbNotFound::CREATE,
         callback::Capture(callback::SetWhenCalled(&called), &status, &db));
     RunLoopUntilIdle();
     EXPECT_TRUE(called);
@@ -131,6 +145,7 @@ TEST_F(LevelDbFactoryTest, CreateMultipleDbsConcurrently) {
 
     db_factory_.GetOrCreateDb(
         db_path_.SubPath(fxl::NumberToString(i)),
+        DbFactory::OnDbNotFound::CREATE,
         callback::Capture(callback::SetWhenCalled(&called[i]), &statuses[i],
                           &dbs[i]));
   }
@@ -156,13 +171,15 @@ TEST_F(LevelDbFactoryTest, GetOrCreateDbInCallback) {
   std::unique_ptr<Db> db2;
 
   db_factory_.GetOrCreateDb(
-      path1, [&](Status status1, std::unique_ptr<Db> db1) {
+      path1, DbFactory::OnDbNotFound::CREATE,
+      [&](Status status1, std::unique_ptr<Db> db1) {
         called1 = true;
         EXPECT_EQ(Status::OK, status1);
         EXPECT_NE(nullptr, db1);
         db_factory_.GetOrCreateDb(
-            path2, callback::Capture(callback::SetWhenCalled(&called2),
-                                     &status2, &db2));
+            path2, DbFactory::OnDbNotFound::CREATE,
+            callback::Capture(callback::SetWhenCalled(&called2), &status2,
+                              &db2));
       });
   RunLoopUntilIdle();
   EXPECT_TRUE(called1);

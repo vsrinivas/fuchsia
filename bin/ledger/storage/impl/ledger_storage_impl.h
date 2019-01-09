@@ -58,6 +58,7 @@ class LedgerStorageImpl : public LedgerStorage {
   // given |page_id|.
   void GetOrCreateDb(
       ledger::DetachedPath path, PageId page_id,
+      DbFactory::OnDbNotFound on_db_not_found,
       fit::function<void(Status, std::unique_ptr<PageStorage>)> callback);
 
   ledger::DetachedPath GetPathFor(PageIdView page_id);

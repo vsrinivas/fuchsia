@@ -17,7 +17,7 @@ class FakeDbFactory : public DbFactory {
       : dispatcher_(dispatcher) {}
 
   void GetOrCreateDb(
-      ledger::DetachedPath db_path,
+      ledger::DetachedPath db_path, DbFactory::OnDbNotFound on_db_not_found,
       fit::function<void(Status, std::unique_ptr<Db>)> callback) override;
 
  private:
