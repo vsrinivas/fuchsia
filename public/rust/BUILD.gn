@@ -9,6 +9,7 @@ package("rust-crates-tests") {
 
   deps = [
     "fdio",
+    "fuchsia-archive",
     "fuchsia-async",
     "fuchsia-cobalt",
     "fuchsia-component",
@@ -30,6 +31,7 @@ package("rust-crates-tests") {
 
   tests = [
     { name = "fdio_lib_test" },
+    { name = "fuchsia_archive_lib_test" },
     { name = "fuchsia_async_lib_test" },
     { name = "fuchsia_cobalt_lib_test" },
     { name = "fuchsia_hyper_lib_test" },
