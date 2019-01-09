@@ -31,11 +31,6 @@ The Application Manager (AppMgr) is responsible for launching components and man
 in which those components run. It is the first process started in the `fuchsia` job by the
 [DevMgr](#DevMgr).
 
-#### **Armadillo**
-
-An implementation of a [session shell](#SessionShell).
-- [Source](https://fuchsia.googlesource.com/topaz/+/master/shell/armadillo/)
-
 ### **Banjo**
 
 Banjo is a language for defining protocols that are used to communicate between
