@@ -23,3 +23,28 @@ MODULE_FIDL_LIBS := \
 MODULE_EXPORT := a
 
 include make/module.mk
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE := $(LOCAL_DIR).test
+
+MODULE_TYPE := usertest
+
+MODULE_NAME := ddk-unittest
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/phys-iter.c \
+    $(TEST_DIR)/main.cpp \
+    $(TEST_DIR)/phys-iter-test.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/unittest \
+    system/ulib/zircon \
+
+include make/module.mk

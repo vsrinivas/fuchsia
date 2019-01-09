@@ -28,7 +28,7 @@ static bool init_next_sg_entry(phys_iter_t* iter) {
         return false;
     }
     if (iter->buf.sg_list) {
-        phys_iter_sg_entry_t* next = &iter->buf.sg_list[iter->next_sg_entry_idx];
+        const phys_iter_sg_entry_t* next = &iter->buf.sg_list[iter->next_sg_entry_idx];
         iter->segment_length = next->length;
         iter->segment_offset = next->offset;
         iter->next_sg_entry_idx++;
@@ -50,7 +50,7 @@ static bool init_next_sg_entry(phys_iter_t* iter) {
     return true;
 }
 
-void phys_iter_init(phys_iter_t* iter, phys_iter_buffer_t* buf, size_t max_length) {
+void phys_iter_init(phys_iter_t* iter, const phys_iter_buffer_t* buf, size_t max_length) {
     memset(iter, 0, sizeof(phys_iter_t));
     memcpy(&iter->buf, buf, sizeof(phys_iter_buffer_t));
     ZX_DEBUG_ASSERT(max_length % PAGE_SIZE == 0);
@@ -67,6 +67,8 @@ static inline void phys_iter_increment(phys_iter_t* iter, size_t len) {
 }
 
 size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
+    *out_paddr = 0;
+
     // Check if we've finished iterating over the current segment.
     // We shouldn't have any zero length segments, but use a while loop just in case.
     while (iter->offset >= iter->segment_length) {
@@ -76,18 +78,22 @@ size_t phys_iter_next(phys_iter_t* iter, zx_paddr_t* out_paddr) {
         }
     }
 
-    phys_iter_buffer_t buf = iter->buf;
-    zx_off_t offset = iter->offset;
-    size_t max_length = iter->max_length;
-    size_t length = iter->segment_length;
+    if (iter->page >= iter->buf.phys_count) {
+        return 0;
+    }
+
+    const phys_iter_buffer_t* buf = &iter->buf;
+    const zx_off_t offset = iter->offset;
+    const size_t max_length = iter->max_length;
+    const size_t length = iter->segment_length;
 
     size_t remaining = length - offset;
-    zx_paddr_t* phys_addrs = buf.phys;
+    const zx_paddr_t* phys_addrs = buf->phys;
     size_t align_adjust = segment_offset(iter) & (PAGE_SIZE - 1);
     zx_paddr_t phys = phys_addrs[iter->page];
     size_t return_length = 0;
 
-    if (buf.phys_count == 1) {
+    if (buf->phys_count == 1) {
         // simple contiguous case
         *out_paddr = phys_addrs[0] + offset + segment_offset(iter);
         return_length = remaining;
