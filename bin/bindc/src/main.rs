@@ -4,5 +4,9 @@
 
 //! A Fuchsia Driver Bind Program compiler
 
-fn main() {
-}
+#[macro_use]
+extern crate bitfield;
+
+mod instruction;
+
+fn main() {}

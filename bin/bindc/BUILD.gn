@@ -2,14 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 if (host_toolchain == current_toolchain) {
   rustc_binary("bindc_bin") {
     name = "bindc"
     edition = "2018"
     with_unit_tests = true
+    deps = [
+      "//third_party/rust-crates/rustc_deps:bitfield",
+    ]
   }
 }
 
