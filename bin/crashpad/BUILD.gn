@@ -42,6 +42,16 @@ package("crashpad_analyzer") {
   ]
 }
 
+package("upload_to_prod_server_config") {
+  deprecated_system_image = true
+  resources = [
+    {
+      path = "configs/upload_to_prod_server.json"
+      dest = "crashpad_analyzer/override_config.json"
+    },
+  ]
+}
+
 source_set("crashpad_analyzer_files") {
   sources = [
     "config.cc",

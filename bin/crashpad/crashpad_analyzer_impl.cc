@@ -45,6 +45,9 @@ namespace fuchsia {
 namespace crash {
 namespace {
 
+const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
+const char kOverrideConfigPath[] =
+    "/system/data/crashpad_analyzer/override_config.json";
 const char kURL[] = "https://clients2.google.com/cr/report";
 
 std::string GetPackageName(const zx::process& process) {
@@ -339,12 +342,12 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
   if (!database) {
     FX_LOGS(ERROR) << "error initializing local crash report database at "
                    << config.local_crashpad_database_path;
+    FX_LOGS(FATAL) << "failed to set up crash analyzer";
     return nullptr;
   }
 
   // Today we enable uploads here. In the future, this will most likely be set
   // in some external settings.
-  // TODO(DX-714): re-enable upload once configurable.
   database->GetSettings()->SetUploadsEnabled(
       config.enable_upload_to_crash_server);
 
@@ -354,11 +357,20 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
   Config config;
-  if (ParseConfig("/pkg/data/default_config.json", &config) != ZX_OK) {
-    return nullptr;
+
+  if (files::IsFile(kOverrideConfigPath) &&
+      ParseConfig(kOverrideConfigPath, &config) == ZX_OK) {
+    return CrashpadAnalyzerImpl::TryCreate(config);
   }
 
-  return CrashpadAnalyzerImpl::TryCreate(config);
+  // We try to load the default config included in the package if no override
+  // config was specified or we failed to parse it.
+  if (ParseConfig(kDefaultConfigPath, &config) == ZX_OK) {
+    return CrashpadAnalyzerImpl::TryCreate(config);
+  }
+
+  FX_LOGS(FATAL) << "failed to set up crash analyzer";
+  return nullptr;
 }
 
 }  // namespace crash

@@ -1,0 +1,4 @@
+{
+    "local_crashpad_database_path": "/data/crashes",
+    "enable_upload_to_crash_server": true
+}
