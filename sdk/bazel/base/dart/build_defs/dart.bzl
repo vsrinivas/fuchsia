@@ -32,6 +32,10 @@ COMMON_COMPILE_KERNEL_ACTION_ATTRS = {
         mandatory = False,
         providers = ["dart"],
     ),
+    "space_dart": attr.bool(
+        doc = "Whether or not to use SpaceDart (defaults to true)",
+        default = True,
+    ),
     "_dart": attr.label(
         default = Label("//tools:dart"),
         allow_single_file = True,
@@ -85,10 +89,11 @@ def compile_kernel_action(
         package = package_name,
         deps = deps,
     )
+    additional_args = []
 
     # 1. Create the .packages file.
     package_spec_path = context.label.name + ".packages"
-    package_spec = context.new_file(package_spec_path)
+    package_spec = context.actions.declare_file(package_spec_path)
     package_spec_action(
         ctx = context,
         output = package_spec,
@@ -143,9 +148,11 @@ def compile_kernel_action(
     # And current directory as it was ignored in the previous logic
     roots_dict["."] = True
 
-    roots_param = []
     for root in roots_dict.keys():
-        roots_param += ["--filesystem-root", root]
+        additional_args += ["--filesystem-root", root]
+
+    if context.attr.space_dart:
+        additional_args += ["--gen-bytecode"]
 
     # 5. Compile the kernel.
     multi_root_scheme = "main-root"
@@ -161,7 +168,7 @@ def compile_kernel_action(
             sdk_root.path,
             "--filesystem-scheme",
             multi_root_scheme,
-        ] + roots_param + [
+        ] + additional_args + [
             "--packages",
             "%s:///%s" % (multi_root_scheme, package_spec.short_path),
             "--no-link-platform",
@@ -189,4 +196,20 @@ def compile_kernel_action(
     )
     mappings[data_root + "main.dilp"] = main_dilp_file
     mappings[data_root + "app.dilplist"] = dilp_list_file
+
+    if context.attr.space_dart:
+        enable_interpreter = context.actions.declare_file(
+            context.label.name + "_enable_interpreter",
+        )
+        context.actions.write(
+            output = enable_interpreter,
+            # The existence of this file is enough to enable SpaceDart, we add
+            # a random string to prevent the `package` rule from removing this
+            # file when empty.
+            # See:
+            #   https://fuchsia.googlesource.com/topaz/+/2a6073f931edc4136761c5b8dcfd2245efc79d45/runtime/flutter_runner/component.cc#57
+            content = "No content",
+        )
+        mappings["data/enable_interpreter"] = enable_interpreter
+
     return mappings
