@@ -24,12 +24,10 @@ std::string GetSelector(const raw::AttributeList* attributes, SourceLocation nam
     return std::string(name.data().data(), name.data().size());
 }
 
-raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
-                        const StringView& interface_name,
-                        const raw::InterfaceMethod& method) {
-    if (method.ordinal != nullptr)
-        return *method.ordinal;
-
+raw::Ordinal GetGeneratedOrdinal(
+    const std::vector<StringView>& library_name,
+    const StringView& interface_name,
+    const raw::InterfaceMethod& method) {
     std::string method_name = GetSelector(method.attributes.get(), method.identifier->location());
     std::string full_name;
     bool once = false;
@@ -51,12 +49,20 @@ raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
     // The following dance ensures that we treat the bytes as a little-endian
     // int32 regardless of host byte order.
     uint32_t ordinal = static_cast<uint32_t>(digest[0]) |
-        static_cast<uint32_t>(digest[1]) << 8 |
-        static_cast<uint32_t>(digest[2]) << 16 |
-        static_cast<uint32_t>(digest[3]) << 24;
+                       static_cast<uint32_t>(digest[1]) << 8 |
+                       static_cast<uint32_t>(digest[2]) << 16 |
+                       static_cast<uint32_t>(digest[3]) << 24;
 
     ordinal &= 0x7fffffff;
     return raw::Ordinal(*method.identifier, ordinal);
+}
+
+raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
+                        const StringView& interface_name,
+                        const raw::InterfaceMethod& method) {
+    if (method.ordinal != nullptr)
+        return *method.ordinal;
+    return GetGeneratedOrdinal(library_name, interface_name, method);
 }
 
 } // namespace ordinals

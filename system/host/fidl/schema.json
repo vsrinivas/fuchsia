@@ -195,6 +195,7 @@
             "type": "object",
             "required": [
                 "ordinal",
+  	        "generated_ordinal",
                 "name",
                 "has_request",
                 "has_response"
@@ -206,6 +207,10 @@
                 },
                 "ordinal": {
                     "description": "Ordinal number of the interface method",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "generated_ordinal": {
+                    "description": "Ordinal number that would be automatically generated for the interface method",
                     "$ref": "#/definitions/ordinal"
                 },
                 "name": {

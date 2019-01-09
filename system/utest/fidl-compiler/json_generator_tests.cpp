@@ -143,7 +143,7 @@ struct Empty {
 };
 
 interface EmptyInterface {
-  Send(Empty e);
+  5: Send(Empty e);
   -> Receive (Empty e);
   SendAndReceive(Empty e) -> (Empty e);
 };
@@ -160,7 +160,8 @@ interface EmptyInterface {
       "name": "fidl.test.json/EmptyInterface",
       "methods": [
         {
-          "ordinal": 296942602,
+          "ordinal": 5,
+          "generated_ordinal": 296942602,
           "name": "Send",
           "has_request": true,
           "maybe_request": [
@@ -184,6 +185,7 @@ interface EmptyInterface {
         },
         {
           "ordinal": 939543845,
+          "generated_ordinal": 939543845,
           "name": "Receive",
           "has_request": false,
           "has_response": true,
@@ -207,6 +209,7 @@ interface EmptyInterface {
         },
         {
           "ordinal": 556045674,
+          "generated_ordinal": 556045674,
           "name": "SendAndReceive",
           "has_request": true,
           "maybe_request": [
@@ -524,6 +527,7 @@ interface sub : super {
       "methods": [
         {
           "ordinal": 790020540,
+          "generated_ordinal": 790020540,
           "name": "foo",
           "has_request": true,
           "maybe_request": [
@@ -567,6 +571,7 @@ interface sub : super {
       "methods": [
         {
           "ordinal": 790020540,
+          "generated_ordinal": 790020540,
           "name": "foo",
           "has_request": true,
           "maybe_request": [

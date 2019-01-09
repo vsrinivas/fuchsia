@@ -15,13 +15,20 @@ namespace ordinals {
 std::string GetSelector(const raw::AttributeList* attributes,
                            SourceLocation name);
 
-// Retrieves the correct ordinal for this method per the FIDL spec.
+// Computes the ordinal for this method per the FIDL spec.
 //
-// If |method.ordinal| is not null, this method will return |method.ordinal|.
-// Otherwise, the ordinal value is equal to
+// The ordinal value is equal to
 //    *((int32_t *)sha256(library_name + "." + interface_name + "/" + method_name)) & 0x7fffffff;
 // If |method| has an Selector attribute, that value will be used as the
 // method_name.
+raw::Ordinal GetGeneratedOrdinal(const std::vector<StringView>& library_name,
+                                 const StringView& interface_name,
+                                 const raw::InterfaceMethod& method);
+
+// Retrieves the correct ordinal for this method per the FIDL spec.
+//
+// If |method.ordinal| is not null, this method will return |method.ordinal|.
+// Otherwise, the ordinal value is computed with GetGeneratedOrdinal.
 raw::Ordinal GetOrdinal(const std::vector<StringView>& library_name,
                         const StringView& interface_name,
                         const raw::InterfaceMethod& method);

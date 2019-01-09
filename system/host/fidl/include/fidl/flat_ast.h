@@ -771,16 +771,23 @@ struct Interface : public Decl {
         Method& operator=(Method&&) = default;
 
         Method(std::unique_ptr<raw::AttributeList> attributes,
-               std::unique_ptr<raw::Ordinal> ordinal, SourceLocation name,
+               std::unique_ptr<raw::Ordinal> ordinal,
+               std::unique_ptr<raw::Ordinal> generated_ordinal,
+               SourceLocation name,
                Struct* maybe_request,
                Struct* maybe_response)
-            : attributes(std::move(attributes)), ordinal(std::move(ordinal)), name(std::move(name)),
-              maybe_request(maybe_request), maybe_response(maybe_response) {
+            : attributes(std::move(attributes)),
+              ordinal(std::move(ordinal)),
+              generated_ordinal(std::move(generated_ordinal)),
+              name(std::move(name)),
+              maybe_request(maybe_request),
+              maybe_response(maybe_response) {
             assert(this->maybe_request != nullptr || this->maybe_response != nullptr);
         }
 
         std::unique_ptr<raw::AttributeList> attributes;
         std::unique_ptr<raw::Ordinal> ordinal;
+        std::unique_ptr<raw::Ordinal> generated_ordinal;
         SourceLocation name;
         Struct* maybe_request;
         Struct* maybe_response;
