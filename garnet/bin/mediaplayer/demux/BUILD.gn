@@ -16,8 +16,8 @@ source_set("demux") {
     "reader.h",
     "reader_cache.cc",
     "reader_cache.h",
-    "sparse_byte_buffer.cc",
-    "sparse_byte_buffer.h",
+    "sliding_buffer.cc",
+    "sliding_buffer.h",
   ]
 
   deps = [
@@ -40,7 +40,7 @@ test("tests") {
   sources = [
     "test/byte_rate_estimator_test.cc",
     "test/reader_cache_test.cc",
-    "test/sparse_byte_buffer_test.cc",
+    "test/sliding_buffer_test.cc",
   ]
 
   deps = [

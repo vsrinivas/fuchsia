@@ -10,7 +10,7 @@
 
 #include "garnet/bin/mediaplayer/demux/byte_rate_estimator.h"
 #include "garnet/bin/mediaplayer/demux/reader.h"
-#include "garnet/bin/mediaplayer/demux/sparse_byte_buffer.h"
+#include "garnet/bin/mediaplayer/demux/sliding_buffer.h"
 #include "garnet/bin/mediaplayer/util/incident.h"
 #include "lib/async/dispatcher.h"
 #include "lib/fxl/synchronization/thread_checker.h"
@@ -65,7 +65,7 @@ class ReaderCache : public Reader,
 
   // Makes async calls to the upstream Reader to fill the given holes in our
   // underlying buffer. Calls callback on completion.
-  void FillHoles(std::vector<SparseByteBuffer::Hole> holes,
+  void FillHoles(std::vector<SlidingBuffer::Block> holes,
                  fit::closure callback);
 
   // Calculates the desired cache range according to our cache options around
@@ -73,7 +73,7 @@ class ReaderCache : public Reader,
   std::pair<size_t, size_t> CalculateCacheRange(size_t position);
 
   // |buffer_| is the underlying storage for the cache.
-  SparseByteBuffer buffer_;
+  std::optional<SlidingBuffer> buffer_;
   Result last_result_;
 
   Incident describe_is_complete_;
@@ -85,6 +85,7 @@ class ReaderCache : public Reader,
   bool upstream_can_seek_;
 
   async_dispatcher_t* dispatcher_;
+  bool load_in_progress_ = false;
 
   size_t capacity_ = 1 * 1024 * 1024;
   size_t max_backtrack_ = 0;
