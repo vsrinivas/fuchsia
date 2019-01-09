@@ -828,8 +828,6 @@ struct cfg80211_ops { // Most of these return zx_status_t
     void* change_virtual_intf;
     void* scan;
     void* set_wiphy_params;
-    void* join_ibss;
-    void* leave_ibss;
     void* get_station;
     void* dump_station;
     void* set_tx_power;
