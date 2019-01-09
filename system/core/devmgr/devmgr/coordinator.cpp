@@ -102,9 +102,10 @@ public:
 
     void HandleNewDevice(Device* dev);
 
-    void ScanSystem();
-    void ControlEvent(async_dispatcher_t* dispatcher, async::Receiver* receiver,
-                      zx_status_t status, const zx_packet_user_t* data);
+    void ScanSystemDrivers();
+    void BindSystemDrivers();
+    void BindDrivers();
+    void UseFallbackDrivers();
 
     void Mexec(zx::vmo kernel, zx::vmo bootdata);
 
@@ -118,10 +119,7 @@ public:
 
     void set_running(bool running) { running_ = running; }
 
-    fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; };
-    fbl::DoublyLinkedList<Driver*, Driver::Node>& fallback_drivers() { return fallback_drivers_; }
     fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
-
     Device& root_device() { return root_device_; }
     Device& misc_device() { return misc_device_; }
     Device& sys_device() { return sys_device_; }
@@ -2187,52 +2185,47 @@ void Coordinator::BindDriver(Driver* drv) {
     }
 }
 
-static constexpr uint32_t kCtlScanSystem = 1u;
-static constexpr uint32_t kCtlAddSystem = 2u;
+static int system_driver_loader(void* arg) {
+    find_loadable_drivers("/system/driver",
+                          fit::bind_member(&g_coordinator, &Coordinator::DriverAddedSys));
+    async::PostTask(DcAsyncDispatcher(), [] { g_coordinator.BindSystemDrivers(); });
+    return 0;
+}
 
-static int system_driver_loader(void* arg);
-
-void Coordinator::ScanSystem() {
+void Coordinator::ScanSystemDrivers() {
     if (!system_loaded_) {
         system_loaded_ = true;
         // Fire up a thread to scan/load system drivers
         // This avoids deadlocks between the devhosts hosting the block devices
         // that these drivers may be served from and the devcoordinator loading them.
         thrd_t t;
-        thrd_create_with_name(&t, system_driver_loader, this, "system-driver-loader");
+        thrd_create_with_name(&t, system_driver_loader, nullptr, "system-driver-loader");
     }
 }
 
-void Coordinator::ControlEvent(async_dispatcher_t* dispatcher, async::Receiver* receiver,
-                               zx_status_t status, const zx_packet_user_t* data) {
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: dc_control_event aborting, saw status %d\n", status);
-        return;
+void Coordinator::BindSystemDrivers() {
+    // Bind system drivers.
+    for (Driver& drv : system_drivers_) {
+        BindDriver(&drv);
     }
+    system_drivers_.clear();
+    // Bind remaining fallback drivers.
+    for (Driver& drv : fallback_drivers_) {
+        printf("devcoord: fallback driver '%s' is available\n", drv.name.c_str());
+        BindDriver(&drv);
+    }
+    fallback_drivers_.clear();
+}
 
-    switch (data->u32[0]) {
-    case kCtlScanSystem:
-        ScanSystem();
-        break;
-    case kCtlAddSystem:
-        async::PostTask(DcAsyncDispatcher(), [this]() mutable {
-            // Add system drivers to the new list.
-            for (Driver& drv : system_drivers_) {
-                BindDriver(&drv);
-            }
-            system_drivers_.clear();
-            // Add any remaining fallback drivers to the new list.
-            for (Driver& drv : fallback_drivers_) {
-                printf("devcoord: fallback driver '%s' is available\n", drv.name.c_str());
-                BindDriver(&drv);
-            }
-            fallback_drivers_.clear();
-        });
-        break;
+void Coordinator::BindDrivers() {
+    for (Driver& drv : drivers_) {
+        BindDriver(&drv);
     }
 }
 
-static async::Receiver control_handler(fit::bind_member(&g_coordinator, &Coordinator::ControlEvent));
+void Coordinator::UseFallbackDrivers() {
+    drivers_.splice(drivers_.end(), fallback_drivers_);
+}
 
 // Drivers added during system scan (from the dedicated thread)
 // are added to system_drivers for bulk processing once
@@ -2254,23 +2247,9 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
-static int system_driver_loader(void* arg) {
-    auto coordinator = static_cast<Coordinator*>(arg);
-    find_loadable_drivers("/system/driver",
-                          fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
-
-    zx_packet_user_t pkt = {};
-    pkt.u32[0] = kCtlAddSystem;
-    control_handler.QueuePacket(DcAsyncDispatcher(), &pkt);
-    return 0;
-}
-
 void load_system_drivers() {
     g_coordinator.set_system_available(true);
-
-    zx_packet_user_t pkt = {};
-    pkt.u32[0] = kCtlScanSystem;
-    control_handler.QueuePacket(DcAsyncDispatcher(), &pkt);
+    async::PostTask(DcAsyncDispatcher(), [] { g_coordinator.ScanSystemDrivers(); });
 }
 
 void coordinator(DevmgrArgs args) {
@@ -2323,7 +2302,7 @@ void coordinator(DevmgrArgs args) {
     // can be removed once the real driver priority system
     // exists.
     if (g_coordinator.system_available()) {
-        g_coordinator.ScanSystem();
+        g_coordinator.ScanSystemDrivers();
     }
 
     g_coordinator.sys_device().libname = args.sys_device_driver;
@@ -2333,16 +2312,11 @@ void coordinator(DevmgrArgs args) {
     if (require_system && !g_coordinator.system_loaded()) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
-        Driver* drv;
-        while ((drv = g_coordinator.fallback_drivers().pop_front()) != nullptr) {
-            g_coordinator.drivers().push_back(drv);
-        }
+        g_coordinator.UseFallbackDrivers();
     }
 
     // Initial bind attempt for drivers enumerated at startup.
-    for (auto& drv : g_coordinator.drivers()) {
-        g_coordinator.BindDriver(&drv);
-    }
+    g_coordinator.BindDrivers();
 
     g_coordinator.set_running(true);
     status = DcAsyncLoop()->Run();
