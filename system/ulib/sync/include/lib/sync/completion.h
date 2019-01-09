@@ -50,6 +50,9 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* f
 // Resets the completion's signaled state to unsignaled.
 void sync_completion_reset(sync_completion_t* completion);
 
+// Returns true iff a completion has been signaled.
+bool sync_completion_signaled(sync_completion_t* completion);
+
 __END_CDECLS
 
 #endif // LIB_SYNC_COMPLETION_H_

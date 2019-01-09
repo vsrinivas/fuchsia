@@ -162,9 +162,25 @@ static bool test_signal_requeue() {
     END_TEST;
 }
 
+static bool test_completion_signaled() {
+    BEGIN_TEST;
+
+    sync_completion_t sync = {};
+    ASSERT_FALSE(sync_completion_signaled(&sync));
+    sync_completion_signal(&sync);
+    ASSERT_TRUE(sync_completion_signaled(&sync));
+
+    // Test that reset clears whether a completion was signaled.
+    sync_completion_reset(&sync);
+    ASSERT_FALSE(sync_completion_signaled(&sync));
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(sync_completion_tests)
 RUN_TEST(test_initializer)
 RUN_TEST(test_completions)
 RUN_TEST(test_timeout)
 RUN_TEST(test_signal_requeue)
+RUN_TEST(test_completion_signaled)
 END_TEST_CASE(sync_completion_tests)

@@ -70,3 +70,7 @@ void sync_completion_signal_requeue(sync_completion_t* completion, zx_futex_t* f
 void sync_completion_reset(sync_completion_t* completion) {
     atomic_store(&completion->futex, UNSIGNALED);
 }
+
+bool sync_completion_signaled(sync_completion_t* completion) {
+    return atomic_load_explicit(&completion->futex, memory_order_acquire) == SIGNALED;
+}
