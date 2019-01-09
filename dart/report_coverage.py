@@ -29,9 +29,6 @@ import tempfile
 TestResult = collections.namedtuple(
     'TestResult', ('exit_code', 'coverage_data_path', 'package_dir'))
 DEV_NULL = open('/dev/null', 'w')
-# TODO(https://github.com/flutter/flutter/issues/19486): Remove this once fixed
-# and fix rolled.
-TEST_BLACKLIST = {'dartfmt_extras_tests'}
 LCOV = 'lcov'
 GENHTML = 'genhtml'
 
@@ -98,17 +95,19 @@ class TestRunner(object):
     # This whole function super hacky. Assumes implementation details which are
     # not meant to be public.
 
-    # test_path actually refers to a script that executes multiple other tests.
+    # test_path actually refers to a script that executes other tests.
     # The other tests that get executed go into this list.
     leaf_test_paths = []
     test_lines = open(test_path, 'r').readlines()
-    for test_line in test_lines:
+    # We expect a script that starts with shebang.
+    if not test_lines or not test_lines[0].startswith('#!'):
+      return []
+    for test_line in test_lines[1:]:  # Skip the shebang.
       test_line_parts = test_line.strip().split()
       if not test_line_parts:
         continue
       if os.path.join(self.out_dir, 'dartlang', 'gen') in test_line_parts[0]:
-        leaf_test_dir = os.path.dirname(test_line_parts[0])
-        leaf_test_paths = glob.glob(os.path.join(leaf_test_dir, '*_test_dart'))
+        leaf_test_paths.append(test_line_parts[0])
     results = [self._RunLeafTest(p) for p in leaf_test_paths]
     return [result for result in results if result] # filter None
 
@@ -172,8 +171,6 @@ def main():
   test_paths = []
   for test_pattern in test_patterns:
     test_paths.extend(glob.glob(os.path.join(host_tests_dir, test_pattern)))
-  test_paths = [tp for tp in test_paths
-                if os.path.basename(tp) not in TEST_BLACKLIST]
   thread_pool = ThreadPool()
   test_runner = TestRunner(out_dir)
   results_lists = thread_pool.map(test_runner.RunTest, test_paths)
