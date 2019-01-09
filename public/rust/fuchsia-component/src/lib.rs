@@ -100,99 +100,48 @@ pub mod client {
         connect_to_service_at::<S>("/svc")
     }
 
-    /// Options for the launcher when starting an applications.
-    pub struct LaunchOptions {
-        namespace: Option<Box<FlatNamespace>>
+    /// Adds a new directory to the namespace for the new process.
+    pub fn add_dir_to_namespace(namespace: &mut FlatNamespace, path: String, dir: File) -> Result<(), Error> {
+        let (mut channels, _) = fdio::transfer_fd(dir)?;
+        if channels.len() != 1 {
+            return Err(format_err!("fdio_transfer_fd() returned unexpected number of handles"));
+        }
+
+        namespace.paths.push(path);
+        namespace.directories.push(channels.remove(0));
+
+        Ok(())
     }
 
-    impl LaunchOptions {
-        /// Creates default launch options.
-        pub fn new() -> LaunchOptions {
-            LaunchOptions {
-                namespace: None
-            }
-        }
-
-        /// Adds a new directory to the namespace for the new process.
-        pub fn add_dir_to_namespace(&mut self, path: String, dir: File) -> Result<&mut Self, Error> {
-            let (mut channels, _) = fdio::transfer_fd(dir)?;
-            if channels.len() != 1 {
-                return Err(format_err!("fdio_transfer_fd() returned unexpected number of handles"));
-            }
-
-            let namespace = self.namespace.get_or_insert_with(||
-                  Box::new(FlatNamespace {paths: vec![], directories: vec![]}));
-            namespace.paths.push(path);
-            namespace.directories.push(channels.remove(0));
-
-            Ok(self)
-        }
+    /// Returns a connection to the application launcher service.
+    pub fn launcher() -> Result<LauncherProxy, Error> {
+        connect_to_service::<LauncherMarker>()
     }
 
-    /// Launcher launches Fuchsia applications.
-    #[derive(Clone)]
-    pub struct Launcher {
-        launcher: LauncherProxy,
-    }
+    /// Launch an application at the specified URL.
+    pub fn launch(
+        launcher: &LauncherProxy,
+        url: String,
+        arguments: Option<Vec<String>>,
+    ) -> Result<App, Error> {
+        let (controller, controller_server_end) = fidl::endpoints::create_proxy()?;
+        let (directory_request, directory_server_chan) = zx::Channel::create()?;
 
-    impl From<LauncherProxy> for Launcher {
-        fn from(other: LauncherProxy) -> Self {
-            Launcher { launcher: other }
-        }
-    }
+        let mut launch_info = LaunchInfo {
+            url,
+            arguments,
+            out: None,
+            err: None,
+            directory_request: Some(directory_server_chan),
+            flat_namespace: None,
+            additional_services: None,
+        };
 
-    impl Into<LauncherProxy> for Launcher {
-        fn into(self) -> LauncherProxy {
-            self.launcher
-        }
-    }
+        launcher
+            .create_component(&mut launch_info, Some(controller_server_end.into()))
+            .context("Failed to start a new Fuchsia application.")?;
 
-    impl Launcher {
-        #[inline]
-        /// Create a new application launcher.
-        pub fn new() -> Result<Self, Error> {
-            let launcher = connect_to_service::<LauncherMarker>()?;
-            Ok(Launcher { launcher })
-        }
-
-        /// Launch an application at the specified URL.
-        pub fn launch(
-            &self,
-            url: String,
-            arguments: Option<Vec<String>>,
-        ) -> Result<App, Error> {
-            self.launch_with_options(url, arguments, LaunchOptions::new())
-        }
-
-        /// Launch an application at the specified URL.
-        pub fn launch_with_options(
-            &self,
-            url: String,
-            arguments: Option<Vec<String>>,
-            options: LaunchOptions
-        ) -> Result<App, Error> {
-            let (controller, controller_server_end) = zx::Channel::create()?;
-            let (directory_request, directory_server_chan) = zx::Channel::create()?;
-
-            let mut launch_info = LaunchInfo {
-                url,
-                arguments,
-                out: None,
-                err: None,
-                directory_request: Some(directory_server_chan),
-                flat_namespace: options.namespace,
-                additional_services: None,
-            };
-
-            self.launcher
-                .create_component(&mut launch_info, Some(controller_server_end.into()))
-                .context("Failed to start a new Fuchsia application.")?;
-
-            let controller = fasync::Channel::from_channel(controller)?;
-            let controller = ComponentControllerProxy::new(controller);
-
-            Ok(App { directory_request, controller })
-        }
+        Ok(App { directory_request, controller })
     }
 
     /// `App` represents a launched application.
@@ -204,7 +153,6 @@ pub mod client {
         directory_request: zx::Channel,
 
         // Keeps the component alive until `App` is dropped.
-        #[allow(dead_code)]
         controller: ComponentControllerProxy,
     }
 
@@ -221,8 +169,8 @@ pub mod client {
             &self.controller
         }
 
-        #[inline]
         /// Connect to a service provided by the `App`.
+        #[inline]
         pub fn connect_to_service<S: ServiceMarker>(&self, service: S)
             -> Result<S::Proxy, Error>
         {
@@ -232,6 +180,7 @@ pub mod client {
         }
 
         /// Connect to a service by passing a channel for the server.
+        #[inline]
         pub fn pass_to_service<S: ServiceMarker>(&self, _: S, server_channel: zx::Channel)
             -> Result<(), Error>
         {
@@ -239,6 +188,7 @@ pub mod client {
         }
 
         /// Connect to a service by name.
+        #[inline]
         pub fn pass_to_named_service(&self, service_name: &str, server_channel: zx::Channel)
             -> Result<(), Error>
         {
@@ -370,8 +320,11 @@ pub mod server {
             self.add_service((service_name, move |channel: fasync::Channel| {
                 let res = (|| {
                     if let Some((component_url, arguments)) = args.take() {
-                        launched_app = Some(
-                            crate::client::Launcher::new()?.launch(component_url, arguments)?);
+                        launched_app = Some(crate::client::launch(
+                            &crate::client::launcher()?,
+                            component_url,
+                            arguments,
+                        )?);
                     }
                     if let Some(app) = launched_app.as_ref() {
                         app.pass_to_named_service(service_name, channel.into())?;
@@ -470,9 +423,7 @@ pub mod server {
             new_env.get_launcher(launcher_server_end)
                 .context("getting nested environment launcher")?;
 
-            let launcher = crate::client::Launcher::from(launcher_proxy);
-            let app = launcher.launch(url, arguments)?;
-
+            let app = crate::client::launch(&launcher_proxy, url, arguments)?;
             Ok((fdio_server, new_env_controller, app))
         }
     }
