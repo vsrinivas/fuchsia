@@ -12,7 +12,6 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-pcie-clk.cpp \
     $(LOCAL_DIR)/aml-pcie-device.cpp \
     $(LOCAL_DIR)/aml-pcie.cpp \
-    $(LOCAL_DIR)/binding.c \
 
 MODULE_STATIC_LIBS := \
     system/dev/pci/designware \
