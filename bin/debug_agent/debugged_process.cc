@@ -16,6 +16,7 @@
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
+#include "garnet/lib/debug_ipc/helper/zx_status.h"
 #include "garnet/lib/debug_ipc/message_reader.h"
 #include "garnet/lib/debug_ipc/message_writer.h"
 #include "lib/fxl/logging.h"
@@ -34,7 +35,32 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
   zx_object_set_property(process_.get(), ZX_PROP_PROCESS_DEBUG_ADDR,
                          &kMagicValue, sizeof(kMagicValue));
 }
-DebuggedProcess::~DebuggedProcess() = default;
+
+DebuggedProcess::~DebuggedProcess() {
+  DetachFromProcess();
+}
+
+void DebuggedProcess::DetachFromProcess() {
+  // 1. Remove installed breakpoints.
+  //    We need to tell each thread that this will happen.
+  for (auto& [address, breakpoint] : breakpoints_) {
+    for (auto& [thread_koid, thread] : threads_) {
+      thread->WillDeleteProcessBreakpoint(breakpoint.get());
+    }
+  }
+
+  breakpoints_.clear();
+
+  // 2. Resume threads.
+  // Technically a 0'ed request would work, but being explicit is future-proof.
+  debug_ipc::ResumeRequest resume_request = {};
+  resume_request.how = debug_ipc::ResumeRequest::How::kContinue;
+  resume_request.process_koid = koid_;
+  OnResume(resume_request);
+
+  // 3. Unbind from the exception port.
+  process_watch_handle_.StopWatching();
+}
 
 bool DebuggedProcess::Init() {
   debug_ipc::MessageLoopZircon* loop = debug_ipc::MessageLoopZircon::Current();

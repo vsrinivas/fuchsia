@@ -244,7 +244,37 @@ void MessageLoopZircon::HandleException(zx_port_packet_t packet) {
     std::lock_guard<std::mutex> guard(mutex_);
     auto found = watches_.find(packet.key);
     if (found == watches_.end()) {
-      FXL_NOTREACHED();
+      // It is possible to get an exception that doesn't have a watch handle.
+      // A case is a race between detaching from a process and getting an
+      // exception on that process.
+      //
+      // The normal process looks like this:
+      //
+      // 1. In order to correctly detach, the debug agent has to resume threads
+      //    from their exceptions. Otherwise that exception will be treated as
+      //    unhandled when the agent detaches and will bubble up.
+      // 2. The agent detaches from the exception port. This means that the
+      //    watch handle is no longer listening.
+      //
+      // It is possible between (1) and (2) to get an exception, which will be
+      // queued in the exception port of the thread. Now, the agent won't read
+      // from the port until *after* it has detached from the exception port.
+      // This means that this new exception is not handled and will be bubbled
+      // up, which is correct as the debug agent stated that it has nothing more
+      // to do with the process.
+      //
+      // Now the problem is that zircon does not clean stale packets from a
+      // queue, meaning that the next time the message loop waits on the port,
+      // it will find a stale packet. In this context a stale packet means one
+      // that does not have a watch handle, as it was deleted in (1). Hence we
+      // get into this case and we simply log it for posperity.
+      //
+      // TODO(zX-2623): zircon is going to clean up stale packets from ports
+      //                in the future. When that is done, this case should not
+      //                happen and we should go back into asserting it.
+      FXL_LOG(WARNING) << "Got stale port packet. This is most probably due to "
+                          "a race between detaching from a process and an "
+                          "exception ocurring.";
       return;
     }
     watch_info = &found->second;
@@ -343,6 +373,7 @@ void MessageLoopZircon::StopWatching(int id) {
       break;
     case WatchType::kProcessExceptions: {
       zx::unowned_process process(info.task_handle);
+
       // Binding an invalid port will detach from the exception port.
       process->bind_exception_port(zx::port(), 0, ZX_EXCEPTION_PORT_DEBUGGER);
       // Stop watching for process events.

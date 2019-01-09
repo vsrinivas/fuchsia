@@ -95,6 +95,19 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   void OnException(zx_koid_t process_koid, zx_koid_t thread_koid,
                    uint32_t type) override;
 
+  // This function will gracefully detach from the underlying zircon process.
+  // Detaching correctly requires several steps:
+  //
+  // 1. Remove the installed breakpoints.
+  //
+  // 2. Resume threads from the exception. Only threads that are stopped on an
+  // exception should be resumed. This is because otherwise zircon will treat
+  // this exception as unhandled and will bubble up the exception upwards,
+  // probably resulting in a crash.
+  //
+  // 3. Unbind the exception port.
+  void DetachFromProcess();
+
   // ProcessMemoryAccessor implementation.
   zx_status_t ReadProcessMemory(uintptr_t address, void* buffer, size_t len,
                                 size_t* actual) override;

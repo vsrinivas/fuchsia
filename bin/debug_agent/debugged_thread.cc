@@ -369,6 +369,7 @@ void DebuggedThread::ResumeForRunMode() {
       SetSingleStep(run_mode_ != debug_ipc::ResumeRequest::How::kContinue);
     }
     suspend_reason_ = SuspendReason::kNone;
+
     debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread_, 0);
   } else if (suspend_reason_ == SuspendReason::kOther) {
     // A breakpoint should only be current when it was hit which will be

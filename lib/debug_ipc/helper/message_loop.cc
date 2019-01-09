@@ -82,8 +82,14 @@ MessageLoop::WatchHandle::WatchHandle(WatchHandle&& other)
 }
 
 MessageLoop::WatchHandle::~WatchHandle() {
+  StopWatching();
+}
+
+void MessageLoop::WatchHandle::StopWatching() {
   if (watching())
     msg_loop_->StopWatching(id_);
+  msg_loop_ = nullptr;
+  id_ = 0;
 }
 
 MessageLoop::WatchHandle& MessageLoop::WatchHandle::operator=(

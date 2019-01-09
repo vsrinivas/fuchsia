@@ -138,6 +138,10 @@ class MessageLoop::WatchHandle {
 
   WatchHandle& operator=(WatchHandle&& other);
 
+  // Stops watching from the message loop.
+  // If the handle is not watching, this doesn't do anything.
+  void StopWatching();
+
   bool watching() const { return id_ > 0; }
 
  private:
