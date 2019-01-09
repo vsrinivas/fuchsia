@@ -9,6 +9,8 @@
 
 namespace fbl {
 
+// |Array| is lightweight movable container that takes ownership of an array.
+// At destruction or when reset() is invoked, it uses delete[] to release the owned array.
 template <typename T>
 class Array {
 public:
