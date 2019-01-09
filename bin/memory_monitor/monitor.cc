@@ -24,6 +24,8 @@ namespace memory {
 
 namespace {
 
+constexpr char kKstatsPathComponent[] = "kstats";
+
 zx_status_t get_root_resource(zx_handle_t* root_resource) {
   const char* sysinfo = "/dev/misc/sysinfo";
   int fd = open(sysinfo, O_RDWR);
@@ -70,6 +72,11 @@ Monitor::Monitor(std::unique_ptr<component::StartupContext> context,
       startup_context_(std::move(context)) {
   startup_context_->outgoing().AddPublicService(
       bindings_.GetHandler(this));
+  startup_context_->outgoing().object_dir()->set_children_callback(
+      {kKstatsPathComponent},
+      [this](component::Object::ObjectVector* out_children) {
+        Inspect(out_children);
+      });
 
   auto status = get_root_resource(&root_);
   if (status != ZX_OK) {
@@ -143,7 +150,11 @@ Monitor::Monitor(std::unique_ptr<component::StartupContext> context,
   SampleAndPost();
 }
 
-Monitor::~Monitor() {}
+Monitor::~Monitor() {
+  // TODO(CF-257).
+  startup_context_->outgoing().object_dir()->set_children_callback(
+      {kKstatsPathComponent}, nullptr);
+}
 
 void Monitor::Watch(
     fidl::InterfaceHandle<fuchsia::memory::Watcher> watcher) {
@@ -183,11 +194,34 @@ void Monitor::NotifyWatchers(zx_info_kmem_stats_t kmem_stats) {
 }
 
 void Monitor::PrintHelp() {
-  std::cout << "memento [options]" << std::endl;
+  std::cout << "memory_monitor [options]" << std::endl;
   std::cout << "Options:" << std::endl;
   std::cout << "  --log" << std::endl;
   std::cout << "  --prealloc=kbytes" << std::endl;
   std::cout << "  --delay=msecs" << std::endl;
+}
+
+void Monitor::Inspect(component::Object::ObjectVector* out_children) {
+  auto kstats = component::ObjectDir::Make(kKstatsPathComponent);
+  zx_info_kmem_stats_t stats;
+  zx_status_t err = zx_object_get_info(
+      root_, ZX_INFO_KMEM_STATS, &stats, sizeof(stats), NULL, NULL);
+  if (err != ZX_OK) {
+      FXL_LOG(ERROR) << "ZX_INFO_KMEM_STATS returns "
+                     << zx_status_get_string(err);
+      return;
+  }
+  kstats.set_metric("total_bytes", component::UIntMetric(stats.total_bytes));
+  kstats.set_metric("free_bytes", component::UIntMetric(stats.free_bytes));
+  kstats.set_metric("wired_bytes", component::UIntMetric(stats.wired_bytes));
+  kstats.set_metric(
+      "total_heap_bytes", component::UIntMetric(stats.total_heap_bytes));
+  kstats.set_metric("vmo_bytes", component::UIntMetric(stats.vmo_bytes));
+  kstats.set_metric(
+      "mmu_overhead_bytes", component::UIntMetric(stats.mmu_overhead_bytes));
+  kstats.set_metric("ipc_bytes", component::UIntMetric(stats.ipc_bytes));
+  kstats.set_metric("other_bytes", component::UIntMetric(stats.other_bytes));
+  out_children->push_back(kstats.object());
 }
 
 void Monitor::SampleAndPost() {

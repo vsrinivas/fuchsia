@@ -37,6 +37,7 @@ class Monitor : public fuchsia::memory::Monitor {
 
   void SampleAndPost();
   void PrintHelp();
+  void Inspect(component::Object::ObjectVector* out_children);
 
   // Destroys a watcher proxy (called upon a connection error).
   void ReleaseWatcher(fuchsia::memory::Watcher* watcher);
