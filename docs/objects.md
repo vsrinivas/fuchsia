@@ -39,6 +39,7 @@ Zircon actively manages the following resources:
 
 ### Waiting
 + [Port](objects/port.md)
++ [Timer](objects/timer.md)
 
 ## Kernel objects for drivers
 
