@@ -4,9 +4,6 @@
         "peridot/packages/prod/integration_testing"
     ],
     "packages": [
-        "//peridot/tests/chain:chain_test_child_module",
-        "//peridot/tests/chain:chain_test_module",
-        "//peridot/tests/chain:chain_test_session_shell",
         "//peridot/tests/clipboard:clipboard_test_module",
         "//peridot/tests/common:common_active_module",
         "//peridot/tests/common:common_module_index",
@@ -27,9 +24,6 @@
         "//peridot/tests/link_data:link_data_test_module1",
         "//peridot/tests/link_data:link_data_test_module2",
         "//peridot/tests/link_data:link_data_test_session_shell",
-        "//peridot/tests/link_passing:link_passing_test_module1",
-        "//peridot/tests/link_passing:link_passing_test_module2",
-        "//peridot/tests/link_passing:link_passing_test_module3",
         "//peridot/tests:modular_tests",
         "//peridot/tests/module_context:module_context_test_session_shell",
         "//peridot/tests/module_context:module_context_test_module",
