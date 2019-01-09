@@ -480,7 +480,6 @@ static zx_status_t brcmf_ap_add_vif(struct wiphy* wiphy, const char* name,
         brcmf_cfg80211_disarm_vif_event(cfg);
         goto fail;
     }
-    // TODO(cphoenix): Lots of duplicated code between here and brcmf_p2p_add_vif() (p2p.c:2057).
     /* wait for firmware event */
     err = brcmf_cfg80211_wait_vif_event(cfg, ZX_MSEC(BRCMF_VIF_EVENT_TIMEOUT_MSEC));
     brcmf_cfg80211_disarm_vif_event(cfg);
@@ -543,9 +542,6 @@ zx_status_t brcmf_cfg80211_add_iface(struct wiphy* wiphy, const char* name,
     switch (type) {
     case WLAN_MAC_ROLE_AP:
         err = brcmf_ap_add_vif(wiphy, name, params, wdev_out);
-        break;
-    case WLAN_MAC_ROLE_CLIENT:
-        err = brcmf_p2p_add_vif(wiphy, name, type, params, wdev_out);
         break;
     default:
         if (wdev_out) {
@@ -723,8 +719,6 @@ static int brcmf_cfg80211_del_iface(struct wiphy* wiphy, struct wireless_dev* wd
     switch (wdev->iftype) {
     case WLAN_MAC_ROLE_AP:
         return brcmf_cfg80211_del_ap_iface(wiphy, wdev);
-    case WLAN_MAC_ROLE_CLIENT:
-        return brcmf_p2p_del_vif(wiphy, wdev);
     default:
         return ZX_ERR_OUT_OF_RANGE;
     }
@@ -5350,7 +5344,6 @@ static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
     brcmf_fweh_register(cfg->pub, BRCMF_E_SET_SSID, brcmf_notify_connect_status);
     brcmf_fweh_register(cfg->pub, BRCMF_E_PFN_NET_FOUND, brcmf_notify_sched_scan_results);
     brcmf_fweh_register(cfg->pub, BRCMF_E_IF, brcmf_notify_vif_event);
-    brcmf_fweh_register(cfg->pub, BRCMF_E_P2P_PROBEREQ_MSG, brcmf_p2p_notify_rx_mgmt_p2p_probereq);
     brcmf_fweh_register(cfg->pub, BRCMF_E_P2P_DISC_LISTEN_COMPLETE,
                         brcmf_p2p_notify_listen_complete);
     brcmf_fweh_register(cfg->pub, BRCMF_E_ACTION_FRAME_RX, brcmf_p2p_notify_action_frame_rx);
@@ -6292,22 +6285,15 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
         goto wiphy_unreg_out;
     }
 
-    err = brcmf_p2p_attach(cfg, p2pdev_forced);
-    if (err != ZX_OK) {
-        brcmf_err("P2P initialisation failed (%d)\n", err);
-        goto wiphy_unreg_out;
-    }
     err = brcmf_btcoex_attach(cfg);
     if (err != ZX_OK) {
         brcmf_err("BT-coex initialisation failed (%d)\n", err);
-        brcmf_p2p_detach(&cfg->p2p);
         goto wiphy_unreg_out;
     }
     err = brcmf_pno_attach(cfg);
     if (err != ZX_OK) {
         brcmf_err("PNO initialisation failed (%d)\n", err);
         brcmf_btcoex_detach(cfg);
-        brcmf_p2p_detach(&cfg->p2p);
         goto wiphy_unreg_out;
     }
 
@@ -6344,7 +6330,6 @@ struct brcmf_cfg80211_info* brcmf_cfg80211_attach(struct brcmf_pub* drvr,
 detach:
     brcmf_pno_detach(cfg);
     brcmf_btcoex_detach(cfg);
-    brcmf_p2p_detach(&cfg->p2p);
 wiphy_unreg_out:
     brcmf_dbg(TEMP, "* * Would have called wiphy_unregister(cfg->wiphy);");
 priv_out:

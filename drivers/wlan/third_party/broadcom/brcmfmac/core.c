@@ -773,16 +773,6 @@ static void brcmf_del_if(struct brcmf_pub* drvr, int32_t bsscfgidx, bool rtnl_lo
             workqueue_cancel_work(&ifp->ndoffload_work);
         }
         brcmf_net_detach(ifp->ndev, rtnl_locked);
-    } else {
-        /* Only p2p device interfaces which get dynamically created
-         * end up here. In this case the p2p module should be informed
-         * about the removal of the interface within the firmware. If
-         * not then p2p commands towards the firmware will cause some
-         * serious troublesome side effects. The p2p module will clean
-         * up the ifp if needed.
-         */
-        brcmf_p2p_ifp_removed(ifp, rtnl_locked);
-        free(ifp);
     }
 }
 
@@ -1180,9 +1170,6 @@ void brcmf_detach(struct brcmf_device* dev) {
 
     /* stop firmware event handling */
     brcmf_fweh_detach(drvr);
-    if (drvr->config) {
-        brcmf_p2p_detach(&drvr->config->p2p);
-    }
 
     brcmf_bus_change_state(bus_if, BRCMF_BUS_DOWN);
 
