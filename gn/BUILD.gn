@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/compiled_action.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/gn/packages.gni")
 import("//build/package.gni")
@@ -181,6 +182,38 @@ action("breakpad_symbols") {
            "-tar-file",
            rebase_path(outputs[0], root_build_dir),
          ] + rebase_path(sources, root_build_dir)
+}
+
+# Generates an archive of package metadata.
+amber_repo = rebase_path("$root_build_dir/amber-files/repository")
+host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
+pm_tool = rebase_path("$host_out_dir/pm")
+pkg_archive_contents = [
+  "amber-files/repository=$amber_repo",
+  "pm=$pm_tool",
+]
+pkg_archive_manifest = "$target_gen_dir/package_archive_manifest"
+write_file(pkg_archive_manifest, pkg_archive_contents)
+
+pkg_archive = "$root_build_dir/packages.tar.gz"
+compiled_action("package_archive") {
+  testonly = true
+  tool = "//build/tools/tar_maker"
+  inputs = [
+    pkg_archive_manifest,
+  ]
+  outputs = [
+    pkg_archive,
+  ]
+  args = [
+    "-manifest",
+    rebase_path(pkg_archive_manifest),
+    "-output",
+    rebase_path(pkg_archive),
+  ]
+  deps = [
+    "//build/images:updates",
+  ]
 }
 
 # Generates a JSON manifest of the platforms available for testing, along with
