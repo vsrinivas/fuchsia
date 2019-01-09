@@ -12,7 +12,6 @@ declare_args() {
   enable_gfx_subsystem = true
   enable_sketchy_subsystem = true
   enable_input_subsystem = true
-  enable_a11y_input_subsystem = true
 }
 
 executable("scenic") {
@@ -39,12 +38,10 @@ executable("scenic") {
 
   if (enable_input_subsystem) {
     defines += [ "SCENIC_ENABLE_INPUT_SUBSYSTEM" ]
-    deps += [ "//garnet/lib/ui/input" ]
-  }
-
-  if (enable_a11y_input_subsystem) {
-    defines += [ "SCENIC_ENABLE_A11Y_INPUT_SUBSYSTEM" ]
-    deps += [ "//garnet/lib/ui/a11y_input" ]
+    deps += [
+      "//garnet/lib/ui/a11y_input",
+      "//garnet/lib/ui/input",
+    ]
   }
 }
 
