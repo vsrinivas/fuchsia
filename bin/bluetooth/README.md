@@ -104,7 +104,7 @@ which gets installed at `/system/test/bluetooth_unittests`.
 ##### Running on QEMU
 If you don't have physical hardware available, you can run the tests in QEMU using the same commands as above. A couple of tips will help run the tests a little more quickly.
 
-* Run the VM with hardware virtualization support: `fx run -- -k`
+* Run the VM with hardware virtualization support: `fx run -k`
 * Disable unnecessary logging for the tests:
   ```
   $ /pkgfs/packages/bluetooth_tests/0/test/bt-host-unittests --quiet=10

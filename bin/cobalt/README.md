@@ -45,7 +45,7 @@ $ fx full-build
 Start Fuchsia. For example:
 
 ```
-$ fx run -- -m 3000 -k -n
+$ fx run -m 3000 -k -n
 ```
 
 From within Fuchsia:

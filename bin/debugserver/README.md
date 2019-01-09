@@ -50,7 +50,7 @@ devhost$ scripts/start-dhcp-server.sh qemu
 Make sure to pass the `-N` argument to enable networking.
 
 ```
-devhost$ fx run -- -N
+devhost$ fx run -N
 ```
 
 ### On the target machine running Fuchsia
