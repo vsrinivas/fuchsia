@@ -58,8 +58,7 @@ LedgerAppInstanceImpl::LedgerAppInstanceImpl(
           loop_controller, convert::ToArray(kLedgerName),
           std::move(ledger_repository_factory)),
       sync_params_(sync_params),
-      startup_context_(
-          component::StartupContext::CreateFromStartupInfoNotChecked()),
+      startup_context_(component::StartupContext::CreateFromStartupInfo()),
       cloud_provider_factory_(startup_context_.get(), random,
                               std::move(sync_params.api_key),
                               std::move(sync_params.credentials)),

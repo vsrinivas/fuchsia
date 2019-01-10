@@ -51,8 +51,7 @@ fidl::VectorPtr<uint8_t> TestArray() {
 class LedgerEndToEndTest : public gtest::RealLoopFixture {
  public:
   LedgerEndToEndTest()
-      : startup_context_(
-            component::StartupContext::CreateFromStartupInfoNotChecked()) {}
+      : startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
   ~LedgerEndToEndTest() override {}
 
  protected:

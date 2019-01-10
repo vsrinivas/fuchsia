@@ -7,8 +7,7 @@
 namespace cloud_provider {
 
 ValidationTest::ValidationTest()
-    : startup_context_(
-          component::StartupContext::CreateFromStartupInfoNotChecked()) {}
+    : startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
 ValidationTest::~ValidationTest() {}
 
 void ValidationTest::SetUp() {
