@@ -721,13 +721,27 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
         }
     }
 
+    // NMI injection is blocked if an NMI is already being serviced (Volume 3, Section 24.4.2,
+    // Table 24-3), and mov ss blocks *all* interrupts (Volume 2 Section 4.3 MOV-Move instruction).
+    // Note that the IF flag does not affect NMIs (Volume 3, Section 6.8.1).
+    auto can_inject_nmi = [vmcs] {
+        return (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
+                (kInterruptibilityNmiBlocking | kInterruptibilityMovSsBlocking)) == 0;
+    };
+    // External interrupts can be blocked due to STI, move SS or the IF flag.
+    auto can_inject_external_int = [vmcs] {
+        return (vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF) &&
+               (vmcs->Read(VmcsField32::GUEST_INTERRUPTIBILITY_STATE) &
+                (kInterruptibilityStiBlocking | kInterruptibilityMovSsBlocking)) == 0;
+    };
+
     if (vector > X86_INT_VIRT && vector < X86_INT_PLATFORM_BASE) {
         dprintf(INFO, "Invalid interrupt vector: %u\n", vector);
         return ZX_ERR_NOT_SUPPORTED;
-    } else if (vector >= X86_INT_PLATFORM_BASE &&
-        !(vmcs->Read(VmcsFieldXX::GUEST_RFLAGS) & X86_FLAGS_IF)) {
-        // Volume 3, Section 6.8.1: The IF flag does not affect non-maskable interrupts (NMIs),
-        // [...] nor does it affect processor generated exceptions.
+    } else if ((vector >= X86_INT_PLATFORM_BASE && !can_inject_external_int()) ||
+               (vector == X86_INT_NMI && !can_inject_nmi())
+
+    ) {
         local_apic_state->interrupt_tracker.Track(vector, type);
         // If interrupts are disabled, we set VM exit on interrupt enable.
         vmcs->InterruptWindowExiting(true);

@@ -85,6 +85,7 @@ static const uint32_t kGuestXxAccessRightsDefault       = kGuestXxAccessRightsTy
 // GUEST_INTERRUPTIBILITY_STATE flags.
 static const uint32_t kInterruptibilityStiBlocking      = 1u << 0;
 static const uint32_t kInterruptibilityMovSsBlocking    = 1u << 1;
+static const uint32_t kInterruptibilityNmiBlocking      = 1u << 3;
 
 // VMCS fields.
 enum class VmcsField16 : uint64_t {
