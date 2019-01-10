@@ -43,7 +43,7 @@ pub enum AuthAlgorithm {
     OpenSystem = 0,
 }
 
-bitfield!{
+bitfield! {
     #[derive(Clone, Copy, Debug)]
     pub struct FrameControl(u16);
     pub protocol_ver, set_protocol_ver: 1, 0;
@@ -60,8 +60,8 @@ bitfield!{
 }
 
 // IEEE Std 802.11-2016, 9.4.1.4
-bitfield!{
-    #[derive(Clone, Copy, Debug)]
+bitfield! {
+    #[derive(Clone, Copy, Debug, PartialEq)]
     pub struct CapabilityInfo(u16);
     pub ess, set_ess: 0;
     pub ibss, set_ibss: 1;
@@ -81,7 +81,7 @@ bitfield!{
 }
 
 // IEEE Std 802.11-2016, 9.2.4.4
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct SeqControl {
     pub frag_num: u16,
     pub seq_num: u16,
@@ -200,6 +200,35 @@ pub struct MgmtHeader {
     pub ht_control: Option<u32>,
 }
 
+#[cfg(test)]
+impl MgmtHeader {
+    pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let frame_control = FrameControl(reader.read_u16::<LittleEndian>()?);
+        let duration = reader.read_u16::<LittleEndian>()?;
+        let mut addr1 = [0u8; 6];
+        reader.read(&mut addr1)?;
+        let mut addr2 = [0u8; 6];
+        reader.read(&mut addr2)?;
+        let mut addr3 = [0u8; 6];
+        reader.read(&mut addr3)?;
+        let seq_control = SeqControl::decode(reader.read_u16::<LittleEndian>()?);
+        let ht_control = if frame_control.htc_order() {
+            Some(reader.read_u32::<LittleEndian>()?)
+        } else {
+            None
+        };
+        Ok(Self {
+            frame_control,
+            duration,
+            addr1,
+            addr2,
+            addr3,
+            seq_control,
+            ht_control,
+        })
+    }
+}
+
 // IEEE Std 802.11-2016, 9.3.3.3
 #[derive(Clone, Copy, Debug)]
 pub struct BeaconFields {
@@ -215,11 +244,39 @@ pub struct AuthenticationFields {
     pub status_code: u16,           // 9.4.1.9
 }
 
+#[cfg(test)]
+impl AuthenticationFields {
+    pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let auth_algorithm_number = reader.read_u16::<LittleEndian>()?;
+        let auth_txn_seq_number = reader.read_u16::<LittleEndian>()?;
+        let status_code = reader.read_u16::<LittleEndian>()?;
+        Ok(Self {
+            auth_algorithm_number,
+            auth_txn_seq_number,
+            status_code,
+        })
+    }
+}
+
 // IEEE Std 802.11-2016, 9.3.3.7
 pub struct AssociationResponseFields {
     pub capability_info: CapabilityInfo, // 9.4.1.4
     pub status_code: u16,                // 9.4.1.9
     pub association_id: u16,             // 9.4.1.8
+}
+
+#[cfg(test)]
+impl AssociationResponseFields {
+    pub fn from_reader<R: io::Read>(reader: &mut R) -> io::Result<Self> {
+        let capability_info = CapabilityInfo(reader.read_u16::<LittleEndian>()?);
+        let status_code = reader.read_u16::<LittleEndian>()?;
+        let association_id = reader.read_u16::<LittleEndian>()?;
+        Ok(Self {
+            capability_info,
+            status_code,
+            association_id,
+        })
+    }
 }
 
 pub const BROADCAST_ADDR: [u8; 6] = [0xff, 0xff, 0xff, 0xff, 0xff, 0xff];
@@ -428,6 +485,42 @@ mod tests {
     }
 
     #[test]
+    fn parse_auth_frame() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let mut bytes: &[u8] = &[
+            // Framectl Duration    Address 1
+            0xb0, 0x00, 0x76, 0x98, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            // Address 2                        Address 3
+            0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12,
+            // Seq ctl  Algo num    Seq num     Status
+            0xC5, 0xAB, 0xB2, 0xA1, 0xAB, 0x23, 0xD4, 0xC3,
+        ];
+        let hdr = MgmtHeader::from_reader(&mut bytes).expect("reading mgmt header");
+        assert_eq!(hdr.frame_control.typ(), FrameControlType::Mgmt as u16);
+        assert_eq!(
+            hdr.frame_control.subtype(),
+            MgmtSubtype::Authentication as u16
+        );
+        assert_eq!(hdr.duration, 0x9876);
+        assert_eq!(hdr.addr1, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+        assert_eq!(hdr.addr2, [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]);
+        assert_eq!(hdr.addr3, [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12]);
+        assert_eq!(
+            hdr.seq_control,
+            SeqControl {
+                frag_num: 5,
+                seq_num: 0xABC
+            }
+        );
+        assert_eq!(hdr.ht_control, None);
+
+        let body = AuthenticationFields::from_reader(&mut bytes).expect("reading auth fields");
+        assert_eq!(body.auth_algorithm_number, 0xA1B2);
+        assert_eq!(body.auth_txn_seq_number, 0x23AB);
+        assert_eq!(body.status_code, 0xC3D4);
+    }
+
+    #[test]
     fn simple_auth() {
         let frame = MacFrameWriter::new(vec![])
             .authentication(
@@ -461,6 +554,41 @@ mod tests {
             0xC5, 0xAB, 0xB2, 0xA1, 0xAB, 0x23, 0xD4, 0xC3,
         ];
         assert_eq!(expected_frame, &frame[..]);
+    }
+
+    #[test]
+    fn parse_assoc_frame() {
+        let mut bytes: &[u8] = &[
+            // Framectl Duration    Address 1
+            0x10, 0x00, 0x65, 0x87, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+            // Address 2                        Address 3
+            0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12,
+            // Seq ctl  Cap info    Status code Assoc id
+            0xF6, 0xDE, 0xDE, 0xBC, 0x76, 0x98, 0x43, 0x65,
+        ];
+        let hdr = MgmtHeader::from_reader(&mut bytes).expect("reading mgmt header");
+        assert_eq!(hdr.frame_control.typ(), FrameControlType::Mgmt as u16);
+        assert_eq!(
+            hdr.frame_control.subtype(),
+            MgmtSubtype::AssociationResponse as u16
+        );
+        assert_eq!(hdr.duration, 0x8765);
+        assert_eq!(hdr.addr1, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
+        assert_eq!(hdr.addr2, [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]);
+        assert_eq!(hdr.addr3, [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12]);
+        assert_eq!(
+            hdr.seq_control,
+            SeqControl {
+                frag_num: 6,
+                seq_num: 0xDEF
+            }
+        );
+        assert_eq!(hdr.ht_control, None);
+
+        let body = AssociationResponseFields::from_reader(&mut bytes).expect("reading assoc resp");
+        assert_eq!(body.capability_info, CapabilityInfo(0xBCDE));
+        assert_eq!(body.status_code, 0x9876);
+        assert_eq!(body.association_id, 0x6543);
     }
 
     #[test]
