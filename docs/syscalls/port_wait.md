@@ -28,10 +28,11 @@ Upon return, if successful *packet* will contain the earliest (in FIFO order)
 available packet data.
 
 The *deadline* indicates when to stop waiting for a packet (with respect to
-**ZX_CLOCK_MONOTONIC**).  If no packet has arrived by the deadline,
-**ZX_ERR_TIMED_OUT** is returned.  The value **ZX_TIME_INFINITE** will
-result in waiting forever.  A value in the past will result in an immediate
-timeout, unless a packet is already available for reading.
+**ZX_CLOCK_MONOTONIC**) and will be automatically adjusted according to the job's
+[timer slack] policy. If no packet has arrived by the deadline,
+**ZX_ERR_TIMED_OUT** is returned.  The value **ZX_TIME_INFINITE** will result in
+waiting forever.  A value in the past will result in an immediate timeout,
+unless a packet is already available for reading.
 
 Unlike [`zx_object_wait_one()`] and [`zx_object_wait_many()`] only one
 waiting thread is released (per available packet) which makes ports
@@ -113,9 +114,12 @@ not be waited upon.
 
 ## SEE ALSO
 
+ - [timer slack]
  - [`zx_object_wait_async()`]
  - [`zx_port_create()`]
  - [`zx_port_queue()`]
+
+[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

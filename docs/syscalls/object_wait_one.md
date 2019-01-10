@@ -35,7 +35,8 @@ process.  (For example, a Channel ceases asserting **ZX_CHANNEL_READABLE**
 once the last message in its queue is read).
 
 The *deadline* parameter specifies a deadline with respect to
-**ZX_CLOCK_MONOTONIC**.  **ZX_TIME_INFINITE** is a special value meaning wait
+**ZX_CLOCK_MONOTONIC** and will be automatically adjusted according to the job's
+[timer slack] policy.  **ZX_TIME_INFINITE** is a special value meaning wait
 forever.
 
 ## RIGHTS
@@ -76,8 +77,11 @@ not be waited upon.
 
 ## SEE ALSO
 
+ - [timer slack]
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_many()`]
+
+[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

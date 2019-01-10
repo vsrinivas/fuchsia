@@ -50,14 +50,15 @@ zx_status_t sys_nanosleep(zx_time_t deadline) {
         return ZX_OK;
     }
 
+    const auto up = ProcessDispatcher::GetCurrent();
+    const Deadline slackDeadline(deadline, up->GetTimerSlackPolicy());
+    const zx_time_t now = current_time();
+
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::SLEEPING);
 
     // This syscall is declared as "blocking" in syscalls.abigen, so a higher
     // layer will automatically retry if we return ZX_ERR_INTERNAL_INTR_RETRY.
-    //
-    // TODO(maniscalco): Replace this call with a call to thread_sleep_etc using the timer slack
-    // from the job policy (ZX-931).
-    return thread_sleep_interruptable(deadline);
+    return thread_sleep_etc(slackDeadline, /* interruptable */ true, now);
 }
 
 // This must be accessed atomically from any given thread.

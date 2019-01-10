@@ -99,10 +99,12 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
 zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size_t count, zx_time_t deadline) {
     LTRACEF("count %zu\n", count);
 
+    const auto up = ProcessDispatcher::GetCurrent();
+    const Deadline slackDeadline(deadline, up->GetTimerSlackPolicy());
+
     if (!count) {
-        // TODO(maniscalco): Replace this call with a call to thread_sleep_etc using the timer slack
-        // from the job policy (ZX-931).
-        zx_status_t result = thread_sleep_interruptable(deadline);
+        const zx_time_t now = current_time();
+        zx_status_t result = thread_sleep_etc(slackDeadline, /* interruptable */ true, now);
         if (result != ZX_OK)
             return result;
         return ZX_ERR_TIMED_OUT;
@@ -117,8 +119,6 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
 
     WaitStateObserver wait_state_observers[kMaxWaitHandleCount];
     Event event;
-
-    auto up = ProcessDispatcher::GetCurrent();
 
     // We may need to unwind (which can be done outside the lock).
     zx_status_t result = ZX_OK;
@@ -147,9 +147,6 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
             wait_state_observers[ix].End();
         return result;
     }
-
-    const TimerSlack slack = up->GetTimerSlackPolicy();
-    const Deadline slackDeadline(deadline, slack);
 
     // event_wait() will return ZX_OK if already signaled,
     // even if deadline has passed.  It will return ZX_ERR_TIMED_OUT

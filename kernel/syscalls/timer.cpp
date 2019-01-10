@@ -56,8 +56,11 @@ zx_status_t sys_timer_set(
     if (status != ZX_OK)
         return status;
 
-    // TODO(maniscalco): Clamp slack at or above the value specified by job policy (ZX-931).
-    return timer->Set(deadline, slack);
+    // Effective slack can only be increased so use max of the requested and the policy slack.
+    const zx_duration_t policySlack = up->GetTimerSlackPolicy().amount();
+    const zx_duration_t effectiveSlack = fbl::max(slack, policySlack);
+
+    return timer->Set(deadline, effectiveSlack);
 }
 
 

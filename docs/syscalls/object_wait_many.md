@@ -38,7 +38,8 @@ The caller must provide *count* `zx_wait_item_t`s in the *items* array,
 containing the handle and signals bitmask to wait for for each item.
 
 The *deadline* parameter specifies a deadline with respect to
-**ZX_CLOCK_MONOTONIC**.  **ZX_TIME_INFINITE** is a special value meaning wait
+**ZX_CLOCK_MONOTONIC** and will be automatically adjusted according to the job's
+[timer slack] policy.  **ZX_TIME_INFINITE** is a special value meaning wait
 forever.
 
 Upon return, the *pending* field of *items* is filled with bitmaps indicating
@@ -102,8 +103,11 @@ In a future build this error will no longer occur.
 
 ## SEE ALSO
 
+ - [timer slack]
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_one()`]
+
+[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

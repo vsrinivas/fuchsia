@@ -44,12 +44,17 @@ bytes, an error is reported.
 When the outbound message is written, simultaneously an interest is registered
 for inbound messages of the matching txid.
 
-While *deadline* has not passed, if an inbound message arrives with a matching txid,
-instead of being added to the tail of the general inbound message queue, it is delivered
-directly to the thread waiting in `zx_channel_call()`.
+*deadline* may be automatically adjusted according to the job's [timer slack]
+policy.
 
-If such a reply arrives after *deadline* has passed, it will arrive in the general
-inbound message queue, cause **ZX_CHANNEL_READABLE** to be signaled, etc.
+While the slack-adjusted *deadline* has not passed, if an inbound message
+arrives with a matching txid, instead of being added to the tail of the general
+inbound message queue, it is delivered directly to the thread waiting in
+`zx_channel_call()`.
+
+If such a reply arrives after the slack-adjusted *deadline* has passed, it will
+arrive in the general inbound message queue, cause **ZX_CHANNEL_READABLE** to be
+signaled, etc.
 
 Inbound messages that are too large to fit in *rd_num_bytes* and *rd_num_handles*
 are discarded and **ZX_ERR_BUFFER_TOO_SMALL** is returned in that case.
@@ -125,6 +130,7 @@ communications on a channel that is timing out.
 
 ## SEE ALSO
 
+ - [timer slack]
  - [`zx_channel_create()`]
  - [`zx_channel_read()`]
  - [`zx_channel_write()`]
@@ -134,6 +140,8 @@ communications on a channel that is timing out.
  - [`zx_object_wait_async()`]
  - [`zx_object_wait_many()`]
  - [`zx_object_wait_one()`]
+
+[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 

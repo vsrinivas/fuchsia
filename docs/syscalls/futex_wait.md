@@ -24,7 +24,8 @@ zx_status_t zx_futex_wait(const zx_futex_t* value_ptr,
 `zx_futex_wait()` atomically verifies that *value_ptr* still contains the value
 *current_value* and sleeps until the futex is made available by a call to
 `zx_futex_wake`. Optionally, the thread can also be woken up after the
-*deadline* (with respect to **ZX_CLOCK_MONOTONIC**) passes.
+*deadline* (with respect to **ZX_CLOCK_MONOTONIC**) passes. *deadline* may be
+automatically adjusted according to the job's [timer slack] policy.
 
 ## SPURIOUS WAKEUPS
 
@@ -74,8 +75,11 @@ None.
 ## SEE ALSO
 
  - [futex objects](../objects/futex.md)
+ - [timer slack]
  - [`zx_futex_requeue()`]
  - [`zx_futex_wake()`]
+
+[timer slack]: ../timer_slack.md
 
 <!-- References updated by update-docs-from-abigen, do not edit. -->
 
