@@ -4,7 +4,7 @@ while [ ! -e /dev/class/gpu/000 ]; do
   echo "Device not found, sleeping"
   sleep 1
 done
-if [[ -z "${GTEST_OUTPUT}" ]]; then
+if [ -z ${GTEST_OUTPUT+x} ]; then
   gtest_output_arg=""
 else
   gtest_output_arg=--gtest_output=$GTEST_OUTPUT
@@ -21,6 +21,6 @@ echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 run_test_component magma_abi_conformance_tests $gtest_output_arg
 /system/test/msd_intel_gen_integration_tests --gtest_filter=-*Stress*
-run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkreadback.cmx
-run fuchsia-pkg://fuchsia.com/vulkan-tests#meta/vkext.cmx
+run_test_component vkext $gtest_output_arg
+run_test_component vkreadback $gtest_output_arg
 echo [INTEGRATION TEST END===]

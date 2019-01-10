@@ -4,6 +4,7 @@
     },
     "sandbox": {
         "features": [
+            "system-temp",
             "vulkan"
         ],
         "services": [
