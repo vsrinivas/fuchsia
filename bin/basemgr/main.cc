@@ -40,11 +40,6 @@ int main(int argc, const char** argv) {
   trace::TraceProvider trace_provider(loop.dispatcher());
   auto context = std::shared_ptr<component::StartupContext>(
       component::StartupContext::CreateFromStartupInfo());
-  if (!context->has_environment_services()) {
-    FXL_LOG(ERROR) << "Failed to receive services from the environment.";
-    return 1;
-  }
-
   modular::BasemgrSettings settings(command_line);
   auto session_shell_settings =
       modular::SessionShellSettings::GetSystemSettings();
