@@ -670,7 +670,8 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     finspect("Inbound LLC frame: hdr len %zu, payload len: %zu\n", llc_frame.hdr()->len(),
              llc_payload_len);
     finspect("  llc hdr: %s\n", debug::Describe(*llc_frame.hdr()).c_str());
-    finspect("  llc payload: %s\n", debug::HexDump(llc_frame.body_data()).c_str());
+    finspect("  llc payload: %s\n",
+             debug::HexDump(llc_frame.body_data().subspan(0, llc_payload_len)).c_str());
     if (llc_payload_len == 0) {
         finspect("  dropping empty LLC frame\n");
         return ZX_OK;
@@ -686,7 +687,7 @@ zx_status_t Station::HandleLlcFrame(const FrameView<LlcHeader>& llc_frame, size_
     eth_hdr->dest = dest;
     eth_hdr->src = src;
     eth_hdr->ether_type = llc_frame.hdr()->protocol_id;
-    w.Write(llc_frame.body_data());
+    w.Write(llc_frame.body_data().subspan(0, llc_payload_len));
 
     packet->set_len(w.WrittenBytes());
 

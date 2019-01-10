@@ -635,6 +635,22 @@ TEST_F(ClientTest, ProcessEmptyDataFrames) {
     ASSERT_TRUE(device.eth_queue.empty());
 }
 
+TEST_F(ClientTest, ProcessAmsduDataFrame) {
+    Span<const uint8_t> payload({1, 2, 3, 4, 5, 6, 7, 8, 9, 10});
+    std::vector<Span<const uint8_t>> payloads;
+    for (size_t payload_len = 1; payload_len <= 10; ++payload_len) {
+        payloads.push_back(payload.subspan(0, payload_len));
+    }
+
+    Connect();
+    client.HandleFramePacket(CreateAmsduDataFramePacket(payloads));
+    ASSERT_EQ(device.eth_queue.size(), payloads.size());
+    for (size_t i = 0; i < payloads.size(); ++i) {
+        auto eth_payload = Span<const uint8_t>(device.eth_queue[i]).subspan(sizeof(EthernetII));
+        EXPECT_RANGES_EQ(eth_payload, payloads[i]);
+    }
+}
+
 TEST_F(ClientTest, DropManagementFrames) {
     Connect();
 
@@ -956,7 +972,6 @@ TEST_F(ClientTest, FailureToAssociateWithAPWithoutAnySupportedRate) {
 // Disassociation in any state issued by AP/SME.
 // Handle Action frames and setup Block-Ack session.
 // Drop data frames from unknown BSS.
-// Handle AMSDUs.
 // Connect to a:
 // - HT/VHT capable network
 // - 5GHz network

@@ -97,6 +97,8 @@ fbl::unique_ptr<Packet> CreateDisassocFrame(common::MacAddr client_addr);
 fbl::unique_ptr<Packet> CreateDataFrame(Span<const uint8_t> payload);
 DataFrame<> CreateNullDataFrame();
 fbl::unique_ptr<Packet> CreateEthFrame(Span<const uint8_t> payload);
+fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
+    const std::vector<Span<const uint8_t>>& payloads);
 
 }  // namespace wlan
 

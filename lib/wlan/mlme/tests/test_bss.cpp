@@ -534,6 +534,58 @@ fbl::unique_ptr<Packet> CreateDataFrame(Span<const uint8_t> payload) {
     return packet;
 }
 
+fbl::unique_ptr<Packet> CreateAmsduDataFramePacket(
+    const std::vector<Span<const uint8_t>>& payloads) {
+    common::MacAddr bssid(kBssid1);
+    common::MacAddr client(kClientAddress);
+    const uint8_t padding[]{0, 0, 0};
+    Span<const uint8_t> padding_span(padding);
+
+    size_t buf_len = DataFrameHeader::max_len();
+    for (auto span : payloads) {
+        buf_len += AmsduSubframeHeader::max_len() + LlcHeader::max_len() + span.size_bytes() + 3;
+    };
+    auto packet = GetWlanPacket(buf_len);
+    ZX_DEBUG_ASSERT(packet != nullptr);
+
+    BufferWriter w(*packet);
+    auto data_hdr = w.Write<DataFrameHeader>();
+    data_hdr->fc.set_type(FrameType::kData);
+    data_hdr->fc.set_subtype(DataSubtype::kQosdata);
+    data_hdr->fc.set_from_ds(1);
+    data_hdr->addr1 = bssid;
+    data_hdr->addr2 = bssid;
+    data_hdr->addr3 = client;
+    data_hdr->sc.set_val(42);
+    auto qos_control = w.Write<QosControl>();
+    qos_control->set_amsdu_present(1);
+
+    for (auto i = 0ULL; i < payloads.size(); ++i) {
+        auto msdu_hdr = w.Write<AmsduSubframeHeader>();
+        msdu_hdr->da = client;
+        msdu_hdr->sa = bssid;
+        msdu_hdr->msdu_len_be = htobe16(LlcHeader::max_len() + payloads[i].size_bytes());
+
+        auto llc_hdr = w.Write<LlcHeader>();
+        llc_hdr->dsap = kLlcSnapExtension;
+        llc_hdr->ssap = kLlcSnapExtension;
+        llc_hdr->control = kLlcUnnumberedInformation;
+        std::memcpy(llc_hdr->oui, kLlcOui, sizeof(llc_hdr->oui));
+        llc_hdr->protocol_id = 42;
+        w.Write(payloads[i]);
+        if (i != payloads.size() - 1) {
+            w.Write(padding_span.subspan(0, (6 - payloads[i].size_bytes()) % 4));
+        }
+    }
+
+    packet->set_len(w.WrittenBytes());
+
+    wlan_rx_info_t rx_info{.rx_flags = 0};
+    packet->CopyCtrlFrom(rx_info);
+
+    return packet;
+}
+
 DataFrame<> CreateNullDataFrame() {
     common::MacAddr bssid(kBssid1);
     common::MacAddr client(kClientAddress);
