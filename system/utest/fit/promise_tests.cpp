@@ -980,6 +980,34 @@ bool join_combinator() {
     END_TEST;
 }
 
+bool join_vector_combinator() {
+    BEGIN_TEST;
+
+    fake_context fake_context;
+
+    std::vector<fit::promise<int, char>> promises;
+    promises.push_back(make_ok_promise(42));
+    promises.push_back(make_error_promise('x').or_else([](char error) {
+        return fit::error('y');
+    }));
+    promises.push_back(make_delayed_ok_promise(55));
+    auto p = fit::join_promise_vector(std::move(promises));
+    EXPECT_TRUE(p);
+
+    fit::result<std::vector<fit::result<int, char>>> result = p(fake_context);
+    EXPECT_TRUE(p);
+    EXPECT_EQ(fit::result_state::pending, result.state());
+
+    result = p(fake_context);
+    EXPECT_FALSE(p);
+    EXPECT_EQ(fit::result_state::ok, result.state());
+    EXPECT_EQ(42, result.value()[0].value());
+    EXPECT_EQ('y', result.value()[1].error());
+    EXPECT_EQ(55, result.value()[2].value());
+
+    END_TEST;
+}
+
 // Ensure that fit::promise is considered nullable so that a promise can be
 // directly stored as the continuation of another promise without any
 // additional wrappers, similar to fit::function.
@@ -1260,6 +1288,7 @@ RUN_TEST(discard_result_combinator)
 RUN_TEST(wrap_with_combinator)
 RUN_TEST(box_combinator)
 RUN_TEST(join_combinator)
+RUN_TEST(join_vector_combinator)
 
 // suppress -Wunneeded-internal-declaration
 (void)handler_invoker_test::result_continuation_lambda;

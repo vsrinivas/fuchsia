@@ -887,6 +887,48 @@ join_promises(Promises... promises) {
         ::fit::internal::join_continuation<Promises...>(std::move(promises)...));
 }
 
+// Jointly evaluates zero or more homogenous promises (same result and error
+// type).  Returns a promise that produces a std::vector<> containing the
+// result of each promise once they all complete.
+//
+// EXAMPLE
+//
+//     auto get_random_number() {
+//         return fit::make_promise([] { return rand() % 10 });
+//     }
+//
+//     auto get_random_product() {
+//         std::vector<fit::promise<int>> promises;
+//         promises.push_back(get_random_number());
+//         promises.push_back(get_random_number());
+//         return fit::join_promise_vector(std::move(promises))
+//             .and_then([] (std::vector<fit::result<int>> results) {
+//                 return fit::ok(results[0].value() + results[1].value());
+//             });
+//     }
+//
+template <typename V, typename E>
+inline promise<std::vector<::fit::result<V, E>>>
+join_promise_vector(std::vector<::fit::promise<V, E>> promises) {
+    std::vector<fit::result<V, E>> results(promises.size());
+    return ::fit::make_promise(
+        [promises = std::move(promises),
+         results = std::move(results)](fit::context& context) mutable
+        -> fit::result<std::vector<fit::result<V, E>>> {
+            bool all_done{true};
+            for (size_t i = 0; i < promises.size(); ++i) {
+                if (!results[i]) {
+                    results[i] = promises[i](context);
+                    all_done &= !!results[i];
+                }
+            }
+            if (all_done) {
+                return fit::ok(std::move(results));
+            }
+            return fit::pending();
+        });
+}
+
 // Describes the status of a future.
 enum class future_state {
     // The future neither holds a result nor a promise that could produce a result.
