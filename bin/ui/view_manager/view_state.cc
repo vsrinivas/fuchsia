@@ -47,24 +47,24 @@ void ViewState::BindOwner(ViewLinker::ImportLink owner_link) {
   FXL_DCHECK(!owner_link.initialized());
 
   owner_link_ = std::move(owner_link);
-  owner_link_.Initialize(
-      this,
-      [this](ViewStub* stub) {
-        // The peer ViewStub will take care of setting
-        // view_stub_ via set_view_stub.  Otherwise,
-        // ViewRegistry::HijackView will cause us to be
-        // detached from the ViewStub prematurely.
-        FXL_VLOG(1) << "View connected: " << this;
-      },
-      [this] {
-        // Ensure the referenced ViewStub is marked nullptr
-        // here, as the pointer is invalid at this point as
-        // we don't want ViewRegistry::HijackView to use it
-        // at all.
-        FXL_VLOG(1) << "View disconnected: " << this;
-        view_stub_ = nullptr;
-        registry_->OnViewDied(this, "ViewHolder connection closed");
-      });
+  owner_link_.Initialize(this,
+                         [this](ViewStub* stub) {
+                           // The peer ViewStub will take care of setting
+                           // view_stub_ via set_view_stub.  Otherwise,
+                           // ViewRegistry::HijackView will cause us to be
+                           // detached from the ViewStub prematurely.
+                           FXL_VLOG(1) << "View connected: " << this;
+                         },
+                         [this] {
+                           // Ensure the referenced ViewStub is marked nullptr
+                           // here, as the pointer is invalid at this point as
+                           // we don't want ViewRegistry::HijackView to use it
+                           // at all.
+                           FXL_VLOG(1) << "View disconnected: " << this;
+                           view_stub_ = nullptr;
+                           registry_->OnViewDied(
+                               this, "ViewHolder connection closed");
+                         });
 }
 
 ViewState* ViewState::AsViewState() { return this; }
@@ -100,6 +100,24 @@ void ViewState::SetServiceProvider(
   } else {
     service_provider_.Unbind();
     service_names_.reset();
+  }
+}
+
+void ViewState::RebuildFocusChain() {
+  focus_chain_ = std::make_unique<FocusChain>();
+  // This will come into play with focus chain management API
+  focus_chain_->version = 1;
+
+  // Construct focus chain by adding our ancestors until we hit a root
+  size_t index = 0;
+  focus_chain_->chain.resize(index + 1);
+  focus_chain_->chain[index++] = view_token();
+  ViewState* parent = view_stub()->parent();
+  while (parent) {
+    focus_chain_->chain.resize(index + 1);
+    focus_chain_->chain[index++] = parent->view_token();
+    ViewStub* stub = parent->view_stub();
+    parent = stub ? stub->parent() : nullptr;
   }
 }
 

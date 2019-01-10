@@ -68,6 +68,9 @@ class ViewTreeState : public ViewContainerState {
   const std::string& label() const { return label_; }
   const std::string& FormattedLabel() const override;
 
+  void RequestFocus(ViewStub* child_stub);
+  const FocusChain* focus_chain();
+
  private:
   ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token_;
   ::fuchsia::ui::viewsv1::ViewTreeListenerPtr view_tree_listener_;
@@ -79,6 +82,8 @@ class ViewTreeState : public ViewContainerState {
   fidl::Binding<::fuchsia::ui::viewsv1::ViewTree> view_tree_binding_;
 
   uint32_t invalidation_flags_ = 0u;
+
+  fxl::WeakPtr<ViewStub> focused_view_;
 
   fxl::WeakPtrFactory<ViewTreeState> weak_factory_;  // must be last
 

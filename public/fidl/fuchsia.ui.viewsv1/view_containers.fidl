@@ -157,6 +157,9 @@ interface ViewContainer {
   7: SendSizeChangeHintHACK(uint32 child_key, float32 width_change_factor,
                             float32 height_change_factor);
 
+  // Request the child view to get input focus for key events.
+  8: RequestFocus(uint32 child_key);
+
   // Request the snapshot of the child view.
   9: RequestSnapshotHACK(uint32 child_key)-> (fuchsia.mem.Buffer data);
 };
