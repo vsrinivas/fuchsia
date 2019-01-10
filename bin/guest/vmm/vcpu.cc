@@ -314,12 +314,6 @@ zx_status_t Vcpu::HandleVcpu(const zx_packet_guest_vcpu_t& packet,
     case ZX_PKT_GUEST_VCPU_INTERRUPT:
       return guest_->Interrupt(packet.interrupt.mask, packet.interrupt.vector);
     case ZX_PKT_GUEST_VCPU_STARTUP:
-      if (id_ != 0) {
-        FXL_LOG(WARNING)
-            << "Ignoring startup of VCPU " << packet.startup.id << " from VCPU "
-            << id_ << ", secondary VCPUs must be started by the primary VCPU";
-        return ZX_OK;
-      }
       return guest_->StartVcpu(packet.startup.id, packet.startup.entry,
                                boot_ptr_);
     default:
