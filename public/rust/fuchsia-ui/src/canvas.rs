@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use font_rs::font::{parse, Font, FontError, GlyphBitmap};
+use failure::Error;
+use rusttype::{Font, FontCollection, Scale};
 use shared_buffer::SharedBuffer;
-use std::{cmp::max, collections::HashMap};
 
 /// Struct representing an RGBA color value
 #[derive(Hash, Eq, PartialEq, Debug, Clone, Copy)]
@@ -64,7 +64,6 @@ struct GlyphDescriptor {
 /// Struct containing a font and a cache of renderered glyphs.
 pub struct FontFace<'a> {
     font: Font<'a>,
-    glyph_cache: HashMap<GlyphDescriptor, GlyphBitmap>,
 }
 
 /// Struct containint font, size and baseline.
@@ -77,23 +76,10 @@ pub struct FontDescription<'a, 'b: 'a> {
 
 #[allow(missing_docs)]
 impl<'a> FontFace<'a> {
-    pub fn new(data: &'a [u8]) -> Result<FontFace<'a>, FontError> {
-        Ok(FontFace {
-            font: parse(data)?,
-            glyph_cache: HashMap::new(),
-        })
-    }
-
-    fn get_glyph(&mut self, glyph: Glyph, size: u32) -> &GlyphBitmap {
-        let font = &self.font;
-        let Glyph(glyph_id) = glyph;
-        self.glyph_cache
-            .entry(GlyphDescriptor { size, glyph })
-            .or_insert_with(|| font.render_glyph(glyph_id, size).unwrap())
-    }
-
-    fn lookup_glyph(&self, scalar: char) -> Option<Glyph> {
-        self.font.lookup_glyph_id(scalar as u32).map(|id| Glyph(id))
+    pub fn new(data: &'a [u8]) -> Result<FontFace<'a>, Error> {
+        let collection = FontCollection::from_bytes(data as &[u8])?;
+        let font = collection.into_font()?;
+        Ok(FontFace { font: font })
     }
 }
 
@@ -158,6 +144,14 @@ impl<T: PixelSink> Canvas<T> {
     }
 
     #[inline]
+    fn set_pixel_at_location(&mut self, location: &Point, value: u8, paint: &Paint) {
+        let col_stride = BYTES_PER_PIXEL as u32;
+        let row_stride = self.stride as u32;
+        let row_offset = location.y * row_stride + location.x * col_stride;
+        self.set_pixel_at_offset(row_offset as usize, value, paint);
+    }
+
+    #[inline]
     fn set_pixel_at_offset(&mut self, offset: usize, value: u8, paint: &Paint) {
         match value {
             0 => (),
@@ -178,24 +172,6 @@ impl<T: PixelSink> Canvas<T> {
         }
     }
 
-    fn draw_glyph_at(&mut self, glyph: &GlyphBitmap, x: i32, y: i32, paint: &Paint) {
-        let glyph_data = &glyph.data.as_slice();
-        let col_stride = BYTES_PER_PIXEL as i32;
-        let row_stride = self.stride as i32;
-        let mut row_offset = y * row_stride + x * col_stride;
-        for glyph_row in glyph_data.chunks(glyph.width) {
-            let mut offset = row_offset;
-            if offset > 0 {
-                for pixel in glyph_row {
-                    let value = *pixel;
-                    self.set_pixel_at_offset(offset as usize, value, paint);
-                    offset += col_stride;
-                }
-            }
-            row_offset += row_stride;
-        }
-    }
-
     /// Fill a rectangle with a particular color.
     pub fn fill_rect(&mut self, rect: &Rect, color: Color) {
         let col_stride = BYTES_PER_PIXEL;
@@ -212,24 +188,40 @@ impl<T: PixelSink> Canvas<T> {
     /// by `paint` and with the typographic characterists in `font`. This method uses
     /// fixed size cells of size `size` for each character.
     pub fn fill_text_cells(
-        &mut self, text: &str, point: Point, size: Size, font: &mut FontDescription, paint: &Paint,
+        &mut self, text: &str, location: Point, size: Size, font: &mut FontDescription,
+        paint: &Paint,
     ) {
-        let mut x = point.x;
+        let mut x = location.x;
         let advance = size.width;
+        let scale = Scale::uniform(font.size as f32);
         for scalar in text.chars() {
             let cell = Rect {
                 left: x,
-                top: point.y,
+                top: location.y,
                 right: x + advance,
-                bottom: point.y + size.height,
+                bottom: location.y + size.height,
             };
             self.fill_rect(&cell, paint.bg);
+
             if scalar != ' ' {
-                if let Some(glyph_id) = font.face.lookup_glyph(scalar) {
-                    let glyph = font.face.get_glyph(glyph_id, font.size);
-                    let x = cell.left as i32 + glyph.left;
-                    let y = cell.top as i32 + font.baseline + glyph.top;
-                    self.draw_glyph_at(glyph, x, y, paint);
+                let glyph =
+                    font.face
+                        .font
+                        .glyph(scalar)
+                        .scaled(scale)
+                        .positioned(rusttype::Point {
+                            x: x as f32,
+                            y: (location.y + font.baseline as u32) as f32,
+                        });
+                if let Some(bounding_box) = glyph.pixel_bounding_box() {
+                    glyph.draw(|pixel_x, pixel_y, v| {
+                        let value = (v * 255.0) as u8;
+                        let glyph_location = Point {
+                            x: pixel_x + bounding_box.min.x as u32,
+                            y: pixel_y + bounding_box.min.y as u32,
+                        };
+                        self.set_pixel_at_location(&glyph_location, value, paint);
+                    });
                 }
             }
             x += advance;
@@ -239,36 +231,22 @@ impl<T: PixelSink> Canvas<T> {
     /// Draw line of text `text` at location `point` with foreground and background colors specified
     /// by `paint` and with the typographic characterists in `font`.
     pub fn fill_text(
-        &mut self, text: &str, point: Point, font: &mut FontDescription, paint: &Paint,
+        &mut self, text: &str, location: Point, font: &mut FontDescription, paint: &Paint,
     ) {
-        let mut x = point.x;
-        let padding: u32 = max(font.size / 16, 2);
-        for scalar in text.chars() {
-            if scalar != ' ' {
-                if let Some(glyph_id) = font.face.lookup_glyph(scalar) {
-                    let glyph = font.face.get_glyph(glyph_id, font.size);
-                    let glyph_x = x as i32 + glyph.left;
-                    let y = point.y as i32 + font.baseline + glyph.top;
-                    let cell = Rect {
-                        left: x,
-                        top: point.y,
-                        right: x + glyph.width as u32,
-                        bottom: point.y + glyph.height as u32,
+        let scale = Scale::uniform(font.size as f32);
+        let v_metrics = font.face.font.v_metrics(scale);
+        let offset = rusttype::point(location.x as f32, location.y as f32 + v_metrics.ascent);
+        let glyphs: Vec<rusttype::PositionedGlyph<'_>> = font.face.font.layout(text, scale, offset).collect();
+        for glyph in glyphs {
+            if let Some(bounding_box) = glyph.pixel_bounding_box() {
+                glyph.draw(|pixel_x, pixel_y, v| {
+                    let value = (v * 255.0) as u8;
+                    let glyph_location = Point {
+                        x: pixel_x + bounding_box.min.x as u32,
+                        y: pixel_y + bounding_box.min.y as u32,
                     };
-                    self.fill_rect(&cell, paint.bg);
-                    self.draw_glyph_at(glyph, glyph_x, y, paint);
-                    x += glyph.width as u32 + padding;
-                }
-            } else {
-                let space_width = (font.size / 3) + padding;
-                let cell = Rect {
-                    left: x,
-                    top: point.y,
-                    right: x + space_width,
-                    bottom: point.y + font.size,
-                };
-                self.fill_rect(&cell, paint.bg);
-                x += space_width;
+                    self.set_pixel_at_location(&glyph_location, value, paint);
+                })
             }
         }
     }
@@ -276,27 +254,18 @@ impl<T: PixelSink> Canvas<T> {
     /// Measure a line of text `text` and with the typographic characterists in `font`.
     /// Returns a tuple containing the measured width and height.
     pub fn measure_text(&mut self, text: &str, font: &mut FontDescription) -> (i32, i32) {
-        let mut max_top = 0;
-        let mut x = 0;
-        const EMPIRICALLY_CHOSEN_PADDING_AMOUNT_DIVISOR: i32 = 16;
-        const EMPIRICALLY_CHOSEN_MINIMUM_PADDING: i32 = 2;
-        let padding: i32 = max(
-            font.size as i32 / EMPIRICALLY_CHOSEN_PADDING_AMOUNT_DIVISOR,
-            EMPIRICALLY_CHOSEN_MINIMUM_PADDING,
-        );
-        for one_char in text.chars() {
-            if one_char != ' ' {
-                if let Some(glyph_id) = font.face.lookup_glyph(one_char) {
-                    let glyph = font.face.get_glyph(glyph_id, font.size as u32);
-                    max_top = max(max_top, -glyph.top);
-                    x += glyph.width as i32 + padding;
-                }
-            } else {
-                const EMPIRICALLY_CHOSEN_SPACE_CHARACTER_WIDTH_DIVIDER: u32 = 3;
-                x +=
-                    (font.size / EMPIRICALLY_CHOSEN_SPACE_CHARACTER_WIDTH_DIVIDER) as i32 + padding;
-            }
-        }
-        (x, max_top)
+        let scale = Scale::uniform(font.size as f32);
+        let v_metrics = font.face.font.v_metrics(scale);
+        let offset = rusttype::point(0.0, v_metrics.ascent);
+        let glyphs: Vec<rusttype::PositionedGlyph<'_>> = font.face.font.layout(text, scale, offset).collect();
+        let width = glyphs
+            .iter()
+            .rev()
+            .map(|g| g.position().x as f32 + g.unpositioned().h_metrics().advance_width)
+            .next()
+            .unwrap_or(0.0)
+            .ceil() as usize;
+
+        (width as i32, font.size as i32)
     }
 }

@@ -57,7 +57,7 @@ impl<'a> RecoveryUI<'a> {
             url,
             Point {
                 x: ((self.config.width / 2) as i32 - width / 2) as u32,
-                y: ((self.config.height / 4) as i32 + height / 2) as u32,
+                y: ((self.config.height / 4) as i32 - height / 2) as u32,
             },
             &mut font_description,
             &paint,
@@ -69,7 +69,7 @@ impl<'a> RecoveryUI<'a> {
             user_code,
             Point {
                 x: ((self.config.width / 2) as i32 - width / 2) as u32,
-                y: ((self.config.height / 2 + self.config.height / 4) as i32 + height / 2) as u32,
+                y: ((self.config.height / 2 + self.config.height / 4) as i32 - height / 2) as u32,
             },
             &mut font_description,
             &paint,
