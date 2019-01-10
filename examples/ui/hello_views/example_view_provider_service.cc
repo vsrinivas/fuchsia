@@ -20,7 +20,7 @@ ExampleViewProviderService::ExampleViewProviderService(
     : startup_ctx_(startup_ctx), view_factory_fn_(factory) {
   FXL_DCHECK(startup_ctx_);
 
-  startup_ctx->outgoing_services()->AddService<fuchsia::ui::app::ViewProvider>(
+  startup_ctx->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
       [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
         bindings_.AddBinding(this, std::move(request));
       },
@@ -28,7 +28,7 @@ ExampleViewProviderService::ExampleViewProviderService(
 }
 
 ExampleViewProviderService::~ExampleViewProviderService() {
-  startup_ctx_->outgoing_services()
+  startup_ctx_->outgoing().deprecated_services()
       ->RemoveService<fuchsia::ui::app::ViewProvider>();
 }
 

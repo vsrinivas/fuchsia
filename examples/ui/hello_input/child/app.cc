@@ -43,7 +43,7 @@ App::App(async::Loop* loop)
     UpdateScene(zx_clock_get(ZX_CLOCK_MONOTONIC));
   });
 
-  startup_context_->outgoing_services()
+  startup_context_->outgoing().deprecated_services()
       ->AddService<fuchsia::ui::app::ViewProvider>(
           [this](
               fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
@@ -63,7 +63,7 @@ App::App(async::Loop* loop)
 }
 
 App::~App() {
-  startup_context_->outgoing_services()
+  startup_context_->outgoing().deprecated_services()
       ->RemoveService<fuchsia::ui::app::ViewProvider>();
   ReleaseSessionResources();
 }

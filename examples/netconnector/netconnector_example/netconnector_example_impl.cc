@@ -49,7 +49,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
   if (params->request_device_name().empty()) {
     // Params say we should be responding. Register the responding service.
     FXL_LOG(INFO) << "Running as responder";
-    startup_context_->outgoing_services()->AddServiceForName(
+    startup_context_->outgoing().deprecated_services()->AddServiceForName(
         [this](zx::channel channel) {
           message_relay_.SetChannel(std::move(channel));
         },
@@ -63,7 +63,7 @@ NetConnectorExampleImpl::NetConnectorExampleImpl(
               fuchsia::netconnector::NetConnector>();
 
       fidl::InterfaceHandle<fuchsia::sys::ServiceProvider> handle;
-      startup_context_->outgoing_services()->AddBinding(handle.NewRequest());
+      startup_context_->outgoing().deprecated_services()->AddBinding(handle.NewRequest());
 
       FXL_DCHECK(handle);
 

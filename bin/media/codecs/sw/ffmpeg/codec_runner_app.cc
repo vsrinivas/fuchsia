@@ -18,7 +18,7 @@ void CodecRunnerApp::Run() {
   auto codec_admission_control =
       std::make_unique<CodecAdmissionControl>(loop_.dispatcher());
 
-  startup_context_->outgoing_services()->AddService(
+  startup_context_->outgoing().deprecated_services()->AddService(
       fidl::InterfaceRequestHandler<fuchsia::mediacodec::CodecFactory>(
           [this, codec_admission_control = codec_admission_control.get()](
               fidl::InterfaceRequest<fuchsia::mediacodec::CodecFactory>
@@ -26,7 +26,7 @@ void CodecRunnerApp::Run() {
             // This runner only expects a single Local Codec Factory to ever be
             // requested.
             FXL_DCHECK(!codec_factory_);
-            startup_context_->outgoing_services()
+            startup_context_->outgoing().deprecated_services()
                 ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
             codec_factory_.reset(new LocalSingleCodecFactory(

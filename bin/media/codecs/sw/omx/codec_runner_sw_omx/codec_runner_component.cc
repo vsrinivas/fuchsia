@@ -23,7 +23,7 @@ CodecRunnerComponent::CodecRunnerComponent(
     : fidl_dispatcher_(fidl_dispatcher),
       fidl_thread_(fidl_thread),
       startup_context_(std::move(startup_context)) {
-  startup_context_->outgoing_services()->AddServiceForName(
+  startup_context_->outgoing().deprecated_services()->AddServiceForName(
       [this](zx::channel request) {
         // This process only intends to have up to one CodecFactory at least for
         // now, so enforce that here.

@@ -59,7 +59,7 @@ CodecFactoryApp::CodecFactoryApp(async::Loop* loop) : loop_(loop) {
   // only because |loop| doesn't have a separate thread, and the current thread
   // won't pump |loop| until after AddServiceForName() is also done.
   startup_context_ = component::StartupContext::CreateFromStartupInfo();
-  startup_context_->outgoing_services()->AddServiceForName(
+  startup_context_->outgoing().deprecated_services()->AddServiceForName(
       [this](zx::channel request) {
         // The CodecFactoryImpl is self-owned and will self-delete when the
         // channel closes or an error occurs.
