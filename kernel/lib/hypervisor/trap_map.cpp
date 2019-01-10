@@ -101,7 +101,7 @@ zx_status_t TrapMap::InsertTrap(uint32_t kind, zx_gpaddr_t addr, size_t len,
         return status;
     }
     {
-        fbl::AutoLock lock(&mutex_);
+        Guard<SpinLock, IrqSave> guard{&lock_};
         traps->insert(ktl::move(range));
     }
     return ZX_OK;
@@ -114,7 +114,7 @@ zx_status_t TrapMap::FindTrap(uint32_t kind, zx_gpaddr_t addr, Trap** trap) {
     }
     TrapTree::iterator iter;
     {
-        fbl::AutoLock lock(&mutex_);
+        Guard<SpinLock, IrqSave> guard{&lock_};
         iter = traps->upper_bound(addr);
     }
     --iter;

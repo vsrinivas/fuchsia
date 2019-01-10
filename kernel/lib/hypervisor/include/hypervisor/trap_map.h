@@ -69,10 +69,10 @@ public:
 private:
     using TrapTree = fbl::WAVLTree<zx_gpaddr_t, ktl::unique_ptr<Trap>>;
 
-    fbl::Mutex mutex_;
-    TrapTree mem_traps_ TA_GUARDED(mutex_);
+    DECLARE_SPINLOCK(TrapMap) lock_;
+    TrapTree mem_traps_ TA_GUARDED(lock_);
 #ifdef ARCH_X86
-    TrapTree io_traps_ TA_GUARDED(mutex_);
+    TrapTree io_traps_ TA_GUARDED(lock_);
 #endif // ARCH_X86
 
     TrapTree* TreeOf(uint32_t kind);
