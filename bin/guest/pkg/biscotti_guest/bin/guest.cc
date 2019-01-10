@@ -32,7 +32,8 @@ namespace biscotti {
 static constexpr bool kBootToContainer = true;
 
 static constexpr const char* kLinuxEnvirionmentName = "biscotti";
-static constexpr const char* kLinuxGuestPackage = "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
+static constexpr const char* kLinuxGuestPackage =
+    "fuchsia-pkg://fuchsia.com/biscotti_guest#meta/biscotti_guest.cmx";
 static constexpr uint32_t kStartupListenerPort = 7777;
 static constexpr uint32_t kTremplinListenerPort = 7778;
 static constexpr uint32_t kMaitredPort = 8888;
@@ -592,6 +593,11 @@ grpc::Status Guest::ContainerReady(
 
   DumpContainerDebugInfo();
 
+  for (auto it = pending_requests_.begin(); it != pending_requests_.end();
+       it = pending_requests_.erase(it)) {
+    LaunchApplication(std::move(*it));
+  }
+
   return grpc::Status::OK;
 }
 
@@ -691,6 +697,41 @@ void Guest::DumpContainerDebugInfo() {
 
   FXL_LOG(INFO) << "Container debug information:";
   FXL_LOG(INFO) << response.debug_information();
+}
+
+void Guest::Launch(AppLaunchRequest request) {
+  // If we have a garcon connection we can request the launch immediately.
+  // Otherwise we just retain the request and forward it along once the
+  // container is started.
+  if (garcon_) {
+    LaunchApplication(std::move(request));
+    return;
+  }
+  pending_requests_.push_back(std::move(request));
+}
+
+void Guest::LaunchApplication(AppLaunchRequest app) {
+  FXL_CHECK(garcon_) << "Called LaunchApplication without a garcon connection";
+  std::string desktop_file_id = std::move(app.application.resolved_url);
+  desktop_file_id.erase(0, 8);
+  FXL_LOG(INFO) << "Launching: " << desktop_file_id;
+
+  grpc::ClientContext context;
+  vm_tools::container::LaunchApplicationRequest request;
+  vm_tools::container::LaunchApplicationResponse response;
+
+  request.set_desktop_file_id(std::move(desktop_file_id));
+  auto grpc_status = garcon_->LaunchApplication(&context, request, &response);
+  if (!grpc_status.ok() || !response.success()) {
+    FXL_LOG(ERROR) << "Failed to launch application: "
+                   << grpc_status.error_message() << ", "
+                   << response.failure_reason();
+    return;
+  }
+
+  FXL_LOG(INFO) << "Application launched successfully";
+  // TODO: Get view out of wayland bridge.
+  // TODO: Create component instance.
 }
 
 }  // namespace biscotti

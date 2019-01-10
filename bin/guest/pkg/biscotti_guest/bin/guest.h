@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
 #define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
 
+#include <deque>
 #include <memory>
 #include <zircon/types.h>
 
@@ -22,6 +23,20 @@
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/vm_guest.grpc.pb.h"
 
 namespace biscotti {
+
+struct AppLaunchRequest {
+ public:
+  AppLaunchRequest(const AppLaunchRequest&) = delete;
+  AppLaunchRequest& operator=(const AppLaunchRequest&) = delete;
+
+  AppLaunchRequest(AppLaunchRequest&&) = default;
+  AppLaunchRequest& operator=(AppLaunchRequest&&) = default;
+
+  fuchsia::sys::Package application;
+  fuchsia::sys::StartupInfo startup_info;
+  fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller_request;
+};
+
 class Guest : public fuchsia::guest::HostVsockAcceptor,
               public vm_tools::StartupListener::Service,
               public vm_tools::tremplin::TremplinListener::Service,
@@ -35,6 +50,8 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   Guest(component::StartupContext* context,
         fuchsia::guest::EnvironmentControllerPtr env,
         fxl::CommandLine cl);
+
+  void Launch(AppLaunchRequest request);
 
  private:
   void Start();
@@ -109,6 +126,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   template <typename Service>
   std::unique_ptr<typename Service::Stub> NewVsockStub(uint32_t cid,
                                                        uint32_t port);
+  void LaunchApplication(AppLaunchRequest request);
 
   async_dispatcher_t* async_;
   std::unique_ptr<grpc::Server> grpc_server_;
@@ -123,6 +141,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   LogCollector log_collector_;
   fxl::CommandLine cl_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;
+  std::deque<AppLaunchRequest> pending_requests_;
 };
 }  // namespace biscotti
 

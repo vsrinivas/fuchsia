@@ -7,7 +7,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/logging.h>
 
-#include "garnet/bin/guest/pkg/biscotti_guest/bin/guest.h"
+#include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_runner.h"
 
 void PrintUsage();
 
@@ -19,9 +19,8 @@ int main(int argc, const char** argv) {
   }
 
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  auto context = component::StartupContext::CreateFromStartupInfo();
-  std::unique_ptr<biscotti::Guest> guest;
-  zx_status_t status = biscotti::Guest::CreateAndStart(context.get(), std::move(cl), &guest);
+  biscotti::LinuxRunner runner;
+  zx_status_t status = runner.Init(std::move(cl));
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start guest: " << status;
     return -1;
