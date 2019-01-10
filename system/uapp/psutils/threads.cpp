@@ -112,7 +112,7 @@ void dump_thread(zx_handle_t process, inspector_dsoinfo_t* dso_list,
     printf("bottom of user stack:\n");
     dump_memory(process, sp, kMemoryDumpSize);
 
-    inspector_print_backtrace(stdout, process, thread, dso_list, pc, sp, fp, true);
+    inspector_print_backtrace_markup(stdout, process, thread, dso_list, pc, sp, fp, true);
 
     if (verbosity_level >= 1)
         printf("Done handling thread %" PRIu64 ".%" PRIu64 ".\n", get_koid(process), get_koid(thread));
@@ -142,18 +142,10 @@ void dump_all_threads(uint64_t pid, zx_handle_t process) {
     }
     ZX_DEBUG_ASSERT(records_read == num_threads);
 
-    const char* arch = "unknown";
-#if defined(__x86_64__)
-    arch = "x86_64";
-#elif defined(__aarch64__)
-    arch = "aarch64";
-#endif
-    printf("arch: %s\n", arch);
-
     printf("%zu thread(s)\n", num_threads);
 
     inspector_dsoinfo_t* dso_list = inspector_dso_fetch_list(process);
-    inspector_dso_print_list(stdout, dso_list);
+    inspector_print_markup_context(stdout, process);
 
     // TODO(dje): Move inspector's DebugInfoCache here, so that we can use it
     // across all threads.
