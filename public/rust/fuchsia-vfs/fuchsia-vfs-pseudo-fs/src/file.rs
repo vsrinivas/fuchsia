@@ -554,6 +554,13 @@ where
                 // There is no backing VMO.
                 responder.send(ZX_OK, None)?;
             }
+            FileRequest::GetBuffer {
+                flags: _,
+                responder,
+            } => {
+                // There is no backing VMO.
+                responder.send(ZX_OK, None)?;
+            }
         }
         Ok(ConnectionState::Alive)
     }
