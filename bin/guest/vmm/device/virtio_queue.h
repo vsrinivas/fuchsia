@@ -28,13 +28,13 @@ struct VirtioRing {
   uint16_t size;
   uint16_t index;
 
-  const volatile struct vring_desc* desc;  // guest-controlled
+  const struct vring_desc* desc;  // guest-controlled
 
-  const volatile struct vring_avail* avail;  // guest-controlled
-  const volatile uint16_t* used_event;       // guest-controlled
+  const struct vring_avail* avail;  // guest-controlled
+  const uint16_t* used_event;       // guest-controlled
 
-  volatile struct vring_used* used;  // guest-controlled
-  volatile uint16_t* avail_event;    // guest-controlled
+  struct vring_used* used;  // guest-controlled
+  uint16_t* avail_event;    // guest-controlled
 };
 
 // A higher-level API for vring_desc.

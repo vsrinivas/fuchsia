@@ -72,7 +72,11 @@ zx_status_t VirtioQueue::NextAvailLocked(uint16_t* index) {
 }
 
 bool VirtioQueue::HasAvailLocked() const {
-  return ring_.avail != nullptr && ring_.avail->idx != ring_.index;
+  // Load the avail index with acquire semantics. We know that the guest will have written to
+  // idx with at least release semantics after filling in the descriptor information, so by
+  // doing an acquire we ensure that the load of any descriptor information is forced to happen
+  // after this point and cannot be cached or read earlier.
+  return ring_.avail != nullptr && __atomic_load_n(&ring_.avail->idx, __ATOMIC_ACQUIRE) != ring_.index;
 }
 
 uint32_t VirtioQueue::RingIndexLocked(uint32_t index) const {
@@ -113,7 +117,12 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
 
     used->id = index;
     used->len = len;
-    ring_.used->idx++;
+    // Update the used index with a release to ensure that all our previous writes are
+    // made visible to the guest before it can observe that the index has changed.
+    // We do not need the increment to be atomic, we only require that a memory order
+    // be enforced, since there will be no other writers to this location and so we
+    // can use the cheaper __atomic_store instead of __atomic_add_fetch
+    __atomic_store_n(&ring_.used->idx, ring_.used->idx + 1, __ATOMIC_RELEASE);
 
     // Virtio 1.0 Section 2.4.7.2: Virtqueue Interrupt Suppression
     if (!use_event_index_) {
