@@ -21,9 +21,66 @@
 #include "garnet/bin/iquery/modes.h"
 
 #include <iostream>
+#include <thread>
+
+using namespace std::chrono_literals;
 
 namespace iquery {
 namespace {
+
+constexpr int kPingPeriodMs = 50;
+
+// This class is a workaround for ZX-3284, which sometimes causes processes to
+// hang when resuming from a suspend. It works by periodically poking at a
+// service hosted by the formerly suspended process to unstick it.
+// TODO(ZX-3284) Remove this hack.
+class FilePinger {
+ public:
+  FilePinger(const std::string& path) : path_(path), done_(false) {
+    thread_ = std::thread([this] {
+      int spawned = 0;
+      while (true) {
+        {
+          std::unique_lock<std::mutex> lock(mutex_);
+          cond_.wait_for(lock, kPingPeriodMs * 1ms);
+          if (done_) {
+            return;
+          }
+        }
+
+        // If we get here, the caller did not cancel the thread in time. This
+        // was probably caused by the caller getting stuck, so spawn a new
+        // thread that just tries to open the wrapped path. In the event that
+        // that event is stuck as well, continue spawning threads up to a limit.
+        // This is very hacky, but experimental results show that it fixes the
+        // hang for the time being.
+        FXL_VLOG(1) << "BUG: File ping triggered " << spawned;
+        // Ping the path.
+        if (spawned++ < 10) {
+          std::thread([path = path_] { files::IsFile(path); }).detach();
+        } else {
+          FXL_LOG(ERROR) << "BUG: File ping triggered at limit";
+          return;
+        }
+      }
+    });
+  }
+  ~FilePinger() {
+    {
+      std::unique_lock<std::mutex> lock(mutex_);
+      done_ = true;
+      cond_.notify_all();
+    }
+    thread_.join();
+  }
+
+ private:
+  const std::string path_;
+  std::mutex mutex_;
+  std::condition_variable cond_;
+  bool done_;
+  std::thread thread_;
+};
 
 // Consult the file system to find out how to open an inspect endpoint at the
 // given path.
@@ -45,6 +102,8 @@ fit::result<ObjectLocation> ParseToLocation(const std::string& path) {
     inspect_parts = fxl::SplitStringCopy(parts[1], "/", fxl::kKeepWhitespace,
                                          fxl::kSplitWantAll);
   }
+
+  FilePinger fp(parts[0]);
 
   if (files::IsFile(parts[0])) {
     // Entry point is a file, split out the directory and base name.
@@ -69,8 +128,8 @@ fit::result<ObjectLocation> ParseToLocation(const std::string& path) {
 std::vector<ObjectLocation> SyncFindPaths(const std::string& path) {
   FXL_VLOG(1) << "Synchronously listing paths under " << path;
   if (path.find("#") != std::string::npos) {
-    // This path refers to something nested inside an inspect hierarchy, return
-    // it directly.
+    // This path refers to something nested inside an inspect hierarchy,
+    // return it directly.
     FXL_VLOG(1) << " Path is inside inspect hierarchy, returning directly";
     auto location = ParseToLocation(path);
     if (location.is_ok()) {
@@ -86,6 +145,9 @@ std::vector<ObjectLocation> SyncFindPaths(const std::string& path) {
   while (!search_paths.empty()) {
     std::string path = std::move(search_paths.back());
     search_paths.pop_back();
+
+    FilePinger fp(path);
+
     FXL_VLOG(1) << " Reading " << path;
     DIR* dir = opendir(path.c_str());
     if (!dir) {
