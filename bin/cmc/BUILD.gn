@@ -7,7 +7,9 @@ import("//build/host.gni")
 
 source_set("cmx_schema_json") {
   inputs = [
-    "cmx_schema.json"
+    "cm_schema.json",
+    "cml_schema.json",
+    "cmx_schema.json",
   ]
 }
 
