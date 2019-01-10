@@ -2,8 +2,17 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde_derive::Deserialize;
 use serde_json::{Map, Value};
+
+pub const DIRECTORY: &str = "directory";
+pub const SERVICE: &str = "service";
+lazy_static! {
+    pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+    pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
+}
 
 #[derive(Deserialize, Debug)]
 pub struct Document {
@@ -62,6 +71,9 @@ pub trait CapabilityClause {
 pub trait AsClause {
     fn r#as(&self) -> &Option<String>;
 }
+pub trait ToClause {
+    fn to(&self) -> Option<&str>;
+}
 
 impl CapabilityClause for Use {
     fn service(&self) -> &Option<String> {
@@ -93,6 +105,18 @@ impl CapabilityClause for Expose {
     }
 }
 
+impl AsClause for Expose {
+    fn r#as(&self) -> &Option<String> {
+        &self.r#as
+    }
+}
+
+impl ToClause for Expose {
+    fn to(&self) -> Option<&str> {
+        None
+    }
+}
+
 impl FromClause for Offer {
     fn from(&self) -> &str {
         &self.from
@@ -108,14 +132,14 @@ impl CapabilityClause for Offer {
     }
 }
 
-impl AsClause for Expose {
+impl AsClause for Target {
     fn r#as(&self) -> &Option<String> {
         &self.r#as
     }
 }
 
-impl AsClause for Target {
-    fn r#as(&self) -> &Option<String> {
-        &self.r#as
+impl ToClause for Target {
+    fn to(&self) -> Option<&str> {
+        Some(&self.to)
     }
 }

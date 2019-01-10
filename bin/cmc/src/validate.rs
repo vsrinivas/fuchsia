@@ -2,8 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use crate::cml;
 use cm_json::{self, Error, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
+use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
@@ -23,15 +25,14 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
         match filename.extension().and_then(|e| e.to_str()) {
             Some("cm") => {
-                let v = cm_json::from_json_str(&buffer)?;
+                let v: Value = serde_json::from_str(&buffer)
+                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
                 cm_json::validate_json(&v, CM_SCHEMA)
             }
-            Some("cml") => {
-                let v = cm_json::from_json5_str(&buffer)?;
-                validate_cml(&v)
-            }
+            Some("cml") => validate_cml(&buffer).map(|_d| ()),
             Some("cmx") => {
-                let v = cm_json::from_json_str(&buffer)?;
+                let v: Value = serde_json::from_str(&buffer)
+                    .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
                 cm_json::validate_json(&v, CMX_SCHEMA)
             }
             _ => Err(Error::invalid_args(BAD_EXTENSION)),
@@ -40,10 +41,174 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Validates CML JSON document according to the schema.
-/// TODO: Perform extra validation beyond what the schema provides.
-pub fn validate_cml(json: &Value) -> Result<(), Error> {
-    cm_json::validate_json(&json, CML_SCHEMA)
+/// Validates CML JSON document according to the schema and returns it as a cml::Document.
+pub fn validate_cml(buffer: &str) -> Result<cml::Document, Error> {
+    let json: Value = cm_json::from_json5_str(&buffer)?;
+    cm_json::validate_json(&json, CML_SCHEMA)?;
+    let document: cml::Document = serde_json::from_value(json)
+        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+
+    let mut ctx = ValidationContext {
+        document: &document,
+        all_children: HashSet::new(),
+    };
+    ctx.validate()?;
+    Ok(document)
+}
+
+struct ValidationContext<'a> {
+    document: &'a cml::Document,
+    all_children: HashSet<&'a str>,
+}
+
+type PathMap<'a> = HashMap<String, HashSet<&'a str>>;
+
+impl<'a> ValidationContext<'a> {
+    fn validate(&mut self) -> Result<(), Error> {
+        // Get the set of all children.
+        if let Some(children) = self.document.children.as_ref() {
+            for child in children.iter() {
+                if !self.all_children.insert(&child.name) {
+                    return Err(Error::parse(format!(
+                        "Duplicate child name: \"{}\"",
+                        &child.name
+                    )));
+                }
+            }
+        }
+
+        // Validate "expose".
+        if let Some(exposes) = self.document.expose.as_ref() {
+            let mut target_paths = HashMap::new();
+            for expose in exposes.iter() {
+                self.validate_expose(&expose, &mut target_paths)?;
+            }
+        }
+
+        // Validate "offer".
+        if let Some(offers) = self.document.offer.as_ref() {
+            let mut target_paths = HashMap::new();
+            for offer in offers.iter() {
+                self.validate_offer(&offer, &mut target_paths)?;
+            }
+        }
+
+        Ok(())
+    }
+
+    fn validate_expose(
+        &self, expose: &'a cml::Expose, prev_target_paths: &mut PathMap<'a>,
+    ) -> Result<(), Error> {
+        self.validate_source("expose", expose)?;
+        self.validate_target(
+            "expose",
+            expose,
+            expose,
+            &mut HashSet::new(),
+            prev_target_paths,
+        )
+    }
+
+    fn validate_offer(
+        &self, offer: &'a cml::Offer, prev_target_paths: &mut PathMap<'a>,
+    ) -> Result<(), Error> {
+        self.validate_source("offer", offer)?;
+
+        let mut prev_targets = HashSet::new();
+        for target in offer.targets.iter() {
+            // Check that any referenced child in the target name is valid.
+            if let Some(caps) = cml::CHILD_RE.captures(&target.to) {
+                if !self.all_children.contains(&caps[1]) {
+                    return Err(Error::parse(format!(
+                        "\"{}\" is an \"offer\" target but it does not appear in \"children\"",
+                        &target.to,
+                    )));
+                }
+            }
+            self.validate_target("offer", offer, target, &mut prev_targets, prev_target_paths)?;
+        }
+        Ok(())
+    }
+
+    /// Validates that a source capability is valid, i.e. that any referenced child is valid.
+    /// - |keyword| is the keyword for the clause ("offer" or "expose").
+    fn validate_source<T>(&self, keyword: &str, source_obj: &'a T) -> Result<(), Error>
+    where
+        T: cml::FromClause + cml::CapabilityClause,
+    {
+        if let Some(caps) = cml::CHILD_RE.captures(source_obj.from()) {
+            if !self.all_children.contains(&caps[1]) {
+                return Err(Error::parse(format!(
+                    "\"{}\" is an \"{}\" source but it does not appear in \"children\"",
+                    source_obj.from(),
+                    keyword,
+                )));
+            }
+        }
+        Ok(())
+    }
+
+    /// Validates that a target is valid, i.e. that it does not duplicate the path of any capability
+    /// and any referenced child is valid.
+    /// - |keyword| is the keyword for the clause ("offer" or "expose").
+    /// - |source_obj| is the object containing the source capability info. This is needed for the
+    ///   default path.
+    /// - |target_obj| is the object containing the target capability info.
+    /// - |prev_target| holds target names collected for this source capability so far.
+    /// - |prev_target_paths| holds target paths collected so far.
+    fn validate_target<T, U>(
+        &self, keyword: &str, source_obj: &'a T, target_obj: &'a U,
+        prev_targets: &mut HashSet<&'a str>, prev_target_paths: &mut PathMap<'a>,
+    ) -> Result<(), Error>
+    where
+        T: cml::CapabilityClause,
+        U: cml::ToClause + cml::AsClause,
+    {
+        // Get the source capability's path.
+        let source_path = if let Some(p) = source_obj.service().as_ref() {
+            p
+        } else if let Some(p) = source_obj.directory().as_ref() {
+            p
+        } else {
+            return Err(Error::internal(format!("no capability path")));
+        };
+
+        // Get the target capability's path (defaults to the source path).
+        let ref target_path = match &target_obj.r#as() {
+            Some(a) => a,
+            None => source_path,
+        };
+
+        // Check that target path is not a duplicate of another capability.
+        let target_name = target_obj.to().unwrap_or("");
+        let paths_for_target = prev_target_paths
+            .entry(target_name.to_string())
+            .or_insert(HashSet::new());
+        if !paths_for_target.insert(target_path) {
+            return match target_name {
+                "" => Err(Error::parse(format!(
+                    "\"{}\" is a duplicate \"{}\" target path",
+                    target_path, keyword
+                ))),
+                _ => Err(Error::parse(format!(
+                    "\"{}\" is a duplicate \"{}\" target path for \"{}\"",
+                    target_path, keyword, target_name
+                ))),
+            };
+        }
+
+        // Check that the target is not a duplicate of a previous target (for this source).
+        if let Some(target_name) = target_obj.to() {
+            if !prev_targets.insert(target_name) {
+                return Err(Error::parse(format!(
+                    "\"{}\" is a duplicate \"{}\" target for \"{}\"",
+                    target_name, keyword, source_path
+                )));
+            }
+        }
+
+        Ok(())
+    }
 }
 
 #[cfg(test)]
@@ -126,6 +291,36 @@ mod tests {
 
         let result = validate(vec![tmp_file_path]);
         assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
+    }
+
+    #[test]
+    fn test_validate_invalid_json_fails() {
+        let tmp_dir = TempDir::new().unwrap();
+        let tmp_file_path = tmp_dir.path().join("test.cm");
+
+        File::create(&tmp_file_path)
+            .unwrap()
+            .write_all(b"{,}")
+            .unwrap();
+
+        let result = validate(vec![tmp_file_path]);
+        let expected_result: Result<(), Error> = Err(Error::parse(
+            "Couldn't read input as JSON: key must be a string at line 1 column 2",
+        ));
+        assert_eq!(format!("{:?}", result), format!("{:?}", expected_result));
+    }
+
+    // TODO(CF-167): fix JSON5 int->float parse bug
+    #[test]
+    fn test_json5_parse_number() {
+        let json: Value = cm_json::from_json5_str("1").expect("couldn't parse");
+        if let Value::Number(n) = json {
+            // This should be assert!(n.is_i64()), but the json5 parser has a bug that parses all
+            // numbers as floats.
+            assert!(!n.is_i64() && !n.is_u64() && n.is_f64());
+        } else {
+            panic!("not a number");
+        }
     }
 
     // TODO: Consider converting these tests to a golden test
@@ -662,7 +857,11 @@ mod tests {
         test_cml_expose => {
             input = json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#logger" },
+                    {
+                        "service": "/loggers/fuchsia.logger.Log",
+                        "from": "#logger",
+                        "as": "/svc/logger"
+                    },
                     { "directory": "/volumes/blobfs", "from": "self" }
                 ],
                 "children": [
@@ -693,6 +892,30 @@ mod tests {
                 "expose": [ {} ]
             }),
             result = Err(Error::parse("OneOf conditions are not met at /expose/0, This property is required at /expose/0/from")),
+        },
+        test_cml_expose_missing_from => {
+            input = json!({
+                "expose": [
+                    { "service": "/loggers/fuchsia.logger.Log", "from": "#missing" }
+                ]
+            }),
+            result = Err(Error::parse("\"#missing\" is an \"expose\" source but it does not appear in \"children\"")),
+        },
+        test_cml_expose_duplicate_target_paths => {
+            input = json!({
+                "expose": [
+                    { "service": "/fonts/CoolFonts", "from": "self" },
+                    { "service": "/svc/logger", "from": "#logger", "as": "/thing" },
+                    { "directory": "/thing", "from": "self" }
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("\"/thing\" is a duplicate \"expose\" target path")),
         },
         test_cml_expose_bad_from => {
             input = json!({
@@ -775,6 +998,18 @@ mod tests {
             }),
             result = Err(Error::parse("OneOf conditions are not met at /offer/0, This property is required at /offer/0/from, This property is required at /offer/0/targets")),
         },
+        test_cml_offer_missing_from => {
+            input = json!({
+                    "offer": [ {
+                        "service": "/svc/fuchsia.logger.Log",
+                        "from": "#missing",
+                        "targets": [
+                            { "to": "#echo2_server" },
+                        ]
+                    } ]
+                }),
+            result = Err(Error::parse("\"#missing\" is an \"offer\" source but it does not appear in \"children\"")),
+        },
         test_cml_offer_bad_from => {
             input = json!({
                     "offer": [ {
@@ -809,6 +1044,22 @@ mod tests {
             }),
             result = Err(Error::parse("This property is required at /offer/0/targets/0/to")),
         },
+        test_cml_offer_target_missing_to => {
+            input = json!({
+                "offer": [ {
+                    "service": "/snvc/fuchsia.logger.Log",
+                    "from": "#logger",
+                    "targets": [
+                        { "to": "#missing" }
+                    ]
+                } ],
+                "children": [ {
+                    "name": "logger",
+                    "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                } ]
+            }),
+            result = Err(Error::parse("\"#missing\" is an \"offer\" target but it does not appear in \"children\"")),
+        },
         test_cml_offer_target_bad_to => {
             input = json!({
                 "offer": [ {
@@ -820,6 +1071,38 @@ mod tests {
                 } ]
             }),
             result = Err(Error::parse("Pattern condition is not met at /offer/0/targets/0/to")),
+        },
+        test_cml_offer_duplicate_target_paths => {
+            input = json!({
+                "offer": [
+                    {
+                        "service": "/svc/logger",
+                        "from": "self",
+                        "targets": [
+                            { "to": "#echo2_server", "as": "/thing" },
+                            { "to": "#scenic" }
+                        ]
+                    },
+                    {
+                        "directory": "/thing",
+                        "from": "realm",
+                        "targets": [
+                            { "to": "#echo2_server" }
+                        ]
+                    }
+                ],
+                "children": [
+                    {
+                        "name": "scenic",
+                        "uri": "fuchsia-pkg://fuchsia.com/scenic/stable#meta/scenic.cm"
+                    },
+                    {
+                        "name": "echo2_server",
+                        "uri": "fuchsia-pkg://fuchsia.com/echo2/stable#meta/echo2_server.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("\"/thing\" is a duplicate \"offer\" target path for \"#echo2_server\"")),
         },
 
         // children
@@ -854,6 +1137,21 @@ mod tests {
                 ]
             }),
             result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+        },
+        test_cml_children_duplicate_names => {
+           input = json!({
+               "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    },
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/beta#meta/logger.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("Duplicate child name: \"logger\"")),
         },
 
         // facets

@@ -5,22 +5,14 @@
 use cm_json::{self, cm, Error, CM_SCHEMA};
 use crate::validate;
 use crate::cml;
-use lazy_static::lazy_static;
-use regex::Regex;
 use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
-use serde_json::{self, Value};
+use serde_json;
 use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::str::from_utf8;
 
-const DIRECTORY: &str = "directory";
-const SERVICE: &str = "service";
-lazy_static! {
-    static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
-    static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
-}
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
@@ -37,10 +29,8 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
 
     let mut buffer = String::new();
     fs::File::open(&file)?.read_to_string(&mut buffer)?;
-    let v: Value = serde_json::from_str(&buffer)
-        .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
-    validate::validate_cml(&v)?;
-    let out = compile_cml(&buffer)?;
+    let document = validate::validate_cml(&buffer)?;
+    let out = compile_cml(document)?;
 
     let mut res = Vec::new();
     if pretty {
@@ -69,9 +59,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
     Ok(())
 }
 
-fn compile_cml(buffer: &str) -> Result<cm::Document, Error> {
-    let document: cml::Document = serde_json::from_str(&buffer)
-        .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
+fn compile_cml(document: cml::Document) -> Result<cm::Document, Error> {
     let mut out = cm::Document::default();
     if let Some(program) = document.program {
         out.program = Some(program.clone());
@@ -157,7 +145,7 @@ where
     T: cml::FromClause,
 {
     let from = in_obj.from().to_string();
-    if !FROM_RE.is_match(&from) {
+    if !cml::FROM_RE.is_match(&from) {
         return Err(Error::internal(format!("invalid \"from\": {}", from)));
     }
     let ret = if from.starts_with("#") {
@@ -180,7 +168,7 @@ fn extract_targets(in_obj: &cml::Offer, source_path: &str) -> Result<Vec<cm::Tar
     let mut out_targets = vec![];
     for target in in_obj.targets.iter() {
         let target_path = extract_target_path(target, source_path);
-        let caps = match CHILD_RE.captures(&target.to) {
+        let caps = match cml::CHILD_RE.captures(&target.to) {
             Some(c) => Ok(c),
             None => Err(Error::internal(format!("invalid \"to\": {}", target.to))),
         }?;
@@ -198,9 +186,9 @@ where
     T: cml::CapabilityClause,
 {
     let (capability, source_path) = if let Some(p) = in_obj.service() {
-        (SERVICE.to_string(), p.clone())
+        (cml::SERVICE.to_string(), p.clone())
     } else if let Some(p) = in_obj.directory() {
-        (DIRECTORY.to_string(), p.clone())
+        (cml::DIRECTORY.to_string(), p.clone())
     } else {
         return Err(Error::internal(format!("no source path")));
     };
@@ -460,6 +448,7 @@ mod tests {
     ]
 }"#,
         },
+        // TODO(CF-167): JSON5 int->float parse bug
         test_compile_facets => {
             input = json!({
                 "facets": {
@@ -478,7 +467,7 @@ mod tests {
                 "you"
             ],
             "title": "foo",
-            "year": 2018
+            "year": 2018.0
         }
     }
 }"#,
@@ -518,6 +507,7 @@ mod tests {
                     "year": 2018
                 }
             }),
+            // TODO(CF-167): JSON5 int->float parse bug
             output = r#"{
     "program": {
         "binary": "bin/app"
@@ -567,7 +557,7 @@ mod tests {
     ],
     "facets": {
         "author": "Fuchsia",
-        "year": 2018
+        "year": 2018.0
     }
 }"#,
         },
