@@ -102,7 +102,12 @@ def main():
         stop_server = serve_package(args.pm, args.package, staging_dir)
         try:
             def run_ssh_command(*params, **kwargs):
-                base = ['ssh', '-i', args.ssh_key, 'fuchsia@'+target_address]
+                base = [
+                    'ssh', '-i', args.ssh_key,
+                    'fuchsia@' + target_address,
+                    '-o', 'StrictHostKeyChecking=no',
+                    '-o', 'UserKnownHostsFile=/dev/null',
+                ]
                 run_command(*(base + list(params)), **kwargs)
             server_address = 'http://%s:8083/config.json' % host_address
             run_ssh_command('amber_ctl', 'add_src', '-x', '-f', server_address)
