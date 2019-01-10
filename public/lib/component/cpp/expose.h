@@ -113,13 +113,13 @@ class Metric {
   void Add(T amount) {
     switch (type_) {
       case INT:
-        int_value_ += amount;
+        int_value_ += static_cast<int64_t>(amount);
         break;
       case UINT:
-        uint_value_ += amount;
+        uint_value_ += static_cast<uint64_t>(amount);
         break;
       case DOUBLE:
-        double_value_ += amount;
+        double_value_ += static_cast<double>(amount);
         break;
       case CALLBACK:
         break;
@@ -133,13 +133,13 @@ class Metric {
   void Sub(T amount) {
     switch (type_) {
       case INT:
-        int_value_ -= amount;
+        int_value_ -= static_cast<int64_t>(amount);
         break;
       case UINT:
-        uint_value_ -= amount;
+        uint_value_ -= static_cast<uint64_t>(amount);
         break;
       case DOUBLE:
-        double_value_ -= amount;
+        double_value_ -= static_cast<double>(amount);
         break;
       case CALLBACK:
         break;
