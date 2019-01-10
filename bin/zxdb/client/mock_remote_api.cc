@@ -44,7 +44,7 @@ void MockRemoteAPI::Resume(
     const debug_ipc::ResumeRequest& request,
     std::function<void(const Err&, debug_ipc::ResumeReply)> cb) {
   // Always returns success and then quits the message loop (if other tests
-  // need this, the callabck should do the quit instead of this function).
+  // need this, the callback should do the quit instead of this function).
   resume_count_++;
   debug_ipc::MessageLoop::Current()->PostTask(FROM_HERE, [cb]() {
     cb(Err(), debug_ipc::ResumeReply());

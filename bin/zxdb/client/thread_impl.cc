@@ -147,6 +147,9 @@ void ThreadImpl::JumpTo(uint64_t new_address,
   // the update so we don't have to wait for two round-trips, but that
   // complicates the callback logic and this feature is not performance-
   // sensitive.
+  //
+  // Another approach is to make the register request message able to
+  // optionally request a stack backtrace and include that in the reply.
   session()->remote_api()->WriteRegisters(request, [
     thread = weak_factory_.GetWeakPtr(), cb = std::move(cb)
   ](const Err& err, debug_ipc::WriteRegistersReply reply) {

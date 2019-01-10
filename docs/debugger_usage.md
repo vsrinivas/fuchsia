@@ -26,7 +26,7 @@ connect 192.168.3.1:2345
 set filter echo2
 run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
 break main
-p continue
+continue
 print argv[1]
 continue
 quit
@@ -175,13 +175,36 @@ reconnecting ([DX-517](https://fuchsia.atlassian.net/browse/DX-517)).
 
 ### Debugging drivers
 
-Debugging driver start-up is not currently possible
-([DX-598](https://fuchsia.atlassian.net/browse/DX-598)).
+It's not currently possible to set up the debugger early enough in system
+startup to debug most driver initialization. And since zxdb itself uses the
+network, no drivers associated with network communication can be debugged.
+
+Driver debugging support is tracked in
+[DX-598](https://fuchsia.atlassian.net/browse/DX-598).
 
 You can debug running drivers by attaching like any other process (see
-“Attaching to an existing process” below). The caveat is that since zxdb uses
-the network to communicate between the zxdb client and the debug agent, you can
-not debug any network-related drivers.
+“Attaching to an existing process” below). You can delay initialization to
+allow time to attach by adding a busyloop at the beginning of your code:
+
+```
+volatile bool stop = false;
+while (!stop) {}
+```
+
+To break out of the loop after attaching, either set the variable to true:
+
+```
+[zxdb] print stop = true
+true
+[zxdb] continue
+```
+
+Or jump to the line after the loop:
+
+```
+[zxdb] jump <line #>
+[zxdb] continue
+```
 
 ### Debugging crash dumps
 
@@ -579,12 +602,21 @@ argc = 1
 argv = (const char* const*) 0x59999ec02dc0
 ```
 
+You can also set variables to integer and boolean values (as long as those
+variables are in memory and not registers):
+
+```
+[zxdb] print done_flag = true
+true
+[zddb] print i = 56
+56
+```
+
 Things that don’t currently work are:
 
   * Math ([DX-600](https://fuchsia.atlassian.net/browse/DX-600))
   * Function calls ([DX-599](https://fuchsia.atlassian.net/browse/DX-599))
   * Casting ([DX-479](https://fuchsia.atlassian.net/browse/DX-479))
-  * Global and static variables ([DX-481](https://fuchsia.atlassian.net/browse/DX-481))
   * Pretty-printing (especially for STL) ([DX-601](https://fuchsia.atlassian.net/browse/DX-601))
 
 ### Controlling execution (stepping, etc.)
@@ -600,10 +632,13 @@ its execution:
 
 `step` / `s`: Advances to the next line. If a function call happens before the
 next line, that function will be stepped into and execution will stop at the
-beginning of it.
+beginning of it. You can also supply an argument which is a substring to match
+of a specific function call. Function names not containing this substring will
+be skipped and only matching ones will be stepped into:
 
 ```
 [zxdb] s
+[zxdb] s MyFunction
 ```
 
 `finish` / `fi`: Exits the function and stops right after the call.
@@ -618,6 +653,13 @@ current file:
 
 ```
 [zxdb] u 45
+```
+
+`jump`: Move the instruction pointer to a new address.
+
+```
+[zxdb] jump 22  // Line number
+[zxdb] jump 0x87534123  // Address
 ```
 
 There different things you can do with context. For example, to run until
