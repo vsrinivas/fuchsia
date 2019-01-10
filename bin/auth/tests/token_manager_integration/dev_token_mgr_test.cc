@@ -427,7 +427,7 @@ int main(int argc, char** argv) {
 
   {
     async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    auto context = component::StartupContext::CreateFromStartupInfoNotChecked();
+    auto context = component::StartupContext::CreateFromStartupInfo();
     test_runner::ReportResult(argv[0], context.get(), listener.GetResults());
   }
 

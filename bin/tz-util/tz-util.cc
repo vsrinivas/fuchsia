@@ -90,7 +90,7 @@ int main(int argc, char** argv) {
   }
   // loop is needed by StartupContext.
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
-  TzUtil app(component::StartupContext::CreateFromStartupInfoNotChecked());
+  TzUtil app(component::StartupContext::CreateFromStartupInfo());
   app.Run(command_line);
   return 0;
 }

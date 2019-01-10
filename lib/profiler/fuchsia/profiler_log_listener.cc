@@ -175,7 +175,7 @@ std::string CollectProfilerLog() {
     });
 
     auto startup_context =
-        component::StartupContext::CreateFromStartupInfoNotChecked();
+        component::StartupContext::CreateFromStartupInfo();
     log_listener->ConnectToLogger(startup_context.get(), GetCurrentProcessKoid());
 
     // Trigger mmap log

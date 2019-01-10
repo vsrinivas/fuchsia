@@ -125,7 +125,7 @@ TEST_F(LoggerTest, Integration) {
   ASSERT_EQ(syslog::InitLogger({tag}), ZX_OK);
   FX_LOGS(INFO) << "my message";
   auto startup_context =
-      component::StartupContext::CreateFromStartupInfoNotChecked();
+      component::StartupContext::CreateFromStartupInfo();
   ASSERT_TRUE(log_listener.ConnectToLogger(startup_context.get(), pid));
   auto& logs = log_listener.GetLogs();
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&logs] { return logs.size() >= 1u; },
