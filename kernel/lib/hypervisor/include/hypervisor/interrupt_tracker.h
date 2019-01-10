@@ -98,26 +98,26 @@ class InterruptTracker {
 public:
     zx_status_t Init() {
         event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         return bitmap_.Init();
     }
 
     // Returns whether there are pending interrupts.
     bool Pending() {
         uint32_t vector;
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         return bitmap_.Scan(&vector) != InterruptType::INACTIVE;
     }
 
     // Clears all vectors in the range [min, max).
     void Clear(uint32_t min, uint32_t max) {
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         bitmap_.Clear(min, max);
     }
 
     // Pops the specified vector, if it is pending.
     InterruptType TryPop(uint32_t vector) {
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         InterruptType type = bitmap_.Get(vector);
         if (type != InterruptType::INACTIVE) {
             bitmap_.Set(vector, InterruptType::INACTIVE);
@@ -127,7 +127,7 @@ public:
 
     // Pops the highest priority interrupt.
     InterruptType Pop(uint32_t* vector) {
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         InterruptType type = bitmap_.Scan(vector);
         if (type != InterruptType::INACTIVE) {
             bitmap_.Set(*vector, InterruptType::INACTIVE);
@@ -137,7 +137,7 @@ public:
 
     // Tracks the given interrupt.
     void Track(uint32_t vector, InterruptType type) {
-        AutoSpinLock lock(&lock_);
+        Guard<SpinLock, IrqSave> lock{&lock_};
         bitmap_.Set(vector, type);
     }
 
@@ -176,7 +176,7 @@ public:
 
 private:
     event_t event_;
-    SpinLock lock_;
+    DECLARE_SPINLOCK(InterruptTracker) lock_;
     InterruptBitmap<N> bitmap_ TA_GUARDED(lock_);
 };
 
