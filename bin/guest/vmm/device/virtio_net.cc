@@ -74,7 +74,9 @@ class RxStream : public StreamBase {
         continue;
       }
       memcpy(phys_mem_->as<void>(offset, length),
-             reinterpret_cast<void*>(pkt.addr), length);
+             reinterpret_cast<void*>(pkt.addr), pkt.length);
+      *chain_.Used() = pkt.length + sizeof(*header);
+      pkt.entry.flags = fuchsia::hardware::ethernet::FIFO_TX_OK;
       guest_ethernet_->Complete(pkt.entry);
     }
   }

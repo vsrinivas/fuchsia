@@ -200,7 +200,7 @@ TEST_F(VirtioNetTest, SendToGuest) {
 
   EXPECT_EQ(entry.offset, 0u);
   EXPECT_EQ(entry.length, packet_size);
-  EXPECT_EQ(entry.flags, 0u);
+  EXPECT_EQ(entry.flags, fuchsia::hardware::ethernet::FIFO_TX_OK);
   EXPECT_EQ(entry.cookie, 0xdeadbeef);
 }
 
