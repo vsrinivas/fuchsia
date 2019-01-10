@@ -41,7 +41,7 @@ class GpuImage : public Image {
 
  protected:
   // No-op for images backed by GPU memory.
-  bool UpdatePixels() override;
+  bool UpdatePixels(escher::BatchGpuUploader* uploader) override;
 
  private:
   // Create an Image object from a VkImage.

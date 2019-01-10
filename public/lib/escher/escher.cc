@@ -11,6 +11,7 @@
 #include "lib/escher/impl/mesh_manager.h"
 #include "lib/escher/impl/vk/pipeline_cache.h"
 #include "lib/escher/profiling/timestamp_profiler.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/renderer/buffer_cache.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/resources/resource_recycler.h"
@@ -164,23 +165,35 @@ MeshBuilderPtr Escher::NewMeshBuilder(const MeshSpec& spec,
 }
 
 ImagePtr Escher::NewRgbaImage(uint32_t width, uint32_t height, uint8_t* bytes) {
-  return image_utils::NewRgbaImage(image_cache(), gpu_uploader(), width, height,
-                                   bytes);
+  BatchGpuUploader uploader(GetWeakPtr(), 0);
+  ImagePtr image =
+      image_utils::NewRgbaImage(image_cache(), &uploader, width, height, bytes);
+  uploader.Submit();
+  return image;
 }
 
 ImagePtr Escher::NewCheckerboardImage(uint32_t width, uint32_t height) {
-  return image_utils::NewCheckerboardImage(image_cache(), gpu_uploader(), width,
-                                           height);
+  BatchGpuUploader uploader(GetWeakPtr(), 0);
+  ImagePtr image = image_utils::NewCheckerboardImage(image_cache(), &uploader,
+                                                     width, height);
+  uploader.Submit();
+  return image;
 }
 
 ImagePtr Escher::NewGradientImage(uint32_t width, uint32_t height) {
-  return image_utils::NewGradientImage(image_cache(), gpu_uploader(), width,
-                                       height);
+  BatchGpuUploader uploader(GetWeakPtr(), 0);
+  ImagePtr image =
+      image_utils::NewGradientImage(image_cache(), &uploader, width, height);
+  uploader.Submit();
+  return image;
 }
 
 ImagePtr Escher::NewNoiseImage(uint32_t width, uint32_t height) {
-  return image_utils::NewNoiseImage(image_cache(), gpu_uploader(), width,
-                                    height);
+  BatchGpuUploader uploader(GetWeakPtr(), 0);
+  ImagePtr image =
+      image_utils::NewNoiseImage(image_cache(), &uploader, width, height);
+  uploader.Submit();
+  return image;
 }
 
 TexturePtr Escher::NewTexture(ImagePtr image, vk::Filter filter,

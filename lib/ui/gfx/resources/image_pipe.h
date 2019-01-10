@@ -18,6 +18,10 @@
 #include "lib/escher/flib/fence_set_listener.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
+namespace escher {
+class BatchGpuUploader;
+}  // namespace escher
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -56,6 +60,11 @@ class ImagePipe : public ImageBase {
   // are released. Cannot be null.
   bool Update(escher::ReleaseFenceSignaller* release_fence_signaller,
               uint64_t presentation_time, uint64_t presentation_interval);
+
+  // Updates the Escher image to the current frame. This should be called after
+  // Update() indicates the current Image changed, and before calling
+  // GetEscherImage().
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
 
   // Returns the image that should be presented at the current time. Can be
   // null.

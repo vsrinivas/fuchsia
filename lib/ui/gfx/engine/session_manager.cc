@@ -16,7 +16,8 @@
 namespace scenic_impl {
 namespace gfx {
 
-CommandContext::CommandContext(escher::BatchGpuUploaderPtr uploader)
+CommandContext::CommandContext(
+    std::unique_ptr<escher::BatchGpuUploader> uploader)
     : batch_gpu_uploader_(std::move(uploader)) {}
 
 void CommandContext::Flush() {

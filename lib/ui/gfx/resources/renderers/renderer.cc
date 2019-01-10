@@ -46,12 +46,17 @@ Renderer::Renderer(Session* session, ResourceId id)
 Renderer::~Renderer() = default;
 
 std::vector<escher::Object> Renderer::CreateDisplayList(
-    const ScenePtr& scene, escher::vec2 screen_dimensions) {
+    const ScenePtr& scene, escher::vec2 screen_dimensions,
+    escher::BatchGpuUploader* uploader) {
   TRACE_DURATION("gfx", "Renderer::CreateDisplayList");
 
+  VisitorContext visitor_context(default_material_, /* opacity= */ 1.0f,
+                                 disable_clipping_, uploader);
+
   // Construct a display list from the tree.
-  Visitor v(default_material_, 1, disable_clipping_);
+  Visitor v(std::move(visitor_context));
   scene->Accept(&v);
+
   return v.TakeDisplayList();
 }
 
@@ -67,11 +72,8 @@ void Renderer::DisableClipping(bool disable_clipping) {
   disable_clipping_ = disable_clipping;
 }
 
-Renderer::Visitor::Visitor(const escher::MaterialPtr& default_material,
-                           float opacity, bool disable_clipping)
-    : default_material_(default_material),
-      opacity_(opacity),
-      disable_clipping_(disable_clipping) {}
+Renderer::Visitor::Visitor(Renderer::VisitorContext context)
+    : context_(context) {}
 
 std::vector<escher::Object> Renderer::Visitor::TakeDisplayList() {
   return std::move(display_list_);
@@ -96,12 +98,12 @@ void Renderer::Visitor::Visit(OpacityNode* r) {
     return;
   }
 
-  float old_opacity = opacity_;
-  opacity_ *= r->opacity();
+  float old_opacity = context_.opacity;
+  context_.opacity *= r->opacity();
 
   VisitNode(r);
 
-  opacity_ = old_opacity;
+  context_.opacity = old_opacity;
 }
 
 void Renderer::Visitor::VisitNode(Node* r) {
@@ -117,34 +119,29 @@ void Renderer::Visitor::VisitNode(Node* r) {
   }
 }
 
-void Renderer::Visitor::VisitAndMaybeClipNode(Node* r) {
-  // If not clipping, recursively visit all descendants in the normal fashion.
-  if (!r->clip_to_self() || disable_clipping_) {
-    ForEachDirectDescendantFrontToBack(
-        *r, [this](Node* node) { node->Accept(this); });
-    return;
-  }
-
-  // We might need to apply a clip.
+std::vector<escher::Object> Renderer::Visitor::GenerateClippeeDisplayList(
+    Node* r) {
   // Gather the escher::Objects corresponding to the children and imports.
-  Renderer::Visitor clippee_visitor(default_material_, opacity_,
-                                    disable_clipping_);
+  VisitorContext clippee_context(context_);
+  Renderer::Visitor clippee_visitor(clippee_context);
   ForEachChildAndImportFrontToBack(
       *r, [&clippee_visitor](Node* node) { node->Accept(&clippee_visitor); });
 
-  // Check whether there's anything to clip.
-  auto clippees = clippee_visitor.TakeDisplayList();
-  if (clippees.empty()) {
-    // Nothing to clip!  Just draw the parts as usual.
-    ForEachPartFrontToBack(*r, [this](Node* node) { node->Accept(this); });
-    return;
-  }
+  return clippee_visitor.TakeDisplayList();
+}
+
+std::vector<escher::Object> Renderer::Visitor::GenerateClipperDisplayList(
+    Node* r) {
+  // Create a VisitorContext with no material for the clippers.
+  const escher::MaterialPtr kNoMaterial;
+  VisitorContext clipper_context(kNoMaterial, context_.opacity,
+                                 context_.disable_clipping,
+                                 /* batch_gpu_uploader= */ nullptr);
 
   // The node's children and imports must be clipped by the
   // Shapes/ShapeNodes amongst the node's parts.  First gather the
   // escher::Objects corresponding to these ShapeNodes.
-  const escher::MaterialPtr kNoMaterial;
-  Renderer::Visitor clipper_visitor(kNoMaterial, opacity_, disable_clipping_);
+  Renderer::Visitor clipper_visitor(clipper_context);
   ForEachPartFrontToBack(*r, [&clipper_visitor](Node* node) {
     if (node->IsKindOf<ShapeNode>()) {
       node->Accept(&clipper_visitor);
@@ -157,8 +154,27 @@ void Renderer::Visitor::VisitAndMaybeClipNode(Node* r) {
     }
   });
 
-  // Check whether there are any clippers.
-  auto clippers = clipper_visitor.TakeDisplayList();
+  return clipper_visitor.TakeDisplayList();
+}
+
+void Renderer::Visitor::VisitAndMaybeClipNode(Node* r) {
+  // If not clipping, recursively visit all descendants in the normal fashion.
+  if (!r->clip_to_self() || context_.disable_clipping) {
+    ForEachDirectDescendantFrontToBack(
+        *r, [this](Node* node) { node->Accept(this); });
+    return;
+  }
+
+  // Check whether there's anything to clip.
+  auto clippees = GenerateClippeeDisplayList(r);
+  if (clippees.empty()) {
+    // Nothing to clip!  Just draw the parts as usual.
+    ForEachPartFrontToBack(*r, [this](Node* node) { node->Accept(this); });
+    return;
+  }
+
+  // Gather the objects used to form the clip regions.
+  auto clippers = GenerateClipperDisplayList(r);
   if (clippers.empty()) {
     // The clip is empty so there's nothing to draw.
     return;
@@ -203,13 +219,13 @@ void Renderer::Visitor::Visit(ShapeNode* r) {
   }
   if (shape) {
     escher::MaterialPtr escher_material =
-        material ? material->escher_material() : default_material_;
-    if (escher_material && opacity_ < 1) {
+        material ? material->escher_material() : context_.default_material;
+    if (escher_material && context_.opacity < 1) {
       // When we want to support other material types (e.g. metallic shaders),
       // we'll need to change this. If we want to support semitransparent
       // textures and materials, we'll need more pervasive changes.
       glm::vec4 color = escher_material->color();
-      color.a *= opacity_;
+      color.a *= context_.opacity;
       escher_material =
           escher::Material::New(color, escher_material->texture());
       escher_material->set_opaque(false);
@@ -230,7 +246,10 @@ void Renderer::Visitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(MeshShape* r) { FXL_CHECK(false); }
 
-void Renderer::Visitor::Visit(Material* r) { r->UpdateEscherMaterial(); }
+void Renderer::Visitor::Visit(Material* r) {
+  FXL_DCHECK(context_.batch_gpu_uploader);
+  r->UpdateEscherMaterial(context_.batch_gpu_uploader);
+}
 
 void Renderer::Visitor::Visit(Import* r) { FXL_CHECK(false); }
 

@@ -4,9 +4,8 @@
 
 #include "lib/escher/impl/image_cache.h"
 
-#include "lib/escher/impl/command_buffer_pool.h"
-#include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/gpu_allocator.h"
 

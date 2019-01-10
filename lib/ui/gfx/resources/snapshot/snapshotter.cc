@@ -78,8 +78,8 @@ bool VmoFromBytes(const uint8_t* bytes, size_t num_bytes, uint32_t type,
   return true;
 }
 
-Snapshotter::Snapshotter(escher::BatchGpuUploaderPtr gpu_uploader)
-    : gpu_uploader_(gpu_uploader) {}
+Snapshotter::Snapshotter(std::unique_ptr<escher::BatchGpuUploader> gpu_uploader)
+    : gpu_uploader_(std::move(gpu_uploader)) {}
 
 void Snapshotter::TakeSnapshot(Resource* resource,
                                TakeSnapshotCallback callback) {
@@ -183,16 +183,12 @@ void Snapshotter::Visit(Material* r) {
 void Snapshotter::Visit(Memory* r) { VisitResource(r); }
 
 void Snapshotter::Visit(Image* r) {
-  if (r->GetEscherImage()) {
-    VisitImage(r->GetEscherImage());
-  }
+  VisitImage(r->GetEscherImage());
   VisitResource(r);
 }
 
 void Snapshotter::Snapshotter::Visit(ImagePipe* r) {
-  if (r->GetEscherImage()) {
-    VisitImage(r->GetEscherImage());
-  }
+  VisitImage(r->GetEscherImage());
   VisitResource(r);
 }
 void Snapshotter::Visit(Buffer* r) { VisitResource(r); }
@@ -277,6 +273,10 @@ void Snapshotter::VisitResource(Resource* r) {
 }
 
 void Snapshotter::VisitImage(escher::ImagePtr image) {
+  if (!image) {
+    return;
+  }
+
   auto format = (int32_t)image->format();
   auto width = image->width();
   auto height = image->height();

@@ -155,7 +155,7 @@ class PaperRenderer2 final : public Renderer {
     // these UniformBindings.
     std::vector<UniformBinding> scene_uniform_bindings;
 
-    BatchGpuUploaderPtr gpu_uploader;
+    std::unique_ptr<BatchGpuUploader> gpu_uploader;
   };
 
   // Called in BeginFrame() to obtain suitable render targets.

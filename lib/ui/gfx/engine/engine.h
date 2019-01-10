@@ -12,7 +12,6 @@
 
 #include "lib/escher/escher.h"
 #include "lib/escher/flib/release_fence_signaller.h"
-#include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/resources/resource_recycler.h"
 #include "lib/escher/shape/rounded_rect_factory.h"
 #include "lib/escher/vk/image_factory.h"
@@ -82,7 +81,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
                           imported_memory_type_index(),
                           escher_resource_recycler(),
                           escher_image_factory(),
-                          escher_gpu_uploader(),
                           escher_rounded_rect_factory(),
                           release_fence_signaller(),
                           event_timestamper(),
@@ -130,10 +128,6 @@ class Engine : public UpdateScheduler, private FrameSchedulerDelegate {
   }
 
   escher::ImageFactory* escher_image_factory() { return image_factory_.get(); }
-
-  escher::impl::GpuUploader* escher_gpu_uploader() {
-    return escher_ ? escher_->gpu_uploader() : nullptr;
-  }
 
   escher::RoundedRectFactory* escher_rounded_rect_factory() {
     return rounded_rect_factory_.get();

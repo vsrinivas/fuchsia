@@ -34,9 +34,10 @@ class Image : public ImageBase {
                       const fuchsia::images::ImageInfo& image_info,
                       uint64_t memory_offset, ErrorReporter* error_reporter);
 
+  void UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) override;
   const escher::ImagePtr& GetEscherImage() override;
 
-  // TODO(SCN-1010): Determine proper signalling for marking images as dirty.
+  // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
   void MarkAsDirty() { dirty_ = true; }
 
  protected:
@@ -45,7 +46,7 @@ class Image : public ImageBase {
   // Updates pixels before rendering, if needed. Returns the new dirty status
   // (i.e. false, if all bits have been updated appropriately, true if the image
   // is still dirty).
-  virtual bool UpdatePixels() = 0;
+  virtual bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) = 0;
 
   // GPU memory-backed image.
   escher::ImagePtr image_;

@@ -19,7 +19,7 @@ VK_TEST(BatchGpuUploader, CreateDestroyUploader) {
   auto escher = test::GetEscher()->GetWeakPtr();
 
   {
-    BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+    std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
     // BatchGpuUploader must be submitted before it is destroyed.
     uploader->Submit();
   }
@@ -28,17 +28,15 @@ VK_TEST(BatchGpuUploader, CreateDestroyUploader) {
   EXPECT_TRUE(escher->Cleanup());
 }
 
-VK_TEST(BatchGpuUploader, DummyUploaderForTests) {
-  // A BatchGpuUploader without an escher needs to be able to be created
-  // without crashing for unittests.
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(EscherWeakPtr());
-  // Submit should also not crash.
-  uploader->Submit();
+VK_TEST(BatchGpuUploader, InvalidUploader) {
+  // A BatchGpuUploader without an escher should not be created.
+  auto uploader = BatchGpuUploader::New(EscherWeakPtr());
+  EXPECT_FALSE(uploader);
 }
 
 VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
   auto writer = uploader->AcquireWriter(256);
   uploader->PostWriter(std::move(writer));
@@ -51,7 +49,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitWriter) {
 
 VK_TEST(BatchGpuUploader, AcquireSubmitReader) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
   auto reader = uploader->AcquireReader(256);
   uploader->PostReader(std::move(reader), [](BufferPtr) {});
@@ -64,7 +62,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitReader) {
 
 VK_TEST(BatchGpuUploader, AcquireSubmitMultipleWriters) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
   auto writer = uploader->AcquireWriter(256);
   uploader->PostWriter(std::move(writer));
@@ -91,7 +89,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitMultipleWriters) {
 
 VK_TEST(BatchGpuUploader, AcquireSubmitMultipleReaders) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher);
 
   auto reader = uploader->AcquireReader(256);
   uploader->PostReader(std::move(reader), [](BufferPtr) {});
@@ -118,7 +116,7 @@ VK_TEST(BatchGpuUploader, AcquireSubmitMultipleReaders) {
 
 VK_TEST(BatchGpuUploader, WriteBuffer) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  auto uploader = BatchGpuUploader::New(escher);
   const size_t buffer_size = 3 * sizeof(vec3);
   auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
@@ -150,7 +148,7 @@ VK_TEST(BatchGpuUploader, WriteBuffer) {
 
 VK_TEST(BatchGpuUploader, WriteImage) {
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  auto uploader = BatchGpuUploader::New(escher);
   const size_t image_size = sizeof(uint8_t) * 4;
   auto writer = uploader->AcquireWriter(image_size);
 
@@ -194,7 +192,7 @@ VK_TEST(BatchGpuUploader, DISABLED_WriterNotPostedFails) {
   // test process. Disabled until EXPECT_DEATH_IF_SUPPORTED can graduate to
   // EXPECT_DEATH.
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  auto uploader = BatchGpuUploader::New(escher);
   auto writer = uploader->AcquireWriter(256);
 
   // Submit should fail since it does not have the command buffer to submit.
@@ -206,12 +204,12 @@ VK_TEST(BatchGpuUploader, DISABLED_WriterPostedToWrongUploaderFails) {
   // test process. Disabled until EXPECT_DEATH_IF_SUPPORTED can graduate to
   // EXPECT_DEATH.
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
+  auto uploader = BatchGpuUploader::New(escher, 0);
   auto writer = uploader->AcquireWriter(256);
 
   // New uploader is created with a different backing frame. Posting the first
   // uploader's writer to this should fail.
-  BatchGpuUploaderPtr uploader2 = BatchGpuUploader::New(escher, 1);
+  auto uploader2 = BatchGpuUploader::New(escher, 1);
   EXPECT_DEATH_IF_SUPPORTED(uploader->PostWriter(std::move(writer)), "");
 
   // New uploader should be able to be successfully submitted and cleaned up.
@@ -227,7 +225,7 @@ VK_TEST(BatchGpuUploader, DISABLED_ReadAWriteSucceeds) {
   // resource.
 
   auto escher = test::GetEscher()->GetWeakPtr();
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher);
+  auto uploader = BatchGpuUploader::New(escher);
   const size_t buffer_size = 3 * sizeof(vec3);
   auto writer = uploader->AcquireWriter(buffer_size);
   // Create buffer to write to.
@@ -291,18 +289,18 @@ VK_TEST(BatchGpuUploader, ReadImageTest) {
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
-  auto reader = uploader->AcquireReader(image->size());
+  BatchGpuUploader uploader(escher, 0);
+  auto reader = uploader.AcquireReader(image->size());
   reader->ReadImage(image, region);
   // Verify that the "upload done" Semaphore was set on the image.
   EXPECT_TRUE(image->HasWaitSemaphore());
 
   bool read_image_done = false;
-  uploader->PostReader(std::move(reader), [&read_image_done](BufferPtr buffer) {
+  uploader.PostReader(std::move(reader), [&read_image_done](BufferPtr buffer) {
     read_image_done = true;
   });
 
-  uploader->Submit([]() {});
+  uploader.Submit([]() {});
 
   escher->vk_device().waitIdle();
   EXPECT_TRUE(escher->Cleanup());
@@ -328,7 +326,7 @@ VK_TEST(BatchGpuUploader, ReadBufferTest) {
   verts[2] = vec3(1.f, 0.f, 0.f);
 
   // Do read.
-  BatchGpuUploaderPtr uploader = BatchGpuUploader::New(escher, 0);
+  std::unique_ptr<BatchGpuUploader> uploader = BatchGpuUploader::New(escher, 0);
   auto reader = uploader->AcquireReader(buffer_size);
   reader->ReadBuffer(vertex_buffer, {0, 0, vertex_buffer->size()});
   // Verify that the "upload done" Semaphore was set on the buffer.

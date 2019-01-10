@@ -20,9 +20,6 @@
 namespace escher {
 namespace impl {
 
-class CommandBufferPool;
-class GpuUploader;
-
 // Allow client to obtain new or recycled Images.  All Images obtained from an
 // ImageCache must be destroyed before the ImageCache is destroyed.
 //

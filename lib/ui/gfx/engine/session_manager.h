@@ -32,10 +32,9 @@ class UpdateScheduler;
 // accessed outside of that.
 class CommandContext {
  public:
-  CommandContext(escher::BatchGpuUploaderPtr uploader);
+  CommandContext(std::unique_ptr<escher::BatchGpuUploader> uploader);
 
   escher::BatchGpuUploader* batch_gpu_uploader() const {
-    FXL_DCHECK(batch_gpu_uploader_.get());
     return batch_gpu_uploader_.get();
   }
 
@@ -43,7 +42,7 @@ class CommandContext {
   void Flush();
 
  private:
-  escher::BatchGpuUploaderPtr batch_gpu_uploader_;
+  std::unique_ptr<escher::BatchGpuUploader> batch_gpu_uploader_;
 };
 
 // Manages a collection of SessionHandlers.

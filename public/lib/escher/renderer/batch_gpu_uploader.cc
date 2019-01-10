@@ -13,16 +13,15 @@
 namespace escher {
 
 /* static */
-BatchGpuUploaderPtr BatchGpuUploader::New(EscherWeakPtr weak_escher,
-                                          int64_t frame_trace_number) {
+std::unique_ptr<BatchGpuUploader> BatchGpuUploader::New(
+    EscherWeakPtr weak_escher, int64_t frame_trace_number) {
   if (!weak_escher) {
-    // Allow creation without an escher for tests. This class is not functional
-    // without a valid escher.
+    // This class is not functional without a valid escher.
     FXL_LOG(WARNING) << "Error, creating a BatchGpuUploader without an escher.";
-    return fxl::AdoptRef(new BatchGpuUploader());
+    return nullptr;
   }
-  return fxl::AdoptRef(
-      new BatchGpuUploader(std::move(weak_escher), frame_trace_number));
+  return std::make_unique<BatchGpuUploader>(std::move(weak_escher),
+                                            frame_trace_number);
 }
 
 BatchGpuUploader::Writer::Writer(CommandBufferPtr command_buffer,
@@ -279,11 +278,6 @@ void BatchGpuUploader::PostReader(
 }
 
 void BatchGpuUploader::Submit(fit::function<void()> callback) {
-  if (dummy_for_tests_) {
-    FXL_LOG(WARNING) << "Dummy BatchGpuUploader for tests, skip submit";
-    return;
-  }
-
   // TODO(SCN-846) Relax this check once Writers are backed by secondary
   // buffers, and the frame's primary command buffer is not moved into the
   // Writer.

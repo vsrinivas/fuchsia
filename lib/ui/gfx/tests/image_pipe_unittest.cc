@@ -27,7 +27,7 @@ class DummyImage : public Image {
   uint32_t update_count_ = 0;
 
  protected:
-  bool UpdatePixels() override {
+  bool UpdatePixels(escher::BatchGpuUploader* uploader) override {
     ++update_count_;
     // Update pixels returns the new dirty state. False will stop additional
     // calls to UpdatePixels() until the image is marked dirty.
@@ -348,6 +348,9 @@ TEST_F(ImagePipeTest, ImagePipePresentTwoFrames) {
 TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   auto image_pipe = fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
       session_.get(), this, update_scheduler_.get());
+  zx::time now = Now();
+  zx::time now_ish = now + zx::sec(2);
+  zx::time later = now + zx::sec(5);
 
   // Image A is a 2x2 image with id=2.
   // Image B is a 4x4 image with id=4.
@@ -364,12 +367,12 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
       imageIdB, std::move(image_info_b), CopyVmo(gradient_b->vmo()), 0,
       GetVmoSize(gradient_b->vmo()), fuchsia::images::MemoryType::HOST_MEMORY);
 
-  image_pipe->PresentImage(imageIdA, 0, std::vector<zx::event>(),
+  image_pipe->PresentImage(imageIdA, now_ish.get(), std::vector<zx::event>(),
                            std::vector<zx::event>(), nullptr);
-  image_pipe->PresentImage(imageIdB, 0, std::vector<zx::event>(),
+  image_pipe->PresentImage(imageIdB, now_ish.get(), std::vector<zx::event>(),
                            std::vector<zx::event>(), nullptr);
 
-  RunLoopUntilIdle();
+  RunLoopUntil(later);
 
   auto image_out = image_pipe->GetEscherImage();
   // We should get the second image in the queue, since both should have been
@@ -380,29 +383,31 @@ TEST_F(ImagePipeTest, ImagePipeUpdateTwoFrames) {
   ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
   ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 1u);
 
+  zx::time even_later = later + zx::sec(1);
+  zx::time much_later = even_later + zx::sec(2);
   // Do it again, to make sure that update is called a second time (since
   // released images could be edited by the client before presentation).
   //
   // In this case, we need to run to idle after presenting image A, so that
   // image B is returned by the pool, marked dirty, and is free to be acquired
   // again.
-  image_pipe->PresentImage(imageIdA, 0, std::vector<zx::event>(),
+  image_pipe->PresentImage(imageIdA, even_later.get(), std::vector<zx::event>(),
                            std::vector<zx::event>(), nullptr);
-  RunLoopUntilIdle();
-  image_pipe->PresentImage(imageIdB, 0, std::vector<zx::event>(),
+  RunLoopUntil(even_later);
+  image_pipe->PresentImage(imageIdB, even_later.get(), std::vector<zx::event>(),
                            std::vector<zx::event>(), nullptr);
-  RunLoopUntilIdle();
+  RunLoopUntil(much_later);
 
   image_out = image_pipe->GetEscherImage();
   ASSERT_EQ(image_pipe->dummy_images_.size(), 2u);
-  // Because we never called GetEscherImage() on the ImagePool while image A was
-  // presented, we should still have zero calls to UpdatePixels for that image.
-  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 0u);
+  // Because Present was handled for image A, we should have a call to
+  // UpdatePixels for that image.
+  ASSERT_EQ(image_pipe->dummy_images_[0]->update_count_, 1u);
   ASSERT_EQ(image_pipe->dummy_images_[1]->update_count_, 2u);
 }
 
 // Present two frames on the ImagePipe. After presenting the first image but
-// before signalling its acquire fence, remove it. Verify that this doesn't
+// before signaling its acquire fence, remove it. Verify that this doesn't
 // cause any errors.
 TEST_F(ImagePipeTest, ImagePipeRemoveImageThatIsPendingPresent) {
   ImagePipePtr image_pipe =

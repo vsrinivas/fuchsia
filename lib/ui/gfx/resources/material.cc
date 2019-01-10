@@ -31,10 +31,11 @@ void Material::SetTexture(ImageBasePtr texture_image) {
   texture_ = std::move(texture_image);
 }
 
-void Material::UpdateEscherMaterial() {
+void Material::UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader) {
   // Update our escher::Material if our texture's presented image changed.
   escher::ImagePtr escher_image;
   if (texture_) {
+    texture_->UpdateEscherImage(gpu_uploader);
     escher_image = texture_->GetEscherImage();
   }
   const escher::TexturePtr& escher_texture = escher_material_->texture();

@@ -17,6 +17,7 @@
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "lib/escher/hmd/pose_buffer_latching_shader.h"
 #include "lib/escher/impl/image_cache.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/renderer/paper_renderer.h"
 #include "lib/escher/renderer/shadow_map.h"
 #include "lib/escher/renderer/shadow_map_renderer.h"
@@ -182,8 +183,15 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
   escher::Stage stage;
   InitEscherStage(&stage, layer->GetViewingVolume(), scene->ambient_lights(),
                   scene->directional_lights());
-  escher::Model model(renderer->CreateDisplayList(renderer->camera()->scene(),
-                                                  escher::vec2(layer->size())));
+
+  // The BatchGpuUploader is here to update the textures for Materials that are
+  // used in the scene, if and only if the backing image is dirty.
+  // TODO(SCN-1219) See if these updates can be consolidated with the batched
+  // uploads when Sessions are updated.
+  escher::BatchGpuUploader gpu_uploader(escher_, frame->frame_number());
+  escher::Model model(renderer->CreateDisplayList(
+      renderer->camera()->scene(), escher::vec2(layer->size()), &gpu_uploader));
+  gpu_uploader.Submit();
 
   // Set the renderer's shadow mode, and generate a shadow map if necessary.
   escher::ShadowMapPtr shadow_map;

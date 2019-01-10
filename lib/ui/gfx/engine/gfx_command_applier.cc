@@ -454,7 +454,7 @@ bool GfxCommandApplier::ApplyTakeSnapshotCmdHACK(
 
         auto gpu_uploader =
             escher::BatchGpuUploader::New(context.escher->GetWeakPtr());
-        Snapshotter snapshotter(gpu_uploader);
+        Snapshotter snapshotter(std::move(gpu_uploader));
         // Take a snapshot and return the data in callback. The closure does
         // not need the snapshotter instance and is invoked after the instance
         // is destroyed.

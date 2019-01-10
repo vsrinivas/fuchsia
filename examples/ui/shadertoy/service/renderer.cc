@@ -10,6 +10,7 @@
 #include "lib/escher/geometry/tessellation.h"
 #include "lib/escher/impl/command_buffer.h"
 #include "lib/escher/impl/mesh_manager.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/util/image_utils.h"
 #include "lib/escher/vk/framebuffer.h"
 #include "lib/escher/vk/image.h"
@@ -198,9 +199,12 @@ escher::TexturePtr Renderer::CreateWhiteTexture() {
 
   escher::ImageFactoryAdapter image_factory(escher()->gpu_allocator(),
                                             escher()->resource_recycler());
+  escher::BatchGpuUploader uploader =
+      escher::BatchGpuUploader(escher()->GetWeakPtr(), /* frame_number= */ 0);
+  auto image = escher::image_utils::NewRgbaImage(&image_factory, &uploader, 1,
+                                                 1, channels);
+  uploader.Submit();
 
-  auto image = escher::image_utils::NewRgbaImage(
-      &image_factory, escher()->gpu_uploader(), 1, 1, channels);
   return fxl::MakeRefCounted<escher::Texture>(
       escher()->resource_recycler(), std::move(image), vk::Filter::eNearest);
 }

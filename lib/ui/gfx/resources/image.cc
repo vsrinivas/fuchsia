@@ -36,9 +36,13 @@ ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
   }
 }
 
+void Image::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) {
+  if (dirty_) {
+    dirty_ = UpdatePixels(gpu_uploader);
+  }
+}
+
 const escher::ImagePtr& Image::GetEscherImage() {
-  if (dirty_)
-    dirty_ = UpdatePixels();
   static const escher::ImagePtr kNullEscherImage;
   return dirty_ ? kNullEscherImage : image_;
 }

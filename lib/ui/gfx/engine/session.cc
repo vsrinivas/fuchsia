@@ -63,9 +63,8 @@ Session::Session(SessionId id, SessionContext session_context,
                              : escher::VulkanDeviceQueues::Caps(),
                          session_context_.imported_memory_type_index,
                          session_context_.escher_resource_recycler,
-                         session_context_.escher_image_factory,
-                         session_context_.escher_gpu_uploader}),
-      resources_(error_reporter_),
+                         session_context_.escher_image_factory}),
+      resources_(error_reporter),
       weak_factory_(this) {
   FXL_DCHECK(error_reporter);
 }
@@ -151,7 +150,7 @@ bool Session::ScheduleUpdate(
 
   auto acquire_fence_set =
       std::make_unique<escher::FenceSetListener>(std::move(acquire_fences));
-  // TODO: Consider calling ScheduleUpdateForSession immediately if
+  // TODO(SCN-1201): Consider calling ScheduleUpdateForSession immediately if
   // acquire_fence_set is already ready (which is the case if there are
   // zero acquire fences).
 
@@ -234,7 +233,7 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
 
       scheduled_updates_.pop();
 
-      // TODO: gather statistics about how close the actual
+      // TODO(SCN-1202): gather statistics about how close the actual
       // presentation_time was to the requested time.
     } else {
       // An error was encountered while applying the update.
@@ -251,20 +250,35 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
     }
   }
 
-  // TODO: Unify with other session updates.
+  // TODO(SCN-1219): Unify with other session updates.
+  std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <=
              presentation_time) {
-    // The bool returned from Update() is 0 or 1, and needs_render is 0 or 1, so
-    // bitwise |= is used which doesn't short-circuit.
     if (scheduled_image_pipe_updates_.top().image_pipe) {
-      update_results.needs_render |=
+      bool image_updated =
           scheduled_image_pipe_updates_.top().image_pipe->Update(
               session_context_.release_fence_signaller, presentation_time,
               presentation_interval);
+      // Only upload images that were updated and are currently dirty, and only
+      // do one upload per ImagePipe.
+      if (image_updated) {
+        image_pipe_updates_to_upload.try_emplace(
+            scheduled_image_pipe_updates_.top().image_pipe->id(),
+            std::move(scheduled_image_pipe_updates_.top().image_pipe));
+      }
     }
     scheduled_image_pipe_updates_.pop();
   }
+
+  // Stage GPU uploads for the latest dirty image on each updated ImagePipe.
+  for (const auto& entry : image_pipe_updates_to_upload) {
+    ImagePipePtr image_pipe = entry.second;
+    image_pipe->UpdateEscherImage(command_context->batch_gpu_uploader());
+    // Image was updated so the image in the scene is dirty.
+    update_results.needs_render = true;
+  }
+  image_pipe_updates_to_upload.clear();
 
   update_results.success = true;
   return update_results;

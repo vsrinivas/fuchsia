@@ -117,18 +117,18 @@ ImagePtr HostImage::New(Session* session, ResourceId id, MemoryPtr memory,
   return host_image;
 }
 
-bool HostImage::UpdatePixels() {
-  TRACE_DURATION("gfx", "UpdatePixels");
-
-  // TODO(SCN-844): Migrate this over to using the batch gpu uploader.
-  if (session()->resource_context().escher_gpu_uploader) {
-    escher::image_utils::WritePixelsToImage(
-        session()->resource_context().escher_gpu_uploader,
-        static_cast<uint8_t*>(memory_->host_ptr()) + memory_offset_, image_,
-        image_conversion_function_);
-    return false;
+bool HostImage::UpdatePixels(escher::BatchGpuUploader* gpu_uploader) {
+  if (!gpu_uploader) {
+    FXL_LOG(WARNING) << "No BatchGpuUploader, cannot UpdatePixels.";
+    return true;
   }
-  return true;
+
+  TRACE_DURATION("gfx", "UpdatePixels");
+  escher::image_utils::WritePixelsToImage(
+      gpu_uploader, static_cast<uint8_t*>(memory_->host_ptr()) + memory_offset_,
+      image_, image_conversion_function_);
+  // Pixels have been updated, dirty state is now false.
+  return false;
 }
 
 }  // namespace gfx

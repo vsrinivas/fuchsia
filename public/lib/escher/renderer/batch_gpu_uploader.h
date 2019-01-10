@@ -9,18 +9,13 @@
 
 #include <lib/fit/function.h>
 
-#include "lib/escher/base/reffable.h"
 #include "lib/escher/escher.h"
-#include "lib/escher/forward_declarations.h"
 #include "lib/escher/renderer/buffer_cache.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/vk/buffer.h"
 #include "lib/escher/vk/command_buffer.h"
 
 namespace escher {
-
-class BatchGpuUploader;
-using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
 
 // Provides host-accessible GPU memory for clients to upload Images and Buffers
 // to the GPU. Offers the ability to batch uploads into consolidated submissions
@@ -30,11 +25,12 @@ using BatchGpuUploaderPtr = fxl::RefPtr<BatchGpuUploader>;
 //
 // TODO (SCN-1197) Add memory barriers so the BatchGpuUploader can handle
 // reads and writes on the same Resource in the same batch.
-class BatchGpuUploader : public Reffable {
+class BatchGpuUploader {
  public:
-  static BatchGpuUploaderPtr New(EscherWeakPtr weak_escher,
-                                 int64_t frame_trace_number = 0);
+  static std::unique_ptr<BatchGpuUploader> New(EscherWeakPtr weak_escher,
+                                               int64_t frame_trace_number = 0);
 
+  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_numberi = 0);
   ~BatchGpuUploader();
 
   // Provides a pointer in host-accessible GPU memory, and methods to copy this
@@ -140,9 +136,6 @@ class BatchGpuUploader : public Reffable {
   void Submit(fit::function<void()> callback = nullptr);
 
  private:
-  BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number);
-  BatchGpuUploader() : frame_trace_number_(0) { dummy_for_tests_ = true; }
-
   static void SemaphoreAssignmentHelper(SemaphorePtr batch_done_semaphore,
                                         WaitableResource* resource,
                                         CommandBuffer* command_buffer);
@@ -160,12 +153,6 @@ class BatchGpuUploader : public Reffable {
   BufferCacheWeakPtr buffer_cache_;
   FramePtr frame_;
   SemaphorePtr batched_commands_done_semaphore_;
-
-  // Temporary flag for tests that need to build and run with a null escher.
-  // Allows the uploader to be created and skips submit without crashing, but
-  // when this flag is set, BatchGpuUploader is not functional and does not
-  // provide any dummy functionality.
-  bool dummy_for_tests_ = false;
 
   std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>>
       read_callbacks_;

@@ -16,10 +16,9 @@
 #include "lib/escher/vk/image.h"
 
 namespace escher {
+class BatchGpuUploader;
 class ImageFactory;
-namespace impl {
-class GpuUploader;
-}
+
 namespace image_utils {
 
 #ifdef __Fuchsia__
@@ -89,8 +88,8 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
 // Note that all escher images are stored in GPU memory.  The use of gpu_image
 // here is to specifically differentiate it from pixels, which may be stored in
 // host_memory.
-void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
-                        ImagePtr gpu_image,
+void WritePixelsToImage(escher::BatchGpuUploader* batch_gpu_uploader,
+                        uint8_t* pixels, ImagePtr gpu_image,
                         const escher::image_utils::ImageConversionFunction&
                             convertion_func = nullptr);
 
@@ -101,7 +100,7 @@ void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
-                      impl::GpuUploader* gpu_uploader, uint32_t width,
+                      BatchGpuUploader* gpu_uploader, uint32_t width,
                       uint32_t height, uint8_t* bytes);
 
 // Returns RGBA image.
@@ -109,7 +108,7 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory,
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
 ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
-                              impl::GpuUploader* gpu_uploader, uint32_t width,
+                              BatchGpuUploader* gpu_uploader, uint32_t width,
                               uint32_t height);
 
 // Returns RGBA image.
@@ -117,7 +116,7 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
 ImagePtr NewGradientImage(ImageFactory* image_factory,
-                          impl::GpuUploader* gpu_uploader, uint32_t width,
+                          BatchGpuUploader* gpu_uploader, uint32_t width,
                           uint32_t height);
 
 // Returns single-channel luminance image containing white noise.
@@ -125,8 +124,8 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
 // case a new Image might be created, or an existing one reused). Alternatively
 // the factory could allocate a new Image every time.
 ImagePtr NewNoiseImage(
-    ImageFactory* image_factory, impl::GpuUploader* gpu_uploader,
-    uint32_t width, uint32_t height,
+    ImageFactory* image_factory, BatchGpuUploader* gpu_uploader, uint32_t width,
+    uint32_t height,
     vk::ImageUsageFlags additional_flags = vk::ImageUsageFlags());
 
 // Return RGBA pixels containing a checkerboard pattern, where each white/black

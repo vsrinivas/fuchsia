@@ -8,6 +8,10 @@
 #include "garnet/lib/ui/gfx/resources/resource.h"
 #include "lib/escher/material/material.h"
 
+namespace escher {
+class BatchGpuUploader;
+}  // namespace escher
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -37,8 +41,8 @@ class Material : public Resource {
 
   void Accept(class ResourceVisitor* visitor) override;
 
-  // Called at presentation time to allow ImagePipes to update current image.
-  void UpdateEscherMaterial();
+  // Called at presentation time to allow Image(Pipes) to update current image.
+  void UpdateEscherMaterial(escher::BatchGpuUploader* gpu_uploader);
 
  private:
   escher::MaterialPtr escher_material_;

@@ -220,7 +220,7 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
   }
   current_release_fences_ = std::move(next_release_fences);
   current_image_id_ = next_image_id;
-  // TODO(SCN-1010): Determine proper signalling for marking images as dirty.
+  // TODO(SCN-1010): Determine proper signaling for marking images as dirty.
   // For now, mark all released images as dirty, with the assumption that the
   // client will likely write into the buffer before submitting it again.
   if (current_image_) {
@@ -229,6 +229,12 @@ bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,
   current_image_ = std::move(next_image);
 
   return true;
+}
+
+void ImagePipe::UpdateEscherImage(escher::BatchGpuUploader* gpu_uploader) {
+  if (current_image_) {
+    current_image_->UpdateEscherImage(gpu_uploader);
+  }
 }
 
 const escher::ImagePtr& ImagePipe::GetEscherImage() {

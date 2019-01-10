@@ -49,8 +49,7 @@ class SnapshotterTest : public VkSessionTest {
 
 VK_TEST_F(SnapshotterTest, DISABLED_Creation) {
   auto escher = escher::test::GetEscher()->GetWeakPtr();
-  auto uploader = escher::BatchGpuUploader::New(escher);
-  Snapshotter snapshotter(uploader);
+  Snapshotter snapshotter(escher::BatchGpuUploader::New(escher));
 
   auto entity = FindResource<EntityNode>(kParentId);
   ASSERT_NE(nullptr, entity.get());

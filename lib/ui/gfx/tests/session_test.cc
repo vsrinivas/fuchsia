@@ -41,7 +41,6 @@ SessionContext SessionTest::CreateBarebonesSessionContext() {
       0,                        // imported_memory_type_index;
       nullptr,                  // escher::ResourceRecycler
       nullptr,                  // escher::ImageFactory*
-      nullptr,                  // escher::impl::GpuUploader*
       nullptr,                  // escher::RoundedRectFactory*
       nullptr,                  // escher::ReleaseFenceSignaller*
       nullptr,                  // EventTimestamper*

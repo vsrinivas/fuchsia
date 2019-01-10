@@ -6,8 +6,8 @@
 
 #include <random>
 
-#include "lib/escher/impl/gpu_uploader.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/escher/vk/image_factory.h"
 
@@ -170,10 +170,10 @@ ImagePtr NewImage(ImageFactory* image_factory, vk::Format format,
   return image;
 }
 
-void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
+void WritePixelsToImage(BatchGpuUploader* batch_gpu_uploader, uint8_t* pixels,
                         ImagePtr image,
                         const ImageConversionFunction& conversion_func) {
-  FXL_DCHECK(gpu_uploader);
+  FXL_DCHECK(batch_gpu_uploader);
   FXL_DCHECK(image);
   FXL_DCHECK(pixels);
 
@@ -181,11 +181,12 @@ void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
   size_t width = image->info().width;
   size_t height = image->info().height;
 
-  auto writer = gpu_uploader->GetWriter(width * height * bytes_per_pixel);
+  auto writer =
+      batch_gpu_uploader->AcquireWriter(width * height * bytes_per_pixel);
   if (!conversion_func) {
-    std::memcpy(writer.ptr(), pixels, width * height * bytes_per_pixel);
+    std::memcpy(writer->host_ptr(), pixels, width * height * bytes_per_pixel);
   } else {
-    conversion_func(writer.ptr(), pixels, width, height);
+    conversion_func(writer->host_ptr(), pixels, width, height);
   }
 
   vk::BufferImageCopy region;
@@ -198,12 +199,12 @@ void WritePixelsToImage(impl::GpuUploader* gpu_uploader, uint8_t* pixels,
   region.imageExtent.depth = 1;
   region.bufferOffset = 0;
 
-  writer.WriteImage(image, region, Semaphore::New(gpu_uploader->device()));
-  writer.Submit();
+  writer->WriteImage(image, region);
+  batch_gpu_uploader->PostWriter(std::move(writer));
 }
 
 ImagePtr NewRgbaImage(ImageFactory* image_factory,
-                      impl::GpuUploader* gpu_uploader, uint32_t width,
+                      BatchGpuUploader* gpu_uploader, uint32_t width,
                       uint32_t height, uint8_t* pixels) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
@@ -216,7 +217,7 @@ ImagePtr NewRgbaImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
-                              impl::GpuUploader* gpu_uploader, uint32_t width,
+                              BatchGpuUploader* gpu_uploader, uint32_t width,
                               uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
@@ -230,7 +231,7 @@ ImagePtr NewCheckerboardImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewGradientImage(ImageFactory* image_factory,
-                          impl::GpuUploader* gpu_uploader, uint32_t width,
+                          BatchGpuUploader* gpu_uploader, uint32_t width,
                           uint32_t height) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);
@@ -245,7 +246,7 @@ ImagePtr NewGradientImage(ImageFactory* image_factory,
 }
 
 ImagePtr NewNoiseImage(ImageFactory* image_factory,
-                       impl::GpuUploader* gpu_uploader, uint32_t width,
+                       BatchGpuUploader* gpu_uploader, uint32_t width,
                        uint32_t height, vk::ImageUsageFlags additional_flags) {
   FXL_DCHECK(image_factory);
   FXL_DCHECK(gpu_uploader);

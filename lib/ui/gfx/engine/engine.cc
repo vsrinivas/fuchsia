@@ -102,7 +102,7 @@ CommandContext InitializeCommandContext(bool has_vulkan,
                                         uint64_t frame_number_for_tracing) {
   return CommandContext(has_vulkan ? escher::BatchGpuUploader::New(
                                          escher, frame_number_for_tracing)
-                                   : escher::BatchGpuUploaderPtr());
+                                   : nullptr);
 }
 
 bool Engine::UpdateSessions(uint64_t presentation_time,

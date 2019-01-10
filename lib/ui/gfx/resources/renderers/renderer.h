@@ -10,6 +10,10 @@
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "lib/escher/scene/object.h"
 
+namespace escher {
+class BatchGpuUploader;
+}  // namespace escher
+
 namespace scenic_impl {
 namespace gfx {
 
@@ -31,8 +35,9 @@ class Renderer : public Resource {
   Renderer(Session* session, ResourceId id);
   ~Renderer();
 
-  std::vector<escher::Object> CreateDisplayList(const ScenePtr& scene,
-                                                escher::vec2 screen_dimensions);
+  std::vector<escher::Object> CreateDisplayList(
+      const ScenePtr& scene, escher::vec2 screen_dimensions,
+      escher::BatchGpuUploader* uploader);
 
   // |Resource|
   void Accept(class ResourceVisitor* visitor) override;
@@ -55,8 +60,37 @@ class Renderer : public Resource {
   }
 
  private:
+  // Context for a Visitor.
+  // The VisitorContext is only valid during a Visitor pass, and should not be
+  // accessed outside of that.
+  struct VisitorContext {
+    VisitorContext() {}
+    VisitorContext(const escher::MaterialPtr& default_material, float opacity,
+                   bool disable_clipping, escher::BatchGpuUploader* uploader)
+        : default_material(default_material),
+          opacity(opacity),
+          disable_clipping(disable_clipping),
+          batch_gpu_uploader(uploader) {}
+    VisitorContext(const VisitorContext& other_context)
+        : default_material(other_context.default_material),
+          opacity(other_context.opacity),
+          disable_clipping(other_context.disable_clipping),
+          batch_gpu_uploader(other_context.batch_gpu_uploader) {}
+
+    const escher::MaterialPtr default_material;
+    // Opacity needs to be separate from default material since default material
+    // is null for geometry that can serve as clippers.
+    float opacity = 1.0f;
+    const bool disable_clipping = false;
+    // Client managing the VisitorContext must guarantee this to be valid for
+    // the lifetime of the Visitor.
+    escher::BatchGpuUploader* batch_gpu_uploader;
+  };
+
   class Visitor : public ResourceVisitor {
    public:
+    explicit Visitor(Renderer::VisitorContext context);
+
     std::vector<escher::Object> TakeDisplayList();
 
     void Visit(Memory* r) override;
@@ -86,24 +120,17 @@ class Renderer : public Resource {
     void Visit(PointLight* r) override;
     void Visit(Import* r) override;
 
-   protected:
    private:
-    friend class Renderer;
-    Visitor(const escher::MaterialPtr& default_material, float opacity,
-            bool disable_clipping);
-
     // Visits a node and all it's children.
     void VisitNode(Node* r);
     // Called by |VisitNode|. Determines if a node and its children are clipped,
     // and generates clipped geometry if so.
     void VisitAndMaybeClipNode(Node* r);
+    std::vector<escher::Object> GenerateClippeeDisplayList(Node* r);
+    std::vector<escher::Object> GenerateClipperDisplayList(Node* r);
 
     std::vector<escher::Object> display_list_;
-    escher::MaterialPtr default_material_;
-    // Opacity needs to be separate from default material since default material
-    // is null for geometry that can serve as clippers.
-    float opacity_;
-    const bool disable_clipping_;
+    Renderer::VisitorContext context_;
   };
 
   CameraPtr camera_;

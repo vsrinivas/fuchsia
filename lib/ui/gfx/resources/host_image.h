@@ -47,7 +47,7 @@ class HostImage : public Image {
   // updated.
 
  protected:
-  bool UpdatePixels() override;
+  bool UpdatePixels(escher::BatchGpuUploader* gpu_uploader) override;
 
  private:
   // Create an Image object from a escher::Image.

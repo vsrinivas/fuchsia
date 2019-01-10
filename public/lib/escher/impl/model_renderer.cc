@@ -253,8 +253,7 @@ TexturePtr ModelRenderer::CreateWhiteTexture(Escher* escher) {
   uint8_t channels[4];
   channels[0] = channels[1] = channels[2] = channels[3] = 255;
 
-  auto image = image_utils::NewRgbaImage(
-      escher->image_cache(), escher->gpu_uploader(), 1, 1, channels);
+  auto image = escher->NewRgbaImage(1, 1, channels);
   return fxl::MakeRefCounted<Texture>(escher->resource_recycler(),
                                       std::move(image), vk::Filter::eNearest);
 }

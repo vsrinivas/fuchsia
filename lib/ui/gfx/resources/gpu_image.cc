@@ -124,7 +124,9 @@ GpuImagePtr GpuImage::New(Session* session, ResourceId id, MemoryPtr memory,
                                     escher_image_info, vk_image));
 }
 
-bool GpuImage::UpdatePixels() { return false; }
+bool GpuImage::UpdatePixels(escher::BatchGpuUploader* uploader) {
+  return false;
+}
 
 }  // namespace gfx
 }  // namespace scenic_impl

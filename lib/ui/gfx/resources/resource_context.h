@@ -28,8 +28,6 @@ struct ResourceContext {
   uint32_t imported_memory_type_index;
   escher::ResourceRecycler* escher_resource_recycler;
   escher::ImageFactory* escher_image_factory;
-  // TODO(SCN-1173): Remove |escher_gpu_uploader| from here.
-  escher::impl::GpuUploader* escher_gpu_uploader;
 };
 
 }  // namespace gfx

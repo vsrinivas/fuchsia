@@ -121,6 +121,8 @@ class Escher : public MeshBuilderFactory, public ShaderProgramFactory {
 
   ResourceRecycler* resource_recycler() { return resource_recycler_.get(); }
   GpuAllocator* gpu_allocator() { return gpu_allocator_.get(); }
+  // TODO(SCN-838) Remove deprecated impl::GpuUploader. Use BatchGpuUploader
+  // instead.
   impl::GpuUploader* gpu_uploader() { return gpu_uploader_.get(); }
   impl::CommandBufferSequencer* command_buffer_sequencer() {
     return command_buffer_sequencer_.get();

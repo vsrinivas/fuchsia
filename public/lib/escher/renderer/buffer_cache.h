@@ -84,4 +84,4 @@ class BufferCache : public ResourceRecycler {
 
 }  // namespace escher
 
-#endif  // LIB_ESCHER_RENDERER_BATCH_GPU_UPLOADER_H_
+#endif  // LIB_ESCHER_RENDERER_BUFFER_CACHE_H_

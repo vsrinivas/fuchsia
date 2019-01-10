@@ -27,7 +27,7 @@ using TakeSnapshotCallback = fit::function<void(::fuchsia::mem::Buffer)>;
 // generates the flatbuffer in |TakeSnapshot|.
 class Snapshotter : public ResourceVisitor {
  public:
-  Snapshotter(escher::BatchGpuUploaderPtr gpu_uploader);
+  Snapshotter(std::unique_ptr<escher::BatchGpuUploader> gpu_uploader);
   virtual ~Snapshotter() = default;
 
   // Takes the snapshot of the |node| and calls the |callback| with a
@@ -73,7 +73,7 @@ class Snapshotter : public ResourceVisitor {
   void ReadBuffer(escher::BufferPtr buffer,
                   fit::function<void(escher::BufferPtr buffer)> callback);
 
-  escher::BatchGpuUploaderPtr gpu_uploader_;
+  std::unique_ptr<escher::BatchGpuUploader> gpu_uploader_;
 
   // Holds the current serializer for the scenic node being serialized. This is
   // needed when visiting node's content like mesh, material and images.

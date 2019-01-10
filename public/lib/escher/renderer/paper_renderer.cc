@@ -21,6 +21,7 @@
 #include "lib/escher/impl/ssdo_accelerator.h"
 #include "lib/escher/impl/ssdo_sampler.h"
 #include "lib/escher/impl/vulkan_utils.h"
+#include "lib/escher/renderer/batch_gpu_uploader.h"
 #include "lib/escher/renderer/frame.h"
 #include "lib/escher/renderer/moment_shadow_map.h"
 #include "lib/escher/renderer/shadow_map.h"
@@ -66,13 +67,6 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
       model_data_(std::move(model_data)),
       model_renderer_(
           impl::ModelRenderer::New(GetEscherWeakPtr(), model_data_)),
-      ssdo_(std::make_unique<impl::SsdoSampler>(
-          GetEscherWeakPtr(), full_screen_,
-          image_utils::NewNoiseImage(image_cache_, escher()->gpu_uploader(),
-                                     impl::SsdoSampler::kNoiseSize,
-                                     impl::SsdoSampler::kNoiseSize,
-                                     vk::ImageUsageFlagBits::eSampled),
-          model_data_.get())),
       ssdo_accelerator_(std::make_unique<impl::SsdoAccelerator>(
           GetEscherWeakPtr(), image_cache_)),
       depth_to_color_(
@@ -80,7 +74,15 @@ PaperRenderer::PaperRenderer(EscherWeakPtr weak_escher,
       clear_values_(
           {vk::ClearColorValue(std::array<float, 4>{{0.f, 0.f, 0.f, 1.f}}),
            vk::ClearDepthStencilValue(kMaxDepth, 0)}),
-      ambient_light_color_(1.f) {}
+      ambient_light_color_(1.f) {
+  escher::BatchGpuUploader uploader(GetEscherWeakPtr(), 0);
+  ImagePtr ssdo_image = image_utils::NewNoiseImage(
+      image_cache_, &uploader, impl::SsdoSampler::kNoiseSize,
+      impl::SsdoSampler::kNoiseSize, vk::ImageUsageFlagBits::eSampled);
+  uploader.Submit();
+  ssdo_ = std::make_unique<impl::SsdoSampler>(GetEscherWeakPtr(), full_screen_,
+                                              ssdo_image, model_data_.get());
+}
 
 PaperRenderer::~PaperRenderer() { escher()->Cleanup(); }
 

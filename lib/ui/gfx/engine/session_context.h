@@ -39,8 +39,6 @@ struct SessionContext {
   uint32_t imported_memory_type_index;
   escher::ResourceRecycler* escher_resource_recycler;
   escher::ImageFactory* escher_image_factory;
-  // TODO(SCN-1173): Remove |escher_gpu_uploader| from here.
-  escher::impl::GpuUploader* escher_gpu_uploader;
   // TODO(SCN-1168): Remove |escher_rounded_rect_factory| from here.
   escher::RoundedRectFactory* escher_rounded_rect_factory;
   escher::ReleaseFenceSignaller* release_fence_signaller;
