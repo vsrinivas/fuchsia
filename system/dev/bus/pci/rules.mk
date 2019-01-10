@@ -11,7 +11,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 MODULE_NAME := bus-pci
 MODULE_SRCS := \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/bus.cpp \
     $(LOCAL_DIR)/config.cpp
 
