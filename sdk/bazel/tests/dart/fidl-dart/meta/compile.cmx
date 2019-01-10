@@ -2,5 +2,5 @@
     "program": {
         "data": "data/compile"
     },
-    "runner": "dart_jit_runner"
+    "runner": "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cmx"
 }

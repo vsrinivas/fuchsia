@@ -2,5 +2,18 @@
     "program": {
         "data": "data/app"
     },
-    "runner": "flutter_jit_runner"
+    "sandbox": {
+        "services": [
+            "fuchsia.fonts.Provider",
+            "fuchsia.modular.Clipboard",
+            "fuchsia.modular.ContextWriter",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Environment",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ]
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/flutter_jit_runner#meta/flutter_jit_runner.cmx"
 }
