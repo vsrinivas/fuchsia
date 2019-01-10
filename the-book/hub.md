@@ -89,6 +89,16 @@ The hub is organized as follows:
 > This directory tree is managed by the system to expose system-level
 > information about the components.
 
+**\<component instance id\>/in/**: component's incoming namespace
+> A directory tree exposing objects that have been offered to the component by
+> its parent or are ambiently offered by the Component Framework.
+
+**\<component instance id\>/in/svc**: component's incoming services directory
+> A directory containing the services that are available to the component
+> (either from its parent or from the Component Framework).
+>
+> This maps to `/svc` in the component's own namespace.
+
 **\<component instance id\>/out/**: component’s out directory
 > A directory containing objects which the component has exported, such as its
 > services.  May be absent if the component exports nothing.  May contain
