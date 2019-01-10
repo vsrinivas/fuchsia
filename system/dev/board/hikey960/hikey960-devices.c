@@ -165,8 +165,8 @@ static const pbus_dev_t i2c_test_dev = {
 
 static const pbus_dev_t hi_display_dev = {
     .name = "hi-display",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
+    .vid = PDEV_VID_96BOARDS,
+    .pid = PDEV_PID_HIKEY960,
     .did = PDEV_DID_HI_DISPLAY,
     .mmio_list = display_mmios,
     .mmio_count = countof(display_mmios),
