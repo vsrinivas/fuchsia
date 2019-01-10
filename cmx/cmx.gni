@@ -33,7 +33,7 @@ template("cmx_module_validate") {
 # Validates a cmx file
 #
 # The cmx_validate template will ensure that a given cmx file is conformant to
-# the cmx schema, as defined by //build/tools/cmx/schema.json. A stamp file is
+# the cmx schema, as defined by //garnet/bin/cmc/schema.json. A stamp file is
 # generated to mark that a given cmx file has passed.
 #
 # Parameters
@@ -63,8 +63,8 @@ template("cmx_validate") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx"
-    tool_output_name = "cmx"
+    tool = "//garnet/bin/cmc"
+    tool_output_name = "cmc"
 
     stamp_file = "$target_gen_dir/$target_name.verified"
 
@@ -183,8 +183,8 @@ template("cmx_merge") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx"
-    tool_output_name = "cmx"
+    tool = "//garnet/bin/cmc"
+    tool_output_name = "cmc"
 
     merged_output = "$target_out_dir/$target_name"
     outputs = [
@@ -234,8 +234,8 @@ template("cmx_format") {
                              "visibility",
                            ])
 
-    tool = "//build/tools/cmx"
-    tool_output_name = "cmx"
+    tool = "//garnet/bin/cmc"
+    tool_output_name = "cmc"
 
     formatted_output = "$target_out_dir/$target_name"
     outputs = [
