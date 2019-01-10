@@ -36,6 +36,26 @@ FXL_EXPORT bool DeletePath(const std::string& path, bool recursive);
 FXL_EXPORT bool DeletePathAt(int root_fd, const std::string& path,
                              bool recursive);
 
+// Joins two paths together.
+// Regardless if |path1| has a trailing '/' or |path2| has a leading '/', there
+// will be only one '/' in-between in the joined path.
+// Note that if either path is "" then the other path is returned unchanged.
+//
+// JoinPath("/foo",   "bar") -> "/foo/bar"
+// JoinPath("/foo",  "/bar") -> "/foo/bar"
+// JoinPath("/foo/",  "bar") -> "/foo/bar"
+// JoinPath("/foo/", "/bar") -> "/foo/bar"
+//
+// JoinPath("",      "") -> ""
+// JoinPath("",  "/foo") -> "/foo"
+// JoinPath("",   "foo") -> "foo"
+// JoinPath("/foo",  "") -> "/foo"
+// JoinPath("foo",   "") -> "foo"
+// JoinPath("/foo/", "") -> "/foo/"
+// JoinPath("foo/",  "") -> "foo/"
+FXL_EXPORT std::string JoinPath(const std::string& path1,
+                                const std::string& path2);
+
 }  // namespace files
 
 #endif  // LIB_FXL_FILES_PATH_H_

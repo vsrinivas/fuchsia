@@ -241,5 +241,41 @@ TEST(Path, DeletePathRecursivelyAt) {
   EXPECT_FALSE(IsDirectoryAt(root.get(), sub_sub_dir1));
 }
 
+TEST(Path, JoinPath) {
+  EXPECT_EQ(JoinPath("foo", ""), "foo");
+  EXPECT_EQ(JoinPath("foo", "bar"), "foo/bar");
+  EXPECT_EQ(JoinPath("foo", "bar/"), "foo/bar/");
+  EXPECT_EQ(JoinPath("foo", "/bar"), "foo/bar");
+  EXPECT_EQ(JoinPath("foo", "/bar/"), "foo/bar/");
+
+  EXPECT_EQ(JoinPath("foo/", ""), "foo/");
+  EXPECT_EQ(JoinPath("foo/", ""), "foo/");
+  EXPECT_EQ(JoinPath("foo/", "bar"), "foo/bar");
+  EXPECT_EQ(JoinPath("foo/", "bar/"), "foo/bar/");
+  EXPECT_EQ(JoinPath("foo/", "/bar"), "foo/bar");
+  EXPECT_EQ(JoinPath("foo/", "/bar/"), "foo/bar/");
+
+  EXPECT_EQ(JoinPath("/foo", ""), "/foo");
+  EXPECT_EQ(JoinPath("/foo", "bar"), "/foo/bar");
+  EXPECT_EQ(JoinPath("/foo", "bar/"), "/foo/bar/");
+  EXPECT_EQ(JoinPath("/foo", "/bar"), "/foo/bar");
+  EXPECT_EQ(JoinPath("/foo", "/bar/"), "/foo/bar/");
+
+  EXPECT_EQ(JoinPath("/foo/", ""), "/foo/");
+  EXPECT_EQ(JoinPath("/foo/", "bar"), "/foo/bar");
+  EXPECT_EQ(JoinPath("/foo/", "bar/"), "/foo/bar/");
+  EXPECT_EQ(JoinPath("/foo/", "/bar"), "/foo/bar");
+  EXPECT_EQ(JoinPath("/foo/", "/bar/"), "/foo/bar/");
+
+  EXPECT_EQ(JoinPath("", ""), "");
+  EXPECT_EQ(JoinPath("", "bar"), "bar");
+  EXPECT_EQ(JoinPath("", "bar/"), "bar/");
+  EXPECT_EQ(JoinPath("", "/bar"), "/bar");
+  EXPECT_EQ(JoinPath("", "/bar/"), "/bar/");
+
+  EXPECT_EQ(JoinPath("/foo/bar/baz/", "/blah/blink/biz"),
+            "/foo/bar/baz/blah/blink/biz");
+}
+
 }  // namespace
 }  // namespace files

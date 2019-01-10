@@ -238,4 +238,23 @@ bool DeletePathAt(int root_fd, const std::string& path, bool recursive) {
   return true;
 }
 
+std::string JoinPath(const std::string& path1, const std::string& path2) {
+  if (path1.empty()) {
+    return path2;
+  }
+  if (path2.empty()) {
+    return path1;
+  }
+  if (path1.back() == '/') {
+    if (path2.front() == '/') {
+      return path1 + path2.substr(1);
+    }
+  } else {
+    if (path2.front() != '/') {
+      return path1 + "/" + path2;
+    }
+  }
+  return path1 + path2;
+}
+
 }  // namespace files
