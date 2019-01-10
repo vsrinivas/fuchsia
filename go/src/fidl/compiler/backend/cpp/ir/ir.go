@@ -154,6 +154,8 @@ type Method struct {
 	types.Attributes
 	Ordinal              types.Ordinal
 	OrdinalName          string
+	GenOrdinal           types.Ordinal
+	GenOrdinalName       string
 	Name                 string
 	HasRequest           bool
 	Request              []Parameter
@@ -601,6 +603,8 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 			v.Attributes,
 			v.Ordinal,
 			fmt.Sprintf("k%s_%s_Ordinal", r.Name, v.Name),
+			v.GenOrdinal,
+			fmt.Sprintf("k%s_%s_GenOrdinal", r.Name, v.Name),
 			name,
 			v.HasRequest,
 			c.compileParameterArray(v.Request),

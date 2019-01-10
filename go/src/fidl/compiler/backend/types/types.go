@@ -421,6 +421,7 @@ func (d *Interface) GetServiceName() string {
 type Method struct {
 	Attributes
 	Ordinal      Ordinal     `json:"ordinal"`
+	GenOrdinal   Ordinal     `json:"generated_ordinal"`
 	Name         Identifier  `json:"name"`
 	HasRequest   bool        `json:"has_request"`
 	Request      []Parameter `json:"maybe_request,omitempty"`

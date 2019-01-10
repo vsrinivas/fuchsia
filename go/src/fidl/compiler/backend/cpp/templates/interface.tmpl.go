@@ -176,7 +176,10 @@ class {{ .SyncProxyName }} : public {{ .SyncName }} {
 {{- define "InterfaceDefinition" }}
 namespace {
 
-{{ range .Methods }}
+{{- range .Methods }}
+  {{ if ne .GenOrdinal .Ordinal }}
+constexpr uint32_t {{ .GenOrdinalName }} = {{ .GenOrdinal }}u;
+  {{- end }}
 constexpr uint32_t {{ .OrdinalName }} = {{ .Ordinal }}u;
   {{- if .HasRequest }}
 extern "C" const fidl_type_t {{ .RequestTypeName }};
@@ -200,7 +203,7 @@ const char {{ .Name }}::Name_[] = {{ .ServiceName }};
 
 {{ .ProxyName }}::{{ .ProxyName }}(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
-  (void) controller_;
+  (void)controller_;
 }
 
 {{ .ProxyName }}::~{{ .ProxyName }}() = default;
@@ -211,6 +214,9 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
     {{- range .Methods }}
       {{- if not .HasRequest }}
         {{- if .HasResponse }}
+          {{- if ne .GenOrdinal .Ordinal }}
+    case {{ .GenOrdinalName }}:
+          {{- end }}
     case {{ .OrdinalName }}: {
       if (!{{ .Name }}) {
         status = ZX_OK;
@@ -252,7 +258,7 @@ zx_status_t {{ .ProxyName }}::Dispatch_(::fidl::Message message) {
 namespace {
 
 class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
-  public:
+ public:
   {{ .ResponseHandlerType }}({{ $.Name }}::{{ .CallbackType }} callback)
       : callback_(std::move(callback)) {
     ZX_DEBUG_ASSERT_MSG(callback_,
@@ -280,7 +286,7 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
     return ZX_OK;
   }
 
-  private:
+ private:
   {{ $.Name }}::{{ .CallbackType }} callback_;
 
   {{ .ResponseHandlerType }}(const {{ .ResponseHandlerType }}&) = delete;
@@ -288,7 +294,6 @@ class {{ .ResponseHandlerType }} : public ::fidl::internal::MessageHandler {
 };
 
 }  // namespace
-
 {{- end }}
 void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
   ::fidl::Encoder _encoder({{ .OrdinalName }});
@@ -308,7 +313,7 @@ void {{ $.ProxyName }}::{{ template "RequestMethodSignature" . }} {
 {{- end }}
 
 {{ .StubName }}::{{ .StubName }}({{ .ClassName }}* impl) : impl_(impl) {
-  (void) impl_;
+  (void)impl_;
 }
 
 {{ .StubName }}::~{{ .StubName }}() = default;
@@ -320,15 +325,15 @@ namespace {
 
 class {{ .ResponderType }} {
  public:
- {{ .ResponderType }}(::fidl::internal::PendingResponse response)
-      : response_(std::move(response)) {}
+  {{ .ResponderType }}(::fidl::internal::PendingResponse response, uint32_t ordinal)
+      : response_(std::move(response)), ordinal_(ordinal) {}
 
   void operator()({{ template "Params" .Response }}) {
-    ::fidl::Encoder _encoder({{ .OrdinalName }});
+    ::fidl::Encoder _encoder(ordinal_);
       {{- if .Response }}
-  _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
+    _encoder.Alloc({{ .ResponseSize }} - sizeof(fidl_message_header_t));
         {{- range .Response }}
-  ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
+    ::fidl::Encode(&_encoder, &{{ .Name }}, {{ .Offset }});
         {{- end }}
       {{- end }}
     response_.Send(&{{ .ResponseTypeName }}, _encoder.GetMessage());
@@ -336,6 +341,7 @@ class {{ .ResponderType }} {
 
  private:
   ::fidl::internal::PendingResponse response_;
+  uint32_t ordinal_;
 };
     {{- end }}
   {{- end }}
@@ -347,9 +353,13 @@ zx_status_t {{ .StubName }}::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
+  uint32_t ordinal = message.ordinal();
+  switch (ordinal) {
     {{- range .Methods }}
       {{- if .HasRequest }}
+        {{- if ne .GenOrdinal .Ordinal }}
+    case {{ .GenOrdinalName }}:
+        {{- end }}
     case {{ .OrdinalName }}: {
       const char* error_msg = nullptr;
       status = message.Decode(&{{ .RequestTypeName }}, &error_msg);
@@ -368,7 +378,7 @@ zx_status_t {{ .StubName }}::Dispatch_(
           {{- if $index }}, {{ end }}std::move(arg{{ $index }})
         {{- end -}}
         {{- if .HasResponse -}}
-          {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response))
+          {{- if .Request }}, {{ end -}}{{ .ResponderType }}(std::move(response), ordinal)
         {{- end -}}
       );
       break;
@@ -401,7 +411,7 @@ void {{ $.StubName }}::{{ template "EventMethodSignature" . }} {
 {{- end }}
 
 {{ .SyncProxyName }}::{{ .SyncProxyName }}(::zx::channel channel)
-  : proxy_(::std::move(channel)) {}
+    : proxy_(::std::move(channel)) {}
 
 {{ .SyncProxyName }}::~{{ .SyncProxyName }}() = default;
 

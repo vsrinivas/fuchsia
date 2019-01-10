@@ -271,5 +271,58 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   EXPECT_EQ(1u, grobs.size());
 }
 
+TEST(InterfacePtr, InterfaceCanHandleGeneratedOrdinal) {
+  // This tests that the server bindings can respond just as well to the
+  // generated ordinal as they can to the explicitly specified ordinal.  It
+  // works by intercepting a message sent by the interface ptr client, changing
+  // the ordinal, forwarding it to the server, and then sending it back.  If all
+  // goes well, no one should be any the wiser.
+
+  test::AsyncLoopForTest loop;
+
+  zx::channel client, h2;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &client, &h2));
+  fidl::test::frobinator::FrobinatorPtr ptr;
+  int error_count = 0;
+  ptr.set_error_handler([&error_count](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
+  EXPECT_EQ(ZX_OK, ptr.Bind(std::move(client)));
+
+  int reply_count = 0;
+  ptr->Grob("one", [&reply_count](StringPtr value) {
+    ++reply_count;
+    EXPECT_FALSE(value.is_null());
+    EXPECT_EQ("response", *value);
+  });
+
+  loop.RunUntilIdle();
+
+  fidl::MessageBuffer buffer;
+  fidl::Message message = buffer.CreateEmptyMessage();
+  EXPECT_EQ(ZX_OK, message.Read(h2.get(), 0));
+
+  // Cribbed from generated .cc file.
+  constexpr uint32_t kFrobinator_Grob_GenOrdinal = 1499796418u;
+  fidl_message_header_t *header =
+      reinterpret_cast<fidl_message_header_t *>(buffer.bytes());
+  header->ordinal = kFrobinator_Grob_GenOrdinal;
+
+  test::FrobinatorImpl impl;
+  zx::channel h3, server;
+  EXPECT_EQ(ZX_OK, zx::channel::create(0, &h3, &server));
+  Binding<fidl::test::frobinator::Frobinator> binding(&impl, std::move(server),
+                                                      loop.dispatcher());
+  fidl::MessageBuffer response_buffer;
+  fidl::Message response = response_buffer.CreateEmptyMessage();
+  EXPECT_EQ(ZX_OK, message.Write(h3.get(), 0));
+  loop.RunUntilIdle();
+  EXPECT_EQ(ZX_OK, response.Read(h3.get(), 0));
+  EXPECT_EQ(ZX_OK, response.Write(h2.get(), 0));
+  EXPECT_EQ(ZX_OK, ptr.WaitForResponse());
+  EXPECT_EQ(1, reply_count);
+}
+
 }  // namespace
 }  // namespace fidl

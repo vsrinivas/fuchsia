@@ -30,6 +30,7 @@ func TestCompileInterface(t *testing.T) {
 				Methods: []types.Method{
 					{
 						Ordinal:    types.Ordinal(1),
+						GenOrdinal: types.Ordinal(314159),
 						Name:       types.Identifier("First"),
 						HasRequest: true,
 						Request: []types.Parameter{
@@ -42,6 +43,7 @@ func TestCompileInterface(t *testing.T) {
 					},
 					{
 						Ordinal:    types.Ordinal(2),
+						GenOrdinal: types.Ordinal(271828),
 						Name:       types.Identifier("Second"),
 						HasRequest: true,
 						Request: []types.Parameter{
@@ -82,14 +84,16 @@ func TestCompileInterface(t *testing.T) {
 				SyncProxyName:   "Test_SyncProxy",
 				Methods: []Method{
 					{
-						Ordinal:     1,
-						OrdinalName: "kTest_First_Ordinal",
-						Name:        "First",
-						HasRequest:  true,
+						Ordinal:        1,
+						OrdinalName:    "kTest_First_Ordinal",
+						GenOrdinal:     314159,
+						GenOrdinalName: "kTest_First_GenOrdinal",
+						Name:           "First",
+						HasRequest:     true,
 						Request: []Parameter{
 							{
 								Type: Type{
-									Decl: "int16_t",
+									Decl:   "int16_t",
 									LLDecl: "int16_t",
 								},
 								Name:   "Value",
@@ -109,10 +113,12 @@ func TestCompileInterface(t *testing.T) {
 						ResponderType:       "Test_First_Responder",
 					},
 					{
-						Ordinal:     2,
-						OrdinalName: "kTest_Second_Ordinal",
-						Name:        "Second",
-						HasRequest:  true,
+						Ordinal:        2,
+						OrdinalName:    "kTest_Second_Ordinal",
+						GenOrdinal:     271828,
+						GenOrdinalName: "kTest_Second_GenOrdinal",
+						Name:           "Second",
+						HasRequest:     true,
 						Request: []Parameter{
 							{
 								Type: Type{

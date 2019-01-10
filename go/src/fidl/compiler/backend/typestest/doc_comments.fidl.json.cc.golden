@@ -7,8 +7,8 @@ namespace test {
 namespace name {
 
 namespace {
-
-
+  
+constexpr uint32_t kInterface_Method_GenOrdinal = 1061382220u;
 constexpr uint32_t kInterface_Method_Ordinal = 1u;
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
 
@@ -22,7 +22,7 @@ Interface_Sync::~Interface_Sync() = default;
 
 Interface_Proxy::Interface_Proxy(::fidl::internal::ProxyController* controller)
     : controller_(controller) {
-  (void) controller_;
+  (void)controller_;
 }
 
 Interface_Proxy::~Interface_Proxy() = default;
@@ -45,7 +45,7 @@ void Interface_Proxy::Method() {
 }
 
 Interface_Stub::Interface_Stub(Interface_clazz* impl) : impl_(impl) {
-  (void) impl_;
+  (void)impl_;
 }
 
 Interface_Stub::~Interface_Stub() = default;
@@ -58,7 +58,9 @@ zx_status_t Interface_Stub::Dispatch_(
     ::fidl::Message message,
     ::fidl::internal::PendingResponse response) {
   zx_status_t status = ZX_OK;
-  switch (message.ordinal()) {
+  uint32_t ordinal = message.ordinal();
+  switch (ordinal) {
+    case kInterface_Method_GenOrdinal:
     case kInterface_Method_Ordinal: {
       const char* error_msg = nullptr;
       status = message.Decode(&test_name_InterfaceMethodRequestTable, &error_msg);
@@ -78,7 +80,7 @@ zx_status_t Interface_Stub::Dispatch_(
 }
 
 Interface_SyncProxy::Interface_SyncProxy(::zx::channel channel)
-  : proxy_(::std::move(channel)) {}
+    : proxy_(::std::move(channel)) {}
 
 Interface_SyncProxy::~Interface_SyncProxy() = default;
 zx_status_t Interface_SyncProxy::Method() {
