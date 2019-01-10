@@ -91,6 +91,7 @@ if jiri_manifest != ""
     au!
     autocmd BufRead,BufNewFile * call FuchsiaBuffer()
     autocmd FileType cpp call FuchsiaCppBuffer()
+    autocmd BufNewFile,BufRead *.cmx set syntax=json
   augroup END
 
 endif
