@@ -29,8 +29,8 @@ zx_status_t sys_pager_create(uint32_t options, user_out_handle* out) {
 }
 
 // zx_status_t zx_pager_create_vmo
-zx_status_t sys_pager_create_vmo(zx_handle_t pager, zx_handle_t port, uint64_t key,
-                                 uint64_t size, uint32_t options, user_out_handle* out) {
+zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_t port,
+                                 uint64_t key, uint64_t size, user_out_handle* out) {
     if (options) {
         return ZX_ERR_INVALID_ARGS;
     }

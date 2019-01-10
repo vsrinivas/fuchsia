@@ -61,7 +61,7 @@ bool UserPager::Init() {
 bool UserPager::CreateVmo(uint64_t size, PagedVmo** vmo_out) {
     zx::vmo vmo;
     size *= ZX_PAGE_SIZE;
-    if (zx_pager_create_vmo(pager_, port_, next_base_, size, 0,
+    if (zx_pager_create_vmo(pager_, 0, port_, next_base_, size,
                             vmo.reset_and_get_address()) != ZX_OK) {
         return false;
     }
@@ -90,7 +90,7 @@ bool UserPager::UnmapVmo(PagedVmo* vmo) {
 bool UserPager::ReplaceVmo(PagedVmo* vmo, zx::vmo* old_vmo) {
     zx::vmo new_vmo;
     zx_status_t s;
-    if ((s = zx_pager_create_vmo(pager_, port_, next_base_, vmo->size_, 0,
+    if ((s = zx_pager_create_vmo(pager_, 0, port_, next_base_, vmo->size_,
                                  new_vmo.reset_and_get_address())) != ZX_OK) {
         return false;
     }
