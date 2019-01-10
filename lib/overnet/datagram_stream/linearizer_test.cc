@@ -257,7 +257,8 @@ TEST(Linearizer, Push_Close) {
 
   Ignore(linearizer.Push(Chunk{0, false, Slice::FromStaticString("a")}));
 
-  linearizer.Close(Status::Ok());
+  // Final status will be an error because the message is incomplete.
+  EXPECT_TRUE(linearizer.Close(Status::Ok()).is_error());
 }
 
 TEST(Linearizer, Push1_Push012_Pull0_Pull1_Pull2) {

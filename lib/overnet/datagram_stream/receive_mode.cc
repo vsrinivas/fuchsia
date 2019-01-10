@@ -49,8 +49,9 @@ void ReliableOrdered::Completed(uint64_t seq, const Status& status) {
 }
 
 void ReliableOrdered::Close(const Status& status) {
-  if (closed_.has_value())
+  if (closed_.has_value()) {
     return;
+  }
   closed_ = status;
   std::unordered_map<uint64_t, BeginCallback> later;
   later_.swap(later);

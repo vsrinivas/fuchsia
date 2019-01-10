@@ -26,10 +26,11 @@ class Linearizer final {
 
   // Output interface.
   void Pull(StatusOrCallback<Optional<Slice>> ready);
-  void PullAll(StatusOrCallback<std::vector<Slice>> ready);
+  void PullAll(StatusOrCallback<Optional<std::vector<Slice>>> ready);
 
-  void Close(const Status& status, Callback<void> quiesced);
-  void Close(const Status& status);
+  // Returns a finalized status (safe to ignore).
+  Status Close(const Status& status, Callback<void> quiesced);
+  Status Close(const Status& status);
 
   bool IsComplete() const { return offset_ == length_; }
 
@@ -46,19 +47,38 @@ class Linearizer final {
         : linearizer_(linearizer),
           pretty_function_(pretty_function),
           file_(file),
-          line_(line) {
+          line_(line),
+          last_(current_) {
+      current_ = this;
       linearizer_->AssertValid("BEGIN", pretty_function_, file_, line_);
     }
 
     ~CheckValid() {
-      linearizer_->AssertValid("END", pretty_function_, file_, line_);
+      if (linearizer_ != nullptr) {
+        linearizer_->AssertValid("END", pretty_function_, file_, line_);
+      }
+      current_ = last_;
+    }
+
+    static void CedeChecksTo(Linearizer* linearizer) {
+      for (auto* p = current_; p != nullptr; p = p->last_) {
+        if (p->linearizer_ == linearizer) {
+          p->linearizer_ = nullptr;
+        }
+      }
     }
 
    private:
-    const Linearizer* const linearizer_;
+    const Linearizer* linearizer_;
     const char* const pretty_function_;
     const char* const file_;
     int line_;
+    // Not threadsafe (but nothing is).
+    // It's not clear that we need to support nesting, but it's conceivable
+    // through some callback sequence that we do, so current_/last_ keep track
+    // of the current nesting structure.
+    static inline CheckValid* current_ = nullptr;
+    CheckValid* const last_;
   };
 #endif
 
@@ -95,7 +115,7 @@ class Linearizer final {
   };
   struct ReadAll {
     std::vector<Slice> building;
-    StatusOrCallback<std::vector<Slice>> done;
+    StatusOrCallback<Optional<std::vector<Slice>>> done;
   };
   union ReadData {
     ReadData() {}
@@ -111,7 +131,7 @@ class Linearizer final {
 
   void IdleToClosed(const Status& status);
   void IdleToReadSlice(StatusOrCallback<Optional<Slice>> done);
-  void IdleToReadAll(StatusOrCallback<std::vector<Slice>> done);
+  void IdleToReadAll(StatusOrCallback<Optional<std::vector<Slice>>> done);
   ReadSlice ReadSliceToIdle();
   ReadAll ReadAllToIdle();
   void ContinueReadAll();

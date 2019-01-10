@@ -160,24 +160,27 @@ RouterEndpoint::ConnectionStream::~ConnectionStream() {
 }
 
 void RouterEndpoint::ConnectionStream::BeginGossipRead() {
+  ScopedModule<DatagramStream> dgstream(gossip_stream_.get());
   OVERNET_TRACE(DEBUG) << "BEGIN_GOSSIP_READ";
   gossip_read_state_ = ReadState::Reading;
   gossip_read_.Init(gossip_stream_.get());
-  gossip_read_->PullAll(StatusOrCallback<std::vector<Slice>>(
-      [this](StatusOr<std::vector<Slice>>&& read_status) {
+  gossip_read_->PullAll(StatusOrCallback<Optional<std::vector<Slice>>>(
+      [this](StatusOr<Optional<std::vector<Slice>>>&& read_status) {
+        ScopedModule<DatagramStream> dgstream(gossip_stream_.get());
         OVERNET_TRACE(DEBUG) << "GOSSIP_READ:" << read_status;
         assert(gossip_read_state_ == ReadState::Reading);
         if (read_status.is_error()) {
           gossip_read_state_ = ReadState::Stopped;
           Close(read_status.AsStatus(), Callback<void>::Ignored());
           return;
-        } else if (read_status->size() == 0) {
+        } else if (!read_status->has_value()) {
           gossip_read_state_ = ReadState::Stopped;
           Close(Status::Ok(), Callback<void>::Ignored());
           return;
         }
         auto apply_status = endpoint_->ApplyGossipUpdate(
-            Slice::Join(read_status->begin(), read_status->end()), peer());
+            Slice::Join((*read_status)->begin(), (*read_status)->end()),
+            peer());
         if (apply_status.is_error()) {
           gossip_read_state_ = ReadState::Stopped;
           Close(apply_status, Callback<void>::Ignored());
@@ -192,20 +195,21 @@ void RouterEndpoint::ConnectionStream::BeginGossipRead() {
 void RouterEndpoint::ConnectionStream::BeginForkRead() {
   fork_read_state_ = ReadState::Reading;
   fork_read_.Init(this);
-  fork_read_->PullAll(StatusOrCallback<std::vector<Slice>>(
-      [this](StatusOr<std::vector<Slice>>&& read_status) {
+  fork_read_->PullAll(StatusOrCallback<Optional<std::vector<Slice>>>(
+      [this](StatusOr<Optional<std::vector<Slice>>>&& read_status) {
         assert(fork_read_state_ == ReadState::Reading);
         if (read_status.is_error()) {
           fork_read_state_ = ReadState::Stopped;
           Close(read_status.AsStatus(), Callback<void>::Ignored());
           return;
-        } else if (read_status->size() == 0) {
+        } else if (!read_status->has_value()) {
           fork_read_state_ = ReadState::Stopped;
           Close(Status::Ok(), Callback<void>::Ignored());
           return;
         }
 
-        auto merged = Slice::Join(read_status->begin(), read_status->end());
+        auto merged =
+            Slice::Join((*read_status)->begin(), (*read_status)->end());
         auto fork_frame_status = Decode<fuchsia::overnet::protocol::ForkFrame>(
             const_cast<uint8_t*>(merged.begin()), merged.length());
         if (fork_frame_status.is_error()) {
@@ -321,26 +325,33 @@ void RouterEndpoint::ConnectionStream::Close(const Status& status,
 RouterEndpoint::Stream* RouterEndpoint::ConnectionStream::GossipStream() {
   if (gossip_stream_ == nullptr && !closing_status_.has_value() &&
       IsGossipStreamInitiator() && !forking_gossip_stream_) {
+    OVERNET_TRACE(DEBUG) << "Initiate gossip stream: ep="
+                         << endpoint_->node_id() << " peer=" << peer();
     forking_gossip_stream_ = true;
     fuchsia::overnet::protocol::Introduction introduction;
     introduction.set_service_name(kOvernetGossipService);
-    Fork(
-        fuchsia::overnet::protocol::ReliabilityAndOrdering::UnreliableUnordered,
-        std::move(introduction), [this](StatusOr<NewStream> new_stream) {
-          assert(forking_gossip_stream_);
-          forking_gossip_stream_ = false;
-          if (new_stream.is_error()) {
-            Close(new_stream.AsStatus().WithContext("Opening gossip stream"),
-                  Callback<void>::Ignored());
-          } else {
-            InstantiateGossipStream(std::move(*new_stream));
-          }
-        });
+    Fork(fuchsia::overnet::protocol::ReliabilityAndOrdering::
+             ReliableOrdered /* TODO(ctiller): should be UnreliableUnordered */,
+         std::move(introduction), [this](StatusOr<NewStream> new_stream) {
+           OVERNET_TRACE(DEBUG)
+               << "Forked gossip stream: ep=" << endpoint_->node_id()
+               << " peer=" << peer();
+           assert(forking_gossip_stream_);
+           forking_gossip_stream_ = false;
+           if (new_stream.is_error()) {
+             Close(new_stream.AsStatus().WithContext("Opening gossip stream"),
+                   Callback<void>::Ignored());
+           } else {
+             InstantiateGossipStream(std::move(*new_stream));
+           }
+         });
   }
   return gossip_stream_.get();
 }
 
 void RouterEndpoint::ConnectionStream::InstantiateGossipStream(NewStream ns) {
+  OVERNET_TRACE(DEBUG) << "Instantiate gossip stream: ep="
+                       << endpoint_->node_id() << " peer=" << peer();
   assert(gossip_stream_ == nullptr);
   gossip_stream_.reset(new Stream(std::move(ns)));
   BeginGossipRead();

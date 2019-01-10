@@ -136,17 +136,17 @@ class DatagramStream : private Router::StreamHandler,
     inline static constexpr auto kModule =
         Module::DATAGRAM_STREAM_INCOMING_MESSAGE;
 
-    IncomingMessage(DatagramStream* stream)
-        : linearizer_(2 * stream->packet_protocol_.mss()) {}
+    IncomingMessage(DatagramStream* stream, uint64_t msg_id)
+        : linearizer_(2 * stream->packet_protocol_.mss()), msg_id_(msg_id) {}
 
     void Pull(StatusOrCallback<Optional<Slice>>&& done) {
       ScopedModule<IncomingMessage> in_im(this);
       linearizer_.Pull(std::forward<StatusOrCallback<Optional<Slice>>>(done));
     }
-    void PullAll(StatusOrCallback<std::vector<Slice>>&& done) {
+    void PullAll(StatusOrCallback<Optional<std::vector<Slice>>>&& done) {
       ScopedModule<IncomingMessage> in_im(this);
       linearizer_.PullAll(
-          std::forward<StatusOrCallback<std::vector<Slice>>>(done));
+          std::forward<StatusOrCallback<Optional<std::vector<Slice>>>>(done));
     }
 
     [[nodiscard]] bool Push(Chunk&& chunk) {
@@ -154,17 +154,20 @@ class DatagramStream : private Router::StreamHandler,
       return linearizer_.Push(std::forward<Chunk>(chunk));
     }
 
-    void Close(const Status& status) {
+    Status Close(const Status& status) {
       ScopedModule<IncomingMessage> in_im(this);
-      linearizer_.Close(status);
+      return linearizer_.Close(status);
     }
 
     bool IsComplete() const { return linearizer_.IsComplete(); }
+
+    uint64_t msg_id() const { return msg_id_; }
 
     InternalListNode<IncomingMessage> incoming_link;
 
    private:
     Linearizer linearizer_;
+    const uint64_t msg_id_;
   };
 
   struct SendState {
@@ -291,7 +294,7 @@ class DatagramStream : private Router::StreamHandler,
     ReceiveOp& operator=(const ReceiveOp& rhs) = delete;
 
     void Pull(StatusOrCallback<Optional<Slice>> ready);
-    void PullAll(StatusOrCallback<std::vector<Slice>> ready);
+    void PullAll(StatusOrCallback<Optional<std::vector<Slice>>> ready);
     void Close(const Status& status);
 
    private:
@@ -299,7 +302,7 @@ class DatagramStream : private Router::StreamHandler,
     IncomingMessage* incoming_message_ = nullptr;
     bool closed_ = false;
     StatusOrCallback<Optional<Slice>> pending_pull_;
-    StatusOrCallback<std::vector<Slice>> pending_pull_all_;
+    StatusOrCallback<Optional<std::vector<Slice>>> pending_pull_all_;
     InternalListNode<ReceiveOp> waiting_link_;
   };
 

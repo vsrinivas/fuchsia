@@ -23,7 +23,7 @@ void LinearizerFuzzer::Close(uint8_t status_code) {
     }
   }
   SetClosed(static_cast<StatusCode>(status_code));
-  linearizer_.Close(static_cast<StatusCode>(status_code));
+  linearizer_.Close(static_cast<StatusCode>(status_code)).Ignore();
 }
 
 // Push a new block onto the linearizer at offset 'offset', with length

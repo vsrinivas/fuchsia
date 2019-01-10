@@ -290,7 +290,7 @@ class ThreeNode final : public Env {
   TimeDelta AllowedTime(uint64_t data_length) const override {
     // TODO(ctiller): make this just
     // 'simulator_->SimulatedBandwidth().SendTimeForBytes(data_length)'
-    return TimeDelta::FromSeconds(2) +
+    return TimeDelta::FromSeconds(4) +
            simulator_->SimulatedBandwidth().SendTimeForBytes(5 * data_length);
   }
 
@@ -444,36 +444,36 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
   auto got_pull_cb = std::make_shared<bool>(false);
   auto got_push_cb = std::make_shared<bool>(false);
 
-  env->endpoint2()->RecvIntro(
-      StatusOrCallback<RouterEndpoint::ReceivedIntroduction>(
-          ALLOCATED_CALLBACK,
-          [this, got_pull_cb](
-              StatusOr<RouterEndpoint::ReceivedIntroduction>&& status) {
-            OVERNET_TRACE(INFO)
-                << "ep2: recv_intro status=" << status.AsStatus();
-            ASSERT_TRUE(status.is_ok()) << status.AsStatus();
-            auto intro = std::move(*status);
-            EXPECT_EQ(*AbcIntro(), intro.introduction)
-                << Encode(&intro.introduction);
-            auto stream = MakeClosedPtr<RouterEndpoint::Stream>(
-                std::move(intro.new_stream));
-            OVERNET_TRACE(INFO) << "ep2: start pull_all";
-            auto* op = new RouterEndpoint::ReceiveOp(stream.get());
-            OVERNET_TRACE(INFO) << "ep2: op=" << op;
-            op->PullAll(StatusOrCallback<std::vector<Slice>>(
-                ALLOCATED_CALLBACK,
-                [this, got_pull_cb, stream{std::move(stream)},
-                 op](const StatusOr<std::vector<Slice>>& status) mutable {
-                  OVERNET_TRACE(INFO)
-                      << "ep2: pull_all status=" << status.AsStatus();
-                  EXPECT_TRUE(status.is_ok()) << status.AsStatus();
-                  auto pull_text = Slice::Join(status->begin(), status->end());
-                  EXPECT_EQ(GetParam().body, pull_text)
-                      << pull_text.AsStdString();
-                  delete op;
-                  *got_pull_cb = true;
-                }));
-          }));
+  env->endpoint2()->RecvIntro(StatusOrCallback<
+                              RouterEndpoint::ReceivedIntroduction>(
+      ALLOCATED_CALLBACK,
+      [this,
+       got_pull_cb](StatusOr<RouterEndpoint::ReceivedIntroduction>&& status) {
+        OVERNET_TRACE(INFO) << "ep2: recv_intro status=" << status.AsStatus();
+        ASSERT_TRUE(status.is_ok()) << status.AsStatus();
+        auto intro = std::move(*status);
+        EXPECT_EQ(*AbcIntro(), intro.introduction)
+            << Encode(&intro.introduction);
+        auto stream =
+            MakeClosedPtr<RouterEndpoint::Stream>(std::move(intro.new_stream));
+        OVERNET_TRACE(INFO) << "ep2: start pull_all";
+        auto* op = new RouterEndpoint::ReceiveOp(stream.get());
+        OVERNET_TRACE(INFO) << "ep2: op=" << op;
+        op->PullAll(StatusOrCallback<Optional<std::vector<Slice>>>(
+            ALLOCATED_CALLBACK,
+            [this, got_pull_cb, stream{std::move(stream)},
+             op](const StatusOr<Optional<std::vector<Slice>>>& status) mutable {
+              OVERNET_TRACE(INFO)
+                  << "ep2: pull_all status=" << status.AsStatus();
+              EXPECT_TRUE(status.is_ok()) << status.AsStatus();
+              EXPECT_TRUE(status->has_value());
+              auto pull_text =
+                  Slice::Join((*status)->begin(), (*status)->end());
+              EXPECT_EQ(GetParam().body, pull_text) << pull_text.AsStdString();
+              delete op;
+              *got_pull_cb = true;
+            }));
+      }));
 
   ScopedOp scoped_op(Op::New(OpType::OUTGOING_REQUEST));
   env->endpoint1()->SendIntro(

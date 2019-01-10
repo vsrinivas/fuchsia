@@ -29,6 +29,9 @@ Linearizer::~Linearizer() {
       read_data_.read_slice.~ReadSlice();
       break;
   }
+#ifndef NDEBUG
+  CheckValid::CedeChecksTo(this);
+#endif
 }
 
 void Linearizer::AssertValid(const char* marker, const char* pretty_function,
@@ -73,32 +76,30 @@ void Linearizer::AssertValid(const char* marker, const char* pretty_function,
 #endif
 }
 
-void Linearizer::Close(const Status& status) {
-  Close(status, Callback<void>::Ignored());
+Status Linearizer::Close(const Status& status) {
+  return Close(status, Callback<void>::Ignored());
 }
 
-void Linearizer::Close(const Status& status, Callback<void> quiesced) {
+Status Linearizer::Close(const Status& status, Callback<void> quiesced) {
   OVERNET_TRACE(DEBUG) << "Close " << status << " mode=" << read_mode_;
   if (status.is_ok() && !pending_push_.empty()) {
-    Close(Status(StatusCode::CANCELLED, "Gaps existed at close time"));
-    return;
+    return Close(Status(StatusCode::CANCELLED, "Gaps existed at close time"));
   }
   if (status.is_ok() && !length_) {
-    Close(Status(StatusCode::CANCELLED, "Closed before end of message seen"));
-    return;
+    return Close(
+        Status(StatusCode::CANCELLED, "Closed before end of message seen"));
   }
   if (status.is_ok() && offset_ != *length_) {
-    Close(
+    return Close(
         Status(StatusCode::CANCELLED, "Closed before end of message reached"));
-    return;
   }
   switch (read_mode_) {
     case ReadMode::Closed:
-      break;
+      return read_data_.closed.status;
     case ReadMode::Idle:
       IdleToClosed(status);
       pending_push_.clear();
-      break;
+      return status;
     case ReadMode::ReadSlice: {
       auto push = std::move(ReadSliceToIdle().done);
       IdleToClosed(status);
@@ -108,7 +109,8 @@ void Linearizer::Close(const Status& status, Callback<void> quiesced) {
       } else {
         push(status);
       }
-    } break;
+      return status;
+    }
     case ReadMode::ReadAll: {
       auto rd = ReadAllToIdle();
       IdleToClosed(status);
@@ -118,7 +120,8 @@ void Linearizer::Close(const Status& status, Callback<void> quiesced) {
       } else {
         rd.done(status);
       }
-    } break;
+      return status;
+    }
   }
 }
 
@@ -143,27 +146,31 @@ bool Linearizer::Push(Chunk chunk) {
   if (length_) {
     if (chunk_end > *length_) {
       Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Received chunk past end of message"));
+                   "Received chunk past end of message"))
+          .Ignore();
     } else if (chunk.end_of_message && *length_ != chunk_end) {
       Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Received ambiguous end of message point"));
+                   "Received ambiguous end of message point"))
+          .Ignore();
     }
   } else if (chunk.end_of_message) {
     if (offset_ > chunk_end) {
       Close(Status(StatusCode::INVALID_ARGUMENT,
-                   "Already read past end of message"));
+                   "Already read past end of message"))
+          .Ignore();
     }
     if (!pending_push_.empty()) {
       const auto it = pending_push_.rbegin();
       const auto end = it->first + it->second.length();
       if (end > chunk_end) {
         Close(Status(StatusCode::INVALID_ARGUMENT,
-                     "Already received bytes past end of message"));
+                     "Already received bytes past end of message"))
+            .Ignore();
       }
     }
     length_ = chunk_end;
     if (offset_ == chunk_end) {
-      Close(Status::Ok());
+      Close(Status::Ok()).Ignore();
     }
   }
 
@@ -186,7 +193,7 @@ bool Linearizer::Push(Chunk chunk) {
     if (length_) {
       assert(offset_ <= *length_);
       if (offset_ == *length_) {
-        Close(Status::Ok());
+        Close(Status::Ok()).Ignore();
       }
     }
     push(std::move(chunk.slice));
@@ -250,7 +257,8 @@ void Linearizer::IntegratePush(Chunk chunk) {
                          << common_length;
     if (0 != memcmp(chunk.slice.begin(), lb->second.begin(), common_length)) {
       Close(Status(StatusCode::DATA_LOSS,
-                   "Linearizer received different bytes for the same span"));
+                   "Linearizer received different bytes for the same span"))
+          .Ignore();
     } else if (chunk.slice.length() <= lb->second.length()) {
       // New chunk is shorter than what's there (or the same length): We're
       // done.
@@ -282,7 +290,8 @@ void Linearizer::IntegratePush(Chunk chunk) {
       if (0 != memcmp(before->second.begin() + (chunk.offset - before->first),
                       chunk.slice.begin(), common_length)) {
         Close(Status(StatusCode::DATA_LOSS,
-                     "Linearizer received different bytes for the same span"));
+                     "Linearizer received different bytes for the same span"))
+            .Ignore();
       } else if (before_end >= chunk.offset + chunk.slice.length()) {
         // New chunk is a subset of the one before: we're done.
       } else {
@@ -312,7 +321,8 @@ void Linearizer::IntegratePush(Chunk chunk) {
                       chunk.slice.begin() + (after->first - chunk.offset),
                       common_length)) {
         Close(Status(StatusCode::DATA_LOSS,
-                     "Linearizer received different bytes for the same span"));
+                     "Linearizer received different bytes for the same span"))
+            .Ignore();
         return;
       } else if (after->first + after->second.length() <
                  chunk.offset + chunk.slice.length()) {
@@ -361,7 +371,7 @@ void Linearizer::Pull(StatusOrCallback<Optional<Slice>> push) {
         if (length_) {
           assert(offset_ <= *length_);
           if (offset_ == *length_) {
-            Close(Status::Ok());
+            Close(Status::Ok()).Ignore();
           }
         }
         push(std::move(slice));
@@ -374,7 +384,7 @@ void Linearizer::Pull(StatusOrCallback<Optional<Slice>> push) {
   }
 }
 
-void Linearizer::PullAll(StatusOrCallback<std::vector<Slice>> push) {
+void Linearizer::PullAll(StatusOrCallback<Optional<std::vector<Slice>>> push) {
   SCOPED_CHECK_VALID;
   switch (read_mode_) {
     case ReadMode::Closed:
@@ -410,7 +420,7 @@ void Linearizer::ContinueReadAll() {
     if (length_) {
       assert(offset_ <= *length_);
       if (offset_ == *length_) {
-        Close(Status::Ok());
+        Close(Status::Ok()).Ignore();
         return;
       }
     }
@@ -429,7 +439,8 @@ void Linearizer::IdleToReadSlice(StatusOrCallback<Optional<Slice>> done) {
   new (&read_data_.read_slice) ReadSlice{std::move(done)};
 }
 
-void Linearizer::IdleToReadAll(StatusOrCallback<std::vector<Slice>> done) {
+void Linearizer::IdleToReadAll(
+    StatusOrCallback<Optional<std::vector<Slice>>> done) {
   assert(read_mode_ == ReadMode::Idle);
   read_mode_ = ReadMode::ReadAll;
   new (&read_data_.read_all) ReadAll{{}, std::move(done)};

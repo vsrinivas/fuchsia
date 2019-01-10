@@ -126,8 +126,9 @@ DatagramStream::DatagramStream(
       reliability_and_ordering_(reliability_and_ordering),
       receive_mode_(reliability_and_ordering),
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
-      packet_protocol_(timer_, [router] { return (*router->rng())(); }, this,
-                       PacketProtocol::NullCodec(), 2048) {}
+      packet_protocol_(
+          timer_, [router] { return (*router->rng())(); }, this,
+          PacketProtocol::NullCodec(), 2048) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -339,29 +340,30 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
       // Got a chunk of data: add it to the relevant incoming message.
       largest_incoming_message_id_seen_ =
           std::max(largest_incoming_message_id_seen_, msg.message());
-      auto it = messages_.find(msg.message());
+      const uint64_t msg_id = msg.message();
+      auto it = messages_.find(msg_id);
       if (it == messages_.end()) {
         it = messages_
                  .emplace(std::piecewise_construct,
-                          std::forward_as_tuple(msg.message()),
-                          std::forward_as_tuple(this))
+                          std::forward_as_tuple(msg_id),
+                          std::forward_as_tuple(this, msg_id))
                  .first;
         if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
           pkt_status.Nack();
         }
-        receive_mode_.Begin(msg.message(), [this, msg = std::move(msg)](
-                                               const Status& status) mutable {
-          if (status.is_error()) {
-            OVERNET_TRACE(WARNING) << "Receive failed: " << status;
-            return;
-          }
-          auto it = messages_.find(msg.message());
-          if (it == messages_.end()) {
-            return;
-          }
-          unclaimed_messages_.PushBack(&it->second);
-          MaybeContinueReceive();
-        });
+        receive_mode_.Begin(
+            msg_id, [this, msg_id](const Status& status) mutable {
+              if (status.is_error()) {
+                OVERNET_TRACE(WARNING) << "Receive failed: " << status;
+                return;
+              }
+              auto it = messages_.find(msg_id);
+              if (it == messages_.end()) {
+                return;
+              }
+              unclaimed_messages_.PushBack(&it->second);
+              MaybeContinueReceive();
+            });
       } else {
         if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
           pkt_status.Nack();
@@ -377,10 +379,10 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
         it = messages_
                  .emplace(std::piecewise_construct,
                           std::forward_as_tuple(msg.message()),
-                          std::forward_as_tuple(this))
+                          std::forward_as_tuple(this, msg.message()))
                  .first;
       }
-      it->second.Close(msg.status());
+      it->second.Close(msg.status()).Ignore();
     } break;
     case MessageFragment::Type::StreamEnd:
       // TODO(ctiller): handle case of ok termination with outstanding
@@ -429,6 +431,10 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
 }
 
 void DatagramStream::MaybeContinueReceive() {
+  OVERNET_TRACE(DEBUG) << "MaybeContinueReceive: unclaimed_messages="
+                       << unclaimed_messages_.Size()
+                       << " unclaimed_receives=" << unclaimed_receives_.Size();
+
   if (unclaimed_messages_.Empty())
     return;
   if (unclaimed_receives_.Empty())
@@ -442,9 +448,10 @@ void DatagramStream::MaybeContinueReceive() {
     incoming_message->Pull(std::move(receive_op->pending_pull_));
   } else if (!receive_op->pending_pull_all_.empty()) {
     incoming_message->PullAll(
-        [receive_op](const StatusOr<std::vector<Slice>>& status) {
+        [receive_op](StatusOr<Optional<std::vector<Slice>>> status) {
+          auto cb = std::move(receive_op->pending_pull_all_);
           receive_op->Close(status.AsStatus());
-          receive_op->pending_pull_all_(status);
+          cb(std::move(status));
         });
   }
 }
@@ -822,7 +829,7 @@ void DatagramStream::CompleteReliable(const Status& status, StateRef state,
 
 void DatagramStream::CompleteUnreliable(const Status& status, StateRef state) {
   ScopedModule<DatagramStream> in_dgs(this);
-  OVERNET_TRACE(DEBUG) << "CompleteReliable: status=" << status
+  OVERNET_TRACE(DEBUG) << "CompleteUnreliable: status=" << status
                        << " state=" << static_cast<int>(state.state());
   if (status.is_error()) {
     state.SetClosed(status);
@@ -855,7 +862,7 @@ void DatagramStream::ReceiveOp::Pull(StatusOrCallback<Optional<Slice>> ready) {
 }
 
 void DatagramStream::ReceiveOp::PullAll(
-    StatusOrCallback<std::vector<Slice>> ready) {
+    StatusOrCallback<Optional<std::vector<Slice>>> ready) {
   ScopedModule<DatagramStream> in_dgs(stream_);
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "PullAll incoming_message=" << incoming_message_;
@@ -867,9 +874,10 @@ void DatagramStream::ReceiveOp::PullAll(
   } else {
     pending_pull_all_ = std::move(ready);
     incoming_message_->PullAll(
-        [this](const StatusOr<std::vector<Slice>>& status) {
+        [this](StatusOr<Optional<std::vector<Slice>>> status) {
+          auto cb = std::move(pending_pull_all_);
           Close(status.AsStatus());
-          pending_pull_all_(status);
+          cb(std::move(status));
         });
   }
 }
@@ -898,12 +906,15 @@ void DatagramStream::ReceiveOp::Close(const Status& status) {
       if (status.is_error()) {
         pending_pull_all_(status);
       } else {
-        pending_pull_all_(std::vector<Slice>{});
+        pending_pull_all_(Nothing);
       }
     }
   } else {
     assert(!stream_->unclaimed_receives_.Contains(this));
-    incoming_message_->Close(status);
+    stream_->receive_mode_.Completed(incoming_message_->msg_id(),
+                                     incoming_message_->Close(status));
+    stream_->messages_.erase(incoming_message_->msg_id());
+    incoming_message_ = nullptr;
   }
 }
 

@@ -237,9 +237,10 @@ void BoundChannel::StartNetRead() {
   OVERNET_TRACE(DEBUG) << "StartNetRead";
   net_recv_.Reset(&overnet_stream_);
   net_recv_->PullAll(
-      [this](overnet::StatusOr<std::vector<overnet::Slice>> status) {
+      [this](overnet::StatusOr<overnet::Optional<std::vector<overnet::Slice>>>
+                 status) {
         OVERNET_TRACE(DEBUG) << "StartNetRead got " << status;
-        if (status.is_error()) {
+        if (status.is_error() || !status->has_value()) {
           // If a read failed, close the stream.
           Close(status.AsStatus());
           return;
@@ -254,7 +255,7 @@ void BoundChannel::StartNetRead() {
         // that there's push back in the system.
         auto builder = std::make_unique<FidlMessageBuilder>(this);
         auto parse_status = overnet::ParseMessageInto(
-            overnet::Slice::Join(status->begin(), status->end()),
+            overnet::Slice::Join((*status)->begin(), (*status)->end()),
             overnet_stream_.peer(), app_->endpoint(), builder.get());
         WriteToChannelAndStartNextRead(std::move(builder));
       });
