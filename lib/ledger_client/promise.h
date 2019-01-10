@@ -12,10 +12,30 @@
 
 namespace modular {
 
-// fit::promise wrapper functions for fuchsia.ledger.Page.
+// These wrapper functions wrap fuchsia.ledger APIs such that they return
+// a fit::promise<> representing the result of the call. They are useful to
+// incorporate into tasks themselves expressed as fit::promises.
 //
-// These methods match the signatures in fuchsia.ledger.Page with the exception
-// that the first parameter is always a fuchsia::ledger::Page*.
+// The wrapper classes act as namespaces for static methods. For a given api
+// (such as fuchsia.ledger.Page), the wrapper class is called PagePromise, and
+// each method has the same signature as that in fuchsia::ledger::Page, with the
+// addition that the first parameter is always a fuchsia::ledger::Page* and the
+// last parameter (the result callback) is omitted.
+//
+// Note that these wrapper methods IMMEDIATELY call the underlying FIDL
+// function (meaning that a message is dispatched immediately on the underlying
+// channel). The returned promise will block until a response message is
+// received.
+//
+// EXAMPLE
+//
+//   auto p = fit::make_promise([snapshot = page_snapshot_ptr.get()] () {
+//     return PageSnapshotPromise::GetInline(snapshot, key);
+//   }).and_then([] (const std::vector<uint8_t> bytes) {
+//     // Decode and use |bytes|.
+//   });
+
+// fit::promise wrapper functions for fuchsia.ledger.Page.
 class PagePromise {
  public:
   static fit::promise<> StartTransaction(fuchsia::ledger::Page* page) {
@@ -125,7 +145,7 @@ class PageSnapshotPromise {
               FXL_LOG(FATAL) << "TODO: fallback to PageSnapshot_Get().";
             default:
               FXL_LOG(ERROR) << "PageSnapshotPromise::GetInline() failed with "
-                << fidl::ToUnderlying(status);
+                             << fidl::ToUnderlying(status);
               completer.complete_error();
           }
         });
