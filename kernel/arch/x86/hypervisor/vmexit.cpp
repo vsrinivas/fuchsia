@@ -148,8 +148,8 @@ static zx_status_t handle_external_interrupt(AutoVmcs* vmcs) {
     ExitInterruptionInformation int_info(*vmcs);
     DEBUG_ASSERT(int_info.valid);
     DEBUG_ASSERT(int_info.interruption_type == InterruptionType::EXTERNAL_INTERRUPT);
-    x86_call_external_interrupt_handler(int_info.vector);
     vmcs->Invalidate();
+    x86_call_external_interrupt_handler(int_info.vector);
 
     // If we are receiving an external interrupt because the thread is being
     // killed, we should exit with an error.
@@ -758,6 +758,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
     switch (static_cast<uint32_t>(guest_state->rcx)) {
     case kKvmSystemTimeMsrOld:
     case kKvmSystemTimeMsr:
+        vmcs->Invalidate();
         if ((guest_paddr & 1) != 0)
             return pvclock_reset_clock(pvclock, gpas, guest_paddr & ~static_cast<zx_paddr_t>(1));
         else
@@ -765,6 +766,7 @@ static zx_status_t handle_kvm_wrmsr(const ExitInfo& exit_info, AutoVmcs* vmcs,
         return ZX_OK;
     case kKvmBootTimeOld:
     case kKvmBootTime:
+        vmcs->Invalidate();
         return pvclock_update_boot_time(gpas, guest_paddr);
     default:
         local_apic_state->interrupt_tracker.VirtualInterrupt(X86_INT_GP_FAULT);
@@ -841,15 +843,14 @@ static zx_paddr_t page_addr(zx_paddr_t pt_addr, size_t level, zx_vaddr_t guest_v
     return (pt_addr & X86_PG_FRAME) + (off & X86_PG_FRAME);
 }
 
-static zx_status_t get_page(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAddressSpace* gpas,
-                            zx_vaddr_t guest_vaddr, zx_paddr_t* host_paddr) {
+static zx_status_t get_page(hypervisor::GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_vaddr,
+                            zx_paddr_t pt_addr, zx_paddr_t* host_paddr) {
     size_t indices[X86_PAGING_LEVELS] = {
         VADDR_TO_PML4_INDEX(guest_vaddr),
         VADDR_TO_PDP_INDEX(guest_vaddr),
         VADDR_TO_PD_INDEX(guest_vaddr),
         VADDR_TO_PT_INDEX(guest_vaddr),
     };
-    zx_paddr_t pt_addr = vmcs.Read(VmcsFieldXX::GUEST_CR3);
     zx_paddr_t pa;
     for (size_t level = 0; level <= X86_PAGING_LEVELS; level++) {
         zx_status_t status = gpas->GetPage(page_addr(pt_addr, level - 1, guest_vaddr), &pa);
@@ -866,14 +867,14 @@ static zx_status_t get_page(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAddre
     return ZX_OK;
 }
 
-static zx_status_t fetch_data(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAddressSpace* gpas,
-                              zx_vaddr_t guest_vaddr, uint8_t* data, size_t size) {
+static zx_status_t fetch_data(hypervisor::GuestPhysicalAddressSpace* gpas, zx_vaddr_t guest_vaddr,
+                              uint8_t* data, size_t size, zx_paddr_t pt_addr) {
     // TODO(abdulla): Make this handle a fetch that crosses more than two pages.
     if (size > PAGE_SIZE)
         return ZX_ERR_OUT_OF_RANGE;
 
     zx_paddr_t pa;
-    zx_status_t status = get_page(vmcs, gpas, guest_vaddr, &pa);
+    zx_status_t status = get_page(gpas, guest_vaddr, pt_addr, &pa);
     if (status != ZX_OK)
         return status;
 
@@ -886,7 +887,7 @@ static zx_status_t fetch_data(const AutoVmcs& vmcs, hypervisor::GuestPhysicalAdd
     if (from_page == size)
         return ZX_OK;
 
-    status = get_page(vmcs, gpas, guest_vaddr + size, &pa);
+    status = get_page(gpas, guest_vaddr + size, pt_addr, &pa);
     if (status != ZX_OK)
         return status;
 
@@ -937,8 +938,11 @@ static zx_status_t handle_trap(const ExitInfo& exit_info, AutoVmcs* vmcs, bool r
             // CS.D clear (and not 64 bit mode).
             packet->guest_mem.default_operand_size = 2;
         }
-        status = fetch_data(*vmcs, gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
-                            packet->guest_mem.inst_len);
+        zx_paddr_t pt_addr = vmcs->Read(VmcsFieldXX::GUEST_CR3);
+        // Done with the vmcs, can now invalidate in case we block.
+        vmcs->Invalidate();
+        status = fetch_data(gpas, exit_info.guest_rip, packet->guest_mem.inst_buf,
+                            packet->guest_mem.inst_len, pt_addr);
         return status == ZX_OK ? ZX_ERR_NEXT : status;
     }
     default:
@@ -951,8 +955,8 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
                                         hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
     EptViolationInfo ept_violation_info(exit_info.exit_qualification);
     zx_vaddr_t guest_paddr = exit_info.guest_physical_address;
-    zx_status_t status = handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, gpas,
-                                     traps, packet);
+    zx_status_t status =
+        handle_trap(exit_info, vmcs, ept_violation_info.read, guest_paddr, gpas, traps, packet);
     switch (status) {
     case ZX_ERR_NOT_FOUND:
         break;
@@ -960,6 +964,8 @@ static zx_status_t handle_ept_violation(const ExitInfo& exit_info, AutoVmcs* vmc
     default:
         return status;
     }
+    // We may have to block when handling the page fault.
+    vmcs->Invalidate();
 
     // If there was no trap associated with this address and it is outside of
     // guest physical address space, return failure.

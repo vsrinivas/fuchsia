@@ -99,18 +99,23 @@ AutoVmcs::AutoVmcs(paddr_t vmcs_address)
     DEBUG_ASSERT(!arch_ints_disabled());
     arch_disable_ints();
     __UNUSED zx_status_t status = vmptrld(vmcs_address_);
+    arch_set_blocking_disallowed(true);
     DEBUG_ASSERT(status == ZX_OK);
 }
 
 AutoVmcs::~AutoVmcs() {
     DEBUG_ASSERT(arch_ints_disabled());
+    if (vmcs_address_) {
+        arch_set_blocking_disallowed(false);
+    }
     arch_enable_ints();
 }
 
 void AutoVmcs::Invalidate() {
-#if LK_DEBUGLEVEL > 0
-    vmcs_address_ = 0;
-#endif
+    if (vmcs_address_) {
+        vmcs_address_ = 0;
+        arch_set_blocking_disallowed(false);
+    }
 }
 
 void AutoVmcs::InterruptWindowExiting(bool enable) {
