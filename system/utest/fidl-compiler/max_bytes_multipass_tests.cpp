@@ -26,8 +26,8 @@ public:
 
     bool Compile() {
         for (auto& file : source_files_) {
-            fidl::Lexer lexer(file, &error_reporter_);
-            fidl::Parser parser(&lexer, &error_reporter_);
+            fidl::Lexer lexer(file, error_reporter_);
+            fidl::Parser parser(&lexer, error_reporter_);
 
             auto ast = parser.Parse();
             if (!parser.Ok() || !library_->ConsumeFile(std::move(ast))) {

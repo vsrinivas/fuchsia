@@ -17,6 +17,7 @@ namespace {
 bool valid_using_without_alias_test() {
     BEGIN_TEST;
 
+    SharedAmongstLibraries shared;
     TestLibrary dependency("dependent.fidl", R"FIDL(
 library fidl.test.uzing.dependent;
 
@@ -24,7 +25,7 @@ struct Bar {
     int8 s;
 };
 
-)FIDL");
+)FIDL", &shared);
     ASSERT_TRUE(dependency.Compile());
 
     TestLibrary library("uzing.fidl", R"FIDL(
@@ -36,8 +37,8 @@ struct Foo {
     fidl.test.uzing.dependent.Bar dep;
 };
 
-)FIDL");
-    ASSERT_TRUE(library.AddDependentLibrary(dependency));
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     EXPECT_TRUE(library.Compile());
 
     END_TEST;
@@ -49,6 +50,7 @@ struct Foo {
 bool valid_using_with_alias_test() {
     BEGIN_TEST;
 
+    SharedAmongstLibraries shared;
     TestLibrary dependency("dependent.fidl", R"FIDL(
 library fidl.test.uzing.dependent;
 
@@ -56,7 +58,7 @@ struct Bar {
     int8 s;
 };
 
-)FIDL");
+)FIDL", &shared);
     ASSERT_TRUE(dependency.Compile());
 
     TestLibrary library("uzing.fidl", R"FIDL(
@@ -69,8 +71,8 @@ struct Foo {
     dependent_alias.Bar dep2;
 };
 
-)FIDL");
-    ASSERT_TRUE(library.AddDependentLibrary(dependency));
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     ASSERT_TRUE(library.Compile());
 
     END_TEST;
@@ -104,10 +106,11 @@ struct Foo {
 bool invalid_duplicate_using() {
     BEGIN_TEST;
 
+    SharedAmongstLibraries shared;
     TestLibrary dependency("dependent.fidl", R"FIDL(
 library fidl.test.uzing.dependent;
 
-)FIDL");
+)FIDL", &shared);
     ASSERT_TRUE(dependency.Compile());
 
     TestLibrary library("uzing.fidl", R"FIDL(
@@ -116,8 +119,8 @@ library fidl.test.uzing;
 using fidl.test.uzing.dependent;
 using fidl.test.uzing.dependent; // duplicated
 
-)FIDL");
-    ASSERT_TRUE(library.AddDependentLibrary(dependency));
+)FIDL", &shared);
+    ASSERT_TRUE(library.AddDependentLibrary(std::move(dependency)));
     ASSERT_FALSE(library.Compile());
     const auto& errors = library.errors();
     ASSERT_EQ(1, errors.size());
