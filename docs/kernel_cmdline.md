@@ -57,6 +57,13 @@ then all `-fsanitize=address` drivers will be supported regardless of this
 option.  If this option is not set and there are no such drivers in /boot, then
 drivers built with `-fsanitize=address` cannot be loaded and will be rejected.
 
+## devmgr\.devhost\.strict-linking
+
+If this option is set, devmgr will only allow `libasync-default.so`,
+`libdriver.so`, and `libfdio.so` to be dynamically linked into a devhost. This
+prevents drivers from dynamically linking with libraries that they should not.
+All other libraries should be statically linked into a driver.
+
 ## devmgr\.verbose
 
 Turn on verbose logging.

@@ -39,6 +39,7 @@
 
 #include <utility>
 
+#include "devhost-loader-service.h"
 #include "devmgr.h"
 #include "../shared/env.h"
 #include "../shared/fdio.h"
@@ -170,6 +171,7 @@ private:
 
 namespace {
 
+DevhostLoaderService g_ldsvc;
 Coordinator g_coordinator;
 
 // Handle ID to use for the root job when spawning devhosts. This number must
@@ -197,6 +199,7 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
+bool dc_strict_linking = false;
 
 async_dispatcher_t* DcAsyncDispatcher() {
     return DcAsyncLoop()->dispatcher();
@@ -622,6 +625,14 @@ static zx_status_t dc_launch_devhost(Devhost* host,
     launchpad_create_with_jobs(devhost_job.get(), 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
+
+    if (dc_strict_linking) {
+        zx::channel connection;
+        zx_status_t status = g_ldsvc.Connect(&connection);
+        if (status == ZX_OK) {
+            launchpad_use_loader_service(lp, connection.release());
+        }
+    }
 
     launchpad_add_handle(lp, hrpc, PA_HND(PA_USER0, 0));
 
@@ -2258,6 +2269,14 @@ void load_system_drivers() {
 
 void coordinator(DevmgrArgs args) {
     log(INFO, "devmgr: coordinator()\n");
+
+    dc_strict_linking = getenv_bool("devmgr.devhost.strict-linking", false);
+    if (dc_strict_linking) {
+        zx_status_t status = g_ldsvc.Init();
+        if (status != ZX_OK) {
+            return;
+        }
+    }
 
     // Set up the default values for our arguments if they weren't given.
     if (args.driver_search_paths.size() == 0) {
