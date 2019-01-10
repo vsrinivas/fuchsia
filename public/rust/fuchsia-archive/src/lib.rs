@@ -113,7 +113,7 @@ where
 }
 
 /// Write a FAR-formatted archive to the target.
-pub fn write<T>(mut target: &mut T, inputs: &mut Iterator<Item = (&str, &str)>) -> Result<(), Error>
+pub fn write<T>(target: &mut T, inputs: &mut Iterator<Item = (&str, &str)>) -> Result<(), Error>
 where
     T: Write,
 {
@@ -153,18 +153,18 @@ where
         length: align(path_data.len() as u64, 8),
     };
 
-    serialize_into(&mut target, &index)?;
+    serialize_into(&mut *target, &index)?;
 
-    serialize_into(&mut target, &dir_index)?;
+    serialize_into(&mut *target, &dir_index)?;
 
-    serialize_into(&mut target, &name_index)?;
+    serialize_into(&mut *target, &name_index)?;
 
     let mut content_offset = align(name_index.offset + name_index.length, CONTENT_ALIGNMENT);
 
     for entry in &mut entries {
         entry.data_offset = content_offset;
         content_offset = align(content_offset + entry.data_length, CONTENT_ALIGNMENT);
-        serialize_into(&mut target, &entry)?;
+        serialize_into(&mut *target, &entry)?;
     }
 
     target.write_all(&path_data)?;
@@ -200,7 +200,7 @@ where
     T: Read + Seek,
 {
     /// Create a new Reader for the provided source.
-    pub fn new(mut source: &'a mut T) -> Result<Reader<'a, T>, Error> {
+    pub fn new(source: &'a mut T) -> Result<Reader<'a, T>, Error> {
         let index = Reader::<T>::read_index(source)?;
 
         let (dir_index, dir_name_index) =
@@ -210,23 +210,19 @@ where
         let dir_name_index =
             dir_name_index.ok_or(format_err!("Invalid archive, missing directory name index"))?;
 
-        let dir_entry_count = dir_index.length / DIRECTORY_ENTRY_LEN;
-        let mut dir_entries: Vec<DirectoryEntry> = Vec::with_capacity(dir_entry_count as usize);
-        for _ in 0..dir_entry_count {
-            dir_entries.push(deserialize_from(&mut source)?);
-        }
-
         source.seek(SeekFrom::Start(dir_name_index.offset))?;
         let mut path_data = vec![0; dir_name_index.length as usize];
         source.read_exact(&mut path_data)?;
 
+        source.seek(SeekFrom::Start(dir_index.offset))?;
+        let dir_entry_count = dir_index.length / DIRECTORY_ENTRY_LEN;
         let mut directory_entries = BTreeMap::new();
-        for entry in dir_entries {
+        for _ in 0..dir_entry_count {
+            let entry: DirectoryEntry = deserialize_from(&mut *source)?;
             let name_start = entry.name_offset as usize;
             let after_name_end = name_start + entry.name_length as usize;
             let file_name_str = str::from_utf8(&path_data[name_start..after_name_end])?;
             let file_name = String::from(file_name_str);
-
             directory_entries.insert(file_name, entry);
         }
 
@@ -237,12 +233,12 @@ where
     }
 
     /// Return a list of the items in the archive
-    pub fn list(&self) -> Vec<&str> {
-        self.directory_entries.keys().map(String::as_str).collect()
+    pub fn list(&self) -> impl Iterator<Item = &str> {
+        self.directory_entries.keys().map(String::as_str)
     }
 
-    fn read_index(mut source: &mut T) -> Result<Index, Error> {
-        let decoded_index: Index = deserialize_from(&mut source)?;
+    fn read_index(source: &mut T) -> Result<Index, Error> {
+        let decoded_index: Index = deserialize_from(&mut *source)?;
         if decoded_index.magic != MAGIC_INDEX_VALUE {
             Err(format_err!("Invalid archive, bad magic"))
         } else if decoded_index.length % INDEX_ENTRY_LEN != 0 {
@@ -253,13 +249,13 @@ where
     }
 
     fn read_index_entries(
-        mut source: &mut T, count: u64, index: &Index,
+        source: &mut T, count: u64, index: &Index,
     ) -> Result<(Option<IndexEntry>, Option<IndexEntry>), Error> {
         let mut dir_index: Option<IndexEntry> = None;
         let mut dir_name_index: Option<IndexEntry> = None;
         let mut last_chunk_type: Option<ChunkType> = None;
         for _ in 0..count {
-            let entry: IndexEntry = deserialize_from(&mut source)?;
+            let entry: IndexEntry = deserialize_from(&mut *source)?;
 
             match last_chunk_type {
                 None => {}
@@ -300,12 +296,12 @@ where
 
     /// Create an EntryReader for an entry with the specified name.
     pub fn open(&mut self, archive_path: &str) -> Result<EntryReader<T>, Error> {
-        let directory_entry = *self.find_directory_entry(archive_path)?;
+        let directory_entry = self.find_directory_entry(archive_path)?;
 
         Ok(EntryReader {
-            source: self.source,
             offset: directory_entry.data_offset,
             length: directory_entry.data_length,
+            source: self.source,
         })
     }
 
@@ -581,7 +577,7 @@ mod tests {
         let mut example_cursor = Cursor::new(&example);
         let reader = Reader::new(&mut example_cursor).unwrap();
 
-        let files = reader.list();
+        let files = reader.list().collect::<Vec<_>>();
         let want = ["a", "b", "dir/c"];
         assert_equal(want.iter(), &files);
     }
