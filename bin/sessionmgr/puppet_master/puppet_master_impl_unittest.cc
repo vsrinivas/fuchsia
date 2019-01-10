@@ -104,7 +104,7 @@ TEST_F(PuppetMasterTest, CommandsAreSentToExecutor_IfWeCloseStoryChannel) {
   story->Execute([&](fuchsia::modular::ExecuteResult r) {
     callback_called = true;
   });
-  story.Close(ZX_OK);
+  story.Unbind();
   RunLoopUntil([&]() { return executor_.execute_count() > 0; });
   EXPECT_FALSE(callback_called);
   EXPECT_EQ(1, executor_.execute_count());
