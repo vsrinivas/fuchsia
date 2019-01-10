@@ -30,7 +30,6 @@
 typedef struct instance_state instance_state_t;
 struct instance_state {
   int root_dir_fd;
-  int data_sink_dir_fd;
   // NULL-terminated list of paths from which objects will loaded.
   const char* const* lib_paths;
 };
@@ -120,9 +119,7 @@ zx_status_t fd_publish_data_sink(void* ctx, const char* sink_name, zx_handle_t v
 void fd_finalizer(void* ctx) {
     instance_state_t* instance_state = (instance_state_t*)ctx;
     int root_dir_fd = instance_state->root_dir_fd;
-    int data_sink_dir_fd = instance_state->data_sink_dir_fd;
     close(root_dir_fd);
-    close(data_sink_dir_fd);
     free(instance_state);
 }
 
@@ -300,11 +297,9 @@ static const char* const fs_lib_paths[] = {"system/lib", "boot/lib", NULL};
 
 // Create the default implementation of a loader service for which
 // paths are loaded relative to |root_dir_fd| and among the array of
-// subdirectories given by |lib_paths| (NULL-terminated), with data published
-// in the location given by |data_sink_dir_fd|.
+// subdirectories given by |lib_paths| (NULL-terminated).
 static zx_status_t loader_service_create_default(async_dispatcher_t* dispatcher,
                                                  int root_dir_fd,
-                                                 int data_sink_dir_fd,
                                                  const char* const* lib_paths,
                                                  loader_service_t** out) {
     instance_state_t* instance_state = calloc(1, sizeof(loader_service_t));
@@ -312,7 +307,6 @@ static zx_status_t loader_service_create_default(async_dispatcher_t* dispatcher,
         return ZX_ERR_NO_MEMORY;
     }
     instance_state->root_dir_fd = root_dir_fd;
-    instance_state->data_sink_dir_fd = data_sink_dir_fd;
     instance_state->lib_paths = lib_paths? lib_paths : fd_lib_paths;
 
     loader_service_t* svc;
@@ -331,16 +325,20 @@ zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_serv
     if (root_dir_fd < 0){
       return ZX_ERR_NOT_FOUND;
     }
-    return loader_service_create_default(dispatcher, root_dir_fd, -1, fs_lib_paths,
-                                         out);
+    return loader_service_create_default(dispatcher, root_dir_fd, fs_lib_paths, out);
 }
 
 zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
                                      int data_sink_dir_fd,
                                      loader_service_t** out) {
-    return loader_service_create_default(dispatcher, root_dir_fd, data_sink_dir_fd,
-                                         fd_lib_paths, out);
+    return loader_service_create_default(dispatcher, root_dir_fd, fd_lib_paths, out);
+}
+
+zx_status_t loader_service_create_fd_new(async_dispatcher_t* dispatcher,
+                                         int root_dir_fd,
+                                         loader_service_t** out) {
+    return loader_service_create_default(dispatcher, root_dir_fd, fd_lib_paths, out);
 }
 
 zx_status_t loader_service_release(loader_service_t* svc) {
