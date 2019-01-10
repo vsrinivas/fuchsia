@@ -53,6 +53,8 @@ _fx() {
     desc=${${lines[${lines[(i)\#\#\# *]}]}#????}
     commands+=("${command#*devshell/}:${desc}")
   done
+  commands+=("gn:invoke the gn command")
+  commands+=("ninja:invoke the ninja command")
 
   _arguments \
     "--config[config file]:filename:_files" \
