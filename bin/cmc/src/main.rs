@@ -10,7 +10,10 @@ use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
 
+mod cm;
+mod cml;
 mod common;
+mod compile;
 mod format;
 mod merge;
 mod opts;
@@ -33,6 +36,11 @@ fn run_cmc() -> Result<(), Error> {
             pretty,
             output,
         } => format::format(&file, pretty, output)?,
+        opts::Commands::Compile {
+            file,
+            pretty,
+            output,
+        } => compile::compile(&file, pretty, output)?,
     }
     if let Some(stamp_path) = opt.stamp {
         stamp(stamp_path)?;

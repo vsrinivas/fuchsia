@@ -52,4 +52,20 @@ pub enum Commands {
         /// file to write the formatted results to, will print to stdout if not provided
         output: Option<PathBuf>,
     },
+
+    #[structopt(name = "compile")]
+    /// compile a CML file
+    Compile {
+        #[structopt(name = "FILE", parse(from_os_str))]
+        /// file to format
+        file: PathBuf,
+
+        #[structopt(short = "p", long = "pretty")]
+        /// whether to pretty-print the results, will minify if not provided
+        pretty: bool,
+
+        #[structopt(short = "o", long = "output", parse(from_os_str))]
+        /// file to write the formatted results to, will print to stdout if not provided
+        output: Option<PathBuf>,
+    },
 }

@@ -15,6 +15,21 @@ pub const CM_SCHEMA: &str = include_str!("../cm_schema.json");
 pub const CML_SCHEMA: &str = include_str!("../cml_schema.json");
 pub const CMX_SCHEMA: &str = include_str!("../cmx_schema.json");
 
+/// Keyword definitions and syntax helpers for CM and CML.
+pub mod keywords {
+    use lazy_static::lazy_static;
+    use regex::Regex;
+
+    pub const DIRECTORY: &str = "directory";
+    pub const SERVICE: &str = "service";
+
+    lazy_static! {
+        pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+        pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
+        pub static ref NAME_RE: Regex = Regex::new(r"^[A-Za-z0-9\-_]+$").unwrap();
+    }
+}
+
 /// Represents a JSON schema.
 pub type JsonSchemaStr<'a> = &'a str;
 

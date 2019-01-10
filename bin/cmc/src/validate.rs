@@ -42,7 +42,7 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
 }
 
 /// Validate a JSON document according to the given schema.
-fn validate_json(json: &Value, schema: JsonSchemaStr) -> Result<(), Error> {
+pub fn validate_json(json: &Value, schema: JsonSchemaStr) -> Result<(), Error> {
     // Parse the schema
     let cmx_schema_json = serde_json::from_str(schema)
         .map_err(|e| Error::internal(format!("Couldn't read schema as JSON: {}", e)))?;
