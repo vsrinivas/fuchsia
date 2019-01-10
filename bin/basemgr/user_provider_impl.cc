@@ -348,7 +348,7 @@ bool UserProviderImpl::AddUserToAccountsDB(
       builder.CreateString(account->display_name),
       builder.CreateString(account->url),
       builder.CreateString(account->image_url),
-      builder.CreateString(account->id)));
+      builder.CreateString(account->profile_id)));
 
   // Write user info to disk
   builder.Finish(fuchsia::modular::CreateUsersStorage(
