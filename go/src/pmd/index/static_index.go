@@ -197,6 +197,17 @@ func (idx *StaticIndex) List() ([]pkg.Package, error) {
 	return packages, nil
 }
 
+// StaticPacakgeBlobs returns the blobs that are the meta FARs for the packages
+// in the static index and never changes, unlike PackageBlobs() which will also
+// include updated versions of packages in the index.
+func (idx *StaticIndex) StaticPackageBlobs() []string {
+	b := make([]string, 0, len(idx.roots))
+	for _, m := range idx.roots {
+		b = append(b, m)
+	}
+	return b
+}
+
 // PackageBlobs returns the list of blobs which are meta FARs backing packages in the index.
 func (idx *StaticIndex) PackageBlobs() []string {
 

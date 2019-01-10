@@ -82,6 +82,9 @@ func New(indexDir string, blobDir string, am amberer.AmberClient) (*Filesystem, 
 				fs:                   f,
 			},
 			"system": unsupportedDirectory("/system"),
+			"validation": &validationDir{unsupportedDirectory: unsupportedDirectory("/validation"),
+				fs: f,
+			},
 		},
 	}
 
@@ -385,4 +388,49 @@ func (fs *Filesystem) GC() error {
 		}
 	}
 	return nil
+}
+
+// ValidateStaticIndex compares the contents of the static index against what
+// blobs are available in blobfs. It returns the ids of the blobs that are
+// present and those that are missing or any error encountered trying to do the
+// validation.
+func (fs *Filesystem) ValidateStaticIndex() (map[string]struct{}, map[string]struct{}, error) {
+	installedBlobs, err := readBlobfs(fs.blobfs)
+	if err != nil {
+		return nil, nil, fmt.Errorf("pmd_validate: unable to list blobfs: %s", err)
+	}
+
+	present := make(map[string]struct{})
+	missing := make(map[string]struct{})
+	staticPkgs := fs.static.StaticPackageBlobs()
+	if pd, ok := fs.root.dir("system").(*packageDir); ok {
+		staticPkgs = append(staticPkgs, pd.contents["meta"])
+	}
+
+	for _, pkgRoot := range staticPkgs {
+		if _, ok := installedBlobs[pkgRoot]; ok {
+			present[pkgRoot] = struct{}{}
+		} else {
+			log.Printf("pmd_validate: %q root is missing", pkgRoot)
+			missing[pkgRoot] = struct{}{}
+		}
+
+		pDir, err := newPackageDirFromBlob(pkgRoot, fs)
+		if err != nil {
+			log.Printf("pmd_validate: failed getting package from blob %s: %s", pkgRoot, err)
+			pDir.Close()
+			return nil, nil, err
+		}
+
+		for _, m := range pDir.Blobs() {
+			if _, ok := installedBlobs[m]; ok {
+				present[m] = struct{}{}
+			} else {
+				log.Printf("pmd_validate: %q is missing from %q", m, pkgRoot)
+				missing[m] = struct{}{}
+			}
+		}
+		pDir.Close()
+	}
+	return present, missing, nil
 }

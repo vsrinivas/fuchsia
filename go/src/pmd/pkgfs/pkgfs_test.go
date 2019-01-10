@@ -330,7 +330,7 @@ func TestListRoot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	want := []string{"garbage", "install", "needs", "packages", "system", "versions"}
+	want := []string{"garbage", "install", "needs", "packages", "system", "versions", "validation"}
 	sort.Strings(names)
 	sort.Strings(want)
 
