@@ -42,12 +42,6 @@ void App::Start(const fxl::CommandLine& command_line) {
     return;
   }
 
-  if (!context()->has_environment_services()) {
-    FXL_LOG(ERROR) << "Cannot access application environment services";
-    Done(1);
-    return;
-  }
-
   command_ = it->second.factory(context());
   command_->Run(fxl::CommandLineFromIteratorsWithArgv0(
                     positional_args.front(), positional_args.begin() + 1,

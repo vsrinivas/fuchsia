@@ -54,11 +54,6 @@ class StartupContext {
   // May be null if the component does not have access to its environment.
   const fuchsia::sys::EnvironmentPtr& environment() const;
 
-  // Whether this component was given services by its environment.
-  bool has_environment_services() const {
-    return !!incoming_services()->directory();
-  }
-
   // Gets the component launcher service provided to the component by
   // its environment.
   //
