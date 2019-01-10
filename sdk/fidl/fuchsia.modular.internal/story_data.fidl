@@ -9,17 +9,16 @@ using fuchsia.modular;
 
 // Metadata and summary information about a single story.  Does not contain the
 // data necessary to run a story: see story_model.fidl for that.
-struct StoryData {
+table StoryData {
     // Metadata available to the SessionShell.
-    fuchsia.modular.StoryInfo story_info;
+    1: fuchsia.modular.StoryInfo story_info;
 
-    // An optional client-supplied name for this story.
-    string? story_name;
+    // A client-supplied name for this story.
+    2: string story_name;
 
     // Story metadata and configuration.
-    fuchsia.modular.StoryOptions story_options;
+    3: fuchsia.modular.StoryOptions story_options;
 
-    // Page id on the user's ledger which stores story information. It
-    // might be NULL until the story is being started.
-    fuchsia.ledger.PageId? story_page_id;
+    // Page id on the user's ledger which stores story information.
+    4: fuchsia.ledger.PageId story_page_id;
 };
