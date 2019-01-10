@@ -19,18 +19,10 @@ const (
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.
 type SubprocessRunner struct {
-	Timeout time.Duration
 }
 
+// Run executes the given command.
 func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.Writer, stderr io.Writer) error {
-	// Set a default timeout if none was given.
-	if r.Timeout == time.Duration(0) {
-		r.Timeout = defaultTimeout
-	}
-
-	ctx, cancel := context.WithTimeout(ctx, r.Timeout)
-	defer cancel()
-
 	cmd := exec.Cmd{
 		Path:        command[0],
 		Args:        command,
@@ -53,6 +45,6 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		return err
 	case <-ctx.Done():
 		syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+		return fmt.Errorf("process was killed because the context completed")
 	}
-	return fmt.Errorf("command timed out after %v", r.Timeout)
 }

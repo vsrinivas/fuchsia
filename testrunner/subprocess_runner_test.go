@@ -25,7 +25,7 @@ func TestSubprocessRunner(t *testing.T) {
 
 	t.Run("Run", func(t *testing.T) {
 		t.Run("should execute a commmand", func(t *testing.T) {
-			runner := testrunner.SubprocessRunner{Timeout: defaultIOTimeout}
+			runner := testrunner.SubprocessRunner{}
 			message := "Hello, World!"
 			command := []string{"/bin/echo", message}
 
@@ -46,9 +46,31 @@ func TestSubprocessRunner(t *testing.T) {
 			}
 		})
 
-		t.Run("should error if the timeout is exceeded", func(t *testing.T) {
-			runner := testrunner.SubprocessRunner{Timeout: defaultIOTimeout}
+		t.Run("should error if the context Completes before the commmand", func(t *testing.T) {
+			ctx, cancel := context.WithCancel(context.Background())
+			cancel()
+			runner := testrunner.SubprocessRunner{}
 			command := []string{"/bin/sleep", "5"}
+
+			stdout := new(bytes.Buffer)
+			stderr := new(bytes.Buffer)
+
+			err := runner.Run(ctx, command, stdout, stderr)
+			stdoutS := strings.TrimSpace(stdout.String())
+			stderrS := strings.TrimSpace(stderr.String())
+
+			if err == nil {
+				t.Fatal(strings.Join([]string{
+					"expected command to terminate early but it completed:",
+					fmt.Sprintf("(stdout): %s\n", stdoutS),
+					fmt.Sprintf("(stderr): %s\n", stderrS),
+				}, "\n"))
+			}
+		})
+
+		t.Run("should return an error if the command fails", func(t *testing.T) {
+			runner := testrunner.SubprocessRunner{}
+			command := []string{"not_a_command_12345"}
 
 			stdout := new(bytes.Buffer)
 			stderr := new(bytes.Buffer)
@@ -59,7 +81,7 @@ func TestSubprocessRunner(t *testing.T) {
 
 			if err == nil {
 				t.Fatal(strings.Join([]string{
-					"expected command to timeout but it completed:",
+					"expected command to terminate early but it completed:",
 					fmt.Sprintf("(stdout): %s\n", stdoutS),
 					fmt.Sprintf("(stderr): %s\n", stderrS),
 				}, "\n"))
