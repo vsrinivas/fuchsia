@@ -22,7 +22,7 @@ namespace fsl {
 FXL_EXPORT void CopyToFileDescriptor(
     zx::socket source, fxl::UniqueFD destination,
     async_dispatcher_t* dispatcher,
-    const std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>&
+    std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>
         callback);
 
 // Asynchronously copies data from source file to the destination. The given
@@ -31,7 +31,7 @@ FXL_EXPORT void CopyToFileDescriptor(
 FXL_EXPORT void CopyFromFileDescriptor(
     fxl::UniqueFD source, zx::socket destination,
     async_dispatcher_t* dispatcher,
-    const std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>&
+    std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>
         callback);
 
 }  // namespace fsl

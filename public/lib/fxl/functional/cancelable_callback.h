@@ -46,8 +46,8 @@ class CancelableCallback<void(Args...)> {
  public:
   CancelableCallback() : weak_ptr_factory_(this) {}
 
-  explicit CancelableCallback(const std::function<void(Args...)>& callback)
-      : callback_(callback), weak_ptr_factory_(this) {
+  explicit CancelableCallback(std::function<void(Args...)> callback)
+      : callback_(std::move(callback)), weak_ptr_factory_(this) {
     FXL_DCHECK(callback_);
     BindWrapper();
   }
@@ -69,11 +69,11 @@ class CancelableCallback<void(Args...)> {
 
   // Sets |callback| as the closure that may be canceled. |callback| may not be
   // null. Outstanding and any previously wrapped callbacks are canceled.
-  void Reset(const std::function<void(Args...)>& callback) {
+  void Reset(std::function<void(Args...)> callback) {
     FXL_DCHECK(callback);
     Cancel();
 
-    callback_ = callback;
+    callback_ = std::move(callback);
     BindWrapper();
   }
 

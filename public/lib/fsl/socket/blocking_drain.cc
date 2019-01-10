@@ -13,7 +13,7 @@ namespace fsl {
 
 bool BlockingDrainFrom(
     zx::socket source,
-    const std::function<size_t(const void*, uint32_t)>& write_bytes) {
+    std::function<size_t(const void*, uint32_t)> write_bytes) {
   std::vector<char> buffer(64 * 1024);
   for (;;) {
     size_t bytes_read;

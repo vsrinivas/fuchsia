@@ -256,7 +256,7 @@ void BatchGpuUploader::PostReader(
 }
 
 void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
-                              const std::function<void()>& callback) {
+                              std::function<void()> callback) {
   if (dummy_for_tests_) {
     FXL_LOG(WARNING) << "Dummy BatchGpuUploader for tests, skip submit";
     return;
@@ -275,7 +275,8 @@ void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
   frame_->EndFrame(upload_done_semaphore,
-                   [callback, read_callbacks = std::move(read_callbacks_)]() {
+                   [callback = std::move(callback),
+                    read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
                        auto buffer = pair.first;
                        auto read_callback = pair.second;

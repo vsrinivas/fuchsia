@@ -18,7 +18,7 @@ namespace fsl {
 // socket has been drained, |false| if an error occured.
 FXL_EXPORT bool BlockingDrainFrom(
     zx::socket source,
-    const std::function<size_t(const void*, uint32_t)>& write_bytes);
+    std::function<size_t(const void*, uint32_t)> write_bytes);
 
 }  // namespace fsl
 

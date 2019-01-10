@@ -121,7 +121,7 @@ class BatchGpuUploader : public Reffable {
   // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
   // can be posted once Submit is called.
   void Submit(const escher::SemaphorePtr& upload_done_semaphore,
-              const std::function<void()>& callback = [] {});
+              std::function<void()> callback = [] {});
 
  private:
   BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number);

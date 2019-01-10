@@ -14,10 +14,10 @@ using SocketDrainerTest = ::gtest::TestLoopFixture;
 
 class Client : public SocketDrainer::Client {
  public:
-  Client(const std::function<void()>& available_callback,
-         const std::function<void()>& completion_callback)
-      : available_callback_(available_callback),
-        completion_callback_(completion_callback) {}
+  Client(std::function<void()> available_callback,
+         std::function<void()> completion_callback)
+      : available_callback_(std::move(available_callback)),
+        completion_callback_(std::move(completion_callback)) {}
   ~Client() override {}
 
   std::string GetValue() { return value_; }
