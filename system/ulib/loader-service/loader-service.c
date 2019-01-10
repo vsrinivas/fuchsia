@@ -302,11 +302,11 @@ static const char* const fs_lib_paths[] = {"system/lib", "boot/lib", NULL};
 // paths are loaded relative to |root_dir_fd| and among the array of
 // subdirectories given by |lib_paths| (NULL-terminated), with data published
 // in the location given by |data_sink_dir_fd|.
-zx_status_t loader_service_create_default(async_dispatcher_t* dispatcher,
-                                          int root_dir_fd,
-                                          int data_sink_dir_fd,
-                                          const char* const* lib_paths,
-                                          loader_service_t** out) {
+static zx_status_t loader_service_create_default(async_dispatcher_t* dispatcher,
+                                                 int root_dir_fd,
+                                                 int data_sink_dir_fd,
+                                                 const char* const* lib_paths,
+                                                 loader_service_t** out) {
     instance_state_t* instance_state = calloc(1, sizeof(loader_service_t));
     if (instance_state == NULL) {
         return ZX_ERR_NO_MEMORY;
