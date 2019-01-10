@@ -35,8 +35,8 @@ std::string WriteKernelLogToFile(const std::string& dir) {
     return std::string();
   }
 
-  zx::debuglog log;
-  zx_status_t status = zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log);
+  zx::log log;
+  zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log);
   if (status != ZX_OK) {
     FX_LOGS(ERROR) << "zx::log::create failed " << status;
     return std::string();
