@@ -26,9 +26,10 @@ often these are built from third party projects, such as third_party/mesa.
 
 ### Build Configuration for Testing
 
-To expedite the build, instead of specifying the default garnet product at garnet/products/default.gni, build with garnet/products/graphics-dev.gni.
+##### Product for L0 and L1 testing:
+* garnet/products/graphics-dev.gni
 
-Packages used for testing:
+##### Packages for L0 and L1 testing:
 * garnet/packages/tests/magma
 * garnet/packages/experimental/disabled/tests_magma
 * garnet/packages/tests/image_pipe_swapchain
@@ -36,9 +37,15 @@ Packages used for testing:
 * garnet/packages/examples/vkcube_on_fb
 * garnet/packages/prod/magma_tools
 
+##### Product for L2 testing:
+* topaz/products/default.gni
+
+##### Package for L2 testing:
+* topaz/packages/examples/spinning_cube
+
 ### Testing Pre-Submit
 
-For details on the testing strategy for magma, see [test_strategy.md](test_strategy.md).
+For details on the testing strategy for magma, see [Test Strategy](test_strategy.md).
 
 There are multiple levels for magma TPS.  Each level includes all previous levels.
 
@@ -70,7 +77,11 @@ Run the test with 'set_root_view vkcube_on_scenic'.
 #### L2
 
 A full UI 'smoke' test. Build the entire product including your change.  
-Login, start a few apps, move them around, and dismiss them.
+
+Login as Guest on the device and run both of these commands:
+./scripts/fx shell sessionctl  --story_name=spinning_cube --mod_name=spinning_cube --mod_url=spinning_cube add_mod spinning_cube
+./scripts/fx shell sessionctl  --story_name=spinning_cube2 --mod_name=spinning_cube2 --mod_url=spinning_cube add_mod spinning_cube
+
 For details, refer to top level project documentation.
 
 #### S0
@@ -91,14 +102,17 @@ See [Conformance](#conformance).
 
 For some changes, it's appropriate to run benchmarks to validate performance metrics. See [Benchmarking](#benchmarking).
 
-### Conformance ###
+### Conformance
 
 For details on the Vulkan conformance test suite, see
 
 * [../third_party/vulkan-cts](../../../../third_party/vulkan-cts)
 
-### Benchmarking ###
+### Benchmarking
 
 The source to Vulkan gfxbench is access-restricted. It should be cloned into third_party.
 
 * https://fuchsia-vendor-internal.git.corp.google.com/gfxbench
+
+### See Also
+* [Test Strategy](test_strategy.md)
