@@ -349,11 +349,11 @@ zx_status_t GptDevicePartitioner::InitializeGpt(fbl::unique_fd devfs_root,
 
     if (!gpt->Valid()) {
         ERROR("Located GPT is invalid; Attempting to initialize\n");
-        if (gpt->RemoveAllPartitions()) {
+        if (gpt->RemoveAllPartitions() != ZX_OK) {
             ERROR("Failed to create empty GPT\n");
             return ZX_ERR_BAD_STATE;
         }
-        if (gpt->Sync() != 0) {
+        if (gpt->Sync() != ZX_OK) {
             ERROR("Failed to sync empty GPT\n");
             return ZX_ERR_BAD_STATE;
         }
@@ -448,17 +448,17 @@ zx_status_t GptDevicePartitioner::CreateGptPartition(const char* name, uint8_t* 
     zx_cprng_draw(out_guid, GPT_GUID_LEN);
 
     zx_status_t status;
-    if ((status = gpt_->AddPartition(name, type, out_guid, offset, blocks, 0))) {
+    if ((status = gpt_->AddPartition(name, type, out_guid, offset, blocks, 0)) != ZX_OK) {
         ERROR("Failed to add partition\n");
         return ZX_ERR_IO;
     }
-    if ((status = gpt_->Sync())) {
+    if ((status = gpt_->Sync()) != ZX_OK) {
         ERROR("Failed to sync GPT\n");
         return ZX_ERR_IO;
     }
-    if ((status = gpt_->ClearPartition(offset, 1))) {
+    if ((status = gpt_->ClearPartition(offset, 1)) != ZX_OK) {
         ERROR("Failed to clear first block of new partition\n");
-        return ZX_ERR_IO;
+        return status;
     }
     if ((status = static_cast<zx_status_t>(ioctl_block_rr_part(fd_.get()))) < 0) {
         ERROR("Failed to rebind GPT\n");
@@ -577,7 +577,7 @@ zx_status_t GptDevicePartitioner::WipePartitions(FilterCallback filter) {
         // Ignore the return status; wiping is a best-effort approach anyway.
         WipeBlockPartition(devfs_root_, p->guid, p->type);
 
-        if (gpt_->RemovePartition(p->guid)) {
+        if (gpt_->RemovePartition(p->guid) != ZX_OK) {
             ERROR("Warning: Could not remove partition\n");
         } else {
             // If we successfully clear the partition, then all subsequent
@@ -743,7 +743,10 @@ zx_status_t CrosDevicePartitioner::Initialize(fbl::unique_fd devfs_root,
             ERROR("Failed to configure CrOS for Fuchsia.\n");
             return status;
         }
-        gpt->Sync();
+        if ((status = gpt->Sync()) != ZX_OK) {
+            ERROR("Failed to sync CrOS for Fuchsia.\n");
+            return status;
+        }
         ioctl_block_rr_part(gpt_partitioner->GetFd());
     }
 
@@ -863,7 +866,11 @@ zx_status_t CrosDevicePartitioner::FinalizePartition(Partition partition_type) {
         ERROR("Cannot set CrOS partition 'tries' for KERN-C\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    gpt_->GetGpt()->Sync();
+    if ((status = gpt_->GetGpt()->Sync()) == ZX_OK) {
+        ERROR("Failed to sync CrOS partition 'tries' for KERN-C.\n");
+        return status;
+    }
+
     return ZX_OK;
 }
 

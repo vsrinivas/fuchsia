@@ -121,8 +121,7 @@ public:
         zx_status_t rc = GptDevice::Create(fd_.get(), static_cast<uint32_t>(BlockSize()),
                                            BlockCount(), &device_);
         ASSERT_GE(rc, 0, "Could not initialize gpt");
-        rc = device_->Finalize();
-        ASSERT_GE(rc, 0, "Could not finalize gpt");
+        ASSERT_EQ(device_->Finalize(), ZX_OK, "Could not finalize gpt");
 
         END_HELPER;
     }
@@ -237,8 +236,7 @@ bool create_kern_roots_state(TestState* test) {
 
     // first the rest of the disk with STATE
     uint64_t disk_start, disk_end;
-    ASSERT_EQ(device->Range(&disk_start, &disk_end), 0,
-              "Retrieval of device range failed.");
+    ASSERT_EQ(device->Range(&disk_start, &disk_end), ZX_OK, "Retrieval of device range failed.");
     part_defs[0].len = disk_end - part_defs[0].start;
 
     ASSERT_TRUE(create_partition(device, "STATE", kStateGUID, &part_defs[0]));
@@ -258,7 +256,7 @@ bool create_default_c_parts(TestState* test) {
 
     GptDevice* device = test->Device();
     uint64_t begin, end;
-    device->Range(&begin, &end);
+    ASSERT_EQ(device->Range(&begin, &end), ZX_OK, "Retrieval of device range failed.");
 
     partition_t part_defs[2];
     part_defs[0].start = begin;
@@ -463,7 +461,7 @@ bool TestNoRootc(void) {
 
     ASSERT_TRUE(create_default_c_parts(&test), "Couldn't create c parts\n");
 
-    ASSERT_EQ(dev->RemovePartition(dev->GetPartition(11)->guid), 0,
+    ASSERT_EQ(dev->RemovePartition(dev->GetPartition(11)->guid), ZX_OK,
               "Failed to remove ROOT-C partition");
 
     ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
@@ -492,7 +490,7 @@ bool TestNoKernc(void) {
 
     ASSERT_TRUE(create_default_c_parts(&test), "Couldn't create c parts\n");
 
-    ASSERT_EQ(dev->RemovePartition(dev->GetPartition(10)->guid), 0,
+    ASSERT_EQ(dev->RemovePartition(dev->GetPartition(10)->guid), ZX_OK,
               "Failed to remove ROOT-C partition");
 
     ASSERT_FALSE(is_ready_to_pave(dev, test.Info(), SZ_ZX_PART),
@@ -521,7 +519,7 @@ bool TestDiskTooSmall(void) {
     ASSERT_TRUE(create_test_layout(&test), "Failed creating initial test layout");
 
     uint64_t reserved, unused;
-    dev->Range(&reserved, &unused);
+    ASSERT_EQ(dev->Range(&reserved, &unused), ZX_OK, "Retrieval of device range failed.");
 
     // this is the size we need the STATE partition to be if we are to resize
     // it to make room for the partitions we want to add and expand

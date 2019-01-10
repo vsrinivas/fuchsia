@@ -110,7 +110,7 @@ bool find_space(GptDevice* gpt,
     gpt_sort_partitions(parts, gpt::kPartitionCount);
 
     uint64_t first_usable, last_usable;
-    gpt->Range(&first_usable, &last_usable);
+    ZX_ASSERT(gpt->Range(&first_usable, &last_usable) == ZX_OK);
 
     uint64_t prev_end = first_usable - 1;
     for (uint32_t i = 0; i < gpt::kPartitionCount; i++) {
@@ -154,7 +154,7 @@ zx_status_t create_gpt_entry(GptDevice* gpt, const uint64_t first,
 
     uint8_t tguid[GPT_GUID_LEN];
     memcpy(&tguid, type, GPT_GUID_LEN);
-    if (gpt->AddPartition(name, tguid, guid, first, blks, 0)) {
+    if (gpt->AddPartition(name, tguid, guid, first, blks, 0) != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -262,7 +262,7 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
     // TODO(ZX-1396): The gpt_device_t may not be valid for modification if it
     // is a newly initialized GPT which has never had gpt_device_finalize or
     // gpt_device_sync called.
-    if (gpt->Finalize() != 0) {
+    if (gpt->Finalize() != ZX_OK) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -273,19 +273,19 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
 
     gpt_partition_t *p;
     if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-A")) != NULL) {
-        gpt->RemovePartition(p->guid);
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
     if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-B")) != NULL) {
-        gpt->RemovePartition(p->guid);
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
     if ((p = find_by_type_and_name(gpt, kKernGuid, "ZIRCON-R")) != NULL) {
-        gpt->RemovePartition(p->guid);
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
     if ((p = find_by_type(gpt, kFvmGuid)) != NULL) {
-        gpt->RemovePartition(p->guid);
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
     if ((p = find_by_type_and_name(gpt, kSysCfgGuid, "SYSCFG")) != NULL) {
-        gpt->RemovePartition(p->guid);
+        ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
     }
 
     // Space is required for 3 kernel partitions and one FVM partition that is
@@ -305,10 +305,10 @@ zx_status_t config_cros_for_fuchsia(GptDevice* gpt,
     if (!found_hole) {
         // Some partitions were not large enough. If we found a KERN-C or a ROOT-C, delete them:
         if ((p = find_by_type_and_name(gpt, kKernGuid, "KERN-C")) != NULL) {
-            gpt->RemovePartition(p->guid);
+            ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
         }
         if ((p = find_by_type_and_name(gpt, kRootGuid, "ROOT-C")) != NULL) {
-            gpt->RemovePartition(p->guid);
+            ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
         }
 
         found_hole = find_space(gpt, blocks_needed, &hole_start, &hole_end);

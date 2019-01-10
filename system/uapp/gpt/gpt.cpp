@@ -168,18 +168,18 @@ void dump(const GptDevice* gpt, int* count) {
         if (!p) break;
         memset(name, 0, gpt::kGuidStrLength);
         unsigned diff;
-        gpt->GetDiffs(i, &diff);
-        setxy(diff & GPT_DIFF_NAME, &X, &Y);
+        ZX_ASSERT(gpt->GetDiffs(i, &diff) == ZX_OK);
+        setxy(diff & gpt::kGptDiffName, &X, &Y);
         printf("Partition %d: %s%s%s\n",
                i, X, utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1), Y);
-        setxy(diff & (GPT_DIFF_FIRST | GPT_DIFF_LAST), &X, &Y);
+        setxy(diff & (gpt::kGptDiffFirst | gpt::kGptDiffLast), &X, &Y);
         printf("    Start: %s%" PRIu64 "%s, End: %s%" PRIu64 "%s (%" PRIu64 " blocks)\n",
                X, p->first, Y, X, p->last, Y, p->last - p->first + 1);
-        setxy(diff & GPT_DIFF_GUID, &X, &Y);
+        setxy(diff & gpt::kGptDiffGuid, &X, &Y);
         printf("    id:   %s%s%s\n", X, guid_to_cstring(guid, (const uint8_t*)p->guid), Y);
-        setxy(diff & GPT_DIFF_TYPE, &X, &Y);
+        setxy(diff & gpt::kGptDiffType, &X, &Y);
         printf("    type: %s%s%s\n", X, guid_to_cstring(id, (const uint8_t*)p->type), Y);
-        setxy(diff & GPT_DIFF_NAME, &X, &Y);
+        setxy(diff & gpt::kGptDiffName, &X, &Y);
         printf("    flags: %s%s%s\n", X, flags_to_cstring(flags_str, sizeof(flags_str), p->type, p->flags), Y);
     }
     if (count) {
@@ -200,7 +200,7 @@ void dump_partitions(const char* dev) {
     printf("Partition table is valid\n");
 
     uint64_t start, end;
-    if (gpt->Range(&start, &end)) {
+    if (gpt->Range(&start, &end) != ZX_OK) {
         printf("Couldn't identify device range\n");
         goto done;
     }
@@ -236,17 +236,17 @@ zx_status_t commit(GptDevice* gpt, int fd, const char* dev) {
     }
 
 make_it_so:;
-    int rc = gpt->Sync();
-    if (rc) {
+    zx_status_t rc = gpt->Sync();
+    if (rc != ZX_OK) {
         printf("Error: GPT device sync failed.\n");
-        return ZX_ERR_INTERNAL;
+        return rc;
     }
     if (ioctl_block_rr_part(fd)) {
         printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
         return ZX_ERR_INTERNAL;
     }
     printf("GPT changes complete.\n");
-    return 0;
+    return ZX_OK;
 }
 
 void init_gpt(const char* dev) {
@@ -255,7 +255,7 @@ void init_gpt(const char* dev) {
     if (!gpt) return;
 
     // generate a default header
-    gpt->RemoveAllPartitions();
+    ZX_ASSERT(gpt->RemoveAllPartitions() == ZX_OK);
     commit(gpt.get(), fd, dev);
     close(fd);
 }
@@ -277,8 +277,8 @@ void add_partition(const char* dev, uint64_t start, uint64_t end, const char* na
 
     uint8_t type[GPT_GUID_LEN];
     memset(type, 0xff, GPT_GUID_LEN);
-    int rc = gpt->AddPartition(name, type, guid, start, end - start + 1, 0);
-    if (rc == 0) {
+    zx_status_t rc = gpt->AddPartition(name, type, guid, start, end - start + 1, 0);
+    if (rc == ZX_OK) {
         printf("add partition: name=%s start=%" PRIu64 " end=%" PRIu64 "\n", name, start, end);
         commit(gpt.get(), fd, dev);
     }
@@ -448,8 +448,7 @@ void remove_partition(const char* dev, uint32_t n) {
     if (!p) {
         return;
     }
-    int rc = gpt->RemovePartition(p->guid);
-    if (rc == 0) {
+    if (gpt->RemovePartition(p->guid) == ZX_OK) {
         char name[gpt::kGuidStrLength];
         printf("remove partition: n=%u name=%s\n", n,
                utf16_to_cstring(name, (const uint16_t*)p->name,
@@ -476,7 +475,7 @@ zx_status_t adjust_partition(const char* dev, uint32_t idx_part,
     }
 
     uint64_t block_start, block_end;
-    if ((rc = gpt->Range(&block_start, &block_end)) < 0) {
+    if ((rc = gpt->Range(&block_start, &block_end)) != ZX_OK) {
         goto done;
     }
 
@@ -761,8 +760,8 @@ int repartition(int argc, char** argv) {
 
   gpt_partition_t* p = gpt->GetPartition(0);
   while (p) {
-    gpt->RemovePartition(p->guid);
-    p = gpt->GetPartition(0);
+      ZX_ASSERT(gpt->RemovePartition(p->guid) == ZX_OK);
+      p = gpt->GetPartition(0);
   }
 
 
@@ -810,7 +809,7 @@ int repartition(int argc, char** argv) {
 
     uint64_t first_usable = 0;
     uint64_t last_usable = 0;
-    gpt->Range(&first_usable, &last_usable);
+    ZX_ASSERT(gpt->Range(&first_usable, &last_usable) == ZX_OK);
 
     uint64_t start = align(first_usable, logical, physical);
 
@@ -844,7 +843,7 @@ int repartition(int argc, char** argv) {
 
       printf("%s: %" PRIu64 " bytes, %" PRIu64 " blocks, %" PRIu64 "-%" PRIu64 "\n",
              name, byte_size, nblocks, start, end);
-      gpt->AddPartition(name, type, guid, start, end - start, 0);
+      ZX_ASSERT(gpt->AddPartition(name, type, guid, start, end - start, 0) == ZX_OK);
 
       start = end + 1;
     }

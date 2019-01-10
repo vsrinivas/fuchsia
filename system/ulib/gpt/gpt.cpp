@@ -73,32 +73,33 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
                      sizeof(part->name) / sizeof(uint16_t));
 }
 
-int gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
-                     gpt_partition_t* ptable) {
+zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
+                             gpt_partition_t* ptable) {
     // write partition table first
     off_t rc = lseek(fd, header->entries * blocksize, SEEK_SET);
+    ssize_t ret;
     if (rc < 0) {
-        return -1;
+        return ZX_ERR_IO;
     }
     size_t ptable_size = header->entries_count * header->entries_size;
-    rc = write(fd, ptable, ptable_size);
-    if (rc < 0 || rc != static_cast<off_t>(ptable_size)) {
-        return -1;
+    ret = write(fd, ptable, ptable_size);
+    if (ret < 0 || ret != static_cast<ssize_t>(ptable_size)) {
+        return ZX_ERR_IO;
     }
     // then write the header
     rc = lseek(fd, header->current * blocksize, SEEK_SET);
     if (rc < 0) {
-        return -1;
+        return ZX_ERR_IO;
     }
 
     uint8_t block[blocksize];
     memset(block, 0, sizeof(blocksize));
     memcpy(block, header, sizeof(*header));
-    rc = write(fd, block, blocksize);
-    if (rc != static_cast<off_t>(blocksize)) {
-        return -1;
+    ret = write(fd, block, blocksize);
+    if (ret != static_cast<ssize_t>(blocksize)) {
+        return ZX_ERR_IO;
     }
-    return 0;
+    return ZX_OK;
 }
 
 int compare(const void* ls, const void* rs) {
@@ -231,7 +232,7 @@ const char* gpt_guid_to_type(const char* guid) {
 
 __END_CDECLS
 
-int GptDevice::FinalizeAndSync(bool persist) {
+zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
     // write fake mbr if needed
     uint8_t mbr[blocksize_];
@@ -248,13 +249,13 @@ int GptDevice::FinalizeAndSync(bool persist) {
         mpart->chs_last[2] = 0xff;
         mpart->lba = 1;
         mpart->sectors = blocks_ & 0xffffffff;
-        rc = lseek(fd_, 0, SEEK_SET);
+        rc = lseek(fd_.get(), 0, SEEK_SET);
         if (rc < 0) {
-            return -1;
+            return ZX_ERR_IO;
         }
-        rc = write(fd_, mbr, blocksize_);
+        rc = write(fd_.get(), mbr, blocksize_);
         if (rc < 0 || rc != static_cast<off_t>(blocksize_)) {
-            return -1;
+            return ZX_ERR_IO;
         }
         mbr_ = true;
     }
@@ -279,14 +280,14 @@ int GptDevice::FinalizeAndSync(bool persist) {
 
     // always write 128 entries in partition table
     size_t ptable_size = kPartitionCount * sizeof(gpt_partition_t);
-    gpt_partition_t* buf = static_cast<gpt_partition_t*>(malloc(ptable_size));
+    fbl::unique_ptr<gpt_partition_t[]> buf(new gpt_partition_t[kPartitionCount]);
     if (!buf) {
-        return -1;
+        return ZX_ERR_NO_MEMORY;
     }
-    memset(buf, 0, ptable_size);
+    memset(buf.get(), 0, ptable_size);
 
     // generate partition table
-    uint8_t* ptr = reinterpret_cast<uint8_t*>(buf);
+    uint8_t* ptr = reinterpret_cast<uint8_t*>(buf.get());
     for (uint32_t i = 0; i < kPartitionCount && partitions_[i] != NULL; i++) {
         memcpy(ptr, partitions_[i], GPT_ENTRY_SIZE);
         ptr += GPT_ENTRY_SIZE;
@@ -296,7 +297,7 @@ int GptDevice::FinalizeAndSync(bool persist) {
     header.entries = valid_ ? header_.entries : 2;
     header.entries_count = kPartitionCount;
     header.entries_size = GPT_ENTRY_SIZE;
-    header.entries_crc = crc32(0, reinterpret_cast<uint8_t*>(buf), ptable_size);
+    header.entries_crc = crc32(0, reinterpret_cast<uint8_t*>(buf.get()), ptable_size);
 
     uint64_t ptable_blocks = ptable_size / blocksize_;
     header.first = header.entries + ptable_blocks;
@@ -316,16 +317,17 @@ int GptDevice::FinalizeAndSync(bool persist) {
     header.crc32 = crc32(0, reinterpret_cast<const uint8_t*>(&header), GPT_HEADER_SIZE);
 
     if (persist) {
+        zx_status_t status;
         // write backup to disk
-        rc = gpt_sync_current(fd_, blocksize_, &header, buf);
-        if (rc < 0) {
-            goto fail;
+        status = gpt_sync_current(fd_.get(), blocksize_, &header, buf.get());
+        if (status != ZX_OK) {
+            return status;
         }
 
         // write primary copy to disk
-        rc = gpt_sync_current(fd_, blocksize_, &header_, buf);
-        if (rc < 0) {
-            goto fail;
+        status = gpt_sync_current(fd_.get(), blocksize_, &header_, buf.get());
+        if (status != ZX_OK) {
+            return status;
         }
     }
 
@@ -334,11 +336,7 @@ int GptDevice::FinalizeAndSync(bool persist) {
 
     valid_ = true;
 
-    free(buf);
-    return 0;
-fail:
-    free(buf);
-    return -1;
+    return ZX_OK;
 }
 
 void GptDevice::PrintTable() const {
@@ -348,40 +346,40 @@ void GptDevice::PrintTable() const {
     print_array(partitions_, count);
 }
 
-int GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
+zx_status_t GptDevice::GetDiffs(uint32_t idx, uint32_t* diffs) const {
 
     *diffs = 0;
 
     if (idx >= kPartitionCount) {
-        return -1;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     if (partitions_[idx] == NULL) {
-        return -1;
+        return ZX_ERR_NOT_FOUND;
     }
 
     const gpt_partition_t* a = partitions_[idx];
     const gpt_partition_t* b = &ptable_backup_[idx];
     if (memcmp(a->type, b->type, sizeof(a->type))) {
-        *diffs |= GPT_DIFF_TYPE;
+        *diffs |= kGptDiffType;
     }
     if (memcmp(a->guid, b->guid, sizeof(a->guid))) {
-        *diffs |= GPT_DIFF_GUID;
+        *diffs |= kGptDiffGuid;
     }
     if (a->first != b->first) {
-        *diffs |= GPT_DIFF_FIRST;
+        *diffs |= kGptDiffFirst;
     }
     if (a->last != b->last) {
-        *diffs |= GPT_DIFF_LAST;
+        *diffs |= kGptDiffLast;
     }
     if (a->flags != b->flags) {
-        *diffs |= GPT_DIFF_FLAGS;
+        *diffs |= kGptDiffFlags;
     }
     if (memcmp(a->name, b->name, sizeof(a->name))) {
-        *diffs |= GPT_DIFF_NAME;
+        *diffs |= kGptDiffName;
     }
 
-    return 0;
+    return ZX_OK;
 }
 
 zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
@@ -390,8 +388,14 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
     gpt_partition_t* ptable;
     gpt_header_t* header;
     off_t rc;
+    ssize_t ret;
 
-    fd_ = fd;
+    fd_.reset(dup(fd));
+    if (!fd_.is_valid()) {
+        G_PRINTF("failed to dup the fd\n");
+        return ZX_ERR_INTERNAL;
+    }
+
     blocksize_ = blocksize;
     blocks_ = blocks;
 
@@ -403,19 +407,19 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
     }
 
     // Read protective MBR.
-    rc = lseek(fd, 0, SEEK_SET);
+    rc = lseek(fd_.get(), 0, SEEK_SET);
     if (rc < 0) {
         return ZX_ERR_INTERNAL;
     }
-    rc = read(fd, block, blocksize);
-    if (rc < 0 || rc != static_cast<off_t>(blocksize)) {
+    ret = read(fd_.get(), block, blocksize);
+    if (ret < 0 || ret != static_cast<ssize_t>(blocksize)) {
         return ZX_ERR_INTERNAL;
     }
     mbr_ = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
 
     // read the gpt header (lba 1)
-    rc = read(fd, block, blocksize);
-    if (rc < 0 || rc != static_cast<off_t>(blocksize)) {
+    ret = read(fd_.get(), block, blocksize);
+    if (ret < 0 || ret != static_cast<ssize_t>(blocksize)) {
         return ZX_ERR_INTERNAL;
     }
 
@@ -456,7 +460,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
     ptable = ptable_;
 
     // read the partition table
-    rc = lseek(fd, header->entries * blocksize, SEEK_SET);
+    rc = lseek(fd_.get(), header->entries * blocksize, SEEK_SET);
     if (rc < 0) {
         return ZX_ERR_INTERNAL;
     }
@@ -465,7 +469,7 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
         G_PRINTF("partition table too big\n");
         return ZX_OK;
     }
-    rc = read(fd, ptable, ptable_size);
+    rc = read(fd_.get(), ptable, ptable_size);
     if (rc != ptable_size) {
         return ZX_ERR_INTERNAL;
     }
@@ -499,39 +503,38 @@ zx_status_t GptDevice::Create(int fd, uint32_t blocksize, uint64_t blocks,
     return status;
 }
 
-int GptDevice::Finalize() {
+zx_status_t GptDevice::Finalize() {
     return FinalizeAndSync(false);
 }
 
-int GptDevice::Sync() {
+zx_status_t GptDevice::Sync() {
     return FinalizeAndSync(true);
 }
 
-int GptDevice::Range(uint64_t* block_start, uint64_t* block_end) const {
+zx_status_t GptDevice::Range(uint64_t* block_start, uint64_t* block_end) const {
 
     if (!valid_) {
         G_PRINTF("partition header invalid\n");
-        return -1;
+        return ZX_ERR_INTERNAL;
     }
 
     // check range
     *block_start = header_.first;
     *block_end = header_.last;
-    return 0;
+    return ZX_OK;
 }
 
-int GptDevice::AddPartition(const char* name, const uint8_t* type,
-                            const uint8_t* guid, uint64_t offset, uint64_t blocks,
-                            uint64_t flags) {
+zx_status_t GptDevice::AddPartition(const char* name, const uint8_t* type, const uint8_t* guid,
+                                    uint64_t offset, uint64_t blocks, uint64_t flags) {
 
     if (!valid_) {
         G_PRINTF("partition header invalid, sync to generate a default header\n");
-        return -1;
+        return ZX_ERR_INTERNAL;
     }
 
     if (blocks == 0) {
         G_PRINTF("partition must be at least 1 block\n");
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     uint64_t first = offset;
@@ -541,7 +544,7 @@ int GptDevice::AddPartition(const char* name, const uint8_t* type,
     if (last < first || first < header_.first || last > header_.last) {
         G_PRINTF("partition must be in range of usable blocks[%" PRIu64 ", %" PRIu64 "]\n",
                  header_.first, header_.last);
-        return -1;
+        return ZX_ERR_INVALID_ARGS;
     }
 
     // check for overlap
@@ -554,12 +557,12 @@ int GptDevice::AddPartition(const char* name, const uint8_t* type,
         }
         if (first <= partitions_[i]->last && last >= partitions_[i]->first) {
             G_PRINTF("partition range overlaps\n");
-            return -1;
+            return ZX_ERR_OUT_OF_RANGE;
         }
     }
     if (tail == -1) {
         G_PRINTF("too many partitions\n");
-        return -1;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     // find a free slot
@@ -575,19 +578,19 @@ int GptDevice::AddPartition(const char* name, const uint8_t* type,
     // insert the new element into the list
     partition_init(part, name, type, guid, first, last, flags);
     partitions_[tail] = part;
-    return 0;
+    return ZX_OK;
 }
 
-int GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
+zx_status_t GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
 
     if (!valid_) {
         G_PRINTF("partition header invalid, sync to generate a default header\n");
-        return -1;
+        return ZX_ERR_WRONG_TYPE;
     }
 
     if (blocks == 0) {
         G_PRINTF("must clear at least 1 block\n");
-        return -1;
+        return ZX_ERR_NO_RESOURCES;
     }
     uint64_t first = offset;
     uint64_t last = offset + blocks - 1;
@@ -595,24 +598,24 @@ int GptDevice::ClearPartition(uint64_t offset, uint64_t blocks) {
     if (last < first || first < header_.first || last > header_.last) {
         G_PRINTF("must clear in the range of usable blocks[%" PRIu64 ", %" PRIu64 "]\n",
                  header_.first, header_.last);
-        return -1;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     char zero[blocksize_];
     memset(zero, 0, sizeof(zero));
 
     for (size_t i = first; i <= last; i++) {
-        if (pwrite(fd_, zero, sizeof(zero), blocksize_ * i) !=
+        if (pwrite(fd_.get(), zero, sizeof(zero), blocksize_ * i) !=
             static_cast<ssize_t>(sizeof(zero))) {
             G_PRINTF("Failed to write to block %zu; errno: %d\n", i, errno);
-            return -1;
+            return ZX_ERR_IO;
         }
     }
 
-    return 0;
+    return ZX_OK;
 }
 
-int GptDevice::RemovePartition(const uint8_t* guid) {
+zx_status_t GptDevice::RemovePartition(const uint8_t* guid) {
     // look for the entry in the partition list
     uint32_t i;
     for (i = 0; i < kPartitionCount; i++) {
@@ -622,7 +625,7 @@ int GptDevice::RemovePartition(const uint8_t* guid) {
     }
     if (i == kPartitionCount) {
         G_PRINTF("partition not found\n");
-        return -1;
+        return ZX_ERR_NOT_FOUND;
     }
     // clear the entry
     memset(partitions_[i], 0, GPT_ENTRY_SIZE);
@@ -634,12 +637,12 @@ int GptDevice::RemovePartition(const uint8_t* guid) {
             partitions_[i - 1] = partitions_[i];
         }
     }
-    return 0;
+    return ZX_OK;
 }
 
-int GptDevice::RemoveAllPartitions() {
+zx_status_t GptDevice::RemoveAllPartitions() {
     memset(partitions_, 0, sizeof(partitions_));
-    return 0;
+    return ZX_OK;
 }
 
 void GptDevice::GetHeaderGuid(uint8_t (*disk_guid_out)[GPT_GUID_LEN]) const {

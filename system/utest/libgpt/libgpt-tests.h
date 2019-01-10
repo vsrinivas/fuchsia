@@ -95,7 +95,7 @@ public:
     // any of the test. Instead we expose following wrapper funtions for
     // a few GptDevice methods.
     bool IsGptValid() const { return gpt_->Valid(); }
-    int GetDiffs(uint32_t partition_index, uint32_t* diffs) const {
+    zx_status_t GetDiffs(uint32_t partition_index, uint32_t* diffs) const {
         return gpt_->GetDiffs(partition_index, diffs);
     }
 
@@ -105,21 +105,16 @@ public:
     }
 
     // Adds a partition
-    int AddPartition(const char* name, const uint8_t* type,
-                     const uint8_t* guid, uint64_t offset, uint64_t blocks,
-                     uint64_t flags) {
+    zx_status_t AddPartition(const char* name, const uint8_t* type, const uint8_t* guid,
+                             uint64_t offset, uint64_t blocks, uint64_t flags) {
         return gpt_->AddPartition(name, type, guid, offset, blocks, flags);
     }
 
     // removes a partition.
-    int RemovePartition(const uint8_t* guid) {
-        return gpt_->RemovePartition(guid);
-    }
+    zx_status_t RemovePartition(const uint8_t* guid) { return gpt_->RemovePartition(guid); }
 
     // removes all partitions.
-    int RemoveAllPartitions() {
-        return gpt_->RemoveAllPartitions();
-    }
+    zx_status_t RemoveAllPartitions() { return gpt_->RemoveAllPartitions(); }
 
 private:
     // Initialize a physical media.

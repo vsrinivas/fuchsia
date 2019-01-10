@@ -279,7 +279,8 @@ bool LibGptTest::Sync() {
 bool LibGptTest::ReadRange() {
     BEGIN_HELPER;
 
-    gpt_->Range(&usable_start_block_, &usable_last_block_);
+    ASSERT_EQ(gpt_->Range(&usable_start_block_, &usable_last_block_), ZX_OK,
+              "Retrieval of device range failed.");
 
     // TODO(auradkar): GptDevice doesn't export api to get GPT-metadata size.
     // If it does, we can keep better track of metadata size it says it needs
@@ -403,10 +404,9 @@ bool AddPartitionHelper(LibGptTest* libGptTest, Partitions* partitions) {
     ASSERT_GT(partitions->GetCount(), 0, "At least one partition is required");
     for (uint32_t i = 0; i < partitions->GetCount(); i++) {
         const gpt_partition_t* p = partitions->GetPartition(i);
-        ASSERT_EQ(libGptTest->AddPartition(reinterpret_cast<const char*>(p->name),
-                                           p->type, p->guid, p->first,
-                                           partition_size(p), p->flags),
-                  0, "Add partition failed");
+        ASSERT_EQ(libGptTest->AddPartition(reinterpret_cast<const char*>(p->name), p->type, p->guid,
+                                           p->first, partition_size(p), p->flags),
+                  ZX_OK, "Add partition failed");
         partitions->MarkCreated(i);
     }
 
@@ -435,8 +435,7 @@ bool RemovePartitionsHelper(LibGptTest* libGptTest,
         ASSERT_TRUE(partitions->IsCreated(index),
                     "Partition already removed");
         const gpt_partition_t* p = partitions->GetPartition(index);
-        ASSERT_EQ(libGptTest->RemovePartition(p->guid), 0,
-                  "Failed to remove partition");
+        ASSERT_EQ(libGptTest->RemovePartition(p->guid), ZX_OK, "Failed to remove partition");
         partitions->ClearCreated(index);
     }
     END_HELPER;
@@ -523,8 +522,7 @@ bool RemoveAllPartitions(LibGptTest* libGptTest, Partitions* partitions, bool sy
 
     ASSERT_LE(partitions->GetCount(), partitions->CreatedCount(),
               "Not all partitions populated");
-    ASSERT_EQ(libGptTest->RemoveAllPartitions(), 0,
-              "Failed to remove all partition");
+    ASSERT_EQ(libGptTest->RemoveAllPartitions(), ZX_OK, "Failed to remove all partition");
 
     for (uint32_t i = 0; i < partitions->GetCount(); i++) {
         partitions->ClearCreated(i);
@@ -642,23 +640,23 @@ bool DiffsTest(LibGptTest* libGptTest) {
     BEGIN_TEST;
     uint32_t diffs;
 
-    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), 0,
-              "GetDiffs should fail before PrepDisk");
+    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK, "GetDiffs should fail before PrepDisk");
     ASSERT_TRUE(libGptTest->PrepDisk(false), "Failed to setup disk");
-    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), 0,
+    ASSERT_NE(libGptTest->GetDiffs(0, &diffs), ZX_OK,
               "GetDiffs for non-existing partition should fail");
 
     Partitions partitions(total_partitions, libGptTest->GetUsableStartBlock(),
                           libGptTest->GetUsableLastBlock());
     ASSERT_TRUE(AddPartitions(libGptTest, &partitions, false),
                 "AddPartitions failed");
-    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), 0,
-              "Diffs zero after adding partition");
+    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "Diffs zero after adding partition");
 
-    ASSERT_EQ(diffs, GPT_DIFF_TYPE | GPT_DIFF_GUID | GPT_DIFF_FIRST | GPT_DIFF_LAST | GPT_DIFF_NAME,
+    ASSERT_EQ(diffs,
+              gpt::kGptDiffType | gpt::kGptDiffGuid | gpt::kGptDiffFirst | gpt::kGptDiffLast |
+                  gpt::kGptDiffName,
               "Unexpected diff after creating partition");
     ASSERT_TRUE(libGptTest->Sync(), "Failed to sync");
-    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), 0, "GetDiffs failed");
+    ASSERT_EQ(libGptTest->GetDiffs(0, &diffs), ZX_OK, "GetDiffs failed");
     ASSERT_EQ(diffs, 0, "Diffs not zero after syncing partition");
 
     END_TEST;
