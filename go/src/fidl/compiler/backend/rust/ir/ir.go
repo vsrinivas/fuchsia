@@ -97,6 +97,7 @@ type Interface struct {
 type Method struct {
 	types.Attributes
 	Ordinal     types.Ordinal
+	GenOrdinal  types.Ordinal
 	OrdinalName string
 	Name        string
 	CamelName   string
@@ -567,6 +568,7 @@ func (c *compiler) compileInterface(val types.Interface) Interface {
 		m := Method{
 			Attributes:  v.Attributes,
 			Ordinal:     v.Ordinal,
+			GenOrdinal:  v.GenOrdinal,
 			Name:        name,
 			CamelName:   camelName,
 			HasRequest:  v.HasRequest,

@@ -252,7 +252,7 @@ impl Stream for {{ $interface.Name }}EventStream {
 		futures::Poll::Ready(Some(match tx_header.ordinal {
 			{{- range $method := $interface.Methods }}
 			{{- if not $method.HasRequest }}
-			{{ $method.Ordinal }} => {
+			{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
 				let mut out_tuple: (
 					{{- range $index, $param := $method.Response -}}
 					{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -435,7 +435,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 			match header.ordinal {
 				{{- range $method := $interface.Methods }}
 					{{- if $method.HasRequest }}
-					{{ $method.Ordinal }} => {
+					{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
 						let mut req: (
 							{{- range $index, $param := $method.Request -}}
 								{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -460,6 +460,7 @@ impl<T: {{ $interface.Name }}> futures::Future for {{ $interface.Name }}Server<T
 									{{- $interface.Name -}}{{- $method.CamelName -}}Responder {
 										control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 										tx_id: header.tx_id,
+										ordinal: header.ordinal,
 									}
 									{{- else -}}
 									control_handle
@@ -544,7 +545,7 @@ impl Stream for {{ $interface.Name }}RequestStream {
 			match header.ordinal {
 				{{- range $method := $interface.Methods }}
 				{{- if $method.HasRequest }}
-				{{ $method.Ordinal }} => {
+				{{ $method.Ordinal }} | {{ $method.GenOrdinal }} => {
 					let mut req: (
 						{{- range $index, $param := $method.Request -}}
 							{{- if ne 0 $index -}}, {{- $param.Type -}}
@@ -569,6 +570,7 @@ impl Stream for {{ $interface.Name }}RequestStream {
 							responder: {{- $interface.Name -}}{{- $method.CamelName -}}Responder {
 								control_handle: ::std::mem::ManuallyDrop::new(control_handle),
 								tx_id: header.tx_id,
+								ordinal: header.ordinal,
 							},
 							{{- else -}}
 							control_handle,
@@ -741,6 +743,7 @@ impl {{ $interface.Name }}ControlHandle {
 pub struct {{ $interface.Name }}{{ $method.CamelName }}Responder {
 	control_handle: ::std::mem::ManuallyDrop<{{ $interface.Name }}ControlHandle>,
 	tx_id: u32,
+	ordinal: u32,
 }
 
 impl ::std::ops::Drop for {{ $interface.Name }}{{ $method.CamelName }}Responder {
@@ -814,7 +817,7 @@ impl {{ $interface.Name }}{{ $method.CamelName }}Responder {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: self.tx_id,
 			flags: 0,
-			ordinal: {{ $method.Ordinal }},
+			ordinal: self.ordinal,
 		};
 
 		let mut response = (
