@@ -79,6 +79,21 @@ __EXPORT zx_status_t usb_desc_iter_init(usb_protocol_t* usb, usb_desc_iter_t* it
     return ZX_OK;
 }
 
+// clones a usb_desc_iter_t
+zx_status_t usb_desc_iter_clone(const usb_desc_iter_t* src, usb_desc_iter_t* dest) {
+    size_t length = (size_t)(src->desc_end)-(size_t)(src->desc);
+    size_t offset = (size_t)(src->current)-(size_t)(src->desc);
+    void* descriptors = malloc(length);
+    if(!descriptors) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    memcpy(descriptors, src->desc, length);
+    dest->desc = descriptors;
+    dest->current = ((unsigned char*)descriptors)+offset;
+    dest->desc_end = ((unsigned char*)descriptors)+length;
+    return ZX_OK;
+}
+
 // releases resources in a usb_desc_iter_t
 __EXPORT void usb_desc_iter_release(usb_desc_iter_t* iter) {
     free(iter->desc);

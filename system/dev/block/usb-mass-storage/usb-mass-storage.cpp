@@ -679,6 +679,7 @@ static int ums_worker_thread(void* arg) {
 
 static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     usb_protocol_t usb;
+    zx_status_t status;
     device_add_args_t args = {};
     int ret;
     if (device_get_protocol(device, ZX_PROTOCOL_USB, &usb)) {
@@ -686,31 +687,28 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
     }
 
     // find our endpoints
-    usb_desc_iter_t iter;
-    zx_status_t result = usb_desc_iter_init(&usb, &iter);
-    if (result < 0) {
-        return result;
+    usb::InterfaceList interfaces(&usb, true);
+    if ((status = interfaces.check()) != ZX_OK) {
+        return status;
     }
-
-    usb_interface_descriptor_t* intf = usb_desc_iter_next_interface(&iter, true);
-    if (!intf) {
-        usb_desc_iter_release(&iter);
+    auto interface = interfaces.begin();
+    const usb_interface_descriptor_t* interface_descriptor = interface->descriptor();
+    if (interface == interfaces.end()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-    if (intf->bNumEndpoints < 2) {
-        DEBUG_PRINT(("UMS:ums_bind wrong number of endpoints: %d\n", intf->bNumEndpoints));
-        usb_desc_iter_release(&iter);
+    if (interface_descriptor->bNumEndpoints < 2) {
+        DEBUG_PRINT(("UMS:ums_bind wrong number of endpoints: %d\n",
+                     interface_descriptor->bNumEndpoints));
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    uint8_t interface_number = intf->bInterfaceNumber;
+    uint8_t interface_number = interface_descriptor->bInterfaceNumber;
     uint8_t bulk_in_addr = 0;
     uint8_t bulk_out_addr = 0;
     size_t bulk_in_max_packet = 0;
     size_t bulk_out_max_packet = 0;
-
-    usb_endpoint_descriptor_t* endp = usb_desc_iter_next_endpoint(&iter);
-    while (endp) {
+    for (auto endpoint : *interface) {
+        usb_endpoint_descriptor_t* endp = &endpoint;
         if (usb_ep_direction(endp) == USB_ENDPOINT_OUT) {
             if (usb_ep_type(endp) == USB_ENDPOINT_BULK) {
                 bulk_out_addr = endp->bEndpointAddress;
@@ -722,9 +720,7 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
                 bulk_in_max_packet = usb_ep_max_packet(endp);
             }
         }
-        endp = usb_desc_iter_next_endpoint(&iter);
     }
-    usb_desc_iter_release(&iter);
 
     if (!bulk_in_addr || !bulk_out_addr) {
         DEBUG_PRINT(("UMS:ums_bind could not find endpoints\n"));
@@ -733,9 +729,9 @@ static zx_status_t ums_bind(void* ctx, zx_device_t* device) {
 
     uint8_t max_lun;
     size_t out_length;
-    zx_status_t status = usb_control_in(&usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
-                                        USB_REQ_GET_MAX_LUN, 0x00, 0x00, ZX_TIME_INFINITE,
-                                        &max_lun, sizeof(max_lun), &out_length);
+    status = usb_control_in(&usb, USB_DIR_IN | USB_TYPE_CLASS | USB_RECIP_INTERFACE,
+                            USB_REQ_GET_MAX_LUN, 0x00, 0x00, ZX_TIME_INFINITE,
+                            &max_lun, sizeof(max_lun), &out_length);
 
     if (status == ZX_ERR_IO_REFUSED) {
         // Devices that do not support multiple LUNS may stall this command.
@@ -847,4 +843,4 @@ ZIRCON_DRIVER_BEGIN(usb_mass_storage, usb_mass_storage_driver_ops, "zircon", "0.
     BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_MSC_SCSI),
     BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, USB_PROTOCOL_MSC_BULK_ONLY),
 ZIRCON_DRIVER_END(usb_mass_storage)
-// clang-format on
+    // clang-format on

@@ -12,7 +12,12 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/block.cpp \
     $(LOCAL_DIR)/usb-mass-storage.cpp \
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/dev/lib/usb system/ulib/sync
+MODULE_STATIC_LIBS := \
+    system/dev/lib/usb \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/sync \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
 
