@@ -1,0 +1,63 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.name/SwitchingOrdinals",
+      "methods": [
+        {
+          "ordinal": 5,
+          "generated_ordinal": 2005164903,
+          "name": "OrdinalFive",
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 667506719,
+          "generated_ordinal": 667506719,
+          "name": "OnlyGeneratedOrdinal",
+          "has_request": true,
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 15,
+          "generated_ordinal": 1467258273,
+          "name": "EventOrdinalFifteen",
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [],
+          "maybe_response_size": 16,
+          "maybe_response_alignment": 8
+        },
+        {
+          "ordinal": 2146190926,
+          "generated_ordinal": 2146190926,
+          "name": "EventOnlyGeneratedOrdinal",
+          "has_request": false,
+          "has_response": true,
+          "maybe_response": [],
+          "maybe_response_size": 16,
+          "maybe_response_alignment": 8
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "declaration_order": [
+    "test.name/SwitchingOrdinals"
+  ],
+  "declarations": {
+    "test.name/SwitchingOrdinals": "interface"
+  }
+}

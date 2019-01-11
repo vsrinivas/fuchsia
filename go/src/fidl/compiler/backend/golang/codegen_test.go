@@ -12,6 +12,7 @@ import (
 )
 
 var cases = []string{
+	"ordinal_switch.fidl.json",
 	"doc_comments.fidl.json",
 	"tables.fidl.json",
 }

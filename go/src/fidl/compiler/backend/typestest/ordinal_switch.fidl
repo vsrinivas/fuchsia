@@ -1,0 +1,8 @@
+library test.name;
+
+interface SwitchingOrdinals {
+    5: OrdinalFive(); // ordinal and generated_ordinal are different
+    OnlyGeneratedOrdinal(); // ordinal and generated_ordinal are the same
+    15: -> EventOrdinalFifteen(); // ordinal and generated_ordinal are different
+    -> EventOnlyGeneratedOrdinal(); // ordinal and generated_ordinal are the same
+};
