@@ -330,7 +330,6 @@ zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_serv
 
 zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
-                                     int data_sink_dir_fd,
                                      loader_service_t** out) {
     return loader_service_create_default(dispatcher, root_dir_fd, fd_lib_paths, out);
 }

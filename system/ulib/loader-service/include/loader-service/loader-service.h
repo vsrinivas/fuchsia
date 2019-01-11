@@ -45,7 +45,6 @@ zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_serv
 // service will take ownership of |root_dir_fd|.
 zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
-                                     int data_sink_dir_fd,
                                      loader_service_t** out);
 zx_status_t loader_service_create_fd_new(async_dispatcher_t* dispatcher,
                                          int root_dir_fd,
