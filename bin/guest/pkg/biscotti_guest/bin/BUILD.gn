@@ -8,12 +8,12 @@ import("//third_party/protobuf/proto_library.gni")
 declare_args() {
   # Default values for the guest network configuration.
   #
-  # Currently the guest shares the same NIC as the host, so you need to use
-  # values here that play nicely with your network setup. Typically I've found
-  # using a unique IP on the same subnet as fuchsia works okay. The values below
-  # are chosen to play nicely with the default edge-router setup.
-  biscotti_ip = "192.168.42.111"
-  biscotti_gateway = "192.168.42.1"
+  # These are currently hard-coded to match what is setup in the virtio-net
+  # device.
+  #
+  # See //garnet/bin/guest/vmm/device/virtio_net.cc for more details.
+  biscotti_ip = "10.0.0.2"
+  biscotti_gateway = "10.0.0.1"
   biscotti_netmask = "255.255.255.0"
 }
 
