@@ -49,23 +49,43 @@ magma_status_t msd_connection_commit_buffer(msd_connection_t* connection, msd_bu
 
 void msd_connection_release_buffer(msd_connection_t* connection, msd_buffer_t* buffer)
 {
-    std::vector<std::shared_ptr<GpuMapping>> released_mappings;
     MsdIntelAbiConnection::cast(connection)
         ->ptr()
-        ->per_process_gtt()
-        ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr()->platform_buffer(),
-                        &released_mappings);
+        ->ReleaseBuffer(MsdIntelAbiBuffer::cast(buffer)->ptr()->platform_buffer());
+}
+
+void MsdIntelConnection::ReleaseBuffer(magma::PlatformBuffer* buffer)
+{
+    std::vector<std::shared_ptr<GpuMapping>> mappings;
+    per_process_gtt()->ReleaseBuffer(buffer, &mappings);
 
     // It's an error to release a buffer while it has inflight mappings, as that
     // can fault the gpu.
-    for (const auto& mapping : released_mappings) {
+    for (const auto& mapping : mappings) {
         uint32_t use_count = mapping.use_count();
         if (use_count != 1) {
             DLOG("mapping use_count %d", use_count);
-            MsdIntelAbiConnection::cast(connection)->ptr()->SendContextKilled();
-            return;
+            SendContextKilled();
+            break;
         }
     }
+
+    // Mappings are held in the connection and passed through the command stream to ensure
+    // the memory isn't released until the tlbs are invalidated, which happens implicitly
+    // on every pipeline flush.
+    mappings_to_release_.insert(mappings_to_release_.end(), mappings.begin(), mappings.end());
+}
+
+bool MsdIntelConnection::SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context)
+{
+    if (!mappings_to_release_.empty()) {
+        magma::Status status = SubmitBatch(
+            std::make_unique<MappingReleaseBatch>(context, std::move(mappings_to_release_)));
+        mappings_to_release_.clear();
+        if (!status.ok())
+            return DRETF(false, "Failed to submit mapping release batch: %d", status.get());
+    }
+    return true;
 }
 
 std::unique_ptr<MsdIntelConnection> MsdIntelConnection::Create(Owner* owner,

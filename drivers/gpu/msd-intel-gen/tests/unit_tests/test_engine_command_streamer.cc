@@ -199,37 +199,17 @@ public:
 
         EXPECT_TRUE(render_cs->RenderInit(context_, std::move(init_batch), address_space_));
 
+        // Validate ringbuffer
         uint32_t expected_dwords = MiBatchBufferStart::kDwordCount + MiNoop::kDwordCount +
                                    MiPipeControl::kDwordCount + MiNoop::kDwordCount +
                                    MiUserInterrupt::kDwordCount;
-
         EXPECT_EQ(expected_dwords * 4, ringbuffer->tail() - tail_start);
 
-        auto ringbuffer_content = TestRingbuffer::vaddr(ringbuffer);
-
-        // batch buffer start
-        gpu_addr_t init_batch_addr;
-        EXPECT_TRUE(render_cs->inflight_command_sequences_.back().mapped_batch()->GetGpuAddress(
-            &init_batch_addr));
-
-        int i = tail_start / 4;
-        EXPECT_EQ(ringbuffer_content[i++], MiBatchBufferStart::kCommandType | (3 - 2));
-        EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(init_batch_addr));
-        EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(init_batch_addr));
-
-        EXPECT_EQ(ringbuffer_content[i++], (uint32_t)MiNoop::kCommandType);
-
-        // pipe control
-        gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page(engine_cs_->id())->gpu_addr() +
-                                    HardwareStatusPage::kSequenceNumberOffset;
-
-        EXPECT_EQ(0x7A000000u | (MiPipeControl::kDwordCount - 2), ringbuffer_content[i++]);
-        uint32_t expected_flags =
-            MiPipeControl::kPostSyncWriteImmediateBit | MiPipeControl::kAddressSpaceGlobalGttBit;
-        EXPECT_EQ(expected_flags, ringbuffer_content[i++]);
-        EXPECT_EQ(ringbuffer_content[i++], magma::lower_32_bits(seqno_gpu_addr));
-        EXPECT_EQ(ringbuffer_content[i++], magma::upper_32_bits(seqno_gpu_addr));
-        EXPECT_EQ(ringbuffer_content[i++], (uint32_t)kFirstSequenceNumber);
+        auto ringbuffer_content = static_cast<uint32_t*>(TestRingbuffer::vaddr(ringbuffer)) +
+                                  tail_start / sizeof(uint32_t);
+        ringbuffer_content = ValidateBatchBufferStart(ringbuffer_content);
+        ringbuffer_content =
+            ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
 
         void* addr;
         EXPECT_TRUE(TestContext::get_context_buffer(context_.get(), engine_cs_->id())
@@ -267,6 +247,69 @@ public:
         EXPECT_EQ(write, submitport_writes.size());
 
         EXPECT_TRUE(context_->Unmap(engine_cs_->id()));
+    }
+
+    void MoveBatchToInflight()
+    {
+        ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
+
+        EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
+        EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
+
+        auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
+        ASSERT_NE(nullptr, ringbuffer);
+        uint32_t tail_start = ringbuffer->tail();
+
+        gpu_addr_t gpu_addr = 0x10000; // Arbitrary
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+        render_cs->MoveBatchToInflight(std::make_unique<MockMappedBatch>(context_, gpu_addr));
+
+        // Validate ringbuffer
+        uint32_t dword_count = 0;
+        dword_count += MiBatchBufferStart::kDwordCount + MiNoop::kDwordCount;
+        dword_count +=
+            MiPipeControl::kDwordCount + MiNoop::kDwordCount + MiUserInterrupt::kDwordCount;
+
+        ASSERT_EQ(ringbuffer->tail() - tail_start, dword_count * sizeof(uint32_t));
+
+        uint32_t* ringbuffer_content =
+            TestRingbuffer::vaddr(ringbuffer) + tail_start / sizeof(uint32_t);
+        ringbuffer_content = ValidateBatchBufferStart(ringbuffer_content);
+        ringbuffer_content =
+            ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
+    }
+
+    void MappingRelease()
+    {
+        ASSERT_EQ(engine_cs_->id(), RENDER_COMMAND_STREAMER);
+
+        EXPECT_TRUE(engine_cs_->InitContext(context_.get()));
+        EXPECT_TRUE(context_->Map(address_space_, engine_cs_->id()));
+
+        auto ringbuffer = context_->get_ringbuffer(engine_cs_->id());
+        ASSERT_NE(nullptr, ringbuffer);
+        uint32_t tail_start = ringbuffer->tail();
+
+        std::shared_ptr<GpuMapping> mapping =
+            AddressSpace::MapBufferGpu(address_space_, MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+        render_cs->MoveBatchToInflight(std::make_unique<MappingReleaseBatch>(
+            context_, std::vector<std::shared_ptr<GpuMapping>>({mapping})));
+
+        // Validate ringbuffer
+        uint32_t dword_count =
+            MiPipeControl::kDwordCount + MiNoop::kDwordCount + MiUserInterrupt::kDwordCount;
+        ASSERT_EQ(ringbuffer->tail() - tail_start, dword_count * sizeof(uint32_t));
+
+        uint32_t* ringbuffer_content =
+            TestRingbuffer::vaddr(ringbuffer) + tail_start / sizeof(uint32_t);
+        ringbuffer_content =
+            ValidatePipeControl(ringbuffer_content, (uint32_t)kFirstSequenceNumber);
+
+        EXPECT_EQ(2u, mapping.use_count());
+        render_cs->ProcessCompletedCommandBuffers(kFirstSequenceNumber);
+        EXPECT_EQ(1u, mapping.use_count());
     }
 
     void Reset()
@@ -309,6 +352,38 @@ public:
     }
 
 private:
+    uint32_t* ValidateBatchBufferStart(uint32_t* ringbuffer_content)
+    {
+        auto render_cs = reinterpret_cast<RenderEngineCommandStreamer*>(engine_cs_.get());
+
+        gpu_addr_t batch_addr;
+        EXPECT_TRUE(render_cs->inflight_command_sequences_.back().mapped_batch()->GetGpuAddress(
+            &batch_addr));
+
+        // Subtract 2 from dword count as per the instruction definition
+        EXPECT_EQ(*ringbuffer_content++,
+                  MiBatchBufferStart::kCommandType | (MiBatchBufferStart::kDwordCount - 2));
+        EXPECT_EQ(*ringbuffer_content++, magma::lower_32_bits(batch_addr));
+        EXPECT_EQ(*ringbuffer_content++, magma::upper_32_bits(batch_addr));
+        EXPECT_EQ(*ringbuffer_content++, (uint32_t)MiNoop::kCommandType);
+        return ringbuffer_content;
+    }
+
+    uint32_t* ValidatePipeControl(uint32_t* ringbuffer_content, uint32_t sequence_number)
+    {
+        gpu_addr_t seqno_gpu_addr = engine_cs_->hardware_status_page(engine_cs_->id())->gpu_addr() +
+                                    HardwareStatusPage::kSequenceNumberOffset;
+
+        // Subtract 2 from dword count as per the instruction definition
+        EXPECT_EQ(*ringbuffer_content++, 0x7A000000u | (MiPipeControl::kDwordCount - 2));
+        EXPECT_EQ(*ringbuffer_content++, MiPipeControl::kPostSyncWriteImmediateBit |
+                                             MiPipeControl::kAddressSpaceGlobalGttBit);
+        EXPECT_EQ(*ringbuffer_content++, magma::lower_32_bits(seqno_gpu_addr));
+        EXPECT_EQ(*ringbuffer_content++, magma::upper_32_bits(seqno_gpu_addr));
+        EXPECT_EQ(*ringbuffer_content++, sequence_number);
+        return ringbuffer_content;
+    }
+
     magma::RegisterIo* register_io() override { return register_io_.get(); }
 
     Sequencer* sequencer() override { return sequencer_.get(); }
@@ -355,26 +430,17 @@ private:
     std::unique_ptr<HardwareStatusPage> hw_status_page_;
 };
 
-TEST(RenderEngineCommandStreamer, InitContext)
+TEST(RenderEngineCommandStreamer, InitContext) { TestEngineCommandStreamer().InitContext(); }
+
+TEST(RenderEngineCommandStreamer, InitHardware) { TestEngineCommandStreamer().InitHardware(); }
+
+TEST(RenderEngineCommandStreamer, RenderInitGen9) { TestEngineCommandStreamer().RenderInit(); }
+
+TEST(RenderEngineCommandStreamer, Reset) { TestEngineCommandStreamer().Reset(); }
+
+TEST(RenderEngineCommandStreamer, MoveBatchToInflight)
 {
-    TestEngineCommandStreamer test;
-    test.InitContext();
+    TestEngineCommandStreamer().MoveBatchToInflight();
 }
 
-TEST(RenderEngineCommandStreamer, InitHardware)
-{
-    TestEngineCommandStreamer test;
-    test.InitHardware();
-}
-
-TEST(RenderEngineCommandStreamer, RenderInitGen9)
-{
-    TestEngineCommandStreamer test;
-    test.RenderInit();
-}
-
-TEST(RenderEngineCommandStreamer, Reset)
-{
-    TestEngineCommandStreamer test;
-    test.Reset();
-}
+TEST(RenderEngineCommandStreamer, MappingRelease) { TestEngineCommandStreamer().MappingRelease(); }

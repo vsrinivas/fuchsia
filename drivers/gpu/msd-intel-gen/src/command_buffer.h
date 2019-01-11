@@ -68,6 +68,8 @@ private:
     CommandBuffer(std::shared_ptr<MsdIntelBuffer> abi_cmd_buf,
                   std::weak_ptr<ClientContext> context);
 
+    bool IsCommandBuffer() override { return true; }
+
     // maps all execution resources into the given |address_space|.
     // fills |resource_gpu_addresses_out| with the mapped addresses of every object in
     // exec_resources_

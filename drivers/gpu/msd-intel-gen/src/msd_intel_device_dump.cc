@@ -378,6 +378,9 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
             dump_out.append(&buf[0]);
 
             auto batch_mapping = batch->GetBatchMapping();
+            if (!batch_mapping)
+                continue;
+
             if (dump_state.render_cs.active_head_pointer >= batch_mapping->gpu_addr() &&
                 dump_state.render_cs.active_head_pointer <
                     batch_mapping->gpu_addr() + batch_mapping->length()) {
@@ -385,7 +388,7 @@ void MsdIntelDevice::FormatDump(DumpState& dump_state, std::string& dump_out)
                 faulted_batch_mapping = batch_mapping;
             }
 
-            if (batch->IsSimple())
+            if (!batch->IsCommandBuffer())
                 continue;
 
             auto cmd_buf = static_cast<CommandBuffer*>(batch);

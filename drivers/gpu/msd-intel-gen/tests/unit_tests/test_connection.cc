@@ -8,7 +8,7 @@
 
 class TestMsdIntelConnection : public MsdIntelConnection::Owner {
 public:
-    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override
+    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override
     {
         return MAGMA_STATUS_UNIMPLEMENTED;
     }

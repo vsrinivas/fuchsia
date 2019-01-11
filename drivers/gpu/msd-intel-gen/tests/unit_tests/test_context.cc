@@ -137,12 +137,13 @@ public:
                 address_space_owner_ = std::make_unique<AddressSpaceOwner>();
             }
 
-            magma::Status
-            SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer) override
+            magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override
             {
+                DASSERT(batch->IsCommandBuffer());
+                auto command_buffer = static_cast<CommandBuffer*>(batch.release());
                 DLOG("command buffer received 0x%" PRIx64,
-                     TestCommandBuffer::platform_buffer(command_buffer.get())->id());
-                callback_(std::move(command_buffer));
+                     TestCommandBuffer::platform_buffer(command_buffer)->id());
+                callback_(std::unique_ptr<CommandBuffer>(command_buffer));
                 return MAGMA_STATUS_OK;
             }
 

@@ -123,6 +123,18 @@ magma::Status ClientContext::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> 
     uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
     TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
 
+    {
+        std::shared_ptr<MsdIntelContext> context = command_buffer->GetContext().lock();
+        DASSERT(context.get() == static_cast<MsdIntelContext*>(this));
+
+        std::shared_ptr<MsdIntelConnection> connection = context->connection().lock();
+        if (!connection)
+            return DRET(MAGMA_STATUS_CONNECTION_LOST);
+
+        // If there are any mappings pending release, submit them now.
+        connection->SubmitPendingReleaseMappings(context);
+    }
+
     if (killed())
         return DRET(MAGMA_STATUS_CONTEXT_KILLED);
 
@@ -180,7 +192,7 @@ magma::Status ClientContext::SubmitPendingCommandBuffer(bool have_lock)
                 uint64_t ATTRIBUTE_UNUSED buffer_id = command_buffer->GetBatchBufferId();
                 TRACE_FLOW_STEP("magma", "command_buffer", buffer_id);
             }
-            connection->SubmitCommandBuffer(std::move(command_buffer));
+            connection->SubmitBatch(std::move(command_buffer));
             pending_command_buffer_queue_.pop();
         } else {
             DLOG("adding waitset with %zu semaphores", semaphores.size());

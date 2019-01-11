@@ -23,21 +23,18 @@ inline uint64_t get_current_time_ns()
         .count();
 }
 
-class MsdIntelDevice::CommandBufferRequest : public DeviceRequest {
+class MsdIntelDevice::BatchRequest : public DeviceRequest {
 public:
-    CommandBufferRequest(std::unique_ptr<CommandBuffer> command_buffer)
-        : command_buffer_(std::move(command_buffer))
-    {
-    }
+    BatchRequest(std::unique_ptr<MappedBatch> batch) : batch_(std::move(batch)) {}
 
 protected:
     magma::Status Process(MsdIntelDevice* device) override
     {
-        return device->ProcessCommandBuffer(std::move(command_buffer_));
+        return device->ProcessBatch(std::move(batch_));
     }
 
 private:
-    std::unique_ptr<CommandBuffer> command_buffer_;
+    std::unique_ptr<MappedBatch> batch_;
 };
 
 class MsdIntelDevice::DestroyContextRequest : public DeviceRequest {
@@ -320,12 +317,12 @@ void MsdIntelDevice::InterruptCallback(void* data, uint32_t master_interrupt_con
 
 void MsdIntelDevice::DumpStatusToLog() { EnqueueDeviceRequest(std::make_unique<DumpRequest>()); }
 
-magma::Status MsdIntelDevice::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+magma::Status MsdIntelDevice::SubmitBatch(std::unique_ptr<MappedBatch> batch)
 {
-    DLOG("SubmitCommandBuffer");
+    DLOG("SubmitBatch");
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
-    EnqueueDeviceRequest(std::make_unique<CommandBufferRequest>(std::move(command_buffer)));
+    EnqueueDeviceRequest(std::make_unique<BatchRequest>(std::move(batch)));
     return MAGMA_STATUS_OK;
 }
 
@@ -335,6 +332,8 @@ void MsdIntelDevice::DestroyContext(std::shared_ptr<ClientContext> client_contex
     CHECK_THREAD_NOT_CURRENT(device_thread_id_);
 
     EnqueueDeviceRequest(std::make_unique<DestroyContextRequest>(std::move(client_context)));
+    // TODO(MA-547): wait for the request to be processed so that the gpu is not executing
+    // the context before we return.
 }
 
 //////////////////////////////////////////////////////////////////////////////////////////////////
@@ -509,14 +508,14 @@ bool MsdIntelDevice::InitContextForRender(MsdIntelContext* context)
     return true;
 }
 
-magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+magma::Status MsdIntelDevice::ProcessBatch(std::unique_ptr<MappedBatch> batch)
 {
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     TRACE_DURATION("magma", "ProcessCommandBuffer");
 
     DLOG("preparing command buffer for execution");
 
-    auto context = command_buffer->GetContext().lock();
+    auto context = batch->GetContext().lock();
     DASSERT(context);
 
     if (context->killed())
@@ -528,7 +527,7 @@ magma::Status MsdIntelDevice::ProcessCommandBuffer(std::unique_ptr<CommandBuffer
     }
 
     TRACE_DURATION_BEGIN("magma", "SubmitCommandBuffer");
-    render_engine_cs_->SubmitCommandBuffer(std::move(command_buffer));
+    render_engine_cs_->SubmitBatch(std::move(batch));
     TRACE_DURATION_END("magma", "SubmitCommandBuffer");
 
     RequestMaxFreq();
@@ -543,6 +542,8 @@ magma::Status MsdIntelDevice::ProcessDestroyContext(std::shared_ptr<ClientContex
 
     CHECK_THREAD_IS_CURRENT(device_thread_id_);
     // Just let it go out of scope
+
+    // TODO(MA-547): if this context is executing, stop it now.
 
     return MAGMA_STATUS_OK;
 }

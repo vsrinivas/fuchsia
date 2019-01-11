@@ -49,7 +49,7 @@ public:
 
         uint32_t tail_start = ringbuffer_->tail();
 
-        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
+        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / sizeof(uint32_t);
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
         MiBatchBufferStart::write(ringbuffer_.get(), gpu_addr, ADDRESS_SPACE_PPGTT);
@@ -79,7 +79,7 @@ public:
 
         uint32_t tail_start = ringbuffer_->tail();
 
-        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / 4;
+        uint32_t* vaddr = TestRingbuffer::vaddr(ringbuffer_.get()) + tail_start / sizeof(uint32_t);
 
         gpu_addr_t gpu_addr = 0xabcd1234cafebeef;
 
@@ -109,20 +109,8 @@ private:
     std::unique_ptr<Ringbuffer> ringbuffer_;
 };
 
-TEST(Instructions, Noop)
-{
-    TestInstructions test;
-    test.Noop();
-}
+TEST(Instructions, Noop) { TestInstructions().Noop(); }
 
-TEST(Instructions, BatchBufferStart)
-{
-    TestInstructions test;
-    test.BatchBufferStart();
-}
+TEST(Instructions, BatchBufferStart) { TestInstructions().BatchBufferStart(); }
 
-TEST(Instructions, PipeControl)
-{
-    TestInstructions test;
-    test.PipeControl();
-}
+TEST(Instructions, PipeControl) { TestInstructions().PipeControl(); }

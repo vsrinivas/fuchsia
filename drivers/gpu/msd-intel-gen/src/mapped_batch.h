@@ -19,7 +19,7 @@ public:
     virtual bool GetGpuAddress(gpu_addr_t* gpu_addr_out) = 0;
     virtual void SetSequenceNumber(uint32_t sequence_number) = 0;
     virtual uint32_t GetPipeControlFlags() { return 0; }
-    virtual bool IsSimple() { return false; }
+    virtual bool IsCommandBuffer() { return false; }
     virtual GpuMapping* GetBatchMapping() = 0;
 
     void scheduled() { scheduled_ = true; }
@@ -50,14 +50,36 @@ public:
         sequence_number_ = sequence_number;
     }
 
-    bool IsSimple() override { return true; }
-
     GpuMapping* GetBatchMapping() override { return batch_buffer_mapping_.get(); }
 
 private:
     std::shared_ptr<MsdIntelContext> context_;
     std::unique_ptr<GpuMapping> batch_buffer_mapping_;
     uint32_t sequence_number_ = Sequencer::kInvalidSequenceNumber;
+};
+
+// Has no batch.
+class NullBatch : public MappedBatch {
+public:
+    bool GetGpuAddress(gpu_addr_t* gpu_addr_out) override { return false; }
+    void SetSequenceNumber(uint32_t sequence_number) override {}
+    GpuMapping* GetBatchMapping() override { return nullptr; }
+};
+
+// Releases the list of mappings when destroyed.
+class MappingReleaseBatch : public NullBatch {
+public:
+    MappingReleaseBatch(std::shared_ptr<MsdIntelContext> context,
+                        std::vector<std::shared_ptr<GpuMapping>> mappings)
+        : context_(std::move(context)), mappings_(std::move(mappings))
+    {
+    }
+
+    std::weak_ptr<MsdIntelContext> GetContext() override { return context_; }
+
+private:
+    std::shared_ptr<MsdIntelContext> context_;
+    std::vector<std::shared_ptr<GpuMapping>> mappings_;
 };
 
 #endif // MAPPED_BATCH_H

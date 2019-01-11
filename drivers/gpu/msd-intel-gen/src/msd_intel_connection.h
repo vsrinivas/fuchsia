@@ -20,7 +20,7 @@ public:
     public:
         virtual ~Owner() = default;
 
-        virtual magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+        virtual magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
         virtual void DestroyContext(std::shared_ptr<ClientContext> client_context) = 0;
     };
 
@@ -32,9 +32,9 @@ public:
 
     msd_client_id_t client_id() { return client_id_; }
 
-    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf)
+    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch)
     {
-        return owner_->SubmitCommandBuffer(std::move(cmd_buf));
+        return owner_->SubmitBatch(std::move(batch));
     }
 
     void DestroyContext(std::shared_ptr<ClientContext> client_context)
@@ -58,6 +58,11 @@ public:
     // PerProcessGtt::Owner
     magma::PlatformBusMapper* GetBusMapper() override { return owner_->GetBusMapper(); }
 
+    void ReleaseBuffer(magma::PlatformBuffer* buffer);
+
+    // Submit pending release mappings on the given context
+    bool SubmitPendingReleaseMappings(std::shared_ptr<MsdIntelContext> context);
+
 private:
     MsdIntelConnection(Owner* owner, std::shared_ptr<PerProcessGtt> ppgtt,
                        msd_client_id_t client_id)
@@ -65,11 +70,17 @@ private:
     {
     }
 
+    const std::vector<std::shared_ptr<GpuMapping>>& mappings_to_release() const
+    {
+        return mappings_to_release_;
+    }
+
     static const uint32_t kMagic = 0x636f6e6e; // "conn" (Connection)
 
     Owner* owner_;
     std::shared_ptr<PerProcessGtt> ppgtt_;
     msd_client_id_t client_id_;
+    std::vector<std::shared_ptr<GpuMapping>> mappings_to_release_;
 
     class Notifications {
     public:
@@ -118,6 +129,8 @@ private:
     };
 
     Notifications notifications_;
+
+    friend class TestExec;
 };
 
 class MsdIntelAbiConnection : public msd_connection_t {

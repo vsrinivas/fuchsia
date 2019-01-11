@@ -45,7 +45,7 @@ public:
 
     uint64_t GetActiveHeadPointer();
 
-    virtual void SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) = 0;
+    virtual void SubmitBatch(std::unique_ptr<MappedBatch> batch) = 0;
 
     virtual bool WaitIdle() = 0;
 
@@ -100,7 +100,7 @@ public:
                     std::unique_ptr<RenderInitBatch> init_batch,
                     std::shared_ptr<AddressSpace> address_space);
 
-    void SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    void SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
 
     void ProcessCompletedCommandBuffers(uint32_t last_completed_sequence);
     void ResetCurrentContext();

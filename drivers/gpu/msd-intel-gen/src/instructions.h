@@ -71,6 +71,8 @@ public:
 };
 
 // intel-gfx-prm-osrc-skl-vol02a-commandreference-instructions.pdf pp.1057
+// Note: Tlb invalidations are implicit on every flush sync since Skylake
+// (GFX_MODE bit 13 "Flush TLB invalidation Mode", from Broadwell spec, removed).
 class MiPipeControl {
 public:
     static constexpr uint32_t kDwordCount = 6;

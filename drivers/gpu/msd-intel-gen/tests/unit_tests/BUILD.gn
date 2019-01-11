@@ -52,6 +52,7 @@ source_set("hardware_tests") {
   sources = [
     "test_command_buffer.cc",
     "test_device.cc",
+    "test_exec.cc",
     "test_forcewake.cc",
   ]
 

@@ -126,7 +126,7 @@ private:
     }
 
     // MsdIntelConnection::Owner
-    magma::Status SubmitCommandBuffer(std::unique_ptr<CommandBuffer> cmd_buf) override;
+    magma::Status SubmitBatch(std::unique_ptr<MappedBatch> batch) override;
     void DestroyContext(std::shared_ptr<ClientContext> client_context) override;
     magma::PlatformBusMapper* GetBusMapper() override { return bus_mapper_.get(); }
 
@@ -143,7 +143,7 @@ private:
     void ProcessCompletedCommandBuffers();
     void HangCheckTimeout();
 
-    magma::Status ProcessCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer);
+    magma::Status ProcessBatch(std::unique_ptr<MappedBatch> batch);
     magma::Status ProcessDestroyContext(std::shared_ptr<ClientContext> client_context);
     magma::Status ProcessReleaseBuffer(std::shared_ptr<AddressSpace> address_space,
                                        std::shared_ptr<MsdIntelBuffer> buffer);
@@ -199,7 +199,7 @@ private:
     std::unique_ptr<InterruptManager> interrupt_manager_;
     std::unique_ptr<magma::PlatformBusMapper> bus_mapper_;
 
-    class CommandBufferRequest;
+    class BatchRequest;
     class DestroyContextRequest;
     class ReleaseBufferRequest;
     class InterruptRequest;
@@ -219,6 +219,7 @@ private:
 
     friend class TestMsdIntelDevice;
     friend class TestCommandBuffer;
+    friend class TestExec;
 };
 
 #endif // MSD_INTEL_DEVICE_H

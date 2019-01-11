@@ -564,11 +564,10 @@ bool RenderEngineCommandStreamer::MoveBatchToInflight(std::unique_ptr<MappedBatc
     DASSERT(context);
 
     gpu_addr_t gpu_addr;
-    if (!mapped_batch->GetGpuAddress(&gpu_addr))
-        return DRETF(false, "couldn't get batch gpu address");
-
-    if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space()->type()))
-        return DRETF(false, "failed to emit batch");
+    if (mapped_batch->GetGpuAddress(&gpu_addr)) {
+        if (!StartBatchBuffer(context.get(), gpu_addr, context->exec_address_space()->type()))
+            return DRETF(false, "failed to emit batch");
+    }
 
     uint32_t sequence_number;
     if (!PipeControl(context.get(), mapped_batch->GetPipeControlFlags(), &sequence_number))
@@ -628,13 +627,13 @@ void RenderEngineCommandStreamer::ScheduleContext()
     context_switch_pending_ = true;
 }
 
-void RenderEngineCommandStreamer::SubmitCommandBuffer(std::unique_ptr<CommandBuffer> command_buffer)
+void RenderEngineCommandStreamer::SubmitBatch(std::unique_ptr<MappedBatch> batch)
 {
-    auto context = command_buffer->GetContext().lock();
+    auto context = batch->GetContext().lock();
     if (!context)
         return;
 
-    context->pending_batch_queue().emplace(std::move(command_buffer));
+    context->pending_batch_queue().emplace(std::move(batch));
 
     scheduler_->CommandBufferQueued(context);
 
