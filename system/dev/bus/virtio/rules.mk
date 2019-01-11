@@ -19,7 +19,6 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ring.cpp \
     $(LOCAL_DIR)/rng.cpp \
     $(LOCAL_DIR)/socket.cpp \
-    $(LOCAL_DIR)/virtio_c.c \
     $(LOCAL_DIR)/virtio_driver.cpp \
 	$(LOCAL_DIR)/backends/pci.cpp \
 	$(LOCAL_DIR)/backends/pci_legacy.cpp \

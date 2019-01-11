@@ -31,7 +31,7 @@
 #include "rng.h"
 #include "socket.h"
 
-extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void** cookie) {
+static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
     zx_status_t status;
     pci_protocol_t pci;
 
@@ -58,10 +58,12 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
     // interface.
     fbl::unique_ptr<virtio::Backend> backend = nullptr;
     if (pci_get_first_capability(&pci, PCI_CAP_ID_VENDOR) != 0) {
-        zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id, info.func_id);
+        zxlogf(SPEW, "virtio %02x:%02x.%1x using modern PCI backend\n", info.bus_id, info.dev_id,
+               info.func_id);
         backend.reset(new virtio::PciModernBackend(pci, info));
     } else {
-        zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend\n", info.bus_id, info.dev_id, info.func_id);
+        zxlogf(SPEW, "virtio %02x:%02x.%1x using legacy PCI backend\n", info.bus_id, info.dev_id,
+               info.func_id);
         backend.reset(new virtio::PciLegacyBackend(pci, info));
     }
 
@@ -117,3 +119,28 @@ extern "C" zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device, void*
     __UNUSED auto ptr = virtio_device.release();
     return ZX_OK;
 }
+
+static const zx_driver_ops_t virtio_driver_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = nullptr,
+    .bind = virtio_pci_bind,
+    .create = nullptr,
+    .release = nullptr,
+};
+
+ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 14)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
+    BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_BLOCK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_CONSOLE),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_NETWORK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_BLOCK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_CONSOLE),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_NETWORK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET),
+    BI_ABORT(),
+ZIRCON_DRIVER_END(virtio)
