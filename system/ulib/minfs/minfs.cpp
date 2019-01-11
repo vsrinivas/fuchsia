@@ -493,7 +493,8 @@ void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
     if (vn->inode_.last_inode == 0) {
         // If |vn| is the first unlinked inode, we just need to update the list head
         // to the next inode (which may not exist).
-        ZX_DEBUG_ASSERT(Info().unlinked_head == vn->ino_);
+        ZX_DEBUG_ASSERT_MSG(Info().unlinked_head == vn->ino_,
+            "Vnode %u has no previous link, but is not listed as unlinked list head", vn->ino_);
         sb_->MutableInfo()->unlinked_head = vn->inode_.next_inode;
     } else {
         // Set the previous vnode's next to |vn|'s next.
@@ -506,7 +507,8 @@ void Minfs::RemoveUnlinked(WritebackWork* wb, VnodeMinfs* vn) {
     if (vn->inode_.next_inode == 0) {
         // If |vn| is the last unlinked inode, we just need to update the list tail
         // to the previous inode (which may not exist).
-        ZX_DEBUG_ASSERT(Info().unlinked_tail == vn->ino_);
+        ZX_DEBUG_ASSERT_MSG(Info().unlinked_tail == vn->ino_,
+            "Vnode %u has no next link, but is not listed as unlinked list tail", vn->ino_);
         sb_->MutableInfo()->unlinked_tail = vn->inode_.last_inode;
     } else {
         // Set the next vnode's previous to |vn|'s previous.
@@ -645,6 +647,7 @@ void Minfs::VnodeInsert(VnodeMinfs* vn) {
 #ifdef __Fuchsia__
     fbl::AutoLock lock(&hash_lock_);
 #endif
+
     ZX_DEBUG_ASSERT_MSG(!vnode_hash_.find(vn->GetKey()).IsValid(), "ino %u already in map\n",
                         vn->GetKey());
     vnode_hash_.insert(vn);
@@ -687,8 +690,15 @@ zx_status_t Minfs::VnodeGet(fbl::RefPtr<VnodeMinfs>* out, ino_t ino) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    VnodeInsert(vn.get());
+    if (vn->IsUnlinked()) {
+        // If a vnode we have recreated from disk is unlinked, something has gone wrong during the
+        // unlink process and our filesystem is now in an inconsistent state. In order to avoid
+        // further inconsistencies, prohibit access to this vnode.
+        FS_TRACE_WARN("minfs: Attempted to load unlinked vnode %u\n", ino);
+        return ZX_ERR_BAD_STATE;
+    }
 
+    VnodeInsert(vn.get());
     *out = std::move(vn);
     UpdateOpenMetrics(/* cache_hit= */ false, ticker.End());
     return ZX_OK;

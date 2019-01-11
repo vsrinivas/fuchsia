@@ -839,6 +839,7 @@ zx_status_t VnodeMinfs::UnlinkChild(Transaction* state,
 }
 
 void VnodeMinfs::RemoveInodeLink(WritebackWork* wb) {
+    ZX_ASSERT(inode_.link_count > 0);
     // This effectively 'unlinks' the target node without deleting the direntry
     inode_.link_count--;
     if (MinfsMagicType(inode_.magic) == kMinfsTypeDir) {
