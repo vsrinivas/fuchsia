@@ -323,7 +323,8 @@ Err DoJump(ConsoleContext* context, const Command& cmd) {
     return err;
 
   cmd.thread()->JumpTo(
-      location.address(), [thread = cmd.thread()->GetWeakPtr()](const Err& err) {
+      location.address(),
+      [thread = cmd.thread()->GetWeakPtr()](const Err& err) {
         Console* console = Console::get();
         if (err.has_error()) {
           console->Output(err);
@@ -440,9 +441,9 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   for (const auto& pair : vars) {
-    helper->AppendVariableWithName(location.symbol_context(),
-                                   cmd.frame()->GetSymbolDataProvider(),
-                                   pair.second, options);
+    helper->AppendVariable(location.symbol_context(),
+                           cmd.frame()->GetSymbolDataProvider(), pair.second,
+                           options);
     helper->Append(OutputBuffer::WithContents("\n"));
   }
   helper->Complete(

@@ -136,9 +136,8 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
           continue;  // Symbols are corrupt.
 
         out->Append("\n      ");  // Indent.
-        out->AppendVariableWithName(location.symbol_context(),
-                                    frame->GetSymbolDataProvider(), value,
-                                    options);
+        out->AppendVariable(location.symbol_context(),
+                            frame->GetSymbolDataProvider(), value, options);
       }
     }
   }

@@ -103,16 +103,12 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
                    const ExprValue value, const FormatValueOptions& options);
 
   // The data provider normally comes from the frame where you want to evaluate
-  // the variable in.
+  // the variable in. This will prepend "<name> = " to the value of the
+  // variable.
   void AppendVariable(const SymbolContext& symbol_context,
                       fxl::RefPtr<SymbolDataProvider> data_provider,
-                      const Variable* var, const FormatValueOptions& options);
-
-  // Writes "<name> = <value>" to the buffer.
-  void AppendVariableWithName(const SymbolContext& symbol_context,
-                              fxl::RefPtr<SymbolDataProvider> data_provider,
-                              const Variable* var,
-                              const FormatValueOptions& options);
+                      const Variable* var,
+                      const FormatValueOptions& options);
 
   void Append(std::string str);
   void Append(OutputBuffer out);
@@ -128,6 +124,8 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   FRIEND_REF_COUNTED_THREAD_SAFE(FormatValue);
   FRIEND_MAKE_REF_COUNTED(FormatValue);
 
+  enum class NodeType { kGeneric, kVariable, kBaseClass };
+
   // Output is multilevel and each level can be asynchronous (a struct can
   // include another struct which can include an array, etc.).
   //
@@ -136,7 +134,31 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Asynchronous operations can fill in the buffers of these nodes, and when
   // all output is complete, the tree can be flattened to produce the final
   // result.
+  //
+  // REFACTORING IN PROGRESS...
+  //
+  // Originally OutputNode just held an OutputBuffer in a hierarchical way
+  // that can be referenced externally as an OutputKey. Strings were filled in
+  // by the value formatter as it went.
+  //
+  // We would like to move to a design where value formatting is split in two
+  // parts: (1) computing a tree of values, (2) converting that tree to text.
+  // The first part should be in the client or expr directory, while the text
+  // formatting should be in the console directory.
+  //
+  // With this split, we can drive other types of UIs without duplicating the
+  // complex type deduction and stringification logic. Even with the console
+  // output only, this design would let us do smarter wrapping since the
+  // complete result is known at text-generation time.
+  //
+  // This class will morph into the tree node. Currently it is a bit of a
+  // hybrid where it can store a higher level concept (given by NodeType) with
+  // an optional name, or it can just be random text.
   struct OutputNode {
+    // Optional.
+    std::string name;
+    NodeType type = NodeType::kGeneric;
+
     OutputBuffer buffer;  // Only used when there are no children.
 
     // Used for sanity checking. This is set when waiting on async resolution
@@ -253,6 +275,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // sub-key for use in later appending. Call OutputKeyComplete when this is
   // done.
   OutputKey AsyncAppend(OutputKey parent);
+  OutputKey AsyncAppend(NodeType type, std::string name, OutputKey parent);
 
   // Marks the given output key complete. The variant that takes an output
   // buffer is a shorthand for appending the contents and marking it complete.
@@ -268,7 +291,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Recursively walks the OutputNode tree to produce the final output in
   // the given output buffer. The sources are moved from so this is
   // destructive.
-  void RecursiveCollectOutput(const OutputNode* node, OutputBuffer* out);
+  void RecursiveCollectOutput(OutputNode* node, OutputBuffer* out);
 
   std::unique_ptr<ProcessContext> process_context_;
   Callback complete_callback_;

@@ -147,7 +147,8 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  const Variable* var,
                                  const FormatValueOptions& options) {
-  OutputKey output_key = AsyncAppend(GetRootOutputKey());
+  OutputKey output_key = AsyncAppend(
+      NodeType::kVariable, var->GetAssignedName(), GetRootOutputKey());
   auto resolver = std::make_unique<SymbolVariableResolver>(data_provider);
 
   // We can capture "this" here since the callback will be scoped to the
@@ -162,15 +163,6 @@ void FormatValue::AppendVariable(const SymbolContext& symbol_context,
 
   // Keep in our class scope so the callbacks will be run.
   resolvers_.push_back(std::move(resolver));
-}
-
-void FormatValue::AppendVariableWithName(
-    const SymbolContext& symbol_context,
-    fxl::RefPtr<SymbolDataProvider> data_provider, const Variable* var,
-    const FormatValueOptions& options) {
-  Append(OutputBuffer(Syntax::kVariable, var->GetAssignedName()));
-  Append(OutputBuffer(" = "));
-  AppendVariable(symbol_context, std::move(data_provider), var, options);
 }
 
 void FormatValue::Append(OutputBuffer out) {
@@ -361,14 +353,13 @@ void FormatValue::FormatCollection(
     std::string base_name = from->GetFullName();
     if (options.verbosity == Verbosity::kMinimal)
       base_name = GetElidedTypeName(base_name);
-    AppendToOutputKey(output_key, OutputBuffer(Syntax::kComment, base_name));
-    AppendToOutputKey(output_key, OutputBuffer(" = "));
 
     // Pass "true" to suppress type printing since we just printed the type.
     ExprValue from_value;
     Err err = ResolveInherited(value, inherited, &from_value);
-    FormatExprValue(data_provider, err, from_value, options, true,
-                    AsyncAppend(output_key));
+    FormatExprValue(
+        data_provider, err, from_value, options, true,
+        AsyncAppend(NodeType::kBaseClass, std::move(base_name), output_key));
   }
 
   // Data members.
@@ -395,17 +386,14 @@ void FormatValue::FormatCollection(
                                 member_value.type()->GetFullName().c_str())));
     }
 
-    AppendToOutputKey(
-        output_key, OutputBuffer(Syntax::kVariable, member->GetAssignedName()));
-    AppendToOutputKey(output_key, OutputBuffer(" = "));
-
     // Force omitting the type info since we already handled that before
     // showing the name. This is because:
     //   (int) b = 12
     // looks better than:
     //   b = (int) 12
     FormatExprValue(data_provider, err, member_value, options, true,
-                    AsyncAppend(output_key));
+                    AsyncAppend(NodeType::kVariable, member->GetAssignedName(),
+                                output_key));
   }
   AppendToOutputKey(output_key, OutputBuffer("}"));
   OutputKeyComplete(output_key);
@@ -871,8 +859,15 @@ void FormatValue::AppendToOutputKey(OutputKey output_key, OutputBuffer buffer) {
 }
 
 FormatValue::OutputKey FormatValue::AsyncAppend(OutputKey parent) {
+  return AsyncAppend(NodeType::kGeneric, std::string(), parent);
+}
+
+FormatValue::OutputKey FormatValue::AsyncAppend(NodeType type, std::string name,
+                                                OutputKey parent) {
   OutputNode* parent_node = reinterpret_cast<OutputNode*>(parent);
   auto new_node = std::make_unique<OutputNode>();
+  new_node->type = type;
+  new_node->name = std::move(name);
   new_node->pending = true;
 
   pending_resolution_++;
@@ -921,10 +916,26 @@ void FormatValue::CheckPendingResolution() {
   // WARNING: |this| may be deleted!
 }
 
-void FormatValue::RecursiveCollectOutput(const OutputNode* node,
-                                         OutputBuffer* out) {
+void FormatValue::RecursiveCollectOutput(OutputNode* node, OutputBuffer* out) {
   // Everything should be resolved when producing output.
   FXL_DCHECK(!node->pending);
+
+  if (!node->name.empty()) {
+    Syntax syntax;
+    switch (node->type) {
+      case NodeType::kGeneric:
+        syntax = Syntax::kNormal;
+        break;
+      case NodeType::kVariable:
+        syntax = Syntax::kVariable;
+        break;
+      case NodeType::kBaseClass:
+        syntax = Syntax::kComment;
+        break;
+    }
+    out->Append(syntax, std::move(node->name));
+    out->Append(" = ");
+  }
 
   // Each node should either have children or a buffer, but not both.
   if (node->child.empty()) {
