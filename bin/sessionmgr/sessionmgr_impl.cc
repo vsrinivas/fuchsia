@@ -191,18 +191,35 @@ void SessionmgrImpl::Initialize(
     fidl::InterfaceHandle<fuchsia::modular::internal::UserContext> user_context,
     fidl::InterfaceRequest<fuchsia::ui::viewsv1token::ViewOwner>
         view_owner_request) {
+  // This is called in the service connection factory callbacks for session
+  // shell (see how RunSessionShell() initializes session_shell_services_) to
+  // lazily initialize the following services only once they are requested
+  // for the first time.
+  finish_initialization_ = fit::defer<fit::closure>([this,
+        session_shell_url = session_shell.url,
+        ledger_token_manager = std::move(ledger_token_manager),
+        story_shell = std::move(story_shell)] () mutable {
+    InitializeLedger(std::move(ledger_token_manager));
+    InitializeDeviceMap();
+    InitializeMessageQueueManager();
+    InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
+    ConnectSessionShellToStoryProvider();
+    AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
+    InitializeClipboard();
+    ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+  });
+
   InitializeUser(std::move(account), std::move(agent_token_manager),
                  std::move(user_context));
-  InitializeLedger(std::move(ledger_token_manager));
-  InitializeDeviceMap();
-  InitializeMessageQueueManager();
-  InitializeMaxwellAndModular(session_shell.url, std::move(story_shell));
-  InitializeClipboard();
   InitializeSessionShell(
       std::move(session_shell),
       zx::eventpair(view_owner_request.TakeChannel().release()));
+}
 
-  ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+void SessionmgrImpl::ConnectSessionShellToStoryProvider() {
+  fuchsia::modular::SessionShellPtr session_shell;
+  session_shell_app_->services().ConnectToService(session_shell.NewRequest());
+  story_provider_impl_->SetSessionShell(std::move(session_shell));
 }
 
 void SessionmgrImpl::InitializeUser(
@@ -650,7 +667,6 @@ void SessionmgrImpl::InitializeSessionShell(
   session_shell_view_host_ =
       std::make_unique<ViewHost>(std::move(view_context));
   RunSessionShell(std::move(session_shell));
-  AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
 }
 
 void SessionmgrImpl::RunSessionShell(
@@ -660,20 +676,24 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::SessionShellContext>
                  request) {
+        finish_initialization_.call();
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::ComponentContext>(
       [this](
           fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+        finish_initialization_.call();
         session_shell_component_context_impl_->Connect(std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+        finish_initialization_.call();
         puppet_master_impl_->Connect(std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::IntelligenceServices>(
       [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
                  request) {
+        finish_initialization_.call();
         fuchsia::modular::ComponentScope component_scope;
         component_scope.set_global_scope(fuchsia::modular::GlobalScope());
         user_intelligence_provider_impl_->GetComponentIntelligenceServices(
@@ -709,10 +729,6 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   session_shell_view_host_->ConnectView(std::move(view_owner));
-
-  fuchsia::modular::SessionShellPtr session_shell;
-  session_shell_app_->services().ConnectToService(session_shell.NewRequest());
-  story_provider_impl_->SetSessionShell(std::move(session_shell));
 }
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
@@ -738,6 +754,7 @@ class SessionmgrImpl::SwapSessionShellOperation : public Operation<> {
     sessionmgr_impl_->story_provider_impl_->StopAllStories([this, flow] {
       sessionmgr_impl_->TerminateSessionShell([this, flow] {
         sessionmgr_impl_->RunSessionShell(std::move(session_shell_config_));
+        sessionmgr_impl_->ConnectSessionShellToStoryProvider();
       });
     });
   }

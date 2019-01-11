@@ -21,6 +21,7 @@
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
+#include <lib/fit/defer.h>
 #include <lib/fxl/macros.h>
 #include <zx/eventpair.h>
 
@@ -199,6 +200,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   // execution steps are stored in at_end_.
   void TerminateRecurse(int i);
 
+  void ConnectSessionShellToStoryProvider();
+
   component::StartupContext* const startup_context_;
   const Options options_;
   std::unique_ptr<scoped_tmpfs::ScopedTmpFS> memfs_for_ledger_;
@@ -301,6 +304,8 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
   class SwapSessionShellOperation;
 
   OperationQueue operation_queue_;
+
+  fit::deferred_action<fit::closure> finish_initialization_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionmgrImpl);
 };
