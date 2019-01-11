@@ -718,8 +718,10 @@ void PacketProtocol::MaybeSendAck() {
                        << " n=" << (max_seen_ - recv_tip_)
                        << " last_ack_send=" << last_ack_send_
                        << " 1/4-rtt=" << QuarterRTT()
-                       << " sending=" << (sending_ ? "true" : "false");
-  if (AckIsNeeded()) {
+                       << " sending=" << (sending_ ? "true" : "false")
+                       << " ack_only_message_outstanding="
+                       << ack_only_message_outstanding_;
+  if (AckIsNeeded() && state_ == State::READY) {
     if (sending_) {
       ack_after_sending_ = true;
     } else if (last_ack_send_ + QuarterRTT() > timer_->Now()) {

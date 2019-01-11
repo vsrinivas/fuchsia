@@ -347,7 +347,12 @@ class PacketProtocol {
       pp_->ack_only_message_outstanding_ = false;
       return Slice();
     }
-    void Ack(const Status& status) {}
+    void Ack(const Status& status) {
+      if (status.is_error() && pp_->ack_only_message_outstanding_) {
+        pp_->ack_only_message_outstanding_ = false;
+        pp_->MaybeSendAck();
+      }
+    }
 
    private:
     PacketProtocol* const pp_;
