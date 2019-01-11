@@ -102,18 +102,11 @@ func (e *endpoint) Attach(dispatcher stack.NetworkDispatcher) {
 				b, err := e.client.Recv()
 				switch mxerror.Status(err) {
 				case zx.ErrOk:
-					// TODO: optimization: consider unpacking the destination link addr
-					// and checking that we are a destination (including multicast support).
-
-					eth := header.Ethernet(b)
-
-					// TODO: avoid the copy? currently results in breaking sftp.
-					v := buffer.NewViewFromBytes(b)
-					v.TrimFront(header.EthernetMinimumSize)
-
-					dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
-
+					v := append(buffer.View(nil), b...)
 					e.client.Free(b)
+					eth := header.Ethernet(v)
+					v.TrimFront(header.EthernetMinimumSize)
+					dispatcher.DeliverNetworkPacket(e, eth.SourceAddress(), eth.DestinationAddress(), eth.Type(), v.ToVectorisedView())
 				case zx.ErrShouldWait:
 					e.client.WaitRecv()
 				default:
