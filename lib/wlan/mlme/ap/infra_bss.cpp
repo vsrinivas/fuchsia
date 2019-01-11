@@ -77,6 +77,8 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     // Start sending Beacon frames.
     started_at_ = zx_clock_get(ZX_CLOCK_MONOTONIC);
     bcn_sender_->Start(this, ps_cfg_, req);
+
+    device_->SetStatus(ETHMAC_STATUS_ONLINE);
 }
 
 void InfraBss::Stop() {
@@ -87,6 +89,7 @@ void InfraBss::Stop() {
     clients_.clear();
     bcn_sender_->Stop();
     started_at_ = 0;
+    device_->SetStatus(0);
 }
 
 bool InfraBss::IsStarted() {
