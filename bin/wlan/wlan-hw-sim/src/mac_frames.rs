@@ -23,6 +23,8 @@ pub enum MgmtSubtype {
     AssociationResponse = 0b0001,
     Beacon = 0b1000,
     Authentication = 0b1011,
+    #[cfg(test)]
+    Action = 0b1101,
 }
 
 #[cfg(test)]

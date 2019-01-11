@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "test/wlan_hw_sim_bin_test"
+    },
+    "sandbox": {
+        "dev": [
+            "test/wlantapctl",
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.wlan.service.Wlan",
+            "fuchsia.wlan.device.service.DeviceService"
+        ]
+    }
+}

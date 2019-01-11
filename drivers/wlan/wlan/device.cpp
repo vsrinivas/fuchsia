@@ -764,6 +764,7 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = ZX_PKT_TYPE_USER;
     pkt.status = status;
+    if (!port_.is_valid()) { return ZX_ERR_BAD_STATE; }
     return port_.queue(&pkt);
 }
 
@@ -773,6 +774,7 @@ zx_status_t Device::QueueDevicePortPacketUser(DevicePacket id, zx_packet_user_t 
     pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
     pkt.type = ZX_PKT_TYPE_USER;
     pkt.user = user_pkt;
+    if (!port_.is_valid()) { return ZX_ERR_BAD_STATE; }
     return port_.queue(&pkt);
 }
 

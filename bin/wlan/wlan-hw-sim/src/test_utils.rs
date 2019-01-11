@@ -7,11 +7,7 @@ use {
     fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
     fuchsia_zircon::{self as zx, prelude::*},
     futures::{channel::mpsc, ready, task::LocalWaker, Future, FutureExt, Poll, StreamExt},
-    std::{
-        marker::Unpin,
-        pin::Pin,
-        sync::Arc,
-    },
+    std::{marker::Unpin, pin::Pin, sync::Arc},
     wlantap_client::Wlantap,
 };
 

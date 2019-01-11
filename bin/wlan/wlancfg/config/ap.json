@@ -1,6 +1,6 @@
 {
     "phy": {
-        "/dev/test/wlantapctl/wlantap0/wlanphy": [ "Client" ],
+        "/dev/test/wlantapctl/wlantap0/wlanphy": [ "Client", "Ap" ],
         "*": [ "Ap" ]
     }
 }

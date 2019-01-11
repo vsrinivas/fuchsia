@@ -17,6 +17,8 @@ use {
     wlantap_client::Wlantap,
 };
 
+mod ap;
+mod config;
 mod mac_frames;
 
 #[cfg(test)]
@@ -27,105 +29,8 @@ mod test_utils;
 const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
 
-fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
-    wlan_device::BandInfo {
-        band_id: wlan_mlme::Band::WlanBand2Ghz,
-        ht_caps: Some(Box::new(wlan_mlme::HtCapabilities {
-            ht_cap_info: wlan_mlme::HtCapabilityInfo {
-                ldpc_coding_cap: false,
-                chan_width_set: wlan_mlme::ChanWidthSet::TwentyForty as u8,
-                sm_power_save: wlan_mlme::SmPowerSave::Disabled as u8,
-                greenfield: true,
-                short_gi_20: true,
-                short_gi_40: true,
-                tx_stbc: true,
-                rx_stbc: 1,
-                delayed_block_ack: false,
-                max_amsdu_len: wlan_mlme::MaxAmsduLen::Octets3839 as u8,
-                dsss_in_40: false,
-                intolerant_40: false,
-                lsig_txop_protect: false,
-            },
-            ampdu_params: wlan_mlme::AmpduParams {
-                exponent: 0,
-                min_start_spacing: wlan_mlme::MinMpduStartSpacing::NoRestrict as u8,
-            },
-            mcs_set: wlan_mlme::SupportedMcsSet {
-                rx_mcs_set: 0x01000000ff,
-                rx_highest_rate: 0,
-                tx_mcs_set_defined: true,
-                tx_rx_diff: false,
-                tx_max_ss: 1,
-                tx_ueqm: false,
-            },
-            ht_ext_cap: wlan_mlme::HtExtCapabilities {
-                pco: false,
-                pco_transition: wlan_mlme::PcoTransitionTime::PcoReserved as u8,
-                mcs_feedback: wlan_mlme::McsFeedback::McsNofeedback as u8,
-                htc_ht_support: false,
-                rd_responder: false,
-            },
-            txbf_cap: wlan_mlme::TxBfCapability {
-                implicit_rx: false,
-                rx_stag_sounding: false,
-                tx_stag_sounding: false,
-                rx_ndp: false,
-                tx_ndp: false,
-                implicit: false,
-                calibration: wlan_mlme::Calibration::CalibrationNone as u8,
-                csi: false,
-                noncomp_steering: false,
-                comp_steering: false,
-                csi_feedback: wlan_mlme::Feedback::FeedbackNone as u8,
-                noncomp_feedback: wlan_mlme::Feedback::FeedbackNone as u8,
-                comp_feedback: wlan_mlme::Feedback::FeedbackNone as u8,
-                min_grouping: wlan_mlme::MinGroup::MinGroupOne as u8,
-                csi_antennas: 1,
-                noncomp_steering_ants: 1,
-                comp_steering_ants: 1,
-                csi_rows: 1,
-                chan_estimation: 1,
-            },
-            asel_cap: wlan_mlme::AselCapability {
-                asel: false,
-                csi_feedback_tx_asel: false,
-                ant_idx_feedback_tx_asel: false,
-                explicit_csi_feedback: false,
-                antenna_idx_feedback: false,
-                rx_asel: false,
-                tx_sounding_ppdu: false,
-            },
-        })),
-        vht_caps: None,
-        basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
-        supported_channels: wlan_device::ChannelList {
-            base_freq: 2407,
-            channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
-        },
-    }
-}
-
 fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
-    use fidl_fuchsia_wlan_device::{DriverFeature, SupportedPhy};
-    wlantap::WlantapPhyConfig {
-        phy_info: wlan_device::PhyInfo {
-            id: 0,
-            dev_path: None,
-            hw_mac_address: HW_MAC_ADDR,
-            supported_phys: vec![
-                SupportedPhy::Dsss,
-                SupportedPhy::Cck,
-                SupportedPhy::Ofdm,
-                SupportedPhy::Ht,
-            ],
-            driver_features: vec![DriverFeature::Synth, DriverFeature::TxStatusReport],
-            mac_roles: vec![wlan_device::MacRole::Client],
-            caps: vec![],
-            bands: vec![create_2_4_ghz_band_info()],
-        },
-        name: String::from("wlantap0"),
-        quiet: false,
-    }
+    config::create_wlantap_config(HW_MAC_ADDR, wlan_device::MacRole::Client)
 }
 
 struct State {
@@ -354,6 +259,7 @@ async fn beacon_sender(state: Arc<Mutex<State>>, proxy: wlantap::WlantapPhyProxy
 #[cfg(test)]
 mod simulation_tests {
     use super::*;
+    use crate::ap;
     use {
         failure::{ensure, format_err},
         fidl_fuchsia_wlan_service as fidl_wlan_service, fuchsia_app as app, fuchsia_zircon as zx,
@@ -382,18 +288,23 @@ mod simulation_tests {
     // Temporary workaround to run tests synchronously. This is because wlan service only works with
     // one PHY, so having tests with multiple PHYs running in parallel make them flaky.
     #[test]
-    fn ethernet_then_scan_then_connect_then_txrx_then_minstrel() {
+    fn test_client_and_ap() {
         let mut ok = true;
-        ok = run_test("verify_ethernet", verify_ethernet) && ok;
-        ok = run_test("simulate_scan", simulate_scan) && ok;
-        ok = run_test("connecting_to_ap", connecting_to_ap) && ok;
-        ok = run_test("ethernet_tx_rx", ethernet_tx_rx) && ok;
-        if false { ok = run_test("verify_rate_selection", verify_rate_selection) && ok; }
+        // client tests
+        ok = run_test("verify_ethernet", test_verify_ethernet) && ok;
+        ok = run_test("simulate_scan", test_simulate_scan) && ok;
+        ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
+        ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
+        if false {
+            ok = run_test("verify_rate_selection", test_verify_rate_selection) && ok;
+        }
+
+        // ap tests
+        ok = run_test("open_ap_connect", ap::tests::test_open_ap_connect) && ok;
         assert!(ok);
     }
 
-    // test
-    fn verify_ethernet() {
+    fn test_verify_ethernet() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         // Make sure there is no existing ethernet device.
         let client = exec
@@ -442,8 +353,7 @@ mod simulation_tests {
         }
     }
 
-    // test
-    fn simulate_scan() {
+    fn test_simulate_scan() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 
@@ -484,8 +394,7 @@ mod simulation_tests {
         assert_eq!(&expected_aps, &aps[..]);
     }
 
-    // test
-    fn connecting_to_ap() {
+    fn test_connecting_to_ap() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 
@@ -653,8 +562,8 @@ mod simulation_tests {
 
     const BSS_MINSTL: [u8; 6] = [0x6d, 0x69, 0x6e, 0x73, 0x74, 0x0a];
     const SSID_MINSTREL: &[u8] = b"minstrel";
-    // test
-    fn verify_rate_selection() {
+
+    fn test_verify_rate_selection() {
         let mut exec = fasync::Executor::new().expect("error creating executor");
         let wlan_service = app::client::connect_to_service::<fidl_wlan_service::WlanMarker>()
             .expect("Error connecting to wlan service");
@@ -912,8 +821,8 @@ mod simulation_tests {
     const BSS_ETHNET: [u8; 6] = [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74];
     const SSID_ETHERNET: &[u8] = b"ethernet";
     const PAYLOAD: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15];
-    // test
-    fn ethernet_tx_rx() {
+
+    fn test_ethernet_tx_rx() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
         let mut helper = test_utils::TestHelper::begin_test(&mut exec, create_wlantap_config());
 

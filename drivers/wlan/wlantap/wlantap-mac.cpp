@@ -86,6 +86,13 @@ struct WlantapMacImpl : WlantapMac {
         return ZX_OK;
     }
 
+    static zx_status_t WlanmacEnableBeaconing(void* ctx, uint32_t options,
+                                              wlan_bcn_config_t* bcn_cfg) {
+        if (options != 0) { return ZX_ERR_INVALID_ARGS; }
+        if (bcn_cfg != nullptr) { return ZX_ERR_NOT_SUPPORTED; }
+        return ZX_OK;
+    }
+
     static zx_status_t WlanmacConfigureBeacon(void* ctx, uint32_t options, wlan_tx_packet_t* pkt) {
         if (options != 0) { return ZX_ERR_INVALID_ARGS; }
         if (pkt != nullptr) { return ZX_ERR_NOT_SUPPORTED; }
@@ -183,6 +190,7 @@ zx_status_t CreateWlantapMac(zx_device_t* parent_phy, const wlan_device::MacRole
         .queue_tx = &WlantapMacImpl::WlanmacQueueTx,
         .set_channel = &WlantapMacImpl::WlanmacSetChannel,
         .configure_bss = &WlantapMacImpl::WlanmacConfigureBss,
+        .enable_beaconing = &WlantapMacImpl::WlanmacEnableBeaconing,
         .configure_beacon = &WlantapMacImpl::WlanmacConfigureBeacon,
         .set_key = &WlantapMacImpl::WlanmacSetKey,
         .configure_assoc = &WlantapMacImpl::WlanmacConfigureAssoc,
