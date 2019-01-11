@@ -35,7 +35,11 @@ zx_status_t ReadPartitionIndex(const char* arg, uint32_t* idx) {
     return ZX_OK;
 }
 
-void print_usage(void) {
+int status_to_retcode(zx_status_t ret) {
+    return ret == ZX_OK ? 0 : 1;
+}
+
+int usage(zx_status_t ret) {
     printf("usage:\n");
     printf("Note that for all these commands, [<dev>] is the device containing the GPT.\n");
     printf("Although using a GPT will split your device into small partitions, [<dev>] \n");
@@ -67,6 +71,8 @@ void print_usage(void) {
     printf("\n");
     printf("The option --live-dangerously may be passed in front of any command\n");
     printf("to skip the write confirmation prompt.\n");
+
+    return status_to_retcode(ret);
 }
 
 int cgetc(void) {
@@ -112,32 +118,29 @@ char* flags_to_cstring(char* dst, size_t dst_len, const uint8_t* guid, uint64_t 
     return dst;
 }
 
-fbl::unique_ptr<GptDevice> init(const char* dev, int* out_fd) {
-    int fd = open(dev, O_RDWR);
-    if (fd < 0) {
+fbl::unique_ptr<GptDevice> init(const char* dev) {
+    fbl::unique_fd fd(open(dev, O_RDWR));
+    if (!fd.is_valid()) {
         printf("error opening %s\n", dev);
         return nullptr;
     }
 
     block_info_t info;
-    ssize_t rc = ioctl_block_get_info(fd, &info);
+    ssize_t rc = ioctl_block_get_info(fd.get(), &info);
     if (rc < 0) {
         printf("error getting block info\n");
-        close(fd);
-        return fbl::unique_ptr<GptDevice>(nullptr);
+        return nullptr;
     }
 
     printf("blocksize=0x%X blocks=%" PRIu64 "\n", info.block_size, info.block_count);
 
     fbl::unique_ptr<GptDevice> gpt;
-    rc = GptDevice::Create(fd, info.block_size, info.block_count, &gpt);
+    rc = GptDevice::Create(fd.get(), info.block_size, info.block_count, &gpt);
     if (rc < 0) {
         printf("error initializing GPT\n");
-        close(fd);
         return fbl::unique_ptr<GptDevice>(nullptr);
     }
 
-    *out_fd = fd;
     return gpt;
 }
 
@@ -188,13 +191,12 @@ void dump(const GptDevice* gpt, int* count) {
 }
 
 void dump_partitions(const char* dev) {
-    int fd;
-    fbl::unique_ptr<GptDevice> gpt = init(dev, &fd);
+    fbl::unique_ptr<GptDevice> gpt = init(dev);
     if (!gpt) return;
 
     if (!gpt->Valid()) {
         printf("No valid GPT found\n");
-        goto done;
+        return;
     }
 
     printf("Partition table is valid\n");
@@ -202,19 +204,16 @@ void dump_partitions(const char* dev) {
     uint64_t start, end;
     if (gpt->Range(&start, &end) != ZX_OK) {
         printf("Couldn't identify device range\n");
-        goto done;
+        return;
     }
 
     printf("GPT contains usable blocks from %" PRIu64 " to %" PRIu64" (inclusive)\n", start, end);
     int count;
     dump(gpt.get(), &count);
     printf("Total: %d partitions\n", count);
-
-done:
-    close(fd);
 }
 
-zx_status_t commit(GptDevice* gpt, int fd, const char* dev) {
+bool ConfirmCommit(const GptDevice* gpt, const char* dev) {
     if (confirm_writes) {
         dump(gpt, NULL);
         printf("\n");
@@ -225,52 +224,56 @@ zx_status_t commit(GptDevice* gpt, int fd, const char* dev) {
             switch (cgetc()) {
             case 'y':
             case 'Y':
-                goto make_it_so;
+                return true;
             case 'n':
             case 'N':
             case 27:
-                close(fd);
-                return ZX_OK;
+                return false;
             }
         }
     }
 
-make_it_so:;
+    return true;
+}
+
+zx_status_t commit(GptDevice* gpt, const char* dev) {
+
+    if (!ConfirmCommit(gpt, dev)) {
+        return ZX_OK;
+    }
+
     zx_status_t rc = gpt->Sync();
     if (rc != ZX_OK) {
         printf("Error: GPT device sync failed.\n");
         return rc;
     }
-    if (ioctl_block_rr_part(fd)) {
+    if ((rc = gpt->BlockRrPart()) != ZX_OK) {
         printf("Error: GPT updated but device could not be rebound. Please reboot.\n");
-        return ZX_ERR_INTERNAL;
+        return rc;
     }
     printf("GPT changes complete.\n");
     return ZX_OK;
 }
 
 void init_gpt(const char* dev) {
-    int fd;
-    fbl::unique_ptr<GptDevice> gpt = init(dev, &fd);
+    fbl::unique_ptr<GptDevice> gpt = init(dev);
     if (!gpt) return;
 
     // generate a default header
     ZX_ASSERT(gpt->RemoveAllPartitions() == ZX_OK);
-    commit(gpt.get(), fd, dev);
-    close(fd);
+    commit(gpt.get(), dev);
 }
 
 void add_partition(const char* dev, uint64_t start, uint64_t end, const char* name) {
     uint8_t guid[GPT_GUID_LEN];
     zx_cprng_draw(guid, GPT_GUID_LEN);
 
-    int fd;
-    fbl::unique_ptr<GptDevice> gpt = init(dev, &fd);
+    fbl::unique_ptr<GptDevice> gpt = init(dev);
     if (!gpt) return;
 
     if (!gpt->Valid()) {
         // generate a default header
-        if (commit(gpt.get(), fd, dev)) {
+        if (commit(gpt.get(), dev)) {
             return;
         }
     }
@@ -280,17 +283,8 @@ void add_partition(const char* dev, uint64_t start, uint64_t end, const char* na
     zx_status_t rc = gpt->AddPartition(name, type, guid, start, end - start + 1, 0);
     if (rc == ZX_OK) {
         printf("add partition: name=%s start=%" PRIu64 " end=%" PRIu64 "\n", name, start, end);
-        commit(gpt.get(), fd, dev);
+        commit(gpt.get(), dev);
     }
-
-    close(fd);
-}
-
-/*
- * Close the file descriptor used to read a GptDevice.
- */
-void tear_down_gpt(int fd) {
-    close(fd);
 }
 
 /*
@@ -373,33 +367,27 @@ bool parse_guid(const char* guid, uint8_t* bytes_out) {
  * Give a path to a block device and a partition index into a GPT, load the GPT
  * information into memory and find the requested partition. This does all the
  * bounds and other error checking. If ZX_OK is returned, the out parameters
- * will be set to valid values. If ZX_OK is returned, the caller should close
- * fd_out after it is done using the GPT information.
+ * will be set to valid values.
  */
 zx_status_t get_gpt_and_part(const char* path_device, uint32_t idx_part,
-                             int* fd_out,
                              fbl::unique_ptr<GptDevice>* gpt_out,
                              gpt_partition_t** part_out) {
     if (idx_part >= gpt::kPartitionCount) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    int fd = -1;
-    fbl::unique_ptr<GptDevice> gpt = init(path_device, &fd);
+    fbl::unique_ptr<GptDevice> gpt = init(path_device);
     if (gpt == NULL) {
-        tear_down_gpt(fd);
         return ZX_ERR_INTERNAL;
     }
 
     gpt_partition_t* part = gpt->GetPartition(idx_part);
     if (part == NULL) {
-        tear_down_gpt(fd);
         return ZX_ERR_INTERNAL;
     }
 
     *gpt_out = std::move(gpt);
     *part_out = part;
-    *fd_out = fd;
     return ZX_OK;
 }
 
@@ -437,8 +425,7 @@ constexpr bool expand_special(const char* in, uint8_t* out) {
 }
 
 void remove_partition(const char* dev, uint32_t n) {
-    int fd;
-    fbl::unique_ptr<GptDevice> gpt = init(dev, &fd);
+    fbl::unique_ptr<GptDevice> gpt = init(dev);
     if (!gpt) return;
 
     if (n >= gpt::kPartitionCount) {
@@ -448,41 +435,37 @@ void remove_partition(const char* dev, uint32_t n) {
     if (!p) {
         return;
     }
-    if (gpt->RemovePartition(p->guid) == ZX_OK) {
-        char name[gpt::kGuidStrLength];
-        printf("remove partition: n=%u name=%s\n", n,
-               utf16_to_cstring(name, (const uint16_t*)p->name,
-                                gpt::kGuidStrLength - 1));
-        commit(gpt.get(), fd, dev);
+    if (gpt->RemovePartition(p->guid) != ZX_OK) {
+        return;
     }
-
-    close(fd);
+    char name[gpt::kGuidStrLength];
+    printf("remove partition: n=%u name=%s\n", n,
+           utf16_to_cstring(name, (const uint16_t*)p->name, gpt::kGuidStrLength - 1));
+    commit(gpt.get(), dev);
 }
 
 zx_status_t adjust_partition(const char* dev, uint32_t idx_part,
                              uint64_t start, uint64_t end) {
     fbl::unique_ptr<GptDevice> gpt = NULL;
     gpt_partition_t* part = NULL;
-    int fd = -1;
 
     if (end < start) {
         fprintf(stderr, "partition #%u would end before it started\n", idx_part);
     }
 
-    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &gpt, &part);
     if (rc != ZX_OK) {
         return rc;
     }
 
     uint64_t block_start, block_end;
     if ((rc = gpt->Range(&block_start, &block_end)) != ZX_OK) {
-        goto done;
+        return rc;
     }
 
     if ((start < block_start) || (end > block_end)) {
         fprintf(stderr, "partition #%u would be outside of valid block range\n", idx_part);
-        rc = -1;
-        goto done;
+        return ZX_ERR_OUT_OF_RANGE;
     }
 
     for (uint32_t idx = 0; idx < gpt::kPartitionCount; idx++) {
@@ -496,18 +479,13 @@ zx_status_t adjust_partition(const char* dev, uint32_t idx_part,
             continue;
         }
         fprintf(stderr, "partition #%u would overlap partition #%u\n", idx_part, idx);
-        rc = -1;
-        goto done;
+        return ZX_ERR_UNAVAILABLE;
     }
 
     part->first = start;
     part->last = end;
 
-    rc = commit(gpt.get(), fd, dev);
-
-done:
-    tear_down_gpt(fd);
-    return rc;
+    return commit(gpt.get(), dev);
 }
 
 /*
@@ -521,7 +499,6 @@ zx_status_t edit_partition(const char* dev, uint32_t idx_part,
                            char* type_or_id, char* guid) {
     fbl::unique_ptr<GptDevice> gpt = NULL;
     gpt_partition_t* part = NULL;
-    int fd = -1;
 
     // whether we're setting the type or id GUID
     bool set_type;
@@ -540,7 +517,7 @@ zx_status_t edit_partition(const char* dev, uint32_t idx_part,
         return ZX_ERR_INVALID_ARGS;
     }
 
-    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &gpt, &part);
     if (rc != ZX_OK) {
         return rc;
     }
@@ -551,9 +528,7 @@ zx_status_t edit_partition(const char* dev, uint32_t idx_part,
         memcpy(part->guid, guid_bytes, GPT_GUID_LEN);
     }
 
-    rc = commit(gpt.get(), fd, dev);
-    tear_down_gpt(fd);
-    return rc;
+    return commit(gpt.get(), dev);
 }
 
 /*
@@ -561,18 +536,16 @@ zx_status_t edit_partition(const char* dev, uint32_t idx_part,
  *
  * argv/argc should correspond only to the arguments after the command.
  */
-zx_status_t edit_cros_partition(char* const* argv, int argc) {
+int edit_cros_partition(char* const* argv, int argc) {
     fbl::unique_ptr<GptDevice> gpt = NULL;
     gpt_partition_t* part = NULL;
-    int fd = -1;
     zx_status_t rc;
     char* dev;
 
     char* end;
     unsigned long lidx_part = strtoul(argv[0], &end, 10);
     if (*end != 0 || argv[0][0] == 0 || lidx_part > UINT32_MAX) {
-        print_usage();
-        return ZX_ERR_INVALID_ARGS;
+        return usage(ZX_ERR_INVALID_ARGS);
     }
     uint32_t idx_part = static_cast<uint32_t>(lidx_part);
 
@@ -587,11 +560,11 @@ zx_status_t edit_cros_partition(char* const* argv, int argc) {
         case 'T': {
             long val = strtol(optarg, &end, 10);
             if (*end != 0 || optarg[0] == 0) {
-                goto usage;
+                return usage(ZX_ERR_INVALID_ARGS);
             }
             if (val < 0 || val > 15) {
                 printf("tries must be in the range [0, 16)\n");
-                goto usage;
+                return usage(ZX_ERR_INVALID_ARGS);
             }
             tries = val;
             break;
@@ -599,11 +572,11 @@ zx_status_t edit_cros_partition(char* const* argv, int argc) {
         case 'P': {
             long val = strtol(optarg, &end, 10);
             if (*end != 0 || optarg[0] == 0) {
-                goto usage;
+                return usage(ZX_ERR_INVALID_ARGS);
             }
             if (val < 0 || val > 15) {
                 printf("priority must be in the range [0, 16)\n");
-                goto usage;
+                return usage(ZX_ERR_INVALID_ARGS);
             }
             priority = val;
             break;
@@ -615,59 +588,50 @@ zx_status_t edit_cros_partition(char* const* argv, int argc) {
                 successful = 1;
             } else {
                 printf("successful must be 0 or 1\n");
-                goto usage;
+                return usage(ZX_ERR_INVALID_ARGS);
             }
             break;
         }
         default:
             printf("Unknown option\n");
-            goto usage;
+            return usage(ZX_ERR_INVALID_ARGS);
         }
     }
 
     if (optind != argc - 1) {
         printf("Did not specify device arg\n");
-        goto usage;
+        return usage(ZX_ERR_INVALID_ARGS);
     }
 
     dev = argv[optind];
 
-    rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    rc = get_gpt_and_part(dev, idx_part, &gpt, &part);
     if (rc != ZX_OK) {
-        return rc;
+        return status_to_retcode(rc);
     }
 
     if (!gpt_cros_is_kernel_guid(part->type, GPT_GUID_LEN)) {
         printf("Partition is not a CrOS kernel partition\n");
-        rc = ZX_ERR_INVALID_ARGS;
-        goto cleanup;
+        return status_to_retcode(ZX_ERR_INVALID_ARGS);
     }
 
     if (tries >= 0) {
         if (gpt_cros_attr_set_tries(&part->flags, static_cast<uint8_t>(tries)) < 0) {
             printf("Failed to set tries\n");
-            rc = ZX_ERR_INVALID_ARGS;
-            goto cleanup;
+            return status_to_retcode(ZX_ERR_INVALID_ARGS);
         }
     }
     if (priority >= 0) {
         if (gpt_cros_attr_set_priority(&part->flags, static_cast<uint8_t>(priority)) < 0) {
             printf("Failed to set priority\n");
-            rc = ZX_ERR_INVALID_ARGS;
-            goto cleanup;
+            return status_to_retcode(ZX_ERR_INVALID_ARGS);
         }
     }
     if (successful >= 0) {
         gpt_cros_attr_set_successful(&part->flags, successful);
     }
 
-    rc = commit(gpt.get(), fd, dev);
-cleanup:
-    tear_down_gpt(fd);
-    return rc;
-usage:
-    print_usage();
-    return ZX_ERR_INVALID_ARGS;
+    return status_to_retcode(commit(gpt.get(), dev));
 }
 
 /*
@@ -678,9 +642,8 @@ usage:
 zx_status_t set_visibility(char* dev, uint32_t idx_part, bool visible) {
     fbl::unique_ptr<GptDevice> gpt = NULL;
     gpt_partition_t* part = NULL;
-    int fd = -1;
 
-    zx_status_t rc = get_gpt_and_part(dev, idx_part, &fd, &gpt, &part);
+    zx_status_t rc = get_gpt_and_part(dev, idx_part, &gpt, &part);
     if (rc != ZX_OK) {
         return rc;
     }
@@ -691,9 +654,7 @@ zx_status_t set_visibility(char* dev, uint32_t idx_part, bool visible) {
         part->flags |= kFlagHidden;
     }
 
-    rc = commit(gpt.get(), fd, dev);
-    tear_down_gpt(fd);
-    return rc;
+    return commit(gpt.get(), dev);
 }
 
 // parse_size parses long integers in base 10, expanding p, t, g, m, and k
@@ -746,13 +707,13 @@ uint64_t align(uint64_t base, uint64_t logical, uint64_t physical) {
 
 // repartition expects argv to start with the disk path and be followed by
 // triples of name, type and size.
-int repartition(int argc, char** argv) {
-  int fd = -1;
-  int rc = 1;
+zx_status_t repartition(int argc, char** argv) {
   const char* dev = argv[0];
   uint64_t logical, free_space;
-  fbl::unique_ptr<GptDevice> gpt = init(dev, &fd);
-  if (!gpt) return 255;
+  fbl::unique_ptr<GptDevice> gpt = init(dev);
+  if (gpt == NULL) {
+    return ZX_ERR_INTERNAL;
+  }
 
   argc--;
   argv = &argv[1];
@@ -764,15 +725,8 @@ int repartition(int argc, char** argv) {
       p = gpt->GetPartition(0);
   }
 
-
-  block_info_t info;
-  if (ioctl_block_get_info(fd, &info) < 0) {
-    printf("error getting block info\n");
-    rc = 255;
-    goto repartition_end;
-  }
-  logical = info.block_size;
-  free_space = info.block_count * logical;
+  logical = gpt->BlockSize();
+  free_space = gpt->TotalBlockCount() * logical;
 
   {
     // expand out any proportional sizes into absolute sizes
@@ -790,8 +744,7 @@ int repartition(int argc, char** argv) {
         } else {
           if (percent == 0) {
             printf("more than 100%% of free space requested\n");
-            rc = 1;
-            goto repartition_end;
+            return ZX_ERR_INVALID_ARGS;
           }
           // portions from parse_size are negative
           portions[i] = -sz;
@@ -822,8 +775,7 @@ int repartition(int argc, char** argv) {
       uint8_t type[GPT_GUID_LEN];
       if (!expand_special(type_string, type) && !parse_guid(type_string, type)) {
           printf("GUID could not be parsed: %s\n", type_string);
-          rc = 1;
-          goto repartition_end;
+          return ZX_ERR_INVALID_ARGS;
       }
 
       uint8_t guid[GPT_GUID_LEN];
@@ -837,8 +789,7 @@ int repartition(int argc, char** argv) {
 
       if (start > last_usable) {
         printf("partition %s does not fit\n", name);
-        rc = 1;
-        goto repartition_end;
+        return ZX_ERR_OUT_OF_RANGE;
       }
 
       printf("%s: %" PRIu64 " bytes, %" PRIu64 " blocks, %" PRIu64 "-%" PRIu64 "\n",
@@ -849,10 +800,7 @@ int repartition(int argc, char** argv) {
     }
   }
 
-  rc = commit(gpt.get(), fd, dev);
-repartition_end:
-  close(fd);
-  return rc;
+  return commit(gpt.get(), dev);
 }
 
 } // namespace
@@ -870,73 +818,92 @@ int main(int argc, char** argv) {
         }
     }
 
-    if (argc == 1) goto usage;
+    if (argc == 1) {
+        return usage(ZX_OK);
+    }
 
     cmd = argv[1];
     if (!strcmp(cmd, "dump")) {
-        if (argc <= 2) goto usage;
+        if (argc <= 2) {
+            return usage(ZX_OK);
+        }
         dump_partitions(argv[2]);
     } else if (!strcmp(cmd, "init")) {
-        if (argc <= 2) goto usage;
+        if (argc <= 2) {
+            return usage(ZX_OK);
+        }
         init_gpt(argv[2]);
     } else if (!strcmp(cmd, "add")) {
-        if (argc <= 5) goto usage;
+        if (argc <= 5) {
+            return usage(ZX_OK);
+        }
         add_partition(argv[5], strtoull(argv[2], NULL, 0), strtoull(argv[3], NULL, 0), argv[4]);
     } else if (!strcmp(cmd, "remove")) {
-        if (argc <= 3) goto usage;
+        if (argc <= 3) {
+            return usage(ZX_OK);
+        }
         if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
-            goto usage;
+            return usage(ZX_OK);
         }
         remove_partition(argv[3], idx_part);
     } else if (!strcmp(cmd, "edit")) {
-        if (argc <= 5) goto usage;
+        if (argc <= 5) {
+            return usage(ZX_OK);
+        }
         if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
-            goto usage;
+            return usage(ZX_OK);
         }
         if (edit_partition(argv[5], idx_part, argv[3], argv[4])) {
             printf("failed to edit partition.\n");
         }
     } else if (!strcmp(cmd, "edit_cros")) {
-        if (argc <= 4) goto usage;
+        if (argc <= 4) {
+            return usage(ZX_OK);
+        }
         if (edit_cros_partition(argv + 2, argc - 2)) {
             printf("failed to edit partition.\n");
         }
     } else if (!strcmp(cmd, "adjust")) {
-        if (argc <= 5) goto usage;
+        if (argc <= 5) {
+            return usage(ZX_OK);
+        }
         if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
-            goto usage;
+            return usage(ZX_OK);
         }
         if (adjust_partition(argv[5], idx_part,
-                             strtoull(argv[3], NULL, 0), strtoull(argv[4], NULL, 0))) {
+                             strtoull(argv[3], NULL, 0), strtoull(argv[4], NULL, 0)) != ZX_OK) {
             printf("failed to adjust partition.\n");
         }
     } else if (!strcmp(cmd, "visible")) {
-        if (argc < 5) goto usage;
+        if (argc < 5) {
+            return usage(ZX_OK);
+        }
         bool visible;
         if (!strcmp(argv[3], "true")) {
             visible = true;
         } else if (!strcmp(argv[3], "false")) {
             visible = false;
         } else {
-            goto usage;
+            return usage(ZX_OK);
         }
 
         if (ReadPartitionIndex(argv[2], &idx_part) != ZX_OK) {
-            goto usage;
+            return usage(ZX_OK);
         }
-        if (set_visibility(argv[4], idx_part, visible)) {
+        if (set_visibility(argv[4], idx_part, visible) != ZX_OK) {
             printf("Error changing visibility.\n");
         }
     } else if (!strcmp(cmd, "repartition")) {
-      if (argc < 6) goto usage;
-      if (argc  % 3 != 0) goto usage;
-      return repartition(argc-2, &argv[2]);
+        if (argc < 6) {
+            return usage(ZX_OK);
+        }
+        if (argc % 3 != 0) {
+            return usage(ZX_OK);
+        }
+        return status_to_retcode(repartition(argc - 2, &argv[2]));
     } else {
-        goto usage;
+        return usage(ZX_OK);
     }
 
-    return 0;
-usage:
-    print_usage();
     return 0;
 }

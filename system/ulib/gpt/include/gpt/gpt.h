@@ -74,6 +74,15 @@ public:
 
     // print out the GPT
     void PrintTable() const;
+    zx_status_t BlockRrPart() {
+        return static_cast<zx_status_t>(ioctl_block_rr_part(fd_.get()));
+    }
+
+    // Return device's block size
+    uint64_t BlockSize() const { return blocksize_; }
+
+    // Return total number of blocks in the device
+    uint64_t TotalBlockCount() const { return blocks_; }
 
 private:
     GptDevice() { valid_ = false; };
