@@ -10,28 +10,30 @@
 
 namespace fidl {
 
-StringPtr::StringPtr() : is_null_(true) {}
+StringPtr::StringPtr() : is_null_if_empty_(true) {}
 
 StringPtr::StringPtr(const StringPtr& other) = default;
 
-StringPtr::StringPtr(std::string str) : str_(std::move(str)), is_null_(false) {}
+StringPtr::StringPtr(std::string str)
+    : str_(std::move(str)), is_null_if_empty_(false) {}
 
 StringPtr::StringPtr(const char* str)
-    : str_(str ? std::string(str) : std::string()), is_null_(!str) {}
+    : str_(str ? std::string(str) : std::string()), is_null_if_empty_(!str) {}
 
 StringPtr::StringPtr(const char* str, size_t length)
-    : str_(str ? std::string(str, length) : std::string()), is_null_(!str) {}
+    : str_(str ? std::string(str, length) : std::string()),
+      is_null_if_empty_(!str) {}
 
 StringPtr::~StringPtr() = default;
 
 StringPtr::StringPtr(StringPtr&& other)
-    : str_(std::move(other.str_)), is_null_(other.is_null_) {}
+    : str_(std::move(other.str_)), is_null_if_empty_(other.is_null_if_empty_) {}
 
 StringPtr& StringPtr::operator=(const StringPtr& other) = default;
 
 StringPtr& StringPtr::operator=(StringPtr&& other) {
   str_ = std::move(other.str_);
-  is_null_ = other.is_null_;
+  is_null_if_empty_ = other.is_null_if_empty_;
   return *this;
 }
 

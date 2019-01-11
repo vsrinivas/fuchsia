@@ -46,28 +46,28 @@ class StringPtr {
   // After this method returns, the StringPtr is non-null.
   void reset(std::string str) {
     str_ = std::move(str);
-    is_null_ = false;
+    is_null_if_empty_ = false;
   }
 
   // Causes this StringPtr to become null.
   void reset() {
     str_.clear();
-    is_null_ = true;
+    is_null_if_empty_ = true;
   }
 
   void swap(StringPtr& other) {
     using std::swap;
     swap(str_, other.str_);
-    swap(is_null_, other.is_null_);
+    swap(is_null_if_empty_, other.is_null_if_empty_);
   }
 
   // Whether this StringPtr is null.
   //
   // The null state is separate from the empty state.
-  bool is_null() const { return is_null_ && str_.empty(); }
+  bool is_null() const { return is_null_if_empty_ && str_.empty(); }
 
   // Tests as true if non-null, false if null.
-  explicit operator bool() const { return !is_null_; }
+  explicit operator bool() const { return !is_null(); }
 
   // Provides access to the underlying std::string.
   std::string* operator->() { return &str_; }
@@ -86,7 +86,7 @@ class StringPtr {
 
  private:
   std::string str_;
-  bool is_null_;
+  bool is_null_if_empty_;
 };
 
 inline bool operator==(const StringPtr& a, const StringPtr& b) {
