@@ -469,7 +469,7 @@ func (ns *Netstack) Bridge(nics []tcpip.NICID) (*ifState, error) {
 		if len(ifs.nic.Name) == 0 {
 			ifs.nic.Name = fmt.Sprintf("br%d", ifs.nic.ID)
 		}
-		return nil
+		return ifs.eth.Up()
 	})
 }
 
