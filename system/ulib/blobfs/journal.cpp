@@ -278,6 +278,7 @@ zx_status_t Journal::InitWriteback() {
         return ZX_ERR_NO_RESOURCES;
     }
 
+    state_ = WritebackState::kRunning;
     return ZX_OK;
 }
 
@@ -805,12 +806,6 @@ void Journal::ProcessQueues(JournalProcessor* processor) {
 }
 
 void Journal::ProcessLoop() {
-    {
-        fbl::AutoLock lock(&lock_);
-        ZX_DEBUG_ASSERT(state_ == WritebackState::kReady);
-        state_ = WritebackState::kRunning;
-    }
-
     JournalProcessor processor(this);
     while (true) {
         ProcessQueues(&processor);
