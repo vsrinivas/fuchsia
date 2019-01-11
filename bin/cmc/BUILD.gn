@@ -23,6 +23,7 @@ rustc_binary("cmc") {
   deps = [
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:json5",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:regex",
     "//third_party/rust-crates/rustc_deps:serde",

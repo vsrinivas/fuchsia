@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use json5;
+use serde_json;
+use serde_json::Value;
 use std::error;
 use std::fmt;
 use std::io;
@@ -65,3 +68,14 @@ impl From<Utf8Error> for Error {
     }
 }
 
+pub fn from_json_str(json: &str) -> Result<Value, Error> {
+    let v = serde_json::from_str(json)
+        .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
+    Ok(v)
+}
+
+pub fn from_json5_str(json5: &str) -> Result<Value, Error> {
+    let v: Value = json5::from_str(json5)
+        .map_err(|e| Error::parse(format!("Couldn't read input as JSON5: {}", e)))?;
+    Ok(v)
+}

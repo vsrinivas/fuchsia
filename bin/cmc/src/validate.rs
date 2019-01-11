@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{Error, CM_SCHEMA, CML_SCHEMA, CMX_SCHEMA, JsonSchemaStr};
+use crate::common::{self, Error, JsonSchemaStr, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
 use std::fs;
 use std::io::Read;
@@ -22,16 +22,20 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
     for filename in files {
         let mut buffer = String::new();
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
-        let v: Value = serde_json::from_str(&buffer)
-            .map_err(|e| Error::parse(format!("Couldn't read input as JSON: {}", e)))?;
-        match filename.extension() {
-            Some(ext) => match ext.to_str() {
-                Some("cm") => validate_json(&v, CM_SCHEMA),
-                Some("cml") => validate_cml(&v),
-                Some("cmx") => validate_json(&v, CMX_SCHEMA),
-                _ => Err(Error::invalid_args(BAD_EXTENSION)),
-            },
-            None => Err(Error::invalid_args(BAD_EXTENSION)),
+        match filename.extension().and_then(|e| e.to_str()) {
+            Some("cm") => {
+                let v = common::from_json_str(&buffer)?;
+                validate_json(&v, CM_SCHEMA)
+            }
+            Some("cml") => {
+                let v = common::from_json5_str(&buffer)?;
+                validate_cml(&v)
+            }
+            Some("cmx") => {
+                let v = common::from_json_str(&buffer)?;
+                validate_json(&v, CMX_SCHEMA)
+            }
+            _ => Err(Error::invalid_args(BAD_EXTENSION)),
         }?;
     }
     Ok(())
@@ -63,7 +67,6 @@ fn validate_json(json: &Value, schema: JsonSchemaStr) -> Result<(), Error> {
 }
 
 /// Validates CML JSON document according to the schema.
-/// TODO: Allow JSON5 input
 /// TODO: Perform extra validation beyond what the schema provides.
 pub fn validate_cml(json: &Value) -> Result<(), Error> {
     validate_json(&json, CML_SCHEMA)
@@ -134,12 +137,17 @@ mod tests {
     fn validate_test(
         filename: &str, input: serde_json::value::Value, expected_result: Result<(), Error>,
     ) {
+        let input_str = format!("{}", input);
+        validate_json_str(filename, &input_str, expected_result);
+    }
+
+    fn validate_json_str(filename: &str, input: &str, expected_result: Result<(), Error>) {
         let tmp_dir = TempDir::new().unwrap();
         let tmp_file_path = tmp_dir.path().join(filename);
 
         File::create(&tmp_file_path)
             .unwrap()
-            .write_all(format!("{}", input).as_bytes())
+            .write_all(input.as_bytes())
             .unwrap();
 
         let result = validate(vec![tmp_file_path]);
@@ -624,6 +632,24 @@ mod tests {
             }),
             result = Err(Error::parse("Type of the value is wrong at /facets")),
         },
+    }
+
+    #[test]
+    fn test_cml_json5() {
+        let input = r##"{
+            "expose": [
+                // Here are some services to expose.
+                { "service": "/loggers/fuchsia.logger.Log", "from": "#logger", },
+                { "directory": "/volumes/blobfs", "from": "self", },
+            ],
+            "children": [
+                {
+                    'name': 'logger',
+                    'uri': 'fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm',
+                },
+            ],
+        }"##;
+        validate_json_str("test.cml", input, Ok(()));
     }
 
     test_validate_cml! {
