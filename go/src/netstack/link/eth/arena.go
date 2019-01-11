@@ -103,9 +103,9 @@ func (a *Arena) alloc(c *Client) Buffer {
 }
 
 func (a *Arena) index(b Buffer) int {
-	bh := (*reflect.SliceHeader)(unsafe.Pointer(&b))
+	bh := *(*reflect.SliceHeader)(unsafe.Pointer(&b))
 	bp := bh.Data
-	ah := (*reflect.SliceHeader)(unsafe.Pointer(&a.iobuf))
+	ah := *(*reflect.SliceHeader)(unsafe.Pointer(&a.iobuf))
 	ap := ah.Data
 	i := (bp - ap) / bufferSize
 	if i < 0 || i >= numBuffers {
