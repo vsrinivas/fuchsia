@@ -11,14 +11,8 @@ import (
 	"fidl/compiler/backend/typestest"
 )
 
-var cases = []string{
-	"ordinal_switch.fidl.json",
-	"doc_comments.fidl.json",
-	"tables.fidl.json",
-}
-
 func TestCodegenImplDotGo(t *testing.T) {
-	for _, filename := range cases {
+	for _, filename := range typestest.AllExamples() {
 		t.Run(filename, func(t *testing.T) {
 			fidl := typestest.GetExample(filename)
 			tree := ir.Compile(fidl)

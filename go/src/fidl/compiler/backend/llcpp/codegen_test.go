@@ -23,18 +23,13 @@ func (s example) source() string {
 	return fmt.Sprintf("%s.llcpp.cpp.golden", s)
 }
 
-var cases = []example{
-	"empty_struct.fidl.json",
-	"union.fidl.json",
-}
-
 func TestCodegenHeader(t *testing.T) {
-	for _, filename := range cases {
-		t.Run(string(filename), func(t *testing.T) {
-			fidl := typestest.GetExample(string(filename))
+	for _, filename := range typestest.AllExamples() {
+		t.Run(filename, func(t *testing.T) {
+			fidl := typestest.GetExample(filename)
 			tree := ir.Compile(fidl)
-			tree.PrimaryHeader = strings.TrimRight(filename.header(), ".golden")
-			header := typestest.GetGolden(filename.header())
+			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			header := typestest.GetGolden(example(filename).header())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateHeader(buf, tree); err != nil {
@@ -46,12 +41,12 @@ func TestCodegenHeader(t *testing.T) {
 	}
 }
 func TestCodegenSource(t *testing.T) {
-	for _, filename := range cases {
-		t.Run(string(filename), func(t *testing.T) {
-			fidl := typestest.GetExample(string(filename))
+	for _, filename := range typestest.AllExamples() {
+		t.Run(filename, func(t *testing.T) {
+			fidl := typestest.GetExample(filename)
 			tree := ir.Compile(fidl)
-			tree.PrimaryHeader = strings.TrimRight(filename.header(), ".golden")
-			source := typestest.GetGolden(filename.source())
+			tree.PrimaryHeader = strings.TrimRight(example(filename).header(), ".golden")
+			source := typestest.GetGolden(example(filename).source())
 
 			buf := new(bytes.Buffer)
 			if err := NewFidlGenerator().GenerateSource(buf, tree); err != nil {

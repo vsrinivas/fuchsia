@@ -32,6 +32,23 @@ var basePath = func() string {
 	panic("")
 }()
 
+// AllExamples returns all examples by filename.
+// See also #GetExample.
+func AllExamples() []string {
+	paths, err := filepath.Glob(filepath.Join(basePath, "*.json"))
+	if err != nil {
+		panic(err)
+	}
+	if len(paths) == 0 {
+		panic("Wrong. There should be a few JSON golden.")
+	}
+	var examples []string
+	for _, path := range paths {
+		examples = append(examples, path[len(basePath):])
+	}
+	return examples
+}
+
 // GetExample retrieves an example by filename, and parses it.
 func GetExample(filename string) types.Root {
 	var (
