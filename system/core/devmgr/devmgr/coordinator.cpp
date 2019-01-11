@@ -661,7 +661,8 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
                                    uint32_t protocol_id,
                                    fbl::StringPiece driver_path,
                                    fbl::StringPiece args,
-                                   bool invisible) {
+                                   bool invisible,
+                                   zx::channel client_remote) {
     // If this is true, then |name_data|'s size is properly bounded.
     static_assert(fuchsia_device_manager_DEVICE_NAME_MAX == ZX_DEVICE_NAME_MAX);
     static_assert(fuchsia_device_manager_PROPERTIES_MAX <= UINT32_MAX);
@@ -750,6 +751,8 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
     dev->AddRef();
     parent->children.push_back(dev.get());
     parent->AddRef();
+
+    dev->client_remote = std::move(client_remote);
 
     devices_.push_back(dev.get());
 
@@ -1090,16 +1093,18 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc,
                                   const char* name_data, size_t name_size,
                                   uint32_t protocol_id,
                                   const char* driver_path_data, size_t driver_path_size,
-                                  const char* args_data, size_t args_size, fidl_txn_t* txn) {
+                                  const char* args_data, size_t args_size,
+                                  zx_handle_t raw_client_remote, fidl_txn_t* txn) {
     auto parent = static_cast<Device*>(ctx);
     zx::channel rpc(raw_rpc);
     fbl::StringPiece name(name_data, name_size);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
+    zx::channel client_remote(raw_client_remote);
 
     zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
                                                         props_count, name, protocol_id, driver_path,
-                                                        args, false);
+                                                        args, false, std::move(client_remote));
     return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status);
 }
 
@@ -1109,16 +1114,17 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
                                            uint32_t protocol_id,
                                            const char* driver_path_data, size_t driver_path_size,
                                            const char* args_data, size_t args_size,
-                                           fidl_txn_t* txn) {
+                                           zx_handle_t raw_client_remote, fidl_txn_t* txn) {
     auto parent = static_cast<Device*>(ctx);
     zx::channel rpc(raw_rpc);
     fbl::StringPiece name(name_data, name_size);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
+    zx::channel client_remote(raw_client_remote);
 
     zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
                                                         props_count, name, protocol_id, driver_path,
-                                                        args, true);
+                                                        args, true, std::move(client_remote));
     return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status);
 }
 
@@ -1674,6 +1680,11 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
                 log(ERROR, "devcoord: dh_send_connect_proxy: %d\n", r);
             }
         }
+        if (dev->client_remote.is_valid()) {
+            if ((r = devfs_connect(dev->proxy, std::move(dev->client_remote))) != ZX_OK) {
+                log(ERROR, "devcoord: devfs_connnect: %d\n", r);
+            }
+        }
     }
 
     return ZX_OK;
@@ -1707,6 +1718,14 @@ zx_status_t Coordinator::AttemptBind(const Driver* drv, Device* dev) {
 }
 
 void Coordinator::HandleNewDevice(Device* dev) {
+    // If the device has a proxy, we actually want to wait for the proxy device to be
+    // created and connect to that.
+    if (dev->client_remote.is_valid() && !(dev->flags & DEV_CTX_MUST_ISOLATE)) {
+        zx_status_t r;
+        if ((r = devfs_connect(dev, std::move(dev->client_remote))) != ZX_OK) {
+            log(ERROR, "devcoord: devfs_connnect: %d\n", r);
+        }
+    }
     for (auto& drv : drivers_) {
         if (dc_is_bindable(&drv, dev->protocol_id,
                            dev->props.get(), dev->prop_count, true)) {

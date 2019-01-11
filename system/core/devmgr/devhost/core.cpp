@@ -385,7 +385,7 @@ static zx_status_t device_validate(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_L
 zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* proxy_args)
+                               const char* proxy_args, zx::channel client_remote)
                                REQ_DM_LOCK {
     auto fail = [&dev](zx_status_t status) {
         if (dev) {
@@ -460,7 +460,7 @@ zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
 
     if (!(dev->flags & DEV_FLAG_INSTANCE)) {
         // devhost_add always consumes the handle
-        status = devhost_add(parent, dev, proxy_args, props, prop_count);
+        status = devhost_add(parent, dev, proxy_args, props, prop_count, std::move(client_remote));
         if (status < 0) {
             printf("devhost: %p(%s): remote add failed %d\n",
                    dev.get(), dev->name, status);

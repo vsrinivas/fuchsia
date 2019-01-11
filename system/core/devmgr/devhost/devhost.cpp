@@ -873,7 +873,8 @@ static void devhost_io_init() {
 // parent device.  Called under devhost api lock.
 zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                         const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                        const zx_device_prop_t* props, uint32_t prop_count) {
+                        const zx_device_prop_t* props, uint32_t prop_count,
+                        zx::channel client_remote) {
     char buffer[512];
     const char* path = mkdevpath(parent, buffer, sizeof(buffer));
     log(RPC_OUT, "devhost[%s] add '%s'\n", path, child->name);
@@ -903,13 +904,13 @@ zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& parent,
                 rpc.get(), hsend.release(), reinterpret_cast<const uint64_t*>(props), prop_count,
                 child->name, strlen(child->name), child->protocol_id,
                 child->driver->libname().data(), child->driver->libname().size(), proxy_args,
-                proxy_args_len, &call_status);
+                proxy_args_len, client_remote.release(), &call_status);
     } else {
         status = fuchsia_device_manager_CoordinatorAddDevice(
                 rpc.get(), hsend.release(), reinterpret_cast<const uint64_t*>(props), prop_count,
                 child->name, strlen(child->name), child->protocol_id,
                 child->driver->libname().data(), child->driver->libname().size(), proxy_args,
-                proxy_args_len, &call_status);
+                proxy_args_len, client_remote.release(), &call_status);
     }
     if (status != ZX_OK) {
         log(ERROR, "devhost[%s] add '%s': rpc sending failed: %d\n", path, child->name, status);

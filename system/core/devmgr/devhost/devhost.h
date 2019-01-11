@@ -143,10 +143,12 @@ namespace devmgr {
 
 extern zx_protocol_device_t device_default_ops;
 
+// |client_remote| will only be a valid handle if the device was added with
+// DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
 zx_status_t devhost_device_add(const fbl::RefPtr<zx_device_t>& dev,
                                const fbl::RefPtr<zx_device_t>& parent,
                                const zx_device_prop_t* props, uint32_t prop_count,
-                               const char* proxy_args) REQ_DM_LOCK;
+                               const char* proxy_args, zx::channel client_remote) REQ_DM_LOCK;
 // Note that devhost_device_remove() takes a RefPtr rather than a const RefPtr&.
 // It intends to consume a reference.
 zx_status_t devhost_device_remove(fbl::RefPtr<zx_device_t> dev) REQ_DM_LOCK;
@@ -209,12 +211,18 @@ zx_status_t devhost_fidl_handler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie)
 zx_status_t devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, uint32_t flags,
                                    const char* path_data, size_t path_size, zx::channel c);
 
+// Attaches channel |c| to new state representing an open connection to |dev|.
+void devhost_device_connect(const fbl::RefPtr<zx_device_t>& dev, zx::channel c);
+
 zx_status_t devhost_start_connection(fbl::unique_ptr<DevfsConnection> ios, zx::channel h);
 
 // routines devhost uses to talk to dev coordinator
+// |client_remote| will only be a valid handle if the device was added with
+// DEVICE_ADD_INVISIBLE or DEVICE_ADD_MUST_ISOLATE.
 zx_status_t devhost_add(const fbl::RefPtr<zx_device_t>& dev,
                         const fbl::RefPtr<zx_device_t>& child, const char* proxy_args,
-                        const zx_device_prop_t* props, uint32_t prop_count) REQ_DM_LOCK;
+                        const zx_device_prop_t* props, uint32_t prop_count,
+                        zx::channel client_remote) REQ_DM_LOCK;
 zx_status_t devhost_remove(const fbl::RefPtr<zx_device_t>& dev) REQ_DM_LOCK;
 void devhost_make_visible(const fbl::RefPtr<zx_device_t>& dev);
 

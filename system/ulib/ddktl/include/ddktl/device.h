@@ -323,7 +323,8 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
   public:
     zx_status_t DdkAdd(const char* name, uint32_t flags = 0, zx_device_prop_t* props = nullptr,
                        uint32_t prop_count = 0, uint32_t proto_id = 0,
-                       const char* proxy_args = nullptr) {
+                       const char* proxy_args = nullptr,
+                       zx_handle_t client_remote = ZX_HANDLE_INVALID) {
         if (zxdev_ != nullptr) {
             return ZX_ERR_BAD_STATE;
         }
@@ -340,6 +341,7 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         args.prop_count = prop_count;
         args.proto_id = proto_id;
         args.proxy_args = proxy_args;
+        args.client_remote = client_remote;
         AddProtocol(&args);
 
         return device_add(parent_, &args, &zxdev_);

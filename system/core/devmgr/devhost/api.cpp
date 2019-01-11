@@ -52,43 +52,59 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
         return ZX_ERR_INVALID_ARGS;
     }
 
-    ApiAutoLock lock;
-    r = devhost_device_create(drv, parent_ref, args->name, args->ctx, args->ops, &dev);
-    if (r != ZX_OK) {
-        return r;
-    }
-    if (args->proto_id) {
-        dev->protocol_id = args->proto_id;
-        dev->protocol_ops = args->proto_ops;
-    }
-    if (args->flags & DEVICE_ADD_NON_BINDABLE) {
-        dev->flags |= DEV_FLAG_UNBINDABLE;
-    }
-    if (args->flags & DEVICE_ADD_INVISIBLE) {
-        dev->flags |= DEV_FLAG_INVISIBLE;
-    }
+    // If the device will be added in the same devhost and visible,
+    // we can connect the client immediately after adding the device.
+    // Otherwise we will pass this channel to the devcoordinator via devhost_device_add.
+    zx::channel client_remote(args->client_remote);
 
-    // out must be set before calling devhost_device_add().
-    // devhost_device_add() may result in child devices being created before it returns,
-    // and those children may call ops on the device before device_add() returns.
-    // This leaked-ref will be accounted below.
-    if (out) {
-        *out = dev.get();
-    }
-
-    if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-        r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args);
-    } else if (args->flags & DEVICE_ADD_INSTANCE) {
-        dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
-        r = devhost_device_add(dev, parent_ref, nullptr, 0, nullptr);
-    } else {
-        r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, nullptr);
-    }
-    if (r != ZX_OK) {
-        if (out) {
-            *out = nullptr;
+    {
+        ApiAutoLock lock;
+        r = devhost_device_create(drv, parent_ref, args->name, args->ctx, args->ops, &dev);
+        if (r != ZX_OK) {
+            return r;
         }
-        dev.reset();
+        if (args->proto_id) {
+            dev->protocol_id = args->proto_id;
+            dev->protocol_ops = args->proto_ops;
+        }
+        if (args->flags & DEVICE_ADD_NON_BINDABLE) {
+            dev->flags |= DEV_FLAG_UNBINDABLE;
+        }
+        if (args->flags & DEVICE_ADD_INVISIBLE) {
+            dev->flags |= DEV_FLAG_INVISIBLE;
+        }
+
+        // out must be set before calling devhost_device_add().
+        // devhost_device_add() may result in child devices being created before it returns,
+        // and those children may call ops on the device before device_add() returns.
+        // This leaked-ref will be accounted below.
+        if (out) {
+            *out = dev.get();
+        }
+
+        if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
+            r = devhost_device_add(dev, parent_ref, args->props, args->prop_count,
+                                   args->proxy_args, std::move(client_remote));
+        } else if (args->flags & DEVICE_ADD_INSTANCE) {
+            dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
+            r = devhost_device_add(dev, parent_ref, nullptr, 0, nullptr,
+                                   zx::channel() /* client_remote */);
+        } else {
+            bool pass_client_remote = args->flags & DEVICE_ADD_INVISIBLE;
+            r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, nullptr,
+                                   pass_client_remote ? std::move(client_remote) : zx::channel());
+        }
+        if (r != ZX_OK) {
+            if (out) {
+                *out = nullptr;
+            }
+            dev.reset();
+        }
+    }
+
+    // This needs to be called outside the ApiAutoLock, as device_open_at will be called.
+    if (dev && client_remote.is_valid()) {
+        devhost_device_connect(dev, std::move(client_remote));
     }
 
     // Leak the reference that was written to |out|, it will be recovered in

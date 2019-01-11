@@ -681,6 +681,15 @@ void devfs_unpublish(Device* dev) {
     }
 }
 
+zx_status_t devfs_connect(Device* dev, zx::channel client_remote) {
+    if (!client_remote.is_valid()) {
+        return ZX_ERR_BAD_HANDLE;
+    }
+    fuchsia_io_DirectoryOpen(dev->hrpc.get(), 0 /* flags */, 0 /* mode */,
+                             ".", 1, client_remote.release());
+    return ZX_OK;
+}
+
 // Helper macros for |DevfsFidlHandler| which make it easier
 // avoid typing generated names.
 

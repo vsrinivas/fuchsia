@@ -86,11 +86,13 @@ interface Coordinator {
     /// For binding purposes, it is has properties |props|. |name| and |driver_path|
     /// are informational and used for debugging.  The device will have |protocol_id|
     /// as its primary protocol id.  |args| should only be used for shadowed devices,
-    /// and will be forwarded to the shadow device.
+    /// and will be forwarded to the shadow device. |client_remote|, if present,
+    /// will be passed to the device as an open connection for the client.
     0x10000011: AddDevice(handle<channel> rpc,
                           vector<DeviceProperty>:PROPERTIES_MAX props,
                           string:DEVICE_NAME_MAX name, uint32 protocol_id,
-                          string:PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args)
+                          string:PATH_MAX? driver_path, string:DEVICE_ARGS_MAX? args,
+                          handle<channel>? client_remote)
                     -> (zx.status status);
 
     /// Behaves as AddDevice, but marks the device as initially invisible.  This means
@@ -100,7 +102,8 @@ interface Coordinator {
                                    vector<DeviceProperty>:PROPERTIES_MAX props,
                                    string:DEVICE_NAME_MAX name, uint32 protocol_id,
                                    string:PATH_MAX? driver_path,
-                                   string:DEVICE_ARGS_MAX? args) -> (zx.status status);
+                                   string:DEVICE_ARGS_MAX? args, handle<channel>? client_remote)
+                    -> (zx.status status);
 
     /// Record the removal of this device.
     0x10000013: RemoveDevice() -> (zx.status status);

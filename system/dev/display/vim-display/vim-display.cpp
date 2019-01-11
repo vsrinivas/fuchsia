@@ -803,6 +803,7 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
         .proto_ops = &display_controller_ops,
         .proxy_args = nullptr,
         .flags = 0,
+        .client_remote = ZX_HANDLE_INVALID,
     };
 
     status = device_add(display->parent, &add_args, &display->mydevice);

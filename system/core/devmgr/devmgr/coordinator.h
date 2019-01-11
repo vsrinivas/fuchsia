@@ -114,6 +114,10 @@ struct Device {
     Device* parent = nullptr;
     Device* proxy = nullptr;
 
+    // For attaching as an open connection to the proxy device,
+    // or once the device becomes visible.
+    zx::channel client_remote;
+
     // listnode for this device in its parent's
     // list-of-children
     fbl::DoublyLinkedListNodeState<Device*> node;
@@ -388,6 +392,7 @@ zx_status_t devfs_publish(Device* parent, Device* dev);
 void devfs_unpublish(Device* dev);
 void devfs_advertise(Device* dev);
 void devfs_advertise_modified(Device* dev);
+zx_status_t devfs_connect(Device* dev, zx::channel client_remote);
 
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DevmgrArgs {
@@ -435,7 +440,8 @@ public:
 
     zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
                           size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                          fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible);
+                          fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
+                          zx::channel client_remote);
     zx_status_t MakeVisible(Device* dev);
     zx_status_t RemoveDevice(Device* dev, bool forced);
 
