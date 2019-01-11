@@ -7,5 +7,6 @@
 
 #[macro_use]
 mod utils;
-mod ie;
-mod mac;
+pub mod ie;
+pub mod mac;
+pub mod sequence;
