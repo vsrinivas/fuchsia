@@ -117,8 +117,7 @@ func (a *netstackClientApp) parseRouteAttribute(in *netstack.RouteTableEntry, ar
 	var attr, val string
 	switch attr, val, remaining = args[0], args[1], args[2:]; attr {
 	case "gateway":
-		gateway := toIpAddress(net.ParseIP(val))
-		in.Gateway = &gateway
+		in.Gateway = toIpAddress(net.ParseIP(val))
 	case "iface":
 		ifaces, err := a.netstack.GetInterfaces()
 		if err != nil {
@@ -157,10 +156,6 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 		}
 	}
 
-	if route.Gateway == nil && route.Nicid == 0 {
-		return route, fmt.Errorf("either gateway or iface must be provided when adding a route")
-	}
-
 	if len(remaining) != 0 {
 		return route, fmt.Errorf("could not parse all route arguments. remaining: %s", remaining)
 	}
@@ -169,6 +164,9 @@ func (a *netstackClientApp) newRouteFromArgs(args []string) (route netstack.Rout
 }
 
 func (a *netstackClientApp) addRoute(r netstack.RouteTableEntry) error {
+	if (r.Gateway == netfidl.IpAddress{}) && r.Nicid == 0 {
+		return fmt.Errorf("either gateway or iface must be provided when adding a route")
+	}
 	req, transactionInterface, err := netstack.NewRouteTableTransactionInterfaceRequest()
 	if err != nil {
 		return fmt.Errorf("could not make a new route table transaction: %s", err)
@@ -217,10 +215,10 @@ func matchRoute(target netstack.RouteTableEntry, source netstack.RouteTableEntry
 	if !equalIpAddress(target.Netmask, source.Netmask) {
 		return false
 	}
-	if target.Gateway != nil {
-		if source.Gateway == nil || !equalIpAddress(*source.Gateway, *target.Gateway) {
-			return false
-		}
+	if target.Gateway.Which() != 0 &&
+		!equalIpAddress(source.Gateway, target.Gateway) {
+		// The gateway is neither wildcard nor a match.
+		return false
 	}
 	if target.Nicid != 0 && source.Nicid != target.Nicid {
 		// The Nicid is neither wildcard nor a match.
@@ -272,10 +270,7 @@ func routeTableEntryToString(r netstack.RouteTableEntry, ifaces []netstack.NetIn
 	case netfidl.IpAddressIpv6:
 		netAndMask = net.IPNet{IP: r.Destination.Ipv6.Addr[:], Mask: r.Netmask.Ipv6.Addr[:]}
 	}
-	if r.Gateway != nil {
-		return fmt.Sprintf("%s via %s %s", netAndMask.String(), netAddrToString(*r.Gateway), ifaceName)
-	}
-	return fmt.Sprintf("%s via %s", netAndMask.String(), ifaceName)
+	return fmt.Sprintf("%s via %s %s", netAndMask.String(), netAddrToString(r.Gateway), ifaceName)
 }
 
 func (a *netstackClientApp) showRoutes() error {
@@ -453,7 +448,7 @@ func usage() {
 	fmt.Printf("  %s [<interface>] [up|down]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] [add|del] [<address>]/[<mask>]\n", os.Args[0])
 	fmt.Printf("  %s [<interface>] dhcp [start|stop]\n", os.Args[0])
-	fmt.Printf("  %s route [add|del] [<address>/<mask>] [iface <name>] [gateway <address>]\n", os.Args[0])
+	fmt.Printf("  %s route [add|del] [<address>/<mask>] [iface <name>] [gateway <address>/<mask>]\n", os.Args[0])
 	fmt.Printf("  %s route show\n", os.Args[0])
 	fmt.Printf("  %s bridge [<interface>]+\n", os.Args[0])
 	os.Exit(1)
