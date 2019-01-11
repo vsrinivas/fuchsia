@@ -11,6 +11,7 @@ rustc_binary("account_handler") {
 
   deps = [
     "//garnet/lib/auth/account_common",
+    "//garnet/lib/auth/token_manager",
     "//garnet/lib/auth/fidl:account-rustc",
     "//garnet/public/fidl/fuchsia.auth:fuchsia.auth-rustc",
     "//garnet/public/fidl/fuchsia.auth.account:fuchsia.auth.account-rustc",
@@ -21,6 +22,7 @@ rustc_binary("account_handler") {
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:rand",

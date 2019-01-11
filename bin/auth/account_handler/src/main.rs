@@ -12,7 +12,11 @@
 
 mod account;
 mod account_handler;
+mod auth_provider_supplier;
 mod persona;
+
+#[cfg(test)]
+mod test_util;
 
 use crate::account_handler::AccountHandler;
 use account_common::ACCOUNT_DIR;
@@ -26,6 +30,8 @@ use fuchsia_async as fasync;
 use log::{error, info};
 use std::path::Path;
 use std::sync::Arc;
+
+type TokenManager = token_manager::TokenManager<auth_provider_supplier::AuthProviderSupplier>;
 
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");

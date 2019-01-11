@@ -3,14 +3,28 @@
 // found in the LICENSE file.
 
 use crate::account_handler::AccountHandler;
+use crate::TokenManager;
 use account_common::{LocalAccountId, LocalPersonaId};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthChangeGranularity, AuthState, TokenManagerMarker};
+use fidl_fuchsia_auth::{
+    AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, TokenManagerMarker,
+};
 use fidl_fuchsia_auth_account::{AuthListenerMarker, PersonaRequest, PersonaRequestStream, Status};
+use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::warn;
+use std::sync::Arc;
+use token_manager::TokenManagerContext;
+
+/// The context that a particular request to a Persona should be executed in, capturing
+/// information that was supplied upon creation of the channel.
+pub struct PersonaContext {
+    /// An `AuthenticationContextProviderProxy` capable of generating new `AuthenticationUiContext`
+    /// channels.
+    pub auth_ui_context_provider: AuthenticationContextProviderProxy,
+}
 
 /// Information about one of the Personae withing the Account that this AccountHandler instance is
 /// responsible for.
@@ -23,14 +37,20 @@ pub struct Persona {
 
     /// The device-local identitier that this persona is a facet of.
     _account_id: LocalAccountId,
+
+    /// The token manager to be used for authentication token requests.
+    token_manager: Arc<TokenManager>,
 }
 
 impl Persona {
     /// Constructs a new Persona.
-    pub fn new(id: LocalPersonaId, account_id: LocalAccountId) -> Persona {
+    pub fn new(
+        id: LocalPersonaId, account_id: LocalAccountId, token_manager: Arc<TokenManager>,
+    ) -> Persona {
         Self {
             id,
             _account_id: account_id,
+            token_manager,
         }
     }
 
@@ -40,18 +60,20 @@ impl Persona {
     }
 
     /// Asynchronously handles the supplied stream of `PersonaRequest` messages.
-    pub async fn handle_requests_from_stream(
-        &self, mut stream: PersonaRequestStream,
+    pub async fn handle_requests_from_stream<'a>(
+        &'a self, context: &'a PersonaContext, mut stream: PersonaRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
-            self.handle_request(req)?;
+            self.handle_request(context, req)?;
         }
         Ok(())
     }
 
     /// Dispatches a `PersonaRequest` message to the appropriate handler method
     /// based on its type.
-    pub fn handle_request(&self, req: PersonaRequest) -> Result<(), fidl::Error> {
+    pub fn handle_request<'a>(
+        &self, context: &'a PersonaContext, req: PersonaRequest,
+    ) -> Result<(), fidl::Error> {
         match req {
             PersonaRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
@@ -71,7 +93,7 @@ impl Persona {
                 token_manager,
                 responder,
             } => {
-                let response = self.get_token_manager(application_url, token_manager);
+                let response = self.get_token_manager(context, application_url, token_manager);
                 responder.send(response)?;
             }
         }
@@ -92,68 +114,122 @@ impl Persona {
         Status::InternalError
     }
 
-    fn get_token_manager(
-        &self, _application_url: String, _token_manager: ServerEnd<TokenManagerMarker>,
+    fn get_token_manager<'a>(
+        &'a self, context: &'a PersonaContext, application_url: String,
+        token_manager_server_end: ServerEnd<TokenManagerMarker>,
     ) -> Status {
-        // TODO(jsankey): Implement this method.
-        warn!("GetTokenManager not yet implemented");
-        Status::InternalError
+        let token_manager_clone = Arc::clone(&self.token_manager);
+        let token_manager_context = TokenManagerContext {
+            application_url,
+            auth_ui_context_provider: context.auth_ui_context_provider.clone(),
+        };
+        match token_manager_server_end.into_stream() {
+            Ok(stream) => {
+                fasync::spawn(
+                    async move {
+                        await!(token_manager_clone
+                            .handle_requests_from_stream(&token_manager_context, stream))
+                        .unwrap_or_else(|err| {
+                            warn!("Error handling TokenManager channel {:?}", err)
+                        })
+                    },
+                );
+                Status::Ok
+            }
+            Err(err) => {
+                warn!("Error opening TokenManager channel {:?}", err);
+                Status::IoError
+            }
+        }
     }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
-    use fidl_fuchsia_auth_account::{PersonaProxy, PersonaRequestStream};
+    use crate::auth_provider_supplier::AuthProviderSupplier;
+    use crate::test_util::*;
+    use fidl::endpoints::create_endpoints;
+    use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
+    use fidl_fuchsia_auth_account::{PersonaMarker, PersonaProxy};
     use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
 
-    const TEST_ACCOUNT_ID: u64 = 111111;
-    const TEST_PERSONA_ID: u64 = 222222;
-    const TEST_APPLICATION_URL: &str = "test_app_url";
-
-    fn create_test_object() -> Persona {
-        Persona {
-            id: LocalPersonaId::new(TEST_PERSONA_ID),
-            _account_id: LocalAccountId::new(TEST_ACCOUNT_ID),
-        }
+    /// Type to hold the common state require during construction of test objects and execution
+    /// of a test, including an async executor and a temporary location in the filesystem.
+    struct Test {
+        executor: fasync::Executor,
+        _location: TempLocation,
+        token_manager: Arc<TokenManager>,
     }
 
-    fn request_stream_test<TestFn, Fut>(test_object: Persona, test_fn: TestFn)
-    where
-        TestFn: FnOnce(PersonaProxy) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
-        let (server_chan, client_chan) = zx::Channel::create().expect("Failed to create channel");
-        let proxy = PersonaProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
-        let request_stream =
-            PersonaRequestStream::from_channel(fasync::Channel::from_channel(server_chan).unwrap());
+    impl Test {
+        fn new() -> Test {
+            let executor = fasync::Executor::new().expect("Failed to create executor");
+            let location = TempLocation::new();
+            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            let token_manager = Arc::new(
+                TokenManager::new(
+                    &location.test_file(),
+                    AuthProviderSupplier::new(account_handler_context_client_end).unwrap(),
+                )
+                .unwrap(),
+            );
+            Test {
+                executor,
+                _location: location,
+                token_manager,
+            }
+        }
 
-        fasync::spawn(
-            async move {
-                await!(test_object.handle_requests_from_stream(request_stream))
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            },
-        );
+        fn create_persona(&self) -> Persona {
+            Persona::new(
+                TEST_PERSONA_ID.clone(),
+                TEST_ACCOUNT_ID.clone(),
+                Arc::clone(&self.token_manager),
+            )
+        }
 
-        executor
-            .run_singlethreaded(test_fn(proxy))
-            .expect("Executor run failed.")
+        fn run<TestFn, Fut>(&mut self, test_object: Persona, test_fn: TestFn)
+        where
+            TestFn: FnOnce(PersonaProxy) -> Fut,
+            Fut: Future<Output = Result<(), Error>>,
+        {
+            let (persona_client_end, persona_server_end) =
+                create_endpoints::<PersonaMarker>().unwrap();
+            let persona_proxy = persona_client_end.into_proxy().unwrap();
+            let request_stream = persona_server_end.into_stream().unwrap();
+
+            let (ui_context_provider_client_end, _) =
+                create_endpoints::<AuthenticationContextProviderMarker>().unwrap();
+            let context = PersonaContext {
+                auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
+            };
+
+            fasync::spawn(
+                async move {
+                    await!(test_object.handle_requests_from_stream(&context, request_stream))
+                        .unwrap_or_else(|err| {
+                            panic!("Fatal error handling test request: {:?}", err)
+                        })
+                },
+            );
+
+            self.executor
+                .run_singlethreaded(test_fn(persona_proxy))
+                .expect("Executor run failed.")
+        }
     }
 
     #[test]
     fn test_id() {
-        assert_eq!(
-            create_test_object().id(),
-            &LocalPersonaId::new(TEST_PERSONA_ID)
-        );
+        let test = Test::new();
+        assert_eq!(test.create_persona().id(), &*TEST_PERSONA_ID);
     }
 
     #[test]
     fn test_get_auth_state() {
-        request_stream_test(create_test_object(), async move |proxy| {
+        let mut test = Test::new();
+        test.run(test.create_persona(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (
@@ -167,12 +243,12 @@ mod tests {
 
     #[test]
     fn test_register_auth_listener() {
-        request_stream_test(create_test_object(), async move |proxy| {
-            let (_server_chan, client_chan) = zx::Channel::create().unwrap();
-            let listener = ClientEnd::new(client_chan);
+        let mut test = Test::new();
+        test.run(test.create_persona(), async move |proxy| {
+            let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
-                    listener,
+                    auth_listener_client_end,
                     true, /* include initial state */
                     &mut AuthChangeGranularity {
                         summary_changes: true
@@ -186,13 +262,22 @@ mod tests {
 
     #[test]
     fn test_get_token_manager() {
-        request_stream_test(create_test_object(), async move |proxy| {
-            let (server_chan, _) = zx::Channel::create().unwrap();
-            let token_manager = ServerEnd::new(server_chan);
+        let mut test = Test::new();
+        test.run(test.create_persona(), async move |proxy| {
+            let (token_manager_client_end, token_manager_server_end) = create_endpoints().unwrap();
             assert_eq!(
-                await!(proxy.get_token_manager(&TEST_APPLICATION_URL, token_manager))?,
-                Status::InternalError
+                await!(proxy.get_token_manager(&TEST_APPLICATION_URL, token_manager_server_end))?,
+                Status::Ok
             );
+
+            // The token manager channel should now be usable.
+            let token_manager_proxy = token_manager_client_end.into_proxy().unwrap();
+            let mut app_config = create_dummy_app_config();
+            assert_eq!(
+                await!(token_manager_proxy.list_profile_ids(&mut app_config))?,
+                (fidl_fuchsia_auth::Status::Ok, vec![])
+            );
+
             Ok(())
         });
     }

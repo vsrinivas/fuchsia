@@ -3,19 +3,38 @@
 // found in the LICENSE file.
 
 use crate::account_handler::AccountHandler;
-use crate::persona::Persona;
-use account_common::{FidlLocalPersonaId, LocalAccountId, LocalPersonaId};
+use crate::auth_provider_supplier::AuthProviderSupplier;
+use crate::persona::{Persona, PersonaContext};
+use crate::TokenManager;
+use account_common::{
+    AccountManagerError, FidlLocalPersonaId, LocalAccountId, LocalPersonaId, ResultExt,
+};
 use failure::Error;
 use fidl::encoding::OutOfLine;
 use fidl::endpoints::{ClientEnd, ServerEnd};
-use fidl_fuchsia_auth::{AuthChangeGranularity, AuthState, ServiceProviderAccount};
+use fidl_fuchsia_auth::{
+    AuthChangeGranularity, AuthState, AuthenticationContextProviderProxy, ServiceProviderAccount,
+};
 use fidl_fuchsia_auth_account::{
     AccountRequest, AccountRequestStream, AuthListenerMarker, PersonaMarker, Status,
 };
+use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, warn};
+use std::path::Path;
 use std::sync::Arc;
+
+/// The file name to use for a token manager database.
+const TOKEN_DB: &str = "tokens.json";
+
+/// The context that a particular request to an Account should be executed in, capturing
+/// information that was supplied upon creation of the channel.
+pub struct AccountContext {
+    /// An `AuthenticationContextProviderProxy` capable of generating new `AuthenticationUiContext`
+    /// channels.
+    pub auth_ui_context_provider: AuthenticationContextProviderProxy,
+}
 
 /// Information about the Account that this AccountHandler instance is responsible for.
 ///
@@ -29,17 +48,26 @@ pub struct Account {
     default_persona: Arc<Persona>,
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
-    // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID.
+    // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID. We
+    // will also need to store Arc<TokenManager> at the account level.
 }
 
 impl Account {
     /// Constructs a new Account.
-    pub fn new(account_id: LocalAccountId) -> Account {
+    pub fn new(
+        account_id: LocalAccountId, account_dir: &Path,
+        context: ClientEnd<AccountHandlerContextMarker>,
+    ) -> Result<Account, AccountManagerError> {
         let persona_id = LocalPersonaId::new(rand::random::<u64>());
-        Self {
+        let db_path = account_dir.join(TOKEN_DB);
+        let token_manager = Arc::new(
+            TokenManager::new(&db_path, AuthProviderSupplier::new(context)?)
+                .account_manager_status(Status::UnknownError)?,
+        );
+        Ok(Self {
             id: account_id.clone(),
-            default_persona: Arc::new(Persona::new(persona_id, account_id)),
-        }
+            default_persona: Arc::new(Persona::new(persona_id, account_id, token_manager)),
+        })
     }
 
     /// A device-local identifier for this account
@@ -48,18 +76,20 @@ impl Account {
     }
 
     /// Asynchronously handles the supplied stream of `AccountRequest` messages.
-    pub async fn handle_requests_from_stream(
-        &self, mut stream: AccountRequestStream,
+    pub async fn handle_requests_from_stream<'a>(
+        &'a self, context: &'a AccountContext, mut stream: AccountRequestStream,
     ) -> Result<(), Error> {
         while let Some(req) = await!(stream.try_next())? {
-            self.handle_request(req)?;
+            self.handle_request(context, req)?;
         }
         Ok(())
     }
 
     /// Dispatches an `AccountRequest` message to the appropriate handler method
     /// based on its type.
-    pub fn handle_request(&self, req: AccountRequest) -> Result<(), fidl::Error> {
+    pub fn handle_request(
+        &self, context: &AccountContext, req: AccountRequest,
+    ) -> Result<(), fidl::Error> {
         match req {
             AccountRequest::GetAuthState { responder } => {
                 let mut response = self.get_auth_state();
@@ -79,7 +109,7 @@ impl Account {
                 responder.send(&mut response.iter_mut())?;
             }
             AccountRequest::GetDefaultPersona { persona, responder } => {
-                let mut response = self.get_default_persona(persona);
+                let mut response = self.get_default_persona(context, persona);
                 responder.send(response.0, response.1.as_mut().map(OutOfLine))?;
             }
             AccountRequest::GetPersona {
@@ -87,7 +117,7 @@ impl Account {
                 persona,
                 responder,
             } => {
-                let response = self.get_persona(id.into(), persona);
+                let response = self.get_persona(context, id.into(), persona);
                 responder.send(response)?;
             }
             AccountRequest::GetRecoveryAccount { responder } => {
@@ -121,14 +151,17 @@ impl Account {
     }
 
     fn get_default_persona(
-        &self, persona_server_end: ServerEnd<PersonaMarker>,
+        &self, context: &AccountContext, persona_server_end: ServerEnd<PersonaMarker>,
     ) -> (Status, Option<FidlLocalPersonaId>) {
         let persona_clone = Arc::clone(&self.default_persona);
+        let persona_context = PersonaContext {
+            auth_ui_context_provider: context.auth_ui_context_provider.clone(),
+        };
         match persona_server_end.into_stream() {
             Ok(stream) => {
                 fasync::spawn(
                     async move {
-                        await!(persona_clone.handle_requests_from_stream(stream))
+                        await!(persona_clone.handle_requests_from_stream(&persona_context, stream))
                             .unwrap_or_else(|e| error!("Error handling Persona channel {:?}", e))
                     },
                 );
@@ -142,10 +175,11 @@ impl Account {
     }
 
     fn get_persona(
-        &self, id: LocalPersonaId, persona_server_end: ServerEnd<PersonaMarker>,
+        &self, context: &AccountContext, id: LocalPersonaId,
+        persona_server_end: ServerEnd<PersonaMarker>,
     ) -> Status {
         if &id == self.default_persona.id() {
-            self.get_default_persona(persona_server_end).0
+            self.get_default_persona(context, persona_server_end).0
         } else {
             warn!("Requested persona does not exist {:?}", id);
             Status::NotFound
@@ -168,45 +202,74 @@ impl Account {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use fidl::endpoints::RequestStream;
-    use fidl_fuchsia_auth_account::{AccountProxy, AccountRequestStream, PersonaProxy};
+    use crate::test_util::*;
+    use fidl::endpoints::create_endpoints;
+    use fidl_fuchsia_auth::AuthenticationContextProviderMarker;
+    use fidl_fuchsia_auth_account::{AccountMarker, AccountProxy};
     use fuchsia_async as fasync;
-    use fuchsia_zircon as zx;
 
-    const TEST_ACCOUNT_ID: u64 = 111111;
-
-    fn create_test_object() -> Account {
-        Account::new(LocalAccountId::new(TEST_ACCOUNT_ID))
+    /// Type to hold the common state require during construction of test objects and execution
+    /// of a test, including an async executor and a temporary location in the filesystem.
+    struct Test {
+        executor: fasync::Executor,
+        location: TempLocation,
     }
 
-    fn request_stream_test<TestFn, Fut>(test_object: Account, test_fn: TestFn)
-    where
-        TestFn: FnOnce(AccountProxy) -> Fut,
-        Fut: Future<Output = Result<(), Error>>,
-    {
-        let mut executor = fasync::Executor::new().expect("Failed to create executor");
-        let (server_chan, client_chan) = zx::Channel::create().expect("Failed to create channel");
-        let proxy = AccountProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
-        let request_stream =
-            AccountRequestStream::from_channel(fasync::Channel::from_channel(server_chan).unwrap());
+    impl Test {
+        fn new() -> Test {
+            Test {
+                executor: fasync::Executor::new().expect("Failed to create executor"),
+                location: TempLocation::new(),
+            }
+        }
 
-        fasync::spawn(
-            async move {
-                await!(test_object.handle_requests_from_stream(request_stream))
-                    .unwrap_or_else(|err| panic!("Fatal error handling test request: {:?}", err))
-            },
-        );
+        fn create_account(&self) -> Account {
+            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            Account::new(
+                TEST_ACCOUNT_ID.clone(),
+                &self.location.path,
+                account_handler_context_client_end,
+            )
+            .unwrap()
+        }
 
-        executor
-            .run_singlethreaded(test_fn(proxy))
-            .expect("Executor run failed.")
+        fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
+        where
+            TestFn: FnOnce(AccountProxy) -> Fut,
+            Fut: Future<Output = Result<(), Error>>,
+        {
+            let (account_client_end, account_server_end) =
+                create_endpoints::<AccountMarker>().unwrap();
+            let account_proxy = account_client_end.into_proxy().unwrap();
+            let request_stream = account_server_end.into_stream().unwrap();
+
+            let (ui_context_provider_client_end, _) =
+                create_endpoints::<AuthenticationContextProviderMarker>().unwrap();
+            let context = AccountContext {
+                auth_ui_context_provider: ui_context_provider_client_end.into_proxy().unwrap(),
+            };
+
+            fasync::spawn(
+                async move {
+                    await!(test_object.handle_requests_from_stream(&context, request_stream))
+                        .unwrap_or_else(|err| {
+                            panic!("Fatal error handling test request: {:?}", err)
+                        })
+                },
+            );
+
+            self.executor
+                .run_singlethreaded(test_fn(account_proxy))
+                .expect("Executor run failed.")
+        }
     }
 
     #[test]
     fn test_random_persona_id() {
+        let test = Test::new();
         // Generating two accounts with the same accountID should lead to two different persona IDs
-        let account_1 = Account::new(LocalAccountId::new(TEST_ACCOUNT_ID));
-        let account_2 = Account::new(LocalAccountId::new(TEST_ACCOUNT_ID));
+        let account_1 = test.create_account();
+        let account_2 = test.create_account();
         assert_ne!(
             account_1.default_persona.id(),
             account_2.default_persona.id()
@@ -215,7 +278,8 @@ mod tests {
 
     #[test]
     fn test_get_auth_state() {
-        request_stream_test(create_test_object(), async move |proxy| {
+        let mut test = Test::new();
+        test.run(test.create_account(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (
@@ -229,12 +293,12 @@ mod tests {
 
     #[test]
     fn test_register_auth_listener() {
-        request_stream_test(create_test_object(), async move |proxy| {
-            let (_server_chan, client_chan) = zx::Channel::create().unwrap();
-            let listener = ClientEnd::new(client_chan);
+        let mut test = Test::new();
+        test.run(test.create_account(), async move |proxy| {
+            let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
-                    listener,
+                    auth_listener_client_end,
                     true, /* include initial state */
                     &mut AuthChangeGranularity {
                         summary_changes: true
@@ -248,11 +312,12 @@ mod tests {
 
     #[test]
     fn test_get_persona_ids() {
+        let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = create_test_object();
+        let account = test.create_account();
         let persona_id = &account.default_persona.id().clone();
 
-        request_stream_test(account, async move |proxy| {
+        test.run(account, async move |proxy| {
             let response = await!(proxy.get_persona_ids())?;
             assert_eq!(response.len(), 1);
             assert_eq!(&LocalPersonaId::new(response[0].id), persona_id);
@@ -262,19 +327,19 @@ mod tests {
 
     #[test]
     fn test_get_default_persona() {
+        let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = create_test_object();
+        let account = test.create_account();
         let persona_id = &account.default_persona.id().clone();
 
-        request_stream_test(account, async move |account_proxy| {
-            let (server_chan, client_chan) = zx::Channel::create().unwrap();
-            let response = await!(account_proxy.get_default_persona(ServerEnd::new(server_chan)))?;
+        test.run(account, async move |account_proxy| {
+            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
+            let response = await!(account_proxy.get_default_persona(persona_server_end))?;
             assert_eq!(response.0, Status::Ok);
             assert_eq!(&LocalPersonaId::from(*response.1.unwrap()), persona_id);
 
             // The persona channel should now be usable.
-            let persona_proxy =
-                PersonaProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
+            let persona_proxy = persona_client_end.into_proxy().unwrap();
             assert_eq!(
                 await!(persona_proxy.get_auth_state())?,
                 (
@@ -289,22 +354,22 @@ mod tests {
 
     #[test]
     fn test_get_persona_by_correct_id() {
-        let account = create_test_object();
+        let mut test = Test::new();
+        let account = test.create_account();
         let persona_id = account.default_persona.id().clone();
 
-        request_stream_test(account, async move |account_proxy| {
-            let (server_chan, client_chan) = zx::Channel::create().unwrap();
+        test.run(account, async move |account_proxy| {
+            let (persona_client_end, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
                 await!(account_proxy.get_persona(
                     &mut FidlLocalPersonaId::from(persona_id),
-                    ServerEnd::new(server_chan)
+                    persona_server_end
                 ))?,
                 Status::Ok
             );
 
             // The persona channel should now be usable.
-            let persona_proxy =
-                PersonaProxy::new(fasync::Channel::from_channel(client_chan).unwrap());
+            let persona_proxy = persona_client_end.into_proxy().unwrap();
             assert_eq!(
                 await!(persona_proxy.get_auth_state())?,
                 (
@@ -319,15 +384,16 @@ mod tests {
 
     #[test]
     fn test_get_persona_by_incorrect_id() {
-        let account = create_test_object();
+        let mut test = Test::new();
+        let account = test.create_account();
         // Note: This fixed value has a 1 - 2^64 probability of not matching the randomly chosen
         // one.
         let wrong_id = LocalPersonaId::new(13);
 
-        request_stream_test(account, async move |proxy| {
-            let (server_chan, _) = zx::Channel::create().unwrap();
+        test.run(account, async move |proxy| {
+            let (_, persona_server_end) = create_endpoints().unwrap();
             assert_eq!(
-                await!(proxy.get_persona(&mut wrong_id.into(), ServerEnd::new(server_chan)))?,
+                await!(proxy.get_persona(&mut wrong_id.into(), persona_server_end))?,
                 Status::NotFound
             );
 
@@ -337,12 +403,13 @@ mod tests {
 
     #[test]
     fn test_set_recovery_account() {
+        let mut test = Test::new();
         let mut service_provider_account = ServiceProviderAccount {
             identity_provider_domain: "google.com".to_string(),
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        request_stream_test(create_test_object(), async move |proxy| {
+        test.run(test.create_account(), async move |proxy| {
             assert_eq!(
                 await!(proxy.set_recovery_account(&mut service_provider_account))?,
                 Status::InternalError
@@ -353,8 +420,9 @@ mod tests {
 
     #[test]
     fn test_get_recovery_account() {
+        let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        request_stream_test(create_test_object(), async move |proxy| {
+        test.run(test.create_account(), async move |proxy| {
             assert_eq!(await!(proxy.get_recovery_account())?, expectation);
             Ok(())
         });
