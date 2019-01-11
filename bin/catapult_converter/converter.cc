@@ -119,6 +119,9 @@ void ComputeStatistics(const std::vector<double>& vals,
 // Takes the unit string as it appears in the input JSON file.  Returns the
 // unit string that should be used in the Catapult Histogram JSON file.
 // Converts the data as necessary.
+//
+// The list of valid unit strings for the Catapult Histogram JSON format is available at:
+// https://github.com/catapult-project/catapult/blob/8dc09eb0703647db9ca37b26f2d01a0a4dc0285c/tracing/tracing/value/histogram.py#L478
 std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
   std::string catapult_unit;
   if (strcmp(input_unit, "nanoseconds") == 0 || strcmp(input_unit, "ns") == 0) {
@@ -146,8 +149,7 @@ std::string ConvertUnits(const char* input_unit, std::vector<double>* vals) {
   } else if (strcmp(input_unit, "frames/second") == 0) {
     return "Hz_biggerIsBetter";
   } else if (strcmp(input_unit, "percent") == 0) {
-    // https://github.com/catapult-project/catapult/blob/f396a42a943f4b88ed09910b092548cd254923c0/telemetry/telemetry/value/unit-info.json#L4
-    return "%";
+    return "n%";
   } else {
     fprintf(stderr, "Units not recognized: %s\n", input_unit);
     exit(1);
