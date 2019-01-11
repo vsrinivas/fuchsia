@@ -28,7 +28,7 @@ namespace simplehid {
 template <typename InputReportType>
 class SimpleHid {
 public:
-    SimpleHid() {}
+    SimpleHid() : interval_ms_(0) {}
 
     SimpleHid(zx::port port, fit::function<zx_status_t(InputReportType*)> get_input_report)
         : port_(std::move(port)), interval_ms_(0), get_input_report_(std::move(get_input_report)) {}
@@ -36,6 +36,10 @@ public:
     SimpleHid& operator=(SimpleHid&& other) {
         port_ = std::move(other.port_);
         get_input_report_ = std::move(other.get_input_report_);
+
+        fbl::AutoLock lock1(&interval_lock_);
+        fbl::AutoLock lock2(&other.interval_lock_);
+        interval_ms_ = other.interval_ms_;
         return *this;
     }
 
