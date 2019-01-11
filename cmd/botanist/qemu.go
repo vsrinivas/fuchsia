@@ -11,8 +11,8 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"os/exec"
 	"path/filepath"
-	"strings"
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/qemu"
@@ -20,22 +20,9 @@ import (
 	"github.com/google/subcommands"
 )
 
-// QCOWImageName is a default name for a QEMU CoW (Copy on Write) image.
-const qcowImageName = "fuchsia.qcow2"
-
-// qemuImgTool is the name of the QEMU image utility tool.
-const qemuImgTool = "qemu-img"
-
 // QEMUBinPrefix is the prefix of the QEMU binary name, which is of the form
 // qemu-system-<QEMU arch suffix>.
 const qemuBinPrefix = "qemu-system"
-
-// TargetToQEMUArch maps the fuchsia shorthand of a target architecture to the name
-// recognized by QEMU.
-var targetToQEMUArch = map[string]string{
-	"x64":   "x86_64",
-	"arm64": "aarch64",
-}
 
 // QEMUCommand is a Command implementation for running the testing workflow on an emulated
 // target within QEMU.
@@ -90,44 +77,28 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	if cmd.qemuBinDir == "" {
 		return fmt.Errorf("-qemu-dir must be set")
 	}
-	if _, err := os.Stat(cmd.minFSImage); cmd.minFSImage != "" && err != nil {
-		return fmt.Errorf("invalid -minfs: %s; could not be found", cmd.minFSImage)
-	}
-	qemuArch, ok := targetToQEMUArch[cmd.targetArch]
-	if !ok {
-		return fmt.Errorf("invalid -arch: %s", cmd.targetArch)
-	}
-	qemuBinPath := filepath.Join(cmd.qemuBinDir, fmt.Sprintf("%s-%s", qemuBinPrefix, qemuArch))
-	if _, err := os.Stat(qemuBinPath); err != nil {
-		return fmt.Errorf("invalid -qemu-dir: %s; could not find qemu binary", cmd.qemuBinDir)
-	}
 
 	imgs, err := botanist.LoadImages(cmd.imageManifest)
 	if err != nil {
 		return err
 	}
-	qemuKernel := botanist.GetImage(imgs, "qemu-kernel")
-	if qemuKernel == nil {
-		return fmt.Errorf("could not find qemu-kernel")
-	}
-	zirconA := botanist.GetImage(imgs, "zircon-a")
-	if qemuKernel == nil {
-		return fmt.Errorf("could not find zircon-a")
-	}
 
-	var q qemu.QEMUBuilder
-	if err := q.Initialize(qemuBinPath, cmd.targetArch, cmd.enableKVM); err != nil {
-		return err
+	qemuCPU, ok := map[string]string{
+		"x64":   "x86_64",
+		"arm64": "aarch64",
+	}[cmd.targetArch]
+	if !ok {
+		return fmt.Errorf("cpu %q not recognized", cmd.targetArch)
 	}
-	q.AddArgs("-kernel", qemuKernel.Path)
-	q.AddArgs("-initrd", zirconA.Path)
-	q.AddArgs("-m", "4096")
-	q.AddArgs("-smp", "4")
-	q.AddArgs("-nographic")
-	q.AddArgs("-serial", "stdio")
-	q.AddArgs("-monitor", "none")
-	if !cmd.enableNetworking {
-		q.AddArgs("-net", "none")
+	qemuBinPath := filepath.Join(cmd.qemuBinDir, fmt.Sprintf("%s-%s", qemuBinPrefix, qemuCPU))
+
+	cfg := qemu.Config{
+		QEMUBin:        qemuBinPath,
+		CPU:            cmd.targetArch,
+		KVM:            cmd.enableKVM,
+		MinFSImage:     cmd.minFSImage,
+		PCIAddr:        cmd.minFSBlkDevPCIAddr,
+		InternetAccess: cmd.enableNetworking,
 	}
 
 	// The system will halt on a kernel panic instead of rebooting
@@ -140,40 +111,10 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		// Necessary to redirect to stdout.
 		cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
 	}
-	q.AddArgs("-append", strings.Join(cmdlineArgs, " "))
 
-	if cmd.minFSImage != "" {
-		absMinFSImage, err := filepath.Abs(cmd.minFSImage)
-		if err != nil {
-			return err
-		}
-
-		// Swarming hard-links Isolate downloads with a cache and the very same cached minfs
-		// image will be used across multiple task. To ensure that it remains blank, we
-		// must break its link.
-		if err := botanist.OverwriteFileWithCopy(absMinFSImage); err != nil {
-			return err
-		}
-
-		q.AddArgs("-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=testdisk", absMinFSImage))
-		q.AddArgs("-device", fmt.Sprintf("virtio-blk-pci,drive=testdisk,addr=%s", cmd.minFSBlkDevPCIAddr))
-	}
-
-	if storageFull := botanist.GetImage(imgs, "storage-full"); storageFull != nil {
-		qemuImgToolPath := filepath.Join(cmd.qemuBinDir, qemuImgTool)
-		qcowDir, err := ioutil.TempDir("", "qcow-dir")
-		if err != nil {
-			return err
-		}
-		defer os.RemoveAll(qcowDir)
-		qcowImage := filepath.Join(qcowDir, qcowImageName)
-
-		if err = qemu.CreateQCOWImage(qemuImgToolPath, storageFull.Path, qcowImage); err != nil {
-			return err
-		}
-		qcowPath := filepath.Join(qcowDir, qcowImageName)
-		q.AddArgs("-drive", fmt.Sprintf("file=%s,format=qcow2,if=none,id=maindisk", qcowPath))
-		q.AddArgs("-device", "virtio-blk-pci,drive=maindisk")
+	invocation, err := qemu.CreateInvocation(cfg, imgs, cmdlineArgs)
+	if err != nil {
+		return err
 	}
 
 	// The QEMU command needs to be invoked within an empty directory, as QEMU will attempt
@@ -185,11 +126,14 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 	}
 	defer os.RemoveAll(qemuWorkingDir)
 
-	qemuCmd := q.Cmd(ctx)
-	qemuCmd.Dir = qemuWorkingDir
-	qemuCmd.Stdout = os.Stdout
-	qemuCmd.Stderr = os.Stderr
-	log.Printf("running:\n\tArgs: %s\n\tEnv: %s", qemuCmd.Args, qemuCmd.Env)
+	qemuCmd := exec.Cmd{
+		Path:   invocation[0],
+		Args:   invocation,
+		Dir:    qemuWorkingDir,
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
+	}
+	log.Printf("QEMU invocation:\n%s", invocation)
 	return qemu.CheckExitCode(qemuCmd.Run())
 }
 
