@@ -97,6 +97,16 @@ impl<B: ByteSlice> Tim<B> {
     pub fn len(&self) -> usize {
         TIM_FIXED_FIELD_BYTES + &self.partial_virtual_bmp[..].len()
     }
+
+    pub fn is_traffic_buffered(&self, aid: usize) -> bool {
+        let n1 = BitmapControl(self.bmp_ctrl).offset() as usize * 2;
+        let octet = aid / 8;
+
+        let pvb = &self.partial_virtual_bmp[..];
+
+        let carries_aid = n1 <= octet && octet < pvb.len() + n1;
+        carries_aid && pvb[octet - n1] & (1 << (aid % 8)) != 0
+    }
 }
 
 pub struct InfoElementReader<'a>(&'a [u8]);
@@ -825,6 +835,42 @@ mod tests {
 
         // corrupted
         assert!(InfoElement::parse(&[50, 5, 1, 2][..]).is_none());
+    }
+
+    #[test]
+    fn is_traffic_buffered() {
+        let tim = Tim {
+            dtim_period: 0,
+            dtim_count: 0,
+            bmp_ctrl: 0,
+            partial_virtual_bmp: &[0b0010010][..],
+        };
+        assert!(!tim.is_traffic_buffered(0));
+        assert!(tim.is_traffic_buffered(1));
+        assert!(!tim.is_traffic_buffered(2));
+        assert!(!tim.is_traffic_buffered(3));
+        assert!(tim.is_traffic_buffered(4));
+        assert!(!tim.is_traffic_buffered(5));
+        assert!(!tim.is_traffic_buffered(6));
+        assert!(!tim.is_traffic_buffered(7));
+        assert!(!tim.is_traffic_buffered(100));
+
+        let mut bmp_ctrl = BitmapControl(0);
+        bmp_ctrl.set_offset(1);
+        let tim = Tim {
+            bmp_ctrl: bmp_ctrl.value(),
+            ..tim
+        };
+        // Offset of 1 means "skip 16 bits"
+        assert!(!tim.is_traffic_buffered(15));
+        assert!(!tim.is_traffic_buffered(16));
+        assert!(tim.is_traffic_buffered(17));
+        assert!(!tim.is_traffic_buffered(18));
+        assert!(!tim.is_traffic_buffered(19));
+        assert!(tim.is_traffic_buffered(20));
+        assert!(!tim.is_traffic_buffered(21));
+        assert!(!tim.is_traffic_buffered(22));
+        assert!(!tim.is_traffic_buffered(100));
     }
 
     pub fn is_zero(slice: &[u8]) -> bool {
