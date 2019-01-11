@@ -5,11 +5,13 @@
 use {
     crate::utils::skip,
     bitfield::bitfield,
-    byteorder::{ByteOrder, LittleEndian},
+    byteorder::{BigEndian, ByteOrder, LittleEndian},
+    num::{One, Unsigned},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
-pub const BCAST_ADDR: [u8; 6] = [0xFF; 6];
+type MacAddr = [u8; 6];
+pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
 // IEEE Std 802.11-2016, 9.2.4.1.3
 // Frame types:
@@ -143,9 +145,9 @@ impl CapabilityInfo {
 pub struct MgmtHdr {
     pub frame_ctrl: [u8; 2],
     pub duration: [u8; 2],
-    pub addr1: [u8; 6],
-    pub addr2: [u8; 6],
-    pub addr3: [u8; 6],
+    pub addr1: MacAddr,
+    pub addr2: MacAddr,
+    pub addr3: MacAddr,
     pub seq_ctrl: [u8; 2],
 }
 // Safe: see macro explanation.
@@ -170,9 +172,9 @@ impl MgmtHdr {
 pub struct DataHdr {
     pub frame_ctrl: [u8; 2],
     pub duration: [u8; 2],
-    pub addr1: [u8; 6],
-    pub addr2: [u8; 6],
-    pub addr3: [u8; 6],
+    pub addr1: MacAddr,
+    pub addr2: MacAddr,
+    pub addr3: MacAddr,
     pub seq_ctrl: [u8; 2],
 }
 // Safe: see macro explanation.
@@ -200,7 +202,7 @@ pub enum MacFrame<B> {
     },
     Data {
         data_hdr: LayoutVerified<B, DataHdr>,
-        addr4: Option<LayoutVerified<B, [u8; 6]>>,
+        addr4: Option<LayoutVerified<B, MacAddr>>,
         qos_ctrl: Option<LayoutVerified<B, [u8; 2]>>,
         ht_ctrl: Option<LayoutVerified<B, [u8; 4]>>,
         body: B,
@@ -406,6 +408,73 @@ impl LlcHdr {
     }
 }
 
+// IEEE Std 802.11-2016, 9.3.2.2.2
+#[repr(C, packed)]
+pub struct AmsduSubframeHdr {
+    // Note this is the same as the IEEE 802.3 frame format.
+    pub da: MacAddr,
+    pub sa: MacAddr,
+    pub msdu_len_be: [u8; 2], // In network byte order (big endian).
+}
+// Safe: see macro explanation.
+unsafe_impl_zerocopy_traits!(AmsduSubframeHdr);
+
+impl AmsduSubframeHdr {
+    pub fn msdu_len(&self) -> u16 {
+        BigEndian::read_u16(&self.msdu_len_be)
+    }
+}
+
+/// Iterates through an A-MSDU frame and provides access to
+/// individual MSDUs.
+/// The reader expects the byte stream to start with an
+/// `AmsduSubframeHdr`.
+pub struct AmsduReader<'a>(&'a [u8]);
+
+impl<'a> AmsduReader<'a> {
+    pub fn has_remaining(&self) -> bool {
+        !self.0.is_empty()
+    }
+
+    pub fn remaining(&self) -> &'a [u8] {
+        self.0
+    }
+}
+
+impl<'a> Iterator for AmsduReader<'a> {
+    type Item = &'a [u8];
+
+    fn next(&mut self) -> Option<Self::Item> {
+        let (amsdu_subframe_hdr, msdu) =
+            LayoutVerified::<_, AmsduSubframeHdr>::new_unaligned_from_prefix(&self.0[..])?;
+        let msdu_len = amsdu_subframe_hdr.msdu_len() as usize;
+        if msdu.len() < msdu_len {
+            // A-MSDU subframe header is valid, but MSDU doesn't fit into the buffer.
+            None
+        } else {
+            let (msdu, next_padded) = msdu.split_at(msdu_len);
+
+            // Padding following the last MSDU is optional.
+            if next_padded.is_empty() {
+                self.0 = next_padded;
+                Some(msdu)
+            } else {
+                let base_len = std::mem::size_of::<AmsduSubframeHdr>() + msdu_len;
+                let padded_len = round_up(base_len, 4);
+                let padding_len = padded_len - base_len;
+                if next_padded.len() < padding_len {
+                    // Corrupted: buffer to short to hold padding.
+                    None
+                } else {
+                    let (_padding, next) = next_padded.split_at(padding_len);
+                    self.0 = next;
+                    Some(msdu)
+                }
+            }
+        }
+    }
+}
+
 pub enum DataSubtype<B> {
     // QoS or regular data type.
     Data {
@@ -433,6 +502,11 @@ impl<B: ByteSlice> DataSubtype<B> {
             subtype => Some(DataSubtype::Unsupported { subtype }),
         }
     }
+}
+
+fn round_up<T: Unsigned + Copy>(value: T, multiple: T) -> T {
+    let overshoot = value + multiple - T::one();
+    overshoot - overshoot % multiple
 }
 
 #[cfg(test)]
@@ -628,4 +702,79 @@ mod tests {
         };
     }
 
+    #[test]
+    fn parse_amsdu() {
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let first_msdu = vec![
+            // LLC header
+            0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
+            // Payload
+            0x33, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04,
+        ];
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let second_msdu = vec![
+            // LLC header
+            0xaa, 0xaa, 0x03, 0x00, 0x00, 0x00, 0x08, 0x00,
+            // Payload
+            0x99, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08,
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+        ];
+
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let mut amsdu_frame = vec![
+            // A-MSDU Subframe #1
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7,
+            0xa1, 0xbe, 0xb9, 0xab,
+            0x00, 0x74, // MSDU length
+        ];
+        amsdu_frame.extend(&first_msdu[..]);
+        amsdu_frame.extend(vec![
+            // Padding
+            0x00, 0x00, // A-MSDU Subframe #2
+            0x78, 0x8a, 0x20, 0x0d, 0x67, 0x03, 0xb4, 0xf7, 0xa1, 0xbe, 0xb9, 0xab, 0x00,
+            0x66, // MSDU length
+        ]);
+        amsdu_frame.extend(&second_msdu[..]);
+
+        let mut found_msdus = (false, false);
+        let mut rdr = AmsduReader(&amsdu_frame[..]);
+        for msdu in &mut rdr {
+            match found_msdus {
+                (false, false) => {
+                    assert_eq!(msdu, &first_msdu[..]);
+                    found_msdus = (true, false);
+                }
+                (true, false) => {
+                    assert_eq!(msdu, &second_msdu[..]);
+                    found_msdus = (true, true);
+                }
+                _ => panic!("unexpected MSDU: {:x?}", msdu),
+            }
+        }
+        assert!(found_msdus.0);
+        assert!(found_msdus.1);
+    }
 }

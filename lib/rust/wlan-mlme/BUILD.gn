@@ -17,6 +17,7 @@ rustc_staticlib("wlan-mlme") {
     "//third_party/rust-crates/rustc_deps:bitfield",
     "//third_party/rust-crates/rustc_deps:byteorder",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:num",
   ]
   non_rust_deps = []
 
