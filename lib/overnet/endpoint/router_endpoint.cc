@@ -320,6 +320,7 @@ void RouterEndpoint::ConnectionStream::Close(const Status& status,
                          this->Close(status, std::move(quiesced));
                        }));
   }
+  assert(quiesced.empty());
 }
 
 RouterEndpoint::Stream* RouterEndpoint::ConnectionStream::GossipStream() {

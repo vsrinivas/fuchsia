@@ -238,6 +238,38 @@ class DatagramStream : private Router::StreamHandler,
     SendStateIt op_;
   };
 
+  // Keeps a stream from quiescing while the ref is not abandoned.
+  class StreamRef {
+   public:
+    StreamRef(DatagramStream* stream) : stream_(stream) {
+      assert(stream_);
+      stream_->stream_refs_++;
+    }
+    StreamRef(const StreamRef&) = delete;
+    StreamRef& operator=(const StreamRef&) = delete;
+    ~StreamRef() { Abandon(); }
+    void Abandon() {
+      if (auto* stream = stream_) {
+        stream_ = nullptr;
+        stream->stream_refs_--;
+        if (stream->stream_refs_ == 0) {
+          stream->Quiesce();
+        }
+      }
+    }
+    DatagramStream* get() const {
+      assert(stream_);
+      return stream_;
+    }
+    DatagramStream* operator->() const {
+      assert(stream_);
+      return stream_;
+    }
+
+   private:
+    DatagramStream* stream_;
+  };
+
  public:
   inline static constexpr auto kModule = Module::DATAGRAM_STREAM;
 
@@ -298,7 +330,7 @@ class DatagramStream : private Router::StreamHandler,
     void Close(const Status& status);
 
    private:
-    DatagramStream* const stream_;
+    StreamRef stream_;
     IncomingMessage* incoming_message_ = nullptr;
     bool closed_ = false;
     StatusOrCallback<Optional<Slice>> pending_pull_;
@@ -330,6 +362,7 @@ class DatagramStream : private Router::StreamHandler,
   void CompleteUnreliable(const Status& status, StateRef state);
   void CancelReceives();
   std::string PendingSendString();
+  void Quiesce();
 
   Timer* const timer_;
   Router* const router_;
@@ -337,10 +370,14 @@ class DatagramStream : private Router::StreamHandler,
   const StreamId stream_id_;
   const fuchsia::overnet::protocol::ReliabilityAndOrdering
       reliability_and_ordering_;
+  // Number of StreamRef objects pointing at this stream.
+  int stream_refs_ = 0;
   uint64_t next_message_id_ = 1;
   uint64_t largest_incoming_message_id_seen_ = 0;
   receive_mode::ParameterizedReceiveMode receive_mode_;
   PacketProtocol packet_protocol_;
+  StreamRef close_ref_{this};  // Keep stream alive until closed
+
   enum class CloseState : uint8_t {
     OPEN,
     LOCAL_CLOSE_REQUESTED_OK,
@@ -349,7 +386,9 @@ class DatagramStream : private Router::StreamHandler,
     DRAINING_LOCAL_CLOSED_OK,
     CLOSING_PROTOCOL,
     CLOSED,
+    QUIESCED,
   };
+
   friend inline std::ostream& operator<<(std::ostream& out, CloseState state) {
     switch (state) {
       case CloseState::OPEN:
@@ -366,14 +405,18 @@ class DatagramStream : private Router::StreamHandler,
         return out << "CLOSING_PROTOCOL";
       case CloseState::CLOSED:
         return out << "CLOSED";
+      case CloseState::QUIESCED:
+        return out << "QUIESCED";
     }
     return out << "UNKNOWN";
   }
+
   bool IsClosedForSending() {
     switch (close_state_) {
       case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
       case CloseState::REMOTE_CLOSED:
       case CloseState::CLOSED:
+      case CloseState::QUIESCED:
       case CloseState::CLOSING_PROTOCOL:
         return true;
       case CloseState::DRAINING_LOCAL_CLOSED_OK:
@@ -382,6 +425,7 @@ class DatagramStream : private Router::StreamHandler,
         return false;
     }
   }
+
   CloseState close_state_ = CloseState::OPEN;
   Optional<Status> local_close_status_;
   struct RequestedClose {

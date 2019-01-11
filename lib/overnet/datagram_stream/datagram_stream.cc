@@ -126,9 +126,8 @@ DatagramStream::DatagramStream(
       reliability_and_ordering_(reliability_and_ordering),
       receive_mode_(reliability_and_ordering),
       // TODO(ctiller): What should mss be? Hardcoding to 2048 for now.
-      packet_protocol_(
-          timer_, [router] { return (*router->rng())(); }, this,
-          PacketProtocol::NullCodec(), 2048) {}
+      packet_protocol_(timer_, [router] { return (*router->rng())(); }, this,
+                       PacketProtocol::NullCodec(), 2048) {}
 
 void DatagramStream::Register() {
   ScopedModule<DatagramStream> scoped_module(this);
@@ -139,7 +138,8 @@ void DatagramStream::Register() {
 
 DatagramStream::~DatagramStream() {
   ScopedModule<DatagramStream> scoped_module(this);
-  assert(close_state_ == CloseState::CLOSED);
+  assert(close_state_ == CloseState::QUIESCED);
+  assert(stream_refs_ == 0);
 }
 
 void DatagramStream::Close(const Status& status, Callback<void> quiesced) {
@@ -149,7 +149,10 @@ void DatagramStream::Close(const Status& status, Callback<void> quiesced) {
                        << " stream_id=" << stream_id_;
 
   switch (close_state_) {
+    case CloseState::QUIESCED:
+      return;
     case CloseState::CLOSED:
+      on_quiesced_.push_back(std::move(quiesced));
       return;
     case CloseState::LOCAL_CLOSE_REQUESTED_OK:
       if (status.is_error()) {
@@ -211,6 +214,7 @@ void DatagramStream::SendCloseAndFlushQuiesced(int retry_number) {
           case CloseState::DRAINING_LOCAL_CLOSED_OK:
             assert(false);
             break;
+          case CloseState::QUIESCED:
           case CloseState::CLOSED:
           case CloseState::CLOSING_PROTOCOL:
             break;
@@ -239,6 +243,7 @@ void DatagramStream::MaybeFinishClosing() {
     case CloseState::OPEN:
     case CloseState::REMOTE_CLOSED:
     case CloseState::CLOSED:
+    case CloseState::QUIESCED:
     case CloseState::CLOSING_PROTOCOL:
     case CloseState::LOCAL_CLOSE_REQUESTED_OK:
       return;
@@ -279,10 +284,16 @@ void DatagramStream::FinishClosing() {
 
     assert(message_state_.empty());
 
-    std::vector<Callback<void>> on_quiesced;
-    on_quiesced.swap(on_quiesced_);
-    on_quiesced.clear();
+    close_ref_.Abandon();
   });
+}
+
+void DatagramStream::Quiesce() {
+  assert(close_state_ == CloseState::CLOSED);
+  close_state_ = CloseState::QUIESCED;
+  std::vector<Callback<void>> on_quiesced;
+  on_quiesced.swap(on_quiesced_);
+  on_quiesced.clear();
 }
 
 template <typename F>
@@ -308,6 +319,7 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
     // In these states we do not:
     case CloseState::CLOSING_PROTOCOL:
     case CloseState::CLOSED:
+    case CloseState::QUIESCED:
     case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
       return;
   }
@@ -417,6 +429,7 @@ void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
             FinishClosing();
             break;
           case CloseState::CLOSED:
+          case CloseState::QUIESCED:
           case CloseState::CLOSING_PROTOCOL:
             break;
         }
@@ -840,14 +853,14 @@ void DatagramStream::CompleteUnreliable(const Status& status, StateRef state) {
 // ReceiveOp
 
 DatagramStream::ReceiveOp::ReceiveOp(DatagramStream* stream) : stream_(stream) {
-  ScopedModule<DatagramStream> in_dgs(stream_);
+  ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   stream->unclaimed_receives_.PushBack(this);
   stream->MaybeContinueReceive();
 }
 
 void DatagramStream::ReceiveOp::Pull(StatusOrCallback<Optional<Slice>> ready) {
-  ScopedModule<DatagramStream> in_dgs(stream_);
+  ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "Pull incoming_message=" << incoming_message_;
   if (closed_) {
@@ -863,7 +876,7 @@ void DatagramStream::ReceiveOp::Pull(StatusOrCallback<Optional<Slice>> ready) {
 
 void DatagramStream::ReceiveOp::PullAll(
     StatusOrCallback<Optional<std::vector<Slice>>> ready) {
-  ScopedModule<DatagramStream> in_dgs(stream_);
+  ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "PullAll incoming_message=" << incoming_message_;
   if (closed_) {
@@ -883,7 +896,7 @@ void DatagramStream::ReceiveOp::PullAll(
 }
 
 void DatagramStream::ReceiveOp::Close(const Status& status) {
-  ScopedModule<DatagramStream> in_dgs(stream_);
+  ScopedModule<DatagramStream> in_dgs(stream_.get());
   ScopedModule<ReceiveOp> in_recv_op(this);
   OVERNET_TRACE(DEBUG) << "Close incoming_message=" << incoming_message_
                        << " status=" << status;
@@ -916,6 +929,7 @@ void DatagramStream::ReceiveOp::Close(const Status& status) {
     stream_->messages_.erase(incoming_message_->msg_id());
     incoming_message_ = nullptr;
   }
+  stream_.Abandon();
 }
 
 }  // namespace overnet
