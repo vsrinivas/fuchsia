@@ -15,7 +15,6 @@ uint64_t version;
 ```
 
 ## open
-
 The open hook is called when a device is opened via the device filesystem,
 or when an existing open connection to a device is cloned (for example,
 when a device fd is shared with another process).  The default open hook,
@@ -36,6 +35,7 @@ zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 ```
 
 ## open_at
+DEPRECATED: See ZX-3277.
 The open_at hook is called in the event that the open path to the device
 contains segments after the device name itself.  For example, if a device
 exists as `/dev/misc/foo` and an attempt is made to `open("/dev/misc/foo/bar",...)`,
@@ -65,6 +65,10 @@ to hot unplug, fatal error, etc).  At the point unbind is called, it is not
 possible for further open or open_at calls to occur, but io operations, etc
 may continue until those client connections are closed.
 
+The driver should avoid further method calls to its parent device or any
+protocols obtained from that device, and expect that any further such calls
+will return with an error.
+
 The driver should adjust its state to encourage its client connections to close
 (cause IO to error out, etc), and call **device_remove()** on itself when ready.
 
@@ -81,8 +85,8 @@ and all open client connections have been closed, and all child devices have bee
 removed and released.
 
 At the point release is invoked, the driver will not receive any further calls
-and absolutely must not use the underlying **zx_device_t** once this method
-returns.
+and absolutely must not use the underlying **zx_device_t** or any protocols obtained
+from that device once this method returns.
 
 The driver must free all memory and release all resources related to this device
 before returning.
@@ -154,6 +158,38 @@ The default ioctl implementation returns **ZX_ERR_NOT_SUPPORTED**.
 zx_status_t (*ioctl)(void* ctx, uint32_t op,
                      const void* in_buf, size_t in_len,
                      void* out_buf, size_t out_len, size_t* out_actual);
+```
+
+## rxrpc
+Only called for bus devices.
+When the "shadow" of a busdev sends an rpc message, the
+device that is shadowing is notified by the rxrpc op and
+should attempt to read and respond to a single message on
+the provided channel.
+
+Any error return from this method will result in the channel
+being closed and the remote "shadow" losing its connection.
+
+This method is called with ZX_HANDLE_INVALID for the channel
+when a new client connects -- at which point any state from
+the previous client should be torn down.
+```
+zx_status_t (*rxrpc)(void* ctx, zx_handle_t channel);
+```
+
+## message
+Process a FIDL rpc message.  This is used to handle class or
+device specific messaging.  fuchsia.io.{Node,File,Device} are
+handles by the devhost itself.
+
+The entire message becomes the responsibility of the driver,
+including the handles.
+
+The txn provided to respond to the message is only valid for
+the duration of the message() call.  It must not be cached
+and used later.
+```
+zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 ```
 
 #### Device State Bits

@@ -65,7 +65,6 @@ typedef struct zx_protocol_device {
     zx_status_t (*get_protocol)(void* ctx, uint32_t proto_id, void* protocol);
 
     //@ ## open
-    //
     // The open hook is called when a device is opened via the device filesystem,
     // or when an existing open connection to a device is cloned (for example,
     // when a device fd is shared with another process).  The default open hook,
@@ -84,6 +83,7 @@ typedef struct zx_protocol_device {
     zx_status_t (*open)(void* ctx, zx_device_t** dev_out, uint32_t flags);
 
     //@ ## open_at
+    // DEPRECATED: See ZX-3277.
     // The open_at hook is called in the event that the open path to the device
     // contains segments after the device name itself.  For example, if a device
     // exists as `/dev/misc/foo` and an attempt is made to `open("/dev/misc/foo/bar",...)`,
