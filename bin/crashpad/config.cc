@@ -36,12 +36,17 @@ const char kSchema[] = R"({
 const char kLocalCrashpadDatabasePathKey[] = "local_crashpad_database_path";
 const char kEnableUploadToCrashServerKey[] = "enable_upload_to_crash_server";
 
-bool CheckSchema(rapidjson::Document& doc) {
+bool CheckAgainstSchema(rapidjson::Document& doc) {
+  // Check that the schema is actually valid.
   rapidjson::Document sd;
-  if (sd.Parse(kSchema).HasParseError()) {
-    FX_LOGS(ERROR) << "invalid JSON schema for config";
+  rapidjson::ParseResult ok = sd.Parse(kSchema);
+  if (!ok) {
+    FX_LOGS(ERROR) << "invalid JSON schema for config at offset " << ok.Offset()
+                   << " " << rapidjson::GetParseError_En(ok.Code());
     return false;
   }
+
+  // Check the document against the schema.
   rapidjson::SchemaDocument schema(sd);
   rapidjson::SchemaValidator validator(schema);
   if (!doc.Accept(validator)) {
@@ -66,13 +71,12 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
   rapidjson::Document doc;
   rapidjson::ParseResult ok = doc.Parse(json.c_str());
   if (!ok) {
-    FX_LOGS(ERROR) << "error parsing config as JSON: "
-                   << rapidjson::GetParseError_En(ok.Code()) << "("
-                   << ok.Offset() << ")";
+    FX_LOGS(ERROR) << "error parsing config as JSON at offset " << ok.Offset()
+                   << " " << rapidjson::GetParseError_En(ok.Code());
     return ZX_ERR_INTERNAL;
   }
 
-  if (!CheckSchema(doc)) {
+  if (!CheckAgainstSchema(doc)) {
     return ZX_ERR_INTERNAL;
   }
 
