@@ -13,3 +13,11 @@
 
 namespace test {
 namespace name {
+
+
+}  // namespace name
+}  // namespace test
+
+namespace fidl {
+
+}  // namespace fidl

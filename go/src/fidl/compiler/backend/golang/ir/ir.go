@@ -353,6 +353,13 @@ type Method struct {
 	// name as a prefix.
 	OrdinalName string
 
+	// GenOrdinal is the generated ordinal for this method.
+	GenOrdinal types.Ordinal
+
+	// GenOrdinalName is the name of the generated ordinal for this method,
+	// including the interface name as a prefix.
+	GenOrdinalName string
+
 	// Name is the name of the Method, including the interface name as a prefix.
 	Name string
 
@@ -829,12 +836,13 @@ func (c *compiler) compileParameter(p types.Parameter) StructMember {
 
 func (c *compiler) compileMethod(ifaceName types.EncodedCompoundIdentifier, val types.Method) Method {
 	methodName := c.compileIdentifier(val.Name, true, "")
-	ordinalName := c.compileCompoundIdentifier(ifaceName, methodName+"Ordinal")
 	r := Method{
 		Attributes:      val.Attributes,
 		Name:            methodName,
 		Ordinal:         val.Ordinal,
-		OrdinalName:     ordinalName,
+		OrdinalName:     c.compileCompoundIdentifier(ifaceName, methodName+"Ordinal"),
+		GenOrdinal:      val.GenOrdinal,
+		GenOrdinalName:  c.compileCompoundIdentifier(ifaceName, methodName+"GenOrdinal"),
 		EventExpectName: "Expect" + methodName,
 		IsEvent:         !val.HasRequest && val.HasResponse,
 		IsTransitional:  val.IsTransitional(),

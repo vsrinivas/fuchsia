@@ -10,7 +10,8 @@ const Interface = `
 const (
 {{- range .Methods }}
 	{{ .OrdinalName }} uint32 = {{ .Ordinal }}
-{{- end }}
+	{{ .GenOrdinalName }} uint32 = {{ .GenOrdinal }}
+	{{- end }}
 )
 
 {{- range .Methods }}
@@ -65,7 +66,7 @@ func (p *{{ $.ProxyName }}) {{ if .IsEvent -}}
 		{{- end }}
 	{{- else }}
 		{{- if .Response }}
-	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, &resp_)
+	err := ((*_bindings.{{ $.ProxyType }})(p)).Recv({{ .OrdinalName }}, &resp_{{ if ne .Ordinal .GenOrdinal }}, {{ .GenOrdinalName }}{{ end }})
 		{{- else }}
 	err := nil
 		{{- end }}
@@ -162,6 +163,10 @@ func (s *{{ .StubName }}) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bin
 	switch ord {
 	{{- range .Methods }}
 	{{- if not .IsEvent }}
+	{{- if ne .Ordinal .GenOrdinal }}
+	case {{ .GenOrdinalName }}:
+		fallthrough
+	{{ end }}
 	case {{ .OrdinalName }}:
 		{{- if .Request }}
 		in_ := {{ .Request.Name }}{}

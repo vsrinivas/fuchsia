@@ -122,6 +122,7 @@ func (u *Table) ClearField() {
 }
 const (
 	InterfaceMethodOrdinal uint32 = 1
+	InterfaceMethodGenOrdinal uint32 = 1061382220
 )
 
 type InterfaceMethodRequest struct {
@@ -184,6 +185,9 @@ type InterfaceStub struct {
 
 func (s *InterfaceStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
+	case InterfaceMethodGenOrdinal:
+		fallthrough
+	
 	case InterfaceMethodOrdinal:
 		in_ := InterfaceMethodRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {
