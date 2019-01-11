@@ -21,6 +21,11 @@ struct Config {
   // Whether to upload the crash report to a remote crash server or leave it
   // locally.
   bool enable_upload_to_crash_server = false;
+
+  // URL of the remote crash server.
+  // We use a std::unique_ptr to set it only when relevant, i.e. when
+  // |enable_upload_to_crash_server| is set.
+  std::unique_ptr<std::string> crash_server_url;
 };
 
 // Parses the JSON config at |filepath| as |config|.

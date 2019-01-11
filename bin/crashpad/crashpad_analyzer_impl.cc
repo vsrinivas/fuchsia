@@ -48,7 +48,6 @@ namespace {
 const char kDefaultConfigPath[] = "/pkg/data/default_config.json";
 const char kOverrideConfigPath[] =
     "/system/data/crashpad_analyzer/override_config.json";
-const char kURL[] = "https://clients2.google.com/cr/report";
 
 std::string GetPackageName(const zx::process& process) {
   char name[ZX_MAX_NAME_LEN];
@@ -142,7 +141,7 @@ zx_status_t CrashpadAnalyzerImpl::UploadReport(
   }
   http_transport->SetBodyStream(http_multipart_builder.GetBodyStream());
   http_transport->SetTimeout(60.0);  // 1 minute.
-  http_transport->SetURL(kURL);
+  http_transport->SetURL(*config_.crash_server_url);
 
   std::string server_report_id;
   if (!http_transport->ExecuteSynchronously(&server_report_id)) {
@@ -290,9 +289,8 @@ zx_status_t CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 }
 
 CrashpadAnalyzerImpl::CrashpadAnalyzerImpl(
-    const Config config,
-    std::unique_ptr<crashpad::CrashReportDatabase> database)
-    : config_(config), database_(std::move(database)) {
+    Config config, std::unique_ptr<crashpad::CrashReportDatabase> database)
+    : config_(std::move(config)), database_(std::move(database)) {
   FXL_DCHECK(database_);
 }
 
@@ -331,7 +329,7 @@ void CrashpadAnalyzerImpl::ProcessKernelPanicCrashlog(
 }
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
-    const Config config) {
+    Config config) {
   if (!files::IsDirectory(config.local_crashpad_database_path)) {
     files::CreateDirectory(config.local_crashpad_database_path);
   }
@@ -352,7 +350,7 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate(
       config.enable_upload_to_crash_server);
 
   return std::unique_ptr<CrashpadAnalyzerImpl>(
-      new CrashpadAnalyzerImpl(config, std::move(database)));
+      new CrashpadAnalyzerImpl(std::move(config), std::move(database)));
 }
 
 std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
@@ -360,13 +358,13 @@ std::unique_ptr<CrashpadAnalyzerImpl> CrashpadAnalyzerImpl::TryCreate() {
 
   if (files::IsFile(kOverrideConfigPath) &&
       ParseConfig(kOverrideConfigPath, &config) == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(config);
+    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
   }
 
   // We try to load the default config included in the package if no override
   // config was specified or we failed to parse it.
   if (ParseConfig(kDefaultConfigPath, &config) == ZX_OK) {
-    return CrashpadAnalyzerImpl::TryCreate(config);
+    return CrashpadAnalyzerImpl::TryCreate(std::move(config));
   }
 
   FX_LOGS(FATAL) << "failed to set up crash analyzer";

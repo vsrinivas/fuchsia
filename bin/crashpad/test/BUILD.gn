@@ -60,8 +60,20 @@ test_package("crashpad_analyzer_tests") {
   resources = [
     # needed for config_unittest
     {
-      path = "configs/valid.json"
-      dest = "valid_config.json"
+      path = "configs/valid_no_upload.json"
+      dest = "valid_config_no_upload.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/valid_upload.json"
+      dest = "valid_config_upload.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/valid_no_upload_spurious_server.json"
+      dest = "valid_config_no_upload_spurious_server.json"
     },
 
     # needed for config_unittest
@@ -74,6 +86,12 @@ test_package("crashpad_analyzer_tests") {
     {
       path = "configs/bad_schema_missing_required_field.json"
       dest = "bad_schema_missing_required_field_config.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/bad_schema_missing_server.json"
+      dest = "bad_schema_missing_server_config.json"
     },
   ]
 }

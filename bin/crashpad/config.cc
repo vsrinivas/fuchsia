@@ -24,6 +24,9 @@ const char kSchema[] = R"({
     },
     "enable_upload_to_crash_server": {
       "type": "boolean"
+    },
+    "crash_server_url": {
+      "type": "string"
     }
   },
   "required": [
@@ -35,6 +38,7 @@ const char kSchema[] = R"({
 
 const char kLocalCrashpadDatabasePathKey[] = "local_crashpad_database_path";
 const char kEnableUploadToCrashServerKey[] = "enable_upload_to_crash_server";
+const char kCrashServerUrlKey[] = "crash_server_url";
 
 bool CheckAgainstSchema(rapidjson::Document& doc) {
   // Check that the schema is actually valid.
@@ -80,13 +84,29 @@ zx_status_t ParseConfig(const std::string& filepath, Config* config) {
     return ZX_ERR_INTERNAL;
   }
 
-  // It is safe to directly access the fields as the keys are marked as required
-  // and we have checked the config against the schema.
-  config->local_crashpad_database_path =
+  // We use a local config to only set the out argument after all the checks.
+  Config local_config;
+  // It is safe to directly access these two fields as the keys are marked as
+  // required and we have checked the config against the schema.
+  local_config.local_crashpad_database_path =
       doc[kLocalCrashpadDatabasePathKey].GetString();
-  config->enable_upload_to_crash_server =
+  local_config.enable_upload_to_crash_server =
       doc[kEnableUploadToCrashServerKey].GetBool();
 
+  if (local_config.enable_upload_to_crash_server) {
+    if (!doc.HasMember(kCrashServerUrlKey)) {
+      FX_LOGS(ERROR)
+          << "missing crash server URL in config with upload enabled";
+      return ZX_ERR_INTERNAL;
+    }
+    local_config.crash_server_url =
+        std::make_unique<std::string>(doc[kCrashServerUrlKey].GetString());
+  } else if (doc.HasMember(kCrashServerUrlKey)) {
+    FX_LOGS(WARNING) << "crash server URL set in config with upload disabled, "
+                        "ignoring value";
+  }
+
+  *config = std::move(local_config);
   return ZX_OK;
 }
 

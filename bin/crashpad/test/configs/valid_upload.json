@@ -1,5 +1,5 @@
 {
     "local_crashpad_database_path": "/data/crashes",
     "enable_upload_to_crash_server": true,
-    "crash_server_url": "https://clients2.google.com/cr/report"
+    "crash_server_url": "http://localhost:1234"
 }

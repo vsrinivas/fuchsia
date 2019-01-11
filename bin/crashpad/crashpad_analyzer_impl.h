@@ -30,7 +30,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
   // Returns nullptr if the analyzer cannot be instantiated, e.g., because the
   // local report database cannot be accessed.
   static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate();
-  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(const Config config);
+  static std::unique_ptr<CrashpadAnalyzerImpl> TryCreate(Config config);
 
   void HandleNativeException(zx::process process, zx::thread thread,
                              zx::port exception_port,
@@ -47,8 +47,7 @@ class CrashpadAnalyzerImpl : public Analyzer {
 
  private:
   explicit CrashpadAnalyzerImpl(
-      const Config config,
-      std::unique_ptr<crashpad::CrashReportDatabase> database);
+      Config config, std::unique_ptr<crashpad::CrashReportDatabase> database);
 
   zx_status_t HandleNativeException(zx::process process, zx::thread thread,
                                     zx::port exception_port);

@@ -37,7 +37,8 @@ class CrashpadAnalyzerImplTest : public ::testing::Test {
   void SetUp() override {
     analyzer_ = CrashpadAnalyzerImpl::TryCreate(
         Config{/*local_crashpad_database_path=*/database_path_.path(),
-               /*enable_upload_to_crash_server=*/false});
+               /*enable_upload_to_crash_server=*/false,
+               /*crash_server_url=*/nullptr});
   }
 
  protected:
