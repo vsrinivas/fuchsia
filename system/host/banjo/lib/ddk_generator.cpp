@@ -1560,7 +1560,7 @@ void DdktlGenerator::ProduceExample(const NamedInterface& named_interface) {
     file_ << "//\n";
     file_ << "// // A driver that implements a ZX_PROTOCOL_" << ToSnakeCase(shortname, true)
           << " device.\n";
-    file_ << "// class " << shortname << "Device {\n";
+    file_ << "// class " << shortname << "Device;\n";
     file_ << "// using " << shortname << "DeviceType = ddk::Device<" << shortname
           << "Device, /* ddk mixins */>;\n";
     file_ << "//\n";
@@ -1569,8 +1569,7 @@ void DdktlGenerator::ProduceExample(const NamedInterface& named_interface) {
           << shortname << "Device> {\n";
     file_ << "//   public:\n";
     file_ << "// " << kIndent << shortname << "Device(zx_device_t* parent)\n";
-    file_ << "// " << kIndent << kIndent << ": " << shortname << "DeviceType(\"my-" << lc_name
-          << "-device\", parent) {}\n";
+    file_ << "// " << kIndent << kIndent << ": " << shortname << "DeviceType(parent) {}\n";
     file_ << "//\n";
     for (const auto& method_info : named_interface.methods) {
         std::vector<Member> input;
