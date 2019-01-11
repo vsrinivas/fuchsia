@@ -1,0 +1,59 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test.gni")
+
+source_set("cpp") {
+  sources = [
+    "connection.cc",
+    "connection.h",
+    "internal/directory_connection.cc",
+    "internal/directory_connection.h",
+    "internal/file_connection.cc",
+    "internal/file_connection.h",
+    "internal/node_connection.cc",
+    "internal/node_connection.h",
+    "directory.cc",
+    "directory.h",
+    "file.cc",
+    "file.h",
+    "node.cc",
+    "node.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+test("vfs_cpp_unittests") {
+  sources = [
+    "file_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("vfs_cpp_tests") {
+  testonly = true
+
+  deps = [
+    ":vfs_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "vfs_cpp_unittests"
+    },
+  ]
+}

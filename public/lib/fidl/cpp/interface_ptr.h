@@ -279,6 +279,11 @@ class InterfacePtr {
     return impl_->controller.reader().channel();
   }
 
+  // The |async_dispatcher_t| to which this interface is bound, if any.
+  async_dispatcher_t* dispatcher() const {
+    return impl_->controller.reader().dispatcher();
+  }
+
  private:
   struct Impl;
 

@@ -77,6 +77,9 @@ class MessageReader {
   // The channel to which this |MessageReader| is bound, if any.
   const zx::channel& channel() const { return channel_; }
 
+  // The |async_dispatcher_t| to which this |MessageReader| is bound, if any.
+  async_dispatcher_t* dispatcher() const { return dispatcher_; }
+
   // Synchronously waits on |channel()| until either a message is available or
   // the peer closes. If the channel is readable, reads a single message from
   // the channel and dispatches it to the message handler.

@@ -27,7 +27,9 @@ TEST(Binding, Control) {
   Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
   fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(nullptr, binding.dispatcher());
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+  EXPECT_EQ(loop.dispatcher(), binding.dispatcher());
 
   ptr->Frob("hello");
 
@@ -112,12 +114,11 @@ TEST(Binding, ErrorHandler) {
   EXPECT_EQ(&impl, binding.impl());
 
   int error_count = 0;
-  binding.set_error_handler(
-      [&error_count, &binding](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-        ++error_count;
-        EXPECT_FALSE(binding.is_bound());
-      });
+  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+    EXPECT_FALSE(binding.is_bound());
+  });
 
   EXPECT_EQ(ZX_OK, handle.channel().write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
@@ -141,13 +142,12 @@ TEST(Binding, DestructDuringErrorHandler) {
   EXPECT_EQ(&impl, binding->impl());
 
   int error_count = 0;
-  binding->set_error_handler(
-      [&error_count, &binding](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-        ++error_count;
-        EXPECT_FALSE(binding->is_bound());
-        binding.reset();
-      });
+  binding->set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+    EXPECT_FALSE(binding->is_bound());
+    binding.reset();
+  });
 
   EXPECT_EQ(ZX_OK, handle.channel().write(0, "a", 1, nullptr, 0));
   EXPECT_EQ(0, error_count);
@@ -165,12 +165,11 @@ TEST(Binding, PeerClosedTriggersErrorHandler) {
                                                       handle.NewRequest());
 
   int error_count = 0;
-  binding.set_error_handler(
-      [&error_count, &binding](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
-        ++error_count;
-        EXPECT_FALSE(binding.is_bound());
-      });
+  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_PEER_CLOSED, status);
+    ++error_count;
+    EXPECT_FALSE(binding.is_bound());
+  });
 
   handle = nullptr;
   EXPECT_EQ(0, error_count);
@@ -186,11 +185,10 @@ TEST(Binding, UnbindDoesNotTriggerErrorHandler) {
                                                       handle.NewRequest());
 
   int error_count = 0;
-  binding.set_error_handler(
-      [&error_count, &binding](zx_status_t status) {
-        EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
-        ++error_count;
-      });
+  binding.set_error_handler([&error_count, &binding](zx_status_t status) {
+    EXPECT_EQ(ZX_ERR_INVALID_ARGS, status);
+    ++error_count;
+  });
 
   binding.Unbind();
   EXPECT_EQ(0, error_count);

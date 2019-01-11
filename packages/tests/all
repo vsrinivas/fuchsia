@@ -92,6 +92,7 @@
         "garnet/packages/tests/timezone",
         "garnet/packages/tests/tracing",
         "garnet/packages/tests/url",
+        "garnet/packages/tests/vfs_cpp",
         "garnet/packages/tests/vulkan",
         "garnet/packages/tests/wayland",
         "garnet/packages/tests/wlan",

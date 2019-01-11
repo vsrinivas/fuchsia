@@ -224,6 +224,11 @@ class Binding {
   // The underlying channel.
   const zx::channel& channel() const { return controller_.reader().channel(); }
 
+  // The |async_dispatcher_t| to which this binding is bound, if any.
+  async_dispatcher_t* dispatcher() const {
+    return controller_.reader().dispatcher();
+  }
+
  private:
   const ImplPtr impl_;
   typename Interface::Stub_ stub_;

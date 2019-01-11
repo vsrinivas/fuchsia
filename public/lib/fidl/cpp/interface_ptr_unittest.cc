@@ -27,7 +27,9 @@ TEST(InterfacePtr, Control) {
   Binding<fidl::test::frobinator::Frobinator> binding(&impl);
 
   fidl::test::frobinator::FrobinatorPtr ptr;
+  EXPECT_EQ(nullptr, ptr.dispatcher());
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
+  EXPECT_EQ(loop.dispatcher(), ptr.dispatcher());
 
   ptr->Frob("one");
   EXPECT_TRUE(impl.frobs.empty());
