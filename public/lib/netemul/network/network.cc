@@ -97,7 +97,7 @@ void Network::SetConfig(fuchsia::netemul::network::NetworkConfig config,
   callback(ZX_OK);
 }
 
-void Network::AttachEndpoint(::fidl::StringPtr name,
+void Network::AttachEndpoint(::std::string name,
                              Network::AttachEndpointCallback callback) {
   data::Consumer::Ptr src;
   auto status =
@@ -113,7 +113,7 @@ void Network::AttachEndpoint(::fidl::StringPtr name,
   callback(status);
 }
 
-void Network::RemoveEndpoint(::fidl::StringPtr name,
+void Network::RemoveEndpoint(::std::string name,
                              Network::RemoveEndpointCallback callback) {
   data::Consumer::Ptr src;
   auto status =

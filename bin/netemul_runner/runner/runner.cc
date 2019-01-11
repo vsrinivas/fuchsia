@@ -66,7 +66,7 @@ void Runner::RunComponent(
   }
   // extract and parse cmx:
   component::FuchsiaPkgUrl fp;
-  if (!fp.Parse(package->resolved_url.get())) {
+  if (!fp.Parse(package->resolved_url)) {
     FXL_LOG(ERROR) << "can't parse fuchsia URL " << package->resolved_url;
     // TODO(brunodalbo) expose errors correctly through interface request
     return;

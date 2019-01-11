@@ -34,7 +34,7 @@ void FakeEndpoint::Consume(const void* data, size_t len) {
   binding_.events().OnData(std::move(vec));
 }
 
-void FakeEndpoint::Write(::fidl::VectorPtr<uint8_t> data) {
+void FakeEndpoint::Write(::std::vector<uint8_t> data) {
   if (!sink_) {
     // sink has disappeared from under us!
     // close the binding
@@ -42,7 +42,7 @@ void FakeEndpoint::Write(::fidl::VectorPtr<uint8_t> data) {
     return;
   }
 
-  sink_->Consume(data->data(), data->size(), GetPointer());
+  sink_->Consume(data.data(), data.size(), GetPointer());
 }
 
 }  // namespace netemul

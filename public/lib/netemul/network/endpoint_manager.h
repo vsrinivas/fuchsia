@@ -23,10 +23,10 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
 
   // fidl interface implementations:
   void ListEndpoints(ListEndpointsCallback callback) override;
-  void CreateEndpoint(::fidl::StringPtr name,
+  void CreateEndpoint(::std::string name,
                       fuchsia::netemul::network::EndpointConfig config,
                       CreateEndpointCallback callback) override;
-  void GetEndpoint(::fidl::StringPtr name,
+  void GetEndpoint(::std::string name,
                    GetEndpointCallback callback) override;
 
   // Request to install a data sink on a named endpoint

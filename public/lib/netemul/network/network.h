@@ -32,9 +32,9 @@ class Network : public fuchsia::netemul::network::Network {
   void GetName(GetNameCallback callback) override;
   void SetConfig(fuchsia::netemul::network::NetworkConfig config,
                  SetConfigCallback callback) override;
-  void AttachEndpoint(::fidl::StringPtr name,
+  void AttachEndpoint(::std::string name,
                       AttachEndpointCallback callback) override;
-  void RemoveEndpoint(::fidl::StringPtr name,
+  void RemoveEndpoint(::std::string name,
                       RemoveEndpointCallback callback) override;
   void CreateFakeEndpoint(
       fidl::InterfaceRequest<fuchsia::netemul::network::FakeEndpoint> ep)

@@ -21,10 +21,10 @@ class NetworkManager : public fuchsia::netemul::network::NetworkManager {
 
   // fidl interface implementations:
   void ListNetworks(ListNetworksCallback callback) override;
-  void CreateNetwork(::fidl::StringPtr name,
+  void CreateNetwork(::std::string name,
                      fuchsia::netemul::network::NetworkConfig config,
                      CreateNetworkCallback callback) override;
-  void GetNetwork(::fidl::StringPtr name, GetNetworkCallback callback) override;
+  void GetNetwork(::std::string name, GetNetworkCallback callback) override;
 
   void Bind(fidl::InterfaceRequest<FNetworkManager> request);
 

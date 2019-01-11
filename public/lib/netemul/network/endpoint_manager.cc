@@ -11,8 +11,8 @@ EndpointManager::EndpointManager(NetworkContext* context) : parent_(context) {}
 
 void EndpointManager::ListEndpoints(
     EndpointManager::ListEndpointsCallback callback) {
-  auto rsp = fidl::VectorPtr<fidl::StringPtr>::New(0);
-  rsp->reserve(endpoints_.size());
+  std::vector<std::string> rsp;
+  rsp.reserve(endpoints_.size());
   for (const auto& x : endpoints_) {
     rsp.push_back(x.first);
   }
@@ -20,11 +20,11 @@ void EndpointManager::ListEndpoints(
 }
 
 void EndpointManager::CreateEndpoint(
-    ::fidl::StringPtr name, fuchsia::netemul::network::EndpointConfig config,
+    ::std::string name, fuchsia::netemul::network::EndpointConfig config,
     EndpointManager::CreateEndpointCallback callback) {
   zx_status_t result = ZX_OK;
   fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
-  if (name->empty()) {
+  if (name.empty()) {
     // empty name not allowed
     result = ZX_ERR_INVALID_ARGS;
   } else if (endpoints_.find(name) == endpoints_.end()) {
@@ -57,7 +57,7 @@ void EndpointManager::CreateEndpoint(
 }
 
 void EndpointManager::GetEndpoint(
-    ::fidl::StringPtr name, EndpointManager::GetEndpointCallback callback) {
+    ::std::string name, EndpointManager::GetEndpointCallback callback) {
   auto ep_it = endpoints_.find(name);
   if (ep_it == endpoints_.end()) {
     // no network with such name

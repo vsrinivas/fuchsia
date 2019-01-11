@@ -30,7 +30,7 @@ class FakeEndpoint : public fuchsia::netemul::network::FakeEndpoint,
   fxl::WeakPtr<data::Consumer> GetPointer();
 
   // fidl interface implementations:
-  void Write(::fidl::VectorPtr<uint8_t> data) override;
+  void Write(::std::vector<uint8_t> data) override;
   // data consumer implementations:
   void Consume(const void* data, size_t len) override;
 

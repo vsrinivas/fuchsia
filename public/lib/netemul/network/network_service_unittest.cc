@@ -140,9 +140,9 @@ TEST_F(NetworkServiceTest, NetworkLifecycle) {
 
   const char* netname = "mynet";
 
-  fidl::VectorPtr<fidl::StringPtr> nets;
+  std::vector<std::string> nets;
   ASSERT_OK(netm->ListNetworks(&nets));
-  ASSERT_EQ(0ul, nets->size());
+  ASSERT_EQ(0ul, nets.size());
   Network::Config config;
   zx_status_t status;
   fidl::InterfaceHandle<FNetwork> neth;
@@ -155,11 +155,11 @@ TEST_F(NetworkServiceTest, NetworkLifecycle) {
 
   // list nets again and make sure it's there:
   ASSERT_OK(netm->ListNetworks(&nets));
-  ASSERT_EQ(1ul, nets->size());
-  ASSERT_EQ(netname, nets->at(0));
+  ASSERT_EQ(1ul, nets.size());
+  ASSERT_EQ(netname, nets.at(0));
 
   // check network name matches:
-  fidl::StringPtr outname;
+  std::string outname;
   ASSERT_OK(net->GetName(&outname));
   ASSERT_EQ(netname, outname);
 
@@ -172,13 +172,13 @@ TEST_F(NetworkServiceTest, NetworkLifecycle) {
 
   // check that network still exists:
   ASSERT_OK(netm->ListNetworks(&nets));
-  ASSERT_EQ(1ul, nets->size());
+  ASSERT_EQ(1ul, nets.size());
 
   // destroy original network handle:
   net.Unbind().TakeChannel().reset();
   // make sure network is deleted afterwards:
   ASSERT_OK(netm->ListNetworks(&nets));
-  ASSERT_EQ(0ul, nets->size());
+  ASSERT_EQ(0ul, nets.size());
 
   // trying to get the network again without creating it fails:
   ASSERT_OK(netm->GetNetwork(netname, &ohandle));
@@ -191,9 +191,9 @@ TEST_F(NetworkServiceTest, EndpointLifecycle) {
 
   const char* epname = "myendpoint";
 
-  fidl::VectorPtr<fidl::StringPtr> eps;
+  std::vector<std::string> eps;
   ASSERT_OK(epm->ListEndpoints(&eps));
-  ASSERT_EQ(0ul, eps->size());
+  ASSERT_EQ(0ul, eps.size());
   auto config = GetDefaultEndpointConfig();
   zx_status_t status;
   fidl::InterfaceHandle<FEndpoint> eph;
@@ -206,11 +206,11 @@ TEST_F(NetworkServiceTest, EndpointLifecycle) {
 
   // list endpoints again and make sure it's there:
   ASSERT_OK(epm->ListEndpoints(&eps));
-  ASSERT_EQ(1ul, eps->size());
-  ASSERT_EQ(epname, eps->at(0));
+  ASSERT_EQ(1ul, eps.size());
+  ASSERT_EQ(epname, eps.at(0));
 
   // check endpoint name matches:
-  fidl::StringPtr outname;
+  std::string outname;
   ASSERT_OK(ep->GetName(&outname));
   ASSERT_EQ(epname, outname);
 
@@ -223,13 +223,13 @@ TEST_F(NetworkServiceTest, EndpointLifecycle) {
 
   // check that endpoint still exists:
   ASSERT_OK(epm->ListEndpoints(&eps));
-  ASSERT_EQ(1ul, eps->size());
+  ASSERT_EQ(1ul, eps.size());
 
   // destroy original endpoint handle:
   ep.Unbind().TakeChannel().reset();
   // make sure endpoint is deleted afterwards:
   ASSERT_OK(epm->ListEndpoints(&eps));
-  ASSERT_EQ(0ul, eps->size());
+  ASSERT_EQ(0ul, eps.size());
 
   // trying to get the endpoint again without creating it fails:
   ASSERT_OK(epm->GetEndpoint(epname, &ohandle));
@@ -580,9 +580,9 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
   ASSERT_OK(net->CreateFakeEndpoint(fake_ep.NewRequest()));
   ASSERT_TRUE(fake_ep.is_bound());
   // install on data callback:
-  fake_ep.events().OnData = [&ok, &test_buff2](fidl::VectorPtr<uint8_t> data) {
-    ASSERT_EQ(TEST_BUF_SIZE, data->size());
-    ASSERT_EQ(0, memcmp(data->data(), test_buff2.data(), data->size()));
+  fake_ep.events().OnData = [&ok, &test_buff2](std::vector<uint8_t> data) {
+    ASSERT_EQ(TEST_BUF_SIZE, data.size());
+    ASSERT_EQ(0, memcmp(data.data(), test_buff2.data(), data.size()));
     ok = true;
   };
   for (int i = 0; i < 3; i++) {
