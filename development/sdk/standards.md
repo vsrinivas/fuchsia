@@ -32,7 +32,7 @@ work properly in future versions of the system.
 ### Source stability
 
 FIDL definitions in the SDK might evolve in source-incompatible ways. For
-example, we might rename a method in an interface while maintaining the its
+example, we might rename a method in an interface while maintaining its
 ordinal and semantics. Such a change preserves the ABI but breaks source
 compatibility.
 
@@ -86,22 +86,22 @@ Client libraries that need to perform asynchronous operations should depend on
 assume the client is using any specific implementation of `async_dispatcher_t*`.
 For example, these libraries should not assume the `async_dispatcher_t*` is
 actually implemented by `libasync-loop.a`. Libraries that require
-`async_get_default_dispatcher` to be populated should state that requirement in
+`async_get_default_dispatcher` to be populated should state this requirement in
 their documentation.
 
 Precompiled libraries can have more extensive dependencies if those dependencies
 are hidden from their client. For example, a precompiled shared library should
-not export symbols from these dependences and should not have headers that
+not export symbols from these dependencies and should not have headers that
 transitively include headers from these dependencies.
 
 ### Naming
 
-Client libraries should be named according to the language the expect their
+Client libraries should be named according to the language they expect their
 clients to use. For example, the C++ variant of the `$NAME` library should be
 located in the source tree at a path with the following pattern:
 `$LAYER/public/lib/$NAME/cpp`.
 
-In some cases, a library makes sense only for one language. In that case, the
+In some cases, a library only makes sense for one language. In that case, the
 language suffix may be omitted unless the client library has an associated
 FIDL interface.
 
