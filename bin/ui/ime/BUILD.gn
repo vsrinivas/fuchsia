@@ -11,6 +11,7 @@ rustc_binary("ime") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//garnet/public/fidl/fuchsia.ui.text:fuchsia.ui.text-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
