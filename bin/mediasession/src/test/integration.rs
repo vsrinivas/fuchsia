@@ -14,7 +14,6 @@ use fidl_fuchsia_mediasession::{
 use fuchsia_app as app;
 use fuchsia_async as fasync;
 use futures::stream::{FusedStream, TryStreamExt};
-use rand::{random, thread_rng, Rng};
 use std::collections::HashMap;
 
 const MEDIASESSION_URL: &str = "fuchsia-pkg://fuchsia.com/mediasession#meta/mediasession.cmx";
@@ -191,27 +190,17 @@ async fn service_reports_changed_active_session() {
 
     // Publish sessions.
     let session_count: usize = 100;
-    let mut sessions = Vec::new();
+    let mut keep_alive = Vec::new();
     for i in 0..session_count {
         let test_session = TestSession::new().expect(&format!("Test session {}.", i));
         let session_id = await!(test_service.publisher.publish(test_session.client_end))
             .expect(&format!("Session {}", i));
-        sessions.push((session_id, test_session.control_handle));
-    }
-
-    // Randomly queue them up for active session status.
-    thread_rng().shuffle(sessions.as_mut_slice());
-    let mut expected_active_session_changes = Vec::new();
-    for (session_id, control_handle) in &sessions {
-        control_handle
+        test_session
+            .control_handle
             .send_on_playback_status_changed(&mut default_playback_status())
             .expect("To update playback status.");
-        expected_active_session_changes.push(*session_id);
-    }
-
-    // Check all the change events.
-    for expected_id in expected_active_session_changes {
-        await!(test_service.expect_active_session(Some(expected_id)));
+        await!(test_service.expect_active_session(Some(session_id)));
+        keep_alive.push(test_session.control_handle);
     }
 }
 
@@ -292,7 +281,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
     let mut expectations = HashMap::new();
     let mut control_handles_to_keep_sessions_alive = Vec::new();
     for (i, (session_id, control_handle)) in test_sessions.into_iter().enumerate() {
-        let should_drop = random::<usize>() % 3 == 0;
+        let should_drop = i % 3 == 0;
         expectations.insert(
             session_id,
             if should_drop {
