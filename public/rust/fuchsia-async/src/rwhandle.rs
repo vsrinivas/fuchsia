@@ -156,6 +156,10 @@ where
         if (old & READABLE) != 0 {
             self.schedule_packet(zx::Signals::OBJECT_READABLE)?;
         }
+        if (old & CLOSED) != 0 {
+            // We just missed a channel close-- go around again.
+            lw.wake();
+        }
         Ok(())
     }
 
@@ -171,6 +175,10 @@ where
         // If WRITABLE was already false, a packet was already scheduled.
         if (old & WRITABLE) != 0 {
             self.schedule_packet(zx::Signals::OBJECT_WRITABLE)?;
+        }
+        if (old & CLOSED) != 0 {
+            // We just missed a channel close-- go around again.
+            lw.wake();
         }
         Ok(())
     }
