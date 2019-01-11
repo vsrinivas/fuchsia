@@ -36,10 +36,6 @@ class ViewManagerApp {
                    std::unique_ptr<ViewSnapshotImpl>>
       view_snapshot_bindings_;
 
-  // Binding to expose view hit-test service to the a11y manager.
-  fidl::BindingSet<fuchsia::ui::viewsv1::AccessibilityViewInspector>
-      inspector_bindings_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(ViewManagerApp);
 };
 

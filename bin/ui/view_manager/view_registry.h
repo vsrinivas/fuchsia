@@ -14,7 +14,6 @@
 #include <fuchsia/ui/views/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
-#include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "garnet/bin/ui/view_manager/view_state.h"
 #include "garnet/bin/ui/view_manager/view_stub.h"
@@ -31,12 +30,10 @@ using ViewLinker = scenic_impl::gfx::ObjectLinker<ViewStub, ViewState>;
 
 // Maintains a registry of the state of all views.
 // All ViewState objects are owned by the registry.
-class ViewRegistry : public ViewInspector,
-                     public fuchsia::ui::viewsv1::AccessibilityViewInspector,
-                     public scenic_impl::ErrorReporter {
+class ViewRegistry : public scenic_impl::ErrorReporter {
  public:
   explicit ViewRegistry(component::StartupContext* startup_context);
-  ~ViewRegistry() override;
+  virtual ~ViewRegistry();
 
   ViewLinker& view_linker() { return view_linker_; }
 
@@ -119,16 +116,6 @@ class ViewRegistry : public ViewInspector,
   void ConnectToViewTreeService(ViewTreeState* tree_state,
                                 const fidl::StringPtr& service_name,
                                 zx::channel client_handle);
-
-  // VIEW INSPECTOR REQUESTS
-
-  void HitTest(::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-               const fuchsia::math::Point3F& ray_origin,
-               const fuchsia::math::Point3F& ray_direction,
-               HitTestCallback callback) override;
-  void GetImeService(uint32_t view_token,
-                     fidl::InterfaceRequest<fuchsia::ui::input::ImeService>
-                         ime_service) override;
 
   // SNAPSHOT
   void TakeSnapshot(uint64_t view_koid,
@@ -214,14 +201,6 @@ class ViewRegistry : public ViewInspector,
   bool IsViewFocusable(uint32_t view_token);
 
   // A11Y VIEW INSPECTOR
-
-  // Performs a view hit-test on the view tree corresponding to
-  // the associated token and returns a vector of gfx::Hit objects
-  // corresponding to the views hit, in order of first to last hit.
-  void PerformHitTest(fuchsia::ui::viewsv1::ViewTreeToken token,
-                      fuchsia::math::Point3F origin,
-                      fuchsia::math::Point3F direction,
-                      PerformHitTestCallback callback) override;
 
   component::StartupContext* startup_context_;
   fuchsia::ui::scenic::ScenicPtr scenic_;

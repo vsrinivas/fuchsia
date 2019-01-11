@@ -8,7 +8,6 @@ fidl("fuchsia.ui.viewsv1") {
   sdk_category = "partner"
 
   sources = [
-    "accessibility_view_inspector.fidl",
     "view_containers.fidl",
     "view_manager.fidl",
     "view_properties.fidl",

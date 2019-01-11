@@ -37,22 +37,6 @@ inline mozart::SceneTokenPtr MakeDummySceneToken(uint32_t value) {
   return result.Pass();
 }
 
-inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
-    mozart::SceneTokenPtr scene_token, mozart::TransformPtr transform) {
-  auto result = mozart::HitTestResult::New();
-  result->root = mozart::SceneHit::New();
-  result->root->scene_token = scene_token.Pass();
-  result->root->hits.push_back(mozart::Hit::New());
-  result->root->hits[0]->set_node(mozart::NodeHit::New());
-  result->root->hits[0]->get_node()->transform = transform.Pass();
-  return result.Pass();
-}
-
-inline mozart::HitTestResultPtr MakeSimpleHitTestResult(
-    mozart::SceneTokenPtr scene_token) {
-  return MakeSimpleHitTestResult(scene_token.Pass(), MakeDummyTransform(0.f));
-}
-
 }  // namespace test
 
 #endif  // GARNET_BIN_UI_VIEW_MANAGER_TESTS_TEST_HELPERS_H_

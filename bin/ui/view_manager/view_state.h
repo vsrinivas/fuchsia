@@ -10,7 +10,6 @@
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 
-#include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "garnet/lib/ui/gfx/engine/object_linker.h"
 #include "lib/fidl/cpp/binding.h"

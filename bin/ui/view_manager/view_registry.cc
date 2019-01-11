@@ -79,30 +79,6 @@ std::string SanitizeLabel(fidl::StringPtr label) {
   return label.get().substr(0, ::fuchsia::ui::viewsv1::kLabelMaxLength);
 }
 
-fuchsia::math::Transform ToTransform(const fuchsia::ui::gfx::mat4& matrix) {
-  // Note: mat4 is column-major but transform is row-major
-  fuchsia::math::Transform transform;
-  const auto& in = matrix.matrix;
-  auto& out = transform.matrix;
-  out[0] = in[0];
-  out[1] = in[4];
-  out[2] = in[8];
-  out[3] = in[12];
-  out[4] = in[1];
-  out[5] = in[5];
-  out[6] = in[9];
-  out[7] = in[13];
-  out[8] = in[2];
-  out[9] = in[6];
-  out[10] = in[10];
-  out[11] = in[14];
-  out[12] = in[3];
-  out[13] = in[7];
-  out[14] = in[11];
-  out[15] = in[15];
-  return transform;
-}
-
 bool Equals(const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& a,
             const ::fuchsia::ui::viewsv1::ViewPropertiesPtr& b) {
   if (!a || !b)
@@ -748,71 +724,6 @@ void ViewRegistry::ConnectToViewTreeService(ViewTreeState* tree_state,
   FXL_DCHECK(IsViewTreeStateRegisteredDebug(tree_state));
 }
 
-// VIEW INSPECTOR
-
-void ViewRegistry::HitTest(
-    ::fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-    const fuchsia::math::Point3F& ray_origin,
-    const fuchsia::math::Point3F& ray_direction, HitTestCallback callback) {
-  FXL_VLOG(1) << "HitTest: tree=" << view_tree_token;
-
-  ViewTreeState* view_tree = FindViewTree(view_tree_token.value);
-  if (!view_tree || !view_tree->GetRoot() ||
-      !view_tree->GetRoot()->host_node()) {
-    callback(fidl::VectorPtr<ViewHit>());
-    return;
-  }
-
-  session_.HitTestDeviceRay(
-      (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
-      (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
-      fxl::MakeCopyable(
-          [this, callback = std::move(callback), ray_origin,
-           ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
-            auto view_hits = fidl::VectorPtr<ViewHit>::New(0);
-            for (auto& hit : *hits) {
-              if (ViewState* view_state = FindView(hit.tag_value)) {
-                view_hits->emplace_back(
-                    ViewHit{view_state->view_token(), ray_origin, ray_direction,
-                            hit.distance, ToTransform(hit.inverse_transform)});
-              }
-            }
-            callback(std::move(view_hits));
-          }));
-}
-
-fuchsia::sys::ServiceProvider* ViewRegistry::FindViewServiceProvider(
-    ViewState* view_state, std::string service_name) {
-  if (!view_state) {
-    return nullptr;
-  }
-
-  auto provider = view_state->GetServiceProviderIfSupports(service_name);
-  while (!provider && view_state) {
-    view_state = view_state->view_stub()->parent();
-    provider = view_state
-                   ? view_state->GetServiceProviderIfSupports(service_name)
-                   : nullptr;
-  }
-  return provider;
-}
-
-void ViewRegistry::GetImeService(
-    uint32_t view_token,
-    fidl::InterfaceRequest<fuchsia::ui::input::ImeService> ime_service) {
-  FXL_DCHECK(ime_service.is_valid());
-  FXL_VLOG(1) << "GetImeService: view_token=" << view_token;
-
-  ViewState* view_state = FindView(view_token);
-  auto provider = FindViewServiceProvider(
-      view_state, fuchsia::ui::input::ImeService::Name_);
-  if (provider) {
-    component::ConnectToService(provider, std::move(ime_service));
-  } else {
-    startup_context_->ConnectToEnvironmentService(std::move(ime_service));
-  }
-}
-
 // EXTERNAL SIGNALING
 
 void ViewRegistry::SendPropertiesChanged(
@@ -912,29 +823,6 @@ ViewState* ViewRegistry::FindView(uint32_t view_token) {
 ViewTreeState* ViewRegistry::FindViewTree(uint32_t view_tree_token_value) {
   auto it = view_trees_by_token_.find(view_tree_token_value);
   return it != view_trees_by_token_.end() ? it->second.get() : nullptr;
-}
-
-void ViewRegistry::PerformHitTest(
-    fuchsia::ui::viewsv1::ViewTreeToken view_tree_token,
-    fuchsia::math::Point3F ray_origin, fuchsia::math::Point3F ray_direction,
-    PerformHitTestCallback callback) {
-  // Direct copy of the internal view registry HitTest method.
-  // The only difference is the callback returns fuchsia::ui::gfx::Hit, the
-  // FIDL equivalent of view_manager::ViewHit.
-  ViewTreeState* view_tree = FindViewTree(view_tree_token.value);
-  if (!view_tree || !view_tree->GetRoot() ||
-      !view_tree->GetRoot()->host_node()) {
-    callback(fidl::VectorPtr<fuchsia::ui::gfx::Hit>());
-    return;
-  }
-  session_.HitTestDeviceRay(
-      (float[3]){ray_origin.x, ray_origin.y, ray_origin.z},
-      (float[3]){ray_direction.x, ray_direction.y, ray_direction.z},
-      fxl::MakeCopyable(
-          [this, callback = std::move(callback), ray_origin,
-           ray_direction](fidl::VectorPtr<fuchsia::ui::gfx::Hit> hits) {
-            callback(std::move(hits));
-          }));
 }
 
 }  // namespace view_manager

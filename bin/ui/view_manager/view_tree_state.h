@@ -9,7 +9,6 @@
 #include <string>
 
 #include <fuchsia/ui/views/cpp/fidl.h>
-#include "garnet/bin/ui/view_manager/internal/view_inspector.h"
 #include "garnet/bin/ui/view_manager/view_container_state.h"
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
