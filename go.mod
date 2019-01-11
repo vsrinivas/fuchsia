@@ -7,6 +7,9 @@ require (
 	github.com/google/uuid v1.1.0
 	github.com/googleapis/gax-go v2.0.2+incompatible // indirect
 	github.com/ianlancetaylor/demangle v0.0.0-20181102032728-5e5cf60278f6 // indirect
+	github.com/kr/fs v0.1.0 // indirect
+	github.com/pkg/errors v0.8.1 // indirect
+	github.com/pkg/sftp v1.8.3
 	go.chromium.org/luci v0.0.0-20181218015242-20acb618582d
 	go.opencensus.io v0.18.0 // indirect
 	golang.org/x/arch v0.0.0-20181203225421-5a4828bb7045 // indirect
