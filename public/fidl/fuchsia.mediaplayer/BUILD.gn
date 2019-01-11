@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.mediaplayer") {
+  sdk_category = "partner"
+
   sources = [
     "metadata.fidl",
     "player.fidl",
