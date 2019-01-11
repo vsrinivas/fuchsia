@@ -4,7 +4,9 @@
 
 #include "garnet/lib/ui/gfx/resources/snapshot/snapshotter.h"
 
+#include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
+
 #include "garnet/lib/ui/gfx/resources/buffer.h"
 #include "garnet/lib/ui/gfx/resources/camera.h"
 #include "garnet/lib/ui/gfx/resources/compositor/display_compositor.h"
@@ -34,7 +36,6 @@
 #include "lib/escher/vk/image.h"
 #include "lib/fsl/vmo/sized_vmo.h"
 #include "lib/fsl/vmo/vector.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace scenic_impl {
@@ -88,9 +89,8 @@ void Snapshotter::TakeSnapshot(Resource* resource,
 
   // Submit all images/buffers to be read from GPU.
   gpu_uploader_->Submit(
-      escher::SemaphorePtr(),
-      fxl::MakeCopyable([node_serializer = current_node_serializer_,
-                         callback = std::move(callback)]() {
+      escher::SemaphorePtr(), [node_serializer = current_node_serializer_,
+                               callback = std::move(callback)]() {
         TRACE_DURATION("gfx", "Snapshotter::Serialize");
         auto builder = std::make_shared<flatbuffers::FlatBufferBuilder>();
         builder->Finish(node_serializer->serialize(*builder));
@@ -103,7 +103,7 @@ void Snapshotter::TakeSnapshot(Resource* resource,
         } else {
           return callback(std::move(sized_vmo).ToTransport());
         }
-      }));
+      });
 }
 
 void Snapshotter::Visit(EntityNode* r) { VisitNode(r); }
@@ -334,7 +334,7 @@ void Snapshotter::VisitMesh(escher::MeshPtr mesh) {
 
 void Snapshotter::ReadImage(
     escher::ImagePtr image,
-    std::function<void(escher::BufferPtr buffer)> callback) {
+    fit::function<void(escher::BufferPtr buffer)> callback) {
   vk::BufferImageCopy region;
   region.imageSubresource.aspectMask = vk::ImageAspectFlagBits::eColor;
   region.imageSubresource.mipLevel = 0;
@@ -352,7 +352,7 @@ void Snapshotter::ReadImage(
 
 void Snapshotter::ReadBuffer(
     escher::BufferPtr buffer,
-    std::function<void(escher::BufferPtr buffer)> callback) {
+    fit::function<void(escher::BufferPtr buffer)> callback) {
   auto reader = gpu_uploader_->AcquireReader(buffer->size());
   reader->ReadBuffer(buffer, {0, 0, buffer->size()}, escher::SemaphorePtr());
   gpu_uploader_->PostReader(std::move(reader), std::move(callback));

@@ -199,9 +199,8 @@ void FakeController::AddDevice(std::unique_ptr<FakeDevice> device) {
   devices_.push_back(std::move(device));
 }
 
-void FakeController::SetScanStateCallback(
-    ScanStateCallback callback,
-    async_dispatcher_t* dispatcher) {
+void FakeController::SetScanStateCallback(ScanStateCallback callback,
+                                          async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(dispatcher);
 
@@ -210,8 +209,7 @@ void FakeController::SetScanStateCallback(
 }
 
 void FakeController::SetAdvertisingStateCallback(
-    fit::closure callback,
-    async_dispatcher_t* dispatcher) {
+    fit::closure callback, async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(dispatcher);
 
@@ -220,8 +218,7 @@ void FakeController::SetAdvertisingStateCallback(
 }
 
 void FakeController::SetConnectionStateCallback(
-    ConnectionStateCallback callback,
-    async_dispatcher_t* dispatcher) {
+    ConnectionStateCallback callback, async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(dispatcher);
 
@@ -230,8 +227,7 @@ void FakeController::SetConnectionStateCallback(
 }
 
 void FakeController::SetLEConnectionParametersCallback(
-    LEConnectionParametersCallback callback,
-    async_dispatcher_t* dispatcher) {
+    LEConnectionParametersCallback callback, async_dispatcher_t* dispatcher) {
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(dispatcher);
 
@@ -434,34 +430,34 @@ void FakeController::ConnectLowEnergy(const common::DeviceAddress& addr,
 void FakeController::L2CAPConnectionParameterUpdate(
     const common::DeviceAddress& addr,
     const hci::LEPreferredConnectionParameters& params) {
-      async::PostTask(dispatcher(), [addr, params, this] {
-        FakeDevice* dev = FindDeviceByAddress(addr);
-        if (!dev) {
-          bt_log(WARN, "fake-hci", "no device found with address: %s",
-                 addr.ToString().c_str());
-          return;
-        }
+  async::PostTask(dispatcher(), [addr, params, this] {
+    FakeDevice* dev = FindDeviceByAddress(addr);
+    if (!dev) {
+      bt_log(WARN, "fake-hci", "no device found with address: %s",
+             addr.ToString().c_str());
+      return;
+    }
 
-        if (!dev->connected()) {
-          bt_log(WARN, "fake-hci", "device not connected");
-          return;
-        }
+    if (!dev->connected()) {
+      bt_log(WARN, "fake-hci", "device not connected");
+      return;
+    }
 
-        ZX_DEBUG_ASSERT(!dev->logical_links().empty());
+    ZX_DEBUG_ASSERT(!dev->logical_links().empty());
 
-        l2cap::ConnectionParameterUpdateRequestPayload payload;
-        payload.interval_min = htole16(params.min_interval());
-        payload.interval_max = htole16(params.max_interval());
-        payload.slave_latency = htole16(params.max_latency());
-        payload.timeout_multiplier = htole16(params.supervision_timeout());
+    l2cap::ConnectionParameterUpdateRequestPayload payload;
+    payload.interval_min = htole16(params.min_interval());
+    payload.interval_max = htole16(params.max_interval());
+    payload.slave_latency = htole16(params.max_latency());
+    payload.timeout_multiplier = htole16(params.supervision_timeout());
 
-        // TODO(armansito): Instead of picking the first handle we should pick
-        // the handle that matches the current LE-U link.
-        SendL2CAPCFrame(*dev->logical_links().begin(), true,
-                        l2cap::kConnectionParameterUpdateRequest,
-                        NextL2CAPCommandId(),
-                        BufferView(&payload, sizeof(payload)));
-      });
+    // TODO(armansito): Instead of picking the first handle we should pick
+    // the handle that matches the current LE-U link.
+    SendL2CAPCFrame(*dev->logical_links().begin(), true,
+                    l2cap::kConnectionParameterUpdateRequest,
+                    NextL2CAPCommandId(),
+                    BufferView(&payload, sizeof(payload)));
+  });
 }
 
 void FakeController::Disconnect(const common::DeviceAddress& addr) {
@@ -556,19 +552,20 @@ void FakeController::NotifyAdvertisingState() {
   }
 
   ZX_DEBUG_ASSERT(advertising_state_cb_dispatcher_);
-  async::PostTask(advertising_state_cb_dispatcher_, advertising_state_cb_.share());
+  async::PostTask(advertising_state_cb_dispatcher_,
+                  advertising_state_cb_.share());
 }
 
 void FakeController::NotifyConnectionState(const common::DeviceAddress& addr,
-                                           bool connected,
-                                           bool canceled) {
+                                           bool connected, bool canceled) {
   if (!conn_state_cb_)
     return;
 
   ZX_DEBUG_ASSERT(conn_state_cb_dispatcher_);
-  async::PostTask(conn_state_cb_dispatcher_, [
-    addr, connected, canceled, cb = conn_state_cb_.share()
-  ] { cb(addr, connected, canceled); });
+  async::PostTask(conn_state_cb_dispatcher_,
+                  [addr, connected, canceled, cb = conn_state_cb_.share()] {
+                    cb(addr, connected, canceled);
+                  });
 }
 
 void FakeController::NotifyLEConnectionParameters(
@@ -578,7 +575,8 @@ void FakeController::NotifyLEConnectionParameters(
     return;
 
   ZX_DEBUG_ASSERT(le_conn_params_cb_dispatcher_);
-  async::PostTask(le_conn_params_cb_dispatcher_,
+  async::PostTask(
+      le_conn_params_cb_dispatcher_,
       [addr, params, cb = le_conn_params_cb_.share()] { cb(addr, params); });
 }
 
@@ -679,7 +677,7 @@ void FakeController::OnLECreateConnectionCommandReceived(
                     BufferView(&response, sizeof(response)));
   });
   async::PostTask(dispatcher(),
-      [cb = pending_le_connect_rsp_.callback()] { cb(); });
+                  [cb = pending_le_connect_rsp_.callback()] { cb(); });
 }
 
 void FakeController::OnLEConnectionUpdateCommandReceived(
@@ -1146,9 +1144,9 @@ void FakeController::OnCommandPacketReceived(
       // state update BEFORE the HCI command sequence terminates.
       if (scan_state_cb_) {
         ZX_DEBUG_ASSERT(scan_state_cb_dispatcher_);
-        async::PostTask(scan_state_cb_dispatcher_, [
-          cb = scan_state_cb_.share(), enabled = le_scan_state_.enabled
-        ] { cb(enabled); });
+        async::PostTask(scan_state_cb_dispatcher_,
+                        [cb = scan_state_cb_.share(),
+                         enabled = le_scan_state_.enabled] { cb(enabled); });
       }
 
       RespondWithSuccess(opcode);

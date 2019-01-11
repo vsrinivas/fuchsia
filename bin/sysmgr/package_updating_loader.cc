@@ -38,8 +38,7 @@ PackageUpdatingLoader::PackageUpdatingLoader(
 
 PackageUpdatingLoader::~PackageUpdatingLoader() = default;
 
-void PackageUpdatingLoader::LoadUrl(std::string url,
-                                    LoadUrlCallback callback) {
+void PackageUpdatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   EnsureConnectedToResolver();
 
   // The updating loader can only update fuchsia-pkg URLs.
@@ -52,7 +51,7 @@ void PackageUpdatingLoader::LoadUrl(std::string url,
                                component::GetPathFromURL(url));
   }
   if (!parsed) {
-    PackageLoader::LoadUrl(url, callback);
+    PackageLoader::LoadUrl(url, std::move(callback));
     return;
   }
 
@@ -62,21 +61,21 @@ void PackageUpdatingLoader::LoadUrl(std::string url,
   // here.
   if (std::find(update_dependency_urls_.begin(), update_dependency_urls_.end(),
                 url) != std::end(update_dependency_urls_)) {
-    PackageLoader::LoadUrl(url, callback);
+    PackageLoader::LoadUrl(url, std::move(callback));
     return;
   }
 
   fuchsia::io::DirectoryPtr dir;
   auto dir_request = dir.NewRequest(dispatcher_);
   auto done_cb = [this, url, dir = std::move(dir),
-                  callback](zx_status_t status) mutable {
+                  callback = std::move(callback)](zx_status_t status) mutable {
     // TODO: only fail soft on NOT_FOUND?
     if (status != ZX_OK) {
       FXL_VLOG(1) << "Package update failed with "
                   << zx_status_get_string(status)
                   << ". Loading package without update: " << url;
     }
-    PackageLoader::LoadUrl(url, callback);
+    PackageLoader::LoadUrl(url, std::move(callback));
   };
 
   fuchsia::pkg::UpdatePolicy update_policy;

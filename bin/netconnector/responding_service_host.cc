@@ -6,7 +6,6 @@
 
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
@@ -22,9 +21,8 @@ RespondingServiceHost::~RespondingServiceHost() {}
 void RespondingServiceHost::RegisterSingleton(
     const std::string& service_name, fuchsia::sys::LaunchInfoPtr launch_info) {
   service_namespace_.AddServiceForName(
-      fxl::MakeCopyable([this, service_name,
-                         launch_info = std::move(launch_info)](
-                            zx::channel client_handle) mutable {
+      [this, service_name, launch_info = std::move(launch_info)](
+          zx::channel client_handle) mutable {
         FXL_VLOG(2) << "Handling request for service " << service_name;
 
         auto iter = service_providers_by_name_.find(service_name);
@@ -61,7 +59,7 @@ void RespondingServiceHost::RegisterSingleton(
         }
 
         iter->second.ConnectToService(service_name, std::move(client_handle));
-      }),
+      },
       service_name);
 }
 

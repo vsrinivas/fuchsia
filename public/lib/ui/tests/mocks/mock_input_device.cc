@@ -11,11 +11,11 @@ MockInputDevice::MockInputDevice(
     uint32_t device_id, fuchsia::ui::input::DeviceDescriptor descriptor,
     fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
         input_device_request,
-    const OnReportCallback& on_report_callback)
+    OnReportCallback on_report_callback)
     : id_(device_id),
       descriptor_(std::move(descriptor)),
       input_device_binding_(this, std::move(input_device_request)),
-      on_report_callback_(on_report_callback) {}
+      on_report_callback_(std::move(on_report_callback)) {}
 
 MockInputDevice::~MockInputDevice() {}
 

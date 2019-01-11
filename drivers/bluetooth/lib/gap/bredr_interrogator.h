@@ -9,6 +9,7 @@
 
 #include <lib/async/cpp/task.h>
 #include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
@@ -51,7 +52,7 @@ class BrEdrInterrogator {
   // Starts interrogation. Calls |callback| when the sequence is completed or
   // abandoned.
   using ResultCallback =
-      std::function<void(hci::Status status, hci::ConnectionPtr conn_ptr)>;
+      fit::function<void(hci::Status status, hci::ConnectionPtr conn_ptr)>;
   void Start(const std::string& device_id, hci::ConnectionPtr conn_ptr,
              ResultCallback callback);
 

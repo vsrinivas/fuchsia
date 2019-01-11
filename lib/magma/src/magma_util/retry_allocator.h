@@ -7,6 +7,8 @@
 
 #include <map>
 
+#include <lib/fit/function.h>
+
 #include "macros.h"
 
 namespace magma {
@@ -16,7 +18,7 @@ namespace magma {
 // space.
 class RetryAllocator final {
 public:
-    using AllocationFunction = std::function<bool(uint64_t)>;
+    using AllocationFunction = fit::function<bool(uint64_t)>;
 
     static std::unique_ptr<RetryAllocator> Create(uint64_t base, uint64_t size);
 

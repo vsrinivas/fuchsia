@@ -7,6 +7,8 @@
 
 #include <utility>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 
@@ -36,23 +38,23 @@ class CopyableLambda {
 
 }  // namespace internal
 
-// Provides a wrapper for a move-only lambda that is implicitly convertible to an
-// std::function.
+// Provides a wrapper for a move-only lambda that is implicitly convertible to
+// an fit::function.
 //
-// std::function is copyable, but if a lambda captures an argument with a
+// fit::function is copyable, but if a lambda captures an argument with a
 // move-only type, the lambda itself is not copyable. In order to use the lambda
-// in places that accept std::functions, we provide a copyable object that wraps
-// the lambda and is implicitly convertible to an std::function.
+// in places that accept fit::functions, we provide a copyable object that wraps
+// the lambda and is implicitly convertible to an fit::function.
 //
 // EXAMPLE:
 //
 // std::unique_ptr<Foo> foo = ...
-// std::function<int()> func =
+// fit::function<int()> func =
 //     fxl::MakeCopyable([bar = std::move(foo)]() { return bar->count(); });
 //
 // Notice that the return type of MakeCopyable is rarely used directly. Instead,
 // callers typically erase the type by implicitly converting the return value
-// to an std::function.
+// to an fit::function.
 template <typename T>
 internal::CopyableLambda<T> MakeCopyable(T lambda) {
   return internal::CopyableLambda<T>(std::move(lambda));

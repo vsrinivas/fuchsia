@@ -85,7 +85,9 @@ source_set("thread") {
 }
 
 group("system") {
-  public_deps = [ ":allocator" ]
+  public_deps = [
+    ":allocator",
+  ]
 }
 
 source_set("allocator") {
@@ -104,6 +106,7 @@ source_set("allocator") {
 
   public_deps = [
     ":common",
+    "//zircon/public/lib/fit",
   ]
 }
 

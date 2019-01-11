@@ -11,7 +11,6 @@
 #include "garnet/bin/mdns/service/mdns_names.h"
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fsl/types/type_converters.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/type_converter.h"
 
@@ -54,8 +53,9 @@ void MdnsServiceImpl::Start() {
 
   if (host_name == kUnsetHostName) {
     // Host name not set. Try again soon.
-    async::PostDelayedTask(async_get_default_dispatcher(),
-                           [this]() { Start(); }, kReadyPollingInterval);
+    async::PostDelayedTask(
+        async_get_default_dispatcher(), [this]() { Start(); },
+        kReadyPollingInterval);
     return;
   }
 
@@ -65,15 +65,14 @@ void MdnsServiceImpl::Start() {
 
   // Publish this device as "_fuchsia._udp.".
   // TODO(dalesat): Make this a config item or delegate to another party.
-  PublishServiceInstance(kPublishAs, host_name, kPublishPort,
-                         fidl::VectorPtr<std::string>(),
-                         [this](fuchsia::mdns::MdnsResult result) {
-                           if (result != fuchsia::mdns::MdnsResult::OK) {
-                             FXL_LOG(ERROR) << "Failed to publish as "
-                                            << kPublishAs << ", result "
-                                            << static_cast<uint32_t>(result);
-                           }
-                         });
+  PublishServiceInstance(
+      kPublishAs, host_name, kPublishPort, fidl::VectorPtr<std::string>(),
+      [this](fuchsia::mdns::MdnsResult result) {
+        if (result != fuchsia::mdns::MdnsResult::OK) {
+          FXL_LOG(ERROR) << "Failed to publish as " << kPublishAs << ", result "
+                         << static_cast<uint32_t>(result);
+        }
+      });
 }
 
 void MdnsServiceImpl::ResolveHostName(std::string host_name,
@@ -352,10 +351,10 @@ void MdnsServiceImpl::ResponderPublisher::GetPublication(
   FXL_DCHECK(responder_);
   responder_->GetPublication(
       query, subtype,
-      fxl::MakeCopyable([callback = std::move(callback)](
-                            fuchsia::mdns::MdnsPublicationPtr publication_ptr) {
+      [callback = std::move(callback)](
+          fuchsia::mdns::MdnsPublicationPtr publication_ptr) {
         callback(MdnsFidlUtil::Convert(publication_ptr));
-      }));
+      });
 }
 
 }  // namespace mdns

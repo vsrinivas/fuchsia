@@ -5,6 +5,8 @@
 #include "lib/component/cpp/testing/enclosing_environment.h"
 
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "lib/component/cpp/testing/test_util.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
@@ -158,7 +160,7 @@ EnclosingEnvironment::~EnclosingEnvironment() {
   }
 }
 
-void EnclosingEnvironment::Kill(std::function<void()> callback) {
+void EnclosingEnvironment::Kill(fit::function<void()> callback) {
   env_controller_->Kill([this, callback = std::move(callback)]() {
     if (callback) {
       callback();

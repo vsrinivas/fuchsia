@@ -38,6 +38,7 @@ source_set("magma_system_tests") {
     "$magma_build_root/tests/helper:platform_device_helper",
     "$magma_build_root/tests/mock:msd",
     "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
   ]
 }
 

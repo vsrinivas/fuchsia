@@ -163,42 +163,40 @@ void BrEdrInterrogator::MakeRemoteNameRequest(const std::string& device_id) {
   auto it = pending_.find(device_id);
   ZX_DEBUG_ASSERT(it != pending_.end());
 
-  it->second->callbacks.emplace_back(
-      [device_id, self = weak_ptr_factory_.GetWeakPtr()](auto,
-                                                         const auto& event) {
-        if (hci_is_error(event, WARN, "gap-bredr",
-                         "remote name request failed")) {
-          self->Complete(device_id, event.ToStatus());
-          return;
-        }
+  it->second->callbacks.emplace_back([device_id,
+                                      self = weak_ptr_factory_.GetWeakPtr()](
+                                         auto, const auto& event) {
+    if (hci_is_error(event, WARN, "gap-bredr", "remote name request failed")) {
+      self->Complete(device_id, event.ToStatus());
+      return;
+    }
 
-        if (event.event_code() == hci::kCommandStatusEventCode) {
-          return;
-        }
+    if (event.event_code() == hci::kCommandStatusEventCode) {
+      return;
+    }
 
-        ZX_DEBUG_ASSERT(event.event_code() ==
-                        hci::kRemoteNameRequestCompleteEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() ==
+                    hci::kRemoteNameRequestCompleteEventCode);
 
-        const auto& params =
-            event.view()
-                .template payload<hci::RemoteNameRequestCompleteEventParams>();
+    const auto& params =
+        event.view()
+            .template payload<hci::RemoteNameRequestCompleteEventParams>();
 
-        size_t len = 0;
-        for (; len < hci::kMaxNameLength; len++) {
-          if (params.remote_name[len] == 0) {
-            break;
-          }
-        }
-        RemoteDevice* device = self->cache_->FindDeviceById(device_id);
-        if (!device) {
-          self->Complete(device_id, hci::Status(common::HostError::kFailed));
-          return;
-        }
-        device->SetName(
-            std::string(params.remote_name, params.remote_name + len));
+    size_t len = 0;
+    for (; len < hci::kMaxNameLength; len++) {
+      if (params.remote_name[len] == 0) {
+        break;
+      }
+    }
+    RemoteDevice* device = self->cache_->FindDeviceById(device_id);
+    if (!device) {
+      self->Complete(device_id, hci::Status(common::HostError::kFailed));
+      return;
+    }
+    device->SetName(std::string(params.remote_name, params.remote_name + len));
 
-        self->MaybeComplete(device_id);
-      });
+    self->MaybeComplete(device_id);
+  });
 
   bt_log(SPEW, "gap-bredr", "name request %s",
          device->address().ToString().c_str());
@@ -325,49 +323,48 @@ void BrEdrInterrogator::ReadRemoteExtendedFeatures(const std::string& device_id,
   auto it = pending_.find(device_id);
   ZX_DEBUG_ASSERT(it != pending_.end());
 
-  it->second->callbacks.emplace_back(
-      [device_id, handle, page, self = weak_ptr_factory_.GetWeakPtr()](
-          auto, const auto& event) {
-        if (hci_is_error(event, WARN, "gap-bredr",
-                         "read remote extended features failed")) {
-          self->Complete(device_id, event.ToStatus());
-          return;
-        }
+  it->second->callbacks.emplace_back([device_id, handle, page,
+                                      self = weak_ptr_factory_.GetWeakPtr()](
+                                         auto, const auto& event) {
+    if (hci_is_error(event, WARN, "gap-bredr",
+                     "read remote extended features failed")) {
+      self->Complete(device_id, event.ToStatus());
+      return;
+    }
 
-        if (event.event_code() == hci::kCommandStatusEventCode) {
-          return;
-        }
+    if (event.event_code() == hci::kCommandStatusEventCode) {
+      return;
+    }
 
-        ZX_DEBUG_ASSERT(event.event_code() ==
-                        hci::kReadRemoteExtendedFeaturesCompleteEventCode);
+    ZX_DEBUG_ASSERT(event.event_code() ==
+                    hci::kReadRemoteExtendedFeaturesCompleteEventCode);
 
-        const auto& params =
-            event.view()
-                .template payload<
-                    hci::ReadRemoteExtendedFeaturesCompleteEventParams>();
+    const auto& params =
+        event.view()
+            .template payload<
+                hci::ReadRemoteExtendedFeaturesCompleteEventParams>();
 
-        RemoteDevice* device = self->cache_->FindDeviceById(device_id);
-        if (!device) {
-          self->Complete(device_id, hci::Status(common::HostError::kFailed));
-          return;
-        }
-        device->SetFeaturePage(params.page_number,
-                               le64toh(params.lmp_features));
-        if (params.page_number != page) {
-          bt_log(INFO, "gap-bredr",
-                 "requested page %u and received page %u, giving up", page,
-                 params.page_number);
-          device->set_last_page_number(0);
-        } else {
-          device->set_last_page_number(params.max_page_number);
-        }
+    RemoteDevice* device = self->cache_->FindDeviceById(device_id);
+    if (!device) {
+      self->Complete(device_id, hci::Status(common::HostError::kFailed));
+      return;
+    }
+    device->SetFeaturePage(params.page_number, le64toh(params.lmp_features));
+    if (params.page_number != page) {
+      bt_log(INFO, "gap-bredr",
+             "requested page %u and received page %u, giving up", page,
+             params.page_number);
+      device->set_last_page_number(0);
+    } else {
+      device->set_last_page_number(params.max_page_number);
+    }
 
-        if (params.page_number < device->features().last_page_number()) {
-          self->ReadRemoteExtendedFeatures(device_id, handle,
-                                           params.page_number + 1);
-        }
-        self->MaybeComplete(device_id);
-      });
+    if (params.page_number < device->features().last_page_number()) {
+      self->ReadRemoteExtendedFeatures(device_id, handle,
+                                       params.page_number + 1);
+    }
+    self->MaybeComplete(device_id);
+  });
 
   bt_log(SPEW, "gap-bredr", "get ext page %u", page);
   hci_->command_channel()->SendCommand(

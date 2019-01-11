@@ -5,6 +5,8 @@
 #ifndef ZIRCON_PLATFORM_TRACE_H
 #define ZIRCON_PLATFORM_TRACE_H
 
+#include <lib/fit/function.h>
+
 #if MAGMA_ENABLE_TRACING
 #include <lib/async-loop/cpp/loop.h>
 #include <trace-provider/provider.h>
@@ -36,7 +38,7 @@ public:
     bool Initialize() override;
 
     // Can only have one observer
-    void SetObserver(std::function<void(bool)> callback) override;
+    void SetObserver(fit::function<void(bool)> callback) override;
 
 private:
     async::Loop loop_;

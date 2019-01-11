@@ -4,8 +4,10 @@
 
 #include "lib/fsl/socket/blocking_drain.h"
 
-#include <lib/zx/socket.h>
 #include <vector>
+
+#include <lib/fit/function.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/logging.h"
 
@@ -13,7 +15,7 @@ namespace fsl {
 
 bool BlockingDrainFrom(
     zx::socket source,
-    std::function<size_t(const void*, uint32_t)> write_bytes) {
+    fit::function<size_t(const void*, uint32_t)> write_bytes) {
   std::vector<char> buffer(64 * 1024);
   for (;;) {
     size_t bytes_read;

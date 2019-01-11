@@ -7,8 +7,9 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <unistd.h>
-
 #include <utility>
+
+#include <lib/fit/function.h>
 
 #include "garnet/bin/appmgr/component_controller_impl.h"
 #include "garnet/bin/appmgr/realm.h"
@@ -22,11 +23,11 @@ namespace component {
 RunnerHolder::RunnerHolder(Services services,
                            fuchsia::sys::ComponentControllerPtr controller,
                            fuchsia::sys::LaunchInfo launch_info, Realm* realm,
-                           std::function<void()> error_handler)
+                           fit::function<void()> error_handler)
     : services_(std::move(services)),
       controller_(std::move(controller)),
       impl_object_(nullptr),
-      error_handler_(error_handler),
+      error_handler_(std::move(error_handler)),
       component_id_counter_(0) {
   realm->CreateComponent(std::move(launch_info), controller_.NewRequest(),
                          [this](ComponentControllerImpl* component) {

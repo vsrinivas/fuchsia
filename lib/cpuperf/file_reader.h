@@ -10,6 +10,7 @@
 #include <functional>
 #include <string>
 
+#include <lib/fit/function.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/macros.h>
 #include <lib/zircon-internal/device/cpu-trace/cpu-perf.h>
@@ -21,7 +22,7 @@ namespace cpuperf {
 
 class FileReader final : public Reader {
  public:
-  using FileNameProducer = std::function<std::string(uint32_t trace_num)>;
+  using FileNameProducer = fit::function<std::string(uint32_t trace_num)>;
 
   static bool Create(FileNameProducer file_name_producer, uint32_t num_traces,
                      std::unique_ptr<FileReader>* out_reader);

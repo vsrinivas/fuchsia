@@ -10,6 +10,7 @@
 #include <functional>
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/binding.h"
 
@@ -45,7 +46,7 @@ namespace codec_factory {
 
 class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
-  using BindAudioDecoderCallback = std::function<void(
+  using BindAudioDecoderCallback = fit::function<void(
       fidl::InterfaceRequest<fuchsia::mediacodec::Codec>,
       fuchsia::mediacodec::CreateDecoder_Params audio_params)>;
 
@@ -87,7 +88,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
     fuchsia::mediacodec::CodecType codec_type;
     std::string_view mime_type;
     std::string_view lib_filename;
-    std::function<std::unique_ptr<codec_runner::CodecRunner>(
+    fit::function<std::unique_ptr<codec_runner::CodecRunner>(
         async_dispatcher_t* dispatcher, thrd_t fidl_thread,
         const CodecStrategy& codec_strategy)>
         create_runner;

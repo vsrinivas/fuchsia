@@ -9,6 +9,8 @@
 #include <functional>
 #include <vulkan/vulkan.hpp>
 
+#include <lib/fit/function.h>
+
 #include "lib/escher/base/reffable.h"
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/impl/command_buffer.h"
@@ -19,7 +21,7 @@
 
 namespace escher {
 
-typedef std::function<void()> FrameRetiredCallback;
+typedef fit::function<void()> FrameRetiredCallback;
 
 class Frame;
 using FramePtr = fxl::RefPtr<Frame>;

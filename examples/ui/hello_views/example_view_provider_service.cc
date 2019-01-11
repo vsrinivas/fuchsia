@@ -9,26 +9,30 @@
 #include <lib/zx/eventpair.h>
 
 #include "lib/component/cpp/startup_context.h"
+#include "lib/fxl/logging.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
-#include "lib/fxl/logging.h"
 
 namespace hello_views {
 
 ExampleViewProviderService::ExampleViewProviderService(
     component::StartupContext* startup_ctx, ViewFactory factory)
-    : startup_ctx_(startup_ctx), view_factory_fn_(factory) {
+    : startup_ctx_(startup_ctx), view_factory_fn_(std::move(factory)) {
   FXL_DCHECK(startup_ctx_);
 
-  startup_ctx->outgoing().deprecated_services()->AddService<fuchsia::ui::app::ViewProvider>(
-      [this](fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
-        bindings_.AddBinding(this, std::move(request));
-      },
-      "view_provider");
+  startup_ctx->outgoing()
+      .deprecated_services()
+      ->AddService<fuchsia::ui::app::ViewProvider>(
+          [this](
+              fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> request) {
+            bindings_.AddBinding(this, std::move(request));
+          },
+          "view_provider");
 }
 
 ExampleViewProviderService::~ExampleViewProviderService() {
-  startup_ctx_->outgoing().deprecated_services()
+  startup_ctx_->outgoing()
+      .deprecated_services()
       ->RemoveService<fuchsia::ui::app::ViewProvider>();
 }
 
