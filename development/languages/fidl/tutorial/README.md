@@ -300,7 +300,7 @@ receiving it asynchronously to its request.
 
 There's no reason why the server couldn't send another message when another event
 of interest occurs; this is the "multiple response" version of the model.
-Note that the second (and subsequent) reponses are sent *without* the client
+Note that the second (and subsequent) responses are sent *without* the client
 sending any additional messages.
 
 ### Server sends to client, without client asking for data
@@ -308,7 +308,7 @@ sending any additional messages.
 This model is also known as the "event" model.
 
 In it, a client prepares to receive messages from a server, but doesn't know
-when to expect them &mash; the messages are not only asynchronous to the client,
+when to expect them &mdash; the messages are not only asynchronous to the client,
 but are also (from a client / server point of view) "unsolicited", in that the
 client didn't explicitly request them (like it did in the previous model, above).
 
@@ -366,29 +366,31 @@ this particular method does not have a return associated with it.
 **Line 7** is the `ReceiveString` method.
 It's a little different &mdash; it doesn't have the method name in the first
 part, but rather it's given after the `->` operator.
-This tells the FIDL complier that this is an "async call" model declaration.
+This tells the FIDL compiler that this is an "async call" model declaration.
 
 # Client implementation
 
-Regardless of the target language, the `fidlc` FIDL compiler generates client code that
-has the following basic structure.
+Regardless of the target language, the `fidlc` FIDL compiler generates client
+code that has the following basic structure.
 
-The first part consists of the administration and background handling, and consists of:
+The first part consists of the administration and background handling, and
+consists of:
 
 1. some means of connecting to the server is provided
 2. an asynchronous ("background") message handling loop is started
-3. async call style and event style methods, if any, are bound to the message loop
+3. async call style and event style methods, if any, are bound to the message
+   loop
 
 The second part consists of implementations of the traditional function call or
 fire and forget style methods, as appropriate for the target language.
 Generally speaking, this consists of:
 
-1. creating a callable API and declarations,
+1. creating a callable API and declarations
 2. generating code for each API that marshals the data from the call into a FIDL
-   formatted buffer suitable for transmission to the server,
-3. generating code to transmit the data to the server,
+   formatted buffer suitable for transmission to the server
+3. generating code to transmit the data to the server
 4. in the case of function call style calls, generating code to:
-    1. wait for the response from the server,
+    1. wait for the response from the server
     2. unmarshal the data from the FIDL formatted buffer, and
     3. return the data via the API function.
 
@@ -397,19 +399,19 @@ but that's the basic outline.
 
 # Server implementation
 
-The `fidlc` FIDL compiler can also generate server code for a given target language.
-Just like the client code, this code has a common structure regardless of the
-target language.
-The code:
+The `fidlc` FIDL compiler can also generate server code for a given target
+language. Just like the client code, this code has a common structure regardless
+of the target language. The code:
 
 1. creates an object which clients can connect to,
 2. starts a main processing loop, which:
-    1. waits for messages,
+    1. waits for messages
     2. processes messages by calling out to the implementation functions
-    3. if specified, issues an asynchronous call back to the client to return the output
+    3. if specified, issues an asynchronous call back to the client to return
+       the output
 
-In the next chapters, we'll see the details of each language's implementation of the
-client and server code.
+In the next chapters, we'll see the details of each language's implementation of
+the client and server code.
 
 # Languages
 
