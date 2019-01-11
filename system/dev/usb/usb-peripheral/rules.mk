@@ -9,11 +9,15 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/usb-peripheral.c \
+    $(LOCAL_DIR)/usb-function.cpp \
+    $(LOCAL_DIR)/usb-peripheral.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
     system/ulib/fidl \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \
