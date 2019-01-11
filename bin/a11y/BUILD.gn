@@ -16,6 +16,13 @@ package("a11y_tests") {
       name = "a11y_manager_apptests"
     },
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_manager_apptests.cmx")
+      dest = "a11y_manager_apptests.cmx"
+    },
+  ]
 }
 
 package("a11y_manager") {

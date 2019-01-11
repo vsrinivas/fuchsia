@@ -32,8 +32,8 @@ package("escher_tests") {
 
   meta = [
     {
-      path = rebase_path("meta/escher_tests.cmx")
-      dest = "escher_tests.cmx"
+      path = rebase_path("meta/escher_unittests.cmx")
+      dest = "escher_unittests.cmx"
     },
   ]
 

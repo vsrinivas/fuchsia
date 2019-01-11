@@ -63,6 +63,18 @@ package("scenic_tests") {
       path = rebase_path("meta/scenic_tests.cmx")
       dest = "scenic_tests.cmx"
     },
+    {
+      path = rebase_path("meta/gfx_unittests.cmx")
+      dest = "gfx_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/input_unittests.cmx")
+      dest = "input_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/view_manager_apptests.cmx")
+      dest = "view_manager_apptests.cmx"
+    },
   ]
 
   public_deps = vulkan_validation_layers.public_deps
