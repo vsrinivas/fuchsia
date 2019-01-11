@@ -76,6 +76,7 @@ fidl("fuchsia.modular") {
     "//garnet/public/fidl/fuchsia.images",
     "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
     "//garnet/public/fidl/fuchsia.ui.policy",
     "//garnet/public/fidl/fuchsia.ui.viewsv1token",
     "//peridot/public/fidl/fuchsia.ledger",
