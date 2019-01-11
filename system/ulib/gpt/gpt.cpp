@@ -76,26 +76,22 @@ void partition_init(gpt_partition_t* part, const char* name, const uint8_t* type
 zx_status_t gpt_sync_current(int fd, uint64_t blocksize, gpt_header_t* header,
                              gpt_partition_t* ptable) {
     // write partition table first
-    off_t rc = lseek(fd, header->entries * blocksize, SEEK_SET);
     ssize_t ret;
-    if (rc < 0) {
-        return ZX_ERR_IO;
-    }
+    off_t offset;
+    offset = header->entries * blocksize;
     size_t ptable_size = header->entries_count * header->entries_size;
-    ret = write(fd, ptable, ptable_size);
-    if (ret < 0 || ret != static_cast<ssize_t>(ptable_size)) {
+    ret = pwrite(fd, ptable, ptable_size, offset);
+    if (ret != static_cast<ssize_t>(ptable_size)) {
         return ZX_ERR_IO;
     }
+
     // then write the header
-    rc = lseek(fd, header->current * blocksize, SEEK_SET);
-    if (rc < 0) {
-        return ZX_ERR_IO;
-    }
+    offset = header->current * blocksize;
 
     uint8_t block[blocksize];
     memset(block, 0, sizeof(blocksize));
     memcpy(block, header, sizeof(*header));
-    ret = write(fd, block, blocksize);
+    ret = pwrite(fd, block, blocksize, offset);
     if (ret != static_cast<ssize_t>(blocksize)) {
         return ZX_ERR_IO;
     }
@@ -236,7 +232,8 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
     // write fake mbr if needed
     uint8_t mbr[blocksize_];
-    off_t rc;
+    off_t offset;
+    ssize_t ret;
     if (!mbr_) {
         memset(mbr, 0, blocksize_);
         mbr[0x1fe] = 0x55;
@@ -249,12 +246,9 @@ zx_status_t GptDevice::FinalizeAndSync(bool persist) {
         mpart->chs_last[2] = 0xff;
         mpart->lba = 1;
         mpart->sectors = blocks_ & 0xffffffff;
-        rc = lseek(fd_.get(), 0, SEEK_SET);
-        if (rc < 0) {
-            return ZX_ERR_IO;
-        }
-        rc = write(fd_.get(), mbr, blocksize_);
-        if (rc < 0 || rc != static_cast<off_t>(blocksize_)) {
+        offset = 0;
+        ret = pwrite(fd_.get(), mbr, blocksize_, offset);
+        if (ret != static_cast<ssize_t>(blocksize_)) {
             return ZX_ERR_IO;
         }
         mbr_ = true;
@@ -387,8 +381,8 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
     uint32_t saved_crc, crc;
     gpt_partition_t* ptable;
     gpt_header_t* header;
-    off_t rc;
     ssize_t ret;
+    off_t offset;
 
     fd_.reset(dup(fd));
     if (!fd_.is_valid()) {
@@ -406,21 +400,18 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
         return ZX_ERR_INTERNAL;
     }
 
-    // Read protective MBR.
-    rc = lseek(fd_.get(), 0, SEEK_SET);
-    if (rc < 0) {
-        return ZX_ERR_INTERNAL;
-    }
-    ret = read(fd_.get(), block, blocksize);
-    if (ret < 0 || ret != static_cast<ssize_t>(blocksize)) {
-        return ZX_ERR_INTERNAL;
+    offset = 0;
+    ret = pread(fd_.get(), block, blocksize, offset);
+    if (ret != blocksize) {
+        return ZX_ERR_IO;
     }
     mbr_ = block[0x1fe] == 0x55 && block[0x1ff] == 0xaa;
 
     // read the gpt header (lba 1)
-    ret = read(fd_.get(), block, blocksize);
-    if (ret < 0 || ret != static_cast<ssize_t>(blocksize)) {
-        return ZX_ERR_INTERNAL;
+    offset = blocksize;
+    ret = pread(fd_.get(), block, blocksize, offset);
+    if (ret != blocksize) {
+        return ZX_ERR_IO;
     }
 
     header = &header_;
@@ -458,20 +449,17 @@ zx_status_t GptDevice::Init(int fd, uint32_t blocksize, uint64_t blocks) {
     }
 
     ptable = ptable_;
-
-    // read the partition table
-    rc = lseek(fd_.get(), header->entries * blocksize, SEEK_SET);
-    if (rc < 0) {
-        return ZX_ERR_INTERNAL;
-    }
     ptable_size = header->entries_size * header->entries_count;
     if (static_cast<size_t>(ptable_size) > SIZE_MAX) {
         G_PRINTF("partition table too big\n");
         return ZX_OK;
     }
-    rc = read(fd_.get(), ptable, ptable_size);
-    if (rc != ptable_size) {
-        return ZX_ERR_INTERNAL;
+
+    // read the partition table
+    offset = header->entries * blocksize;
+    ret = pread(fd_.get(), ptable, ptable_size, offset);
+    if (ret != ptable_size) {
+        return ZX_ERR_IO;
     }
 
     // partition table checksum

@@ -58,7 +58,20 @@ static zx_status_t mock_read(zxio_t* io, void* buffer, size_t capacity, size_t* 
     return ZX_OK;
 }
 
+static zx_status_t mock_read_at(zxio_t* io, size_t offset, void* buffer,
+                                size_t capacity, size_t* out_actual) {
+    memset(buffer, 0, capacity);
+    *out_actual = capacity;
+    return ZX_OK;
+}
+
 static zx_status_t mock_write(zxio_t* io, const void* buffer, size_t capacity, size_t* out_actual) {
+    *out_actual = capacity;
+    return ZX_OK;
+}
+
+static zx_status_t mock_write_at(zxio_t* io, size_t offset, const void* buffer,
+                                 size_t capacity, size_t* out_actual) {
     *out_actual = capacity;
     return ZX_OK;
 }
@@ -76,6 +89,8 @@ constexpr zxio_ops_t mock_ops = []() {
     ops.read = &mock_read;
     ops.write = &mock_write;
     ops.seek = &mock_seek;
+    ops.read_at = &mock_read_at;
+    ops.write_at = &mock_write_at;
     return ops;
 }();
 
