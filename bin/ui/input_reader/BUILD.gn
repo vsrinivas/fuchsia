@@ -53,6 +53,8 @@ source_set("fdio") {
 
   public_deps = [
     ":device",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//zircon/public/lib/fbl",
   ]
 }
 
