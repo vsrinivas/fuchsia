@@ -9,13 +9,22 @@ use {
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
+pub const BCAST_ADDR: [u8; 6] = [0xFF; 6];
+
 // IEEE Std 802.11-2016, 9.2.4.1.3
 // Frame types:
 const FRAME_TYPE_MGMT: u16 = 0;
+const FRAME_TYPE_DATA: u16 = 2;
 // Management subtypes:
 const MGMT_SUBTYPE_ASSOC_RESP: u16 = 0x01;
 const MGMT_SUBTYPE_BEACON: u16 = 0x08;
 const MGMT_SUBTYPE_AUTH: u16 = 0x0B;
+// Data subtypes:
+const DATA_SUBTYPE_DATA: u16 = 0x00;
+const DATA_SUBTYPE_QOS_DATA: u16 = 0x08;
+
+// IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
+const BITMASK_QOS: u16 = 1 << 3;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
 bitfield! {
@@ -48,6 +57,27 @@ impl FrameControl {
     }
 }
 
+// IEEE Std 802.11-2016, 9.2.4.4
+bitfield! {
+    pub struct SequenceControl(u16);
+    impl Debug;
+
+    pub frag_num, set_frag_num: 3, 0;
+    pub seq_num, set_seq_num: 15, 4;
+
+    pub value, _: 15,0;
+}
+
+impl SequenceControl {
+    pub fn from_bytes(bytes: &[u8]) -> Option<SequenceControl> {
+        if bytes.len() < 2 {
+            None
+        } else {
+            Some(SequenceControl(LittleEndian::read_u16(bytes)))
+        }
+    }
+}
+
 // IEEE Std 802.11-2016, 9.2.4.6
 bitfield! {
     #[derive(PartialEq)]
@@ -70,6 +100,40 @@ impl HtControl {
             None
         } else {
             Some(HtControl(LittleEndian::read_u32(bytes)))
+        }
+    }
+}
+
+// IEEE Std 802.11-2016, 9.4.1.4
+bitfield! {
+    pub struct CapabilityInfo(u16);
+    impl Debug;
+
+    pub ess, set_ess: 0;
+    pub ibss, set_ibss: 1;
+    pub cf_pollable, set_cf_pollable: 2;
+    pub cf_poll_req, set_cf_poll_req: 3;
+    pub privacy, set_privacy: 4;
+    pub short_preamble, set_short_preamble: 5;
+    // bit 6-7 reserved
+    pub spectrum_mgmt, set_spectrum_mgmt: 8;
+    pub qos, set_qos: 9;
+    pub short_slot_time, set_short_slot_time: 10;
+    pub apsd, set_apsd: 11;
+    pub radio_msmt, set_radio_msmt: 12;
+    // bit 13 reserved
+    pub delayed_block_ack, set_delayed_block_ack: 14;
+    pub immediate_block_ack, set_immediate_block_ack: 15;
+
+    pub value, _: 15, 0;
+}
+
+impl CapabilityInfo {
+    pub fn from_bytes(bytes: &[u8]) -> Option<CapabilityInfo> {
+        if bytes.len() < 4 {
+            None
+        } else {
+            Some(CapabilityInfo(LittleEndian::read_u16(bytes)))
         }
     }
 }
@@ -101,9 +165,43 @@ impl MgmtHdr {
     }
 }
 
+// IEEE Std 802.11-2016, 9.3.2.1
+#[repr(C, packed)]
+pub struct DataHdr {
+    pub frame_ctrl: [u8; 2],
+    pub duration: [u8; 2],
+    pub addr1: [u8; 6],
+    pub addr2: [u8; 6],
+    pub addr3: [u8; 6],
+    pub seq_ctrl: [u8; 2],
+}
+// Safe: see macro explanation.
+unsafe_impl_zerocopy_traits!(DataHdr);
+
+impl DataHdr {
+    pub fn frame_ctrl(&self) -> u16 {
+        LittleEndian::read_u16(&self.frame_ctrl)
+    }
+
+    pub fn duration(&self) -> u16 {
+        LittleEndian::read_u16(&self.duration)
+    }
+
+    pub fn seq_ctrl(&self) -> u16 {
+        LittleEndian::read_u16(&self.seq_ctrl)
+    }
+}
+
 pub enum MacFrame<B> {
     Mgmt {
         mgmt_hdr: LayoutVerified<B, MgmtHdr>,
+        ht_ctrl: Option<LayoutVerified<B, [u8; 4]>>,
+        body: B,
+    },
+    Data {
+        data_hdr: LayoutVerified<B, DataHdr>,
+        addr4: Option<LayoutVerified<B, [u8; 6]>>,
+        qos_ctrl: Option<LayoutVerified<B, [u8; 2]>>,
         ht_ctrl: Option<LayoutVerified<B, [u8; 4]>>,
         body: B,
     },
@@ -118,12 +216,12 @@ impl<B: ByteSlice> MacFrame<B> {
         let fc = FrameControl::from_bytes(&bytes[..])?;
         match fc.frame_type() {
             FRAME_TYPE_MGMT => {
-                let (mgmt_hdr, body) = LayoutVerified::new_from_prefix(bytes)?;
+                let (mgmt_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 let body = skip(body, padding)?;
 
                 // HT Control field is optional.
                 let (ht_ctrl, body) = if fc.htc_order() {
-                    let (ht_ctrl, body) = LayoutVerified::new_from_prefix(body)?;
+                    let (ht_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
                     (Some(ht_ctrl), body)
                 } else {
                     (None, body)
@@ -131,6 +229,43 @@ impl<B: ByteSlice> MacFrame<B> {
 
                 Some(MacFrame::Mgmt {
                     mgmt_hdr,
+                    ht_ctrl,
+                    body,
+                })
+            }
+            FRAME_TYPE_DATA => {
+                let (data_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                let body = skip(body, padding)?;
+
+                // addr4 field is optional.
+                let (addr4, body) = if fc.to_ds() && fc.from_ds() {
+                    let (addr4, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
+                    (Some(addr4), body)
+                } else {
+                    (None, body)
+                };
+
+                // QoS Control field is optional.
+                let has_qos_ctrl = fc.frame_subtype() & BITMASK_QOS != 0;
+                let (qos_ctrl, body) = if has_qos_ctrl {
+                    let (qos_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
+                    (Some(qos_ctrl), body)
+                } else {
+                    (None, body)
+                };
+
+                // HT Control field is optional.
+                let (ht_ctrl, body) = if fc.htc_order() {
+                    let (ht_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
+                    (Some(ht_ctrl), body)
+                } else {
+                    (None, body)
+                };
+
+                Some(MacFrame::Data {
+                    data_hdr,
+                    addr4,
+                    qos_ctrl,
                     ht_ctrl,
                     body,
                 })
@@ -145,6 +280,7 @@ impl<B: ByteSlice> MacFrame<B> {
 pub struct BeaconHdr {
     pub timestamp: [u8; 8],
     pub beacon_interval: [u8; 2],
+    // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: [u8; 2],
 }
 // Safe: see macro explanation.
@@ -191,6 +327,7 @@ impl AuthHdr {
 // IEEE Std 802.11-2016, 9.3.3.6
 #[repr(C, packed)]
 pub struct AssocRespHdr {
+    // IEEE Std 802.11-2016, 9.4.1.4
     pub capabilities: [u8; 2],
     pub status_code: [u8; 2],
     pub aid: [u8; 2],
@@ -234,15 +371,15 @@ impl<B: ByteSlice> MgmtSubtype<B> {
     pub fn parse(subtype: u16, bytes: B) -> Option<MgmtSubtype<B>> {
         match subtype {
             MGMT_SUBTYPE_BEACON => {
-                let (hdr, elements) = LayoutVerified::new_from_prefix(bytes)?;
+                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtSubtype::Beacon { hdr, elements })
             }
             MGMT_SUBTYPE_AUTH => {
-                let (hdr, elements) = LayoutVerified::new_from_prefix(bytes)?;
+                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtSubtype::Authentication { hdr, elements })
             }
             MGMT_SUBTYPE_ASSOC_RESP => {
-                let (hdr, elements) = LayoutVerified::new_from_prefix(bytes)?;
+                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 Some(MgmtSubtype::AssociationResp { hdr, elements })
             }
             subtype => Some(MgmtSubtype::Unsupported { subtype }),
@@ -250,9 +387,58 @@ impl<B: ByteSlice> MgmtSubtype<B> {
     }
 }
 
+// IEEE Std 802.2-1998, 3.2
+// IETF RFC 1042
+#[repr(C, packed)]
+pub struct LlcHdr {
+    pub dsap: u8,
+    pub ssap: u8,
+    pub control: u8,
+    pub oui: [u8; 3],
+    pub protocol_id: [u8; 2],
+}
+// Safe: see macro explanation.
+unsafe_impl_zerocopy_traits!(LlcHdr);
+
+impl LlcHdr {
+    pub fn protocol_id(&self) -> u16 {
+        LittleEndian::read_u16(&self.protocol_id)
+    }
+}
+
+pub enum DataSubtype<B> {
+    // QoS or regular data type.
+    Data {
+        is_qos: bool,
+        hdr: LayoutVerified<B, LlcHdr>,
+        payload: B,
+    },
+    Unsupported {
+        subtype: u16,
+    },
+}
+
+impl<B: ByteSlice> DataSubtype<B> {
+    pub fn parse(subtype: u16, bytes: B) -> Option<DataSubtype<B>> {
+        match subtype {
+            DATA_SUBTYPE_DATA | DATA_SUBTYPE_QOS_DATA => {
+                let (hdr, payload) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                let is_qos = subtype == DATA_SUBTYPE_QOS_DATA;
+                Some(DataSubtype::Data {
+                    hdr,
+                    is_qos,
+                    payload,
+                })
+            }
+            subtype => Some(DataSubtype::Unsupported { subtype }),
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::mem::transmute;
 
     fn make_mgmt_frame(ht_ctrl: bool, padding: bool) -> Vec<u8> {
         #[cfg_attr(rustfmt, rustfmt_skip)]
@@ -271,6 +457,49 @@ mod tests {
             bytes.extend_from_slice(&[8, 8, 8, 8]);
         }
         bytes.extend_from_slice(&[9, 9, 9]);
+        bytes
+    }
+
+    fn make_data_frame(addr4: Option<[u8; 6]>, ht_ctrl: Option<[u8; 4]>) -> Vec<u8> {
+        let mut fc = FrameControl(0);
+        fc.set_frame_type(FRAME_TYPE_DATA);
+        fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
+        fc.set_from_ds(addr4.is_some());
+        fc.set_to_ds(addr4.is_some());
+        fc.set_htc_order(ht_ctrl.is_some());
+        let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
+
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let mut bytes = vec![
+            // Data Header
+            fc[0], fc[1], // fc
+            2, 2, // duration
+            3, 3, 3, 3, 3, 3, // addr1
+            4, 4, 4, 4, 4, 4, // addr2
+            5, 5, 5, 5, 5, 5, // addr3
+            6, 6, // sequence control
+        ];
+
+        if let Some(addr4) = addr4 {
+            bytes.extend_from_slice(&addr4);
+        }
+
+        // QoS Control
+        bytes.extend_from_slice(&[1, 1]);
+
+        if let Some(ht_ctrl) = ht_ctrl {
+            bytes.extend_from_slice(&ht_ctrl);
+        }
+
+        bytes.extend_from_slice(&[
+            // LLC Header
+            7, 7, 7, // DSAP, SSAP & control
+            8, 8, 8, // OUI
+            9, 9, // eth type
+        ]);
+
+        // Some trailing bytes.
+        bytes.extend_from_slice(&[10, 10, 10]);
         bytes
     }
 
@@ -342,6 +571,60 @@ mod tests {
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
             }
             _ => panic!("failed parsing beacon frame"),
+        };
+    }
+
+    #[test]
+    fn parse_data_frame() {
+        let bytes = make_data_frame(None, None);
+        match MacFrame::parse(&bytes[..], 0) {
+            Some(MacFrame::Data {
+                data_hdr,
+                addr4,
+                qos_ctrl,
+                ht_ctrl,
+                body,
+            }) => {
+                assert_eq!([0b10001000, 0], data_hdr.frame_ctrl);
+                assert_eq!([2, 2], data_hdr.duration);
+                assert_eq!([3, 3, 3, 3, 3, 3], data_hdr.addr1);
+                assert_eq!([4, 4, 4, 4, 4, 4], data_hdr.addr2);
+                assert_eq!([5, 5, 5, 5, 5, 5], data_hdr.addr3);
+                assert_eq!([6, 6], data_hdr.seq_ctrl);
+                assert!(addr4.is_none());
+                match qos_ctrl {
+                    None => panic!("qos_ctrl expected to be present"),
+                    Some(qos_ctrl) => {
+                        assert_eq!(&[1, 1][..], &qos_ctrl[..]);
+                    }
+                };
+                assert!(ht_ctrl.is_none());
+                assert_eq!(&body[..], &[7, 7, 7, 8, 8, 8, 9, 9, 10, 10, 10]);
+            }
+            _ => panic!("failed parsing data frame"),
+        };
+    }
+
+    #[test]
+    fn parse_llc_with_addr4_ht_ctrl() {
+        let bytes = make_data_frame(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
+        match MacFrame::parse(&bytes[..], 0) {
+            Some(MacFrame::Data { data_hdr, body, .. }) => {
+                let fc = FrameControl(data_hdr.frame_ctrl());
+                match DataSubtype::parse(fc.frame_subtype(), &body[..]) {
+                    Some(DataSubtype::Data { hdr, payload, is_qos }) => {
+                        assert!(is_qos);
+                        assert_eq!(7, hdr.dsap);
+                        assert_eq!(7, hdr.ssap);
+                        assert_eq!(7, hdr.control);
+                        assert_eq!([8, 8, 8], hdr.oui);
+                        assert_eq!([9, 9], hdr.protocol_id);
+                        assert_eq!(&[10, 10, 10], payload);
+                    },
+                    _ => panic!("failed parsing LLC"),
+                }
+            }
+            _ => panic!("failed parsing data frame"),
         };
     }
 

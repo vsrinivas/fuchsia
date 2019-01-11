@@ -13,6 +13,7 @@ const IE_ID_SSID: u8 = 0;
 const IE_ID_SUPPORTED_RATES: u8 = 1;
 const IE_ID_DSSS_PARAM_SET: u8 = 3;
 const IE_ID_TIM: u8 = 5;
+const IE_ID_EXT_SUPPORTED_RATES: u8 = 50;
 
 // IEEE Std 802.11-2016, 9.4.2.2
 const SSID_IE_MIN_BODY_LEN: usize = 0;
@@ -28,6 +29,10 @@ const DSSS_PARAM_SET_IE_BODY_LEN: usize = 1;
 // IEEE Std 802.11-2016, 9.4.2.6
 const TIM_IE_MIN_PVB_LEN: usize = 1;
 const TIM_IE_MAX_PVB_LEN: usize = 251;
+
+// IEEE Std 802.11-2016, 9.4.2.13
+const EXT_SUPP_RATES_IE_MIN_BODY_LEN: usize = 1;
+const EXT_SUPP_RATES_IE_MAX_BODY_LEN: usize = 255;
 
 // IEEE Std 802.11-2016, 9.4.2.1
 const IE_HDR_LEN: usize = 2;
@@ -210,6 +215,8 @@ pub enum InfoElement<B: ByteSlice> {
     DsssParamSet { channel: u8 },
     // IEEE Std 802.11-2016, 9.4.2.6
     Tim(Tim<B>),
+    // IEEE Std 802.11-2016, 9.4.2.13
+    ExtSupportedRates(B),
     Unsupported { id: u8, body: B },
 }
 
@@ -224,12 +231,12 @@ impl<B: ByteSlice> InfoElement<B> {
         match hdr.id {
             // IEEE Std 802.11-2016, 9.4.2.2
             IE_ID_SSID => {
-                let ssid = parse_fixed_length_ie(body, SSID_IE_MIN_BODY_LEN, SSID_IE_MAX_BODY_LEN)?;
+                let ssid = parse_ie_with_bounds(body, SSID_IE_MIN_BODY_LEN, SSID_IE_MAX_BODY_LEN)?;
                 Some((InfoElement::Ssid(ssid), remaining))
             }
             // IEEE Std 802.11-2016, 9.4.2.3
             IE_ID_SUPPORTED_RATES => {
-                let rates = parse_fixed_length_ie(
+                let rates = parse_ie_with_bounds(
                     body,
                     SUPP_RATES_IE_MIN_BODY_LEN,
                     SUPP_RATES_IE_MAX_BODY_LEN,
@@ -238,7 +245,7 @@ impl<B: ByteSlice> InfoElement<B> {
             }
             // IEEE Std 802.11-2016, 9.4.2.4
             IE_ID_DSSS_PARAM_SET => {
-                let param_set = parse_fixed_length_ie(
+                let param_set = parse_ie_with_bounds(
                     body,
                     DSSS_PARAM_SET_IE_BODY_LEN,
                     DSSS_PARAM_SET_IE_BODY_LEN,
@@ -252,13 +259,22 @@ impl<B: ByteSlice> InfoElement<B> {
             }
             // IEEE Std 802.11-2016, 9.4.2.6
             IE_ID_TIM => Some((InfoElement::Tim(parse_tim(body)?), remaining)),
+            // IEEE Std 802.11-2016, 9.4.2.13
+            IE_ID_EXT_SUPPORTED_RATES => {
+                let rates = parse_ie_with_bounds(
+                    body,
+                    EXT_SUPP_RATES_IE_MIN_BODY_LEN,
+                    EXT_SUPP_RATES_IE_MAX_BODY_LEN,
+                )?;
+                Some((InfoElement::ExtSupportedRates(rates), remaining))
+            }
             // All other IEs are considered unsupported.
             id => Some((InfoElement::Unsupported { id, body }, remaining)),
         }
     }
 }
 
-fn parse_fixed_length_ie<B: ByteSlice>(body: B, min_len: usize, max_len: usize) -> Option<B> {
+fn parse_ie_with_bounds<B: ByteSlice>(body: B, min_len: usize, max_len: usize) -> Option<B> {
     if body.len() < min_len || body.len() > max_len {
         None
     } else {
@@ -770,6 +786,45 @@ mod tests {
         assert_eq!(buf[4], 3);
         assert_eq!(&buf[5..256], &[5u8; 251][..]);
         assert!(is_zero(&buf[257..]));
+    }
+
+    #[test]
+    fn parse_ext_supported_rates() {
+        match InfoElement::parse(&[50, 5, 1, 2, 3, 4, 5, 6, 7][..]) {
+            Some((InfoElement::ExtSupportedRates(rates), remaining)) => {
+                assert_eq!([1, 2, 3, 4, 5], rates);
+                assert_eq!([6, 7], remaining)
+            }
+            _ => panic!("error parsing extended supported rates IE"),
+        }
+    }
+
+    #[test]
+    fn parse_ext_supported_rates_min_max_len() {
+        // min length
+        match InfoElement::parse(&[50, 1, 8][..]) {
+            Some((InfoElement::ExtSupportedRates(rates), _)) => assert_eq!([8], rates),
+            _ => panic!("error parsing extended supported rates IE"),
+        }
+
+        // max length
+        let mut bytes = vec![50, 255];
+        bytes.extend_from_slice(&[9; 255]);
+        match InfoElement::parse(&bytes[..]) {
+            Some((InfoElement::ExtSupportedRates(rates), _)) => {
+                assert_eq!(&[9; 255][..], &rates[..])
+            }
+            _ => panic!("error parsing extended supported rates IE"),
+        }
+    }
+
+    #[test]
+    fn parse_ext_supported_rates_invalid() {
+        // too short
+        assert!(InfoElement::parse(&[50, 0][..]).is_none());
+
+        // corrupted
+        assert!(InfoElement::parse(&[50, 5, 1, 2][..]).is_none());
     }
 
     pub fn is_zero(slice: &[u8]) -> bool {
