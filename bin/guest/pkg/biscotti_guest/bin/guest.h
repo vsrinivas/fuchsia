@@ -5,9 +5,9 @@
 #ifndef GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
 #define GARNET_BIN_GUEST_PKG_BISCOTTI_GUEST_BIN_GUEST_H_
 
+#include <zircon/types.h>
 #include <deque>
 #include <memory>
-#include <zircon/types.h>
 
 #include <fuchsia/guest/cpp/fidl.h>
 #include <grpc++/grpc++.h>
@@ -48,8 +48,7 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
                                     std::unique_ptr<Guest>* guest);
 
   Guest(component::StartupContext* context,
-        fuchsia::guest::EnvironmentControllerPtr env,
-        fxl::CommandLine cl);
+        fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl);
 
   void Launch(AppLaunchRequest request);
 
@@ -88,7 +87,6 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       const vm_tools::tremplin::ContainerCreationProgress* request,
       vm_tools::tremplin::EmptyMessage* response) override;
 
-
   // |vm_tools::container::ContainerListener::Service|
   grpc::Status ContainerReady(
       grpc::ServerContext* context,
@@ -102,10 +100,9 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
       grpc::ServerContext* context,
       const vm_tools::container::UpdateApplicationListRequest* request,
       vm_tools::EmptyMessage* response) override;
-  grpc::Status OpenUrl(
-      grpc::ServerContext* context,
-      const vm_tools::container::OpenUrlRequest* request,
-      vm_tools::EmptyMessage* response) override;
+  grpc::Status OpenUrl(grpc::ServerContext* context,
+                       const vm_tools::container::OpenUrlRequest* request,
+                       vm_tools::EmptyMessage* response) override;
   grpc::Status InstallLinuxPackageProgress(
       grpc::ServerContext* context,
       const vm_tools::container::InstallLinuxPackageProgressInfo* request,

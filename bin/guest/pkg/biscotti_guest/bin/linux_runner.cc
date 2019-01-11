@@ -18,8 +18,7 @@ LinuxRunner::LinuxRunner()
 }
 
 zx_status_t LinuxRunner::Init(fxl::CommandLine cl) {
-  return Guest::CreateAndStart(context_.get(), std::move(cl),
-                                         &guest_);
+  return Guest::CreateAndStart(context_.get(), std::move(cl), &guest_);
 }
 
 void LinuxRunner::StartComponent(

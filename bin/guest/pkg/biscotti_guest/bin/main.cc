@@ -30,19 +30,21 @@ int main(int argc, const char** argv) {
 }
 
 void PrintUsage() {
-  std::cout <<
-  "Usage: run biscotti [options]\n"
-  "\n"
-  "Options:\n"
-  "--help            print this message and exit.\n"
-  "--ip <addr>       configure the guest to use ip <addr>.\n"
-  "--netmask <addr>  configure the guest to use netmask <addr>.\n"
-  "--gateway <addr>  configure the guest to use gateway <addr>.\n"
-  "--vm              boot to a minimal VM shell without networking or containers\n"
-  "                  configured\n"
-  "\n"
-  "If none of 'ip', 'netmask', or 'gateway' are provided, then the guest network\n"
-  "will be left unconfigured. You'll need to configure networking on the first\n"
-  "boot to setup the debian container.\n"
-  << std::endl;
+  std::cout << "Usage: run biscotti [options]\n"
+               "\n"
+               "Options:\n"
+               "--help            print this message and exit.\n"
+               "--ip <addr>       configure the guest to use ip <addr>.\n"
+               "--netmask <addr>  configure the guest to use netmask <addr>.\n"
+               "--gateway <addr>  configure the guest to use gateway <addr>.\n"
+               "--vm              boot to a minimal VM shell without "
+               "networking or containers\n"
+               "                  configured\n"
+               "\n"
+               "If none of 'ip', 'netmask', or 'gateway' are provided, then "
+               "the guest network\n"
+               "will be left unconfigured. You'll need to configure networking "
+               "on the first\n"
+               "boot to setup the debian container.\n"
+            << std::endl;
 }

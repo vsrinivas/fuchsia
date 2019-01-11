@@ -76,10 +76,10 @@ static fidl::VectorPtr<fuchsia::guest::BlockDevice> GetBlockDevices() {
   FXL_CHECK(file_handle) << "Failed to open stateful file";
   fidl::VectorPtr<fuchsia::guest::BlockDevice> devices;
   devices.push_back({
-    "stateful",
-    fuchsia::guest::BlockMode::READ_WRITE,
-    fuchsia::guest::BlockFormat::RAW,
-    std::move(file_handle),
+      "stateful",
+      fuchsia::guest::BlockMode::READ_WRITE,
+      fuchsia::guest::BlockFormat::RAW,
+      std::move(file_handle),
   });
   return devices;
 }
@@ -117,14 +117,16 @@ zx_status_t Guest::CreateAndStart(component::StartupContext* context,
   fuchsia::guest::EnvironmentControllerPtr guest_env;
   guestmgr->Create(kLinuxEnvirionmentName, guest_env.NewRequest());
 
-  *guest = std::make_unique<Guest>(context, std::move(guest_env), std::move(cl));
+  *guest =
+      std::make_unique<Guest>(context, std::move(guest_env), std::move(cl));
   return ZX_OK;
 }
 
 Guest::Guest(component::StartupContext* context,
-             fuchsia::guest::EnvironmentControllerPtr env,
-             fxl::CommandLine cl)
-    : guest_env_(std::move(env)), cl_(std::move(cl)), wayland_dispatcher_(context) {
+             fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
+    : guest_env_(std::move(env)),
+      cl_(std::move(cl)),
+      wayland_dispatcher_(context) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
   Start();
@@ -632,10 +634,9 @@ grpc::Status Guest::UpdateApplicationList(
   return grpc::Status::OK;
 }
 
-grpc::Status Guest::OpenUrl(
-    grpc::ServerContext* context,
-    const vm_tools::container::OpenUrlRequest* request,
-    vm_tools::EmptyMessage* response) {
+grpc::Status Guest::OpenUrl(grpc::ServerContext* context,
+                            const vm_tools::container::OpenUrlRequest* request,
+                            vm_tools::EmptyMessage* response) {
   FXL_LOG(INFO) << "Open URL";
   return grpc::Status::OK;
 }
@@ -673,7 +674,8 @@ grpc::Status Guest::UpdateMimeTypes(
   for (const auto& pair : request->mime_type_mappings()) {
     FXL_LOG(INFO) << "\t" << pair.first << ": " << pair.second;
     if (++i > 10) {
-      FXL_LOG(INFO) << "\t..." << (request->mime_type_mappings_size() - i) << " more.";
+      FXL_LOG(INFO) << "\t..." << (request->mime_type_mappings_size() - i)
+                    << " more.";
       break;
     }
   }
@@ -691,8 +693,9 @@ void Guest::DumpContainerDebugInfo() {
 
   auto grpc_status = garcon_->GetDebugInformation(&context, request, &response);
   if (!grpc_status.ok()) {
-      FXL_LOG(ERROR) << "Failed to read container debug information: " << grpc_status.error_message();
-      return;
+    FXL_LOG(ERROR) << "Failed to read container debug information: "
+                   << grpc_status.error_message();
+    return;
   }
 
   FXL_LOG(INFO) << "Container debug information:";
