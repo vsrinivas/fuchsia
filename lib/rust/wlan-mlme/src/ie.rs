@@ -4,7 +4,8 @@
 
 use {
     bitfield::bitfield,
-    zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
+    failure::{bail, ensure, Error},
+    zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned},
 };
 
 // IEEE Std 802.11-2016, 9.4.2.1, Table 9-77
@@ -29,6 +30,7 @@ const TIM_IE_MIN_PVB_LEN: usize = 1;
 const TIM_IE_MAX_PVB_LEN: usize = 251;
 
 // IEEE Std 802.11-2016, 9.4.2.1
+const IE_HDR_LEN: usize = 2;
 #[repr(C, packed)]
 pub struct InfoElementHdr {
     pub id: u8,
@@ -78,11 +80,18 @@ impl BitmapControl {
 }
 
 // IEEE Std 802.11-2016, 9.4.2.6
-pub struct Tim<B> {
+const TIM_FIXED_FIELD_BYTES: usize = 3;
+pub struct Tim<B: ByteSlice> {
     pub dtim_count: u8,
     pub dtim_period: u8,
     pub bmp_ctrl: u8,
     pub partial_virtual_bmp: B,
+}
+
+impl<B: ByteSlice> Tim<B> {
+    pub fn len(&self) -> usize {
+        TIM_FIXED_FIELD_BYTES + &self.partial_virtual_bmp[..].len()
+    }
 }
 
 pub struct InfoElementReader<'a>(&'a [u8]);
@@ -107,7 +116,92 @@ impl<'a> Iterator for InfoElementReader<'a> {
     }
 }
 
-pub enum InfoElement<B> {
+pub struct InfoElementWriter<B: ByteSliceMut> {
+    buf: B,
+}
+
+impl<B: ByteSliceMut> InfoElementWriter<B> {
+    pub fn new(buf: B) -> InfoElementWriter<B> {
+        InfoElementWriter { buf }
+    }
+
+    fn write_hdr(buf: B, ie_id: u8, body_len: usize) -> Result<(B, B), Error> {
+        ensure!(
+            buf.len() >= IE_HDR_LEN + body_len,
+            "buffer too short to write IE {} with body len {}",
+            ie_id,
+            body_len
+        );
+
+        let (mut hdr, mut body) = buf.split_at(IE_HDR_LEN);
+        hdr[0] = ie_id;
+        hdr[1] = body_len as u8;
+
+        Ok(body.split_at(body_len))
+    }
+
+    pub fn write_ssid(mut self, ssid: &[u8]) -> Result<Self, Error> {
+        ensure!(
+            ssid.len() <= SSID_IE_MAX_BODY_LEN,
+            "SSID '{:x?}' > 32 bytes",
+            ssid
+        );
+
+        let (mut body, remaining) = InfoElementWriter::write_hdr(self.buf, IE_ID_SSID, ssid.len())?;
+        &mut body[..].clone_from_slice(ssid);
+        Ok(InfoElementWriter { buf: remaining })
+    }
+
+    pub fn write_supported_rates(mut self, rates: &[u8]) -> Result<Self, Error> {
+        ensure!(
+            rates.len() >= SUPP_RATES_IE_MIN_BODY_LEN,
+            "supported rates is empty",
+        );
+        ensure!(
+            rates.len() <= SUPP_RATES_IE_MAX_BODY_LEN,
+            "too many supported rates; max: {}, got: {}",
+            SUPP_RATES_IE_MAX_BODY_LEN,
+            rates.len()
+        );
+
+        let (mut body, remaining) =
+            InfoElementWriter::write_hdr(self.buf, IE_ID_SUPPORTED_RATES, rates.len())?;
+        &mut body[..].clone_from_slice(rates);
+        Ok(InfoElementWriter { buf: remaining })
+    }
+
+    pub fn write_dsss_param_set(mut self, chan: u8) -> Result<Self, Error> {
+        let (mut body, remaining) = InfoElementWriter::write_hdr(
+            self.buf,
+            IE_ID_DSSS_PARAM_SET,
+            DSSS_PARAM_SET_IE_BODY_LEN,
+        )?;
+        body[0] = chan;
+        Ok(InfoElementWriter { buf: remaining })
+    }
+
+    pub fn write_tim<C: ByteSliceMut>(mut self, tim: &Tim<C>) -> Result<Self, Error> {
+        ensure!(
+            tim.partial_virtual_bmp.len() >= TIM_IE_MIN_PVB_LEN,
+            "partial virtual bitmap is empty",
+        );
+        ensure!(
+            tim.partial_virtual_bmp.len() <= TIM_IE_MAX_PVB_LEN,
+            "partial virtual bitmap too large; max: {}, got {}",
+            TIM_IE_MAX_PVB_LEN,
+            tim.partial_virtual_bmp.len()
+        );
+
+        let (mut body, remaining) = InfoElementWriter::write_hdr(self.buf, IE_ID_TIM, tim.len())?;
+        body[0] = tim.dtim_count;
+        body[1] = tim.dtim_period;
+        body[2] = tim.bmp_ctrl;
+        body[3..].clone_from_slice(&tim.partial_virtual_bmp[..]);
+        Ok(InfoElementWriter { buf: remaining })
+    }
+}
+
+pub enum InfoElement<B: ByteSlice> {
     // IEEE Std 802.11-2016, 9.4.2.2
     Ssid(B),
     // IEEE Std 802.11-2016, 9.4.2.3
@@ -412,5 +506,273 @@ mod tests {
             }
             _ => panic!("error parsing unknown IE"),
         }
+    }
+
+    #[test]
+    fn write_parse_many_ies() {
+        let mut buf = vec![222u8; 510];
+        InfoElementWriter::new(&mut buf[..])
+            .write_ssid("fuchsia".as_bytes())
+            .expect("error writing SSID IE")
+            .write_supported_rates(&[1u8, 2, 3, 4])
+            .expect("error writing supported rates IE")
+            .write_dsss_param_set(7)
+            .expect("error writing DSSS param set IE")
+            .write_tim(&Tim {
+                dtim_count: 1,
+                dtim_period: 2,
+                bmp_ctrl: 3,
+                partial_virtual_bmp: &mut [5u8; 10][..],
+            })
+            .expect("error writing TIM IE");
+
+        // Found (SSID, Supported-Rates, DSSS, Tim)
+        let mut found_ies = (false, false, false, false);
+        let mut iter = InfoElementReader(&buf[..]);
+        for element in &mut iter {
+            match element {
+                InfoElement::Ssid(ssid) => {
+                    assert!(!found_ies.0);
+                    found_ies.0 = true;
+                    assert_eq!("fuchsia".as_bytes(), ssid);
+                }
+                InfoElement::SupportedRates(rates) => {
+                    assert!(!found_ies.1);
+                    found_ies.1 = true;
+                    assert_eq!([1, 2, 3, 4], rates);
+                }
+                InfoElement::DsssParamSet { channel } => {
+                    assert!(!found_ies.2);
+                    found_ies.2 = true;
+                    assert_eq!(7, channel);
+                }
+                InfoElement::Tim(tim) => {
+                    assert!(!found_ies.3);
+                    found_ies.3 = true;
+                    assert_eq!(1, tim.dtim_count);
+                    assert_eq!(2, tim.dtim_period);
+                    assert_eq!(3, tim.bmp_ctrl);
+                    assert_eq!(&[5u8; 10], tim.partial_virtual_bmp);
+                }
+                _ => (),
+            }
+        }
+        assert!(found_ies.0, "SSID IE not present");
+        assert!(found_ies.1, "Supported Rates IE not present");
+        assert!(found_ies.2, "DSSS IE not present");
+        assert!(found_ies.3, "TIM IE not present");
+    }
+
+    #[test]
+    fn write_ssid() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_ssid("fuchsia".as_bytes())
+            .expect("error writing SSID IE");
+        assert_eq!(&buf[..2][..], &[0u8, 7][..]);
+        assert_eq!(&buf[2..9][..], "fuchsia".as_bytes());
+        assert!(is_zero(&buf[9..]));
+    }
+
+    #[test]
+    fn write_ssid_wildcard() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_ssid(&[])
+            .expect("error writing SSID IE");
+        assert!(is_zero(&buf[2..]));
+    }
+
+    #[test]
+    fn write_ssid_buffer_too_short() {
+        let mut buf = vec![0u8; 4];
+        let result = InfoElementWriter::new(&mut buf[..]).write_ssid("fuchsia".as_bytes());
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_ssid_too_large() {
+        let mut buf = vec![0u8; 50];
+        let result = InfoElementWriter::new(&mut buf[..]).write_ssid(&[4u8; 33][..]);
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_supported_rates() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_supported_rates(&[1u8, 2, 3, 4])
+            .expect("error writing supported rates IE");
+        assert_eq!(&buf[..2][..], &[1u8, 4][..]);
+        assert_eq!(&buf[2..6], &[1u8, 2, 3, 4][..]);
+        assert!(is_zero(&buf[7..]));
+    }
+
+    #[test]
+    fn write_supported_rates_buffer_too_short() {
+        let mut buf = vec![0u8; 4];
+        let result = InfoElementWriter::new(&mut buf[..]).write_supported_rates(&[1u8, 2, 3, 4]);
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_supported_rates_max_rates() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_supported_rates(&[1u8, 2, 3, 4, 5, 6, 7, 8])
+            .expect("error writing supported rates IE");
+        assert_eq!(&buf[..2][..], &[1u8, 8][..]);
+        assert_eq!(&buf[2..10], &[1u8, 2, 3, 4, 5, 6, 7, 8][..]);
+        assert!(is_zero(&buf[10..]));
+    }
+
+    #[test]
+    fn write_supported_rates_min_rates() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_supported_rates(&[1u8])
+            .expect("error writing supported rates IE");
+        assert_eq!(&buf[..2][..], &[1u8, 1][..]);
+        assert_eq!(buf[2], 1u8);
+        assert!(is_zero(&buf[3..]));
+    }
+
+    #[test]
+    fn write_supported_rates_no_rates() {
+        let mut buf = vec![0u8; 50];
+        let result = InfoElementWriter::new(&mut buf[..]).write_supported_rates(&[]);
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_supported_rates_too_many_rates() {
+        let mut buf = vec![0u8; 50];
+        let result = InfoElementWriter::new(&mut buf[..])
+            .write_supported_rates(&[1u8, 2, 3, 4, 5, 6, 7, 8, 9]);
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_dsss_param_set() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_dsss_param_set(77)
+            .expect("error writing DSSS param set IE");
+        assert_eq!(&buf[..2][..], &[3u8, 1][..]);
+        assert_eq!(buf[2], 77);
+        assert!(is_zero(&buf[3..]));
+    }
+
+    #[test]
+    fn write_dsss_param_set_buffer_too_short() {
+        let mut buf = vec![0u8; 2];
+        let result = InfoElementWriter::new(&mut buf[..]).write_dsss_param_set(77);
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_tim() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_tim(&Tim {
+                dtim_count: 1,
+                dtim_period: 2,
+                bmp_ctrl: 3,
+                partial_virtual_bmp: &mut [1u8, 2, 3, 4, 5, 6][..],
+            })
+            .expect("error writing TIM IE");
+        assert_eq!(&buf[..2][..], &[5u8, 9][..]);
+        assert_eq!(buf[2], 1);
+        assert_eq!(buf[3], 2);
+        assert_eq!(buf[4], 3);
+        assert_eq!(&buf[5..11][..], &[1u8, 2, 3, 4, 5, 6][..]);
+        assert!(is_zero(&buf[11..]));
+    }
+
+    #[test]
+    fn write_tim_too_short_buffer() {
+        let mut buf = vec![0u8; 5];
+        let result = InfoElementWriter::new(&mut buf[..]).write_tim(&Tim {
+            dtim_count: 1,
+            dtim_period: 2,
+            bmp_ctrl: 3,
+            partial_virtual_bmp: &mut [1u8, 2, 3, 4, 5, 6][..],
+        });
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_tim_too_short_pvb() {
+        let mut buf = vec![0u8; 50];
+        let result = InfoElementWriter::new(&mut buf[..]).write_tim(&Tim {
+            dtim_count: 1,
+            dtim_period: 2,
+            bmp_ctrl: 3,
+            partial_virtual_bmp: &mut [][..],
+        });
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_tim_too_large_pvb() {
+        let mut buf = vec![0u8; 50];
+        let result = InfoElementWriter::new(&mut buf[..]).write_tim(&Tim {
+            dtim_count: 1,
+            dtim_period: 2,
+            bmp_ctrl: 3,
+            partial_virtual_bmp: &mut [3u8; 252][..],
+        });
+        assert!(result.is_err());
+        assert!(is_zero(&buf[..]));
+    }
+
+    #[test]
+    fn write_tim_min_pvb() {
+        let mut buf = vec![0u8; 50];
+        InfoElementWriter::new(&mut buf[..])
+            .write_tim(&Tim {
+                dtim_count: 1,
+                dtim_period: 2,
+                bmp_ctrl: 3,
+                partial_virtual_bmp: &mut [5u8][..],
+            })
+            .expect("error writing TIM IE");
+        assert_eq!(&buf[..2][..], &[5u8, 4][..]);
+        assert_eq!(buf[2], 1);
+        assert_eq!(buf[3], 2);
+        assert_eq!(buf[4], 3);
+        assert_eq!(buf[5], 5);
+        assert!(is_zero(&buf[6..]));
+    }
+
+    #[test]
+    fn write_tim_max_pvb() {
+        let mut buf = vec![0u8; 300];
+        InfoElementWriter::new(&mut buf[..])
+            .write_tim(&Tim {
+                dtim_count: 1,
+                dtim_period: 2,
+                bmp_ctrl: 3,
+                partial_virtual_bmp: &mut [5u8; 251][..],
+            })
+            .expect("error writing TIM IE");
+        assert_eq!(&buf[..2][..], &[5u8, 254][..]);
+        assert_eq!(buf[2], 1);
+        assert_eq!(buf[3], 2);
+        assert_eq!(buf[4], 3);
+        assert_eq!(&buf[5..256], &[5u8; 251][..]);
+        assert!(is_zero(&buf[257..]));
+    }
+
+    pub fn is_zero(slice: &[u8]) -> bool {
+        slice.iter().all(|&x| x == 0)
     }
 }
