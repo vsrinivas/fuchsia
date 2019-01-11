@@ -35,7 +35,6 @@ package("netstack") {
 
 package("netstack_tools") {
   deps = [
-    "filter/netfilter",
     "ifconfig",
     "ifinfo",
     "netstat",
@@ -52,10 +51,6 @@ package("netstack_tools") {
     },
     {
       name = "netstat"
-      shell = true
-    },
-    {
-      name = "netfilter"
       shell = true
     },
   ]
