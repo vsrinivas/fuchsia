@@ -62,7 +62,7 @@ echo "== $BENCHMARK_LABEL: Killing processes..."
 killall root_presenter*; killall scenic*; killall basemgr*; killall view_manager*; killall flutter*; killall set_root_view*
 
 echo "== $BENCHMARK_LABEL: Configuring scenic renderer params..."
-/pkgfs/packages/run/0/bin/run set_renderer_params --render_continuously $RENDERER_PARAMS
+/pkgfs/packages/run/0/bin/run fuchsia-pkg://fuchsia.com/set_renderer_params#meta/set_renderer_params.cmx --render_continuously $RENDERER_PARAMS
 
 echo "== $BENCHMARK_LABEL: Tracing..."
 echo $TRACE_FILE

@@ -29,7 +29,8 @@ runbench_exec "${OUT_DIR}/zircon_benchmarks.json" \
     /pkgfs/packages/zircon_benchmarks/0/test/zircon_benchmarks \
     -p --out="${OUT_DIR}/zircon_benchmarks.json"
 
-vulkan_is_supported_result="$(/pkgfs/packages/run/0/bin/run vulkan_is_supported || echo '')"
+vulkan_is_supported="fuchsia-pkg://fuchsia.com/vulkan_is_supported#meta/vulkan_is_supported.cmx"
+vulkan_is_supported_result="$(/pkgfs/packages/run/0/bin/run $vulkan_is_supported || echo '')"
 if [ "${vulkan_is_supported_result}" = '1' ]; then
   # Run the gfx benchmarks in the current shell environment, because they write
   # to (hidden) global state used by runbench_finish.

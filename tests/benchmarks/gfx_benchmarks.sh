@@ -41,35 +41,42 @@ bench () {
 #
 # hello_scenic
 #
-bench "fuchsia.scenic.hello_scenic" "hello_scenic" ""
+hello_scenic="fuchsia-pkg://fuchsia.com/hello_scenic#meta/hello_scenic.cmx"
+bench "fuchsia.scenic.hello_scenic" "$hello_scenic" ""
 
 #
 # image_grid_cpp
 #
+set_root_view="fuchsia-pkg://fuchsia.com/set_root_view#meta/set_root_view.cmx"
+image_grid_cpp="fuchsia-pkg://fuchsia.com/image_grid_cpp#meta/image_grid_cpp.cmx"
+
 bench "fuchsia.scenic.image_grid_cpp_noclipping_noshadows" \
-      "set_root_view image_grid_cpp" \
+      "$set_root_view $image_grid_cpp" \
       "--unshadowed --clipping_disabled"
 
 bench "fuchsia.scenic.image_grid_cpp_noshadows" \
-      "set_root_view image_grid_cpp" \
+      "$set_root_view $image_grid_cpp" \
       "--unshadowed --clipping_enabled"
 
 bench "fuchsia.scenic.image_grid_cpp_ssdo" \
-      "set_root_view image_grid_cpp" \
+      "$set_root_view $image_grid_cpp" \
       "--screen_space_shadows --clipping_enabled"
 
 bench "fuchsia.scenic.image_grid_cpp_shadow_map" \
-      "set_root_view image_grid_cpp" \
+      "$set_root_view $image_grid_cpp" \
       "--shadow_map --clipping_enabled"
 
 bench "fuchsia.scenic.image_grid_cpp_moment_shadow_map" \
-      "set_root_view image_grid_cpp" \
+      "$set_root_view $image_grid_cpp" \
       "--moment_shadow_map --clipping_enabled"
 
 #
 # image_grid_cpp x3
 #
-IMAGE_GRID_CPP_X3_COMMAND="set_root_view tile_view image_grid_cpp image_grid_cpp image_grid_cpp"
+
+tile_view="fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx"
+
+IMAGE_GRID_CPP_X3_COMMAND="$set_root_view $tile_view $image_grid_cpp $image_grid_cpp $image_grid_cpp"
 bench "fuchsia.scenic.image_grid_cpp_x3_noclipping_noshadows" \
       "${IMAGE_GRID_CPP_X3_COMMAND}" \
       "--unshadowed --clipping_disabled"
