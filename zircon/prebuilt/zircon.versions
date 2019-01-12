@@ -60,3 +60,19 @@ fuchsia_internal/firmware/bluetooth/bcm4345c4
 fuchsia_internal/firmware/intel-adsp-sst
 	git_revision:8fc2d4e55685bf73b6f7752383da9067404a74bb
 	9d21c0035e6212f8ae944166f600e44a3f0cc35d
+
+gn/gn/linux-amd64
+	git_revision:b5a2ac6ede22611212c4368eb8ff374944e1a3aa
+	-UwtixJfzddTdK2vWdBcC13EU2WwflYJDM5POOmLvm4C
+
+gn/gn/mac-amd64
+	git_revision:b5a2ac6ede22611212c4368eb8ff374944e1a3aa
+	IYscYtxspwY-I3bBRS0vKXZvdw_BDxvUqbWpR2hVxtsC
+
+infra/ninja/linux-amd64
+	version:1.8.2
+	74ac124bfbbaabf1fd700cc821fd604effbdd918
+
+infra/ninja/mac-amd64
+	version:1.8.2
+	04d426fab9a5bd493dc03ce7274c30c4148a1cbe
