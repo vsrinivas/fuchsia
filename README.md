@@ -25,3 +25,4 @@ using a distributed offline-first storage system.
    - [Repository structure](docs/repository_structure.md)
  - [examples](examples) - examples of applications that use Peridot components
  - [public](public) - public FIDL APIs of Peridot components
+
