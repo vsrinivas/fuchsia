@@ -86,20 +86,6 @@ void trace_internal_write_duration_end_event_record_and_release_context(
     trace_release_context(context);
 }
 
-void trace_internal_write_duration_event_record(const trace_internal_duration_scope_t* scope) {
-    trace_string_ref_t category_ref;
-    trace_context_t* context =
-        trace_acquire_context_for_category(scope->category_literal, &category_ref);
-    if (likely(context)) {
-        EventHelper helper(context, scope->name_literal);
-        trace_internal_complete_args(context, scope->args, scope->num_args);
-        trace_context_write_duration_event_record(
-            context, scope->start_time, helper.ticks, &helper.thread_ref, &category_ref,
-            &helper.name_ref, scope->args, scope->num_args);
-        trace_release_context(context);
-    }
-}
-
 void trace_internal_write_async_begin_event_record_and_release_context(
     trace_context_t* context,
     const trace_string_ref_t* category_ref,

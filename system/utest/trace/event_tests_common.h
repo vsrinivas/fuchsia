@@ -8,8 +8,7 @@
 //
 // This file is also compiled with and without the NTRACE macro.
 
-#ifndef ZIRCON_SYSTEM_UTEST_TRACE_EVENT_TESTS_COMMON_H_
-#define ZIRCON_SYSTEM_UTEST_TRACE_EVENT_TESTS_COMMON_H_
+#pragma once
 
 #include <trace/event.h>
 #include <trace/event_args.h>
@@ -196,7 +195,7 @@ static bool test_duration(void) {
         TRACE_DURATION("+enabled", "name");
         TRACE_DURATION("+enabled", "name", STR_ARGS1);
         TRACE_DURATION("+enabled", "name", STR_ARGS4);
-    } // complete duration events are written when the scope exits
+    } // end events are written when the scope exits
 
     ASSERT_RECORDS("\
 String(index: 1, \"+enabled\")\n\
@@ -204,13 +203,16 @@ String(index: 2, \"process\")\n\
 KernelObject(koid: <>, type: thread, name: \"initial-thread\", {process: koid(<>)})\n\
 Thread(index: 1, <>)\n\
 String(index: 3, \"name\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {})\n\
 String(index: 4, \"k1\")\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\")})\n\
 String(index: 5, \"k2\")\n\
 String(index: 6, \"k3\")\n\
 String(index: 7, \"k4\")\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationComplete(end_ts: <>), {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationComplete(end_ts: <>), {k1: string(\"v1\")})\n\
-Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationComplete(end_ts: <>), {})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {})\n\
+Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationEnd, {})\n\
 ",
                    "");
 
@@ -1136,7 +1138,7 @@ String(index: 7, \"k4\")\n\
 Event(ts: <>, pt: <>, category: \"+enabled\", name: \"name\", DurationBegin, {k1: string(\"v1\"), k2: string(\"v2\"), k3: string(\"v3\"), k4: string(\"v4\")})\n\
 ",
                    "");
-#endif // !NTRACE
+#endif  // !NTRACE
 
     END_TRACE_TEST;
 }
@@ -1205,5 +1207,3 @@ _END_TEST_CASE(_NAME)
 #undef _NAME
 #undef _BEGIN_TEST_CASE
 #undef _END_TEST_CASE
-
-#endif // ZIRCON_SYSTEM_UTEST_TRACE_EVENT_TESTS_COMMON_H_

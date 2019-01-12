@@ -31,7 +31,6 @@ bool CompareRecords(const fbl::Vector<trace::Record>& records,
                           "|koid\\(([0-9]+)\\)"
                           "|koid: ([0-9]+)"
                           "|ts: ([0-9]+)"
-                          "|end_ts: ([0-9]+)"
                           "|(0x[0-9a-f]+)");
     ZX_DEBUG_ASSERT(squelcher);
 
@@ -93,4 +92,4 @@ bool CompareBuffer(const fbl::Vector<trace::Record>& records,
     return ComparePartialBuffer(records, SIZE_MAX, expected, nullptr);
 }
 
-} // namespace trace_testing
+}  // namespace trace_testing
