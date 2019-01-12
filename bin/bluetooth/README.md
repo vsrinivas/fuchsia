@@ -117,6 +117,27 @@ TODO(armansito): Describe integration tests
 
 ### Controlling Log Verbosity
 
+#### Drivers
+
+The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
+
+```
+fx set x64 --args="kernel_cmdline_files=[\"$FUCHSIA_DIR/kernel_cmdline.txt\"]"
+```
+Add the commands to the `$FUCHSIA_DIR/kernel_cmdline.txt`, e.g. to enable full logging for the usb transport, intel hci and host drivers:
+```
+$ cat $FUCHSIA_DIR/kernel_cmdline.txt
+driver.bt_host.log=+trace,+spew,+info,+error,+warn
+driver.bt_hci_intel.log=+trace,+spew,+info,+error,+warn
+driver.bt_transport_usb.log=+trace,+info,+error,+warn
+```
+
+(Hci drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_fake`)
+
+Using `fx set` writes these values into the image, so they will survive a restart.
+
+For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/driver-development.md#logging)
+
 #### bin/bt-gap
 
 The Bluetooth system service is invoked by sysmgr to resolve service requests.
