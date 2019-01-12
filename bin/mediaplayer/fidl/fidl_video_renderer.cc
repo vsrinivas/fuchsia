@@ -338,6 +338,13 @@ void FidlVideoRenderer::UpdateImages() {
   std::vector<fbl::RefPtr<PayloadVmo>> vmos = UseInputVmos().GetVmos();
   FXL_DCHECK(!vmos.empty());
 
+  if (vmos[0]->size() < image_info_.stride * image_info_.height) {
+    // The payload VMOs are too small for the images. We will be getting a new
+    // set of VMOs shortly, at which time |OnInputConnectionReady| will be
+    // called, and we'll he here again with good VMOs.
+    return;
+  }
+
   image_id_base_ = next_image_id_base_;
   next_image_id_base_ = image_id_base_ + vmos.size();
 
