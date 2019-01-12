@@ -89,19 +89,17 @@ class OutputBuffer {
   OutputBuffer();
 
   // Creates an output buffer with one substring in it.
-  explicit OutputBuffer(std::string str);
+  OutputBuffer(std::string str,
+               TextForegroundColor fg = TextForegroundColor::kDefault,
+               TextBackgroundColor bg = TextBackgroundColor::kDefault);
   OutputBuffer(Syntax syntax, std::string str);
-  OutputBuffer(TextForegroundColor color, std::string str);
 
   ~OutputBuffer();
 
-  // Helpers to construct an OutputBuffer with one substring in it.
-  // TODO(brettw) remove in favor of using the constructors.
-  static OutputBuffer WithContents(std::string str);
-  static OutputBuffer WithContents(Syntax syntax, std::string str);
-
   // Appends the given type.
-  void Append(std::string str);
+  void Append(std::string str,
+              TextForegroundColor fg = TextForegroundColor::kDefault,
+              TextBackgroundColor bg = TextBackgroundColor::kDefault);
   void Append(Syntax syntax, std::string str);
   void Append(OutputBuffer buffer);
   void Append(const Err& err);
@@ -118,9 +116,6 @@ class OutputBuffer {
   // Returns the number of Unicode characters in the buffer. Backed by the
   // version in string_util.h, see that for documentation.
   size_t UnicodeCharWidth() const;
-
-  void SetBackgroundColor(TextBackgroundColor);
-  void SetForegroundColor(TextForegroundColor);
 
   void Clear();
 
@@ -140,13 +135,14 @@ class OutputBuffer {
  private:
   struct Span {
     Span(Syntax s, std::string t);
-    Span(TextForegroundColor fg, std::string t);
+    Span(std::string t, TextForegroundColor fg, TextBackgroundColor bg);
 
     Syntax syntax = Syntax::kNormal;
-    // This will only be used when Syntax is kNormal.
-    // This is normally set through the OutputBuffer interface.
-    TextBackgroundColor background = TextBackgroundColor::kDefault;
+
+    // Explicit colors will only be used when Syntax is kNormal.
     TextForegroundColor foreground = TextForegroundColor::kDefault;
+    TextBackgroundColor background = TextBackgroundColor::kDefault;
+
     std::string text;
   };
   std::vector<Span> spans_;

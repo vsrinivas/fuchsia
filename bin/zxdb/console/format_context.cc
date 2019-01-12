@@ -16,8 +16,8 @@
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_table.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
-#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/console/source_util.h"
+#include "garnet/bin/zxdb/console/string_util.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/strings/string_printf.h"
@@ -147,8 +147,8 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
   // a current line without clamping.
   int first_line = std::max(1, opts.first_line);
 
-  std::vector<std::string> context = ExtractSourceLines(file_contents,
-      first_line, opts.last_line);
+  std::vector<std::string> context =
+      ExtractSourceLines(file_contents, first_line, opts.last_line);
   if (context.empty()) {
     // No source found for this location. If highlight_line exists, assume
     // it's the one the user cares about.
@@ -201,15 +201,13 @@ Err FormatSourceContext(const std::string& file_name_for_errors,
     std::string number = fxl::StringPrintf("%d", line_number);
     if (line_number == opts.highlight_line) {
       // This is the line to mark.
-      row.push_back(
-          OutputBuffer::WithContents(Syntax::kHeading, std::move(number)));
-      row.push_back(
-          HighlightLine(std::move(line_text), opts.highlight_column));
+      row.emplace_back(Syntax::kHeading, std::move(number));
+      row.push_back(HighlightLine(std::move(line_text), opts.highlight_column));
     } else {
       // Normal context line.
       Syntax syntax = opts.dim_others ? Syntax::kComment : Syntax::kNormal;
-      row.push_back(OutputBuffer::WithContents(syntax, std::move(number)));
-      row.push_back(OutputBuffer::WithContents(syntax, std::move(line_text)));
+      row.emplace_back(syntax, std::move(number));
+      row.emplace_back(syntax, std::move(line_text));
     }
   }
 
@@ -266,8 +264,8 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
     out_row.push_back(std::move(margin));
 
     if (opts.emit_addresses) {
-      out_row.push_back(OutputBuffer::WithContents(
-          Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, row.address)));
+      out_row.emplace_back(Syntax::kComment,
+                           fxl::StringPrintf("0x%" PRIx64, row.address));
     }
     if (opts.emit_bytes) {
       std::string bytes_str;
@@ -276,18 +274,14 @@ Err FormatAsmContext(const ArchInfo* arch_info, const MemoryDump& dump,
           bytes_str.push_back(' ');
         bytes_str.append(fxl::StringPrintf("%2.2x", row.bytes[i]));
       }
-      out_row.push_back(
-          OutputBuffer::WithContents(Syntax::kComment, std::move(bytes_str)));
+      out_row.emplace_back(Syntax::kComment, std::move(bytes_str));
     }
 
     Syntax op_param_syntax =
         row.address == opts.active_address ? Syntax::kHeading : Syntax::kNormal;
-    out_row.push_back(
-        OutputBuffer::WithContents(op_param_syntax, std::move(row.op)));
-    out_row.push_back(
-        OutputBuffer::WithContents(op_param_syntax, std::move(row.params)));
-    out_row.push_back(
-        OutputBuffer::WithContents(Syntax::kComment, std::move(row.comment)));
+    out_row.emplace_back(op_param_syntax, std::move(row.op));
+    out_row.emplace_back(op_param_syntax, std::move(row.params));
+    out_row.emplace_back(Syntax::kComment, std::move(row.comment));
   }
 
   std::vector<ColSpec> spec;

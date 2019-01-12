@@ -185,12 +185,12 @@ Err FormatRegisters(const FormatRegisterOptions& options,
 std::vector<OutputBuffer> DescribeRegister(const Register& reg,
                                            TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(color, RegisterIDToString(reg.id()));
+  result.emplace_back(RegisterIDToString(reg.id()), color);
 
   if (reg.size() <= 8) {
     // Treat <= 64 bit registers as numbers.
     uint64_t value = reg.GetValue();
-    result.emplace_back(color, fxl::StringPrintf("0x%" PRIx64, value));
+    result.emplace_back(fxl::StringPrintf("0x%" PRIx64, value), color);
 
     // For plausible small integers, show the decimal value also. This size
     // check is intended to avoid cluttering up the results with large numbers
@@ -199,8 +199,8 @@ std::vector<OutputBuffer> DescribeRegister(const Register& reg,
     if (value <= kMaxSmallMagnitude ||
         llabs(static_cast<long long int>(value)) <=
             static_cast<long long int>(kMaxSmallMagnitude)) {
-      result.emplace_back(color,
-                          fxl::StringPrintf("= %d", static_cast<int>(value)));
+      result.emplace_back(fxl::StringPrintf("= %d", static_cast<int>(value)),
+                          color);
     } else {
       result.emplace_back();
     }
@@ -209,9 +209,9 @@ std::vector<OutputBuffer> DescribeRegister(const Register& reg,
     std::string hex_out;
     Err err = GetLittleEndianHexOutput(reg.data(), &hex_out);
     if (!err.ok())
-      result.emplace_back(color, err.msg());
+      result.emplace_back(err.msg(), color);
     else
-      result.emplace_back(color, std::move(hex_out));
+      result.emplace_back(std::move(hex_out), color);
   }
 
   return result;

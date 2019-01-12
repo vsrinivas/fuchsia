@@ -162,17 +162,16 @@ void MemoryAnalysis::DoAnalysis() {
     uint64_t address = begin_address_ + offset;
 
     // Address.
-    row.push_back(OutputBuffer::WithContents(
-        Syntax::kComment, fxl::StringPrintf("0x%" PRIx64, address)));
+    row.emplace_back(Syntax::kComment,
+                     fxl::StringPrintf("0x%" PRIx64, address));
 
     // Data
     uint64_t data_value = 0;
     bool has_data = GetData(address, &data_value);
     if (has_data) {
-      row.push_back(OutputBuffer::WithContents(
-          fxl::StringPrintf("0x%016" PRIx64, data_value)));
+      row.emplace_back(fxl::StringPrintf("0x%016" PRIx64, data_value));
     } else {
-      row.push_back(OutputBuffer::WithContents("<invalid memory>"));
+      row.emplace_back("<invalid memory>");
     }
 
     std::string annotation = GetAnnotationsBetween(address, address + kAlign);

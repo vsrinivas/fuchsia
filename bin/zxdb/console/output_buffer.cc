@@ -174,97 +174,128 @@ static const ForegroundColorMap& GetForegroundColorMap() {
 
 const char* SyntaxToString(Syntax syntax) {
   switch (syntax) {
-    case Syntax::kNormal: return "kNormal";
-    case Syntax::kComment: return "kComment";
-    case Syntax::kHeading: return "kHeading";
-    case Syntax::kError: return "kError";
-    case Syntax::kWarning: return "kWarning";
-    case Syntax::kSpecial: return "kSpecial";
-    case Syntax::kReversed: return "kReversed";
-    case Syntax::kVariable: return "kVariable";
+    case Syntax::kNormal:
+      return "kNormal";
+    case Syntax::kComment:
+      return "kComment";
+    case Syntax::kHeading:
+      return "kHeading";
+    case Syntax::kError:
+      return "kError";
+    case Syntax::kWarning:
+      return "kWarning";
+    case Syntax::kSpecial:
+      return "kSpecial";
+    case Syntax::kReversed:
+      return "kReversed";
+    case Syntax::kVariable:
+      return "kVariable";
   }
   return nullptr;
 }
 
 const char* TextBackgroundColorToString(TextBackgroundColor color) {
   switch (color) {
-    case TextBackgroundColor::kDefault: return "kDefault";
-    case TextBackgroundColor::kBlack: return "kBlack";
-    case TextBackgroundColor::kBlue: return "kBlue";
-    case TextBackgroundColor::kCyan: return "kCyan";
-    case TextBackgroundColor::kGray: return "kGray";
-    case TextBackgroundColor::kGreen: return "kGreen";
-    case TextBackgroundColor::kMagenta: return "kMagenta";
-    case TextBackgroundColor::kRed: return "kRed";
-    case TextBackgroundColor::kYellow: return "kYellow";
-    case TextBackgroundColor::kWhite: return "kWhite";
-    case TextBackgroundColor::kLightBlue: return "kLightBlue";
-    case TextBackgroundColor::kLightCyan: return "kLightCyan";
-    case TextBackgroundColor::kLightGray: return "kLightGray";
-    case TextBackgroundColor::kLightGreen: return "kLightGreen";
-    case TextBackgroundColor::kLightMagenta: return "kLightMagenta";
-    case TextBackgroundColor::kLightRed: return "kLightRed";
-    case TextBackgroundColor::kLightYellow: return "kLightYellow";
+    case TextBackgroundColor::kDefault:
+      return "kDefault";
+    case TextBackgroundColor::kBlack:
+      return "kBlack";
+    case TextBackgroundColor::kBlue:
+      return "kBlue";
+    case TextBackgroundColor::kCyan:
+      return "kCyan";
+    case TextBackgroundColor::kGray:
+      return "kGray";
+    case TextBackgroundColor::kGreen:
+      return "kGreen";
+    case TextBackgroundColor::kMagenta:
+      return "kMagenta";
+    case TextBackgroundColor::kRed:
+      return "kRed";
+    case TextBackgroundColor::kYellow:
+      return "kYellow";
+    case TextBackgroundColor::kWhite:
+      return "kWhite";
+    case TextBackgroundColor::kLightBlue:
+      return "kLightBlue";
+    case TextBackgroundColor::kLightCyan:
+      return "kLightCyan";
+    case TextBackgroundColor::kLightGray:
+      return "kLightGray";
+    case TextBackgroundColor::kLightGreen:
+      return "kLightGreen";
+    case TextBackgroundColor::kLightMagenta:
+      return "kLightMagenta";
+    case TextBackgroundColor::kLightRed:
+      return "kLightRed";
+    case TextBackgroundColor::kLightYellow:
+      return "kLightYellow";
   }
   return nullptr;
 }
 
 const char* TextForegroundColorToString(TextForegroundColor color) {
   switch (color) {
-    case TextForegroundColor::kDefault: return "kDefault";
-    case TextForegroundColor::kBlack: return "kBlack";
-    case TextForegroundColor::kBlue: return "kBlue";
-    case TextForegroundColor::kCyan: return "kCyan";
-    case TextForegroundColor::kGray: return "kGray";
-    case TextForegroundColor::kGreen: return "kGreen";
-    case TextForegroundColor::kMagenta: return "kMagenta";
-    case TextForegroundColor::kRed: return "kRed";
-    case TextForegroundColor::kYellow: return "kYellow";
-    case TextForegroundColor::kWhite: return "kWhite";
-    case TextForegroundColor::kLightBlue: return "kLightBlue";
-    case TextForegroundColor::kLightCyan: return "kLightCyan";
-    case TextForegroundColor::kLightGray: return "kLightGray";
-    case TextForegroundColor::kLightGreen: return "kLightGreen";
-    case TextForegroundColor::kLightMagenta: return "kLightMagenta";
-    case TextForegroundColor::kLightRed: return "kLightRed";
-    case TextForegroundColor::kLightYellow: return "kLightYellow";
+    case TextForegroundColor::kDefault:
+      return "kDefault";
+    case TextForegroundColor::kBlack:
+      return "kBlack";
+    case TextForegroundColor::kBlue:
+      return "kBlue";
+    case TextForegroundColor::kCyan:
+      return "kCyan";
+    case TextForegroundColor::kGray:
+      return "kGray";
+    case TextForegroundColor::kGreen:
+      return "kGreen";
+    case TextForegroundColor::kMagenta:
+      return "kMagenta";
+    case TextForegroundColor::kRed:
+      return "kRed";
+    case TextForegroundColor::kYellow:
+      return "kYellow";
+    case TextForegroundColor::kWhite:
+      return "kWhite";
+    case TextForegroundColor::kLightBlue:
+      return "kLightBlue";
+    case TextForegroundColor::kLightCyan:
+      return "kLightCyan";
+    case TextForegroundColor::kLightGray:
+      return "kLightGray";
+    case TextForegroundColor::kLightGreen:
+      return "kLightGreen";
+    case TextForegroundColor::kLightMagenta:
+      return "kLightMagenta";
+    case TextForegroundColor::kLightRed:
+      return "kLightRed";
+    case TextForegroundColor::kLightYellow:
+      return "kLightYellow";
   }
   return nullptr;
 }
 
-OutputBuffer::Span::Span(Syntax s, std::string t) : syntax(s), text(std::move(t)) {}
-OutputBuffer::Span::Span(TextForegroundColor fg, std::string t) : foreground(fg), text(std::move(t)) {}
+OutputBuffer::Span::Span(Syntax s, std::string t)
+    : syntax(s), text(std::move(t)) {}
+OutputBuffer::Span::Span(std::string t, TextForegroundColor fg,
+                         TextBackgroundColor bg)
+    : foreground(fg), background(bg), text(std::move(t)) {}
 
 OutputBuffer::OutputBuffer() = default;
 
-OutputBuffer::OutputBuffer(std::string str) { Append(std::move(str)); }
-
-OutputBuffer::OutputBuffer(Syntax syntax, std::string str) {
-  Append(syntax, std::move(str));
+OutputBuffer::OutputBuffer(std::string str, TextForegroundColor fg,
+                           TextBackgroundColor bg) {
+  spans_.emplace_back(std::move(str), fg, bg);
 }
 
-OutputBuffer::OutputBuffer(TextForegroundColor color, std::string str) {
-  spans_.emplace_back(color, std::move(str));
+OutputBuffer::OutputBuffer(Syntax syntax, std::string str) {
+  spans_.emplace_back(syntax, std::move(str));
 }
 
 OutputBuffer::~OutputBuffer() = default;
 
-// static
-OutputBuffer OutputBuffer::WithContents(std::string str) {
-  OutputBuffer result;
-  result.Append(std::move(str));
-  return result;
-}
-
-// static
-OutputBuffer OutputBuffer::WithContents(Syntax syntax, std::string str) {
-  OutputBuffer result;
-  result.Append(syntax, str);
-  return result;
-}
-
-void OutputBuffer::Append(std::string str) {
-  spans_.emplace_back(Syntax::kNormal, std::move(str));
+void OutputBuffer::Append(std::string str, TextForegroundColor fg,
+                          TextBackgroundColor bg) {
+  spans_.emplace_back(std::move(str), fg, bg);
 }
 
 void OutputBuffer::Append(Syntax syntax, std::string str) {
@@ -346,19 +377,7 @@ size_t OutputBuffer::UnicodeCharWidth() const {
   return result;
 }
 
-void OutputBuffer::SetBackgroundColor(TextBackgroundColor color) {
-  for (Span& span : spans_)
-    span.background = color;
-}
-
-void OutputBuffer::SetForegroundColor(TextForegroundColor color) {
-  for (Span& span : spans_)
-    span.foreground = color;
-}
-
-void OutputBuffer::Clear() {
-  spans_.clear();
-}
+void OutputBuffer::Clear() { spans_.clear(); }
 
 std::string OutputBuffer::GetDebugString() const {
   // Normalize so the output is the same even if it was built with different
@@ -369,8 +388,7 @@ std::string OutputBuffer::GetDebugString() const {
       normalized.push_back(cur);
     } else {
       Span& prev = normalized.back();
-      if (prev.syntax == cur.syntax &&
-          prev.background == cur.background &&
+      if (prev.syntax == cur.syntax && prev.background == cur.background &&
           prev.foreground == cur.foreground)
         prev.text.append(cur.text);  // Merge: continuation of same format.
       else

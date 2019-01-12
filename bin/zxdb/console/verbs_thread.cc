@@ -428,8 +428,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
   }
 
   if (vars.empty()) {
-    Console::get()->Output(
-        OutputBuffer::WithContents("No local variables in scope."));
+    Console::get()->Output("No local variables in scope.");
     return Err();
   }
 
@@ -444,7 +443,7 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     helper->AppendVariable(location.symbol_context(),
                            cmd.frame()->GetSymbolDataProvider(), pair.second,
                            options);
-    helper->Append(OutputBuffer::WithContents("\n"));
+    helper->Append(OutputBuffer("\n"));
   }
   helper->Complete(
       [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });

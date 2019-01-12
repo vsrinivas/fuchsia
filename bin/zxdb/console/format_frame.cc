@@ -59,8 +59,8 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       else
         helper->Append("  ");
 
-      helper->Append(OutputBuffer::WithContents(Syntax::kSpecial,
-                                                fxl::StringPrintf("%d ", i)));
+      helper->Append(
+          OutputBuffer(Syntax::kSpecial, fxl::StringPrintf("%d ", i)));
 
       // Supply "-1" for the frame index to suppress printing (we already
       // did it above).
@@ -107,7 +107,7 @@ void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
                      const FormatValueOptions& options, int id) {
   if (id >= 0)
-    out->Append(OutputBuffer::WithContents(fxl::StringPrintf("Frame %d ", id)));
+    out->Append(OutputBuffer(fxl::StringPrintf("Frame %d ", id)));
 
   // Only print the location if it has symbols, otherwise the hex
   // address will be shown twice.

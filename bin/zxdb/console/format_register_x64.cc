@@ -25,12 +25,9 @@ namespace zxdb {
 
 namespace {
 
-
 inline void PushName(const Register& reg, TextForegroundColor color,
                      std::vector<OutputBuffer>* row) {
-  OutputBuffer buf(RegisterIDToString(reg.id()));
-  buf.SetForegroundColor(color);
-  row->emplace_back(std::move(buf));
+  row->emplace_back(RegisterIDToString(reg.id()), color);
 }
 
 inline Err PushHex(const Register& reg, TextForegroundColor color,
@@ -39,9 +36,7 @@ inline Err PushHex(const Register& reg, TextForegroundColor color,
   Err err = GetLittleEndianHexOutput(reg.data(), &hex_out, length);
   if (!err.ok())
     return err;
-  OutputBuffer buf(std::move(hex_out));
-  buf.SetForegroundColor(color);
-  row->emplace_back(std::move(buf));
+  row->emplace_back(std::move(hex_out), color);
   return Err();
 }
 
@@ -51,9 +46,7 @@ inline Err PushFP(const Register& reg, TextForegroundColor color,
   Err err = GetFPString(reg.data(), &fp_val);
   if (!err.ok())
     return err;
-  OutputBuffer fp_out(std::move(fp_val));
-  fp_out.SetForegroundColor(color);
-  row->emplace_back(std::move(fp_out));
+  row->emplace_back(std::move(fp_val), color);
   return Err();
 }
 
@@ -68,28 +61,23 @@ TextForegroundColor GetRowColor(size_t table_len) {
 std::vector<OutputBuffer> DescribeRflags(const Register& rflags,
                                          TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(color, RegisterIDToString(rflags.id()));
+  result.emplace_back(RegisterIDToString(rflags.id()), color);
 
   uint64_t value = rflags.GetValue();
 
   // Hex value: rflags is a 32 bit value.
-  result.emplace_back(color, fxl::StringPrintf("0x%08" PRIx64, value));
+  result.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
 
   // Decode individual flags.
   result.emplace_back(
-      color,
       fxl::StringPrintf(
           "CF=%d, PF=%d, AF=%d, ZF=%d, SF=%d, TF=%d, IF=%d, DF=%d, OF=%d",
-          X86_FLAG_VALUE(value, RflagsCF),
-          X86_FLAG_VALUE(value, RflagsPF),
-          X86_FLAG_VALUE(value, RflagsAF),
-          X86_FLAG_VALUE(value, RflagsZF),
-          X86_FLAG_VALUE(value, RflagsSF),
-          X86_FLAG_VALUE(value, RflagsTF),
-          X86_FLAG_VALUE(value, RflagsIF),
-          X86_FLAG_VALUE(value, RflagsDF),
-          X86_FLAG_VALUE(value, RflagsOF)));
-
+          X86_FLAG_VALUE(value, RflagsCF), X86_FLAG_VALUE(value, RflagsPF),
+          X86_FLAG_VALUE(value, RflagsAF), X86_FLAG_VALUE(value, RflagsZF),
+          X86_FLAG_VALUE(value, RflagsSF), X86_FLAG_VALUE(value, RflagsTF),
+          X86_FLAG_VALUE(value, RflagsIF), X86_FLAG_VALUE(value, RflagsDF),
+          X86_FLAG_VALUE(value, RflagsOF)),
+      color);
 
   return result;
 }
@@ -105,16 +93,13 @@ std::vector<OutputBuffer> DescribeRflagsExtended(const Register& rflags,
 
   // Decode individual flags.
   result.emplace_back(
-      color, fxl::StringPrintf(
-                 "IOPL=%d, NT=%d, RF=%d, VM=%d, AC=%d, VIF=%d, VIP=%d, ID=%d",
-                 X86_FLAG_VALUE(value, RflagsIOPL),
-                 X86_FLAG_VALUE(value, RflagsNT),
-                 X86_FLAG_VALUE(value, RflagsRF),
-                 X86_FLAG_VALUE(value, RflagsVM),
-                 X86_FLAG_VALUE(value, RflagsAC),
-                 X86_FLAG_VALUE(value, RflagsVIF),
-                 X86_FLAG_VALUE(value, RflagsVIP),
-                 X86_FLAG_VALUE(value, RflagsID)));
+      fxl::StringPrintf(
+          "IOPL=%d, NT=%d, RF=%d, VM=%d, AC=%d, VIF=%d, VIP=%d, ID=%d",
+          X86_FLAG_VALUE(value, RflagsIOPL), X86_FLAG_VALUE(value, RflagsNT),
+          X86_FLAG_VALUE(value, RflagsRF), X86_FLAG_VALUE(value, RflagsVM),
+          X86_FLAG_VALUE(value, RflagsAC), X86_FLAG_VALUE(value, RflagsVIF),
+          X86_FLAG_VALUE(value, RflagsVIP), X86_FLAG_VALUE(value, RflagsID)),
+      color);
 
   return result;
 }
@@ -253,19 +238,20 @@ Err FormatFPRegisters(const std::vector<Register>& registers,
 std::vector<OutputBuffer> FormatDr6(const Register& dr6,
                                     TextForegroundColor color) {
   std::vector<OutputBuffer> result;
-  result.emplace_back(color, RegisterIDToString(dr6.id()));
+  result.emplace_back(RegisterIDToString(dr6.id()), color);
 
   // Write as padded 32-bit value.
   uint64_t value = dr6.GetValue();
-  result.emplace_back(color, fxl::StringPrintf("0x%08" PRIx64, value));
+  result.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
 
   result.emplace_back(
-      color, fxl::StringPrintf(
-                 "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
-                 X86_FLAG_VALUE(value, Dr6B0), X86_FLAG_VALUE(value, Dr6B1),
-                 X86_FLAG_VALUE(value, Dr6B2), X86_FLAG_VALUE(value, Dr6B3),
-                 X86_FLAG_VALUE(value, Dr6BD), X86_FLAG_VALUE(value, Dr6BS),
-                 X86_FLAG_VALUE(value, Dr6BT)));
+      fxl::StringPrintf(
+          "B0=%d, B1=%d, B2=%d, B3=%d, BD=%d, BS=%d, BT=%d",
+          X86_FLAG_VALUE(value, Dr6B0), X86_FLAG_VALUE(value, Dr6B1),
+          X86_FLAG_VALUE(value, Dr6B2), X86_FLAG_VALUE(value, Dr6B3),
+          X86_FLAG_VALUE(value, Dr6BD), X86_FLAG_VALUE(value, Dr6BS),
+          X86_FLAG_VALUE(value, Dr6BT)),
+      color);
 
   return result;
 }
@@ -277,13 +263,12 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
   auto& first_row = rows->back();
 
   // First row gets the name and raw value (padded 32 bits).
-  first_row.emplace_back(color, RegisterIDToString(dr7.id()));
+  first_row.emplace_back(RegisterIDToString(dr7.id()), color);
   uint64_t value = dr7.GetValue();
-  first_row.emplace_back(color, fxl::StringPrintf("0x%08" PRIx64, value));
+  first_row.emplace_back(fxl::StringPrintf("0x%08" PRIx64, value), color);
 
   // First row decoded values.
   first_row.emplace_back(
-      color,
       fxl::StringPrintf(
           "L0=%d, G0=%d, L1=%d, G1=%d, L2=%d, G2=%d, L3=%d, G4=%d, LE=%d, "
           "GE=%d, "
@@ -293,7 +278,8 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
           X86_FLAG_VALUE(value, Dr7L2), X86_FLAG_VALUE(value, Dr7G2),
           X86_FLAG_VALUE(value, Dr7L3), X86_FLAG_VALUE(value, Dr7G3),
           X86_FLAG_VALUE(value, Dr7LE), X86_FLAG_VALUE(value, Dr7GE),
-          X86_FLAG_VALUE(value, Dr7GD)));
+          X86_FLAG_VALUE(value, Dr7GD)),
+      color);
 
   // Second row only gets decoded values in the 3rd column.
   rows->emplace_back();
@@ -301,14 +287,14 @@ void FormatDr7(const Register& dr7, TextForegroundColor color,
   second_row.resize(2);  // Default-construct two empty cols.
 
   second_row.emplace_back(
-      color,
       fxl::StringPrintf(
           "R/W0=%d, LEN0=%d, R/W1=%d, LEN1=%d, R/W2=%d, "
           "LEN2=%d, R/W3=%d, LEN3=%d",
           X86_FLAG_VALUE(value, Dr7RW0), X86_FLAG_VALUE(value, Dr7LEN0),
           X86_FLAG_VALUE(value, Dr7RW1), X86_FLAG_VALUE(value, Dr7LEN1),
           X86_FLAG_VALUE(value, Dr7RW2), X86_FLAG_VALUE(value, Dr7LEN2),
-          X86_FLAG_VALUE(value, Dr7RW3), X86_FLAG_VALUE(value, Dr7LEN3)));
+          X86_FLAG_VALUE(value, Dr7RW3), X86_FLAG_VALUE(value, Dr7LEN3)),
+      color);
 }
 
 void FormatDebugRegisters(const std::vector<Register>& registers,
