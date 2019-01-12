@@ -262,7 +262,7 @@ void BrEdrInterrogator::ReadRemoteFeatures(const std::string& device_id,
       hci::kReadRemoteSupportedFeatures,
       sizeof(hci::ReadRemoteSupportedFeaturesCommandParams));
   packet->mutable_view()
-      ->mutable_payload<hci::ReadRemoteVersionInfoCommandParams>()
+      ->mutable_payload<hci::ReadRemoteSupportedFeaturesCommandParams>()
       ->connection_handle = htole16(handle);
 
   auto it = pending_.find(device_id);
