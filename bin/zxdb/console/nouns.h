@@ -4,8 +4,12 @@
 
 #pragma once
 
+#include <map>
+#include <vector>
+
 #include "garnet/bin/zxdb/common/err.h"
-#include "garnet/bin/zxdb/console/command.h"
+#include "garnet/bin/zxdb/console/command_group.h"
+#include "garnet/bin/zxdb/console/switch_record.h"
 
 namespace zxdb {
 
@@ -13,6 +17,46 @@ class Command;
 class Console;
 class ConsoleContext;
 class Thread;
+
+enum class Noun {
+  kNone = 0,
+  kFrame,
+  kThread,
+  kProcess,
+  kJob,
+
+  kBreakpoint,
+
+  // Adding a new one? Add to GetNouns().
+  kLast  // Not a real noun, keep last.
+};
+
+struct NounRecord {
+  NounRecord();
+  NounRecord(std::initializer_list<std::string> aliases, const char* short_help,
+             const char* help, CommandGroup command_group);
+  ~NounRecord();
+
+  // These are the user-typed strings that will name this noun. The [0]th one
+  // is the canonical name.
+  std::vector<std::string> aliases;
+
+  const char* short_help = nullptr;  // One-line help.
+  const char* help = nullptr;
+
+  CommandGroup command_group;
+};
+
+// Returns all known nouns. The contents of this map will never change once
+// it is called.
+const std::map<Noun, NounRecord>& GetNouns();
+
+// Converts the given noun to the canonical name.
+std::string NounToString(Noun n);
+
+// Returns the mapping from possible inputs to the noun. This is an inverted
+// version of the map returned by GetNouns().
+const std::map<std::string, Noun>& GetStringNounMap();
 
 // Handles execution of command input consisting of a noun and no verb.
 // For example "process", "process 2 thread", "thread 5".

@@ -11,6 +11,8 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/console/nouns.h"
+#include "garnet/bin/zxdb/console/verbs.h"
 
 namespace zxdb {
 
@@ -20,107 +22,6 @@ class Frame;
 class Target;
 class JobContext;
 class Thread;
-
-// Noun ------------------------------------------------------------------------
-
-enum class Noun {
-  kNone = 0,
-  kFrame,
-  kThread,
-  kProcess,
-  kJob,
-
-  kBreakpoint,
-
-  // Adding a new one? Add to GetNouns().
-  kLast  // Not a real noun, keep last.
-};
-
-std::string NounToString(Noun n);
-
-// Verb ------------------------------------------------------------------------
-
-// Note: things to add: kAttach, kBacktrace, kContinue, kDelete, kDown, kList,
-// kListProcesses, kRead, kSet, kStepIn, kStepInst, kStepOut, kStepOver, kUp,
-// kWrite,
-enum class Verb {
-  kNone = 0,
-
-  kAspace,
-  kAttach,
-  kBacktrace,
-  kBreak,
-  kClear,
-  kCls,
-  kConnect,
-  kContinue,
-  kDetach,
-  kDisassemble,
-  kDisconnect,
-  kEdit,
-  kFinish,
-  kGet,
-  kHelp,
-  kJump,
-  kKill,
-  kLibs,
-  kList,
-  kListProcesses,
-  kLocals,
-  kMemAnalyze,
-  kMemRead,
-  kNew,
-  kNext,
-  kNexti,
-  kOpenDump,
-  kPause,
-  kPrint,
-  kQuit,
-  kQuitAgent,
-  kRegs,
-  kRun,
-  kSet,
-  kStack,
-  kStep,
-  kStepi,
-  kSymInfo,
-  kSymNear,
-  kSymStat,
-  kUntil,
-
-  // Adding a new one? Add in one of the functions GetVerbs() calls.
-  kLast  // Not a real verb, keep last.
-};
-
-std::string VerbToString(Verb v);
-
-// SourceAffinity --------------------------------------------------------------
-
-// Indicates whether a command implies either source or assembly context. This
-// can be used by the frontend as a hint for what to show for the next stop.
-enum class SourceAffinity {
-  // The command applies to source code (e.g. "next").
-  kSource,
-
-  // The command applies to assembly code (e.g. "stepi", "disassemble").
-  kAssembly,
-
-  // This command does not imply any source or disassembly relation.
-  kNone
-};
-
-// CommandGroup ----------------------------------------------------------------
-
-// Used to group similar commands in the help.
-enum class CommandGroup {
-  kAssembly,
-  kBreakpoint,
-  kGeneral,
-  kProcess,
-  kJob,
-  kQuery,
-  kStep,
-};
 
 // Command ---------------------------------------------------------------------
 
@@ -208,98 +109,10 @@ class Command {
   std::vector<std::string> args_;
 };
 
-// Switches --------------------------------------------------------------------
-
-struct SwitchRecord {
-  SwitchRecord();
-  SwitchRecord(const SwitchRecord&);
-  SwitchRecord(int i, bool has_value, const char* n, char c = 0);
-  ~SwitchRecord();
-
-  int id = 0;
-
-  // Indicates if this switch has a value. False means it's a bool.
-  bool has_value = false;
-
-  // Not including hyphens, e.g. "size" for the switch "--size".
-  const char* name = nullptr;
-
-  // 1-character shorthand switch. 0 means no short variant.
-  char ch = 0;
-};
-
 // Command dispatch ------------------------------------------------------------
-
-// Type for the callback that runs a command.
-using CommandExecutor = std::function<Err(ConsoleContext*, const Command&)>;
 
 // Type for a callback that a CommandExecutor will receive
 using CommandCallback = std::function<void(Err)>;
-// Executor that is able to receive a callback that it can then pass on.
-using CommandExecutorWithCallback =
-    std::function<Err(ConsoleContext*, const Command&, CommandCallback)>;
-
-struct NounRecord {
-  NounRecord();
-  NounRecord(std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup command_group);
-  ~NounRecord();
-
-  // These are the user-typed strings that will name this noun. The [0]th one
-  // is the canonical name.
-  std::vector<std::string> aliases;
-
-  const char* short_help = nullptr;  // One-line help.
-  const char* help = nullptr;
-
-  CommandGroup command_group;
-};
-
-struct VerbRecord {
-  VerbRecord();
-
-  // The help will be referenced by pointer. It is expected to be a static
-  // string.
-  VerbRecord(CommandExecutor exec, std::initializer_list<std::string> aliases,
-             const char* short_help, const char* help, CommandGroup group,
-             SourceAffinity source_affinity = SourceAffinity::kNone);
-  VerbRecord(CommandExecutorWithCallback exec_cb,
-             std::initializer_list<std::string> aliases, const char* short_help,
-             const char* help, CommandGroup group,
-             SourceAffinity source_affinity = SourceAffinity::kNone);
-  ~VerbRecord();
-
-  CommandExecutor exec = nullptr;
-  CommandExecutorWithCallback exec_cb = nullptr;
-
-  // These are the user-typed strings that will name this verb. The [0]th one
-  // is the canonical name.
-  std::vector<std::string> aliases;
-
-  const char* short_help = nullptr;  // One-line help.
-  const char* help = nullptr;
-  std::vector<SwitchRecord> switches;  // Switches supported by this verb.
-
-  CommandGroup command_group = CommandGroup::kGeneral;
-  SourceAffinity source_affinity = SourceAffinity::kNone;
-};
-
-// Returns all known nouns. The contents of this map will never change once
-// it is called.
-const std::map<Noun, NounRecord>& GetNouns();
-
-// Returns all known verbs. The contents of this map will never change once
-// it is called.
-const std::map<Verb, VerbRecord>& GetVerbs();
-
-// Returns the record for the given verb. If the verb is not registered (should
-// not happen) or is kNone (this is what noun-only commands use), returns null.
-const VerbRecord* GetVerbRecord(Verb verb);
-
-// Returns the mapping from possible inputs to the noun/verb. This is an
-// inverted version of the map returned by GetNouns()/GetVerbs();
-const std::map<std::string, Noun>& GetStringNounMap();
-const std::map<std::string, Verb>& GetStringVerbMap();
 
 // Runs the given command.
 Err DispatchCommand(ConsoleContext* context, const Command& cmd,

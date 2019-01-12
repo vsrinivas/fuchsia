@@ -571,6 +571,48 @@ bool HandleBreakpointNoun(ConsoleContext* context, const Command& cmd,
 
 }  // namespace
 
+NounRecord::NounRecord() = default;
+NounRecord::NounRecord(std::initializer_list<std::string> aliases,
+                       const char* short_help, const char* help,
+                       CommandGroup command_group)
+    : aliases(aliases),
+      short_help(short_help),
+      help(help),
+      command_group(command_group) {}
+NounRecord::~NounRecord() = default;
+
+const std::map<Noun, NounRecord>& GetNouns() {
+  static std::map<Noun, NounRecord> all_nouns;
+  if (all_nouns.empty()) {
+    AppendNouns(&all_nouns);
+
+    // Everything but Noun::kNone (= 0) should be in the map.
+    FXL_DCHECK(all_nouns.size() == static_cast<size_t>(Noun::kLast) - 1)
+        << "You need to update the noun lookup table for additions to Nouns.";
+  }
+  return all_nouns;
+}
+
+std::string NounToString(Noun n) {
+  const auto& nouns = GetNouns();
+  auto found = nouns.find(n);
+  if (found == nouns.end())
+    return std::string();
+  return found->second.aliases[0];
+}
+
+const std::map<std::string, Noun>& GetStringNounMap() {
+  static std::map<std::string, Noun> map;
+  if (map.empty()) {
+    // Build up the reverse-mapping from alias to verb enum.
+    for (const auto& noun_pair : GetNouns()) {
+      for (const auto& alias : noun_pair.second.aliases)
+        map[alias] = noun_pair.first;
+    }
+  }
+  return map;
+}
+
 Err ExecuteNoun(ConsoleContext* context, const Command& cmd) {
   Err result;
 
