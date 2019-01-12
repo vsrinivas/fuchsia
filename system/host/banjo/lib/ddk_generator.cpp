@@ -1744,7 +1744,7 @@ void DdktlGenerator::ProduceProtocolSubclass(const NamedInterface& named_interfa
         file_ << kIndent << kIndent << "\"" << cc_name << " subclasses must implement \"\n";
         file_ << kIndent << kIndent << "\"";
         EmitProtocolMethodDecl(&file_, method_info.protocol_name, input, output);
-        file_ << "\");\n";
+        file_ << ");\");\n";
     }
     file_ << "}\n";
     EmitBlank(&file_);
