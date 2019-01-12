@@ -334,12 +334,6 @@ zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
     return loader_service_create_default(dispatcher, root_dir_fd, fd_lib_paths, out);
 }
 
-zx_status_t loader_service_create_fd_new(async_dispatcher_t* dispatcher,
-                                         int root_dir_fd,
-                                         loader_service_t** out) {
-    return loader_service_create_default(dispatcher, root_dir_fd, fd_lib_paths, out);
-}
-
 zx_status_t loader_service_release(loader_service_t* svc) {
     // This call to |loader_service_deref| balances the |loader_service_addref|
     // call in |loader_service_create|. This reference prevents the loader

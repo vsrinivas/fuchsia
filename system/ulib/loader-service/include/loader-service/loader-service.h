@@ -46,9 +46,6 @@ zx_status_t loader_service_create_fs(async_dispatcher_t* dispatcher, loader_serv
 zx_status_t loader_service_create_fd(async_dispatcher_t* dispatcher,
                                      int root_dir_fd,
                                      loader_service_t** out);
-zx_status_t loader_service_create_fd_new(async_dispatcher_t* dispatcher,
-                                         int root_dir_fd,
-                                         loader_service_t** out);
 
 // Returns a new dl_set_loader_service-compatible loader service channel.
 zx_status_t loader_service_connect(loader_service_t* svc, zx_handle_t* out);
@@ -88,4 +85,5 @@ zx_status_t loader_service_create(async_dispatcher_t* dispatcher,
 // The |finalizer| in |loader_service_ops_t| will be called shortly before |svc|
 // destroys itself.
 zx_status_t loader_service_release(loader_service_t* svc);
+
 __END_CDECLS
