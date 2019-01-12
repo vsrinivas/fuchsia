@@ -36,14 +36,12 @@ template("banjo") {
     banjo_library(target_name) {
       forward_variables_from(invoker, "*")
     }
-
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
 
     banjo_c_target(target_name) {
       forward_variables_from(invoker, "*")
     }
-
   } else {
     assert(false,
            "Unable to process BANJO target in toolchain $current_toolchain.")
@@ -60,14 +58,12 @@ template("banjo_dummy") {
     banjo_dummy_library(target_name) {
       forward_variables_from(invoker, "*")
     }
-
   } else if (is_fuchsia) {
     import("//build/c/banjo_c.gni")
 
     banjo_dummy_c_target(target_name) {
       forward_variables_from(invoker, "*")
     }
-
   } else {
     assert(false,
            "Unable to process BANJO target in toolchain $current_toolchain.")

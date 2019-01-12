@@ -5,8 +5,8 @@
 import("//build/config/clang/clang.gni")
 import("//build/fidl/toolchain.gni")
 import("//build/rust/config.gni")  # for rust_config
-import("//build/testing/test_spec.gni")
 import("//build/sdk/sdk_atom.gni")
+import("//build/testing/test_spec.gni")
 
 template("rustc_third_party_artifact") {
   # Dummy build target to match the one in rustc_artifact
@@ -272,11 +272,12 @@ template("rustc_artifact") {
         output_path,
       ]
     }
+
     # if appropriate, create an SDK atom for the binary/staticlib that we just
     # copied
     if (type == "bin" && defined(invoker.sdk_category) &&
-        invoker.sdk_category != "excluded" &&
-        !is_fuchsia && !(defined(invoker.test) && invoker.test)) {
+        invoker.sdk_category != "excluded" && !is_fuchsia &&
+        !(defined(invoker.test) && invoker.test)) {
       output_name = target_name
       file_base = "tools/$output_name"
 

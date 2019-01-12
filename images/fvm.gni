@@ -42,7 +42,12 @@ declare_args() {
 #     Same as for any GN `action()` target.
 template("generate_fvm") {
   zircon_tool_action(target_name) {
-    forward_variables_from(invoker, [ "testonly", "deps", "visibility" ])
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "visibility",
+                           ])
     tool = "fvm"
     outputs = [
       invoker.output_name,
@@ -56,7 +61,7 @@ template("generate_fvm") {
       deps = []
     }
     foreach(part, invoker.partitions) {
-      args += ["--${part.type}"]
+      args += [ "--${part.type}" ]
       deps += [ part.dep ]
       sources += get_target_outputs(part.dep)
       args += rebase_path(get_target_outputs(part.dep), root_build_dir)

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/banjo/toolchain.gni")
+import("//build/compiled_action.gni")
 
 # C/C++ bindings for a Banjo protocol.
 #
@@ -47,9 +47,7 @@ template("banjo_c_target") {
     # Let dependencies use `#include "$file_stem.h"`.
     public_configs = [ "//build/c:banjo_gen_config" ]
 
-    deps += [
-      ":${main_target_name}_compile($banjo_toolchain)",
-    ]
+    deps += [ ":${main_target_name}_compile($banjo_toolchain)" ]
 
     libs = [ "zircon" ]
   }
@@ -58,7 +56,11 @@ template("banjo_c_target") {
 template("banjo_dummy_c_target") {
   assert(is_fuchsia, "This template can only be used in $target_toolchain.")
 
-  not_needed(invoker, [ "sources", "name" ])
+  not_needed(invoker,
+             [
+               "sources",
+               "name",
+             ])
 
   main_target_name = target_name
 

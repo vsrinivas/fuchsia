@@ -31,7 +31,11 @@ template("sdk_documentation") {
   }
 
   sdk_atom(target_name) {
-    forward_variables_from(invoker, ["category", "files"])
+    forward_variables_from(invoker,
+                           [
+                             "category",
+                             "files",
+                           ])
 
     id = "sdk://docs/${invoker.name}"
 

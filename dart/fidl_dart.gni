@@ -64,8 +64,10 @@ template("fidl_dart") {
 
     # Don't run the formatter if we are using a custom-built Dart SDK in a
     # cross-build.
-    deps = [ ":$main_target_name($fidl_toolchain)" ]
-    if (use_prebuilt_dart_sdk || (host_cpu == target_cpu)) {
+    deps = [
+      ":$main_target_name($fidl_toolchain)",
+    ]
+    if (use_prebuilt_dart_sdk || host_cpu == target_cpu) {
       args += [
         "--dartfmt",
         rebase_path("$dart_sdk/bin/dartfmt"),

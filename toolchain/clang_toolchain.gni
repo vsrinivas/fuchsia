@@ -206,8 +206,7 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all" +
-              " --build-id-link-dir=.build-id" +
+              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
               " --build-id-link-input=.debug" + " --build-id-link-output=" +
               " \"$unstripped_outfile\" \"$outfile\""
         }
@@ -246,8 +245,7 @@ template("clang_toolchain") {
           command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
         } else {
           command +=
-              " && $strip --strip-all" +
-              " --build-id-link-dir=.build-id" +
+              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
               " --build-id-link-input=.debug" + " --build-id-link-output=" +
               " \"$unstripped_outfile\" \"$outfile\""
         }

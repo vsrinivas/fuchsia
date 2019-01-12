@@ -71,7 +71,7 @@ template("rustc_binary") {
                              "source_root",
                              "testonly",
                              "with_lto",
-                             "sdk_category"
+                             "sdk_category",
                            ])
     type = "bin"
   }

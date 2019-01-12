@@ -91,7 +91,7 @@ template("rustc_staticlib") {
   build_output = "${first_party_crate_root}/staticlib${crate_name}.a"
 
   config(config_target) {
-    libs = [build_output]
+    libs = [ build_output ]
     visibility = [ ":$group_target" ]
   }
 

@@ -64,7 +64,8 @@ if (fuchsia_products != [] && current_toolchain == default_toolchain) {
   print("or BLD-240 for more details")
 }
 
-if (monolith == [] && preinstall == [] && available == [] && fuchsia_packages == []) {
+if (monolith == [] && preinstall == [] && available == [] &&
+    fuchsia_packages == []) {
   _jiri_manifest = "//.jiri_manifest"
   _layers = exec_script("//build/gn/guess_layer.py",
                         [ rebase_path(_jiri_manifest) ],

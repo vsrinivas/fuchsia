@@ -5,6 +5,7 @@
 import("//build/banjo/toolchain.gni")
 
 config("banjo_gen_config") {
-  banjo_root_gen_dir = get_label_info("//bogus($banjo_toolchain)", "root_gen_dir")
+  banjo_root_gen_dir =
+      get_label_info("//bogus($banjo_toolchain)", "root_gen_dir")
   include_dirs = [ banjo_root_gen_dir ]
 }

@@ -147,6 +147,7 @@ template("dart_tool") {
 
     main_uri = rebase_path(invoker.main_dart)
     package_relative = rebase_path(invoker.main_dart, source_dir)
+
     # Approximation for source_dir contains main_dart.
     if (get_path_info(get_path_info(package_relative, "dir"), "file") != "bin") {
       main_uri = "package:" + package_name + "/" + package_relative

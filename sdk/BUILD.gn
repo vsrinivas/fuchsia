@@ -23,9 +23,11 @@ sdk_documentation("schemas") {
   ]
   files = []
   foreach(schema, schemas) {
-    files += [{
-      source = "//build/sdk/meta/$schema.json"
-      dest = "meta/schemas/$schema.json"
-    }]
+    files += [
+      {
+        source = "//build/sdk/meta/$schema.json"
+        dest = "meta/schemas/$schema.json"
+      },
+    ]
   }
 }

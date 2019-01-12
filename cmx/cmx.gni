@@ -145,9 +145,7 @@ template("cmx_merge") {
     ]
 
     foreach(source, sources) {
-      args += [
-        rebase_path(source, root_build_dir),
-      ]
+      args += [ rebase_path(source, root_build_dir) ]
     }
   }
 }
@@ -195,11 +193,11 @@ template("cmx_format") {
       "format",
       "--output",
       rebase_path(formatted_output),
-      invoker.data
+      invoker.data,
     ]
 
     if (is_debug) {
-        args += [ "--pretty" ]
+      args += [ "--pretty" ]
     }
   }
 }

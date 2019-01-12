@@ -93,14 +93,17 @@ template("sdk_shared_library") {
   }
 
   no_headers = defined(invoker.no_headers) && invoker.no_headers
+
   # Base path for source files of this library in SDKs.
   file_base = "pkg/$atom_name"
+
   # Base path for binaries of this library in SDKs.
   prebuilt_base = "arch/$target_cpu"
 
   # Identify dependencies and their metadata files.
   sdk_deps = []
   sdk_metas = []
+
   # If a prebuilt library is only provided for packaging purposes (by not
   # exposing headers) then its dependencies need not be included in an SDK.
   if (defined(invoker.public_deps) && !no_headers) {
@@ -110,6 +113,7 @@ template("sdk_shared_library") {
       sdk_deps += [ sdk_dep ]
     }
   }
+
   # Runtime deps are already SDK targets.
   if (defined(invoker.runtime_deps)) {
     sdk_deps += invoker.runtime_deps
@@ -148,7 +152,7 @@ template("sdk_shared_library") {
       {
         source = header
         dest = header_dest
-      }
+      },
     ]
   }
 
@@ -176,9 +180,7 @@ template("sdk_shared_library") {
   action(metadata_target_name) {
     script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
 
-    inputs = sdk_metas + [
-      debug_lib_file,
-    ]
+    inputs = sdk_metas + [ debug_lib_file ]
 
     outputs = [
       debug_mapping_file,
@@ -186,33 +188,30 @@ template("sdk_shared_library") {
     ]
 
     args = [
-      "--out",
-      rebase_path(metadata_file),
-      "--name",
-      atom_name,
-      "--root",
-      file_base,
-      "--include-dir",
-      "$file_base/include",
-      "--deps",
-    ] + sdk_metas + [
-      "--headers",
-    ] + sdk_headers + [
-      "--arch",
-      target_cpu,
-      "--lib-link",
-      link_lib,
-      "--lib-dist",
-      dist_lib,
-      "--lib-debug-file",
-      rebase_path(debug_lib_file),
-      "--debug-mapping",
-      rebase_path(debug_mapping_file),
-    ]
+             "--out",
+             rebase_path(metadata_file),
+             "--name",
+             atom_name,
+             "--root",
+             file_base,
+             "--include-dir",
+             "$file_base/include",
+             "--deps",
+           ] + sdk_metas + [ "--headers" ] + sdk_headers +
+           [
+             "--arch",
+             target_cpu,
+             "--lib-link",
+             link_lib,
+             "--lib-dist",
+             dist_lib,
+             "--lib-debug-file",
+             rebase_path(debug_lib_file),
+             "--debug-mapping",
+             rebase_path(debug_mapping_file),
+           ]
 
-    deps = sdk_deps + [
-      ":$main_target_name",
-    ]
+    deps = sdk_deps + [ ":$main_target_name" ]
   }
 
   sdk_atom(manifest_target_name) {
@@ -289,8 +288,6 @@ template("sdk_shared_library") {
   sdk_atom_alias(sdk_target_name) {
     atom = ":$manifest_target_name"
 
-    non_sdk_deps = [
-      ":$verify_target_name",
-    ]
+    non_sdk_deps = [ ":$verify_target_name" ]
   }
 }

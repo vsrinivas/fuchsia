@@ -71,8 +71,8 @@ template("fidl") {
       forward_variables_from(invoker, "*")
     }
   } else if (is_fuchsia) {
-    import("//build/rust/fidl_rust_library.gni")
     import("//build/c/fidl_c.gni")
+    import("//build/rust/fidl_rust_library.gni")
 
     fidl_tables(target_name) {
       forward_variables_from(invoker,

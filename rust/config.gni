@@ -79,13 +79,13 @@ if (is_debug) {
 
 clang_prefix_rebased = rebase_path(clang_prefix, "", root_build_dir)
 
-clang_resource_dir =
-  exec_script(
-    rebase_path("$clang_prefix_rebased/clang"),
-    ["--target=$_target", "-print-resource-dir"],
-    "trim string",
-    []
-  )
+clang_resource_dir = exec_script(rebase_path("$clang_prefix_rebased/clang"),
+                                 [
+                                   "--target=$_target",
+                                   "-print-resource-dir",
+                                 ],
+                                 "trim string",
+                                 [])
 
 # rust_config collects common arguments and dependencies for rustc builds
 rust_build_args = [

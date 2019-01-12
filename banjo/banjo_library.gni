@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/compiled_action.gni")
 import("//build/banjo/toolchain.gni")
+import("//build/compiled_action.gni")
 import("//build/sdk/sdk_atom.gni")
 
 # Private template to generate an SDK Atom for banjo_library and
@@ -242,7 +242,8 @@ template("banjo_dummy_library") {
       current_toolchain == banjo_toolchain,
       "This template can only be used in the Banjo toolchain $banjo_toolchain.")
 
-  assert(defined(invoker.sources), "A Banjo dummy library requires some sources.")
+  assert(defined(invoker.sources),
+         "A Banjo dummy library requires some sources.")
 
   library_name = target_name
   if (defined(invoker.name)) {
@@ -282,7 +283,6 @@ template("banjo_dummy_library") {
              library_name,
              "--sources",
            ] + rebase_path(sources, root_build_dir)
-
   }
 
   group(main_target_name) {
