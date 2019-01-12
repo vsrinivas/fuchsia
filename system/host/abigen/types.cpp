@@ -168,7 +168,17 @@ bool Syscall::is_internal() const {
 }
 
 size_t Syscall::num_kernel_args() const {
-    return is_noreturn() ? arg_spec.size() : arg_spec.size() + ret_spec.size() - 1;
+    if (is_noreturn()) {
+        return arg_spec.size();
+    }
+
+    // The first return value is passed as the ordinary C return
+    // value, but only if there is at least one return value.
+    size_t ret_values = ret_spec.size();
+    if (ret_values > 0) {
+        --ret_values;
+    }
+    return arg_spec.size() + ret_values;
 }
 
 void Syscall::for_each_return(const std::function<void(const TypeSpec&)>& cb) const {
