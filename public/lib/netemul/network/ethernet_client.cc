@@ -393,6 +393,7 @@ std::string EthernetClientFactory::MountPointWithMAC(const Mac& mac,
   status = fdio_watch_directory(ethdir, WatchCb,
                                 zx_deadline_after(ZX_MSEC(deadline_ms)),
                                 reinterpret_cast<void*>(&args));
+  close(ethdir);
   if (status == ZX_ERR_STOP) {
     return std::move(args.result);
   } else {

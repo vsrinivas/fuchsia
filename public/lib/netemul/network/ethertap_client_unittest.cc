@@ -16,7 +16,7 @@ namespace testing {
 #define TEST_MTU_SIZE (1500)
 
 using component::testing::TestWithEnvironment;
-class DISABLED_EthertapClientTest : public TestWithEnvironment {
+class EthertapClientTest : public TestWithEnvironment {
  public:
   // pushes an interface into local vectors
   void PushInterface(Mac* mac = nullptr) {
@@ -65,9 +65,9 @@ class DISABLED_EthertapClientTest : public TestWithEnvironment {
   std::vector<std::unique_ptr<EthernetClient>> eths_;
 };
 
-TEST_F(DISABLED_EthertapClientTest, CreateEthertapClient) { PushInterface(); }
+TEST_F(EthertapClientTest, CreateEthertapClient) { PushInterface(); }
 
-TEST_F(DISABLED_EthertapClientTest, EthertapReceive) {
+TEST_F(EthertapClientTest, EthertapReceive) {
   // create single interface and bring it up
   PushInterface();
   tap()->SetLinkUp(true);
@@ -103,7 +103,7 @@ TEST_F(DISABLED_EthertapClientTest, EthertapReceive) {
   }
 }
 
-TEST_F(DISABLED_EthertapClientTest, EthertapSend) {
+TEST_F(EthertapClientTest, EthertapSend) {
   // create single interface and bring it up
   PushInterface();
   tap()->SetLinkUp(true);
@@ -130,7 +130,7 @@ TEST_F(DISABLED_EthertapClientTest, EthertapSend) {
   }
 }
 
-TEST_F(DISABLED_EthertapClientTest, EthertapLink) {
+TEST_F(EthertapClientTest, EthertapLink) {
   // create two ethertap interfaces:
   PushInterface();
   PushInterface();
@@ -180,7 +180,7 @@ TEST_F(DISABLED_EthertapClientTest, EthertapLink) {
       zx::sec(2)));
 }
 
-TEST_F(DISABLED_EthertapClientTest, EthertapClose) {
+TEST_F(EthertapClientTest, EthertapClose) {
   Mac mac;
   PushInterface(&mac);
   bool ok = false;
@@ -192,7 +192,7 @@ TEST_F(DISABLED_EthertapClientTest, EthertapClose) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&ok]() { return ok; }, zx::sec(2)));
 }
 
-TEST_F(DISABLED_EthertapClientTest, EthertapDies) {
+TEST_F(EthertapClientTest, EthertapDies) {
   PushInterface();
   tap()->SetLinkUp(true);
   bool ok = false;

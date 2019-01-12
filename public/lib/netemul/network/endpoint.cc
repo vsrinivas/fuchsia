@@ -46,6 +46,11 @@ class EndpointImpl : public data::Consumer {
     ethernet_mount_path_ = EthernetClientFactory().MountPointWithMAC(mac);
     // can't find mount path for ethernet!!
     if (ethernet_mount_path_.empty()) {
+      fprintf(
+          stderr,
+          "Failed to locate ethertap device %s %02X:%02X:%02X:%02X:%02X:%02X\n",
+          name.c_str(), mac.d[0], mac.d[1], mac.d[2], mac.d[3], mac.d[4],
+          mac.d[5]);
       return ZX_ERR_INTERNAL;
     }
 

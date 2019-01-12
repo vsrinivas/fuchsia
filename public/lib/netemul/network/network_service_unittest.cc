@@ -25,7 +25,7 @@ static const EthernetConfig TestEthBuffConfig = {.buff_size = 2048, .nbufs = 4};
 using component::testing::EnclosingEnvironment;
 using component::testing::EnvironmentServices;
 using component::testing::TestWithEnvironment;
-class DISABLED_NetworkServiceTest : public TestWithEnvironment {
+class NetworkServiceTest : public TestWithEnvironment {
  public:
   using FNetworkManager = NetworkManager::FNetworkManager;
   using FEndpointManager = EndpointManager::FEndpointManager;
@@ -134,7 +134,7 @@ class DISABLED_NetworkServiceTest : public TestWithEnvironment {
   fidl::SynchronousInterfacePtr<FEndpointManager> endp_manager_;
 };
 
-TEST_F(DISABLED_NetworkServiceTest, NetworkLifecycle) {
+TEST_F(NetworkServiceTest, NetworkLifecycle) {
   fidl::SynchronousInterfacePtr<FNetworkManager> netm;
   GetNetworkManager(netm.NewRequest());
 
@@ -185,7 +185,7 @@ TEST_F(DISABLED_NetworkServiceTest, NetworkLifecycle) {
   ASSERT_FALSE(ohandle.is_valid());
 }
 
-TEST_F(DISABLED_NetworkServiceTest, EndpointLifecycle) {
+TEST_F(NetworkServiceTest, EndpointLifecycle) {
   fidl::SynchronousInterfacePtr<FEndpointManager> epm;
   GetEndpointManager(epm.NewRequest());
 
@@ -236,7 +236,7 @@ TEST_F(DISABLED_NetworkServiceTest, EndpointLifecycle) {
   ASSERT_FALSE(ohandle.is_valid());
 }
 
-TEST_F(DISABLED_NetworkServiceTest, BadEndpointConfigurations) {
+TEST_F(NetworkServiceTest, BadEndpointConfigurations) {
   fidl::SynchronousInterfacePtr<FEndpointManager> epm;
   GetEndpointManager(epm.NewRequest());
 
@@ -277,7 +277,7 @@ TEST_F(DISABLED_NetworkServiceTest, BadEndpointConfigurations) {
   ASSERT_FALSE(eph.is_valid());
 }
 
-TEST_F(DISABLED_NetworkServiceTest, BadNetworkConfigurations) {
+TEST_F(NetworkServiceTest, BadNetworkConfigurations) {
   fidl::SynchronousInterfacePtr<FNetworkManager> netm;
   GetNetworkManager(netm.NewRequest());
 
@@ -303,7 +303,7 @@ TEST_F(DISABLED_NetworkServiceTest, BadNetworkConfigurations) {
   ASSERT_FALSE(neth.is_valid());
 }
 
-TEST_F(DISABLED_NetworkServiceTest, TransitData) {
+TEST_F(NetworkServiceTest, TransitData) {
   const char* netname = "mynet";
   const char* ep1name = "ep1";
   const char* ep2name = "ep2";
@@ -389,7 +389,7 @@ TEST_F(DISABLED_NetworkServiceTest, TransitData) {
   ASSERT_FALSE(ok);
 }
 
-TEST_F(DISABLED_NetworkServiceTest, Flooding) {
+TEST_F(NetworkServiceTest, Flooding) {
   const char* netname = "mynet";
   const char* ep1name = "ep1";
   const char* ep2name = "ep2";
@@ -495,7 +495,7 @@ TEST_F(DISABLED_NetworkServiceTest, Flooding) {
   }
 }
 
-TEST_F(DISABLED_NetworkServiceTest, AttachRemove) {
+TEST_F(NetworkServiceTest, AttachRemove) {
   const char* netname = "mynet";
   const char* epname = "ep1";
   StartServices();
@@ -526,7 +526,7 @@ TEST_F(DISABLED_NetworkServiceTest, AttachRemove) {
   ASSERT_NOK(status);
 }
 
-TEST_F(DISABLED_NetworkServiceTest, FakeEndpoints) {
+TEST_F(NetworkServiceTest, FakeEndpoints) {
   const char* netname = "mynet";
   const char* epname = "ep1";
   StartServices();
