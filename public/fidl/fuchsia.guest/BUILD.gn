@@ -16,6 +16,7 @@ fidl("fuchsia.guest") {
   public_deps = [
     "//garnet/public/fidl/fuchsia.math",
     "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.app",
     "//zircon/public/fidl/fuchsia-io",
   ]
 }

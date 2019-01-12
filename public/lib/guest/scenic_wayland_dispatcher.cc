@@ -36,6 +36,9 @@ fuchsia::guest::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
     // Connect to the |WaylandDispatcher| FIDL interface and forward the
     // channel along.
     services.ConnectToService(dispatcher_.NewRequest());
+    services.ConnectToService(view_producer_.NewRequest());
+    view_producer_.events().OnNewView =
+        fit::bind_member(this, &ScenicWaylandDispatcher::OnNewView);
   }
 
   return dispatcher_.get();
@@ -49,6 +52,11 @@ void ScenicWaylandDispatcher::Reset(zx_status_t status) {
   if (dispatcher_) {
     dispatcher_.Unbind();
   }
+}
+
+void ScenicWaylandDispatcher::OnNewView(
+    fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view) {
+  listener_(std::move(view));
 }
 
 };  // namespace guest

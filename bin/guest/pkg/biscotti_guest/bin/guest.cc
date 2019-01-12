@@ -46,6 +46,7 @@ static constexpr const char* kContainerImageAlias = "debian/stretch";
 static constexpr const char* kContainerImageServer =
     "https://storage.googleapis.com/cros-containers";
 static constexpr const char* kDefaultContainerUser = "machina";
+static constexpr const char* kLinuxUriScheme = "linux://";
 
 // Minfs max file size is currently just under 4GB.
 static constexpr off_t kStatefulImageSize = 4000ul * 1024 * 1024;
@@ -126,7 +127,7 @@ Guest::Guest(component::StartupContext* context,
              fuchsia::guest::EnvironmentControllerPtr env, fxl::CommandLine cl)
     : guest_env_(std::move(env)),
       cl_(std::move(cl)),
-      wayland_dispatcher_(context) {
+      wayland_dispatcher_(context, fit::bind_member(this, &Guest::OnNewView)) {
   guest_env_->GetHostVsockEndpoint(socket_endpoint_.NewRequest());
   async_ = async_get_default_dispatcher();
   Start();
@@ -715,10 +716,31 @@ void Guest::Launch(AppLaunchRequest request) {
 
 void Guest::LaunchApplication(AppLaunchRequest app) {
   FXL_CHECK(garcon_) << "Called LaunchApplication without a garcon connection";
-  std::string desktop_file_id = std::move(app.application.resolved_url);
-  desktop_file_id.erase(0, 8);
-  FXL_LOG(INFO) << "Launching: " << desktop_file_id;
+  std::string desktop_file_id = app.application.resolved_url;
+  if (desktop_file_id.rfind(kLinuxUriScheme, 0) == std::string::npos) {
+    FXL_LOG(ERROR) << "Invalid URI: " << desktop_file_id;
+    return;
+  }
+  desktop_file_id.erase(0, strlen(kLinuxUriScheme));
+  if (desktop_file_id == "") {
+    // HACK: we use the empty URI to pick up a view that wasn't associated
+    // with an app launch request. For example, if you started a GUI
+    // application from the serial console, a wayland view will have been
+    // created without a fuchsia component to associate with it.
+    //
+    // We'll need to come up with a more proper solution, but this allows us to
+    // at least do some testing of these views for the time being.
+    auto it = background_views_.begin();
+    if (it == background_views_.end()) {
+      FXL_LOG(INFO) << "No background views available";
+      return;
+    }
+    CreateComponent(std::move(app), it->Bind());
+    background_views_.erase(it);
+    return;
+  }
 
+  FXL_LOG(INFO) << "Launching: " << desktop_file_id;
   grpc::ClientContext context;
   vm_tools::container::LaunchApplicationRequest request;
   vm_tools::container::LaunchApplicationResponse response;
@@ -733,8 +755,35 @@ void Guest::LaunchApplication(AppLaunchRequest app) {
   }
 
   FXL_LOG(INFO) << "Application launched successfully";
-  // TODO: Get view out of wayland bridge.
-  // TODO: Create component instance.
+  pending_views_.push_back(std::move(app));
+}
+
+void Guest::OnNewView(
+    fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+  // TODO: This currently just pops a component request off the queue to
+  // associate with the new view. This is obviously racy but will work until
+  // we can pipe though a startup id to provide a more accurate correlation.
+  auto it = pending_views_.begin();
+  if (it == pending_views_.end()) {
+    background_views_.push_back(std::move(view_provider));
+    return;
+  }
+  CreateComponent(std::move(*it), std::move(view_provider));
+  pending_views_.erase(it);
+}
+
+void Guest::CreateComponent(
+    AppLaunchRequest request,
+    fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view_provider) {
+  auto component = LinuxComponent::Create(
+      fit::bind_member(this, &Guest::OnComponentTerminated),
+      std::move(request.application), std::move(request.startup_info),
+      std::move(request.controller_request), view_provider.Bind());
+  components_.insert({component.get(), std::move(component)});
+}
+
+void Guest::OnComponentTerminated(const LinuxComponent* component) {
+  components_.erase(component);
 }
 
 }  // namespace biscotti

@@ -6,6 +6,7 @@
 #define LIB_GUEST_SCENIC_WAYLAND_DISPATCHER_H_
 
 #include <fuchsia/guest/cpp/fidl.h>
+#include <fuchsia/wayland/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/zx/channel.h>
@@ -18,8 +19,12 @@ namespace guest {
 // This class is not thread-safe.
 class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
  public:
-  ScenicWaylandDispatcher(component::StartupContext* context)
-      : context_(context){};
+  using ViewListener = fit::function<void(
+      fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>)>;
+
+  ScenicWaylandDispatcher(component::StartupContext* context,
+                          ViewListener listener = nullptr)
+      : context_(context), listener_(std::move(listener)){};
 
   // |fuchsia::guest::WaylandDispatcher|
   void OnNewConnection(zx::channel channel);
@@ -29,14 +34,17 @@ class ScenicWaylandDispatcher : public fuchsia::guest::WaylandDispatcher {
   }
 
  private:
+  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
   void Reset(zx_status_t status);
 
   fuchsia::guest::WaylandDispatcher* GetOrStartBridge();
 
-  fidl::Binding<fuchsia::guest::WaylandDispatcher> bindings_{this};
   component::StartupContext* context_;
+  ViewListener listener_;
+  fidl::Binding<fuchsia::guest::WaylandDispatcher> bindings_{this};
   fuchsia::sys::ComponentControllerPtr bridge_;
   fuchsia::guest::WaylandDispatcherPtr dispatcher_;
+  fuchsia::wayland::ViewProducerPtr view_producer_;
 };
 
 };  // namespace guest

@@ -16,6 +16,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/guest/scenic_wayland_dispatcher.h>
 
+#include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_component.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/bin/log_collector.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_guest.grpc.pb.h"
 #include "garnet/bin/guest/pkg/biscotti_guest/third_party/protos/container_host.grpc.pb.h"
@@ -124,6 +125,11 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   std::unique_ptr<typename Service::Stub> NewVsockStub(uint32_t cid,
                                                        uint32_t port);
   void LaunchApplication(AppLaunchRequest request);
+  void OnNewView(fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void CreateComponent(
+      AppLaunchRequest request,
+      fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider> view);
+  void OnComponentTerminated(const LinuxComponent* component);
 
   async_dispatcher_t* async_;
   std::unique_ptr<grpc::Server> grpc_server_;
@@ -138,7 +144,17 @@ class Guest : public fuchsia::guest::HostVsockAcceptor,
   LogCollector log_collector_;
   fxl::CommandLine cl_;
   guest::ScenicWaylandDispatcher wayland_dispatcher_;
+  // Requests queued up waiting for the guest to fully boot.
   std::deque<AppLaunchRequest> pending_requests_;
+  // Requests that have been dispatched to the container, but have not yet been
+  // associated with a wayland ViewProvider.
+  std::deque<AppLaunchRequest> pending_views_;
+  // Views launched in the background (ex: not using garcon). These can be
+  // returned by requesting a null app URI (linux://).
+  std::deque<fidl::InterfaceHandle<fuchsia::ui::app::ViewProvider>>
+      background_views_;
+  std::unordered_map<const LinuxComponent*, std::unique_ptr<LinuxComponent>>
+      components_;
 };
 }  // namespace biscotti
 

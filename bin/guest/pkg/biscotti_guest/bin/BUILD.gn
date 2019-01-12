@@ -40,6 +40,8 @@ source_set("lib") {
   sources = [
     "guest.cc",
     "guest.h",
+    "linux_component.cc",
+    "linux_component.h",
     "linux_runner.cc",
     "linux_runner.h",
     "log_collector.cc",
@@ -48,6 +50,9 @@ source_set("lib") {
   public_configs = [ ":biscotti_net_config" ]
   public_deps = [
     ":protos",
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/bin/wayland/fidl:fuchsia.wayland",
     "//garnet/public/fidl/fuchsia.guest",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/component/cpp",
