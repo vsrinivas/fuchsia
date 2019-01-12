@@ -343,17 +343,17 @@ func (fs *Filesystem) GC() error {
 	}
 	log.Printf("GC: %d blobs in blobfs", len(installedBlobs))
 
-	allBlobs := make(map[string]struct{})
+	allPackageBlobs := fs.index.AllPackageBlobs()
 	// access the meta FAR blob of the system package
 	if pd, ok := fs.root.dir("system").(*packageDir); ok {
-		allBlobs[pd.contents["meta"]] = struct{}{}
+		allPackageBlobs = append(allPackageBlobs, pd.contents["meta"])
 	} else {
 		return fmt.Errorf("GC: gc aborted, system directory is of unknown type")
 	}
 
 	// Walk the list of all packages and collate all involved blobs, both the fars
 	// themselves, and the contents on which they depend.
-	allPackageBlobs := fs.index.AllPackageBlobs()
+	allBlobs := make(map[string]struct{})
 	for _, pkgRoot := range allPackageBlobs {
 		allBlobs[pkgRoot] = struct{}{}
 
