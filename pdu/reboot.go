@@ -55,7 +55,7 @@ func RebootDevice(cfg *Config) error {
 	case "arduinorelay":
 		return arduinorelay.Reboot(cfg.DevicePath, cfg.DevicePort)
 	case "wol":
-		return wol.Reboot(botBroadcastAddr, botInterface, cfg.DevicePath)
+		return wol.Reboot(botBroadcastAddr, botInterface, cfg.HostMACAddr)
 	case "webcardlx":
 		fallthrough
 	default:
