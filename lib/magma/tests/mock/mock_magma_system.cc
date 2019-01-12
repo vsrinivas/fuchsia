@@ -26,6 +26,12 @@ magma_connection_t* magma_create_connection(int32_t fd, uint32_t capabilities)
     return new MockConnection();
 }
 
+magma_status_t magma_create_connection2(int32_t fd, magma_connection_t** connection_out)
+{
+    *connection_out = new MockConnection();
+    return MAGMA_STATUS_OK;
+}
+
 void magma_release_connection(magma_connection_t* connection)
 {
     delete static_cast<MockConnection*>(connection);

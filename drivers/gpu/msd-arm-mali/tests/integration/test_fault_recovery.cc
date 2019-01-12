@@ -48,7 +48,7 @@ class TestConnection : public TestBase {
 public:
     TestConnection()
     {
-        connection_ = magma_create_connection(fd(), 0);
+        magma_create_connection2(fd(), &connection_);
         DASSERT(connection_);
 
         magma_create_context(connection_, &context_id_);

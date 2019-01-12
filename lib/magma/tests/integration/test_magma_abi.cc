@@ -22,7 +22,7 @@ public:
     {
         fd_ = open("/dev/class/gpu/000", O_RDONLY);
         DASSERT(fd_ >= 0);
-        connection_ = magma_create_connection(fd(), 0);
+        magma_create_connection2(fd(), &connection_);
     }
 
     ~TestConnection()

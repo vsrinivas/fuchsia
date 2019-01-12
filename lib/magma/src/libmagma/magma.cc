@@ -29,6 +29,19 @@ magma_connection_t* magma_create_connection(int fd, uint32_t capabilities)
         .release();
 }
 
+magma_status_t magma_create_connection2(int32_t file_descriptor, magma_connection_t** connection_out)
+{
+    uint32_t primary_channel;
+    uint32_t notification_channel;
+    if (!magma::PlatformConnectionClient::GetHandles(file_descriptor, &primary_channel,
+                                                     &notification_channel))
+        return DRET_MSG(MAGMA_STATUS_INVALID_ARGS, "couldn't get handles from file_descriptor %d", file_descriptor);
+
+    *connection_out = magma::PlatformConnectionClient::Create(primary_channel, notification_channel)
+        .release();
+    return MAGMA_STATUS_OK;
+}
+
 void magma_release_connection(magma_connection_t* connection)
 {
     // TODO(MA-109): close the connection
