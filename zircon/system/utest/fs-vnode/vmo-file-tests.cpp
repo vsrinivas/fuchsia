@@ -381,7 +381,7 @@ bool TestGetNodeInfo() {
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_EQ(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ,
                   GetRights(vmo.get()));
         EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
         EXPECT_EQ(PAGE_1 - 5u, info.vmofile.offset);
@@ -455,7 +455,7 @@ bool TestGetNodeInfo() {
         zx::vmo vmo(info.vmofile.vmo);
         EXPECT_NE(abc.get(), vmo.get());
         EXPECT_NE(GetKoid(abc.get()), GetKoid(vmo.get()));
-        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ | ZX_RIGHT_EXECUTE,
+        EXPECT_EQ(ZX_RIGHTS_BASIC | ZX_RIGHT_MAP | ZX_RIGHT_READ,
                   GetRights(vmo.get()));
         EXPECT_EQ(fuchsia_io_NodeInfoTag_vmofile, info.tag);
         EXPECT_EQ(PAGE_SIZE - 5u, info.vmofile.offset);

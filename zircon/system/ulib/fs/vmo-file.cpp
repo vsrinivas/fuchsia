@@ -27,9 +27,7 @@ zx_rights_t GetVmoRightsForAccessMode(uint32_t flags) {
     if (flags & ZX_FS_RIGHT_WRITABLE) {
         rights |= ZX_RIGHT_WRITE;
     }
-    if ((flags & ZX_FS_RIGHT_READABLE) & !(flags & ZX_FS_RIGHT_WRITABLE)) {
-        rights |= ZX_RIGHT_EXECUTE;
-    }
+    // TODO(mdempsky): Add ZX_FS_RIGHT_EXECUTABLE flag?
     return rights;
 }
 

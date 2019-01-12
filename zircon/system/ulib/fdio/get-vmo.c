@@ -109,7 +109,7 @@ static zx_status_t read_file_into_vmo(fdio_t* io, zx_handle_t* out_vmo) {
 }
 
 static zx_status_t get_file_vmo(fdio_t* io, zx_handle_t* out_vmo) {
-    return io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC |
+    return io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
                             fuchsia_io_VMO_FLAG_PRIVATE, out_vmo);
 }
 
@@ -136,8 +136,12 @@ zx_status_t fdio_get_vmo_copy(int fd, zx_handle_t* out_vmo) {
     if (io == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
-    zx_status_t status = copy_file_vmo(io, out_vmo);
+    zx_handle_t vmo;
+    zx_status_t status = copy_file_vmo(io, &vmo);
     fdio_release(io);
+    // TODO(mdempsky): Make callers responsible for adding executability as needed.
+    if (status == ZX_OK)
+        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }
 
@@ -147,8 +151,12 @@ zx_status_t fdio_get_vmo_clone(int fd, zx_handle_t* out_vmo) {
     if (io == NULL) {
         return ZX_ERR_BAD_HANDLE;
     }
-    zx_status_t status = get_file_vmo(io, out_vmo);
+    zx_handle_t vmo;
+    zx_status_t status = get_file_vmo(io, &vmo);
     fdio_release(io);
+    // TODO(mdempsky): Make callers responsible for adding executability as needed.
+    if (status == ZX_OK)
+        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }
 
@@ -159,9 +167,12 @@ zx_status_t fdio_get_vmo_exact(int fd, zx_handle_t* out_vmo) {
         return ZX_ERR_BAD_HANDLE;
     }
 
-    zx_status_t status = io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ | fuchsia_io_VMO_FLAG_EXEC |
-                                          fuchsia_io_VMO_FLAG_EXACT, out_vmo);
+    zx_handle_t vmo;
+    zx_status_t status = io->ops->get_vmo(io, fuchsia_io_VMO_FLAG_READ |
+                                          fuchsia_io_VMO_FLAG_EXACT, &vmo);
     fdio_release(io);
-
+    // TODO(mdempsky): Make callers responsible for adding executability as needed.
+    if (status == ZX_OK)
+        status = zx_vmo_replace_as_executable(vmo, ZX_HANDLE_INVALID, out_vmo);
     return status;
 }
