@@ -46,7 +46,6 @@
 namespace component {
 namespace {
 
-constexpr char kNumberedLabelFormat[] = "env-%d";
 constexpr char kAppPath[] = "bin/app";
 constexpr char kDataPathPrefix[] = "data/";
 constexpr char kDataKey[] = "data";
@@ -166,7 +165,7 @@ zx::process CreateProcess(const zx::job& job, fsl::SizedVmo data,
 
 // static
 RealmArgs RealmArgs::Make(
-    Realm* parent, fidl::StringPtr label,
+    Realm* parent, std::string label,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, bool inherit_parent_services, bool kill_on_oom) {
   return {.parent = parent,
@@ -179,7 +178,7 @@ RealmArgs RealmArgs::Make(
 }
 
 RealmArgs RealmArgs::MakeWithAdditionalServices(
-    Realm* parent, fidl::StringPtr label,
+    Realm* parent, std::string label,
     const std::shared_ptr<component::Services>& env_services,
     bool run_virtual_console, fuchsia::sys::ServiceListPtr additional_services,
     bool inherit_parent_services, bool kill_on_oom) {
@@ -191,8 +190,6 @@ RealmArgs RealmArgs::MakeWithAdditionalServices(
           .inherit_parent_services = inherit_parent_services,
           .kill_on_oom = kill_on_oom};
 }
-
-uint32_t Realm::next_numbered_label_ = 1u;
 
 Realm::Realm(RealmArgs args)
     : parent_(args.parent),
@@ -218,11 +215,8 @@ Realm::Realm(RealmArgs args)
   FXL_CHECK(zx::job::create(*parent_job, 0u, &job_) == ZX_OK);
 
   koid_ = std::to_string(fsl::GetKoid(job_.get()));
-  if (args.label->size() == 0) {
-    label_ = fxl::StringPrintf(kNumberedLabelFormat, next_numbered_label_++);
-  } else {
-    label_ = args.label.get().substr(0, fuchsia::sys::kLabelMaxLength);
-  }
+  FXL_CHECK(!args.label.empty());
+  label_ = args.label.substr(0, fuchsia::sys::kLabelMaxLength);
 
   if (args.kill_on_oom) {
     size_t property_value = 1;
@@ -309,15 +303,31 @@ void Realm::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController>
         controller_request,
-    fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
+    std::string label, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
-  TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label",
-                 label.get());
+  TRACE_DURATION("appmgr", "Realm::CreateNestedEnvironment", "label", label);
+
+  // Check that label is non-empty and unique among existing children.
+  if (label.empty()) {
+    environment.Close(ZX_ERR_INVALID_ARGS);
+    controller_request.Close(ZX_ERR_INVALID_ARGS);
+    return;
+  }
+  for (const auto& child : children_) {
+    if (label == child.first->label_) {
+      FXL_LOG(WARNING) << "Attempt to create nested environment '"
+                       << label.c_str() << "' under '" << label_
+                       << "' but label matches existing environment";
+    }
+  }
+
   if (additional_services && !additional_services->host_directory) {
-    FXL_LOG(ERROR) << label->c_str()
+    FXL_LOG(ERROR) << label.c_str()
                    << ": |additional_services.provider| is not supported for "
                    << "CreateNestedEnvironment. Use "
                    << "|additional_services.host_directory| instead.";
+    environment.Close(ZX_ERR_INVALID_ARGS);
+    controller_request.Close(ZX_ERR_INVALID_ARGS);
     return;
   }
 

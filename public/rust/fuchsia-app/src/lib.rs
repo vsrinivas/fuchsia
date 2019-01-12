@@ -457,7 +457,7 @@ pub mod server {
             env.create_nested_environment(
                 new_env_server_end,
                 Some(new_env_controller_server_end),
-                Some(environment_label),
+                environment_label,
                 Some(fidl::encoding::OutOfLine(&mut service_list)),
                 &mut EnvironmentOptions {
                     inherit_parent_services: false,

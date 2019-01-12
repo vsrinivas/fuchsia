@@ -229,6 +229,29 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return killed; }, kTimeout));
 }
 
+TEST_F(RealmTest, EnvironmentLabelRequired) {
+  // Can't use EnclosingEnvironment here since there's no way to discern between
+  // 'not yet created' and 'failed to create'. This also lets use check the
+  // specific status returned.
+  fuchsia::sys::EnvironmentPtr env;
+  fuchsia::sys::EnvironmentControllerPtr env_controller;
+
+  zx_status_t env_status = ZX_OK;
+  zx_status_t env_controller_status = ZX_OK;
+  env.set_error_handler([&](zx_status_t status) { env_status = status; });
+  env_controller.set_error_handler(
+      [&](zx_status_t status) { env_controller_status = status; });
+
+  real_env()->CreateNestedEnvironment(
+      env.NewRequest(), env_controller.NewRequest(), /* label = */ "",
+      /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return env_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
+}
+
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
  protected:
   RealmFakeLoaderTest() {

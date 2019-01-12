@@ -61,6 +61,8 @@ class TestWithEnvironment : public gtest::RealLoopFixture {
     return real_services_;
   }
 
+  const fuchsia::sys::EnvironmentPtr& real_env() { return real_env_; }
+
   // Creates a new enclosing environment inside current real environment with
   // the given services.
   //

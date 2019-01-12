@@ -53,7 +53,7 @@ class Namespace : public fuchsia::sys::Environment,
   void CreateNestedEnvironment(
       fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
       fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-      fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
+      std::string label, fuchsia::sys::ServiceListPtr additional_services,
       fuchsia::sys::EnvironmentOptions options) override;
 
   void GetLauncher(

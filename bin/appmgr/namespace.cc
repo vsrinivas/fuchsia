@@ -96,11 +96,11 @@ void Namespace::AddBinding(
 void Namespace::CreateNestedEnvironment(
     fidl::InterfaceRequest<fuchsia::sys::Environment> environment,
     fidl::InterfaceRequest<fuchsia::sys::EnvironmentController> controller,
-    fidl::StringPtr label, fuchsia::sys::ServiceListPtr additional_services,
+    std::string label, fuchsia::sys::ServiceListPtr additional_services,
     fuchsia::sys::EnvironmentOptions options) {
   realm_->CreateNestedEnvironment(std::move(environment), std::move(controller),
-                                  label, std::move(additional_services),
-                                  options);
+                                  std::move(label),
+                                  std::move(additional_services), options);
 }
 
 void Namespace::GetLauncher(fidl::InterfaceRequest<Launcher> launcher) {

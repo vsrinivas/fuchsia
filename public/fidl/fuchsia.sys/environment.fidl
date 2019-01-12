@@ -37,9 +37,9 @@ struct EnvironmentOptions {
   // environment. If an |EnvironmentController|'s interface is
   // request, the environment will be killed when the interface is closed.
   //
-  // The |label| is an optional name to associate with the environment for
-  // diagnostic purposes.  The label will be truncated if it is longer
-  // than |kLabelMaxLength|.
+  // |label| defines the new environment's label/name. It can also be used for
+  // diagnostic purposes. The label will be truncated if it is longer than
+  // |kLabelMaxLength|.
   //
   // |additional_services|, which may be empty, contains a list of services
   // that the environment provides, which are hosted by
@@ -51,7 +51,7 @@ struct EnvironmentOptions {
   // details.
   1: CreateNestedEnvironment(request<Environment> environment,
                              request<EnvironmentController>? controller,
-                             string? label,
+                             string label,
                              ServiceList? additional_services,
                              EnvironmentOptions options);
 
