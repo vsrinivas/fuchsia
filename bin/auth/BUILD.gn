@@ -68,6 +68,7 @@ package("auth_bin_unittests") {
 
   tests = [
     { name = "account_manager_bin_test" },
+    { name = "account_handler_bin_test" },
     { name = "dev_auth_provider_bin_test"},
     { name = "dev_auth_provider_iotid_bin_test"},
   ]
