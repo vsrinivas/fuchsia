@@ -158,7 +158,7 @@ func TestFindEvents(t *testing.T) {
 	compareEvents(t, "Find events by Category", expectedEvents, events)
 
 	// Find events by Process
-	pid := 7009
+	pid := uint64(7009)
 	expectedEvents = []Event{
 		Event{Type: 0, Cat: "input", Name: "Read", Pid: 7009, Tid: 7021, Start: 6.975031389531089e+08, Dur: 322.78645980358124, Id: 0, Args: map[string]interface{}(nil)},
 		Event{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil)},
@@ -167,7 +167,7 @@ func TestFindEvents(t *testing.T) {
 	compareEvents(t, "Find events by Process", expectedEvents, events)
 
 	// Find events by Thread
-	tid := 7022
+	tid := uint64(7022)
 	expectedEvents = []Event{
 		Event{Type: 0, Cat: "io", Name: "Write", Pid: 7009, Tid: 7022, Start: 6.977783282160872e+08, Dur: 268.38336956501007, Id: 0, Args: map[string]interface{}(nil)},
 		Event{Type: 1, Cat: "async", Name: "ReadWrite", Pid: 7009, Tid: 7022, Start: 6.87503138e+08, Dur: 0, Id: 43, Args: map[string]interface{}(nil)}}

@@ -35,10 +35,10 @@ type traceEvent struct {
 	Cat  string
 	Name string
 	Ph   string
-	Pid  int
-	Tid  int
+	Pid  uint64
+	Tid  uint64
 	Ts   float64
-	Id   int
+	Id   uint64
 	Dur  float64
 	Args map[string]interface{}
 }
@@ -59,8 +59,8 @@ type traceEvent struct {
 // }
 type systemTraceEvent struct {
 	Name string
-	Pid  int
-	Tid  int
+	Pid  uint64
+	Tid  uint64
 	Ph   string
 }
 
@@ -94,25 +94,25 @@ type Event struct {
 	Type  EventType
 	Cat   string
 	Name  string
-	Pid   int
-	Tid   int
+	Pid   uint64
+	Tid   uint64
 	Start float64
 	Dur   float64
-	Id    int // Used for async events.
+	Id    uint64 // Used for async events.
 	Args  map[string]interface{}
 }
 
 // A struct that represents a Thread in the model.
 type Thread struct {
 	Name   string
-	Tid    int
+	Tid    uint64
 	Events []Event
 }
 
 // A struct that represents a Process in the model.
 type Process struct {
 	Name    string
-	Pid     int
+	Pid     uint64
 	Threads []Thread
 }
 
@@ -121,7 +121,7 @@ type Model struct {
 	Processes []Process
 }
 
-func (m Model) getProcessById(pid int) *Process {
+func (m Model) getProcessById(pid uint64) *Process {
 	for i, _ := range m.Processes {
 		if m.Processes[i].Pid == pid {
 			return &m.Processes[i]
@@ -130,7 +130,7 @@ func (m Model) getProcessById(pid int) *Process {
 	return nil
 }
 
-func (m *Model) getOrCreateProcessById(pid int) *Process {
+func (m *Model) getOrCreateProcessById(pid uint64) *Process {
 	processPtr := m.getProcessById(pid)
 	if processPtr != nil {
 		return processPtr
@@ -140,7 +140,7 @@ func (m *Model) getOrCreateProcessById(pid int) *Process {
 	return &m.Processes[len(m.Processes)-1]
 }
 
-func (p Process) getThreadById(tid int) *Thread {
+func (p Process) getThreadById(tid uint64) *Thread {
 	for i, _ := range p.Threads {
 		if p.Threads[i].Tid == tid {
 			return &p.Threads[i]
@@ -149,7 +149,7 @@ func (p Process) getThreadById(tid int) *Thread {
 	return nil
 }
 
-func (m *Model) getOrCreateThreadById(pid int, tid int) *Thread {
+func (m *Model) getOrCreateThreadById(pid uint64, tid uint64) *Thread {
 	processPtr := m.getOrCreateProcessById(pid)
 	threadPtr := processPtr.getThreadById(tid)
 	if threadPtr != nil {
@@ -186,14 +186,14 @@ func combineArgs(event1 traceEvent, event2 traceEvent) map[string]interface{} {
 
 // Used to match sync events
 type pidAndTid struct {
-	Pid int
-	Tid int
+	Pid uint64
+	Tid uint64
 }
 
 // Used to match async events
 type catAndID struct {
 	Cat string
-	Id  int
+	Id  uint64
 }
 
 func (m *Model) processTraceEvents(traceEvents []traceEvent) {
@@ -304,8 +304,8 @@ func ReadTrace(data []byte) (Model, error) {
 type EventsFilter struct {
 	Cat  *string
 	Name *string
-	Pid  *int
-	Tid  *int
+	Pid  *uint64
+	Tid  *uint64
 }
 
 // A method that finds events in the given thread, filtered by |filter|.
