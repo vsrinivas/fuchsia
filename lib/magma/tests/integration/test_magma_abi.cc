@@ -42,7 +42,7 @@ public:
         EXPECT_NE(0u, device_id);
     }
 
-    magma_connection_t* connection() { return connection_; }
+    magma_connection_t connection() { return connection_; }
 
     void Connection() { ASSERT_NE(connection_, nullptr); }
 
@@ -226,7 +226,7 @@ public:
 
 private:
     int fd_ = -1;
-    magma_connection_t* connection_;
+    magma_connection_t connection_;
 };
 
 TEST(MagmaAbi, DeviceId)

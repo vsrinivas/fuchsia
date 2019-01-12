@@ -58,7 +58,7 @@ public:
     magma_status_t ReadNotificationChannel(void* buffer, uint64_t buffer_size,
                                            uint64_t* buffer_size_out);
 
-    static VirtioMagmaConnection* cast(magma_connection_t* connection);
+    static VirtioMagmaConnection* cast(magma_connection_t connection);
 
 private:
     VirtioMagmaConnection(const VirtioMagmaConnection&) = delete;

@@ -68,7 +68,7 @@ typedef uintptr_t magma_semaphore_t;
 
 typedef struct magma_connection {
     uint32_t magic_;
-} magma_connection_t;
+} * magma_connection_t;
 
 typedef uintptr_t magma_sysmem_connection_t;
 

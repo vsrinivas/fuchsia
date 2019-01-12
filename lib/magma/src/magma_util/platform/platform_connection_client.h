@@ -18,7 +18,7 @@
 namespace magma {
 
 // Any implementation of PlatformConnectionClient shall be threadsafe.
-class PlatformConnectionClient : public magma_connection_t {
+class PlatformConnectionClient : public magma_connection {
 public:
     virtual ~PlatformConnectionClient() {}
 
@@ -64,7 +64,7 @@ public:
     virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,
                                           magma_system_inline_command_buffer* command_buffers) = 0;
 
-    static PlatformConnectionClient* cast(magma_connection_t* connection)
+    static PlatformConnectionClient* cast(magma_connection_t connection)
     {
         DASSERT(connection);
         DASSERT(connection->magic_ == kMagic);

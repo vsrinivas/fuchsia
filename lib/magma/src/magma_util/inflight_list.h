@@ -22,8 +22,7 @@ namespace magma {
 // Note, this class is not threadsafe.
 class InflightList {
 public:
-    InflightList(magma_connection_t* connection)
-        : fd_(magma_get_notification_channel_fd(connection))
+    InflightList(magma_connection_t connection) : fd_(magma_get_notification_channel_fd(connection))
     {
         DASSERT(fd_ >= 0);
     }
@@ -65,7 +64,7 @@ public:
     }
 
     // Read all outstanding completions and update the inflight list.
-    void ServiceCompletions(magma_connection_t* connection)
+    void ServiceCompletions(magma_connection_t connection)
     {
         uint64_t buffer_ids[8];
         uint64_t bytes_available = 0;

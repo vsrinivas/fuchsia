@@ -485,7 +485,7 @@ magma_status_t VirtioMagmaConnection::ReadNotificationChannel(void* buffer, uint
     return args.status_return;
 }
 
-VirtioMagmaConnection* VirtioMagmaConnection::cast(magma_connection_t* connection)
+VirtioMagmaConnection* VirtioMagmaConnection::cast(magma_connection_t connection)
 {
     DASSERT(connection);
     DASSERT(connection->magic_ == kMagic);

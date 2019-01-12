@@ -45,7 +45,7 @@ class VirtioMagma {
   __UNUSED zx::vmar* vmar_;
   __UNUSED VirtioQueue* in_queue_;
   VirtioQueue* out_queue_;
-  std::unordered_map<uint64_t, magma_connection_t*> connections_;
+  std::unordered_map<uint64_t, magma_connection_t> connections_;
   uint64_t next_connection_id_ = 1;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(VirtioMagma);

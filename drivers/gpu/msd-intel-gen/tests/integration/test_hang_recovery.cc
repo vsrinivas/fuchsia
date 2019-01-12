@@ -227,7 +227,7 @@ public:
     }
 
 private:
-    magma_connection_t* connection_;
+    magma_connection_t connection_;
     uint32_t context_id_;
 };
 

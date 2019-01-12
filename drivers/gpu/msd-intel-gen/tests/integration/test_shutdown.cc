@@ -115,7 +115,7 @@ public:
     }
 
 private:
-    magma_connection_t* connection_;
+    magma_connection_t connection_;
 };
 
 constexpr uint32_t kMaxCount = 100;

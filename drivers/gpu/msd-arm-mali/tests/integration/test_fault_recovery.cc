@@ -182,7 +182,7 @@ public:
     }
 
 private:
-    magma_connection_t* connection_;
+    magma_connection_t connection_;
     uint32_t context_id_;
     uint64_t next_job_address_ = 0x1000000;
 };
