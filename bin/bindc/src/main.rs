@@ -7,6 +7,7 @@
 #[macro_use]
 extern crate bitfield;
 
+mod c_generation;
 mod instruction;
 
 fn main() {}

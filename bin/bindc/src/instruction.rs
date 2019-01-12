@@ -23,7 +23,8 @@ bitfield! {
 
 /// For all conditions (except Always), the operands to the condition
 /// are (parameter_b, value) pairs in the final encoding.
-enum Condition {
+#[derive(PartialEq, Eq)]
+pub enum Condition {
     Always,
     Equal(u32, u32),
     NotEqual(u32, u32),
@@ -33,7 +34,7 @@ enum Condition {
     LessThanEqual(u32, u32),
 }
 
-enum Instruction {
+pub enum Instruction {
     Abort(Condition),
     Match(Condition),
     Goto(Condition, u32),
