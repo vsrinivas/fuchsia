@@ -13,13 +13,15 @@
 
 namespace {
 
+using Request = usb::Request<void>;
+
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
-constexpr size_t kReqSize = usb::Request::RequestSize(kParentReqSize);
+constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
 
 bool AllocTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
     END_TEST;
 }
 
@@ -27,8 +29,8 @@ bool InitTest() {
     BEGIN_TEST;
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
     EXPECT_EQ(request->Init(vmo, 0, 0, 0),
               ZX_OK);
     END_TEST;
@@ -38,16 +40,16 @@ bool AllocVmoTest() {
     BEGIN_TEST;
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::AllocVmo(&request, vmo, 0, 0, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::AllocVmo(&request, vmo, 0, 0, 0, kReqSize),
               ZX_OK);
     END_TEST;
 }
 
 bool CopyTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
               ZX_OK);
 
     constexpr uint8_t kSampleData[] = "blahblahblah";
@@ -62,8 +64,8 @@ bool CopyTest() {
 
 bool MmapTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
               ZX_OK);
 
     constexpr uint8_t kSampleData[] = "blahblahblah";
@@ -78,8 +80,8 @@ bool MmapTest() {
 
 bool CacheOpTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 0, 0), ZX_OK);
@@ -95,8 +97,8 @@ bool CacheOpTest() {
 
 bool CacheFlushTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheFlush(0, 0), ZX_OK);
@@ -108,8 +110,8 @@ bool CacheFlushTest() {
 
 bool CacheFlushInvalidateTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    EXPECT_EQ(usb::Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    std::optional<Request> request;
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheFlushInvalidate(0, 0), ZX_OK);
@@ -126,8 +128,8 @@ bool PhysMapTest() {
     fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
     zx::unowned_bti bti(bti_handle);
 
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
@@ -142,17 +144,16 @@ bool PhysIterTest() {
     fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
     zx::unowned_bti bti(bti_handle);
 
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
-    auto* req = request->release();
+    auto* req = request->take();
     for (size_t i = 0; i < req->phys_count; i++) {
         req->phys_list[i] = ZX_PAGE_SIZE * i;
     }
-    request = usb::Request(req, 0);
-
+    request = usb::Request(req, kParentReqSize);
     size_t count = 0;
     for (auto [paddr, size] : request->phys_iter(ZX_PAGE_SIZE)) {
         EXPECT_EQ(paddr, ZX_PAGE_SIZE * count);
@@ -165,8 +166,8 @@ bool PhysIterTest() {
 
 bool SetScatterGatherListTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, PAGE_SIZE * 3, 1, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 3, 1, kReqSize),
               ZX_OK);
     // Wrap around the end of the request.
     constexpr phys_iter_sg_entry_t kWrapped[] = {
@@ -185,13 +186,13 @@ bool SetScatterGatherListTest() {
     END_TEST;
 }
 
-static bool InvalidScatterGatherListTest() {
+bool InvalidScatterGatherListTest() {
     BEGIN_TEST;
 
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE * 3, 0, &vmo), ZX_OK);
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kReqSize),
               ZX_OK);
 
     constexpr phys_iter_sg_entry_t kOutOfBounds[] = {
@@ -215,8 +216,8 @@ bool ScatterGatherPhysIterTest() {
     fbl::AutoCall cleanup([&]() { fake_bti_destroy(bti_handle); });
     zx::unowned_bti bti(bti_handle);
 
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
@@ -227,11 +228,11 @@ bool ScatterGatherPhysIterTest() {
         {.length = 10, .offset = 2000}};
     EXPECT_EQ(request->SetScatterGatherList(kUnordered, fbl::count_of(kUnordered)), ZX_OK);
 
-    auto* req = request->release();
+    auto* req = request->take();
     for (size_t i = 0; i < req->phys_count; i++) {
         req->phys_list[i] = ZX_PAGE_SIZE * (i * 2 + 1);
     }
-    request = usb::Request(req, 0);
+    request = usb::Request(req, kParentReqSize);
 
     auto phys_iter = request->phys_iter(ZX_PAGE_SIZE);
     auto iter = phys_iter.begin();
@@ -270,20 +271,30 @@ bool MultipleSectionTest() {
     BEGIN_TEST;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
-    constexpr size_t kFirstLayerReqSize = usb::Request::RequestSize(kBaseReqSize);
-    constexpr size_t kSecondLayerReqSize = usb::Request::RequestSize(kFirstLayerReqSize);
-    constexpr size_t kThirdLayerReqSize = usb::Request::RequestSize(kSecondLayerReqSize);
+    constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
+    constexpr size_t kSecondLayerReqSize = Request::RequestSize(kFirstLayerReqSize);
+    constexpr size_t kThirdLayerReqSize = Request::RequestSize(kSecondLayerReqSize);
 
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, kThirdLayerReqSize, kBaseReqSize), ZX_OK);
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kThirdLayerReqSize, kBaseReqSize), ZX_OK);
 
-    usb::UnownedRequest request2(request->release(), kFirstLayerReqSize);
+    usb::UnownedRequest request2(request->take(), kFirstLayerReqSize);
     // TODO: Validate req.
-    usb::UnownedRequest request3(request2.release(), kSecondLayerReqSize);
+    usb::UnownedRequest request3(request2.take(), kSecondLayerReqSize);
     // TODO: Validate req.
-    request = usb::Request(request3.release(), kBaseReqSize);
+    request = usb::Request(request3.take(), kBaseReqSize);
     // TODO: Validate req.
 
+    END_TEST;
+}
+
+bool PrivateStorageTest() {
+    BEGIN_TEST;
+    constexpr size_t kRequestSize = usb::Request<uint32_t>::RequestSize(kParentReqSize);
+    std::optional<usb::Request<uint32_t>> request;
+    EXPECT_EQ(usb::Request<uint32_t>::Alloc(&request, 0, 0, kRequestSize), ZX_OK);
+    *request->private_storage() = 1001;
+    ASSERT_EQ(*request->private_storage(), 1001);
     END_TEST;
 }
 
@@ -304,4 +315,5 @@ RUN_TEST_SMALL(SetScatterGatherListTest)
 RUN_TEST_SMALL(InvalidScatterGatherListTest)
 RUN_TEST_SMALL(ScatterGatherPhysIterTest)
 RUN_TEST_SMALL(MultipleSectionTest)
+RUN_TEST_SMALL(PrivateStorageTest)
 END_TEST_CASE(UsbRequestTests);

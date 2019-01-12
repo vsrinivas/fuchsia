@@ -8,8 +8,10 @@
 
 namespace {
 
+using Request = usb::Request<void>;
+
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
-constexpr size_t kReqSize = usb::Request::RequestSize(kParentReqSize);
+constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
@@ -19,8 +21,8 @@ bool TrivialLifetimeTest() {
 
 bool SingleRequestTest() {
     BEGIN_TEST;
-    std::optional<usb::Request> request;
-    ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, kReqSize),
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
               ZX_OK);
 
     usb::RequestPool pool;
@@ -37,8 +39,8 @@ bool MultipleRequestTest() {
     usb::RequestPool pool;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<usb::Request> request;
-        ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, kReqSize),
+        std::optional<Request> request;
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
                   ZX_OK);
         pool.Add(std::move(*request));
     }
@@ -56,14 +58,15 @@ bool MultipleSizeTest() {
 
     for (size_t i = 0; i < 10; i++) {
         const size_t size = kParentReqSize + i * 8;
-        std::optional<usb::Request> request;
-        ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, usb::Request::RequestSize(size), size),
+        std::optional<Request> request;
+        ASSERT_EQ(Request::Alloc(&request, 0, 0,
+                                 Request::RequestSize(size), size),
                   ZX_OK);
         pool.Add(std::move(*request));
     }
 
     for (size_t i = 0; i < 10; i++) {
-        const size_t size = usb::Request::RequestSize(kParentReqSize + i * 8);
+        const size_t size = Request::RequestSize(kParentReqSize + i * 8);
         EXPECT_TRUE(pool.Get(size) != std::nullopt);
         EXPECT_TRUE(pool.Get(size) == std::nullopt);
     }
@@ -75,8 +78,8 @@ bool ReleaseTest() {
     usb::RequestPool pool;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<usb::Request> request;
-        ASSERT_EQ(usb::Request::Alloc(&request, 0, 0, kReqSize),
+        std::optional<Request> request;
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
                   ZX_OK);
         pool.Add(std::move(*request));
     }
