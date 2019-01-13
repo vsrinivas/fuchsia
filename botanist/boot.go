@@ -29,15 +29,15 @@ const (
 
 const (
 	// Special image names recognized by fuchsia's netsvc.
-	cmdlineNetsvcName = "<<netboot>>cmdline"
-	kernelNetsvcName  = "<<netboot>>kernel.bin"
-	fvmNetsvcName     = "<<image>>sparse.fvm"
-	efiNetsvcName     = "<<image>>efi.img"
-	kerncNetsvcName   = "<<image>>kernc.img"
-	zirconANetsvcName = "<<image>>zircona.img"
-	zirconBNetsvcName = "<<image>>zirconb.img"
-	zirconRNetsvcName = "<<image>>zirconr.img"
-	sshNetsvcName     = "<<image>>authorized_keys"
+	cmdlineNetsvcName        = "<<netboot>>cmdline"
+	kernelNetsvcName         = "<<netboot>>kernel.bin"
+	fvmNetsvcName            = "<<image>>sparse.fvm"
+	efiNetsvcName            = "<<image>>efi.img"
+	kerncNetsvcName          = "<<image>>kernc.img"
+	zirconANetsvcName        = "<<image>>zircona.img"
+	zirconBNetsvcName        = "<<image>>zirconb.img"
+	zirconRNetsvcName        = "<<image>>zirconr.img"
+	authorizedKeysNetsvcName = "<<image>>authorized_keys"
 )
 
 // The order in which bootserver serves images to netsvc.
@@ -80,7 +80,7 @@ func containsBootSwitch(strs []string) bool {
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, sshKey []byte) error {
+func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, authorizedKey []byte) error {
 	var ramKernel *Image
 	var paveImgs []Image
 	if bootMode == ModePave {
@@ -103,7 +103,7 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cm
 		return fmt.Errorf("invalid boot mode: %d", bootMode)
 	}
 
-	if err := transfer(ctx, addr, paveImgs, ramKernel, cmdlineArgs, sshKey); err != nil {
+	if err := transfer(ctx, addr, paveImgs, ramKernel, cmdlineArgs, authorizedKey); err != nil {
 		return err
 	}
 
@@ -150,7 +150,7 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 
 // Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
 // address.
-func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, sshKey []byte) error {
+func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, authorizedKey []byte) error {
 	// Prepare all files to be tranferred, minding the order, which follows that of the
 	// bootserver host tool.
 	netsvcFiles := []*netsvcFile{}
@@ -181,11 +181,11 @@ func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *I
 		netsvcFiles = append(netsvcFiles, imgNetsvcFile)
 	}
 
-	if len(sshKey) > 0 {
+	if len(authorizedKey) > 0 {
 		sshNetsvcFile := &netsvcFile{
-			reader: bytes.NewReader(sshKey),
-			size: int64(len(sshKey)),
-			name: sshNetsvcName,
+			reader: bytes.NewReader(authorizedKey),
+			size:   int64(len(authorizedKey)),
+			name:   authorizedKeysNetsvcName,
 		}
 		netsvcFiles = append(netsvcFiles, sshNetsvcFile)
 	}

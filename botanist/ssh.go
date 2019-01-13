@@ -30,26 +30,19 @@ const (
 	defaultIOTimeout = 5 * time.Second
 )
 
-// GenerateKeyPair generates a pair of private/public keys.
-func GenerateKeyPair() ([]byte, []byte, error) {
+// GeneratePrivateKey generates a private SSH key.
+func GeneratePrivateKey() ([]byte, error) {
 	key, err := rsa.GenerateKey(rand.Reader, RSAKeySize)
 	if err != nil {
-		return nil, nil, err
+		return nil, err
 	}
-
-	pubkey, err := ssh.NewPublicKey(&key.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pembuf := pubkey.Marshal()
-
-	var privateKey = &pem.Block{
+	privateKey := &pem.Block{
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	}
 	buf := pem.EncodeToMemory(privateKey)
 
-	return pembuf, buf, nil
+	return buf, nil
 }
 
 func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig) (*ssh.Client, error) {
