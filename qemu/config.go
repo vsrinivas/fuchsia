@@ -5,157 +5,190 @@
 package qemu
 
 import (
-	"errors"
 	"fmt"
-	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
-
-	"fuchsia.googlesource.com/tools/build"
 )
+
+const (
+	DefaultNetwork   = "10.0.2.0/24"
+	DefaultDHCPStart = "10.0.2.15"
+	DefaultGateway   = "10.0.2.2"
+	DefaultDNS       = "10.0.2.3"
+)
+
+const (
+	TargetAArch64 = "aarch64"
+	TargetX86_64  = "x86_64"
+)
+
+type Drive struct {
+	// ID is the block device identifier.
+	ID string
+
+	// File is the disk image file.
+	File string
+
+	// Addr is the PCI address of the block device.
+	Addr string
+}
+
+type Forward struct {
+	// HostPort is the port on the host.
+	HostPort int
+
+	// GuestPort is the port on the guest.
+	GuestPort int
+}
+
+type Netdev struct {
+	// ID is the network device identifier.
+	ID string
+
+	// Network is the network block.
+	Network string
+
+	// DHCPStart is the address at which the DHCP allocation starts.
+	DHCPStart string
+
+	// DNS is the address of the builtin DNS server.
+	DNS string
+
+	// Host is the host IP address.
+	Host string
+
+	// Forwards are the host forwardings.
+	Forwards []Forward
+
+	// MAC is the network device MAC address.
+	MAC string
+}
 
 // Config gives a high-level configuration for QEMU on Fuchsia.
 type Config struct {
 	// QEMUBin is a path to the QEMU binary.
-	QEMUBin string
+	Binary string
 
-	// CPU is the emulated CPU (e.g., "x64" or "arm64").
-	CPU string
+	// Target is the QEMU target (e.g., "x86_64" or "aarch64").
+	Target string
+
+	// CPU is the number of CPUs.
+	CPU int
+
+	// Memory is the amount of RAM.
+	Memory int
 
 	// KVM gives whether to enable KVM.
 	KVM bool
 
-	// MinFSImage is the path to a minfs image. If unset, none will be attached.
-	MinFSImage string
+	// Kernel is the path to the kernel image.
+	Kernel string
 
-	// PCIAddr is the PCI address under which a minfs image will be mounted as a block device.
-	PCIAddr string
+	// Initrd is the path to the initrd image.
+	Initrd string
 
-	// InternetAccess gives whether to enable internet access.
-	InternetAccess bool
+	// Drives are drives to mount inside the QEMU instance.
+	Drives []Drive
+
+	// Networks are networks to set up inside the QEMU instance.
+	Networks []Netdev
 }
 
 // CreateInvocation creates a QEMU invocation given a particular configuration, a list of
 // images, and any specified command-line arguments.
-func CreateInvocation(cfg Config, imgs build.Images, cmdlineArgs []string) ([]string, error) {
-	if _, err := os.Stat(cfg.QEMUBin); err != nil {
+func CreateInvocation(cfg Config, cmdlineArgs []string) ([]string, error) {
+	if _, err := os.Stat(cfg.Binary); err != nil {
 		return nil, fmt.Errorf("QEMU binary not found: %v", err)
 	}
-	absQEMUBinPath, err := filepath.Abs(cfg.QEMUBin)
+	absBinaryPath, err := filepath.Abs(cfg.Binary)
 	if err != nil {
 		return nil, err
 	}
 
-	invocation := []string{absQEMUBinPath}
-	addArgs := func(args ...string) {
-		invocation = append(invocation, args...)
-	}
+	invocation := []string{absBinaryPath}
 
-	if cfg.CPU == "arm64" {
+	switch cfg.Target {
+	case TargetAArch64:
 		if cfg.KVM {
-			addArgs("-machine", "virt,gic_version=host")
-			addArgs("-cpu", "host")
-			addArgs("-enable-kvm")
+			invocation = append(invocation, "-machine", "virt,gic_version=host")
+			invocation = append(invocation, "-cpu", "host")
+			invocation = append(invocation, "-enable-kvm")
 		} else {
-			addArgs("-machine", "virt,gic_version=3")
-			addArgs("-machine", "virtualization=true")
-			addArgs("-cpu", "cortex-a53")
+			invocation = append(invocation, "-machine", "virt,gic_version=3")
+			invocation = append(invocation, "-machine", "virtualization=true")
+			invocation = append(invocation, "-cpu", "cortex-a53")
 		}
-	} else if cfg.CPU == "x64" {
-		addArgs("-machine", "q35")
-		// Necessary for userboot.shutdown to trigger properly, since it writes to
-		// 0xf4 to debug-exit in QEMU.
-		addArgs("-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
-
+	case TargetX86_64:
+		invocation = append(invocation, "-machine", "q35")
+		// TODO: this is Fuchsia specific, factor it out as another device struct.
+		// Necessary for userboot.shutdown to trigger properly, since it writes
+		// to 0xf4 to debug-exit in QEMU.
+		invocation = append(invocation, "-device", "isa-debug-exit,iobase=0xf4,iosize=0x04")
 		if cfg.KVM {
-			addArgs("-cpu", "host")
-			addArgs("-enable-kvm")
+			invocation = append(invocation, "-cpu", "host")
+			invocation = append(invocation, "-enable-kvm")
 		} else {
-			addArgs("-cpu", "Haswell,+smap,-check,-fsgsbase")
+			invocation = append(invocation, "-cpu", "Haswell,+smap,-check,-fsgsbase")
 		}
-	} else {
-		return nil, fmt.Errorf("cpu %q not recognized", cfg.CPU)
+	default:
+		return nil, fmt.Errorf("cpu %q not recognized", cfg.Target)
 	}
 
-	addArgs("-m", "4096")
-	addArgs("-smp", "4")
-	addArgs("-nographic")
-	addArgs("-serial", "stdio")
-	addArgs("-monitor", "none")
+	invocation = append(invocation, "-m", fmt.Sprintf("%d", cfg.Memory))
+	invocation = append(invocation, "-smp", fmt.Sprintf("%d", cfg.CPU))
+	invocation = append(invocation, "-nographic")
+	invocation = append(invocation, "-serial", "stdio")
+	invocation = append(invocation, "-monitor", "none")
 
-	if !cfg.InternetAccess {
-		addArgs("-net", "none")
-	}
+	invocation = append(invocation, "-kernel", cfg.Kernel)
+	invocation = append(invocation, "-initrd", cfg.Initrd)
 
-	if cfg.MinFSImage != "" {
-		if cfg.PCIAddr == "" {
-			return nil, errors.New("PCI address must be set if a MinFS image is provided")
+	// TODO: maybe we should introduce Device interface with three different
+	// implementations: Drive, Netdev and ISADebugExit to cleanup the code
+	// below a bit.
+
+	for _, d := range cfg.Drives {
+		var drive strings.Builder
+		fmt.Fprintf(&drive, "id=%s,file=%s,format=raw,if=none", d.ID, d.File)
+		invocation = append(invocation, "-drive", drive.String())
+
+		var device strings.Builder
+		fmt.Fprintf(&device, "virtio-blk-pci,drive=%s", d.ID)
+		if d.Addr != "" {
+			fmt.Fprintf(&device, ",addr=%s", d.Addr)
 		}
-		absMinFSImage, err := filepath.Abs(cfg.MinFSImage)
-		if err != nil {
-			return nil, err
+		invocation = append(invocation, "-device", device.String())
+	}
+
+	for _, n := range cfg.Networks {
+		var netdev strings.Builder
+		fmt.Fprintf(&netdev, "user,id=%s", n.ID)
+		if n.Network != "" {
+			fmt.Fprintf(&netdev, ",net=%s", n.Network)
 		}
-		// Swarming hard-links Isolate downloads with a cache and the very same cached minfs
-		// image will be used across multiple tasks. To ensure that it remains blank, we
-		// must break its link.
-		if err := overwriteFileWithCopy(absMinFSImage); err != nil {
-			return nil, err
+		if n.DHCPStart != "" {
+			fmt.Fprintf(&netdev, ",dhcpstart=%s", n.DHCPStart)
 		}
-		addArgs("-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=testdisk", absMinFSImage))
-		addArgs("-device", fmt.Sprintf("virtio-blk-pci,drive=testdisk,addr=%s", cfg.PCIAddr))
+		if n.DNS != "" {
+			fmt.Fprintf(&netdev, ",dns=%s", n.DNS)
+		}
+		if n.Host != "" {
+			fmt.Fprintf(&netdev, ",host=%s", n.Host)
+		}
+		for _, f := range n.Forwards {
+			fmt.Fprintf(&netdev, ",hostfwd=tcp::%d-:%d", f.HostPort, f.GuestPort)
+		}
+		invocation = append(invocation, "-netdev", netdev.String())
+
+		var device strings.Builder
+		fmt.Fprintf(&device, "virtio-net-pci,netdev=%s", n.ID)
+		if n.MAC != "" {
+			fmt.Fprintf(&device, ",mac=%s", n.MAC)
+		}
+		invocation = append(invocation, "-device", device.String())
 	}
 
-	qemuKernel := imgs.Get("qemu-kernel")
-	if qemuKernel == nil {
-		return nil, fmt.Errorf("could not find qemu-kernel")
-	}
-	zirconA := imgs.Get("zircon-a")
-	if zirconA == nil {
-		return nil, fmt.Errorf("could not find zircon-a")
-	}
-	addArgs("-kernel", qemuKernel.Path)
-	addArgs("-initrd", zirconA.Path)
-
-	if storageFull := imgs.Get("storage-full"); storageFull != nil {
-		addArgs("-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=maindisk", storageFull.Path))
-		addArgs("-device", "virtio-blk-pci,drive=maindisk")
-	}
-
-	addArgs("-append", strings.Join(cmdlineArgs, " "))
+	invocation = append(invocation, "-append", strings.Join(cmdlineArgs, " "))
 	return invocation, nil
-}
-
-func overwriteFileWithCopy(path string) error {
-	copy, err := ioutil.TempFile("", "botanist")
-	if err != nil {
-		return err
-	}
-	if err = copyFile(path, copy.Name()); err != nil {
-		return err
-	}
-	if err = os.Remove(path); err != nil {
-		return err
-	}
-	return os.Rename(copy.Name(), path)
-}
-
-func copyFile(src, dest string) error {
-	in, err := os.Open(src)
-	if err != nil {
-		return err
-	}
-	defer in.Close()
-	info, err := in.Stat()
-	if err != nil {
-		return err
-	}
-	out, err := os.OpenFile(dest, os.O_WRONLY|os.O_CREATE, info.Mode().Perm())
-	if err != nil {
-		return err
-	}
-	defer out.Close()
-	_, err = io.Copy(out, in)
-	return err
 }

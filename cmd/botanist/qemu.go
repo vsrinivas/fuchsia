@@ -8,14 +8,10 @@ import (
 	"context"
 	"flag"
 	"fmt"
-	"io/ioutil"
-	"os"
-	"os/exec"
-	"path/filepath"
 
+	"fuchsia.googlesource.com/tools/botanist/target"
 	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/logger"
-	"fuchsia.googlesource.com/tools/qemu"
 	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
 )
@@ -83,58 +79,27 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		return err
 	}
 
-	qemuCPU, ok := map[string]string{
-		"x64":   "x86_64",
-		"arm64": "aarch64",
-	}[cmd.targetArch]
-	if !ok {
-		return fmt.Errorf("cpu %q not recognized", cmd.targetArch)
-	}
-	qemuBinPath := filepath.Join(cmd.qemuBinDir, fmt.Sprintf("%s-%s", qemuBinPrefix, qemuCPU))
-
-	cfg := qemu.Config{
-		QEMUBin:        qemuBinPath,
-		CPU:            cmd.targetArch,
-		KVM:            cmd.enableKVM,
-		MinFSImage:     cmd.minFSImage,
-		PCIAddr:        cmd.minFSBlkDevPCIAddr,
-		InternetAccess: cmd.enableNetworking,
+	// TODO: pass this directly from a file.
+	config := target.QEMUConfig{
+		CPU:     4,
+		Memory:  4096,
+		Path:    cmd.qemuBinDir,
+		Target:  cmd.targetArch,
+		KVM:     cmd.enableKVM,
+		Network: cmd.enableNetworking,
+		MinFS: &target.MinFS{
+			Image:      cmd.minFSImage,
+			PCIAddress: cmd.minFSBlkDevPCIAddr,
+		},
 	}
 
-	// The system will halt on a kernel panic instead of rebooting
-	cmdlineArgs = append(cmdlineArgs, "kernel.halt-on-panic=true")
-	// Print a message if `dm poweroff` times out.
-	cmdlineArgs = append(cmdlineArgs, "devmgr.suspend-timeout-debug=true")
-	// Do not print colors.
-	cmdlineArgs = append(cmdlineArgs, "TERM=dumb")
-	if cmd.targetArch == "x64" {
-		// Necessary to redirect to stdout.
-		cmdlineArgs = append(cmdlineArgs, "kernel.serial=legacy")
-	}
+	t := target.NewQEMUTarget(config)
 
-	invocation, err := qemu.CreateInvocation(cfg, imgs, cmdlineArgs)
-	if err != nil {
+	if err := t.Start(ctx, imgs, cmdlineArgs); err != nil {
 		return err
 	}
 
-	// The QEMU command needs to be invoked within an empty directory, as QEMU will attempt
-	// to pick up files from its working directory, one notable culprit being multiboot.bin.
-	// This can result in strange behavior.
-	qemuWorkingDir, err := ioutil.TempDir("", "qemu-working-dir")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(qemuWorkingDir)
-
-	qemuCmd := exec.Cmd{
-		Path:   invocation[0],
-		Args:   invocation,
-		Dir:    qemuWorkingDir,
-		Stdout: os.Stdout,
-		Stderr: os.Stderr,
-	}
-	logger.Debugf(ctx, "QEMU invocation:\n%s", invocation)
-	return qemu.CheckExitCode(qemuCmd.Run())
+	return t.Wait(ctx)
 }
 
 func (cmd *QEMUCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
