@@ -1,0 +1,67 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.ramdisk;
+
+using zx;
+
+// Identifies if requests which are sent ot the ramdisk while it is
+// considered "asleep" should be processed when the ramdisk wakes up.
+// If this flag is not set, those requests are failed immediately.
+const uint32 RAMDISK_FLAG_RESUME_ON_WAKE = 0xFF000001;
+
+// Counters for the number of write requests since the last call to either
+// "SleepAfter" or "Wake". All units are in individual blocks.
+struct BlockWriteCounts {
+    uint64 received;
+    uint64 successful;
+    uint64 failed;
+};
+
+// The interface for interacting with a instance of a ramdisk.
+[Layout = "Simple"]
+interface Ramdisk {
+    // Sets any of the |RAMDISK_FLAG_*| flags.
+    SetFlags(uint32 flags) -> (zx.status s);
+
+    // Wakes a ramdisk, if it was sleeping.
+    //
+    // Resets the block counts being stored by the ramdisk.
+    Wake() -> (zx.status s);
+
+    // Causes the ramdisk to sleep after |count| blocks are written successfully.
+    // After |count| blocks are written, requests either wait for the ramdisk to
+    // be awoken (if RESUME_ON_WAKE has been set), or begin failing immediately.
+    //
+    // Resets the block counts being stored by the ramdisk.
+    SleepAfter(uint64 count) -> (zx.status s);
+
+    // Returns the number of write requests since the last call to either
+    // "SleepAfter" or "Wake".
+    GetBlockCounts() -> (zx.status s, BlockWriteCounts? counts);
+};
+
+// TODO(smklein): Deduplicate GUID declarations with other FIDL interfaces.
+
+// Matches the value of ZBI_PARTITION_GUID_LEN.
+const uint32 GUID_LEN = 16;
+
+// An array of bytes interpreted as a GUID. Wrapped in a struct to
+// allow optional GUIDs.
+struct GUID {
+    array<uint8>:GUID_LEN value;
+};
+
+const uint32 MAX_NAME_LENGTH = 32;
+
+[Layout = "Simple"]
+interface RamdiskController {
+    // Initializes a new Ramdisk instance with the provided block size and block count.
+    // Takes an optional |type_guid|, which may be queried from the ramdisk instance.
+    Create(uint64 block_size, uint64 block_count, GUID? type_guid) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+
+    // Initializes a new Ramdisk instance from a VMO. Uses a block size of |PAGE_SIZE|,
+    // and derives the block count from the size of the VMO.
+    CreateFromVmo(handle<vmo> vmo) -> (zx.status s, string:MAX_NAME_LENGTH? name);
+};

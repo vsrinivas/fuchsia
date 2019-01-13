@@ -49,6 +49,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-hardware-skipblock \
 
 include make/module.mk
@@ -99,6 +100,7 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-nand \
     system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-hardware-skipblock \
 
 include make/module.mk

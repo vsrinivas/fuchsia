@@ -41,6 +41,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
     system/fidl/fuchsia-hardware-nand \
+    system/fidl/fuchsia-hardware-ramdisk \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

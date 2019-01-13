@@ -31,7 +31,7 @@ static std::atomic<uint64_t> g_ramdisk_count = 0;
 } // namespace
 
 Ramdisk::Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
-                 uint8_t* type_guid, fzl::OwnedVmoMapper mapping)
+                 const uint8_t* type_guid, fzl::OwnedVmoMapper mapping)
     : RamdiskDeviceType(parent), block_size_(block_size), block_count_(block_count),
       mapping_(std::move(mapping)) {
     if (type_guid) {
@@ -43,7 +43,8 @@ Ramdisk::Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
 }
 
 zx_status_t Ramdisk::Create(zx_device_t* parent, zx::vmo vmo, uint64_t block_size,
-                            uint64_t block_count, uint8_t* type_guid, std::unique_ptr<Ramdisk>* out)
+                            uint64_t block_count, const uint8_t* type_guid,
+                            std::unique_ptr<Ramdisk>* out)
 {
     fzl::OwnedVmoMapper mapping;
     zx_status_t status = mapping.Map(std::move(vmo), block_size * block_count);
@@ -145,6 +146,10 @@ zx_status_t Ramdisk::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len,
     }
 }
 
+zx_status_t Ramdisk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_ramdisk_Ramdisk_dispatch(this, txn, msg, Ops());
+}
+
 void Ramdisk::DdkRelease() {
     // Wake up the worker thread, in case it is sleeping
     sync_completion_signal(&signal_);
@@ -204,6 +209,49 @@ void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completi
         txn->Complete(ZX_ERR_NOT_SUPPORTED);
         break;
     }
+}
+
+zx_status_t Ramdisk::FidlSetFlags(uint32_t flags, fidl_txn_t* txn) {
+    {
+        fbl::AutoLock lock(&lock_);
+        flags_ = flags;
+    }
+    return fuchsia_hardware_ramdisk_RamdiskSetFlags_reply(txn, ZX_OK);
+}
+
+zx_status_t Ramdisk::FidlWake(fidl_txn_t* txn) {
+    {
+        fbl::AutoLock lock(&lock_);
+        asleep_ = false;
+        memset(&block_counts_, 0, sizeof(block_counts_));
+        pre_sleep_write_block_count_ = 0;
+        sync_completion_signal(&signal_);
+    }
+    return fuchsia_hardware_ramdisk_RamdiskWake_reply(txn, ZX_OK);
+}
+
+zx_status_t Ramdisk::FidlSleepAfter(uint64_t block_count, fidl_txn_t* txn) {
+    {
+        fbl::AutoLock lock(&lock_);
+        asleep_ = false;
+        memset(&block_counts_, 0, sizeof(block_counts_));
+        pre_sleep_write_block_count_ = block_count;
+
+        if (block_count == 0) {
+            asleep_ = true;
+        }
+    }
+    return fuchsia_hardware_ramdisk_RamdiskSleepAfter_reply(txn, ZX_OK);
+}
+
+zx_status_t Ramdisk::FidlGetBlockCounts(fidl_txn_t* txn) {
+    fuchsia_hardware_ramdisk_BlockWriteCounts block_counts;
+    {
+        fbl::AutoLock lock(&lock_);
+        static_assert(sizeof(block_counts_) == sizeof(block_counts), "Bad FIDL / IOCTL alignment");
+        memcpy(&block_counts, &block_counts_, sizeof(block_counts_));
+    }
+    return fuchsia_hardware_ramdisk_RamdiskGetBlockCounts_reply(txn, ZX_OK, &block_counts);
 }
 
 zx_status_t Ramdisk::BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid) {

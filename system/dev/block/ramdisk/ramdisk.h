@@ -10,6 +10,8 @@
 #include <ddktl/protocol/block.h>
 #include <ddktl/protocol/block/partition.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -27,6 +29,7 @@ using RamdiskDeviceType = ddk::Device<Ramdisk,
                                       ddk::GetProtocolable,
                                       ddk::GetSizable,
                                       ddk::Unbindable,
+                                      ddk::Messageable,
                                       ddk::Ioctlable>;
 
 class Ramdisk : public RamdiskDeviceType,
@@ -36,7 +39,7 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Ramdisk);
 
     static zx_status_t Create(zx_device_t* parent, zx::vmo vmo, uint64_t block_size,
-                              uint64_t block_count, uint8_t* type_guid,
+                              uint64_t block_count, const uint8_t* type_guid,
                               std::unique_ptr<Ramdisk>* out);
 
     const char* Name() const {
@@ -49,11 +52,18 @@ public:
     void DdkUnbind();
     zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
                          void* reply, size_t max, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkRelease();
 
     // Block Protocol
     void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out);
     void BlockImplQueue(block_op_t* txn, block_impl_queue_callback completion_cb, void* cookie);
+
+    // FIDL interface Ramdisk
+    zx_status_t FidlSetFlags(uint32_t flags, fidl_txn_t* txn);
+    zx_status_t FidlWake(fidl_txn_t* txn);
+    zx_status_t FidlSleepAfter(uint64_t count, fidl_txn_t* txn);
+    zx_status_t FidlGetBlockCounts(fidl_txn_t* txn);
 
     // Partition Protocol
     zx_status_t BlockPartitionGetGuid(guidtype_t guid_type, guid_t* out_guid);
@@ -61,10 +71,22 @@ public:
 
 private:
     Ramdisk(zx_device_t* parent, uint64_t block_size, uint64_t block_count,
-            uint8_t* type_guid, fzl::OwnedVmoMapper mapping);
+            const uint8_t* type_guid, fzl::OwnedVmoMapper mapping);
 
     // Processes requests made to the ramdisk until it is unbound.
     void ProcessRequests();
+
+    static const fuchsia_hardware_ramdisk_Ramdisk_ops* Ops() {
+        using Binder = fidl::Binder<Ramdisk>;
+
+        static const fuchsia_hardware_ramdisk_Ramdisk_ops kOps = {
+            .SetFlags = Binder::BindMember<&Ramdisk::FidlSetFlags>,
+            .Wake = Binder::BindMember<&Ramdisk::FidlWake>,
+            .SleepAfter = Binder::BindMember<&Ramdisk::FidlSleepAfter>,
+            .GetBlockCounts = Binder::BindMember<&Ramdisk::FidlGetBlockCounts>,
+        };
+        return &kOps;
+    }
 
     static int WorkerThunk(void* arg) {
         Ramdisk* dev = reinterpret_cast<Ramdisk*>(arg);

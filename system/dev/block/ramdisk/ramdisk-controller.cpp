@@ -7,6 +7,8 @@
 #include <ddk/driver.h>
 #include <ddk/binding.h>
 #include <ddktl/device.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/vmo.h>
 #include <zircon/device/ramdisk.h>
 #include <zircon/types.h>
@@ -18,7 +20,8 @@ namespace ramdisk {
 namespace {
 
 class RamdiskController;
-using RamdiskControllerDeviceType = ddk::Device<RamdiskController, ddk::Ioctlable>;
+using RamdiskControllerDeviceType = ddk::Device<RamdiskController, ddk::Ioctlable,
+                                                ddk::Messageable>;
 
 class RamdiskController : public RamdiskControllerDeviceType {
 public:
@@ -27,14 +30,31 @@ public:
     // Device Protocol
     zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply, size_t max,
                          size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkRelease() {
         delete this;
     }
 
 private:
+    // FIDL Interface RamdiskController.
+    zx_status_t Create(uint64_t block_size, uint64_t block_count,
+                       const fuchsia_hardware_ramdisk_GUID* type_guid, fidl_txn_t* txn);
+    zx_status_t CreateFromVmo(zx_handle_t vmo, fidl_txn_t* txn);
+
     // Other methods
     zx_status_t ConfigureDevice(zx::vmo vmo, uint64_t block_size, uint64_t block_count,
-                                uint8_t* type_guid, void* reply, size_t max, size_t* out_actual);
+                                const uint8_t* type_guid, void* reply, size_t max,
+                                size_t* out_actual);
+
+    static const fuchsia_hardware_ramdisk_RamdiskController_ops* Ops() {
+        using Binder = fidl::Binder<RamdiskController>;
+
+        static const fuchsia_hardware_ramdisk_RamdiskController_ops kOps = {
+            .Create = Binder::BindMember<&RamdiskController::Create>,
+            .CreateFromVmo = Binder::BindMember<&RamdiskController::CreateFromVmo>,
+        };
+        return &kOps;
+    }
 };
 
 zx_status_t RamdiskController::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply,
@@ -46,7 +66,7 @@ zx_status_t RamdiskController::DdkIoctl(uint32_t op, const void* cmd, size_t cmd
         }
         ramdisk_ioctl_config_t* config = (ramdisk_ioctl_config_t*)cmd;
         zx::vmo vmo;
-        zx_status_t status = zx::vmo::create( config->blk_size * config->blk_count, 0, &vmo);
+        zx_status_t status = zx::vmo::create(config->blk_size * config->blk_count, 0, &vmo);
         if (status == ZX_OK) {
             status = ConfigureDevice(std::move(vmo), config->blk_size, config->blk_count,
                                      config->type_guid, reply, max, out_actual);
@@ -82,10 +102,69 @@ zx_status_t RamdiskController::DdkIoctl(uint32_t op, const void* cmd, size_t cmd
     }
 }
 
+zx_status_t RamdiskController::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_ramdisk_RamdiskController_dispatch(this, txn, msg, Ops());
+}
+
+zx_status_t RamdiskController::Create(uint64_t block_size, uint64_t block_count,
+                   const fuchsia_hardware_ramdisk_GUID* type_guid, fidl_txn_t* txn) {
+    auto failure_response = [&txn](zx_status_t status) -> zx_status_t {
+        return fuchsia_hardware_ramdisk_RamdiskControllerCreate_reply(txn, status, nullptr, 0);
+    };
+
+    zx::vmo vmo;
+    zx_status_t status = zx::vmo::create(block_size * block_count, 0, &vmo);
+    if (status != ZX_OK) {
+        return failure_response(status);
+    }
+    char name[fuchsia_hardware_ramdisk_MAX_NAME_LENGTH + 1];
+    size_t name_length = 0;
+    status = ConfigureDevice(std::move(vmo), block_size, block_count,
+                             type_guid ? type_guid->value : nullptr,
+                             name, sizeof(name), &name_length);
+    if (status != ZX_OK) {
+        return failure_response(status);
+    }
+    return fuchsia_hardware_ramdisk_RamdiskControllerCreate_reply(txn, ZX_OK, name, name_length);
+}
+
+zx_status_t RamdiskController::CreateFromVmo(zx_handle_t raw_vmo, fidl_txn_t* txn) {
+    zx::vmo vmo(raw_vmo);
+    auto failure_response = [&txn](zx_status_t status) -> zx_status_t {
+        return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo_reply(txn, status,
+                                                                             nullptr, 0);
+    };
+
+    // Ensure this is the last handle to this VMO; otherwise, the size
+    // may change from underneath us.
+    zx_info_handle_count_t info;
+    zx_status_t status = vmo.get_info(ZX_INFO_HANDLE_COUNT, &info, sizeof(info), nullptr,
+                                      nullptr);
+    if (status != ZX_OK || info.handle_count != 1) {
+        return failure_response(ZX_ERR_INVALID_ARGS);
+    }
+
+    uint64_t vmo_size;
+    status = vmo.get_size(&vmo_size);
+    if (status != ZX_OK) {
+        return failure_response(status);
+    }
+
+    char name[fuchsia_hardware_ramdisk_MAX_NAME_LENGTH + 1];
+    size_t name_length = 0;
+    status = ConfigureDevice(std::move(vmo), PAGE_SIZE, (vmo_size + PAGE_SIZE - 1) / PAGE_SIZE,
+                             nullptr, name, sizeof(name), &name_length);
+    if (status != ZX_OK) {
+        return failure_response(status);
+    }
+    return fuchsia_hardware_ramdisk_RamdiskControllerCreateFromVmo_reply(txn, ZX_OK, name,
+                                                                         name_length);
+}
+
 constexpr size_t kMaxRamdiskNameLength = 32;
 
 zx_status_t RamdiskController::ConfigureDevice(zx::vmo vmo, uint64_t block_size,
-                                               uint64_t block_count, uint8_t* type_guid,
+                                               uint64_t block_count, const uint8_t* type_guid,
                                                void* reply, size_t max, size_t* out_actual) {
     if (max < kMaxRamdiskNameLength) {
         return ZX_ERR_INVALID_ARGS;

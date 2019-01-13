@@ -13,9 +13,13 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ramdisk-controller.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/fidl-async \
+    system/ulib/fidl-utils \
     system/ulib/fzl \
     system/ulib/sync \
     system/ulib/zx \
@@ -29,5 +33,10 @@ MODULE_LIBS := \
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block \
     system/banjo/ddk-protocol-block-partition \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-ramdisk \
+    system/fidl/fuchsia-io \
+    system/fidl/fuchsia-mem \
 
 include make/module.mk
