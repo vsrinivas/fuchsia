@@ -175,7 +175,8 @@ void Bearer::TransactionQueue::TrySendNext(l2cap::Channel* chan,
   if (current()) {
     ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
     timeout_task_.set_handler(std::move(timeout_cb));
-    timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::msec(timeout_ms));
+    timeout_task_.PostDelayed(async_get_default_dispatcher(),
+                              zx::msec(timeout_ms));
     chan->Send(std::move(current()->pdu));
   }
 }
@@ -277,7 +278,8 @@ bool Bearer::StartTransaction(common::ByteBufferPtr pdu,
   ZX_DEBUG_ASSERT(callback);
   ZX_DEBUG_ASSERT(error_callback);
 
-  return SendInternal(std::move(pdu), std::move(callback), std::move(error_callback));
+  return SendInternal(std::move(pdu), std::move(callback),
+                      std::move(error_callback));
 }
 
 bool Bearer::SendWithoutResponse(common::ByteBufferPtr pdu) {
@@ -333,14 +335,14 @@ bool Bearer::SendInternal(common::ByteBufferPtr pdu,
   }
 
   tq->Enqueue(std::make_unique<PendingTransaction>(
-      reader.opcode(), std::move(callback), std::move(error_callback), std::move(pdu)));
+      reader.opcode(), std::move(callback), std::move(error_callback),
+      std::move(pdu)));
   TryStartNextTransaction(tq);
 
   return true;
 }
 
-Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode,
-                                          Handler handler) {
+Bearer::HandlerId Bearer::RegisterHandler(OpCode opcode, Handler handler) {
   ZX_DEBUG_ASSERT(handler);
 
   if (!is_open())
@@ -412,14 +414,13 @@ bool Bearer::Reply(TransactionId tid, common::ByteBufferPtr pdu) {
     return false;
   }
 
-  pending->Reset();
+  pending->reset();
   chan_->Send(std::move(pdu));
 
   return true;
 }
 
-bool Bearer::ReplyWithError(TransactionId id,
-                            Handle handle,
+bool Bearer::ReplyWithError(TransactionId id, Handle handle,
                             ErrorCode error_code) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
@@ -433,7 +434,7 @@ bool Bearer::ReplyWithError(TransactionId id,
     return false;
   }
 
-  pending->Reset();
+  pending->reset();
   SendErrorResponse(pending_opcode, handle, error_code);
 
   return true;
@@ -447,16 +448,16 @@ void Bearer::TryStartNextTransaction(TransactionQueue* tq) {
   ZX_DEBUG_ASSERT(is_open());
   ZX_DEBUG_ASSERT(tq);
 
-  tq->TrySendNext(chan_.get(),
-                  [this](async_dispatcher_t*, async::Task*, zx_status_t status) {
-                    if (status == ZX_OK)
-                      ShutDownInternal(true /* due_to_timeout */);
-                  },
-                  kTransactionTimeoutMs);
+  tq->TrySendNext(
+      chan_.get(),
+      [this](async_dispatcher_t*, async::Task*, zx_status_t status) {
+        if (status == ZX_OK)
+          ShutDownInternal(true /* due_to_timeout */);
+      },
+      kTransactionTimeoutMs);
 }
 
-void Bearer::SendErrorResponse(OpCode request_opcode,
-                               Handle attribute_handle,
+void Bearer::SendErrorResponse(OpCode request_opcode, Handle attribute_handle,
                                ErrorCode error_code) {
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
 
@@ -561,7 +562,7 @@ void Bearer::HandleBeginTransaction(RemoteTransaction* currently_pending,
   ZX_DEBUG_ASSERT(thread_checker_.IsCreationThreadCurrent());
   ZX_DEBUG_ASSERT(currently_pending);
 
-  if (currently_pending->HasValue()) {
+  if (currently_pending->has_value()) {
     bt_log(TRACE, "att", "A transaction is already pending! (opcode: %#.2x)",
            packet.opcode());
     ShutDown();

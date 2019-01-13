@@ -8,7 +8,6 @@
 #include <string>
 #include <vector>
 
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 
@@ -105,8 +104,7 @@ class DiscoveryFilter final {
   // returns false. |advertising_data| should include scan response data, if
   // any.
   bool MatchLowEnergyResult(const common::ByteBuffer& advertising_data,
-                            bool connectable,
-                            int8_t rssi) const;
+                            bool connectable, int8_t rssi) const;
 
   // Clears all the fields of this filter.
   void Reset();
@@ -114,12 +112,12 @@ class DiscoveryFilter final {
  private:
   std::vector<common::UUID> service_uuids_;
   std::string name_substring_;
-  common::Optional<uint8_t> flags_;
+  std::optional<uint8_t> flags_;
   bool all_flags_required_;
-  common::Optional<bool> connectable_;
-  common::Optional<uint16_t> manufacturer_code_;
-  common::Optional<int8_t> pathloss_;
-  common::Optional<int8_t> rssi_;
+  std::optional<bool> connectable_;
+  std::optional<uint16_t> manufacturer_code_;
+  std::optional<int8_t> pathloss_;
+  std::optional<int8_t> rssi_;
 };
 
 }  // namespace gap

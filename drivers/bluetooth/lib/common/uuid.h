@@ -9,7 +9,6 @@
 #include <unordered_set>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 
 namespace btlib {
@@ -97,7 +96,7 @@ class UUID final {
   // Returns the underlying value in little-endian byte order.
   const UInt128& value() const { return value_; }
 
-  common::Optional<uint16_t> As16Bit() const;
+  std::optional<uint16_t> As16Bit() const;
 
  private:
   // The Bluetooth Base UUID defines the first value in the range reserved
@@ -200,25 +199,17 @@ bool IsStringValidUuid(const std::string& uuid_string);
 bool StringToUuid(const std::string& uuid_string, UUID* out_uuid);
 
 // Equality operators
-inline bool operator==(uint16_t lhs, const UUID& rhs) {
-  return rhs == lhs;
-}
+inline bool operator==(uint16_t lhs, const UUID& rhs) { return rhs == lhs; }
 
-inline bool operator==(uint32_t lhs, const UUID& rhs) {
-  return rhs == lhs;
-}
+inline bool operator==(uint32_t lhs, const UUID& rhs) { return rhs == lhs; }
 
 inline bool operator==(const UInt128& lhs, const UUID& rhs) {
   return rhs == lhs;
 }
 
-inline bool operator!=(uint16_t lhs, const UUID& rhs) {
-  return rhs != lhs;
-}
+inline bool operator!=(uint16_t lhs, const UUID& rhs) { return rhs != lhs; }
 
-inline bool operator!=(uint32_t lhs, const UUID& rhs) {
-  return rhs != lhs;
-}
+inline bool operator!=(uint32_t lhs, const UUID& rhs) { return rhs != lhs; }
 
 inline bool operator!=(const UInt128& lhs, const UUID& rhs) {
   return rhs != lhs;

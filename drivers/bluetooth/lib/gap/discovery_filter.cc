@@ -15,8 +15,7 @@ namespace gap {
 namespace {
 
 bool MatchUuids(const std::vector<common::UUID>& uuids,
-                const common::BufferView& data,
-                size_t uuid_size) {
+                const common::BufferView& data, size_t uuid_size) {
   if (data.size() % uuid_size) {
     bt_log(WARN, "gap", "malformed service UUIDs list");
     return false;
@@ -42,8 +41,7 @@ void DiscoveryFilter::SetGeneralDiscoveryFlags() {
 }
 
 bool DiscoveryFilter::MatchLowEnergyResult(
-    const common::ByteBuffer& advertising_data,
-    bool connectable,
+    const common::ByteBuffer& advertising_data, bool connectable,
     int8_t rssi) const {
   // No need to iterate over |advertising_data| for the |connectable_| filter.
   if (connectable_ && *connectable_ != connectable)
@@ -184,10 +182,10 @@ bool DiscoveryFilter::MatchLowEnergyResult(
 void DiscoveryFilter::Reset() {
   service_uuids_.clear();
   name_substring_.clear();
-  connectable_.Reset();
-  manufacturer_code_.Reset();
-  pathloss_.Reset();
-  rssi_.Reset();
+  connectable_.reset();
+  manufacturer_code_.reset();
+  pathloss_.reset();
+  rssi_.reset();
 }
 
 }  // namespace gap

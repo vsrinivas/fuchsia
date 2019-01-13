@@ -21,7 +21,6 @@
 #include <zircon/compiler.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -106,8 +105,7 @@ class CommandChannel final {
       fit::function<void(TransactionId id, const EventPacket& event)>;
   TransactionId SendCommand(
       std::unique_ptr<CommandPacket> command_packet,
-      async_dispatcher_t* dispatcher,
-      CommandCallback callback,
+      async_dispatcher_t* dispatcher, CommandCallback callback,
       const EventCode complete_event_code = kCommandCompleteEventCode);
 
   // Used to identify an individual HCI event handler that was registered with
@@ -162,10 +160,9 @@ class CommandChannel final {
   // subevent code.
   //
   // |subevent_code| cannot be 0.
-  EventHandlerId AddLEMetaEventHandler(
-      EventCode subevent_code,
-      EventCallback event_callback,
-      async_dispatcher_t* dispatcher);
+  EventHandlerId AddLEMetaEventHandler(EventCode subevent_code,
+                                       EventCallback event_callback,
+                                       async_dispatcher_t* dispatcher);
 
   // Removes a previously registered event handler. Does nothing if an event
   // handler with the given |id| could not be found.
@@ -178,10 +175,8 @@ class CommandChannel final {
   // Represents a pending or running HCI command.
   class TransactionData {
    public:
-    TransactionData(TransactionId id,
-                    OpCode opcode,
-                    EventCode complete_event_code,
-                    CommandCallback callback,
+    TransactionData(TransactionId id, OpCode opcode,
+                    EventCode complete_event_code, CommandCallback callback,
                     async_dispatcher_t* dispatcher);
     ~TransactionData();
 
@@ -261,8 +256,7 @@ class CommandChannel final {
 
   // Creates a new event handler entry in the event handler map and returns its
   // ID.
-  EventHandlerId NewEventHandler(EventCode event_code,
-                                 bool is_le_meta,
+  EventHandlerId NewEventHandler(EventCode event_code, bool is_le_meta,
                                  EventCallback event_callback,
                                  async_dispatcher_t* dispatcher)
       __TA_REQUIRES(event_handler_mutex_);
@@ -276,10 +270,8 @@ class CommandChannel final {
   void UpdateTransaction(std::unique_ptr<EventPacket> event);
 
   // Read ready handler for |channel_|
-  void OnChannelReady(async_dispatcher_t* dispatcher,
-                      async::WaitBase* wait,
-                      zx_status_t status,
-                      const zx_packet_signal_t* signal);
+  void OnChannelReady(async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                      zx_status_t status, const zx_packet_signal_t* signal);
 
   // Opcodes of commands that we have sent to the controller but not received a
   // status update from.  New commands with these opcodes can't be sent because

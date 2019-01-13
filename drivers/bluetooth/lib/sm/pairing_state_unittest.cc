@@ -17,7 +17,6 @@ namespace btlib {
 
 using common::ByteBuffer;
 using common::DeviceAddress;
-using common::Optional;
 using common::StaticByteBuffer;
 using common::UInt128;
 
@@ -246,12 +245,12 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     return auth_failure_status_;
   }
 
-  const Optional<LTK>& ltk() const { return pairing_data_.ltk; }
-  const Optional<Key>& irk() const { return pairing_data_.irk; }
-  const Optional<DeviceAddress>& identity() const {
+  const std::optional<LTK>& ltk() const { return pairing_data_.ltk; }
+  const std::optional<Key>& irk() const { return pairing_data_.irk; }
+  const std::optional<DeviceAddress>& identity() const {
     return pairing_data_.identity_address;
   }
-  const Optional<Key>& csrk() const { return pairing_data_.csrk; }
+  const std::optional<Key>& csrk() const { return pairing_data_.csrk; }
 
   using TkDelegate =
       fit::function<void(PairingMethod, PairingState::Delegate::TkResponse)>;

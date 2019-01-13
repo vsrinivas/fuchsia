@@ -470,7 +470,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithLtk) {
   EXPECT_FALSE(device()->temporary());
   EXPECT_TRUE(device()->le()->bonded());
   EXPECT_TRUE(device()->le()->bond_data());
-  EXPECT_EQ(data, *device()->le()->bond_data().value());
+  EXPECT_EQ(data, *device()->le()->bond_data());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithCsrk) {
@@ -486,7 +486,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithCsrk) {
   EXPECT_FALSE(device()->temporary());
   EXPECT_TRUE(device()->le()->bonded());
   EXPECT_TRUE(device()->le()->bond_data());
-  EXPECT_EQ(data, *device()->le()->bond_data().value());
+  EXPECT_EQ(data, *device()->le()->bond_data());
 }
 
 // StoreLowEnergyBond fails if it contains the address of a different,
@@ -848,15 +848,15 @@ TEST_F(
   eirep().rssi = kTestRSSI;
   eirep().class_of_device = kTestDeviceClass;
   eir_data().Write(kEirData);
-  ASSERT_FALSE(device()->name().HasValue());
+  ASSERT_FALSE(device()->name().has_value());
   ASSERT_EQ(device()->rssi(), hci::kRSSIInvalid);
   cache()->set_device_updated_callback([](const auto& updated_dev) {
     const auto& data = updated_dev.bredr();
     ASSERT_TRUE(data);
-    ASSERT_TRUE(data->clock_offset().HasValue());
-    ASSERT_TRUE(data->page_scan_repetition_mode().HasValue());
-    ASSERT_TRUE(data->device_class().HasValue());
-    ASSERT_TRUE(updated_dev.name().HasValue());
+    ASSERT_TRUE(data->clock_offset().has_value());
+    ASSERT_TRUE(data->page_scan_repetition_mode().has_value());
+    ASSERT_TRUE(data->device_class().has_value());
+    ASSERT_TRUE(updated_dev.name().has_value());
 
     EXPECT_EQ(*data->clock_offset(), 0x8001);
     EXPECT_EQ(*data->page_scan_repetition_mode(),

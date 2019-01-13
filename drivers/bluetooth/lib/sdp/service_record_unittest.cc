@@ -52,7 +52,7 @@ TEST_F(SDP_ServiceRecordTest, BasicFunctionality) {
 
   EXPECT_EQ(DataElement::Type::kSequence, elem.type());
 
-  common::Optional<std::vector<DataElement>> vec =
+  std::optional<std::vector<DataElement>> vec =
       elem.Get<std::vector<DataElement>>();
 
   EXPECT_TRUE(vec);

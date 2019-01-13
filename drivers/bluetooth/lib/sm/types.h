@@ -5,7 +5,8 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
 #define GARNET_DRIVERS_BLUETOOTH_LIB_SM_TYPES_H_
 
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
+#include <optional>
+
 #include "garnet/drivers/bluetooth/lib/common/uint128.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
@@ -133,16 +134,16 @@ class Key final {
 // Container for LE pairing data.
 struct PairingData final {
   // The identity address.
-  common::Optional<common::DeviceAddress> identity_address;
+  std::optional<common::DeviceAddress> identity_address;
 
   // The long term key used for link encryption.
-  common::Optional<sm::LTK> ltk;
+  std::optional<sm::LTK> ltk;
 
   // The identity resolving key used to resolve RPAs to |identity|.
-  common::Optional<sm::Key> irk;
+  std::optional<sm::Key> irk;
 
   // The connection signature resolving key used in LE security mode 2.
-  common::Optional<sm::Key> csrk;
+  std::optional<sm::Key> csrk;
 
   bool operator==(const PairingData& other) const {
     return identity_address == other.identity_address && ltk == other.ltk &&

@@ -71,7 +71,7 @@ void Recombiner::Drop() {
   ready_ = false;
   frame_length_ = 0u;
   cur_length_ = 0u;
-  pdu_.Reset();
+  pdu_.reset();
 }
 
 bool Recombiner::ProcessFirstFragment(const hci::ACLDataPacket& fragment) {

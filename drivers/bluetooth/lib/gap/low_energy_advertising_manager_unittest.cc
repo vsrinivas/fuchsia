@@ -40,8 +40,7 @@ struct AdvertisementStatus {
 class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
  public:
   FakeLowEnergyAdvertiser(
-      size_t max_ads,
-      size_t max_ad_size,
+      size_t max_ads, size_t max_ad_size,
       std::map<common::DeviceAddress, AdvertisementStatus>* ad_store)
       : max_ads_(max_ads), max_ad_size_(max_ad_size), ads_(ad_store) {
     ZX_ASSERT(ads_);
@@ -57,8 +56,7 @@ class FakeLowEnergyAdvertiser final : public hci::LowEnergyAdvertiser {
                         const common::ByteBuffer& data,
                         const common::ByteBuffer& scan_rsp,
                         ConnectionCallback connect_callback,
-                        uint32_t interval_ms,
-                        bool anonymous,
+                        uint32_t interval_ms, bool anonymous,
                         AdvertisingStatusCallback callback) override {
     if (!pending_error_) {
       callback(0, pending_error_);
@@ -176,7 +174,7 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
 
   // Returns and clears the last callback status. This resets the state to
   // detect another callback.
-  const common::Optional<hci::Status> MoveLastStatus() {
+  const std::optional<hci::Status> MoveLastStatus() {
     return std::move(last_status_);
   }
 
@@ -185,7 +183,7 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase {
  private:
   std::map<common::DeviceAddress, AdvertisementStatus> ad_store_;
   std::string last_ad_id_;
-  common::Optional<hci::Status> last_status_;
+  std::optional<hci::Status> last_status_;
   std::unique_ptr<FakeLowEnergyAdvertiser> advertiser_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(GAP_LowEnergyAdvertisingManagerTest);
@@ -324,7 +322,8 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
-  auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) { };
+  auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) {
+  };
 
   am.StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestIntervalMs,
                       true /* anonymous */, GetErrorCallback());

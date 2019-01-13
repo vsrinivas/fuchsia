@@ -8,7 +8,6 @@
 #include <memory>
 #include <queue>
 
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/link_key.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/sm/bearer.h"
@@ -158,10 +157,10 @@ class PairingState final : public Bearer::Listener {
     // True if all keys that are expected from the remote have been received.
     bool RequestedKeysObtained() const;
 
-    bool ShouldReceiveLTK() const;  // True if peer should send the LTK
+    bool ShouldReceiveLTK() const;       // True if peer should send the LTK
     bool ShouldReceiveIdentity() const;  // True if peer should send identity
-    bool ShouldSendLTK() const;     // True if we should send the LTK
-    bool ShouldSendIdentity() const;  // True if we should send identity info
+    bool ShouldSendLTK() const;          // True if we should send the LTK
+    bool ShouldSendIdentity() const;     // True if we should send identity info
 
     // True if LTK will be exchanged and the link is yet to be encrypted with
     // the LTK.
@@ -172,7 +171,7 @@ class PairingState final : public Bearer::Listener {
 
     // The pairing features obtained during Phase 1. If invalid, we're in
     // Phase 1. Otherwise, we're in Phase 2.
-    common::Optional<PairingFeatures> features;
+    std::optional<PairingFeatures> features;
 
     // True if the link has been encrypted with the STK. This means that we're
     // in Phase 3. Otherwise we're in Phase 1 or 2.
@@ -209,7 +208,7 @@ class PairingState final : public Bearer::Listener {
     common::DeviceAddress identity_address;
 
     // Keys obtained during pairing.
-    common::Optional<hci::LinkKey> ltk;  // LTK with ediv/rand
+    std::optional<hci::LinkKey> ltk;  // LTK with ediv/rand
   };
 
   // Represents a pending request to update the security level.
@@ -283,7 +282,7 @@ class PairingState final : public Bearer::Listener {
 
   // Data for the currently registered LE-U link, if any.
   fxl::WeakPtr<hci::Connection> le_link_;
-  std::unique_ptr<Bearer> le_smp_;       // SMP data bearer for the LE-U link.
+  std::unique_ptr<Bearer> le_smp_;  // SMP data bearer for the LE-U link.
   SecurityProperties le_sec_;  // Current security properties of the LE-U link.
 
   // The state of the LE legacy pairing procedure, if any.

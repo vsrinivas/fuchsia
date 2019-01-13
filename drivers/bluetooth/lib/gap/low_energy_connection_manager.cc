@@ -26,7 +26,6 @@ namespace btlib {
 namespace gap {
 
 using common::DeviceAddress;
-using common::Optional;
 
 namespace internal {
 
@@ -98,7 +97,7 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
       }
 
       // Obtain existing pairing data, if any.
-      common::Optional<sm::LTK> ltk;
+      std::optional<sm::LTK> ltk;
       auto* dev = self->conn_mgr_->device_cache()->FindDeviceById(self->id_);
       ZX_DEBUG_ASSERT_MSG(dev, "connected device must be present in cache!");
 

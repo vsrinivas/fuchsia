@@ -8,7 +8,6 @@
 #include <vector>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 namespace btlib {
@@ -120,7 +119,7 @@ class DataElement {
   // Has the same defined specializations as Set().
   // Returns an optional without a value if the wrong type is stored.
   template <typename T>
-  common::Optional<T> Get() const;
+  std::optional<T> Get() const;
 
   // Get a pointer to an element in a DataElement Sequence.
   // Returns nullptr if type() is not kSequence or the index is invalid.

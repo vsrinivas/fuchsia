@@ -11,7 +11,6 @@
 #include <lib/async/dispatcher.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device_cache.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"

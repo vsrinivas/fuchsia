@@ -25,7 +25,8 @@ struct fxl::TypeConverter<fidl::VectorPtr<unsigned char>, T> {
   static fidl::VectorPtr<unsigned char> Convert(const T& input) {
     static_assert(std::is_base_of<::btlib::common::ByteBuffer, T>::value, "");
 
-    fidl::VectorPtr<unsigned char> result = fidl::VectorPtr<unsigned char>::New(input.size());
+    fidl::VectorPtr<unsigned char> result =
+        fidl::VectorPtr<unsigned char>::New(input.size());
     memcpy(result->data(), input.data(), input.size());
     return result;
   }
@@ -40,7 +41,6 @@ using common::BufferView;
 using common::ByteBuffer;
 using common::DynamicByteBuffer;
 using common::MutableByteBuffer;
-using common::Optional;
 using common::UUID;
 
 namespace {
@@ -422,17 +422,15 @@ const BufferView AdvertisingData::manufacturer_data(
   return BufferView(iter->second);
 }
 
-void AdvertisingData::SetTxPower(int8_t dbm) {
-  tx_power_ = dbm;
-}
+void AdvertisingData::SetTxPower(int8_t dbm) { tx_power_ = dbm; }
 
-Optional<int8_t> AdvertisingData::tx_power() const { return tx_power_; }
+std::optional<int8_t> AdvertisingData::tx_power() const { return tx_power_; }
 
 void AdvertisingData::SetLocalName(const std::string& name) {
   local_name_ = std::string(name);
 }
 
-Optional<std::string> AdvertisingData::local_name() const {
+std::optional<std::string> AdvertisingData::local_name() const {
   return local_name_;
 }
 
@@ -449,7 +447,9 @@ void AdvertisingData::SetAppearance(uint16_t appearance) {
   appearance_ = appearance;
 }
 
-Optional<uint16_t> AdvertisingData::appearance() const { return appearance_; }
+std::optional<uint16_t> AdvertisingData::appearance() const {
+  return appearance_;
+}
 
 size_t AdvertisingData::CalculateBlockSize() const {
   size_t len = 0;

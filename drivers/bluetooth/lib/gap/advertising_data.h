@@ -12,7 +12,6 @@
 #include <fuchsia/bluetooth/le/cpp/fidl.h>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 
@@ -100,13 +99,13 @@ class AdvertisingData {
   void SetTxPower(int8_t dbm);
 
   // Gets the TX power
-  common::Optional<int8_t> tx_power() const;
+  std::optional<int8_t> tx_power() const;
 
   // Sets the local name
   void SetLocalName(const std::string& name);
 
   // Gets the local name
-  common::Optional<std::string> local_name() const;
+  std::optional<std::string> local_name() const;
 
   // Adds a URI to the set of URIs advertised.
   // Does nothing if |uri| is empty.
@@ -119,7 +118,7 @@ class AdvertisingData {
   void SetAppearance(uint16_t appearance);
 
   // Get the appearance
-  common::Optional<uint16_t> appearance() const;
+  std::optional<uint16_t> appearance() const;
 
   // Calculates the size of the current set of fields if they were to be written
   // to a buffer using WriteBlock()
@@ -140,12 +139,10 @@ class AdvertisingData {
  private:
   // TODO(armansito): Consider storing the payload in its serialized form and
   // have these point into the structure (see NET-209).
-  common::Optional<std::string> local_name_;
-  common::Optional<int8_t> tx_power_;
-  common::Optional<uint16_t> appearance_;
-
+  std::optional<std::string> local_name_;
+  std::optional<int8_t> tx_power_;
+  std::optional<uint16_t> appearance_;
   std::unordered_set<common::UUID> service_uuids_;
-
   std::unordered_map<uint16_t, common::DynamicByteBuffer> manufacturer_data_;
   std::unordered_map<common::UUID, common::DynamicByteBuffer> service_data_;
 

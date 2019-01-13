@@ -11,7 +11,6 @@
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/lmp_feature_set.h"
@@ -48,9 +47,6 @@ class RemoteDevice final {
   // Contains RemoteDevice data that apply only to the LE transport.
   class LowEnergyData final {
    public:
-    // TODO(NET-1436): Remove default constructor once common::Optional no
-    // longer requires it.
-    LowEnergyData() = default;
     explicit LowEnergyData(RemoteDevice* owner);
 
     // Current connection state.
@@ -58,7 +54,7 @@ class RemoteDevice final {
     bool connected() const {
       return connection_state() == ConnectionState::kConnected;
     }
-    bool bonded() const { return bond_data_.HasValue(); }
+    bool bonded() const { return bond_data_.has_value(); }
 
     // Advertising (and optionally scan response) data obtained during
     // discovery.
@@ -68,19 +64,19 @@ class RemoteDevice final {
 
     // Most recently used LE connection parameters. Has no value if this device
     // has never been connected.
-    const common::Optional<hci::LEConnectionParameters>& connection_parameters()
+    const std::optional<hci::LEConnectionParameters>& connection_parameters()
         const {
       return conn_params_;
     }
 
     // Preferred LE connection parameters as reported by this device.
-    const common::Optional<hci::LEPreferredConnectionParameters>&
+    const std::optional<hci::LEPreferredConnectionParameters>&
     preferred_connection_parameters() const {
       return preferred_conn_params_;
     }
 
     // This device's LE bond data, if bonded.
-    const common::Optional<sm::PairingData>& bond_data() const {
+    const std::optional<sm::PairingData>& bond_data() const {
       return bond_data_;
     }
 
@@ -115,11 +111,10 @@ class RemoteDevice final {
     ConnectionState conn_state_;
     size_t adv_data_len_;
     common::DynamicByteBuffer adv_data_buffer_;
-    common::Optional<hci::LEConnectionParameters> conn_params_;
-    common::Optional<hci::LEPreferredConnectionParameters>
-        preferred_conn_params_;
+    std::optional<hci::LEConnectionParameters> conn_params_;
+    std::optional<hci::LEPreferredConnectionParameters> preferred_conn_params_;
 
-    common::Optional<sm::PairingData> bond_data_;
+    std::optional<sm::PairingData> bond_data_;
 
     // TODO(armansito): Store all keys
     // TODO(armansito): Store GATT service UUIDs.
@@ -128,9 +123,6 @@ class RemoteDevice final {
   // Contains RemoteDevice data that apply only to the BR/EDR transport.
   class BrEdrData final {
    public:
-    // TODO(NET-1436): Remove default constructor once common::Optional no
-    // longer requires it.
-    BrEdrData() = default;
     explicit BrEdrData(RemoteDevice* owner);
 
     // Current connection state.
@@ -138,18 +130,18 @@ class RemoteDevice final {
     bool connected() const {
       return connection_state() == ConnectionState::kConnected;
     }
-    bool bonded() const { return link_key_.HasValue(); }
+    bool bonded() const { return link_key_.has_value(); }
 
     // Returns the device's BD_ADDR.
     const common::DeviceAddress& address() const { return address_; }
 
     // Returns the device class of this device, if it is known.
-    const common::Optional<common::DeviceClass>& device_class() const {
+    const std::optional<common::DeviceClass>& device_class() const {
       return device_class_;
     }
 
     // Returns the page scan repetition mode of this device, if known.
-    const common::Optional<hci::PageScanRepetitionMode>&
+    const std::optional<hci::PageScanRepetitionMode>&
     page_scan_repetition_mode() const {
       return page_scan_rep_mode_;
     }
@@ -158,14 +150,14 @@ class RemoteDevice final {
     // clock offset will have the highest-order bit set and the rest represent
     // bits 16-2 of CLKNslave-CLK (see hci::kClockOffsetFlagBit in
     // hci/hci_constants.h).
-    const common::Optional<uint16_t>& clock_offset() const {
+    const std::optional<uint16_t>& clock_offset() const {
       return clock_offset_;
     }
     const common::BufferView extended_inquiry_response() const {
       return eir_buffer_.view(0, eir_len_);
     }
 
-    const common::Optional<sm::LTK>& link_key() const { return link_key_; }
+    const std::optional<sm::LTK>& link_key() const { return link_key_; }
 
     // Setters:
 
@@ -203,13 +195,13 @@ class RemoteDevice final {
     RemoteDevice* dev_;  // weak
     ConnectionState conn_state_;
     common::DeviceAddress address_;
-    common::Optional<common::DeviceClass> device_class_;
-    common::Optional<hci::PageScanRepetitionMode> page_scan_rep_mode_;
-    common::Optional<uint16_t> clock_offset_;
+    std::optional<common::DeviceClass> device_class_;
+    std::optional<hci::PageScanRepetitionMode> page_scan_rep_mode_;
+    std::optional<uint16_t> clock_offset_;
     // TODO(jamuraa): Parse more of the Extended Inquiry Response fields
     size_t eir_len_;
     common::DynamicByteBuffer eir_buffer_;
-    common::Optional<sm::LTK> link_key_;
+    std::optional<sm::LTK> link_key_;
 
     // TODO(armansito): Store traditional service UUIDs.
   };
@@ -240,9 +232,7 @@ class RemoteDevice final {
   bool identity_known() const { return identity_known_; }
 
   // The LMP version of this device obtained doing discovery.
-  const common::Optional<hci::HCIVersion>& version() const {
-    return lmp_version_;
-  }
+  const std::optional<hci::HCIVersion>& version() const { return lmp_version_; }
 
   // Returns true if this is a connectable device.
   bool connectable() const { return connectable_; }
@@ -264,7 +254,7 @@ class RemoteDevice final {
   // Gets the user-friendly name of the device, if it's known. This can be
   // assigned based on LE advertising data, BR/EDR inquiry data, or by directly
   // calling the SetName() method.
-  const common::Optional<std::string>& name() const { return name_; }
+  const std::optional<std::string>& name() const { return name_; }
 
   // Returns the set of features of this device.
   const hci::LMPFeatureSet& features() const { return lmp_features_; }
@@ -285,12 +275,12 @@ class RemoteDevice final {
   // Returns the LE transport specific data of this device, if any. This will be
   // present if information about this device is obtained using the LE discovery
   // and connection procedures.
-  const common::Optional<LowEnergyData>& le() const { return le_data_; }
+  const std::optional<LowEnergyData>& le() const { return le_data_; }
 
   // Returns the BR/EDR transport specific data of this device, if any. This
   // will be present if information about this device is obtained using the
   // BR/EDR discovery and connection procedures.
-  const common::Optional<BrEdrData>& bredr() const { return bredr_data_; }
+  const std::optional<BrEdrData>& bredr() const { return bredr_data_; }
 
   // Returns a mutable reference to each transport-specific data structure,
   // initializing the structure if it is unitialized. Use these to mutate
@@ -386,10 +376,10 @@ class RemoteDevice final {
   common::DeviceAddress address_;
   bool identity_known_;
 
-  common::Optional<std::string> name_;
-  common::Optional<hci::HCIVersion> lmp_version_;
-  common::Optional<uint16_t> lmp_manufacturer_;
-  common::Optional<uint16_t> lmp_subversion_;
+  std::optional<std::string> name_;
+  std::optional<hci::HCIVersion> lmp_version_;
+  std::optional<uint16_t> lmp_manufacturer_;
+  std::optional<uint16_t> lmp_subversion_;
   hci::LMPFeatureSet lmp_features_;
   bool connectable_;
   bool temporary_;
@@ -397,11 +387,11 @@ class RemoteDevice final {
 
   // Data that only applies to the LE transport. This is present if this device
   // is known to support LE.
-  common::Optional<LowEnergyData> le_data_;
+  std::optional<LowEnergyData> le_data_;
 
   // Data that only applies to the BR/EDR transport. This is present if this
   // device is known to support BR/EDR.
-  common::Optional<BrEdrData> bredr_data_;
+  std::optional<BrEdrData> bredr_data_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(RemoteDevice);
 };

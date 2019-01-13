@@ -15,7 +15,6 @@
 namespace btlib {
 
 using common::MutableByteBuffer;
-using common::Optional;
 using common::UUID;
 
 namespace sdp {
@@ -197,8 +196,8 @@ void DataElement::SetAlternative(std::vector<DataElement> items) {
 }
 
 template <>
-Optional<uint8_t> DataElement::Get<uint8_t>() const {
-  Optional<uint8_t> ret;
+std::optional<uint8_t> DataElement::Get<uint8_t>() const {
+  std::optional<uint8_t> ret;
   if (type_ == Type::kUnsignedInt && size_ == SizeToSizeType(sizeof(uint8_t))) {
     ret = static_cast<uint8_t>(uint_value_);
   }
@@ -206,8 +205,8 @@ Optional<uint8_t> DataElement::Get<uint8_t>() const {
 }
 
 template <>
-Optional<uint16_t> DataElement::Get<uint16_t>() const {
-  Optional<uint16_t> ret;
+std::optional<uint16_t> DataElement::Get<uint16_t>() const {
+  std::optional<uint16_t> ret;
   if (type_ == Type::kUnsignedInt &&
       size_ == SizeToSizeType(sizeof(uint16_t))) {
     ret = static_cast<uint16_t>(uint_value_);
@@ -216,8 +215,8 @@ Optional<uint16_t> DataElement::Get<uint16_t>() const {
 }
 
 template <>
-Optional<uint32_t> DataElement::Get<uint32_t>() const {
-  Optional<uint32_t> ret;
+std::optional<uint32_t> DataElement::Get<uint32_t>() const {
+  std::optional<uint32_t> ret;
   if (type_ == Type::kUnsignedInt &&
       size_ == SizeToSizeType(sizeof(uint32_t))) {
     ret = static_cast<uint32_t>(uint_value_);
@@ -226,8 +225,8 @@ Optional<uint32_t> DataElement::Get<uint32_t>() const {
 }
 
 template <>
-Optional<uint64_t> DataElement::Get<uint64_t>() const {
-  Optional<uint64_t> ret;
+std::optional<uint64_t> DataElement::Get<uint64_t>() const {
+  std::optional<uint64_t> ret;
   if (type_ == Type::kUnsignedInt &&
       size_ == SizeToSizeType(sizeof(uint64_t))) {
     ret = uint_value_;
@@ -236,8 +235,8 @@ Optional<uint64_t> DataElement::Get<uint64_t>() const {
 }
 
 template <>
-Optional<int8_t> DataElement::Get<int8_t>() const {
-  Optional<int8_t> ret;
+std::optional<int8_t> DataElement::Get<int8_t>() const {
+  std::optional<int8_t> ret;
   if (type_ == Type::kUnsignedInt && size_ == SizeToSizeType(sizeof(int8_t))) {
     ret = static_cast<int8_t>(int_value_);
   }
@@ -245,8 +244,8 @@ Optional<int8_t> DataElement::Get<int8_t>() const {
 }
 
 template <>
-Optional<int16_t> DataElement::Get<int16_t>() const {
-  Optional<int16_t> ret;
+std::optional<int16_t> DataElement::Get<int16_t>() const {
+  std::optional<int16_t> ret;
   if (type_ == Type::kUnsignedInt && size_ == SizeToSizeType(sizeof(int16_t))) {
     ret = static_cast<int16_t>(int_value_);
   }
@@ -254,8 +253,8 @@ Optional<int16_t> DataElement::Get<int16_t>() const {
 }
 
 template <>
-Optional<int32_t> DataElement::Get<int32_t>() const {
-  Optional<int32_t> ret;
+std::optional<int32_t> DataElement::Get<int32_t>() const {
+  std::optional<int32_t> ret;
   if (type_ == Type::kUnsignedInt && size_ == SizeToSizeType(sizeof(int32_t))) {
     ret = static_cast<int32_t>(int_value_);
   }
@@ -263,8 +262,8 @@ Optional<int32_t> DataElement::Get<int32_t>() const {
 }
 
 template <>
-Optional<int64_t> DataElement::Get<int64_t>() const {
-  Optional<int64_t> ret;
+std::optional<int64_t> DataElement::Get<int64_t>() const {
+  std::optional<int64_t> ret;
   if (type_ == Type::kUnsignedInt && size_ == SizeToSizeType(sizeof(int64_t))) {
     ret = static_cast<int64_t>(int_value_);
   }
@@ -272,8 +271,8 @@ Optional<int64_t> DataElement::Get<int64_t>() const {
 }
 
 template <>
-Optional<bool> DataElement::Get<bool>() const {
-  Optional<bool> ret;
+std::optional<bool> DataElement::Get<bool>() const {
+  std::optional<bool> ret;
   if (type_ == Type::kBoolean) {
     ret = (int_value_ == 1);
   }
@@ -281,8 +280,8 @@ Optional<bool> DataElement::Get<bool>() const {
 }
 
 template <>
-Optional<std::nullptr_t> DataElement::Get<std::nullptr_t>() const {
-  Optional<std::nullptr_t> ret;
+std::optional<std::nullptr_t> DataElement::Get<std::nullptr_t>() const {
+  std::optional<std::nullptr_t> ret;
   if (type_ == Type::kNull) {
     ret = nullptr;
   }
@@ -290,8 +289,8 @@ Optional<std::nullptr_t> DataElement::Get<std::nullptr_t>() const {
 }
 
 template <>
-Optional<std::string> DataElement::Get<std::string>() const {
-  Optional<std::string> ret;
+std::optional<std::string> DataElement::Get<std::string>() const {
+  std::optional<std::string> ret;
   if (type_ == Type::kString) {
     ret = string_;
   }
@@ -299,8 +298,8 @@ Optional<std::string> DataElement::Get<std::string>() const {
 }
 
 template <>
-Optional<UUID> DataElement::Get<UUID>() const {
-  Optional<UUID> ret;
+std::optional<UUID> DataElement::Get<UUID>() const {
+  std::optional<UUID> ret;
   if (type_ == Type::kUuid) {
     ret = uuid_;
   }
@@ -308,9 +307,9 @@ Optional<UUID> DataElement::Get<UUID>() const {
 }
 
 template <>
-Optional<std::vector<DataElement>> DataElement::Get<std::vector<DataElement>>()
-    const {
-  Optional<std::vector<DataElement>> ret;
+std::optional<std::vector<DataElement>>
+DataElement::Get<std::vector<DataElement>>() const {
+  std::optional<std::vector<DataElement>> ret;
   if (type_ == Type::kSequence) {
     std::vector<DataElement> aggregate_copy;
     for (const auto& it : aggregate_) {
@@ -637,14 +636,14 @@ std::string DataElement::ToString() const {
       return fxl::StringPrintf("String(%s)", string_.c_str());
     case Type::kSequence: {
       std::string str;
-      for (const auto &it : aggregate_) {
+      for (const auto& it : aggregate_) {
         str += it.ToString() + " ";
       }
       return fxl::StringPrintf("Sequence { %s}", str.c_str());
     }
     case Type::kAlternative: {
       std::string str;
-      for (const auto &it : aggregate_) {
+      for (const auto& it : aggregate_) {
         str += it.ToString() + " ";
       }
       return fxl::StringPrintf("Alternatives { %s}", str.c_str());

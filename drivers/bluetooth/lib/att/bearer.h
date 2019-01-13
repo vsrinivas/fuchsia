@@ -18,7 +18,6 @@
 #include "garnet/drivers/bluetooth/lib/att/status.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
 #include "garnet/drivers/bluetooth/lib/common/linked_list.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/packet_view.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/scoped_channel.h"
@@ -113,8 +112,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // correspond to a request or indication.
   using TransactionCallback = fit::function<void(const PacketReader& packet)>;
   using ErrorCallback = fit::function<void(Status, Handle attr_in_error)>;
-  bool StartTransaction(common::ByteBufferPtr pdu,
-                        TransactionCallback callback,
+  bool StartTransaction(common::ByteBufferPtr pdu, TransactionCallback callback,
                         ErrorCallback error_callback);
 
   // Sends |pdu| without initiating a transaction. Used for command and
@@ -167,10 +165,8 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
   // Represents a locally initiated pending request or indication transaction.
   struct PendingTransaction : common::LinkedListable<PendingTransaction> {
-    PendingTransaction(OpCode opcode,
-                       TransactionCallback callback,
-                       ErrorCallback error_callback,
-                       common::ByteBufferPtr pdu);
+    PendingTransaction(OpCode opcode, TransactionCallback callback,
+                       ErrorCallback error_callback, common::ByteBufferPtr pdu);
 
     // Required fields
     OpCode opcode;
@@ -212,8 +208,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
 
     // Tries to initiate the next transaction. Sends the PDU over |chan| if
     // successful.
-    void TrySendNext(l2cap::Channel* chan,
-                     async::Task::Handler timeout_cb,
+    void TrySendNext(l2cap::Channel* chan, async::Task::Handler timeout_cb,
                      uint32_t timeout_ms);
 
     // Adds |next| to the transaction queue.
@@ -231,8 +226,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
     async::Task timeout_task_;
   };
 
-  bool SendInternal(common::ByteBufferPtr pdu,
-                    TransactionCallback callback,
+  bool SendInternal(common::ByteBufferPtr pdu, TransactionCallback callback,
                     ErrorCallback error_callback);
 
   // Shuts down the link.
@@ -245,8 +239,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   void TryStartNextTransaction(TransactionQueue* tq);
 
   // Sends out an immediate error response.
-  void SendErrorResponse(OpCode request_opcode,
-                         Handle attribute_handle,
+  void SendErrorResponse(OpCode request_opcode, Handle attribute_handle,
                          ErrorCode error_code);
 
   // Called when the peer sends us a response or confirmation PDU.
@@ -258,7 +251,7 @@ class Bearer final : public fxl::RefCountedThreadSafe<Bearer> {
   // Returns the next remote-initiated transaction ID.
   TransactionId NextRemoteTransactionId();
 
-  using RemoteTransaction = common::Optional<PendingRemoteTransaction>;
+  using RemoteTransaction = std::optional<PendingRemoteTransaction>;
 
   // Called when the peer initiates a request or indication transaction.
   void HandleBeginTransaction(RemoteTransaction* currently_pending,

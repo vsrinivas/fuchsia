@@ -9,7 +9,6 @@
 #include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
 #include "garnet/drivers/bluetooth/lib/hci/control_packets.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci.h"
@@ -132,7 +131,7 @@ class Connection {
   void set_link_key(const LinkKey& ltk) { ltk_ = ltk; }
 
   // The current long term key of the connection.
-  const common::Optional<LinkKey>& ltk() const { return ltk_; }
+  const std::optional<LinkKey>& ltk() const { return ltk_; }
 
   // Assigns a callback that will run when the encryption state of the
   // underlying link changes. The |enabled| parameter should be ignored if
@@ -180,7 +179,7 @@ class Connection {
   LEConnectionParameters le_params_;
 
   // This connection's current link key.
-  common::Optional<LinkKey> ltk_;
+  std::optional<LinkKey> ltk_;
 
   EncryptionChangeCallback encryption_change_callback_;
 

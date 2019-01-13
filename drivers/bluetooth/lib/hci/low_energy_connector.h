@@ -11,7 +11,6 @@
 #include <lib/async/dispatcher.h>
 
 #include "garnet/drivers/bluetooth/lib/common/device_address.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/command_channel.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection_parameters.h"
@@ -58,7 +57,8 @@ class LowEnergyConnector {
                          const LEConnectionParameters& conn_params)>;
   LowEnergyConnector(fxl::RefPtr<Transport> hci,
                      const common::DeviceAddress& local_address,
-                     async_dispatcher_t* dispatcher, IncomingConnectionDelegate delegate);
+                     async_dispatcher_t* dispatcher,
+                     IncomingConnectionDelegate delegate);
 
   // Deleting an instance cancels any pending connection request.
   ~LowEnergyConnector();
@@ -82,20 +82,17 @@ class LowEnergyConnector {
   // called with a null |link| and a |status| with error Host::Error::kTimedOut.
   using StatusCallback = fit::function<void(Status status, ConnectionPtr link)>;
   bool CreateConnection(
-      LEOwnAddressType own_address_type,
-      bool use_whitelist,
-      const common::DeviceAddress& peer_address,
-      uint16_t scan_interval,
+      LEOwnAddressType own_address_type, bool use_whitelist,
+      const common::DeviceAddress& peer_address, uint16_t scan_interval,
       uint16_t scan_window,
       const LEPreferredConnectionParameters& initial_parameters,
-      StatusCallback status_callback,
-      int64_t timeout_ms);
+      StatusCallback status_callback, int64_t timeout_ms);
 
   // Cancels the currently pending connection attempt.
   void Cancel();
 
   // Returns true if a connection request is currently pending.
-  bool request_pending() const { return pending_request_.HasValue(); }
+  bool request_pending() const { return pending_request_.has_value(); }
 
   // Returns true if a connection timeout has been posted. Returns false if it
   // was not posted or was canceled. This is intended for unit tests.
@@ -142,14 +139,14 @@ class LowEnergyConnector {
   IncomingConnectionDelegate delegate_;
 
   // The currently pending request.
-  common::Optional<PendingRequest> pending_request_;
+  std::optional<PendingRequest> pending_request_;
 
   // Task that runs when a request to create connection times out. We do not
   // rely on CommandChannel's timer since that request completes when we receive
   // the HCI Command Status event.
   async::TaskClosureMethod<LowEnergyConnector,
                            &LowEnergyConnector::OnCreateConnectionTimeout>
-                               request_timeout_task_{this};
+      request_timeout_task_{this};
 
   // Our event handle ID for the LE Connection Complete event.
   CommandChannel::EventHandlerId event_handler_id_;

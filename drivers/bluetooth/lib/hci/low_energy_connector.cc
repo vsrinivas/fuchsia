@@ -128,9 +128,7 @@ bool LowEnergyConnector::CreateConnection(
   return true;
 }
 
-void LowEnergyConnector::Cancel() {
-  CancelInternal(false);
-}
+void LowEnergyConnector::Cancel() { CancelInternal(false); }
 
 void LowEnergyConnector::CancelInternal(bool timed_out) {
   ZX_DEBUG_ASSERT(request_pending());
@@ -238,7 +236,7 @@ void LowEnergyConnector::OnCreateConnectionComplete(Status status,
   request_timeout_task_.Cancel();
 
   auto status_cb = std::move(pending_request_->status_callback);
-  pending_request_.Reset();
+  pending_request_.reset();
 
   status_cb(status, std::move(link));
 }

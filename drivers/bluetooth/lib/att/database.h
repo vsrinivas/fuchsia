@@ -11,7 +11,6 @@
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/att/attribute.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 #include "lib/fxl/macros.h"
@@ -64,11 +63,8 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
     inline void MarkEnd() { grp_iter_ = grp_end_; }
 
     friend class Database;
-    Iterator(GroupingList* list,
-             Handle start,
-             Handle end,
-             const common::UUID* type,
-             bool groups_only);
+    Iterator(GroupingList* list, Handle start, Handle end,
+             const common::UUID* type, bool groups_only);
 
     Handle start_;
     Handle end_;
@@ -76,7 +72,7 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
     GroupingList::iterator grp_end_;
     GroupingList::iterator grp_iter_;
     uint8_t attr_offset_;
-    common::Optional<common::UUID> type_filter_;
+    std::optional<common::UUID> type_filter_;
   };
 
   // Initializes this database to span the attribute handle range given by
@@ -100,8 +96,7 @@ class Database final : public fxl::RefCountedThreadSafe<Database> {
   //
   // If |type| is not a nullptr, it will be assigned as the iterator's type
   // filter.
-  Iterator GetIterator(Handle start,
-                       Handle end,
+  Iterator GetIterator(Handle start, Handle end,
                        const common::UUID* type = nullptr,
                        bool groups_only = false);
 

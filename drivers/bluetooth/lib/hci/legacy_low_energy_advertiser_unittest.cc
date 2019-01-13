@@ -25,8 +25,7 @@ using TestingBase = ::btlib::testing::FakeControllerTest<FakeController>;
 constexpr ConnectionHandle kHandle = 0x0001;
 
 const common::DeviceAddress kPublicAddress(
-    common::DeviceAddress::Type::kLEPublic,
-    "00:00:00:00:00:01");
+    common::DeviceAddress::Type::kLEPublic, "00:00:00:00:00:01");
 const common::DeviceAddress kRandomAddress(
     common::DeviceAddress::Type::kLERandom, "00:00:00:00:00:02");
 
@@ -84,7 +83,7 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
   }
 
   // Retrieves the last status, and resets the last status to empty.
-  common::Optional<Status> MoveLastStatus() { return std::move(last_status_); }
+  std::optional<Status> MoveLastStatus() { return std::move(last_status_); }
 
   // Makes some fake advertising data of a specific |packed_size|
   common::DynamicByteBuffer GetExampleData(size_t size = kDefaultAdSize) {
@@ -99,7 +98,7 @@ class HCI_LegacyLowEnergyAdvertiserTest : public TestingBase {
  private:
   std::unique_ptr<LegacyLowEnergyAdvertiser> advertiser_;
 
-  common::Optional<Status> last_status_;
+  std::optional<Status> last_status_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(HCI_LegacyLowEnergyAdvertiserTest);
 };

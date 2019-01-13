@@ -92,13 +92,9 @@ bool UUID::FromBytes(const common::ByteBuffer& bytes, UUID* out_uuid) {
   return false;
 }
 
-UUID::UUID() : type_(Type::k128Bit) {
-  value_.fill(0);
-}
+UUID::UUID() : type_(Type::k128Bit) { value_.fill(0); }
 
-bool UUID::operator==(const UUID& uuid) const {
-  return value_ == uuid.value_;
-}
+bool UUID::operator==(const UUID& uuid) const { return value_ == uuid.value_; }
 
 bool UUID::operator==(uint16_t uuid16) const {
   if (type_ == Type::k16Bit)
@@ -182,8 +178,8 @@ std::size_t UUID::Hash() const {
   return hash;
 }
 
-common::Optional<uint16_t> UUID::As16Bit() const {
-  common::Optional<uint16_t> ret;
+std::optional<uint16_t> UUID::As16Bit() const {
+  std::optional<uint16_t> ret;
   if (type_ == Type::k16Bit) {
     ret = ValueAs16Bit();
   }

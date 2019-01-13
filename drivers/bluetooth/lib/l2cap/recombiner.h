@@ -9,7 +9,6 @@
 
 #include <cstdint>
 
-#include "garnet/drivers/bluetooth/lib/common/optional.h"
 #include "garnet/drivers/bluetooth/lib/hci/acl_data_packet.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/l2cap.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/pdu.h"
@@ -71,7 +70,7 @@ class Recombiner final {
   size_t cur_length_;
 
   // The PDU currently being constructed, if any.
-  common::Optional<PDU> pdu_;
+  std::optional<PDU> pdu_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Recombiner);
 };
