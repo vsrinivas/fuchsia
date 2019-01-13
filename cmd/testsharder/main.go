@@ -14,8 +14,8 @@ import (
 )
 
 var (
-	// The path to the Fuchsia build output directory.
-	fuchsiaBuildDir string
+	// The path to the Fuchsia build directory root.
+	buildDir string
 
 	// The filepath to write output to. If unspecified, stdout is used.
 	outputFile string
@@ -25,7 +25,7 @@ var (
 )
 
 func init() {
-	flag.StringVar(&fuchsiaBuildDir, "fuchsia-build-dir", "", "(required) path to the fuchsia build output directory")
+	flag.StringVar(&buildDir, "build-dir", "", "path to the fuchsia build directory root (required)")
 	flag.StringVar(&outputFile, "output-file", "", "path to a file which will contain the shards as JSON, default is stdout")
 	flag.StringVar(&label, "label", "", "environment label on which to filter")
 }
@@ -33,26 +33,26 @@ func init() {
 func main() {
 	flag.Parse()
 
-	if fuchsiaBuildDir == "" {
+	if buildDir == "" {
 		log.Fatal("must specify a Fuchsia build output directory")
 	}
 
 	// Load spec files.
-	pkgs, err := build.LoadPackages(fuchsiaBuildDir)
+	pkgs, err := build.LoadPackages(buildDir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	hostTests, err := build.LoadHostTests(fuchsiaBuildDir)
+	hostTests, err := build.LoadHostTests(buildDir)
 	if err != nil {
 		log.Fatal(err)
 	}
-	specs, err := testsharder.LoadTestSpecs(fuchsiaBuildDir, pkgs, hostTests)
+	specs, err := testsharder.LoadTestSpecs(buildDir, pkgs, hostTests)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	// Load test platform environments.
-	platforms, err := testsharder.LoadPlatforms(fuchsiaBuildDir)
+	platforms, err := testsharder.LoadPlatforms(buildDir)
 	if err != nil {
 		log.Fatal(err)
 	}
