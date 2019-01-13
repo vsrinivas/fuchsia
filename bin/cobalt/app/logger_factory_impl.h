@@ -25,9 +25,9 @@ namespace cobalt {
 class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
  public:
   LoggerFactoryImpl(encoder::ClientSecret client_secret,
-                    encoder::ObservationStore* observation_store,
-                    util::EncryptedMessageMaker* encrypt_to_analyzer,
-                    encoder::ShippingManager* shipping_manager,
+                    encoder::ObservationStore* legacy_observation_store,
+                    util::EncryptedMessageMaker* legacy_encrypt_to_analyzer,
+                    encoder::ShippingManager* legacy_shipping_manager,
                     const encoder::SystemData* system_data,
                     TimerManager* timer_manager,
                     logger::Encoder* logger_encoder,
@@ -80,13 +80,13 @@ class LoggerFactoryImpl : public fuchsia::cobalt::LoggerFactory {
   // Cobalt uses internal_logger_ to log events about Cobalt.
   std::unique_ptr<logger::Logger> internal_logger_;
 
-  encoder::ObservationStore* observation_store_;      // not owned
-  util::EncryptedMessageMaker* encrypt_to_analyzer_;  // not owned
-  encoder::ShippingManager* shipping_manager_;        // not owned
-  const encoder::SystemData* system_data_;            // not owned
-  TimerManager* timer_manager_;                       // not owned
-  logger::Encoder* logger_encoder_;                   // not owned
-  logger::ObservationWriter* observation_writer_;     // not owned
+  encoder::ObservationStore* legacy_observation_store_;      // not owned
+  util::EncryptedMessageMaker* legacy_encrypt_to_analyzer_;  // not owned
+  encoder::ShippingManager* legacy_shipping_manager_;        // not owned
+  const encoder::SystemData* system_data_;                   // not owned
+  TimerManager* timer_manager_;                              // not owned
+  logger::Encoder* logger_encoder_;                          // not owned
+  logger::ObservationWriter* observation_writer_;            // not owned
 
   // Used for cobalt v0.1 clients.
   std::shared_ptr<config::ClientConfig> client_config_;

@@ -3,13 +3,16 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "pkgfs": [ "packages" ],
         "features": [
             "root-ssl-certificates",
             "persistent-storage"
         ],
+        "pkgfs": [
+            "packages"
+        ],
         "services": [
-            "fuchsia.net.LegacySocketProvider"
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.oldhttp.HttpService"
         ]
     }
 }

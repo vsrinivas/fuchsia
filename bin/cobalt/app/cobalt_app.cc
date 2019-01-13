@@ -36,6 +36,7 @@ const size_t kMaxBytesPerEnvelope = 512 * 1024;  // 0.5 MiB.
 const size_t kMaxBytesTotal = 1024 * 1024;       // 1 MiB
 
 constexpr char kCloudShufflerUri[] = "shuffler.cobalt-api.fuchsia.com:443";
+constexpr char kClearcutEndpoint[] = "https://jmt17.google.com/log";
 
 constexpr char kAnalyzerPublicKeyPemPath[] =
     "/pkg/data/certs/cobaltv0.1/analyzer_public.pem";
@@ -66,31 +67,44 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       // makes sense to use MAX_BYTES_PER_EVENT as the value of
       // max_bytes_per_observation. But when we start implementing non-immediate
       // observations this needs to be revisited.
-      legacy_observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
-                                kMaxBytesPerEnvelope, kMaxBytesTotal,
-                                std::make_unique<PosixFileSystem>(),
-                                kLegacyObservationStorePath),
+      legacy_observation_store_(
+          fuchsia::cobalt::MAX_BYTES_PER_EVENT, kMaxBytesPerEnvelope,
+          kMaxBytesTotal, std::make_unique<PosixFileSystem>(),
+          kLegacyObservationStorePath, "Legacy FileObservationStore"),
       observation_store_(fuchsia::cobalt::MAX_BYTES_PER_EVENT,
                          kMaxBytesPerEnvelope, kMaxBytesTotal,
                          std::make_unique<PosixFileSystem>(),
-                         kObservationStorePath),
-      encrypt_to_analyzer_(ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
-                           EncryptedMessage::HYBRID_ECDH_V1),
-      encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
-                           EncryptedMessage::HYBRID_ECDH_V1),
-      shipping_manager_(
+                         kObservationStorePath, "V1 FileObservationStore"),
+      legacy_encrypt_to_analyzer_(ReadPublicKeyPem(kAnalyzerPublicKeyPemPath),
+                                  EncryptedMessage::HYBRID_ECDH_V1),
+      legacy_encrypt_to_shuffler_(ReadPublicKeyPem(kShufflerPublicKeyPemPath),
+                                  EncryptedMessage::HYBRID_ECDH_V1),
+      // TODO(rudominer,pesk) Support encryption in Cobalt 1.0.
+      encrypt_to_analyzer_("", EncryptedMessage::NONE),
+      encrypt_to_shuffler_("", EncryptedMessage::NONE),
+
+      legacy_shipping_manager_(
           UploadScheduler(schedule_interval, min_interval, initial_interval),
-          &legacy_observation_store_, &encrypt_to_shuffler_,
+          &legacy_observation_store_, &legacy_encrypt_to_shuffler_,
           LegacyShippingManager::SendRetryerParams(kInitialRpcDeadline,
                                                    kDeadlinePerSendAttempt),
           &send_retryer_),
+
+      clearcut_shipping_manager_(
+          UploadScheduler(schedule_interval, min_interval, initial_interval),
+          &observation_store_, &encrypt_to_shuffler_,
+          std::make_unique<clearcut::ClearcutUploader>(
+              kClearcutEndpoint, std::make_unique<FuchsiaHTTPClient>(
+                                     &network_wrapper_, dispatcher))),
       timer_manager_(dispatcher),
       logger_encoder_(getClientSecret(), &system_data_),
-      observation_writer_(&observation_store_, &shipping_manager_,
+      observation_writer_(&observation_store_, &clearcut_shipping_manager_,
                           &encrypt_to_analyzer_),
-      controller_impl_(
-          new CobaltControllerImpl(dispatcher, &shipping_manager_)) {
-  shipping_manager_.Start();
+      controller_impl_(new CobaltControllerImpl(
+          dispatcher,
+          {&legacy_shipping_manager_, &clearcut_shipping_manager_})) {
+  legacy_shipping_manager_.Start();
+  clearcut_shipping_manager_.Start();
 
   // Load the global metrics registry.
   std::ifstream registry_file_stream;
@@ -123,9 +137,10 @@ CobaltApp::CobaltApp(async_dispatcher_t* dispatcher,
       << kMetricsRegistryPath;
 
   logger_factory_impl_.reset(new LoggerFactoryImpl(
-      getClientSecret(), &legacy_observation_store_, &encrypt_to_analyzer_,
-      &shipping_manager_, &system_data_, &timer_manager_, &logger_encoder_,
-      &observation_writer_, client_config_, project_configs_));
+      getClientSecret(), &legacy_observation_store_,
+      &legacy_encrypt_to_analyzer_, &legacy_shipping_manager_, &system_data_,
+      &timer_manager_, &logger_encoder_, &observation_writer_, client_config_,
+      project_configs_));
 
   context_->outgoing().AddPublicService(
       logger_factory_bindings_.GetHandler(logger_factory_impl_.get()));

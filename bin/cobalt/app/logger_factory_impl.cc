@@ -93,18 +93,18 @@ CreateProjectContexts(ProjectProfile profile) {
 
 LoggerFactoryImpl::LoggerFactoryImpl(
     encoder::ClientSecret client_secret,
-    encoder::ObservationStore* observation_store,
-    util::EncryptedMessageMaker* encrypt_to_analyzer,
-    encoder::ShippingManager* shipping_manager,
+    encoder::ObservationStore* legacy_observation_store,
+    util::EncryptedMessageMaker* legacy_encrypt_to_analyzer,
+    encoder::ShippingManager* legacy_shipping_manager,
     const encoder::SystemData* system_data, TimerManager* timer_manager,
     logger::Encoder* logger_encoder,
     logger::ObservationWriter* observation_writer,
     std::shared_ptr<config::ClientConfig> client_config,
     std::shared_ptr<ProjectConfigs> project_configs)
     : client_secret_(std::move(client_secret)),
-      observation_store_(observation_store),
-      encrypt_to_analyzer_(encrypt_to_analyzer),
-      shipping_manager_(shipping_manager),
+      legacy_observation_store_(legacy_observation_store),
+      legacy_encrypt_to_analyzer_(legacy_encrypt_to_analyzer),
+      legacy_shipping_manager_(legacy_shipping_manager),
       system_data_(system_data),
       timer_manager_(timer_manager),
       logger_encoder_(logger_encoder),
@@ -134,8 +134,8 @@ void LoggerFactoryImpl::CreateLogger(
     logger_bindings_.AddBinding(
         std::make_unique<LegacyLoggerImpl>(
             std::move(legacy_project_context), client_secret_,
-            observation_store_, encrypt_to_analyzer_, shipping_manager_,
-            system_data_, timer_manager_),
+            legacy_observation_store_, legacy_encrypt_to_analyzer_,
+            legacy_shipping_manager_, system_data_, timer_manager_),
         std::move(request));
     callback(Status::OK);
   } else if (project_context) {
@@ -161,8 +161,8 @@ void LoggerFactoryImpl::CreateLoggerSimple(
     logger_simple_bindings_.AddBinding(
         std::make_unique<LegacyLoggerImpl>(
             std::move(legacy_project_context), client_secret_,
-            observation_store_, encrypt_to_analyzer_, shipping_manager_,
-            system_data_, timer_manager_),
+            legacy_observation_store_, legacy_encrypt_to_analyzer_,
+            legacy_shipping_manager_, system_data_, timer_manager_),
         std::move(request));
     callback(Status::OK);
   } else if (project_context) {
@@ -232,8 +232,8 @@ void LoggerFactoryImpl::CreateLoggerFromProjectId(
 
   logger_bindings_.AddBinding(
       std::make_unique<LegacyLoggerImpl>(
-          std::move(project_context), client_secret_, observation_store_,
-          encrypt_to_analyzer_, shipping_manager_, system_data_,
+          std::move(project_context), client_secret_, legacy_observation_store_,
+          legacy_encrypt_to_analyzer_, legacy_shipping_manager_, system_data_,
           timer_manager_),
       std::move(request));
 
@@ -249,8 +249,8 @@ void LoggerFactoryImpl::CreateLoggerSimpleFromProjectId(
 
   logger_simple_bindings_.AddBinding(
       std::make_unique<LegacyLoggerImpl>(
-          std::move(project_context), client_secret_, observation_store_,
-          encrypt_to_analyzer_, shipping_manager_, system_data_,
+          std::move(project_context), client_secret_, legacy_observation_store_,
+          legacy_encrypt_to_analyzer_, legacy_shipping_manager_, system_data_,
           timer_manager_),
       std::move(request));
 
