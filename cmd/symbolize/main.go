@@ -8,9 +8,7 @@ import (
 	"context"
 	"encoding/json"
 	"flag"
-	"fmt"
 	"io"
-	"log"
 	"os"
 
 	"fuchsia.googlesource.com/tools/color"
@@ -19,30 +17,25 @@ import (
 )
 
 var (
-	llvmSymboPath string
-	idsPath       string
-	colorValue    string
+	colors        color.EnableColor
 	jsonOutput    string
+	idsPath       string
 	// TODO(jakehehrlich): Make idsRel always true and remove this flag.
-	idsRel bool
+	idsRel        bool
+	level         logger.LogLevel
+	llvmSymboPath string
 )
 
 func init() {
+	colors = color.ColorAuto
+	level = logger.InfoLevel
+
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
 	flag.StringVar(&idsPath, "ids", "", "path to ids.txt")
-	flag.StringVar(&colorValue, "color", "auto", "can be `always`, `auto`, or `never`.")
+	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
+	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
 	flag.StringVar(&jsonOutput, "json-output", "", "outputs trigger information to the specified file")
 	flag.BoolVar(&idsRel, "ids-rel", false, "tells the symbolizer to always use ids.txt relative paths")
-}
-
-func getColor() (color.Color, error) {
-	ec := color.EnableColor(colorValue)
-	switch ec {
-	case color.ColorAlways, color.ColorNever, color.ColorAuto:
-		return color.NewColor(ec), nil
-	default:
-		return nil, fmt.Errorf("invalid color option `%s`, possible values are `always`, `auto`, and `never`", colorValue)
-	}
 }
 
 type dumpEntry struct {
@@ -79,25 +72,22 @@ func (d *dumpHandler) Write(buf io.Writer) error {
 func main() {
 	// Parse flags and setup helpers
 	flag.Parse()
-	painter, err := getColor()
-	if err != nil {
-		log.Fatal(err)
-	}
 	var jsonTriggerHandler *dumpHandler
 	if jsonOutput != "" {
 		jsonTriggerHandler = &dumpHandler{}
 	}
 
 	// Setup logger and context
-	symbolizeLogger := logger.NewLogger(logger.WarningLevel, painter, os.Stderr, os.Stderr)
-	ctx := logger.WithLogger(context.Background(), symbolizeLogger)
+	painter := color.NewColor(colors)
+	log := logger.NewLogger(level, painter, os.Stdout, os.Stderr)
+	ctx := logger.WithLogger(context.Background(), log)
 
 	// Construct the nodes of the pipeline
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
 	repo := symbolize.NewRepo()
-	err = repo.AddSource(symbolize.NewIDsSource(idsPath, idsRel))
+	err := repo.AddSource(symbolize.NewIDsSource(idsPath, idsRel))
 	if err != nil {
-		symbolizeLogger.Fatalf("%v", err)
+		log.Fatalf("%v\n", err)
 	}
 	demuxer := symbolize.NewDemuxer(repo, symbolizer)
 	tap := symbolize.NewTriggerTap()
@@ -109,7 +99,7 @@ func main() {
 	// Build the pipeline to start presenting.
 	err = symbolizer.Start(ctx)
 	if err != nil {
-		symbolizeLogger.Fatalf("%v", err)
+		log.Fatalf("%v\n", err)
 	}
 	inputLines := symbolize.StartParsing(ctx, os.Stdin)
 	outputLines := demuxer.Start(ctx, inputLines)
@@ -124,10 +114,10 @@ func main() {
 	if jsonTriggerHandler != nil {
 		file, err := os.Create(jsonOutput)
 		if err != nil {
-			log.Fatal(err)
+			log.Fatalf("%v\n", err)
 		}
 		if err := jsonTriggerHandler.Write(file); err != nil {
-			log.Fatal(err)
+			log.Fatalf("%v\n", err)
 		}
 	}
 }

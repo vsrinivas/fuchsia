@@ -9,12 +9,12 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"os"
 	"os/exec"
 	"path/filepath"
 
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/qemu"
 	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
@@ -133,7 +133,7 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		Stdout: os.Stdout,
 		Stderr: os.Stderr,
 	}
-	log.Printf("QEMU invocation:\n%s", invocation)
+	logger.Debugf(ctx, "QEMU invocation:\n%s", invocation)
 	return qemu.CheckExitCode(qemuCmd.Run())
 }
 
@@ -145,7 +145,7 @@ func (cmd *QEMUCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...inter
 	secrets.StartSecretsServer(ctx, 8081)
 
 	if err := cmd.execute(ctx, f.Args()); err != nil {
-		log.Print(err)
+		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess

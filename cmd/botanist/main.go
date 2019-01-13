@@ -9,7 +9,23 @@ import (
 	"os"
 
 	"github.com/google/subcommands"
+
+	"fuchsia.googlesource.com/tools/color"
+	"fuchsia.googlesource.com/tools/logger"
 )
+
+var (
+	colors color.EnableColor
+	level  logger.LogLevel
+)
+
+func init() {
+	colors = color.ColorAuto
+	level = logger.InfoLevel
+
+	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
+	flag.Var(&level, "level", "output verbosity, can be fatal, error, warning, info, debug or trace")
+}
 
 func main() {
 	subcommands.Register(subcommands.HelpCommand(), "")
@@ -20,5 +36,9 @@ func main() {
 	subcommands.Register(&RunCommand{}, "")
 
 	flag.Parse()
-	os.Exit(int(subcommands.Execute(context.Background())))
+
+	log := logger.NewLogger(level, color.NewColor(colors), os.Stdout, os.Stderr)
+	ctx := logger.WithLogger(context.Background(), log)
+
+	os.Exit(int(subcommands.Execute(ctx)))
 }

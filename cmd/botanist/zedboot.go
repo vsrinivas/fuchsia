@@ -12,7 +12,6 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -25,6 +24,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -108,15 +108,15 @@ func (cmd *ZedbootCommand) createTarFile() (*os.File, error) {
 }
 
 // Creates and returns Summary file object for Host Cmds.
-func (cmd *ZedbootCommand) hostSummaryJSON(err error) (*bytes.Buffer, error) {
+func (cmd *ZedbootCommand) hostSummaryJSON(ctx context.Context, err error) (*bytes.Buffer, error) {
 	var cmdResult runtests.TestResult
 
 	if err != nil {
 		cmdResult = runtests.TestFailure
-		log.Printf("Command failed! %v\n", err)
+		logger.Infof(ctx, "Command failed! %v\n", err)
 	} else {
 		cmdResult = runtests.TestSuccess
-		log.Printf("Command succeeded!\n")
+		logger.Infof(ctx, "Command succeeded!\n")
 	}
 
 	// Create coarse-grained summary based on host command exit code
@@ -191,7 +191,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	})
 
 	// Execute host command
-	log.Printf("Executing command: %v", cmd.hostCmd)
+	logger.Debugf(ctx, "executing command: %q\n", cmd.hostCmd)
 	hostCmd.Start()
 	hostCmdErr := hostCmd.Wait()
 
@@ -199,7 +199,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	stdoutBuf.Write(stderrBuf.Bytes())
 
 	// Create summary JSON based on host command exit code
-	summaryBuffer, err := cmd.hostSummaryJSON(hostCmdErr)
+	summaryBuffer, err := cmd.hostSummaryJSON(ctx, hostCmdErr)
 	if err != nil {
 		return err
 	}
@@ -221,7 +221,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 	}
 	go func() {
 		defer l.Close()
-		log.Printf("starting log listener\n")
+		logger.Debugf(ctx, "starting log listener\n")
 		for {
 			data, err := l.Listen()
 			if err != nil {
@@ -265,7 +265,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		return cmd.runHostCmd(ctx)
 	}
 
-	log.Printf("waiting for \"%s\"\n", cmd.summaryFilename)
+	logger.Debugf(ctx, "waiting for %q\n", cmd.summaryFilename)
 
 	// Poll for summary.json; this relies on runtest being executed using
 	// autorun and it eventually producing the summary.json file.
@@ -285,7 +285,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		return fmt.Errorf("timed out waiting for tests to complete: %v", err)
 	}
 
-	log.Printf("reading \"%s\"\n", cmd.summaryFilename)
+	logger.Debugf(ctx, "reading %q\n", cmd.summaryFilename)
 
 	if _, err := writer.WriteTo(&buffer); err != nil {
 		return fmt.Errorf("failed to receive summary file: %v\n", err)
@@ -309,7 +309,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		return err
 	}
 
-	log.Printf("copying test output\n")
+	logger.Debugf(ctx, "copying test output\n")
 
 	// Tar in a subroutine while busy-printing so that we do not hit an i/o timeout when
 	// dealing with large files.
@@ -343,7 +343,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 		c <- nil
 	}()
 
-	log.Printf("tarring test output...")
+	logger.Debugf(ctx, "tarring test output...\n")
 	ticker := time.NewTicker(5 * time.Second)
 	for {
 		select {
@@ -351,7 +351,7 @@ func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, node
 			ticker.Stop()
 			return err
 		case <-ticker.C:
-			log.Printf("tarring test output...")
+			logger.Debugf(ctx, "tarring test output...\n")
 		}
 	}
 }
@@ -364,10 +364,10 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 
 	if properties.PDU != nil {
 		defer func() {
-			log.Printf("rebooting the node \"%s\"\n", properties.Nodename)
+			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
 			if err := pdu.RebootDevice(properties.PDU); err != nil {
-				log.Fatalf("failed to reboot the device: %v", err)
+				logger.Fatalf(ctx, "failed to reboot the device: %v\n", err)
 			}
 		}()
 	}
@@ -397,7 +397,7 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 			// continue is very generous.
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
-			log.Printf("flashing to zedboot with fastboot")
+			logger.Debugf(ctx, "flashing to zedboot with fastboot\n")
 			if err := botanist.FastbootToZedboot(ctx, cmd.fastboot, zirconR.Path); err != nil {
 				errs <- err
 				return
@@ -418,21 +418,21 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 
 func (cmd *ZedbootCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interface{}) subcommands.ExitStatus {
 	propertiesFlag := f.Lookup("properties")
-	log.Printf("properties flag: %v", propertiesFlag.Value)
+	logger.Debugf(ctx, "properties flag: %v\n", propertiesFlag.Value)
 
 	// Aggregate command-line arguments.
 	cmdlineArgs := f.Args()
 	if cmd.cmdlineFile != "" {
 		args, err := ioutil.ReadFile(cmd.cmdlineFile)
 		if err != nil {
-			log.Printf("failed to read command-line args file \"%v\": %v", cmd.cmdlineFile, err)
+			logger.Errorf(ctx, "failed to read command-line args file %q: %v\n", cmd.cmdlineFile, err)
 			return subcommands.ExitFailure
 		}
 		cmdlineArgs = append(cmdlineArgs, strings.Split(string(args), "\n")...)
 	}
 
 	if err := cmd.execute(ctx, cmdlineArgs); err != nil {
-		log.Print(err)
+		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure
 	}
 

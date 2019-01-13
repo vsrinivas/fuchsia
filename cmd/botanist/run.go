@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"net"
 	"os"
 	"os/exec"
@@ -18,6 +17,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/build"
+	"fuchsia.googlesource.com/tools/logger"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -94,7 +94,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 	}
 	go func() {
 		defer l.Close()
-		log.Printf("starting log listener\n")
+		logger.Debugf(ctx, "starting log listener\n")
 		for {
 			data, err := l.Listen()
 			if err != nil {
@@ -212,10 +212,10 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 
 	if properties.PDU != nil {
 		defer func() {
-			log.Printf("rebooting the node \"%s\"\n", properties.Nodename)
+			logger.Debugf(ctx, "rebooting the node %q\n", properties.Nodename)
 
 			if err := pdu.RebootDevice(properties.PDU); err != nil {
-				log.Fatalf("failed to reboot %s: %v", properties.Nodename, err)
+				logger.Fatalf(ctx, "failed to reboot %q: %v\n", properties.Nodename, err)
 			}
 		}()
 	}
@@ -241,7 +241,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 			// continue is very generous.
 			ctx, cancel := context.WithTimeout(ctx, 2*time.Minute)
 			defer cancel()
-			log.Printf("flashing to zedboot with fastboot")
+			logger.Debugf(ctx, "flashing to zedboot with fastboot\n")
 			if err := botanist.FastbootToZedboot(ctx, r.fastboot, zirconR.Path); err != nil {
 				errs <- err
 				return
@@ -266,7 +266,7 @@ func (r *RunCommand) Execute(ctx context.Context, f *flag.FlagSet, _ ...interfac
 		return subcommands.ExitUsageError
 	}
 	if err := r.execute(ctx, args); err != nil {
-		log.Print(err)
+		logger.Errorf(ctx, "%v\n", err)
 		return subcommands.ExitFailure
 	}
 	return subcommands.ExitSuccess

@@ -39,6 +39,46 @@ const (
 	TraceLevel
 )
 
+func (l *LogLevel) String() string {
+	switch *l {
+	case NoLogLevel:
+		return "no"
+	case FatalLevel:
+		return "fatal"
+	case ErrorLevel:
+		return "error"
+	case WarningLevel:
+		return "warning"
+	case InfoLevel:
+		return "info"
+	case DebugLevel:
+		return "debug"
+	case TraceLevel:
+		return "trace"
+	}
+	return ""
+}
+
+func (l *LogLevel) Set(s string) error {
+	switch s {
+	case "fatal":
+		*l = FatalLevel
+	case "error":
+		*l = ErrorLevel
+	case "warning":
+		*l = WarningLevel
+	case "info":
+		*l = InfoLevel
+	case "debug":
+		*l = DebugLevel
+	case "trace":
+		*l = TraceLevel
+	default:
+		return fmt.Errorf("%s is not a valid level", s)
+	}
+	return nil
+}
+
 func NewLogger(loggerLevel LogLevel, color color.Color, outWriter, errWriter io.Writer) *Logger {
 	if outWriter == nil {
 		outWriter = os.Stdout

@@ -98,12 +98,12 @@ func (monochrome) Enabled() bool {
 	return false
 }
 
-type EnableColor string
+type EnableColor int
 
 const (
-	ColorAlways EnableColor = "always"
-	ColorNever  EnableColor = "never"
-	ColorAuto   EnableColor = "auto"
+	ColorNever EnableColor = iota
+	ColorAuto
+	ColorAlways
 )
 
 func isColorAvailable() bool {
@@ -125,4 +125,30 @@ func NewColor(enableColor EnableColor) Color {
 	} else {
 		return monochrome{}
 	}
+}
+
+func (ec *EnableColor) String() string {
+	switch *ec {
+	case ColorNever:
+		return "never"
+	case ColorAuto:
+		return "auto"
+	case ColorAlways:
+		return "always"
+	}
+	return ""
+}
+
+func (ec *EnableColor) Set(s string) error {
+	switch s {
+	case "never":
+		*ec = ColorNever
+	case "auto":
+		*ec = ColorAuto
+	case "always":
+		*ec = ColorAlways
+	default:
+		return fmt.Errorf("%s is not a valid color value", s)
+	}
+	return nil
 }
