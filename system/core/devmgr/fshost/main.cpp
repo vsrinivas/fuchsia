@@ -13,6 +13,7 @@
 #include <lib/fdio/namespace.h>
 #include <lib/fdio/util.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fit/defer.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
@@ -239,6 +240,28 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
     }
 }
 
+// Setup the loader service to be used by all processes spawned by devmgr.
+void setup_loader_service(zx::channel devmgr_loader) {
+    loader_service_t* svc;
+    zx_status_t status = loader_service_create_fs(nullptr, &svc);;
+    if (status != ZX_OK) {
+        fprintf(stderr, "fshost: failed to create loader service %d\n", status);
+    }
+    auto defer = fit::defer([svc] { loader_service_release(svc); });
+    status = loader_service_attach(svc, devmgr_loader.release());
+    if (status != ZX_OK) {
+        fprintf(stderr, "fshost: failed to attach to loader service: %d\n", status);
+        return;
+    }
+    zx_handle_t fshost_loader;
+    status = loader_service_connect(svc, &fshost_loader);
+    if (status != ZX_OK) {
+        fprintf(stderr, "fshost: failed to connect to loader service: %d\n", status);
+        return;
+    }
+    zx_handle_close(dl_set_loader_service(fshost_loader));
+}
+
 } // namespace
 
 FshostConnections::FshostConnections(zx::channel devfs_root, zx::channel svc_root,
@@ -304,7 +327,7 @@ int main(int argc, char** argv) {
         argv++;
     }
 
-    zx::channel fs_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
+    zx::channel fs_root(zx_take_startup_handle(PA_HND(PA_USER0, 0)));
     zx::channel devfs_root;
     {
         zx::channel devfs_root_remote;
@@ -318,9 +341,9 @@ int main(int argc, char** argv) {
         ZX_ASSERT_MSG(status == ZX_OK, "fshost: failed to connect to /dev: %s\n",
                       zx_status_get_string(status));
     }
-    zx::channel svc_root = zx::channel(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
-    zx_handle_t devmgr_loader = zx_take_startup_handle(PA_HND(PA_USER0, 3));
-    zx::event fshost_event = zx::event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
+    zx::channel svc_root(zx_take_startup_handle(PA_HND(PA_USER0, 2)));
+    zx::channel devmgr_loader(zx_take_startup_handle(PA_HND(PA_USER0, 3)));
+    zx::event fshost_event(zx_take_startup_handle(PA_HND(PA_USER1, 0)));
 
     // First, initialize the local filesystem in isolation.
     fbl::unique_ptr<FsManager> root = fbl::make_unique<FsManager>();
@@ -341,22 +364,8 @@ int main(int argc, char** argv) {
         root->FuchsiaStart();
     }
 
-    {
-        loader_service_t* loader_service;
-        zx_status_t status = loader_service_create_fs(nullptr, &loader_service);
-        if (status != ZX_OK) {
-            printf("fshost: failed to create loader service: %d\n", status);
-        } else {
-            loader_service_attach(loader_service, devmgr_loader);
-            zx_handle_t svc;
-            if ((status = loader_service_connect(loader_service, &svc)) != ZX_OK) {
-                printf("fshost: failed to connect to loader service: %d\n", status);
-            } else {
-                // switch from bootfs-loader to system-loader
-                zx_handle_close(dl_set_loader_service(svc));
-            }
-        }
-    }
+    // Setup the devmgr loader service.
+    setup_loader_service(std::move(devmgr_loader));
 
     if (!bootdata_ramdisk_list->is_empty()) {
         thrd_t th;

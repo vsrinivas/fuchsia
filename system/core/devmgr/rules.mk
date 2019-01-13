@@ -95,6 +95,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/bootdata \
     system/ulib/bootfs \
     system/ulib/fbl \
+    system/ulib/fit \
     system/ulib/gpt \
     system/ulib/sync \
     system/ulib/trace \
