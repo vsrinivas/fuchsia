@@ -20,9 +20,9 @@ const (
 	// TestSpecSuffix is the file suffix identifying a test spec.
 	TestSpecSuffix = ".spec.json"
 
-	// HostDepsSuffix is the file suffix identifying a file giving the host-side runtime
+	// TestDepsSuffix is the file suffix identifying a file giving the runtime
 	// depedencies of a test.
-	HostDepsSuffix = ".spec.data"
+	TestDepsSuffix = ".spec.data"
 )
 
 // TestSpec is the specification for a single test and the environments it
@@ -33,9 +33,6 @@ type TestSpec struct {
 
 	// Envs is a set of environments that the test should be executed in.
 	Envs []Environment `json:"environments"`
-
-	// HostDeps are the host-side runtime depedencies of the test.
-	HostDeps []string
 }
 
 // Test encapsulates details about a particular test.
@@ -54,7 +51,12 @@ type Test struct {
 	OS string `json:"os"`
 
 	// Command is the command line to run to execute this test.
-	Command []string `json:"command"`
+	Command []string `json:"command,omitempty"`
+
+	// Deps is the list of paths to the test's runtime dependencies,
+	// relative to the build directory.
+	// Currently this field only makes sense for Linux and Mac tests.
+	Deps []string `json:"deps,omitempty"`
 }
 
 func (spec TestSpec) validateAgainst(platforms []DimensionSet) error {
@@ -172,7 +174,7 @@ func LoadTestSpecs(fuchsiaBuildDir string, pkgs, hostTests []build.Target) ([]Te
 					continue
 				}
 
-				// Open, read, and parse any test spec found. Look for any associated host-side
+				// Open, read, and parse any test spec found. Look for any associated
 				// runtime depedencies.
 				path := filepath.Join(specDir, entry.Name())
 				if strings.HasSuffix(path, TestSpecSuffix) {
@@ -187,16 +189,14 @@ func LoadTestSpecs(fuchsiaBuildDir string, pkgs, hostTests []build.Target) ([]Te
 						return fmt.Errorf("failed to decode %s: %v", path, err)
 					}
 
-					// If there is not an associated host deps file, there are no host deps, which
-					// is okay and not a failure mode.
-					hostDepsPath := strings.Replace(path, TestSpecSuffix, HostDepsSuffix, 1)
-					_, err = os.Stat(hostDepsPath)
+					testDepsPath := strings.Replace(path, TestSpecSuffix, TestDepsSuffix, 1)
+					_, err = os.Stat(testDepsPath)
 					if err == nil {
-						deps, err := readLinesFromFile(hostDepsPath)
+						deps, err := readLinesFromFile(testDepsPath)
 						if err != nil {
 							return err
 						}
-						spec.HostDeps = deps
+						spec.Test.Deps = deps
 					} else if !os.IsNotExist(err) {
 						return err
 					}

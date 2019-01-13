@@ -17,9 +17,6 @@ type Shard struct {
 
 	// Env is a generalized notion of the execution environment for the shard.
 	Env Environment `json:"environment"`
-
-	// HostDeps is a map which associates a host-side test to its runtime dependencies.
-	HostDeps map[string][]string `json:"host_deps,omitempty"`
 }
 
 // MakeShards is the core algorithm to this tool. It takes a set of test specs and produces
@@ -50,23 +47,15 @@ func MakeShards(specs []TestSpec, label string) []*Shard {
 		sort.Slice(specs, func(i, j int) bool {
 			return specs[i].Test.Location < specs[i].Test.Location
 		})
-
-		shard := Shard{
-			Name:  env.Name(),
-			Tests: []Test{},
-			Env:   env,
-		}
-		hostDeps := make(map[string][]string)
+		var tests []Test
 		for _, spec := range specs {
-			shard.Tests = append(shard.Tests, spec.Test)
-			if len(spec.HostDeps) > 0 {
-				hostDeps[spec.Test.Location] = spec.HostDeps
-			}
+			tests = append(tests, spec.Test)
 		}
-		if len(hostDeps) > 0 {
-			shard.HostDeps = hostDeps
-		}
-		shards = append(shards, &shard)
+		shards = append(shards, &Shard{
+			Name:  env.Name(),
+			Tests: tests,
+			Env:   env,
+		})
 	}
 	return shards
 }

@@ -252,7 +252,7 @@ func TestLoadTestSpecs(t *testing.T) {
 		}
 	})
 
-	t.Run("host-side deps are loaded", func(t *testing.T) {
+	t.Run("deps are loaded", func(t *testing.T) {
 		bd := newFuchsiaBuildDir(t)
 		defer os.RemoveAll(bd.root)
 		bd.createLayout(pkgs, hostTests)
@@ -260,21 +260,21 @@ func TestLoadTestSpecs(t *testing.T) {
 		specDirBaz := testsharder.HostTestSpecDir(bd.root, hostTestBaz)
 		writeTestSpec(t, specBaz, filepath.Join(specDirBaz, testSpecFilename("baz_host_tests")))
 
-		hostDeps := []string{"path/to/dep/1", "path/to/dep/2"}
-		hostDepsPath := filepath.Join(specDirBaz, "baz_host_tests"+testsharder.HostDepsSuffix)
-		fd, err := os.Create(hostDepsPath)
+		deps := []string{"path/to/dep/1", "path/to/dep/2"}
+		DepsPath := filepath.Join(specDirBaz, "baz_host_tests"+testsharder.TestDepsSuffix)
+		fd, err := os.Create(DepsPath)
 		defer fd.Close()
 		if err != nil {
 			t.Fatal(err)
 		}
-		for _, dep := range hostDeps {
+		for _, dep := range deps {
 			_, err := fd.WriteString(dep + "\n")
 			if err != nil {
 				t.Fatal(err)
 			}
 		}
 		specBazWithDeps := specBaz
-		specBazWithDeps.HostDeps = hostDeps
+		specBazWithDeps.Test.Deps = deps
 
 		expected := []testsharder.TestSpec{specBazWithDeps}
 		correctSpecsLoad(t, expected, bd.root)

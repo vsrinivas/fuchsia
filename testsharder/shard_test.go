@@ -28,10 +28,12 @@ func assertEqual(t *testing.T, expected, actual []*testsharder.Shard) {
 }
 
 func TestMakeShards(t *testing.T) {
-	test1 := testsharder.Test{Location: "/path/to/binary"}
-	test2 := testsharder.Test{Location: "/path/to/binary2"}
-	hostDeps1 := []string{"host/side/dep/1a", "host/side/dep/1b"}
-	hostDeps2 := []string{"host/side/dep/2a", "host/side/dep/2b"}
+	test1 := testsharder.Test{
+		Location: "/path/to/binary",
+	}
+	test2 := testsharder.Test{
+		Location: "/path/to/binary2",
+	}
 	env1 := testsharder.Environment{
 		Dimensions: testsharder.DimensionSet{DeviceType: "QEMU"},
 	}
@@ -98,52 +100,6 @@ func TestMakeShards(t *testing.T) {
 				Name:  env3.Name(),
 				Tests: []testsharder.Test{test2},
 				Env:   env3,
-			},
-		}
-		assertEqual(t, expected, actual)
-	})
-
-	t.Run("Ensure host deps are aggregated", func(t *testing.T) {
-		linuxEnv := testsharder.Environment{
-			Dimensions: testsharder.DimensionSet{OS: "Linux"},
-		}
-		macEnv := testsharder.Environment{
-			Dimensions: testsharder.DimensionSet{OS: "Mac"},
-		}
-		actual := testsharder.MakeShards([]testsharder.TestSpec{
-			{
-				Test:     test1,
-				Envs:     []testsharder.Environment{linuxEnv},
-				HostDeps: hostDeps1,
-			},
-			{
-				Test:     test2,
-				Envs:     []testsharder.Environment{linuxEnv},
-				HostDeps: hostDeps2,
-			},
-			{
-				Test:     test1,
-				Envs:     []testsharder.Environment{macEnv},
-				HostDeps: hostDeps1,
-			},
-		}, "")
-		expected := []*testsharder.Shard{
-			{
-				Name:  linuxEnv.Name(),
-				Tests: []testsharder.Test{test1, test2},
-				Env:   linuxEnv,
-				HostDeps: map[string][]string{
-					test1.Location: hostDeps1,
-					test2.Location: hostDeps2,
-				},
-			},
-			{
-				Name:  macEnv.Name(),
-				Tests: []testsharder.Test{test1},
-				Env:   macEnv,
-				HostDeps: map[string][]string{
-					test1.Location: hostDeps1,
-				},
 			},
 		}
 		assertEqual(t, expected, actual)
