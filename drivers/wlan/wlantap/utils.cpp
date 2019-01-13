@@ -6,7 +6,6 @@
 
 #include <ddk/protocol/ethernet.h>
 #include <fuchsia/wlan/device/cpp/fidl.h>
-#include <lib/fxl/arraysize.h>
 #include <wlan/common/band.h>
 #include <wlan/common/channel.h>
 #include <wlan/common/element.h>
@@ -57,7 +56,6 @@ uint32_t ConvertDriverFeatures(const ::std::vector<wlan_device::DriverFeature>& 
             ret |= WLAN_DRIVER_FEATURE_TX_STATUS_REPORT;
             break;
         }
-
     }
     return ret;
 }
@@ -133,12 +131,12 @@ void ConvertBandInfo(const wlan_device::BandInfo& in, wlan_band_info_t* out) {
     }
 
     std::copy_n(in.basic_rates.data(),
-                std::min(in.basic_rates.size(), arraysize(out->basic_rates)), out->basic_rates);
+                std::min<size_t>(in.basic_rates.size(), WLAN_BASIC_RATES_MAX_LEN),
+                out->basic_rates);
 
     out->supported_channels.base_freq = in.supported_channels.base_freq;
     std::copy_n(in.supported_channels.channels.data(),
-                std::min(in.supported_channels.channels.size(),
-                         arraysize(out->supported_channels.channels)),
+                std::min<size_t>(in.supported_channels.channels.size(), WLAN_CHANNELS_MAX_LEN),
                 out->supported_channels.channels);
 }
 
