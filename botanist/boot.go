@@ -40,30 +40,22 @@ const (
 	authorizedKeysNetsvcName = "<<image>>authorized_keys"
 )
 
-// The order in which bootserver serves images to netsvc.
-// Must be a subsequence of the order given in
-// https://fuchsia.googlesource.com/zircon/+/master/system/host/bootserver/bootserver.c
-var bootserverImgOrder = map[string]int{
-	"storage-sparse": 1,
-	"efi":            2,
-	"zircon-vboot":   3,
-	"zircon-a":       4,
-	"zircon-b":       5,
-	"zircon-r":       6,
-}
-
-// GetNetsvcName returns the associated name recognized by fuchsia's netsvc.
-func GetNetsvcName(img Image) (string, bool) {
-	m := map[string]string{
-		"storage-sparse": fvmNetsvcName,
-		"efi":            efiNetsvcName,
-		"zircon-a":       zirconANetsvcName,
-		"zircon-b":       zirconBNetsvcName,
-		"zircon-r":       zirconRNetsvcName,
-		"zircon-vboot":   kerncNetsvcName,
-	}
-	name, ok := m[img.Name]
-	return name, ok
+// Gives the names and indices to use when sending images to netsvc.
+var netsvcInfo = map[string]struct {
+	index int
+	name  string
+}{
+	// The indices correspond to the transfer ordering given in
+	// https://fuchsia.googlesource.com/zircon/+/master/system/host/bootserver/bootserver.c
+	"storage-sparse":  {index: 1, name: fvmNetsvcName},
+	"efi":             {index: 2, name: efiNetsvcName},
+	"zircon-vboot":    {index: 3, name: kerncNetsvcName},
+	"zircon-a":        {index: 4, name: zirconANetsvcName},
+	"zircon-a.signed": {index: 4, name: zirconANetsvcName},
+	"zircon-b":        {index: 5, name: zirconBNetsvcName},
+	"zircon-b.signed": {index: 5, name: zirconBNetsvcName},
+	"zircon-r":        {index: 6, name: zirconRNetsvcName},
+	"zircon-r.signed": {index: 6, name: zirconRNetsvcName},
 }
 
 // Returns whether the list of strings containst "--boot". If an image has such a switch
@@ -94,8 +86,17 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cm
 				paveImgs = append(paveImgs, imgs[i])
 			}
 		}
+		// Sort by transfer index, moving unrecognized images to the front.
 		sort.Slice(paveImgs, func(i, j int) bool {
-			return bootserverImgOrder[paveImgs[i].Name] < bootserverImgOrder[paveImgs[j].Name]
+			ithInfo, ok := netsvcInfo[paveImgs[i].Name]
+			if !ok {
+				return true
+			}
+			jthInfo, ok := netsvcInfo[paveImgs[j].Name]
+			if !ok {
+				return false
+			}
+			return ithInfo.index < jthInfo.index
 		})
 	} else if bootMode == ModeNetboot {
 		ramKernel = GetImage(imgs, "netboot")
@@ -169,11 +170,11 @@ func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *I
 	}
 
 	for _, img := range imgs {
-		netsvcName, ok := GetNetsvcName(img)
+		info, ok := netsvcInfo[img.Name]
 		if !ok {
 			return fmt.Errorf("Could not find associated netsvc name for %s", img.Name)
 		}
-		imgNetsvcFile, err := openNetsvcFile(img.Path, netsvcName)
+		imgNetsvcFile, err := openNetsvcFile(img.Path, info.name)
 		if err != nil {
 			return err
 		}
