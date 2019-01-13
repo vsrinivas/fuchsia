@@ -1316,4 +1316,10 @@ void Minfs::UpdateOpenMetrics(bool cache_hit, const fs::Duration& duration) {
 #endif
 }
 
+#ifdef __Fuchsia__
+fbl::Vector<BlockRegion> Minfs::GetAllocatedRegions() const {
+    return block_allocator_->GetAllocatedRegions();
+}
+#endif
+
 } // namespace minfs

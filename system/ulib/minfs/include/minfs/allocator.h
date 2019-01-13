@@ -12,6 +12,10 @@
 #include <fbl/unique_ptr.h>
 #include <fs/block-txn.h>
 
+#ifdef __Fuchsia__
+#include <fuchsia/minfs/c/fidl.h>
+#endif
+
 #include <minfs/block-txn.h>
 #include <minfs/format.h>
 #include <minfs/superblock.h>
@@ -20,6 +24,7 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+using BlockRegion = fuchsia_minfs_BlockRegion;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
@@ -201,6 +206,10 @@ public:
 
     // Free an item from the allocator.
     void Free(WriteTxn* txn, size_t index);
+
+#ifdef __Fuchsia__
+    fbl::Vector<BlockRegion> GetAllocatedRegions() const;
+#endif
 
 private:
     friend class MinfsChecker;

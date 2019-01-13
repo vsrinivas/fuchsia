@@ -95,10 +95,16 @@ private:
         return GetVnodeMinfs().ToggleMetrics(enable, txn);
     }
 
+    zx_status_t GetAllocatedRegions(fidl_txn_t* txn) {
+        return GetVnodeMinfs().GetAllocatedRegions(txn);
+    }
+
     static const fuchsia_minfs_Minfs_ops* Ops() {
         static const fuchsia_minfs_Minfs_ops kMinfsOps = {
             .GetMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::GetMetrics>,
             .ToggleMetrics = MinfsConnectionBinder::BindMember<&MinfsConnection::ToggleMetrics>,
+            .GetAllocatedRegions =
+                MinfsConnectionBinder::BindMember<&MinfsConnection::GetAllocatedRegions>,
         };
         return &kMinfsOps;
     }
@@ -1729,6 +1735,23 @@ zx_status_t VnodeMinfs::GetMetrics(fidl_txn_t* txn) {
 zx_status_t VnodeMinfs::ToggleMetrics(bool enable, fidl_txn_t* txn) {
     fs_->SetMetrics(enable);
     return fuchsia_minfs_MinfsToggleMetrics_reply(txn, ZX_OK);
+}
+
+zx_status_t VnodeMinfs::GetAllocatedRegions(fidl_txn_t* txn) const {
+    zx::vmo vmo;
+    zx_status_t status = ZX_OK;
+    fbl::Vector<BlockRegion> buffer = fs_->GetAllocatedRegions();
+    uint64_t allocations = buffer.size();
+    if (allocations != 0) {
+        status = zx::vmo::create(sizeof(BlockRegion) * allocations, 0, &vmo);
+        if (status == ZX_OK) {
+            status = vmo.write(buffer.get(), 0, sizeof(BlockRegion) * allocations);
+        }
+    }
+    return fuchsia_minfs_MinfsGetAllocatedRegions_reply(txn, status,
+                                                        status == ZX_OK ? vmo.get() :
+                                                        ZX_HANDLE_INVALID,
+                                                        status == ZX_OK ? allocations : 0);
 }
 
 #endif

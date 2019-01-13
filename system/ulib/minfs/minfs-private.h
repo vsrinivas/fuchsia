@@ -56,6 +56,7 @@ namespace minfs {
 
 #ifdef __Fuchsia__
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::VmoStorage>;
+using BlockRegion = fuchsia_minfs_BlockRegion;
 #else
 using RawBitmap = bitmap::RawBitmapGeneric<bitmap::DefaultStorage>;
 #endif
@@ -249,6 +250,9 @@ public:
         }
         return ZX_ERR_UNAVAILABLE;
     }
+
+    // Record the location, size, and number of all non-free block regions.
+    fbl::Vector<BlockRegion> GetAllocatedRegions() const;
 #endif
 
     // Return an immutable reference to a copy of the internal info.
@@ -383,6 +387,7 @@ public:
     // Minfs FIDL interface.
     zx_status_t GetMetrics(fidl_txn_t* txn);
     zx_status_t ToggleMetrics(bool enabled, fidl_txn_t* txn);
+    zx_status_t GetAllocatedRegions(fidl_txn_t* txn) const;
 #endif
 
     // TODO(rvargas): Make private.

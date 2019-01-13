@@ -248,4 +248,19 @@ void Allocator::Persist(WriteTxn* txn, size_t index, size_t count) {
     txn->Enqueue(data, rel_block, abs_block, blk_count);
 }
 
+#ifdef __Fuchsia__
+fbl::Vector<BlockRegion> Allocator::GetAllocatedRegions() const {
+    fbl::Vector<BlockRegion> out_regions;
+    uint64_t offset = 0;
+    uint64_t end = 0;
+    while (!map_.Scan(end, map_.size(), false, &offset)) {
+        if (map_.Scan(offset, map_.size(), true, &end)) {
+            end = map_.size();
+        }
+        out_regions.push_back({offset, end - offset});
+    }
+    return out_regions;
+}
+#endif
+
 } // namespace minfs
