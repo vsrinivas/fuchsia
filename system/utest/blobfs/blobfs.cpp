@@ -30,6 +30,7 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -38,7 +39,6 @@
 #include <lib/memfs/memfs.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
@@ -429,7 +429,7 @@ bool BlobfsTest::ToggleSleep(uint64_t blk_count) {
 
 bool BlobfsTest::GetRamdiskCount(uint64_t* blk_count) const {
     BEGIN_HELPER;
-    ramdisk_blk_counts_t counts;
+    ramdisk_block_write_counts_t counts;
 
     ASSERT_EQ(ramdisk_get_block_counts(ramdisk_, &counts), ZX_OK);
 

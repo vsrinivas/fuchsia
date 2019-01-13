@@ -12,7 +12,6 @@
 #include <block-client/client.h>
 #include <fs-management/ramdisk.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 #include <zircon/types.h>

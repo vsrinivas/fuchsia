@@ -44,7 +44,6 @@
 #include <minfs/format.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>

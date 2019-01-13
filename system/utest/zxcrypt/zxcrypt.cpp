@@ -14,7 +14,6 @@
 #include <fvm/fvm.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
 #include <zxcrypt/volume.h>

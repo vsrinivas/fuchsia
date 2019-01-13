@@ -18,7 +18,6 @@
 #include <fs-management/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
-#include <zircon/device/ramdisk.h>
 
 #include "filesystems.h"
 

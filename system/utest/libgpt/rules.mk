@@ -28,5 +28,7 @@ MODULE_LIBS := \
     system/ulib/fs-management \
     system/ulib/unittest \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-ramdisk \
 
 include make/module.mk

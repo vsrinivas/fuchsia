@@ -26,9 +26,9 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/time.h>
 #include <lib/zx/vmo.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -385,13 +385,16 @@ zx_status_t ramdisk_set_flags(const ramdisk_client* client, uint32_t flags) {
     return status;
 }
 
-zx_status_t ramdisk_get_block_counts(const ramdisk_client* client, ramdisk_blk_counts_t* counts) {
-    static_assert(sizeof(ramdisk_blk_counts_t) == sizeof(fuchsia_hardware_ramdisk_BlockWriteCounts),
-                  "FIDL-Ioctl size mismatch");
+zx_status_t ramdisk_get_block_counts(const ramdisk_client* client,
+                                     ramdisk_block_write_counts_t* out_counts) {
+    static_assert(sizeof(ramdisk_block_write_counts_t) ==
+                  sizeof(fuchsia_hardware_ramdisk_BlockWriteCounts),
+                  "Cannot convert between C library / FIDL block counts");
+
     zx_status_t status;
     zx_status_t io_status = fuchsia_hardware_ramdisk_RamdiskGetBlockCounts(
             client->ramdisk_interface().get(), &status,
-            reinterpret_cast<fuchsia_hardware_ramdisk_BlockWriteCounts*>(counts));
+            reinterpret_cast<fuchsia_hardware_ramdisk_BlockWriteCounts*>(out_counts));
     if (io_status != ZX_OK) {
         return io_status;
     }

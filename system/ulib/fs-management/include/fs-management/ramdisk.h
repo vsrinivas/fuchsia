@@ -8,7 +8,6 @@
 #include <stdlib.h>
 
 #include <zircon/compiler.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/types.h>
 
 __BEGIN_CDECLS
@@ -53,8 +52,17 @@ zx_status_t ramdisk_sleep_after(const ramdisk_client_t* client, uint64_t blk_cou
 // Wake the ramdisk at |ramdisk_path| from a sleep state.
 zx_status_t ramdisk_wake(const ramdisk_client_t* client);
 
+// A struct containing the number of write operations transmitted to the ramdisk
+// since the last invocation of "wake" or "sleep_after".
+typedef struct ramdisk_block_write_counts {
+    uint64_t received;
+    uint64_t successful;
+    uint64_t failed;
+} ramdisk_block_write_counts_t;
+
 // Returns the ramdisk's current failed, successful, and total block counts as |counts|.
-zx_status_t ramdisk_get_block_counts(const ramdisk_client_t* client, ramdisk_blk_counts_t* counts);
+zx_status_t ramdisk_get_block_counts(const ramdisk_client_t* client,
+                                     ramdisk_block_write_counts_t* out_counts);
 
 // Sets flags on a ramdisk. Flags are plumbed directly through IPC interface.
 zx_status_t ramdisk_set_flags(const ramdisk_client_t* client, uint32_t flags);

@@ -24,7 +24,6 @@
 #include <lib/fzl/fdio.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 

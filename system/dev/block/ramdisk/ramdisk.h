@@ -15,8 +15,8 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -29,8 +29,7 @@ using RamdiskDeviceType = ddk::Device<Ramdisk,
                                       ddk::GetProtocolable,
                                       ddk::GetSizable,
                                       ddk::Unbindable,
-                                      ddk::Messageable,
-                                      ddk::Ioctlable>;
+                                      ddk::Messageable>;
 
 class Ramdisk : public RamdiskDeviceType,
                 public ddk::BlockImplProtocol<Ramdisk, ddk::base_protocol>,
@@ -50,8 +49,6 @@ public:
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out);
     zx_off_t DdkGetSize();
     void DdkUnbind();
-    zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
-                         void* reply, size_t max, size_t* out_actual);
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     void DdkRelease();
 
@@ -129,7 +126,7 @@ private:
     // The number of blocks-to-be-written that should be processed.
     // When this reaches zero, the ramdisk will set |asleep| to true.
     uint64_t pre_sleep_write_block_count_ TA_GUARDED(lock_) = 0;
-    ramdisk_blk_counts_t block_counts_ TA_GUARDED(lock_) {};
+    fuchsia_hardware_ramdisk_BlockWriteCounts block_counts_ TA_GUARDED(lock_) {};
 
     thrd_t worker_ = {};
     char name_[ZBI_PARTITION_NAME_LEN];

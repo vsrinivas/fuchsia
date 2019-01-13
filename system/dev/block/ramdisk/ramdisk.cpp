@@ -14,8 +14,8 @@
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/types.h>
 
 #include "ramdisk.h"
@@ -90,60 +90,6 @@ void Ramdisk::DdkUnbind() {
     }
     sync_completion_signal(&signal_);
     DdkRemove();
-}
-
-zx_status_t Ramdisk::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len,
-                              void* reply, size_t max, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_RAMDISK_UNLINK: {
-        DdkUnbind();
-        return ZX_OK;
-    }
-    case IOCTL_RAMDISK_SET_FLAGS: {
-        if (cmd_len < sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const uint32_t flags = *static_cast<const uint32_t*>(cmd);
-        fbl::AutoLock lock(&lock_);
-        flags_ = flags;
-        return ZX_OK;
-    }
-    case IOCTL_RAMDISK_WAKE_UP: {
-        // Reset state and transaction counts
-        fbl::AutoLock lock(&lock_);
-        asleep_ = false;
-        memset(&block_counts_, 0, sizeof(block_counts_));
-        pre_sleep_write_block_count_ = 0;
-        sync_completion_signal(&signal_);
-        return ZX_OK;
-    }
-    case IOCTL_RAMDISK_SLEEP_AFTER: {
-        if (cmd_len < sizeof(uint64_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        const uint64_t block_count = *static_cast<const uint64_t*>(cmd);
-        fbl::AutoLock lock(&lock_);
-        asleep_ = false;
-        memset(&block_counts_, 0, sizeof(block_counts_));
-        pre_sleep_write_block_count_ = block_count;
-
-        if (block_count == 0) {
-            asleep_ = true;
-        }
-        return ZX_OK;
-    }
-    case IOCTL_RAMDISK_GET_BLK_COUNTS: {
-        if (max < sizeof(ramdisk_blk_counts_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        fbl::AutoLock lock(&lock_);
-        memcpy(reply, &block_counts_, sizeof(ramdisk_blk_counts_t));
-        *out_actual = sizeof(ramdisk_blk_counts_t);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
 }
 
 zx_status_t Ramdisk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -248,7 +194,6 @@ zx_status_t Ramdisk::FidlGetBlockCounts(fidl_txn_t* txn) {
     fuchsia_hardware_ramdisk_BlockWriteCounts block_counts;
     {
         fbl::AutoLock lock(&lock_);
-        static_assert(sizeof(block_counts_) == sizeof(block_counts), "Bad FIDL / IOCTL alignment");
         memcpy(&block_counts, &block_counts_, sizeof(block_counts_));
     }
     return fuchsia_hardware_ramdisk_RamdiskGetBlockCounts_reply(txn, ZX_OK, &block_counts);
@@ -286,7 +231,7 @@ void Ramdisk::ProcessRequests() {
                 txn = nullptr;
                 dead = dead_;
                 asleep = asleep_;
-                defer = (flags_ & RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
+                defer = (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
                 blocks = pre_sleep_write_block_count_;
 
                 if (!asleep) {

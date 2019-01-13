@@ -22,6 +22,7 @@
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/fdio/debug.h>
 #include <lib/fdio/watcher.h>
@@ -168,7 +169,7 @@ bool TestDevice::SleepUntil(uint64_t num, bool deferred) {
     ASSERT_EQ(thrd_create(&tid_, TestDevice::WakeThread, this), thrd_success);
     need_join_ = true;
     if (deferred) {
-        uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
+        uint32_t flags = fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE;
         ASSERT_OK(ramdisk_set_flags(ramdisk_, flags));
     }
     uint64_t sleep_after = 0;
@@ -200,7 +201,7 @@ int TestDevice::WakeThread(void* arg) {
     });
 
     // Loop until timeout, |wake_after_| txns received, or error getting counts
-    ramdisk_blk_counts_t counts;
+    ramdisk_block_write_counts_t counts;
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
         if (device->wake_deadline_ < zx::clock::get_monotonic()) {

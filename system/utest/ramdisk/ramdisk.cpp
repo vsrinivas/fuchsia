@@ -23,10 +23,10 @@
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
-
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <fs-management/ramdisk.h>
+#include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
 #include <lib/fzl/vmo-mapper.h>
@@ -35,8 +35,8 @@
 #include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
 #include <unittest/unittest.h>
+#include <zircon/boot/image.h>
 #include <zircon/device/block.h>
-#include <zircon/device/ramdisk.h>
 #include <zircon/syscalls.h>
 
 #include <utility>
@@ -1362,7 +1362,7 @@ bool RamdiskTestFifoSleepUnavailable(void) {
     // Other callers (e.g. block_watcher) may also send requests without affecting this test.
     ASSERT_EQ(client.Transaction(&requests[0], fbl::count_of(requests)), ZX_ERR_UNAVAILABLE);
 
-    ramdisk_blk_counts_t counts;
+    ramdisk_block_write_counts_t counts;
     ASSERT_EQ(ramdisk_get_block_counts(ramdisk->ramdisk_client(), &counts), ZX_OK);
     ASSERT_EQ(counts.received, 3);
     ASSERT_EQ(counts.successful, 1);
@@ -1448,7 +1448,7 @@ static int fifo_wake_thread(void* arg) {
     }
 
     // Loop until timeout, |wake_after| txns received, or error getting counts
-    ramdisk_blk_counts_t counts;
+    ramdisk_block_write_counts_t counts;
     do {
         zx::nanosleep(zx::deadline_after(zx::msec(100)));
         if (wake->deadline < zx_clock_get_monotonic()) {
@@ -1513,7 +1513,7 @@ bool RamdiskTestFifoSleepDeferred(void) {
     }
 
     // Sleep and wake parameters
-    uint32_t flags = RAMDISK_FLAG_RESUME_ON_WAKE;
+    uint32_t flags = fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE;
     thrd_t thread;
     wake_args_t wake;
     wake.ramdisk_client = ramdisk->ramdisk_client();

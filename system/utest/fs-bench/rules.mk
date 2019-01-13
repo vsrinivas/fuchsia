@@ -46,6 +46,7 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
 

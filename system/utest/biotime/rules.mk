@@ -25,4 +25,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/zx \
     system/ulib/zxcpp \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-ramdisk \
+
 include make/module.mk
