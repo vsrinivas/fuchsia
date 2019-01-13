@@ -12,7 +12,7 @@ This is the command usage guide for zxdb. Please see also:
 ```
 connect 192.168.3.1:2345
 break main
-run /system/bin/cowsay moo
+run /bin/cowsay moo
 next
 print argv[1]
 continue
@@ -267,9 +267,9 @@ The run command will immediately start running the process. Many utilities run
 and exit right away, so you’ll see:
 
 ```
-[zxdb] run /system/bin/cowsay moo
-Process 1 Running koid=10734 /system/bin/cowsay
-Exited with code 1: Process 1 Not running /system/bin/cowsay
+[zxdb] run /bin/cowsay moo
+Process 1 Running koid=10734 /bin/cowsay
+Exited with code 1: Process 1 Not running /bin/cowsay
 ```
 
 This is expected because the process did its work and exited. Currently stdout
@@ -591,7 +591,7 @@ switching to them (see “Interaction model” above for more):
 
 ```
 [zxdb] frame 2 print argv[0]
-"/system/bin/cowsay"
+"/bin/cowsay"
 ```
 
 Often you will want to see all local variables:

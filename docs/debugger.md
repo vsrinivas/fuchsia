@@ -95,7 +95,7 @@ out/x64/host_x64/zxdb
 If you're connecting or running many times, there are command-line switches:
 
 ```sh
-zxdb -c 192.168.3.53:2345 -r /system/bin/cowsay
+zxdb -c 192.168.3.53:2345 -r /bin/cowsay
 ```
 
 See `help connect` for more examples, including IPv6 syntax.
