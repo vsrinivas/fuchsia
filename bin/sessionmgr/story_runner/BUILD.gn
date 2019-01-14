@@ -76,6 +76,7 @@ source_set("story_runner") {
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
   ]
 
   deps = [

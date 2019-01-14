@@ -7,7 +7,6 @@
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/context/cpp/context_helper.h>
 #include <lib/context/cpp/context_metadata_builder.h>
-#include <lib/context/cpp/formatting.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
 

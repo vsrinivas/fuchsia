@@ -11,6 +11,7 @@
 #include <lib/fidl/cpp/interface_handle.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fidl/cpp/optional.h>
+#include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fsl/vmo/strings.h>
 #include <lib/fxl/functional/make_copyable.h>
 #include <lib/fxl/logging.h>
@@ -23,13 +24,6 @@ using fuchsia::modular::LinkWatcherPtr;
 namespace modular {
 
 namespace {
-std::ostream& operator<<(std::ostream& o, const LinkPath& link_path) {
-  for (const auto& part : link_path.module_path) {
-    o << part << ":";
-  }
-  o << link_path.link_name;
-  return o;
-}
 
 // Applies a JSON mutation operation using |apply_fn|. Its parameters are
 // references because we treat |apply_fn| as part of ApplyOp's body.

@@ -72,7 +72,6 @@ executable("local_module_resolver_unittest") {
     "//peridot/lib/fidl:clone",
     "//peridot/lib/testing:entity_resolver_fake",
     "//peridot/public/lib/entity/cpp:json",
-    "//peridot/public/lib/module_resolver/cpp:formatting",
     "//third_party/googletest:gtest_main",
   ]
 }

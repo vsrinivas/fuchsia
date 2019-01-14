@@ -53,6 +53,7 @@ source_set("find_modules_call") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:operation",
     "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
   ]
 }
 

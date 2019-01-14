@@ -10,8 +10,8 @@
 #include <fuchsia/ui/viewsv1token/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/context/cpp/context_helper.h>
-#include <lib/context/cpp/formatting.h>
 #include <lib/fidl/cpp/binding.h>
+#include <lib/fostr/fidl/fuchsia/modular/formatting.h>
 #include <lib/fxl/logging.h>
 #include <lib/fxl/macros.h>
 

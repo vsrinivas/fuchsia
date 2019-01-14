@@ -5,7 +5,6 @@
 #include "peridot/bin/context_engine/index.h"
 
 #include <fuchsia/modular/cpp/fidl.h>
-#include <lib/context/cpp/formatting.h>
 #include <lib/fidl/cpp/clone.h>
 
 #include "gtest/gtest.h"

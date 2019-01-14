@@ -24,14 +24,3 @@ source_set("context_metadata_builder") {
     "//peridot/public/fidl/fuchsia.modular",
   ]
 }
-
-source_set("formatting") {
-  sources = [
-    "formatting.cc",
-    "formatting.h",
-  ]
-
-  deps = [
-    "//peridot/public/fidl/fuchsia.modular",
-  ]
-}

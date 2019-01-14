@@ -5,7 +5,6 @@
 #include "peridot/bin/acquirers/story_info/story_watcher_impl.h"
 
 #include <lib/context/cpp/context_metadata_builder.h>
-#include <lib/context/cpp/formatting.h>
 #include <lib/fidl/cpp/optional.h>
 #include <lib/fxl/functional/make_copyable.h>
 

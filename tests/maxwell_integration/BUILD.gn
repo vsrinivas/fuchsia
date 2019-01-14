@@ -4,7 +4,7 @@
 
 import("//peridot/build/tests_package.gni")
 
-tests_package("maxwell_integration_tests") {
+hermetic_tests_package("maxwell_integration_tests") {
   deps = [
     ":context_engine_test",
     ":suggestion_engine_test",
@@ -27,7 +27,6 @@ executable("context_engine_test") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
-    "//peridot/public/lib/context/cpp:formatting",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -108,7 +107,7 @@ source_set("test_suggestion_listener") {
   deps = [
     "//garnet/public/lib/fxl",
     "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/lib/suggestion/cpp:formatting",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
   ]
 
   public_deps = [

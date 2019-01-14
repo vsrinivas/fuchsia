@@ -28,7 +28,7 @@ executable_package("context_engine") {
   ]
 }
 
-tests_package("context_engine_unittests") {
+hermetic_tests_package("context_engine_unittests") {
   deps = [
     ":context_index_unittest",
     ":context_repository_unittest",
@@ -59,7 +59,6 @@ executable("context_index_unittest") {
     "//garnet/public/lib/fsl",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/context/cpp:formatting",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -73,7 +72,6 @@ source_set("context_reader_impl") {
   deps = [
     ":context_repository",
     "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/lib/context/cpp:formatting",
   ]
 }
 
@@ -95,7 +93,7 @@ source_set("context_repository") {
     "//peridot/lib/bound_set",
     "//peridot/lib/rapidjson",
     "//peridot/public/fidl/fuchsia.modular",
-    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//third_party/rapidjson",
   ]
 }
@@ -113,7 +111,6 @@ executable("context_repository_unittest") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
-    "//peridot/public/lib/context/cpp:formatting",
     "//third_party/googletest:gtest_main",
   ]
 }
@@ -130,7 +127,6 @@ source_set("context_writer_impl") {
     "//peridot/lib/bound_set",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/async/cpp:future",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
     "//third_party/rapidjson",

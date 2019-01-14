@@ -1,0 +1,10 @@
+{
+  "program": {
+    "binary": "test/dispatch_story_command_executor_unittest"
+  },
+  "sandbox": {
+    "services": [
+      "fuchsia.sys.Launcher"
+    ]
+  }
+}

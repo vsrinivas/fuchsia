@@ -38,7 +38,6 @@ executable_package("story_info") {
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
     "//peridot/public/lib/context/cpp:context_metadata_builder",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/public/lib/entity/cpp",
     "//peridot/public/lib/entity/cpp:json",
     "//third_party/rapidjson",

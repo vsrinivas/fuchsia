@@ -44,7 +44,6 @@ executable_package("story_shell_test_story_shell") {
     "//peridot/lib/testing:component_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/tests/common:defs",
   ]
 }
@@ -82,7 +81,6 @@ executable_package("story_shell_test_session_shell") {
     "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp",
-    "//peridot/public/lib/context/cpp:formatting",
     "//peridot/tests/common:defs",
   ]
 }

@@ -4,7 +4,7 @@
 
 import("//peridot/build/tests_package.gni")
 
-tests_package("puppet_master_unittests") {
+hermetic_tests_package("puppet_master_unittests") {
   deps = [
     ":dispatch_story_command_executor_unittest",
     ":puppet_master_impl_unittest",

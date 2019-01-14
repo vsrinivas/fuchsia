@@ -1,0 +1,8 @@
+{
+  "program": {
+    "binary": "test/focus_mod_command_runner_unittest"
+  },
+  "sandbox": {
+    "services": []
+  }
+}

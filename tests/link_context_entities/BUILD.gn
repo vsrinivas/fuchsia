@@ -42,7 +42,7 @@ executable_package("link_context_entities_test_session_shell") {
     "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/context/cpp:context_helper",
-    "//peridot/public/lib/context/cpp:formatting",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
   ]

@@ -8,7 +8,6 @@
 #include <sstream>
 
 #include <lib/context/cpp/context_metadata_builder.h>
-#include <lib/context/cpp/formatting.h>
 #include <lib/entity/cpp/json.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fidl/cpp/optional.h>
