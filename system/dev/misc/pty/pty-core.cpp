@@ -6,6 +6,7 @@
 #include <string.h>
 #include <threads.h>
 
+#include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <zircon/device/pty.h>
@@ -13,14 +14,6 @@
 
 #include "pty-core.h"
 #include "pty-fifo.h"
-
-#if 0
-#define xprintf(fmt...) printf(fmt)
-#else
-#define xprintf(fmt...) \
-    do {                \
-    } while (0)
-#endif
 
 #define CTRL_(n) ((n) - 'A' + 1)
 
@@ -52,6 +45,7 @@ static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t 
                                    size_t* actual) {
     auto pc = static_cast<pty_client_t*>(ctx);
     auto ps = static_cast<pty_server_t*>(pc->srv);
+    zxlogf(TRACE, "PTY Client %p (id=%u) read\n", pc, pc->id);
 
     mtx_lock(&ps->lock);
     bool was_full = pty_fifo_is_full(&pc->fifo);
@@ -76,6 +70,7 @@ static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx
                                     size_t* actual) {
     auto pc = static_cast<pty_client_t*>(ctx);
     auto ps = static_cast<pty_server_t*>(pc->srv);
+    zxlogf(TRACE, "PTY Client %p (id=%u) write\n", pc, pc->id);
 
     zx_status_t status;
 
@@ -100,7 +95,7 @@ static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx
 #define PTY_FEATURE_BAD (~PTY_FEATURE_RAW)
 
 static void pty_make_active_locked(pty_server_t* ps, pty_client_t* pc) {
-    xprintf("pty cli %p (id=%u) becomes active\n", pc, pc->id);
+    zxlogf(TRACE, "PTY Client %p (id=%u) becomes active\n", pc, pc->id);
     if (ps->active != pc) {
         if (ps->active) {
             ps->active->flags &= (~PTY_CLI_ACTIVE);
@@ -140,6 +135,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, 
 
     switch (op) {
     case IOCTL_PTY_CLR_SET_FEATURE: {
+        zxlogf(TRACE, "PTY Client %p (id=%u) ioctl: clear and/or set feature\n", pc, pc->id);
         auto cs = static_cast<const pty_clr_set_t*>(in_buf);
         if ((in_len != sizeof(pty_clr_set_t)) || (cs->clr & PTY_FEATURE_BAD) ||
             (cs->set & PTY_FEATURE_BAD)) {
@@ -151,6 +147,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         return ZX_OK;
     }
     case IOCTL_PTY_GET_WINDOW_SIZE: {
+        zxlogf(TRACE, "PTY Client %p (id=%u) ioctl: get window size\n", pc, pc->id);
         auto wsz = static_cast<pty_window_size_t*>(out_buf);
         if (out_len != sizeof(pty_window_size_t)) {
             return ZX_ERR_INVALID_ARGS;
@@ -163,6 +160,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         return ZX_OK;
     }
     case IOCTL_PTY_MAKE_ACTIVE: {
+        zxlogf(TRACE, "PTY Client %p (id=%u) ioctl: make active\n", pc, pc->id);
         if (in_len != sizeof(uint32_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -183,6 +181,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, 
         return ZX_ERR_NOT_FOUND;
     }
     case IOCTL_PTY_READ_EVENTS: {
+        zxlogf(TRACE, "PTY Client %p (id=%u) ioctl: read events\n", pc, pc->id);
         if (!(pc->flags & PTY_CLI_CONTROL)) {
             return ZX_ERR_ACCESS_DENIED;
         }
@@ -213,6 +212,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, 
 static void pty_client_release(void* ctx) {
     auto pc = static_cast<pty_client_t*>(ctx);
     auto ps = static_cast<pty_server_t*>(pc->srv);
+    zxlogf(TRACE, "PTY Client %p (id=%u) release\n", pc, pc->id);
 
     mtx_lock(&ps->lock);
 
@@ -238,7 +238,7 @@ static void pty_client_release(void* ctx) {
     mtx_unlock(&ps->lock);
 
     if (refcount == 0) {
-        xprintf("pty srv %p release (from client)\n", ps);
+        zxlogf(TRACE, "PTY Server %p release (from client)\n", ps);
         if (ps->release) {
             ps->release(ps);
         } else {
@@ -246,7 +246,6 @@ static void pty_client_release(void* ctx) {
         }
     }
 
-    xprintf("pty cli %p (id=%u) release\n", pc, pc->id);
     free(pc);
 }
 
@@ -254,6 +253,7 @@ zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, ui
     auto pc = static_cast<pty_client_t*>(ctx);
     auto ps = static_cast<pty_server_t*>(pc->srv);
     uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
+    zxlogf(TRACE, "PTY Client %p (id=%u) openat %u\n", pc, pc->id, id);
     // only controlling clients may create additional clients
     if (!(pc->flags & PTY_CLI_CONTROL)) {
         return ZX_ERR_ACCESS_DENIED;
@@ -331,7 +331,7 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
         pc->flags |= PTY_CLI_CONTROL;
     }
 
-    xprintf("pty cli %p (id=%u) created (srv %p)\n", pc, pc->id, ps);
+    zxlogf(TRACE, "PTY Client %p (id=%u) created (server %p)\n", pc, pc->id, ps);
 
     mtx_lock(&ps->lock);
     if (num_clients == 0) {
@@ -358,6 +358,7 @@ void pty_server_resume_locked(pty_server_t* ps) {
 zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic,
                             size_t* actual) {
     // TODO: rw signals
+    zxlogf(TRACE, "PTY Server %p send\n", ps);
     zx_status_t status;
     mtx_lock(&ps->lock);
     if (ps->active) {
@@ -384,7 +385,7 @@ zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
                 // consume the event
                 r++;
                 ps->events |= evt;
-                xprintf("pty cli %p evt %x\n", pc, evt);
+                zxlogf(TRACE, "PTY Client %p event %x\n", ps, evt);
                 if (ps->control) {
                     device_state_set(ps->control->zxdev, PTY_SIGNAL_EVENT);
                 }
@@ -407,6 +408,7 @@ zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
 }
 
 void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
+    zxlogf(TRACE, "PTY Server %p set window size %ux%u\n", ps, w, h);
     mtx_lock(&ps->lock);
     ps->width = w;
     ps->height = h;
@@ -417,6 +419,7 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
 zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
     auto ps = static_cast<pty_server_t*>(ctx);
     uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
+    zxlogf(TRACE, "PTY Server %p openat %u\n", ps, id);
     return pty_openat(ps, out, id, flags);
 }
 
@@ -434,7 +437,7 @@ void pty_server_release(void* ctx) {
     mtx_unlock(&ps->lock);
 
     if (refcount == 0) {
-        xprintf("pty srv %p release (from server)\n", ps);
+        zxlogf(TRACE, "PTY Server %p release (from server)\n", ps);
         if (ps->release) {
             ps->release(ps);
         } else {
@@ -444,6 +447,7 @@ void pty_server_release(void* ctx) {
 }
 
 void pty_server_init(pty_server_t* ps) {
+    zxlogf(TRACE, "PTY Server %p init\n", ps);
     mtx_init(&ps->lock, mtx_plain);
     ps->refcount = 1;
     list_initialize(&ps->clients);
