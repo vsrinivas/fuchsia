@@ -60,7 +60,7 @@ bool MultipleSizeTest() {
         const size_t size = kParentReqSize + i * 8;
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0,
-                                 Request::RequestSize(size), size),
+                                 Request::RequestSize(size)),
                   ZX_OK);
         pool.Add(std::move(*request));
     }

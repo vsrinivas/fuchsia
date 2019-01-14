@@ -17,6 +17,7 @@ using Request = usb::Request<void>;
 
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
 constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
+constexpr usb_request_complete_t kNoCallback = {};
 
 bool AllocTest() {
     BEGIN_TEST;
@@ -154,6 +155,7 @@ bool PhysIterTest() {
         req->phys_list[i] = ZX_PAGE_SIZE * i;
     }
     request = usb::Request(req, kParentReqSize);
+
     size_t count = 0;
     for (auto [paddr, size] : request->phys_iter(ZX_PAGE_SIZE)) {
         EXPECT_EQ(paddr, ZX_PAGE_SIZE * count);
@@ -272,18 +274,17 @@ bool MultipleSectionTest() {
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
     constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
-    constexpr size_t kSecondLayerReqSize = Request::RequestSize(kFirstLayerReqSize);
-    constexpr size_t kThirdLayerReqSize = Request::RequestSize(kSecondLayerReqSize);
+    constexpr size_t kSecondLayerReqSize =
+        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
+    constexpr size_t kThirdLayerReqSize =
+        usb::UnownedRequest<void>::RequestSize(kSecondLayerReqSize);
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kThirdLayerReqSize, kBaseReqSize), ZX_OK);
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kThirdLayerReqSize), ZX_OK);
 
-    usb::UnownedRequest request2(request->take(), kFirstLayerReqSize);
-    // TODO: Validate req.
-    usb::UnownedRequest request3(request2.take(), kSecondLayerReqSize);
-    // TODO: Validate req.
+    usb::UnownedRequest request2(request->take(), kNoCallback, kFirstLayerReqSize);
+    usb::UnownedRequest request3(request2.take(), kNoCallback, kSecondLayerReqSize);
     request = usb::Request(request3.take(), kBaseReqSize);
-    // TODO: Validate req.
 
     END_TEST;
 }
@@ -295,6 +296,63 @@ bool PrivateStorageTest() {
     EXPECT_EQ(usb::Request<uint32_t>::Alloc(&request, 0, 0, kRequestSize), ZX_OK);
     *request->private_storage() = 1001;
     ASSERT_EQ(*request->private_storage(), 1001);
+    END_TEST;
+}
+
+bool CallbackTest() {
+    BEGIN_TEST;
+    constexpr size_t kBaseReqSize = sizeof(usb_request_t);
+    constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
+    constexpr size_t kSecondLayerReqSize =
+        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
+
+    bool called = false;
+    auto callback = [](void* ctx, usb_request_t* request) {
+        *static_cast<bool*>(ctx) = true;
+        // We take ownership.
+        Request unused(request, kBaseReqSize);
+    };
+    usb_request_complete_t complete_cb = {
+        .callback = callback,
+        .ctx = &called,
+    };
+
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
+
+    usb::UnownedRequest<void> request2(request->take(), complete_cb, kFirstLayerReqSize);
+    request2.Complete(ZX_OK, 0);
+    EXPECT_TRUE(called);
+
+    END_TEST;
+}
+
+bool AutoCallbackTest() {
+    BEGIN_TEST;
+    constexpr size_t kBaseReqSize = sizeof(usb_request_t);
+    constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
+    constexpr size_t kSecondLayerReqSize =
+        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
+
+    bool called = false;
+    auto callback = [](void* ctx, usb_request_t* request) {
+        *static_cast<bool*>(ctx) = true;
+        // We take ownership.
+        Request unused(request, kBaseReqSize);
+    };
+    usb_request_complete_t complete_cb = {
+        .callback = callback,
+        .ctx = &called,
+    };
+
+    std::optional<Request> request;
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
+
+    {
+        usb::UnownedRequest<void> request2(request->take(), complete_cb, kFirstLayerReqSize);
+    }
+    EXPECT_TRUE(called);
+
     END_TEST;
 }
 
@@ -316,4 +374,6 @@ RUN_TEST_SMALL(InvalidScatterGatherListTest)
 RUN_TEST_SMALL(ScatterGatherPhysIterTest)
 RUN_TEST_SMALL(MultipleSectionTest)
 RUN_TEST_SMALL(PrivateStorageTest)
+RUN_TEST_SMALL(CallbackTest)
+RUN_TEST_SMALL(AutoCallbackTest)
 END_TEST_CASE(UsbRequestTests);

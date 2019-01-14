@@ -8,6 +8,7 @@
 
 #include <optional>
 
+#include <ddk/debug.h>
 #include <ddk/phys-iter.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
@@ -19,9 +20,6 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
-// TODO(surajmalhotra): Add support for auto-calling complete in destructor for
-// usb::UnownedRequest if it wasn't already called.
-
 namespace usb {
 
 // Usage notes:
@@ -31,10 +29,10 @@ namespace usb {
 // usb stack. On deletion, it will automatically call |usb_request_release|.
 // Most of it's functionality is defined in usb::RequestBase.
 //
-// usb::UnownedRequest provides an unowned variant of usb::Request. It does not
-// take any action on deletion (TODO: Auto-complete if it hasn't already been
-// completed on deletion). In addition, it adds a wrapper around
-// |usb_request_complete| which isn't present in usb::Request.
+// usb::UnownedRequest provides an unowned variant of usb::Request. It adds a
+// wrapper around |usb_request_complete| which isn't present in usb::Request.
+// In addition, it will call the completion on destruction if it wasn't already
+// triggered.
 //
 // usb::RequestPool provides pooling functionality for usb::Request reuse.
 //
@@ -62,13 +60,13 @@ namespace usb {
 // public:
 //     <...>
 // private:
-//     usb::UnownedRequestQueue requests_;
+//     usb::UnownedRequestQueue<void> requests_;
 //     const size_t parent_req_size_;
 // };
 //
 // void Driver::UsbRequestQueue(usb_request_t* req,
-//                              usb_request_queue_callback cb, void* ctx) {
-//     requests_.push(usb::UnownedRequest(request, parent_req_size_));
+//                              const usb_request_queue_callback* cb) {
+//     requests_.push(usb::UnownedRequest(request, cb, parent_req_size_));
 // }
 //
 
@@ -181,6 +179,10 @@ public:
         return node_offset_ + fbl::round_up(sizeof(RequestNode<D, Storage>), kAlignment);
     }
 
+    size_t alloc_size() const {
+        return request_->alloc_size;
+    }
+
     // Returns private node stored inline
     RequestNode<D, Storage>* node() {
         auto* node = reinterpret_cast<RequestNode<D, Storage>*>(
@@ -259,18 +261,9 @@ public:
         using NodeType = RequestNode<Request<Storage>, Storage>;
         if (BaseClass::request_) {
             BaseClass::node()->NodeType::~NodeType();
-            usb_request_release(BaseClass::request_);
-            BaseClass::request_ = nullptr;
+            usb_request_release(BaseClass::take());
         }
     }
-
-    friend class RequestNode<Request<Storage>, Storage>;
-
-private:
-    // Special constructor to be used by RequestNode. Skips initializing the
-    // RequestNode.
-    Request(usb_request_t* request, size_t parent_req_size, bool ununsed_marker)
-        : Request(request, parent_req_size) {}
 };
 
 // Similar to usb::Request, but it doesn't call usb_request_release on delete.
@@ -281,10 +274,11 @@ class UnownedRequest : public RequestBase<UnownedRequest<Storage>, Storage> {
 public:
     using BaseClass = RequestBase<UnownedRequest<Storage>, Storage>;
 
-    UnownedRequest(usb_request_t* request, size_t parent_req_size)
+    UnownedRequest(usb_request_t* request, const usb_request_complete_t& complete_cb,
+                   size_t parent_req_size)
         : BaseClass(request, parent_req_size) {
         new (BaseClass::node())
-            RequestNode<UnownedRequest<Storage>, Storage>(BaseClass::node_offset_);
+            RequestNode<UnownedRequest<Storage>, Storage>(BaseClass::node_offset_, complete_cb);
     }
 
     UnownedRequest(UnownedRequest&& other)
@@ -298,22 +292,25 @@ public:
     }
 
     ~UnownedRequest() {
-        using NodeType = RequestNode<UnownedRequest<Storage>, Storage>;
-        if (BaseClass::request_) {
-            BaseClass::node()->NodeType::~NodeType();
+        // Complete should have been called.
+        if (BaseClass::request_ != nullptr)  {
+            zxlogf(WARN, "Auto-completing request.\n");
         }
+        // Auto-complete if it wasn't.
+        Complete(ZX_ERR_INTERNAL, 0);
     }
 
-    // Must be called by the processor when the request has
-    // completed or failed and the request and any virtual or physical memory obtained
-    // from it may not be touched again by the processor.
-    //
-    // The complete_cb() will be called as the last action of this method.
-    void Complete(zx_status_t status, zx_off_t actual, const usb_request_complete_t* complete_cb) {
+    // Must be called by the processor when the request has completed or failed.
+    // The request and any virtual or physical memory obtained from it is no
+    // longer valid after Complete is called.
+    void Complete(zx_status_t status, zx_off_t actual) {
         using NodeType = RequestNode<UnownedRequest<Storage>, Storage>;
-        BaseClass::node()->NodeType::~NodeType();
-        usb_request_complete(BaseClass::request_, status, actual, complete_cb);
-        BaseClass::request_ = nullptr;
+        if (BaseClass::request_) {
+            auto complete_cb = *BaseClass::node()->complete_cb();
+            BaseClass::node()->NodeType::~NodeType();
+            usb_request_complete(BaseClass::take(), status, actual,
+                                 &complete_cb);
+        }
     }
 
     friend class RequestNode<UnownedRequest<Storage>, Storage>;
@@ -321,7 +318,7 @@ public:
 private:
     // Special constructor to be used by RequestNode. Skips initializing the
     // RequestNode.
-    UnownedRequest(usb_request_t* request, size_t parent_req_size, bool ununsed_marker)
+    UnownedRequest(usb_request_t* request, size_t parent_req_size)
         : BaseClass(request, parent_req_size) {}
 };
 
@@ -341,7 +338,7 @@ public:
     T request() const {
         return T(
             reinterpret_cast<usb_request_t*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
-            node_offset_, false);
+            node_offset_);
     }
 
     Storage* private_storage() {
@@ -350,6 +347,37 @@ public:
 
 private:
     const zx_off_t node_offset_;
+    Storage private_storage_;
+};
+
+// Specialized version for when complete_cb is required.
+template <typename Storage>
+class RequestNode<UnownedRequest<Storage>, Storage> : public fbl::DoublyLinkedListable<
+                                                          RequestNode<UnownedRequest<Storage>,
+                                                                      Storage>*> {
+public:
+    RequestNode(zx_off_t node_offset, const usb_request_complete_t& complete_cb)
+        : node_offset_(node_offset), complete_cb_(complete_cb) {}
+
+    ~RequestNode() = default;
+
+    UnownedRequest<Storage> request() const {
+        return UnownedRequest<Storage>(
+            reinterpret_cast<usb_request_t*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+            node_offset_);
+    }
+
+    const usb_request_complete_t* complete_cb() {
+        return &complete_cb_;
+    }
+
+    Storage* private_storage() {
+        return &private_storage_;
+    }
+
+private:
+    const zx_off_t node_offset_;
+    const usb_request_complete_t complete_cb_;
     Storage private_storage_;
 };
 
@@ -370,6 +398,32 @@ public:
 
 private:
     const zx_off_t node_offset_;
+};
+
+// Specialized version for when no additional storage is required, but
+// complete_cb is required.
+template <>
+class RequestNode<UnownedRequest<void>, void> : public fbl::DoublyLinkedListable<
+                                                    RequestNode<UnownedRequest<void>>*> {
+public:
+    RequestNode(zx_off_t node_offset, const usb_request_complete_t& complete_cb)
+        : node_offset_(node_offset), complete_cb_(complete_cb) {}
+
+    ~RequestNode() = default;
+
+    UnownedRequest<void> request() const {
+        return UnownedRequest<void>(
+            reinterpret_cast<usb_request_t*>(reinterpret_cast<uintptr_t>(this) - node_offset_),
+            node_offset_);
+    }
+
+    const usb_request_complete_t* complete_cb() {
+        return &complete_cb_;
+    }
+
+private:
+    const zx_off_t node_offset_;
+    const usb_request_complete_t complete_cb_;
 };
 
 // A driver may use usb::RequestPool for recycling their own usb requests.
@@ -399,7 +453,7 @@ public:
         fbl::AutoLock al(&lock_);
         auto node = free_reqs_.erase_if([length](const NodeType& node) {
             auto request = node.request();
-            const size_t size = request.size();
+            const size_t size = request.alloc_size();
             __UNUSED auto* dummy = request.take(); // Don't free request.
             return size == length;
         });
@@ -459,7 +513,7 @@ public:
     void release() {
         fbl::AutoLock al(&lock_);
         while (!queue_.is_empty()) {
-            __UNUSED auto req = queue_.pop_front()->request();
+            __UNUSED auto req = queue_.pop_back()->request();
         }
     }
 

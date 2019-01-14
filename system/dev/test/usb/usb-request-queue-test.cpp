@@ -12,6 +12,7 @@ using Request = usb::Request<void>;
 
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
 constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
+constexpr usb_request_complete_t kNoCallback = {};
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
@@ -71,14 +72,17 @@ bool ReleaseTest() {
 bool MultipleLayerTest() {
     BEGIN_TEST;
 
+    using FirstLayerReq = usb::UnownedRequest<void>;
+    using SecondLayerReq = usb::Request<void>;
+
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
-    constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
-    constexpr size_t kSecondLayerReqSize = Request::RequestSize(kFirstLayerReqSize);
+    constexpr size_t kFirstLayerReqSize = FirstLayerReq::RequestSize(kBaseReqSize);
+    constexpr size_t kSecondLayerReqSize = SecondLayerReq::RequestSize(kFirstLayerReqSize);
 
     usb::RequestQueue<void> queue;
     for (size_t i = 0; i < 10; i++) {
-        std::optional<Request> request;
-        ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize, kBaseReqSize),
+        std::optional<SecondLayerReq> request;
+        ASSERT_EQ(SecondLayerReq::Alloc(&request, 0, 0, kSecondLayerReqSize, kFirstLayerReqSize),
                   ZX_OK);
         queue.push(std::move(*request));
     }
@@ -86,7 +90,7 @@ bool MultipleLayerTest() {
     usb::UnownedRequestQueue<void> queue2;
     size_t count = 0;
     for (auto request = queue.pop(); request; request = queue.pop()) {
-        usb::UnownedRequest unowned(request->take(), kFirstLayerReqSize);
+        FirstLayerReq unowned(request->take(), kNoCallback, kBaseReqSize);
         queue2.push(std::move(unowned));
         ++count;
     }
@@ -94,7 +98,7 @@ bool MultipleLayerTest() {
 
     count = 0;
     for (auto unowned = queue2.pop(); unowned; unowned = queue2.pop()) {
-        Request request(unowned->take(), kFirstLayerReqSize);
+        SecondLayerReq request(unowned->take(), kFirstLayerReqSize);
         queue.push(std::move(request));
         ++count;
     }
@@ -106,8 +110,8 @@ bool MultipleLayerTest() {
 bool MultipleLayerWithStorageTest() {
     BEGIN_TEST;
 
-    using FirstLayerReq = usb::Request<uint64_t>;
-    using SecondLayerReq = usb::UnownedRequest<char>;
+    using FirstLayerReq = usb::UnownedRequest<char>;
+    using SecondLayerReq = usb::Request<uint64_t>;
 
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
     constexpr size_t kFirstLayerReqSize = FirstLayerReq::RequestSize(kBaseReqSize);
@@ -115,8 +119,8 @@ bool MultipleLayerWithStorageTest() {
 
     usb::RequestQueue<uint64_t> queue;
     for (size_t i = 0; i < 10; i++) {
-        std::optional<FirstLayerReq> request;
-        ASSERT_EQ(FirstLayerReq::Alloc(&request, 0, 0, kSecondLayerReqSize, kBaseReqSize),
+        std::optional<SecondLayerReq> request;
+        ASSERT_EQ(SecondLayerReq::Alloc(&request, 0, 0, kSecondLayerReqSize, kFirstLayerReqSize),
                   ZX_OK);
         *request->private_storage() = i;
         EXPECT_EQ(*request->private_storage(), i);
@@ -126,7 +130,7 @@ bool MultipleLayerWithStorageTest() {
     usb::UnownedRequestQueue<char> queue2;
     size_t count = 0;
     for (auto request = queue.pop(); request; request = queue.pop()) {
-        SecondLayerReq unowned(request->take(), kFirstLayerReqSize);
+        FirstLayerReq unowned(request->take(), kNoCallback, kBaseReqSize);
         *unowned.private_storage() = static_cast<char>('a' + count);
         queue2.push(std::move(unowned));
         ++count;
@@ -136,9 +140,56 @@ bool MultipleLayerWithStorageTest() {
     count = 0;
     for (auto unowned = queue2.pop(); unowned; unowned = queue2.pop()) {
         EXPECT_EQ(*unowned->private_storage(), static_cast<char>('a' + count));
-        FirstLayerReq request(unowned->take(), kBaseReqSize);
+        SecondLayerReq request(unowned->take(), kFirstLayerReqSize);
         EXPECT_EQ(*request.private_storage(), count);
         queue.push(std::move(request));
+        ++count;
+    }
+    EXPECT_EQ(count, 10);
+
+    END_TEST;
+}
+
+bool MultipleLayerWithCallbackTest() {
+    BEGIN_TEST;
+
+    using FirstLayerReq = usb::UnownedRequest<char>;
+    using SecondLayerReq = usb::Request<uint64_t>;
+
+    constexpr size_t kBaseReqSize = sizeof(usb_request_t);
+    constexpr size_t kFirstLayerReqSize = FirstLayerReq::RequestSize(kBaseReqSize);
+    constexpr size_t kSecondLayerReqSize = SecondLayerReq::RequestSize(kFirstLayerReqSize);
+
+    usb::RequestQueue<uint64_t> queue;
+    for (size_t i = 0; i < 10; i++) {
+        std::optional<SecondLayerReq> request;
+        ASSERT_EQ(SecondLayerReq::Alloc(&request, 0, 0, kSecondLayerReqSize, kFirstLayerReqSize),
+                  ZX_OK);
+        *request->private_storage() = i;
+        EXPECT_EQ(*request->private_storage(), i);
+        queue.push(std::move(*request));
+    }
+
+    auto callback = [](void* ctx, usb_request_t* request) {
+        auto* queue = static_cast<usb::RequestQueue<uint64_t>*>(ctx);
+        queue->push(SecondLayerReq(request, kFirstLayerReqSize));
+    };
+    usb_request_complete_t complete_cb = {
+        .callback = callback,
+        .ctx = &queue,
+    };
+
+    {
+        usb::UnownedRequestQueue<char> queue2;
+        for (auto request = queue.pop(); request; request = queue.pop()) {
+            FirstLayerReq unowned(request->take(), complete_cb, kBaseReqSize);
+            queue2.push(std::move(unowned));
+        }
+    }
+
+    size_t count = 0;
+    for (auto request = queue.pop(); request; request = queue.pop()) {
+        EXPECT_EQ(*request->private_storage(), count);
         ++count;
     }
     EXPECT_EQ(count, 10);
@@ -155,4 +206,5 @@ RUN_TEST_SMALL(MultipleRequestTest)
 RUN_TEST_SMALL(ReleaseTest)
 RUN_TEST_SMALL(MultipleLayerTest)
 RUN_TEST_SMALL(MultipleLayerWithStorageTest)
+RUN_TEST_SMALL(MultipleLayerWithCallbackTest)
 END_TEST_CASE(UsbRequestQueueTests);
