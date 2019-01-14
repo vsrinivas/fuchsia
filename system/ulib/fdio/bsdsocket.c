@@ -144,11 +144,8 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
             return ERRNO(EIO);
         }
 
-        zx_status_t remote_status = ZX_OK;
-        size_t actual = 0u;
-        status = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &remote_status,
-                                sizeof(remote_status), &actual);
-        status = status != ZX_OK ? ZX_ERR_IO : remote_status;
+        // Call Connect() again after blocking to find connect's result.
+        status = zxs_connect(socket, addr, len);
     }
 
     if (status == ZX_OK) {
