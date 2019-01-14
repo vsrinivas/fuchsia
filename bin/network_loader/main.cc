@@ -106,7 +106,7 @@ class RetryingLoader {
   }
 
   void SendResponse(fuchsia::sys::PackagePtr package) {
-    FXL_DCHECK(!package || package->resolved_url.empty());
+    FXL_DCHECK(!package || !package->resolved_url.empty());
     callback_(std::move(package));
     deleter_();
   }
