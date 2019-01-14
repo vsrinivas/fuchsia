@@ -268,9 +268,7 @@ TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTP) {
   ASSERT_TRUE(WaitForComponentLoad());
   EXPECT_THAT(
       component_url(),
-      AnyOf(Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"),
-            Eq("fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
-               "web_runner_prototype.cmx")));
+      Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
@@ -278,9 +276,7 @@ TEST_F(RealmFakeLoaderTest, CreateWebComponent_HTTPS) {
   ASSERT_TRUE(WaitForComponentLoad());
   EXPECT_THAT(
       component_url(),
-      AnyOf(Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"),
-            Eq("fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
-               "web_runner_prototype.cmx")));
+      Eq("fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx"));
 }
 
 TEST_F(RealmFakeLoaderTest, CreateCastComponent_CAST) {

@@ -563,18 +563,6 @@ void Realm::CreateComponentWithRunnerForScheme(
   TRACE_DURATION("appmgr", "Realm::CreateComponentWithRunnerForScheme",
                  "runner_url", runner_url, "launch_info.url",
                  launch_info.url);
-  // Use "web_runner" if it is installed, otherwise fall back to using
-  // "web_runner_prototype" instead.
-  // TODO(CP-71): Remove web_runner_prototype scaffolding once there is a real
-  // web_runner.
-  if (runner_url ==
-          "fuchsia-pkg://fuchsia.com/web_runner#meta/web_runner.cmx" &&
-      !files::IsDirectory("/pkgfs/packages/web_runner") &&
-      files::IsDirectory("/pkgfs/packages/web_runner_prototype")) {
-    runner_url =
-        "fuchsia-pkg://fuchsia.com/web_runner_prototype#meta/"
-        "web_runner_prototype.cmx";
-  }
 
   fuchsia::sys::Package package;
   package.resolved_url = launch_info.url;
