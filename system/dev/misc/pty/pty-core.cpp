@@ -8,16 +8,18 @@
 
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <zircon/device/pty.h>
+#include <zircon/errors.h>
+
 #include "pty-core.h"
 #include "pty-fifo.h"
-
-#include <zircon/errors.h>
-#include <zircon/device/pty.h>
 
 #if 0
 #define xprintf(fmt...) printf(fmt)
 #else
-#define xprintf(fmt...) do {} while (0)
+#define xprintf(fmt...) \
+    do {                \
+    } while (0)
 #endif
 
 #define CTRL_(n) ((n) - 'A' + 1)
@@ -26,11 +28,12 @@
 #define CTRL_S CTRL_('S')
 #define CTRL_Z CTRL_('Z')
 
+// clang-format off
 #define PTY_CLI_RAW_MODE    (0x00000001u)
-
 #define PTY_CLI_CONTROL     (0x00010000u)
 #define PTY_CLI_ACTIVE      (0x00020000u)
 #define PTY_CLI_PEER_CLOSED (0x00040000u)
+// clang-format on
 
 struct pty_client {
     zx_device_t* zxdev;
@@ -43,14 +46,12 @@ struct pty_client {
 
 static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags);
 
-
-
 // pty client device operations
 
 static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t off,
                                    size_t* actual) {
-    pty_client_t* pc = ctx;
-    pty_server_t* ps = pc->srv;
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
 
     mtx_lock(&ps->lock);
     bool was_full = pty_fifo_is_full(&pc->fifo);
@@ -64,7 +65,7 @@ static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t 
     mtx_unlock(&ps->lock);
 
     if (length > 0) {
-        *actual =length;
+        *actual = length;
         return ZX_OK;
     } else {
         return (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
@@ -73,26 +74,26 @@ static zx_status_t pty_client_read(void* ctx, void* buf, size_t count, zx_off_t 
 
 static zx_status_t pty_client_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                                     size_t* actual) {
-    pty_client_t* pc = ctx;
-    pty_server_t* ps = pc->srv;
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
 
-    ssize_t r;
+    zx_status_t status;
 
     mtx_lock(&ps->lock);
     if (pc->flags & PTY_CLI_ACTIVE) {
         size_t length;
-        r = ps->recv(ps, buf, count, &length);
-        if (r == ZX_OK) {
+        status = ps->recv(ps, buf, count, &length);
+        if (status == ZX_OK) {
             *actual = length;
-        } else if (r == ZX_ERR_SHOULD_WAIT) {
+        } else if (status == ZX_ERR_SHOULD_WAIT) {
             device_state_clr(pc->zxdev, DEV_STATE_WRITABLE);
         }
     } else {
-        r = (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
+        status = (pc->flags & PTY_CLI_PEER_CLOSED) ? ZX_ERR_PEER_CLOSED : ZX_ERR_SHOULD_WAIT;
     }
     mtx_unlock(&ps->lock);
 
-    return r;
+    return status;
 }
 
 // mask of invalid features
@@ -132,18 +133,15 @@ static void pty_adjust_signals_locked(pty_client_t* pc) {
     device_state_clr_set(pc->zxdev, clr, set);
 }
 
-
-static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
-                                const void* in_buf, size_t in_len,
-                                void* out_buf, size_t out_len, size_t* out_actual) {
-    pty_client_t* pc = ctx;
-    pty_server_t* ps = pc->srv;
+static zx_status_t pty_client_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                                    void* out_buf, size_t out_len, size_t* out_actual) {
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
 
     switch (op) {
     case IOCTL_PTY_CLR_SET_FEATURE: {
-        const pty_clr_set_t* cs = in_buf;
-        if ((in_len != sizeof(pty_clr_set_t)) ||
-            (cs->clr & PTY_FEATURE_BAD) ||
+        auto cs = static_cast<const pty_clr_set_t*>(in_buf);
+        if ((in_len != sizeof(pty_clr_set_t)) || (cs->clr & PTY_FEATURE_BAD) ||
             (cs->set & PTY_FEATURE_BAD)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -153,7 +151,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
         return ZX_OK;
     }
     case IOCTL_PTY_GET_WINDOW_SIZE: {
-        pty_window_size_t* wsz = out_buf;
+        auto wsz = static_cast<pty_window_size_t*>(out_buf);
         if (out_len != sizeof(pty_window_size_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -174,7 +172,7 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
         uint32_t id = *((uint32_t*)in_buf);
         mtx_lock(&ps->lock);
         pty_client_t* c;
-        list_for_every_entry(&ps->clients, c, pty_client_t, node) {
+        list_for_every_entry (&ps->clients, c, pty_client_t, node) {
             if (c->id == id) {
                 pty_make_active_locked(ps, c);
                 mtx_unlock(&ps->lock);
@@ -192,12 +190,12 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
             return ZX_ERR_INVALID_ARGS;
         }
         mtx_lock(&ps->lock);
-        uint32_t events = ps->events;
+        auto events = static_cast<uint32_t*>(out_buf);
+        *events = ps->events;
         ps->events = 0;
         if (ps->active == NULL) {
-            events |= PTY_EVENT_HANGUP;
+            *events |= PTY_EVENT_HANGUP;
         }
-        *((uint32_t*) out_buf) = events;
         device_state_clr(pc->zxdev, PTY_SIGNAL_EVENT);
         mtx_unlock(&ps->lock);
         *out_actual = sizeof(uint32_t);
@@ -213,8 +211,8 @@ static zx_status_t pty_client_ioctl(void* ctx, uint32_t op,
 }
 
 static void pty_client_release(void* ctx) {
-    pty_client_t* pc = ctx;
-    pty_server_t* ps = pc->srv;
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
 
     mtx_lock(&ps->lock);
 
@@ -253,9 +251,9 @@ static void pty_client_release(void* ctx) {
 }
 
 zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
-    pty_client_t* pc = ctx;
-    pty_server_t* ps = pc->srv;
-    uint32_t id = strtoul(path, NULL, 0);
+    auto pc = static_cast<pty_client_t*>(ctx);
+    auto ps = static_cast<pty_server_t*>(pc->srv);
+    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
     // only controlling clients may create additional clients
     if (!(pc->flags & PTY_CLI_CONTROL)) {
         return ZX_ERR_ACCESS_DENIED;
@@ -267,21 +265,23 @@ zx_status_t pty_client_openat(void* ctx, zx_device_t** out, const char* path, ui
     return pty_openat(ps, out, id, flags);
 }
 
-zx_protocol_device_t pc_ops = {
-    .version = DEVICE_OPS_VERSION,
-    // .open = default, allow cloning
-    .open_at = pty_client_openat,
-    .release = pty_client_release,
-    .read = pty_client_read,
-    .write = pty_client_write,
-    .ioctl = pty_client_ioctl,
-};
+zx_protocol_device_t pc_ops = []() {
+    zx_protocol_device_t ops = {};
+    ops.version = DEVICE_OPS_VERSION;
+    // ops.open = default, allow cloning
+    ops.open_at = pty_client_openat;
+    ops.release = pty_client_release;
+    ops.read = pty_client_read;
+    ops.write = pty_client_write;
+    ops.ioctl = pty_client_ioctl;
+    return ops;
+}();
 
 // used by both client and server ptys to create new client ptys
 
 static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, uint32_t flags) {
-    pty_client_t* pc;
-    if ((pc = calloc(1, sizeof(pty_client_t))) == NULL) {
+    auto pc = static_cast<pty_client_t*>(calloc(1, sizeof(pty_client_t)));
+    if (!pc) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -295,7 +295,7 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
     mtx_lock(&ps->lock);
     // require that client ID is unique
     pty_client_t* c;
-    list_for_every_entry(&ps->clients, c, pty_client_t, node) {
+    list_for_every_entry (&ps->clients, c, pty_client_t, node) {
         if (c->id == id) {
             mtx_unlock(&ps->lock);
             free(pc);
@@ -310,13 +310,12 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
 
     pc->srv = ps;
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "pty",
-        .ctx = pc,
-        .ops = &pc_ops,
-        .flags = DEVICE_ADD_INSTANCE,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "pty";
+    args.ctx = pc;
+    args.ops = &pc_ops;
+    args.flags = DEVICE_ADD_INSTANCE;
 
     status = device_add(ps->zxdev, &args, &pc->zxdev);
     if (status < 0) {
@@ -348,7 +347,6 @@ static zx_status_t pty_openat(pty_server_t* ps, zx_device_t** out, uint32_t id, 
     return ZX_OK;
 }
 
-
 // pty server device operations
 
 void pty_server_resume_locked(pty_server_t* ps) {
@@ -357,8 +355,9 @@ void pty_server_resume_locked(pty_server_t* ps) {
     }
 }
 
-zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic, size_t* actual) {
-    //TODO: rw signals
+zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic,
+                            size_t* actual) {
+    // TODO: rw signals
     zx_status_t status;
     mtx_lock(&ps->lock);
     if (ps->active) {
@@ -370,7 +369,7 @@ zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool
             if (len > PTY_FIFO_SIZE) {
                 len = PTY_FIFO_SIZE;
             }
-            const uint8_t *ch = data;
+            auto ch = static_cast<const uint8_t*>(data);
             unsigned n = 0;
             unsigned evt = 0;
             while (n < len) {
@@ -411,23 +410,23 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h) {
     mtx_lock(&ps->lock);
     ps->width = w;
     ps->height = h;
-    //TODO signal?
+    // TODO signal?
     mtx_unlock(&ps->lock);
 }
 
 zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags) {
-    pty_server_t* ps = ctx;
-    uint32_t id = strtoul(path, NULL, 0);
+    auto ps = static_cast<pty_server_t*>(ctx);
+    uint32_t id = static_cast<uint32_t>(strtoul(path, NULL, 0));
     return pty_openat(ps, out, id, flags);
 }
 
 void pty_server_release(void* ctx) {
-    pty_server_t* ps = ctx;
+    auto ps = static_cast<pty_server_t*>(ctx);
 
     mtx_lock(&ps->lock);
     // inform clients that server is gone
     pty_client_t* pc;
-    list_for_every_entry(&ps->clients, pc, pty_client_t, node) {
+    list_for_every_entry (&ps->clients, pc, pty_client_t, node) {
         pc->flags = (pc->flags & (~PTY_CLI_ACTIVE)) | PTY_CLI_PEER_CLOSED;
         device_state_set(pc->zxdev, DEV_STATE_HANGUP);
     }

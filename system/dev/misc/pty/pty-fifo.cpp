@@ -27,10 +27,11 @@ size_t pty_fifo_write(pty_fifo_t* fifo, const void* data, size_t len, bool atomi
         memcpy(fifo->data + offset, data, len);
     } else {
         memcpy(fifo->data + offset, data, avail);
-        memcpy(fifo->data, data + avail, len - avail);
+        auto p = static_cast<const uint8_t*>(data);
+        memcpy(fifo->data, p + avail, len - avail);
     }
 
-    fifo->head += len;
+    fifo->head += static_cast<uint32_t>(len);
     return len;
 }
 
@@ -47,10 +48,10 @@ size_t pty_fifo_read(pty_fifo_t* fifo, void* data, size_t len) {
         memcpy(data, fifo->data + offset, len);
     } else {
         memcpy(data, fifo->data + offset, avail);
-        memcpy(data + avail, fifo->data, len - avail);
+        auto p = static_cast<uint8_t*>(data);
+        memcpy(p + avail, fifo->data, len - avail);
     }
 
-    fifo->tail += len;
+    fifo->tail += static_cast<uint32_t>(len);
     return len;
 }
-

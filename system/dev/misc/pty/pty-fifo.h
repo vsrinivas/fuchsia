@@ -2,15 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_FIFO_H_
+#define ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_FIFO_H_
 
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdlib.h>
 
 #include <zircon/compiler.h>
-
-__BEGIN_CDECLS;
 
 #define PTY_FIFO_SIZE (4096)
 
@@ -31,4 +30,4 @@ static inline bool pty_fifo_is_full(pty_fifo_t* fifo) {
     return (fifo->head - fifo->tail) == PTY_FIFO_SIZE;
 }
 
-__END_CDECLS;
+#endif // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_FIFO_H_

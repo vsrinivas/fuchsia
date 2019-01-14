@@ -7,9 +7,9 @@
 #include <string.h>
 #include <threads.h>
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 
 #include "pty-core.h"
 #include "pty-fifo.h"
@@ -25,14 +25,12 @@ typedef struct pty_server_dev {
 
 static zx_device_t* pty_root;
 
-#define psd_from_ps(ps) containerof(ps, pty_server_dev_t, srv)
-
 static zx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size_t* actual) {
     if (len == 0) {
         return 0;
     }
 
-    pty_server_dev_t* psd = psd_from_ps(ps);
+    pty_server_dev_t* psd = static_cast<pty_server_dev_t*>(containerof(ps, pty_server_dev_t, srv));
 
     bool was_empty = pty_fifo_is_empty(&psd->fifo);
     *actual = pty_fifo_write(&psd->fifo, data, len, false);
@@ -48,7 +46,7 @@ static zx_status_t psd_recv(pty_server_t* ps, const void* data, size_t len, size
 }
 
 static zx_status_t psd_read(void* ctx, void* buf, size_t count, zx_off_t off, size_t* actual) {
-    pty_server_dev_t* psd = ctx;
+    auto psd = static_cast<pty_server_dev_t*>(ctx);
 
     bool eof = false;
 
@@ -80,7 +78,7 @@ static zx_status_t psd_read(void* ctx, void* buf, size_t count, zx_off_t off, si
 
 static zx_status_t psd_write(void* ctx, const void* buf, size_t count, zx_off_t off,
                              size_t* actual) {
-    pty_server_dev_t* psd = ctx;
+    auto psd = static_cast<pty_server_dev_t*>(ctx);
     size_t length;
     zx_status_t status;
 
@@ -92,14 +90,13 @@ static zx_status_t psd_write(void* ctx, const void* buf, size_t count, zx_off_t 
     }
 }
 
-static zx_status_t psd_ioctl(void* ctx, uint32_t op,
-                  const void* in_buf, size_t in_len,
-                  void* out_buf, size_t out_len, size_t* out_actual) {
-    pty_server_dev_t* psd = ctx;
+static zx_status_t psd_ioctl(void* ctx, uint32_t op, const void* in_buf, size_t in_len,
+                             void* out_buf, size_t out_len, size_t* out_actual) {
+    auto psd = static_cast<pty_server_dev_t*>(ctx);
 
     switch (op) {
     case IOCTL_PTY_SET_WINDOW_SIZE: {
-        const pty_window_size_t* wsz = in_buf;
+        auto wsz = static_cast<const pty_window_size_t*>(in_buf);
         if (in_len != sizeof(pty_window_size_t)) {
             return ZX_ERR_INVALID_ARGS;
         }
@@ -114,22 +111,23 @@ static zx_status_t psd_ioctl(void* ctx, uint32_t op,
 // Since we have no special functionality,
 // we just use the implementations from pty-core
 // directly.
-static zx_protocol_device_t psd_ops = {
-    .version = DEVICE_OPS_VERSION,
-    // .open = default, allow cloning
-    .open_at = pty_server_openat,
-    .release = pty_server_release,
-    .read = psd_read,
-    .write = psd_write,
-    .ioctl = psd_ioctl,
-};
-
+static zx_protocol_device_t psd_ops = []() {
+    zx_protocol_device_t ops = {};
+    ops.version = DEVICE_OPS_VERSION;
+    // ops.open = default, allow cloning;
+    ops.open_at = pty_server_openat;
+    ops.release = pty_server_release;
+    ops.read = psd_read;
+    ops.write = psd_write;
+    ops.ioctl = psd_ioctl;
+    return ops;
+}();
 
 // ptmx device - used to obtain the pty server of a new pty instance
 
 static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
-    pty_server_dev_t* psd;
-    if ((psd = calloc(1, sizeof(pty_server_dev_t))) == NULL) {
+    auto psd = static_cast<pty_server_dev_t*>(calloc(1, sizeof(pty_server_dev_t)));
+    if (!psd) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -139,14 +137,13 @@ static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
     psd->fifo.head = 0;
     psd->fifo.tail = 0;
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "pty",
-        .ctx = psd,
-        .ops = &psd_ops,
-        .proto_id = ZX_PROTOCOL_PTY,
-        .flags = DEVICE_ADD_INSTANCE,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "pty";
+    args.ctx = psd;
+    args.ops = &psd_ops;
+    args.proto_id = ZX_PROTOCOL_PTY;
+    args.flags = DEVICE_ADD_INSTANCE;
 
     zx_status_t status;
     if ((status = device_add(pty_root, &args, &psd->srv.zxdev)) < 0) {
@@ -158,26 +155,30 @@ static zx_status_t ptmx_open(void* ctx, zx_device_t** out, uint32_t flags) {
     return ZX_OK;
 }
 
-static zx_protocol_device_t ptmx_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .open = ptmx_open,
-};
+static zx_protocol_device_t ptmx_ops = []() {
+    zx_protocol_device_t ops = {};
+    ops.version = DEVICE_OPS_VERSION;
+    ops.open = ptmx_open;
+    return ops;
+}();
 
 static zx_status_t ptmx_bind(void* ctx, zx_device_t* parent) {
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "ptmx",
-        .ops = &ptmx_ops,
-    };
+    device_add_args_t args = {};
+    args.version = DEVICE_ADD_ARGS_VERSION;
+    args.name = "ptmx";
+    args.ops = &ptmx_ops;
 
     return device_add(parent, &args, &pty_root);
 }
 
-static zx_driver_ops_t ptmx_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = ptmx_bind,
-};
+static zx_driver_ops_t ptmx_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = ptmx_bind;
+    return ops;
+}();
 
+// clang-format off
 ZIRCON_DRIVER_BEGIN(ptmx, ptmx_driver_ops, "zircon", "0.1", 1)
     BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
-ZIRCON_DRIVER_END(ptzx)
+ZIRCON_DRIVER_END(ptmx)

@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_
+#define ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_
 
 #include <stdint.h>
 #include <threads.h>
@@ -11,8 +12,6 @@
 
 #include <zircon/compiler.h>
 #include <zircon/listnode.h>
-
-__BEGIN_CDECLS;
 
 typedef struct pty_server pty_server_t;
 typedef struct pty_client pty_client_t;
@@ -45,9 +44,8 @@ struct pty_server {
 
     // if non-null, called for unhandled client ioctl ops
     // no lock is held across this call
-    zx_status_t (*ioctl)(pty_server_t* ps, uint32_t op,
-                     const void* cmd, size_t cmdlen,
-                     void* out, size_t outlen, size_t* out_actual);
+    zx_status_t (*ioctl)(pty_server_t* ps, uint32_t op, const void* cmd, size_t cmdlen, void* out,
+                         size_t outlen, size_t* out_actual);
 
     // called when pty_server_t should be deleted
     // if NULL, free(ps) is called instead
@@ -64,7 +62,8 @@ void pty_server_init(pty_server_t* ps);
 // write data through to active client
 // if atomic is true, the send will be all-or-nothing
 // if atomic is true ^c, etc processing is not done
-zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic, size_t* actual);
+zx_status_t pty_server_send(pty_server_t* ps, const void* data, size_t len, bool atomic,
+                            size_t* actual);
 
 // If the recv callback returns ZX_ERR_SHOULD_WAIT, pty_server_resume()
 // must be called when it is possible to call it successfully again.
@@ -78,4 +77,4 @@ void pty_server_set_window_size(pty_server_t* ps, uint32_t w, uint32_t h);
 zx_status_t pty_server_openat(void* ctx, zx_device_t** out, const char* path, uint32_t flags);
 void pty_server_release(void* ctx);
 
-__END_CDECLS;
+#endif // ZIRCON_SYSTEM_DEV_MISC_PTY_PTY_CORE_H_
