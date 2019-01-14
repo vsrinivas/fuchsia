@@ -146,7 +146,9 @@ int fuchsia_starter(void* arg) {
             // we're starting the appmgr because /system is present
             // so we also signal the device coordinator that those
             // drivers are now loadable
-            devmgr::load_system_drivers();
+            auto coordinator = static_cast<devmgr::Coordinator*>(arg);
+            coordinator->set_system_available(true);
+            coordinator->ScanSystemDrivers();
             drivers_loaded = true;
         }
 
@@ -443,7 +445,7 @@ int service_starter(void* arg) {
     do_autorun("autorun:boot", "zircon.autorun.boot");
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, fuchsia_starter, nullptr, "fuchsia-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, fuchsia_starter, arg, "fuchsia-starter")) == thrd_success) {
         thrd_detach(t);
     }
 
@@ -534,7 +536,9 @@ int main(int argc, char** argv) {
 
     g_handles.root_job = zx::job::default_job();
 
-    devmgr::devfs_init(*g_handles.root_job);
+    devmgr::coordinator_init(*g_handles.root_job);
+    devmgr::Coordinator coordinator;
+    devmgr::devfs_init(&coordinator.root_device());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
     // This is for use in tests to let the test environment see devfs.
@@ -582,12 +586,12 @@ int main(int argc, char** argv) {
 
     start_console_shell();
 
-    if ((thrd_create_with_name(&t, devmgr::service_starter, nullptr, "service-starter")) ==
+    if ((thrd_create_with_name(&t, devmgr::service_starter, &coordinator, "service-starter")) ==
         thrd_success) {
         thrd_detach(t);
     }
 
-    coordinator(std::move(args));
+    coordinator_run(&coordinator, std::move(args));
     printf("devmgr: coordinator exited?!\n");
     return 0;
 }

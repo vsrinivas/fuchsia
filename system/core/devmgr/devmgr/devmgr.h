@@ -18,9 +18,10 @@
 
 namespace devmgr {
 
+struct Device;
 struct Devnode;
 
-void devfs_init(const zx::job& root_job);
+void devfs_init(Device* device);
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
 
 void devmgr_svc_init();
@@ -35,8 +36,6 @@ bool secondary_bootfs_ready();
 void fshost_start();
 
 zx::job get_sysinfo_job_root();
-
-void load_system_drivers();
 
 void devmgr_disable_appmgr_services();
 

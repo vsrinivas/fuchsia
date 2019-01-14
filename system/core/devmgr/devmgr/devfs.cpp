@@ -850,7 +850,7 @@ zx::channel devfs_root_clone() {
     return zx::channel(fdio_service_clone(g_devfs_root.get()));
 }
 
-void devfs_init(const zx::job& root_job) {
+void devfs_init(Device* device) {
     printf("devmgr: init\n");
 
     root_devnode = fbl::make_unique<Devnode>("");
@@ -862,7 +862,7 @@ void devfs_init(const zx::job& root_job) {
 
     prepopulate_protocol_dirs();
 
-    root_devnode->device = coordinator_init(root_job);
+    root_devnode->device = device;
     root_devnode->device->self = root_devnode.get();
 
     zx::channel h0, h1;

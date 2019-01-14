@@ -48,131 +48,9 @@
 
 namespace devmgr {
 
-class Coordinator {
-public:
-    Coordinator(const Coordinator&) = delete;
-    Coordinator& operator=(const Coordinator&) = delete;
-
-    Coordinator(Coordinator&&) = delete;
-    Coordinator& operator=(Coordinator&&) = delete;
-
-    Coordinator() = default;
-
-    zx_status_t InitializeCoreDevices();
-
-    zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
-
-    const Driver* LibnameToDriver(const char* libname) const;
-    zx_status_t LibnameToVmo(const char* libname, zx::vmo* out_vmo) const;
-
-    bool InSuspend() const;
-
-    void DumpDevice(const Device* dev, size_t indent) const;
-    void DumpState() const;
-    void DumpDeviceProps(const Device* dev) const;
-    void DumpGlobalDeviceProps() const;
-    void DumpDrivers() const;
-
-    zx_status_t GetTopoPath(const Device* dev, char* out, size_t max) const;
-
-    zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
-    void ReleaseDevhost(Devhost* dh);
-    void ReleaseDevice(Device* dev);
-
-    zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
-                          size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
-                          fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible);
-    zx_status_t MakeVisible(Device* dev);
-    zx_status_t RemoveDevice(Device* dev, bool forced);
-
-    zx_status_t LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size);
-
-    zx_status_t GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
-                            size_t* actual);
-    zx_status_t AddMetadata(Device* dev, uint32_t type, const void* data, uint32_t length);
-    zx_status_t PublishMetadata(Device* dev, const char* path, uint32_t type, const void* data,
-                                uint32_t length);
-
-    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
-    void BindDriver(Driver* drv);
-
-    zx_status_t HandleDeviceRead(Device* dev);
-
-    zx_status_t PrepareProxy(Device* dev);
-    zx_status_t AttemptBind(const Driver* drv, Device* dev);
-
-    void HandleNewDevice(Device* dev);
-
-    void ScanSystemDrivers();
-    void BindSystemDrivers();
-    void BindDrivers();
-    void UseFallbackDrivers();
-
-    void Mexec(zx::vmo kernel, zx::vmo bootdata);
-
-    void Suspend(uint32_t flags);
-    void ContinueSuspend(SuspendContext* ctx);
-    Devhost* BuildSuspendList(SuspendContext* ctx);
-
-    void DriverAdded(Driver* drv, const char* version);
-    void DriverAddedInit(Driver* drv, const char* version);
-    void DriverAddedSys(Driver* drv, const char* version);
-
-    void set_running(bool running) { running_ = running; }
-
-    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
-    Device& root_device() { return root_device_; }
-    Device& misc_device() { return misc_device_; }
-    Device& sys_device() { return sys_device_; }
-    Device& test_device() { return test_device_; }
-
-    SuspendContext& suspend_context() { return suspend_context_; }
-    bool suspend_fallback() const { return suspend_fallback_; }
-    void set_suspend_fallback(bool suspend_fallback) { suspend_fallback_ = suspend_fallback; }
-    bool suspend_debug() const { return suspend_debug_; }
-    void set_suspend_debug(bool suspend_debug) { suspend_debug_ = suspend_debug; }
-
-    bool system_available() const { return system_available_; }
-    void set_system_available(bool system_available) { system_available_ = system_available; }
-    bool system_loaded() const { return system_loaded_; }
-
-private:
-    bool running_ = false;
-
-    // All Drivers
-    fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
-
-    // Drivers to try last
-    fbl::DoublyLinkedList<Driver*, Driver::Node> fallback_drivers_;
-
-    // List of drivers loaded from /system by system_driver_loader()
-    fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
-
-    // All Devices (excluding static immortal devices)
-    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode> devices_;
-
-    // All DevHosts
-    fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
-
-    Device root_device_{this};
-    Device misc_device_{this};
-    Device sys_device_{this};
-    Device test_device_{this};
-
-    SuspendContext suspend_context_;
-
-    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
-
-    bool suspend_fallback_ = false;
-    bool suspend_debug_ = false;
-    bool system_available_ = false;
-    bool system_loaded_ = false;
-};
-
 namespace {
 
 DevhostLoaderService g_ldsvc;
-Coordinator g_coordinator;
 
 // Handle ID to use for the root job when spawning devhosts. This number must
 // match the value used in system/dev/misc/sysinfo/sysinfo.c.
@@ -779,8 +657,8 @@ void Coordinator::ReleaseDevice(Device* dev) {
     delete dev;
 }
 
-Device::Device(Coordinator* coordinator)
-    : publish_task([this, coordinator] { coordinator->HandleNewDevice(this); }) {}
+Device::Device(Coordinator* coord)
+    : coordinator(coord), publish_task([this] { coordinator->HandleNewDevice(this); }) {}
 
 Device::~Device() {
     // TODO: cancel any pending rpc responses.  This clear is a hack to prevent
@@ -1233,8 +1111,9 @@ static zx_status_t fidl_AddDevice(void* ctx, zx_handle_t raw_rpc,
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
 
-    zx_status_t status = g_coordinator.AddDevice(parent, std::move(rpc), props_data, props_count,
-                                                 name, protocol_id, driver_path, args, false);
+    zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
+                                                        props_count, name, protocol_id, driver_path,
+                                                        args, false);
     return fuchsia_device_manager_CoordinatorAddDevice_reply(txn, status);
 }
 
@@ -1251,14 +1130,15 @@ static zx_status_t fidl_AddDeviceInvisible(void* ctx, zx_handle_t raw_rpc,
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
     fbl::StringPiece args(args_data, args_size);
 
-    zx_status_t status = g_coordinator.AddDevice(parent, std::move(rpc), props_data, props_count,
-                                                 name, protocol_id, driver_path, args, true);
+    zx_status_t status = parent->coordinator->AddDevice(parent, std::move(rpc), props_data,
+                                                        props_count, name, protocol_id, driver_path,
+                                                        args, true);
     return fuchsia_device_manager_CoordinatorAddDeviceInvisible_reply(txn, status);
 }
 
 static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
-    if (g_coordinator.InSuspend()) {
+    if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: remove-device '%s' forbidden in suspend\n", dev->name);
         return fuchsia_device_manager_CoordinatorRemoveDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
@@ -1266,7 +1146,7 @@ static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
     log(RPC_IN, "devcoord: rpc: remove-device '%s'\n", dev->name);
     // TODO(teisenbe): RemoveDevice and the reply func can return errors.  We should probably
     // act on it, but the existing code being migrated does not.
-    g_coordinator.RemoveDevice(dev, false);
+    dev->coordinator->RemoveDevice(dev, false);
     fuchsia_device_manager_CoordinatorRemoveDevice_reply(txn, ZX_OK);
 
     // Return STOP to signal we are done with this channel
@@ -1275,14 +1155,14 @@ static zx_status_t fidl_RemoveDevice(void* ctx, fidl_txn_t* txn) {
 
 static zx_status_t fidl_MakeVisible(void* ctx, fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
-    if (g_coordinator.InSuspend()) {
+    if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: make-visible '%s' forbidden in suspend\n", dev->name);
         return fuchsia_device_manager_CoordinatorMakeVisible_reply(txn, ZX_ERR_BAD_STATE);
     }
     log(RPC_IN, "devcoord: rpc: make-visible '%s'\n", dev->name);
     // TODO(teisenbe): MakeVisibile can return errors.  We should probably
     // act on it, but the existing code being migrated does not.
-    g_coordinator.MakeVisible(dev);
+    dev->coordinator->MakeVisible(dev);
     return fuchsia_device_manager_CoordinatorMakeVisible_reply(txn, ZX_OK);
 }
 
@@ -1290,12 +1170,12 @@ static zx_status_t fidl_BindDevice(void* ctx, const char* driver_path_data, size
                                    fidl_txn_t* txn) {
     auto dev = static_cast<Device*>(ctx);
     fbl::StringPiece driver_path(driver_path_data, driver_path_size);
-    if (g_coordinator.InSuspend()) {
+    if (dev->coordinator->InSuspend()) {
         log(ERROR, "devcoord: rpc: bind-device '%s' forbidden in suspend\n", dev->name);
         return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, ZX_ERR_BAD_STATE);
     }
     log(RPC_IN, "devcoord: rpc: bind-device '%s'\n", dev->name);
-    zx_status_t status = g_coordinator.BindDevice(dev, driver_path);
+    zx_status_t status = dev->coordinator->BindDevice(dev, driver_path);
     return fuchsia_device_manager_CoordinatorBindDevice_reply(txn, status);
 }
 
@@ -1304,7 +1184,7 @@ static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {
 
     auto dev = static_cast<Device*>(ctx);
     zx_status_t status;
-    if ((status = g_coordinator.GetTopoPath(dev, path, sizeof(path))) != ZX_OK) {
+    if ((status = dev->coordinator->GetTopoPath(dev, path, sizeof(path))) != ZX_OK) {
         return fuchsia_device_manager_CoordinatorGetTopologicalPath_reply(txn, status, nullptr, 0);
     }
     return fuchsia_device_manager_CoordinatorGetTopologicalPath_reply(txn, ZX_OK,
@@ -1322,7 +1202,7 @@ static zx_status_t fidl_LoadFirmware(void* ctx, const char* fw_path_data, size_t
     zx::vmo vmo;
     uint64_t size = 0;
     zx_status_t status;
-    if ((status = g_coordinator.LoadFirmware(dev, fw_path, &vmo, &size)) != ZX_OK) {
+    if ((status = dev->coordinator->LoadFirmware(dev, fw_path, &vmo, &size)) != ZX_OK) {
         return fuchsia_device_manager_CoordinatorLoadFirmware_reply(txn, status,
                                                                     ZX_HANDLE_INVALID, 0);
     }
@@ -1335,7 +1215,7 @@ static zx_status_t fidl_GetMetadata(void* ctx, uint32_t key, fidl_txn_t* txn) {
 
     uint8_t data[fuchsia_device_manager_METADATA_MAX];
     size_t actual = 0;
-    zx_status_t status = g_coordinator.GetMetadata(dev, key, data, sizeof(data), &actual);
+    zx_status_t status = dev->coordinator->GetMetadata(dev, key, data, sizeof(data), &actual);
     if (status != ZX_OK) {
         return fuchsia_device_manager_CoordinatorGetMetadata_reply(txn, status, nullptr, 0);
     }
@@ -1347,7 +1227,8 @@ static zx_status_t fidl_AddMetadata(void* ctx, uint32_t key,
     static_assert(fuchsia_device_manager_METADATA_MAX <= UINT32_MAX);
 
     auto dev = static_cast<Device*>(ctx);
-    zx_status_t status = g_coordinator.AddMetadata(dev, key, data_data, static_cast<uint32_t>(data_count));
+    zx_status_t status = dev->coordinator->AddMetadata(dev, key, data_data,
+                                                       static_cast<uint32_t>(data_count));
     return fuchsia_device_manager_CoordinatorAddMetadata_reply(txn, status);
 }
 
@@ -1361,8 +1242,8 @@ static zx_status_t fidl_PublishMetadata(void* ctx, const char* device_path_data,
     memcpy(path, device_path_data, device_path_size);
     path[device_path_size] = 0;
 
-    zx_status_t status = g_coordinator.PublishMetadata(dev, path, key, data_data,
-                                                       static_cast<uint32_t>(data_count));
+    zx_status_t status = dev->coordinator->PublishMetadata(dev, path, key, data_data,
+                                                           static_cast<uint32_t>(data_count));
     return fuchsia_device_manager_CoordinatorPublishMetadata_reply(txn, status);
 }
 
@@ -1374,7 +1255,8 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket,
         dmctl_socket = std::move(log_socket);
     }
 
-    zx_status_t status = g_coordinator.HandleDmctlWrite(command_size, command_data);
+    auto dev = static_cast<Device*>(ctx);
+    zx_status_t status = dev->coordinator->HandleDmctlWrite(command_size, command_data);
     dmctl_socket.reset();
     return fuchsia_device_manager_CoordinatorDmCommand_reply(txn, status);
 }
@@ -1452,7 +1334,8 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
         return ZX_ERR_INTERNAL;
     }
 
-    g_coordinator.Mexec(std::move(kernel), std::move(bootdata));
+    auto dev = static_cast<Device*>(ctx);
+    dev->coordinator->Mexec(std::move(kernel), std::move(bootdata));
     return ZX_OK;
 }
 
@@ -1600,12 +1483,12 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
         zx_status_t r;
-        if ((r = g_coordinator.HandleDeviceRead(dev)) < 0) {
+        if ((r = dev->coordinator->HandleDeviceRead(dev)) < 0) {
             if (r != ZX_ERR_STOP) {
                 log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
                     dev, dev->name, r);
             }
-            g_coordinator.RemoveDevice(dev, true);
+            dev->coordinator->RemoveDevice(dev, true);
             // Do not start waiting again on this device's channel again
             return;
         }
@@ -1614,7 +1497,7 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
     }
     if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
         log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
-        g_coordinator.RemoveDevice(dev, true);
+        dev->coordinator->RemoveDevice(dev, true);
         // Do not start waiting again on this device's channel again
         return;
     }
@@ -1634,7 +1517,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
 
     if (dev->libname[0]) {
         zx::vmo vmo;
-        if ((r = g_coordinator.LibnameToVmo(dev->libname, &vmo)) != ZX_OK) {
+        if ((r = dev->coordinator->LibnameToVmo(dev->libname, &vmo)) != ZX_OK) {
             return r;
         }
 
@@ -1733,7 +1616,7 @@ static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
 
     zx::vmo vmo;
     zx_status_t r;
-    if ((r = g_coordinator.LibnameToVmo(libname, &vmo)) < 0) {
+    if ((r = dev->coordinator->LibnameToVmo(libname, &vmo)) < 0) {
         return r;
     }
 
@@ -1934,7 +1817,7 @@ static void process_suspend_list(SuspendContext* ctx) {
         if (!parent || (dh->parent() == parent)) {
             // send Message::Op::kSuspend each set of children of a devhost at a time,
             // since they can run in parallel
-            dc_suspend_devhost(dh.CopyPointer(), &g_coordinator.suspend_context());
+            dc_suspend_devhost(dh.CopyPointer(), &ctx->coordinator()->suspend_context());
             parent = dh->parent();
         } else {
             // if the parent is different than the previous devhost's
@@ -1978,21 +1861,21 @@ static int suspend_timeout_thread(void* arg) {
     zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
 
     auto ctx = static_cast<SuspendContext*>(arg);
-    auto& coordinator = *ctx->coordinator();
-    if (coordinator.suspend_debug()) {
+    auto coordinator = ctx->coordinator();
+    if (coordinator->suspend_debug()) {
         if (ctx->flags() == SuspendContext::Flags::kRunning) {
             return 0; // success
         }
         log(ERROR, "devcoord: suspend time out\n");
         log(ERROR, "  sflags: 0x%08x\n", ctx->sflags());
-        for (const auto& dev : coordinator.devices()) {
+        for (const auto& dev : coordinator->devices()) {
             check_pending(&dev);
         }
-        check_pending(&coordinator.root_device());
-        check_pending(&coordinator.misc_device());
-        check_pending(&coordinator.sys_device());
+        check_pending(&coordinator->root_device());
+        check_pending(&coordinator->misc_device());
+        check_pending(&coordinator->sys_device());
     }
-    if (g_coordinator.suspend_fallback()) {
+    if (coordinator->suspend_fallback()) {
         dc_suspend_fallback(ctx->sflags());
     }
     return 0;
@@ -2148,8 +2031,8 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     });
 }
 
-Device* coordinator_init(const zx::job& root_job) {
-    printf("coordinator_init()\n");
+void coordinator_init(const zx::job& root_job) {
+    printf("devmgr: coordinator_init()\n");
 
     zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
     if (status < 0) {
@@ -2164,8 +2047,6 @@ Device* coordinator_init(const zx::job& root_job) {
         log(ERROR, "devcoord: zx_job_set_policy() failed\n");
     }
     devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
-
-    return &g_coordinator.root_device();
 }
 
 // BindDRiver is called when a new driver becomes available to
@@ -2200,9 +2081,10 @@ void Coordinator::BindDriver(Driver* drv) {
 }
 
 static int system_driver_loader(void* arg) {
+    auto coordinator = static_cast<Coordinator*>(arg);
     find_loadable_drivers("/system/driver",
-                          fit::bind_member(&g_coordinator, &Coordinator::DriverAddedSys));
-    async::PostTask(DcAsyncDispatcher(), [] { g_coordinator.BindSystemDrivers(); });
+                          fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
+    async::PostTask(DcAsyncDispatcher(), [coordinator] { coordinator->BindSystemDrivers(); });
     return 0;
 }
 
@@ -2213,7 +2095,7 @@ void Coordinator::ScanSystemDrivers() {
         // This avoids deadlocks between the devhosts hosting the block devices
         // that these drivers may be served from and the devcoordinator loading them.
         thrd_t t;
-        thrd_create_with_name(&t, system_driver_loader, nullptr, "system-driver-loader");
+        thrd_create_with_name(&t, system_driver_loader, this, "system-driver-loader");
     }
 }
 
@@ -2262,13 +2144,8 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
-void load_system_drivers() {
-    g_coordinator.set_system_available(true);
-    async::PostTask(DcAsyncDispatcher(), [] { g_coordinator.ScanSystemDrivers(); });
-}
-
-void coordinator(DevmgrArgs args) {
-    log(INFO, "devmgr: coordinator()\n");
+void coordinator_run(Coordinator* coordinator, DevmgrArgs args) {
+    log(INFO, "devmgr: coordinator_run()\n");
 
     dc_strict_linking = getenv_bool("devmgr.devhost.strict-linking", false);
     if (dc_strict_linking) {
@@ -2296,27 +2173,26 @@ void coordinator(DevmgrArgs args) {
         log_flags |= LOG_ALL;
     }
 
-    g_coordinator.set_suspend_fallback(getenv_bool("devmgr.suspend-timeout-fallback", false));
-    g_coordinator.set_suspend_debug(getenv_bool("devmgr.suspend-timeout-debug", false));
+    coordinator->set_suspend_fallback(getenv_bool("devmgr.suspend-timeout-fallback", false));
+    coordinator->set_suspend_debug(getenv_bool("devmgr.suspend-timeout-debug", false));
 
     dc_asan_drivers = getenv_bool("devmgr.devhost.asan", false);
 
-    zx_status_t status = g_coordinator.InitializeCoreDevices();
+    zx_status_t status = coordinator->InitializeCoreDevices();
     if (status != ZX_OK) {
         log(ERROR, "devmgr: failed to initialize core devices\n");
         return;
     }
 
-    devfs_publish(&g_coordinator.root_device(), &g_coordinator.misc_device());
-    devfs_publish(&g_coordinator.root_device(), &g_coordinator.sys_device());
-    devfs_publish(&g_coordinator.root_device(), &g_coordinator.test_device());
+    devfs_publish(&coordinator->root_device(), &coordinator->misc_device());
+    devfs_publish(&coordinator->root_device(), &coordinator->sys_device());
+    devfs_publish(&coordinator->root_device(), &coordinator->test_device());
 
     for (const char* path : args.driver_search_paths) {
-        find_loadable_drivers(path,
-                              fit::bind_member(&g_coordinator, &Coordinator::DriverAddedInit));
+        find_loadable_drivers(path, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
     }
     for (const char* driver : args.load_drivers) {
-        load_driver(driver, fit::bind_member(&g_coordinator, &Coordinator::DriverAddedInit));
+        load_driver(driver, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
     }
 
     // Special case early handling for the ramdisk boot
@@ -2324,24 +2200,24 @@ void coordinator(DevmgrArgs args) {
     // starts.  This avoids breaking the "priority hack" and
     // can be removed once the real driver priority system
     // exists.
-    if (g_coordinator.system_available()) {
-        g_coordinator.ScanSystemDrivers();
+    if (coordinator->system_available()) {
+        coordinator->ScanSystemDrivers();
     }
 
-    g_coordinator.sys_device().libname = args.sys_device_driver;
-    g_coordinator.PrepareProxy(&g_coordinator.sys_device());
-    g_coordinator.PrepareProxy(&g_coordinator.test_device());
+    coordinator->sys_device().libname = args.sys_device_driver;
+    coordinator->PrepareProxy(&coordinator->sys_device());
+    coordinator->PrepareProxy(&coordinator->test_device());
 
-    if (require_system && !g_coordinator.system_loaded()) {
+    if (require_system && !coordinator->system_loaded()) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
-        g_coordinator.UseFallbackDrivers();
+        coordinator->UseFallbackDrivers();
     }
 
     // Initial bind attempt for drivers enumerated at startup.
-    g_coordinator.BindDrivers();
+    coordinator->BindDrivers();
 
-    g_coordinator.set_running(true);
+    coordinator->set_running(true);
     status = DcAsyncLoop()->Run();
     if (status != ZX_OK) {
         log(ERROR, "devcoord: port dispatch ended: %d\n", status);

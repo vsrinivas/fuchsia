@@ -62,7 +62,7 @@ private:
 #define DEV_HOST_SUSPEND 2
 
 struct Device {
-    explicit Device(Coordinator* coordinator);
+    explicit Device(Coordinator* coord);
     ~Device();
 
     // Begins waiting in |dispatcher| on |dev->wait|.  This transfers a
@@ -90,6 +90,7 @@ struct Device {
                           async::WaitBase* wait, zx_status_t status,
                           const zx_packet_signal_t* signal);
 
+    Coordinator* coordinator;
     zx::channel hrpc;
     uint32_t flags = 0;
 
@@ -390,8 +391,6 @@ void devfs_unpublish(Device* dev);
 void devfs_advertise(Device* dev);
 void devfs_advertise_modified(Device* dev);
 
-Device* coordinator_init(const zx::job& root_job);
-
 // Values parsed out of argv.  All paths described below are absolute paths.
 struct DevmgrArgs {
     // Load drivers from these directories.  If this is empty, the default will
@@ -405,8 +404,131 @@ struct DevmgrArgs {
     const char* sys_device_driver = nullptr;
 };
 
+class Coordinator {
+public:
+    Coordinator(const Coordinator&) = delete;
+    Coordinator& operator=(const Coordinator&) = delete;
+
+    Coordinator(Coordinator&&) = delete;
+    Coordinator& operator=(Coordinator&&) = delete;
+
+    Coordinator() = default;
+
+    zx_status_t InitializeCoreDevices();
+
+    zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
+
+    const Driver* LibnameToDriver(const char* libname) const;
+    zx_status_t LibnameToVmo(const char* libname, zx::vmo* out_vmo) const;
+
+    bool InSuspend() const;
+
+    void DumpDevice(const Device* dev, size_t indent) const;
+    void DumpState() const;
+    void DumpDeviceProps(const Device* dev) const;
+    void DumpGlobalDeviceProps() const;
+    void DumpDrivers() const;
+
+    zx_status_t GetTopoPath(const Device* dev, char* out, size_t max) const;
+
+    zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
+    void ReleaseDevhost(Devhost* dh);
+    void ReleaseDevice(Device* dev);
+
+    zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
+                          size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
+                          fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible);
+    zx_status_t MakeVisible(Device* dev);
+    zx_status_t RemoveDevice(Device* dev, bool forced);
+
+    zx_status_t LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size);
+
+    zx_status_t GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
+                            size_t* actual);
+    zx_status_t AddMetadata(Device* dev, uint32_t type, const void* data, uint32_t length);
+    zx_status_t PublishMetadata(Device* dev, const char* path, uint32_t type, const void* data,
+                                uint32_t length);
+
+    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
+    void BindDriver(Driver* drv);
+
+    zx_status_t HandleDeviceRead(Device* dev);
+
+    zx_status_t PrepareProxy(Device* dev);
+    zx_status_t AttemptBind(const Driver* drv, Device* dev);
+
+    void HandleNewDevice(Device* dev);
+
+    void ScanSystemDrivers();
+    void BindSystemDrivers();
+    void BindDrivers();
+    void UseFallbackDrivers();
+
+    void Mexec(zx::vmo kernel, zx::vmo bootdata);
+
+    void Suspend(uint32_t flags);
+    void ContinueSuspend(SuspendContext* ctx);
+    Devhost* BuildSuspendList(SuspendContext* ctx);
+
+    void DriverAdded(Driver* drv, const char* version);
+    void DriverAddedInit(Driver* drv, const char* version);
+    void DriverAddedSys(Driver* drv, const char* version);
+
+    void set_running(bool running) { running_ = running; }
+
+    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
+    Device& root_device() { return root_device_; }
+    Device& misc_device() { return misc_device_; }
+    Device& sys_device() { return sys_device_; }
+    Device& test_device() { return test_device_; }
+
+    SuspendContext& suspend_context() { return suspend_context_; }
+    bool suspend_fallback() const { return suspend_fallback_; }
+    void set_suspend_fallback(bool suspend_fallback) { suspend_fallback_ = suspend_fallback; }
+    bool suspend_debug() const { return suspend_debug_; }
+    void set_suspend_debug(bool suspend_debug) { suspend_debug_ = suspend_debug; }
+
+    bool system_available() const { return system_available_; }
+    void set_system_available(bool system_available) { system_available_ = system_available; }
+    bool system_loaded() const { return system_loaded_; }
+
+private:
+    bool running_ = false;
+
+    // All Drivers
+    fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
+
+    // Drivers to try last
+    fbl::DoublyLinkedList<Driver*, Driver::Node> fallback_drivers_;
+
+    // List of drivers loaded from /system by system_driver_loader()
+    fbl::DoublyLinkedList<Driver*, Driver::Node> system_drivers_;
+
+    // All Devices (excluding static immortal devices)
+    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode> devices_;
+
+    // All DevHosts
+    fbl::DoublyLinkedList<Devhost*, Devhost::AllDevhostsNode> devhosts_;
+
+    Device root_device_{this};
+    Device misc_device_{this};
+    Device sys_device_{this};
+    Device test_device_{this};
+
+    SuspendContext suspend_context_;
+
+    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
+
+    bool suspend_fallback_ = false;
+    bool suspend_debug_ = false;
+    bool system_available_ = false;
+    bool system_loaded_ = false;
+};
+
+void coordinator_init(const zx::job& root_job);
+
 // Setup and begin executing the coordinator's loop.
-void coordinator(DevmgrArgs args);
+void coordinator_run(Coordinator* coordinator, DevmgrArgs args);
 
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
 
