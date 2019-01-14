@@ -26,7 +26,8 @@ fbl::RefPtr<Timer> Timer::Create(zx_time_t early_slop_nsec) {
 }
 
 zx_status_t Timer::Activate(fbl::RefPtr<ExecutionDomain> domain,
-                            ProcessHandler process_handler) {
+                            ProcessHandler process_handler,
+                            uint32_t slack_type) {
     if (process_handler == nullptr)
         return ZX_ERR_INVALID_ARGS;
 
@@ -35,7 +36,7 @@ zx_status_t Timer::Activate(fbl::RefPtr<ExecutionDomain> domain,
         return ZX_ERR_BAD_STATE;
 
     zx::timer timer;
-    zx_status_t res = zx::timer::create(0, ZX_CLOCK_MONOTONIC, &timer);
+    zx_status_t res = zx::timer::create(slack_type, ZX_CLOCK_MONOTONIC, &timer);
     if (res != ZX_OK)
         return res;
 
@@ -73,7 +74,7 @@ void Timer::Deactivate() {
     }
 }
 
-zx_status_t Timer::Arm(zx_time_t deadline) {
+zx_status_t Timer::Arm(zx_time_t deadline, zx_duration_t slack_amount) {
     fbl::AutoLock obj_lock(&obj_lock_);
 
     // If we are in the process of waiting on the port, or there is a dispatch
@@ -96,6 +97,7 @@ zx_status_t Timer::Arm(zx_time_t deadline) {
     // Record the current armed status.
     armed_ = true;
     deadline_ = deadline;
+    slack_amount_ = slack_amount;
 
     // If we are currently Idle, set the timer and post a wait on our port.
     // Otherwise, there is a dispatch in flight that we failed to cancel.  The
@@ -210,7 +212,7 @@ void Timer::DisarmLocked() {
 zx_status_t Timer::SetTimerAndWaitLocked() {
     ZX_DEBUG_ASSERT(armed_);
 
-    zx_status_t res = zx_timer_set(handle_.get(), deadline_, 0);
+    zx_status_t res = zx_timer_set(handle_.get(), deadline_, slack_amount_);
     if (res != ZX_OK) {
         DisarmLocked();
         return res;
