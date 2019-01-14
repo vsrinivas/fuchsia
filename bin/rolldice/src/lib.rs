@@ -4,8 +4,8 @@
 
 #![deny(warnings)]
 
-use rand::Rng;
 use rand::distributions::{Distribution, Standard};
+use rand::Rng;
 use std::fmt;
 use std::iter::Iterator;
 
@@ -104,15 +104,7 @@ impl<I: Iterator> Iterator for MultiZip<I> {
     type Item = Vec<I::Item>;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let mut pos = Vec::with_capacity(self.iters.len());
-        for iter in self.iters.iter_mut() {
-            if let Some(x) = iter.next() {
-                pos.push(x);
-            } else {
-                return None;
-            }
-        }
-        Some(pos)
+        self.iters.iter_mut().map(|iter| iter.next()).collect()
     }
 }
 
