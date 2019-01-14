@@ -54,7 +54,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/dev/lib/mt8167 \
     system/dev/lib/fake_ddk \
-    system/dev/lib/mock_mmio_reg \
+    system/dev/lib/mock-mmio-reg \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

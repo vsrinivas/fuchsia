@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <ddktl/mmio.h>
-#include <mock_mmio_reg/mock_mmio_reg.h>
+#include <mock-mmio-reg/mock-mmio-reg.h>
 
 // These override the weak methods in mtk-sdmmc-reg.h.
 

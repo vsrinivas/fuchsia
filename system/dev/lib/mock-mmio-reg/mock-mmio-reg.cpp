@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mock_mmio_reg/mock_mmio_reg.h"
+#include "mock-mmio-reg/mock-mmio-reg.h"
 
 void mmio_fake_read(uintptr_t base, size_t size, zx_off_t off, void* value) {
     ZX_ASSERT(size == sizeof(uint8_t) ||

@@ -8,7 +8,7 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_SRCS := $(LOCAL_DIR)/mock_mmio_reg.cpp
+MODULE_SRCS := $(LOCAL_DIR)/mock-mmio-reg.cpp
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
