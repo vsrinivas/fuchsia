@@ -61,6 +61,7 @@ static_library("lib") {
   public_deps = [
     "//garnet/lib/debug_ipc:agent",
     "//garnet/lib/debug_ipc/helper",
+    "//garnet/lib/elflib",
     "//garnet/lib/process",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",

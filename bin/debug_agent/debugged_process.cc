@@ -324,6 +324,12 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
+void DebuggedProcess::OnSymbolTables(debug_ipc::SymbolTablesReply* reply) {
+  // Modules can only be read after the debug state is set.
+  if (dl_debug_addr_)
+    GetSymbolTablesForProcess(process_, dl_debug_addr_, &reply->symbol_tables);
+}
+
 void DebuggedProcess::OnWriteMemory(
     const debug_ipc::WriteMemoryRequest& request,
     debug_ipc::WriteMemoryReply* reply) {

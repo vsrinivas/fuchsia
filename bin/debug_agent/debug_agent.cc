@@ -404,7 +404,9 @@ void DebugAgent::OnWriteMemory(const debug_ipc::WriteMemoryRequest& request,
 
 void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                                 debug_ipc::SymbolTablesReply* reply) {
-  reply->symbol_tables.clear();
+  DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
+  if (proc)
+    proc->OnSymbolTables(reply);
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {

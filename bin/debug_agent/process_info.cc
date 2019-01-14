@@ -4,6 +4,10 @@
 
 #include "garnet/bin/debug_agent/process_info.h"
 
+// link.h leaks Elf-related #defines all over the place, so this has to be
+// included early or we don't compile. C++ was a mistake.
+#include "garnet/lib/elflib/elflib.h"
+
 #include <inttypes.h>
 #include <lib/zx/thread.h>
 #include <link.h>
@@ -21,6 +25,80 @@
 namespace debug_agent {
 
 namespace {
+
+using elflib::ElfLib;
+
+class ProcessMemoryAccessor : public ElfLib::MemoryAccessor {
+ public:
+  ProcessMemoryAccessor(const zx::process* process, uint64_t base)
+      : process_(process), base_(base) {}
+  virtual ~ProcessMemoryAccessor() = default;
+
+  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
+                                                size_t size) override {
+    std::vector<uint8_t> out;
+    out.resize(size);
+    size_t got;
+
+    if (process_->read_memory(base_ + offset, out.data(), out.size(), &got) !=
+        ZX_OK) {
+      return std::nullopt;
+    }
+
+    if (got != size) {
+      return std::nullopt;
+    }
+
+    return out;
+  }
+
+  std::optional<std::vector<uint8_t>> GetMappedMemory(
+      uint64_t offset, uint64_t file_size, uint64_t mapped_address,
+      uint64_t mapped_size) override {
+    return GetMemory(mapped_address, mapped_size);
+  }
+
+ private:
+  const zx::process* process_;
+  uint64_t base_;
+};
+
+zx_status_t WalkModules(
+    const zx::process& process, uint64_t dl_debug_addr,
+    std::function<bool(const zx::process&, uint64_t, uint64_t)> cb) {
+  size_t num_read = 0;
+  uint64_t lmap = 0;
+  zx_status_t status = process.read_memory(
+      dl_debug_addr + offsetof(r_debug, r_map), &lmap, sizeof(lmap), &num_read);
+  if (status != ZX_OK)
+    return status;
+
+  size_t module_count = 0;
+
+  // Walk the linked list.
+  constexpr size_t kMaxObjects = 512;  // Sanity threshold.
+  while (lmap != 0) {
+    if (module_count++ >= kMaxObjects)
+      return ZX_ERR_BAD_STATE;
+
+    uint64_t base;
+    if (process.read_memory(lmap + offsetof(link_map, l_addr), &base,
+                            sizeof(base), &num_read) != ZX_OK)
+      break;
+
+    uint64_t next;
+    if (process.read_memory(lmap + offsetof(link_map, l_next), &next,
+                            sizeof(next), &num_read) != ZX_OK)
+      break;
+
+    if (!cb(process, base, lmap))
+      break;
+
+    lmap = next;
+  }
+
+  return ZX_OK;
+}
 
 debug_ipc::ThreadRecord::BlockedReason ThreadStateBlockedReasonToEnum(
     uint32_t state) {
@@ -193,43 +271,56 @@ void FillThreadRecord(const zx::process& process, uint64_t dl_debug_addr,
 zx_status_t GetModulesForProcess(const zx::process& process,
                                  uint64_t dl_debug_addr,
                                  std::vector<debug_ipc::Module>* modules) {
-  size_t num_read = 0;
-  uint64_t lmap = 0;
-  zx_status_t status = process.read_memory(
-      dl_debug_addr + offsetof(r_debug, r_map), &lmap, sizeof(lmap), &num_read);
-  if (status != ZX_OK)
-    return status;
+  return WalkModules(
+      process, dl_debug_addr,
+      [modules](const zx::process& process, uint64_t base, uint64_t lmap) {
+        debug_ipc::Module module;
+        module.base = base;
 
-  // Walk the linked list.
-  constexpr size_t kMaxObjects = 512;  // Sanity threshold.
-  while (lmap != 0) {
-    if (modules->size() >= kMaxObjects)
-      return ZX_ERR_BAD_STATE;
+        uint64_t str_addr;
+        size_t num_read;
+        if (process.read_memory(lmap + offsetof(link_map, l_name), &str_addr,
+                                sizeof(str_addr), &num_read) != ZX_OK)
+          return false;
 
-    debug_ipc::Module module;
-    if (process.read_memory(lmap + offsetof(link_map, l_addr), &module.base,
-                            sizeof(module.base), &num_read) != ZX_OK)
-      break;
+        if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
+          return false;
 
-    uint64_t next;
-    if (process.read_memory(lmap + offsetof(link_map, l_next), &next,
-                            sizeof(next), &num_read) != ZX_OK)
-      break;
+        module.build_id = debug_ipc::ExtractBuildID(process, module.base);
 
-    uint64_t str_addr;
-    if (process.read_memory(lmap + offsetof(link_map, l_name), &str_addr,
-                            sizeof(str_addr), &num_read) != ZX_OK)
-      break;
+        modules->push_back(std::move(module));
+        return true;
+      });
+}
 
-    if (ReadNullTerminatedString(process, str_addr, &module.name) != ZX_OK)
-      break;
+zx_status_t GetSymbolTablesForProcess(
+    const zx::process& process, uint64_t dl_debug_addr,
+    std::vector<debug_ipc::SymbolTable>* symtabs) {
+  return WalkModules(
+      process, dl_debug_addr,
+      [symtabs](const zx::process& process, uint64_t base, uint64_t lmap) {
+        debug_ipc::SymbolTable symtab;
+        symtab.build_id = debug_ipc::ExtractBuildID(process, base);
 
-    module.build_id = debug_ipc::ExtractBuildID(process, module.base);
+        auto elf = ElfLib::Create(
+            std::make_unique<ProcessMemoryAccessor>(&process, base));
 
-    modules->push_back(std::move(module));
-    lmap = next;
-  }
-  return ZX_OK;
+        if (elf) {
+          if (auto syms = elf->GetAllSymbols()) {
+            for (const auto& sym : *syms) {
+              debug_ipc::SymbolTable::Symbol ipc_sym;
+
+              ipc_sym.name = sym.first;
+              ipc_sym.value = sym.second.st_value;
+
+              symtab.symbols.push_back(std::move(ipc_sym));
+            }
+          }
+        }
+
+        symtabs->push_back(std::move(symtab));
+        return true;
+      });
 }
 
 std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {
