@@ -22,6 +22,7 @@ class Touchscreen {
     Y = 1 << 3,
     SCAN_TIME = 1 << 16,
     CONTACT_COUNT = 1 << 17,
+    BUTTON = 1 << 18,
   };
 
   struct ContactReport {
@@ -39,6 +40,7 @@ class Touchscreen {
     // define units, the value will be passed on unconverted.
     uint32_t scan_time;
     size_t contact_count;
+    bool button;
     ContactReport contacts[MAX_TOUCH_POINTS];
   };
 
@@ -90,6 +92,7 @@ class Touchscreen {
   TouchPointConfig configs_[MAX_TOUCH_POINTS];
   hid::Attributes scan_time_;
   hid::Attributes contact_count_;
+  hid::Attributes button_;
   uint32_t capabilities_;
   size_t report_size_;
   uint8_t report_id_;

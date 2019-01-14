@@ -66,7 +66,14 @@ class InputInterpreter {
     FT3X27,
   };
 
-  enum class MouseDeviceType { NONE, BOOT, PARADISEv1, PARADISEv2, GAMEPAD };
+  enum class MouseDeviceType {
+    NONE,
+    BOOT,
+    TOUCH,
+    PARADISEv1,
+    PARADISEv2,
+    GAMEPAD
+  };
 
   enum class SensorDeviceType {
     NONE,
@@ -80,6 +87,7 @@ class InputInterpreter {
   void ParseMouseReport(uint8_t* report, size_t len);
   void ParseGamepadMouseReport(const HidDecoder::HidGamepadSimple* gamepad);
   bool ParseTouchscreenReport(Touchscreen::Report* report);
+  bool ParseTouchpadReport(Touchscreen::Report* report);
   bool ParseAcer12TouchscreenReport(uint8_t* report, size_t len);
   bool ParseAcer12StylusReport(uint8_t* report, size_t len);
   bool ParseSamsungTouchscreenReport(uint8_t* report, size_t len);
@@ -124,6 +132,17 @@ class InputInterpreter {
   MouseDeviceType mouse_device_type_ = MouseDeviceType::NONE;
   SensorDeviceType sensor_device_type_ = SensorDeviceType::NONE;
 
+  // Global variables necessary to do conversion from touchpad information
+  // into mouse information. All information is from the previous seen report,
+  // which enables us to do relative deltas and finger tracking.
+
+  // True if any fingers are pressed on the touchpad.
+  bool has_touch_ = false;
+  // True if the tracking finger is no longer pressed, but other fingers are
+  // still pressed.
+  bool tracking_finger_was_lifted_ = false;
+  // Used to keep track of which finger is controlling the mouse on a touchpad
+  uint32_t tracking_finger_id_;
   // Used for converting absolute coords from paradise into relative deltas
   int32_t mouse_abs_x_ = -1;
   int32_t mouse_abs_y_ = -1;

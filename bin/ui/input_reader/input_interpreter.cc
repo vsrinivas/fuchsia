@@ -135,6 +135,25 @@ bool InputInterpreter::Initialize() {
         fuchsia::ui::input::TouchscreenReport::New();
 
     touch_device_type_ = TouchDeviceType::HID;
+  } else if (protocol == HidDecoder::Protocol::Touchpad) {
+    FXL_VLOG(2) << "Device " << name() << " has hid touchpad";
+
+    has_mouse_ = true;
+    mouse_descriptor_ = fuchsia::ui::input::MouseDescriptor::New();
+    mouse_device_type_ = MouseDeviceType::TOUCH;
+
+    mouse_descriptor_->rel_x.range.min = INT32_MIN;
+    mouse_descriptor_->rel_x.range.max = INT32_MAX;
+    mouse_descriptor_->rel_x.resolution = 1;
+
+    mouse_descriptor_->rel_y.range.min = INT32_MIN;
+    mouse_descriptor_->rel_y.range.max = INT32_MAX;
+    mouse_descriptor_->rel_y.resolution = 1;
+
+    mouse_descriptor_->buttons |= fuchsia::ui::input::kMouseButtonPrimary;
+
+    mouse_report_ = fuchsia::ui::input::InputReport::New();
+    mouse_report_->mouse = fuchsia::ui::input::MouseReport::New();
   } else if (protocol == HidDecoder::Protocol::Acer12Touch) {
     FXL_VLOG(2) << "Device " << name() << " has stylus";
     has_stylus_ = true;
@@ -538,6 +557,19 @@ bool InputInterpreter::Read(bool discard) {
         input_device_->DispatchReport(CloneReport(mouse_report_));
       }
       break;
+    case MouseDeviceType::TOUCH:
+      Touchscreen::Report touch_report;
+      if (!hid_decoder_->Read(&touch_report)) {
+        FXL_LOG(ERROR) << " failed reading from touchpad";
+        return false;
+      }
+
+      if (ParseTouchpadReport(&touch_report)) {
+        if (!discard) {
+          input_device_->DispatchReport(CloneReport(mouse_report_));
+        }
+      }
+      break;
     case MouseDeviceType::PARADISEv1:
       if (ParseParadiseTouchpadReport<paradise_touchpad_v1_t>(report.data(),
                                                               rc)) {
@@ -743,6 +775,72 @@ void InputInterpreter::ParseGamepadMouseReport(
   mouse_report_->mouse->rel_x = gamepad->left_x;
   mouse_report_->mouse->rel_y = gamepad->left_y;
   mouse_report_->mouse->pressed_buttons = gamepad->hat_switch;
+}
+
+// This logic converts the multi-finger report from the touchpad into
+// a mouse report. It does this by only tracking the first finger that
+// is placed down, and converting the absolution finger position into
+// relative X and Y movements. All other fingers besides the tracking
+// finger are ignored.
+bool InputInterpreter::ParseTouchpadReport(Touchscreen::Report* report) {
+  mouse_report_->event_time = InputEventTimestampNow();
+  mouse_report_->mouse->rel_x = 0;
+  mouse_report_->mouse->rel_y = 0;
+  mouse_report_->mouse->pressed_buttons = 0;
+
+  // If all fingers are lifted reset our tracking finger.
+  if (report->contact_count == 0) {
+    has_touch_ = false;
+    tracking_finger_was_lifted_ = true;
+    return true;
+  }
+
+  // If we don't have a tracking finger then set one.
+  if (!has_touch_) {
+    has_touch_ = true;
+    tracking_finger_was_lifted_ = false;
+    tracking_finger_id_ = report->contacts[0].id;
+
+    mouse_abs_x_ = report->contacts[0].x;
+    mouse_abs_y_ = report->contacts[0].y;
+    return true;
+  }
+
+  // Find the finger we are tracking.
+  Touchscreen::ContactReport* contact = nullptr;
+  for (size_t i = 0; i < report->contact_count; i++) {
+    if (report->contacts[i].id == tracking_finger_id_) {
+      contact = &report->contacts[i];
+      break;
+    }
+  }
+
+  // If our tracking finger isn't pressed return early.
+  if (contact == nullptr) {
+    tracking_finger_was_lifted_ = true;
+    return true;
+  }
+
+  // If our tracking finger was lifted then reset the abs values otherwise
+  // the pointer will jump rapidly.
+  if (tracking_finger_was_lifted_) {
+    tracking_finger_was_lifted_ = false;
+    mouse_abs_x_ = contact->x;
+    mouse_abs_y_ = contact->y;
+  }
+
+  // The touch driver returns in units of 10^-5m, but the resolution expected
+  // by |mouse_report_| is 10^-3.
+  mouse_report_->mouse->rel_x = (contact->x - mouse_abs_x_) / 100;
+  mouse_report_->mouse->rel_y = (contact->y - mouse_abs_y_) / 100;
+
+  mouse_report_->mouse->pressed_buttons =
+      report->button ? fuchsia::ui::input::kMouseButtonPrimary : 0;
+
+  mouse_abs_x_ = report->contacts[0].x;
+  mouse_abs_y_ = report->contacts[0].y;
+
+  return true;
 }
 
 bool InputInterpreter::ParseTouchscreenReport(Touchscreen::Report* report) {

@@ -134,6 +134,9 @@ FdioHidDecoder::Protocol ExtractProtocol(hid::Usage input) {
       {{static_cast<uint16_t>(Page::kDigitizer),
         static_cast<uint32_t>(Digitizer::kTouchScreen)},
        HidDecoder::Protocol::Touch},
+      {{static_cast<uint16_t>(Page::kDigitizer),
+        static_cast<uint32_t>(Digitizer::kTouchPad)},
+       HidDecoder::Protocol::Touchpad},
       // Add more sensors here
   };
   for (auto& j : usage_to_protocol) {
@@ -299,6 +302,8 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
       case Protocol::Buttons:
         ParseButtonsDescriptor(input_desc->first_field, input_desc->count);
         break;
+      case Protocol::Touchpad:
+        // Fallthrough
       case Protocol::Touch: {
         bool success = ts_.ParseTouchscreenDescriptor(input_desc);
         if (!success) {
@@ -578,8 +583,9 @@ bool FdioHidDecoder::Read(Touchscreen::Report* report) {
   }
 
   if (r[0] != ts_.report_id()) {
-    FXL_VLOG(0) << name() << " Touchscreen report " << r[0]
-                << " does not match report id " << ts_.report_id();
+    FXL_VLOG(0) << name() << " Touchscreen report "
+                << static_cast<uint32_t>(r[0]) << " does not match report id "
+                << static_cast<uint32_t>(ts_.report_id());
     return false;
   }
 

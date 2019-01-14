@@ -22,22 +22,32 @@ bool Touchscreen::ParseTouchscreenDescriptor(
   TouchPointConfig configs[MAX_TOUCH_POINTS] = {};
   hid::Attributes scan_time = {};
   hid::Attributes contact_count = {};
+  hid::Attributes button = {};
   hid::Collection *finger_collection;
   uint32_t caps = 0;
 
   for (size_t i = 0; i < desc->count; i++) {
     const hid::ReportField field = desc->first_field[i];
 
-    // Process the global items
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                       hid::usage::Digitizer::kContactCount)) {
+    // Process the global items if we haven't seen them before
+    if (!(caps & Capabilities::CONTACT_COUNT) &&
+        (field.attr.usage ==
+         hid::USAGE(hid::usage::Page::kDigitizer,
+                    hid::usage::Digitizer::kContactCount))) {
       contact_count = field.attr;
       caps |= Capabilities::CONTACT_COUNT;
     }
-    if (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
-                                       hid::usage::Digitizer::kScanTime)) {
+    if (!(caps & Capabilities::SCAN_TIME) &&
+        (field.attr.usage == hid::USAGE(hid::usage::Page::kDigitizer,
+                                        hid::usage::Digitizer::kScanTime))) {
       scan_time = field.attr;
       caps |= Capabilities::SCAN_TIME;
+    }
+
+    if (!(caps & Capabilities::BUTTON) &&
+        (field.attr.usage.page == hid::usage::Page::kButton)) {
+      button = field.attr;
+      caps |= Capabilities::BUTTON;
     }
 
     // Now we move on to processing touch points, so don't process the item if
@@ -115,6 +125,7 @@ bool Touchscreen::ParseTouchscreenDescriptor(
 
   touch_points_ = touch_points;
   scan_time_ = scan_time;
+  button_ = button;
   contact_count_ = contact_count;
   capabilities_ = caps;
   report_size_ = desc->byte_sz;
@@ -194,6 +205,15 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
   }
 
   report->contact_count = contact_count;
+
+  if (capabilities_ & Capabilities::BUTTON) {
+    uint8_t button;
+    if (!hid::ExtractUint(hid_report, button_, &button)) {
+      FXL_LOG(ERROR) << "Touchpad report: Failed to parse BUTTON";
+      return false;
+    }
+    report->button = (button == 1);
+  }
 
   if (capabilities_ & Capabilities::SCAN_TIME) {
     // If we don't have a unit, extract the raw data
