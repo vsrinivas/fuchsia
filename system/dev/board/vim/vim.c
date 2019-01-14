@@ -38,14 +38,6 @@ static zx_protocol_device_t vim_bus_device_protocol = {
     .release = vim_bus_release,
 };
 
-// TODO(rjascani): Remove this when not needed for testing any longer
-static const pbus_dev_t tee_dev = {
-    .name = "tee",
-    .vid = PDEV_VID_GENERIC,
-    .pid = PDEV_PID_GENERIC,
-    .did = PDEV_DID_OPTEE,
-};
-
 static int vim_start_thread(void* arg) {
     vim_bus_t* bus = arg;
     zx_status_t status;
@@ -109,10 +101,6 @@ static int vim_start_thread(void* arg) {
         }
         if ((status = vim_led2472g_init(bus)) != ZX_OK) {
             zxlogf(ERROR, "vim_led2472g_init failed: %d\n", status);
-        }
-        // TODO(rjascani): Remove this when not needed for testing any longer
-        if ((status = pbus_device_add(&bus->pbus, &tee_dev)) != ZX_OK) {
-            zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);
         }
         if ((status = vim_rtc_init(bus)) != ZX_OK) {
             zxlogf(ERROR, "vim_rtc_init failed: %d\n", status);
