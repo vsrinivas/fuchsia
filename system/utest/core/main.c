@@ -92,16 +92,21 @@ int isatty(int fd) {
 }
 
 int main(int argc, char** argv) {
-    if (zx_debuglog_create(ZX_HANDLE_INVALID, 0, &log_handle) < 0) {
+    if (get_root_resource() == ZX_HANDLE_INVALID) {
+        // If the root resource isn't available, printf will go nowhere. Put a
+        // message on the stack and crash. This will show up in the standard
+        // backtrace that's logged after aborting.
+        __UNUSED volatile const char kErrorMsg[] =
+            "Cannot access root resource, refusing to run tests.\n"
+            "core-tests must be invoked by userboot (e.g. userboot=bin/core-tests)\n";
+        abort();
+    }
+
+    if (zx_debuglog_create(get_root_resource(), 0, &log_handle) < 0) {
         return -2;
     }
     zx_debuglog_write(log_handle, 0, "TEST", 4);
 
-    if (get_root_resource() == ZX_HANDLE_INVALID) {
-        fprintf(stderr, "Cannot access root resource, refusing to run tests.\n");
-        fprintf(stderr, "core-tests must be invoked by userboot (e.g. userboot=bin/core-tests).\n");
-        return -1;
-    }
     const bool success = unittest_run_all_tests(argc, argv);
     if (!success) {
         return EXIT_FAILURE;
