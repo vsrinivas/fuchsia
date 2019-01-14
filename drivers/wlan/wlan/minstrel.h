@@ -57,7 +57,8 @@ struct Peer {
     bool is_ht = false;
     bool is_vht = false;
 
-    std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map;
+    std::unique_ptr<std::mutex> update_lock = std::make_unique<std::mutex>();
+    std::unordered_map<tx_vec_idx_t, TxStats> tx_stats_map __TA_GUARDED(*update_lock);
     std::unordered_set<tx_vec_idx_t> basic_rates;
 
     tx_vec_idx_t basic_highest = kErpStartIdx;  // will be replaced when assoc_ctx is parsed.

@@ -223,37 +223,40 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
     Peer peer{};
     peer.addr = addr;
 
-    HtCapabilities ht_cap;
-    constexpr uint32_t kMcsMask0_31 = 0xFFFFFFFF;
-    if (assoc_ctx.has_ht_cap) {
-        ht_cap = HtCapabilities::FromDdk(assoc_ctx.ht_cap);
+    {
+        std::lock_guard<std::mutex> guard(*peer.update_lock);
+        HtCapabilities ht_cap;
+        constexpr uint32_t kMcsMask0_31 = 0xFFFFFFFF;
+        if (assoc_ctx.has_ht_cap) {
+            ht_cap = HtCapabilities::FromDdk(assoc_ctx.ht_cap);
 
-        // TODO(eyw): SGI support suppressed. Remove these once they are supported.
-        ht_cap.ht_cap_info.set_short_gi_20(false);
-        ht_cap.ht_cap_info.set_short_gi_40(false);
+            // TODO(eyw): SGI support suppressed. Remove these once they are supported.
+            ht_cap.ht_cap_info.set_short_gi_20(false);
+            ht_cap.ht_cap_info.set_short_gi_40(false);
 
-        if ((ht_cap.mcs_set.rx_mcs_head.bitmask() & kMcsMask0_31) == 0) {
-            errorf("Invalid AssocCtx: HT supported but no valid MCS. %s\n",
-                   debug::Describe(ht_cap.mcs_set).c_str());
+            if ((ht_cap.mcs_set.rx_mcs_head.bitmask() & kMcsMask0_31) == 0) {
+                errorf("Invalid AssocCtx: HT supported but no valid MCS. %s\n",
+                       debug::Describe(ht_cap.mcs_set).c_str());
+                ZX_DEBUG_ASSERT(false);
+            } else {
+                peer.is_ht = true;
+                AddHt(&peer.tx_stats_map, ht_cap);
+            }
+        }
+
+        if (assoc_ctx.rates_cnt > 0) {
+            peer.basic_rates = AddErp(&peer.tx_stats_map, assoc_ctx);
+            if (peer.basic_rates.size() > 0) {
+                peer.basic_highest =
+                    *std::max_element(peer.basic_rates.cbegin(), peer.basic_rates.cend());
+            }
+        }
+        debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
+
+        if (peer.tx_stats_map.size() == 0) {
+            errorf("No usable rates for peer %s.\n", addr.ToString().c_str());
             ZX_DEBUG_ASSERT(false);
-        } else {
-            peer.is_ht = true;
-            AddHt(&peer.tx_stats_map, ht_cap);
         }
-    }
-
-    if (assoc_ctx.rates_cnt > 0) {
-        peer.basic_rates = AddErp(&peer.tx_stats_map, assoc_ctx);
-        if (peer.basic_rates.size() > 0) {
-            peer.basic_highest =
-                *std::max_element(peer.basic_rates.cbegin(), peer.basic_rates.cend());
-        }
-    }
-    debugmstl("tx_stats_map populated. size: %zu.\n", peer.tx_stats_map.size());
-
-    if (peer.tx_stats_map.size() == 0) {
-        errorf("No usable rates for peer %s.\n", addr.ToString().c_str());
-        ZX_DEBUG_ASSERT(false);
     }
 
     debugmstl("Minstrel peer added: %s\n", addr.ToString().c_str());
@@ -291,6 +294,7 @@ void MinstrelRateSelector::HandleTxStatusReport(const wlan_tx_status_t& tx_statu
         return;
     }
 
+    std::lock_guard<std::mutex> guard(*peer->update_lock);
     auto tx_stats_map = &peer->tx_stats_map;
     tx_vec_idx_t last_idx = kInvalidTxVectorIdx;
     for (auto entry : tx_status.tx_status_entry) {
@@ -340,6 +344,7 @@ inline constexpr bool IsTxUnlikely(const TxStats& ts) {
 }
 
 void UpdateStatsPeer(Peer* peer) {
+    std::lock_guard<std::mutex> guard(*peer->update_lock);
     auto& tsm = peer->tx_stats_map;
     for (auto& [_, stats] : tsm) {
         if (stats.attempts_cur != 0) {
@@ -407,6 +412,7 @@ bool MinstrelRateSelector::HandleTimeout() {
 }
 
 tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
+    std::lock_guard<std::mutex> gaurd(*peer->update_lock);
     tx_vec_idx_t probe_idx = kInvalidTxVectorIdx;
     zx::duration baseline_tx_time = peer->tx_stats_map[peer->max_probability].perfect_tx_time;
     auto potential_probes = peer->tx_stats_map.size();
@@ -516,6 +522,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
 
     peer_addr.CopyTo(peer_fidl->mac_addr.mutable_data());
 
+    std::lock_guard<std::mutex> guard(*peer->update_lock);
     peer_fidl->entries.resize(peer->tx_stats_map.size());
 
     size_t idx = 0;

@@ -93,7 +93,6 @@ class Device : public DeviceInterface {
         kShutdown,
         kPacketQueued,
         kIndication,
-        kReportTxStatus,
         kHwScanComplete,
     };
 

@@ -40,6 +40,13 @@ namespace wlan {
 
 namespace wlan_minstrel = ::fuchsia::wlan::minstrel;
 
+// Remedy for FLK-24 (DNO-389)
+// See |MINSTREL_DATA_FRAME_INTERVAL_NANOS| in //garnet/bin/wlan-hw-sim/src/main.rs
+// For the test, ensure at least one probe frame (generated every 16 data frames) in every cycle,
+// 16 <= (kMinstrelUpdateIntervalForHwSim / MINSTREL_DATA_FRAME_INTERVAL_NANOS * 1e6) < 32.
+static constexpr zx::duration kMinstrelUpdateIntervalForHwSim = zx::msec(83);
+static constexpr zx::duration kMinstrelUpdateIntervalNormal = zx::msec(100);
+
 #define DEV(c) static_cast<Device*>(c)
 static zx_protocol_device_t wlan_device_ops = {
     .version = DEVICE_OPS_VERSION,
@@ -405,11 +412,8 @@ void Device::WlanmacIndication(uint32_t ind) {
 }
 
 void Device::WlanmacReportTxStatus(const wlan_tx_status_t* tx_status) {
-    zx_packet_user_t user_pkt;
-    static_assert(sizeof(zx_packet_user_t) >= sizeof(wlan_tx_status_t), "tx_status size > 32");
-    memcpy(user_pkt.c8, reinterpret_cast<const uint8_t*>(tx_status), sizeof(wlan_tx_status_t));
-    auto status = QueueDevicePortPacketUser(DevicePacket::kReportTxStatus, user_pkt);
-    if (status != ZX_OK) { warnf("could not queue tx status report packet err=%d\n", status); }
+    ZX_DEBUG_ASSERT(minstrel_ != nullptr);
+    if (minstrel_ != nullptr) { minstrel_->HandleTxStatusReport(*tx_status); }
 }
 
 void Device::WlanmacHwScanComplete(const wlan_hw_scan_result_t* result) {
@@ -674,11 +678,6 @@ void Device::MainLoop() {
                 }
                 break;
             }
-            case to_enum_type(DevicePacket::kReportTxStatus): {
-                auto tx_status = reinterpret_cast<wlan_tx_status_t*>(pkt.user.c8);
-                minstrel_->HandleTxStatusReport(*tx_status);
-                break;
-            }
             default:
                 errorf("unknown device port key subtype: %" PRIu64 "\n", pkt.user.u64[0]);
                 break;
@@ -867,8 +866,9 @@ zx_status_t Device::CreateMinstrel(uint32_t features) {
         errorf("could not create minstrel timer: %d\n", status);
         return status;
     }
-    const zx::duration minstrel_update_interval =
-        (features & WLAN_DRIVER_FEATURE_SYNTH) != 0 ? zx::msec(10) : zx::msec(100);
+    const zx::duration minstrel_update_interval = (features & WLAN_DRIVER_FEATURE_SYNTH) != 0
+                                                      ? kMinstrelUpdateIntervalForHwSim
+                                                      : kMinstrelUpdateIntervalNormal;
     minstrel_.reset(new MinstrelRateSelector(
         TimerManager(std::move(timer)), ProbeSequence::RandomSequence(), minstrel_update_interval));
     return ZX_OK;

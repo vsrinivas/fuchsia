@@ -4,7 +4,7 @@
 
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
-#![recursion_limit="128"]
+#![recursion_limit = "128"]
 
 use {
     byteorder::{LittleEndian, ReadBytesExt},
@@ -28,6 +28,11 @@ mod test_utils;
 
 const HW_MAC_ADDR: [u8; 6] = [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b];
 const BSSID: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x73, 0x73];
+
+// Remedy for FLK-24 (DNO-389)
+// Refer to |KMinstrelUpdateIntervalForHwSim| in //garnet/drivers/wlan/wlan/device.cpp
+#[cfg(test)]
+const MINSTREL_DATA_FRAME_INTERVAL_NANOS: i64 = 4_000_000;
 
 fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
     config::create_wlantap_config(HW_MAC_ADDR, wlan_device::MacRole::Client)
@@ -295,9 +300,7 @@ mod simulation_tests {
         ok = run_test("simulate_scan", test_simulate_scan) && ok;
         ok = run_test("connecting_to_ap", test_connecting_to_ap) && ok;
         ok = run_test("ethernet_tx_rx", test_ethernet_tx_rx) && ok;
-        if false {
-            ok = run_test("verify_rate_selection", test_verify_rate_selection) && ok;
-        }
+        ok = run_test("verify_rate_selection", test_verify_rate_selection) && ok;
 
         // ap tests
         ok = run_test("open_ap_connect", ap::tests::test_open_ap_connect) && ok;
@@ -665,6 +668,10 @@ mod simulation_tests {
             assert_eq!(&tx_vec_idx_seen[..], ALL_SUPPORTED_IDX);
         }
         let most_frequently_used_idx = hm.keys().max_by_key(|k| hm[&k]).unwrap();
+        println!(
+            "If the test fails due to QEMU slowness outside of the scope of WLAN(FLK-24, \
+             DNO-389). Try increasing |MINSTREL_DATA_FRAME_INTERVAL_NANOS| above."
+        );
         assert_eq!(most_frequently_used_idx, &MAX_SUCCESSFUL_IDX);
     }
 
@@ -716,11 +723,7 @@ mod simulation_tests {
         )
         .expect("Error creating fake ethernet frame");
 
-        const ETH_PACKETS_PER_INTERVAL: u64 = 16;
-
-        let mut timer_stream = fasync::Interval::new(7.millis())
-            .map(|()| stream::repeat(()).take(ETH_PACKETS_PER_INTERVAL))
-            .flatten();
+        let mut timer_stream = fasync::Interval::new(MINSTREL_DATA_FRAME_INTERVAL_NANOS.nanos());
         let mut client_stream = client.get_stream().fuse();
         'eth_sender: loop {
             select! {
@@ -978,11 +981,11 @@ mod simulation_tests {
         clear_ssid_and_ensure_iface_gone();
         match result {
             Ok(_) => {
-                println!("Test `{}` passed\n", name);
+                println!("\nTest `{}` passed\n", name);
                 true
             }
             Err(_) => {
-                println!("Test `{}` failed\n", name);
+                println!("\nTest `{}` failed\n", name);
                 false
             }
         }
