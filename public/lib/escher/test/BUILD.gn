@@ -72,6 +72,7 @@ if (is_mac) {
     ]
 
     deps = [
+      ":force_waterfall_to_build_on_host",
       ":gtest_escher",
       "base:base_unittests",
       "//garnet/public/lib/fxl",
@@ -144,5 +145,12 @@ source_set("gtest_escher") {
   sources = [
     "gtest_escher.cc",
     "gtest_escher.h",
+  ]
+}
+
+group("force_waterfall_to_build_on_host") {
+  deps = [
+    "//garnet/examples/escher/waterfall($host_toolchain)",
+    "//garnet/examples/escher/waterfall2($host_toolchain)"
   ]
 }
