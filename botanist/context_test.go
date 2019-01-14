@@ -13,7 +13,7 @@ func TestSetAndGetDeviceContext(t *testing.T) {
 	newDeviceContext := func() *DeviceContext {
 		return &DeviceContext{
 			Nodename: "nodename",
-			SSHKey: "private-key",
+			SSHKey:   "private-key",
 		}
 
 	}
