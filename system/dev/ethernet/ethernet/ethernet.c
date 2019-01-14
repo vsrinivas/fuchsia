@@ -76,9 +76,6 @@ typedef struct ethdev0 {
 // This client has requested multicast promisc mode
 #define ETHDEV_MULTICAST_PROMISC (0x40u)
 
-// indicates the device is busy although its lock is released
-#define ETHDEV0_BUSY (1u)
-
 // Number of empty fifo entries to read at a time
 #define FIFO_BATCH_SZ 32
 
@@ -666,13 +663,15 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
     zx_status_t status;
     if (list_is_empty(&edev0->list_active)) {
         // Release the lock to allow other device operations in callback routine.
-        // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
-        edev0->state |= ETHDEV0_BUSY;
+        // Re-acquire lock afterwards.
         mtx_unlock(&edev0->lock);
         const ethmac_ifc_t ifc = {&ethmac_ifc, edev0};
         status = ethmac_start(&edev->edev0->mac, &ifc);
         mtx_lock(&edev0->lock);
-        edev0->state &= ~ETHDEV0_BUSY;
+        // Check whether unbind was called while we were unlocked.
+        if (edev->state & ETHDEV_DEAD) {
+            status = ZX_ERR_BAD_STATE;
+        }
     } else {
         status = ZX_OK;
     }
@@ -710,12 +709,10 @@ static zx_status_t eth_stop_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS 
         if (list_is_empty(&edev0->list_active)) {
             if (!(edev->state & ETHDEV_DEAD)) {
                 // Release the lock to allow other device operations in callback routine.
-                // Re-acquire lock afterwards. Set busy to prevent problems with other ioctls.
-                edev0->state |= ETHDEV0_BUSY;
+                // Re-acquire lock afterwards.
                 mtx_unlock(&edev0->lock);
                 ethmac_stop(&edev->edev0->mac);
                 mtx_lock(&edev0->lock);
-                edev0->state &= ~ETHDEV0_BUSY;
             }
         }
     }
@@ -879,6 +876,10 @@ fuchsia_hardware_ethernet_Device_ops_t fidl_ops = {
 static zx_status_t eth_message(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
     ethdev_t* edev = ctx;
     mtx_lock(&edev->edev0->lock);
+    if (edev->state & ETHDEV_DEAD) {
+        mtx_unlock(&edev->edev0->lock);
+        return ZX_ERR_BAD_STATE;
+    }
     zx_status_t status = fuchsia_hardware_ethernet_Device_dispatch(ctx, txn, msg, &fidl_ops);
     mtx_unlock(&edev->edev0->lock);
     return status;
