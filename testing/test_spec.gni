@@ -218,6 +218,10 @@ template("test_spec") {
     test = {
       name = get_label_info(":${invoker.name}", "label_no_toolchain")
       location = invoker.location
+      if (is_linux || is_mac) {
+        # Trim leading //.
+        location = rebase_path(location, root_build_dir)
+      }
       os = current_os
       cpu = current_cpu
     }
