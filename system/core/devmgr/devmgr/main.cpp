@@ -23,6 +23,7 @@
 #include <zircon/processargs.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
+#include <zircon/syscalls/log.h>
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
@@ -411,14 +412,26 @@ int service_starter(void* arg) {
 
         const char* num_shells = require_system && !netboot ? "0" : "3";
 
-        uint32_t type = PA_HND(PA_USER0, 0);
-        zx_handle_t h = ZX_HANDLE_INVALID;
-        zx_channel_create(0, &h, &virtcon_open);
+        size_t handle_count = 0;
+        uint32_t types[2];
+        zx_handle_t handles[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
+
+        if (zx_channel_create(0, &handles[0], &virtcon_open) == ZX_OK) {
+            types[handle_count++] = PA_HND(PA_USER0, 0);
+        }
+
+        zx::debuglog debuglog;
+        if (zx::debuglog::create(g_handles.root_resource, ZX_LOG_FLAG_READABLE, &debuglog) ==
+            ZX_OK) {
+            handles[handle_count] = debuglog.release();
+            types[handle_count] = PA_HND(PA_USER0, 1);
+            ++handle_count;
+        }
+
         const char* args[] = {"/boot/bin/virtual-console", "--shells", num_shells, "--run", vcmd};
-        devmgr_launch(g_handles.svc_job, "virtual-console",
-                      &devmgr_launch_load, nullptr,
-                      vruncmd ? 5 : 3, args, envp, -1,
-                      &h, &type, (h == ZX_HANDLE_INVALID) ? 0 : 1, nullptr, FS_ALL);
+        devmgr_launch(g_handles.svc_job, "virtual-console", &devmgr_launch_load, nullptr,
+                      vruncmd ? 5 : 3, args, envp, -1, handles, types, handle_count, nullptr,
+                      FS_ALL);
     }
 
     const char* epoch = getenv("devmgr.epoch");

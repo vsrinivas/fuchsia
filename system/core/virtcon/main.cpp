@@ -406,9 +406,9 @@ int main(int argc, char** argv) {
         proc_koid = info.koid;
     }
 
-    // TODO: receive from launching process
-    if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &log_ph.handle) < 0) {
-        printf("vc log listener: cannot open log\n");
+    log_ph.handle = zx_take_startup_handle(PA_HND(PA_USER0, 1));
+    if (log_ph.handle == ZX_HANDLE_INVALID) {
+        printf("vc log listener: did not receive log startup handle\n");
         return -1;
     }
 
