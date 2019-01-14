@@ -41,14 +41,9 @@ void InfraBss::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
     // Move to requested channel.
     auto chan = wlan_channel_t{
         .primary = req.body()->channel,
+        // TODO(WLAN-908): Augment MLME-START.request and forgo a guessing in MLME.
         .cbw = CBW20,
     };
-
-    if (Ht().cbw_40_rx_ready) {
-        wlan_channel_t chan_override = chan;
-        chan_override.cbw = CBW40;
-        chan.cbw = common::GetValidCbw(chan_override);
-    }
 
     auto status = device_->SetChannel(chan);
     if (status != ZX_OK) {
@@ -520,7 +515,7 @@ HtConfig InfraBss::Ht() const {
     // TODO(NET-567): Reflect hardware capabilities and association negotiation
     return HtConfig{
         .ready = true,
-        .cbw_40_rx_ready = true,
+        .cbw_40_rx_ready = false,
         .cbw_40_tx_ready = false,
     };
 }

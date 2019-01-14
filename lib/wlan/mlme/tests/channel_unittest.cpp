@@ -111,37 +111,6 @@ TEST_F(ChannelTest, InvalidCombo) {
     }
 }
 
-TEST_F(ChannelTest, GetValidCbw) {
-    struct TestVectorCbw {
-        uint8_t primary;
-        uint8_t cbw;
-        uint8_t want;
-    };
-
-    std::vector<TestVectorCbw> tvs = {
-        // clang-format off
-        {1, CBW20, CBW20},
-        {1, CBW40ABOVE, CBW40ABOVE},
-        {1, CBW40BELOW, CBW40ABOVE},
-        {9, CBW40ABOVE, CBW40BELOW},
-        {9, CBW40BELOW, CBW40BELOW},
-        {36, CBW40ABOVE, CBW40ABOVE},
-        {36, CBW40BELOW, CBW40ABOVE},
-        {40, CBW40ABOVE, CBW40BELOW},
-        {40, CBW40BELOW, CBW40BELOW},
-        // Add more interesting cases
-        // clang-format on
-    };
-
-    for (TestVectorCbw tv : tvs) {
-        wlan_channel_t chan = {
-            .primary = tv.primary,
-            .cbw = tv.cbw,
-        };
-        EXPECT_EQ(tv.want, GetValidCbw(chan));
-    }
-}
-
 TEST_F(ChannelTest, Conversion) {
     struct TestVector {
         wlan_channel_t ddk;
