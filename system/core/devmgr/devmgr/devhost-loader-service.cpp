@@ -11,6 +11,7 @@
 
 #include <fbl/string_printf.h>
 #include <lib/fdio/io.h>
+#include <lib/fit/defer.h>
 
 #include "coordinator.h"
 #include "../shared/fdio.h"
@@ -70,36 +71,39 @@ constexpr loader_service_ops_t ops_{
 
 namespace devmgr {
 
-zx_status_t DevhostLoaderService::Init() {
-    zx_status_t status = fdio_ns_create(&ns_);
+zx_status_t DevhostLoaderService::Create(async_dispatcher_t* dispatcher,
+                                         fbl::unique_ptr<DevhostLoaderService>* out) {
+    fdio_ns_t* ns;
+    zx_status_t status = fdio_ns_create(&ns);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: failed to create namespace %d\n", status);
         return status;
     }
-    status = fdio_ns_bind(ns_, "/boot", fs_clone("boot").release());
+    auto defer = fit::defer([ns] { fdio_ns_destroy(ns); });
+    status = fdio_ns_bind(ns, "/boot", fs_clone("boot").release());
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: failed to bind namespace %d\n", status);
         return status;
     }
-    root_.reset(fdio_ns_opendir(ns_));
-    if (!root_) {
+    fbl::unique_fd root(fdio_ns_opendir(ns));
+    if (!root) {
         fprintf(stderr, "devmgr: failed to open root directory %d\n", errno);
         return ZX_ERR_IO;
     }
-    status = loader_service_create(DcAsyncDispatcher(), &ops_, this, &svc_);
+    fbl::unique_ptr<DevhostLoaderService> ldsvc(new DevhostLoaderService);
+    status = loader_service_create(dispatcher, &ops_, ldsvc.get(), &ldsvc->svc_);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: failed to create loader service %d\n", status);
         return status;
     }
+    ldsvc->root_ = std::move(root);
+    *out = std::move(ldsvc);
     return ZX_OK;
 }
 
 DevhostLoaderService::~DevhostLoaderService() {
     if (svc_ != nullptr) {
         loader_service_release(svc_);
-    }
-    if (ns_ != nullptr) {
-        fdio_ns_destroy(ns_);
     }
 }
 

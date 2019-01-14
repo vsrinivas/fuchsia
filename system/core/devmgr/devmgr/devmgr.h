@@ -21,7 +21,7 @@ namespace devmgr {
 struct Device;
 struct Devnode;
 
-void devfs_init(Device* device);
+void devfs_init(Device* device, async_dispatcher_t* dispatcher);
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
 
 void devmgr_svc_init();

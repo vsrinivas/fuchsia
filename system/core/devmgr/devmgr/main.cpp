@@ -43,6 +43,7 @@
 #include "../shared/fdio.h"
 #include "coordinator.h"
 #include "devmgr.h"
+#include "devhost-loader-service.h"
 
 namespace {
 
@@ -529,6 +530,8 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
 int main(int argc, char** argv) {
     printf("devmgr: main()\n");
 
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+
     devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
 
@@ -537,8 +540,8 @@ int main(int argc, char** argv) {
     g_handles.root_job = zx::job::default_job();
 
     devmgr::coordinator_init(*g_handles.root_job);
-    devmgr::Coordinator coordinator;
-    devmgr::devfs_init(&coordinator.root_device());
+    devmgr::Coordinator coordinator(loop.dispatcher());
+    devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
     // This is for use in tests to let the test environment see devfs.
@@ -555,8 +558,9 @@ int main(int argc, char** argv) {
     }
     g_handles.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
 
-    if (fuchsia_create_job() != ZX_OK)
+    if (fuchsia_create_job() != ZX_OK) {
         return 1;
+    }
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
     zx::event::create(0, &g_handles.fshost_event);
@@ -591,9 +595,20 @@ int main(int argc, char** argv) {
         thrd_detach(t);
     }
 
-    coordinator_run(&coordinator, std::move(args));
-    printf("devmgr: coordinator exited?!\n");
-    return 0;
+    fbl::unique_ptr<devmgr::DevhostLoaderService> loader_service;
+    if (devmgr::getenv_bool("devmgr.devhost.strict-linking", false)) {
+        status = devmgr::DevhostLoaderService::Create(loop.dispatcher(), &loader_service);
+        if (status != ZX_OK) {
+            return 1;
+        }
+        coordinator.set_loader_service(loader_service.get());
+    }
+
+    coordinator_setup(&coordinator, std::move(args));
+
+    status = loop.Run();
+    fprintf(stderr, "devmgr: coordinator exited unexpectedly: %d\n", status);
+    return status == ZX_OK ? 0 : 1;
 }
 
 namespace devmgr {

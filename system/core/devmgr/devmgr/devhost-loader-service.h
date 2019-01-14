@@ -5,6 +5,7 @@
 #pragma once
 
 #include <fbl/unique_fd.h>
+#include <fbl/unique_ptr.h>
 #include <lib/fdio/namespace.h>
 #include <lib/zx/channel.h>
 #include <loader-service/loader-service.h>
@@ -14,17 +15,20 @@ namespace devmgr {
 // A loader service for devhosts that restricts access to dynamic libraries.
 class DevhostLoaderService {
 public:
-    zx_status_t Init();
+    // Create a new loader service for devhosts. The |dispatcher| must have a
+    // longer lifetime than |out|.
+    static zx_status_t Create(async_dispatcher_t* dispatcher,
+                              fbl::unique_ptr<DevhostLoaderService>* out);
     ~DevhostLoaderService();
 
     // Connect to the loader service.
     zx_status_t Connect(zx::channel* out);
 
+    // Return the file descriptor for the root namespace of the loader service.
     const fbl::unique_fd& root() const { return root_; }
 
 private:
     fbl::unique_fd root_;
-    fdio_ns_t* ns_ = nullptr;
     loader_service_t* svc_ = nullptr;
 };
 

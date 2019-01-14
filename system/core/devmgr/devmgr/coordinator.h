@@ -29,6 +29,7 @@ namespace devmgr {
 
 class Coordinator;
 class Devhost;
+class DevhostLoaderService;
 struct Devnode;
 class SuspendContext;
 
@@ -383,9 +384,6 @@ struct Driver {
 
 #define DRIVER_NAME_LEN_MAX 64
 
-// Access the devcoordinator's async dispatcher.
-async_dispatcher_t* DcAsyncDispatcher();
-
 zx_status_t devfs_publish(Device* parent, Device* dev);
 void devfs_unpublish(Device* dev);
 void devfs_advertise(Device* dev);
@@ -412,7 +410,7 @@ public:
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
-    Coordinator() = default;
+    explicit Coordinator(async_dispatcher_t* dispatcher);
 
     zx_status_t InitializeCoreDevices();
 
@@ -475,6 +473,10 @@ public:
     void DriverAddedSys(Driver* drv, const char* version);
 
     void set_running(bool running) { running_ = running; }
+    void set_loader_service(DevhostLoaderService* loader_service) {
+        loader_service_ = loader_service;
+    }
+    async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
     fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
     Device& root_device() { return root_device_; }
@@ -494,6 +496,8 @@ public:
 
 private:
     bool running_ = false;
+    DevhostLoaderService* loader_service_ = nullptr;
+    async_dispatcher_t* dispatcher_;
 
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;
@@ -526,9 +530,7 @@ private:
 };
 
 void coordinator_init(const zx::job& root_job);
-
-// Setup and begin executing the coordinator's loop.
-void coordinator_run(Coordinator* coordinator, DevmgrArgs args);
+void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
 
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
 

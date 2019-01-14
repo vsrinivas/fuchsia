@@ -78,9 +78,9 @@ public:
     ~DcIostate();
 
     // Claims ownership of |*h| on success
-    static zx_status_t Create(Devnode* dn, zx::channel* h);
+    static zx_status_t Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* h);
 
-    static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie);
+    static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie, async_dispatcher_t* dispatcher);
 
     static void HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
@@ -425,7 +425,7 @@ again:
     return ZX_ERR_NEXT;
 }
 
-void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags) {
+void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, char* path, uint32_t flags) {
     zx::channel ipc(h);
     h = ZX_HANDLE_INVALID;
 
@@ -470,7 +470,7 @@ void devfs_open(Devnode* dirdn, zx_handle_t h, char* path, uint32_t flags) {
     // or we are asked to open-as-a-directory, open locally:
     if (local_requested || local_required) {
         zx::unowned_channel unowned_ipc(ipc);
-        if ((r = DcIostate::Create(dn, &ipc)) != ZX_OK) {
+        if ((r = DcIostate::Create(dn, dispatcher, &ipc)) != ZX_OK) {
             if (describe) {
                 describe_error(std::move(ipc), r);
             }
@@ -554,14 +554,14 @@ DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
     devnode_->iostate.push_back(this);
 }
 
-zx_status_t DcIostate::Create(Devnode* dn, zx::channel* ipc) {
+zx_status_t DcIostate::Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* ipc) {
     auto ios = fbl::make_unique<DcIostate>(dn);
     if (ios == nullptr) {
         return ZX_ERR_NO_MEMORY;
     }
 
     ios->set_channel(std::move(*ipc));
-    zx_status_t status = DcIostate::BeginWait(&ios, DcAsyncDispatcher());
+    zx_status_t status = DcIostate::BeginWait(&ios, dispatcher);
     if (status != ZX_OK) {
         // Take the handle back from |ios| so it doesn't close it when it's
         // destroyed
@@ -702,7 +702,7 @@ void devfs_unpublish(Device* dev) {
         (fuchsia_io_ ## METHOD ## Request*) MSG->bytes;
 
 
-zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie) {
+zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie, async_dispatcher_t* dispatcher) {
     auto ios = static_cast<DcIostate*>(cookie);
     Devnode* dn = ios->devnode_;
     if (dn == nullptr) {
@@ -720,7 +720,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         uint32_t flags = request->flags;
         char path[PATH_MAX];
         path[0] = '\0';
-        devfs_open(dn, h, path, flags | ZX_FS_FLAG_NOREMOTE);
+        devfs_open(dn, dispatcher, h, path, flags | ZX_FS_FLAG_NOREMOTE);
         return ZX_OK;
     }
     case fuchsia_io_NodeDescribeOrdinal: {
@@ -741,7 +741,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
             zx_handle_close(h);
         } else {
             path[len] = '\0';
-            devfs_open(dn, h, path, flags);
+            devfs_open(dn, dispatcher, h, path, flags);
         }
         return ZX_OK;
     }
@@ -824,16 +824,16 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        status = fs::ReadMessage(wait->object(), [&ios](fidl_msg_t* msg, fs::FidlConnection* txn) {
-            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get());
+        status = fs::ReadMessage(wait->object(), [&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
         });
         if (status == ZX_OK) {
             ios->BeginWait(std::move(ios), dispatcher);
             return;
         }
     } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        fs::CloseMessage([&ios](fidl_msg_t* msg, fs::FidlConnection* txn) {
-            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get());
+        fs::CloseMessage([&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
+            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
         });
     } else {
         log(ERROR, "devcoord: DcIostate::HandleRpc: invalid signals %x\n", signal->observed);
@@ -850,7 +850,7 @@ zx::channel devfs_root_clone() {
     return zx::channel(fdio_service_clone(g_devfs_root.get()));
 }
 
-void devfs_init(Device* device) {
+void devfs_init(Device* device, async_dispatcher_t* dispatcher) {
     printf("devmgr: init\n");
 
     root_devnode = fbl::make_unique<Devnode>("");
@@ -868,7 +868,7 @@ void devfs_init(Device* device) {
     zx::channel h0, h1;
     if (zx::channel::create(0, &h0, &h1) != ZX_OK) {
         return;
-    } else if (DcIostate::Create(root_devnode.get(), &h0) != ZX_OK) {
+    } else if (DcIostate::Create(root_devnode.get(), dispatcher, &h0) != ZX_OK) {
         return;
     }
 

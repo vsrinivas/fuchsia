@@ -25,6 +25,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fdio/io.h>
 #include <lib/fidl/coding.h>
+#include <lib/fit/defer.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zircon-internal/ktrace.h>
 #include <lib/zx/job.h>
@@ -46,11 +47,7 @@
 #include "../shared/fidl_txn.h"
 #include "../shared/log.h"
 
-namespace devmgr {
-
 namespace {
-
-DevhostLoaderService g_ldsvc;
 
 // Handle ID to use for the root job when spawning devhosts. This number must
 // match the value used in system/dev/misc/sysinfo/sysinfo.c.
@@ -61,15 +58,9 @@ constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
 zx::vmo bootdata_vmo;
 
-async::Loop* DcAsyncLoop() {
-    // The constructor of this asserts that the loop allocation succeeds. This
-    // is fine, since if we can't successfully heap alloc during process
-    // startup, the devcoordinator is not going to make it very far.
-    static async::Loop loop(&kAsyncLoopConfigAttachToThread);
-    return &loop;
-}
-
 } // namespace
+
+namespace devmgr {
 
 extern zx_handle_t virtcon_open;
 
@@ -77,11 +68,8 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
-bool dc_strict_linking = false;
 
-async_dispatcher_t* DcAsyncDispatcher() {
-    return DcAsyncLoop()->dispatcher();
-}
+Coordinator::Coordinator(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
 
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
@@ -495,7 +483,7 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
     return ZX_OK;
 }
 
-static zx_status_t dc_launch_devhost(Devhost* host,
+static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
                                      const char* name, zx_handle_t hrpc) {
     const char* devhost_bin = get_devhost_bin();
 
@@ -504,9 +492,9 @@ static zx_status_t dc_launch_devhost(Devhost* host,
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
 
-    if (dc_strict_linking) {
+    if (loader_service != nullptr) {
         zx::channel connection;
-        zx_status_t status = g_ldsvc.Connect(&connection);
+        zx_status_t status = loader_service->Connect(&connection);
         if (status == ZX_OK) {
             launchpad_use_loader_service(lp, connection.release());
         }
@@ -584,7 +572,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     }
     dh->set_hrpc(dh_hrpc);
 
-    if ((r = dc_launch_devhost(dh.get(), name, hrpc)) < 0) {
+    if ((r = dc_launch_devhost(dh.get(), loader_service_, name, hrpc)) < 0) {
         zx_handle_close(dh->hrpc());
         return r;
     }
@@ -751,7 +739,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
 
     dev->wait.set_object(dev->hrpc.get());
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncDispatcher())) != ZX_OK) {
+    if ((r = dev->wait.Begin(dispatcher_)) != ZX_OK) {
         devfs_unpublish(dev.get());
         return r;
     }
@@ -774,7 +762,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        r = dev->publish_task.Post(DcAsyncDispatcher());
+        r = dev->publish_task.Post(dispatcher_);
         if (r != ZX_OK) {
             return r;
         }
@@ -792,7 +780,7 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        zx_status_t r = dev->publish_task.Post(DcAsyncDispatcher());
+        zx_status_t r = dev->publish_task.Post(dispatcher_);
         if (r != ZX_OK) {
             return r;
         }
@@ -900,7 +888,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
 
                     if (parent->retries > 0) {
                         // Add device with an exponential backoff.
-                        zx_status_t r = parent->publish_task.PostDelayed(DcAsyncDispatcher(), parent->backoff);
+                        zx_status_t r = parent->publish_task.PostDelayed(dispatcher_, parent->backoff);
                         if (r != ZX_OK) {
                             return r;
                         }
@@ -1536,7 +1524,7 @@ static zx_status_t dh_create_device(Device* dev, Devhost* dh,
     dev->wait.set_object(hrpc.get());
     dev->hrpc = std::move(hrpc);
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(DcAsyncDispatcher())) != ZX_OK) {
+    if ((r = dev->wait.Begin(dev->coordinator->dispatcher())) != ZX_OK) {
         return r;
     }
     dev->host = dh;
@@ -2025,7 +2013,7 @@ void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-    async::PostTask(DcAsyncDispatcher(), [this, drv] {
+    async::PostTask(dispatcher_, [this, drv] {
         drivers_.push_back(drv);
         BindDriver(drv);
     });
@@ -2084,7 +2072,7 @@ static int system_driver_loader(void* arg) {
     auto coordinator = static_cast<Coordinator*>(arg);
     find_loadable_drivers("/system/driver",
                           fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
-    async::PostTask(DcAsyncDispatcher(), [coordinator] { coordinator->BindSystemDrivers(); });
+    async::PostTask(coordinator->dispatcher(), [coordinator] { coordinator->BindSystemDrivers(); });
     return 0;
 }
 
@@ -2144,16 +2132,8 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
-void coordinator_run(Coordinator* coordinator, DevmgrArgs args) {
-    log(INFO, "devmgr: coordinator_run()\n");
-
-    dc_strict_linking = getenv_bool("devmgr.devhost.strict-linking", false);
-    if (dc_strict_linking) {
-        zx_status_t status = g_ldsvc.Init();
-        if (status != ZX_OK) {
-            return;
-        }
-    }
+void coordinator_setup(Coordinator* coordinator, DevmgrArgs args) {
+    log(INFO, "devmgr: coordinator_setup()\n");
 
     // Set up the default values for our arguments if they weren't given.
     if (args.driver_search_paths.size() == 0) {
@@ -2218,10 +2198,6 @@ void coordinator_run(Coordinator* coordinator, DevmgrArgs args) {
     coordinator->BindDrivers();
 
     coordinator->set_running(true);
-    status = DcAsyncLoop()->Run();
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: port dispatch ended: %d\n", status);
-    }
 }
 
 } // namespace devmgr
