@@ -12,7 +12,6 @@ MODULE := $(LOCAL_DIR)
 CPU := generic
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/acpi.cpp \
     $(LOCAL_DIR)/console.cpp \
     $(LOCAL_DIR)/debug.cpp \
     $(LOCAL_DIR)/hpet.cpp \
@@ -30,6 +29,7 @@ MODULE_SRCS += \
 MODULE_DEPS += \
     third_party/lib/acpica \
     third_party/lib/cksum \
+    kernel/lib/acpi_tables \
     kernel/lib/cbuf \
     kernel/lib/gfxconsole \
     kernel/lib/fixed_point \

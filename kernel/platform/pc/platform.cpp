@@ -24,6 +24,7 @@
 #include <err.h>
 #include <fbl/alloc_checker.h>
 #include <kernel/cmdline.h>
+#include <lib/acpi_tables.h>
 #include <lib/debuglog.h>
 #include <libzbi/zbi-cpp.h>
 #include <lk/init.h>
@@ -32,7 +33,6 @@
 #include <platform/console.h>
 #include <platform/keyboard.h>
 #include <platform/pc.h>
-#include <platform/pc/acpi.h>
 #include <platform/pc/bootloader.h>
 #include <platform/pc/smbios.h>
 #include <string.h>
@@ -774,9 +774,11 @@ void platform_early_init(void) {
 }
 
 static void platform_init_smp(void) {
-    uint32_t num_cpus = 0;
+    const AcpiTableProvider acpi_table_provider;
+    const AcpiTables acpi_tables(&acpi_table_provider);
 
-    zx_status_t status = platform_enumerate_cpus(NULL, 0, &num_cpus);
+    uint32_t num_cpus = 0;
+    auto status = acpi_tables.cpu_count(&num_cpus);
     if (status != ZX_OK) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;
@@ -796,7 +798,7 @@ static void platform_init_smp(void) {
 
     // find the list of all cpu apic ids into a temporary list
     uint32_t real_num_cpus;
-    status = platform_enumerate_cpus(apic_ids_temp, num_cpus, &real_num_cpus);
+    status = acpi_tables.cpu_apic_ids(apic_ids_temp, num_cpus, &real_num_cpus);
     if (status != ZX_OK || num_cpus != real_num_cpus) {
         TRACEF("failed to enumerate CPUs, disabling SMP\n");
         return;

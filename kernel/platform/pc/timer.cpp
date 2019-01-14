@@ -29,7 +29,6 @@
 #include <platform.h>
 #include <platform/console.h>
 #include <platform/pc.h>
-#include <platform/pc/acpi.h>
 #include <platform/pc/hpet.h>
 #include <platform/pc/timer.h>
 #include <platform/timer.h>
