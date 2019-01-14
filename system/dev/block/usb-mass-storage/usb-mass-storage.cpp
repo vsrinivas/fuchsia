@@ -272,6 +272,27 @@ static zx_status_t ums_mode_sense6(ums_t* ums, uint8_t lun, scsi_mode_sense_6_da
     return status;
 }
 
+static zx_status_t ums_mode_sense_6(ums_t* ums, uint8_t lun, uint8_t page,
+                                    void* data, uint8_t transfer_length) {
+    // CBW Configuration
+    scsi_mode_sense_6_command_t command;
+    memset(&command, 0, sizeof(command));
+    command.opcode = UMS_MODE_SENSE6;
+    command.page = page; // all pages, current values
+    command.allocation_length = transfer_length;
+
+    ums_send_cbw(ums, lun, transfer_length, USB_DIR_IN, sizeof(command), &command);
+
+    // read mode sense response
+    ums_queue_read(ums, transfer_length);
+
+    zx_status_t status = ums_read_csw(ums, NULL);
+    if (status == ZX_OK) {
+        usb_request_copy_from(ums->data_req, data, transfer_length, 0);
+    }
+    return status;
+}
+
 static zx_status_t ums_data_transfer(ums_t* ums, ums_txn_t* txn, zx_off_t offset, size_t length,
                                      uint8_t ep_address) {
     usb_request_t* req = ums->data_transfer_req;
@@ -514,6 +535,15 @@ static zx_status_t ums_add_block_device(ums_block_t* dev) {
         return status;
     }
 
+    unsigned char cache_sense[20];
+    status = ums_mode_sense_6(ums, lun, 0x08, cache_sense, sizeof(cache_sense));
+    if (status != ZX_OK) {
+        zxlogf(WARN, "CacheSense failed: %d\n", status);
+        ums->cache_enabled = true;
+    } else {
+        ums->cache_enabled = cache_sense[6] & (1 << 2);
+    }
+
     if (ms_data.device_specific_param & MODE_SENSE_DSP_RO) {
         dev->flags |= BLOCK_FLAG_READONLY;
     } else {
@@ -642,8 +672,21 @@ static int ums_worker_thread(void* arg) {
             }
             break;
         case BLOCK_OP_FLUSH:
-            // nothing to do for flush txns other than complete them
-            status = ZX_OK;
+            if (ums->cache_enabled) {
+                scsi_command10_t command;
+                memset(&command, 0, sizeof(command));
+                command.opcode = UMS_SYNCHRONIZE_CACHE;
+                command.misc = 0;
+                ums_send_cbw(ums, dev->lun, 0, USB_DIR_OUT, sizeof(command), &command);
+                uint32_t residue;
+                status = ums_read_csw(ums, &residue);
+                if (status == ZX_OK && residue) {
+                    zxlogf(ERROR, "unexpected residue in Write\n");
+                    status = ZX_ERR_IO;
+                }
+            } else {
+                status = ZX_OK;
+            }
             break;
         default:
             status = ZX_ERR_INVALID_ARGS;

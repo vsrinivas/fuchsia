@@ -53,6 +53,8 @@ typedef struct {
     thrd_t worker_thread;
     bool dead;
 
+    bool cache_enabled;
+
     // list of queued transactions
     list_node_t queued_txns;
 
