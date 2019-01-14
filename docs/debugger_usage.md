@@ -7,7 +7,9 @@ This is the command usage guide for zxdb. Please see also:
 
 ## Quick start
 
-### debug process
+### Debug a regular process
+
+Console apps like unit tests can be launched directly from within the debugger:
 
 ```
 connect 192.168.3.1:2345
@@ -19,17 +21,26 @@ continue
 quit
 ```
 
-### debug component
+### Debug a component
+
+Components can't be launched from within the debugger, but you can watch for
+their creation. See [Debugging a component](#debugging-a-component) below for
+more details.
 
 ```
-connect 192.168.3.1:2345
-set filters echo2
-run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
-break main
-continue
-print argv[1]
-continue
-quit
+[zxdb] connect 192.168.3.1:2345
+[zxdb] set filters echo2
+```
+
+Launch the component as under normal usage (not from within the debugger). The
+debugger should break when the component's process starts and you can do:
+
+```
+[zxdb] break main
+[zxdb] continue
+[zxdb] print argv[1]
+[zxdb] continue
+[zxdb] quit
 ```
 
 There is an extensive built-in help system. Type `help` and the command prompt
@@ -217,29 +228,44 @@ Components are launched by appmgr, so they're always launched in a job that's a
 child of appmgr's job. When zxdb is connected, it attaches itself to appmgr's
 job. To debug a new component you need to add filters to attached jobs.
 
-To add filter
+To add filter (this attaches to any component with a name containing "echo2",
+substitute your component name):
+
 ```
-[zxdb] set filter echo2 # attaches to any component starting with echo2.
-```
-Now run the component
-```
-[zxdb] run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+[zxdb] set filters echo2
 ```
 
-Now you can see it in attached process list
+Now run the component from the appropriate environment. For example, to launch
+from the command line (not from within zxdb):
+
+```
+$ run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
+```
+
+It should stop in the debugger upon startup and you should see it in the
+process list:
+
 ```
 [zxdb] process
 # State       Koid Name
 ▶ 1 Running 3471 echo2_client_cpp.cmx
-
-
 ```
 
-Now you can attach breakpoints and start debugging your component. Look at
-[Working with breakpoints](#working-with-breakpoints) for breakpoints and
-[Directly running a new process](#directly-running-a-new-process) for debugging
-attached processes below.
+At this point the process is still very early in its initialization and
+symbols won't be loaded yet. But you can add pending
+[breakpoints](#working-with-breakpoints) that will be resolved automatically as
+things are loaded:
 
+```
+[zxdb] break main
+Breakpoint 1 (Software) on Global, Enabled, stop=All, @ main
+Pending: No matches for location, it will be pending library loads.
+
+[zxdb] continue
+
+Thread 1 stopped on breakpoint 1 at main(…) • echo2_client.cc:15
+ ▶ 15 int main(int argc, const char** argv) {
+```
 
 ### Directly running a new process
 
