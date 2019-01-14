@@ -59,11 +59,6 @@ void netboot_run_cmd(const char* cmd) {
     run_program("net:sh", argv, ZX_HANDLE_INVALID);
 }
 
-static void run_server(const char* progname, const char* bin, zx_handle_t h) {
-    const char* argv[] = { bin, NULL };
-    run_program(progname, argv, h);
-}
-
 const char* nodename = "zircon";
 
 void udp6_recv(void* data, size_t len,
