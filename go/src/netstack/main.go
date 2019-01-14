@@ -54,12 +54,6 @@ func main() {
 		log.Fatalf("method SetTransportProtocolOption(%v, tcp.SACKEnabled(true)) failed: %v", tcp.ProtocolNumber, err)
 	}
 
-	s, err := newSocketServer(stk, ctx)
-	if err != nil {
-		log.Fatal(err)
-	}
-	log.Print("socket server started")
-
 	arena, err := eth.NewArena()
 	if err != nil {
 		log.Fatalf("ethernet: %s", err)
@@ -74,7 +68,6 @@ func main() {
 
 	ns := &Netstack{
 		arena:          arena,
-		socketServer:   s,
 		dnsClient:      dns.NewClient(stk),
 		deviceSettings: ds,
 		ifStates:       make(map[tcpip.NICID]*ifState),
@@ -84,8 +77,6 @@ func main() {
 	if err := ns.addLoopback(); err != nil {
 		log.Fatalf("loopback: %s", err)
 	}
-
-	s.setNetstack(ns)
 
 	// TODO(NET-1263): register resolver admin service once clients don't crash netstack
 	// var dnsService netstack.ResolverAdminService

@@ -47,8 +47,7 @@ const (
 
 // A Netstack tracks all of the running state of the network stack.
 type Netstack struct {
-	arena        *eth.Arena
-	socketServer *socketServer
+	arena *eth.Arena
 
 	deviceSettings *devicesettings.DeviceSettingsManagerInterface
 	dnsClient      *dns.Client

@@ -19,6 +19,7 @@ import (
 	"github.com/google/netstack/tcpip/transport/ping"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
+	"github.com/google/netstack/waiter"
 )
 
 // #cgo CFLAGS: -I${SRCDIR}/../../../../zircon/system/ulib/zxs/include
@@ -67,11 +68,27 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
 	}
 
-	s, err := sp.ns.socketServer.opSocket(netProto, transProto)
-	if err != nil {
-		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
+	{
+		wq := new(waiter.Queue)
+		ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
+		if err != nil {
+			if debug {
+				log.Printf("socket: new endpoint: %v", err)
+			}
+			return zx.Socket(zx.HandleInvalid), int32(zx.ErrInternal), nil
+		}
+		{
+			_, peerS, err := newIostate(sp.ns, netProto, transProto, wq, ep, false)
+			if err != nil {
+				if debug {
+					log.Printf("socket: new iostate: %v", err)
+				}
+				return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
+			}
+
+			return peerS, 0, nil
+		}
 	}
-	return s, 0, nil
 }
 
 func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, uint32, [4]net.AddrInfo, error) {
