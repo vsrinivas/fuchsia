@@ -792,7 +792,7 @@ extern {
 
     pub fn zx_guest_set_trap(
         guest: zx_handle_t,
-        kind: u32,
+        kind: zx_guest_trap_t,
         addr: zx_vaddr_t,
         len: usize,
         port: zx_handle_t,
@@ -808,7 +808,7 @@ extern {
 
     pub fn zx_vcpu_resume(
         vcpu: zx_handle_t,
-        packet: *mut zx_guest_packet_t
+        packet: *mut zx_port_packet_t
         ) -> zx_status_t;
 
     pub fn zx_vcpu_interrupt(

@@ -5,8 +5,6 @@
 #![allow(non_camel_case_types)]
 #![deny(warnings)]
 
-use std::{cmp, fmt};
-
 pub type zx_addr_t = usize;
 pub type zx_duration_t = i64;
 pub type zx_futex_t = i32;
@@ -20,11 +18,13 @@ pub type zx_ssize_t = isize;
 pub type zx_status_t = i32;
 pub type zx_time_t = i64;
 pub type zx_vaddr_t = usize;
+pub type zx_gpaddr_t = usize;
 pub type zx_vm_option_t = u32;
 pub type zx_obj_type_t = i32;
 pub type zx_obj_props_t = u32;
 pub type zx_koid_t = u64;
 pub type zx_object_info_topic_t = u32;
+pub type zx_guest_trap_t = u32;
 
 // TODO: combine these macros with the bitflags and assoc consts macros below
 // so that we only have to do one macro invocation.
@@ -431,6 +431,11 @@ pub enum zx_packet_type_t {
     ZX_PKT_TYPE_USER = 0,
     ZX_PKT_TYPE_SIGNAL_ONE = 1,
     ZX_PKT_TYPE_SIGNAL_REP = 2,
+    ZX_PKT_TYPE_GUEST_BELL = 3,
+    ZX_PKT_TYPE_GUEST_MEM = 4,
+    ZX_PKT_TYPE_GUEST_IO = 5,
+    #[doc(hidden)]
+    __Nonexhaustive,
 }
 
 impl Default for zx_packet_type_t {
@@ -464,20 +469,29 @@ pub struct zx_port_packet_t {
 
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct zx_guest_io_t {
-    port: u16,
-    access_size: u8,
-    input: bool,
-    // TODO: Actually a union
-    data: [u8; 4],
+pub struct zx_packet_guest_bell_t {
+    pub addr: zx_gpaddr_t,
+}
+
+#[repr(C)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq)]
+pub struct zx_packet_guest_io_t {
+    pub port: u16,
+    pub access_size: u8,
+    pub input: bool,
+    pub data: [u8; 4],
 }
 
 #[cfg(target_arch = "aarch64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct zx_guest_memory_t {
-    addr: zx_vaddr_t,
-    inst: u32,
+pub struct zx_packet_guest_mem_t {
+    pub addr: zx_gpaddr_t,
+    pub access_size: u8,
+    pub sign_extend: bool,
+    pub xt: u8,
+    pub read: bool,
+    pub data: u64,
 }
 
 pub const X86_MAX_INST_LEN: usize = 15;
@@ -485,74 +499,12 @@ pub const X86_MAX_INST_LEN: usize = 15;
 #[cfg(target_arch = "x86_64")]
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub struct zx_guest_memory_t {
-    addr: zx_vaddr_t,
-    inst_len: u8,
-    inst_buf: [u8; X86_MAX_INST_LEN],
+pub struct zx_packet_guest_mem_t {
+    pub addr: zx_gpaddr_t,
+    pub inst_len: u8,
+    pub inst_buf: [u8; X86_MAX_INST_LEN],
+    pub default_operand_size: u8,
 }
-
-#[repr(u8)]
-#[derive(Debug, Copy, Clone, Eq, PartialEq)]
-pub enum zx_guest_packet_t_type {
-    ZX_GUEST_PKT_MEMORY = 1,
-    ZX_GUEST_PKT_IO = 2,
-}
-
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub union zx_guest_packet_t_union {
-    // ZX_GUEST_PKT_MEMORY
-    memory: zx_guest_memory_t,
-    // ZX_GUEST_PKT_IO
-    io: zx_guest_io_t,
-}
-
-// Note: values of this type must maintain the invariant that
-// `packet_type` correctly indicates the type of `contents`.
-// Failure to do so will result in unsafety.
-#[repr(C)]
-#[derive(Copy, Clone)]
-pub struct zx_guest_packet_t {
-    packet_type: zx_guest_packet_t_type,
-    contents: zx_guest_packet_t_union,
-}
-
-impl fmt::Debug for zx_guest_packet_t {
-    fn fmt(&self, f: &mut fmt::Formatter) -> Result<(), fmt::Error> {
-        write!(
-            f,
-            "zx_guest_packet_t {{ packet_type: {:?}, contents: ",
-            self.packet_type
-        )?;
-        match self.packet_type {
-            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY => {
-                write!(f, "zx_guest_packet_t_union {{ memory: {:?} }} }}", unsafe {
-                    self.contents.memory
-                })
-            }
-            zx_guest_packet_t_type::ZX_GUEST_PKT_IO => {
-                write!(f, "zx_guest_packet_t_union {{ io: {:?} }} }}", unsafe {
-                    self.contents.io
-                })
-            }
-        }
-    }
-}
-
-impl cmp::PartialEq for zx_guest_packet_t {
-    fn eq(&self, other: &Self) -> bool {
-        (self.packet_type == other.packet_type) && match self.packet_type {
-            zx_guest_packet_t_type::ZX_GUEST_PKT_MEMORY => unsafe {
-                self.contents.memory == other.contents.memory
-            },
-            zx_guest_packet_t_type::ZX_GUEST_PKT_IO => unsafe {
-                self.contents.io == other.contents.io
-            },
-        }
-    }
-}
-
-impl cmp::Eq for zx_guest_packet_t {}
 
 multiconst!(zx_object_info_topic_t, [
     ZX_INFO_NONE                       = 0;
@@ -598,6 +550,12 @@ pub struct zx_info_socket_t {
     pub tx_buf_max: usize,
     pub tx_buf_size: usize,
 }
+
+multiconst!(zx_guest_trap_t, [
+    ZX_GUEST_TRAP_BELL = 0;
+    ZX_GUEST_TRAP_MEM  = 1;
+    ZX_GUEST_TRAP_IO   = 2;
+]);
 
 #[cfg(target_arch = "x86_64")]
 #[repr(C)]
