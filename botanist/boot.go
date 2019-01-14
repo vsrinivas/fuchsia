@@ -7,6 +7,7 @@ package botanist
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -37,94 +38,120 @@ const (
 	zirconANetsvcName        = "<<image>>zircona.img"
 	zirconBNetsvcName        = "<<image>>zirconb.img"
 	zirconRNetsvcName        = "<<image>>zirconr.img"
+	vbmetaANetsvcName        = "<<image>>vbmetaa.img"
+	vbmetaBNetsvcName        = "<<image>>vbmetab.img"
 	authorizedKeysNetsvcName = "<<image>>authorized_keys"
 )
 
-// Gives the names and indices to use when sending images to netsvc.
-var netsvcInfo = map[string]struct {
-	index int
-	name  string
-}{
-	// The indices correspond to the transfer ordering given in
-	// https://fuchsia.googlesource.com/zircon/+/master/system/host/bootserver/bootserver.c
-	"storage-sparse":  {index: 1, name: fvmNetsvcName},
-	"efi":             {index: 2, name: efiNetsvcName},
-	"zircon-vboot":    {index: 3, name: kerncNetsvcName},
-	"zircon-a":        {index: 4, name: zirconANetsvcName},
-	"zircon-a.signed": {index: 4, name: zirconANetsvcName},
-	"zircon-b":        {index: 5, name: zirconBNetsvcName},
-	"zircon-b.signed": {index: 5, name: zirconBNetsvcName},
-	"zircon-r":        {index: 6, name: zirconRNetsvcName},
-	"zircon-r.signed": {index: 6, name: zirconRNetsvcName},
+// Maps bootserver argument to a corresponding netsvc name.
+var bootserverArgToName = map[string]string{
+	"--fvm":     fvmNetsvcName,
+	"--efi":     efiNetsvcName,
+	"--kernc":   kerncNetsvcName,
+	"--zircona": zirconANetsvcName,
+	"--zirconb": zirconBNetsvcName,
+	"--zirconr": zirconRNetsvcName,
+	"--vbmetaa": vbmetaANetsvcName,
+	"--vbmetab": vbmetaBNetsvcName,
+	"--boot":    kernelNetsvcName,
 }
 
-// Returns whether the list of strings containst "--boot". If an image has such a switch
-// in its bootserver args, it should be treated as a kernel image.
-func containsBootSwitch(strs []string) bool {
-	for _, s := range strs {
-		if s == "--boot" {
-			return true
-		}
-	}
-	return false
+// Maps netsvc name to the index at which the corresponding file should be transferred if
+// present. The indices correspond to the ordering given in
+// https://fuchsia.googlesource.com/zircon/+/master/system/host/bootserver/bootserver.c
+var transferOrder = map[string]int{
+	cmdlineNetsvcName:        1,
+	fvmNetsvcName:            2,
+	efiNetsvcName:            3,
+	kerncNetsvcName:          4,
+	zirconANetsvcName:        5,
+	zirconBNetsvcName:        6,
+	zirconRNetsvcName:        7,
+	vbmetaANetsvcName:        8,
+	vbmetaBNetsvcName:        9,
+	authorizedKeysNetsvcName: 10,
+	kernelNetsvcName:         11,
 }
 
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
 func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, authorizedKey []byte) error {
-	var ramKernel *Image
-	var paveImgs []Image
-	if bootMode == ModePave {
-		// Key on whether bootserver paving args are present to determine if the image is used
-		// to pave.
-		for i, _ := range imgs {
-			if len(imgs[i].PaveArgs) > 0 {
-				if containsBootSwitch(imgs[i].PaveArgs) {
-					ramKernel = &imgs[i]
-				}
-				paveImgs = append(paveImgs, imgs[i])
-			}
-		}
-		// Sort by transfer index, moving unrecognized images to the front.
-		sort.Slice(paveImgs, func(i, j int) bool {
-			ithInfo, ok := netsvcInfo[paveImgs[i].Name]
-			if !ok {
-				return true
-			}
-			jthInfo, ok := netsvcInfo[paveImgs[j].Name]
-			if !ok {
-				return false
-			}
-			return ithInfo.index < jthInfo.index
-		})
-	} else if bootMode == ModeNetboot {
-		ramKernel = GetImage(imgs, "netboot")
-	} else {
+	var bootArgs func(Image) []string
+	switch bootMode {
+	case ModePave:
+		bootArgs = func(img Image) []string { return img.PaveArgs }
+	case ModeNetboot:
+		bootArgs = func(img Image) []string { return img.NetbootArgs }
+	default:
 		return fmt.Errorf("invalid boot mode: %d", bootMode)
 	}
 
-	if err := transfer(ctx, addr, paveImgs, ramKernel, cmdlineArgs, authorizedKey); err != nil {
+	var files []*netsvcFile
+	if len(cmdlineArgs) > 0 {
+		var buf bytes.Buffer
+		for _, arg := range cmdlineArgs {
+			fmt.Fprintf(&buf, "%s\n", arg)
+		}
+		cmdlineFile, err := newNetsvcFile(cmdlineNetsvcName, buf.Bytes())
+		if err != nil {
+			return err
+		}
+		files = append(files, cmdlineFile)
+	}
+
+	for _, img := range imgs {
+		for _, arg := range bootArgs(img) {
+			name, ok := bootserverArgToName[arg]
+			if !ok {
+				return fmt.Errorf("unrecognized bootserver argument found: %s", arg)
+			}
+			imgFile, err := openNetsvcFile(name, img.Path)
+			if err != nil {
+				return err
+			}
+			defer imgFile.close()
+			files = append(files, imgFile)
+		}
+	}
+
+	if len(authorizedKey) > 0 {
+		sshFile, err := newNetsvcFile(authorizedKeysNetsvcName, authorizedKey)
+		if err != nil {
+			return err
+		}
+		files = append(files, sshFile)
+	}
+
+	sort.Slice(files, func(i, j int) bool {
+		return files[i].index < files[j].index
+	})
+
+	if len(files) == 0 {
+		return errors.New("no files to transfer")
+	}
+	if err := transfer(ctx, addr, files); err != nil {
 		return err
 	}
 
 	// If we do not load a kernel into RAM, then we reboot back into the first kernel
 	// partition; else we boot directly from RAM.
-	// TODO(ZX-2069): Eventually, no ramKernel should be present.
+	// TODO(ZX-2069): Eventually, no such kernel should be present.
+	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
 	n := netboot.NewClient(time.Second)
-	if ramKernel == nil {
+	if hasRAMKernel {
 		return n.Reboot(addr)
 	} else {
 		return n.Boot(addr)
 	}
 }
 
-// A struct represenitng a file to send per the netboot protocol.
+// A file to send to netsvc.
 type netsvcFile struct {
+	name   string
 	reader io.Reader
 	size   int64
-	path   string
-	name   string
+	index  int
 }
 
 func (f netsvcFile) close() error {
@@ -135,7 +162,11 @@ func (f netsvcFile) close() error {
 	return nil
 }
 
-func openNetsvcFile(path, name string) (*netsvcFile, error) {
+func openNetsvcFile(name, path string) (*netsvcFile, error) {
+	idx, ok := transferOrder[name]
+	if !ok {
+		return nil, fmt.Errorf("unrecognized name: %s", name)
+	}
 	fd, err := os.Open(path)
 	if err != nil {
 		fd.Close()
@@ -146,60 +177,24 @@ func openNetsvcFile(path, name string) (*netsvcFile, error) {
 		fd.Close()
 		return nil, err
 	}
-	return &netsvcFile{reader: fd, size: fi.Size(), name: name}, nil
+	return &netsvcFile{name: name, reader: fd, size: fi.Size(), index: idx}, nil
 }
 
-// Transfers images with the appropriate netboot prefixes over TFTP to a node at a given
-// address.
-func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *Image, cmdlineArgs []string, authorizedKey []byte) error {
-	// Prepare all files to be tranferred, minding the order, which follows that of the
-	// bootserver host tool.
-	netsvcFiles := []*netsvcFile{}
-
-	if len(cmdlineArgs) > 0 {
-		var buf bytes.Buffer
-		for _, arg := range cmdlineArgs {
-			fmt.Fprintf(&buf, "%s\n", arg)
-		}
-		cmdlineNetsvcFile := &netsvcFile{
-			reader: bytes.NewReader(buf.Bytes()),
-			size:   int64(buf.Len()),
-			name:   cmdlineNetsvcName,
-		}
-		netsvcFiles = append(netsvcFiles, cmdlineNetsvcFile)
+func newNetsvcFile(name string, buf []byte) (*netsvcFile, error) {
+	idx, ok := transferOrder[name]
+	if !ok {
+		return nil, fmt.Errorf("unrecognized name: %s", name)
 	}
+	return &netsvcFile{
+		reader: bytes.NewReader(buf),
+		size:   int64(len(buf)),
+		name:   name,
+		index:  idx,
+	}, nil
+}
 
-	for _, img := range imgs {
-		info, ok := netsvcInfo[img.Name]
-		if !ok {
-			return fmt.Errorf("Could not find associated netsvc name for %s", img.Name)
-		}
-		imgNetsvcFile, err := openNetsvcFile(img.Path, info.name)
-		if err != nil {
-			return err
-		}
-		defer imgNetsvcFile.close()
-		netsvcFiles = append(netsvcFiles, imgNetsvcFile)
-	}
-
-	if len(authorizedKey) > 0 {
-		sshNetsvcFile := &netsvcFile{
-			reader: bytes.NewReader(authorizedKey),
-			size:   int64(len(authorizedKey)),
-			name:   authorizedKeysNetsvcName,
-		}
-		netsvcFiles = append(netsvcFiles, sshNetsvcFile)
-	}
-
-	if ramKernel != nil {
-		kernelNetsvcFile, err := openNetsvcFile(ramKernel.Path, kernelNetsvcName)
-		if err != nil {
-			return err
-		}
-		defer kernelNetsvcFile.close()
-		netsvcFiles = append(netsvcFiles, kernelNetsvcFile)
-	}
-
+// Transfers files over TFTP to a node at a given address.
+func transfer(ctx context.Context, addr *net.UDPAddr, files []*netsvcFile) error {
 	t := tftp.NewClient()
 	tftpAddr := &net.UDPAddr{
 		IP:   addr.IP,
@@ -210,7 +205,7 @@ func transfer(ctx context.Context, addr *net.UDPAddr, imgs []Image, ramKernel *I
 	// Attempt the whole process of sending every file over and retry on failure of any file.
 	// This behavior more closely aligns with that of the bootserver.
 	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
-		for _, f := range netsvcFiles {
+		for _, f := range files {
 			select {
 			case <-ctx.Done():
 				return nil
