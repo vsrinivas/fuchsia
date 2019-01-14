@@ -7,7 +7,6 @@ package main
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -57,16 +56,12 @@ var (
 type TestRecorder func(runtests.TestDetails)
 
 func usage() {
-	fmt.Println(`
-		testrunner [flags] tests-file
+	fmt.Println(`testrunner [flags] tests-file
 
 		Executes all tests found in the JSON [tests-file]
-		Required environment variables:
-
-		"NODENAME":  The nodename of the attached Fuchsia device to use for testing. This
-		           can usually be found using the 'netls' tool.
-		"SSH_KEY":   Path to the SSH private key used to connect to the Fuchsia device.
-	`)
+		Requires botanist.DeviceContext to have been registered and in the current
+		environment; for more details see
+		https://fuchsia.googlesource.com/tools/+/master/botanist/context.go.`)
 }
 
 func init() {
@@ -122,21 +117,15 @@ func main() {
 }
 
 func execute(tests []testsharder.Test, recorder TestRecorder) error {
-	// Validate inputs.
-	nodename := os.Getenv("NODENAME")
-	if nodename == "" {
-		return errors.New("missing environment variable NODENAME")
-	}
-
-	privateKeyPath := os.Getenv("SSH_KEY")
-	if privateKeyPath == "" {
-		return errors.New("missing environment variable SSH_KEY")
+	devCtx, err := botanist.GetDeviceContext()
+	if err != nil {
+		return err
 	}
 
 	// Initialize the connection to the Fuchsia device.
-	sshClient, err := sshIntoNode(nodename, privateKeyPath)
+	sshClient, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
 	if err != nil {
-		return fmt.Errorf("failed to connect to node %q: %v", nodename, err)
+		return fmt.Errorf("failed to connect to node %q: %v", devCtx.Nodename, err)
 	}
 
 	fuchsiaTester := &FuchsiaTester{
