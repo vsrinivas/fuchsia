@@ -67,19 +67,6 @@
       ]
     },
     {
-      "name": "link_data",
-      "exec": [
-        "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
-        "--test",
-        "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
-        "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",
-        "--session_shell=fuchsia-pkg://fuchsia.com/link_data_test_session_shell#meta/link_data_test_session_shell.cmx",
-        "--session_shell_args=--use_memfs_for_ledger",
-        "--story_shell=fuchsia-pkg://fuchsia.com/dev_story_shell#meta/dev_story_shell.cmx",
-        "--sessionmgr_args=--use_memfs_for_ledger"
-      ]
-    },
-    {
       "name": "parent_child",
       "exec": [
         "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",

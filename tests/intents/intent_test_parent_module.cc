@@ -114,62 +114,8 @@ class TestModule {
         kIntentParameterNameAlternate, json, child_module_second_.NewRequest());
     Await(kChildModuleHandledIntent + json, [this] {
       third_intent_was_handled_.Pass();
-      TestStartIntentWithLinkNameAndPath();
+      Signal(modular::testing::kTestShutdown);
     });
-  }
-
-  // Tests that a link_name parameter and a link_path parameter both get
-  // modified by the framework to point to the appropriate link name when given
-  // to the intent handler.
-  TestPoint fourth_intent_was_handled_{"Fourth intent was handled"};
-  void TestStartIntentWithLinkNameAndPath() {
-    fuchsia::modular::Intent intent;
-    intent.handler = kChildModuleUrl;
-    intent.action = kChildModuleAction;
-    // The framework populates the intent handler's link namespace and provides
-    // each parameter in a link with the parameter name.
-    std::string first_parameter_name = "first_param";
-    std::string second_parameter_name = "second_param";
-
-    fuchsia::modular::IntentParameter intent_parameter;
-    intent_parameter.name = first_parameter_name;
-    intent_parameter.data = fuchsia::modular::IntentParameterData();
-    // The link name here should not be seen by the intent handler, but rather
-    // the handler will be given the link name in its own namespace, in this
-    // case first_parameter_name.
-    intent_parameter.data.set_link_name("does_not_matter");
-
-    fuchsia::modular::IntentParameter intent_parameter2;
-    intent_parameter2.name = second_parameter_name;
-    intent_parameter2.data = fuchsia::modular::IntentParameterData();
-    fuchsia::modular::LinkPath path;
-    // The link_path here should not be seen by the intent handler, but rather
-    // the handler will be given the link name in its own namespace, in this
-    // case first_parameter_name.
-    path.link_name = "does_not_matter_either";
-    std::vector<std::string> module_path;
-    module_path.push_back("nor_does_this_matter");
-    path.module_path = std::move(module_path);
-    intent_parameter2.data.set_link_path(std::move(path));
-
-    intent.parameters.push_back(std::move(intent_parameter));
-    intent.parameters.push_back(std::move(intent_parameter2));
-
-    module_host_->module_context()->AddModuleToStory(
-        kChildModuleName, std::move(intent), child_module_second_.NewRequest(),
-        nullptr, [](const fuchsia::modular::StartModuleStatus) {});
-
-    // Verify that the link_name parameter was delivered as a link named the
-    // same as the parameter.
-    Await(kChildModuleHandledIntent + first_parameter_name,
-          [this, second_parameter_name] {
-            // Verify that the link_path parameter was delivered as a link named
-            // the same as the parameter.
-            Await(kChildModuleHandledIntent + second_parameter_name, [this] {
-              fourth_intent_was_handled_.Pass();
-              Signal(modular::testing::kTestShutdown);
-            });
-          });
   }
 
   // Called by ModuleDriver.
