@@ -45,8 +45,6 @@ void XdrIntentParameterData(XdrContext* const xdr,
   static constexpr char kEntityReference[] = "entity_reference";
   static constexpr char kJson[] = "json";
   static constexpr char kEntityType[] = "entity_type";
-  static constexpr char kLinkName[] = "link_name";
-  static constexpr char kLinkPath[] = "link_path";
 
   switch (xdr->op()) {
     case XdrOp::FROM_JSON: {
@@ -67,14 +65,6 @@ void XdrIntentParameterData(XdrContext* const xdr,
         ::std::vector<::std::string> value;
         xdr->Field(kEntityType, &value);
         data->set_entity_type(std::move(value));
-      } else if (tag == kLinkName) {
-        fidl::StringPtr value;
-        xdr->Field(kLinkName, &value);
-        data->set_link_name(std::move(value));
-      } else if (tag == kLinkPath) {
-        fuchsia::modular::LinkPath value;
-        xdr->Field(kLinkPath, &value, XdrLinkPath);
-        data->set_link_path(std::move(value));
       } else {
         FXL_LOG(ERROR) << "XdrIntentParameterData FROM_JSON unknown tag: "
                        << tag;
@@ -104,17 +94,6 @@ void XdrIntentParameterData(XdrContext* const xdr,
           tag = kEntityType;
           std::vector<std::string> value = data->entity_type();
           xdr->Field(kEntityType, &value);
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kLinkName: {
-          tag = kLinkName;
-          fidl::StringPtr value = data->link_name();
-          xdr->Field(kLinkName, &value);
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kLinkPath: {
-          tag = kLinkPath;
-          xdr->Field(kLinkPath, &data->link_path(), XdrLinkPath);
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::Invalid:

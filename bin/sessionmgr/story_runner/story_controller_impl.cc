@@ -257,18 +257,6 @@ class StoryControllerImpl::LaunchModuleCall : public Operation<> {
     fuchsia::modular::Intent intent;
     module_data_.intent->Clone(&intent);
 
-    for (auto& parameter : *intent.parameters) {
-      // When an Intent is created the creator specifies a link either by
-      // absolute path, or by name in the creator's namespace.
-      //
-      // The link_path and link_name both get converted to the handler's
-      // namespace before the intent is sent to the handler. The link name in
-      // the handler's namespace is always the same as the parameter name.
-      if (parameter.data.is_link_path() || parameter.data.is_link_name()) {
-        parameter.data.set_link_name(parameter.name);
-      }
-    }
-
     intent_handler->HandleIntent(std::move(intent));
   }
 

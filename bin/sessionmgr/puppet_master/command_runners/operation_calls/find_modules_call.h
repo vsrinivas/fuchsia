@@ -7,12 +7,11 @@
 
 #include <fuchsia/modular/cpp/fidl.h>
 #include <lib/async/cpp/operation.h>
-#include "peridot/bin/sessionmgr/storage/story_storage.h"
 
 namespace modular {
 
 void AddFindModulesOperation(
-    OperationContainer* operation_container, StoryStorage* story_storage,
+    OperationContainer* operation_container,
     fuchsia::modular::ModuleResolver* module_resolver,
     fuchsia::modular::EntityResolver* entity_resolver,
     fuchsia::modular::IntentPtr intent,

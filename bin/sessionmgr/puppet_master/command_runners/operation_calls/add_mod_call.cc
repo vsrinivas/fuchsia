@@ -57,7 +57,7 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
     // forgivingly execute the handler anyway.
     if (!intent_.action.is_null()) {
       AddFindModulesOperation(
-          &operation_queue_, story_storage_, module_resolver_, entity_resolver_,
+          &operation_queue_, module_resolver_, entity_resolver_,
           CloneOptional(intent_), surface_parent_mod_name_,
           [this, flow](fuchsia::modular::ExecuteResult result,
                        fuchsia::modular::FindModulesResponse response) {
@@ -168,45 +168,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
           fuchsia::modular::CreateLinkInfo create_link;
           param.data.json().Clone(&create_link.initial_data);
           entry.value.set_create_link(std::move(create_link));
-          break;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kLinkName: {
-          auto did_get_lp = Future<fuchsia::modular::LinkPathPtr>::Create(
-              "AddModCommandRunner::AddModCall::did_get_link");
-          // TODO(miguelfrde): get rid of using surface_parent_mod_name this
-          // way. Maybe INVALID status should be returned here since using
-          // this parameter in a StoryCommand doesn't make much sense.
-          AddGetLinkPathForParameterNameOperation(
-              &operations_, story_storage_, surface_parent_mod_name_,
-              param.data.link_name(), did_get_lp->Completer());
-
-          did_get_entries.emplace_back(
-              did_get_lp->Map([this, param_name = param.name,
-                               done](fuchsia::modular::LinkPathPtr link_path) {
-                if (!GetWeakPtr()) {
-                  return fuchsia::modular::CreateModuleParameterMapEntry{};
-                }
-                if (!link_path) {
-                  // OH NO! bail on this entire function's flow.
-                  out_result_.status =
-                      fuchsia::modular::ExecuteStatus::INTERNAL_ERROR;
-                  out_result_.error_message = fxl::StringPrintf(
-                      "Link path does not exist for parameter name = %s",
-                      param_name.get().c_str());
-                  done();
-                  return fuchsia::modular::CreateModuleParameterMapEntry{};
-                }
-                fuchsia::modular::CreateModuleParameterMapEntry entry;
-                entry.key = param_name;
-                entry.value.set_link_path(std::move(*link_path));
-                return entry;
-              }));
-          continue;
-        }
-        case fuchsia::modular::IntentParameterData::Tag::kLinkPath: {
-          fuchsia::modular::LinkPath lp;
-          param.data.link_path().Clone(&lp);
-          entry.value.set_link_path(std::move(lp));
           break;
         }
         case fuchsia::modular::IntentParameterData::Tag::Invalid: {
