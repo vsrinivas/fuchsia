@@ -132,10 +132,10 @@
 + [system_get_physmem](syscalls/system_get_physmem.md) - get physical memory size
 + [system_get_version](syscalls/system_get_version.md) - get version string
 
-## Logging
-+ [debuglog_create](syscalls/debuglog_create.md) - create a kernel managed log reader or writer
-+ [log_write](syscalls/log_write.md) - write log entry to log
-+ [log_read](syscalls/log_read.md) - read log entries from log
+## Debug Logging
++ [debuglog_create](syscalls/debuglog_create.md) - create a kernel managed debuglog reader or writer
++ [debuglog_write](syscalls/debuglog_write.md) - write log entry to debuglog
++ [debuglog_read](syscalls/debuglog_read.md) - read log entries from debuglog
 
 ## Multi-function
 + [vmar_unmap_handle_close_thread_exit](syscalls/vmar_unmap_handle_close_thread_exit.md) - three-in-one

@@ -45,7 +45,7 @@ Zircon actively manages the following resources:
 
 + [Interrupts](objects/interrupts.md)
 + [Resource](objects/resource.md)
-+ [Log](objects/log.md)
++ [Debuglog](objects/debuglog.md)
 
 ## Kernel Object and LK
 Some kernel objects wrap one or more LK-level constructs. For example the
