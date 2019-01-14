@@ -334,8 +334,8 @@ func (fs *blobfsFilesystem) Mount(path string) error {
 	dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
 	panicerr(err)
 	status, err := dir.Mount(remote)
-	if status != zx.ErrOk {
-		panic(fmt.Sprintf("Mount error: %s", status))
+	if zx.Status(status) != zx.ErrOk {
+		panic(fmt.Sprintf("Mount error: %s", zx.Status(status)))
 	}
 	panicerr(err)
 	fs.Serve(rpcChan)

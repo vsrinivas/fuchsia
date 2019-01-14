@@ -239,7 +239,7 @@ func (f *Filesystem) Mount(path string) error {
 	remote := zxio.DirectoryInterface(fidl.InterfaceRequest{Channel: mountChan})
 	dirChan := zx.Channel(syscall.FDIOForFD(f.mountInfo.parentFd).Handles()[0])
 	dir := zxio.DirectoryAdminInterface(fidl.InterfaceRequest{Channel: dirChan})
-	if status, err := dir.Mount(remote); err != nil || status != zx.ErrOk {
+	if status, err := dir.Mount(remote); err != nil || zx.Status(status) != zx.ErrOk {
 		rpcChan.Close()
 		syscall.Close(f.mountInfo.parentFd)
 		f.mountInfo.parentFd = -1
