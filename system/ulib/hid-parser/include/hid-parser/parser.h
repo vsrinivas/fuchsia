@@ -2,7 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#pragma once
+#ifndef HID_PARSER_PARSER_H_
+#define HID_PARSER_PARSER_H_
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -156,33 +157,33 @@ enum NodeType : uint32_t {
 
 enum FieldTypeFlags : uint32_t {
     // Indicates if field can be modfied. Constant often means is padding.
-    kData               = 1 << 0,
-    kConstant           = 1 << 1,
+    kData = 1 << 0,
+    kConstant = 1 << 1,
     // The field is either an array or scalar. If it is an array only
     // the kData|kConstant and kAbsolute|kRelative flags are valid.
-    kArray              = 1 << 2,
-    kScalar             = 1 << 3,
+    kArray = 1 << 2,
+    kScalar = 1 << 3,
     // Value is absolute wrt to a fixed origin or not.
-    kAbsolute           = 1 << 4,
-    kRelative           = 1 << 5,
+    kAbsolute = 1 << 4,
+    kRelative = 1 << 5,
     // Whether the data rolls over wrt to the logical min/max.
-    kNoWrap             = 1 << 6,
-    kWrap               = 1 << 7,
+    kNoWrap = 1 << 6,
+    kWrap = 1 << 7,
     // Data has been pre-processed, for example dead-zone.
-    kLinear             = 1 << 8,
-    kNonLinear          = 1 << 9,
+    kLinear = 1 << 8,
+    kNonLinear = 1 << 9,
     // Value returns to a preset value when the user is not interacting with control.
-    kPreferredState     = 1 << 10,
-    kNoPreferred        = 1 << 11,
+    kPreferredState = 1 << 10,
+    kNoPreferred = 1 << 11,
     // If the control can enter a state when it does not report data.
-    kNoNullPosition     = 1 << 12,
-    kNullState          = 1 << 13,
+    kNoNullPosition = 1 << 12,
+    kNullState = 1 << 13,
     // Output-only: can the value be modified without host interaction.
-    kNonVolatile        = 1 << 14,
-    kVolatile           = 1 << 15,
+    kNonVolatile = 1 << 14,
+    kVolatile = 1 << 15,
     // Data is a fixed size stream.
-    kBitField           = 1 << 16,
-    kBufferedBytes      = 1 << 17,
+    kBitField = 1 << 16,
+    kBufferedBytes = 1 << 17,
 };
 
 // TODO(cpu): consider repurposing the kData| kArray | kNonLinear to indicate
@@ -192,7 +193,7 @@ enum FieldTypeFlags : uint32_t {
 struct Collection {
     CollectionType type;
     Usage usage;
-    Collection* parent;            // Enclosing collection or null.
+    Collection* parent; // Enclosing collection or null.
 };
 
 struct Attributes {
@@ -238,31 +239,30 @@ struct ReportDescriptor {
     ReportField* first_field;
 };
 
-
 struct DeviceDescriptor {
     size_t rep_count;
     ReportDescriptor report[];
 };
 
 enum ParseResult : uint32_t {
-    kParseOk                 = 0,
-    kParseNoMemory           = 1,
-    kParseMoreNeeded         = 2,
-    kParseUnsuported         = 3,
-    kParseInvalidTag         = 4,
-    kParseInvalidItemType    = 5,
-    kParseInvalidItemValue   = 6,
-    kParseUsageLimit         = 7,
-    kParseInvalidRange       = 8,
-    kParseOverflow           = 9,
-    kParseLeftovers          = 10,
-    kParseUnexpectedCol      = 11,
-    kParseUnexectedItem      = 12,
-    kParseInvalidUsage       = 13,
-    kParseMissingUsage       = 14,
-    kParserMissingPage       = 15,
-    kParserUnexpectedPop     = 16,
-    kParserInvalidID         = 17
+    kParseOk = 0,
+    kParseNoMemory = 1,
+    kParseMoreNeeded = 2,
+    kParseUnsuported = 3,
+    kParseInvalidTag = 4,
+    kParseInvalidItemType = 5,
+    kParseInvalidItemValue = 6,
+    kParseUsageLimit = 7,
+    kParseInvalidRange = 8,
+    kParseOverflow = 9,
+    kParseLeftovers = 10,
+    kParseUnexpectedCol = 11,
+    kParseUnexectedItem = 12,
+    kParseInvalidUsage = 13,
+    kParseMissingUsage = 14,
+    kParserMissingPage = 15,
+    kParserUnexpectedPop = 16,
+    kParserInvalidID = 17
 };
 
 ParseResult ParseReportDescriptor(
@@ -279,10 +279,10 @@ Collection* GetAppCollection(const ReportField* field);
 // Helper for creating Usage constants.
 template <typename P, typename U>
 constexpr Usage USAGE(P page, U usage) {
-  return Usage{static_cast<uint16_t>(page), static_cast<uint32_t>(usage)};
+    return Usage{static_cast<uint16_t>(page), static_cast<uint32_t>(usage)};
 }
 
-}  // namespace hid
+} // namespace hid
 
 inline bool operator==(hid::Usage a, hid::Usage b) {
     return (a.page == b.page) && (a.usage == b.usage);
@@ -295,3 +295,5 @@ inline bool operator!=(hid::Usage a, hid::Usage b) {
 inline bool operator==(hid::MinMax a, hid::MinMax b) {
     return (a.min == b.min) && (a.max == b.max);
 }
+
+#endif // HID_PARSER_PARSER_H_

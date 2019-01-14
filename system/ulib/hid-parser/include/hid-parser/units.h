@@ -65,4 +65,4 @@ bool ConvertUnits(double val_in, const Unit& unit_in, double& val_out, const Uni
 } // namespace unit
 } // namespace hid
 
-#endif  // HID_PARSER_UNITS_H_
+#endif // HID_PARSER_UNITS_H_

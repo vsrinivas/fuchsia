@@ -7,9 +7,9 @@
 
 #include <hid-parser/item.h>
 #include <hid-parser/parser.h>
-#include <hid-parser/usages.h>
 #include <hid-parser/report.h>
 #include <hid-parser/units.h>
+#include <hid-parser/usages.h>
 
 #include <unistd.h>
 #include <unittest/unittest.h>
@@ -57,7 +57,7 @@ size_t ItemizeHIDReportDesc(const uint8_t* rpt_desc, size_t desc_len, Stats* sta
     return (desc_len - len);
 }
 
-}  // namespace.
+} // namespace.
 
 static bool itemize_acer12_rpt1() {
     BEGIN_TEST;
@@ -89,7 +89,6 @@ static bool itemize_eve_tablet_rpt() {
     END_TEST;
 }
 
-
 static bool parse_boot_mouse() {
     BEGIN_TEST;
 
@@ -107,7 +106,6 @@ static bool parse_boot_mouse() {
     EXPECT_EQ(dev->report[0].input_count, 6);
     EXPECT_EQ(dev->report[0].input_byte_sz, 3);
     const auto fields = dev->report[0].input_fields;
-
 
     // All fields are input type with report id = 0.
     for (uint8_t ix = 0; ix != dev->report[0].input_count; ++ix) {
@@ -183,7 +181,6 @@ static bool parse_boot_mouse() {
 
     auto app_col = hid::GetAppCollection(first_input);
     EXPECT_EQ(app_col, collection);
-
 
     hid::FreeDeviceDescriptor(dev);
     END_TEST;
@@ -423,7 +420,6 @@ static bool parse_adaf_trinket() {
     EXPECT_EQ(output_fields[5].attr.offset, 13u);
     EXPECT_EQ(output_fields[5].type, hid::kOutput);
     EXPECT_EQ(hid::kConstant & output_fields[5].flags, hid::kConstant);
-
 
     // All fields belong to the same collection
     collection = fields[0].col;
@@ -805,11 +801,11 @@ static bool parse_eve_tablet() {
 }
 
 static bool parse_asus_touch() {
-   BEGIN_TEST;
-   hid::DeviceDescriptor* dev = nullptr;
-   auto res = hid::ParseReportDescriptor(asus_touch_desc, sizeof(asus_touch_desc), &dev);
-   ASSERT_EQ(res, hid::ParseResult::kParseOk);
-   END_TEST;
+    BEGIN_TEST;
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(asus_touch_desc, sizeof(asus_touch_desc), &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseOk);
+    END_TEST;
 }
 
 // Test that the push and pop operations complete successfully.
@@ -912,153 +908,150 @@ static bool parse_push_pop() {
 }
 
 static bool parse_eve_touchpad_v2() {
-   BEGIN_TEST;
-   hid::DeviceDescriptor* dev = nullptr;
-   auto res = hid::ParseReportDescriptor(eve_touchpad_v2_r_desc,
-                                         sizeof(eve_touchpad_v2_r_desc), &dev);
-   ASSERT_EQ(res, hid::ParseResult::kParseOk);
-   // Check that we have one main collection.
-   EXPECT_EQ(dev->rep_count, 1);
+    BEGIN_TEST;
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(eve_touchpad_v2_r_desc,
+                                          sizeof(eve_touchpad_v2_r_desc), &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseOk);
+    // Check that we have one main collection.
+    EXPECT_EQ(dev->rep_count, 1);
 
-   EXPECT_EQ(dev->report[0].report_id, 1);
-   EXPECT_EQ(dev->report[0].input_count, 47);
+    EXPECT_EQ(dev->report[0].report_id, 1);
+    EXPECT_EQ(dev->report[0].input_count, 47);
 
-   const hid::ReportField* fields = dev->report[0].input_fields;
+    const hid::ReportField* fields = dev->report[0].input_fields;
 
-   uint8_t ix = 0;
+    uint8_t ix = 0;
 
-   // First report is a button.
-   EXPECT_EQ(fields[ix].report_id, 1);
-   EXPECT_EQ(fields[ix].type, hid::kInput);
-   EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
-   EXPECT_EQ(fields[ix].attr.bit_sz, 1);
-   ++ix;
+    // First report is a button.
+    EXPECT_EQ(fields[ix].report_id, 1);
+    EXPECT_EQ(fields[ix].type, hid::kInput);
+    EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kButton);
+    EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+    ++ix;
 
-   // Second report is a digitizer.
-   EXPECT_EQ(fields[ix].report_id, 1);
-   EXPECT_EQ(fields[ix].type, hid::kInput);
-   EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer);
-   EXPECT_EQ(fields[ix].attr.bit_sz, 7);
-   ++ix;
+    // Second report is a digitizer.
+    EXPECT_EQ(fields[ix].report_id, 1);
+    EXPECT_EQ(fields[ix].type, hid::kInput);
+    EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer);
+    EXPECT_EQ(fields[ix].attr.bit_sz, 7);
+    ++ix;
 
-   // Here are the finger collections. There are 10 items per finger.
-   for (int finger = 0; finger != 5; ++finger) {
-       char err_msg[50];
-       sprintf(err_msg, "Failed on Finger %d\n", finger);
+    // Here are the finger collections. There are 10 items per finger.
+    for (int finger = 0; finger != 5; ++finger) {
+        char err_msg[50];
+        sprintf(err_msg, "Failed on Finger %d\n", finger);
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kTipSwitch, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 1);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kTipSwitch, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 1);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kInRange, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 7);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kInRange, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 7);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, 0x51, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, 0x51, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16);
+        ++ix;
 
-       // The X coordinate.
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kX, err_msg);
-       EXPECT_EQ(fields[ix].attr.phys_mm.min, 0, err_msg);
-       EXPECT_EQ(fields[ix].attr.phys_mm.max, 1030, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 13184, err_msg);
-       // TODO(dgilhooley) Define Unit types in ulib/hid-parser.
-       EXPECT_EQ(fields[ix].attr.unit.type, 0x11, err_msg);
-       EXPECT_EQ(fields[ix].attr.unit.exp, -2, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16, err_msg);
-       ++ix;
+        // The X coordinate.
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kX, err_msg);
+        EXPECT_EQ(fields[ix].attr.phys_mm.min, 0, err_msg);
+        EXPECT_EQ(fields[ix].attr.phys_mm.max, 1030, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 13184, err_msg);
+        // TODO(dgilhooley) Define Unit types in ulib/hid-parser.
+        EXPECT_EQ(fields[ix].attr.unit.type, 0x11, err_msg);
+        EXPECT_EQ(fields[ix].attr.unit.exp, -2, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16, err_msg);
+        ++ix;
 
-       // The Y Coordinate (most fields are inherited from X).
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kY, err_msg);
-       EXPECT_EQ(fields[ix].attr.phys_mm.min, 0, err_msg);
-       EXPECT_EQ(fields[ix].attr.phys_mm.max, 680, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 8704, err_msg);
-       // TODO(dgilhooley) Define Unit types in ulib/hid-parser
-       EXPECT_EQ(fields[ix].attr.unit.type, 0x11, err_msg);
-       EXPECT_EQ(fields[ix].attr.unit.exp, -2, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16, err_msg);
-       ++ix;
+        // The Y Coordinate (most fields are inherited from X).
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kGenericDesktop, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::GenericDesktop::kY, err_msg);
+        EXPECT_EQ(fields[ix].attr.phys_mm.min, 0, err_msg);
+        EXPECT_EQ(fields[ix].attr.phys_mm.max, 680, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 8704, err_msg);
+        // TODO(dgilhooley) Define Unit types in ulib/hid-parser
+        EXPECT_EQ(fields[ix].attr.unit.type, 0x11, err_msg);
+        EXPECT_EQ(fields[ix].attr.unit.exp, -2, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16, err_msg);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, 0x48, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 13184, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, 0x48, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 13184, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, 0x49, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 8704, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, 0x49, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 8704, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kTipPressure, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 255, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 8);
-       ++ix;
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kTipPressure, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 255, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 8);
+        ++ix;
 
-       EXPECT_EQ(fields[ix].type, hid::kInput);
-       EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
-       EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kAzimuth, err_msg);
-       EXPECT_EQ(fields[ix].attr.logc_mm.max, 360, err_msg);
-       EXPECT_EQ(fields[ix].attr.bit_sz, 16);
-       ++ix;
-   }
+        EXPECT_EQ(fields[ix].type, hid::kInput);
+        EXPECT_EQ(fields[ix].attr.usage.page, hid::usage::Page::kDigitizer, err_msg);
+        EXPECT_EQ(fields[ix].attr.usage.usage, hid::usage::Digitizer::kAzimuth, err_msg);
+        EXPECT_EQ(fields[ix].attr.logc_mm.max, 360, err_msg);
+        EXPECT_EQ(fields[ix].attr.bit_sz, 16);
+        ++ix;
+    }
 
-   // Make sure we checked each of the report fields.
-   ASSERT_EQ(ix, dev->report[0].input_count);
+    // Make sure we checked each of the report fields.
+    ASSERT_EQ(ix, dev->report[0].input_count);
 
-   END_TEST;
+    END_TEST;
 }
 
 static bool usage_helper() {
-   BEGIN_TEST;
-   auto usage = hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID);
-   EXPECT_EQ(usage.page, static_cast<uint16_t>(hid::usage::Page::kDigitizer));
-   EXPECT_EQ(usage.usage, static_cast<uint32_t>(hid::usage::Digitizer::kContactID));
-   END_TEST;
+    BEGIN_TEST;
+    auto usage = hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID);
+    EXPECT_EQ(usage.page, static_cast<uint16_t>(hid::usage::Page::kDigitizer));
+    EXPECT_EQ(usage.usage, static_cast<uint32_t>(hid::usage::Digitizer::kContactID));
+    END_TEST;
 }
 
 static bool minmax_operators() {
-   BEGIN_TEST;
-   EXPECT_TRUE((hid::MinMax{-1, 1} == hid::MinMax{-1, 1}));
-   EXPECT_FALSE((hid::MinMax{0, 1} == hid::MinMax{-1, 1}));
-   EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{0, 1}));
-   EXPECT_FALSE((hid::MinMax{-1, 2} == hid::MinMax{-1, 1}));
-   EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{-1, 2}));
-   EXPECT_FALSE((hid::MinMax{0, 2} == hid::MinMax{-1, 1}));
-   END_TEST;
+    BEGIN_TEST;
+    EXPECT_TRUE((hid::MinMax{-1, 1} == hid::MinMax{-1, 1}));
+    EXPECT_FALSE((hid::MinMax{0, 1} == hid::MinMax{-1, 1}));
+    EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{0, 1}));
+    EXPECT_FALSE((hid::MinMax{-1, 2} == hid::MinMax{-1, 1}));
+    EXPECT_FALSE((hid::MinMax{-1, 1} == hid::MinMax{-1, 2}));
+    EXPECT_FALSE((hid::MinMax{0, 2} == hid::MinMax{-1, 1}));
+    END_TEST;
 }
 
 static bool usage_operators() {
-   BEGIN_TEST;
-   EXPECT_TRUE(
-      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID) ==
-      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
-   );
-   EXPECT_FALSE(
-      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch) ==
-      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
-   );
-   EXPECT_FALSE(
-      hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX) ==
-      hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID)
-   );
-   END_TEST;
+    BEGIN_TEST;
+    EXPECT_TRUE(
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID) ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID));
+    EXPECT_FALSE(
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kTipSwitch) ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID));
+    EXPECT_FALSE(
+        hid::USAGE(hid::usage::Page::kGenericDesktop, hid::usage::GenericDesktop::kX) ==
+        hid::USAGE(hid::usage::Page::kDigitizer, hid::usage::Digitizer::kContactID));
+    END_TEST;
 }
 
 static bool extract_tests() {
@@ -1133,7 +1126,6 @@ static bool extract_tests() {
     EXPECT_FALSE(ret);
 
     END_TEST;
-
 }
 
 static bool unit_tests() {
@@ -1406,7 +1398,6 @@ static bool unit_tests() {
 
     ret = hid::unit::ConvertUnits(1, unit_in, val_out, unit_out);
     EXPECT_FALSE(ret);
-
 
     END_TEST;
 }

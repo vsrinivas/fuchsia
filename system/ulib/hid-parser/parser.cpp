@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <hid-parser/parser.h>
 #include <hid-parser/item.h>
+#include <hid-parser/parser.h>
 
 #include <fbl/alloc_checker.h>
 #include <fbl/intrusive_double_list.h>
@@ -52,8 +52,7 @@ private:
     T* const dest_base_;
 };
 
-}  // namespace
-
+} // namespace
 
 namespace hid {
 namespace impl {
@@ -92,7 +91,6 @@ namespace impl {
 //  interspersed before the collection or input,output,feature
 //  items. The system/utest/hid-parser has many examples captured
 //  from real devices.
-
 
 // Limit on the collection count we can process, complicated devices
 // such as touch-pad are in the 10 to 20 range. This limitation can be
@@ -167,7 +165,7 @@ public:
         if (mem == nullptr)
             return kParseNoMemory;
 
-        auto dev = new (mem) DeviceDescriptor { report_count, {} };
+        auto dev = new (mem) DeviceDescriptor{report_count, {}};
 
         mem += device_sz;
         auto dest_fields = reinterpret_cast<ReportField*>(mem);
@@ -179,7 +177,7 @@ public:
 
         size_t ix = 0u;
         // Copy and fix the collections first.
-        for (const auto& c: coll_) {
+        for (const auto& c : coll_) {
             dest_colls[ix] = c;
             dest_colls[ix].parent = coll_fixup(c.parent);
             ++ix;
@@ -189,7 +187,7 @@ public:
         ix = 0u;
         size_t ifr = 0u;
 
-        for (const ReportID& report_id: report_ids_) {
+        for (const ReportID& report_id : report_ids_) {
             size_t field_count = 0;
 
             // If we don't have report ids, we start at 0 offset.
@@ -217,38 +215,38 @@ public:
             dev->report[ifr].output_fields = output_fields_start;
             dev->report[ifr].feature_fields = feature_fields_start;
 
-            for (const auto& f: fields_) {
+            for (const auto& f : fields_) {
                 if (f.report_id != report_id.report_id)
                     continue;
 
                 switch (f.type) {
-                    case NodeType::kInput:
-                        if (input_count == report_id.input_count)
-                            return kParseOverflow;
-                        input_fields_start[input_count] = f;
-                        input_fields_start[input_count].col = coll_fixup(f.col);
-                        input_fields_start[input_count].attr.offset = static_cast<uint32_t>(input_bit_sz);
-                        input_bit_sz += f.attr.bit_sz;
-                        ++input_count;
-                        break;
-                    case NodeType::kOutput:
-                        if (output_count == report_id.output_count)
-                            return kParseOverflow;
-                        output_fields_start[output_count] = f;
-                        output_fields_start[output_count].col = coll_fixup(f.col);
-                        output_fields_start[output_count].attr.offset = static_cast<uint32_t>(output_bit_sz);
-                        output_bit_sz += f.attr.bit_sz;
-                        ++output_count;
-                        break;
-                    case NodeType::kFeature:
-                        if (feature_count == report_id.feature_count)
-                            return kParseOverflow;
-                        feature_fields_start[feature_count] = f;
-                        feature_fields_start[feature_count].col = coll_fixup(f.col);
-                        feature_fields_start[feature_count].attr.offset = static_cast<uint32_t>(feature_bit_sz);
-                        feature_bit_sz += f.attr.bit_sz;
-                        ++feature_count;
-                        break;
+                case NodeType::kInput:
+                    if (input_count == report_id.input_count)
+                        return kParseOverflow;
+                    input_fields_start[input_count] = f;
+                    input_fields_start[input_count].col = coll_fixup(f.col);
+                    input_fields_start[input_count].attr.offset = static_cast<uint32_t>(input_bit_sz);
+                    input_bit_sz += f.attr.bit_sz;
+                    ++input_count;
+                    break;
+                case NodeType::kOutput:
+                    if (output_count == report_id.output_count)
+                        return kParseOverflow;
+                    output_fields_start[output_count] = f;
+                    output_fields_start[output_count].col = coll_fixup(f.col);
+                    output_fields_start[output_count].attr.offset = static_cast<uint32_t>(output_bit_sz);
+                    output_bit_sz += f.attr.bit_sz;
+                    ++output_count;
+                    break;
+                case NodeType::kFeature:
+                    if (feature_count == report_id.feature_count)
+                        return kParseOverflow;
+                    feature_fields_start[feature_count] = f;
+                    feature_fields_start[feature_count].col = coll_fixup(f.col);
+                    feature_fields_start[feature_count].attr.offset = static_cast<uint32_t>(feature_bit_sz);
+                    feature_bit_sz += f.attr.bit_sz;
+                    ++feature_count;
+                    break;
                 }
 
                 ++field_count;
@@ -277,7 +275,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult start_collection(uint32_t data) {                 // Main
+    ParseResult start_collection(uint32_t data) { // Main
         if (!is_valid_collection(data))
             return kParseInvalidItemValue;
 
@@ -294,11 +292,10 @@ public:
 
         uint32_t usage = usages_.is_empty() ? 0 : usages_[0];
 
-        Collection col {
+        Collection col{
             static_cast<CollectionType>(data),
-            Usage {table_.attributes.usage.page, usage},
-            parent_coll_
-        };
+            Usage{table_.attributes.usage.page, usage},
+            parent_coll_};
 
         coll_.push_back(col);
         parent_coll_ = &coll_[coll_.size() - 1];
@@ -317,7 +314,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult add_field(NodeType type, uint32_t data) {       // Main
+    ParseResult add_field(NodeType type, uint32_t data) { // Main
         if (coll_.size() == 0)
             return kParseUnexectedItem;
 
@@ -338,18 +335,17 @@ public:
         Attributes attributes = table_.attributes;
         UsageIterator usage_it(this, flags);
 
-        for (uint32_t ix = 0; ix != table_.report_count; ++ ix) {
+        for (uint32_t ix = 0; ix != table_.report_count; ++ix) {
             attributes.usage.usage = usage_it.next_usage();
 
             auto curr_col = &coll_[coll_.size() - 1];
 
-            ReportField field {
+            ReportField field{
                 table_.report_id->report_id,
                 attributes,
                 type,
                 flags,
-                curr_col
-            };
+                curr_col};
 
             fbl::AllocChecker ac;
             fields_.push_back(field, &ac);
@@ -357,34 +353,34 @@ public:
                 return kParseNoMemory;
 
             switch (type) {
-                case kInput:
-                    table_.report_id->input_count++;
-                    break;
-                case kOutput:
-                    table_.report_id->output_count++;
-                    break;
-                case kFeature:
-                    table_.report_id->feature_count++;
-                    break;
+            case kInput:
+                table_.report_id->input_count++;
+                break;
+            case kOutput:
+                table_.report_id->output_count++;
+                break;
+            case kFeature:
+                table_.report_id->feature_count++;
+                break;
             }
         }
 
         return kParseOk;
     }
 
-    ParseResult reset_usage() {                                 //  after each Main
+    ParseResult reset_usage() { //  after each Main
         // Is it an error to drop pending usages?
         usages_.reset();
         usage_range_ = {};
         return kParseOk;
     }
 
-    ParseResult add_usage(uint32_t data) {                      // Local
+    ParseResult add_usage(uint32_t data) { // Local
         usages_.push_back(data);
         return kParseOk;
     }
 
-    ParseResult set_usage_min(uint32_t data) {                  // Local
+    ParseResult set_usage_min(uint32_t data) { // Local
         if (data > UINT16_MAX)
             return kParseUnsuported;
 
@@ -392,7 +388,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_usage_max(uint32_t data) {                  // Local
+    ParseResult set_usage_max(uint32_t data) { // Local
         // In add_usage() we don't restrict the value while
         // here we do. This is because a very large range can
         // effectively DoS the code in the usage iterator.
@@ -403,7 +399,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_usage_page(uint32_t data) {                 // Global
+    ParseResult set_usage_page(uint32_t data) { // Global
         if (data > UINT16_MAX)
             return kParseInvalidRange;
 
@@ -412,22 +408,22 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_logical_min(int32_t data) {                // Global
+    ParseResult set_logical_min(int32_t data) { // Global
         table_.attributes.logc_mm.min = data;
         return kParseOk;
     }
 
-    ParseResult set_logical_max(int32_t data) {                // Global
+    ParseResult set_logical_max(int32_t data) { // Global
         table_.attributes.logc_mm.max = data;
         return kParseOk;
     }
 
-    ParseResult set_physical_min(int32_t data) {                // Global
+    ParseResult set_physical_min(int32_t data) { // Global
         table_.attributes.phys_mm.min = data;
         return kParseOk;
     }
 
-    ParseResult set_physical_max(int32_t data) {                // Global
+    ParseResult set_physical_max(int32_t data) { // Global
         table_.attributes.phys_mm.max = data;
         return kParseOk;
     }
@@ -439,7 +435,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_unit_exp(uint32_t data) {                   // Global
+    ParseResult set_unit_exp(uint32_t data) { // Global
         int32_t exp = static_cast<uint8_t>(data);
         // The exponent uses a weird, not fully specified
         // conversion, for example the value 0xf results
@@ -450,7 +446,7 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_report_id(uint32_t data) {                  // Global
+    ParseResult set_report_id(uint32_t data) { // Global
         if (data == 0)
             return kParserInvalidID;
         if (data > UINT8_MAX)
@@ -458,7 +454,7 @@ public:
 
         // Check if we've seen the report id before.
         uint8_t id = static_cast<uint8_t>(data);
-        ReportID *report_ids = report_ids_.get();
+        ReportID* report_ids = report_ids_.get();
         for (size_t i = 0; i < report_ids_.size(); i++) {
             if (report_ids[i].report_id == id) {
                 table_.report_id = &report_ids[i];
@@ -477,29 +473,29 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_report_count(uint32_t data) {               // Global
+    ParseResult set_report_count(uint32_t data) { // Global
         table_.report_count = data;
         return kParseOk;
     }
 
-    ParseResult set_report_size(uint32_t data) {                // Global
+    ParseResult set_report_size(uint32_t data) { // Global
         if (data > UINT8_MAX)
             return kParseInvalidRange;
         table_.attributes.bit_sz = static_cast<uint8_t>(data);
         return kParseOk;
     }
 
-    ParseResult push(uint32_t data) {                          // Global
+    ParseResult push(uint32_t data) { // Global
         fbl::AllocChecker ac;
         stack_.push_back(table_, &ac);
         return ac.check() ? kParseOk : kParseNoMemory;
     }
 
-    ParseResult pop(uint32_t data) {                           // Global
+    ParseResult pop(uint32_t data) { // Global
         if (stack_.size() == 0)
             return kParserUnexpectedPop;
 
-        table_ = stack_[stack_.size() -1];
+        table_ = stack_[stack_.size() - 1];
         stack_.pop_back();
         return kParseOk;
     }
@@ -508,7 +504,7 @@ private:
     struct StateTable {
         Attributes attributes;
         uint32_t report_count;
-        ReportID *report_id;
+        ReportID* report_id;
     };
 
     // Helper class that encapsulates the logic of assigning usages
@@ -603,41 +599,60 @@ ParseResult ProcessMainItem(const hid::Item& item, ParseState* state) {
     case Item::Tag::kFeature:
         res = state->add_field(static_cast<NodeType>(item.tag()), item.data());
         break;
-    case Item::Tag::kCollection: res = state->start_collection(item.data());
+    case Item::Tag::kCollection:
+        res = state->start_collection(item.data());
         break;
-    case Item::Tag::kEndCollection: res = state->end_collection(item.data());
+    case Item::Tag::kEndCollection:
+        res = state->end_collection(item.data());
         break;
-    default: res = kParseInvalidTag;
+    default:
+        res = kParseInvalidTag;
     }
 
-    return (res == kParseOk)? state->reset_usage() : res;
+    return (res == kParseOk) ? state->reset_usage() : res;
 }
 
 ParseResult ProcessGlobalItem(const hid::Item& item, ParseState* state) {
     switch (item.tag()) {
-    case Item::Tag::kUsagePage: return state->set_usage_page(item.data());
-    case Item::Tag::kLogicalMinimum: return state->set_logical_min(item.signed_data());
-    case Item::Tag::kLogicalMaximum: return state->set_logical_max(item.signed_data());
-    case Item::Tag::kPhysicalMinimum: return state->set_physical_min(item.signed_data());
-    case Item::Tag::kPhysicalMaximum: return state->set_physical_max(item.signed_data());
-    case Item::Tag::kUnitExponent: return state->set_unit_exp(item.data());
-    case Item::Tag::kUnit: return state->set_unit(item.data());
-    case Item::Tag::kReportSize: return state->set_report_size(item.data());
-    case Item::Tag::kReportId: return state->set_report_id(item.data());
-    case Item::Tag::kReportCount: return state->set_report_count(item.data());
-    case Item::Tag::kPush: return state->push(item.data());
-    case Item::Tag::kPop: return state->pop(item.data());
-    default: return kParseInvalidTag;
+    case Item::Tag::kUsagePage:
+        return state->set_usage_page(item.data());
+    case Item::Tag::kLogicalMinimum:
+        return state->set_logical_min(item.signed_data());
+    case Item::Tag::kLogicalMaximum:
+        return state->set_logical_max(item.signed_data());
+    case Item::Tag::kPhysicalMinimum:
+        return state->set_physical_min(item.signed_data());
+    case Item::Tag::kPhysicalMaximum:
+        return state->set_physical_max(item.signed_data());
+    case Item::Tag::kUnitExponent:
+        return state->set_unit_exp(item.data());
+    case Item::Tag::kUnit:
+        return state->set_unit(item.data());
+    case Item::Tag::kReportSize:
+        return state->set_report_size(item.data());
+    case Item::Tag::kReportId:
+        return state->set_report_id(item.data());
+    case Item::Tag::kReportCount:
+        return state->set_report_count(item.data());
+    case Item::Tag::kPush:
+        return state->push(item.data());
+    case Item::Tag::kPop:
+        return state->pop(item.data());
+    default:
+        return kParseInvalidTag;
     }
 }
 
 ParseResult ProcessLocalItem(const hid::Item& item, ParseState* state) {
     switch (item.tag()) {
-    case Item::Tag::kUsage: return state->add_usage(item.data());
-    case Item::Tag::kUsageMinimum: return state->set_usage_min(item.data());
-    case Item::Tag::kUsageMaximum: return state->set_usage_max(item.data());
+    case Item::Tag::kUsage:
+        return state->add_usage(item.data());
+    case Item::Tag::kUsageMinimum:
+        return state->set_usage_min(item.data());
+    case Item::Tag::kUsageMaximum:
+        return state->set_usage_max(item.data());
 
-    case Item::Tag::kDesignatorIndex:  // Fall thru. TODO(cpu) implement.
+    case Item::Tag::kDesignatorIndex: // Fall thru. TODO(cpu) implement.
     case Item::Tag::kDesignatorMinimum:
     case Item::Tag::kDesignatorMaximum:
     case Item::Tag::kStringIndex:
@@ -645,20 +660,25 @@ ParseResult ProcessLocalItem(const hid::Item& item, ParseState* state) {
     case Item::Tag::kStringMaximum:
     case Item::Tag::kDelimiter:
         return kParseUnsuported;
-    default: return kParseInvalidTag;
+    default:
+        return kParseInvalidTag;
     }
 }
 
 ParseResult ProcessItem(const hid::Item& item, ParseState* state) {
     switch (item.type()) {
-    case Item::Type::kMain: return ProcessMainItem(item, state);
-    case Item::Type::kGlobal: return ProcessGlobalItem(item, state);
-    case Item::Type::kLocal: return ProcessLocalItem(item, state);
-    default: return kParseInvalidItemType;
+    case Item::Type::kMain:
+        return ProcessMainItem(item, state);
+    case Item::Type::kGlobal:
+        return ProcessGlobalItem(item, state);
+    case Item::Type::kLocal:
+        return ProcessLocalItem(item, state);
+    default:
+        return kParseInvalidItemType;
     }
 }
 
-}  // namespace impl
+} // namespace impl
 
 ParseResult ParseReportDescriptor(
     const uint8_t* rpt_desc, size_t desc_len,
@@ -728,4 +748,4 @@ Collection* GetAppCollection(const ReportField* field) {
 }
 
 #undef DIV_ROUND_UP
-}  // namespace hid
+} // namespace hid
