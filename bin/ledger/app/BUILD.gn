@@ -175,7 +175,6 @@ source_set("unittests") {
 
   deps = [
     ":lib",
-    "//garnet/public/fidl/fuchsia.inspect:fuchsia.inspect",
     "//garnet/public/lib/backoff/testing",
     "//garnet/public/lib/component/cpp:cpp",
     "//garnet/public/lib/fidl/cpp",
