@@ -14,8 +14,19 @@
 namespace wlan {
 
 struct HwmpState {
-    uint32_t our_hwmp_seqno;
-    TimerManager timer_mgr;
+    struct TimedEvent {
+        common::MacAddr addr;
+    };
+
+    struct TargetState {
+        TimeoutId next_attempt;
+        size_t attempts_left;
+    };
+
+    uint32_t our_hwmp_seqno = 0;
+    uint32_t next_path_discovery_id = 0;
+    TimerManager2<TimedEvent> timer_mgr;
+    std::unordered_map<uint64_t, TargetState> state_by_target;
 
     explicit HwmpState(fbl::unique_ptr<Timer> timer)
         : our_hwmp_seqno(0), timer_mgr(std::move(timer)) {}
@@ -26,6 +37,15 @@ PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
                              const common::MacAddr& self_addr, uint32_t last_hop_metric,
                              const MacHeaderWriter& mac_header_writer, HwmpState* state,
                              PathTable* path_table);
+
+zx_status_t InitiatePathDiscovery(const common::MacAddr& target_addr,
+                                  const common::MacAddr& self_addr,
+                                  const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                                  const PathTable& path_table, PacketQueue* packets_to_tx);
+
+zx_status_t HandleHwmpTimeout(const common::MacAddr& self_addr,
+                              const MacHeaderWriter& mac_header_writer, HwmpState* state,
+                              const PathTable& path_table, PacketQueue* packets_to_tx);
 
 // Visible for testing
 bool HwmpSeqnoLessThan(uint32_t a, uint32_t b);

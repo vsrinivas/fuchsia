@@ -48,6 +48,8 @@ class MeshMlme : public Mlme {
     zx_status_t HandleMpmOpenAction(common::MacAddr src_addr, BufferReader* r);
     void HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r);
 
+    void TriggerPathDiscovery(const common::MacAddr& target);
+
     void HandleDataFrame(fbl::unique_ptr<Packet> packet);
     bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
     void DeliverData(const common::ParsedMeshDataHeader& header, Span<uint8_t> wlan_frame,

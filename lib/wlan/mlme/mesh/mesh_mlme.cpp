@@ -237,7 +237,8 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
 
         auto path = path_table_.GetPath(mesh_dest);
         if (path == nullptr) {
-            // TODO(gbonik): buffer the frame and initiate path discovery
+            // TODO(gbonik): buffer the frame
+            TriggerPathDiscovery(mesh_dest);
             return;
         }
         CreateMacHeaderWriter().WriteMeshDataHeaderIndivAddressed(&w, path->next_hop, mesh_dest,
@@ -336,6 +337,20 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
     return SendServiceMsg(device_, &action, fuchsia_wlan_mlme_MLMEIncomingMpOpenActionOrdinal);
 }
 
+void MeshMlme::TriggerPathDiscovery(const common::MacAddr& target) {
+    PacketQueue packets_to_tx;
+    zx_status_t status = InitiatePathDiscovery(target, self_addr(), CreateMacHeaderWriter(),
+                                               hwmp_.get(), path_table_, &packets_to_tx);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] Failed to initiate path discovery: %s\n", zx_status_get_string(status));
+        return;
+    }
+
+    while (!packets_to_tx.is_empty()) {
+        SendMgmtFrame(packets_to_tx.Dequeue());
+    }
+}
+
 void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
     BufferReader r(*packet);
 
@@ -432,6 +447,25 @@ void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header, Span<uint
 }
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
+    switch (id.target()) {
+    case to_enum_type(ObjectTarget::kHwmp): {
+        PacketQueue packets_to_tx;
+        zx_status_t status = HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(), hwmp_.get(),
+                                               path_table_, &packets_to_tx);
+        if (status != ZX_OK) {
+            errorf("[mesh-mlme] Failed to rearm the HWMP timer: %s\n",
+                   zx_status_get_string(status));
+            return status;
+        }
+
+        while (!packets_to_tx.is_empty()) {
+            SendMgmtFrame(packets_to_tx.Dequeue());
+        }
+        break;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     return ZX_OK;
 }
 
