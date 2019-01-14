@@ -23,7 +23,7 @@ quit
 
 ```
 connect 192.168.3.1:2345
-set filter echo2
+set filters echo2
 run fuchsia-pkg://fuchsia.com/echo2_client_cpp#meta/echo2_client_cpp.cmx
 break main
 continue
