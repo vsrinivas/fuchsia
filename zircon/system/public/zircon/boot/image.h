@@ -448,7 +448,9 @@ typedef struct {
 }  zbi_topology_arm_info_t;
 
 typedef struct {
-    uint32_t apic_id;
+    // Indexes here correspond to the logical_ids index for the thread.
+    uint32_t apic_ids[ZBI_MAX_SMT];
+    uint32_t apic_id_count;
 }  zbi_topology_x86_info_t;
 
 typedef struct {

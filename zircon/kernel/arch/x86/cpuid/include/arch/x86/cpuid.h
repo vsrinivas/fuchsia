@@ -8,7 +8,6 @@
 #include <cstdint>
 #include <cstring>
 #include <optional>
-
 #include <assert.h>
 
 namespace cpu_id {
@@ -35,6 +34,12 @@ struct Registers {
     }
 
     uint32_t reg[4];
+};
+
+template<size_t count>
+struct SubLeaves {
+  Registers subleaf[count];
+  static constexpr size_t size = count;
 };
 
 // Extracts the manufacturer id string from call with EAX=0.
@@ -247,8 +252,10 @@ private:
 // Parses topology data from the CPUID instruction.
 class Topology {
 public:
+    static constexpr size_t kEaxBSubleaves = 3;
     static constexpr size_t kMaxLevels = 3;
     static constexpr uint8_t kInvalidCount = 255;
+
     enum class LevelType {
         INVALID,
         SMT,
@@ -261,30 +268,53 @@ public:
         // node_count is set best-effort, only some systems provide it.
         uint8_t node_count = kInvalidCount;
 
-        uint8_t shift_width = 0;
+        // This many bits of the apic id are used to distinguish different nodes in this level.
+        // In other words, the width by which you would need to shift an apic id to "skip"
+        // this level.
+        uint8_t id_bits = 0;
     };
     struct Levels {
         Level levels[kMaxLevels];
         uint8_t level_count = 0;
     };
 
+    struct Cache {
+        uint8_t level = 0;
+
+        // This is how many bits you need to shift the apic id right by in order
+        // to determine which cache is serving it.
+        uint8_t shift_width = 0;
+
+        uint64_t size_bytes = 0;
+    };
+
+    // Leaf4 being provided should represent the highest level of cache.
+    // Intel labels leaf 4 as "Deterministic Cache Parameters" and leaf 0xB as
+    // "Processor Topology".
     Topology(ManufacturerInfo info, Features features,
-             Registers leaf4, Registers* leafB);
+             Registers leaf4, SubLeaves<kEaxBSubleaves> leafB);
 
     // Provides details for each level of this system's topology.
     // Returns nullopt if unable to parse topology from cpuid data.
     std::optional<Levels> levels() const;
 
+    // Returns info about the numerically highest level (i.e. L3 > L2 > L1) of processor cache.
+    Cache highest_level_cache() const;
+
+protected:
+    // Used for testing.
+    Topology()
+        : info_({}), features_({}, {}, {}) {}
+
 private:
     std::optional<Levels> IntelLevels() const;
 
-    static constexpr size_t kEaxBLevels = 3;
 
     ManufacturerInfo info_;
     Features features_;
 
     Registers leaf4_;
-    Registers leafB_[kEaxBLevels];
+    SubLeaves<kEaxBSubleaves> leafB_;
 };
 
 // Wraps the CPUID instruction on x86, provides helpers to parse the output and

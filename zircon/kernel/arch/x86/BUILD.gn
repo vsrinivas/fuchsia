@@ -98,6 +98,7 @@ library("x86") {
     "smp.cpp",
     "start.S",
     "start16.S",
+    "system_topology.cpp",
     "thread.cpp",
     "timer_freq.cpp",
     "tsc.cpp",
@@ -108,6 +109,7 @@ library("x86") {
   deps = [
     ":syscall",
     ":tests",
+    "$zx/kernel/arch/x86/cpuid",
     "$zx/kernel/dev/hw_rng",
     "$zx/kernel/dev/iommu/dummy",
     "$zx/kernel/dev/iommu/intel",
@@ -117,11 +119,16 @@ library("x86") {
     "$zx/kernel/lib/crashlog",
     "$zx/kernel/lib/fbl",
     "$zx/kernel/lib/pci",
+    "$zx/kernel/lib/topology",
+    "$zx/kernel/lib/acpi_tables",
     "$zx/kernel/object",
     "$zx/system/ulib/bitmap",
     "cpuid",
   ]
   public_deps = [
+    # arch/x86/system_topology.h has #include <arch/x86/cpuid.h>.
+    "$zx/kernel/arch/x86/cpuid:headers",
+
     # arch/x86/apic.h has #include <dev/interrupt.h>.
     "$zx/kernel/dev/interrupt:headers",
 
@@ -157,9 +164,12 @@ source_set("syscall") {
 source_set("tests") {
   sources = [
     "mmu_tests.cpp",
+    "system_topology_test.cpp",
   ]
   deps = [
     ":headers",
+    "$zx/kernel/lib/acpi_tables:headers",
+    "$zx/kernel/lib/topology:headers",
     "$zx/kernel/lib/unittest",
   ]
 }

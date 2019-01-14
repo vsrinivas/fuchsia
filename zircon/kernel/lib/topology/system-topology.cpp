@@ -9,6 +9,17 @@ inline void ValidationError(int index, const char* message) {
     printf("Error validating topology at node %d : %s \n", index, message);
 }
 
+template <typename T>
+zx_status_t GrowVector(size_t new_size, fbl::Vector<T>* vector, fbl::AllocChecker* checker) {
+    for (size_t i = vector->size(); i < new_size; i++) {
+        vector->push_back(T(), checker);
+        if (!checker->check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+    }
+    return ZX_OK;
+}
+
 } // namespace
 
 zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
@@ -46,14 +57,14 @@ zx_status_t Graph::Update(zbi_topology_node_t* flat_nodes, size_t count) {
             }
 
             for (int i = 0; i < node->entity.processor.logical_id_count; ++i) {
-                processors_by_logical_id_.insert(node->entity.processor.logical_ids[i],
-                                                 node, &checker);
+                const auto index = node->entity.processor.logical_ids[i];
+                GrowVector(index + 1, &processors_by_logical_id_, &checker);
+                processors_by_logical_id_[index] = node;
                 if (!checker.check()) {
                     nodes_.reset(nullptr);
                     return ZX_ERR_NO_MEMORY;
                 }
             }
-
             break;
         case ZBI_TOPOLOGY_ENTITY_CLUSTER:
             node->entity.cluster = flat_node->entity.cluster;

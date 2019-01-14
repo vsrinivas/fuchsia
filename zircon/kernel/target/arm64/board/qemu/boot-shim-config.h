@@ -6,7 +6,7 @@
 #define USE_DEVICE_TREE_CPU_COUNT 1
 #define USE_DEVICE_TREE_GIC_VERSION 1
 
-#define MAX_CPU_COUNT 100
+#define MAX_CPU_COUNT 16
 static size_t cpu_count = 0;
 
 static const zbi_mem_range_t mem_config[] = {
@@ -78,7 +78,7 @@ static void add_cpu_topology(zbi_header_t* zbi) {
                 .processor = {
                     .logical_ids = {index},
                     .logical_id_count = 1,
-                    .flags = ZBI_TOPOLOGY_PROCESSOR_PRIMARY,
+                    .flags = (index == 0) ? ZBI_TOPOLOGY_PROCESSOR_PRIMARY : 0,
                     .architecture = ZBI_TOPOLOGY_ARCH_ARM,
                     .architecture_info = {
                         .arm = {

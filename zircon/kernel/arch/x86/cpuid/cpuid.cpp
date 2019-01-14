@@ -5,12 +5,26 @@
 #include <arch/x86/cpuid.h>
 
 #include <memory>
+#include <pow2.h>
 
 namespace cpu_id {
 namespace {
 
-inline uint8_t BaseFamilyFromEax(uint64_t eax) {
-    return (eax & 0xF00) >> 8;
+// Extracts the bit range from [lower_bound, upper_bound] (inclusive) from input
+// and returns it as a type T.
+//TODO(edcoyne): Extract this into a common header for other kernel code.
+template <typename T>
+inline T ExtractBits(uint32_t input, uint32_t upper_bound, uint32_t lower_bound) {
+    // Add one to upper bound because it is inclusive.
+    const auto bit_count = upper_bound + 1 - lower_bound;
+
+    DEBUG_ASSERT_MSG(bit_count <= sizeof(T) * 8, "%u <= %lu, upper_bound: %u, lower_bound: %u",
+                     bit_count, sizeof(T) * 8, upper_bound, lower_bound);
+    return static_cast<T>((input >> lower_bound) & (valpow2(bit_count) - 1));
+}
+
+inline uint8_t BaseFamilyFromEax(uint32_t eax) {
+    return ExtractBits<uint8_t>(eax, 11, 8);
 }
 
 Registers CallCpuId(uint32_t leaf, uint32_t subleaf = 0) {
@@ -28,15 +42,35 @@ Registers CallCpuId(uint32_t leaf, uint32_t subleaf = 0) {
 }
 
 // Convert power of two value to a shift_width.
-uint8_t ToShiftWidth(size_t value) {
-    if (value == 0) {
-        return 0;
+uint8_t ToShiftWidth(uint32_t value) {
+    return static_cast<uint8_t>(log2_uint_ceil(value));
+}
+
+Registers FindHighestLeaf4() {
+    std::optional<Registers> highest;
+    for (uint32_t i = 0; i < 1000; i++) {
+        const Registers current = CallCpuId(4, i);
+        if ((current.eax() & 0xF) == 0) { // Null level
+            // If we encounter a null level the last level should be the
+            // highest.
+
+            // If there is no highest just return the current.
+            if (!highest) {
+                printf("WARNING: unable to find any cache levels.");
+                return current;
+            }
+            return *highest;
+        }
+
+        // We want to find the numerically highest cache level.
+        if (highest &&
+            ((*highest).eax() & 0xFF) < (current.eax() & 0xFF)) {
+            highest = {current};
+        }
     }
 
-    uint8_t count = 0;
-    while (!((value >> count++) & 1))
-        ;
-    return --count; // an extra increment was added before testing.
+    printf("WARNING: more than 1000 levels of cache, couldn't find highest.");
+    return *highest;
 }
 
 } // namespace
@@ -54,11 +88,11 @@ Features CpuId::ReadFeatures() const {
 }
 
 Topology CpuId::ReadTopology() const {
-    Registers leafB[] = {
+    SubLeaves<Topology::kEaxBSubleaves> leafB = {
         CallCpuId(11, 0),
         CallCpuId(11, 1),
         CallCpuId(11, 2)};
-    return Topology(ReadManufacturerInfo(), ReadFeatures(), CallCpuId(4), leafB);
+    return Topology(ReadManufacturerInfo(), ReadFeatures(), FindHighestLeaf4(), leafB);
 }
 
 ManufacturerInfo::ManufacturerInfo(Registers registers)
@@ -97,8 +131,8 @@ uint8_t ProcessorId::stepping() const {
 }
 
 uint16_t ProcessorId::model() const {
-    const uint8_t base = (registers_.eax() >> 4) & 0xF;
-    const uint8_t extended = (registers_.eax() >> 16) & 0xF;
+    const uint8_t base = ExtractBits<uint8_t>(registers_.eax(), 7, 4);
+    const uint8_t extended = ExtractBits<uint8_t>(registers_.eax(), 19, 16);
 
     const uint8_t family = BaseFamilyFromEax(registers_.eax());
     if (family == 0xF || family == 0x6) {
@@ -110,7 +144,7 @@ uint16_t ProcessorId::model() const {
 
 uint16_t ProcessorId::family() const {
     const uint8_t base = BaseFamilyFromEax(registers_.eax());
-    const uint8_t extended = (registers_.eax() >> 20) & 0xFF;
+    const uint8_t extended = ExtractBits<uint8_t>(registers_.eax(), 27, 20);
     if (base == 0xF) {
         return static_cast<uint16_t>(base + extended);
     } else {
@@ -119,18 +153,19 @@ uint16_t ProcessorId::family() const {
 }
 
 uint8_t ProcessorId::local_apic_id() const {
-    return static_cast<uint8_t>((registers_.ebx() >> 24) & 0xFF);
+    return ExtractBits<uint8_t>(registers_.ebx(), 31, 24);
 }
 
 Features::Features(Registers leaf1, Registers leaf7, Registers leaf8_01)
     : leaves_{leaf1, leaf7, leaf8_01} {}
 
 uint8_t Features::max_logical_processors_in_package() const {
-    return (leaves_[LEAF1].ebx() >> 16) & 0x7F;
+    return ExtractBits<uint8_t>(leaves_[LEAF1].ebx(), 23, 16);
 }
 
-Topology::Topology(ManufacturerInfo info, Features features, Registers leaf4, Registers* leafB)
-    : info_(info), features_(features), leaf4_(leaf4), leafB_{leafB[0], leafB[1], leafB[2]} {}
+Topology::Topology(ManufacturerInfo info, Features features, Registers leaf4,
+                   SubLeaves<kEaxBSubleaves> leafB)
+    : info_(info), features_(features), leaf4_(leaf4), leafB_(leafB) {}
 
 std::optional<Topology::Levels> Topology::IntelLevels() const {
     Topology::Levels levels;
@@ -138,9 +173,9 @@ std::optional<Topology::Levels> Topology::IntelLevels() const {
         int nodes_under_previous_level = 0;
         int bits_in_previous_levels = 0;
         for (int i = 0; i < 3; i++) {
-            const uint8_t width = leafB_[i].eax() & 0xF;
+            const uint8_t width = ExtractBits<uint8_t>(leafB_.subleaf[i].eax(), 4, 0);
             if (width) {
-                uint8_t raw_type = (leafB_[i].ecx() & 0xFF00) >> 8;
+                uint8_t raw_type = ExtractBits<uint8_t>(leafB_.subleaf[i].ecx(), 15, 8);
 
                 LevelType type = LevelType::INVALID;
                 if (raw_type == 1) {
@@ -154,20 +189,21 @@ std::optional<Topology::Levels> Topology::IntelLevels() const {
 
                 // This actually contains total logical processors in all
                 // subtrees of this level of the topology.
-                const uint16_t nodes_under_level = leafB_[i].ebx() & 0xFF;
+                const uint16_t nodes_under_level =
+                    ExtractBits<uint8_t>(leafB_.subleaf[i].ebx(), 7, 0);
                 const uint8_t node_count = static_cast<uint8_t>(
                     nodes_under_level / ((nodes_under_previous_level == 0) ? 1 : nodes_under_previous_level));
-                const uint8_t shift_width = static_cast<uint8_t>(width - bits_in_previous_levels);
+                const uint8_t id_bits = static_cast<uint8_t>(width - bits_in_previous_levels);
 
                 levels.levels[levels.level_count++] = {
                     .type = type,
                     // Dividing by logical processors under last level will give
                     // us the nodes that are at this level.
                     .node_count = node_count,
-                    .shift_width = shift_width,
+                    .id_bits = id_bits,
                 };
                 nodes_under_previous_level += nodes_under_level;
-                bits_in_previous_levels += shift_width;
+                bits_in_previous_levels += id_bits;
             }
         }
     } else if (info_.highest_cpuid_leaf() >= 4) {
@@ -176,23 +212,23 @@ std::optional<Topology::Levels> Topology::IntelLevels() const {
             levels.levels[levels.level_count++] = {
                 .type = LevelType::PACKAGE,
                 .node_count = 1,
-                .shift_width = 0,
+                .id_bits = 0,
             };
         } else {
             const auto logical_in_package = features_.max_logical_processors_in_package();
-            const auto cores_in_package = ((leaf4_.eax() >> 26) & 0x3F) + 1;
+            const auto cores_in_package = ExtractBits<uint8_t>(leaf4_.eax(), 31, 26) + 1;
             const auto logical_per_core = logical_in_package / cores_in_package;
             if (logical_per_core > 1) {
                 levels.levels[levels.level_count++] = {
                     .type = LevelType::SMT,
-                    .shift_width = ToShiftWidth(logical_per_core),
+                    .id_bits = ToShiftWidth(logical_per_core),
                 };
             }
 
             if (cores_in_package > 1) {
                 levels.levels[levels.level_count++] = {
                     .type = LevelType::CORE,
-                    .shift_width = ToShiftWidth(cores_in_package),
+                    .id_bits = ToShiftWidth(cores_in_package),
                 };
             }
         }
@@ -220,6 +256,18 @@ std::optional<Topology::Levels> Topology::levels() const {
     printf("WARNING: Unable to parse topology from CPUID. If this is an Intel chip, "
            "ensure IA32_MISC_ENABLES[22] is off.\n");
     return std::nullopt;
+}
+
+Topology::Cache Topology::highest_level_cache() const {
+    const auto value = ExtractBits<uint16_t>(leaf4_.eax(), 25, 14) + 1;
+    return {
+        .level = ExtractBits<uint8_t>(leaf4_.eax(), 7, 5),
+        .shift_width = ToShiftWidth(value),
+        .size_bytes = (ExtractBits<uint16_t>(leaf4_.ebx(), 32, 22) + 1) *
+                      (ExtractBits<uint16_t>(leaf4_.ebx(), 21, 12) + 1) *
+                      (ExtractBits<uint16_t>(leaf4_.ebx(), 11, 0) + 1) *
+                      (leaf4_.ecx() + 1),
+    };
 }
 
 } // namespace cpu_id

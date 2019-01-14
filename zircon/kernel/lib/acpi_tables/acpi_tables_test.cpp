@@ -5,77 +5,16 @@
 #include <lib/acpi_tables.h>
 
 #include <initializer_list>
+#include <lib/acpi_tables_test_data.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 #include <lib/unittest/unittest.h>
 
-namespace {
-
-struct FakeTable {
-    char sig[5];
-    uint32_t instance = 0xFFFFFF;
-    ACPI_TABLE_HEADER* header;
-};
-
-class FakeTableProvider : public AcpiTableProvider {
-public:
-    void AddTable(FakeTable table) {
-        tables_[table_count_++] = table;
-        DEBUG_ASSERT(table_count_ < kMaxTables);
-    }
-
-    ACPI_STATUS GetTable(char* signature, uint32_t instance,
-                         ACPI_TABLE_HEADER** header) const override {
-        for (uint32_t i = 0; i < table_count_; i++) {
-            const FakeTable* table = &tables_[i];
-            if (strcmp(signature, table->sig) == 0 && instance == table->instance) {
-                *header = table->header;
-                return AE_OK;
-            }
-        }
-        return AE_NOT_FOUND;
-    }
-
-private:
-    static const uint32_t kMaxTables = 3;
-    FakeTable tables_[kMaxTables];
-    uint32_t table_count_ = 0;
-};
-
-// Dumped from pixelbook eve.
-const uint8_t kEveMadtTable[]{
-    0x41, 0x50, 0x49, 0x43, 0x6C, 0x0, 0x0, 0x0, 0x1, 0x72,
-    0x43, 0x4F, 0x52, 0x45, 0x20, 0x20, 0x43, 0x4F, 0x52, 0x45,
-    0x42, 0x4F, 0x4F, 0x54, 0x0, 0x0, 0x0, 0x0, 0x43, 0x4F,
-    0x52, 0x45, 0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0xE0, 0xFE,
-    0x1, 0x0, 0x0, 0x0, 0x0, 0x8, 0x0, 0x0, 0x1, 0x0,
-    0x0, 0x0, 0x0, 0x8, 0x1, 0x1, 0x1, 0x0, 0x0, 0x0,
-    0x0, 0x8, 0x2, 0x2, 0x1, 0x0, 0x0, 0x0, 0x0, 0x8,
-    0x3, 0x3, 0x1, 0x0, 0x0, 0x0, 0x1, 0xC, 0x2, 0x0,
-    0x0, 0x0, 0xC0, 0xFE, 0x0, 0x0, 0x0, 0x0, 0x2, 0xA,
-    0x0, 0x0, 0x2, 0x0, 0x0, 0x0, 0x0, 0x0, 0x2, 0xA,
-    0x0, 0x9, 0x9, 0x0, 0x0, 0x0, 0xD, 0x0, 0x71, 0x8A,
-};
-
-// Dumped from pixelbook eve.
-const uint8_t kEveHpetTable[]{
-    0x48, 0x50, 0x45, 0x54, 0x38, 0x0, 0x0, 0x0, 0x1, 0xEB,
-    0x43, 0x4F, 0x52, 0x45, 0x20, 0x20, 0x43, 0x4F, 0x52, 0x45,
-    0x42, 0x4F, 0x4F, 0x54, 0x0, 0x0, 0x0, 0x0, 0x43, 0x4F,
-    0x52, 0x45, 0x0, 0x0, 0x0, 0x0, 0x1, 0xA7, 0x86, 0x80,
-    0x0, 0x40, 0x0, 0x0, 0x0, 0x0, 0xD0, 0xFE, 0x0, 0x0,
-    0x0, 0x0, 0x0, 0x0, 0x0, 0x0, 0x61, 0xCC, 0x68, 0x61,
-};
-
-} // namespace
-
-bool test_cpus() {
+bool test_cpus_eve() {
     BEGIN_TEST;
-    FakeTableProvider provider;
-    provider.AddTable(FakeTable{ACPI_SIG_MADT, 1, (ACPI_TABLE_HEADER*)kEveMadtTable});
-    AcpiTables tables(&provider);
+    AcpiTables tables(&acpi_test_data::kEveTableProvider);
 
     uint32_t cpus = 0;
     EXPECT_EQ(ZX_OK, tables.cpu_count(&cpus), "");
@@ -92,11 +31,21 @@ bool test_cpus() {
     END_TEST;
 }
 
+bool test_cpus_z840() {
+    BEGIN_TEST;
+    AcpiTables tables(&acpi_test_data::kZ840TableProvider);
+
+    // We check the numcpus to ensure basic parsing is working.
+    uint32_t cpus = 0;
+    EXPECT_EQ(ZX_OK, tables.cpu_count(&cpus), "");
+    EXPECT_EQ(56u, cpus, "");
+
+    END_TEST;
+}
+
 bool test_io() {
     BEGIN_TEST;
-    FakeTableProvider provider;
-    provider.AddTable(FakeTable{ACPI_SIG_MADT, 1, (ACPI_TABLE_HEADER*)kEveMadtTable});
-    AcpiTables tables(&provider);
+    AcpiTables tables(&acpi_test_data::kEveTableProvider);
 
     uint32_t num_io = 0;
     EXPECT_EQ(ZX_OK, tables.io_apic_count(&num_io), "");
@@ -114,9 +63,7 @@ bool test_io() {
 
 bool test_interrupt_source_overrides() {
     BEGIN_TEST;
-    FakeTableProvider provider;
-    provider.AddTable(FakeTable{ACPI_SIG_MADT, 1, (ACPI_TABLE_HEADER*)kEveMadtTable});
-    AcpiTables tables(&provider);
+    AcpiTables tables(&acpi_test_data::kEveTableProvider);
 
     uint32_t num_overrides = 0;
     EXPECT_EQ(ZX_OK, tables.interrupt_source_overrides_count(&num_overrides), "");
@@ -143,9 +90,7 @@ bool test_interrupt_source_overrides() {
 
 bool test_hpet() {
     BEGIN_TEST;
-    FakeTableProvider provider;
-    provider.AddTable(FakeTable{ACPI_SIG_HPET, 1, (ACPI_TABLE_HEADER*)kEveHpetTable});
-    AcpiTables tables(&provider);
+    AcpiTables tables(&acpi_test_data::kEveTableProvider);
 
     acpi_hpet_descriptor hpet;
     ASSERT_EQ(ZX_OK, tables.hpet(&hpet), "");
@@ -158,9 +103,31 @@ bool test_hpet() {
     END_TEST;
 }
 
-UNITTEST_START_TESTCASE(apic_tables_tests)
-UNITTEST("Enumerate cpus.", test_cpus)
+bool test_numa() {
+    BEGIN_TEST;
+    AcpiTables tables(&acpi_test_data::kZ840TableProvider);
+    size_t domain_counts[2] = {0, 0};
+    AcpiNumaRegion regions[2];
+    EXPECT_EQ(ZX_OK, tables.VisitCpuNumaPairs([&](const AcpiNumaRegion& region, uint32_t apic_id) {
+        domain_counts[region.domain]++;
+        regions[region.domain] = region;
+    }),
+              "");
+
+    ASSERT_EQ(28u, domain_counts[0], "");
+    ASSERT_EQ(28u, domain_counts[1], "");
+    EXPECT_EQ(0u, regions[0].base_address, "");
+    EXPECT_EQ(0x1030000000u, regions[0].length, "");
+    EXPECT_EQ(0x1030000000u, regions[1].base_address, "");
+    EXPECT_EQ(0x1000000000u, regions[1].length, "");
+    END_TEST;
+}
+
+UNITTEST_START_TESTCASE(acpi_tables_tests)
+UNITTEST("Enumerate cpus using pixelbook eve data", test_cpus_eve)
+UNITTEST("Enumerate cpus using HP z840 data.", test_cpus_z840)
 UNITTEST("Enumerate io_apic_ids.", test_io)
 UNITTEST("Enumerate interrupt_source_overrides.", test_interrupt_source_overrides)
 UNITTEST("Lookup HPET.", test_hpet)
-UNITTEST_END_TESTCASE(apic_tables_tests, "apic_tables", "Test parsing of apic tables.");
+UNITTEST("Enumerate NUMA regions.", test_numa)
+UNITTEST_END_TESTCASE(acpi_tables_tests, "acpi_tables", "Test parsing of acpi tables.");
