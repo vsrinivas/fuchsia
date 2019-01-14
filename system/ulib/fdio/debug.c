@@ -46,7 +46,7 @@ static ssize_t fdio_lldebug_log_write(const void* _data, size_t len) {
         }
         logbuf->data[logbuf->next++] = c;
         if (logbuf->next == LOGBUF_MAX) {
-            zx_debuglog_write(logbuf->log, 0, lobbuf->data, logbuf->next);
+            zx_debuglog_write(logbuf->log, 0, logbuf->data, logbuf->next);
             logbuf->next = 0;
             continue;
         }

@@ -28,6 +28,7 @@
 #include <zircon/device/vfs.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
+#include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
 
