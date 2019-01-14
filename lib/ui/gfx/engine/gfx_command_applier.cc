@@ -151,6 +151,8 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
       return ApplySetMaterialCmd(session, std::move(command.set_material()));
     case fuchsia::ui::gfx::Command::Tag::kSetClip:
       return ApplySetClipCmd(session, std::move(command.set_clip()));
+    case ::fuchsia::ui::gfx::Command::Tag::kSetClipPlanes:
+      return ApplySetClipPlanesCmd(session, std::move(command.set_clip_planes()));
     case fuchsia::ui::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCmd(
           session, std::move(command.set_hit_test_behavior()));
@@ -603,6 +605,20 @@ bool GfxCommandApplier::ApplySetClipCmd(Session* session,
 
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     return node->SetClipToSelf(command.clip_to_self);
+  }
+
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetClipPlanesCmd(Session* session,
+    fuchsia::ui::gfx::SetClipPlanesCmd command) {
+  if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
+    std::vector<escher::plane3> clip_planes;
+    clip_planes.reserve(command.clip_planes.size());
+    for (auto& p : command.clip_planes) {
+      clip_planes.emplace_back(Unwrap(p.dir), p.dist);
+    }
+    return node->SetClipPlanes(std::move(clip_planes));
   }
 
   return false;

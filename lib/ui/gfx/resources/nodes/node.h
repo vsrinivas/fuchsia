@@ -54,6 +54,7 @@ class Node : public Resource {
   bool SetAnchor(const escher::vec3& anchor);
   bool SetAnchor(Vector3VariablePtr anchor);
   bool SetClipToSelf(bool clip_to_self);
+  bool SetClipPlanes(std::vector<escher::plane3> clip_planes);
   bool SetHitTestBehavior(::fuchsia::ui::gfx::HitTestBehavior behavior);
   bool SendSizeChangeHint(float width_change_factor,
                           float height_change_factor);
@@ -66,6 +67,7 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
+  const std::vector<escher::plane3>& clip_planes() const { return clip_planes_; }
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const {
     return hit_test_behavior_;
   }
@@ -170,6 +172,7 @@ class Node : public Resource {
   mutable escher::mat4 global_transform_;
   mutable bool global_transform_dirty_ = true;
   bool clip_to_self_ = false;
+  std::vector<escher::plane3> clip_planes_;
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior_ =
       ::fuchsia::ui::gfx::HitTestBehavior::kDefault;
   ::fuchsia::ui::gfx::Metrics reported_metrics_;

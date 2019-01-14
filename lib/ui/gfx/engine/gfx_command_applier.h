@@ -102,6 +102,7 @@ class GfxCommandApplier {
                                   fuchsia::ui::gfx::SetMaterialCmd command);
   static bool ApplySetClipCmd(Session* session,
                               fuchsia::ui::gfx::SetClipCmd command);
+  static bool ApplySetClipPlanesCmd(Session* session, fuchsia::ui::gfx::SetClipPlanesCmd command);
   static bool ApplySetViewPropertiesCmd(
       Session* session, fuchsia::ui::gfx::SetViewPropertiesCmd command);
   static bool ApplySetHitTestBehaviorCmd(
