@@ -27,37 +27,39 @@ zx_status_t zx_guest_set_trap(zx_handle_t handle,
 there is an access by a VCPU within the address range defined by *addr* and
 *size*, within the address space defined by *kind*.
 
-If *port_handle* is specified, a packet for the trap will be delivered through
-*port_handle* each time the trap is triggered, otherwise if **ZX_HANDLE_INVALID**
-is given, a packet will be delivered through [`zx_vcpu_resume()`]. This provides
-control over whether the packet is delivered asynchronously or synchronously.
+*kind* may be either **ZX_GUEST_TRAP_BELL**, **ZX_GUEST_TRAP_MEM**, or
+**ZX_GUEST_TRAP_IO**. If **ZX_GUEST_TRAP_BELL** or **ZX_GUEST_TRAP_MEM** is
+specified, then *addr* and *size* must both be page-aligned.
+**ZX_GUEST_TRAP_BELL** is an asynchronous trap, and both **ZX_GUEST_TRAP_MEM**
+and **ZX_GUEST_TRAP_IO** are synchronous traps.
 
-When *port_handle* is specified, a fixed number of packets are pre-allocated
-per trap. If all the packets are exhausted, execution of the VCPU that caused
-the trap will be paused. When at least one packet is dequeued, execution of the
-VCPU will resume. To dequeue a packet from *port_handle*, use [`zx_port_wait()`].
-Multiple threads may use [`zx_port_wait()`] to dequeue packets, enabling the use
-of a thread pool to handle traps.
+Packets for synchronous traps will be delivered through [`zx_vcpu_resume()`] and
+packets for asynchronous traps will be delivered through *port_handle*.
+
+*port_handle* must be **ZX_HANDLE_INVALID** for synchronous traps. For
+asynchronous traps *port_handle* must be valid and a packet for the trap will be
+delivered through *port_handle* each time the trap is triggered. A fixed number
+of packets are pre-allocated per trap. If all the packets are exhausted,
+execution of the VCPU that caused the trap will be paused. When at least one
+packet is dequeued, execution of the VCPU will resume. To dequeue a packet from
+*port_handle*, use [`zx_port_wait()`]. Multiple threads may use
+[`zx_port_wait()`] to dequeue packets, enabling the use of a thread pool to
+handle traps.
 
 *key* is used to set the key field within `zx_port_packet_t`, and can be used to
 distinguish between packets for different traps.
 
-*kind* may be either **ZX_GUEST_TRAP_BELL**, **ZX_GUEST_TRAP_MEM**, or
-**ZX_GUEST_TRAP_IO**. If **ZX_GUEST_TRAP_BELL** or **ZX_GUEST_TRAP_MEM** is
-specified, then *addr* and *size* must both be page-aligned. If
-**ZX_GUEST_TRAP_BELL** is set, then *port_handle* must be specified. If
-**ZX_GUEST_TRAP_MEM** or **ZX_GUEST_TRAP_IO** is set, then *port_handle* must be
-**ZX_HANDLE_INVALID**.
 
-**ZX_GUEST_TRAP_BELL** is a type of trap that defines a door-bell. If there is an
-access to the memory region specified by the trap, then a packet is generated
+**ZX_GUEST_TRAP_BELL** is a type of trap that defines a door-bell. If there is
+an access to the memory region specified by the trap, then a packet is generated
 that does not fetch the instruction associated with the access. The packet will
-then be delivered via *port_handle*.
+then be delivered asynchronously via *port_handle*.
 
-To identify what *kind* of trap generated a packet, use **ZX_PKT_TYPE_GUEST_MEM**,
-**ZX_PKT_TYPE_GUEST_IO**, **ZX_PKT_TYPE_GUEST_BELL**, and **ZX_PKT_TYPE_GUEST_VCPU**.
-**ZX_PKT_TYPE_GUEST_VCPU** is a special packet, not caused by a trap, that
-indicates that the guest requested to start an additional VCPU.
+To identify what *kind* of trap generated a packet, use
+**ZX_PKT_TYPE_GUEST_MEM**, **ZX_PKT_TYPE_GUEST_IO**, **ZX_PKT_TYPE_GUEST_BELL**,
+and **ZX_PKT_TYPE_GUEST_VCPU**. **ZX_PKT_TYPE_GUEST_VCPU** is a special packet,
+not caused by a trap, that indicates that the guest requested to start an
+additional VCPU.
 
 ## RIGHTS
 
