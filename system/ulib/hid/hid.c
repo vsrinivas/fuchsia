@@ -17,7 +17,7 @@ void hid_kbd_parse_report(uint8_t buf[8], hid_keys_t* keys) {
     keys->keymask[7] = buf[0];
     for (int i = 2; i < 8; i++) {
         if (buf[i] == 0) {
-            break;
+            continue;
         }
         KEYSET(keys->keymask, buf[i]);
     }
