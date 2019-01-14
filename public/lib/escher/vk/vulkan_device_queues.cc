@@ -147,10 +147,19 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
 
 fxl::RefPtr<VulkanDeviceQueues> VulkanDeviceQueues::New(
     VulkanInstancePtr instance, Params params) {
+  // Escher requires the memory_requirements_2 extension for the
+  // vma_gpu_allocator to function.
+  params.extension_names.insert(
+      VK_KHR_GET_MEMORY_REQUIREMENTS_2_EXTENSION_NAME);
+
+  // If the params contain a surface, then ensure that the swapchain extension
+  // is supported so that we can render to that surface.
   if (params.surface) {
     params.extension_names.insert(VK_KHR_SWAPCHAIN_EXTENSION_NAME);
   }
+
 #if defined(OS_FUCHSIA)
+  // If we're running on Fuchsia, make sure we have our semaphore extensions.
   params.extension_names.insert(
       VK_KHR_EXTERNAL_SEMAPHORE_FUCHSIA_EXTENSION_NAME);
   params.extension_names.insert(VK_KHR_EXTERNAL_SEMAPHORE_EXTENSION_NAME);

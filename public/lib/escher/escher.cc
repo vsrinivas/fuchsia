@@ -22,8 +22,8 @@
 #include "lib/escher/vk/impl/framebuffer_allocator.h"
 #include "lib/escher/vk/impl/pipeline_layout_cache.h"
 #include "lib/escher/vk/impl/render_pass_cache.h"
-#include "lib/escher/vk/naive_gpu_allocator.h"
 #include "lib/escher/vk/texture.h"
+#include "lib/escher/vk/vma_gpu_allocator.h"
 #include "third_party/shaderc/libshaderc/include/shaderc/shaderc.hpp"
 
 namespace escher {
@@ -77,7 +77,7 @@ Escher::Escher(VulkanDeviceQueuesPtr device, HackFilesystemPtr filesystem)
     : renderer_count_(0),
       device_(std::move(device)),
       vulkan_context_(device_->GetVulkanContext()),
-      gpu_allocator_(std::make_unique<NaiveGpuAllocator>(vulkan_context_)),
+      gpu_allocator_(std::make_unique<VmaGpuAllocator>(vulkan_context_)),
       command_buffer_sequencer_(
           std::make_unique<impl::CommandBufferSequencer>()),
       command_buffer_pool_(NewCommandBufferPool(
