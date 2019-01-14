@@ -12,6 +12,8 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/hid-parser-test.cpp \
     $(LOCAL_DIR)/hid-report-data.cpp \
     $(LOCAL_DIR)/hid-utest-data.cpp \
+    $(LOCAL_DIR)/hid-helper-test.cpp \
+    $(LOCAL_DIR)/hid-helper-test.h \
 
 MODULE_NAME := hidparse-test
 
