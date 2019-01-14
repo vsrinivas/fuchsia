@@ -97,6 +97,10 @@ typedef struct zx_packet_guest_mem {
 #define X86_MAX_INST_LEN 15u
     uint8_t inst_len;
     uint8_t inst_buf[X86_MAX_INST_LEN];
+    // This is the default operand size as determined by the CS and EFER register (Volume 3,
+    // Section 5.2.1). If operating in 64-bit mode then near branches and all instructions, except
+    // far branches, that implicitly reference the RSP will actually have a default operand size of
+    // 64-bits (Volume 2, Section 2.2.1.7), and not the 32-bits that will be given here.
     uint8_t default_operand_size;
     uint8_t reserved[7];
 #endif
