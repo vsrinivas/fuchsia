@@ -22,15 +22,12 @@ package ramdisk
 import "C"
 
 import (
-	"bytes"
 	"fmt"
 	"runtime"
-	"syscall"
-	"unsafe"
 )
 
 type Ramdisk struct {
-	path [syscall.PathMax]byte
+	ramdisk_client *C.struct_ramdisk_client
 }
 
 // New constructs and creates a ramdisk of size bytes at the given path.
@@ -40,7 +37,7 @@ func New(size int) (*Ramdisk, error) {
 }
 
 func (r *Ramdisk) Create(blkSz uint64, blkCnt uint64) error {
-	n := C.create_ramdisk(C.uint64_t(blkSz), C.uint64_t(blkCnt), (*C.char)(unsafe.Pointer(&r.path[0])))
+	n := C.create_ramdisk(C.uint64_t(blkSz), C.uint64_t(blkCnt), &r.ramdisk_client)
 	if n == 0 {
 		runtime.SetFinalizer(r, finalizeRamdisk)
 		return nil
@@ -49,7 +46,7 @@ func (r *Ramdisk) Create(blkSz uint64, blkCnt uint64) error {
 }
 
 func (r *Ramdisk) Destroy() error {
-	n := C.destroy_ramdisk((*C.char)(unsafe.Pointer(&r.path[0])))
+	n := C.ramdisk_destroy(r.ramdisk_client)
 	if n == 0 {
 		return nil
 	}
@@ -57,7 +54,7 @@ func (r *Ramdisk) Destroy() error {
 }
 
 func (r *Ramdisk) Path() string {
-	return string(r.path[:bytes.Index(r.path[:], []byte{0})])
+	return C.GoString(C.ramdisk_get_path(r.ramdisk_client))
 }
 
 func (r *Ramdisk) MkfsBlobfs() error {
