@@ -165,7 +165,7 @@ zx_status_t async_loop_create(const async_loop_config_t* config, async_loop_t** 
 
     zx_status_t status = zx_port_create(0u, &loop->port);
     if (status == ZX_OK)
-        status = zx_timer_create(0u, ZX_CLOCK_MONOTONIC, &loop->timer);
+        status = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &loop->timer);
     if (status == ZX_OK) {
         status = zx_object_wait_async(loop->timer, loop->port, KEY_CONTROL,
                                       ZX_TIMER_SIGNALED,
