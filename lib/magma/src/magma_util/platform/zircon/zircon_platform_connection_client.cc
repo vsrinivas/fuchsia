@@ -243,6 +243,8 @@ public:
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, true);
     }
 
+    uint32_t GetNotificationChannelHandle() override { return notification_channel_.get(); }
+
     magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                            size_t* buffer_size_out) override
     {
@@ -532,6 +534,8 @@ public:
         return fdio_handle_fd(notification_channel_.get(),
                               ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED, 0, true);
     }
+
+    uint32_t GetNotificationChannelHandle() override { return notification_channel_.get(); }
 
     magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                            size_t* buffer_size_out) override

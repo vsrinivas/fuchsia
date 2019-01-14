@@ -68,7 +68,7 @@ public:
         EXPECT_NE(magma_get_error(connection_), 0);
     }
 
-    void NotificationChannel()
+    void NotificationFd()
     {
         int fd1 = magma_get_notification_channel_fd(connection_);
         EXPECT_LE(0, fd1);
@@ -86,6 +86,15 @@ public:
         EXPECT_EQ(0, fds[1].revents);
         close(fd1);
         close(fd2);
+    }
+
+    void NotificationChannel()
+    {
+        uint32_t handle = magma_get_notification_channel_handle(connection_);
+        EXPECT_NE(0u, handle);
+
+        uint32_t handle2 = magma_get_notification_channel_handle(connection_);
+        EXPECT_EQ(handle, handle2);
     }
 
     void Buffer()
@@ -251,6 +260,12 @@ TEST(MagmaAbi, Context)
 {
     TestConnection test;
     test.Context();
+}
+
+TEST(MagmaAbi, NotificationFd)
+{
+    TestConnection test;
+    test.NotificationFd();
 }
 
 TEST(MagmaAbi, NotificationChannel)

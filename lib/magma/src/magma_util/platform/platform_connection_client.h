@@ -59,6 +59,7 @@ public:
                                         uint64_t page_count) = 0;
 
     virtual int GetNotificationChannelFd() = 0;
+    virtual uint32_t GetNotificationChannelHandle() = 0;
     virtual magma_status_t ReadNotificationChannel(void* buffer, size_t buffer_size,
                                                    size_t* buffer_size_out) = 0;
     virtual void ExecuteImmediateCommands(uint32_t context_id, uint64_t command_count,

@@ -212,6 +212,8 @@ void magma_unmap_buffer_gpu(magma_connection_t connection, magma_buffer_t buffer
 
 int32_t magma_get_notification_channel_fd(magma_connection_t connection) { return 0; }
 
+uint32_t magma_get_notification_channel_handle(magma_connection_t connection) { return 0; }
+
 // Read a notification from the channel into |buffer|. Sets |*buffer_size_out| to 0 if there are no
 // messages pending.
 magma_status_t magma_read_notification_channel(magma_connection_t connection, void* buffer,
