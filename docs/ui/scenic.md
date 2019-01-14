@@ -234,7 +234,7 @@ make up Scenic.
   * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/events.fidl)
   * [resources.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/resources.fidl)
   * [nodes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/nodes.fidl)
-  * [shapes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/shades.fidl)
+  * [shapes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/shapes.fidl)
   * [...](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx)
 
 * [Views](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
