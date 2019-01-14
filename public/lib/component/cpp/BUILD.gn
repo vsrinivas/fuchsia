@@ -27,11 +27,11 @@ source_set("cpp") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.inspect",
     "//garnet/public/fidl/fuchsia.sys",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/svc/cpp",
+    "//zircon/public/fidl/fuchsia-inspect",
     "//zircon/public/lib/fit",
     "//zircon/public/lib/fs",
     "//zircon/public/lib/zx",

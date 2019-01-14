@@ -31,9 +31,9 @@ source_set("lib") {
   ]
 
   public_deps = [
-    "//garnet/public/fidl/fuchsia.inspect",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fostr",
+    "//zircon/public/fidl/fuchsia-inspect",
   ]
 }
 
