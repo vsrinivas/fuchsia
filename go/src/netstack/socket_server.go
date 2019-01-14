@@ -42,10 +42,12 @@ const debug = false
 const logListen = false
 const logAccept = false
 
-const ZXSIO_SIGNAL_INCOMING = zx.SignalUser0
-const ZXSIO_SIGNAL_OUTGOING = zx.SignalUser1
-const ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
-const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
+const (
+	ZXSIO_SIGNAL_INCOMING  = zx.SignalUser0
+	ZXSIO_SIGNAL_OUTGOING  = zx.SignalUser1
+	ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
+	LOCAL_SIGNAL_CLOSING   = zx.SignalUser5
+)
 
 func sendSignal(s zx.Socket, sig zx.Signals, peer bool) error {
 	var err error
@@ -68,7 +70,7 @@ func signalConnectFailure(s zx.Socket) error {
 	return sendSignal(s, ZXSIO_SIGNAL_OUTGOING, true)
 }
 
-func signalConnectSuccess(s zx.Socket, outgoing bool) error {
+func signalConnectSuccess(s zx.Socket) error {
 	// CONNECTED should be sent to the peer before it is sent locally.
 	// That ensures the peer detects the connection before any data is written by
 	// loopStreamRead.
@@ -1107,7 +1109,7 @@ func (ios *iostate) loopListen(inCh chan struct{}) {
 				log.Printf("listen: Share failed: %v", err)
 				return
 			}
-			if err := signalConnectSuccess(localS, false); err != nil {
+			if err := signalConnectSuccess(localS); err != nil {
 				log.Printf("listen: signalConnectSuccess failed: %v", err)
 				return
 			}
@@ -1225,7 +1227,7 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 				}
 				return
 			}
-			if err := signalConnectSuccess(ios.dataHandle, true); err != nil {
+			if err := signalConnectSuccess(ios.dataHandle); err != nil {
 				log.Printf("connect: signalConnectSuccess failed: %v", err)
 			}
 		}()
@@ -1242,7 +1244,7 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 		log.Printf("connect: connected")
 	}
 	if ios.transProto == tcp.ProtocolNumber {
-		if err := signalConnectSuccess(ios.dataHandle, true); err != nil {
+		if err := signalConnectSuccess(ios.dataHandle); err != nil {
 			return errStatus(err)
 		}
 	}
