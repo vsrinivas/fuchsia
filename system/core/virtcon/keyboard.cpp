@@ -200,7 +200,7 @@ zx_status_t vc_input_create(vc_input_t** out, keypress_handler_t handler, int fd
 
 #if !BUILD_FOR_TEST
     zx_status_t r;
-    if ((r = zx_timer_create(0, ZX_CLOCK_MONOTONIC, &vi->timer)) < 0) {
+    if ((r = zx_timer_create(ZX_TIMER_SLACK_LATE, ZX_CLOCK_MONOTONIC, &vi->timer)) < 0) {
         free(vi);
         return r;
     }
