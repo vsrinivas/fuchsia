@@ -15,6 +15,7 @@ import (
 	"log"
 	"os"
 	"path"
+	"sort"
 	"strings"
 	"time"
 
@@ -25,7 +26,6 @@ import (
 )
 
 // TODO(IN-824): Produce a tar archive of all output files.
-// TODO(IN-824): Include log_listener output.
 
 const (
 	// Default amount of time to wait before failing to perform any IO action.
@@ -124,10 +124,43 @@ func execute(testsFilepath string) error {
 		return fmt.Errorf("failed to unmarshal %s: %v", testsFilepath, err)
 	}
 
-	// Execute all tests.
-	summary, err := runTests(tests, fuchsiaTester.Test, RunTestInSubprocess, outputDir)
-	if err != nil {
-		return err
+	// Partition the tests into groups according to OS.
+	groups := groupTests(tests, func(test testsharder.Test) string {
+		sys := strings.ToLower(test.OS)
+		switch sys {
+		case "fuchsia", "linux", "mac":
+			return sys
+		}
+		return "unknown"
+	})
+
+	// Fail fast if any test cannot be run.
+	if unknownTests, ok := groups["unknown"]; ok {
+		return fmt.Errorf("could not determine the runtime system for following tests %v", unknownTests)
+	}
+
+	var summary *runtests.TestSummary
+
+	// Execute UNIX tests locally, assuming we're running in a UNIX environment.
+	var localTests []testsharder.Test
+	localTests = append(localTests, groups["linux"]...)
+	localTests = append(localTests, groups["mac"]...)
+	if len(localTests) > 0 {
+		details, err := runTests(localTests, RunTestInSubprocess, outputDir)
+		if err != nil {
+			return err
+		}
+		summary.Tests = append(summary.Tests, details...)
+	}
+
+	// Execute Fuchsia tests.
+	if fuchsiaTests, ok := groups["fuchsia"]; ok {
+		// TODO(IN-824): Record log_listener output.
+		details, err := runTests(fuchsiaTests, fuchsiaTester.Test, outputDir)
+		if err != nil {
+			return err
+		}
+		summary.Tests = append(summary.Tests, details...)
 	}
 
 	summaryFile, err := os.Create(path.Join(outputDir, "summary.json"))
@@ -138,6 +171,25 @@ func execute(testsFilepath string) error {
 	// Log summary to `outputDir`.
 	encoder := json.NewEncoder(summaryFile)
 	return encoder.Encode(summary)
+}
+
+// groupTests splits a list of tests into named subgroups according to the names returned
+// by `name`.  Within any subgroup, the list of tests is sorted by test name.
+func groupTests(input []testsharder.Test, name func(testsharder.Test) string) map[string][]testsharder.Test {
+	tests := make([]testsharder.Test, len(input))
+	copy(tests, input)
+
+	sort.SliceStable(tests, func(i, j int) bool {
+		return tests[i].Name < tests[j].Name
+	})
+
+	output := make(map[string][]testsharder.Test)
+	for _, test := range tests {
+		group := name(test)
+		output[group] = append(output[group], test)
+	}
+
+	return output
 }
 
 func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
@@ -163,32 +215,20 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runTests(tests []testsharder.Test, fuchsia Tester, local Tester, outputDir string) (*runtests.TestSummary, error) {
-	// Execute all tests.
-	summary := new(runtests.TestSummary)
+func runTests(tests []testsharder.Test, tester Tester, outputDir string) ([]runtests.TestDetails, error) {
+	var output []runtests.TestDetails
 	for _, test := range tests {
-		var tester Tester
-		switch strings.ToLower(test.OS) {
-		case "fuchsia":
-			tester = fuchsia
-		case "linux", "mac":
-			tester = local
-		default:
-			log.Printf("cannot run '%s' on unknown OS '%s'", test.Name, test.OS)
-			continue
-		}
-
 		details, err := runTest(context.Background(), test, tester, outputDir)
 		if err != nil {
 			log.Println(err)
 		}
 
 		if details != nil {
-			summary.Tests = append(summary.Tests, *details)
+			output = append(output, *details)
 		}
 	}
 
-	return summary, nil
+	return output, nil
 }
 
 func runTest(ctx context.Context, test testsharder.Test, tester Tester, outputDir string) (*runtests.TestDetails, error) {
