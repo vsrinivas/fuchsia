@@ -57,6 +57,7 @@ fn main() -> Result<(), Error> {
         });
     });
 
-    run_fidl_loop(&mut executor, sl4f_session_async, async_receiver);
+    executor.run_singlethreaded(run_fidl_loop(sl4f_session_async, async_receiver));
+
     Ok(())
 }

@@ -3,12 +3,9 @@
 // found in the LICENSE file.
 
 use failure::Error;
-use fuchsia_async::{self as fasync, unsafe_many_futures};
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::macros::*;
 use futures::channel::mpsc;
-use futures::future::ready as fready;
-use futures::prelude::*;
 use futures::StreamExt;
 use parking_lot::RwLock;
 use serde_json::Value;
@@ -25,78 +22,74 @@ use crate::bluetooth::commands::gatt_client_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
 use crate::wlan::commands::wlan_method_to_fidl;
 
-pub fn run_fidl_loop(
-    executor: &mut fasync::Executor,
+pub async fn run_fidl_loop(
     sl4f_session: Arc<RwLock<Sl4f>>, receiver: mpsc::UnboundedReceiver<AsyncRequest>,
 ) {
-    let receiver_fut = receiver.map(|request| match request {
-        AsyncRequest {
-            tx,
-            id,
-            method_type,
-            name,
-            params,
-        } => {
-            let curr_sl4f_session = sl4f_session.clone();
-            fx_log_info!(tag: "run_fidl_loop",
-                "Received synchronous request: {:?}, {:?}, {:?}, {:?}, {:?}",
-                tx, id, method_type, name, params
-            );
+    const CONCURRENT_REQ_LIMIT: usize = 10; // TODO(CONN-6) figure out a good parallel value for this
 
-            let fidl_fut = method_to_fidl(
-                method_type.clone(),
-                name.clone(),
-                params.clone(),
-                curr_sl4f_session.clone(),
-            );
-            fidl_fut.and_then(move |resp| {
-                let response = AsyncResponse::new(Ok(resp));
+    let session = &sl4f_session;
+    let handler = async move |request| {
+        await!(handle_request(Arc::clone(session), request)).unwrap();
+    };
 
-                // Ignore any tx sending errors, other requests can still be outstanding
-                tx.send(response).unwrap();
-                future::ready(Ok(()))
-            }).map(|r| {
-                if let Err(e) = r {
-                    println!("ERROR in run_fidl_loop response processing: {}", e);
-                }
-            })
-        }
-    }).buffer_unordered(10) // TODO figure out a good parallel value for this
-    .collect::<()>();
+    let receiver_fut = receiver.for_each_concurrent(CONCURRENT_REQ_LIMIT, handler);
 
-    executor.run_singlethreaded(receiver_fut);
+    await!(receiver_fut);
 }
 
-fn method_to_fidl(
+async fn handle_request(sl4f_session: Arc<RwLock<Sl4f>>, request: AsyncRequest) -> Result<(), Error> {
+    match request {
+        AsyncRequest { tx, id, method_type, name, params } => {
+            let curr_sl4f_session = sl4f_session.clone();
+            fx_log_info!(tag: "run_fidl_loop",
+                         "Received synchronous request: {:?}, {:?}, {:?}, {:?}, {:?}",
+                         tx, id, method_type, name, params);
+            match await!(method_to_fidl(method_type, name, params, curr_sl4f_session)) {
+                Ok(response) => {
+                    let async_response = AsyncResponse::new(Ok(response));
+
+                    // Ignore any tx sending errors, other requests can still be outstanding
+                    tx.send(async_response).unwrap();
+                },
+                Err(e) => {
+                    // TODO: (CONN-3) send back the error
+                    println!("Error returned from calling method_to_fidl {}", e);
+                }
+            };
+        }
+    }
+    Ok(())
+}
+
+async fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
-) -> impl Future<Output = Result<Value, Error>> {
-    unsafe_many_futures!(MethodType, [NetstackFacade, BleAdvertiseFacade, Bluetooth, GattClientFacade, Wlan, Error]);
+) -> Result<Value, Error> {
     match FacadeType::from_str(&method_type) {
-        FacadeType::NetstackFacade => MethodType::NetstackFacade(netstack_method_to_fidl(
+        FacadeType::NetstackFacade => await!(netstack_method_to_fidl(
                 method_name,
                 args,
                 sl4f_session.write().get_netstack_facade(),
         )),
-        FacadeType::BleAdvertiseFacade => MethodType::BleAdvertiseFacade(ble_advertise_method_to_fidl(
+        FacadeType::BleAdvertiseFacade => await!(ble_advertise_method_to_fidl(
                 method_name,
                 args,
                 sl4f_session.write().get_ble_advertise_facade(),
         )),
-        FacadeType::Bluetooth => MethodType::Bluetooth(ble_method_to_fidl(
+        FacadeType::Bluetooth => await!(ble_method_to_fidl(
             method_name,
             args,
             sl4f_session.write().get_bt_facade(),
         )),
-        FacadeType::GattClientFacade => MethodType::GattClientFacade(gatt_client_method_to_fidl(
+        FacadeType::GattClientFacade => await!(gatt_client_method_to_fidl(
                 method_name,
                 args,
                 sl4f_session.write().get_gatt_client_facade(),
         )),
-        FacadeType::Wlan => MethodType::Wlan(wlan_method_to_fidl(
+        FacadeType::Wlan => await!(wlan_method_to_fidl(
             method_name,
             args,
             sl4f_session.write().get_wlan_facade()
         )),
-        _ => MethodType::Error(fready(Err(BTError::new("Invalid FIDL method type").into()))),
+        _ => Err(BTError::new("Invalid FIDL method type").into()),
     }
 }
