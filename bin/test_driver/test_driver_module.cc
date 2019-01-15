@@ -11,7 +11,6 @@
 #include <lib/fdio/util.h>
 #include <lib/fsl/vmo/strings.h>
 
-#include "peridot/bin/test_driver/defs.h"
 #include "peridot/lib/rapidjson/rapidjson.h"
 #include "peridot/lib/testing/test_driver.h"
 #include "peridot/public/lib/integration_testing/cpp/reporting.h"
@@ -21,6 +20,11 @@ using modular::testing::Signal;
 using modular::testing::TestPoint;
 
 namespace {
+
+// The name of the test driver's environment.
+constexpr char kEnvironmentName[] = "test_driver_env";
+// The name of the test driver's child module.
+constexpr char kSubModuleName[] = "test_driver_sub_module";
 
 // Cf. README.md for what this test does and how.
 class TestModule {
@@ -92,7 +96,8 @@ class TestModule {
 
   bool CreateNestedEnv() {
     module_host_->startup_context()->environment()->CreateNestedEnvironment(
-        test_driver_env_.NewRequest(), /*controller=*/nullptr, kSubModuleName,
+        test_driver_env_.NewRequest(), test_driver_env_controller_.NewRequest(),
+        kEnvironmentName,
         /*additional_services=*/nullptr, {.inherit_parent_services = true});
     return true;
   }
@@ -152,6 +157,7 @@ class TestModule {
   component::Services test_driver_services_;
   fuchsia::modular::LinkPtr link_;
   fuchsia::sys::EnvironmentPtr test_driver_env_;
+  fuchsia::sys::EnvironmentControllerPtr test_driver_env_controller_;
   fuchsia::sys::LauncherPtr test_driver_launcher_;
   fuchsia::sys::ComponentControllerPtr test_driver_component_controller_;
 

@@ -11,7 +11,6 @@ executable_package("test_driver_module") {
     "test_driver_module.cc",
   ]
   deps = [
-    ":defs",
     "//garnet/public/fidl/fuchsia.testing.runner",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
     "//garnet/public/lib/fidl/cpp",
@@ -29,13 +28,5 @@ executable_package("test_driver_module") {
       path = "meta/test_driver_module.cmx"
       dest = "test_driver_module.cmx"
     },
-  ]
-}
-
-source_set("defs") {
-  testonly = true
-
-  sources = [
-    "defs.h",
   ]
 }
