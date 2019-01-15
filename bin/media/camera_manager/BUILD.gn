@@ -21,7 +21,6 @@ source_set("lib") {
     "//garnet/public/lib/fidl/cpp",
     "//zircon/public/lib/ddk",
     "//zircon/public/lib/ddktl",
-    "//zircon/public/lib/dispatcher-pool",
     "//zircon/public/lib/driver",
     "//zircon/public/lib/fbl",
   ]
