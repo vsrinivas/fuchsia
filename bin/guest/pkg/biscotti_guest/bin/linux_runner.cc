@@ -4,7 +4,6 @@
 
 #include "garnet/bin/guest/pkg/biscotti_guest/bin/linux_runner.h"
 
-#include <fuchsia/guest/vmm/cpp/fidl.h>
 #include <memory>
 
 #include "lib/fxl/logging.h"
