@@ -103,7 +103,9 @@ typedef struct info {
 } info_t;
 
 int rnum(int m) {
-    return (random() & 0x7FFFFFFFU) % m;
+    uint32_t data;
+    zx_cprng_draw((void*)&data, sizeof(data));
+    return (data & 0x7FFFFFFFU) % m;
 }
 
 void* blaster(void* arg) {
