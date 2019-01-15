@@ -38,7 +38,6 @@ also provides core drivers and Fuchsia's libc implementation.
  - [Story][framework-story]
  - [Module][framework-module]
  - [Agent][framework-agent]
- - Links
 
 ## Storage
 
