@@ -22,6 +22,7 @@
 #include <fs/vfs.h>
 #include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/event.h>
 

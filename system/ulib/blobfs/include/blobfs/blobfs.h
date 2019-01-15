@@ -58,18 +58,7 @@
 
 namespace blobfs {
 
-class Blobfs;
-class Journal;
-class Blob;
-class WritebackQueue;
-class WritebackWork;
-
 using digest::Digest;
-
-enum class EnqueueType {
-    kJournal,
-    kData,
-};
 
 // Toggles that may be set on blobfs during initialization.
 struct MountOptions {
@@ -81,8 +70,7 @@ struct MountOptions {
 
 class Blobfs : public fs::ManagedVfs,
                public fbl::RefCounted<Blobfs>,
-               public fs::TransactionHandler,
-               public SpaceManager {
+               public TransactionManager {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Blobfs);
 
@@ -92,7 +80,9 @@ public:
     void Shutdown(fs::Vfs::ShutdownCallback closure) final;
 
     ////////////////
-    // fs::TransactionHandler interface.
+    // TransactionManager's fs::TransactionHandler interface.
+    //
+    // Allows transmitting read and write transactions directly to the underlying storage.
 
     uint32_t FsBlockSize() const final { return kBlobfsBlockSize; }
 
@@ -110,12 +100,27 @@ public:
     }
 
     ////////////////
-    // SpaceManager interface.
+    // TransactionManager's SpaceManager interface.
+    //
+    // Allows viewing and controlling the size of the underlying volume.
 
+    const Superblock& Info() const final { return info_; }
     zx_status_t AttachVmo(const zx::vmo& vmo, vmoid_t* out) final;
     zx_status_t DetachVmo(vmoid_t vmoid) final;
     zx_status_t AddInodes(fzl::ResizeableVmoMapper* node_map) final;
     zx_status_t AddBlocks(size_t nblocks, RawBitmap* block_map) final;
+
+    ////////////////
+    // TransactionManager interface.
+    //
+    // Allows attaching VMOs, controlling the underlying volume, and sending transactions to the
+    // underlying storage (optionally through the journal).
+
+    BlobfsMetrics& LocalMetrics() final {
+        return metrics_;
+    }
+    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
+    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
 
     ////////////////
     // Other methods.
@@ -142,10 +147,6 @@ public:
 
     static zx_status_t Create(fbl::unique_fd blockfd, const MountOptions& options,
                               const Superblock* info, fbl::unique_ptr<Blobfs>* out);
-
-    BlobfsMetrics& LocalMetrics() {
-        return metrics_;
-    }
 
     void CollectMetrics() {
         collecting_metrics_ = true;
@@ -186,21 +187,11 @@ public:
 
     int Fd() const { return blockfd_.get(); }
 
-    const Superblock& Info() const { return info_; }
-
     // Returns an unique identifier for this instance.
     uint64_t GetFsId() const { return fs_id_; }
 
     using SyncCallback = fs::Vnode::SyncCallback;
     void Sync(SyncCallback closure);
-
-    zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode);
-
-    // Enqueues |work| to the appropriate buffer. If |journal| is true and the journal is enabled,
-    // the transaction(s) will first be written to the journal. Otherwise, they will be sent
-    // straight to the writeback buffer.
-    zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work,
-                            EnqueueType type) __WARN_UNUSED_RESULT;
 
     // Frees an inode, from both the reserved map and the inode table. If the
     // inode was allocated in the inode table, write the deleted inode out to

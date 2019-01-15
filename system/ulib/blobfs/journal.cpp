@@ -3,7 +3,6 @@
 // found in the LICENSE file.
 
 #include <blobfs/journal.h>
-
 #include <fbl/unique_ptr.h>
 #include <lib/cksum.h>
 #include <zircon/types.h>
@@ -99,19 +98,20 @@ void JournalEntry::SetChecksum(uint32_t checksum) {
     commit_block_.checksum = checksum;
 }
 
-zx_status_t Journal::Create(Blobfs* blobfs, uint64_t journal_blocks, uint64_t start_block,
-                            fbl::unique_ptr<Journal>* out) {
+zx_status_t Journal::Create(TransactionManager* transaction_manager, uint64_t journal_blocks,
+                            uint64_t start_block, fbl::unique_ptr<Journal>* out) {
     // Create the buffer with 1 less than total journal blocks.
     // (1 block must be reserved for journal info).
     zx_status_t status;
     fbl::unique_ptr<Buffer> buffer;
-    if ((status = Buffer::Create(blobfs, journal_blocks - 1, "blobfs-journal", &buffer)) != ZX_OK) {
+    if ((status = Buffer::Create(transaction_manager, journal_blocks - 1, "blobfs-journal",
+                                 &buffer)) != ZX_OK) {
         return status;
     }
 
     // Create another buffer for the journal info block.
     fbl::unique_ptr<Buffer> info;
-    if ((status = Buffer::Create(blobfs, 1, "blobfs-journal-info", &info)) != ZX_OK) {
+    if ((status = Buffer::Create(transaction_manager, 1, "blobfs-journal-info", &info)) != ZX_OK) {
         return status;
     }
 
@@ -119,8 +119,8 @@ zx_status_t Journal::Create(Blobfs* blobfs, uint64_t journal_blocks, uint64_t st
     info->ReserveIndex();
 
     // Create the Journal with the newly created vmos.
-    fbl::unique_ptr<Journal> journal(new Journal(blobfs, std::move(info), std::move(buffer),
-                                                 start_block));
+    fbl::unique_ptr<Journal> journal(new Journal(transaction_manager, std::move(info),
+                                                 std::move(buffer), start_block));
 
     // Load contents of journal from disk.
     if ((status = journal->Load()) != ZX_OK) {
@@ -171,7 +171,7 @@ zx_status_t Journal::Load() {
     ZX_DEBUG_ASSERT(state_ == WritebackState::kInit);
 
     // Load info block and journal entries into their respective buffers.
-    fs::ReadTxn txn(blobfs_);
+    fs::ReadTxn txn(transaction_manager_);
     info_->Load(&txn, start_block_);
     entries_->Load(&txn, start_block_ + 1);
     zx_status_t status = txn.Transact();
@@ -490,14 +490,14 @@ void Journal::PrepareDelete(JournalEntry* entry, WritebackWork* work) {
 
 fbl::unique_ptr<WritebackWork> Journal::CreateWork() {
     fbl::unique_ptr<WritebackWork> work;
-    blobfs_->CreateWork(&work, nullptr);
+    transaction_manager_->CreateWork(&work, nullptr);
     ZX_DEBUG_ASSERT(work != nullptr);
     return work;
 }
 
 zx_status_t Journal::EnqueueEntryWork(fbl::unique_ptr<WritebackWork> work) {
     entries_->ValidateTransaction(work.get());
-    return blobfs_->EnqueueWork(std::move(work), EnqueueType::kData);
+    return transaction_manager_->EnqueueWork(std::move(work), EnqueueType::kData);
 }
 
 bool Journal::VerifyEntryMetadata(size_t header_index, uint64_t last_timestamp, bool expect_valid) {
@@ -631,7 +631,7 @@ zx_status_t Journal::WriteInfo(uint64_t start, uint64_t length) {
     }
 
     fbl::unique_ptr<WritebackWork> work;
-    blobfs_->CreateWork(&work, nullptr);
+    transaction_manager_->CreateWork(&work, nullptr);
 
     info->start_block = start;
     info->num_blocks = length;
@@ -644,7 +644,7 @@ zx_status_t Journal::WriteInfo(uint64_t start, uint64_t length) {
 
     info_->AddTransaction(0, start_block_, 1, work.get());
     info_->ValidateTransaction(work.get());
-    return blobfs_->EnqueueWork(std::move(work), EnqueueType::kData);
+    return transaction_manager_->EnqueueWork(std::move(work), EnqueueType::kData);
 }
 
 void Journal::EnsureSpaceLocked(size_t blocks) {

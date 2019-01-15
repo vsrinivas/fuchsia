@@ -8,17 +8,22 @@
 static_assert(false, "Fuchsia only header");
 #endif
 
-#include <zircon/types.h>
-
-#include <stdint.h>
-
-#include <blobfs/format.h>
-#include <blobfs/writeback.h>
-
 #include <atomic>
 #include <utility>
 
+#include <stdint.h>
+
+#include <blobfs/blob.h>
+#include <blobfs/format.h>
+#include <blobfs/transaction-manager.h>
+#include <blobfs/writeback.h>
+#include <fbl/intrusive_single_list.h>
+#include <fbl/mutex.h>
+#include <fbl/unique_ptr.h>
+#include <zircon/types.h>
+
 namespace blobfs {
+
 class JournalBase;
 class JournalProcessor;
 
@@ -209,8 +214,8 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(Journal);
 
     // Calls constructor, return an error if anything goes wrong.
-    static zx_status_t Create(Blobfs* bs, uint64_t block_count, uint64_t start_block,
-                              fbl::unique_ptr<Journal>* out);
+    static zx_status_t Create(TransactionManager* transaction_manager, uint64_t block_count,
+                              uint64_t start_block, fbl::unique_ptr<Journal>* out);
 
     ~Journal();
 
@@ -270,9 +275,9 @@ private:
     struct Waiter : public fbl::SinglyLinkedListable<Waiter*> {};
     using ProducerQueue = fs::Queue<Waiter*>;
 
-    Journal(Blobfs* blobfs, fbl::unique_ptr<Buffer> info, fbl::unique_ptr<Buffer> entries,
-            uint64_t start_block)
-        : blobfs_(blobfs), start_block_(start_block),
+    Journal(TransactionManager* transaction_manager, fbl::unique_ptr<Buffer> info,
+            fbl::unique_ptr<Buffer> entries, uint64_t start_block)
+        : transaction_manager_(transaction_manager), start_block_(start_block),
           info_(std::move(info)), entries_(std::move(entries)) {}
 
     bool IsRunning() const __TA_REQUIRES(lock_);
@@ -344,7 +349,7 @@ private:
     // Processes entries in the work queue and the processor queues.
     void ProcessQueues(JournalProcessor* processor) __TA_EXCLUDES(lock_);
 
-    Blobfs* blobfs_;
+    TransactionManager* transaction_manager_;
 
     // The absolute start block of the journal on disk. Used for transactions.
     uint64_t start_block_;

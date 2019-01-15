@@ -66,13 +66,14 @@ void WriteTxn::SetBuffer(vmoid_t vmoid) {
 
 zx_status_t WriteTxn::Flush() {
     ZX_ASSERT(IsBuffered());
-    fs::Ticker ticker(bs_->LocalMetrics().Collecting());
+    fs::Ticker ticker(transaction_manager_->LocalMetrics().Collecting());
 
     // Update all the outgoing transactions to be in disk blocks
     block_fifo_request_t blk_reqs[requests_.size()];
-    const uint32_t kDiskBlocksPerBlobfsBlock = kBlobfsBlockSize / bs_->DeviceBlockSize();
+    const uint32_t kDiskBlocksPerBlobfsBlock =
+            kBlobfsBlockSize / transaction_manager_->DeviceBlockSize();
     for (size_t i = 0; i < requests_.size(); i++) {
-        blk_reqs[i].group = bs_->BlockGroupID();
+        blk_reqs[i].group = transaction_manager_->BlockGroupID();
         blk_reqs[i].vmoid = vmoid_;
         blk_reqs[i].opcode = BLOCKIO_WRITE;
         blk_reqs[i].vmo_offset = requests_[i].vmo_offset * kDiskBlocksPerBlobfsBlock;
@@ -85,14 +86,14 @@ zx_status_t WriteTxn::Flush() {
     }
 
     // Actually send the operations to the underlying block device.
-    zx_status_t status = bs_->Transaction(blk_reqs, requests_.size());
+    zx_status_t status = transaction_manager_->Transaction(blk_reqs, requests_.size());
 
-    if (bs_->LocalMetrics().Collecting()) {
+    if (transaction_manager_->LocalMetrics().Collecting()) {
         uint64_t sum = 0;
         for (const auto& blk_req : blk_reqs) {
             sum += blk_req.length * kBlobfsBlockSize;
         }
-        bs_->LocalMetrics().UpdateWriteback(sum, ticker.End());
+        transaction_manager_->LocalMetrics().UpdateWriteback(sum, ticker.End());
     }
 
     requests_.reset();
@@ -148,8 +149,9 @@ zx_status_t WritebackWork::Complete() {
     return status;
 }
 
-WritebackWork::WritebackWork(Blobfs* bs, fbl::RefPtr<Blob> vn) :
-    WriteTxn(bs), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false), vn_(std::move(vn)) {}
+WritebackWork::WritebackWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vn)
+    : WriteTxn(transaction_manager), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false),
+      vn_(std::move(vn)) {}
 
 void WritebackWork::InvokeSyncCallback(zx_status_t status) {
     if (sync_cb_) {
@@ -167,14 +169,14 @@ Buffer::~Buffer() {
     if (vmoid_ != VMOID_INVALID) {
         // Close the buffer vmo.
         block_fifo_request_t request;
-        request.group = blobfs_->BlockGroupID();
+        request.group = transaction_manager_->BlockGroupID();
         request.vmoid = vmoid_;
         request.opcode = BLOCKIO_CLOSE_VMO;
-        blobfs_->Transaction(&request, 1);
+        transaction_manager_->Transaction(&request, 1);
     }
 }
 
-zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
+zx_status_t Buffer::Create(TransactionManager* blobfs, size_t blocks, const char* label,
                            fbl::unique_ptr<Buffer>* out) {
 
     fzl::OwnedVmoMapper mapper;
@@ -185,7 +187,7 @@ zx_status_t Buffer::Create(Blobfs* blobfs, size_t blocks, const char* label,
     }
 
     fbl::unique_ptr<Buffer> buffer(new Buffer(blobfs, std::move(mapper)));
-    if ((status = buffer->blobfs_->AttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_))
+    if ((status = buffer->transaction_manager_->AttachVmo(buffer->mapper_.vmo(), &buffer->vmoid_))
         != ZX_OK) {
         FS_TRACE_ERROR("Buffer: Failed to attach vmo\n");
         return status;
@@ -366,11 +368,13 @@ zx_status_t WritebackQueue::Teardown() {
     return status;
 }
 
-zx_status_t WritebackQueue::Create(Blobfs* blobfs, const size_t buffer_blocks,
+zx_status_t WritebackQueue::Create(TransactionManager* transaction_manager,
+                                   const size_t buffer_blocks,
                                    fbl::unique_ptr<WritebackQueue>* out) {
     zx_status_t status;
     fbl::unique_ptr<Buffer> buffer;
-    if ((status = Buffer::Create(blobfs, buffer_blocks, "blobfs-writeback", &buffer)) != ZX_OK) {
+    if ((status = Buffer::Create(transaction_manager, buffer_blocks, "blobfs-writeback", &buffer))
+        != ZX_OK) {
         return status;
     }
 

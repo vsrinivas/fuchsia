@@ -8,6 +8,13 @@
 #error Fuchsia-only Header
 #endif
 
+#include <utility>
+
+#include <blobfs/allocator.h>
+#include <blobfs/blob.h>
+#include <blobfs/format.h>
+#include <blobfs/metrics.h>
+#include <blobfs/transaction-manager.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
 #include <fbl/intrusive_hash_table.h>
@@ -17,25 +24,15 @@
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-
 #include <fs/block-txn.h>
 #include <fs/queue.h>
 #include <fs/vfs.h>
-
+#include <fs/vnode.h>
 #include <lib/sync/completion.h>
-
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
 
-#include <blobfs/blobfs.h>
-#include <blobfs/format.h>
-
-#include <utility>
-
 namespace blobfs {
-
-class Blobfs;
-class Blob;
 
 struct WriteRequest {
     zx_handle_t vmo;
@@ -58,7 +55,8 @@ class WriteTxn {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(WriteTxn);
 
-    explicit WriteTxn(Blobfs* bs) : bs_(bs), vmoid_(VMOID_INVALID), block_count_(0) {}
+    explicit WriteTxn(TransactionManager* transaction_manager)
+        : transaction_manager_(transaction_manager), vmoid_(VMOID_INVALID), block_count_(0) {}
 
     virtual ~WriteTxn();
 
@@ -101,12 +99,11 @@ protected:
     zx_status_t Flush();
 
 private:
-    Blobfs* bs_;
+    TransactionManager* transaction_manager_;
     vmoid_t vmoid_;
     fbl::Vector<WriteRequest> requests_;
     size_t block_count_;
 };
-
 
 // A wrapper around a WriteTxn, holding references to the underlying Vnodes
 // corresponding to the txn, so their Vnodes (and VMOs) are not released
@@ -122,7 +119,7 @@ public:
 
     // Create a WritebackWork given a vnode (which may be null)
     // Vnode is stored for duration of txn so that it isn't destroyed during the write process
-    WritebackWork(Blobfs* bs, fbl::RefPtr<Blob> vnode);
+    WritebackWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vnode);
     ~WritebackWork() = default;
 
     // Sets the WritebackWork to a completed state. |status| should indicate whether the work was
@@ -178,8 +175,8 @@ public:
     ~Buffer();
 
     // Initializes the buffer VMO with |blocks| blocks of size kBlobfsBlockSize.
-    static zx_status_t Create(Blobfs* blobfs, const size_t blocks, const char* label,
-                              fbl::unique_ptr<Buffer>* out);
+    static zx_status_t Create(TransactionManager* transaction_manager, const size_t blocks,
+                              const char* label, fbl::unique_ptr<Buffer>* out);
 
     // Adds a transaction to |txn| which reads all data into buffer
     // starting from |disk_start| on disk.
@@ -233,11 +230,11 @@ public:
         return reinterpret_cast<char*>(mapper_.start()) + (index * kBlobfsBlockSize);
     }
 private:
-    Buffer(Blobfs* blobfs, fzl::OwnedVmoMapper mapper)
-        : blobfs_(blobfs), mapper_(std::move(mapper)), start_(0), length_(0),
-          capacity_(mapper_.size() / kBlobfsBlockSize) {}
+    Buffer(TransactionManager* transaction_manager, fzl::OwnedVmoMapper mapper)
+        : transaction_manager_(transaction_manager), mapper_(std::move(mapper)), start_(0),
+          length_(0), capacity_(mapper_.size() / kBlobfsBlockSize) {}
 
-    Blobfs* blobfs_;
+    TransactionManager* transaction_manager_;
     fzl::OwnedVmoMapper mapper_;
     vmoid_t vmoid_ = VMOID_INVALID;
 
@@ -257,7 +254,7 @@ public:
 
     // Initializes the WritebackBuffer at |out|
     // with a buffer of |buffer_blocks| blocks of size kBlobfsBlockSize.
-    static zx_status_t Create(Blobfs* bs, const size_t buffer_blocks,
+    static zx_status_t Create(TransactionManager* transaction_manager, const size_t buffer_blocks,
                               fbl::unique_ptr<WritebackQueue>* out);
 
     // Copies all transaction data referenced from |work| into the writeback buffer.
