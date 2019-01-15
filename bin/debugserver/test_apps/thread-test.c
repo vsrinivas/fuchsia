@@ -35,7 +35,7 @@ static void ThreadCreate(thrd_t* t, thrd_start_t entry, void* arg,
 static int ThreadFunc(void* arg) {
   const char* name = arg;
   printf("Thread %s starting\n", name);
-  sleep(1 + (random() % 4));
+  sleep(1 + (rand() % 4));
   printf("Thread %s exiting\n", name);
   return 0;
 }
