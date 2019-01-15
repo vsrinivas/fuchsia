@@ -22,12 +22,22 @@
 
 #include "counters_private.h"
 
-// The arena is allocated in kernel.ld linker script.
-extern int64_t kcounters_arena[];
+// kernel.ld uses this and fills in the descriptor table size after it and then
+// places the sorted descriptor table after that (and then pads to page size),
+// so as to fully populate the counters::DescriptorVmo layout.
+__USED __SECTION(".kcounter.desc.header") static const uint64_t vmo_header[] = {
+    counters::DescriptorVmo::kMagic,
+    SMP_MAX_CPUS,
+};
+static_assert(sizeof(vmo_header) ==
+              offsetof(counters::DescriptorVmo, descriptor_table_size));
+
+// This counter gets a constant value just as a sanity check.
+KCOUNTER(magic, "kernel.counters.magic");
 
 struct watched_counter_t {
     list_node node;
-    const k_counter_desc* desc;
+    const counters::Descriptor* desc;
     // TODO(cpu): add min, max.
 };
 
@@ -35,23 +45,20 @@ static fbl::Mutex watcher_lock;
 static list_node watcher_list = LIST_INITIAL_VALUE(watcher_list);
 static thread_t* watcher_thread;
 
-static size_t get_num_counters() {
-    return kcountdesc_end - kcountdesc_begin;
-}
-
 static bool prefix_match(const char* pre, const char* str) {
     return strncmp(pre, str, strlen(pre)) == 0;
 }
 
 // Binary search the sorted counter descriptors.
 // We rely on SORT_BY_NAME() in the linker script for this to work.
-static const k_counter_desc* upper_bound(
-    const char* val, const k_counter_desc* first, const k_counter_desc* last) {
+static const counters::Descriptor* upper_bound(
+    const char* val, const counters::Descriptor* first,
+    const counters::Descriptor* last) {
     if (first >= last) {
         return last;
     }
 
-    const k_counter_desc* it;
+    const counters::Descriptor* it;
     size_t step;
     auto count = last - first;
 
@@ -72,8 +79,9 @@ static const k_counter_desc* upper_bound(
 static void counters_init(unsigned level) {
     // Wire the memory defined in the .bss section to the counters.
     for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
-        percpu[ix].counters = &kcounters_arena[ix * get_num_counters()];
+        percpu[ix].counters = CounterArena().CpuData(ix);
     }
+    magic.Add(counters::DescriptorVmo::kMagic);
 }
 
 // Collapse values to only non-zero ones and sort.
@@ -144,13 +152,13 @@ bool counters_has_outlier(const uint64_t* values_in) {
     return false;
 }
 
-static void dump_counter(const k_counter_desc* desc, bool verbose) {
-    size_t counter_index = kcounter_index(desc);
+static void dump_counter(const counters::Descriptor& desc, bool verbose) {
+    size_t counter_index = &desc - CounterDesc().begin();
 
     uint64_t summary = 0;
     uint64_t values[SMP_MAX_CPUS];
 
-    if (desc->type == k_counter_type::max) {
+    if (desc.type == counters::Type::kMax) {
         for (size_t ix = 0; ix != SMP_MAX_CPUS; ++ix) {
             // This value is not atomically consistent, therefore is just
             // an approximation. TODO(cpu): for ARM this might need some magic.
@@ -168,7 +176,7 @@ static void dump_counter(const k_counter_desc* desc, bool verbose) {
         }
     }
 
-    printf("[%.2zu] %s = %lu\n", counter_index, desc->name, summary);
+    printf("[%.2zu] %s = %lu\n", counter_index, desc.name, summary);
     if (summary == 0u) {
         return;
     }
@@ -187,9 +195,9 @@ static void dump_counter(const k_counter_desc* desc, bool verbose) {
 }
 
 static void dump_all_counters(bool verbose) {
-    printf("%zu counters available:\n", get_num_counters());
-    for (auto it = kcountdesc_begin; it != kcountdesc_end; ++it) {
-        dump_counter(it, verbose);
+    printf("%zu counters available:\n", CounterDesc().size());
+    for (const auto& desc : CounterDesc()) {
+        dump_counter(desc, verbose);
     }
 }
 
@@ -205,7 +213,7 @@ static int watcher_thread_fn(void* arg) {
 
             watched_counter_t* wc;
             list_for_every_entry (&watcher_list, wc, watched_counter_t, node) {
-                dump_counter(wc->desc, verbose);
+                dump_counter(*wc->desc, verbose);
             }
         }
 
@@ -229,12 +237,13 @@ static int view_counter(int argc, const cmd_args* argv) {
         } else {
             int num_results = 0;
             auto name = argv[1].str;
-            auto desc = upper_bound(name, kcountdesc_begin, kcountdesc_end);
-            while (desc != kcountdesc_end) {
+            auto desc = upper_bound(name,
+                                    CounterDesc().begin(), CounterDesc().end());
+            while (desc != CounterDesc().end()) {
                 if (!prefix_match(name, desc->name)) {
                     break;
                 }
-                dump_counter(desc, verbose);
+                dump_counter(*desc, verbose);
                 ++num_results;
                 ++desc;
             }
@@ -278,7 +287,7 @@ static int watch_counter(int argc, const cmd_args* argv) {
         }
 
         size_t counter_id = argv[1].u;
-        auto range = get_num_counters() - 1;
+        auto range = CounterDesc().size() - 1;
         if (counter_id > range) {
             printf("counter id must be in the 0 to %zu range\n", range);
             return 1;
@@ -290,7 +299,7 @@ static int watch_counter(int argc, const cmd_args* argv) {
 
         fbl::AllocChecker ac;
         auto wc = new (&ac) watched_counter_t{
-            LIST_INITIAL_CLEARED_VALUE, &kcountdesc_begin[counter_id]};
+            LIST_INITIAL_CLEARED_VALUE, CounterDesc().begin() + counter_id};
         if (!ac.check()) {
             printf("no memory for counter\n");
             return 1;

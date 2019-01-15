@@ -187,6 +187,7 @@ static void x86_df_handler(x86_iframe_t* frame) {
     // Do not give the user exception handler the opportunity to handle double
     // faults, since they indicate an unexpected system state and cannot be
     // recovered from.
+    kcounter_add(exceptions_dfault, 1);
     exception_die(frame, "double fault, halting\n");
 }
 

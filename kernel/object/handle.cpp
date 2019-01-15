@@ -24,7 +24,7 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 KCOUNTER(handle_count_made, "kernel.handles.made");
 KCOUNTER(handle_count_duped, "kernel.handles.duped");
 KCOUNTER(handle_count_live, "kernel.handles.live");
-KCOUNTER(handle_count_max_live, "kernel.handles.max_live");
+KCOUNTER_MAX(handle_count_max_live, "kernel.handles.max_live");
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
 // uses to create zx_handle_t values.

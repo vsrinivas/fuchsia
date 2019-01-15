@@ -11,6 +11,7 @@
 #include <kernel/percpu.h>
 
 #include <zircon/compiler.h>
+#include <zircon/kernel-counters.h>
 
 // Kernel counters are a facility designed to help field diagnostics and
 // to help devs properly dimension the load/clients/size of the kernel
@@ -47,19 +48,109 @@
 // operations are never used to set their value so they are both
 // imprecise and reflect only the operations on a particular core.
 
-enum class k_counter_type : uint64_t {
-    sum = 1,
-    min = 2,
-    max = 3,
+class CounterDesc {
+public:
+    constexpr const counters::Descriptor* begin() const { return begin_; }
+    constexpr const counters::Descriptor* end() const { return end_; }
+    size_t size() const { return end() - begin(); }
+
+    constexpr auto VmoData() const { return &vmo_begin_; }
+    size_t VmoDataSize() const {
+        return (reinterpret_cast<uintptr_t>(vmo_end_) -
+                reinterpret_cast<uintptr_t>(&vmo_begin_));
+    }
+
+private:
+    // Via magic in kernel.ld, all the descriptors wind up in a contiguous
+    // array bounded by these two symbols, sorted by name.
+    static const counters::Descriptor begin_[] __asm__("kcountdesc_begin");
+    static const counters::Descriptor end_[] __asm__("kcountdesc_end");
+
+    // That array sits inside a region that's page-aligned and padded out to
+    // page size.  The region as a whole has the DescriptorVmo layout.
+    static const counters::DescriptorVmo vmo_begin_ __asm__("k_counter_desc_vmo_begin");
+    static const counters::Descriptor vmo_end_[] __asm__("k_counter_desc_vmo_end");
 };
 
-struct k_counter_desc {
-    const char* name;
-    k_counter_type type;
+class CounterArena {
+public:
+    int64_t* CpuData(size_t idx) const {
+        return &arena_[idx * CounterDesc().size()];
+    }
+
+    constexpr int64_t* VmoData() const {
+        return arena_;
+    }
+
+    size_t VmoDataSize() const {
+        return (reinterpret_cast<uintptr_t>(arena_page_end_) -
+                reinterpret_cast<uintptr_t>(arena_));
+    }
+
+private:
+    // Parallel magic in kernel.ld allocates int64_t[SMP_MAX_CPUS] worth
+    // of data space for each counter.
+    static int64_t arena_[] __asm__("kcounters_arena");
+    static int64_t arena_end_[] __asm__("kcounters_arena_end");
+    // That's page-aligned and padded out to page size.
+    static int64_t arena_page_end_[] __asm__("kcounters_arena_page_end");
 };
-static_assert(
-    sizeof(struct k_counter_desc) == 16,
-    "kernel.ld uses this size to ASSERT that enough space has been reserved in the counters arena");
+
+class CounterBase {
+public:
+    explicit constexpr CounterBase(const counters::Descriptor* desc) :
+        desc_(desc) { }
+
+    int64_t Value() const {
+        return *Slot();
+    }
+
+protected:
+    int64_t* Slot() const {
+        return &get_local_percpu()->counters[Index()];
+    }
+
+private:
+    // The order of the descriptors is the order of the slots in each per-CPU
+    // array.
+    constexpr size_t Index() const {
+        return desc_ - CounterDesc().begin();
+    }
+
+    const counters::Descriptor* desc_;
+};
+
+struct CounterSum : public CounterBase {
+    explicit constexpr CounterSum(const counters::Descriptor* desc) :
+        CounterBase(desc) { }
+    void Add(int64_t delta) const {
+#if defined(__aarch64__)
+        // Use a relaxed atomic load/store for arm64 to avoid a potentially
+        // nasty race between the regular load/store operations for a +1.
+        // Relaxed atomic load/stores are about as efficient as a regular
+        // load/store.
+        atomic_add_64_relaxed(Slot(), delta);
+#else
+        // x86 can do the add in a single non atomic instruction, so the data
+        // loss of a preemption in the middle of this sequence is fairly
+        // minimal.
+        *Slot() += delta;
+#endif
+    }
+};
+
+struct CounterMax : public CounterBase {
+    explicit constexpr CounterMax(const counters::Descriptor* desc) :
+        CounterBase(desc) { }
+    void Update(int64_t value) const {
+        // TODO(travisg|scottmg): Revisit, consider more efficient arm-specific
+        // instruction sequence here.
+        int64_t prev_value = atomic_load_64_relaxed(Slot());
+        while (prev_value < value &&
+               !atomic_cmpxchg_64_relaxed(Slot(), &prev_value, value))
+            ;
+    }
+};
 
 // Define the descriptor and reserve the arena space for the counters.
 // Because of -fdata-sections, each kcounter_arena_* array will be
@@ -69,53 +160,25 @@ static_assert(
 // slots used for this particular counter (that would have terrible
 // cache effects); it just reserves enough space for counters_init() to
 // dole out in per-CPU chunks.
-#define KCOUNTER(var, name)                                                                        \
-    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name);                   \
-    __USED __SECTION("kcountdesc." name) static const struct k_counter_desc var[] = {              \
-        {name, k_counter_type::sum}}
+#define KCOUNTER_DECLARE(var, name, type) \
+    namespace { \
+    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name); \
+    alignas(counters::Descriptor) __USED __SECTION("kcountdesc." name) const counters::Descriptor kcounter_desc_##var{name, counters::Type::k##type}; \
+    constexpr Counter##type var(&kcounter_desc_##var); \
+    }  // anonymous namespace
 
-#define KCOUNTER_MAX(var, name)                                                                    \
-    __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name);                   \
-    __USED __SECTION("kcountdesc." name) static const struct k_counter_desc var[] = {              \
-        {name, k_counter_type::max}}
+#define KCOUNTER(var, name) KCOUNTER_DECLARE(var, name, Sum)
+#define KCOUNTER_MAX(var, name) KCOUNTER_DECLARE(var, name, Max)
 
-// Via magic in kernel.ld, all the descriptors wind up in a contiguous
-// array bounded by these two symbols, sorted by name.
-extern const struct k_counter_desc kcountdesc_begin[], kcountdesc_end[];
-
-// The order of the descriptors is the order of the slots in each per-cpu array.
-static inline size_t kcounter_index(const struct k_counter_desc* var) {
-    return var - kcountdesc_begin;
+static inline void kcounter_add(const CounterSum& counter, int64_t delta) {
+    counter.Add(delta);
 }
 
-// The counter, as named |var| and defined is just an offset into
-// per-cpu table, therefore to add an atomic is not required.
-static inline int64_t* kcounter_slot(const struct k_counter_desc* var) {
-    return &get_local_percpu()->counters[kcounter_index(var)];
+static inline void kcounter_max(const CounterMax& counter, int64_t value) {
+    counter.Update(value);
 }
 
-static inline void kcounter_add(const struct k_counter_desc* var,
-                                int64_t add) {
-#if defined(__aarch64__)
-    // use a relaxed atomic load/store for arm64 to avoid a potentially nasty
-    // race between the regular load/store operations on for a +1. Relaxed
-    // atomic load/stores are about as efficient as a regular load/store.
-    atomic_add_64_relaxed(kcounter_slot(var), add);
-#else
-    // x86 can do the add in a single non atomic instruction, so the data loss
-    // of a preemption in the middle of this sequence is fairly minimal.
-    *kcounter_slot(var) += add;
-#endif
-}
-
-// TODO(travisg|scottmg): Revisit, consider more efficient arm-specific
-// instruction sequence here.
-static inline void kcounter_max(const struct k_counter_desc* var, int64_t value) {
-    int64_t prev_value = atomic_load_64_relaxed(kcounter_slot(var));
-    while (prev_value < value && !atomic_cmpxchg_64_relaxed(kcounter_slot(var), &prev_value, value))
-        ;
-}
-
-static inline void kcounter_max_counter(const struct k_counter_desc* var, const struct k_counter_desc* other_var) {
-    kcounter_max(var, *kcounter_slot(other_var));
+static inline void kcounter_max_counter(const CounterMax& counter,
+                                        const CounterBase& other) {
+    counter.Update(other.Value());
 }

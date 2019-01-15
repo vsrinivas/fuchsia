@@ -87,6 +87,27 @@ SECTIONS
      */
     .rodata.rodso_image : {
         *(.rodata.rodso_image.*)
+    } :rodata
+
+    /*
+     * The named sections starting with kcountdesc are sorted by name so that
+     * tools can provide binary search lookup for counters::Descriptor::name[]
+     * variables.  This is page-aligned and padded out to page size so it can be
+     * exported as a VMO without exposing any other .rodata contents.
+     */
+    .kcounter.desc : ALIGN(4096) {
+        PROVIDE_HIDDEN(k_counter_desc_vmo_begin = .);
+        KEEP(*(.kcounter.desc.header))
+        ASSERT(. - k_counter_desc_vmo_begin == 16,
+               "lib/counters/counters.cpp and kernel.ld mismatch");
+        QUAD(kcountdesc_end - kcountdesc_begin);
+        PROVIDE_HIDDEN(kcountdesc_begin = .);
+        ASSERT(kcountdesc_begin - k_counter_desc_vmo_begin == 24,
+               "lib/counters/counters.cpp and kernel.ld mismatch");
+        KEEP(*(SORT_BY_NAME(kcountdesc.*)))
+        PROVIDE_HIDDEN(kcountdesc_end = .);
+        . = ALIGN(4096);
+        PROVIDE_HIDDEN(k_counter_desc_vmo_end = .);
     }
 
     .note.gnu.build-id : {
@@ -94,17 +115,6 @@ SECTIONS
         *(.note.gnu.build-id)
         PROVIDE_HIDDEN(__build_id_note_end = .);
     } :rodata :note
-
-    /*
-     * The named sections starting with kcountdesc are sorted
-     * by name so that tools can provide binary search lookup
-     * for k_counter_desc::name[] variables.
-     */
-    .kcounter.desc : ALIGN(8) {
-        PROVIDE_HIDDEN(kcountdesc_begin = .);
-        KEEP(*(SORT_BY_NAME(kcountdesc.*)))
-        PROVIDE_HIDDEN(kcountdesc_end = .);
-    } :rodata
 
     .rodata : {
         *(.rodata* .gnu.linkonce.r.*)
@@ -210,23 +220,36 @@ SECTIONS
 
         /*
          * See kernel/include/lib/counters.h; the KCOUNTER macro defines a
-         * kcounter.NAME array in the .bss.kcounter.NAME section that
-         * allocates SMP_MAX_CPUS counter slots.  Here we collect all those
-         * together to make up the kcounters_arena contiguous array.  There
-         * is no particular reason to sort these, but doing so makes them
-         * line up in parallel with the sorted .kcounter.desc section.
+         * kcounter.NAME array in the .bss.kcounter.NAME section that allocates
+         * SMP_MAX_CPUS counter slots.  Here we collect all those together to
+         * make up the kcounters_arena contiguous array.  There is no particular
+         * reason to sort these, but doing so makes them line up in parallel
+         * with the sorted .kcounter.desc section.  Note that placement of the
+         * input sections in the arena has no actual bearing on how the space is
+         * used, because nothing ever refers to these arrays as variables--they
+         * exist only to get the right amount of space allocated in the arena.
+         * Instead, the order of the .kcounter.desc entries is what determines
+         * how the arena is used: each index in the desc table corresponds to an
+         * index in a per-CPU array, and the arena is a contiguous block of
+         * SMP_MAX_CPUS such arrays.  The region containing the arena is
+         * page-aligned and padded out to page size so that it can be exported
+         * as a VMO without exposing any other .bss contents.
          */
-        . = ALIGN(8);
+        . = ALIGN(4096);
         PROVIDE_HIDDEN(kcounters_arena = .);
         KEEP(*(SORT_BY_NAME(.bss.kcounter.*)))
+        PROVIDE_HIDDEN(kcounters_arena_end = .);
+        . = ALIGN(4096);
+        PROVIDE_HIDDEN(kcounters_arena_page_end = .);
 
         /*
          * Sanity check that the aggregate size of kcounters_arena SMP_MAX_CPUS
-         * slots for each counter.  The k_counter_desc structs in .kcounter.desc
-         * are 16 bytes each. (It's only for this sanity check that we need to
-         * care how big k_counter_desc is.)
+         * slots for each counter.  The counters::Descriptor structs in
+         * .kcounter.desc are 64 bytes each.  (It's only for this sanity check
+         * that we need to care how big counters::Descriptor is.)
          */
-        ASSERT(. - kcounters_arena == SIZEOF(.kcounter.desc) * 8 * SMP_MAX_CPUS / 16,
+        ASSERT(kcounters_arena_end - kcounters_arena ==
+               (kcountdesc_end - kcountdesc_begin) * 8 * SMP_MAX_CPUS / 64,
                "kcounters_arena size mismatch");
 
         *(.bss*)

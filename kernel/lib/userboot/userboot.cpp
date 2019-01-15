@@ -17,6 +17,7 @@
 #include <kernel/cmdline.h>
 #include <vm/vm_object_paged.h>
 #include <lib/console.h>
+#include <lib/counters.h>
 #include <lib/vdso.h>
 #include <lk/init.h>
 #include <mexec.h>
@@ -185,6 +186,8 @@ enum bootstrap_handle_index {
 #if ENABLE_ENTROPY_COLLECTOR_TEST
     BOOTSTRAP_ENTROPY_FILE,
 #endif
+    BOOTSTRAP_KCOUNTDESC,
+    BOOTSTRAP_KCOUNTERS,
     BOOTSTRAP_HANDLES
 };
 
@@ -211,6 +214,14 @@ static MessagePacketPtr prepare_bootstrap_message() {
     msg->header.environ_num = static_cast<uint32_t>(__kernel_cmdline_count);
     msg->header.handle_info_off =
         offsetof(struct bootstrap_message, handle_info);
+
+    // Note indices for PA_VMO_KERNEL_FILE must be densely-packed since bootsvc
+    // just iterates up from 0 seeing if that info value is in the list, rather
+    // than iterating over the list checking for PA_VMO_KERNEL_FILE with any
+    // index.  The index is not otherwise meaningful: the VMO name identifies
+    // the kernel file being exported.
+    int kernel_file_idx = 0;
+
     for (int i = 0; i < BOOTSTRAP_HANDLES; ++i) {
         uint32_t info = 0;
         switch (static_cast<bootstrap_handle_index>(i)) {
@@ -239,13 +250,13 @@ static MessagePacketPtr prepare_bootstrap_message() {
             info = PA_HND(PA_VMAR_ROOT, 0);
             break;
         case BOOTSTRAP_CRASHLOG:
-            info = PA_HND(PA_VMO_KERNEL_FILE, 0);
-            break;
 #if ENABLE_ENTROPY_COLLECTOR_TEST
         case BOOTSTRAP_ENTROPY_FILE:
-            info = PA_HND(PA_VMO_KERNEL_FILE, 1);
-            break;
 #endif
+        case BOOTSTRAP_KCOUNTDESC:
+        case BOOTSTRAP_KCOUNTERS:
+            info = PA_HND(PA_VMO_KERNEL_FILE, kernel_file_idx++);
+            break;
         case BOOTSTRAP_HANDLES:
             __builtin_unreachable();
         }
@@ -345,6 +356,35 @@ static zx_status_t attempt_userboot() {
 #endif
     if (status != ZX_OK)
         return status;
+
+    fbl::RefPtr<VmObject> kcountdesc_vmo;
+    status = VmObjectPaged::CreateFromROData(CounterDesc().VmoData(),
+                                             CounterDesc().VmoDataSize(),
+                                             &kcountdesc_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    kcountdesc_vmo->set_name(counters::DescriptorVmo::kVmoName,
+                             sizeof(counters::DescriptorVmo::kVmoName) - 1);
+    status = get_vmo_handle(ktl::move(kcountdesc_vmo), true, nullptr,
+                            &handles[BOOTSTRAP_KCOUNTDESC]);
+    if (status != ZX_OK) {
+        return status;
+    }
+    fbl::RefPtr<VmObject> kcounters_vmo;
+    status = VmObjectPaged::CreateFromROData(CounterArena().VmoData(),
+                                             CounterArena().VmoDataSize(),
+                                             &kcounters_vmo);
+    if (status != ZX_OK) {
+        return status;
+    }
+    kcounters_vmo->set_name(counters::kArenaVmoName,
+                             sizeof(counters::kArenaVmoName) - 1);
+    status = get_vmo_handle(ktl::move(kcounters_vmo), true, nullptr,
+                            &handles[BOOTSTRAP_KCOUNTERS]);
+    if (status != ZX_OK) {
+        return status;
+    }
 
     fbl::RefPtr<Dispatcher> proc_disp;
     fbl::RefPtr<VmAddressRegionDispatcher> vmar;

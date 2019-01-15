@@ -54,6 +54,8 @@ zx_status_t sys_profile_create(zx_handle_t root_job,
     if (status != ZX_OK)
         return status;
 
+    kcounter_add(profile_create, 1);
+
     return out->make(ktl::move(dispatcher), rights);
 }
 
@@ -75,6 +77,8 @@ zx_status_t sys_object_set_profile(zx_handle_t handle,
         up->GetDispatcherWithRights(profile_handle, ZX_RIGHT_APPLY_PROFILE, &profile);
     if (result != ZX_OK)
         return result;
+
+    kcounter_add(profile_set, 1);
 
     return profile->ApplyProfile(ktl::move(thread));
 }
