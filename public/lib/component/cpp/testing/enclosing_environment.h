@@ -95,7 +95,7 @@ class EnvironmentServices {
   // instances, generally you want to use the URL that'll be used for launch
   // info.
   zx_status_t AddServiceWithLaunchInfo(
-      const std::string& singleton_id,
+      std::string singleton_id,
       fit::function<fuchsia::sys::LaunchInfo()> handler,
       const std::string& service_name);
 

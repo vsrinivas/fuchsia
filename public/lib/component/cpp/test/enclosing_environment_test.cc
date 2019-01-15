@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <lib/fxl/strings/string_printf.h>
 #include <zircon/processargs.h>
+
 #include "fidl/examples/echo/cpp/fidl.h"
 #include "lib/async/cpp/wait.h"
 #include "lib/component/cpp/testing/test_with_environment.h"
@@ -229,6 +231,62 @@ TEST_F(EnclosingEnvTest, OutErrPassing) {
                cerr_reader.GetString().find("tomato") != std::string::npos;
       },
       kTimeout));
+}
+
+class FakeLoader : public fuchsia::sys::Loader {
+ public:
+  FakeLoader() {
+    loader_service_ =
+        fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
+          bindings_.AddBinding(
+              this,
+              fidl::InterfaceRequest<fuchsia::sys::Loader>(std::move(channel)));
+          return ZX_OK;
+        }));
+  }
+
+  void LoadUrl(std::string url, LoadUrlCallback callback) override {
+    ASSERT_TRUE(!url.empty());
+    component_urls_.push_back(url);
+  }
+  std::vector<std::string>& component_urls() { return component_urls_; };
+
+  fbl::RefPtr<fs::Service> loader_service() { return loader_service_; }
+
+ private:
+  fbl::RefPtr<fs::Service> loader_service_;
+  fidl::BindingSet<fuchsia::sys::Loader> bindings_;
+  std::vector<std::string> component_urls_;
+};
+
+TEST_F(EnclosingEnvTest, CanLaunchMoreThanOneService) {
+  FakeLoader loader;
+  auto loader_service = loader.loader_service();
+  auto svc = CreateServicesWithCustomLoader(loader_service);
+
+  std::vector<std::string> urls;
+  std::vector<std::string> svc_names;
+  for (int i = 0; i < 3; i++) {
+    auto url = fxl::StringPrintf(
+        "fuchsia-pkg://fuchsia.com/dummy%d#meta/dummy%d.cmx", i, i);
+    auto svc_name = fxl::StringPrintf("service%d", i);
+    LaunchInfo linfo;
+    linfo.url = url;
+    svc->AddServiceWithLaunchInfo(std::move(linfo), svc_name);
+    urls.push_back(url);
+    svc_names.push_back(svc_name);
+  }
+  auto env = CreateNewEnclosingEnvironment("test-env", std::move(svc));
+  ASSERT_TRUE(WaitForEnclosingEnvToStart(env.get()));
+
+  for (int i = 0; i < 3; i++) {
+    echo::EchoPtr echo;
+    env->ConnectToService(echo.NewRequest(), svc_names[i]);
+  }
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&loader]() { return loader.component_urls().size() == 3; }, kTimeout))
+      << loader.component_urls().size();
+  ASSERT_EQ(loader.component_urls(), urls);
 }
 
 }  // namespace component::testing::test

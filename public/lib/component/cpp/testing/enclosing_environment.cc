@@ -66,13 +66,13 @@ zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
 }
 
 zx_status_t EnvironmentServices::AddServiceWithLaunchInfo(
-    const std::string& singleton_id,
-    fit::function<fuchsia::sys::LaunchInfo()> handler,
+    std::string singleton_id, fit::function<fuchsia::sys::LaunchInfo()> handler,
     const std::string& service_name) {
-  auto child = fbl::AdoptRef(new fs::Service(
-      [this, service_name, handler = std::move(handler), singleton_id,
-       controller = fuchsia::sys::ComponentControllerPtr()](
-          zx::channel client_handle) mutable {
+  auto child = fbl::AdoptRef(
+      new fs::Service([this, service_name, handler = std::move(handler),
+                       singleton_id = std::move(singleton_id),
+                       controller = fuchsia::sys::ComponentControllerPtr()](
+                          zx::channel client_handle) mutable {
         auto it = singleton_services_.find(singleton_id);
         if (it == singleton_services_.end()) {
           component::Services services;
