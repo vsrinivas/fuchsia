@@ -139,8 +139,13 @@ executable("tests") {
 
   deps = [
     ":lib",
-    "//garnet/bin/debug_agent/integration_tests",
     "//garnet/lib/debug_ipc:tests",
+    # TODO(DX-879): Some HW capabilities (like HW breakpoints) are not well
+    #               emulated by QEMU without KVM. This will sometimes make tests
+    #               fail or even crash QEMU.
+    #               The tests will be re-enabled when there is way to express
+    #               that these test must not run on QEMU.
+    # "//garnet/bin/debug_agent/integration_tests",
     "//garnet/public/lib/component/cpp:environment_services",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//third_party/googletest:gmock",
