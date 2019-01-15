@@ -91,8 +91,11 @@ int main(int argc, char* argv[]) {
     // or implicitly), and we want that setup/binding to occur on the same
     // thread as runs that loop (the current thread), as that's a typical
     // assumption of setup/binding code.
+    // TODO(turnage): Rework to catch the first few frames using view connected
+    //                callback.
     frame_sink =
-        FrameSink::Create(startup_context.get(), &main_loop, frames_per_second);
+        FrameSink::Create(startup_context.get(), &main_loop, frames_per_second,
+                          [](FrameSink* _frame_sink) {});
   }
   // We set up a closure here just to avoid forcing the two decoder types to
   // take the same parameters, but still be able to share the

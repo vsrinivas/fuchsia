@@ -1,0 +1,63 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("raw_frames") {
+  sources = [
+    "raw_frames.cc",
+  ]
+
+  public = [
+    "raw_frames.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/media/codec_impl:fourcc",
+    "//garnet/public/fidl/fuchsia.images",
+    "//garnet/public/fidl/fuchsia.mediacodec",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+executable("raw_frames_test_bin") {
+  output_name = "raw_frames_test"
+
+  testonly = true
+
+  sources = [
+    "test/raw_frames_test.cc",
+  ]
+
+  deps = [
+    ":raw_frames",
+    "//garnet/lib/media/test:frame_sink",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//third_party/boringssl:crypto",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("raw_frames_test") {
+  deps = [
+    ":raw_frames_test_bin",
+  ]
+
+  tests = [
+    {
+      name = "raw_frames_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../../../test_data/media/third_party/chromium_media_test_data/bear_320x192_40frames.yuv")
+      dest = "bear_320x192_40frames.yuv"
+    },
+  ]
+}

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_
-#define GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_
+#ifndef GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_H_
+#define GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_H_
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -24,8 +24,10 @@ class FrameSinkView;
 // throughput, for now.  A .h264 file doesn't have real timestamps, but we could
 // potentially add a flag to clock the frames out at a particular frame rate.
 //
-// This class is designed to run only on the thread of main_loop_.  Any calling
-// of this class from other threads won't work.
+// This class is designed such that frames, views, and stream signal methods
+// should be called on the main_loop_. WaitForView must be called on a separate
+// thread while main_loop_ runs to allow Scenic time to connect before we send
+// frames.
 class FrameSink {
  public:
   // Only designed to be managed via unique_ptr<>, so this static factory method
@@ -37,7 +39,8 @@ class FrameSink {
   //     built-in default frames per second.
   static std::unique_ptr<FrameSink> Create(
       component::StartupContext* startup_context, async::Loop* main_loop,
-      double frames_per_second);
+      double frames_per_second,
+      fit::function<void(FrameSink*)> view_connected_callback);
 
   ~FrameSink();
 
@@ -69,7 +72,8 @@ class FrameSink {
 
  private:
   FrameSink(component::StartupContext* startup_context, async::Loop* main_loop,
-            double frames_per_second);
+            double frames_per_second,
+            fit::function<void(FrameSink*)> view_connected_callback);
 
   void CheckIfAllFramesReturned();
 
@@ -98,9 +102,11 @@ class FrameSink {
 
   fit::closure on_frames_returned_;
 
+  fit::function<void(FrameSink*)> view_connected_callback_;
+
   zx_time_t last_requested_present_time_ = ZX_TIME_INFINITE_PAST;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(FrameSink);
 };
 
-#endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_FRAME_SINK_H_
+#endif  // GARNET_LIB_MEDIA_TEST_INCLUDE_LIB_MEDIA_TEST_FRAME_SINK_H_

@@ -27,9 +27,11 @@ constexpr double kDefaultFramesPerSecond = 24;
 
 std::unique_ptr<FrameSink> FrameSink::Create(
     component::StartupContext* startup_context, async::Loop* main_loop,
-    double frames_per_second) {
+    double frames_per_second,
+    fit::function<void(FrameSink*)> view_connected_callback) {
   return std::unique_ptr<FrameSink>(
-      new FrameSink(startup_context, main_loop, frames_per_second));
+      new FrameSink(startup_context, main_loop, frames_per_second,
+                    std::move(view_connected_callback)));
 }
 
 FrameSink::~FrameSink() {
@@ -151,17 +153,23 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
   CheckIfAllFramesReturned();
 }
 
-void FrameSink::AddFrameSinkView(FrameSinkView* view) { views_.insert(view); }
+void FrameSink::AddFrameSinkView(FrameSinkView* view) {
+  views_.insert(view);
+  FXL_DCHECK(view_connected_callback_);
+  view_connected_callback_(this);
+}
 
 void FrameSink::RemoveFrameSinkView(FrameSinkView* view) { views_.erase(view); }
 
 FrameSink::FrameSink(component::StartupContext* startup_context,
-                     async::Loop* main_loop, double frames_per_second)
+                     async::Loop* main_loop, double frames_per_second,
+                     fit::function<void(FrameSink*)> view_connected_callback)
     : startup_context_(startup_context),
       main_loop_(main_loop),
       // IEEE 754 floating point can represent 0.0 exactly.
       frames_per_second_(frames_per_second != 0.0 ? frames_per_second
-                                                  : kDefaultFramesPerSecond) {
+                                                  : kDefaultFramesPerSecond),
+      view_connected_callback_(std::move(view_connected_callback)) {
   view_provider_component_ = std::make_unique<scenic::ViewProviderComponent>(
       [this](scenic::ViewContext view_context) {
         return FrameSinkView::Create(std::move(view_context), this, main_loop_);
