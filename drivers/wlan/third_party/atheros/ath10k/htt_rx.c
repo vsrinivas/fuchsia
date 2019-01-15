@@ -445,9 +445,7 @@ err_netbuf:
     return ZX_ERR_NO_MEMORY;
 }
 
-#if 0  // NEEDS PORTING
-static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar,
-        enum htt_rx_mpdu_encrypt_type type) {
+static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar, enum htt_rx_mpdu_encrypt_type type) {
     switch (type) {
     case HTT_RX_MPDU_ENCRYPT_NONE:
         return 0;
@@ -470,8 +468,7 @@ static int ath10k_htt_rx_crypto_param_len(struct ath10k* ar,
 
 #define MICHAEL_MIC_LEN 8
 
-static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar,
-        enum htt_rx_mpdu_encrypt_type type) {
+static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar, enum htt_rx_mpdu_encrypt_type type) {
     switch (type) {
     case HTT_RX_MPDU_ENCRYPT_NONE:
         return 0;
@@ -482,7 +479,7 @@ static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar,
     case HTT_RX_MPDU_ENCRYPT_TKIP_WPA:
         return IEEE80211_TKIP_ICV_LEN;
     case HTT_RX_MPDU_ENCRYPT_AES_CCM_WPA2:
-        return IEEE80211_CCMP_MIC_LEN;
+        return IEEE80211_CCMP_128_MIC_LEN;
     case HTT_RX_MPDU_ENCRYPT_WEP128:
     case HTT_RX_MPDU_ENCRYPT_WAPI:
         break;
@@ -492,6 +489,7 @@ static int ath10k_htt_rx_crypto_tail_len(struct ath10k* ar,
     return 0;
 }
 
+#if 0  // NEEDS PORTING
 struct amsdu_subframe_hdr {
     uint8_t dst[ETH_ALEN];
     uint8_t src[ETH_ALEN];
@@ -903,24 +901,13 @@ static size_t ath10k_htt_rx_nwifi_hdrlen(struct ath10k* ar, struct ieee80211_fra
     return len;
 }
 
-#if 0   // NEEDS PORTING
 static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
-                                        struct sk_buff* msdu,
-                                        struct ieee80211_rx_status* status,
+                                        struct ath10k_msg_buf* msdu,
                                         enum htt_rx_mpdu_encrypt_type enctype,
                                         bool is_decrypted) {
-    struct ieee80211_hdr* hdr;
-    struct htt_rx_desc* rxd;
-    size_t hdr_len;
-    size_t crypto_len;
-    bool is_first;
-    bool is_last;
-
-    rxd = (void*)msdu->data - sizeof(*rxd);
-    is_first = !!(rxd->msdu_end.common.info0 &
-                  RX_MSDU_END_INFO0_FIRST_MSDU);
-    is_last = !!(rxd->msdu_end.common.info0 &
-                 RX_MSDU_END_INFO0_LAST_MSDU);
+    struct htt_rx_desc* rxd = ath10k_msg_buf_get_header(msdu, ATH10K_MSG_TYPE_HTT_RX);
+    bool is_first = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_FIRST_MSDU);
+    bool is_last = !!(rxd->msdu_end.common.info0 & RX_MSDU_END_INFO0_LAST_MSDU);
 
     /* Delivered decapped frame:
      * [802.11 header]
@@ -942,7 +929,10 @@ static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
         return;
     }
 
-    skb_trim(msdu, msdu->len - FCS_LEN);
+    if (msdu->rx.frame_size < IEEE80211_FCS_LEN) {
+        return;
+    }
+    msdu->rx.frame_size -= IEEE80211_FCS_LEN;
 
     /* In most cases this will be true for sniffed frames. It makes sense
      * to deliver them as-is without stripping the crypto param. This is
@@ -959,31 +949,41 @@ static void ath10k_htt_rx_h_undecap_raw(struct ath10k* ar,
      * since hdr is used to compute some stuff.
      */
 
-    hdr = (void*)msdu->data;
+    void* frame = ath10k_msg_buf_get_payload(msdu);
+    struct ieee80211_frame_header* hdr = frame;
+
+    size_t to_remove_from_tail = 0;
 
     /* Tail */
-    if (status->flag & RX_FLAG_IV_STRIPPED)
-        skb_trim(msdu, msdu->len -
-                 ath10k_htt_rx_crypto_tail_len(ar, enctype));
+    if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
+        to_remove_from_tail += ath10k_htt_rx_crypto_tail_len(ar, enctype);
+    }
 
     /* MMIC */
-    if ((status->flag & RX_FLAG_MMIC_STRIPPED) &&
-            !ieee80211_has_morefrags(hdr->frame_control) &&
+    if ((msdu->rx.mpdu_flags & ATH10K_RX_MPDU_MMIC_STRIPPED) &&
+            !(hdr->frame_ctrl & IEEE80211_FRAME_CTRL_MORE_FRAGMENTS_MASK) &&
             enctype == HTT_RX_MPDU_ENCRYPT_TKIP_WPA) {
-        skb_trim(msdu, msdu->len - 8);
+        to_remove_from_tail += 8;
     }
+
+    if (msdu->rx.frame_size < to_remove_from_tail) {
+        return;
+    }
+    msdu->rx.frame_size -= to_remove_from_tail;
 
     /* Head */
-    if (status->flag & RX_FLAG_IV_STRIPPED) {
-        hdr_len = ieee80211_hdrlen(hdr->frame_control);
-        crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
+    if (msdu->rx.mpdu_flags & ATH10K_RX_MPDU_IV_STRIPPED) {
+        size_t hdr_len = ieee80211_hdrlen(hdr);
+        size_t crypto_len = ath10k_htt_rx_crypto_param_len(ar, enctype);
+        if (msdu->rx.frame_size < hdr_len + crypto_len) {
+            return;
+        }
 
-        memmove((void*)msdu->data + crypto_len,
-                (void*)msdu->data, hdr_len);
-        skb_pull(msdu, crypto_len);
+        memmove(frame + crypto_len, frame, hdr_len);
+        msdu->rx.frame_offset += crypto_len;
+        msdu->rx.frame_size -= crypto_len;
     }
 }
-#endif  // NEEDS PORTING
 
 static void ath10k_htt_rx_h_undecap_nwifi(struct ath10k* ar,
                                           struct ath10k_msg_buf* msdu,
@@ -1177,11 +1177,7 @@ static void ath10k_htt_rx_h_undecap(struct ath10k* ar,
 
     switch (decap) {
     case RX_MSDU_DECAP_RAW:
-        ath10k_warn("ath10k_htt_rx_h_undecap_raw unimplemented\n");
-#if 0   // NEEDS PORTING
-        ath10k_htt_rx_h_undecap_raw(ar, msdu, status, enctype,
-                                    is_decrypted);
-#endif  // NEEDS PORTING
+        ath10k_htt_rx_h_undecap_raw(ar, msdu, enctype, is_decrypted);
         break;
     case RX_MSDU_DECAP_NATIVE_WIFI:
         ath10k_htt_rx_h_undecap_nwifi(ar, msdu, original_hdr, original_hdr_len);
@@ -1275,9 +1271,7 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar, list_node_t* amsdu) {
 
     bool has_fcs_err = !!(attention & RX_ATTENTION_FLAGS_FCS_ERR);
     bool has_crypto_err = !!(attention & RX_ATTENTION_FLAGS_DECRYPT_ERR);
-#if 0 // NEEDS PORTING
     bool has_tkip_err = !!(attention & RX_ATTENTION_FLAGS_TKIP_MIC_ERR);
-#endif  // NEEDS PORTING
     bool has_peer_idx_invalid = !!(attention & RX_ATTENTION_FLAGS_PEER_IDX_INVALID);
 
     /* Note: If hardware captures an encrypted frame that it can't decrypt,
@@ -1289,36 +1283,29 @@ static void ath10k_htt_rx_h_mpdu(struct ath10k* ar, list_node_t* amsdu) {
                         !has_crypto_err &&
                         !has_peer_idx_invalid);
 
-#if 0 // NEEDS PORTING
-    /* Clear per-MPDU flags while leaving per-PPDU flags intact. */
-    status->flag &= ~(RX_FLAG_FAILED_FCS_CRC |
-                      RX_FLAG_MMIC_ERROR |
-                      RX_FLAG_DECRYPTED |
-                      RX_FLAG_IV_STRIPPED |
-                      RX_FLAG_ONLY_MONITOR |
-                      RX_FLAG_MMIC_STRIPPED);
+    uint8_t mpdu_flags = 0;
 
     if (has_fcs_err) {
-        status->flag |= RX_FLAG_FAILED_FCS_CRC;
+        mpdu_flags |= ATH10K_RX_MPDU_FAILED_FCS_CRC;
     }
 
     if (has_tkip_err) {
-        status->flag |= RX_FLAG_MMIC_ERROR;
+        mpdu_flags |= ATH10K_RX_MPDU_MMIC_ERROR;
     }
 
     if (is_decrypted) {
-        status->flag |= RX_FLAG_DECRYPTED;
+        mpdu_flags |= ATH10K_RX_MPDU_DECRYPTED;
 
-        if (likely(!is_mgmt))
-            status->flag |= RX_FLAG_IV_STRIPPED |
-                            RX_FLAG_MMIC_STRIPPED;
+        if (likely(!is_mgmt)) {
+            mpdu_flags |= ATH10K_RX_MPDU_IV_STRIPPED | ATH10K_RX_MPDU_MMIC_STRIPPED;
+        }
     }
-#endif  // NEEDS PORTING
 
     struct ath10k_msg_buf* msdu;
     list_for_every_entry(amsdu, msdu, struct ath10k_msg_buf, listnode) {
         msdu->rx.frame_offset = ath10k_msg_buf_get_payload_offset(msdu->type);
         msdu->rx.frame_size = msdu->used - msdu->rx.frame_offset;
+        msdu->rx.mpdu_flags = mpdu_flags;
 
 
 #if 0 // NEEDS PORTING

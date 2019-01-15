@@ -63,6 +63,14 @@ enum ath10k_msg_type {
 };
 #undef MSG
 
+enum ath10k_rx_mpdu_flags {
+    ATH10K_RX_MPDU_FAILED_FCS_CRC = 1 << 0,
+    ATH10K_RX_MPDU_MMIC_ERROR = 1 << 1,
+    ATH10K_RX_MPDU_DECRYPTED = 1 << 2,
+    ATH10K_RX_MPDU_IV_STRIPPED = 1 << 3,
+    ATH10K_RX_MPDU_MMIC_STRIPPED = 1 << 4,
+};
+
 enum ath10k_tx_flags {
     ATH10K_TX_BUF_PROTECTED = (1 << 0),
     ATH10K_TX_BUF_QOS = (1 << 1),
@@ -86,6 +94,7 @@ struct ath10k_msg_buf {
             // These tell us how to find the packet within the HTT message
             size_t frame_offset;
             size_t frame_size;
+            uint8_t mpdu_flags;  // ATH10K_RX_MPDU_*
         } rx;
 
         struct {
