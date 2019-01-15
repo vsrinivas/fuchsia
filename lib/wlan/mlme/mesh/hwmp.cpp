@@ -149,6 +149,38 @@ static fbl::unique_ptr<Packet> MakeOriginalPrep(const MacHeaderWriter& header_wr
     return packet;
 }
 
+// See IEEE Std 802.11-2016, 14.10.9.3, Case E
+static fbl::unique_ptr<Packet> MakeForwardedPreq(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPreq& incoming_preq,
+                                                 uint32_t last_hop_metric,
+                                                 Span<const PreqPerTarget> to_forward) {
+    auto packet = GetWlanPacket(kMaxHwmpFrameSize);
+    if (!packet) { return {}; }
+    BufferWriter w(*packet);
+    mac_header_writer.WriteMeshMgmtHeader(&w, kAction, common::kBcastMac);
+    w.Write<ActionFrame>()->category = action::kMesh;
+    w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
+    common::WritePreq(
+        &w,
+        {
+            .flags = incoming_preq.header->flags,
+            .hop_count = static_cast<uint8_t>(incoming_preq.header->hop_count + 1),
+            .element_ttl = static_cast<uint8_t>(incoming_preq.header->element_ttl - 1),
+            .path_discovery_id = incoming_preq.header->path_discovery_id,
+            .originator_addr = incoming_preq.header->originator_addr,
+            .originator_hwmp_seqno = incoming_preq.header->originator_hwmp_seqno,
+        },
+        incoming_preq.originator_external_addr,
+        {
+            .lifetime = incoming_preq.middle->lifetime,
+            .metric = incoming_preq.middle->metric + last_hop_metric,
+            .target_count = static_cast<uint8_t>(to_forward.size()),
+        },
+        to_forward);
+    packet->set_len(w.WrittenBytes());
+    return packet;
+}
+
 // See IEEE Std 802.11-2016, 14.10.9.4.3
 static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
                        const common::MacAddr& self_addr, const common::ParsedPreq& preq,
@@ -172,6 +204,10 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
     // we would need to cache (originator_addr, path_discovery_id) pairs, which
     // could be avoided otherwise.
     if (path_to_originator == nullptr) { return; }
+
+    PreqPerTarget to_forward[kPreqMaxTargets];
+    size_t num_to_forward = 0;
+
     for (auto t : preq.per_target) {
         if (t.target_addr == self_addr) {
             // TODO(gbonik): Also check if we are a proxy of target_addr
@@ -183,12 +219,36 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
                                              preq, *path_to_originator, *state)) {
                 packets_to_tx->Enqueue(std::move(prep));
             }
+        } else {
+            bool replied = false;
+            if (!t.flags.target_only()) {
+                if (auto path_to_target = path_table->GetPath(t.target_addr)) {
+                    // TODO(gbonik): send a PREP on behalf of target (case(c))
+                    replied = true;
+                }
+            }
+
+            if (preq.header->element_ttl > 1 && num_to_forward < countof(to_forward)) {
+                to_forward[num_to_forward] = t;
+                if (replied) {
+                    // See IEEE Std 802.11-2016, 14.10.9.3, case E2: since we already replied
+                    // to the PREQ, we need to set 'Target Only' to true so that other intermediate
+                    // nodes do not reply.
+                    to_forward[num_to_forward].flags.set_target_only(true);
+                }
+                num_to_forward += 1;
+            }
         }
         // TODO(gbonik): update proxy info if address extension is present (case (a)/(b))
-        // TODO(gbonik): reply if target_only=false and we know a path to the target (case (c))
         // TODO: Also update precursors if we decide to store them one day (case (d))
         // TODO(gobnik): reply to proactive (broadcast) PREQs (case (e))
-        // TODO(gbonik): propagate the PREQ (case (f))
+    }
+
+    if (num_to_forward > 0) {
+        if (auto packet = MakeForwardedPreq(mac_header_writer, preq, last_hop_metric,
+                                            {to_forward, num_to_forward})) {
+            packets_to_tx->Enqueue(std::move(packet));
+        }
     }
 }
 

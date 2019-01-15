@@ -124,6 +124,91 @@ TEST_F(HwmpTest, HandlePreqAddressedToUs) {
     EXPECT_EQ(10u, state.our_hwmp_seqno);
 }
 
+TEST_F(HwmpTest, ForwardPreq) {
+    // clang-format off
+    const uint8_t preq[] = {
+        130, 37,
+        0x00, // flags: no address extension
+        0x03, // hop count
+        0x20, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        50, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x01, // target flags: target only
+        0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+    };
+    // clang-format on
+
+    auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("11:11:11:11:11:11"), self_addr(),
+                                          100, CreateMacHeaderWriter(), &state, &table);
+
+    ASSERT_EQ(1u, packets_to_tx.size());
+    auto packet = packets_to_tx.Dequeue();
+
+    // clang-format off
+    const uint8_t expected_preq_frame[] = {
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // addr1
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr2
+        0xaa, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        // Preq element
+        130, 37,
+        0x00, // flags: no address extension
+        0x04, // hop count = previous hop count + 1
+        0x1f, // element ttl = previous ttl - 1
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        150, 0, 0, 0, // metric: previous metric + last hop
+        1, // target count
+        // Target 1
+        0x01, // target flags: target only
+        0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+    };
+    // clang-format on
+
+    EXPECT_RANGES_EQ(expected_preq_frame, Span<const uint8_t>(*packet));
+}
+
+TEST_F(HwmpTest, PreqTimeToDie) {
+    // clang-format off
+    const uint8_t preq[] = {
+        130, 37,
+        0x00, // flags: no address extension
+        0x03, // hop count
+        0x01, // element ttl
+        0x04, 0x05, 0x06, 0x07, // path discovery ID
+        0x08, 0x09, 0x0a, 0x0b, 0x0c, 0x0d, // originator addr
+        0x07, 0x00, 0x00, 0x00, // originator hwmp seqno
+        0x05, 0x00, 0x00, 0x00, // lifetime
+        50, 0, 0, 0, // metric
+        1, // target count
+        // Target 1
+        0x01, // target flags: target only
+        0xcc, 0xcc, 0xcc, 0xcc, 0xcc, 0xcc, // target address
+        0x09, 0x00, 0x00, 0x00, // target hwmp seqno
+    };
+    // clang-format on
+
+    auto packets_to_tx = HandleHwmpAction(preq, common::MacAddr("11:11:11:11:11:11"), self_addr(),
+                                          100, CreateMacHeaderWriter(), &state, &table);
+
+    // PREQ should not be forwarded because TTL has dropped to zero
+    ASSERT_EQ(0u, packets_to_tx.size());
+}
+
 TEST_F(HwmpTest, PathDiscoveryWithRetry) {
     auto expected_preq_frame = [](uint8_t i) {
         // clang-format off

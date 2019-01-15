@@ -222,6 +222,9 @@ struct PreqMiddle {
 
 static_assert(sizeof(PreqMiddle) == 9);
 
+// IEEE Std 802.11-2016, 9.4.2.113
+constexpr size_t kPreqMaxTargets = 20;
+
 // IEEE Std 802.11-2016, 9.4.2.113, Figure 9-479
 struct PreqPerTargetFlags : public common::BitField<uint8_t> {
     WLAN_BIT_FIELD(target_only, 0, 1);
