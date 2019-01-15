@@ -10,8 +10,10 @@
 #include <thread>
 
 namespace {
-constexpr uint32_t kImmediateCommandSize = 4096 / 128;
-}
+constexpr uint32_t kImmediateCommandCount = 128;
+// The total size of all commands should not be a multiple of the receive buffer size.
+constexpr uint32_t kImmediateCommandSize = 2048 * 3 / 2 / kImmediateCommandCount;
+} // namespace
 
 class TestPlatformConnection {
 public:
@@ -142,6 +144,7 @@ public:
         connection_->ShutdownEvent()->Signal();
         connection_.reset();
         ipc_thread_.join();
+        EXPECT_TRUE(got_null_notification);
 
         // Poll should still terminate early.
         poll_status = poll(&pfd, 1, 5000);
@@ -150,23 +153,23 @@ public:
         status = client_connection_->ReadNotificationChannel(&out_data, sizeof(out_data),
                                                              &out_data_size);
         EXPECT_EQ(MAGMA_STATUS_CONNECTION_LOST, status);
+        test_complete = true;
     }
 
     void TestExecuteImmediateCommands()
     {
-        uint8_t commands_buffer[4096] = {};
+        uint8_t commands_buffer[kImmediateCommandSize * kImmediateCommandCount] = {};
         uint64_t semaphore_ids[]{0, 1, 2};
-        magma_system_inline_command_buffer commands[128];
-        static_assert(kImmediateCommandSize * 128 == sizeof(commands_buffer),
-                      "Incorrect command size");
-        for (size_t i = 0; i < 128; i++) {
+        magma_system_inline_command_buffer commands[kImmediateCommandCount];
+        for (size_t i = 0; i < kImmediateCommandCount; i++) {
             commands[i].data = commands_buffer;
             commands[i].size = kImmediateCommandSize;
             commands[i].semaphore_count = 3;
             commands[i].semaphores = semaphore_ids;
         }
 
-        client_connection_->ExecuteImmediateCommands(test_context_id, 128, commands);
+        client_connection_->ExecuteImmediateCommands(test_context_id, kImmediateCommandCount,
+                                                     commands);
         EXPECT_EQ(client_connection_->GetError(), 0);
     }
 
@@ -181,11 +184,13 @@ public:
         for (auto& thread : threads) {
             thread.join();
         }
+        test_complete = true;
     }
 
     static uint64_t test_buffer_id;
     static uint32_t test_context_id;
     static uint64_t test_semaphore_id;
+    static bool got_null_notification;
     static magma_status_t test_error;
     static bool test_complete;
     static std::unique_ptr<magma::PlatformSemaphore> test_semaphore;
@@ -208,6 +213,7 @@ uint32_t TestPlatformConnection::test_context_id;
 magma_status_t TestPlatformConnection::test_error;
 bool TestPlatformConnection::test_complete;
 std::unique_ptr<magma::PlatformSemaphore> TestPlatformConnection::test_semaphore;
+bool TestPlatformConnection::got_null_notification;
 
 class TestDelegate : public magma::PlatformConnection::Delegate {
 public:
@@ -291,7 +297,9 @@ public:
                                  void* token) override
     {
         if (!token) {
-            TestPlatformConnection::test_complete = true;
+            // This doesn't count as test complete because it should happen in every test when the
+            // server shuts down.
+            TestPlatformConnection::got_null_notification = true;
         } else {
             uint32_t data = 5;
             msd_notification_t n = {.type = MSD_CONNECTION_NOTIFICATION_CHANNEL_SEND};
@@ -316,9 +324,9 @@ public:
             EXPECT_EQ(2u, semaphores[2]);
             semaphores += 3;
         }
-
         immediate_commands_bytes_executed_ += commands_size;
-        TestPlatformConnection::test_complete = immediate_commands_bytes_executed_ == 4096;
+        TestPlatformConnection::test_complete =
+            immediate_commands_bytes_executed_ == kImmediateCommandSize * kImmediateCommandCount;
 
         return MAGMA_STATUS_OK;
     }
@@ -333,6 +341,7 @@ std::unique_ptr<TestPlatformConnection> TestPlatformConnection::Create()
     test_context_id = 0xdeadbeef;
     test_error = 0x12345678;
     test_complete = false;
+    got_null_notification = false;
     auto delegate = std::make_unique<TestDelegate>();
 
     auto connection = magma::PlatformConnection::Create(std::move(delegate));

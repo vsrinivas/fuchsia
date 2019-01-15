@@ -135,7 +135,7 @@ public:
         uint64_t bytes_used = 0;
         *command_bytes = 0;
         *num_semaphores = 0;
-        while (buffer_count < num_buffers && bytes_used < max_bytes) {
+        while (starting_index + buffer_count < num_buffers && bytes_used < max_bytes) {
             *command_bytes += buffers[starting_index + buffer_count].size;
             *num_semaphores += buffers[starting_index + buffer_count].semaphore_count;
             bytes_used = *command_bytes + *num_semaphores * sizeof(uint64_t);
