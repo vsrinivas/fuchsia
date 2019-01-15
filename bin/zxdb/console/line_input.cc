@@ -447,6 +447,7 @@ void LineInputStdout::EnsureRawMode() {
     raw_termios_->c_cc[VTIME] = 0;
   }
 
+  fflush(stdout);  // Synchronize with the buffered stdio stream.
   if (tcsetattr(STDOUT_FILENO, TCSAFLUSH, raw_termios_.get()) < 0)
     return;
 
@@ -457,6 +458,7 @@ void LineInputStdout::EnsureRawMode() {
 void LineInputStdout::EnsureNoRawMode() {
 #if !defined(__Fuchsia__)
   if (raw_mode_enabled_) {
+    fflush(stdout);  // Synchronize with the buffered stdio stream.
     tcsetattr(STDOUT_FILENO, TCSAFLUSH, original_termios_.get());
     raw_mode_enabled_ = false;
   }

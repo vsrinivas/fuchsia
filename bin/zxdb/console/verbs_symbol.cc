@@ -45,6 +45,7 @@ namespace {
 
 constexpr int kListAllSwitch = 1;
 constexpr int kListContextSwitch = 2;
+constexpr int kDumpIndexSwitch = 3;
 
 void DumpVariableLocation(const SymbolContext& symbol_context,
                           const VariableLocation& loc, OutputBuffer* out) {
@@ -344,7 +345,7 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
         "symbol to look up.");
   }
 
-  auto [err, identifier] = Identifier::FromString(cmd.args()[0]);
+  auto[err, identifier] = Identifier::FromString(cmd.args()[0]);
   if (err.has_error())
     return err;
 
@@ -381,20 +382,30 @@ Err DoSymInfo(ConsoleContext* context, const Command& cmd) {
 
 const char kSymStatShortHelp[] = "sym-stat: Print process symbol status.";
 const char kSymStatHelp[] =
-    R"(sym-stat
+    R"(sym-stat [ --dump-index ]
 
   Prints out symbol information.
 
-  The global information includes the symbol search path and how many files are
-  indexed from each location.
+  With no arguments, this shows global information and information for the
+  current (or specified) process. The global information includes the symbol
+  search path and how many files are indexed from each location.
 
   If there is a process it will includes which libraries are loaded, how many
   symbols each has, and where the symbol file is located.
 
+Arguments
+
+  --dump-index
+      Dumps the symbol index which maps build IDs to local file paths. This
+      can be useful for debugging cases of missing symbols.
+
 Example
 
   sym-stat
+
   process 2 sym-stat
+
+  sym-stat --dump-index
 )";
 
 void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
@@ -439,27 +450,20 @@ void SummarizeProcessSymbolStatus(ConsoleContext* context, Process* process,
   out->Append(Syntax::kNormal, "\n\n");
 }
 
-Err DoSymStat(ConsoleContext* context, const Command& cmd) {
-  Err err = cmd.ValidateNouns({Noun::kProcess});
-  if (err.has_error())
-    return err;
-
-  if (!cmd.args().empty())
-    return Err("\"sym-stat\" takes no arguments.");
-
-  OutputBuffer out;
-  out.Append(Syntax::kHeading, "Symbol index status\n\n");
-
-  SystemSymbols* system_symbols = context->session()->system().GetSymbols();
+void DumpIndexOverview(SystemSymbols* system_symbols, OutputBuffer* out) {
+  out->Append(Syntax::kHeading, "Symbol index status\n\n");
 
   std::vector<std::vector<OutputBuffer>> table;
   auto index_status = system_symbols->build_id_index().GetStatus();
   if (index_status.empty()) {
-    out.Append(Syntax::kError, "  No symbol locations are indexed.");
-    out.Append(
+    out->Append(Syntax::kError, "  No symbol locations are indexed.");
+    out->Append(
         "\n\n  Use the command-line switch \"zxdb -s <path>\" to "
         "specify the location of\n  your symbols.\n\n");
   } else {
+    out->Append(
+        Syntax::kComment,
+        "  Use \"sym-stat --dump-index\" to see the individual mappings.\n\n");
     for (const auto& pair : index_status) {
       auto& row = table.emplace_back();
       auto syntax = pair.second ? Syntax::kNormal : Syntax::kError;
@@ -468,12 +472,42 @@ Err DoSymStat(ConsoleContext* context, const Command& cmd) {
     }
     FormatTable({ColSpec(Align::kRight, 0, "Indexed", 2),
                  ColSpec(Align::kLeft, 0, "Source path", 1)},
-                table, &out);
+                table, out);
   }
+}
 
-  // Process symbol status (if any).
-  if (cmd.target() && cmd.target()->GetProcess())
-    SummarizeProcessSymbolStatus(context, cmd.target()->GetProcess(), &out);
+void DumpBuildIdIndex(SystemSymbols* system_symbols, OutputBuffer* out) {
+  const auto& build_id_to_file =
+      system_symbols->build_id_index().build_id_to_file();
+  if (build_id_to_file.empty()) {
+    out->Append(Syntax::kError, "  No build IDs found.\n");
+  } else {
+    for (const auto & [ id, file ] : build_id_to_file)
+      out->Append(fxl::StringPrintf("%s %s\n", id.c_str(), file.c_str()));
+  }
+  out->Append("\n");
+}
+
+Err DoSymStat(ConsoleContext* context, const Command& cmd) {
+  Err err = cmd.ValidateNouns({Noun::kProcess});
+  if (err.has_error())
+    return err;
+
+  if (!cmd.args().empty())
+    return Err("\"sym-stat\" takes no arguments.");
+
+  SystemSymbols* system_symbols = context->session()->system().GetSymbols();
+  OutputBuffer out;
+
+  if (cmd.HasSwitch(kDumpIndexSwitch)) {
+    DumpBuildIdIndex(system_symbols, &out);
+  } else {
+    DumpIndexOverview(system_symbols, &out);
+
+    // Process symbol status (if any).
+    if (cmd.target() && cmd.target()->GetProcess())
+      SummarizeProcessSymbolStatus(context, cmd.target()->GetProcess(), &out);
+  }
 
   Console* console = Console::get();
   console->Output(std::move(out));
@@ -537,9 +571,13 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kSymInfo] =
       VerbRecord(&DoSymInfo, {"sym-info"}, kSymInfoShortHelp, kSymInfoHelp,
                  CommandGroup::kQuery);
-  (*verbs)[Verb::kSymStat] =
-      VerbRecord(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
-                 CommandGroup::kQuery);
+
+  // sym-stat
+  VerbRecord sym_stat(&DoSymStat, {"sym-stat"}, kSymStatShortHelp, kSymStatHelp,
+                      CommandGroup::kQuery);
+  sym_stat.switches.emplace_back(kDumpIndexSwitch, false, "dump-index", 0);
+  (*verbs)[Verb::kSymStat] = std::move(sym_stat);
+
   (*verbs)[Verb::kSymNear] =
       VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
                  kSymNearHelp, CommandGroup::kQuery);

@@ -70,6 +70,8 @@ class BuildIDIndex {
   }
   const std::vector<std::string>& sources() const { return sources_; }
 
+  const IDMap& build_id_to_file() const { return build_id_to_file_; }
+
  private:
   // Updates the build_id_to_file_ cache if necessary.
   void EnsureCacheClean();
