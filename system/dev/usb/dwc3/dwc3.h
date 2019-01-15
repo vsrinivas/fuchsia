@@ -82,16 +82,16 @@ typedef struct {
 } dwc3_endpoint_t;
 
 typedef struct {
-    zx_device_t* zxdev;
-    zx_device_t* xhci_dev;
-    zx_device_t* parent;
+    zx_device_t* zxdev = nullptr;
+    zx_device_t* xhci_dev = nullptr;
+    zx_device_t* parent = nullptr;
     pdev_protocol_t pdev;
     usb_mode_switch_protocol_t ums;
     usb_dci_interface_t dci_intf;
     std::optional<ddk::MmioBuffer> mmio;
     zx::handle bti_handle;
 
-    usb_mode_t usb_mode;
+    usb_mode_t usb_mode = USB_MODE_NONE;
     bool start_device_on_xhci_release;
     fbl::Mutex usb_mode_lock; // protects usb_mode and start_device_on_xhci_release
 
@@ -103,7 +103,7 @@ typedef struct {
     dwc3_endpoint_t eps[DWC3_MAX_EPS];
 
     // connection state
-    usb_speed_t speed;
+    usb_speed_t speed = USB_SPEED_UNDEFINED;
 
     // ep0 stuff
     usb_setup_t cur_setup;      // current setup request
@@ -115,7 +115,7 @@ typedef struct {
     // dwc3_endpoint_t.lock should be acquired first
     // if acquiring both locks.
     fbl::Mutex lock;
-    bool configured;
+    bool configured = false;
 } dwc3_t;
 
 // Internal context for USB requests
