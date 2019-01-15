@@ -117,24 +117,6 @@ func main() {
 }
 
 func execute(tests []testsharder.Test, recorder TestRecorder) error {
-	devCtx, err := botanist.GetDeviceContext()
-	if err != nil {
-		return err
-	}
-
-	// Initialize the connection to the Fuchsia device.
-	sshClient, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
-	if err != nil {
-		return fmt.Errorf("failed to connect to node %q: %v", devCtx.Nodename, err)
-	}
-
-	fuchsiaTester := &FuchsiaTester{
-		remoteOutputDir: fuchsiaOutputDir,
-		delegate: &SSHTester{
-			client: sshClient,
-		},
-	}
-
 	// Partition the tests into groups according to OS.
 	groups := groupTests(tests, func(test testsharder.Test) string {
 		sys := strings.ToLower(test.OS)
@@ -151,9 +133,7 @@ func execute(tests []testsharder.Test, recorder TestRecorder) error {
 	}
 
 	// Execute UNIX tests locally, assuming we're running in a UNIX environment.
-	var localTests []testsharder.Test
-	localTests = append(localTests, groups["linux"]...)
-	localTests = append(localTests, groups["mac"]...)
+	localTests := append(groups["linux"], groups["mac"]...)
 	if len(localTests) > 0 {
 		if err := runTests(localTests, RunTestInSubprocess, outputDir, recorder); err != nil {
 			return err
@@ -161,14 +141,7 @@ func execute(tests []testsharder.Test, recorder TestRecorder) error {
 	}
 
 	// Execute Fuchsia tests.
-	if fuchsiaTests, ok := groups["fuchsia"]; ok {
-		// TODO(IN-824): Record log_listener output.
-		if err := runTests(fuchsiaTests, fuchsiaTester.Test, outputDir, recorder); err != nil {
-			return err
-		}
-	}
-
-	return nil
+	return runFuchsiaTests(groups["fuchsia"], outputDir, recorder)
 }
 
 // groupTests splits a list of tests into named subgroups according to the names returned
@@ -211,6 +184,33 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 	}
 
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
+}
+
+func runFuchsiaTests(tests []testsharder.Test, outputDir string, record TestRecorder) error {
+	if len(tests) == 0 {
+		return nil
+	}
+
+	devCtx, err := botanist.GetDeviceContext()
+	if err != nil {
+		return err
+	}
+
+	// Initialize the connection to the Fuchsia device.
+	sshClient, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
+	if err != nil {
+		return fmt.Errorf("failed to connect to node %q: %v", devCtx.Nodename, err)
+	}
+	defer sshClient.Close()
+
+	fuchsiaTester := &FuchsiaTester{
+		remoteOutputDir: fuchsiaOutputDir,
+		delegate: &SSHTester{
+			client: sshClient,
+		},
+	}
+
+	return runTests(tests, fuchsiaTester.Test, outputDir, record)
 }
 
 func runTests(tests []testsharder.Test, tester Tester, outputDir string, record TestRecorder) error {
