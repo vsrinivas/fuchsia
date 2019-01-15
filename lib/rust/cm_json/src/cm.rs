@@ -1,7 +1,13 @@
-use serde_derive::Serialize;
+use serde_derive::{Serialize, Deserialize};
 use serde_json::{Map, Value};
 
-#[derive(Serialize, Debug, Default)]
+pub const SERVICE: &str = "service";
+pub const DIRECTORY: &str = "directory";
+pub const REALM: &str = "realm";
+pub const SELF: &str = "self";
+pub const CHILD: &str = "child";
+
+#[derive(Serialize, Deserialize, Debug, Default)]
 pub struct Document {
     #[serde(skip_serializing_if = "Option::is_none")]
     pub program: Option<Map<String, Value>>,
@@ -17,14 +23,14 @@ pub struct Document {
     pub facets: Option<Map<String, Value>>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Use {
     pub r#type: String,
     pub source_path: String,
     pub target_path: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Expose {
     pub r#type: String,
     pub source_path: String,
@@ -32,7 +38,7 @@ pub struct Expose {
     pub target_path: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Offer {
     pub r#type: String,
     pub source_path: String,
@@ -40,20 +46,20 @@ pub struct Offer {
     pub targets: Vec<Target>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Child {
     pub name: String,
     pub uri: String,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Source {
     pub relation: String,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub child_name: Option<String>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct Target {
     pub target_path: String,
     pub child_name: String,

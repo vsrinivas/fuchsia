@@ -26,7 +26,7 @@ rustc_binary("cmc") {
   ]
 
   non_rust_deps = [
-    "//garnet/lib/rust/cm_json:cmx_schema_json"
+    "//garnet/lib/rust/cm_json:cm_schema_json"
   ]
 }
 

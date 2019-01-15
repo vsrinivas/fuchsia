@@ -10,7 +10,8 @@ enum Relation {
   /// This component’s containing realm, i.e. the parent component.
   REALM = 0;
   /// This component (the one for this component manifest).
-  SELF = 1;
+  // TODO: FIDL(???): Rename to |SELF| once reserved keyword bug is fixed in rust fidl bindings.
+  MYSELF = 1;
   /// One of this component’s children.
   CHILD = 2;
 };

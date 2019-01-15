@@ -1,5 +1,6 @@
 {
     "packages": [
+        "//garnet/lib/rust/cm_fidl:cm_fidl_tests",
         "//garnet/lib/rust/cm_json:cm_json_tests",
         "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
         "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",

@@ -54,9 +54,8 @@ table ComponentDecl {
     /// The offered capabilities must be unique and non-overlapping.
     4: vector<OfferDecl> offers;
 
-    /// Additional metadata about the component. The facets must have unique
-    /// names.
-    5: vector<FacetDecl> facets;
+    /// Additional metadata about the component.
+    5: fuchsia.data.Dictionary facets;
 
     /// The component's statically instantiated children. The children must have
     /// unique names.
