@@ -17,6 +17,7 @@
         "garnet/packages/prod/cobalt_client",
         "garnet/packages/prod/cpuperf",
         "garnet/packages/prod/crashpad",
+        "garnet/packages/prod/cs",
         "garnet/packages/prod/debug_agent",
         "garnet/packages/prod/debugserver",
         "garnet/packages/prod/device_settings",
