@@ -503,34 +503,12 @@ TEST_P(RouterEndpoint_OneMessageIntegration, Works) {
 
 const std::vector<OneMessageArgs> kOneMessageArgTests = [] {
   std::vector<OneMessageArgs> out;
+  const std::vector<size_t> kLengths = {1, 32, 1024, 32768, 1048576};
   for (MakeEnv make_env : kEnvVariations) {
-    out.emplace_back(OneMessageArgs{make_env, Slice::FromStaticString("123")});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(3, 'a')});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(128, 'a')});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(240, 'a')});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(256, 'a')});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(512, 'a')});
-    out.emplace_back(OneMessageArgs{make_env, Slice::RepeatedChar(1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(2 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(4 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(8 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(16 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(32 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(64 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(128 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(256 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(512 * 1024, 'b')});
-    out.emplace_back(
-        OneMessageArgs{make_env, Slice::RepeatedChar(1024 * 1024, 'b')});
+    for (auto payload_length : kLengths) {
+      out.emplace_back(
+          OneMessageArgs{make_env, Slice::RepeatedChar(payload_length, 'a')});
+    }
   }
   return out;
 }();

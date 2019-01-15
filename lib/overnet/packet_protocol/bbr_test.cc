@@ -343,7 +343,7 @@ std::vector<SimulationArgs> GenerateArguments() {
             mss,
             Nothing,
             {ContinuousTraffic(
-                 TimeDelta::Zero(), TimeDelta::FromSeconds(1000),
+                 TimeDelta::Zero(), TimeDelta::FromSeconds(20),
                  Bandwidth::FromKilobitsPerSecond(generate_traffic),
                  std::max(
                      uint64_t(1),
@@ -351,7 +351,7 @@ std::vector<SimulationArgs> GenerateArguments() {
                                        .BytesSentForTime(
                                            TimeDelta::FromMilliseconds(100))))),
              MeasureBandwidth(
-                 TimeDelta::FromSeconds(900),
+                 TimeDelta::FromSeconds(19),
                  Bandwidth::FromBitsPerSecond(expect_bw * 500),
                  Bandwidth::FromBitsPerSecond(expect_bw * 2000))}});
       }
