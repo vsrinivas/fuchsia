@@ -271,20 +271,20 @@ static zx_status_t zxio_remote_flags_set(zxio_t* io, uint32_t flags) {
 
 static zx_status_t zxio_remote_vmo_get(zxio_t* io, uint32_t flags, zx_handle_t* out_vmo, size_t* out_size) {
     zxio_remote_t* rio = reinterpret_cast<zxio_remote_t*>(io);
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    fuchsia_mem_Buffer buffer{};
     zx_status_t io_status, status;
-    io_status = fuchsia_io_FileGetVmo(rio->control, flags, &status, &vmo);
+    io_status = fuchsia_io_FileGetBuffer(rio->control, flags, &status, &buffer);
     if (io_status != ZX_OK) {
         return io_status;
     }
     if (status != ZX_OK) {
         return status;
     }
-    if (vmo == ZX_HANDLE_INVALID) {
+    if (buffer.vmo == ZX_HANDLE_INVALID) {
         return ZX_ERR_IO;
     }
-    *out_vmo = vmo;
-    *out_size = 0u;
+    *out_vmo = buffer.vmo;
+    *out_size = buffer.size;
     return ZX_OK;
 }
 

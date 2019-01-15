@@ -309,19 +309,20 @@ static void fdio_zxio_remote_wait_end(fdio_t* io, zx_signals_t signals, uint32_t
 
 static zx_status_t fdio_zxio_remote_get_vmo(fdio_t* io, int flags, zx_handle_t* out_vmo) {
     zxio_remote_t* rio = fdio_get_zxio_remote(io);
-    zx_handle_t vmo = ZX_HANDLE_INVALID;
+    fuchsia_mem_Buffer buffer;
+    memset(&buffer, 0, sizeof(buffer));
     zx_status_t io_status, status;
-    io_status = fuchsia_io_FileGetVmo(rio->control, flags, &status, &vmo);
+    io_status = fuchsia_io_FileGetBuffer(rio->control, flags, &status, &buffer);
     if (io_status != ZX_OK) {
         return io_status;
     }
     if (status != ZX_OK) {
         return status;
     }
-    if (vmo == ZX_HANDLE_INVALID) {
+    if (buffer.vmo == ZX_HANDLE_INVALID) {
         return ZX_ERR_IO;
     }
-    *out_vmo = vmo;
+    *out_vmo = buffer.vmo;
     return ZX_OK;
 }
 

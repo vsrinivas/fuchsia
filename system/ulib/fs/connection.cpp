@@ -701,7 +701,7 @@ zx_status_t Connection::FileGetBuffer(uint32_t flags, fidl_txn_t* txn) {
     fuchsia_mem_Buffer buffer;
     memset(&buffer, 0, sizeof(buffer));
     zx_status_t status = vnode_->GetVmo(flags, &buffer.vmo, &buffer.size);
-    return fuchsia_io_FileGetBuffer_reply(txn, status, &buffer);
+    return fuchsia_io_FileGetBuffer_reply(txn, status, status == ZX_OK ? &buffer : nullptr);
 }
 
 zx_status_t Connection::DirectoryOpen(uint32_t flags, uint32_t mode, const char* path_data,
