@@ -11,8 +11,10 @@
 
 #include "libgpt-tests.h"
 
-// generate a random number  between [1, max]
-#define random_non_zero_length(max) ((random() % max) + 1)
+// generate a random number between [1, max]
+uint64_t random_non_zero_length(uint64_t max) {
+    return (rand() % max) + 1;
+}
 
 extern bool gUseRamDisk;
 extern char gDevPath[PATH_MAX];
@@ -425,7 +427,7 @@ bool RemovePartitionsHelper(LibGptTest* libGptTest,
 
     for (uint32_t i = 0; i < remove_count; i++) {
         while (true) {
-            index = static_cast<uint32_t>(random()) % partitions->GetCount();
+            index = static_cast<uint32_t>(rand()) % partitions->GetCount();
             if (partitions->IsCreated(index)) {
                 break;
             }
