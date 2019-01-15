@@ -5,7 +5,6 @@
 #include "use_video_decoder.h"
 
 #include "codec_client.h"
-#include "frame_sink.h"
 #include "util.h"
 
 #include <garnet/lib/media/raw_video_writer/raw_video_writer.h>
@@ -14,6 +13,8 @@
 #include <lib/fit/defer.h>
 #include <lib/fxl/arraysize.h>
 #include <lib/fxl/logging.h>
+#include <lib/media/codec_impl/fourcc.h>
+#include <lib/media/test/frame_sink.h>
 
 #include <stdint.h>
 #include <string.h>

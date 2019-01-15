@@ -9,6 +9,14 @@ config("codec_impl_include_config") {
   include_dirs = [ "include" ]
 }
 
+source_set("fourcc") {
+  public_configs = [ ":codec_impl_include_config" ]
+
+  public = [
+    "include/lib/media/codec_impl/fourcc.h",
+  ]
+}
+
 source_set("codec_impl") {
   sources = [
     "codec_adapter.cc",
@@ -30,6 +38,7 @@ source_set("codec_impl") {
     "include/lib/media/codec_impl/codec_packet.h",
   ]
   public_deps = [
+    ":fourcc",
     "//zircon/public/lib/async-cpp",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/fbl",

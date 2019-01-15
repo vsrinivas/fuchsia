@@ -5,7 +5,6 @@
 #include <stdint.h>
 #include <stdio.h>
 
-#include "frame_sink.h"
 #include "use_aac_decoder.h"
 #include "use_video_decoder.h"
 
@@ -14,6 +13,7 @@
 #include <lib/fxl/command_line.h>
 #include <lib/fxl/log_settings_command_line.h>
 #include <lib/fxl/logging.h>
+#include <lib/media/test/frame_sink.h>
 
 #include <thread>
 

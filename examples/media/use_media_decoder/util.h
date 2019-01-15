@@ -75,19 +75,4 @@ void SHA256_Update_VideoParameters(
 void SHA256_Update_VideoPlane(SHA256_CTX* sha256_ctx, uint8_t* start,
                               uint32_t width, uint32_t stride, uint32_t height);
 
-static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
-                                             uint8_t d) {
-  return (static_cast<uint32_t>(d) << 24) | (static_cast<uint32_t>(c) << 16) |
-         (static_cast<uint32_t>(b) << 8) | static_cast<uint32_t>(a);
-}
-
-static inline std::string fourcc_to_string(uint32_t fourcc) {
-  // fourcc has first letter in the low-order byte.  We want that letter to be
-  // the first byte in memory, without regard for host endian-ness, so convert
-  // from host to little-endian which puts the low-order byte first.
-  uint32_t little_endian_fourcc = htole32(fourcc);
-  return std::string(reinterpret_cast<char*>(&little_endian_fourcc),
-                     sizeof(fourcc));
-}
-
 #endif  // GARNET_EXAMPLES_MEDIA_USE_MEDIA_DECODER_UTIL_H_

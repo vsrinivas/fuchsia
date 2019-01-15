@@ -5,6 +5,8 @@
 import("//build/test.gni")
 
 source_set("use_media_decoder_source_set") {
+  testonly = true
+
   sources = [
     "codec_buffer.cc",
     "codec_buffer.h",
@@ -12,10 +14,6 @@ source_set("use_media_decoder_source_set") {
     "codec_client.h",
     "codec_output.cc",
     "codec_output.h",
-    "frame_sink.cc",
-    "frame_sink.h",
-    "frame_sink_view.cc",
-    "frame_sink_view.h",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
     "use_video_decoder.cc",
@@ -33,7 +31,9 @@ source_set("use_media_decoder_source_set") {
   ]
 
   deps = [
+    "//garnet/lib/media/codec_impl:fourcc",
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
+    "//garnet/lib/media/test:frame_sink",
     "//garnet/lib/media/wav_writer:wav_writer",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/ui/base_view/cpp",
@@ -42,12 +42,14 @@ source_set("use_media_decoder_source_set") {
 }
 
 executable("use_media_decoder") {
+  testonly = true
   sources = [
     "main.cc",
   ]
 
   deps = [
     ":use_media_decoder_source_set",
+    "//garnet/lib/media/test:frame_sink",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -86,6 +88,8 @@ test("use_h264_decoder_test") {
 
   deps = [
     ":use_media_decoder_source_set",
+    "//garnet/lib/media/codec_impl:fourcc",
+    "//garnet/lib/media/test:frame_sink",
     "//garnet/public/lib/component/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]

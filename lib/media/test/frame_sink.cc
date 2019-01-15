@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "frame_sink.h"
+#include "lib/media/test/frame_sink.h"
 
-#include "frame_sink_view.h"
-#include "util.h"
+#include "lib/media/test/frame_sink_view.h"
 
 #include <fuchsia/mediacodec/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -13,6 +12,7 @@
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fit/defer.h>
 #include <lib/fxl/logging.h>
+#include <lib/media/codec_impl/fourcc.h>
 #include <lib/zx/vmo.h>
 
 #include <memory>
