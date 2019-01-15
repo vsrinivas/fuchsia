@@ -265,6 +265,34 @@ TEST_F(RealmTest, EnvironmentLabelRequired) {
       [&] { return env_controller_status == ZX_ERR_INVALID_ARGS; }, kTimeout));
 }
 
+TEST_F(RealmTest, EnvironmentLabelMustBeUnique) {
+  // Create first environment with label kRealm using EnclosingEnvironment since
+  // that's easy.
+  auto enclosing_environment =
+      CreateNewEnclosingEnvironment(kRealm, CreateServices());
+
+  // Can't use EnclosingEnvironment here since there's no way to discern between
+  // 'not yet created' and 'failed to create'. This also lets us check the
+  // specific status returned.
+  fuchsia::sys::EnvironmentPtr env;
+  fuchsia::sys::EnvironmentControllerPtr env_controller;
+
+  zx_status_t env_status, env_controller_status;
+  env.set_error_handler([&](zx_status_t status) { env_status = status; });
+  env_controller.set_error_handler(
+      [&](zx_status_t status) { env_controller_status = status; });
+
+  // Same environment label as EnclosingEnvironment created above.
+  real_env()->CreateNestedEnvironment(
+      env.NewRequest(), env_controller.NewRequest(), kRealm, nullptr,
+      fuchsia::sys::EnvironmentOptions{});
+
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return env_status == ZX_ERR_BAD_STATE; }, kTimeout));
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&] { return env_controller_status == ZX_ERR_BAD_STATE; }, kTimeout));
+}
+
 class RealmFakeLoaderTest : public RealmTest, public fuchsia::sys::Loader {
  protected:
   RealmFakeLoaderTest() {

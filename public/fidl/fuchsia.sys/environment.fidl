@@ -38,9 +38,10 @@ struct EnvironmentOptions {
   // automatically when the |EnvironmentController|'s interface is closed. You
   // can use |EnvironmentController.Detach| to disable this behavior.
   //
-  // |label| defines the new environment's label/name. It can also be used for
-  // diagnostic purposes. The label will be truncated if it is longer than
-  // |kLabelMaxLength|.
+  // |label| defines the new environment's label/name. It must be unique within
+  // the parent environment (though not globally) and is used for isolating
+  // separate environments. It can also be used for diagnostic purposes. The
+  // label will be truncated if it is longer than |kLabelMaxLength|.
   //
   // |additional_services|, which may be empty, contains a list of services
   // that the environment provides, which are hosted by

@@ -315,9 +315,12 @@ void Realm::CreateNestedEnvironment(
   }
   for (const auto& child : children_) {
     if (label == child.first->label_) {
-      FXL_LOG(WARNING) << "Attempt to create nested environment '"
-                       << label.c_str() << "' under '" << label_
-                       << "' but label matches existing environment";
+      FXL_LOG(ERROR) << "Attempt to create nested environment '"
+                     << label.c_str() << "' under '" << label_
+                     << "' but label matches existing environment";
+      environment.Close(ZX_ERR_BAD_STATE);
+      controller_request.Close(ZX_ERR_BAD_STATE);
+      return;
     }
   }
 
