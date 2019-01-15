@@ -55,6 +55,7 @@ struct SdmmcReq {
     /// offset into dma_vmo or virt
     uint64 buf_offset;
     handle pmt;
+    bool probe_tuning_cmd;
 
     /// response data
     array<uint32>:4 response;

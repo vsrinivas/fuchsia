@@ -148,6 +148,7 @@ zx_status_t sdio_send_op_cond(sdmmc_device_t* dev, uint32_t ocr, uint32_t* rocr)
         .arg = ocr,
         .cmd_flags = SDIO_SEND_OP_COND_FLAGS,
         .use_dma = sdmmc_use_dma(dev),
+        .probe_tuning_cmd = true,
     };
     for (size_t i = 0; i < 100; i++) {
         if ((st = sdmmc_request_helper(dev, &req, 3, 10)) != ZX_OK) {
@@ -185,8 +186,16 @@ zx_status_t sdio_io_rw_direct(sdmmc_device_t* dev, bool write, uint32_t fn_idx,
         .cmd_flags = SDIO_IO_RW_DIRECT_FLAGS,
         .use_dma = sdmmc_use_dma(dev),
     };
+    if (reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
+        req.probe_tuning_cmd = true;
+    }
     zx_status_t st = sdmmc_request(&dev->host, &req);
-    if (st != ZX_OK) {
+    if (st != ZX_OK && reg_addr == SDIO_CIA_CCCR_ASx_ABORT_SEL_CR_ADDR) {
+        // Do not log error if ABORT fails during reset, as it proved to be harmless.
+        // TODO(ravoorir): Is it expected for the command to fail intermittently during reset?
+        zxlogf(TRACE, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d\n", st);
+        return st;
+    } else if (st != ZX_OK) {
         zxlogf(ERROR, "sdio: SDIO_IO_RW_DIRECT failed, retcode = %d\n", st);
         return st;
     }

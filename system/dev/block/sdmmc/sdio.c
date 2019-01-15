@@ -760,7 +760,7 @@ zx_status_t sdmmc_probe_sdio(sdmmc_device_t* dev) {
 
     uint32_t ocr;
     if ((st = sdio_send_op_cond(dev, 0, &ocr)) != ZX_OK) {
-        zxlogf(ERROR, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
+        zxlogf(TRACE, "sdmmc_probe_sdio: SDIO_SEND_OP_COND failed, retcode = %d\n", st);
         return st;
     }
     //Select voltage 3.3 V. Also request for 1.8V. Section 3.2 SDIO spec

@@ -257,6 +257,7 @@ static zx_status_t aml_sd_emmc_do_tuning_transfer(aml_sd_emmc_t* dev, uint8_t* t
         .use_dma = false,
         .virt_buffer = tuning_res,
         .virt_size = blk_pattern_size,
+        .probe_tuning_cmd = true,
     };
     return aml_sd_emmc_request(dev, &tuning_req);
 }
@@ -565,8 +566,13 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
         uint32_t rxd_err = get_bits(status_irq, AML_SD_EMMC_STATUS_RXD_ERR_MASK,
                                     AML_SD_EMMC_STATUS_RXD_ERR_LOC);
         if (rxd_err) {
-            AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n", req->cmd_idx,
-                              status_irq, rxd_err);
+            if (req->probe_tuning_cmd) {
+                AML_SD_EMMC_TRACE("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n",
+                                  req->cmd_idx, status_irq, rxd_err);
+            } else {
+                AML_SD_EMMC_ERROR("RX Data CRC Error cmd%d, status=0x%x, RXD_ERR:%d\n",
+                                  req->cmd_idx, status_irq, rxd_err);
+            }
             status = ZX_ERR_IO_DATA_INTEGRITY;
             goto complete;
         }
@@ -588,8 +594,14 @@ static int aml_sd_emmc_irq_thread(void* ctx) {
             goto complete;
         }
         if (status_irq & AML_SD_EMMC_STATUS_RESP_TIMEOUT) {
-            AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
-                              req->cmd_idx, status_irq);
+            // When mmc device is being probed with SDIO command this is an expected failure.
+            if (req->probe_tuning_cmd) {
+                AML_SD_EMMC_TRACE("No response received before time limit, cmd%d, status=0x%x\n",
+                                  req->cmd_idx, status_irq);
+            } else {
+                AML_SD_EMMC_ERROR("No response received before time limit, cmd%d, status=0x%x\n",
+                                  req->cmd_idx, status_irq);
+            }
             status = ZX_ERR_TIMED_OUT;
             goto complete;
         }
