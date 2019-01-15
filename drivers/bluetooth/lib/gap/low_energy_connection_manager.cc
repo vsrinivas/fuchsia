@@ -846,8 +846,8 @@ void LowEnergyConnectionManager::OnLEConnectionUpdateComplete(
 
   if (payload->status != hci::StatusCode::kSuccess) {
     bt_log(WARN, "gap-le",
-           "HCI LE Connection Update Complete event with with"
-           " error (status: %#.2x, handle: %#.4x)",
+           "HCI LE Connection Update Complete event with error "
+           "(status: %#.2x, handle: %#.4x)",
            payload->status, handle);
     return;
   }
