@@ -76,7 +76,7 @@ func (a *echoClientApp) getEchoInterface() (ei *echo2.EchoInterface, err error) 
 }
 
 func main() {
-	serverURL := flag.String("server", "echo2_server_go", "server URL")
+	serverURL := flag.String("server", "fuchsia-pkg://fuchsia.com/echo2_server_go#meta/echo2_server_go.cmx", "server URL")
 	msg := flag.String("m", "Hello, Go World", "message")
 
 	flag.Parse()

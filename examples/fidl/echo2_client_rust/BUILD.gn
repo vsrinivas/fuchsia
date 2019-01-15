@@ -21,8 +21,6 @@ rustc_binary("echo2_client_rust_bin") {
 }
 
 package("echo2_client_rust") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":echo2_client_rust_bin"
   ]

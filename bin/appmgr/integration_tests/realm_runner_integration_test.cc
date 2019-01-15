@@ -263,7 +263,7 @@ class RealmRunnerServiceTest : public RealmRunnerTest {
     auto env_services = CreateServices();
     ASSERT_EQ(ZX_OK, env_services->AddService(runner_registry_.GetHandler()));
     ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                         CreateLaunchInfo("echo2_server_cpp"),
+                         CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx"),
                          fidl::examples::echo::Echo::Name_));
     enclosing_environment_ =
         CreateNewEnclosingEnvironment(kRealm, std::move(env_services));

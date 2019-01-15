@@ -163,14 +163,14 @@ TEST_F(RealmTest, CreateTwoKillOne) {
   // launch component as a service.
   auto env_services = CreateServices();
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                       CreateLaunchInfo("echo2_server_cpp"),
+                       CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx"),
                        fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
   ASSERT_TRUE(WaitForEnclosingEnvToStart(enclosing_environment.get()));
   // launch component normally
   auto controller1 =
-      RunComponent(enclosing_environment.get(), "echo2_server_cpp");
+      RunComponent(enclosing_environment.get(), "fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx");
 
   // make sure echo service is running.
   fidl::examples::echo::EchoPtr echo;
@@ -202,7 +202,7 @@ TEST_F(RealmTest, CreateTwoKillOne) {
 TEST_F(RealmTest, KillRealmKillsComponent) {
   auto env_services = CreateServices();
   ASSERT_EQ(ZX_OK, env_services->AddServiceWithLaunchInfo(
-                       CreateLaunchInfo("echo2_server_cpp"),
+                       CreateLaunchInfo("fuchsia-pkg://fuchsia.com/echo2_server_cpp#meta/echo2_server_cpp.cmx"),
                        fidl::examples::echo::Echo::Name_));
   auto enclosing_environment =
       CreateNewEnclosingEnvironment(kRealm, std::move(env_services));
