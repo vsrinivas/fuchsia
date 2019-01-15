@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/blobfs.h>
 #include <blobfs/writeback.h>
 
 #include <utility>
@@ -104,8 +103,11 @@ zx_status_t WriteTxn::Flush() {
 
 void WritebackWork::MarkCompleted(zx_status_t status) {
     WriteTxn::Reset();
-    InvokeSyncCallback(status);
-    ResetInternal();
+    if (sync_cb_) {
+        sync_cb_(status);
+    }
+    sync_cb_ = nullptr;
+    ready_cb_ = nullptr;
 }
 
 bool WritebackWork::IsReady() {
@@ -127,43 +129,28 @@ void WritebackWork::SetReadyCallback(ReadyCallback callback) {
 }
 
 void WritebackWork::SetSyncCallback(SyncCallback callback) {
-    ZX_DEBUG_ASSERT(!sync_cb_);
-    sync_cb_ = std::move(callback);
-}
-
-void WritebackWork::SetSyncComplete() {
-    ZX_ASSERT(vn_);
-    sync_ = true;
+    if (sync_cb_) {
+        // This "callback chain" allows multiple clients to observe the completion
+        // of the WritebackWork. This is akin to a promise "and-then" relationship.
+        sync_cb_ = [previous_callback = std::move(sync_cb_),
+                    next_callback = std::move(callback)] (zx_status_t status) {
+            next_callback(status);
+            previous_callback(status);
+        };
+    } else {
+        sync_cb_ = std::move(callback);
+    }
 }
 
 // Returns the number of blocks of the writeback buffer that have been consumed
 zx_status_t WritebackWork::Complete() {
     zx_status_t status = Flush();
-
-    if (status == ZX_OK && sync_) {
-        vn_->CompleteSync();
-    }
-
-    InvokeSyncCallback(status);
-    ResetInternal();
+    MarkCompleted(status);
     return status;
 }
 
-WritebackWork::WritebackWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vn)
-    : WriteTxn(transaction_manager), ready_cb_(nullptr), sync_cb_(nullptr), sync_(false),
-      vn_(std::move(vn)) {}
-
-void WritebackWork::InvokeSyncCallback(zx_status_t status) {
-    if (sync_cb_) {
-        sync_cb_(status);
-    }
-}
-
-void WritebackWork::ResetInternal() {
-    sync_cb_ = nullptr;
-    ready_cb_ = nullptr;
-    vn_ = nullptr;
-}
+WritebackWork::WritebackWork(TransactionManager* transaction_manager)
+    : WriteTxn(transaction_manager), ready_cb_(nullptr), sync_cb_(nullptr) {}
 
 Buffer::~Buffer() {
     if (vmoid_ != VMOID_INVALID) {
@@ -524,4 +511,37 @@ int WritebackQueue::WritebackThread(void* arg) {
         cnd_wait(&b->work_added_, b->lock_.GetInternal());
     }
 }
+
+zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
+                             TransactionManager* transaction_manager, Blob* vn,
+                             const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
+                             uint64_t nblocks) {
+    const size_t kMaxChunkBlocks = (3 * transaction_manager->WritebackCapacity()) / 4;
+    uint64_t delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
+    while (nblocks > 0) {
+        if ((*work)->BlkCount() + delta_blocks > kMaxChunkBlocks) {
+            // If enqueueing these blocks could push us past the writeback buffer capacity
+            // when combined with all previous writes, break this transaction into a smaller
+            // chunk first.
+            fbl::unique_ptr<WritebackWork> tmp;
+            zx_status_t status = transaction_manager->CreateWork(&tmp, vn);
+            if (status != ZX_OK) {
+                return status;
+            }
+            if ((status = transaction_manager->EnqueueWork(std::move(*work),
+                                                           EnqueueType::kData)) != ZX_OK) {
+                return status;
+            }
+            *work = std::move(tmp);
+        }
+
+        (*work)->Enqueue(vmo, relative_block, absolute_block, delta_blocks);
+        relative_block += delta_blocks;
+        absolute_block += delta_blocks;
+        nblocks -= delta_blocks;
+        delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
+    }
+    return ZX_OK;
+}
+
 } // namespace blobfs

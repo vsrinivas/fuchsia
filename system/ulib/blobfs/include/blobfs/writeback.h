@@ -11,7 +11,6 @@
 #include <utility>
 
 #include <blobfs/allocator.h>
-#include <blobfs/blob.h>
 #include <blobfs/format.h>
 #include <blobfs/metrics.h>
 #include <blobfs/transaction-manager.h>
@@ -105,22 +104,15 @@ private:
     size_t block_count_;
 };
 
-// A wrapper around a WriteTxn, holding references to the underlying Vnodes
-// corresponding to the txn, so their Vnodes (and VMOs) are not released
-// while being written out to disk.
-//
-// Additionally, this class allows completions to be signalled when the transaction
-// has successfully completed.
+// A wrapper around a WriteTxn with added support for callback invocation on completion.
 class WritebackWork : public WriteTxn,
                       public fbl::SinglyLinkedListable<fbl::unique_ptr<WritebackWork>> {
 public:
     using ReadyCallback = fbl::Function<bool()>;
     using SyncCallback = fs::Vnode::SyncCallback;
 
-    // Create a WritebackWork given a vnode (which may be null)
-    // Vnode is stored for duration of txn so that it isn't destroyed during the write process
-    WritebackWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vnode);
-    ~WritebackWork() = default;
+    WritebackWork(TransactionManager* transaction_manager);
+    virtual ~WritebackWork() = default;
 
     // Sets the WritebackWork to a completed state. |status| should indicate whether the work was
     // completed successfully.
@@ -141,29 +133,32 @@ public:
     // Adds a callback to the WritebackWork, such that it will be signalled when the WritebackWork
     // is flushed to disk. If no callback is set, nothing will get signalled.
     //
-    // Only one sync callback may be set for each WritebackWork unit.
+    // Multiple callbacks may be set. They are invoked in "first-in, last-out" order (i.e.,
+    // enqueueing A, B, C will invoke C, B, A).
     void SetSyncCallback(SyncCallback callback);
-
-    // Tells work to remove sync flag once the txn has successfully completed.
-    void SetSyncComplete();
 
     // Persists the enqueued work to disk,
     // and resets the WritebackWork to its initial state.
     zx_status_t Complete();
 
 private:
-    // If a sync callback exists, call it with |status|.
-    void InvokeSyncCallback(zx_status_t status);
-
-    // Delete any internal members that are no longer needed.
-    void ResetInternal();
-
     // Optional callbacks.
     ReadyCallback ready_cb_; // Call to check whether work is ready to be processed.
     SyncCallback sync_cb_; // Call after work has been completely flushed.
+};
 
-    bool sync_;
-    fbl::RefPtr<Blob> vn_;
+// An object compatible with the WritebackWork interface, which contains a single blob reference.
+// When the writeback is completed, this reference will go out of scope.
+//
+// This class helps WritebackWork avoid concurrent writes and reads to blobs: if a BlobWork
+// is alive, the impacted Blob is still alive.
+class BlobWork : public WritebackWork {
+public:
+    BlobWork(TransactionManager* transaction_manager, fbl::RefPtr<Blob> vnode)
+        : WritebackWork(transaction_manager), vnode_(std::move(vnode)) {}
+
+private:
+    fbl::RefPtr<Blob> vnode_;
 };
 
 // In-memory data buffer.
@@ -316,4 +311,19 @@ private:
     // transactions into the writeback buffer, they can each write in-order.
     ProducerQueue producer_queue_ __TA_GUARDED(lock_);
 };
+
+// A wrapper around "Enqueue" for content which risks being larger
+// than the writeback buffer.
+//
+// For content which is smaller than 3/4 the size of the writeback buffer: the
+// content is enqueued to |work| without flushing.
+//
+// For content which is larger than 3/4 the size of the writeback buffer: flush
+// the data by enqueueing it to the writeback thread in chunks until the
+// remainder is small enough to comfortably fit within the writeback buffer.
+zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work,
+                             TransactionManager* transaction_manager, Blob* vn,
+                             const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
+                             uint64_t nblocks);
+
 } // namespace blobfs

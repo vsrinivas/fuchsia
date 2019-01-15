@@ -106,6 +106,7 @@ MODULE_SRCS := \
     $(TEST_DIR)/node-reserver-test.cpp \
     $(TEST_DIR)/utils.cpp \
     $(TEST_DIR)/vector-extent-iterator-test.cpp \
+    $(TEST_DIR)/writeback-test.cpp \
 
 MODULE_STATIC_LIBS := $(TARGET_MODULE_STATIC_LIBS)
 

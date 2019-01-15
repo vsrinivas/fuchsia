@@ -119,6 +119,7 @@ public:
     BlobfsMetrics& LocalMetrics() final {
         return metrics_;
     }
+    size_t WritebackCapacity() const final;
     zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) final;
     zx_status_t EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) final;
 
@@ -168,9 +169,6 @@ public:
     // Initializes the WritebackQueue and Journal (if enabled in |options|),
     // replaying any existing journal entries.
     zx_status_t InitializeWriteback(const MountOptions& options);
-
-    // Returns the capacity of the writeback buffer in blocks.
-    size_t WritebackCapacity() const;
 
     virtual ~Blobfs();
 

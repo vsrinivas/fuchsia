@@ -18,6 +18,7 @@
 #include <blobfs/iterator/node-populator.h>
 #include <blobfs/iterator/vector-extent-iterator.h>
 #include <blobfs/latency-event.h>
+#include <blobfs/writeback.h>
 #include <cobalt-client/cpp/timer.h>
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
@@ -39,41 +40,6 @@ namespace {
 
 using digest::Digest;
 using digest::MerkleTree;
-
-// A wrapper around "Enqueue" for content which risks being larger
-// than the writeback buffer.
-//
-// For content which is smaller than 3/4 the size of the writeback buffer: the
-// content is enqueued to |work| without flushing.
-//
-// For content which is larger than 3/4 the size of the writeback buffer: flush
-// the data by enqueueing it to the writeback thread in chunks until the
-// remainder is small enough to comfortably fit within the writeback buffer.
-zx_status_t EnqueuePaginated(fbl::unique_ptr<WritebackWork>* work, Blobfs* blobfs, Blob* vn,
-                             const zx::vmo& vmo, uint64_t relative_block, uint64_t absolute_block,
-                             uint64_t nblocks) {
-    const size_t kMaxChunkBlocks = (3 * blobfs->WritebackCapacity()) / 4;
-    uint64_t delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
-    while (nblocks > 0) {
-        (*work)->Enqueue(vmo, relative_block, absolute_block, delta_blocks);
-        relative_block += delta_blocks;
-        absolute_block += delta_blocks;
-        nblocks -= delta_blocks;
-        delta_blocks = fbl::min(nblocks, kMaxChunkBlocks);
-        if (nblocks) {
-            fbl::unique_ptr<WritebackWork> tmp;
-            zx_status_t status = blobfs->CreateWork(&tmp, vn);
-            if (status != ZX_OK) {
-                return status;
-            }
-            if ((status = blobfs->EnqueueWork(std::move(*work), EnqueueType::kData)) != ZX_OK) {
-                return status;
-            }
-            *work = std::move(tmp);
-        }
-    }
-    return ZX_OK;
-}
 
 } // namespace
 
@@ -470,7 +436,11 @@ zx_status_t Blob::WriteMetadata() {
         blobfs_->PersistNode(wb.get(), node.index());
     }
 
-    wb->SetSyncComplete();
+    wb->SetSyncCallback([blob = fbl::WrapRefPtr(this)](zx_status_t status) {
+        if (status == ZX_OK) {
+            blob->CompleteSync();
+        }
+    });
     if ((status = blobfs_->EnqueueWork(std::move(wb), EnqueueType::kJournal)) != ZX_OK) {
         return status;
     }

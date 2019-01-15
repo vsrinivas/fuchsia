@@ -33,6 +33,10 @@ public:
     virtual ~TransactionManager() = default;
     virtual BlobfsMetrics& LocalMetrics() = 0;
 
+    // Returns the capacity of the writeback buffer in blocks.
+    virtual size_t WritebackCapacity() const = 0;
+
+    // Initializes a new unit of WritebackWork associated with a Writebacktarget.
     virtual zx_status_t CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode) = 0;
 
     // Enqueues |work| to the appropriate buffer.

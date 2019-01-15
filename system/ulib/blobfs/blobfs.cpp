@@ -811,11 +811,12 @@ zx_status_t Blobfs::CreateWork(fbl::unique_ptr<WritebackWork>* out, Blob* vnode)
         return ZX_ERR_BAD_STATE;
     }
 
-    out->reset(new WritebackWork(this, fbl::WrapRefPtr(vnode)));
+    out->reset(new BlobWork(this, fbl::WrapRefPtr(vnode)));
     return ZX_OK;
 }
 
 zx_status_t Blobfs::EnqueueWork(fbl::unique_ptr<WritebackWork> work, EnqueueType type) {
+    ZX_DEBUG_ASSERT(work != nullptr);
     switch (type) {
     case EnqueueType::kJournal:
         if (journal_ != nullptr) {
