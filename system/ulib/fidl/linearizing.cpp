@@ -245,7 +245,7 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
         return ZX_ERR_INVALID_ARGS;
     }
 
-    uint64_t primary_size;
+    size_t primary_size;
     zx_status_t status;
     if ((status = fidl::GetPrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
         return status;

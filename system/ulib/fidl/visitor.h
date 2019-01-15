@@ -163,20 +163,20 @@ private:
 
 template <typename Visitor, typename ImplSubType>
 constexpr bool CheckVisitorInterface() {
-    static_assert(std::is_base_of_v<Visitor, ImplSubType>,
+    static_assert(std::is_base_of<Visitor, ImplSubType>::value,
                   "ImplSubType should inherit from fidl::Visitor");
 
     // kContinueAfterConstraintViolation:
     // - When true, the walker will continue when constraints (e.g. string length) are violated.
     // - When false, the walker will stop upon first error of any kind.
-    static_assert(std::is_same_v<decltype(ImplSubType::kContinueAfterConstraintViolation),
-                                 const bool>,
+    static_assert(std::is_same<decltype(ImplSubType::kContinueAfterConstraintViolation),
+                               const bool>::value,
                   "ImplSubType must declare constexpr bool kContinueAfterConstraintViolation");
 
-    static_assert(std::is_same_v<
+    static_assert(std::is_same<
                       typename internal::callable_traits<
                           decltype(&Visitor::StartingPoint::ToPosition)>::return_type,
-                      typename Visitor::Position>,
+                      typename Visitor::Position>::value,
                   "Incorrect/missing StartingPoint");
 
     static_assert(internal::SameInterface<

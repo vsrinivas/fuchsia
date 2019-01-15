@@ -64,14 +64,14 @@ struct callable_traits<ReturnType(ArgTypes...)> {
 template <typename FuncA, typename FuncB>
 struct SameInterfaceImpl {
     static constexpr bool args_equal =
-        std::is_same_v<
+        std::is_same<
             typename callable_traits<FuncA>::args,
-            typename callable_traits<FuncB>::args>;
+            typename callable_traits<FuncB>::args>::value;
 
     static constexpr bool return_equal =
-        std::is_same_v<
+        std::is_same<
             typename callable_traits<FuncA>::return_type,
-            typename callable_traits<FuncB>::return_type>;
+            typename callable_traits<FuncB>::return_type>::value;
 
     static constexpr bool value = args_equal && return_equal;
 };

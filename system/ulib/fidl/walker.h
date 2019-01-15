@@ -22,20 +22,20 @@ namespace fidl {
 namespace internal {
 
 // Some assumptions about data type layout.
-static_assert(offsetof(fidl_string_t, size) == 0u);
-static_assert(offsetof(fidl_string_t, data) == 8u);
-static_assert(sizeof(fidl_string_t) == 16u);
+static_assert(offsetof(fidl_string_t, size) == 0u, "fidl_string_t layout");
+static_assert(offsetof(fidl_string_t, data) == 8u, "fidl_string_t layout");
+static_assert(sizeof(fidl_string_t) == 16u, "fidl_string_t layout");
 
-static_assert(offsetof(fidl_vector_t, count) == 0u);
-static_assert(offsetof(fidl_vector_t, data) == 8u);
-static_assert(sizeof(fidl_vector_t) == 16u);
+static_assert(offsetof(fidl_vector_t, count) == 0u, "fidl_vector_t layout");
+static_assert(offsetof(fidl_vector_t, data) == 8u, "fidl_vector_t layout");
+static_assert(sizeof(fidl_vector_t) == 16u, "fidl_vector_t layout");
 
-static_assert(offsetof(fidl_envelope_t, num_bytes) == 0u);
-static_assert(offsetof(fidl_envelope_t, num_handles) == 4u);
-static_assert(offsetof(fidl_envelope_t, data) == 8u);
-static_assert(sizeof(fidl_envelope_t) == 16u);
+static_assert(offsetof(fidl_envelope_t, num_bytes) == 0u, "fidl_envelope_t layout");
+static_assert(offsetof(fidl_envelope_t, num_handles) == 4u, "fidl_envelope_t layout");
+static_assert(offsetof(fidl_envelope_t, data) == 8u, "fidl_envelope_t layout");
+static_assert(sizeof(fidl_envelope_t) == 16u, "fidl_envelope_t layout");
 
-static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT);
+static_assert(ZX_HANDLE_INVALID == FIDL_HANDLE_ABSENT, "invalid handle equals absence marker");
 
 constexpr uint32_t TypeSize(const fidl_type_t* type) {
     switch (type->type_tag) {
@@ -78,7 +78,7 @@ private:
 
     using Status = typename VisitorSuper::Status;
 
-    static_assert(CheckVisitorInterface<VisitorSuper, VisitorImpl>());
+    static_assert(CheckVisitorInterface<VisitorSuper, VisitorImpl>(), "");
 
 public:
     Walker(const fidl_type_t* type, StartingPoint start) : type_(type), start_(start) {}
