@@ -2,10 +2,10 @@
   "imports": [
     "garnet/packages/prod/pm",
     "garnet/packages/prod/run",
-    "garnet/packages/prod/scenic_tools",
     "garnet/packages/prod/tracing",
     "garnet/packages/prod/vboot_reference",
     "garnet/packages/products/graphical",
+    "garnet/packages/tools/scenic",
     "garnet/packages/tools/tiles"
   ]
 }

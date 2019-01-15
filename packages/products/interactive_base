@@ -1,12 +1,11 @@
 {
   "imports": [
-    "garnet/packages/products/graphical",
     "garnet/packages/prod/display_manager",
     "garnet/packages/prod/fonts",
     "garnet/packages/prod/media_audio",
     "garnet/packages/prod/media_codec",
     "garnet/packages/prod/mediaplayer",
-    "garnet/packages/prod/scenic_tools",
-    "garnet/packages/prod/vboot_reference"
+    "garnet/packages/prod/vboot_reference",
+    "garnet/packages/products/graphical"
   ]
 }

@@ -31,6 +31,7 @@
         "garnet/packages/prod/wlan",
         "garnet/packages/products/devtools",
         "garnet/packages/testing/run_test_component",
+        "garnet/packages/tools/bluetooth",
         "garnet/packages/tools/tiles"
     ],
     "labels": [

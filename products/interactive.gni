@@ -6,4 +6,4 @@ monolith = [ "garnet/packages/products/interactive" ]
 
 preinstall = []
 
-available = []
+available = [ "garnet/packages/tools/scenic" ]
