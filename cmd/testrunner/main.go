@@ -139,7 +139,7 @@ func execute(testsFilepath string) error {
 		return fmt.Errorf("could not determine the runtime system for following tests %v", unknownTests)
 	}
 
-	var summary *runtests.TestSummary
+	var summary runtests.TestSummary
 
 	// Execute UNIX tests locally, assuming we're running in a UNIX environment.
 	var localTests []testsharder.Test
@@ -232,13 +232,19 @@ func runTests(tests []testsharder.Test, tester Tester, outputDir string) ([]runt
 }
 
 func runTest(ctx context.Context, test testsharder.Test, tester Tester, outputDir string) (*runtests.TestDetails, error) {
-	// Create a file for test output.
-	output, err := os.Create(path.Join(outputDir, test.Name, runtests.TestOutputFilename))
+	// Prepare an output file for the test.
+	workspace := path.Join(outputDir, test.Name)
+	if err := os.MkdirAll(workspace, os.FileMode(0755)); err != nil {
+		return nil, err
+	}
+
+	output, err := os.Create(path.Join(workspace, runtests.TestOutputFilename))
 	if err != nil {
 		return nil, err
 	}
 	defer output.Close()
 
+	// Execute the test.
 	result := runtests.TestSuccess
 	multistdout := io.MultiWriter(output, os.Stdout)
 	multistderr := io.MultiWriter(output, os.Stderr)
