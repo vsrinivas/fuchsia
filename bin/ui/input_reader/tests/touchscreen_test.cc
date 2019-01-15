@@ -4,19 +4,21 @@
 
 #include <hid-parser/parser.h>
 #include <hid-parser/usages.h>
+#include <hid/paradise.h>
+
+#include <gtest/gtest.h>
+#include <lib/fxl/time/time_point.h>
 
 #include "garnet/bin/ui/input_reader/tests/touchscreen_test_data.h"
 #include "garnet/bin/ui/input_reader/touchscreen.h"
-#include "gtest/gtest.h"
-#include "lib/fxl/time/time_point.h"
 
 namespace input {
 
 namespace {
 
-void ParseTouchscreen(const uint8_t* desc, size_t desc_len,
-                      mozart::Touchscreen* ts) {
-  hid::DeviceDescriptor* dev_desc = nullptr;
+void ParseTouchscreen(const uint8_t *desc, size_t desc_len,
+                      mozart::Touchscreen *ts) {
+  hid::DeviceDescriptor *dev_desc = nullptr;
   auto parse_res = hid::ParseReportDescriptor(desc, desc_len, &dev_desc);
   ASSERT_EQ(hid::ParseResult::kParseOk, parse_res);
 
@@ -24,9 +26,9 @@ void ParseTouchscreen(const uint8_t* desc, size_t desc_len,
   ASSERT_LT(0UL, count);
 
   // Find the first input report.
-  const hid::ReportDescriptor* input_desc = nullptr;
+  const hid::ReportDescriptor *input_desc = nullptr;
   for (size_t rep = 0; rep < count; rep++) {
-    const hid::ReportDescriptor* desc = &dev_desc->report[rep];
+    const hid::ReportDescriptor *desc = &dev_desc->report[rep];
     if (desc->first_field[0].type == hid::kInput) {
       input_desc = desc;
       break;
@@ -238,6 +240,148 @@ TEST(TouchscreenTest, Gechic1303) {
   // These values have been manually calculated based on the above report_data
   EXPECT_EQ(2460187, report.contacts[0].x);
   EXPECT_EQ(1671014, report.contacts[0].y);
+}
+
+TEST(TouchscreenTest, ParadiseV1) {
+  mozart::Touchscreen ts;
+  size_t desc_size;
+  const uint8_t *paradise_touch_v1_report_desc =
+      get_paradise_touch_report_desc(&desc_size);
+
+  ParseTouchscreen(paradise_touch_v1_report_desc, desc_size, &ts);
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
+  EXPECT_EQ(5UL, ts.touch_points());
+  EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
+                mozart::Touchscreen::Capabilities::TIP_SWITCH |
+                mozart::Touchscreen::Capabilities::X |
+                mozart::Touchscreen::Capabilities::Y |
+                mozart::Touchscreen::Capabilities::CONTACT_COUNT |
+                mozart::Touchscreen::Capabilities::SCAN_TIME,
+            ts.capabilities());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(2592000, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(1728000, ts_desc.y_max);
+
+  // Now use the parsed descriptor to interpret a touchpad report.
+  paradise_touch_t touch_v1_report = {};
+  touch_v1_report.rpt_id = 12;
+  touch_v1_report.contact_count = 1;
+  touch_v1_report.scan_time = 0xabc;
+  touch_v1_report.fingers[1].flags = 0xF;
+  touch_v1_report.fingers[1].finger_id = 0x1;
+  touch_v1_report.fingers[1].x = 100;
+  touch_v1_report.fingers[1].y = 200;
+
+  uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v1_report);
+
+  mozart::Touchscreen::Report report;
+  auto success = ts.ParseReport(report_data, sizeof(touch_v1_report), &report);
+  EXPECT_EQ(true, success);
+
+  EXPECT_EQ(1UL, report.contact_count);
+  EXPECT_EQ(72U, report.scan_time);
+
+  EXPECT_EQ(1U, report.contacts[0].id);
+  EXPECT_EQ(25000, report.contacts[0].x);
+  EXPECT_EQ(50000, report.contacts[0].y);
+}
+
+TEST(TouchscreenTest, ParadiseV2) {
+  mozart::Touchscreen ts;
+  size_t desc_size;
+  const uint8_t *paradise_touch_v2_report_desc =
+      get_paradise_touch_v2_report_desc(&desc_size);
+
+  ParseTouchscreen(paradise_touch_v2_report_desc, desc_size, &ts);
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
+  EXPECT_EQ(5UL, ts.touch_points());
+  EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
+                mozart::Touchscreen::Capabilities::TIP_SWITCH |
+                mozart::Touchscreen::Capabilities::X |
+                mozart::Touchscreen::Capabilities::Y |
+                mozart::Touchscreen::Capabilities::CONTACT_COUNT |
+                mozart::Touchscreen::Capabilities::SCAN_TIME,
+            ts.capabilities());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(2592000, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(1728000, ts_desc.y_max);
+
+  // Now use the parsed descriptor to interpret a touchpad report.
+  paradise_touch_v2_t touch_v2_report = {};
+  touch_v2_report.rpt_id = 12;
+  touch_v2_report.contact_count = 1;
+  touch_v2_report.scan_time = 0xabc;
+  touch_v2_report.fingers[1].flags = 0xF;
+  touch_v2_report.fingers[1].finger_id = 0x1;
+  touch_v2_report.fingers[1].x = 100;
+  touch_v2_report.fingers[1].y = 200;
+
+  uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v2_report);
+
+  mozart::Touchscreen::Report report;
+  auto success = ts.ParseReport(report_data, sizeof(touch_v2_report), &report);
+  EXPECT_EQ(true, success);
+
+  EXPECT_EQ(1UL, report.contact_count);
+  EXPECT_EQ(0xabcU, report.scan_time);
+
+  EXPECT_EQ(1U, report.contacts[0].id);
+  EXPECT_EQ(25000, report.contacts[0].x);
+  EXPECT_EQ(50000, report.contacts[0].y);
+}
+
+TEST(TouchscreenTest, ParadiseV3) {
+  mozart::Touchscreen ts;
+  size_t desc_size;
+  const uint8_t *paradise_touch_v3_report_desc =
+      get_paradise_touch_v3_report_desc(&desc_size);
+
+  ParseTouchscreen(paradise_touch_v3_report_desc, desc_size, &ts);
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
+  EXPECT_EQ(5UL, ts.touch_points());
+  EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
+                mozart::Touchscreen::Capabilities::TIP_SWITCH |
+                mozart::Touchscreen::Capabilities::X |
+                mozart::Touchscreen::Capabilities::Y |
+                mozart::Touchscreen::Capabilities::CONTACT_COUNT |
+                mozart::Touchscreen::Capabilities::SCAN_TIME,
+            ts.capabilities());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(2593000, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(1729000, ts_desc.y_max);
+
+  // Now use the parsed descriptor to interpret a touchpad report.
+  // The v3 report is the same as the v1 report.
+  paradise_touch_t touch_v3_report = {};
+  touch_v3_report.rpt_id = 12;
+  touch_v3_report.contact_count = 1;
+  touch_v3_report.scan_time = 0xabc;
+  touch_v3_report.fingers[1].flags = 0xF;
+  touch_v3_report.fingers[1].finger_id = 0x1;
+  touch_v3_report.fingers[1].x = 100;
+  touch_v3_report.fingers[1].y = 200;
+
+  uint8_t *report_data = reinterpret_cast<uint8_t *>(&touch_v3_report);
+
+  mozart::Touchscreen::Report report;
+  auto success = ts.ParseReport(report_data, sizeof(touch_v3_report), &report);
+  EXPECT_EQ(true, success);
+
+  EXPECT_EQ(1UL, report.contact_count);
+  EXPECT_EQ(72U, report.scan_time);
+
+  EXPECT_EQ(1U, report.contacts[0].id);
+  EXPECT_EQ(25000, report.contacts[0].x);
+  EXPECT_EQ(50000, report.contacts[0].y);
 }
 
 }  // namespace test
