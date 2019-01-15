@@ -84,6 +84,44 @@ __END_CDECLS;
 #ifdef __cplusplus
 namespace usb {
 
+class UsbDevice : public ddk::UsbProtocolClient {
+public:
+    UsbDevice() {}
+    UsbDevice(const usb_protocol_t* proto)
+        : UsbProtocolClient(proto) {}
+
+    UsbDevice(zx_device_t* parent)
+        : UsbProtocolClient(parent) {
+    }
+    zx_status_t ClearFeature(uint8_t request_type,
+                             uint16_t feature, uint16_t index, zx_time_t timeout) {
+        usb_protocol_t proto;
+        GetProto(&proto);
+        return usb_clear_feature(&proto, request_type, feature, index, timeout);
+    }
+    zx_status_t GetDescriptor(uint8_t request_type,
+                              uint16_t type, uint16_t index, void* data,
+                              size_t length, zx_time_t timeout, size_t* out_length) {
+        usb_protocol_t proto;
+        GetProto(&proto);
+        return usb_get_descriptor(&proto, request_type, type, index, data, length, timeout,
+                                  out_length);
+    }
+    zx_status_t GetStatus(uint8_t request_type,
+                          uint16_t index, void* data, size_t length,
+                          zx_time_t timeout, size_t* out_length) {
+        usb_protocol_t proto;
+        GetProto(&proto);
+        return usb_get_status(&proto, request_type, index, data, length, timeout, out_length);
+    }
+    zx_status_t SetFeature(int8_t request_type,
+                           uint16_t feature, uint16_t index, zx_time_t timeout) {
+        usb_protocol_t proto;
+        GetProto(&proto);
+        return usb_set_feature(&proto, request_type, feature, index, timeout);
+    }
+};
+
 // Usage and implementation notes
 // Interface is owned by an iterator of an InterfaceList.
 // It is possible to enumerate all USB endpoint descriptors
