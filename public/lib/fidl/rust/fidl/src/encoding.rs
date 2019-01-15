@@ -787,6 +787,8 @@ impl<T: Decodable> Decodable for Option<Vec<T>> {
     }
 }
 
+/// A shorthand macro for calling `Decodable::inline_size()` on a type
+/// without importing the `Decodable` trait.
 #[macro_export]
 macro_rules! fidl_inline_size {
     ($type:ty) => {
@@ -794,6 +796,8 @@ macro_rules! fidl_inline_size {
     }
 }
 
+/// A shorthand macro for calling `Decodable::inline_align()` on a type
+/// without importing the `Decodable` trait.
 #[macro_export]
 macro_rules! fidl_inline_align {
     ($type:ty) => {
@@ -801,6 +805,8 @@ macro_rules! fidl_inline_align {
     }
 }
 
+/// A shorthand macro for calling `Encodable::encode()` on a type
+/// without importing the `Encodable` trait.
 #[macro_export]
 macro_rules! fidl_encode {
     ($val:expr, $encoder:expr) => {
@@ -808,6 +814,8 @@ macro_rules! fidl_encode {
     }
 }
 
+/// A shorthand macro for calling `Decodable::decode()` on a type
+/// without importing the `Decodable` trait.
 #[macro_export]
 macro_rules! fidl_decode {
     ($val:expr, $decoder:expr) => {
@@ -815,6 +823,8 @@ macro_rules! fidl_decode {
     }
 }
 
+/// A shorthand macro for calling `Decodable::new_empty()` on a type
+/// without importing the `Decodable` trait.
 #[macro_export]
 macro_rules! fidl_new_empty {
     ($type:ty) => {
@@ -822,6 +832,30 @@ macro_rules! fidl_new_empty {
     }
 }
 
+/// Declare an enum type and implement the FIDL coding traits for it.
+///
+/// Example:
+///
+/// ```rust
+/// fidl_enum!(MyEnum (u32) { BAR = 5, BAZ = 6, });
+///
+/// // expands to:
+///
+///  #[derive(Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, Hash)]
+///  #[repr($prim_ty)]
+///  pub enum MyEnum {
+///     BAR = 5,
+///     BAZ = 6,
+///  }
+///
+///  impl MyEnum {
+///     pub fn from_primitive(prim: u32) -> Option<Self> { ... }
+///     pub fn into_primitive(self) -> u32 { ... }
+///  }
+///
+///  impl Encodable for MyEnum { ... }
+///  impl Decodable for MyEnum { ... }
+/// ```
 #[macro_export]
 macro_rules! fidl_enum {
     ($name:ident ($prim_ty:ident) { $($key:ident = $value:expr,)* }) => {
@@ -980,6 +1014,8 @@ impl Decodable for Option<zx::Handle> {
     }
 }
 
+/// A macro for implementing the `Encodable` and `Decodable` traits for a type
+/// which implements the `fuchsia_zircon::HandleBased` trait.
 // TODO(cramertj) replace when specialization is stable
 #[macro_export]
 macro_rules! handle_based_codable {
@@ -1222,6 +1258,8 @@ impl<T: Autonull> Decodable for Box<T> {
     }
 }
 
+/// A macro which implements the FIDL `Encodable` and `Decodable` traits
+/// for an existing struct.
 #[macro_export]
 macro_rules! fidl_struct {
     (
@@ -1335,6 +1373,9 @@ where
     Ok(())
 }
 
+/// A macro which implements the FIDL `Encodable` and `Decodable` traits
+/// for an existing struct whose fields are all `Option`s and may or may not
+/// appear in the wire-format representation.
 #[macro_export]
 macro_rules! fidl_table {
     (
@@ -1497,6 +1538,8 @@ macro_rules! fidl_table {
     }
 }
 
+/// A macro which declares a new FIDL union as a Rust enum and implements the
+/// FIDL encoding and decoding traits for it.
 #[macro_export]
 macro_rules! fidl_union {
     (

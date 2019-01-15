@@ -7,6 +7,7 @@
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 #![deny(missing_docs)]
+#![recursion_limit="256"]
 
 mod device;
 mod device_watch;

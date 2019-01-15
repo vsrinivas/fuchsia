@@ -7,6 +7,7 @@
     await_macro,
     futures_api,
 )]
+#![recursion_limit="256"]
 
 use {
     failure::{err_msg, Error, ResultExt},

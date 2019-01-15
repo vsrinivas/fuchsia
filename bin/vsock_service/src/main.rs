@@ -4,6 +4,7 @@
 
 #![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
+#![recursion_limit="256"]
 
 use {
     failure::{Error, ResultExt},

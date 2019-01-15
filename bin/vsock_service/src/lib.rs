@@ -4,6 +4,7 @@
 
 #![feature(async_await, await_macro, futures_api, arbitrary_self_types)]
 #![deny(warnings)]
+#![recursion_limit="512"]
 
 mod addr;
 mod port;

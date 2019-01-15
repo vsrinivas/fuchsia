@@ -48,6 +48,12 @@ use {
     },
 };
 
+/// Creates an `&'static str` containing the URL of a Fuchsia package
+/// from a string literal containng the name of a fuchsia component
+/// containing only a single package.
+///
+/// e.g. `fuchsia_single_component_package_url!("my_server")` would
+/// create `fuchsia-pkg://fuchsia.com/my_server#meta/my_server.cmx`.
 #[macro_export]
 macro_rules! fuchsia_single_component_package_url {
     ($component_name:expr) => {

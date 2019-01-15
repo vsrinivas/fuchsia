@@ -4,6 +4,7 @@
 
 #![deny(warnings)]
 #![feature(async_await, await_macro, futures_api)]
+#![recursion_limit="128"]
 
 use std::sync::Arc;
 

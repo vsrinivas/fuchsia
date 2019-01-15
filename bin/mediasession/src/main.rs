@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro, futures_api)]
+#![recursion_limit="256"]
 
 #[macro_use]
 mod log_error;
