@@ -185,6 +185,10 @@ bool FfmpegVideoDecoder::UpdateSize(const AVCodecContext& av_codec_context) {
   int aligned_width = av_codec_context.coded_width;
   int aligned_height = av_codec_context.coded_height;
 
+  if (aligned_width == 0 && aligned_height == 0) {
+    return false;
+  }
+
   avcodec_align_dimensions(const_cast<AVCodecContext*>(&av_codec_context),
                            &aligned_width, &aligned_height);
   FXL_DCHECK(aligned_width >= av_codec_context.coded_width);
