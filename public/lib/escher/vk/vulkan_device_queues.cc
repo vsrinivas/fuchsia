@@ -91,7 +91,8 @@ FindSuitablePhysicalDeviceAndQueueFamilies(
   for (auto& physical_device : physical_devices) {
     // Look for a physical device that has all required extensions.
     if (!VulkanDeviceQueues::ValidateExtensions(physical_device,
-                                                params.extension_names)) {
+                                                params.extension_names, 
+                                                instance->params().layer_names)) {
       continue;
     }
 
@@ -292,20 +293,52 @@ VulkanDeviceQueues::VulkanDeviceQueues(
 
 VulkanDeviceQueues::~VulkanDeviceQueues() { device_.destroy(); }
 
-bool VulkanDeviceQueues::ValidateExtensions(
+// Helper for ValidateExtensions().
+static bool ValidateExtension(
     vk::PhysicalDevice device,
-    const std::set<std::string>& required_extension_names) {
-  auto extensions =
-      ESCHER_CHECKED_VK_RESULT(device.enumerateDeviceExtensionProperties());
+    const std::string name,
+    const std::vector<vk::ExtensionProperties> &base_extensions,
+    const std::set<std::string> &required_layer_names) {
+  auto found =
+      std::find_if(base_extensions.begin(), base_extensions.end(),
+                   [&name](const vk::ExtensionProperties &extension) {
+                     return !strncmp(extension.extensionName, name.c_str(),
+                                     VK_MAX_EXTENSION_NAME_SIZE);
+                   });
+  if (found != base_extensions.end())
+    return true;
 
-  for (auto& name : required_extension_names) {
+  // Didn't find the extension in the base list of extensions.  Perhaps it is
+  // implemented in a layer.
+  for (auto &layer_name : required_layer_names) {
+    auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
+        device.enumerateDeviceExtensionProperties(layer_name));
+    FXL_LOG(INFO) << "Looking for Vulkan device extension: " << name
+                  << " in layer: " << layer_name;
+
     auto found =
-        std::find_if(extensions.begin(), extensions.end(),
-                     [&name](vk::ExtensionProperties& extension) {
+        std::find_if(layer_extensions.begin(), layer_extensions.end(),
+                     [&name](vk::ExtensionProperties &extension) {
                        return !strncmp(extension.extensionName, name.c_str(),
                                        VK_MAX_EXTENSION_NAME_SIZE);
                      });
-    if (found == extensions.end()) {
+    if (found != layer_extensions.end())
+      return true;
+  }
+
+  return false;
+}
+
+bool VulkanDeviceQueues::ValidateExtensions(
+    vk::PhysicalDevice device,
+    const std::set<std::string> &required_extension_names,
+    const std::set<std::string> &required_layer_names) {
+  auto extensions =
+      ESCHER_CHECKED_VK_RESULT(device.enumerateDeviceExtensionProperties());
+
+  for (auto &name : required_extension_names) {
+    if (!ValidateExtension(device, name, extensions, required_layer_names)) {
+      FXL_LOG(WARNING) << "Vulkan has no device extension named: " << name;
       return false;
     }
   }

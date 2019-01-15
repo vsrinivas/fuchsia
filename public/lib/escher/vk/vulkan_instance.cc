@@ -42,15 +42,15 @@ fxl::RefPtr<VulkanInstance> VulkanInstance::New(Params params) {
       VK_KHR_EXTERNAL_SEMAPHORE_CAPABILITIES_EXTENSION_NAME);
 #endif
   FXL_DCHECK(ValidateLayers(params.layer_names));
-  FXL_DCHECK(ValidateExtensions(params.extension_names));
+  FXL_DCHECK(ValidateExtensions(params.extension_names, params.layer_names));
 
   // Gather names of layers/extensions to populate InstanceCreateInfo.
-  std::vector<const char*> layer_names;
-  for (auto& layer : params.layer_names) {
+  std::vector<const char *> layer_names;
+  for (auto &layer : params.layer_names) {
     layer_names.push_back(layer.c_str());
   }
-  std::vector<const char*> extension_names;
-  for (auto& extension : params.extension_names) {
+  std::vector<const char *> extension_names;
+  for (auto &extension : params.extension_names) {
     extension_names.push_back(extension.c_str());
   }
 
@@ -77,13 +77,13 @@ VulkanInstance::VulkanInstance(vk::Instance instance, Params params)
 VulkanInstance::~VulkanInstance() { instance_.destroy(); }
 
 bool VulkanInstance::ValidateLayers(
-    const std::set<std::string>& required_layer_names) {
+    const std::set<std::string> &required_layer_names) {
   auto properties =
       ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceLayerProperties());
 
-  for (auto& name : required_layer_names) {
+  for (auto &name : required_layer_names) {
     auto found = std::find_if(properties.begin(), properties.end(),
-                              [&name](vk::LayerProperties& layer) {
+                              [&name](vk::LayerProperties &layer) {
                                 return !strncmp(layer.layerName, name.c_str(),
                                                 VK_MAX_EXTENSION_NAME_SIZE);
                               });
@@ -95,19 +95,49 @@ bool VulkanInstance::ValidateLayers(
   return true;
 }
 
-bool VulkanInstance::ValidateExtensions(
-    const std::set<std::string>& required_extension_names) {
-  auto extensions =
-      ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties());
+// Helper for ValidateExtensions().
+static bool ValidateExtension(
+    const std::string name,
+    const std::vector<vk::ExtensionProperties> &base_extensions,
+    const std::set<std::string> &required_layer_names) {
+  auto found =
+      std::find_if(base_extensions.begin(), base_extensions.end(),
+                   [&name](const vk::ExtensionProperties &extension) {
+                     return !strncmp(extension.extensionName, name.c_str(),
+                                     VK_MAX_EXTENSION_NAME_SIZE);
+                   });
+  if (found != base_extensions.end())
+    return true;
 
-  for (auto& name : required_extension_names) {
+  // Didn't find the extension in the base list of extensions.  Perhaps it is
+  // implemented in a layer.
+  for (auto &layer_name : required_layer_names) {
+    auto layer_extensions = ESCHER_CHECKED_VK_RESULT(
+        vk::enumerateInstanceExtensionProperties(layer_name));
+    FXL_LOG(INFO) << "Looking for Vulkan instance extension: " << name
+                  << " in layer: " << layer_name;
+
     auto found =
-        std::find_if(extensions.begin(), extensions.end(),
-                     [&name](vk::ExtensionProperties& extension) {
+        std::find_if(layer_extensions.begin(), layer_extensions.end(),
+                     [&name](vk::ExtensionProperties &extension) {
                        return !strncmp(extension.extensionName, name.c_str(),
                                        VK_MAX_EXTENSION_NAME_SIZE);
                      });
-    if (found == extensions.end()) {
+    if (found != layer_extensions.end())
+      return true;
+  }
+
+  return false;
+}
+
+bool VulkanInstance::ValidateExtensions(
+    const std::set<std::string> &required_extension_names,
+    const std::set<std::string> &required_layer_names) {
+  auto extensions =
+      ESCHER_CHECKED_VK_RESULT(vk::enumerateInstanceExtensionProperties());
+
+  for (auto &name : required_extension_names) {
+    if (!ValidateExtension(name, extensions, required_layer_names)) {
       FXL_LOG(WARNING) << "Vulkan has no instance extension named: " << name;
       return false;
     }

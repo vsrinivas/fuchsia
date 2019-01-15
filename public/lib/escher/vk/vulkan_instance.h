@@ -47,9 +47,12 @@ class VulkanInstance : public fxl::RefCountedThreadSafe<VulkanInstance> {
   static bool ValidateLayers(const std::set<std::string>& required_layer_names);
 
   // Enumerate the available instance extensions.  Return true if all required
-  // extensions are present, and false otherwise.
+  // extensions are present, and false otherwise.  NOTE: if an extension isn't
+  // found at first, we look in all required layers to see if it is implemented
+  // there.
   static bool ValidateExtensions(
-      const std::set<std::string>& required_extension_names);
+      const std::set<std::string>& required_extension_names,
+      const std::set<std::string>& required_layer_names);
 
   vk::Instance vk_instance() const { return instance_; }
 

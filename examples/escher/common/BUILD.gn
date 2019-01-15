@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+
 static_library("common") {
   sources = [
     "demo.cc",
@@ -42,6 +44,7 @@ source_set("demo_harness_fuchsia") {
   deps = [
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fsl",
+    "//garnet/lib/vulkan:image_pipe_swapchain",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/trace-provider",
   ]

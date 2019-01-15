@@ -104,13 +104,13 @@ void DemoHarnessFuchsia::InitWindowSystem() { input_reader_.Start(); }
 
 vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
     const WindowParams& params) {
-  VkMagmaSurfaceCreateInfoKHR create_info = {
-      .sType = VK_STRUCTURE_TYPE_MAGMA_SURFACE_CREATE_INFO_KHR,
+    VkImagePipeSurfaceCreateInfoFUCHSIA create_info = {
+      .sType = VK_STRUCTURE_TYPE_IMAGEPIPE_SURFACE_CREATE_INFO_FUCHSIA,
       .pNext = nullptr,
   };
   VkSurfaceKHR surface;
   VkResult err =
-      vkCreateMagmaSurfaceKHR(instance(), &create_info, nullptr, &surface);
+      vkCreateImagePipeSurfaceFUCHSIA(instance(), &create_info, nullptr, &surface);
   FXL_CHECK(!err);
   return surface;
 }
@@ -118,7 +118,15 @@ vk::SurfaceKHR DemoHarnessFuchsia::CreateWindowAndSurface(
 void DemoHarnessFuchsia::AppendPlatformSpecificInstanceExtensionNames(
     InstanceParams* params) {
   params->extension_names.insert(VK_KHR_SURFACE_EXTENSION_NAME);
-  params->extension_names.insert(VK_KHR_MAGMA_SURFACE_EXTENSION_NAME);
+  params->extension_names.insert(VK_FUCHSIA_IMAGEPIPE_SURFACE_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_EXTERNAL_MEMORY_CAPABILITIES_EXTENSION_NAME);
+  params->extension_names.insert(VK_KHR_GET_PHYSICAL_DEVICE_PROPERTIES_2_EXTENSION_NAME);
+  params->layer_names.insert("VK_LAYER_FUCHSIA_imagepipe_swapchain_fb");
+}
+
+void DemoHarnessFuchsia::AppendPlatformSpecificDeviceExtensionNames(
+    std::set<std::string>* names) {
+  names->insert(VK_KHR_EXTERNAL_MEMORY_FUCHSIA_EXTENSION_NAME);
 }
 
 void DemoHarnessFuchsia::ShutdownWindowSystem() {}

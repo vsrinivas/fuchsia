@@ -32,7 +32,11 @@ void DemoHarness::Init(InstanceParams instance_params) {
   InitWindowSystem();
   CreateInstance(std::move(instance_params));
   vk::SurfaceKHR surface = CreateWindowAndSurface(window_params_);
-  CreateDeviceAndQueue({{}, surface});
+
+  std::set<std::string> device_extension_names;
+  AppendPlatformSpecificDeviceExtensionNames(&device_extension_names);
+  CreateDeviceAndQueue({std::move(device_extension_names), surface});
+
   CreateSwapchain();
   escher::GlslangInitializeProcess();
 }

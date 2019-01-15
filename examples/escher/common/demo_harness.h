@@ -115,9 +115,11 @@ class DemoHarness {
   void CreateDeviceAndQueue(escher::VulkanDeviceQueues::Params params);
   void CreateSwapchain();
 
-  // Called by Init() via CreateInstance().
+  // Called by Init() via CreateInstance() and CreateDeviceAndQueue().
   virtual void AppendPlatformSpecificInstanceExtensionNames(
       InstanceParams* params) = 0;
+  virtual void AppendPlatformSpecificDeviceExtensionNames(
+      std::set<std::string>* names) = 0;
 
   // Called by Shutdown().
   void DestroySwapchain();

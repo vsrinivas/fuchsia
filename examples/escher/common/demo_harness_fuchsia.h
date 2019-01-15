@@ -38,6 +38,8 @@ class DemoHarnessFuchsia : public DemoHarness,
   // Called by Init() via CreateInstance().
   void AppendPlatformSpecificInstanceExtensionNames(
       InstanceParams* params) override;
+  void AppendPlatformSpecificDeviceExtensionNames(
+      std::set<std::string>* names) override;
 
   // |DemoHarness|
   // Called by Shutdown().

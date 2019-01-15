@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 package("escher_waterfall") {
@@ -21,9 +22,12 @@ package("escher_waterfall") {
     },
   ]
 
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
-  resources = vulkan_validation_layers.resources
+  public_deps = vulkan_validation_layers.public_deps +
+                image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+  resources =
+      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
 }
 
 package("escher_waterfall2") {
@@ -31,6 +35,7 @@ package("escher_waterfall2") {
 
   deps = [
     "waterfall2",
+    "//third_party/vulkan_loader_and_validation_layers/layers",
   ]
 
   binary = "waterfall2"
@@ -42,8 +47,11 @@ package("escher_waterfall2") {
     },
   ]
 
-  public_deps = vulkan_validation_layers.public_deps
-  loadable_modules = vulkan_validation_layers.loadable_modules
+  public_deps = vulkan_validation_layers.public_deps +
+                image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+
   resources = [
       {
           path = "//garnet/public/lib/escher/shaders/model_renderer/default_position.vert"
@@ -97,5 +105,5 @@ package("escher_waterfall2") {
           path = "//garnet/public/lib/escher/shaders/paper/vert/vertex_attributes.vert"
           dest = "shaders/paper/vert/vertex_attributes.vert"
       },
-  ] + vulkan_validation_layers.resources
+  ] + vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
 }

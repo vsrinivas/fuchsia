@@ -74,9 +74,12 @@ class VulkanDeviceQueues
 
   // Enumerate the available extensions for the specified physical device.
   // Return true if all required extensions are present, and false otherwise.
+  // NOTE: if an extension isn't found at first, we look in all required layers
+  // to see if it is implemented there.
   static bool ValidateExtensions(
       vk::PhysicalDevice device,
-      const std::set<std::string>& required_extension_names);
+      const std::set<std::string>& required_extension_names,
+      const std::set<std::string>& required_layer_names);
 
   vk::Device vk_device() const { return device_; }
   vk::PhysicalDevice vk_physical_device() const { return physical_device_; }

@@ -186,6 +186,10 @@ void DemoHarnessLinux::AppendPlatformSpecificInstanceExtensionNames(
   }
 }
 
+void DemoHarnessLinux::AppendPlatformSpecificDeviceExtensionNames(
+    std::set<std::string>* names) {
+}
+
 void DemoHarnessLinux::ShutdownWindowSystem() {
   FXL_CHECK(g_harness);
   g_harness = nullptr;
