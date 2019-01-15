@@ -2258,8 +2258,8 @@ static void brcmf_iedump(uint8_t* ie, size_t length) {
             brcmf_dbg(TEMP, " * * ie 0 (name), len %d", length);
             brcmf_alphadump(ie + offset + 2, length);
         } else {
-            //brcmf_dbg(TEMP, "ie %d, len %d", type, length);
-            //brcmf_hexdump(ie + offset + 2, length);
+            brcmf_dbg_hex_dump(BRCMF_BYTES_ON(), ie + offset + 2, length,
+                               "IE (length %zd):\n", length);
             if (ieinfoptr < ieinfo + sizeof(ieinfo)) {
                 ieinfoptr += snprintf(ieinfoptr, sizeof(ieinfo) - (ieinfoptr - ieinfo),
                     "ie %d, len %d. ", ie[offset], length);
@@ -2278,9 +2278,9 @@ static void brcmf_iedump(uint8_t* ie, size_t length) {
 
 void brcmf_cfg80211_rx(struct brcmf_if* ifp, struct brcmf_netbuf* packet) {
     struct net_device* ndev = ifp->ndev;
-    THROTTLE(10, brcmf_dbg(TEMP, "Calling data_recv with data 0x%016lx %016lx len %d",
-              *(uint64_t*)packet->data, *(uint64_t*)(packet->data+8), packet->len););
-    THROTTLE(10, brcmf_hexdump(packet->data, min(packet->len, 64)););
+    THROTTLE(10, brcmf_dbg_hex_dump(BRCMF_BYTES_ON() && BRCMF_DATA_ON(), packet->data,
+                                    min(packet->len, 64),
+                                    "Data received (%d bytes, max 64 shown):\n", packet->len););
     // IEEE Std. 802.3-2015, 3.1.1
     uint16_t eth_type = ((uint16_t*)(packet->data))[6];
     if (eth_type == EAPOL_ETHERNET_TYPE_UINT16) {
@@ -4608,7 +4608,7 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
     if (req->rsne_len != 0) {
         brcmf_dbg(TEMP, " * * RSNE non-zero! %ld", req->rsne_len);
-        brcmf_hexdump(req->rsne, req->rsne_len);
+        brcmf_dbg_hex_dump(BRCMF_BYTES_ON(), req->rsne, req->rsne_len, "RSNE:\n");
     }
     if (memcmp(req->peer_sta_address, ifp->bss.bssid, ETH_ALEN)) {
         brcmf_dbg(TEMP, " * * ERROR * * Requested MAC %lx !=  connected MAC %lx",

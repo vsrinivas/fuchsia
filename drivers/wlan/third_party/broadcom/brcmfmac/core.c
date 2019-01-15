@@ -262,7 +262,6 @@ void brcmf_netdev_start_xmit(struct net_device* ndev, ethmac_netbuf_t* ethmac_ne
     brcmf_netbuf_grow_tail(netbuf, ethmac_netbuf->data_size + drvr->hdrlen);
     brcmf_netbuf_shrink_head(netbuf, drvr->hdrlen);
     memcpy(netbuf->data, ethmac_netbuf->data_buffer, ethmac_netbuf->data_size);
-    brcmf_hexdump(netbuf->data, 32);
 
     /* Make sure there's enough writeable headroom */
     if (brcmf_netbuf_head_space(netbuf) < drvr->hdrlen) {
@@ -377,9 +376,6 @@ static zx_status_t brcmf_rx_hdrpull(struct brcmf_pub* drvr, struct brcmf_netbuf*
     // and that we don't worry about "older Novell" IPX.
     // TODO(cphoenix): This is an ugly hack, probably buggy, to replace some of eth_type_trans.
     // See https://elixir.bootlin.com/linux/v4.17-rc7/source/net/ethernet/eth.c#L156
-    //brcmf_dbg(TEMP, "Packet header:");
-    //brcmf_hexdump(netbuf->data, min(netbuf->len, 32));
-    //brcmf_alphadump(netbuf->data, netbuf->len);
     if (address_is_multicast(netbuf->data)) {
         if (address_is_broadcast(netbuf->data)) {
             netbuf->pkt_type = ADDRESSED_TO_BROADCAST;

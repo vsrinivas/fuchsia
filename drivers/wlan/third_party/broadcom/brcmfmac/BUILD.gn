@@ -23,7 +23,7 @@ source_set("brcmfmac_srcs") {
     "CONFIG_BRCMFMAC_USB=1",
     "CONFIG_BRCMFMAC_SDIO=1",
     "CONFIG_BRCMFMAC_PCIE=1",
-    "CONFIG_BRCMFMAC_DBG=0",
+    "CONFIG_BRCMFMAC_DBG=1",
     "ENABLE_DRIVER_TRACING=true",
   ]
 

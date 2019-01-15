@@ -43,6 +43,7 @@
 #define BRCMF_MSGBUF_VAL  0x00040000
 #define BRCMF_PCIE_VAL    0x00080000
 #define BRCMF_FWCON_VAL   0x00100000
+#define BRCMF_ALL_VAL     0xffffffff
 
 // clang-format on
 
@@ -97,12 +98,12 @@ __PRINTFLIKE(3, 4) void __brcmf_dbg(uint32_t filter, const char* func, const cha
 
 #endif /* defined(DEBUG) || defined(CONFIG_BRCMFMAC_DBG) */
 
-// TODO(cphoenix): The call to brcmf_hexdump was originally trace_brcmf_hexdump, so this is
-// probably too spammy.
 #define brcmf_dbg_hex_dump(test, data, len, fmt, ...)                \
     do {                                                             \
-        brcmf_hexdump((void*)data, len);                             \
-        if (test) brcmu_dbg_hex_dump(data, len, fmt, ##__VA_ARGS__); \
+        if (test) {                                                  \
+            zxlogf(INFO, "brcmfmac: " fmt, ##__VA_ARGS__);           \
+            brcmf_hexdump(data, len);                                \
+        }                                                            \
     } while (0)
 
 void brcm_dbg_clear_err();

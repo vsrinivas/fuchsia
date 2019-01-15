@@ -284,23 +284,3 @@ char* brcmu_dotrev_str(uint32_t dotrev, char* buf) {
 
     return buf;
 }
-
-#if defined(DEBUG)
-
-void brcmu_dbg_hex_dump(const void* data, size_t size, const char* fmt, ...) {
-    struct va_format vaf;
-    va_list args;
-
-    va_start(args, fmt);
-
-    vaf.fmt = fmt;
-    vaf.va = &args;
-
-    zxlogf(INFO, "brcmfmac: %pV", &vaf);
-
-    va_end(args);
-
-    brcmf_hexdump(data, size);
-}
-
-#endif /* defined(DEBUG) */

@@ -24,6 +24,11 @@
 #include "linuxisms.h"
 #include "fweh.h"
 
+#define BRCMF_HEXDUMP_WIDTH 16
+
+// Debug level configuration. See debug.h for bits
+int brcmf_msg_filter;
+
 static zx_handle_t root_folder;
 
 bool __brcm_dbg_err_flag = false;
@@ -69,33 +74,29 @@ void __brcmf_err(const char* func, const char* fmt, ...) {
 }
 
 void brcmf_hexdump(const void* buf, size_t len) {
-    if (!(brcmf_msg_filter & BRCMF_INFO_VAL)) {
-        return;
-    }
-
     if (len > 4096) {
-        brcmf_dbg(INFO, "Truncating hexdump to 4096 bytes");
+        zxlogf(INFO, "brcmfmac: Truncating hexdump to 4096 bytes\n");
         len = 4096;
     }
     if (len == 0) {
-        brcmf_dbg(INFO, "Empty hexdump %p", buf);
+        zxlogf(INFO, "brcmfmac: Empty hexdump %p\n", buf);
         return;
     }
-    char output[120];
+    char output[64 + BRCMF_HEXDUMP_WIDTH * 3];
     uint8_t* bytes = (uint8_t*)buf;
     size_t i;
     char* next = output;
     for (i = 0; i < len; i++) {
-        next += sprintf(next, "%02x ", *bytes++);
-        if ((i % 32) == 31) {
-            brcmf_dbg(INFO, "%s", output);
-            // Give the serial-line log time to drain on long dumps.
-            zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
+        next += sprintf(next, "%02x ", bytes[i % BRCMF_HEXDUMP_WIDTH]);
+        if ((i % BRCMF_HEXDUMP_WIDTH) == (BRCMF_HEXDUMP_WIDTH - 1)) {
+            // For larger dumps over serial, a delay may need to be added
+            zxlogf(INFO, "%p: %s\n", bytes, output);
             next = output;
+            bytes += BRCMF_HEXDUMP_WIDTH;
         }
     }
-    if ((i % 32) != 0) {
-        brcmf_dbg(INFO, "%s", output);
+    if ((i % BRCMF_HEXDUMP_WIDTH) != 0) {
+        zxlogf(INFO, "%p: %s\n", bytes, output);
     }
 }
 

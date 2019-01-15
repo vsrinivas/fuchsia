@@ -46,11 +46,6 @@ const uint8_t ALLFFMAC[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
 /* default boost value for RSSI_DELTA in preferred join selection */
 #define BRCMF_JOIN_PREF_RSSI_BOOST 8
 
-/* Debug level configuration. See debug.h for bits, sysfs modifiable */
-int brcmf_msg_filter;
-module_param_named(debug, brcmf_msg_filter, int, S_IRUSR | S_IWUSR);
-MODULE_PARM_DESC(debug, "Level of debug output");
-
 static int brcmf_p2p_enable;
 module_param_named(p2pon, brcmf_p2p_enable, int, 0);
 MODULE_PARM_DESC(p2pon, "Enable legacy p2p management functionality");
