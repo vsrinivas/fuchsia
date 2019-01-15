@@ -42,11 +42,12 @@ fuchsia::guest::WaylandDispatcher* ScenicWaylandDispatcher::GetOrStartBridge() {
 }
 
 void ScenicWaylandDispatcher::Reset(zx_status_t status) {
+  FXL_LOG(ERROR) << "Wayland bridge lost: " << status;
   if (bridge_) {
-    bridge_.Close(status);
+    bridge_.Unbind();
   }
   if (dispatcher_) {
-    dispatcher_.Close(status);
+    dispatcher_.Unbind();
   }
 }
 
