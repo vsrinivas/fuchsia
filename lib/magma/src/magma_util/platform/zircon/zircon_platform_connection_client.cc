@@ -159,17 +159,16 @@ public:
                 FitCommands(fuchsia::gpu::magma::kReceiveBufferSize, num_buffers, buffers,
                             buffers_sent, &command_bytes, &num_semaphores);
 
-            // Copy tallied command data into fidl::VectorPtrs.
             // TODO(MA-536): Figure out how to move command and semaphore bytes across the FIDL
             //               interface without copying.
-            fidl::VectorPtr<uint8_t> command_vec;
+            std::vector<uint8_t> command_vec;
+            command_vec.reserve(command_bytes);
             fidl::VectorPtr<uint64_t> semaphore_vec;
-            command_vec->reserve(command_bytes);
             semaphore_vec->reserve(num_semaphores);
             for (int i = 0; i < buffers_to_send; ++i) {
                 const auto& buffer = buffers[buffers_sent + i];
                 const auto buffer_data = static_cast<uint8_t*>(buffer.data);
-                std::copy(buffer_data, buffer_data + buffer.size, std::back_inserter(*command_vec));
+                std::copy(buffer_data, buffer_data + buffer.size, std::back_inserter(command_vec));
                 std::copy(buffer.semaphores, buffer.semaphores + buffer.semaphore_count,
                           std::back_inserter(*semaphore_vec));
             }
