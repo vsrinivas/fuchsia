@@ -161,8 +161,8 @@ interface EmptyInterface {
       "name": "fidl.test.json/EmptyInterface",
       "methods": [
         {
-          "ordinal": 5,
-          "generated_ordinal": 296942602,
+          "ordinal": 296942602,
+          "generated_ordinal": 5,
           "name": "Send",
           "has_request": true,
           "maybe_request": [

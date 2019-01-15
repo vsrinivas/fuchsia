@@ -1231,7 +1231,8 @@ bool Library::ConsumeInterfaceDeclaration(
     for (auto& method : interface_declaration->methods) {
         std::unique_ptr<raw::Ordinal> ordinal_literal =
             std::make_unique<raw::Ordinal>(fidl::ordinals::GetOrdinal(library_name_, name.name_part(), *method));
-
+        std::unique_ptr<raw::Ordinal> generated_ordinal =
+            std::make_unique<raw::Ordinal>(fidl::ordinals::GetGeneratedOrdinal(library_name_, name.name_part(), *method));
         auto attributes = std::move(method->attributes);
         SourceLocation method_name = method->identifier->location();
 
@@ -1258,8 +1259,8 @@ bool Library::ConsumeInterfaceDeclaration(
 
         assert(maybe_request != nullptr || maybe_response != nullptr);
         methods.emplace_back(std::move(attributes),
+                             std::move(generated_ordinal),
                              std::move(ordinal_literal),
-                             std::make_unique<raw::Ordinal>(fidl::ordinals::GetGeneratedOrdinal(library_name_, name.name_part(), *method)),
                              std::move(method_name), std::move(maybe_request),
                              std::move(maybe_response));
     }

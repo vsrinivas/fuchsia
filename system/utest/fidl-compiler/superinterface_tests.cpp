@@ -71,26 +71,19 @@ interface D: B, C {
 class InvalidOrdinalSuperinterfaces : public TestLibrary {
 public:
     InvalidOrdinalSuperinterfaces() : TestLibrary("superinterfaces.fidl", R"FIDL(
-library fidl.test.superinterfaces;
+library a;
+
+// a.b/lo and a.cv/f have colliding computed ordinals, so this is an illegal
+// FIDL definition.
 
 [FragileBase]
-interface A {
-    1: MethodA();
+interface b {
+   lo();
 };
 
 [FragileBase]
-interface B : A {
-    2: MethodB();
-};
-
-[FragileBase]
-interface C : A {
-    3: MethodC();
-};
-
-interface D: B, C {
-    4: MethodD();
-    1: MethodE();
+interface cv : b {
+    f();
 };
 
 )FIDL") {}
