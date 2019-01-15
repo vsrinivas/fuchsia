@@ -462,7 +462,7 @@ pub mod server {
             let (new_env_controller, new_env_controller_server_end) = fidl::endpoints::create_proxy()?;
             env.create_nested_environment(
                 new_env_server_end,
-                Some(new_env_controller_server_end),
+                new_env_controller_server_end,
                 environment_label,
                 Some(fidl::encoding::OutOfLine(&mut service_list)),
                 &mut EnvironmentOptions {

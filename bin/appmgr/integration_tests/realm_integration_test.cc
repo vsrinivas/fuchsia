@@ -229,6 +229,19 @@ TEST_F(RealmTest, KillRealmKillsComponent) {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([&] { return killed; }, kTimeout));
 }
 
+TEST_F(RealmTest, EnvironmentControllerRequired) {
+  fuchsia::sys::EnvironmentPtr env;
+  real_env()->CreateNestedEnvironment(
+      env.NewRequest(), /* controller = */ nullptr, kRealm,
+      /* additional_services = */ nullptr, fuchsia::sys::EnvironmentOptions{});
+
+  zx_status_t env_status = ZX_OK;
+  env.set_error_handler([&](zx_status_t status) { env_status = status; });
+
+  EXPECT_TRUE(
+      RunLoopWithTimeoutOrUntil([&] { return env_status != ZX_OK; }, kTimeout));
+}
+
 TEST_F(RealmTest, EnvironmentLabelRequired) {
   // Can't use EnclosingEnvironment here since there's no way to discern between
   // 'not yet created' and 'failed to create'. This also lets use check the

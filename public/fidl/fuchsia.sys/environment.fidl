@@ -34,8 +34,9 @@ struct EnvironmentOptions {
   // the newly created application in its |StartupInfo|.
   //
   // The |controller| can be used to control the lifecycle of the created
-  // environment. If an |EnvironmentController|'s interface is
-  // request, the environment will be killed when the interface is closed.
+  // environment. Note that by default the environment will be killed
+  // automatically when the |EnvironmentController|'s interface is closed. You
+  // can use |EnvironmentController.Detach| to disable this behavior.
   //
   // |label| defines the new environment's label/name. It can also be used for
   // diagnostic purposes. The label will be truncated if it is longer than
@@ -50,7 +51,7 @@ struct EnvironmentOptions {
   // |options| provides additional options, see |EnvironmentOptions| for
   // details.
   1: CreateNestedEnvironment(request<Environment> environment,
-                             request<EnvironmentController>? controller,
+                             request<EnvironmentController> controller,
                              string label,
                              ServiceList? additional_services,
                              EnvironmentOptions options);
