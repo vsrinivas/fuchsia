@@ -51,6 +51,8 @@ zx_status_t devmgr_launch_cmdline(
     const zx_handle_t* handles, const uint32_t* types, size_t hcount,
     zx::process* proc_out, uint32_t flags);
 
+void devmgr_disable_appmgr_services();
+
 // The variable to set on the kernel command line to enable ld.so tracing
 // of the processes we launch.
 #define LDSO_TRACE_CMDLINE "ldso.trace"

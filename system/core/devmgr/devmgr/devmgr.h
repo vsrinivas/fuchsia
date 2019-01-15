@@ -21,23 +21,13 @@ namespace devmgr {
 struct Device;
 struct Devnode;
 
+extern zx_handle_t virtcon_open;
+
+// Initializes a devfs directory from |device|.
 void devfs_init(Device* device, async_dispatcher_t* dispatcher);
+
+// Watches the devfs directory |dn|, and sends events to |watcher|.
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
-
-void devmgr_svc_init(bool require_system);
-void devmgr_vfs_init();
-void devmgr_set_bootdata(zx::unowned_vmo vmo);
-
-zx_status_t devmgr_load_file(const char* path, zx::vmo* out_vmo, uint32_t* out_size);
-zx_status_t devmgr_launch_load(void* ctx, launchpad_t* lp, const char* file);
-
-bool secondary_bootfs_ready();
-
-void fshost_start();
-
-zx::job get_sysinfo_job_root();
-
-void devmgr_disable_appmgr_services();
 
 // Borrows the channel connected to the root of devfs.
 zx::unowned_channel devfs_root_borrow();
@@ -45,7 +35,10 @@ zx::unowned_channel devfs_root_borrow();
 // Clones the channel connected to the root of devfs.
 zx::channel devfs_root_clone();
 
+// Tells VFS to exit by shutting down the fshost.
 void devmgr_vfs_exit();
+
 zx_handle_t get_root_resource();
+zx::job get_sysinfo_job_root();
 
 } // namespace devmgr

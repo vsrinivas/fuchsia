@@ -62,8 +62,6 @@ zx::vmo bootdata_vmo;
 
 namespace devmgr {
 
-extern zx_handle_t virtcon_open;
-
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 bool dc_asan_drivers = false;

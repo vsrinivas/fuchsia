@@ -535,6 +535,7 @@ private:
 };
 
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
+void devmgr_set_bootdata(zx::unowned_vmo vmo);
 
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
 
