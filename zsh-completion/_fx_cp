@@ -1,0 +1,46 @@
+__fx_cp_remote_files() {
+  local -a dirs files
+  local -a remote_matches
+  # ask dash on the device to glob the prefix
+  remote_matches=($(fx shell echo "$PREFIX*/" "$PREFIX*"))
+  # remove the unmatched globs
+  remote_matches=(${remote_matches:#*\**})
+  # files don't have a trailing /
+  files=(${remote_matches:#*/})
+  # directories have a trailing slash filter those and remove the slash
+  dirs=(${${(M)remote_matches:#*/}%/})
+  # remove directory names from the files list
+  files=(${files:|dirs})
+
+  # we want to complete the next path component not the whole path
+  compset -P '*/'
+  compset -S '/*'
+
+  # add directories to completion
+  compadd -S/ -d dirs -- ${dirs##*/}
+  # add files to completion
+  compadd -- ${files##*/}
+}
+
+__fx_cp_src() {
+  if [ -n "${words[(r)--to-host]}" ]; then
+    __fx_cp_remote_files
+  else
+    _files
+  fi
+}
+
+__fx_cp_dest() {
+  if [ -n "${words[(r)--to-host]}" ]; then
+    _files
+  else
+    __fx_cp_remote_files
+  fi
+}
+
+_arguments \
+  '(--to-host)--to-target[Copy a file from the host to the target.]' \
+  '(--to-target)--to-host[Copy a file from the target to the host.]' \
+  '1:src:__fx_cp_src' \
+  '2:dest:__fx_cp_dest' \
+
