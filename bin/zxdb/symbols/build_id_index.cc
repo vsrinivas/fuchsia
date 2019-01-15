@@ -139,7 +139,8 @@ void BuildIDIndex::LoadOneBuildIDFile(const std::string& file_name) {
 }
 
 void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
-  if (std::filesystem::is_directory(path)) {
+  std::error_code ec;
+  if (std::filesystem::is_directory(path, ec)) {
     // Iterate through all files in this directory, but don't recurse.
     int indexed = 0;
     for (const auto& child : std::filesystem::directory_iterator(path)) {
@@ -147,7 +148,7 @@ void BuildIDIndex::IndexOneSourcePath(const std::string& path) {
         indexed++;
     }
     status_.emplace_back(path, indexed);
-  } else {
+  } else if (!ec) {
     if (IndexOneSourceFile(path)) {
       status_.emplace_back(path, 1);
     } else {
