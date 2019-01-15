@@ -108,6 +108,9 @@ int Mt8167::Thread() {
     if (SensorsInit() != ZX_OK) {
         zxlogf(ERROR, "SensorsInit() failed\n");
     }
+    if (BacklightInit() != ZX_OK) {
+        zxlogf(ERROR, "BacklightInit() failed\n");
+    }
 
     return 0;
 }
