@@ -4,18 +4,54 @@
 
 #pragma once
 
-#include <ddk/device.h>
-#include <ddk/protocol/usb/hci.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/usb/bus.h>
+#include <ddktl/protocol/usb/hci.h>
+#include <fbl/array.h>
+#include <fbl/ref_ptr.h>
 
-typedef struct usb_device usb_device_t;
+namespace usb_bus {
 
-// Represents a USB bus, which manages all devices for a USB host controller
-typedef struct usb_bus {
-    zx_device_t* zxdev;
-    zx_device_t* hci_zxdev;
-    usb_hci_protocol_t hci;
+class UsbBus;
+class UsbDevice;
+using UsbBusType = ddk::Device<UsbBus, ddk::Unbindable>;
 
-    // top-level USB devices, indexed by device_id
-    usb_device_t** devices;
-    size_t max_device_count;
-} usb_bus_t;
+class UsbBus : public UsbBusType,
+               public ddk::UsbBusProtocol<UsbBus, ddk::base_protocol>,
+               public ddk::UsbBusInterface<UsbBus> {
+public:
+    UsbBus(zx_device_t* parent)
+        : UsbBusType(parent), hci_(parent) {}
+
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+    // Device protocol implementation.
+    void DdkUnbind();
+    void DdkRelease();
+
+    // USB Bus protocol implementation.
+    zx_status_t UsbBusConfigureHub(zx_device_t* hub_device, usb_speed_t speed,
+                                   const usb_hub_descriptor_t* desc);
+    zx_status_t UsbBusDeviceAdded(zx_device_t* hub_device, uint32_t port, usb_speed_t speed);
+    zx_status_t UsbBusDeviceRemoved(zx_device_t* hub_device, uint32_t port);
+    zx_status_t UsbBusSetHubInterface(zx_device_t* usb_device, const usb_hub_interface_t* hub);
+
+    // USB Bus interface implementation.
+    zx_status_t UsbBusInterfaceAddDevice(uint32_t device_id, uint32_t hub_id, usb_speed_t speed);
+    zx_status_t UsbBusInterfaceRemoveDevice(uint32_t device_id);
+    zx_status_t UsbBusInterfaceResetPort(uint32_t hub_id, uint32_t port, bool enumerating);
+    zx_status_t UsbBusInterfaceReinitializeDevice(uint32_t device_id);
+
+private:
+    zx_status_t Init();
+
+    zx_status_t GetDeviceId(zx_device_t* device, uint32_t* out);
+
+    // Our parent's HCI protocol.
+    const ddk::UsbHciProtocolClient hci_;
+    // Array of all our USB devices.
+    fbl::Array<fbl::RefPtr<UsbDevice>> devices_;
+};
+
+
+} // namespace usb_bus

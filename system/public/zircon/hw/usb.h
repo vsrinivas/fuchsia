@@ -243,4 +243,16 @@ typedef struct {
     uint8_t bDescriptorSubType;
 } __attribute__ ((packed)) usb_cs_interface_descriptor_t;
 
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_STRING
+    uint16_t wLangIds[127];
+} __attribute__ ((packed)) usb_langid_desc_t;
+
+typedef struct {
+    uint8_t bLength;
+    uint8_t bDescriptorType;    // USB_DT_STRING
+    uint16_t code_points[127];
+} __attribute__ ((packed)) usb_string_desc_t;
+
 __END_CDECLS;
