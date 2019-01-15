@@ -627,6 +627,136 @@ interface sub : super {
 
     END_TEST;
 }
+
+bool json_generator_test_inheritance_with_recursive_decl() {
+    BEGIN_TEST;
+
+    for (int i = 0; i < kRepeatTestCount; i++) {
+        EXPECT_TRUE(checkJSONGenerator(R"FIDL(
+library fidl.test.json;
+
+[FragileBase]
+interface Parent {
+  First(request<Parent> request);
+};
+
+interface Child : Parent {
+  Second(request<Parent> request);
+};
+
+)FIDL",
+                                       R"JSON({
+  "version": "0.0.1",
+  "name": "fidl.test.json",
+  "library_dependencies": [],
+  "const_declarations": [],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "fidl.test.json/Parent",
+      "maybe_attributes": [
+        {
+          "name": "FragileBase",
+          "value": ""
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 1722375644,
+          "generated_ordinal": 1722375644,
+          "name": "First",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "fidl.test.json/Parent",
+                "nullable": false
+              },
+              "name": "request",
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        }
+      ]
+    },
+    {
+      "name": "fidl.test.json/Child",
+      "methods": [
+        {
+          "ordinal": 1722375644,
+          "generated_ordinal": 1722375644,
+          "name": "First",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "fidl.test.json/Parent",
+                "nullable": false
+              },
+              "name": "request",
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        },
+        {
+          "ordinal": 19139766,
+          "generated_ordinal": 19139766,
+          "name": "Second",
+          "has_request": true,
+          "maybe_request": [
+            {
+              "type": {
+                "kind": "request",
+                "subtype": "fidl.test.json/Parent",
+                "nullable": false
+              },
+              "name": "request",
+              "size": 4,
+              "max_out_of_line": 0,
+              "alignment": 4,
+              "offset": 16,
+              "max_handles": 1
+            }
+          ],
+          "maybe_request_size": 24,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [],
+  "table_declarations": [],
+  "union_declarations": [],
+  "declaration_order": [
+    "fidl.test.json/Parent",
+    "fidl.test.json/Child"
+  ],
+  "declarations": {
+    "fidl.test.json/Parent": "interface",
+    "fidl.test.json/Child": "interface"
+  }
+})JSON"));
+    }
+
+    END_TEST;
+}
 } // namespace
 
 BEGIN_TEST_CASE(json_generator_tests);
@@ -635,4 +765,5 @@ RUN_TEST(json_generator_test_struct);
 RUN_TEST(json_generator_test_table);
 RUN_TEST(json_generator_test_union);
 RUN_TEST(json_generator_test_inheritance);
+RUN_TEST(json_generator_test_inheritance_with_recursive_decl);
 END_TEST_CASE(json_generator_tests);
