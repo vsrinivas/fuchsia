@@ -8,6 +8,140 @@
 #include <stdio.h>
 #include <string.h>
 
+static const uint8_t paradise_touch_report_desc[1064];
+static const uint8_t paradise_touch_v2_report_desc[1289];
+static const uint8_t paradise_touch_v3_report_desc[1014];
+
+static const uint8_t paradise_touchpad_v1_report_desc[490];
+static const uint8_t paradise_touchpad_v2_report_desc[560];
+
+static const uint8_t paradise_sensor_report_desc[235];
+
+const uint8_t* get_paradise_touch_report_desc(size_t* len) {
+    *len = sizeof(paradise_touch_report_desc);
+    return paradise_touch_report_desc;
+}
+
+bool is_paradise_touch_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_touch_report_desc)) {
+        return false;
+    }
+
+    return (memcmp(data, paradise_touch_report_desc, len) == 0);
+}
+
+const uint8_t* get_paradise_touch_v2_report_desc(size_t* len) {
+    *len = sizeof(paradise_touch_v2_report_desc);
+    return paradise_touch_v2_report_desc;
+}
+
+bool is_paradise_touch_v2_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_touch_v2_report_desc)) {
+        return false;
+    }
+
+    return (memcmp(data, paradise_touch_v2_report_desc, len) == 0);
+}
+
+const uint8_t* get_paradise_touch_v3_report_desc(size_t* len) {
+    *len = sizeof(paradise_touch_v3_report_desc);
+    return paradise_touch_v3_report_desc;
+}
+
+bool is_paradise_touch_v3_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_touch_v3_report_desc)) {
+        return false;
+    }
+
+    return (memcmp(data, paradise_touch_v3_report_desc, len) == 0);
+}
+
+zx_status_t setup_paradise_touch(int fd) {
+    if (fd < 0)
+        return ZX_ERR_INVALID_ARGS;
+
+    return ZX_OK;
+}
+
+bool is_paradise_touchpad_report_desc(const uint8_t* data, size_t len) {
+    return is_paradise_touchpad_v2_report_desc(data, len);
+}
+
+const uint8_t* get_paradise_touchpad_v1_report_desc(size_t* len) {
+    *len = sizeof(paradise_touchpad_v1_report_desc);
+    return paradise_touchpad_v1_report_desc;
+}
+
+bool is_paradise_touchpad_v1_report_desc(const uint8_t* data, size_t len) {
+    static_assert(sizeof(paradise_touchpad_v1_t) == 62, "hid struct not packed");
+
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_touchpad_v1_report_desc))
+        return false;
+
+    return (memcmp(data, paradise_touchpad_v1_report_desc, len) == 0);
+}
+
+const uint8_t* get_paradise_touchpad_v2_report_desc(size_t* len) {
+    *len = sizeof(paradise_touchpad_v2_report_desc);
+    return paradise_touchpad_v2_report_desc;
+}
+
+bool is_paradise_touchpad_v2_report_desc(const uint8_t* data, size_t len) {
+    static_assert(sizeof(paradise_touchpad_v2_t) == 72, "hid struct not packed");
+
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_touchpad_v2_report_desc))
+        return false;
+
+    return (memcmp(data, paradise_touchpad_v2_report_desc, len) == 0);
+}
+
+zx_status_t setup_paradise_touchpad(int fd) {
+    if (fd < 0)
+        return ZX_ERR_INVALID_ARGS;
+
+    return ZX_OK;
+}
+
+const uint8_t* get_paradise_sensor_report_desc(size_t* len) {
+    *len = sizeof(paradise_sensor_report_desc);
+    return paradise_sensor_report_desc;
+}
+
+bool is_paradise_sensor_report_desc(const uint8_t* data, size_t len) {
+    if (!data)
+        return false;
+
+    if (len != sizeof(paradise_sensor_report_desc))
+        return false;
+
+    return (memcmp(data, paradise_sensor_report_desc, len) == 0);
+}
+
+zx_status_t setup_paradise_sensor(int fd) {
+    if (fd < 0)
+        return ZX_ERR_INVALID_ARGS;
+
+    return ZX_OK;
+}
+
+// Only data should exist beyond this point. All functions should be at the
+// top of the file where they are easy to read.
+
 static const uint8_t paradise_touch_report_desc[] = {
     0x05, 0x0D,        // Usage Page (Digitizer)
     0x09, 0x04,        // Usage (Touch Screen)
@@ -499,17 +633,6 @@ static const uint8_t paradise_touch_report_desc[] = {
 
     // 1064 bytes
 };
-
-bool is_paradise_touch_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_touch_report_desc)) {
-        return false;
-    }
-
-    return (memcmp(data, paradise_touch_report_desc, len) == 0);
-}
 
 static const uint8_t paradise_touch_v2_report_desc[] = {
 0x05, 0x0D,        // Usage Page (Digitizer)
@@ -1108,17 +1231,6 @@ static const uint8_t paradise_touch_v2_report_desc[] = {
 // 1289 bytes
 };
 
-bool is_paradise_touch_v2_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_touch_v2_report_desc)) {
-        return false;
-    }
-
-    return (memcmp(data, paradise_touch_v2_report_desc, len) == 0);
-}
-
 static const uint8_t paradise_touch_v3_report_desc[] = {
 0x05, 0x0D,        // Usage Page (Digitizer)
 0x09, 0x04,        // Usage (Touch Screen)
@@ -1592,24 +1704,6 @@ static const uint8_t paradise_touch_v3_report_desc[] = {
 
 // 1014 bytes
 };
-
-bool is_paradise_touch_v3_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_touch_v3_report_desc)) {
-        return false;
-    }
-
-    return (memcmp(data, paradise_touch_v3_report_desc, len) == 0);
-}
-
-zx_status_t setup_paradise_touch(int fd) {
-    if (fd < 0)
-        return ZX_ERR_INVALID_ARGS;
-
-    return ZX_OK;
-}
 
 static const uint8_t paradise_touchpad_v1_report_desc[] = {
 0x05, 0x0D,        // Usage Page (Digitizer)
@@ -2111,43 +2205,7 @@ static const uint8_t paradise_touchpad_v2_report_desc[] = {
 // 560 bytes
 };
 
-bool is_paradise_touchpad_report_desc(const uint8_t* data, size_t len) {
-    return is_paradise_touchpad_v2_report_desc(data, len);
-}
-
-bool is_paradise_touchpad_v1_report_desc(const uint8_t* data, size_t len) {
-    static_assert(sizeof(paradise_touchpad_v1_t) == 62, "hid struct not packed");
-
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_touchpad_v1_report_desc))
-        return false;
-
-    return (memcmp(data, paradise_touchpad_v1_report_desc, len) == 0);
-}
-
-bool is_paradise_touchpad_v2_report_desc(const uint8_t* data, size_t len) {
-    static_assert(sizeof(paradise_touchpad_v2_t) == 72, "hid struct not packed");
-
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_touchpad_v2_report_desc))
-        return false;
-
-    return (memcmp(data, paradise_touchpad_v2_report_desc, len) == 0);
-}
-
-zx_status_t setup_paradise_touchpad(int fd) {
-    if (fd < 0)
-        return ZX_ERR_INVALID_ARGS;
-
-    return ZX_OK;
-}
-
 // Sensors
-
 static const uint8_t paradise_sensor_report_desc[] = {
     // Base Sensor Set
     0x05, 0x20,                   // HID Usage Page (Sensors)
@@ -2260,20 +2318,3 @@ static const uint8_t paradise_sensor_report_desc[] = {
 
     // 235 bytes
 };
-
-bool is_paradise_sensor_report_desc(const uint8_t* data, size_t len) {
-    if (!data)
-        return false;
-
-    if (len != sizeof(paradise_sensor_report_desc))
-        return false;
-
-    return (memcmp(data, paradise_sensor_report_desc, len) == 0);
-}
-
-zx_status_t setup_paradise_sensor(int fd) {
-    if (fd < 0)
-        return ZX_ERR_INVALID_ARGS;
-
-    return ZX_OK;
-}

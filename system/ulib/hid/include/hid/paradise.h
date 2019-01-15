@@ -93,9 +93,15 @@ typedef struct paradise_stylus {
     uint16_t scan_time;
 } __attribute__((packed)) paradise_stylus_t;
 
+const uint8_t* get_paradise_touch_report_desc(size_t* len);
 bool is_paradise_touch_report_desc(const uint8_t* data, size_t len);
+
+const uint8_t* get_paradise_touch_v2_report_desc(size_t* len);
 bool is_paradise_touch_v2_report_desc(const uint8_t* data, size_t len);
+
+const uint8_t* get_paradise_touch_v3_report_desc(size_t* len);
 bool is_paradise_touch_v3_report_desc(const uint8_t* data, size_t len);
+
 zx_status_t setup_paradise_touch(int fd);
 
 typedef struct paradise_touchpad_finger_v1 {
@@ -145,9 +151,13 @@ typedef struct paradise_touchpad_v2 {
 
 // The following typedef and function are transitional.
 typedef paradise_touchpad_v2_t paradise_touchpad_t;
+
 bool is_paradise_touchpad_report_desc(const uint8_t* data, size_t len);
 
+const uint8_t* get_paradise_touchpad_v1_report_desc(size_t* len);
 bool is_paradise_touchpad_v1_report_desc(const uint8_t* data, size_t len);
+
+const uint8_t* get_paradise_touchpad_v2_report_desc(size_t* len);
 bool is_paradise_touchpad_v2_report_desc(const uint8_t* data, size_t len);
 
 zx_status_t setup_paradise_touchpad(int fd);
@@ -162,7 +172,9 @@ typedef struct paradise_sensor_scalar_data {
   uint16_t scalar;
 } __attribute__((packed)) paradise_sensor_scalar_data_t;
 
+const uint8_t* get_paradise_sensor_report_desc(size_t* len);
 bool is_paradise_sensor_report_desc(const uint8_t* data, size_t len);
+
 zx_status_t setup_paradise_sensor(int fd);
 
 __END_CDECLS
