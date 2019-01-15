@@ -7,6 +7,7 @@
 #include <stdint.h>
 #include <sys/types.h>
 #include <ddk/io-buffer.h>
+#include <ddk/protocol/usb.h>
 #include <ddk/protocol/usb/request.h>
 #include <zircon/hw/usb.h>
 #include <zircon/listnode.h>
@@ -53,7 +54,7 @@ zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle,
 // Future transfers using this request will determine where in the VMO to store read / write data
 // using the scatter gather list.
 // This will free any existing scatter gather list stored in the request.
-zx_status_t usb_request_set_sg_list(usb_request_t* req, const phys_iter_sg_entry_t* sg_list,
+zx_status_t usb_request_set_sg_list(usb_request_t* req, phys_iter_sg_entry_t* sg_list,
                                     size_t sg_count);
 
 // usb_request_copy_from() copies data from the usb_request's vm object.

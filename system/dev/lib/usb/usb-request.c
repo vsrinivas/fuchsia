@@ -2,9 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <usb/usb-request.h>
-
 #include <ddk/protocol/usb.h>
+#include <usb/usb-request.h>
 #include <ddk/debug.h>
 
 #include <zircon/process.h>
@@ -161,7 +160,7 @@ __EXPORT zx_status_t usb_request_init(usb_request_t* req, zx_handle_t vmo_handle
 }
 
 __EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
-                                             const phys_iter_sg_entry_t* sg_list, size_t sg_count) {
+                                             phys_iter_sg_entry_t* sg_list, size_t sg_count) {
     if (req->sg_list) {
         free(req->sg_list);
         req->sg_list = NULL;
@@ -170,7 +169,7 @@ __EXPORT zx_status_t usb_request_set_sg_list(usb_request_t* req,
     size_t total_length = 0;
     // TODO(jocelyndang): disallow overlapping entries?
     for (size_t i = 0; i < sg_count; ++i) {
-        const phys_iter_sg_entry_t* entry = &sg_list[i];
+        phys_iter_sg_entry_t* entry = &sg_list[i];
         if (entry->length == 0 || (req_buffer_size(req, entry->offset) < entry->length)) {
             return ZX_ERR_INVALID_ARGS;
         }
