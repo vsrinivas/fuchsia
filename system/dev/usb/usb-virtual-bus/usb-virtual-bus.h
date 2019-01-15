@@ -79,11 +79,11 @@ private:
     struct usb_virtual_ep_t {
         list_node_t host_reqs __TA_GUARDED(lock_);
         list_node_t device_reqs __TA_GUARDED(lock_);
-        uint16_t max_packet_size;
+        uint16_t max_packet_size = 0;
         // Offset into current host req, for dealing with host reqs that are bigger than
         // their matching device req.
-        zx_off_t req_offset;
-        bool stalled;
+        zx_off_t req_offset = 0;
+        bool stalled = false;
     };
 
     zx_status_t Init();
@@ -111,9 +111,9 @@ private:
     sync_completion_t thread_signal_;
 
     // True when the virtual bus is connected.
-    bool connected_ __TA_GUARDED(lock_);
+    bool connected_ __TA_GUARDED(lock_) = false;
     // Used to shut down our thread when this driver is unbinding.
-    bool unbinding_ __TA_GUARDED(lock_);
+    bool unbinding_ __TA_GUARDED(lock_) = false;
 };
 
 } // namespace usb_virtual_bus
