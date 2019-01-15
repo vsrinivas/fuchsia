@@ -455,4 +455,19 @@ TEST(Vulkan, ReadbackExternalMemoryFuchsia)
     ASSERT_TRUE(import_app.Readback());
 }
 
+TEST(Vulkan, ManyReadback)
+{
+    std::vector<std::unique_ptr<VkReadbackTest>> tests;
+    // This should be limited by the number of FDs in use. The maximum number of FDs is 256
+    // (FDIO_MAX_FD), and the Intel mesa driver uses 2 per VkPhysicalDevice and 1 per VkDevice.
+    for (uint32_t i = 0; i < 75; i++) {
+        tests.push_back(std::make_unique<VkReadbackTest>());
+        ASSERT_TRUE(tests.back()->Initialize());
+        ASSERT_TRUE(tests.back()->Exec());
+    }
+    for (auto& test : tests) {
+        ASSERT_TRUE(test->Readback());
+    }
+}
+
 } // namespace
