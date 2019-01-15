@@ -2,9 +2,9 @@
 # Do not modify manually. All changes will be overwritten.
 
 fuchsia/sysroot/linux-amd64
-	git_revision:3a257b6f56d9f934e852c84c5b82f6c6b71a6182
-	IiFVaKmy2J6nGBAa91I2LqanvcDAUPjUpakpxSp4thEC
+	git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+	qIDZyI1rOQR7INRUL5vxltcQ9sAmdu3-FrI-Wcf_OVwC
 
 fuchsia/sysroot/linux-arm64
-	git_revision:3a257b6f56d9f934e852c84c5b82f6c6b71a6182
-	dEnIcxu8ZQD2MwA1ZUK_SINW9z2kHtrsreAJ6lcD39UC
+	git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+	B1w-KMj3c3107ZQ3i05ID0Keq_kDPXLmwAkwzn2LmTIC
