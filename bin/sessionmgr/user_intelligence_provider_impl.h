@@ -14,7 +14,6 @@
 #include <lib/svc/cpp/services.h>
 #include <lib/zx/channel.h>
 
-#include "peridot/bin/sessionmgr/agent_launcher.h"
 #include "peridot/lib/util/rate_limited_retry.h"
 
 namespace modular {

@@ -5,13 +5,15 @@
 #ifndef PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 #define PERIDOT_TESTS_MAXWELL_INTEGRATION_TEST_H_
 
+#include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/component/cpp/connect.h>
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/component/cpp/startup_context.h>
+#include <lib/svc/cpp/services.h>
 
 #include "gtest/gtest.h"
-#include "peridot/bin/sessionmgr/agent_launcher.h"
+#include "peridot/lib/environment_host/maxwell_service_provider_bridge.h"
 #include "peridot/lib/testing/component_context_fake.h"
 #include "peridot/lib/testing/entity_resolver_fake.h"
 
@@ -23,9 +25,7 @@ class MaxwellTestBase : public testing::Test {
   ~MaxwellTestBase() override = default;
 
   void StartAgent(const std::string& url,
-                  std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
-    agent_launcher_->StartAgent(url, std::move(bridge));
-  }
+                  std::unique_ptr<MaxwellServiceProviderBridge> bridge);
 
   component::Services StartServices(const std::string& url);
 
@@ -45,8 +45,10 @@ class MaxwellTestBase : public testing::Test {
 
  private:
   std::unique_ptr<component::StartupContext> startup_context_;
-  std::unique_ptr<modular::AgentLauncher> agent_launcher_;
+  fuchsia::sys::EnvironmentControllerPtr environment_controller_;
   std::vector<fuchsia::sys::ComponentControllerPtr> component_ptrs_;
+
+  std::unique_ptr<maxwell::MaxwellServiceProviderBridge> bridge_;
 
   component::ServiceProviderImpl child_app_services_;
   modular::ComponentContextFake child_component_context_;

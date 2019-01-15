@@ -7,19 +7,44 @@
 #include <lib/fxl/logging.h>
 
 namespace maxwell {
+namespace {
+
+constexpr char kEnvironmentLabel[] = "maxwell-test-env";
+
+}
 
 MaxwellTestBase::MaxwellTestBase() : loop_(&kAsyncLoopConfigAttachToThread) {
   startup_context_ = component::StartupContext::CreateFromStartupInfo();
-  auto root_environment = startup_context_->environment().get();
-  FXL_CHECK(root_environment != nullptr);
-
-  agent_launcher_ = std::make_unique<modular::AgentLauncher>(root_environment);
 
   child_app_services_.AddService<fuchsia::modular::ComponentContext>(
       [this](
           fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
         child_component_context_.Connect(std::move(request));
       });
+}
+
+void MaxwellTestBase::StartAgent(
+    const std::string& url,
+    std::unique_ptr<MaxwellServiceProviderBridge> bridge) {
+  bridge_ = std::move(bridge);
+
+  fuchsia::sys::ServiceListPtr service_list(new fuchsia::sys::ServiceList);
+  service_list->names = bridge_->service_names();
+  service_list->host_directory = bridge_->OpenAsDirectory();
+  fuchsia::sys::EnvironmentPtr agent_env;
+  startup_context_->environment()->CreateNestedEnvironment(
+      agent_env.NewRequest(), environment_controller_.NewRequest(),
+      kEnvironmentLabel, std::move(service_list), {});
+
+  fuchsia::sys::LauncherPtr launcher;
+  agent_env->GetLauncher(launcher.NewRequest());
+
+  fuchsia::sys::LaunchInfo launch_info;
+  launch_info.url = url;
+  component::Services services;
+  launch_info.directory_request = services.NewRequest();
+  FXL_LOG(INFO) << "Starting modular agent " << url;
+  launcher->CreateComponent(std::move(launch_info), nullptr);
 }
 
 component::Services MaxwellTestBase::StartServices(const std::string& url) {
