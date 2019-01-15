@@ -171,6 +171,7 @@ zx_status_t LoggerImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer, asyn
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
     case fuchsia_logger_LogSinkConnectOrdinal:
+    case fuchsia_logger_LogSinkConnectGenOrdinal:
         return Connect(std::move(message), dispatcher);
     default:
         fprintf(stderr, "logger: error: Unknown message ordinal: %d\n", message.ordinal());

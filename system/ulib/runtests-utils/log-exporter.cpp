@@ -99,8 +99,10 @@ zx_status_t LogExporter::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return ZX_ERR_INVALID_ARGS;
     }
     switch (message.ordinal()) {
+    case fuchsia_logger_LogListenerLogGenOrdinal:
     case fuchsia_logger_LogListenerLogOrdinal:
         return Log(std::move(message));
+    case fuchsia_logger_LogListenerLogManyGenOrdinal:
     case fuchsia_logger_LogListenerLogManyOrdinal:
         return LogMany(std::move(message));
     default:

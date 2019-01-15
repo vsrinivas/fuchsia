@@ -759,6 +759,8 @@ CGenerator::NameInterfaces(const std::vector<std::unique_ptr<flat::Interface>>& 
             std::string method_name = NameMethod(named_interface.c_name, method);
             named_method.ordinal = method.ordinal->value;
             named_method.ordinal_name = NameOrdinal(method_name);
+            named_method.generated_ordinal = method.generated_ordinal->value;
+            named_method.generated_ordinal_name = NameGenOrdinal(method_name);
             named_method.identifier = NameIdentifier(method.name);
             named_method.c_name = method_name;
             if (method.maybe_request != nullptr) {
@@ -865,6 +867,8 @@ void CGenerator::ProduceInterfaceForwardDeclaration(const NamedInterface& named_
             IOFlagsGuard reset_flags(&file_);
             file_ << "#define " << method_info.ordinal_name << " ((uint32_t)0x"
                   << std::uppercase << std::hex << method_info.ordinal << std::dec << ")\n";
+            file_ << "#define " << method_info.generated_ordinal_name << " ((uint32_t)0x"
+                  << std::uppercase << std::hex << method_info.generated_ordinal << std::dec << ")\n";
         }
         if (method_info.request)
             GenerateStructTypedef(method_info.request->c_name);
@@ -1293,6 +1297,9 @@ void CGenerator::ProduceInterfaceServerImplementation(const NamedInterface& name
     for (const auto& method_info : named_interface.methods) {
         if (!method_info.request)
             continue;
+        if (method_info.ordinal != method_info.generated_ordinal) {
+            file_ << kIndent << "case " << method_info.generated_ordinal_name << ":\n";
+        }
         file_ << kIndent << "case " << method_info.ordinal_name << ": {\n";
         file_ << kIndent << kIndent << "status = fidl_decode_msg(&" << method_info.request->coded_name << ", msg, NULL);\n";
         file_ << kIndent << kIndent << "if (status != ZX_OK)\n";

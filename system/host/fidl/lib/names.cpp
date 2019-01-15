@@ -438,6 +438,13 @@ std::string NameOrdinal(StringView method_name) {
     return ordinal_name;
 }
 
+// TODO: Remove post-FIDL-425
+std::string NameGenOrdinal(StringView method_name) {
+    std::string ordinal_name(method_name);
+    ordinal_name += "GenOrdinal";
+    return ordinal_name;
+}
+
 std::string NameMessage(StringView method_name, types::MessageKind kind) {
     std::string message_name(method_name);
     switch (kind) {

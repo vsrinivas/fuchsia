@@ -122,7 +122,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
 
     auto hdr = reinterpret_cast<fidl_message_header_t*>(buffer);
     switch (hdr->ordinal) {
-    case fuchsia_tracelink_ProviderStartOrdinal: {
+    case fuchsia_tracelink_ProviderStartOrdinal:
+    case fuchsia_tracelink_ProviderStartGenOrdinal: {
         zx_status_t status = fidl_decode(&fuchsia_tracelink_ProviderStartRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);
@@ -156,7 +157,8 @@ bool TraceProviderImpl::Connection::DecodeAndDispatch(
                      std::move(categories));
         return true;
     }
-    case fuchsia_tracelink_ProviderStopOrdinal: {
+    case fuchsia_tracelink_ProviderStopOrdinal:
+    case fuchsia_tracelink_ProviderStopGenOrdinal: {
         zx_status_t status = fidl_decode(&fuchsia_tracelink_ProviderStopRequestTable,
                                          buffer, num_bytes, handles, num_handles,
                                          nullptr);

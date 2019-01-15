@@ -1407,7 +1407,7 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
     // TODO: Check txid on the message
     switch (pending->op()) {
         case PendingOperation::Op::kBind: {
-            if (hdr->ordinal != fuchsia_device_manager_ControllerBindDriverOrdinal) {
+            if (hdr->ordinal != fuchsia_device_manager_ControllerBindDriverOrdinal && hdr->ordinal != fuchsia_device_manager_ControllerBindDriverGenOrdinal) {
                 log(ERROR, "devcoord: rpc: bind-driver '%s' received wrong reply ordinal %08x\n",
                     dev->name, hdr->ordinal);
                 return ZX_ERR_IO;
@@ -1429,7 +1429,7 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
             break;
         }
         case PendingOperation::Op::kSuspend: {
-            if (hdr->ordinal != fuchsia_device_manager_ControllerSuspendOrdinal) {
+            if (hdr->ordinal != fuchsia_device_manager_ControllerSuspendOrdinal && hdr->ordinal != fuchsia_device_manager_ControllerSuspendGenOrdinal) {
                 log(ERROR, "devcoord: rpc: suspend '%s' received wrong reply ordinal %08x\n",
                     dev->name, hdr->ordinal);
                 return ZX_ERR_IO;

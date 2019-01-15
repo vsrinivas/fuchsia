@@ -90,16 +90,22 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return ZX_ERR_INVALID_ARGS;
     switch (message.ordinal()) {
     case fuchsia_process_LauncherLaunchOrdinal:
+    case fuchsia_process_LauncherLaunchGenOrdinal:
         return Launch(buffer, std::move(message));
     case fuchsia_process_LauncherCreateWithoutStartingOrdinal:
+    case fuchsia_process_LauncherCreateWithoutStartingGenOrdinal:
         return CreateWithoutStarting(buffer, std::move(message));
     case fuchsia_process_LauncherAddArgsOrdinal:
+    case fuchsia_process_LauncherAddArgsGenOrdinal:
         return AddArgs(std::move(message));
     case fuchsia_process_LauncherAddEnvironsOrdinal:
+    case fuchsia_process_LauncherAddEnvironsGenOrdinal:
         return AddEnvirons(std::move(message));
     case fuchsia_process_LauncherAddNamesOrdinal:
+    case fuchsia_process_LauncherAddNamesGenOrdinal:
         return AddNames(std::move(message));
     case fuchsia_process_LauncherAddHandlesOrdinal:
+    case fuchsia_process_LauncherAddHandlesGenOrdinal:
         return AddHandles(std::move(message));
     default:
         fprintf(stderr, "launcher: error: Unknown message ordinal: %d\n", message.ordinal());
