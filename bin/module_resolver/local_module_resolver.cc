@@ -106,7 +106,6 @@ class LocalModuleResolver::FindModulesCall
       auto found_handlers =
           local_module_resolver_->FindHandlers(query_.handler);
       if (found_handlers.empty()) {
-        FXL_LOG(INFO) << "No manifest found for handler=" << query_.handler;
         response_ = CreateEmptyResponseWithStatus(
             fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER);
         return;

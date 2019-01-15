@@ -81,10 +81,6 @@ class AddModCall : public Operation<fuchsia::modular::ExecuteResult,
               } break;
 
               case fuchsia::modular::FindModulesStatus::UNKNOWN_HANDLER: {
-                FXL_LOG(INFO)
-                    << "Module Resolver does not know about module '"
-                    << intent_.handler << "' with action = '" << intent_.action
-                    << "'. Going to try using it anyway..";
                 candidate_module_.module_id = intent_.handler;
               } break;
             }
