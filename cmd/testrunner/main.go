@@ -21,6 +21,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
+	"fuchsia.googlesource.com/tools/tap"
 	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
@@ -51,6 +52,9 @@ var (
 	// The path to a file containing properties of the Fuchsia device to use for testing.
 	deviceFilepath string
 )
+
+// TestRecorder records the details of test run.
+type TestRecorder func(runtests.TestDetails)
 
 func usage() {
 	fmt.Println(`
@@ -84,18 +88,40 @@ func main() {
 		log.Fatal("-output is required")
 	}
 
+	// Load tests.
 	testsPath := flag.Arg(0)
 	tests, err := testrunner.LoadTests(testsPath)
 	if err != nil {
 		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
 	}
 
-	if err := execute(tests); err != nil {
+	// Prepare outputs.
+	tapp := tap.NewProducer(os.Stdout)
+	tapp.Plan(len(tests))
+	var summary runtests.TestSummary
+	recordDetails := func(details runtests.TestDetails) {
+		tapp.Ok(details.Result == runtests.TestSuccess, details.Name)
+		summary.Tests = append(summary.Tests, details)
+	}
+
+	// Execute.
+	if err := execute(tests, recordDetails); err != nil {
+		log.Fatal(err)
+	}
+
+	// Write Summary.
+	file, err := os.Create(path.Join(outputDir, "summary.json"))
+	if err != nil {
+		log.Fatal(err)
+	}
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(summary); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(tests []testsharder.Test) error {
+func execute(tests []testsharder.Test, recorder TestRecorder) error {
 	// Validate inputs.
 	nodename := os.Getenv("NODENAME")
 	if nodename == "" {
@@ -135,38 +161,25 @@ func execute(tests []testsharder.Test) error {
 		return fmt.Errorf("could not determine the runtime system for following tests %v", unknownTests)
 	}
 
-	var summary runtests.TestSummary
-
 	// Execute UNIX tests locally, assuming we're running in a UNIX environment.
 	var localTests []testsharder.Test
 	localTests = append(localTests, groups["linux"]...)
 	localTests = append(localTests, groups["mac"]...)
 	if len(localTests) > 0 {
-		details, err := runTests(localTests, RunTestInSubprocess, outputDir)
-		if err != nil {
+		if err := runTests(localTests, RunTestInSubprocess, outputDir, recorder); err != nil {
 			return err
 		}
-		summary.Tests = append(summary.Tests, details...)
 	}
 
 	// Execute Fuchsia tests.
 	if fuchsiaTests, ok := groups["fuchsia"]; ok {
 		// TODO(IN-824): Record log_listener output.
-		details, err := runTests(fuchsiaTests, fuchsiaTester.Test, outputDir)
-		if err != nil {
+		if err := runTests(fuchsiaTests, fuchsiaTester.Test, outputDir, recorder); err != nil {
 			return err
 		}
-		summary.Tests = append(summary.Tests, details...)
 	}
 
-	summaryFile, err := os.Create(path.Join(outputDir, "summary.json"))
-	if err != nil {
-		return err
-	}
-
-	// Log summary to `outputDir`.
-	encoder := json.NewEncoder(summaryFile)
-	return encoder.Encode(summary)
+	return nil
 }
 
 // groupTests splits a list of tests into named subgroups according to the names returned
@@ -211,8 +224,7 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runTests(tests []testsharder.Test, tester Tester, outputDir string) ([]runtests.TestDetails, error) {
-	var output []runtests.TestDetails
+func runTests(tests []testsharder.Test, tester Tester, outputDir string, record TestRecorder) error {
 	for _, test := range tests {
 		details, err := runTest(context.Background(), test, tester, outputDir)
 		if err != nil {
@@ -220,11 +232,11 @@ func runTests(tests []testsharder.Test, tester Tester, outputDir string) ([]runt
 		}
 
 		if details != nil {
-			output = append(output, *details)
+			record(*details)
 		}
 	}
 
-	return output, nil
+	return nil
 }
 
 func runTest(ctx context.Context, test testsharder.Test, tester Tester, outputDir string) (*runtests.TestDetails, error) {
