@@ -500,6 +500,13 @@ public:
         __UNUSED auto dummy = req.take();
     }
 
+    void push_next(ReqType req) {
+        fbl::AutoLock al(&lock_);
+        auto* node = req.node();
+        queue_.push_back(node);
+        __UNUSED auto dummy = req.take();
+    }
+
     std::optional<ReqType> pop() {
         fbl::AutoLock al(&lock_);
         auto* node = queue_.pop_back();
@@ -507,6 +514,11 @@ public:
             return std::move(node->request());
         }
         return std::nullopt;
+    }
+
+    bool is_empty() {
+        fbl::AutoLock al(&lock_);
+        return queue_.is_empty();
     }
 
     // Releases all usb requests stored in the queue.

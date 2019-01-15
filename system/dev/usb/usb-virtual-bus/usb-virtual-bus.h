@@ -12,6 +12,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
 #include <lib/sync/completion.h>
+#include <usb/request-cpp.h>
 
 #include <threads.h>
 
@@ -75,10 +76,13 @@ public:
 private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(UsbVirtualBus);
 
+    using Request = usb::UnownedRequest<void>;
+    using RequestQueue = usb::UnownedRequestQueue<void>;
+
     // This struct represents an endpoint on the virtual device.
     struct usb_virtual_ep_t {
-        list_node_t host_reqs __TA_GUARDED(lock_);
-        list_node_t device_reqs __TA_GUARDED(lock_);
+        RequestQueue host_reqs;
+        RequestQueue device_reqs;
         uint16_t max_packet_size = 0;
         // Offset into current host req, for dealing with host reqs that are bigger than
         // their matching device req.
@@ -91,7 +95,7 @@ private:
     zx_status_t CreateHost();
     void SetConnected(bool connected);
     int Thread();
-    void HandleControl(usb_request_t* req);
+    void HandleControl(Request req);
     zx_status_t SetStall(uint8_t ep_address, bool stall);
 
     // Reference to class that implements the virtual device controller protocol.
