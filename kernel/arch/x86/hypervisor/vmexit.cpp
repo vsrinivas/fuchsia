@@ -1018,6 +1018,9 @@ static zx_status_t handle_pause(const ExitInfo& exit_info, AutoVmcs* vmcs) {
 static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
                                  hypervisor::GuestPhysicalAddressSpace* gpas,
                                  GuestState* guest_state) {
+    next_rip(exit_info, vmcs);
+    vmcs->Invalidate();
+
     VmCallInfo info(guest_state);
     switch (info.type) {
     case VmCallType::CLOCK_PAIRING: {
@@ -1043,7 +1046,6 @@ static zx_status_t handle_vmcall(const ExitInfo& exit_info, AutoVmcs* vmcs,
         guest_state->rax = VmCallStatus::NO_SYS;
         break;
     }
-    next_rip(exit_info, vmcs);
     // We never fail in case of hypercalls, we just return/propagate errors to the caller.
     return ZX_OK;
 }
