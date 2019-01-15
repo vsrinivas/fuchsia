@@ -21,6 +21,7 @@ import (
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
+	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
 )
@@ -83,12 +84,18 @@ func main() {
 		log.Fatal("-output is required")
 	}
 
-	if err := execute(flag.Arg(0)); err != nil {
+	testsPath := flag.Arg(0)
+	tests, err := testrunner.LoadTests(testsPath)
+	if err != nil {
+		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
+	}
+
+	if err := execute(tests); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(testsFilepath string) error {
+func execute(tests []testsharder.Test) error {
 	// Validate inputs.
 	nodename := os.Getenv("NODENAME")
 	if nodename == "" {
@@ -111,17 +118,6 @@ func execute(testsFilepath string) error {
 		delegate: &SSHTester{
 			client: sshClient,
 		},
-	}
-
-	// Parse test input.
-	bytes, err := ioutil.ReadFile(testsFilepath)
-	if err != nil {
-		return fmt.Errorf("failed to read %s: %v", testsFilepath, err)
-	}
-
-	var tests []testsharder.Test
-	if err := json.Unmarshal(bytes, &tests); err != nil {
-		return fmt.Errorf("failed to unmarshal %s: %v", testsFilepath, err)
 	}
 
 	// Partition the tests into groups according to OS.
