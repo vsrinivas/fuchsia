@@ -33,8 +33,8 @@ namespace zxdb {
 
 namespace {
 
-using NumFormat = FormatValueOptions::NumFormat;
-using Verbosity = FormatValueOptions::Verbosity;
+using NumFormat = FormatExprValueOptions::NumFormat;
+using Verbosity = FormatExprValueOptions::Verbosity;
 
 // When there are errors during value printing we can't just print them since
 // they're associated with a value. This function formats the error in a way
@@ -138,7 +138,7 @@ FormatValue::~FormatValue() = default;
 
 void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                               const ExprValue value,
-                              const FormatValueOptions& options) {
+                              const FormatExprValueOptions& options) {
   FormatExprValue(data_provider, value, options, false,
                   AsyncAppend(GetRootOutputKey()));
 }
@@ -146,7 +146,7 @@ void FormatValue::AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 void FormatValue::AppendVariable(const SymbolContext& symbol_context,
                                  fxl::RefPtr<SymbolDataProvider> data_provider,
                                  const Variable* var,
-                                 const FormatValueOptions& options) {
+                                 const FormatExprValueOptions& options) {
   OutputKey output_key = AsyncAppend(
       NodeType::kVariable, var->GetAssignedName(), GetRootOutputKey());
   auto resolver = std::make_unique<SymbolVariableResolver>(data_provider);
@@ -184,7 +184,7 @@ void FormatValue::Complete(Callback callback) {
 
 void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const ExprValue& value,
-                                  const FormatValueOptions& options,
+                                  const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
                                   OutputKey output_key) {
   const Type* type = value.type();
@@ -262,7 +262,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
     switch (value.GetBaseType()) {
       case BaseType::kBaseTypeAddress: {
         // Always print addresses as unsigned hex.
-        FormatValueOptions overridden(options);
+        FormatExprValueOptions overridden(options);
         overridden.num_format = NumFormat::kHex;
         FormatUnsignedInt(value, options, &out);
         break;
@@ -287,7 +287,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 
 void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const Err& err, const ExprValue& value,
-                                  const FormatValueOptions& options,
+                                  const FormatExprValueOptions& options,
                                   bool suppress_type_printing,
                                   OutputKey output_key) {
   if (err.has_error()) {
@@ -320,7 +320,7 @@ void FormatValue::FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
 //   }
 void FormatValue::FormatCollection(
     fxl::RefPtr<SymbolDataProvider> data_provider, const Collection* coll,
-    const ExprValue& value, const FormatValueOptions& options,
+    const ExprValue& value, const FormatExprValueOptions& options,
     OutputKey output_key) {
   AppendToOutputKey(output_key, OutputBuffer("{"));
 
@@ -403,12 +403,12 @@ void FormatValue::FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
                                const ExprValue& value,
                                const Type* array_value_type,
                                int known_elt_count,
-                               const FormatValueOptions& options,
+                               const FormatExprValueOptions& options,
                                OutputKey output_key) {}
 
 bool FormatValue::TryFormatArrayOrString(
     fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
-    const ExprValue& value, const FormatValueOptions& options,
+    const ExprValue& value, const FormatExprValueOptions& options,
     OutputKey output_key) {
   FXL_DCHECK(type == type->GetConcreteType());
 
@@ -447,7 +447,7 @@ bool FormatValue::TryFormatArrayOrString(
 
 void FormatValue::FormatCharPointer(
     fxl::RefPtr<SymbolDataProvider> data_provider, const Type* type,
-    const ExprValue& value, const FormatValueOptions& options,
+    const ExprValue& value, const FormatExprValueOptions& options,
     OutputKey output_key) {
   if (value.data().size() != kTargetPointerSize) {
     OutputKeyComplete(output_key, ErrStringToOutput("Bad pointer data."));
@@ -519,7 +519,7 @@ void FormatValue::FormatCharArray(const uint8_t* data, size_t length,
 
 void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
                               const ExprValue& value, int elt_count,
-                              const FormatValueOptions& options,
+                              const FormatExprValueOptions& options,
                               OutputKey output_key) {
   // Arrays should have known non-zero sizes.
   FXL_DCHECK(elt_count >= 0);
@@ -556,7 +556,7 @@ void FormatValue::FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
 }
 
 void FormatValue::FormatNumeric(const ExprValue& value,
-                                const FormatValueOptions& options,
+                                const FormatExprValueOptions& options,
                                 OutputBuffer* out) {
   if (options.num_format != NumFormat::kDefault) {
     // Overridden format option.
@@ -612,7 +612,7 @@ void FormatValue::FormatBoolean(const ExprValue& value, OutputBuffer* out) {
 
 void FormatValue::FormatEnum(const ExprValue& value,
                              const Enumeration* enum_type,
-                             const FormatValueOptions& options,
+                             const FormatExprValueOptions& options,
                              OutputBuffer* out) {
   // Get the value out casted to a uint64.
   Err err;
@@ -645,7 +645,7 @@ void FormatValue::FormatEnum(const ExprValue& value,
 
   // Invalid enum values of explicitly overridden numeric formatting gets
   // printed as a number.
-  FormatValueOptions modified_opts = options;
+  FormatExprValueOptions modified_opts = options;
   if (modified_opts.num_format == NumFormat::kDefault) {
     // Compute the formatting for invalid enum values when there is no numeric
     // override.
@@ -680,7 +680,7 @@ void FormatValue::FormatSignedInt(const ExprValue& value, OutputBuffer* out) {
 }
 
 void FormatValue::FormatUnsignedInt(const ExprValue& value,
-                                    const FormatValueOptions& options,
+                                    const FormatExprValueOptions& options,
                                     OutputBuffer* out) {
   // This formatter handles unsigned and hex output.
   uint64_t int_val = 0;
@@ -707,7 +707,7 @@ void FormatValue::FormatChar(const ExprValue& value, OutputBuffer* out) {
 }
 
 void FormatValue::FormatPointer(const ExprValue& value,
-                                const FormatValueOptions& options,
+                                const FormatExprValueOptions& options,
                                 OutputBuffer* out) {
   // Don't make assumptions about the type of value.type() since it isn't
   // necessarily a ModifiedType representing a pointer, but could be other
@@ -732,7 +732,7 @@ void FormatValue::FormatPointer(const ExprValue& value,
 
 void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                                   const ExprValue& value,
-                                  const FormatValueOptions& options,
+                                  const FormatExprValueOptions& options,
                                   OutputKey output_key) {
   EnsureResolveReference(data_provider, value, [
     weak_this = weak_factory_.GetWeakPtr(), data_provider,
@@ -783,7 +783,7 @@ void FormatValue::FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
 }
 
 void FormatValue::FormatFunctionPointer(const ExprValue& value,
-                                        const FormatValueOptions& options,
+                                        const FormatExprValueOptions& options,
                                         OutputBuffer* out) {
   // Unlike pointers, we don't print the type for function pointers. These
   // are usually very long and not very informative. If explicitly requested,
@@ -827,7 +827,7 @@ void FormatValue::FormatFunctionPointer(const ExprValue& value,
 }
 
 void FormatValue::FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
-                                  const FormatValueOptions& options,
+                                  const FormatExprValueOptions& options,
                                   OutputBuffer* out) {
   const Type* container_type = type->container_type().Get()->AsType();
   const Type* pointed_to_type = type->member_type().Get()->AsType();

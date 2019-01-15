@@ -18,13 +18,13 @@ namespace {
 
 // Synchronous wrapper around asynchronous long formatting.
 std::string SyncFormatFrameLong(const Frame* frame,
-                                const FormatValueOptions& options) {
+                                const FormatExprValueOptions& options) {
   debug_ipc::PlatformMessageLoop loop;
   loop.Init();
 
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<MockFormatValueProcessContext>());
-  FormatFrameLong(frame, false, helper.get(), FormatValueOptions());
+  FormatFrameLong(frame, false, helper.get(), FormatExprValueOptions());
 
   std::string out_string;
   bool complete = false;
@@ -64,7 +64,7 @@ TEST(FormatFrame, Unsymbolized) {
 
   // Long version should do the same (not duplicate it).
   EXPECT_EQ("\n      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
-            SyncFormatFrameLong(&frame, FormatValueOptions()));
+            SyncFormatFrameLong(&frame, FormatExprValueOptions()));
 
   // With index.
   out = OutputBuffer();

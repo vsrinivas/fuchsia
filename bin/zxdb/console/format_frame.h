@@ -7,7 +7,7 @@
 namespace zxdb {
 
 class FormatValue;
-struct FormatValueOptions;
+struct FormatExprValueOptions;
 class Frame;
 class OutputBuffer;
 class Thread;
@@ -23,7 +23,8 @@ void OutputFrameList(Thread* thread, bool include_params, bool long_format);
 // Printing of function parameter types is controlled by include_params.
 //
 // This does not append a newline at the end of the output.
-void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out, int id = -1);
+void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
+                 int id = -1);
 
 // Formats one frame using the long format. Since the long format includes
 // function parameters which are computed asynchronously, this takes the
@@ -31,6 +32,6 @@ void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out, int
 //
 // This does not append a newline at the end of the output.
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
-                     const FormatValueOptions& options, int id = -1);
+                     const FormatExprValueOptions& options, int id = -1);
 
 }  // namespace zxdb

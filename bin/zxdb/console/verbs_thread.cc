@@ -63,14 +63,15 @@ bool VerifySystemHasRunningProcess(System* system, Err* err) {
 }
 
 // Populates the formatting options with the given command's switches.
-Err GetFormatValueOptions(const Command& cmd, FormatValueOptions* options) {
+Err GetFormatExprValueOptions(const Command& cmd,
+                              FormatExprValueOptions* options) {
   // Verbosity.
   if (cmd.HasSwitch(kForceAllTypes))
-    options->verbosity = FormatValueOptions::Verbosity::kAllTypes;
+    options->verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   else if (cmd.HasSwitch(kVerboseFormat))
-    options->verbosity = FormatValueOptions::Verbosity::kMedium;
+    options->verbosity = FormatExprValueOptions::Verbosity::kMedium;
   else
-    options->verbosity = FormatValueOptions::Verbosity::kMinimal;
+    options->verbosity = FormatExprValueOptions::Verbosity::kMinimal;
 
   // Array size.
   if (cmd.HasSwitch(kMaxArraySize)) {
@@ -83,12 +84,12 @@ Err GetFormatValueOptions(const Command& cmd, FormatValueOptions* options) {
 
   // Mapping from command-line parameter to format enum.
   constexpr size_t kFormatCount = 4;
-  static constexpr std::pair<int, FormatValueOptions::NumFormat>
+  static constexpr std::pair<int, FormatExprValueOptions::NumFormat>
       kFormats[kFormatCount] = {
-          {kForceNumberChar, FormatValueOptions::NumFormat::kChar},
-          {kForceNumberUnsigned, FormatValueOptions::NumFormat::kUnsigned},
-          {kForceNumberSigned, FormatValueOptions::NumFormat::kSigned},
-          {kForceNumberHex, FormatValueOptions::NumFormat::kHex}};
+          {kForceNumberChar, FormatExprValueOptions::NumFormat::kChar},
+          {kForceNumberUnsigned, FormatExprValueOptions::NumFormat::kUnsigned},
+          {kForceNumberSigned, FormatExprValueOptions::NumFormat::kSigned},
+          {kForceNumberHex, FormatExprValueOptions::NumFormat::kHex}};
 
   int num_type_overrides = 0;
   for (const auto& cur : kFormats) {
@@ -432,8 +433,8 @@ Err DoLocals(ConsoleContext* context, const Command& cmd) {
     return Err();
   }
 
-  FormatValueOptions options;
-  err = GetFormatValueOptions(cmd, &options);
+  FormatExprValueOptions options;
+  err = GetFormatExprValueOptions(cmd, &options);
   if (err.has_error())
     return err;
 
@@ -697,8 +698,8 @@ Err DoPrint(ConsoleContext* context, const Command& cmd) {
   if (expr.empty())
     return Err("Usage: print <expression>\nSee \"help print\" for more.");
 
-  FormatValueOptions options;
-  err = GetFormatValueOptions(cmd, &options);
+  FormatExprValueOptions options;
+  err = GetFormatExprValueOptions(cmd, &options);
   if (err.has_error())
     return err;
 

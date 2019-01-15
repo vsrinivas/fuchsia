@@ -114,7 +114,7 @@ bool HandleFrameNoun(ConsoleContext* context, const Command& cmd, Err* err) {
   auto helper = fxl::MakeRefCounted<FormatValue>(
       std::make_unique<FormatValueProcessContextImpl>(cmd.target()));
   FormatFrameLong(cmd.frame(), cmd.HasSwitch(kForceTypes), helper.get(),
-                  FormatValueOptions(),
+                  FormatExprValueOptions(),
                   context->GetActiveFrameIdForThread(cmd.thread()));
   helper->Complete(
       [helper](OutputBuffer out) { Console::get()->Output(std::move(out)); });

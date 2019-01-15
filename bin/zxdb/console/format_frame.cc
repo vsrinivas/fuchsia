@@ -33,8 +33,8 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       std::make_unique<FormatValueProcessContextImpl>(thread->GetProcess()));
 
   // Formatting used for long format mode.
-  FormatValueOptions format_options;
-  format_options.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  FormatExprValueOptions format_options;
+  format_options.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
@@ -105,7 +105,7 @@ void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,
 }
 
 void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
-                     const FormatValueOptions& options, int id) {
+                     const FormatExprValueOptions& options, int id) {
   if (id >= 0)
     out->Append(OutputBuffer(fxl::StringPrintf("Frame %d ", id)));
 

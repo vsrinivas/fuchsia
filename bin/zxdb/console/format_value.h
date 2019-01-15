@@ -11,6 +11,7 @@
 #include <vector>
 
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/expr/format_expr_value_options.h"
 #include "lib/fxl/memory/ref_counted.h"
 #include "lib/fxl/memory/ref_ptr.h"
 #include "lib/fxl/memory/weak_ptr.h"
@@ -30,39 +31,6 @@ class SymbolVariableResolver;
 class Type;
 class Value;
 class Variable;
-
-struct FormatValueOptions {
-  enum class NumFormat { kDefault, kUnsigned, kSigned, kHex, kChar };
-
-  // This has numeric values so one can compare verbosity levels.
-  enum class Verbosity : int {
-    // Show as little as possible without being misleading. Some long types
-    // will be elided with "...", references won't have addresses.
-    kMinimal = 0,
-
-    // Print like GDB does. Show the full names of base classes, reference
-    // addresses, and pointer types.
-    kMedium = 1,
-
-    // All full type information and pointer values are shown for everything.
-    kAllTypes = 2
-  };
-
-  // Maximum number of elements to print in an array. For strings we'll
-  // speculatively fetch this much data since we don't know mow long the string
-  // will be in advance. This means that increasing this will make all string
-  // printing (even small strings) slower.
-  //
-  // If we want to support larger sizes, we may want to add a special memory
-  // request option where the debug agent fetches until a null terminator is
-  // reached.
-  uint32_t max_array_size = 256;
-
-  // Format to apply to numeric types.
-  NumFormat num_format = NumFormat::kDefault;
-
-  Verbosity verbosity = Verbosity::kMedium;
-};
 
 // Manages formatting of variables and ExprValues (the results of expressions).
 // Since formatting is asynchronous this can be tricky. This class manages a
@@ -100,7 +68,8 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // Construct with fxl::MakeRefCounted<FormatValue>().
 
   void AppendValue(fxl::RefPtr<SymbolDataProvider> data_provider,
-                   const ExprValue value, const FormatValueOptions& options);
+                   const ExprValue value,
+                   const FormatExprValueOptions& options);
 
   // The data provider normally comes from the frame where you want to evaluate
   // the variable in. This will prepend "<name> = " to the value of the
@@ -108,7 +77,7 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   void AppendVariable(const SymbolContext& symbol_context,
                       fxl::RefPtr<SymbolDataProvider> data_provider,
                       const Variable* var,
-                      const FormatValueOptions& options);
+                      const FormatExprValueOptions& options);
 
   void Append(std::string str);
   void Append(OutputBuffer out);
@@ -203,11 +172,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // been printed.
   void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
-                       const FormatValueOptions& options,
+                       const FormatExprValueOptions& options,
                        bool suppress_type_printing, OutputKey output_key);
   void FormatExprValue(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const Err& err, const ExprValue& value,
-                       const FormatValueOptions& options,
+                       const FormatExprValueOptions& options,
                        bool suppress_type_printing, OutputKey output_key);
 
   // Asynchronously formats the given type.
@@ -215,11 +184,11 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // The known_elt_count can be -1 if the array size is not statically known.
   void FormatCollection(fxl::RefPtr<SymbolDataProvider> data_provider,
                         const Collection* coll, const ExprValue& value,
-                        const FormatValueOptions& options,
+                        const FormatExprValueOptions& options,
                         OutputKey output_key);
   void FormatString(fxl::RefPtr<SymbolDataProvider> data_provider,
                     const ExprValue& value, const Type* array_value_type,
-                    int known_elt_count, const FormatValueOptions& options,
+                    int known_elt_count, const FormatExprValueOptions& options,
                     OutputKey output_key);
 
   // Checks array and string types and formats the value accordingly. Returns
@@ -227,43 +196,46 @@ class FormatValue : public fxl::RefCountedThreadSafe<FormatValue> {
   // was anything else.
   bool TryFormatArrayOrString(fxl::RefPtr<SymbolDataProvider> data_provider,
                               const Type* type, const ExprValue& value,
-                              const FormatValueOptions& options,
+                              const FormatExprValueOptions& options,
                               OutputKey output_key);
 
   // Array and string format helpers.
   void FormatCharPointer(fxl::RefPtr<SymbolDataProvider> data_provider,
                          const Type* type, const ExprValue& value,
-                         const FormatValueOptions& options,
+                         const FormatExprValueOptions& options,
                          OutputKey output_key);
   void FormatCharArray(const uint8_t* data, size_t length, bool truncated,
                        OutputKey output_key);
   void FormatArray(fxl::RefPtr<SymbolDataProvider> data_provider,
                    const ExprValue& value, int elt_count,
-                   const FormatValueOptions& options, OutputKey output_key);
+                   const FormatExprValueOptions& options, OutputKey output_key);
 
   // Dispatcher for all numeric types. This handles formatting overrides.
-  void FormatNumeric(const ExprValue& value, const FormatValueOptions& options,
-                     OutputBuffer* out);
+  void FormatNumeric(const ExprValue& value,
+                     const FormatExprValueOptions& options, OutputBuffer* out);
 
   // Simpler synchronous outputs.
   void FormatBoolean(const ExprValue& value, OutputBuffer* out);
   void FormatEnum(const ExprValue& value, const Enumeration* enum_type,
-                  const FormatValueOptions& options, OutputBuffer* out);
+                  const FormatExprValueOptions& options, OutputBuffer* out);
   void FormatFloat(const ExprValue& value, OutputBuffer* out);
   void FormatSignedInt(const ExprValue& value, OutputBuffer* out);
   void FormatUnsignedInt(const ExprValue& value,
-                         const FormatValueOptions& options, OutputBuffer* out);
+                         const FormatExprValueOptions& options,
+                         OutputBuffer* out);
   void FormatChar(const ExprValue& value, OutputBuffer* out);
-  void FormatPointer(const ExprValue& value, const FormatValueOptions& options,
-                     OutputBuffer* out);
+  void FormatPointer(const ExprValue& value,
+                     const FormatExprValueOptions& options, OutputBuffer* out);
   void FormatReference(fxl::RefPtr<SymbolDataProvider> data_provider,
                        const ExprValue& value,
-                       const FormatValueOptions& options, OutputKey output_key);
+                       const FormatExprValueOptions& options,
+                       OutputKey output_key);
   void FormatFunctionPointer(const ExprValue& value,
-                             const FormatValueOptions& options,
+                             const FormatExprValueOptions& options,
                              OutputBuffer* out);
   void FormatMemberPtr(const ExprValue& value, const MemberPtr* type,
-                       const FormatValueOptions& options, OutputBuffer* out);
+                       const FormatExprValueOptions& options,
+                       OutputBuffer* out);
 
   OutputKey GetRootOutputKey();
 

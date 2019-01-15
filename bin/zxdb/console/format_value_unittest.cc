@@ -50,7 +50,7 @@ class FormatValueTest : public TestWithLoop {
 
   // Synchronously calls FormatExprValue, returning the result.
   std::string SyncFormatValue(const ExprValue& value,
-                              const FormatValueOptions& opts) {
+                              const FormatExprValueOptions& opts) {
     bool called = false;
     std::string output;
 
@@ -83,7 +83,7 @@ class FormatValueTest : public TestWithLoop {
 }  // namespace
 
 TEST_F(FormatValueTest, Signed) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // 8-bit.
   ExprValue val_int8(
@@ -113,12 +113,12 @@ TEST_F(FormatValueTest, Signed) {
   ExprValue val_float(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
       {0x04, 0x03, 0x02, 0x01});
-  opts.num_format = FormatValueOptions::NumFormat::kSigned;
+  opts.num_format = FormatExprValueOptions::NumFormat::kSigned;
   EXPECT_EQ("16909060", SyncFormatValue(val_float, opts));
 }
 
 TEST_F(FormatValueTest, Unsigned) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // 8-bit.
   ExprValue val_int8(
@@ -148,14 +148,14 @@ TEST_F(FormatValueTest, Unsigned) {
   ExprValue val_float(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeFloat, 4, "float"),
       {0x04, 0x03, 0x02, 0x01});
-  opts.num_format = FormatValueOptions::NumFormat::kUnsigned;
+  opts.num_format = FormatExprValueOptions::NumFormat::kUnsigned;
   EXPECT_EQ("16909060", SyncFormatValue(val_float, opts));
-  opts.num_format = FormatValueOptions::NumFormat::kHex;
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
   EXPECT_EQ("0x1020304", SyncFormatValue(val_float, opts));
 }
 
 TEST_F(FormatValueTest, Bool) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // 8-bit true.
   ExprValue val_true8(
@@ -177,7 +177,7 @@ TEST_F(FormatValueTest, Bool) {
 }
 
 TEST_F(FormatValueTest, Char) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // 8-bit char.
   ExprValue val_char8(
@@ -204,7 +204,7 @@ TEST_F(FormatValueTest, Char) {
   EXPECT_EQ("'A'", SyncFormatValue(val_char32, opts));
 
   // 32-bit int forced to char.
-  opts.num_format = FormatValueOptions::NumFormat::kChar;
+  opts.num_format = FormatExprValueOptions::NumFormat::kChar;
   ExprValue val_int32(
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 4, "int32_t"),
       {'$', 0x01, 0x00, 0x00});
@@ -212,7 +212,7 @@ TEST_F(FormatValueTest, Char) {
 }
 
 TEST_F(FormatValueTest, Float) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   uint8_t buffer[8];
 
@@ -234,7 +234,7 @@ TEST_F(FormatValueTest, Float) {
 }
 
 TEST_F(FormatValueTest, Pointer) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
@@ -249,16 +249,16 @@ TEST_F(FormatValueTest, Pointer) {
 
   // Print with type printing forced on. The result should be the same (the
   // type shouldn't be duplicated).
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int*) 0x807060504030201", SyncFormatValue(value, opts));
 
   // Minimal formatting should omit the type name
-  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
   EXPECT_EQ("(*) 0x807060504030201", SyncFormatValue(value, opts));
 
   // Test an invalid one with an incorrect size.
   data.resize(7);
-  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   ExprValue bad_value(ptr_type, data);
   EXPECT_EQ(
       "(int*) <The value of type 'int*' is the incorrect size (expecting 8, "
@@ -267,7 +267,7 @@ TEST_F(FormatValueTest, Pointer) {
 }
 
 TEST_F(FormatValueTest, GoodStrings) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   constexpr uint64_t kAddress = 0x1100;
   std::vector<uint8_t> data = {'A',  'B',  'C', 'D',  'E', 'F',
@@ -285,24 +285,24 @@ TEST_F(FormatValueTest, GoodStrings) {
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
   // Force type info.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(std::string("(char*) ") + kExpected,
             SyncFormatValue(ExprValue(ptr_type, address_data), opts));
 
   // This string has the same data but is type encoded as char[12], it should
   // give the same output (except for type info).
-  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   auto array_type = fxl::MakeRefCounted<ArrayType>(GetCharType(), 12);
   EXPECT_EQ(kExpected, SyncFormatValue(ExprValue(array_type, data), opts));
 
   // Force type info.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(std::string("(char[12]) ") + kExpected,
             SyncFormatValue(ExprValue(array_type, data), opts));
 }
 
 TEST_F(FormatValueTest, BadStrings) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   std::vector<uint8_t> address_data = {0x00, 0x11, 0x00, 0x00,
                                        0x00, 0x00, 0x00, 0x00};
 
@@ -317,7 +317,7 @@ TEST_F(FormatValueTest, BadStrings) {
 }
 
 TEST_F(FormatValueTest, TruncatedString) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   constexpr uint64_t kAddress = 0x1100;
   provider()->AddMemory(kAddress, {'A', 'B', 'C', 'D', 'E', 'F'});
@@ -339,7 +339,7 @@ TEST_F(FormatValueTest, TruncatedString) {
 }
 
 TEST_F(FormatValueTest, EmptyAndBadArray) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // Array of two int32's: [1, 2]
   constexpr uint64_t kAddress = 0x1100;
@@ -360,7 +360,7 @@ TEST_F(FormatValueTest, EmptyAndBadArray) {
 }
 
 TEST_F(FormatValueTest, TruncatedArray) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   opts.max_array_size = 2;
 
   // Array of two int32's: {1, 2}
@@ -376,7 +376,7 @@ TEST_F(FormatValueTest, TruncatedArray) {
 
   // Try one with type info forced on. Only the root array type should have the
   // type, not each individual element.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int32_t[2]) {1, 2}",
             SyncFormatValue(ExprValue(array_type, data, source), opts));
 
@@ -387,7 +387,7 @@ TEST_F(FormatValueTest, TruncatedArray) {
 }
 
 TEST_F(FormatValueTest, Reference) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   auto base_type =
       fxl::MakeRefCounted<BaseType>(BaseType::kBaseTypeSigned, 1, "int");
@@ -402,16 +402,16 @@ TEST_F(FormatValueTest, Reference) {
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
 
   // Forcing type info on shouldn't duplicate the type.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(int&) 0x1100 = 123", SyncFormatValue(value, opts));
 
   // Force with minimal formatting (no addr ot type info).
-  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
   EXPECT_EQ("123", SyncFormatValue(value, opts));
 
   // Test an invalid one with an invalid address.
   std::vector<uint8_t> bad_data = {0x00, 0x22, 0, 0, 0, 0, 0, 0};
-  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   value = ExprValue(ref_type, bad_data);
   EXPECT_EQ("(int&) 0x2200 = <Invalid pointer 0x2200>",
             SyncFormatValue(value, opts));
@@ -421,16 +421,16 @@ TEST_F(FormatValueTest, Reference) {
   auto rvalue_ref_type = fxl::MakeRefCounted<ModifiedType>(
       Symbol::kTagRvalueReferenceType, LazySymbol(base_type));
   value = ExprValue(rvalue_ref_type, data);
-  opts.verbosity = FormatValueOptions::Verbosity::kMedium;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMedium;
   EXPECT_EQ("(int&&) 0x1100 = 123", SyncFormatValue(value, opts));
 
-  opts.verbosity = FormatValueOptions::Verbosity::kMinimal;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kMinimal;
   EXPECT_EQ("123", SyncFormatValue(value, opts));
 }
 
 TEST_F(FormatValueTest, Structs) {
-  FormatValueOptions opts;
-  opts.num_format = FormatValueOptions::NumFormat::kHex;
+  FormatExprValueOptions opts;
+  opts.num_format = FormatExprValueOptions::NumFormat::kHex;
 
   auto int32_type = MakeInt32Type();
 
@@ -465,7 +465,7 @@ TEST_F(FormatValueTest, Structs) {
 
   // Force type info. Now the reference types move before the member names like
   // the other types.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(
       "(Pair) {(Foo) first = {(int32_t) a = 0x110011, (int32_t&) b = 0x1100 = "
       "0x12}, "
@@ -485,7 +485,7 @@ TEST_F(FormatValueTest, Structs) {
 // GDB and LLDB both print all members of a union and accept the possibility
 // that sometimes one of them might be garbage, we do the same.
 TEST_F(FormatValueTest, Union) {
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
 
   // Define a union type with two int32 values.
   auto int32_type = MakeInt32Type();
@@ -546,12 +546,12 @@ TEST_F(FormatValueTest, DerivedClasses) {
 
   // Default formatting. Only the Base should be printed, EmptyBase should be
   // omitted because it has no data.
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   EXPECT_EQ("{Base = {a = 1, b = 2}, c = 3, d = 4}",
             SyncFormatValue(value, opts));
 
   // Force types on. The type of the base class should not be duplicated.
-  opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ(
       "(Derived) {Base = {(int32_t) a = 1, (int32_t) b = 2}, (int32_t) c = 3, "
       "(int32_t) d = 4}",
@@ -568,7 +568,7 @@ TEST_F(FormatValueTest, Enumeration) {
       "UnsignedEnum", LazySymbol(), 8, false, unsigned_map);
 
   // Found value
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   EXPECT_EQ("kZero",
             SyncFormatValue(ExprValue(unsigned_enum, {0, 0, 0, 0, 0, 0, 0, 0}),
                             opts));
@@ -578,8 +578,8 @@ TEST_F(FormatValueTest, Enumeration) {
                             opts));
 
   // Found value forced to hex.
-  FormatValueOptions hex_opts;
-  hex_opts.num_format = FormatValueOptions::NumFormat::kHex;
+  FormatExprValueOptions hex_opts;
+  hex_opts.num_format = FormatExprValueOptions::NumFormat::kHex;
   EXPECT_EQ("0xffffffffffffffff",
             SyncFormatValue(ExprValue(unsigned_enum, {0xff, 0xff, 0xff, 0xff,
                                                       0xff, 0xff, 0xff, 0xff}),
@@ -616,8 +616,8 @@ TEST_F(FormatValueTest, Enumeration) {
                             hex_opts));
 
   // Force type info.
-  FormatValueOptions type_opts;
-  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  FormatExprValueOptions type_opts;
+  type_opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   EXPECT_EQ("(SignedEnum) kZero",
             SyncFormatValue(ExprValue(signed_enum, {0, 0, 0, 0}), type_opts));
   EXPECT_EQ("(SignedEnum) -4",
@@ -648,13 +648,13 @@ TEST_F(FormatValueTest, FunctionPtr) {
                          LazySymbol(function)));
 
   // Function.
-  FormatValueOptions type_opts;
-  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  FormatExprValueOptions type_opts;
+  type_opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   ExprValue null_func(func_type, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("(void()) 0x0", SyncFormatValue(null_func, type_opts));
 
   // Null function pointer.
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   ExprValue null_ptr(func_ptr_type, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("0x0", SyncFormatValue(null_ptr, opts));
 
@@ -671,8 +671,8 @@ TEST_F(FormatValueTest, FunctionPtr) {
   EXPECT_EQ("&MyFunc", SyncFormatValue(good_ptr, opts));
 
   // Force output as hex even when the function is matched.
-  FormatValueOptions hex_opts;
-  hex_opts.num_format = FormatValueOptions::NumFormat::kHex;
+  FormatExprValueOptions hex_opts;
+  hex_opts.num_format = FormatExprValueOptions::NumFormat::kHex;
   EXPECT_EQ("0x1234", SyncFormatValue(good_ptr, hex_opts));
 
   // Member function pointer. The type naming of function pointers is tested by
@@ -707,13 +707,13 @@ TEST_F(FormatValueTest, MemberPtr) {
                                                      LazySymbol(int32_type));
 
   // Null pointer.
-  FormatValueOptions opts;
+  FormatExprValueOptions opts;
   ExprValue null_member_ptr(member_int32, {0, 0, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("(int32_t MyClass::*) 0x0", SyncFormatValue(null_member_ptr, opts));
 
   // Regular pointer with types forced on.
-  FormatValueOptions type_opts;
-  type_opts.verbosity = FormatValueOptions::Verbosity::kAllTypes;
+  FormatExprValueOptions type_opts;
+  type_opts.verbosity = FormatExprValueOptions::Verbosity::kAllTypes;
   ExprValue good_member_ptr(member_int32, {0x34, 0x12, 0, 0, 0, 0, 0, 0});
   EXPECT_EQ("(int32_t MyClass::*) 0x1234",
             SyncFormatValue(good_member_ptr, type_opts));
