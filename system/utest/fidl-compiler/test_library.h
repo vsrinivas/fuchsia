@@ -126,6 +126,10 @@ public:
         return error_reporter_.warnings();
     }
 
+    const std::vector<fidl::flat::Decl*> declaration_order() const {
+        return library_->declaration_order_;
+    }
+
 protected:
     fidl::SourceFile source_file_;
     fidl::ErrorReporter error_reporter_;
