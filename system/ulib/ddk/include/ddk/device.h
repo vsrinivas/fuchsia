@@ -224,6 +224,9 @@ typedef struct zx_protocol_device {
     // The txn provided to respond to the message is only valid for
     // the duration of the message() call.  It must not be cached
     // and used later.
+    //
+    // If this method returns anything other than ZX_OK, the underlying
+    // connection is closed.
     zx_status_t (*message)(void* ctx, fidl_msg_t* msg, fidl_txn_t* txn);
 } zx_protocol_device_t;
 
