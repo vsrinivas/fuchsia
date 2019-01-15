@@ -7,6 +7,7 @@
 #include "mock_device.h"
 
 #include <lib/timekeeper/clock.h>
+#include <wlan/common/element_splitter.h>
 #include <wlan/mlme/client/channel_scheduler.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
@@ -25,6 +26,9 @@
 
 #include <cstring>
 
+#include "test_bss.h"
+#include "test_utils.h"
+
 namespace wlan {
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
@@ -33,6 +37,18 @@ namespace {
 
 const uint8_t kBeacon[] = {
     0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
+};
+
+const uint8_t kHiddenApBeacon[] = {
+    0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
+    0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+    0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+};
+
+const uint8_t kProbeResponse[] = {
+    0x50, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0x01, 0x02, 0x03, 0x04, 0x05, 0x06,
     0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x10, 0x00, 0x00, 0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
     0x64, 0x00, 0x01, 0x00, 0x00, 0x09, 0x74, 0x65, 0x73, 0x74, 0x20, 0x73, 0x73, 0x69, 0x64,
 };
@@ -47,13 +63,47 @@ class ScannerTest : public ::testing::Test {
    public:
     ScannerTest()
         : chan_sched_(&on_channel_handler_, &mock_dev_, mock_dev_.CreateTimer(1u)),
-          scanner_(&mock_dev_, &chan_sched_) {
+          scanner_(&mock_dev_, &chan_sched_, mock_dev_.CreateTimer(1u)) {
         mock_dev_.SetChannel(wlan_channel_t{.primary = 11, .cbw = CBW20});
     }
 
    protected:
     zx_status_t Start(wlan_mlme::ScanRequest&& req) {
         return scanner_.Start({std::move(req), fuchsia_wlan_mlme_MLMEOnScanResultOrdinal});
+    }
+
+    fbl::unique_ptr<wlan::Packet> CreatePacket(Span<const uint8_t> data) {
+        wlan_rx_info_t info;
+        info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
+        info.chan = {
+            .primary = 1,
+        };
+        info.rssi_dbm = -75;
+        info.snr_dbh = 30;
+
+        auto buffer = GetBuffer(data.size());
+        auto packet = fbl::make_unique<Packet>(std::move(buffer), data.size());
+        packet->CopyCtrlFrom(info);
+        memcpy(packet->mut_field<uint8_t*>(0), data.data(), data.size());
+        return packet;
+    }
+
+    void AssertScanResult(const MlmeMsg<wlan_mlme::ScanResult>& msg, common::MacAddr bssid) {
+        wlan_mlme::BSSDescription bss;
+        msg.body()->bss.Clone(&bss);
+
+        EXPECT_EQ(0, std::memcmp(bssid.byte, bss.bssid.data(), 6));
+        EXPECT_EQ(bss.ssid.size(), static_cast<size_t>(9));
+
+        const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
+        EXPECT_EQ(0, std::memcmp(ssid, bss.ssid.data(), sizeof(ssid)));
+        EXPECT_EQ(wlan_mlme::BSSTypes::INFRASTRUCTURE, bss.bss_type);
+        EXPECT_EQ(100u, bss.beacon_period);
+        EXPECT_EQ(1024u, bss.timestamp);
+        // Not checking for channel since DSSS Param Set IE is missing from sample beacon
+        EXPECT_EQ(-75, bss.rssi_dbm);
+        EXPECT_EQ(WLAN_RCPI_DBMH_INVALID, bss.rcpi_dbmh);
+        EXPECT_EQ(30, bss.rsni_dbh);
     }
 
     void AssertScanEnd(wlan_mlme::ScanResultCodes expected_code) {
@@ -73,10 +123,13 @@ class ScannerTest : public ::testing::Test {
 wlan_mlme::ScanRequest FakeScanRequest() {
     wlan_mlme::ScanRequest req{};
     req.txn_id = 123;
+    req.scan_type = wlan_mlme::ScanTypes::PASSIVE;
     req.channel_list.resize(0);
     req.channel_list->push_back(1);
     req.max_channel_time = 1u;
     req.ssid.resize(0);
+    std::memcpy(req.bssid.mutable_data(), kBssid1, 6);
+    req.probe_delay = 0;
     return req;
 }
 
@@ -152,23 +205,82 @@ TEST_F(ScannerTest, Timeout_NextChannel) {
     EXPECT_EQ(2u, mock_dev_.GetChannelNumber());
 }
 
-TEST_F(ScannerTest, ScanResponse) {
+TEST_F(ScannerTest, PassiveScanning) {
     ASSERT_EQ(ZX_OK, Start(FakeScanRequest()));
 
-    wlan_rx_info_t info;
-    info.valid_fields = WLAN_RX_INFO_VALID_RSSI | WLAN_RX_INFO_VALID_SNR;
-    info.chan = {
-        .primary = 1,
-    };
-    info.rssi_dbm = -75;
-    info.snr_dbh = 30;
+    // Verify that no ProbeRequest was sent
+    EXPECT_TRUE(mock_dev_.wlan_queue.empty());
 
-    auto buffer = GetBuffer(sizeof(kBeacon));
-    auto packet = fbl::make_unique<Packet>(std::move(buffer), sizeof(kBeacon));
-    packet->CopyCtrlFrom(info);
-    memcpy(packet->mut_field<uint8_t*>(0), kBeacon, sizeof(kBeacon));
+    // Mock receiving a beacon during scan. Verify that scan result is constructed.
+    auto packet = CreatePacket(kBeacon);
 
     chan_sched_.HandleIncomingFrame(std::move(packet));
+    chan_sched_.HandleTimeout();
+
+    auto results =
+        mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+    ASSERT_EQ(results.size(), 1ULL);
+    common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+    AssertScanResult(results[0], frame_bssid);
+
+    AssertScanEnd(wlan_mlme::ScanResultCodes::SUCCESS);
+}
+
+TEST_F(ScannerTest, ActiveScanning) {
+    auto req = FakeScanRequest();
+    req.scan_type = wlan_mlme::ScanTypes::ACTIVE;
+
+    ASSERT_EQ(ZX_OK, Start(std::move(req)));
+
+    // Verify that a probe request gets sent
+    ASSERT_EQ(mock_dev_.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*mock_dev_.wlan_queue.begin());
+    auto frame = TypeCheckWlanFrame<MgmtFrameView<ProbeRequest>>(pkt.pkt.get());
+
+    constexpr uint8_t expected[] = {
+        // Management header
+        0b01000000, 0b0,                     // frame control
+        0x00, 0x00,                          // duration
+        0xff, 0xff, 0xff, 0xff, 0xff, 0xff,  // addr1
+        0x94, 0x3c, 0x49, 0x49, 0x9f, 0x2d,  // addr2 (client address)
+        0xb7, 0xcd, 0x3f, 0xb0, 0x93, 0x01,  // addr3 (bssid)
+        0x10, 0x00,                          // sequence control
+        // Probe request body
+        0x00, 0x00,                           // ssid IE
+        0x01, 0x06, 12, 24, 48, 54, 96, 108,  // supported rates IE
+    };
+    EXPECT_RANGES_EQ(Span<const uint8_t>(frame.data(), frame.len()), expected);
+
+    // Mock receiving a probe response during scan. Verify that scan result is constructed.
+    auto packet = CreatePacket(kProbeResponse);
+
+    chan_sched_.HandleIncomingFrame(std::move(packet));
+    chan_sched_.HandleTimeout();
+
+    auto results =
+        mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
+    ASSERT_EQ(results.size(), 1ULL);
+    common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+    AssertScanResult(results[0], frame_bssid);
+
+    AssertScanEnd(wlan_mlme::ScanResultCodes::SUCCESS);
+}
+
+// Main objective of this test is to verify that if we receive a probe response from an AP and then
+// a beacon from the same AP that blanks out the SSID (as can happen in hidden AP), we keep the SSID
+// in the scan result.
+TEST_F(ScannerTest, BeaconFromHiddenAp) {
+    auto req = FakeScanRequest();
+    req.scan_type = wlan_mlme::ScanTypes::ACTIVE;
+
+    ASSERT_EQ(ZX_OK, Start(std::move(req)));
+
+    // Mock receiving a probe response and then a beacon during scan.
+    auto probe_resp_pkt = CreatePacket(kProbeResponse);
+    auto beacon_pkt = CreatePacket(kHiddenApBeacon);
+
+    chan_sched_.HandleIncomingFrame(std::move(probe_resp_pkt));
+    chan_sched_.HandleIncomingFrame(std::move(beacon_pkt));
 
     mock_dev_.SetTime(zx::time(1));
     chan_sched_.HandleTimeout();
@@ -176,23 +288,28 @@ TEST_F(ScannerTest, ScanResponse) {
     auto results =
         mock_dev_.GetServiceMsgs<wlan_mlme::ScanResult>(fuchsia_wlan_mlme_MLMEOnScanResultOrdinal);
     ASSERT_EQ(results.size(), 1ULL);
-    wlan_mlme::BSSDescription bss;
-    results[0].body()->bss.Clone(&bss);
-
-    EXPECT_EQ(0, std::memcmp(kBeacon + 16, bss.bssid.data(), 6));
-    EXPECT_EQ(bss.ssid.size(), static_cast<size_t>(9));
-
-    const uint8_t ssid[] = {'t', 'e', 's', 't', ' ', 's', 's', 'i', 'd'};
-    EXPECT_EQ(0, std::memcmp(ssid, bss.ssid.data(), sizeof(ssid)));
-    EXPECT_EQ(wlan_mlme::BSSTypes::INFRASTRUCTURE, bss.bss_type);
-    EXPECT_EQ(100u, bss.beacon_period);
-    EXPECT_EQ(1024u, bss.timestamp);
-    // EXPECT_EQ(1u, bss->channel);  // IE missing. info.chan != bss->channel.
-    EXPECT_EQ(-75, bss.rssi_dbm);
-    EXPECT_EQ(WLAN_RCPI_DBMH_INVALID, bss.rcpi_dbmh);
-    EXPECT_EQ(30, bss.rsni_dbh);
+    common::MacAddr frame_bssid({0x01, 0x02, 0x03, 0x04, 0x05, 0x06});
+    AssertScanResult(results[0], frame_bssid);
 
     AssertScanEnd(wlan_mlme::ScanResultCodes::SUCCESS);
+}
+
+TEST_F(ScannerTest, ActiveScanningWithProbeDelay) {
+    auto req = FakeScanRequest();
+    req.scan_type = wlan_mlme::ScanTypes::ACTIVE;
+    req.probe_delay = 1;
+
+    ASSERT_EQ(ZX_OK, Start(std::move(req)));
+
+    // Verify that no probe request was sent
+    EXPECT_TRUE(mock_dev_.wlan_queue.empty());
+
+    scanner_.HandleTimeout();
+
+    // Verify that a probe request gets sent
+    ASSERT_EQ(mock_dev_.wlan_queue.size(), static_cast<size_t>(1));
+    auto pkt = std::move(*mock_dev_.wlan_queue.begin());
+    TypeCheckWlanFrame<MgmtFrameView<ProbeRequest>>(pkt.pkt.get());
 }
 
 }  // namespace

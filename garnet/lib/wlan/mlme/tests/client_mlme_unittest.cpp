@@ -39,15 +39,6 @@ struct ClientTest : public ::testing::Test {
         TriggerTimeout(ObjectTarget::kChannelScheduler);
     }
 
-    template <typename FV> FV TypeCheckWlanFrame(Packet* pkt) {
-        EXPECT_EQ(pkt->peer(), Packet::Peer::kWlan);
-        auto type_checked_frame = FV::CheckType(pkt);
-        EXPECT_TRUE(type_checked_frame);
-        auto frame = type_checked_frame.CheckLength();
-        EXPECT_TRUE(frame);
-        return frame;
-    }
-
     zx_status_t SendNullDataFrame() {
         auto frame = CreateNullDataFrame();
         if (frame.IsEmpty()) { return ZX_ERR_NO_RESOURCES; }

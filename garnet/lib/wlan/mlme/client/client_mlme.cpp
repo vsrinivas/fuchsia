@@ -53,7 +53,18 @@ zx_status_t ClientMlme::Init() {
     }
     chan_sched_.reset(new ChannelScheduler(&on_channel_handler_, device_, std::move(timer)));
 
-    scanner_.reset(new Scanner(device_, chan_sched_.get()));
+    fbl::unique_ptr<Timer> scanner_timer;
+    ObjectId scanner_timer_id;
+    scanner_timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    scanner_timer_id.set_target(to_enum_type(ObjectTarget::kScanner));
+    status =
+        device_->GetTimer(ToPortKey(PortKeyType::kMlme, scanner_timer_id.val()), &scanner_timer);
+    if (status != ZX_OK) {
+        errorf("could not create scanner timer: %d\n", status);
+        return status;
+    }
+
+    scanner_.reset(new Scanner(device_, chan_sched_.get(), std::move(scanner_timer)));
     return status;
 }
 
@@ -61,6 +72,9 @@ zx_status_t ClientMlme::HandleTimeout(const ObjectId id) {
     switch (id.target()) {
     case to_enum_type(ObjectTarget::kChannelScheduler):
         chan_sched_->HandleTimeout();
+        break;
+    case to_enum_type(ObjectTarget::kScanner):
+        scanner_->HandleTimeout();
         break;
     case to_enum_type(ObjectTarget::kStation):
         if (sta_ != nullptr) {
@@ -245,6 +259,8 @@ void ClientMlme::OnChannelHandlerImpl::HandleOnChannelFrame(fbl::unique_ptr<Pack
     if (auto mgmt_frame = MgmtFrameView<>::CheckType(packet.get()).CheckLength()) {
         if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
             mlme_->scanner_->HandleBeacon(bcn_frame);
+        } else if (auto probe_frame = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
+            mlme_->scanner_->HandleProbeResponse(probe_frame);
         }
     }
 

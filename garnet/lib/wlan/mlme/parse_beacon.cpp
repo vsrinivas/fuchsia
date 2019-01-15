@@ -80,6 +80,10 @@ wlan_channel_t DeriveChannel(uint8_t rx_channel, std::optional<uint8_t> dsss_cha
     return chan;
 }
 
+static bool IsBlankSsid(Span<const uint8_t> ssid) {
+    return std::all_of(ssid.cbegin(), ssid.cend(), [](auto c) { return c == '\0'; });
+}
+
 static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
                                   wlan_mlme::BSSDescription* bss_desc,
                                   std::optional<uint8_t>* dsss_chan,
@@ -89,6 +93,12 @@ static void DoParseBeaconElements(Span<const uint8_t> ies, uint8_t rx_channel,
         switch (id) {
         case element_id::kSsid:
             if (auto ssid = common::ParseSsid(raw_body)) {
+                // Don't update if SSID for BSS description is already populated and the SSID
+                // received from the beacon is one that's blanked out (SSID is empty, or full of 0
+                // bytes). This can happen if we receive a probe response from a hidden AP (which
+                // shows the SSID), and then receive a beacon from the same AP (which blanks out
+                // the SSID).
+                if (!bss_desc->ssid.empty() && IsBlankSsid(*ssid)) { continue; }
                 bss_desc->ssid.assign(ssid->begin(), ssid->end());
             }
             break;

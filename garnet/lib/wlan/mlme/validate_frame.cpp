@@ -524,7 +524,7 @@ static void ValidateFrameWithElements(BufferReader* r,
                                       const char* frame_name,
                                       Span<const AllowedElement> allowed_elements,
                                       ErrorAccumulator* errors) {
-    if (r->Read(fixed_header_len).empty()) {
+    if (fixed_header_len != 0 && r->Read(fixed_header_len).empty()) {
         errors->Add(r->ReadBytes(), "Expected a %s header but the frame is too short", frame_name);
         return;
     }
@@ -566,8 +566,8 @@ static void ValidateMgmtFrame(BufferReader* r, ErrorAccumulator* errors) {
                                   kReassocRespElements, errors);
         break;
     case kProbeRequest:
-        ValidateFrameWithElements(r, sizeof(ProbeRequest), "Probe Request",
-                                  kProbeReqElements, errors);
+        ValidateFrameWithElements(r, ProbeRequest::max_len(), "Probe Request", kProbeReqElements,
+                                  errors);
         break;
     case kProbeResponse:
         ValidateFrameWithElements(r, sizeof(ProbeResponse), "Probe Response",

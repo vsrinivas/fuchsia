@@ -56,6 +56,8 @@ struct AssocContext {
     wlan_assoc_ctx_t ToDdk() const;
 };
 
+const wlan_band_info_t* FindBand(const wlan_info_t& ifc_info, bool is_5ghz);
+
 std::optional<std::vector<SupportedRate>> BuildAssocReqSuppRates(
     const std::vector<uint8_t>& ap_basic_rate_set,
     const std::vector<uint8_t>& ap_op_rate_set,

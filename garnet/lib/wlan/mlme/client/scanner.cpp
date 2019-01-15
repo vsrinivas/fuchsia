@@ -4,10 +4,15 @@
 
 #include <wlan/mlme/client/scanner.h>
 
+#include <wlan/common/buffer_writer.h>
+#include <wlan/common/channel.h>
 #include <wlan/common/logging.h>
+#include <wlan/common/write_element.h>
+#include <wlan/mlme/assoc_context.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_frame.h>
 #include <wlan/mlme/packet.h>
+#include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
 #include <wlan/mlme/timer.h>
@@ -53,8 +58,12 @@ static zx_status_t SendResults(DeviceInterface* device, uint64_t txn_id,
 
 // TODO(NET-500): The way we handle Beacons and ProbeResponses in here is kinda gross. Refactor.
 
-Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched)
-    : off_channel_handler_(this), device_(device), chan_sched_(chan_sched) {}
+Scanner::Scanner(DeviceInterface* device, ChannelScheduler* chan_sched,
+                 fbl::unique_ptr<Timer> timer)
+    : off_channel_handler_(this),
+      device_(device),
+      chan_sched_(chan_sched),
+      timer_(std::move(timer)) {}
 
 zx_status_t Scanner::HandleMlmeScanReq(const MlmeMsg<wlan_mlme::ScanRequest>& req) {
     return Start(req);
@@ -122,21 +131,31 @@ zx_status_t Scanner::StartHwScan() {
 }
 
 void Scanner::OffChannelHandlerImpl::BeginOffChannelTime() {
-    // Don't do anything for now. For active scans, we should send a probe request,
-    // or set a timer to send a probe request.
-    // TODO(NET-1294)
+    if (scanner_->req_->scan_type == wlan_mlme::ScanTypes::ACTIVE) {
+        if (scanner_->req_->probe_delay == 0) {
+            scanner_->SendProbeRequest(scanner_->ScanChannel());
+        } else {
+            scanner_->timer_->CancelTimer();
+            auto deadline = scanner_->timer_->Now() + WLAN_TU(scanner_->req_->probe_delay);
+            scanner_->timer_->SetTimer(deadline);
+        }
+    }
 }
 
 void Scanner::OffChannelHandlerImpl::HandleOffChannelFrame(fbl::unique_ptr<Packet> pkt) {
     if (auto mgmt_frame = MgmtFrameView<>::CheckType(pkt.get()).CheckLength()) {
         if (auto bcn_frame = mgmt_frame.CheckBodyType<Beacon>().CheckLength()) {
             scanner_->HandleBeacon(bcn_frame);
+        } else if (auto probe_frame = mgmt_frame.CheckBodyType<ProbeResponse>().CheckLength()) {
+            scanner_->HandleProbeResponse(probe_frame);
         }
     }
 }
 
 bool Scanner::OffChannelHandlerImpl::EndOffChannelTime(bool interrupted,
                                                        OffChannelRequest* next_req) {
+    scanner_->timer_->CancelTimer();
+
     // If we were interrupted before the timeout ended, scan the channel again
     if (interrupted) {
         *next_req = scanner_->CreateOffChannelRequest();
@@ -173,6 +192,10 @@ wlan_channel_t Scanner::ScanChannel() const {
     };
 }
 
+void Scanner::HandleTimeout() {
+    SendProbeRequest(ScanChannel());
+}
+
 bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
     // Ignore all management frames when scanner is not running.
     if (!IsRunning()) { return true; }
@@ -192,12 +215,37 @@ bool Scanner::ShouldDropMgmtFrame(const MgmtFrameHeader& hdr) {
 
 void Scanner::HandleBeacon(const MgmtFrameView<Beacon>& frame) {
     debugfn();
-    if (!ShouldDropMgmtFrame(*frame.hdr())) { ProcessBeacon(frame); }
+    if (!ShouldDropMgmtFrame(*frame.hdr())) {
+        auto bssid = frame.hdr()->addr3;
+        auto rx_info = frame.rx_info();
+        auto bcn_frame = frame.NextFrame();
+        Span<const uint8_t> ie_chain = bcn_frame.body_data();
+
+        ProcessBeaconOrProbeResponse(bssid, *bcn_frame.hdr(), ie_chain, rx_info);
+    }
 }
 
-void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& mgmt_bcn_frame) {
+void Scanner::HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame) {
     debugfn();
-    auto bssid = mgmt_bcn_frame.hdr()->addr3;
+    if (!ShouldDropMgmtFrame(*frame.hdr())) {
+        auto bssid = frame.hdr()->addr3;
+        auto rx_info = frame.rx_info();
+        auto probe_resp_body = frame.NextFrame();
+        Span<const uint8_t> ie_chain = probe_resp_body.body_data();
+
+        Beacon beacon;
+        beacon.timestamp = probe_resp_body.hdr()->timestamp;
+        beacon.beacon_interval = probe_resp_body.hdr()->beacon_interval;
+        beacon.cap = probe_resp_body.hdr()->cap;
+
+        ProcessBeaconOrProbeResponse(bssid, beacon, ie_chain, rx_info);
+    }
+}
+
+void Scanner::ProcessBeaconOrProbeResponse(const common::MacAddr bssid, const Beacon& beacon,
+                                           Span<const uint8_t> ie_chain,
+                                           const wlan_rx_info_t* rx_info) {
+    debugfn();
 
     auto it = current_bss_.find(bssid.ToU64());
     if (it == current_bss_.end()) {
@@ -211,14 +259,61 @@ void Scanner::ProcessBeacon(const MgmtFrameView<Beacon>& mgmt_bcn_frame) {
                  .first;
     }
 
-    auto rx_info = mgmt_bcn_frame.rx_info();
-    auto bcn_frame = mgmt_bcn_frame.NextFrame();
-    Span<const uint8_t> ie_chain = bcn_frame.body_data();
-    zx_status_t status = it->second.ProcessBeacon(*bcn_frame.hdr(), ie_chain, rx_info);
+    zx_status_t status = it->second.ProcessBeacon(beacon, ie_chain, rx_info);
     if (status != ZX_OK) {
         debugbcn("Failed to handle beacon (err %3d): BSSID %s timestamp: %15" PRIu64 "\n", status,
-                 MACSTR(bssid), bcn_frame.hdr()->timestamp);
+                 MACSTR(bssid), beacon.timestamp);
     }
+}
+
+void Scanner::SendProbeRequest(wlan_channel_t channel) {
+    debugfn();
+
+    constexpr size_t reserved_ie_len = 256;
+    constexpr size_t max_frame_len =
+        MgmtFrameHeader::max_len() + ProbeRequest::max_len() + reserved_ie_len;
+    auto packet = GetWlanPacket(max_frame_len);
+    if (packet == nullptr) {
+        errorf("scanner: error allocating buffer for ProbeRequest\n");
+        return;
+    }
+
+    BufferWriter w(*packet);
+    auto mgmt_hdr = w.Write<MgmtFrameHeader>();
+    mgmt_hdr->fc.set_type(FrameType::kManagement);
+    mgmt_hdr->fc.set_subtype(ManagementSubtype::kProbeRequest);
+    SetSeqNo(mgmt_hdr, &seq_);
+
+    const common::MacAddr& mymac = device_->GetState()->address();
+    const common::MacAddr& bssid = common::MacAddr(req_->bssid.data());
+    mgmt_hdr->addr1 = common::kBcastMac;
+    mgmt_hdr->addr2 = mymac;
+    mgmt_hdr->addr3 = bssid;
+
+    BufferWriter elem_w(w.RemainingBuffer());
+    common::WriteSsid(&elem_w, {req_->ssid.data(), req_->ssid.size()});
+
+    auto band_info = FindBand(device_->GetWlanInfo().ifc_info, common::Is5Ghz(channel));
+    ZX_DEBUG_ASSERT(band_info != nullptr);
+    if (band_info) {
+        SupportedRate rates[WLAN_BASIC_RATES_MAX_LEN];
+        uint8_t num_rates = 0;
+        for (uint8_t rate : band_info->basic_rates) {
+            if (rate == 0) { break; }
+            rates[num_rates] = SupportedRate(band_info->basic_rates[num_rates]);
+            num_rates++;
+        }
+        ZX_DEBUG_ASSERT(num_rates > 0);
+        RatesWriter rates_writer({rates, num_rates});
+        rates_writer.WriteSupportedRates(&elem_w);
+        rates_writer.WriteExtendedSupportedRates(&elem_w);
+    } else {
+        warnf("scanner: no rates found for chan %u; skip sending ProbeRequest\n", channel.primary);
+        return;
+    }
+
+    packet->set_len(w.WrittenBytes() + elem_w.WrittenBytes());
+    device_->SendWlan(std::move(packet));
 }
 
 OffChannelRequest Scanner::CreateOffChannelRequest() {

@@ -63,6 +63,15 @@ static constexpr uint8_t kCipherOui[3] = {0x96, 0x85, 0x74};
 static constexpr uint8_t kCipherSuiteType = 0x11;
 static const AssocContext kAssocCtx = {};
 
+template <typename FV> FV TypeCheckWlanFrame(Packet* pkt) {
+    EXPECT_EQ(pkt->peer(), Packet::Peer::kWlan);
+    auto type_checked_frame = FV::CheckType(pkt);
+    EXPECT_TRUE(type_checked_frame);
+    auto frame = type_checked_frame.CheckLength();
+    EXPECT_TRUE(frame);
+    return frame;
+}
+
 ::fuchsia::wlan::mlme::BSSDescription CreateBssDescription(bool rsn,
                                                            wlan_channel_t chan = kBssChannel);
 MlmeMsg<::fuchsia::wlan::mlme::ScanRequest> CreateScanRequest(uint32_t max_channel_time);

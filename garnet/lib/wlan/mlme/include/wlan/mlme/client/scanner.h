@@ -7,6 +7,7 @@
 
 #include <wlan/mlme/client/bss.h>
 #include <wlan/mlme/client/channel_scheduler.h>
+#include <wlan/mlme/sequence.h>
 
 #include <fuchsia/wlan/mlme/cpp/fidl.h>
 
@@ -27,7 +28,7 @@ template <typename T> class MlmeMsg;
 
 class Scanner {
    public:
-    Scanner(DeviceInterface* device, ChannelScheduler* chan_sched);
+    Scanner(DeviceInterface* device, ChannelScheduler* chan_sched, fbl::unique_ptr<Timer> timer);
     virtual ~Scanner() {}
 
     zx_status_t Start(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
@@ -36,8 +37,11 @@ class Scanner {
     bool IsRunning() const;
     wlan_channel_t ScanChannel() const;
 
+    void HandleTimeout();
+
     zx_status_t HandleMlmeScanReq(const MlmeMsg<::fuchsia::wlan::mlme::ScanRequest>& req);
     void HandleBeacon(const MgmtFrameView<Beacon>& frame);
+    void HandleProbeResponse(const MgmtFrameView<ProbeResponse>& frame);
     void HandleHwScanAborted();
     void HandleHwScanComplete();
 
@@ -55,7 +59,9 @@ class Scanner {
     zx_status_t StartHwScan();
 
     bool ShouldDropMgmtFrame(const MgmtFrameHeader& hdr);
-    void ProcessBeacon(const MgmtFrameView<Beacon>& bcn_frame);
+    void ProcessBeaconOrProbeResponse(const common::MacAddr bssid, const Beacon& beacon,
+                                      Span<const uint8_t> ie_chain, const wlan_rx_info_t* rx_info);
+    void SendProbeRequest(wlan_channel_t channel);
     OffChannelRequest CreateOffChannelRequest();
     void SendResultsAndReset();
 
@@ -67,6 +73,8 @@ class Scanner {
 
     std::unordered_map<uint64_t, Bss> current_bss_;
     ChannelScheduler* chan_sched_;
+    fbl::unique_ptr<Timer> timer_;
+    Sequence seq_;
 };
 
 }  // namespace wlan

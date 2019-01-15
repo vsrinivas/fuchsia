@@ -40,15 +40,6 @@ struct Context {
         ap->HandleTimeout(timer_id);
     }
 
-    template <typename FV> FV TypeCheckWlanFrame(Packet* pkt) {
-        EXPECT_EQ(pkt->peer(), Packet::Peer::kWlan);
-        auto type_checked_frame = FV::CheckType(pkt);
-        EXPECT_TRUE(type_checked_frame);
-        auto frame = type_checked_frame.CheckLength();
-        EXPECT_TRUE(frame);
-        return frame;
-    }
-
     void SendClientAuthReqFrame() { ap->HandleFramePacket(CreateAuthReqFrame(client_addr)); }
 
     void SendClientDeauthFrame() { ap->HandleFramePacket(CreateDeauthFrame(client_addr)); }
@@ -272,7 +263,7 @@ TEST_F(ApInfraBssTest, Authenticate_SmeRefuses) {
     // Verify that authentication response frame for client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.pkt.get());
+    auto frame = TypeCheckWlanFrame<MgmtFrameView<Authentication>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
@@ -461,7 +452,7 @@ TEST_F(ApInfraBssTest, Associate_SmeRefuses) {
     // Verify association response frame for the client is a refusal
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.pkt.get());
+    auto frame = TypeCheckWlanFrame<MgmtFrameView<AssociationResponse>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
@@ -657,7 +648,7 @@ TEST_F(ApInfraBssTest, Exchange_Eapol_Frames) {
     // Verify EAPOL frame was sent.
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
+    auto frame = TypeCheckWlanFrame<DataFrameView<LlcHeader>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, ctx.client_addr.byte, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
@@ -727,7 +718,7 @@ TEST_F(ApInfraBssTest, MlmeDeauthReqWhileAssociated) {
     // Verify deauthenticate frame was sent
     ASSERT_EQ(device.wlan_queue.size(), static_cast<size_t>(1));
     auto pkt = std::move(*device.wlan_queue.begin());
-    auto frame = ctx.TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.pkt.get());
+    auto frame = TypeCheckWlanFrame<MgmtFrameView<Deauthentication>>(pkt.pkt.get());
     EXPECT_EQ(std::memcmp(frame.hdr()->addr1.byte, kClientAddress, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr2.byte, kBssid1, 6), 0);
     EXPECT_EQ(std::memcmp(frame.hdr()->addr3.byte, kBssid1, 6), 0);
