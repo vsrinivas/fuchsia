@@ -287,12 +287,18 @@ void CodecAdapterH264::CoreCodecStopStream() {
     // We know there won't be any new queuing of input, so once this posted work
     // runs, we know all previously-queued ProcessInput() calls have returned.
     PostToInputProcessingThread([this, &stop_input_processing_condition] {
+      std::list<CodecInputItem> leftover_input_items;
       {  // scope lock
         std::lock_guard<std::mutex> lock(lock_);
         ZX_DEBUG_ASSERT(is_cancelling_input_processing_);
-        input_queue_.clear();
+        leftover_input_items = std::move(input_queue_);
         is_cancelling_input_processing_ = false;
       }  // ~lock
+      for (auto& input_item : leftover_input_items) {
+        if (input_item.is_packet()) {
+          events_->onCoreCodecInputPacketDone(std::move(input_item.packet()));
+        }
+      }
       stop_input_processing_condition.notify_all();
     });
     while (is_cancelling_input_processing_) {
