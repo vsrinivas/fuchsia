@@ -203,15 +203,17 @@ int UsbVirtualBus::Thread() {
                     list_add_tail(&completed, &device_req_int->node);
 
                     offset += length;
-                    if (offset < req->header.length) {
-                        ep->req_offset = offset;
-                    } else {
+                    if (offset == req->header.length ||
+                        // Short packet in the IN direction signals end of transfer.
+                        (!out && device_req->header.length < ep->max_packet_size)) {
                         list_delete(&req_int->node);
                         usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
                         req->response.status = ZX_OK;
                         req->response.actual = length;
                         list_add_tail(&completed, &req_int->node);
                         ep->req_offset = 0;
+                    } else {
+                        ep->req_offset = offset;
                     }
                 } else {
                     break;
@@ -415,6 +417,13 @@ zx_status_t UsbVirtualBus::UsbDciSetInterface(const usb_dci_interface_t* dci_int
 
 zx_status_t UsbVirtualBus::UsbDciConfigEp(const usb_endpoint_descriptor_t* ep_desc,
                                           const usb_ss_ep_comp_descriptor_t* ss_comp_desc) {
+    uint8_t index = EpAddressToIndex(ep_desc->bEndpointAddress);
+    if (index >= USB_MAX_EPS) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    usb_virtual_ep_t* ep = &eps_[index];
+    ep->max_packet_size = usb_ep_max_packet(ep_desc);
     return ZX_OK;
 }
 
