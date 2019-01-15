@@ -2,19 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <gpt/gpt.h>
-#include <lib/cksum.h>
-#include <zircon/syscalls.h> // for zx_cprng_draw
-#include <zircon/device/block.h>
 #include <assert.h>
 #include <errno.h>
+#include <gpt/gpt.h>
+#include <gpt/guid.h>
 #include <inttypes.h>
+#include <lib/cksum.h>
 #include <stdbool.h>
 #include <stddef.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/param.h>
+#include <zircon/device/block.h>
+#include <zircon/syscalls.h> // for zx_cprng_draw
 
 #include "gpt/gpt.h"
 
@@ -34,16 +35,6 @@ struct mbr_partition_t {
     uint8_t chs_last[3];
     uint32_t lba;
     uint32_t sectors;
-};
-
-// Since the human-readable representation of a GUID is the following format,
-// ordered little-endian, it is useful to group a GUID into these
-// appropriately-sized groups.
-struct guid_t {
-    uint32_t data1;
-    uint16_t data2;
-    uint16_t data3;
-    uint8_t data4[8];
 };
 
 static_assert(sizeof(gpt_header_t) == GPT_HEADER_SIZE, "unexpected gpt header size");
@@ -181,52 +172,22 @@ void uint8_to_guid_string(char* dst, const uint8_t* src) {
 }
 
 const char* gpt_guid_to_type(const char* guid) {
-    if (!strcmp("FE3A2A5D-4F32-41A7-B725-ACCC3285A309", guid)) {
-        return "cros kernel";
-    } else if (!strcmp("3CB8E202-3B7E-47DD-8A3C-7FF2A13CFCEC", guid)) {
-        return "cros rootfs";
-    } else if (!strcmp("2E0A753D-9E48-43B0-8337-B15192CB1B5E", guid)) {
-        return "cros reserved";
-    } else if (!strcmp("CAB6E88E-ABF3-4102-A07A-D4BB9BE3C1D3", guid)) {
-        return "cros firmware";
-    } else if (!strcmp("C12A7328-F81F-11D2-BA4B-00A0C93EC93B", guid)) {
-        return "efi system";
-    } else if (!strcmp("EBD0A0A2-B9E5-4433-87C0-68B6B72699C7", guid)) {
-        return "data";
-    } else if (!strcmp("21686148-6449-6E6F-744E-656564454649", guid)) {
-        return "bios";
-    } else if (!strcmp(GUID_SYSTEM_STRING, guid)) {
-        return "fuchsia-system";
-    } else if (!strcmp(GUID_DATA_STRING, guid)) {
-        return "fuchsia-data";
-    } else if (!strcmp(GUID_INSTALL_STRING, guid)) {
-        return "fuchsia-install";
-    } else if (!strcmp(GUID_BLOB_STRING, guid)) {
-        return "fuchsia-blob";
-    } else if (!strcmp(GUID_FVM_STRING, guid)) {
-        return "fuchsia-fvm";
-    } else if (!strcmp(GUID_ZIRCON_A_STRING, guid)) {
-        return "zircon-a";
-    } else if (!strcmp(GUID_ZIRCON_B_STRING, guid)) {
-        return "zircon-b";
-    } else if (!strcmp(GUID_ZIRCON_R_STRING, guid)) {
-        return "zircon-r";
-    } else if (!strcmp(GUID_SYS_CONFIG_STRING, guid)) {
-        return "sys-config";
-    } else if (!strcmp(GUID_FACTORY_CONFIG_STRING, guid)) {
-        return "factory";
-    } else if (!strcmp(GUID_BOOTLOADER_STRING, guid)) {
-        return "bootloader";
-    } else if (!strcmp(GUID_VBMETA_A_STRING, guid)) {
-        return "vbmeta_a";
-    } else if (!strcmp(GUID_VBMETA_B_STRING, guid)) {
-        return "vbmeta_b";
-    } else {
-        return "unknown";
-    }
+    return gpt::KnownGuid::GuidStrToName(guid);
 }
 
 __END_CDECLS
+
+bool IsPartitionVisible(const gpt_partition_t* partition) {
+    return !((partition->flags & kFlagHidden) == kFlagHidden);
+}
+
+void SetPartitionVisibility(gpt_partition_t* partition, bool visible) {
+    if (visible) {
+        partition->flags &= ~kFlagHidden;
+    } else {
+        partition->flags |= kFlagHidden;
+    }
+}
 
 zx_status_t GptDevice::FinalizeAndSync(bool persist) {
 
@@ -630,6 +591,99 @@ zx_status_t GptDevice::RemovePartition(const uint8_t* guid) {
 
 zx_status_t GptDevice::RemoveAllPartitions() {
     memset(partitions_, 0, sizeof(partitions_));
+    return ZX_OK;
+}
+
+gpt_partition_t* GptDevice::GetPartition(uint32_t partition_index) const {
+    if (partition_index >= kPartitionCount) {
+        return nullptr;
+    }
+
+    return partitions_[partition_index];
+}
+
+zx_status_t GptDevice::SetPartitionType(uint32_t partition_index, const uint8_t* type) {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    memcpy(p->type, type, GPT_GUID_LEN);
+    return ZX_OK;
+}
+
+zx_status_t GptDevice::SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    memcpy(p->guid, guid, GPT_GUID_LEN);
+    return ZX_OK;
+}
+
+zx_status_t GptDevice::SetPartitionVisibility(uint32_t partition_index, bool visible) {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+    gpt::SetPartitionVisibility(p, visible);
+
+    return ZX_OK;
+}
+
+zx_status_t GptDevice::SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    zx_status_t ret;
+    uint64_t block_start, block_end;
+    if ((ret = Range(&block_start, &block_end)) != ZX_OK) {
+        return ret;
+    }
+
+    if ((start < block_start) || (end > block_end) || (start >= end)) {
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    for (uint32_t idx = 0; idx < kPartitionCount; idx++) {
+        // skip this partition and non-existent partitions
+        if ((idx == partition_index) || (GetPartition(idx) == NULL)) {
+            continue;
+        }
+
+        // skip partitions we don't intersect
+        if ((start > GetPartition(idx)->last) || (end < GetPartition(idx)->first)) {
+            continue;
+        }
+
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    p->first = start;
+    p->last = end;
+    return ZX_OK;
+}
+
+zx_status_t GptDevice::GetPartitionFlags(uint32_t partition_index, uint64_t* flags) const {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    *flags = p->flags;
+    return ZX_OK;
+}
+
+// TODO(auradkar): flags are unckecked for invalid flags
+zx_status_t GptDevice::SetPartitionFlags(uint32_t partition_index, uint64_t flags) {
+    gpt_partition_t* p = GetPartition(partition_index);
+    if (p == nullptr) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
+
+    p->flags = flags;
     return ZX_OK;
 }
 

@@ -3,22 +3,28 @@
 // found in the LICENSE file.
 
 #include <limits.h>
+#include <time.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 
 bool gUseRamDisk = true;
+unsigned int gRandSeed = 1;
 char gDevPath[PATH_MAX];
 
 int main(int argc, char** argv) {
+    gRandSeed = static_cast<unsigned int>(time(nullptr));
     for (int i = 1; i < argc; i++) {
         if (!strcmp(argv[i], "-d") && (i + 1 < argc)) {
             snprintf(gDevPath, sizeof(gDevPath), "%s", argv[i + 1]);
             gUseRamDisk = false;
+        } else if (!strcmp(argv[i], "-s") && (i + 1 < argc)) {
+            gRandSeed = static_cast<unsigned int>(strtoul(argv[i + 1], NULL, 0));
         } else {
             // Ignore options we don't recognize. See ulib/unittest/README.md.
             continue;
         }
     }
+    srand(gRandSeed);
 
     return unittest_run_all_tests(argc, argv) ? 0 : -1;
 }

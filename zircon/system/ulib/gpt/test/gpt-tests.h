@@ -11,6 +11,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
 #include <gpt/gpt.h>
+#include <gpt/guid.h>
 
 namespace {
 
@@ -24,8 +25,7 @@ static_assert(kGptMetadataSize <= kAccptableMinimumSize,
 
 class LibGptTest {
 public:
-    LibGptTest(bool use_ramdisk)
-        : use_ramdisk_(use_ramdisk) {}
+    LibGptTest(bool use_ramdisk) : use_ramdisk_(use_ramdisk) {}
     ~LibGptTest() {}
 
     // Creates a ramdisk and initialize GPT on it.
@@ -35,34 +35,22 @@ public:
     bool Teardown();
 
     // Returns total size of the disk under test.
-    uint64_t GetDiskSize() const {
-        return blk_size_ * blk_count_;
-    }
+    uint64_t GetDiskSize() const { return blk_size_ * blk_count_; }
 
     // Return block size of the disk under test.
-    uint32_t GetBlockSize() const {
-        return blk_size_;
-    }
+    uint32_t GetBlockSize() const { return blk_size_; }
 
     // Returns total number of block in the disk.
-    uint64_t GetBlockCount() const {
-        return blk_count_;
-    }
+    uint64_t GetBlockCount() const { return blk_count_; }
 
     // Return total number of block free in disk after GPT is created.
-    uint64_t GetUsableBlockCount() const {
-        return usable_last_block_ - usable_start_block_;
-    }
+    uint64_t GetUsableBlockCount() const { return usable_last_block_ - usable_start_block_; }
 
     // First block that is free to use after GPT is created.
-    uint64_t GetUsableStartBlock() const {
-        return usable_start_block_;
-    }
+    uint64_t GetUsableStartBlock() const { return usable_start_block_; }
 
     // Last block that is free to use after GPT is created.
-    uint64_t GetUsableLastBlock() const {
-        return usable_last_block_;
-    }
+    uint64_t GetUsableLastBlock() const { return usable_last_block_; }
 
     // Returns number of block GPT uses.
     uint64_t GptMetadataBlocksCount() const {
@@ -100,9 +88,7 @@ public:
     }
 
     // Get's a partition at index pindex.
-    gpt_partition_t* GetPartition(uint32_t pindex) const {
-        return gpt_->GetPartition(pindex);
-    }
+    gpt_partition_t* GetPartition(uint32_t pindex) const { return gpt_->GetPartition(pindex); }
 
     // Adds a partition
     zx_status_t AddPartition(const char* name, const uint8_t* type, const uint8_t* guid,
@@ -115,6 +101,36 @@ public:
 
     // removes all partitions.
     zx_status_t RemoveAllPartitions() { return gpt_->RemoveAllPartitions(); }
+
+    // wrapper around GptDevice's SetPartitionType
+    zx_status_t SetPartitionType(uint32_t partition_index, const uint8_t* type) {
+        return gpt_->SetPartitionType(partition_index, type);
+    };
+
+    // wrapper around GptDevice's SetPartitionGuid
+    zx_status_t SetPartitionGuid(uint32_t partition_index, const uint8_t* guid) {
+        return gpt_->SetPartitionGuid(partition_index, guid);
+    };
+
+    // wrapper around GptDevice's SetPartitionRange
+    zx_status_t SetPartitionRange(uint32_t partition_index, uint64_t start, uint64_t end) {
+        return gpt_->SetPartitionRange(partition_index, start, end);
+    }
+
+    // wrapper around GptDevice's SetPartitionVisibility
+    zx_status_t SetPartitionVisibility(uint32_t index, bool visible) {
+        return gpt_->SetPartitionVisibility(index, visible);
+    }
+
+    // wrapper around GptDevice's GetPartitionFlags
+    zx_status_t GetPartitionFlags(uint32_t index, uint64_t* flags) {
+        return gpt_->GetPartitionFlags(index, flags);
+    }
+
+    // wrapper around GptDevice's SetPartitionFlags
+    zx_status_t SetPartitionFlags(uint32_t index, uint64_t flags) {
+        return gpt_->SetPartitionFlags(index, flags);
+    }
 
 private:
     // Initialize a physical media.

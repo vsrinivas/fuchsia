@@ -6,6 +6,7 @@ library("gpt") {
   sources = [
     "cros.cpp",
     "gpt.cpp",
+    "guid.cpp",
   ]
   public_deps = [
     # <gpt/gpt.h> has #include <fbl/unique_ptr.h>.

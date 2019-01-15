@@ -2,10 +2,17 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-test("libgpt") {
+group("test") {
+  testonly = true
+  deps = [
+    ":gpt-unit",
+  ]
+}
+
+test("gpt-unit") {
   sources = [
-    "libgpt-tests.cpp",
-    "main.c",
+    "gpt-tests.cpp",
+    "main.cpp",
   ]
   deps = [
     "$zx/system/ulib/fbl",
