@@ -11,6 +11,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <zircon/syscalls.h>
 
 long long strtonum(const char *nptr, long long minval, long long maxval,
                    const char **errstr) {
@@ -52,10 +53,7 @@ void errc(int eval, int code, const char* fmt, ...) {
 }
 
 unsigned int arc4random(void) {
-  static atomic_bool random_init = false;
-  if (!random_init) {
-    srandom(time(NULL));
-    random_init = true;
-  }
-  return (unsigned int)random();
+  unsigned int data;
+  zx_cprng_draw(&data, sizeof(data));
+  return data;
 }

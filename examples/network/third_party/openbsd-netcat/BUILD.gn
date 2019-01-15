@@ -12,4 +12,6 @@ executable("nc") {
     "openbsd_compat.c",
     "openbsd_compat.h",
   ]
+
+  libs = [ "zircon" ]
 }
