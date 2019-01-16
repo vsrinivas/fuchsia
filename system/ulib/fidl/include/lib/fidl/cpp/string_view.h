@@ -12,6 +12,7 @@ namespace fidl {
 class StringView : public fidl_string_t {
 public:
     StringView() : fidl_string_t{} {}
+    StringView(uint64_t size, char* data) : fidl_string_t{size, data} {}
 
     uint64_t size() const { return fidl_string_t::size; }
     void set_size(uint64_t size) { fidl_string_t::size = size; }

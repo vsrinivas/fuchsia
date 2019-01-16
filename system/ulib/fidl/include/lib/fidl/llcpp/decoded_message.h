@@ -88,6 +88,12 @@ private:
     // Use the FIDL encoding tables for |FidlType| to walk the message and
     // destroy the handles it contains.
     void CloseHandles() {
+        // Using the coding table to single out boring types instead of checking
+        // |FidlType::MaxNumHandle|, to avoid the pathological case where a FIDL message has a
+        // vector of handles with max count limited at 0, but the user attaches some handles anyway.
+        if (!NeedsEncodeDecode<FidlType>::value) {
+            return;
+        }
 #ifdef __Fuchsia__
         if (bytes_.data()) {
             fidl_close_handles(FidlType::Type, bytes_.data(), nullptr);

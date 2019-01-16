@@ -28,7 +28,7 @@ MODULE_TYPE := usertest
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp \
-    $(LOCAL_DIR)/generated/fidl_llcpp_basic.cpp \
+    $(LOCAL_DIR)/generated/fidl_llcpp_basictypes.cpp \
     $(LOCAL_DIR)/basictypes_tests.cpp \
 
 MODULE_NAME := fidl-llcpp-interop-test
@@ -37,7 +37,9 @@ MODULE_FIDL_LIBS := \
     system/utest/fidl-llcpp-interop.basictypes \
 
 MODULE_STATIC_LIBS := \
+    system/ulib/async.cpp \
     system/ulib/async \
+    system/ulib/async-loop.cpp \
     system/ulib/async-loop \
     system/ulib/fbl \
     system/ulib/fidl \

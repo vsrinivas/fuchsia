@@ -17,7 +17,7 @@
 #include <zircon/syscalls.h>
 
 // Interface under test
-#include "generated/fidl_llcpp_basic.h"
+#include "generated/fidl_llcpp_basictypes.h"
 
 // C server implementation
 namespace internal_c {
@@ -265,7 +265,9 @@ bool SyncCallStructTest() {
         }
     }
     // perform call
-    zx_status_t status = test.ConsumeSimpleStruct(simple_struct, &out_status, &out_field);
+    zx_status_t status = test.ConsumeSimpleStruct(std::move(simple_struct),
+                                                  &out_status,
+                                                  &out_field);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);
     ASSERT_EQ(out_field, 123);
@@ -320,9 +322,10 @@ bool SyncCallerAllocateCallStructTest() {
     FIDL_ALIGNDECL uint8_t request_buf[512] = {};
     FIDL_ALIGNDECL uint8_t response_buf[512] = {};
     zx_status_t status = test.ConsumeSimpleStruct(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                                  std::move(simple_struct),
                                                   fidl::BytePart(response_buf,
                                                                  sizeof(response_buf)),
-                                                  simple_struct, &out_status, &out_field);
+                                                  &out_status, &out_field);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(out_status, ZX_OK);
     ASSERT_EQ(out_field, 123);
@@ -381,8 +384,9 @@ bool SyncCallerAllocateCallUnionTest() {
     FIDL_ALIGNDECL uint8_t request_buf[512] = {};
     FIDL_ALIGNDECL uint8_t response_buf[512] = {};
     zx_status_t status = test.ConsumeSimpleUnion(fidl::BytePart(request_buf, sizeof(request_buf)),
+                                                 simple_union,
                                                  fidl::BytePart(response_buf, sizeof(response_buf)),
-                                                 simple_union, &out_index, &out_field);
+                                                 &out_index, &out_field);
     ASSERT_EQ(status, ZX_OK);
     ASSERT_EQ(out_index, 1);
     ASSERT_EQ(out_field, 456);
@@ -397,10 +401,10 @@ bool SyncCallerAllocateCallUnionTest() {
 BEGIN_TEST_CASE(llcpp_basictypes_tests)
 RUN_NAMED_TEST_SMALL("raw channel call (passing struct)", RawChannelCallStructTest)
 RUN_NAMED_TEST_SMALL("raw channel call (passing union)", RawChannelCallUnionTest)
-RUN_NAMED_TEST_SMALL("sync call via generated binding (passing struct)", SyncCallStructTest)
-RUN_NAMED_TEST_SMALL("sync call via generated binding (passing union)", SyncCallUnionTest)
-RUN_NAMED_TEST_SMALL("sync call via generated binding (passing struct, caller supplying buffer)",
+RUN_NAMED_TEST_SMALL("generated binding (passing struct)", SyncCallStructTest)
+RUN_NAMED_TEST_SMALL("generated binding (passing union)", SyncCallUnionTest)
+RUN_NAMED_TEST_SMALL("generated binding (passing struct, caller allocating)",
                      SyncCallerAllocateCallStructTest)
-RUN_NAMED_TEST_SMALL("sync call via generated binding (passing union, caller supplying buffer)",
+RUN_NAMED_TEST_SMALL("generated binding (passing union, caller allocating)",
                      SyncCallerAllocateCallUnionTest)
 END_TEST_CASE(llcpp_basictypes_tests);

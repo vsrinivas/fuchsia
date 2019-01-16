@@ -5,6 +5,7 @@
 #ifndef LIB_FIDL_LLCPP_TRAITS_H_
 #define LIB_FIDL_LLCPP_TRAITS_H_
 
+#include <lib/fidl/internal.h>
 #include <lib/zx/object.h>
 #include <stdint.h>
 #include <type_traits>
@@ -20,7 +21,11 @@
 // |T::PrimarySize| is an uint32_t specifying the size in bytes of the inline part of the message.
 // |T::MaxOutOfLine| is an uint32_t specifying the upper bound on the out-of-line message size.
 //                   It is std::numeric_limits<uint32_t>::max() if |T| is unbounded.
-// |T::Type| is a fidl_type_t* pointing to the corresponding encoding table, if any.
+// |T::Type| is a fidl_type_t* pointing to the corresponding coding table, if any.
+//           If the encoding/decoding of |T| can be elided, |T::Type| is NULL.
+// If |T| is a non-empty request message of a FIDL transaction:
+// |T::ResponseType| resolves to the corresponding response message type, if the FIDL method calls
+//                   for a response. Otherwise, the definition does not exist.
 //
 
 namespace fidl {
@@ -62,6 +67,56 @@ template <typename E>
 struct IsFidlType<VectorView<E>> : public IsFidlType<E> {};
 
 // Code-gen will explicitly conform the generated FIDL structures to IsFidlType.
+
+template <typename FidlType>
+struct NeedsEncodeDecode {
+    // A FIDL type with no coding table definition does not need any encoding/decoding,
+    // as the in-memory representation of the type is identical to its on-wire representation.
+    // Sometimes, GCC knows that the value can never equal nullptr and it may complain
+    // that the comparison is always true. Just suppress the warning.
+#pragma GCC diagnostic push
+#pragma GCC diagnostic ignored "-Waddress"
+    static constexpr bool value = FidlType::Type != nullptr;
+#pragma GCC diagnostic pop
+};
+
+// Utility templates used internally by the llcpp binding.
+namespace internal {
+
+// C++ 14 compatible implementation of std::void_t.
+#if defined(__cplusplus) && __cplusplus >= 201703L
+template <typename... T>
+using void_t = std::void_t<T...>;
+#else
+template <typename... T>
+struct make_void { typedef void type; };
+template <typename... T>
+using void_t = typename make_void<T...>::type;
+#endif
+
+// A type trait that indicates if the given FidlType is a request message type that also
+// unambiguously declare a corresponding response message type.
+template <typename, typename = void_t<>>
+struct HasResponseType : std::false_type {};
+template <typename FidlType>
+struct HasResponseType<FidlType, void_t<typename FidlType::ResponseType>> : std::true_type {};
+
+// Calculates the maximum possible message size for a FIDL type,
+// clamped at the Zircon channel packet size.
+template <typename FidlType>
+constexpr uint32_t ClampedMessageSize() {
+    static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
+    uint64_t primary = ::fidl::FidlAlign(FidlType::PrimarySize);
+    uint64_t out_of_line = ::fidl::FidlAlign(FidlType::MaxOutOfLine);
+    uint64_t sum = primary + out_of_line;
+    if (sum > ZX_CHANNEL_MAX_MSG_BYTES) {
+        return ZX_CHANNEL_MAX_MSG_BYTES;
+    } else {
+        return static_cast<uint32_t>(sum);
+    }
+}
+
+}  // namespace internal
 
 }  // namespace fidl
 

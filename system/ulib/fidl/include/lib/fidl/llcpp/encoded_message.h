@@ -17,10 +17,42 @@
 
 #ifdef __Fuchsia__
 #include <lib/zx/channel.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 #endif
 
 namespace fidl {
+
+namespace internal {
+
+// When |MaxNumHandles| is zero, |handle_storage| is always NULL.
+// This way we avoid declaring a C array with zero number of elements.
+template <uint32_t MaxNumHandles, typename Enabled = void>
+class EncodedMessageHandleHolder;
+
+template <uint32_t MaxNumHandles>
+class EncodedMessageHandleHolder<MaxNumHandles, std::enable_if_t<(MaxNumHandles > 0)>> {
+protected:
+    constexpr static uint32_t kResolvedMaxHandles =
+        MaxNumHandles > ZX_CHANNEL_MAX_MSG_HANDLES
+            ? ZX_CHANNEL_MAX_MSG_HANDLES
+            : MaxNumHandles;
+
+    zx_handle_t* handle_storage() { return &handle_storage_[0]; }
+
+private:
+    zx_handle_t handle_storage_[kResolvedMaxHandles];
+};
+
+template <uint32_t MaxNumHandles>
+class EncodedMessageHandleHolder<MaxNumHandles, std::enable_if_t<(MaxNumHandles == 0)>> {
+protected:
+    constexpr static uint32_t kResolvedMaxHandles = 0;
+
+    zx_handle_t* handle_storage() { return nullptr; }
+};
+
+} // namespace internal
 
 // Holds an encoded FIDL message, that is, a byte array plus a handle table.
 //
@@ -33,14 +65,13 @@ namespace fidl {
 // Because this class does not own the underlying message buffer, the caller
 // must make sure the lifetime of this class does not extend over that of the buffer.
 template <typename FidlType>
-class EncodedMessage final {
+class EncodedMessage final : public internal::EncodedMessageHandleHolder<FidlType::MaxNumHandles> {
     static_assert(IsFidlType<FidlType>::value, "Only FIDL types allowed here");
     static_assert(FidlType::PrimarySize > 0, "Positive message size");
 
-    constexpr static uint32_t kResolvedNumHandles =
-        FidlType::MaxNumHandles > ZX_CHANNEL_MAX_MSG_HANDLES
-            ? ZX_CHANNEL_MAX_MSG_HANDLES
-            : FidlType::MaxNumHandles;
+    using Super = internal::EncodedMessageHandleHolder<FidlType::MaxNumHandles>;
+
+    constexpr static uint32_t kResolvedMaxHandles = Super::kResolvedMaxHandles;
 
 public:
     // Instantiates an empty buffer with no bytes or handles.
@@ -88,8 +119,7 @@ public:
     const HandlePart& handles() const { return handles_; }
 
     // Clears the contents of the EncodedMessage then invokes Callback
-    // to initialize the EncodedMessage in-place then returns the callback's
-    // result.
+    // to initialize the EncodedMessage in-place then returns the callback's result.
     //
     // |callback| is a callable object whose arguments are (BytePart&, HandlePart&).
     template <typename Callback>
@@ -105,6 +135,9 @@ public:
 
 private:
     void CloseHandles() {
+        if (kResolvedMaxHandles == 0) {
+            return;
+        }
         if (handles_.actual() > 0) {
 #ifdef __Fuchsia__
             zx_handle_close_many(handles_.data(), handles_.actual());
@@ -119,19 +152,23 @@ private:
     void MoveImpl(EncodedMessage&& other) noexcept {
         CloseHandles();
         bytes_ = std::move(other.bytes_);
-        // copy handles from |other|
-        memcpy(handle_storage_, other.handle_storage_,
-            other.handles_.actual() * sizeof(zx_handle_t));
+#ifdef __Fuchsia__
+        ZX_DEBUG_ASSERT(other.handles_.actual() <= kResolvedMaxHandles);
+#endif
+        if (kResolvedMaxHandles > 0) {
+            // copy handles from |other|
+            memcpy(Super::handle_storage(), other.Super::handle_storage(),
+                   other.handles_.actual() * sizeof(zx_handle_t));
+        }
         // release handles in |other|
         handles_.set_actual(other.handles().actual());
         other.handles_.set_actual(0);
     }
 
     BytePart bytes_;
-    zx_handle_t handle_storage_[kResolvedNumHandles];
-    HandlePart handles_{handle_storage_, kResolvedNumHandles};
+    HandlePart handles_{Super::handle_storage(), kResolvedMaxHandles};
 };
 
-}
+} // namespace fidl
 
 #endif  // LIB_FIDL_LLCPP_ENCODED_MESSAGE_H_

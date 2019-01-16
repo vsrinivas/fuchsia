@@ -8,10 +8,9 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
-
-#include <zircon/fidl.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
+#include <zircon/fidl.h>
 
 namespace fidl {
 namespace test {
@@ -85,9 +84,6 @@ struct SimpleUnion {
 };
 
 extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionRequestTable;
-extern "C" const fidl_type_t fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionResponseTable;
 
 // Test interface implemented by both C and LLCPP
 class TestInterface final {
@@ -99,10 +95,9 @@ class TestInterface final {
     int32_t status;
     int32_t field;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructResponseTable;
+    static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = 0;
   };
   struct ConsumeSimpleStructRequest {
@@ -113,7 +108,6 @@ class TestInterface final {
     static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStructRequestTable;
     static constexpr uint32_t MaxNumHandles = 21;
     static constexpr uint32_t PrimarySize = 104;
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = 0;
     using ResponseType = ConsumeSimpleStructResponse;
   };
@@ -124,10 +118,9 @@ class TestInterface final {
     uint32_t index;
     int32_t field;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionResponseTable;
+    static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = 0;
   };
   struct ConsumeSimpleUnionRequest {
@@ -135,10 +128,9 @@ class TestInterface final {
     fidl_message_header_t _hdr;
     SimpleUnion arg;
 
-    static constexpr const fidl_type_t* Type = &fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnionRequestTable;
+    static constexpr const fidl_type_t* Type = nullptr;
     static constexpr uint32_t MaxNumHandles = 0;
     static constexpr uint32_t PrimarySize = 24;
-    [[maybe_unused]]
     static constexpr uint32_t MaxOutOfLine = 0;
     using ResponseType = ConsumeSimpleUnionResponse;
   };
@@ -152,42 +144,33 @@ class TestInterface final {
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
-    zx_status_t ConsumeSimpleStruct(SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
+    zx_status_t ConsumeSimpleStruct(SimpleStruct arg, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
-    zx_status_t ConsumeSimpleStruct(::fidl::BytePart _request_buffer, ::fidl::BytePart _response_buffer, SimpleStruct& arg, int32_t* out_status, int32_t* out_field);
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field);
 
     // Verifies that all the handles are valid channels, then returns
     // ZX_OK and loops back the field member. Otherwise, returns an error.
+    // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ConsumeSimpleStructResponse> ConsumeSimpleStruct(::fidl::DecodedMessage<ConsumeSimpleStructRequest> params, ::fidl::BytePart response_buffer);
 
     // Loops back the field which is set, along with its index.
-    zx_status_t ConsumeSimpleUnion(SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
+    zx_status_t ConsumeSimpleUnion(SimpleUnion arg, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
-    zx_status_t ConsumeSimpleUnion(::fidl::BytePart _request_buffer, ::fidl::BytePart _response_buffer, SimpleUnion& arg, uint32_t* out_index, int32_t* out_field);
+    // Caller provides the backing storage for FIDL message via request and response buffers.
+    zx_status_t ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field);
 
     // Loops back the field which is set, along with its index.
+    // Messages are encoded and decoded in-place.
     ::fidl::DecodeResult<ConsumeSimpleUnionResponse> ConsumeSimpleUnion(::fidl::DecodedMessage<ConsumeSimpleUnionRequest> params, ::fidl::BytePart response_buffer);
 
    private:
     ::zx::channel channel_;
   };
 
-  // TBD
-  class AsyncClient final {
-   public:
-    AsyncClient() = default;
-    ~AsyncClient() = default;
-  };
-
-  // TBD
-  class Server {
-   public:
-    Server() = default;
-    virtual ~Server() = default;
-  };
 };
 
 }  // namespace basictypes
@@ -205,6 +188,8 @@ static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, ep) == 4);
 static_assert(offsetof(::fidl::test::llcpp::basictypes::SimpleStruct, arr) == 8);
 static_assert(sizeof(::fidl::test::llcpp::basictypes::SimpleStruct) == ::fidl::test::llcpp::basictypes::SimpleStruct::PrimarySize);
 
+template <>
+struct IsFidlType<::fidl::test::llcpp::basictypes::SimpleUnion> : public std::true_type {};
 static_assert(std::is_standard_layout_v<::fidl::test::llcpp::basictypes::SimpleUnion>);
 
 template <>
