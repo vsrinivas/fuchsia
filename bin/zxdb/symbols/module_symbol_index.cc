@@ -414,11 +414,11 @@ const std::vector<unsigned>* ModuleSymbolIndex::FindFileUnitIndices(
   return &found->second;
 }
 
-void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) {
-  for (const auto& name_pair : file_name_index_) {
-    const auto& full_pair = *name_pair.second;
-    out << name_pair.first << " -> " << full_pair.first << " -> "
-        << full_pair.second.size() << " units\n";
+void ModuleSymbolIndex::DumpFileIndex(std::ostream& out) const {
+  for (const auto& [filename, file_index_entry]: file_name_index_) {
+    const auto& [filepath, compilation_units] = *file_index_entry;
+    out << filename << " -> " << filepath << " -> "
+        << compilation_units.size() << " units\n";
   }
 }
 

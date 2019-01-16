@@ -15,6 +15,7 @@
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/common/regex.h"
 #include "garnet/bin/zxdb/console/command.h"
 #include "garnet/bin/zxdb/console/command_utils.h"
 #include "garnet/bin/zxdb/console/console.h"
@@ -29,7 +30,10 @@
 #include "garnet/bin/zxdb/symbols/collection.h"
 #include "garnet/bin/zxdb/symbols/data_member.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/module_symbol_index.h"
 #include "garnet/bin/zxdb/symbols/module_symbol_status.h"
+#include "garnet/bin/zxdb/symbols/module_symbols.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 #include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
@@ -37,6 +41,8 @@
 #include "garnet/bin/zxdb/symbols/type.h"
 #include "garnet/bin/zxdb/symbols/variable.h"
 #include "lib/fxl/logging.h"
+#include "lib/fxl/strings/ascii.h"
+#include "lib/fxl/strings/join_strings.h"
 #include "lib/fxl/strings/string_printf.h"
 
 namespace zxdb {
@@ -559,6 +565,224 @@ Err DoSymNear(ConsoleContext* context, const Command& cmd) {
   return Err();
 }
 
+// sym-search ------------------------------------------------------------------
+
+constexpr size_t kSymSearchListLimit = 200;
+
+constexpr int kSymSearchUnfold = 1;
+constexpr int kSymSearchListAll= 2;
+
+const char kSymSearchShortHelp[] = "sym-search: Search for symbols.";
+const char kSymSearchHelp[] =
+  R"(sym-search [--all] [--unfold] [<regexp>]
+
+  Searches for symbols loaded by a process.
+
+  By default will display all the symbols loaded by the process, truncated to a
+  limit. It is possible to use a regular expression to limit the search to a
+  desired symbol(s).
+
+  Default display is nested scoping (namespaces, classes) to be joined by "::".
+  While this looks similar to what C++ symbols are, they are not meant to be
+  literal C++ symbols, but rather to have a relatively familiar way of
+  displaying symbols.
+
+  The symbols are displayed by loaded modules.
+
+Arguments
+
+  <regexp>
+      Case insensitive regular expression. Uses the POSIX Extended Regular
+      Expression syntax. This regexp will be compared with every symbol. Any
+      successful matches will be included in the output.
+
+      NOTE: Currently using both regexp and unfold (-u) result in the scoping
+            symbols to not be outputted. In order to see the complete scopes,
+            don't unfold the output.
+
+  --all | -a
+      Don't limit the output. By default zxdb will limit the amount of output
+      in order not to print thousands of entries.
+
+  --unfold | -u
+      This changes to use a "nesting" formatting, in which scoping symbols,
+      such as namespaces or classes, indent other symbols.
+
+Examples
+
+  sym-search
+      List all the symbols with the default C++-ish nesting collapsing.
+
+      some_module.so
+
+      nested::scoping::symbol
+      nested::scoping::other_symbol
+      ...
+
+  pr 3 sym-search other
+      Filter using "other" as a regular expression for process 3.
+
+      some_module.so
+
+      nested::scoping::other_symbol
+      ...
+
+  sym-search --unfold
+      List all the symbols in an unfolded fashion.
+      This will be truncated.
+
+      some_module.so
+
+      nested
+        scoping
+          symbol
+          other_symbol
+      ...
+)";
+
+struct CaseInsensitiveCompare {
+  bool operator()(const std::string* lhs, const std::string* rhs) const {
+    auto lhs_it = lhs->begin();
+    auto rhs_it = rhs->begin();
+
+    while (lhs_it != lhs->end() && rhs_it != rhs->end()) {
+      char lhs_low = fxl::ToLowerASCII(*lhs_it);
+      char rhs_low = fxl::ToLowerASCII(*rhs_it);
+      if (lhs_low != rhs_low)
+        return lhs_low < rhs_low;
+
+      lhs_it++;
+      rhs_it++;
+    }
+
+    // The shortest string wins!
+    return lhs->size() < rhs->size();
+  }
+};
+
+std::string CreateSymbolName(const Command& cmd,
+                             const std::vector<std::string>& names,
+                             int indent_level) {
+  if (cmd.HasSwitch(kSymSearchUnfold))
+    return fxl::StringPrintf("%*s%s", indent_level, "", names.back().c_str());
+  return fxl::JoinStrings(names, "::");
+}
+
+struct DumpModuleContext {
+  std::vector<std::string>* names = nullptr;
+  std::vector<std::string>* output = nullptr;
+  Regex* regex = nullptr;   // nullptr if no filter is defined.
+};
+
+// Returns true if the list was truncated.
+bool DumpModule(const Command& cmd, const ModuleSymbolIndexNode& node,
+                DumpModuleContext* context, int indent_level = 0) {
+  // Root node doesn't have a name, so it's not printed.
+  bool root = context->names->empty();
+  if (!root) {
+    auto name = CreateSymbolName(cmd, *context->names, indent_level);
+    if (!context->regex || context->regex->Match(name)) {
+      context->output->push_back(std::move(name));
+    }
+  }
+
+  if (!cmd.HasSwitch(kSymSearchListAll) &&
+      context->output->size() >= kSymSearchListLimit) {
+    return true;
+  }
+
+  // Root should not indent forward.
+  indent_level = root ? 0 : indent_level + 2;
+  for (const auto& [child_name, child] : node.sub()) {
+    context->names->push_back(child_name);
+    if (DumpModule(cmd, child, context, indent_level))
+      return true;
+    context->names->pop_back();
+  }
+
+  return false;
+}
+
+Err DoSymSearch(ConsoleContext* context, const Command& cmd) {
+  if (cmd.args().size() > 1)
+    return Err("Too many arguments. See \"help sym-search\".");
+
+  Process* process = cmd.target()->GetProcess();
+  if (!process)
+    return Err("No process is running.");
+
+  ProcessSymbols* process_symbols = process->GetSymbols();
+  auto process_status = process_symbols->GetStatus();
+
+  // We sort them alphabetically in order to ensure all runs return the same
+  // result.
+  std::sort(process_status.begin(), process_status.end(),
+            [](const ModuleSymbolStatus& lhs, const ModuleSymbolStatus& rhs) {
+              return lhs.name < rhs.name;
+            });
+
+  Console* console = Console::get();
+
+  Regex regex;
+  if (cmd.args().size() == 1) {
+    Err err = regex.Init(cmd.args().front());
+    if (err.has_error())
+      return err;
+  }
+
+  // The collected symbols that pass the filter.
+  std::vector<std::string> dump;
+  // Marks where within the dump vector each module ends.
+  std::vector<std::pair<ModuleSymbolStatus, size_t>> module_symbol_indices;
+  bool truncated = false;
+  for (auto& module_status : process_status) {
+    if (!module_status.symbols)
+      continue;
+
+    const auto& index = module_status.symbols->module_symbols()->GetIndex();
+    const auto& root = index.root();
+
+    std::vector<std::string> names;
+    size_t size_before = dump.size();
+
+    DumpModuleContext dump_context;
+    dump_context.names = &names;
+    dump_context.output = &dump;
+    dump_context.regex = regex.valid() ? &regex : nullptr;
+    truncated = DumpModule(cmd, root, &dump_context);
+
+    // Only track this module if symbols were actually added.
+    if (size_before < dump.size())
+      module_symbol_indices.push_back({module_status, dump.size()});
+    if (truncated)
+      break;
+  }
+
+  size_t current_index = 0;
+  for (const auto& [module_info, limit] : module_symbol_indices) {
+    console->Output(OutputBuffer(
+        Syntax::kHeading,
+        fxl::StringPrintf("%s\n\n", module_info.name.c_str())));
+
+    while (current_index < limit) {
+      console->Output(dump[current_index]);
+      current_index++;
+    }
+    console->Output("\n");
+  }
+
+  if (truncated) {
+    console->Output(
+        Err("Limiting results to %lu. Make a more specific filter or use "
+            "--all.",
+            dump.size()));
+  } else {
+    console->Output(fxl::StringPrintf("Displaying %lu entries.", dump.size()));
+  }
+
+  return Err();
+}
+
 }  // namespace
 
 void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
@@ -581,6 +805,12 @@ void AppendSymbolVerbs(std::map<Verb, VerbRecord>* verbs) {
   (*verbs)[Verb::kSymNear] =
       VerbRecord(&DoSymNear, {"sym-near", "sn"}, kSymNearShortHelp,
                  kSymNearHelp, CommandGroup::kQuery);
+
+  VerbRecord search(&DoSymSearch, {"sym-search"}, kSymSearchShortHelp,
+                    kSymSearchHelp, CommandGroup::kQuery);
+  search.switches.emplace_back(kSymSearchListAll, false, "--all", 'a');
+  search.switches.emplace_back(kSymSearchUnfold, false, "unfold", 'u');
+  (*verbs)[Verb::kSymSearch] = std::move(search);
 }
 
 }  // namespace zxdb

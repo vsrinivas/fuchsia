@@ -10,6 +10,8 @@
 
 namespace zxdb {
 
+class LoadedModuleSymbols;
+
 struct ModuleSymbolStatus {
   // Name of the executable or shared library on the system.
   std::string name;
@@ -28,6 +30,10 @@ struct ModuleSymbolStatus {
 
   // Local file name with the symbols if the symbols were loaded.
   std::string symbol_file;
+
+  // Represents a handle to the actual symbols.
+  // nullptr if the symbols are not loaded.
+  LoadedModuleSymbols* symbols = nullptr;
 };
 
 }  // namespace zxdb

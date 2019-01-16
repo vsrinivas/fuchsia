@@ -83,10 +83,10 @@ void ProcessSymbols::SetModules(
 
   // Update the TargetSymbols.
   target_symbols_->RemoveAllModules();
-  for (auto& pair : modules_) {
-    if (pair.second.symbols) {
+  for (auto& [base, mod_info] : modules_) {
+    if (mod_info.symbols) {
       target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
-          pair.second.symbols->module_ref()));
+          mod_info.symbols->module_ref()));
     }
   }
 
@@ -118,18 +118,19 @@ void ProcessSymbols::InjectModuleForTesting(
 
 std::vector<ModuleSymbolStatus> ProcessSymbols::GetStatus() const {
   std::vector<ModuleSymbolStatus> result;
-  for (const auto& pair : modules_) {
-    if (pair.second.symbols.get()) {
-      result.push_back(pair.second.symbols->module_symbols()->GetStatus());
+  for (const auto& [base, mod_info] : modules_) {
+    if (mod_info.symbols) {
+      result.push_back(mod_info.symbols->module_symbols()->GetStatus());
       // ModuleSymbols doesn't know the name or base address so fill in now.
-      result.back().name = pair.second.name;
-      result.back().base = pair.second.base;
+      result.back().name = mod_info.name;
+      result.back().base = mod_info.base;
+      result.back().symbols = mod_info.symbols.get();
     } else {
       // No symbols, make an empty record.
       ModuleSymbolStatus status;
-      status.name = pair.second.name;
-      status.build_id = pair.second.build_id;
-      status.base = pair.second.base;
+      status.name = mod_info.name;
+      status.build_id = mod_info.build_id;
+      status.base = mod_info.base;
       status.symbols_loaded = false;
       result.push_back(std::move(status));
     }
@@ -141,7 +142,7 @@ std::vector<const LoadedModuleSymbols*>
 ProcessSymbols::GetLoadedModuleSymbols() const {
   std::vector<const LoadedModuleSymbols*> result;
   result.reserve(modules_.size());
-  for (const auto & [ base, mod_info ] : modules_) {
+  for (const auto& [base, mod_info] : modules_) {
     if (mod_info.symbols)
       result.push_back(mod_info.symbols.get());
   }
@@ -174,9 +175,9 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
 
   // Symbol and file/line resolution both requires iterating over all modules.
   std::vector<Location> result;
-  for (const auto& pair : modules_) {
-    if (pair.second.symbols) {
-      const LoadedModuleSymbols* loaded = pair.second.symbols.get();
+  for (const auto& [base, mod_info] : modules_) {
+    if (mod_info.symbols) {
+      const LoadedModuleSymbols* loaded = mod_info.symbols.get();
       for (Location& location : loaded->module_symbols()->ResolveInputLocation(
                loaded->symbol_context(), input_location, options))
         result.push_back(std::move(location));

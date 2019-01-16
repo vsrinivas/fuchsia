@@ -909,7 +909,7 @@ Arguments
 
   <regexp>
       Case insensitive regular expression. Any register that matches will be
-      shown. Uses POSIX Basic Regular Expression syntax. If not specified, it
+      shown. Uses POSIX Extended Regular Expression syntax. If not specified, it
       will match all registers.
 
 Examples

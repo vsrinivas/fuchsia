@@ -69,7 +69,7 @@ class ModuleSymbolIndex {
       const std::string& name) const;
 
   // Dumps the file index to the stream for debugging.
-  void DumpFileIndex(std::ostream& out);
+  void DumpFileIndex(std::ostream& out) const;
 
  private:
   void IndexCompileUnit(llvm::DWARFContext* context, llvm::DWARFUnit* unit,
