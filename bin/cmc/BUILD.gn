@@ -5,14 +5,6 @@
 import("//build/rust/rustc_binary.gni")
 import("//build/host.gni")
 
-source_set("cmx_schema_json") {
-  inputs = [
-    "cm_schema.json",
-    "cml_schema.json",
-    "cmx_schema.json",
-  ]
-}
-
 rustc_binary("cmc") {
   name = "cmc"
   with_unit_tests = true
@@ -21,9 +13,9 @@ rustc_binary("cmc") {
   sdk_category = "partner"
 
   deps = [
+    "//garnet/lib/rust/cm_json",
     "//third_party/rust-crates/rustc_deps:clap",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:json5",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:regex",
     "//third_party/rust-crates/rustc_deps:serde",
@@ -31,11 +23,10 @@ rustc_binary("cmc") {
     "//third_party/rust-crates/rustc_deps:serde_json",
     "//third_party/rust-crates/rustc_deps:structopt",
     "//third_party/rust-crates/rustc_deps:tempfile",
-    "//third_party/rust-crates/rustc_deps:valico",
   ]
 
   non_rust_deps = [
-    ":cmx_schema_json"
+    "//garnet/lib/rust/cm_json:cmx_schema_json"
   ]
 }
 

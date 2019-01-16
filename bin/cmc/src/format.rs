@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::Error;
+use cm_json::Error;
 use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use serde_json::Value;

@@ -1,0 +1,43 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+source_set("cmx_schema_json") {
+  inputs = [
+    "cm_schema.json",
+    "cml_schema.json",
+    "cmx_schema.json",
+  ]
+}
+
+rustc_library("cm_json") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//third_party/rust-crates/rustc_deps:json5",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:valico",
+  ]
+
+  non_rust_deps = [
+    ":cmx_schema_json"
+  ]
+}
+
+test_package("cm_json_tests") {
+    deps = [
+        ":cm_json",
+    ]
+
+    tests = [
+        {
+            name = "cm_json_lib_test"
+            dest = "cm_json_tests"
+        }
+    ]
+}

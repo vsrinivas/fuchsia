@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::keywords::*;
-use crate::common::{Error, CM_SCHEMA};
+use cm_json::{self, cm, Error, CM_SCHEMA};
 use crate::validate;
-use crate::{cm, cml};
+use crate::cml;
+use lazy_static::lazy_static;
+use regex::Regex;
 use serde::ser::Serialize;
 use serde_json::ser::{CompactFormatter, PrettyFormatter, Serializer};
 use serde_json::{self, Value};
@@ -13,6 +14,13 @@ use std::fs;
 use std::io::{Read, Write};
 use std::path::PathBuf;
 use std::str::from_utf8;
+
+const DIRECTORY: &str = "directory";
+const SERVICE: &str = "service";
+lazy_static! {
+    static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
+    static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
+}
 
 /// Read in a CML file and produce the equivalent CM.
 pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<(), Error> {
@@ -57,7 +65,7 @@ pub fn compile(file: &PathBuf, pretty: bool, output: Option<PathBuf>) -> Result<
     // Sanity check that output conforms to CM schema.
     let json = serde_json::from_slice(&res)
         .map_err(|e| Error::parse(format!("Couldn't read output as JSON: {}", e)))?;
-    validate::validate_json(&json, CM_SCHEMA)?;
+    cm_json::validate_json(&json, CM_SCHEMA)?;
     Ok(())
 }
 

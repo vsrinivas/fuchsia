@@ -2,12 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{self, Error, JsonSchemaStr, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
+use cm_json::{self, Error, CML_SCHEMA, CMX_SCHEMA, CM_SCHEMA};
 use serde_json::Value;
 use std::fs;
 use std::io::Read;
 use std::path::PathBuf;
-use valico::json_schema;
 
 /// Read in and parse a list of files, and return an Error if any of the given files are not valid
 /// cmx. One of the JSON schemas located at ../*_schema.json, selected based on the file extension,
@@ -24,16 +23,16 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
         fs::File::open(&filename)?.read_to_string(&mut buffer)?;
         match filename.extension().and_then(|e| e.to_str()) {
             Some("cm") => {
-                let v = common::from_json_str(&buffer)?;
-                validate_json(&v, CM_SCHEMA)
+                let v = cm_json::from_json_str(&buffer)?;
+                cm_json::validate_json(&v, CM_SCHEMA)
             }
             Some("cml") => {
-                let v = common::from_json5_str(&buffer)?;
+                let v = cm_json::from_json5_str(&buffer)?;
                 validate_cml(&v)
             }
             Some("cmx") => {
-                let v = common::from_json_str(&buffer)?;
-                validate_json(&v, CMX_SCHEMA)
+                let v = cm_json::from_json_str(&buffer)?;
+                cm_json::validate_json(&v, CMX_SCHEMA)
             }
             _ => Err(Error::invalid_args(BAD_EXTENSION)),
         }?;
@@ -41,35 +40,10 @@ pub fn validate(files: Vec<PathBuf>) -> Result<(), Error> {
     Ok(())
 }
 
-/// Validate a JSON document according to the given schema.
-pub fn validate_json(json: &Value, schema: JsonSchemaStr) -> Result<(), Error> {
-    // Parse the schema
-    let cmx_schema_json = serde_json::from_str(schema)
-        .map_err(|e| Error::internal(format!("Couldn't read schema as JSON: {}", e)))?;
-    let mut scope = json_schema::Scope::new();
-    let schema = scope
-        .compile_and_return(cmx_schema_json, false)
-        .map_err(|e| Error::internal(format!("Couldn't parse schema: {:?}", e)))?;
-
-    // Validate the json
-    let res = schema.validate(json);
-    if !res.is_strictly_valid() {
-        let mut err_msgs = Vec::new();
-        for e in &res.errors {
-            err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
-        }
-        // The ordering in which valico emits these errors is unstable.
-        // Sort error messages so that the resulting message is predictable.
-        err_msgs.sort_unstable();
-        return Err(Error::parse(err_msgs.join(", ")));
-    }
-    Ok(())
-}
-
 /// Validates CML JSON document according to the schema.
 /// TODO: Perform extra validation beyond what the schema provides.
 pub fn validate_cml(json: &Value) -> Result<(), Error> {
-    validate_json(&json, CML_SCHEMA)
+    cm_json::validate_json(&json, CML_SCHEMA)
 }
 
 #[cfg(test)]

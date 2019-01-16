@@ -4,15 +4,13 @@
 
 #![deny(warnings)]
 
-use crate::common::Error;
+use cm_json::Error;
 use std::fs;
 use std::path::PathBuf;
 use std::process;
 use structopt::StructOpt;
 
-mod cm;
 mod cml;
-mod common;
 mod compile;
 mod format;
 mod merge;

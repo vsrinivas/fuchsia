@@ -1,6 +1,8 @@
-// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+
+#![deny(warnings)]
 
 use json5;
 use serde_json;
@@ -9,29 +11,14 @@ use std::error;
 use std::fmt;
 use std::io;
 use std::str::Utf8Error;
+use valico::json_schema;
 
-// Directly include schemas in the binary. These are used to parse component manifests.
+pub mod cm;
+
+// Directly include schemas in the library. These are used to parse component manifests.
 pub const CM_SCHEMA: &str = include_str!("../cm_schema.json");
 pub const CML_SCHEMA: &str = include_str!("../cml_schema.json");
 pub const CMX_SCHEMA: &str = include_str!("../cmx_schema.json");
-
-/// Keyword definitions and syntax helpers for CM and CML.
-pub mod keywords {
-    use lazy_static::lazy_static;
-    use regex::Regex;
-
-    pub const DIRECTORY: &str = "directory";
-    pub const SERVICE: &str = "service";
-
-    lazy_static! {
-        pub static ref CHILD_RE: Regex = Regex::new(r"^#([A-Za-z0-9\-_]+)$").unwrap();
-        pub static ref FROM_RE: Regex = Regex::new(r"^(realm|self|#[A-Za-z0-9\-_]+)$").unwrap();
-        pub static ref NAME_RE: Regex = Regex::new(r"^[A-Za-z0-9\-_]+$").unwrap();
-    }
-}
-
-/// Represents a JSON schema.
-pub type JsonSchemaStr<'a> = &'a str;
 
 /// Enum type that can represent any error encountered by a cmx operation.
 #[derive(Debug)]
@@ -81,6 +68,34 @@ impl From<Utf8Error> for Error {
     fn from(err: Utf8Error) -> Self {
         Error::Utf8(err)
     }
+}
+
+/// Represents a JSON schema.
+pub type JsonSchemaStr<'a> = &'a str;
+
+/// Validates a JSON document according to the given schema.
+pub fn validate_json(json: &Value, schema: JsonSchemaStr) -> Result<(), Error> {
+    // Parse the schema
+    let cmx_schema_json = serde_json::from_str(schema)
+        .map_err(|e| Error::internal(format!("Couldn't read schema as JSON: {}", e)))?;
+    let mut scope = json_schema::Scope::new();
+    let schema = scope
+        .compile_and_return(cmx_schema_json, false)
+        .map_err(|e| Error::internal(format!("Couldn't parse schema: {:?}", e)))?;
+
+    // Validate the json
+    let res = schema.validate(json);
+    if !res.is_strictly_valid() {
+        let mut err_msgs = Vec::new();
+        for e in &res.errors {
+            err_msgs.push(format!("{} at {}", e.get_title(), e.get_path()).into_boxed_str());
+        }
+        // The ordering in which valico emits these errors is unstable.
+        // Sort error messages so that the resulting message is predictable.
+        err_msgs.sort_unstable();
+        return Err(Error::parse(err_msgs.join(", ")));
+    }
+    Ok(())
 }
 
 pub fn from_json_str(json: &str) -> Result<Value, Error> {
