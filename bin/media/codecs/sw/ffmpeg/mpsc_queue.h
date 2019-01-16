@@ -51,9 +51,9 @@ class MpscQueue {
     }
 
     T elem = std::move(cache_->element);
-    Cell* to_free = cache_;
+    Cell* to_delete = cache_;
     cache_ = cache_->next;
-    free(to_free);
+    delete to_delete;
     return elem;
   }
 
