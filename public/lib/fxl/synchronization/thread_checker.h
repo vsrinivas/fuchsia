@@ -14,6 +14,7 @@
 
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
+#include "lib/fxl/synchronization/thread_annotations.h"
 
 namespace fxl {
 
@@ -25,7 +26,27 @@ namespace fxl {
 // #ifdef it out if you want something Debug-only). (Rationale: Having a
 // |CalledOnValidThread()| that lies in Release builds seems bad. Moreover,
 // there's a small space cost to having even an empty class. )
-class ThreadChecker final {
+//
+// In addition to providing an explicity check of the current thread,
+// |ThreadChecker| commplies with BasicLockable, checking the current thread
+// when |lock| is called. This allows static thread safety analysis to be used
+// to ensure that resources are accessed in a context that is checked (at debug
+// runtime) to ensure that it's running on the correct thread:
+//
+// class MyClass {
+//  public:
+//    void Foo() {
+//      std::lock_guard<fxl::ThreadChecker> locker(thread_checker_);
+//      resource_ = 0;
+//    }
+//  private:
+//   mutable fxl::ThreadChecker thread_checker_;
+//   int resource_ FXL_GUARDED_BY(thread_checker_);
+// }
+//
+// Note: |lock| checks the thread in debug builds only.
+//
+class FXL_CAPABILITY("mutex") ThreadChecker final {
  public:
   ThreadChecker() : self_(pthread_self()) {}
   ~ThreadChecker() {}
@@ -35,6 +56,12 @@ class ThreadChecker final {
   bool IsCreationThreadCurrent() const {
     return !!pthread_equal(pthread_self(), self_);
   }
+
+  void lock() FXL_ACQUIRE() {
+    FXL_DCHECK(IsCreationThreadCurrent());
+  }
+
+  void unlock() FXL_RELEASE() {}
 
  private:
   const pthread_t self_;

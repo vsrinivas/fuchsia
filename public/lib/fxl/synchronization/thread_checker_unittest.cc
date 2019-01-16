@@ -21,11 +21,15 @@ TEST(ThreadCheckerTest, SameThread) {
 TEST(ThreadCheckerTest, DifferentThreads) {
   ThreadChecker checker1;
   EXPECT_TRUE(checker1.IsCreationThreadCurrent());
+  checker1.lock();
+  checker1.unlock();
 
   std::thread thread([&checker1]() {
     ThreadChecker checker2;
     EXPECT_TRUE(checker2.IsCreationThreadCurrent());
     EXPECT_FALSE(checker1.IsCreationThreadCurrent());
+    checker2.lock();
+    checker2.unlock();
   });
   thread.join();
 
