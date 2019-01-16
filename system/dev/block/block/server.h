@@ -177,6 +177,9 @@ private:
 
     // Helper for processing a single message read from the FIFO.
     void ProcessRequest(block_fifo_request_t* request);
+    zx_status_t ProcessReadWriteRequest(block_fifo_request_t* request) TA_EXCL(server_lock_);
+    zx_status_t ProcessCloseVmoRequest(block_fifo_request_t* request) TA_EXCL(server_lock_);
+    zx_status_t ProcessFlushRequest(block_fifo_request_t* request);
 
     // Helper for the server to react to a signal that a barrier
     // operation has completed. Unsets the local "waiting for barrier"
