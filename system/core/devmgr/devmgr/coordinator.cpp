@@ -146,10 +146,8 @@ zx_status_t Coordinator::InitializeCoreDevices() {
     return ZX_OK;
 }
 
-static zx::socket dmctl_socket;
-
-static void dmprintf(const char* fmt, ...) {
-    if (!dmctl_socket.is_valid()) {
+void Coordinator::DmPrintf(const char* fmt, ...) const {
+    if (!dmctl_socket_.is_valid()) {
         return;
     }
     char buf[1024];
@@ -158,8 +156,9 @@ static void dmprintf(const char* fmt, ...) {
     vsnprintf(buf, sizeof(buf), fmt, ap);
     va_end(ap);
     size_t actual;
-    if (dmctl_socket.write(0, buf, strlen(buf), &actual) != ZX_OK) {
-        dmctl_socket.reset();
+    zx_status_t status = dmctl_socket_.write(0, buf, strlen(buf), &actual);
+    if (status != ZX_OK) {
+        dmctl_socket_.reset();
     }
 }
 
@@ -170,7 +169,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
             return ZX_OK;
         }
         if (!memcmp(cmd, "help", 4)) {
-            dmprintf("dump              - dump device tree\n"
+            DmPrintf("dump              - dump device tree\n"
                      "poweroff          - power off the system\n"
                      "shutdown          - power off the system\n"
                      "suspend           - suspend the system to RAM\n"
@@ -247,7 +246,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
         load_driver(path, fit::bind_member(this, &Coordinator::DriverAdded));
         return ZX_OK;
     }
-    dmprintf("unknown command\n");
+    DmPrintf("unknown command\n");
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ZX_ERR_NOT_SUPPORTED;
 }
@@ -322,9 +321,9 @@ void Coordinator::DumpDevice(const Device* dev, size_t indent) const {
         extra[0] = 0;
     }
     if (pid == 0) {
-        dmprintf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
+        DmPrintf("%*s[%s]%s\n", (int) (indent * 3), "", dev->name, extra);
     } else {
-        dmprintf("%*s%c%s%c pid=%zu%s %s\n",
+        DmPrintf("%*s%c%s%c pid=%zu%s %s\n",
                  (int) (indent * 3), "",
                  dev->flags & DEV_CTX_PROXY ? '<' : '[',
                  dev->name,
@@ -350,12 +349,12 @@ void Coordinator::DumpState() const {
 
 void Coordinator::DumpDeviceProps(const Device* dev) const {
     if (dev->host) {
-        dmprintf("Name [%s]%s%s%s\n",
+        DmPrintf("Name [%s]%s%s%s\n",
                  dev->name,
                  dev->libname ? " Driver [" : "",
                  dev->libname ? dev->libname : "",
                  dev->libname ? "]" : "");
-        dmprintf("Flags   :%s%s%s%s%s%s%s\n",
+        DmPrintf("Flags   :%s%s%s%s%s%s%s\n",
                  dev->flags & DEV_CTX_IMMORTAL     ? " Immortal"  : "",
                  dev->flags & DEV_CTX_MUST_ISOLATE ? " Isolate"   : "",
                  dev->flags & DEV_CTX_MULTI_BIND   ? " MultiBind" : "",
@@ -368,7 +367,7 @@ void Coordinator::DumpDeviceProps(const Device* dev) const {
         char b = (char)((dev->protocol_id >> 16) & 0xFF);
         char c = (char)((dev->protocol_id >> 8) & 0xFF);
         char d = (char)(dev->protocol_id & 0xFF);
-        dmprintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n",
+        DmPrintf("ProtoId : '%c%c%c%c' 0x%08x(%u)\n",
                  isprint(a) ? a : '.',
                  isprint(b) ? b : '.',
                  isprint(c) ? c : '.',
@@ -376,20 +375,20 @@ void Coordinator::DumpDeviceProps(const Device* dev) const {
                  dev->protocol_id,
                  dev->protocol_id);
 
-        dmprintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
+        DmPrintf("%u Propert%s\n", dev->prop_count, dev->prop_count == 1 ? "y" : "ies");
         for (uint32_t i = 0; i < dev->prop_count; ++i) {
             const zx_device_prop_t* p = &dev->props[i];
             const char* param_name = di_bind_param_name(p->id);
 
             if (param_name) {
-                dmprintf("[%2u/%2u] : Value 0x%08x Id %s\n",
+                DmPrintf("[%2u/%2u] : Value 0x%08x Id %s\n",
                          i, dev->prop_count, p->value, param_name);
             } else {
-                dmprintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n",
+                DmPrintf("[%2u/%2u] : Value 0x%08x Id 0x%04hx\n",
                          i, dev->prop_count, p->value, p->id);
             }
         }
-        dmprintf("\n");
+        DmPrintf("\n");
     }
 
     if (dev->proxy) {
@@ -410,17 +409,17 @@ void Coordinator::DumpGlobalDeviceProps() const {
 void Coordinator::DumpDrivers() const {
     bool first = true;
     for (const auto& drv : drivers_) {
-        dmprintf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
-        dmprintf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
-        dmprintf("Flags   : 0x%08x\n", drv.flags);
+        DmPrintf("%sName    : %s\n", first ? "" : "\n", drv.name.c_str());
+        DmPrintf("Driver  : %s\n", !drv.libname.empty() ? drv.libname.c_str() : "(null)");
+        DmPrintf("Flags   : 0x%08x\n", drv.flags);
         if (drv.binding_size) {
             char line[256];
             uint32_t count = drv.binding_size / static_cast<uint32_t>(sizeof(drv.binding[0]));
-            dmprintf("Binding : %u instruction%s (%u bytes)\n",
+            DmPrintf("Binding : %u instruction%s (%u bytes)\n",
                      count, (count == 1) ? "" : "s", drv.binding_size);
             for (uint32_t i = 0; i < count; ++i) {
                 di_dump_bind_inst(&drv.binding[i], line, sizeof(line));
-                dmprintf("[%u/%u]: %s\n", i + 1, count, line);
+                DmPrintf("[%u/%u]: %s\n", i + 1, count, line);
             }
         }
         first = false;
@@ -1241,13 +1240,13 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket,
                                   const char* command_data, size_t command_size, fidl_txn_t* txn) {
     zx::socket log_socket(raw_log_socket);
 
+    auto dev = static_cast<Device*>(ctx);
     if (log_socket.is_valid()) {
-        dmctl_socket = std::move(log_socket);
+        dev->coordinator->set_dmctl_socket(std::move(log_socket));
     }
 
-    auto dev = static_cast<Device*>(ctx);
     zx_status_t status = dev->coordinator->HandleDmctlWrite(command_size, command_data);
-    dmctl_socket.reset();
+    dev->coordinator->set_dmctl_socket(zx::socket());
     return fuchsia_device_manager_CoordinatorDmCommand_reply(txn, status);
 }
 
@@ -1897,7 +1896,7 @@ void Coordinator::Suspend(uint32_t flags) {
         return;
     }
     // Move the socket in to prevent the rpc handler from closing the handle.
-    *ctx = SuspendContext(this, SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket));
+    *ctx = SuspendContext(this, SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_));
 
     ctx->set_dh(BuildSuspendList(ctx));
 

@@ -419,6 +419,7 @@ public:
 
     zx_status_t InitializeCoreDevices();
 
+    void DmPrintf(const char* fmt, ...) const;
     zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
 
     const Driver* LibnameToDriver(const char* libname) const;
@@ -487,6 +488,7 @@ public:
     void set_loader_service(DevhostLoaderService* loader_service) {
         loader_service_ = loader_service;
     }
+    void set_dmctl_socket(zx::socket dmctl_socket) { dmctl_socket_ = std::move(dmctl_socket); }
 
     fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
     Device& root_device() { return root_device_; }
@@ -511,6 +513,10 @@ private:
 
     bool running_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
+    // This socket is used by DmPrintf for output, and DmPrintf can be called in
+    // the context of a const member function, therefore it is also const. Given
+    // that, we must make dmctl_socket_ mutable.
+    mutable zx::socket dmctl_socket_;
     zx::vmo bootdata_vmo_;
 
     // All Drivers
