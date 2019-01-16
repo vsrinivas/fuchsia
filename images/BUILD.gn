@@ -14,6 +14,7 @@ import("//build/images/manifest.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
+import("//garnet/build/pkgfs.gni")
 import("//garnet/go/src/pm/pm.gni")
 
 declare_args() {
@@ -485,9 +486,8 @@ action("devmgr_config.txt") {
     "$target_out_dir/$target_name",
   ]
 
-  pkgfs_label = "//garnet/go/src/pmd:pkgsvr"
-  pkgfs = "bin/" + get_label_info(pkgfs_label, "name")
-  pkgfs_label += ".meta"
+  pkgfs = "bin/" + pkgfs_binary_name
+  pkgfs_label = pkgfs_package_label + ".meta"
   pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
                       get_label_info(pkgfs_label, "name")
   pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"

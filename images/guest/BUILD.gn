@@ -6,6 +6,7 @@ import("//build/config/fuchsia/zbi.gni")
 import("//build/config/fuchsia/zircon.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
+import("//garnet/build/pkgfs.gni")
 
 guest_packages = [
   get_label_info("//build/images:shell-commands", "label_no_toolchain"),
@@ -19,7 +20,7 @@ guest_packages = [
   get_label_info("//garnet/bin/trace", "label_no_toolchain"),
   get_label_info("//garnet/bin/vsock_service:vsock_service",
                  "label_no_toolchain"),
-  get_label_info("//garnet/go/src/pmd:pkgsvr", "label_no_toolchain"),
+  get_label_info(pkgfs_package_label, "label_no_toolchain"),
 ]
 
 # The pkgsvr index is a manifest mapping `package_name/package_version` to
@@ -175,9 +176,8 @@ action("devmgr_config.txt") {
   outputs = [
     "$target_out_dir/$target_name",
   ]
-  pkgfs_label = "//garnet/go/src/pmd:pkgsvr"
-  pkgfs = "bin/" + get_label_info(pkgfs_label, "name")
-  pkgfs_label += ".meta"
+  pkgfs = "bin/" + pkgfs_binary_name
+  pkgfs_label = pkgfs_package_label + ".meta"
   pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
                       get_label_info(pkgfs_label, "name")
   pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
