@@ -10,6 +10,7 @@
 #include "lib/fxl/logging.h"
 
 namespace debug_agent {
+
 namespace {
 
 bool StartsWithCaseInsensitive(std::string mainStr, std::string toMatch) {
@@ -19,6 +20,7 @@ bool StartsWithCaseInsensitive(std::string mainStr, std::string toMatch) {
 }
 
 }  // namespace
+
 DebuggedJob::DebuggedJob(ProcessStartHandler* handler, zx_koid_t job_koid,
                          zx::job job)
     : handler_(handler), koid_(job_koid), job_(std::move(job)) {}
@@ -50,6 +52,10 @@ void DebuggedJob::OnProcessStarting(zx_koid_t job_koid, zx_koid_t process_koid,
     }
   }
 
+  // Attached to the process. At that point it will get a new thread
+  // notification for the initial thread which it can stop or continue as it
+  // desires. Therefore, we can always resume the thread in the "new process"
+  // exception.
   debug_ipc::MessageLoopZircon::Current()->ResumeFromException(thread, 0);
 }
 

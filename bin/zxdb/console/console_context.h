@@ -134,7 +134,8 @@ class ConsoleContext : public ProcessObserver,
   void OnSymbolIndexingInformation(const std::string& msg) override;
 
   // TargetObserver implementation:
-  void DidCreateProcess(Target* target, Process* process) override;
+  void DidCreateProcess(Target* target, Process* process,
+                        bool autoattached_to_new_process) override;
   void WillDestroyProcess(Target* target, Process* process,
                           DestroyReason reason, int exit_code) override;
 

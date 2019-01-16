@@ -35,7 +35,7 @@ void DebugAgent::OnProcessStart(zx::process process) {
   auto koid = KoidForObject(process);
   auto name = NameForObject(process);
 
-  // send notification, then create debug process so that thread notification is
+  // Send notification, then create debug process so that thread notification is
   // sent after this
   debug_ipc::NotifyProcessStarting notify;
   notify.koid = koid;

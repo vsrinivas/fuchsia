@@ -29,6 +29,10 @@ class TargetImpl : public Target {
   // a real copy, because any process information is not cloned.
   std::unique_ptr<TargetImpl> Clone(SystemImpl* system);
 
+  // Notification that a new process was created from a job filter. The process
+  // will not have started running yet.
+  void ProcessCreatedInJob(uint64_t koid, const std::string& process_name);
+
   // Tests can use this to create a target for mocking purposes without making
   // any IPC. To destroy call ImplicitlyDetach().
   void CreateProcessForTesting(uint64_t koid, const std::string& process_name);
@@ -50,7 +54,6 @@ class TargetImpl : public Target {
   void Launch(Callback callback) override;
   void Kill(Callback callback) override;
   void Attach(uint64_t koid, Callback callback) override;
-  void AttachToProcess(uint64_t koid, const std::string& process_name) override;
   void Detach(Callback callback) override;
   void OnProcessExiting(int return_code) override;
 

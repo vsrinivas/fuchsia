@@ -15,7 +15,12 @@ class TargetObserver {
 
   // The process could have been newly launched or attached to an existing
   // process.
-  virtual void DidCreateProcess(Target* target, Process* process) {}
+  //
+  // The autoattached_to_new_process flag will be set when this process is
+  // a result of attaching automatically to a new process in a job. The
+  // process in this state will have not technically started running yet.
+  virtual void DidCreateProcess(Target* target, Process* process,
+                                bool autoattached_to_new_process) {}
 
   // Called after detaching from or destroying a process. The Process object
   // will exist but the Target object will report there is no process

@@ -40,7 +40,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
   // usually so unpredictable.
   const auto& frames = thread->GetStack().GetFrames();
   if (frames.empty()) {
-    if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended ||
+    if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended &&
         !(thread->GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
           thread->GetBlockedReason() ==
               debug_ipc::ThreadRecord::BlockedReason::kException)) {

@@ -416,7 +416,8 @@ void ConsoleContext::OnSymbolIndexingInformation(const std::string& msg) {
   console->Output(OutputBuffer(Syntax::kComment, msg));
 }
 
-void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
+void ConsoleContext::DidCreateProcess(Target* target, Process* process,
+                                      bool autoattached_to_new_process) {
   TargetRecord* record = GetTargetRecord(target);
   if (!record) {
     FXL_NOTREACHED();
@@ -440,8 +441,17 @@ void ConsoleContext::DidCreateProcess(Target* target, Process* process) {
   }
   FXL_DCHECK(msg);
 
-  Console::get()->Output(fxl::StringPrintf("Process %d %s %s", target_id, msg,
-                                           process->GetName().data()));
+  OutputBuffer out;
+  out.Append(fxl::StringPrintf("Process %d %s %s\n", target_id, msg,
+                               process->GetName().data()));
+
+  if (autoattached_to_new_process) {
+    out.Append(Syntax::kComment,
+        "  The process is currently in an initializing state. You can "
+        "only set\n  pending breakpoints (symbols haven't been loaded yet) "
+        "or \"continue\" (DX-912).");
+  }
+  Console::get()->Output(std::move(out));
 }
 
 void ConsoleContext::WillDestroyProcess(Target* target, Process* process,

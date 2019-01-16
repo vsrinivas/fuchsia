@@ -57,7 +57,7 @@ class Stack {
 
   // Computes the stack frame fingerprint for the stack frame at the given
   // index. This function requires that that the previous stack frame
-  // (frame_index + 1) by present since the stack base is the SP of the
+  // (frame_index + 1) be present since the stack base is the SP of the
   // calling function.
   //
   // This function can always return the fingerprint for frame 0. Other

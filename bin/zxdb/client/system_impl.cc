@@ -80,6 +80,14 @@ std::vector<TargetImpl*> SystemImpl::GetTargetImpls() const {
   return result;
 }
 
+TargetImpl* SystemImpl::CreateNewTargetImpl(TargetImpl* clone) {
+  auto target = clone ? clone->Clone(this)
+                      : std::make_unique<TargetImpl>(this);
+  TargetImpl* to_return = target.get();
+  AddNewTarget(std::move(target));
+  return to_return;
+}
+
 SystemSymbols* SystemImpl::GetSymbols() { return &symbols_; }
 
 std::vector<Target*> SystemImpl::GetTargets() const {
@@ -118,11 +126,7 @@ void SystemImpl::GetProcessTree(ProcessTreeCallback callback) {
 }
 
 Target* SystemImpl::CreateNewTarget(Target* clone) {
-  auto target = clone ? static_cast<TargetImpl*>(clone)->Clone(this)
-                      : std::make_unique<TargetImpl>(this);
-  Target* to_return = target.get();
-  AddNewTarget(std::move(target));
-  return to_return;
+  return CreateNewTargetImpl(static_cast<TargetImpl*>(clone));
 }
 
 JobContext* SystemImpl::CreateNewJobContext(JobContext* clone) {

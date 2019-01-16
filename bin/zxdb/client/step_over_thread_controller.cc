@@ -30,6 +30,11 @@ void StepOverThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
+  if (thread->GetStack().GetFrames().empty()) {
+    cb(Err("Can't step, no frames."));
+    return;
+  }
+
   // Save the info for the frame we're stepping inside of for future possible
   // stepping out.
   frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);

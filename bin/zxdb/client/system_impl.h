@@ -35,6 +35,9 @@ class SystemImpl final : public System, public SettingStoreObserver {
 
   std::vector<TargetImpl*> GetTargetImpls() const;
 
+  // Like CreateNewTarget byt returns the implementation.
+  TargetImpl* CreateNewTargetImpl(TargetImpl* clone);
+
   // System implementation:
   SystemSymbols* GetSymbols() override;
   std::vector<Target*> GetTargets() const override;

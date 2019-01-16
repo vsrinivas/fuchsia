@@ -26,7 +26,10 @@ void StepThreadController::InitWithThread(Thread* thread,
   set_thread(thread);
 
   auto frames = thread->GetStack().GetFrames();
-  FXL_DCHECK(!frames.empty());
+  if (frames.empty()) {
+    cb(Err("Can't step, no frames."));
+    return;
+  }
   uint64_t ip = frames[0]->GetAddress();
 
   if (step_mode_ == StepMode::kSourceLine) {
@@ -108,7 +111,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   // crash or there could be a breakpoint in the middle, and those don't
   // count as leaving the range.
   auto frames = thread()->GetStack().GetFrames();
-  FXL_DCHECK(!frames.empty());
+  if (frames.empty())
+    return kStop;  // Agent sent bad state, give up trying to step.
 
   uint64_t ip = frames[0]->GetAddress();
   if (current_range_.InRange(ip)) {
