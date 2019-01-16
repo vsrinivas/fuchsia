@@ -6,13 +6,14 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 
 MODULE := $(LOCAL_DIR)
 
-MODULE_TYPE := fidl
+MODULE_TYPE := banjo
 
-MODULE_PACKAGE := fidl
+MODULE_PACKAGE := banjo
 
-MODULE_FIDL_LIBRARY := fuchsia.hardware.camera
+MODULE_BANJO_LIBRARY := ddk.protocol.ispimpl
 
-MODULE_SRCS += \
-    $(LOCAL_DIR)/camera_sensor.fidl \
+MODULE_BANJO_NAME := ispimpl
+
+MODULE_SRCS += $(LOCAL_DIR)/isp-impl.banjo
 
 include make/module.mk

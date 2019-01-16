@@ -11,6 +11,7 @@
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
 #include <ddktl/pdev.h>
+#include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/mipicsi.h>
 #include <fbl/unique_ptr.h>
 
@@ -19,9 +20,12 @@
 #include <threads.h>
 
 namespace camera {
-
+// |AmlMipiDevice| is spawned by the driver in |aml-mipi.cpp|
+// to which the IMX 277 Sensor driver binds to.
+// This class provides the ZX_PROTOCOL_MIPICSI ops for all of it's
+// children.
 class AmlMipiDevice;
-using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable>;
+using DeviceType = ddk::Device<AmlMipiDevice, ddk::Unbindable, ddk::GetProtocolable>;
 
 class AmlMipiDevice : public DeviceType,
                       public ddk::MipiCsiProtocol<AmlMipiDevice, ddk::base_protocol> {
@@ -29,7 +33,10 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(AmlMipiDevice);
 
     explicit AmlMipiDevice(zx_device_t* parent)
-        : DeviceType(parent), pdev_(parent) {}
+        : DeviceType(parent), pdev_(parent), parent_protocol_(parent) {
+        mipi_csi_protocol_t self{&mipi_csi_protocol_ops_, this};
+        self_protocol_ = ddk::MipiCsiProtocolClient(&self);
+    }
 
     static zx_status_t Create(zx_device_t* parent);
 
@@ -38,6 +45,7 @@ public:
     // Methods required by the ddk.
     void DdkRelease();
     void DdkUnbind();
+    zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
 
     // Methods for ZX_PROTOCOL_MIPI_CSI.
     zx_status_t MipiCsiInit(const mipi_info_t* mipi_info,
@@ -100,6 +108,8 @@ private:
     std::optional<ddk::MmioBuffer> reset_mmio_;
 
     ddk::PDev pdev_;
+    ddk::MipiCsiProtocolClient self_protocol_;
+    ddk::IspImplProtocolClient parent_protocol_;
 
     zx::bti bti_;
     zx::interrupt adap_irq_;

@@ -67,6 +67,14 @@ constexpr pbus_mmio_t mipi_mmios[] = {
     },
 };
 
+constexpr camera_sensor_t isp_mipi[] = {
+    {
+        .vid = PDEV_VID_AMLOGIC,
+        .pid = PDEV_PID_AMLOGIC_T931,
+        .did = PDEV_DID_AMLOGIC_MIPI,
+    },
+};
+
 constexpr camera_sensor_t mipi_sensor[] = {
     {
         .vid = PDEV_VID_SONY,
@@ -93,6 +101,14 @@ constexpr pbus_metadata_t mipi_metadata[] = {
         .type = DEVICE_METADATA_PRIVATE,
         .data_buffer = &mipi_sensor,
         .data_size = sizeof(camera_sensor_t),
+    },
+};
+
+constexpr pbus_metadata_t isp_metadata[] = {
+    {
+        .type = DEVICE_METADATA_PRIVATE,
+        .data_buffer = &isp_mipi,
+        .data_size = sizeof(isp_mipi),
     },
 };
 
@@ -137,12 +153,10 @@ static const pbus_dev_t mipi_children = []() {
     return dev;
 }();
 
-static pbus_dev_t mipi_dev = []() {
+static const pbus_dev_t isp_children = []() {
+    // MIPI CSI PHY ADAPTER
     pbus_dev_t dev;
     dev.name = "mipi-csi2";
-    dev.vid = PDEV_VID_AMLOGIC;
-    dev.pid = PDEV_PID_AMLOGIC_T931;
-    dev.did = PDEV_DID_AMLOGIC_MIPI;
     dev.mmio_list = mipi_mmios;
     dev.mmio_count = countof(mipi_mmios);
     dev.metadata_list = mipi_metadata;
@@ -156,8 +170,31 @@ static pbus_dev_t mipi_dev = []() {
     return dev;
 }();
 
+static pbus_dev_t isp_dev = []() {
+    // ISP
+    pbus_dev_t dev;
+    dev.name = "isp";
+    dev.vid = PDEV_VID_ARM;
+    dev.pid = PDEV_PID_ISP;
+    dev.did = PDEV_DID_ARM_MALI_IV009;
+    dev.metadata_list = isp_metadata;
+    dev.metadata_count = countof(isp_metadata);
+    dev.child_list = &isp_children;
+    dev.child_count = 1;
+    return dev;
+}();
+
 } // namespace
 
+// Camera Board Driver loads the following three drivers
+// with parent -> child -> child relationship
+// ISP
+//  |
+//  |
+//  -> MIPI
+//      |
+//      |
+//      -> IMX227
 zx_status_t Sherlock::CameraInit() {
 
     // Set GPIO alternate functions.
@@ -166,7 +203,7 @@ zx_status_t Sherlock::CameraInit() {
     gpio_impl_.SetAltFunction(T931_GPIOA(14), kI2cSDAAltFunc);
     gpio_impl_.SetAltFunction(T931_GPIOA(15), kI2cSCLAltFunc);
 
-    zx_status_t status = pbus_.DeviceAdd(&mipi_dev);
+    zx_status_t status = pbus_.DeviceAdd(&isp_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: DeviceAdd failed %d\n", __func__, status);
         return status;

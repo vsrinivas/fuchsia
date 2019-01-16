@@ -3,13 +3,8 @@
 // found in the LICENSE file.
 
 library ddk.protocol.mipicsi;
+using ddk.protocol.ispimpl;
 using zx;
-
-// This structure represents image resolution.
-struct ImageResolution {
-    uint32 width;
-    uint32 height;
-};
 
 struct MipiInfo {
     // Number of channels used.
@@ -48,7 +43,7 @@ enum MipiPath : uint32 {
 };
 
 struct MipiAdapInfo {
-    ImageResolution resolution;
+    ddk.protocol.ispimpl.ImageResolution resolution;
     ImageFormat format;
     MipiModes mode;
     MipiPath path;

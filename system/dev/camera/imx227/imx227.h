@@ -9,8 +9,8 @@
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <ddktl/protocol/gpio.h>
+#include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/mipicsi.h>
-#include <fuchsia/hardware/camera/c/fidl.h>
 
 namespace camera {
 
@@ -41,17 +41,13 @@ typedef struct sensor_context {
     uint8_t dgain_change;
     uint8_t change_flag;
     uint8_t hdr_flag;
-    fuchsia_hardware_camera_SensorInfo param;
+    sensor_info_t param;
 } sensor_context_t;
 
 class Imx227Device;
-using DeviceType = ddk::Device<Imx227Device,
-                               ddk::Unbindable,
-                               ddk::Ioctlable,
-                               ddk::Messageable>;
+using DeviceType = ddk::Device<Imx227Device, ddk::Unbindable>;
 
-class Imx227Device : public DeviceType,
-                     public ddk::EmptyProtocol<ZX_PROTOCOL_CAMERA> {
+class Imx227Device : public DeviceType {
 public:
     // GPIO Indexes.
     enum {
@@ -63,20 +59,14 @@ public:
 
     static zx_status_t Create(zx_device_t* parent);
     Imx227Device(zx_device_t* device)
-        : DeviceType(device), pdev_(device), i2c_(device), clk_(device), mipi_(device) {}
+        : DeviceType(device), pdev_(device), i2c_(device),
+          clk_(device), mipi_(device), ispimpl_(device) {}
 
     // Methods required by the ddk mixins.
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                         void* out_buf, size_t out_len, size_t* out_actual);
-    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
-    // Methods for IOCTLs.
-    zx_status_t GetInfo(fuchsia_hardware_camera_SensorInfo* out_info);
-    void GetSupportedModes(void* out_buf, size_t* out_actual);
-
-    // Methods for FIDL Message.
+    // Methods for callbacks.
     zx_status_t Init();
     void DeInit();
     zx_status_t SetMode(uint8_t mode);
@@ -85,7 +75,9 @@ public:
     int32_t SetAnalogGain(int32_t gain);
     int32_t SetDigitalGain(int32_t gain);
     void SetIntegrationTime(int32_t int_time, int32_t int_time_M, int32_t int_time_L);
-    void Update();
+    zx_status_t Update();
+    zx_status_t GetInfo(sensor_info_t* out_info);
+    void GetSupportedModes(void* out_buf, size_t* out_actual);
 
 private:
     // Sensor Context
@@ -97,6 +89,7 @@ private:
     ddk::GpioProtocolClient gpios_[GPIO_COUNT];
     ddk::ClkProtocolClient clk_;
     ddk::MipiCsiProtocolClient mipi_;
+    ddk::IspImplProtocolClient ispimpl_;
 
     // I2C Helpers.
     uint8_t ReadReg(uint16_t addr);

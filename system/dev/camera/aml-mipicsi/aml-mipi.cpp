@@ -11,6 +11,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <memory>
 #include <stdint.h>
 #include <threads.h>
 #include <zircon/types.h>
@@ -269,6 +270,24 @@ void AmlMipiDevice::DdkRelease() {
     delete this;
 }
 
+zx_status_t AmlMipiDevice::DdkGetProtocol(uint32_t proto_id, void* out_protocol) {
+    switch (proto_id) {
+    case ZX_PROTOCOL_ISP_IMPL: {
+        if (!parent_protocol_.is_valid()) {
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+        parent_protocol_.GetProto(static_cast<isp_impl_protocol_t*>(out_protocol));
+        return ZX_OK;
+    }
+    case ZX_PROTOCOL_MIPI_CSI: {
+        self_protocol_.GetProto(static_cast<mipi_csi_protocol_t*>(out_protocol));
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
 zx_status_t AmlMipiDevice::Bind(camera_sensor_t* sensor_info) {
 
     zx_device_prop_t props[] = {
@@ -293,7 +312,7 @@ zx_status_t AmlMipiDevice::Bind(camera_sensor_t* sensor_info) {
 // static
 zx_status_t AmlMipiDevice::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto mipi_device = fbl::make_unique_checked<AmlMipiDevice>(&ac, parent);
+    auto mipi_device = std::unique_ptr<AmlMipiDevice>(new (&ac) AmlMipiDevice(parent));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }

@@ -170,7 +170,6 @@ __BEGIN_CDECLS;
 #define PDEV_PID_TI_LP8556          1
 #define PDEV_DID_TI_BACKLIGHT       1
 
-
 // Test
 #define PDEV_VID_TEST               17
 #define PDEV_PID_PBUS_TEST          1
@@ -181,8 +180,13 @@ __BEGIN_CDECLS;
 #define PDEV_DID_TEST_CHILD_3       4
 #define PDEV_DID_TEST_GPIO          5
 
+// ARM
+#define PDEV_VID_ARM                18
+#define PDEV_PID_ISP                1
+#define PDEV_DID_ARM_MALI_IV009     1
+
 // Qualcomm
-#define PDEV_VID_QUALCOMM           18
+#define PDEV_VID_QUALCOMM           19
 #define PDEV_PID_QUALCOMM_MSM8X53    1
 
 __END_CDECLS;

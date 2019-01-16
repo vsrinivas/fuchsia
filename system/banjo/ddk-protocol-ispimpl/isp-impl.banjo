@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-library fuchsia.hardware.camera;
-
+library ddk.protocol.ispimpl;
 using zx;
 
 // This structure represents image resolution.
@@ -79,64 +78,34 @@ struct SensorInfo {
     uint8 bayer;
 };
 
-
-[Layout = "Simple"]
-interface CameraSensor {
-  // Initializes the Camera Sensor.
-  1: Init() -> (zx.status s);
-
-  // De-Initializes the Camera Sensor.
-  2: DeInit();
-
-  // Sets the Camera Sensor Mode to one of the supported modes.
-  3: SetMode(uint8 mode) -> (zx.status s);
-
-  // Stop sensor data output.
-  // This function is called from system to enable video stream from sensor.
-  4: StartStreaming();
-
-  // Stop sensor data output.
-  // This function is called from system to disable video stream from sensor.
-  5: StopStreaming();
-
-  // Set analog gain.
-  // This function sets the sensor digital gain.
-  // Gain should be just saved here for the future.
-  // The real sensor digital gain update must be implemented in
-  // Update() routine.
-  // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
-  // @return the real digital gain which will be applied
-  6: SetAnalogGain(int32 gain) -> (int32 actual_gain);
-
-  // Set digital gain.
-  // This function sets the sensor digital gain.
-  // Gain should be just saved here for the future.
-  // The real sensor digital gain update must be implemented in
-  // Update() routine.
-  // @param gain - analog gain value in log2 format precision is defined by LOG2_GAIN_SHIFT
-  // @return the real digital gain which will be applied
-  7: SetDigitalGain(int32 gain) -> (int32 actual_gain);
-
-  // Set integration time
-  // This function sets the sensor integration time.
-  // Integration time should be just saved here for the future.
-  // The real time update must be implemented in
-  // sensor_update routine.
-  // @param int_time - integration time if one exposure is used or short exposure for multi-expsoure sensors.
-  //        int_time_M - medium integration time if several exposures are supported.
-  //        int_time_L - long integration time if several exposures are supported.
-  8: SetIntegrationTime(int32 int_time, int32 int_time_M, int32 int_time_L);
-
-  // Update all sensor parameters
-  // The function is called from IRQ thread in vertical blanking.
-  // All sensor parameters must be updated here.
-  9: Update();
-
-  // Get supported sensor modes.
-  // 10: GetSupportedModes() -> (vector<SensorMode> supported_modes, uint32 num);
-
-  // Gets the Sensor Parameters.
-  // Note: This is not supported in Zircon yet under "Simple" layout.
-  // 11: GetInfo() -> (zx.status s, SensorInfo info);
+[Layout = "ddk-interface"]
+interface IspCallbacks {
+    // Initializes the Camera Sensor.
+    Init() -> (zx.status s);
+    // De-Initializes the Camera Sensor.
+    DeInit() -> ();
+    // Sets the Camera Sensor Mode to one of the supported modes.
+    SetMode(uint8 mode) -> (zx.status s);
+    // Start streaming from the camera sensor.
+    StartStreaming() -> ();
+    // Stop steaming.
+    StopStreaming() -> ();
+    // Change Analog Gain.
+    SetAnalogGain(int32 gain) -> (int32 gain);
+    // Change Digital Gain.
+    SetDigitalGain(int32 gain) -> (int32 gain);
+    // Set Integration Time.
+    SetIntegrationTime(int32 int_time, int32 int_time_M, int32 int_time_L) -> ();
+    // Update the sensor with new parameters.
+    Update() -> (zx.status s);
+    // Gets the Sensor Parameters.
+    GetInfo() -> (zx.status s, SensorInfo info);
+    // Get the supported modes.
+    // GetSupportedModes() ->()
 };
 
+[Layout = "ddk-protocol"]
+interface IspImpl {
+    RegisterCallbacks(IspCallbacks cb) -> (zx.status s);
+    DeRegisterCallbacks() -> (zx.status s);
+};

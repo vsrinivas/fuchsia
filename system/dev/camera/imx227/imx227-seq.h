@@ -588,7 +588,7 @@ const init_seq_fmt_t* kSEQUENCE_TABLE[] = {
     setting_2400_2720_2lane_1g_28fps,
 };
 
-constexpr fuchsia_hardware_camera_SensorMode supported_modes[] = {
+constexpr sensor_mode_t supported_modes[] = {
     {
         // NOTE: SW reference consumes this as (30fps * 256)
         //       We are representing this as fpms.

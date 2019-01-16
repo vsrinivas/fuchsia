@@ -37,6 +37,7 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-mipicsi \
     system/banjo/ddk-protocol-i2c \
     system/banjo/ddk-protocol-gpio \
+    system/banjo/ddk-protocol-ispimpl \
 
 include make/module.mk
 

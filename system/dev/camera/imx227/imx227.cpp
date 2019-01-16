@@ -14,9 +14,9 @@
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <hw/reg.h>
+#include <memory>
 #include <stdint.h>
 #include <threads.h>
-#include <zircon/device/camera.h>
 #include <zircon/types.h>
 
 namespace camera {
@@ -61,6 +61,11 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
 
     // Mipi for init and de-init.
     if (!mipi_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
+    }
+
+    // IspImpl for registering callbacks.
+    if (!ispimpl_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -180,7 +185,7 @@ void Imx227Device::DeInit() {
     mipi_.DeInit();
 }
 
-zx_status_t Imx227Device::GetInfo(fuchsia_hardware_camera_SensorInfo* out_info) {
+zx_status_t Imx227Device::GetInfo(sensor_info_t* out_info) {
     return ZX_ERR_NOT_SUPPORTED;
 }
 
@@ -284,102 +289,13 @@ void Imx227Device::SetIntegrationTime(int32_t int_time,
                                       int32_t int_time_L) {
 }
 
-void Imx227Device::Update() {
-}
-
-zx_status_t Imx227Device::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
-                                   void* out_buf, size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case CAMERA_IOCTL_GET_SUPPORTED_MODES: {
-        if (out_len < sizeof(fuchsia_hardware_camera_SensorMode) * MAX_SUPPORTED_MODES) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        memcpy(out_buf, &supported_modes, sizeof(supported_modes));
-        *out_actual = sizeof(supported_modes);
-        return ZX_OK;
-    }
-
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
-}
-
-static zx_status_t Init(void* ctx, fidl_txn_t* txn) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    zx_status_t status = self.Init();
-    return fuchsia_hardware_camera_CameraSensorInit_reply(txn, status);
-}
-
-static zx_status_t DeInit(void* ctx) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    self.DeInit();
-    return ZX_OK;
-}
-
-static zx_status_t SetMode(void* ctx, uint8_t mode, fidl_txn_t* txn) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    zx_status_t status = self.SetMode(mode);
-    return fuchsia_hardware_camera_CameraSensorSetMode_reply(txn, status);
-}
-
-static zx_status_t StartStreaming(void* ctx) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    self.StartStreaming();
-    return ZX_OK;
-}
-
-static zx_status_t StopStreaming(void* ctx) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    self.StopStreaming();
-    return ZX_OK;
-}
-
-static zx_status_t SetAnalogGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    int32_t actual_gain = self.SetAnalogGain(gain);
-    return fuchsia_hardware_camera_CameraSensorSetAnalogGain_reply(txn, actual_gain);
-}
-
-static zx_status_t SetDigitalGain(void* ctx, int32_t gain, fidl_txn_t* txn) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    int32_t actual_gain = self.SetDigitalGain(gain);
-    return fuchsia_hardware_camera_CameraSensorSetDigitalGain_reply(txn, actual_gain);
-}
-
-static zx_status_t SetIntegrationTime(void* ctx,
-                                      int32_t int_time,
-                                      int32_t int_time_M,
-                                      int32_t int_time_L) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    self.SetIntegrationTime(int_time, int_time_M, int_time_L);
-    return ZX_OK;
-}
-
-static zx_status_t Update(void* ctx) {
-    auto& self = *static_cast<Imx227Device*>(ctx);
-    self.Update();
-    return ZX_OK;
-}
-
-fuchsia_hardware_camera_CameraSensor_ops_t fidl_ops = {
-    .Init = Init,
-    .DeInit = DeInit,
-    .SetMode = SetMode,
-    .StartStreaming = StartStreaming,
-    .StopStreaming = StopStreaming,
-    .SetAnalogGain = SetAnalogGain,
-    .SetDigitalGain = SetDigitalGain,
-    .SetIntegrationTime = SetIntegrationTime,
-    .Update = Update,
-};
-
-zx_status_t Imx227Device::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
-    return fuchsia_hardware_camera_CameraSensor_dispatch(this, txn, msg, &fidl_ops);
+zx_status_t Imx227Device::Update() {
+    return ZX_ERR_NOT_SUPPORTED;
 }
 
 zx_status_t Imx227Device::Create(zx_device_t* parent) {
     fbl::AllocChecker ac;
-    auto sensor_device = fbl::make_unique_checked<Imx227Device>(&ac, parent);
+    auto sensor_device = std::unique_ptr<Imx227Device>(new (&ac) Imx227Device(parent));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -390,11 +306,57 @@ zx_status_t Imx227Device::Create(zx_device_t* parent) {
     }
 
     status = sensor_device->DdkAdd("imx227");
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "imx227: Could not create imx227 sensor device: %d\n", status);
+        return status;
+    }
 
     // sensor_device intentionally leaked as it is now held by DevMgr.
-    __UNUSED auto ptr = sensor_device.release();
+    auto* dev = sensor_device.release();
 
-    return status;
+    isp_callbacks_t cb;
+    isp_callbacks_ops ops;
+
+    ops.init = [](void* ctx) {
+        return static_cast<Imx227Device*>(ctx)->Init();
+    };
+    ops.de_init = [](void* ctx) {
+        return static_cast<Imx227Device*>(ctx)->DeInit();
+    };
+    ops.set_mode = [](void* ctx, uint8_t mode) {
+        return static_cast<Imx227Device*>(ctx)->SetMode(mode);
+    };
+    ops.start_streaming = [](void* ctx) {
+        return static_cast<Imx227Device*>(ctx)->StartStreaming();
+    };
+    ops.stop_streaming = [](void* ctx) {
+        return static_cast<Imx227Device*>(ctx)->StopStreaming();
+    };
+    ops.set_analog_gain = [](void* ctx, int32_t gain) {
+        return static_cast<Imx227Device*>(ctx)->SetAnalogGain(gain);
+    };
+    ops.set_digital_gain = [](void* ctx, int32_t gain) {
+        return static_cast<Imx227Device*>(ctx)->SetDigitalGain(gain);
+    };
+    ops.set_integration_time = [](void* ctx,
+                                  int32_t int_time,
+                                  int32_t int_time_M,
+                                  int32_t int_time_L) {
+        return static_cast<Imx227Device*>(ctx)->SetIntegrationTime(int_time,
+                                                                   int_time_M,
+                                                                   int_time_L);
+    };
+    ops.get_info = [](void* ctx, sensor_info_t* out_info) {
+        return static_cast<Imx227Device*>(ctx)->GetInfo(out_info);
+    };
+    ops.update = [](void* ctx) {
+        return static_cast<Imx227Device*>(ctx)->Update();
+    };
+
+    cb.ops = &ops;
+    cb.ctx = dev;
+    return dev->ispimpl_.RegisterCallbacks(&cb);
+    return ZX_OK;
 }
 
 void Imx227Device::ShutDown() {
