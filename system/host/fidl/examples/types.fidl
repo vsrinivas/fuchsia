@@ -339,8 +339,3 @@ struct requests {
     request<this_is_an_interface> r;
     request<this_is_an_interface>? nullable_r;
 };
-
-xunion this_is_a_xunion {
-    string s;
-    int32 i;
-};
