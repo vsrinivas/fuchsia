@@ -91,11 +91,8 @@ func TestOutput(t *testing.T) {
 		defer cancel()
 
 		ping := exec.CommandContext(ctx, "/boot/bin/ping", "-c", "1", "localhost")
-		switch err := ping.Run(); err.(type) {
-		case *exec.Error:
-			t.Fatalf("failed to run ping: %v", err)
-		case *exec.ExitError:
-			// fallthrough, ping doesn't have to successfully resolve the host for sent count to increase
+		if err := ping.Run(); err != nil {
+			t.Fatalf("ping failed: %+v", err)
 		}
 
 		out, err := exec.Command("/bin/netstat", "-s").CombinedOutput()
