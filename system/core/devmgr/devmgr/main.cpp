@@ -41,6 +41,7 @@
 
 #include "../shared/env.h"
 #include "../shared/fdio.h"
+#include "../shared/log.h"
 #include "coordinator.h"
 #include "devmgr.h"
 #include "devhost-loader-service.h"
@@ -525,6 +526,34 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
     }
 }
 
+zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) {
+    printf("devmgr: coordinator_init()\n");
+
+    zx::job devhost_job;
+    zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: unable to create devhost job\n");
+        return status;
+    }
+    static const zx_policy_basic_t policy[] = {
+        { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
+    };
+    status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE,
+                                    ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: zx_job_set_policy() failed\n");
+        return status;
+    }
+    status = devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: zx_job_set_property() failed\n");
+        return status;
+    }
+
+    *devhost_job_out = std::move(devhost_job);
+    return ZX_OK;
+}
+
 } // namespace
 
 int main(int argc, char** argv) {
@@ -539,8 +568,13 @@ int main(int argc, char** argv) {
 
     g_handles.root_job = zx::job::default_job();
 
-    devmgr::coordinator_init(*g_handles.root_job);
-    devmgr::Coordinator coordinator(loop.dispatcher());
+    zx::job devhost_job;
+    zx_status_t status = CreateDevhostJob(*g_handles.root_job, &devhost_job);
+    if (status != ZX_OK) {
+        printf("unable to create devhost job\n");
+        return 1;
+    }
+    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher());
     devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
@@ -552,9 +586,10 @@ int main(int argc, char** argv) {
 
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
 
-    zx_status_t status = zx::job::create(*g_handles.root_job, 0u, &g_handles.svc_job);
-    if (status < 0) {
+    status = zx::job::create(*g_handles.root_job, 0u, &g_handles.svc_job);
+    if (status != ZX_OK) {
         printf("unable to create service job\n");
+        return 1;
     }
     g_handles.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
 

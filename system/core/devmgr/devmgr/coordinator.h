@@ -410,7 +410,7 @@ public:
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
-    explicit Coordinator(async_dispatcher_t* dispatcher);
+    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher);
 
     zx_status_t InitializeCoreDevices();
 
@@ -497,6 +497,7 @@ public:
 private:
     bool running_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
+    zx::job devhost_job_;
     async_dispatcher_t* dispatcher_;
 
     // All Drivers
@@ -529,7 +530,6 @@ private:
     bool system_loaded_ = false;
 };
 
-void coordinator_init(const zx::job& root_job);
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
 
 using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;

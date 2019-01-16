@@ -69,7 +69,9 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
 
-Coordinator::Coordinator(async_dispatcher_t* dispatcher) : dispatcher_(dispatcher) {}
+Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher) :
+    devhost_job_(std::move(devhost_job)),
+    dispatcher_(dispatcher) {}
 
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
@@ -253,8 +255,6 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
     log(ERROR, "dmctl: unknown command '%.*s'\n", (int) len, cmd);
     return ZX_ERR_NOT_SUPPORTED;
 }
-
-static zx::job devhost_job;
 
 const Driver* Coordinator::LibnameToDriver(const char* libname) const {
     for (const auto& drv : drivers_) {
@@ -484,11 +484,11 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
 }
 
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
-                                     const char* name, zx_handle_t hrpc) {
+                                     const char* name, zx_handle_t hrpc, zx::unowned_job devhost_job) {
     const char* devhost_bin = get_devhost_bin();
 
     launchpad_t* lp;
-    launchpad_create_with_jobs(devhost_job.get(), 0, name, &lp);
+    launchpad_create_with_jobs(devhost_job->get(), 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
     launchpad_set_args(lp, 1, &devhost_bin);
 
@@ -572,7 +572,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     }
     dh->set_hrpc(dh_hrpc);
 
-    if ((r = dc_launch_devhost(dh.get(), loader_service_, name, hrpc)) < 0) {
+    if ((r = dc_launch_devhost(dh.get(), loader_service_, name, hrpc, zx::unowned_job(devhost_job_))) < 0) {
         zx_handle_close(dh->hrpc());
         return r;
     }
@@ -2017,24 +2017,6 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
         drivers_.push_back(drv);
         BindDriver(drv);
     });
-}
-
-void coordinator_init(const zx::job& root_job) {
-    printf("devmgr: coordinator_init()\n");
-
-    zx_status_t status = zx::job::create(root_job, 0u, &devhost_job);
-    if (status < 0) {
-        log(ERROR, "devcoord: unable to create devhost job\n");
-    }
-    static const zx_policy_basic_t policy[] = {
-        { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
-    };
-    status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE,
-                                    ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
-    if (status < 0) {
-        log(ERROR, "devcoord: zx_job_set_policy() failed\n");
-    }
-    devhost_job.set_property(ZX_PROP_NAME, "zircon-drivers", 15);
 }
 
 // BindDRiver is called when a new driver becomes available to
