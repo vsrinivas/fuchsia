@@ -107,7 +107,7 @@ static inline struct x86_percpu *x86_get_percpu(void)
 
 static inline cpu_num_t arch_curr_cpu_num(void)
 {
-    return x86_get_percpu()->cpu_num;
+    return x86_read_gs_offset32(PERCPU_CPU_NUM_OFFSET);
 }
 
 extern uint8_t x86_num_cpus;
