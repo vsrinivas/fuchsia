@@ -19,6 +19,7 @@ use crate::server::sl4f_types::{AsyncRequest, AsyncResponse, FacadeType};
 use crate::bluetooth::commands::ble_advertise_method_to_fidl;
 use crate::bluetooth::commands::ble_method_to_fidl;
 use crate::bluetooth::commands::gatt_client_method_to_fidl;
+use crate::bluetooth::commands::gatt_server_method_to_fidl;
 use crate::netstack::commands::netstack_method_to_fidl;
 use crate::wlan::commands::wlan_method_to_fidl;
 
@@ -70,30 +71,35 @@ async fn method_to_fidl(
     method_type: String, method_name: String, args: Value, sl4f_session: Arc<RwLock<Sl4f>>,
 ) -> Result<Value, Error> {
     match FacadeType::from_str(&method_type) {
-        FacadeType::NetstackFacade => await!(netstack_method_to_fidl(
-                method_name,
-                args,
-                sl4f_session.write().get_netstack_facade(),
-        )),
         FacadeType::BleAdvertiseFacade => await!(ble_advertise_method_to_fidl(
                 method_name,
                 args,
-                sl4f_session.write().get_ble_advertise_facade(),
+                sl4f_session.read().get_ble_advertise_facade(),
         )),
         FacadeType::Bluetooth => await!(ble_method_to_fidl(
             method_name,
             args,
-            sl4f_session.write().get_bt_facade(),
+            sl4f_session.read().get_bt_facade(),
         )),
         FacadeType::GattClientFacade => await!(gatt_client_method_to_fidl(
                 method_name,
                 args,
-                sl4f_session.write().get_gatt_client_facade(),
+                sl4f_session.read().get_gatt_client_facade(),
+        )),
+        FacadeType::GattServerFacade => await!(gatt_server_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_gatt_server_facade(),
+        )),
+        FacadeType::NetstackFacade => await!(netstack_method_to_fidl(
+            method_name,
+            args,
+            sl4f_session.read().get_netstack_facade(),
         )),
         FacadeType::Wlan => await!(wlan_method_to_fidl(
             method_name,
             args,
-            sl4f_session.write().get_wlan_facade()
+            sl4f_session.read().get_wlan_facade()
         )),
         _ => Err(BTError::new("Invalid FIDL method type").into()),
     }

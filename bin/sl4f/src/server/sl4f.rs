@@ -22,15 +22,71 @@ use crate::server::sl4f_types::{
     AsyncRequest, AsyncResponse, ClientData, CommandRequest, CommandResponse,
 };
 
-// Bluetooth related includes (do the same for each connectivity stack)
+// Bluetooth related includes
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
+use crate::bluetooth::gatt_server_facade::GattServerFacade;
+
+// Netstack related includes
+use crate::netstack::facade::NetstackFacade;
 
 // Wlan related includes
 use crate::wlan::facade::WlanFacade;
 
-use crate::netstack::facade::NetstackFacade;
+pub mod macros {
+    pub use crate::dtag;
+}
+
+// Create a short way to describe tags within facades.
+//
+// dtag is short for "descriptive tag"
+//
+// While using the dtag macro within a custom facade, the log
+// tag will print as such:
+// TestFacade::test_func:123
+//     TestFacade - is the class.
+//     test_func - is the function where the log message was called from.
+//     123 - is the line number the log message was called from.
+//
+// Example usage and output:
+// Class TestFacade {
+//      pub fn test_func {
+//          fx_log_info!(tag: &dtag!(), "tests this random func.");
+//      }
+//
+// "fx syslog" output:
+//     [sl4f, TestFacade::test_func:123] INFO: tests this random func.
+#[macro_export]
+macro_rules! dtag {
+    () => {{
+        fn f() {}
+        fn type_name_of<T>(_: T) -> &'static str {
+            extern crate core;
+            unsafe { core::intrinsics::type_name::<T>() }
+        }
+        let name = type_name_of(f);
+
+        // In some circumstances an additional ::{{closure}} tag is added
+        // to the function name. Remove it.
+        let re = Regex::new(r"::\{\{closure\}\}").unwrap();
+        let mut result = re.replace_all(name, "").to_string();
+
+        // Remove the full module path as we only want the class and
+        // function being called for less verbosity.
+        let mut prefix_to_remove = module_path!().to_string() + &"::".to_string();
+        // Remove beginning "sl4f::" from the prefix_to_remove.
+        prefix_to_remove = prefix_to_remove[6..prefix_to_remove.len()].to_string();
+        let re = Regex::new(&prefix_to_remove).unwrap();
+        result = re.replace_all(&result, "").to_string();
+        // Remove beginning "fn() {" and ending "::f}".
+        result = result[6..result.len() - 4].to_string();
+        let line = line!();
+        // Return and add line number to the tag.
+        let result = result + &":".to_string() + &line.to_string();
+        result
+    }};
+}
 
 /// Sl4f object. This stores all information about state for each connectivity stack.
 /// Every session will have a new Sl4f object.
@@ -47,6 +103,9 @@ pub struct Sl4f {
     // gatt_client_facade: Thread safe object for state for Gatt Client tests
     gatt_client_facade: Arc<GattClientFacade>,
 
+    // gatt_server_facade: Thread safe object for state for Gatt Server tests
+    gatt_server_facade: Arc<GattServerFacade>,
+
     // netstack_facade: Thread safe object for state for netstack functions.
     netstack_facade: Arc<NetstackFacade>,
 
@@ -61,14 +120,16 @@ pub struct Sl4f {
 
 impl Sl4f {
     pub fn new() -> Result<Arc<RwLock<Sl4f>>, Error> {
-        let netstack_facade = Arc::new(NetstackFacade::new());
         let ble_advertise_facade = Arc::new(BleAdvertiseFacade::new());
         let gatt_client_facade = Arc::new(GattClientFacade::new());
+        let gatt_server_facade = Arc::new(GattServerFacade::new());
+        let netstack_facade = Arc::new(NetstackFacade::new());
         let wlan_facade = Arc::new(WlanFacade::new()?);
         Ok(Arc::new(RwLock::new(Sl4f {
             ble_advertise_facade,
             bt_facade: BluetoothFacade::new(),
             gatt_client_facade,
+            gatt_server_facade,
             netstack_facade,
             wlan_facade,
             clients: Arc::new(Mutex::new(HashMap::new())),
@@ -85,6 +146,10 @@ impl Sl4f {
 
     pub fn get_gatt_client_facade(&self) -> Arc<GattClientFacade> {
         self.gatt_client_facade.clone()
+    }
+
+    pub fn get_gatt_server_facade(&self) -> Arc<GattServerFacade> {
+        self.gatt_server_facade.clone()
     }
 
     pub fn get_bt_facade(&self) -> Arc<RwLock<BluetoothFacade>> {
@@ -107,6 +172,7 @@ impl Sl4f {
         BluetoothFacade::cleanup(self.bt_facade.clone());
         self.ble_advertise_facade.cleanup();
         self.gatt_client_facade.cleanup();
+        self.gatt_server_facade.cleanup();
         self.cleanup_clients();
     }
 
@@ -119,6 +185,7 @@ impl Sl4f {
         self.bt_facade.read().print();
         self.ble_advertise_facade.print();
         self.gatt_client_facade.print();
+        self.gatt_server_facade.print();
     }
 }
 

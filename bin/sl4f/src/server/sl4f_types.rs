@@ -119,10 +119,11 @@ impl AsyncResponse {
 /// Enum for supported connectivity stacks
 /// Make sure to update sl4f.rs:method_to_fidl() match statement
 pub enum FacadeType {
-    NetstackFacade,
     BleAdvertiseFacade,
     Bluetooth,
     GattClientFacade,
+    GattServerFacade,
+    NetstackFacade,
     Wlan,
     Undefined,
 }
@@ -133,6 +134,7 @@ impl FacadeType {
             "ble_advertise_facade" => FacadeType::BleAdvertiseFacade,
             "bluetooth" => FacadeType::Bluetooth,
             "gatt_client_facade" => FacadeType::GattClientFacade,
+            "gatt_server_facade" => FacadeType::GattServerFacade,
             "netstack_facade" => FacadeType::NetstackFacade,
             "wlan" => FacadeType::Wlan,
             _ => FacadeType::Undefined,

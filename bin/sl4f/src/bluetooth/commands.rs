@@ -15,6 +15,7 @@ use std::sync::Arc;
 use crate::bluetooth::ble_advertise_facade::BleAdvertiseFacade;
 use crate::bluetooth::facade::BluetoothFacade;
 use crate::bluetooth::gatt_client_facade::GattClientFacade;
+use crate::bluetooth::gatt_server_facade::GattServerFacade;
 use crate::bluetooth::types::{
     BleConnectPeripheralResponse, BluetoothMethod, GattcDiscoverCharacteristicResponse,
 };
@@ -258,11 +259,11 @@ pub async fn gatt_client_method_to_fidl(
                 &facade, id, value
             ))
         }
-        BluetoothMethod::GattcEnableNotifyCharactertistic => {
+        BluetoothMethod::GattcEnableNotifyCharacteristic => {
             let id = parse_u64_identifier(args.clone())?;
             await!(gattc_toggle_notify_characteristic_async(&facade, id, true))
         }
-        BluetoothMethod::GattcDisableNotifyCharactertistic => {
+        BluetoothMethod::GattcDisableNotifyCharacteristic => {
             let id = parse_u64_identifier(args.clone())?;
             await!(gattc_toggle_notify_characteristic_async(&facade, id, false))
         }
@@ -304,6 +305,18 @@ pub async fn gatt_client_method_to_fidl(
             await!(list_services_async(&facade, id))
         }
         _ => bail!("Invalid Gatt Client FIDL method: {:?}", method_name),
+    }
+}
+
+pub async fn gatt_server_method_to_fidl(
+    method_name: String, args: Value, facade: Arc<GattServerFacade>,
+) -> Result<Value, Error> {
+    match BluetoothMethod::from_str(&method_name) {
+        BluetoothMethod::GattServerPublishServer => {
+            let result = await!(facade.publish_server(args))?;
+            Ok(to_value(result)?)
+        }
+        _ => bail!("Invalid Gatt Server FIDL method: {:?}", method_name),
     }
 }
 

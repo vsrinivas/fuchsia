@@ -10,6 +10,11 @@ use serde_derive::{Deserialize, Serialize};
 
 /// Enum for supported FIDL commands, to extend support for new commands, add to this
 /// definition, update ble_method_to_fidl, and implement helper methods in BluetoothFacade
+///
+/// TODO: Expand short names: BT-699
+/// Short names expanded:
+///     Ble: Bluetooth Low Energy
+///     Gattc: Gatt Client
 pub enum BluetoothMethod {
     BleAdvertise,
     BleConnectPeripheral,
@@ -25,13 +30,14 @@ pub enum BluetoothMethod {
     GattcDiscoverCharacteristics,
     GattcWriteCharacteristicById,
     GattcWriteCharacteristicByIdWithoutResponse,
-    GattcEnableNotifyCharactertistic,
-    GattcDisableNotifyCharactertistic,
+    GattcEnableNotifyCharacteristic,
+    GattcDisableNotifyCharacteristic,
     GattcReadCharacteristicById,
     GattcReadLongCharacteristicById,
     GattcReadLongDescriptorById,
     GattcReadDescriptorById,
     GattcWriteDescriptorById,
+    GattServerPublishServer,
 }
 
 impl BluetoothMethod {
@@ -52,15 +58,16 @@ impl BluetoothMethod {
             "GattcWriteCharacteristicByIdWithoutResponse" => {
                 BluetoothMethod::GattcWriteCharacteristicByIdWithoutResponse
             }
-            "GattcEnableNotifyCharactertistic" => BluetoothMethod::GattcEnableNotifyCharactertistic,
-            "GattcDisableNotifyCharactertistic" => {
-                BluetoothMethod::GattcDisableNotifyCharactertistic
+            "GattcEnableNotifyCharactertistic" => BluetoothMethod::GattcEnableNotifyCharacteristic,
+            "GattcDisableNotifyCharacteristic" => {
+                BluetoothMethod::GattcDisableNotifyCharacteristic
             }
             "GattcReadCharacteristicById" => BluetoothMethod::GattcReadCharacteristicById,
             "GattcReadLongCharacteristicById" => BluetoothMethod::GattcReadLongCharacteristicById,
             "GattcReadLongDescriptorById" => BluetoothMethod::GattcReadLongDescriptorById,
             "GattcReadDescriptorById" => BluetoothMethod::GattcReadDescriptorById,
             "GattcWriteDescriptorById" => BluetoothMethod::GattcWriteDescriptorById,
+            "GattServerPublishServer" => BluetoothMethod::GattServerPublishServer,
 
             _ => BluetoothMethod::BleUndefined,
         }
