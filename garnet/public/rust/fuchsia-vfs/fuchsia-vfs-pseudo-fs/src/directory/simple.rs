@@ -8,8 +8,8 @@
 
 use {
     crate::common::send_on_open_with_error,
-    crate::directory_entry::{DirectoryEntry, EntryInfo},
-    crate::watcher_connection::WatcherConnection,
+    crate::directory::entry::{DirectoryEntry, EntryInfo},
+    crate::directory::watcher_connection::WatcherConnection,
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
@@ -46,7 +46,7 @@ use {
 /// In this implementation pseudo directories own all the entries that are directly direct
 /// children, also "running" direct entries when the directory itself is run via [`Future::poll`].
 /// See [`DirectoryEntry`] documentation for details.
-pub struct PseudoDirectory<'entries> {
+pub struct Simple<'entries> {
     /// MODE_PROTECTION_MASK attributes returned by this directory through io.fidl:Node::GetAttr.
     /// They have no meaning for the directory operation itself, but may have consequences to the
     /// POSIX emulation layer.  This field should only have set bits in the MODE_PROTECTION_MASK
@@ -121,7 +121,7 @@ macro_rules! assert_eq_size {
     };
 }
 
-/// Return type for PseudoDirectory::handle_request().
+/// Return type for Simple::handle_request().
 enum ConnectionState {
     Alive,
     Closed,
@@ -130,24 +130,24 @@ enum ConnectionState {
 /// POSIX emulation layer access attributes set by default for directories created with empty().
 pub const DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
 
-impl<'entries> PseudoDirectory<'entries> {
-    /// Creates an empty directory.
-    ///
-    /// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
-    pub fn empty() -> Self {
-        PseudoDirectory::empty_attr(DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES)
-    }
+/// Creates an empty directory.
+///
+/// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
+pub fn empty<'entries>() -> Simple<'entries> {
+    empty_attr(DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES)
+}
 
-    /// Creates an empty directory with the specified POSIX access attributes.
-    pub fn empty_attr(protection_attributes: u32) -> Self {
-        PseudoDirectory {
-            protection_attributes,
-            entries: BTreeMap::new(),
-            connections: FuturesUnordered::new(),
-            watchers: Vec::new(),
-        }
+/// Creates an empty directory with the specified POSIX access attributes.
+pub fn empty_attr<'entries>(protection_attributes: u32) -> Simple<'entries> {
+    Simple {
+        protection_attributes,
+        entries: BTreeMap::new(),
+        connections: FuturesUnordered::new(),
+        watchers: Vec::new(),
     }
+}
 
+impl<'entries> Simple<'entries> {
     /// Adds a child entry to this directory.  The directory will own the child entry item and will
     /// run it as part of the directory own `poll()` invocation.
     ///
@@ -320,7 +320,7 @@ impl<'entries> PseudoDirectory<'entries> {
             DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
                 // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
-                // PseudoDirectory.
+                // Simple.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             DirectoryRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
@@ -446,7 +446,7 @@ impl<'entries> PseudoDirectory<'entries> {
 
         let (entries_iter, mut last_returned) = match &connection.seek {
             DirectoryReadPos::Start => {
-                if !PseudoDirectory::encode_dirent(
+                if !Simple::encode_dirent(
                     &mut buf,
                     max_bytes,
                     &EntryInfo::new(INO_UNKNOWN, DIRENT_TYPE_DIRECTORY),
@@ -486,7 +486,7 @@ impl<'entries> PseudoDirectory<'entries> {
         };
 
         for (name, entry) in entries_iter {
-            if !PseudoDirectory::encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
+            if !Simple::encode_dirent(&mut buf, max_bytes, &entry.entry_info(), name) {
                 connection.seek = last_returned;
                 return responder(
                     if fit_one { Status::OK } else { Status::BUFFER_TOO_SMALL },
@@ -502,7 +502,7 @@ impl<'entries> PseudoDirectory<'entries> {
     }
 }
 
-impl<'entries> DirectoryEntry for PseudoDirectory<'entries> {
+impl<'entries> DirectoryEntry for Simple<'entries> {
     fn open(
         &mut self,
         flags: u32,
@@ -560,9 +560,9 @@ impl<'entries> DirectoryEntry for PseudoDirectory<'entries> {
     }
 }
 
-impl<'entries> Unpin for PseudoDirectory<'entries> {}
+impl<'entries> Unpin for Simple<'entries> {}
 
-impl<'entries> Future for PseudoDirectory<'entries> {
+impl<'entries> Future for Simple<'entries> {
     type Output = Void;
 
     fn poll(mut self: Pin<&mut Self>, lw: &Waker) -> Poll<Self::Output> {
@@ -618,7 +618,7 @@ impl<'entries> Future for PseudoDirectory<'entries> {
     }
 }
 
-impl<'entries> FusedFuture for PseudoDirectory<'entries> {
+impl<'entries> FusedFuture for Simple<'entries> {
     fn is_terminated(&self) -> bool {
         for entry in self.entries.values() {
             if !entry.is_terminated() {
@@ -631,8 +631,8 @@ impl<'entries> FusedFuture for PseudoDirectory<'entries> {
         //
         // As a pseudo directory blocks when no connections are available, it can not use
         // `connections.is_terminated()`.  `FuturesUnordered::is_terminated()` will return `false`
-        // for an empty set of connections for the first time, while `PseudoDirectory::poll()` will
-        // return `Pending` in the same situation.  If we do not return `true` here for the empty
+        // for an empty set of connections for the first time, while `Simple::poll()` will return
+        // `Pending` in the same situation.  If we do not return `true` here for the empty
         // connections case for the first time instead, we will hang.
         self.watchers.len() == 0 && self.connections.len() == 0
     }
@@ -797,14 +797,14 @@ mod tests {
 
     #[test]
     fn empty_directory() {
-        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
             assert_close!(proxy);
         });
     }
 
     #[test]
     fn empty_directory_get_attr() {
-        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
             assert_get_attr!(
                 proxy,
                 NodeAttributes {
@@ -825,7 +825,7 @@ mod tests {
     fn empty_attr_directory_get_attr() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            PseudoDirectory::empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
+            empty_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR),
             async move |proxy| {
                 assert_get_attr!(
                     proxy,
@@ -847,7 +847,7 @@ mod tests {
 
     #[test]
     fn empty_directory_describe() {
-        run_server_client(OPEN_RIGHT_READABLE, PseudoDirectory::empty(), async move |proxy| {
+        run_server_client(OPEN_RIGHT_READABLE, empty(), async move |proxy| {
             assert_describe!(proxy, NodeInfo::Directory(DirectoryObject { reserved: 0 }));
             assert_close!(proxy);
         });
@@ -855,23 +855,20 @@ mod tests {
 
     #[test]
     fn open_empty_directory_with_describe() {
-        run_server_client_with_open_requests_channel(
-            PseudoDirectory::empty(),
-            async move |mut open_sender| {
-                let (proxy, server_end) = create_proxy::<DirectoryMarker>()
-                    .expect("Failed to create connection endpoints");
+        run_server_client_with_open_requests_channel(empty(), async move |mut open_sender| {
+            let (proxy, server_end) =
+                create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
 
-                let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
-                await!(open_sender.send((flags, 0, Box::new(iter::empty()), server_end))).unwrap();
-                assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
-                    assert_eq!(s, ZX_OK);
-                    assert_eq!(
-                        info,
-                        Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 })))
-                    );
-                });
-            },
-        );
+            let flags = OPEN_RIGHT_READABLE | OPEN_FLAG_DESCRIBE;
+            await!(open_sender.send((flags, 0, Box::new(iter::empty()), server_end))).unwrap();
+            assert_event!(proxy, DirectoryEvent::OnOpen_ { s, info }, {
+                assert_eq!(s, ZX_OK);
+                assert_eq!(
+                    info,
+                    Some(Box::new(NodeInfo::Directory(DirectoryObject { reserved: 0 })))
+                );
+            });
+        });
     }
 
     #[test]

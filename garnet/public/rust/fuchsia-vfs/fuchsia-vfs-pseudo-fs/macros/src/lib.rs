@@ -55,10 +55,10 @@ pub fn pseudo_directory(input: TokenStream) -> TokenStream {
 
     let constructor = match parsed.protection_attributes {
         None => quote! {
-            let mut #dir_var = #directory_mod::PseudoDirectory::empty();
+            let mut #dir_var = #directory_mod::simple::empty();
         },
         Some(attrs) => quote! {
-            let mut #dir_var = #directory_mod::PseudoDirectory::empty_attr(#attrs);
+            let mut #dir_var = #directory_mod::simple::empty_attr(#attrs);
         },
     };
 

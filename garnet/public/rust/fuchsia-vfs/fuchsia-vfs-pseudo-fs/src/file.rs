@@ -34,7 +34,7 @@
 
 use {
     crate::common::send_on_open_with_error,
-    crate::directory_entry::{DirectoryEntry, EntryInfo},
+    crate::directory::entry::{DirectoryEntry, EntryInfo},
     failure::Error,
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,

@@ -15,11 +15,9 @@ use proc_macro_hack::proc_macro_hack;
 mod test_utils;
 
 pub mod directory;
-pub mod directory_entry;
 pub mod file;
 
 mod common;
-mod watcher_connection;
 
 // --- pseudo_directory ---
 
