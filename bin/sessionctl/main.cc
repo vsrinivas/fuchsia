@@ -145,19 +145,23 @@ PuppetMasterPtr ConnectToPuppetMaster(const DebugService& session) {
 }
 
 fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
-  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
-  auto request = basemgr.NewRequest().TakeChannel();
-
+  const char kRegex[] = "/basemgr.cmx/(\\d+)";
   std::vector<DebugService> services;
-  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, "basemgr.cmx",
+  FindDebugServicesForPath(modular::kBasemgrDebugServiceGlobPath, kRegex,
                            &services);
+
+  // Path to basemgr debug service from a virtual console
+  FindDebugServicesForPath("/hub/r/sys/*/c/basemgr.cmx/*/out/debug/basemgr",
+                           kRegex, &services);
 
   if (services.empty()) {
     return nullptr;
   }
   FXL_CHECK(services.size() == 1);
-
   std::string service_path = services[0].service_path;
+
+  fuchsia::modular::internal::BasemgrDebugPtr basemgr;
+  auto request = basemgr.NewRequest().TakeChannel();
   if (fdio_service_connect(service_path.c_str(), request.get()) != ZX_OK) {
     FXL_LOG(FATAL) << "Could not connect to basemgr service in "
                    << service_path;
