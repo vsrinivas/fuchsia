@@ -2,11 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-// The software delivery grand unified binary is a binary that contains several
-// other binaries, so done in order to reduce the amount of disk space and
-// shared memory required to run the software delivery subsystem. This
-// combination saves >=50% of storage and ram cost on a running system at
-// boot/update time.
+// The Fuchsia Go Grand Unified Binary is a binary that contains several other
+// binaries, so done in order to reduce the amount of disk space and shared
+// memory required to run Fuchsia subsystems written in Go. This combination
+// saves >=50% of storage and ram cost on a running system at boot/update time.
 package main
 
 import (
@@ -17,6 +16,7 @@ import (
 
 	"amber/amberctl"
 	"amber/amberd"
+	"netstack"
 	"system_updater"
 
 	"fuchsia.googlesource.com/pmd/pkgsvr"
@@ -38,6 +38,8 @@ func main() {
 		amberctl.Main()
 	case "system_updater":
 		system_updater.Main()
+	case "netstack":
+		netstack.Main()
 	default:
 		log.Printf("software delivery grand unified binary: unknown inner binary name: %s (%s)", name, os.Args[0])
 		os.Exit(1)

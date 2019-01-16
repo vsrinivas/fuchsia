@@ -8,12 +8,13 @@ import("//build/go/go_library.gni")
 # lib contains all of the softare delivery binaries dependencies used to make
 # the grand unified binary.
 go_library("lib") {
-  name = "fuchsia.googlesource.com/amber/grand_unified_binary"
+  name = "fuchsia.googlesource.com/grand_unified_binary"
 
   deps = [
     "//garnet/go/src/pmd",
     "//garnet/go/src/amber/system_updater:lib",
     "//garnet/go/src/amber:lib",
+    "//garnet/go/src/netstack:netstack_lib"
   ]
 }
 
@@ -23,7 +24,7 @@ go_library("lib") {
 # amber_ctl
 # system_updater
 go_binary("grand_unified_binary") {
-  gopackage = "fuchsia.googlesource.com/amber/grand_unified_binary"
+  gopackage = "fuchsia.googlesource.com/grand_unified_binary"
   deps = [
     ":lib"
   ]

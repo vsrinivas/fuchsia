@@ -4,7 +4,7 @@
 
 //+build pprof
 
-package main
+package netstack
 
 import (
 	"log"

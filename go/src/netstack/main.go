@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package netstack
 
 import (
 	"flag"
@@ -33,7 +33,7 @@ import (
 
 var OnInterfacesChanged func()
 
-func main() {
+func Main() {
 	flag.Parse()
 	log.SetFlags(log.Lshortfile)
 	log.SetPrefix("netstack: ")

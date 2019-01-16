@@ -33,7 +33,7 @@ metrics_registry("cobalt_sw_delivery_registry") {
 
 package("amber") {
   deps = [
-    "grand_unified_binary",
+    "//garnet/go/src/grand_unified_binary",
     ":cobalt_sw_delivery_registry",
   ]
 
@@ -91,7 +91,7 @@ package("amber") {
 
 package("amber_tools") {
   deps = [
-    "grand_unified_binary",
+    "//garnet/go/src/grand_unified_binary",
   ]
 
   binaries = [

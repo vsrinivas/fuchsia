@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -12,12 +11,13 @@ package("netstack") {
   deprecated_bare_package_url = "//build"
 
   deps = [
-    ":netstack_bin",
+    "//garnet/go/src/grand_unified_binary",
   ]
 
   binaries = [
     {
       name = "netstack"
+      source = "grand_unified_binary"
     },
   ]
 
@@ -134,15 +134,6 @@ go_library("netstack_lib") {
     "//zircon/public/fidl/fuchsia-hardware-ethernet($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net($go_toolchain)",
     "//zircon/public/fidl/fuchsia-net-stack($go_toolchain)",
-  ]
-}
-
-go_binary("netstack_bin") {
-  output_name = "netstack"
-
-  gopackage = "netstack"
-  deps = [
-    ":netstack_lib",
   ]
 }
 

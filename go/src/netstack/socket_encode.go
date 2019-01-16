@@ -5,7 +5,7 @@
 // Ad-hoc unsafe encoding/decoding of C data types used by the
 // protocol libc talks to netstack.
 
-package main
+package netstack
 
 import (
 	"fmt"
