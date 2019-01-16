@@ -10,7 +10,7 @@
 #include "gtest/gtest.h"
 
 static constexpr char kRunPath[] = "/bin/run";
-static constexpr char kExiter[] = "run_test_exiter";
+static constexpr char kExiter[] = "fuchsia-pkg://fuchsia.com/run_test_exiter#meta/run_test_exiter.cmx";
 
 void test_case(const char* value) {
   // Spawn "run run_test_exiter <value>"
