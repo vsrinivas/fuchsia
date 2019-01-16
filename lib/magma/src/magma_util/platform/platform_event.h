@@ -2,10 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PLATFORM_EVENT_H
-#define PLATFORM_EVENT_H
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_EVENT_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_EVENT_H_
 
 #include <memory>
+
+#include "magma_util/status.h"
 
 namespace magma {
 
@@ -19,12 +21,13 @@ public:
 
     virtual void Signal() = 0;
 
-    // Returns true if the event is signaled before the timeout expires.
-    virtual bool Wait(uint64_t timeout_ms) = 0;
+    // Returns MAGMA_STATUS_OK if the event is signaled before the
+    // timeout expires.
+    virtual magma::Status Wait(uint64_t timeout_ms) = 0;
 
-    bool Wait() { return Wait(UINT64_MAX); }
+    magma::Status Wait() { return Wait(UINT64_MAX); }
 };
 
 } // namespace magma
 
-#endif // PLATFORM_EVENT_H
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_PLATFORM_EVENT_H_

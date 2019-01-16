@@ -21,29 +21,30 @@ bool ZirconPlatformSemaphore::duplicate_handle(uint32_t* handle_out)
     return true;
 }
 
-bool ZirconPlatformSemaphore::WaitNoReset(uint64_t timeout_ms)
+magma::Status ZirconPlatformSemaphore::WaitNoReset(uint64_t timeout_ms)
 {
     TRACE_DURATION("magma:sync", "semaphore wait", "id", koid_);
-    zx_signals_t pending = 0;
     zx_status_t status = event_.wait_one(
-        zx_signal(), zx::deadline_after(zx::duration(magma::ms_to_signed_ns(timeout_ms))),
-        &pending);
-    if (status == ZX_ERR_TIMED_OUT)
-        return false;
-
-    DASSERT(status == ZX_OK);
-    DASSERT(pending & zx_signal());
-
-    return true;
+        zx_signal(), zx::deadline_after(zx::duration(magma::ms_to_signed_ns(timeout_ms))), nullptr);
+    switch (status) {
+        case ZX_OK:
+            return MAGMA_STATUS_OK;
+        case ZX_ERR_TIMED_OUT:
+            return MAGMA_STATUS_TIMED_OUT;
+        case ZX_ERR_CANCELED:
+            return MAGMA_STATUS_CONNECTION_LOST;
+        default:
+            return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Unexpected wait() status: %d", status);
+    }
 }
 
-bool ZirconPlatformSemaphore::Wait(uint64_t timeout_ms)
+magma::Status ZirconPlatformSemaphore::Wait(uint64_t timeout_ms)
 {
-    if (WaitNoReset(timeout_ms)) {
+    magma::Status status = WaitNoReset(timeout_ms);
+    if (status.ok()) {
         Reset();
-        return true;
     }
-    return false;
+    return status;
 }
 
 bool ZirconPlatformSemaphore::WaitAsync(PlatformPort* platform_port)

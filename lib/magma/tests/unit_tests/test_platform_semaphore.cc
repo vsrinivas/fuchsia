@@ -20,7 +20,7 @@ public:
         // Verify timeout
         thread.reset(new std::thread([sem] {
             DLOG("Waiting for semaphore");
-            EXPECT_FALSE(sem->Wait(100));
+            EXPECT_EQ(sem->Wait(100), MAGMA_STATUS_TIMED_OUT);
             DLOG("Semaphore wait returned");
         }));
         thread->join();
@@ -37,7 +37,7 @@ public:
         // Verify autoreset - should timeout again
         thread.reset(new std::thread([sem] {
             DLOG("Waiting for semaphore");
-            EXPECT_FALSE(sem->Wait(100));
+            EXPECT_EQ(sem->Wait(100), MAGMA_STATUS_TIMED_OUT);
             DLOG("Semaphore wait returned");
         }));
         thread->join();
@@ -52,12 +52,12 @@ public:
         sem->Signal();
         thread->join();
 
-        // Verify Reset
+        // Verify Reset - should timeout.
         sem->Signal();
         sem->Reset();
         thread.reset(new std::thread([sem] {
             DLOG("Waiting for semaphore");
-            EXPECT_FALSE(sem->Wait(100));
+            EXPECT_EQ(sem->Wait(100), MAGMA_STATUS_TIMED_OUT);
             DLOG("Semaphore wait returned");
         }));
         thread->join();

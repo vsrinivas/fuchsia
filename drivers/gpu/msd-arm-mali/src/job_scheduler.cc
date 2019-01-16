@@ -269,10 +269,10 @@ void JobScheduler::PlatformPortSignaled(uint64_t key)
     for (auto& atom : waiting_atoms_) {
         bool wait_succeeded;
         if (atom->soft_flags() == kAtomFlagSemaphoreWait) {
-            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0);
+            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0).ok();
         } else {
             DASSERT(atom->soft_flags() == kAtomFlagSemaphoreWaitAndReset);
-            wait_succeeded = atom->platform_semaphore()->Wait(0);
+            wait_succeeded = atom->platform_semaphore()->Wait(0).ok();
         }
 
         if (wait_succeeded) {
@@ -403,9 +403,9 @@ void JobScheduler::ProcessSoftAtom(std::shared_ptr<MsdArmSoftAtom> atom)
                (atom->soft_flags() == kAtomFlagSemaphoreWaitAndReset)) {
         bool wait_succeeded;
         if (atom->soft_flags() == kAtomFlagSemaphoreWait) {
-            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0);
+            wait_succeeded = atom->platform_semaphore()->WaitNoReset(0).ok();
         } else {
-            wait_succeeded = atom->platform_semaphore()->Wait(0);
+            wait_succeeded = atom->platform_semaphore()->Wait(0).ok();
         }
 
         if (wait_succeeded) {

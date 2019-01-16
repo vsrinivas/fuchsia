@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef STATUS_H
-#define STATUS_H
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_
 
 #include "magma_common_defs.h"
 
@@ -18,10 +18,11 @@ public:
     bool ok() const { return status_ == MAGMA_STATUS_OK; }
 
     explicit operator bool() const { return ok(); }
+    bool operator==(const magma_status_t status) const { return status_ == status; }
 
 private:
     magma_status_t status_;
 };
 } // namespace magma
 
-#endif // STATUS_H
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_STATUS_H_

@@ -361,7 +361,7 @@ public:
 
         EXPECT_EQ(0u, owner.run_list().size());
         EXPECT_EQ(3u, owner.completed_list().size());
-        EXPECT_EQ(true, semaphore->WaitNoReset(0u));
+        EXPECT_TRUE(semaphore->WaitNoReset(0u).ok());
 
         // Semaphore was set, so atom should complete immediately.
         auto atom_already_set = std::make_shared<MsdArmSoftAtom>(
@@ -375,7 +375,7 @@ public:
         scheduler.EnqueueAtom(atom4);
         scheduler.TryToSchedule();
 
-        EXPECT_EQ(false, semaphore->WaitNoReset(0u));
+        EXPECT_EQ(semaphore->WaitNoReset(0u), MAGMA_STATUS_TIMED_OUT);
         EXPECT_EQ(5u, owner.completed_list().size());
 
         auto atom5 = std::make_shared<MsdArmSoftAtom>(connection, kAtomFlagSemaphoreWaitAndReset,
@@ -390,7 +390,7 @@ public:
         scheduler.PlatformPortSignaled(key);
 
         EXPECT_EQ(6u, owner.completed_list().size());
-        EXPECT_EQ(false, semaphore->WaitNoReset(0u));
+        EXPECT_EQ(semaphore->WaitNoReset(0u), MAGMA_STATUS_TIMED_OUT);
 
         auto atom6 = std::make_shared<MsdArmSoftAtom>(connection, kAtomFlagSemaphoreWaitAndReset,
                                                       semaphore, 0, magma_arm_mali_user_data());

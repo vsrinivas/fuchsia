@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef ZIRCON_PLATFORM_SEMAPHORE_H
-#define ZIRCON_PLATFORM_SEMAPHORE_H
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_SEMAPHORE_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_SEMAPHORE_H_
 
 #include <lib/zx/event.h>
 
@@ -39,14 +39,14 @@ public:
         DASSERT(status == ZX_OK);
     }
 
-    bool WaitNoReset(uint64_t timeout_ms) override;
-    bool Wait(uint64_t timeout_ms) override;
+    magma::Status WaitNoReset(uint64_t timeout_ms) override;
+    magma::Status Wait(uint64_t timeout_ms) override;
 
     bool WaitAsync(PlatformPort* platform_port) override;
 
-    zx_handle_t zx_handle() { return event_.get(); }
+    zx_handle_t zx_handle() const { return event_.get(); }
 
-    zx_signals_t zx_signal() { return ZX_EVENT_SIGNALED; }
+    zx_signals_t zx_signal() const { return ZX_EVENT_SIGNALED; }
 
 private:
     zx::event event_;
@@ -55,4 +55,4 @@ private:
 
 } // namespace magma
 
-#endif // ZIRCON_PLATFORM_SEMAPHORE_H
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_SEMAPHORE_H_

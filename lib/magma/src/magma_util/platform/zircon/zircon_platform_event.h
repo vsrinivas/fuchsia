@@ -2,6 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#ifndef GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_EVENT_H_
+#define GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_EVENT_H_
+
 #include "magma_util/macros.h"
 #include "platform_event.h"
 #include <lib/zx/event.h>
@@ -19,24 +22,32 @@ public:
         DASSERT(status == ZX_OK);
     }
 
-    bool Wait(uint64_t timeout_ms) override
+    magma::Status Wait(uint64_t timeout_ms) override
     {
-        zx_signals_t pending = 0;
-
         zx_status_t status = zx_event_.wait_one(
             zx_signal(), zx::deadline_after(zx::duration(magma::ms_to_signed_ns(timeout_ms))),
-            &pending);
-        DASSERT(status == ZX_OK || status == ZX_ERR_TIMED_OUT);
-
-        return pending & zx_signal();
+            nullptr);
+        switch (status) {
+            case ZX_OK:
+                return MAGMA_STATUS_OK;
+            case ZX_ERR_TIMED_OUT:
+                return MAGMA_STATUS_TIMED_OUT;
+            case ZX_ERR_CANCELED:
+                return MAGMA_STATUS_CONNECTION_LOST;
+            default:
+                return DRET_MSG(MAGMA_STATUS_INTERNAL_ERROR, "Unexpected wait() status: %d.",
+                                status);
+        }
     }
 
-    zx_handle_t zx_handle() { return zx_event_.get(); }
+    zx_handle_t zx_handle() const { return zx_event_.get(); }
 
-    zx_signals_t zx_signal() { return ZX_EVENT_SIGNALED; }
+    zx_signals_t zx_signal() const { return ZX_EVENT_SIGNALED; }
 
 private:
     zx::event zx_event_;
 };
 
 } // namespace magma
+
+#endif // GARNET_LIB_MAGMA_SRC_MAGMA_UTIL_PLATFORM_ZIRCON_ZIRCON_PLATFORM_EVENT_H_
