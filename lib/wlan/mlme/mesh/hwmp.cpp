@@ -252,10 +252,42 @@ static void HandlePreq(const common::MacAddr& preq_transmitter_addr,
     }
 }
 
+// See IEEE Std 802.11-2016, 14.10.10.3, Case B
+static fbl::unique_ptr<Packet> MakeForwardedPrep(const MacHeaderWriter& mac_header_writer,
+                                                 const common::ParsedPrep& incoming_prep,
+                                                 uint32_t last_hop_metric,
+                                                 const MeshPath& path_to_originator) {
+    auto packet = GetWlanPacket(kMaxHwmpFrameSize);
+    if (!packet) { return {}; }
+    BufferWriter w(*packet);
+    mac_header_writer.WriteMeshMgmtHeader(&w, kAction, path_to_originator.next_hop);
+    w.Write<ActionFrame>()->category = action::kMesh;
+    w.Write<MeshActionHeader>()->mesh_action = action::kHwmpMeshPathSelection;
+    common::WritePrep(
+        &w,
+        {
+            .flags = incoming_prep.header->flags,
+            .hop_count = static_cast<uint8_t>(incoming_prep.header->hop_count + 1),
+            .element_ttl = static_cast<uint8_t>(incoming_prep.header->element_ttl - 1),
+            .target_addr = incoming_prep.header->target_addr,
+            .target_hwmp_seqno = incoming_prep.header->target_hwmp_seqno,
+        },
+        incoming_prep.target_external_addr,
+        {
+            .lifetime = incoming_prep.tail->lifetime,
+            .metric = incoming_prep.tail->metric + last_hop_metric,
+            .originator_addr = incoming_prep.tail->originator_addr,
+            .originator_hwmp_seqno = incoming_prep.tail->originator_hwmp_seqno,
+        });
+    packet->set_len(w.WrittenBytes());
+    return packet;
+}
+
 // See IEEE Std 802.11-2016, 14.10.10.4.3
-static void HandlePrep(const common::MacAddr& prep_transmitter_addr, const common::ParsedPrep& prep,
+static void HandlePrep(const common::MacAddr& prep_transmitter_addr,
+                       const common::MacAddr& self_addr, const common::ParsedPrep& prep,
                        uint32_t last_hop_metric, const MacHeaderWriter& mac_header_writer,
-                       HwmpState* state, PathTable* path_table) {
+                       HwmpState* state, PathTable* path_table, PacketQueue* packets_to_tx) {
     auto path_to_target =
         UpdateForwardingInfo(path_table, state, prep_transmitter_addr, prep.header->target_addr,
                              prep.header->target_hwmp_seqno, prep.tail->metric, last_hop_metric,
@@ -269,7 +301,14 @@ static void HandlePrep(const common::MacAddr& prep_transmitter_addr, const commo
         state->state_by_target.erase(it);
     }
 
-    // TODO(gbonik): propagate the PREP (case (a))
+    if (prep.tail->originator_addr != self_addr && prep.header->element_ttl > 1) {
+        if (auto path_to_originator = path_table->GetPath(prep.tail->originator_addr)) {
+            if (auto packet = MakeForwardedPrep(mac_header_writer, prep, last_hop_metric,
+                                                *path_to_originator)) {
+                packets_to_tx->Enqueue(std::move(packet));
+            }
+        }
+    }
     // TODO(gbonik): update proxy info if address extension is present (case (b)/(c))
     // TODO: Also update precursors if we decide to store them one day (case (d))
 }
@@ -290,8 +329,8 @@ PacketQueue HandleHwmpAction(Span<const uint8_t> elements,
             break;
         case element_id::kPrep:
             if (auto prep = common::ParsePrep(raw_body)) {
-                HandlePrep(action_transmitter_addr, *prep, last_hop_metric, mac_header_writer,
-                           state, path_table);
+                HandlePrep(action_transmitter_addr, self_addr, *prep, last_hop_metric,
+                           mac_header_writer, state, path_table, &ret);
             }
             break;
         default:
