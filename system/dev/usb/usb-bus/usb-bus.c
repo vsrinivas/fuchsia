@@ -95,7 +95,19 @@ static zx_status_t bus_reinitialize_device(void* ctx, uint32_t device_id) {
         zxlogf(INFO, "device updated from VID 0x%x PID 0x%x to VID 0x%x PID 0x%x\n",
                device->device_desc.idVendor, device->device_desc.idProduct,
                updated_desc.idVendor, updated_desc.idProduct);
-        // TODO(jocelyndang): handle this.
+
+        uint32_t hub_id = device->hub_id;
+        usb_speed_t speed = device->speed;
+        status = bus_remove_device(bus, device_id);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "could not remove device %u, got err %d\n", device_id, status);
+            return status;
+        }
+        status = bus_add_device(bus, device_id, hub_id, speed);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "could not add device %u, got err %d\n", device_id, status);
+        }
+        return status;
     }
 
 done:
