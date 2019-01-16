@@ -13,6 +13,7 @@
 #include <trace.h>
 #include <vm/pmm.h>
 #include <vm/vm.h>
+#include <vm/vm_object_paged.h>
 #include <zircon/types.h>
 
 #include "vm_priv.h"
@@ -99,6 +100,10 @@ VmPageList::~VmPageList() {
 zx_status_t VmPageList::AddPage(vm_page* p, uint64_t offset) {
     uint64_t node_offset = offset_to_node_offset(offset);
     size_t index = offset_to_node_index(offset);
+
+    if (node_offset >= VmObjectPaged::MAX_SIZE) {
+        return ZX_ERR_OUT_OF_RANGE;
+    }
 
     LTRACEF_LEVEL(2, "%p page %p, offset %#" PRIx64 " node_offset %#" PRIx64 " index %zu\n", this, p, offset,
                   node_offset, index);

@@ -118,8 +118,9 @@ public:
         return 0;
     }
 
-    // maximum size of a VMO is one page less than the full 64bit range
-    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, PAGE_SIZE);
+    // The size is clamped to allow VmPageList to use a one-past-the-end for
+    // VmPageListNode offsets.
+    static const uint64_t MAX_SIZE = ROUNDDOWN(UINT64_MAX, VmPageListNode::kPageFanOut * PAGE_SIZE);
 
 private:
     // private constructor (use Create())

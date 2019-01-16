@@ -32,6 +32,7 @@ public:
     // for every valid page in the node call the passed in function
     template <typename T>
     zx_status_t ForEveryPage(T func, uint64_t start_offset, uint64_t end_offset) {
+        DEBUG_ASSERT(end_offset >= start_offset);
         size_t start = 0;
         size_t end = kPageFanOut;
         if (start_offset > obj_offset_) {
@@ -57,6 +58,7 @@ public:
     // for every valid page in the node call the passed in function
     template <typename T>
     zx_status_t ForEveryPage(T func, uint64_t start_offset, uint64_t end_offset) const {
+        DEBUG_ASSERT(end_offset >= start_offset);
         size_t start = 0;
         size_t end = kPageFanOut;
         if (start_offset > obj_offset_) {

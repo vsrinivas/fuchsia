@@ -347,6 +347,17 @@ static bool vmo_create_test() {
     END_TEST;
 }
 
+static bool vmo_create_maximum_size() {
+    BEGIN_TEST;
+    fbl::RefPtr<VmObject> vmo;
+    zx_status_t status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0xffffffffffff0000, &vmo);
+    EXPECT_EQ(status, ZX_OK, "should be ok\n");
+
+    status = VmObjectPaged::Create(PMM_ALLOC_FLAG_ANY, 0u, 0xffffffffffff1000, &vmo);
+    EXPECT_EQ(status, ZX_ERR_OUT_OF_RANGE, "should be too large\n");
+    END_TEST;
+}
+
 // Creates a vm object, commits memory.
 static bool vmo_commit_test() {
     BEGIN_TEST;
@@ -1124,6 +1135,36 @@ static bool vmpl_free_pages_last_page_test() {
     END_TEST;
 }
 
+static bool vmpl_near_last_offset_free() {
+    BEGIN_TEST;
+
+    for (uint64_t addr = 0xfffffffffff00000; addr != 0; addr += 0x1000) {
+        paddr_t pa;
+        vm_page_t* page;
+
+        zx_status_t status = pmm_alloc_page(0, &page, &pa);
+        ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
+        ASSERT_NONNULL(page, "pmm_alloc single page");
+        ASSERT_NE(0u, pa, "pmm_alloc single page");
+
+        VmPageList pl;
+        if (pl.AddPage(page, addr) == ZX_OK) {
+            EXPECT_EQ(page, pl.GetPage(addr), "unexpected page\n");
+            pl.FreeAllPages();
+            EXPECT_TRUE(pl.IsEmpty(), "non-empty list\n");
+        } else {
+            pmm_free_page(page);
+        }
+    }
+
+    vm_page_t test_page{};
+    VmPageList pl2;
+    EXPECT_EQ(pl2.AddPage(&test_page, 0xffffffffffff0000), ZX_ERR_OUT_OF_RANGE,
+              "unexpected offset addable\n");
+
+    END_TEST;
+}
+
 // Tests taking a page from the start of a VmPageListNode
 static bool vmpl_take_single_page_even_test() {
     BEGIN_TEST;
@@ -1295,6 +1336,7 @@ VM_UNITTEST(vmm_alloc_contiguous_zero_size_fails)
 VM_UNITTEST(vmaspace_create_smoke_test)
 VM_UNITTEST(vmaspace_alloc_smoke_test)
 VM_UNITTEST(vmo_create_test)
+VM_UNITTEST(vmo_create_maximum_size)
 VM_UNITTEST(vmo_pin_test)
 VM_UNITTEST(vmo_multiple_pin_test)
 VM_UNITTEST(vmo_commit_test)
@@ -1327,6 +1369,7 @@ UNITTEST_START_TESTCASE(vm_page_list_tests)
 VM_UNITTEST(vmpl_add_remove_page_test)
 VM_UNITTEST(vmpl_free_pages_test)
 VM_UNITTEST(vmpl_free_pages_last_page_test)
+VM_UNITTEST(vmpl_near_last_offset_free)
 VM_UNITTEST(vmpl_take_single_page_even_test)
 VM_UNITTEST(vmpl_take_single_page_odd_test)
 VM_UNITTEST(vmpl_take_all_pages_test)
