@@ -151,18 +151,20 @@ void SimpleStreamSinkImpl::SendPacket(fuchsia::media::StreamPacket packet,
       packet.payload_size, payload_vmo_info.vmo_->at_offset(payload_offset),
       payload_vmo_info.vmo_, payload_offset,
       [this, shared_this = shared_from_this(), vmo_id,
-       callback = std::move(callback)](PayloadBuffer* payload_buffer) {
-        auto iter = payload_vmo_infos_by_id_.find(vmo_id);
-        FXL_DCHECK(iter != payload_vmo_infos_by_id_.end());
-        auto& payload_vmo_info = iter->second;
-        FXL_DCHECK(payload_vmo_info.vmo_);
-        FXL_DCHECK(payload_vmo_info.packet_count_ != 0);
+       callback = std::move(callback)](PayloadBuffer* payload_buffer) mutable {
+        PostTask([this, shared_this, vmo_id, callback = std::move(callback)]() {
+          auto iter = payload_vmo_infos_by_id_.find(vmo_id);
+          FXL_DCHECK(iter != payload_vmo_infos_by_id_.end());
+          auto& payload_vmo_info = iter->second;
+          FXL_DCHECK(payload_vmo_info.vmo_);
+          FXL_DCHECK(payload_vmo_info.packet_count_ != 0);
 
-        --payload_vmo_info.packet_count_;
+          --payload_vmo_info.packet_count_;
 
-        if (callback) {
-          callback();
-        }
+          if (callback) {
+            callback();
+          }
+        });
       });
 
   PutOutputPacket(Packet::Create(
