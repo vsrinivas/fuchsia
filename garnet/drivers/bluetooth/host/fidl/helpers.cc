@@ -216,6 +216,13 @@ btlib::sm::PairingData PairingDataFromFidl(const fhost::LEData& data) {
   return result;
 }
 
+std::optional<btlib::sm::LTK> BrEdrKeyFromFidl(const fhost::BREDRData& data) {
+  if (data.link_key) {
+    return LtkFromFidl(*data.link_key);
+  }
+  return std::nullopt;
+}
+
 fctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   fctrl::AdapterInfo adapter_info;
   adapter_info.identifier = adapter.identifier();
@@ -330,7 +337,24 @@ fhost::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
     }
   }
 
-  // TODO(BT-640): Store BR/EDR data.
+  // Store BR/EDR data.
+  if (device.bredr() && device.bredr()->link_key()) {
+    out_data.bredr = fhost::BREDRData::New();
+
+    out_data.bredr->address = device.bredr()->address().value().ToString();
+
+    // TODO(BT-669): Populate with history of role switches.
+    out_data.bredr->piconet_leader = false;
+
+    // TODO(BT-670): Populate with discovered SDP services.
+    out_data.bredr->services.resize(0);
+
+    if (device.bredr()->link_key()) {
+      out_data.bredr->link_key = fhost::LTK::New();
+      *out_data.bredr->link_key = LtkToFidl(*device.bredr()->link_key());
+    }
+  }
+
   return out_data;
 }
 

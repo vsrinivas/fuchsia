@@ -257,27 +257,44 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
   std::vector<std::string> failed_ids;
 
   for (auto& bond : bonds) {
-    btlib::sm::PairingData bond_data;
+    btlib::common::DeviceAddress address;
+    btlib::sm::PairingData le_bond_data;
+    if (bond.le) {
+      if (bond.bredr && bond.le->address != bond.bredr->address) {
+        bt_log(ERROR, "bt-host", "Dual-mode bonding data mismatched (id: %s)",
+               bond.identifier.c_str());
+        failed_ids.push_back(bond.identifier);
+        continue;
+      }
+      le_bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
 
-    // TODO(BT-640): Handle BR/EDR data here. For now we skip the entry if LE
-    // data isn't available.
-    if (!bond.le) {
-      bt_log(ERROR, "bt-host", "Ignore non-LE bonding data");
-      continue;
+      // The |identity_address| field in btlib::sm::PairingData is optional
+      // however it is not nullable in the FIDL struct. Hence it must be
+      // present.
+      ZX_DEBUG_ASSERT(le_bond_data.identity_address);
+      address = *le_bond_data.identity_address;
     }
 
-    bond_data = fidl_helpers::PairingDataFromFidl(*bond.le);
+    std::optional<btlib::sm::LTK> bredr_link_key;
+    if (bond.bredr) {
+      // Dual-mode devices will have a BR/EDR-typed address.
+      address = btlib::common::DeviceAddress(
+          btlib::common::DeviceAddress::Type::kBREDR, bond.bredr->address);
+      bredr_link_key = fidl_helpers::BrEdrKeyFromFidl(*bond.bredr);
+    }
 
-    // The |identity_address| field in btlib::sm::PairingData is optional
-    // however it is not nullable in the FIDL struct. Hence it must be
-    // present.
-    ZX_DEBUG_ASSERT(bond_data.identity_address);
+    if (!bond.le && !bond.bredr) {
+      bt_log(ERROR, "bt-host", "Required bonding data missing (id: %s)",
+             bond.identifier.c_str());
+      failed_ids.push_back(bond.identifier);
+      continue;
+    }
 
     // TODO(armansito): BondingData should contain the identity address for both
     // transports instead of storing them separately. For now use the one we
     // obtained from |bond.le|.
-    if (!adapter()->AddBondedDevice(bond.identifier,
-                                    *bond_data.identity_address, bond_data, {})) {
+    if (!adapter()->AddBondedDevice(bond.identifier, address, le_bond_data,
+                                    bredr_link_key)) {
       failed_ids.push_back(bond.identifier);
       continue;
     }
