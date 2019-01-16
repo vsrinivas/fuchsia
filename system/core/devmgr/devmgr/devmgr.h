@@ -4,17 +4,10 @@
 
 #pragma once
 
-#include <sys/types.h>
-
-#include <fbl/function.h>
-#include <launchpad/launchpad.h>
+#include <lib/async/dispatcher.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
-#include <lib/zx/process.h>
-#include <lib/zx/vmo.h>
-#include <zircon/compiler.h>
 #include <zircon/types.h>
-#include <zircon/device/vfs.h>
 
 namespace devmgr {
 

@@ -56,8 +56,6 @@ constexpr uint32_t kIdHJobRoot = 4;
 constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
-zx::vmo bootdata_vmo;
-
 } // namespace
 
 namespace devmgr {
@@ -308,11 +306,11 @@ zx_status_t Coordinator::LibnameToVmo(const char* libname, zx::vmo* out_vmo) con
     }
 }
 
-void devmgr_set_bootdata(const zx::unowned_vmo vmo) {
-    if (bootdata_vmo.is_valid()) {
-        return;
+zx_status_t Coordinator::SetBootdata(const zx::unowned_vmo& vmo) {
+    if (bootdata_vmo_.is_valid()) {
+        return ZX_ERR_ALREADY_EXISTS;
     }
-    vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo);
+    return vmo->duplicate(ZX_RIGHT_SAME_RIGHTS, &bootdata_vmo_);
 }
 
 void Coordinator::DumpDevice(const Device* dev, size_t indent) const {
@@ -1665,7 +1663,7 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
             h1 = std::move(c1);
         } else if (dev == &sys_device_) {
             // pass bootdata VMO handle to sys device
-            h1 = std::move(bootdata_vmo);
+            h1 = std::move(bootdata_vmo_);
         }
         if ((r = NewDevhost(devhostname, dev->host, &dev->proxy->host)) < 0) {
             log(ERROR, "devcoord: dc_new_devhost: %d\n", r);

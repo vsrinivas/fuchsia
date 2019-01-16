@@ -424,6 +424,8 @@ public:
     const Driver* LibnameToDriver(const char* libname) const;
     zx_status_t LibnameToVmo(const char* libname, zx::vmo* out_vmo) const;
 
+    zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
+
     bool InSuspend() const;
 
     void DumpDevice(const Device* dev, size_t indent) const;
@@ -509,6 +511,7 @@ private:
 
     bool running_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
+    zx::vmo bootdata_vmo_;
 
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;

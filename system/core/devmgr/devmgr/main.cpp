@@ -18,6 +18,7 @@
 #include <launchpad/launchpad.h>
 #include <loader-service/loader-service.h>
 #include <zircon/boot/bootdata.h>
+#include <zircon/device/vfs.h>
 #include <zircon/dlfcn.h>
 #include <zircon/process.h>
 #include <zircon/processargs.h>
@@ -412,7 +413,7 @@ zx_status_t svchost_start(bool require_system) {
     return ZX_OK;
 }
 
-void fshost_start() {
+void fshost_start(devmgr::Coordinator* coordinator) {
     // assemble handles to pass down to fshost
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t types[fbl::count_of(handles)];
@@ -442,12 +443,15 @@ void fshost_start() {
     // pass bootdata VMOs to fshost
     for (uint32_t m = 0; n < fbl::count_of(handles); m++) {
         uint32_t type = PA_HND(PA_VMO_BOOTDATA, m);
-        if ((handles[n] = zx_take_startup_handle(type)) != ZX_HANDLE_INVALID) {
-            devmgr::devmgr_set_bootdata(zx::unowned_vmo(handles[n]));
-            types[n++] = type;
-        } else {
+        if ((handles[n] = zx_take_startup_handle(type)) == ZX_HANDLE_INVALID) {
             break;
         }
+        zx_status_t status = coordinator->SetBootdata(zx::unowned_vmo(handles[n]));
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: failed to set bootdata: %d\n", status);
+            break;
+        }
+        types[n++] = type;
     }
 
     // pass VDSO VMOS to fshost
@@ -520,7 +524,7 @@ zx::channel bootfs_root_clone() {
     return boot;
 }
 
-void devmgr_vfs_init() {
+void devmgr_vfs_init(devmgr::Coordinator* coordinator) {
     printf("devmgr: vfs init\n");
 
     fdio_ns_t* ns;
@@ -532,7 +536,7 @@ void devmgr_vfs_init() {
                   zx_status_get_string(r));
 
     // Start fshost before binding /system, since it publishes it.
-    fshost_start();
+    fshost_start(coordinator);
 
     if ((r = fdio_ns_bind(ns, "/system", devmgr::fs_clone("system").release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", r);
@@ -849,7 +853,7 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    devmgr_vfs_init();
+    devmgr_vfs_init(&coordinator);
 
     // If this is not a full Fuchsia build, do not setup appmgr services, as
     // this will delay startup.
