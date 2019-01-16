@@ -66,14 +66,18 @@ executable("simple_camera_unittests") {
 package("camera_tests") {
   testonly = true
 
-  package_name = "simple_camera_unittests"
-
   deps = [
     "//garnet/lib/media/camera/simple_camera_lib:tests",
   ]
   tests = [
     {
       name = "simple_camera_unittests"
+    },
+  ]
+  meta = [
+    {
+      path = rebase_path("tests/meta/simple_camera_unittests.cmx")
+      dest = "simple_camera_unittests.cmx"
     },
   ]
 }
