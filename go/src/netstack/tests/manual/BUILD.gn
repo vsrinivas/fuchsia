@@ -9,9 +9,7 @@ executable("sockettest") {
     "sockettest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -25,9 +23,7 @@ executable("keepalivetest") {
     "keepalivetest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -41,9 +37,7 @@ executable("mctest") {
     "mctest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -57,9 +51,7 @@ executable("nbiotest") {
     "nbiotest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -73,9 +65,7 @@ executable("polltest") {
     "polltest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -89,9 +79,7 @@ executable("selecttest") {
     "selecttest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -105,13 +93,25 @@ executable("udptest") {
     "udptest.c",
   ]
 
-  libs = [
-    "zircon",
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("connect_twice_test") {
+  testonly = true
+
+  sources = [
+    "connect_twice_test.c",
   ]
 
   deps = [
     "//zircon/public/lib/fdio",
   ]
+
+  libs = [ "zircon" ]
 }
 
 executable("closetest") {
@@ -125,9 +125,7 @@ executable("closetest") {
     "//zircon/public/lib/fdio",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 }
 
 executable("sockopttest") {
@@ -137,9 +135,7 @@ executable("sockopttest") {
     "sockopttest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -153,9 +149,7 @@ executable("passfdtest") {
     "passfdtest.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -169,9 +163,7 @@ executable("gethostbyname_test") {
     "gethostbyname_test.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",
@@ -185,9 +177,7 @@ executable("getaddrinfo_test") {
     "getaddrinfo_test.c",
   ]
 
-  libs = [
-    "zircon",
-  ]
+  libs = [ "zircon" ]
 
   deps = [
     "//zircon/public/lib/fdio",

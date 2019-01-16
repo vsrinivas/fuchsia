@@ -78,7 +78,7 @@ func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p
 			return zx.Socket(zx.HandleInvalid), int32(zx.ErrInternal), nil
 		}
 		{
-			_, peerS, err := newIostate(sp.ns, netProto, transProto, wq, ep, false)
+			peerS, err := newIostate(sp.ns, netProto, transProto, wq, ep, false)
 			if err != nil {
 				if debug {
 					log.Printf("socket: new iostate: %v", err)

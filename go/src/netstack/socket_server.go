@@ -8,7 +8,6 @@ import (
 	"encoding/binary"
 	"fmt"
 	"log"
-	"sync"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/mxerror"
@@ -48,38 +47,6 @@ const (
 	LOCAL_SIGNAL_CLOSING   = zx.SignalUser5
 )
 
-func sendSignal(s zx.Socket, sig zx.Signals, peer bool) error {
-	var err error
-	if peer {
-		err = s.Handle().SignalPeer(0, sig)
-	} else {
-		err = s.Handle().Signal(0, sig)
-	}
-	switch status := mxerror.Status(err); status {
-	case zx.ErrOk:
-	case zx.ErrBadHandle, zx.ErrPeerClosed:
-		// The peer might have closed the handle.
-	default:
-		return err
-	}
-	return nil
-}
-
-func signalConnectFailure(s zx.Socket) error {
-	return sendSignal(s, ZXSIO_SIGNAL_OUTGOING, true)
-}
-
-func signalConnectSuccess(s zx.Socket) error {
-	// CONNECTED should be sent to the peer before it is sent locally.
-	// That ensures the peer detects the connection before any data is written by
-	// loopRead.
-	err := sendSignal(s, ZXSIO_SIGNAL_OUTGOING|ZXSIO_SIGNAL_CONNECTED, true)
-	if err != nil {
-		return err
-	}
-	return sendSignal(s, ZXSIO_SIGNAL_CONNECTED, false)
-}
-
 type iostate struct {
 	wq *waiter.Queue
 	ep tcpip.Endpoint
@@ -90,9 +57,6 @@ type iostate struct {
 	transProto tcpip.TransportProtocolNumber // TCP or UDP
 
 	dataHandle zx.Socket // used to communicate with libc
-
-	mu        sync.Mutex
-	lastError *tcpip.Error // if not-nil, next error returned via getsockopt
 
 	loopWriteDone  chan struct{} // report that loopWrite finished
 	loopListenDone chan struct{} // report that loopListen finished
@@ -216,49 +180,59 @@ func (ios *iostate) loopWrite() error {
 
 // loopRead connects libc read to the network stack.
 func (ios *iostate) loopRead() error {
-	if ios.transProto == tcp.ProtocolNumber {
-		switch obs, err := zxwait.Wait(
-			zx.Handle(ios.dataHandle),
-			zx.SignalSocketWriteDisabled|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING|ZXSIO_SIGNAL_CONNECTED,
-			zx.TimensecInfinite,
-		); mxerror.Status(err) {
-		case zx.ErrOk:
-			if obs&ZXSIO_SIGNAL_CONNECTED != 0 {
-				// We're connected.
-			}
-			if obs&zx.SignalSocketPeerClosed != 0 {
-				return nil
-			}
-			if obs&LOCAL_SIGNAL_CLOSING != 0 {
-				return nil
-			}
-			if obs&zx.SignalSocketWriteDisabled != 0 {
-				if err := ios.ep.Shutdown(tcpip.ShutdownRead); err != nil {
-					return fmt.Errorf("Endpoint.Shutdown(ShutdownRead): %s", err)
-				}
-				return nil
-			}
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-			return nil
-		default:
-			return err
-		}
-	}
-
 	const sigs = zx.SignalSocketWritable | zx.SignalSocketWriteDisabled |
 		zx.SignalSocketPeerClosed | LOCAL_SIGNAL_CLOSING
 
-	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-	defer ios.wq.EventUnregister(&waitEntry)
+	inEntry, inCh := waiter.NewChannelEntry(nil)
+	defer ios.wq.EventUnregister(&inEntry)
+
+	outEntry, outCh := waiter.NewChannelEntry(nil)
+	connected := ios.transProto != tcp.ProtocolNumber
+	if !connected {
+		ios.wq.EventRegister(&outEntry, waiter.EventOut)
+		defer ios.wq.EventUnregister(&outEntry)
+	}
 
 	var sender tcpip.FullAddress
 	for {
-		ios.wq.EventRegister(&waitEntry, waiter.EventIn)
 		var v []byte
+
+		ios.wq.EventRegister(&inEntry, waiter.EventIn)
 		for {
 			var err *tcpip.Error
 			v, _, err = ios.ep.Read(&sender)
-			if err == tcpip.ErrWouldBlock {
+			if err == tcpip.ErrClosedForReceive {
+				return ios.dataHandle.Shutdown(zx.SocketShutdownWrite)
+			}
+			var notifyCh <-chan struct{}
+			if err == tcpip.ErrInvalidEndpointState {
+				if connected {
+					panic(fmt.Sprintf("connected endpoint returned %s", err))
+				}
+				notifyCh = outCh
+			} else if !connected {
+				var signals zx.Signals = ZXSIO_SIGNAL_OUTGOING
+				switch err {
+				case nil, tcpip.ErrWouldBlock:
+					connected = true
+					ios.wq.EventUnregister(&outEntry)
+
+					signals |= ZXSIO_SIGNAL_CONNECTED
+				default:
+					notifyCh = outCh
+				}
+
+				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
+				case zx.ErrOk, zx.ErrBadHandle:
+				default:
+					log.Printf("%p: SignalPeer(0, %b): %s", ios, signals, err)
+				}
+			}
+			switch err {
+			case tcpip.ErrWouldBlock:
+				notifyCh = inCh
+			}
+			if notifyCh != nil {
 				select {
 				case <-notifyCh:
 					continue
@@ -267,15 +241,12 @@ func (ios *iostate) loopRead() error {
 					return nil
 				}
 			}
-			if err == tcpip.ErrClosedForReceive {
-				return ios.dataHandle.Shutdown(zx.SocketShutdownWrite)
-			}
 			if err != nil {
 				return fmt.Errorf("Endpoint.Read(): %s", err)
 			}
 			break
 		}
-		ios.wq.EventUnregister(&waitEntry)
+		ios.wq.EventUnregister(&inEntry)
 		if debug {
 			log.Printf("%p: loopRead: received packet n=%d, v=%q", ios, len(v), v)
 		}
@@ -404,7 +375,7 @@ func (ios *iostate) loopControl() {
 	}
 }
 
-func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (zx.Socket, zx.Socket, error) {
+func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto tcpip.TransportProtocolNumber, wq *waiter.Queue, ep tcpip.Endpoint, isAccept bool) (zx.Socket, error) {
 	var t uint32
 	switch transProto {
 	case tcp.ProtocolNumber:
@@ -421,7 +392,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 	}
 	localS, peerS, err := zx.NewSocket(t)
 	if err != nil {
-		return zx.Socket(zx.HandleInvalid), zx.Socket(zx.HandleInvalid), err
+		return zx.Socket(zx.HandleInvalid), err
 	}
 	ios := &iostate{
 		netProto:      netProto,
@@ -448,7 +419,7 @@ func newIostate(ns *Netstack, netProto tcpip.NetworkProtocolNumber, transProto t
 		}
 	}()
 
-	return localS, peerS, nil
+	return peerS, nil
 }
 
 func errStatus(err error) zx.Status {
@@ -542,14 +513,7 @@ func (ios *iostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
 	}
 	switch o := opt.(type) {
 	case tcpip.ErrorOption:
-		ios.mu.Lock()
-		err := ios.lastError
-		ios.lastError = nil
-		ios.mu.Unlock()
-
-		if err == nil {
-			err = ios.ep.GetSockOpt(o)
-		}
+		err := ios.ep.GetSockOpt(o)
 
 		errno := uint32(0)
 		if err != nil {
@@ -886,7 +850,7 @@ func (ios *iostate) opGetPeerName(msg *zxsocket.Msg) (status zx.Status) {
 	return fdioSockAddrReply(a, msg)
 }
 
-func (ios *iostate) loopListen(inCh chan struct{}) {
+func (ios *iostate) loopListen(inCh chan struct{}) error {
 	// When an incoming connection is available, wait for the listening socket to
 	// enter a shareable state, then share it with the client.
 	for {
@@ -894,67 +858,63 @@ func (ios *iostate) loopListen(inCh chan struct{}) {
 		case <-inCh:
 			// NOP
 		case <-ios.closing:
-			return
+			return nil
 		}
 		// We got incoming connections.
 		// Note that we don't know how many connections pending (the waiter channel won't
 		// queue more than one notification) so we'll need to call Accept repeatedly until
 		// it returns tcpip.ErrWouldBlock.
 		for {
-			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
+			switch obs, err := zxwait.Wait(
+				zx.Handle(ios.dataHandle),
 				zx.SignalSocketShare|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
-				zx.TimensecInfinite)
-			switch mxerror.Status(err) {
+				zx.TimensecInfinite,
+			); mxerror.Status(err) {
 			case zx.ErrOk:
 				switch {
 				case obs&zx.SignalSocketShare != 0:
 					// NOP
 				case obs&LOCAL_SIGNAL_CLOSING != 0:
-					return
+					return nil
 				case obs&zx.SignalSocketPeerClosed != 0:
-					return
+					return nil
 				}
 			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
-				return
+				return nil
 			default:
-				log.Printf("listen: wait failed: %v", err)
+				return err
 			}
 
-			newep, newwq, e := ios.ep.Accept()
-			if e == tcpip.ErrWouldBlock {
+			ep, wq, err := ios.ep.Accept()
+			if err == tcpip.ErrWouldBlock {
 				// No more pending connections.
 				break
 			}
-			if e != nil {
-				if debug {
-					log.Printf("listen: accept failed: %v", e)
-				}
-				return
+			if err != nil {
+				return fmt.Errorf("Endpoint.Accept(): %s", err)
 			}
 
 			if logAccept {
-				localAddr, err := newep.GetLocalAddress()
-				remoteAddr, err2 := newep.GetRemoteAddress()
-				if err == nil && err2 == nil {
-					log.Printf("TCP accept: local(%v, %v), remote(%v, %v)", localAddr.Addr, localAddr.Port, remoteAddr.Addr, remoteAddr.Port)
+				localAddr, err := ep.GetLocalAddress()
+				if err != nil {
+					panic(err)
 				}
+				remoteAddr, err := ep.GetRemoteAddress()
+				if err != nil {
+					panic(err)
+				}
+				log.Printf("%p: TCP accept: local=%+v, remote=%+v", ios, localAddr, remoteAddr)
 			}
 
-			localS, peerS, err := newIostate(ios.ns, ios.netProto, ios.transProto, newwq, newep, true)
-			if err != nil {
-				if debug {
-					log.Printf("listen: newIostate failed: %v", err)
+			{
+				peerS, err := newIostate(ios.ns, ios.netProto, ios.transProto, wq, ep, true)
+				if err != nil {
+					return err
 				}
-				return
-			}
 
-			if err := ios.dataHandle.Share(zx.Handle(peerS)); err != nil {
-				log.Printf("listen: Share failed: %v", err)
-				return
-			}
-			if err := signalConnectSuccess(localS); err != nil {
-				log.Printf("listen: signalConnectSuccess failed: %v", err)
-				return
+				if err := ios.dataHandle.Share(zx.Handle(peerS)); err != nil {
+					return err
+				}
 			}
 		}
 	}
@@ -989,7 +949,9 @@ func (ios *iostate) opListen(msg *zxsocket.Msg) (status zx.Status) {
 	ios.loopListenDone = make(chan struct{})
 	go func() {
 		defer close(ios.loopListenDone)
-		ios.loopListen(inCh)
+		if err := ios.loopListen(inCh); err != nil {
+			log.Printf("%p: loopListen: %s", ios, err)
+		}
 		ios.wq.EventUnregister(&inEntry)
 	}()
 
@@ -1032,7 +994,7 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 		}()
 	}
 
-	if addr.Addr == "" {
+	if len(addr.Addr) == 0 {
 		// TODO: Not ideal. We should pass an empty addr to the endpoint,
 		// and netstack should find the first local interface that it can
 		// connect to. Until that exists, we assume localhost.
@@ -1044,54 +1006,25 @@ func (ios *iostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 		}
 	}
 
-	waitEntry, notifyCh := waiter.NewChannelEntry(nil)
-	ios.wq.EventRegister(&waitEntry, waiter.EventOut)
-	e := ios.ep.Connect(addr)
-
 	msg.SetOff(0)
 	msg.Datalen = 0
 
-	if e == tcpip.ErrConnectStarted {
-		go func() {
-			select {
-			case <-notifyCh:
-			case <-ios.closing:
-				ios.wq.EventUnregister(&waitEntry)
-				return
+	if err := ios.ep.Connect(addr); err != nil {
+		if err == tcpip.ErrConnectStarted {
+			switch err := ios.dataHandle.Handle().SignalPeer(ZXSIO_SIGNAL_OUTGOING, 0); mxerror.Status(err) {
+			case zx.ErrOk, zx.ErrBadHandle:
+			default:
+				log.Printf("%p: SignalPeer(%b, 0): %s", ios, ZXSIO_SIGNAL_OUTGOING, err)
 			}
-			ios.wq.EventUnregister(&waitEntry)
-			e = ios.ep.GetSockOpt(tcpip.ErrorOption{})
-			if e != nil {
-				ios.mu.Lock()
-				ios.lastError = e
-				ios.mu.Unlock()
-				if err := signalConnectFailure(ios.dataHandle); err != nil {
-					log.Printf("connect: signalConnectFailure failed: %v", err)
-				}
-				return
-			}
-			if err := signalConnectSuccess(ios.dataHandle); err != nil {
-				log.Printf("connect: signalConnectSuccess failed: %v", err)
-			}
-		}()
-		return zx.ErrShouldWait
-	}
-	ios.wq.EventUnregister(&waitEntry)
-	if e != nil {
-		if debug {
-			log.Printf("connect: addr=%v, %v", addr, e)
 		}
-		return zxNetError(e)
+		if debug {
+			log.Printf("connect: addr=%v, %s", addr, err)
+		}
+		return zxNetError(err)
 	}
 	if debug {
 		log.Printf("connect: connected")
 	}
-	if ios.transProto == tcp.ProtocolNumber {
-		if err := signalConnectSuccess(ios.dataHandle); err != nil {
-			return errStatus(err)
-		}
-	}
-
 	return zx.ErrOk
 }
 
