@@ -17,6 +17,7 @@ fidl("fuchsia.ui.gfx") {
     "renderer.fidl",
     "resources.fidl",
     "shapes.fidl",
+    "tokens.fidl",
     "types.fidl",
   ]
 
