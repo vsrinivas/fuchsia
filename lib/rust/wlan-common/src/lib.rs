@@ -4,3 +4,5 @@
 
 //! Crate wlan-common hosts common libraries
 //! to be used for WLAN SME, MLME, and binaries written in Rust.
+
+mod channel;
