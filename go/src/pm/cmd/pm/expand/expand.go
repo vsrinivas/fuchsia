@@ -11,6 +11,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"log"
 	"os"
 	"path/filepath"
@@ -20,6 +21,7 @@ import (
 	"sync/atomic"
 
 	"fuchsia.googlesource.com/far"
+	"fuchsia.googlesource.com/merkle"
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/pkg"
 )
@@ -66,7 +68,7 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	if err := writeMetaAndManifest(pkgArchive, outputDir); err != nil {
+	if err := writeMetadataAndManifest(pkgArchive, outputDir); err != nil {
 		return err
 	}
 
@@ -77,27 +79,96 @@ func Run(cfg *build.Config, args []string) error {
 	return nil
 }
 
+func merkleFor(b []byte) (build.MerkleRoot, error) {
+	var res build.MerkleRoot
+
+	var tree merkle.Tree
+	if _, err := tree.ReadFrom(bytes.NewReader(b)); err != nil {
+		return res, err
+	}
+
+	copy(res[:], tree.Root())
+
+	return res, nil
+}
+
 // Extract the meta.far to the `outputDir`, and write out a package manifest
 // into `$outputDir/package.manifest`. for it. The format of the manifest is:
 //
 //     $PKG_NAME.$PKG_VERSION=$outputDir/meta.far
-func writeMetaAndManifest(pkgArchive *far.Reader, outputDir string) error {
+func writeMetadataAndManifest(pkgArchive *far.Reader, outputDir string) error {
 	// First, extract the package info from the archive, or error out if
 	// the meta.far is malformed.
-	p, err := extractMetaPackage(pkgArchive)
+	pkgMetaBytes, err := pkgArchive.ReadFile(metaFar)
 	if err != nil {
 		return err
+	}
+
+	pkgMetaMerkle, err := merkleFor(pkgMetaBytes)
+	if err != nil {
+		return err
+	}
+
+	pkgMeta, err := far.NewReader(bytes.NewReader(pkgMetaBytes))
+	if err != nil {
+		return err
+	}
+
+	p, err := readMetaPackage(pkgMeta)
+	if err != nil {
+		return err
+	}
+
+	contents, err := readMetaContents(pkgMeta)
+	if err != nil {
+		return err
+	}
+
+	blobs := make([]build.PackageBlobInfo, 0, len(contents)+1)
+
+	blobs = append(blobs, build.PackageBlobInfo{
+		SourcePath: filepath.Join(outputDir, metaFar),
+		Path:       "meta/",
+		Merkle:     pkgMetaMerkle,
+		Size:       uint64(len(pkgMetaBytes)),
+	})
+
+	for path, merkle := range contents {
+		blobs = append(blobs, build.PackageBlobInfo{
+			SourcePath: filepath.Join(outputDir, "blobs", merkle.String()),
+			Path:       path,
+			Merkle:     merkle,
+			Size:       pkgArchive.GetSize(merkle.String()),
+		})
 	}
 
 	if err := os.MkdirAll(outputDir, os.ModePerm); err != nil {
 		return err
 	}
 
-	if err := writeEntry(pkgArchive, outputDir, metaFar); err != nil {
+	// Write meta.far
+	if err := ioutil.WriteFile(filepath.Join(outputDir, metaFar), pkgMetaBytes, 0666); err != nil {
 		return err
 	}
 
-	f, err := os.Create(filepath.Join(outputDir, "package.manifest"))
+	// Write meta.far.merkle
+	if err := ioutil.WriteFile(filepath.Join(outputDir, metaFar+".merkle"), []byte(pkgMetaMerkle.String()), 0666); err != nil {
+		return err
+	}
+
+	// Write blobs.json
+	f, err := os.Create(filepath.Join(outputDir, "blobs.json"))
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := json.NewEncoder(f).Encode(blobs); err != nil {
+		return err
+	}
+
+	// Write package.manifest
+	f, err = os.Create(filepath.Join(outputDir, "package.manifest"))
 	if err != nil {
 		return err
 	}
@@ -112,17 +183,7 @@ func writeMetaAndManifest(pkgArchive *far.Reader, outputDir string) error {
 }
 
 // Extract the meta-package from the archive.
-func extractMetaPackage(pkgArchive *far.Reader) (*pkg.Package, error) {
-	b, err := pkgArchive.ReadFile(metaFar)
-	if err != nil {
-		return nil, err
-	}
-
-	pkgMeta, err := far.NewReader(bytes.NewReader(b))
-	if err != nil {
-		return nil, err
-	}
-
+func readMetaPackage(pkgMeta *far.Reader) (*pkg.Package, error) {
 	pkgJSON, err := pkgMeta.ReadFile("meta/package")
 	if err != nil {
 		return nil, err
@@ -134,6 +195,16 @@ func extractMetaPackage(pkgArchive *far.Reader) (*pkg.Package, error) {
 	}
 
 	return &p, nil
+}
+
+// Extract the meta-contents from the archive.
+func readMetaContents(pkgMeta *far.Reader) (build.MetaContents, error) {
+	b, err := pkgMeta.ReadFile("meta/contents")
+	if err != nil {
+		return nil, err
+	}
+
+	return build.ParseMetaContents(bytes.NewReader(b))
 }
 
 // Extract out all the blobs into the `outputDir`, and write out a blob
