@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use carnelian::{App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
 use failure::Error;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
@@ -9,7 +10,6 @@ use fidl_fuchsia_ui_viewsv1::ViewProviderMarker;
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, Launcher};
 use fuchsia_scenic::{Circle, EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_ui::{App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
 use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::{any::Any, cell::RefCell};

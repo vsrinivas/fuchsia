@@ -14,9 +14,9 @@ rustc_binary("bin") {
     "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
     "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/carnelian",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-scenic",
-    "//garnet/public/rust/fuchsia-ui",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:parking_lot",
   ]
