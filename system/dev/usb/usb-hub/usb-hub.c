@@ -258,13 +258,15 @@ static void usb_hub_handle_port_status(usb_hub_t* hub, int port, port_status_t s
             old_status &= ~USB_PORT_CONNECTION;
         }
     }
+    bool port_enable_cleared = !(status & USB_PORT_ENABLE) && (old_status & USB_PORT_ENABLE);
+
     if ((status & USB_PORT_CONNECTION) && !(old_status & USB_PORT_CONNECTION)) {
         usb_hub_port_connected(hub, port);
     // Check for both USB_PORT_CONNECTION and USB_PORT_ENABLE below.
     // It seems to be a quirk of newer x86 hardware that USB_PORT_ENABLE might be set
     // but USB_PORT_CONNECTION is not.
     } else if (!(status & USB_PORT_CONNECTION) &&
-                (old_status & USB_PORT_CONNECTION || old_status & USB_PORT_ENABLE)) {
+                (old_status & USB_PORT_CONNECTION || port_enable_cleared)) {
         usb_hub_port_disconnected(hub, port);
     } else if ((status & USB_PORT_ENABLE) && !(old_status & USB_PORT_ENABLE)) {
         usb_hub_port_enabled(hub, port);
