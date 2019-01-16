@@ -6,11 +6,32 @@ import (
 	"testing"
 )
 
+// merkleRootGenerator allows test cases to hand generate sequential merkle roots
+type merkleRootGenerator MerkleRoot
+
+// Value returns the current MerkleRoot
+func (b *merkleRootGenerator) Value() MerkleRoot {
+	return MerkleRoot(*b)
+}
+
+// Next moves to and returns the next sequential merkle root
+func (b *merkleRootGenerator) Next() MerkleRoot {
+	b[1]++
+	return b.Value()
+}
+
+// NextEpoch moves to and returns the start of the next block of merkle roots
+func (b *merkleRootGenerator) NextEpoch() MerkleRoot {
+	b[0]++
+	b[1] = 0
+	return b.Value()
+}
+
 // snapshotBuilder allows test cases to hand generate Snapshot structures
 type snapshotBuilder struct {
 	snapshot Snapshot
 
-	currentBlobID MerkleRoot
+	currentBlobID merkleRootGenerator
 }
 
 type fileRef = PackageFileRef
@@ -34,14 +55,13 @@ func (b *snapshotBuilder) ensurePackage(name string) {
 
 // IncrementMerkleRootEpoch moves to the start of the next block of merkle roots
 func (b *snapshotBuilder) IncrementMerkleRootEpoch() *snapshotBuilder {
-	b.currentBlobID[0]++
-	b.currentBlobID[1] = 0
+	b.currentBlobID.NextEpoch()
 	return b
 }
 
 // IncrementMerkleRoot moves to the next sequential merkle root
 func (b *snapshotBuilder) IncrementMerkleRoot() *snapshotBuilder {
-	b.currentBlobID[1]++
+	b.currentBlobID.Next()
 	return b
 }
 
@@ -63,11 +83,11 @@ func (b *snapshotBuilder) File(size uint64, refs ...fileRef) *snapshotBuilder {
 		panic("File called without any file refs")
 	}
 	b.IncrementMerkleRoot()
-	b.snapshot.Blobs[b.currentBlobID] = BlobInfo{Size: size}
+	b.snapshot.Blobs[b.currentBlobID.Value()] = BlobInfo{Size: size}
 
 	for _, ref := range refs {
 		b.ensurePackage(ref.Name)
-		b.snapshot.Packages[ref.Name].Files[ref.Path] = b.currentBlobID
+		b.snapshot.Packages[ref.Name].Files[ref.Path] = b.currentBlobID.Value()
 	}
 
 	return b
@@ -220,4 +240,110 @@ func TestSnapshotFilter_excludeWildcardPackage(t *testing.T) {
 
 	filtered := original.Filter([]string{"*"}, []string{"foo*"})
 	verifyFilteredSnapshot(t, original, filtered, []string{"system/0", "bar/0", "optional/0"})
+}
+
+func TestSnapshotAddPackage_consistent(t *testing.T) {
+	s := newSnapshotBuilder().Build()
+	var m merkleRootGenerator
+
+	shared := PackageBlobInfo{
+		Path:   "shared",
+		Size:   42,
+		Merkle: m.Next(),
+	}
+
+	if err := s.AddPackage("foo/0", []PackageBlobInfo{
+		PackageBlobInfo{
+			Path:   "a",
+			Size:   100,
+			Merkle: m.Next(),
+		},
+		PackageBlobInfo{
+			Path:   "b",
+			Size:   100,
+			Merkle: m.Next(),
+		},
+		shared,
+	}, nil); err != nil {
+		t.Errorf("expected success, got %v", err)
+	}
+
+	{
+		expected := newSnapshotBuilder().
+			Package("foo/0").
+			File(42,
+				fileRef{"foo/0", "shared"},
+			).
+			File(100, fileRef{"foo/0", "a"}).
+			File(100, fileRef{"foo/0", "b"}).
+			Build()
+
+		if !reflect.DeepEqual(s, expected) {
+			t.Errorf("\n%v\n!=\n%v\n", s, expected)
+		}
+	}
+
+	if err := s.AddPackage("bar/0", []PackageBlobInfo{
+		PackageBlobInfo{
+			Path:   "a",
+			Size:   200,
+			Merkle: m.Next(),
+		},
+		PackageBlobInfo{
+			Path:   "b",
+			Size:   200,
+			Merkle: m.Next(),
+		},
+		shared,
+	}, nil); err != nil {
+		t.Errorf("expected success, got %v", err)
+	}
+
+	{
+		expected := newSnapshotBuilder().
+			Package("foo/0").
+			Package("bar/0").
+			File(42,
+				fileRef{"foo/0", "shared"},
+				fileRef{"bar/0", "shared"},
+			).
+			File(100, fileRef{"foo/0", "a"}).
+			File(100, fileRef{"foo/0", "b"}).
+			File(200, fileRef{"bar/0", "a"}).
+			File(200, fileRef{"bar/0", "b"}).
+			Build()
+
+		if !reflect.DeepEqual(s, expected) {
+			t.Errorf("\n%v\n!=\n%v\n", s, expected)
+		}
+	}
+}
+
+func TestSnapshotAddPackage_duplicatePackage(t *testing.T) {
+	s := newSnapshotBuilder().
+		Package("foo/0").
+		Build()
+
+	if err := s.AddPackage("foo/0", nil, nil); err == nil {
+		t.Errorf("expected err, got nil")
+	}
+}
+
+func TestSnapshotAddPackage_inconsistentBlob(t *testing.T) {
+	s := newSnapshotBuilder().
+		Package("foo/0").
+		File(100, fileRef{"foo/0", "fileA"}).
+		Build()
+
+	merkle := s.Packages["foo/0"].Files["fileA"]
+
+	if err := s.AddPackage("bar/0", []PackageBlobInfo{
+		PackageBlobInfo{
+			Path:   "differentFileA",
+			Size:   s.Blobs[merkle].Size + 1,
+			Merkle: merkle,
+		},
+	}, nil); err == nil {
+		t.Errorf("expected err, got nil")
+	}
 }

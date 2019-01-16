@@ -84,6 +84,39 @@ func ParseSnapshot(jsonData []byte) (Snapshot, error) {
 	return s, nil
 }
 
+// AddPackage adds the metadata for a single package to the given package
+// snapshot, detecting and reporting any inconsistencies with the provided
+// metadata.
+func (s *Snapshot) AddPackage(name string, blobs []PackageBlobInfo, tags []string) error {
+	pkg := Package{
+		make(map[string]MerkleRoot),
+		tags,
+	}
+
+	newBlobs := make(map[MerkleRoot]BlobInfo)
+
+	for _, blob := range blobs {
+		pkg.Files[blob.Path] = blob.Merkle
+
+		info := BlobInfo{blob.Size}
+		if dup, ok := s.Blobs[blob.Merkle]; ok && dup != info {
+			return fmt.Errorf("snapshot contains inconsistent blob metadata for %q (%v != %v)", blob.Merkle, dup, info)
+		}
+		newBlobs[blob.Merkle] = info
+	}
+
+	if dup, ok := s.Packages[name]; ok {
+		return fmt.Errorf("snapshot contains more than one package called %q (%v, %v)", name, dup, pkg)
+	}
+
+	s.Packages[name] = pkg
+	for merkle, info := range newBlobs {
+		s.Blobs[merkle] = info
+	}
+
+	return nil
+}
+
 // Verify determines if the snapshot is internally consistent. Specifically, it
 // ensures that no package references a blob that does not have metadata and
 // that the snapshot does not contain blob metadata that is not referenced by

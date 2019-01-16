@@ -138,21 +138,16 @@ func parseManifest(path string) ([]packageEntry, error) {
 	return entries, nil
 }
 
-// loadBlobs attempts to read and parse a blobs manifest from the given path
-func loadBlobs(path string) ([]build.PackageBlobInfo, error) {
-	data, err := ioutil.ReadFile(path)
+// addPackage adds the metadata for a single package to the given package
+// snapshot, detecting and reporting any inconsistencies with the provided
+// metadata.
+func addPackage(snapshot *build.Snapshot, entry packageEntry) error {
+	blobs, err := build.LoadBlobs(entry.BlobsPath)
 	if err != nil {
-		return nil, err
+		return err
 	}
 
-	var members []build.PackageBlobInfo
-
-	err = json.Unmarshal(data, &members)
-	if err != nil {
-		return nil, err
-	}
-
-	return members, nil
+	return snapshot.AddPackage(entry.Name, blobs, entry.Tags)
 }
 
 // buildSnapshot loads and aggregates package metadata requested by the command
@@ -163,23 +158,10 @@ func buildSnapshot(c snapshotConfig) (*build.Snapshot, error) {
 		make(map[build.MerkleRoot]build.BlobInfo),
 	}
 
-	for _, pkgInfo := range c.packages {
-		pkg := build.Package{
-			make(map[string]build.MerkleRoot),
-			pkgInfo.Tags,
-		}
-
-		blobs, err := loadBlobs(pkgInfo.BlobsPath)
-		if err != nil {
+	for _, entry := range c.packages {
+		if err := addPackage(snapshot, entry); err != nil {
 			return nil, err
 		}
-
-		for _, blob := range blobs {
-			pkg.Files[blob.Path] = blob.Merkle
-			snapshot.Blobs[blob.Merkle] = build.BlobInfo{blob.Size}
-		}
-
-		snapshot.Packages[pkgInfo.Name] = pkg
 	}
 
 	if c.manifestPath != "" {
@@ -189,27 +171,14 @@ func buildSnapshot(c snapshotConfig) (*build.Snapshot, error) {
 		}
 
 		for _, entry := range index {
-			pkg := build.Package{
-				make(map[string]build.MerkleRoot),
-				entry.Tags,
-			}
-
-			blobs, err := loadBlobs(entry.BlobsPath)
-			if err != nil {
+			if err := addPackage(snapshot, entry); err != nil {
 				return nil, err
 			}
-
-			for _, blob := range blobs {
-				pkg.Files[blob.Path] = blob.Merkle
-				snapshot.Blobs[blob.Merkle] = build.BlobInfo{blob.Size}
-			}
-
-			snapshot.Packages[entry.Name] = pkg
 
 		}
 	}
 
-	return snapshot, nil
+	return snapshot, snapshot.Verify()
 }
 
 // Run executes the snapshot command
