@@ -39,18 +39,18 @@ struct TextInputState {
 
 // A interface for interacting with a text input control.
 interface InputMethodEditor {
-  SetKeyboardType(KeyboardType keyboard_type);
-  SetState(TextInputState state);
-  InjectInput(InputEvent event);
+  1: SetKeyboardType(KeyboardType keyboard_type);
+  2: SetState(TextInputState state);
+  3: InjectInput(InputEvent event);
 
   // TODO(TEXT-19): remove these in a later change, after PlatformView has been
   // switched over to open/close on the input_connection_ instead.
-  Show();
-  Hide();
+  4: Show();
+  5: Hide();
 };
 
 // An interface to receive information from |TextInputService|.
 interface InputMethodEditorClient {
-  DidUpdateState(TextInputState state, InputEvent? event);
-  OnAction(InputMethodAction action);
+  1: DidUpdateState(TextInputState state, InputEvent? event);
+  2: OnAction(InputMethodAction action);
 };
