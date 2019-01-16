@@ -21,7 +21,7 @@ class MockSemanticsProvider : public fuchsia::accessibility::SemanticsProvider {
   // On initialization, MockSemanticsProvider tries to connect to
   // |fuchsia::accessibility::SemanticsRoot| service in |context_| and
   // registers with its |view_id_| and |binding|.
-  MockSemanticsProvider(component::StartupContext* context, int32_t view_id);
+  MockSemanticsProvider(component::StartupContext* context, zx_koid_t view_id);
   ~MockSemanticsProvider() = default;
 
   // These functions directly call the |fuchsia::accessibility::SemanticsRoot|
@@ -38,7 +38,7 @@ class MockSemanticsProvider : public fuchsia::accessibility::SemanticsProvider {
   fidl::Binding<fuchsia::accessibility::SemanticsProvider> binding_;
   component::StartupContext* context_;
   fuchsia::accessibility::SemanticsRootPtr root_;
-  int32_t view_id_;
+  zx_koid_t view_id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(MockSemanticsProvider);
 };

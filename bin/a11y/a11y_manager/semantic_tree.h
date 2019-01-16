@@ -37,36 +37,36 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
   // coordinates from Scenic. Currently, this only supports 2D hit-tests
   // using bounding boxes.
   fuchsia::accessibility::NodePtr GetHitAccessibilityNode(
-      int32_t view_id, fuchsia::math::PointF point);
+      zx_koid_t view_id, fuchsia::math::PointF point);
 
   // Provides the manager a way to query a node if it already knows
   // what view id and node id it wants to query for. This method returns
   // a copy of the queried node. It may return a nullptr if no node is found.
-  fuchsia::accessibility::NodePtr GetAccessibilityNode(int32_t view_id,
+  fuchsia::accessibility::NodePtr GetAccessibilityNode(zx_koid_t view_id,
                                                        int32_t node_id);
 
   // Since the SemanticsTree holds the references to the front-end semantics
   // providers, it must be the one to perform actions.
-  void PerformAccessibilityAction(int32_t view_id, int32_t node_id,
+  void PerformAccessibilityAction(zx_koid_t view_id, int32_t node_id,
                                   fuchsia::accessibility::Action action);
 
  private:
   // |fuchsia::accessibility::SemanticRoot|:
 
-  // We tie the lifetime of the view id to to the lifetime of the
+  // We tie the lifetime of the view id to the lifetime of the
   // SemanticsProvider connection. Upon SemanticsProvider connection error,
   // we remove the associated view id semantics tree in the mappings.
   // Providers should re-register upon connection error to send more data.
   void RegisterSemanticsProvider(
-      int32_t view_id,
+      zx_koid_t view_id,
       fidl::InterfaceHandle<fuchsia::accessibility::SemanticsProvider> handle)
       override;
   void UpdateSemanticNodes(
-      int32_t view_id,
+      zx_koid_t view_id,
       std::vector<fuchsia::accessibility::Node> nodes) override;
-  void DeleteSemanticNodes(int32_t view_id,
+  void DeleteSemanticNodes(zx_koid_t view_id,
                            std::vector<int32_t> node_ids) override;
-  void Commit(int32_t view_id) override;
+  void Commit(zx_koid_t view_id) override;
 
   // Internal recursive hit-test function using the cached tree. Returns a
   // null pointer if no hit nodes were found. Public functions that query
@@ -91,24 +91,24 @@ class SemanticTree : public fuchsia::accessibility::SemanticsRoot {
   // node ids to the actual node objects. All query operations should
   // use the node information from these trees.
   std::unordered_map<
-      int32_t /*view_id*/,
+      zx_koid_t /*view_id*/,
       std::unordered_map<int32_t /*node_id*/, fuchsia::accessibility::Node>>
       nodes_;
 
   // Maps view ids to the list of nodes that should be updated or added to the
   // tree on the next commit.
-  std::unordered_map<int32_t /*view_id*/,
+  std::unordered_map<zx_koid_t /*view_id*/,
                      std::vector<fuchsia::accessibility::Node>>
       uncommitted_nodes_;
 
   // Maps view ids to the list of local node ids that should be removed from
   // the next commit.
-  std::unordered_map<int32_t /*view_id*/, std::vector<int32_t> /*node_ids*/>
+  std::unordered_map<zx_koid_t /*view_id*/, std::vector<int32_t> /*node_ids*/>
       uncommitted_deletes_;
 
   // Maps view ids to SemanticsProvider pointers that the SemanticTree
   // can use to ask front-ends to perform accessibility actions.
-  std::unordered_map<int32_t /*view_id*/,
+  std::unordered_map<zx_koid_t /*view_id*/,
                      fuchsia::accessibility::SemanticsProviderPtr>
       providers_;
 

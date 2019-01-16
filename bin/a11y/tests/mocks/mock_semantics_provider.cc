@@ -7,7 +7,7 @@
 namespace accessibility_test {
 
 MockSemanticsProvider::MockSemanticsProvider(component::StartupContext* context,
-                                             int32_t view_id)
+                                             zx_koid_t view_id)
     : binding_(this), context_(context), view_id_(view_id) {
   context_->ConnectToEnvironmentService(root_.NewRequest());
   root_.set_error_handler([this](zx_status_t status) {

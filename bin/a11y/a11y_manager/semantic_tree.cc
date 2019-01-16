@@ -18,7 +18,7 @@ void SemanticTree::AddBinding(
 }
 
 fuchsia::accessibility::NodePtr SemanticTree::GetHitAccessibilityNode(
-    int32_t view_id, fuchsia::math::PointF point) {
+    zx_koid_t view_id, fuchsia::math::PointF point) {
   auto it = nodes_.find(view_id);
   if (it == nodes_.end()) {
     return nullptr;
@@ -34,7 +34,7 @@ fuchsia::accessibility::NodePtr SemanticTree::GetHitAccessibilityNode(
 }
 
 fuchsia::accessibility::NodePtr SemanticTree::GetAccessibilityNode(
-    int32_t view_id, int32_t node_id) {
+    zx_koid_t view_id, int32_t node_id) {
   auto it = nodes_.find(view_id);
   if (it == nodes_.end()) {
     return nullptr;
@@ -49,7 +49,7 @@ fuchsia::accessibility::NodePtr SemanticTree::GetAccessibilityNode(
 }
 
 void SemanticTree::PerformAccessibilityAction(
-    int32_t view_id, int32_t node_id, fuchsia::accessibility::Action action) {
+    zx_koid_t view_id, int32_t node_id, fuchsia::accessibility::Action action) {
   auto it = providers_.find(view_id);
   if (it == providers_.end()) {
     return;
@@ -58,7 +58,7 @@ void SemanticTree::PerformAccessibilityAction(
 }
 
 void SemanticTree::RegisterSemanticsProvider(
-    int32_t view_id,
+    zx_koid_t view_id,
     fidl::InterfaceHandle<fuchsia::accessibility::SemanticsProvider> handle) {
   auto it = nodes_.find(view_id);
   if (it != nodes_.end()) {
@@ -82,7 +82,7 @@ void SemanticTree::RegisterSemanticsProvider(
 }
 
 void SemanticTree::UpdateSemanticNodes(
-    int32_t view_id, std::vector<fuchsia::accessibility::Node> nodes) {
+    zx_koid_t view_id, std::vector<fuchsia::accessibility::Node> nodes) {
   auto it = uncommitted_nodes_.find(view_id);
   if (it == uncommitted_nodes_.end()) {
     return;
@@ -91,18 +91,17 @@ void SemanticTree::UpdateSemanticNodes(
                     std::make_move_iterator(nodes.end()));
 }
 
-void SemanticTree::DeleteSemanticNodes(int32_t view_id,
+void SemanticTree::DeleteSemanticNodes(zx_koid_t view_id,
                                        std::vector<int32_t> node_ids) {
   auto it = uncommitted_deletes_.find(view_id);
   if (it == uncommitted_deletes_.end()) {
     return;
   }
-  it->second.insert(it->second.end(),
-                    std::make_move_iterator(node_ids.begin()),
+  it->second.insert(it->second.end(), std::make_move_iterator(node_ids.begin()),
                     std::make_move_iterator(node_ids.end()));
 }
 
-void SemanticTree::Commit(int32_t view_id) {
+void SemanticTree::Commit(zx_koid_t view_id) {
   auto nodes_it = nodes_.find(view_id);
   auto u_nodes_it = uncommitted_nodes_.find(view_id);
   auto u_delete_it = uncommitted_deletes_.find(view_id);

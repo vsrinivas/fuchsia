@@ -4,23 +4,24 @@
 
 library fuchsia.accessibility;
 
-// A semantics root is an interface implemented by an accessibility manager for
-// front-ends to push their semantic trees for the manager to have a global
-// semantics tree of all front-ends. It also acts as a place for the manager
-// to call actions on front-ends.
+using koid = uint64;
+
+// A semantics root is an interface implemented by an accessibility manager. It stores semantic
+// information on a per-view basis as supplied by front-ends. Each frontend pushes its semantic tree
+// to the manager, which stores this data. In future, the manager will also forward this data to
+// relevant client services. It also acts as a place for the manager to call actions on front-ends.
 //
 // This is a stub implementation and is currently a work in progress.
 [Discoverable]
 interface SemanticsRoot {
-    // Registers a frontend with an view id to the root. All future updates
-    // that a frontend makes need to include the view id. The frontend is
-    // required to pass a SemanticsProvider interface on registration for the
-    // manager to call front-end accessibility actions. Providers need to re-register
-    // on connection error. Currently, to get the
-    // view id, the front-end needs to call GetToken() on its Scenic view.
-    // TODO(SCN-847): Use event pairs to set up initial
-    // front-end/Scenic/Manager connections.
-    1: RegisterSemanticsProvider(int32 view_id, SemanticsProvider provider);
+    // Registers a frontend with a view id to the root. To correlate views with their associated
+    // clients, the semantic root uses view KOIDs as unique identifiers. All future updates that a
+    // frontend makes need to include the view id. The frontend is required to pass a
+    // SemanticsProvider interface on registration for the manager to call front-end accessibility
+    // actions. Providers need to re-register on connection error.
+    RegisterSemanticsProvider(
+        koid view_id,
+        SemanticsProvider provider);
 
     // Commits changes to node tree associated with the view_id using
     // UpdateSemanticNodes and DeleteSemanticNodes. This function must
@@ -31,17 +32,15 @@ interface SemanticsRoot {
     // exceed the FIDL transfer limit and allows both updates and deletes as part
     // of one commit. We give front-ends the responsibility of splitting a full update
     // into multiple update and delete calls that do not exceed FIDL transfer data limits.
-    2: Commit(int32 view_id);
+    Commit(koid view_id);
 
     // Sends new/updated nodes to the root to add to the cache on the next commit.
     // No-op if the client did not register that ID.
-    3: UpdateSemanticNodes(int32 view_id, vector<Node> nodes);
+    UpdateSemanticNodes(koid view_id, vector<Node> nodes);
 
     // Tells the root to remove nodes with node_ids from the frontend referenced by
     // view_id on the next commit. No-op if the client did not register that ID.
-    4: DeleteSemanticNodes(int32 view_id, vector<int32> node_ids);
-
-
+    DeleteSemanticNodes(koid view_id, vector<int32> node_ids);
 };
 
 // A semantic provider is the client-side interface that the manager can use to
@@ -49,5 +48,5 @@ interface SemanticsRoot {
 interface SemanticsProvider {
     // Asks the semantics provider to perform an accessibility action on the
     // node with node id in the front-end.
-    1: PerformAccessibilityAction(int32 node_id, Action action);
+    PerformAccessibilityAction(int32 node_id, Action action);
 };

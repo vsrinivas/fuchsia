@@ -60,9 +60,6 @@ fuchsia::math::PointF TransformPointerEvent(const Point3F& ray_origin,
   return point;
 }
 
-ManagerImpl::ManagerImpl(SemanticTree* semantic_tree)
-    : semantic_tree_(semantic_tree) {}
-
 void ManagerImpl::AddBinding(
     fidl::InterfaceRequest<fuchsia::accessibility::Manager> request) {
   bindings_.AddBinding(this, std::move(request));
@@ -76,37 +73,12 @@ void ManagerImpl::GetHitAccessibilityNode(
 }
 
 void ManagerImpl::SetAccessibilityFocus(int32_t view_id, int32_t node_id) {
-  using ::fuchsia::accessibility::Action;
-  if (a11y_focused_) {
-    semantic_tree_->PerformAccessibilityAction(
-        a11y_focused_view_id_, a11y_focused_node_id_,
-        Action::LOSE_ACCESSIBILITY_FOCUS);
-  }
-
-  // TODO(SCN-853) Add way for a11y focus to be lost once the selected node is
-  // deleted or hidden.
-  a11y_focused_view_id_ = view_id;
-  a11y_focused_node_id_ = node_id;
-  a11y_focused_ = true;
-  semantic_tree_->PerformAccessibilityAction(view_id, node_id,
-                                             Action::GAIN_ACCESSIBILITY_FOCUS);
-  fuchsia::accessibility::Node node;
-  semantic_tree_->GetAccessibilityNode(view_id, node_id)->Clone(&node);
-
-  // Notify front-ends that focus has changed. This is a bit of a hack,
-  // because front-ends should ideally be signaling that focus has changed.
-  // This might also be information in the tree not yet exposed yet.
-  // TODO(SCN-854) Figure how the manager should be notified that actions
-  // has been completed on the front-ends.
-  BroadcastOnNodeAccessibilityAction(view_id, std::move(node),
-                                     Action::GAIN_ACCESSIBILITY_FOCUS);
+  // TODO(MI4-1736): implement focus change with KOID-based semantic tree
 }
 
 void ManagerImpl::PerformAccessibilityAction(
     fuchsia::accessibility::Action action) {
-  if (a11y_focused_)
-    semantic_tree_->PerformAccessibilityAction(a11y_focused_view_id_,
-                                               a11y_focused_node_id_, action);
+  // TODO(MI4-1736): implement action with KOID-based semantic tree
 }
 
 void ManagerImpl::BroadcastOnNodeAccessibilityAction(
