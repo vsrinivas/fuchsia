@@ -16,6 +16,7 @@ executable("bin") {
     "lazy_dir.cc",
     "mmu.cc",
     "ports.cc",
+    "prng.cc",
     "pseudo_dir.cc",
     "pthreads.cc",
     "round_trips.cc",
