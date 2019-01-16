@@ -8,12 +8,17 @@ import "dart:io";
 
 class Blob {
   String hash;
-  String path;
+  String sourcePath = "Unknown";
   int size;
   int count;
 
-  int get saved { return size * (count - 1); }
-  int get proportional { return size ~/ count; }
+  int get saved {
+    return size * (count - 1);
+  }
+
+  int get proportional {
+    return size ~/ count;
+  }
 }
 
 class Package {
@@ -25,16 +30,14 @@ class Package {
   Map<String, Blob> blobsByPath;
 }
 
-String pathJoin(String part1,
-                String part2, [
-                String part3]) {
+String pathJoin(String part1, String part2, [String part3]) {
   var buffer = new StringBuffer();
   buffer.write(part1);
   if (!part1.endsWith("/")) buffer.write("/");
   buffer.write(part2);
   if (part3 != null) {
-      if (!part2.endsWith("/")) buffer.write("/");
-      buffer.write(part3);
+    if (!part2.endsWith("/")) buffer.write("/");
+    buffer.write(part3);
   }
   return buffer.toString();
 }
@@ -42,7 +45,6 @@ String pathJoin(String part1,
 class BlobStats {
   Directory buildDir;
   String suffix;
-  List<File> pendingFiles = new List<File>();
   Map<String, Blob> blobsByHash = new Map<String, Blob>();
   int duplicatedSize = 0;
   int deduplicatedSize = 0;
@@ -54,20 +56,13 @@ class BlobStats {
   Future addManifest(String path) async {
     var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
     for (var line in lines) {
-      var path = line.split("=").last;
-      pendingFiles.add(new File(pathJoin(buildDir.path, path)));
-    }
-  }
-
-  Future<String> computeHash(String path) async {
-    return (await Process.run("shasum", [path])).stdout.substring(0, 40);
-  }
-
-  Future computeBlobs() async {
-    while (!pendingFiles.isEmpty) {
-      var file = pendingFiles.removeLast();
-      var path = file.path;
-
+      var parts = line.split("=");
+      var hash = parts[0];
+      var path = parts[1];
+      if (!path.startsWith("/")) {
+        path = pathJoin(buildDir.path, path);
+      }
+      var file = new File(path);
       if (path.endsWith("meta.far")) {
         pendingPackages.add(file);
       }
@@ -81,32 +76,19 @@ class BlobStats {
         print("$path does not exist");
         continue;
       }
-
-      var size = stat.size;
-      var hash = await computeHash(path);
-
       var blob = blobsByHash[hash];
       if (blob == null) {
         var blob = new Blob();
         blob.hash = hash;
-        blob.path = path;
-        blob.size = size;
+        blob.size = stat.size;
         blob.count = 0;
         blobsByHash[hash] = blob;
       }
     }
   }
 
-  Future computeBlobsInParallel(int jobs) async {
-    var tasks = new List<Future>();
-    for (var i = 0; i < jobs; i++) {
-      tasks.add(computeBlobs());
-    }
-    await Future.wait(tasks);
-  }
-
   void printBlobList(List<Blob> blobs, int limit) {
-    print("     Size Share      Prop     Saved Path");
+    print("     Size Share      Prop     Saved Hash");
     var n = 0;
     for (var blob in blobs) {
       if (n++ > limit) return;
@@ -120,7 +102,7 @@ class BlobStats {
       sb.write(" ");
       sb.write(blob.saved.toString().padLeft(9));
       sb.write(" ");
-      sb.write(blob.path.substring(buildDir.path.length));
+      sb.write(blob.sourcePath);
       print(sb);
     }
   }
@@ -150,16 +132,16 @@ class BlobStats {
     print("   $percent% $deduplicatedSize / $duplicatedSize");
   }
 
-  String farToManifest(String farPath) {
+  String metaFarToBlobsJson(String farPath) {
     // Assumes details of //build/package.gni, namely that it generates
-    //   <build-dir>/.../<package>.manifest
     //   <build-dir>/.../<package>.meta/meta.far
-    // and puts meta.far into
-    //   <build-dir>/blobs.manifest
+    // and puts a blobs.json file into
+    //   <build-dir>/.../<package>.meta/blobs.json
     if (!farPath.endsWith(".meta/meta.far")) {
       throw "Build details have changed";
     }
-    return farPath.substring(0, farPath.length - ".meta/meta.far".length) + ".manifest";
+    return farPath.substring(0, farPath.length - "meta.far".length) +
+        "blobs.json";
   }
 
   Future computePackagesInParallel(int jobs) async {
@@ -182,23 +164,36 @@ class BlobStats {
       package.blobCount = 0;
       package.blobsByPath = new Map<String, Blob>();
 
-      for (var line in await new File(farToManifest(far.path)).readAsLines()) {
-        var path = line.split("=").last;
+      var blobs = json
+          .decode(await new File(metaFarToBlobsJson(far.path)).readAsString());
 
-        if (suffix != null && !path.endsWith(suffix)) {
+      for (var blob in blobs) {
+        var hash = blob["merkle"];
+        var path = blob["path"];
+        var b = blobsByHash[hash];
+        if (b == null) {
+          print(
+              "$path $hash is in a package manifest but not the final manifest");
           continue;
         }
-
-        var hash = await computeHash(path);
-        var blob = blobsByHash[hash];
-        if (blob == null) {
-          print("$path is in a package manifest but not the final manifest");
-          continue;
+        b.count++;
+        var sourcePath = blob["source_path"];
+        // If the source_path looks like <something>/blobs/<merkle>, it from a prebuilt package and has no
+        // meaningful source. Instead, use the path within the package as its identifier.
+        if (sourcePath.endsWith("/blobs/$hash")) {
+          sourcePath = path;
         }
-
-        blob.count++;
-        package.blobsByPath[path] = blob;
+        // We may see the same blob referenced from different packages with different source paths.
+        // If all references agree with each other, use that.
+        // Otherwise record the first observed path and append " *" to denote that the path is only one of many.
+        if (b.sourcePath == "Unknown") {
+          b.sourcePath = sourcePath;
+        } else if (b.sourcePath != sourcePath && !b.sourcePath.endsWith(" *")) {
+          b.sourcePath = b.sourcePath + " *";
+        }
+        package.blobsByPath[path] = b;
       }
+
       packages.add(package);
     }
   }
@@ -207,7 +202,8 @@ class BlobStats {
     var filteredBlobs = new Map<String, Blob>();
     blobsByHash.forEach((hash, blob) {
       if (blob.count == 0) {
-        print("${blob.path} is in the final manifest but not any package manifest");
+        print(
+            "${blob.hash} is in the final manifest but not any package manifest");
       } else {
         filteredBlobs[hash] = blob;
       }
@@ -253,27 +249,32 @@ class BlobStats {
     var rootTree = {};
     rootTree["n"] = "packages";
     rootTree["children"] = new List();
-    rootTree["k"] = "p";  // kind=path
+    rootTree["k"] = "p"; // kind=path
     for (var pkg in packages) {
       var parts = pkg.name.split("/");
       var pkgName = parts.length > 1 ? parts[parts.length - 2] : parts.last;
       var pkgTree = {};
       pkgTree["n"] = pkgName;
       pkgTree["children"] = new List();
-      pkgTree["k"] = "p";  // kind=path
+      pkgTree["k"] = "p"; // kind=path
       rootTree["children"].add(pkgTree);
       pkg.blobsByPath.forEach((path, blob) {
-        var blobName = path.split("/").last;
+        var blobName = path; //path.split("/").last;
         var blobTree = {};
         blobTree["n"] = blobName;
-        blobTree["k"] = "s";  // kind=symbol
+        blobTree["k"] = "s"; // kind=symbol
         if (blobName.endsWith(".dilp") || blobName.endsWith(".aotsnapshot")) {
-          blobTree["t"] = "t";  // type=local text ("blue")
+          blobTree["t"] = "t"; // type=local text ("blue")
         } else {
-          blobTree["t"] = "T";  // type=global text ("red")
+          blobTree["t"] = "T"; // type=global text ("red")
         }
         blobTree["value"] = blob.proportional;
         pkgTree["children"].add(blobTree);
+        // Mark blobs with exactly one reference as "unique symbols" ("green")
+        // The visualizer helpfully computes the sum of all unique "symbols" within a package.
+        if (blob.count == 1) {
+          blobTree["t"] = "u";
+        }
       });
     }
 
@@ -283,17 +284,20 @@ class BlobStats {
     await sink.close();
 
     await new Directory(pathJoin(buildDir.path, "d3")).create(recursive: true);
-    var d3Dir = buildDir.path + "/../../third_party/dart/runtime/third_party/d3/src/";
+    var d3Dir =
+        buildDir.path + "/../../third_party/dart/runtime/third_party/d3/src/";
     for (var file in ["LICENSE", "d3.js"]) {
       await new File(d3Dir + file).copy(pathJoin(buildDir.path, "d3", file));
     }
-    var templateDir = pathJoin(buildDir.path, "../../third_party/dart/runtime/third_party/binary_size/src/template/");
+    var templateDir = pathJoin(buildDir.path,
+        "../../third_party/dart/runtime/third_party/binary_size/src/template/");
     for (var file in ["index.html", "D3SymbolTreeMap.js"]) {
       await new File(templateDir + file).copy(pathJoin(buildDir.path, file));
     }
 
     print("");
-    print("  Wrote visualization to file://" + pathJoin(buildDir.path, "index.html"));
+    print("  Wrote visualization to file://" +
+        pathJoin(buildDir.path, "index.html"));
   }
 }
 
@@ -305,7 +309,6 @@ Future main(List<String> args) async {
 
   var stats = new BlobStats(Directory.current, suffix);
   await stats.addManifest("blob.manifest");
-  await stats.computeBlobsInParallel(Platform.numberOfProcessors);
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats.computeStats();
   stats.printBlobs(40);
