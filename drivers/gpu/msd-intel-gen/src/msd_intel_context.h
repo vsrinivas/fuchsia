@@ -55,6 +55,21 @@ public:
         return iter == state_map_.end() ? nullptr : iter->second.context_buffer.get();
     }
 
+    void* GetCachedContextBufferCpuAddr(EngineCommandStreamerId id)
+    {
+        auto iter = state_map_.find(id);
+        if (iter == state_map_.end())
+            return nullptr;
+        if (!iter->second.context_buffer_cpu_addr) {
+            MsdIntelBuffer* context_buffer = iter->second.context_buffer.get();
+            if (!context_buffer)
+                return nullptr;
+            if (!context_buffer->platform_buffer()->MapCpu(&iter->second.context_buffer_cpu_addr))
+                return DRETP(nullptr, "Failed to map context buffer");
+        }
+        return iter->second.context_buffer_cpu_addr;
+    }
+
     Ringbuffer* get_ringbuffer(EngineCommandStreamerId id)
     {
         auto iter = state_map_.find(id);
@@ -75,6 +90,7 @@ private:
         std::shared_ptr<MsdIntelBuffer> context_buffer;
         std::unique_ptr<GpuMapping> context_mapping;
         std::unique_ptr<Ringbuffer> ringbuffer;
+        void* context_buffer_cpu_addr = nullptr;
     };
 
     std::map<EngineCommandStreamerId, PerEngineState> state_map_;

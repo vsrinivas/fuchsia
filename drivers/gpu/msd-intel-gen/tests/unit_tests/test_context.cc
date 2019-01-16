@@ -51,6 +51,7 @@ public:
 
     void Map(bool global)
     {
+        // Arbitrary
         constexpr uint32_t base = 0x10000;
 
         std::weak_ptr<MsdIntelConnection> connection;
@@ -91,6 +92,35 @@ public:
 
         // Already unmapped
         EXPECT_FALSE(context->Unmap(RENDER_COMMAND_STREAMER));
+    }
+
+    void CachedMapping()
+    {
+        // Arbitrary
+        constexpr uint32_t base = 0x10000;
+
+        std::unique_ptr<MsdIntelBuffer> buffer(MsdIntelBuffer::Create(PAGE_SIZE, "test"));
+
+        auto ringbuffer = std::make_unique<Ringbuffer>(
+            std::unique_ptr<MsdIntelBuffer>(MsdIntelBuffer::Create(PAGE_SIZE, "test")));
+
+        auto address_space_owner = std::make_unique<AddressSpaceOwner>();
+        auto address_space = std::make_shared<MockAddressSpace>(address_space_owner.get(), base,
+                                                                buffer->platform_buffer()->size() +
+                                                                    ringbuffer->size());
+
+        auto context =
+            std::make_unique<ClientContext>(std::weak_ptr<MsdIntelConnection>(), address_space);
+
+        void* cpu_addr = context->GetCachedContextBufferCpuAddr(RENDER_COMMAND_STREAMER);
+        EXPECT_EQ(nullptr, cpu_addr);
+
+        context->SetEngineState(RENDER_COMMAND_STREAMER, std::move(buffer), std::move(ringbuffer));
+
+        cpu_addr = context->GetCachedContextBufferCpuAddr(RENDER_COMMAND_STREAMER);
+        EXPECT_NE(nullptr, cpu_addr);
+        // Returned address shouldn't change.
+        EXPECT_EQ(cpu_addr, context->GetCachedContextBufferCpuAddr(RENDER_COMMAND_STREAMER));
     }
 
     static void SubmitCommandBuffer(uint32_t command_buffer_count, uint32_t semaphore_count)
@@ -225,6 +255,8 @@ TEST(MsdIntelContext, ClientMap)
     TestContext test;
     test.Map(false);
 }
+
+TEST(MsdIntelContext, CachedMapping) { TestContext().CachedMapping(); }
 
 TEST(GlobalContext, GlobalMap)
 {
