@@ -4,7 +4,7 @@
     ],
     "packages": [
         "//garnet/bin/bluetooth/bt-gap:bt-gap-tests",
-        "//garnet/bin/bluetooth/tests",
+        "//garnet/bin/bluetooth/tests:bluetooth_tests",
         "//garnet/lib/rust/fuchsia-bluetooth:tests"
     ]
 }

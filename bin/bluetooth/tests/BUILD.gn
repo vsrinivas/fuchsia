@@ -4,7 +4,8 @@
 
 import("//build/package.gni")
 
-package("tests") {
+# TODO(BLD-338): Workaround: match target to package_name to make it pushable.
+package("bluetooth_tests") {
   testonly = true
 
   package_name = "bluetooth_tests"
