@@ -28,8 +28,10 @@ type deltaConfig struct {
 	outputPath string
 
 	// filtering options
-	includeTags []string
-	excludeTags []string
+	sourceIncludeTags []string
+	sourceExcludeTags []string
+	targetIncludeTags []string
+	targetExcludeTags []string
 
 	// stdout display options (ignored if outputPath is specified)
 	summary           bool
@@ -68,15 +70,22 @@ func parseConfig(args []string) (*deltaConfig, error) {
 
 	var c deltaConfig
 
+	var includeTags []string
+	var excludeTags []string
+
 	fs.StringVar(&c.outputPath, "output", "", "Write delta as JSON to the provided path instead of writing to stdout ('-' to write json to stdout)")
 	fs.BoolVar(&c.detailed, "detailed", false, "Include all package and blob statistics, instead of just the top few")
 	fs.BoolVar(&c.summary, "summary", false, "Show summary of update statistics")
 	fs.BoolVar(&c.packages, "packages", false, "Show per-package statistics")
 	fs.BoolVar(&c.blobs, "blobs", false, "Show per-blob statistics")
-	fs.UintVar(&c.packageCount, "package_count", 0, "Show up to N packages with largest updates (implies --packages)")
-	fs.UintVar(&c.blobCount, "blob_count", 0, "Show up to N blobs with largest updates (implies --blobs)")
-	fs.Var((*stringSlice)(&c.includeTags), "include", "Include a tag in the analysis (default is to include all tags)")
-	fs.Var((*stringSlice)(&c.excludeTags), "exclude", "Exclude a tag from the analysis (default is to exclude no tags)")
+	fs.UintVar(&c.packageCount, "package-count", 0, "Show up to N packages with largest updates (implies --packages)")
+	fs.UintVar(&c.blobCount, "blob-count", 0, "Show up to N blobs with largest updates (implies --blobs)")
+	fs.Var((*stringSlice)(&c.sourceIncludeTags), "source-include", "Include a tag from source in the analysis (default is to include all tags)")
+	fs.Var((*stringSlice)(&c.sourceExcludeTags), "source-exclude", "Exclude a tag from source from the analysis (default is to exclude no tags)")
+	fs.Var((*stringSlice)(&c.targetIncludeTags), "target-include", "Include a tag from target in the analysis (default is to include all tags)")
+	fs.Var((*stringSlice)(&c.targetExcludeTags), "target-exclude", "Exclude a tag from target from the analysis (default is to exclude no tags)")
+	fs.Var((*stringSlice)(&includeTags), "include", "Include a tag from source and target in the analysis (default is to include all tags)")
+	fs.Var((*stringSlice)(&excludeTags), "exclude", "Exclude a tag from source and target from the analysis (default is to exclude no tags)")
 
 	fs.Usage = func() {
 		fmt.Fprintf(fs.Output(), usage, filepath.Base(os.Args[0]))
@@ -119,8 +128,17 @@ func parseConfig(args []string) (*deltaConfig, error) {
 	// Show section headers if more than one section will be shown
 	c.showSectionHeader = countTrueValues(c.summary, c.packages, c.blobs) > 1
 
-	if len(c.includeTags) == 0 {
-		c.includeTags = append(c.includeTags, "*")
+	c.sourceIncludeTags = append(c.sourceIncludeTags, includeTags...)
+	c.sourceExcludeTags = append(c.sourceExcludeTags, excludeTags...)
+	c.targetIncludeTags = append(c.targetIncludeTags, includeTags...)
+	c.targetExcludeTags = append(c.targetExcludeTags, excludeTags...)
+
+	if len(c.sourceIncludeTags) == 0 {
+		c.sourceIncludeTags = append(c.sourceIncludeTags, "*")
+	}
+
+	if len(c.targetIncludeTags) == 0 {
+		c.targetIncludeTags = append(c.targetIncludeTags, "*")
 	}
 
 	return &c, nil
@@ -143,8 +161,8 @@ func Run(cfg *build.Config, args []string) error {
 		return err
 	}
 
-	source = source.Filter(config.includeTags, config.excludeTags)
-	target = target.Filter(config.includeTags, config.excludeTags)
+	source = source.Filter(config.sourceIncludeTags, config.sourceExcludeTags)
+	target = target.Filter(config.targetIncludeTags, config.targetExcludeTags)
 
 	delta, err := build.DeltaSnapshots(source, target)
 	if err != nil {
