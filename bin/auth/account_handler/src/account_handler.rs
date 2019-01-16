@@ -151,9 +151,29 @@ impl AccountHandler {
     }
 
     fn remove_account(&self) -> Status {
-        // TODO(dnordstrom): Implement this method once accounts are persisted on disk.
-        warn!("RemoveAccount method not yet implemented");
-        Status::InternalError
+        let mut account_lock = self.account.write();
+        let account = match &*account_lock {
+            Some(account) => account,
+            None => {
+                warn!("No account is initialized or it has already been removed");
+                return Status::InvalidRequest;
+            }
+        };
+        let local_account_id = account.id();
+        let account_dir = self
+            .accounts_dir
+            .join(local_account_id.to_canonical_string());
+        match fs::remove_dir_all(account_dir) {
+            Err(err) => {
+                warn!("Could not remove account dir: {:?}", err);
+                Status::IoError
+            }
+            Ok(()) => {
+                info!("Deleted Fuchsia account {:?}", local_account_id);
+                *account_lock = None;
+                Status::Ok
+            }
+        }
     }
 
     fn get_account(
@@ -281,38 +301,35 @@ mod tests {
     #[test]
     fn test_create_and_get_account() {
         let location = TempLocation::new();
-        request_stream_test(
-            AccountHandler::new(location.path),
-            async move |account_handler_proxy| {
-                let (_, ahc_client_chan) = zx::Channel::create().unwrap();
-                let (status, account_id_optional) =
-                    await!(account_handler_proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
-                assert_eq!(status, Status::Ok);
-                assert!(account_id_optional.is_some());
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+            let (_, ahc_client_chan) = zx::Channel::create().unwrap();
+            let (status, account_id_optional) =
+                await!(proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
+            assert_eq!(status, Status::Ok);
+            assert!(account_id_optional.is_some());
 
-                let (account_server_chan, account_client_chan) = zx::Channel::create().unwrap();
-                let (_, acp_client_chan) = zx::Channel::create().unwrap();
-                assert_eq!(
-                    await!(account_handler_proxy.get_account(
-                        ClientEnd::new(acp_client_chan),
-                        ServerEnd::new(account_server_chan)
-                    ))?,
-                    Status::Ok
-                );
+            let (account_server_chan, account_client_chan) = zx::Channel::create().unwrap();
+            let (_, acp_client_chan) = zx::Channel::create().unwrap();
+            assert_eq!(
+                await!(proxy.get_account(
+                    ClientEnd::new(acp_client_chan),
+                    ServerEnd::new(account_server_chan)
+                ))?,
+                Status::Ok
+            );
 
-                // The account channel should now be usable.
-                let account_proxy =
-                    AccountProxy::new(fasync::Channel::from_channel(account_client_chan).unwrap());
-                assert_eq!(
-                    await!(account_proxy.get_auth_state())?,
-                    (
-                        Status::Ok,
-                        Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
-                    )
-                );
-                Ok(())
-            },
-        );
+            // The account channel should now be usable.
+            let account_proxy =
+                AccountProxy::new(fasync::Channel::from_channel(account_client_chan).unwrap());
+            assert_eq!(
+                await!(account_proxy.get_auth_state())?,
+                (
+                    Status::Ok,
+                    Some(Box::new(AccountHandler::DEFAULT_AUTH_STATE))
+                )
+            );
+            Ok(())
+        });
     }
 
     #[test]
@@ -323,10 +340,10 @@ mod tests {
         let acc_id_borrow = acc_id.clone();
         request_stream_test(
             AccountHandler::new(location.path.clone()),
-            async move |account_handler_proxy| {
+            async move |proxy| {
                 let (_, ahc_client_chan) = zx::Channel::create().unwrap();
                 let (status, account_id_optional) =
-                    await!(account_handler_proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
+                    await!(proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
                 assert_eq!(status, Status::Ok);
                 assert!(account_id_optional.is_some());
                 let mut acc_id = acc_id_borrow.lock().unwrap();
@@ -343,6 +360,58 @@ mod tests {
             );
             Ok(())
         });
+    }
+
+    #[test]
+    fn test_create_and_remove_account() {
+        let location = TempLocation::new();
+        request_stream_test(
+            AccountHandler::new(location.path.clone()),
+            async move |proxy| {
+                let (_, ahc_client_chan) = zx::Channel::create().unwrap();
+                let (status, account_id_optional) =
+                    await!(proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
+                assert_eq!(status, Status::Ok);
+                assert!(account_id_optional.is_some());
+                let account_path = location
+                    .path
+                    .join(account_id_optional.unwrap().id.to_string());
+                assert!(account_path.is_dir());
+                assert_eq!(await!(proxy.remove_account())?, Status::Ok);
+                assert_eq!(account_path.exists(), false);
+                Ok(())
+            },
+        );
+    }
+
+    #[test]
+    fn test_remove_account_before_initialization() {
+        let location = TempLocation::new();
+        request_stream_test(AccountHandler::new(location.path), async move |proxy| {
+            assert_eq!(await!(proxy.remove_account())?, Status::InvalidRequest);
+            Ok(())
+        });
+    }
+
+    #[test]
+    fn test_create_and_remove_account_twice() {
+        let location = TempLocation::new();
+        request_stream_test(
+            AccountHandler::new(location.path.clone()),
+            async move |proxy| {
+                let (_, ahc_client_chan) = zx::Channel::create().unwrap();
+                let (status, account_id_optional) =
+                    await!(proxy.create_account(ClientEnd::new(ahc_client_chan)))?;
+                assert_eq!(status, Status::Ok);
+                assert!(account_id_optional.is_some());
+                assert_eq!(await!(proxy.remove_account())?, Status::Ok);
+                assert_eq!(
+                    await!(proxy.remove_account())?,
+                    Status::InvalidRequest // You can only remove once
+                );
+                Ok(())
+            },
+        );
     }
 
     #[test]

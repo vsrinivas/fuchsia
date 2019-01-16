@@ -23,11 +23,10 @@ use std::sync::Arc;
 /// the AccountHandlerControl channel.
 pub struct Account {
     /// A device-local identifier for this account.
-    _id: LocalAccountId,
+    id: LocalAccountId,
 
     /// The default persona for this account.
     default_persona: Arc<Persona>,
-
     // TODO(jsankey): Once the system and API surface can support more than a single persona, add
     // additional state here to store these personae. This will most likely be a hashmap from
     // LocalPersonaId to Persona struct, and changing default_persona from a struct to an ID.
@@ -38,9 +37,14 @@ impl Account {
     pub fn new(account_id: LocalAccountId) -> Account {
         let persona_id = LocalPersonaId::new(rand::random::<u64>());
         Self {
-            _id: account_id.clone(),
+            id: account_id.clone(),
             default_persona: Arc::new(Persona::new(persona_id, account_id)),
         }
+    }
+
+    /// A device-local identifier for this account
+    pub fn id(&self) -> &LocalAccountId {
+        &self.id
     }
 
     /// Asynchronously handles the supplied stream of `AccountRequest` messages.
