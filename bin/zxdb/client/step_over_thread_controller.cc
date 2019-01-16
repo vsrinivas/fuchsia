@@ -30,7 +30,7 @@ void StepOverThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  if (thread->GetStack().GetFrames().empty()) {
+  if (thread->GetStack().empty()) {
     cb(Err("Can't step, no frames."));
     return;
   }
@@ -91,8 +91,8 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     return kStop;
   }
 
-  auto frames = thread()->GetStack().GetFrames();
-  if (frames.size() < 2) {
+  const auto& stack = thread()->GetStack();
+  if (stack.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
     return kStop;
   }
@@ -100,7 +100,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Got into a sub-frame. The calling code may have added a filter to stop
   // at one of them.
   if (subframe_should_stop_callback_) {
-    if (subframe_should_stop_callback_(frames[0])) {
+    if (subframe_should_stop_callback_(stack[0])) {
       Log("should_stop callback returned true, stopping.");
       return kStop;
     } else {
@@ -125,7 +125,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // breakpoint sets will arrive before telling the thread to continue.
   Log("In a new frame, passing through to 'finish'.");
   finish_ = std::make_unique<FinishThreadController>(
-      FinishThreadController::ToFrame(), frames[1]->GetAddress(),
+      FinishThreadController::ToFrame(), stack[1]->GetAddress(),
       frame_fingerprint_);
   finish_->InitWithThread(thread(), [](const Err&) {});
   return finish_->OnThreadStop(stop_type, hit_breakpoints);

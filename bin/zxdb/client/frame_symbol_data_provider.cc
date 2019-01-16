@@ -192,10 +192,10 @@ void FrameSymbolDataProvider::WriteMemory(uint64_t address,
 bool FrameSymbolDataProvider::IsTopFrame() const {
   if (!frame_)
     return false;
-  const auto& frames = frame_->GetThread()->GetStack().GetFrames();
-  if (frames.empty())
+  const auto& stack = frame_->GetThread()->GetStack();
+  if (stack.empty())
     return false;
-  return frames[0] == frame_;
+  return stack[0] == frame_;
 }
 
 }  // namespace zxdb

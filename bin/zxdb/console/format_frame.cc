@@ -38,8 +38,8 @@ void ListCompletedFrames(Thread* thread, bool include_params,
 
   // This doesn't use table output since the format of the stack frames is
   // usually so unpredictable.
-  const auto& frames = thread->GetStack().GetFrames();
-  if (frames.empty()) {
+  const Stack& stack = thread->GetStack();
+  if (stack.empty()) {
     if (thread->GetState() != debug_ipc::ThreadRecord::State::kSuspended &&
         !(thread->GetState() == debug_ipc::ThreadRecord::State::kBlocked &&
           thread->GetBlockedReason() ==
@@ -53,7 +53,7 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       helper->Append("No stack frames.\n");
     }
   } else {
-    for (int i = 0; i < static_cast<int>(frames.size()); i++) {
+    for (int i = 0; i < static_cast<int>(stack.size()); i++) {
       if (i == active_frame_id)
         helper->Append(GetRightArrow() + " ");
       else
@@ -65,11 +65,11 @@ void ListCompletedFrames(Thread* thread, bool include_params,
       // Supply "-1" for the frame index to suppress printing (we already
       // did it above).
       if (long_format) {
-        FormatFrameLong(frames[i], include_params, helper.get(), format_options,
+        FormatFrameLong(stack[i], include_params, helper.get(), format_options,
                         -1);
       } else {
         OutputBuffer out;
-        FormatFrame(frames[i], include_params, &out, -1);
+        FormatFrame(stack[i], include_params, &out, -1);
         helper->Append(std::move(out));
       }
 

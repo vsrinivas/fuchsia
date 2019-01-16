@@ -118,18 +118,18 @@ void MemoryAnalysis::SetAspace(std::vector<debug_ipc::AddressRegion> aspace) {
   aspace_ = std::move(aspace);
 }
 
-void MemoryAnalysis::SetFrames(const std::vector<Frame*>& frames) {
+void MemoryAnalysis::SetStack(const Stack& stack) {
   FXL_DCHECK(!have_frames_);
   have_frames_ = true;
 
   // This loop avoids adding frame 0's information because that should be
   // covered by the CPU registers.
-  for (int i = 1; i < static_cast<int>(frames.size()); i++) {
-    AddAnnotation(frames[i]->GetAddress(), fxl::StringPrintf("frame %d IP", i));
+  for (int i = 1; i < static_cast<int>(stack.size()); i++) {
+    AddAnnotation(stack[i]->GetAddress(), fxl::StringPrintf("frame %d IP", i));
     // TODO(brettw) make this work when the BP is asynchronous.
-    if (auto bp = frames[i]->GetBasePointer())
+    if (auto bp = stack[i]->GetBasePointer())
       AddAnnotation(*bp, fxl::StringPrintf("frame %d BP", i));
-    AddAnnotation(frames[i]->GetStackPointer(),
+    AddAnnotation(stack[i]->GetStackPointer(),
                   fxl::StringPrintf("frame %d SP", i));
   }
 }
@@ -244,11 +244,10 @@ void MemoryAnalysis::OnFrames(fxl::WeakPtr<Thread> thread) {
 
   // This function can continue even if the thread is gone, it just won't get
   // the frame annotations.
-  std::vector<Frame*> frames;
   if (thread)
-    frames = thread->GetStack().GetFrames();
-
-  SetFrames(frames);
+    SetStack(thread->GetStack());
+  else
+    have_frames_ = true;  // Mark fetching is complete.
 
   if (HasEverything())
     DoAnalysis();

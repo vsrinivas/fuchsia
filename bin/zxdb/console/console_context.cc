@@ -89,9 +89,9 @@ int ConsoleContext::IdForFrame(const Frame* frame) const {
   // whether the frames have been synced, since if there is a frame here,
   // we know it's present in the thread's list.
   Thread* thread = frame->GetThread();
-  auto frames = thread->GetStack().GetFrames();
-  for (size_t i = 0; i < frames.size(); i++) {
-    if (frames[i] == frame)
+  const Stack& stack = thread->GetStack();
+  for (size_t i = 0; i < stack.size(); i++) {
+    if (stack[i] == frame)
       return static_cast<int>(i);
   }
   FXL_NOTREACHED();  // Should have found the frame.
@@ -197,11 +197,11 @@ int ConsoleContext::GetActiveFrameIdForThread(const Thread* thread) const {
   }
 
   // Should be a valid frame index in the thread (or no frames and == 0).
-  FXL_DCHECK((thread->GetStack().GetFrames().empty() &&
+  FXL_DCHECK((thread->GetStack().empty() &&
               record->active_frame_id == 0) ||
              (record->active_frame_id >= 0 &&
               record->active_frame_id <
-                  static_cast<int>(thread->GetStack().GetFrames().size())));
+                  static_cast<int>(thread->GetStack().size())));
   return record->active_frame_id;
 }
 
@@ -273,9 +273,9 @@ void ConsoleContext::OutputThreadContext(
   }
 
   // Frame (current position will always be frame 0).
-  const auto& frames = thread->GetStack().GetFrames();
-  FXL_DCHECK(!frames.empty());
-  const Location& location = frames[0]->GetLocation();
+  const Stack& stack = thread->GetStack();
+  FXL_DCHECK(!stack.empty());
+  const Location& location = stack[0]->GetLocation();
   out.Append("at ");
   out.Append(FormatLocation(location, false, false));
   if (location.has_symbols()) {
@@ -738,14 +738,14 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
   if (frame_id == Command::kNoIndex) {
     // No index: use the active one (if any).
     if (thread_record) {
-      const auto& frames = thread_record->thread->GetStack().GetFrames();
+      auto& stack = thread_record->thread->GetStack();
       frame_id = thread_record->active_frame_id;
-      if (frame_id >= 0 && frame_id < static_cast<int>(frames.size())) {
-        cmd->set_frame(frames[frame_id]);
-      } else if (!frames.empty()) {
+      if (frame_id >= 0 && frame_id < static_cast<int>(stack.size())) {
+        cmd->set_frame(stack[frame_id]);
+      } else if (!stack.empty()) {
         // Invalid frame index, default to 0th frame.
         frame_id = 0;
-        cmd->set_frame(frames[0]);
+        cmd->set_frame(stack[0]);
       }
     }
     return Err();
@@ -755,9 +755,9 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
   if (!thread_record)
     return Err(ErrType::kInput, "There is no thread to have frames.");
 
-  const auto& frames = thread_record->thread->GetStack().GetFrames();
-  if (frame_id >= 0 && frame_id < static_cast<int>(frames.size())) {
-    cmd->set_frame(frames[frame_id]);
+  Stack& stack = thread_record->thread->GetStack();
+  if (frame_id >= 0 && frame_id < static_cast<int>(stack.size())) {
+    cmd->set_frame(stack[frame_id]);
     return Err();
   }
 
@@ -772,7 +772,7 @@ Err ConsoleContext::FillOutFrame(Command* cmd,
   // a state to have frames at all (stopped). There will always be the
   // topmost frame in this case. If the thread is running there will be no
   // frames.
-  if (frames.size() == 1 &&
+  if (stack.size() == 1 &&
       !thread_record->thread->GetStack().has_all_frames()) {
     return Err(ErrType::kInput,
                "The frames for this thread haven't been synced.\n"

@@ -20,6 +20,7 @@ class Err;
 class Frame;
 class OutputBuffer;
 class Process;
+class Stack;
 class Thread;
 class RegisterSet;
 
@@ -73,7 +74,7 @@ class MemoryAnalysis : public fxl::RefCountedThreadSafe<MemoryAnalysis> {
   // Tests can call these functions to manually provide the data that would
   // normally be provided via IPC call. To use, call before "Schedule".
   void SetAspace(std::vector<debug_ipc::AddressRegion> aspace);
-  void SetFrames(const std::vector<Frame*>& frames);
+  void SetStack(const Stack& stack);
   void SetMemory(MemoryDump dump);
   void SetRegisters(const RegisterSet&);
 

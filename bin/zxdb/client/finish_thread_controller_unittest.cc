@@ -58,12 +58,12 @@ TEST_F(FinishThreadControllerTest, Finish) {
                                             kReturnBase);
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
-  auto frames = thread()->GetStack().GetFrames();
+  const Frame* frame_zero = thread()->GetStack()[0];
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
   thread()->ContinueWith(std::make_unique<FinishThreadController>(
-                             FinishThreadController::FromFrame(), frames[0]),
+                             FinishThreadController::FromFrame(), frame_zero),
                          [&out_err](const Err& err) {
                            out_err = err;
                            debug_ipc::MessageLoop::Current()->QuitNow();
@@ -117,12 +117,12 @@ TEST_F(FinishThreadControllerTest, BottomStackFrame) {
       debug_ipc::ThreadRecord::StackAmount::kFull;
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
-  auto frames = thread()->GetStack().GetFrames();
+  Frame* frame_zero = thread()->GetStack()[0];
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
   thread()->ContinueWith(std::make_unique<FinishThreadController>(
-                             FinishThreadController::FromFrame(), frames[0]),
+                             FinishThreadController::FromFrame(), frame_zero),
                          [&out_err](const Err& err) {
                            out_err = err;
                            debug_ipc::MessageLoop::Current()->QuitNow();

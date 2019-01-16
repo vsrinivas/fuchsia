@@ -25,12 +25,12 @@ void StepThreadController::InitWithThread(Thread* thread,
                                           std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  auto frames = thread->GetStack().GetFrames();
-  if (frames.empty()) {
+  const Stack& stack = thread->GetStack();
+  if (stack.empty()) {
     cb(Err("Can't step, no frames."));
     return;
   }
-  uint64_t ip = frames[0]->GetAddress();
+  uint64_t ip = stack[0]->GetAddress();
 
   if (step_mode_ == StepMode::kSourceLine) {
     LineDetails line_details =
@@ -110,11 +110,11 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   // won't prematurely stop while executing a line of code. But the code could
   // crash or there could be a breakpoint in the middle, and those don't
   // count as leaving the range.
-  auto frames = thread()->GetStack().GetFrames();
-  if (frames.empty())
+  const auto& stack = thread()->GetStack();
+  if (stack.empty())
     return kStop;  // Agent sent bad state, give up trying to step.
 
-  uint64_t ip = frames[0]->GetAddress();
+  uint64_t ip = stack[0]->GetAddress();
   if (current_range_.InRange(ip)) {
     Log("In existing range: [0x%" PRIx64 ", 0x%" PRIx64 ")",
         current_range_.begin(), current_range_.end());
@@ -181,7 +181,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         Log("Called unsymbolized function, stepping out.");
         FXL_DCHECK(original_frame_fingerprint_.is_valid());
         finish_unsymolized_function_ = std::make_unique<FinishThreadController>(
-            FinishThreadController::ToFrame(), frames[1]->GetAddress(),
+            FinishThreadController::ToFrame(), stack[1]->GetAddress(),
             original_frame_fingerprint_);
         finish_unsymolized_function_->InitWithThread(thread(),
                                                      [](const Err&) {});

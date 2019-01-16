@@ -17,17 +17,6 @@ Stack::Stack(Delegate* delegate) : delegate_(delegate) {}
 
 Stack::~Stack() = default;
 
-const std::vector<Frame*>& Stack::GetFrames() const {
-  if (frames_cache_.empty()) {
-    frames_cache_.reserve(frames_.size());
-    for (const auto& cur : frames_)
-      frames_cache_.push_back(cur.get());
-  } else {
-    FXL_DCHECK(frames_.size() == frames_cache_.size());
-  }
-  return frames_cache_;
-}
-
 FrameFingerprint Stack::GetFrameFingerprint(size_t frame_index) const {
   // See function comment in thread.h for more. We need to look at the next
   // frame, so either we need to know we got them all or the caller wants the
@@ -69,7 +58,6 @@ void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
   }
 
   frames_.clear();
-  frames_cache_.clear();
   for (size_t i = 0; i < frames.size(); i++) {
     IpSp key(frames[i].ip, frames[i].sp);
     auto found = existing.find(key);
@@ -89,7 +77,6 @@ void Stack::SetFrames(debug_ipc::ThreadRecord::StackAmount amount,
 void Stack::SetFramesForTest(std::vector<std::unique_ptr<Frame>> frames,
                              bool has_all) {
   frames_ = std::move(frames);
-  frames_cache_.clear();
   has_all_frames_ = has_all;
 }
 
@@ -100,7 +87,6 @@ bool Stack::ClearFrames() {
     return false;  // Nothing to do.
 
   frames_.clear();
-  frames_cache_.clear();
   return true;
 }
 

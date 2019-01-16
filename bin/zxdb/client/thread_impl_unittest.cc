@@ -53,7 +53,7 @@ TEST_F(ThreadImplTest, Frames) {
   Thread* thread = InjectThread(kProcessKoid, kThreadKoid);
 
   // The thread should be in a running state with no frames.
-  EXPECT_TRUE(thread->GetStack().GetFrames().empty());
+  EXPECT_TRUE(thread->GetStack().empty());
   EXPECT_FALSE(thread->GetStack().has_all_frames());
 
   // Notify of thread stop.
@@ -71,14 +71,13 @@ TEST_F(ThreadImplTest, Frames) {
 
   // There should be one frame with the address of the stop.
   EXPECT_FALSE(thread->GetStack().has_all_frames());
-  auto frames = thread->GetStack().GetFrames();
-  ASSERT_EQ(1u, frames.size());
-  EXPECT_EQ(kAddress1, frames[0]->GetAddress());
-  EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
+  const Stack& stack = thread->GetStack();
+  ASSERT_EQ(1u, stack.size());
+  EXPECT_EQ(kAddress1, stack[0]->GetAddress());
+  EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
 
   // The top stack frame object should be preserved across the updates below.
-  Frame* top_stack = frames[0];
-  frames.clear();
+  const Frame* top_stack = stack[0];
 
   // Construct what the full stack will be returned to the thread. The top
   // element should match the one already there.
@@ -98,19 +97,18 @@ TEST_F(ThreadImplTest, Frames) {
 
   // The thread should have the new stack we provided.
   EXPECT_TRUE(thread->GetStack().has_all_frames());
-  frames = thread->GetStack().GetFrames();
-  ASSERT_EQ(2u, frames.size());
-  EXPECT_EQ(kAddress1, frames[0]->GetAddress());
-  EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
-  EXPECT_EQ(kAddress2, frames[1]->GetAddress());
-  EXPECT_EQ(kStack2, frames[1]->GetStackPointer());
+  ASSERT_EQ(2u, stack.size());
+  EXPECT_EQ(kAddress1, stack[0]->GetAddress());
+  EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
+  EXPECT_EQ(kAddress2, stack[1]->GetAddress());
+  EXPECT_EQ(kStack2, stack[1]->GetStackPointer());
 
   // The unchanged stack element @ index 0 should be the same Frame object.
-  EXPECT_EQ(top_stack, frames[0]);
+  EXPECT_EQ(top_stack, stack[0]);
 
   // Resuming the thread should be asynchronous so nothing should change.
   thread->Continue();
-  EXPECT_EQ(2u, thread->GetStack().GetFrames().size());
+  EXPECT_EQ(2u, thread->GetStack().size());
   EXPECT_TRUE(thread->GetStack().has_all_frames());
   loop().Run();
 
@@ -124,11 +122,10 @@ TEST_F(ThreadImplTest, Frames) {
   // same frame object.
   InjectException(break_notification);
   EXPECT_FALSE(thread->GetStack().has_all_frames());
-  frames = thread->GetStack().GetFrames();
-  ASSERT_EQ(1u, frames.size());
-  EXPECT_EQ(kAddress1, frames[0]->GetAddress());
-  EXPECT_EQ(kStack1, frames[0]->GetStackPointer());
-  EXPECT_EQ(top_stack, frames[0]);
+  ASSERT_EQ(1u, stack.size());
+  EXPECT_EQ(kAddress1, stack[0]->GetAddress());
+  EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
+  EXPECT_EQ(top_stack, stack[0]);
 }
 
 // Tests that general exceptions still run thread controllers. If the exception
@@ -228,7 +225,7 @@ TEST_F(ThreadImplTest, JumpTo) {
   EXPECT_FALSE(out_err.has_error());
 
   // The thread should be in the new location.
-  EXPECT_EQ(kDestAddress, thread->GetStack().GetFrames()[0]->GetAddress());
+  EXPECT_EQ(kDestAddress, thread->GetStack()[0]->GetAddress());
 }
 
 }  // namespace zxdb

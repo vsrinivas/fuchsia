@@ -47,14 +47,14 @@ void FinishThreadController::InitWithThread(
     // Need to make sure the frames are available to find the fingerprint
     // (fingerprint computation requires both the destination frame and the
     // frame before the destination frame).
-    auto frames = thread->GetStack().GetFrames();
-    if (thread->GetStack().has_all_frames()) {
-      InitWithFrames(frames, std::move(cb));
+    Stack& stack = thread->GetStack();
+    if (stack.has_all_frames()) {
+      InitWithStack(stack, std::move(cb));
     } else {
       // Need to asynchronously request the thread's frames. We can capture
-      // |this| here since the thread owns this class.
-      thread->GetStack().SyncFrames([ this, cb = std::move(cb) ]() {
-        InitWithFrames(this->thread()->GetStack().GetFrames(), std::move(cb));
+      // |this| here since the thread owns this thread controller.
+      stack.SyncFrames([ this, cb = std::move(cb) ]() {
+        InitWithStack(this->thread()->GetStack(), std::move(cb));
       });
     }
   }
@@ -66,17 +66,17 @@ ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
   return ContinueOp::Continue();
 }
 
-void FinishThreadController::InitWithFrames(
-    const std::vector<Frame*>& frames, std::function<void(const Err&)> cb) {
+void FinishThreadController::InitWithStack(
+    const Stack& stack, std::function<void(const Err&)> cb) {
   // Note if this was called asynchronously the thread could be resumed
   // and it could have no frames, or totally different ones.
 
   // Find the frame corresponding to the requested one.
   constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
   size_t requested_index = kNotFound;
-  for (size_t i = 0; i < frames.size(); i++) {
-    if (frames[i]->GetAddress() == frame_ip_ &&
-        frames[i]->GetStackPointer() == frame_sp_) {
+  for (size_t i = 0; i < stack.size(); i++) {
+    if (stack[i]->GetAddress() == frame_ip_ &&
+        stack[i]->GetStackPointer() == frame_sp_) {
       requested_index = i;
       break;
     }
@@ -86,7 +86,7 @@ void FinishThreadController::InitWithFrames(
     return;
   }
 
-  if (requested_index == frames.size() - 1) {
+  if (requested_index == stack.size() - 1) {
     // "Finish" from the bottom-most stack frame just continues the
     // program to completion.
     cb(Err());
@@ -95,7 +95,7 @@ void FinishThreadController::InitWithFrames(
 
   // The stack frame to exit to is just the next one up.
   size_t step_to_index = requested_index + 1;
-  to_address_ = frames[step_to_index]->GetAddress();
+  to_address_ = stack[step_to_index]->GetAddress();
   if (!to_address_) {
     // Often the bottom-most stack frame will have a 0 IP which obviously
     // we can't return to. Treat this the same as when returning from the

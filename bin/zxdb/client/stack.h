@@ -7,6 +7,7 @@
 #include <vector>
 
 #include "garnet/lib/debug_ipc/protocol.h"
+#include "lib/fxl/macros.h"
 
 namespace zxdb {
 
@@ -52,8 +53,12 @@ class Stack {
   // the top 1-2 (see class-level comment above).
   bool has_all_frames() const { return has_all_frames_; }
 
-  // Returns the current stack trace.
-  const std::vector<Frame*>& GetFrames() const;
+  size_t size() const { return frames_.size(); }
+  bool empty() const { return frames_.empty(); }
+
+  // Access into the individual frames. The topmost stack frame is index 0.
+  Frame* operator[](size_t index) { return frames_[index].get(); }
+  const Frame* operator[](size_t index) const { return frames_[index].get(); }
 
   // Computes the stack frame fingerprint for the stack frame at the given
   // index. This function requires that that the previous stack frame
@@ -94,12 +99,7 @@ class Stack {
   std::vector<std::unique_ptr<Frame>> frames_;
   bool has_all_frames_ = false;
 
-  // Cached version of frames_ containing non-owning pointers to the base type.
-  // This is the backing store for GetFrames() which can be called frequently
-  // so we don't want to return a copy every time.
-  //
-  // When empty, it should be repopulated from frames_.
-  mutable std::vector<Frame*> frames_cache_;
+  FXL_DISALLOW_COPY_AND_ASSIGN(Stack);
 };
 
 }  // namespace zxdb

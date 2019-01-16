@@ -7,6 +7,7 @@
 #include "garnet/bin/zxdb/client/mock_process.h"
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
+#include "garnet/bin/zxdb/client/stack.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
 #include "garnet/bin/zxdb/symbols/process_symbols_test_setup.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
@@ -95,18 +96,21 @@ TEST_F(AnalyzeMemoryTest, Basic) {
   analysis->SetAspace(aspace);
 
   // Setup frames.
-  std::vector<Frame*> frames;
+  std::vector<std::unique_ptr<Frame>> frames;
   const uint64_t kStack0SP = kBegin;
   const uint64_t kStack1SP = kBegin + 8;
-  MockFrame frame0(nullptr, nullptr,
-                   debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
-                   Location(Location::State::kSymbolized, 0x1234));
-  MockFrame frame1(nullptr, nullptr,
-                   debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
-                   Location(Location::State::kSymbolized, 0x1234));
-  frames.push_back(&frame0);
-  frames.push_back(&frame1);
-  analysis->SetFrames(frames);
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, debug_ipc::StackFrame(0x100, kStack0SP, kStack0SP),
+      Location(Location::State::kSymbolized, 0x1234)));
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, debug_ipc::StackFrame(0x108, kStack1SP, kStack1SP),
+      Location(Location::State::kSymbolized, 0x1234)));
+
+  // Stack to hold our mock frames. This stack doesn't need to do anything
+  // other than return the frames again, so the delegate can be null.
+  Stack temp_stack(nullptr);
+  temp_stack.SetFramesForTest(std::move(frames), true);
+  analysis->SetStack(temp_stack);
 
   // Setup memory.
   std::vector<debug_ipc::MemoryBlock> blocks;

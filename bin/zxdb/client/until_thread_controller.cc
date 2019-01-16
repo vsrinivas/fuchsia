@@ -99,13 +99,13 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     return kStop;
   }
 
-  auto frames = thread()->GetStack().GetFrames();
-  if (frames.empty()) {
+  const Stack& stack = thread()->GetStack();
+  if (stack.empty()) {
     FXL_NOTREACHED();  // Should always have a current frame on stop.
     return kStop;
   }
 
-  FrameFingerprint current_frame = thread()->GetStack().GetFrameFingerprint(0);
+  FrameFingerprint current_frame = stack.GetFrameFingerprint(0);
   if (FrameFingerprint::Newer(current_frame, newest_threadhold_frame_)) {
     Log("In newer frame, ignoring.");
     return kContinue;

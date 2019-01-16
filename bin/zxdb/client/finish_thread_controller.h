@@ -12,6 +12,7 @@
 namespace zxdb {
 
 class Frame;
+class Stack;
 class UntilThreadController;
 
 class FinishThreadController : public ThreadController {
@@ -45,10 +46,9 @@ class FinishThreadController : public ThreadController {
   const char* GetName() const override { return "Finish"; }
 
  private:
-  // Callback for when the thread has loaded its frames. This will compute the
-  // to_frame_fingerprint_.
-  void InitWithFrames(const std::vector<Frame*>& frames,
-                      std::function<void(const Err&)> cb);
+  // Callback for when the thread has loaded its stack frames. This will
+  // compute the to_frame_fingerprint_.
+  void InitWithStack(const Stack& stack, std::function<void(const Err&)> cb);
 
   bool HaveAddressAndFingerprint() const;
 
