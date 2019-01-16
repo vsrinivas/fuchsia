@@ -61,9 +61,9 @@ TEST(TouchscreenTest, Gechic1101) {
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
-  EXPECT_EQ(16384, ts_desc.x_max);
+  EXPECT_EQ(2563000, ts_desc.x_max);
   EXPECT_EQ(0, ts_desc.y_min);
-  EXPECT_EQ(9600, ts_desc.y_max);
+  EXPECT_EQ(1442000, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x04,                                            // Report ID
@@ -90,8 +90,10 @@ TEST(TouchscreenTest, Gechic1101) {
   EXPECT_EQ(0xa00u, report.scan_time);
 
   EXPECT_EQ(0U, report.contacts[0].id);
-  EXPECT_EQ(0x2122, report.contacts[0].x);
-  EXPECT_EQ(0x171f, report.contacts[0].y);
+  // Test that X and Y have been converted to micrometers
+  // These values have been manually calculated based on the above report_data
+  EXPECT_EQ(1326865, report.contacts[0].x);
+  EXPECT_EQ(889083, report.contacts[0].y);
 }
 
 TEST(TouchscreenTest, CoolTouch) {
@@ -111,9 +113,9 @@ TEST(TouchscreenTest, CoolTouch) {
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
-  EXPECT_EQ(32767, ts_desc.x_max);
+  EXPECT_EQ(2771000, ts_desc.x_max);
   EXPECT_EQ(0, ts_desc.y_min);
-  EXPECT_EQ(32767, ts_desc.y_max);
+  EXPECT_EQ(1561000, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x01,                          // Report ID
@@ -134,8 +136,10 @@ TEST(TouchscreenTest, CoolTouch) {
   EXPECT_EQ(0x004cU, report.scan_time);
 
   EXPECT_EQ(1U, report.contacts[0].id);
-  EXPECT_EQ(0x3b6f, report.contacts[0].x);
-  EXPECT_EQ(0x4b1e, report.contacts[0].y);
+  // Test that X and Y have been converted to micrometers
+  // These values have been manually calculated based on the above report_data
+  EXPECT_EQ(1286683, report.contacts[0].x);
+  EXPECT_EQ(916105, report.contacts[0].y);
 }
 
 TEST(TouchscreenTest, WaveShare) {
@@ -155,9 +159,9 @@ TEST(TouchscreenTest, WaveShare) {
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
-  EXPECT_EQ(1024, ts_desc.x_max);
+  EXPECT_EQ(655350000, ts_desc.x_max);
   EXPECT_EQ(0, ts_desc.y_min);
-  EXPECT_EQ(600, ts_desc.y_max);
+  EXPECT_EQ(655350000, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x01,        // Report ID
@@ -178,8 +182,10 @@ TEST(TouchscreenTest, WaveShare) {
   EXPECT_EQ(0xd4f4U, report.scan_time);
 
   EXPECT_EQ(0U, report.contacts[0].id);
-  EXPECT_EQ(0x02a0, report.contacts[0].x);
-  EXPECT_EQ(0x0146, report.contacts[0].y);
+  // Test that X and Y have been converted to micrometers
+  // These values have been manually calculated based on the above report_data
+  EXPECT_EQ(430073437, report.contacts[0].x);
+  EXPECT_EQ(356073500, report.contacts[0].y);
 }
 
 TEST(TouchscreenTest, Gechic1303) {
@@ -199,9 +205,9 @@ TEST(TouchscreenTest, Gechic1303) {
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
   EXPECT_EQ(0, ts_desc.x_min);
-  EXPECT_EQ(16384, ts_desc.x_max);
+  EXPECT_EQ(5090000, ts_desc.x_max);
   EXPECT_EQ(0, ts_desc.y_min);
-  EXPECT_EQ(9600, ts_desc.y_max);
+  EXPECT_EQ(2860000, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x04,                          // Report ID
@@ -227,8 +233,11 @@ TEST(TouchscreenTest, Gechic1303) {
   EXPECT_EQ(0x2bc0U, report.scan_time);
 
   EXPECT_EQ(0U, report.contacts[0].id);
-  EXPECT_EQ(0x1eef, report.contacts[0].x);
-  EXPECT_EQ(0x15e9, report.contacts[0].y);
+
+  // Test that X and Y have been converted to micrometers
+  // These values have been manually calculated based on the above report_data
+  EXPECT_EQ(2460187, report.contacts[0].x);
+  EXPECT_EQ(1671014, report.contacts[0].y);
 }
 
 }  // namespace test

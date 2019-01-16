@@ -6,6 +6,7 @@
 
 #include <hid-parser/parser.h>
 #include <hid-parser/report.h>
+#include <hid-parser/units.h>
 #include <hid-parser/usages.h>
 
 #include <stdint.h>
@@ -136,6 +137,12 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
     return false;
   }
 
+  // X and Y will have units of 10^-5 meters
+  hid::Unit length_unit = {};
+  length_unit.exp = -5;
+  hid::unit::SetSystem(length_unit, hid::unit::System::si_linear);
+  hid::unit::SetLengthExp(length_unit, 1);
+
   size_t contact_count = 0;
   for (size_t i = 0; i < touch_points_; i++) {
     auto config = &configs_[i];
@@ -159,19 +166,25 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
       }
     }
     if (config->capabilities & Capabilities::X) {
-      uint16_t x;
-      if (!hid::ExtractUint(hid_report, config->x, &x)) {
+      double x;
+      if (!hid::ExtractAsUnit(hid_report, config->x, &x)) {
         FXL_LOG(ERROR) << "Touchscreen report: Failed to parse X";
         return false;
       }
+      // If this returns true, x was converted. If it returns false,
+      // x is unchanged. Either way we return successfully.
+      hid::unit::ConvertUnits(config->x.unit, x, length_unit, &x);
       contact->x = static_cast<int32_t>(x);
     }
     if (config->capabilities & Capabilities::Y) {
-      uint16_t y;
-      if (!hid::ExtractUint(hid_report, config->y, &y)) {
+      double y;
+      if (!hid::ExtractAsUnit(hid_report, config->y, &y)) {
         FXL_LOG(ERROR) << "Touchpad report: Failed to parse Y";
         return false;
       }
+      // If this returns true, x was converted. If it returns false,
+      // x is unchanged. Either way we return successfully.
+      hid::unit::ConvertUnits(config->y.unit, y, length_unit, &y);
       contact->y = static_cast<int32_t>(y);
     }
 
@@ -183,26 +196,71 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
   report->contact_count = contact_count;
 
   if (capabilities_ & Capabilities::SCAN_TIME) {
-    uint32_t scan_time;
-    if (!hid::ExtractUint(hid_report, scan_time_, &scan_time)) {
-      FXL_LOG(ERROR) << "Touchpad report: Failed to parse SCAN_TIME";
-      return false;
+    // If we don't have a unit, extract the raw data
+    if (scan_time_.unit.type == 0) {
+      if (!hid::ExtractUint(hid_report, scan_time_, &report->scan_time)) {
+        return false;
+      }
+    } else {
+      double scan_time;
+      if (!hid::ExtractAsUnit(hid_report, scan_time_, &scan_time)) {
+        FXL_LOG(ERROR) << "Touchpad report: Failed to parse SCAN_TIME";
+        return false;
+      }
+
+      hid::Unit time_unit = {};
+      time_unit.exp = -6;
+      hid::unit::SetSystem(time_unit, hid::unit::System::si_linear);
+      hid::unit::SetTimeExp(time_unit, 1);
+      // If this returns true, scan_time was converted. If it returns false,
+      // scan_time is unchanged. Either way we return successfully.
+      hid::unit::ConvertUnits(scan_time_.unit, scan_time, time_unit,
+                              &scan_time);
+
+      report->scan_time = static_cast<uint32_t>(scan_time);
     }
-
-    // TODO(ZX-3287) Convert scan time units to microseconds
-    report->scan_time = scan_time;
   }
-
   return true;
 }
 
 bool Touchscreen::SetDescriptor(Touchscreen::Descriptor *touch_desc) {
-  touch_desc->x_min = configs_[0].x.logc_mm.min;
-  touch_desc->x_max = configs_[0].x.logc_mm.max;
+  // X and Y will have units of 10^-5 meters
+  hid::Unit length_unit = {};
+  length_unit.exp = -5;
+  hid::unit::SetSystem(length_unit, hid::unit::System::si_linear);
+  hid::unit::SetLengthExp(length_unit, 1);
+
+  double val_out;
+
+  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.min,
+                              length_unit, &val_out)) {
+    touch_desc->x_min = static_cast<int32_t>(val_out);
+  } else {
+    touch_desc->x_min = configs_[0].x.phys_mm.min;
+  }
+
+  if (hid::unit::ConvertUnits(configs_[0].x.unit, configs_[0].x.phys_mm.max,
+                              length_unit, &val_out)) {
+    touch_desc->x_max = static_cast<int32_t>(val_out);
+  } else {
+    touch_desc->x_max = configs_[0].x.phys_mm.max;
+  }
   touch_desc->x_resolution = 1;
 
-  touch_desc->y_min = configs_[0].y.logc_mm.min;
-  touch_desc->y_max = configs_[0].y.logc_mm.max;
+  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.min,
+                              length_unit, &val_out)) {
+    touch_desc->y_min = static_cast<int32_t>(val_out);
+  } else {
+    touch_desc->y_min = configs_[0].y.phys_mm.min;
+  }
+
+  if (hid::unit::ConvertUnits(configs_[0].y.unit, configs_[0].y.phys_mm.max,
+                              length_unit, &val_out)) {
+    touch_desc->y_max = static_cast<int32_t>(val_out);
+  } else {
+    touch_desc->y_max = configs_[0].y.phys_mm.max;
+  }
+
   touch_desc->y_resolution = 1;
 
   touch_desc->max_finger_id = contact_id_max_;

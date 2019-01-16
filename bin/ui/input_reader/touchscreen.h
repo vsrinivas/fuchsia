@@ -26,23 +26,26 @@ class Touchscreen {
 
   struct ContactReport {
     uint32_t id;
-    // x and y are unitless. The touchscreen descriptor declares a logical max
-    // and min as well as a resolution, and this describes how the x and y will
-    // be used.
+    // x and y are have units of 10 microns (10^-5 meters). This seems to give
+    // the most precision without having the values overflow. If the report
+    // descriptor does not define units, the value will be passed on
+    // unconverted.
     int32_t x;
     int32_t y;
   };
 
   struct Report {
-    // Scan time currently is in whatever seconds unit that the report
-    // descriptor defines
-    // TODO(ZX-3287) Convert scan time to microseconds
+    // Scan time in microseconds. If the report descriptor does not
+    // define units, the value will be passed on unconverted.
     uint32_t scan_time;
     size_t contact_count;
     ContactReport contacts[MAX_TOUCH_POINTS];
   };
 
   struct Descriptor {
+    // The min and max of x and y have units of 10^-5 meters. If the
+    // report descriptor does not define units, the value will be passed
+    // on unconverted.
     int32_t x_min;
     int32_t x_max;
     int32_t x_resolution;
