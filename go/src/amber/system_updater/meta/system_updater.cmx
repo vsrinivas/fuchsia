@@ -1,6 +1,6 @@
 {
     "program": {
-        "binary": "bin/app"
+        "binary": "bin/system_updater"
     },
     "sandbox": {
         "features": [ "shell" ],

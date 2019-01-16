@@ -2,11 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
-import("//build/host.gni")
 import("//build/package.gni")
 
 go_library("pmd") {
@@ -23,22 +21,6 @@ go_library("pmd") {
   ]
 }
 
-go_binary("pkgsvr_bin") {
-  output_name = "pkgsvr"
-  gopackage = "fuchsia.googlesource.com/pmd/cmd/pkgsvr"
-  deps = [
-    ":pmd",
-  ]
-}
-
-go_binary("installblob_bin") {
-  output_name = "installblob"
-  gopackage = "fuchsia.googlesource.com/pmd/cmd/installblob"
-  deps = [
-    ":pmd",
-  ]
-}
-
 test_packages = [
   "pkgfs",
   "index",
@@ -51,41 +33,6 @@ foreach(testpkg, test_packages) {
     ]
     non_go_deps = [ "//zircon/public/lib/fs-management" ]
   }
-}
-
-package("pkgsvr") {
-  deprecated_bare_package_url = "//build"
-
-  meta = [
-    {
-      path = rebase_path("meta/pkgsvr.cmx")
-      dest = "pkgsvr.cmx"
-    },
-  ]
-
-  deps = [
-    ":pkgsvr_bin",
-  ]
-
-  binaries = [
-    {
-      name = "pkgsvr"
-    },
-  ]
-}
-
-package("installblob") {
-  deprecated_system_image = true
-
-  deps = [
-    ":installblob_bin",
-  ]
-
-  binaries = [
-    {
-      name = "installblob"
-    },
-  ]
 }
 
 package("pmd_tests") {

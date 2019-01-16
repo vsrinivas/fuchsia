@@ -2,7 +2,6 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
@@ -10,7 +9,7 @@ import("//build/host.gni")
 import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 
-go_library("amber_lib") {
+go_library("lib") {
   name = "amber"
   deps = [
     "//garnet/go/src/merkle",
@@ -27,48 +26,31 @@ go_library("amber_lib") {
   ]
 }
 
-amber_target_binaries = [
-  {
-    target = "amber_bin"
-    name = "amber"
-    gopkg = "amber/cmd/amber"
-  },
-  {
-    name = "amber_ctl"
-    gopkg = "amber/cmd/ctl"
-  },
-]
-
-foreach(tgt, amber_target_binaries) {
-  target_name = tgt.name
-  if (defined(tgt.target)) {
-    target_name = tgt.target
-  }
-  go_binary(target_name) {
-    output_name = tgt.name
-
-    gopackage = tgt.gopkg
-
-    deps = [
-      ":amber_lib",
-    ]
-  }
-}
-
 metrics_registry("cobalt_sw_delivery_registry") {
   project_id = 108
   use_target_name = true
 }
 
 package("amber") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
-    ":amber_bin",
+    "grand_unified_binary",
     ":cobalt_sw_delivery_registry",
   ]
 
-  binary = "amber"
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
+    {
+      name = "amber"
+      source = "grand_unified_binary"
+    },
+    {
+      name = "system_updater"
+      source = "grand_unified_binary"
+    },
+  ]
 
   resources = [
     {
@@ -81,28 +63,48 @@ package("amber") {
               "/cobalt_sw_delivery_registry.pb")
       dest = "cobalt_config.pb"
     },
+    {
+      path = rebase_path("system_updater/images")
+      dest = "images"
+    },
   ]
 
   meta = [
     {
-      path = rebase_path("cmd/amber/meta/amber.cmx")
+      path = rebase_path("meta/amber.cmx")
       dest = "amber.cmx"
     },
     {
       path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
       dest = "legacy_flat_exported_dir"
     },
+    {
+      path = rebase_path("//garnet/go/src/pmd/meta/pkgsvr.cmx")
+      dest = "pkgsvr.cmx"
+    },
+    {
+      path = rebase_path("//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
+    }
   ]
 }
 
 package("amber_tools") {
   deps = [
-    ":amber_ctl",
+    "grand_unified_binary",
   ]
 
   binaries = [
+    # TODO(raggi): remove the underscore version of the command name once all
+    # docs and scripts have been updated.
     {
       name = "amber_ctl"
+      source = "grand_unified_binary"
+      shell = true
+    },
+    {
+      name = "amberctl"
+      source = "grand_unified_binary"
       shell = true
     },
   ]
@@ -127,7 +129,7 @@ foreach(test, test_targets) {
     gopackage = test.gopkg
 
     deps = [
-      ":amber_lib",
+      ":lib",
       "//garnet/go/src/pmd",
       "//garnet/public/go/third_party:github.com/google/go-cmp",
     ]

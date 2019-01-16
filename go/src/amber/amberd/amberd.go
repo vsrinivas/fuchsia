@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package amberd
 
 import (
 	"bufio"
@@ -33,14 +33,15 @@ const (
 	defaultSourceDir = "/system/data/amber/sources"
 )
 
-var (
-	// TODO(jmatt) replace hard-coded values with something better/more flexible
-	usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
-	store      = flag.String("s", "/data/amber/store", "The path to the local file store")
-	autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
-)
+func Main() {
 
-func main() {
+	var (
+		// TODO(jmatt) replace hard-coded values with something better/more flexible
+		usage      = "usage: amber [-k=<path>] [-s=<path>] [-u=<url>]"
+		store      = flag.String("s", "/data/amber/store", "The path to the local file store")
+		autoUpdate = flag.Bool("a", false, "Automatically update and restart the system as updates become available")
+	)
+
 	flag.CommandLine.Usage = func() {
 		fmt.Println(usage)
 		flag.CommandLine.PrintDefaults()

@@ -20,7 +20,6 @@
         "garnet/packages/prod/openssh",
         "garnet/packages/prod/pkg_cache",
         "garnet/packages/prod/pkg_resolver",
-        "garnet/packages/prod/pkgsvr",
         "garnet/packages/prod/pm",
         "garnet/packages/prod/root_ssl_certificates",
         "garnet/packages/prod/runtime",

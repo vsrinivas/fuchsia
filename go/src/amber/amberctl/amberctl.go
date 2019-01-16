@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package amberctl
 
 import (
 	"bytes"
@@ -476,7 +476,7 @@ func do(proxy *amber.ControlInterface) int {
 	return 0
 }
 
-func main() {
+func Main() {
 	if len(os.Args) < 2 {
 		fmt.Printf("Error: no command provided\n%s\n", usage)
 		os.Exit(-1)

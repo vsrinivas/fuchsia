@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package system_update_package
+package system_updater
 
 import (
 	"bytes"
@@ -15,7 +15,7 @@ type byteReadCloser struct {
 }
 
 func newByteReadCloser(d []byte) *byteReadCloser {
-	return &ByteReadCloser{bytes.NewReader(d)}
+	return &byteReadCloser{bytes.NewReader(d)}
 }
 
 func (b *byteReadCloser) Close() error {
@@ -80,10 +80,6 @@ func TestParseRequirements(t *testing.T) {
 
 func openDataSources() (io.ReadCloser, io.ReadCloser) {
 	// fake stub
-	return newByteReadCloser(
-			[]byte("amber/0=abcdef\npkgfs/0=123456789"),
-			"data/packages"),
-		newByteReadCloser(
-			[]byte("dc38ffa1029c3fd44\n"),
-			"data/images")
+	return newByteReadCloser([]byte("amber/0=abcdef\npkgfs/0=123456789")),
+		newByteReadCloser([]byte("dc38ffa1029c3fd44\n"))
 }

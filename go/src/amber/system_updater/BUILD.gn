@@ -2,14 +2,13 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/go/go_binary.gni")
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/package.gni")
 import("//build/go/toolchain.gni")
 
-go_library("system_update_package_lib") {
-  name = "system_update_package"
+go_library("lib") {
+  name = "system_updater"
 
   deps = [
     "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
@@ -19,47 +18,18 @@ go_library("system_update_package_lib") {
   ]
 }
 
-go_binary("sys_updater") {
-  output_name = "system_updater"
-  gopackage = "system_update_package/cmd/updater"
-
-  deps = [ ":system_update_package_lib" ]
-}
-
-go_test("processor_test") {
-  gopackage = "system_update_package"
-  deps = [ ":system_update_package_lib" ]
-}
-
-package("system_updater") {
-  deprecated_bare_package_url = "//build"
-
-  deps = [
-    ":sys_updater"
-  ]
-
-  binary = "system_updater"
-
-  resources = [
-    {
-      path = rebase_path("images")
-      dest = "images"
-    },
-  ]
-  meta = [
-    {
-      path = rebase_path("cmd/updater/meta/system_updater.cmx")
-      dest = "system_updater.cmx"
-    }
-  ]
+go_test("system_updater_test") {
+  gopackage = "system_updater"
+  deps = [ ":lib" ]
 }
 
 package("system_updater_tests") {
   testonly = true
 
   deps = [
-    ":processor_test"
+    ":system_updater_test"
   ]
+
   resources = [
     {
       path = rebase_path("test_images")
@@ -70,9 +40,10 @@ package("system_updater_tests") {
       dest = "packages"
     }
   ]
+
   tests = [
     {
-      name = "processor_test"
+      name = "system_updater_test"
     }
   ]
 }

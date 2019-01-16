@@ -4,6 +4,7 @@
     ],
     "packages": [
         "//garnet/go/src/amber:amber_tests",
+        "//garnet/go/src/amber/system_updater:system_updater_tests",
         "//garnet/go/src/amber:test_config"
     ]
 }

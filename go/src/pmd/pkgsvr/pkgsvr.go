@@ -1,8 +1,8 @@
-// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package main
+package pkgsvr
 
 import (
 	"flag"
@@ -15,12 +15,13 @@ import (
 	"fuchsia.googlesource.com/pmd/pkgfs"
 )
 
-var (
-	blob  = flag.String("blob", "/blob", "Path at which to store blobs")
-	index = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
-)
+// Main starts a package server program
+func Main() {
+	var (
+		blob  = flag.String("blob", "/blob", "Path at which to store blobs")
+		index = flag.String("index", "/data/pkgfs_index", "Path at which to store package index")
+	)
 
-func main() {
 	log.SetPrefix("pkgsvr: ")
 	log.SetFlags(0) // no time required
 	flag.Parse()
