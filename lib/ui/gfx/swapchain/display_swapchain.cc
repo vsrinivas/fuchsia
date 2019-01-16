@@ -460,32 +460,22 @@ void DisplaySwapchain::OnVsync(zx_time_t timestamp,
 namespace {
 
 vk::ImageUsageFlags GetFramebufferImageUsage() {
-  uint32_t instance_extension_count;
-  vk::Result enumerate_result = vk::enumerateInstanceLayerProperties(
-      &instance_extension_count, static_cast<vk::LayerProperties*>(nullptr));
-  if (enumerate_result != vk::Result::eSuccess) {
-    FXL_DLOG(ERROR) << "vkEnumerateInstanceLayerProperties failed: "
-                    << vk::to_string(enumerate_result);
+  const std::string kGoogleImageUsageScanoutExtensionName(
+      VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
+  auto instance_extensions = vk::enumerateInstanceExtensionProperties();
+  if (instance_extensions.result != vk::Result::eSuccess) {
+    FXL_DLOG(ERROR) << "vkEnumerateInstanceExtensionProperties failed: "
+                    << vk::to_string(instance_extensions.result);
     return vk::ImageUsageFlagBits::eColorAttachment;
   }
 
-  const std::string kGoogleImageUsageScanoutExtensionName(
-      VK_GOOGLE_IMAGE_USAGE_SCANOUT_EXTENSION_NAME);
-  if (instance_extension_count > 0) {
-    auto instance_extensions = vk::enumerateInstanceExtensionProperties();
-    if (instance_extensions.result != vk::Result::eSuccess) {
-      FXL_DLOG(ERROR) << "vkEnumerateInstanceExtensionProperties failed: "
-                      << vk::to_string(instance_extensions.result);
-      return vk::ImageUsageFlagBits::eColorAttachment;
-    }
-
-    for (auto& extension : instance_extensions.value) {
-      if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
-        return vk::ImageUsageFlagBits::eScanoutGOOGLE |
-               vk::ImageUsageFlagBits::eColorAttachment;
-      }
+  for (auto& extension : instance_extensions.value) {
+    if (extension.extensionName == kGoogleImageUsageScanoutExtensionName) {
+      return vk::ImageUsageFlagBits::eScanoutGOOGLE |
+             vk::ImageUsageFlagBits::eColorAttachment;
     }
   }
+
   FXL_DLOG(ERROR)
       << "Unable to find optimal framebuffer image usage extension ("
       << kGoogleImageUsageScanoutExtensionName << ").";
