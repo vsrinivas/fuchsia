@@ -43,12 +43,31 @@ struct TimeZoneMutation {
     TimeZoneInfo value;
 };
 
+/// Mutation that replaces the existing list of locales with a new list.
+struct LocalesMutation {
+  /// See IntlSettings.locales for format.
+  vector<string> locales;
+};
+
+/// Mutation that changes the |HourCycle|.
+struct HourCycleMutation {
+    HourCycle hour_cycle;
+};
+
+/// Mutation that changes the |TemperatureUnit|.
+struct TemperatureUnitMutation {
+    TemperatureUnit temperature_unit;
+};
+
 /// Container for setting mutations.
 union Mutation {
     AccountMutation account_mutation_value;
     StringMutation string_mutation_value;
     WirelessMutation wireless_mutation_value;
     TimeZoneMutation time_zone_mutation_value;
+    LocalesMutation locales_mutation_value;
+    HourCycleMutation hour_cycle_mutation_value;
+    TemperatureUnitMutation temperature_unit_mutation_value;
 };
 
 struct AccountMutationHandles {

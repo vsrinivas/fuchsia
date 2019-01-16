@@ -5,6 +5,7 @@ enum SettingType {
     TIME_ZONE = 1;
     CONNECTIVITY = 2;
     WIRELESS = 3;
+    INTL = 4;
 };
 
 union SettingData {
@@ -19,6 +20,9 @@ union SettingData {
 
     /// The wireless state (read-only).
     WirelessState wireless;
+
+    /// Internationalization settings.
+    IntlSettings intl;
 };
 
 struct TimeZoneInfo {
@@ -133,4 +137,33 @@ enum Reachability {
 struct ConnectedState {
     /// The current level of connection access.
     Reachability reachability;
+};
+
+enum HourCycle {
+    /// 12-hour clock
+    H12 = 0;
+    /// 24-hour clock (from 0:00:00 to 23:59:59)
+    H23 = 1;
+};
+
+enum TemperatureUnit {
+    CELSIUS = 0;
+    FAHRENHEIT = 1;
+};
+
+/// Collection of internationalization-related settings stored in Stash.
+// TODO(SU-106): Consider switching to FIDL table.
+struct IntlSettings {
+    /// An ordered list of the user's preferred locales, encoded as Unicode BCP-47 locale 
+    /// identifiers _without extensions_.
+    /// Supports language-Script-REGION-variant.
+    ///
+    /// Examples: "fr", "en-US", "sr-Latn-BA", "sl-nedis"
+    vector<string>:10 locales;
+
+    /// The user's preferred hour cycle, 12 hours or 24 hours.
+    HourCycle hour_cycle;
+
+    /// The user's preferred temperature unit.
+    TemperatureUnit temperature_unit;
 };
