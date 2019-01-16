@@ -69,9 +69,9 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 bool dc_asan_drivers = false;
 bool dc_launched_first_devhost = false;
 
-Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher) :
-    devhost_job_(std::move(devhost_job)),
-    dispatcher_(dispatcher) {}
+Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system)
+    : devhost_job_(std::move(devhost_job)), dispatcher_(dispatcher),
+    require_system_(require_system) {}
 
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
@@ -2170,7 +2170,7 @@ void coordinator_setup(Coordinator* coordinator, DevmgrArgs args) {
     coordinator->PrepareProxy(&coordinator->sys_device());
     coordinator->PrepareProxy(&coordinator->test_device());
 
-    if (require_system && !coordinator->system_loaded()) {
+    if (coordinator->require_system() && !coordinator->system_loaded()) {
         printf("devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
     } else {
         coordinator->UseFallbackDrivers();

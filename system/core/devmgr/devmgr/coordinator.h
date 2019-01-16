@@ -410,7 +410,7 @@ public:
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
-    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher);
+    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system);
 
     zx_status_t InitializeCoreDevices();
 
@@ -472,11 +472,13 @@ public:
     void DriverAddedInit(Driver* drv, const char* version);
     void DriverAddedSys(Driver* drv, const char* version);
 
+    async_dispatcher_t* dispatcher() const { return dispatcher_; }
+    bool require_system() const { return require_system_; }
+
     void set_running(bool running) { running_ = running; }
     void set_loader_service(DevhostLoaderService* loader_service) {
         loader_service_ = loader_service;
     }
-    async_dispatcher_t* dispatcher() const { return dispatcher_; }
 
     fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
     Device& root_device() { return root_device_; }
@@ -495,10 +497,12 @@ public:
     bool system_loaded() const { return system_loaded_; }
 
 private:
-    bool running_ = false;
-    DevhostLoaderService* loader_service_ = nullptr;
     zx::job devhost_job_;
     async_dispatcher_t* dispatcher_;
+    bool require_system_;
+
+    bool running_ = false;
+    DevhostLoaderService* loader_service_ = nullptr;
 
     // All Drivers
     fbl::DoublyLinkedList<Driver*, Driver::Node> drivers_;

@@ -24,7 +24,7 @@ struct Devnode;
 void devfs_init(Device* device, async_dispatcher_t* dispatcher);
 zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask);
 
-void devmgr_svc_init();
+void devmgr_svc_init(bool require_system);
 void devmgr_vfs_init();
 void devmgr_set_bootdata(zx::unowned_vmo vmo);
 
@@ -44,10 +44,6 @@ zx::unowned_channel devfs_root_borrow();
 
 // Clones the channel connected to the root of devfs.
 zx::channel devfs_root_clone();
-
-// Global flag tracking if devmgr believes this is a full Fuchsia build
-// (requiring /system, etc) or not.
-extern bool require_system;
 
 void devmgr_vfs_exit();
 zx_handle_t get_root_resource();

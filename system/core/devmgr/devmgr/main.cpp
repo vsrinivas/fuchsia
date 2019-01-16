@@ -117,6 +117,7 @@ void do_autorun(const char* name, const char* env) {
 }
 
 int fuchsia_starter(void* arg) {
+    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
     bool appmgr_started = false;
     bool autorun_started = false;
     bool drivers_loaded = false;
@@ -129,7 +130,7 @@ int fuchsia_starter(void* arg) {
                                                              nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
-                if (devmgr::require_system) {
+                if (coordinator->require_system()) {
                     printf("devmgr: appmgr not launched in %zus, closing appmgr handle\n",
                            appmgr_timeout);
                 }
@@ -148,7 +149,6 @@ int fuchsia_starter(void* arg) {
             // we're starting the appmgr because /system is present
             // so we also signal the device coordinator that those
             // drivers are now loadable
-            auto coordinator = static_cast<devmgr::Coordinator*>(arg);
             coordinator->set_system_available(true);
             coordinator->ScanSystemDrivers();
             drivers_loaded = true;
@@ -323,10 +323,6 @@ zx_status_t fuchsia_create_job() {
 
 namespace devmgr {
 
-// Global flag tracking if devmgr believes this is a full Fuchsia build
-// (requiring /system, etc) or not.
-bool require_system;
-
 zx_handle_t virtcon_open;
 
 zx_handle_t get_root_resource() {
@@ -401,6 +397,7 @@ int service_starter(void* arg) {
         __UNUSED auto leaked_handle = proc.release();
     }
 
+    auto coordinator = static_cast<devmgr::Coordinator*>(arg);
     if (!getenv_bool("virtcon.disable", false)) {
         // pass virtcon.* options along
         const char* envp[16];
@@ -414,7 +411,7 @@ int service_starter(void* arg) {
         }
         envp[envc] = nullptr;
 
-        const char* num_shells = require_system && !netboot ? "0" : "3";
+        const char* num_shells = coordinator->require_system() && !netboot ? "0" : "3";
 
         size_t handle_count = 0;
         uint32_t types[2];
@@ -447,7 +444,8 @@ int service_starter(void* arg) {
     do_autorun("autorun:boot", "zircon.autorun.boot");
 
     thrd_t t;
-    if ((thrd_create_with_name(&t, fuchsia_starter, arg, "fuchsia-starter")) == thrd_success) {
+    if ((thrd_create_with_name(&t, fuchsia_starter, coordinator, "fuchsia-starter")) ==
+        thrd_success) {
         thrd_detach(t);
     }
 
@@ -559,13 +557,11 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 int main(int argc, char** argv) {
     printf("devmgr: main()\n");
 
-    async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
     devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
 
     devmgr::fetch_root_resource();
-
     g_handles.root_job = zx::job::default_job();
 
     zx::job devhost_job;
@@ -574,7 +570,11 @@ int main(int argc, char** argv) {
         printf("unable to create devhost job\n");
         return 1;
     }
-    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher());
+
+    async::Loop loop(&kAsyncLoopConfigAttachToThread);
+    bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
+
+    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher(), require_system);
     devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
@@ -605,15 +605,13 @@ int main(int argc, char** argv) {
         printf("cmdline: %s\n", *e++);
     }
 
-    devmgr::require_system = devmgr::getenv_bool("devmgr.require-system", false);
-
-    devmgr::devmgr_svc_init();
+    devmgr::devmgr_svc_init(require_system);
     devmgr::devmgr_vfs_init();
 
     // if we're not a full fuchsia build, no point to set up appmgr services
     // which will just cause things attempting to access it to block until
     // we give up on the appmgr 10s later
-    if (!devmgr::require_system) {
+    if (!require_system) {
         devmgr::devmgr_disable_appmgr_services();
     }
 
@@ -822,7 +820,7 @@ void devmgr_vfs_init() {
     }
 }
 
-zx_status_t svchost_start() {
+zx_status_t svchost_start(bool require_system) {
     zx::channel dir_request;
     zx::debuglog logger;
     zx::channel appmgr_svc_req;
@@ -894,10 +892,10 @@ zx_status_t svchost_start() {
     return ZX_OK;
 }
 
-void devmgr_svc_init() {
+void devmgr_svc_init(bool require_system) {
     printf("devmgr: svc init\n");
 
-    zx_status_t status = svchost_start();
+    zx_status_t status = svchost_start(require_system);
     if (status != ZX_OK) {
         printf("devmgr_svc_init failed %s\n", zx_status_get_string(status));
     }
