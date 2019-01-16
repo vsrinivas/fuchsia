@@ -8,6 +8,17 @@ import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/test_spec.gni")
 
+# Declared Arguments:
+#
+#   gocache_dir
+#     Directory GOCACHE environment variable will be set to. This directory
+#     will have build and test results cached, and is safe to be written to
+#     concurrently. If overridden, this directory must be a full path.
+#
+declare_args() {
+  gocache_dir = rebase_path("$root_out_dir/.gocache")
+}
+
 # A template for an action that builds a Go binary. Users should instead use the
 # go_binary or go_test rules.
 #
@@ -91,6 +102,8 @@ template("go_build") {
           get_label_info("//default($shlib_toolchain)", "root_out_dir")),
       "--sysroot",
       sysroot,
+      "--go-cache",
+      gocache_dir,
     ]
 
     if (defined(invoker.skip_vet) && invoker.skip_vet) {

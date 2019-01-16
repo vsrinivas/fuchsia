@@ -32,6 +32,8 @@ def main():
     parser.add_argument('--current-os', help='Target operating system.',
                         choices=['fuchsia', 'linux', 'mac', 'win'], required=True)
     parser.add_argument('--go-root', help='The go root to use for builds.', required=True)
+    parser.add_argument('--go-cache', help='Cache directory to use for builds.',
+                        required=False)
     parser.add_argument('--is-test', help='True if the target is a go test',
                         default=False)
     parser.add_argument('--go-dep-files',
@@ -52,6 +54,14 @@ def main():
     parser.add_argument('--skip-vet', help='Skip running go vet',
                         action='store_true')
     args = parser.parse_args()
+
+    try:
+        os.makedirs(args.go_cache)
+    except OSError as e:
+        if e.errno == errno.EEXIST and os.path.isdir(args.go_cache):
+            pass
+        else:
+            raise
 
     goarch = {
         'x64': 'amd64',
@@ -111,6 +121,7 @@ def main():
     # Some users have GOROOT set in their parent environment, which can break
     # things, so it is always set explicitly here.
     env['GOROOT'] = build_goroot
+    env['GOCACHE'] = args.go_cache
     env['CGO_CFLAGS'] = "--sysroot=" + args.sysroot
 
     if goos == 'fuchsia':
