@@ -86,8 +86,9 @@ void Reporter::OnTestStart(const TestCase& test_case, const TestInfo& test) {
 }
 
 void Reporter::OnAssertion(const Assertion& assertion) {
-    fprintf(stream_, "%s:%ld: error: Failure:\n    Expected: %s\n", assertion.location().filename,
-            assertion.location().line_number, assertion.expected().c_str());
+    fprintf(stream_, "%s:%ld: error: Failure:\n%s\n    Expected: %s\n",
+            assertion.location().filename, assertion.location().line_number,
+            assertion.description().c_str(), assertion.expected().c_str());
     // When it is not a literal.
     if (assertion.expected() != assertion.expected_eval()) {
         fprintf(stream_, "    Which is: %s\n", assertion.expected_eval().c_str());

@@ -156,4 +156,9 @@ void Runner::NotifyAssertion(const Assertion& assertion) {
     event_broadcaster_.OnAssertion(assertion);
 }
 
+Runner* Runner::GetInstance() {
+    static Runner runner = Runner(Reporter(stdout));
+    return &runner;
+}
+
 } // namespace zxtest

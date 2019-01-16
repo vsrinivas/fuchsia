@@ -61,7 +61,8 @@ public:
 
 private:
     void TestBody() {
-        Assertion assertion("a", "1", "b", "2", {.filename = __FILE__, .line_number = __LINE__},
+        Assertion assertion("eq", "a", "1", "b", "2",
+                            {.filename = __FILE__, .line_number = __LINE__},
                             /*is_fatal=*/true);
         runner_->NotifyAssertion(assertion);
     }
@@ -208,7 +209,8 @@ void RunnerListTests() {
 
 void TestDriverImplReset() {
     TestDriverImpl driver;
-    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+    Assertion assertion("desc", "A", "A", "B", "B",
+                        {.filename = kFileName, .line_number = kLineNumber},
                         /*is_fatal*/ true);
 
     driver.OnAssertion(assertion);
@@ -228,7 +230,8 @@ void TestDriverImplReset() {
 
 void TestDriverImplFatalFailureEndsTest() {
     TestDriverImpl driver;
-    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+    Assertion assertion("desc", "A", "A", "B", "B",
+                        {.filename = kFileName, .line_number = kLineNumber},
                         /*is_fatal*/ true);
 
     ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
@@ -243,7 +246,8 @@ void TestDriverImplFatalFailureEndsTest() {
 
 void TestDriverImplNonFatalFailureDoesNotEndTest() {
     TestDriverImpl driver;
-    Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+    Assertion assertion("desc", "A", "A", "B", "B",
+                        {.filename = kFileName, .line_number = kLineNumber},
                         /*is_fatal*/ false);
 
     ZX_ASSERT_MSG(driver.Continue(), "TestDriverImpl::Continue should return true by default.\n");
@@ -279,7 +283,8 @@ void TestDriverImplResetOnTestCompletion() {
 
     for (auto complete_fn : complete_fns) {
         TestDriverImpl driver;
-        Assertion assertion("A", "A", "B", "B", {.filename = kFileName, .line_number = kLineNumber},
+        Assertion assertion("desc", "A", "A", "B", "B",
+                            {.filename = kFileName, .line_number = kLineNumber},
                             /*is_fatal*/ false);
 
         driver.OnAssertion(assertion);

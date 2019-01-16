@@ -101,8 +101,7 @@ const SourceLocation kLocation = {.filename = "filename", .line_number = 20};
 
 void Stub() {}
 
-template <typename T>
-void ValidateAllObserversNotified(const T& observers) {
+template <typename T> void ValidateAllObserversNotified(const T& observers) {
     for (auto& observer : observers) {
         ZX_ASSERT_MSG(observer.called, "EventBroadcaster failed to propagate event.\n");
     }
@@ -212,7 +211,7 @@ void EventBroadcasterOnAssertion() {
     ASSERTION_OBSERVER;
 
     internal::EventBroadcaster event_broadcaster;
-    Assertion assertion("kExpectedValue", "5", "actual_value", "10",
+    Assertion assertion("Value should be equal", "kExpectedValue", "5", "actual_value", "10",
                         {.filename = "test.cpp", .line_number = 99999}, /*is_fatal*/ false);
     fbl::Vector<FakeObserver> observers;
     observers.reserve(kNumObservers);

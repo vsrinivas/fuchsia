@@ -114,6 +114,9 @@ public:
     // Default Runner options.
     static const Options kDefaultOptions;
 
+    // Returns process shared |Runner| instance.
+    static Runner* GetInstance();
+
     Runner() = delete;
     explicit Runner(Reporter&& reporter);
     Runner(const Runner&) = delete;
@@ -158,6 +161,10 @@ public:
     // access to a |Test| instance and legacy tests are not part of a Fixture, but wrapped by one.
     // If this is called without any test running, it will have no effect.
     void NotifyAssertion(const Assertion& assertion);
+
+    // Returns true if the current test should be aborted. This happens as a result of a fatal
+    // failure.
+    bool ShouldAbortCurrentTest() { return !test_driver_.Continue(); }
 
 private:
     TestRef RegisterTest(const fbl::String& test_case_name, const fbl::String& test_name,
