@@ -144,6 +144,7 @@ Members are appointed by each functional area of the project:
 *   Software Delivery
 *   Storage
 *   System
+*   Toolchain
 *   Virtualization
 *   Web
 
