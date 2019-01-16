@@ -56,6 +56,10 @@ class L2CAP_ChannelManagerTest : public TestingBase {
   }
 
   void TearDown() override {
+    // Don't trigger the data callback when cleaning up the manager.
+    if (test_device()) {
+      test_device()->ClearDataCallback();
+    }
     chanmgr_ = nullptr;
     TestingBase::TearDown();
   }

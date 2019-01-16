@@ -245,9 +245,14 @@ class BrEdrConnectionManagerTest : public TestingBase {
         transport(), device_cache_.get(), data_domain_, true);
 
     StartTestDevice();
+
+    test_device()->SetTransactionCallback([this] { transaction_count_++; },
+                                          async_get_default_dispatcher());
   }
 
   void TearDown() override {
+    // Don't trigger the transaction callback when cleaning up the manager.
+    test_device()->ClearTransactionCallback();
     if (connection_manager_ != nullptr) {
       // deallocating the connection manager disables connectivity.
       test_device()->QueueCommandTransaction(
@@ -269,9 +274,11 @@ class BrEdrConnectionManagerTest : public TestingBase {
     connection_manager_ = std::move(mgr);
   }
 
+  RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
+
   data::testing::FakeDomain* data_domain() const { return data_domain_.get(); }
 
-  RemoteDeviceCache* device_cache() const { return device_cache_.get(); }
+  int transaction_count() const { return transaction_count_; }
 
   void QueueSuccessfulIncomingConn() const {
     test_device()->QueueCommandTransaction(CommandTransaction(
@@ -298,6 +305,7 @@ class BrEdrConnectionManagerTest : public TestingBase {
   std::unique_ptr<BrEdrConnectionManager> connection_manager_;
   std::unique_ptr<RemoteDeviceCache> device_cache_;
   fbl::RefPtr<data::testing::FakeDomain> data_domain_;
+  int transaction_count_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BrEdrConnectionManagerTest);
 };
@@ -394,10 +402,6 @@ const auto kDisconnectionComplete = common::CreateStaticByteBuffer(
 // Features page.
 TEST_F(GAP_BrEdrConnectionManagerTest,
        IncomingConnection_BrokenExtendedPageResponse) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   test_device()->QueueCommandTransaction(
       CommandTransaction(kAcceptConnectionRequest,
                          {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
@@ -421,7 +425,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6u, transactions);
+  EXPECT_EQ(6, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
   test_device()->QueueCommandTransaction(CommandTransaction(
@@ -437,16 +441,12 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(9u, transactions);
+  EXPECT_EQ(9, transaction_count());
 }
 
 // Test: An incoming connection request should trigger an acceptance and an
 // interrogation to discover capabilities.
 TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 
   QueueSuccessfulIncomingConn();
@@ -459,7 +459,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
 
-  EXPECT_EQ(6u, transactions);
+  EXPECT_EQ(6, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
   test_device()->QueueCommandTransaction(CommandTransaction(
@@ -475,7 +475,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(9u, transactions);
+  EXPECT_EQ(9, transaction_count());
 }
 
 // Test: An incoming connection request should upgrade a known LE device with a
@@ -505,10 +505,6 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
 // Test: A remote disconnect should correctly remove the conneection.
 TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
 
   QueueSuccessfulIncomingConn();
@@ -521,7 +517,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
 
-  EXPECT_EQ(6u, transactions);
+  EXPECT_EQ(6, transaction_count());
 
   // Remote end disconnects.
   test_device()->SendCommandChannelPacket(kDisconnectionComplete);
@@ -540,7 +536,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(8u, transactions);
+  EXPECT_EQ(8, transaction_count());
 }
 
 const auto kRemoteNameRequestCompleteFailed =
@@ -557,10 +553,6 @@ const auto kReadRemoteSupportedFeaturesCompleteFailed =
 //  - Receiving extra responses after a command fails will not fail
 //  - We don't query extended features if we don't receive an answer.
 TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   test_device()->QueueCommandTransaction(
       CommandTransaction(kAcceptConnectionRequest,
                          {&kAcceptConnectionRequestRsp, &kConnectionComplete}));
@@ -582,7 +574,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncommingConnectionFailedInterrogation) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(5u, transactions);
+  EXPECT_EQ(5, transaction_count());
 }
 
 const auto kCapabilitiesRequest =
@@ -613,10 +605,6 @@ const auto kCapabilitiesRequestReplyRsp =
 // TODO(jamuraa): returns correct capabilities when we have different
 // requirements.
 TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   test_device()->QueueCommandTransaction(kCapabilitiesRequestReply,
                                          {&kCapabilitiesRequestReplyRsp});
 
@@ -624,7 +612,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, CapabilityRequest) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(1u, transactions);
+  EXPECT_EQ(1, transaction_count());
 }
 
 const auto kUserConfirmationRequest = common::CreateStaticByteBuffer(
@@ -646,10 +634,6 @@ const auto kConfirmationRequestReplyRsp =
 
 // Test: sends replies to Confirmation Requests
 TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   test_device()->QueueCommandTransaction(kConfirmationRequestReply,
                                          {&kConfirmationRequestReplyRsp});
 
@@ -657,22 +641,18 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConfirmationRequest) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(1u, transactions);
+  EXPECT_EQ(1, transaction_count());
 }
 
 // Test: if L2CAP gets a link error, we disconnect the connection
 TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6u, transactions);
+  EXPECT_EQ(6, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
   test_device()->QueueCommandTransaction(CommandTransaction(
@@ -682,7 +662,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(7u, transactions);
+  EXPECT_EQ(7, transaction_count());
 
   test_device()->QueueCommandTransaction(
       CommandTransaction(kReadScanEnable, {&kReadScanEnableRspBoth}));
@@ -693,21 +673,17 @@ TEST_F(GAP_BrEdrConnectionManagerTest, DisconnectOnLinkError) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(9u, transactions);
+  EXPECT_EQ(9, transaction_count());
 }
 
 TEST_F(GAP_BrEdrConnectionManagerTest, ConnectedDeviceTimeout) {
-  size_t transactions = 0;
-  test_device()->SetTransactionCallback([&transactions] { transactions++; },
-                                        async_get_default_dispatcher());
-
   QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ(6u, transactions);
+  EXPECT_EQ(6, transaction_count());
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);

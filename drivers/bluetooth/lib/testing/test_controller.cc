@@ -54,6 +54,11 @@ void TestController::SetDataCallback(DataCallback callback,
   data_dispatcher_ = dispatcher;
 }
 
+void TestController::ClearDataCallback() {
+  // Leave dispatcher set (if already set) to preserve its write-once-ness.
+  data_callback_ = nullptr;
+}
+
 void TestController::SetTransactionCallback(
     fit::closure callback,
     async_dispatcher_t* dispatcher) {
@@ -64,6 +69,11 @@ void TestController::SetTransactionCallback(
 
   transaction_callback_ = std::move(callback);
   transaction_dispatcher_ = dispatcher;
+}
+
+void TestController::ClearTransactionCallback() {
+  // Leave dispatcher set (if already set) to preserve its write-once-ness.
+  transaction_callback_ = nullptr;
 }
 
 void TestController::OnCommandPacketReceived(

@@ -58,13 +58,19 @@ class TestController : public FakeControllerBase {
       const common::ByteBuffer& expected,
       const std::vector<const common::ByteBuffer*>& replies);
 
-  // Callback to invoke when a packet is received over the data channel.
+  // Callback to invoke when a packet is received over the data channel. Care
+  // should be taken to ensure that a callback with a reference to test case
+  // variables is not invoked when tearing down.
   using DataCallback = fit::function<void(const common::ByteBuffer& packet)>;
   void SetDataCallback(DataCallback callback, async_dispatcher_t* dispatcher);
+  void ClearDataCallback();
 
-  // Callback invoked when a transaction completes.
+  // Callback invoked when a transaction completes. Care should be taken to
+  // ensure that a callback with a reference to test case variables is not
+  // invoked when tearing down.
   void SetTransactionCallback(fit::closure callback,
                               async_dispatcher_t* dispatcher);
+  void ClearTransactionCallback();
 
  private:
   // FakeControllerBase overrides:
