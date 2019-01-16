@@ -199,6 +199,31 @@ int ResolveGlobs(const fbl::Vector<fbl::String>& globs,
     return 0;
 }
 
+bool IsSharedLibraryName(fbl::StringPiece filename) {
+    struct ExcludePattern {
+        fbl::StringPiece prefix;
+        fbl::StringPiece suffix;
+    };
+    static const fbl::Vector<ExcludePattern> kExcludePatterns = {
+        {"lib", ".so"},
+        {"lib", ".dylib"},
+    };
+
+    for (const auto& exclusion : kExcludePatterns) {
+        if (filename.length() < exclusion.prefix.length() + exclusion.suffix.length()) {
+            continue;
+        }
+
+        fbl::StringPiece start(filename.begin(), exclusion.prefix.length());
+        fbl::StringPiece finish(filename.end() - exclusion.suffix.length(), exclusion.suffix.length());
+        if (start == exclusion.prefix && finish == exclusion.suffix) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
 int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs,
                             const char* ignore_dir_name,
                             const fbl::Vector<fbl::String>& basename_whitelist,
@@ -247,9 +272,13 @@ int DiscoverTestsInDirGlobs(const fbl::Vector<fbl::String>& dir_globs,
 
         struct dirent* de;
         while ((de = readdir(dir)) != nullptr) {
-            const char* test_name = de->d_name;
+            fbl::StringPiece test_name = de->d_name;
             if (!basename_whitelist.is_empty() &&
                 !runtests::IsInWhitelist(test_name, basename_whitelist)) {
+                continue;
+            }
+
+            if (IsSharedLibraryName(test_name)) {
                 continue;
             }
 
