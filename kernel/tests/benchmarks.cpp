@@ -258,7 +258,6 @@ __NO_INLINE static void bench_spinlock() {
 
 __NO_INLINE static void bench_mutex() {
     mutex_t m;
-    mutex_init(&m);
 
     static const uint count = 128 * 1024 * 1024;
     uint64_t c = arch_cycle_count();

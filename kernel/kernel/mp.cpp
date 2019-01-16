@@ -41,7 +41,6 @@ struct mp_sync_context;
 static void mp_sync_task(void* context);
 
 void mp_init(void) {
-    mutex_init(&mp.hotplug_lock);
     mp.ipi_task_lock = SPIN_LOCK_INITIAL_VALUE;
     for (uint i = 0; i < fbl::count_of(mp.ipi_task_list); ++i) {
         list_initialize(&mp.ipi_task_list[i]);

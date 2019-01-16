@@ -23,8 +23,8 @@ namespace fbl {
 
 class __TA_CAPABILITY("mutex") Mutex {
 public:
-    constexpr Mutex() : mutex_(MUTEX_INITIAL_VALUE(mutex_)) { }
-    ~Mutex() { mutex_destroy(&mutex_); }
+    constexpr Mutex() = default;
+    ~Mutex() = default;
     void Acquire() __TA_ACQUIRE() { mutex_acquire(&mutex_); }
     void Release() __TA_RELEASE() { mutex_release(&mutex_); }
 

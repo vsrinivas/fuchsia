@@ -31,17 +31,7 @@ static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 
 static uint8_t DLOG_DATA[DLOG_SIZE];
 
-static dlog_t DLOG = {
-    .lock = SPIN_LOCK_INITIAL_VALUE,
-    .head = 0,
-    .tail = 0,
-    .data = DLOG_DATA,
-    .panic = false,
-    .event = EVENT_INITIAL_VALUE(DLOG.event, 0, EVENT_FLAG_AUTOUNSIGNAL),
-
-    .readers_lock = MUTEX_INITIAL_VALUE(DLOG.readers_lock),
-    .readers = LIST_INITIAL_VALUE(DLOG.readers),
-};
+static dlog_t DLOG(DLOG_DATA);
 
 static thread_t* notifier_thread;
 static thread_t* dumper_thread;
@@ -321,7 +311,7 @@ void dlog_serial_write(const char* data, size_t len) {
         __kernel_serial_write(data, len);
     } else {
         // Otherwise we can use a mutex and avoid time under spinlock
-        static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
+        static mutex_t lock;
         mutex_acquire(&lock);
         platform_dputs_thread(data, len);
         mutex_release(&lock);

@@ -28,7 +28,7 @@
 #include <zircon/types.h>
 
 // Ensures unittests are not run concurrently.
-static mutex_t lock = MUTEX_INITIAL_VALUE(lock);
+static mutex_t lock;
 
 /**
  * \brief Function called to dump results

@@ -145,7 +145,6 @@ zx_status_t p2ra_init(p2ra_state_t* state, uint max_alloc_size) {
     }
 
     /* Initialize the rest of our bookeeping */
-    mutex_init(&state->lock);
     list_initialize(&state->ranges);
     list_initialize(&state->unused_blocks);
     list_initialize(&state->allocated_blocks);
@@ -166,9 +165,6 @@ void p2ra_free(p2ra_state_t* state) {
     p2ra_free_block_list(&state->allocated_blocks);
     for (uint i = 0; i < state->bucket_count; ++i)
         p2ra_free_block_list(&state->free_block_buckets[i]);
-
-    mutex_destroy(&state->lock);
-    memset(state, 0, sizeof(*state));
 }
 
 zx_status_t p2ra_add_range(p2ra_state_t* state, uint range_start, uint range_len) {

@@ -1123,9 +1123,6 @@ static ssize_t heap_grow(size_t size) {
 void cmpct_init(void) {
     LTRACE_ENTRY;
 
-    // Create a mutex.
-    mutex_init(&theheap.lock);
-
     // Initialize the free list.
     for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
         theheap.free_lists[i] = NULL;

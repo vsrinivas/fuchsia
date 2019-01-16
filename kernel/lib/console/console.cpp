@@ -45,7 +45,7 @@ static char* debug_buffer;
 static bool echo = true;
 
 /* command processor state */
-static mutex_t command_lock = MUTEX_INITIAL_VALUE(command_lock);
+static mutex_t command_lock;
 int lastresult;
 static bool abort_script;
 

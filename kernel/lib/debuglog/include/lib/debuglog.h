@@ -13,27 +13,27 @@
 #include <list.h>
 #include <stdint.h>
 
-__BEGIN_CDECLS
-
 typedef struct dlog dlog_t;
 typedef struct dlog_header dlog_header_t;
 typedef struct dlog_record dlog_record_t;
 typedef struct dlog_reader dlog_reader_t;
 
 struct dlog {
-    spin_lock_t lock;
+    constexpr dlog(uint8_t* data_ptr) : data(data_ptr) {}
 
-    size_t head;
-    size_t tail;
+    spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+
+    size_t head = 0;
+    size_t tail = 0;
 
     uint8_t* data;
 
-    bool panic;
+    bool panic = false;
 
-    event_t event;
+    event_t event = EVENT_INITIAL_VALUE(this->event, 0, EVENT_FLAG_AUTOUNSIGNAL);
 
-    mutex_t readers_lock;
-    struct list_node readers;
+    mutex_t readers_lock = {};
+    struct list_node readers = LIST_INITIAL_VALUE(this->readers);
 };
 
 struct dlog_reader {
@@ -99,5 +99,3 @@ void dlog_shutdown(void);
 void dlog_bypass_init_early(void);
 void dlog_bypass_init(void);
 bool dlog_bypass(void);
-
-__END_CDECLS
