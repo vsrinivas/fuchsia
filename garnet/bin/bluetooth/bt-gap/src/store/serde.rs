@@ -15,6 +15,7 @@ use {
         Key,
         LeConnectionParameters,
         LeData,
+        BredrData,
         Ltk,
         SecurityProperties
     },
@@ -88,6 +89,17 @@ struct LeDataDef {
 }
 
 #[derive(Serialize, Deserialize)]
+#[serde(remote = "BredrData")]
+#[serde(rename_all = "camelCase")]
+struct BredrDataDef {
+    pub address: String,
+    pub piconet_leader: bool,
+    pub services: Vec<String>,
+    #[serde(with = "OptBoxLtk")]
+    pub link_key: Option<Box<Ltk>>,
+}
+
+#[derive(Serialize, Deserialize)]
 #[serde(remote = "BondingData")]
 #[serde(rename_all = "camelCase")]
 #[allow(dead_code)] // Workaround for rustc warning
@@ -97,6 +109,8 @@ struct BondingDataDef {
     pub name: Option<String>,
     #[serde(with = "OptBoxLeData")]
     pub le: Option<Box<LeData>>,
+    #[serde(with = "OptBoxBredrData")]
+    pub bredr: Option<Box<BredrData>>,
 }
 
 #[derive(Serialize)]
@@ -149,6 +163,7 @@ macro_rules! derive_opt_box {
 
 derive_opt_box!(OptBoxKey, Key, KeyDef, "KeyDef");
 derive_opt_box!(OptBoxLeData, LeData, LeDataDef, "LeDataDef");
+derive_opt_box!(OptBoxBredrData, BredrData, BredrDataDef, "BredrDataDef");
 derive_opt_box!(
     OptBoxLeConnectionParameters,
     LeConnectionParameters,
@@ -201,6 +216,24 @@ mod tests {
                 })),
                 csrk: None,
             })),
+            bredr: Some(Box::new(BredrData {
+                address: "06:05:04:03:02:01".to_string(),
+                piconet_leader: false,
+                services: vec!["1101".to_string(), "110A".to_string()],
+                link_key: Some(Box::new(Ltk {
+                    key: Key {
+                        security_properties: SecurityProperties {
+                            authenticated: true,
+                            secure_connections: true,
+                            encryption_key_size: 16,
+                        },
+                        value: [9, 10, 11, 12, 13, 14, 15, 16, 1, 2, 3, 4, 5, 6, 7, 8],
+                    },
+                    key_size: 16,
+                    ediv: 0,
+                    rand: 0,
+                })),
+            })),
         }
     }
 
@@ -242,7 +275,25 @@ mod tests {
                      \"value\":[16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]\
                 },\
                 \"csrk\":null\
-             }\
+             },\
+             \"bredr\":{\
+                 \"address\":\"06:05:04:03:02:01\",\
+                 \"piconetLeader\":false,\
+                 \"services\":[\"1101\",\"110A\"],\
+                 \"linkKey\":{\
+                     \"key\":{\
+                         \"securityProperties\":{\
+                             \"authenticated\":true,\
+                             \"secureConnections\":true,\
+                             \"encryptionKeySize\":16\
+                         },\
+                         \"value\":[9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]\
+                     },\
+                     \"keySize\":16,\
+                     \"ediv\":0,\
+                     \"rand\":0\
+                }\
+            }\
         }";
         assert_eq!(expected, serialized);
     }
@@ -284,6 +335,24 @@ mod tests {
                      "value": [16,15,14,13,12,11,10,9,8,7,6,5,4,3,2,1]
                 },
                 "csrk": null
+             },
+             "bredr": {
+                 "address": "06:05:04:03:02:01",
+                 "piconetLeader": false,
+                 "services": ["1101", "110A"],
+                 "linkKey": {
+                     "key": {
+                         "securityProperties": {
+                             "authenticated": true,
+                             "secureConnections": true,
+                             "encryptionKeySize": 16
+                         },
+                         "value": [9,10,11,12,13,14,15,16,1,2,3,4,5,6,7,8]
+                     },
+                     "keySize": 16,
+                     "ediv": 0,
+                     "rand": 0
+                }
              }
         }"#;
 

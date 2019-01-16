@@ -212,7 +212,8 @@ mod tests {
                        "identifier": "id-1",
                        "localAddress": "00:00:00:00:00:01",
                        "name": "Test Device 1",
-                       "le": null
+                       "le": null,
+                       "bredr": null
                     }"#
                     .to_string(),
                 )).expect("failed to set value");
@@ -222,7 +223,8 @@ mod tests {
                        "identifier": "id-2",
                        "localAddress": "00:00:00:00:00:01",
                        "name": "Test Device 2",
-                       "le": null
+                       "le": null,
+                       "bredr": null
                     }"#
                     .to_string(),
                 )).expect("failed to set value");
@@ -232,7 +234,8 @@ mod tests {
                        "identifier": "id-3",
                        "localAddress": "00:00:00:00:00:02",
                        "name": null,
-                       "le": null
+                       "le": null,
+                       "bredr": null
                     }"#
                     .to_string(),
                 )).expect("failed to set value");
@@ -258,6 +261,7 @@ mod tests {
                 local_address: "00:00:00:00:00:01".to_string(),
                 name: Some("Test Device 1".to_string()),
                 le: None,
+                bredr: None,
             },
             local.get("id-1").expect("could not find device")
         );
@@ -267,6 +271,7 @@ mod tests {
                 local_address: "00:00:00:00:00:01".to_string(),
                 name: Some("Test Device 2".to_string()),
                 le: None,
+                bredr: None,
             },
             local.get("id-2").expect("could not find device")
         );
@@ -283,6 +288,7 @@ mod tests {
                 local_address: "00:00:00:00:00:02".to_string(),
                 name: None,
                 le: None,
+                bredr: None,
             },
             local.get("id-3").expect("could not find device")
         );
@@ -301,6 +307,7 @@ mod tests {
             local_address: "00:00:00:00:00:01".to_string(),
             name: None,
             le: None,
+            bredr: None,
         };
         assert!(stash.store_bond(bonding_data).is_ok());
 
@@ -312,6 +319,7 @@ mod tests {
                 local_address: "00:00:00:00:00:01".to_string(),
                 name: None,
                 le: None,
+                bredr: None,
             },
             stash
                 .bonding_data
@@ -327,7 +335,7 @@ mod tests {
                        .map(|x| *x),
             Some(Value::Stringval(
                 "{\"identifier\":\"id-1\",\"localAddress\":\"00:00:00:00:00:01\",\"name\":null,\
-                 \"le\":null}"
+                 \"le\":null,\"bredr\":null}"
                     .to_string()
             )));
     }
@@ -345,7 +353,8 @@ mod tests {
                        "identifier": "id-1",
                        "localAddress": "00:00:00:00:00:01",
                        "name": null,
-                       "le": null
+                       "le": null,
+                       "bredr": null
                     }"#
                     .to_string(),
                 )).expect("failed to set value");
@@ -355,7 +364,8 @@ mod tests {
                        "identifier": "id-2",
                        "localAddress": "00:00:00:00:00:01",
                        "name": null,
-                       "le": null
+                       "le": null,
+                       "bredr": null
                     }"#
                     .to_string(),
                 )).expect("failed to set value");

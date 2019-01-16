@@ -14,6 +14,7 @@ use {
         Key,
         LeConnectionParameters,
         LeData,
+        BredrData,
         Ltk,
         SecurityProperties,
     },
@@ -107,6 +108,7 @@ pub fn clone_bonding_data(bd: &BondingData) -> BondingData {
         local_address: bd.local_address.clone(),
         name: bd.name.clone(),
         le: bd.le.as_ref().map(|v| Box::new(clone_le_data(&v))),
+        bredr: bd.bredr.as_ref().map(|v| Box::new(clone_bredr_data(&v))),
     }
 }
 
@@ -145,6 +147,15 @@ fn clone_le_data(le: &LeData) -> LeData {
         irk: le.irk.as_ref().map(|v| Box::new(clone_key(&v))),
         csrk: le.csrk.as_ref().map(|v| Box::new(clone_key(&v))),
         ..*le
+    }
+}
+
+fn clone_bredr_data(bredr: &BredrData) -> BredrData {
+    BredrData {
+        address: bredr.address.clone(),
+        services: bredr.services.clone(),
+        link_key: bredr.link_key.as_ref().map(|v| Box::new(clone_ltk(&v))),
+        ..*bredr
     }
 }
 

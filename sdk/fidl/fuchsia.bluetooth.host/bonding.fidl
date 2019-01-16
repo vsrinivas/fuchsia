@@ -50,7 +50,7 @@ struct LEData {
     LEConnectionParameters? connection_parameters;
 
     // Known GATT service UUIDs.
-    vector<string> services;
+    vector<string:36> services;
 
     // The LE long-term key. Present if the link was encrypted.
     LTK? ltk;
@@ -60,6 +60,23 @@ struct LEData {
 
     // Connection Signature Resolving Key used for data signing without encryption.
     Key? csrk;
+};
+
+struct BREDRData {
+  // The public device address of the peer.
+  string address;
+
+  // True if the peer prefers to lead the piconet. This is determined by role
+  // switch procedures. Paging and connecting from a peer does not automatically
+  // set this flag.
+  bool piconet_leader;
+
+  // Known SDP service UUIDs.
+  vector<string:36> services;
+
+  // The semi-permanent BR/EDR key. Present if link was paired with Secure
+  // Simple Pairing or stronger.
+  LTK? link_key;
 };
 
 struct BondingData {
@@ -76,5 +93,5 @@ struct BondingData {
     LEData? le;
 
     // Bonding data that is present when this device is paired on the BR/EDR transport.
-    // TODO(armansito): Add BR/EDR data.
+    BREDRData? bredr;
 };
