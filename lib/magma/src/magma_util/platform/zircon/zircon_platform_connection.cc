@@ -301,8 +301,7 @@ private:
                     server_notification_endpoint_.get(), 0, task->notification.u.channel_send.data,
                     task->notification.u.channel_send.size, nullptr, 0);
                 if (status != ZX_OK)
-                    return DRETF(MAGMA_STATUS_INTERNAL_ERROR, "Failed writing to channel %s",
-                                 zx_status_get_string(status));
+                    return DRETF(false, "Failed writing to channel: %s", zx_status_get_string(status));
                 return true;
             }
             case MSD_CONNECTION_NOTIFICATION_CONTEXT_KILLED:
