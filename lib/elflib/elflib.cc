@@ -40,8 +40,11 @@ std::unique_ptr<ElfLib> ElfLib::Create(
 
   out->header_ = *reinterpret_cast<Elf64_Ehdr*>(header_data->data());
 
-  // We don't support non-standard section header sizes.
-  if (out->header_.e_shentsize != sizeof(Elf64_Shdr)) {
+  // We don't support non-standard section header sizes. Stripped binaries that
+  // don't have sections sometimes zero out the shentsize, so we can ignore it
+  // if we have no sections.
+  if (out->header_.e_shnum > 0 &&
+      out->header_.e_shentsize != sizeof(Elf64_Shdr)) {
     return std::unique_ptr<ElfLib>();
   }
 
