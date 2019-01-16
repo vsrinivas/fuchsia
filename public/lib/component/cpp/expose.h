@@ -36,12 +36,12 @@ class Property {
   Property() { Set(""); }
 
   // Constructs a property from a string.
-  Property(std::string value) { Set(std::move(value)); }
-  Property(ByteVector value) { Set(std::move(value)); }
+  explicit Property(std::string value) { Set(std::move(value)); }
+  explicit Property(ByteVector value) { Set(std::move(value)); }
 
   // Constructs a property with value set on each read by the given callback.
-  Property(StringValueCallback callback) { Set(std::move(callback)); }
-  Property(VectorValueCallback callback) { Set(std::move(callback)); }
+  explicit Property(StringValueCallback callback) { Set(std::move(callback)); }
+  explicit Property(VectorValueCallback callback) { Set(std::move(callback)); }
 
   // Sets the property from a string.
   void Set(std::string value);
@@ -84,7 +84,7 @@ class Metric {
   Metric() { SetInt(0); }
 
   // Constructs a metric set on read by the given callback.
-  Metric(ValueCallback callback) { SetCallback(std::move(callback)); }
+  explicit Metric(ValueCallback callback) { SetCallback(std::move(callback)); }
 
   // Sets the type of this metric to INT with the given value.
   void SetInt(int64_t value);
@@ -215,6 +215,14 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   // returned children will consist only of children contained by this object.
   void ClearChildrenCallback();
 
+  // Remove a property from the object, returning true if it was found and
+  // removed.
+  bool RemoveProperty(const std::string& name);
+
+  // Remove a metric from the object, returning true if it was found and
+  // removed.
+  bool RemoveMetric(const std::string& name);
+
   // Sets a |Property| on this |Object| to the given value.
   // The name of the property cannot include null bytes.
   bool SetProperty(const std::string& name, Property value);
@@ -276,15 +284,18 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   zx_status_t GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
                       fbl::String name) override;
 
+  // Turn this |Object| into its FIDL representation.
+  fuchsia::inspect::Object ToFidl();
+
+  // Returns the names of this Object's children in a vector.
+  StringOutputVector GetChildren();
+
  private:
   enum { kChanId = 1, kSpecialIdMax };
 
   // Helper function to populate an output vector of children objects.
   void PopulateChildVector(StringOutputVector* out_vector)
       __TA_EXCLUDES(mutex_);
-
-  // Helper function to turn this |Object| into its FIDL representation.
-  fuchsia::inspect::Object ToFidl() __TA_REQUIRES(mutex_);
 
   // Mutex protecting fields below.
   mutable fbl::Mutex mutex_;

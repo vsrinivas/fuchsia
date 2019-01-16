@@ -1,0 +1,175 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "lib/inspect/inspect.h"
+
+using component::ObjectDir;
+
+namespace inspect {
+
+template <>
+component::Metric internal::MakeMetric<int64_t>(int64_t value) {
+  return component::IntMetric(value);
+}
+
+template <>
+component::Metric internal::MakeMetric<uint64_t>(uint64_t value) {
+  return component::UIntMetric(value);
+}
+
+template <>
+component::Metric internal::MakeMetric<double>(double value) {
+  return component::DoubleMetric(value);
+}
+
+template <>
+void internal::RemoveEntity<component::Property>(component::Object* object,
+                                                 const std::string& name) {
+  object->RemoveProperty(name);
+}
+
+template <>
+void internal::RemoveEntity<component::Metric>(component::Object* object,
+                                               const std::string& name) {
+  object->RemoveMetric(name);
+}
+
+CallbackMetric::CallbackMetric() {}
+
+CallbackMetric::CallbackMetric(
+    internal::EntityWrapper<component::Metric> entity)
+    : entity_(std::move(entity)) {}
+void CallbackMetric::Set(MetricCallback callback) {
+  if (entity_) {
+    entity_.ParentObject()->SetMetric(
+        entity_.name(), component::CallbackMetric(std::move(callback)));
+  }
+}
+
+#define DEFINE_PROPERTY_METHODS(CLASS, TYPE)                        \
+  CLASS::CLASS() {}                                                 \
+  CLASS::CLASS(internal::EntityWrapper<component::Property> entity) \
+      : entity_(std::move(entity)) {}                               \
+  void CLASS::Set(TYPE value) {                                     \
+    if (entity_) {                                                  \
+      entity_.ParentObject()->SetProperty(                          \
+          entity_.name(), component::Property(std::move(value)));   \
+    }                                                               \
+  }
+
+DEFINE_PROPERTY_METHODS(StringProperty, std::string)
+DEFINE_PROPERTY_METHODS(ByteVectorProperty, VectorValue)
+DEFINE_PROPERTY_METHODS(LazyStringProperty, StringValueCallback)
+DEFINE_PROPERTY_METHODS(LazyByteVectorProperty, VectorValueCallback)
+
+ChildrenCallback::ChildrenCallback() {}
+
+ChildrenCallback::ChildrenCallback(fbl::RefPtr<component::Object> object)
+    : parent_obj_(std::move(object)) {}
+
+ChildrenCallback::~ChildrenCallback() {
+  // Remove the entity from its parent if it has a parent.
+  if (parent_obj_) {
+    parent_obj_->ClearChildrenCallback();
+  }
+}
+
+void ChildrenCallback::Set(ChildrenCallbackFunction callback) {
+  if (parent_obj_) {
+    parent_obj_->SetChildrenCallback(std::move(callback));
+  }
+}
+
+ChildrenCallback& ChildrenCallback::operator=(ChildrenCallback&& other) {
+  // Remove the entity from its parent before moving values over.
+  if (parent_obj_ && parent_obj_.get() != other.parent_obj_.get()) {
+    parent_obj_->ClearChildrenCallback();
+  }
+  parent_obj_ = std::move(other.parent_obj_);
+  return *this;
+}
+
+Object::Object(std::string name) : object_(std::move(name)) {}
+
+Object::Object(ObjectDir object_dir) : object_(std::move(object_dir)) {}
+
+fuchsia::inspect::Object Object::object() const {
+  return object_.object()->ToFidl();
+}
+
+component::Object::StringOutputVector Object::children() const {
+  return object_.object()->GetChildren();
+}
+
+Object Object::CreateChild(std::string name) {
+  component::ExposedObject child(std::move(name));
+  object_.add_child(&child);
+  return Object(std::move(child));
+}
+
+IntMetric Object::CreateIntMetric(std::string name, int64_t value) {
+  object_.object()->SetMetric(name, component::IntMetric(value));
+  return IntMetric(internal::EntityWrapper<component::Metric>(
+      std::move(name), object_.object()));
+}
+
+UIntMetric Object::CreateUIntMetric(std::string name, uint64_t value) {
+  object_.object()->SetMetric(name, component::UIntMetric(value));
+  return UIntMetric(internal::EntityWrapper<component::Metric>(
+      std::move(name), object_.object()));
+}
+
+DoubleMetric Object::CreateDoubleMetric(std::string name, double value) {
+  object_.object()->SetMetric(name, component::DoubleMetric(value));
+  return DoubleMetric(internal::EntityWrapper<component::Metric>(
+      std::move(name), object_.object()));
+}
+
+CallbackMetric Object::CreateCallbackMetric(
+    std::string name, component::Metric::ValueCallback callback) {
+  object_.object()->SetMetric(name,
+                              component::CallbackMetric(std::move(callback)));
+  return CallbackMetric(internal::EntityWrapper<component::Metric>(
+      std::move(name), object_.object()));
+}
+
+StringProperty Object::CreateStringProperty(std::string name,
+                                            std::string value) {
+  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  return StringProperty(internal::EntityWrapper<component::Property>(
+      std::move(name), object_.object()));
+}
+
+ByteVectorProperty Object::CreateByteVectorProperty(std::string name,
+                                                    VectorValue value) {
+  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  return ByteVectorProperty(internal::EntityWrapper<component::Property>(
+      std::move(name), object_.object()));
+}
+
+LazyStringProperty Object::CreateLazyStringProperty(std::string name,
+                                                    StringValueCallback value) {
+  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  return LazyStringProperty(internal::EntityWrapper<component::Property>(
+      std::move(name), object_.object()));
+}
+
+LazyByteVectorProperty Object::CreateLazyByteVectorProperty(
+    std::string name, VectorValueCallback value) {
+  object_.object()->SetProperty(name, component::Property(std::move(value)));
+  return LazyByteVectorProperty(internal::EntityWrapper<component::Property>(
+      std::move(name), object_.object()));
+}
+
+ChildrenCallback Object::CreateChildrenCallback(
+    ChildrenCallbackFunction callback) {
+  object_.object()->SetChildrenCallback(std::move(callback));
+  return ChildrenCallback(object_.object());
+}
+
+std::string UniqueName(const std::string& prefix) {
+  return component::ExposedObject::UniqueName(prefix);
+}
+
+}  // namespace inspect

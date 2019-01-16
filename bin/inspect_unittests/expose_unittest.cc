@@ -6,6 +6,7 @@
 #include <lib/component/cpp/expose.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "matchers.h"
 
 namespace {
 
@@ -13,29 +14,6 @@ using component::Metric;
 using component::Object;
 using component::Property;
 using testing::UnorderedElementsAre;
-
-MATCHER_P2(StringProperty, name, value, "") {
-  return arg.value.is_str() && arg.key == name && arg.value.str() == value;
-}
-
-MATCHER_P2(VectorProperty, name, value, "") {
-  return arg.value.is_bytes() && arg.key == name && arg.value.bytes() == value;
-}
-
-MATCHER_P2(UIntMetric, name, value, "") {
-  return arg.key == name && arg.value.is_uint_value() &&
-         arg.value.uint_value() == static_cast<uint64_t>(value);
-}
-
-MATCHER_P2(IntMetric, name, value, "") {
-  return arg.key == name && arg.value.is_int_value() &&
-         arg.value.int_value() == static_cast<int64_t>(value);
-}
-
-MATCHER_P2(DoubleMetric, name, value, "") {
-  return arg.key == name && arg.value.is_double_value() &&
-         arg.value.double_value() == static_cast<double>(value);
-}
 
 TEST(Property, StringValue) {
   Property a("test");
@@ -52,10 +30,10 @@ TEST(Property, VectorValue) {
 
   Property a(test_vector);
 
-  EXPECT_THAT(a.ToFidl("key"), VectorProperty("key", test_vector));
+  EXPECT_THAT(a.ToFidl("key"), ByteVectorProperty("key", test_vector));
   test_vector.push_back('a');
   a.Set(test_vector);
-  EXPECT_THAT(a.ToFidl("key"), VectorProperty("key", test_vector));
+  EXPECT_THAT(a.ToFidl("key"), ByteVectorProperty("key", test_vector));
 }
 
 TEST(Property, StringCallback) {
@@ -74,12 +52,12 @@ TEST(Property, VectorCallback) {
 
   // Check callback is called.
   EXPECT_THAT(a.ToFidl("key"),
-              VectorProperty("key", Property::ByteVector(2, 'a')));
+              ByteVectorProperty("key", Property::ByteVector(2, 'a')));
 
   // Set to new callback, cancelling token. New value should be present.
   a.Set([] { return Property::ByteVector(2, 'b'); });
   EXPECT_THAT(a.ToFidl("key"),
-              VectorProperty("key", Property::ByteVector(2, 'b')));
+              ByteVectorProperty("key", Property::ByteVector(2, 'b')));
 }
 
 TEST(Metric, SetValue) {

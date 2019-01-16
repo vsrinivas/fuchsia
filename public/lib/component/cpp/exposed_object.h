@@ -28,10 +28,14 @@ class ExposedObject {
   // Constructs a new exposed object with the given name. Call this constructor
   // from derived class constructors.
   explicit ExposedObject(const std::string& name);
+
+  // Wrap an existing ObjectDir as an ExposedObject.
+  explicit ExposedObject(ObjectDir object_dir);
+
   virtual ~ExposedObject();
 
   ExposedObject(ExposedObject&& other) = default;
-  ExposedObject& operator=(ExposedObject&& other) = default;
+  ExposedObject& operator=(ExposedObject&& other);
 
   // Adds a child to this object.
   void add_child(ExposedObject* child);

@@ -15,7 +15,17 @@ namespace component {
 ExposedObject::ExposedObject(const std::string& name)
     : object_dir_(fbl::MakeRefCounted<Object>(name.c_str())) {}
 
+ExposedObject::ExposedObject(ObjectDir object_dir)
+    : object_dir_(std::move(object_dir)) {}
+
 ExposedObject::~ExposedObject() { remove_from_parent(); }
+
+ExposedObject& ExposedObject::operator=(ExposedObject&& other) {
+  remove_from_parent();
+  parent_ = std::move(other.parent_);
+  object_dir_ = std::move(other.object_dir_);
+  return *this;
+}
 
 void ExposedObject::set_parent(const ObjectDir& parent) {
   move_parents(parent);

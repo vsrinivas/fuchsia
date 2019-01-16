@@ -2,18 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package/component.gni")
 import("//build/package.gni")
-
+import("//build/package/component.gni")
 
 executable("bin") {
   output_name = "inspect_unittests"
   testonly = true
   sources = [
     "expose_unittest.cc",
+    "inspect_unittest.cc",
+    "matchers.h",
   ]
   deps = [
     "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/inspect",
   ]
   public_deps = [
     "//garnet/public/lib/fxl/test:gtest_main",

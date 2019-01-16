@@ -132,10 +132,7 @@ Object::Object(fbl::String name) : name_(name) {
       << "Object name cannot contain null bytes";
 }
 
-void Object::ReadData(ReadDataCallback callback) {
-  fbl::AutoLock lock(&mutex_);
-  callback(ToFidl());
-}
+void Object::ReadData(ReadDataCallback callback) { callback(ToFidl()); }
 
 void Object::ListChildren(ListChildrenCallback callback) {
   StringOutputVector out;
@@ -209,6 +206,26 @@ void Object::ClearChildrenCallback() {
   fbl::AutoLock lock(&mutex_);
   ChildrenCallback temp;
   lazy_object_callback_.swap(temp);
+}
+
+bool Object::RemoveProperty(const std::string& name) {
+  fbl::AutoLock lock(&mutex_);
+  auto it = properties_.find(name.c_str());
+  if (it != properties_.end()) {
+    properties_.erase(it);
+    return true;
+  }
+  return false;
+}
+
+bool Object::RemoveMetric(const std::string& name) {
+  fbl::AutoLock lock(&mutex_);
+  auto it = metrics_.find(name.c_str());
+  if (it != metrics_.end()) {
+    metrics_.erase(it);
+    return true;
+  }
+  return false;
 }
 
 bool Object::SetProperty(const std::string& name, Property value) {
@@ -307,7 +324,8 @@ void Object::PopulateChildVector(StringOutputVector* out_vector)
   }
 }
 
-fuchsia::inspect::Object Object::ToFidl() __TA_REQUIRES(mutex_) {
+fuchsia::inspect::Object Object::ToFidl() {
+  fbl::AutoLock lock(&mutex_);
   fuchsia::inspect::Object ret;
   ret.name = name_.data();
   for (const auto& it : properties_) {
@@ -316,6 +334,12 @@ fuchsia::inspect::Object Object::ToFidl() __TA_REQUIRES(mutex_) {
   for (const auto& it : metrics_) {
     ret.metrics.push_back(it.second.ToFidl(it.first));
   }
+  return ret;
+}
+
+Object::StringOutputVector Object::GetChildren() {
+  Object::StringOutputVector ret;
+  PopulateChildVector(&ret);
   return ret;
 }
 
