@@ -140,11 +140,13 @@ typedef std::map<SampleStreamId, std::string> StreamInfoMap;
 // equivalent map in sync). The racy nature of this update is not an issue
 // because the rest of the API will cope with invalid stream IDs, so 'eventually
 // consistent' is acceptable).
+// Use SetStreamNamesHandler() to install a StreamNamesCallback callback.
 typedef std::function<void(const std::vector<StreamInfo>& add,
                            const std::vector<SampleStreamId>& remove)>
     StreamNamesCallback;
 
 // Called after (and in response to) a request is sent to |GetStreamSets()|.
+// Use SetStreamSetsHandler() to install a StreamSetsCallback callback.
 typedef std::function<void(const StreamSetsResponse& response)>
     StreamSetsCallback;
 
@@ -168,22 +170,27 @@ class Dockyard {
   // samples for that time range, virtual samples will be generated based on
   // available samples.
   //
+  // The results will be supplied in a call to the |callback| previously set
+  // with SetStreamSetsHandler(). The |response| parameter on that callback will
+  // have the same context ID that is returned from this call to
+  // GetStreamSets() (i.e. that's how to match a response to a request).
+  //
   // Returns unique context ID.
   uint64_t GetStreamSets(StreamSetsRequest* request);
 
-  // Listen for sample streams being added or removed. |callback| is called
-  // when new streams are added or removed. Pass nullptr as |callback| to stop
-  // listening.
+  // Sets the function called when sample streams are added or removed. Pass
+  // nullptr as |callback| to stop receiving calls.
   //
   // Returns prior callback or nullptr.
-  StreamNamesCallback ObserveStreamNames(StreamNamesCallback callback);
+  StreamNamesCallback SetStreamNamesHandler(StreamNamesCallback callback);
 
-  // Listen for sample streams being added or removed. |callback| is called
-  // when new streams are added or removed. Pass nullptr as |callback| to stop
-  // listening.
+  // Sets the function called when sample stream data arrives in response to a
+  // call to GetStreamSets(). So, first set a handler with
+  // SetStreamSetsHandler(), then make as many GetStreamSets() calls as
+  // desired. Pass nullptr as |callback| to stop receiving calls.
   //
   // Returns prior callback or nullptr.
-  StreamSetsCallback ObserveStreamSets(StreamSetsCallback callback);
+  StreamSetsCallback SetStreamSetsHandler(StreamSetsCallback callback);
 
   // Generate responses and call handlers for sample requests. Not intended for
   // use by the GUI.

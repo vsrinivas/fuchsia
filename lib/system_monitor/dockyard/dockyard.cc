@@ -86,13 +86,14 @@ uint64_t Dockyard::GetStreamSets(StreamSetsRequest* request) {
   return request->request_id;
 }
 
-StreamNamesCallback Dockyard::ObserveStreamNames(StreamNamesCallback callback) {
+StreamNamesCallback Dockyard::SetStreamNamesHandler(
+    StreamNamesCallback callback) {
   auto old_handler = _stream_name_handler;
   _stream_name_handler = callback;
   return old_handler;
 }
 
-StreamSetsCallback Dockyard::ObserveStreamSets(StreamSetsCallback callback) {
+StreamSetsCallback Dockyard::SetStreamSetsHandler(StreamSetsCallback callback) {
   auto old_handler = _stream_sets_handler;
   _stream_sets_handler = callback;
   return old_handler;

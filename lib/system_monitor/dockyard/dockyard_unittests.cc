@@ -17,10 +17,10 @@ class SystemMonitorDockyardTest : public ::testing::Test {
     _name_call_count = 100;  // Arbitrary.
     _sets_call_count = 200;  // Arbitrary.
     EXPECT_EQ(nullptr,
-              _dockyard.ObserveStreamNames(std::bind(
+              _dockyard.SetStreamNamesHandler(std::bind(
                   &SystemMonitorDockyardTest::TestStreamNamesCallback, this,
                   std::placeholders::_1, std::placeholders::_2)));
-    EXPECT_EQ(nullptr, _dockyard.ObserveStreamSets(std::bind(
+    EXPECT_EQ(nullptr, _dockyard.SetStreamSetsHandler(std::bind(
                            &SystemMonitorDockyardTest::TestStreamSetsCallback,
                            this, std::placeholders::_1)));
     // Add some samples.

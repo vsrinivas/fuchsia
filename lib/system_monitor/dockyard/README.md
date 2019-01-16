@@ -18,8 +18,8 @@ If something is unclear or if you prefer examples, consider looking in
 
 - Create a Dockyard instance.
 - Add handlers for new stream names and stream sets:
-  - dockyard.ObserveStreamNames(MyStreamNameHandler);
-  - dockyard.ObserveStreamSets(MyStreamSetHandler);
+  - dockyard.SetStreamNamesHandler(MyStreamNameHandler);
+  - dockyard.SetStreamSetsHandler(MyStreamSetHandler);
 - For testing, create some pseudo-random samples
   - Create a RandomSampleGenerator
   - Pass it and the dockyard to GenerateRandomSamples()
@@ -27,6 +27,7 @@ If something is unclear or if you prefer examples, consider looking in
   - Create a StreamSetsRequest
   - Pass it to dockyard.GetStreamSets()
   - Kick back and wait for MyStreamSetHandler to be called
+    - (for testing ProcessRequests() can be used to force it).
 - When MyStreamSetHandler is called, loop over the data_sets to get the
   sample values.
 
