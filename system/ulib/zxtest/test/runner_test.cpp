@@ -297,5 +297,85 @@ void TestDriverImplResetOnTestCompletion() {
     }
 }
 
+void RunnerOptionsParseFromCmdLineShort() {
+    const char* kArgs[12] = {};
+    kArgs[0] = "mybin";
+    kArgs[1] = "-f";
+    kArgs[2] = "+*:-ZxTest";
+    kArgs[3] = "-i";
+    kArgs[4] = "100";
+    kArgs[5] = "-s";
+    kArgs[6] = "-r";
+    kArgs[7] = "10";
+    kArgs[8] = "-l";
+    kArgs[9] = "false";
+    kArgs[10] = "-h";
+    kArgs[11] = "true";
+
+    fbl::Vector<fbl::String> errors;
+    Runner::Options options =
+        Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+
+    // Just in case it returns errors, this will give insight into where the problem is.
+    for (const auto& error : errors) {
+        fprintf(stdout, "%s", error.c_str());
+    }
+    ZX_ASSERT_MSG(errors.is_empty(), "Runner::Options::FromArgs returned errors.\n");
+    ZX_ASSERT_MSG(strcmp(options.filter.c_str(), kArgs[2]) == 0,
+                  "Runner::Options::filter not parsed correctly.\n");
+    ZX_ASSERT_MSG(options.repeat == 100, "Runner::Options::repeat not parsed correctly.\n");
+    ZX_ASSERT_MSG(options.seed == 10, "Runner::Options::seed not parsed correctly.\n");
+    ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly.\n");
+    ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly.\n");
+    ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly.\n");
+}
+
+void RunnerOptionsParseFromCmdLineLong() {
+    const char* kArgs[12] = {};
+    kArgs[0] = "mybin";
+    kArgs[1] = "--gtest_filter";
+    kArgs[2] = "+*:-ZxTest";
+    kArgs[3] = "--gtest_repeat";
+    kArgs[4] = "100";
+    kArgs[5] = "--gtest_shuffle";
+    kArgs[6] = "--gtest_random_seed";
+    kArgs[7] = "10";
+    kArgs[8] = "--gtest_list_tests";
+    kArgs[9] = "false";
+    kArgs[10] = "--help";
+    kArgs[11] = "true";
+
+    fbl::Vector<fbl::String> errors;
+    Runner::Options options =
+        Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+
+    // Just in case it returns errors, this will give insight into where the problem is.
+    for (const auto& error : errors) {
+        fprintf(stdout, "%s", error.c_str());
+    }
+    ZX_ASSERT_MSG(errors.is_empty(), "Runner::Options::FromArgs returned errors.\n.");
+    ZX_ASSERT_MSG(strcmp(options.filter.c_str(), kArgs[2]) == 0,
+                  "Runner::Options::filter not parsed correctly\n.");
+    ZX_ASSERT_MSG(options.repeat == 100, "Runner::Options::repeat not parsed correctly\n.");
+    ZX_ASSERT_MSG(options.seed == 10, "Runner::Options::seed not parsed correctly\n.");
+    ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly\n.");
+    ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly\n.");
+    ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly\n.");
+}
+
+void RunnerOptionsParseFromCmdLineErrors() {
+    const char* kArgs[3] = {};
+    kArgs[0] = "mybin";
+    kArgs[1] = "--gtest_repeat";
+    kArgs[2] = "-1";
+
+    fbl::Vector<fbl::String> errors;
+    Runner::Options options =
+        Runner::Options::FromArgs(countof(kArgs), const_cast<char**>(kArgs), &errors);
+
+    // Just in case it returns errors, this will give insight into where the problem is.
+    ZX_ASSERT_MSG(!errors.is_empty(), "Runner::Options::FromArgs should return error.\n.");
+}
+
 } // namespace test
 } // namespace zxtest

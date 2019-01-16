@@ -92,6 +92,12 @@ struct RunnerSummary {
 class Runner {
 public:
     struct Options {
+        // Parses the contents of argv into |Options|.
+        static Options FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors);
+
+        // Prints the usage message into the |stream|.
+        static void Usage(char* bin, FILE* stream);
+
         // Pattern for filtering tests. Empty pattern matches all.
         fbl::String filter;
 

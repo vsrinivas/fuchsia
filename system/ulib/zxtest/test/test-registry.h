@@ -108,6 +108,10 @@ void TestDriverImplNonFatalFailureDoesNotEndTest();
 void TestDriverImplResetOnTestCompletion();
 void TestDriverImplReset();
 
+// Verify that we parse options correctly.
+void RunnerOptionsParseFromCmdLineShort();
+void RunnerOptionsParseFromCmdLineLong();
+
 struct RegisteredTest {
     const char* name = nullptr;
     void (*test_fn)() = nullptr;
@@ -157,6 +161,8 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestDriverImplNonFatalFailureDoesNotEndTest),
     RUN_TEST(TestDriverImplReset),
     RUN_TEST(TestDriverImplResetOnTestCompletion),
+    RUN_TEST(RunnerOptionsParseFromCmdLineShort),
+    RUN_TEST(RunnerOptionsParseFromCmdLineLong),
 };
 
 #undef RUN_TEST
