@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use carnelian::{
+    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
+    ViewMessages, APP,
+};
 use failure::Error;
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fuchsia_async::{self as fasync, Interval};
 use fuchsia_scenic::{Material, Rectangle, SessionPtr, ShapeNode};
-use fuchsia_ui::{
-    App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr, ViewKey,
-    ViewMessages, APP,
-};
 use fuchsia_zircon::{ClockId, Duration, Time};
 use futures::StreamExt;
 use parking_lot::Mutex;

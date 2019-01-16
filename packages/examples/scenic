@@ -19,7 +19,7 @@
         "//garnet/examples/ui:spinning_square_view",
         "//garnet/examples/ui:tile_view",
         "//garnet/examples/ui:yuv_to_image_pipe",
-        "//garnet/public/rust/fuchsia-ui:spinning_square_rs",
-        "//garnet/public/rust/fuchsia-ui:embedding_rs"
+        "//garnet/public/rust/carnelian:spinning_square_rs",
+        "//garnet/public/rust/carnelian:embedding_rs"
     ]
 }
