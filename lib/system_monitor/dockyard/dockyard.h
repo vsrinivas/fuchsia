@@ -12,10 +12,6 @@
 
 namespace dockyard {
 
-// This is a simple hello world style API call to test with. This will be
-// removed once the initial Dart library is implemented.
-int64_t AddNumbers(int64_t first, int64_t second);
-
 // An integer value representing a sample stream name.
 typedef uint32_t SampleStreamId;
 // Sample time stamp in nanoseconds.

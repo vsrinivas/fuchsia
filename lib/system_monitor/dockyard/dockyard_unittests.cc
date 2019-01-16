@@ -65,10 +65,6 @@ class SystemMonitorDockyardTest : public ::testing::Test {
   StreamSetsResponse _response;
 };
 
-TEST_F(SystemMonitorDockyardTest, CallAdd) {
-  EXPECT_EQ(8, dockyard::AddNumbers(3, 5));
-}
-
 TEST_F(SystemMonitorDockyardTest, NameCallback) {
   EXPECT_EQ(100, _name_call_count);
   EXPECT_EQ(200, _sets_call_count);

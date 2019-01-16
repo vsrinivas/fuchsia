@@ -25,8 +25,6 @@ constexpr SampleTimeNs CalcStride(const StreamSetsRequest& request) {
 
 }  // namespace
 
-int64_t AddNumbers(int64_t first, int64_t second) { return first + second; }
-
 Dockyard::Dockyard()
     : _next_context_id(0ULL),
       _stream_name_handler(nullptr),
