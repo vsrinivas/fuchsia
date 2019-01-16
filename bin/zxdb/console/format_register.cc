@@ -3,16 +3,14 @@
 // found in the LICENSE file.
 
 #include <inttypes.h>
-#include <regex.h>
 #include <stdlib.h>
 
 #include <map>
 
-#include <lib/fit/defer.h>
-
 #include "garnet/bin/zxdb/client/register.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/common/err.h"
+#include "garnet/bin/zxdb/common/regex.h"
 #include "garnet/bin/zxdb/console/console.h"
 #include "garnet/bin/zxdb/console/format_register.h"
 #include "garnet/bin/zxdb/console/format_register_arm64.h"
@@ -80,14 +78,6 @@ Err FormatCategory(const FormatRegisterOptions& options,
   return Err();
 }
 
-inline Err RegexpError(const char* prefix, const std::string& pattern,
-                       const regex_t* regexp, int status) {
-  char err_buf[256];
-  regerror(status, regexp, err_buf, sizeof(err_buf));
-  return Err(
-      fxl::StringPrintf("%s \"%s\": %s", prefix, pattern.c_str(), err_buf));
-}
-
 }  // namespace
 
 Err FilterRegisters(const FormatRegisterOptions& options,
@@ -113,25 +103,16 @@ Err FilterRegisters(const FormatRegisterOptions& options,
       }
     } else {
       // We use insensitive case regexp matching.
-      regex_t regexp;
-      auto status = regcomp(&regexp, options.filter_regexp.data(), REG_ICASE);
-      auto reg_freer = fit::defer([&regexp]() { regfree(&regexp); });
-
-      if (status) {
-        return RegexpError("Could not compile regexp",
-                           options.filter_regexp.data(), &regexp, status);
-      }
+      Regex regex;
+      Err err = regex.Init(options.filter_regexp);
+      if (err.has_error())
+        return err;
 
       for (const auto& reg : it->second) {
         const char* reg_name = RegisterIDToString(reg.id());
-        // We don't care about the matches.
-        status = regexec(&regexp, reg_name, 0, nullptr, 0);
-        if (!status) {
+        if (regex.Match(reg_name)) {
           registers.push_back(reg);
           registers_found++;
-        } else if (status != REG_NOMATCH) {
-          return RegexpError("Error running regexp",
-                             options.filter_regexp.data(), &regexp, status);
         }
       }
     }

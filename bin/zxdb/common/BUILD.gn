@@ -12,14 +12,17 @@ static_library("common") {
     "err.h",
     "file_util.h",
     "host_util.h",
+    "regex.h",
     "string_util.h",
   ]
+
   sources = [
     "address_range.cc",
     "command_line_parser.cc",
     "err.cc",
     "file_util.cc",
     "host_util.cc",
+    "regex.cc",
     "string_util.cc",
   ]
 
@@ -43,6 +46,7 @@ source_set("tests") {
   sources = [
     "command_line_parser_unittest.cc",
     "file_util_unittest.cc",
+    "regex_unittest.cc",
   ]
 
   deps = [
