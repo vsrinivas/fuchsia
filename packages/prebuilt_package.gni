@@ -44,7 +44,6 @@ template("prebuilt_package") {
 
     script = "//build/packages/prebuilt_package.py"
 
-    blobs_rsp = "$target_out_dir/$pkg_name.blobs.rsp"
     manifest = "$target_out_dir/$pkg_name.manifest"
     system_rsp = "$target_out_dir/$pkg_name.system.rsp"
     ids_txt = "$target_out_dir/$pkg_name.final.manifest.ids.txt"
@@ -53,8 +52,6 @@ template("prebuilt_package") {
     args = [
       "--pm-tool",
       rebase_path("$root_out_dir/host_$host_cpu/pm"),
-      "--merkleroot-tool",
-      rebase_path("$zircon_tools_dir/merkleroot"),
       "--name",
       pkg_name,
       "--archive",
@@ -63,22 +60,15 @@ template("prebuilt_package") {
       rebase_path(meta_dir, root_build_dir),
       "--manifest",
       rebase_path(manifest, root_build_dir),
-      "--blobs-rsp",
-      rebase_path(blobs_rsp, root_build_dir),
       "--system-rsp",
       rebase_path(system_rsp, root_build_dir),
       "--ids-txt",
       rebase_path(ids_txt, root_build_dir),
-      "--blobs-json",
-      rebase_path(blobs_json, root_build_dir),
-      "--meta-merkle",
-      rebase_path(meta_merkle, root_build_dir),
     ]
     inputs = [
       archive,
     ]
     outputs = [
-      blobs_rsp,
       manifest,
       ids_txt,
       system_rsp,
@@ -103,10 +93,8 @@ template("prebuilt_package") {
     ]
   }
 
-  group(target_name + ".blobs.rsp") {
-    public_deps = [
-      ":$pkg_target_name",
-    ]
+  generate_response_file("${pkg_target_name}.blobs.rsp") {
+    response_file_contents = ["--input=" + rebase_path(blobs_json, root_build_dir)]
   }
 
   pkg = {
