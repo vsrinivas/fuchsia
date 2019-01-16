@@ -195,4 +195,19 @@ bool Touchscreen::ParseReport(const uint8_t *data, size_t len,
 
   return true;
 }
+
+bool Touchscreen::SetDescriptor(Touchscreen::Descriptor *touch_desc) {
+  touch_desc->x_min = configs_[0].x.logc_mm.min;
+  touch_desc->x_max = configs_[0].x.logc_mm.max;
+  touch_desc->x_resolution = 1;
+
+  touch_desc->y_min = configs_[0].y.logc_mm.min;
+  touch_desc->y_max = configs_[0].y.logc_mm.max;
+  touch_desc->y_resolution = 1;
+
+  touch_desc->max_finger_id = contact_id_max_;
+
+  return true;
+}
+
 }  // namespace mozart

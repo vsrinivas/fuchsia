@@ -120,12 +120,12 @@ bool InputInterpreter::Initialize() {
     touchscreen_descriptor_ = fuchsia::ui::input::TouchscreenDescriptor::New();
     Touchscreen::Descriptor touch_desc;
     hid_decoder_->SetDescriptor(&touch_desc);
-    touchscreen_descriptor_->x.range.min = touch_desc.x_logical_min;
-    touchscreen_descriptor_->x.range.max = touch_desc.x_logical_max;
+    touchscreen_descriptor_->x.range.min = touch_desc.x_min;
+    touchscreen_descriptor_->x.range.max = touch_desc.x_max;
     touchscreen_descriptor_->x.resolution = touch_desc.x_resolution;
 
-    touchscreen_descriptor_->y.range.min = touch_desc.y_logical_min;
-    touchscreen_descriptor_->y.range.max = touch_desc.y_logical_max;
+    touchscreen_descriptor_->y.range.min = touch_desc.y_min;
+    touchscreen_descriptor_->y.range.max = touch_desc.y_max;
     touchscreen_descriptor_->y.resolution = touch_desc.x_resolution;
 
     touchscreen_descriptor_->max_finger_id = touch_desc.max_finger_id;

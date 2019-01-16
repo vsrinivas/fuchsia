@@ -49,6 +49,8 @@ TEST(TouchscreenTest, Gechic1101) {
   mozart::Touchscreen ts;
   ParseTouchscreen(gechic1101_hid_descriptor, sizeof(gechic1101_hid_descriptor),
                    &ts);
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
 
   EXPECT_EQ(10UL, ts.touch_points());
   EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
@@ -58,10 +60,10 @@ TEST(TouchscreenTest, Gechic1101) {
                 mozart::Touchscreen::Capabilities::CONTACT_COUNT |
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
-  EXPECT_EQ(0, ts.x_logical_min());
-  EXPECT_EQ(16384, ts.x_logical_max());
-  EXPECT_EQ(0, ts.y_logical_min());
-  EXPECT_EQ(9600, ts.y_logical_max());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(16384, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(9600, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x04,                                            // Report ID
@@ -97,6 +99,9 @@ TEST(TouchscreenTest, CoolTouch) {
   ParseTouchscreen(cooltouch_10x_hid_descriptor,
                    sizeof(cooltouch_10x_hid_descriptor), &ts);
 
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
   EXPECT_EQ(5UL, ts.touch_points());
   EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
                 mozart::Touchscreen::Capabilities::TIP_SWITCH |
@@ -105,10 +110,10 @@ TEST(TouchscreenTest, CoolTouch) {
                 mozart::Touchscreen::Capabilities::CONTACT_COUNT |
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
-  EXPECT_EQ(0, ts.x_logical_min());
-  EXPECT_EQ(32767, ts.x_logical_max());
-  EXPECT_EQ(0, ts.y_logical_min());
-  EXPECT_EQ(32767, ts.y_logical_max());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(32767, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(32767, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x01,                          // Report ID
@@ -138,6 +143,9 @@ TEST(TouchscreenTest, WaveShare) {
   ParseTouchscreen(waveshare_hid_descriptor, sizeof(waveshare_hid_descriptor),
                    &ts);
 
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
   EXPECT_EQ(1UL, ts.touch_points());
   EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
                 mozart::Touchscreen::Capabilities::TIP_SWITCH |
@@ -146,10 +154,10 @@ TEST(TouchscreenTest, WaveShare) {
                 mozart::Touchscreen::Capabilities::CONTACT_COUNT |
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
-  EXPECT_EQ(0, ts.x_logical_min());
-  EXPECT_EQ(1024, ts.x_logical_max());
-  EXPECT_EQ(0, ts.y_logical_min());
-  EXPECT_EQ(600, ts.y_logical_max());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(1024, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(600, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x01,        // Report ID
@@ -179,6 +187,9 @@ TEST(TouchscreenTest, Gechic1303) {
   ParseTouchscreen(gechic_1303_hid_descriptor,
                    sizeof(gechic_1303_hid_descriptor), &ts);
 
+  mozart::Touchscreen::Descriptor ts_desc;
+  EXPECT_TRUE(ts.SetDescriptor(&ts_desc));
+
   EXPECT_EQ(10UL, ts.touch_points());
   EXPECT_EQ(mozart::Touchscreen::Capabilities::CONTACT_ID |
                 mozart::Touchscreen::Capabilities::TIP_SWITCH |
@@ -187,10 +198,10 @@ TEST(TouchscreenTest, Gechic1303) {
                 mozart::Touchscreen::Capabilities::CONTACT_COUNT |
                 mozart::Touchscreen::Capabilities::SCAN_TIME,
             ts.capabilities());
-  EXPECT_EQ(0, ts.x_logical_min());
-  EXPECT_EQ(16384, ts.x_logical_max());
-  EXPECT_EQ(0, ts.y_logical_min());
-  EXPECT_EQ(9600, ts.y_logical_max());
+  EXPECT_EQ(0, ts_desc.x_min);
+  EXPECT_EQ(16384, ts_desc.x_max);
+  EXPECT_EQ(0, ts_desc.y_min);
+  EXPECT_EQ(9600, ts_desc.y_max);
 
   uint8_t report_data[] = {
       0x04,                          // Report ID

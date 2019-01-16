@@ -43,12 +43,12 @@ class Touchscreen {
   };
 
   struct Descriptor {
-    int32_t x_logical_min;
-    int32_t x_logical_max;
+    int32_t x_min;
+    int32_t x_max;
     int32_t x_resolution;
 
-    int32_t y_logical_min;
-    int32_t y_logical_max;
+    int32_t y_min;
+    int32_t y_max;
     int32_t y_resolution;
 
     int32_t max_finger_id;
@@ -67,15 +67,12 @@ class Touchscreen {
 
   bool ParseTouchscreenDescriptor(const hid::ReportDescriptor *desc);
   bool ParseReport(const uint8_t *data, size_t len, Report *report) const;
+  bool SetDescriptor(Touchscreen::Descriptor *touch_desc);
 
   uint8_t report_id() const { return report_id_; }
   size_t touch_points() const { return touch_points_; }
   int32_t contact_id_max() const { return contact_id_max_; }
   uint32_t capabilities() const { return capabilities_; }
-  int32_t x_logical_min() const { return configs_[0].x.logc_mm.min; }
-  int32_t x_logical_max() const { return configs_[0].x.logc_mm.max; }
-  int32_t y_logical_min() const { return configs_[0].y.logc_mm.min; }
-  int32_t y_logical_max() const { return configs_[0].y.logc_mm.max; }
 
  private:
   struct TouchPointConfig {

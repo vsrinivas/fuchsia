@@ -587,17 +587,7 @@ bool FdioHidDecoder::Read(Touchscreen::Report* report) {
 }
 
 bool FdioHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
-  touch_desc->x_logical_min = ts_.x_logical_min();
-  touch_desc->x_logical_max = ts_.x_logical_max();
-  touch_desc->x_resolution = 1;
-
-  touch_desc->y_logical_min = ts_.y_logical_min();
-  touch_desc->y_logical_max = ts_.y_logical_max();
-  touch_desc->y_resolution = 1;
-
-  touch_desc->max_finger_id = ts_.contact_id_max();
-
-  return true;
+  return ts_.SetDescriptor(touch_desc);
 }
 
 }  // namespace mozart
