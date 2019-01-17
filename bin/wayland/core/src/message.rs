@@ -256,6 +256,10 @@ impl Message {
         let pos = self.byte_buf.position();
         let len = self.byte_buf.read_u32::<NativeEndian>()?;
         let mut vec: Vec<u8> = Vec::with_capacity(len as usize);
+        if len == 0 {
+            return Ok(vec);
+        }
+
         vec.resize(len as usize, 0);
         self.byte_buf.read_exact(vec.as_mut_slice())?;
 
@@ -453,6 +457,20 @@ mod tests {
         message.rewind();
         let arg = message.read_arg(ArgKind::String).unwrap();
         assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, s5));
+
+        // Null string (no \0 termiator). This is distinct from the empty
+        // string (which is encoded as a single null terminator character).
+        // Note that once decoded, a null and an empty string will have the
+        // same representation, which is a Rust 'String' with length 0, but
+        // this test ensures that we decode the null string correctly.
+        //
+        // 4 bytes length
+        message.clear();
+        assert!(message.write_arg(Arg::Uint(0)).is_ok());
+        assert_eq!(4, message.bytes().len());
+        message.rewind();
+        let arg = message.read_arg(ArgKind::String).unwrap();
+        assert_matches!(arg, Arg::String(ref s) => assert_eq!(s, ""));
     }
 
     #[test]
