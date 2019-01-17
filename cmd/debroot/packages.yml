@@ -9,4 +9,24 @@ packages:
   - package: libc6-dev
   - package: libgcc-4.9-dev
   - package: libgcc1
+  - package: libgl1-mesa-dev
+  - package: libgl1-mesa-glx
+  - package: libglapi-mesa
+  - package: libx11-6
+  - package: libx11-dev
+  - package: libxcursor1
+  - package: libxcursor-dev
+  - package: libxrandr2
+  - package: libxrandr-dev
+  - package: libxrender1
+  - package: libxrender-dev
+  - package: libxinerama1
+  - package: libxinerama-dev
   - package: linux-libc-dev
+  - package: mesa-common-dev
+  - package: x11proto-core-dev
+  - package: x11proto-gl-dev
+  - package: x11proto-input-dev
+  - package: x11proto-kb-dev
+  - package: x11proto-randr-dev
+  - package: x11proto-render-dev

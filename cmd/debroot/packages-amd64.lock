@@ -1,5 +1,5 @@
-hash: 6a5cfff67301c2b5fc62305d798be8b511ce875cec717186839f010647865acd
-updated: 2018-11-18T16:36:29.512871417-08:00
+hash: 369c7ba0ff758f0199c2eeca8e730161bb38881ed43806d7791393fa6d6a2aba
+updated: 2019-01-17T20:05:01.055378751-08:00
 packages:
 - package: libc6
   version: 2.19-18+deb8u10
@@ -17,7 +17,87 @@ packages:
   version: 1:4.9.2-10+deb8u1
   filename: pool/main/g/gcc-4.9/libgcc1_4.9.2-10+deb8u1_amd64.deb
   hash: 3101d5dc171fab3b4601bc3282bbc69f0fb9cfd1e1761389e1e6d2590e384623
+- package: libgl1-mesa-dev
+  version: 10.3.2-1+deb8u1
+  filename: pool/main/m/mesa/libgl1-mesa-dev_10.3.2-1+deb8u1_amd64.deb
+  hash: b790d56135725193fc38216d4c6017003209d23e4250147882f075b5622e5e06
+- package: libgl1-mesa-glx
+  version: 10.3.2-1+deb8u1
+  filename: pool/main/m/mesa/libgl1-mesa-glx_10.3.2-1+deb8u1_amd64.deb
+  hash: de91fad0ffb35ba497ec146ccfa261df79dced33ffc6f9e229435dadeac49e64
+- package: libglapi-mesa
+  version: 10.3.2-1+deb8u1
+  filename: pool/main/m/mesa/libglapi-mesa_10.3.2-1+deb8u1_amd64.deb
+  hash: 8f77452524501072c09676bd1acf4b71d864d7d2a18fa8158aa5a5cb0bc3ade3
+- package: libx11-6
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-6_1.6.2-3+deb8u1_amd64.deb
+  hash: 380aa38372e949f74b57e962146626aae847850ed4f1fcb83784086f239d50c3
+- package: libx11-dev
+  version: 2:1.6.2-3+deb8u1
+  filename: pool/main/libx/libx11/libx11-dev_1.6.2-3+deb8u1_amd64.deb
+  hash: cd141e5c95d7b5f05df08a8e66abbbdb9a2a7213f9f4354b862925fac6106334
+- package: libxcursor-dev
+  version: 1:1.1.14-1+deb8u1
+  filename: pool/main/libx/libxcursor/libxcursor-dev_1.1.14-1+deb8u1_amd64.deb
+  hash: 101d83f1368cef54594100b849843df0d1952b0155b707f2256914d4e2d9debc
+- package: libxcursor1
+  version: 1:1.1.14-1+deb8u1
+  filename: pool/main/libx/libxcursor/libxcursor1_1.1.14-1+deb8u1_amd64.deb
+  hash: 31c05ccd419d5c255643e3d21c871204e154a06af25300c2bd2b721989d038f0
+- package: libxinerama-dev
+  version: 2:1.1.3-1+b1
+  filename: pool/main/libx/libxinerama/libxinerama-dev_1.1.3-1+b1_amd64.deb
+  hash: 0e2504bbe3501aae376691e2519336533309c8a97715f8a2b060cdcd6abce15f
+- package: libxinerama1
+  version: 2:1.1.3-1+b1
+  filename: pool/main/libx/libxinerama/libxinerama1_1.1.3-1+b1_amd64.deb
+  hash: 3668c1178ac649879338192759e79879e0f5797764b448dcac6aed4b24ef495b
+- package: libxrandr-dev
+  version: 2:1.4.2-1+deb8u1
+  filename: pool/main/libx/libxrandr/libxrandr-dev_1.4.2-1+deb8u1_amd64.deb
+  hash: d64ac2abe410fe6e25c6de2b90fd2a65dbfdf027c117a574714a0a60c019738f
+- package: libxrandr2
+  version: 2:1.4.2-1+deb8u1
+  filename: pool/main/libx/libxrandr/libxrandr2_1.4.2-1+deb8u1_amd64.deb
+  hash: e59996ac0e993331799aa7bc768f7edd7b0baec0fafdbeebeef658834ba96b63
+- package: libxrender-dev
+  version: 1:0.9.8-1+b1
+  filename: pool/main/libx/libxrender/libxrender-dev_0.9.8-1+b1_amd64.deb
+  hash: d17bd9a32eaecdd75d465d38bfc6318aa00e92fa5289ed36a8853f94feb18cbe
+- package: libxrender1
+  version: 1:0.9.8-1+b1
+  filename: pool/main/libx/libxrender/libxrender1_0.9.8-1+b1_amd64.deb
+  hash: 8980934c84c0ebbca4158023d91ced3ddbfa028a2be25959ff4566b37eceb8f4
 - package: linux-libc-dev
   version: 3.16.51-3
   filename: pool/main/l/linux/linux-libc-dev_3.16.51-3_amd64.deb
   hash: 8cdc63378b6dfe8995f40cd6f04701e89dbca588e9a9c6fbbe524d1db4cb4f08
+- package: mesa-common-dev
+  version: 10.3.2-1+deb8u1
+  filename: pool/main/m/mesa/mesa-common-dev_10.3.2-1+deb8u1_amd64.deb
+  hash: 6e617bfdbe9b87a82981b33d2be0963d3cba28160565658420859d84d07ef7a0
+- package: x11proto-core-dev
+  version: 7.0.26-1
+  filename: pool/main/x/x11proto-core/x11proto-core-dev_7.0.26-1_all.deb
+  hash: 9d60c962746bf2d1b1eb69e872a57eb21e13b341329ca592fd8eca527bab1df6
+- package: x11proto-gl-dev
+  version: 1.4.17-1
+  filename: pool/main/x/x11proto-gl/x11proto-gl-dev_1.4.17-1_all.deb
+  hash: 6ce92444e2fda684d5071667adb776152291f940696e547d73022d5ed66d3f10
+- package: x11proto-input-dev
+  version: 2.3.1-1
+  filename: pool/main/x/x11proto-input/x11proto-input-dev_2.3.1-1_all.deb
+  hash: a61a10b34cb0ffac6a2603971be1afd4908ed2830b6a1c554e74ac3321bb1e35
+- package: x11proto-kb-dev
+  version: 1.0.6-2
+  filename: pool/main/x/x11proto-kb/x11proto-kb-dev_1.0.6-2_all.deb
+  hash: b7ff8eceb9f05eb470700807c73fdae88f5f9f8b8fbef869029882264dbebd81
+- package: x11proto-randr-dev
+  version: 1.4.0-2
+  filename: pool/main/x/x11proto-randr/x11proto-randr-dev_1.4.0-2_all.deb
+  hash: 3d49d2e205da5d2ca4cdca8d5782e47da5c11ad762c046ffb6173beb5f0d837e
+- package: x11proto-render-dev
+  version: 2:0.11.1-2
+  filename: pool/main/x/x11proto-render/x11proto-render-dev_0.11.1-2_all.deb
+  hash: 606d63fab57421afe305e4866edb1948e4f9090409d6f63199838ac269d8cfba
