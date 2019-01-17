@@ -109,14 +109,18 @@ mod tests {
         let mut new_phy_stream = watch_phy_devices().expect("watch_phy_devices() failed");
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
         let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
-        let new_phy = exec.run_singlethreaded(
-            new_phy_stream.next().on_timeout(2.seconds().after_now(),
-                || panic!("Didn't get a new phy in time"))
+        for _ in 0..10 { // 5 is more than enough even for Toulouse but let's be generous
+            let new_phy = exec.run_singlethreaded(
+                new_phy_stream.next().on_timeout(2.seconds().after_now(),
+                                                 || panic!("No more phys"))
             )
-            .expect("new_phy_stream ended without yielding a phy")
-            .expect("new_phy_stream returned an error");
-        let query_resp = exec.run_singlethreaded(new_phy.proxy.query()).expect("phy query failed");
-        assert_eq!(*b"wtchph", query_resp.info.hw_mac_address);
+                .expect("new_phy_stream ended without yielding a phy")
+                .expect("new_phy_stream returned an error");
+            let query_resp = exec.run_singlethreaded(new_phy.proxy.query())
+                .expect("phy query failed");
+            if b"wtchph" == &query_resp.info.hw_mac_address { return; }
+        }
+        panic!("Did not get the phy we are looking for");
     }
 
     fn create_wlantap_config(mac_addr: [u8; 6]) -> fidl_wlantap::WlantapPhyConfig {
