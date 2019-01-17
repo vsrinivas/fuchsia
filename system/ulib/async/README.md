@@ -31,10 +31,11 @@ and structures declared in the following headers:
     - [async/cpp/wait.h](include/lib/async/cpp/wait.h)
 
 - `libasync-default.so` provides functions for getting or setting a thread-local
-default asynchronous dispatcher as declared in [async/default.h](include/lib/async/default.h).
+default asynchronous dispatcher as declared in
+[async/default.h](include/lib/async/default.h).
 
-See also [libasync-loop.a](../async-loop/README.md) which provides a general-purpose
-implementation of `async_dispatcher_t`.
+See also [libasync-loop.a](../async-loop/README.md) which provides a
+general-purpose implementation of `async_dispatcher_t`.
 
 ## Using the asynchronous dispatcher
 
@@ -119,7 +120,7 @@ zx_status_t ebind(async_exception_handler_t* handler,
     zx_status_t status = async_bind_exception_port(async, exception);
     if (status == ZX_OK) {
         *out_exception = exception;
-    } else }
+    } else {
         free(exception);
     }
     return status;
@@ -223,17 +224,20 @@ zx_status_t send(const zx_packet_user_t* data) {
 
 ## The default async dispatcher
 
-As a client of the async dispatcher, where should you get your `async_dispatcher_t*` from?
+As a client of the async dispatcher, where should you get your
+`async_dispatcher_t*` from?
 
-The ideal answer is for the `async_dispatcher_t*` to be passed into your code when it is
-initialized.  However sometimes this becomes burdensome or isn't practical.
+The ideal answer is for the `async_dispatcher_t*` to be passed into your code
+when it is initialized.  However sometimes this becomes burdensome or isn't
+practical.
 
 For this reason, the `libasync-default.so` shared library provides functions
 for getting or setting a thread-local default `async_dispatcher_t*` using
 `async_get_default_dispatcher()` or `async_set_default_dispatcher()`.
 
-This makes it easy to retrieve the `async_dispatcher_t*` from the ambient environment
-by calling `async_get_default_dispatcher()`, which is used by many libraries.
+This makes it easy to retrieve the `async_dispatcher_t*` from the ambient
+environment by calling `async_get_default_dispatcher()`, which is used by many
+libraries.
 
 Message loop implementations should register themselves as the default
 dispatcher any threads they service.
