@@ -100,10 +100,8 @@ http_archive(
   path = "<FUCHSIA_SDK_URL>",
 )
 
-load("@fuchsia_sdk//build_defs:crosstool.bzl", "install_fuchsia_crosstool")
-install_fuchsia_crosstool(
-  name = "fuchsia_crosstool"
-)
+load("@fuchsia_sdk//build_defs:fuchsia_setup.bzl", "fuchsia_setup")
+fuchsia_setup(with_toolchain = True)
 ```
 
 This adds the Fuchsia SDK to the workspace and sets up the necessary toolchains
@@ -117,7 +115,7 @@ build:fuchsia --cpu=x86_64
 build:fuchsia --host_crosstool_top=@bazel_tools//tools/cpp:toolchain
 ```
 
-Targets can then be built for Fuschsia with:
+Targets can then be built for Fuchsia with:
 
 ```
 $ bazel build --config=fuchsia //...
@@ -133,6 +131,9 @@ http_archive(
   name = "fuchsia_sdk",
   path = "<FUCHSIA_SDK_URL>",
 )
+
+load("@fuchsia_sdk//build_defs:fuchsia_setup.bzl", "fuchsia_setup")
+fuchsia_setup(with_toolchain = False)
 
 http_archive(
   name = "io_bazel_rules_dart",
