@@ -30,6 +30,14 @@
 
 namespace {
 
+// Using twice as many blocks and slices of half-size, we have just as much space, but we require
+// resizing to fill our filesystem.
+const test_disk_t kGrowableTestDisk = {
+    .block_count = TEST_BLOCK_COUNT_DEFAULT * 2,
+    .block_size = TEST_BLOCK_SIZE_DEFAULT,
+    .slice_size = TEST_FVM_SLICE_SIZE_DEFAULT / 2,
+};
+
 bool QueryInfo(fuchsia_io_FilesystemInfo* info) {
     BEGIN_HELPER;
     fbl::unique_fd fd(open(kMountPath, O_RDONLY | O_DIRECTORY));
@@ -186,11 +194,13 @@ bool TestMetrics() {
     END_TEST;
 }
 
-bool GetUsedBlocks(uint32_t* used_blocks) {
+bool GetFreeBlocks(uint32_t* out_free_blocks) {
     BEGIN_HELPER;
     fuchsia_io_FilesystemInfo info;
     ASSERT_TRUE(QueryInfo(&info));
-    *used_blocks = static_cast<uint32_t>((info.total_bytes - info.used_bytes) / info.block_size);
+    uint64_t total_bytes = info.total_bytes + info.free_shared_pool_bytes;
+    uint64_t used_bytes = info.used_bytes;
+    *out_free_blocks = static_cast<uint32_t>((total_bytes - used_bytes) / info.block_size);
     END_HELPER;
 }
 
@@ -203,7 +213,7 @@ bool FillPartition(int fd, uint32_t max_remaining_blocks, uint32_t* actual_remai
     uint32_t free_blocks;
 
     while (true) {
-        ASSERT_TRUE(GetUsedBlocks(&free_blocks));
+        ASSERT_TRUE(GetFreeBlocks(&free_blocks));
         if (free_blocks <= max_remaining_blocks) {
             break;
         }
@@ -290,7 +300,7 @@ bool TestFullOperations() {
     }
 
     // Make sure we now have only 1 block remaining.
-    ASSERT_TRUE(GetUsedBlocks(&free_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&free_blocks));
     ASSERT_EQ(free_blocks, 1);
 
     // We should now have exactly 1 free block remaining. Attempt to write into the indirect
@@ -324,7 +334,7 @@ bool TestFullOperations() {
     ASSERT_TRUE(sml_fd);
 
     // Make sure we now have at least kMinfsDirect + 1 blocks remaining.
-    ASSERT_TRUE(GetUsedBlocks(&free_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&free_blocks));
     ASSERT_GE(free_blocks, minfs::kMinfsDirect + 1);
 
     // We have some room now, so create a new directory.
@@ -361,7 +371,7 @@ bool TestFullOperations() {
     }
 
     // Ensure that there is now exactly one block remaining.
-    ASSERT_TRUE(GetUsedBlocks(&actual_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&actual_blocks));
     ASSERT_EQ(free_blocks, actual_blocks);
 
     // Now, attempt to add one more file to the directory we created. Since it will need to
@@ -409,7 +419,7 @@ bool TestFullOperations() {
     }
 
     // Ensure that there is now exactly one block remaining.
-    ASSERT_TRUE(GetUsedBlocks(&actual_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&actual_blocks));
     ASSERT_EQ(free_blocks, actual_blocks);
 
     // Now, attempt to rename one of our original files under the new directory.
@@ -440,7 +450,7 @@ bool TestUnlinkFail(void) {
     }
 
     uint32_t original_blocks;
-    ASSERT_TRUE(GetUsedBlocks(&original_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&original_blocks));
 
     uint32_t fd_count = 100;
     fbl::unique_fd fds[fd_count];
@@ -473,7 +483,7 @@ bool TestUnlinkFail(void) {
 
     // Check that the number of Minfs free blocks has decreased.
     uint32_t current_blocks;
-    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&current_blocks));
     ASSERT_LT(current_blocks, original_blocks);
 
     // Put the ramdisk to sleep and close all the fds. This will cause file purge to fail,
@@ -491,7 +501,7 @@ bool TestUnlinkFail(void) {
 
     // Writeback should have failed.
     // However, the in-memory state has been updated correctly.
-    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&current_blocks));
     ASSERT_EQ(current_blocks, original_blocks);
 
     // Remount Minfs, which should cause leftover unlinked files to be removed.
@@ -499,7 +509,7 @@ bool TestUnlinkFail(void) {
     ASSERT_TRUE(check_remount());
 
     // Check that the block count has been reverted to the value before any files were added.
-    ASSERT_TRUE(GetUsedBlocks(&current_blocks));
+    ASSERT_TRUE(GetFreeBlocks(&current_blocks));
     ASSERT_EQ(current_blocks, original_blocks);
 
     END_TEST;
@@ -522,3 +532,8 @@ RUN_MINFS_TESTS_FVM(FsMinfsFvmTests,
     RUN_TEST_MEDIUM(TestMetrics)
     RUN_TEST_MEDIUM(TestUnlinkFail)
 )
+
+// Running with an isolated FVM to avoid interactions with the other integration tests.
+FS_TEST_CASE(FsMinfsFullFvmTests, kGrowableTestDisk,
+    RUN_TEST_LARGE(TestFullOperations),
+FS_TEST_FVM, minfs, 1)
