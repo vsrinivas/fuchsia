@@ -183,6 +183,7 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   info.width = kWidth;
   info.height = kHeight;
   info.usage = kUsage;
+  info.tiling = vk::ImageTiling::eLinear;
 
   // Allocate some images, and confirm that the allocator is tracking the bytes
   // allocated.
@@ -234,6 +235,7 @@ void TestAllocationOfImages(GpuAllocator* allocator) {
   small_image.width = 1;
   small_image.height = 1;
   small_image.usage = kUsage;
+  info.tiling = vk::ImageTiling::eLinear;
 
   auto image_dedicated1 = allocator->AllocateImage(nullptr, small_image, &ptr);
   EXPECT_EQ(0u, ptr->offset());
