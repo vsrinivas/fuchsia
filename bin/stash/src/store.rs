@@ -187,11 +187,11 @@ impl Store {
 
 pub fn value_to_type(v: &Value) -> ValueType {
     match v {
-        Value::Intval(_) => ValueType::Int,
-        Value::Floatval(_) => ValueType::Float,
+        Value::Intval(_) => ValueType::IntVal,
+        Value::Floatval(_) => ValueType::FloatVal,
         Value::Boolval(_) => ValueType::BoolVal,
-        Value::Stringval(_) => ValueType::String,
-        Value::Bytesval(_) => ValueType::Bytes,
+        Value::Stringval(_) => ValueType::StringVal,
+        Value::Bytesval(_) => ValueType::BytesVal,
     }
 }
 

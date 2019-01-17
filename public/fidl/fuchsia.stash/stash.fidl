@@ -11,11 +11,11 @@ const uint64 MAX_KEY_SIZE = 256;
 
 // ValueType encodes a type for a field in the store
 enum ValueType: uint8 {
-    INT      = 1;
-    FLOAT    = 2;
-    BOOL_VAL = 3;
-    STRING   = 4;
-    BYTES    = 5;
+    INT_VAL    = 1;
+    FLOAT_VAL  = 2;
+    BOOL_VAL   = 3;
+    STRING_VAL = 4;
+    BYTES_VAL  = 5;
 };
 
 // ListItem is returned when a series of keys are being listed.
