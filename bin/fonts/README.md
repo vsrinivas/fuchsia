@@ -13,13 +13,9 @@ for their update instructions.
 ## Adding new fonts.
 To add new fonts:
 
-  1. Create a new directory under `third_party`, e.g. `third_party/fontname`.
-  2. Place all font files in the new directory along with LICENSE and README files.
-  3. Run `./upload.sh third_party/fontname` to package and upload the archive to
-     Google Storage. The upload step will fail if you don't have upload
-     permission for the `fuchsia-build` storage bucket, in which case you will
-     need to file infra (INTK-) ticket to be added to the ACL.
-  4. Run `git add third_party/fontname.stamp` to add the `.stamp` file created
-     created by `upload.sh`.
+  1. Place all font files in the new directory along with LICENSE and README files.
+  2. Add the relevant repository and font files to the recipe [here](https://fuchsia.googlesource.com/infra/recipes/+/master/recipes/fonts.py).
+  3. Update the Fonts section of the CIPD ensure file [here](https://fuchsia.googlesource.com/garnet/+/master/tools/cipd.ensure) with the new git_revisions (which can be retrieved from [here](https://chrome-infra-packages.appspot.com/p/fuchsia/third_party/fonts/+/)).
+  4. Trigger the bot to run with the changes from the LUCI scheduler [here](https://luci-scheduler.appspot.com/jobs/fuchsia/fonts).
   5. Add the new font files in `BUILD.gn`.
   6. Add the new fonts in `manifest.json`.

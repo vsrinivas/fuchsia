@@ -190,8 +190,8 @@ package("font_provider_tests") {
   # implemented it will be possible to customize set of fonts on higher levels,
   # which will allow to include these fonts in the default font package.
   fonts = [
-    "notosanscjk/NotoSansCJK-Regular.ttc",
-    "notoserifcjk/NotoSerifCJK-Regular.ttc",
+    "noto-cjk/NotoSansCJK-Regular.ttc",
+    "noto-cjk/NotoSerifCJK-Regular.ttc",
   ]
   foreach (font, fonts) {
     resources += [
