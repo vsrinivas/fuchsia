@@ -25,6 +25,16 @@ const (
 	TestDepsSuffix = ".spec.data"
 )
 
+// OS is an operating system that a test may run in.
+type OS string
+
+// Acceptable OS constants.
+const (
+	Linux   OS = "linux"
+	Fuchsia OS = "fuchsia"
+	Mac     OS = "mac"
+)
+
 // TestSpec is the specification for a single test and the environments it
 // should be executed in.
 type TestSpec struct {
@@ -48,7 +58,7 @@ type Test struct {
 	Location string `json:"location"`
 
 	// OS is the operating system in which this test must be executed.
-	OS string `json:"os"`
+	OS OS `json:"os"`
 
 	// Command is the command line to run to execute this test.
 	Command []string `json:"command,omitempty"`

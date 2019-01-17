@@ -124,11 +124,11 @@ func execute(tests []testsharder.Test, recorder TestRecorder, devCtx *botanist.D
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
-		case "fuchsia":
+		case testsharder.Fuchsia:
 			fuchsia = append(fuchsia, test)
-		case "linux":
+		case testsharder.Linux:
 			linux = append(linux, test)
-		case "mac":
+		case testsharder.Mac:
 			mac = append(mac, test)
 		default:
 			unknown = append(unknown, test)
