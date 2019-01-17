@@ -55,6 +55,10 @@ class MeshMlme : public Mlme {
     bool ShouldDeliverData(const common::ParsedDataFrameHeader& header);
     void DeliverData(const common::ParsedMeshDataHeader& header, Span<uint8_t> wlan_frame,
                      size_t payload_offset);
+    std::optional<common::MacAddr> GetNextHopForForwarding(
+        const common::ParsedMeshDataHeader& header);
+    void ForwardData(const common::ParsedMeshDataHeader& header, fbl::unique_ptr<Packet> packet,
+                     const common::MacAddr& next_hop);
 
     MacHeaderWriter CreateMacHeaderWriter();
 

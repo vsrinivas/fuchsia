@@ -412,7 +412,9 @@ void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
 
     if (ShouldDeliverData(header->mac_header)) { DeliverData(*header, *packet, r.ReadBytes()); }
 
-    // TODO(gbonik): forward data
+    if (auto next_hop = GetNextHopForForwarding(*header)) {
+        ForwardData(*header, std::move(packet), *next_hop);
+    }
 }
 
 bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {
@@ -452,6 +454,37 @@ void MeshMlme::DeliverData(const common::ParsedMeshDataHeader& header, Span<uint
         errorf("[mesh-mlme] Failed to deliver an ethernet frame: %s\n",
                zx_status_get_string(status));
     }
+}
+
+std::optional<common::MacAddr> MeshMlme::GetNextHopForForwarding(
+    const common::ParsedMeshDataHeader& header) {
+    if (header.mesh_ctrl->ttl <= 1) { return {}; }
+
+    if (header.mac_header.addr4 != nullptr) {
+        // Individually addressed frame: addr3 is the mesh destination
+        if (header.mac_header.fixed->addr3 == self_addr()) { return {}; }
+        auto path = path_table_.GetPath(header.mac_header.fixed->addr3);
+        if (path == nullptr) { return {}; }
+        return {path->next_hop};
+    } else {
+        // Group-addressed frame: check that addr1 is actually a group address
+        if (!header.mac_header.fixed->addr1.IsGroupAddr()) { return {}; }
+        return {header.mac_header.fixed->addr1};
+    }
+}
+
+void MeshMlme::ForwardData(const common::ParsedMeshDataHeader& header,
+                           fbl::unique_ptr<Packet> packet, const common::MacAddr& next_hop) {
+    // const_cast is safe because we have a mutable pointer to data in `packet`
+    auto mac_header = const_cast<DataFrameHeader*>(header.mac_header.fixed);
+    mac_header->addr1 = next_hop;
+    mac_header->addr2 = self_addr();
+    SetSeqNo(mac_header, &seq_);
+
+    auto mesh_ctrl = const_cast<MeshControl*>(header.mesh_ctrl);
+    mesh_ctrl->ttl -= 1;
+
+    SendDataFrame(std::move(packet));
 }
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {

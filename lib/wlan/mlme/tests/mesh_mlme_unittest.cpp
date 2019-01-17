@@ -271,4 +271,90 @@ TEST(MeshMlme, DeliverDuplicateData) {
         }
     }
 }
+
+TEST(MeshMlme, DataForwarding) {
+    MockDevice device;
+    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
+    MeshMlme mlme(&device);
+    mlme.Init();
+    JoinMesh(&mlme);
+
+    // Receive a PREP to establish a path to 33:33:33:33:33:33 via 22:22:22:22:22:22
+    zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+        // clang-format off
+        // Mgmt header
+        0xd0, 0x00, 0x00, 0x00, // fc, duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr3
+        0x10, 0x00, // seq ctl
+        // Action
+        13, // category (mesh)
+        1, // action = HWMP mesh path selection
+        131, 31, // PREP
+        0x00, 0x01, 0x20, // flags, hop count, elem ttl
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // target addr
+        0x07, 0x00, 0x00, 0x00, // target hwmp seqno
+        0x00, 0x01, 0x00, 0x00, // lifetime
+        150, 0x0, 0x0, 0x0, // metric
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // originator addr = self
+        0x02, 0x00, 0x00, 0x00, // originator hwmp seqno
+        // clang-format on
+    }));
+    EXPECT_EQ(ZX_OK, status);
+
+    // Receive a data frame originating from 55:55:55:55:55:55 and targeted at 33:33:33:33:33:33,
+    // sent to us (11:11:11:11:11:11) by the previous hop (44:44:44:44:44:44)
+    status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
+        // clang-format off
+        // Data header
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+        0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3: mesh da
+        0x00, 0x00, // seq ctl
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr4: mesh sa
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, 0x20, // flags, ttl
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+        // clang-format on
+    }));
+    EXPECT_EQ(ZX_OK, status);
+
+    auto packets = device.GetWlanPackets();
+    ASSERT_EQ(1u, packets.size());
+
+    const uint8_t expected[] = {
+        // clang-format off
+        // Data header
+        0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+        0x00, 0x00, // duration
+        0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr1: next hop to destination
+        0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr2
+        0x33, 0x33, 0x33, 0x33, 0x33, 0x33, // addr3: mesh da
+        0x10, 0x00, // seq ctl: should be filled by us
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr4: mesh sa
+        0x00, 0x01, // qos ctl: mesh control present
+        // Mesh control
+        0x00, 0x1f, // flags, ttl (decreased by one)
+        0xaa, 0xbb, 0xcc, 0xdd, // seq
+        // LLC header
+        0xaa, 0xaa, 0x03, // dsap ssap ctrl
+        0x00, 0x00, 0x00, // oui
+        0x12, 0x34, // protocol id
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+        // clang-format on
+    };
+    EXPECT_RANGES_EQ(expected, Span<const uint8_t>(*packets[0].pkt));
+}
+
 }  // namespace wlan
