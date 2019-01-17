@@ -274,54 +274,6 @@ static const struct brcmf_tlv* brcmf_parse_tlvs(const void* buf, int buflen, uin
     return NULL;
 }
 
-/* Is any of the tlvs the expected entry? If
- * not update the tlvs buffer pointer/length.
- */
-static bool brcmf_tlv_has_ie(const uint8_t* ie, const uint8_t** tlvs, uint32_t* tlvs_len,
-                             const uint8_t* oui, uint32_t oui_len, uint8_t type) {
-    /* If the contents match the OUI and the type */
-    if (ie[TLV_LEN_OFF] >= oui_len + 1 && !memcmp(&ie[TLV_BODY_OFF], oui, oui_len) &&
-            type == ie[TLV_BODY_OFF + oui_len]) {
-        return true;
-    }
-
-    if (tlvs == NULL) {
-        return false;
-    }
-    /* point to the next ie */
-    ie += ie[TLV_LEN_OFF] + TLV_HDR_LEN;
-    /* calculate the length of the rest of the buffer */
-    *tlvs_len -= (int)(ie - *tlvs);
-    /* update the pointer to the start of the buffer */
-    *tlvs = ie;
-
-    return false;
-}
-
-static struct brcmf_vs_tlv* brcmf_find_wpaie(const uint8_t* parse, uint32_t len) {
-    const struct brcmf_tlv* ie;
-
-    while ((ie = brcmf_parse_tlvs(parse, len, WLAN_EID_VENDOR_SPECIFIC))) {
-        if (brcmf_tlv_has_ie((const uint8_t*)ie, &parse, &len, (const uint8_t*)WPA_OUI, TLV_OUI_LEN,
-                             WPA_OUI_TYPE)) {
-            return (struct brcmf_vs_tlv*)ie;
-        }
-    }
-    return NULL;
-}
-
-struct brcmf_vs_tlv* brcmf_find_wpsie(const uint8_t* parse, uint32_t len) {
-    const struct brcmf_tlv* ie;
-
-    while ((ie = brcmf_parse_tlvs(parse, len, WLAN_EID_VENDOR_SPECIFIC))) {
-        if (brcmf_tlv_has_ie((uint8_t*)ie, &parse, &len, (const uint8_t*)WPA_OUI, TLV_OUI_LEN,
-                             WPS_OUI_TYPE)) {
-            return (struct brcmf_vs_tlv*)ie;
-        }
-    }
-    return NULL;
-}
-
 static zx_status_t brcmf_vif_change_validate(struct brcmf_cfg80211_info* cfg,
                                              struct brcmf_cfg80211_vif* vif,
                                              uint16_t new_type) {
@@ -1938,39 +1890,6 @@ static zx_status_t brcmf_cfg80211_config_default_mgmt_key(struct wiphy* wiphy,
     brcmf_dbg(INFO, "Not supported\n");
 
     return ZX_ERR_NOT_SUPPORTED;
-}
-
-static void brcmf_cfg80211_reconfigure_wep(struct brcmf_if* ifp) {
-    zx_status_t err;
-    uint8_t key_idx;
-    struct brcmf_wsec_key* key;
-    int32_t wsec;
-
-    for (key_idx = 0; key_idx < BRCMF_MAX_DEFAULT_KEYS; key_idx++) {
-        key = &ifp->vif->profile.key[key_idx];
-        if ((key->algo == CRYPTO_ALGO_WEP1) || (key->algo == CRYPTO_ALGO_WEP128)) {
-            break;
-        }
-    }
-    if (key_idx == BRCMF_MAX_DEFAULT_KEYS) {
-        return;
-    }
-
-    err = send_key_to_dongle(ifp, key);
-    if (err != ZX_OK) {
-        brcmf_err("Setting WEP key failed (%d)\n", err);
-        return;
-    }
-    err = brcmf_fil_bsscfg_int_get(ifp, "wsec", (uint32_t*)&wsec);
-    if (err != ZX_OK) {
-        brcmf_err("get wsec error (%d)\n", err);
-        return;
-    }
-    wsec |= WEP_ENABLED;
-    err = brcmf_fil_bsscfg_int_set(ifp, "wsec", (uint32_t)wsec);
-    if (err != ZX_OK) {
-        brcmf_err("set wsec error (%d)\n", err);
-    }
 }
 
 static void brcmf_convert_sta_flags(uint32_t fw_sta_flags, struct station_info* si) {
@@ -3778,204 +3697,116 @@ static zx_status_t brcmf_config_ap_mgmt_ie(struct brcmf_cfg80211_vif* vif,
     return err;
 }
 
-static zx_status_t brcmf_cfg80211_start_ap(struct wiphy* wiphy, struct net_device* ndev,
-                                           struct cfg80211_ap_settings* settings) {
-    int32_t ie_offset;
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
+// Returns an MLME result code (WLAN_START_RESULT_*)
+static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req_t* req) {
+    if (req->bss_type != WLAN_BSS_TYPE_INFRASTRUCTURE) {
+        brcmf_err("Attempt to start AP in unsupported mode (%d)\n", req->bss_type);
+        return WLAN_START_RESULT_NOT_SUPPORTED;
+    }
+    brcmf_dbg(TRACE, "ssid: %*s  beacon period: %d  dtim_period: %d  channel: %d  rsne_len: %zd",
+              req->ssid.len, req->ssid.data, req->beacon_period, req->dtim_period, req->channel,
+              req->rsne_len);
+
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    const struct brcmf_tlv* ssid_ie;
-    const struct brcmf_tlv* country_ie;
+
+    if (ifp->vif->mbss) {
+        brcmf_err("Mesh role not yet supported\n");
+        return WLAN_START_RESULT_NOT_SUPPORTED;
+    }
+
+    struct brcmf_cfg80211_info* cfg = ifp->drvr->config;
+    zx_status_t status;
+
     struct brcmf_ssid_le ssid_le;
-    int32_t err = ZX_ERR_WRONG_TYPE;
-    const struct brcmf_tlv* rsn_ie;
-    const struct brcmf_vs_tlv* wpa_ie;
-    struct brcmf_join_params join_params;
-    uint16_t dev_role;
-    uint16_t chanspec = channel_to_chanspec(&cfg->d11inf, settings->chan);
-    bool mbss;
-    int is_11d;
-    bool supports_11d;
-
-    brcmf_dbg(TRACE, "primary=%d, cbw=%d, secondary=%d, beacon_interval=%d, dtim_period=%d,\n",
-              settings->chan->primary, settings->chan->cbw, settings->chan->secondary80,
-              settings->beacon_interval, settings->dtim_period);
-    brcmf_dbg(TRACE, "ssid=%s(%zu), auth_type=%d, inactivity_timeout=%d\n", settings->ssid,
-              settings->ssid_len, settings->auth_type, settings->inactivity_timeout);
-    dev_role = ifp->vif->wdev.iftype;
-    mbss = ifp->vif->mbss;
-
-    /* store current 11d setting */
-    if (brcmf_fil_cmd_int_get(ifp, BRCMF_C_GET_REGULATORY, (uint32_t*)&ifp->vif->is_11d) != ZX_OK) {
-        is_11d = supports_11d = false;
-    } else {
-        country_ie = brcmf_parse_tlvs((uint8_t*)settings->beacon.tail, settings->beacon.tail_len,
-                                      WLAN_EID_COUNTRY);
-        is_11d = country_ie ? 1 : 0;
-        supports_11d = true;
-    }
-
     memset(&ssid_le, 0, sizeof(ssid_le));
-    if (settings->ssid == NULL || settings->ssid_len == 0) {
-        ie_offset = DOT11_MGMT_HDR_LEN + DOT11_BCN_PRB_FIXED_LEN;
-        ssid_ie = brcmf_parse_tlvs((uint8_t*)&settings->beacon.head[ie_offset],
-                                   settings->beacon.head_len - ie_offset, WLAN_EID_SSID);
-        if (!ssid_ie || ssid_ie->len > WLAN_MAX_SSID_LEN) {
-            return ZX_ERR_INVALID_ARGS;
-        }
+    memcpy(ssid_le.SSID, req->ssid.data, req->ssid.len);
+    ssid_le.SSID_len = req->ssid.len;
 
-        memcpy(ssid_le.SSID, ssid_ie->data, ssid_ie->len);
-        ssid_le.SSID_len = ssid_ie->len;
-        brcmf_dbg(TRACE, "SSID is (%s) in Head\n", ssid_le.SSID);
-    } else {
-        memcpy(ssid_le.SSID, settings->ssid, settings->ssid_len);
-        ssid_le.SSID_len = (uint32_t)settings->ssid_len;
-    }
+    brcmf_set_mpc(ifp, 0);
+    brcmf_configure_arp_nd_offload(ifp, false);
 
-    if (!mbss) {
-        brcmf_set_mpc(ifp, 0);
-        brcmf_configure_arp_nd_offload(ifp, false);
-    }
-
-    /* find the RSN_IE */
-    rsn_ie = brcmf_parse_tlvs((uint8_t*)settings->beacon.tail, settings->beacon.tail_len,
-                              WLAN_IE_TYPE_RSNE);
-
-    /* find the WPA_IE */
-    wpa_ie = brcmf_find_wpaie((uint8_t*)settings->beacon.tail, settings->beacon.tail_len);
-
-    if ((wpa_ie != NULL || rsn_ie != NULL)) {
-        brcmf_dbg(TRACE, "WPA(2) IE is found\n");
-        if (wpa_ie != NULL) {
-            /* WPA IE */
-            err = brcmf_configure_wpaie(ifp, wpa_ie, false);
-            if (err != ZX_OK) {
-                goto exit;
-            }
-        } else {
-            struct brcmf_vs_tlv* tmp_ie;
-
-            tmp_ie = (struct brcmf_vs_tlv*)rsn_ie;
-
-            /* RSN IE */
-            err = brcmf_configure_wpaie(ifp, tmp_ie, true);
-            if (err != ZX_OK) {
-                goto exit;
-            }
+    // Configure RSN IE
+    if (req->rsne_len != 0) {
+        struct brcmf_vs_tlv* tmp_ie = (struct brcmf_vs_tlv*)req->rsne;
+        status = brcmf_configure_wpaie(ifp, tmp_ie, true);
+        if (status != ZX_OK) {
+            brcmf_err("Failed to install RSNE\n");
+            goto fail;
         }
     } else {
-        brcmf_dbg(TRACE, "No WPA(2) IEs found\n");
         brcmf_configure_opensecurity(ifp);
     }
 
-    /* Parameters shared by all radio interfaces */
-    if (!mbss) {
-        if ((supports_11d) && (is_11d != ifp->vif->is_11d)) {
-            err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_REGULATORY, is_11d);
-            if (err != ZX_OK) {
-                brcmf_err("Regulatory Set Error, %d\n", err);
-                goto exit;
-            }
-        }
-        if (settings->beacon_interval) {
-            err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, settings->beacon_interval);
-            if (err != ZX_OK) {
-                brcmf_err("Beacon Interval Set Error, %d\n", err);
-                goto exit;
-            }
-        }
-        if (settings->dtim_period) {
-            err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_DTIMPRD, settings->dtim_period);
-            if (err != ZX_OK) {
-                brcmf_err("DTIM Interval Set Error, %d\n", err);
-                goto exit;
-            }
-        }
-
-        if ((dev_role == WLAN_MAC_ROLE_AP) &&
-                ((ifp->ifidx == 0) || !brcmf_feat_is_enabled(ifp, BRCMF_FEAT_RSDB))) {
-            err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
-            if (err != ZX_OK) {
-                brcmf_err("BRCMF_C_DOWN error %d\n", err);
-                goto exit;
-            }
-            brcmf_fil_iovar_int_set(ifp, "apsta", 0);
-        }
-
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1);
-        if (err != ZX_OK) {
-            brcmf_err("SET INFRA error %d\n", err);
-            goto exit;
-        }
-    } else if (WARN_ON(supports_11d && (is_11d != ifp->vif->is_11d))) {
-        /* Multiple-BSS should use same 11d configuration */
-        err = ZX_ERR_INVALID_ARGS;
-        goto exit;
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_BCNPRD, req->beacon_period);
+    if (status != ZX_OK) {
+        brcmf_err("Beacon Interval Set Error, %s\n", zx_status_get_string(status));
+        goto fail;
     }
 
-    /* Interface specific setup */
-    if (dev_role == WLAN_MAC_ROLE_AP) {
-        if ((brcmf_feat_is_enabled(ifp, BRCMF_FEAT_MBSS)) && (!mbss)) {
-            brcmf_fil_iovar_int_set(ifp, "mbss", 1);
-        }
-
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 1);
-        if (err != ZX_OK) {
-            brcmf_err("setting AP mode failed %d\n", err);
-            goto exit;
-        }
-        if (!mbss) {
-            /* Firmware 10.x requires setting channel after enabling
-             * AP and before bringing interface up.
-             */
-            err = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
-            if (err != ZX_OK) {
-                brcmf_err("Set Channel failed: chspec=%d, %d\n", chanspec, err);
-                goto exit;
-            }
-        }
-        err = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
-        if (err != ZX_OK) {
-            brcmf_err("BRCMF_C_UP error (%d)\n", err);
-            goto exit;
-        }
-        /* On DOWN the firmware removes the WEP keys, reconfigure
-         * them if they were set.
-         */
-        brcmf_cfg80211_reconfigure_wep(ifp);
-
-        memset(&join_params, 0, sizeof(join_params));
-        /* join parameters starts with ssid */
-        memcpy(&join_params.ssid_le, &ssid_le, sizeof(ssid_le));
-        /* create softap */
-        err = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
-        if (err != ZX_OK) {
-            brcmf_err("SET SSID error (%d)\n", err);
-            goto exit;
-        }
-
-        if (settings->hidden_ssid) {
-            err = brcmf_fil_iovar_int_set(ifp, "closednet", 1);
-            if (err != ZX_OK) {
-                brcmf_err("closednet error (%d)\n", err);
-                goto exit;
-            }
-        }
-
-        brcmf_dbg(TRACE, "AP mode configuration complete\n");
-    } else {
-        WARN_ON(1);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_DTIMPRD, req->dtim_period);
+    if (status != ZX_OK) {
+        brcmf_err("DTIM Interval Set Error, %s\n", zx_status_get_string(status));
+        goto fail;
     }
 
-    brcmf_config_ap_mgmt_ie(ifp->vif, &settings->beacon);
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_DOWN, 1);
+    if (status != ZX_OK) {
+        brcmf_err("BRCMF_C_DOWN error %s\n", zx_status_get_string(status));
+        goto fail;
+    }
+
+    // Disable simultaneous STA/AP operation, aka Real Simultaneous Dual Band (RSDB)
+    brcmf_fil_iovar_int_set(ifp, "apsta", 0);
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_INFRA, 1);
+    if (status != ZX_OK) {
+        brcmf_err("SET INFRA error %s\n", zx_status_get_string(status));
+        goto fail;
+    }
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_AP, 1);
+    if (status != ZX_OK) {
+        brcmf_err("setting AP mode failed %s\n", zx_status_get_string(status));
+        goto fail;
+    }
+
+    wlan_channel_t channel = {.primary = req->channel, .cbw = CBW20, .secondary80 = 0};
+    uint16_t chanspec = channel_to_chanspec(&cfg->d11inf, &channel);
+    status = brcmf_fil_iovar_int_set(ifp, "chanspec", chanspec);
+    if (status != ZX_OK) {
+        brcmf_err("Set Channel failed: chspec=%d, status=%s\n", chanspec,
+                  zx_status_get_string(status));
+        goto fail;
+    }
+
+    status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_UP, 1);
+    if (status != ZX_OK) {
+        brcmf_err("BRCMF_C_UP error (%s)\n", zx_status_get_string(status));
+        goto fail;
+    }
+
+    struct brcmf_join_params join_params;
+    memset(&join_params, 0, sizeof(join_params));
+    // join parameters starts with ssid
+    memcpy(&join_params.ssid_le, &ssid_le, sizeof(ssid_le));
+    // create softap
+    status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SET_SSID, &join_params, sizeof(join_params));
+    if (status != ZX_OK) {
+        brcmf_err("SET SSID error (%s)\n", zx_status_get_string(status));
+        goto fail;
+    }
+
+    brcmf_dbg(TRACE, "AP mode configuration complete\n");
+
     brcmf_set_bit_in_array(BRCMF_VIF_STATUS_AP_CREATED, &ifp->vif->sme_state);
     brcmf_net_setcarrier(ifp, true);
 
-exit:
-    if ((err != ZX_OK) && (!mbss)) {
-        brcmf_set_mpc(ifp, 1);
-        brcmf_configure_arp_nd_offload(ifp, true);
-    }
-    return err;
+    return WLAN_START_RESULT_SUCCESS;
+
+fail:
+    brcmf_set_mpc(ifp, 1);
+    brcmf_configure_arp_nd_offload(ifp, true);
+    return WLAN_START_RESULT_NOT_SUPPORTED;
 }
 
 static zx_status_t brcmf_cfg80211_stop_ap(struct wiphy* wiphy, struct net_device* ndev) {
@@ -4445,7 +4276,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .set_pmksa = brcmf_cfg80211_set_pmksa,
     .del_pmksa = brcmf_cfg80211_del_pmksa,
     .flush_pmksa = brcmf_cfg80211_flush_pmksa,
-    .start_ap = brcmf_cfg80211_start_ap,
     .stop_ap = brcmf_cfg80211_stop_ap,
     .change_beacon = brcmf_cfg80211_change_beacon,
     .del_station = brcmf_cfg80211_del_station,
@@ -4642,7 +4472,10 @@ void brcmf_hook_reset_req(void* ctx, wlanif_reset_req_t* req) {
 
 void brcmf_hook_start_req(void* ctx, wlanif_start_req_t* req) {
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+    struct net_device* ndev = ctx;
+    uint8_t result_code = brcmf_cfg80211_start_ap(ndev, req);
+    wlanif_start_confirm_t result = {.result_code = result_code};
+    ndev->if_callbacks->start_conf(ndev->if_callback_cookie, &result);
 }
 
 void brcmf_hook_stop_req(void* ctx, wlanif_stop_req_t* req) {
