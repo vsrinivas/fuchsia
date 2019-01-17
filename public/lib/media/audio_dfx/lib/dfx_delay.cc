@@ -19,7 +19,7 @@ namespace audio_dfx_test {
 
 // static -- called from static DfxBase::GetInfo; uses DfxDelay classwide consts
 bool DfxDelay::GetInfo(fuchsia_audio_dfx_description* dfx_desc) {
-  std::strcpy(dfx_desc->name, "Delay effect");
+  strlcpy(dfx_desc->name, "Delay effect", sizeof(dfx_desc->name));
   dfx_desc->num_controls = kNumControls;
   dfx_desc->incoming_channels = kNumChannelsIn;
   dfx_desc->outgoing_channels = kNumChannelsOut;
@@ -34,7 +34,8 @@ bool DfxDelay::GetControlInfo(
     return false;
   }
 
-  std::strcpy(device_fx_control_desc->name, "Delay (in frames)");
+  strlcpy(device_fx_control_desc->name, "Delay (in frames)",
+          sizeof(device_fx_control_desc->name));
   device_fx_control_desc->max_val = static_cast<float>(kMaxDelayFrames);
   device_fx_control_desc->min_val = static_cast<float>(kMinDelayFrames);
   device_fx_control_desc->initial_val = static_cast<float>(kInitialDelayFrames);
@@ -62,7 +63,8 @@ DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
   delay_buff_ =
       std::make_unique<float[]>((kMaxDelayFrames + frame_rate) * channels);
 
-  Reset();
+  delay_samples_ = kInitialDelayFrames * channels_in_;
+  ::memset(delay_buff_.get(), 0, delay_samples_ * sizeof(float));
 }
 
 // Returns FRAMES of delay. We cache SAMPLES for convenience, so convert back.

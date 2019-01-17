@@ -46,6 +46,7 @@ executable("test_bin") {
     "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
     "//garnet/public/lib/fxl",
     "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
   ]
 }
 
