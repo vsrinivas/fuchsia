@@ -6,6 +6,9 @@
 
 #include <utility>
 
+#include <fs/vfs.h>
+#include <zircon/device/vfs.h>
+
 namespace fs {
 
 PseudoFile::PseudoFile(ReadHandler read_handler, WriteHandler write_handler)

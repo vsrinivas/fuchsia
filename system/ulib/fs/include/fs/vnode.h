@@ -10,12 +10,14 @@
 #include <sys/types.h>
 
 #include <fbl/function.h>
+#include <fbl/intrusive_single_list.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
 #include <fbl/ref_counted_internal.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_piece.h>
+#include <fs/mount_channel.h>
 #include <fs/ref_counted.h>
-#include <fs/vfs.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/vfs.h>
 #include <zircon/assert.h>
@@ -32,6 +34,9 @@
 #endif // __Fuchsia__
 
 namespace fs {
+
+class Vfs;
+typedef struct vdircookie vdircookie_t;
 
 inline bool vfs_valid_name(fbl::StringPiece name) {
     return name.length() <= NAME_MAX &&
@@ -241,6 +246,26 @@ private:
     char* ptr_;
     size_t pos_;
     const size_t len_;
+};
+
+// Helper class to track outstanding operations associated to a
+// particular Vnode.
+class VnodeToken : public fbl::SinglyLinkedListable<std::unique_ptr<VnodeToken>> {
+public:
+    VnodeToken(zx_koid_t koid, fbl::RefPtr<Vnode> vnode) :
+        koid_(koid), vnode_(std::move(vnode)) {
+    }
+
+    zx_koid_t get_koid() const { return koid_; }
+    fbl::RefPtr<Vnode> get_vnode() const { return vnode_; }
+
+    // Trait implementation for fbl::HashTable
+    zx_koid_t GetKey() const { return koid_; }
+    static size_t GetHash(zx_koid_t koid) { return koid; }
+
+private:
+    zx_koid_t koid_;
+    fbl::RefPtr<Vnode> vnode_;
 };
 
 } // namespace fs
