@@ -444,7 +444,7 @@ void CodecAdapterFfmpegDecoder::DecodeFrames() {
 
     events_->onCoreCodecOutputPacket(output_packet,
                                      /*error_detected_before=*/false,
-                                     /*error_detected_before=*/false);
+                                     /*error_detected_during=*/false);
   }
 }
 

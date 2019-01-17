@@ -498,11 +498,12 @@ class VolApp {
   void OnGetDevices(std::vector<AudioDeviceInfo> devices) {
     // Build our device map.
     for (auto& dev : devices) {
+      auto id = dev.token_id;
       auto result =
-          devices_.emplace(std::make_pair(dev.token_id, std::move(dev)));
+          devices_.emplace(std::make_pair(id, std::move(dev)));
       if (!result.second) {
         std::cerr << "<WARNING>: Duplicate audio device token ID ("
-                  << dev.token_id << std::endl;
+                  << id << std::endl;
         continue;
       }
     }

@@ -90,7 +90,7 @@ bool AudioTest::ReceiveNoDisconnectCallback() {
 // and set the system to a known baseline for gain/mute testing.
 void SystemGainMuteTest::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
-
+  
   environment_services_ = component::GetEnvironmentServices();
   environment_services_->ConnectToService(audio_.NewRequest());
   audio_.set_error_handler([this](zx_status_t error) {

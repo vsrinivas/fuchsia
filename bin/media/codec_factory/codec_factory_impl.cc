@@ -42,7 +42,8 @@ void CodecFactoryImpl::CreateSelfOwned(
   // break the point of making the constructor private.
   std::unique_ptr<CodecFactoryImpl> self(
       new CodecFactoryImpl(app, startup_context, std::move(request)));
-  self->OwnSelf(std::move(self));
+  auto* self_ptr = self.get();
+  self_ptr->OwnSelf(std::move(self));
   assert(!self);
 }
 

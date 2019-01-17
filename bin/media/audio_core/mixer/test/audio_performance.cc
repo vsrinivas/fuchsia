@@ -261,7 +261,7 @@ void AudioPerformance::ProfileMixer(uint32_t num_input_chans,
     total_elapsed += elapsed;
   }
 
-  double mean = total_elapsed / kNumMixerProfilerRuns;
+  auto mean = static_cast<double>(total_elapsed) / kNumMixerProfilerRuns;
   printf("%c-%s.%u%u%c%c%u:",
          (sampler_type == Resampler::SampleAndHold ? 'P' : 'L'), format.c_str(),
          num_input_chans, num_output_chans, gain_char, (accumulate ? '+' : '-'),
@@ -411,12 +411,11 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
     }
   }
 
-  double mean = total_elapsed / kNumOutputProfilerRuns;
+  auto mean = static_cast<double>(total_elapsed) / kNumOutputProfilerRuns;
   printf("%s-%c%u:\t%9.3lf\t%9.3lf\t%9.3lf\t%9.3lf\n", format.c_str(), range,
          num_chans, mean / 1000.0, first / 1000.0, best / 1000.0,
          worst / 1000.0);
 }
-
 }  // namespace test
 }  // namespace audio
 }  // namespace media

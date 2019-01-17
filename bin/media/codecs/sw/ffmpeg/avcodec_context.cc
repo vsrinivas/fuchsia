@@ -177,7 +177,7 @@ AvCodecContext::DecodedOutputInfo AvCodecContext::decoded_output_info(
 
   size_t buffer_bytes_needed = av_image_get_buffer_size(
       static_cast<AVPixelFormat>(frame->format), frame->width, frame->height,
-      /*linesizes_alignment=*/1);
+      /*align=*/1);
 
   return {.format = std::move(uncompressed_format),
           .buffer_bytes_needed = buffer_bytes_needed};

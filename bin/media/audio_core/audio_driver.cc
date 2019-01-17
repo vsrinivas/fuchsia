@@ -465,13 +465,13 @@ zx_status_t AudioDriver::ReadMessage(
 
 #define CHECK_RESP(_ioctl, _payload, _expect_handle, _is_notif)           \
   do {                                                                    \
-    if (_expect_handle != rxed_handle.is_valid()) {                       \
-      FXL_LOG(ERROR) << (_expect_handle ? "Missing" : "Unexpected")       \
+    if ((_expect_handle) != rxed_handle.is_valid()) {                     \
+      FXL_LOG(ERROR) << ((_expect_handle) ? "Missing" : "Unexpected")     \
                      << " handle in " #_ioctl " response";                \
       return ZX_ERR_INVALID_ARGS;                                         \
     }                                                                     \
     if ((msg.hdr.transaction_id == AUDIO_INVALID_TRANSACTION_ID) !=       \
-        _is_notif) {                                                      \
+        (_is_notif)) {                                                    \
       FXL_LOG(ERROR) << "Bad txn id " << msg.hdr.transaction_id           \
                      << " in " #_ioctl " response";                       \
       return ZX_ERR_INVALID_ARGS;                                         \

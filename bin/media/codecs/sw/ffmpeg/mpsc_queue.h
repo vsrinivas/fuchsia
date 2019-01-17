@@ -29,9 +29,10 @@ class MpscQueue {
   // In any given thread, elements pushed first will be dequeued first. When
   // pushers on different threads contend it is not gauranteed that the thread
   // to call first will end up in the queue first.
-  void Push(T&& element) {
+  template <typename U>
+  void Push(U&& element) {
     Cell* loaded_head;
-    Cell* new_head = new Cell{.element = std::move(element)};
+    Cell* new_head = new Cell{.element = std::forward<T>(element)};
     do {
       loaded_head = head_.load();
       new_head->next = loaded_head;
@@ -120,8 +121,9 @@ class BlockingMpscQueue {
     ZX_ASSERT(status == ZX_OK);
   }
 
-  void Push(T&& element) {
-    queue_.Push(std::move(element));
+  template <typename U>
+  void Push(U&& element) {
+    queue_.Push(std::forward<T>(element));
     should_wait_event_.signal(ZX_EVENT_SIGNAL_MASK, ZX_EVENT_SIGNALED);
   }
 

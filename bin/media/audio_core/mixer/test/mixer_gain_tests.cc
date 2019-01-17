@@ -570,7 +570,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_EQ(gain_.GetGainScale(), expect_scale);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
     expect_arr[idx] = expect_scale;
     expect_scale -= 0.1;
   }
@@ -590,7 +590,7 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_TRUE(
       CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
-  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
     expect_arr[idx] = expect_scale;
     expect_scale -= 0.1;
   }
@@ -613,7 +613,7 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   gain_.SetSourceMute(true);
   EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
 
-  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
     expect_arr[idx] = expect_scale;
     expect_scale -= 0.1;
   }
@@ -635,7 +635,7 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   EXPECT_TRUE(
       CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
-  for (uint32_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
+  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
     expect_arr[idx] = expect_scale;
     expect_scale -= 0.1;
   }

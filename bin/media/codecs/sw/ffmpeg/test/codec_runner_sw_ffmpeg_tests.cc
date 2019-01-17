@@ -15,7 +15,7 @@ TEST(MpscQueueTest, Sanity) {
   const int kElements = 10;
 
   for (int i = 0; i < kElements; ++i) {
-    under_test.Push(std::move(i));
+    under_test.Push(i);
     expectation.push(i);
   }
 
@@ -41,7 +41,7 @@ TEST(MpscQueueTest, TwoThreads) {
   async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
   async::PostTask(producer_loop.dispatcher(), [&under_test, &expectation] {
     for (int i = 0; i < kElements; ++i) {
-      under_test.Push(std::move(i));
+      under_test.Push(i);
     }
   });
 
@@ -71,7 +71,7 @@ TEST(BlockingMpscQueueTest, TwoThreads) {
   async::Loop producer_loop(&kAsyncLoopConfigNoAttachToThread);
   async::PostTask(producer_loop.dispatcher(), [&under_test, &expectation] {
     for (int i = 0; i < kElements; ++i) {
-      under_test.Push(std::move(i));
+      under_test.Push(i);
     }
   });
 
@@ -94,7 +94,7 @@ TEST(BlockingMpscQueueTest, Clear) {
 
   const int kElements = 100;
   for (int i = 0; i < kElements; ++i) {
-    under_test.Push(std::move(i));
+    under_test.Push(i);
   }
 
   under_test.WaitForElement();
@@ -112,7 +112,7 @@ TEST(BlockingMpscQueueTest, Extract) {
   const int kElements = 100;
   for (int i = 0; i < kElements; ++i) {
     expectation.insert(i);
-    under_test.Push(std::move(i));
+    under_test.Push(i);
   }
 
   std::queue<int> extracted =
@@ -141,7 +141,7 @@ TEST(BlockingMpscQueueTest, ManyThreads) {
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
     async::PostTask(producer_loops[i]->dispatcher(), [&under_test] {
       for (int j = 0; j < kElements; ++j) {
-        under_test.Push(std::move(j));
+        under_test.Push(j);
       }
     });
     producer_loops[i]->StartThread(nullptr, nullptr);
