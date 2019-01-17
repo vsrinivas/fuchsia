@@ -3,13 +3,11 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
-# TODO(BLD-338): Workaround: match target to package_name to make it pushable.
-package("bluetooth_tests") {
-  testonly = true
-
-  package_name = "bluetooth_tests"
-
+# TODO(BLD-338): Rename target to the less-redundant "tests" when target names
+# no longer have to match package names.
+test_package("bluetooth-tests") {
   deps = [
     ":bt-host-unittests",
     "integration",
@@ -25,7 +23,7 @@ package("bluetooth_tests") {
     },
     {
       name = "rust_crates/host_lifecycle"
-      dest = "bt-host-lifecycle-test"
+      dest = "bt-host-lifecycle-tests"
     },
   ]
 }
