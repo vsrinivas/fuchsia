@@ -57,9 +57,7 @@ executable("bin") {
   libs = [ "zircon" ]
 }
 
-package("cpuperf_binary") {
-  deprecated_system_image = true
-
+package("cpuperf") {
   deps = [
     ":bin",
   ]
@@ -67,29 +65,39 @@ package("cpuperf_binary") {
   binaries = [
     {
       name = "cpuperf"
-    },
-  ]
-}
-
-package("cpuperf") {
-  resources = [
-    {
-      path = rebase_path("cpspec/basic-cpu-memory.cpspec")
-      dest = "basic-cpu-memory.cpspec"
-    },
-    {
-      path = rebase_path("cpspec/l1.cpspec")
-      dest = "l1.cpspec"
-    },
-    {
-      path = rebase_path("cpspec/l2.cpspec")
-      dest = "l2.cpspec"
-    },
-    {
-      path = rebase_path("cpspec/l3.cpspec")
-      dest = "l3.cpspec"
+      shell = true
     }
   ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cpuperf.cmx")
+      dest = "cpuperf.cmx"
+    }
+  ]
+
+  resources = []
+
+  if (current_cpu == "x64") {
+    resources += [
+      {
+        path = rebase_path("cpspec/basic-cpu-memory.cpspec")
+        dest = "basic-cpu-memory.cpspec"
+      },
+      {
+        path = rebase_path("cpspec/l1.cpspec")
+        dest = "l1.cpspec"
+      },
+      {
+        path = rebase_path("cpspec/l2.cpspec")
+        dest = "l2.cpspec"
+      },
+      {
+        path = rebase_path("cpspec/l3.cpspec")
+        dest = "l3.cpspec"
+      }
+    ]
+  }
 }
 
 source_set("unittests") {

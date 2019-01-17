@@ -19,7 +19,9 @@
 #include "run_test.h"
 
 // The path of the trace program.
-const char kCpuperfProgramPath[] = "/system/bin/cpuperf";
+// cpuperf is a "shell=true" program, and thus has a stub for it in /bin
+// that resolves to the component path.
+const char kCpuperfProgramPath[] = "/bin/cpuperf";
 
 static void AppendLoggingArgs(std::vector<std::string>* argv) {
   // Transfer our log settings to the subprogram.
@@ -76,7 +78,8 @@ static zx_status_t SpawnProgram(const zx::job& job,
                                out_process->reset_and_get_address(),
                                err_msg);
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: " << err_msg;
+    FXL_LOG(ERROR) << "Spawning " << c_argv[0] << " failed: "
+                   << status << ", " << err_msg;
     return status;
   }
 

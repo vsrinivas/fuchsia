@@ -46,8 +46,6 @@ install_host_tools("host_insntrace_print") {
 }
 
 package("insntrace") {
-  deprecated_system_image = true
-
   deps = [
     ":bin",
   ]
@@ -55,6 +53,14 @@ package("insntrace") {
   binaries = [
     {
       name = "insntrace"
-    },
+      shell = true
+    }
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/insntrace.cmx")
+      dest = "insntrace.cmx"
+    }
   ]
 }
