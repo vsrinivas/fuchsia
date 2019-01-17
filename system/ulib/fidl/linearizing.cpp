@@ -14,6 +14,7 @@
 #include <zircon/assert.h>
 #include <zircon/compiler.h>
 
+#include "envelope_frames.h"
 #include "visitor.h"
 #include "walker.h"
 
@@ -63,6 +64,8 @@ Position StartingPoint::ToPosition() const {
     };
 }
 
+using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
+
 class FidlLinearizer final : public fidl::Visitor<
     fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
@@ -83,18 +86,11 @@ public:
                         ObjectPointerPointer object_ptr_ptr,
                         uint32_t inline_size,
                         Position* out_position) {
-        // We have to manually maintain alignment here. For example, a pointer
-        // to a struct that is 4 bytes still needs to advance the next
-        // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
-        // property.
-        static constexpr uint32_t mask = FIDL_ALIGNMENT - 1;
-        uint32_t new_offset = next_out_of_line_;
-        if (add_overflow(new_offset, inline_size, &new_offset) ||
-            add_overflow(new_offset, mask, &new_offset)) {
+        uint32_t new_offset;
+        if (!fidl::AddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
             SetError("out-of-line offset overflow trying to linearize");
             return Status::kMemoryError;
         }
-        new_offset &= ~mask;
 
         if (new_offset > num_bytes_) {
             SetError("object is too big to linearize into provided buffer",
@@ -144,7 +140,7 @@ public:
         }
         // Remember the current watermark of bytes and handles, so that after processing
         // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
-        if (!Push(next_out_of_line_, handle_idx_)) {
+        if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
             SetError("Overly deep nested envelopes");
             return Status::kConstraintViolationError;
         }
@@ -154,7 +150,7 @@ public:
     Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
         // Now that the envelope has been consumed, go back and update the envelope header with
         // the correct num_bytes and num_handles values
-        auto& starting_state = Pop();
+        auto& starting_state = envelope_frames_.Pop();
         uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
         uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
         envelope->num_bytes = num_bytes;
@@ -187,29 +183,6 @@ private:
         }
     }
 
-    struct EnvelopeState {
-        uint32_t bytes_so_far;
-        uint32_t handles_so_far;
-    };
-
-    const EnvelopeState& Pop() {
-        ZX_ASSERT(envelope_depth_ != 0);
-        envelope_depth_ -= 1;
-        return envelope_states_[envelope_depth_];
-    }
-
-    bool Push(uint32_t num_bytes, uint32_t num_handles) {
-        if (envelope_depth_ == FIDL_RECURSION_DEPTH) {
-            return false;
-        }
-        envelope_states_[envelope_depth_] = (EnvelopeState) {
-            .bytes_so_far = num_bytes,
-            .handles_so_far = num_handles,
-        };
-        envelope_depth_ += 1;
-        return true;
-    }
-
     // Message state passed into the constructor.
     uint8_t* const bytes_;
     const uint32_t num_bytes_;
@@ -220,8 +193,7 @@ private:
     zx_status_t status_ = ZX_OK;
     uint32_t handle_idx_ = 0;
     zx_handle_t* original_handles_[ZX_CHANNEL_MAX_MSG_HANDLES];
-    uint32_t envelope_depth_ = 0;
-    EnvelopeState envelope_states_[FIDL_RECURSION_DEPTH];
+    fidl::EnvelopeFrames envelope_frames_;
 };
 
 } // namespace
@@ -240,14 +212,10 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
         set_error("Cannot linearize with null destination buffer");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (type == nullptr) {
-        set_error("Cannot linearize a null fidl type");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
     size_t primary_size;
     zx_status_t status;
-    if ((status = fidl::GetPrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+    if ((status = fidl::PrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
         return status;
     }
     if (primary_size > num_bytes) {

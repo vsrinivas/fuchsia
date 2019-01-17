@@ -17,6 +17,7 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include "envelope_frames.h"
 #include "visitor.h"
 #include "walker.h"
 
@@ -49,6 +50,8 @@ struct Position {
 Position StartingPoint::ToPosition() const {
     return Position { 0 };
 }
+
+using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
 
 class FidlEncoder final : public fidl::Visitor<
     fidl::MutatingVisitorTrait, StartingPoint, Position> {
@@ -93,7 +96,7 @@ public:
         }
         handles_[handle_idx_] = *handle;
         *handle = FIDL_HANDLE_PRESENT;
-        handle_idx_ += 1;
+        handle_idx_++;
         return Status::kSuccess;
     }
 
@@ -101,11 +104,10 @@ public:
                          EnvelopePointer envelope,
                          const fidl_type_t* payload_type) {
         // Validate envelope data/bytes invariants
-        if (envelope->data == nullptr) {
-            if (!(envelope->num_bytes == 0 && envelope->num_handles == 0)) {
-                SetError("Envelope has absent data pointer, yet has data and/or handles");
-                return Status::kConstraintViolationError;
-            }
+        if (envelope->data == nullptr &&
+            (envelope->num_bytes != 0 || envelope->num_handles != 0)) {
+            SetError("Envelope has absent data pointer, yet has data and/or handles");
+            return Status::kConstraintViolationError;
         }
         if (envelope->data != nullptr && envelope->num_bytes == 0) {
             SetError("Envelope has present data pointer, but zero byte count");
@@ -119,7 +121,7 @@ public:
         }
         // Remember the current watermark of bytes and handles, so that after processing
         // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
-        if (!Push(next_out_of_line_, handle_idx_)) {
+        if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
             SetError("Overly deep nested envelopes");
             return Status::kConstraintViolationError;
         }
@@ -128,7 +130,7 @@ public:
 
     Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
         // Now that the envelope has been consumed, check the correctness of the envelope header.
-        auto& starting_state = Pop();
+        auto& starting_state = envelope_frames_.Pop();
         uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
         uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
         if (envelope->num_bytes != num_bytes) {
@@ -174,48 +176,17 @@ private:
             SetError("noncontiguous out of line storage during encode");
             return false;
         }
-        // We have to manually maintain alignment here. For example, a pointer
-        // to a struct that is 4 bytes still needs to advance the next
-        // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
-        // property.
-        static constexpr uint32_t mask = FIDL_ALIGNMENT - 1;
-        uint32_t new_offset = next_out_of_line_;
-        if (add_overflow(new_offset, size, &new_offset)
-            || add_overflow(new_offset, mask, &new_offset)) {
+        uint32_t new_offset;
+        if (!fidl::AddOutOfLine(next_out_of_line_, size, &new_offset)) {
             SetError("overflow updating out-of-line offset");
             return false;
         }
-        new_offset &= ~mask;
-
         if (new_offset > num_bytes_) {
             SetError("message tried to encode more than provided number of bytes");
             return false;
         }
         *out_position = Position { next_out_of_line_ };
         next_out_of_line_ = new_offset;
-        return true;
-    }
-
-    struct EnvelopeState {
-        uint32_t bytes_so_far;
-        uint32_t handles_so_far;
-    };
-
-    const EnvelopeState& Pop() {
-        ZX_ASSERT(envelope_depth_ != 0);
-        envelope_depth_ -= 1;
-        return envelope_states_[envelope_depth_];
-    }
-
-    bool Push(uint32_t num_bytes, uint32_t num_handles) {
-        if (envelope_depth_ == FIDL_RECURSION_DEPTH) {
-            return false;
-        }
-        envelope_states_[envelope_depth_] = (EnvelopeState) {
-            .bytes_so_far = num_bytes,
-            .handles_so_far = num_handles,
-        };
-        envelope_depth_ += 1;
         return true;
     }
 
@@ -230,8 +201,7 @@ private:
     // Encoder state
     zx_status_t status_ = ZX_OK;
     uint32_t handle_idx_ = 0;
-    uint32_t envelope_depth_ = 0;
-    EnvelopeState envelope_states_[FIDL_RECURSION_DEPTH];
+    fidl::EnvelopeFrames envelope_frames_;
 };
 
 } // namespace
@@ -254,28 +224,17 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         set_error("Cannot encode with null out_actual_handles");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (type == nullptr) {
-        set_error("Cannot encode a null fidl type");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
-    size_t primary_size;
+    uint32_t next_out_of_line;
     zx_status_t status;
-    if ((status = fidl::GetPrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+    if ((status = fidl::StartingOutOfLineOffset(type,
+                                                num_bytes,
+                                                &next_out_of_line,
+                                                out_error_msg)) != ZX_OK) {
         return status;
     }
-    if (primary_size > num_bytes) {
-        set_error("Buffer is too small for first inline object");
-        return ZX_ERR_INVALID_ARGS;
-    }
-    uint64_t next_out_of_line = fidl::FidlAlign(static_cast<uint32_t>(primary_size));
-    if (next_out_of_line > std::numeric_limits<uint32_t>::max()) {
-        set_error("Out of line starting offset overflows");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
-    FidlEncoder encoder(bytes, num_bytes, handles, max_handles,
-                        static_cast<uint32_t>(next_out_of_line), out_error_msg);
+    FidlEncoder encoder(bytes, num_bytes, handles, max_handles, next_out_of_line, out_error_msg);
     fidl::Walk(encoder,
                type,
                StartingPoint { reinterpret_cast<uint8_t*>(bytes) });

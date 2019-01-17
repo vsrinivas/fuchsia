@@ -16,6 +16,7 @@
 #include <zircon/syscalls.h>
 #endif
 
+#include "envelope_frames.h"
 #include "visitor.h"
 #include "walker.h"
 
@@ -52,6 +53,8 @@ Position StartingPoint::ToPosition() const {
 constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
 constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
 
+using EnvelopeState = ::fidl::EnvelopeFrames::EnvelopeState;
+
 class FidlDecoder final : public fidl::Visitor<
     fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
@@ -75,19 +78,11 @@ public:
             SetError("decoder encountered invalid pointer");
             return Status::kConstraintViolationError;
         }
-        // We have to manually maintain alignment here. For example, a pointer
-        // to a struct that is 4 bytes still needs to advance the next
-        // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
-        // property.
-        static constexpr uint32_t mask = FIDL_ALIGNMENT - 1;
-        uint32_t new_offset = next_out_of_line_;
-        if (add_overflow(new_offset, inline_size, &new_offset)
-            || add_overflow(new_offset, mask, &new_offset)) {
+        uint32_t new_offset;
+        if (!fidl::AddOutOfLine(next_out_of_line_, inline_size, &new_offset)) {
             SetError("overflow updating out-of-line offset");
             return Status::kMemoryError;
         }
-        new_offset &= ~mask;
-
         if (new_offset > num_bytes_) {
             SetError("message tried to decode more than provided number of bytes");
             return Status::kMemoryError;
@@ -143,7 +138,7 @@ public:
         }
         // Remember the current watermark of bytes and handles, so that after processing
         // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
-        if (!Push(next_out_of_line_, handle_idx_)) {
+        if (!envelope_frames_.Push(EnvelopeState(next_out_of_line_, handle_idx_))) {
             SetError("Overly deep nested envelopes");
             return Status::kConstraintViolationError;
         }
@@ -161,7 +156,7 @@ public:
 
     Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
         // Now that the envelope has been consumed, check the correctness of the envelope header.
-        auto& starting_state = Pop();
+        auto& starting_state = envelope_frames_.Pop();
         uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
         uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
         if (envelope->num_bytes != num_bytes) {
@@ -197,29 +192,6 @@ private:
         *out_error_msg_ = error;
     }
 
-    struct EnvelopeState {
-        uint32_t bytes_so_far;
-        uint32_t handles_so_far;
-    };
-
-    const EnvelopeState& Pop() {
-        ZX_ASSERT(envelope_depth_ != 0);
-        envelope_depth_--;
-        return envelope_states_[envelope_depth_];
-    }
-
-    bool Push(uint32_t num_bytes, uint32_t num_handles) {
-        if (envelope_depth_ == FIDL_RECURSION_DEPTH) {
-            return false;
-        }
-        envelope_states_[envelope_depth_] = (EnvelopeState) {
-            .bytes_so_far = num_bytes,
-            .handles_so_far = num_handles,
-        };
-        envelope_depth_++;
-        return true;
-    }
-
     // Message state passed in to the constructor.
     uint8_t* const bytes_;
     const uint32_t num_bytes_;
@@ -231,8 +203,7 @@ private:
     // Decoder state
     zx_status_t status_ = ZX_OK;
     uint32_t handle_idx_ = 0;
-    uint32_t envelope_depth_ = 0;
-    EnvelopeState envelope_states_[FIDL_RECURSION_DEPTH];
+    fidl::EnvelopeFrames envelope_frames_;
 };
 
 } // namespace
@@ -251,28 +222,17 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         set_error("Cannot provide non-zero handle count and null handle pointer");
         return ZX_ERR_INVALID_ARGS;
     }
-    if (type == nullptr) {
-        set_error("Cannot decode a null fidl type");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
-    size_t primary_size;
+    uint32_t next_out_of_line;
     zx_status_t status;
-    if ((status = fidl::GetPrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+    if ((status = fidl::StartingOutOfLineOffset(type,
+                                                num_bytes,
+                                                &next_out_of_line,
+                                                out_error_msg)) != ZX_OK) {
         return status;
     }
-    if (primary_size > num_bytes) {
-        set_error("Buffer is too small for first inline object");
-        return ZX_ERR_INVALID_ARGS;
-    }
-    uint64_t next_out_of_line = fidl::FidlAlign(static_cast<uint32_t>(primary_size));
-    if (next_out_of_line > std::numeric_limits<uint32_t>::max()) {
-        set_error("Out of line starting offset overflows");
-        return ZX_ERR_INVALID_ARGS;
-    }
 
-    FidlDecoder decoder(bytes, num_bytes, handles, num_handles,
-                        static_cast<uint32_t>(next_out_of_line), out_error_msg);
+    FidlDecoder decoder(bytes, num_bytes, handles, num_handles, next_out_of_line, out_error_msg);
     fidl::Walk(decoder,
                type,
                StartingPoint { reinterpret_cast<uint8_t*>(bytes) });

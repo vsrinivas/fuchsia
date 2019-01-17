@@ -38,7 +38,7 @@ zx_status_t fidl_validate(const fidl_type_t* type, const void* bytes, uint32_t n
 zx_status_t fidl_validate_msg(const fidl_type_t* type, const fidl_msg_t* msg,
                               const char** out_error_msg);
 
-// Traverses a FIDL message starting at |value|, closing all handles within it.
+// Traverses a decoded FIDL message starting at |value|, closing all handles within it.
 // If the message is non-contiguous in memory, the function will follow pointers and close handles
 // in any scattered out-of-line objects.
 //

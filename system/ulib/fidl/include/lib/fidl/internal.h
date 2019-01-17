@@ -30,9 +30,25 @@ enum FidlNullability : uint32_t {
     kNullable = 1u,
 };
 
-inline uint64_t FidlAlign(uint32_t offset) {
+constexpr inline uint64_t FidlAlign(uint32_t offset) {
     constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
     return (offset + alignment_mask) & ~alignment_mask;
+}
+
+// Add |size| to out-of-line |offset|, maintaining alignment. For example, a pointer to a struct
+// that is 4 bytes still needs to advance the next out-of-line offset by 8 to maintain
+// the aligned-to-FIDL_ALIGNMENT property.
+// Returns false on overflow. Otherwise, resulting offset is stored in |out_offset|.
+inline bool AddOutOfLine(uint32_t offset, uint32_t size, uint32_t* out_offset) {
+    constexpr uint32_t kMask = FIDL_ALIGNMENT - 1;
+    uint32_t new_offset = offset;
+    if (add_overflow(new_offset, size, &new_offset)
+        || add_overflow(new_offset, kMask, &new_offset)) {
+        return false;
+    }
+    new_offset &= ~kMask;
+    *out_offset = new_offset;
+    return true;
 }
 
 struct FidlStructField {

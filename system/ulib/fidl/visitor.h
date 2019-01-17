@@ -23,7 +23,7 @@ struct NonMutatingVisitorTrait {
     static constexpr bool kIsConst = true;
 
     // Message is const
-    using ObjectPointerPointer = const void** const;
+    using ObjectPointerPointer = const void* const* const;
 };
 
 struct MutatingVisitorTrait {
@@ -31,7 +31,7 @@ struct MutatingVisitorTrait {
     static constexpr bool kIsConst = false;
 
     // Message is mutable
-    using ObjectPointerPointer = void**;
+    using ObjectPointerPointer = void** const;
 };
 
 namespace {
@@ -59,7 +59,8 @@ public:
     using MutationTrait = MutationTrait_;
 
     template <typename T>
-    using Ptr = typename std::conditional<MutationTrait::kIsConst, std::add_const<T*>, T*>::type;
+    using Ptr = typename std::conditional<MutationTrait::kIsConst,
+                                          typename std::add_const<T>::type, T>::type*;
 
     // A type encapsulating the starting point of message traversal.
     //

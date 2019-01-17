@@ -64,7 +64,7 @@ constexpr uint32_t TypeSize(const fidl_type_t* type) {
     __builtin_unreachable();
 }
 
-// The Walker class traverses through a FIDL message by following its encoding table and
+// The Walker class traverses through a FIDL message by following its coding table and
 // calling the visitor implementation. VisitorImpl must be a concrete implementation of the
 // fidl::Visitor interface. The concrete type is used to eliminate dynamic dispatch.
 template <typename VisitorImpl>
@@ -230,7 +230,7 @@ private:
             ZX_DEBUG_ASSERT(state == kStateStruct);
 
             uint32_t current = struct_state.field;
-            struct_state.field += 1;
+            struct_state.field++;
             return current;
         }
 
@@ -263,7 +263,7 @@ private:
         Position position;
 
         // This is a subset of the information recorded in the
-        // fidl_type structures needed for decoding state. For
+        // fidl_type structures needed for coding state. For
         // example, struct sizes do not need to be present here.
         union {
             struct {
@@ -348,7 +348,7 @@ private:
         if (depth_ == FIDL_RECURSION_DEPTH) {
             return false;
         }
-        decoding_frames_[depth_] = frame;
+        coding_frames_[depth_] = frame;
         ++depth_;
         return true;
     }
@@ -360,7 +360,7 @@ private:
 
     Frame* Peek() {
         ZX_DEBUG_ASSERT(depth_ != 0u);
-        return &decoding_frames_[depth_ - 1];
+        return &coding_frames_[depth_ - 1];
     }
 
     const fidl_type_t* const type_;
@@ -368,7 +368,7 @@ private:
 
     // Decoding stack state.
     uint32_t depth_ = 0u;
-    Frame decoding_frames_[FIDL_RECURSION_DEPTH];
+    Frame coding_frames_[FIDL_RECURSION_DEPTH];
 };
 
 template <typename VisitorImpl>
@@ -416,12 +416,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             case Frame::kStateStructPointer: {
-                if (*PtrTo<void*>(frame->position) == nullptr) {
+                if (*PtrTo<Ptr<void>>(frame->position) == nullptr) {
                     Pop();
                     continue;
                 }
                 auto status = visitor.VisitPointer(frame->position,
-                                                   PtrTo<void*>(frame->position),
+                                                   PtrTo<Ptr<void>>(frame->position),
                                                    frame->struct_pointer_state.struct_type->size,
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
@@ -478,14 +478,14 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                     const fidl::FidlTableField* field = table_frame.field;
                     if (field->ordinal == table_frame.ordinal) {
                         known_field = field;
-                        table_frame.field += 1;
-                        table_frame.remaining_fields -= 1;
+                        table_frame.field++;
+                        table_frame.remaining_fields--;
                     }
                 }
                 Position envelope_pos = envelope_position(table_frame.ordinal);
                 auto envelope_ptr = PtrTo<fidl_envelope_t>(envelope_pos);
                 // Process the next ordinal in the following state machine iteration
-                table_frame.ordinal += 1;
+                table_frame.ordinal++;
                 // Make sure we don't process a malformed envelope
                 const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
                 auto status = visitor.EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
@@ -523,12 +523,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             case Frame::kStateTablePointer: {
-                if (*PtrTo<fidl_vector_t*>(frame->position) == nullptr) {
+                if (*PtrTo<Ptr<fidl_vector_t>>(frame->position) == nullptr) {
                     Pop();
                     continue;
                 }
                 auto status = visitor.VisitPointer(frame->position,
-                                                   PtrTo<void*>(frame->position),
+                                                   PtrTo<Ptr<void>>(frame->position),
                                                    static_cast<uint32_t>(sizeof(fidl_vector_t)),
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
@@ -552,12 +552,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             case Frame::kStateUnionPointer: {
-                if (*PtrTo<fidl_union_tag_t*>(frame->position) == nullptr) {
+                if (*PtrTo<Ptr<fidl_union_tag_t>>(frame->position) == nullptr) {
                     Pop();
                     continue;
                 }
                 auto status = visitor.VisitPointer(frame->position,
-                                                   PtrTo<void*>(frame->position),
+                                                   PtrTo<Ptr<void>>(frame->position),
                                                    frame->union_pointer_state.union_type->size,
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
@@ -625,12 +625,12 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             case Frame::kStateXUnionPointer: {
-                if (*PtrTo<fidl_xunion_t*>(frame->position) == nullptr) {
+                if (*PtrTo<Ptr<fidl_xunion_t>>(frame->position) == nullptr) {
                     Pop();
                     continue;
                 }
                 auto status = visitor.VisitPointer(frame->position,
-                                                   PtrTo<void*>(frame->position),
+                                                   PtrTo<Ptr<void>>(frame->position),
                                                    static_cast<uint32_t>(sizeof(fidl_xunion_t)),
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
@@ -678,8 +678,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 }
                 Position position;
                 auto status = visitor.VisitPointer(position,
-                                                   &const_cast<Ptr<void>&>(
-                                                       reinterpret_cast<void*&>(string_ptr->data)),
+                                                   &reinterpret_cast<Ptr<void>&>(
+                                                       const_cast<Ptr<char>&>(
+                                                           string_ptr->data)),
                                                    static_cast<uint32_t>(size),
                                                    &position);
                 FIDL_STATUS_GUARD(status);
@@ -730,7 +731,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                                                    &frame->position);
                 FIDL_STATUS_GUARD(status);
                 if (frame->vector_state.element) {
-                    // Continue by decoding the vector elements as an array.
+                    // Continue by visiting the vector elements as an array.
                     *frame = Frame(frame->vector_state.element, size,
                                    frame->vector_state.element_size, frame->position);
                 } else {
@@ -763,13 +764,27 @@ void Walk(VisitorImpl& visitor,
     walker.Walk(visitor);
 }
 
-// Given a FIDL coding table, first ensure that the primary object is of one of the expected types,
-// then return the size of the primary object.
+// Infer the size of the primary object, from the coding table in |type|.
+// Ensures that the primary object is of one of the expected types.
 //
-// Currently the primary object must be either a struct or a table. An error is returned if this is
-// not the case.
-zx_status_t GetPrimaryObjectSize(const fidl_type_t* type,
-                                 size_t* out_size,
-                                 const char** out_error);
+// An error is returned if:
+// - |type| is null
+// - The primary object is neither a struct nor a table.
+zx_status_t PrimaryObjectSize(const fidl_type_t* type,
+                              size_t* out_size,
+                              const char** out_error);
+
+// Calculate the offset of the first out-of-line object, from the coding table in |type|.
+// Ensures that the primary object is of one of the expected types, and the offset falls within the
+// |buffer_size| constraints.
+//
+// An error is returned if:
+// - |type| is null
+// - The primary object is neither a struct nor a table.
+// - The offset overflows, or is larger than |buffer_size|.
+zx_status_t StartingOutOfLineOffset(const fidl_type_t* type,
+                                    uint32_t buffer_size,
+                                    uint32_t* out_first_out_of_line,
+                                    const char** out_error);
 
 } // namespace fidl
