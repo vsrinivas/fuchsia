@@ -7,6 +7,7 @@
 #include <limits.h>
 
 #include <fuchsia/io/c/fidl.h>
+#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/object.h>
 

@@ -244,6 +244,14 @@ zx_status_t Vfs::Unlink(fbl::RefPtr<Vnode> vndir, fbl::StringPiece path) {
 
 #define TOKEN_RIGHTS (ZX_RIGHTS_BASIC)
 
+namespace {
+zx_koid_t GetTokenKoid(const zx::event& token) {
+    zx_info_handle_basic_t info = {};
+    token.get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
+    return info.koid;
+}
+} // namespace
+
 void Vfs::TokenDiscard(zx::event ios_token) {
     fbl::AutoLock lock(&vfs_lock_);
     if (ios_token) {
@@ -256,13 +264,12 @@ void Vfs::TokenDiscard(zx::event ios_token) {
         //
         // By cleared the token cookie, any remaining handles to the event will
         // be ignored by the filesystem server.
-        ios_token.set_cookie(*zx::process::self(), 0);
+        auto rename_request = vnode_tokens_.erase(GetTokenKoid(ios_token));
     }
 }
 
 zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
                               zx::event* out) {
-    uint64_t vnode_cookie = reinterpret_cast<uint64_t>(vn.get());
     zx_status_t r;
 
     fbl::AutoLock lock(&vfs_lock_);
@@ -280,28 +287,22 @@ zx_status_t Vfs::VnodeToToken(fbl::RefPtr<Vnode> vn, zx::event* ios_token,
         return r;
     } else if ((r = new_ios_token.duplicate(TOKEN_RIGHTS, &new_token) != ZX_OK)) {
         return r;
-    } else if ((r = new_ios_token.set_cookie(*zx::process::self(), vnode_cookie)) != ZX_OK) {
-        return r;
     }
+    auto koid = GetTokenKoid(new_ios_token);
+    vnode_tokens_.insert(std::make_unique<VnodeToken>(koid, std::move(vn)));
     *ios_token = std::move(new_ios_token);
     *out = std::move(new_token);
     return ZX_OK;
 }
 
 zx_status_t Vfs::TokenToVnode(zx::event token, fbl::RefPtr<Vnode>* out) {
-    uint64_t vcookie;
-    zx_status_t r;
-    if ((r = token.get_cookie(*zx::process::self(), &vcookie)) < 0) {
+    const auto& vnode_token = vnode_tokens_.find(GetTokenKoid(token));
+    if (vnode_token == vnode_tokens_.end()) {
         // TODO(smklein): Return a more specific error code for "token not from this server"
         return ZX_ERR_INVALID_ARGS;
     }
 
-    if (vcookie == 0) {
-        // Client closed the channel associated with the token
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    *out = fbl::RefPtr<fs::Vnode>(reinterpret_cast<fs::Vnode*>(vcookie));
+    *out = vnode_token->get_vnode();
     return ZX_OK;
 }
 

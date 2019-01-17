@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include <fs/lazy-dir.h>
+
+#include <fs/vfs.h>
+#include <fs/vnode.h>
 #include <fuchsia/io/c/fidl.h>
 
 namespace fs {
