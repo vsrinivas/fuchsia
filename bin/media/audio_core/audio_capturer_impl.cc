@@ -73,6 +73,9 @@ void AudioCapturerImpl::SetInitialFormat(
 }
 
 void AudioCapturerImpl::Shutdown() {
+  // Take a local ref to ourselves, else we might get freed before we return!
+  auto self_ref = fbl::WrapRefPtr(this);
+
   // Disconnect from everything we were connected to.
   PreventNewLinks();
   Unlink();
@@ -85,6 +88,7 @@ void AudioCapturerImpl::Shutdown() {
 
   // Deactivate our mixing domain and synchronize with any in-flight operations.
   mix_domain_->Deactivate();
+  state_.store(State::Shutdown);
 
   // Release our buffer resources.
   //
@@ -103,12 +107,10 @@ void AudioCapturerImpl::Shutdown() {
 
   payload_buf_vmo_.reset();
 
-  // Make sure we have left the set of active audio ins.
+  // Make sure we have left the set of active audio capturers.
   if (InContainer()) {
     owner_->GetDeviceManager().RemoveAudioCapturer(this);
   }
-
-  state_.store(State::Shutdown);
 }
 
 zx_status_t AudioCapturerImpl::InitializeSourceLink(const AudioLinkPtr& link) {
