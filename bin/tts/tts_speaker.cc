@@ -95,7 +95,7 @@ void TtsSpeaker::SendPendingAudio() {
     return;
 
   // Figure out how much audio we have synthesized, but not given to the audio
-  // render yet, and hand it off to the renderer.  There are three (slightly)
+  // renderer yet, and hand it off to the renderer.  There are three (slightly)
   // special cases we need to consider.
   //
   // 1) We may not permit our payloads to span the ring wrap point.  All
@@ -112,7 +112,6 @@ void TtsSpeaker::SendPendingAudio() {
     bytes_to_send = ComputeTxPending();
   }
 
-  bool first_payload = !clock_started_;
   bool eos = synthesis_complete_.load();
   uint64_t bytes_till_low_water = eos ? 0 : bytes_to_send - kLowWaterBytes;
   uint64_t bytes_till_ring_wrap = shared_buf_.size() - tx_ptr_;
@@ -134,7 +133,6 @@ void TtsSpeaker::SendPendingAudio() {
     pkt.payload_offset = tx_ptr_;
     pkt.payload_size = todo;
 
-    first_payload = false;
     tx_ptr_ += todo;
     if (tx_ptr_ >= shared_buf_.size()) {
       FXL_DCHECK(tx_ptr_ == shared_buf_.size());
