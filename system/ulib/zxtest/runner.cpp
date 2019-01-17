@@ -161,4 +161,29 @@ Runner* Runner::GetInstance() {
     return &runner;
 }
 
+int RunAllTests(int argc, char** argv) {
+    fbl::Vector<fbl::String> errors;
+    Runner::Options options = Runner::Options::FromArgs(argc, argv, &errors);
+
+    if (!errors.is_empty()) {
+        for (const auto& error : errors) {
+            fprintf(stderr, "%s\n", error.c_str());
+        }
+        options.help = true;
+    }
+
+    // Errors will always set help to true.
+    if (options.help) {
+        Runner::Options::Usage(argv[0], stdout);
+        return errors.is_empty();
+    }
+
+    if (options.list) {
+        Runner::GetInstance()->List(options);
+        return 0;
+    }
+
+    return Runner::GetInstance()->Run(options);
+}
+
 } // namespace zxtest

@@ -198,4 +198,7 @@ private:
     RunnerSummary summary_;
 };
 
+// Entry point for C++
+int RunAllTests(int argc, char** argv);
+
 } // namespace zxtest

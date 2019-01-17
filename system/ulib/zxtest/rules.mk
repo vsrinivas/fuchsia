@@ -10,6 +10,7 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/assertion.cpp \
+    $(LOCAL_DIR)/c-wrappers.cpp \
     $(LOCAL_DIR)/event-broadcaster.cpp \
     $(LOCAL_DIR)/reporter.cpp \
     $(LOCAL_DIR)/runner.cpp \
@@ -32,9 +33,8 @@ MODULE_PACKAGE := src
 include make/module.mk
 
 #
-# zxtest sanity tests
+# zxtest unit tests
 #
-
 MODULE := $(LOCAL_DIR).test
 
 MODULE_NAME := zxtest-test
@@ -63,3 +63,34 @@ MODULE_LIBS := \
     system/ulib/c \
 
 include make/module.mk
+
+#
+# zxtest integratione tests Sanity checks that macros are working.
+#
+MODULE := $(LOCAL_DIR).integration-test
+
+MODULE_NAME := zxtest-integration-test
+
+MODULE_TYPE := usertest
+
+TEST_DIR := $(LOCAL_DIR)/test/integration/
+
+MODULE_SRCS := \
+    $(TEST_DIR)/helper.cpp \
+    $(TEST_DIR)/register_test.c \
+    $(TEST_DIR)/register_test.cpp \
+    $(TEST_DIR)/main.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+    system/ulib/zxtest \
+
+MODULE_LIBS := \
+    system/ulib/fdio \
+    system/ulib/zircon \
+    system/ulib/c \
+
+include make/module.mk
+
