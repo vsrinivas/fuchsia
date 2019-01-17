@@ -9,7 +9,7 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/aml-sd-emmc.c
+    $(LOCAL_DIR)/aml-sd-emmc.cpp
 
 MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/sync
 
