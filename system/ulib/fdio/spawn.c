@@ -70,36 +70,6 @@ static_assert(offsetof(fdio_spawn_action_t, name) == 8,
 static_assert(offsetof(fdio_spawn_action_t, name.data) == 8,
               "fdio_spawn_action_t must have a stable ABI");
 
-// resolve_name makes a call to the fuchsia.process.Resolver service and may
-// return a vmo and associated loader service, if the name resolves within the
-// current realm.
-static zx_status_t resolve_name(const char* name, size_t name_len, zx_handle_t* vmo, zx_handle_t* ldsvc) {
-    zx_handle_t resolver, resolver_request;
-    zx_status_t status = zx_channel_create(0, &resolver, &resolver_request);
-    if (status != ZX_OK) {
-        LOG(1, "failed to create channel: %s\n", zx_status_get_string(status));
-        return ZX_ERR_INTERNAL;
-    }
-
-    status = fdio_service_connect("/svc/fuchsia.process.Resolver", resolver_request);
-    resolver_request = ZX_HANDLE_INVALID;
-    if (status != ZX_OK) {
-        zx_handle_close(resolver);
-        LOG(1, "failed to connect to resolver service: %s\n", zx_status_get_string(status));
-        return ZX_ERR_INTERNAL;
-    }
-
-    zx_status_t io_status = fuchsia_process_ResolverResolve(
-        resolver, name, name_len, &status, vmo, ldsvc);
-    zx_handle_close(resolver);
-    if (io_status != ZX_OK) {
-        LOG(1, "failed to send resolver request: %s\n", zx_status_get_string(io_status));
-        return ZX_ERR_INTERNAL;
-    }
-
-    return status;
-}
-
 static zx_status_t load_path(const char* path, zx_handle_t* vmo) {
     int fd = open(path, O_RDONLY);
     if (fd < 0)
@@ -140,6 +110,38 @@ static void report_error(char* err_msg, const char* format, ...) {
     va_start(args, format);
     vsnprintf(err_msg, FDIO_SPAWN_ERR_MSG_MAX_LENGTH, format, args);
     va_end(args);
+}
+
+// resolve_name makes a call to the fuchsia.process.Resolver service and may
+// return a vmo and associated loader service, if the name resolves within the
+// current realm.
+static zx_status_t resolve_name(const char* name, size_t name_len,
+                                zx_handle_t* vmo, zx_handle_t* ldsvc,
+                                char* err_msg) {
+    zx_handle_t resolver, resolver_request;
+    zx_status_t status = zx_channel_create(0, &resolver, &resolver_request);
+    if (status != ZX_OK) {
+        report_error(err_msg, "failed to create channel: %d", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    status = fdio_service_connect("/svc/fuchsia.process.Resolver", resolver_request);
+    resolver_request = ZX_HANDLE_INVALID;
+    if (status != ZX_OK) {
+        zx_handle_close(resolver);
+        report_error(err_msg, "failed to connect to resolver service: %d", status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    zx_status_t io_status = fuchsia_process_ResolverResolve(
+        resolver, name, name_len, &status, vmo, ldsvc);
+    zx_handle_close(resolver);
+    if (io_status != ZX_OK) {
+        report_error(err_msg, "failed to send resolver request: %d", io_status);
+        return ZX_ERR_INTERNAL;
+    }
+
+    return status;
 }
 
 static zx_status_t send_string_array(zx_handle_t launcher, int ordinal, const char* const* array) {
@@ -451,6 +453,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
     if (err_msg)
         err_msg[0] = '\0';
 
+    // We intentionally don't fill in |err_msg| for invalid args.
+
     if (executable_vmo == ZX_HANDLE_INVALID || !argv || (action_count != 0 && !actions)) {
         status = ZX_ERR_INVALID_ARGS;
         goto cleanup;
@@ -522,7 +526,8 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         ZX_ASSERT(sizeof(head) < PAGE_SIZE);
         memset(head, 0, sizeof(head));
         status = zx_vmo_read(executable_vmo, head, 0, sizeof(head));
-         if (status != ZX_OK) {
+        if (status != ZX_OK) {
+            report_error(err_msg, "error reading executable vmo: %d", status);
             goto cleanup;
         }
         if (memcmp(FDIO_RESOLVE_PREFIX, head, FDIO_RESOLVE_PREFIX_LEN) != 0) {
@@ -532,6 +537,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
         // resolves are not allowed to carry on forever.
         if (i == FDIO_SPAWN_MAX_RESOLVE_DEPTH) {
             status = ZX_ERR_IO_INVALID;
+            report_error(err_msg, "hit recursion limit resolving name");
             goto cleanup;
         }
 
@@ -542,7 +548,7 @@ zx_status_t fdio_spawn_vmo(zx_handle_t job,
             len = end - name;
         }
 
-        status = resolve_name(name, len, &executable_vmo, &ldsvc);
+        status = resolve_name(name, len, &executable_vmo, &ldsvc, err_msg);
         if (status != ZX_OK) {
             goto cleanup;
         }
