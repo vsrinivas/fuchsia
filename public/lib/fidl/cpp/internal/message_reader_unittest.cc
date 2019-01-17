@@ -293,6 +293,8 @@ TEST(MessageReader, UnbindDuringHandler) {
   EXPECT_EQ(0, error_count);
   EXPECT_FALSE(reader.is_bound());
   EXPECT_EQ(0, logger.message_count_);
+
+  reader.set_message_handler(nullptr);
 }
 
 TEST(MessageReader, ShouldWaitFromRead) {
@@ -345,6 +347,8 @@ TEST(MessageReader, ShouldWaitFromRead) {
   EXPECT_EQ(1, logger.message_count_);
   EXPECT_EQ(6u, logger.bytes_.size());
   EXPECT_EQ('a', logger.bytes_[0]);
+
+  reader.set_message_handler(nullptr);
 }
 
 TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
@@ -390,6 +394,8 @@ TEST(MessageReader, ShouldWaitFromReadWithUnbind) {
   // the channel anymore.
 
   EXPECT_EQ(ZX_ERR_PEER_CLOSED, h2.write(0, ", world", 7, nullptr, 0));
+
+  reader.set_message_handler(nullptr);
 }
 
 TEST(MessageReader, NoHandler) {
