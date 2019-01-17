@@ -142,8 +142,6 @@ impl RequestForwarder {
             ControllerRequest::SetShuffleMode { shuffle_on, .. } => {
                 self.controller_proxy.set_shuffle_mode(shuffle_on)?
             }
-            ControllerRequest::Like { .. } => self.controller_proxy.like()?,
-            ControllerRequest::Dislike { .. } => self.controller_proxy.dislike()?,
             ControllerRequest::ConnectToExtension {
                 extension, channel, ..
             } => self

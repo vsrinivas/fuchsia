@@ -44,10 +44,6 @@ interface Controller : Observer {
     SetRepeatMode(RepeatMode repeat_mode);
     // Sets through supported shuffle modes.
     SetShuffleMode(bool shuffle_on);
-    // Likes the playing media.
-    Like();
-    // Dislikes the playing media.
-    Dislike();
 
     // Connects a channel to a custom extension. This is for clients
     // privy to the underlying implementation.
