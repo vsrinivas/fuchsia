@@ -419,7 +419,7 @@ TexturePtr SsdoAccelerator::GenerateLookupTable(
   kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                     work_groups_x, work_groups_y, 1, nullptr);
 
-  frame->AddTimestamp("generated SSDO acceleration lookup table");
+  frame->AddTimestamp("SSDO acceleration lookup table generation");
   return tmp_texture;
 }
 
@@ -462,7 +462,7 @@ TexturePtr SsdoAccelerator::GenerateNullLookupTable(
   null_kernel_->Dispatch({depth_texture, tmp_texture}, {}, command_buffer,
                          work_groups_x, work_groups_y, 1, nullptr);
 
-  frame->AddTimestamp("generated null SSDO acceleration lookup table");
+  frame->AddTimestamp("Null SSDO acceleration lookup table generation");
   return tmp_texture;
 }
 

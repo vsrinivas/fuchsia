@@ -18,6 +18,8 @@
 namespace scenic_impl {
 namespace gfx {
 
+using SessionUpdate = SessionUpdater::SessionUpdate;
+
 class DefaultFrameScheduler : public FrameScheduler {
  public:
   explicit DefaultFrameScheduler(Display* display);
@@ -59,11 +61,10 @@ class DefaultFrameScheduler : public FrameScheduler {
   // heap, placing the earliest PresentationTime at the top
   class UpdatableSessionsComparator {
    public:
-    bool operator()(
-        std::pair<PresentationTime, scenic_impl::SessionId> updatable_session1,
-        std::pair<PresentationTime, scenic_impl::SessionId>
-            updatable_session2) {
-      return updatable_session1.first > updatable_session2.first;
+    bool operator()(SessionUpdate updatable_session1,
+                    SessionUpdate updatable_session2) {
+      return updatable_session1.requested_presentation_time >
+             updatable_session2.requested_presentation_time;
     }
   };
 
@@ -129,10 +130,8 @@ class DefaultFrameScheduler : public FrameScheduler {
 
   // Lists all Session that have updates to apply, sorted by the earliest
   // requested presentation time of each update.
-  std::priority_queue<
-      std::pair<PresentationTime, scenic_impl::SessionId>,
-      std::vector<std::pair<PresentationTime, scenic_impl::SessionId>>,
-      UpdatableSessionsComparator>
+  std::priority_queue<SessionUpdate, std::vector<SessionUpdate>,
+                      UpdatableSessionsComparator>
       updatable_sessions_;
 
   FrameSchedulerDelegate delegate_;

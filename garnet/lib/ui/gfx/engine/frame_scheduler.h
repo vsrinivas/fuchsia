@@ -23,12 +23,17 @@ using PresentationTime = uint64_t;
 // Interface for performing session updates.
 class SessionUpdater {
  public:
+  struct SessionUpdate {
+    SessionId session_id;
+    PresentationTime requested_presentation_time;
+  };
+
   virtual ~SessionUpdater() = default;
 
   // Applies all updates scheduled before or at |presentation_time|, for each
   // session in |sessions|. Returns true if any updates were applied, false
   // otherwise.
-  virtual bool UpdateSessions(std::vector<SessionId> sessions,
+  virtual bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
                               uint64_t frame_number, uint64_t presentation_time,
                               uint64_t presentation_interval) = 0;
 };

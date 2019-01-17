@@ -106,6 +106,10 @@ bool Session::ScheduleUpdate(
     std::vector<zx::event> acquire_fences,
     std::vector<zx::event> release_events,
     fuchsia::ui::scenic::Session::PresentCallback callback) {
+  TRACE_DURATION("gfx", "Session::ScheduleUpdate", "session_id", id_,
+                 "session_debug_name", debug_name_, "requested time",
+                 requested_presentation_time);
+
   uint64_t last_scheduled_presentation_time =
       last_applied_update_presentation_time_;
   if (!scheduled_updates_.empty()) {
@@ -181,31 +185,34 @@ void Session::ScheduleImagePipeUpdate(uint64_t presentation_time,
 }
 
 Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
-    CommandContext* command_context, uint64_t presentation_time,
-    uint64_t presentation_interval) {
+    CommandContext* command_context, uint64_t requested_presentation_time,
+    uint64_t actual_presentation_time, uint64_t presentation_interval) {
   TRACE_DURATION("gfx", "Session::ApplyScheduledUpdates", "session_id", id_,
-                 "session_debug_name", debug_name_, "time", presentation_time,
+                 "session_debug_name", debug_name_, "requested time",
+                 requested_presentation_time, "time", actual_presentation_time,
                  "interval", presentation_interval);
 
   ApplyUpdateResult update_results{false, false};
 
-  if (presentation_time < last_presentation_time_) {
+  if (actual_presentation_time < last_presentation_time_) {
     error_reporter_->ERROR()
         << "scenic_impl::gfx::Session: ApplyScheduledUpdates called with "
-           "presentation_time="
-        << presentation_time << ", which is less than last_presentation_time_="
+           "expected_presentation_time="
+        << actual_presentation_time
+        << ", which is less than last_presentation_time_="
         << last_presentation_time_ << ".";
     update_results.success = false;
     return update_results;
   }
 
   while (!scheduled_updates_.empty() &&
-         scheduled_updates_.front().presentation_time <= presentation_time) {
+         scheduled_updates_.front().presentation_time <=
+             actual_presentation_time) {
     if (!scheduled_updates_.front().acquire_fences->ready()) {
       TRACE_INSTANT("gfx", "Session missed frame", TRACE_SCOPE_PROCESS,
                     "session_id", id(), "session_debug_name", debug_name_,
                     "target presentation time (usecs)",
-                    presentation_time / 1000,
+                    actual_presentation_time / 1000,
                     "session target presentation time (usecs)",
                     scheduled_updates_.front().presentation_time / 1000);
       break;
@@ -214,7 +221,7 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
                     std::move(scheduled_updates_.front().commands))) {
       update_results.needs_render = true;
       auto info = fuchsia::images::PresentationInfo();
-      info.presentation_time = presentation_time;
+      info.presentation_time = actual_presentation_time;
       info.presentation_interval = presentation_interval;
       scheduled_updates_.front().present_callback(std::move(info));
 
@@ -253,12 +260,12 @@ Session::ApplyUpdateResult Session::ApplyScheduledUpdates(
   std::unordered_map<ResourceId, ImagePipePtr> image_pipe_updates_to_upload;
   while (!scheduled_image_pipe_updates_.empty() &&
          scheduled_image_pipe_updates_.top().presentation_time <=
-             presentation_time) {
+             actual_presentation_time) {
     if (scheduled_image_pipe_updates_.top().image_pipe) {
       bool image_updated =
           scheduled_image_pipe_updates_.top().image_pipe->Update(
-              session_context_.release_fence_signaller, presentation_time,
-              presentation_interval);
+              session_context_.release_fence_signaller,
+              actual_presentation_time, presentation_interval);
       // Only upload images that were updated and are currently dirty, and only
       // do one upload per ImagePipe.
       if (image_updated) {

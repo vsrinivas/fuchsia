@@ -124,8 +124,8 @@ class Engine : public SessionUpdater, public FrameRenderer {
   //
   // Applies scheduled updates to a session. If the update fails, the session is
   // killed. Returns true if a new render is needed, false otherwise.
-  bool UpdateSessions(std::vector<SessionId> sessions, uint64_t frame_number,
-                      uint64_t presentation_time,
+  bool UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
+                      uint64_t frame_number, uint64_t presentation_time,
                       uint64_t presentation_interval) override;
 
   // |FrameRenderer|

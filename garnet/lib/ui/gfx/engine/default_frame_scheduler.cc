@@ -224,7 +224,8 @@ void DefaultFrameScheduler::MaybeRenderFrame(zx_time_t presentation_time,
 
 void DefaultFrameScheduler::ScheduleUpdateForSession(
     uint64_t presentation_time, scenic_impl::SessionId session_id) {
-  updatable_sessions_.push({presentation_time, session_id});
+  updatable_sessions_.push({.session_id = session_id,
+                            .requested_presentation_time = presentation_time});
   RequestFrame(presentation_time);
 }
 
@@ -236,15 +237,15 @@ bool DefaultFrameScheduler::ApplyScheduledSessionUpdates(
   TRACE_DURATION("gfx", "ApplyScheduledSessionUpdates", "time",
                  presentation_time, "interval", presentation_interval);
 
-  std::vector<scenic_impl::SessionId> sessions_to_update;
+  std::vector<SessionUpdate> sessions_to_update;
   while (!updatable_sessions_.empty()) {
     auto& top = updatable_sessions_.top();
 
-    if (top.first > presentation_time) {
+    if (top.requested_presentation_time > presentation_time) {
       break;
     }
 
-    sessions_to_update.push_back(std::move(top.second));
+    sessions_to_update.push_back(std::move(top));
     updatable_sessions_.pop();
   }
 

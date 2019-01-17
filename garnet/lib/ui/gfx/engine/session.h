@@ -94,13 +94,18 @@ class Session {
                                ImagePipePtr image_pipe);
 
   // Called by Engine() when it is notified by the FrameScheduler that
-  // a frame should be rendered for the specified |presentation_time|.
+  // a frame should be rendered for the specified |actual_presentation_time|.
   // Returns ApplyUpdateResult.success as true if updates were successfully
   // applied, false if updates failed to be applied.
   // Returns ApplyUpdateResult.needs_render as true if any changes were
   // applied, false if none were.
+  // |requested_presentation_time| is the time the session specified it would
+  // like to be scheduled for, and is used for tracing.
+  // |presentation_interval| is the estimated time until next frame and is
+  // returned to the client.
   ApplyUpdateResult ApplyScheduledUpdates(CommandContext* command_context,
-                                          uint64_t presentation_time,
+                                          uint64_t requested_presentation_time,
+                                          uint64_t actual_presentation_time,
                                           uint64_t presentation_interval);
 
   // Convenience.  Forwards an event to the EventReporter.

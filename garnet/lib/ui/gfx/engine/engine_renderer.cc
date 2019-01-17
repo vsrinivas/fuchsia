@@ -61,7 +61,7 @@ void EngineRenderer::RenderLayers(const escher::FramePtr& frame,
                                   const escher::ImagePtr& output_image,
                                   const std::vector<Layer*>& layers) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
-  // without also updating the "process_scenic_trace.go" script.
+  // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "EngineRenderer::RenderLayers");
 
   // Render each layer, except the bottom one. Create an escher::Object for

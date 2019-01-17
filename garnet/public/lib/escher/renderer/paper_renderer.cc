@@ -157,13 +157,13 @@ void PaperRenderer::DrawSsdoPasses(const FramePtr& frame,
       depth_in, vk::ImageLayout::eDepthStencilAttachmentOptimal,
       vk::ImageLayout::eShaderReadOnlyOptimal);
 
-  frame->AddTimestamp("finished layout transition before SSDO sampling");
+  frame->AddTimestamp("Layout transition before SSDO sampling");
 
   impl::SsdoSampler::SamplerConfig sampler_config(stage);
   ssdo_->Sample(command_buffer, fb_out, depth_texture, accelerator_texture,
                 &sampler_config);
 
-  frame->AddTimestamp("finished SSDO sampling");
+  frame->AddTimestamp("SSDO sampling");
 
   // Now that we have finished sampling the depth buffer, transition it for
   // reuse as a depth buffer in the lighting pass.
@@ -171,7 +171,7 @@ void PaperRenderer::DrawSsdoPasses(const FramePtr& frame,
       depth_in, vk::ImageLayout::eShaderReadOnlyOptimal,
       vk::ImageLayout::eDepthStencilAttachmentOptimal);
 
-  frame->AddTimestamp("finished layout transition before SSDO filtering");
+  frame->AddTimestamp("Layout transition before SSDO filtering");
 
   // Do two filter passes, one horizontal and one vertical.
   if (!kSkipFiltering) {
@@ -190,7 +190,7 @@ void PaperRenderer::DrawSsdoPasses(const FramePtr& frame,
           color_out, vk::ImageLayout::eShaderReadOnlyOptimal,
           vk::ImageLayout::eColorAttachmentOptimal);
 
-      frame->AddTimestamp("finished SSDO filter pass 1");
+      frame->AddTimestamp("SSDO filter pass 1");
     }
     {
       auto color_aux_tex = fxl::MakeRefCounted<Texture>(
@@ -207,7 +207,7 @@ void PaperRenderer::DrawSsdoPasses(const FramePtr& frame,
           color_aux, vk::ImageLayout::eShaderReadOnlyOptimal,
           vk::ImageLayout::eColorAttachmentOptimal);
 
-      frame->AddTimestamp("finished SSDO filter pass 2");
+      frame->AddTimestamp("SSDO filter pass 2");
     }
   }
 }
@@ -385,7 +385,7 @@ void PaperRenderer::DrawDebugOverlays(const FramePtr& frame,
           vk::Filter::eLinear);
     }
 
-    frame->AddTimestamp("finished blitting debug overlay");
+    frame->AddTimestamp("Blitting debug overlay");
   }
 }
 
@@ -437,7 +437,7 @@ void PaperRenderer::DrawFrame(const FramePtr& frame, const Stage& stage,
       color_image_out, vk::ImageLayout::eColorAttachmentOptimal,
       vk::ImageLayout::ePresentSrcKHR);
 
-  frame->AddTimestamp("finished transition to presentation layout");
+  frame->AddTimestamp("Transition to presentation layout");
 }
 
 void PaperRenderer::DrawFrameWithNoShadows(const FramePtr& frame,
@@ -507,7 +507,7 @@ void PaperRenderer::DrawFrameWithShadowMapShadows(
                    shadow_map_lighting_pass_, stage, model, camera,
                    overlay_model);
 
-  frame->AddTimestamp("finished shadow map lighting pass");
+  frame->AddTimestamp("Shadow map lighting pass");
 }
 
 void PaperRenderer::DrawFrameWithMomentShadowMapShadows(
@@ -542,7 +542,7 @@ void PaperRenderer::DrawFrameWithMomentShadowMapShadows(
                    moment_shadow_map_lighting_pass_, stage, model, camera,
                    overlay_model);
 
-  frame->AddTimestamp("finished moment shadow map lighting pass");
+  frame->AddTimestamp("Moment shadow map lighting pass");
 }
 
 void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
@@ -593,7 +593,7 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
                      ssdo_accel_dummy_color_image,
                      1.f / kSsdoAccelDownsampleFactor, stage, model, camera);
     frame->SubmitPartialFrame(nullptr);
-    frame->AddTimestamp("finished SSDO acceleration depth pre-pass");
+    frame->AddTimestamp("SSDO acceleration depth pre-pass");
   }
 
   // Compute SSDO acceleration structure.
@@ -614,7 +614,7 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
     DrawDepthPrePass(frame, depth_image, color_image_out, 1.f, stage, model,
                      camera);
     frame->SubmitPartialFrame(nullptr);
-    frame->AddTimestamp("finished depth pre-pass");
+    frame->AddTimestamp("Depth pre-pass");
   }
 
   // Compute the illumination and store the result in a texture.
@@ -658,7 +658,7 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
                      stage.key_light().color(), ssdo_lighting_pass_, stage,
                      model, camera, overlay_model);
 
-    frame->AddTimestamp("finished lighting pass");
+    frame->AddTimestamp("Lighting pass");
   } else {
     ImageInfo info;
     info.width = width;
@@ -689,7 +689,7 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
                      stage.key_light().color(), ssdo_lighting_pass_, stage,
                      model, camera, overlay_model);
 
-    frame->AddTimestamp("finished lighting pass");
+    frame->AddTimestamp("Lighting pass");
 
     // TODO: do this during lighting sub-pass by adding a resolve attachment.
     vk::ImageResolve resolve;
@@ -708,7 +708,7 @@ void PaperRenderer::DrawFrameWithSsdoShadows(const FramePtr& frame,
         vk::ImageLayout::eColorAttachmentOptimal, color_image_out->vk(),
         vk::ImageLayout::eColorAttachmentOptimal, resolve);
 
-    frame->AddTimestamp("finished multisample resolve");
+    frame->AddTimestamp("Multisample resolve");
   }
 
   DrawDebugOverlays(frame, color_image_out, depth_image,

@@ -32,7 +32,7 @@ package("scenic_benchmarks") {
   testonly = true
 
   deps = [
-    ":process_scenic_trace",
+    ":process_gfx_trace",
   ]
 
   binaries = [
@@ -41,28 +41,32 @@ package("scenic_benchmarks") {
       source = rebase_path("gfx_benchmarks_standalone.sh")
     },
     {
-      name = "process_scenic_trace"
+      name = "process_gfx_trace"
     },
     {
       name = "run_scenic_benchmark.sh"
       source = rebase_path("run_scenic_benchmark.sh")
     },
+    {
+      name = "scenic_benchmark_example.sh"
+      source = rebase_path("scenic_benchmark_example.sh")
+    },
   ]
 }
 
-go_library("process_scenic_trace_lib") {
-  name = "process_scenic_trace"
+go_library("process_trace_lib") {
+  name = "process_gfx_trace"
   deps = [
     "//garnet/go/src/benchmarking",
   ]
 }
 
-go_binary("process_scenic_trace") {
-  output_name = "process_scenic_trace"
+go_binary("process_gfx_trace") {
+  output_name = "process_gfx_trace"
 
-  gopackage = "process_scenic_trace"
+  gopackage = "process_gfx_trace"
 
   deps = [
-    ":process_scenic_trace_lib",
+    ":process_trace_lib",
   ]
 }

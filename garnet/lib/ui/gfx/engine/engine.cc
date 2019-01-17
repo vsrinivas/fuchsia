@@ -126,14 +126,15 @@ CommandContext Engine::CreateCommandContext(uint64_t frame_number_for_tracing) {
 
 // Applies scheduled updates to a session. If the update fails, the session is
 // killed. Returns true if a new render is needed, false otherwise.
-bool Engine::UpdateSessions(std::vector<SessionId> sessions,
+bool Engine::UpdateSessions(std::vector<SessionUpdate> sessions_to_update,
                             uint64_t frame_number, uint64_t presentation_time,
                             uint64_t presentation_interval) {
   auto command_context = CreateCommandContext(frame_number);
 
   bool needs_render = false;
-  for (auto session_id : sessions) {
-    auto session_handler = session_manager_->FindSessionHandler(session_id);
+  for (auto session_to_update : sessions_to_update) {
+    auto session_handler =
+        session_manager_->FindSessionHandler(session_to_update.session_id);
     if (!session_handler) {
       // This means the session that requested the update died after the
       // request. Requiring the scene to be re-rendered to reflect the session's
@@ -146,7 +147,8 @@ bool Engine::UpdateSessions(std::vector<SessionId> sessions,
     auto session = session_handler->session();
 
     auto update_results = session->ApplyScheduledUpdates(
-        &command_context, presentation_time, presentation_interval);
+        &command_context, session_to_update.requested_presentation_time,
+        presentation_time, presentation_interval);
 
     // If update fails, kill the entire client session.
     if (!update_results.success) {
@@ -166,7 +168,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
                          uint64_t presentation_time,
                          uint64_t presentation_interval) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
-  // without also updating the "process_scenic_trace.go" script.
+  // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "RenderFrame", "frame_number", timings->frame_number(),
                  "time", presentation_time, "interval", presentation_interval);
 
@@ -249,7 +251,7 @@ bool Engine::RenderFrame(const FrameTimingsPtr& timings,
 
 void Engine::UpdateAndDeliverMetrics(uint64_t presentation_time) {
   // NOTE: this name is important for benchmarking.  Do not remove or modify it
-  // without also updating the "process_scenic_trace.go" script.
+  // without also updating the "process_gfx_trace.go" script.
   TRACE_DURATION("gfx", "UpdateAndDeliverMetrics", "time", presentation_time);
 
   // Gather all of the scene which might need to be updated.
