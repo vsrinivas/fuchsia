@@ -48,12 +48,17 @@ async fn handle_request(sl4f_session: Arc<RwLock<Sl4f>>, request: AsyncRequest) 
                 Ok(response) => {
                     let async_response = AsyncResponse::new(Ok(response));
 
-                    // Ignore any tx sending errors, other requests can still be outstanding
-                    tx.send(async_response).unwrap();
+                    // Ignore any tx sending errors since there is not a recovery path.  The
+                    // connection to the test server may be broken.
+                    let _ = tx.send(async_response);
                 },
                 Err(e) => {
-                    // TODO: (CONN-3) send back the error
                     println!("Error returned from calling method_to_fidl {}", e);
+                    let async_response = AsyncResponse::new(Err(e));
+
+                    // Ignore any tx sending errors since there is not a recovery path.  The
+                    // connection to the test server may be broken.
+                    let _ = tx.send(async_response);
                 }
             };
         }
