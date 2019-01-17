@@ -144,7 +144,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Me
                     writeln!(
                         self.w,
                         "        {arg_name}: {arg_type},",
-                        arg_name = arg.name,
+                        arg_name = arg.rust_name(),
                         arg_type = arg_formatter(&arg)
                     )?;
                 }
@@ -171,7 +171,7 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Me
         for message in messages.iter() {
             writeln!(self.w, "            {}::{} {{", name, message.rust_name())?;
             for arg in message.args.iter() {
-                writeln!(self.w, "                ref {},", arg.name)?;
+                writeln!(self.w, "                ref {},", arg.rust_name())?;
             }
             writeln!(self.w, "            }} => {{")?;
 
@@ -196,14 +196,14 @@ use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Me
                 match arg.kind {
                     ArgKind::Array => {
                         message_args.push(format!("{}: Array[{{}}]", arg.name));
-                        format_args.push(format!("{}.len()", arg.name).into());
+                        format_args.push(format!("{}.len()", arg.rust_name()).into());
                     }
                     ArgKind::Fd => {
                         message_args.push(format!("{}: <handle>", arg.name));
                     }
                     _ => {
                         message_args.push(format!("{}: {{:?}}", arg.name));
-                        format_args.push(arg.name.as_str().into());
+                        format_args.push(arg.rust_name().into());
                     }
                 }
             }
@@ -270,7 +270,11 @@ impl IntoMessage for Event {{
                 message_name = to_camel_case(&event.name)
             )?;
             for arg in event.args.iter() {
-                write!(self.w, "            {arg_name},\n", arg_name = arg.name)?;
+                write!(
+                    self.w,
+                    "            {arg_name},\n",
+                    arg_name = arg.rust_name()
+                )?;
             }
             write!(self.w, "        }} => {{\n")?;
             for arg in event.args.iter() {
@@ -326,7 +330,7 @@ impl FromArgs for Request {{
                     "                {}: iter.next()
                                              .ok_or(DecodeError::InsufficientArgs)?
                                              .{},",
-                    arg.name,
+                    arg.rust_name(),
                     arg_to_primitive(&arg)
                 )?;
             }
@@ -632,6 +636,28 @@ impl RustName for ast::EnumEntry {
         let is_digit = self.name.chars().next().map_or(false, |c| c.is_digit(10));
         let prefix = if is_digit { "_" } else { "" };
         format!("{}{}", prefix, to_camel_case(&self.name))
+    }
+}
+
+fn is_rust_keyword(s: &str) -> bool {
+    match s {
+        "as" | "break" | "const" | "continue" | "crate" | "dyn" | "else" | "enum" | "extern"
+        | "false" | "fn" | "for" | "if" | "impl" | "in" | "let" | "loop" | "match" | "mod"
+        | "move" | "mut" | "pub" | "ref" | "return" | "Self" | "self" | "static" | "struct"
+        | "super" | "trait" | "true" | "type" | "unsafe" | "use" | "where" | "while"
+        | "abstract" | "async" | "await" | "become" | "box" | "do" | "final" | "macro"
+        | "override" | "priv" | "try" | "typeof" | "unsized" | "virtual" | "yield" => true,
+        _ => false,
+    }
+}
+
+impl RustName for ast::Arg {
+    fn rust_name(&self) -> String {
+        if is_rust_keyword(&self.name) {
+            format!("r#{}", self.name)
+        } else {
+            self.name.to_owned()
+        }
     }
 }
 
