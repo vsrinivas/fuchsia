@@ -63,7 +63,7 @@ int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {
   return fd;
 }
 
-TEST(File, Control) {
+TEST(File, DISABLED_Control) {
   async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
   loop.StartThread("vfs test thread");
 
