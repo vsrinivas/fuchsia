@@ -18,8 +18,8 @@ namespace modular {
 
 class LedgerClient;
 
-// LedgerStoryModelStorage writes a StoryModel into a Ledger Page instance. It partitions
-// the StoryModel into two sections:
+// LedgerStoryModelStorage writes a StoryModel into a Ledger Page instance. It
+// partitions the StoryModel into two sections:
 //
 // 1) Values that are scoped to this device (such as the Story's runtime state)
 // 2) Values that are shared among all devices (such as the list of mod URLs)
@@ -37,12 +37,10 @@ class LedgerStoryModelStorage : public StoryModelStorage, PageClient {
   ~LedgerStoryModelStorage() override;
 
  private:
-  // |PageClient|
-  void OnPageChange(const std::string& key,
-                    fuchsia::mem::BufferPtr value) override;
-
-  // |PageClient|
-  void OnPageDelete(const std::string& key) override;
+  // |PageWatcher|
+  void OnChange(fuchsia::ledger::PageChange page,
+                fuchsia::ledger::ResultState result_state,
+                OnChangeCallback callback) override;
 
   // |PageClient|
   void OnPageConflict(Conflict* conflict) override;
@@ -58,7 +56,17 @@ class LedgerStoryModelStorage : public StoryModelStorage, PageClient {
       std::vector<fuchsia::modular::storymodel::StoryModelMutation> commands)
       override;
 
+  // Called from OnChange().
+  void ProcessCompletePageChange(fuchsia::ledger::PageChange page_change);
+
   const std::string device_id_;
+
+  // For very large changes to the Ledger page, OnChange() may be called
+  // multiple times, each time with a partial representation of the change. The
+  // changes are accumulated in |partial_page_change_| until OnChange() is
+  // called with the final set (where |result_state| ==
+  // ResultState::PARTIAL_COMPLETE).
+  fuchsia::ledger::PageChange partial_page_change_;
 
   // With |scope_| is destroyed (which is when |this| is destructed), all
   // fit::promises created in Mutate() will be abandoned. This is important

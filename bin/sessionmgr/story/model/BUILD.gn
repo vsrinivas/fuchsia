@@ -17,8 +17,7 @@ hermetic_tests_package("story_model_unittests") {
   deps = [
     ":apply_mutations_unittest",
     ":story_model_owner_unittest",
-
-    # DISALBED: FLAKY ":ledger_story_model_storage_unittest",
+    ":ledger_story_model_storage_unittest",
   ]
 }
 

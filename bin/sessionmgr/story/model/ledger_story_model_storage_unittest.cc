@@ -187,9 +187,7 @@ TEST_F(LedgerStoryModelStorageTest, Load) {
     commands[1].set_set_visibility_state(StoryVisibilityState::IMMERSIVE);
     // TODO(thatguy): As we add more StoryModelMutations, add more lines here.
     executor.schedule_task(storage->Execute(std::move(commands)));
-    bool done{false};
-    executor.schedule_task(storage->Flush().and_then([&] { done = true; }));
-    RunLoopUntil([&] { return done; });
+    RunLoopUntilNumMutationsObserved(observed_mutations, 1);
     expected_model = std::move(*observed_model);
   }
 

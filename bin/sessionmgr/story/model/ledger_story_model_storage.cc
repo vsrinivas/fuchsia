@@ -7,6 +7,7 @@
 #include <lib/fit/bridge.h>
 #include <lib/fit/promise.h>
 #include <vector>
+#include <string>
 
 #include "lib/fidl/cpp/object_coding.h"  // for EncodeObject()/DecodeObject()
 #include "lib/fsl/vmo/vector.h"
@@ -70,54 +71,89 @@ LedgerStoryModelStorage::~LedgerStoryModelStorage() = default;
 
 // Helper functions to support OnPageChange() and OnPageDelete().
 namespace {
-// Returns a list of StoryModelMutation objects that, when applied to a
+// Appends to |commands| StoryModelMutation objects that, when applied to a
 // StoryModel, reflect the device state in |device_state_bytes|.
-std::vector<StoryModelMutation> GenerateObservedMutationsForDeviceState(
-    std::vector<uint8_t> device_state_bytes) {
+void GenerateObservedMutationsForDeviceState(
+    std::vector<uint8_t> device_state_bytes,
+    std::vector<StoryModelMutation>* commands) {
   StoryModel model;
   DecodeFromStorage(std::move(device_state_bytes), &model);
 
-  std::vector<StoryModelMutation> commands;
   if (model.has_runtime_state()) {
-    commands.resize(commands.size() + 1);
-    commands.back().set_set_runtime_state(*model.runtime_state());
+    commands->resize(commands->size() + 1);
+    commands->back().set_set_runtime_state(*model.runtime_state());
   }
   if (model.has_visibility_state()) {
-    commands.resize(commands.size() + 1);
-    commands.back().set_set_visibility_state(*model.visibility_state());
+    commands->resize(commands->size() + 1);
+    commands->back().set_set_visibility_state(*model.visibility_state());
   }
-  return commands;
 }
 
-std::vector<StoryModelMutation> GenerateObservedMutationsForDeviceState(
-    const fuchsia::mem::Buffer& buffer) {
+void GenerateObservedMutationsForDeviceState(
+    const fuchsia::mem::Buffer& buffer,
+    std::vector<StoryModelMutation>* commands) {
   std::vector<uint8_t> bytes;
   FXL_CHECK(fsl::VectorFromVmo(buffer, &bytes));
-  return GenerateObservedMutationsForDeviceState(std::move(bytes));
+  GenerateObservedMutationsForDeviceState(std::move(bytes), commands);
 }
 }  // namespace
 
-void LedgerStoryModelStorage::OnPageChange(const std::string& key,
-                                           fuchsia::mem::BufferPtr value) {
-  // TODO(MF-157): PageClient breaks a single change notification for multiple
-  // keys into one call to OnPageChange() per key. This breaks the semantic
-  // meaning of a single transaction. This, like OnPageConflict(), should be
-  // changed to preserve the transaction.
-  if (key == MakeDeviceKey(device_id_)) {
-    FXL_CHECK(value) << key;
-    // Read the value and generate equivalent StoryModelMutation commands.
-    Observe(GenerateObservedMutationsForDeviceState(*value));
-  } else if (key.find(kDeviceKeyPrefix) == 0) {
-    // This is device data from another device!
-    // TODO(thatguy): Store it in the local StoryModel when we care about
-    // observing these data.
-  } else {
-    FXL_LOG(FATAL) << "LedgerStoryModelStorage::OnPageChange(): key " << key
-                   << " unexpected in the Ledger.";
+void LedgerStoryModelStorage::OnChange(
+    fuchsia::ledger::PageChange page_change,
+    fuchsia::ledger::ResultState result_state, OnChangeCallback callback) {
+  switch (result_state) {
+    case fuchsia::ledger::ResultState::COMPLETED:
+      ProcessCompletePageChange(std::move(page_change));
+      break;
+    case fuchsia::ledger::ResultState::PARTIAL_STARTED:
+      partial_page_change_ = fuchsia::ledger::PageChange();
+      // Continue to merging of values with |partial_page_change_|.
+    case fuchsia::ledger::ResultState::PARTIAL_CONTINUED:
+    case fuchsia::ledger::ResultState::PARTIAL_COMPLETED:
+      // Merge the entries in |page_change| with |partial_page_change_|.
+      partial_page_change_.changed_entries.insert(
+          partial_page_change_.changed_entries.end(),
+          std::make_move_iterator(page_change.changed_entries.begin()),
+          std::make_move_iterator(page_change.changed_entries.end()));
+      partial_page_change_.deleted_keys.insert(
+          partial_page_change_.deleted_keys.end(),
+          std::make_move_iterator(page_change.deleted_keys.begin()),
+          std::make_move_iterator(page_change.deleted_keys.end()));
+
+      if (result_state == fuchsia::ledger::ResultState::PARTIAL_COMPLETED) {
+        ProcessCompletePageChange(std::move(partial_page_change_));
+      }
   }
+
+  callback(nullptr /* snapshot request */);
 }
 
-void LedgerStoryModelStorage::OnPageDelete(const std::string& key) {}
+void LedgerStoryModelStorage::ProcessCompletePageChange(
+    fuchsia::ledger::PageChange page_change) {
+  std::vector<StoryModelMutation> commands;
+
+  for (auto& entry : page_change.changed_entries) {
+    auto key = to_string(entry.key);
+    if (key == MakeDeviceKey(device_id_)) {
+      FXL_CHECK(entry.value)
+          << key << ": This key should never be deleted. Something is wrong.";
+      // Read the value and generate equivalent StoryModelMutation commands.
+      GenerateObservedMutationsForDeviceState(std::move(*entry.value),
+                                              &commands);
+    } else if (key.find(kDeviceKeyPrefix) == 0) {
+      // This is device data from another device!
+      // TODO(thatguy): Store it in the local StoryModel when we care about
+      // observing these data.
+    } else {
+      FXL_LOG(FATAL) << "LedgerStoryModelStorage::OnPageChange(): key " << key
+                     << " unexpected in the Ledger.";
+    }
+  }
+
+  Observe(std::move(commands));
+
+  // Don't do anything with deleted keys at this time.
+}
 
 void LedgerStoryModelStorage::OnPageConflict(Conflict* conflict) {
   // The default merge policy in LedgerClient is LEFT, meaning whatever value
@@ -258,12 +294,8 @@ fit::promise<> LedgerStoryModelStorage::Load() {
                                  const std::unique_ptr<std::vector<uint8_t>>&
                                      device_state_bytes) {
                      if (device_state_bytes) {
-                       auto commands = GenerateObservedMutationsForDeviceState(
-                           std::move(*device_state_bytes));
-                       state->commands.insert(
-                           state->commands.end(),
-                           std::make_move_iterator(commands.begin()),
-                           std::make_move_iterator(commands.end()));
+                       GenerateObservedMutationsForDeviceState(
+                           std::move(*device_state_bytes), &state->commands);
                      }
                      return fit::ok();
                    });
