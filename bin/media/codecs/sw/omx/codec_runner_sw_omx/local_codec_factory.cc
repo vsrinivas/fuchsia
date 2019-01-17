@@ -70,10 +70,12 @@ void LocalCodecFactory::CreateDecoder(
                });
 }
 
-// TODO(dustingreen):
-// AudioEncoder:
-// VideoEncoder:
-// (or combined)
+void LocalCodecFactory::CreateEncoder(
+    fuchsia::mediacodec::CreateEncoder_Params encoder_params,
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request) {
+  // We have no encoders to provide.
+  // ~encoder_request
+}
 
 void LocalCodecFactory::CreateCommon(
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,

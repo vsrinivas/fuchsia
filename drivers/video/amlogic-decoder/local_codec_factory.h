@@ -74,10 +74,10 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> video_decoder)
       override;
 
-  // TODO(dustingreen): Implement just-close-the-request stubs for:
-  // audio encoder
-  // video encoder
-  // (or combine more)
+  virtual void CreateEncoder(
+      fuchsia::mediacodec::CreateEncoder_Params encoder_params,
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      override;
 
  private:
   DeviceCtx* device_ = nullptr;

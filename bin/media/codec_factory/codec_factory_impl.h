@@ -27,6 +27,11 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
       fuchsia::mediacodec::CreateDecoder_Params params,
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) override;
 
+  virtual void CreateEncoder(
+      fuchsia::mediacodec::CreateEncoder_Params encoder_params,
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      override;
+
  private:
   CodecFactoryImpl(CodecFactoryApp* app,
                    component::StartupContext* startup_context,

@@ -148,4 +148,11 @@ void CodecFactoryImpl::CreateDecoder(
   // fine, but make sure.
 }
 
+void CodecFactoryImpl::CreateEncoder(
+    fuchsia::mediacodec::CreateEncoder_Params encoder_params,
+    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request) {
+  // We have no encoders to provide.
+  // ~encoder_request
+}
+
 }  // namespace codec_factory

@@ -13,6 +13,8 @@ struct CreateDecoder_Params {
     // Input mime type for a decoder.
     //
     // The recognized mime types for now:
+    // video/h264
+    // video/vp9
     // audio/aac
     //   input_details.codec_oob_bytes must be an AudioSpecificConfig() as defined
     //   by AAC spec.
@@ -164,6 +166,26 @@ struct CreateDecoder_Params {
     bool permit_lack_of_split_header_handling = false;
 };
 
+/// Parameters used to request an encoder.
+struct CreateEncoder_Params {
+    /// The format of the uncompressed input data.
+    ///
+    /// This field should be a raw mime_type (e.g. 'video/raw') and uncompressed
+    /// format details for the encoder to use when reading buffers.
+    ///
+    /// To be elibigible an encoder must support the input format.
+    CodecFormatDetails input_format;
+
+    /// The desired format of the encoded output data.
+    ///
+    /// To be eligible an encoder must support the output mime_type and any
+    /// compressed format details.
+    CodecFormatDetails output_format;
+
+    /// If true, require that the returned codec is HW-accelerated.
+    bool require_hw = false;
+};
+
 enum CodecType {
     DECODER = 0;
     ENCODER = 1;
@@ -242,8 +264,16 @@ interface CodecFactory {
         CreateDecoder_Params decoder_params,
         request<Codec> decoder);
 
-    // TODO(dustingreen):
-    // CreateAudioEncoder
-    // CreateVideoEncoder
-    // (or combined)
+    // CreateEncoder:
+    //
+    // encoder_params - See CreateEncoder_Params comments for required
+    // and optional parameters for creating a decoder.
+    //
+    // encoder - a Codec.NewRequest() which will hopefully be connected to
+    // a Codec server, or the Codec channel will get closed if no suitable codec
+    // can be found.  We don't return any additional Codec-specific status here
+    // because finding the Codec is allowed to be fully async, so we don't
+    // necessarily yet know on return from this method which Codec will be
+    // selected, if any.
+    CreateEncoder(CreateEncoder_Params encoder_params, request<Codec> encoder);
 };

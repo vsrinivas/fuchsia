@@ -267,6 +267,8 @@ union VideoCompressedFormat {
     // TODO(dustingreen): Any compressed video formats that aren't sufficiently
     // self-describing to select and create a Codec instance to decode it?
 
+    // TODO(turnage): Add fields for scaling, target bitrate, etc.
+
     // TODO(dustingreen): temp field to make the compiler happy until we have at
     // least one real field.
     uint32 temp_field_todo_remove;

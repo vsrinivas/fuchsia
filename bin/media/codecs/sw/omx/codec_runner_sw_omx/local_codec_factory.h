@@ -62,6 +62,11 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder)
       override;
 
+  virtual void CreateEncoder(
+      fuchsia::mediacodec::CreateEncoder_Params encoder_params,
+      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      override;
+
   // TODO(dustingreen): Implement interface methods for:
   // audio encoder
   // video encoder
