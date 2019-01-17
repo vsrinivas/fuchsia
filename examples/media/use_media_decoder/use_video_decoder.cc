@@ -151,7 +151,8 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
     }
   };
   for (size_t i = 0; i < input_size;) {
-    size_t start_code_size_bytes;
+    // Until clang-tidy correctly interprets Exit(), this "= 0" satisfies it.
+    size_t start_code_size_bytes = 0;
     if (!is_start_code(&input_bytes[i], input_size - i,
                        &start_code_size_bytes)) {
       if (i == 0) {
