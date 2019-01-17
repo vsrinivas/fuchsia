@@ -42,6 +42,7 @@
     },
     {
       "name": "last_focus_time",
+      "disabled": true,
       "exec": [
         "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
         "--test",
