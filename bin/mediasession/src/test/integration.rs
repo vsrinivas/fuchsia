@@ -7,8 +7,8 @@ use fidl::endpoints::{create_endpoints, ClientEnd};
 use fidl_fuchsia_mediaplayer::TimelineFunction;
 use fidl_fuchsia_mediasession::{
     ActiveSession, ControllerControlHandle, ControllerEvent, ControllerMarker, ControllerRequest,
-    ControllerRequestStream, ControllerVendorEvent, ControllerVendorEventStream,
-    ControllerVendorMarker, ControllerVendorProxy, PlaybackState, PlaybackStatus, PublisherMarker,
+    ControllerRequestStream, ControllerRegistryEvent, ControllerRegistryEventStream,
+    ControllerRegistryMarker, ControllerRegistryProxy, PlaybackState, PlaybackStatus, PublisherMarker,
     PublisherProxy, RepeatMode,
 };
 use fuchsia_app as app;
@@ -64,8 +64,8 @@ struct TestService {
     #[allow(unused)]
     app: app::client::App,
     publisher: PublisherProxy,
-    controller_vendor: ControllerVendorProxy,
-    active_session_changes: ControllerVendorEventStream,
+    controller_registry: ControllerRegistryProxy,
+    active_session_changes: ControllerRegistryEventStream,
 }
 
 impl TestService {
@@ -78,22 +78,22 @@ impl TestService {
         let publisher = mediasession
             .connect_to_service(PublisherMarker)
             .context("Connecting to Publisher.")?;
-        let controller_vendor = mediasession
-            .connect_to_service(ControllerVendorMarker)
-            .context("Connecting to ControllerVendor.")?;
-        let active_session_changes = controller_vendor.take_event_stream();
+        let controller_registry = mediasession
+            .connect_to_service(ControllerRegistryMarker)
+            .context("Connecting to ControllerRegistry.")?;
+        let active_session_changes = controller_registry.take_event_stream();
 
         Ok(Self {
             app: mediasession,
             publisher,
-            controller_vendor,
+            controller_registry,
             active_session_changes,
         })
     }
 
     async fn expect_active_session(&mut self, expected: Option<u64>) {
         assert!(!self.active_session_changes.is_terminated());
-        let ControllerVendorEvent::OnActiveSession {
+        let ControllerRegistryEvent::OnActiveSession {
             active_session: actual,
         } = await!(self.active_session_changes.try_next())
             .expect("Reported active session.")
@@ -127,7 +127,7 @@ async fn service_routes_controls() {
             let (client_end, server_end) =
                 create_endpoints::<ControllerMarker>().expect("Controller endpoints.");
             test_service
-                .controller_vendor
+                .controller_registry
                 .connect_to_controller_by_id(session_id, server_end)
                 .expect("To connect to session.");
             let proxy = client_end.into_proxy().expect("Controller a proxy.");
@@ -229,7 +229,7 @@ async fn service_broadcasts_events() {
         let (client_end, server_end) =
             create_endpoints::<ControllerMarker>().expect("Controller endpoints.");
         test_service
-            .controller_vendor
+            .controller_registry
             .connect_to_controller_by_id(session_id, server_end)
             .expect("To connect to session.");
         let mut event_stream = client_end
@@ -299,7 +299,7 @@ async fn service_correctly_tracks_session_ids_states_and_lifetimes() {
         let (client_end, server_end) =
             create_endpoints::<ControllerMarker>().expect("Fidl endpoints.");
         test_service
-            .controller_vendor
+            .controller_registry
             .connect_to_controller_by_id(session_id, server_end)
             .expect(&format!(
                 "To make connection request to session {}",

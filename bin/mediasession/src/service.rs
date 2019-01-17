@@ -5,7 +5,7 @@
 use crate::session::Session;
 use crate::Result;
 use fidl::{encoding::OutOfLine, endpoints::ServerEnd};
-use fidl_fuchsia_mediasession::{ActiveSession, ControllerMarker, ControllerVendorControlHandle};
+use fidl_fuchsia_mediasession::{ActiveSession, ControllerMarker, ControllerRegistryControlHandle};
 use fuchsia_async as fasync;
 use futures::{
     channel::mpsc::{channel, Receiver, Sender},
@@ -69,13 +69,13 @@ pub enum ServiceEvent {
         session_id: u64,
         request: ServerEnd<ControllerMarker>,
     },
-    NewActiveSessionChangeListener(ControllerVendorControlHandle),
+    NewActiveSessionChangeListener(ControllerRegistryControlHandle),
 }
 
 /// The Media Session service.
 pub struct Service {
     published_sessions: HashMap<u64, Sender<ServerEnd<ControllerMarker>>>,
-    active_session_listeners: Vec<ControllerVendorControlHandle>,
+    active_session_listeners: Vec<ControllerRegistryControlHandle>,
     /// The most recent sessions to broadcast activity.
     active_session_queue: ActiveSessionQueue,
 }
@@ -143,7 +143,7 @@ impl Service {
     }
 
     fn send_active_session(
-        active_session: Option<u64>, recipient: &ControllerVendorControlHandle,
+        active_session: Option<u64>, recipient: &ControllerRegistryControlHandle,
     ) -> Result<()> {
         let mut update_out_of_line = ActiveSession {
             session_id: active_session.unwrap_or(0),

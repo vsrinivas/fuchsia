@@ -24,10 +24,10 @@ struct ActiveSession {
     id session_id;
 };
 
-/// |ControllerVendor| observes the collection of published media sessions
+/// |ControllerRegistry| observes the collection of published media sessions
 /// and vends control handles to them.
 [Discoverable]
-interface ControllerVendor {
+interface ControllerRegistry {
     /// |OnActiveSession| is sent on connection and when the
     /// underlying active session is changed.
     -> OnActiveSession(ActiveSession? active_session);
@@ -36,9 +36,9 @@ interface ControllerVendor {
     ConnectToControllerById(id session_id, request<Controller> controller_request);
 };
 
-/// |ObserverVendor| vends handles to observe published media sessions.
+/// |ObserverRegistry| vends handles to observe published media sessions.
 [Discoverable]
-interface ObserverVendor {
+interface ObserverRegistry {
     /// |OnActiveSession| is sent on connection and when the
     /// underlying active session is changed.
     -> OnActiveSession(ActiveSession? active_session);

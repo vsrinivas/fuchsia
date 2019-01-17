@@ -14,7 +14,7 @@ mod session;
 #[cfg(test)]
 mod test;
 
-use self::controller::ControllerVendor;
+use self::controller::ControllerRegistry;
 use self::publisher::Publisher;
 use self::service::Service;
 use failure::{Error, ResultExt};
@@ -32,7 +32,7 @@ async fn main() -> Result<()> {
     let (fidl_sink, fidl_stream) = channel(CHANNEL_BUFFER_SIZE);
     let fidl_server = ServicesServer::new()
         .add_service(Publisher::factory(fidl_sink.clone()))
-        .add_service(ControllerVendor::factory(fidl_sink.clone()))
+        .add_service(ControllerRegistry::factory(fidl_sink.clone()))
         .start()
         .context("Starting Media Session FIDL server.")?;
 
