@@ -62,7 +62,7 @@ zx_status_t sys_pager_create_vmo(zx_handle_t pager, uint32_t options, zx_handle_
 
     fbl::RefPtr<Dispatcher> dispatcher;
     zx_rights_t rights;
-    status = VmObjectDispatcher::Create(vmo, &dispatcher, &rights);
+    status = VmObjectDispatcher::Create(vmo, pager_dispatcher->get_koid(), &dispatcher, &rights);
     if (status != ZX_OK) {
         return status;
     }
@@ -86,7 +86,7 @@ zx_status_t sys_pager_detach_vmo(zx_handle_t pager, zx_handle_t vmo) {
         return status;
     }
 
-    if (vmo_dispatcher->vmo()->get_page_source_id() != pager_dispatcher->get_koid()) {
+    if (vmo_dispatcher->pager_koid() != pager_dispatcher->get_koid()) {
         return ZX_ERR_INVALID_ARGS;
     }
 
@@ -112,7 +112,7 @@ zx_status_t sys_pager_supply_pages(zx_handle_t pager, zx_handle_t pager_vmo,
         return status;
     }
 
-    if (pager_vmo_dispatcher->vmo()->get_page_source_id() != pager_dispatcher->get_koid()) {
+    if (pager_vmo_dispatcher->pager_koid() != pager_dispatcher->get_koid()) {
         return ZX_ERR_INVALID_ARGS;
     }
 

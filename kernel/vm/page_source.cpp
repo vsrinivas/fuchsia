@@ -12,7 +12,7 @@
 
 #define LOCAL_TRACE 0
 
-PageSource::PageSource(uint64_t page_source_id) : page_source_id_(page_source_id) {
+PageSource::PageSource() {
     LTRACEF("%p\n", this);
 }
 

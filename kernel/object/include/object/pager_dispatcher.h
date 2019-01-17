@@ -25,8 +25,7 @@
 class PagerSource : public PageSource , public PortAllocator,
                     public fbl::DoublyLinkedListable<fbl::RefPtr<PagerSource>> {
 private:
-    PagerSource(uint64_t page_source_id,
-                PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
+    PagerSource(PagerDispatcher* dispatcher, fbl::RefPtr<PortDispatcher> port, uint64_t key);
     virtual ~PagerSource();
     friend fbl::RefPtr<PagerSource>;
 

@@ -111,12 +111,6 @@ public:
     uint32_t GetMappingCachePolicy() const override;
     zx_status_t SetMappingCachePolicy(const uint32_t cache_policy) override;
 
-    uint64_t get_page_source_id() const override {
-        if (page_source_) {
-            return page_source_->get_page_source_id();
-        }
-        return 0;
-    }
     void DetachSource() override {
         DEBUG_ASSERT(page_source_);
         page_source_->Detach();

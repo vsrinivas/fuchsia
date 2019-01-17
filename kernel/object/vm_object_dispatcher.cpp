@@ -21,10 +21,11 @@
 #define LOCAL_TRACE 0
 
 zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
+                                       zx_koid_t pager_koid,
                                        fbl::RefPtr<Dispatcher>* dispatcher,
                                        zx_rights_t* rights) {
     fbl::AllocChecker ac;
-    auto disp = new (&ac) VmObjectDispatcher(ktl::move(vmo));
+    auto disp = new (&ac) VmObjectDispatcher(ktl::move(vmo), pager_koid);
     if (!ac.check())
         return ZX_ERR_NO_MEMORY;
 
@@ -34,8 +35,8 @@ zx_status_t VmObjectDispatcher::Create(fbl::RefPtr<VmObject> vmo,
     return ZX_OK;
 }
 
-VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo)
-    : SoloDispatcher(ZX_VMO_ZERO_CHILDREN), vmo_(vmo) {
+VmObjectDispatcher::VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid)
+    : SoloDispatcher(ZX_VMO_ZERO_CHILDREN), vmo_(vmo), pager_koid_(pager_koid) {
         vmo_->SetChildObserver(this);
     }
 

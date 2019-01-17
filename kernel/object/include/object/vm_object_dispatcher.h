@@ -21,6 +21,13 @@ class VmObjectDispatcher final : public SoloDispatcher<VmObjectDispatcher, ZX_DE
 public:
     static zx_status_t Create(fbl::RefPtr<VmObject> vmo,
                               fbl::RefPtr<Dispatcher>* dispatcher,
+                              zx_rights_t* rights) {
+        return Create(std::move(vmo), ZX_KOID_INVALID, dispatcher, rights);
+    }
+
+    static zx_status_t Create(fbl::RefPtr<VmObject> vmo,
+                              zx_koid_t pager_koid,
+                              fbl::RefPtr<Dispatcher>* dispatcher,
                               zx_rights_t* rights);
     ~VmObjectDispatcher() final;
 
@@ -52,9 +59,10 @@ public:
     zx_info_vmo_t GetVmoInfo();
 
     const fbl::RefPtr<VmObject>& vmo() const { return vmo_; }
+    zx_koid_t pager_koid() const { return pager_koid_; }
 
 private:
-    explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo);
+    explicit VmObjectDispatcher(fbl::RefPtr<VmObject> vmo, zx_koid_t pager_koid);
 
     fbl::Canary<fbl::magic("VMOD")> canary_;
 
@@ -62,6 +70,10 @@ private:
     // ourselves to |vmo_| so we have to ensure we don't reset vmo_
     // except during destruction.
     fbl::RefPtr<VmObject> const vmo_;
+
+    // The koid of the related pager object, or ZX_KOID_INVALID if
+    // there is no related pager.
+    const zx_koid_t pager_koid_;
 
     // VMOs do not currently maintain any VMO-specific signal state,
     // but do allow user signals to be set. In addition, the CookieJar

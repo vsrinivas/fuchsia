@@ -50,7 +50,7 @@ typedef struct page_request {
 // Object which provides pages to a vm_object.
 class PageSource : public fbl::RefCounted<PageSource> {
 public:
-    PageSource(uint64_t page_source_id);
+    PageSource();
     virtual ~PageSource();
 
     // Sends a request to the backing source to provide the requested page.
@@ -74,9 +74,6 @@ public:
     // Closes the source. All pending transactions will be aborted and all future
     // calls will fail.
     void Close();
-
-    // Gets an id used for ownership verification.
-    uint64_t get_page_source_id() const { return page_source_id_; }
 
 protected:
     // Synchronously gets a page from the backing source.
@@ -102,8 +99,6 @@ protected:
 
 private:
     fbl::Canary<fbl::magic("VMPS")> canary_;
-
-    const uint64_t page_source_id_;
 
     mutable DECLARE_MUTEX(PageSource) page_source_mtx_;
     bool detached_ TA_GUARDED(page_source_mtx_) = false;

@@ -32,7 +32,7 @@ PagerDispatcher::~PagerDispatcher() {
 zx_status_t PagerDispatcher::CreateSource(fbl::RefPtr<PortDispatcher> port,
                                           uint64_t key, fbl::RefPtr<PageSource>* src_out) {
     fbl::AllocChecker ac;
-    auto src = fbl::AdoptRef(new (&ac) PagerSource(get_koid(), this, ktl::move(port), key));
+    auto src = fbl::AdoptRef(new (&ac) PagerSource(this, ktl::move(port), key));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -63,9 +63,9 @@ void PagerDispatcher::on_zero_handles() {
     }
 }
 
-PagerSource::PagerSource(uint64_t page_source_id, PagerDispatcher* dispatcher,
+PagerSource::PagerSource(PagerDispatcher* dispatcher,
                          fbl::RefPtr<PortDispatcher> port, uint64_t key)
-    : PageSource(page_source_id), pager_(dispatcher), port_(ktl::move(port)), key_(key) {
+    : PageSource(), pager_(dispatcher), port_(ktl::move(port)), key_(key) {
     LTRACEF("%p key %lx\n", this, key_);
 }
 
