@@ -2,15 +2,13 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use {
-    failure::{Error, ResultExt},
-    fidl_fuchsia_wlan_device as wlan,
-    serde_derive::Deserialize,
-    std::{
-        collections::HashMap,
-        fs::File,
-        io::{Read, Write},
-    },
+use failure::{Error, ResultExt};
+use fidl_fuchsia_wlan_device as wlan;
+use serde_derive::Deserialize;
+use std::{
+    collections::HashMap,
+    fs::File,
+    io::{Read, Write},
 };
 
 const CONFIG_FILE: &str = "/data/config.json";
@@ -64,8 +62,7 @@ impl Config {
     fn load_data_config() -> Result<Config, Error> {
         let mut file = File::open(CONFIG_FILE).context("could not open config file")?;
         let mut contents = String::new();
-        file.read_to_string(&mut contents)
-            .context("could not read config file")?;
+        file.read_to_string(&mut contents).context("could not read config file")?;
         serde_json::from_str(&contents).map_err(Into::into)
     }
 
@@ -80,9 +77,7 @@ impl Config {
 
             let mut data_file =
                 File::create(CONFIG_FILE).context("could not create new config file")?;
-            data_file
-                .write_all(contents.as_bytes())
-                .context("could not write new config file")?;
+            data_file.write_all(contents.as_bytes()).context("could not write new config file")?;
         }
         Self::load_data_config()
     }

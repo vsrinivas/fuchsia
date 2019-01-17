@@ -4,20 +4,17 @@
 
 use crate::Never;
 
-use {
-    futures::{
-        future::{Future, FutureExt, FutureObj},
-        ready,
-        task::{LocalWaker, Poll},
-    },
-    std::marker::Unpin,
-    std::pin::Pin,
+use futures::{
+    future::{Future, FutureExt, FutureObj},
+    ready,
+    task::{LocalWaker, Poll},
 };
+use std::{marker::Unpin, pin::Pin};
 
 pub struct State<E>(FutureObj<'static, Result<State<E>, E>>);
 
-pub struct StateMachine<E>{
-    cur_state: State<E>
+pub struct StateMachine<E> {
+    cur_state: State<E>,
 }
 
 impl<E> Unpin for StateMachine<E> {}
@@ -37,17 +34,13 @@ impl<E> Future for StateMachine<E> {
 
 pub trait IntoStateExt<E>: Future<Output = Result<State<E>, E>> {
     fn into_state(self) -> State<E>
-        where Self: Sized + Send + 'static
-    {
+    where Self: Sized + Send + 'static {
         State(FutureObj::new(Box::new(self)))
     }
 
     fn into_state_machine(self) -> StateMachine<E>
-        where Self: Sized + Send + 'static
-    {
-        StateMachine {
-            cur_state: self.into_state()
-        }
+    where Self: Sized + Send + 'static {
+        StateMachine { cur_state: self.into_state() }
     }
 }
 
@@ -56,14 +49,9 @@ impl<F, E> IntoStateExt<E> for F where F: Future<Output = Result<State<E>, E>> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fuchsia_async as fasync,
-        futures::{
-            channel::mpsc,
-            stream::StreamExt,
-        },
-        std::mem,
-    };
+    use fuchsia_async as fasync;
+    use futures::{channel::mpsc, stream::StreamExt};
+    use std::mem;
 
     #[test]
     fn state_machine() {
@@ -82,9 +70,9 @@ mod tests {
         assert_eq!(Poll::Ready(Err(5)), r);
     }
 
-    async fn sum_state(current: u32, stream: mpsc::UnboundedReceiver<u32>)
-        -> Result<State<u32>, u32>
-    {
+    async fn sum_state(
+        current: u32, stream: mpsc::UnboundedReceiver<u32>,
+    ) -> Result<State<u32>, u32> {
         let (number, stream) = await!(stream.into_future());
         match number {
             Some(number) => Ok(make_sum_state(current + number, stream)),
