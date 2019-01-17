@@ -19,31 +19,20 @@ namespace modular {
 
 class LedgerClient;
 
-// A helper class that holds on to a page snapshot through a shared
-// pointer, hands out shared pointers to it, can replace the snapshot
-// by a new one, and registers a connection error handler on it. It
-// essentially wraps fuchsia::ledger::PageSnapshot.
+// A helper class that aids in interfacing with a fuchsia.ledger.Page by:
 //
-// This is used by classes that hold onto a PageSnapshot and update it
-// in return calls from PageWatcher notifications, and use Operation
-// containers to access the snapshot.
+// 1) Forwarding requests for conflict resolution from the
+// fuchsia.ledger.Ledger connection to a PageClient's OnPageConflict() which is
+// constructed with an associated key prefix of the Page.
+// 2) Providing a convenient method to acquire a PageSnapshot from the Page.
+// 3) Providing an optional and convenient per-key
+// fuchsia.ledger.PageWatcher.OnChange() implementation that calls into
+// OnPageChange(). Clients that care about the notification semantics of >1 key
+// at a time may wish to implement OnChange() directly.
 //
-// Every time we receive an OnChange notification, we update the page
-// snapshot so we see the current state. Just in case, we also install
-// a connection error handler on the snapshot connection, so we can
-// log when the connection unexpectedly closes, although we cannot do
-// anything else about it.
-//
-// An instance of this class always holds the current snapshot of the
-// page we read from, as obtained from the watcher on the page. It is
-// held by a shared pointer, because the update may occur while
-// Operation instances that read from it are still in progress, and
-// they need to hold on to the same snapshot they started with, lest
-// the methods called on that snapshot never return.
-//
-// The same behavior as with a shared_ptr could be accomplished with
-// a duplicate PageSnapshotPtr for each Operation instance that needs
-// one, but PageSnapshot doesn't have a duplicate method.
+// NOTE: The conflict resolution API is currently implemented on a per-key
+// basis.  Conflict resolution may be difficult for some clients to implement
+// if a multiple-key update has semantic meaning. MF-157
 class PageClient : fuchsia::ledger::PageWatcher {
  public:
   // |context| is used as a string prefix on log messages.  |ledger_client| is
@@ -97,11 +86,21 @@ class PageClient : fuchsia::ledger::PageWatcher {
   };
 
  protected:
-  // Derived classes implement this method as needed. The default implementation
-  // copies the VMO to a string and forwards to |OnPageChange(const
-  // std::string&, const std::string&)|.
+  // Derived classes may implement this method as needed. The default
+  // implementation copies the VMO to a string and forwards to
+  // |OnPageChange(const std::string&, const std::string&)|.
   virtual void OnPageChange(const std::string& key,
                             fuchsia::mem::BufferPtr value);
+
+  using PageWatcher::OnChangeCallback;
+  // |PageWatcher|
+  //
+  // Derived classes may implement this method as needed. The default
+  // implementation forwards individual changed keys to OnPageChange() and
+  // OnPageDelete().
+  void OnChange(fuchsia::ledger::PageChange page,
+                fuchsia::ledger::ResultState result_state,
+                OnChangeCallback callback) override;
 
  private:
   // Derived classes implement this method as needed. The default implementation
@@ -129,10 +128,6 @@ class PageClient : fuchsia::ledger::PageWatcher {
   friend class LedgerClient;
   virtual void OnPageConflict(Conflict* conflict);
 
-  // |PageWatcher|
-  void OnChange(fuchsia::ledger::PageChange page,
-                fuchsia::ledger::ResultState result_state,
-                OnChangeCallback callback) override;
 
   fidl::Binding<fuchsia::ledger::PageWatcher> binding_;
   const std::string context_;
