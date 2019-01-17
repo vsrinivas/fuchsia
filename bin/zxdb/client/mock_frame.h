@@ -19,13 +19,20 @@ class MockFrame : public Frame {
  public:
   // Session and Thread can be null as long as no code that uses this object
   // needs it.
+  //
+  // The physical frame is the non-inlined call frame associated with this one.
+  // The pointer must outlive this class (normally both are owned by the
+  // Stack). A null physical frame indicates that this is not inline.
   MockFrame(Session* session, Thread* thread,
-            const debug_ipc::StackFrame& stack_frame, const Location& location);
+            const debug_ipc::StackFrame& stack_frame, const Location& location,
+            const Frame* physical_frame = nullptr);
 
   ~MockFrame() override;
 
   // Frame implementation.
   Thread* GetThread() const override;
+  bool IsInline() const override;
+  const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   uint64_t GetBasePointerRegister() const override;
@@ -39,6 +46,7 @@ class MockFrame : public Frame {
   Thread* thread_;
 
   debug_ipc::StackFrame stack_frame_;
+  const Frame* physical_frame_;  // Null if non-inlined.
   Location location_;
   mutable fxl::RefPtr<MockSymbolDataProvider> symbol_data_provider_;  // Lazy.
   mutable fxl::RefPtr<SymbolEvalContext> symbol_eval_context_;        // Lazy.

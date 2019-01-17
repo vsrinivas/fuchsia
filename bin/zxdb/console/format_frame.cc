@@ -115,8 +115,10 @@ void FormatFrameLong(const Frame* frame, bool include_params, FormatValue* out,
   if (location.has_symbols())
     out->Append(FormatLocation(location, false, include_params));
 
+  if (frame->IsInline())
+    out->Append(OutputBuffer(Syntax::kComment, " (inline)"));
+
   // Long format includes the IP address.
-  // TODO(brettw) handle asynchronously available BP.
   uint64_t bp = 0;
   if (auto optional_bp = frame->GetBasePointer())
     bp = *optional_bp;

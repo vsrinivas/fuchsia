@@ -33,6 +33,10 @@ FrameImpl::~FrameImpl() {
 
 Thread* FrameImpl::GetThread() const { return thread_; }
 
+bool FrameImpl::IsInline() const { return false; }
+
+const Frame* FrameImpl::GetPhysicalFrame() const { return this; }
+
 const Location& FrameImpl::GetLocation() const {
   EnsureSymbolized();
   return location_;

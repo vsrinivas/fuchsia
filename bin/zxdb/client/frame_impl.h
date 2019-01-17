@@ -28,6 +28,8 @@ class FrameImpl final : public Frame {
 
   // Frame implementation.
   Thread* GetThread() const override;
+  bool IsInline() const override;
+  const Frame* GetPhysicalFrame() const override;
   const Location& GetLocation() const override;
   uint64_t GetAddress() const override;
   uint64_t GetBasePointerRegister() const override;

@@ -8,7 +8,9 @@
 #include "garnet/bin/zxdb/console/format_value.h"
 #include "garnet/bin/zxdb/console/mock_format_value_process_context.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "garnet/lib/debug_ipc/helper/platform_message_loop.h"
 #include "gtest/gtest.h"
 
@@ -70,6 +72,33 @@ TEST(FormatFrame, Unsymbolized) {
   out = OutputBuffer();
   FormatFrame(&frame, false, &out, 3);
   EXPECT_EQ("Frame 3 0x12345678", out.AsString());
+}
+
+TEST(FormatFrame, Inline) {
+  debug_ipc::StackFrame stack_frame;
+  stack_frame.ip = 0x12345678;
+  stack_frame.bp = 0xdeadbeef;
+  stack_frame.sp = 0x567890;
+
+  // This is to have some place for the inline frame to refer to as the
+  // underlying physical frame. The values are ignored.
+  MockFrame physical_frame(
+      nullptr, nullptr, stack_frame,
+      Location(Location::State::kSymbolized, stack_frame.ip));
+
+  SymbolContext symbol_context = SymbolContext::ForRelativeAddresses();
+
+  auto function = fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
+  function->set_assigned_name("Function");
+
+  MockFrame inline_frame(nullptr, nullptr, stack_frame,
+                         Location(stack_frame.ip, FileLine("file.cc", 22), 0,
+                                  symbol_context, LazySymbol(function)),
+                         &physical_frame);
+
+  EXPECT_EQ("Function() • file.cc:22 (inline)\n"
+            "      IP = 0x12345678, BP = 0xdeadbeef, SP = 0x567890",
+            SyncFormatFrameLong(&inline_frame, FormatExprValueOptions()));
 }
 
 }  // namespace zxdb

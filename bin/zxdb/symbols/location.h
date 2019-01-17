@@ -80,9 +80,15 @@ class Location {
   int column() const { return column_; }
 
   // The symbol associated with this address, if any. In the case of code, this
-  // will be the most specific inline or regular function covering the given
-  // address. It could also be a variable symbol corresponding to a global or
-  // static variable.
+  // will be the inline or regular function covering the given address. It
+  // could also be a variable symbol corresponding to a global or static
+  // variable.
+  //
+  // When looking up code locations from the symbol system, this will be the
+  // most specific symbol covering the code in question (the innermost inlined
+  // function if there is one). But Locations may be generated (e.g. by the
+  // stack unwinder) for any of the other inlined functions that may cover the
+  // same address.
   //
   // This isn't necessarily valid, even if the State == kSymbolized. It could
   // be the symbol table indicates file/line info for this address but could

@@ -12,14 +12,25 @@ namespace zxdb {
 
 MockFrame::MockFrame(Session* session, Thread* thread,
                      const debug_ipc::StackFrame& stack_frame,
-                     const Location& location)
+                     const Location& location,
+                     const Frame* physical_frame)
     : Frame(session),
       thread_(thread),
       stack_frame_(stack_frame),
+      physical_frame_(physical_frame),
       location_(location) {}
 MockFrame::~MockFrame() = default;
 
 Thread* MockFrame::GetThread() const { return thread_; }
+
+bool MockFrame::IsInline() const { return !!physical_frame_; }
+
+const Frame* MockFrame::GetPhysicalFrame() const {
+  if (physical_frame_)
+    return physical_frame_;
+  return this;
+}
+
 const Location& MockFrame::GetLocation() const { return location_; }
 uint64_t MockFrame::GetAddress() const { return stack_frame_.ip; }
 uint64_t MockFrame::GetBasePointerRegister() const {
