@@ -75,6 +75,7 @@ void found_driver(zircon_driver_note_payload_t* note,
     drv->binding.reset(binding.release());
     drv->binding_size = static_cast<uint32_t>(bindlen);
 
+    drv->flags = note->flags;
     drv->libname.Set(libname);
     drv->name.Set(note->name);
 
