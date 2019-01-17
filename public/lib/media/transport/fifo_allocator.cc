@@ -4,6 +4,8 @@
 
 #include "lib/media/transport/fifo_allocator.h"
 
+#include <zircon/compiler.h>
+
 #include "lib/fxl/logging.h"
 
 namespace media {
@@ -69,8 +71,8 @@ uint64_t FifoAllocator::AllocateRegion(uint64_t size) {
 
 void FifoAllocator::ReleaseRegion(uint64_t offset) {
   // Start at active_->next. That's usually the region we're looking for.
-  bool released = Release(offset, active_->next, nullptr) ||
-                  Release(offset, front_, active_);
+  bool __UNUSED released = Release(offset, active_->next, nullptr) ||
+                           Release(offset, front_, active_);
   FXL_DCHECK(released);
 }
 
@@ -151,20 +153,18 @@ void FifoAllocator::MakeActivePlaceholder() {
 void FifoAllocator::remove(Region* region) {
   FXL_DCHECK(region);
 
-  if (front_ == region) {
-    FXL_DCHECK(region->prev == nullptr);
+  if (region->prev == nullptr) {
+    FXL_DCHECK(front_ == region);
     front_ = region->next;
   } else {
-    FXL_DCHECK(region->prev);
     FXL_DCHECK(region->prev->next == region);
     region->prev->next = region->next;
   }
 
-  if (back_ == region) {
-    FXL_DCHECK(region->next == nullptr);
+  if (region->next == nullptr) {
+    FXL_DCHECK(back_ == region);
     back_ = region->prev;
   } else {
-    FXL_DCHECK(region->next);
     FXL_DCHECK(region->next->prev == region);
     region->next->prev = region->prev;
   }
