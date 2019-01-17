@@ -28,6 +28,7 @@
 #include <zircon/syscalls/object.h>
 #include <zircon/syscalls/policy.h>
 
+#include <lib/async-loop/cpp/loop.h>
 #include <lib/devmgr-launcher/processargs.h>
 #include <lib/fdio/io.h>
 #include <lib/fdio/namespace.h>

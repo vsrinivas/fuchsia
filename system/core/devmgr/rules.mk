@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/devmgr/coordinator.cpp \
     $(LOCAL_DIR)/devmgr/devfs.cpp \
     $(LOCAL_DIR)/devmgr/devhost-loader-service.cpp \
+    $(LOCAL_DIR)/devmgr/device.cpp \
     $(LOCAL_DIR)/devmgr/drivers.cpp \
     $(LOCAL_DIR)/devmgr/fidl.cpp \
     $(LOCAL_DIR)/shared/env.cpp \

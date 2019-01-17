@@ -11,9 +11,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
-#include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/async-loop/cpp/loop.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/job.h>
@@ -23,160 +21,20 @@
 
 #include <utility>
 
+#include "device.h"
 #include "metadata.h"
 
 namespace devmgr {
 
-class Coordinator;
-class Devhost;
 class DevhostLoaderService;
-struct Devnode;
-class SuspendContext;
-
-class PendingOperation {
-public:
-    enum struct Op : uint32_t {
-        kBind = 1,
-        kSuspend = 2,
-    };
-
-    PendingOperation(Op op, SuspendContext* context) : op_(op), context_(context) {}
-
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>>& node_state(
-            PendingOperation& obj) {
-            return obj.node_;
-        }
-    };
-
-    Op op() const { return op_; }
-    SuspendContext* context() const { return context_; }
-
-private:
-    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>> node_;
-
-    Op op_;
-    SuspendContext* context_;
-};
-
-#define DEV_HOST_DYING 1
-#define DEV_HOST_SUSPEND 2
-
-struct Device {
-    explicit Device(Coordinator* coord);
-    ~Device();
-
-    // Begins waiting in |dispatcher| on |dev->wait|.  This transfers a
-    // reference of |dev| to the dispatcher.  The dispatcher returns ownership
-    // when the of that reference when the handler is invoked.
-    // TODO(teisenbe/kulakowski): Make this take a RefPtr
-    static zx_status_t BeginWait(Device* dev, async_dispatcher_t* dispatcher) {
-        // TODO(teisenbe/kulakowski): Once this takes a refptr, we should leak a
-        // ref in the success case (to present the ref owned by the dispatcher).
-        return dev->wait.Begin(dispatcher);
-    }
-
-    // Entrypoint for the RPC handler that captures the pointer ownership
-    // semantics.
-    void HandleRpcEntry(async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-                        const zx_packet_signal_t* signal) {
-        // TODO(teisenbe/kulakowski): Perform the appropriate dance to construct
-        // a RefPtr from |this| without a net-increase in refcount, to represent
-        // the dispatcher passing ownership of its reference to the handler
-        HandleRpc(this, dispatcher, wait, status, signal);
-    }
-
-    // TODO(teisenbe/kulakowski): Make this take a RefPtr
-    static void HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
-
-    Coordinator* coordinator;
-    zx::channel hrpc;
-    uint32_t flags = 0;
-
-    async::WaitMethod<Device, &Device::HandleRpcEntry> wait{this};
-    async::TaskClosure publish_task;
-
-    Devhost* host = nullptr;
-    const char* name = nullptr;
-    const char* libname = nullptr;
-    fbl::unique_ptr<const char[]> args;
-    // The backoff between each driver retry. This grows exponentially.
-    zx::duration backoff = zx::msec(250);
-    // The number of retries left for the driver.
-    uint32_t retries = 4;
-    mutable int32_t refcount_ = 0;
-    uint32_t protocol_id = 0;
-    uint32_t prop_count = 0;
-    Devnode* self = nullptr;
-    Devnode* link = nullptr;
-    Device* parent = nullptr;
-    Device* proxy = nullptr;
-
-    // For attaching as an open connection to the proxy device,
-    // or once the device becomes visible.
-    zx::channel client_remote;
-
-    // listnode for this device in its parent's
-    // list-of-children
-    fbl::DoublyLinkedListNodeState<Device*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
-            return obj.node;
-        }
-    };
-
-    // listnode for this device in its devhost's
-    // list-of-devices
-    fbl::DoublyLinkedListNodeState<Device*> dhnode;
-    struct DevhostNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
-            return obj.dhnode;
-        }
-    };
-
-    // list of all child devices of this device
-    fbl::DoublyLinkedList<Device*, Node> children;
-
-    // list of outstanding requests from the devcoord
-    // to this device's devhost, awaiting a response
-    fbl::DoublyLinkedList<fbl::unique_ptr<PendingOperation>, PendingOperation::Node> pending;
-
-    // listnode for this device in the all devices list
-    fbl::DoublyLinkedListNodeState<Device*> anode;
-    struct AllDevicesNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
-            return obj.anode;
-        }
-    };
-
-    // Metadata entries associated to this device.
-    fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
-
-    fbl::unique_ptr<zx_device_prop_t[]> props;
-
-    // Allocation backing |name| and |libname|
-    fbl::unique_ptr<char[]> name_alloc_;
-
-    // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const {
-        ++refcount_;
-    }
-
-    // Returns true when the last reference has been released.
-    bool Release() const {
-        const int32_t rc = refcount_;
-        --refcount_;
-        return rc == 1;
-    }
-};
 
 class Devhost {
 public:
+    enum Flags : uint32_t {
+        kDying = 1 << 0,
+        kSuspend = 1 << 1,
+    };
+
     struct AllDevhostsNode {
         static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
             Devhost& obj) {
@@ -195,8 +53,6 @@ public:
             return obj.node_;
         }
     };
-
-    Devhost();
 
     zx_handle_t hrpc() const { return hrpc_; }
     void set_hrpc(zx_handle_t hrpc) { hrpc_ = hrpc; }
@@ -225,12 +81,12 @@ public:
 
 private:
     async::Wait wait_;
-    zx_handle_t hrpc_;
+    zx_handle_t hrpc_ = ZX_HANDLE_INVALID;
     zx::process proc_;
-    zx_koid_t koid_;
-    mutable int32_t refcount_;
-    uint32_t flags_;
-    Devhost* parent_;
+    zx_koid_t koid_ = 0;
+    mutable int32_t refcount_ = 0;
+    uint32_t flags_ = 0;
+    Devhost* parent_ = nullptr;
 
     // list of all devices on this devhost
     fbl::DoublyLinkedList<Device*, Device::DevhostNode> devices_;
@@ -250,13 +106,12 @@ private:
 
 class SuspendContext {
 public:
-    enum struct Flags : uint32_t {
+    enum class Flags : uint32_t {
         kRunning = 0u,
         kSuspend = 1u,
     };
 
-    SuspendContext() {
-    }
+    SuspendContext() = default;
 
     SuspendContext(Coordinator* coordinator,
                    Flags flags, uint32_t sflags, zx::socket socket,

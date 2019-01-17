@@ -544,11 +544,6 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     return ZX_OK;
 }
 
-Devhost::Devhost()
-    : hrpc_(ZX_HANDLE_INVALID), proc_(ZX_HANDLE_INVALID), koid_(0), refcount_(0),
-      flags_(0), parent_(nullptr) {
-}
-
 zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost** out) {
     auto dh = fbl::make_unique<Devhost>();
     if (dh == nullptr) {
@@ -635,15 +630,6 @@ void Coordinator::ReleaseDevice(Device* dev) {
     //TODO: cancel any pending rpc responses
     //TODO: Have dtor assert that DEV_CTX_IMMORTAL set on flags
     delete dev;
-}
-
-Device::Device(Coordinator* coord)
-    : coordinator(coord), publish_task([this] { coordinator->HandleNewDevice(this); }) {}
-
-Device::~Device() {
-    // TODO: cancel any pending rpc responses.  This clear is a hack to prevent
-    // pending's dtor from asserting.
-    pending.clear();
 }
 
 // Add a new device to a parent device (same devhost)
@@ -831,7 +817,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
         // A side-effect of this is that the devhost will be released,
         // as well as any proxy devices.
         if (forced) {
-            dh->flags() |= DEV_HOST_DYING;
+            dh->flags() |= Devhost::Flags::kDying;
 
             Device* next;
             Device* last = nullptr;
@@ -876,7 +862,8 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
                 // THEN we will want to rebind our parent
                 if (!(parent->flags & DEV_CTX_DEAD) &&
                     (parent->flags & DEV_CTX_MUST_ISOLATE) &&
-                    ((parent->host == nullptr) || !(parent->host->flags() & DEV_HOST_DYING))) {
+                    ((parent->host == nullptr) ||
+                    !(parent->host->flags() & Devhost::Flags::kDying))) {
 
                     log(DEVLC, "devcoord: bus device %p name='%s' is unbound\n",
                         parent, parent->name);
@@ -1458,39 +1445,6 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
     return ZX_OK;
 }
 
-// handle inbound messages from devhost to devices
-void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
-                      async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal) {
-    if (status != ZX_OK) {
-        log(ERROR, "devcoord: Device::HandleRpc aborting, saw status %d\n", status);
-        return;
-    }
-
-    if (signal->observed & ZX_CHANNEL_READABLE) {
-        zx_status_t r;
-        if ((r = dev->coordinator->HandleDeviceRead(dev)) < 0) {
-            if (r != ZX_ERR_STOP) {
-                log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
-                    dev, dev->name, r);
-            }
-            dev->coordinator->RemoveDevice(dev, true);
-            // Do not start waiting again on this device's channel again
-            return;
-        }
-        Device::BeginWait(dev, dispatcher);
-        return;
-    }
-    if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
-        dev->coordinator->RemoveDevice(dev, true);
-        // Do not start waiting again on this device's channel again
-        return;
-    }
-    log(ERROR, "devcoord: no work? %08x\n", signal->observed);
-    Device::BeginWait(dev, dispatcher);
-}
-
 // send message to devhost, requesting the creation of a device
 static zx_status_t dh_create_device(Device* dev, Devhost* dh,
                                     const char* args, zx::handle rpc_proxy) {
@@ -1767,7 +1721,7 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
         return r;
     }
 
-    dh->flags() |= DEV_HOST_SUSPEND;
+    dh->flags() |= Devhost::Flags::kSuspend;
 
     auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kSuspend, ctx);
     if (pending == nullptr) {
