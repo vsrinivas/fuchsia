@@ -165,7 +165,7 @@ bool WaitForNewInterface(
   return false;
 }
 
-TEST_F(NetstackFilterTest, TestRuleset) {
+TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
   auto services = CreateServices();
   const std::string netstack_url =
       "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
