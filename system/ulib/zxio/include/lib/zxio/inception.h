@@ -37,6 +37,7 @@ static_assert(sizeof(zxio_remote_t) <= sizeof(zxio_storage_t),
 
 zx_status_t zxio_remote_init(zxio_storage_t* remote, zx_handle_t control,
                              zx_handle_t event);
+zx_status_t zxio_dir_init(zxio_storage_t* remote, zx_handle_t control);
 
 // vmofile ---------------------------------------------------------------------
 

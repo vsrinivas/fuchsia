@@ -385,3 +385,54 @@ zx_status_t zxio_remote_init(zxio_storage_t* storage, zx_handle_t control,
     remote->event = event;
     return ZX_OK;
 }
+
+static zx_status_t zxio_dir_read(zxio_t* io, void* data, size_t capacity,
+                                    size_t* out_actual) {
+    if (capacity == 0) {
+        // zero-sized reads to directories should always succeed
+        *out_actual = 0;
+        return ZX_OK;
+    }
+    return ZX_ERR_WRONG_TYPE;
+}
+
+static zx_status_t zxio_dir_read_at(zxio_t* io, size_t offset, void* data,
+                                       size_t capacity, size_t* out_actual) {
+    if (capacity == 0) {
+        // zero-sized reads to directories should always succeed
+        *out_actual = 0;
+        return ZX_OK;
+    }
+    return ZX_ERR_WRONG_TYPE;
+}
+
+static constexpr zxio_ops_t zxio_dir_ops = []() {
+    zxio_ops_t ops = zxio_default_ops;
+    ops.release = zxio_remote_release;
+    ops.close = zxio_remote_close;
+    ops.clone_async = zxio_remote_clone_async;
+    ops.sync = zxio_remote_sync;
+    ops.attr_get = zxio_remote_attr_get;
+    ops.attr_set = zxio_remote_attr_set;
+    // use specialized read functions that succeed for zero-sized reads.
+    ops.read = zxio_dir_read;
+    ops.read_at = zxio_dir_read_at;
+    ops.flags_get = zxio_remote_flags_get;
+    ops.flags_set = zxio_remote_flags_set;
+    ops.open_async = zxio_remote_open_async;
+    ops.unlink = zxio_remote_unlink;
+    ops.token_get = zxio_remote_token_get;
+    ops.rename = zxio_remote_rename;
+    ops.link = zxio_remote_link;
+    ops.readdir = zxio_remote_readdir;
+    ops.rewind = zxio_remote_rewind;
+    return ops;
+}();
+
+zx_status_t zxio_dir_init(zxio_storage_t* storage, zx_handle_t control) {
+    zxio_remote_t* remote = reinterpret_cast<zxio_remote_t*>(storage);
+    zxio_init(&remote->io, &zxio_dir_ops);
+    remote->control = control;
+    remote->event = ZX_HANDLE_INVALID;
+    return ZX_OK;
+}

@@ -936,6 +936,7 @@ int fdio_status_to_errno(zx_status_t status) {
     case ZX_ERR_NOT_FILE: return EISDIR;
     case ZX_ERR_NOT_DIR: return ENOTDIR;
     case ZX_ERR_NOT_SUPPORTED: return ENOTSUP;
+    case ZX_ERR_WRONG_TYPE: return ENOTSUP;
     case ZX_ERR_OUT_OF_RANGE: return EINVAL;
     case ZX_ERR_NO_RESOURCES: return ENOMEM;
     case ZX_ERR_BAD_HANDLE: return EBADF;

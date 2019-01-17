@@ -125,6 +125,11 @@ zx_status_t fdio_close(fdio_t* io);
 zx_status_t fdio_wait(fdio_t* io, uint32_t events, zx_time_t deadline,
                       uint32_t* out_pending);
 
+// Creates an |fdio_t| from a remote directory connection.
+//
+// Takes ownership of |control|.
+fdio_t* fdio_dir_create(zx_handle_t control);
+
 // Creates a pipe backed by a socket.
 //
 // Takes ownership of |socket|.

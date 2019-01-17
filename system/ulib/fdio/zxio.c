@@ -430,6 +430,22 @@ fdio_t* fdio_remote_create(zx_handle_t control, zx_handle_t event) {
     return io;
 }
 
+fdio_t* fdio_dir_create(zx_handle_t control) {
+    fdio_t* io = fdio_alloc(sizeof(fdio_t));
+    if (io == NULL) {
+        zx_handle_close(control);
+        return NULL;
+    }
+    io->ops = &fdio_zxio_remote_ops;
+    io->magic = FDIO_MAGIC;
+    atomic_init(&io->refcount, 1);
+    zx_status_t status = zxio_dir_init(&io->storage, control);
+    if (status != ZX_OK) {
+        return NULL;
+    }
+    return io;
+}
+
 __EXPORT
 zx_status_t fdio_get_service_handle(int fd, zx_handle_t* out) {
     mtx_lock(&fdio_lock);

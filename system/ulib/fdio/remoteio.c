@@ -416,6 +416,17 @@ static zx_status_t fdio_from_handles(zx_handle_t handle, fuchsia_io_NodeInfo* in
     fdio_t* io;
     switch (info->tag) {
     case fuchsia_io_NodeInfoTag_directory:
+        if (handle == ZX_HANDLE_INVALID) {
+            r = ZX_ERR_INVALID_ARGS;
+            break;
+        }
+        io = fdio_dir_create(handle);
+        xprintf("rio (%x,%x) -> %p\n", handle, 0, io);
+        if (io == NULL) {
+            return ZX_ERR_NO_RESOURCES;
+        }
+        *out = io;
+        return ZX_OK;
     case fuchsia_io_NodeInfoTag_service:
         if (handle == ZX_HANDLE_INVALID) {
             r = ZX_ERR_INVALID_ARGS;
