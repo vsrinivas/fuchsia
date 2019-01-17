@@ -8,6 +8,7 @@ import (
 	"archive/tar"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"os"
 	"path/filepath"
@@ -54,6 +55,16 @@ func ArchiveBuffer(tw *tar.Writer, buf []byte, path string) error {
 	}
 	_, err := tw.Write(buf)
 	return err
+}
+
+// ArchiveReader writes data from the given Reader to the given tar.Writer.
+func ArchiveReader(tw *tar.Writer, r io.Reader, path string) error {
+	bytes, err := ioutil.ReadAll(r)
+	if err != nil {
+		return err
+	}
+
+	return ArchiveBuffer(tw, bytes, path)
 }
 
 // FetchAndArchiveFile fetches a remote file via TFTP from a given node, and

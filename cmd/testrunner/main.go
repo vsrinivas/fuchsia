@@ -5,20 +5,20 @@
 package main
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
 	"io/ioutil"
 	"log"
 	"os"
-	"path"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
-	"fuchsia.googlesource.com/tools/tap"
 	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
 	"golang.org/x/crypto/ssh"
@@ -42,16 +42,49 @@ var (
 	// Whether to show Usage and exit.
 	help bool
 
-	// The directory where output should be written. This path will contain both
-	// summary.json and the set of output files for each test.
-	outputDir string
-
-	// The path to a file containing properties of the Fuchsia device to use for testing.
-	deviceFilepath string
+	// The path where a tar archive containing test results should be created.
+	archive string
 )
 
-// TestRecorder records the details of test run.
-type TestRecorder func(runtests.TestDetails)
+// TestRunnerOutput manages the output of this test runner.
+type TestRunnerOutput struct {
+	Summary *SummaryRecorder
+	TAP     *TAPRecorder
+	Tar     *TarRecorder
+}
+
+func (o *TestRunnerOutput) Record(result testResult) {
+	if o.Summary != nil {
+		o.Summary.Record(result)
+	}
+
+	if o.TAP != nil {
+		o.TAP.Record(result)
+	}
+
+	if o.Tar != nil {
+		o.Tar.Record(result)
+	}
+}
+
+// TarSummary tars a summary file in the testrunner's output archive.
+func (o *TestRunnerOutput) TarSummary() error {
+	if o.Tar == nil {
+		return errors.New("TarSummary was called, but tar ouput was not initialized")
+	}
+
+	bytes, err := json.Marshal(o.Summary.Summary)
+	if err != nil {
+		return err
+	}
+	return botanist.ArchiveBuffer(o.Tar.Writer, bytes, "summary.json")
+}
+
+type testResult struct {
+	Name   string
+	Output io.Reader
+	Result runtests.TestResult
+}
 
 func usage() {
 	fmt.Println(`testrunner [flags] tests-file
@@ -64,7 +97,7 @@ func usage() {
 
 func init() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
-	flag.StringVar(&outputDir, "output", "", "Directory where output should be written")
+	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
 	flag.Usage = usage
 }
 
@@ -77,10 +110,6 @@ func main() {
 		return
 	}
 
-	if outputDir == "" {
-		log.Fatal("-output is required")
-	}
-
 	// Load tests.
 	testsPath := flag.Arg(0)
 	tests, err := testrunner.LoadTests(testsPath)
@@ -88,13 +117,20 @@ func main() {
 		log.Fatalf("failed to load tests from %q: %v", testsPath, err)
 	}
 
-	// Prepare outputs.
-	tapp := tap.NewProducer(os.Stdout)
-	tapp.Plan(len(tests))
-	var summary runtests.TestSummary
-	recordDetails := func(details runtests.TestDetails) {
-		tapp.Ok(details.Result == runtests.TestSuccess, details.Name)
-		summary.Tests = append(summary.Tests, details)
+	// Prepare test output drivers.
+	output := &TestRunnerOutput{
+		TAP:     NewTAPRecorder(os.Stdout, len(tests)),
+		Summary: &SummaryRecorder{},
+	}
+
+	// Add an archive Recorder if specified.
+	if archive != "" {
+		tar, err := NewTarRecorder(archive)
+		if err != nil {
+			log.Fatalf("failed to initialize tar recorder: %v", err)
+		}
+		output.Tar = tar
+		defer output.TarSummary()
 	}
 
 	// Prepare the Fuchsia DeviceContext.
@@ -104,23 +140,12 @@ func main() {
 	}
 
 	// Execute.
-	if err := execute(tests, recordDetails, devCtx); err != nil {
-		log.Fatal(err)
-	}
-
-	// Write Summary.
-	file, err := os.Create(path.Join(outputDir, "summary.json"))
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(summary); err != nil {
+	if err := execute(tests, output, devCtx); err != nil {
 		log.Fatal(err)
 	}
 }
 
-func execute(tests []testsharder.Test, recorder TestRecorder, devCtx *botanist.DeviceContext) error {
+func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
 	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
 		switch test.OS {
@@ -139,15 +164,15 @@ func execute(tests []testsharder.Test, recorder TestRecorder, devCtx *botanist.D
 		return fmt.Errorf("could not determine the runtime system for following tests %v", unknown)
 	}
 
-	if err := runTests(linux, RunTestInSubprocess, outputDir, recorder); err != nil {
+	if err := runTests(linux, RunTestInSubprocess, output); err != nil {
 		return err
 	}
 
-	if err := runTests(mac, RunTestInSubprocess, outputDir, recorder); err != nil {
+	if err := runTests(mac, RunTestInSubprocess, output); err != nil {
 		return err
 	}
 
-	return runFuchsiaTests(fuchsia, outputDir, recorder, devCtx)
+	return runFuchsiaTests(fuchsia, output, devCtx)
 }
 
 func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
@@ -173,7 +198,7 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, outputDir string, record TestRecorder, devCtx *botanist.DeviceContext) error {
+func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
 	if len(tests) == 0 {
 		return nil
 	}
@@ -192,39 +217,27 @@ func runFuchsiaTests(tests []testsharder.Test, outputDir string, record TestReco
 		},
 	}
 
-	return runTests(tests, fuchsiaTester.Test, outputDir, record)
+	return runTests(tests, fuchsiaTester.Test, output)
 }
 
-func runTests(tests []testsharder.Test, tester Tester, outputDir string, record TestRecorder) error {
+func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput) error {
 	for _, test := range tests {
-		details, err := runTest(context.Background(), test, tester, outputDir)
+		result, err := runTest(context.Background(), test, tester)
 		if err != nil {
 			log.Println(err)
 		}
 
-		if details != nil {
-			record(*details)
+		if result != nil {
+			output.Record(*result)
 		}
 	}
 
 	return nil
 }
 
-func runTest(ctx context.Context, test testsharder.Test, tester Tester, outputDir string) (*runtests.TestDetails, error) {
-	// Prepare an output file for the test.
-	workspace := path.Join(outputDir, test.Name)
-	if err := os.MkdirAll(workspace, os.FileMode(0755)); err != nil {
-		return nil, err
-	}
-
-	output, err := os.Create(path.Join(workspace, runtests.TestOutputFilename))
-	if err != nil {
-		return nil, err
-	}
-	defer output.Close()
-
-	// Execute the test.
+func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testResult, error) {
 	result := runtests.TestSuccess
+	output := new(bytes.Buffer)
 	multistdout := io.MultiWriter(output, os.Stdout)
 	multistderr := io.MultiWriter(output, os.Stderr)
 	if err := tester(ctx, test, multistdout, multistderr); err != nil {
@@ -233,9 +246,9 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester, outputDi
 	}
 
 	// Record the test details in the summary.
-	return &runtests.TestDetails{
-		Name:       test.Name,
-		OutputFile: output.Name(),
-		Result:     result,
+	return &testResult{
+		Name:   test.Name,
+		Output: output,
+		Result: result,
 	}, nil
 }
