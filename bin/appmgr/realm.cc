@@ -574,8 +574,7 @@ void Realm::CreateComponentWithRunnerForScheme(
     ComponentRequestWrapper component_request,
     ComponentObjectCreatedCallback callback) {
   TRACE_DURATION("appmgr", "Realm::CreateComponentWithRunnerForScheme",
-                 "runner_url", runner_url, "launch_info.url",
-                 launch_info.url);
+                 "runner_url", runner_url, "launch_info.url", launch_info.url);
 
   fuchsia::sys::Package package;
   package.resolved_url = launch_info.url;
@@ -600,10 +599,8 @@ void Realm::CreateComponentWithRunnerForScheme(
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   TerminationCallback termination_callback;
   component_request.Extract(&controller, &termination_callback);
-  // TODO(CF-268): change this to kPublicDebugCtrlLayout
-  runner->StartComponent(ExportedDirType::kLegacyFlatLayout, std::move(package),
-                         std::move(startup_info), std::move(ns),
-                         std::move(controller),
+  runner->StartComponent(std::move(package), std::move(startup_info),
+                         std::move(ns), std::move(controller),
                          std::move(termination_callback));
 }
 
@@ -872,8 +869,7 @@ void Realm::CreateRunnerComponentFromPackage(
   fidl::InterfaceRequest<fuchsia::sys::ComponentController> controller;
   TerminationCallback termination_callback;
   component_request.Extract(&controller, &termination_callback);
-  runner->StartComponent(ExportedDirType::kPublicDebugCtrlLayout,
-                         std::move(inner_package), std::move(startup_info),
+  runner->StartComponent(std::move(inner_package), std::move(startup_info),
                          std::move(ns), std::move(controller),
                          std::move(termination_callback));
 }
