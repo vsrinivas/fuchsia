@@ -415,7 +415,8 @@ public:
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
-    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system);
+    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system,
+                bool asan_drivers);
 
     zx_status_t InitializeCoreDevices();
 
@@ -510,8 +511,10 @@ private:
     zx::job devhost_job_;
     async_dispatcher_t* dispatcher_;
     bool require_system_;
+    bool asan_drivers_;
 
     bool running_ = false;
+    bool launched_first_devhost_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
     // This socket is used by DmPrintf for output, and DmPrintf can be called in
     // the context of a const member function, therefore it is also const. Given
@@ -547,6 +550,8 @@ private:
     bool suspend_debug_ = false;
     bool system_available_ = false;
     bool system_loaded_ = false;
+
+    fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
 };
 
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
@@ -560,9 +565,6 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func);
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
                     zx_device_prop_t* props, size_t prop_count,
                     bool autobind);
-
-extern bool dc_asan_drivers;
-extern bool dc_launched_first_devhost;
 
 // Methods for composing FIDL RPCs to the devhosts
 zx_status_t dh_send_remove_device(const Device* dev);

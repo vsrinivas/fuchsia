@@ -62,12 +62,10 @@ namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-bool dc_asan_drivers = false;
-bool dc_launched_first_devhost = false;
-
-Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system)
+Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system,
+                         bool asan_drivers)
     : devhost_job_(std::move(devhost_job)), dispatcher_(dispatcher),
-    require_system_(require_system) {}
+    require_system_(require_system), asan_drivers_(asan_drivers) {}
 
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
@@ -426,14 +424,14 @@ void Coordinator::DumpDrivers() const {
     }
 }
 
-static const char* get_devhost_bin() {
+static const char* get_devhost_bin(bool asan_drivers) {
     // If there are any ASan drivers, use the ASan-supporting devhost for
     // all drivers because even a devhost launched initially with just a
     // non-ASan driver might later load an ASan driver.  One day we might
     // be able to be more flexible about which drivers must get loaded into
     // the same devhost and thus be able to use both ASan and non-ASan
     // devhosts at the same time when only a subset of drivers use ASan.
-    if (dc_asan_drivers)
+    if (asan_drivers)
         return "/boot/bin/devhost.asan";
     return "/boot/bin/devhost";
 }
@@ -479,9 +477,8 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
 }
 
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
-                                     const char* name, zx_handle_t hrpc, zx::unowned_job devhost_job) {
-    const char* devhost_bin = get_devhost_bin();
-
+                                     const char* devhost_bin, const char* name, zx_handle_t hrpc,
+                                     zx::unowned_job devhost_job) {
     launchpad_t* lp;
     launchpad_create_with_jobs(devhost_job->get(), 0, name, &lp);
     launchpad_load_from_file(lp, devhost_bin);
@@ -544,8 +541,6 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
         name, host->koid());
 
-    dc_launched_first_devhost = true;
-
     return ZX_OK;
 }
 
@@ -567,10 +562,12 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     }
     dh->set_hrpc(dh_hrpc);
 
-    if ((r = dc_launch_devhost(dh.get(), loader_service_, name, hrpc, zx::unowned_job(devhost_job_))) < 0) {
+    if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(asan_drivers_), name,
+        hrpc, zx::unowned_job(devhost_job_))) < 0) {
         zx_handle_close(dh->hrpc());
         return r;
     }
+    launched_first_devhost_ = true;
 
     if (parent) {
         dh->set_parent(parent);
@@ -2005,32 +2002,77 @@ static bool is_root_driver(Driver* drv) {
         (memcmp(&root_device_binding, drv->binding.get(), sizeof(root_device_binding)) == 0);
 }
 
-// DriverAddedInit is called from driver enumeration during
-// startup and before the devcoordinator starts running.  Enumerated
-// drivers are added directly to the all-drivers or fallback list.
-//
-// TODO: fancier priorities
-void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
-    if (version[0] == '*') {
-        // fallback driver, load only if all else fails
-        fallback_drivers_.push_front(drv);
-    } else if (version[0] == '!') {
-        // debugging / development hack
-        // prioritize drivers with version "!..." over others
-        drivers_.push_front(drv);
-    } else {
-        drivers_.push_back(drv);
+fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
+    if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !asan_drivers_) {
+        if (launched_first_devhost_) {
+            log(ERROR, "%s (%s) requires ASan: cannot load after boot;"
+                " consider devmgr.devhost.asan=true\n",
+                drv->libname.c_str(), drv->name.c_str());
+            return nullptr;
+        }
+        asan_drivers_ = true;
     }
+    return drv;
 }
 
 // DriverAdded is called when a driver is added after the
 // devcoordinator has started.  The driver is added to the new-drivers
 // list and work is queued to process it.
 void Coordinator::DriverAdded(Driver* drv, const char* version) {
-    async::PostTask(dispatcher_, [this, drv] {
+    auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+    if (!driver) {
+        return;
+    }
+    async::PostTask(dispatcher_, [this, drv = driver.release()] {
         drivers_.push_back(drv);
         BindDriver(drv);
     });
+}
+
+// DriverAddedInit is called from driver enumeration during
+// startup and before the devcoordinator starts running.  Enumerated
+// drivers are added directly to the all-drivers or fallback list.
+//
+// TODO: fancier priorities
+void Coordinator::DriverAddedInit(Driver* drv, const char* version) {
+    auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+    if (!driver) {
+        return;
+    }
+    if (version[0] == '*') {
+        // fallback driver, load only if all else fails
+        fallback_drivers_.push_front(driver.release());
+    } else if (version[0] == '!') {
+        // debugging / development hack
+        // prioritize drivers with version "!..." over others
+        drivers_.push_front(driver.release());
+    } else {
+        drivers_.push_back(driver.release());
+    }
+}
+
+// Drivers added during system scan (from the dedicated thread)
+// are added to system_drivers for bulk processing once
+// CTL_ADD_SYSTEM is sent.
+//
+// TODO: fancier priority management
+void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
+    auto driver = ValidateDriver(fbl::unique_ptr<Driver>(drv));
+    if (!driver) {
+        return;
+    }
+    log(INFO, "devmgr: adding system driver '%s' '%s'\n", driver->name.c_str(),
+        driver->libname.c_str());
+    if (load_vmo(driver->libname.c_str(), &driver->dso_vmo)) {
+        log(ERROR, "devmgr: system driver '%s' '%s' could not cache DSO\n", driver->name.c_str(),
+            driver->libname.c_str());
+    }
+    if (version[0] == '*') {
+        // de-prioritize drivers that are "fallback"
+        system_drivers_.push_back(driver.release());
+    } else {
+        system_drivers_.push_front(driver.release());
+    }
 }
 
 // BindDRiver is called when a new driver becomes available to
@@ -2108,26 +2150,6 @@ void Coordinator::UseFallbackDrivers() {
     drivers_.splice(drivers_.end(), fallback_drivers_);
 }
 
-// Drivers added during system scan (from the dedicated thread)
-// are added to system_drivers for bulk processing once
-// CTL_ADD_SYSTEM is sent.
-//
-// TODO: fancier priority management
-void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
-    log(INFO, "devmgr: adding system driver '%s' '%s'\n", drv->name.c_str(), drv->libname.c_str());
-
-    if (load_vmo(drv->libname.c_str(), &drv->dso_vmo)) {
-        log(ERROR, "devmgr: system driver '%s' '%s' could not cache DSO\n", drv->name.c_str(),
-            drv->libname.c_str());
-    }
-    if (version[0] == '*') {
-        // de-prioritize drivers that are "fallback"
-        system_drivers_.push_back(drv);
-    } else {
-        system_drivers_.push_front(drv);
-    }
-}
-
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args) {
     log(INFO, "devmgr: coordinator_setup()\n");
 
@@ -2151,8 +2173,6 @@ void coordinator_setup(Coordinator* coordinator, DevmgrArgs args) {
 
     coordinator->set_suspend_fallback(getenv_bool("devmgr.suspend-timeout-fallback", false));
     coordinator->set_suspend_debug(getenv_bool("devmgr.suspend-timeout-debug", false));
-
-    dc_asan_drivers = getenv_bool("devmgr.devhost.asan", false);
 
     zx_status_t status = coordinator->InitializeCoreDevices();
     if (status != ZX_OK) {

@@ -20,20 +20,18 @@
 
 #include <zircon/driver/binding.h>
 
-namespace devmgr {
-
 namespace {
 
 struct AddContext {
     const char* libname;
-    DriverLoadCallback func;
+    devmgr::DriverLoadCallback func;
 };
 
 bool is_driver_disabled(const char* name) {
     // driver.<driver_name>.disable
     char opt[16 + DRIVER_NAME_LEN_MAX];
     snprintf(opt, 16 + DRIVER_NAME_LEN_MAX, "driver.%s.disable", name);
-    return getenv_bool(opt, false);
+    return devmgr::getenv_bool(opt, false);
 }
 
 void found_driver(zircon_driver_note_payload_t* note,
@@ -49,19 +47,7 @@ void found_driver(zircon_driver_note_payload_t* note,
         return;
     }
 
-    const char* libname = context->libname;
-
-    if ((note->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !dc_asan_drivers) {
-        if (dc_launched_first_devhost) {
-            log(ERROR, "%s (%s) requires ASan: cannot load after boot;"
-                " consider devmgr.devhost.asan=true\n",
-                libname, note->name);
-            return;
-        }
-        dc_asan_drivers = true;
-    }
-
-    auto drv = fbl::make_unique<Driver>();
+    auto drv = fbl::make_unique<devmgr::Driver>();
     if (drv == nullptr) {
         return;
     }
@@ -76,7 +62,7 @@ void found_driver(zircon_driver_note_payload_t* note,
     drv->binding_size = static_cast<uint32_t>(bindlen);
 
     drv->flags = note->flags;
-    drv->libname.Set(libname);
+    drv->libname.Set(context->libname);
     drv->name.Set(note->name);
 
 #if VERBOSE_DRIVER_LOAD
@@ -95,6 +81,8 @@ void found_driver(zircon_driver_note_payload_t* note,
 }
 
 } // namespace
+
+namespace devmgr {
 
 void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 

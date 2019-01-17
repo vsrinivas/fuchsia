@@ -814,8 +814,10 @@ int main(int argc, char** argv) {
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
+    bool asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
 
-    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher(), require_system);
+    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher(), require_system,
+                                    asan_drivers);
     devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
