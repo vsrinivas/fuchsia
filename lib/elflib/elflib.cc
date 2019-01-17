@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <algorithm>
 #include <string>
+
+#include <lib/fxl/logging.h>
 
 #include "garnet/lib/elflib/elflib.h"
 
@@ -223,11 +226,145 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   return GetSectionData(iter->second);
 }
 
+bool ElfLib::LoadDynamicSymbols() {
+  if (dynamic_symtab_offset_ || dynamic_strtab_offset_) {
+    return true;
+  }
+
+  LoadProgramHeaders();
+
+  for (size_t idx = 0; idx < segments_.size(); idx++) {
+    if (segments_[idx].p_type != PT_DYNAMIC) {
+      continue;
+    }
+
+    auto data = GetSegmentData(idx);
+
+    if (!data) {
+      return false;
+    }
+
+    const Elf64_Dyn* start = reinterpret_cast<const Elf64_Dyn*>(data->data());
+    const Elf64_Dyn* end = start + (data->size() / sizeof(Elf64_Dyn));
+
+    dynamic_strtab_size_ = 0;
+    dynamic_symtab_size_ = 0;
+
+    for (auto dyn = start; dyn != end; dyn++) {
+      if (dyn->d_tag == DT_STRTAB) {
+        if (dynamic_strtab_offset_) {
+          // We have more than one entry specifying the strtab location. Not
+          // clear what to do there so just ignore all but the first.
+          continue;
+        }
+
+        dynamic_strtab_offset_ = dyn->d_un.d_ptr;
+      } else if (dyn->d_tag == DT_SYMTAB) {
+        if (dynamic_symtab_offset_) {
+          continue;
+        }
+
+        dynamic_symtab_offset_ = dyn->d_un.d_ptr;
+      } else if (dyn->d_tag == DT_STRSZ) {
+        if (dynamic_strtab_size_) {
+          continue;
+        }
+
+        dynamic_strtab_size_ = dyn->d_un.d_val;
+      } else if (dyn->d_tag == DT_HASH) {
+        // A note: The old DT_HASH style of hash table is considered legacy on
+        // Fuchsia. Technically a binary could provide both styles of hash
+        // table and we can produce a sane result in that case, so this code
+        // ignores DT_HASH.
+        FXL_LOG(WARNING) << "Old style DT_HASH table found.";
+      } else if (dyn->d_tag == DT_GNU_HASH) {
+        auto addr = dyn->d_un.d_ptr;
+
+        // Our elf header doesn't provide the DT_GNU_HASH header structure.
+        struct Header {
+          uint32_t nbuckets;
+          uint32_t symoffset;
+          uint32_t bloom_size;
+          uint32_t bloom_shift;
+        } header;
+
+        static_assert(sizeof(Header) == 16);
+
+        auto data = memory_->GetMappedMemory(addr, addr, sizeof(header),
+                                             sizeof(header));
+
+        if (!data) {
+          continue;
+        }
+
+        header = *reinterpret_cast<Header*>(data->data());
+
+        addr += sizeof(header);
+        addr += 8 * header.bloom_size;
+
+        size_t bucket_bytes = 4 * header.nbuckets;
+        auto bucket_data =
+            memory_->GetMappedMemory(addr, addr, bucket_bytes, bucket_bytes);
+
+        if (!bucket_data) {
+          continue;
+        }
+
+        uint32_t* buckets = reinterpret_cast<uint32_t*>(bucket_data->data());
+        uint32_t max_bucket =
+            *std::max_element(buckets, buckets + header.nbuckets);
+
+        if (max_bucket < header.symoffset) {
+          dynamic_symtab_size_ = max_bucket;
+          continue;
+        }
+
+        addr += bucket_bytes;
+        addr += (max_bucket - header.symoffset) * 4;
+
+        for (uint32_t nsyms = max_bucket + 1;; nsyms++, addr += 4) {
+          auto chain_entry_data = memory_->GetMappedMemory(addr, addr, 4, 4);
+
+          if (!chain_entry_data) {
+            break;
+          }
+
+          uint32_t chain_entry =
+              *reinterpret_cast<uint32_t*>(chain_entry_data->data());
+
+          if (chain_entry & 1) {
+            dynamic_symtab_size_ = nsyms;
+            break;
+          }
+        }
+      }
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 std::optional<std::string> ElfLib::GetString(size_t index) {
+  std::vector<uint8_t> tmp;
   const std::vector<uint8_t>* string_data = GetSectionData(".strtab");
 
   if (!string_data) {
-    return std::nullopt;
+    if (!LoadDynamicSymbols()) {
+      return std::nullopt;
+    }
+
+    auto data = memory_->GetMappedMemory(
+        *dynamic_strtab_offset_, *dynamic_strtab_offset_, dynamic_strtab_size_,
+        dynamic_strtab_size_);
+
+    if (!data) {
+      return std::nullopt;
+    }
+
+    tmp = *data;
+    string_data = &tmp;
   }
 
   return GetNullTerminatedStringAt(*string_data, index);
@@ -235,10 +372,28 @@ std::optional<std::string> ElfLib::GetString(size_t index) {
 
 bool ElfLib::LoadSymbols() {
   if (symbols_.empty()) {
+    std::vector<uint8_t> tmp;
     const std::vector<uint8_t>* symbol_data = GetSectionData(".symtab");
 
     if (!symbol_data) {
-      return false;
+      if (!LoadDynamicSymbols()) {
+        return false;
+      }
+
+      if (!dynamic_symtab_offset_) {
+        return false;
+      }
+
+      size_t size = dynamic_symtab_size_ * sizeof(Elf64_Sym);
+      auto data = memory_->GetMappedMemory(*dynamic_symtab_offset_,
+                                           *dynamic_symtab_offset_, size, size);
+
+      if (!data) {
+        return false;
+      }
+
+      tmp = *data;
+      symbol_data = &tmp;
     }
 
     const Elf64_Sym* start =

@@ -4,6 +4,14 @@
 
 #include "garnet/lib/elflib/elflib.h"
 
+#include <limits.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#if defined(__APPLE__)
+#include <mach-o/dyld.h>
+#endif
+
 #include <algorithm>
 #include <iterator>
 
@@ -16,6 +24,77 @@ constexpr uint64_t kAddrPoison = 0xdeadb33ff00db4b3;
 constexpr uint64_t kSymbolPoison = 0xb0bab0ba;
 constexpr uint64_t kNoteGnuBuildId = 3;
 constexpr uint64_t kMeaninglessNoteType = 42;
+
+std::string GetSelfPath() {
+  std::string result;
+#if defined(__APPLE__)
+  // Executable path can have relative references ("..") depending on how the
+  // app was launched.
+  uint32_t length = 0;
+  _NSGetExecutablePath(nullptr, &length);
+  result.resize(length);
+  _NSGetExecutablePath(&result[0], &length);
+  result.resize(length - 1);  // Length included terminator.
+#elif defined(__linux__)
+  // The realpath() call below will resolve the symbolic link.
+  result.assign("/proc/self/exe");
+#else
+#error Write this for your platform.
+#endif
+
+  char fullpath[PATH_MAX];
+  return std::string(realpath(result.c_str(), fullpath));
+}
+
+inline std::string GetTestFilePath(const std::string& rel_path) {
+  std::string path = GetSelfPath();
+  size_t last_slash = path.rfind('/');
+  if (last_slash == std::string::npos) {
+    path = "./";  // Just hope the current directory works.
+  } else {
+    path.resize(last_slash + 1);
+  }
+  return path + rel_path;
+}
+
+// The test files will be copied over to this specific location at build time.
+const char kRelativeTestDataPath[] = "test_data/elflib/";
+
+class StrippedExampleAccessor : public ElfLib::MemoryAccessor {
+ public:
+  StrippedExampleAccessor() {
+    file_ =
+        fopen((GetTestFilePath(kRelativeTestDataPath) + "stripped_example.elf")
+                  .c_str(),
+              "r");
+
+    if (!file_) {
+      abort();
+    }
+  }
+
+  std::optional<std::vector<uint8_t>> GetMemory(uint64_t offset,
+                                                size_t size) override {
+    std::vector<uint8_t> ret;
+    ret.resize(size);
+
+    fseek(file_, offset, SEEK_SET);
+    if (fread(ret.data(), size, 1, file_) != 1) {
+      return std::nullopt;
+    }
+
+    return ret;
+  }
+
+  ~StrippedExampleAccessor() {
+    if (file_) {
+      fclose(file_);
+    }
+  }
+
+ private:
+  FILE* file_ = nullptr;
+};
 
 class TestMemoryAccessor : public ElfLib::MemoryAccessor {
  public:
@@ -240,6 +319,36 @@ TEST(ElfLib, GetIrregularNote) {
   EXPECT_EQ(3U, data.size());
 
   EXPECT_EQ("foo", std::string(data.data(), data.data() + 3));
+}
+
+TEST(ElfLib, GetSymbolsFromStripped) {
+  std::unique_ptr<ElfLib> elf =
+      ElfLib::Create(std::make_unique<StrippedExampleAccessor>());
+
+  ASSERT_NE(elf.get(), nullptr);
+
+  auto syms = elf->GetAllSymbols();
+  ASSERT_TRUE(syms);
+  EXPECT_EQ(8U, syms->size());
+
+  std::map<std::string, Elf64_Sym>::iterator it;
+
+  it = syms->find("");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("__bss_start");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("__libc_start_main");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("__scudo_default_options");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("_edata");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("_end");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("printf");
+  EXPECT_NE(it, syms->end());
+  it = syms->find("strlen");
+  EXPECT_NE(it, syms->end());
 }
 
 }  // namespace elflib

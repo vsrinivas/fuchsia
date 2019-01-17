@@ -94,8 +94,17 @@ class ElfLib {
   // Load all symbols from the target. Returns true unless an error occurred.
   bool LoadSymbols();
 
+  // Load symbols from the dynamic segment of the target. We only do this when
+  // the section data isn't available and we can't use the regular .symtab
+  // information. Returns true unless an error occurred.
+  bool LoadDynamicSymbols();
+
   std::unique_ptr<MemoryAccessor> memory_;
   Elf64_Ehdr header_;
+  size_t dynamic_strtab_size_;
+  size_t dynamic_symtab_size_;
+  std::optional<uint64_t> dynamic_strtab_offset_;
+  std::optional<uint64_t> dynamic_symtab_offset_;
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
   std::vector<Elf64_Sym> symbols_;
