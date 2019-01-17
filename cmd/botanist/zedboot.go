@@ -24,6 +24,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -207,7 +208,7 @@ func (cmd *ZedbootCommand) runHostCmd(ctx context.Context) error {
 	return cmd.tarHostCmdArtifacts(summaryBuffer.Bytes(), stdoutBuf.Bytes(), tmpDir)
 }
 
-func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs []botanist.Image, nodename string, cmdlineArgs []string) error {
+func (cmd *ZedbootCommand) runTests(ctx context.Context, imgs build.Images, nodename string, cmdlineArgs []string) error {
 	// Find the node address UDP address.
 	n := netboot.NewClient(time.Second)
 	var addr *net.UDPAddr
@@ -377,14 +378,14 @@ func (cmd *ZedbootCommand) execute(ctx context.Context, cmdlineArgs []string) er
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM)
 
-	imgs, err := botanist.LoadImages(cmd.imageManifests...)
+	imgs, err := build.LoadImages(cmd.imageManifests...)
 	if err != nil {
 		return err
 	}
 	errs := make(chan error)
 	go func() {
 		if cmd.fastboot != "" {
-			zirconR := botanist.GetImage(imgs, "zircon-r")
+			zirconR := imgs.Get("zircon-r")
 			if zirconR == nil {
 				errs <- fmt.Errorf("zircon-r not provided")
 				return

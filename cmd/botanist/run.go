@@ -17,6 +17,7 @@ import (
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/pdu"
 	"fuchsia.googlesource.com/tools/retry"
@@ -80,7 +81,7 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
-func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename string, args []string, privKey []byte) error {
+func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename string, args []string, privKey []byte) error {
 	// Find the node address UDP address.
 	n := netboot.NewClient(time.Second)
 	var addr *net.UDPAddr
@@ -186,7 +187,7 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs []botanist.Image, nodename
 }
 
 func (r *RunCommand) execute(ctx context.Context, args []string) error {
-	imgs, err := botanist.LoadImages(r.imageManifests...)
+	imgs, err := build.LoadImages(r.imageManifests...)
 	if err != nil {
 		return fmt.Errorf("failed to load images: %v", err)
 	}
@@ -228,7 +229,7 @@ func (r *RunCommand) execute(ctx context.Context, args []string) error {
 	errs := make(chan error)
 	go func() {
 		if r.fastboot != "" {
-			zirconR := botanist.GetImage(imgs, "zircon-r")
+			zirconR := imgs.Get("zircon-r")
 			if zirconR == nil {
 				errs <- fmt.Errorf("zircon-r not provided")
 				return

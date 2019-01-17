@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/qemu"
 	"fuchsia.googlesource.com/tools/secrets"
 	"github.com/google/subcommands"
@@ -78,7 +78,7 @@ func (cmd *QEMUCommand) execute(ctx context.Context, cmdlineArgs []string) error
 		return fmt.Errorf("-qemu-dir must be set")
 	}
 
-	imgs, err := botanist.LoadImages(cmd.imageManifest)
+	imgs, err := build.LoadImages(cmd.imageManifest)
 	if err != nil {
 		return err
 	}

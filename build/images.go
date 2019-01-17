@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package botanist
+package build
 
 import (
 	"encoding/json"
@@ -34,10 +34,12 @@ type Image struct {
 	NetbootArgs []string `json:"bootserver_netboot"`
 }
 
-// GetImage is a convenience function that returns the first image in a list with the
-// given name, or nil if no such image exists.
-func GetImage(images []Image, name string) *Image {
-	for _, img := range images {
+// Images is list of images produced by the build, as may be read in from an image manifest.
+type Images []Image
+
+// Get returns the first image in a list with the given name, or nil if no such image exists.
+func (imgs Images) Get(name string) *Image {
+	for _, img := range imgs {
 		if img.Name == name {
 			return &img
 		}
@@ -46,14 +48,14 @@ func GetImage(images []Image, name string) *Image {
 }
 
 // LoadImages reads in the entries indexed in the given image manifests.
-func LoadImages(imageManifests ...string) ([]Image, error) {
-	decodeImages := func(manifest string) ([]Image, error) {
+func LoadImages(imageManifests ...string) (Images, error) {
+	decodeImages := func(manifest string) (Images, error) {
 		f, err := os.Open(manifest)
 		if err != nil {
 			return nil, fmt.Errorf("failed to open %s: %v", manifest, err)
 		}
 		defer f.Close()
-		imgs := []Image{}
+		var imgs Images
 		if err := json.NewDecoder(f).Decode(&imgs); err != nil {
 			return nil, fmt.Errorf("failed to decode %s: %v", manifest, err)
 		}
@@ -67,7 +69,7 @@ func LoadImages(imageManifests ...string) ([]Image, error) {
 		return imgs, nil
 	}
 
-	imgs := []Image{}
+	var imgs Images
 	for _, manifest := range imageManifests {
 		decoded, err := decodeImages(manifest)
 		if err != nil {

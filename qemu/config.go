@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"fuchsia.googlesource.com/tools/botanist"
+	"fuchsia.googlesource.com/tools/build"
 )
 
 // Config gives a high-level configuration for QEMU on Fuchsia.
@@ -39,7 +39,7 @@ type Config struct {
 
 // CreateInvocation creates a QEMU invocation given a particular configuration, a list of
 // images, and any specified command-line arguments.
-func CreateInvocation(cfg Config, imgs []botanist.Image, cmdlineArgs []string) ([]string, error) {
+func CreateInvocation(cfg Config, imgs build.Images, cmdlineArgs []string) ([]string, error) {
 	if _, err := os.Stat(cfg.QEMUBin); err != nil {
 		return nil, fmt.Errorf("QEMU binary not found: %v", err)
 	}
@@ -107,18 +107,18 @@ func CreateInvocation(cfg Config, imgs []botanist.Image, cmdlineArgs []string) (
 		addArgs("-device", fmt.Sprintf("virtio-blk-pci,drive=testdisk,addr=%s", cfg.PCIAddr))
 	}
 
-	qemuKernel := botanist.GetImage(imgs, "qemu-kernel")
+	qemuKernel := imgs.Get("qemu-kernel")
 	if qemuKernel == nil {
 		return nil, fmt.Errorf("could not find qemu-kernel")
 	}
-	zirconA := botanist.GetImage(imgs, "zircon-a")
+	zirconA := imgs.Get("zircon-a")
 	if zirconA == nil {
 		return nil, fmt.Errorf("could not find zircon-a")
 	}
 	addArgs("-kernel", qemuKernel.Path)
 	addArgs("-initrd", zirconA.Path)
 
-	if storageFull := botanist.GetImage(imgs, "storage-full"); storageFull != nil {
+	if storageFull := imgs.Get("storage-full"); storageFull != nil {
 		addArgs("-drive", fmt.Sprintf("file=%s,format=raw,if=none,id=maindisk", storageFull.Path))
 		addArgs("-device", "virtio-blk-pci,drive=maindisk")
 	}

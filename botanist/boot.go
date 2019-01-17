@@ -16,6 +16,7 @@ import (
 	"sort"
 	"time"
 
+	"fuchsia.googlesource.com/tools/build"
 	"fuchsia.googlesource.com/tools/netboot"
 	"fuchsia.googlesource.com/tools/retry"
 	"fuchsia.googlesource.com/tools/tftp"
@@ -76,13 +77,13 @@ var transferOrder = map[string]int{
 // Boot prepares and boots a device at the given IP address. Depending on bootMode, the
 // device will either be paved or netbooted with the provided images, command-line
 // arguments and a public SSH user key.
-func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []Image, cmdlineArgs []string, authorizedKey []byte) error {
-	var bootArgs func(Image) []string
+func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Image, cmdlineArgs []string, authorizedKey []byte) error {
+	var bootArgs func(build.Image) []string
 	switch bootMode {
 	case ModePave:
-		bootArgs = func(img Image) []string { return img.PaveArgs }
+		bootArgs = func(img build.Image) []string { return img.PaveArgs }
 	case ModeNetboot:
-		bootArgs = func(img Image) []string { return img.NetbootArgs }
+		bootArgs = func(img build.Image) []string { return img.NetbootArgs }
 	default:
 		return fmt.Errorf("invalid boot mode: %d", bootMode)
 	}
