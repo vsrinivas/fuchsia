@@ -320,7 +320,7 @@ void TestRateModulo(Resampler sampler_type) {
   MixerPtr mixer = SelectMixer(fuchsia::media::AudioSampleFormat::FLOAT, 1,
                                32000, 1, 48000, sampler_type);
 
-  int16_t source[] = {0, 1, 2};
+  float source[] = {0.0f, 0.1f, 0.2f};
   float accum[3];
   int32_t expected_frac_src_offset = 2 << kPtsFractionalBits;
 
