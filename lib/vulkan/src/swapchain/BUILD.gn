@@ -30,9 +30,10 @@ loadable_module("swapchain") {
   deps = [
     ":surface_header",
     "$loader_build_root:extra_vulkan_headers",
-    "$loader_build_root/layers:layer_common",
+    "$loader_build_root/layers:micro_layer_common",
     "//zircon/public/lib/async-loop-cpp",
   ]
+  ldflags = [ "-static-libstdc++" ]
 }
 
 loadable_module("fb") {
@@ -52,8 +53,9 @@ loadable_module("fb") {
   deps = [
     ":surface_header",
     "$loader_build_root:extra_vulkan_headers",
-    "$loader_build_root/layers:layer_common",
+    "$loader_build_root/layers:micro_layer_common",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/framebuffer",
   ]
+  ldflags = [ "-static-libstdc++" ]
 }

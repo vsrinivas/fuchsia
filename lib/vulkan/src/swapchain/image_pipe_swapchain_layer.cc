@@ -11,12 +11,12 @@
 #include <thread>
 #include <vector>
 #include "vk_dispatch_table_helper.h"
-#include "vk_layer_config.h"
+#include "vk_layer_data.h"
 #include "vk_layer_extension_utils.h"
-#include "vk_layer_logging.h"
-#include "vk_layer_utils.h"
 #include "vk_loader_platform.h"
 #include "vulkan/vk_layer.h"
+
+#define VK_LAYER_API_VERSION VK_MAKE_VERSION(1, 0, VK_HEADER_VERSION)
 
 namespace image_pipe_swapchain {
 
