@@ -23,6 +23,8 @@ golib("golang.org/x/oauth2") {
     ":golang.org/x/net",
   ]
 }
+golib("golang.org/x/sys") {
+}
 
 golib("github.com/dustin/go-humanize") {
 }
@@ -55,6 +57,8 @@ golib("github.com/google/go-cmp") {
 golib("github.com/google/netstack") {
 }
 golib("github.com/google/subcommands") {
+}
+golib("github.com/google/uuid") {
 }
 golib("github.com/kr/fs") {
 }
