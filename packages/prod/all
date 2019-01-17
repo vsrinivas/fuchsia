@@ -36,6 +36,7 @@
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/logger",
         "garnet/packages/prod/magma",
+        "garnet/packages/prod/magma-vsl-gc",
         "garnet/packages/prod/magma_tools",
         "garnet/packages/prod/mdns",
         "garnet/packages/prod/mdns_util",

@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/magma/gnbuild/magma-vsl-gc"
+    ]
+}
