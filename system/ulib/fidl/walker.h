@@ -140,6 +140,7 @@ private:
                     state = kStateXUnion;
                     xunion_state.fields = fidl_type->coded_xunion.fields;
                     xunion_state.field_count = fidl_type->coded_xunion.field_count;
+                    xunion_state.inside_envelope = false;
                     break;
                 case fidl::kFidlTypeXUnionPointer:
                     state = kStateXUnionPointer;
@@ -203,6 +204,7 @@ private:
             // is much more involved in a ctor initialization list.
             xunion_state.fields = coded_xunion->fields;
             xunion_state.field_count = coded_xunion->field_count;
+            xunion_state.inside_envelope = false;
         }
 
         Frame(const fidl_type_t* element, uint32_t array_size, uint32_t element_size,
@@ -274,8 +276,8 @@ private:
                 const fidl::FidlCodedStruct* struct_type;
             } struct_pointer_state;
             struct {
-                // Sparse coding table array for fields;
-                // advance the field pointer on every matched ordinal to save space
+                // Sparse (but monotonically increasing) coding table array for fields;
+                // advance the |field| pointer on every matched ordinal to save space
                 const fidl::FidlTableField* field;
                 // Number of unseen fields in the coding table
                 uint32_t remaining_fields;
@@ -305,7 +307,11 @@ private:
             } union_pointer_state;
             struct {
                 const fidl::FidlXUnionField* fields;
+                // Number of known ordinals declared in the coding table
                 uint32_t field_count;
+                // When true, the walker is currently working within an envelope, or equivalently,
+                // |EnterEnvelope| was successful.
+                bool inside_envelope;
             } xunion_state;
             struct {
                 const fidl::FidlCodedXUnion* xunion_type;
@@ -372,13 +378,13 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
 
 // Macro to insert the relevant goop required to support two control flows here in case of error:
 // one where we keep reading after error, and another where we return immediately.
-#define FIDL_STATUS_GUARD(status)                                       \
+#define FIDL_STATUS_GUARD_IMPL(status, pop)                             \
     switch ((status)) {                                                 \
         case Status::kSuccess:                                          \
             break;                                                      \
         case Status::kConstraintViolationError:                         \
             if (VisitorImpl::kContinueAfterConstraintViolation) {       \
-                Pop();                                                  \
+                if ((pop)) { Pop(); }                                   \
                 continue;                                               \
             } else {                                                    \
                 return;                                                 \
@@ -386,6 +392,9 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
         case Status::kMemoryError:                                      \
             return;                                                     \
     }                                                                   \
+
+#define FIDL_STATUS_GUARD(status) FIDL_STATUS_GUARD_IMPL(status, true)
+#define FIDL_STATUS_GUARD_NO_POP(status) FIDL_STATUS_GUARD_IMPL(status, false)
 
     for (;;) {
         Frame* frame = Peek();
@@ -397,7 +406,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                     Pop();
                     continue;
                 }
-                const fidl::FidlField& field = frame->struct_state.fields[field_index];
+                const fidl::FidlStructField& field = frame->struct_state.fields[field_index];
                 const fidl_type_t* field_type = field.type;
                 Position field_position = frame->position + field.offset;
                 if (!Push(Frame(field_type, field_position))) {
@@ -486,19 +495,19 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 if (envelope_ptr->data == nullptr) {
                     continue;
                 }
-                if (known_field != nullptr) {
-                    const fidl_type_t* field_type = known_field->type;
+                if (payload_type != nullptr) {
                     Position position;
                     auto status =
                         visitor.VisitPointer(frame->position,
                                              // casting since |envelope_ptr->data| is always void*
                                              &const_cast<Ptr<void>&>(envelope_ptr->data),
-                                             TypeSize(field_type),
+                                             TypeSize(payload_type),
                                              &position);
-                    FIDL_STATUS_GUARD(status);
-                    if (!Push(Frame(field_type, position))) {
+                    // Do not pop the table frame, to guarantee calling |LeaveEnvelope|
+                    FIDL_STATUS_GUARD_NO_POP(status);
+                    if (!Push(Frame(payload_type, position))) {
                         visitor.OnError("recursion depth exceeded processing table");
-                        FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+                        FIDL_STATUS_GUARD_NO_POP(Status::kConstraintViolationError);
                     }
                 } else {
                     // No coding table for this ordinal.
@@ -509,7 +518,7 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                                              &const_cast<Ptr<void>&>(envelope_ptr->data),
                                              envelope_ptr->num_bytes,
                                              &position);
-                    FIDL_STATUS_GUARD(status);
+                    FIDL_STATUS_GUARD_NO_POP(status);
                 }
                 continue;
             }
@@ -557,11 +566,76 @@ void Walker<VisitorImpl>::Walk(VisitorImpl& visitor) {
                 continue;
             }
             case Frame::kStateXUnion: {
-                assert(false && "xunions not implemented yet");
+                auto xunion = PtrTo<fidl_xunion_t>(frame->position);
+                const auto envelope_pos = frame->position + offsetof(fidl_xunion_t, envelope);
+                auto envelope_ptr = &xunion->envelope;
+                // |inside_envelope| is always false when first encountering an xunion.
+                if (frame->xunion_state.inside_envelope) {
+                    // Finished processing the xunion field, and is in clean-up state
+                    auto status = visitor.LeaveEnvelope(envelope_pos, envelope_ptr);
+                    FIDL_STATUS_GUARD(status);
+                    Pop();
+                    continue;
+                }
+                if (xunion->padding != 0) {
+                    visitor.OnError("xunion padding after discriminant are non-zero");
+                    FIDL_STATUS_GUARD(Status::kConstraintViolationError);
+                }
+                // Find coding table corresponding to the ordinal via linear search
+                const FidlXUnionField* known_field = nullptr;
+                for (size_t i = 0; i < frame->xunion_state.field_count; i++) {
+                    const auto field = frame->xunion_state.fields + i;
+                    if (field->ordinal == xunion->tag) {
+                        known_field = field;
+                        break;
+                    }
+                }
+                // Make sure we don't process a malformed envelope
+                const fidl_type_t* payload_type = known_field ? known_field->type : nullptr;
+                auto status = visitor.EnterEnvelope(envelope_pos, envelope_ptr, payload_type);
+                FIDL_STATUS_GUARD(status);
+                frame->xunion_state.inside_envelope = true;
+                // Skip empty envelopes
+                if (envelope_ptr->data == nullptr) {
+                    continue;
+                }
+                if (payload_type != nullptr) {
+                    Position position;
+                    auto status =
+                        visitor.VisitPointer(frame->position,
+                                             &const_cast<Ptr<void>&>(envelope_ptr->data),
+                                             TypeSize(payload_type),
+                                             &position);
+                    FIDL_STATUS_GUARD_NO_POP(status);
+                    if (!Push(Frame(payload_type, position))) {
+                        visitor.OnError("recursion depth exceeded processing xunion");
+                        FIDL_STATUS_GUARD_NO_POP(Status::kConstraintViolationError);
+                    }
+                } else {
+                    // No coding table for this ordinal.
+                    // Still patch pointers, but cannot recurse into the payload.
+                    Position position;
+                    auto status =
+                        visitor.VisitPointer(frame->position,
+                                             &const_cast<Ptr<void>&>(envelope_ptr->data),
+                                             envelope_ptr->num_bytes,
+                                             &position);
+                    FIDL_STATUS_GUARD_NO_POP(status);
+                }
                 continue;
             }
             case Frame::kStateXUnionPointer: {
-                assert(false && "xunion pointers not implemented yet");
+                if (*PtrTo<fidl_xunion_t*>(frame->position) == nullptr) {
+                    Pop();
+                    continue;
+                }
+                auto status = visitor.VisitPointer(frame->position,
+                                                   PtrTo<void*>(frame->position),
+                                                   static_cast<uint32_t>(sizeof(fidl_xunion_t)),
+                                                   &frame->position);
+                FIDL_STATUS_GUARD(status);
+                const fidl::FidlCodedXUnion* coded_xunion = frame->xunion_pointer_state.xunion_type;
+                *frame = Frame(coded_xunion, frame->position);
                 continue;
             }
             case Frame::kStateArray: {

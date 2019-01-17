@@ -69,10 +69,6 @@ public:
                         ObjectPointerPointer object_ptr_ptr,
                         uint32_t inline_size,
                         Position* out_position) {
-        if (inline_size > std::numeric_limits<uint32_t>::max()) {
-            SetError("inline size is too big");
-            return Status::kMemoryError;
-        }
         // Make sure objects in secondary storage are contiguous
         if (!ClaimOutOfLineStorage(static_cast<uint32_t>(inline_size),
                                    *object_ptr_ptr,

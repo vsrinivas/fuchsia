@@ -16,86 +16,223 @@
 #include <zircon/syscalls.h>
 #endif
 
-#include "buffer_walker.h"
+#include "visitor.h"
+#include "walker.h"
 
 // TODO(kulakowski) Design zx_status_t error values.
 
 namespace {
 
-class FidlDecoder final : public fidl::internal::BufferWalker<FidlDecoder, true, false> {
-    typedef fidl::internal::BufferWalker<FidlDecoder, true, false> Super;
+struct Position;
 
+struct StartingPoint {
+    uint8_t* const addr;
+    Position ToPosition() const;
+};
+
+struct Position {
+    uint32_t offset;
+    Position operator+(uint32_t size) const {
+        return Position { offset + size };
+    }
+    Position& operator+=(uint32_t size) {
+        offset += size;
+        return *this;
+    }
+    template <typename T>
+    constexpr T* Get(StartingPoint start) const {
+        return reinterpret_cast<T*>(start.addr + offset);
+    }
+};
+
+Position StartingPoint::ToPosition() const {
+    return Position { 0 };
+}
+
+constexpr uintptr_t kAllocPresenceMarker = FIDL_ALLOC_PRESENT;
+constexpr uintptr_t kAllocAbsenceMarker = FIDL_ALLOC_ABSENT;
+
+class FidlDecoder final : public fidl::Visitor<
+    fidl::MutatingVisitorTrait, StartingPoint, Position> {
 public:
-    FidlDecoder(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
-                const zx_handle_t* handles, uint32_t num_handles, const char** out_error_msg)
-        : Super(type), bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
-          handles_(handles), num_handles_(num_handles), out_error_msg_(out_error_msg) {}
+    FidlDecoder(void* bytes, uint32_t num_bytes, const zx_handle_t* handles, uint32_t num_handles,
+                uint32_t next_out_of_line, const char** out_error_msg)
+        : bytes_(static_cast<uint8_t*>(bytes)), num_bytes_(num_bytes),
+          handles_(handles), num_handles_(num_handles), next_out_of_line_(next_out_of_line),
+          out_error_msg_(out_error_msg) {}
 
-    void Walk() {
-        if (handles_ == nullptr && num_handles_ != 0u) {
-            SetError("Cannot provide non-zero handle count and null handle pointer");
-            return;
+    using StartingPoint = StartingPoint;
+
+    using Position = Position;
+
+    static constexpr bool kContinueAfterConstraintViolation = true;
+
+    Status VisitPointer(Position ptr_position,
+                        ObjectPointerPointer object_ptr_ptr,
+                        uint32_t inline_size,
+                        Position* out_position) {
+        if (reinterpret_cast<uintptr_t>(*object_ptr_ptr) != kAllocPresenceMarker) {
+            SetError("decoder encountered invalid pointer");
+            return Status::kConstraintViolationError;
         }
-        Super::Walk();
-        if (status_ == ZX_OK && handle_idx() != num_handles()) {
-            SetError("message did not contain the specified number of handles");
+        // We have to manually maintain alignment here. For example, a pointer
+        // to a struct that is 4 bytes still needs to advance the next
+        // out-of-line offset by 8 to maintain the aligned-to-FIDL_ALIGNMENT
+        // property.
+        static constexpr uint32_t mask = FIDL_ALIGNMENT - 1;
+        uint32_t new_offset = next_out_of_line_;
+        if (add_overflow(new_offset, inline_size, &new_offset)
+            || add_overflow(new_offset, mask, &new_offset)) {
+            SetError("overflow updating out-of-line offset");
+            return Status::kMemoryError;
         }
+        new_offset &= ~mask;
+
+        if (new_offset > num_bytes_) {
+            SetError("message tried to decode more than provided number of bytes");
+            return Status::kMemoryError;
+        }
+
+        *out_position = Position { next_out_of_line_ };
+        *object_ptr_ptr = reinterpret_cast<void*>(&bytes_[next_out_of_line_]);
+
+        next_out_of_line_ = new_offset;
+        return Status::kSuccess;
     }
 
-    uint8_t* bytes() const { return bytes_; }
-    uint32_t num_bytes() const { return num_bytes_; }
-    uint32_t num_handles() const { return num_handles_; }
-
-    bool ValidateOutOfLineStorageClaim(const void* a, const void* b) {
-        return true;
+    Status VisitHandle(Position handle_position, HandlePointer handle) {
+        if (*handle != FIDL_HANDLE_PRESENT) {
+            SetError("message tried to decode a garbage handle");
+            return Status::kConstraintViolationError;
+        }
+        if (handle_idx_ == num_handles_) {
+            SetError("message decoded too many handles");
+            return Status::kConstraintViolationError;
+        }
+        if (handles_ == nullptr) {
+            SetError("decoder noticed a handle is present but the handle table is empty");
+            *handle = ZX_HANDLE_INVALID;
+            return Status::kConstraintViolationError;
+        }
+        if (handles_[handle_idx_] == ZX_HANDLE_INVALID) {
+            SetError("invalid handle detected in handle table");
+            return Status::kConstraintViolationError;
+        }
+        *handle = handles_[handle_idx_];
+        handle_idx_++;
+        return Status::kSuccess;
     }
 
-    void UnclaimedHandle(zx_handle_t* out_handle) {}
-    void ClaimedHandle(zx_handle_t* out_handle, uint32_t idx) {
-        if (out_handle != nullptr) {
-            *out_handle = handles_[idx];
+    Status EnterEnvelope(Position envelope_position,
+                         EnvelopePointer envelope,
+                         const fidl_type_t* payload_type) {
+        if (envelope->presence == kAllocAbsenceMarker &&
+            (envelope->num_bytes != 0 || envelope->num_handles != 0)) {
+            SetError("Envelope has absent data pointer, yet has data and/or handles");
+            return Status::kConstraintViolationError;
+        }
+        if (envelope->presence != kAllocAbsenceMarker && envelope->num_bytes == 0) {
+            SetError("Envelope has present data pointer, but zero byte count");
+            return Status::kConstraintViolationError;
+        }
+        uint32_t expected_handle_count;
+        if (add_overflow(handle_idx_, envelope->num_handles, &expected_handle_count) ||
+            expected_handle_count > num_handles_) {
+            SetError("Envelope has more handles than expected");
+            return Status::kConstraintViolationError;
+        }
+        // Remember the current watermark of bytes and handles, so that after processing
+        // the envelope, we can validate that the claimed num_bytes/num_handles matches the reality.
+        if (!Push(next_out_of_line_, handle_idx_)) {
+            SetError("Overly deep nested envelopes");
+            return Status::kConstraintViolationError;
+        }
+        // If we do not have the coding table for this payload,
+        // treat it as unknown and close its contained handles
+        if (envelope->presence != kAllocAbsenceMarker && payload_type == nullptr &&
+            envelope->num_handles > 0) {
 #ifdef __Fuchsia__
-        } else {
-            // Return value intentionally ignored: this is best-effort cleanup.
-            zx_handle_close(handles_[idx]);
+            zx_handle_close_many(&handles_[handle_idx_], envelope->num_handles);
 #endif
+            handle_idx_ += num_handles_;
         }
+        return Status::kSuccess;
     }
 
-    PointerState GetPointerState(const void* ptr) const {
-        return static_cast<PointerState>(*static_cast<const uintptr_t*>(ptr));
-    }
-    HandleState GetHandleState(zx_handle_t p) const {
-        return static_cast<HandleState>(p);
+    Status LeaveEnvelope(Position envelope_position, EnvelopePointer envelope) {
+        // Now that the envelope has been consumed, check the correctness of the envelope header.
+        auto& starting_state = Pop();
+        uint32_t num_bytes = next_out_of_line_ - starting_state.bytes_so_far;
+        uint32_t num_handles = handle_idx_ - starting_state.handles_so_far;
+        if (envelope->num_bytes != num_bytes) {
+            SetError("Envelope num_bytes was mis-sized");
+            return Status::kConstraintViolationError;
+        }
+        if (envelope->num_handles != num_handles) {
+            SetError("Envelope num_handles was mis-sized");
+            return Status::kConstraintViolationError;
+        }
+        return Status::kSuccess;
     }
 
-    template <class T>
-    void UpdatePointer(T* p, T v) {
-        *p = v;
-    }
-
-    void SetError(const char* error_msg) {
-        status_ = ZX_ERR_INVALID_ARGS;
-        if (out_error_msg_ != nullptr) {
-            *out_error_msg_ = error_msg;
-        }
-#ifdef __Fuchsia__
-        if (handles_) {
-            // Return value intentionally ignored: this is best-effort cleanup.
-            zx_handle_close_many(handles_, num_handles());
-        }
-#endif
+    void OnError(const char* error) {
+        SetError(error);
     }
 
     zx_status_t status() const { return status_; }
 
+    bool DidConsumeAllBytes() const { return next_out_of_line_ == num_bytes_; }
+
+    bool DidConsumeAllHandles() const { return handle_idx_ == num_handles_; }
+
 private:
+    void SetError(const char* error) {
+        if (status_ != ZX_OK) {
+            return;
+        }
+        status_ = ZX_ERR_INVALID_ARGS;
+        if (!out_error_msg_) {
+            return;
+        }
+        *out_error_msg_ = error;
+    }
+
+    struct EnvelopeState {
+        uint32_t bytes_so_far;
+        uint32_t handles_so_far;
+    };
+
+    const EnvelopeState& Pop() {
+        ZX_ASSERT(envelope_depth_ != 0);
+        envelope_depth_--;
+        return envelope_states_[envelope_depth_];
+    }
+
+    bool Push(uint32_t num_bytes, uint32_t num_handles) {
+        if (envelope_depth_ == FIDL_RECURSION_DEPTH) {
+            return false;
+        }
+        envelope_states_[envelope_depth_] = (EnvelopeState) {
+            .bytes_so_far = num_bytes,
+            .handles_so_far = num_handles,
+        };
+        envelope_depth_++;
+        return true;
+    }
+
+    // Message state passed in to the constructor.
     uint8_t* const bytes_;
     const uint32_t num_bytes_;
     const zx_handle_t* const handles_;
     const uint32_t num_handles_;
+    uint32_t next_out_of_line_;
     const char** const out_error_msg_;
+
+    // Decoder state
     zx_status_t status_ = ZX_OK;
+    uint32_t handle_idx_ = 0;
+    uint32_t envelope_depth_ = 0;
+    EnvelopeState envelope_states_[FIDL_RECURSION_DEPTH];
 };
 
 } // namespace
@@ -103,8 +240,61 @@ private:
 zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes,
                         const zx_handle_t* handles, uint32_t num_handles,
                         const char** out_error_msg) {
-    FidlDecoder decoder(type, bytes, num_bytes, handles, num_handles, out_error_msg);
-    decoder.Walk();
+    auto set_error = [&out_error_msg] (const char* msg) {
+        if (out_error_msg) *out_error_msg = msg;
+    };
+    if (bytes == nullptr) {
+        set_error("Cannot decode null bytes");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (handles == nullptr && num_handles != 0) {
+        set_error("Cannot provide non-zero handle count and null handle pointer");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    if (type == nullptr) {
+        set_error("Cannot decode a null fidl type");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    size_t primary_size;
+    zx_status_t status;
+    if ((status = fidl::GetPrimaryObjectSize(type, &primary_size, out_error_msg)) != ZX_OK) {
+        return status;
+    }
+    if (primary_size > num_bytes) {
+        set_error("Buffer is too small for first inline object");
+        return ZX_ERR_INVALID_ARGS;
+    }
+    uint64_t next_out_of_line = fidl::FidlAlign(static_cast<uint32_t>(primary_size));
+    if (next_out_of_line > std::numeric_limits<uint32_t>::max()) {
+        set_error("Out of line starting offset overflows");
+        return ZX_ERR_INVALID_ARGS;
+    }
+
+    FidlDecoder decoder(bytes, num_bytes, handles, num_handles,
+                        static_cast<uint32_t>(next_out_of_line), out_error_msg);
+    fidl::Walk(decoder,
+               type,
+               StartingPoint { reinterpret_cast<uint8_t*>(bytes) });
+
+    if (decoder.status() == ZX_OK) {
+        if (!decoder.DidConsumeAllBytes()) {
+            set_error("message did not decode all provided bytes");
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (!decoder.DidConsumeAllHandles()) {
+            set_error("message did not decode all provided handles");
+            return ZX_ERR_INVALID_ARGS;
+        }
+    } else {
+#ifdef __Fuchsia__
+        if (handles) {
+            // Return value intentionally ignored. This is best-effort cleanup.
+            (void)zx_handle_close_many(handles, num_handles);
+        }
+#endif
+    }
+
     return decoder.status();
 }
 

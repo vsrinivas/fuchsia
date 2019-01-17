@@ -99,7 +99,7 @@ public:
 private:
     // Visit an indirection, which can be the data pointer of a string/vector, the data pointer
     // of an envelope from a table, the pointer in a nullable type, etc.
-    // Only called when the pointer is non-null.
+    // Only called when the pointer is present.
     //
     // |ptr_position|   Position of the pointer.
     // |object_ptr_ptr| Pointer to the data pointer, obtained from |ptr_position.Get(start)|.
@@ -116,7 +116,7 @@ private:
     }
 
     // Visit a handle. The handle pointer will be mutable if the visitor is mutating.
-    // Only called when the handle is valid.
+    // Only called when the handle is present.
     // The handle pointer is derived from |handle_position.Get(start)|.
     Status VisitHandle(Position handle_position, HandlePointer handle_ptr) {
         return Status::kSuccess;
@@ -145,6 +145,7 @@ private:
     // Decoder/encoder should validate that the expected number of bytes/handles have been consumed.
     // Linearizer can use this opportunity to set the appropriate num_bytes/num_handles value.
     // It is possible to have nested enter/leave envelope pairs.
+    // There will be a matching call to |LeaveEnvelope| for every successful |EnterEnvelope|.
     //
     // |envelope_position| Position of the envelope header.
     // |envelope_ptr|      Pointer to the envelope header that was just processed.
