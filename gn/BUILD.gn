@@ -185,11 +185,15 @@ action("breakpad_symbols") {
 }
 
 # Generates an archive of package metadata.
-amber_repo = rebase_path("$root_build_dir/amber-files/repository")
+amber_files = rebase_path("$root_build_dir/amber-files")
 host_out_dir = get_label_info("//anything($host_toolchain)", "root_out_dir")
 pm_tool = rebase_path("$host_out_dir/pm")
 pkg_archive_contents = [
-  "amber-files/repository=$amber_repo",
+  "amber-files/repository=$amber_files/repository",
+  # TODO(IN-915): this should never contain the root key. In the future, this
+  # should contain no keys, once infra is managing key material itself.
+  # These keys are consumed by the infra train promote scripts.
+  "amber-files/keys=$amber_files/keys",
   "pm=$pm_tool",
 ]
 pkg_archive_manifest = "$target_gen_dir/package_archive_manifest"
