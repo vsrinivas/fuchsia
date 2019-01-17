@@ -6,6 +6,7 @@
 
 #include <object/mbuf.h>
 
+#include <fbl/array.h>
 #include <ktl/unique_ptr.h>
 #include <lib/unittest/unittest.h>
 #include <lib/unittest/user_memory.h>
@@ -13,6 +14,92 @@
 namespace {
 
 using testing::UserMemory;
+
+enum class MessageType {
+    kStream,
+    kDatagram
+};
+
+enum class ReadType {
+    kRead,
+    kPeek
+};
+
+// Writes a null-terminated string into |chain|.
+//
+// Helps eliminate some of the boilerplate code dealing with copying in and
+// out of user memory to make the test logic more obvious.
+//
+// The null terminator on |str| is not copied into |chain|, it's just used
+// so that we can easily determine the length without requiring the caller
+// to pass it in separately.
+//
+// Returns false if a user memory operation fails or |chain| failed to write
+// the whole |str|.
+bool WriteHelper(MBufChain* chain, const char* str, MessageType message_type) {
+    BEGIN_TEST;
+
+    const size_t length = strlen(str);
+    ktl::unique_ptr<UserMemory> memory = UserMemory::Create(length);
+    ASSERT_NE(nullptr, memory.get(), "");
+    ASSERT_EQ(ZX_OK, make_user_out_ptr(memory->out()).copy_array_to_user(str, length), "");
+
+    auto user_in = make_user_in_ptr(memory->in());
+    size_t written = 0;
+    if (message_type == MessageType::kDatagram) {
+        ASSERT_EQ(ZX_OK, chain->WriteDatagram(user_in, length, &written), "");
+    } else {
+        ASSERT_EQ(ZX_OK, chain->WriteStream(user_in, length, &written), "");
+    }
+    ASSERT_EQ(length, written, "");
+
+    END_TEST;
+}
+
+// Reads or peeks data from |chain|.
+//
+// Returns nullptr on memory failure.
+fbl::Array<char> ReadHelper(MBufChain* chain, size_t length, MessageType message_type,
+                            ReadType read_type) {
+    // It's an error to create UserMemory of size 0, so bump this to 1 even if we
+    // don't intend to use it.
+    ktl::unique_ptr<UserMemory> memory = UserMemory::Create(length ? length : 1);
+    if (!memory) {
+        unittest_printf("Failed to allocate UserMemory\n");
+        return nullptr;
+    }
+
+    auto user_out = make_user_out_ptr(memory->out());
+    bool datagram = (message_type == MessageType::kDatagram);
+    size_t result =
+        (read_type == ReadType::kRead) ? chain->Read(user_out, length, datagram)
+                                       : chain->Peek(user_out, length, datagram);
+
+    fbl::AllocChecker ac;
+    fbl::Array<char> buffer(new (&ac) char[result], result);
+    if (!ac.check()) {
+        unittest_printf("Failed to allocate char buffer\n");
+        return nullptr;
+    }
+
+    if (make_user_in_ptr(memory->in()).copy_array_from_user(buffer.get(), result) != ZX_OK) {
+        unittest_printf("Failed to copy user memory bytes\n");
+        return nullptr;
+    }
+
+    return buffer;
+}
+
+// Checks that the contents of |buffer| match the null-terminated |str|.
+//
+// fbl::Array<char> isn't supported by EXPECT_EQ() due to printf() usage so
+// this allows us to write EXPECT_TRUE(Equal(...)) instead.
+//
+// Returns false if either the size or contents differ.
+bool Equal(const fbl::Array<char>& buffer, const char* str) {
+    const size_t length = strlen(str);
+    return buffer.size() == length && memcmp(buffer.get(), str, length) == 0;
+}
 
 static bool initial_state() {
     BEGIN_TEST;
@@ -145,6 +232,59 @@ static bool stream_write_too_much() {
     EXPECT_TRUE(chain.is_empty(), "");
     EXPECT_EQ(0U, chain.size(), "");
     EXPECT_EQ(total_written, total_read, "");
+    END_TEST;
+}
+
+static bool stream_peek() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    ASSERT_TRUE(WriteHelper(&chain, "abc", MessageType::kStream), "");
+    ASSERT_TRUE(WriteHelper(&chain, "123", MessageType::kStream), "");
+
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 1, MessageType::kStream, ReadType::kPeek), "a"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 3, MessageType::kStream, ReadType::kPeek), "abc"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 4, MessageType::kStream, ReadType::kPeek), "abc1"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 6, MessageType::kStream, ReadType::kPeek), "abc123"), "");
+
+    // Make sure peeking didn't affect an actual read.
+    EXPECT_EQ(6u, chain.size(), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 6, MessageType::kStream, ReadType::kRead), "abc123"), "");
+
+    END_TEST;
+}
+
+static bool stream_peek_empty() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 1, MessageType::kStream, ReadType::kPeek), ""), "");
+
+    END_TEST;
+}
+
+static bool stream_peek_zero() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    ASSERT_TRUE(WriteHelper(&chain, "a", MessageType::kStream), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 0, MessageType::kStream, ReadType::kPeek), ""), "");
+
+    END_TEST;
+}
+
+// Ask for more data than exists, make sure it only returns the real data.
+static bool stream_peek_underflow() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+
+    ASSERT_TRUE(WriteHelper(&chain, "abc", MessageType::kStream), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 10, MessageType::kStream, ReadType::kPeek), "abc"), "");
+
+    ASSERT_TRUE(WriteHelper(&chain, "123", MessageType::kStream), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 10, MessageType::kStream, ReadType::kPeek), "abc123"), "");
+
     END_TEST;
 }
 
@@ -335,6 +475,56 @@ static bool datagram_write_huge_packet() {
     END_TEST;
 }
 
+static bool datagram_peek() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    ASSERT_TRUE(WriteHelper(&chain, "abc", MessageType::kDatagram), "");
+
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 1, MessageType::kDatagram, ReadType::kPeek), "a"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 3, MessageType::kDatagram, ReadType::kPeek), "abc"), "");
+
+    // Make sure peeking didn't affect an actual read.
+    EXPECT_EQ(3u, chain.size(), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 3, MessageType::kDatagram, ReadType::kRead), "abc"), "");
+
+    END_TEST;
+}
+
+static bool datagram_peek_empty() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 1, MessageType::kDatagram, ReadType::kPeek), ""), "");
+
+    END_TEST;
+}
+
+static bool datagram_peek_zero() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    ASSERT_TRUE(WriteHelper(&chain, "a", MessageType::kDatagram), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 0, MessageType::kDatagram, ReadType::kPeek), ""), "");
+
+    END_TEST;
+}
+
+static bool datagram_peek_underflow() {
+    BEGIN_TEST;
+
+    MBufChain chain;
+    ASSERT_TRUE(WriteHelper(&chain, "abc", MessageType::kDatagram), "");
+    ASSERT_TRUE(WriteHelper(&chain, "123", MessageType::kDatagram), "");
+
+    // Datagram peeks should not return more than a single message.
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 10, MessageType::kDatagram, ReadType::kPeek), "abc"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 3, MessageType::kDatagram, ReadType::kRead), "abc"), "");
+    EXPECT_TRUE(Equal(ReadHelper(&chain, 10, MessageType::kDatagram, ReadType::kPeek), "123"), "");
+
+    END_TEST;
+}
+
 } // namespace
 
 UNITTEST_START_TESTCASE(mbuf_tests)
@@ -344,6 +534,10 @@ UNITTEST("stream_read_zero", stream_read_zero)
 UNITTEST("stream_write_basic", stream_write_basic)
 UNITTEST("stream_write_zero", stream_write_zero)
 UNITTEST("stream_write_too_much", stream_write_too_much)
+UNITTEST("stream_peek", stream_peek)
+UNITTEST("stream_peek_empty", stream_peek_empty)
+UNITTEST("stream_peek_zero", stream_peek_zero)
+UNITTEST("stream_peek_underflow", stream_peek_underflow)
 UNITTEST("datagram_read_empty", datagram_read_empty)
 UNITTEST("datagram_read_zero", datagram_read_zero)
 UNITTEST("datagram_read_buffer_too_small", datagram_read_buffer_too_small)
@@ -351,4 +545,8 @@ UNITTEST("datagram_write_basic", datagram_write_basic)
 UNITTEST("datagram_write_zero", datagram_write_zero)
 UNITTEST("datagram_write_too_much", datagram_write_too_much)
 UNITTEST("datagram_write_huge_packet", datagram_write_huge_packet)
+UNITTEST("datagram_peek", datagram_peek)
+UNITTEST("datagram_peek_empty", datagram_peek_empty)
+UNITTEST("datagram_peek_zero", datagram_peek_zero)
+UNITTEST("datagram_peek_underflow", datagram_peek_underflow)
 UNITTEST_END_TESTCASE(mbuf_tests, "mbuf", "MBuf test");

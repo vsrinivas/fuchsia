@@ -36,7 +36,7 @@ public:
     // Returns an error on failure.
     zx_status_t WriteDatagram(user_in_ptr<const void> src, size_t len, size_t* written);
 
-    // Reads upto |len| bytes from chain into |dst|.
+    // Reads up to |len| bytes from chain into |dst|.
     //
     // When |datagram| is false, the data in the chain is treated as a stream (no boundaries).
     //
@@ -46,6 +46,9 @@ public:
     //
     // Returns number of bytes read.
     size_t Read(user_out_ptr<void> dst, size_t len, bool datagram);
+
+    // Same as Read() but leaves the bytes in the chain instead of consuming them.
+    size_t Peek(user_out_ptr<void> dst, size_t len, bool datagram) const;
 
     bool is_full() const;
     bool is_empty() const;
@@ -93,6 +96,14 @@ private:
 
     MBuf* AllocMBuf();
     void FreeMBuf(MBuf* buf);
+
+    // Helper method to provide common code for Read() and Peek().
+    //
+    // The static template function allows us to use the same code for both
+    // const and non-const MBufChain objects. Const objects will peek,
+    // non-const will read and consume.
+    template <typename T>
+    static size_t ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram);
 
     fbl::SinglyLinkedList<MBuf*> freelist_;
     fbl::SinglyLinkedList<MBuf*> tail_;

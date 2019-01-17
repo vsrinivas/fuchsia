@@ -6,10 +6,11 @@
 
 #include <object/mbuf.h>
 
-#include <lib/user_copy/user_ptr.h>
+#include <type_traits>
 
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <lib/user_copy/user_ptr.h>
 
 #define LOCAL_TRACE 0
 
@@ -38,41 +39,61 @@ bool MBufChain::is_empty() const {
 }
 
 size_t MBufChain::Read(user_out_ptr<void> dst, size_t len, bool datagram) {
-    if (size_ == 0) {
+    return ReadHelper(this, dst, len, datagram);
+}
+
+size_t MBufChain::Peek(user_out_ptr<void> dst, size_t len, bool datagram) const {
+    return ReadHelper(this, dst, len, datagram);
+}
+
+template <class T>
+size_t MBufChain::ReadHelper(T* chain, user_out_ptr<void> dst, size_t len, bool datagram) {
+    if (chain->size_ == 0) {
         return 0;
     }
 
-    if (datagram && len > tail_.front().pkt_len_)
-        len = tail_.front().pkt_len_;
+    if (datagram && len > chain->tail_.front().pkt_len_)
+        len = chain->tail_.front().pkt_len_;
 
     size_t pos = 0;
-    while (pos < len && !tail_.is_empty()) {
-        MBuf& cur = tail_.front();
-        char* src = cur.data_ + cur.off_;
-        size_t copy_len = MIN(cur.len_, len - pos);
+    auto iter = chain->tail_.begin();
+    while (pos < len && iter != chain->tail_.end()) {
+        const char* src = iter->data_ + iter->off_;
+        size_t copy_len = MIN(iter->len_, len - pos);
         if (dst.byte_offset(pos).copy_array_to_user(src, copy_len) != ZX_OK)
             return pos;
         pos += copy_len;
-        cur.off_ += static_cast<uint32_t>(copy_len);
-        cur.len_ -= static_cast<uint32_t>(copy_len);
-        size_ -= copy_len;
-        if (cur.len_ == 0 || datagram) {
-            size_ -= cur.len_;
-            if (head_ == &cur)
-                head_ = nullptr;
-            FreeMBuf(tail_.pop_front());
+
+        if constexpr (std::is_const<T>::value) {
+            ++iter;
+        } else {
+            iter->off_ += static_cast<uint32_t>(copy_len);
+            iter->len_ -= static_cast<uint32_t>(copy_len);
+            chain->size_ -= copy_len;
+
+            if (iter->len_ == 0 || datagram) {
+                chain->size_ -= iter->len_;
+                if (chain->head_ == &(*iter))
+                    chain->head_ = nullptr;
+                chain->FreeMBuf(chain->tail_.pop_front());
+                iter = chain->tail_.begin();
+            }
         }
     }
-    if (datagram) {
-        // Drain any leftover mbufs in the datagram packet.
-        while (!tail_.is_empty() && tail_.front().pkt_len_ == 0) {
-            MBuf* cur = tail_.pop_front();
-            size_ -= cur->len_;
-            if (head_ == cur)
-                head_ = nullptr;
-            FreeMBuf(cur);
+
+    // Drain any leftover mbufs in the datagram packet if we're consuming data.
+    if constexpr (!std::is_const<T>::value) {
+        if (datagram) {
+            while (!chain->tail_.is_empty() && chain->tail_.front().pkt_len_ == 0) {
+                MBuf* cur = chain->tail_.pop_front();
+                chain->size_ -= cur->len_;
+                if (chain->head_ == cur)
+                    chain->head_ = nullptr;
+                chain->FreeMBuf(cur);
+            }
         }
     }
+
     return pos;
 }
 
