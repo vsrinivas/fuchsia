@@ -14,8 +14,6 @@ import (
 	"log"
 	"os"
 	"path"
-	"sort"
-	"strings"
 	"time"
 
 	"fuchsia.googlesource.com/tools/botanist"
@@ -99,8 +97,14 @@ func main() {
 		summary.Tests = append(summary.Tests, details)
 	}
 
+	// Prepare the Fuchsia DeviceContext.
+	devCtx, err := botanist.GetDeviceContext()
+	if err != nil {
+		log.Fatal(err)
+	}
+
 	// Execute.
-	if err := execute(tests, recordDetails); err != nil {
+	if err := execute(tests, recordDetails, devCtx); err != nil {
 		log.Fatal(err)
 	}
 
@@ -116,51 +120,34 @@ func main() {
 	}
 }
 
-func execute(tests []testsharder.Test, recorder TestRecorder) error {
-	// Partition the tests into groups according to OS.
-	groups := groupTests(tests, func(test testsharder.Test) string {
-		sys := strings.ToLower(test.OS)
-		switch sys {
-		case "fuchsia", "linux", "mac":
-			return sys
-		}
-		return "unknown"
-	})
-
-	// Fail fast if any test cannot be run.
-	if unknownTests, ok := groups["unknown"]; ok {
-		return fmt.Errorf("could not determine the runtime system for following tests %v", unknownTests)
-	}
-
-	// Execute UNIX tests locally, assuming we're running in a UNIX environment.
-	localTests := append(groups["linux"], groups["mac"]...)
-	if len(localTests) > 0 {
-		if err := runTests(localTests, RunTestInSubprocess, outputDir, recorder); err != nil {
-			return err
-		}
-	}
-
-	// Execute Fuchsia tests.
-	return runFuchsiaTests(groups["fuchsia"], outputDir, recorder)
-}
-
-// groupTests splits a list of tests into named subgroups according to the names returned
-// by `name`.  Within any subgroup, the list of tests is sorted by test name.
-func groupTests(input []testsharder.Test, name func(testsharder.Test) string) map[string][]testsharder.Test {
-	tests := make([]testsharder.Test, len(input))
-	copy(tests, input)
-
-	sort.SliceStable(tests, func(i, j int) bool {
-		return tests[i].Name < tests[j].Name
-	})
-
-	output := make(map[string][]testsharder.Test)
+func execute(tests []testsharder.Test, recorder TestRecorder, devCtx *botanist.DeviceContext) error {
+	var linux, mac, fuchsia, unknown []testsharder.Test
 	for _, test := range tests {
-		group := name(test)
-		output[group] = append(output[group], test)
+		switch test.OS {
+		case "fuchsia":
+			fuchsia = append(fuchsia, test)
+		case "linux":
+			linux = append(linux, test)
+		case "mac":
+			mac = append(mac, test)
+		default:
+			unknown = append(unknown, test)
+		}
 	}
 
-	return output
+	if len(unknown) > 0 {
+		return fmt.Errorf("could not determine the runtime system for following tests %v", unknown)
+	}
+
+	if err := runTests(linux, RunTestInSubprocess, outputDir, recorder); err != nil {
+		return err
+	}
+
+	if err := runTests(mac, RunTestInSubprocess, outputDir, recorder); err != nil {
+		return err
+	}
+
+	return runFuchsiaTests(fuchsia, outputDir, recorder, devCtx)
 }
 
 func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
@@ -186,14 +173,9 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 	return botanist.SSHIntoNode(context.Background(), nodename, config)
 }
 
-func runFuchsiaTests(tests []testsharder.Test, outputDir string, record TestRecorder) error {
+func runFuchsiaTests(tests []testsharder.Test, outputDir string, record TestRecorder, devCtx *botanist.DeviceContext) error {
 	if len(tests) == 0 {
 		return nil
-	}
-
-	devCtx, err := botanist.GetDeviceContext()
-	if err != nil {
-		return err
 	}
 
 	// Initialize the connection to the Fuchsia device.
