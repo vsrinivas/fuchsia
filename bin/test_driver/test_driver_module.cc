@@ -21,8 +21,6 @@ using modular::testing::TestPoint;
 
 namespace {
 
-// The name of the test driver's environment.
-constexpr char kEnvironmentName[] = "test_driver_env";
 // The name of the test driver's child module.
 constexpr char kSubModuleName[] = "test_driver_sub_module";
 
@@ -94,16 +92,9 @@ class TestModule {
     return true;
   }
 
-  bool CreateNestedEnv() {
-    module_host_->startup_context()->environment()->CreateNestedEnvironment(
-        test_driver_env_.NewRequest(), test_driver_env_controller_.NewRequest(),
-        kEnvironmentName,
-        /*additional_services=*/nullptr, {.inherit_parent_services = true});
-    return true;
-  }
-
   void CreateTestDriverComponent(const std::string& url) {
-    test_driver_env_->GetLauncher(test_driver_launcher_.NewRequest());
+    module_host_->startup_context()->environment()->GetLauncher(
+        test_driver_launcher_.NewRequest());
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.url = url;
     launch_info.directory_request = test_driver_services_.NewRequest();
@@ -132,9 +123,6 @@ class TestModule {
           FXL_LOG(INFO) << "TestDriverModule launching test driver for URL: "
                         << test_driver_url;
 
-          if (!CreateNestedEnv()) {
-            return;
-          }
           CreateTestDriverComponent(test_driver_url);
           test_driver_component_controller_.events().OnTerminated =
               [this](int64_t return_code,
@@ -156,8 +144,6 @@ class TestModule {
 
   component::Services test_driver_services_;
   fuchsia::modular::LinkPtr link_;
-  fuchsia::sys::EnvironmentPtr test_driver_env_;
-  fuchsia::sys::EnvironmentControllerPtr test_driver_env_controller_;
   fuchsia::sys::LauncherPtr test_driver_launcher_;
   fuchsia::sys::ComponentControllerPtr test_driver_component_controller_;
 
