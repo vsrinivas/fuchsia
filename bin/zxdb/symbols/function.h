@@ -59,6 +59,10 @@ class Function final : public CodeBlock {
   const FileLine& decl_line() const { return decl_line_; }
   void set_decl_line(FileLine decl) { decl_line_ = std::move(decl); }
 
+  // For inline functions, this can be set to indicate the call location.
+  const FileLine& call_line() const { return call_line_; }
+  void set_call_line(FileLine call) { call_line_ = std::move(call); }
+
   // The return value type. This should be some kind of Type object. Will be
   // empty for void return types.
   const LazySymbol& return_type() const { return return_type_; }
@@ -131,6 +135,7 @@ class Function final : public CodeBlock {
   std::string assigned_name_;
   std::string linkage_name_;
   FileLine decl_line_;
+  FileLine call_line_;
   LazySymbol return_type_;
   std::vector<LazySymbol> parameters_;
   VariableLocation frame_base_;

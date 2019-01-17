@@ -70,9 +70,14 @@ class MockThread : public Thread, public Stack::Delegate {
     FXL_NOTREACHED();  // All frames are available.
   }
   std::unique_ptr<Frame> MakeFrameForStack(
-      const debug_ipc::StackFrame& input) override {
+      const debug_ipc::StackFrame& input,
+      Location location) override {
     FXL_NOTREACHED();  // Should not get called since we provide stack frames.
     return std::unique_ptr<Frame>();
+  }
+  Location GetSymbolizedLocationForStackFrame(
+      const debug_ipc::StackFrame& input) override {
+    return Location(Location::State::kSymbolized, input.ip);
   }
 
   std::string thread_name_ = "test thread";

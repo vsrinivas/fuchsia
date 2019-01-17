@@ -6,6 +6,7 @@
 
 #include <vector>
 
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 #include "lib/fxl/macros.h"
 
@@ -38,9 +39,15 @@ class Stack {
     // processing.
     virtual void SyncFramesForStack(std::function<void()> callback) = 0;
 
-    // Constructs a Frame implementation for the given IPC stack frame
-    // information.
+    // Constructs a Frame implementation for the given IPC stack frame and
+    // location. The location must be an input since inline frame expansion
+    // requires stack frames be constructed with different symbols than just
+    // looking up the address in the symbols.
     virtual std::unique_ptr<Frame> MakeFrameForStack(
+        const debug_ipc::StackFrame& input,
+        Location location) = 0;
+
+    virtual Location GetSymbolizedLocationForStackFrame(
         const debug_ipc::StackFrame& input) = 0;
   };
 
@@ -94,6 +101,11 @@ class Stack {
   bool ClearFrames();
 
  private:
+  // Adds the given stack frame to the end of the current stack (going
+  // backwards in time). Inline frames will be expanded so this may append more
+  // than one frame.
+  void AppendFrame(const debug_ipc::StackFrame& record);
+
   Delegate* delegate_;
 
   std::vector<std::unique_ptr<Frame>> frames_;

@@ -4,6 +4,7 @@
 
 #include "garnet/bin/zxdb/symbols/code_block.h"
 
+#include "garnet/bin/zxdb/symbols/function.h"
 #include "garnet/bin/zxdb/symbols/symbol_context.h"
 #include "lib/fxl/logging.h"
 
@@ -69,6 +70,21 @@ const Function* CodeBlock::GetContainingFunction() const {
     cur_block = cur_block->parent().Get()->AsCodeBlock();
   }
   return nullptr;
+}
+
+std::vector<const Function*> CodeBlock::GetInlineChain() const {
+  std::vector<const Function*> result;
+
+  const CodeBlock* cur_block = this;
+  while (cur_block) {
+    if (const Function* function = cur_block->AsFunction()) {
+      result.push_back(function);
+      if (!function->is_inline())
+        break;  // Just added containing non-inline function.
+    }
+    cur_block = cur_block->parent().Get()->AsCodeBlock();
+  }
+  return result;
 }
 
 }  // namespace zxdb

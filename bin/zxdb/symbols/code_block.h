@@ -4,6 +4,8 @@
 
 #pragma once
 
+#include <vector>
+
 #include "garnet/bin/zxdb/common/address_range.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 
@@ -77,6 +79,20 @@ class CodeBlock : public Symbol {
   // on error, but this should not happen for well-formed symbols (all code
   // should be inside functions).
   const Function* GetContainingFunction() const;
+
+  // Returns the chain of inline functions to the current code block.
+  //
+  // The returned vector will go back in time. The 0 item will be the most
+  // specific function containing this code block (always
+  // GetContainingFunction(), will be = |this| if this is a function).
+  //
+  // The back "should" be the containing non-inlined function (this depends on
+  // the symbols declaring a function for the code block which they should do,
+  // but calling code shouldn't crash on malformed symbols).
+  //
+  // If the current block is not in an inline function, the returned vector
+  // will have one element.
+  std::vector<const Function*> GetInlineChain() const;
 
  protected:
   FRIEND_REF_COUNTED_THREAD_SAFE(CodeBlock);

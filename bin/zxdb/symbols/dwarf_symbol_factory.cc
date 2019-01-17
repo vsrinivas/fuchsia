@@ -260,11 +260,19 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
   llvm::DWARFDie return_type;
   decoder.AddReference(llvm::dwarf::DW_AT_type, &return_type);
 
+  // Declaration location.
   llvm::Optional<std::string> decl_file;
-  decoder.AddFile(llvm::dwarf::DW_AT_decl_file, &decl_file);
-
   llvm::Optional<uint64_t> decl_line;
+  decoder.AddFile(llvm::dwarf::DW_AT_decl_file, &decl_file);
   decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_decl_line, &decl_line);
+
+  // Call location (inline functions only).
+  llvm::Optional<std::string> call_file;
+  llvm::Optional<uint64_t> call_line;
+  if (tag == Symbol::kTagInlinedSubroutine) {
+    decoder.AddFile(llvm::dwarf::DW_AT_call_file, &call_file);
+    decoder.AddUnsignedConstant(llvm::dwarf::DW_AT_call_line, &call_line);
+  }
 
   VariableLocation frame_base;
   decoder.AddCustom(llvm::dwarf::DW_AT_frame_base,
@@ -302,6 +310,7 @@ fxl::RefPtr<Symbol> DwarfSymbolFactory::DecodeFunction(
     function->set_linkage_name(*linkage_name);
   function->set_code_ranges(GetCodeRanges(die));
   function->set_decl_line(MakeFileLine(decl_file, decl_line));
+  function->set_call_line(MakeFileLine(call_file, call_line));
   if (return_type)
     function->set_return_type(MakeLazy(return_type));
   function->set_frame_base(std::move(frame_base));

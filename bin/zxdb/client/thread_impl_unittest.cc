@@ -76,9 +76,6 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kAddress1, stack[0]->GetAddress());
   EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
 
-  // The top stack frame object should be preserved across the updates below.
-  const Frame* top_stack = stack[0];
-
   // Construct what the full stack will be returned to the thread. The top
   // element should match the one already there.
   constexpr uint64_t kAddress2 = 0x34567890;
@@ -103,9 +100,6 @@ TEST_F(ThreadImplTest, Frames) {
   EXPECT_EQ(kAddress2, stack[1]->GetAddress());
   EXPECT_EQ(kStack2, stack[1]->GetStackPointer());
 
-  // The unchanged stack element @ index 0 should be the same Frame object.
-  EXPECT_EQ(top_stack, stack[0]);
-
   // Resuming the thread should be asynchronous so nothing should change.
   thread->Continue();
   EXPECT_EQ(2u, thread->GetStack().size());
@@ -116,16 +110,6 @@ TEST_F(ThreadImplTest, Frames) {
   // nothing should change. If we have better thread state notifications in
   // the future, it would be nice if the thread reported itself as running
   // and the stack was cleared at this point.
-
-  // Stopping the thread again should clear the stack back to the one frame
-  // we sent. Since the address didn't change from last time, it should be the
-  // same frame object.
-  InjectException(break_notification);
-  EXPECT_FALSE(thread->GetStack().has_all_frames());
-  ASSERT_EQ(1u, stack.size());
-  EXPECT_EQ(kAddress1, stack[0]->GetAddress());
-  EXPECT_EQ(kStack1, stack[0]->GetStackPointer());
-  EXPECT_EQ(top_stack, stack[0]);
 }
 
 // Tests that general exceptions still run thread controllers. If the exception

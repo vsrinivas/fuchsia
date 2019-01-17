@@ -27,6 +27,7 @@ class LazySymbol {
              uint32_t factory_data_offset);
   // Creates a non-lazy one, mostly for tests.
   explicit LazySymbol(fxl::RefPtr<Symbol> symbol);
+  explicit LazySymbol(const Symbol* symbol);
   ~LazySymbol();
 
   LazySymbol& operator=(const LazySymbol& other);

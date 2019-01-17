@@ -191,6 +191,7 @@ source_set("tests") {
     "setting_schema_unittest.cc",
     "setting_store_unittest.cc",
     "setting_value_unittest.cc",
+    "stack_unittest.cc",
     "step_over_thread_controller_unittest.cc",
     "step_thread_controller_unittest.cc",
     "string_util_unittest.cc",

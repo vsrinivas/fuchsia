@@ -315,9 +315,18 @@ void ThreadImpl::SyncFramesForStack(std::function<void()> callback) {
 }
 
 std::unique_ptr<Frame> ThreadImpl::MakeFrameForStack(
+    const debug_ipc::StackFrame& input, Location location) {
+  return std::make_unique<FrameImpl>(this, input, std::move(location));
+}
+
+Location ThreadImpl::GetSymbolizedLocationForStackFrame(
     const debug_ipc::StackFrame& input) {
-  return std::make_unique<FrameImpl>(
-      this, input, Location(Location::State::kAddress, input.ip));
+  auto vect = GetProcess()->GetSymbols()->ResolveInputLocation(
+      InputLocation(input.ip));
+
+  // Symbolizing an address should always give exactly one result.
+  FXL_DCHECK(vect.size() == 1u);
+  return vect[0];
 }
 
 void ThreadImpl::ClearFrames() {

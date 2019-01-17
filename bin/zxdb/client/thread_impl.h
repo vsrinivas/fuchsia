@@ -63,6 +63,8 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
   // Stack::Delegate implementation.
   void SyncFramesForStack(std::function<void()> callback) override;
   std::unique_ptr<Frame> MakeFrameForStack(
+      const debug_ipc::StackFrame& input, Location location) override;
+  Location GetSymbolizedLocationForStackFrame(
       const debug_ipc::StackFrame& input) override;
 
   // Invalidates the cached frames.
