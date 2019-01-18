@@ -512,8 +512,7 @@ void BasemgrImpl::ShowSetupOrLogin() {
               });
 
           user_provider_impl_->PreviousUsers(
-              [this](
-                  std::vector<fuchsia::modular::auth::Account> accounts) {
+              [this](std::vector<fuchsia::modular::auth::Account> accounts) {
                 std::vector<FuturePtr<>> did_remove_users;
                 did_remove_users.reserve(accounts.size());
 
@@ -543,5 +542,10 @@ void BasemgrImpl::ShowSetupOrLogin() {
 }
 
 void BasemgrImpl::RestartSession() { user_provider_impl_->RestartSession(); }
+
+void BasemgrImpl::LoginAsGuest() {
+  fuchsia::modular::UserLoginParams params;
+  user_provider_impl_->Login(std::move(params));
+}
 
 }  // namespace modular

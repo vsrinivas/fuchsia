@@ -5,9 +5,11 @@
 #include <dirent.h>
 #include <glob.h>
 #include <sys/types.h>
+#include <chrono>
 #include <iostream>
 #include <regex>
 #include <string>
+#include <thread>
 #include <vector>
 
 #include <fuchsia/modular/cpp/fidl.h>
@@ -94,6 +96,9 @@ delete_story
 list_stories
   List all the stories in the current session.
 
+login_guest
+  Logs in a guest user.
+
 restart_session
   Restarts the current session.)";
 }
@@ -170,6 +175,46 @@ fuchsia::modular::internal::BasemgrDebugPtr ConnectToBasemgr() {
   return basemgr;
 }
 
+// Returns true if a guest user was logged in.
+bool LoginAsGuest(bool has_running_sessions,
+                  fuchsia::modular::internal::BasemgrDebug* basemgr,
+                  modular::Logger logger) {
+  if (has_running_sessions) {
+    logger.LogError(modular::kLoginGuestCommandString,
+                    "A user is already logged in. You may log a guest user out "
+                    "by running 'sessionctl restart_session' or you may issue "
+                    "any other sessionctl command.");
+    return false;
+  }
+
+  basemgr->LoginAsGuest();
+  logger.Log(modular::kLoginGuestCommandString, std::vector<std::string>());
+  return true;
+}
+
+// Returns true if a guest user was logged in.
+bool LoginDefaultGuestUser(fuchsia::modular::internal::BasemgrDebug* basemgr,
+                           modular::Logger logger,
+                           std::vector<DebugService>* sessions,
+                           std::string cmd) {
+  std::cout << "Logging in as a guest user in the absence of running sessions."
+            << std::endl;
+  LoginAsGuest(/*has_running_sessions=*/false, basemgr, logger);
+
+  // Wait 2 seconds to allow sessionmgr to initialize
+  std::this_thread::sleep_for(std::chrono::seconds(2));
+  std::cout << "Finding sessions..." << std::endl;
+  *sessions = FindAllSessions();
+
+  if (sessions->empty()) {
+    logger.LogError(cmd,
+                    "Unable find a running session after logging in. "
+                    "Please try your command again.");
+    return false;
+  }
+  return true;
+}
+
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
@@ -188,10 +233,23 @@ int main(int argc, const char** argv) {
   }
 
   auto sessions = FindAllSessions();
-  if (sessions.empty()) {
-    logger.LogError(
-        cmd, "Could not find a running sessionmgr. Is the user logged in?");
+
+  // Continue with log in flow if user issued a login_guest command
+  if (cmd == modular::kLoginGuestCommandString) {
+    if (LoginAsGuest(/*has_running_sessions=*/!sessions.empty(), basemgr.get(),
+                     logger)) {
+      return 0;
+    }
     return 1;
+  }
+
+  // Log in a guest user if no session is found before continuing to execute
+  // the requested command
+  if (sessions.empty()) {
+    // Exit here if no sessions were found after logging in a guest user
+    if (!LoginDefaultGuestUser(basemgr.get(), logger, &sessions, cmd)) {
+      return 1;
+    }
   }
 
   if (!command_line.HasOption(modular::kJsonOutFlagString)) {

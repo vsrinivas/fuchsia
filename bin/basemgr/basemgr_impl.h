@@ -134,6 +134,9 @@ class BasemgrImpl : fuchsia::modular::BaseShellContext,
   // |BasemgrDebug|
   void RestartSession() override;
 
+  // |BasemgrDebug|
+  void LoginAsGuest() override;
+
   const modular::BasemgrSettings& settings_;  // Not owned nor copied.
   const std::vector<SessionShellSettings>& session_shell_settings_;
   fuchsia::modular::AppConfig session_shell_config_;

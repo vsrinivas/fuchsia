@@ -10,8 +10,9 @@ namespace modular {
 // Commands available to SessionCtlApp.
 constexpr char kAddModCommandString[] = "add_mod";
 constexpr char kDeleteStoryCommandString[] = "delete_story";
-constexpr char kRemoveModCommandString[] = "remove_mod";
 constexpr char kListStoriesCommandString[] = "list_stories";
+constexpr char kLoginGuestCommandString[] = "login_guest";
+constexpr char kRemoveModCommandString[] = "remove_mod";
 constexpr char kRestartSessionCommandString[] = "restart_session";
 
 // Flags to pass to SessionCtlApp.

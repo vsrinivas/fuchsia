@@ -136,11 +136,10 @@ std::string SessionCtlApp::ExecuteDeleteStoryCommand(
 
 std::string SessionCtlApp::ExecuteListStoriesCommand() {
   async::PostTask(dispatcher_, [this]() mutable {
-    puppet_master_->GetStories(
-        [this](std::vector<std::string> story_names) {
-          logger_.Log(kListStoriesCommandString, std::move(story_names));
-          on_command_executed_();
-        });
+    puppet_master_->GetStories([this](std::vector<std::string> story_names) {
+      logger_.Log(kListStoriesCommandString, std::move(story_names));
+      on_command_executed_();
+    });
   });
 
   return "";
@@ -171,9 +170,8 @@ fuchsia::modular::StoryCommand SessionCtlApp::MakeFocusModCommand(
   return command;
 }
 
-std::vector<fuchsia::modular::StoryCommand>
-SessionCtlApp::MakeAddModCommands(const std::string& mod_url,
-                                  const std::string& mod_name) {
+std::vector<fuchsia::modular::StoryCommand> SessionCtlApp::MakeAddModCommands(
+    const std::string& mod_url, const std::string& mod_name) {
   fuchsia::modular::Intent intent;
   intent.handler = mod_url;
 

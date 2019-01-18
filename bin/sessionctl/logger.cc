@@ -61,8 +61,7 @@ void Logger::Log(const std::string& command,
 }
 
 std::string Logger::GenerateJsonLogString(
-    const std::string& command,
-    const std::vector<std::string>& params) const {
+    const std::string& command, const std::vector<std::string>& params) const {
   rapidjson::Document document = GetDocument(command);
 
   // Generate array of |params| strings.

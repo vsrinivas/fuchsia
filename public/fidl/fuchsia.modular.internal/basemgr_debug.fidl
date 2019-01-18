@@ -8,5 +8,9 @@ library fuchsia.modular.internal;
 // state within the `basemgr` process.
 [Discoverable]
 interface BasemgrDebug {
+    // Restarts the current session.
     RestartSession();
+
+    // Logs in as a guest user.
+    LoginAsGuest();
 };
