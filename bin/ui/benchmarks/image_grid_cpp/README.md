@@ -5,4 +5,6 @@ collection of cards. Used for benchmarking purposes.
 
 ## USAGE
 
-  set_root_view image_grid_cpp
+```shell
+$ set_root_view fuchsia-pkg://fuchsia.com/image_grid_cpp#meta/image_grid_cpp.cmx
+```

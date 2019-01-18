@@ -17,3 +17,13 @@ A Go program that takes the following parameters in this order:
 * trace file name
 * output filename for benchmarks
 The output is a JSON file with the benchmark output.
+
+## Example Usage
+```shell
+fx shell "/pkgfs/packages/scenic_benchmarks/0/bin/gfx_benchmarks_standalone.sh /tmp \
+  --catapult-converter-args \
+  --bots fake_bot_name \
+  --masters fuchsia.try \
+  --execution-timestamp-ms 1534438419097 \
+  --log-url https://fake_url"
+```

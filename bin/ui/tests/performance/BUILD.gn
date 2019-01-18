@@ -9,8 +9,6 @@ import("//build/package.gni")
 import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
 
 package("vulkan_is_supported") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
@@ -27,8 +25,6 @@ package("vulkan_is_supported") {
 }
 
 package("scenic_benchmarks") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [

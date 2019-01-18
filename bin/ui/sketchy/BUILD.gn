@@ -63,8 +63,6 @@ executable("bin") {
 }
 
 package("sketchy_service") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
