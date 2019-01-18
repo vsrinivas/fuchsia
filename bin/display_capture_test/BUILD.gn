@@ -33,8 +33,6 @@ executable("bin") {
 }
 
 package("display_capture_test") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
