@@ -194,7 +194,11 @@ func (ios *iostate) loopWrite() error {
 				continue
 			}
 			if err != nil {
-				return fmt.Errorf("Endpoint.Write(...): %s", err)
+				optsStr := "..."
+				if to := opts.To; to != nil {
+					optsStr = fmt.Sprintf("%+v", *to)
+				}
+				return fmt.Errorf("Endpoint.Write(%s): %s", optsStr, err)
 			}
 			if ios.transProto != tcp.ProtocolNumber {
 				if int(n) < len(v) {
