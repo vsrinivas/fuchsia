@@ -488,7 +488,7 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
 
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
                                      const char* devhost_bin, const char* name, zx_handle_t hrpc,
-                                     const zx::resource& root_resource,
+                                     const zx::resource& root_resource, const zx::job& sysinfo_job,
                                      zx::unowned_job devhost_job) {
     launchpad_t* lp;
     launchpad_create_with_jobs(devhost_job->get(), 0, name, &lp);
@@ -509,7 +509,10 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
     //TODO: limit root resource to root devhost only
     if (root_resource.is_valid()) {
         zx::resource resource;
-        root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
+        zx_status_t status = root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
+        if (status != ZX_OK) {
+            log(ERROR, "devcoord: failed to duplicate root resource: %d\n", status);
+        }
         launchpad_add_handle(lp, resource.release(), PA_HND(PA_RESOURCE, 0));
     }
 
@@ -531,27 +534,29 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
 
     launchpad_set_nametable(lp, name_count, nametable);
 
-    //TODO: limit root job access to root devhost only
-    launchpad_add_handle(lp, get_sysinfo_job_root().release(),
-                         PA_HND(PA_USER0, kIdHJobRoot));
+    //TODO: limit sysinfo job access to root devhost only
+    zx::job sysinfo_job_duplicate;
+    zx_status_t status = sysinfo_job.duplicate(ZX_RIGHT_SAME_RIGHTS, &sysinfo_job_duplicate);
+    if (status != ZX_OK) {
+        log(ERROR, "devcoord: failed to duplicate sysinfo job: %d\n", status);
+    }
+    launchpad_add_handle(lp, sysinfo_job_duplicate.release(), PA_HND(PA_USER0, kIdHJobRoot));
 
     const char* errmsg;
     zx_handle_t proc;
-    zx_status_t status = launchpad_go(lp, &proc, &errmsg);
+    status = launchpad_go(lp, &proc, &errmsg);
     if (status < 0) {
-        log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n",
-            name, status, errmsg);
+        log(ERROR, "devcoord: launch devhost '%s': failed: %d: %s\n", name, status, errmsg);
         return status;
     }
     host->set_proc(proc);
 
     zx_info_handle_basic_t info;
-    if (host->proc()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) == ZX_OK) {
+    if (host->proc()->get_info(ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr) ==
+        ZX_OK) {
         host->set_koid(info.koid);
     }
-    log(INFO, "devcoord: launch devhost '%s': pid=%zu\n",
-        name, host->koid());
-
+    log(INFO, "devcoord: launch devhost '%s': pid=%zu\n", name, host->koid());
     return ZX_OK;
 }
 
@@ -569,7 +574,8 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     dh->set_hrpc(dh_hrpc);
 
     if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
-        name, hrpc, root_resource(), zx::unowned_job(config_.devhost_job))) < 0) {
+        name, hrpc, root_resource(), config_.sysinfo_job, zx::unowned_job(config_.devhost_job))) <
+        0) {
         zx_handle_close(dh->hrpc());
         return r;
     }

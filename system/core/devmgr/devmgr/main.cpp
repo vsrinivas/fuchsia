@@ -744,16 +744,6 @@ namespace devmgr {
 
 zx_handle_t virtcon_open;
 
-zx::job get_sysinfo_job_root() {
-    zx::job h;
-    //TODO: limit to enumerate rights
-    if (g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &h) < 0) {
-        return zx::job();
-    } else {
-        return h;
-    }
-}
-
 zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
         return devfs_root_clone();
@@ -793,6 +783,7 @@ int main(int argc, char** argv) {
     ParseArgs(argc, argv, &args);
 
     g_handles.root_job = zx::job::default_job();
+    g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
     bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
@@ -805,14 +796,19 @@ int main(int argc, char** argv) {
         fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
         return 1;
     }
+    //TODO: limit to enumerate rights
+    status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: failed to duplicate root job for sysinfo: %d\n", status);
+    }
     status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: unable to create devhost job: %d\n", status);
+        fprintf(stderr, "devmgr: failed to create devhost job: %d\n", status);
         return 1;
     }
     status = zx::event::create(0, &config.fshost_event);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: unable to create fshost event: %d\n", status);
+        fprintf(stderr, "devmgr: failed to create fshost event: %d\n", status);
         return 1;
     }
 
@@ -826,11 +822,9 @@ int main(int argc, char** argv) {
         fdio_service_clone_to(devmgr::devfs_root_borrow()->get(), devfs_client.release());
     }
 
-    g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
-
     status = zx::job::create(*g_handles.root_job, 0u, &g_handles.svc_job);
     if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: unable to create service job: %d\n", status);
+        fprintf(stderr, "devmgr: failed to create service job: %d\n", status);
         return 1;
     }
     g_handles.svc_job.set_property(ZX_PROP_NAME, "zircon-services", 16);
