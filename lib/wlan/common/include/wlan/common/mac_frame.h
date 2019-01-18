@@ -488,13 +488,8 @@ struct Beacon {
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.10
-struct ProbeRequest {
+struct ProbeRequest : EmptyHdr {
     static constexpr ManagementSubtype Subtype() { return ManagementSubtype::kProbeRequest; }
-    static constexpr size_t max_len() { return sizeof(ProbeRequest); }
-
-    size_t hdr_len() { return 0; }
-
-    constexpr size_t len() const { return sizeof(*this); }
 } __PACKED;
 
 // IEEE Std 802.11-2016, 9.3.3.11
