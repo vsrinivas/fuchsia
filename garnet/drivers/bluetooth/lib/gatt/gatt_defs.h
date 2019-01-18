@@ -6,6 +6,7 @@
 #define GARNET_DRIVERS_BLUETOOTH_LIB_GATT_GATT_DEFS_H_
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 
 namespace btlib {
@@ -77,6 +78,8 @@ using ExtendedProperties = uint16_t;
 constexpr uint16_t kCCCNotificationBit = 0x0001;
 constexpr uint16_t kCCCIndicationBit = 0x0002;
 
+using DeviceId = common::DeviceId;
+
 // An identifier uniquely identifies a service, characteristic, or descriptor.
 using IdType = uint64_t;
 
@@ -96,10 +99,8 @@ struct ServiceData {
 
 struct CharacteristicData {
   CharacteristicData() = default;
-  CharacteristicData(Properties props,
-                     att::Handle handle,
-                     att::Handle value_handle,
-                     const common::UUID& type);
+  CharacteristicData(Properties props, att::Handle handle,
+                     att::Handle value_handle, const common::UUID& type);
 
   Properties properties;
   att::Handle handle;

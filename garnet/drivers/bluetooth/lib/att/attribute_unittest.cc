@@ -11,7 +11,7 @@ namespace btlib {
 namespace att {
 namespace {
 
-constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
+constexpr DeviceId kTestDeviceId(1);
 constexpr Handle kTestHandle = 0x0001;
 constexpr common::UUID kTestType1((uint16_t)0x0001);
 constexpr common::UUID kTestType2((uint16_t)0x0002);
@@ -155,7 +155,7 @@ TEST(ATT_AttributeTest, ReadAsync) {
     callback_called = true;
   };
 
-  auto handler = [&](const auto& peer_id, Handle handle, uint16_t offset,
+  auto handler = [&](DeviceId peer_id, Handle handle, uint16_t offset,
                      const auto& result_cb) {
     EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(attr->handle(), handle);
@@ -204,7 +204,7 @@ TEST(ATT_AttributeTest, WriteAsync) {
     callback_called = true;
   };
 
-  auto handler = [&](const auto& peer_id, Handle handle, uint16_t offset,
+  auto handler = [&](DeviceId peer_id, Handle handle, uint16_t offset,
                      const auto& value, const auto& result_cb) {
     EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(attr->handle(), handle);

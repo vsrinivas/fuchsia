@@ -95,7 +95,7 @@ void RemoteDevice::LowEnergyData::SetConnectionState(ConnectionState state) {
 
   bt_log(TRACE, "gap-le",
          "peer (%s) LE connection state changed from \"%s\" to \"%s\"",
-         dev_->identifier().c_str(),
+         bt_str(dev_->identifier()),
          ConnectionStateToString(connection_state()).c_str(),
          ConnectionStateToString(state).c_str());
 
@@ -194,7 +194,7 @@ void RemoteDevice::BrEdrData::SetConnectionState(ConnectionState state) {
 
   bt_log(TRACE, "gap-bredr",
          "peer (%s) BR/EDR connection state changed from \"%s\" to \"%s\"",
-         dev_->identifier().c_str(),
+         bt_str(dev_->identifier()),
          ConnectionStateToString(connection_state()).c_str(),
          ConnectionStateToString(state).c_str());
 
@@ -280,8 +280,8 @@ void RemoteDevice::BrEdrData::SetLinkKey(const sm::LTK& link_key) {
 RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
                            DeviceCallback update_expiry_callback,
                            DeviceCallback dual_mode_callback,
-                           const std::string& identifier,
-                           const DeviceAddress& address, bool connectable)
+                           DeviceId identifier, const DeviceAddress& address,
+                           bool connectable)
     : notify_listeners_callback_(std::move(notify_listeners_callback)),
       update_expiry_callback_(std::move(update_expiry_callback)),
       dual_mode_callback_(std::move(dual_mode_callback)),
@@ -297,7 +297,7 @@ RemoteDevice::RemoteDevice(DeviceCallback notify_listeners_callback,
   ZX_DEBUG_ASSERT(notify_listeners_callback_);
   ZX_DEBUG_ASSERT(update_expiry_callback_);
   ZX_DEBUG_ASSERT(dual_mode_callback_);
-  ZX_DEBUG_ASSERT(!identifier_.empty());
+  ZX_DEBUG_ASSERT(identifier.IsValid());
 
   if (address.type() == DeviceAddress::Type::kBREDR ||
       address.type() == DeviceAddress::Type::kLEPublic) {
@@ -342,7 +342,7 @@ RemoteDevice::BrEdrData& RemoteDevice::MutBrEdr() {
 
 std::string RemoteDevice::ToString() const {
   return fxl::StringPrintf("{remote-device id: %s, address: %s}",
-                           identifier_.c_str(), address_.ToString().c_str());
+                           bt_str(identifier_), bt_str(address_));
 }
 
 void RemoteDevice::SetName(const std::string& name) {

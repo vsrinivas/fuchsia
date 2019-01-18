@@ -27,6 +27,9 @@ using common::StaticByteBuffer;
 // All fields are initialized to zero as they are unused in these tests.
 const hci::LEConnectionParameters kTestParams;
 
+// Arbitrary ID value used by the bonding tests below. The actual value of this
+// constant does not effect the test logic.
+constexpr DeviceId kId(100);
 constexpr int8_t kTestRSSI = 10;
 
 const DeviceAddress kAddrBrEdr(DeviceAddress::Type::kBREDR,
@@ -94,8 +97,9 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUp) {
   auto kAdvData1 = CreateStaticByteBuffer(0x0C, 0x09, 'T', 'e', 's', 't', ' ',
                                           'D', 'e', 'v', 'i', 'c', 'e');
 
+  // These should return false regardless of the input while the cache is empty.
   EXPECT_FALSE(cache()->FindDeviceByAddress(kAddrLePublic));
-  EXPECT_FALSE(cache()->FindDeviceById("foo"));
+  EXPECT_FALSE(cache()->FindDeviceById(kId));
 
   auto device = cache()->NewDevice(kAddrLePublic, true);
   ASSERT_TRUE(device);
@@ -383,7 +387,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceFailsWithExistingAddress) {
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", device()->address(), data, {}));
+  EXPECT_FALSE(cache()->AddBondedDevice(kId, device()->address(), data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
@@ -392,28 +396,27 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
   EXPECT_TRUE(NewDevice(kAddrBrEdr, true));
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data, {}));
+  EXPECT_FALSE(cache()->AddBondedDevice(kId, kAddrLeAlias, data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedBrEdrDeviceFailsWithExistingLowEnergyAliasAddress) {
   EXPECT_TRUE(NewDevice(kAddrLeAlias, true));
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrBrEdr, {}, kBrEdrKey));
+  EXPECT_FALSE(cache()->AddBondedDevice(kId, kAddrBrEdr, {}, kBrEdrKey));
   EXPECT_FALSE(bonded_callback_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceFailsWithoutMandatoryKeys) {
   sm::PairingData data;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrLeAlias, data, kBrEdrKey));
+  EXPECT_FALSE(cache()->AddBondedDevice(kId, kAddrLeAlias, data, kBrEdrKey));
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->AddBondedDevice("foo", kAddrBrEdr, data, {}));
+  EXPECT_FALSE(cache()->AddBondedDevice(kId, kAddrBrEdr, data, {}));
   EXPECT_FALSE(bonded_callback_called());
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddLowEnergyBondedDeviceSuccess) {
-  const std::string kId("test-id");
   sm::PairingData data;
   data.ltk = kLTK;
 
@@ -437,7 +440,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddLowEnergyBondedDeviceSuccess) {
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBrEdrBondedDeviceSuccess) {
-  const std::string kId("test-id");
+  DeviceId kId(5);
   sm::PairingData data;
 
   EXPECT_TRUE(cache()->AddBondedDevice(kId, kAddrBrEdr, data, kBrEdrKey));
@@ -461,7 +464,6 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, AddBrEdrBondedDeviceSuccess) {
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
        AddBondedDeviceWithIrkIsAddedToResolvingList) {
-  const std::string kId("test-id");
   sm::PairingData data;
   data.ltk = kLTK;
   data.irk = sm::Key(sm::SecurityProperties(), common::RandomUInt128());
@@ -486,7 +488,7 @@ TEST_F(GAP_RemoteDeviceCacheTest_BondingTest,
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondDeviceUnknown) {
   sm::PairingData data;
   data.ltk = kLTK;
-  EXPECT_FALSE(cache()->StoreLowEnergyBond("foo", data));
+  EXPECT_FALSE(cache()->StoreLowEnergyBond(kId, data));
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest_BondingTest, StoreLowEnergyBondWithLtk) {
@@ -667,7 +669,7 @@ class DualModeBondingTest
       public ::testing::WithParamInterface<DeviceAddress> {};
 
 TEST_P(DualModeBondingTest, AddBondedDeviceSuccess) {
-  const std::string kId("test-id");
+  DeviceId kId(5);
   sm::PairingData data;
   data.ltk = kLTK;
 
@@ -1040,9 +1042,7 @@ class GAP_RemoteDeviceCacheExpirationTest : public ::gtest::TestLoopFixture {
   void TearDown() { RunLoopUntilIdle(); }
 
   RemoteDevice* GetDefaultDevice() { return cache_.FindDeviceById(device_id_); }
-  RemoteDevice* GetDeviceById(const std::string& id) {
-    return cache_.FindDeviceById(id);
-  }
+  RemoteDevice* GetDeviceById(DeviceId id) { return cache_.FindDeviceById(id); }
   bool IsDefaultDeviceAddressInCache() {
     return cache_.FindDeviceByAddress(device_addr_);
   }
@@ -1055,7 +1055,7 @@ class GAP_RemoteDeviceCacheExpirationTest : public ::gtest::TestLoopFixture {
  private:
   RemoteDeviceCache cache_;
   common::DeviceAddress device_addr_;
-  std::string device_id_;
+  DeviceId device_id_;
 };
 
 TEST_F(GAP_RemoteDeviceCacheExpirationTest,
@@ -1149,7 +1149,7 @@ TEST_F(GAP_RemoteDeviceCacheExpirationTest,
 TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        LERandomDeviceBecomesTemporaryOnDisconnect) {
   // Create our RemoteDevice, and get it into the kConnected state.
-  std::string custom_device_id;
+  DeviceId custom_device_id;
   {
     auto* custom_device = NewDevice(kAddrLeRandom, true);
     ASSERT_TRUE(custom_device);
@@ -1185,7 +1185,7 @@ TEST_F(GAP_RemoteDeviceCacheExpirationTest,
 TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        BREDRDeviceRemainsNonTemporaryOnDisconnect) {
   // Create our RemoteDevice, and get it into the kConnected state.
-  std::string custom_device_id;
+  DeviceId custom_device_id;
   {
     auto* custom_device = NewDevice(kAddrBrEdr, true);
     ASSERT_TRUE(custom_device);

@@ -27,7 +27,7 @@ namespace bthost {
 class GattRemoteServiceDevice final {
  public:
   GattRemoteServiceDevice(zx_device_t* parent_device,
-                          const std::string& peer_id,
+                          btlib::gatt::DeviceId peer_id,
                           fbl::RefPtr<btlib::gatt::RemoteService> service);
 
   ~GattRemoteServiceDevice();
@@ -46,7 +46,8 @@ class GattRemoteServiceDevice final {
     static_cast<GattRemoteServiceDevice*>(ctx)->Release();
   }
 
-  static void OpConnect(void* ctx, bt_gatt_svc_connect_callback connect_cb, void* cookie) {
+  static void OpConnect(void* ctx, bt_gatt_svc_connect_callback connect_cb,
+                        void* cookie) {
     static_cast<GattRemoteServiceDevice*>(ctx)->Connect(connect_cb, cookie);
   }
 
@@ -57,21 +58,20 @@ class GattRemoteServiceDevice final {
   static void OpReadCharacteristic(
       void* ctx, bt_gatt_id_t id,
       bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
-    static_cast<GattRemoteServiceDevice*>(ctx)->ReadCharacteristic(
-        id, read_cb, cookie);
+    static_cast<GattRemoteServiceDevice*>(ctx)->ReadCharacteristic(id, read_cb,
+                                                                   cookie);
   }
 
   static void OpReadLongCharacteristic(
-      void* ctx, bt_gatt_id_t id,  uint16_t offset,
-      size_t max_bytes, bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
+      void* ctx, bt_gatt_id_t id, uint16_t offset, size_t max_bytes,
+      bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
     static_cast<GattRemoteServiceDevice*>(ctx)->ReadLongCharacteristic(
         id, offset, max_bytes, read_cb, cookie);
   }
 
-  static void OpWriteCharacteristic(void* ctx, bt_gatt_id_t id,
-                                           const void* buf, size_t len,
-                                           bt_gatt_svc_write_characteristic_callback status_cb,
-                                           void* cookie) {
+  static void OpWriteCharacteristic(
+      void* ctx, bt_gatt_id_t id, const void* buf, size_t len,
+      bt_gatt_svc_write_characteristic_callback status_cb, void* cookie) {
     static_cast<GattRemoteServiceDevice*>(ctx)->WriteCharacteristic(
         id, buf, len, status_cb, cookie);
   }
@@ -90,15 +90,21 @@ class GattRemoteServiceDevice final {
   // bt-gatt-svc ops.
   void Connect(bt_gatt_svc_connect_callback connect_cb, void* cookie);
   void Stop();
-  void ReadCharacteristic(bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb,
+  void ReadCharacteristic(bt_gatt_id_t id,
+                          bt_gatt_svc_read_characteristic_callback read_cb,
                           void* cookie);
 
-  void ReadLongCharacteristic(bt_gatt_id_t id, uint16_t offset, size_t max_bytes,
-                              bt_gatt_svc_read_characteristic_callback read_cb, void* cookie);
+  void ReadLongCharacteristic(bt_gatt_id_t id, uint16_t offset,
+                              size_t max_bytes,
+                              bt_gatt_svc_read_characteristic_callback read_cb,
+                              void* cookie);
   void WriteCharacteristic(bt_gatt_id_t id, const void* buff, size_t len,
-                           bt_gatt_svc_write_characteristic_callback write_cb, void* cookie);
-  void EnableNotifications(bt_gatt_id_t id, const bt_gatt_notification_value_t* value_cb,
-                           bt_gatt_svc_enable_notifications_callback status_cb, void* cookie);
+                           bt_gatt_svc_write_characteristic_callback write_cb,
+                           void* cookie);
+  void EnableNotifications(bt_gatt_id_t id,
+                           const bt_gatt_notification_value_t* value_cb,
+                           bt_gatt_svc_enable_notifications_callback status_cb,
+                           void* cookie);
 
   // All device protocol messages are dispatched on this loop to not block the
   // gatt or host thread.
@@ -107,7 +113,7 @@ class GattRemoteServiceDevice final {
   zx_device_t* parent_device_;  // The BT Host device
   zx_device_t* dev_;            // The child we are creating.
 
-  const std::string& peer_id_;
+  const btlib::gatt::DeviceId peer_id_;
   fbl::RefPtr<btlib::gatt::RemoteService> service_;
 
   // The base DDK device ops.

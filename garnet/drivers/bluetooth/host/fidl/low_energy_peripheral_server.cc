@@ -11,6 +11,7 @@
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 #include "helpers.h"
 
@@ -40,10 +41,23 @@ std::string MessageFromStatus(btlib::hci::Status status) {
   }
 }
 
+// TODO(BT-305): Remove this once the string IDs have been removed from the FIDL
+// API.
+std::optional<btlib::gap::AdvertisementId> AdvertisementIdFromString(
+    const std::string& id) {
+  uint64_t value;
+  if (!fxl::StringToNumberWithError<decltype(value)>(id, &value,
+                                                     fxl::Base::k16)) {
+    return std::nullopt;
+  }
+  return btlib::gap::AdvertisementId(value);
+}
+
 }  // namespace
 
 LowEnergyPeripheralServer::InstanceData::InstanceData(
-    const std::string& id, fxl::WeakPtr<LowEnergyPeripheralServer> owner)
+    ::btlib::gap::AdvertisementId id,
+    fxl::WeakPtr<LowEnergyPeripheralServer> owner)
     : id_(id), owner_(owner) {
   ZX_DEBUG_ASSERT(owner_);
 }
@@ -54,7 +68,8 @@ void LowEnergyPeripheralServer::InstanceData::RetainConnection(
   ZX_DEBUG_ASSERT(!conn_ref_);
 
   conn_ref_ = std::move(conn_ref);
-  owner_->binding()->events().OnCentralConnected(id_, std::move(peer));
+  owner_->binding()->events().OnCentralConnected(id_.ToString(),
+                                                 std::move(peer));
 }
 
 void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
@@ -62,7 +77,7 @@ void LowEnergyPeripheralServer::InstanceData::ReleaseConnection() {
   ZX_DEBUG_ASSERT(conn_ref_);
 
   owner_->binding()->events().OnCentralDisconnected(
-      conn_ref_->device_identifier());
+      conn_ref_->device_identifier().ToString());
   conn_ref_ = nullptr;
 }
 
@@ -113,11 +128,11 @@ void LowEnergyPeripheralServer::StartAdvertising(
   if (connectable) {
     connect_cb = [self](auto adv_id, auto link) {
       if (self)
-        self->OnConnected(std::move(adv_id), std::move(link));
+        self->OnConnected(adv_id, std::move(link));
     };
   }
   auto advertising_status_cb = [self, callback = std::move(callback)](
-                                   std::string ad_id,
+                                   ::btlib::gap::AdvertisementId ad_id,
                                    ::btlib::hci::Status status) mutable {
     if (!self)
       return;
@@ -132,7 +147,7 @@ void LowEnergyPeripheralServer::StartAdvertising(
 
     self->instances_[ad_id] =
         InstanceData(ad_id, self->weak_ptr_factory_.GetWeakPtr());
-    callback(Status(), ad_id);
+    callback(Status(), ad_id.ToString());
   };
 
   advertising_manager->StartAdvertising(
@@ -142,7 +157,14 @@ void LowEnergyPeripheralServer::StartAdvertising(
 
 void LowEnergyPeripheralServer::StopAdvertising(
     ::std::string id, StopAdvertisingCallback callback) {
-  if (StopAdvertisingInternal(id)) {
+  auto peer_id = AdvertisementIdFromString(id);
+  if (!peer_id.has_value()) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "invalid device ID"));
+    return;
+  }
+
+  if (StopAdvertisingInternal(*peer_id)) {
     callback(Status());
   } else {
     callback(fidl_helpers::NewFidlError(ErrorCode::NOT_FOUND,
@@ -150,7 +172,8 @@ void LowEnergyPeripheralServer::StopAdvertising(
   }
 }
 
-bool LowEnergyPeripheralServer::StopAdvertisingInternal(const std::string& id) {
+bool LowEnergyPeripheralServer::StopAdvertisingInternal(
+    btlib::gap::AdvertisementId id) {
   auto count = instances_.erase(id);
   if (count) {
     adapter()->le_advertising_manager()->StopAdvertising(id);
@@ -159,8 +182,9 @@ bool LowEnergyPeripheralServer::StopAdvertisingInternal(const std::string& id) {
   return count != 0;
 }
 
-void LowEnergyPeripheralServer::OnConnected(std::string advertisement_id,
-                                            ::btlib::hci::ConnectionPtr link) {
+void LowEnergyPeripheralServer::OnConnected(
+    btlib::gap::AdvertisementId advertisement_id,
+    ::btlib::hci::ConnectionPtr link) {
   ZX_DEBUG_ASSERT(link);
 
   // If the active adapter that was used to start advertising was changed before

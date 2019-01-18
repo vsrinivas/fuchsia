@@ -168,8 +168,11 @@ class GattServerServer::LocalServiceImpl
 
   void NotifyValue(uint64_t characteristic_id, ::std::string peer_id,
                    ::std::vector<uint8_t> value, bool confirm) override {
-    gatt()->SendNotification(id_, characteristic_id, peer_id, std::move(value),
-                             confirm);
+    auto id = fidl_helpers::DeviceIdFromString(std::move(peer_id));
+    if (id) {
+      gatt()->SendNotification(id_, characteristic_id, *id, std::move(value),
+                               confirm);
+    }
   }
 
   // Unregisters the underlying service if it is still active.
@@ -272,8 +275,9 @@ void GattServerServer::PublishService(
       responder(::btlib::att::ErrorCode::kUnlikelyError);
     }
   };
-  auto ccc_callback = [self](auto svc_id, auto id, const std::string& peer_id,
-                             bool notify, bool indicate) {
+  auto ccc_callback = [self](auto svc_id, auto id,
+                             btlib::gatt::DeviceId peer_id, bool notify,
+                             bool indicate) {
     if (self)
       self->OnCharacteristicConfig(svc_id, id, peer_id, notify, indicate);
   };
@@ -369,13 +373,14 @@ void GattServerServer::OnWriteRequest(::btlib::gatt::IdType service_id,
 
 void GattServerServer::OnCharacteristicConfig(::btlib::gatt::IdType service_id,
                                               ::btlib::gatt::IdType chrc_id,
-                                              const std::string& peer_id,
+                                              ::btlib::gatt::DeviceId peer_id,
                                               bool notify, bool indicate) {
   auto iter = services_.find(service_id);
   if (iter != services_.end()) {
     auto* delegate = iter->second->delegate();
     ZX_DEBUG_ASSERT(delegate);
-    delegate->OnCharacteristicConfiguration(chrc_id, peer_id, notify, indicate);
+    delegate->OnCharacteristicConfiguration(chrc_id, peer_id.ToString(), notify,
+                                            indicate);
   }
 }
 

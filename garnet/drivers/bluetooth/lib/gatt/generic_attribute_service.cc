@@ -15,21 +15,18 @@ namespace btlib {
 namespace gatt {
 namespace {
 
-void NopReadHandler(IdType, IdType, uint16_t, const ReadResponder&) {
-}
+void NopReadHandler(IdType, IdType, uint16_t, const ReadResponder&) {}
 
 void NopWriteHandler(IdType, IdType, uint16_t, const common::ByteBuffer&,
-                     const WriteResponder&) {
-}
+                     const WriteResponder&) {}
 
 }  // namespace
-
 
 GenericAttributeService::GenericAttributeService(
     LocalServiceManager* local_service_manager,
     SendIndicationCallback send_indication_callback)
-  : local_service_manager_(local_service_manager),
-    send_indication_callback_(std::move(send_indication_callback)) {
+    : local_service_manager_(local_service_manager),
+      send_indication_callback_(std::move(send_indication_callback)) {
   ZX_DEBUG_ASSERT(local_service_manager != nullptr);
   ZX_DEBUG_ASSERT(send_indication_callback_);
 
@@ -53,13 +50,13 @@ void GenericAttributeService::Register() {
       kDisallowed,                           // read
       kDisallowed,                           // write
       kAllowedNoSecurity);                   // update
-  auto service = std::make_unique<Service>(true,
-                                           types::kGenericAttributeService);
+  auto service =
+      std::make_unique<Service>(true, types::kGenericAttributeService);
   service->AddCharacteristic(std::move(service_changed_chr));
 
   ClientConfigCallback ccc_callback = [this](IdType service_id, IdType chrc_id,
-                                             const std::string& peer_id,
-                                             bool notify, bool indicate) {
+                                             DeviceId peer_id, bool notify,
+                                             bool indicate) {
     ZX_DEBUG_ASSERT(chrc_id == 0u);
 
     // Discover the handle assigned to this characteristic if necessary.
@@ -68,20 +65,20 @@ void GenericAttributeService::Register() {
       if (!local_service_manager_->GetCharacteristicConfig(service_id, chrc_id,
                                                            peer_id, &config)) {
         bt_log(TRACE, "gatt",
-               "service: Peer has not configured characteristic:  %s",
-               peer_id.c_str());
+               "service: Peer has not configured characteristic: %s",
+               bt_str(peer_id));
         return;
       }
       svc_changed_handle_ = config.handle;
     }
     if (indicate) {
       subscribed_peers_.insert(peer_id);
-      bt_log(SPEW, "gatt", "service: Service Changed enabled for peer  %s",
-             peer_id.c_str());
+      bt_log(SPEW, "gatt", "service: Service Changed enabled for peer %s",
+             bt_str(peer_id));
     } else {
       subscribed_peers_.erase(peer_id);
-      bt_log(SPEW, "gatt", "service: Service Changed disabled for peer  %s",
-             peer_id.c_str());
+      bt_log(SPEW, "gatt", "service: Service Changed disabled for peer %s",
+             bt_str(peer_id));
     }
   };
 
@@ -113,11 +110,11 @@ void GenericAttributeService::OnServiceChanged(IdType service_id,
   value[2] = static_cast<uint8_t>(end);
   value[3] = static_cast<uint8_t>(end >> 8);
 
-  for (const auto& peer_id : subscribed_peers_) {
+  for (auto peer_id : subscribed_peers_) {
     bt_log(SPEW, "gatt",
            "service: indicating peer %s of service(s) changed "
            "(start: %#.4x, end: %#.4x)",
-           peer_id.c_str(), start, end);
+           bt_str(peer_id), start, end);
     send_indication_callback_(peer_id, svc_changed_handle_, value);
   }
 }

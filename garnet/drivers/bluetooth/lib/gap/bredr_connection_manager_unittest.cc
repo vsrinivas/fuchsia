@@ -18,6 +18,7 @@ namespace {
 using ::btlib::testing::CommandTransaction;
 
 using common::DeviceAddress;
+using common::kInvalidDeviceId;
 using common::LowerBits;
 using common::UpperBits;
 
@@ -457,7 +458,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 // Test: An incoming connection request should trigger an acceptance and an
 // interrogation to discover capabilities.
 TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
-  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+  EXPECT_EQ(kInvalidDeviceId, connmgr()->GetPeerId(kConnectionHandle));
 
   QueueSuccessfulIncomingConn();
 
@@ -468,7 +469,6 @@ TEST_F(GAP_BrEdrConnectionManagerTest, IncomingConnectionSuccess) {
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
   EXPECT_EQ(dev->identifier(), connmgr()->GetPeerId(kConnectionHandle));
-
   EXPECT_EQ(kIncomingConnTransactions, transaction_count());
 
   // When we deallocate the connection manager next, we should disconnect.
@@ -514,12 +514,10 @@ TEST_F(GAP_BrEdrConnectionManagerTest,
 
 // Test: A remote disconnect should correctly remove the connection.
 TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
-  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
-
+  EXPECT_EQ(kInvalidDeviceId, connmgr()->GetPeerId(kConnectionHandle));
   QueueSuccessfulIncomingConn();
 
   test_device()->SendCommandChannelPacket(kConnectionRequest);
-
   RunLoopUntilIdle();
 
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
@@ -533,7 +531,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, RemoteDisconnect) {
 
   RunLoopUntilIdle();
 
-  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+  EXPECT_EQ(kInvalidDeviceId, connmgr()->GetPeerId(kConnectionHandle));
 
   // deallocating the connection manager disables connectivity.
   test_device()->QueueCommandTransaction(
@@ -743,8 +741,8 @@ const auto kLinkKeyRequestReplyRsp = common::CreateStaticByteBuffer(
 
 // Test: replies to Link Key Requests for bonded device
 TEST_F(GAP_BrEdrConnectionManagerTest, RecallLinkKeyForBondedDevice) {
-  ASSERT_TRUE(
-      device_cache()->AddBondedDevice("1234", kTestDevAddr, {}, kLinkKey));
+  ASSERT_TRUE(device_cache()->AddBondedDevice(DeviceId(999), kTestDevAddr, {},
+                                              kLinkKey));
   auto* dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
   ASSERT_FALSE(dev->connected());
@@ -968,8 +966,7 @@ TEST_F(GAP_BrEdrConnectionManagerTest, ConnectedDeviceTimeout) {
   dev = device_cache()->FindDeviceByAddress(kTestDevAddr);
   ASSERT_TRUE(dev);
   EXPECT_FALSE(dev->connected());
-
-  EXPECT_EQ("", connmgr()->GetPeerId(kConnectionHandle));
+  EXPECT_EQ(kInvalidDeviceId, connmgr()->GetPeerId(kConnectionHandle));
 }
 
 #undef COMMAND_COMPLETE_RSP

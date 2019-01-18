@@ -9,9 +9,9 @@
 
 #include <lib/fit/function.h>
 
-#include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/gatt/local_service_manager.h"
 
 namespace btlib {
 namespace gatt {
@@ -20,9 +20,7 @@ namespace gatt {
 // inject the GATT object's notification sending functionality (avoiding this
 // service from carrying a reference to GATT or Server).
 using SendIndicationCallback = fit::function<void(
-    const std::string& peer_id,
-    att::Handle handle,
-    const common::ByteBuffer& value)>;
+    DeviceId peer_id, att::Handle handle, const common::ByteBuffer& value)>;
 
 // Implements the "Generic Attribute Profile Service" containing the "Service
 // Changed" characteristic that is "...used to indicate to connected devices
@@ -50,7 +48,7 @@ class GenericAttributeService final {
   const SendIndicationCallback send_indication_callback_;
 
   // Peers that have subscribed to indications.
-  std::unordered_set<std::string> subscribed_peers_;
+  std::unordered_set<DeviceId> subscribed_peers_;
 
   // Handle for the Service Changed characteristic that is read when it is first
   // configured for indications.

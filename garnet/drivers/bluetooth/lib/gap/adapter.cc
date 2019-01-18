@@ -8,6 +8,7 @@
 #include <unistd.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/common/random.h"
 #include "garnet/drivers/bluetooth/lib/hci/connection.h"
 #include "garnet/drivers/bluetooth/lib/hci/legacy_low_energy_advertiser.h"
 #include "garnet/drivers/bluetooth/lib/hci/low_energy_connector.h"
@@ -15,7 +16,6 @@
 #include "garnet/drivers/bluetooth/lib/hci/transport.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
 #include "garnet/drivers/bluetooth/lib/l2cap/channel_manager.h"
-#include "src/lib/uuid/uuid.h"
 
 #include "bredr_connection_manager.h"
 #include "bredr_discovery_manager.h"
@@ -49,7 +49,7 @@ std::string GetHostname() {
 Adapter::Adapter(fxl::RefPtr<hci::Transport> hci,
                  fbl::RefPtr<data::Domain> data_domain,
                  fbl::RefPtr<gatt::GATT> gatt)
-    : identifier_(uuid::Generate()),
+    : identifier_(common::Random<AdapterId>()),
       dispatcher_(async_get_default_dispatcher()),
       hci_(hci),
       init_state_(State::kNotInitialized),
@@ -192,7 +192,7 @@ void Adapter::ShutDown() {
   CleanUp();
 }
 
-bool Adapter::AddBondedDevice(const std::string& identifier,
+bool Adapter::AddBondedDevice(DeviceId identifier,
                               const common::DeviceAddress& address,
                               const sm::PairingData& le_bond_data,
                               const std::optional<sm::LTK>& link_key) {
@@ -678,11 +678,11 @@ void Adapter::OnTransportClosed() {
     transport_closed_cb_();
 }
 
-void Adapter::OnLeAutoConnectRequest(const std::string& device_id) {
+void Adapter::OnLeAutoConnectRequest(DeviceId device_id) {
   ZX_DEBUG_ASSERT(le_connection_manager_);
   auto self = weak_ptr_factory_.GetWeakPtr();
   le_connection_manager_->Connect(device_id, [self](auto status, auto conn) {
-    const auto& id = conn->device_identifier();
+    DeviceId id = conn->device_identifier();
     if (!self) {
       bt_log(INFO, "gap", "ignoring auto-connection (adapter destroyed)");
       return;
@@ -692,7 +692,7 @@ void Adapter::OnLeAutoConnectRequest(const std::string& device_id) {
       return;
     }
 
-    bt_log(INFO, "gap", "device auto-connected (id: %s)", id.c_str());
+    bt_log(INFO, "gap", "device auto-connected (id: %s)", bt_str(id));
     if (self->auto_conn_cb_) {
       self->auto_conn_cb_(std::move(conn));
     }

@@ -60,15 +60,14 @@ class LowEnergyConnectionRef final {
     closed_cb_ = std::move(callback);
   }
 
-  const std::string& device_identifier() const { return device_id_; }
+  DeviceId device_identifier() const { return device_id_; }
   hci::ConnectionHandle handle() const { return handle_; }
 
  private:
   friend class LowEnergyConnectionManager;
   friend class internal::LowEnergyConnection;
 
-  LowEnergyConnectionRef(const std::string& device_id,
-                         hci::ConnectionHandle handle,
+  LowEnergyConnectionRef(DeviceId device_id, hci::ConnectionHandle handle,
                          fxl::WeakPtr<LowEnergyConnectionManager> manager);
 
   // Called by LowEnergyConnectionManager when the underlying connection is
@@ -76,7 +75,7 @@ class LowEnergyConnectionRef final {
   void MarkClosed();
 
   bool active_;
-  std::string device_id_;
+  DeviceId device_id_;
   hci::ConnectionHandle handle_;
   fxl::WeakPtr<LowEnergyConnectionManager> manager_;
   fit::closure closed_cb_;
@@ -97,8 +96,8 @@ class LowEnergyConnectionManager final {
   ~LowEnergyConnectionManager();
 
   // Allows a caller to claim shared ownership over a connection to the
-  // requested remote LE device identified by |device_identifier|. Returns
-  // false, if |device_identifier| is not recognized, otherwise:
+  // requested remote LE device identified by |device_id|. Returns
+  // false, if |device_id| is not recognized, otherwise:
   //
   //   * If the requested device is already connected, this method
   //     asynchronously returns a LowEnergyConnectionRef without sending any
@@ -118,15 +117,14 @@ class LowEnergyConnectionManager final {
   // |callback| is posted on the creation thread's dispatcher.
   using ConnectionResultCallback =
       fit::function<void(hci::Status, LowEnergyConnectionRefPtr)>;
-  bool Connect(const std::string& device_identifier,
-               ConnectionResultCallback callback);
+  bool Connect(DeviceId device_id, ConnectionResultCallback callback);
 
   RemoteDeviceCache* device_cache() { return device_cache_; }
 
-  // Disconnects any existing LE connection to |device_identifier|, invalidating
-  // all active LowEnergyConnectionRefs. Returns false if |device_identifier| is
+  // Disconnects any existing LE connection to |device_id|, invalidating
+  // all active LowEnergyConnectionRefs. Returns false if |device_id| is
   // not recognized or the corresponding remote device is not connected.
-  bool Disconnect(const std::string& device_identifier);
+  bool Disconnect(DeviceId device_id);
 
   // Initializes a new connection over the given |link| and returns a connection
   // reference. Returns nullptr if the connection was rejected.
@@ -178,7 +176,7 @@ class LowEnergyConnectionManager final {
 
   // Mapping from device identifiers to open LE connections.
   using ConnectionMap =
-      std::unordered_map<std::string,
+      std::unordered_map<DeviceId,
                          std::unique_ptr<internal::LowEnergyConnection>>;
 
   class PendingRequestData {
@@ -222,14 +220,13 @@ class LowEnergyConnectionManager final {
   // Initializes the connection to the peer with the given identifier and
   // returns the initial reference to it. This method is responsible for setting
   // up all data bearers.
-  LowEnergyConnectionRefPtr InitializeConnection(const std::string& device_id,
+  LowEnergyConnectionRefPtr InitializeConnection(DeviceId device_id,
                                                  hci::ConnectionPtr link);
 
   // Adds a new connection reference to an existing connection to the device
-  // with the ID |device_identifier| and returns it. Returns nullptr if
-  // |device_identifier| is not recognized.
-  LowEnergyConnectionRefPtr AddConnectionRef(
-      const std::string& device_identifier);
+  // with the ID |device_id| and returns it. Returns nullptr if
+  // |device_id| is not recognized.
+  LowEnergyConnectionRefPtr AddConnectionRef(DeviceId device_id);
 
   // Cleans up a connection state. This results in a HCI_Disconnect command
   // if |close_link| is true, and notifies any referenced
@@ -262,7 +259,7 @@ class LowEnergyConnectionManager final {
   RemoteDevice* UpdateRemoteDeviceWithLink(const hci::Connection& link);
 
   // Called by |connector_| to indicate the result of a connect request.
-  void OnConnectResult(const std::string& device_identifier, hci::Status status,
+  void OnConnectResult(DeviceId device_id, hci::Status status,
                        hci::ConnectionPtr link);
 
   // Event handler for the HCI Disconnection Complete event.
@@ -290,10 +287,10 @@ class LowEnergyConnectionManager final {
   // discovery, as recommended by the specification in v5.0, Vol 3, Part C,
   // Section 9.3.12.1).
   //
-  // |device_identifier| uniquely identifies the peer. |handle| represents
+  // |device_id| uniquely identifies the peer. |handle| represents
   // the logical link that |params| should be applied to.
   void OnNewLEConnectionParams(
-      const std::string& device_identifier, hci::ConnectionHandle handle,
+      DeviceId device_id, hci::ConnectionHandle handle,
       const hci::LEPreferredConnectionParameters& params);
 
   // Tells the controller to use the given connection |params| on the given
@@ -351,7 +348,7 @@ class LowEnergyConnectionManager final {
   DisconnectCallback test_disconn_cb_;
 
   // Outstanding connection requests based on remote device ID.
-  std::unordered_map<std::string, PendingRequestData> pending_requests_;
+  std::unordered_map<DeviceId, PendingRequestData> pending_requests_;
 
   // Mapping from device identifiers to currently open LE connections.
   ConnectionMap connections_;

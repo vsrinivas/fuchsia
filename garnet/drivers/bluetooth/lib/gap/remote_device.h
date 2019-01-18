@@ -206,8 +206,14 @@ class RemoteDevice final {
     // TODO(armansito): Store traditional service UUIDs.
   };
 
-  // 128-bit UUID that uniquely identifies this device on this system.
-  const std::string& identifier() const { return identifier_; }
+  // Number that uniquely identifies this device with respect to the bt-host
+  // that generated it.
+  // TODO(armansito): Come up with a scheme that guarnatees the uniqueness of
+  // this ID across all bt-hosts. Today this is guaranteed since we don't allow
+  // clients to interact with multiple controllers simultaneously though this
+  // could possibly lead to collisions if the active adapter gets changed
+  // without clearing the previous adapter's cache.
+  DeviceId identifier() const { return identifier_; }
 
   // The Bluetooth technologies that are supported by this device.
   TechnologyType technology() const { return technology_; }
@@ -326,7 +332,7 @@ class RemoteDevice final {
   // (do the callbacks outlive |this|?).
   RemoteDevice(DeviceCallback notify_listeners_callback,
                DeviceCallback update_expiry_callback,
-               DeviceCallback dual_mode_callback, const std::string& identifier,
+               DeviceCallback dual_mode_callback, DeviceId identifier,
                const common::DeviceAddress& address, bool connectable);
 
   // Marks this device's identity as known. Called by RemoteDeviceCache when
@@ -370,7 +376,7 @@ class RemoteDevice final {
   DeviceCallback update_expiry_callback_;
   DeviceCallback dual_mode_callback_;
 
-  const std::string identifier_;
+  DeviceId identifier_;
   TechnologyType technology_;
 
   common::DeviceAddress address_;

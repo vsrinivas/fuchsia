@@ -168,11 +168,10 @@ void BrEdrConnectionManager::SetPairingDelegate(
   // TODO(armansito): implement
 }
 
-std::string BrEdrConnectionManager::GetPeerId(
-    hci::ConnectionHandle handle) const {
+DeviceId BrEdrConnectionManager::GetPeerId(hci::ConnectionHandle handle) const {
   auto it = connections_.find(handle);
   if (it == connections_.end()) {
-    return "";
+    return common::kInvalidDeviceId;
   }
 
   auto* device = cache_->FindDeviceByAddress(it->second->peer_address());
@@ -180,7 +179,7 @@ std::string BrEdrConnectionManager::GetPeerId(
   return device->identifier();
 }
 
-bool BrEdrConnectionManager::OpenL2capChannel(const std::string& device_id,
+bool BrEdrConnectionManager::OpenL2capChannel(DeviceId device_id,
                                               l2cap::PSM psm, SocketCallback cb,
                                               async_dispatcher_t* dispatcher) {
   auto* device = cache_->FindDeviceById(device_id);
@@ -195,7 +194,7 @@ bool BrEdrConnectionManager::OpenL2capChannel(const std::string& device_id,
 
   // If we're connected we must have an ID
   ZX_DEBUG_ASSERT_MSG(it != connections_.end(),
-                      "couldn't find handle for device %s", device_id.c_str());
+                      "couldn't find handle for device %s", bt_str(device_id));
 
   data_domain_->OpenL2capChannel(
       it->first, psm,
@@ -424,8 +423,8 @@ void BrEdrConnectionManager::OnDisconnectionComplete(
 
   bt_log(INFO, "gap-bredr",
          "%s disconnected - %s, handle: %#.4x, reason: %#.2x",
-         device->identifier().c_str(), event.ToStatus().ToString().c_str(),
-         handle, params.reason);
+         bt_str(device->identifier()), bt_str(event.ToStatus()), handle,
+         params.reason);
 
   data_domain_->RemoveConnection(handle);
 
@@ -460,7 +459,7 @@ void BrEdrConnectionManager::OnLinkKeyRequest(const hci::EventPacket& event) {
   }
 
   bt_log(INFO, "gap-bredr", "recalling link key for bonded peer %s",
-         device->identifier().c_str());
+         bt_str(device->identifier()));
 
   auto reply = hci::CommandPacket::New(
       hci::kLinkKeyRequestReply, sizeof(hci::LinkKeyRequestReplyCommandParams));
@@ -505,7 +504,7 @@ void BrEdrConnectionManager::OnLinkKeyNotification(
   if (key_type == hci::LinkKeyType::kChangedCombination) {
     if (!device->bredr() || !device->bredr()->bonded()) {
       bt_log(WARN, "gap-bredr", "can't update link key of unbonded peer %s",
-             device->identifier().c_str());
+             bt_str(device->identifier()));
       return;
     }
 
@@ -519,7 +518,7 @@ void BrEdrConnectionManager::OnLinkKeyNotification(
   if (sec_props.level() == sm::SecurityLevel::kNoSecurity) {
     bt_log(WARN, "gap-bredr",
            "link key for peer %s has insufficient security; not stored",
-           device->identifier().c_str());
+           bt_str(device->identifier()));
     return;
   }
 
@@ -529,7 +528,7 @@ void BrEdrConnectionManager::OnLinkKeyNotification(
   sm::LTK key(sec_props, hci::LinkKey(key_value, 0, 0));
   if (!cache_->StoreBrEdrBond(addr, key)) {
     bt_log(ERROR, "gap-bredr", "failed to cache bonding data (id: %s)",
-           device->identifier().c_str());
+           bt_str(device->identifier()));
   }
 }
 
@@ -565,7 +564,7 @@ void BrEdrConnectionManager::OnUserConfirmationRequest(
       event.view().payload<hci::UserConfirmationRequestEventParams>();
 
   bt_log(INFO, "gap-bredr", "auto-confirming pairing from %s (%lu)",
-         params.bd_addr.ToString().c_str(), params.numeric_value);
+         bt_str(params.bd_addr), params.numeric_value);
 
   // TODO(jamuraa, BT-169): if we are not NoInput/NoOutput then we need to ask
   // the pairing delegate.  This currently will auto accept any pairing

@@ -53,7 +53,7 @@ class LowEnergyCentralServer
 
   // Notifies the delegate that the device with the given identifier has been
   // disconnected.
-  void NotifyPeripheralDisconnected(const std::string& identifier);
+  void NotifyPeripheralDisconnected(::btlib::gap::DeviceId peer_id);
 
   // The GATT host is used to instantiate GATT Clients upon connection.
   fbl::RefPtr<GattHost> gatt_host_;
@@ -68,7 +68,8 @@ class LowEnergyCentralServer
   //   a. nullptr, if a connect request to this device is currently pending.
   //   b. a valid reference if this Central is holding a connection reference to
   //   this device.
-  std::unordered_map<std::string, ::btlib::gap::LowEnergyConnectionRefPtr>
+  std::unordered_map<::btlib::gap::DeviceId,
+                     ::btlib::gap::LowEnergyConnectionRefPtr>
       connections_;
 
   // Keep this as the last member to make sure that all weak pointers are

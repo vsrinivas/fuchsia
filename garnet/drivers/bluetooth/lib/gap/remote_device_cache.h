@@ -34,7 +34,7 @@ namespace gap {
 class RemoteDeviceCache final {
  public:
   using DeviceCallback = fit::function<void(const RemoteDevice& device)>;
-  using DeviceIdCallback = fit::function<void(const std::string& identifier)>;
+  using DeviceIdCallback = fit::function<void(DeviceId identifier)>;
 
   RemoteDeviceCache() = default;
 
@@ -71,7 +71,7 @@ class RemoteDeviceCache final {
   // should be instead updated with new bond information to create a dual-mode
   // device.
   //
-  bool AddBondedDevice(const std::string& identifier,
+  bool AddBondedDevice(DeviceId identifier,
                        const common::DeviceAddress& address,
                        const sm::PairingData& bond_data,
                        const std::optional<sm::LTK>& link_key);
@@ -87,7 +87,7 @@ class RemoteDeviceCache final {
   // return false. TODO(armansito): Merge the devices instead of failing? What
   // happens if we obtain a LE identity address from a dual-mode device that
   // matches the BD_ADDR previously obtained from it over BR/EDR?
-  bool StoreLowEnergyBond(const std::string& identifier,
+  bool StoreLowEnergyBond(DeviceId identifier,
                           const sm::PairingData& bond_data);
 
   // Update a device identified by BD_ADDR |address| with a new BR/EDR link key.
@@ -99,7 +99,7 @@ class RemoteDeviceCache final {
 
   // Returns the remote device with identifier |identifier|. Returns nullptr if
   // |identifier| is not recognized.
-  RemoteDevice* FindDeviceById(const std::string& identifier) const;
+  RemoteDevice* FindDeviceById(DeviceId identifier) const;
 
   // Finds and returns a RemoteDevice with address |address| if it exists,
   // returns nullptr otherwise. Tries to resolve |address| if it is resolvable.
@@ -165,7 +165,7 @@ class RemoteDeviceCache final {
   // |address|, and connectability (|connectable|). Returns a pointer to the
   // inserted device or nullptr if |identifier| or |address| already exists in
   // the cache.
-  RemoteDevice* InsertDeviceRecord(const std::string& identifier,
+  RemoteDevice* InsertDeviceRecord(DeviceId identifier,
                                    const common::DeviceAddress& address,
                                    bool connectable);
 
@@ -194,14 +194,14 @@ class RemoteDeviceCache final {
 
   // Search for an unique device ID by its device address |address|, by both
   // technologies if it is a public address. |address| should be already
-  // resolved, if it is resolvable. Returns a reference to a value of
-  // |address_map_| if found, empty otherwise.
-  std::optional<std::reference_wrapper<const std::string>> FindIdByAddress(
+  // resolved, if it is resolvable. If found, returns a valid device ID;
+  // otherwise returns std::nullopt.
+  std::optional<DeviceId> FindIdByAddress(
       const common::DeviceAddress& address) const;
 
   // Mapping from unique device IDs to RemoteDeviceRecords.
   // Owns the corresponding RemoteDevices.
-  std::unordered_map<std::string, RemoteDeviceRecord> devices_;
+  std::unordered_map<DeviceId, RemoteDeviceRecord> devices_;
 
   // Mapping from device addresses to unique device identifiers for all known
   // devices. This is used to look-up and update existing cached data for a
@@ -213,7 +213,7 @@ class RemoteDeviceCache final {
   //
   // TODO(armansito): Replace this with an implementation that can resolve
   // device identity, to handle bonded LE devices that use privacy.
-  std::unordered_map<common::DeviceAddress, std::string> address_map_;
+  std::unordered_map<common::DeviceAddress, DeviceId> address_map_;
 
   // The LE identity resolving list used to resolve RPAs.
   IdentityResolvingList le_resolving_list_;

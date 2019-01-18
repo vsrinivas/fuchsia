@@ -123,12 +123,18 @@ void LowEnergyCentralServer::StopScan() {
 }
 
 void LowEnergyCentralServer::ConnectPeripheral(
-    ::std::string identifier,
-    ::fidl::InterfaceRequest<Client> client_request,
+    ::std::string identifier, ::fidl::InterfaceRequest<Client> client_request,
     ConnectPeripheralCallback callback) {
   bt_log(TRACE, "bt-host", "ConnectPeripheral()");
 
-  auto iter = connections_.find(identifier);
+  auto peer_id = fidl_helpers::DeviceIdFromString(identifier);
+  if (!peer_id.has_value()) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "invalid device ID"));
+    return;
+  }
+
+  auto iter = connections_.find(*peer_id);
   if (iter != connections_.end()) {
     if (iter->second) {
       callback(fidl_helpers::NewFidlError(
@@ -141,7 +147,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
   }
 
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto conn_cb = [self, callback = callback.share(), peer_id = identifier,
+  auto conn_cb = [self, callback = callback.share(), peer_id = *peer_id,
                   request = std::move(client_request)](auto status,
                                                        auto conn_ref) mutable {
     if (!self)
@@ -159,7 +165,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     if (!status) {
       ZX_DEBUG_ASSERT(!conn_ref);
       bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
-             peer_id.c_str());
+             bt_str(peer_id));
       callback(fidl_helpers::StatusToFidl(status, "failed to connect"));
       return;
     }
@@ -192,7 +198,7 @@ void LowEnergyCentralServer::ConnectPeripheral(
     callback(Status());
   };
 
-  if (!adapter()->le_connection_manager()->Connect(identifier,
+  if (!adapter()->le_connection_manager()->Connect(*peer_id,
                                                    std::move(conn_cb))) {
     bt_log(TRACE, "bt-host", "cannot connect to unknown device (id: %s)",
            identifier.c_str());
@@ -201,12 +207,19 @@ void LowEnergyCentralServer::ConnectPeripheral(
     return;
   }
 
-  connections_[identifier] = nullptr;
+  connections_[*peer_id] = nullptr;
 }
 
 void LowEnergyCentralServer::DisconnectPeripheral(
     ::std::string identifier, DisconnectPeripheralCallback callback) {
-  auto iter = connections_.find(identifier);
+  auto peer_id = fidl_helpers::DeviceIdFromString(identifier);
+  if (!peer_id.has_value()) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "invalid device ID"));
+    return;
+  }
+
+  auto iter = connections_.find(*peer_id);
   if (iter == connections_.end()) {
     bt_log(TRACE, "bt-host", "client not connected to device (id: %s)",
            identifier.c_str());
@@ -222,9 +235,8 @@ void LowEnergyCentralServer::DisconnectPeripheral(
   if (was_pending) {
     bt_log(TRACE, "bt-host", "canceling connection request");
   } else {
-    const std::string& peer_id = identifier;
     gatt_host_->UnbindGattClient(reinterpret_cast<uintptr_t>(this));
-    NotifyPeripheralDisconnected(peer_id);
+    NotifyPeripheralDisconnected(*peer_id);
   }
 
   callback(Status());
@@ -251,8 +263,8 @@ void LowEnergyCentralServer::NotifyScanStateChanged(bool scanning) {
 }
 
 void LowEnergyCentralServer::NotifyPeripheralDisconnected(
-    const std::string& identifier) {
-  binding()->events().OnPeripheralDisconnected(identifier);
+    btlib::gap::DeviceId peer_id) {
+  binding()->events().OnPeripheralDisconnected(peer_id.ToString());
 }
 
 }  // namespace bthost

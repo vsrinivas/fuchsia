@@ -16,8 +16,7 @@ namespace btlib {
 namespace gatt {
 namespace internal {
 
-Connection::Connection(const std::string& peer_id,
-                       fxl::RefPtr<att::Bearer> att_bearer,
+Connection::Connection(DeviceId peer_id, fxl::RefPtr<att::Bearer> att_bearer,
                        fxl::RefPtr<att::Database> local_db,
                        RemoteServiceWatcher svc_watcher,
                        async_dispatcher_t* gatt_dispatcher)

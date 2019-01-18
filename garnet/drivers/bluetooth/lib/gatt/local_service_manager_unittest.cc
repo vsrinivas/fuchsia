@@ -15,8 +15,8 @@ namespace btlib {
 namespace gatt {
 namespace {
 
-constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
-constexpr char kTestDeviceId2[] = "00112233-4411-2211-2211-221122334455";
+constexpr DeviceId kTestDeviceId(1);
+constexpr DeviceId kTestDeviceId2(2);
 constexpr common::UUID kTestType16((uint16_t)0xdead);
 constexpr common::UUID kTestType32((uint32_t)0xdeadbeef);
 
@@ -33,25 +33,19 @@ inline att::AccessRequirements AllowedNoSecurity() {
 }
 
 void NopReadHandler(IdType, IdType, uint16_t, const ReadResponder&) {}
-void NopWriteHandler(IdType,
-                     IdType,
-                     uint16_t,
-                     const common::ByteBuffer&,
+void NopWriteHandler(IdType, IdType, uint16_t, const common::ByteBuffer&,
                      const WriteResponder&) {}
-void NopCCCallback(IdType service_id,
-                   IdType chrc_id,
-                   const std::string& peer_id,
-                   bool notify,
-                   bool indicate) {}
+void NopCCCallback(IdType service_id, IdType chrc_id, DeviceId peer_id,
+                   bool notify, bool indicate) {}
 
 // Convenience function that registers |service| with |mgr| using the NOP
 // handlers above by default.
-IdType RegisterService(LocalServiceManager* mgr,
-                       ServicePtr service,
+IdType RegisterService(LocalServiceManager* mgr, ServicePtr service,
                        ReadHandler read_handler = NopReadHandler,
                        WriteHandler write_handler = NopWriteHandler,
                        ClientConfigCallback ccc_callback = NopCCCallback) {
-  return mgr->RegisterService(std::move(service), std::move(read_handler), std::move(write_handler),
+  return mgr->RegisterService(std::move(service), std::move(read_handler),
+                              std::move(write_handler),
                               std::move(ccc_callback));
 }
 
@@ -525,8 +519,7 @@ TEST(GATT_LocalServiceManagerTest, ReadCharacteristic) {
 
   bool called = false;
   IdType svc_id;
-  auto read_cb = [&](auto cb_svc_id, auto id, auto offset,
-                     auto responder) {
+  auto read_cb = [&](auto cb_svc_id, auto id, auto offset, auto responder) {
     called = true;
     EXPECT_EQ(svc_id, cb_svc_id);
     EXPECT_EQ(kChrcId, id);
@@ -568,8 +561,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWritePermission) {
   bool called = false;
   auto write_cb = [&called](auto, auto, auto, auto&, auto) { called = true; };
 
-  EXPECT_NE(
-      0u, RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb)));
+  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), NopReadHandler,
+                                std::move(write_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -578,7 +571,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWritePermission) {
   bool result_called = false;
   auto result_cb = [&result_called](auto) { result_called = true; };
 
-  EXPECT_FALSE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
+  EXPECT_FALSE(
+      attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
   EXPECT_FALSE(called);
   EXPECT_FALSE(result_called);
 }
@@ -599,8 +593,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWriteProperty) {
   bool called = false;
   auto write_cb = [&called](auto, auto, auto, auto&, auto) { called = true; };
 
-  EXPECT_NE(
-      0u, RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb)));
+  EXPECT_NE(0u, RegisterService(&mgr, std::move(service), NopReadHandler,
+                                std::move(write_cb)));
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
   ASSERT_TRUE(attr);
@@ -609,7 +603,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristicNoWriteProperty) {
   att::ErrorCode ecode = att::ErrorCode::kNoError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
+  EXPECT_TRUE(
+      attr->WriteAsync(kTestDeviceId, 0, kTestValue, std::move(result_cb)));
 
   // The error should be handled internally and not reach |write_cb|.
   EXPECT_FALSE(called);
@@ -644,7 +639,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
     responder(att::ErrorCode::kNoError);
   };
 
-  svc_id = RegisterService(&mgr, std::move(service), NopReadHandler, std::move(write_cb));
+  svc_id = RegisterService(&mgr, std::move(service), NopReadHandler,
+                           std::move(write_cb));
   ASSERT_NE(0u, svc_id);
 
   auto* attr = mgr.database()->FindAttribute(kFirstChrcValueHandle);
@@ -654,7 +650,8 @@ TEST(GATT_LocalServiceManagerTest, WriteCharacteristic) {
   att::ErrorCode ecode = att::ErrorCode::kUnlikelyError;
   auto result_cb = [&ecode](auto code) { ecode = code; };
 
-  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue, std::move(result_cb)));
+  EXPECT_TRUE(attr->WriteAsync(kTestDeviceId, kOffset, kTestValue,
+                               std::move(result_cb)));
 
   EXPECT_TRUE(called);
   EXPECT_EQ(att::ErrorCode::kNoError, ecode);
@@ -831,12 +828,12 @@ TEST(GATT_LocalServiceManagerTest, ServiceChanged) {
   att::Handle expected_start, expected_end;
   int callback_count = 0;
   ServiceChangedCallback service_changed_callback =
-    [&](IdType id, att::Handle start, att::Handle end) {
-      callback_count++;
-      EXPECT_EQ(expected_id, id);
-      EXPECT_EQ(expected_start, start);
-      EXPECT_EQ(expected_end, end);
-    };
+      [&](IdType id, att::Handle start, att::Handle end) {
+        callback_count++;
+        EXPECT_EQ(expected_id, id);
+        EXPECT_EQ(expected_start, start);
+        EXPECT_EQ(expected_end, end);
+      };
 
   LocalServiceManager mgr;
 
@@ -907,7 +904,7 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
 
   int ccc_callback_count = 0;
   IdType last_service_id = 0u;
-  std::string last_peer_id;
+  DeviceId last_peer_id = DeviceId(kInvalidId);
   bool last_notify = false;
   bool last_indicate = false;
 
@@ -917,7 +914,7 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
         std::make_unique<Service>(true /* is_primary */, kTestType16);
     service->AddCharacteristic(std::make_unique<Characteristic>(
         kChrcId, kTestType32, props, 0, kReqs, kReqs, update_reqs));
-    auto ccc_callback = [this](auto cb_svc_id, auto id, const auto& peer_id,
+    auto ccc_callback = [this](IdType cb_svc_id, IdType id, DeviceId peer_id,
                                bool notify, bool indicate) {
       ccc_callback_count++;
       EXPECT_EQ(last_service_id, cb_svc_id);
@@ -934,10 +931,8 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
     EXPECT_EQ(last_service_count + 1u, mgr.database()->groupings().size());
   }
 
-  bool ReadCCC(const att::Attribute* attr,
-               const std::string& device_id,
-               att::ErrorCode* out_ecode,
-               uint16_t* out_value) {
+  bool ReadCCC(const att::Attribute* attr, DeviceId peer_id,
+               att::ErrorCode* out_ecode, uint16_t* out_value) {
     ZX_DEBUG_ASSERT(attr);
     ZX_DEBUG_ASSERT(out_ecode);
     ZX_DEBUG_ASSERT(out_value);
@@ -951,20 +946,18 @@ class GATT_LocalClientCharacteristicConfigurationTest : public ::testing::Test {
       }
     };
 
-    return attr->ReadAsync(device_id, 0u, result_cb);
+    return attr->ReadAsync(peer_id, 0u, result_cb);
   }
 
-  bool WriteCCC(const att::Attribute* attr,
-                const std::string& device_id,
-                uint16_t ccc_value,
-                att::ErrorCode* out_ecode) {
+  bool WriteCCC(const att::Attribute* attr, DeviceId peer_id,
+                uint16_t ccc_value, att::ErrorCode* out_ecode) {
     ZX_DEBUG_ASSERT(attr);
     ZX_DEBUG_ASSERT(out_ecode);
 
     auto result_cb = [&out_ecode](auto cb_code) { *out_ecode = cb_code; };
     uint16_t value = htole16(ccc_value);
     return attr->WriteAsync(
-        device_id, 0u, common::BufferView(&value, sizeof(value)), result_cb);
+        peer_id, 0u, common::BufferView(&value, sizeof(value)), result_cb);
   }
 };
 

@@ -9,8 +9,7 @@ namespace att {
 
 AccessRequirements::AccessRequirements() : value_(0u) {}
 
-AccessRequirements::AccessRequirements(bool encryption,
-                                       bool authentication,
+AccessRequirements::AccessRequirements(bool encryption, bool authentication,
                                        bool authorization)
     : value_(kAttributePermissionBitAllowed) {
   if (encryption) {
@@ -24,8 +23,7 @@ AccessRequirements::AccessRequirements(bool encryption,
   }
 }
 
-Attribute::Attribute(AttributeGrouping* group,
-                     Handle handle,
+Attribute::Attribute(AttributeGrouping* group, Handle handle,
                      const common::UUID& type,
                      const AccessRequirements& read_reqs,
                      const AccessRequirements& write_reqs)
@@ -47,8 +45,7 @@ void Attribute::SetValue(const common::ByteBuffer& value) {
   value_ = common::DynamicByteBuffer(value);
 }
 
-bool Attribute::ReadAsync(const std::string& peer_id,
-                          uint16_t offset,
+bool Attribute::ReadAsync(DeviceId peer_id, uint16_t offset,
                           ReadResultCallback result_callback) const {
   if (!is_initialized() || !read_handler_)
     return false;
@@ -60,8 +57,7 @@ bool Attribute::ReadAsync(const std::string& peer_id,
   return true;
 }
 
-bool Attribute::WriteAsync(const std::string& peer_id,
-                           uint16_t offset,
+bool Attribute::WriteAsync(DeviceId peer_id, uint16_t offset,
                            const common::ByteBuffer& value,
                            WriteResultCallback result_callback) const {
   if (!is_initialized() || !write_handler_)
@@ -70,13 +66,13 @@ bool Attribute::WriteAsync(const std::string& peer_id,
   if (!write_reqs_.allowed())
     return false;
 
-  write_handler_(peer_id, handle_, offset, std::move(value), std::move(result_callback));
+  write_handler_(peer_id, handle_, offset, std::move(value),
+                 std::move(result_callback));
   return true;
 }
 
 AttributeGrouping::AttributeGrouping(const common::UUID& group_type,
-                                     Handle start_handle,
-                                     size_t attr_count,
+                                     Handle start_handle, size_t attr_count,
                                      const common::ByteBuffer& decl_value)
     : start_handle_(start_handle), active_(false) {
   ZX_DEBUG_ASSERT(start_handle_ != kInvalidHandle);
@@ -96,8 +92,7 @@ AttributeGrouping::AttributeGrouping(const common::UUID& group_type,
 }
 
 Attribute* AttributeGrouping::AddAttribute(
-    const common::UUID& type,
-    const AccessRequirements& read_reqs,
+    const common::UUID& type, const AccessRequirements& read_reqs,
     const AccessRequirements& write_reqs) {
   if (complete())
     return nullptr;

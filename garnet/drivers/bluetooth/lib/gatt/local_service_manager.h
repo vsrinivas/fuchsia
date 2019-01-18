@@ -25,10 +25,8 @@ namespace gatt {
 //   - |responder|: Should be called to respond to the read request with a
 //                  characteristic or descriptor value, or an ATT error code.
 using ReadResponder = att::Attribute::ReadResultCallback;
-using ReadHandler = fit::function<void(IdType service_id,
-                                       IdType id,
-                                       uint16_t offset,
-                                       ReadResponder responder)>;
+using ReadHandler = fit::function<void(
+    IdType service_id, IdType id, uint16_t offset, ReadResponder responder)>;
 
 // Called to write the value of a dynamic characteristic or characteristic
 // descriptor.
@@ -41,25 +39,20 @@ using ReadHandler = fit::function<void(IdType service_id,
 //                  if the client has initiated a "Write Without Response"
 //                  procedure, in which case a response is not required.
 using WriteResponder = att::Attribute::WriteResultCallback;
-using WriteHandler = fit::function<void(IdType service_id,
-                                        IdType id,
-                                        uint16_t offset,
-                                        const common::ByteBuffer& value,
-                                        WriteResponder responder)>;
+using WriteHandler = fit::function<void(
+    IdType service_id, IdType id, uint16_t offset,
+    const common::ByteBuffer& value, WriteResponder responder)>;
 
 // Called when the peer device with the given |peer_id| has enabled or disabled
 // notifications/indications on the characteristic with id |chrc_id|.
-using ClientConfigCallback = fit::function<void(IdType service_id,
-                                                IdType chrc_id,
-                                                const std::string& peer_id,
-                                                bool notify,
-                                                bool indicate)>;
+using ClientConfigCallback =
+    fit::function<void(IdType service_id, IdType chrc_id, DeviceId peer_id,
+                       bool notify, bool indicate)>;
 
 // Called with the ID and range of attributes handles spanned (inclusive) by a
 // service that was added or removed.
-using ServiceChangedCallback = fit::function<void(IdType service_id,
-                                                  att::Handle start,
-                                                  att::Handle end)>;
+using ServiceChangedCallback =
+    fit::function<void(IdType service_id, att::Handle start, att::Handle end)>;
 
 // LocalServiceManager allows clients to implement GATT services. This
 // internally maintains an attribute database and provides hooks for clients to
@@ -81,8 +74,7 @@ class LocalServiceManager final {
   // database has run out of handles or if the hierarchy contains
   // characteristics or descriptors with repeated IDs. Objects under |service|
   // must have unique identifiers to aid in value request handling.
-  IdType RegisterService(ServicePtr service,
-                         ReadHandler read_handler,
+  IdType RegisterService(ServicePtr service, ReadHandler read_handler,
                          WriteHandler write_handler,
                          ClientConfigCallback ccc_callback);
 
@@ -98,15 +90,14 @@ class LocalServiceManager final {
     bool notify;
     bool indicate;
   };
-  bool GetCharacteristicConfig(IdType service_id,
-                               IdType chrc_id,
-                               const std::string& peer_id,
+  bool GetCharacteristicConfig(IdType service_id, IdType chrc_id,
+                               DeviceId peer_id,
                                ClientCharacteristicConfig* out_config);
 
   // Erase any client characteristic configuration associated to a specific
   // client and invoke its ClientConfigCallback to signal that notifications and
   // indications are now disabled.
-  void DisconnectClient(const std::string& peer_id);
+  void DisconnectClient(DeviceId peer_id);
 
   void set_service_changed_callback(ServiceChangedCallback callback) {
     service_changed_callback_ = std::move(callback);

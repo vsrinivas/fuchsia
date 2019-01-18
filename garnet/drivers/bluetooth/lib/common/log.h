@@ -131,4 +131,9 @@ void UsePrintf(LogSeverity min_severity);
 
 #define BT_DECLARE_FAKE_DRIVER() zx_driver_rec_t __zircon_driver_rec__ = {};
 
+// Convenience macro for printf-style formatting of an object with a ToString()
+// method e.g.:
+//   bt_log(INFO, "tag", "foo happened: %s", bt_str(id));
+#define bt_str(id) ((id).ToString().c_str())
+
 #endif  // GARNET_DRIVERS_BLUETOOTH_LIB_COMMON_LOG_H_

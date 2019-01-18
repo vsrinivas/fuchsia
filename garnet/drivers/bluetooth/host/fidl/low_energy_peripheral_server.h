@@ -34,7 +34,7 @@ class LowEnergyPeripheralServer
   class InstanceData final {
    public:
     InstanceData() = default;
-    InstanceData(const std::string& id,
+    InstanceData(::btlib::gap::AdvertisementId id,
                  fxl::WeakPtr<LowEnergyPeripheralServer> owner);
 
     InstanceData(InstanceData&& other) = default;
@@ -52,7 +52,7 @@ class LowEnergyPeripheralServer
     void ReleaseConnection();
 
    private:
-    std::string id_;
+    ::btlib::gap::AdvertisementId id_;
     ConnectionRefPtr conn_ref_;
     // The object that created and owns this InstanceData.
     // |owner_| must outlive the InstanceData.
@@ -70,15 +70,15 @@ class LowEnergyPeripheralServer
 
   void StopAdvertising(::std::string advertisement_id,
                        StopAdvertisingCallback callback) override;
-  bool StopAdvertisingInternal(const std::string& id);
+  bool StopAdvertisingInternal(btlib::gap::AdvertisementId id);
 
   // Called when a central connects to us.  When this is called, the
   // advertisement in |advertisement_id| has been stopped.
-  void OnConnected(std::string advertisement_id,
+  void OnConnected(btlib::gap::AdvertisementId advertisement_id,
                    ::btlib::hci::ConnectionPtr link);
 
   // Tracks currently active advertisements.
-  std::unordered_map<std::string, InstanceData> instances_;
+  std::unordered_map<::btlib::gap::AdvertisementId, InstanceData> instances_;
 
   // Keep this as the last member to make sure that all weak pointers are
   // invalidated before other members get destroyed.

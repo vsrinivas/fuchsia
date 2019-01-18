@@ -12,6 +12,7 @@
 #include <lib/fit/function.h>
 #include <zircon/assert.h>
 
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "garnet/drivers/bluetooth/lib/data/domain.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter_state.h"
 #include "garnet/drivers/bluetooth/lib/gap/low_energy_connection_manager.h"
@@ -40,6 +41,13 @@ class LowEnergyAddressManager;
 class LowEnergyAdvertisingManager;
 class LowEnergyDiscoveryManager;
 
+// TODO(BT-734): Consider removing this identifier from the bt-host layer.
+class AdapterId : public common::Identifier<uint64_t> {
+ public:
+  constexpr explicit AdapterId(uint64_t value) : Identifier<uint64_t>(value) {}
+  AdapterId() = default;
+};
+
 // Represents the host-subsystem state for a Bluetooth controller. All
 // asynchronous callbacks are posted on the Loop on which this Adapter
 // instance is created.
@@ -61,9 +69,8 @@ class Adapter final {
                    fbl::RefPtr<gatt::GATT> gatt);
   ~Adapter();
 
-  // Returns a 128-bit UUID that uniquely identifies this adapter on the current
-  // system.
-  const std::string& identifier() const { return identifier_; }
+  // Returns a uniquely identifier for this adapter on the current system.
+  AdapterId identifier() const { return identifier_; }
 
   // Initializes the host-subsystem state for the HCI device this was created
   // for. This performs the initial HCI transport set up. Returns false if an
@@ -144,7 +151,7 @@ class Adapter final {
 
   // Add a previously bonded device to the device cache and set it up for
   // auto-connect procedures.
-  bool AddBondedDevice(const std::string& identifier,
+  bool AddBondedDevice(DeviceId identifier,
                        const common::DeviceAddress& address,
                        const sm::PairingData& le_bond_data,
                        const std::optional<sm::LTK>& link_key);
@@ -209,14 +216,14 @@ class Adapter final {
   // which is handled by routing the request to |le_connection_manager_| to
   // initiate a Direct Connection Establishment procedure (Vol 3, Part C,
   // 9.3.8).
-  void OnLeAutoConnectRequest(const std::string& device_id);
+  void OnLeAutoConnectRequest(DeviceId device_id);
 
   // Called by |le_address_manager_| to query whether it is currently allowed to
   // reconfigure the LE random address.
   bool IsLeRandomAddressChangeAllowed();
 
   // Uniquely identifies this adapter on the current system.
-  std::string identifier_;
+  AdapterId identifier_;
 
   async_dispatcher_t* dispatcher_;
   fxl::RefPtr<hci::Transport> hci_;

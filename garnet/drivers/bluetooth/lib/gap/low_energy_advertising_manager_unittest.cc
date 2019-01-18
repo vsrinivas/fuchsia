@@ -163,17 +163,17 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase,
   }
 
   LowEnergyAdvertisingManager::AdvertisingStatusCallback GetErrorCallback() {
-    return [this](std::string ad_id, hci::Status status) {
-      EXPECT_TRUE(ad_id.empty());
+    return [this](AdvertisementId ad_id, hci::Status status) {
+      EXPECT_EQ(kInvalidAdvertisementId, ad_id);
       EXPECT_FALSE(status);
       last_status_ = status;
     };
   }
 
   LowEnergyAdvertisingManager::AdvertisingStatusCallback GetSuccessCallback() {
-    return [this](std::string ad_id, hci::Status status) {
+    return [this](AdvertisementId ad_id, hci::Status status) {
       last_ad_id_ = ad_id;
-      EXPECT_FALSE(ad_id.empty());
+      EXPECT_NE(kInvalidAdvertisementId, ad_id);
       EXPECT_TRUE(status);
       last_status_ = status;
     };
@@ -199,7 +199,7 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase,
   const std::map<common::DeviceAddress, AdvertisementStatus>& ad_store() {
     return ad_store_;
   }
-  const std::string& last_ad_id() const { return last_ad_id_; }
+  AdvertisementId last_ad_id() const { return last_ad_id_; }
 
   // Returns and clears the last callback status. This resets the state to
   // detect another callback.
@@ -214,7 +214,7 @@ class GAP_LowEnergyAdvertisingManagerTest : public TestingBase,
 
  private:
   std::map<common::DeviceAddress, AdvertisementStatus> ad_store_;
-  std::string last_ad_id_;
+  AdvertisementId last_ad_id_;
   std::optional<hci::Status> last_status_;
   DeviceAddress local_address_;
   std::unique_ptr<FakeLowEnergyAdvertiser> advertiser_;
@@ -277,7 +277,7 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;  // Empty scan response
 
-  EXPECT_FALSE(adv_mgr()->StopAdvertising(""));
+  EXPECT_FALSE(adv_mgr()->StopAdvertising(kInvalidAdvertisementId));
 
   adv_mgr()->StartAdvertising(fake_ad, scan_rsp, nullptr, kTestInterval,
                               false /* anonymous */, GetSuccessCallback());
@@ -287,11 +287,10 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, RegisterUnregister) {
   EXPECT_TRUE(MoveLastStatus());
   EXPECT_EQ(1u, ad_store().size());
 
-  std::string id = last_ad_id();
-  EXPECT_TRUE(adv_mgr()->StopAdvertising(id));
+  EXPECT_TRUE(adv_mgr()->StopAdvertising(last_ad_id()));
   EXPECT_TRUE(ad_store().empty());
 
-  EXPECT_FALSE(adv_mgr()->StopAdvertising(id));
+  EXPECT_FALSE(adv_mgr()->StopAdvertising(last_ad_id()));
   EXPECT_TRUE(ad_store().empty());
 }
 
@@ -315,9 +314,10 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectCallback) {
   AdvertisingData scan_rsp;
 
   hci::ConnectionPtr link;
-  std::string advertised_id = "not-a-uuid";
+  AdvertisementId advertised_id = kInvalidAdvertisementId;
 
-  auto connect_cb = [&](std::string connected_id, hci::ConnectionPtr cb_link) {
+  auto connect_cb = [&](AdvertisementId connected_id,
+                        hci::ConnectionPtr cb_link) {
     link = std::move(cb_link);
     EXPECT_EQ(advertised_id, connected_id);
   };
@@ -348,8 +348,8 @@ TEST_F(GAP_LowEnergyAdvertisingManagerTest, ConnectAdvertiseError) {
   AdvertisingData fake_ad = CreateFakeAdvertisingData();
   AdvertisingData scan_rsp;
 
-  auto connect_cb = [this](std::string connected_id, hci::ConnectionPtr conn) {
-  };
+  auto connect_cb = [this](AdvertisementId connected_id,
+                           hci::ConnectionPtr conn) {};
 
   adv_mgr()->StartAdvertising(fake_ad, scan_rsp, connect_cb, kTestInterval,
                               true /* anonymous */, GetErrorCallback());

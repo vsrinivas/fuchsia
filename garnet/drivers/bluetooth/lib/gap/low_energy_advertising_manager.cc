@@ -7,9 +7,9 @@
 #include <zircon/assert.h>
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/common/random.h"
 #include "garnet/drivers/bluetooth/lib/common/slab_allocator.h"
 #include "garnet/drivers/bluetooth/lib/hci/util.h"
-#include "src/lib/uuid/uuid.h"
 #include "lib/fxl/strings/string_printf.h"
 
 #include "low_energy_address_manager.h"
@@ -39,17 +39,20 @@ void WriteFlags(common::MutableByteBuffer* buffer, bool limited = false) {
 
 class LowEnergyAdvertisingManager::ActiveAdvertisement final {
  public:
+  // TODO(BT-270): Don't randomly generate the ID of an advertisement.
+  // Instead use a counter like other internal IDs once this ID is not visible
+  // outside of bt-host.
   explicit ActiveAdvertisement(const common::DeviceAddress& address)
-      : address_(address), id_(uuid::Generate()) {}
+      : address_(address), id_(common::RandomDeviceId().value()) {}
 
   ~ActiveAdvertisement() = default;
 
   const common::DeviceAddress& address() const { return address_; }
-  const std::string& id() const { return id_; }
+  AdvertisementId id() const { return id_; }
 
  private:
   common::DeviceAddress address_;
-  std::string id_;
+  AdvertisementId id_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ActiveAdvertisement);
 };
@@ -78,7 +81,8 @@ void LowEnergyAdvertisingManager::StartAdvertising(
   // Can't be anonymous and connectable
   if (anonymous && connect_callback) {
     bt_log(TRACE, "gap-le", "can't advertise anonymously and connectable!");
-    status_callback("", hci::Status(common::HostError::kInvalidParameters));
+    status_callback(kInvalidAdvertisementId,
+                    hci::Status(common::HostError::kInvalidParameters));
     return;
   }
 
@@ -133,11 +137,11 @@ void LowEnergyAdvertisingManager::StartAdvertising(
             return;
 
           if (!status) {
-            status_cb("", status);
+            status_cb(kInvalidAdvertisementId, status);
             return;
           }
 
-          const std::string& id = ad_ptr->id();
+          auto id = ad_ptr->id();
           self->advertisements_.emplace(id, std::move(ad_ptr));
           status_cb(id, status);
         };
@@ -150,13 +154,12 @@ void LowEnergyAdvertisingManager::StartAdvertising(
 }
 
 bool LowEnergyAdvertisingManager::StopAdvertising(
-    std::string advertisement_id) {
+    AdvertisementId advertisement_id) {
   auto it = advertisements_.find(advertisement_id);
   if (it == advertisements_.end())
     return false;
 
   advertiser_->StopAdvertising(it->second->address());
-
   advertisements_.erase(it);
   return true;
 }

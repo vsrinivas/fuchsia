@@ -53,7 +53,7 @@ class HostDevice final {
 
   // Called when a new remote GATT service has been found.
   void OnRemoteGattServiceAdded(
-      const std::string& peer_id,
+      btlib::gatt::DeviceId peer_id,
       fbl::RefPtr<btlib::gatt::RemoteService> service);
 
   void CleanUp() __TA_REQUIRES(mtx_);
@@ -68,7 +68,8 @@ class HostDevice final {
   std::mutex mtx_;
 
   // Map of child DDK gatt devices
-  std::unordered_map<GattRemoteServiceDevice*, std::unique_ptr<GattRemoteServiceDevice>>
+  std::unordered_map<GattRemoteServiceDevice*,
+                     std::unique_ptr<GattRemoteServiceDevice>>
       gatt_devices_;
 
   // Host processes all its messages on |loop_|. |loop_| is initialized to run

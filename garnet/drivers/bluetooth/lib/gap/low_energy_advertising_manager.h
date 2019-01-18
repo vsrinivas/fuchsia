@@ -7,6 +7,7 @@
 
 #include <lib/fit/function.h>
 
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/gap.h"
 #include "garnet/drivers/bluetooth/lib/hci/hci_constants.h"
@@ -22,6 +23,9 @@ class Transport;
 }  // namespace hci
 
 namespace gap {
+
+using AdvertisementId = common::Identifier<uint64_t>;
+constexpr AdvertisementId kInvalidAdvertisementId(0u);
 
 class LowEnergyAdvertisingManager {
  public:
@@ -44,19 +48,17 @@ class LowEnergyAdvertisingManager {
   // |status_callback| provides one of:
   //  - an |advertisement_id|, which can be used to stop advertising
   //    or disambiguate calls to |callback|, and a success |status|.
-  //  - an empty |advertisement_id| and an error indication in |status|:
+  //  - kInvalidAdvertisementId and an error indication in |status|:
   //    * common::HostError::kInvalidParameters if the advertising parameters
   //      are invalid (e.g. |data| is too large).
   //    * common::HostError::kNotSupported if another set cannot be advertised
   //      or if the requested parameters are not supported by the hardware.
   //    * common::HostError::kProtocolError with a HCI error reported from
   //      the controller, otherwise.
-  //
-  // TODO(armansito): Return integer IDs instead.
   using ConnectionCallback = fit::function<void(
-      std::string advertisement_id, std::unique_ptr<hci::Connection> link)>;
+      AdvertisementId advertisement_id, std::unique_ptr<hci::Connection> link)>;
   using AdvertisingStatusCallback =
-      fit::function<void(std::string advertisement_id, hci::Status status)>;
+      fit::function<void(AdvertisementId advertisement_id, hci::Status status)>;
   void StartAdvertising(const AdvertisingData& data,
                         const AdvertisingData& scan_rsp,
                         ConnectionCallback connect_callback,
@@ -66,7 +68,7 @@ class LowEnergyAdvertisingManager {
   // Stop advertising the advertisement with the id |advertisement_id|
   // Returns true if an advertisement was stopped, and false otherwise.
   // This function is idempotent.
-  bool StopAdvertising(std::string advertisement_id);
+  bool StopAdvertising(AdvertisementId advertisement_id);
 
  private:
   class ActiveAdvertisement;
@@ -75,7 +77,7 @@ class LowEnergyAdvertisingManager {
   // TODO(armansito): Use fbl::HashMap here (NET-176) or move
   // ActiveAdvertisement definition here and store by value (it is a small
   // object).
-  std::unordered_map<std::string, std::unique_ptr<ActiveAdvertisement>>
+  std::unordered_map<AdvertisementId, std::unique_ptr<ActiveAdvertisement>>
       advertisements_;
 
   // Used to communicate with the controller. |advertiser_| must outlive this

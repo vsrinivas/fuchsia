@@ -12,6 +12,7 @@
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "garnet/drivers/bluetooth/lib/gap/advertising_data.h"
 #include "garnet/drivers/bluetooth/lib/gap/discovery_filter.h"
+#include "lib/fxl/strings/string_number_conversions.h"
 
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::Error;
@@ -146,6 +147,16 @@ fhost::Key KeyToFidl(const btlib::sm::Key& key) {
 
 }  // namespace
 
+std::optional<btlib::common::DeviceId> DeviceIdFromString(
+    const std::string& id) {
+  uint64_t value;
+  if (!fxl::StringToNumberWithError<decltype(value)>(id, &value,
+                                                     fxl::Base::k16)) {
+    return std::nullopt;
+  }
+  return btlib::common::DeviceId(value);
+}
+
 ErrorCode HostErrorToFidl(::btlib::common::HostError host_error) {
   switch (host_error) {
     case ::btlib::common::HostError::kFailed:
@@ -225,7 +236,7 @@ std::optional<btlib::sm::LTK> BrEdrKeyFromFidl(const fhost::BREDRData& data) {
 
 fctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
   fctrl::AdapterInfo adapter_info;
-  adapter_info.identifier = adapter.identifier();
+  adapter_info.identifier = adapter.identifier().ToString();
   adapter_info.technology = TechnologyTypeToFidl(adapter.state().type());
   adapter_info.address = adapter.state().controller_address().ToString();
 
@@ -243,7 +254,7 @@ fctrl::AdapterInfo NewAdapterInfo(const ::btlib::gap::Adapter& adapter) {
 
 fctrl::RemoteDevice NewRemoteDevice(const ::btlib::gap::RemoteDevice& device) {
   fctrl::RemoteDevice fidl_device;
-  fidl_device.identifier = device.identifier();
+  fidl_device.identifier = device.identifier().ToString();
   fidl_device.address = device.address().value().ToString();
   fidl_device.technology = TechnologyTypeToFidl(device.technology());
   fidl_device.connected = device.connected();
@@ -300,7 +311,7 @@ fctrl::RemoteDevicePtr NewRemoteDevicePtr(
 fhost::BondingData NewBondingData(const ::btlib::gap::Adapter& adapter,
                                   const ::btlib::gap::RemoteDevice& device) {
   fhost::BondingData out_data;
-  out_data.identifier = device.identifier();
+  out_data.identifier = device.identifier().ToString();
   out_data.local_address = adapter.state().controller_address().ToString();
 
   if (device.name()) {
@@ -367,7 +378,7 @@ fble::RemoteDevicePtr NewLERemoteDevice(
 
   const auto& le = *device.le();
   auto fidl_device = fble::RemoteDevice::New();
-  fidl_device->identifier = device.identifier();
+  fidl_device->identifier = device.identifier().ToString();
   fidl_device->connectable = device.connectable();
 
   // Initialize advertising data only if its non-empty.

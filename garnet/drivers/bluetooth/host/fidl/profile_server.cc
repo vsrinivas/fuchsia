@@ -348,11 +348,19 @@ void ProfileServer::RemoveService(uint64_t service_id) {
 
 void ProfileServer::ConnectL2cap(std::string remote_id, uint16_t channel,
                                  ConnectL2capCallback callback) {
+  auto peer_id = fidl_helpers::DeviceIdFromString(remote_id);
+  if (!peer_id.has_value()) {
+    callback(fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                        "invalid device ID"),
+             zx::socket());
+    return;
+  }
+
   auto connected_cb = [cb = callback.share()](zx::socket channel) {
     cb(fidl_helpers::StatusToFidl(btlib::sdp::Status()), std::move(channel));
   };
   bool connecting = adapter()->bredr_connection_manager()->OpenL2capChannel(
-      std::move(remote_id), channel, std::move(connected_cb),
+      *peer_id, channel, std::move(connected_cb),
       async_get_default_dispatcher());
   if (!connecting) {
     callback(
@@ -381,7 +389,7 @@ void ProfileServer::OnChannelConnected(
 
   ZX_DEBUG_ASSERT(desc);
 
-  binding()->events().OnConnected(id, service_id, std::move(socket),
+  binding()->events().OnConnected(id.ToString(), service_id, std::move(socket),
                                   std::move(*desc));
 }
 

@@ -47,13 +47,14 @@ class BrEdrConnectionManager final {
   void SetPairingDelegate(fxl::WeakPtr<PairingDelegate> delegate);
 
   // Retrieves the device id that is connected to the connection |handle|.
-  std::string GetPeerId(hci::ConnectionHandle handle) const;
+  // Returns common::kInvalidDeviceId if no such device exists.
+  DeviceId GetPeerId(hci::ConnectionHandle handle) const;
 
   // Opens a new L2CAP channel to the already-connected |device_id| on psm
   // |psm|.  Returns false if the device is not already connected.
   using SocketCallback = fit::function<void(zx::socket)>;
-  bool OpenL2capChannel(const std::string& device_id, l2cap::PSM psm,
-                        SocketCallback cb, async_dispatcher_t* dispatcher);
+  bool OpenL2capChannel(DeviceId device_id, l2cap::PSM psm, SocketCallback cb,
+                        async_dispatcher_t* dispatcher);
 
  private:
   // Reads the controller page scan settings.

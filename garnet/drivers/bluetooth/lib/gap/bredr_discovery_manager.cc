@@ -296,11 +296,11 @@ void BrEdrDiscoveryManager::ExtendedInquiryResult(
   }
 }
 
-void BrEdrDiscoveryManager::RequestRemoteDeviceName(const std::string& id) {
+void BrEdrDiscoveryManager::RequestRemoteDeviceName(DeviceId id) {
   RemoteDevice* device = cache_->FindDeviceById(id);
   if (!device) {
     bt_log(WARN, "gap-bredr", "cannot request name, unknown id: %s",
-           id.c_str());
+           bt_str(id));
     return;
   }
   auto packet = hci::CommandPacket::New(

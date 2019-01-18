@@ -5,6 +5,8 @@
 #ifndef GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_HELPERS_H_
 #define GARNET_DRIVERS_BLUETOOTH_HOST_FIDL_HELPERS_H_
 
+#include <optional>
+
 #include <fuchsia/bluetooth/control/cpp/fidl.h>
 #include <fuchsia/bluetooth/cpp/fidl.h>
 #include <fuchsia/bluetooth/gatt/cpp/fidl.h>
@@ -15,6 +17,7 @@
 #include "lib/fxl/type_converter.h"
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "garnet/drivers/bluetooth/lib/common/status.h"
 #include "garnet/drivers/bluetooth/lib/gap/adapter.h"
 #include "garnet/drivers/bluetooth/lib/gap/remote_device.h"
@@ -31,6 +34,12 @@ class DiscoveryFilter;
 
 namespace bthost {
 namespace fidl_helpers {
+
+// TODO(BT-305): Temporary logic for converting between the stack identifier
+// type (integer) and FIDL identifier type (string). Remove these once all FIDL
+// interfaces have been converted to use integer IDs.
+std::optional<btlib::common::DeviceId> DeviceIdFromString(
+    const std::string& id);
 
 // Functions for generating a FIDL bluetooth::common::Status
 

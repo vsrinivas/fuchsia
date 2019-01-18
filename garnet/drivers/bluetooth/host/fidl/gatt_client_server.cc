@@ -24,16 +24,15 @@ using fuchsia::bluetooth::gatt::ServiceInfoPtr;
 
 namespace bthost {
 
-GattClientServer::GattClientServer(std::string peer_id,
+GattClientServer::GattClientServer(btlib::gatt::DeviceId peer_id,
                                    fbl::RefPtr<btlib::gatt::GATT> gatt,
                                    fidl::InterfaceRequest<Client> request)
     : GattServerBase(gatt, this, std::move(request)),
-      peer_id_(std::move(peer_id)),
+      peer_id_(peer_id),
       weak_ptr_factory_(this) {}
 
-void GattClientServer::ListServices(
-    ::fidl::VectorPtr<::std::string> fidl_uuids,
-    ListServicesCallback callback) {
+void GattClientServer::ListServices(::fidl::VectorPtr<::std::string> fidl_uuids,
+                                    ListServicesCallback callback) {
   // Parse the UUID list.
   std::vector<btlib::common::UUID> uuids;
   if (!fidl_uuids.is_null()) {
@@ -41,10 +40,10 @@ void GattClientServer::ListServices(
     uuids.resize(fidl_uuids->size());
     for (size_t i = 0; i < uuids.size(); ++i) {
       if (!StringToUuid(fidl_uuids.get()[i], &uuids[i])) {
-        callback(fidl_helpers::NewFidlError(
-                     ErrorCode::INVALID_ARGUMENTS,
-                     "Invalid UUID: " + fidl_uuids.get()[i]),
-                 std::vector<ServiceInfo>((size_t)0u));
+        callback(
+            fidl_helpers::NewFidlError(ErrorCode::INVALID_ARGUMENTS,
+                                       "Invalid UUID: " + fidl_uuids.get()[i]),
+            std::vector<ServiceInfo>((size_t)0u));
         return;
       }
     }

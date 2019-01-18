@@ -15,33 +15,21 @@ namespace gatt {
 namespace {
 
 void NopReadHandler(IdType, IdType, uint16_t, const ReadResponder&) {}
-void NopWriteHandler(IdType,
-                     IdType,
-                     uint16_t,
-                     const common::ByteBuffer&,
+void NopWriteHandler(IdType, IdType, uint16_t, const common::ByteBuffer&,
                      const WriteResponder&) {}
-void NopCCCallback(IdType service_id,
-                   IdType chrc_id,
-                   const std::string& peer_id,
-                   bool notify,
-                   bool indicate) {}
-static void NopSendIndication(const std::string&,
-                              att::Handle,
-                              const common::ByteBuffer&) {}
+void NopCCCallback(IdType, IdType, DeviceId, bool notify, bool indicate) {}
+void NopSendIndication(DeviceId, att::Handle, const common::ByteBuffer&) {}
 
 // Handles for the third attribute (Service Changed characteristic) and fourth
 // attribute (corresponding client config).
-static constexpr att::Handle kChrcHandle = 0x0003;
-static constexpr att::Handle kCCCHandle = 0x0004;
-
-static constexpr char kTestDeviceId[] = "11223344-1122-1122-1122-112233445566";
-
-static constexpr uint16_t kEnableInd = 0x0002;
+constexpr att::Handle kChrcHandle = 0x0003;
+constexpr att::Handle kCCCHandle = 0x0004;
+constexpr DeviceId kTestDeviceId(1);
+constexpr uint16_t kEnableInd = 0x0002;
 
 class GATT_GenericAttributeServiceTest : public ::testing::Test {
  protected:
-  bool WriteServiceChangedCCC(const std::string& device_id,
-                              uint16_t ccc_value,
+  bool WriteServiceChangedCCC(DeviceId peer_id, uint16_t ccc_value,
                               att::ErrorCode* out_ecode) {
     ZX_DEBUG_ASSERT(out_ecode);
 
@@ -50,7 +38,7 @@ class GATT_GenericAttributeServiceTest : public ::testing::Test {
     auto result_cb = [&out_ecode](auto cb_code) { *out_ecode = cb_code; };
     uint16_t value = htole16(ccc_value);
     return attr->WriteAsync(
-        device_id, 0u, common::BufferView(&value, sizeof(value)), result_cb);
+        peer_id, 0u, common::BufferView(&value, sizeof(value)), result_cb);
   }
 
   LocalServiceManager mgr;
@@ -87,8 +75,7 @@ TEST_F(GATT_GenericAttributeServiceTest, RegisterUnregister) {
 // callback to send an indication to the "client."
 TEST_F(GATT_GenericAttributeServiceTest, IndicateOnRegister) {
   int callback_count = 0;
-  auto send_indication = [&](const std::string& peer_id,
-                             att::Handle handle,
+  auto send_indication = [&](DeviceId peer_id, att::Handle handle,
                              const common::ByteBuffer& value) {
     EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(kChrcHandle, handle);
@@ -131,8 +118,7 @@ TEST_F(GATT_GenericAttributeServiceTest, IndicateOnRegister) {
 // the latter test service.
 TEST_F(GATT_GenericAttributeServiceTest, IndicateOnUnregister) {
   int callback_count = 0;
-  auto send_indication = [&](const std::string& peer_id,
-                             att::Handle handle,
+  auto send_indication = [&](DeviceId peer_id, att::Handle handle,
                              const common::ByteBuffer& value) {
     EXPECT_EQ(kTestDeviceId, peer_id);
     EXPECT_EQ(kChrcHandle, handle);

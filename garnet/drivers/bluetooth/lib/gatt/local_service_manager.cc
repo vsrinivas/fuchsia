@@ -19,8 +19,7 @@ namespace {
 // Adds characteristic definition attributes to |grouping| for |chrc|. Returns
 // the characteristic value handle.
 att::Handle InsertCharacteristicAttributes(
-    att::AttributeGrouping* grouping,
-    const Characteristic& chrc,
+    att::AttributeGrouping* grouping, const Characteristic& chrc,
     att::Attribute::ReadHandler read_handler,
     att::Attribute::WriteHandler write_handler) {
   ZX_DEBUG_ASSERT(grouping);
@@ -63,13 +62,12 @@ att::Handle InsertCharacteristicAttributes(
 }
 
 // Adds a characteristic descriptor declaration to |grouping| for |desc|.
-void InsertDescriptorAttribute(
-    att::AttributeGrouping* grouping,
-    const common::UUID& type,
-    const att::AccessRequirements& read_reqs,
-    const att::AccessRequirements& write_reqs,
-    att::Attribute::ReadHandler read_handler,
-    att::Attribute::WriteHandler write_handler) {
+void InsertDescriptorAttribute(att::AttributeGrouping* grouping,
+                               const common::UUID& type,
+                               const att::AccessRequirements& read_reqs,
+                               const att::AccessRequirements& write_reqs,
+                               att::Attribute::ReadHandler read_handler,
+                               att::Attribute::WriteHandler write_handler) {
   ZX_DEBUG_ASSERT(grouping);
   ZX_DEBUG_ASSERT(!grouping->complete());
   ZX_DEBUG_ASSERT(read_handler);
@@ -144,11 +142,8 @@ bool ValidateService(const Service& service, size_t* out_attr_count) {
 
 class LocalServiceManager::ServiceData final {
  public:
-  ServiceData(IdType id,
-              att::AttributeGrouping* grouping,
-              Service* service,
-              ReadHandler&& read_handler,
-              WriteHandler&& write_handler,
+  ServiceData(IdType id, att::AttributeGrouping* grouping, Service* service,
+              ReadHandler&& read_handler, WriteHandler&& write_handler,
               ClientConfigCallback&& ccc_callback)
       : id_(id),
         read_handler_(std::forward<ReadHandler>(read_handler)),
@@ -179,8 +174,7 @@ class LocalServiceManager::ServiceData final {
   inline att::Handle start_handle() const { return start_handle_; }
   inline att::Handle end_handle() const { return end_handle_; }
 
-  bool GetCharacteristicConfig(IdType chrc_id,
-                               const std::string& peer_id,
+  bool GetCharacteristicConfig(IdType chrc_id, DeviceId peer_id,
                                ClientCharacteristicConfig* out_config) {
     ZX_DEBUG_ASSERT(out_config);
 
@@ -199,7 +193,7 @@ class LocalServiceManager::ServiceData final {
   // Invoke the ClientConfigCallback for each matching client to be removed if
   // notify or indicate is enabled to signal that they are cleared, then clears
   // them.
-  void DisconnectClient(const std::string& peer_id) {
+  void DisconnectClient(DeviceId peer_id) {
     for (auto& id_config_pair : chrc_configs_) {
       const uint16_t value = id_config_pair.second.Get(peer_id);
       id_config_pair.second.Erase(peer_id);
@@ -219,7 +213,7 @@ class LocalServiceManager::ServiceData final {
     // The characteristic handle.
     att::Handle handle() const { return handle_; }
 
-    uint16_t Get(const std::string& peer_id) {
+    uint16_t Get(DeviceId peer_id) {
       auto iter = client_states_.find(peer_id);
 
       // If a configuration doesn't exist for |peer_id| then return the default
@@ -230,28 +224,23 @@ class LocalServiceManager::ServiceData final {
       return iter->second;
     }
 
-    void Set(const std::string& peer_id, uint16_t value) {
+    void Set(DeviceId peer_id, uint16_t value) {
       client_states_[peer_id] = value;
     }
 
-    void Erase(const std::string& peer_id) {
-      client_states_.erase(peer_id);
-    }
+    void Erase(DeviceId peer_id) { client_states_.erase(peer_id); }
 
    private:
     att::Handle handle_;
-    std::unordered_map<std::string, uint16_t> client_states_;
+    std::unordered_map<DeviceId, uint16_t> client_states_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(CharacteristicConfig);
   };
 
   // Called when a read request is performed on a CCC descriptor belonging to
   // the characteristic identified by |chrc_id|.
-  void OnReadCCC(IdType chrc_id,
-                 const std::string& peer_id,
-                 att::Handle handle,
-                 uint16_t offset,
-                 const ReadResponder& result_cb) {
+  void OnReadCCC(IdType chrc_id, DeviceId peer_id, att::Handle handle,
+                 uint16_t offset, const ReadResponder& result_cb) {
     uint16_t value = 0;
     auto iter = chrc_configs_.find(chrc_id);
     if (iter != chrc_configs_.end()) {
@@ -266,11 +255,8 @@ class LocalServiceManager::ServiceData final {
 
   // Called when a write request is performed on a CCC descriptor belonging to
   // the characteristic identified by |chrc_id|.
-  void OnWriteCCC(IdType chrc_id,
-                  uint8_t chrc_props,
-                  const std::string& peer_id,
-                  att::Handle handle,
-                  uint16_t offset,
+  void OnWriteCCC(IdType chrc_id, uint8_t chrc_props, DeviceId peer_id,
+                  att::Handle handle, uint16_t offset,
                   const common::ByteBuffer& value,
                   const WriteResponder& result_cb) {
     if (offset != 0u) {
@@ -346,8 +332,7 @@ class LocalServiceManager::ServiceData final {
 
     auto write_handler = [self, id, props](const auto& peer_id,
                                            att::Handle handle, uint16_t offset,
-                                           const auto& value,
-                                           auto result_cb) {
+                                           const auto& value, auto result_cb) {
       if (!self) {
         if (result_cb)
           result_cb(att::ErrorCode::kUnlikelyError);
@@ -433,13 +418,13 @@ class LocalServiceManager::ServiceData final {
     };
 
     InsertDescriptorAttribute(grouping, desc->type(), desc->read_permissions(),
-                              desc->write_permissions(), std::move(read_handler),
+                              desc->write_permissions(),
+                              std::move(read_handler),
                               std::move(write_handler));
   }
 
   void AddCCCDescriptor(att::AttributeGrouping* grouping,
-                        const Characteristic& chrc,
-                        att::Handle chrc_handle) {
+                        const Characteristic& chrc, att::Handle chrc_handle) {
     ZX_DEBUG_ASSERT(chrc.update_permissions().allowed());
 
     // Readable with no authentication or authorization (Vol 3, Part G,
@@ -477,7 +462,8 @@ class LocalServiceManager::ServiceData final {
     // The write permission is determined by the service.
     InsertDescriptorAttribute(grouping, types::kClientCharacteristicConfig,
                               read_reqs, chrc.update_permissions(),
-                              std::move(read_handler), std::move(write_handler));
+                              std::move(read_handler),
+                              std::move(write_handler));
   }
 
   IdType id_;
@@ -550,7 +536,8 @@ IdType LocalServiceManager::RegisterService(ServicePtr service,
 
   services_[id] = std::move(service_data);
   if (service_changed_callback_) {
-    service_changed_callback_(id, grouping->start_handle(), grouping->end_handle());
+    service_changed_callback_(id, grouping->start_handle(),
+                              grouping->end_handle());
   }
 
   return id;
@@ -573,9 +560,7 @@ bool LocalServiceManager::UnregisterService(IdType service_id) {
 }
 
 bool LocalServiceManager::GetCharacteristicConfig(
-    IdType service_id,
-    IdType chrc_id,
-    const std::string& peer_id,
+    IdType service_id, IdType chrc_id, DeviceId peer_id,
     ClientCharacteristicConfig* out_config) {
   ZX_DEBUG_ASSERT(out_config);
 
@@ -586,7 +571,7 @@ bool LocalServiceManager::GetCharacteristicConfig(
   return iter->second->GetCharacteristicConfig(chrc_id, peer_id, out_config);
 }
 
-void LocalServiceManager::DisconnectClient(const std::string& peer_id) {
+void LocalServiceManager::DisconnectClient(DeviceId peer_id) {
   for (auto& id_service_pair : services_) {
     id_service_pair.second->DisconnectClient(peer_id);
   }

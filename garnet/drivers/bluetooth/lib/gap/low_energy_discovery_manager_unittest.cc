@@ -787,9 +787,10 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest, DirectedConnectableEvent) {
   EXPECT_EQ(0, count);
 
   // Mark the device as bonded.
+  constexpr DeviceId kDeviceId(1);
   sm::PairingData pdata;
   pdata.ltk = sm::LTK();
-  device_cache()->AddBondedDevice("1234", kAddress0, pdata, {});
+  device_cache()->AddBondedDevice(kDeviceId, kAddress0, pdata, {});
   EXPECT_EQ(1u, device_cache()->count());
 
   // Advance to the next scan period. We should receive a new notification.
@@ -982,7 +983,7 @@ TEST_F(GAP_LowEnergyDiscoveryManagerTest,
 
 TEST_F(GAP_LowEnergyDiscoveryManagerTest,
        BackgroundScanOnlyHandlesDirectedEventsFromBondedDevices) {
-  const char kBondedDeviceId[] = "1234";
+  DeviceId kBondedDeviceId(1);
   AddFakeDevices();
 
   // Add a bonded device.

@@ -278,7 +278,7 @@ TEST_F(GAP_AdapterTest, RemoteDeviceCacheReturnsNonNull) {
 
 TEST_F(GAP_AdapterTest, LeAutoConnect) {
   constexpr zx::duration kTestScanPeriod = zx::sec(10);
-  const char kDeviceId[] = "1234";
+  constexpr DeviceId kDeviceId(1234);
   const common::DeviceAddress kAddress(common::DeviceAddress::Type::kLEPublic,
                                        "00:00:00:00:00:01");
 
@@ -325,7 +325,7 @@ TEST_F(GAP_AdapterTest, LocalAddressForLegacyAdvertising) {
   test_device()->set_settings(settings);
   InitializeAdapter([](bool) {});
 
-  std::string adv_id;
+  AdvertisementId adv_id = kInvalidAdvertisementId;
   auto adv_cb = [&](auto id, hci::Status status) {
     adv_id = id;
     EXPECT_TRUE(status);

@@ -66,7 +66,7 @@ class GattHost final : public fbl::RefCounted<GattHost>,
   // The handle associated with |request| will be closed if |token| is already
   // bound to another handle.
   void BindGattClient(
-      Token token, std::string peer_id,
+      Token token, btlib::gatt::DeviceId peer_id,
       fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> request);
 
   // Unbinds a previously bound GATT client server associated with |token|.

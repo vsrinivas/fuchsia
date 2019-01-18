@@ -13,11 +13,15 @@
 
 #include "garnet/drivers/bluetooth/lib/att/att.h"
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
 #include "lib/fxl/macros.h"
 
 namespace btlib {
 namespace att {
+
+// Identifier type used to identify a peer device.
+using DeviceId = common::DeviceId;
 
 // Defines the read or write access permissions for an attribute.
 class AccessRequirements final {
@@ -116,9 +120,7 @@ class Attribute final {
   using ReadResultCallback =
       fit::function<void(ErrorCode status, const common::ByteBuffer& value)>;
   using ReadHandler =
-      fit::function<void(const std::string& peer_id,
-                         Handle handle,
-                         uint16_t offset,
+      fit::function<void(DeviceId peer_id, Handle handle, uint16_t offset,
                          ReadResultCallback result_callback)>;
   void set_read_handler(ReadHandler read_handler) {
     read_handler_ = std::move(read_handler);
@@ -127,26 +129,21 @@ class Attribute final {
   // An "ATT Write Command" will trigger WriteHandler with
   // a null |result_callback|
   using WriteResultCallback = fit::function<void(ErrorCode status)>;
-  using WriteHandler =
-      fit::function<void(const std::string& peer_id,
-                         Handle handle,
-                         uint16_t offset,
-                         const common::ByteBuffer& value,
-                         WriteResultCallback result_callback)>;
+  using WriteHandler = fit::function<void(
+      DeviceId peer_id, Handle handle, uint16_t offset,
+      const common::ByteBuffer& value, WriteResultCallback result_callback)>;
   void set_write_handler(WriteHandler write_handler) {
     write_handler_ = std::move(write_handler);
   }
 
   // Initiates an asynchronous read of the attribute value. Returns false if
   // this attribute is not dynamic.
-  bool ReadAsync(const std::string& peer_id,
-                 uint16_t offset,
+  bool ReadAsync(DeviceId peer_id, uint16_t offset,
                  ReadResultCallback result_callback) const;
 
   // Initiates an asynchronous write of the attribute value. Returns false if
   // this attribute is not dynamic.
-  bool WriteAsync(const std::string& peer_id,
-                  uint16_t offset,
+  bool WriteAsync(DeviceId peer_id, uint16_t offset,
                   const common::ByteBuffer& value,
                   WriteResultCallback result_callback) const;
 
@@ -157,9 +154,7 @@ class Attribute final {
   // The default constructor will construct this attribute as uninitialized.
   // This is intended for STL containers.
   Attribute();
-  Attribute(AttributeGrouping* group,
-            Handle handle,
-            const common::UUID& type,
+  Attribute(AttributeGrouping* group, Handle handle, const common::UUID& type,
             const AccessRequirements& read_reqs,
             const AccessRequirements& write_reqs);
 
@@ -194,10 +189,8 @@ class AttributeGrouping final {
   //
   // Note: |attr_count| should not cause the group end handle to exceed
   // att::kHandleMax.
-  AttributeGrouping(const common::UUID& group_type,
-                    Handle start_handle,
-                    size_t attr_count,
-                    const common::ByteBuffer& decl_value);
+  AttributeGrouping(const common::UUID& group_type, Handle start_handle,
+                    size_t attr_count, const common::ByteBuffer& decl_value);
 
   // Inserts a new attribute into this grouping using the given parameters and
   // returns a pointer to it. Returns nullptr if the grouping is out of handles

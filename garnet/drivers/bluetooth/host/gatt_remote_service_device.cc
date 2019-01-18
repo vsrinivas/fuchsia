@@ -105,7 +105,7 @@ bt_gatt_status_t AttStatusToDdkStatus(const btlib::att::Status& status) {
 }  // namespace
 
 GattRemoteServiceDevice::GattRemoteServiceDevice(
-    zx_device_t* parent_device, const std::string& peer_id,
+    zx_device_t* parent_device, btlib::gatt::DeviceId peer_id,
     fbl::RefPtr<btlib::gatt::RemoteService> service)
     : loop_(&kAsyncLoopConfigNoAttachToThread),
       parent_device_(parent_device),
@@ -165,7 +165,7 @@ zx_status_t GattRemoteServiceDevice::Bind() {
   bt_log(TRACE, "bt-host",
          "bt-gatt-svc binding to UUID16(%#04x), UUID128(1: %08x, 2: %08x,"
          " 3: %08x, 4: %08x), peer: %s",
-         uuid16, uuid01, uuid02, uuid03, uuid04, peer_id_.c_str());
+         uuid16, uuid01, uuid02, uuid03, uuid04, bt_str(peer_id_));
 
   device_add_args_t args = {
       .version = DEVICE_ADD_ARGS_VERSION,
@@ -201,7 +201,8 @@ void GattRemoteServiceDevice::Unbind() {
 }
 void GattRemoteServiceDevice::Release() { dev_ = nullptr; }
 
-void GattRemoteServiceDevice::Connect(bt_gatt_svc_connect_callback connect_cb, void* cookie) {
+void GattRemoteServiceDevice::Connect(bt_gatt_svc_connect_callback connect_cb,
+                                      void* cookie) {
   async::PostTask(loop_.dispatcher(), [this, connect_cb, cookie]() {
     service_->DiscoverCharacteristics(
         [connect_cb, cookie](att::Status cb_status, const auto& chrcs) {
@@ -225,8 +226,9 @@ void GattRemoteServiceDevice::Connect(bt_gatt_svc_connect_callback connect_cb, v
               for (auto& descriptor : descriptors) {
                 ddk_chars[char_idx].descriptor_list[desc_idx].id =
                     static_cast<bt_gatt_id_t>(descriptor.id());
-                CopyUUIDBytes(&ddk_chars[char_idx].descriptor_list[desc_idx].type,
-                              descriptor.info().type);
+                CopyUUIDBytes(
+                    &ddk_chars[char_idx].descriptor_list[desc_idx].type,
+                    descriptor.info().type);
                 desc_idx++;
               }
             } else {
@@ -263,7 +265,8 @@ void GattRemoteServiceDevice::Stop() {
 }
 
 void GattRemoteServiceDevice::ReadCharacteristic(
-    bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb, void* cookie) {
+    bt_gatt_id_t id, bt_gatt_svc_read_characteristic_callback read_cb,
+    void* cookie) {
   auto read_callback = [id, cookie, read_cb](att::Status status,
                                              const common::ByteBuffer& buff) {
     bt_gatt_status_t ddk_status = AttStatusToDdkStatus(status);

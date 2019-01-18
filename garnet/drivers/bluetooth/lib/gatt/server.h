@@ -7,6 +7,7 @@
 
 #include "garnet/drivers/bluetooth/lib/att/bearer.h"
 #include "garnet/drivers/bluetooth/lib/common/uuid.h"
+#include "garnet/drivers/bluetooth/lib/gatt/gatt_defs.h"
 
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/ref_ptr.h"
@@ -30,11 +31,10 @@ namespace gatt {
 // is initialized with. Each Server shares an att::Bearer with a Client.
 class Server final {
  public:
-  // |peer_id| is the 128-bit UUID that identifies the peer device.
+  // |peer_id| is the unique system identifier for the peer device.
   // |database| will be queried by the Server to resolve transactions.
   // |bearer| is the ATT data bearer that this Server operates on.
-  Server(const std::string& peer_id,
-         fxl::RefPtr<att::Database> database,
+  Server(DeviceId peer_id, fxl::RefPtr<att::Database> database,
          fxl::RefPtr<att::Bearer> bearer);
   ~Server();
 
@@ -42,8 +42,7 @@ class Server final {
   // attribute handle. If |indicate| is true, then an indication will be sent.
   // The underlying att::Bearer will disconnect the link if a confirmation is
   // not received in a timely manner.
-  void SendNotification(att::Handle handle,
-                        const common::ByteBuffer& value,
+  void SendNotification(att::Handle handle, const common::ByteBuffer& value,
                         bool indicate);
 
  private:
@@ -78,17 +77,12 @@ class Server final {
   // Returns att::ErrorCode::kNoError on success. On error, returns an error
   // code that can be used in a ATT Error Response.
   att::ErrorCode ReadByTypeHelper(
-      att::Handle start,
-      att::Handle end,
-      const common::UUID& type,
-      bool group_type,
-      size_t max_data_list_size,
-      size_t max_value_size,
-      size_t entry_prefix_size,
-      size_t* out_value_size,
+      att::Handle start, att::Handle end, const common::UUID& type,
+      bool group_type, size_t max_data_list_size, size_t max_value_size,
+      size_t entry_prefix_size, size_t* out_value_size,
       std::list<const att::Attribute*>* out_results);
 
-  std::string peer_id_;
+  DeviceId peer_id_;
   fxl::RefPtr<att::Database> db_;
   fxl::RefPtr<att::Bearer> att_;
 

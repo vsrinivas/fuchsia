@@ -32,7 +32,7 @@ void GattHost::Initialize() {
   // Initialize the profile.
   gatt_->Initialize();
   gatt_->RegisterRemoteServiceWatcher(
-      [self = fbl::WrapRefPtr(this)](const auto& peer_id, auto service) {
+      [self = fbl::WrapRefPtr(this)](auto peer_id, auto service) {
         std::lock_guard<std::mutex> lock(self->mtx_);
         if (self->alive() && self->remote_service_watcher_) {
           self->remote_service_watcher_(peer_id, service);
@@ -81,10 +81,9 @@ void GattHost::BindGattServer(
 }
 
 void GattHost::BindGattClient(
-    Token token, std::string peer_id,
+    Token token, btlib::gatt::DeviceId peer_id,
     fidl::InterfaceRequest<fuchsia::bluetooth::gatt::Client> request) {
-  PostMessage([this, token, peer_id = std::move(peer_id),
-               request = std::move(request)]() mutable {
+  PostMessage([this, token, peer_id, request = std::move(request)]() mutable {
     if (client_servers_.find(token) != client_servers_.end()) {
       bt_log(WARN, "bt-host", "duplicate Client FIDL server tokens!");
 
@@ -93,8 +92,8 @@ void GattHost::BindGattClient(
     }
 
     auto self = weak_ptr_factory_.GetWeakPtr();
-    auto server = std::make_unique<GattClientServer>(std::move(peer_id), gatt_,
-                                                     std::move(request));
+    auto server =
+        std::make_unique<GattClientServer>(peer_id, gatt_, std::move(request));
     server->set_error_handler([self, token](zx_status_t status) {
       if (self) {
         bt_log(TRACE, "bt-host", "GATT client disconnected");

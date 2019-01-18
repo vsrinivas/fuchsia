@@ -181,7 +181,7 @@ zx_status_t HostDevice::Ioctl(uint32_t op, const void* in_buf, size_t in_len,
 }
 
 void HostDevice::OnRemoteGattServiceAdded(
-    const std::string& peer_id,
+    btlib::gatt::DeviceId peer_id,
     fbl::RefPtr<btlib::gatt::RemoteService> service) {
   auto gatt_device =
       std::make_unique<GattRemoteServiceDevice>(dev_, peer_id, service);

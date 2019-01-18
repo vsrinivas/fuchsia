@@ -60,7 +60,7 @@ class GattServerServer
   // a local characteristic.
   void OnCharacteristicConfig(::btlib::gatt::IdType service_id,
                               ::btlib::gatt::IdType chrc_id,
-                              const std::string& peer_id, bool notify,
+                              ::btlib::gatt::DeviceId peer_id, bool notify,
                               bool indicate);
 
   // The mapping between service identifiers and FIDL Service implementations.

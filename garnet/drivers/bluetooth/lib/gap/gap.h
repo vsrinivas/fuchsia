@@ -7,6 +7,7 @@
 
 #include <cstdint>
 
+#include "garnet/drivers/bluetooth/lib/common/identifier.h"
 #include "lib/zx/time.h"
 
 // This file contains constants and numbers that are part of the Generic Access
@@ -29,6 +30,10 @@ enum class Mode {
   // Use the extended HCI command set introduced in version 5.0
   kExtended,
 };
+
+// Opaque identifier type. This is used by the GAP library to identify remote
+// Bluetooth devices.
+using DeviceId = common::DeviceId;
 
 // EIR Data Type, Advertising Data Type (AD Type), OOB Data Type definitions.
 // clang-format off

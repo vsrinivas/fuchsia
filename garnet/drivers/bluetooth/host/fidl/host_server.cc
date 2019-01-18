@@ -26,7 +26,9 @@
 
 namespace bthost {
 
+using btlib::gap::DeviceId;
 using btlib::sm::IOCapability;
+using fidl_helpers::DeviceIdFromString;
 using fidl_helpers::NewFidlError;
 using fuchsia::bluetooth::Bool;
 using fuchsia::bluetooth::ErrorCode;
@@ -113,8 +115,8 @@ void HostServer::SetLocalName(::std::string local_name,
 void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
   auto le_manager = adapter()->le_discovery_manager();
   if (!le_manager) {
-    callback(fidl_helpers::NewFidlError(ErrorCode::BAD_STATE,
-                                        "Adapter is not initialized yet."));
+    callback(
+        NewFidlError(ErrorCode::BAD_STATE, "Adapter is not initialized yet."));
     return;
   }
   le_manager->StartDiscovery([self = weak_ptr_factory_.GetWeakPtr(),
@@ -122,21 +124,19 @@ void HostServer::StartLEDiscovery(StartDiscoveryCallback callback) {
     // End the new session if this AdapterServer got destroyed in the
     // mean time (e.g. because the client disconnected).
     if (!self) {
-      callback(
-          fidl_helpers::NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
+      callback(NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
       return;
     }
 
     if (!self->requesting_discovery_) {
-      callback(
-          fidl_helpers::NewFidlError(ErrorCode::CANCELED, "Request canceled"));
+      callback(NewFidlError(ErrorCode::CANCELED, "Request canceled"));
       return;
     }
 
     if (!session) {
       bt_log(TRACE, "bt-host", "failed to start LE discovery session");
-      callback(fidl_helpers::NewFidlError(
-          ErrorCode::FAILED, "Failed to start LE discovery session"));
+      callback(NewFidlError(ErrorCode::FAILED,
+                            "Failed to start LE discovery session"));
       self->bredr_discovery_session_ = nullptr;
       self->requesting_discovery_ = false;
       return;
@@ -168,8 +168,8 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
 
   if (le_discovery_session_ || requesting_discovery_) {
     bt_log(TRACE, "bt-host", "discovery already in progress");
-    callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
-                                        "Discovery already in progress"));
+    callback(
+        NewFidlError(ErrorCode::IN_PROGRESS, "Discovery already in progress"));
     return;
   }
 
@@ -184,14 +184,12 @@ void HostServer::StartDiscovery(StartDiscoveryCallback callback) {
       [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
           btlib::hci::Status status, auto session) mutable {
         if (!self) {
-          callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
-                                              "Adapter Shutdown"));
+          callback(NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
           return;
         }
 
         if (!self->requesting_discovery_) {
-          callback(fidl_helpers::NewFidlError(ErrorCode::CANCELED,
-                                              "Request Canceled"));
+          callback(NewFidlError(ErrorCode::CANCELED, "Request Canceled"));
           return;
         }
 
@@ -212,8 +210,8 @@ void HostServer::StopDiscovery(StopDiscoveryCallback callback) {
   bt_log(TRACE, "bt-host", "StopDiscovery()");
   if (!le_discovery_session_) {
     bt_log(TRACE, "bt-host", "no active discovery session");
-    callback(fidl_helpers::NewFidlError(ErrorCode::BAD_STATE,
-                                        "No discovery session in progress"));
+    callback(
+        NewFidlError(ErrorCode::BAD_STATE, "No discovery session in progress"));
     return;
   }
 
@@ -235,8 +233,8 @@ void HostServer::SetConnectable(bool connectable,
 
   auto bredr_conn_manager = adapter()->bredr_connection_manager();
   if (!bredr_conn_manager) {
-    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
-                                        "Connectable mode not available"));
+    callback(NewFidlError(ErrorCode::NOT_SUPPORTED,
+                          "Connectable mode not available"));
     return;
   }
   bredr_conn_manager->SetConnectable(
@@ -249,14 +247,19 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
                                   AddBondedDevicesCallback callback) {
   bt_log(TRACE, "bt-host", "AddBondedDevices");
   if (bonds.empty()) {
-    callback(fidl_helpers::NewFidlError(ErrorCode::NOT_SUPPORTED,
-                                        "No bonds were added"));
+    callback(NewFidlError(ErrorCode::NOT_SUPPORTED, "No bonds were added"));
     return;
   }
 
   std::vector<std::string> failed_ids;
 
   for (auto& bond : bonds) {
+    auto device_id = DeviceIdFromString(bond.identifier);
+    if (!device_id) {
+      failed_ids.push_back(bond.identifier);
+      continue;
+    }
+
     btlib::common::DeviceAddress address;
     btlib::sm::PairingData le_bond_data;
     if (bond.le) {
@@ -293,7 +296,7 @@ void HostServer::AddBondedDevices(::std::vector<BondingData> bonds,
     // TODO(armansito): BondingData should contain the identity address for both
     // transports instead of storing them separately. For now use the one we
     // obtained from |bond.le|.
-    if (!adapter()->AddBondedDevice(bond.identifier, address, le_bond_data,
+    if (!adapter()->AddBondedDevice(*device_id, address, le_bond_data,
                                     bredr_link_key)) {
       failed_ids.push_back(bond.identifier);
       continue;
@@ -321,16 +324,15 @@ void HostServer::OnConnect(btlib::gap::LowEnergyConnectionRefPtr conn_ref,
                            bool auto_connect) {
   ZX_DEBUG_ASSERT(conn_ref);
 
-  const auto& id = conn_ref->device_identifier();
+  btlib::gap::DeviceId id = conn_ref->device_identifier();
   auto iter = le_connections_.find(id);
   if (iter != le_connections_.end()) {
-    bt_log(WARN, "bt-host", "%s device already connected; reference dropped",
-           (auto_connect ? "auto-connected" : "manually-connected"));
+    bt_log(WARN, "bt-host", "device already connected; reference dropped");
     return;
   }
 
-  bt_log(TRACE, "bt-host", "LE device %s: %s ",
-         (auto_connect ? "auto-connected" : "manually_connected"), id.c_str());
+  bt_log(TRACE, "bt-host", "LE device connected (%s): %s ",
+         (auto_connect ? "auto" : "direct"), bt_str(id));
   conn_ref->set_closed_callback([self = weak_ptr_factory_.GetWeakPtr(), id] {
     if (self)
       self->le_connections_.erase(id);
@@ -356,29 +358,27 @@ void HostServer::SetDiscoverable(bool discoverable,
   }
   if (discoverable && requesting_discoverable_) {
     bt_log(TRACE, "bt-host", "SetDiscoverable already in progress");
-    callback(fidl_helpers::NewFidlError(ErrorCode::IN_PROGRESS,
-                                        "SetDiscoverable already in progress"));
+    callback(NewFidlError(ErrorCode::IN_PROGRESS,
+                          "SetDiscoverable already in progress"));
     return;
   }
   requesting_discoverable_ = true;
   auto bredr_manager = adapter()->bredr_discovery_manager();
   if (!bredr_manager) {
-    callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
-                                        "Discoverable mode not available"));
+    callback(
+        NewFidlError(ErrorCode::FAILED, "Discoverable mode not available"));
     return;
   }
   bredr_manager->RequestDiscoverable(
       [self = weak_ptr_factory_.GetWeakPtr(), callback = std::move(callback)](
           btlib::hci::Status status, auto session) {
         if (!self) {
-          callback(fidl_helpers::NewFidlError(ErrorCode::FAILED,
-                                              "Adapter Shutdown"));
+          callback(NewFidlError(ErrorCode::FAILED, "Adapter Shutdown"));
           return;
         }
 
         if (!self->requesting_discoverable_) {
-          callback(fidl_helpers::NewFidlError(ErrorCode::CANCELED,
-                                              "Request canceled"));
+          callback(NewFidlError(ErrorCode::CANCELED, "Request canceled"));
           return;
         }
 
@@ -438,7 +438,12 @@ void HostServer::SetPairingDelegate(
 }
 
 void HostServer::Connect(::std::string device_id, ConnectCallback callback) {
-  auto device = adapter()->remote_device_cache()->FindDeviceById(device_id);
+  auto id = DeviceIdFromString(device_id);
+  if (!id.has_value()) {
+    callback(NewFidlError(ErrorCode::INVALID_ARGUMENTS, "invalid device ID"));
+    return;
+  }
+  auto device = adapter()->remote_device_cache()->FindDeviceById(*id);
   if (!device) {
     // We don't support connections to devices not in our cache
     callback(NewFidlError(ErrorCode::NOT_FOUND,
@@ -461,12 +466,12 @@ void HostServer::Connect(::std::string device_id, ConnectCallback callback) {
   // on whether we are initiating a BR/EDR connection as well. We may want to
   // refactor this into a separate ConnectLowEnergy method.
   auto self = weak_ptr_factory_.GetWeakPtr();
-  auto on_complete = [self, callback = std::move(callback),
-                      peer_id = device_id](auto status, auto conn_ref) {
+  auto on_complete = [self, callback = std::move(callback), peer_id = *id](
+                         auto status, auto conn_ref) {
     if (!status) {
       ZX_DEBUG_ASSERT(!conn_ref);
       bt_log(TRACE, "bt-host", "failed to connect to connect to device (id %s)",
-             peer_id.c_str());
+             bt_str(peer_id));
       callback(fidl_helpers::StatusToFidl(status, "failed to connect"));
     } else {
       ZX_DEBUG_ASSERT(conn_ref);
@@ -477,8 +482,7 @@ void HostServer::Connect(::std::string device_id, ConnectCallback callback) {
       callback(Status());
     }
   };
-  adapter()->le_connection_manager()->Connect(device_id,
-                                              std::move(on_complete));
+  adapter()->le_connection_manager()->Connect(*id, std::move(on_complete));
 }
 
 void HostServer::RequestLowEnergyCentral(
@@ -564,16 +568,16 @@ btlib::sm::IOCapability HostServer::io_capability() const {
   return io_capability_;
 }
 
-void HostServer::CompletePairing(std::string id, btlib::sm::Status status) {
+void HostServer::CompletePairing(DeviceId id, btlib::sm::Status status) {
   bt_log(INFO, "bt-host", "pairing complete for device: %s, status: %s",
-         id.c_str(), status.ToString().c_str());
+         bt_str(id), status.ToString().c_str());
   ZX_DEBUG_ASSERT(pairing_delegate_);
-  pairing_delegate_->OnPairingComplete(std::move(id),
+  pairing_delegate_->OnPairingComplete(id.ToString(),
                                        fidl_helpers::StatusToFidl(status));
 }
 
-void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
-  bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
+void HostServer::ConfirmPairing(DeviceId id, ConfirmCallback confirm) {
+  bt_log(INFO, "bt-host", "pairing request for device: %s", bt_str(id));
   auto found_device = adapter()->remote_device_cache()->FindDeviceById(id);
   ZX_DEBUG_ASSERT(found_device);
   auto device = fidl_helpers::NewRemoteDevicePtr(*found_device);
@@ -587,9 +591,9 @@ void HostServer::ConfirmPairing(std::string id, ConfirmCallback confirm) {
           const bool success, const std::string passkey) { confirm(success); });
 }
 
-void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
+void HostServer::DisplayPasskey(DeviceId id, uint32_t passkey,
                                 ConfirmCallback confirm) {
-  bt_log(INFO, "bt-host", "pairing request for device: %s", id.c_str());
+  bt_log(INFO, "bt-host", "pairing request for device: %s", bt_str(id));
   bt_log(INFO, "bt-host", "enter passkey: %06u", passkey);
 
   auto device = fidl_helpers::NewRemoteDevicePtr(
@@ -605,8 +609,7 @@ void HostServer::DisplayPasskey(std::string id, uint32_t passkey,
           const bool success, const std::string passkey) { confirm(success); });
 }
 
-void HostServer::RequestPasskey(std::string id,
-                                PasskeyResponseCallback respond) {
+void HostServer::RequestPasskey(DeviceId id, PasskeyResponseCallback respond) {
   auto device = fidl_helpers::NewRemoteDevicePtr(
       *adapter()->remote_device_cache()->FindDeviceById(id));
   ZX_DEBUG_ASSERT(device);
@@ -652,10 +655,10 @@ void HostServer::OnRemoteDeviceUpdated(
   this->binding()->events().OnDeviceUpdated(std::move(*fidl_device));
 }
 
-void HostServer::OnRemoteDeviceRemoved(const std::string& identifier) {
+void HostServer::OnRemoteDeviceRemoved(btlib::gap::DeviceId identifier) {
   // TODO(armansito): Notify only if the device is connectable for symmetry with
   // OnDeviceUpdated?
-  this->binding()->events().OnDeviceRemoved(identifier);
+  this->binding()->events().OnDeviceRemoved(identifier.ToString());
 }
 
 void HostServer::ResetPairingDelegate() {

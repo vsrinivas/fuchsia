@@ -59,7 +59,7 @@ att::ErrorCode CheckWritePermissions(const att::AccessRequirements& reqs,
 
 }  // namespace
 
-Server::Server(const std::string& peer_id, fxl::RefPtr<att::Database> database,
+Server::Server(DeviceId peer_id, fxl::RefPtr<att::Database> database,
                fxl::RefPtr<att::Bearer> bearer)
     : peer_id_(peer_id), db_(database), att_(bearer), weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(db_);

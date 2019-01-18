@@ -32,7 +32,7 @@ void LowEnergyDiscoverySession::SetResultCallback(
   device_found_callback_ = std::move(callback);
   if (!manager_)
     return;
-  for (const auto& cached_device_id : manager_->cached_scan_results()) {
+  for (DeviceId cached_device_id : manager_->cached_scan_results()) {
     auto device = manager_->device_cache()->FindDeviceById(cached_device_id);
     ZX_DEBUG_ASSERT(device);
     NotifyDiscoveryResult(*device);
