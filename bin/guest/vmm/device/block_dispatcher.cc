@@ -33,8 +33,8 @@ class RawBlockDispatcher : public BlockDispatcher {
     auto addr = static_cast<uint8_t*>(data);
     for (uint64_t at = 0; at < size; at += fuchsia::io::MAX_BUF) {
       auto len = std::min<uint64_t>(size - at, fuchsia::io::MAX_BUF);
-      auto read = [io_guard, len, begin = addr + at](
-                      zx_status_t status, std::vector<uint8_t> buf) {
+      auto read = [io_guard, len, begin = addr + at](zx_status_t status,
+                                                     std::vector<uint8_t> buf) {
         if (status != ZX_OK) {
           io_guard->SetStatus(status);
         } else if (buf.size() != len) {
@@ -111,19 +111,22 @@ void CreateRawBlockDispatcher(fuchsia::io::FilePtr file, uint32_t vmo_flags,
                               NestedBlockDispatcherCallback callback) {
   auto make_disp = [vmo_flags, callback = std::move(callback)](
                        fuchsia::io::FilePtr file, size_t size) mutable {
-    file->GetVmo(vmo_flags, [file = std::move(file), vmo_flags, size,
-                             callback = std::move(callback)](
-                                zx_status_t status, zx::vmo vmo) mutable {
+    file->GetBuffer(vmo_flags, [file = std::move(file), vmo_flags, size,
+                                callback = std::move(callback)](
+                                   zx_status_t status,
+                                   fuchsia::mem::BufferPtr buffer) mutable {
       if (status != ZX_OK) {
         auto disp = std::make_unique<RawBlockDispatcher>(std::move(file));
         callback(size, std::move(disp));
         return;
       }
       uintptr_t addr;
-      status = zx::vmar::root_self()->map(0, vmo, 0, size, vmo_flags, &addr);
+      // TODO: Use the |buffer->size| rather than calling |GetAttr|.
+      status =
+          zx::vmar::root_self()->map(0, buffer->vmo, 0, size, vmo_flags, &addr);
       FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
       auto disp = std::make_unique<VmoBlockDispatcher>(
-          std::move(file), std::move(vmo), size, addr);
+          std::move(file), std::move(buffer->vmo), size, addr);
       callback(size, std::move(disp));
     });
   };
@@ -249,8 +252,7 @@ void CreateVolatileWriteBlockDispatcher(
   uintptr_t addr;
   status = zx::vmar::root_self()->map(
       0, vmo, 0, vmo_size,
-      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE,
-      &addr);
+      ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_REQUIRE_NON_RESIZABLE, &addr);
   FXL_CHECK(status == ZX_OK) << "Failed to map VMO " << status;
 
   auto disp = std::make_unique<VolatileWriteBlockDispatcher>(

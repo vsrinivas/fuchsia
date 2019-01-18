@@ -552,13 +552,6 @@ where
                 // explicitly encoded in the API instead, I guess.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
-            FileRequest::GetVmo {
-                flags: _,
-                responder,
-            } => {
-                // There is no backing VMO.
-                responder.send(ZX_OK, None)?;
-            }
             FileRequest::GetBuffer {
                 flags: _,
                 responder,

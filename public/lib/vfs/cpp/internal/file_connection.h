@@ -49,7 +49,6 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void Truncate(uint64_t length, TruncateCallback callback) override;
   void GetFlags(GetFlagsCallback callback) override;
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
-  void GetVmo(uint32_t flags, GetVmoCallback callback) override;
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override;
 
  private:

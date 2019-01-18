@@ -118,10 +118,6 @@ void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED);
 }
 
-void FileConnection::GetVmo(uint32_t flags, GetVmoCallback callback) {
-  callback(ZX_ERR_NOT_SUPPORTED, zx::vmo());
-}
-
 void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
 }
