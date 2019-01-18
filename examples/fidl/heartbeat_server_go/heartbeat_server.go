@@ -29,7 +29,7 @@ func main() {
 	go func() {
 		for {
 			time.Sleep(1 * time.Second)
-			for key, _ := range heartbeatService.Bindings {
+			for _, key := range heartbeatService.BindingKeys() {
 				if p, ok := heartbeatService.EventProxyFor(key); ok {
 					if !quiet {
 						fmt.Println("heartbeat server: sending heartbeat")

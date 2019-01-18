@@ -67,7 +67,7 @@ func inferReachability(ifs []netstack.NetInterface) bool {
 }
 
 func notify(reachable bool) {
-	for key := range service.Bindings {
+	for _, key := range service.BindingKeys() {
 		if p, ok := service.EventProxyFor(key); ok {
 			p.OnNetworkReachable(reachable)
 		}

@@ -133,7 +133,7 @@ func (echo *echoImpl) EchoStructNoRetVal(
 		go app.listen()
 		app.echo.EchoStructNoRetVal(value, "")
 	} else {
-		for key := range echoService.Bindings {
+		for _, key := range echoService.BindingKeys() {
 			if pxy, ok := echoService.EventProxyFor(key); ok {
 				pxy.EchoEvent(value)
 			}
@@ -151,7 +151,7 @@ func (app *echoClientApp) listen() {
 			log.Println("ExpectEchoEvent failed: ", err)
 			continue
 		}
-		for key := range echoService.Bindings {
+		for _, key := range echoService.BindingKeys() {
 			if pxy, ok := echoService.EventProxyFor(key); ok {
 				pxy.EchoEvent(value)
 			}

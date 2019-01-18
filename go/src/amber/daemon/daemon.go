@@ -413,7 +413,7 @@ func (d *Daemon) fetchInto(merkle string, length int64, outputDir string) error 
 				return err
 			}
 			if e, ok := err.(zx.Error); ok && e.Status == zx.ErrNoSpace {
-				for key := range d.events.Bindings {
+				for _, key := range d.events.BindingKeys() {
 					if p, ok := d.events.EventProxyFor(key); ok {
 						log.Printf("daemon: blobfs is out of space")
 						if err := p.OnOutOfSpace(); err != nil {

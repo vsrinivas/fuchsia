@@ -85,7 +85,7 @@ func Main() {
 	OnInterfacesChanged = func() {
 		interfaces := getInterfaces(ns)
 		connectivity.InferAndNotify(interfaces)
-		for key := range netstackService.Bindings {
+		for _, key := range netstackService.BindingKeys() {
 			if p, ok := netstackService.EventProxyFor(key); ok {
 				if err := p.OnInterfacesChanged(interfaces); err != nil {
 					log.Printf("OnInterfacesChanged failed: %v", err)
