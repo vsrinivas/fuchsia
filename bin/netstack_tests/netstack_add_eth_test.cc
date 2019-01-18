@@ -30,6 +30,7 @@
 namespace {
 class NetstackLaunchTest : public component::testing::TestWithEnvironment {};
 
+const char kNetstackUrl[] = "fuchsia-pkg://fuchsia.com/netstack#meta/netstack.cmx";
 const char kEthernetDir[] = "/dev/class/ethernet";
 const char kTapctl[] = "/dev/misc/tapctl";
 const uint8_t kTapMac[] = {0x12, 0x20, 0x30, 0x40, 0x50, 0x60};
@@ -131,7 +132,7 @@ TEST_F(NetstackLaunchTest, AddEthernetInterface) {
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "netstack";
+  launch_info.url = kNetstackUrl;
   launch_info.out = component::testing::CloneFileDescriptor(1);
   launch_info.err = component::testing::CloneFileDescriptor(2);
   services->AddServiceWithLaunchInfo(std::move(launch_info),
@@ -199,7 +200,7 @@ TEST_F(NetstackLaunchTest, DISABLED_AddEthernetDevice) {
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "netstack";
+  launch_info.url = kNetstackUrl;
   launch_info.out = component::testing::CloneFileDescriptor(1);
   launch_info.err = component::testing::CloneFileDescriptor(2);
   services->AddServiceWithLaunchInfo(std::move(launch_info),
@@ -265,7 +266,7 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "netstack";
+  launch_info.url = kNetstackUrl;
   launch_info.out = component::testing::CloneFileDescriptor(1);
   launch_info.err = component::testing::CloneFileDescriptor(2);
   zx_status_t status = services->AddServiceWithLaunchInfo(
