@@ -86,7 +86,7 @@ bool ReleaseTest() {
         queue.push(std::move(*request));
     }
 
-    queue.release();
+    queue.Release();
     EXPECT_TRUE(queue.pop() == std::nullopt);
     END_TEST;
 }

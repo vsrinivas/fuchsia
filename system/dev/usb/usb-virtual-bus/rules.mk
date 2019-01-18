@@ -14,6 +14,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/usb-virtual-host.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/operation \
     system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/ddktl \

@@ -19,6 +19,7 @@ MODULE_SRCS += \
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \
     system/dev/lib/fake-bti \
+    system/dev/lib/operation \
     system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/fbl \
