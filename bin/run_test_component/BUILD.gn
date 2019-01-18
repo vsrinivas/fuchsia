@@ -47,7 +47,6 @@ executable("bin") {
 
 package("run_test_component") {
   testonly = true
-  deprecated_system_image = true
 
   deps = [
     ":bin",
@@ -55,13 +54,20 @@ package("run_test_component") {
 
   binaries = [
     {
+      # Deprecated binary name
       name = "run_test_component"
+      shell = true
+    },
+    {
+      name = "run-test-component"
+      source = "run_test_component"
+      shell = true
     },
   ]
 
   resources = [
     {
-      dest = "run_test_component/environment.config"
+      dest = "environment.config"
       path = rebase_path("environment.config")
     },
   ]

@@ -25,7 +25,7 @@ using fuchsia::sys::TerminationReason;
 namespace {
 constexpr char kEnv[] = "env_for_test";
 constexpr char kConfigPath[] =
-    "/system/data/run_test_component/environment.config";
+    "/pkgfs/packages/run_test_component/0/data/environment.config";
 
 void PrintUsage() {
   fprintf(stderr, R"(
