@@ -18,6 +18,7 @@
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <lib/operation/nand.h>
 #include <lib/sync/completion.h>
 #include <zircon/boot/image.h>
 #include <zircon/hw/gpt.h>
@@ -31,28 +32,28 @@ namespace {
 constexpr uint8_t fvm_guid[] = GUID_FVM_VALUE;
 constexpr uint8_t test_guid[] = GUID_TEST_VALUE;
 
-struct NandPartOpContext {
+struct PrivateStorage {
     uint32_t offset;
-    nand_queue_callback completion_cb;
-    void* cookie;
 };
 
+using NandPartOp = nand::UnownedOperation<PrivateStorage>;
+
 // Shim for calling sub-partition's callback.
-void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* op) {
-    auto* ctx = reinterpret_cast<NandPartOpContext*>(cookie);
+void CompletionCallback(void* cookie, zx_status_t status, nand_operation_t* nand_op) {
+    NandPartOp op(nand_op, *static_cast<size_t*>(cookie));
     // Re-translate the offsets.
-    switch (op->command) {
+    switch (op.operation()->command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE:
-        op->rw.offset_nand -= ctx->offset;
+        op.operation()->rw.offset_nand -= op.private_storage()->offset;
         break;
     case NAND_OP_ERASE:
-        op->erase.first_block -= ctx->offset;
+        op.operation()->erase.first_block -= op.private_storage()->offset;
         break;
     default:
         ZX_ASSERT(false);
     }
-    ctx->completion_cb(ctx->cookie, status, op);
+    op.Complete(status);
 }
 
 } // namespace
@@ -210,36 +211,32 @@ zx_status_t NandPartDevice::Bind(const char* name, uint32_t copy_count) {
 void NandPartDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &nand_info_, sizeof(*info_out));
     // Add size of extra context.
-    *nand_op_size_out = parent_op_size_ + sizeof(NandPartOpContext);
+    *nand_op_size_out = NandPartOp::OperationSize(parent_op_size_);
 }
 
-void NandPartDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb,
+void NandPartDevice::NandQueue(nand_operation_t* nand_op, nand_queue_callback completion_cb,
                                void* cookie) {
-    auto* ctx =
-        reinterpret_cast<NandPartOpContext*>(reinterpret_cast<uintptr_t>(op) + parent_op_size_);
-    uint32_t command = op->command;
+    NandPartOp op(nand_op, completion_cb, cookie, parent_op_size_);
+    uint32_t command = op.operation()->command;
 
     // Make offset relative to full underlying device
     switch (command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE:
-        ctx->offset = erase_block_start_ * nand_info_.pages_per_block;
-        op->rw.offset_nand += ctx->offset;
+        op.private_storage()->offset = erase_block_start_ * nand_info_.pages_per_block;
+        op.operation()->rw.offset_nand += op.private_storage()->offset;
         break;
     case NAND_OP_ERASE:
-        ctx->offset = erase_block_start_;
-        op->erase.first_block += erase_block_start_;
+        op.private_storage()->offset = erase_block_start_;
+        op.operation()->erase.first_block += erase_block_start_;
         break;
     default:
-        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
+        op.Complete(ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
-    ctx->completion_cb = completion_cb;
-    ctx->cookie = cookie;
-
     // Call parent's queue
-    nand_.Queue(op, CompletionCallback, ctx);
+    nand_.Queue(op.take(), CompletionCallback, &parent_op_size_);
 }
 
 zx_status_t NandPartDevice::NandGetFactoryBadBlockList(uint32_t* bad_blocks, size_t bad_block_len,
