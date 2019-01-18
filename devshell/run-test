@@ -28,13 +28,14 @@ function usage {
 
 
 function main {
+  all_args="$@"
+  test_args="${all_args#* -- }"
 
   fx-standard-switches "$@"
   set -- "${FX_ARGV[@]}"
 
   test=""
   target=""
-  test_args=""
 
   while (($#)); do
     case $1 in
@@ -48,8 +49,6 @@ function main {
         test="$1"
         ;;
       --)
-        shift  # value
-        test_args="$@"
         break
         ;;
       *)
