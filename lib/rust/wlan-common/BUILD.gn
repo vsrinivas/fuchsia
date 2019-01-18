@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//build/rust/rustc_library.gni")
 
 rustc_library("wlan-common") {
@@ -13,4 +14,14 @@ rustc_library("wlan-common") {
   deps = [
     "//third_party/rust-crates/rustc_deps:failure",
   ]
+}
+
+package("wlan-common-tests") {
+  testonly = true
+
+  deps = [
+    ":wlan-common"
+  ]
+
+  tests = [ { name = "wlan_common_lib_test" } ]
 }

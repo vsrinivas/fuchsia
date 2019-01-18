@@ -1,6 +1,7 @@
 {
     "packages": [
         "//garnet/drivers/wlan/wlan:wlan_drivers_tests",
+        "//garnet/lib/rust/wlan-common:wlan-common-tests",
         "//garnet/lib/rust/wlan-mlme:wlan-mlme-tests",
         "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
         "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
