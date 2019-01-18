@@ -46,7 +46,6 @@ Console::Console(Session* session)
   // Set stdin to async mode or OnStdinReadable will block, but make sure
   // stdout is in blocking mode since we don't expect to retry.
   fcntl(STDIN_FILENO, F_SETFL, fcntl(STDIN_FILENO, F_GETFL, 0) | O_NONBLOCK);
-  fcntl(STDOUT_FILENO, F_SETFL, fcntl(STDOUT_FILENO, F_GETFL, 0) & ~O_NONBLOCK);
 }
 
 Console::~Console() {
