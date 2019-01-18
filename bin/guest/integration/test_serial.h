@@ -28,6 +28,8 @@ class TestSerial {
 
   zx_status_t WaitForAny();
 
+  zx_status_t Drain();
+
   zx::socket socket_;
   std::string buffer_;
 };

@@ -13,6 +13,7 @@
 static constexpr bool kGuestOutput = false;
 static constexpr size_t kSerialBufferSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
+static constexpr zx::duration kSerialStableDelay = zx::msec(800);
 
 static std::string command_hash(const std::string& command) {
   std::hash<std::string> hash;
@@ -29,6 +30,19 @@ zx_status_t TestSerial::Start(zx::socket socket) {
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to start serial";
   }
+
+  // Wait for output to stabilize
+  zx_signals_t pending = 0;
+  do {
+    zx_status_t status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                              zx::deadline_after(kSerialStableDelay), &pending);
+    if (status != ZX_OK && status != ZX_ERR_TIMED_OUT) {
+      FXL_LOG(ERROR) << "Error waiting for socket " << status;
+      return status;
+    }
+    Drain();
+  } while (pending & ZX_SOCKET_READABLE);
+
   return status;
 }
 
@@ -162,21 +176,14 @@ zx_status_t TestSerial::WaitForMarker(const std::string& marker,
   return status;
 }
 
-// Waits for something to be written to the socket and drains it.
-zx_status_t TestSerial::WaitForAny() {
-  zx_status_t status;
-  zx_signals_t pending = 0;
-  size_t actual = 0;
-  while (actual == 0) {
-    status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
-                              zx::deadline_after(kTestTimeout), &pending);
-    if (status != ZX_OK) {
-      return status;
-    } else if (pending & ZX_SOCKET_PEER_CLOSED) {
-      return ZX_ERR_PEER_CLOSED;
-    }
+zx_status_t TestSerial::Drain() {
+  while (true) {
     char buf[kSerialBufferSize];
-    status = socket_.read(0, buf, sizeof(buf), &actual);
+    size_t actual;
+    zx_status_t status = socket_.read(0, buf, sizeof(buf), &actual);
+    if (status == ZX_ERR_SHOULD_WAIT) {
+      return ZX_ERR_SHOULD_WAIT;
+    }
     if (status != ZX_OK) {
       return status;
     }
@@ -185,5 +192,19 @@ zx_status_t TestSerial::WaitForAny() {
       std::cout.flush();
     }
   }
-  return status;
+}
+
+// Waits for something to be written to the socket and drains it.
+zx_status_t TestSerial::WaitForAny() {
+  zx_status_t status;
+  zx_signals_t pending = 0;
+  status = socket_.wait_one(ZX_SOCKET_READABLE | ZX_SOCKET_PEER_CLOSED,
+                            zx::deadline_after(kTestTimeout), &pending);
+  if (status != ZX_OK) {
+    return status;
+  } else if (pending & ZX_SOCKET_PEER_CLOSED) {
+    return ZX_ERR_PEER_CLOSED;
+  }
+  status = Drain();
+  return status == ZX_ERR_SHOULD_WAIT ? ZX_OK : status;
 }
