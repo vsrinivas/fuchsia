@@ -152,14 +152,6 @@ func loadBlobs(path string) ([]build.PackageBlobInfo, error) {
 		return nil, err
 	}
 
-	packagePaths := make(map[string]struct{})
-	for _, blob := range members {
-		if _, ok := packagePaths[blob.Path]; ok {
-			return nil, fmt.Errorf("%q contains more than one entry with path = %q", path, blob.Path)
-		}
-		packagePaths[blob.Path] = struct{}{}
-	}
-
 	return members, nil
 }
 
@@ -217,7 +209,7 @@ func buildSnapshot(c snapshotConfig) (*build.Snapshot, error) {
 		}
 	}
 
-	return snapshot, snapshot.Verify()
+	return snapshot, nil
 }
 
 // Run executes the snapshot command
