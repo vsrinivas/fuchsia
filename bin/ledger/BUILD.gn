@@ -59,22 +59,54 @@ package("ledger_tests") {
 
   meta = [
     {
-      path = rebase_path(
-              "//peridot/bin/cloud_provider_firestore/validation/validation_firestore.cmx")
-      dest = "validation_firestore.cmx"
+      path = rebase_path("tests/ledger_unittests.cmx")
+      dest = "ledger_unittests.cmx"
+    },
+    {
+      path = rebase_path("tests/integration/ledger_integration_tests.cmx")
+      dest = "ledger_integration_tests.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_local/ledger_e2e_local.cmx")
+      dest = "ledger_e2e_local.cmx"
     },
     {
       path = rebase_path("tests/e2e_sync/ledger_e2e_sync.cmx")
       dest = "ledger_e2e_sync.cmx"
     },
+    {
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_firestore/cloud_provider_firestore_unittests.cmx")
+      dest = "cloud_provider_firestore_unittests.cmx"
+    },
+    {
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_firestore/validation/validation_firestore.cmx")
+      dest = "validation_firestore.cmx"
+    },
+    {
+      # This test must be started by validation_firestore and will fail if started on its own.
+      path = rebase_path("tests/cloud_provider/cloud_provider_validation_tests.cmx")
+      dest = "cloud_provider_validation_tests.cmx"
+    },
   ]
 
   tests = [
     {
-      name = "cloud_provider_firestore_unittests"
+      name = "ledger_unittests"
     },
     {
-      name = "cloud_provider_validation_tests"
+      name = "ledger_integration_tests"
+    },
+    {
+      name = "ledger_e2e_local"
+    },
+    {
+      name = "cloud_provider_firestore_unittests"
+    },
+
+    {
+      name = "ledger_e2e_sync"
 
       # This test needs additional configuration and should not run by default.
       # Marking it as disabled puts the binary in `test/disabled/` under the
@@ -90,21 +122,9 @@ package("ledger_tests") {
       disabled = true
     },
     {
-      name = "ledger_integration_tests"
-    },
+      name = "cloud_provider_validation_tests"
 
-    {
-      name = "ledger_unittests"
-    },
-
-    {
-      name = "ledger_e2e_local"
-    },
-
-    {
-      name = "ledger_e2e_sync"
-
-      # This test needs additional configuration and should not run by default.
+      # This test must be started by validation_firestore and will fail if started on its own.
       # Marking it as disabled puts the binary in `test/disabled/` under the
       # package directory.
       disabled = true

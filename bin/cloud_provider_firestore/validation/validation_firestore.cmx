@@ -1,4 +1,16 @@
 {
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.oldhttp.HttpService": "http"
+            },
+            "system-services": [
+                "fuchsia.net.LegacySocketProvider",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.net.stack.Stack"
+            ]
+        }
+    },
     "program": {
         "binary": "test/disabled/launch_validation_tests_firestore"
     },

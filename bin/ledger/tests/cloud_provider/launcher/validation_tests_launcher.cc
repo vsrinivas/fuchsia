@@ -11,8 +11,8 @@ namespace cloud_provider {
 
 namespace {
 constexpr char kValidationTestsUrl[] =
-    "/pkgfs/packages/ledger_tests/0/test/disabled/"
-    "cloud_provider_validation_tests";
+    "fuchsia-pkg://fuchsia.com/ledger_tests"
+    "#meta/cloud_provider_validation_tests.cmx";
 }  // namespace
 
 ValidationTestsLauncher::ValidationTestsLauncher(

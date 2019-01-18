@@ -7,10 +7,12 @@ interface.
 
 ## Testing
 
+The tests are packaged with Ledger tests.
+
 In order to run the unit tests:
 
 ```sh
-fx run-test cloud_provider_firestore_unittests
+fx run-test -t cloud_provider_firestore_unittests ledger_tests
 ```
 
 In order to run the [validation tests], follow the [cloud sync set-up
@@ -20,9 +22,12 @@ and obtain the sync parameters.
 Then, run the validation tests as follows:
 
 ```sh
-fx shell "run fuchsia-pkg://fuchsia.com/ledger_tests#meta/validation_firestore.cmx"
+fx run-test -t validation_firestore ledger_tests
 ```
 
+Note that `validation_firestore` is only a launcher for the actual tests,
+`cloud_provider_validation_tests`. As a result, you will need to look at `fx
+log` output to see if the tests passed.
 
 ## Documentation
 
