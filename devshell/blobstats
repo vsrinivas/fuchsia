@@ -20,4 +20,6 @@ esac
 
 cd "${FUCHSIA_BUILD_DIR}"
 
-exec "${PREBUILT_DART}" "${DEVSHELL_DIR}/blobstats.dart" "$@"
+exec "${PREBUILT_DART}" \
+  --packages="${DEVSHELL_DIR}/blobstats-lib/blobstats.packages" \
+  "${DEVSHELL_DIR}/blobstats-lib/blobstats.dart" "$@"
