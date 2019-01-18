@@ -9,8 +9,7 @@
 #include "garnet/bin/media/audio_core/driver_utils.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 zx_status_t SelectBestFormat(
     const std::vector<audio_stream_format_range_t>& fmts,
@@ -241,5 +240,4 @@ zx_status_t SelectBestFormat(
   return ZX_OK;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

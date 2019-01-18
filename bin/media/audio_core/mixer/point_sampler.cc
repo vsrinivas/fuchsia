@@ -11,9 +11,7 @@
 #include "garnet/bin/media/audio_core/mixer/mixer_utils.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 // Point Sample Mixer implementation.
 template <size_t DestChanCount, typename SrcSampleType, size_t SrcChanCount>
@@ -75,7 +73,7 @@ inline bool PointSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
@@ -265,7 +263,7 @@ inline bool NxNPointSamplerImpl<SrcSampleType>::Mix(
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
@@ -524,6 +522,4 @@ MixerPtr PointSampler::Select(
   }
 }
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer

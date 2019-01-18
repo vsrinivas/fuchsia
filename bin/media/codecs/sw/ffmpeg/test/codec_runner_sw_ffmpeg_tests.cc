@@ -136,15 +136,15 @@ TEST(BlockingMpscQueueTest, ManyThreads) {
   // Order is not gauranteed when multiple producers contend, so we just test
   // here that the implementation is stable and all elements are yielded.
   std::unique_ptr<async::Loop> producer_loops[kThreads];
-  for (int i = 0; i < kThreads; ++i) {
-    producer_loops[i] =
+  for (auto& producer_loop : producer_loops) {
+    producer_loop =
         std::make_unique<async::Loop>(&kAsyncLoopConfigNoAttachToThread);
-    async::PostTask(producer_loops[i]->dispatcher(), [&under_test] {
+    async::PostTask(producer_loop->dispatcher(), [&under_test] {
       for (int j = 0; j < kElements; ++j) {
         under_test.Push(j);
       }
     });
-    producer_loops[i]->StartThread(nullptr, nullptr);
+    producer_loop->StartThread(nullptr, nullptr);
   }
 
   int element_count = 0;

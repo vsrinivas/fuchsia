@@ -12,8 +12,7 @@
 #include "lib/fidl/cpp/synchronous_interface_ptr.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace tools {
+namespace media::tools {
 
 MediaApp::MediaApp(fit::closure quit_callback)
     : quit_callback_(std::move(quit_callback)) {
@@ -441,5 +440,4 @@ void MediaApp::Shutdown() {
   quit_callback_();
 }
 
-}  // namespace tools
-}  // namespace media
+}  // namespace media::tools

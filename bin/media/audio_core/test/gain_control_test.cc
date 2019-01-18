@@ -11,9 +11,7 @@
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // GainControlTestBase
 //
@@ -796,6 +794,4 @@ TEST_F(TwoCapturersGainControlsTest_Negative, SetGainTooLow) {
   TestSetGainTooLow();
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

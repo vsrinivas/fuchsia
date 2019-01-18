@@ -6,7 +6,7 @@
 
 #include <zircon/syscalls.h>
 
-#include <assert.h>
+#include <cassert>
 
 nsecs_t systemTime(int clock) {
   if (clock != SYSTEM_TIME_MONOTONIC) {

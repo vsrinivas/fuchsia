@@ -126,13 +126,13 @@ void Thread::_threadLoop() {
 
     strong.clear();
     strong = weak.promote();
-    if (strong == 0) {
+    if (strong == nullptr) {
       std::unique_lock<std::mutex> lock(lock_);
       // It's nice to treat the strong refcount dropping to zero as an official
       // exit request, before ~wp.
       is_exit_requested_ = true;
     }
-  } while (strong != 0);
+  } while (strong != nullptr);
   // ~wp can be how this gets deleted, but for now we asser in the destructor
   // if ~wp calls delete this, because that usage pattern isn't consistent with
   // safe un-load of the code of a shared library.

@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <assert.h>
-#include <stdarg.h>
-#include <stdint.h>
-#include <stdio.h>
+#include <cassert>
+#include <cstdarg>
+#include <cstdint>
+#include <cstdio>
 
 #include "log/log.h"
 

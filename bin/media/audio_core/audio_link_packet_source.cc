@@ -9,8 +9,7 @@
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioLinkPacketSource::AudioLinkPacketSource(
     fbl::RefPtr<AudioObject> source, fbl::RefPtr<AudioObject> dest,
@@ -67,9 +66,8 @@ void AudioLinkPacketSource::FlushPendingQueue(
       // our flush token (if any) to the pending flush token queue.  The sink's
       // thread will take are of releasing these objects back to the service
       // thread for cleanup when it has finished it's current job.
-      for (size_t i = 0; i < pending_packet_queue_.size(); ++i) {
-        pending_flush_packet_queue_.emplace_back(
-            std::move(pending_packet_queue_[i]));
+      for (auto& packet : pending_packet_queue_) {
+        pending_flush_packet_queue_.emplace_back(std::move(packet));
       }
       pending_packet_queue_.clear();
 
@@ -165,5 +163,4 @@ void AudioLinkPacketSource::UnlockPendingQueueFront(bool release_packet) {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

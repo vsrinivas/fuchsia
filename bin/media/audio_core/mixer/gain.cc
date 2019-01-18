@@ -8,8 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr Gain::AScale Gain::kMinScale;
 constexpr Gain::AScale Gain::kUnityScale;
@@ -174,5 +173,4 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
   return combined_gain_scale_;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

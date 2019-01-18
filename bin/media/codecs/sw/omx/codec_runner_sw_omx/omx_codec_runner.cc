@@ -193,7 +193,7 @@ bool OmxCodecRunner::Load() {
   omx_callbacks_.EventHandler = omx_EventHandler;
   omx_callbacks_.EmptyBufferDone = omx_EmptyBufferDone;
   omx_callbacks_.FillBufferDone = omx_FillBufferDone;
-  OMX_PTR app_data = reinterpret_cast<OMX_PTR>(this);
+  auto app_data = reinterpret_cast<OMX_PTR>(this);
   // The direct_ version bypasses the .so stuff above, because it's an easier
   // workflow if we don't have to replace two files, for now, until we figure
   // out if there's a clean way to load an .so from an arbitrary file - like
@@ -341,10 +341,10 @@ void OmxCodecRunner::SetDecoderParams(
        &OmxCodecRunner::SetInputAacAdts},
   };
   const AudioDecoder* dec = nullptr;
-  for (size_t i = 0; i < arraysize(known_audio_decoders); i++) {
-    if (known_audio_decoders[i].codec_mime_type ==
+  for (const auto& known_audio_decoder : known_audio_decoders) {
+    if (known_audio_decoder.codec_mime_type ==
         audio_decoder_params.input_details.mime_type) {
-      dec = &known_audio_decoders[i];
+      dec = &known_audio_decoder;
       break;
     }
   }
@@ -2074,7 +2074,7 @@ OMX_BUFFERHEADERTYPE* OmxCodecRunner::OmxUseBuffer(
   if (omx_buffer_size_raw > std::numeric_limits<OMX_U32>::max()) {
     Exit("internal buffer size limit exceeded - exiting\n");
   }
-  OMX_U32 omx_buffer_size = static_cast<OMX_U32>(omx_buffer_size_raw);
+  auto omx_buffer_size = static_cast<OMX_U32>(omx_buffer_size_raw);
   if (port == kOutput) {
     // If codec_buffer_size is smaller, we won't have room for the amount of
     // output OMX might create.  If that happened somehow, when did OMX
@@ -2316,7 +2316,7 @@ OMX_ERRORTYPE OmxCodecRunner::omx_EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
   VLOGF("omx_EventHandler eEvent: %d nData1: %d, nData2: %d pEventData: %p\n",
         eEvent, nData1, nData2, pEventData);
   fflush(nullptr);
-  OmxCodecRunner* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
+  auto* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
   assert(me->omx_component_ == hComponent);
   return me->EventHandler(eEvent, nData1, nData2, pEventData);
 }
@@ -2324,7 +2324,7 @@ OMX_ERRORTYPE OmxCodecRunner::omx_EventHandler(OMX_IN OMX_HANDLETYPE hComponent,
 OMX_ERRORTYPE OmxCodecRunner::omx_EmptyBufferDone(
     OMX_IN OMX_HANDLETYPE hComponent, OMX_IN OMX_PTR pAppData,
     OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
-  OmxCodecRunner* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
+  auto* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
   assert(me->omx_component_ == hComponent);
   return me->EmptyBufferDone(pBuffer);
 }
@@ -2332,7 +2332,7 @@ OMX_ERRORTYPE OmxCodecRunner::omx_EmptyBufferDone(
 OMX_ERRORTYPE OmxCodecRunner::omx_FillBufferDone(
     OMX_IN OMX_HANDLETYPE hComponent, OMX_IN OMX_PTR pAppData,
     OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
-  OmxCodecRunner* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
+  auto* me = reinterpret_cast<OmxCodecRunner*>(pAppData);
   assert(me->omx_component_ == hComponent);
   return me->FillBufferDone(pBuffer);
 }
@@ -2402,7 +2402,7 @@ OMX_ERRORTYPE OmxCodecRunner::EventHandler(OMX_IN OMX_EVENTTYPE eEvent,
         printf("OMX_EventError - error: %d, nData2: %d, pEventData: %p\n",
                nData1, nData2, pEventData);
         const char* error_string = nullptr;
-        OMX_ERRORTYPE which_error = static_cast<OMX_ERRORTYPE>(nData1);
+        auto which_error = static_cast<OMX_ERRORTYPE>(nData1);
         // recoverable means recoverable by faling the stream, not recoverable
         // within a stream - there doesn't appear to be any way for AOSP OMX SW
         // codecs to report mid-stream errors (despite what the OMX spec says)
@@ -2915,7 +2915,7 @@ void OmxCodecRunner::onOmxStreamFailed(uint64_t stream_lifetime_ordinal) {
 // thread, but OMX spec doesn't specify AFAICT.
 OMX_ERRORTYPE OmxCodecRunner::EmptyBufferDone(
     OMX_IN OMX_BUFFERHEADERTYPE* pBuffer) {
-  Packet* packet = reinterpret_cast<Packet*>(pBuffer->pAppPrivate);
+  auto* packet = reinterpret_cast<Packet*>(pBuffer->pAppPrivate);
   assert(packet->omx_header() == pBuffer);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -2993,7 +2993,7 @@ void OmxCodecRunner::SendFreeInputPacketLocked(
 // buffer that OMX is done with.
 OMX_ERRORTYPE OmxCodecRunner::FillBufferDone(
     OMX_OUT OMX_BUFFERHEADERTYPE* pBuffer) {
-  Packet* packet = reinterpret_cast<Packet*>(pBuffer->pAppPrivate);
+  auto* packet = reinterpret_cast<Packet*>(pBuffer->pAppPrivate);
   assert(packet->omx_header() == pBuffer);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);

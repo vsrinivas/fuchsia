@@ -8,9 +8,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -458,6 +456,4 @@ TEST(PassThru, Output_Float_Silence) {
   EXPECT_EQ(dest[fbl::count_of(dest) - 1], 7.8f);  // this val survives
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

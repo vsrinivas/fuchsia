@@ -18,8 +18,7 @@
 #include "garnet/bin/media/audio_core/schema/audio_device_settings_schema.inl"
 #include "lib/fxl/files/directory.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 namespace {
 constexpr size_t kMaxSettingFileSize = (64 << 10);
@@ -458,5 +457,4 @@ void AudioDeviceSettings::CreateSettingsPath(const std::string& prefix,
       is_input_ ? "input" : "output");
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

@@ -28,9 +28,8 @@ namespace {
 
 // A pointer to this function gets used as an OMX_COMPONENTTYPE.ComponentDeInit.
 OMX_ERRORTYPE ComponentDeInit(OMX_IN OMX_HANDLETYPE hComponent) {
-  android::SoftOMXComponent *me =
-      (android::SoftOMXComponent *)((OMX_COMPONENTTYPE *)hComponent)
-          ->pComponentPrivate;
+  auto *me = (android::SoftOMXComponent *)((OMX_COMPONENTTYPE *)hComponent)
+                 ->pComponentPrivate;
   me->prepareForDestruction();
   me->decStrong(reinterpret_cast<void *>(ComponentDeInit));
   // It's important that by this point any threads that were created by

@@ -5,11 +5,11 @@
 #include "./include/media/stagefright/foundation/AString.h"
 
 #include <media/stagefright/foundation/ADebug.h>
-#include <stdarg.h>
+#include <cstdarg>
 
 namespace android {
 
-AString::AString() {}
+AString::AString() = default;
 
 AString::AString(const char* from_string) : std::string(from_string) {}
 

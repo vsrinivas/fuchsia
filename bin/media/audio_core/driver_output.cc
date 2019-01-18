@@ -17,8 +17,7 @@
 
 constexpr bool VERBOSE_TIMING_DEBUG = false;
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static constexpr uint32_t kDefaultFramesPerSec = 48000;
 static constexpr uint32_t kDefaultChannelCount = 2;
@@ -480,5 +479,4 @@ void DriverOutput::OnDriverPlugStateChange(bool plugged, zx_time_t plug_time) {
   });
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

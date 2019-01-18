@@ -36,7 +36,7 @@ CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(
   ZX_DEBUG_ASSERT(codec_adapter_events);
 }
 
-CodecAdapterFfmpegDecoder::~CodecAdapterFfmpegDecoder() {}
+CodecAdapterFfmpegDecoder::~CodecAdapterFfmpegDecoder() = default;
 
 bool CodecAdapterFfmpegDecoder::
     IsCoreCodecRequiringOutputConfigForFormatDetection() {

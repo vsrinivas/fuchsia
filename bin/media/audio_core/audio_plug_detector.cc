@@ -23,8 +23,7 @@
 #include "garnet/bin/media/audio_core/driver_output.h"
 #include "lib/fxl/files/unique_fd.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static const struct {
   const char* path;
@@ -125,5 +124,4 @@ void AudioPlugDetector::AddAudioDevice(int dir_fd, const std::string& name,
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

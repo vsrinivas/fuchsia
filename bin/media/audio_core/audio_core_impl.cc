@@ -12,8 +12,7 @@
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr float AudioCoreImpl::kMaxSystemAudioGainDb;
 
@@ -212,5 +211,4 @@ void AudioCoreImpl::ScheduleFlushCleanup(
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

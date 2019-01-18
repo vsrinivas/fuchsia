@@ -7,8 +7,7 @@
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioPacketRef::AudioPacketRef(
     fbl::RefPtr<RefCountedVmoMapper> vmo_ref,
@@ -42,5 +41,4 @@ void AudioPacketRef::fbl_recycle() {
   delete this;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

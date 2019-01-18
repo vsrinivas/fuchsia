@@ -11,8 +11,7 @@
 #include "garnet/bin/media/audio_core/audio_renderer_impl.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // static
 std::shared_ptr<AudioLink> AudioObject::LinkObjects(
@@ -184,5 +183,4 @@ void AudioObject::UnlinkCleanup(AudioLinkSet* links) {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

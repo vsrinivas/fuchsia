@@ -11,8 +11,7 @@
 #include "lib/fxl/arraysize.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 fbl::RefPtr<AudioRendererImpl> AudioRendererImpl::Create(
     fidl::InterfaceRequest<fuchsia::media::AudioRenderer>
@@ -763,5 +762,4 @@ void AudioRendererImpl::GainControlBinding::SetMute(bool mute) {
   owner_->SetMute(mute);
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

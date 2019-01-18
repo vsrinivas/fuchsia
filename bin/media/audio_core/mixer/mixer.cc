@@ -10,14 +10,13 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline_rate.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr uint32_t Mixer::FRAC_ONE;
 constexpr uint32_t Mixer::FRAC_MASK;
 constexpr uint32_t Bookkeeping::kScaleArrLen;
 
-Mixer::~Mixer() {}
+Mixer::~Mixer() = default;
 
 Mixer::Mixer(uint32_t pos_filter_width, uint32_t neg_filter_width)
     : pos_filter_width_(pos_filter_width),
@@ -57,5 +56,4 @@ MixerPtr Mixer::Select(const fuchsia::media::AudioStreamType& src_format,
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

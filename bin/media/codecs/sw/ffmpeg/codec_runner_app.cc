@@ -8,6 +8,8 @@
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fxl/logging.h>
 
+#include <memory>
+
 CodecRunnerApp::CodecRunnerApp()
     : loop_(&kAsyncLoopConfigAttachToThread),
       startup_context_(component::StartupContext::CreateFromStartupInfo()) {}
@@ -29,7 +31,7 @@ void CodecRunnerApp::Run() {
             startup_context_->outgoing().deprecated_services()
                 ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
-            codec_factory_.reset(new LocalSingleCodecFactory(
+            codec_factory_ = std::make_unique<LocalSingleCodecFactory>(
                 loop_.dispatcher(), std::move(request),
                 [this](std::unique_ptr<CodecImpl> created_codec_instance) {
                   // Own codec implementation and bind it.
@@ -45,7 +47,7 @@ void CodecRunnerApp::Run() {
                 [this](zx_status_t error) {
                   // Drop factory and close factory channel on error.
                   codec_factory_.reset();
-                }));
+                });
           }));
 
   loop_.Run();

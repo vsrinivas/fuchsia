@@ -122,10 +122,10 @@ std::unique_ptr<codec_runner::CodecRunner> LocalCodecFactory::CreateCodec(
     async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread,
     fuchsia::mediacodec::CodecType codec_type, std::string mime_type) {
   const CodecStrategy* strategy = nullptr;
-  for (size_t i = 0; i < arraysize(codec_strategies); i++) {
-    if (codec_strategies[i].codec_type == codec_type &&
-        codec_strategies[i].mime_type == mime_type) {
-      strategy = &codec_strategies[i];
+  for (auto& codec_strategy : codec_strategies) {
+    if (codec_strategy.codec_type == codec_type &&
+        codec_strategy.mime_type == mime_type) {
+      strategy = &codec_strategy;
       break;
     }
   }

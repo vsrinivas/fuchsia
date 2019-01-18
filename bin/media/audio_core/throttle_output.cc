@@ -8,8 +8,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static constexpr fxl::TimeDelta TRIM_PERIOD =
     fxl::TimeDelta::FromMilliseconds(10);
@@ -17,7 +16,7 @@ static constexpr fxl::TimeDelta TRIM_PERIOD =
 ThrottleOutput::ThrottleOutput(AudioDeviceManager* manager)
     : StandardOutputBase(manager) {}
 
-ThrottleOutput::~ThrottleOutput() {}
+ThrottleOutput::~ThrottleOutput() = default;
 
 // static
 fbl::RefPtr<AudioOutput> ThrottleOutput::Create(AudioDeviceManager* manager) {
@@ -69,5 +68,4 @@ bool ThrottleOutput::FinishMixJob(const MixJob& job) {
   return false;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

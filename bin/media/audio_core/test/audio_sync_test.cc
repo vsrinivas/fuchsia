@@ -8,9 +8,7 @@
 
 #include "lib/component/cpp/environment_services_helper.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // AudioSyncTest
@@ -106,6 +104,4 @@ TEST_F(AudioSyncTest, SetRoutingPolicy) {
                 fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

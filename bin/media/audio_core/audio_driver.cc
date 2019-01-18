@@ -5,14 +5,13 @@
 #include "garnet/bin/media/audio_core/audio_driver.h"
 
 #include <audio-proto-utils/format-utils.h>
-#include <stdio.h>
+#include <cstdio>
 
 #include "garnet/bin/media/audio_core/driver_utils.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static constexpr zx_txid_t TXID = 1;
 static constexpr zx_duration_t kDefaultShortCmdTimeout = ZX_MSEC(250);
@@ -1051,5 +1050,4 @@ zx_status_t AudioDriver::SendSetGain(
   return stream_channel_->Write(&req, sizeof(req));
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

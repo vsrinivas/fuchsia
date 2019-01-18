@@ -6,9 +6,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 #include "gtest/gtest.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // These test functions, run after all other details tests have executed,
@@ -352,6 +350,4 @@ TEST(Recap, DynamicRange) {
   printf("\n\n");
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

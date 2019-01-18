@@ -7,8 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // If any instances remain, remove and delete them before we leave.
 FxProcessor::~FxProcessor() {
@@ -155,5 +154,4 @@ zx_status_t FxProcessor::RemoveFx(fx_token_t fx_token) {
   return ZX_OK;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

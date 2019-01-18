@@ -4,9 +4,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviations within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -89,6 +87,4 @@ void DoMix(MixerPtr mixer, const void* src_buf, float* accum_buf,
             static_cast<uint32_t>(frac_src_offset));
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

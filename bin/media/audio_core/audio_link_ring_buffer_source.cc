@@ -6,8 +6,7 @@
 
 #include "garnet/bin/media/audio_core/audio_device.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // static
 std::shared_ptr<AudioLinkRingBufferSource> AudioLinkRingBufferSource::Create(
@@ -20,5 +19,4 @@ AudioLinkRingBufferSource::AudioLinkRingBufferSource(
     fbl::RefPtr<AudioDevice> source, fbl::RefPtr<AudioObject> dest)
     : AudioLink(SourceType::RingBuffer, std::move(source), std::move(dest)) {}
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

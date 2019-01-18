@@ -4,9 +4,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 bool NoOp::Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
                const void* src, uint32_t frac_src_frames,
@@ -14,6 +12,4 @@ bool NoOp::Mix(float* dest, uint32_t dest_frames, uint32_t* dest_offset,
   return false;
 }
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer

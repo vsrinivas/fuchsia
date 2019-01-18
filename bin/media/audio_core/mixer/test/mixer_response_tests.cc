@@ -8,9 +8,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = media::audio::Mixer::Resampler;
@@ -867,6 +865,4 @@ TEST(Sinad, Linear_NxN) {
                        AudioResult::kPrevSinadLinearMicro.data(), true);
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

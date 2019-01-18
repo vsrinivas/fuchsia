@@ -7,9 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/audio_result.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = media::audio::Mixer::Resampler;
@@ -570,8 +568,8 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_EQ(gain_.GetGainScale(), expect_scale);
 
   // When comparing buffers, do it within the tolerance of 32-bit float
-  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
-    expect_arr[idx] = expect_scale;
+  for (auto& val : expect_arr) {
+    val = expect_scale;
     expect_scale -= 0.1;
   }
   EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
@@ -590,8 +588,8 @@ TEST_F(ScaleArrayTest, AdvanceHalfwayThroughRamp) {
   EXPECT_TRUE(
       CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
-  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
-    expect_arr[idx] = expect_scale;
+  for (auto& val : expect_arr) {
+    val = expect_scale;
     expect_scale -= 0.1;
   }
   EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
@@ -613,8 +611,8 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   gain_.SetSourceMute(true);
   EXPECT_EQ(gain_.GetGainScale(), Gain::kMuteScale);
 
-  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
-    expect_arr[idx] = expect_scale;
+  for (auto& val : expect_arr) {
+    val = expect_scale;
     expect_scale -= 0.1;
   }
   // When comparing buffers, do it within the tolerance of 32-bit float
@@ -635,8 +633,8 @@ TEST_F(ScaleArrayTest, MuteDuringRamp) {
   EXPECT_TRUE(
       CompareBufferToVal(&expect_scale, gain_.GetGainScale(), 1, true, true));
 
-  for (size_t idx = 0; idx < fbl::count_of(expect_arr); ++idx) {
-    expect_arr[idx] = expect_scale;
+  for (auto& val : expect_arr) {
+    val = expect_scale;
     expect_scale -= 0.1;
   }
   EXPECT_TRUE(CompareBuffers(scale_arr, expect_arr, fbl::count_of(scale_arr),
@@ -835,6 +833,4 @@ TEST(MixGain, Accumulator_Clear) {
 // the headroom inherent in a multi-stream accumulator, implement a test that
 // assesses our headroom for a post-SUM gain stage.
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

@@ -4,7 +4,7 @@
 
 #include "binder/Parcel.h"
 
-#include <assert.h>
+#include <cassert>
 
 namespace android {
 

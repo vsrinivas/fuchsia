@@ -16,8 +16,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 static constexpr fxl::TimeDelta kMaxTrimPeriod =
     fxl::TimeDelta::FromMilliseconds(10);
@@ -29,7 +28,7 @@ StandardOutputBase::StandardOutputBase(AudioDeviceManager* manager)
   source_link_refs_.reserve(16u);
 }
 
-StandardOutputBase::~StandardOutputBase() {}
+StandardOutputBase::~StandardOutputBase() = default;
 
 zx_status_t StandardOutputBase::Init() {
   zx_status_t res = AudioOutput::Init();
@@ -239,8 +238,7 @@ void StandardOutputBase::ForeachLink(TaskType task_type) {
 
     // It would be nice to be able to use a dynamic cast for this, but currently
     // we are building with no-rtti
-    Bookkeeping* info =
-        static_cast<Bookkeeping*>(packet_link->bookkeeping().get());
+    auto* info = static_cast<Bookkeeping*>(packet_link->bookkeeping().get());
     FXL_DCHECK(info);
 
     // Ensure the mapping from source-frame to local-time is up-to-date.
@@ -412,8 +410,8 @@ bool StandardOutputBase::ProcessMix(
   FXL_DCHECK(input_offset_64 <= std::numeric_limits<int32_t>::max());
   FXL_DCHECK(input_offset_64 >= std::numeric_limits<int32_t>::min());
 
-  uint32_t output_offset = static_cast<uint32_t>(output_offset_64);
-  int32_t frac_input_offset = static_cast<int32_t>(input_offset_64);
+  auto output_offset = static_cast<uint32_t>(output_offset_64);
+  auto frac_input_offset = static_cast<int32_t>(input_offset_64);
 
   // Looks like we are ready to go. Mix.
   FXL_DCHECK(packet->frac_frame_len() <=
@@ -572,5 +570,4 @@ void StandardOutputBase::UpdateDestTrans(const MixJob& job, Bookkeeping* bk) {
   bk->dest_trans_gen_id = job.local_to_output_gen;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

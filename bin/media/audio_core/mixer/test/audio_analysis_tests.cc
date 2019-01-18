@@ -7,9 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/audio_analysis.h"
 #include "gtest/gtest.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Test uint8 version of CompareBuffers, which we use to test output buffers
 TEST(AnalysisHelpers, CompareBuffers_8) {
@@ -310,6 +308,4 @@ TEST(AnalysisHelpers, MeasureAudioFreq_Float) {
   EXPECT_EQ(5.0, magn_other);
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

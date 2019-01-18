@@ -11,9 +11,7 @@
 #include "lib/component/cpp/environment_services_helper.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 constexpr int16_t kPlaybackData1 = 0x1000;
 constexpr int16_t kPlaybackData2 = 0xfff;
@@ -200,7 +198,7 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   SetUpRenderer(0, kPlaybackData1);
   SetUpCapturer(0, kCaptureData1);
 
-  int16_t* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
+  auto* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
 
   // Add a callback for when we get our captured packet.
   bool produced_packet = false;
@@ -298,7 +296,7 @@ TEST_F(AudioLoopbackTest, DualStream) {
   // SetUp loopback capture
   SetUpCapturer(0, kCaptureData1);
 
-  int16_t* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
+  auto* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
 
   // Add a callback for when we get our captured packet.
   bool produced_packet = false;
@@ -389,6 +387,4 @@ TEST_F(AudioLoopbackTest, DualStream) {
   CleanUpCapturer(0);
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

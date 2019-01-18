@@ -6,8 +6,7 @@
 
 #include "garnet/bin/media/audio_core/audio_device_manager.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 constexpr zx_duration_t kMinFenceDistance = ZX_MSEC(200);
 constexpr zx_duration_t kMaxFenceDistance = kMinFenceDistance + ZX_MSEC(20);
@@ -163,8 +162,8 @@ void AudioInput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
       in_out_info->gain_db =
           fbl::clamp(in_out_info->gain_db, caps.min_gain, caps.max_gain);
     } else {
-      int32_t min_steps = static_cast<int32_t>(caps.min_gain / caps.gain_step);
-      int32_t max_steps = static_cast<int32_t>(caps.max_gain / caps.gain_step);
+      auto min_steps = static_cast<int32_t>(caps.min_gain / caps.gain_step);
+      auto max_steps = static_cast<int32_t>(caps.max_gain / caps.gain_step);
       int32_t steps = fbl::clamp(
           static_cast<int32_t>(in_out_info->gain_db / caps.gain_step),
           min_steps, max_steps);
@@ -188,5 +187,4 @@ void AudioInput::UpdateDriverGainState() {
   driver()->SendSetGain(state, dirty_flags);
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

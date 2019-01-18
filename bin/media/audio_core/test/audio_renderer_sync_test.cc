@@ -9,9 +9,7 @@
 #include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // AudioRendererSyncTest
@@ -124,6 +122,4 @@ TEST_F(AudioRendererSyncTest_Negative, PauseNoReplyWithoutFormat) {
   EXPECT_TRUE(audio_renderer_sync_.is_bound());
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

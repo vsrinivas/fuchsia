@@ -7,8 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/constants.h"
 #include "lib/media/timeline/timeline.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioRendererFormatInfo::AudioRendererFormatInfo(
     fuchsia::media::AudioStreamType format)
@@ -57,5 +56,4 @@ fbl::RefPtr<AudioRendererFormatInfo> AudioRendererFormatInfo::Create(
   return fbl::AdoptRef(new AudioRendererFormatInfo(std::move(format)));
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

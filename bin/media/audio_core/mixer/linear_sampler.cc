@@ -11,9 +11,7 @@
 #include "garnet/bin/media/audio_core/mixer/mixer_utils.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace mixer {
+namespace media::audio::mixer {
 
 // We specify alpha in fixed-point 19.13: a max val of "1.0" is 0x00002000.
 constexpr float kFramesPerPtsSubframe = 1.0f / (1 << kPtsFractionalBits);
@@ -99,7 +97,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
 
   using SR = SrcReader<SrcSampleType, SrcChanCount, DestChanCount>;
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping.
@@ -132,8 +130,7 @@ inline bool LinearSamplerImpl<DestChanCount, SrcSampleType, SrcChanCount>::Mix(
   }
 
   // "Source end" is the last valid input sub-frame that can be sampled.
-  int32_t src_end =
-      static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
 
   FXL_DCHECK(dest_off < dest_frames);
   FXL_DCHECK(src_end >= 0);
@@ -394,7 +391,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
              static_cast<uint32_t>(std::numeric_limits<int32_t>::max()));
 
   using DM = DestMixer<ScaleType, DoAccumulate>;
-  const SrcSampleType* src = static_cast<const SrcSampleType*>(src_void);
+  const auto* src = static_cast<const SrcSampleType*>(src_void);
 
   uint32_t dest_off = *dest_offset;
   uint32_t dest_off_start = dest_off;  // Only used when ramping
@@ -427,8 +424,7 @@ inline bool NxNLinearSamplerImpl<SrcSampleType>::Mix(
   }
 
   // This is the last sub-frame at which we can output without additional data.
-  int32_t src_end =
-      static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
+  auto src_end = static_cast<int32_t>(frac_src_frames - pos_filter_width() - 1);
 
   FXL_DCHECK(dest_off < dest_frames);
   FXL_DCHECK(src_end >= 0);
@@ -747,6 +743,4 @@ MixerPtr LinearSampler::Select(
   }
 }
 
-}  // namespace mixer
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::mixer

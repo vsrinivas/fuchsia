@@ -15,9 +15,7 @@ CodecRunner::CodecRunner(async_dispatcher_t* fidl_dispatcher,
   // nothing else to do here
 }
 
-CodecRunner::~CodecRunner() {
-  // nothing to do here
-}
+CodecRunner::~CodecRunner() = default;
 
 void CodecRunner::BindAndOwnSelf(
     fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,

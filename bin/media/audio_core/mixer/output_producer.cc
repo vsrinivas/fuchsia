@@ -5,7 +5,7 @@
 #include "garnet/bin/media/audio_core/mixer/output_producer.h"
 
 #include <fbl/algorithm.h>
-#include <math.h>
+#include <cmath>
 #include <limits>
 #include <type_traits>
 
@@ -13,8 +13,7 @@
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // Converting audio between float and int is surprisingly controversial.
 // (blog.bjornroche.com/2009/12/int-float-int-its-jungle-out-there.html etc. --
@@ -113,7 +112,7 @@ class OutputProducerImpl : public OutputProducer {
   void ProduceOutput(const float* source, void* dest_void,
                      uint32_t frames) const override {
     using DC = DestConverter<DType>;
-    DType* dest = static_cast<DType*>(dest_void);
+    auto* dest = static_cast<DType*>(dest_void);
 
     // Previously we clamped here; because of rounding, this is different for
     // each output type, so it is now handled in Convert() specializations.
@@ -161,5 +160,4 @@ OutputProducerPtr OutputProducer::Select(
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

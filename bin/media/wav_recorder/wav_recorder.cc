@@ -11,8 +11,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/media/audio/types.h"
 
-namespace media {
-namespace tools {
+namespace media::tools {
 
 // TODO(mpuryear): make these constexpr char[] and eliminate c_str() usage later
 static const std::string kLoopbackOption = "loopback";
@@ -502,5 +501,4 @@ void WavRecorder::OnQuit() {
   }
 }
 
-}  // namespace tools
-}  // namespace media
+}  // namespace media::tools

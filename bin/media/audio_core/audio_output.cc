@@ -9,11 +9,9 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioOutput::AudioOutput(AudioDeviceManager* manager)
     : AudioDevice(Type::Output, manager) {}
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

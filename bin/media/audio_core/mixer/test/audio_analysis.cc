@@ -10,9 +10,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // This library contains standalone functions that enable tests to analyze
@@ -416,6 +414,4 @@ template void MeasureAudioFreq<float>(float* audio, uint32_t buf_size,
                                       uint32_t freq, double* magn_signal,
                                       double* magn_other = nullptr);
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

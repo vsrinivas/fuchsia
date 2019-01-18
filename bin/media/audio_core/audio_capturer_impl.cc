@@ -16,8 +16,7 @@
 DECLARE_STATIC_SLAB_ALLOCATOR_STORAGE(
     ::media::audio::AudioCapturerImpl::PcbAllocatorTraits, 0x100);
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 zx_duration_t kAssumedWorstSourceFenceTime = ZX_MSEC(5);
 
@@ -845,7 +844,7 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
     }
 
     // Get our capture link bookkeeping.
-    Bookkeeping* info = static_cast<Bookkeeping*>(link->bookkeeping().get());
+    auto* info = static_cast<Bookkeeping*>(link->bookkeeping().get());
     FXL_DCHECK(info != nullptr);
 
     // If this gain scale is at or below our mute threshold, skip this source,
@@ -901,9 +900,9 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       int64_t sfrac_pts;  // start fractional frame pts
     } regions[2];
 
-    uint32_t start_frames_mod =
+    auto start_frames_mod =
         static_cast<uint32_t>(start_fence_frames % rb->frames());
-    uint32_t end_frames_mod =
+    auto end_frames_mod =
         static_cast<uint32_t>(end_fence_frames % rb->frames());
 
     if (start_frames_mod <= end_frames_mod) {
@@ -990,8 +989,8 @@ bool AudioCapturerImpl::MixToIntermediate(uint32_t mix_frames) {
       FXL_DCHECK(source_offset_64 >= std::numeric_limits<int32_t>::min());
 
       uint32_t region_frac_frame_len = region.len << kPtsFractionalBits;
-      uint32_t output_offset = static_cast<uint32_t>(output_offset_64);
-      int32_t frac_source_offset = static_cast<int32_t>(source_offset_64);
+      auto output_offset = static_cast<uint32_t>(output_offset_64);
+      auto frac_source_offset = static_cast<int32_t>(source_offset_64);
 
       FXL_DCHECK(frac_source_offset <
                  static_cast<int32_t>(region_frac_frame_len));
@@ -1097,7 +1096,7 @@ void AudioCapturerImpl::UpdateTransformation(
   info->dest_frames_to_frac_source_frames = TimelineFunction::Compose(
       src_clock_mono_to_ring_pos_frac_frames, frames_to_clock_mono_);
 
-  int64_t offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
+  auto offset = static_cast<int64_t>(rb_snap.position_to_end_fence_frames);
 
   info->clock_mono_to_frac_source_frames = TimelineFunction::Compose(
       TimelineFunction(-offset, 0, TimelineRate(1u, 1u)),
@@ -1435,5 +1434,4 @@ void AudioCapturerImpl::NotifyGainMuteChanged() {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

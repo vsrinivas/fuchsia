@@ -270,7 +270,7 @@ int main(int argc, const char** argv) {
     media_app.set_ramp_target_gain_db(std::stof(target_gain_db_str));
 
     // Convert signal duration of doublefloat seconds, to int64 nanoseconds.
-    zx_duration_t ramp_duration_nsec =
+    auto ramp_duration_nsec =
         static_cast<zx_duration_t>(media_app.get_duration() * 1000000000.0);
     if (command_line.HasOption(kStreamRampDurationSwitch)) {
       std::string ramp_duration_str = "";

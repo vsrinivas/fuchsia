@@ -4,8 +4,8 @@
 
 #include <utils/String16.h>
 
-#include <wchar.h>
 #include <codecvt>
+#include <cwchar>
 #include <locale>
 #include <string>
 
@@ -15,7 +15,7 @@ class DestructibleConverter : public std::codecvt<char16_t, char, mbstate_t> {
  public:
   DestructibleConverter(std::size_t refs = 0)
       : std::codecvt<char16_t, char, mbstate_t>(refs) {}
-  ~DestructibleConverter() {}
+  ~DestructibleConverter() override = default;
 };
 
 }  // anonymous namespace

@@ -6,8 +6,7 @@
 
 #include "garnet/bin/media/audio_core/audio_object.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
                      fbl::RefPtr<AudioObject> dest)
@@ -21,7 +20,6 @@ AudioLink::AudioLink(SourceType source_type, fbl::RefPtr<AudioObject> source,
              (dest_->type() == AudioObject::Type::AudioCapturer));
 }
 
-AudioLink::~AudioLink() {}
+AudioLink::~AudioLink() = default;
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

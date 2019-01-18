@@ -6,7 +6,7 @@
 
 namespace android {
 
-Mutex::Mutex() {}
+Mutex::Mutex() = default;
 
 Mutex::Mutex(const char* mutex_name) {}
 

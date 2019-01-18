@@ -7,9 +7,7 @@
 #include "garnet/bin/media/audio_core/mixer/no_op.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -708,6 +706,4 @@ TEST(Resampling, Reset_Linear) {
   EXPECT_TRUE(CompareBuffers(accum, expect, fbl::count_of(accum)));
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

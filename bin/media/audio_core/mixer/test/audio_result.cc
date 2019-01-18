@@ -4,14 +4,12 @@
 
 #include "garnet/bin/media/audio_core/mixer/test/audio_result.h"
 
-#include <stdio.h>
+#include <cstdio>
 #include <string>
 
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // See audio_result.h for in-depth descriptions of these class members/consts.
 //
@@ -682,6 +680,4 @@ void AudioResult::DumpDynamicRangeValues() {
          Gain::ScaleToDb(AudioResult::MinScaleNonZero));
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

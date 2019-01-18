@@ -8,9 +8,7 @@
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 #include "garnet/bin/media/audio_core/mixer/test/mixer_tests_shared.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 // Convenience abbreviation within this source file to shorten names
 using Resampler = ::media::audio::Mixer::Resampler;
@@ -416,6 +414,4 @@ void AudioPerformance::ProfileOutputType(uint32_t num_chans,
          num_chans, mean / 1000.0, first / 1000.0, best / 1000.0,
          worst / 1000.0);
 }
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

@@ -15,8 +15,7 @@
 #include "garnet/bin/media/audio_core/mixer/fx_loader.h"
 #include "garnet/bin/media/audio_core/throttle_output.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 AudioDeviceManager::AudioDeviceManager(AudioCoreImpl* service)
     : service_(service) {}
@@ -767,5 +766,4 @@ void AudioDeviceManager::CommitDirtySettings() {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

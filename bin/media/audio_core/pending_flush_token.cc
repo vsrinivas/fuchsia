@@ -7,8 +7,7 @@
 #include "garnet/bin/media/audio_core/audio_core_impl.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 PendingFlushToken::~PendingFlushToken() { FXL_DCHECK(was_recycled_); }
 
@@ -22,5 +21,4 @@ void PendingFlushToken::fbl_recycle() {
   }
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

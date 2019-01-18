@@ -6,8 +6,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // static
 fbl::RefPtr<DriverRingBuffer> DriverRingBuffer::Create(zx::vmo vmo,
@@ -66,5 +65,4 @@ zx_status_t DriverRingBuffer::Init(zx::vmo vmo, uint32_t frame_size,
   return res;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

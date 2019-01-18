@@ -4,15 +4,15 @@
 
 #include <utils/String8.h>
 
-#include <wchar.h>
 #include <cassert>
 #include <codecvt>
+#include <cwchar>
 #include <locale>
 #include <string>
 
 namespace android {
 
-String8::String8() {}
+String8::String8() = default;
 
 status_t String8::appendFormat(const char* format, ...) {
   va_list ap;

@@ -9,9 +9,7 @@
 #include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 //
 // AudioRendererTest
@@ -19,7 +17,7 @@ namespace test {
 // This set of tests verifies asynchronous usage of AudioRenderer.
 class AudioRendererTest : public gtest::RealLoopFixture {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   void TearDown() override;
 
   std::shared_ptr<component::Services> environment_services_;
@@ -414,6 +412,4 @@ TEST_F(AudioRendererTest_Negative, PauseNoReplyWithoutFormat) {
   ExpectDisconnect();
 }
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

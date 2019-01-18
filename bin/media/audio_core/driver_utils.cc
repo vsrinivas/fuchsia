@@ -8,8 +8,7 @@
 #include "garnet/bin/media/audio_core/driver_utils.h"
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace driver_utils {
+namespace media::driver_utils {
 
 namespace {
 static constexpr audio_sample_format_t AUDIO_SAMPLE_FORMAT_UNSIGNED_8BIT =
@@ -68,5 +67,4 @@ bool DriverSampleFormatToAudioSampleFormat(
   return true;
 }
 
-}  // namespace driver_utils
-}  // namespace media
+}  // namespace media::driver_utils

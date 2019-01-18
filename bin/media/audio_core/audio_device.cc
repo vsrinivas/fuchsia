@@ -10,8 +10,7 @@
 #include "lib/fxl/logging.h"
 #include "lib/fxl/time/time_delta.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 namespace {
 std::string AudioDeviceUniqueIdToString(const audio_stream_unique_id_t& id) {
@@ -224,5 +223,4 @@ void AudioDevice::GetDeviceInfo(
   device_settings_->GetGainInfo(&out_info->gain_info);
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

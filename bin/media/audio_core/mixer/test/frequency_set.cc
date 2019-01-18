@@ -4,9 +4,7 @@
 
 #include "garnet/bin/media/audio_core/mixer/test/frequency_set.h"
 
-namespace media {
-namespace audio {
-namespace test {
+namespace media::audio::test {
 
 bool FrequencySet::UseFullFrequencySet = false;
 
@@ -56,6 +54,4 @@ const std::array<uint32_t, FrequencySet::kNumSummaryIdxs>
         31   //  => 12000 Hz
 };
 
-}  // namespace test
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio::test

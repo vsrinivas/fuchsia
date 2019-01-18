@@ -8,8 +8,7 @@
 
 #include "lib/fxl/logging.h"
 
-namespace media {
-namespace audio {
+namespace media::audio {
 
 // Private internal method
 bool FxLoader::TryLoad(void* lib, const char* export_name,
@@ -322,5 +321,4 @@ zx_status_t FxLoader::FxFlush(fx_token_t fx_token) {
   return ZX_OK;
 }
 
-}  // namespace audio
-}  // namespace media
+}  // namespace media::audio

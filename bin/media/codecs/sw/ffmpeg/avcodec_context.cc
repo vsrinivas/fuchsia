@@ -58,7 +58,7 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
   ZX_DEBUG_ASSERT(oob.empty() || format_details.codec_oob_bytes);
   if (!oob.empty()) {
     // Freed in AVCodecContext deleter in avcodec_free.
-    uint8_t* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob.size()));
+    auto* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob.size()));
     ZX_ASSERT(extradata);
     std::memcpy(extradata, oob.data(), oob.size());
     decoder->avcodec_context_->extradata = extradata;
