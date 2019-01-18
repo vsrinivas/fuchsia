@@ -8,7 +8,6 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
-	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -67,17 +66,22 @@ func (o *TestRunnerOutput) Record(result testResult) {
 	}
 }
 
-// TarSummary tars a summary file in the testrunner's output archive.
-func (o *TestRunnerOutput) TarSummary() error {
+// Complete finishes producing output for the test run.
+func (o *TestRunnerOutput) Complete() error {
 	if o.Tar == nil {
-		return errors.New("TarSummary was called, but tar ouput was not initialized")
+		return nil
 	}
 
 	bytes, err := json.Marshal(o.Summary.Summary)
 	if err != nil {
 		return err
 	}
-	return botanist.ArchiveBuffer(o.Tar.Writer, bytes, "summary.json")
+
+	if err := botanist.ArchiveBuffer(o.Tar.Writer, bytes, "summary.json"); err != nil {
+		return err
+	}
+
+	return o.Tar.Writer.Close()
 }
 
 type testResult struct {
@@ -122,6 +126,7 @@ func main() {
 		TAP:     NewTAPRecorder(os.Stdout, len(tests)),
 		Summary: &SummaryRecorder{},
 	}
+	defer output.Complete()
 
 	// Add an archive Recorder if specified.
 	if archive != "" {
@@ -130,7 +135,6 @@ func main() {
 			log.Fatalf("failed to initialize tar recorder: %v", err)
 		}
 		output.Tar = tar
-		defer output.TarSummary()
 	}
 
 	// Prepare the Fuchsia DeviceContext.
