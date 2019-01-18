@@ -16,6 +16,7 @@
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
+#include <lib/operation/nand.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
@@ -23,6 +24,8 @@
 #include "logical-to-physical-map.h"
 
 namespace nand {
+
+using NandOperation = nand::Operation<>;
 
 using PartitionInfo = fuchsia_hardware_skipblock_PartitionInfo;
 using ReadWriteOperation = fuchsia_hardware_skipblock_ReadWriteOperation;
@@ -72,8 +75,8 @@ private:
     fbl::Mutex lock_;
     fuchsia_hardware_nand_Info nand_info_;
     size_t parent_op_size_;
-    // Operation buffer of size parent_op_size_.
-    fbl::Array<uint8_t> nand_op_ __TA_GUARDED(lock_);
+
+    std::optional<NandOperation> nand_op_ __TA_GUARDED(lock_);
 
     const uint32_t copy_count_;
 };

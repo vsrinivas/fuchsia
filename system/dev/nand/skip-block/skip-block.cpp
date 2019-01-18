@@ -12,11 +12,11 @@
 #include <ddk/protocol/nand.h>
 
 #include <fbl/algorithm.h>
-#include <fbl/auto_lock.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
-#include <lib/zx/vmo.h>
 #include <lib/sync/completion.h>
+#include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 
 #include <utility>
@@ -132,7 +132,7 @@ zx_status_t Read(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
 zx_status_t Write(void* ctx, const ReadWriteOperation* op, fidl_txn_t* txn) {
     auto* device = reinterpret_cast<SkipBlockDevice*>(ctx);
     bool bad_block_grown;
-    zx_status_t status = device->Write(*op, & bad_block_grown);
+    zx_status_t status = device->Write(*op, &bad_block_grown);
     return fuchsia_hardware_skipblock_SkipBlockWrite_reply(txn, status, bad_block_grown);
 }
 
@@ -227,12 +227,10 @@ zx_status_t SkipBlockDevice::Bind() {
         return ZX_ERR_INTERNAL;
     }
 
-    fbl::AllocChecker ac;
-    fbl::Array<uint8_t> nand_op(new (&ac) uint8_t[parent_op_size_], parent_op_size_);
-    if (!ac.check()) {
+    nand_op_ = NandOperation::Alloc(parent_op_size_);
+    if (!nand_op_) {
         return ZX_ERR_NO_MEMORY;
     }
-    nand_op_ = std::move(nand_op);
 
     // TODO(surajmalhotra): Potentially make this lazy instead of in the bind.
     fbl::Array<uint32_t> bad_blocks;
@@ -307,7 +305,7 @@ zx_status_t SkipBlockDevice::Read(const ReadWriteOperation& op) {
         .mark_bad = false,
     };
 
-    auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+    nand_operation_t* nand_op = nand_op_->operation();
     nand_op->rw.command = NAND_OP_READ;
     nand_op->rw.data_vmo = op.vmo;
     nand_op->rw.oob_vmo = ZX_HANDLE_INVALID;
@@ -354,7 +352,7 @@ zx_status_t SkipBlockDevice::Write(const ReadWriteOperation& op, bool* bad_block
                 .mark_bad = false,
             };
 
-            auto* nand_op = reinterpret_cast<nand_operation_t*>(nand_op_.get());
+            nand_operation_t* nand_op = nand_op_->operation();
             nand_op->erase.command = NAND_OP_ERASE;
             nand_op->erase.first_block = physical_block;
             nand_op->erase.num_blocks = 1;
