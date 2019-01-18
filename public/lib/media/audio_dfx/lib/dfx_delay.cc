@@ -69,7 +69,7 @@ DfxDelay::DfxDelay(uint32_t frame_rate, uint16_t channels)
 
 // Returns FRAMES of delay. We cache SAMPLES for convenience, so convert back.
 bool DfxDelay::GetControlValue(uint16_t control_num, float* value_out) {
-  *value_out = delay_samples_ / channels_in_;
+  *value_out = static_cast<float>(delay_samples_) / channels_in_;
   return true;
 }
 

@@ -487,7 +487,7 @@ TEST_F(FxDelayTest, ProcessInPlace) {
   uint16_t control_num = 0;
   ASSERT_EQ(fx_loader_.FxSetControlValue(
                 dfx_token, control_num,
-                static_cast<float>(delay_samples / kTestChans)),
+                static_cast<float>(delay_samples) / kTestChans),
             ZX_OK);
 
   EXPECT_EQ(fx_loader_.FxProcessInPlace(dfx_token, 4, delay_buff_in_out),

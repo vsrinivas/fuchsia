@@ -15,9 +15,9 @@ namespace audio {
 namespace test {
 
 //
-// AudioTest
+// AudioBase
 //
-class AudioTest : public gtest::RealLoopFixture {
+class AudioBase : public gtest::RealLoopFixture {
  protected:
   virtual void SetUp() override;
   void TearDown() override;
@@ -33,9 +33,17 @@ class AudioTest : public gtest::RealLoopFixture {
 };
 
 //
+// AudioTest
+//
+class AudioTest : public AudioBase {
+ protected:
+  void SetUp() override;
+};
+
+//
 // SystemGainMuteTest class
 //
-class SystemGainMuteTest : public AudioTest {
+class SystemGainMuteTest : public AudioBase {
  protected:
   void SetUp() override;
 
@@ -51,10 +59,10 @@ class SystemGainMuteTest : public AudioTest {
 };
 
 //
-// AudioTest implementation
+// AudioBase implementation
 //
 // Connect to Audio interface and set an error handler
-void AudioTest::SetUp() {
+void AudioBase::SetUp() {
   ::gtest::RealLoopFixture::SetUp();
 
   environment_services_ = component::GetEnvironmentServices();
@@ -63,19 +71,16 @@ void AudioTest::SetUp() {
     error_occurred_ = true;
     QuitLoop();
   });
-
-  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
-  ASSERT_TRUE(audio_.is_bound());
 }
 
-void AudioTest::TearDown() {
+void AudioBase::TearDown() {
   ASSERT_FALSE(error_occurred_);
 
   ::gtest::RealLoopFixture::TearDown();
 }
 
 // Expecting NOT to receive a disconnect. Wait, then check for errors.
-bool AudioTest::ReceiveNoDisconnectCallback() {
+bool AudioBase::ReceiveNoDisconnectCallback() {
   bool timed_out = RunLoopWithTimeout(kDurationTimeoutExpected);
   EXPECT_FALSE(error_occurred_);
   EXPECT_TRUE(timed_out) << kNoTimeoutErr;
@@ -84,19 +89,22 @@ bool AudioTest::ReceiveNoDisconnectCallback() {
 }
 
 //
+// AudioTest implementation
+//
+void AudioTest::SetUp() {
+  AudioBase::SetUp();
+
+  ASSERT_TRUE(RunLoopWithTimeout(kDurationTimeoutExpected)) << kConnectionErr;
+  ASSERT_TRUE(audio_.is_bound());
+}
+
+//
 // SystemGainMuteTest implementation
 //
 // Register for notification of SystemGainMute changes; receive initial values
 // and set the system to a known baseline for gain/mute testing.
 void SystemGainMuteTest::SetUp() {
-  ::gtest::RealLoopFixture::SetUp();
-  
-  environment_services_ = component::GetEnvironmentServices();
-  environment_services_->ConnectToService(audio_.NewRequest());
-  audio_.set_error_handler([this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  });
+  AudioBase::SetUp();
 
   audio_.events().SystemGainMuteChanged = [this](float gain_db, bool muted) {
     received_gain_db_ = gain_db;
