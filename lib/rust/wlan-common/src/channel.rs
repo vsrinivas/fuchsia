@@ -227,6 +227,32 @@ impl Channel {
     pub fn is_5ghz(&self) -> bool {
         self.is_valid_5ghz()
     }
+
+    fn is_unii1(&self) -> bool {
+        let p = self.primary;
+        p >= 32 && p <= 50
+    }
+
+    fn is_unii2a(&self) -> bool {
+        let p = self.primary;
+        // Note the overlap with U-NII-1
+        p >= 50 && p <= 68
+    }
+
+    fn is_unii2c(&self) -> bool {
+        let p = self.primary;
+        p >= 96 && p <= 144
+    }
+
+    fn is_unii3(&self) -> bool {
+        let p = self.primary;
+        // Note the overlap with U-NII-2C
+        p >= 138 && p <= 165
+    }
+
+    pub fn is_dfs(&self) -> bool {
+        self.is_unii2a() || self.is_unii2c()
+    }
 }
 
 #[cfg(test)]
@@ -400,5 +426,14 @@ mod tests {
         assert!(!Channel::new(1, Cbw::Cbw20).is_5ghz());
         assert!(Channel::new(36, Cbw::Cbw20).is_5ghz());
         assert!(!Channel::new(36, Cbw::Cbw20).is_2ghz());
+    }
+
+    #[test]
+    fn test_is_dfs() {
+        assert!(!Channel::new(1, Cbw::Cbw20).is_dfs());
+        assert!(!Channel::new(36, Cbw::Cbw20).is_dfs());
+        assert!(Channel::new(50, Cbw::Cbw20).is_dfs());
+        assert!(Channel::new(144, Cbw::Cbw20).is_dfs());
+        assert!(!Channel::new(149, Cbw::Cbw20).is_dfs());
     }
 }
