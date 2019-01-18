@@ -5,8 +5,9 @@
 use crate::server::sl4f::macros::dtag;
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::{
-    AttributePermissions, Characteristic, LocalServiceDelegateMarker, LocalServiceMarker,
-    LocalServiceProxy, SecurityRequirements, Server_Marker, Server_Proxy, ServiceInfo,
+    AttributePermissions, Characteristic, Descriptor, LocalServiceDelegateMarker,
+    LocalServiceMarker, LocalServiceProxy, SecurityRequirements, Server_Marker, Server_Proxy,
+    ServiceInfo,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
@@ -16,6 +17,7 @@ use fuchsia_zircon as zx;
 use parking_lot::RwLock;
 use regex::Regex;
 use serde_json::value::Value;
+use std::collections::HashMap;
 
 use crate::bluetooth::constants::{
     PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM, PERMISSION_WRITE_ENCRYPTED,
@@ -42,6 +44,10 @@ impl Counter {
 
 #[derive(Debug)]
 struct InnerGattServerFacade {
+    /// attribute_value_mapping: A Hashmap that will be used for capturing
+    /// and updating Characteristic and Descriptor values for each service.
+    attribute_value_mapping: HashMap<u64, Vec<u8>>,
+
     // A generic counter GATT server attributes
     generic_id_counter: Counter,
 
@@ -65,6 +71,7 @@ impl GattServerFacade {
     pub fn new() -> GattServerFacade {
         GattServerFacade {
             inner: RwLock::new(InnerGattServerFacade {
+                attribute_value_mapping: HashMap::new(),
                 generic_id_counter: Counter::new(),
                 server_proxy: None,
                 service_proxies: Vec::new(),
@@ -87,6 +94,26 @@ impl GattServerFacade {
                 }
                 service
             }
+        }
+    }
+
+    /// Function to take the input attribute value and parse it to
+    /// a byte array. Types can be Strings, u8, or generic Array.
+    pub fn parse_attribute_value_to_byte_array(&self, value_to_parse: &Value) -> Vec<u8> {
+        match value_to_parse {
+            Value::String(obj) => {
+                String::from(obj.as_str()).into_bytes()
+            }
+            Value::Number(obj) => {
+                match obj.as_u64() {
+                    Some(num) => vec![num as u8],
+                    None => vec![]
+                }
+            }
+            Value::Array(obj) => {
+                 obj.into_iter().filter_map(|v| v.as_u64()).map(|v| v as u8).collect()
+            }
+            _ => vec![],
         }
     }
 
@@ -194,21 +221,74 @@ impl GattServerFacade {
         }
     }
 
-    pub fn generate_characteristics(
-        &self, characteristic_list_json: &Value,
-    ) -> Vec<Characteristic> {
+    pub fn generate_descriptors(&self, descriptor_list_json: &Value) -> Vec<Descriptor> {
         // TODO: Parse characteristic_json_list to create Characteristics.
         fx_log_info!(
             tag: &dtag!(),
-            "Generating characteristics from json input {:?}",
-            characteristic_list_json
+            "Generating descriptors from json input {:?}",
+            descriptor_list_json
         );
-        // TODO: Just a placeholder until it is used when Characteristics are
-        // actually being parsed.
-        self.permissions_and_properties_from_raw_num(0, 0);
+        let descriptors: Vec<Descriptor> = Vec::new();
+        if descriptor_list_json.is_null() {
+            ()
+        }
+        descriptors
+    }
 
-        let characteristics: Vec<Characteristic> = Vec::new();
-        characteristics
+    pub fn generate_characteristics(
+        &self, characteristic_list_json: &Value,
+    ) -> Result<Vec<Characteristic>, Error> {
+        let mut characteristics: Vec<Characteristic> = Vec::new();
+        if characteristic_list_json.is_null() {
+            return Ok(characteristics);
+        }
+
+        let characteristic_list = match characteristic_list_json.as_array() {
+            Some(c) => c,
+            None => bail!("Attribute 'characteristic' is not a parseable list."),
+        };
+
+        for characteristic in characteristic_list.into_iter() {
+            let characteristic_uuid = match characteristic["uuid"].as_str() {
+                Some(uuid) => uuid.to_string(),
+                None => bail!("Characteristic uuid was unable to cast to str."),
+            };
+
+            let characteristic_properties = match characteristic["properties"].as_u64() {
+                Some(properties) => properties as u32,
+                None => bail!("Characteristic properties was unable to cast to u64."),
+            };
+
+            let raw_characteristic_permissions = match characteristic["permissions"].as_u64() {
+                Some(permissions) => permissions as u32,
+                None => bail!("Characteristic permissions was unable to cast to u64."),
+            };
+
+            let characteristic_value =
+                self.parse_attribute_value_to_byte_array(&characteristic["value"]);
+            let descriptor_list = &characteristic["descriptors"];
+            let descriptors = self.generate_descriptors(descriptor_list);
+
+            let characteristic_permissions = self.permissions_and_properties_from_raw_num(
+                raw_characteristic_permissions,
+                characteristic_properties,
+            );
+            let characteristic_id = self.inner.write().generic_id_counter.next();
+            self.inner
+                .write()
+                .attribute_value_mapping
+                .insert(characteristic_id, characteristic_value);
+            let characteristic_obj = Characteristic {
+                id: characteristic_id,
+                type_: characteristic_uuid,
+                properties: characteristic_properties,
+                permissions: Some(Box::new(characteristic_permissions)),
+                descriptors: Some(descriptors),
+            };
+
+            characteristics.push(characteristic_obj);
+        }
+        Ok(characteristics)
     }
 
     pub fn generate_service(&self, service_json: &Value) -> Result<ServiceInfo, Error> {
@@ -231,7 +311,7 @@ impl GattServerFacade {
         };
 
         //Get the Characteristics from the service.
-        let characteristics = self.generate_characteristics(&service_json["characteristics"]);
+        let characteristics = self.generate_characteristics(&service_json["characteristics"])?;
 
         // Includes: TBD
         let includes = None;
@@ -365,6 +445,7 @@ impl GattServerFacade {
         };
 
         for service in service_list.into_iter() {
+            self.inner.write().attribute_value_mapping.clear();
             let service_info = self.generate_service(service)?;
             let service_uuid = &service["uuid"];
             await!(self.publish_service(service_info, service_uuid.to_string()))?;
