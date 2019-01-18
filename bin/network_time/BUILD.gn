@@ -5,8 +5,6 @@
 import("//build/package.gni")
 
 package("network_time") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
