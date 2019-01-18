@@ -1,11 +1,10 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
-# Use of this source code is governed by a BSD-style license that can be
-# found in the LICENSE file.
+#Copyright 2018 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
 
 import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/test/test_package.gni")
-
 rustc_binary("bin") {
   name = "wlan_hw_sim"
   with_unit_tests = true
@@ -60,6 +59,18 @@ test_package("wlan-hw-sim-tests") {
   tests = [
     {
       name = "wlan_hw_sim_bin_test"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+        {
+          dimensions = {
+            device_type = "QEMU"
+          }
+        },
+      ]
     },
   ]
 }
