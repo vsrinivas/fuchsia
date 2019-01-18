@@ -183,6 +183,7 @@ void dpc_init_for_cpu(void) {
     char name[10];
     snprintf(name, sizeof(name), "dpc-%u", cpu_num);
     cpu->dpc_thread = thread_create(name, &dpc_thread, NULL, DPC_THREAD_PRIORITY);
+    DEBUG_ASSERT(cpu->dpc_thread != nullptr);
     thread_set_cpu_affinity(cpu->dpc_thread, cpu_num_to_mask(cpu_num));
     thread_resume(cpu->dpc_thread);
 }
