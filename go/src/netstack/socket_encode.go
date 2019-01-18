@@ -67,20 +67,6 @@ func (v *C.struct_zxrio_sockopt_req_reply) MarshalTo(data []byte) (int, error) {
 	return n, nil
 }
 
-func (v *C.struct_tcp_info) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_struct_tcp_info
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	// TODO(tamird): why are we encoding 144 bytes into a 128 byte buffer?
-	if n < size {
-		n += 16
-	}
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
-}
-
 func (v *C.struct_zxrio_sockaddr_reply) MarshalTo(data []byte) (int, error) {
 	const size = C.sizeof_struct_zxrio_sockaddr_reply
 

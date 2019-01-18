@@ -5,6 +5,7 @@
 package netstack
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"log"
@@ -13,7 +14,6 @@ import (
 	"syscall/zx/mxerror"
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
-	"time"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
@@ -500,160 +500,52 @@ func zxNetError(e *tcpip.Error) zx.Status {
 }
 
 func (ios *iostate) opGetSockOpt(msg *zxsocket.Msg) zx.Status {
-	var val C.struct_zxrio_sockopt_req_reply
-	if err := val.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
+	var reqReply C.struct_zxrio_sockopt_req_reply
+	if err := reqReply.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
 			log.Printf("getsockopt: decode argument: %v", err)
 		}
 		return errStatus(err)
 	}
-	opt, err := val.Unpack()
+	val, err := GetSockOpt(ios.ep, ios.transProto, int16(reqReply.level), int16(reqReply.optname))
 	if err != nil {
-		return errStatus(err)
+		return zxNetError(err)
 	}
-	switch o := opt.(type) {
-	case tcpip.ErrorOption:
-		err := ios.ep.GetSockOpt(o)
-
-		errno := uint32(0)
-		if err != nil {
-			// TODO: should this be a unix errno?
-			errno = uint32(zxNetError(err))
-		}
-		binary.LittleEndian.PutUint32(val.opt(), errno)
-		val.optlen = 4
-	case tcpip.SendBufferSizeOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.ReceiveBufferSizeOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.ReceiveQueueSizeOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.DelayOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		// Socket option is TCP_NODELAY, so we need to invert the delay flag.
-		if o != 0 {
-			o = 0
-		} else {
-			o = 1
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.ReuseAddressOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.ReusePortOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.V6OnlyOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.MulticastTTLOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.KeepaliveEnabledOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.KeepaliveIdleOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(time.Duration(o).Seconds()))
-		val.optlen = 4
-	case tcpip.KeepaliveIntervalOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(time.Duration(o).Seconds()))
-		val.optlen = 4
-	case tcpip.KeepaliveCountOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		binary.LittleEndian.PutUint32(val.opt(), uint32(o))
-		val.optlen = 4
-	case tcpip.TCPInfoOption:
-		if err := ios.ep.GetSockOpt(&o); err != nil {
-			return zxNetError(err)
-		}
-		info := C.struct_tcp_info{
-			// Microseconds.
-			tcpi_rtt:    C.uint(o.RTT.Nanoseconds() / 1000),
-			tcpi_rttvar: C.uint(o.RTTVar.Nanoseconds() / 1000),
-		}
-		n, err := info.MarshalTo(val.opt())
+	buf := bytes.NewBuffer(reqReply.opt()[:0])
+	if err := binary.Write(buf, binary.LittleEndian, val); err != nil {
+		panic(err)
+	}
+	b := buf.Bytes()
+	n := copy(reqReply.opt(), b)
+	if _, ok := val.(C.struct_tcp_info); ok {
+		// TODO(tamird): why are we encoding 144 bytes into a 128 byte buffer?
+		n += 16
+	}
+	if n < len(b) {
+		panic(fmt.Sprintf("short %T: %d/%d", val, n, len(b)))
+	} else {
+		reqReply.optlen = C.socklen_t(n)
+	}
+	{
+		n, err := reqReply.MarshalTo(msg.Data[:])
 		if err != nil {
 			return errStatus(err)
 		}
-		val.optlen = C.socklen_t(n)
-	default:
-		b := val.opt()
-		for i := range b {
-			b[i] = 0
-		}
-
-		if opt != nil {
-			val.optlen = 4
-		} else {
-			val.optlen = 0
-		}
-
-		log.Printf("unsupported getsockopt(%d, %d)", val.level, val.optname)
+		msg.Datalen = uint32(n)
 	}
-	n, err := val.MarshalTo(msg.Data[:])
-	if err != nil {
-		return errStatus(err)
-	}
-	msg.Datalen = uint32(n)
 	return zx.ErrOk
 }
 
 func (ios *iostate) opSetSockOpt(msg *zxsocket.Msg) zx.Status {
-	var val C.struct_zxrio_sockopt_req_reply
-	if err := val.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
+	var reqReply C.struct_zxrio_sockopt_req_reply
+	if err := reqReply.Unmarshal(msg.Data[:msg.Datalen]); err != nil {
 		if debug {
 			log.Printf("setsockopt: decode argument: %v", err)
 		}
 		return errStatus(err)
 	}
-	opt, err := val.Unpack()
-	if err != nil {
-		return errStatus(err)
-	}
-	if opt != nil {
-		if err := ios.ep.SetSockOpt(opt); err != nil {
-			return zxNetError(err)
-		}
-	} else {
-		log.Printf("unsupported setsockopt: level=%d name=%d)", val.level, val.optname)
+	if err := SetSockOpt(ios.ep, int16(reqReply.level), int16(reqReply.optname), reqReply.opt()[:reqReply.optlen]); err != nil {
+		return zxNetError(err)
 	}
 	msg.Datalen = 0
 	msg.SetOff(0)
