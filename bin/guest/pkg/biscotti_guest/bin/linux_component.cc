@@ -42,24 +42,6 @@ LinuxComponent::LinuxComponent(
       view_bindings_.GetHandler(this));
   outgoing_.AddPublicService<fuchsia::ui::viewsv1::ViewProvider>(
       v1_view_bindings_.GetHandler(this));
-
-  // TODO(CF-268): Remove once services are pulled from the public directory.
-  outgoing_.root_dir()->AddEntry(
-      fuchsia::ui::app::ViewProvider::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        view_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(
-                      std::move(channel)));
-        return ZX_OK;
-      })));
-  outgoing_.root_dir()->AddEntry(
-      fuchsia::ui::viewsv1::ViewProvider::Name_,
-      fbl::AdoptRef(new fs::Service([this](zx::channel channel) {
-        v1_view_bindings_.AddBinding(
-            this, fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>(
-                      std::move(channel)));
-        return ZX_OK;
-      })));
 }
 
 LinuxComponent::~LinuxComponent() = default;
