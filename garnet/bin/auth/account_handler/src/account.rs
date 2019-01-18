@@ -1,6 +1,8 @@
 // Copyright 2018 The Fuchsia Authors. All rights reserved.
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
+extern crate serde;
+extern crate serde_json;
 
 use crate::account_handler::AccountHandler;
 use crate::auth_provider_supplier::AuthProviderSupplier;
@@ -22,10 +24,19 @@ use fidl_fuchsia_auth_account_internal::AccountHandlerContextMarker;
 use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::{error, warn};
-use std::path::Path;
+use serde_derive::{Deserialize, Serialize};
+use std::fs::{self, File};
+use std::path::{Path, PathBuf};
 use std::sync::Arc;
 
-/// The file name to use for a token manager database.
+/// Name of account doc file (one per account), within the account's dir.
+const ACCOUNT_DOC: &str = "account.json";
+
+/// Name of temporary account doc file, within the account's dir.
+const ACCOUNT_DOC_TMP: &str = "account.json.tmp";
+
+/// The file name to use for a token manager database. The location is supplied
+/// by `AccountHandlerContext.GetAccountPath()`
 const TOKEN_DB: &str = "tokens.json";
 
 /// The context that a particular request to an Account should be executed in, capturing
@@ -58,21 +69,49 @@ impl Account {
     /// implemented.
     const DEFAULT_ACCOUNT_NAME: &'static str = "Unnamed account";
 
-    /// Constructs a new Account.
-    pub fn new(
-        account_id: LocalAccountId, account_dir: &Path,
+    /// Manually construct an account object, shouldn't normally be called directly.
+    fn new(
+        account_id: LocalAccountId, persona_id: LocalPersonaId, account_dir: &Path,
         context: ClientEnd<AccountHandlerContextMarker>,
     ) -> Result<Account, AccountManagerError> {
-        let persona_id = LocalPersonaId::new(rand::random::<u64>());
-        let db_path = account_dir.join(TOKEN_DB);
+        let token_db_path = account_dir.join(TOKEN_DB);
         let token_manager = Arc::new(
-            TokenManager::new(&db_path, AuthProviderSupplier::new(context)?)
+            TokenManager::new(&token_db_path, AuthProviderSupplier::new(context)?)
                 .account_manager_status(Status::UnknownError)?,
         );
         Ok(Self {
             id: account_id.clone(),
             default_persona: Arc::new(Persona::new(persona_id, account_id, token_manager)),
         })
+    }
+
+    /// Creates a new Fuchsia account and persist it on disk.
+    pub fn create(
+        account_id: LocalAccountId, account_dir: &Path,
+        context: ClientEnd<AccountHandlerContextMarker>,
+    ) -> Result<Account, AccountManagerError> {
+        fs::create_dir(account_dir).map_err(|err| {
+            warn!("Failed to create account dir: {:?}", err);
+            AccountManagerError::new(Status::IoError).with_cause(err)
+        })?;
+        let local_persona_id = LocalPersonaId::new(rand::random::<u64>());
+        let stored_account = StoredAccount::new(local_persona_id.clone());
+        stored_account.save(account_dir)?;
+        Self::new(account_id, local_persona_id, account_dir, context)
+    }
+
+    /// Loads an existing Fuchsia account from disk.
+    pub fn load(
+        account_id: LocalAccountId, account_dir: &Path,
+        context: ClientEnd<AccountHandlerContextMarker>,
+    ) -> Result<Account, AccountManagerError> {
+        let stored_account = StoredAccount::load(account_dir)?;
+        Self::new(
+            account_id,
+            stored_account.default_persona_id,
+            account_dir,
+            context,
+        )
     }
 
     /// A device-local identifier for this account
@@ -214,6 +253,69 @@ impl Account {
     }
 }
 
+/// Json-representation of Fuchsia account state, on disk. As this format evolves,
+/// cautiousness is encouraged to ensure backwards compatibility.
+#[derive(Serialize, Deserialize)]
+struct StoredAccount {
+    /// Default persona id for this account
+    default_persona_id: LocalPersonaId,
+}
+
+impl StoredAccount {
+    /// Create a new stored account. No side effects.
+    pub fn new(default_persona_id: LocalPersonaId) -> StoredAccount {
+        Self { default_persona_id }
+    }
+
+    /// Load StoredAccount from disk
+    pub fn load(account_dir: &Path) -> Result<StoredAccount, AccountManagerError> {
+        let path = Self::path(account_dir);
+        if !path.exists() {
+            warn!("Failed to locate account doc: {:?}", path);
+            return Err(AccountManagerError::new(Status::InternalError));
+        };
+        let file = File::open(path).map_err(|err| {
+            warn!("Failed to read account doc: {:?}", err);
+            AccountManagerError::new(Status::IoError).with_cause(err)
+        })?;
+        serde_json::from_reader(file).map_err(|err| {
+            warn!("Failed to parse account doc: {:?}", err);
+            AccountManagerError::new(Status::InternalError).with_cause(err)
+        })
+    }
+
+    /// Convenience path to the doc file, given the account_dir
+    fn path(account_dir: &Path) -> PathBuf {
+        account_dir.join(ACCOUNT_DOC)
+    }
+
+    /// Convenience path to the doc temp file, given the account_dir; used for safe writing
+    fn tmp_path(account_dir: &Path) -> PathBuf {
+        account_dir.join(ACCOUNT_DOC_TMP)
+    }
+
+    /// Write StoredAccount to disk, ensuring the file is either written completely or not
+    /// modified.
+    pub fn save(&self, account_dir: &Path) -> Result<(), AccountManagerError> {
+        let path = Self::path(account_dir);
+        let tmp_path = Self::tmp_path(account_dir);
+        {
+            let tmp_file = File::create(&tmp_path).map_err(|err| {
+                warn!("Failed to create account tmp doc: {:?}", err);
+                AccountManagerError::new(Status::IoError).with_cause(err)
+            })?;
+            serde_json::to_writer(tmp_file, self).map_err(|err| {
+                warn!("Failed to write account doc: {:?}", err);
+                AccountManagerError::new(Status::IoError).with_cause(err)
+            })?;
+        }
+        fs::rename(&tmp_path, &path).map_err(|err| {
+            warn!("Failed to rename account doc: {:?}", err);
+            AccountManagerError::new(Status::IoError).with_cause(err)
+        })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -238,14 +340,22 @@ mod tests {
             }
         }
 
-        fn create_account(&self) -> Account {
+        fn create_account(&self) -> Result<Account, AccountManagerError> {
             let (account_handler_context_client_end, _) = create_endpoints().unwrap();
-            Account::new(
+            Account::create(
                 TEST_ACCOUNT_ID.clone(),
-                &self.location.path,
+                &self.location.test_path(),
                 account_handler_context_client_end,
             )
-            .unwrap()
+        }
+
+        fn load_account(&self) -> Result<Account, AccountManagerError> {
+            let (account_handler_context_client_end, _) = create_endpoints().unwrap();
+            Account::load(
+                TEST_ACCOUNT_ID.clone(),
+                &self.location.test_path(),
+                account_handler_context_client_end,
+            )
         }
 
         fn run<TestFn, Fut>(&mut self, test_object: Account, test_fn: TestFn)
@@ -281,10 +391,11 @@ mod tests {
 
     #[test]
     fn test_random_persona_id() {
-        let test = Test::new();
+        let mut test = Test::new();
         // Generating two accounts with the same accountID should lead to two different persona IDs
-        let account_1 = test.create_account();
-        let account_2 = test.create_account();
+        let account_1 = test.create_account().unwrap();
+        test.location = TempLocation::new();
+        let account_2 = test.create_account().unwrap();
         assert_ne!(
             account_1.default_persona.id(),
             account_2.default_persona.id()
@@ -294,16 +405,41 @@ mod tests {
     #[test]
     fn test_get_account_name() {
         let mut test = Test::new();
-        test.run(test.create_account(), async move |proxy| {
+        test.run(test.create_account().unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_account_name())?, Account::DEFAULT_ACCOUNT_NAME);
             Ok(())
         });
     }
 
     #[test]
+    fn test_create_and_load() {
+        let test = Test::new();
+        let account_1 = test.create_account().unwrap(); // Persists the account on disk
+        let account_2 = test.load_account().unwrap(); // Reads from same location
+        // Since persona ids are random, we can check that loading worked successfully here
+        assert_eq!(
+            account_1.default_persona.id(),
+            account_2.default_persona.id()
+        );
+    }
+
+    #[test]
+    fn test_load_non_existing() {
+        let test = Test::new();
+        assert!(test.load_account().is_err()); // Reads from uninitialized location
+    }
+
+    #[test]
+    fn test_create_twice() {
+        let test = Test::new();
+        assert!(test.create_account().is_ok());
+        assert!(test.create_account().is_err()); // Tries to write to same dir
+    }
+
+    #[test]
     fn test_get_auth_state() {
         let mut test = Test::new();
-        test.run(test.create_account(), async move |proxy| {
+        test.run(test.create_account().unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.get_auth_state())?,
                 (
@@ -318,7 +454,7 @@ mod tests {
     #[test]
     fn test_register_auth_listener() {
         let mut test = Test::new();
-        test.run(test.create_account(), async move |proxy| {
+        test.run(test.create_account().unwrap(), async move |proxy| {
             let (auth_listener_client_end, _) = create_endpoints().unwrap();
             assert_eq!(
                 await!(proxy.register_auth_listener(
@@ -338,7 +474,7 @@ mod tests {
     fn test_get_persona_ids() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = test.create_account();
+        let account = test.create_account().unwrap();
         let persona_id = &account.default_persona.id().clone();
 
         test.run(account, async move |proxy| {
@@ -353,7 +489,7 @@ mod tests {
     fn test_get_default_persona() {
         let mut test = Test::new();
         // Note: Persona ID is random. Record the persona_id before starting the test.
-        let account = test.create_account();
+        let account = test.create_account().unwrap();
         let persona_id = &account.default_persona.id().clone();
 
         test.run(account, async move |account_proxy| {
@@ -379,7 +515,7 @@ mod tests {
     #[test]
     fn test_get_persona_by_correct_id() {
         let mut test = Test::new();
-        let account = test.create_account();
+        let account = test.create_account().unwrap();
         let persona_id = account.default_persona.id().clone();
 
         test.run(account, async move |account_proxy| {
@@ -409,7 +545,7 @@ mod tests {
     #[test]
     fn test_get_persona_by_incorrect_id() {
         let mut test = Test::new();
-        let account = test.create_account();
+        let account = test.create_account().unwrap();
         // Note: This fixed value has a 1 - 2^64 probability of not matching the randomly chosen
         // one.
         let wrong_id = LocalPersonaId::new(13);
@@ -433,7 +569,7 @@ mod tests {
             user_profile_id: "test_obfuscated_gaia_id".to_string(),
         };
 
-        test.run(test.create_account(), async move |proxy| {
+        test.run(test.create_account().unwrap(), async move |proxy| {
             assert_eq!(
                 await!(proxy.set_recovery_account(&mut service_provider_account))?,
                 Status::InternalError
@@ -446,7 +582,7 @@ mod tests {
     fn test_get_recovery_account() {
         let mut test = Test::new();
         let expectation = (Status::InternalError, None);
-        test.run(test.create_account(), async move |proxy| {
+        test.run(test.create_account().unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_recovery_account())?, expectation);
             Ok(())
         });

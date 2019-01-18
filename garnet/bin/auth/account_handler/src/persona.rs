@@ -169,7 +169,7 @@ mod tests {
             let (account_handler_context_client_end, _) = create_endpoints().unwrap();
             let token_manager = Arc::new(
                 TokenManager::new(
-                    &location.test_file(),
+                    &location.test_path(),
                     AuthProviderSupplier::new(account_handler_context_client_end).unwrap(),
                 )
                 .unwrap(),

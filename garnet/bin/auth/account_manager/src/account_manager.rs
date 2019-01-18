@@ -18,6 +18,8 @@ use lazy_static::lazy_static;
 use log::{info, warn};
 use std::collections::BTreeMap;
 use std::sync::Arc;
+use std::fs;
+use std::path::PathBuf;
 
 use crate::account_handler_connection::AccountHandlerConnection;
 use crate::account_handler_context::AccountHandlerContext;
@@ -59,14 +61,19 @@ pub struct AccountManager {
 
 impl AccountManager {
     /// Constructs a new AccountManager with no accounts.
-    pub fn new(account_dir_parent: &str) -> AccountManager {
-        AccountManager {
+    pub fn new(account_dir_parent: &str) -> Result<AccountManager, Error> {
+        let dir = PathBuf::from(account_dir_parent);
+        if !dir.exists() {
+            fs::create_dir(account_dir_parent)?;
+            info!("Created account dir parent: {:?}", account_dir_parent);
+        }
+        Ok(AccountManager {
             ids_to_handlers: Mutex::new(BTreeMap::new()),
             context: Arc::new(AccountHandlerContext::new(
                 &DEFAULT_AUTH_PROVIDER_CONFIG,
                 account_dir_parent,
             )),
-        }
+        })
     }
 
     /// Asynchronously handles the supplied stream of `AccountManagerRequest` messages.
@@ -309,7 +316,7 @@ mod tests {
 
     #[test]
     fn test_initially_empty() {
-        request_stream_test(AccountManager::new(TEST_ACCOUNT_DIR), async move |proxy| {
+        request_stream_test(AccountManager::new(TEST_ACCOUNT_DIR).unwrap(), async move |proxy| {
             assert_eq!(await!(proxy.get_account_ids())?, vec![]);
             assert_eq!(
                 await!(proxy.get_account_auth_states())?,

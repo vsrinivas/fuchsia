@@ -6,6 +6,8 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+extern crate serde;
+
 /// An error type for problems encountered in the account manager and account handler.
 mod error;
 /// More ergonomic wrapper types for FIDL account and persona identifiers.

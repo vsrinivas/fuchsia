@@ -16,6 +16,7 @@ use futures::prelude::*;
 use lazy_static::lazy_static;
 use log::error;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tempfile::TempDir;
 
 lazy_static! {
@@ -40,7 +41,7 @@ pub fn create_dummy_app_config() -> AppConfig {
 pub struct TempLocation {
     /// A fresh temp directory that will be deleted when this object is dropped.
     _dir: TempDir,
-    /// A path within the temp dir to use for writing the db.
+    /// A path to an existing temp dir.
     pub path: PathBuf,
 }
 
@@ -52,9 +53,10 @@ impl TempLocation {
         TempLocation { _dir: dir, path }
     }
 
-    /// Returns a path to a test file inside the temporary location. The file name is static.
-    pub fn test_file(&self) -> PathBuf {
-        self.path.join("testfile")
+    /// Returns a path to a static test path inside the temporary location which does not exist by
+    /// default.
+    pub fn test_path(&self) -> PathBuf {
+        self.path.join("test_path")
     }
 }
 
@@ -97,13 +99,14 @@ impl FakeAccountHandlerContext {
 /// Creates a new `AccountHandlerContext` channel, spawns a task to handle requests received on
 /// this channel using the supplied `FakeAccountHandlerContext`, and returns the `ClientEnd`.
 pub fn spawn_context_channel(
-    context: FakeAccountHandlerContext,
+    context: Arc<FakeAccountHandlerContext>,
 ) -> ClientEnd<AccountHandlerContextMarker> {
     let (client_end, server_end) = create_endpoints().unwrap();
     let request_stream = server_end.into_stream().unwrap();
+    let context_clone = Arc::clone(&context);
     fasync::spawn(
         async move {
-            await!(context.handle_requests_from_stream(request_stream))
+            await!(context_clone.handle_requests_from_stream(request_stream))
                 .unwrap_or_else(|err| error!("Error handling FakeAccountHandlerContext: {:?}", err))
         },
     );
@@ -119,8 +122,8 @@ mod tests {
     #[test]
     fn test_context_fake() {
         let mut executor = fasync::Executor::new().expect("Failed to create executor");
-        let fake_context = FakeAccountHandlerContext::new(TEST_DIR);
-        let client_end = spawn_context_channel(fake_context);
+        let fake_context = Arc::new(FakeAccountHandlerContext::new(TEST_DIR));
+        let client_end = spawn_context_channel(fake_context.clone());
         let proxy = client_end.into_proxy().unwrap();
         let dir_future = proxy.get_account_dir_parent();
         let dir = executor.run_singlethreaded(dir_future).unwrap();

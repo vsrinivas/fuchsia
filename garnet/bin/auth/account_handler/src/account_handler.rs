@@ -116,13 +116,9 @@ impl AccountHandler {
 
             // First create the directory to contain the new account
             let account_dir = self.account_dir(&local_account_id);
-            if let Err(err) = fs::create_dir_all(&account_dir) {
-                warn!("Could not create account dir: {:?}", err);
-                return (Status::IoError, None);
-            }
 
             // Construct an Account value to maintain state inside this directory
-            let account = match Account::new(local_account_id.clone(), &account_dir, context) {
+            let account = match Account::create(local_account_id.clone(), &account_dir, context) {
                 Ok(account) => account,
                 Err(err) => {
                     warn!("Failed to initialize new Account: {:?}", err);
@@ -149,9 +145,7 @@ impl AccountHandler {
         } else {
             let account_dir = self.account_dir(&id);
             if account_dir.exists() {
-                // TODO(dnordstrom): Implement reading the actual db file. Currently we get a new
-                // persona id.
-                let account = match Account::new(id.clone(), &account_dir, context) {
+                let account = match Account::load(id.clone(), &account_dir, context) {
                     Ok(account) => account,
                     Err(err) => return err.status,
                 };
@@ -172,17 +166,14 @@ impl AccountHandler {
                 return Status::InvalidRequest;
             }
         };
-        let local_account_id = account.id();
-        let account_dir = self
-            .accounts_dir
-            .join(local_account_id.to_canonical_string());
+        let account_dir = self.account_dir(&account.id());
         match fs::remove_dir_all(account_dir) {
             Err(err) => {
                 warn!("Could not remove account dir: {:?}", err);
                 Status::IoError
             }
             Ok(()) => {
-                info!("Deleted Fuchsia account {:?}", local_account_id);
+                info!("Deleted Fuchsia account {:?}", &account.id());
                 *account_lock = None;
                 Status::Ok
             }
@@ -437,4 +428,5 @@ mod tests {
             Ok(())
         });
     }
+
 }

@@ -11,6 +11,8 @@
 // Longer term we aspire to annotate this wrapper pattern in FIDL, which would allow the bindings
 // to be more ergonomic and remove the need for this module.
 
+use serde::de::{Deserialize, Deserializer};
+use serde::Serialize;
 use std::cmp::Ordering;
 use std::fmt::{Debug, Formatter};
 use std::hash::{Hash, Hasher};
@@ -107,6 +109,27 @@ macro_rules! wrapper_type {
         impl AsMut<$fidl_crate::$name> for $name {
             fn as_mut(&mut self) -> &mut $fidl_crate::$name {
                 &mut self.inner
+            }
+        }
+
+        impl Serialize for $name {
+            fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+            where
+                S: ::serde::Serializer,
+            {
+                Serialize::serialize(&self.inner.id, serializer)
+            }
+        }
+
+        impl<'a> Deserialize<'a> for $name {
+            fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
+            where
+                D: Deserializer<'a>,
+            {
+                let id = Deserialize::deserialize(deserializer)?;
+                Ok($name {
+                    inner: $fidl_crate::$name { id },
+                })
             }
         }
     };

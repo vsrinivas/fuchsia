@@ -14,5 +14,7 @@ rustc_library("account_common") {
     "//garnet/public/lib/fidl/rust/fidl",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
   ]
 }

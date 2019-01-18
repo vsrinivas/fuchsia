@@ -37,7 +37,11 @@ fn main() -> Result<(), Error> {
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
 
     // TODO(dnorsdtrom): Add CLI arg for making the path configurable, to support test isolation
-    let account_manager = Arc::new(AccountManager::new(ACCOUNT_DIR_PARENT));
+    let account_manager = AccountManager::new(ACCOUNT_DIR_PARENT).map_err(|e| {
+        error!("Error initializing AccountManager {:?}", e);
+        e
+    })?;
+    let account_manager = Arc::new(account_manager);
 
     let fut = ServicesServer::new()
         .add_service((AccountManagerMarker::NAME, move |chan| {

@@ -25,7 +25,10 @@ where
 /// contains the fuchsia.auth.account.Status that should be reported back to the client and an
 /// indication of whether it is fatal.
 #[derive(Debug, Fail)]
-#[fail(display = "AccountManager error, returning {:?}. ({:?})", status, cause)]
+#[fail(
+    display = "AccountManager error, returning {:?}. ({:?})",
+    status, cause
+)]
 pub struct AccountManagerError {
     /// The most appropriate `fuchsia.auth.account.Status` to describe this problem.
     pub status: Status,
@@ -94,6 +97,7 @@ mod tests {
         assert_eq!(wrapped_result.as_ref().unwrap_err().status, TEST_STATUS);
         assert_eq!(
             format!("{:?}", wrapped_result.unwrap_err().cause.unwrap()),
-            format!("{:?}", create_test_error()));
+            format!("{:?}", create_test_error())
+        );
     }
 }
