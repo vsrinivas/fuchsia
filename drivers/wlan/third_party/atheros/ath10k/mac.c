@@ -2938,12 +2938,14 @@ zx_status_t ath10k_mac_set_bss(struct ath10k* ar, wlan_bss_config_t* config) {
         goto out;
     }
 
-    if (arvif->is_started && arvif->is_up) {
-        ret = ath10k_mac_bss_disassoc(ar);
-        if (ret != ZX_OK) {
-            ath10k_err("disassociating vdev failed %i: %s\n", arvif->vdev_id,
-                                                              zx_status_get_string(ret));
-            goto out;
+    if (arvif->is_started) {
+        if (arvif->is_up) {
+            ret = ath10k_mac_bss_disassoc(ar);
+            if (ret != ZX_OK) {
+                ath10k_err("disassociating vdev failed %i: %s\n", arvif->vdev_id,
+                                                                  zx_status_get_string(ret));
+                goto out;
+            }
         }
 
         ret = ath10k_vdev_restart(arvif, &ar->rx_channel);
