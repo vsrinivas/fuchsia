@@ -7,10 +7,10 @@ package main
 import (
 	"bytes"
 	"context"
-	"os"
 	"strings"
 	"testing"
 
+	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/testsharder"
 )
 
@@ -33,23 +33,20 @@ func TestTester(t *testing.T) {
 }
 
 // Verifies that SSHTester can execute tests on a remote device. These tests are
-// only meant for local verification.
+// only meant for local verification.  You can execute them like this:
+//
+//  DEVICE_CONTEXT=./device.json go test ./...
 func TestSSHTester(t *testing.T) {
 	t.Skip("ssh tests are meant for local testing only")
 
-	nodename := os.Getenv("NODENAME")
-	if nodename == "" {
-		t.Fatalf("missing environment variable '%s'", "NODENAME")
-	}
-
-	privateKeyPath := os.Getenv("SSH_KEY")
-	if privateKeyPath == "" {
-		t.Fatalf("missing environment variable '%s'", privateKeyPath)
-	}
-
-	client, err := sshIntoNode(nodename, privateKeyPath)
+	devCtx, err := botanist.GetDeviceContext()
 	if err != nil {
-		t.Fatalf("failed to connect to node '%s': %v", nodename, err)
+		t.Fatal(err)
+	}
+
+	client, err := sshIntoNode(devCtx.Nodename, devCtx.SSHKey)
+	if err != nil {
+		t.Fatalf("failed to connect to node '%s': %v", devCtx.Nodename, err)
 	}
 
 	tester := &SSHTester{client: client}
