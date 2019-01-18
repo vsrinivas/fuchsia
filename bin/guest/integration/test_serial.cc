@@ -50,7 +50,7 @@ zx_status_t TestSerial::Start(zx::socket socket) {
 // header and footer before and after the command. Then we wait for the command
 // to be written back to the serial, then the header, then finally we capture
 // everything until the footer.
-zx_status_t TestSerial::ExecuteBlocking(const std::string& command,
+zx_status_t TestSerial::ExecuteBlocking(const std::string& command, const std::string& prompt,
                                         std::string* result) {
   std::string header = command_hash(command);
   std::string footer = header;
@@ -70,15 +70,21 @@ zx_status_t TestSerial::ExecuteBlocking(const std::string& command,
     return status;
   }
 
-  status = WaitForMarker(header);
+  status = WaitForMarker(header + "\n");
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command header: " << status;
     return status;
   }
 
-  status = WaitForMarker(footer, result);
+  status = WaitForMarker(footer + "\n", result);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to wait for command footer: " << status;
+    return status;
+  }
+
+  status = WaitForMarker(prompt);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Failed to wait for command prompt: " << status;
     return status;
   }
 
@@ -117,32 +123,24 @@ zx_status_t TestSerial::SendBlocking(const std::string& message) {
 
 zx_status_t TestSerial::WaitForMarker(const std::string& marker,
                                       std::string* result) {
-  std::regex prompt_re("[#$] ");
   std::string output = buffer_;
   buffer_.erase();
   zx_status_t status;
   while (true) {
-    // We strip prompts from the output as a stopgap against linux guests
-    // interleaving the prompt randomly in the output.
-    output = std::regex_replace(output, prompt_re, "");
 
     auto marker_loc = output.rfind(marker);
     if (marker_loc != std::string::npos && !output.empty()) {
-      // Do not accept a marker that isn't terminated by a newline.
-      if (marker_loc + marker.size() != output.size() &&
-          output[marker_loc + marker.size()] == '\n') {
-        // If we have read the socket past the end of the marker, make sure
-        // what's left is kept in the buffer for the next read.
-        if (marker_loc + marker.size() + 1 < output.size()) {
-          buffer_ = output.substr(marker_loc + marker.size() + 1);
-        }
-        if (result == nullptr) {
-          return ZX_OK;
-        }
-        output.erase(marker_loc);
-        *result = output;
+      // If we have read the socket past the end of the marker, make sure
+      // what's left is kept in the buffer for the next read.
+      if (marker_loc + marker.size() < output.size()) {
+        buffer_ = output.substr(marker_loc + marker.size());
+      }
+      if (result == nullptr) {
         return ZX_OK;
       }
+      output.erase(marker_loc);
+      *result = output;
+      return ZX_OK;
     }
 
     zx_signals_t pending = 0;

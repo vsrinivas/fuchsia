@@ -17,7 +17,7 @@ class TestSerial {
   // ensure the command finished executing and to capture output. Blocks on the
   // serial socket being writable and readable at various points and on the
   // command completing.
-  zx_status_t ExecuteBlocking(const std::string& command,
+  zx_status_t ExecuteBlocking(const std::string& command, const std::string& prompt,
                               std::string* result = nullptr);
 
  private:

@@ -45,7 +45,7 @@ class EnclosedGuest {
   // Execute |command| on the guest serial and wait for the |result|.
   zx_status_t Execute(const std::string& command,
                       std::string* result = nullptr) {
-    return serial_.ExecuteBlocking(command, result);
+    return serial_.ExecuteBlocking(command, SerialPrompt(), result);
   }
 
   // Run a test util named |util| with |args| in the guest and wait for the
@@ -73,6 +73,8 @@ class EnclosedGuest {
   // Waits until the guest is ready to run test utilities, called by Start.
   virtual zx_status_t WaitForSystemReady() = 0;
 
+  virtual std::string SerialPrompt() = 0;
+
  private:
   async::Loop loop_;
   std::shared_ptr<component::Services> real_services_;
@@ -98,6 +100,9 @@ class ZirconEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
+  std::string SerialPrompt() override {
+    return "$ ";
+  }
 };
 
 class LinuxEnclosedGuest : public EnclosedGuest {
@@ -110,6 +115,9 @@ class LinuxEnclosedGuest : public EnclosedGuest {
  protected:
   zx_status_t LaunchInfo(fuchsia::guest::LaunchInfo* launch_info) override;
   zx_status_t WaitForSystemReady() override;
+  std::string SerialPrompt() override {
+    return "# ";
+  }
 };
 
 #endif  // GARNET_BIN_GUEST_INTEGRATION_ENCLOSED_GUEST_H_
