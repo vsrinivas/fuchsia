@@ -127,4 +127,5 @@
 #define MT8167_GPIO_TOUCH_RST                               9
 #define MT8167_GPIO_MSDC0_RST                               114
 
+#define MT8167_CLEO_GPIO_HUB_PWR_EN                         13
 #define MT8167_CLEO_GPIO_LCM_EN                             22

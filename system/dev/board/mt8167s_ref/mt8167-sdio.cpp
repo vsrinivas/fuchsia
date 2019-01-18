@@ -101,11 +101,28 @@ zx_status_t Mt8167::SdioInit() {
         }
     };
 
-    static const pbus_gpio_t sdio_gpios[] = {
+    static const pbus_gpio_t sdio_ref_gpios[] = {
         {
             .gpio = MT8167_GPIO_MT7668_PMU_EN
         }
     };
+
+    static const pbus_gpio_t sdio_cleo_gpios[] = {
+        {
+            .gpio = MT8167_GPIO_MT7668_PMU_EN
+        },
+        {
+            .gpio = MT8167_CLEO_GPIO_HUB_PWR_EN
+        }
+    };
+
+    const pbus_gpio_t* sdio_gpios = sdio_ref_gpios;
+    size_t sdio_gpio_count = countof(sdio_ref_gpios);
+
+    if (board_info_.pid == PDEV_PID_CLEO) {
+        sdio_gpios = sdio_cleo_gpios;
+        sdio_gpio_count = countof(sdio_cleo_gpios);
+    }
 
     pbus_dev_t sdio_dev = {};
     sdio_dev.name = "sdio";
@@ -120,7 +137,7 @@ zx_status_t Mt8167::SdioInit() {
     sdio_dev.irq_list = sdio_irqs;
     sdio_dev.irq_count = countof(sdio_irqs);
     sdio_dev.gpio_list = sdio_gpios;
-    sdio_dev.gpio_count = countof(sdio_gpios);
+    sdio_dev.gpio_count = sdio_gpio_count;
 
     zx::unowned_resource root_resource(get_root_resource());
     std::optional<ddk::MmioBuffer> gpio_mmio;

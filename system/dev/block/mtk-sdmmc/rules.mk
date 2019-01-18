@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/binding.c \
     $(LOCAL_DIR)/mtk-sdmmc.cpp \
 
 MODULE_STATIC_LIBS := \
@@ -53,7 +52,6 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/mt8167 \
-    system/dev/lib/fake_ddk \
     system/dev/lib/mock-mmio-reg \
     system/ulib/ddk \
     system/ulib/ddktl \

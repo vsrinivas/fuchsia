@@ -6,8 +6,8 @@
 
 #include <threads.h>
 
-#include <ddk/phys-iter.h>
 #include <ddk/io-buffer.h>
+#include <ddk/phys-iter.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/mmio.h>
@@ -53,7 +53,7 @@ using DeviceType = ddk::Device<MtkSdmmc>;
 class MtkSdmmc : public DeviceType, public ddk::SdmmcProtocol<MtkSdmmc, ddk::base_protocol> {
 
 public:
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     virtual ~MtkSdmmc() = default;
 
@@ -73,10 +73,11 @@ public:
     // Visible for testing.
     MtkSdmmc(zx_device_t* parent, ddk::MmioBuffer mmio, zx::bti bti, const sdmmc_host_info_t& info,
              zx::interrupt irq, const ddk::GpioProtocolClient& reset_gpio,
-             const pdev_device_info_t& dev_info, const board_mt8167::MtkSdmmcConfig& config)
+             const ddk::GpioProtocolClient& power_en_gpio, const pdev_device_info_t& dev_info,
+             const board_mt8167::MtkSdmmcConfig& config)
         : DeviceType(parent), req_(nullptr), mmio_(std::move(mmio)), bti_(std::move(bti)),
           info_(info), irq_(std::move(irq)), cmd_status_(ZX_OK), reset_gpio_(reset_gpio),
-          dev_info_(dev_info), config_(config) {}
+          power_en_gpio_(power_en_gpio), dev_info_(dev_info), config_(config) {}
 
     // Visible for testing.
     zx_status_t Init();
@@ -132,7 +133,8 @@ private:
     io_buffer_t bdma_buf_;
     sync_completion_t req_completion_;
     zx_status_t cmd_status_ TA_GUARDED(mutex_);
-    ddk::GpioProtocolClient reset_gpio_;
+    const ddk::GpioProtocolClient reset_gpio_;
+    const ddk::GpioProtocolClient power_en_gpio_;
     const pdev_device_info_t dev_info_;
     const board_mt8167::MtkSdmmcConfig config_;
 };

@@ -5,7 +5,6 @@
 #include "mtk-sdmmc.h"
 
 #include <fbl/auto_call.h>
-#include <lib/fake_ddk/fake_ddk.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 
 namespace {
@@ -25,6 +24,7 @@ public:
                    kNullHostInfo,
                    zx::interrupt(ZX_HANDLE_INVALID),
                    ddk::GpioProtocolClient(),
+                   ddk::GpioProtocolClient(),
                    pdev_device_info_t{},
                    board_mt8167::MtkSdmmcConfig{
                        .fifo_depth = 128,
@@ -37,6 +37,7 @@ public:
                    zx::bti(ZX_HANDLE_INVALID),
                    kNullHostInfo,
                    zx::interrupt(ZX_HANDLE_INVALID),
+                   ddk::GpioProtocolClient(),
                    ddk::GpioProtocolClient(),
                    pdev_device_info_t{},
                    board_mt8167::MtkSdmmcConfig{

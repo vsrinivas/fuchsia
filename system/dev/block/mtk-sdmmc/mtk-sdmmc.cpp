@@ -6,6 +6,7 @@
 
 #include <unistd.h>
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/io-buffer.h>
 #include <ddk/metadata.h>
@@ -86,7 +87,7 @@ bool GetBestWindow(const sdmmc::TuneWindow& rising_window, const sdmmc::TuneWind
 
 namespace sdmmc {
 
-zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
+zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     zx_status_t status;
 
     ddk::PDev pdev(parent);
@@ -138,19 +139,32 @@ zx_status_t MtkSdmmc::Create(zx_device_t* parent) {
         return status;
     }
 
-    ddk::GpioProtocolClient reset_gpio;
+    std::optional<ddk::GpioProtocolClient> reset_gpio;
     if (dev_info.gpio_count > 0) {
-        reset_gpio = ddk::GpioProtocolClient(parent);
-        if (!reset_gpio.is_valid()) {
+        reset_gpio = pdev.GetGpio(0);
+        if (!reset_gpio) {
             zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;
         }
+    } else {
+        reset_gpio.emplace();
+    }
+
+    std::optional<ddk::GpioProtocolClient> power_en_gpio;
+    if (dev_info.gpio_count > 1) {
+        power_en_gpio = pdev.GetGpio(1);
+        if (!power_en_gpio) {
+            zxlogf(ERROR, "%s: Failed to get power enable GPIO\n", __FILE__);
+            return ZX_ERR_NO_RESOURCES;
+        }
+    } else {
+        power_en_gpio.emplace();
     }
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(*mmio), std::move(bti),
-                                                        info, std::move(irq), reset_gpio, dev_info,
-                                                        config));
+                                                        info, std::move(irq), *reset_gpio,
+                                                        *power_en_gpio, dev_info, config));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);
@@ -203,10 +217,17 @@ zx_status_t MtkSdmmc::Init() {
     bdma_buf_.phys_list = nullptr;
 
     auto cb = [](void* arg) -> int { return reinterpret_cast<MtkSdmmc*>(arg)->IrqThread(); };
-    int status = thrd_create_with_name(&irq_thread_, cb, this, "mt8167-emmc-thread");
-    if (status != thrd_success) {
+    if (thrd_create_with_name(&irq_thread_, cb, this, "mt8167-emmc-thread") != thrd_success) {
         zxlogf(ERROR, "%s: Failed to create IRQ thread\n", __FILE__);
         return ZX_ERR_INTERNAL;
+    }
+
+    if (power_en_gpio_.is_valid()) {
+        zx_status_t status = power_en_gpio_.ConfigOut(1);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: Failed to set power enable GPIO\n", __FILE__);
+            return status;
+        }
     }
 
     return ZX_OK;
@@ -833,6 +854,16 @@ zx_status_t MtkSdmmc::WaitForInterrupt() {
 
 }  // namespace sdmmc
 
-extern "C" zx_status_t mtk_sdmmc_bind(void* ctx, zx_device_t* parent) {
-    return sdmmc::MtkSdmmc::Create(parent);
-}
+static zx_driver_ops_t mtk_sdmmc_driver_ops = []() -> zx_driver_ops_t {
+    zx_driver_ops_t ops;
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = sdmmc::MtkSdmmc::Create;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(mtk_sdmmc, mtk_sdmmc_driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_EMMC),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_SDIO),
+ZIRCON_DRIVER_END(mtk_sdmmc)
