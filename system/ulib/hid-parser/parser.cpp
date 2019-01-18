@@ -413,8 +413,12 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_logical_max(int32_t data) { // Global
-        table_.attributes.logc_mm.max = data;
+    ParseResult set_logical_max(const hid::Item& item) { // Global
+        if (table_.attributes.logc_mm.min >= 0) {
+            table_.attributes.logc_mm.max = item.data();
+        } else {
+            table_.attributes.logc_mm.max = item.signed_data();
+        }
         return kParseOk;
     }
 
@@ -423,8 +427,12 @@ public:
         return kParseOk;
     }
 
-    ParseResult set_physical_max(int32_t data) { // Global
-        table_.attributes.phys_mm.max = data;
+    ParseResult set_physical_max(const hid::Item& item) { // Global
+        if (table_.attributes.phys_mm.min >= 0) {
+            table_.attributes.phys_mm.max = item.data();
+        } else {
+            table_.attributes.phys_mm.max = item.signed_data();
+        }
         return kParseOk;
     }
 
@@ -619,11 +627,11 @@ ParseResult ProcessGlobalItem(const hid::Item& item, ParseState* state) {
     case Item::Tag::kLogicalMinimum:
         return state->set_logical_min(item.signed_data());
     case Item::Tag::kLogicalMaximum:
-        return state->set_logical_max(item.signed_data());
+        return state->set_logical_max(item);
     case Item::Tag::kPhysicalMinimum:
         return state->set_physical_min(item.signed_data());
     case Item::Tag::kPhysicalMaximum:
-        return state->set_physical_max(item.signed_data());
+        return state->set_physical_max(item);
     case Item::Tag::kUnitExponent:
         return state->set_unit_exp(item.data());
     case Item::Tag::kUnit:

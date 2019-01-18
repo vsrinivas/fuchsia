@@ -50,3 +50,43 @@ extern "C" const uint8_t push_pop_test[62] = {
     0xC0,              //   End Collection
     0xC0,              // End Collection
 };
+
+extern "C" const uint8_t minmax_signed_test[68] = {
+    0x05, 0x0D,  // Usage Page (Digitizer)
+    0x09, 0x04,  // Usage (Touch Screen)
+    0xA1, 0x01,  // Collection (Application)
+
+    0x05, 0x0D,  //     Usage Page (Digitizer)
+    0x75, 0x10,  //     Report Size (16)
+    0x95, 0x01,  //     Report Count (1)
+    0x09, 0x51,  //     Usage (0x51)
+    0x15, 0x00,        //     Logical Minimum (0)
+    0x25, 0xFF,  //     Logical Maximum (-1)
+    0x35, 0x00,        //     Physical Minimum (0)
+    0x46, 0xFF, 0xFF,  //     Physical Maximum (65535)
+    0x81, 0x02,  //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No
+
+    0x05, 0x0D,  //     Usage Page (Digitizer)
+    0x75, 0x10,  //     Report Size (16)
+    0x95, 0x01,  //     Report Count (1)
+    0x09, 0x51,  //     Usage (0x51)
+    0x15, 0xFB,        //     Logical Minimum (-5)
+    0x25, 0xFF,  //     Logical Maximum (-1)
+    0x35, 0xFB,       //     Physical Minimum (-5)
+    0x46, 0xFF, 0xFF,  //     Physical Maximum (-1)
+    0x05, 0x01,  //     Usage Page (Generic Desktop Ctrls)
+    0x81, 0x02,  //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No
+
+    0x05, 0x0D,  //     Usage Page (Digitizer)
+    0x75, 0x10,  //     Report Size (16)
+    0x95, 0x01,  //     Report Count (1)
+    0x09, 0x51,  //     Usage (0x51)
+    0x15, 0xFB,        //     Logical Minimum (-5)
+    0x25, 0x5,  //     Logical Maximum (5)
+    0x35, 0xFB,       //     Physical Minimum (-5)
+    0x46, 0x00, 0x05,  //     Physical Maximum (5)
+    0x05, 0x01,  //     Usage Page (Generic Desktop Ctrls)
+    0x81, 0x02,  //     Input (Data,Var,Abs,No Wrap,Linear,Preferred State,No
+
+    0xC0,        // End Collection
+};

@@ -16,6 +16,32 @@
 
 // See hid-utest-data.cpp for the definitions of the test data
 extern "C" const uint8_t push_pop_test[62];
+extern "C" const uint8_t minmax_signed_test[68];
+
+// Tests that the max values of the MinMax are parsed as unsigned
+// data when the min values are >= 0. Also tests that the max values
+// are parsed as signed data when the min values are < 0.
+bool parse_minmax_signed() {
+    BEGIN_TEST;
+
+    hid::DeviceDescriptor* dev = nullptr;
+    auto res = hid::ParseReportDescriptor(minmax_signed_test, sizeof(minmax_signed_test), &dev);
+    ASSERT_EQ(res, hid::ParseResult::kParseOk);
+
+    const auto fields = dev->report[0].input_fields;
+
+    EXPECT_EQ(fields[0].attr.logc_mm.min, 0);
+    EXPECT_EQ(fields[0].attr.logc_mm.max, 0xFF);
+    EXPECT_EQ(fields[0].attr.phys_mm.min, 0);
+    EXPECT_EQ(fields[0].attr.phys_mm.max, 0xFFFF);
+
+    EXPECT_EQ(fields[1].attr.logc_mm.min, -5);
+    EXPECT_EQ(fields[1].attr.logc_mm.max, -1);
+    EXPECT_EQ(fields[1].attr.phys_mm.min, -5);
+    EXPECT_EQ(fields[1].attr.phys_mm.max, -1);
+
+    END_TEST;
+}
 
 // Test that the push and pop operations complete successfully.
 // Pushing saves all of the GLOBAL items.
@@ -219,6 +245,124 @@ bool extract_tests() {
     attr.bit_sz = 16;
     ret = ExtractUint(report, attr, &int16);
     EXPECT_FALSE(ret);
+
+    END_TEST;
+}
+
+bool extract_as_unit_tests() {
+    BEGIN_TEST;
+
+    uint8_t data[] = {0x0F, 10, 0x0F, 0x0F, 0x0F};
+    hid::Report report = {data, 5};
+    hid::Attributes attr = {};
+    bool ret;
+    double val_out;
+
+    // Test a signed conversion with the same logc / physical max
+    attr.offset = 0;
+    attr.bit_sz = 8;
+
+    attr.logc_mm.max = 100;
+    attr.logc_mm.min = -100;
+    attr.phys_mm.max = 100;
+    attr.phys_mm.min = -100;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 0x0F);
+
+    // Test that a signed conversion actually sign extends
+    attr.offset = 0;
+    attr.bit_sz = 4;
+
+    attr.logc_mm.max = 10;
+    attr.logc_mm.min = -10;
+    attr.phys_mm.max = 10;
+    attr.phys_mm.min = -10;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), -1);
+
+    // Test an unsigned conversion
+    attr.offset = 0;
+    attr.bit_sz = 4;
+
+    attr.logc_mm.max = 100;
+    attr.logc_mm.min = 0;
+    attr.phys_mm.max = 100;
+    attr.phys_mm.min = 0;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<uint32_t>(val_out), 0xF);
+
+    // Test a signed conversion with a negative number that x3 the number
+    attr.offset = 0;
+    attr.bit_sz = 4;
+
+    attr.logc_mm.max = 10;
+    attr.logc_mm.min = -10;
+    attr.phys_mm.max = 30;
+    attr.phys_mm.min = -30;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), -3);
+
+    // Test an unsigned conversion with a negative number that x2.5 the number
+    attr.offset = 8;
+    attr.bit_sz = 8;
+
+    attr.logc_mm.max = 10;
+    attr.logc_mm.min = 0;
+    attr.phys_mm.max = 25;
+    attr.phys_mm.min = 0;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 25);
+
+    // Test that when phys max and min are 0, there is no scaling
+    attr.offset = 8;
+    attr.bit_sz = 8;
+
+    attr.logc_mm.max = 100;
+    attr.logc_mm.min = 0;
+    attr.phys_mm.max = 0;
+    attr.phys_mm.min = 0;
+
+    ret = ExtractAsUnit(report, attr, val_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 10);
+
+    // Test ExtractWithUnit
+    attr.offset = 8;
+    attr.bit_sz = 8;
+
+    attr.logc_mm.max = 10;
+    attr.logc_mm.min = 0;
+    attr.phys_mm.max = 25;
+    attr.phys_mm.min = 0;
+
+    // 25 * 10^0 cm = 250 * 10^-1 cm
+    hid::Unit unit_in;
+    unit_in.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_in);
+    hid::unit::SetLengthExp(unit_in, 1);
+    unit_in.exp = 0;
+
+    hid::Unit unit_out;
+    unit_out.type = 0;
+    hid::unit::SetSystem(hid::unit::System::si_linear, unit_out);
+    hid::unit::SetLengthExp(unit_out, 1);
+    unit_out.exp = -1;
+
+    attr.unit = unit_in;
+
+    ret = ExtractWithUnit(report, attr, val_out, unit_out);
+    EXPECT_TRUE(ret);
+    EXPECT_EQ(static_cast<int32_t>(val_out), 250);
 
     END_TEST;
 }
@@ -498,10 +642,12 @@ bool unit_tests() {
 }
 
 BEGIN_TEST_CASE(hidparser_helper_tests)
+RUN_TEST(parse_minmax_signed)
 RUN_TEST(parse_push_pop)
 RUN_TEST(usage_helper)
 RUN_TEST(minmax_operators)
 RUN_TEST(usage_operators)
 RUN_TEST(extract_tests)
+RUN_TEST(extract_as_unit_tests)
 RUN_TEST(unit_tests)
 END_TEST_CASE(hidparser_helper_tests)
