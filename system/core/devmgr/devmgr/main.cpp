@@ -64,8 +64,6 @@ struct {
     zx::job fuchsia_job;
     zx::channel svchost_outgoing;
 
-    zx::event fshost_event;
-
     zx::channel fs_root;
 } g_handles;
 
@@ -150,13 +148,13 @@ int fuchsia_starter(void* arg) {
     zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
-        zx_status_t status = g_handles.fshost_event.wait_one(FSHOST_SIGNAL_READY, deadline,
-                                                             nullptr);
+        zx_status_t status = coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline,
+                                                                   nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
                 if (coordinator->require_system()) {
-                    printf("devmgr: appmgr not launched in %zus, closing appmgr handle\n",
-                           appmgr_timeout);
+                    fprintf(stderr, "devmgr: appmgr not launched in %zus, closing appmgr handle\n",
+                            appmgr_timeout);
                 }
                 g_handles.appmgr_server.reset();
             }
@@ -164,10 +162,13 @@ int fuchsia_starter(void* arg) {
             continue;
         }
         if (status != ZX_OK) {
-            printf("devmgr: error waiting on fuchsia start event: %d\n", status);
+            fprintf(stderr, "devmgr: error waiting on fuchsia start event: %d\n", status);
             break;
         }
-        g_handles.fshost_event.signal(FSHOST_SIGNAL_READY, 0);
+        status = coordinator->fshost_event().signal(FSHOST_SIGNAL_READY, 0);
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: error signaling fshost: %d\n", status);
+        }
 
         if (!drivers_loaded) {
             // we're starting the appmgr because /system is present
@@ -436,7 +437,8 @@ void fshost_start(devmgr::Coordinator* coordinator) {
 
     // pass fuchsia start event to fshost
     zx::event fshost_event_duplicate;
-    if (g_handles.fshost_event.duplicate(ZX_RIGHT_SAME_RIGHTS, &fshost_event_duplicate) == ZX_OK) {
+    if (coordinator->fshost_event().duplicate(ZX_RIGHT_SAME_RIGHTS, &fshost_event_duplicate) ==
+        ZX_OK) {
         handles[n] = fshost_event_duplicate.release();
         types[n++] = PA_HND(PA_USER1, 0);
     }
@@ -753,18 +755,6 @@ zx::job get_sysinfo_job_root() {
     }
 }
 
-void devmgr_vfs_exit() {
-    zx_status_t status;
-    if ((status = g_handles.fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
-        printf("devmgr: Failed to signal VFS exit\n");
-        return;
-    } else if ((status = g_handles.fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE,
-                                                         zx::deadline_after(zx::sec(5)),
-                                                         nullptr)) != ZX_OK) {
-        printf("devmgr: Failed to wait for VFS exit completion\n");
-    }
-}
-
 zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {
         return devfs_root_clone();
@@ -805,20 +795,25 @@ int main(int argc, char** argv) {
 
     fetch_root_resource();
     g_handles.root_job = zx::job::default_job();
+    bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
-    zx::job devhost_job;
-    zx_status_t status = CreateDevhostJob(*g_handles.root_job, &devhost_job);
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    devmgr::CoordinatorConfig config;
+    config.dispatcher = loop.dispatcher();
+    config.require_system = require_system;
+    config.asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
+    zx_status_t status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
     if (status != ZX_OK) {
-        printf("unable to create devhost job\n");
+        fprintf(stderr, "devmgr: unable to create devhost job: %d\n", status);
+        return 1;
+    }
+    status = zx::event::create(0, &config.fshost_event);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: unable to create fshost event: %d\n", status);
         return 1;
     }
 
-    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-    bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
-    bool asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
-
-    devmgr::Coordinator coordinator(std::move(devhost_job), loop.dispatcher(), require_system,
-                                    asan_drivers);
+    devmgr::Coordinator coordinator(std::move(config));
     devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
@@ -843,7 +838,6 @@ int main(int argc, char** argv) {
     }
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
-    zx::event::create(0, &g_handles.fshost_event);
 
     char** e = environ;
     while (*e) {

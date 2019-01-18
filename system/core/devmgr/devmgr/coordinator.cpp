@@ -56,16 +56,26 @@ constexpr uint32_t kIdHJobRoot = 4;
 constexpr char kBootFirmwareDir[] = "/boot/lib/firmware";
 constexpr char kSystemFirmwareDir[] = "/system/lib/firmware";
 
+// Tells VFS to exit by shutting down the fshost.
+void vfs_exit(const zx::event& fshost_event) {
+    zx_status_t status;
+    if ((status = fshost_event.signal(0, FSHOST_SIGNAL_EXIT)) != ZX_OK) {
+        printf("devmgr: Failed to signal VFS exit\n");
+        return;
+    } else if ((status = fshost_event.wait_one(FSHOST_SIGNAL_EXIT_DONE,
+                                               zx::deadline_after(zx::sec(5)),
+                                               nullptr)) != ZX_OK) {
+        printf("devmgr: Failed to wait for VFS exit completion\n");
+    }
+}
+
 } // namespace
 
 namespace devmgr {
 
 uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
-Coordinator::Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system,
-                         bool asan_drivers)
-    : devhost_job_(std::move(devhost_job)), dispatcher_(dispatcher),
-    require_system_(require_system), asan_drivers_(asan_drivers) {}
+Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {}
 
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
@@ -213,17 +223,17 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
     }
 
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
-        devmgr_vfs_exit();
+        vfs_exit(config_.fshost_event);
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT);
         return ZX_OK;
     }
     if ((len == 17) && !memcmp(cmd, "reboot-bootloader", 17)) {
-        devmgr_vfs_exit();
+        vfs_exit(config_.fshost_event);
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
         return ZX_OK;
     }
     if ((len == 15) && !memcmp(cmd, "reboot-recovery", 15)) {
-        devmgr_vfs_exit();
+        vfs_exit(config_.fshost_event);
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
         return ZX_OK;
     }
@@ -232,7 +242,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
         return ZX_OK;
     }
     if (len == 8 && (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8))) {
-        devmgr_vfs_exit();
+        vfs_exit(config_.fshost_event);
         Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
         return ZX_OK;
     }
@@ -557,8 +567,8 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     }
     dh->set_hrpc(dh_hrpc);
 
-    if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(asan_drivers_), name,
-        hrpc, zx::unowned_job(devhost_job_))) < 0) {
+    if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
+        name, hrpc, zx::unowned_job(config_.devhost_job))) < 0) {
         zx_handle_close(dh->hrpc());
         return r;
     }
@@ -718,7 +728,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
 
     dev->wait.set_object(dev->hrpc.get());
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(dispatcher_)) != ZX_OK) {
+    if ((r = dev->wait.Begin(config_.dispatcher)) != ZX_OK) {
         devfs_unpublish(dev.get());
         return r;
     }
@@ -743,7 +753,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        r = dev->publish_task.Post(dispatcher_);
+        r = dev->publish_task.Post(config_.dispatcher);
         if (r != ZX_OK) {
             return r;
         }
@@ -761,7 +771,7 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        zx_status_t r = dev->publish_task.Post(dispatcher_);
+        zx_status_t r = dev->publish_task.Post(config_.dispatcher);
         if (r != ZX_OK) {
             return r;
         }
@@ -870,7 +880,8 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
 
                     if (parent->retries > 0) {
                         // Add device with an exponential backoff.
-                        zx_status_t r = parent->publish_task.PostDelayed(dispatcher_, parent->backoff);
+                        zx_status_t r = parent->publish_task.PostDelayed(config_.dispatcher,
+                                                                         parent->backoff);
                         if (r != ZX_OK) {
                             return r;
                         }
@@ -1957,14 +1968,14 @@ static bool is_root_driver(Driver* drv) {
 }
 
 fbl::unique_ptr<Driver> Coordinator::ValidateDriver(fbl::unique_ptr<Driver> drv) {
-    if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !asan_drivers_) {
+    if ((drv->flags & ZIRCON_DRIVER_NOTE_FLAG_ASAN) && !config_.asan_drivers) {
         if (launched_first_devhost_) {
             log(ERROR, "%s (%s) requires ASan: cannot load after boot;"
                 " consider devmgr.devhost.asan=true\n",
                 drv->libname.c_str(), drv->name.c_str());
             return nullptr;
         }
-        asan_drivers_ = true;
+        config_.asan_drivers = true;
     }
     return drv;
 }
@@ -1977,7 +1988,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     if (!driver) {
         return;
     }
-    async::PostTask(dispatcher_, [this, drv = driver.release()] {
+    async::PostTask(config_.dispatcher, [this, drv = driver.release()] {
         drivers_.push_back(drv);
         BindDriver(drv);
     });
@@ -2029,7 +2040,7 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
     }
 }
 
-// BindDRiver is called when a new driver becomes available to
+// BindDriver is called when a new driver becomes available to
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
 void Coordinator::BindDriver(Driver* drv) {

@@ -14,6 +14,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/fit/function.h>
 #include <lib/zx/channel.h>
+#include <lib/zx/event.h>
 #include <lib/zx/job.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
@@ -262,6 +263,19 @@ struct DevmgrArgs {
     const char* sys_device_driver = nullptr;
 };
 
+struct CoordinatorConfig {
+    // Job for all devhosts.
+    zx::job devhost_job;
+    // Event that controls the fshost.
+    zx::event fshost_event;
+    // Async dispatcher for the coordinator.
+    async_dispatcher_t* dispatcher;
+    // Whether we require /system.
+    bool require_system;
+    // Whether we require ASan drivers.
+    bool asan_drivers;
+};
+
 class Coordinator {
 public:
     Coordinator(const Coordinator&) = delete;
@@ -270,8 +284,7 @@ public:
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
-    Coordinator(zx::job devhost_job, async_dispatcher_t* dispatcher, bool require_system,
-                bool asan_drivers);
+    explicit Coordinator(CoordinatorConfig config);
 
     zx_status_t InitializeCoreDevices();
 
@@ -337,8 +350,9 @@ public:
     void DriverAddedInit(Driver* drv, const char* version);
     void DriverAddedSys(Driver* drv, const char* version);
 
-    async_dispatcher_t* dispatcher() const { return dispatcher_; }
-    bool require_system() const { return require_system_; }
+    const zx::event& fshost_event() const { return config_.fshost_event; }
+    async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
+    bool require_system() const { return config_.require_system; }
 
     void set_running(bool running) { running_ = running; }
     void set_loader_service(DevhostLoaderService* loader_service) {
@@ -363,11 +377,7 @@ public:
     bool system_loaded() const { return system_loaded_; }
 
 private:
-    zx::job devhost_job_;
-    async_dispatcher_t* dispatcher_;
-    bool require_system_;
-    bool asan_drivers_;
-
+    CoordinatorConfig config_;
     bool running_ = false;
     bool launched_first_devhost_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
