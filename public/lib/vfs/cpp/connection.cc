@@ -20,8 +20,7 @@ void Connection::Clone(Node* vn, uint32_t flags,
 }
 
 void Connection::Close(Node* vn, fuchsia::io::Node::CloseCallback callback) {
-  callback(vn->Close());
-  vn->RemoveConnection(this);
+  callback(vn->Close(this));
   // |this| is destroyed at this point.
 }
 
@@ -57,6 +56,16 @@ void Connection::Ioctl(Node* vn, uint32_t opcode, uint64_t max_out,
                        fuchsia::io::Node::IoctlCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, std::vector<zx::handle>(),
            std::vector<uint8_t>());
+}
+
+std::unique_ptr<fuchsia::io::NodeInfo> Connection::NodeInfoIfStatusOk(
+    Node* vn, zx_status_t status) {
+  std::unique_ptr<fuchsia::io::NodeInfo> node_info;
+  if (status == ZX_OK) {
+    node_info = std::make_unique<fuchsia::io::NodeInfo>();
+    vn->Describe(node_info.get());
+  }
+  return node_info;
 }
 
 }  // namespace vfs

@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/vfs/cpp/directory.h>
+#include <lib/vfs/cpp/flags.h>
 
 namespace vfs {
 namespace internal {
@@ -22,8 +23,7 @@ zx_status_t DirectoryConnection::Bind(zx::channel request,
   if (status != ZX_OK) {
     return status;
   }
-  binding_.set_error_handler(
-      [this](zx_status_t status) { vn_->RemoveConnection(this); });
+  binding_.set_error_handler([this](zx_status_t status) { vn_->Close(this); });
   return ZX_OK;
 }
 
@@ -92,6 +92,10 @@ void DirectoryConnection::Link(::std::string src, zx::handle dst_parent_token,
 void DirectoryConnection::Watch(uint32_t mask, uint32_t options,
                                 zx::channel watcher, WatchCallback callback) {
   // TODO: Implement watch.
+}
+
+void DirectoryConnection::SendOnOpenEvent(zx_status_t status) {
+  binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
 }  // namespace internal

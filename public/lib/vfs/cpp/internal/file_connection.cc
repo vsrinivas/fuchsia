@@ -7,6 +7,7 @@
 #include <utility>
 
 #include <lib/vfs/cpp/file.h>
+#include <lib/vfs/cpp/flags.h>
 
 namespace vfs {
 namespace internal {
@@ -22,8 +23,7 @@ zx_status_t FileConnection::Bind(zx::channel request,
   if (status != ZX_OK) {
     return status;
   }
-  binding_.set_error_handler(
-      [this](zx_status_t status) { vn_->RemoveConnection(this); });
+  binding_.set_error_handler([this](zx_status_t status) { vn_->Close(this); });
   return ZX_OK;
 }
 
@@ -62,25 +62,34 @@ void FileConnection::Ioctl(uint32_t opcode, uint64_t max_out,
 }
 
 void FileConnection::Read(uint64_t count, ReadCallback callback) {
-  // TODO: Check flags.
   std::vector<uint8_t> data;
+  if (!Flags::IsReadable(flags())) {
+    callback(ZX_ERR_ACCESS_DENIED, std::move(data));
+    return;
+  }
   zx_status_t status = vn_->ReadAt(count, offset(), &data);
   if (status == ZX_OK) {
     set_offset(offset() + data.size());
   }
-  callback(status, std::vector<uint8_t>(std::move(data)));
+  callback(status, std::move(data));
 }
 
 void FileConnection::ReadAt(uint64_t count, uint64_t offset,
                             ReadAtCallback callback) {
-  // TODO: Check flags.
   std::vector<uint8_t> data;
+  if (!Flags::IsReadable(flags())) {
+    callback(ZX_ERR_ACCESS_DENIED, std::move(data));
+    return;
+  }
   zx_status_t status = vn_->ReadAt(count, offset, &data);
-  callback(status, std::vector<uint8_t>(std::move(data)));
+  callback(status, std::move(data));
 }
 
 void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
-  // TODO: Check flags.
+  if (!Flags::IsWritable(flags())) {
+    callback(ZX_ERR_ACCESS_DENIED, 0);
+    return;
+  }
   uint64_t actual = 0u;
   zx_status_t status = vn_->WriteAt(std::move(data), offset(), &actual);
   if (status == ZX_OK) {
@@ -91,7 +100,10 @@ void FileConnection::Write(std::vector<uint8_t> data, WriteCallback callback) {
 
 void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset,
                              WriteAtCallback callback) {
-  // TODO: Check flags.
+  if (!Flags::IsWritable(flags())) {
+    callback(ZX_ERR_ACCESS_DENIED, 0);
+    return;
+  }
   uint64_t actual = 0u;
   zx_status_t status = vn_->WriteAt(std::move(data), offset, &actual);
   callback(status, actual);
@@ -105,7 +117,10 @@ void FileConnection::Seek(int64_t offset, fuchsia::io::SeekOrigin start,
 }
 
 void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {
-  // TODO: Check flags.
+  if (!Flags::IsWritable(flags())) {
+    callback(ZX_ERR_ACCESS_DENIED);
+    return;
+  }
   callback(vn_->Truncate(length));
 }
 
@@ -120,6 +135,10 @@ void FileConnection::SetFlags(uint32_t flags, SetFlagsCallback callback) {
 
 void FileConnection::GetBuffer(uint32_t flags, GetBufferCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, nullptr);
+}
+
+void FileConnection::SendOnOpenEvent(zx_status_t status) {
+  binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
 }  // namespace internal

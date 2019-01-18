@@ -6,6 +6,7 @@
 
 #include <utility>
 
+#include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/node.h>
 
 namespace vfs {
@@ -22,8 +23,7 @@ zx_status_t NodeConnection::Bind(zx::channel request,
   if (status != ZX_OK) {
     return status;
   }
-  binding_.set_error_handler(
-      [this](zx_status_t status) { vn_->RemoveConnection(this); });
+  binding_.set_error_handler([this](zx_status_t status) { vn_->Close(this); });
   return ZX_OK;
 }
 
@@ -59,6 +59,10 @@ void NodeConnection::Ioctl(uint32_t opcode, uint64_t max_out,
                            std::vector<uint8_t> in, IoctlCallback callback) {
   Connection::Ioctl(vn_, opcode, max_out, std::move(handles), std::move(in),
                     std::move(callback));
+}
+
+void NodeConnection::SendOnOpenEvent(zx_status_t status) {
+  binding_.events().OnOpen(status, NodeInfoIfStatusOk(vn_, status));
 }
 
 }  // namespace internal

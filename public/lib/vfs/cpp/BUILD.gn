@@ -13,6 +13,7 @@ source_set("cpp") {
     "directory.h",
     "file.cc",
     "file.h",
+    "flags.h",
     "internal/directory_connection.cc",
     "internal/directory_connection.h",
     "internal/file_connection.cc",
@@ -21,6 +22,8 @@ source_set("cpp") {
     "internal/node_connection.h",
     "node.cc",
     "node.h",
+    "pseudo_file.cc",
+    "pseudo_file.h",
   ]
 
   public_deps = [
@@ -35,6 +38,7 @@ source_set("cpp") {
 test("vfs_cpp_unittests") {
   sources = [
     "file_unittest.cc",
+    "pseudo_file_unittest.cc",
   ]
 
   deps = [

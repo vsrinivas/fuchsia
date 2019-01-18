@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_CONNECTION_H_
-#define LIB_VFS_CONNECTION_H_
+#ifndef LIB_VFS_CPP_CONNECTION_H_
+#define LIB_VFS_CPP_CONNECTION_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
@@ -43,6 +43,12 @@ class Connection {
   uint64_t offset() const { return offset_; }
   void set_offset(uint64_t offset) { offset_ = offset; }
 
+  // Send OnOpen event for |fuchsia::io::Node|.
+  //
+  // This function will not check for |OPEN_FLAG_DESCRIBE|. Caller should do
+  // that. Every subclass must implement this.
+  virtual void SendOnOpenEvent(zx_status_t status) = 0;
+
   // Associate |request| with this connection.
   //
   // Waits for messages asynchronously on the |request| channel using
@@ -71,6 +77,11 @@ class Connection {
              std::vector<zx::handle> handles, std::vector<uint8_t> in,
              fuchsia::io::Node::IoctlCallback callback);
 
+  // returns |fuchsia.io.NodeInfo| if status is |ZX_OK|, else returns null
+  // inside unique_ptr.
+  std::unique_ptr<fuchsia::io::NodeInfo> NodeInfoIfStatusOk(Node* vn,
+                                                            zx_status_t status);
+
  private:
   // The flags associated with this connection.
   //
@@ -85,4 +96,4 @@ class Connection {
 
 }  // namespace vfs
 
-#endif  // LIB_VFS_CONNECTION_H_
+#endif  // LIB_VFS_CPP_CONNECTION_H_

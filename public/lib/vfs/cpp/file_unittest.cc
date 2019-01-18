@@ -63,12 +63,12 @@ int OpenAsFD(vfs::Node* node, async_dispatcher_t* dispatcher) {
   return fd;
 }
 
-TEST(File, DISABLED_Control) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  loop.StartThread("vfs test thread");
-
+TEST(File, Control) {
   std::vector<uint8_t> store(12u);
   TestFile file(&store);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
 
   int fd = OpenAsFD(&file, loop.dispatcher());
   ASSERT_LE(0, fd);
@@ -96,11 +96,11 @@ TEST(File, DISABLED_Control) {
 }
 
 TEST(File, Clone) {
-  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
-  loop.StartThread("vfs test thread");
-
   std::vector<uint8_t> store(12u);
   TestFile file(&store);
+
+  async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+  loop.StartThread("vfs test thread");
 
   int fd = OpenAsFD(&file, loop.dispatcher());
   ASSERT_LE(0, fd);

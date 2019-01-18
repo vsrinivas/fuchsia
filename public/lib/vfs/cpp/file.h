@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_FILE_H_
-#define LIB_VFS_FILE_H_
+#ifndef LIB_VFS_CPP_FILE_H_
+#define LIB_VFS_CPP_FILE_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/vfs/cpp/node.h>
@@ -51,9 +51,14 @@ class File : public Node {
   void Describe(fuchsia::io::NodeInfo* out_info) override;
 
  protected:
-  std::unique_ptr<Connection> CreateConnection(uint32_t flags) override;
+  zx_status_t CreateConnection(
+      uint32_t flags, std::unique_ptr<Connection>* connection) override;
+
+  uint32_t GetAdditionalAllowedFlags() const override;
+
+  bool IsDirectory() const override;
 };
 
 }  // namespace vfs
 
-#endif  // LIB_VFS_FILE_H_
+#endif  // LIB_VFS_CPP_FILE_H_

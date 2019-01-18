@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_INTERNAL_DIRECTORY_CONNECTION_H_
-#define LIB_VFS_INTERNAL_DIRECTORY_CONNECTION_H_
+#ifndef LIB_VFS_CPP_INTERNAL_DIRECTORY_CONNECTION_H_
+#define LIB_VFS_CPP_INTERNAL_DIRECTORY_CONNECTION_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -17,7 +17,8 @@ class Directory;
 namespace internal {
 
 // Binds an implementation of |fuchsia.io.Directory| to a |vfs::Directory|.
-class DirectoryConnection final : public Connection, public fuchsia::io::Directory {
+class DirectoryConnection final : public Connection,
+                                  public fuchsia::io::Directory {
  public:
   // Create a connection to |vn| with the given |flags|.
   DirectoryConnection(uint32_t flags, vfs::Directory* vn);
@@ -51,6 +52,9 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
   void Watch(uint32_t mask, uint32_t options, zx::channel watcher,
              WatchCallback callback) override;
 
+  // |Connection| Implementation:
+  void SendOnOpenEvent(zx_status_t status) override;
+
  private:
   vfs::Directory* vn_;
   fidl::Binding<fuchsia::io::Directory> binding_;
@@ -59,4 +63,4 @@ class DirectoryConnection final : public Connection, public fuchsia::io::Directo
 }  // namespace internal
 }  // namespace vfs
 
-#endif  // LIB_VFS_INTERNAL_DIRECTORY_CONNECTION_H_
+#endif  // LIB_VFS_CPP_INTERNAL_DIRECTORY_CONNECTION_H_

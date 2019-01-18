@@ -21,8 +21,23 @@ zx_status_t Directory::Lookup(const std::string& name, Node** out_node) {
   return ZX_ERR_NOT_FOUND;
 }
 
-std::unique_ptr<Connection> Directory::CreateConnection(uint32_t flags) {
-  return std::make_unique<internal::DirectoryConnection>(flags, this);
+zx_status_t Directory::CreateConnection(
+    uint32_t flags, std::unique_ptr<Connection>* connection) {
+  *connection = std::make_unique<internal::DirectoryConnection>(flags, this);
+  return ZX_OK;
 }
+
+uint32_t Directory::GetAdditionalAllowedFlags() const {
+  return fuchsia::io::OPEN_RIGHT_READABLE | fuchsia::io::OPEN_RIGHT_WRITABLE |
+         fuchsia::io::OPEN_FLAG_DIRECTORY;
+}
+
+uint32_t Directory::GetProhibitiveFlags() const {
+  return fuchsia::io::OPEN_FLAG_CREATE |
+         fuchsia::io::OPEN_FLAG_CREATE_IF_ABSENT |
+         fuchsia::io::OPEN_FLAG_TRUNCATE | fuchsia::io::OPEN_FLAG_APPEND;
+}
+
+bool Directory::IsDirectory() const { return true; }
 
 }  // namespace vfs

@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_VFS_INTERNAL_FILE_CONNECTION_H_
-#define LIB_VFS_INTERNAL_FILE_CONNECTION_H_
+#ifndef LIB_VFS_CPP_INTERNAL_FILE_CONNECTION_H_
+#define LIB_VFS_CPP_INTERNAL_FILE_CONNECTION_H_
 
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/fidl/cpp/binding.h>
@@ -51,6 +51,9 @@ class FileConnection final : public Connection, public fuchsia::io::File {
   void SetFlags(uint32_t flags, SetFlagsCallback callback) override;
   void GetBuffer(uint32_t flags, GetBufferCallback callback) override;
 
+  // |Connection| Implementation:
+  void SendOnOpenEvent(zx_status_t status) override;
+
  private:
   vfs::File* vn_;
   fidl::Binding<fuchsia::io::File> binding_;
@@ -59,4 +62,4 @@ class FileConnection final : public Connection, public fuchsia::io::File {
 }  // namespace internal
 }  // namespace vfs
 
-#endif  // LIB_VFS_INTERNAL_FILE_CONNECTION_H_
+#endif  // LIB_VFS_CPP_INTERNAL_FILE_CONNECTION_H_
