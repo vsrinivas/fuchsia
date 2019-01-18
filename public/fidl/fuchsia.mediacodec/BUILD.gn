@@ -12,4 +12,8 @@ fidl("fuchsia.mediacodec") {
     "codec_common.fidl",
     "codec_factory.fidl",
   ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.media",
+  ]
 }

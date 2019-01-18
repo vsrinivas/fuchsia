@@ -14,6 +14,8 @@ fidl("fuchsia.media") {
     "audio_renderer.fidl",
     "gain_control.fidl",
     "stream.fidl",
+    "stream_common.fidl",
+    "stream_processor.fidl",
     "stream_type.fidl",
   ]
 

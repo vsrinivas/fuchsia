@@ -4,6 +4,8 @@
 
 library fuchsia.mediacodec;
 
+using fuchsia.media;
+
 // CreateDecoder_Params
 //
 // Input parameters for creating a decoder (audio or video).
@@ -263,6 +265,11 @@ interface CodecFactory {
     CreateDecoder(
         CreateDecoder_Params decoder_params,
         request<Codec> decoder);
+
+    [Transitional]
+    CreateDecoder2(
+        CreateDecoder_Params decoder_params,
+        request<fuchsia.media.StreamProcessor> decoder);
 
     // CreateEncoder:
     //
