@@ -33,7 +33,8 @@ namespace runtests {
 
 // Path to helper binary which can run test as a component. This binary takes
 // component url as its parameter.
-constexpr char kRunTestComponentPath[] = "/system/bin/run_test_component";
+constexpr char kDeprecatedRunTestComponentPath[] = "/system/bin/run_test_component";
+constexpr char kRunTestComponentPath[] = "/bin/run-test-component";
 
 fbl::String DirectoryName(const fbl::String& path) {
     char* cpath = strndup(path.data(), path.length());
@@ -184,20 +185,27 @@ fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
     // If we get a non empty |cmx_file_path|, check that it exists, and if
     // present launch the test as component using generated |component_url|.
     if (cmx_file_path != "" && stat(cmx_file_path.c_str(), &s) == 0) {
-        if (stat(kRunTestComponentPath, &s) != 0) {
-            // TODO(anmittal): Make this a error once we have a stable
-            // system and we can run all tests as components.
-            fprintf(stderr,
-                    "WARNING: Cannot find '%s', running '%s' as normal test "
-                    "binary.",
-                    kRunTestComponentPath, path);
-        } else {
+        if (stat(kRunTestComponentPath, &s) == 0) {
             component_launch_args[0] = kRunTestComponentPath;
             component_launch_args[1] = component_url.c_str();
             for (size_t i = 1; i <= argc; i++) {
                 component_launch_args[1 + i] = argv[i];
             }
             args = component_launch_args;
+        } else if (stat(kDeprecatedRunTestComponentPath, &s) == 0) {
+            component_launch_args[0] = kDeprecatedRunTestComponentPath;
+            component_launch_args[1] = component_url.c_str();
+            for (size_t i = 1; i <= argc; i++) {
+                component_launch_args[1 + i] = argv[i];
+            }
+            args = component_launch_args;
+        } else {
+            // TODO(anmittal): Make this a error once we have a stable
+            // system and we can run all tests as components.
+            fprintf(stderr,
+                    "WARNING: Cannot find '%s', running '%s' as normal test "
+                    "binary.",
+                    kRunTestComponentPath, path);
         }
     }
 
