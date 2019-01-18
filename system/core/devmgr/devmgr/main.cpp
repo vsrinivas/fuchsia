@@ -122,20 +122,23 @@ void do_autorun(const char* name, const char* env) {
 // Get the root resource from the startup handle.  Not receiving the startup
 // handle is logged, but not fatal.  In test environments, it would not be
 // present.
-void fetch_root_resource() {
+zx_status_t fetch_root_resource(zx::resource* root_resource) {
     // Read the root resource out of its channel
     zx::channel root_resource_channel(
         zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
-    if (!root_resource_channel.is_valid()) {
-        printf("devmgr: did not receive root resource channel\n");
-        return;
+    if (!root_resource_channel) {
+        fprintf(stderr, "devmgr: did not receive root resource channel, assuming test "
+            "environment and continuing\n");
+        return ZX_OK;
     }
     uint32_t actual_handles = 0;
     zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
-                                                    g_handles.root_resource.reset_and_get_address(),
-                                                    1, &actual_handles);
-    ZX_ASSERT_MSG(status == ZX_OK && actual_handles == 1,
-                  "devmgr: did not receive root resource: %s\n", zx_status_get_string(status));
+                                                    root_resource->reset_and_get_address(), 1,
+                                                    &actual_handles);
+    if (status != ZX_OK) {
+        return status;
+    }
+    return actual_handles == 1 ? ZX_OK : ZX_ERR_UNAVAILABLE;
 }
 
 int fuchsia_starter(void* arg) {
@@ -628,7 +631,7 @@ int service_starter(void* arg) {
         }
 
         zx::debuglog debuglog;
-        if (zx::debuglog::create(g_handles.root_resource, ZX_LOG_FLAG_READABLE, &debuglog) ==
+        if (zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE, &debuglog) ==
             ZX_OK) {
             handles[handle_count] = debuglog.release();
             types[handle_count] = PA_HND(PA_USER0, 1);
@@ -644,7 +647,7 @@ int service_starter(void* arg) {
     const char* epoch = getenv("devmgr.epoch");
     if (epoch) {
         zx_time_t offset = ZX_SEC(atoi(epoch));
-        zx_clock_adjust(devmgr::get_root_resource(), ZX_CLOCK_UTC, offset);
+        zx_clock_adjust(coordinator->root_resource().get(), ZX_CLOCK_UTC, offset);
     }
 
     do_autorun("autorun:boot", "zircon.autorun.boot");
@@ -741,10 +744,6 @@ namespace devmgr {
 
 zx_handle_t virtcon_open;
 
-zx_handle_t get_root_resource() {
-    return g_handles.root_resource.get();
-}
-
 zx::job get_sysinfo_job_root() {
     zx::job h;
     //TODO: limit to enumerate rights
@@ -793,7 +792,6 @@ int main(int argc, char** argv) {
     devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
 
-    fetch_root_resource();
     g_handles.root_job = zx::job::default_job();
     bool require_system = devmgr::getenv_bool("devmgr.require-system", false);
 
@@ -802,7 +800,12 @@ int main(int argc, char** argv) {
     config.dispatcher = loop.dispatcher();
     config.require_system = require_system;
     config.asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
-    zx_status_t status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
+    zx_status_t status = fetch_root_resource(&config.root_resource);
+    if (status != ZX_OK) {
+        fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
+        return 1;
+    }
+    status = CreateDevhostJob(*g_handles.root_job, &config.devhost_job);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: unable to create devhost job: %d\n", status);
         return 1;

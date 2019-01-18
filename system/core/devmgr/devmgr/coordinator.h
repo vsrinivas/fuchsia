@@ -264,6 +264,8 @@ struct DevmgrArgs {
 };
 
 struct CoordinatorConfig {
+    // Initial root resource from the kernel.
+    zx::resource root_resource;
     // Job for all devhosts.
     zx::job devhost_job;
     // Event that controls the fshost.
@@ -350,6 +352,7 @@ public:
     void DriverAddedInit(Driver* drv, const char* version);
     void DriverAddedSys(Driver* drv, const char* version);
 
+    const zx::resource& root_resource() const { return config_.root_resource; }
     const zx::event& fshost_event() const { return config_.fshost_event; }
     async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
     bool require_system() const { return config_.require_system; }

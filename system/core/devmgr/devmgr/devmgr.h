@@ -28,7 +28,6 @@ zx::unowned_channel devfs_root_borrow();
 // Clones the channel connected to the root of devfs.
 zx::channel devfs_root_clone();
 
-zx_handle_t get_root_resource();
 zx::job get_sysinfo_job_root();
 
 } // namespace devmgr

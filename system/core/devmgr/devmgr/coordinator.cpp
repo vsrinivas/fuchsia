@@ -199,7 +199,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
     }
     if (len == 8) {
         if (!memcmp(cmd, "ktraceon", 8)) {
-            zx_ktrace_control(get_root_resource(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
+            zx_ktrace_control(root_resource().get(), KTRACE_ACTION_START, KTRACE_GRP_ALL, nullptr);
             return ZX_OK;
         }
         if (!memcmp(cmd, "devprops", 8)) {
@@ -208,12 +208,12 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
         }
     }
     if ((len == 9) && (!memcmp(cmd, "ktraceoff", 9))) {
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_STOP, 0, nullptr);
-        zx_ktrace_control(get_root_resource(), KTRACE_ACTION_REWIND, 0, nullptr);
+        zx_ktrace_control(root_resource().get(), KTRACE_ACTION_STOP, 0, nullptr);
+        zx_ktrace_control(root_resource().get(), KTRACE_ACTION_REWIND, 0, nullptr);
         return ZX_OK;
     }
     if ((len > 12) && !memcmp(cmd, "kerneldebug ", 12)) {
-        return zx_debug_send_command(get_root_resource(), cmd + 12, len - 12);
+        return zx_debug_send_command(root_resource().get(), cmd + 12, len - 12);
     }
 
     if (InSuspend()) {
@@ -223,17 +223,17 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
     }
 
     if ((len == 6) && !memcmp(cmd, "reboot", 6)) {
-        vfs_exit(config_.fshost_event);
+        vfs_exit(fshost_event());
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT);
         return ZX_OK;
     }
     if ((len == 17) && !memcmp(cmd, "reboot-bootloader", 17)) {
-        vfs_exit(config_.fshost_event);
+        vfs_exit(fshost_event());
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER);
         return ZX_OK;
     }
     if ((len == 15) && !memcmp(cmd, "reboot-recovery", 15)) {
-        vfs_exit(config_.fshost_event);
+        vfs_exit(fshost_event());
         Suspend(DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY);
         return ZX_OK;
     }
@@ -242,7 +242,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
         return ZX_OK;
     }
     if (len == 8 && (!memcmp(cmd, "poweroff", 8) || !memcmp(cmd, "shutdown", 8))) {
-        vfs_exit(config_.fshost_event);
+        vfs_exit(fshost_event());
         Suspend(DEVICE_SUSPEND_FLAG_POWEROFF);
         return ZX_OK;
     }
@@ -488,6 +488,7 @@ zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) c
 
 static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader_service,
                                      const char* devhost_bin, const char* name, zx_handle_t hrpc,
+                                     const zx::resource& root_resource,
                                      zx::unowned_job devhost_job) {
     launchpad_t* lp;
     launchpad_create_with_jobs(devhost_job->get(), 0, name, &lp);
@@ -506,11 +507,10 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
 
     // Give devhosts the root resource if we have it (in tests, we may not)
     //TODO: limit root resource to root devhost only
-    zx_handle_t h;
-    zx_handle_t root_resource = get_root_resource();
-    if (root_resource != ZX_HANDLE_INVALID) {
-        zx_handle_duplicate(root_resource, ZX_RIGHT_SAME_RIGHTS, &h);
-        launchpad_add_handle(lp, h, PA_HND(PA_RESOURCE, 0));
+    if (root_resource.is_valid()) {
+        zx::resource resource;
+        root_resource.duplicate(ZX_RIGHT_SAME_RIGHTS, &resource);
+        launchpad_add_handle(lp, resource.release(), PA_HND(PA_RESOURCE, 0));
     }
 
     // Inherit devmgr's environment (including kernel cmdline)
@@ -524,8 +524,9 @@ static zx_status_t dc_launch_devhost(Devhost* host, DevhostLoaderService* loader
                          PA_HND(PA_NS_DIR, name_count++));
 
     //TODO: constrain to /svc/device
-    if ((h = fs_clone("svc").release()) != ZX_HANDLE_INVALID) {
-        launchpad_add_handle(lp, h, PA_HND(PA_NS_DIR, name_count++));
+    zx::channel svc_channel = fs_clone("svc");
+    if (svc_channel.is_valid()) {
+        launchpad_add_handle(lp, svc_channel.release(), PA_HND(PA_NS_DIR, name_count++));
     }
 
     launchpad_set_nametable(lp, name_count, nametable);
@@ -568,7 +569,7 @@ zx_status_t Coordinator::NewDevhost(const char* name, Devhost* parent, Devhost**
     dh->set_hrpc(dh_hrpc);
 
     if ((r = dc_launch_devhost(dh.get(), loader_service_, get_devhost_bin(config_.asan_drivers),
-        name, hrpc, zx::unowned_job(config_.devhost_job))) < 0) {
+        name, hrpc, root_resource(), zx::unowned_job(config_.devhost_job))) < 0) {
         zx_handle_close(dh->hrpc());
         return r;
     }
@@ -728,7 +729,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
 
     dev->wait.set_object(dev->hrpc.get());
     dev->wait.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
-    if ((r = dev->wait.Begin(config_.dispatcher)) != ZX_OK) {
+    if ((r = dev->wait.Begin(dispatcher())) != ZX_OK) {
         devfs_unpublish(dev.get());
         return r;
     }
@@ -753,7 +754,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
 
     if (!invisible) {
-        r = dev->publish_task.Post(config_.dispatcher);
+        r = dev->publish_task.Post(dispatcher());
         if (r != ZX_OK) {
             return r;
         }
@@ -771,7 +772,7 @@ zx_status_t Coordinator::MakeVisible(Device* dev) {
     if (dev->flags & DEV_CTX_INVISIBLE) {
         dev->flags &= ~DEV_CTX_INVISIBLE;
         devfs_advertise(dev);
-        zx_status_t r = dev->publish_task.Post(config_.dispatcher);
+        zx_status_t r = dev->publish_task.Post(dispatcher());
         if (r != ZX_OK) {
             return r;
         }
@@ -880,7 +881,7 @@ zx_status_t Coordinator::RemoveDevice(Device* dev, bool forced) {
 
                     if (parent->retries > 0) {
                         // Add device with an exponential backoff.
-                        zx_status_t r = parent->publish_task.PostDelayed(config_.dispatcher,
+                        zx_status_t r = parent->publish_task.PostDelayed(dispatcher(),
                                                                          parent->backoff);
                         if (r != ZX_OK) {
                             return r;
@@ -1289,7 +1290,9 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
         return st;
     }
 
-    st = zx_system_mexec_payload_get(devmgr::get_root_resource(), buffer, kBootdataExtraSz);
+    auto dev = static_cast<Device*>(ctx);
+    st = zx_system_mexec_payload_get(dev->coordinator->root_resource().get(), buffer,
+                                     kBootdataExtraSz);
     if (st != ZX_OK) {
         log(ERROR, "dm_mexec: mexec get payload returned %d\n", st);
         return st;
@@ -1318,7 +1321,6 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
         return ZX_ERR_INTERNAL;
     }
 
-    auto dev = static_cast<Device*>(ctx);
     dev->coordinator->Mexec(std::move(kernel), std::move(bootdata));
     return ZX_OK;
 }
@@ -1699,16 +1701,16 @@ void Coordinator::HandleNewDevice(Device* dev) {
     }
 }
 
-static void dc_suspend_fallback(uint32_t flags) {
+static void dc_suspend_fallback(const zx::resource& root_resource, uint32_t flags) {
     log(INFO, "devcoord: suspend fallback with flags 0x%08x\n", flags);
     if (flags == DEVICE_SUSPEND_FLAG_REBOOT) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
+        zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_BOOTLOADER) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
+        zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_BOOTLOADER, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_REBOOT_RECOVERY) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
+        zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_REBOOT_RECOVERY, nullptr);
     } else if (flags == DEVICE_SUSPEND_FLAG_POWEROFF) {
-        zx_system_powerctl(get_root_resource(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
+        zx_system_powerctl(root_resource.get(), ZX_SYSTEM_POWERCTL_SHUTDOWN, nullptr);
     }
 }
 
@@ -1840,7 +1842,7 @@ static int suspend_timeout_thread(void* arg) {
         check_pending(&coordinator->sys_device());
     }
     if (coordinator->suspend_fallback()) {
-        dc_suspend_fallback(ctx->sflags());
+        dc_suspend_fallback(coordinator->root_resource(), ctx->sflags());
     }
     return 0;
 }
@@ -1921,13 +1923,12 @@ void Coordinator::ContinueSuspend(SuspendContext* ctx) {
         if (ctx->dh() != nullptr) {
             process_suspend_list(ctx);
         } else if (ctx->sflags() == DEVICE_SUSPEND_FLAG_MEXEC) {
-            zx_system_mexec(devmgr::get_root_resource(), ctx->kernel().get(),
-                            ctx->bootdata().get());
+            zx_system_mexec(root_resource().get(), ctx->kernel().get(), ctx->bootdata().get());
         } else {
             // should never get here on x86
             // on arm, if the platform driver does not implement
             // suspend go to the kernel fallback
-            dc_suspend_fallback(ctx->sflags());
+            dc_suspend_fallback(root_resource(), ctx->sflags());
             // this handle is leaked on the shutdown path for x86
             ctx->CloseSocket();
             // if we get here the system did not suspend successfully
@@ -1988,7 +1989,7 @@ void Coordinator::DriverAdded(Driver* drv, const char* version) {
     if (!driver) {
         return;
     }
-    async::PostTask(config_.dispatcher, [this, drv = driver.release()] {
+    async::PostTask(dispatcher(), [this, drv = driver.release()] {
         drivers_.push_back(drv);
         BindDriver(drv);
     });
