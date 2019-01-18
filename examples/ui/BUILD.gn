@@ -243,6 +243,21 @@ package("spinning_square_view") {
   ]
 }
 
+package("bouncing_ball") {
+  deps = [
+    "bouncing_ball",
+  ]
+
+  binary = "bouncing_ball"
+
+  meta = [
+    {
+      path = rebase_path("bouncing_ball/meta/bouncing_ball.cmx")
+      dest = "bouncing_ball.cmx"
+    },
+  ]
+}
+
 package("tile_view") {
   deps = [
     "tile",

@@ -17,6 +17,7 @@
         "//garnet/examples/ui:shapes_view",
         "//garnet/examples/ui:sketchy_client",
         "//garnet/examples/ui:spinning_square_view",
+        "//garnet/examples/ui:bouncing_ball",
         "//garnet/examples/ui:tile_view",
         "//garnet/examples/ui:video_display",
         "//garnet/examples/ui:yuv_to_image_pipe",

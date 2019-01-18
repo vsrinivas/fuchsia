@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("bouncing_ball") {
+  output_name = "bouncing_ball"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/component/cpp:cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/scenic/cpp:cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

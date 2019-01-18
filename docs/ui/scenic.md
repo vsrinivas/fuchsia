@@ -11,6 +11,7 @@
     * [Compositors](#compositors)
   * [Timing Model](#timing-model)
   * [Fences](#fences)
+* [Examples of using Scenic](#examples-of-using-scenic)
 * [API Guide](#api-guide)
   * [FIDL interfaces](#fidl-interfaces)
 
@@ -215,6 +216,10 @@ TODO: Talk about scheduling frames, presentation timestamps, etc.
 ## Fences
 
 TODO: Talk about synchronization.
+
+# Examples of using Scenic
+
+A simple example of using Scenic is the [bouncing ball](https://fuchsia.googlesource.com/garnet/+/master/examples/ui/bouncing_ball/README.md) app.
 
 # API Guide
 
