@@ -201,6 +201,7 @@ pub enum ApCmd {
         #[structopt(short = "p", long = "password")]
         password: Option<String>,
         #[structopt(short = "c", long = "channel")]
+        // TODO(porce): Expand to support PHY and CBW
         channel: u8,
     },
     #[structopt(name = "stop")]
@@ -219,6 +220,7 @@ pub enum MeshCmd {
         #[structopt(short = "m", long = "mesh_id")]
         mesh_id: String,
         #[structopt(short = "c", long = "channel")]
+        // TODO(porce): Expand to support PHY and CBW
         channel: u8,
     },
 }

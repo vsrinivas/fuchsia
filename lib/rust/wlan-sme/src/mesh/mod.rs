@@ -6,6 +6,7 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     futures::channel::mpsc,
     log::{error},
+    wlan_common::channel::{Channel, Cbw},
     crate::{
         clone_utils,
         DeviceInfo,
@@ -60,10 +61,12 @@ pub struct Config {
     pub channel: u8,
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub enum JoinMeshResult {
     Success,
-    Error,
+    InternalError,
+    InvalidArguments,
+    DfsUnsupported,
 }
 
 // A message from the Mesh node to a user or a group of listeners
@@ -76,19 +79,35 @@ pub enum UserEvent<T: Tokens> {
 }
 
 impl<T: Tokens> MeshSme<T> {
-    pub fn on_join_command(&mut self, token: T::JoinToken, config: Config) {
+    pub fn on_join_command(&mut self, token: T::JoinToken, config: Config){
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => {
-                self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
-                State::Joining { token, config }
+                if let Err(result) = validate_config(&config) {
+                    report_join_finished(&self.user_sink, token, result);
+                    State::Idle
+                } else {
+                    self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
+                    State::Joining { token, config }
+                }
             },
             s@ State::Joining { .. } | s@ State::Joined { .. } => {
                 // TODO(gbonik): Leave then re-join
                 error!("cannot join mesh because already joined or joining");
-                report_join_finished(&self.user_sink, token, JoinMeshResult::Error);
+                report_join_finished(&self.user_sink, token, JoinMeshResult::InternalError);
                 s
             }
         });
+    }
+}
+
+fn validate_config(config: &Config) -> Result<(), JoinMeshResult> {
+    let c = Channel::new(config.channel.clone(), Cbw::Cbw20);
+    if !c.is_valid() {
+        Err(JoinMeshResult::InvalidArguments)
+    } else if c.is_dfs() {
+        Err(JoinMeshResult::DfsUnsupported)
+    } else {
+        Ok(())
     }
 }
 
@@ -118,7 +137,7 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                     },
                     other => {
                         error!("failed to join mesh: {:?}", other);
-                        report_join_finished(&self.user_sink, token, JoinMeshResult::Error);
+                        report_join_finished(&self.user_sink, token, JoinMeshResult::InternalError);
                         State::Idle
                     }
                 },
@@ -189,7 +208,8 @@ fn create_peering_params(device_info: &DeviceInfo,
     })
 }
 
-fn report_join_finished<T: Tokens>(user_sink: &UserSink<T>, token: T::JoinToken,
+fn report_join_finished<T: Tokens>(user_sink: &UserSink<T>,
+                                   token: T::JoinToken,
                                    result: JoinMeshResult)
 {
     user_sink.send(UserEvent::JoinMeshFinished { token, result });
@@ -232,4 +252,20 @@ fn get_mesh_config() -> fidl_mlme::MeshConfiguration {
         mesh_formation_info: 0,
         mesh_capability: 0x9, // accept additional peerings (0x1) + forwarding (0x8)
     }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_validate_config() {
+        assert_eq!(Err(JoinMeshResult::InvalidArguments),
+                   validate_config(&Config { mesh_id: vec![], channel: 15}));
+        assert_eq!(Err(JoinMeshResult::DfsUnsupported),
+                   validate_config(&Config { mesh_id: vec![], channel: 52}));
+        assert_eq!(Ok(()),
+                   validate_config(&Config { mesh_id: vec![], channel: 40}));
+    }
+
 }

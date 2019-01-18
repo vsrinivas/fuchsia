@@ -130,7 +130,7 @@ async fn join_mesh(sme: Arc<Mutex<Sme>>, config: fidl_sme::MeshConfig)
     });
     let r = await!(receiver).unwrap_or_else(|_| {
         error!("Responder for Join Mesh command was dropped without sending a response");
-        mesh_sme::JoinMeshResult::Error
+        mesh_sme::JoinMeshResult::InternalError
     });
     convert_join_mesh_result(r)
 }
@@ -138,6 +138,8 @@ async fn join_mesh(sme: Arc<Mutex<Sme>>, config: fidl_sme::MeshConfig)
 fn convert_join_mesh_result(result: mesh_sme::JoinMeshResult) -> fidl_sme::JoinMeshResultCode {
     match result {
         mesh_sme::JoinMeshResult::Success => fidl_sme::JoinMeshResultCode::Success,
-        mesh_sme::JoinMeshResult::Error => fidl_sme::JoinMeshResultCode::InternalError,
+        mesh_sme::JoinMeshResult::InternalError => fidl_sme::JoinMeshResultCode::InternalError,
+        mesh_sme::JoinMeshResult::InvalidArguments => fidl_sme::JoinMeshResultCode::InvalidArguments,
+        mesh_sme::JoinMeshResult::DfsUnsupported => fidl_sme::JoinMeshResultCode::DfsUnsupported,
     }
 }

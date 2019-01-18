@@ -14,6 +14,7 @@ use failure::{bail, ensure};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use log::{debug, info, error, warn};
+use wlan_common::channel::{Channel, Cbw};
 use wlan_rsn::{
     self,
     NegotiatedRsne,
@@ -108,6 +109,8 @@ pub enum StartResult {
     Canceled,
     TimedOut,
     PreviousStartInProgress,
+    InvalidArguments,
+    DfsUnsupported,
 }
 
 // A message from the Ap to a user or a group of listeners
@@ -140,9 +143,13 @@ impl<T: Tokens> ApSme<T> {
         (sme, mlme_stream, user_stream, time_stream)
     }
 
-    pub fn on_start_command(&mut self, config: Config, token: T::StartToken) {
+    pub fn on_start_command(&mut self, config: Config, token: T::StartToken){
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { mut ctx } => {
+                if let Err(result) = validate_config(&config) {
+                    ctx.user_sink.send(UserEvent::StartComplete { token, result });
+                    return State::Idle { ctx };
+                }
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
                 match rsn_cfg_result {
                     Err(e) => {
@@ -278,6 +285,17 @@ impl<T: Tokens> super::Station for ApSme<T> {
                 state
             },
         });
+    }
+}
+
+fn validate_config(config: &Config) -> Result<(), StartResult> {
+    let c = Channel::new(config.channel.clone(), Cbw::Cbw20);
+    if !c.is_valid() {
+        Err(StartResult::InvalidArguments)
+    } else if c.is_dfs() {
+        Err(StartResult::DfsUnsupported)
+    } else {
+        Ok(())
     }
 }
 
@@ -511,6 +529,16 @@ mod tests {
             password: vec![0x61, 0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68],
             channel: 11,
         }
+    }
+
+    #[test]
+    fn test_validate_config() {
+        assert_eq!(Err(StartResult::InvalidArguments),
+                   validate_config(&Config { ssid: vec![], password: vec![], channel: 15}));
+        assert_eq!(Err(StartResult::DfsUnsupported),
+                   validate_config(&Config { ssid: vec![], password: vec![], channel: 52}));
+        assert_eq!(Ok(()),
+                   validate_config(&Config { ssid: vec![], password: vec![], channel: 40}));
     }
 
     #[test]

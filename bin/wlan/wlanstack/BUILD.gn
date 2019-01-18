@@ -22,6 +22,7 @@ rustc_binary("bin") {
   deps = [
     "//garnet/lib/rust/eapol",
     "//garnet/lib/rust/fuchsia-wlan-dev",
+    "//garnet/lib/rust/wlan-common",
     "//garnet/lib/rust/wlan-sme",
     "//garnet/lib/rust/wlantap-client",
     "//garnet/lib/wlan/fidl:fidl-rustc",

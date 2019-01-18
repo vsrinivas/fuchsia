@@ -201,10 +201,19 @@ async fn do_ap(cmd: opts::ApCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let mut config = fidl_sme::ApConfig {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.map_or(vec![], |p| p.as_bytes().to_vec()),
-                channel
+                channel,
             };
-            let r = await!(sme.start(&mut config));
-            println!("{:?}", r);
+            let r = await!(sme.start(&mut config))?;
+            match r {
+                fidl_sme::StartApResultCode::InvalidArguments => {
+                    println!("{:?}: Channel {:?} is invalid", r, config.channel);
+                },
+                fidl_sme::StartApResultCode::DfsUnsupported => {
+                    println!("{:?}: The specified role does not support DFS channel {:?}",
+                        r, config.channel);
+                },
+                _ => { println!("{:?}", r ); },
+            }
         },
         opts::ApCmd::Stop { iface_id } => {
             let sme = await!(get_ap_sme(wlan_svc, iface_id))?;
@@ -221,10 +230,19 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
             let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
             let mut config = fidl_sme::MeshConfig {
                 mesh_id: mesh_id.as_bytes().to_vec(),
-                channel
+                channel,
             };
-            let r = await!(sme.join(&mut config));
-            println!("{:?}", r);
+            let r = await!(sme.join(&mut config))?;
+            match r {
+                fidl_sme::JoinMeshResultCode::InvalidArguments => {
+                    println!("{:?}: Channel {:?} is invalid", r, config.channel);
+                },
+                fidl_sme::JoinMeshResultCode::DfsUnsupported => {
+                    println!("{:?}: The specified role does not support DFS channel {:?}",
+                    r, config.channel);
+                },
+                _ => { println!("{:?}", r ); },
+            }
         },
     }
     Ok(())

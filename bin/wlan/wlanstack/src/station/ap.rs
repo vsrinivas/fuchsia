@@ -120,6 +120,7 @@ async fn start(sme: &Arc<Mutex<Sme>>, config: fidl_sme::ApConfig) -> fidl_sme::S
         password: config.password,
         channel: config.channel,
     };
+
     sme.lock().unwrap().on_start_command(sme_config, sender);
     let r = await!(receiver).unwrap_or_else(|_| {
         error!("Responder for AP Start command was dropped without sending a response");
@@ -137,6 +138,8 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
         ap_sme::StartResult::TimedOut => fidl_sme::StartApResultCode::TimedOut,
         ap_sme::StartResult::PreviousStartInProgress =>
             fidl_sme::StartApResultCode::PreviousStartInProgress,
+        ap_sme::StartResult::InvalidArguments => fidl_sme::StartApResultCode::InvalidArguments,
+        ap_sme::StartResult::DfsUnsupported => fidl_sme::StartApResultCode::DfsUnsupported,
     }
 }
 
