@@ -104,7 +104,7 @@ TEST_F(ConfigTest, Parse) {
       ["listen", "22"]
     ],
     "loaders": {
-      "http": "network_loader"
+      "http": "fuchsia-pkg://fuchsia.com/network_loader#meta/network_loader.cmx"
     }
   })json";
 
@@ -133,7 +133,7 @@ TEST_F(ConfigTest, Parse) {
 
   auto loaders = config.TakeAppLoaders();
   EXPECT_THAT(loaders, UnorderedElementsAre(Key("http")));
-  EXPECT_EQ(loaders["http"]->url, "network_loader");
+  EXPECT_EQ(loaders["http"]->url, "fuchsia-pkg://fuchsia.com/network_loader#meta/network_loader.cmx");
 }
 
 }  // namespace
