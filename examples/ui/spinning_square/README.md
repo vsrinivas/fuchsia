@@ -1,9 +1,20 @@
-# Mozart Spinning Square Example
+# Scenic Spinning Square Example
 
 This directory contains an application which draws an animated spinning
 square using the scene manager.
 
-From garnet, this can be run with `set_root_view spinning_square_view`.
-From topaz, this can be run with `launch spinning_square_view`.
+## Usage
 
+From garnet, this can be run with
+
+```shell
+$ set_root_view fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
+```
 In garnet, Alt+Esc toggles back and forth between the console and graphics.
+
+From topaz, this can be run with
+
+```shell
+$ launch fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx
+```
+

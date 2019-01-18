@@ -39,7 +39,6 @@ App::App(async::Loop* loop)
   // Connect to the SceneManager service.
   scenic_ = startup_context_
                 ->ConnectToEnvironmentService<fuchsia::ui::scenic::Scenic>();
-  session_->SetDebugName("Hello Stereo");
   scenic_.set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Lost connection to Scenic service.";
     loop_->Quit();
@@ -133,6 +132,7 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // TODO: set up SessionListener.
   session_ = std::make_unique<scenic::Session>(scenic_.get());
+  session_->SetDebugName("Hello Stereo");
   session_->set_error_handler([this](zx_status_t status) {
     FXL_LOG(INFO) << "Session terminated.";
     loop_->Quit();
@@ -140,9 +140,9 @@ void App::Init(fuchsia::ui::gfx::DisplayInfo display_info) {
 
   // Wait kSessionDuration seconds, and close the session.
   constexpr zx::duration kSessionDuration = zx::sec(40);
-  async::PostDelayedTask(loop_->dispatcher(),
-                         [this] { ReleaseSessionResources(); },
-                         kSessionDuration);
+  async::PostDelayedTask(
+      loop_->dispatcher(), [this] { ReleaseSessionResources(); },
+      kSessionDuration);
 
   // Set up initial scene.
   const float display_width = static_cast<float>(display_info.width_in_px);

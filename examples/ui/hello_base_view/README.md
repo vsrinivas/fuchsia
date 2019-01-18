@@ -30,12 +30,12 @@ touchscreen events.
 ## Usage:
 
 *   Connect to the root presenter:
-    *   `$ run hello_base_view --use_root_presenter`
+    *   `$ run fuchsia-pkg://fuchsia.com/hello_base_view#meta/hello_base_view.cmx --use_root_presenter`
 *   Set up an example presenter:
-    *   `$ run hello_base_view --use_example_presenter`
+    *   `$ run fuchsia-pkg://fuchsia.com/hello_base_view#meta/hello_base_view.cmx --use_example_presenter`
     *   For `ExamplePresenter`, make sure to kill any instances of `scenic` and
         `root_presenter` (use `killall`).
 *   Stand up the view provider service, and have it connect to an ambient
     `root_presenter`. In this configuration, the `hello_base_view` application
     won't put up its own View.
-    *   `$ present_view hello_base_view`
+    *   `$ present_view fuchsia-pkg://fuchsia.com/hello_base_view#meta/hello_base_view.cmx`

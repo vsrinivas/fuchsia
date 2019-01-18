@@ -32,7 +32,8 @@ ShadertoyEmbedderView::ShadertoyEmbedderView(scenic::ViewContext context,
 void ShadertoyEmbedderView::LaunchShadertoyClient() {
   FXL_DCHECK(!view_holder_);
 
-  embedded_view_info_ = LaunchComponentAndCreateView("shadertoy_client");
+  embedded_view_info_ = LaunchComponentAndCreateView(
+      "fuchsia-pkg://fuchsia.com/shadertoy_client#meta/shadertoy_client.cmx");
 
   view_holder_ = std::make_unique<scenic::ViewHolder>(
       session(), std::move(embedded_view_info_.view_holder_token),

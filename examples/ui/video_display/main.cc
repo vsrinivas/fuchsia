@@ -3,12 +3,12 @@
 // found in the LICENSE file.
 
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fxl/command_line.h>
+#include <lib/fxl/log_settings_command_line.h>
+#include <lib/ui/base_view/cpp/view_provider_component.h>
 #include <trace-provider/provider.h>
 
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
-#include "lib/fxl/command_line.h"
-#include "lib/fxl/log_settings_command_line.h"
-#include "lib/ui/base_view/cpp/view_provider_component.h"
 
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);

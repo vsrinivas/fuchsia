@@ -5,4 +5,6 @@ It runs for 50 seconds, then quits.
 
 ## USAGE
 
-  hello_scenic
+```shell
+$ run fuchsia-pkg://fuchsia.com/hello_scenic#meta/hello_scenic.cmx
+```

@@ -80,7 +80,9 @@ App::App(async::Loop* loop)
     fuchsia::sys::LaunchInfo launch_info;
     launch_info.out = CloneFileDescriptor(STDOUT_FILENO);
     launch_info.err = CloneFileDescriptor(STDERR_FILENO);
-    launch_info.url = "hello_input_child";
+    launch_info.url =
+        "fuchsia-pkg://fuchsia.com/hello_input_child#meta/"
+        "hello_input_child.cmx";
     launch_info.directory_request = child_services.NewRequest();
     startup_context_->launcher()->CreateComponent(
         std::move(launch_info), child_controller_.NewRequest());
@@ -190,13 +192,14 @@ void App::OnKeyboardEvent(const fuchsia::ui::input::KeyboardEvent& event) {
   // "Blink" the focus frame to acknowledge keyboard event.
   if (event.phase == Phase::PRESSED) {
     view_->DetachChild(*focus_frame_);
-    async::PostDelayedTask(message_loop_->dispatcher(),
-                           [this]() {
-                             if (focused_) {
-                               view_->AddChild(*focus_frame_);
-                             }
-                           },
-                           zx::msec(80));
+    async::PostDelayedTask(
+        message_loop_->dispatcher(),
+        [this]() {
+          if (focused_) {
+            view_->AddChild(*focus_frame_);
+          }
+        },
+        zx::msec(80));
   }
 }
 

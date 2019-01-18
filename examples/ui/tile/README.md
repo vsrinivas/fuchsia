@@ -1,4 +1,4 @@
-# Mozart View Tiling Example
+# Scenic View Tiling Example
 
 This directory contains a simple application which embeds any number of
 views from other applications all tiled in a row. It also exposes a Presenter
@@ -11,7 +11,9 @@ The applications must implement the ViewProvider interface to be embedded.
 
 Specify the urls of the views to embed initially as command-line arguments.
 
-  tile_view <app1> <app2> ...
+```shell
+$ set_root_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx <app1> <app2> ...
+```
 
 The following command-line options are also supported:
 
@@ -22,4 +24,9 @@ The following command-line options are also supported:
 
 Example:
 
-  tile_view --horizontal spinning_square_view shapes_view
+```shell
+$ set_root_view fuchsia-pkg://fuchsia.com/tile_view#meta/tile_view.cmx \
+    --horizontal \
+    fuchsia-pkg://fuchsia.com/spinning_square_view#meta/spinning_square_view.cmx \
+    fuchsia-pkg://fuchsia.com/shapes_view#meta/shapes_view.cmx
+```

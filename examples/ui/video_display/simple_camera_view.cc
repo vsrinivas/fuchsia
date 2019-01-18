@@ -2,7 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <garnet/examples/ui/video_display/simple_camera_view.h>
+#include "garnet/examples/ui/video_display/simple_camera_view.h"
+
+#include <lib/fxl/log_level.h>
+#include <lib/fxl/logging.h>
+#include <lib/ui/scenic/cpp/commands.h>
 
 #if defined(countof)
 // TODO(ZX-377): Workaround for compiler error due to Zircon defining countof()
@@ -15,11 +19,7 @@
 // No workaround required.
 #include <glm/glm.hpp>
 #endif
-#include <lib/fxl/log_level.h>
-#include <lib/fxl/logging.h>
 #include <glm/gtc/type_ptr.hpp>
-
-#include <lib/ui/scenic/cpp/commands.h>
 
 namespace video_display {
 
@@ -31,7 +31,9 @@ constexpr float kInitialWindowXPos = 320;
 constexpr float kInitialWindowYPos = 240;
 }  // namespace
 
-static const std::string kSimpleCameraServiceUrl = "simple_camera_server_cpp";
+static const std::string kSimpleCameraServiceUrl =
+    "fuchsia-pkg://fuchsia.com/simple_camera_server_cpp#meta/"
+    "simple_camera_server_cpp.cmx";
 
 SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
     : V1BaseView(std::move(view_context), "Video Display Example"),
@@ -74,8 +76,6 @@ SimpleCameraView::SimpleCameraView(scenic::ViewContext view_context)
   node_.SetTranslation(kInitialWindowXPos, kInitialWindowYPos, kDisplayHeight);
   InvalidateScene();
 }
-
-SimpleCameraView::~SimpleCameraView() = default;
 
 void SimpleCameraView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {

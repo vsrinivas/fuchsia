@@ -19,8 +19,7 @@ namespace video_display {
 class SimpleCameraView : public scenic::V1BaseView {
  public:
   SimpleCameraView(scenic::ViewContext view_context);
-
-  ~SimpleCameraView() override;
+  ~SimpleCameraView() override = default;
 
  private:
   // |scenic::V1BaseView|

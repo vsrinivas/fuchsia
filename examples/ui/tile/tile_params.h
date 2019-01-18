@@ -5,6 +5,7 @@
 #ifndef GARNET_EXAMPLES_UI_TILE_TILE_PARAMS_H_
 #define GARNET_EXAMPLES_UI_TILE_TILE_PARAMS_H_
 
+#include <string>
 #include <vector>
 
 #include "lib/fxl/command_line.h"
@@ -16,9 +17,6 @@ struct TileParams {
     kHorizontal,
     kVertical,
   };
-
-  TileParams();
-  ~TileParams();
 
   bool Parse(const fxl::CommandLine& command_line);
 

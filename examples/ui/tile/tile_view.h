@@ -10,17 +10,18 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/policy/cpp/fidl.h>
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/component/cpp/startup_context.h>
+#include <lib/fidl/cpp/binding_set.h>
+#include <lib/fxl/macros.h>
+#include <lib/ui/base_view/cpp/base_view.h>
+#include <lib/ui/base_view/cpp/v1_base_view.h>
+#include <lib/ui/scenic/cpp/resources.h>
 #include <zx/eventpair.h>
+
 #include <map>
 #include <memory>
 
 #include "garnet/examples/ui/tile/tile_params.h"
-#include "lib/component/cpp/startup_context.h"
-#include "lib/fidl/cpp/binding_set.h"
-#include "lib/fxl/macros.h"
-#include "lib/ui/base_view/cpp/base_view.h"
-#include "lib/ui/base_view/cpp/v1_base_view.h"
-#include "lib/ui/scenic/cpp/resources.h"
 
 namespace examples {
 
@@ -29,14 +30,14 @@ class TileView : public scenic::V1BaseView,
  public:
   TileView(scenic::ViewContext context, TileParams tile_params);
 
-  ~TileView() override;
+  ~TileView() override = default;
 
  private:
   struct ViewData {
     explicit ViewData(uint32_t key,
                       fuchsia::sys::ComponentControllerPtr controller,
                       scenic::Session* session);
-    ~ViewData();
+    ~ViewData() = default;
 
     const uint32_t key;
     fuchsia::sys::ComponentControllerPtr controller;

@@ -4,14 +4,13 @@
 
 #include "garnet/examples/ui/tile/tile_view.h"
 
-#include <lib/fdio/util.h>
-
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
 #include <lib/async/default.h>
-#include "lib/fidl/cpp/optional.h"
-#include "lib/fxl/logging.h"
-#include "lib/fxl/strings/split_string.h"
-#include "lib/svc/cpp/services.h"
+#include <lib/fdio/util.h>
+#include <lib/fidl/cpp/optional.h>
+#include <lib/fxl/logging.h>
+#include <lib/fxl/strings/split_string.h>
+#include <lib/svc/cpp/services.h>
 
 namespace examples {
 
@@ -26,8 +25,6 @@ TileView::TileView(scenic::ViewContext context, TileParams params)
   CreateNestedEnvironment();
   ConnectViews();
 }
-
-TileView::~TileView() {}
 
 void TileView::Present2(
     zx::eventpair view_holder_token,
@@ -219,7 +216,5 @@ TileView::ViewData::ViewData(uint32_t key,
       controller(std::move(controller)),
       host_node(session),
       clip_shape_node(session) {}
-
-TileView::ViewData::~ViewData() {}
 
 }  // namespace examples

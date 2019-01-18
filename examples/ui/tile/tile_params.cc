@@ -6,10 +6,6 @@
 
 namespace examples {
 
-TileParams::TileParams() {}
-
-TileParams::~TileParams() {}
-
 bool TileParams::Parse(const fxl::CommandLine& command_line) {
   std::string value;
 
