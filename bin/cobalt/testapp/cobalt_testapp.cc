@@ -85,7 +85,7 @@ void CobaltTestApp::Connect(uint32_t schedule_interval_seconds,
   controller_.Unbind();
   component::Services services;
   fuchsia::sys::LaunchInfo launch_info;
-  launch_info.url = "cobalt";
+  launch_info.url = "fuchsia-pkg://fuchsia.com/cobalt#meta/cobalt.cmx";
   launch_info.directory_request = services.NewRequest();
   {
     std::ostringstream stream;
