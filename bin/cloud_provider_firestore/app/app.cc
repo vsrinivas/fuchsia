@@ -16,6 +16,7 @@
 namespace cloud_provider_firestore {
 namespace {
 
+constexpr fxl::StringView kCobaltClientName = "cloud_provider_firestore";
 constexpr fxl::StringView kNoStatisticsReporting = "disable_reporting";
 
 struct AppParams {
@@ -30,7 +31,7 @@ class App : public fuchsia::modular::Lifecycle {
         trace_provider_(loop_.dispatcher()),
         factory_impl_(
             loop_.dispatcher(), &random_, startup_context_.get(),
-            app_params.disable_statistics ? "" : "cloud_provider_firestore") {
+            app_params.disable_statistics ? "" : kCobaltClientName.ToString()) {
     FXL_DCHECK(startup_context_);
   }
 

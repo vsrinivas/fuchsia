@@ -19,7 +19,9 @@ namespace cloud_provider_firestore {
 namespace {
 namespace http = ::fuchsia::net::oldhttp;
 
-constexpr char kAppUrl[] = "cloud_provider_firestore";
+constexpr char kAppUrl[] =
+    "fuchsia-pkg://fuchsia.com/cloud_provider_firestore"
+    "#meta/cloud_provider_firestore.cmx";
 
 std::string GenerateUserId() {
   // Always use a real random generator for user ids.

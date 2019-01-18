@@ -58,7 +58,7 @@ class LedgerEndToEndTest : public gtest::RealLoopFixture {
   void Init(std::vector<std::string> additional_args) {
     component::Services child_services;
     fuchsia::sys::LaunchInfo launch_info;
-    launch_info.url = "ledger";
+    launch_info.url = "fuchsia-pkg://fuchsia.com/ledger#meta/ledger.cmx";
     launch_info.directory_request = child_services.NewRequest();
     launch_info.arguments.push_back("--disable_reporting");
     for (auto& additional_arg : additional_args) {
