@@ -91,6 +91,8 @@ static int netboot_send_query(int socket, unsigned port, const char* ifname) {
         return -1;
     }
 
+    bool success = false;
+
     for (; ifa != NULL; ifa = ifa->ifa_next) {
         if (ifa->ifa_addr == NULL) {
             continue;
@@ -102,19 +104,23 @@ static int netboot_send_query(int socket, unsigned port, const char* ifname) {
         if (in6->sin6_scope_id == 0) {
             continue;
         }
-        if (ifname && ifname[0] != 0 && strcmp(ifname, ifa->ifa_name))
+        if (ifname && ifname[0] != 0 && strcmp(ifname, ifa->ifa_name)) {
             continue;
+        }
         // printf("tx %s (sid=%d)\n", ifa->ifa_name, in6->sin6_scope_id);
         size_t sz = sizeof(nbmsg) + hostname_len;
         addr.sin6_scope_id = in6->sin6_scope_id;
 
         ssize_t r = sendto(socket, &m, sz, 0,
                            (struct sockaddr*)&addr, sizeof(addr));
-        if (r < 0) {
-            fprintf(stderr, "error: sendto: %s\n", strerror(errno));
-        } else if ((size_t)r != sz) {
-            fprintf(stderr, "error: sendto: short count %zu != %zu\n", r, sz);
+        if ((r >= 0) && (size_t)r == sz) {
+            success = true;
         }
+    }
+
+    if (!success) {
+        fprintf(stderr, "error: failed to find interface for sending query\n");
+        return -1;
     }
 
     return 0;
