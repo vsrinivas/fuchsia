@@ -94,7 +94,6 @@ public:
     zx_status_t FileTruncate(uint64_t length, fidl_txn_t* txn);
     zx_status_t FileGetFlags(fidl_txn_t* txn);
     zx_status_t FileSetFlags(uint32_t flags, fidl_txn_t* txn);
-    zx_status_t FileGetVmo(uint32_t flags, fidl_txn_t* txn);
     zx_status_t FileGetBuffer(uint32_t flags, fidl_txn_t* txn);
 
     // Directory Operations.
