@@ -172,24 +172,23 @@ zx_status_t NandDevice::WriteOp(nand_operation_t* nand_op) {
     return status;
 }
 
-void NandDevice::DoIo(Transaction* txn) {
+void NandDevice::DoIo(Transaction txn) {
     zx_status_t status = ZX_OK;
 
-    ZX_DEBUG_ASSERT(txn != nullptr);
-    switch (txn->op.command) {
+    switch (txn.operation()->command) {
     case NAND_OP_READ:
-        status = ReadOp(&txn->op);
+        status = ReadOp(txn.operation());
         break;
     case NAND_OP_WRITE:
-        status = WriteOp(&txn->op);
+        status = WriteOp(txn.operation());
         break;
     case NAND_OP_ERASE:
-        status = EraseOp(&txn->op);
+        status = EraseOp(txn.operation());
         break;
     default:
         ZX_DEBUG_ASSERT(false); // Unexpected.
     }
-    txn->Complete(status);
+    txn.Complete(status);
 }
 
 // Initialization is complete by the time the thread starts.
@@ -199,17 +198,12 @@ zx_status_t NandDevice::WorkerThread() {
     for (;;) {
         // Don't loop until txn_queue_ is empty to check for kNandShutdown
         // between each io.
-        {
-            fbl::AutoLock al(&lock_);
-            Transaction* txn = txn_queue_.pop_front();
-            if (txn) {
-                // Unlock if we execute the transaction.
-                al.release();
-                DoIo(txn);
-            } else {
-                // Clear the "RECEIVED" flag under the lock.
-                worker_event_.signal(kNandTxnReceived, 0);
-            }
+        std::optional<Transaction> txn = txn_queue_.pop();
+        if (txn) {
+            DoIo(std::move(*txn));
+        } else {
+            // Clear the "RECEIVED" flag under the lock.
+            worker_event_.signal(kNandTxnReceived, 0);
         }
 
         zx_signals_t pending;
@@ -230,7 +224,7 @@ zx_status_t NandDevice::WorkerThread() {
 
 void NandDevice::NandQuery(fuchsia_hardware_nand_Info* info_out, size_t* nand_op_size_out) {
     memcpy(info_out, &nand_info_, sizeof(*info_out));
-    *nand_op_size_out = sizeof(Transaction);
+    *nand_op_size_out = Transaction::OperationSize(sizeof(nand_operation_t));
 }
 
 void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_cb, void* cookie) {
@@ -240,19 +234,19 @@ void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_
         return;
     }
 
-    Transaction* txn = Transaction::FromOp(op, completion_cb, cookie);
+    Transaction txn(op, completion_cb, cookie, sizeof(nand_operation_t));
 
-    switch (txn->op.command) {
+    switch (op->command) {
     case NAND_OP_READ:
     case NAND_OP_WRITE: {
         if (op->rw.offset_nand >= num_nand_pages_ || !op->rw.length ||
             (num_nand_pages_ - op->rw.offset_nand) < op->rw.length) {
-            txn->Complete(ZX_ERR_OUT_OF_RANGE);
+            txn.Complete(ZX_ERR_OUT_OF_RANGE);
             return;
         }
         if (op->rw.data_vmo == ZX_HANDLE_INVALID &&
             op->rw.oob_vmo == ZX_HANDLE_INVALID) {
-            txn->Complete(ZX_ERR_BAD_HANDLE);
+            txn.Complete(ZX_ERR_BAD_HANDLE);
             return;
         }
         break;
@@ -261,19 +255,18 @@ void NandDevice::NandQueue(nand_operation_t* op, nand_queue_callback completion_
         if (!op->erase.num_blocks ||
             op->erase.first_block >= nand_info_.num_blocks ||
             (op->erase.num_blocks > (nand_info_.num_blocks - op->erase.first_block))) {
-            txn->Complete(ZX_ERR_OUT_OF_RANGE);
+            txn.Complete(ZX_ERR_OUT_OF_RANGE);
             return;
         }
         break;
 
     default:
-        txn->Complete(ZX_ERR_NOT_SUPPORTED);
+        txn.Complete(ZX_ERR_NOT_SUPPORTED);
         return;
     }
 
-    fbl::AutoLock al(&lock_);
     // TODO: UPDATE STATS HERE.
-    txn_queue_.push_back(txn);
+    txn_queue_.push(std::move(txn));
     // Wake up the worker thread (while locked, so they don't accidentally
     // clear the event).
     worker_event_.signal(0, kNandTxnReceived);
@@ -294,16 +287,8 @@ NandDevice::~NandDevice() {
     worker_event_.signal(0, kNandShutdown);
     thrd_join(worker_thread_, nullptr);
 
-    {
-        lock_.Acquire();
-        // Error out all pending requests.
-        for (auto& txn : txn_queue_) {
-            lock_.Release();
-            txn.Complete(ZX_ERR_BAD_STATE);
-            lock_.Acquire();
-        }
-        lock_.Release();
-    }
+    // Error out all pending requests.
+    txn_queue_.Release();
 }
 
 // static

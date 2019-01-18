@@ -15,6 +15,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/nand.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/operation \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -58,6 +59,7 @@ MODULE_COMPILEFLAGS := \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \
+    system/dev/lib/operation \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
