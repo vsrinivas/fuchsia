@@ -258,6 +258,8 @@ function fx-command-help {
 #     set -- "${FX_ARGV[@]}"
 #     ...
 #     }
+# Arguments following a `--` are also added to FX_ARGV but not split, as they
+# should usually be forwarded as-is to subprocesses.
 function fx-standard-switches {
   # In bash 4, this can be `declare -a -g FX_ARGV=()` to be explicit
   # about setting a global array.  But bash 3 (shipped on macOS) does
@@ -271,6 +273,10 @@ function fx-standard-switches {
     elif [[ "$1" == --*=* ]]; then
       # Turn --switch=value into --switch value.
       FX_ARGV+=("${1%%=*}" "${1#*=}")
+    elif [[ "$1" == "--" ]]; then
+      # Do not parse remaining parameters after --
+      FX_ARGV+=("$@")
+      return
     else
       FX_ARGV+=("$1")
     fi
