@@ -40,8 +40,7 @@ std::shared_future<PipelinePtr> PipelineCache::GetPipeline(
     // guaranteed to fail forever.
     FXL_DCHECK(pipeline);
     promise->set_value(std::move(pipeline));
-  })
-      .detach();
+  }).detach();
 
   return result;
 }
