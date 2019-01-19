@@ -162,10 +162,16 @@ func LoadTestSpecs(fuchsiaBuildDir string, pkgs, hostTests []build.Target) ([]Te
 	// corresponding package its test was defined in: specifically, it will be put in
 	// <target_out_dir of the test package>/<test package name>.
 	specs := []TestSpec{}
+	processedDirs := make(map[string]bool)
 
 	decodeTestSpecs := func(targets []build.Target, testSpecDir func(string, build.Target) string) error {
 		for _, target := range targets {
 			specDir := testSpecDir(fuchsiaBuildDir, target)
+			if _, ok := processedDirs[specDir]; ok {
+				continue
+			}
+			processedDirs[specDir] = true
+
 			// If the associated test spec directory does not exist, the package specified no
 			// tests.
 			if _, err := os.Stat(specDir); os.IsNotExist(err) {
