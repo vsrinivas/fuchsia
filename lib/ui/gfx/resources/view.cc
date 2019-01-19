@@ -24,6 +24,7 @@ View::View(Session* session, ResourceId id, ViewLinker::ImportLink link)
 
 View::~View() {
   for (const NodePtr& child : children_) {
+    child->set_view(nullptr);
     child->Detach();
   }
 }
