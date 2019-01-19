@@ -104,9 +104,13 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
 
     if (!count) {
         const zx_time_t now = current_time();
-        zx_status_t result = thread_sleep_etc(slackDeadline, /* interruptable */ true, now);
-        if (result != ZX_OK)
-            return result;
+        {
+            ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::WAIT_MANY);
+            zx_status_t result = thread_sleep_etc(slackDeadline, /* interruptable */ true, now);
+            if (result != ZX_OK) {
+                return result;
+            }
+        }
         return ZX_ERR_TIMED_OUT;
     }
 

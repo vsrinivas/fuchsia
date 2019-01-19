@@ -282,8 +282,8 @@ static void do_msg_wait_one_test(zx_handle_t channel, const Message* msg) {
 }
 
 static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
-    if (msg->num_handles != NUM_WAIT_MANY_HANDLES) {
-        unittest_printf("ERROR: wrong number handles\n");
+    if (msg->num_handles > NUM_WAIT_MANY_HANDLES) {
+        unittest_printf("ERROR: too many handles\n");
         send_msg(channel, MSG_FAIL);
         return;
     }
@@ -293,7 +293,7 @@ static void do_msg_wait_many_test(zx_handle_t channel, const Message* msg) {
     // have to know which one is used to wait for messages.
     send_msg(channel, MSG_PROCEED);
 
-    uint32_t num_handles = NUM_WAIT_MANY_HANDLES;
+    uint32_t num_handles = msg->num_handles;
     zx_wait_item_t items[num_handles];
     for (uint32_t i = 0; i < num_handles; ++i) {
         items[i].handle = msg->handles[i];
@@ -644,6 +644,32 @@ static bool wait_many_test() {
     END_TEST;
 }
 
+// Just like wait_many_test except the child doesn't wait on any objects, just
+// the (infinite) timeout.
+static bool wait_many_no_objects_test() {
+    BEGIN_TEST;
+
+    // Start a new process.
+    zx_handle_t child, channel;
+    start_test_child(zx_job_default(), test_child_name, &child, &channel);
+    zx_handle_t thread;
+    ASSERT_TRUE(get_child_thread(channel, &thread));
+
+    send_msg(channel, MSG_WAIT_MANY_TEST);
+
+    // Don't continue until we see MSG_PROCEED, that tells us the child has
+    // received the message and isn't in a wait_one/wait_many syscall.
+    ASSERT_TRUE(recv_specific_msg(channel, MSG_PROCEED));
+
+    wait_thread_blocked(thread, ZX_THREAD_STATE_BLOCKED_WAIT_MANY);
+
+    // The child won't be sending a pass/fail message back because it's stuck in
+    // object_wait_many so just kill it.
+    terminate_process(child);
+
+    END_TEST;
+}
+
 static bool interrupt_test() {
     BEGIN_TEST;
 
@@ -687,6 +713,7 @@ RUN_TEST(port_test);
 RUN_TEST(channel_test);
 RUN_TEST(wait_one_test);
 RUN_TEST(wait_many_test);
+RUN_TEST(wait_many_no_objects_test);
 RUN_TEST(interrupt_test);
 END_TEST_CASE(thread_state_tests)
 
