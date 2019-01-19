@@ -248,8 +248,11 @@ TEST_F(NetstackFilterTest, DISABLED_TestRuleset) {
       << "Static IP address was not found in the interface list!";
 
   // Launch the test program.
+  const std::string filter_client_url =
+      "fuchsia-pkg://fuchsia.com/test_filter_client#meta/"
+      "test_filter_client.cmx";
   std::vector<std::string> args = {test_static_ip.ToString()};
-  auto controller = RunComponent(env.get(), "test_filter_client", args);
+  auto controller = RunComponent(env.get(), filter_client_url, args);
   bool wait = false;
   int64_t exit_code;
   fuchsia::sys::TerminationReason term_reason;
