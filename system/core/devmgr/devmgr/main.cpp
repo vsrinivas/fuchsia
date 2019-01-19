@@ -621,18 +621,23 @@ int service_starter(void* arg) {
         envp[envc] = nullptr;
 
         const char* num_shells = coordinator->require_system() && !netboot ? "0" : "3";
-
         size_t handle_count = 0;
+        zx_handle_t handles[2];
         uint32_t types[2];
-        zx_handle_t handles[2] = {ZX_HANDLE_INVALID, ZX_HANDLE_INVALID};
 
-        if (zx_channel_create(0, &handles[0], &devmgr::virtcon_open) == ZX_OK) {
-            types[handle_count++] = PA_HND(PA_USER0, 0);
+        zx::channel virtcon_client, virtcon_server;
+        zx_status_t status = zx::channel::create(0, &virtcon_client, &virtcon_server);
+        if (status == ZX_OK) {
+            coordinator->set_virtcon_channel(std::move(virtcon_client));
+            handles[handle_count] = virtcon_server.release();
+            types[handle_count] = PA_HND(PA_USER0, 0);
+            ++handle_count;
         }
 
         zx::debuglog debuglog;
-        if (zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE, &debuglog) ==
-            ZX_OK) {
+        status = zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE,
+                                      &debuglog);
+        if (status == ZX_OK) {
             handles[handle_count] = debuglog.release();
             types[handle_count] = PA_HND(PA_USER0, 1);
             ++handle_count;
@@ -741,8 +746,6 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
 } // namespace
 
 namespace devmgr {
-
-zx_handle_t virtcon_open;
 
 zx::channel fs_clone(const char* path) {
     if (!strcmp(path, "dev")) {

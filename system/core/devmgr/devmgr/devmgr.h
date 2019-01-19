@@ -14,8 +14,6 @@ namespace devmgr {
 struct Device;
 struct Devnode;
 
-extern zx_handle_t virtcon_open;
-
 // Initializes a devfs directory from |device|.
 void devfs_init(Device* device, async_dispatcher_t* dispatcher);
 

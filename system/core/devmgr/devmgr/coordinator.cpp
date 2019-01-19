@@ -154,6 +154,11 @@ zx_status_t Coordinator::InitializeCoreDevices() {
     return ZX_OK;
 }
 
+zx_status_t Coordinator::OpenVirtcon(zx::channel virtcon_receiver) const {
+    zx_handle_t raw_virtcon_receiver = virtcon_receiver.release();
+    return virtcon_channel_.write(0, nullptr, 0, &raw_virtcon_receiver, 1);
+}
+
 void Coordinator::DmPrintf(const char* fmt, ...) const {
     if (!dmctl_socket_.is_valid()) {
         return;
@@ -1253,11 +1258,8 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket,
 }
 
 static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
-    zx::channel vc_receiver(raw_vc_receiver);
-
-    zx_handle_t h = vc_receiver.release();
-    zx_channel_write(virtcon_open, 0, nullptr, 0, &h, 1);
-    return ZX_OK;
+    auto dev = static_cast<Device*>(ctx);
+    return dev->coordinator->OpenVirtcon(zx::channel(raw_vc_receiver));
 }
 
 static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
