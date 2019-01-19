@@ -42,6 +42,7 @@ class Importer {
   bool ImportNameRecord(const ktrace_rec_name_t* record,
                         const TagInfo& tag_info);
   bool ImportProbeRecord(const ktrace_header_t* record, size_t record_size);
+  bool ImportDurationRecord(const ktrace_header_t* record, size_t record_size);
   bool ImportUnknownRecord(const ktrace_header_t* record, size_t record_size);
 
   bool HandleKernelThreadName(KernelThread kernel_thread,
@@ -110,9 +111,26 @@ class Importer {
                      zx_koid_t object, uint32_t signals, zx_time_t timeout);
   bool HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread,
                          zx_koid_t object, uint32_t status, uint32_t pending);
-  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t probe);
-  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread, uint32_t probe,
-                   uint32_t arg0, uint32_t arg1);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
+                   uint32_t event_name_id, bool cpu_trace);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
+                   uint32_t event_name_id, bool cpu_trace, uint32_t arg0,
+                   uint32_t arg1);
+  bool HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
+                   uint32_t event_name_id, bool cpu_trace, uint64_t arg0,
+                   uint64_t arg1);
+  bool HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
+                           uint32_t event_name_id, uint32_t group,
+                           bool cpu_trace);
+  bool HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
+                           uint32_t event_name_id, uint32_t group,
+                           bool cpu_trace, uint64_t arg0, uint64_t arg1);
+  bool HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
+                         uint32_t event_name_id, uint32_t group,
+                         bool cpu_trace);
+  bool HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
+                         uint32_t event_name_id, uint32_t group, bool cpu_trace,
+                         uint64_t arg0, uint64_t arg1);
   bool HandleVcpuEnter(trace_ticks_t event_time, zx_koid_t thread);
   bool HandleVcpuExit(trace_ticks_t event_time, zx_koid_t thread, uint32_t exit,
                       uint64_t exit_address);
@@ -138,14 +156,23 @@ class Importer {
       uint32_t id);
   const trace_thread_ref_t& GetThreadRef(zx_koid_t thread);
   const trace_thread_ref_t& GetKernelThreadRef(KernelThread kernel_thread);
+  const trace_thread_ref_t& GetCpuPseudoThreadRef(trace_cpu_number_t cpu);
+
+  const trace_string_ref_t& GetCategoryForGroup(uint32_t group);
 
   trace_context_t* const context_;
   const TagMap& tags_;
 
   trace_string_ref_t const kernel_string_ref_;
+  trace_string_ref_t const unknown_category_ref_;
+  trace_string_ref_t const arch_category_ref_;
+  trace_string_ref_t const meta_category_ref_;
+  trace_string_ref_t const lifecycle_category_ref_;
+  trace_string_ref_t const tasks_category_ref_;
   trace_string_ref_t const ipc_category_ref_;
   trace_string_ref_t const irq_category_ref_;
   trace_string_ref_t const probe_category_ref_;
+  trace_string_ref_t const sched_category_ref_;
   trace_string_ref_t const syscall_category_ref_;
   trace_string_ref_t const channel_category_ref_;
   trace_string_ref_t const vcpu_category_ref_;

@@ -17,7 +17,10 @@ namespace {
 
 constexpr zx_koid_t kNoProcess = 0u;
 constexpr zx_koid_t kKernelThreadFlag = 0x100000000;
-constexpr uint32_t kProbeFlag = 0x800;
+
+constexpr zx_koid_t kKernelPseudoKoidBase = 0x00000000'70000000u;
+constexpr zx_koid_t kKernelPseudoCpuBase =
+    kKernelPseudoKoidBase + 0x00000000'01000000u;
 
 constexpr uint64_t ToUInt64(uint32_t lo, uint32_t hi) {
   return (static_cast<uint64_t>(hi) << 32) | lo;
@@ -56,9 +59,15 @@ Importer::Importer(trace_context_t* context)
     : context_(context),
       tags_(GetTags()),
       kernel_string_ref_(MAKE_STRING("kernel")),
+      unknown_category_ref_(MAKE_STRING("kernel:unknown")),
+      arch_category_ref_(MAKE_STRING("kernel:arch")),
+      meta_category_ref_(MAKE_STRING("kernel:meta")),
+      lifecycle_category_ref_(MAKE_STRING("kernel:lifecycle")),
+      tasks_category_ref_(MAKE_STRING("kernel:tasks")),
       ipc_category_ref_(MAKE_STRING("kernel:ipc")),
       irq_category_ref_(MAKE_STRING("kernel:irq")),
       probe_category_ref_(MAKE_STRING("kernel:probe")),
+      sched_category_ref_(MAKE_STRING("kernel:sched")),
       syscall_category_ref_(MAKE_STRING("kernel:syscall")),
       channel_category_ref_(MAKE_STRING("kernel:channel")),
       vcpu_category_ref_(MAKE_STRING("kernel:vcpu")),
@@ -124,8 +133,13 @@ bool Importer::ImportRecord(const ktrace_header_t* record, size_t record_size) {
     }
   }
 
-  if (KTRACE_EVENT(record->tag) & kProbeFlag)
+  const bool is_probe_group = KTRACE_GROUP(record->tag) & KTRACE_GRP_PROBE;
+  const bool is_duration =
+      KTRACE_FLAGS(record->tag) & (KTRACE_FLAGS_BEGIN | KTRACE_FLAGS_END);
+  if (is_probe_group)
     return ImportProbeRecord(record, record_size);
+  else if (is_duration)
+    return ImportDurationRecord(record, record_size);
 
   return ImportUnknownRecord(record, record_size);
 }
@@ -276,21 +290,72 @@ bool Importer::ImportNameRecord(const ktrace_rec_name_t* record,
 
 bool Importer::ImportProbeRecord(const ktrace_header_t* record,
                                  size_t record_size) {
-  uint32_t probe = KTRACE_EVENT(record->tag) & 0x7ff;
-  if (record_size >= 24) {
-    uint32_t arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
-    uint32_t arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
-    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
-                << probe << ", tid=" << std::dec << record->tid
-                << ", ts=" << record->ts << ", arg0=0x" << std::hex << arg0
-                << ", arg1=0x" << arg1;
-    return HandleProbe(record->ts, record->tid, probe, arg0, arg1);
+  if (!(KTRACE_EVENT(record->tag) & KTRACE_NAMED_EVENT_BIT)) {
+    return ImportUnknownRecord(record, record_size);
   }
 
-  FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag << ", probe=0x"
-              << probe << ", tid=" << std::dec << record->tid
-              << ", ts=" << record->ts;
-  return HandleProbe(record->ts, record->tid, probe);
+  const uint32_t event_name_id = KTRACE_EVENT_NAME_ID(record->tag);
+  const bool cpu_trace = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_CPU;
+
+  if (record_size == 24) {
+    const auto arg0 = reinterpret_cast<const uint32_t*>(record + 1)[0];
+    const auto arg1 = reinterpret_cast<const uint32_t*>(record + 1)[1];
+    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+                << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
+                << record->tid << ", ts=" << record->ts << ", arg0=0x"
+                << std::hex << arg0 << ", arg1=0x" << arg1;
+    return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace, arg0,
+                       arg1);
+  } else if (record_size == 32) {
+    const auto arg0 = reinterpret_cast<const uint64_t*>(record + 1)[0];
+    const auto arg1 = reinterpret_cast<const uint64_t*>(record + 1)[1];
+    FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+                << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
+                << record->tid << ", ts=" << record->ts << ", arg0=0x"
+                << std::hex << arg0 << ", arg1=0x" << arg1;
+    return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace, arg0,
+                       arg1);
+  }
+
+  FXL_VLOG(2) << "PROBE: tag=0x" << std::hex << record->tag
+              << ", event_name_id=0x" << event_name_id << ", tid=" << std::dec
+              << record->tid << ", ts=" << record->ts;
+  return HandleProbe(record->ts, record->tid, event_name_id, cpu_trace);
+}
+
+bool Importer::ImportDurationRecord(const ktrace_header_t* record,
+                                    size_t record_size) {
+  if (!(KTRACE_EVENT(record->tag) & KTRACE_NAMED_EVENT_BIT)) {
+    return ImportUnknownRecord(record, record_size);
+  }
+
+  const uint32_t event_name_id = KTRACE_EVENT_NAME_ID(record->tag);
+  const uint32_t group = KTRACE_GROUP(record->tag);
+  const bool cpu_trace = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_CPU;
+  const bool is_begin = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_BEGIN;
+  const bool is_end = KTRACE_FLAGS(record->tag) & KTRACE_FLAGS_END;
+
+  if (record_size == 32) {
+    const auto arg0 = reinterpret_cast<const uint64_t*>(record + 1)[0];
+    const auto arg1 = reinterpret_cast<const uint64_t*>(record + 1)[1];
+    if (is_begin) {
+      return HandleDurationBegin(record->ts, record->tid, event_name_id, group,
+                                 cpu_trace, arg0, arg1);
+    } else if (is_end) {
+      return HandleDurationEnd(record->ts, record->tid, event_name_id, group,
+                               cpu_trace, arg0, arg1);
+    }
+  } else {
+    if (is_begin) {
+      return HandleDurationBegin(record->ts, record->tid, event_name_id, group,
+                                 cpu_trace);
+    } else if (is_end) {
+      return HandleDurationEnd(record->ts, record->tid, event_name_id, group,
+                               cpu_trace);
+    }
+  }
+
+  return false;
 }
 
 bool Importer::ImportUnknownRecord(const ktrace_header_t* record,
@@ -344,9 +409,11 @@ bool Importer::HandleIRQName(uint32_t irq, const fbl::StringPiece& name) {
   return true;
 }
 
-bool Importer::HandleProbeName(uint32_t probe, const fbl::StringPiece& name) {
-  probe_names_.emplace(probe, trace_context_make_registered_string_copy(
-                                  context_, name.data(), name.length()));
+bool Importer::HandleProbeName(uint32_t event_name_id,
+                               const fbl::StringPiece& name) {
+  probe_names_.emplace(event_name_id,
+                       trace_context_make_registered_string_copy(
+                           context_, name.data(), name.length()));
   return true;
 }
 
@@ -364,7 +431,7 @@ bool Importer::HandleVcpuExitMeta(uint32_t exit, const fbl::StringPiece& name) {
 
 bool Importer::HandleIRQEnter(trace_ticks_t event_time,
                               trace_cpu_number_t cpu_number, uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_thread_ref_t thread_ref = GetCpuPseudoThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
     trace_context_write_duration_begin_event_record(
@@ -376,7 +443,7 @@ bool Importer::HandleIRQEnter(trace_ticks_t event_time,
 
 bool Importer::HandleIRQExit(trace_ticks_t event_time,
                              trace_cpu_number_t cpu_number, uint32_t irq) {
-  trace_thread_ref_t thread_ref = GetCpuCurrentThreadRef(cpu_number);
+  trace_thread_ref_t thread_ref = GetCpuPseudoThreadRef(cpu_number);
   if (!trace_is_unknown_thread_ref(&thread_ref)) {
     trace_string_ref_t name_ref = GetNameRef(irq_names_, "irq", irq);
     trace_context_write_duration_end_event_record(
@@ -600,9 +667,11 @@ bool Importer::HandleWaitOneDone(trace_ticks_t event_time, zx_koid_t thread,
 }
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
-                           uint32_t probe) {
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", probe);
+                           uint32_t event_name_id, bool cpu_trace) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
   trace_context_write_instant_event_record(context_, event_time, &thread_ref,
                                            &probe_category_ref_, &name_ref,
                                            TRACE_SCOPE_THREAD, nullptr, 0u);
@@ -610,12 +679,31 @@ bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
 }
 
 bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
-                           uint32_t probe, uint32_t arg0, uint32_t arg1) {
-  trace_thread_ref_t thread_ref = GetThreadRef(thread);
-  trace_string_ref_t name_ref = GetNameRef(probe_names_, "probe", probe);
+                           uint32_t event_name_id, bool cpu_trace,
+                           uint32_t arg0, uint32_t arg1) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
   trace_arg_t args[] = {
       trace_make_arg(arg0_name_ref_, trace_make_uint32_arg_value(arg0)),
       trace_make_arg(arg1_name_ref_, trace_make_uint32_arg_value(arg1))};
+  trace_context_write_instant_event_record(
+      context_, event_time, &thread_ref, &probe_category_ref_, &name_ref,
+      TRACE_SCOPE_THREAD, args, fbl::count_of(args));
+  return true;
+}
+
+bool Importer::HandleProbe(trace_ticks_t event_time, zx_koid_t thread,
+                           uint32_t event_name_id, bool cpu_trace,
+                           uint64_t arg0, uint64_t arg1) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_arg_t args[] = {
+      trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
+      trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
   trace_context_write_instant_event_record(
       context_, event_time, &thread_ref, &probe_category_ref_, &name_ref,
       TRACE_SCOPE_THREAD, args, fbl::count_of(args));
@@ -676,6 +764,71 @@ bool Importer::HandleVcpuUnblock(trace_ticks_t event_time, zx_koid_t thread,
   return true;
 }
 
+bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
+                                   uint32_t event_name_id, uint32_t group,
+                                   bool cpu_trace) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_duration_begin_event_record(
+      context_, event_time, &thread_ref, &category_ref, &name_ref, nullptr, 0u);
+
+  return true;
+}
+
+bool Importer::HandleDurationBegin(trace_ticks_t event_time, zx_koid_t thread,
+                                   uint32_t event_name_id, uint32_t group,
+                                   bool cpu_trace, uint64_t arg0,
+                                   uint64_t arg1) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_arg_t args[] = {
+      trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
+      trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_duration_begin_event_record(
+      context_, event_time, &thread_ref, &category_ref, &name_ref, args,
+      fbl::count_of(args));
+
+  return true;
+}
+
+bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
+                                 uint32_t event_name_id, uint32_t group,
+                                 bool cpu_trace) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_duration_end_event_record(
+      context_, event_time, &thread_ref, &category_ref, &name_ref, nullptr, 0u);
+
+  return true;
+}
+
+bool Importer::HandleDurationEnd(trace_ticks_t event_time, zx_koid_t thread,
+                                 uint32_t event_name_id, uint32_t group,
+                                 bool cpu_trace, uint64_t arg0, uint64_t arg1) {
+  trace_thread_ref_t thread_ref =
+      cpu_trace ? GetCpuPseudoThreadRef(thread) : GetThreadRef(thread);
+  trace_arg_t args[] = {
+      trace_make_arg(arg0_name_ref_, trace_make_uint64_arg_value(arg0)),
+      trace_make_arg(arg1_name_ref_, trace_make_uint64_arg_value(arg1))};
+  trace_string_ref_t name_ref =
+      GetNameRef(probe_names_, "probe", event_name_id);
+  trace_string_ref_t category_ref = GetCategoryForGroup(group);
+  trace_context_write_duration_end_event_record(
+      context_, event_time, &thread_ref, &category_ref, &name_ref, args,
+      fbl::count_of(args));
+
+  return true;
+}
+
 trace_thread_ref_t Importer::GetCpuCurrentThreadRef(
     trace_cpu_number_t cpu_number) {
   if (cpu_number >= cpu_infos_.size())
@@ -728,6 +881,26 @@ const trace_thread_ref_t& Importer::GetThreadRef(zx_koid_t thread) {
   return it->second;
 }
 
+// TODO(TO-106): Revisit using pseudo thread references to support per-CPU
+// events.
+const trace_thread_ref_t& Importer::GetCpuPseudoThreadRef(
+    trace_cpu_number_t cpu) {
+  const zx_koid_t thread = kKernelPseudoCpuBase + cpu;
+  auto it = thread_refs_.find(thread);
+  if (it == thread_refs_.end()) {
+    fbl::String label = fbl::StringPrintf("cpu-%d", cpu);
+
+    trace_string_ref name_ref =
+        trace_make_inline_string_ref(label.data(), label.length());
+    trace_context_write_thread_info_record(context_, kNoProcess, thread,
+                                           &name_ref);
+    std::tie(it, std::ignore) = thread_refs_.emplace(
+        thread,
+        trace_context_make_registered_thread(context_, kNoProcess, thread));
+  }
+  return it->second;
+}
+
 const trace_thread_ref_t& Importer::GetKernelThreadRef(
     KernelThread kernel_thread) {
   auto it = kernel_thread_refs_.find(kernel_thread);
@@ -737,6 +910,29 @@ const trace_thread_ref_t& Importer::GetKernelThreadRef(
                            kNoProcess, kKernelThreadFlag | kernel_thread));
   }
   return it->second;
+}
+
+const trace_string_ref_t& Importer::GetCategoryForGroup(uint32_t group) {
+  switch (group) {
+    case KTRACE_GRP_META:
+      return meta_category_ref_;
+    case KTRACE_GRP_LIFECYCLE:
+      return lifecycle_category_ref_;
+    case KTRACE_GRP_SCHEDULER:
+      return sched_category_ref_;
+    case KTRACE_GRP_TASKS:
+      return tasks_category_ref_;
+    case KTRACE_GRP_IPC:
+      return ipc_category_ref_;
+    case KTRACE_GRP_IRQ:
+      return irq_category_ref_;
+    case KTRACE_GRP_PROBE:
+      return probe_category_ref_;
+    case KTRACE_GRP_ARCH:
+      return arch_category_ref_;
+    default:
+      return unknown_category_ref_;
+  }
 }
 
 }  // namespace ktrace_provider
