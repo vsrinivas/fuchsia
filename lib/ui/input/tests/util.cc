@@ -263,4 +263,3 @@ bool PointerMatches(const PointerEvent& event, uint32_t pointer_id,
 }
 
 }  // namespace lib_ui_input_tests
-

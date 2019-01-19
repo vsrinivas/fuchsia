@@ -199,8 +199,7 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // subclass via the single-event version of OnEvent() above.
   //
   // Subclasses should not override this.
-  void OnScenicEvent(
-      ::std::vector<fuchsia::ui::scenic::Event> events) override;
+  void OnScenicEvent(::std::vector<fuchsia::ui::scenic::Event> events) override;
 
   void PresentScene(zx_time_t presentation_time);
 

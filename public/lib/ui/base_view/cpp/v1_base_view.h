@@ -132,8 +132,7 @@ class V1BaseView : private ::fuchsia::ui::viewsv1::ViewListener,
   // Called when session events are received.
   //
   // The default implementation does nothing.
-  virtual void OnScenicEvent(
-      std::vector<fuchsia::ui::scenic::Event> events);
+  virtual void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events);
 
   // Called to handle an input event.
   // Returns true if the view will handle the event, false if the event

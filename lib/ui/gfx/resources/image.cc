@@ -26,13 +26,13 @@ ImagePtr Image::New(Session* session, ResourceId id, MemoryPtr memory,
                     uint64_t memory_offset, ErrorReporter* error_reporter) {
   // Create from host memory.
   if (memory->is_host()) {
-    return HostImage::New(session, id, memory, image_info,
-                          memory_offset, error_reporter);
+    return HostImage::New(session, id, memory, image_info, memory_offset,
+                          error_reporter);
 
     // Create from GPU memory.
   } else {
-    return GpuImage::New(session, id, memory, image_info,
-                         memory_offset, error_reporter);
+    return GpuImage::New(session, id, memory, image_info, memory_offset,
+                         error_reporter);
   }
 }
 

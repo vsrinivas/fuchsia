@@ -8,18 +8,18 @@
 #include <fuchsia/ui/input/cpp/fidl.h>
 #include <lib/zx/eventpair.h>
 
-#include <string>
 #include <memory>
+#include <string>
 
 #include "garnet/lib/ui/gfx/displays/display.h"
 #include "garnet/lib/ui/gfx/id.h"
 #include "garnet/lib/ui/gfx/tests/mocks.h"
+#include "garnet/lib/ui/input/input_system.h"
 #include "garnet/lib/ui/scenic/scenic.h"
 #include "lib/escher/impl/command_buffer_sequencer.h"
 #include "lib/ui/gfx/tests/gfx_test.h"
-#include "lib/ui/scenic/cpp/session.h"
-#include "garnet/lib/ui/input/input_system.h"
 #include "lib/ui/scenic/cpp/resources.h"
+#include "lib/ui/scenic/cpp/session.h"
 
 namespace lib_ui_input_tests {
 

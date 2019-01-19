@@ -28,7 +28,8 @@ class IdleEventReporter : public EventReporter {
   }
 
   void EnqueueEvent(fuchsia::ui::scenic::Command unhandled) override {
-    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: " << unhandled;
+    FXL_LOG(WARNING) << "EventReporter not set up, dropped event: "
+                     << unhandled;
   }
 };
 
@@ -41,7 +42,7 @@ IdleEventReporter* GetIdleEventReporter() {
 }  // namespace
 
 void EventReporter::EnqueueEvent(fuchsia::ui::scenic::Event event) {
-  switch(event.Which()) {
+  switch (event.Which()) {
     case fuchsia::ui::scenic::Event::Tag::kGfx:
       EnqueueEvent(std::move(event.gfx()));
       break;

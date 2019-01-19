@@ -142,18 +142,18 @@ void ViewHolder::ResetRenderEvent() {
   // Re-arm the wait.
   render_waiter_.set_object(render_event_.get());
   render_waiter_.set_trigger(ZX_EVENT_SIGNALED);
-  render_waiter_.set_handler(
-      [this](async_dispatcher_t*, async::Wait*, zx_status_t status,
-             const zx_packet_signal_t*) {
-        ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
-        if (status == ZX_OK) {
-          SetIsViewRendering(true);
-        }
+  render_waiter_.set_handler([this](async_dispatcher_t*, async::Wait*,
+                                    zx_status_t status,
+                                    const zx_packet_signal_t*) {
+    ZX_ASSERT(status == ZX_OK || status == ZX_ERR_CANCELED);
+    if (status == ZX_OK) {
+      SetIsViewRendering(true);
+    }
 
-        // The first frame has been signaled. Clear the event as it is not used
-        // for subsequent frames.
-        CloseRenderEvent();
-      });
+    // The first frame has been signaled. Clear the event as it is not used
+    // for subsequent frames.
+    CloseRenderEvent();
+  });
   status = render_waiter_.Begin(async_get_default_dispatcher());
   ZX_ASSERT(status == ZX_OK);
 
@@ -214,8 +214,7 @@ void ViewHolder::SendViewDetachedFromSceneEvent() {
   view_->session()->EnqueueEvent(std::move(event));
 }
 
-void
-ViewHolder::SendViewStateChangedEvent() {
+void ViewHolder::SendViewStateChangedEvent() {
   fuchsia::ui::gfx::Event event;
   event.set_view_state_changed({.view_holder_id = id(), .state = view_state_});
   session()->EnqueueEvent(std::move(event));

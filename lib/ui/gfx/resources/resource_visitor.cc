@@ -68,9 +68,7 @@ void MeshShape::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void Material::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
-void Compositor::Accept(ResourceVisitor* visitor) {
-  visitor->Visit(this);
-}
+void Compositor::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void DisplayCompositor::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);

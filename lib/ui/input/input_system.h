@@ -84,7 +84,8 @@ class InputCommandDispatcher : public CommandDispatcher {
       const fuchsia::ui::input::SendPointerInputCmd command);
 
   // Enqueue the focus event into the view's SessionListener.
-  void EnqueueEventToView(GlobalId view_id, fuchsia::ui::input::FocusEvent focus);
+  void EnqueueEventToView(GlobalId view_id,
+                          fuchsia::ui::input::FocusEvent focus);
 
   // Enqueue the pointer event into the view's SessionListener.
   void EnqueueEventToView(GlobalId view_id,

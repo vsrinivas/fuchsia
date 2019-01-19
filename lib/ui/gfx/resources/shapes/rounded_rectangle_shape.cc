@@ -15,8 +15,8 @@ const ResourceTypeInfo RoundedRectangleShape::kTypeInfo = {
     "RoundedRectangleShape"};
 
 RoundedRectangleShape::RoundedRectangleShape(
-    Session* session, ResourceId id,
-    const escher::RoundedRectSpec& spec, escher::MeshPtr mesh)
+    Session* session, ResourceId id, const escher::RoundedRectSpec& spec,
+    escher::MeshPtr mesh)
     : PlanarShape(session, id, RoundedRectangleShape::kTypeInfo),
       spec_(spec),
       mesh_(std::move(mesh)) {}

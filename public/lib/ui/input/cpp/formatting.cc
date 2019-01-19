@@ -64,8 +64,8 @@ std::ostream& operator<<(std::ostream& os,
   }
 }
 
-std::ostream&
-operator<<(std::ostream& os, const fuchsia::ui::input::PointerEvent& value) {
+std::ostream& operator<<(std::ostream& os,
+                         const fuchsia::ui::input::PointerEvent& value) {
   os << "{PointerEvent:" << value.phase;
   os << ", device_id=" << value.device_id;
   os << ", pointer_id=" << value.pointer_id;
@@ -433,8 +433,7 @@ std::ostream& operator<<(
 }
 
 std::ostream& operator<<(
-    std::ostream& os,
-    const fuchsia::ui::input::SetParallelDispatchCmd& value) {
+    std::ostream& os, const fuchsia::ui::input::SetParallelDispatchCmd& value) {
   return os << "{SetParallelDispatchCmd: parallel_dispatch="
             << (value.parallel_dispatch ? "on" : "off") << "}";
 }

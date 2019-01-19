@@ -34,12 +34,12 @@ TEST_F(ScenicGfxTest, InvalidPresentCall_ShouldDestroySession) {
   EXPECT_EQ(scenic()->num_sessions(), 1U);
 
   session->Present(/*Presentation Time*/ 10,
-                   /*Present Callback*/ [](auto){});
+                   /*Present Callback*/ [](auto) {});
 
   // Trigger error by making a present call with an earlier presentation time
   // than the previous call to present
   session->Present(/*Presentation Time*/ 0,
-                   /*Present Callback*/ [](auto){});
+                   /*Present Callback*/ [](auto) {});
 
   RunLoopUntilIdle();
 

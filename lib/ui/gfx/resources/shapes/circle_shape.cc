@@ -10,8 +10,7 @@ namespace gfx {
 const ResourceTypeInfo CircleShape::kTypeInfo = {
     ResourceType::kShape | ResourceType::kCircle, "CircleShape"};
 
-CircleShape::CircleShape(Session* session, ResourceId id,
-                         float initial_radius)
+CircleShape::CircleShape(Session* session, ResourceId id, float initial_radius)
     : PlanarShape(session, id, CircleShape::kTypeInfo),
       radius_(initial_radius) {}
 

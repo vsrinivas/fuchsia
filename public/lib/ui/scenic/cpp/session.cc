@@ -165,8 +165,7 @@ void Session::OnScenicError(std::string error) {
   fprintf(stderr, "Session error: %s", error.c_str());
 }
 
-void Session::OnScenicEvent(
-    std::vector<fuchsia::ui::scenic::Event> events) {
+void Session::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   if (event_handler_)
     event_handler_(std::move(events));
 }

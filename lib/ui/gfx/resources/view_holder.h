@@ -46,8 +46,7 @@ class ViewHolder final : public Resource {
  public:
   static const ResourceTypeInfo kTypeInfo;
 
-  ViewHolder(Session* session, ResourceId id,
-             ViewLinker::ExportLink link);
+  ViewHolder(Session* session, ResourceId id, ViewLinker::ExportLink link);
   ~ViewHolder() override;
 
   // | Resource |
@@ -79,7 +78,6 @@ class ViewHolder final : public Resource {
   void RefreshScene();
 
  private:
-
   // | ViewLinker::ImportCallbacks |
   void LinkResolved(View* view);
   void LinkDisconnected();

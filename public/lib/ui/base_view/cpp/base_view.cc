@@ -88,8 +88,7 @@ void BaseView::InvalidateScene() {
     PresentScene(last_presentation_time_);
 }
 
-void BaseView::OnScenicEvent(
-    std::vector<fuchsia::ui::scenic::Event> events) {
+void BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
   for (auto& event : events) {
     switch (event.Which()) {
       case ::fuchsia::ui::scenic::Event::Tag::kGfx:

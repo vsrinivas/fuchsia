@@ -114,15 +114,16 @@ void ViewStub::SetContainer(ViewContainerState* container, uint32_t key) {
   // immediately.  The resolution callback assumes that |container| has been
   // set.
   // TODO(SCN-972): Remove the need for this by making callbacks fire async.
-  view_link_.Initialize(this,
-                        [this](ViewState* state) {
-                          FXL_VLOG(1) << "ViewStub connected: " << this;
-                          OnViewResolved(state, true);
-                        },
-                        [this] {
-                          FXL_VLOG(1) << "ViewStub disconnected: " << this;
-                          OnViewResolved(nullptr, false);
-                        });
+  view_link_.Initialize(
+      this,
+      [this](ViewState* state) {
+        FXL_VLOG(1) << "ViewStub connected: " << this;
+        OnViewResolved(state, true);
+      },
+      [this] {
+        FXL_VLOG(1) << "ViewStub disconnected: " << this;
+        OnViewResolved(nullptr, false);
+      });
 }
 
 void ViewStub::Unlink() {

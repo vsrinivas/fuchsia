@@ -75,9 +75,8 @@ class DisplayManager {
                zx_status_t status, const zx_packet_signal_t* signal);
   async::WaitMethod<DisplayManager, &DisplayManager::OnAsync> wait_{this};
 
-  void DisplaysChanged(
-      ::std::vector<fuchsia::hardware::display::Info> added,
-      ::std::vector<uint64_t> removed);
+  void DisplaysChanged(::std::vector<fuchsia::hardware::display::Info> added,
+                       ::std::vector<uint64_t> removed);
   void ClientOwnershipChange(bool has_ownership);
 
   fxl::UniqueFD dc_fd_;

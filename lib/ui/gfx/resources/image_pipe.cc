@@ -146,9 +146,9 @@ void ImagePipe::PresentImage(
                                                    ImagePipePtr(weak.get()));
         }
       });
-  frames_.push(Frame{image_it->second, presentation_time,
-                     std::move(acquire_fences_listener),
-                     fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
+  frames_.push(Frame{
+      image_it->second, presentation_time, std::move(acquire_fences_listener),
+      fidl::VectorPtr(std::move(release_fences)), std::move(callback)});
 };
 
 bool ImagePipe::Update(escher::ReleaseFenceSignaller* release_fence_signaller,

@@ -157,10 +157,11 @@ class ObjectLinker : public ObjectLinkerBase {
     // Initialize the Link with an |object| and callbacks for |link_resolved|
     // and |link_failed| events, making it ready for connection to its
     // peer.
-    void Initialize(Obj* object,
-                    fit::function<void(PeerObj* peer_object)> link_resolved =
-                        [](PeerObj*) {},
-                    fit::closure link_failed = []() {});
+    void Initialize(
+        Obj* object,
+        fit::function<void(PeerObj* peer_object)> link_resolved =
+            [](PeerObj*) {},
+        fit::closure link_failed = []() {});
 
    private:
     // Kept private so only an ObjectLinker can construct a valid Link.

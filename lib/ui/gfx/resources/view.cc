@@ -68,10 +68,10 @@ void View::SignalRender() {
 
   // Verify the render_handle_ is still valid before attempting to signal it.
   if (zx_object_get_info(render_handle_, ZX_INFO_HANDLE_VALID, /*buffer=*/NULL,
-                         /*buffer_size=*/0, /*actual=*/NULL, /*avail=*/NULL)
-      == ZX_OK) {
+                         /*buffer_size=*/0, /*actual=*/NULL,
+                         /*avail=*/NULL) == ZX_OK) {
     zx_status_t status =
-        zx_object_signal(render_handle_, /*clear_mask=*/ 0u, ZX_EVENT_SIGNALED);
+        zx_object_signal(render_handle_, /*clear_mask=*/0u, ZX_EVENT_SIGNALED);
     ZX_ASSERT(status == ZX_OK);
   }
 }

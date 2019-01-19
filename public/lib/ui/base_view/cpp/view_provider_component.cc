@@ -25,7 +25,7 @@ ViewProviderComponent::ViewProviderComponent(
           fidl::InterfaceRequest<fuchsia::ui::app::View> request) mutable {
         view_impl_ =
             std::make_unique<ViewImpl>(factory.share(), std::move(request),
-                                          scenic_.get(), startup_context);
+                                       scenic_.get(), startup_context);
         view_impl_->SetErrorHandler([this] { view_impl_ = nullptr; });
       });
 

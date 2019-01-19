@@ -487,13 +487,14 @@ bool RawToPNG(size_t width, size_t height, const uint8_t *data,
     rows[y] = (uint8_t *)data + y * width * 4;
   }
   png_set_rows(png_ptr, info_ptr, &rows[0]);
-  png_set_write_fn(png_ptr, &out,
-                   [](png_structp png_ptr, png_bytep data, png_size_t length) {
-                     std::vector<uint8_t> *p =
-                         (std::vector<uint8_t> *)png_get_io_ptr(png_ptr);
-                     p->insert(p->end(), data, data + length);
-                   },
-                   NULL);
+  png_set_write_fn(
+      png_ptr, &out,
+      [](png_structp png_ptr, png_bytep data, png_size_t length) {
+        std::vector<uint8_t> *p =
+            (std::vector<uint8_t> *)png_get_io_ptr(png_ptr);
+        p->insert(p->end(), data, data + length);
+      },
+      NULL);
   png_write_png(png_ptr, info_ptr, PNG_TRANSFORM_BGR, NULL);
 
   if (setjmp(png_jmpbuf(png_ptr))) {

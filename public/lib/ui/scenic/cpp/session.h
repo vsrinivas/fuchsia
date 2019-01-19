@@ -126,8 +126,7 @@ class Session : private fuchsia::ui::scenic::SessionListener {
  private:
   // |fuchsia::ui::scenic::SessionListener|
   void OnScenicError(std::string error) override;
-  void OnScenicEvent(
-      std::vector<fuchsia::ui::scenic::Event> events) override;
+  void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override;
 
   fuchsia::ui::scenic::SessionPtr session_;
   // |session_handle_| is stored only when |session_| is unbound/invalid.

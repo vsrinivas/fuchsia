@@ -129,10 +129,9 @@ TEST_F(ReaderInterpreterInputTest, KeyboardTest) {
   device->Send({0, 0, HID_USAGE_KEY_A, HID_USAGE_KEY_Z, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();
   EXPECT_EQ(2, report_count_);
-  EXPECT_EQ(
-      std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
-      std::multiset<uint32_t>(last_report_.keyboard->pressed_keys.begin(),
-                              last_report_.keyboard->pressed_keys.end()));
+  EXPECT_EQ(std::multiset<uint32_t>({HID_USAGE_KEY_A, HID_USAGE_KEY_Z}),
+            std::multiset<uint32_t>(last_report_.keyboard->pressed_keys.begin(),
+                                    last_report_.keyboard->pressed_keys.end()));
 
   device->Send({0, 0, HID_USAGE_KEY_Z, 0, 0, 0, 0, 0}, 8);
   RunLoopUntilIdle();

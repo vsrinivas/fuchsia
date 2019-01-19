@@ -99,10 +99,8 @@ std::ostream& operator<<(
                 << ", properties=<TBD>)";
 }
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewStateChangedEvent& event) {
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewStateChangedEvent& event) {
   return stream << "ViewStateChangedEvent(view_id=" << event.view_holder_id
-                << ", state=.is_rendering" << event.state.is_rendering
-                << ")";
+                << ", state=.is_rendering" << event.state.is_rendering << ")";
 }

@@ -84,43 +84,43 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
 
   // "Presenter" sets up a scene with two ViewHolders.
   uint32_t compositor_id = 0;
-  presenter.RunNow([this, &compositor_id, vh1 = std::move(vh1),
-                  vh2 = std::move(vh2)](scenic::Session* session,
-                                        scenic::EntityNode* root_node) mutable {
-    // Minimal scene.
-    scenic::Compositor compositor(session);
-    compositor_id = compositor.id();
+  presenter.RunNow(
+      [this, &compositor_id, vh1 = std::move(vh1), vh2 = std::move(vh2)](
+          scenic::Session* session, scenic::EntityNode* root_node) mutable {
+        // Minimal scene.
+        scenic::Compositor compositor(session);
+        compositor_id = compositor.id();
 
-    scenic::Scene scene(session);
-    scenic::Camera camera(scene);
-    scenic::Renderer renderer(session);
-    renderer.SetCamera(camera);
+        scenic::Scene scene(session);
+        scenic::Camera camera(scene);
+        scenic::Renderer renderer(session);
+        renderer.SetCamera(camera);
 
-    scenic::Layer layer(session);
-    layer.SetSize(test_display_width_px(), test_display_height_px());
-    layer.SetRenderer(renderer);
+        scenic::Layer layer(session);
+        layer.SetSize(test_display_width_px(), test_display_height_px());
+        layer.SetRenderer(renderer);
 
-    scenic::LayerStack layer_stack(session);
-    layer_stack.AddLayer(layer);
-    compositor.SetLayerStack(layer_stack);
+        scenic::LayerStack layer_stack(session);
+        layer_stack.AddLayer(layer);
+        compositor.SetLayerStack(layer_stack);
 
-    // Add local root node to the scene. Attach two entity nodes that perform
-    // translation for the two clients; attach ViewHolders.
-    scene.AddChild(*root_node);
-    scenic::EntityNode translate_1(session), translate_2(session);
-    scenic::ViewHolder holder_1(session, std::move(vh1), "holder_1"),
-        holder_2(session, std::move(vh2), "holder_2");
+        // Add local root node to the scene. Attach two entity nodes that
+        // perform translation for the two clients; attach ViewHolders.
+        scene.AddChild(*root_node);
+        scenic::EntityNode translate_1(session), translate_2(session);
+        scenic::ViewHolder holder_1(session, std::move(vh1), "holder_1"),
+            holder_2(session, std::move(vh2), "holder_2");
 
-    root_node->AddChild(translate_1);
-    translate_1.SetTranslation(0, 0, 2);
-    translate_1.Attach(holder_1);
+        root_node->AddChild(translate_1);
+        translate_1.SetTranslation(0, 0, 2);
+        translate_1.Attach(holder_1);
 
-    root_node->AddChild(translate_2);
-    translate_2.SetTranslation(4, 4, 1);
-    translate_2.Attach(holder_2);
+        root_node->AddChild(translate_2);
+        translate_2.SetTranslation(4, 4, 1);
+        translate_2.Attach(holder_2);
 
-    RequestToPresent(session);
-  });
+        RequestToPresent(session);
+      });
 
   // Client 1 vends a View to the global scene.
   SessionWrapper client_1(scenic());
@@ -231,8 +231,8 @@ TEST_F(CoordinateTransformTest, CoordinateTransform) {
 
     // MOVE
     EXPECT_TRUE(events[2].is_pointer());
-    EXPECT_TRUE(
-        PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE, 1, -1));
+    EXPECT_TRUE(PointerMatches(events[2].pointer(), 1u, PointerEventPhase::MOVE,
+                               1, -1));
 
     // UP
     EXPECT_TRUE(events[3].is_pointer());

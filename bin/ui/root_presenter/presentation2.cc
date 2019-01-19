@@ -197,9 +197,13 @@ void Presentation2::HandleScenicEvent(const fuchsia::ui::scenic::Event& event) {
           Shutdown();
           break;
         }
-        default: { break; }
+        default: {
+          break;
+        }
       }
-    default: { break; }
+    default: {
+      break;
+    }
   }
 }
 

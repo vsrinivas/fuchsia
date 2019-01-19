@@ -162,8 +162,8 @@ void V1BaseView::OnPropertiesChanged(
 void V1BaseView::OnSceneInvalidated(
     fuchsia::images::PresentationInfo presentation_info) {}
 
-void V1BaseView::OnScenicEvent(
-    std::vector<fuchsia::ui::scenic::Event> events) {}
+void V1BaseView::OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) {
+}
 
 bool V1BaseView::OnInputEvent(fuchsia::ui::input::InputEvent event) {
   return false;

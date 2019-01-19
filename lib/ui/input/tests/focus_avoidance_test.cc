@@ -96,44 +96,44 @@ TEST_F(FocusAvoidanceTest, ViewHierarchyByViewManager) {
   // "Presenter" sets up a scene with room for two Views.
   uint32_t compositor_id = 0;
   SessionWrapper presenter(scenic());
-  presenter.RunNow([this, &compositor_id, export_1 = std::move(export_1),
-                    export_2 = std::move(export_2)](
-                       scenic::Session* session,
-                       scenic::EntityNode* root_node) mutable {
-    // Minimal scene.
-    scenic::Compositor compositor(session);
-    compositor_id = compositor.id();
+  presenter.RunNow(
+      [this, &compositor_id, export_1 = std::move(export_1),
+       export_2 = std::move(export_2)](scenic::Session* session,
+                                       scenic::EntityNode* root_node) mutable {
+        // Minimal scene.
+        scenic::Compositor compositor(session);
+        compositor_id = compositor.id();
 
-    scenic::Scene scene(session);
-    scenic::Camera camera(scene);
-    scenic::Renderer renderer(session);
-    renderer.SetCamera(camera);
+        scenic::Scene scene(session);
+        scenic::Camera camera(scene);
+        scenic::Renderer renderer(session);
+        renderer.SetCamera(camera);
 
-    scenic::Layer layer(session);
-    layer.SetSize(test_display_width_px(), test_display_height_px());
-    layer.SetRenderer(renderer);
+        scenic::Layer layer(session);
+        layer.SetSize(test_display_width_px(), test_display_height_px());
+        layer.SetRenderer(renderer);
 
-    scenic::LayerStack layer_stack(session);
-    layer_stack.AddLayer(layer);
-    compositor.SetLayerStack(layer_stack);
+        scenic::LayerStack layer_stack(session);
+        layer_stack.AddLayer(layer);
+        compositor.SetLayerStack(layer_stack);
 
-    // Add local root node to the scene. Add per-view translation node for each
-    // View, export these nodes to ViewManager.
-    scene.AddChild(*root_node);
-    scenic::EntityNode translate_1(session), translate_2(session);
+        // Add local root node to the scene. Add per-view translation node for
+        // each View, export these nodes to ViewManager.
+        scene.AddChild(*root_node);
+        scenic::EntityNode translate_1(session), translate_2(session);
 
-    root_node->AddChild(translate_1);
-    translate_1.SetTranslation(0, 0, 1);
-    translate_1.SetTag(1);
-    translate_1.Export(std::move(export_1));
+        root_node->AddChild(translate_1);
+        translate_1.SetTranslation(0, 0, 1);
+        translate_1.SetTag(1);
+        translate_1.Export(std::move(export_1));
 
-    root_node->AddChild(translate_2);
-    translate_2.SetTranslation(4, 4, 2);
-    translate_2.SetTag(2);
-    translate_2.Export(std::move(export_2));
+        root_node->AddChild(translate_2);
+        translate_2.SetTranslation(4, 4, 2);
+        translate_2.SetTag(2);
+        translate_2.Export(std::move(export_2));
 
-    RequestToPresent(session);
-  });
+        RequestToPresent(session);
+      });
 
   // Create the tokens for ViewManager to share with each View.
   zx::eventpair import_view_1, export_view_1, import_view_2, export_view_2;

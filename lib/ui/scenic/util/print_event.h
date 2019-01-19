@@ -43,8 +43,7 @@ std::ostream& operator<<(
     std::ostream& stream,
     const fuchsia::ui::gfx::ViewPropertiesChangedEvent& event);
 
-std::ostream& operator<<(
-    std::ostream& stream,
-    const fuchsia::ui::gfx::ViewStateChangedEvent& event);
+std::ostream& operator<<(std::ostream& stream,
+                         const fuchsia::ui::gfx::ViewStateChangedEvent& event);
 
 #endif  // GARNET_LIB_UI_SCENIC_UTIL_PRINT_EVENT_H_
