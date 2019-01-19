@@ -31,8 +31,6 @@ enum CBW {	// Channel Bandwidth
     CBW80 = 3;
     CBW160 = 4;
     CBW80P80 = 5;
-
-    CBW_COUNT = 6;
 };
 
 struct WlanChan {

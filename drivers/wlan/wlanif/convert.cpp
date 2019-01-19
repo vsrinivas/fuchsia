@@ -59,9 +59,8 @@ uint8_t ConvertCBW(wlan_common::CBW cbw) {
         return CBW160;
     case wlan_common::CBW::CBW80P80:
         return CBW80P80;
-    default:
-        ZX_ASSERT(0);
     }
+    ZX_ASSERT(0);
 }
 
 void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_common::WlanChan& fidl_chan) {

@@ -4,6 +4,7 @@
 
 #![allow(dead_code)]
 use failure::{self, bail};
+use fidl_fuchsia_wlan_common as fidl_common;
 use std::fmt;
 
 // IEEE Std 802.11-2016, Annex E
@@ -31,6 +32,34 @@ pub enum Cbw {
     Cbw80P80 { secondary80: u8 },
 }
 
+impl Cbw {
+    pub fn to_fidl(&self) -> (fidl_common::Cbw, u8) {
+        match self {
+            Cbw::Cbw20 => (fidl_common::Cbw::Cbw20, 0),
+            Cbw::Cbw40 => (fidl_common::Cbw::Cbw40, 0),
+            Cbw::Cbw40Below => (fidl_common::Cbw::Cbw40Below, 0),
+            Cbw::Cbw80 => (fidl_common::Cbw::Cbw80, 0),
+            Cbw::Cbw160 => (fidl_common::Cbw::Cbw160, 0),
+            Cbw::Cbw80P80 { secondary80 } => (fidl_common::Cbw::Cbw80P80, *secondary80),
+        }
+    }
+
+    pub fn from_fidl(
+        fidl_cbw: fidl_common::Cbw, fidl_secondary80: u8,
+    ) -> Self {
+        match fidl_cbw {
+            fidl_common::Cbw::Cbw20 => Cbw::Cbw20,
+            fidl_common::Cbw::Cbw40 => Cbw::Cbw40,
+            fidl_common::Cbw::Cbw40Below => Cbw::Cbw40Below,
+            fidl_common::Cbw::Cbw80 => Cbw::Cbw80,
+            fidl_common::Cbw::Cbw160 => Cbw::Cbw160,
+            fidl_common::Cbw::Cbw80P80 => Cbw::Cbw80P80 {
+                secondary80: fidl_secondary80,
+            },
+        }
+    }
+}
+
 /// A short list of IEEE WLAN PHY.
 #[derive(Clone, Copy, Debug, Ord, PartialOrd, Eq, PartialEq)]
 pub enum Phy {
@@ -39,6 +68,28 @@ pub enum Phy {
     Ht,  // IEEE 802.11n
     Vht, // IEEE 802.11ac
     Hew, // IEEE 802.11ax
+}
+
+impl Phy {
+    pub fn to_fidl(&self) -> fidl_common::Phy {
+        match self {
+            Phy::Hr => fidl_common::Phy::Hr,
+            Phy::Erp => fidl_common::Phy::Erp,
+            Phy::Ht => fidl_common::Phy::Ht,
+            Phy::Vht => fidl_common::Phy::Vht,
+            Phy::Hew => fidl_common::Phy::Hew,
+        }
+    }
+
+    pub fn from_fidl(phy: fidl_common::Phy) -> Self {
+        match phy {
+            fidl_common::Phy::Hr => Phy::Hr,
+            fidl_common::Phy::Erp => Phy::Erp,
+            fidl_common::Phy::Ht => Phy::Ht,
+            fidl_common::Phy::Vht => Phy::Vht,
+            fidl_common::Phy::Hew => Phy::Hew,
+        }
+    }
 }
 
 /// A Channel defines the frequency spectrum to be used for radio synchronization.
@@ -71,8 +122,6 @@ impl fmt::Display for Channel {
         write!(f, "{}{}", self.primary, self.cbw)
     }
 }
-
-// TODO(porce): Convert from FIDL's WlanChan
 
 impl Channel {
     pub fn new(primary: u8, cbw: Cbw) -> Self {
@@ -252,6 +301,22 @@ impl Channel {
 
     pub fn is_dfs(&self) -> bool {
         self.is_unii2a() || self.is_unii2c()
+    }
+
+    pub fn to_fidl(&self) -> fidl_common::WlanChan {
+        let (cbw, secondary80) = self.cbw.to_fidl();
+        fidl_common::WlanChan {
+            primary: self.primary,
+            cbw,
+            secondary80,
+        }
+    }
+
+    pub fn from_fidl(c: fidl_common::WlanChan) -> Self {
+        Channel {
+            primary: c.primary,
+            cbw: Cbw::from_fidl(c.cbw, c.secondary80),
+        }
     }
 }
 
@@ -435,5 +500,34 @@ mod tests {
         assert!(Channel::new(50, Cbw::Cbw20).is_dfs());
         assert!(Channel::new(144, Cbw::Cbw20).is_dfs());
         assert!(!Channel::new(149, Cbw::Cbw20).is_dfs());
+    }
+
+    #[test]
+    fn test_convert_fidl_channel() {
+        let mut f = Channel::new(1, Cbw::Cbw20).to_fidl();
+        assert!(f.primary == 1 && f.cbw == fidl_common::Cbw::Cbw20 && f.secondary80 == 0);
+
+        f = Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).to_fidl();
+        assert!(f.primary == 36 && f.cbw == fidl_common::Cbw::Cbw80P80 && f.secondary80 == 155);
+
+        let mut c = Channel::from_fidl(fidl_common::WlanChan {
+            primary: 11,
+            cbw: fidl_common::Cbw::Cbw40Below,
+            secondary80: 123,
+        });
+        assert!(c.primary == 11 && c.cbw == Cbw::Cbw40Below);
+        c = Channel::from_fidl(fidl_common::WlanChan {
+            primary: 149,
+            cbw: fidl_common::Cbw::Cbw80P80,
+            secondary80: 42,
+        });
+        assert!(c.primary == 149 && c.cbw == Cbw::Cbw80P80 { secondary80: 42 });
+    }
+
+    #[test]
+    fn test_convert_fidl_phy() {
+        let p = Phy::Vht;
+        assert_eq!(p.to_fidl(), fidl_common::Phy::Vht);
+        assert_eq!(Phy::from_fidl(p.to_fidl()), p);
     }
 }
