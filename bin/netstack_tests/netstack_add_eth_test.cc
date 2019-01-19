@@ -165,7 +165,7 @@ TEST_F(NetstackLaunchTest, AddEthernetDevice) {
   ASSERT_TRUE(RunLoopWithTimeoutOrUntil([&] { return list_ifs; }, zx::sec(5)));
 }
 
-TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
+TEST_F(NetstackLaunchTest, DHCPRequestSent) {
   auto services = CreateServices();
 
   // TODO(NET-1818): parameterize this over multiple netstack implementations
@@ -199,19 +199,15 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
   config.name = interface_name;
   config.ip_address_config.set_dhcp(true);
 
-  auto f = [&](const void* b, size_t len) {
-    const std::byte* buf = reinterpret_cast<const std::byte*>(b);
-    size_t expected_len = 310;
+  bool data_callback_run = false;
+  auto f = [&data_callback_run](const void* b, size_t len) {
+    const std::byte* ethbuf = reinterpret_cast<const std::byte*>(b);
+    size_t expected_len = 302;
     size_t parsed = 0;
 
     EXPECT_EQ(len, (size_t)expected_len)
         << "got " << len << " bytes of " << expected_len << " requested\n";
 
-    EXPECT_EQ((unsigned int)(buf[0]), ETHERTAP_MSG_PACKET)
-        << "ethertap packet header incorrect";
-
-    const std::byte* ethbuf = &buf[sizeof(ethertap_socket_header_t)];
-    parsed += sizeof(ethertap_socket_header_t);
     const std::byte ethertype = ethbuf[12];
     EXPECT_EQ((int)ethertype, 0x08);
 
@@ -240,12 +236,17 @@ TEST_F(NetstackLaunchTest, DISABLED_DHCPRequestSent) {
     // Assert the DHCP op type is DHCP request.
     const std::byte dhcp_op_type = dhcp[0];
     EXPECT_EQ((int)dhcp_op_type, 0x01);
+
+    data_callback_run = true;
   };
-  eth->SetDataCallback(f);
+
+  tap->SetPacketCallback(f);
 
   // TODO(NET-1864): migrate to fuchsia.net.stack.AddEthernetInterface when we
   // migrate netcfg to use AddEthernetInterface.
   netstack->AddEthernetDevice(std::move(topo_path), std::move(config),
                               eth->device(), [&](uint32_t id) {});
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&data_callback_run] { return data_callback_run; }, zx::sec(5)));
 }
 }  // namespace
