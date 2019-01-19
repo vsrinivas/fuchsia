@@ -5,8 +5,8 @@
 use crate::server::sl4f::macros::dtag;
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::{
-    Characteristic, LocalServiceDelegateMarker, LocalServiceMarker, LocalServiceProxy,
-    Server_Marker, Server_Proxy, ServiceInfo,
+    AttributePermissions, Characteristic, LocalServiceDelegateMarker, LocalServiceMarker,
+    LocalServiceProxy, SecurityRequirements, Server_Marker, Server_Proxy, ServiceInfo,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
@@ -16,6 +16,12 @@ use fuchsia_zircon as zx;
 use parking_lot::RwLock;
 use regex::Regex;
 use serde_json::value::Value;
+
+use crate::bluetooth::constants::{
+    PERMISSION_READ_ENCRYPTED, PERMISSION_READ_ENCRYPTED_MITM, PERMISSION_WRITE_ENCRYPTED,
+    PERMISSION_WRITE_ENCRYPTED_MITM, PERMISSION_WRITE_SIGNED, PERMISSION_WRITE_SIGNED_MITM,
+    PROPERTY_INDICATE, PROPERTY_NOTIFY,
+};
 
 #[derive(Debug)]
 struct Counter {
@@ -84,6 +90,110 @@ impl GattServerFacade {
         }
     }
 
+    /// Convert a number representing permissions into AttributePermissions.
+    ///
+    /// Fuchsia GATT Server uses a u32 as a property value and an AttributePermissions
+    /// object to represent Characteristic and Descriptor permissions. In order to
+    /// simplify the incomming json object the incoming permission value will be
+    /// treated as a u32 and converted into the proper AttributePermission object.
+    ///
+    /// The incoming permissions number is represented by adding the numbers representing
+    /// the permission level.
+    /// Values:
+    /// 0x001 - Allow read permission
+    /// 0x002 - Allow encrypted read operations
+    /// 0x004 - Allow reading with man-in-the-middle protection
+    /// 0x010 - Allow write permission
+    /// 0x020 - Allow encrypted writes
+    /// 0x040 - Allow writing with man-in-the-middle protection
+    /// 0x080 - Allow signed writes
+    /// 0x100 - Allow signed write perations with man-in-the-middle protection
+    ///
+    /// Example input that allows read and write: 0x01 | 0x10 = 0x11
+    /// This function will convert this to the proper AttributePermission permissions.
+    pub fn permissions_and_properties_from_raw_num(
+        &self, permissions: u32, properties: u32,
+    ) -> AttributePermissions {
+        let mut read_encryption_required = false;
+        let mut read_authentication_required = false;
+        let mut read_authorization_required = false;
+
+        let mut write_encryption_required = false;
+        let mut write_authentication_required = false;
+        let mut write_authorization_required = false;
+
+        let mut update_encryption_required = false;
+        let mut update_authentication_required = false;
+        let mut update_authorization_required = false;
+
+        if permissions & PERMISSION_READ_ENCRYPTED != 0 {
+            read_encryption_required = true;
+        }
+
+        if permissions & PERMISSION_READ_ENCRYPTED_MITM != 0 {
+            read_encryption_required = true;
+            read_authentication_required = true;
+            read_authorization_required = true;
+        }
+
+        if permissions & PERMISSION_WRITE_ENCRYPTED != 0 {
+            write_encryption_required = true;
+            update_encryption_required = true;
+        }
+
+        if permissions & PERMISSION_WRITE_ENCRYPTED_MITM != 0 {
+            write_encryption_required = true;
+            write_authentication_required = true;
+            write_authorization_required = true;
+            update_encryption_required = true;
+            update_authentication_required = true;
+            update_authorization_required = true;
+        }
+
+        if permissions & PERMISSION_WRITE_SIGNED != 0 {
+            write_authorization_required = true;
+        }
+
+        if permissions & PERMISSION_WRITE_SIGNED_MITM != 0 {
+            write_encryption_required = true;
+            write_authentication_required = true;
+            write_authorization_required = true;
+            update_encryption_required = true;
+            update_authentication_required = true;
+            update_authorization_required = true;
+        }
+
+        // Update Security Requirements only required if notify or indicate
+        // properties set.
+        let update_sec_requirement = if properties & (PROPERTY_NOTIFY | PROPERTY_INDICATE) != 0 {
+            Some(Box::new(SecurityRequirements {
+                encryption_required: update_encryption_required,
+                authentication_required: update_authentication_required,
+                authorization_required: update_authorization_required,
+            }))
+        } else {
+            None
+        };
+
+        let read_sec_requirement = SecurityRequirements {
+            encryption_required: read_encryption_required,
+            authentication_required: read_authentication_required,
+            authorization_required: read_authorization_required,
+        };
+
+        let write_sec_requirement = SecurityRequirements {
+            encryption_required: write_encryption_required,
+            authentication_required: write_authentication_required,
+            authorization_required: write_authorization_required,
+        };
+
+        AttributePermissions {
+            read: Some(Box::new(read_sec_requirement)),
+            write: Some(Box::new(write_sec_requirement)),
+            update: update_sec_requirement,
+        }
+    }
+
     pub fn generate_characteristics(
         &self, characteristic_list_json: &Value,
     ) -> Vec<Characteristic> {
@@ -93,6 +203,10 @@ impl GattServerFacade {
             "Generating characteristics from json input {:?}",
             characteristic_list_json
         );
+        // TODO: Just a placeholder until it is used when Characteristics are
+        // actually being parsed.
+        self.permissions_and_properties_from_raw_num(0, 0);
+
         let characteristics: Vec<Characteristic> = Vec::new();
         characteristics
     }
@@ -113,7 +227,7 @@ impl GattServerFacade {
         // Get the service UUID.
         let service_uuid = match service_json["uuid"].as_str() {
             Some(s) => s,
-            None => bail!("Service uuid was unable to cast to str.")
+            None => bail!("Service uuid was unable to cast to str."),
         };
 
         //Get the Characteristics from the service.
@@ -240,14 +354,14 @@ impl GattServerFacade {
         let services = match database {
             Some(d) => match d.get("services") {
                 Some(s) => s,
-                None => bail!("No services found.")
+                None => bail!("No services found."),
             },
             None => bail!("Could not find the 'services' key in the json database."),
         };
 
         let service_list = match services.as_array() {
             Some(s) => s,
-            None => bail!("Attribute 'service' is not a parseable list.")
+            None => bail!("Attribute 'service' is not a parseable list."),
         };
 
         for service in service_list.into_iter() {
