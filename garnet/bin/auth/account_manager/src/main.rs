@@ -27,12 +27,17 @@ use fuchsia_async as fasync;
 use log::{error, info};
 use std::sync::Arc;
 
+// Default accounts directory
+const ACCOUNT_DIR_PARENT: &str = "/data/account";
+
 fn main() -> Result<(), Error> {
     fuchsia_syslog::init_with_tags(&["auth"]).expect("Can't init logger");
     info!("Starting account manager");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let account_manager = Arc::new(AccountManager::new());
+
+    // TODO(dnorsdtrom): Add CLI arg for making the path configurable, to support test isolation
+    let account_manager = Arc::new(AccountManager::new(ACCOUNT_DIR_PARENT));
 
     let fut = ServicesServer::new()
         .add_service((AccountManagerMarker::NAME, move |chan| {

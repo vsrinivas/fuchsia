@@ -102,4 +102,11 @@ interface AccountHandlerContext {
     GetAuthProvider(string auth_provider_type,
                     request<fuchsia.auth.AuthProvider> auth_provider)
         -> (fuchsia.auth.account.Status status);
+
+    // Returns the directory path to use for files concerning account
+    // definitions and credentials. Each account's data is located in a
+    // sub-directory named after the account's local id.
+    //
+    // Returns: |string| Path to the parent of all account directories.
+    GetAccountDirParent() -> (string path);
 };

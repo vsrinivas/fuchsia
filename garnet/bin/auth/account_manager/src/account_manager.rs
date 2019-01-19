@@ -59,10 +59,13 @@ pub struct AccountManager {
 
 impl AccountManager {
     /// Constructs a new AccountManager with no accounts.
-    pub fn new() -> AccountManager {
+    pub fn new(account_dir_parent: &str) -> AccountManager {
         AccountManager {
             ids_to_handlers: Mutex::new(BTreeMap::new()),
-            context: Arc::new(AccountHandlerContext::new(&DEFAULT_AUTH_PROVIDER_CONFIG)),
+            context: Arc::new(AccountHandlerContext::new(
+                &DEFAULT_AUTH_PROVIDER_CONFIG,
+                account_dir_parent,
+            )),
         }
     }
 
@@ -255,6 +258,8 @@ mod tests {
     use fuchsia_async as fasync;
     use fuchsia_zircon as zx;
 
+    const TEST_ACCOUNT_DIR: &str = "/data/test_account";
+
     fn request_stream_test<TestFn, Fut>(test_object: AccountManager, test_fn: TestFn)
     where
         TestFn: FnOnce(AccountManagerProxy) -> Fut,
@@ -287,7 +292,7 @@ mod tests {
                     .map(|id| (LocalAccountId::new(id), None))
                     .collect(),
             ),
-            context: Arc::new(AccountHandlerContext::new(&vec![])),
+            context: Arc::new(AccountHandlerContext::new(&vec![], TEST_ACCOUNT_DIR)),
         }
     }
 
@@ -304,7 +309,7 @@ mod tests {
 
     #[test]
     fn test_initially_empty() {
-        request_stream_test(AccountManager::new(), async move |proxy| {
+        request_stream_test(AccountManager::new(TEST_ACCOUNT_DIR), async move |proxy| {
             assert_eq!(await!(proxy.get_account_ids())?, vec![]);
             assert_eq!(
                 await!(proxy.get_account_auth_states())?,

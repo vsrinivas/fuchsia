@@ -21,12 +21,15 @@ pub struct AccountHandlerContext {
     /// A map from auth_provider_type to an `AuthProviderConnection` used to launch the associated
     /// component.
     auth_provider_connections: HashMap<String, AuthProviderConnection>,
+    account_dir_parent: String,
 }
 
 impl AccountHandlerContext {
     /// Creates a new `AccountHandlerContext` from the supplied vector of `AuthProviderConfig`
     /// objects.
-    pub fn new(auth_provider_configs: &[AuthProviderConfig]) -> AccountHandlerContext {
+    pub fn new(
+        auth_provider_configs: &[AuthProviderConfig], account_dir_parent: &str,
+    ) -> AccountHandlerContext {
         AccountHandlerContext {
             auth_provider_connections: auth_provider_configs
                 .iter()
@@ -37,6 +40,7 @@ impl AccountHandlerContext {
                     )
                 })
                 .collect(),
+            account_dir_parent: account_dir_parent.to_string(),
         }
     }
 
@@ -60,7 +64,14 @@ impl AccountHandlerContext {
             } => responder.send(await!(
                 self.get_auth_provider(&auth_provider_type, auth_provider)
             )),
+            AccountHandlerContextRequest::GetAccountDirParent { responder } => {
+                responder.send(self.get_account_dir_parent())
+            }
         }
+    }
+
+    fn get_account_dir_parent(&self) -> &str {
+        &self.account_dir_parent
     }
 
     async fn get_auth_provider<'a>(
@@ -85,6 +96,8 @@ mod tests {
     /// hermetic component test to provide coverage for these areas and only cover the in-process
     /// behavior with this unit-test.
 
+    const TEST_ACCOUNT_DIR_PARENT: &str = "/data/test_account";
+
     #[test]
     fn test_new() {
         let dummy_configs = vec![
@@ -102,7 +115,7 @@ mod tests {
         let dummy_config_1 = &dummy_configs[0];
         let dummy_config_2 = &dummy_configs[1];
 
-        let test_object = AccountHandlerContext::new(&dummy_configs);
+        let test_object = AccountHandlerContext::new(&dummy_configs, TEST_ACCOUNT_DIR_PARENT);
         let test_connection_1 = test_object
             .auth_provider_connections
             .get(&dummy_config_1.auth_provider_type)
@@ -112,6 +125,7 @@ mod tests {
             .get(&dummy_config_2.auth_provider_type)
             .unwrap();
 
+        assert_eq!(test_object.get_account_dir_parent(), TEST_ACCOUNT_DIR_PARENT);
         assert_eq!(test_connection_1.component_url(), dummy_config_1.url);
         assert_eq!(test_connection_2.component_url(), dummy_config_2.url);
         assert!(test_object
