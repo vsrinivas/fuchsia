@@ -4,3 +4,4 @@ License: BSD
 
 Modifications:
  - Deleted unused build and source files.
+ - Renamed "lib/zstd.h" to "include/zstd/zstd.h".
