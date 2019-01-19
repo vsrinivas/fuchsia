@@ -13,6 +13,7 @@ fidl("fuchsia.wlan.mlme") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
     "//garnet/public/fidl/fuchsia.wlan.minstrel",
     "//garnet/public/fidl/fuchsia.wlan.stats",
   ]

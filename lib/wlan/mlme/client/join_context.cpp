@@ -6,8 +6,8 @@
 #include <wlan/mlme/client/join_context.h>
 
 namespace wlan {
-JoinContext::JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::wlan::mlme::PHY phy,
-                         ::fuchsia::wlan::mlme::CBW cbw)
+JoinContext::JoinContext(::fuchsia::wlan::mlme::BSSDescription bss,
+                         ::fuchsia::wlan::common::PHY phy, ::fuchsia::wlan::common::CBW cbw)
     : bss_(std::move(bss)) {
     bssid_ = common::MacAddr(bss_.bssid);
     bss_channel_ = wlan_channel_t{

@@ -6,8 +6,9 @@
 pub mod tests {
     use crate::{config, mac_frames, test_utils};
     use {
+        fidl_fuchsia_wlan_common as wlan_common,
         fidl, fidl_fuchsia_wlan_device as wlan_device,
-        fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_mlme as wlan_mlme,
+        fidl_fuchsia_wlan_device_service as fidl_wlan_service,
         fidl_fuchsia_wlan_sme as fidl_sme, fidl_fuchsia_wlan_tap as wlantap, fuchsia_app as app,
         fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
         fuchsia_zircon::{self as zx, prelude::*},
@@ -213,10 +214,10 @@ pub mod tests {
             valid_fields: 0,
             phy: 0,
             data_rate: 0,
-            chan: wlan_mlme::WlanChan {
+            chan: wlan_common::WlanChan {
                 // TODO(FIDL-54): use clone()
                 primary: 11,
-                cbw: wlan_mlme::Cbw::Cbw20,
+                cbw: wlan_common::Cbw::Cbw20,
                 secondary80: 0,
             },
             mcs: 0,

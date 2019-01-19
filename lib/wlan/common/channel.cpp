@@ -21,7 +21,7 @@ bool operator!=(const wlan_channel_t& lhs, const wlan_channel_t& rhs) {
 namespace wlan {
 namespace common {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_common = ::fuchsia::wlan::common;
 
 const char* kCbwStr[] = {"CBW20", "CBW40", "CBW40B", "CBW80", "CBW160", "CBW80P80", "CBW_INV"};
 
@@ -219,7 +219,7 @@ std::string ChanStrLong(const wlan_channel_t& chan) {
     return std::string(buf);
 }
 
-wlan_channel_t FromFidl(const wlan_mlme::WlanChan& fidl_chan) {
+wlan_channel_t FromFidl(const wlan_common::WlanChan& fidl_chan) {
     // Translate wlan::WlanChan class defined in wlan-mlme.fidl
     // to wlan_channel_t struct defined in wlan.h
     return wlan_channel_t{
@@ -229,10 +229,10 @@ wlan_channel_t FromFidl(const wlan_mlme::WlanChan& fidl_chan) {
     };
 }
 
-wlan_mlme::WlanChan ToFidl(const wlan_channel_t& chan) {
-    return wlan_mlme::WlanChan{
+wlan_common::WlanChan ToFidl(const wlan_channel_t& chan) {
+    return wlan_common::WlanChan{
         .primary = chan.primary,
-        .cbw = static_cast<wlan_mlme::CBW>(chan.cbw),
+        .cbw = static_cast<wlan_common::CBW>(chan.cbw),
         .secondary80 = chan.secondary80,
     };
 }
@@ -254,18 +254,18 @@ std::string GetPhyStr(PHY phy) {
     }
 }
 
-PHY FromFidl(::fuchsia::wlan::mlme::PHY phy) {
+PHY FromFidl(::fuchsia::wlan::common::PHY phy) {
     // TODO(NET-1845): Streamline the enum values
     switch (phy) {
-    case wlan_mlme::PHY::HR:
+    case wlan_common::PHY::HR:
         return WLAN_PHY_CCK;
-    case wlan_mlme::PHY::ERP:
+    case wlan_common::PHY::ERP:
         return WLAN_PHY_OFDM;
-    case wlan_mlme::PHY::HT:
+    case wlan_common::PHY::HT:
         return WLAN_PHY_HT;
-    case wlan_mlme::PHY::VHT:
+    case wlan_common::PHY::VHT:
         return WLAN_PHY_VHT;
-    case wlan_mlme::PHY::HEW:
+    case wlan_common::PHY::HEW:
         return WLAN_PHY_HEW;
     default:
         errorf("Unknown phy value: %d\n", phy);
@@ -274,23 +274,23 @@ PHY FromFidl(::fuchsia::wlan::mlme::PHY phy) {
     }
 }
 
-::fuchsia::wlan::mlme::PHY ToFidl(PHY phy) {
+::fuchsia::wlan::common::PHY ToFidl(PHY phy) {
     // TODO(NET-1845): Streamline the enum values
     switch (phy) {
     case WLAN_PHY_CCK:
-        return wlan_mlme::PHY::HR;
+        return wlan_common::PHY::HR;
     case WLAN_PHY_OFDM:
-        return wlan_mlme::PHY::ERP;
+        return wlan_common::PHY::ERP;
     case WLAN_PHY_HT:
-        return wlan_mlme::PHY::HT;
+        return wlan_common::PHY::HT;
     case WLAN_PHY_VHT:
-        return wlan_mlme::PHY::VHT;
+        return wlan_common::PHY::VHT;
     case WLAN_PHY_HEW:
-        return wlan_mlme::PHY::HEW;
+        return wlan_common::PHY::HEW;
     default:
         errorf("Unknown phy value: %d\n", phy);
         ZX_DEBUG_ASSERT(false);
-        return wlan_mlme::PHY::HEW;
+        return wlan_common::PHY::HEW;
     }
 }
 

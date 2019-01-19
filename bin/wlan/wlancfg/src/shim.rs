@@ -5,8 +5,8 @@
 use crate::{client, known_ess_store::KnownEssStore};
 
 use fidl::{self, endpoints::create_proxy};
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service as wlan_service;
-use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use fidl_fuchsia_wlan_service as legacy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fidl_fuchsia_wlan_stats as fidl_wlan_stats;
@@ -180,10 +180,10 @@ fn convert_bss_info(bss: fidl_sme::BssInfo) -> legacy::Ap {
         rssi_dbm: bss.rx_dbm,
         is_secure: bss.protected,
         is_compatible: bss.compatible,
-        chan: fidl_mlme::WlanChan {
+        chan: fidl_common::WlanChan {
             primary: bss.channel,
             secondary80: 0,
-            cbw: fidl_mlme::Cbw::Cbw20,
+            cbw: fidl_common::Cbw::Cbw20
         },
     }
 }

@@ -4,6 +4,7 @@
 
 use failure::{bail, format_err, Error, ResultExt};
 use fidl::endpoints;
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_device_service::DeviceServiceProxy;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_syslog::fx_log_err;
@@ -49,9 +50,9 @@ pub async fn connect_to_network(
         password: target_pwd,
         params: fidl_sme::ConnectPhyParams {
             override_phy: false,
-            phy: fidl_sme::Phy::Ht,
+            phy: fidl_common::Phy::Ht,
             override_cbw: false,
-            cbw: fidl_sme::Cbw::Cbw20,
+            cbw: fidl_common::Cbw::Cbw20,
         },
     };
 

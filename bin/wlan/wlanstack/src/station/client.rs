@@ -4,7 +4,7 @@
 
 use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
-use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEventStream, MlmeProxy};
+use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select, stream::FuturesUnordered};
 use futures::channel::mpsc;
@@ -153,29 +153,6 @@ fn scan(sme: &Arc<Mutex<Sme>>,
     Ok(())
 }
 
-
-fn convert_to_mlme_phy(sme_phy: fidl_sme::Phy) -> fidl_mlme::Phy {
-    match sme_phy {
-        fidl_sme::Phy::Hr => fidl_mlme::Phy::Hr,
-        fidl_sme::Phy::Erp => fidl_mlme::Phy::Erp,
-        fidl_sme::Phy::Ht => fidl_mlme::Phy::Ht,
-        fidl_sme::Phy::Vht => fidl_mlme::Phy::Vht,
-        fidl_sme::Phy::Hew => fidl_mlme::Phy::Hew,
-    }
-}
-
-fn convert_to_mlme_cbw(sme_cbw: fidl_sme::Cbw) -> fidl_mlme::Cbw {
-    match sme_cbw {
-        fidl_sme::Cbw::Cbw20 => fidl_mlme::Cbw::Cbw20,
-        fidl_sme::Cbw::Cbw40 => fidl_mlme::Cbw::Cbw40,
-        fidl_sme::Cbw::Cbw40Below => fidl_mlme::Cbw::Cbw40Below,
-        fidl_sme::Cbw::Cbw80 => fidl_mlme::Cbw::Cbw80,
-        fidl_sme::Cbw::Cbw160 => fidl_mlme::Cbw::Cbw160,
-        fidl_sme::Cbw::Cbw80P80 => fidl_mlme::Cbw::Cbw80P80,
-        fidl_sme::Cbw::CbwCount => fidl_mlme::Cbw::CbwCount,
-    }
-}
-
 fn connect(sme: &Arc<Mutex<Sme>>, ssid: Vec<u8>, password: Vec<u8>,
            txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
            params: fidl_sme::ConnectPhyParams)
@@ -186,11 +163,9 @@ fn connect(sme: &Arc<Mutex<Sme>>, ssid: Vec<u8>, password: Vec<u8>,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
 
-    let mlme_phy = convert_to_mlme_phy(params.phy);
-    let mlme_cbw = convert_to_mlme_cbw(params.cbw);
     let params = ConnectPhyParams {
-        phy: if params.override_phy { Some(mlme_phy) } else { None },
-        cbw: if params.override_cbw { Some(mlme_cbw) } else { None },
+        phy: if params.override_phy { Some(params.phy) } else { None },
+        cbw: if params.override_cbw { Some(params.cbw) } else { None },
     };
     sme.lock().unwrap().on_connect_command(ssid, password, handle, params);
     Ok(())

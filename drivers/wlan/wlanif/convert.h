@@ -9,14 +9,16 @@
 
 namespace wlanif {
 
+// TODO(porce): Avoid using namespace alias
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 namespace wlan_stats = ::fuchsia::wlan::stats;
 
 uint8_t ConvertBSSType(wlan_mlme::BSSTypes bss_type);
 uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type);
-uint8_t ConvertCBW(wlan_mlme::CBW cbw);
-void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_mlme::WlanChan& fidl_chan);
-void ConvertWlanChan(wlan_mlme::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan);
+uint8_t ConvertCBW(wlan_common::CBW cbw);
+void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_common::WlanChan& fidl_chan);
+void ConvertWlanChan(wlan_common::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan);
 void CopySSID(const ::std::vector<uint8_t>& in_ssid, wlanif_ssid_t* out_ssid);
 void CopyRSNE(const ::std::vector<uint8_t>& in_rsne, uint8_t* out_rsne, size_t* out_rsne_len);
 void ConvertBSSDescription(wlanif_bss_description_t* wlanif_bss_desc,
@@ -33,7 +35,7 @@ void ConvertSetKeyDescriptor(set_key_descriptor_t* key_desc,
 void ConvertDeleteKeyDescriptor(delete_key_descriptor_t* key_desc,
                                 const wlan_mlme::DeleteKeyDescriptor& fidl_key_desc);
 wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type);
-wlan_mlme::CBW ConvertCBW(uint8_t cbw);
+wlan_common::CBW ConvertCBW(uint8_t cbw);
 wlan_mlme::AuthenticationTypes ConvertAuthType(uint8_t auth_type);
 wlan_mlme::ReasonCode ConvertDeauthReasonCode(uint16_t reason);
 wlan_mlme::ScanResultCodes ConvertScanResultCode(uint8_t code);

@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use failure::{bail, format_err};
+use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
 use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities};
@@ -51,10 +52,10 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         ht_op: None,
         vht_cap: None,
         vht_op: None,
-        chan: fidl_mlme::WlanChan {
+        chan: fidl_common::WlanChan {
             primary: 1,
             secondary80: 0,
-            cbw: fidl_mlme::Cbw::Cbw20,
+            cbw: fidl_common::Cbw::Cbw20,
         },
         rssi_dbm: 0,
     }
@@ -88,10 +89,10 @@ pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {
     }
 }
 
-pub fn fake_chan(primary :u8) -> fidl_mlme::WlanChan {
-    fidl_mlme::WlanChan {
+pub fn fake_chan(primary :u8) -> fidl_common::WlanChan {
+    fidl_common::WlanChan {
         primary,
-        cbw: fidl_mlme::Cbw::Cbw20,
+        cbw: fidl_common::Cbw::Cbw20,
         secondary80: 0,
     }
 }
@@ -303,7 +304,7 @@ fn fake_basic_vht_mcs_nss() -> fidl_mlme::BasicVhtMcsNss {
 
 pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
     fidl_mlme::BandCapabilities {
-        band_id: fidl_mlme::Band::WlanBand5Ghz,
+        band_id: fidl_common::Band::WlanBand5Ghz,
         basic_rates: vec![],
         base_frequency: 5000,
         channels: vec![],

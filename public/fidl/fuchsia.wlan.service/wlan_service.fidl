@@ -4,6 +4,7 @@
 
 library fuchsia.wlan.service;
 
+using fuchsia.wlan.common;
 using fuchsia.wlan.mlme;
 using fuchsia.wlan.stats;
 
@@ -26,7 +27,7 @@ struct AP {
     int8 rssi_dbm;
     bool is_secure;
     bool is_compatible; // with respect to Fuchsia
-    fuchsia.wlan.mlme.WlanChan chan;
+    fuchsia.wlan.common.WlanChan chan;
 };
 
 struct ScanRequest {

@@ -4,6 +4,8 @@
 
 library fuchsia.wlan.mlme;
 
+using fuchsia.wlan.common;
+
 // Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
 // MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
 
@@ -25,43 +27,6 @@ enum ScanTypes {
     PASSIVE = 2;
     //LAST = PASSIVE;
 };
-
-// LINT analyzer keyword intended for humans:
-// LINT.IfChange
-
-enum PHY {
-    HR = 1; // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    ERP = 2; // IEEE 802.11a/g, used for ERP-OFDM
-    HT = 3; // IEEE 802.11n
-    VHT = 4; // IEEE 802.11ac
-    HEW = 5; // IEEE 802.11ax
-};
-
-enum CBW {	// Channel Bandwidth
-    CBW20 = 0;
-    CBW40 = 1;
-    //CBW40ABOVE = CBW40;
-    CBW40BELOW = 2;
-    CBW80 = 3;
-    CBW160 = 4;
-    CBW80P80 = 5;
-
-    CBW_COUNT = 6;
-};
-
-struct WlanChan {
-    uint8 primary;
-    CBW cbw;
-    uint8 secondary80;
-};
-
-enum Band : uint8 {
-    WLAN_BAND_2GHZ = 0;
-    WLAN_BAND_5GHZ = 1;
-    WLAN_BAND_COUNT = 2;
-};
-
-// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/info.h)
 
 struct ScanRequest {
     uint64 txn_id;
@@ -415,7 +380,7 @@ struct BSSDescription {
     VhtOperation? vht_op;
 
     // List up non-standard, Fuchsia only parameters
-    WlanChan chan;
+    fuchsia.wlan.common.WlanChan chan;
     int8 rssi_dbm; // dBm
 };
 
@@ -452,8 +417,8 @@ struct JoinRequest {
     // - HT Capabilities
     // - VHT Capabilities
     // - Extended Capabilities
-    PHY phy;
-    CBW cbw;
+    fuchsia.wlan.common.PHY phy;
+    fuchsia.wlan.common.CBW cbw;
 };
 
 // MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)

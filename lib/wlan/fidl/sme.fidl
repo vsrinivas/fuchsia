@@ -4,6 +4,8 @@
 
 library fuchsia.wlan.sme;
 
+using fuchsia.wlan.common;
+
 struct BssInfo {
     array<uint8>:6 bssid;
     vector<uint8>:32 ssid;
@@ -55,30 +57,11 @@ interface ConnectTransaction {
     -> OnFinished(ConnectResultCode code);
 };
 
-enum Phy {
-    HR = 1; // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
-    ERP = 2; // IEEE 802.11a/g, used for ERP-OFDM
-    HT = 3; // IEEE 802.11n
-    VHT = 4; // IEEE 802.11ac
-    HEW = 5; // IEEE 802.11ax
-};
-
-enum Cbw { // Channel Bandwidth
-    CBW20 = 0;
-    CBW40 = 1;
-    // CBW40ABOVE = CBW40;
-    CBW40BELOW = 2;
-    CBW80 = 3;
-    CBW160 = 4;
-    CBW80P80 = 5;
-    CBW_COUNT = 6;
-};
-
 struct ConnectPhyParams {
     bool override_phy;
-    Phy phy;
+    fuchsia.wlan.common.PHY phy;
     bool override_cbw;
-    Cbw cbw;
+    fuchsia.wlan.common.CBW cbw;
 };
 
 struct ConnectRequest {

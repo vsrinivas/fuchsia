@@ -11,6 +11,7 @@ mod state;
 #[cfg(test)]
 pub mod test_utils;
 
+use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
 use futures::channel::mpsc;
 use log::error;
@@ -70,8 +71,8 @@ pub type TimeStream = timer::TimeStream<Event>;
 
 #[derive(Debug, PartialEq)]
 pub struct ConnectPhyParams {
-    pub phy: Option<fidl_mlme::Phy>,
-    pub cbw: Option<fidl_mlme::Cbw>,
+    pub phy: Option<fidl_common::Phy>,
+    pub cbw: Option<fidl_common::Cbw>,
 }
 
 pub struct ConnectConfig<T> {

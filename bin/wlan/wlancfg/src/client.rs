@@ -9,6 +9,7 @@ use crate::{
 
 use failure::{bail, format_err};
 use fidl::endpoints::create_proxy;
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_sme as fidl_sme;
 use fuchsia_zircon::prelude::*;
 use futures::{
@@ -325,9 +326,9 @@ fn start_connect_txn(
         password: password.to_vec(),
         params: fidl_sme::ConnectPhyParams {
             override_phy: false,
-            phy: fidl_sme::Phy::Ht,
+            phy: fidl_common::Phy::Ht,
             override_cbw: false,
-            cbw: fidl_sme::Cbw::Cbw20,
+            cbw: fidl_common::Cbw::Cbw20,
         },
     };
     sme.connect(&mut req, Some(remote))?;

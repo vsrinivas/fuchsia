@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BandCapabilities};
 
 pub fn clone_capability_info(c: &fidl_mlme::CapabilityInfo) -> fidl_mlme::CapabilityInfo {
@@ -88,7 +89,7 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
         vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
 
-        chan: fidl_mlme::WlanChan {
+        chan: fidl_common::WlanChan {
             primary: d.chan.primary,
             cbw: d.chan.cbw,
             secondary80: d.chan.secondary80,

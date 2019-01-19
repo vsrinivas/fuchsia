@@ -13,7 +13,7 @@ go_library("wlantool_lib") {
 
   deps = [
     "//garnet/public/lib/component/go/src/app",
-    "//garnet/public/fidl/fuchsia.wlan.mlme($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.wlan.common($go_toolchain)",
     "//garnet/public/fidl/fuchsia.wlan.service($go_toolchain)",
   ]
 }

@@ -56,13 +56,13 @@ struct Channel {
     // See IEEE Std 802.11-2016 19.3.15
 };
 
-wlan_channel_t FromFidl(const ::fuchsia::wlan::mlme::WlanChan& fidl_chan);
-::fuchsia::wlan::mlme::WlanChan ToFidl(const wlan_channel_t& chan);
+wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
+::fuchsia::wlan::common::WlanChan ToFidl(const wlan_channel_t& chan);
 
 extern const char* kCbwStr[];
 
-PHY FromFidl(::fuchsia::wlan::mlme::PHY phy);
-::fuchsia::wlan::mlme::PHY ToFidl(PHY phy);
+PHY FromFidl(::fuchsia::wlan::common::PHY phy);
+::fuchsia::wlan::common::PHY ToFidl(PHY phy);
 
 }  // namespace common
 }  // namespace wlan

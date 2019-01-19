@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 library fuchsia.wlan.mlme;
+
+using fuchsia.wlan.common;
 using fuchsia.wlan.stats;
 using fuchsia.wlan.minstrel;
 
@@ -33,7 +35,7 @@ enum MacRole {
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
 struct BandCapabilities {
-    Band band_id;
+    fuchsia.wlan.common.Band band_id;
     vector<uint8> basic_rates;
     uint16 base_frequency;
     vector<uint8> channels;

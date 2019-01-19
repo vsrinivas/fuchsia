@@ -13,7 +13,9 @@
 
 namespace wlanif {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
+
 
 uint8_t ConvertBSSType(wlan_mlme::BSSTypes bss_type) {
     switch (bss_type) {
@@ -43,26 +45,26 @@ uint8_t ConvertScanType(wlan_mlme::ScanTypes scan_type) {
     }
 }
 
-uint8_t ConvertCBW(wlan_mlme::CBW cbw) {
+uint8_t ConvertCBW(wlan_common::CBW cbw) {
     switch (cbw) {
-    case wlan_mlme::CBW::CBW20:
+    case wlan_common::CBW::CBW20:
         return CBW20;
-    case wlan_mlme::CBW::CBW40:
+    case wlan_common::CBW::CBW40:
         return CBW40;
-    case wlan_mlme::CBW::CBW40BELOW:
+    case wlan_common::CBW::CBW40BELOW:
         return CBW40BELOW;
-    case wlan_mlme::CBW::CBW80:
+    case wlan_common::CBW::CBW80:
         return CBW80;
-    case wlan_mlme::CBW::CBW160:
+    case wlan_common::CBW::CBW160:
         return CBW160;
-    case wlan_mlme::CBW::CBW80P80:
+    case wlan_common::CBW::CBW80P80:
         return CBW80P80;
-    case wlan_mlme::CBW::CBW_COUNT:
+    case wlan_common::CBW::CBW_COUNT:
         ZX_ASSERT(0);
     }
 }
 
-void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_mlme::WlanChan& fidl_chan) {
+void ConvertWlanChan(wlan_channel_t* wlanif_chan, const wlan_common::WlanChan& fidl_chan) {
     // primary
     wlanif_chan->primary = fidl_chan.primary;
 
@@ -177,26 +179,26 @@ wlan_mlme::BSSTypes ConvertBSSType(uint8_t bss_type) {
     }
 }
 
-wlan_mlme::CBW ConvertCBW(uint8_t cbw) {
+wlan_common::CBW ConvertCBW(uint8_t cbw) {
     switch (cbw) {
     case CBW20:
-        return wlan_mlme::CBW::CBW20;
+        return wlan_common::CBW::CBW20;
     case CBW40:
-        return wlan_mlme::CBW::CBW40;
+        return wlan_common::CBW::CBW40;
     case CBW40BELOW:
-        return wlan_mlme::CBW::CBW40BELOW;
+        return wlan_common::CBW::CBW40BELOW;
     case CBW80:
-        return wlan_mlme::CBW::CBW80;
+        return wlan_common::CBW::CBW80;
     case CBW160:
-        return wlan_mlme::CBW::CBW160;
+        return wlan_common::CBW::CBW160;
     case CBW80P80:
-        return wlan_mlme::CBW::CBW80P80;
+        return wlan_common::CBW::CBW80P80;
     default:
         ZX_ASSERT(0);
     }
 }
 
-void ConvertWlanChan(wlan_mlme::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan) {
+void ConvertWlanChan(wlan_common::WlanChan* fidl_chan, const wlan_channel_t& wlanif_chan) {
     // primary
     fidl_chan->primary = wlanif_chan.primary;
 

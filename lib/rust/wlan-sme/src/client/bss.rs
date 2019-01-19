@@ -135,6 +135,7 @@ fn get_standard(bss: &BssDescription) -> Standard {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::cmp::Ordering;
 
@@ -285,7 +286,7 @@ mod tests {
             vht_cap: None,
             vht_op: None,
 
-            chan: fidl_mlme::WlanChan { primary: 1, secondary80: 0, cbw: fidl_mlme::Cbw::Cbw20 },
+            chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
             rssi_dbm: _rssi_dbm,
         };
         ret

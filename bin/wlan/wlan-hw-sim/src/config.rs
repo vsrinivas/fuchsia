@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_device as wlan_device, fidl_fuchsia_wlan_mlme as wlan_mlme,
+    // TODO(porce): Rename the aliases as fidl_*
+    fidl_fuchsia_wlan_common as wlan_common,
+    fidl_fuchsia_wlan_device as wlan_device,
+    fidl_fuchsia_wlan_mlme as wlan_mlme,
     fidl_fuchsia_wlan_tap as wlantap,
 };
 
@@ -34,7 +37,7 @@ pub fn create_wlantap_config(
 
 fn create_2_4_ghz_band_info() -> wlan_device::BandInfo {
     wlan_device::BandInfo {
-        band_id: wlan_mlme::Band::WlanBand2Ghz,
+        band_id: wlan_common::Band::WlanBand2Ghz,
         ht_caps: Some(Box::new(wlan_mlme::HtCapabilities {
             ht_cap_info: wlan_mlme::HtCapabilityInfo {
                 ldpc_coding_cap: false,

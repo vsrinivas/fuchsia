@@ -97,6 +97,7 @@ fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_wlan_dev, SupportedPhy};
     use fidl_fuchsia_wlan_tap as fidl_wlantap;
     use fuchsia_async::{self as fasync, TimeoutExt};
@@ -144,7 +145,7 @@ mod tests {
 
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
         fidl_wlan_dev::BandInfo{
-            band_id: fidl_mlme::Band::WlanBand2Ghz,
+            band_id: fidl_common::Band::WlanBand2Ghz,
             ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
                 ht_cap_info: fidl_mlme::HtCapabilityInfo {
                     ldpc_coding_cap: false,

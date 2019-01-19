@@ -11,3 +11,40 @@ enum RequestStatus {
     REJECTED_ALREADY_IN_USE = 3;
     REJECTED_DUPLICATE_REQUEST = 4;
 };
+
+// LINT analyzer keyword intended for humans:
+// LINT.IfChange
+
+enum PHY {
+    HR = 1; // IEEE 802.11b, used for DSSS, HR/DSSS, ERP-DSSS/CCK
+    ERP = 2; // IEEE 802.11a/g, used for ERP-OFDM
+    HT = 3; // IEEE 802.11n
+    VHT = 4; // IEEE 802.11ac
+    HEW = 5; // IEEE 802.11ax
+};
+
+enum CBW {	// Channel Bandwidth
+    CBW20 = 0;
+    CBW40 = 1;
+    //CBW40ABOVE = CBW40;
+    CBW40BELOW = 2;
+    CBW80 = 3;
+    CBW160 = 4;
+    CBW80P80 = 5;
+
+    CBW_COUNT = 6;
+};
+
+struct WlanChan {
+    uint8 primary;
+    CBW cbw;
+    uint8 secondary80;
+};
+
+enum Band : uint8 {
+    WLAN_BAND_2GHZ = 0;
+    WLAN_BAND_5GHZ = 1;
+    WLAN_BAND_COUNT = 2;
+};
+
+// LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/info.h)

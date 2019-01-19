@@ -9,9 +9,10 @@
 namespace wlan {
 namespace {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
-using wlan_mlme::CBW;
-using wlan_mlme::PHY;
+using wlan_common::CBW;
+using wlan_common::PHY;
 
 struct TestVector {
     uint8_t bss_chan_primary;

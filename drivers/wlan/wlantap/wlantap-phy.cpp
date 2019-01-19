@@ -19,6 +19,7 @@
 
 namespace wlan {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_device = ::fuchsia::wlan::device;
 namespace wlantap = ::fuchsia::wlan::tap;
 
@@ -85,7 +86,7 @@ struct EventSender {
         wlantap::SetChannelArgs args = {
             .wlanmac_id = wlanmac_id,
             .chan = {.primary = channel->primary,
-                     .cbw = static_cast<::fuchsia::wlan::mlme::CBW>(channel->cbw),
+                     .cbw = static_cast<wlan_common::CBW>(channel->cbw),
                      .secondary80 = channel->secondary80}};
         Send(EventOrdinal::SetChannel, &args);
     }

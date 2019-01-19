@@ -11,7 +11,7 @@ namespace wlan {
 namespace common {
 namespace {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
+namespace wlan_common = ::fuchsia::wlan::common;
 
 class ChannelTest : public ::testing::Test {
    protected:
@@ -114,24 +114,24 @@ TEST_F(ChannelTest, InvalidCombo) {
 TEST_F(ChannelTest, Conversion) {
     struct TestVector {
         wlan_channel_t ddk;
-        wlan_mlme::WlanChan fidl;
+        wlan_common::WlanChan fidl;
         bool is_same;
     };
 
     std::vector<TestVector> tvs = {
         // clang-format off
-        {{  0, CBW20,      0}, {  0, wlan_mlme::CBW::CBW20,      0}, true,},
-        {{  1, CBW20,      0}, { 11, wlan_mlme::CBW::CBW20,      0}, false,},
-        {{ 11, CBW40BELOW, 0}, { 11, wlan_mlme::CBW::CBW20,      0}, false,},
-        {{ 36, CBW20,      0}, { 36, wlan_mlme::CBW::CBW40,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW20,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW80,      0}, false,},
-        {{ 36, CBW40,      0}, { 36, wlan_mlme::CBW::CBW160,     0}, false,},
-        {{ 36, CBW40,    155}, { 36, wlan_mlme::CBW::CBW80P80, 155}, false,},
-        {{169, CBW160,     0}, {169, wlan_mlme::CBW::CBW160,     0}, true,},
-        {{  6, CBW40,      0}, {  6, wlan_mlme::CBW::CBW40,      0}, true,},
-        {{  6, CBW40ABOVE, 0}, {  6, wlan_mlme::CBW::CBW40,      0}, true,},
-        {{  6, CBW40ABOVE, 0}, {  6, wlan_mlme::CBW::CBW40BELOW, 0}, false,},
+        {{  0, CBW20,      0}, {  0, wlan_common::CBW::CBW20,      0}, true,},
+        {{  1, CBW20,      0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 11, CBW40BELOW, 0}, { 11, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 36, CBW20,      0}, { 36, wlan_common::CBW::CBW40,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW20,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW80,      0}, false,},
+        {{ 36, CBW40,      0}, { 36, wlan_common::CBW::CBW160,     0}, false,},
+        {{ 36, CBW40,    155}, { 36, wlan_common::CBW::CBW80P80, 155}, false,},
+        {{169, CBW160,     0}, {169, wlan_common::CBW::CBW160,     0}, true,},
+        {{  6, CBW40,      0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
+        {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40,      0}, true,},
+        {{  6, CBW40ABOVE, 0}, {  6, wlan_common::CBW::CBW40BELOW, 0}, false,},
         // clang-format on
     };
 

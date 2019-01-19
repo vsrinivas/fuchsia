@@ -8,7 +8,8 @@
 
 use {
     byteorder::{LittleEndian, ReadBytesExt},
-    fidl_fuchsia_wlan_device as wlan_device, fidl_fuchsia_wlan_mlme as wlan_mlme,
+    fidl_fuchsia_wlan_common as wlan_common,
+    fidl_fuchsia_wlan_device as wlan_device,
     fidl_fuchsia_wlan_tap as wlantap, fuchsia_async as fasync,
     fuchsia_zircon::prelude::*,
     futures::prelude::*,
@@ -39,7 +40,7 @@ fn create_wlantap_config() -> wlantap::WlantapPhyConfig {
 }
 
 struct State {
-    current_channel: wlan_mlme::WlanChan,
+    current_channel: wlan_common::WlanChan,
     frame_buf: Vec<u8>,
     is_associated: bool,
 }
@@ -47,9 +48,9 @@ struct State {
 impl State {
     fn new() -> Self {
         Self {
-            current_channel: wlan_mlme::WlanChan {
+            current_channel: wlan_common::WlanChan {
                 primary: 0,
-                cbw: wlan_mlme::Cbw::Cbw20,
+                cbw: wlan_common::Cbw::Cbw20,
                 secondary80: 0,
             },
             frame_buf: vec![],
@@ -59,7 +60,7 @@ impl State {
 }
 
 fn send_beacon(
-    frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6], ssid: &[u8],
+    frame_buf: &mut Vec<u8>, channel: &wlan_common::WlanChan, bss_id: &[u8; 6], ssid: &[u8],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -93,7 +94,7 @@ fn send_beacon(
 }
 
 fn send_authentication(
-    frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
+    frame_buf: &mut Vec<u8>, channel: &wlan_common::WlanChan, bss_id: &[u8; 6],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -123,7 +124,7 @@ fn send_authentication(
 }
 
 fn send_association_response(
-    frame_buf: &mut Vec<u8>, channel: &wlan_mlme::WlanChan, bss_id: &[u8; 6],
+    frame_buf: &mut Vec<u8>, channel: &wlan_common::WlanChan, bss_id: &[u8; 6],
     proxy: &wlantap::WlantapPhyProxy,
 ) -> Result<(), failure::Error> {
     frame_buf.clear();
@@ -160,13 +161,13 @@ fn send_association_response(
     Ok(())
 }
 
-fn create_rx_info(channel: &wlan_mlme::WlanChan) -> wlantap::WlanRxInfo {
+fn create_rx_info(channel: &wlan_common::WlanChan) -> wlantap::WlanRxInfo {
     wlantap::WlanRxInfo {
         rx_flags: 0,
         valid_fields: 0,
         phy: 0,
         data_rate: 0,
-        chan: wlan_mlme::WlanChan {
+        chan: wlan_common::WlanChan {
             // TODO(FIDL-54): use clone()
             primary: channel.primary,
             cbw: channel.cbw,
@@ -284,10 +285,10 @@ mod simulation_tests {
     const BSS_BAZ: [u8; 6] = [0x62, 0x73, 0x73, 0x62, 0x61, 0x7a];
     const SSID_BAZ: &[u8] = b"baz";
 
-    const CHANNEL: wlan_mlme::WlanChan = wlan_mlme::WlanChan {
+    const CHANNEL: wlan_common::WlanChan = wlan_common::WlanChan {
         primary: 6,
         secondary80: 0,
-        cbw: wlan_mlme::Cbw::Cbw20,
+        cbw: wlan_common::Cbw::Cbw20,
     };
 
     // Temporary workaround to run tests synchronously. This is because wlan service only works with

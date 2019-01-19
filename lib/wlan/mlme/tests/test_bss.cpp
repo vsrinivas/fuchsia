@@ -23,6 +23,7 @@
 
 namespace wlan {
 
+namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 void WriteTim(BufferWriter* w, const PsCfg& ps_cfg) {
@@ -92,7 +93,7 @@ wlan_mlme::BSSDescription CreateBssDescription(bool rsn, wlan_channel_t chan) {
     bss_desc.vht_cap.reset();
     bss_desc.vht_op.reset();
 
-    bss_desc.chan.cbw = static_cast<wlan_mlme::CBW>(chan.cbw);
+    bss_desc.chan.cbw = static_cast<wlan_common::CBW>(chan.cbw);
     bss_desc.chan.primary = chan.primary;
 
     bss_desc.rssi_dbm = -35;

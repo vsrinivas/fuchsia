@@ -12,6 +12,7 @@ fidl("fuchsia.wlan.service") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
     "//garnet/public/fidl/fuchsia.wlan.mlme",
     "//garnet/public/fidl/fuchsia.wlan.stats",
   ]

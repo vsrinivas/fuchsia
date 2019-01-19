@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 library fuchsia.wlan.device;
+
+using fuchsia.wlan.common;
 using fuchsia.wlan.mlme;
 
 enum SupportedPhy {
@@ -55,7 +57,7 @@ struct ChannelList {
 // BandInfo groups capabilities defined per band.
 // This grouping is the industry's de factor standard.
 struct BandInfo {
-    fuchsia.wlan.mlme.Band band_id;
+    fuchsia.wlan.common.Band band_id;
     fuchsia.wlan.mlme.HtCapabilities? ht_caps;
     fuchsia.wlan.mlme.VhtCapabilities? vht_caps;
     vector<uint8>:16 basic_rates;

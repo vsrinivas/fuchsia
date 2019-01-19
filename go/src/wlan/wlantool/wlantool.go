@@ -12,7 +12,8 @@ import (
 
 	"app/context"
 
-	"fidl/fuchsia/wlan/mlme"
+	"fidl/fuchsia/wlan/common"
+
 	wlan_service "fidl/fuchsia/wlan/service"
 )
 
@@ -32,26 +33,26 @@ type ToolApp struct {
 }
 
 // LINT.IfChange
-func CbwToStr(cbw mlme.Cbw) string {
+func CbwToStr(cbw common.Cbw) string {
 	switch cbw {
-	case mlme.CbwCbw20:
+	case common.CbwCbw20:
 		return " "
-	case mlme.CbwCbw40:
+	case common.CbwCbw40:
 		return "+"
-	case mlme.CbwCbw40Below:
+	case common.CbwCbw40Below:
 		return "-"
-	case mlme.CbwCbw80:
+	case common.CbwCbw80:
 		return "V"
-	case mlme.CbwCbw160:
+	case common.CbwCbw160:
 		return "W"
-	case mlme.CbwCbw80P80:
+	case common.CbwCbw80P80:
 		return "P"
 	default:
 		return "(unknown CBW)"
 	}
 }
 
-func ChanToStr(ch mlme.WlanChan) string {
+func ChanToStr(ch common.WlanChan) string {
 	return fmt.Sprintf("%3d%s", ch.Primary, CbwToStr(ch.Cbw))
 }
 

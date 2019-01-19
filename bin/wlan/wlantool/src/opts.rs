@@ -6,7 +6,7 @@
 
 use clap::{_clap_count_exprs, arg_enum};
 use fidl_fuchsia_wlan_device as wlan;
-use fidl_fuchsia_wlan_sme as sme;
+use fidl_fuchsia_wlan_common as wlan_common;
 use structopt::StructOpt;
 
 arg_enum!{
@@ -44,22 +44,22 @@ impl ::std::convert::From<RoleArg> for wlan::MacRole {
     }
 }
 
-impl ::std::convert::From<PhyArg> for sme::Phy {
+impl ::std::convert::From<PhyArg> for wlan_common::Phy {
     fn from(arg: PhyArg) -> Self {
         match arg {
-            PhyArg::Erp => sme::Phy::Erp,
-            PhyArg::Ht => sme::Phy::Ht,
-            PhyArg::Vht => sme::Phy::Vht,
+            PhyArg::Erp => wlan_common::Phy::Erp,
+            PhyArg::Ht => wlan_common::Phy::Ht,
+            PhyArg::Vht => wlan_common::Phy::Vht,
         }
     }
 }
 
-impl ::std::convert::From<CbwArg> for sme::Cbw {
+impl ::std::convert::From<CbwArg> for wlan_common::Cbw {
     fn from(arg: CbwArg) -> Self {
         match arg {
-            CbwArg::Cbw20 => sme::Cbw::Cbw20,
-            CbwArg::Cbw40 => sme::Cbw::Cbw40,
-            CbwArg::Cbw80 => sme::Cbw::Cbw80,
+            CbwArg::Cbw20 => wlan_common::Cbw::Cbw20,
+            CbwArg::Cbw40 => wlan_common::Cbw::Cbw40,
+            CbwArg::Cbw80 => wlan_common::Cbw::Cbw80,
         }
     }
 }

@@ -19,9 +19,9 @@ Band GetBand(const wlan_channel_t& chan);
 std::string BandStr(uint8_t band);
 std::string BandStr(Band band);
 std::string BandStr(const wlan_channel_t& chan);
-::fuchsia::wlan::mlme::Band BandToFidl(uint8_t band);
-::fuchsia::wlan::mlme::Band BandToFidl(Band band);
-Band BandFromFidl(::fuchsia::wlan::mlme::Band band);
+::fuchsia::wlan::common::Band BandToFidl(uint8_t band);
+::fuchsia::wlan::common::Band BandToFidl(Band band);
+Band BandFromFidl(::fuchsia::wlan::common::Band band);
 
 }  // namespace common
 }  // namespace wlan

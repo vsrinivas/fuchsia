@@ -16,8 +16,8 @@ namespace wlan {
 
 class JoinContext {
    public:
-    JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::wlan::mlme::PHY phy,
-                ::fuchsia::wlan::mlme::CBW cbw);
+    JoinContext(::fuchsia::wlan::mlme::BSSDescription bss, ::fuchsia::wlan::common::PHY phy,
+                ::fuchsia::wlan::common::CBW cbw);
 
     const common::MacAddr& bssid() const { return bssid_; }
     const wlan_channel_t& channel() const { return channel_; }

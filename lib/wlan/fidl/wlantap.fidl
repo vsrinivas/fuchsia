@@ -6,6 +6,7 @@ library fuchsia.wlan.tap;
 
 using fuchsia.wlan.device;
 using fuchsia.wlan.mlme;
+using fuchsia.wlan.common;
 
 struct WlantapPhyConfig {
     fuchsia.wlan.device.PhyInfo phy_info;
@@ -19,7 +20,7 @@ struct WlanRxInfo {
     uint32 valid_fields;
     uint16 phy;
     uint32 data_rate;
-    fuchsia.wlan.mlme.WlanChan chan;
+    fuchsia.wlan.common.WlanChan chan;
     uint8 mcs;
     int8 rssi_dbm;
     int16 rcpi_dbmh;
@@ -93,7 +94,7 @@ struct TxArgs {
 
 struct SetChannelArgs {
     uint16 wlanmac_id;
-    fuchsia.wlan.mlme.WlanChan chan;
+    fuchsia.wlan.common.WlanChan chan;
 };
 
 struct ConfigureBssArgs {
