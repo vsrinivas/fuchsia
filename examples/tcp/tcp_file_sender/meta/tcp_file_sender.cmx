@@ -1,12 +1,14 @@
 {
-  "program": {
-    "binary": "bin/app"
-  },
-  "sandbox": {
-    "features": [ "persistent-storage" ],
-    "services": [
-      "fuchsia.net.LegacySocketProvider",
-      "fuchsia.logger.LogSink"
-    ]
-  }
+    "program": {
+        "binary": "bin/tcp_file_sender"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.logger.LogSink"
+        ]
+    }
 }

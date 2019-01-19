@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "tcp_file_sender"
@@ -17,13 +17,15 @@ rustc_binary("bin") {
 }
 
 package("tcp_file_sender") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
 
-  binary = "rust_crates/tcp_file_sender"
+  binaries = [
+    {
+      name = "tcp_file_sender"
+    },
+  ]
 
   meta = [
     {
