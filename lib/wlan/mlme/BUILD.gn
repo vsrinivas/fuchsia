@@ -10,7 +10,6 @@ declare_args() {
   experimental_wlan_client_mlme = false
 }
 
-
 config("wlan_mlme_config") {
   include_dirs = [ "include" ]
 }
@@ -79,6 +78,7 @@ source_set("mlme") {
     "mac_frame.cpp",
     "mac_header_writer.cpp",
     "mcs.cpp",
+    "mesh/deduplicator.cpp",
     "mesh/hwmp.cpp",
     "mesh/mesh_mlme.cpp",
     "mesh/parse_mp_action.cpp",

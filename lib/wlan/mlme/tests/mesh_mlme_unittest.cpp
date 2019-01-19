@@ -170,4 +170,105 @@ TEST(MeshMlme, HandlePreq) {
     EXPECT_EQ(packet.data()[26], 131);  // prep element
 }
 
+TEST(MeshMlme, DeliverDuplicateData) {
+    MockDevice device;
+    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
+    MeshMlme mlme(&device);
+    mlme.Init();
+    JoinMesh(&mlme);
+
+    auto mesh_packet = [](uint8_t addr, uint8_t seq, uint8_t data) {
+        // clang-format off
+        return std::vector<uint8_t> {
+            // Data header
+            0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+            0x00, 0x00, // duration
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+            0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr3: mesh da = ra
+            0x00, 0x00, // seq ctl
+            0x44, 0x44, 0x44, 0x44, addr, addr, // addr4
+            0x00, 0x01, // qos ctl: mesh control present
+            // Mesh control
+            0x02, // flags: addr56 extension
+            0x20, // ttl
+            seq, seq, seq, seq, // seq
+            0x55, 0x55, 0x55, 0x55, 0x55, 0x55, // addr5
+            0x66, 0x66, 0x66, 0x66, 0x66, 0x66, // addr6
+            // LLC header
+            0xaa, 0xaa, 0x03, // dsap ssap ctrl
+            0x00, 0x00, 0x00, // oui
+            0x12, 0x34, // protocol id
+            // Payload
+            0xde, 0xad, 0xbe, data,
+         };
+        // clang-format on
+    };
+
+    // clang-format off
+    const uint8_t expected[] = {
+        // Destination = addr5
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+        // Source = addr6
+        0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+        // Ethertype = protocol id from the LLC header
+        0x12, 0x34,
+        // Payload
+        0xde, 0xad, 0xbe, 0xef,
+    };
+    // clang-format on
+
+    // clang-format off
+    const uint8_t expected2[] = {
+        // Destination = addr5
+        0x55, 0x55, 0x55, 0x55, 0x55, 0x55,
+        // Source = addr6
+        0x66, 0x66, 0x66, 0x66, 0x66, 0x66,
+        // Ethertype = protocol id from the LLC header
+        0x12, 0x34,
+        // Payload
+        0xde, 0xad, 0xbe, 0xff,
+    };
+    // clang-format on
+
+    // send some non-duplicate packets
+    for (uint8_t addr = 1; addr < 5; addr++) {
+        for (uint8_t seq = 1; seq < 5; seq++) {
+            zx_status_t status =
+                mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
+            EXPECT_EQ(ZX_OK, status);
+
+            auto eth_frames = device.GetEthPackets();
+            ASSERT_EQ(1u, eth_frames.size());
+
+            EXPECT_RANGES_EQ(expected, eth_frames[0]);
+        }
+    }
+
+    // send some duplicate packets
+    for (uint8_t addr = 1; addr < 5; addr++) {
+        for (uint8_t seq = 1; seq < 5; seq++) {
+            zx_status_t status =
+                mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xef)));
+            EXPECT_EQ(ZX_OK, status);
+
+            auto eth_frames = device.GetEthPackets();
+            ASSERT_EQ(0u, eth_frames.size());  // expect 0 packets
+        }
+    }
+
+    // send some more non-duplicate packets with a different payload
+    for (uint8_t addr = 5; addr < 10; addr++) {
+        for (uint8_t seq = 0; seq < 5; seq++) {
+            zx_status_t status =
+                mlme.HandleFramePacket(test_utils::MakeWlanPacket(mesh_packet(addr, seq, 0xff)));
+            EXPECT_EQ(ZX_OK, status);
+
+            auto eth_frames = device.GetEthPackets();
+            ASSERT_EQ(1u, eth_frames.size());
+
+            EXPECT_RANGES_EQ(expected2, eth_frames[0]);
+        }
+    }
+}
 }  // namespace wlan

@@ -18,6 +18,7 @@
 namespace wlan {
 
 static constexpr size_t kMaxMeshMgmtFrameSize = 1024;
+static constexpr size_t kMaxReceivedFrameCacheSize = 500;
 
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
@@ -73,7 +74,8 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
     return BuildBeacon(c, buffer, tim_ele_offset);
 }
 
-MeshMlme::MeshMlme(DeviceInterface* device) : device_(device) {}
+MeshMlme::MeshMlme(DeviceInterface* device)
+    : device_(device), deduplicator_(kMaxReceivedFrameCacheSize) {}
 
 zx_status_t MeshMlme::Init() {
     fbl::unique_ptr<Timer> timer;
@@ -351,27 +353,6 @@ void MeshMlme::TriggerPathDiscovery(const common::MacAddr& target) {
     }
 }
 
-void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
-    BufferReader r(*packet);
-
-    auto header = common::ParseMeshDataHeader(&r);
-    if (!header) { return; }
-
-    // Drop frames with 5 addresses (only 3, 4 or 6 addresses are allowed)
-    if (header->mac_header.addr4 != nullptr && header->addr_ext.size() == 1) { return; }
-
-    // Drop reflected frames
-    if (header->mac_header.fixed->addr2 == self_addr()) { return; }
-
-    // TODO(gbonik): drop frames from non-peers
-
-    // TODO(gbonik): maintain a cache of seen sequence IDs and drop duplicate frames
-
-    if (ShouldDeliverData(header->mac_header)) { DeliverData(*header, *packet, r.ReadBytes()); }
-
-    // TODO(gbonik): forward data
-}
-
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42)
 static const common::MacAddr& GetDestAddr(const common::ParsedMeshDataHeader& header) {
     if (header.addr_ext.size() == 2) {
@@ -386,6 +367,17 @@ static const common::MacAddr& GetDestAddr(const common::ParsedMeshDataHeader& he
     return header.mac_header.fixed->addr1;
 }
 
+// See IEEE Std 802.11-2016, 10.35.6
+static const common::MacAddr& GetMeshSrcAddr(const common::ParsedMeshDataHeader& header) {
+    if (header.mac_header.addr4 != nullptr) {
+        // Unproxied individually addressed frame
+        return *header.mac_header.addr4;
+    } else {
+        // Unproxied group addressed frame
+        return header.mac_header.fixed->addr3;
+    }
+}
+
 // See IEEE Std 802.11-2016, 9.3.5 (Table 9-42)
 static const common::MacAddr& GetSrcAddr(const common::ParsedMeshDataHeader& header) {
     switch (header.addr_ext.size()) {
@@ -397,14 +389,30 @@ static const common::MacAddr& GetSrcAddr(const common::ParsedMeshDataHeader& hea
         return header.addr_ext[1];
     default:
         // Unproxied
-        if (header.mac_header.addr4 != nullptr) {
-            // Unproxied individually addressed frame
-            return *header.mac_header.addr4;
-        } else {
-            // Unproxied group addressed frame
-            return header.mac_header.fixed->addr3;
-        }
+        return GetMeshSrcAddr(header);
     }
+}
+
+void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
+    BufferReader r(*packet);
+
+    auto header = common::ParseMeshDataHeader(&r);
+    if (!header) { return; }
+
+    // Drop frames with 5 addresses (only 3, 4 or 6 addresses are allowed)
+    if (header->mac_header.addr4 != nullptr && header->addr_ext.size() == 1) { return; }
+
+    // Drop reflected frames
+    if (header->mac_header.fixed->addr2 == self_addr()) { return; }
+
+    // TODO(gbonik): drop frames from non-peers
+
+    // Drop if duplicate
+    if (deduplicator_.DeDuplicate(GetMeshSrcAddr(*header), header->mesh_ctrl->seq)) { return; }
+
+    if (ShouldDeliverData(header->mac_header)) { DeliverData(*header, *packet, r.ReadBytes()); }
+
+    // TODO(gbonik): forward data
 }
 
 bool MeshMlme::ShouldDeliverData(const common::ParsedDataFrameHeader& header) {

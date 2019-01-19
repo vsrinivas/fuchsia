@@ -11,6 +11,7 @@
 #include <wlan/mlme/packet.h>
 #include <wlan/protocol/info.h>
 #include <algorithm>
+#include <vector>
 
 namespace wlan {
 namespace test_utils {
@@ -48,6 +49,15 @@ template <typename T> struct RangeWrapper {
 };
 
 static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::initializer_list<uint8_t> bytes) {
+    auto packet = GetWlanPacket(bytes.size());
+    ZX_ASSERT(packet != nullptr);
+
+    std::copy(bytes.begin(), bytes.end(), packet->data());
+    packet->set_len(bytes.size());
+    return packet;
+}
+
+static inline fbl::unique_ptr<Packet> MakeWlanPacket(std::vector<uint8_t> bytes) {
     auto packet = GetWlanPacket(bytes.size());
     ZX_ASSERT(packet != nullptr);
 

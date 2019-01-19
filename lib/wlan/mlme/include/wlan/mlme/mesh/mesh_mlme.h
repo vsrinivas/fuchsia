@@ -9,6 +9,7 @@
 #include <wlan/common/parse_mac_header.h>
 #include <wlan/mlme/device_interface.h>
 #include <wlan/mlme/mac_header_writer.h>
+#include <wlan/mlme/mesh/deduplicator.h>
 #include <wlan/mlme/mesh/hwmp.h>
 #include <wlan/mlme/mesh/path_table.h>
 #include <wlan/mlme/mlme.h>
@@ -63,6 +64,8 @@ class MeshMlme : public Mlme {
     uint32_t mesh_seq_ = 0;
     std::unique_ptr<HwmpState> hwmp_;
     PathTable path_table_;
+
+    DeDuplicator deduplicator_;
 };
 
 }  // namespace wlan
