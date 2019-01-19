@@ -221,18 +221,65 @@ impl GattServerFacade {
         }
     }
 
-    pub fn generate_descriptors(&self, descriptor_list_json: &Value) -> Vec<Descriptor> {
-        // TODO: Parse characteristic_json_list to create Characteristics.
-        fx_log_info!(
-            tag: &dtag!(),
-            "Generating descriptors from json input {:?}",
-            descriptor_list_json
-        );
-        let descriptors: Vec<Descriptor> = Vec::new();
+    pub fn generate_descriptors(
+        &self, descriptor_list_json: &Value,
+    ) -> Result<Vec<Descriptor>, Error> {
+        let mut descriptors: Vec<Descriptor> = Vec::new();
+        // Fuchsia will automatically setup these descriptors and manage them.
+        // Skip setting them up if found in the input descriptor list.
+        let banned_descriptor_uuids = [
+            "00002900-0000-1000-8000-00805f9b34fb".to_string(), // CCC Descriptor
+            "00002902-0000-1000-8000-00805f9b34fb".to_string(), // Client Configuration Descriptor
+            "00002903-0000-1000-8000-00805f9b34fb".to_string(), // Server Configuration Descriptor
+        ];
+
         if descriptor_list_json.is_null() {
-            ()
+            return Ok(descriptors);
         }
-        descriptors
+
+        let descriptor_list = match descriptor_list_json.as_array() {
+            Some(d) => d,
+            None => bail!("Attribute 'descriptors' is not a parseable list."),
+        };
+
+        for descriptor in descriptor_list.into_iter() {
+            let descriptor_uuid = match descriptor["uuid"].as_str() {
+                Some(uuid) => uuid.to_string(),
+                None => bail!("Descriptor uuid was unable to cast to str."),
+            };
+            let descriptor_value = self.parse_attribute_value_to_byte_array(&descriptor["value"]);
+
+            // No properties for descriptors.
+            let properties = 0u32;
+
+            if banned_descriptor_uuids.contains(&descriptor_uuid) {
+                continue;
+            }
+
+            let raw_descriptor_permissions = match descriptor["permissions"].as_u64() {
+                Some(permissions) => permissions as u32,
+                None => bail!("Descriptor permissions was unable to cast to u64."),
+            };
+
+            let desc_permission_attributes = self.permissions_and_properties_from_raw_num(
+                raw_descriptor_permissions,
+                properties,
+            );
+
+            let descriptor_id = self.inner.write().generic_id_counter.next();
+            self.inner
+                .write()
+                .attribute_value_mapping
+                .insert(descriptor_id, descriptor_value);
+            let descriptor_obj = Descriptor {
+                id: descriptor_id,
+                type_: descriptor_uuid.clone(),
+                permissions: Some(Box::new(desc_permission_attributes)),
+            };
+
+            descriptors.push(descriptor_obj);
+        }
+        Ok(descriptors)
     }
 
     pub fn generate_characteristics(
@@ -245,7 +292,7 @@ impl GattServerFacade {
 
         let characteristic_list = match characteristic_list_json.as_array() {
             Some(c) => c,
-            None => bail!("Attribute 'characteristic' is not a parseable list."),
+            None => bail!("Attribute 'characteristics' is not a parseable list."),
         };
 
         for characteristic in characteristic_list.into_iter() {
@@ -267,7 +314,7 @@ impl GattServerFacade {
             let characteristic_value =
                 self.parse_attribute_value_to_byte_array(&characteristic["value"]);
             let descriptor_list = &characteristic["descriptors"];
-            let descriptors = self.generate_descriptors(descriptor_list);
+            let descriptors = self.generate_descriptors(descriptor_list)?;
 
             let characteristic_permissions = self.permissions_and_properties_from_raw_num(
                 raw_characteristic_permissions,
