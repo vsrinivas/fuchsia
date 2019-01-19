@@ -20,6 +20,13 @@ constexpr char kModuleUrl[] =
 // The intent action |kModuleUrl| accepts.
 constexpr char kIntentAction[] = "action";
 
+// The URL for the entity test module.
+constexpr char kEntityModuleUrl[] =
+    "fuchsia-pkg://fuchsia.com/module_context_test_entity_module#meta/module_context_test_entity_module.cmx";
+
+// The intent action |kEntityModuleUrl| accepts.
+constexpr char kEntityIntentAction[] = "test";
+
 // The names of the first and second modules to be stopped.
 constexpr char kFirstModuleName[] = "first";
 constexpr char kSecondModuleName[] = "second";

@@ -105,8 +105,8 @@ class TestApp : public modular::testing::SessionShellBase {
     }
     {
       fuchsia::modular::Intent intent;
-      intent.handler = "module_context_test_entity_module";
-      intent.action = "test";
+      intent.handler = kEntityModuleUrl;
+      intent.action = kEntityIntentAction;
       fuchsia::modular::AddMod add_mod;
       add_mod.mod_name.push_back("entity_module");
       add_mod.intent = std::move(intent);
@@ -221,8 +221,8 @@ class TestApp : public modular::testing::SessionShellBase {
     Await(kEntityModuleDoneFirstTask, [this] {
       Await(kEntityModuleDoneSecondTask, [this] {
         fuchsia::modular::Intent intent;
-        intent.handler = "module_context_test_entity_module";
-        intent.action = "test";
+        intent.handler = kEntityModuleUrl;
+        intent.action = kEntityIntentAction;
         fuchsia::modular::RemoveMod remove_mod;
         remove_mod.mod_name.push_back("entity_module");
 
