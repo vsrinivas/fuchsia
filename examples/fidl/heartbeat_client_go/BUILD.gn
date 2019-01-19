@@ -27,8 +27,6 @@ go_library("heartbeat_client_go_lib") {
 }
 
 package("heartbeat_client_go") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":heartbeat_client_go_bin",
   ]

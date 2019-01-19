@@ -76,7 +76,10 @@ func (a *heartbeatClientApp) getHeartbeatInterface() (ei *heartbeat.HeartbeatInt
 }
 
 func main() {
-	serverURL := flag.String("server", "heartbeat_server_go", "server URL")
+	serverURL := flag.String(
+		"server",
+		"fuchsia-pkg://fuchsia.com/heartbeat_server_go#meta/heartbeat_server_go.cmx",
+		"server URL")
 
 	flag.Parse()
 
