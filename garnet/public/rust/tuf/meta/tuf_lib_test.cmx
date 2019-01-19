@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/tuf_lib_test"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

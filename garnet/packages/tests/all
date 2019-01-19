@@ -30,7 +30,7 @@
         "garnet/packages/tests/fidl_compatibility_test_server_cpp",
         "garnet/packages/tests/fidl_compatibility_test_server_go",
         "garnet/packages/tests/fidl_compatibility_test_server_rust",
-	"garnet/packages/tests/fidlcat",
+        "garnet/packages/tests/fidlcat",
         "garnet/packages/tests/fidlext_tests",
         "garnet/packages/tests/fonts",
         "garnet/packages/tests/fostr",
