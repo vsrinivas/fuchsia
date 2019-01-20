@@ -47,8 +47,11 @@ type RunCommand struct {
 	// Timeout is the duration allowed for the command to finish execution.
 	timeout time.Duration
 
-	// CmdOutput is the file to which the command's stdout will be redirected.
-	cmdOutput string
+	// CmdStdout is the file to which the command's stdout will be redirected.
+	cmdStdout string
+
+	// CmdStderr is the file to which the command's stderr will be redirected.
+	cmdStderr string
 
 	// sshKey is the path to a private SSH user key.
 	sshKey string
@@ -77,7 +80,8 @@ func (r *RunCommand) SetFlags(f *flag.FlagSet) {
 	f.StringVar(&r.fastboot, "fastboot", "", "path to the fastboot tool; if set, the device will be flashed into Zedboot. A zircon-r must be supplied via -images")
 	f.Var(&r.zirconArgs, "zircon-args", "kernel command-line arguments")
 	f.DurationVar(&r.timeout, "timeout", 10*time.Minute, "duration allowed for the command to finish execution.")
-	f.StringVar(&r.cmdOutput, "output", "", "file to redirect the command's stdout into")
+	f.StringVar(&r.cmdStdout, "stdout", "", "file to redirect the command's stdout into; if unspecified, it will be redirected to the process' stdout")
+	f.StringVar(&r.cmdStderr, "stderr", "", "file to redirect the command's stderr into; if unspecified, it will be redirected to the process' stderr")
 	f.StringVar(&r.sshKey, "ssh", "", "file containing a private SSH user key; if not provided, a private key will be generated.")
 }
 
@@ -158,15 +162,25 @@ func (r *RunCommand) runCmd(ctx context.Context, imgs build.Images, nodename str
 		Args:        args,
 		Env:         append(os.Environ(), devCtx.EnvironEntry()),
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
+		Stdout: os.Stdout,
+		Stderr: os.Stderr,
 	}
 
-	if r.cmdOutput != "" {
-		f, err := os.Create(r.cmdOutput)
+	if r.cmdStdout != "" {
+		f, err := os.Create(r.cmdStdout)
 		if err != nil {
 			return err
 		}
 		defer f.Close()
 		cmd.Stdout = f
+	}
+	if r.cmdStderr != "" {
+		f, err := os.Create(r.cmdStderr)
+		if err != nil {
+			return err
+		}
+		defer f.Close()
+		cmd.Stderr = f
 	}
 
 	if err := cmd.Start(); err != nil {
