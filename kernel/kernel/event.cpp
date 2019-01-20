@@ -35,17 +35,6 @@
 #include <zircon/types.h>
 
 /**
- * @brief  Initialize an event object
- *
- * @param e        Event object to initialize
- * @param initial  Initial value for "signaled" state
- * @param flags    0 or EVENT_FLAG_AUTOUNSIGNAL
- */
-void event_init(event_t* e, bool initial, uint flags) {
-    *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
-}
-
-/**
  * @brief  Destroy an event object.
  *
  * Event's resources are freed and it may no longer be

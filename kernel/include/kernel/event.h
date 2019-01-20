@@ -50,7 +50,9 @@ typedef struct event {
 //     time it will unsignal atomicly and return immediately) or
 //     event_unsignal() is called.
 
-void event_init(event_t*, bool initial, uint flags);
+static inline void event_init(event_t* e, bool initial, uint flags) {
+    *e = (event_t)EVENT_INITIAL_VALUE(*e, initial, flags);
+}
 void event_destroy(event_t*);
 
 // Wait until deadline
@@ -87,9 +89,8 @@ static inline bool event_signaled(const event_t* e) {
 // signaled from many threads (Signal() is thread-safe).
 class Event {
 public:
-    Event(uint32_t opts = 0) {
-        event_init(&event_, false, opts);
-    }
+    constexpr explicit Event(uint32_t opts = 0)
+        : event_(EVENT_INITIAL_VALUE(event_, false, opts)) {}
     ~Event() {
         event_destroy(&event_);
     }
@@ -108,6 +109,14 @@ public:
 
     void Signal(zx_status_t status = ZX_OK) {
         event_signal_etc(&event_, true, status);
+    }
+
+    void SignalThreadLocked() TA_REQ(thread_lock) {
+        event_signal_thread_locked(&event_);
+    }
+
+    void SignalNoResched() {
+        event_signal(&event_, false);
     }
 
     zx_status_t Unsignal() {
