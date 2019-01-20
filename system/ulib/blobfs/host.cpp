@@ -25,10 +25,11 @@
 
 #define ZXDEBUG 0
 
+#include <blobfs/compression/compressor.h>
+#include <blobfs/compression/zstd.h>
 #include <blobfs/format.h>
 #include <blobfs/fsck.h>
 #include <blobfs/host.h>
-#include <blobfs/lz4.h>
 
 using digest::Digest;
 using digest::MerkleTree;
@@ -37,6 +38,10 @@ constexpr uint32_t kExtentCount = 5;
 
 namespace blobfs {
 namespace {
+
+using HostCompressor = ZSTDCompressor;
+const auto HostDecompressor = ZSTDDecompress;
+constexpr uint32_t kBlobFlagCompressed = kBlobFlagZSTDCompressed;
 
 zx_status_t readblk_offset(int fd, uint64_t bno, off_t offset, void* data) {
     off_t off = offset + bno * kBlobfsBlockSize;
@@ -82,7 +87,7 @@ zx_status_t buffer_create_merkle(const FileMapping& mapping, MerkleInfo* out_inf
 }
 
 zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
-    size_t max = Compressor::BufferMax(mapping.length());
+    size_t max = HostCompressor::BufferMax(mapping.length());
     out_info->compressed_data.reset(new uint8_t[max]);
     out_info->compressed = false;
 
@@ -91,24 +96,26 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
     }
 
     zx_status_t status;
-    Compressor compressor;
-    if ((status = compressor.Initialize(out_info->compressed_data.get(), max)) != ZX_OK) {
+    fbl::unique_ptr<HostCompressor> compressor;
+    if ((status = HostCompressor::Create(mapping.length(),
+                                         out_info->compressed_data.get(),
+                                         max, &compressor)) != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize blobfs compressor: %d\n", status);
         return status;
     }
 
-    if ((status = compressor.Update(mapping.data(), mapping.length())) != ZX_OK) {
+    if ((status = compressor->Update(mapping.data(), mapping.length())) != ZX_OK) {
         FS_TRACE_ERROR("Failed to update blobfs compressor: %d\n", status);
         return status;
     }
 
-    if ((status = compressor.End()) != ZX_OK) {
+    if ((status = compressor->End()) != ZX_OK) {
         FS_TRACE_ERROR("Failed to complete blobfs compressor: %d\n", status);
         return status;
     }
 
-    if (mapping.length() > compressor.Size() + kCompressionMinBytesSaved) {
-        out_info->compressed_length = compressor.Size();
+    if (mapping.length() > compressor->Size() + kCompressionMinBytesSaved) {
+        out_info->compressed_length = compressor->Size();
         out_info->compressed = true;
     }
 
@@ -146,7 +153,7 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* siz
     Inode* inode = inode_block->GetInode();
     inode->blob_size = mapping.length();
     inode->block_count = MerkleTreeBlocks(*inode) + info.GetDataBlocks();
-    inode->header.flags |= kBlobFlagAllocated | (info.compressed ? kBlobFlagLZ4Compressed : 0);
+    inode->header.flags |= kBlobFlagAllocated | (info.compressed ? kBlobFlagCompressed : 0);
 
     // TODO(smklein): Currently, host-side tools can only generate single-extent
     // blobs. This should be fixed.
@@ -581,7 +588,7 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
 
     // Create data buffer.
     fbl::unique_ptr<uint8_t[]> data(new uint8_t[target_size]);
-    if (inode.header.flags & kBlobFlagLZ4Compressed) {
+    if (inode.header.flags & kBlobFlagCompressed) {
         // Read in uncompressed merkle blocks.
         for (unsigned i = 0; i < merkle_blocks; i++) {
             ReadBlock(data_start_block_ + inode.extents[0].Start() + i);
@@ -609,8 +616,8 @@ zx_status_t Blobfs::VerifyBlob(uint32_t node_index) {
         zx_status_t status;
         target_size = inode.blob_size;
         uint8_t* data_ptr = data.get() + (merkle_blocks * kBlobfsBlockSize);
-        if ((status = Decompressor::Decompress(data_ptr, &target_size, compressed_data.get(),
-                                               &compressed_size)) != ZX_OK) {
+        if ((status = HostDecompressor(data_ptr, &target_size, compressed_data.get(),
+                                       &compressed_size)) != ZX_OK) {
             return status;
         }
         if (target_size != inode.blob_size) {

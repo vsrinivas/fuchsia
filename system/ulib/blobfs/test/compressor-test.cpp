@@ -7,39 +7,52 @@
 #include <algorithm>
 #include <memory>
 
-#include <blobfs/lz4.h>
+#include <blobfs/compression/blob-compressor.h>
+#include <blobfs/compression/compressor.h>
+#include <blobfs/compression/lz4.h>
+#include <blobfs/compression/zstd.h>
 #include <unittest/unittest.h>
+#include <zircon/assert.h>
 
 namespace blobfs {
 namespace {
 
-// Tests the API of using an unset Compressor.
-bool NullCompressor() {
-    BEGIN_TEST;
+enum class DataType {
+    Compressible,
+    Random,
+};
 
-    Compressor compressor;
-    EXPECT_FALSE(compressor.Compressing());
-    EXPECT_EQ(ZX_ERR_BUFFER_TOO_SMALL, compressor.Initialize(nullptr, 0));
-
-    END_TEST;
-}
-
-std::unique_ptr<char[]> GenerateInput(unsigned seed, size_t size) {
+std::unique_ptr<char[]> GenerateInput(DataType data_type, unsigned seed, size_t size) {
     std::unique_ptr<char[]> input(new char[size]);
-    for (size_t i = 0; i < size; i++) {
-        input[i] = static_cast<char>(rand_r(&seed));
+    switch (data_type) {
+    case DataType::Compressible: {
+        size_t i = 0;
+        while (i < size) {
+            size_t run_length = 1 + (rand_r(&seed) % (size - i));
+            char value = static_cast<char>(rand_r(&seed) % std::numeric_limits<char>::max());
+            memset(input.get() + i, value, run_length);
+            i += run_length;
+        }
+        break;
+    }
+    case DataType::Random:
+        for (size_t i = 0; i < size; i++) {
+            input[i] = static_cast<char>(rand_r(&seed));
+        }
+        break;
+    default:
+        ZX_DEBUG_ASSERT_MSG(false, "Bad Data Type");
     }
     return input;
 }
 
-bool CompressionHelper(Compressor* compressor, const char* input, size_t size, size_t step,
-                       std::unique_ptr<char[]>* out_compressed) {
+template <CompressionAlgorithm Algorithm>
+bool CompressionHelper(const char* input, size_t size, size_t step,
+                       std::optional<BlobCompressor>* out) {
     BEGIN_HELPER;
 
-    size_t max_output = Compressor::BufferMax(size);
-    std::unique_ptr<char[]> compressed(new char[max_output]);
-    ASSERT_EQ(ZX_OK, compressor->Initialize(compressed.get(), max_output));
-    EXPECT_TRUE(compressor->Compressing());
+    auto compressor = BlobCompressor::Create(Algorithm, size);
+    ASSERT_TRUE(compressor);
 
     size_t offset = 0;
     while (offset != size) {
@@ -51,18 +64,27 @@ bool CompressionHelper(Compressor* compressor, const char* input, size_t size, s
     ASSERT_EQ(ZX_OK, compressor->End());
     EXPECT_GT(compressor->Size(), 0);
 
-    *out_compressed = std::move(compressed);
-
+    *out = std::move(compressor);
     END_HELPER;
 }
 
-bool DecompressionHelper(const char* compressed, size_t compressed_size,
-                         const char* expected, size_t expected_size) {
+template <CompressionAlgorithm Algorithm>
+bool DecompressionHelper(const void* compressed, size_t compressed_size,
+                         const void* expected, size_t expected_size) {
     BEGIN_HELPER;
     std::unique_ptr<char[]> output(new char[expected_size]);
     size_t target_size = expected_size;
     size_t src_size = compressed_size;
-    ASSERT_EQ(ZX_OK, Decompressor::Decompress(output.get(), &target_size, compressed, &src_size));
+    switch (Algorithm) {
+    case CompressionAlgorithm::LZ4:
+        ASSERT_EQ(ZX_OK, LZ4Decompress(output.get(), &target_size, compressed, &src_size));
+        break;
+    case CompressionAlgorithm::ZSTD:
+        ASSERT_EQ(ZX_OK, ZSTDDecompress(output.get(), &target_size, compressed, &src_size));
+        break;
+    default:
+        ASSERT_TRUE(false, "Bad algorithm");
+    }
     EXPECT_EQ(expected_size, target_size);
     EXPECT_EQ(compressed_size, src_size);
     EXPECT_EQ(0, memcmp(expected, output.get(), expected_size));
@@ -74,118 +96,73 @@ bool DecompressionHelper(const char* compressed, size_t compressed_size,
 //
 // kSize: The Size of the input buffer.
 // kStep: The step size of updating the compression buffer.
-template <size_t kSize, size_t kStep>
-bool CompressDecompressRandom() {
+template <CompressionAlgorithm Algorithm, DataType kDataType, size_t kSize, size_t kStep>
+bool CompressDecompress() {
     BEGIN_TEST;
 
     static_assert(kStep <= kSize, "Step size too large");
 
     // Generate input.
-    std::unique_ptr<char[]> input(GenerateInput(0, kSize));
+    std::unique_ptr<char[]> input(GenerateInput(kDataType, 0, kSize));
 
     // Compress a buffer.
-    Compressor compressor;
-    std::unique_ptr<char[]> compressed;
-    ASSERT_TRUE(CompressionHelper(&compressor, input.get(), kSize, kStep, &compressed));
+    std::optional<BlobCompressor> compressor;
+    ASSERT_TRUE(CompressionHelper<Algorithm>(input.get(), kSize, kStep, &compressor));
+    ASSERT_TRUE(compressor);
 
     // Decompress the buffer.
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), kSize));
+    ASSERT_TRUE(DecompressionHelper<Algorithm>(compressor->Data(), compressor->Size(),
+                                               input.get(), kSize));
 
     END_TEST;
 }
 
-bool CompressDecompressReset() {
-    BEGIN_TEST;
-
-    Compressor compressor;
-
-    size_t step = 128;
-    size_t input_size = 1024;
-    std::unique_ptr<char[]> input(GenerateInput(0, input_size));
-    std::unique_ptr<char[]> compressed;
-    ASSERT_TRUE(CompressionHelper(&compressor, input.get(), input_size, step, &compressed));
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), input_size));
-
-    // We should be able to re-use a buffer of the same size.
-    compressor.Reset();
-    ASSERT_TRUE(CompressionHelper(&compressor, input.get(), input_size, step, &compressed));
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), input_size));
-
-    // We should be able to re-use a buffer of a different size (larger).
-    compressor.Reset();
-    input_size = 2048;
-    input = GenerateInput(0, input_size);
-    ASSERT_TRUE(CompressionHelper(&compressor, input.get(), input_size, step, &compressed));
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), input_size));
-
-    // We should be able to re-use a buffer of a different size (smaller).
-    compressor.Reset();
-    input_size = 512;
-    input = GenerateInput(0, input_size);
-    ASSERT_TRUE(CompressionHelper(&compressor, input.get(), input_size, step, &compressed));
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), input_size));
-
-    END_TEST;
-}
-
+template <CompressionAlgorithm Algorithm>
 bool UpdateNoData() {
     BEGIN_TEST;
 
-    Compressor compressor;
     const size_t input_size = 1024;
-    std::unique_ptr<char[]> input(GenerateInput(0, input_size));
-    const size_t max_output = Compressor::BufferMax(input_size);
-    std::unique_ptr<char[]> compressed(new char[max_output]);
-    ASSERT_EQ(ZX_OK, compressor.Initialize(compressed.get(), max_output));
+    auto compressor = BlobCompressor::Create(Algorithm, input_size);
+    ASSERT_TRUE(compressor);
+
+    std::unique_ptr<char[]> input(new char[input_size]);
+    memset(input.get(), 'a', input_size);
 
     // Test that using "Update(data, 0)" acts a no-op, rather than corrupting the buffer.
-    ASSERT_EQ(ZX_OK, compressor.Update(input.get(), 0));
-    ASSERT_EQ(ZX_OK, compressor.Update(input.get(), input_size));
-    ASSERT_EQ(ZX_OK, compressor.End());
+    ASSERT_EQ(ZX_OK, compressor->Update(input.get(), 0));
+    ASSERT_EQ(ZX_OK, compressor->Update(input.get(), input_size));
+    ASSERT_EQ(ZX_OK, compressor->End());
 
     // Ensure that even with the addition of a zero-length buffer, we still decompress
     // to the expected output.
-    ASSERT_TRUE(DecompressionHelper(compressed.get(), compressor.Size(), input.get(), input_size));
+    ASSERT_TRUE(DecompressionHelper<Algorithm>(compressor->Data(), compressor->Size(),
+                                               input.get(), input_size));
 
     END_TEST;
 }
 
-// Tests Compressor returns an error if we try to compress more data than the buffer can hold.
-bool BufferTooSmall() {
-    BEGIN_TEST;
+// TODO(smklein): Add a test of:
+// - Compress
+// - Round up compressed size to block
+// - Decompress
+// (This mimics blobfs' usage, where the exact compressed size is not stored explicitly)
 
-    // Pretend we're going to compress only one byte of data.
-    const size_t buf_size = Compressor::BufferMax(1);
-    std::unique_ptr<char[]> buf(new char[buf_size]);
-    Compressor compressor;
-    ASSERT_EQ(ZX_OK, compressor.Initialize(buf.get(), buf_size));
+#define ALL_COMPRESSION_TESTS(ALGORITHM) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 0, 1 << 0>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 1, 1 << 0>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 10, 1 << 5>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Random, 1 << 15, 1 << 10>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 0, 1 << 0>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 1, 1 << 0>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 10, 1 << 5>)) \
+    RUN_TEST((CompressDecompress<ALGORITHM, DataType::Compressible, 1 << 15, 1 << 10>)) \
+    RUN_TEST((UpdateNoData<ALGORITHM>)) \
 
-    // Create data that is just too big to fit within this buffer size.
-    size_t data_size = 0;
-    while (Compressor::BufferMax(++data_size) <= buf_size) {}
-    ASSERT_GT(data_size, 0);
-
-    unsigned int seed = 0;
-    std::unique_ptr<char[]> data(new char[data_size]);
-
-    for (size_t i = 0; i < data_size; i++) {
-        data[i] = static_cast<char>(rand_r(&seed));
-    }
-
-    ASSERT_EQ(ZX_ERR_IO_DATA_INTEGRITY, compressor.Update(&data, data_size));
-    END_TEST;
-}
+BEGIN_TEST_CASE(blobfsCompressorTests)
+ALL_COMPRESSION_TESTS(CompressionAlgorithm::LZ4)
+ALL_COMPRESSION_TESTS(CompressionAlgorithm::ZSTD)
+END_TEST_CASE(blobfsCompressorTests);
 
 } // namespace
 } // namespace blobfs
 
-BEGIN_TEST_CASE(blobfsCompressorTests)
-RUN_TEST(blobfs::NullCompressor)
-RUN_TEST((blobfs::CompressDecompressRandom<1 << 0, 1 << 0>))
-RUN_TEST((blobfs::CompressDecompressRandom<1 << 1, 1 << 0>))
-RUN_TEST((blobfs::CompressDecompressRandom<1 << 10, 1 << 5>))
-RUN_TEST((blobfs::CompressDecompressRandom<1 << 15, 1 << 10>))
-RUN_TEST(blobfs::CompressDecompressReset)
-RUN_TEST(blobfs::UpdateNoData)
-RUN_TEST(blobfs::BufferTooSmall)
-END_TEST_CASE(blobfsCompressorTests);

@@ -17,6 +17,7 @@ MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \
     -Ithird_party/ulib/lz4/include \
+    -Ithird_party/ulib/zstd/include \
     -Isystem/uapp/lz4/include \
     -Isystem/ulib/fvm-host/include \
     -Isystem/ulib/fbl/include \
@@ -35,17 +36,18 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fdio/include \
 
 MODULE_HOST_LIBS := \
-    third_party/ulib/uboringssl.hostlib \
-    third_party/ulib/lz4.hostlib \
-    system/ulib/fvm-host.hostlib \
-    system/ulib/fvm.hostlib \
-    system/ulib/unittest.hostlib \
-    system/ulib/pretty.hostlib \
-    system/ulib/minfs.hostlib \
+    system/uapp/blobfs.hostlib \
+    system/ulib/digest.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/fs.hostlib \
     system/ulib/fs-host.hostlib \
-    system/ulib/digest.hostlib \
-    system/uapp/blobfs.hostlib \
+    system/ulib/fvm-host.hostlib \
+    system/ulib/fvm.hostlib \
+    system/ulib/minfs.hostlib \
+    system/ulib/pretty.hostlib \
+    system/ulib/unittest.hostlib \
+    third_party/ulib/lz4.hostlib \
+    third_party/ulib/uboringssl.hostlib \
+    third_party/ulib/zstd.hostlib \
 
 include make/module.mk

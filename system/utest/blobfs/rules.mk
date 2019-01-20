@@ -37,6 +37,7 @@ MODULE_STATIC_LIBS := \
     third_party/ulib/cksum \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
+    third_party/ulib/zstd \
 
 MODULE_LIBS := \
     system/ulib/async.default \

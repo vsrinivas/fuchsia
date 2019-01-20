@@ -17,12 +17,13 @@ MODULE_COMPILEFLAGS += -fvisibility=hidden
 # Sources common between host, target, and tests.
 COMMON_SRCS := \
     $(LOCAL_DIR)/common.cpp \
-    $(LOCAL_DIR)/fsck.cpp \
+    $(LOCAL_DIR)/compression/lz4.cpp \
+    $(LOCAL_DIR)/compression/zstd.cpp \
     $(LOCAL_DIR)/extent-reserver.cpp \
+    $(LOCAL_DIR)/fsck.cpp \
     $(LOCAL_DIR)/iterator/allocated-extent-iterator.cpp \
     $(LOCAL_DIR)/iterator/block-iterator.cpp \
     $(LOCAL_DIR)/iterator/vector-extent-iterator.cpp \
-    $(LOCAL_DIR)/lz4.cpp \
     $(LOCAL_DIR)/node-reserver.cpp \
 
 # Sources common between target and tests.
@@ -33,6 +34,7 @@ COMMON_TARGET_SRCS := \
     $(LOCAL_DIR)/blobfs.cpp \
     $(LOCAL_DIR)/blob-cache.cpp \
     $(LOCAL_DIR)/cache-node.cpp \
+    $(LOCAL_DIR)/compression/blob-compressor.cpp \
     $(LOCAL_DIR)/directory.cpp \
     $(LOCAL_DIR)/iterator/node-populator.cpp \
     $(LOCAL_DIR)/journal.cpp \
@@ -61,6 +63,7 @@ TARGET_MODULE_STATIC_LIBS := \
     third_party/ulib/cksum \
     third_party/ulib/lz4 \
     third_party/ulib/uboringssl \
+    third_party/ulib/zstd \
 
 TARGET_MODULE_LIBS := \
     system/ulib/async.default \
@@ -145,6 +148,7 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/digest/include \
     -Ithird_party/ulib/lz4/include \
     -Ithird_party/ulib/uboringssl/include \
+    -Ithird_party/ulib/zstd/include \
     -Isystem/ulib/cobalt-client/include \
     -Isystem/ulib/fbl/include \
     -Isystem/ulib/fs/include \

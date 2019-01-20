@@ -2,64 +2,74 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <lz4/lz4frame.h>
 #include <stdio.h>
 #include <unistd.h>
 
+#include <blobfs/compression/compressor.h>
+#include <blobfs/compression/lz4.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <lz4/lz4frame.h>
 #include <fs/trace.h>
 #include <zircon/types.h>
-
-#include <blobfs/lz4.h>
 
 namespace blobfs {
 
 constexpr size_t kLz4HeaderSize = 15;
 
-Compressor::Compressor() {}
+LZ4Compressor::LZ4Compressor(LZ4F_compressionContext_t ctx, void* compression_buffer,
+                             size_t compression_buffer_length)
+    : ctx_(std::move(ctx)), buf_(compression_buffer), buf_max_(compression_buffer_length),
+      buf_used_(0) {}
 
-Compressor::~Compressor() {
-    Reset();
+void* LZ4Compressor::Buffer() const {
+    return reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(buf_) + buf_used_);
 }
 
-void Compressor::Reset() {
-    if (Compressing()) {
-        LZ4F_freeCompressionContext(ctx_);
+size_t LZ4Compressor::Remaining() const {
+    return buf_max_ - buf_used_;
+}
+
+LZ4Compressor::~LZ4Compressor() {
+    LZ4F_freeCompressionContext(ctx_);
+}
+
+zx_status_t LZ4Compressor::Create(size_t input_size, void* compression_buffer,
+                                  size_t compression_buffer_length,
+                                  fbl::unique_ptr<LZ4Compressor>* out) {
+    if (BufferMax(input_size) > compression_buffer_length) {
+        return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    buf_ = nullptr;
-    buf_max_ = 0;
-    buf_used_ = 0;
-}
 
-zx_status_t Compressor::Initialize(void* buf, size_t buf_max) {
-    ZX_DEBUG_ASSERT(!Compressing());
-    LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&ctx_, LZ4F_VERSION);
+    LZ4F_compressionContext_t ctx;
+    LZ4F_errorCode_t errc = LZ4F_createCompressionContext(&ctx, LZ4F_VERSION);
     if (LZ4F_isError(errc)) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    buf_ = buf;
-    buf_max_ = buf_max;
-    buf_used_ = 0;
-
-    size_t r = LZ4F_compressBegin(ctx_, Buffer(), buf_remaining(), nullptr);
+    auto compressor = fbl::unique_ptr<LZ4Compressor>(new LZ4Compressor(std::move(ctx),
+                                                                       compression_buffer,
+                                                                       compression_buffer_length));
+    size_t r = LZ4F_compressBegin(compressor->ctx_,
+                                  compressor->Buffer(),
+                                  compressor->Remaining(), nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_BUFFER_TOO_SMALL;
     }
-    buf_used_ += r;
+    compressor->buf_used_ += r;
+
+    *out = std::move(compressor);
     return ZX_OK;
 }
 
-size_t Compressor::BufferMax(size_t blob_size) {
+size_t LZ4Compressor::BufferMax(size_t blob_size) {
     return kLz4HeaderSize + LZ4F_compressBound(blob_size, nullptr);
 }
 
-zx_status_t Compressor::Update(const void* data, size_t length) {
-    ZX_DEBUG_ASSERT(Compressing());
-    size_t r = LZ4F_compressUpdate(ctx_, Buffer(), buf_remaining(), data, length, nullptr);
+zx_status_t LZ4Compressor::Update(const void* data, size_t length) {
+    size_t r = LZ4F_compressUpdate(ctx_, Buffer(), Remaining(), data, length, nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
@@ -67,9 +77,8 @@ zx_status_t Compressor::Update(const void* data, size_t length) {
     return ZX_OK;
 }
 
-zx_status_t Compressor::End() {
-    ZX_DEBUG_ASSERT(Compressing());
-    size_t r = LZ4F_compressEnd(ctx_, Buffer(), buf_remaining(), nullptr);
+zx_status_t LZ4Compressor::End() {
+    size_t r = LZ4F_compressEnd(ctx_, Buffer(), Remaining(), nullptr);
     if (LZ4F_isError(r)) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
@@ -77,14 +86,13 @@ zx_status_t Compressor::End() {
     return ZX_OK;
 }
 
-size_t Compressor::Size() const {
-    ZX_DEBUG_ASSERT(Compressing());
+size_t LZ4Compressor::Size() const {
     return buf_used_;
 }
 
-zx_status_t Decompressor::Decompress(void* target_buf_, size_t* target_size,
-                                     const void* src_buf_, size_t* src_size) {
-    TRACE_DURATION("blobfs", "Decompressor::Decompress", "target_size", *target_size,
+zx_status_t LZ4Decompress(void* target_buf_, size_t* target_size, const void* src_buf_,
+                          size_t* src_size) {
+    TRACE_DURATION("blobfs", "LZ4Decompress", "target_size", *target_size,
                    "src_size", *src_size);
     uint8_t* target_buf = reinterpret_cast<uint8_t*>(target_buf_);
     const uint8_t* src_buf = reinterpret_cast<const uint8_t*>(src_buf_);

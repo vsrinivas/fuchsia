@@ -12,6 +12,8 @@
 #include <unistd.h>
 
 #include <blobfs/blobfs.h>
+#include <blobfs/compression/lz4.h>
+#include <blobfs/compression/zstd.h>
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/block-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
@@ -42,8 +44,6 @@ namespace {
 using digest::Digest;
 using digest::MerkleTree;
 
-} // namespace
-
 // Blob's vmo names have following pattern
 // "blob-1abc8" or "compressedBlob-5c"
 constexpr char kBlobVmoNamePrefix[] = "blob";
@@ -55,6 +55,8 @@ void FormatVmoName(const char* prefix,
     vmo_name->Clear();
     vmo_name->AppendPrintf("%s-%lx", prefix, index);
 }
+
+} // namespace
 
 zx_status_t Blob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
@@ -120,7 +122,11 @@ zx_status_t Blob::InitVmos() {
     }
 
     if ((inode_.header.flags & kBlobFlagLZ4Compressed) != 0) {
-        if ((status = InitCompressed()) != ZX_OK) {
+        if ((status = InitCompressed(CompressionAlgorithm::LZ4)) != ZX_OK) {
+            return status;
+        }
+    } else if ((inode_.header.flags & kBlobFlagZSTDCompressed) != 0) {
+        if ((status = InitCompressed(CompressionAlgorithm::ZSTD)) != ZX_OK) {
             return status;
         }
     } else {
@@ -136,7 +142,7 @@ zx_status_t Blob::InitVmos() {
     return ZX_OK;
 }
 
-zx_status_t Blob::InitCompressed() {
+zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     TRACE_DURATION("blobfs", "Blobfs::InitCompressed", "size", inode_.blob_size, "blocks",
                    inode_.block_count);
     fs::Ticker ticker(blobfs_->LocalMetrics().Collecting());
@@ -207,8 +213,19 @@ zx_status_t Blob::InitCompressed() {
 
     // Decompress the compressed data into the target buffer.
     size_t target_size = inode_.blob_size;
-    status = Decompressor::Decompress(GetData(), &target_size, compressed_mapper.start(),
-                                      &compressed_size);
+    const void* compressed_buffer = compressed_mapper.start();
+    switch (algorithm) {
+    case CompressionAlgorithm::LZ4:
+        status = LZ4Decompress(GetData(), &target_size, compressed_buffer, &compressed_size);
+        break;
+    case CompressionAlgorithm::ZSTD:
+        status = ZSTDDecompress(GetData(), &target_size, compressed_buffer, &compressed_size);
+        break;
+    default:
+        FS_TRACE_ERROR("Unsupported decompression algorithm");
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to decompress data: %d\n", status);
         return status;
@@ -339,15 +356,9 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
     fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
     if (inode_.blob_size >= kCompressionMinBytesSaved) {
-        size_t max = Compressor::BufferMax(inode_.blob_size);
-        FormatVmoName(kCompressedBlobVmoNamePrefix, &vmo_name, Ino());
-        status = write_info->compressed_blob.CreateAndMap(max, vmo_name.c_str());
-        if (status != ZX_OK) {
-            return status;
-        }
-        status = write_info->compressor.Initialize(write_info->compressed_blob.start(),
-                                                   write_info->compressed_blob.size());
-        if (status != ZX_OK) {
+        write_info->compressor = BlobCompressor::Create(CompressionAlgorithm::ZSTD,
+                                                        inode_.blob_size);
+        if (!write_info->compressor) {
             FS_TRACE_ERROR("blobfs: Failed to initialize compressor: %d\n", status);
             return status;
         }
@@ -356,7 +367,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
     // Open VMOs, so we can begin writing after allocate succeeds.
     fzl::OwnedVmoMapper mapping;
     FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
-    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize, vmo_name.c_str())) != ZX_OK) {
+    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize,
+                                       vmo_name.c_str())) != ZX_OK) {
         return status;
     }
     if ((status = blobfs_->AttachVmo(mapping.vmo(), &vmoid_)) != ZX_OK) {
@@ -448,7 +460,8 @@ zx_status_t Blob::WriteMetadata() {
         ZX_ASSERT(populator.Walk(on_node, on_extent) == ZX_OK);
 
         // Ensure all non-allocation flags are propagated to the inode.
-        mapped_inode->header.flags |= (inode_.header.flags & kBlobFlagLZ4Compressed);
+        const uint32_t non_allocation_flags = kBlobFlagZSTDCompressed | kBlobFlagLZ4Compressed;
+        mapped_inode->header.flags |= (inode_.header.flags & non_allocation_flags);
     } else {
         // Special case: Empty node.
         ZX_DEBUG_ASSERT(write_info_->node_indices.size() == 1);
@@ -492,8 +505,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
         *actual = to_write;
         write_info_->bytes_written += to_write;
 
-        if (write_info_->compressor.Compressing()) {
-            if ((status = write_info_->compressor.Update(data, to_write)) != ZX_OK) {
+        if (write_info_->compressor) {
+            if ((status = write_info_->compressor->Update(data, to_write)) != ZX_OK) {
                 return status;
             }
             ConsiderCompressionAbort();
@@ -521,8 +534,8 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
             SetState(kBlobStateError);
         });
 
-        if (write_info_->compressor.Compressing()) {
-            if ((status = write_info_->compressor.End()) != ZX_OK) {
+        if (write_info_->compressor) {
+            if ((status = write_info_->compressor->End()) != ZX_OK) {
                 return status;
             }
             ConsiderCompressionAbort();
@@ -571,9 +584,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
             return status;
         }
 
-        if (write_info_->compressor.Compressing()) {
+        if (write_info_->compressor) {
             uint64_t blocks64 =
-                fbl::round_up(write_info_->compressor.Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
+                fbl::round_up(write_info_->compressor->Size(), kBlobfsBlockSize) / kBlobfsBlockSize;
             ZX_DEBUG_ASSERT(blocks64 <= std::numeric_limits<uint32_t>::max());
             uint32_t blocks = static_cast<uint32_t>(blocks64);
             int64_t vmo_bias = -static_cast<int64_t>(merkle_blocks);
@@ -581,7 +594,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
             status = StreamBlocks(&block_iter, blocks,
                                   [&](uint64_t vmo_offset, uint64_t dev_offset, uint32_t length) {
                                       return EnqueuePaginated(
-                                          &wb, blobfs_, this, write_info_->compressed_blob.vmo(),
+                                          &wb, blobfs_, this, write_info_->compressor->Vmo(),
                                           vmo_offset - merkle_blocks,
                                           dev_offset + blobfs_->DataStart(), length);
                                   });
@@ -594,7 +607,7 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
             ZX_DEBUG_ASSERT(inode_.block_count > blocks);
 
             inode_.block_count = blocks;
-            inode_.header.flags |= kBlobFlagLZ4Compressed;
+            inode_.header.flags |= kBlobFlagZSTDCompressed;
         } else {
             uint64_t blocks64 =
                 fbl::round_up(inode_.blob_size, kBlobfsBlockSize) / kBlobfsBlockSize;
@@ -632,10 +645,9 @@ zx_status_t Blob::WriteInternal(const void* data, size_t len, size_t* actual) {
 }
 
 void Blob::ConsiderCompressionAbort() {
-    ZX_DEBUG_ASSERT(write_info_->compressor.Compressing());
-    if (inode_.blob_size - kCompressionMinBytesSaved < write_info_->compressor.Size()) {
-        write_info_->compressor.Reset();
-        write_info_->compressed_blob.Reset();
+    ZX_DEBUG_ASSERT(write_info_->compressor);
+    if (inode_.blob_size - kCompressionMinBytesSaved < write_info_->compressor->Size()) {
+        write_info_->compressor.reset();
     }
 }
 

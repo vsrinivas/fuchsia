@@ -15,12 +15,13 @@ MODULE_SRCS := \
     system/ulib/bitmap/raw-bitmap.cpp \
 
 MODULE_HOST_LIBS := \
-    third_party/ulib/lz4.hostlib \
-    third_party/ulib/uboringssl.hostlib \
     system/ulib/blobfs.hostlib \
     system/ulib/digest.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/fs-host.hostlib \
+    third_party/ulib/lz4.hostlib \
+    third_party/ulib/uboringssl.hostlib \
+    third_party/ulib/zstd.hostlib \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

@@ -49,7 +49,6 @@
 #include <blobfs/iterator/allocated-extent-iterator.h>
 #include <blobfs/iterator/extent-iterator.h>
 #include <blobfs/journal.h>
-#include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 #include <blobfs/writeback.h>

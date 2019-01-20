@@ -29,9 +29,10 @@
 #include <blobfs/allocator.h>
 #include <blobfs/blob-cache.h>
 #include <blobfs/common.h>
+#include <blobfs/compression/blob-compressor.h>
+#include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
 #include <blobfs/format.h>
-#include <blobfs/lz4.h>
 #include <blobfs/metrics.h>
 #include <blobfs/node-reserver.h>
 
@@ -222,10 +223,9 @@ private:
     // the contents of a VMO into memory when it is opened.
     zx_status_t InitVmos();
 
-    // Initializes a compressed blob by reading it from disk and decompressing
-    // it.
+    // Initializes a compressed blob by reading it from disk and decompressing it.
     // Does not verify the blob.
-    zx_status_t InitCompressed();
+    zx_status_t InitCompressed(CompressionAlgorithm algorithm);
 
     // Initializes a decompressed blob by reading it from disk.
     // Does not verify the blob.
@@ -281,8 +281,7 @@ private:
         fbl::Vector<ReservedExtent> extents;
         fbl::Vector<ReservedNode> node_indices;
 
-        Compressor compressor;
-        fzl::OwnedVmoMapper compressed_blob;
+        std::optional<BlobCompressor> compressor;
     };
 
     fbl::unique_ptr<WritebackInfo> write_info_ = {};

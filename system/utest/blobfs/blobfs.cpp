@@ -16,7 +16,6 @@
 
 #include <blobfs/format.h>
 #include <blobfs/journal.h>
-#include <blobfs/lz4.h>
 #include <digest/digest.h>
 #include <digest/merkle-tree.h>
 #include <fbl/alloc_checker.h>

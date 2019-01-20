@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <blobfs/lz4.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fvm-host/container.h>
@@ -585,35 +584,6 @@ bool TestCompressorBufferTooSmall() {
     END_TEST;
 }
 
-bool TestBlobfsCompressor() {
-    BEGIN_TEST;
-    blobfs::Compressor compressor;
-
-    // Pretend we're going to compress only one byte of data.
-    const size_t buf_size = compressor.BufferMax(1);
-    fbl::unique_ptr<char[]> buf(new char[buf_size]);
-    ASSERT_EQ(compressor.Initialize(buf.get(), buf_size), ZX_OK);
-
-    // Create data as large as possible that will fit still within this buffer.
-    size_t data_size = 0;
-    while (compressor.BufferMax(data_size + 1) <= buf_size) {
-        ++data_size;
-    }
-
-    ASSERT_GT(data_size, 0);
-    ASSERT_EQ(compressor.BufferMax(data_size), buf_size);
-    ASSERT_GT(compressor.BufferMax(data_size+1), buf_size);
-
-    unsigned int seed = 0;
-    for (size_t i = 0; i < data_size; i++) {
-        char data = static_cast<char>(rand_r(&seed));
-        ASSERT_EQ(compressor.Update(&data, 1), ZX_OK);
-    }
-
-    ASSERT_EQ(compressor.End(), ZX_OK);
-    END_TEST;
-}
-
 enum class PaveSizeType {
     kSmall, // Allocate disk space for paving smaller than what is required.
     kExact, // Allocate exactly as much disk space as is required for a pave.
@@ -816,7 +786,6 @@ BEGIN_TEST_CASE(fvm_host_tests)
 RUN_FOR_ALL_TYPES(8192)
 RUN_FOR_ALL_TYPES(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestCompressorBufferTooSmall)
-RUN_TEST_MEDIUM(TestBlobfsCompressor)
 RUN_ALL_PAVE(8192)
 RUN_ALL_PAVE(DEFAULT_SLICE_SIZE)
 RUN_TEST_MEDIUM(TestPaveZxcryptFail)

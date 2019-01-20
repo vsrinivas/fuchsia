@@ -13,8 +13,8 @@
 #include <unistd.h>
 
 #include <blobfs/blobfs.h>
+#include <blobfs/compression/compressor.h>
 #include <blobfs/extent-reserver.h>
-#include <blobfs/lz4.h>
 #include <blobfs/node-reserver.h>
 #include <blobfs/writeback.h>
 #include <cobalt-client/cpp/collector.h>
