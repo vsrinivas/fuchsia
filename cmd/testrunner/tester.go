@@ -16,8 +16,12 @@ import (
 // Tester is executes a Test.
 type Tester func(context.Context, testsharder.Test, io.Writer, io.Writer) error
 
-// RunTestInSubprocess is a TesterFunc that executes the given test in a local subprocess.
-func RunTestInSubprocess(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
+// SubprocessTester executes tests in local subprocesses.
+type SubprocessTester struct {
+	WD string
+}
+
+func (t *SubprocessTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
 	var command []string
 	if len(test.Location) > 0 {
 		command = []string{test.Location}
@@ -26,10 +30,11 @@ func RunTestInSubprocess(ctx context.Context, test testsharder.Test, stdout io.W
 	}
 
 	runner := new(testrunner.SubprocessRunner)
+	runner.WD = t.WD
 	return runner.Run(ctx, command, stdout, stderr)
 }
 
-// SSHTester is executes tests over an SSH connection. It assumes the test.Command
+// SSHTester executes tests over an SSH connection. It assumes the test.Command
 // contains the command line to execute on the remote machine.
 type SSHTester struct {
 	client *ssh.Client

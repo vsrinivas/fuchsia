@@ -19,6 +19,9 @@ const (
 
 // SubprocessRunner is a Runner that runs commands as local subprocesses.
 type SubprocessRunner struct {
+	// WD is the working directory of the subprocesses; if unspecified, that
+	// of the current process will be used.
+	WD string
 }
 
 // Run executes the given command.
@@ -28,6 +31,7 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		Args:        command,
 		Stdout:      stdout,
 		Stderr:      stderr,
+		Dir:         r.WD,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
 

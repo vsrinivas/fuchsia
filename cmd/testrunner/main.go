@@ -47,6 +47,9 @@ var (
 
 	// The path where a tar archive containing test results should be created.
 	archive string
+
+	// Working directory of the local testing subprocesses.
+	localWD string
 )
 
 // TestRunnerOutput manages the output of this test runner.
@@ -106,6 +109,7 @@ func usage() {
 func init() {
 	flag.BoolVar(&help, "help", false, "Whether to show Usage and exit.")
 	flag.StringVar(&archive, "archive", "", "Optional path where a tar archive containing test results should be created.")
+	flag.StringVar(&localWD, "C", "", "Working directory of local testing subprocesses; if unset the current working directory will be used.")
 	flag.Usage = usage
 }
 
@@ -172,11 +176,15 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanis
 		return fmt.Errorf("could not determine the runtime system for following tests %v", unknown)
 	}
 
-	if err := runTests(linux, RunTestInSubprocess, output); err != nil {
+	localTester := &SubprocessTester{
+		WD: localWD,
+	}
+
+	if err := runTests(linux, localTester.Test, output); err != nil {
 		return err
 	}
 
-	if err := runTests(mac, RunTestInSubprocess, output); err != nil {
+	if err := runTests(mac, localTester.Test, output); err != nil {
 		return err
 	}
 

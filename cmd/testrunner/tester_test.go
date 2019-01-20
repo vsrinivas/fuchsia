@@ -15,11 +15,11 @@ import (
 )
 
 func TestTester(t *testing.T) {
-	tester := RunTestInSubprocess
+	tester := &SubprocessTester{}
 	cases := []testCase{
 		{
 			name:   "should run a command a local subprocess",
-			tester: tester,
+			tester: tester.Test,
 			test: testsharder.Test{
 				Name: "hello_world_test",
 				// Assumes that we're running on a Unix system.
