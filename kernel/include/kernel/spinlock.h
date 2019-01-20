@@ -38,7 +38,7 @@ static inline void spin_unlock(spin_lock_t* lock) TA_REL(lock) {
 }
 
 static inline void spin_lock_init(spin_lock_t* lock) {
-    arch_spin_lock_init(lock);
+    *lock = SPIN_LOCK_INITIAL_VALUE;
 }
 
 // which cpu currently holds the spin lock
@@ -84,7 +84,7 @@ __END_CDECLS
 
 class TA_CAP("mutex") SpinLock {
 public:
-    SpinLock() { spin_lock_init(&spinlock_); }
+    constexpr SpinLock() = default;
     void Acquire() TA_ACQ() { spin_lock(&spinlock_); }
     bool TryAcquire() TA_TRY_ACQ(false) { return spin_trylock(&spinlock_); }
     void Release() TA_REL() { spin_unlock(&spinlock_); }
@@ -111,7 +111,7 @@ public:
     SpinLock& operator=(SpinLock&& c) = delete;
 
 private:
-    spin_lock_t spinlock_;
+    spin_lock_t spinlock_ = SPIN_LOCK_INITIAL_VALUE;
 };
 
 // Declares a SpinLock member of the struct or class |containing_type|

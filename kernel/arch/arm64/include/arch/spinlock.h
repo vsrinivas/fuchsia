@@ -30,10 +30,6 @@ void arch_spin_lock(spin_lock_t* lock) TA_ACQ(lock);
 int arch_spin_trylock(spin_lock_t* lock) TA_TRY_ACQ(false, lock);
 void arch_spin_unlock(spin_lock_t* lock) TA_REL(lock);
 
-static inline void arch_spin_lock_init(spin_lock_t* lock) {
-    *lock = SPIN_LOCK_INITIAL_VALUE;
-}
-
 static inline uint arch_spin_lock_holder_cpu(spin_lock_t* lock) {
     return (uint)__atomic_load_n(&lock->value, __ATOMIC_RELAXED) - 1;
 }
