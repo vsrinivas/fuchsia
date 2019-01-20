@@ -52,7 +52,7 @@ func (devCtx *DeviceContext) Register() error {
 // that may be attached to the environment of subprocesses.
 // This method does not modify the current process' environment.
 func (devCtx DeviceContext) EnvironEntry() string {
-	return fmt.Sprintf("%s=%q", devCtxEnvVar, devCtx.location)
+	return fmt.Sprintf("%s=%s", devCtxEnvVar, devCtx.location)
 }
 
 // Unregister clears the ambient device context value.
