@@ -47,12 +47,11 @@ executable("bin") {
 }
 
 package("guest_manager") {
-  deprecated_bare_package_url = "//build"
+  binary = "guest_manager"
 
   deps = [
     ":bin",
   ]
-  binary = "guest_manager"
   meta = [
     {
       path = rebase_path("meta/guest_manager.cmx")

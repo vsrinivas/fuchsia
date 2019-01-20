@@ -129,8 +129,6 @@ executable("bin") {
 }
 
 package("vmm") {
-  deprecated_bare_package_url = "//build"
-
   binary = "vmm"
 
   deps = [

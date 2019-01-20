@@ -34,8 +34,6 @@ executable("bin") {
 }
 
 package("guest_runner") {
-  deprecated_bare_package_url = "//build"
-
   binary = "guest_runner"
 
   deps = [
