@@ -5,6 +5,7 @@
 #pragma once
 
 #include <ddk/device.h>
+#include <fbl/string.h>
 #include <lib/async/cpp/task.h>
 #include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
@@ -83,7 +84,7 @@ struct Device {
     Devhost* host = nullptr;
     const char* name = nullptr;
     const char* libname = nullptr;
-    fbl::unique_ptr<const char[]> args;
+    fbl::String args;
     // The backoff between each driver retry. This grows exponentially.
     zx::duration backoff = zx::msec(250);
     // The number of retries left for the driver.

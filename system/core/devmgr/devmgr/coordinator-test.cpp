@@ -13,7 +13,7 @@ namespace devmgr {
     }
 }
 
-bool construct() {
+bool initialize_core_devices() {
     BEGIN_TEST;
 
     devmgr::CoordinatorConfig config;
@@ -22,9 +22,12 @@ bool construct() {
     config.asan_drivers = false;
     devmgr::Coordinator coordinator(std::move(config));
 
+    zx_status_t status = coordinator.InitializeCoreDevices();
+    ASSERT_EQ(ZX_OK, status);
+
     END_TEST;
 }
 
 BEGIN_TEST_CASE(coordinator_tests)
-RUN_TEST_SMALL(construct)
+RUN_TEST_SMALL(initialize_core_devices)
 END_TEST_CASE(coordinator_tests)

@@ -82,20 +82,16 @@ bool Coordinator::InSuspend() const {
 }
 
 zx_status_t Coordinator::InitializeCoreDevices() {
+    fbl::AllocChecker ac;
     {
         root_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
         root_device_.protocol_id = ZX_PROTOCOL_ROOT;
         root_device_.name = "root";
         root_device_.libname = "";
-
-        constexpr const char kArgs[] = "root,";
-        auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-        if (!args) {
+        root_device_.args = fbl::String("root,", &ac);
+        if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        memcpy(args.get(), kArgs, sizeof(kArgs));
-        root_device_.args.reset(args.release());
-
         root_device_.AddRef();
     }
 
@@ -105,15 +101,10 @@ zx_status_t Coordinator::InitializeCoreDevices() {
         misc_device_.protocol_id = ZX_PROTOCOL_MISC_PARENT;
         misc_device_.name = "misc";
         misc_device_.libname = "";
-
-        constexpr const char kArgs[] = "misc,";
-        auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-        if (!args) {
+        misc_device_.args = fbl::String("misc,", &ac);
+        if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        memcpy(args.get(), kArgs, sizeof(kArgs));
-        misc_device_.args.reset(args.release());
-
         misc_device_.AddRef();
     }
 
@@ -122,15 +113,10 @@ zx_status_t Coordinator::InitializeCoreDevices() {
         sys_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
         sys_device_.name = "sys";
         sys_device_.libname = "";
-
-        constexpr const char kArgs[] = "sys,";
-        auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-        if (!args) {
+        sys_device_.args = fbl::String("sys,", &ac);
+        if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        memcpy(args.get(), kArgs, sizeof(kArgs));
-        sys_device_.args.reset(args.release());
-
         sys_device_.AddRef();
     }
 
@@ -140,15 +126,10 @@ zx_status_t Coordinator::InitializeCoreDevices() {
         test_device_.protocol_id = ZX_PROTOCOL_TEST_PARENT;
         test_device_.name = "test";
         test_device_.libname = "";
-
-        constexpr const char kArgs[] = "test,";
-        auto args = fbl::make_unique<char[]>(sizeof(kArgs));
-        if (!args) {
+        test_device_.args = fbl::String("test,", &ac);
+        if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
-        memcpy(args.get(), kArgs, sizeof(kArgs));
-        test_device_.args.reset(args.release());
-
         test_device_.AddRef();
     }
     return ZX_OK;
@@ -683,21 +664,17 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         return ZX_ERR_NO_MEMORY;
     }
 
-    auto args_buf = fbl::make_unique<char[]>(args.size() + 1);
+    fbl::AllocChecker ac;
+    dev->args = fbl::String(args, &ac);
     dev->props = fbl::make_unique<zx_device_prop_t[]>(props_count);
     dev->name_alloc_ = fbl::make_unique<char[]>(driver_path.size() + name.size() + 2);
-    if (!args_buf || !dev->props || !dev->name_alloc_) {
+    if (!ac.check() || !dev->props || !dev->name_alloc_) {
         return ZX_ERR_NO_MEMORY;
     }
 
     dev->hrpc = std::move(rpc);
     dev->prop_count = static_cast<uint32_t>(props_count);
     dev->protocol_id = protocol_id;
-
-    memcpy(args_buf.get(), args.data(), args.size());
-    args_buf[args.size()] = 0;
-    // release+reset is used here to add const to the inner type
-    dev->args.reset(args_buf.release());
 
     memcpy(dev->name_alloc_.get(), name.data(), name.size());
     dev->name_alloc_[name.size()] = 0;
@@ -762,7 +739,7 @@ zx_status_t Coordinator::AddDevice(Device* parent, zx::channel rpc,
         parent, parent->name, parent->refcount_);
 
     log(DEVLC, "devcoord: publish %p '%s' props=%u args='%s' parent=%p\n",
-        dev.get(), dev->name, dev->prop_count, dev->args.get(), dev->parent);
+        dev.get(), dev->name, dev->prop_count, dev->args.data(), dev->parent);
 
     if (!invisible) {
         r = dev->publish_task.Post(dispatcher());
@@ -1598,7 +1575,7 @@ zx_status_t Coordinator::PrepareProxy(Device* dev) {
     }
 
     // proxy args are "processname,args"
-    const char* arg0 = dev->args.get();
+    const char* arg0 = dev->args.data();
     const char* arg1 = strchr(arg0, ',');
     if (arg1 == nullptr) {
         return ZX_ERR_INTERNAL;
