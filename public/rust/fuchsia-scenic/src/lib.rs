@@ -42,11 +42,11 @@ impl Session {
         }))
     }
 
-    fn enqueue(&mut self, command: Command) {
+    pub fn enqueue(&mut self, command: Command) {
         self.commands.push(command)
     }
 
-    fn flush(&mut self) {
+    pub fn flush(&mut self) {
         let mut commands = mem::replace(&mut self.commands, vec![]);
         self.session.enqueue(&mut commands.iter_mut()).ok();
     }
