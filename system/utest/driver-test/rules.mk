@@ -13,7 +13,7 @@ MODULE_USERTEST_GROUP := ddk
 MODULE_SRCS += \
     $(LOCAL_DIR)/main.cpp
 
-MODULE_NAME := driver-tests
+MODULE_NAME := driver-test
 
 MODULE_STATIC_LIBS := \
 	system/ulib/fbl \
