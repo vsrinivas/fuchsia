@@ -10,9 +10,6 @@ of this foundation.
 The canonical Zircon Git repository is located
 at: https://fuchsia.googlesource.com/zircon
 
-A read-only mirror of the code is present
-at: https://github.com/fuchsia-mirror/zircon
-
 The Zircon Kernel provides syscalls to manage processes, threads,
 virtual memory, inter-process communication, waiting on object state
 changes, and locking (via futexes).

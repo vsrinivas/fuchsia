@@ -111,9 +111,8 @@ incomplete and will be expanded over time.
 
 * Documentation is one honking great idea &mdash; let's do more of that!
 
-    - Documentation should be in Markdown files.  Our Markdown is rendered both in Gitiles in
-      [the main repo browser][googlesource-docs] and in Github in [the mirrored repo][github-docs].
-      Please check how your docs are rendered on both websites.
+    - Documentation should be in Markdown files.  Our Markdown is rendered in Gitiles in
+      [the main repo browser][googlesource-docs]. Please check how your docs are rendered.
 
     - Some notable docs: there's a list of syscalls in [docs/syscalls.md][syscall-doc] and a list of
       kernel cmdline options in [docs/kernel_cmdline.md][cmdline-doc].  When editing or adding
@@ -125,7 +124,6 @@ incomplete and will be expanded over time.
 
 [google-style-guide]: https://google.github.io/styleguide/cppguide.html
 [googlesource-docs]: https://fuchsia.googlesource.com/zircon/+/master/docs/
-[github-docs]: https://github.com/fuchsia-mirror/zircon/tree/master/docs
 [syscall-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md
 [cmdline-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md
 [h2md-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/h2md.md
