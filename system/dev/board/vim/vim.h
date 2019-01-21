@@ -31,7 +31,7 @@ typedef struct {
 } vim_bus_t;
 
 // vim-gpio.c
-zx_status_t vim_gpio_init(vim_bus_t* bus, bool enable_test);
+zx_status_t vim_gpio_init(vim_bus_t* bus);
 
 // vim-i2c.c
 zx_status_t vim_i2c_init(vim_bus_t* bus);

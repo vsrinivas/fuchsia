@@ -44,15 +44,17 @@ static int vim_start_thread(void* arg) {
     pdev_board_info_t info;
 
     // Fetch the board info so that we can distinguish between the "vim2" and
-    // "vim2-machina" boards. The latter of which has fewer devices available
-    // to Zircon.
+    // "vim2-machina" boards. The latter of which does not initialize devices.
     if ((status = pbus_get_board_info(&bus->pbus, &info)) != ZX_OK) {
         zxlogf(ERROR, "pbus_get_board_info failed: %d\n", status);
         goto fail;
     }
+    if (info.pid == PDEV_PID_VIM2_MACHINA) {
+        return ZX_OK;
+    }
 
     // Start protocol drivers before adding platform devices.
-    if ((status = vim_gpio_init(bus, info.pid == PDEV_PID_VIM2)) != ZX_OK) {
+    if ((status = vim_gpio_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init failed: %d\n", status);
         goto fail;
     }
@@ -64,10 +66,8 @@ static int vim_start_thread(void* arg) {
         zxlogf(ERROR, "vim_clk_init failed: %d\n", status);
         goto fail;
     }
-    if (info.pid == PDEV_PID_VIM2) {
-        if ((status = vim2_canvas_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim2_canvas_init failed: %d\n", status);
-        }
+    if ((status = vim2_canvas_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_canvas_init failed: %d\n", status);
     }
 
     // Start platform devices.
@@ -83,28 +83,26 @@ static int vim_start_thread(void* arg) {
     if ((status = vim_eth_init(bus)) != ZX_OK) {
         zxlogf(ERROR, "vim_eth_init failed: %d\n", status);
     }
-    if (info.pid == PDEV_PID_VIM2) {
-        if ((status = vim_usb_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
-        }
-        if ((status = vim_mali_init(bus, BTI_MALI)) != ZX_OK) {
-            zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
-        }
-        if ((status = vim2_thermal_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim2_thermal_init failed: %d\n", status);
-        }
-        if ((status = vim_display_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_display_init failed: %d\n", status);
-        }
-        if ((status = vim_video_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_video_init failed: %d\n", status);
-        }
-        if ((status = vim_led2472g_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_led2472g_init failed: %d\n", status);
-        }
-        if ((status = vim_rtc_init(bus)) != ZX_OK) {
-            zxlogf(ERROR, "vim_rtc_init failed: %d\n", status);
-        }
+    if ((status = vim_usb_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_usb_init failed: %d\n", status);
+    }
+    if ((status = vim_mali_init(bus, BTI_MALI)) != ZX_OK) {
+        zxlogf(ERROR, "vim_mali_init failed: %d\n", status);
+    }
+    if ((status = vim2_thermal_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim2_thermal_init failed: %d\n", status);
+    }
+    if ((status = vim_display_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_display_init failed: %d\n", status);
+    }
+    if ((status = vim_video_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_video_init failed: %d\n", status);
+    }
+    if ((status = vim_led2472g_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_led2472g_init failed: %d\n", status);
+    }
+    if ((status = vim_rtc_init(bus)) != ZX_OK) {
+        zxlogf(ERROR, "vim_rtc_init failed: %d\n", status);
     }
 
     return ZX_OK;

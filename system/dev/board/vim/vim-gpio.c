@@ -76,9 +76,7 @@ static const pbus_dev_t gpio_dev = {
     .irq_count = countof(gpio_irqs),
 };
 
-
-zx_status_t vim_gpio_init(vim_bus_t* bus, bool enable_test) {
-
+zx_status_t vim_gpio_init(vim_bus_t* bus) {
     zx_status_t status = pbus_protocol_device_add(&bus->pbus, ZX_PROTOCOL_GPIO_IMPL, &gpio_dev);
     if (status != ZX_OK) {
         zxlogf(ERROR, "vim_gpio_init: pbus_protocol_device_add failed: %d\n", status);
@@ -91,32 +89,30 @@ zx_status_t vim_gpio_init(vim_bus_t* bus, bool enable_test) {
         return status;
     }
 
-    if (enable_test) {
-        const pbus_gpio_t gpio_test_gpios[] = {
-            {
-                // SYS_LED
-                .gpio = S912_GPIOAO(9),
-            },
-            {
-                // GPIO PIN
-                .gpio = S912_GPIOAO(2),
-            },
-        };
+    const pbus_gpio_t gpio_test_gpios[] = {
+        {
+            // SYS_LED
+            .gpio = S912_GPIOAO(9),
+        },
+        {
+            // GPIO PIN
+            .gpio = S912_GPIOAO(2),
+        },
+    };
 
-        const pbus_dev_t gpio_test_dev = {
-            .name = "vim-gpio-test",
-            .vid = PDEV_VID_GENERIC,
-            .pid = PDEV_PID_GENERIC,
-            .did = PDEV_DID_GPIO_TEST,
-            .gpio_list = gpio_test_gpios,
-            .gpio_count = countof(gpio_test_gpios),
-        };
+    const pbus_dev_t gpio_test_dev = {
+        .name = "vim-gpio-test",
+        .vid = PDEV_VID_GENERIC,
+        .pid = PDEV_PID_GENERIC,
+        .did = PDEV_DID_GPIO_TEST,
+        .gpio_list = gpio_test_gpios,
+        .gpio_count = countof(gpio_test_gpios),
+    };
 
-        status = pbus_device_add(&bus->pbus, &gpio_test_dev);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "vim_gpio_init could not add gpio_test_dev: %d\n", status);
-            return status;
-        }
+    status = pbus_device_add(&bus->pbus, &gpio_test_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "vim_gpio_init could not add gpio_test_dev: %d\n", status);
+        return status;
     }
 
     return ZX_OK;
