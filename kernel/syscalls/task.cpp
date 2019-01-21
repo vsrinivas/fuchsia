@@ -165,11 +165,7 @@ zx_status_t sys_thread_create(zx_handle_t process_handle,
     fbl::RefPtr<ProcessDispatcher> process;
     result = up->GetDispatcherWithRights(process_handle, ZX_RIGHT_MANAGE_THREAD, &process);
     if (result != ZX_OK) {
-        // Try again, but with the WRITE right.
-        // TODO(ZX-2967) Remove this when all callers are using MANAGE_THREAD.
-        result = up->GetDispatcherWithRights(process_handle, ZX_RIGHT_WRITE, &process);
-        if (result != ZX_OK)
-            return result;
+        return result;
     }
 
     uint32_t pid = (uint32_t)process->get_koid();

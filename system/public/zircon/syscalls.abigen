@@ -356,7 +356,6 @@ syscall thread_exit noreturn ();
 
 #^ create a thread
 #! process must be of type ZX_OBJ_TYPE_PROCESS and have ZX_RIGHT_MANAGE_THREAD.
-# TODO(ZX-2967): process with ZX_RIGHT_WRITE is also accepted.
 syscall thread_create
     (process: zx_handle_t, name: char[name_size] IN, name_size: size_t, options: uint32_t)
     returns (zx_status_t, out: zx_handle_t handle_acquire);
