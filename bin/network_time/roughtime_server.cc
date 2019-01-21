@@ -138,8 +138,8 @@ Status RoughTimeServer::GetTimeFromServer(
   std::string error;
   if (!roughtime::ParseResponse(timestamp, &radius, &error, public_key_,
                                 recv_buf, buf_len, nonce)) {
-    FX_LOGS(ERROR) << "response from " << address_ << " failed verification: ",
-        error;
+    FX_LOGS(ERROR) << "response from " << address_
+                   << " failed verification: " << error;
     return BAD_RESPONSE;
   }
 
