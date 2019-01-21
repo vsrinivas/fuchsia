@@ -781,6 +781,9 @@ zx::channel fs_clone(const char* path) {
 
 int main(int argc, char** argv) {
     printf("devmgr: main()\n");
+    for (char** e = environ; *e != nullptr; e++) {
+        printf("cmdline: %s\n", *e);
+    }
 
     devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
@@ -838,11 +841,6 @@ int main(int argc, char** argv) {
     }
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
-
-    char** e = environ;
-    while (*e) {
-        printf("cmdline: %s\n", *e++);
-    }
 
     status = svchost_start(require_system);
     if (status != ZX_OK) {
