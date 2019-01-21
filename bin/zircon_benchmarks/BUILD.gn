@@ -13,6 +13,7 @@ executable("bin") {
     "events.cc",
     "fifos.cc",
     "filesystem.cc",
+    "handle.cc",
     "lazy_dir.cc",
     "mmu.cc",
     "ports.cc",
