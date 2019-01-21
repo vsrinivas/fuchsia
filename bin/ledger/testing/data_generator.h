@@ -22,9 +22,8 @@ class DataGenerator {
 
   ~DataGenerator();
 
-  // Builds a key of the given length as "<the given int>-<random data>", so
-  // that deterministic ordering of entries can be ensured by using a different
-  // |i| value each time, but the resulting B-tree nodes are always distinct.
+  // Builds a key of the given |size| as "<random data>-<i>". The id (|i|) of
+  // the result can be retrieved by calling |GetKeyId|.
   std::vector<uint8_t> MakeKey(int i, size_t size);
 
   // Builds a random value that can be used as a page id.
@@ -35,9 +34,12 @@ class DataGenerator {
 
   // Builds a vector of length |key_count| containing keys of size |key_size|,
   // |unique_key_count| of which are unique.
-  std::vector<std::vector<uint8_t>> MakeKeys(size_t key_count,
-                                                 size_t key_size,
-                                                 size_t unique_key_count);
+  std::vector<std::vector<uint8_t>> MakeKeys(size_t key_count, size_t key_size,
+                                             size_t unique_key_count);
+
+  // Returns the id of |key|. |key| is assumed to have been created by this
+  // DataGenerator, using either |MakeKey| or |MakeKeys|.
+  size_t GetKeyId(const std::vector<uint8_t>& key);
 
  private:
   std::independent_bits_engine<rng::Random::BitGenerator<uint64_t>, CHAR_BIT,

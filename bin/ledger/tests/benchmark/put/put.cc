@@ -162,22 +162,21 @@ void PutBenchmark::Run() {
         }
         page_ = std::move(page);
 
-        InitializeKeys(
-            [this](std::vector<std::vector<uint8_t>> keys) mutable {
-              if (transaction_size_ > 0) {
-                page_->StartTransaction(
-                    [this, keys = std::move(keys)](Status status) mutable {
-                      if (QuitOnError(QuitLoopClosure(), status,
-                                      "Page::StartTransaction")) {
-                        return;
-                      }
-                      TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
-                      BindWatcher(std::move(keys));
-                    });
-              } else {
-                BindWatcher(std::move(keys));
-              }
-            });
+        InitializeKeys([this](std::vector<std::vector<uint8_t>> keys) mutable {
+          if (transaction_size_ > 0) {
+            page_->StartTransaction(
+                [this, keys = std::move(keys)](Status status) mutable {
+                  if (QuitOnError(QuitLoopClosure(), status,
+                                  "Page::StartTransaction")) {
+                    return;
+                  }
+                  TRACE_ASYNC_BEGIN("benchmark", "transaction", 0);
+                  BindWatcher(std::move(keys));
+                });
+          } else {
+            BindWatcher(std::move(keys));
+          }
+        });
       });
 }
 
@@ -185,7 +184,7 @@ void PutBenchmark::OnChange(PageChange page_change,
                             ResultState /*result_state*/,
                             OnChangeCallback callback) {
   for (auto const& change : page_change.changed_entries) {
-    size_t key_number = std::stoul(convert::ToString(change.key));
+    size_t key_number = generator_.GetKeyId(change.key);
     if (keys_to_receive_.find(key_number) != keys_to_receive_.end()) {
       TRACE_ASYNC_END("benchmark", "local_change_notification", key_number);
       keys_to_receive_.erase(key_number);
@@ -206,11 +205,11 @@ void PutBenchmark::InitializeKeys(
     keys_cloned.push_back(keys[i]);
     if (transaction_size_ == 0 ||
         i % transaction_size_ == transaction_size_ - 1) {
-      keys_to_receive_.insert(std::stoul(convert::ToString(keys[i])));
+      keys_to_receive_.insert(generator_.GetKeyId(keys[i]));
     }
   }
   // Last key should always be recorded so the last transaction is not lost.
-  size_t last_key_number = std::stoul(convert::ToString(keys.back()));
+  size_t last_key_number = generator_.GetKeyId(keys.back());
   keys_to_receive_.insert(last_key_number);
   if (!update_) {
     on_done(std::move(keys));
@@ -242,15 +241,14 @@ void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
       });
 }
 
-void PutBenchmark::RunSingle(int i,
-                             std::vector<std::vector<uint8_t>> keys) {
+void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
   if (i == entry_count_) {
     // All sent, waiting for watcher notification before shutting down.
     return;
   }
 
   fidl::VectorPtr<uint8_t> value = generator_.MakeValue(value_size_);
-  size_t key_number = std::stoul(convert::ToString(keys[i]));
+  size_t key_number = generator_.GetKeyId(keys[i]);
   if (transaction_size_ == 0) {
     TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   }
@@ -312,8 +310,8 @@ void PutBenchmark::PutEntry(std::vector<uint8_t> key,
       });
 }
 
-void PutBenchmark::CommitAndRunNext(
-    int i, size_t key_number, std::vector<std::vector<uint8_t>> keys) {
+void PutBenchmark::CommitAndRunNext(int i, size_t key_number,
+                                    std::vector<std::vector<uint8_t>> keys) {
   TRACE_ASYNC_BEGIN("benchmark", "local_change_notification", key_number);
   TRACE_ASYNC_BEGIN("benchmark", "commit", i / transaction_size_);
   page_->Commit([this, i, keys = std::move(keys)](Status status) mutable {

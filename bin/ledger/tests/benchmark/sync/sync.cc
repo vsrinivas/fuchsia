@@ -210,8 +210,7 @@ void SyncBenchmark::Run() {
 void SyncBenchmark::OnChange(PageChange page_change, ResultState result_state,
                              OnChangeCallback callback) {
   FXL_DCHECK(!page_change.changed_entries.empty());
-  size_t i =
-      std::stoul(convert::ToString(page_change.changed_entries.at(0).key));
+  size_t i = generator_.GetKeyId(page_change.changed_entries.at(0).key);
   changed_entries_received_ += page_change.changed_entries.size();
   if (result_state == ResultState::COMPLETED ||
       result_state == ResultState::PARTIAL_STARTED) {
@@ -233,7 +232,8 @@ void SyncBenchmark::RunSingleChange(size_t change_number) {
 
   std::vector<std::vector<uint8_t>> keys(entries_per_change_);
   for (size_t i = 0; i < entries_per_change_; i++) {
-    // Keys are distinct, but have the common prefix <i>.
+    // Keys are distinct, but they all have the same id (|change_number|), which
+    // will be used to end the trace.
     keys[i] = generator_.MakeKey(change_number, kKeySize);
   }
 

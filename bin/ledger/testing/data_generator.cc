@@ -15,6 +15,11 @@
 #include "peridot/lib/convert/convert.h"
 
 namespace ledger {
+namespace {
+
+constexpr fxl::StringView kKeyIdSeparator = "-";
+
+}  // namespace
 
 DataGenerator::DataGenerator(rng::Random* random)
     : generator_(random->NewBitGenerator<uint64_t>()) {}
@@ -23,11 +28,11 @@ DataGenerator::~DataGenerator() {}
 
 std::vector<uint8_t> DataGenerator::MakeKey(int i, size_t size) {
   std::string i_str = std::to_string(i);
-  FXL_DCHECK(i_str.size() + 1 <= size);
-  auto rand_bytes = MakeValue(size - i_str.size() - 1);
+  FXL_DCHECK(i_str.size() + kKeyIdSeparator.size() <= size);
+  auto rand_bytes = MakeValue(size - i_str.size() - kKeyIdSeparator.size());
 
-  return convert::ToArray(
-      fxl::Concatenate({i_str, "-", convert::ExtendedStringView(rand_bytes)}));
+  return convert::ToArray(fxl::Concatenate(
+      {convert::ExtendedStringView(rand_bytes), kKeyIdSeparator, i_str}));
 }
 
 PageId DataGenerator::MakePageId() {
@@ -53,6 +58,14 @@ std::vector<std::vector<uint8_t>> DataGenerator::MakeKeys(
     keys[i] = keys[i - unique_key_count];
   }
   return keys;
+}
+
+size_t DataGenerator::GetKeyId(const std::vector<uint8_t>& key) {
+  std::string key_str = convert::ToString(key);
+  size_t split_index = key_str.find_last_of(kKeyIdSeparator.ToString());
+  FXL_CHECK(split_index != std::string::npos &&
+            split_index + kKeyIdSeparator.size() < key_str.size());
+  return std::stoul(key_str.substr(split_index + kKeyIdSeparator.size()));
 }
 
 }  // namespace ledger
