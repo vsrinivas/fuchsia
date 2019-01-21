@@ -89,30 +89,18 @@ public:
             thread_resume(t);
         }
 
-        uint32_t highest_readers = 0;
-        bool saw_writer = false;
         zx_time_t start = current_time();
         zx_duration_t duration = ZX_MSEC(300);
         while (current_time() < start + duration) {
             uint32_t local_state = test.state_.load(fbl::memory_order_relaxed);
             uint32_t num_readers = local_state & 0xffff;
             uint32_t num_writers = local_state >> 16;
-            highest_readers = fbl::max(highest_readers, num_readers);
-            if (num_writers > 0) {
-                saw_writer = true;
-            }
             EXPECT_LE(num_readers, readers + upgraders, "Too many readers");
             EXPECT_TRUE(num_writers == 0 || num_writers == 1, "Too many writers");
             EXPECT_TRUE((num_readers == 0 && num_writers == 0) || num_writers > 0 ||
                             num_readers > 0,
                         "Readers and writers");
             thread_yield();
-        }
-        if (readers > 1) {
-            EXPECT_GT(highest_readers, 1u, "No parallel readers");
-        }
-        if (writers > 0) {
-            EXPECT_TRUE(saw_writer, "No writers seen");
         }
 
         // Shutdown all the threads. Validating they can shutdown is important
