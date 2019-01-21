@@ -14,10 +14,10 @@ table ChildDecl {
     /// The child component's URI.
     ///
     /// Must be non-empty and well-formed.
-    2: string:MAX_URL_LENGTH uri;
+    2: string:MAX_URI_LENGTH uri;
 
     // TODO(CP-154): Provide a way to supply parameters to the child, possibly
-    // as command-line arguments, by URL, or maybe in some other way which is
+    // as command-line arguments, by URI, or maybe in some other way which is
     // orthogonal to other inputs to mitigate confused deputy issues.  Perhaps
     // as a dictionary like we do for runners?
 };

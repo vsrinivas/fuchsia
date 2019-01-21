@@ -9,12 +9,12 @@ using fuchsia.io;
 // A package is a signed collection of immutable files.
 //
 // This object provides access to a package's content and relevant metadata.
-struct Package {
-    // The URL of the package itself.
-    string package_url;
+table Package {
+    // The URI of the package itself.
+    1: string package_uri;
 
     // The package's content directory.
-    fuchsia.io.Directory package_dir;
+    2: fuchsia.io.Directory package_dir;
 
     // TODO(CP-154): Add more metadata for the package such as its
     // code signing information.

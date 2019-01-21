@@ -15,7 +15,7 @@ using zx;
 // the Dart virtual machine exposes a service with this interface to run
 // Dart programs.
 //
-// To specify the runner needed to run your component, set the "runner_url"
+// To specify the runner needed to run your component, set the "runner_uri"
 // property in your component's manifest.
 //
 // Note: The component manager is the only intended direct client of this
@@ -32,18 +32,18 @@ interface ComponentRunner {
 };
 
 // Parameters for starting a new component instance.
-struct ComponentStartInfo {
-    // The resolved URL of the component.
-    // This is the canonical URL obtained by the component resolver after
+table ComponentStartInfo {
+    // The resolved URI of the component.
+    // This is the canonical URI obtained by the component resolver after
     // after following redirects and resolving relative paths.
-    string resolved_url;
+    1: string resolved_uri;
 
     // The component's program declaration.
     // This information originates from |ComponentDecl.program|.
-    fuchsia.data.Dictionary program;
+    2: fuchsia.data.Dictionary program;
 
     // The namespace to provide to the component instance.
-    ComponentNamespace ns;
+    3: ComponentNamespace ns;
 };
 
 // An interface for binding client connections and controlling the lifetime

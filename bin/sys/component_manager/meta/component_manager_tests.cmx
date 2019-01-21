@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/component_manager_tests"
+    }
+}

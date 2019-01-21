@@ -1,4 +1,8 @@
 {
+    "packages": [
+        "//garnet/bin/sys/component_manager",
+        "//garnet/bin/sys/component_manager:component_manager_tests"
+    ],
     "labels": [
         "//garnet/public/fidl/fuchsia.data",
         "//garnet/public/fidl/fuchsia.sys2"
