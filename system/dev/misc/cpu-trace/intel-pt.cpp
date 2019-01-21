@@ -4,6 +4,17 @@
 
 // See the README.md in this directory for documentation.
 
+#include <assert.h>
+#include <cpuid.h>
+#include <inttypes.h>
+#include <limits.h>
+#include <memory>
+#include <new>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,21 +23,15 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 
+#include <fbl/alloc_checker.h>
+
 #include <lib/zircon-internal/device/cpu-trace/intel-pt.h>
 #include <lib/zircon-internal/mtrace.h>
+#include <lib/zx/bti.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
-
-#include <assert.h>
-#include <cpuid.h>
-#include <inttypes.h>
-#include <limits.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
 
 typedef enum {
     IPT_TRACE_CPUS,
@@ -68,8 +73,8 @@ typedef struct ipt_per_trace_state {
     // trace buffers and ToPA tables
     // ToPA: Table of Physical Addresses
     // A "trace buffer" is a set of N chunks.
-    io_buffer_t* chunks;
-    io_buffer_t* topas;
+    std::unique_ptr<io_buffer_t[]> chunks;
+    std::unique_ptr<io_buffer_t[]> topas;
 } ipt_per_trace_state_t;
 
 typedef struct insntrace_device {
@@ -87,12 +92,12 @@ typedef struct insntrace_device {
     uint32_t num_traces;
 
     // one entry for each trace
-    ipt_per_trace_state_t* per_trace_state;
+    std::unique_ptr<ipt_per_trace_state_t[]> per_trace_state;
 
     // Once tracing has started various things are not allowed until it stops.
     bool active;
 
-    zx_handle_t bti;
+    zx::bti bti;
 } insntrace_device_t;
 
 static uint32_t ipt_config_family;
@@ -142,8 +147,6 @@ static bool ipt_config_lip = false;
 
 #define BIT(x, b) ((x) & (1u << (b)))
 
-static zx_status_t x86_pt_free(insntrace_device_t* dev);
-
 
 // The userspace side of the driver
 
@@ -151,7 +154,7 @@ static zx_status_t insntrace_init_once(void)
 {
     unsigned a, b, c, d, max_leaf;
 
-    max_leaf = __get_cpuid_max(0, NULL);
+    max_leaf = __get_cpuid_max(0, nullptr);
     if (max_leaf < 0x14) {
         zxlogf(INFO, "IntelPT: No PT support\n");
         return ZX_ERR_NOT_SUPPORTED;
@@ -190,7 +193,7 @@ static zx_status_t insntrace_init_once(void)
         unsigned a1 = 0, b1 = 0, c1 = 0, d1 = 0;
         __cpuid(0x15, a1, b1, c1, d1);
         if (a1 && b1)
-            ipt_config_bus_freq = 1. / ((float)a1 / (float)b1);
+            ipt_config_bus_freq = static_cast<uint32_t>(1. / ((float)a1 / (float)b1));
     }
 
     ipt_config_cr3_filtering = !!BIT(b, 0);
@@ -226,7 +229,7 @@ static void make_topa(insntrace_device_t* dev, ipt_per_trace_state_t* per_trace)
 
     uint32_t curr_table = 0;
     uint32_t curr_idx = 0;
-    uint64_t* last_entry = NULL;
+    uint64_t* last_entry = nullptr;
 
     // Note: An early version of this patch auto-computed the desired grouping
     // of pages with sufficient alignment. If you find yourself needing this
@@ -239,7 +242,7 @@ static void make_topa(insntrace_device_t* dev, ipt_per_trace_state_t* per_trace)
 
         uint64_t val = IPT_TOPA_ENTRY_PHYS_ADDR(pa) |
             IPT_TOPA_ENTRY_SIZE(run_len_log2 + PAGE_SIZE_SHIFT);
-        uint64_t* table = io_buffer_virt(topa);
+        auto table = reinterpret_cast<uint64_t*>(io_buffer_virt(topa));
         table[curr_idx] = val;
         last_entry = &table[curr_idx];
 
@@ -270,7 +273,7 @@ static void make_topa(insntrace_device_t* dev, ipt_per_trace_state_t* per_trace)
 
         zx_paddr_t next_table_pa = io_buffer_phys(next_table);
         uint64_t val = IPT_TOPA_ENTRY_PHYS_ADDR(next_table_pa) | IPT_TOPA_ENTRY_END;
-        uint64_t* table = io_buffer_virt(this_table);
+        auto table = reinterpret_cast<uint64_t*>(io_buffer_virt(this_table));
         table[IPT_TOPA_MAX_TABLE_ENTRIES - 1] = val;
     }
 
@@ -280,7 +283,7 @@ static void make_topa(insntrace_device_t* dev, ipt_per_trace_state_t* per_trace)
         io_buffer_t* first_table = &per_trace->topas[0];
         zx_paddr_t first_table_pa = io_buffer_phys(first_table);
         uint64_t val = IPT_TOPA_ENTRY_PHYS_ADDR(first_table_pa) | IPT_TOPA_ENTRY_END;
-        uint64_t* table = io_buffer_virt(this_table);
+        auto table = reinterpret_cast<uint64_t*>(io_buffer_virt(this_table));
         table[curr_idx] = val;
     }
 
@@ -315,7 +318,7 @@ static size_t compute_capture_size(insntrace_device_t* dev,
     uint32_t curr_table_entry_idx = (uint32_t)per_trace->output_mask_ptrs >> 7;
     uint32_t curr_entry_offset = (uint32_t)(per_trace->output_mask_ptrs >> 32);
 
-    zxlogf(DEBUG1, "IPT: compute_capture_size: trace %tu\n", per_trace - dev->per_trace_state);
+    zxlogf(DEBUG1, "IPT: compute_capture_size: trace %tu\n", per_trace - dev->per_trace_state.get());
     zxlogf(DEBUG1, "IPT: curr_table_paddr 0x%" PRIx64 ", curr_table_entry_idx %u, curr_entry_offset %u\n",
            curr_table_paddr, curr_table_entry_idx, curr_entry_offset);
 
@@ -330,7 +333,7 @@ static size_t compute_capture_size(insntrace_device_t* dev,
                 total_size += curr_entry_offset;
                 return total_size;
             }
-            uint64_t* table_ptr = io_buffer_virt(&per_trace->topas[table]);
+            auto table_ptr = reinterpret_cast<uint64_t*>(io_buffer_virt(&per_trace->topas[table]));
             uint64_t topa_entry = table_ptr[entry];
             total_size += 1UL << IPT_TOPA_ENTRY_EXTRACT_SIZE(topa_entry);
         }
@@ -349,16 +352,16 @@ static zx_status_t x86_pt_alloc_buffer1(insntrace_device_t* dev,
     zx_status_t status;
     size_t chunk_pages = 1 << order;
 
-    memset(per_trace, 0, sizeof(*per_trace));
-
-    per_trace->chunks = calloc(num, sizeof(io_buffer_t));
-    if (per_trace->chunks == NULL)
+    fbl::AllocChecker ac;
+    per_trace->chunks = std::unique_ptr<io_buffer_t[]>(new (&ac) io_buffer_t[num]{});
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     for (uint32_t i = 0; i < num; ++i) {
         // ToPA entries of size N must be aligned to N, too.
         uint32_t alignment_log2 = PAGE_SIZE_SHIFT + order;
-        status = io_buffer_init_aligned(&per_trace->chunks[i], dev->bti,
+        status = io_buffer_init_aligned(&per_trace->chunks[i], dev->bti.get(),
                                         chunk_pages * PAGE_SIZE, alignment_log2,
                                         IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
@@ -399,12 +402,13 @@ static zx_status_t x86_pt_alloc_buffer1(insntrace_device_t* dev,
 
     // Allocate Table(s) of Physical Addresses (ToPA) for each cpu.
 
-    per_trace->topas = calloc(table_count, sizeof(io_buffer_t));
-    if (per_trace->topas == NULL)
+    per_trace->topas = std::unique_ptr<io_buffer_t[]>(new (&ac) io_buffer_t[table_count]{});
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
+    }
 
     for (uint32_t i = 0; i < table_count; ++i) {
-        status = io_buffer_init(&per_trace->topas[i], dev->bti,
+        status = io_buffer_init(&per_trace->topas[i], dev->bti.get(),
                                 sizeof(uint64_t) * IPT_TOPA_MAX_TABLE_ENTRIES,
                                 IO_BUFFER_RW | IO_BUFFER_CONTIG);
         if (status != ZX_OK)
@@ -428,16 +432,14 @@ static void x86_pt_free_buffer1(insntrace_device_t* dev, ipt_per_trace_state_t* 
             io_buffer_release(&per_trace->chunks[i]);
         }
     }
-    free(per_trace->chunks);
-    per_trace->chunks = NULL;
+    per_trace->chunks.reset();
 
     if (per_trace->topas) {
         for (uint32_t i = 0; i < per_trace->num_tables; ++i) {
             io_buffer_release(&per_trace->topas[i]);
         }
     }
-    free(per_trace->topas);
-    per_trace->topas = NULL;
+    per_trace->topas.reset();
 
     per_trace->allocated = false;
 }
@@ -522,7 +524,6 @@ static zx_status_t x86_pt_alloc_buffer(insntrace_device_t* dev,
         return ZX_ERR_NO_RESOURCES;
 
     ipt_per_trace_state_t* per_trace = &dev->per_trace_state[descriptor];
-    memset(per_trace, 0, sizeof(*per_trace));
     zx_status_t status = x86_pt_alloc_buffer1(dev, per_trace,
                                               config->num_chunks, config->chunk_order, config->is_circular);
     if (status != ZX_OK) {
@@ -668,8 +669,10 @@ static zx_status_t ipt_alloc_trace(insntrace_device_t* dev,
     }
 
     dev->num_traces = config.num_traces;
-    dev->per_trace_state = calloc(dev->num_traces, sizeof(dev->per_trace_state[0]));
-    if (!dev->per_trace_state) {
+    fbl::AllocChecker ac;
+    dev->per_trace_state =
+        std::unique_ptr<ipt_per_trace_state_t[]>(new (&ac) ipt_per_trace_state_t[dev->num_traces]{});
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -678,8 +681,7 @@ static zx_status_t ipt_alloc_trace(insntrace_device_t* dev,
         zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_ALLOC_TRACE, 0,
                           &config, sizeof(config));
     if (status != ZX_OK) {
-        free(dev->per_trace_state);
-        dev->per_trace_state = NULL;
+        dev->per_trace_state.reset();
         return status;
     }
 
@@ -706,14 +708,13 @@ static zx_status_t ipt_free_trace(insntrace_device_t* dev) {
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
-        zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_FREE_TRACE, 0, NULL, 0);
+        zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE, MTRACE_INSNTRACE_FREE_TRACE, 0, nullptr, 0);
     // TODO(dje): This really shouldn't fail. What to do?
     // For now flag things as busted and prevent further use.
     if (status != ZX_OK)
         return ZX_OK;
 
-    free(dev->per_trace_state);
-    dev->per_trace_state = NULL;
+    dev->per_trace_state.reset();
     return ZX_OK;
 }
 
@@ -866,7 +867,7 @@ static zx_status_t ipt_get_chunk_handle(insntrace_device_t* dev,
     zx_info_handle_basic_t handle_info;
     zx_status_t status = zx_object_get_info(vmo_handle, ZX_INFO_HANDLE_BASIC,
                                             &handle_info, sizeof(handle_info),
-                                            NULL, NULL);
+                                            nullptr, nullptr);
     if (status != ZX_OK) {
         // This could only fail if vmo_handle is invalid.
         printf("%s: WARNING: unexpected error reading vmo handle rights: %d/%s\n",
@@ -934,7 +935,7 @@ static zx_status_t ipt_start(insntrace_device_t* dev) {
 
     status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
                                MTRACE_INSNTRACE_START,
-                               0, NULL, 0);
+                               0, nullptr, 0);
     if (status != ZX_OK)
         return status;
     dev->active = true;
@@ -954,7 +955,7 @@ static zx_status_t ipt_stop(insntrace_device_t* dev) {
 
     zx_status_t status = zx_mtrace_control(resource, MTRACE_KIND_INSNTRACE,
                                            MTRACE_INSNTRACE_STOP,
-                                           0, NULL, 0);
+                                           0, nullptr, 0);
     if (status != ZX_OK)
         return status;
     dev->active = false;
@@ -1052,7 +1053,7 @@ zx_status_t insntrace_ioctl_worker(insntrace_device_t* dev, uint32_t op,
 // Devhost interface.
 
 static zx_status_t insntrace_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    insntrace_device_t* dev = ctx;
+    auto dev = reinterpret_cast<insntrace_device_t*>(ctx);
     if (dev->opened)
         return ZX_ERR_ALREADY_BOUND;
 
@@ -1061,7 +1062,7 @@ static zx_status_t insntrace_open(void* ctx, zx_device_t** dev_out, uint32_t fla
 }
 
 static zx_status_t insntrace_close(void* ctx, uint32_t flags) {
-    insntrace_device_t* dev = ctx;
+    auto dev = reinterpret_cast<insntrace_device_t*>(ctx);
 
     dev->opened = false;
     return ZX_OK;
@@ -1071,7 +1072,7 @@ static zx_status_t insntrace_ioctl(void* ctx, uint32_t op,
                                    const void* cmd, size_t cmdlen,
                                    void* reply, size_t replymax,
                                    size_t* out_actual) {
-    insntrace_device_t* dev = ctx;
+    auto dev = reinterpret_cast<insntrace_device_t*>(ctx);
 
     mtx_lock(&dev->lock);
 
@@ -1088,28 +1089,29 @@ static zx_status_t insntrace_ioctl(void* ctx, uint32_t op,
 
     mtx_unlock(&dev->lock);
 
-    return result;
+    return static_cast<zx_status_t>(result);
 }
 
 static void insntrace_release(void* ctx) {
-    insntrace_device_t* dev = ctx;
+    auto dev = reinterpret_cast<insntrace_device_t*>(ctx);
 
     // TODO(dje): None of these should fail. What to do?
     // For now flag things as busted and prevent further use.
     ipt_stop(dev);
     ipt_free_trace(dev);
 
-    zx_handle_close(dev->bti);
-    free(dev);
+    delete dev;
 }
 
-static zx_protocol_device_t insntrace_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = insntrace_open,
-    .close = insntrace_close,
-    .ioctl = insntrace_ioctl,
-    .release = insntrace_release,
-};
+static zx_protocol_device_t insntrace_device_proto = []() {
+    zx_protocol_device_t dev{};
+    dev.version = DEVICE_OPS_VERSION;
+    dev.open = insntrace_open;
+    dev.close = insntrace_close;
+    dev.ioctl = insntrace_ioctl;
+    dev.release = insntrace_release;
+    return dev;
+}();
 
 zx_status_t insntrace_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = insntrace_init_once();
@@ -1123,32 +1125,30 @@ zx_status_t insntrace_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    insntrace_device_t* dev = calloc(1, sizeof(*dev));
-    if (!dev) {
+    fbl::AllocChecker ac;
+    auto dev = new (&ac) insntrace_device_t{};
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    dev->bti = ZX_HANDLE_INVALID;
-    status = pdev_get_bti(&pdev, 0, &dev->bti);
+    status = pdev_get_bti(&pdev, 0, dev->bti.reset_and_get_address());
     if (status != ZX_OK) {
-        goto fail;
+        delete dev;
+        return status;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "insntrace",
-        .ctx = dev,
-        .ops = &insntrace_device_proto,
-    };
+    device_add_args_t args = [&dev]() {
+        device_add_args_t args{};
+        args.version = DEVICE_ADD_ARGS_VERSION;
+        args.name = "insntrace";
+        args.ctx = dev;
+        args.ops = &insntrace_device_proto;
+        return args;
+    }();
 
-    if ((status = device_add(parent, &args, NULL)) < 0) {
-        goto fail;
+    if ((status = device_add(parent, &args, nullptr)) < 0) {
+        delete dev;
     }
 
-    return ZX_OK;
-
-fail:
-    zx_handle_close(dev->bti);
-    free(dev);
     return status;
 }

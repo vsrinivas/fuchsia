@@ -338,17 +338,17 @@ __BEGIN_CDECLS
 // Properties of perf data collection on this system.
 typedef struct {
     // The H/W Performance Monitor version.
-    uint32_t pm_version;
+    uint16_t pm_version;
     // The number of fixed events.
-    uint32_t num_fixed_events;
+    uint16_t num_fixed_events;
     // The number of programmable events.
-    uint32_t num_programmable_events;
+    uint16_t num_programmable_events;
     // The number of misc events.
-    uint32_t num_misc_events;
+    uint16_t num_misc_events;
     // For fixed events that are counters, the width in bits.
-    uint32_t fixed_counter_width;
+    uint16_t fixed_counter_width;
     // For programmable events that are counters, the width in bits.
-    uint32_t programmable_counter_width;
+    uint16_t programmable_counter_width;
     // The PERF_CAPABILITIES MSR.
     uint64_t perf_capabilities;
     // The size of the LBR (Last Branch Record) stack.

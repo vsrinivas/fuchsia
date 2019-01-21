@@ -219,11 +219,11 @@ enum LbrFormat {
 
 static bool supports_perfmon = false;
 
-static uint32_t perfmon_version = 0;
-static uint32_t perfmon_num_programmable_counters = 0;
-static uint32_t perfmon_programmable_counter_width = 0;
-static uint32_t perfmon_num_fixed_counters = 0;
-static uint32_t perfmon_fixed_counter_width = 0;
+static uint16_t perfmon_version = 0;
+static uint16_t perfmon_num_programmable_counters = 0;
+static uint16_t perfmon_programmable_counter_width = 0;
+static uint16_t perfmon_num_fixed_counters = 0;
+static uint16_t perfmon_fixed_counter_width = 0;
 static uint32_t perfmon_unsupported_events = 0;
 static uint32_t perfmon_capabilities = 0;
 
@@ -242,7 +242,7 @@ static uint64_t perfmon_counter_status_bits = 0;
 static uint32_t perfmon_mchbar_bar = 0;
 
 // The number of "miscellaneous" events we can handle at once.
-static uint32_t perfmon_num_misc_events = 0;
+static uint16_t perfmon_num_misc_events = 0;
 
 struct PerfmonCpuData {
     // The trace buffer, passed in from userspace.

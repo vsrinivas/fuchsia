@@ -33,10 +33,12 @@ static zx_status_t cpu_trace_bind(void* ctx, zx_device_t* parent) {
     return ZX_OK;
 }
 
-static zx_driver_ops_t cpu_trace_driver_ops = {
-    .version = DRIVER_OPS_VERSION,
-    .bind = cpu_trace_bind,
-};
+static zx_driver_ops_t cpu_trace_driver_ops = []() {
+    zx_driver_ops_t ops{};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = cpu_trace_bind;
+    return ops;
+}();
 
 ZIRCON_DRIVER_BEGIN(cpu_trace, cpu_trace_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),

@@ -4,6 +4,17 @@
 
 // See the README.md in this directory for documentation.
 
+#include <assert.h>
+#include <cpuid.h>
+#include <inttypes.h>
+#include <limits>
+#include <memory>
+#include <new>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <threads.h>
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
@@ -12,20 +23,14 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
 
+#include <fbl/alloc_checker.h>
+
 #include <lib/zircon-internal/device/cpu-trace/intel-pm.h>
 #include <lib/zircon-internal/mtrace.h>
+#include <lib/zx/bti.h>
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
-
-#include <assert.h>
-#include <cpuid.h>
-#include <inttypes.h>
-#include <stdbool.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <threads.h>
 
 // TODO(dje): Having trouble getting this working, so just punt for now.
 #define TRY_FREEZE_ON_PMI 0
@@ -74,21 +79,24 @@ static cpuperf_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
 // Const accessor to give the illusion of the table being const.
 static const cpuperf_event_id_t* misc_event_table = &misc_event_table_contents[0];
 
-static void pmu_init_misc_event_table(void);
+static void pmu_init_misc_event_table();
 
-typedef enum {
+enum arch_event_t : uint16_t {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
     symbol,
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-} arch_event_t;
+};
 
-typedef enum {
+enum model_event_t : uint16_t {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
     symbol,
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
-} model_event_t;
+};
 
 typedef struct {
+    // Ids are densely allocated. If ids get larger than this we will need
+    // a more complex id->event map.
+    uint16_t id;
     uint32_t event;
     uint32_t umask;
     uint32_t flags;
@@ -96,29 +104,25 @@ typedef struct {
 
 static const event_details_t kArchEvents[] = {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
-    { event, umask, flags },
+    { id, event, umask, flags },
 #include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
 };
 
 static const event_details_t kModelEvents[] = {
 #define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
-    { event, umask, flags },
+    { id, event, umask, flags },
 #include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
 };
 
-static const uint16_t kArchEventMap[] = {
-#define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
-    [id] = symbol,
-#include <lib/zircon-internal/device/cpu-trace/intel-pm-events.inc>
-};
-static_assert(countof(kArchEventMap) <= CPUPERF_MAX_EVENT + 1, "");
+// A table to map event id to index in |kArchEvents|.
+// We use the kConstant naming style as once computed it is constant.
+static uint16_t* kArchEventMap;
+size_t kArchEventMapSize;
 
-static const uint16_t kModelEventMap[] = {
-#define DEF_SKL_EVENT(symbol, event_name, id, event, umask, flags, readable_name, description) \
-    [id] = symbol,
-#include <lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc>
-};
-static_assert(countof(kModelEventMap) <= CPUPERF_MAX_EVENT + 1, "");
+// A table to map event id to index in |kModelEvents|.
+// We use the kConstant naming style as once computed it is constant.
+static uint16_t* kModelEventMap;
+size_t kModelEventMapSize;
 
 // All configuration data is staged here before writing any MSRs, etc.
 // Then when ready the "START" ioctl will write all the necessary MSRS,
@@ -145,7 +149,7 @@ typedef struct pmu_per_trace_state {
     // that large of a buffer.
     uint32_t buffer_size;
 
-    io_buffer_t* buffers;
+    std::unique_ptr<io_buffer_t[]> buffers;
 } pmu_per_trace_state_t;
 
 typedef struct cpuperf_device {
@@ -160,9 +164,9 @@ typedef struct cpuperf_device {
     // one entry for each trace
     // TODO(dje): At the moment we only support one trace at a time.
     // "trace" == "data collection run"
-    pmu_per_trace_state_t* per_trace_state;
+    std::unique_ptr<pmu_per_trace_state_t> per_trace_state;
 
-    zx_handle_t bti;
+    zx::bti bti;
 } cpuperf_device_t;
 
 static bool pmu_supported = false;
@@ -172,8 +176,79 @@ static zx_x86_pmu_properties_t pmu_properties;
 // maximum space, in bytes, for trace buffers (per cpu)
 #define MAX_PER_TRACE_SPACE (256 * 1024 * 1024)
 
-static zx_status_t cpuperf_init_once(void)
-{
+static uint16_t get_largest_event_id(const event_details_t* events, size_t count) {
+    uint16_t largest = 0;
+
+    for (size_t i = 0; i < count; ++i) {
+        uint16_t id = events[i].id;
+        if (id > largest)
+            largest = id;
+    }
+
+    return largest;
+}
+
+// Initialize the event maps.
+// If there's a problem with the database just flag the error but don't crash.
+
+static zx_status_t initialize_event_maps() {
+    static_assert(CPUPERF_MAX_EVENT < std::numeric_limits<uint16_t>::max());
+    uint16_t largest_arch_event_id = get_largest_event_id(kArchEvents, countof(kArchEvents));
+    // See cpu-perf.h: The full event id is split into two pieces:
+    // group type and id within that group. The event recorded in
+    // |event_details_t| is the id within the group. Each id must be in
+    // the range [1,CPUPERF_MAX_EVENT]. ID 0 is reserved.
+    if (largest_arch_event_id == 0 ||
+        largest_arch_event_id > CPUPERF_MAX_EVENT) {
+        zxlogf(ERROR, "PMU: Corrupt arch event database\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    fbl::AllocChecker ac;
+    kArchEventMapSize = largest_arch_event_id + 1;
+    zxlogf(INFO, "PMU: %zu arch events\n", countof(kArchEvents));
+    zxlogf(INFO, "PMU: arch event id range: 1-%zu\n", kArchEventMapSize);
+    auto arch_map = std::unique_ptr<uint16_t[]>(new (&ac) uint16_t[kArchEventMapSize]{});
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    for (uint16_t i = 0; i < countof(kArchEvents); ++i) {
+        uint16_t id = kArchEvents[i].id;
+        assert(id < kArchEventMapSize);
+        assert(arch_map[id] == 0);
+        arch_map[id] = i;
+    }
+
+    uint16_t largest_model_event_id = get_largest_event_id(kModelEvents, countof(kModelEvents));
+    if (largest_model_event_id == 0 ||
+        largest_model_event_id > CPUPERF_MAX_EVENT) {
+        zxlogf(ERROR, "PMU: Corrupt model event database\n");
+        return ZX_ERR_INTERNAL;
+    }
+
+    kModelEventMapSize = largest_model_event_id + 1;
+    zxlogf(INFO, "PMU: %zu model events\n", countof(kModelEvents));
+    zxlogf(INFO, "PMU: model event id range: 1-%zu\n", kModelEventMapSize);
+    auto model_map = std::unique_ptr<uint16_t[]>(new (&ac) uint16_t[kModelEventMapSize]{});
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    for (uint16_t i = 0; i < countof(kModelEvents); ++i) {
+        uint16_t id = kModelEvents[i].id;
+        assert(id < kModelEventMapSize);
+        assert(model_map[id] == 0);
+        model_map[id] = i;
+    }
+
+    kArchEventMap = arch_map.release();
+    kModelEventMap = model_map.release();
+
+    return ZX_OK;
+}
+
+static zx_status_t cpuperf_init_once() {
     pmu_init_misc_event_table();
 
     zx_x86_pmu_properties_t props;
@@ -195,6 +270,11 @@ static zx_status_t cpuperf_init_once(void)
     if (props.pm_version < 4) {
         zxlogf(INFO, "%s: PM version 4 or above is required\n", __func__);
         return ZX_ERR_NOT_SUPPORTED;
+    }
+
+    status = initialize_event_maps();
+    if (status != ZX_OK) {
+        return status;
     }
 
     pmu_supported = true;
@@ -227,8 +307,7 @@ static void pmu_free_buffers_for_trace(pmu_per_trace_state_t* per_trace, uint32_
     assert(num_allocated <= per_trace->num_buffers);
     for (uint32_t i = 0; i < num_allocated; ++i)
         io_buffer_release(&per_trace->buffers[i]);
-    free(per_trace->buffers);
-    per_trace->buffers = NULL;
+    per_trace->buffers.reset();
 }
 
 // Map a fixed counter event id to its h/w register number.
@@ -252,8 +331,8 @@ static unsigned pmu_fixed_counter_number(cpuperf_event_id_t id) {
 }
 
 static int pmu_compare_cpuperf_event_id(const void* ap, const void* bp) {
-    const cpuperf_event_id_t* a = ap;
-    const cpuperf_event_id_t* b = bp;
+    auto a = reinterpret_cast<const cpuperf_event_id_t*>(ap);
+    auto b = reinterpret_cast<const cpuperf_event_id_t*>(bp);
     if (*a < *b)
         return -1;
     if (*a > *b)
@@ -261,7 +340,7 @@ static int pmu_compare_cpuperf_event_id(const void* ap, const void* bp) {
     return 0;
 }
 
-static void pmu_init_misc_event_table(void) {
+static void pmu_init_misc_event_table() {
     qsort(misc_event_table_contents,
           countof(misc_event_table_contents),
           sizeof(misc_event_table_contents[0]),
@@ -272,10 +351,11 @@ static void pmu_init_misc_event_table(void) {
 // 0 ... NUM_MISC_EVENTS - 1).
 // Returns -1 if |id| is unknown.
 static int pmu_lookup_misc_event(cpuperf_event_id_t id) {
-    cpuperf_event_id_t* p = bsearch(&id, misc_event_table,
-                                    countof(misc_event_table_contents),
-                                    sizeof(id),
-                                    pmu_compare_cpuperf_event_id);
+    auto p = reinterpret_cast<cpuperf_event_id_t*>(
+        bsearch(&id, misc_event_table,
+                countof(misc_event_table_contents),
+                sizeof(id),
+                pmu_compare_cpuperf_event_id));
     if (!p)
         return -1;
     ptrdiff_t result = p - misc_event_table;
@@ -312,8 +392,8 @@ static zx_status_t pmu_get_properties(cpuperf_device_t* dev,
     // data is for informational/debug purposes.
     // TODO(dje): Something more elaborate can wait for publishing them via
     // some namespace.
-    props.num_fixed_events = (pmu_properties.num_fixed_events +
-                              pmu_properties.num_misc_events);
+    props.num_fixed_events = static_cast<uint16_t>(
+        pmu_properties.num_fixed_events + pmu_properties.num_misc_events);
     props.num_programmable_events = pmu_properties.num_programmable_events;
     props.fixed_counter_width = pmu_properties.fixed_counter_width;
     props.programmable_counter_width = pmu_properties.programmable_counter_width;
@@ -348,33 +428,32 @@ static zx_status_t pmu_alloc_trace(cpuperf_device_t* dev,
     if (alloc.num_buffers != num_cpus) // TODO(dje): for now
         return ZX_ERR_INVALID_ARGS;
 
-    pmu_per_trace_state_t* per_trace = calloc(1, sizeof(dev->per_trace_state[0]));
-    if (!per_trace) {
+    fbl::AllocChecker ac;
+    auto per_trace = std::unique_ptr<pmu_per_trace_state_t>(new (&ac) pmu_per_trace_state_t{});
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    per_trace->buffers = calloc(num_cpus, sizeof(per_trace->buffers[0]));
-    if (!per_trace->buffers) {
-        free(per_trace);
+    per_trace->buffers = std::unique_ptr<io_buffer_t[]>(new (&ac) io_buffer_t[num_cpus]);
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
     uint32_t i = 0;
     for ( ; i < num_cpus; ++i) {
         zx_status_t status =
-            io_buffer_init(&per_trace->buffers[i], dev->bti, alloc.buffer_size, IO_BUFFER_RW);
+            io_buffer_init(&per_trace->buffers[i], dev->bti.get(), alloc.buffer_size, IO_BUFFER_RW);
         if (status != ZX_OK)
             break;
     }
     if (i != num_cpus) {
-        pmu_free_buffers_for_trace(per_trace, i);
-        free(per_trace);
+        pmu_free_buffers_for_trace(per_trace.get(), i);
         return ZX_ERR_NO_MEMORY;
     }
 
     per_trace->num_buffers = alloc.num_buffers;
     per_trace->buffer_size = alloc.buffer_size;
-    dev->per_trace_state = per_trace;
+    dev->per_trace_state = std::move(per_trace);
     return ZX_OK;
 }
 
@@ -383,13 +462,12 @@ static zx_status_t pmu_free_trace(cpuperf_device_t* dev) {
 
     if (dev->active)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     pmu_free_buffers_for_trace(per_trace, per_trace->num_buffers);
-    free(per_trace);
-    dev->per_trace_state = NULL;
+    dev->per_trace_state.reset();
     return ZX_OK;
 }
 
@@ -398,7 +476,7 @@ static zx_status_t pmu_get_alloc(cpuperf_device_t* dev,
                                  size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -419,7 +497,7 @@ static zx_status_t pmu_get_buffer_handle(cpuperf_device_t* dev,
                                          size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -560,17 +638,17 @@ static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
         ocfg->programmable_initial_value[ss->num_programmable] =
             ss->max_programmable_value - icfg->rate[ii] + 1;
     }
-    const event_details_t* details = NULL;
+    const event_details_t* details = nullptr;
     switch (group) {
     case CPUPERF_GROUP_ARCH:
-        if (event >= countof(kArchEventMap)) {
+        if (event >= kArchEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
         details = &kArchEvents[kArchEventMap[event]];
         break;
     case CPUPERF_GROUP_MODEL:
-        if (event >= countof(kModelEventMap)) {
+        if (event >= kModelEventMapSize) {
             zxlogf(ERROR, "%s: Invalid event id, event [%u]\n", __func__, ii);
             return ZX_ERR_INVALID_ARGS;
         }
@@ -675,7 +753,7 @@ static zx_status_t pmu_stage_config(cpuperf_device_t* dev,
 
     if (dev->active)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -796,7 +874,7 @@ static zx_status_t pmu_get_config(cpuperf_device_t* dev,
                                   size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -817,7 +895,7 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
 
     if (dev->active)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -838,7 +916,7 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
 
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                          MTRACE_CPUPERF_INIT, 0, NULL, 0);
+                          MTRACE_CPUPERF_INIT, 0, nullptr, 0);
     if (status != ZX_OK)
         return status;
 
@@ -863,7 +941,7 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
     // Step 2: Start data collection.
 
     status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF, MTRACE_CPUPERF_START,
-                               0, NULL, 0);
+                               0, nullptr, 0);
     if (status != ZX_OK)
         goto fail;
 
@@ -874,7 +952,7 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
     {
         zx_status_t status2 =
             zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                              MTRACE_CPUPERF_FINI, 0, NULL, 0);
+                              MTRACE_CPUPERF_FINI, 0, nullptr, 0);
         if (status2 != ZX_OK)
             zxlogf(TRACE, "%s: MTRACE_CPUPERF_FINI failed: %d\n", __func__, status2);
         assert(status2 == ZX_OK);
@@ -885,18 +963,18 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
 static zx_status_t pmu_stop(cpuperf_device_t* dev) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state;
+    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
     zx_handle_t resource = get_root_resource();
     zx_status_t status =
         zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                          MTRACE_CPUPERF_STOP, 0, NULL, 0);
+                          MTRACE_CPUPERF_STOP, 0, nullptr, 0);
     if (status == ZX_OK) {
         dev->active = false;
         status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
-                                   MTRACE_CPUPERF_FINI, 0, NULL, 0);
+                                   MTRACE_CPUPERF_FINI, 0, nullptr, 0);
     }
     return status;
 }
@@ -957,7 +1035,7 @@ zx_status_t cpuperf_ioctl_worker(cpuperf_device_t* dev, uint32_t op,
 // Devhost interface.
 
 static zx_status_t cpuperf_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    cpuperf_device_t* dev = ctx;
+    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
     if (dev->opened)
         return ZX_ERR_ALREADY_BOUND;
 
@@ -966,7 +1044,7 @@ static zx_status_t cpuperf_open(void* ctx, zx_device_t** dev_out, uint32_t flags
 }
 
 static zx_status_t cpuperf_close(void* ctx, uint32_t flags) {
-    cpuperf_device_t* dev = ctx;
+    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
 
     dev->opened = false;
     return ZX_OK;
@@ -976,7 +1054,7 @@ static zx_status_t cpuperf_ioctl(void* ctx, uint32_t op,
                                  const void* cmd, size_t cmdlen,
                                  void* reply, size_t replymax,
                                  size_t* out_actual) {
-    cpuperf_device_t* dev = ctx;
+    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
 
     mtx_lock(&dev->lock);
 
@@ -993,28 +1071,29 @@ static zx_status_t cpuperf_ioctl(void* ctx, uint32_t op,
 
     mtx_unlock(&dev->lock);
 
-    return result;
+    return static_cast<zx_status_t>(result);
 }
 
 static void cpuperf_release(void* ctx) {
-    cpuperf_device_t* dev = ctx;
+    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
 
     // TODO(dje): None of these should fail. What to do?
     // Suggest flagging things as busted and prevent further use.
     pmu_stop(dev);
     pmu_free_trace(dev);
 
-    zx_handle_close(dev->bti);
-    free(dev);
+    delete dev;
 }
 
-static zx_protocol_device_t cpuperf_device_proto = {
-    .version = DEVICE_OPS_VERSION,
-    .open = cpuperf_open,
-    .close = cpuperf_close,
-    .ioctl = cpuperf_ioctl,
-    .release = cpuperf_release,
-};
+static zx_protocol_device_t cpuperf_device_proto = []() {
+    zx_protocol_device_t dev{};
+    dev.version = DEVICE_OPS_VERSION;
+    dev.open = cpuperf_open;
+    dev.close = cpuperf_close;
+    dev.ioctl = cpuperf_ioctl;
+    dev.release = cpuperf_release;
+    return dev;
+}();
 
 zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
     zx_status_t status = cpuperf_init_once();
@@ -1028,32 +1107,30 @@ zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    cpuperf_device_t* dev = calloc(1, sizeof(*dev));
-    if (!dev) {
+    fbl::AllocChecker ac;
+    auto dev = new (&ac) cpuperf_device_t{};
+    if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    dev->bti = ZX_HANDLE_INVALID;
-    status = pdev_get_bti(&pdev, 0, &dev->bti);
+    status = pdev_get_bti(&pdev, 0, dev->bti.reset_and_get_address());
     if (status != ZX_OK) {
-        goto fail;
+        delete dev;
+        return status;
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = "cpuperf",
-        .ctx = dev,
-        .ops = &cpuperf_device_proto,
-    };
+    device_add_args_t args = [&dev]() {
+        device_add_args_t args{};
+        args.version = DEVICE_ADD_ARGS_VERSION;
+        args.name = "cpuperf";
+        args.ctx = dev;
+        args.ops = &cpuperf_device_proto;
+        return args;
+    }();
 
-    if ((status = device_add(parent, &args, NULL)) < 0) {
-        goto fail;
+    if ((status = device_add(parent, &args, nullptr)) < 0) {
+        delete dev;
     }
 
-    return ZX_OK;
-
-fail:
-    zx_handle_close(dev->bti);
-    free(dev);
     return status;
 }

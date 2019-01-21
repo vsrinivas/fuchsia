@@ -13,17 +13,25 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/cpu-trace.c
+    $(LOCAL_DIR)/cpu-trace.cpp
 
 ifeq ($(ARCH),x86)
 MODULE_SRCS += \
-    $(LOCAL_DIR)/intel-pm.c \
-    $(LOCAL_DIR)/intel-pt.c
+    $(LOCAL_DIR)/intel-pm.cpp \
+    $(LOCAL_DIR)/intel-pt.cpp
 endif
 
-MODULE_STATIC_LIBS := system/ulib/ddk system/ulib/zircon-internal
+MODULE_STATIC_LIBS := \
+    system/ulib/ddk \
+    system/ulib/fbl \
+    system/ulib/zircon-internal \
+    system/ulib/zx \
+    system/ulib/zxcpp
 
-MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-platform-device \
