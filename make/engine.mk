@@ -874,6 +874,9 @@ endif
 HOST_LDFLAGS += -static-libstdc++
 # For host tools without C++, ignore the unused arguments.
 HOST_LDFLAGS += -Wno-unused-command-line-argument
+# macOS needs this to not complain about C++17isms that older macOS system
+# libc++ doesn't support.  But we use our own toolchain's static libc++ anyway.
+HOST_CPPFLAGS += -faligned-allocation
 endif
 HOST_ASMFLAGS :=
 
