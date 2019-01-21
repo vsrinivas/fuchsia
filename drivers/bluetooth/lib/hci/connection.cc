@@ -224,9 +224,9 @@ void ConnectionImpl::Close(StatusCode reason) {
   params->connection_handle = htole16(handle());
   params->reason = reason;
 
-  hci_->command_channel()->SendCommand(std::move(disconn), async_get_default_dispatcher(),
-                                       std::move(status_cb),
-                                       kCommandStatusEventCode);
+  hci_->command_channel()->SendCommand(
+      std::move(disconn), async_get_default_dispatcher(), std::move(status_cb),
+      kCommandStatusEventCode);
 }
 
 bool ConnectionImpl::StartEncryption() {
@@ -290,8 +290,8 @@ bool ConnectionImpl::LEStartEncryption(const LinkKey& ltk) {
   };
 
   return hci_->command_channel()->SendCommand(
-             std::move(cmd), async_get_default_dispatcher(), std::move(status_cb),
-             kCommandStatusEventCode) != 0u;
+             std::move(cmd), async_get_default_dispatcher(),
+             std::move(status_cb), kCommandStatusEventCode) != 0u;
 }
 
 void ConnectionImpl::HandleEncryptionStatus(Status status, bool enabled) {
@@ -408,8 +408,11 @@ void ConnectionImpl::OnLELongTermKeyRequestEvent(const EventPacket& event) {
 
   std::unique_ptr<CommandPacket> cmd;
 
-  uint16_t rand = le16toh(params->random_number);
-  uint64_t ediv = le64toh(params->encrypted_diversifier);
+  uint64_t rand = le64toh(params->random_number);
+  uint16_t ediv = le16toh(params->encrypted_diversifier);
+
+  bt_log(TRACE, "hci", "LE LTK request - ediv: %#.4x, rand: %#.16x", ediv,
+         rand);
   if (ltk() && ltk()->rand() == rand && ltk()->ediv() == ediv) {
     cmd = CommandPacket::New(kLELongTermKeyRequestReply,
                              sizeof(LELongTermKeyRequestReplyCommandParams));

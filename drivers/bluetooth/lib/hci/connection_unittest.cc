@@ -101,10 +101,7 @@ TEST_F(HCI_ConnectionTest, Close) {
 
   bool callback_called = false;
   test_device()->SetTransactionCallback(
-      [&callback_called, this] {
-        callback_called = true;
-      },
-      dispatcher());
+      [&callback_called, this] { callback_called = true; }, dispatcher());
 
   auto connection = NewLEConnection();
   EXPECT_TRUE(connection->is_open());
@@ -139,10 +136,7 @@ TEST_F(HCI_ConnectionTest, CloseError) {
   // The callback should get called regardless of the procedure status.
   bool callback_called = false;
   test_device()->SetTransactionCallback(
-      [&callback_called, this] {
-        callback_called = true;
-      },
-      dispatcher());
+      [&callback_called, this] { callback_called = true; }, dispatcher());
 
   auto connection = NewLEConnection();
   EXPECT_TRUE(connection->is_open());
@@ -214,29 +208,28 @@ TEST_F(HCI_ConnectionTest, LEStartEncryptionFailsAtStatus) {
 
 TEST_F(HCI_ConnectionTest, LEStartEncryptionSuccess) {
   auto kExpectedCommand = CreateStaticByteBuffer(
-    0x19, 0x20,  // HCI_LE_Start_Encryption
-    28,          // parameter total size
-    0x01, 0x00,  // connection handle: 1
-    0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,  // rand: 1
-    0xFF, 0x00,  // ediv: 255
-    1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16  // LTK
+      0x19, 0x20,  // HCI_LE_Start_Encryption
+      28,          // parameter total size
+      0x01, 0x00,  // connection handle: 1
+      0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,        // rand: 1
+      0xFF, 0x00,                                            // ediv: 255
+      1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16  // LTK
   );
-  auto kStatus = CreateStaticByteBuffer(
-    0x0F,       // HCI Command Status event code
-    4,          // parameter total size
-    0x00,       // success status
-    1,          // num_hci_command_packets
-    0x19, 0x20  // opcode: HCI_LE_Start_Encryption
-  );
+  auto kStatus =
+      CreateStaticByteBuffer(0x0F,       // HCI Command Status event code
+                             4,          // parameter total size
+                             0x00,       // success status
+                             1,          // num_hci_command_packets
+                             0x19, 0x20  // opcode: HCI_LE_Start_Encryption
+      );
 
   test_device()->QueueCommandTransaction(kExpectedCommand, {&kStatus});
 
   bool callback = false;
   auto conn = NewLEConnection();
   conn->set_link_key(LinkKey(kLTK, kRand, kEDiv));
-  conn->set_encryption_change_callback([&](Status status, bool enabled) {
-    callback = true;
-  });
+  conn->set_encryption_change_callback(
+      [&](Status status, bool enabled) { callback = true; });
 
   EXPECT_TRUE(conn->StartEncryption());
 
@@ -267,9 +260,7 @@ TEST_F(HCI_ConnectionTest, EncryptionChangeIgnoredEvents) {
   bool callback = false;
   auto conn = NewLEConnection();
   conn->set_link_key(LinkKey(kLTK, kRand, kEDiv));
-  conn->set_encryption_change_callback([&](Status, bool) {
-    callback = true;
-  });
+  conn->set_encryption_change_callback([&](Status, bool) { callback = true; });
 
   test_device()->SendCommandChannelPacket(kEncChangeMalformed);
   test_device()->SendCommandChannelPacket(kEncChangeWrongHandle);
@@ -316,9 +307,9 @@ TEST_F(HCI_ConnectionTest, EncryptionChangeEvents) {
   Status status(HostError::kFailed);
   bool enabled = false;
   conn->set_encryption_change_callback([&](Status cb_status, bool cb_enabled) {
-      callback_count++;
-      status = cb_status;
-      enabled = cb_enabled;
+    callback_count++;
+    status = cb_status;
+    enabled = cb_enabled;
   });
 
   test_device()->SendCommandChannelPacket(kEncryptionEnabled);
@@ -336,7 +327,7 @@ TEST_F(HCI_ConnectionTest, EncryptionChangeEvents) {
   EXPECT_FALSE(enabled);
 
   // The host should disconnect the link if encryption fails.
-  test_device()->QueueCommandTransaction(kDisconnect, {}); 
+  test_device()->QueueCommandTransaction(kDisconnect, {});
   test_device()->SendCommandChannelPacket(kEncryptionFailed);
   RunLoopUntilIdle();
 
@@ -505,11 +496,10 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestReply) {
     0x05,        // LE LTK Request subevent code
     0x01, 0x00,  // connection handle: 2 (wrong)
 
-    // rand: 0
-    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
-
-    // ediv: 0
-    0x00, 0x00
+    // rand: 0x8899AABBCCDDEEFF
+    0xFF, 0xEE, 0xDD, 0xCC, 0xBB, 0xAA, 0x99, 0x88,
+    // ediv: 0xBEEF
+    0xEF, 0xBE
   );
   auto kResponse = CreateStaticByteBuffer(
     0x1A, 0x20,  // opcode: HCI_LE_Long_Term_Key_Request_Reply
@@ -524,7 +514,7 @@ TEST_F(HCI_ConnectionTest, LELongTermKeyRequestReply) {
   // The request should be rejected since there is no LTK.
   test_device()->QueueCommandTransaction(kResponse, {});
   auto conn = NewLEConnection();
-  conn->set_link_key(LinkKey(kLTK, 0, 0));
+  conn->set_link_key(LinkKey(kLTK, 0x8899AABBCCDDEEFF, 0xBEEF));
 
   test_device()->SendCommandChannelPacket(kEvent);
   RunLoopUntilIdle();
