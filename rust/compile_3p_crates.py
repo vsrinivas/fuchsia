@@ -224,15 +224,16 @@ def main():
         if package["name"] == "fuchsia-third-party":
             for crate_id in package["dependencies"]:
                 crate_id = pathless_crate_id(crate_id)
-                crate_info = crate_id_to_info[crate_id]
-                crate_name = crate_info["crate_name"]
-                package_name = package_name_from_crate_id(crate_id)
-                if package_name in cargo_dependencies:
-                    crate_info["cargo_dependency_toml"] = cargo_dependencies[package_name]
-                    crates[package_name] = crate_info
-                elif package_name not in other_target_deps:
-                    print (package_name + " not found in Cargo.toml dependencies section")
-                    return 1
+                if crate_id in crate_id_to_info:
+                    crate_info = crate_id_to_info[crate_id]
+                    crate_name = crate_info["crate_name"]
+                    package_name = package_name_from_crate_id(crate_id)
+                    if package_name in cargo_dependencies:
+                        crate_info["cargo_dependency_toml"] = cargo_dependencies[package_name]
+                        crates[package_name] = crate_info
+                    elif package_name not in other_target_deps:
+                        print (package_name + " not found in Cargo.toml dependencies section")
+                        return 1
 
     # normalize paths for patches
     patches = cargo_toml["patch"]["crates-io"]
