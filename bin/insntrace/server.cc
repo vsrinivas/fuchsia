@@ -107,11 +107,11 @@ bool IptServer::StartInferior() {
     return false;
 
   if (config_.mode == IPT_MODE_CPUS) {
-    if (!InitCpuPerf(config_))
+    if (!InitTrace(config_))
       goto Fail;
   }
 
-  if (!InitPerfPreProcess(config_))
+  if (!InitProcessTrace(config_))
     goto Fail;
 
   // N.B. It's important that the PT device be closed at this point as we
@@ -131,7 +131,7 @@ bool IptServer::StartInferior() {
   // don't include all the initialization. For threads it doesn't matter.
   // TODO(dje): Could even defer until the first thread is started.
   if (config_.mode == IPT_MODE_CPUS) {
-    if (!StartCpuPerf(config_))
+    if (!StartTrace(config_))
       goto Fail;
   }
 
@@ -139,7 +139,7 @@ bool IptServer::StartInferior() {
   if (!process->Start()) {
     FXL_LOG(ERROR) << "failed to start process";
     if (config_.mode == IPT_MODE_CPUS)
-      StopCpuPerf(config_);
+      StopTrace(config_);
     goto Fail;
   }
   FXL_DCHECK(process->IsLive());
@@ -153,13 +153,13 @@ Fail:
 
 bool IptServer::DumpResults() {
   if (config_.mode == IPT_MODE_CPUS)
-    StopCpuPerf(config_);
-  StopPerf(config_);
+    StopTrace(config_);
+  StopSidebandDataCollection(config_);
   if (config_.mode == IPT_MODE_CPUS)
-    DumpCpuPerf(config_);
-  DumpPerf(config_);
+    DumpTrace(config_);
+  DumpSidebandData(config_);
   if (config_.mode == IPT_MODE_CPUS)
-    ResetCpuPerf(config_);
+    ResetTrace(config_);
   FreeTrace(config_);
   return true;
 }
@@ -208,10 +208,10 @@ void IptServer::OnThreadStarting(inferior_control::Process* process,
   }
 
   if (config_.mode == IPT_MODE_THREADS) {
-    if (!InitThreadPerf(thread, config_))
+    if (!InitThreadTrace(thread, config_))
       goto Fail;
-    if (!StartThreadPerf(thread, config_)) {
-      ResetThreadPerf(thread, config_);
+    if (!StartThreadTrace(thread, config_)) {
+      ResetThreadTrace(thread, config_);
       goto Fail;
     }
   }
@@ -231,9 +231,9 @@ void IptServer::OnThreadExiting(inferior_control::Process* process,
   // Dump any collected trace.
   if (config_.mode == IPT_MODE_THREADS) {
     if (thread->ipt_buffer() >= 0) {
-      StopThreadPerf(thread, config_);
-      DumpThreadPerf(thread, config_);
-      ResetThreadPerf(thread, config_);
+      StopThreadTrace(thread, config_);
+      DumpThreadTrace(thread, config_);
+      ResetThreadTrace(thread, config_);
     }
   }
 

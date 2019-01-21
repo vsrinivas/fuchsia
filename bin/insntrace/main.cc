@@ -400,23 +400,23 @@ static bool ControlIpt(const insntrace::IptConfig& config,
     if (action == "init") {
       if (!AllocTrace(config))
         return false;
-      if (!insntrace::InitCpuPerf(config))
+      if (!insntrace::InitTrace(config))
         return false;
-      if (!insntrace::InitPerfPreProcess(config))
+      if (!insntrace::InitProcessTrace(config))
         return false;
     } else if (action == "start") {
-      if (!insntrace::StartCpuPerf(config)) {
+      if (!insntrace::StartTrace(config)) {
         FXL_LOG(WARNING) << "Start failed, but buffers not removed";
         return false;
       }
     } else if (action == "stop") {
-      insntrace::StopCpuPerf(config);
-      insntrace::StopPerf(config);
+      insntrace::StopTrace(config);
+      insntrace::StopSidebandDataCollection(config);
     } else if (action == "dump") {
-      insntrace::DumpCpuPerf(config);
-      insntrace::DumpPerf(config);
+      insntrace::DumpTrace(config);
+      insntrace::DumpSidebandData(config);
     } else if (action == "reset") {
-      insntrace::ResetCpuPerf(config);
+      insntrace::ResetTrace(config);
       insntrace::FreeTrace(config);
     } else {
       FXL_LOG(ERROR) << "Unrecognized action: " << action;

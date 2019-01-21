@@ -12,31 +12,31 @@ namespace insntrace {
 
 bool AllocTrace(const IptConfig& config);
 
-bool InitCpuPerf(const IptConfig& config);
+bool InitTrace(const IptConfig& config);
 
-bool InitThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
+bool InitThreadTrace(inferior_control::Thread* thread, const IptConfig& config);
 
-bool InitPerfPreProcess(const IptConfig& config);
+bool InitProcessTrace(const IptConfig& config);
 
-bool StartCpuPerf(const IptConfig& config);
+bool StartTrace(const IptConfig& config);
 
-bool StartThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
+bool StartThreadTrace(inferior_control::Thread* thread, const IptConfig& config);
 
-void StopCpuPerf(const IptConfig& config);
+void StopTrace(const IptConfig& config);
 
-void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
+void StopThreadTrace(inferior_control::Thread* thread, const IptConfig& config);
 
-void StopPerf(const IptConfig& config);
+void StopSidebandDataCollection(const IptConfig& config);
 
-void DumpCpuPerf(const IptConfig& config);
+void DumpTrace(const IptConfig& config);
 
-void DumpThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
+void DumpThreadTrace(inferior_control::Thread* thread, const IptConfig& config);
 
-void DumpPerf(const IptConfig& config);
+void DumpSidebandData(const IptConfig& config);
 
-void ResetCpuPerf(const IptConfig& config);
+void ResetTrace(const IptConfig& config);
 
-void ResetThreadPerf(inferior_control::Thread* thread, const IptConfig& config);
+void ResetThreadTrace(inferior_control::Thread* thread, const IptConfig& config);
 
 void FreeTrace(const IptConfig& config);
 

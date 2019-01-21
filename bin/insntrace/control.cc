@@ -138,8 +138,8 @@ static void InitIptBufferConfig(ioctl_insntrace_buffer_config_t* ipt_config,
   ipt_config->addr_ranges[1].b = config.AddrEnd(1);
 }
 
-bool InitCpuPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "InitCpuPerf called";
+bool InitTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "InitTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
   fxl::UniqueFD ipt_fd;
@@ -167,8 +167,8 @@ Fail:
   return false;
 }
 
-bool InitThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "InitThreadPerf called";
+bool InitThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
+  FXL_LOG(INFO) << "InitThreadTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   fxl::UniqueFD ipt_fd;
@@ -197,8 +197,8 @@ Fail:
 // This must be called before a process is started so we emit a ktrace
 // process start record for it.
 
-bool InitPerfPreProcess(const IptConfig& config) {
-  FXL_LOG(INFO) << "InitPerfPreProcess called";
+bool InitProcessTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "InitProcessTrace called";
 
   zx::handle ktrace_handle;
   zx_status_t status;
@@ -266,8 +266,8 @@ Fail:
   return false;
 }
 
-bool StartCpuPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "StartCpuPerf called";
+bool StartTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "StartTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
   fxl::UniqueFD ipt_fd;
@@ -284,9 +284,9 @@ bool StartCpuPerf(const IptConfig& config) {
   return true;
 }
 
-bool StartThreadPerf(inferior_control::Thread* thread,
+bool StartThreadTrace(inferior_control::Thread* thread,
                      const IptConfig& config) {
-  FXL_LOG(INFO) << "StartThreadPerf called";
+  FXL_LOG(INFO) << "StartThreadTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
@@ -325,8 +325,8 @@ Fail:
   return false;
 }
 
-void StopCpuPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "StopCpuPerf called";
+void StopTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "StopTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
   fxl::UniqueFD ipt_fd;
@@ -340,8 +340,8 @@ void StopCpuPerf(const IptConfig& config) {
   }
 }
 
-void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "StopThreadPerf called";
+void StopThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
+  FXL_LOG(INFO) << "StopThreadTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
@@ -376,8 +376,8 @@ void StopThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
 Fail:;  // nothing to do
 }
 
-void StopPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "StopPerf called";
+void StopSidebandDataCollection(const IptConfig& config) {
+  FXL_LOG(INFO) << "StopSidebandDataCollection called";
 
   zx::handle ktrace_handle;
   if (!OpenDevices(nullptr, nullptr, &ktrace_handle))
@@ -528,8 +528,8 @@ Fail:
 // Write all output files.
 // This assumes tracing has already been stopped.
 
-void DumpCpuPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpCpuPerf called";
+void DumpTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "DumpTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
   fxl::UniqueFD ipt_fd;
@@ -550,8 +550,8 @@ void DumpCpuPerf(const IptConfig& config) {
 // Write the buffer contents for |thread|.
 // This assumes the thread is stopped.
 
-void DumpThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpThreadPerf called";
+void DumpThreadTrace(inferior_control::Thread* thread, const IptConfig& config) {
+  FXL_LOG(INFO) << "DumpThreadTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   zx_koid_t id = thread->id();
@@ -573,8 +573,8 @@ void DumpThreadPerf(inferior_control::Thread* thread, const IptConfig& config) {
   }
 }
 
-void DumpPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "DumpPerf called";
+void DumpSidebandData(const IptConfig& config) {
+  FXL_LOG(INFO) << "DumpSidebandData called";
 
   {
     fxl::UniqueFD ktrace_fd;
@@ -644,17 +644,17 @@ void DumpPerf(const IptConfig& config) {
   }
 }
 
-void ResetCpuPerf(const IptConfig& config) {
-  FXL_LOG(INFO) << "ResetCpuPerf called";
+void ResetTrace(const IptConfig& config) {
+  FXL_LOG(INFO) << "ResetTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_CPUS);
 
   // TODO(dje): Nothing to do currently. There use to be. So keep this
   // function around for a bit.
 }
 
-void ResetThreadPerf(inferior_control::Thread* thread,
+void ResetThreadTrace(inferior_control::Thread* thread,
                      const IptConfig& config) {
-  FXL_LOG(INFO) << "ResetThreadPerf called";
+  FXL_LOG(INFO) << "ResetThreadTrace called";
   FXL_DCHECK(config.mode == IPT_MODE_THREADS);
 
   if (thread->ipt_buffer() < 0) {
@@ -701,7 +701,7 @@ void FreeTrace(const IptConfig& config) {
   // For now set the values to what we need: A later run might still need
   // the boot time records.
   zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_STOP, 0, nullptr);
-#if 0  // TODO(dje): See rewind comments in InitPerfPreProcess.
+#if 0  // TODO(dje): See rewind comments in InitProcessTrace.
   zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_REWIND, 0, nullptr);
 #endif
   zx_ktrace_control(ktrace_handle.get(), KTRACE_ACTION_START, kKtraceGroupMask,
