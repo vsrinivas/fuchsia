@@ -228,9 +228,17 @@ class LedgerManager::PageManagerContainer {
   void CheckEmpty();
 
   const storage::PageId page_id_;
+
   std::unique_ptr<PageManager> page_manager_;
-  PageConnectionNotifier connection_notifier_;
+  // |status_| holds the status given to |SetPageManager|. If
+  // |page_manager_is_set_| is true, |status_| is |Status::OK| if and only if
+  // |page_manager_| is not null.
   Status status_ = Status::OK;
+  // |page_manager_is_set_| if |SetPageManager| has been called. |page_manager_|
+  // may still be null.
+  bool page_manager_is_set_ = false;
+
+  PageConnectionNotifier connection_notifier_;
   std::vector<std::pair<std::unique_ptr<PageDelayingFacade>,
                         fit::function<void(Status)>>>
       requests_;
@@ -239,7 +247,6 @@ class LedgerManager::PageManagerContainer {
       debug_requests_;
   std::vector<fit::function<void(Status, ExpiringToken, PageManager*)>>
       internal_request_callbacks_;
-  bool page_manager_is_set_ = false;
   fit::closure on_empty_callback_;
 
   // Must be the last member.
@@ -329,7 +336,7 @@ void LedgerManager::PageManagerContainer::SetPageManager(
     Status status, std::unique_ptr<PageManager> page_manager) {
   TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
 
-  FXL_DCHECK(!page_manager_);
+  FXL_DCHECK(!page_manager_is_set_);
   FXL_DCHECK((status != Status::OK) == !page_manager);
   status_ = status;
   page_manager_ = std::move(page_manager);
@@ -372,8 +379,8 @@ void LedgerManager::PageManagerContainer::SetPageManager(
 }
 
 bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
-  return (page_manager_is_set_ && !page_manager_->IsEmpty()) ||
-         !requests_.empty() || !debug_requests_.empty();
+  return (page_manager_ && !page_manager_->IsEmpty()) || !requests_.empty() ||
+         !debug_requests_.empty();
 }
 
 ExpiringToken LedgerManager::PageManagerContainer::NewExpiringToken() {
@@ -384,6 +391,8 @@ ExpiringToken LedgerManager::PageManagerContainer::NewExpiringToken() {
 }
 
 void LedgerManager::PageManagerContainer::CheckEmpty() {
+  // The PageManagerContainer is not considered empty until |SetPageManager| has
+  // been called.
   if (on_empty_callback_ && connection_notifier_.IsEmpty() &&
       page_manager_is_set_ && (!page_manager_ || page_manager_->IsEmpty())) {
     on_empty_callback_();
