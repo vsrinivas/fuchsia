@@ -182,8 +182,7 @@ zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
                      "ktraceoff         - stop kernel tracing\n"
                      "ktraceon          - start kernel tracing\n"
                      "devprops          - dump published devices and their binding properties\n"
-                     "drivers           - list discovered drivers and their properties\n"
-                     );
+                     "drivers           - list discovered drivers and their properties\n");
             return ZX_OK;
         }
     }
