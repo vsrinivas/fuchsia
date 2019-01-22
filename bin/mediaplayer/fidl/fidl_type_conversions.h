@@ -119,17 +119,17 @@ struct TypeConverter<std::unique_ptr<media_player::Bytes>,
 };
 
 template <>
-struct TypeConverter<fuchsia::mediacodec::CodecFormatDetailsPtr,
+struct TypeConverter<fuchsia::media::FormatDetailsPtr,
                      media_player::StreamType> {
-  static fuchsia::mediacodec::CodecFormatDetailsPtr Convert(
+  static fuchsia::media::FormatDetailsPtr Convert(
       const media_player::StreamType& input);
 };
 
 template <>
 struct TypeConverter<std::unique_ptr<media_player::StreamType>,
-                     fuchsia::mediacodec::CodecFormatDetails> {
+                     fuchsia::media::FormatDetails> {
   static std::unique_ptr<media_player::StreamType> Convert(
-      const fuchsia::mediacodec::CodecFormatDetails& input);
+      const fuchsia::media::FormatDetails& input);
 };
 
 // Generic |std::unique_ptr| to |std::unique_ptr| conversion.

@@ -24,7 +24,7 @@ class CodecBuffer {
   // a corresponding packet.
   static std::unique_ptr<CodecBuffer> Allocate(
       uint32_t buffer_index,
-      const fuchsia::mediacodec::CodecBufferConstraints& constraints);
+      const fuchsia::media::StreamBufferConstraints& constraints);
 
   // Each successful call to this method dups the VMO handle, with basic rights
   // + read + optional write depending on is_for_write.

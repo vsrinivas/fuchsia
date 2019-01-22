@@ -15,7 +15,7 @@
 
 namespace media_player {
 
-// A set of buffers associated with a specific CodecPortBufferSettings and
+// A set of buffers associated with a specific StreamBufferSettings and
 // buffer lifetime ordinal.
 //
 // This class is thread-safe.
@@ -25,10 +25,10 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // |single_vmo| indicates whether the buffers should be allocated from a
   // single VMO (true) or a VMO per buffer.
   static fbl::RefPtr<BufferSet> Create(
-      const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+      const fuchsia::media::StreamBufferSettings& settings,
       uint64_t lifetime_ordinal, bool single_vmo);
 
-  BufferSet(const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+  BufferSet(const fuchsia::media::StreamBufferSettings& settings,
             uint64_t lifetime_ordinal, bool single_vmo);
 
   ~BufferSet();
@@ -36,7 +36,7 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
   // Gets the settings for this buffer set. The |buffer_lifetime_ordinal| of
   // settings is set to the |lifetime_ordinal| value passed into the
   // constructor.
-  const fuchsia::mediacodec::CodecPortBufferSettings& settings() const {
+  const fuchsia::media::StreamBufferSettings& settings() const {
     std::lock_guard<std::mutex> locker(mutex_);
     return settings_;
   }
@@ -71,10 +71,10 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
     return free_buffer_count_;
   }
 
-  // Returns a |CodecBuffer| struct for the specified buffer. |writeable|
+  // Returns a |StreamBuffer| struct for the specified buffer. |writeable|
   // determines whether the vmo handle in the descriptor should have write
   // permission.
-  fuchsia::mediacodec::CodecBuffer GetBufferDescriptor(
+  fuchsia::media::StreamBuffer GetBufferDescriptor(
       uint32_t buffer_index, bool writeable,
       const PayloadVmos& payload_vmos) const;
 
@@ -144,7 +144,7 @@ class BufferSet : public fbl::RefCounted<BufferSet> {
 
   mutable std::mutex mutex_;
 
-  fuchsia::mediacodec::CodecPortBufferSettings settings_ FXL_GUARDED_BY(mutex_);
+  fuchsia::media::StreamBufferSettings settings_ FXL_GUARDED_BY(mutex_);
   bool single_vmo_ FXL_GUARDED_BY(mutex_);
   std::vector<BufferInfo> buffers_ FXL_GUARDED_BY(mutex_);
 
@@ -196,7 +196,7 @@ class BufferSetManager {
   // its own vmo. The resulting set's |single_vmo| method with return true in
   // former case, false in the latter.
   void ApplyConstraints(
-      const fuchsia::mediacodec::CodecBufferConstraints& constraints,
+      const fuchsia::media::StreamBufferConstraints& constraints,
       bool single_vmo_preferred);
 
   // Releases a reference to the payload buffer previously added using

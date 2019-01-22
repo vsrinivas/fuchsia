@@ -44,8 +44,7 @@ bool CodecAdapterFfmpegDecoder::
 }
 
 void CodecAdapterFfmpegDecoder::CoreCodecInit(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   // Will always be 0 for now.
   input_format_details_version_ordinal_ =
       initial_input_format_details.format_details_version_ordinal;
@@ -78,8 +77,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecStartStream() {
 }
 
 void CodecAdapterFfmpegDecoder::CoreCodecQueueInputFormatDetails(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        per_stream_override_format_details) {
+    const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(turnage): Accept midstream and interstream input format changes.
   // For now these should always be 0, so assert to notice if anything changes.
   ZX_ASSERT(per_stream_override_format_details.format_details_version_ordinal ==
@@ -170,7 +168,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecEnsureBuffersNotConfigured(
   }
 }
 
-std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::media::StreamOutputConfig>
 CodecAdapterFfmpegDecoder::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
@@ -182,11 +180,10 @@ CodecAdapterFfmpegDecoder::CoreCodecBuildNewOutputConfig(
   auto& [uncompressed_format, per_packet_buffer_bytes] =
       decoded_output_info_.value();
 
-  std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> config =
-      std::make_unique<fuchsia::mediacodec::CodecOutputConfig>();
+  auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
 
   config->stream_lifetime_ordinal = stream_lifetime_ordinal;
-  // For the moment, there will be only one CodecOutputConfig, and it'll need
+  // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->buffer_constraints_action_required =
@@ -199,7 +196,7 @@ CodecAdapterFfmpegDecoder::CoreCodecBuildNewOutputConfig(
   config->buffer_constraints.default_settings
       .buffer_constraints_version_ordinal =
       new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_codec =
+  config->buffer_constraints.default_settings.packet_count_for_server =
       kPacketCount - kPacketCountForClientForced;
   config->buffer_constraints.default_settings.packet_count_for_client =
       kDefaultPacketCountForClient;
@@ -217,13 +214,13 @@ CodecAdapterFfmpegDecoder::CoreCodecBuildNewOutputConfig(
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_codec_min =
+  config->buffer_constraints.packet_count_for_server_min =
       kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended =
+  config->buffer_constraints.packet_count_for_server_recommended =
       kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended_max =
+  config->buffer_constraints.packet_count_for_server_recommended_max =
       kPacketCount - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_max =
+  config->buffer_constraints.packet_count_for_server_max =
       kPacketCount - kPacketCountForClientForced;
 
   config->buffer_constraints.packet_count_for_client_min =
@@ -238,11 +235,11 @@ CodecAdapterFfmpegDecoder::CoreCodecBuildNewOutputConfig(
       new_output_format_details_version_ordinal;
   config->format_details.mime_type = "video/raw";
 
-  fuchsia::mediacodec::VideoFormat video_format;
+  fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(uncompressed_format));
 
   config->format_details.domain =
-      std::make_unique<fuchsia::mediacodec::DomainFormat>();
+      std::make_unique<fuchsia::media::DomainFormat>();
   config->format_details.domain->set_video(std::move(video_format));
 
   return config;

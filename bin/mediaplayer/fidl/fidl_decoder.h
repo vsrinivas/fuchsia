@@ -19,16 +19,16 @@ class FidlDecoder : public Decoder {
   // decoder on success. Calls the callback with nullptr on failure.
   static void Create(
       const StreamType& stream_type,
-      fuchsia::mediacodec::CodecFormatDetails input_format_details,
-      fuchsia::mediacodec::CodecPtr decoder,
+      fuchsia::media::FormatDetails input_format_details,
+      fuchsia::media::StreamProcessorPtr decoder,
       fit::function<void(std::shared_ptr<Decoder>)> callback);
 
   FidlDecoder(const StreamType& stream_type,
-              fuchsia::mediacodec::CodecFormatDetails input_format_details);
+              fuchsia::media::FormatDetails input_format_details);
 
   ~FidlDecoder() override;
 
-  void Init(fuchsia::mediacodec::CodecPtr decoder,
+  void Init(fuchsia::media::StreamProcessorPtr decoder,
             fit::function<void(bool)> callback);
 
   // Decoder implementation.
@@ -69,7 +69,7 @@ class FidlDecoder : public Decoder {
   // cached constraints and the node is ready, this method will configure the
   // input with the cached constraints and clear the cache.
   void MaybeConfigureInput(
-      fuchsia::mediacodec::CodecBufferConstraints* constraints);
+      fuchsia::media::StreamBufferConstraints* constraints);
 
   // Adds input buffers to the outboard decoder. This method must not be called
   // until the input connection is ready.
@@ -82,7 +82,7 @@ class FidlDecoder : public Decoder {
   // cached constraints and the node is ready, this method will configure the
   // output with the cached constraints and clear the cache.
   void MaybeConfigureOutput(
-      fuchsia::mediacodec::CodecBufferConstraints* constraints);
+      fuchsia::media::StreamBufferConstraints* constraints);
 
   // Adds output buffers to the outboard decoder. This method must not be called
   // until the output connection is ready.
@@ -100,13 +100,13 @@ class FidlDecoder : public Decoder {
   // Handles the |OnInputConstraints| event from the outboard decoder after
   // |ConfigureConnectors| is called.
   void OnInputConstraints(
-      fuchsia::mediacodec::CodecBufferConstraints constraints);
+      fuchsia::media::StreamBufferConstraints constraints);
 
   // Handles the |OnOutputConfig| event from the outboard decoder.
-  void OnOutputConfig(fuchsia::mediacodec::CodecOutputConfig config);
+  void OnOutputConfig(fuchsia::media::StreamOutputConfig config);
 
   // Handles the |OnOutputPacket| event from the outboard decoder.
-  void OnOutputPacket(fuchsia::mediacodec::CodecPacket output_packet,
+  void OnOutputPacket(fuchsia::media::Packet output_packet,
                       bool error_detected_before, bool error_detected_during);
 
   // Handles the |OnOutputEndOfStream| event from the outboard decoder.
@@ -114,7 +114,7 @@ class FidlDecoder : public Decoder {
                            bool error_detected_before);
 
   // Handles the |OnFreeInputPacket| event from the outboard decoder.
-  void OnFreeInputPacket(fuchsia::mediacodec::CodecPacketHeader packet_header);
+  void OnFreeInputPacket(fuchsia::media::PacketHeader packet_header);
 
   // Determines if the output stream type has changed and takes action if it
   // has.
@@ -124,8 +124,8 @@ class FidlDecoder : public Decoder {
   FXL_DECLARE_THREAD_CHECKER(thread_checker_);
 
   StreamType::Medium medium_;
-  fuchsia::mediacodec::CodecPtr outboard_decoder_;
-  fuchsia::mediacodec::CodecFormatDetails input_format_details_;
+  fuchsia::media::StreamProcessorPtr outboard_decoder_;
+  fuchsia::media::FormatDetails input_format_details_;
   fit::function<void(bool)> init_callback_;
   bool have_real_output_stream_type_ = false;
   uint32_t pre_stream_type_packet_requests_remaining_ = 10;

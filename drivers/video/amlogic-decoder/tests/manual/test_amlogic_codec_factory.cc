@@ -63,7 +63,7 @@ void test_factory() {
                 std::move(request));
       });
 
-  fuchsia::mediacodec::CodecPtr codec;
+  fuchsia::media::StreamProcessorPtr codec;
   codec.set_error_handler([](zx_status_t error) {
     printf(
         "codec failed with error %d (for now this is normal if not running "
@@ -81,7 +81,7 @@ void test_factory() {
            .promise_separate_access_units_on_input = true,
            .require_hw = true,
        }]() mutable {
-        codec_factory->CreateDecoder(std::move(params), std::move(request));
+        codec_factory->CreateDecoder2(std::move(params), std::move(request));
       });
 
   // Use FIDL thread to check that codec can communicate to the driver

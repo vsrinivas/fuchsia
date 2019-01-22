@@ -10,7 +10,7 @@
 #include "codec_port.h"
 
 #include <fbl/macros.h>
-#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include <list>
 #include <random>
@@ -66,15 +66,15 @@ class CodecAdapter {
   // with the core codec's initialized configuration (as set up during
   // CoreCodecInit()), and if not, fail the CodecImpl using
   // onCoreCodecFailCodec().  Core codecs may re-configure themselves based
-  // on new input CodecFormatDetails to the degree that's reasonable for the
+  // on new input FormatDetails to the degree that's reasonable for the
   // input format and the core codec's capabilities, but there's no particular
   // degree to which this is required (for now at least).  Core codecs are
   // discouraged from attempting to reconfigure themselves to process completely
   // different input formats that are better to think of as a completely
   // different Codec.
   //
-  // A client that's using different CodecFormatDetails than the initial
-  // CodecFormatDetails (to any degree) should try one more time with a fresh
+  // A client that's using different FormatDetails than the initial
+  // FormatDetails (to any degree) should try one more time with a fresh
   // Codec before giving up (giving up immediately only if the format details at
   // time of failure match the initial format details specified during Codec
   // creation).
@@ -85,8 +85,8 @@ class CodecAdapter {
   //
   // TODO(dustingreen): Re-visit the lifetime rule and required copy here, once
   // more is nailed down re. exactly how the core codec relates to CodecImpl.
-  virtual void CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
-                                 initial_input_format_details) = 0;
+  virtual void CoreCodecInit(
+      const fuchsia::media::FormatDetails& initial_input_format_details) = 0;
 
   // Stream lifetime:
   //
@@ -118,7 +118,7 @@ class CodecAdapter {
   // and CoreCodecStopStream().
   virtual void CoreCodecStartStream() = 0;
 
-  // The parameter includes the codec_oob_bytes. The core codec is free to call
+  // The parameter includes the oob_bytes. The core codec is free to call
   // onCoreCodecFailCodec() (immediately on this stack or async) if the
   // override input format details can't be accommodated (even in situations
   // where the override input format details would be ok as initial input format
@@ -133,7 +133,7 @@ class CodecAdapter {
   //
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
   virtual void CoreCodecQueueInputFormatDetails(
-      const fuchsia::mediacodec::CodecFormatDetails&
+      const fuchsia::media::FormatDetails&
           per_stream_override_format_details) = 0;
 
   // Only permitted between CoreCodecStartStream() and CoreCodecStopStream().
@@ -209,7 +209,7 @@ class CodecAdapter {
   // This is called on the same thread and same stack as
   // onCoreCodecMidStreamOutputConfigChange() (and with same stream still
   // active).
-  virtual std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  virtual std::unique_ptr<const fuchsia::media::StreamOutputConfig>
   CoreCodecBuildNewOutputConfig(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,

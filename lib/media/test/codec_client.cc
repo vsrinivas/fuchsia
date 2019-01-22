@@ -66,7 +66,7 @@ CodecClient::CodecClient(async::Loop* loop)
 
 CodecClient::~CodecClient() { Stop(); }
 
-fidl::InterfaceRequest<fuchsia::mediacodec::Codec>
+fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
 CodecClient::GetTheRequestOnce() {
   return std::move(temp_codec_request_);
 }
@@ -114,22 +114,22 @@ void CodecClient::Start() {
   // FIDL thread to send any FIDL message.
 
   uint32_t packet_count_for_client = kMinExtraInputPacketsForClient;
-  uint32_t packet_count_for_codec =
-      input_constraints_->packet_count_for_codec_recommended;
+  uint32_t packet_count_for_server =
+      input_constraints_->packet_count_for_server_recommended;
   uint32_t input_packet_count =
-      packet_count_for_client + packet_count_for_codec;
-  if (input_packet_count < packet_count_for_codec ||
-      input_packet_count > input_constraints_->packet_count_for_codec_max) {
-    FXL_LOG(FATAL) << "server can't easily accommodate "
+      packet_count_for_client + packet_count_for_server;
+  if (input_packet_count < packet_count_for_server ||
+      input_packet_count > input_constraints_->packet_count_for_server_max) {
+    FXL_LOG(FATAL) << "server can't easily accomodate "
                       "kMinExtraInputPacketsForClient - not "
                       "using server - exiting";
   }
   {  // scope input_settings, just for clarity
-    fuchsia::mediacodec::CodecPortBufferSettings input_settings{
+    fuchsia::media::StreamBufferSettings input_settings{
         .buffer_lifetime_ordinal = kInputBufferLifetimeOrdinal,
         .buffer_constraints_version_ordinal =
             input_constraints_->buffer_constraints_version_ordinal,
-        .packet_count_for_codec = packet_count_for_codec,
+        .packet_count_for_server = packet_count_for_server,
         .packet_count_for_client = packet_count_for_client,
         .per_packet_buffer_bytes =
             input_constraints_->per_packet_buffer_bytes_recommended,
@@ -159,11 +159,11 @@ void CodecClient::Start() {
 
     // May as well tell the Codec server about these incrementally.
     {
-      fuchsia::mediacodec::CodecBuffer codec_buffer{
+      fuchsia::media::StreamBuffer codec_buffer{
           .buffer_lifetime_ordinal = kInputBufferLifetimeOrdinal,
           .buffer_index = i,
       };
-      codec_buffer.data.set_vmo(fuchsia::mediacodec::CodecBufferDataVmo{
+      codec_buffer.data.set_vmo(fuchsia::media::StreamBufferDataVmo{
           .vmo_handle = std::move(dup_vmo),
           .vmo_usable_start = 0,
           .vmo_usable_size =
@@ -227,21 +227,21 @@ void CodecClient::CallSyncAndWaitForResponse() {
 }
 
 void CodecClient::OnInputConstraints(
-    fuchsia::mediacodec::CodecBufferConstraints input_constraints) {
+    fuchsia::media::StreamBufferConstraints input_constraints) {
   if (input_constraints_) {
     FXL_LOG(FATAL) << "server sent more than one input constraints";
   }
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     input_constraints_ =
-        std::make_unique<fuchsia::mediacodec::CodecBufferConstraints>(
+        std::make_unique<fuchsia::media::StreamBufferConstraints>(
             std::move(input_constraints));
   }  // ~lock
   input_constraints_exist_condition_.notify_all();
 }
 
 void CodecClient::OnFreeInputPacket(
-    fuchsia::mediacodec::CodecPacketHeader free_input_packet) {
+    fuchsia::media::PacketHeader free_input_packet) {
   bool was_empty;
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -263,7 +263,7 @@ void CodecClient::OnFreeInputPacket(
   }
 }
 
-std::unique_ptr<fuchsia::mediacodec::CodecPacket>
+std::unique_ptr<fuchsia::media::Packet>
 CodecClient::BlockingGetFreeInputPacket() {
   uint32_t free_index;
   {  // scope lock
@@ -278,8 +278,8 @@ CodecClient::BlockingGetFreeInputPacket() {
     // caller queues the input packet.
     assert(input_free_bits_[free_index]);
   }
-  std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
-      fuchsia::mediacodec::CodecPacket::New();
+  std::unique_ptr<fuchsia::media::Packet> packet =
+      fuchsia::media::Packet::New();
   packet->header.buffer_lifetime_ordinal = kInputBufferLifetimeOrdinal;
   packet->header.packet_index = free_index;
   packet->buffer_index = free_index;
@@ -296,7 +296,7 @@ const CodecBuffer& CodecClient::GetOutputBufferByIndex(uint32_t packet_index) {
 
 void CodecClient::QueueInputFormatDetails(
     uint64_t stream_lifetime_ordinal,
-    fuchsia::mediacodec::CodecFormatDetails input_format_details) {
+    fuchsia::media::FormatDetails input_format_details) {
   async::PostTask(dispatcher_, [this, stream_lifetime_ordinal,
                                 input_format_details =
                                     std::move(input_format_details)]() mutable {
@@ -308,9 +308,9 @@ void CodecClient::QueueInputFormatDetails(
 // buffer - the populated input packet buffer, or an empty input buffers with
 //   end_of_stream set on it.
 void CodecClient::QueueInputPacket(
-    std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet) {
+    std::unique_ptr<fuchsia::media::Packet> packet) {
   // Intentional copy.
-  fuchsia::mediacodec::CodecPacket local_packet = *packet;
+  fuchsia::media::Packet local_packet = *packet;
   {  // scope lock
     // This packet is already not on the free list, but is still considered free
     // from a protocol point of view, so update that part.
@@ -346,7 +346,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     // packets are pending and config is pending, the packets were delivered to
     // the client first.  So we drain the packets first.
     std::unique_ptr<CodecOutput> packet;
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config;
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig> config;
     {  // scope lock
       std::unique_lock<std::mutex> lock(lock_);
       while (!output_pending_) {
@@ -443,7 +443,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     // the codec in a protocol-valid way without being forced to perform buffer
     // re-configuration on the FIDL thread.
 
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig>
         snapped_config;
     uint64_t new_output_buffer_lifetime_ordinal;
     {  // scope lock
@@ -457,12 +457,12 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 
     // Tell the server about output settings.
 
-    const fuchsia::mediacodec::CodecBufferConstraints& constraints =
+    const fuchsia::media::StreamBufferConstraints& constraints =
         snapped_config->buffer_constraints;
-    uint32_t packet_count_for_codec =
-        constraints.packet_count_for_codec_recommended;
+    uint32_t packet_count_for_server =
+        constraints.packet_count_for_server_recommended;
     uint32_t packet_count_for_client = kMinExtraOutputPacketsForClient;
-    uint32_t packet_count = packet_count_for_codec + packet_count_for_client;
+    uint32_t packet_count = packet_count_for_server + packet_count_for_client;
     // printf("Sending SetOutputBufferSettings - buffer_lifetime_ordinal: %lu
     // buffer_constraints_version_ordinal: %lu\n",
     // new_output_buffer_lifetime_ordinal,
@@ -470,11 +470,11 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
     async::PostTask(
         dispatcher_,
         [this,
-         settings = fuchsia::mediacodec::CodecPortBufferSettings{
+         settings = fuchsia::media::StreamBufferSettings{
              .buffer_lifetime_ordinal = new_output_buffer_lifetime_ordinal,
              .buffer_constraints_version_ordinal =
                  constraints.buffer_constraints_version_ordinal,
-             .packet_count_for_codec = packet_count_for_codec,
+             .packet_count_for_server = packet_count_for_server,
              .packet_count_for_client = packet_count_for_client,
              .per_packet_buffer_bytes =
                  constraints.per_packet_buffer_bytes_recommended,
@@ -517,11 +517,11 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
       }
 
       {  // scope codec_buffer for clarity
-        fuchsia::mediacodec::CodecBuffer codec_buffer{
+        fuchsia::media::StreamBuffer codec_buffer{
             .buffer_lifetime_ordinal = new_output_buffer_lifetime_ordinal,
             .buffer_index = i,
         };
-        codec_buffer.data.set_vmo(fuchsia::mediacodec::CodecBufferDataVmo{
+        codec_buffer.data.set_vmo(fuchsia::media::StreamBufferDataVmo{
             .vmo_handle = std::move(dup_vmo),
             .vmo_usable_start = 0,
             .vmo_usable_size = constraints.per_packet_buffer_bytes_recommended,
@@ -585,7 +585,7 @@ std::unique_ptr<CodecOutput> CodecClient::BlockingGetEmittedOutput() {
 }
 
 void CodecClient::RecycleOutputPacket(
-    fuchsia::mediacodec::CodecPacketHeader free_packet) {
+    fuchsia::media::PacketHeader free_packet) {
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
     output_free_bits_[free_packet.packet_index] = true;
@@ -596,11 +596,11 @@ void CodecClient::RecycleOutputPacket(
 }
 
 void CodecClient::OnOutputConfig(
-    fuchsia::mediacodec::CodecOutputConfig output_config) {
+    fuchsia::media::StreamOutputConfig output_config) {
   bool output_pending_notify_needed = false;
-  // Not that the std::move() actually helps here, but that's what we're doing.
-  std::shared_ptr<fuchsia::mediacodec::CodecOutputConfig> shared_config =
-      std::make_shared<fuchsia::mediacodec::CodecOutputConfig>(
+  // Not that the std::move() actaully helps here, but that's what we're doing.
+  std::shared_ptr<fuchsia::media::StreamOutputConfig> shared_config =
+      std::make_shared<fuchsia::media::StreamOutputConfig>(
           std::move(output_config));
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -642,12 +642,12 @@ void CodecClient::OnOutputConfig(
   }
 }
 
-void CodecClient::OnOutputPacket(fuchsia::mediacodec::CodecPacket output_packet,
+void CodecClient::OnOutputPacket(fuchsia::media::Packet output_packet,
                                  bool error_detected_before,
                                  bool error_detected_during) {
   bool output_pending_notify_needed = false;
-  std::unique_ptr<const fuchsia::mediacodec::CodecPacket> local_packet =
-      std::make_unique<fuchsia::mediacodec::CodecPacket>(
+  std::unique_ptr<const fuchsia::media::Packet> local_packet =
+      std::make_unique<fuchsia::media::Packet>(
           std::move(output_packet));
   uint32_t packet_index = local_packet->header.packet_index;
   // This is safe outside the lock, because last_output_config_ is only updated

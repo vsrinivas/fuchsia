@@ -1111,15 +1111,15 @@ bool Vp9Decoder::FindNewFrameBuffer(HardwareRenderParams* params) {
                        vmo_create_result);
           return false;
         }
-        fuchsia::mediacodec::CodecBufferData codec_buffer_data;
-        codec_buffer_data.set_vmo(fuchsia::mediacodec::CodecBufferDataVmo{
+        fuchsia::media::StreamBufferData codec_buffer_data;
+        codec_buffer_data.set_vmo(fuchsia::media::StreamBufferDataVmo{
             .vmo_handle = std::move(frame_vmo),
             .vmo_usable_start = 0,
             .vmo_usable_size = frame_vmo_bytes,
         });
         frames.emplace_back(CodecFrame{
             .codec_buffer_spec =
-                fuchsia::mediacodec::CodecBuffer{
+                fuchsia::media::StreamBuffer{
                     .buffer_lifetime_ordinal =
                         next_non_codec_buffer_lifetime_ordinal_,
                     .buffer_index = 0,

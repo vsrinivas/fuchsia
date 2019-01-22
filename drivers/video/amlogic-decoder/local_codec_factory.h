@@ -74,9 +74,14 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> video_decoder)
       override;
 
+  void CreateDecoder2(
+      fuchsia::mediacodec::CreateDecoder_Params video_decoder_params,
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder)
+      override;
+
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
       override;
 
  private:

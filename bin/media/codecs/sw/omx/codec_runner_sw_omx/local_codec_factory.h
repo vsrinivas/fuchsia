@@ -47,7 +47,7 @@ namespace codec_factory {
 class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
  public:
   using BindAudioDecoderCallback = fit::function<void(
-      fidl::InterfaceRequest<fuchsia::mediacodec::Codec>,
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor>,
       fuchsia::mediacodec::CreateDecoder_Params audio_params)>;
 
   // This creates a self-owned CodecFactory instance that knows how to create
@@ -62,9 +62,14 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> audio_decoder)
       override;
 
+  virtual void CreateDecoder2(
+      fuchsia::mediacodec::CreateDecoder_Params audio_decoder_params,
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> audio_decoder)
+      override;
+
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
       override;
 
   // TODO(dustingreen): Implement interface methods for:
@@ -79,7 +84,7 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
   LocalCodecFactory(async_dispatcher_t* fidl_dispatcher, thrd_t fidl_thread);
 
   void CreateCommon(
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
       fuchsia::mediacodec::CodecType codec_type, std::string mime_type,
       fit::function<void(codec_runner::CodecRunner* codec_runner)>
           set_type_specific_params);

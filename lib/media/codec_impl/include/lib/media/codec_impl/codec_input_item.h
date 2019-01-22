@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_INPUT_ITEM_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_INPUT_ITEM_H_
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include <memory>
 
@@ -22,7 +22,7 @@ class CodecInputItem {
 
   static CodecInputItem Invalid();
   static CodecInputItem FormatDetails(
-      const fuchsia::mediacodec::CodecFormatDetails& format_details);
+      const fuchsia::media::FormatDetails& format_details);
   static CodecInputItem Packet(CodecPacket* packet);
   static CodecInputItem EndOfStream();
 
@@ -31,20 +31,19 @@ class CodecInputItem {
   bool is_packet() const;
   bool is_end_of_stream() const;
 
-  const fuchsia::mediacodec::CodecFormatDetails& format_details();
+  const fuchsia::media::FormatDetails& format_details();
   CodecPacket* packet() const;
 
  private:
   // !is_valid()
   CodecInputItem();
-  explicit CodecInputItem(
-      const fuchsia::mediacodec::CodecFormatDetails& format_details);
+  explicit CodecInputItem(const fuchsia::media::FormatDetails& format_details);
   explicit CodecInputItem(CodecPacket* packet);
 
   // The fields of this class are relied upon to be move-able.
 
   bool is_valid_ = true;
-  std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails> format_details_;
+  std::unique_ptr<fuchsia::media::FormatDetails> format_details_;
   // If nullptr, is_end_of_stream() is true.
   CodecPacket* packet_ = nullptr;
 

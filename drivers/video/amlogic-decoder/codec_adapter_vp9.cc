@@ -106,8 +106,7 @@ bool CodecAdapterVp9::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 }
 
 void CodecAdapterVp9::CoreCodecInit(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterVp9::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -214,10 +213,9 @@ void CodecAdapterVp9::CoreCodecStartStream() {
 }
 
 void CodecAdapterVp9::CoreCodecQueueInputFormatDetails(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        per_stream_override_format_details) {
+    const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(dustingreen): Consider letting the client specify profile/level info
-  // in the CodecFormatDetails at least optionally, and possibly sizing input
+  // in the FormatDetails at least optionally, and possibly sizing input
   // buffer constraints and/or other buffers based on that.
 
   QueueInputItem(
@@ -380,7 +378,7 @@ void CodecAdapterVp9::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   }
 }
 
-std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::media::StreamOutputConfig>
 CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
@@ -412,11 +410,10 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
 
   uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
 
-  std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> config =
-      std::make_unique<fuchsia::mediacodec::CodecOutputConfig>();
+  auto config = std::make_unique<fuchsia::media::StreamOutputConfig>();
 
   config->stream_lifetime_ordinal = stream_lifetime_ordinal;
-  // For the moment, there will be only one CodecOutputConfig, and it'll need
+  // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->buffer_constraints_action_required =
@@ -429,7 +426,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   config->buffer_constraints.default_settings
       .buffer_constraints_version_ordinal =
       new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_codec =
+  config->buffer_constraints.default_settings.packet_count_for_server =
       packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.default_settings.packet_count_for_client =
       kDefaultPacketCountForClient;
@@ -448,13 +445,13 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_codec_min =
+  config->buffer_constraints.packet_count_for_server_min =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended =
+  config->buffer_constraints.packet_count_for_server_recommended =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended_max =
+  config->buffer_constraints.packet_count_for_server_recommended_max =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_max =
+  config->buffer_constraints.packet_count_for_server_max =
       packet_count_total_ - kPacketCountForClientForced;
 
   config->buffer_constraints.packet_count_for_client_min =
@@ -486,7 +483,7 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   config->format_details.mime_type = "video/raw";
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
-  fuchsia::mediacodec::VideoUncompressedFormat video_uncompressed;
+  fuchsia::media::VideoUncompressedFormat video_uncompressed;
   video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
   video_uncompressed.primary_width_pixels = width_;
   video_uncompressed.primary_height_pixels = height_;
@@ -513,11 +510,11 @@ CodecAdapterVp9::CoreCodecBuildNewOutputConfig(
   // required.
   video_uncompressed.special_formats.set_temp_field_todo_remove(0);
 
-  fuchsia::mediacodec::VideoFormat video_format;
+  fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
   config->format_details.domain =
-      std::make_unique<fuchsia::mediacodec::DomainFormat>();
+      std::make_unique<fuchsia::media::DomainFormat>();
   config->format_details.domain->set_video(std::move(video_format));
 
   return config;

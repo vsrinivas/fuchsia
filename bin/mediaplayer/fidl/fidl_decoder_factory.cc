@@ -31,8 +31,7 @@ void FidlDecoderFactory::CreateDecoder(
     fit::function<void(std::shared_ptr<Decoder>)> callback) {
   FXL_DCHECK(callback);
 
-  auto format_details =
-      fxl::To<fuchsia::mediacodec::CodecFormatDetailsPtr>(stream_type);
+  auto format_details = fxl::To<fuchsia::media::FormatDetailsPtr>(stream_type);
   if (!format_details || !codec_factory_) {
     // If we don't know how to build |CodecFormatDetails| or we don't have a
     // codec factory, we don't know how to make a decoder.
@@ -45,8 +44,8 @@ void FidlDecoderFactory::CreateDecoder(
   decoder_params.promise_separate_access_units_on_input = true;
   decoder_params.require_hw = true;
 
-  fuchsia::mediacodec::CodecPtr decoder;
-  codec_factory_->CreateDecoder(std::move(decoder_params),
+  fuchsia::media::StreamProcessorPtr decoder;
+  codec_factory_->CreateDecoder2(std::move(decoder_params),
                                 decoder.NewRequest());
   FXL_DCHECK(decoder);
 

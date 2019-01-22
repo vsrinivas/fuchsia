@@ -226,13 +226,13 @@ void use_aac_decoder(async::Loop* main_loop,
   create_params.input_details.format_details_version_ordinal = 0;
   create_params.input_details.mime_type = "audio/aac-adts";
   // We don't do this here for now, because we want to cover what happens when
-  // CreateDecoder() doesn't specify codec_oob_bytes, but
+  // CreateDecoder() doesn't specify oob_bytes, but
   // QueueInputFormatDetails() does.
-  // create_params.input_details.codec_oob_bytes.reset(std::move(asc_vector));
+  // create_params.input_details.oob_bytes.reset(std::move(asc_vector));
 
-  fuchsia::mediacodec::CodecFormatDetails full_input_details =
+  fuchsia::media::FormatDetails full_input_details =
       fidl::Clone(create_params.input_details);
-  full_input_details.codec_oob_bytes.reset(std::move(asc_vector));
+  full_input_details.oob_bytes.reset(std::move(asc_vector));
 
   // We're using CodecPtr here rather than CodecSyncPtr partly to have this
   // example program be slightly more realistic (with respect to client programs
@@ -250,7 +250,7 @@ void use_aac_decoder(async::Loop* main_loop,
       [&codec_factory, create_params = std::move(create_params),
        codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
-        codec_factory->CreateDecoder(std::move(create_params),
+        codec_factory->CreateDecoder2(std::move(create_params),
                                      std::move(codec_client_request));
       });
   VLOGF("before codec_client.Start()...\n");
@@ -319,7 +319,7 @@ void use_aac_decoder(async::Loop* main_loop,
           // printf("queuing offset: %ld byte_count: %zu\n", bytes -
           // input_bytes.get(), byte_count);
           while (bytes_so_far != byte_count) {
-            std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+            std::unique_ptr<fuchsia::media::Packet> packet =
                 codec_client.BlockingGetFreeInputPacket();
             const CodecBuffer& buffer =
                 codec_client.GetInputBufferByIndex(packet->header.packet_index);
@@ -390,7 +390,7 @@ void use_aac_decoder(async::Loop* main_loop,
     //
     // In this example, we only deal with one output format once we start seeing
     // stream data show up, since WAV only supports a single format per file.
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> stream_config;
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig> stream_config;
     while (true) {
       std::unique_ptr<CodecOutput> output =
           codec_client.BlockingGetEmittedOutput();
@@ -405,7 +405,7 @@ void use_aac_decoder(async::Loop* main_loop,
         goto end_of_output;
       }
 
-      const fuchsia::mediacodec::CodecPacket& packet = output->packet();
+      const fuchsia::media::Packet& packet = output->packet();
       // "packet" will live long enough because ~cleanup runs before ~output.
       auto cleanup = fit::defer([&codec_client, &packet] {
         // Using an auto call for this helps avoid losing track of the
@@ -417,7 +417,7 @@ void use_aac_decoder(async::Loop* main_loop,
         // state command, so if that occurs, exit.
         codec_client.RecycleOutputPacket(packet.header);
       });
-      std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config =
+      std::shared_ptr<const fuchsia::media::StreamOutputConfig> config =
           output->config();
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
@@ -442,16 +442,16 @@ void use_aac_decoder(async::Loop* main_loop,
       if (!stream_config) {
         // Every output has a config.  This happens exactly once.
         stream_config = config;
-        const fuchsia::mediacodec::CodecFormatDetails& format =
+        const fuchsia::media::FormatDetails& format =
             stream_config->format_details;
         if (!format.domain->is_audio()) {
           Exit("!format.domain.is_audio() - unexpected");
         }
-        const fuchsia::mediacodec::AudioFormat& audio = format.domain->audio();
+        const fuchsia::media::AudioFormat& audio = format.domain->audio();
         if (!audio.is_uncompressed()) {
           Exit("!audio.is_uncompressed() - unexpected");
         }
-        const fuchsia::mediacodec::AudioUncompressedFormat& uncompressed =
+        const fuchsia::media::AudioUncompressedFormat& uncompressed =
             audio.uncompressed();
         if (!uncompressed.is_pcm()) {
           Exit("!uncompressed.is_pcm() - unexpected");
@@ -468,24 +468,24 @@ void use_aac_decoder(async::Loop* main_loop,
         // TODO(dustingreen): Once we have a video decoder, update this example
         // to handle at least one video format, or create a separate example for
         // video with some of the code in this file moved to a source_set.
-        const fuchsia::mediacodec::PcmFormat& pcm = uncompressed.pcm();
+        const fuchsia::media::PcmFormat& pcm = uncompressed.pcm();
         if (pcm.channel_map.size() < 1 || pcm.channel_map.size() > 2) {
           Exit(
               "pcm.channel_map->size() outside range [1, 2] - unexpected - "
               "actual: %zu\n",
               pcm.channel_map.size());
         }
-        if (static_cast<fuchsia::mediacodec::AudioChannelId>(
+        if (static_cast<fuchsia::media::AudioChannelId>(
                 pcm.channel_map[0]) !=
-            fuchsia::mediacodec::AudioChannelId::LF) {
+            fuchsia::media::AudioChannelId::LF) {
           Exit(
               "pcm.channel_map[0] is unexpected given the input data used in "
               "this example");
         }
         if (pcm.channel_map.size() >= 2 &&
-            static_cast<fuchsia::mediacodec::AudioChannelId>(
+            static_cast<fuchsia::media::AudioChannelId>(
                 pcm.channel_map[1]) !=
-                fuchsia::mediacodec::AudioChannelId::RF) {
+                fuchsia::media::AudioChannelId::RF) {
           Exit(
               "pcm.channel_map[1] is unexpected given the input data used in "
               "this example");

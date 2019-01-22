@@ -8,7 +8,7 @@
 #include "codec_port.h"
 
 #include <fbl/macros.h>
-#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include <memory>
 
@@ -42,7 +42,7 @@ class CodecBuffer {
 
   size_t buffer_size() const;
 
-  const fuchsia::mediacodec::CodecBuffer& codec_buffer() const;
+  const fuchsia::media::StreamBuffer& codec_buffer() const;
 
   // The use of weak_ptr<> here is to emphasize that we don't need shared_ptr<>
   // to keep the VideoFrame(s) alive.  We'd use a raw pointer here if it weren't
@@ -61,7 +61,7 @@ class CodecBuffer {
   friend struct std::default_delete<CodecBuffer>;
 
   CodecBuffer(CodecImpl* parent, CodecPort port,
-              fuchsia::mediacodec::CodecBuffer buffer);
+              fuchsia::media::StreamBuffer buffer);
   ~CodecBuffer();
   bool Init(bool input_require_write = false);
 
@@ -72,7 +72,7 @@ class CodecBuffer {
   CodecPort port_ = kFirstPort;
 
   // This msg still has the live vmo_handle.
-  fuchsia::mediacodec::CodecBuffer buffer_;
+  fuchsia::media::StreamBuffer buffer_;
 
   // Mutable only in the sense that it's set later than the constructor.  The
   // association does not switch to a different VideoFrame once set.

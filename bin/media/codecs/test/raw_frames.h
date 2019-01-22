@@ -29,7 +29,7 @@ class RawFrames {
   };
 
   struct Image {
-    fuchsia::mediacodec::VideoUncompressedFormat format;
+    fuchsia::media::VideoUncompressedFormat format;
     zx::vmo vmo;
     size_t vmo_offset;
     size_t image_size;

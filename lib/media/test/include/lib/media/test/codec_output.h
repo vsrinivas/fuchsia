@@ -10,8 +10,8 @@
 #include <lib/fxl/macros.h>
 #include <memory>
 
-// Each CodecOutput represents a CodecPacket, and the correct associated
-// CodecOutputConfig for that packet.  Since the CodecClient takes care of
+// Each CodecOutput represents a Packet, and the correct associated
+// StreamOutputConfig for that packet.  Since the CodecClient takes care of
 // buffer_constraints_action_required true internally, the consumer of
 // CodecOutput never has to deal with the situation where there's a new buffer
 // constraints that's action required before any more output packets will show
@@ -25,13 +25,13 @@ class CodecOutput {
  public:
   CodecOutput(
       uint64_t stream_lifetime_ordinal,
-      std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config,
-      std::unique_ptr<const fuchsia::mediacodec::CodecPacket> packet,
+      std::shared_ptr<const fuchsia::media::StreamOutputConfig> config,
+      std::unique_ptr<const fuchsia::media::Packet> packet,
       bool end_of_stream);
 
   uint64_t stream_lifetime_ordinal() { return stream_lifetime_ordinal_; }
 
-  std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config() {
+  std::shared_ptr<const fuchsia::media::StreamOutputConfig> config() {
     // Caller should only call this after checking end_of_stream() first.
     assert(config_);
     return config_;
@@ -39,7 +39,7 @@ class CodecOutput {
 
   // The caller doesn't own the returned reference, and the caller must ensure
   // the returned reference isn't retained beyond the lifetime of CodecOutput.
-  const fuchsia::mediacodec::CodecPacket& packet() {
+  const fuchsia::media::Packet& packet() {
     // Caller should only call this after checking end_of_stream() first.
     assert(packet_);
     return *packet_;
@@ -50,8 +50,8 @@ class CodecOutput {
  private:
   uint64_t stream_lifetime_ordinal_ = 0;
   // The shared_ptr<> is just to optimize away copying an immutable config.
-  std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config_;
-  std::unique_ptr<const fuchsia::mediacodec::CodecPacket> packet_;
+  std::shared_ptr<const fuchsia::media::StreamOutputConfig> config_;
+  std::unique_ptr<const fuchsia::media::Packet> packet_;
 
   bool end_of_stream_ = false;
 

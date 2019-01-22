@@ -27,9 +27,13 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
       fuchsia::mediacodec::CreateDecoder_Params params,
       ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) override;
 
+  void CreateDecoder2(fuchsia::mediacodec::CreateDecoder_Params params,
+                      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
+                          decoder) override;
+
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request)
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
       override;
 
  private:

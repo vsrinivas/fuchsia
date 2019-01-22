@@ -32,7 +32,7 @@ class FrameSinkView : public scenic::V1BaseView {
   void PutFrame(
       uint32_t image_id, zx_time_t present_time, const zx::vmo& vmo,
       uint64_t vmo_offset,
-      const fuchsia::mediacodec::VideoUncompressedFormat& video_format,
+      const fuchsia::media::VideoUncompressedFormat& video_format,
       fit::closure on_done);
 
  private:

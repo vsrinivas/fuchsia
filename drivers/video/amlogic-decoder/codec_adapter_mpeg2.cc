@@ -28,8 +28,7 @@ bool CodecAdapterMpeg2::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 }
 
 void CodecAdapterMpeg2::CoreCodecInit(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
@@ -38,8 +37,7 @@ void CodecAdapterMpeg2::CoreCodecStartStream() {
 }
 
 void CodecAdapterMpeg2::CoreCodecQueueInputFormatDetails(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        per_stream_override_format_details) {
+    const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
@@ -73,14 +71,14 @@ void CodecAdapterMpeg2::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
 }
 
-std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::media::StreamOutputConfig>
 CodecAdapterMpeg2::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
     uint64_t new_output_format_details_version_ordinal,
     bool buffer_constraints_action_required) {
   ZX_DEBUG_ASSERT_MSG(false, "not yet implemented");
-  return std::make_unique<const fuchsia::mediacodec::CodecOutputConfig>();
+  return std::make_unique<const fuchsia::media::StreamOutputConfig>();
 }
 
 void CodecAdapterMpeg2::CoreCodecMidStreamOutputBufferReConfigPrepare() {

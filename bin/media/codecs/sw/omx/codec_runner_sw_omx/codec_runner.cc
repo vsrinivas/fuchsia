@@ -18,7 +18,7 @@ CodecRunner::CodecRunner(async_dispatcher_t* fidl_dispatcher,
 CodecRunner::~CodecRunner() = default;
 
 void CodecRunner::BindAndOwnSelf(
-    fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
     std::unique_ptr<CodecRunner> self) {
   assert(thrd_current() == fidl_thread_);
   // We have input_constraints_ by now thanks to our behavior (server-side),

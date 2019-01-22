@@ -22,12 +22,12 @@ class CodecAdapterH264 : public CodecAdapter {
   ~CodecAdapterH264();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
-  void CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
+  void CoreCodecInit(const fuchsia::media::FormatDetails&
                          initial_input_format_details) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
-      const fuchsia::mediacodec::CodecFormatDetails&
-          per_stream_override_format_details) override;
+      const fuchsia::media::FormatDetails& per_stream_override_format_details)
+      override;
   void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
@@ -37,7 +37,7 @@ class CodecAdapterH264 : public CodecAdapter {
       const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
-  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  std::unique_ptr<const fuchsia::media::StreamOutputConfig>
   CoreCodecBuildNewOutputConfig(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,
@@ -73,8 +73,8 @@ class CodecAdapterH264 : public CodecAdapter {
   DeviceCtx* device_ = nullptr;
   AmlogicVideo* video_ = nullptr;
 
-  fuchsia::mediacodec::CodecFormatDetails initial_input_format_details_;
-  fuchsia::mediacodec::CodecFormatDetails latest_input_format_details_;
+  fuchsia::media::FormatDetails initial_input_format_details_;
+  fuchsia::media::FormatDetails latest_input_format_details_;
 
   // Currently, AmlogicVideo::ParseVideo() can indirectly block on availability
   // of output buffers to make space in the ring buffer the parser is outputting
@@ -113,7 +113,7 @@ class CodecAdapterH264 : public CodecAdapter {
   // frames.  This counts all bytes delivered to the amlogic firmware, including
   // start code bytes.
   uint64_t parsed_video_size_ = 0;
-  // If true, the core codec will need the codec_oob_bytes info, if any.  The
+  // If true, the core codec will need the oob_bytes info, if any.  The
   // core codec in this case wants the info in annex B form in-band, not
   // AVCC/avcC form out-of-band.
   bool is_input_format_details_pending_ = false;

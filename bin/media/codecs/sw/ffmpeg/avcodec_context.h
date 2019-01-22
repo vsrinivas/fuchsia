@@ -21,7 +21,7 @@ class AvCodecContext {
  public:
   // Describes uncompressed decoded output.
   struct DecodedOutputInfo {
-    fuchsia::mediacodec::VideoUncompressedFormat format;
+    fuchsia::media::VideoUncompressedFormat format;
     size_t buffer_bytes_needed;
   };
 
@@ -50,7 +50,7 @@ class AvCodecContext {
   //
   // See ffmpeg's get_buffer2 and av_buffer_create for more details.
   static std::optional<std::unique_ptr<AvCodecContext>> CreateDecoder(
-      const fuchsia::mediacodec::CodecFormatDetails& format_details,
+      const fuchsia::media::FormatDetails& format_details,
       GetBufferCallback get_buffer_callback);
 
   // Sends a compressed packet to the decoder. The semantics of SendPacket and

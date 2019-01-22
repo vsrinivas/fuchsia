@@ -48,13 +48,13 @@ class CodecClient {
   // Separate from Start() because we don't wan this class to handle the Codec
   // creation, so the caller needs a server endpoint to send off to a Codec
   // server (via the CodecFactory).
-  fidl::InterfaceRequest<fuchsia::mediacodec::Codec> GetTheRequestOnce();
+  fidl::InterfaceRequest<fuchsia::media::StreamProcessor> GetTheRequestOnce();
 
   // Get the Codec into a state where it's ready to process input data.
   void Start();
 
   // On this thread, wait for an available input packet_index, and when one is
-  // available, create a new CodecPacket object to represent that packet_index
+  // available, create a new Packet object to represent that packet_index
   // and return that.  The packet_index will be filled out, but not the rest of
   // the packet.  It's up to the caller to set stream_lifetime_ordinal and other
   // fields.
@@ -66,7 +66,7 @@ class CodecClient {
   // To return eventually, this call relies on output being accepted on an
   // ongoing basis from the Codec using some other thread(s), processed, and
   // those output packets freed back to the codec.
-  std::unique_ptr<fuchsia::mediacodec::CodecPacket>
+  std::unique_ptr<fuchsia::media::Packet>
   BlockingGetFreeInputPacket();
 
   const CodecBuffer& GetInputBufferByIndex(uint32_t packet_index);
@@ -74,11 +74,11 @@ class CodecClient {
 
   void QueueInputFormatDetails(
       uint64_t stream_lifetime_ordinal,
-      fuchsia::mediacodec::CodecFormatDetails input_format_details);
+      fuchsia::media::FormatDetails input_format_details);
 
   // Queue an input packet to the codec.
   void QueueInputPacket(
-      std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet);
+      std::unique_ptr<fuchsia::media::Packet> packet);
 
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal);
 
@@ -90,11 +90,11 @@ class CodecClient {
   // the stream to be done.  If an end_of_stream packet shows up, this method
   // will return that packet.
   //
-  // The returned CodecPacket itself will remain valid and readable as long as
+  // The returned Packet itself will remain valid and readable as long as
   // the caller keeps it around.  However, if the caller calls
   // BlockingGetEmittedOutput() again, the entire set of output buffers
   // can get deallocated and replacement buffers allocated, rendering the
-  // meaning of the returned CodecPacket only usable until
+  // meaning of the returned Packet only usable until
   // BlockingGetEmittedOutput() is called again.  This means the calling
   // code needs to go ahead and do whatever it wants to do with the output
   // data in the corresponding output buffer before calling this method again.
@@ -107,7 +107,7 @@ class CodecClient {
   std::unique_ptr<CodecOutput> BlockingGetEmittedOutput();
 
   // Recycle an output packet for re-use.
-  void RecycleOutputPacket(fuchsia::mediacodec::CodecPacketHeader free_packet);
+  void RecycleOutputPacket(fuchsia::media::PacketHeader free_packet);
 
   void Stop();
 
@@ -124,9 +124,9 @@ class CodecClient {
   void OnStreamFailed(uint64_t stream_lifetime_ordinal);
 
   void OnInputConstraints(
-      fuchsia::mediacodec::CodecBufferConstraints input_constraints);
+      fuchsia::media::StreamBufferConstraints input_constraints);
   void OnFreeInputPacket(
-      fuchsia::mediacodec::CodecPacketHeader free_input_packet);
+      fuchsia::media::PacketHeader free_input_packet);
 
   // This example ignores any buffer constraints with
   // buffer_constraints_action_required false.
@@ -140,10 +140,10 @@ class CodecClient {
   // more than one of this message per Codec instance (though not quite to the
   // degree needed to fully cover client handling of true mid-stream format
   // changes).
-  void OnOutputConfig(fuchsia::mediacodec::CodecOutputConfig output_config);
+  void OnOutputConfig(fuchsia::media::StreamOutputConfig output_config);
 
   // Every output packet is stream-specific with stream_lifetime_ordinal set.
-  void OnOutputPacket(fuchsia::mediacodec::CodecPacket output_packet,
+  void OnOutputPacket(fuchsia::media::Packet output_packet,
                       bool error_detected_before, bool error_detected_during);
 
   void OnOutputEndOfStream(uint64_t stream_lifetime_ordinal,
@@ -151,14 +151,14 @@ class CodecClient {
   std::mutex lock_;
   async::Loop* loop_ = nullptr;               // must override
   async_dispatcher_t* dispatcher_ = nullptr;  // must override
-  fuchsia::mediacodec::CodecPtr codec_;
+  fuchsia::media::StreamProcessorPtr codec_;
   // This only temporarily holds the Codec request that was created during the
   // constructor.  If the caller asks for this more than once, the subsequent
   // requests give back a !is_valid() request.
-  fidl::InterfaceRequest<fuchsia::mediacodec::Codec> temp_codec_request_;
+  fidl::InterfaceRequest<fuchsia::media::StreamProcessor> temp_codec_request_;
 
   // We're use unique_ptr<> here only for it's optional-ness.
-  std::unique_ptr<fuchsia::mediacodec::CodecBufferConstraints>
+  std::unique_ptr<fuchsia::media::StreamBufferConstraints>
       input_constraints_;
   std::condition_variable input_constraints_exist_condition_;
 
@@ -180,7 +180,7 @@ class CodecClient {
 
   // In contrast to buffers, packets don't really exist in full continuously.
   // The set of packet_index values is a thing, but each packet_index re-use is
-  // really best thought of as a new fuchsia::mediacodec::CodecPacket lifetime,
+  // really best thought of as a new fuchsia::media::Packet lifetime,
   // so that's how we represent the packets in this example - as created and
   // owned by their input and output arcs, not kept allocated continuously by
   // CodecClient.
@@ -213,23 +213,23 @@ class CodecClient {
   //
   // A client that is immediately processing every output packet and just tracks
   // the most recent output config would work as long as it always associates
-  // an output packet with the closest prior CodecOutputConfig.
+  // an output packet with the closest prior StreamOutputConfig.
   std::list<std::unique_ptr<CodecOutput>> emitted_output_;
 
   // For input, in this example we just know what the input format details are
   // and we send those to CodecFactory as part of CreateAudioDecoder_Params,
   // so we don't really need them as a member variable.
 
-  // For output, we have CodecOutputConfig here as a shared_ptr<> so we can
+  // For output, we have StreamOutputConfig here as a shared_ptr<> so we can
   // explicitly associate each output packet with the config that applies to the
   // output packet.
   //
   // Note that stream_lifetime_ordinal is nearly entirely orthogonal from which
   // config applies.  The only interaction is that sometimes a new stream will
   // happen to have a different format so will cause format_details to update.
-  std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  std::shared_ptr<const fuchsia::media::StreamOutputConfig>
       last_output_config_;
-  std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  std::shared_ptr<const fuchsia::media::StreamOutputConfig>
       last_required_output_config_;
   // Becomes true when we get a new last_output_config_ with action required,
   // and becomes false just before taking the needed action based on

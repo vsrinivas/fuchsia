@@ -45,6 +45,7 @@ source_set("codec_impl") {
   ]
   public_configs = [ ":codec_impl_include_config" ]
   deps = [
+    "//garnet/public/fidl/fuchsia.media",
     "//garnet/public/fidl/fuchsia.mediacodec",
     "//garnet/public/lib/fidl/cpp",
   ]

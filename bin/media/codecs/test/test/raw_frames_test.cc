@@ -90,11 +90,11 @@ int SendFramesToScenic(RawFrames&& raw_frames) {
     std::optional<RawFrames::Image> frame;
     size_t frames_sent = 0;
     while ((frame = raw_frames.Frame(frames_sent++))) {
-      auto domain = std::make_unique<fuchsia::mediacodec::DomainFormat>();
+      auto domain = std::make_unique<fuchsia::media::DomainFormat>();
       domain->video().set_uncompressed(std::move(frame->format));
-      auto config = std::make_shared<fuchsia::mediacodec::CodecOutputConfig>();
+      auto config = std::make_shared<fuchsia::media::StreamOutputConfig>();
       config->format_details =
-          fuchsia::mediacodec::CodecFormatDetails{.domain = std::move(domain)};
+          fuchsia::media::FormatDetails{.domain = std::move(domain)};
       frame_sink->PutFrame(frames_sent, frame->vmo, frame->vmo_offset, config,
                            [] {});
     }

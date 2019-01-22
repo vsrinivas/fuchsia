@@ -44,7 +44,7 @@ FrameSink::~FrameSink() {
 // Must be called on main_loop_'s thread.
 void FrameSink::PutFrame(
     uint32_t image_id, const zx::vmo& vmo, uint64_t vmo_offset,
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> output_config,
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig> output_config,
     fit::closure on_done) {
   // This method fans out to the views_, and runs on_done async when all the
   // views_ are done with the frame.
@@ -68,7 +68,7 @@ void FrameSink::PutFrame(
   auto shared_done_runner =
       std::make_shared<decltype(done_runner)>(std::move(done_runner));
 
-  const fuchsia::mediacodec::VideoUncompressedFormat& video_format =
+  const fuchsia::media::VideoUncompressedFormat& video_format =
       output_config->format_details.domain->video().uncompressed();
 
   zx_time_t present_time;
@@ -128,7 +128,7 @@ void FrameSink::PutEndOfStreamThenWaitForFramesReturnedAsync(
   // frame, because it's easier to generate a black frame in RGB, and because
   // there's no harm in covering Scenic's ability to switch to a frame with
   // completely different format.
-  fuchsia::mediacodec::VideoUncompressedFormat blank_frame_video_format{
+  fuchsia::media::VideoUncompressedFormat blank_frame_video_format{
       .primary_width_pixels = kBlankFrameWidth,
       .primary_height_pixels = kBlankFrameHeight,
       .primary_display_width_pixels = kBlankFrameWidth,

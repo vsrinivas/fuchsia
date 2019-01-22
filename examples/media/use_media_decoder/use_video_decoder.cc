@@ -121,7 +121,7 @@ void QueueH264Frames(CodecClient* codec_client, uint8_t* input_bytes,
     // printf("queuing offset: %ld byte_count: %zu\n", bytes -
     // input_bytes.get(), byte_count);
     while (bytes_so_far != byte_count) {
-      std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+      std::unique_ptr<fuchsia::media::Packet> packet =
           codec_client->BlockingGetFreeInputPacket();
       // For input we do buffer_index == packet_index.
       const CodecBuffer& buffer =
@@ -202,7 +202,7 @@ void QueueVp9Frames(CodecClient* codec_client, uint8_t* input_bytes,
   auto queue_access_unit = [&codec_client, &input_bytes](uint8_t* bytes,
                                                          size_t byte_count,
                                                          uint32_t frame_pts) {
-    std::unique_ptr<fuchsia::mediacodec::CodecPacket> packet =
+    std::unique_ptr<fuchsia::media::Packet> packet =
         codec_client->BlockingGetFreeInputPacket();
     // For input we do buffer_index == packet_index.
     const CodecBuffer& buffer =
@@ -265,7 +265,7 @@ static void use_video_decoder(
   VLOGF("done reading h264 file.\n");
 
   // Since the .h264 file has SPS + PPS NALs in addition to frame NALs, we don't
-  // use codec_oob_bytes for this stream.
+  // use oob_bytes for this stream.
   //
   // TODO(dustingreen): Determine for .mp4 or similar which don't have SPS / PPS
   // in band whether .mp4 provides ongoing OOB data, or just at the start, and
@@ -289,8 +289,8 @@ static void use_video_decoder(
       main_loop->dispatcher(),
       [&codec_factory, codec_client_request = codec_client.GetTheRequestOnce(),
        mime_type]() mutable {
-        VLOGF("before codec_factory->CreateDecoder() (async)\n");
-        codec_factory->CreateDecoder(
+        VLOGF("before codec_factory->CreateDecoder2() (async)\n");
+        codec_factory->CreateDecoder2(
             fuchsia::mediacodec::CreateDecoder_Params{
                 .input_details.format_details_version_ordinal = 0,
                 .input_details.mime_type = mime_type,
@@ -371,8 +371,8 @@ static void use_video_decoder(
     // In this example, we only deal with one output format once we start seeing
     // stream output data show up, since our raw_video_writer is only really
     // meant to store one format per file.
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> stream_config;
-    const fuchsia::mediacodec::VideoUncompressedFormat* raw = nullptr;
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig> stream_config;
+    const fuchsia::media::VideoUncompressedFormat* raw = nullptr;
     while (true) {
       std::unique_ptr<CodecOutput> output =
           codec_client.BlockingGetEmittedOutput();
@@ -387,7 +387,7 @@ static void use_video_decoder(
         goto end_of_output;
       }
 
-      const fuchsia::mediacodec::CodecPacket& packet = output->packet();
+      const fuchsia::media::Packet& packet = output->packet();
       // cleanup can run on any thread, and codec_client.RecycleOutputPacket()
       // is ok with that.  In addition, cleanup can run after codec_client is
       // gone, since we don't block return from use_h264_decoder() on Scenic
@@ -403,7 +403,7 @@ static void use_video_decoder(
             // set state command, so if that occurs, exit.
             codec_client.RecycleOutputPacket(std::move(packet_header));
           });
-      std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config =
+      std::shared_ptr<const fuchsia::media::StreamOutputConfig> config =
           output->config();
       // This will remain live long enough because this thread is the only
       // thread that re-allocates output buffers.
@@ -428,12 +428,12 @@ static void use_video_decoder(
       if (!stream_config) {
         // Every output has a config.  This happens exactly once.
         stream_config = config;
-        const fuchsia::mediacodec::CodecFormatDetails& format =
+        const fuchsia::media::FormatDetails& format =
             stream_config->format_details;
         if (!format.domain->is_video()) {
           Exit("!format.domain.is_video()");
         }
-        const fuchsia::mediacodec::VideoFormat& video_format =
+        const fuchsia::media::VideoFormat& video_format =
             format.domain->video();
         if (!video_format.is_uncompressed()) {
           Exit("!video.is_uncompressed()");

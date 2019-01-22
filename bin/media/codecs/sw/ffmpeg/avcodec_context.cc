@@ -24,7 +24,7 @@ static inline constexpr uint32_t make_fourcc(uint8_t a, uint8_t b, uint8_t c,
 }  // namespace
 
 std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
-    const fuchsia::mediacodec::CodecFormatDetails& format_details,
+    const fuchsia::media::FormatDetails& format_details,
     GetBufferCallback get_buffer_callback) {
   avcodec_register_all();
   auto codec_id = codec_ids.find(format_details.mime_type);
@@ -54,8 +54,8 @@ std::optional<std::unique_ptr<AvCodecContext>> AvCodecContext::CreateDecoder(
   std::unique_ptr<AvCodecContext> decoder(new AvCodecContext(
       std::move(avcodec_context), std::move(get_buffer_callback)));
 
-  const std::vector<uint8_t>& oob = format_details.codec_oob_bytes.get();
-  ZX_DEBUG_ASSERT(oob.empty() || format_details.codec_oob_bytes);
+  const std::vector<uint8_t>& oob = format_details.oob_bytes.get();
+  ZX_DEBUG_ASSERT(oob.empty() || format_details.oob_bytes);
   if (!oob.empty()) {
     // Freed in AVCodecContext deleter in avcodec_free.
     auto* extradata = reinterpret_cast<uint8_t*>(av_malloc(oob.size()));
@@ -135,7 +135,7 @@ AvCodecContext::DecodedOutputInfo AvCodecContext::decoded_output_info(
   av_image_fill_linesizes(linesizes, static_cast<AVPixelFormat>(frame->format),
                           frame->width);
 
-  fuchsia::mediacodec::VideoUncompressedFormat uncompressed_format;
+  fuchsia::media::VideoUncompressedFormat uncompressed_format;
   uncompressed_format.fourcc = make_fourcc('Y', 'V', '1', '2');
 
   uncompressed_format.primary_start_offset = 0;

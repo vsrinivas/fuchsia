@@ -114,8 +114,7 @@ bool CodecAdapterH264::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 }
 
 void CodecAdapterH264::CoreCodecInit(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        initial_input_format_details) {
+    const fuchsia::media::FormatDetails& initial_input_format_details) {
   zx_status_t result = input_processing_loop_.StartThread(
       "CodecAdapterH264::input_processing_thread_", &input_processing_thread_);
   if (result != ZX_OK) {
@@ -233,10 +232,9 @@ void CodecAdapterH264::CoreCodecStartStream() {
 }
 
 void CodecAdapterH264::CoreCodecQueueInputFormatDetails(
-    const fuchsia::mediacodec::CodecFormatDetails&
-        per_stream_override_format_details) {
+    const fuchsia::media::FormatDetails& per_stream_override_format_details) {
   // TODO(dustingreen): Consider letting the client specify profile/level info
-  // in the CodecFormatDetails at least optionally, and possibly sizing input
+  // in the FormatDetails at least optionally, and possibly sizing input
   // buffer constraints and/or other buffers based on that.
 
   QueueInputItem(
@@ -401,7 +399,7 @@ void CodecAdapterH264::CoreCodecEnsureBuffersNotConfigured(CodecPort port) {
   }
 }
 
-std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::media::StreamOutputConfig>
 CodecAdapterH264::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
@@ -433,11 +431,11 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
 
   uint32_t per_packet_buffer_bytes = stride_ * height_ * 3 / 2;
 
-  std::unique_ptr<fuchsia::mediacodec::CodecOutputConfig> config =
-      std::make_unique<fuchsia::mediacodec::CodecOutputConfig>();
+  std::unique_ptr<fuchsia::media::StreamOutputConfig> config =
+      std::make_unique<fuchsia::media::StreamOutputConfig>();
 
   config->stream_lifetime_ordinal = stream_lifetime_ordinal;
-  // For the moment, there will be only one CodecOutputConfig, and it'll need
+  // For the moment, there will be only one StreamOutputConfig, and it'll need
   // output buffers configured for it.
   ZX_DEBUG_ASSERT(buffer_constraints_action_required);
   config->buffer_constraints_action_required =
@@ -450,7 +448,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   config->buffer_constraints.default_settings
       .buffer_constraints_version_ordinal =
       new_output_buffer_constraints_version_ordinal;
-  config->buffer_constraints.default_settings.packet_count_for_codec =
+  config->buffer_constraints.default_settings.packet_count_for_server =
       packet_count_total_ - kPacketCountForClientForced;
   config->buffer_constraints.default_settings.packet_count_for_client =
       kDefaultPacketCountForClient;
@@ -469,13 +467,13 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
 
   // For the moment, let's just force the client to set this exact number of
   // frames for the codec.
-  config->buffer_constraints.packet_count_for_codec_min =
+  config->buffer_constraints.packet_count_for_server_min =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended =
+  config->buffer_constraints.packet_count_for_server_recommended =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_recommended_max =
+  config->buffer_constraints.packet_count_for_server_recommended_max =
       packet_count_total_ - kPacketCountForClientForced;
-  config->buffer_constraints.packet_count_for_codec_max =
+  config->buffer_constraints.packet_count_for_server_max =
       packet_count_total_ - kPacketCountForClientForced;
 
   config->buffer_constraints.packet_count_for_client_min =
@@ -507,7 +505,7 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   config->format_details.mime_type = "video/raw";
 
   // For the moment, we'll memcpy to NV12 without any extra padding.
-  fuchsia::mediacodec::VideoUncompressedFormat video_uncompressed;
+  fuchsia::media::VideoUncompressedFormat video_uncompressed;
   video_uncompressed.fourcc = make_fourcc('N', 'V', '1', '2');
   video_uncompressed.primary_width_pixels = width_;
   video_uncompressed.primary_height_pixels = height_;
@@ -534,11 +532,11 @@ CodecAdapterH264::CoreCodecBuildNewOutputConfig(
   // required.
   video_uncompressed.special_formats.set_temp_field_todo_remove(0);
 
-  fuchsia::mediacodec::VideoFormat video_format;
+  fuchsia::media::VideoFormat video_format;
   video_format.set_uncompressed(std::move(video_uncompressed));
 
   config->format_details.domain =
-      std::make_unique<fuchsia::mediacodec::DomainFormat>();
+      std::make_unique<fuchsia::media::DomainFormat>();
   config->format_details.domain->set_video(std::move(video_format));
 
   return config;
@@ -645,18 +643,18 @@ void CodecAdapterH264::ProcessInput() {
 
       // Even if the new item.format_details() are the same as
       // initial_input_format_details_, this CodecAdapter doesn't notice any
-      // in-band SPS/PPS info, so the new codec_oob_bytes still need to be
+      // in-band SPS/PPS info, so the new oob_bytes still need to be
       // (converted and) re-delivered to the core codec in case any in-band
       // SPS/PPS changes have been seen by the core codec since the previous
       // time.
       //
-      // Or maybe we have no codec_oob_bytes in which case this is irrelevant
+      // Or maybe we have no oob_bytes in which case this is irrelevant
       // but harmless.
       //
-      // Or maybe the codec_oob_bytes changed.  Either way, the core codec will
+      // Or maybe the oob_bytes changed.  Either way, the core codec will
       // want that info, but in-band.  We delay sending the info to the core
       // codec until we see the first input data, to more consistently handle
-      // the codec_oob_bytes that we get initially during Codec creation.
+      // the oob_bytes that we get initially during Codec creation.
       is_input_format_details_pending_ = true;
       continue;
     }
@@ -715,13 +713,13 @@ void CodecAdapterH264::ProcessInput() {
 }
 
 bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
-  // Our latest codec_oob_bytes may contain SPS/PPS info.  If we have any
+  // Our latest oob_bytes may contain SPS/PPS info.  If we have any
   // such info, the core codec needs it (possibly converted first).
 
-  // We check oob.empty() below, which covers when !codec_oob_bytes as well.
+  // We check oob.empty() below, which covers when !oob_bytes as well.
   const std::vector<uint8_t>& oob =
-      latest_input_format_details_.codec_oob_bytes.get();
-  ZX_DEBUG_ASSERT(oob.empty() || latest_input_format_details_.codec_oob_bytes);
+      latest_input_format_details_.oob_bytes.get();
+  ZX_DEBUG_ASSERT(oob.empty() || latest_input_format_details_.oob_bytes);
 
   // If there's no OOB info, then there's nothing to do, as all such info will
   // be in-band in normal packet-based AnnexB NALs (including start codes and
@@ -732,9 +730,9 @@ bool CodecAdapterH264::ParseAndDeliverCodecOobBytes() {
   }
 
   // We need to deliver Annex B style SPS/PPS to this core codec, regardless of
-  // what format the codec_oob_bytes is in.
+  // what format the oob_bytes is in.
 
-  // The codec_oob_bytes can be in two different forms, which can be detected by
+  // The oob_bytes can be in two different forms, which can be detected by
   // the value of the first byte:
   //
   // 0 - Annex B form already.  The 0 is the first byte of a start code.

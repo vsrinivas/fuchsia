@@ -10,7 +10,7 @@
 #include <lib/media/codec_impl/codec_port.h>
 
 CodecBuffer::CodecBuffer(CodecImpl* parent, CodecPort port,
-                         fuchsia::mediacodec::CodecBuffer buffer)
+                         fuchsia::media::StreamBuffer buffer)
     : parent_(parent), port_(port), buffer_(std::move(buffer)) {
   // nothing else to do here
 }
@@ -62,7 +62,7 @@ size_t CodecBuffer::buffer_size() const {
   return buffer_.data.vmo().vmo_usable_size;
 }
 
-const fuchsia::mediacodec::CodecBuffer& CodecBuffer::codec_buffer() const {
+const fuchsia::media::StreamBuffer& CodecBuffer::codec_buffer() const {
   return buffer_;
 }
 

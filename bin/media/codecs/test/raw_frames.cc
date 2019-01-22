@@ -95,7 +95,7 @@ std::optional<RawFrames::Image> RawFrames::Frame(size_t frame_index) {
     return std::nullopt;
   }
 
-  fuchsia::mediacodec::VideoUncompressedFormat format = {
+  fuchsia::media::VideoUncompressedFormat format = {
       .fourcc = make_fourcc('Y', 'V', '1', '2'),
       .primary_width_pixels = static_cast<uint32_t>(layout_.width),
       .primary_height_pixels = static_cast<uint32_t>(layout_.height),

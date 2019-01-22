@@ -376,8 +376,8 @@ std::unique_ptr<media_player::Bytes> TypeConverter<
   return bytes;
 }
 
-fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
-    fuchsia::mediacodec::CodecFormatDetailsPtr,
+fuchsia::media::FormatDetailsPtr TypeConverter<
+    fuchsia::media::FormatDetailsPtr,
     media_player::StreamType>::Convert(const media_player::StreamType& input) {
   const char* mime_type = nullptr;
 
@@ -407,11 +407,11 @@ fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
     return nullptr;
   }
 
-  auto result = fuchsia::mediacodec::CodecFormatDetails::New();
+  auto result = fuchsia::media::FormatDetails::New();
   result->format_details_version_ordinal = 0;
   result->mime_type = mime_type;
   if (input.encoding_parameters()) {
-    result->codec_oob_bytes =
+    result->oob_bytes =
         fxl::To<fidl::VectorPtr<uint8_t>>(input.encoding_parameters());
   }
 
@@ -420,8 +420,8 @@ fuchsia::mediacodec::CodecFormatDetailsPtr TypeConverter<
 
 std::unique_ptr<media_player::StreamType>
 TypeConverter<std::unique_ptr<media_player::StreamType>,
-              fuchsia::mediacodec::CodecFormatDetails>::
-    Convert(const fuchsia::mediacodec::CodecFormatDetails& input) {
+              fuchsia::media::FormatDetails>::
+    Convert(const fuchsia::media::FormatDetails& input) {
   if (input.mime_type == kAudioMimeTypeLpcm) {
     if (!input.domain->is_audio() || !input.domain->audio().is_uncompressed() ||
         !input.domain->audio().uncompressed().is_pcm()) {
@@ -429,7 +429,7 @@ TypeConverter<std::unique_ptr<media_player::StreamType>,
     }
 
     auto& format = input.domain->audio().uncompressed().pcm();
-    if (format.pcm_mode != fuchsia::mediacodec::AudioPcmMode::LINEAR) {
+    if (format.pcm_mode != fuchsia::media::AudioPcmMode::LINEAR) {
       return nullptr;
     }
 

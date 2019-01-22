@@ -61,6 +61,12 @@ LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher,
 void LocalCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params decoder_params,
     ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder_request) {
+    // No longer supported, Omx users should switch to StreamProcessor.
+}
+
+void LocalCodecFactory::CreateDecoder2(
+    fuchsia::mediacodec::CreateDecoder_Params decoder_params,
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) {
   CreateCommon(std::move(decoder_request),
                fuchsia::mediacodec::CodecType::DECODER,
                decoder_params.input_details.mime_type,
@@ -72,13 +78,13 @@ void LocalCodecFactory::CreateDecoder(
 
 void LocalCodecFactory::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request) {
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
   // We have no encoders to provide.
   // ~encoder_request
 }
 
 void LocalCodecFactory::CreateCommon(
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
     fuchsia::mediacodec::CodecType codec_type, std::string mime_type,
     fit::function<void(codec_runner::CodecRunner* codec_runner)>
         set_type_specific_params) {

@@ -227,9 +227,65 @@ void LocalCodecFactory::CreateDecoder(
       });
 }
 
+void LocalCodecFactory::CreateDecoder2(
+    fuchsia::mediacodec::CreateDecoder_Params video_decoder_params,
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder) {
+  const CodecAdapterFactory* factory = nullptr;
+  for (const CodecAdapterFactory& candidate_factory : kCodecFactories) {
+    if (candidate_factory.description.mime_type ==
+        video_decoder_params.input_details.mime_type) {
+      factory = &candidate_factory;
+      break;
+    }
+  }
+  if (!factory) {
+    // This shouldn't really happen since the main CodecFactory shouldn't be
+    // asking this LocalCodecFactory for a codec fitting a description that's
+    // not a description this factory previously delivered to the main
+    // CodecFactory via OnCodecList().
+    //
+    // TODO(dustingreen): epitaph for video_decoder.
+    //
+    // ~video_decoder here will take care of closing the channel
+    return;
+  }
+
+  // We also post to the same queue in the set_error_handler() lambda, so that
+  // we know the LocalCodecFactory will remain alive until after this lambda
+  // completes.
+  //
+  // The factory pointer remains valid for whole lifetime of this devhost
+  // process.
+  device_->codec_admission_control()->TryAddCodec(
+      factory->multi_instance,
+      [this, video_decoder_params = std::move(video_decoder_params),
+       video_decoder = std::move(video_decoder),
+       factory](std::unique_ptr<CodecAdmission> codec_admission) mutable {
+        if (!codec_admission) {
+          // We can't create another Codec presently.
+          //
+          // ~video_decoder will take care of closing the channel.
+          return;
+        }
+
+        std::unique_ptr<CodecImpl> codec = std::make_unique<CodecImpl>(
+            std::move(codec_admission),
+            device_->driver()->shared_fidl_loop()->dispatcher(),
+            device_->driver()->shared_fidl_thread(),
+            std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
+                std::move(video_decoder_params)),
+            std::move(video_decoder));
+
+        codec->SetCoreCodecAdapter(
+            factory->create(codec->lock(), codec.get(), device_));
+
+        device_->device_fidl()->BindCodecImpl(std::move(codec));
+      });
+}
+
 void LocalCodecFactory::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> encoder_request) {
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
   // We have no encoders to provide.
   // ~encoder_request
 }

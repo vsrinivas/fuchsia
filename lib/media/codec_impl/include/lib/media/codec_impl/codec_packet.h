@@ -5,7 +5,7 @@
 #ifndef GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PACKET_H_
 #define GARNET_LIB_MEDIA_CODEC_IMPL_INCLUDE_LIB_MEDIA_CODEC_IMPL_CODEC_PACKET_H_
 
-#include <fuchsia/mediacodec/cpp/fidl.h>
+#include <fuchsia/media/cpp/fidl.h>
 
 #include <stdint.h>
 #include <limits>
@@ -15,7 +15,7 @@
 
 class CodecBuffer;
 
-// Instances of this class are 1:1 with fuchsia::mediacodec::CodecPacket.
+// Instances of this class are 1:1 with fuchsia::media::Packet.
 class CodecPacket {
  public:
   ~CodecPacket();

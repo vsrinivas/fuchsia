@@ -10,18 +10,18 @@ namespace media_player {
 
 // static
 fbl::RefPtr<BufferSet> BufferSet::Create(
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+    const fuchsia::media::StreamBufferSettings& settings,
     uint64_t buffer_lifetime_ordinal, bool single_vmo) {
   return fbl::MakeRefCounted<BufferSet>(settings, buffer_lifetime_ordinal,
                                         single_vmo);
 }
 
 BufferSet::BufferSet(
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings,
+    const fuchsia::media::StreamBufferSettings& settings,
     uint64_t buffer_lifetime_ordinal, bool single_vmo)
     : settings_(settings),
       single_vmo_(single_vmo),
-      buffers_(settings_.packet_count_for_codec +
+      buffers_(settings_.packet_count_for_server +
                settings_.packet_count_for_client) {
   free_buffer_count_ = buffers_.size();
   settings_.buffer_lifetime_ordinal = buffer_lifetime_ordinal;
@@ -32,20 +32,20 @@ BufferSet::~BufferSet() {
   ReleaseAllDecoderOwnedBuffers();
 }
 
-fuchsia::mediacodec::CodecBuffer BufferSet::GetBufferDescriptor(
+fuchsia::media::StreamBuffer BufferSet::GetBufferDescriptor(
     uint32_t buffer_index, bool writeable,
     const PayloadVmos& payload_vmos) const {
   std::lock_guard<std::mutex> locker(mutex_);
   FXL_DCHECK(buffer_index < buffers_.size());
 
-  fuchsia::mediacodec::CodecBuffer buffer;
+  fuchsia::media::StreamBuffer buffer;
   buffer.buffer_lifetime_ordinal = settings_.buffer_lifetime_ordinal;
   buffer.buffer_index = buffer_index;
 
   fbl::RefPtr<PayloadVmo> payload_vmo = BufferVmo(buffer_index, payload_vmos);
   FXL_DCHECK(payload_vmo);
 
-  fuchsia::mediacodec::CodecBufferDataVmo buffer_data_vmo;
+  fuchsia::media::StreamBufferDataVmo buffer_data_vmo;
   buffer_data_vmo.vmo_handle = payload_vmo->Duplicate(
       ZX_RIGHT_READ | ZX_RIGHT_MAP | ZX_RIGHT_TRANSFER | ZX_RIGHT_DUPLICATE |
       (writeable ? ZX_RIGHT_WRITE : 0));
@@ -242,7 +242,7 @@ fbl::RefPtr<PayloadBuffer> BufferSet::CreateBuffer(
 }
 
 void BufferSetManager::ApplyConstraints(
-    const fuchsia::mediacodec::CodecBufferConstraints& constraints,
+    const fuchsia::media::StreamBufferConstraints& constraints,
     bool prefer_single_vmo) {
   FXL_DCHECK_CREATION_THREAD_IS_CURRENT(thread_checker_);
 

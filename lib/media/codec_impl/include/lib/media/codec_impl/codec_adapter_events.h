@@ -18,7 +18,7 @@ class CodecPacket;
 class CodecAdapterEvents {
  public:
   // If the core codec needs to fail the whole CodecImpl, such as when/if new
-  // CodecFormatDetails are different than the initial CodecFormatDetails and
+  // FormatDetails are different than the initial FormatDetails and
   // the core codec doesn't support switching from the old to the new input
   // format details (for example due to needing different input buffer config).
   virtual void onCoreCodecFailCodec(const char* format, ...) = 0;

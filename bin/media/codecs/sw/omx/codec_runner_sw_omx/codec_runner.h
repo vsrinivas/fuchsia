@@ -17,7 +17,7 @@ namespace codec_runner {
 
 // This is an abstract base class whose main purpose is to prevent us from
 // assuming that all codecs run locally will be OMX codecs.
-class CodecRunner : public fuchsia::mediacodec::Codec {
+class CodecRunner : public fuchsia::media::StreamProcessor {
  public:
   // needs a virtual destructor because unique_ptr will be deleting via vtable
   // entry instead of direct call to destructor
@@ -51,7 +51,7 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   // precisely, owned by the Codec channel via ImplPtr of the binding being
   // std::unique_ptr<CodecRunner> here (instead of the default Codec*).
   void BindAndOwnSelf(
-      fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request,
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request,
       std::unique_ptr<CodecRunner> self);
 
   // Some sub-classes want to send initial output constraints very early,
@@ -92,8 +92,8 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
 
   async_dispatcher_t* const fidl_dispatcher_;
   const thrd_t fidl_thread_;
-  using BindingType =
-      fidl::Binding<fuchsia::mediacodec::Codec, std::unique_ptr<CodecRunner>>;
+  using BindingType = fidl::Binding<fuchsia::media::StreamProcessor,
+                                    std::unique_ptr<CodecRunner>>;
   std::unique_ptr<BindingType> binding_;
 
   bool input_constraints_sent_ = false;
@@ -105,7 +105,7 @@ class CodecRunner : public fuchsia::mediacodec::Codec {
   //
   // This remains valid after CodecRunner sends OnInputConstraints(), in case
   // a derived class wants to refer to the input constraints.
-  std::unique_ptr<const fuchsia::mediacodec::CodecBufferConstraints>
+  std::unique_ptr<const fuchsia::media::StreamBufferConstraints>
       input_constraints_;
 
   FXL_DISALLOW_IMPLICIT_CONSTRUCTORS(CodecRunner);

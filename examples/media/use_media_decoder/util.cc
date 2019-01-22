@@ -77,7 +77,7 @@ void PostSerial(async_dispatcher_t* dispatcher, fit::closure to_run) {
 }
 
 void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
-                                   const fuchsia::mediacodec::PcmFormat& pcm) {
+                                   const fuchsia::media::PcmFormat& pcm) {
   uint32_t pcm_mode_le = htole32(pcm.pcm_mode);
   if (!SHA256_Update(sha256_ctx, &pcm_mode_le, sizeof(pcm_mode_le))) {
     assert(false);
@@ -92,7 +92,7 @@ void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
                      sizeof(frames_per_second_le))) {
     assert(false);
   }
-  for (fuchsia::mediacodec::AudioChannelId channel_id : pcm.channel_map) {
+  for (fuchsia::media::AudioChannelId channel_id : pcm.channel_map) {
     uint32_t channel_id_le = htole32(channel_id);
     if (!SHA256_Update(sha256_ctx, &channel_id_le, sizeof(channel_id_le))) {
       assert(false);
@@ -102,7 +102,7 @@ void SHA256_Update_AudioParameters(SHA256_CTX* sha256_ctx,
 
 void SHA256_Update_VideoParameters(
     SHA256_CTX* sha256_ctx,
-    const fuchsia::mediacodec::VideoUncompressedFormat& video) {
+    const fuchsia::media::VideoUncompressedFormat& video) {
   UpdateSha256(sha256_ctx, video.fourcc);
   UpdateSha256(sha256_ctx, video.primary_width_pixels);
   UpdateSha256(sha256_ctx, video.primary_height_pixels);

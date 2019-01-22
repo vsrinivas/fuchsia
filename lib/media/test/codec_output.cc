@@ -9,8 +9,8 @@
 
 CodecOutput::CodecOutput(
     uint64_t stream_lifetime_ordinal,
-    std::shared_ptr<const fuchsia::mediacodec::CodecOutputConfig> config,
-    std::unique_ptr<const fuchsia::mediacodec::CodecPacket> packet,
+    std::shared_ptr<const fuchsia::media::StreamOutputConfig> config,
+    std::unique_ptr<const fuchsia::media::Packet> packet,
     bool end_of_stream)
     : stream_lifetime_ordinal_(stream_lifetime_ordinal),
       config_(config),

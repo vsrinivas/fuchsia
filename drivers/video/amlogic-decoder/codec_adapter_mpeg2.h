@@ -18,12 +18,12 @@ class CodecAdapterMpeg2 : public CodecAdapter {
   ~CodecAdapterMpeg2();
 
   bool IsCoreCodecRequiringOutputConfigForFormatDetection() override;
-  void CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
+  void CoreCodecInit(const fuchsia::media::FormatDetails&
                          initial_input_format_details) override;
   void CoreCodecStartStream() override;
   void CoreCodecQueueInputFormatDetails(
-      const fuchsia::mediacodec::CodecFormatDetails&
-          per_stream_override_format_details) override;
+      const fuchsia::media::FormatDetails& per_stream_override_format_details)
+      override;
   void CoreCodecQueueInputPacket(CodecPacket* packet) override;
   void CoreCodecQueueInputEndOfStream() override;
   void CoreCodecStopStream() override;
@@ -33,7 +33,7 @@ class CodecAdapterMpeg2 : public CodecAdapter {
       const std::vector<std::unique_ptr<CodecPacket>>& packets) override;
   void CoreCodecRecycleOutputPacket(CodecPacket* packet) override;
   void CoreCodecEnsureBuffersNotConfigured(CodecPort port) override;
-  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+  std::unique_ptr<const fuchsia::media::StreamOutputConfig>
   CoreCodecBuildNewOutputConfig(
       uint64_t stream_lifetime_ordinal,
       uint64_t new_output_buffer_constraints_version_ordinal,

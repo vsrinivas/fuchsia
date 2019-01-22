@@ -125,12 +125,12 @@ class ScopedRelock {
 };
 
 uint32_t PacketCountFromPortSettings(
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings) {
-  return settings.packet_count_for_codec + settings.packet_count_for_client;
+    const fuchsia::media::StreamBufferSettings& settings) {
+  return settings.packet_count_for_server + settings.packet_count_for_client;
 }
 
 uint32_t BufferCountFromPortSettings(
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings) {
+    const fuchsia::media::StreamBufferSettings& settings) {
   if (settings.single_buffer_mode) {
     return 1;
   }
@@ -139,6 +139,37 @@ uint32_t BufferCountFromPortSettings(
 
 }  // namespace
 
+CodecImpl::CodecImpl(
+    std::unique_ptr<CodecAdmission> codec_admission,
+    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
+    std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
+    fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request)
+    // The parameters to CodecAdapter constructor here aren't important.
+    : CodecAdapter(lock_, this),
+      codec_admission_(std::move(codec_admission)),
+      shared_fidl_dispatcher_(shared_fidl_dispatcher),
+      shared_fidl_thread_(shared_fidl_thread),
+      // TODO(dustingreen): Maybe have another parameter for encoder params, or
+      // maybe separate constructor.
+      decoder_params_(std::move(decoder_params)),
+      // TODO(rjascani): Uncomment after soft transition complete.
+      // tmp_interface_request_(std::move(codec_request)),
+      // binding_(this),
+      binding_(this, std::move(codec_request)),
+      stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
+  // For now, decoder_params is required.
+  //
+  // TODO(dustingreen): Make decoder_params || encoder_params required.
+  ZX_DEBUG_ASSERT(decoder_params_);
+  // TODO(rjascani): uncomment after soft transition complete
+  /* ZX_DEBUG_ASSERT(tmp_interface_request_); */
+  // This is the binding_'s error handler, not the owner_error_handler_ which
+  // is related but separate.
+  binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
+  initial_input_format_details_ = &decoder_params_->input_details;
+}
+
+// TODO(rjascani): Remove after soft transition complete.
 CodecImpl::CodecImpl(
     std::unique_ptr<CodecAdmission> codec_admission,
     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
@@ -152,14 +183,12 @@ CodecImpl::CodecImpl(
       // TODO(dustingreen): Maybe have another parameter for encoder params, or
       // maybe separate constructor.
       decoder_params_(std::move(decoder_params)),
-      tmp_interface_request_(std::move(codec_request)),
-      binding_(this),
+      binding_(this, std::move(codec_request)),
       stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
   // For now, decoder_params is required.
   //
   // TODO(dustingreen): Make decoder_params || encoder_params required.
   ZX_DEBUG_ASSERT(decoder_params_);
-  ZX_DEBUG_ASSERT(tmp_interface_request_);
   // This is the binding_'s error handler, not the owner_error_handler_ which
   // is related but separate.
   binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
@@ -205,7 +234,8 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
   // Up to once only.  No re-use.
   ZX_DEBUG_ASSERT(!was_bind_async_called_);
   ZX_DEBUG_ASSERT(!binding_.is_bound());
-  ZX_DEBUG_ASSERT(tmp_interface_request_);
+  // TODO(rjascani): Uncomment after soft transition complete.
+  //ZX_DEBUG_ASSERT(tmp_interface_request_);
   was_bind_async_called_ = true;
 
   zx_status_t start_thread_result = stream_control_loop_.StartThread(
@@ -248,18 +278,22 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     // of that dispatching would tend to land in FailLocked().  The concurrency
     // is just worth keeping in mind for the rest of the current lambda is all.
     PostToSharedFidl([this] {
-      zx_status_t bind_result = binding_.Bind(std::move(tmp_interface_request_),
-                                              shared_fidl_dispatcher_);
+      // TODO(rjascani): Uncomment after soft transition complete.
+      // zx_status_t bind_result =
+      // binding_.Bind(std::move(tmp_interface_request_),
+      //                                        shared_fidl_dispatcher_);
+      zx_status_t bind_result = binding_.Bind(shared_fidl_dispatcher_);
       if (bind_result != ZX_OK) {
         Fail("binding_.Bind() failed");
         return;
       }
-      ZX_DEBUG_ASSERT(!tmp_interface_request_);
+      // TODO(rjascani): Uncomment after soft transition complete.
+      //ZX_DEBUG_ASSERT(!tmp_interface_request_);
     });
 
     input_constraints_ =
-        std::make_unique<fuchsia::mediacodec::CodecBufferConstraints>(
-            fuchsia::mediacodec::CodecBufferConstraints{
+        std::make_unique<fuchsia::media::StreamBufferConstraints>(
+            fuchsia::media::StreamBufferConstraints{
                 .buffer_constraints_version_ordinal =
                     kInputBufferConstraintsVersionOrdinal,
                 // This is not really a suggestion; actual values must be odd,
@@ -267,7 +301,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
                 .default_settings.buffer_lifetime_ordinal = 0,
                 .default_settings.buffer_constraints_version_ordinal =
                     kInputDefaultBufferConstraintsVersionOrdinal,
-                .default_settings.packet_count_for_codec =
+                .default_settings.packet_count_for_server =
                     kInputDefaultPacketCountForCodec,
                 .default_settings.packet_count_for_client =
                     kInputDefaultPacketCountForClient,
@@ -279,12 +313,12 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
                 .per_packet_buffer_bytes_recommended =
                     kInputPerPacketBufferBytesRecommended,
                 .per_packet_buffer_bytes_max = kInputPerPacketBufferBytesMax,
-                .packet_count_for_codec_min = kInputPacketCountForCodecMin,
-                .packet_count_for_codec_recommended =
+                .packet_count_for_server_min = kInputPacketCountForCodecMin,
+                .packet_count_for_server_recommended =
                     kInputPacketCountForCodecRecommended,
-                .packet_count_for_codec_recommended_max =
+                .packet_count_for_server_recommended_max =
                     kInputPacketCountForCodecRecommendedMax,
-                .packet_count_for_codec_max = kInputPacketCountForCodecMax,
+                .packet_count_for_server_max = kInputPacketCountForCodecMax,
                 .packet_count_for_client_max = kInputPacketCountForClientMax,
                 .single_buffer_mode_allowed = kInputSingleBufferModeAllowed,
             });
@@ -309,7 +343,7 @@ void CodecImpl::EnableOnStreamFailed() {
 }
 
 void CodecImpl::SetInputBufferSettings(
-    fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
+    fuchsia::media::StreamBufferSettings input_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   PostToStreamControl([this, input_settings = std::move(input_settings)] {
     SetInputBufferSettings_StreamControl(std::move(input_settings));
@@ -317,7 +351,7 @@ void CodecImpl::SetInputBufferSettings(
 }
 
 void CodecImpl::SetInputBufferSettings_StreamControl(
-    fuchsia::mediacodec::CodecPortBufferSettings input_settings) {
+    fuchsia::media::StreamBufferSettings input_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -333,7 +367,7 @@ void CodecImpl::SetInputBufferSettings_StreamControl(
   }  // ~lock
 }
 
-void CodecImpl::AddInputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
+void CodecImpl::AddInputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   PostToStreamControl([this, buffer = std::move(buffer)]() mutable {
     AddInputBuffer_StreamControl(std::move(buffer));
@@ -341,7 +375,7 @@ void CodecImpl::AddInputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
 }
 
 void CodecImpl::AddInputBuffer_StreamControl(
-    fuchsia::mediacodec::CodecBuffer buffer) {
+    fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   if (IsStopping()) {
     return;
@@ -354,7 +388,7 @@ void CodecImpl::AddInputBuffer_StreamControl(
 }
 
 void CodecImpl::SetOutputBufferSettings(
-    fuchsia::mediacodec::CodecPortBufferSettings output_settings) {
+    fuchsia::media::StreamBufferSettings output_settings) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
 
   {  // scope lock
@@ -397,7 +431,7 @@ void CodecImpl::SetOutputBufferSettings(
   }  // ~lock
 }
 
-void CodecImpl::AddOutputBuffer(fuchsia::mediacodec::CodecBuffer buffer) {
+void CodecImpl::AddOutputBuffer(fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   bool output_done_configuring =
       AddBufferCommon(kOutputPort, std::move(buffer));
@@ -546,7 +580,7 @@ void CodecImpl::Sync_StreamControl(SyncCallback callback) {
 }
 
 void CodecImpl::RecycleOutputPacket(
-    fuchsia::mediacodec::CodecPacketHeader available_output_packet) {
+    fuchsia::media::PacketHeader available_output_packet) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   CodecPacket* packet = nullptr;
   {  // scope lock
@@ -609,7 +643,7 @@ void CodecImpl::RecycleOutputPacket(
 
 void CodecImpl::QueueInputFormatDetails(
     uint64_t stream_lifetime_ordinal,
-    fuchsia::mediacodec::CodecFormatDetails format_details) {
+    fuchsia::media::FormatDetails format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -632,7 +666,7 @@ void CodecImpl::QueueInputFormatDetails(
 // should be allowed nonetheless).
 void CodecImpl::QueueInputFormatDetails_StreamControl(
     uint64_t stream_lifetime_ordinal,
-    fuchsia::mediacodec::CodecFormatDetails format_details) {
+    fuchsia::media::FormatDetails format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
 
   std::unique_lock<std::mutex> lock(lock_);
@@ -659,7 +693,7 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
     return;
   }
   stream_->SetInputFormatDetails(
-      std::make_unique<fuchsia::mediacodec::CodecFormatDetails>(
+      std::make_unique<fuchsia::media::FormatDetails>(
           std::move(format_details)));
   // SetOobConfigPending(true) to ensure oob_config_pending() is true.
   //
@@ -670,13 +704,13 @@ void CodecImpl::QueueInputFormatDetails_StreamControl(
   // stream.  For QueueInputFormatDetails() at the start of a stream before any
   // packets, oob_config_pending() will already be true.
   //
-  // For decoders this is basically a pending codec_oob_bytes.  For encoders
+  // For decoders this is basically a pending oob_bytes.  For encoders
   // this pending config change can potentially include uncompressed format
   // details, if mid-stream format change is supported by the encoder.
   stream_->SetOobConfigPending(true);
 }
 
-void CodecImpl::QueueInputPacket(fuchsia::mediacodec::CodecPacket packet) {
+void CodecImpl::QueueInputPacket(fuchsia::media::Packet packet) {
   ZX_DEBUG_ASSERT(thrd_current() == fidl_thread());
   {  // scope lock
     std::unique_lock<std::mutex> lock(lock_);
@@ -693,10 +727,10 @@ void CodecImpl::QueueInputPacket(fuchsia::mediacodec::CodecPacket packet) {
 }
 
 void CodecImpl::QueueInputPacket_StreamControl(
-    fuchsia::mediacodec::CodecPacket packet) {
+    fuchsia::media::Packet packet) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
 
-  fuchsia::mediacodec::CodecPacketHeader temp_header_copy =
+  fuchsia::media::PacketHeader temp_header_copy =
       fidl::Clone(packet.header);
 
   {  // scope lock
@@ -1076,8 +1110,8 @@ bool CodecImpl::IsStreamActiveLocked() {
 
 void CodecImpl::SetBufferSettingsCommon(
     std::unique_lock<std::mutex>& lock, CodecPort port,
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
+    const fuchsia::media::StreamBufferSettings& settings,
+    const fuchsia::media::StreamBufferConstraints& constraints) {
   ZX_DEBUG_ASSERT(port == kInputPort &&
                       thrd_current() == stream_control_thread_ ||
                   port == kOutputPort && thrd_current() == fidl_thread());
@@ -1148,7 +1182,7 @@ void CodecImpl::SetBufferSettingsCommon(
 
   // This also starts the new buffer_lifetime_ordinal.
   port_settings_[port] =
-      std::make_unique<fuchsia::mediacodec::CodecPortBufferSettings>(
+      std::make_unique<fuchsia::media::StreamBufferSettings>(
           std::move(settings));
   buffer_lifetime_ordinal_[port] =
       port_settings_[port]->buffer_lifetime_ordinal;
@@ -1191,16 +1225,16 @@ void CodecImpl::EnsureBuffersNotConfigured(std::unique_lock<std::mutex>& lock,
 
 bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
     CodecPort port,
-    const fuchsia::mediacodec::CodecPortBufferSettings& settings,
-    const fuchsia::mediacodec::CodecBufferConstraints& constraints) {
-  if (settings.packet_count_for_codec <
-      constraints.packet_count_for_codec_min) {
-    FailLocked("packet_count_for_codec < packet_count_for_codec_min");
+    const fuchsia::media::StreamBufferSettings& settings,
+    const fuchsia::media::StreamBufferConstraints& constraints) {
+  if (settings.packet_count_for_server <
+      constraints.packet_count_for_server_min) {
+    FailLocked("packet_count_for_server < packet_count_for_server_min");
     return false;
   }
-  if (settings.packet_count_for_codec >
-      constraints.packet_count_for_codec_max) {
-    FailLocked("packet_count_for_codec > packet_count_for_codec_max");
+  if (settings.packet_count_for_server >
+      constraints.packet_count_for_server_max) {
+    FailLocked("packet_count_for_server > packet_count_for_server_max");
     return false;
   }
   if (settings.packet_count_for_client >
@@ -1226,7 +1260,7 @@ bool CodecImpl::ValidateBufferSettingsVsConstraintsLocked(
 }
 
 bool CodecImpl::AddBufferCommon(CodecPort port,
-                                fuchsia::mediacodec::CodecBuffer buffer) {
+                                fuchsia::media::StreamBuffer buffer) {
   ZX_DEBUG_ASSERT(port == kInputPort &&
                       (thrd_current() == stream_control_thread_) ||
                   port == kOutputPort && (thrd_current() == fidl_thread()));
@@ -1804,7 +1838,7 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
   // new_output_buffer_constraints_version_ordinal,
   // buffer_constraints_action_required);
 
-  std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig> output_config;
+  std::unique_ptr<const fuchsia::media::StreamOutputConfig> output_config;
   {  // scope unlock
     ScopedUnlock unlock(lock);
     // Don't call the core codec under the lock_, because we can avoid doing so,
@@ -1846,7 +1880,7 @@ void CodecImpl::GenerateAndSendNewOutputConfig(
   sent_format_details_version_ordinal_[kOutputPort] =
       new_output_format_details_version_ordinal;
 
-  // Intentional copy of fuchsia::mediacodec::OutputConfig output_config_ here,
+  // Intentional copy of fuchsia::media::OutputConfig output_config_ here,
   // as we want output_config_ to remain valid (at least for debugging reasons
   // for now).
   PostToSharedFidl(
@@ -1920,7 +1954,7 @@ void CodecImpl::MidStreamOutputConfigChange(uint64_t stream_lifetime_ordinal) {
 thrd_t CodecImpl::fidl_thread() { return shared_fidl_thread_; }
 
 void CodecImpl::SendFreeInputPacketLocked(
-    fuchsia::mediacodec::CodecPacketHeader header) {
+    fuchsia::media::PacketHeader header) {
   // We allow calling this method on StreamControl or InputData ordering domain.
   // Because the InputData ordering domain thread isn't visible to this code,
   // if this isn't the StreamControl then we can only assert that this thread
@@ -2083,7 +2117,7 @@ bool CodecImpl::IsPotentiallyCoreCodecThread() {
 
 void CodecImpl::HandlePendingInputFormatDetails() {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
-  const fuchsia::mediacodec::CodecFormatDetails* input_details = nullptr;
+  const fuchsia::media::FormatDetails* input_details = nullptr;
   if (stream_->input_format_details()) {
     input_details = stream_->input_format_details();
   } else {
@@ -2250,7 +2284,7 @@ void CodecImpl::onCoreCodecInputPacketDone(CodecPacket* packet) {
     ZX_DEBUG_ASSERT(
         !all_packets_[kInputPort][packet->packet_index()]->is_free());
     all_packets_[kInputPort][packet->packet_index()]->SetFree(true);
-    SendFreeInputPacketLocked(fuchsia::mediacodec::CodecPacketHeader{
+    SendFreeInputPacketLocked(fuchsia::media::PacketHeader{
         .buffer_lifetime_ordinal = packet->buffer_lifetime_ordinal(),
         .packet_index = packet->packet_index()});
   }  // ~lock
@@ -2282,7 +2316,7 @@ void CodecImpl::onCoreCodecOutputPacket(CodecPacket* packet,
     PostToSharedFidl(
         [this,
          p =
-             fuchsia::mediacodec::CodecPacket{
+             fuchsia::media::Packet{
                  .header.buffer_lifetime_ordinal =
                      packet->buffer_lifetime_ordinal(),
                  .header.packet_index = packet->packet_index(),
@@ -2355,13 +2389,13 @@ CodecImpl::Stream::~Stream() {
 }
 
 void CodecImpl::Stream::SetInputFormatDetails(
-    std::unique_ptr<fuchsia::mediacodec::CodecFormatDetails>
+    std::unique_ptr<fuchsia::media::FormatDetails>
         input_format_details) {
   // This is allowed to happen multiple times per stream.
   input_format_details_ = std::move(input_format_details);
 }
 
-const fuchsia::mediacodec::CodecFormatDetails*
+const fuchsia::media::FormatDetails*
 CodecImpl::Stream::input_format_details() {
   return input_format_details_.get();
 }
@@ -2405,7 +2439,7 @@ bool CodecImpl::Stream::failure_seen() { return failure_seen_; }
 // methods instead of virtual methods.
 //
 
-void CodecImpl::CoreCodecInit(const fuchsia::mediacodec::CodecFormatDetails&
+void CodecImpl::CoreCodecInit(const fuchsia::media::FormatDetails&
                                   initial_input_format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecInit(initial_input_format_details);
@@ -2440,7 +2474,7 @@ void CodecImpl::CoreCodecStartStream() {
 }
 
 void CodecImpl::CoreCodecQueueInputFormatDetails(
-    const fuchsia::mediacodec::CodecFormatDetails&
+    const fuchsia::media::FormatDetails&
         per_stream_override_format_details) {
   ZX_DEBUG_ASSERT(thrd_current() == stream_control_thread_);
   codec_adapter_->CoreCodecQueueInputFormatDetails(
@@ -2472,7 +2506,7 @@ bool CodecImpl::IsCoreCodecRequiringOutputConfigForFormatDetection() {
 // during setup, during a core codec initiated mid-stream format change, or
 // during stream start before any input data has been delivered for the new
 // stream.
-std::unique_ptr<const fuchsia::mediacodec::CodecOutputConfig>
+std::unique_ptr<const fuchsia::media::StreamOutputConfig>
 CodecImpl::CoreCodecBuildNewOutputConfig(
     uint64_t stream_lifetime_ordinal,
     uint64_t new_output_buffer_constraints_version_ordinal,
