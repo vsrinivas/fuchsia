@@ -13,8 +13,6 @@ source_set("defs") {
 }
 
 executable_package("intent_test_parent_module") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [
@@ -40,8 +38,6 @@ executable_package("intent_test_parent_module") {
 }
 
 executable_package("intent_test_child_module") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [

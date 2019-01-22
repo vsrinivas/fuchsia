@@ -14,8 +14,6 @@ source_set("defs") {
 }
 
 executable_package("queue_persistence_test_module") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [
@@ -43,8 +41,6 @@ executable_package("queue_persistence_test_module") {
 }
 
 executable_package("queue_persistence_test_agent") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [

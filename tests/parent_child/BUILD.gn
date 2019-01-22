@@ -13,8 +13,6 @@ source_set("defs") {
 }
 
 executable_package("parent_child_test_child_module1") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [
@@ -40,8 +38,6 @@ executable_package("parent_child_test_child_module1") {
 }
 
 executable_package("parent_child_test_child_module2") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [
@@ -67,8 +63,6 @@ executable_package("parent_child_test_child_module2") {
 }
 
 executable_package("parent_child_test_parent_module") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   meta = [
