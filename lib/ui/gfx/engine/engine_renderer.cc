@@ -12,6 +12,7 @@
 #include "garnet/lib/ui/gfx/resources/dump_visitor.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/renderers/renderer.h"
 #include "garnet/lib/ui/gfx/resources/stereo_camera.h"
 #include "lib/escher/hmd/pose_buffer_latching_shader.h"
@@ -203,6 +204,10 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
       shadow_map = shadow_renderer_->GenerateDirectionalShadowMap(
           frame, stage, model, stage.key_light().direction(),
           stage.key_light().color());
+      break;
+    case ::fuchsia::ui::gfx::ShadowTechnique::STENCIL_SHADOW_VOLUME:
+      FXL_DLOG(WARNING) << "Stencil shadow volumes not implemented";
+      paper_renderer_->set_shadow_type(escher::PaperRendererShadowType::kSsdo);
       break;
   }
 

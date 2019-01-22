@@ -5,79 +5,79 @@
 library fuchsia.ui.gfx;
 
 struct vec2 {
-  float32 x;
-  float32 y;
+    float32 x;
+    float32 y;
 };
 
 struct vec3 {
-  float32 x;
-  float32 y;
-  float32 z;
+    float32 x;
+    float32 y;
+    float32 z;
 };
 
 struct vec4 {
-  float32 x;
-  float32 y;
-  float32 z;
-  float32 w;
+    float32 x;
+    float32 y;
+    float32 z;
+    float32 w;
 };
 
 struct mat4 {
-  // Column major order.
-  array<float32>:16 matrix;
+    // Column major order.
+    array<float32>:16 matrix;
 };
 
 // TODO(MZ-238): use float32s instead of uint8.
 struct ColorRgba {
-  uint8 red;
-  uint8 green;
-  uint8 blue;
-  uint8 alpha;
+    uint8 red;
+    uint8 green;
+    uint8 blue;
+    uint8 alpha;
 };
 
 struct ColorRgb {
-  float32 red;
-  float32 green;
-  float32 blue;
+    float32 red;
+    float32 green;
+    float32 blue;
 };
 
 struct Quaternion {
-  float32 x;
-  float32 y;
-  float32 z;
-  float32 w;
+    float32 x;
+    float32 y;
+    float32 z;
+    float32 w;
 };
 
 // Oriented plane described by a normal vector and a distance
 // from the origin along that vector.
 struct Plane3 {
-  vec3 dir;
-  float32 dist;
+    vec3 dir;
+    float32 dist;
 };
 
 struct FactoredTransform {
-  vec3 translation;
-  vec3 scale;
-  // Point around which rotation and scaling occur.
-  vec3 anchor;
-  Quaternion rotation;
+    vec3 translation;
+    vec3 scale;
+    // Point around which rotation and scaling occur.
+    vec3 anchor;
+    Quaternion rotation;
 };
 
 union Value {
-  float32 vector1;
-  vec2 vector2;
-  vec3 vector3;
-  vec4 vector4;
-  mat4 matrix4x4;
-  ColorRgba color_rgba;
-  ColorRgb color_rgb;
-  // Degrees of counter-clockwise rotation in the XY plane.
-  float32 degrees;
-  Quaternion quaternion;
-  FactoredTransform transform;
-  // ID of a value-producing resource (an animation or an expression).
-  // The type of this value matches the type produced by the named resource.
-  uint32 variable_id;
+    float32 vector1;
+    vec2 vector2;
+    vec3 vector3;
+    vec4 vector4;
+    mat4 matrix4x4;
+    ColorRgba color_rgba;
+    ColorRgb color_rgb;
+    // Degrees of counter-clockwise rotation in the XY plane.
+    float32 degrees;
+    Quaternion quaternion;
+    FactoredTransform transform;
+    // ID of a value-producing resource (an animation or an expression).
+    // The type of this value matches the type produced by the named resource.
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -85,8 +85,8 @@ union Value {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a float32, and |value| is ignored.
 struct FloatValue {
-  float32 value;
-  uint32 variable_id;
+    float32 value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -94,8 +94,8 @@ struct FloatValue {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a vec2, and |value| is ignored.
 struct Vector2Value {
-  vec2 value;
-  uint32 variable_id;
+    vec2 value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -103,8 +103,8 @@ struct Vector2Value {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a vec3, and |value| is ignored.
 struct Vector3Value {
-  vec3 value;
-  uint32 variable_id;
+    vec3 value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -112,8 +112,8 @@ struct Vector3Value {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a vec4, and |value| is ignored.
 struct Vector4Value {
-  vec4 value;
-  uint32 variable_id;
+    vec4 value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -121,8 +121,8 @@ struct Vector4Value {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a vec4, and |value| is ignored.
 struct Matrix4Value {
-  mat4 value;
-  uint32 variable_id;
+    mat4 value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -130,8 +130,8 @@ struct Matrix4Value {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a ColorRgb, and |value| is ignored.
 struct ColorRgbValue {
-  ColorRgb value;
-  uint32 variable_id;
+    ColorRgb value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -139,8 +139,8 @@ struct ColorRgbValue {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a ColorRgba, and |value| is ignored.
 struct ColorRgbaValue {
-  ColorRgba value;
-  uint32 variable_id;
+    ColorRgba value;
+    uint32 variable_id;
 };
 
 // A value that is specified explicitly by |value| if |variable_id| is zero,
@@ -148,96 +148,96 @@ struct ColorRgbaValue {
 // an animation or expression.  In the latter case, the value produced by the
 // resource must be a Quaternion, and |value| is ignored.
 struct QuaternionValue {
-  Quaternion value;
-  uint32 variable_id;
+    Quaternion value;
+    uint32 variable_id;
 };
 
 enum ValueType {
-  kNone = 0;
-  kVector1 = 1;
-  kVector2 = 2;
-  kVector3 = 3;
-  kVector4 = 4;
-  kMatrix4 = 5;
-  kColorRgb = 6;
-  kColorRgba = 7;
-  kQuaternion = 8;
-  kFactoredTransform = 9;
+    kNone = 0;
+    kVector1 = 1;
+    kVector2 = 2;
+    kVector3 = 3;
+    kVector4 = 4;
+    kMatrix4 = 5;
+    kColorRgb = 6;
+    kColorRgba = 7;
+    kQuaternion = 8;
+    kFactoredTransform = 9;
 };
 
 // Describes how nodes interact with hit testings.
 enum HitTestBehavior {
-  // Apply hit testing to the node's content, its parts, and its children.
-  kDefault = 0;
+    // Apply hit testing to the node's content, its parts, and its children.
+    kDefault = 0;
 
-  // Suppress hit testing of the node and everything it contains.
-  kSuppress = 1;
+    // Suppress hit testing of the node and everything it contains.
+    kSuppress = 1;
 };
 
 // Rendering target metrics associated with a node.
 // See also |MetricsEvent|.
 struct Metrics {
-  // The ratio between the size of one logical pixel within the node's local
-  // coordinate system and the size of one physical pixel of the rendering
-  // target.
-  //
-  // This scale factors change in relation to the resolution of the rendering
-  // target and the scale transformations applied by containing nodes.
-  // They are always strictly positive and non-zero.
-  //
-  // For example, suppose the rendering target is a high resolution display
-  // with a device pixel ratio of 2.0 meaning that each logical pixel
-  // within the model corresponds to two physical pixels of the display.
-  // Assuming no scale transformations affect the node, then its metrics event
-  // will report a scale factor of 2.0.
-  //
-  // Building on this example, if instead the node's parent applies a
-  // scale transformation of 0.25 to the node, then the node's metrics event
-  // will report a scale factor of 0.5 indicating that the node should render
-  // its content at a reduced resolution and level of detail since a smaller
-  // area of physical pixels (half the size in each dimension) will be rendered.
-  float32 scale_x;
-  float32 scale_y;
-  float32 scale_z;
+    // The ratio between the size of one logical pixel within the node's local
+    // coordinate system and the size of one physical pixel of the rendering
+    // target.
+    //
+    // This scale factors change in relation to the resolution of the rendering
+    // target and the scale transformations applied by containing nodes.
+    // They are always strictly positive and non-zero.
+    //
+    // For example, suppose the rendering target is a high resolution display
+    // with a device pixel ratio of 2.0 meaning that each logical pixel
+    // within the model corresponds to two physical pixels of the display.
+    // Assuming no scale transformations affect the node, then its metrics event
+    // will report a scale factor of 2.0.
+    //
+    // Building on this example, if instead the node's parent applies a
+    // scale transformation of 0.25 to the node, then the node's metrics event
+    // will report a scale factor of 0.5 indicating that the node should render
+    // its content at a reduced resolution and level of detail since a smaller
+    // area of physical pixels (half the size in each dimension) will be rendered.
+    float32 scale_x;
+    float32 scale_y;
+    float32 scale_z;
 };
 
 // Represents an axis-aligned bounding box.  If any of the dimensions has a
 // negative extent (e.g. max.x < min.x) then the bounding box is treated as
 // empty.
 struct BoundingBox {
-  vec3 min;
-  vec3 max;
+    vec3 min;
+    vec3 max;
 };
 
 // Represents the properties for a View.
 struct ViewProperties {
-  // The View's bounding box extents can be defined as:
-  //    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
-  // Content contained within the View is clipped to this bounding box.
-  //
-  // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
-  // with a potentially non-zero min?
-  BoundingBox bounding_box;
+    // The View's bounding box extents can be defined as:
+    //    { bounding_box.min - inset_from_min, bounding_box.max + inset_from_max }
+    // Content contained within the View is clipped to this bounding box.
+    //
+    // TODO(SCN-819): should we just have a vec3 extent instead of a bounding box
+    // with a potentially non-zero min?
+    BoundingBox bounding_box;
 
-  // |insets_from_min| and |insets_from_max| specify the distances between the
-  // view's bounding box and that of its parent.
-  vec3 inset_from_min;
-  vec3 inset_from_max;
+    // |insets_from_min| and |insets_from_max| specify the distances between the
+    // view's bounding box and that of its parent.
+    vec3 inset_from_min;
+    vec3 inset_from_max;
 
-  // Whether the View can receive a focus event; default is true.  When
-  // false, and this View is eligible to receive a focus event, no
-  // focus/unfocus event is actually sent to any View.
-  bool focus_change = true;
+    // Whether the View can receive a focus event; default is true.  When
+    // false, and this View is eligible to receive a focus event, no
+    // focus/unfocus event is actually sent to any View.
+    bool focus_change = true;
 
-  // Whether the View allows geometrically underlying Views to receive input;
-  // default is true. When false, Scenic does not send input events to
-  // underlying Views.
-  bool downward_input = true;
+    // Whether the View allows geometrically underlying Views to receive input;
+    // default is true. When false, Scenic does not send input events to
+    // underlying Views.
+    bool downward_input = true;
 };
 
 // Represents the state of a View in Scenic.
 struct ViewState {
-  // Whether the View is rendering. Default is false. Delivered to the View's
-  // corresponding ViewHolder after the View's first frame render request.
-  bool is_rendering;
+    // Whether the View is rendering. Default is false. Delivered to the View's
+    // corresponding ViewHolder after the View's first frame render request.
+    bool is_rendering;
 };

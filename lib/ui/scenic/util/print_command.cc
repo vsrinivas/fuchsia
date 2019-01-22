@@ -76,8 +76,18 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SetLightColor";
     case Command::Tag::kSetLightDirection:
       return stream << "SetLightDirection";
+    case Command::Tag::kSetPointLightPosition:
+      return stream << "SetPointLightPosition";
+    case Command::Tag::kSetPointLightFalloff:
+      return stream << "SetPointLightFalloff";
     case Command::Tag::kAddLight:
       return stream << "AddLight";
+    case Command::Tag::kScene_AddAmbientLight:
+      return stream << "AddAmbientLight";
+    case Command::Tag::kScene_AddDirectionalLight:
+      return stream << "AddDirectionalLight";
+    case Command::Tag::kScene_AddPointLight:
+      return stream << "AddPointLight";
     case Command::Tag::kDetachLight:
       return stream << "DetachLight";
     case Command::Tag::kDetachLights:
@@ -146,6 +156,9 @@ std::ostream& operator<<(std::ostream& stream,
       break;
     case ResourceArgs::Tag::kDirectionalLight:
       stream << "DirectionalLight";
+      break;
+    case ResourceArgs::Tag::kPointLight:
+      stream << "PointLight";
       break;
     case ResourceArgs::Tag::kRectangle:
       stream << "Rectangle";
@@ -223,6 +236,9 @@ std::ostream& operator<<(std::ostream& stream,
           break;
         case ShadowTechnique::MOMENT_SHADOW_MAP:
           stream << "MomentShadowMap";
+          break;
+        case ShadowTechnique::STENCIL_SHADOW_VOLUME:
+          stream << "StencilShadowVolume";
           break;
       }
       break;

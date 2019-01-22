@@ -99,6 +99,38 @@ TEST_F(NodeTest, SettingHitTestBehavior) {
             shape_node->hit_test_behavior());
 }
 
+TEST_F(NodeTest, SettingClipPlanes) {
+  const ResourceId kNodeId = 1;
+
+  EXPECT_TRUE(Apply(scenic::NewCreateEntityNodeCmd(kNodeId)));
+
+  auto node = FindResource<EntityNode>(kNodeId);
+  EXPECT_EQ(0U, node->clip_planes().size());
+
+  std::vector<fuchsia::ui::gfx::Plane3> planes;
+  planes.push_back({.dir = {.x = 1.f, .y = 0.f, .z = 0.f}, .dist = -1.f});
+  planes.push_back({.dir = {.x = 0.f, .y = 1.f, .z = 0.f}, .dist = -2.f});
+  EXPECT_TRUE(Apply(scenic::NewSetClipPlanesCmd(kNodeId, planes)));
+  EXPECT_EQ(2U, node->clip_planes().size());
+
+  // Setting clip planes replaces the previous ones.
+  planes.push_back({.dir = {.x = 0.f, .y = 0.f, .z = 1.f}, .dist = -3.f});
+  EXPECT_TRUE(Apply(scenic::NewSetClipPlanesCmd(kNodeId, planes)));
+  EXPECT_EQ(3U, node->clip_planes().size());
+
+  // Verify the the planes have the values set by the Cmd.
+  for (size_t i = 0; i < planes.size(); ++i) {
+    EXPECT_EQ(planes[i].dir.x, node->clip_planes()[i].dir().x);
+    EXPECT_EQ(planes[i].dir.y, node->clip_planes()[i].dir().y);
+    EXPECT_EQ(planes[i].dir.z, node->clip_planes()[i].dir().z);
+    EXPECT_EQ(planes[i].dist, node->clip_planes()[i].dist());
+  }
+
+  // Clear clip planes by setting empty vector of planes.
+  EXPECT_TRUE(Apply(scenic::NewSetClipPlanesCmd(kNodeId, {})));
+  EXPECT_EQ(0U, node->clip_planes().size());
+}
+
 }  // namespace test
 }  // namespace gfx
 }  // namespace scenic_impl

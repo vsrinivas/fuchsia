@@ -76,6 +76,7 @@ executable("unittests") {
     "resource_linker_unittest.cc",
     "run_all_unittests.cc",
     "scene_graph_unittest.cc",
+    "scene_unittest.cc",
     "session_handler_unittest.cc",
     "session_unittest.cc",
     "shape_unittest.cc",

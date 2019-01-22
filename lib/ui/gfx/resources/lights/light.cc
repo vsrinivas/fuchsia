@@ -18,13 +18,6 @@ Light::Light(Session* session, ResourceId node_id,
 }
 
 bool Light::SetColor(const glm::vec3& color) {
-  if (color.x != color.y || color.y != color.z) {
-    // TODO(MZ-398): This is a limitation of the SSDO shadows.
-    error_reporter()->ERROR() << "scenic::gfx::Light::SetColor(): "
-                                 "colored lights not supported.";
-    return false;
-  }
-
   color_ = color;
   return true;
 }

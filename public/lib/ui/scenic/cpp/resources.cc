@@ -287,6 +287,10 @@ void EntityNode::SetClip(uint32_t clip_id, bool clip_to_self) {
   session()->Enqueue(NewSetClipCmd(id(), clip_id, clip_to_self));
 }
 
+void EntityNode::SetClipPlanes(std::vector<fuchsia::ui::gfx::Plane3> planes) {
+  session()->Enqueue(NewSetClipPlanesCmd(id(), std::move(planes)));
+}
+
 ImportNode::ImportNode(Session* session) : ContainerNode(session) {}
 
 ImportNode::ImportNode(ImportNode&& moved) : ContainerNode(std::move(moved)) {}
@@ -389,6 +393,18 @@ Scene::~Scene() = default;
 
 void Scene::AddLight(uint32_t light_id) {
   session()->Enqueue(NewAddLightCmd(id(), light_id));
+}
+
+void Scene::AddAmbientLight(uint32_t light_id) {
+  session()->Enqueue(NewSceneAddAmbientLightCmd(id(), light_id));
+}
+
+void Scene::AddDirectionalLight(uint32_t light_id) {
+  session()->Enqueue(NewSceneAddDirectionalLightCmd(id(), light_id));
+}
+
+void Scene::AddPointLight(uint32_t light_id) {
+  session()->Enqueue(NewSceneAddPointLightCmd(id(), light_id));
 }
 
 void Scene::DetachLights() { session()->Enqueue(NewDetachLightsCmd(id())); }
@@ -565,6 +581,26 @@ void DirectionalLight::SetDirection(const float direction[3]) {
 
 void DirectionalLight::SetDirection(uint32_t variable_id) {
   session()->Enqueue(NewSetLightDirectionCmd(id(), variable_id));
+}
+
+PointLight::PointLight(Session* session) : Light(session) {
+  session->Enqueue(NewCreatePointLightCmd(id()));
+}
+
+PointLight::PointLight(PointLight&& moved) : Light(std::move(moved)) {}
+
+PointLight::~PointLight() = default;
+
+void PointLight::SetPosition(const float position[3]) {
+  session()->Enqueue(NewSetPointLightPositionCmd(id(), position));
+}
+
+void PointLight::SetPosition(uint32_t variable_id) {
+  session()->Enqueue(NewSetPointLightPositionCmd(id(), variable_id));
+}
+
+void PointLight::SetFalloff(float falloff) {
+  session()->Enqueue(NewSetPointLightFalloffCmd(id(), falloff));
 }
 
 }  // namespace scenic

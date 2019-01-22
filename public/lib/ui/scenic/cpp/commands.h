@@ -54,6 +54,7 @@ fuchsia::ui::gfx::Command NewCreateStereoCameraCmd(uint32_t id,
 fuchsia::ui::gfx::Command NewCreateRendererCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateAmbientLightCmd(uint32_t id);
 fuchsia::ui::gfx::Command NewCreateDirectionalLightCmd(uint32_t id);
+fuchsia::ui::gfx::Command NewCreatePointLightCmd(uint32_t id);
 
 fuchsia::ui::gfx::Command NewCreateCircleCmd(uint32_t id, float radius);
 fuchsia::ui::gfx::Command NewCreateRectangleCmd(uint32_t id, float width,
@@ -151,6 +152,8 @@ fuchsia::ui::gfx::Command NewSetMaterialCmd(uint32_t node_id,
                                             uint32_t material_id);
 fuchsia::ui::gfx::Command NewSetClipCmd(uint32_t node_id, uint32_t clip_id,
                                         bool clip_to_self);
+fuchsia::ui::gfx::Command NewSetClipPlanesCmd(
+    uint32_t node_id, std::vector<fuchsia::ui::gfx::Plane3> planes);
 fuchsia::ui::gfx::Command NewSetTagCmd(uint32_t node_id, uint32_t tag_value);
 fuchsia::ui::gfx::Command NewSetHitTestBehaviorCmd(
     uint32_t node_id, fuchsia::ui::gfx::HitTestBehavior hit_test_behavior);
@@ -186,7 +189,21 @@ fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id,
                                                   const float direction[3]);
 fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id,
                                                   uint32_t variable_id);
+fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
+                                                      const float position[3]);
+fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
+                                                      uint32_t variable_id);
+fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
+                                                      const float position[3]);
+fuchsia::ui::gfx::Command NewSetPointLightFalloffCmd(uint32_t light_id,
+                                                     float falloff);
 fuchsia::ui::gfx::Command NewAddLightCmd(uint32_t scene_id, uint32_t light_id);
+fuchsia::ui::gfx::Command NewSceneAddAmbientLightCmd(uint32_t scene_id,
+                                                     uint32_t light_id);
+fuchsia::ui::gfx::Command NewSceneAddDirectionalLightCmd(uint32_t scene_id,
+                                                         uint32_t light_id);
+fuchsia::ui::gfx::Command NewSceneAddPointLightCmd(uint32_t scene_id,
+                                                   uint32_t light_id);
 fuchsia::ui::gfx::Command NewDetachLightCmd(uint32_t light_id);
 fuchsia::ui::gfx::Command NewDetachLightsCmd(uint32_t scene_id);
 

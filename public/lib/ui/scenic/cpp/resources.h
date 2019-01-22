@@ -289,6 +289,7 @@ class EntityNode : public ContainerNode {
   ~EntityNode();
 
   void SetClip(uint32_t clip_id, bool clip_to_self);
+  void SetClipPlanes(std::vector<fuchsia::ui::gfx::Plane3> planes);
 
   void Attach(const ViewHolder& view_holder);
 
@@ -433,6 +434,24 @@ class DirectionalLight final : public Light {
   void SetDirection(uint32_t variable_id);
 };
 
+// Represents a point light resource in a session.
+class PointLight final : public Light {
+ public:
+  explicit PointLight(Session* session);
+  PointLight(PointLight&& moved);
+  ~PointLight();
+
+  // Sets the light's direction.
+  void SetPosition(float dx, float dy, float dz) {
+    SetPosition((float[3]){dx, dy, dz});
+  }
+  void SetPosition(const float direction[3]);
+  void SetPosition(uint32_t variable_id);
+
+  // Set the light's falloff.
+  void SetFalloff(float falloff);
+};
+
 // Represents a scene resource in a session.
 class Scene final : public ContainerNode {
  public:
@@ -445,6 +464,25 @@ class Scene final : public ContainerNode {
     AddLight(light.id());
   }
   void AddLight(uint32_t light_id);
+
+  void AddAmbientLight(const AmbientLight& light) {
+    ZX_DEBUG_ASSERT(session() == light.session());
+    AddAmbientLight(light.id());
+  }
+  void AddAmbientLight(uint32_t light_id);
+
+  void AddDirectionalLight(const DirectionalLight& light) {
+    ZX_DEBUG_ASSERT(session() == light.session());
+    AddDirectionalLight(light.id());
+  }
+  void AddDirectionalLight(uint32_t light_id);
+
+  void AddPointLight(const PointLight& light) {
+    ZX_DEBUG_ASSERT(session() == light.session());
+    AddPointLight(light.id());
+  }
+  void AddPointLight(uint32_t light_id);
+
   void DetachLights();
 
  private:

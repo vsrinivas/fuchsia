@@ -14,10 +14,12 @@ namespace gfx {
 class AmbientLight;
 class DirectionalLight;
 class Light;
+class PointLight;
 class Scene;
 using AmbientLightPtr = fxl::RefPtr<AmbientLight>;
 using DirectionalLightPtr = fxl::RefPtr<DirectionalLight>;
 using LightPtr = fxl::RefPtr<Light>;
+using PointLightPtr = fxl::RefPtr<PointLight>;
 using ScenePtr = fxl::RefPtr<Scene>;
 
 class Scene final : public Node {
@@ -28,6 +30,9 @@ class Scene final : public Node {
   ~Scene() override;
 
   bool AddLight(const LightPtr& light);
+  bool AddAmbientLight(const AmbientLightPtr& light);
+  bool AddDirectionalLight(const DirectionalLightPtr& light);
+  bool AddPointLight(const PointLightPtr& light);
 
   // |Resource|.
   void Accept(class ResourceVisitor* visitor) override;
@@ -43,9 +48,14 @@ class Scene final : public Node {
     return directional_lights_;
   }
 
+  const std::vector<PointLightPtr>& point_lights() const {
+    return point_lights_;
+  }
+
  private:
   std::vector<AmbientLightPtr> ambient_lights_;
   std::vector<DirectionalLightPtr> directional_lights_;
+  std::vector<PointLightPtr> point_lights_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Scene);
 };

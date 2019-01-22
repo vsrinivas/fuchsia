@@ -17,6 +17,7 @@
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
@@ -115,7 +116,10 @@ void Snapshotter::Visit(ShapeNode* r) {
   }
 }
 
-void Snapshotter::Visit(Scene* r) { VisitNode(r); }
+void Snapshotter::Visit(Scene* r) {
+  // TODO(SCN-1221): Should handle Scene better, e.g. storing the lights.
+  VisitNode(r);
+}
 
 void Snapshotter::Visit(CircleShape* r) {
   FXL_DCHECK(current_node_serializer_);
@@ -210,6 +214,7 @@ void Snapshotter::Visit(Renderer* r) { r->camera()->Accept(this); }
 void Snapshotter::Visit(Light* r) { VisitResource(r); }
 void Snapshotter::Visit(AmbientLight* r) { VisitResource(r); }
 void Snapshotter::Visit(DirectionalLight* r) { VisitResource(r); }
+void Snapshotter::Visit(PointLight* r) { VisitResource(r); }
 void Snapshotter::Visit(Import* r) { r->delegate()->Accept(this); }
 
 void Snapshotter::VisitNode(Node* r) {

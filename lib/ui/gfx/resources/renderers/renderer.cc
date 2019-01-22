@@ -247,5 +247,7 @@ void Renderer::Visitor::Visit(AmbientLight* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(DirectionalLight* r) { FXL_CHECK(false); }
 
+void Renderer::Visitor::Visit(PointLight* r) { FXL_CHECK(false); }
+
 }  // namespace gfx
 }  // namespace scenic_impl

@@ -102,7 +102,8 @@ class GfxCommandApplier {
                                   fuchsia::ui::gfx::SetMaterialCmd command);
   static bool ApplySetClipCmd(Session* session,
                               fuchsia::ui::gfx::SetClipCmd command);
-  static bool ApplySetClipPlanesCmd(Session* session, fuchsia::ui::gfx::SetClipPlanesCmd command);
+  static bool ApplySetClipPlanesCmd(Session* session,
+                                    fuchsia::ui::gfx::SetClipPlanesCmd command);
   static bool ApplySetViewPropertiesCmd(
       Session* session, fuchsia::ui::gfx::SetViewPropertiesCmd command);
   static bool ApplySetHitTestBehaviorCmd(
@@ -121,8 +122,18 @@ class GfxCommandApplier {
                                     fuchsia::ui::gfx::SetLightColorCmd command);
   static bool ApplySetLightDirectionCmd(
       Session* session, fuchsia::ui::gfx::SetLightDirectionCmd command);
+  static bool ApplySetPointLightPositionCmd(
+      Session* session, fuchsia::ui::gfx::SetPointLightPositionCmd command);
+  static bool ApplySetPointLightFalloffCmd(
+      Session* session, fuchsia::ui::gfx::SetPointLightFalloffCmd command);
   static bool ApplyAddLightCmd(Session* session,
                                fuchsia::ui::gfx::AddLightCmd command);
+  static bool ApplySceneAddAmbientLightCmd(
+      Session* session, fuchsia::ui::gfx::SceneAddAmbientLightCmd command);
+  static bool ApplySceneAddDirectionalLightCmd(
+      Session* session, fuchsia::ui::gfx::SceneAddDirectionalLightCmd command);
+  static bool ApplySceneAddPointLightCmd(
+      Session* session, fuchsia::ui::gfx::SceneAddPointLightCmd command);
   static bool ApplyDetachLightCmd(Session* session,
                                   fuchsia::ui::gfx::DetachLightCmd command);
   static bool ApplyDetachLightsCmd(Session* session,
@@ -175,6 +186,8 @@ class GfxCommandApplier {
   static bool ApplyCreateDirectionalLight(
       Session* session, ResourceId id,
       fuchsia::ui::gfx::DirectionalLightArgs args);
+  static bool ApplyCreatePointLight(Session* session, ResourceId id,
+                                    fuchsia::ui::gfx::PointLightArgs args);
   static bool ApplyCreateRectangle(Session* session, ResourceId id,
                                    fuchsia::ui::gfx::RectangleArgs args);
   static bool ApplyCreateRoundedRectangle(
@@ -236,6 +249,7 @@ class GfxCommandApplier {
 
   static ResourcePtr CreateAmbientLight(Session* session, ResourceId id);
   static ResourcePtr CreateDirectionalLight(Session* session, ResourceId id);
+  static ResourcePtr CreatePointLight(Session* session, ResourceId id);
 
   static ResourcePtr CreateView(Session* session, ResourceId id,
                                 fuchsia::ui::gfx::ViewArgs args);

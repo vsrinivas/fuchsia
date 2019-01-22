@@ -135,6 +135,8 @@ source_set("gfx") {
     "resources/lights/directional_light.h",
     "resources/lights/light.cc",
     "resources/lights/light.h",
+    "resources/lights/point_light.cc",
+    "resources/lights/point_light.h",
     "resources/material.cc",
     "resources/material.h",
     "resources/memory.cc",

@@ -67,7 +67,9 @@ class Node : public Resource {
   const escher::quat& rotation() const { return transform_.rotation; }
   const escher::vec3& anchor() const { return transform_.anchor; }
   bool clip_to_self() const { return clip_to_self_; }
-  const std::vector<escher::plane3>& clip_planes() const { return clip_planes_; }
+  const std::vector<escher::plane3>& clip_planes() const {
+    return clip_planes_;
+  }
   ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior() const {
     return hit_test_behavior_;
   }

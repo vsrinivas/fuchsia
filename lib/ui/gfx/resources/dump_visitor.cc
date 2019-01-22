@@ -16,6 +16,7 @@
 #include "garnet/lib/ui/gfx/resources/import.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
@@ -137,6 +138,24 @@ void DumpVisitor::Visit(ShapeNode* r) {
 
 void DumpVisitor::Visit(Scene* r) {
   BeginItem("Scene", r);
+
+  const bool has_lights = !r->ambient_lights().empty() ||
+                          !r->directional_lights().empty() ||
+                          !r->point_lights().empty();
+  if (has_lights) {
+    BeginSection("lights");
+    for (auto& light : r->ambient_lights()) {
+      light->Accept(this);
+    }
+    for (auto& light : r->directional_lights()) {
+      light->Accept(this);
+    }
+    for (auto& light : r->point_lights()) {
+      light->Accept(this);
+    }
+    EndSection();
+  }
+
   VisitNode(r);
   EndItem();
 }
@@ -333,6 +352,14 @@ void DumpVisitor::Visit(AmbientLight* r) {
 void DumpVisitor::Visit(DirectionalLight* r) {
   BeginItem("DirectionalLight", r);
   escher::operator<<(WriteProperty("direction"), r->direction());
+  escher::operator<<(WriteProperty("color"), r->color());
+  VisitResource(r);
+  EndItem();
+}
+
+void DumpVisitor::Visit(PointLight* r) {
+  BeginItem("PointLight", r);
+  escher::operator<<(WriteProperty("position"), r->position());
   escher::operator<<(WriteProperty("color"), r->color());
   VisitResource(r);
   EndItem();

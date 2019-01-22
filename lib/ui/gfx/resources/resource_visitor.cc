@@ -17,6 +17,7 @@
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/material.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
@@ -91,6 +92,8 @@ void AmbientLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 void DirectionalLight::Accept(ResourceVisitor* visitor) {
   visitor->Visit(this);
 }
+
+void PointLight::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 
 void Import::Accept(ResourceVisitor* visitor) { visitor->Visit(this); }
 

@@ -194,6 +194,15 @@ fuchsia::ui::gfx::Command NewCreateDirectionalLightCmd(uint32_t id) {
   return NewCreateResourceCmd(id, std::move(resource));
 }
 
+fuchsia::ui::gfx::Command NewCreatePointLightCmd(uint32_t id) {
+  fuchsia::ui::gfx::PointLightArgs point_light;
+
+  fuchsia::ui::gfx::ResourceArgs resource;
+  resource.set_point_light(std::move(point_light));
+
+  return NewCreateResourceCmd(id, std::move(resource));
+}
+
 fuchsia::ui::gfx::Command NewCreateCircleCmd(uint32_t id, float radius) {
   fuchsia::ui::gfx::Value radius_value;
   radius_value.set_vector1(radius);
@@ -753,6 +762,18 @@ fuchsia::ui::gfx::Command NewSetClipCmd(uint32_t node_id, uint32_t clip_id,
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetClipPlanesCmd(
+    uint32_t node_id, std::vector<fuchsia::ui::gfx::Plane3> planes) {
+  fuchsia::ui::gfx::SetClipPlanesCmd set_clip_planes;
+  set_clip_planes.node_id = node_id;
+  set_clip_planes.clip_planes = std::move(planes);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_clip_planes(std::move(set_clip_planes));
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewSetTagCmd(uint32_t node_id, uint32_t tag_value) {
   fuchsia::ui::gfx::SetTagCmd set_tag;
   set_tag.node_id = node_id;
@@ -1057,6 +1078,42 @@ fuchsia::ui::gfx::Command NewSetLightDirectionCmd(uint32_t light_id,
   return command;
 }
 
+fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
+                                                      const float pos[3]) {
+  fuchsia::ui::gfx::SetPointLightPositionCmd set_command;
+  set_command.light_id = light_id;
+  set_command.position = NewVector3Value(pos);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_point_light_position(std::move(set_command));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetPointLightPositionCmd(uint32_t light_id,
+                                                      uint32_t variable_id) {
+  fuchsia::ui::gfx::SetPointLightPositionCmd set_command;
+  set_command.light_id = light_id;
+  set_command.position = NewVector3Value(variable_id);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_point_light_position(std::move(set_command));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSetPointLightFalloffCmd(uint32_t light_id,
+                                                     float falloff) {
+  fuchsia::ui::gfx::SetPointLightFalloffCmd set_command;
+  set_command.light_id = light_id;
+  set_command.falloff = NewFloatValue(falloff);
+
+  fuchsia::ui::gfx::Command command;
+  command.set_set_point_light_falloff(std::move(set_command));
+
+  return command;
+}
+
 fuchsia::ui::gfx::Command NewAddLightCmd(uint32_t scene_id, uint32_t light_id) {
   fuchsia::ui::gfx::AddLightCmd add_light_command;
   add_light_command.scene_id = scene_id;
@@ -1064,6 +1121,42 @@ fuchsia::ui::gfx::Command NewAddLightCmd(uint32_t scene_id, uint32_t light_id) {
 
   fuchsia::ui::gfx::Command command;
   command.set_add_light(std::move(add_light_command));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSceneAddAmbientLightCmd(uint32_t scene_id,
+                                                     uint32_t light_id) {
+  fuchsia::ui::gfx::SceneAddAmbientLightCmd add_light_command;
+  add_light_command.scene_id = scene_id;
+  add_light_command.light_id = light_id;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_scene__add_ambient_light(std::move(add_light_command));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSceneAddDirectionalLightCmd(uint32_t scene_id,
+                                                         uint32_t light_id) {
+  fuchsia::ui::gfx::SceneAddDirectionalLightCmd add_light_command;
+  add_light_command.scene_id = scene_id;
+  add_light_command.light_id = light_id;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_scene__add_directional_light(std::move(add_light_command));
+
+  return command;
+}
+
+fuchsia::ui::gfx::Command NewSceneAddPointLightCmd(uint32_t scene_id,
+                                                   uint32_t light_id) {
+  fuchsia::ui::gfx::SceneAddPointLightCmd add_light_command;
+  add_light_command.scene_id = scene_id;
+  add_light_command.light_id = light_id;
+
+  fuchsia::ui::gfx::Command command;
+  command.set_scene__add_point_light(std::move(add_light_command));
 
   return command;
 }

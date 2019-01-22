@@ -18,6 +18,7 @@
 #include "garnet/lib/ui/gfx/resources/image_pipe_handler.h"
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 #include "garnet/lib/ui/gfx/resources/memory.h"
 #include "garnet/lib/ui/gfx/resources/nodes/entity_node.h"
 #include "garnet/lib/ui/gfx/resources/nodes/node.h"
@@ -152,7 +153,8 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetClip:
       return ApplySetClipCmd(session, std::move(command.set_clip()));
     case ::fuchsia::ui::gfx::Command::Tag::kSetClipPlanes:
-      return ApplySetClipPlanesCmd(session, std::move(command.set_clip_planes()));
+      return ApplySetClipPlanesCmd(session,
+                                   std::move(command.set_clip_planes()));
     case fuchsia::ui::gfx::Command::Tag::kSetHitTestBehavior:
       return ApplySetHitTestBehaviorCmd(
           session, std::move(command.set_hit_test_behavior()));
@@ -179,8 +181,23 @@ bool GfxCommandApplier::ApplyCommand(Session* session,
     case fuchsia::ui::gfx::Command::Tag::kSetLightDirection:
       return ApplySetLightDirectionCmd(
           session, std::move(command.set_light_direction()));
+    case fuchsia::ui::gfx::Command::Tag::kSetPointLightPosition:
+      return ApplySetPointLightPositionCmd(
+          session, std::move(command.set_point_light_position()));
+    case fuchsia::ui::gfx::Command::Tag::kSetPointLightFalloff:
+      return ApplySetPointLightFalloffCmd(
+          session, std::move(command.set_point_light_falloff()));
     case fuchsia::ui::gfx::Command::Tag::kAddLight:
       return ApplyAddLightCmd(session, std::move(command.add_light()));
+    case fuchsia::ui::gfx::Command::Tag::kScene_AddAmbientLight:
+      return ApplySceneAddAmbientLightCmd(
+          session, std::move(command.scene__add_ambient_light()));
+    case fuchsia::ui::gfx::Command::Tag::kScene_AddDirectionalLight:
+      return ApplySceneAddDirectionalLightCmd(
+          session, std::move(command.scene__add_directional_light()));
+    case fuchsia::ui::gfx::Command::Tag::kScene_AddPointLight:
+      return ApplySceneAddPointLightCmd(
+          session, std::move(command.scene__add_point_light()));
     case fuchsia::ui::gfx::Command::Tag::kDetachLight:
       return ApplyDetachLightCmd(session, std::move(command.detach_light()));
     case fuchsia::ui::gfx::Command::Tag::kDetachLights:
@@ -266,6 +283,9 @@ bool GfxCommandApplier::ApplyCreateResourceCmd(
     case fuchsia::ui::gfx::ResourceArgs::Tag::kDirectionalLight:
       return ApplyCreateDirectionalLight(
           session, id, std::move(command.resource.directional_light()));
+    case fuchsia::ui::gfx::ResourceArgs::Tag::kPointLight:
+      return ApplyCreatePointLight(session, id,
+                                   std::move(command.resource.point_light()));
     case fuchsia::ui::gfx::ResourceArgs::Tag::kRectangle:
       return ApplyCreateRectangle(session, id,
                                   std::move(command.resource.rectangle()));
@@ -610,8 +630,8 @@ bool GfxCommandApplier::ApplySetClipCmd(Session* session,
   return false;
 }
 
-bool GfxCommandApplier::ApplySetClipPlanesCmd(Session* session,
-    fuchsia::ui::gfx::SetClipPlanesCmd command) {
+bool GfxCommandApplier::ApplySetClipPlanesCmd(
+    Session* session, fuchsia::ui::gfx::SetClipPlanesCmd command) {
   if (auto node = session->resources()->FindResource<Node>(command.node_id)) {
     std::vector<escher::plane3> clip_planes;
     clip_planes.reserve(command.clip_planes.size());
@@ -940,6 +960,36 @@ bool GfxCommandApplier::ApplySetLightDirectionCmd(
   return false;
 }
 
+bool GfxCommandApplier::ApplySetPointLightPositionCmd(
+    Session* session, fuchsia::ui::gfx::SetPointLightPositionCmd command) {
+  // TODO(SCN-123): support variables.
+  if (command.position.variable_id) {
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier:"
+                                          ":ApplySetPointLightPositionCmd(): "
+                                          "unimplemented: variable position.";
+    return false;
+  } else if (auto light = session->resources()->FindResource<PointLight>(
+                 command.light_id)) {
+    return light->SetPosition(Unwrap(command.position.value));
+  }
+  return false;
+}
+
+bool GfxCommandApplier::ApplySetPointLightFalloffCmd(
+    Session* session, fuchsia::ui::gfx::SetPointLightFalloffCmd command) {
+  // TODO(SCN-123): support variables.
+  if (command.falloff.variable_id) {
+    session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier:"
+                                          ":ApplySetPointLightFalloffCmd(): "
+                                          "unimplemented: variable falloff.";
+    return false;
+  } else if (auto light = session->resources()->FindResource<PointLight>(
+                 command.light_id)) {
+    return light->SetFalloff(command.falloff.value);
+  }
+  return false;
+}
+
 bool GfxCommandApplier::ApplyAddLightCmd(
     Session* session, fuchsia::ui::gfx::AddLightCmd command) {
   if (auto scene =
@@ -952,6 +1002,54 @@ bool GfxCommandApplier::ApplyAddLightCmd(
 
   session->error_reporter()->ERROR() << "scenic_impl::gfx::GfxCommandApplier::"
                                         "ApplyAddLightCmd(): unimplemented.";
+  return false;
+}
+
+bool GfxCommandApplier::ApplySceneAddAmbientLightCmd(
+    Session* session, fuchsia::ui::gfx::SceneAddAmbientLightCmd command) {
+  if (auto scene =
+          session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<AmbientLight>(
+            command.light_id)) {
+      return scene->AddAmbientLight(std::move(light));
+    }
+  }
+
+  session->error_reporter()->ERROR()
+      << "scenic_impl::gfx::GfxCommandApplier::"
+         "ApplySceneAddAmbientLightCmd(): unimplemented.";
+  return false;
+}
+
+bool GfxCommandApplier::ApplySceneAddDirectionalLightCmd(
+    Session* session, fuchsia::ui::gfx::SceneAddDirectionalLightCmd command) {
+  if (auto scene =
+          session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light = session->resources()->FindResource<DirectionalLight>(
+            command.light_id)) {
+      return scene->AddDirectionalLight(std::move(light));
+    }
+  }
+
+  session->error_reporter()->ERROR()
+      << "scenic_impl::gfx::GfxCommandApplier::"
+         "ApplySceneAddDirectionalLightCmd(): unimplemented.";
+  return false;
+}
+
+bool GfxCommandApplier::ApplySceneAddPointLightCmd(
+    Session* session, fuchsia::ui::gfx::SceneAddPointLightCmd command) {
+  if (auto scene =
+          session->resources()->FindResource<Scene>(command.scene_id)) {
+    if (auto light =
+            session->resources()->FindResource<PointLight>(command.light_id)) {
+      return scene->AddPointLight(std::move(light));
+    }
+  }
+
+  session->error_reporter()->ERROR()
+      << "scenic_impl::gfx::GfxCommandApplier::"
+         "ApplySceneAddPointLightCmd(): unimplemented.";
   return false;
 }
 
@@ -1066,6 +1164,13 @@ bool GfxCommandApplier::ApplyCreateDirectionalLight(
     Session* session, ResourceId id,
     fuchsia::ui::gfx::DirectionalLightArgs args) {
   auto light = CreateDirectionalLight(session, id);
+  return light ? session->resources()->AddResource(id, std::move(light))
+               : false;
+}
+
+bool GfxCommandApplier::ApplyCreatePointLight(
+    Session* session, ResourceId id, fuchsia::ui::gfx::PointLightArgs args) {
+  auto light = CreatePointLight(session, id);
   return light ? session->resources()->AddResource(id, std::move(light))
                : false;
 }
@@ -1337,6 +1442,11 @@ ResourcePtr GfxCommandApplier::CreateAmbientLight(Session* session,
 ResourcePtr GfxCommandApplier::CreateDirectionalLight(Session* session,
                                                       ResourceId id) {
   return fxl::MakeRefCounted<DirectionalLight>(session, id);
+}
+
+ResourcePtr GfxCommandApplier::CreatePointLight(Session* session,
+                                                ResourceId id) {
+  return fxl::MakeRefCounted<PointLight>(session, id);
 }
 
 ResourcePtr GfxCommandApplier::CreateView(Session* session, ResourceId id,

@@ -6,6 +6,7 @@
 
 #include "garnet/lib/ui/gfx/resources/lights/ambient_light.h"
 #include "garnet/lib/ui/gfx/resources/lights/directional_light.h"
+#include "garnet/lib/ui/gfx/resources/lights/point_light.h"
 
 namespace scenic_impl {
 namespace gfx {
@@ -22,19 +23,36 @@ Scene::~Scene() = default;
 
 bool Scene::AddLight(const LightPtr& light) {
   if (light->IsKindOf<AmbientLight>()) {
-    // TODO: check for duplicates.
-    ambient_lights_.push_back(
-        AmbientLightPtr(static_cast<AmbientLight*>(light.get())));
+    // TODO(SCN-1217): check for duplicates.
+    ambient_lights_.push_back(light->As<AmbientLight>());
     return true;
   } else if (light->IsKindOf<DirectionalLight>()) {
-    // TODO: check for duplicates.
-    directional_lights_.push_back(
-        DirectionalLightPtr(static_cast<DirectionalLight*>(light.get())));
+    // TODO(SCN-1217): check for duplicates.
+    directional_lights_.push_back(light->As<DirectionalLight>());
+    return true;
+  } else if (light->IsKindOf<PointLight>()) {
+    // TODO(SCN-1217): check for duplicates.
+    point_lights_.push_back(light->As<PointLight>());
     return true;
   }
   error_reporter()->ERROR()
       << "scenic::gfx::Scene::AddLight(): unrecognized light type.";
   return false;
+}
+
+bool Scene::AddAmbientLight(const AmbientLightPtr& light) {
+  ambient_lights_.push_back(light);
+  return true;
+}
+
+bool Scene::AddDirectionalLight(const DirectionalLightPtr& light) {
+  directional_lights_.push_back(light);
+  return true;
+}
+
+bool Scene::AddPointLight(const PointLightPtr& light) {
+  point_lights_.push_back(light);
+  return true;
 }
 
 bool Scene::Detach() {

@@ -60,10 +60,11 @@ enum ResourceType : uint64_t {
   kLight = 1ul << 30,
   kAmbientLight = 1ul << 31,
   kDirectionalLight = 1ul << 32,
-  kRenderer = 1ul << 33,
+  kPointLight = 1ul << 33,
+  kRenderer = 1ul << 34,
 
   // Animation
-  kVariable = 1ul << 34,
+  kVariable = 1ul << 35,
 };
 
 // Bitwise combination of ResourceTypes.  A subclass hierarchy can be

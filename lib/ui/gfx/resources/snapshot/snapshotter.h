@@ -59,6 +59,7 @@ class Snapshotter : public ResourceVisitor {
   void Visit(Light* r) override;
   void Visit(AmbientLight* r) override;
   void Visit(DirectionalLight* r) override;
+  void Visit(PointLight* r) override;
   void Visit(Import* r) override;
 
  private:

@@ -34,6 +34,7 @@ class Scene;
 class Light;
 class AmbientLight;
 class DirectionalLight;
+class PointLight;
 
 class ResourceVisitor {
  public:
@@ -74,6 +75,7 @@ class ResourceVisitor {
   virtual void Visit(Light* r) = 0;
   virtual void Visit(AmbientLight* r) = 0;
   virtual void Visit(DirectionalLight* r) = 0;
+  virtual void Visit(PointLight* r) = 0;
 
   // Imported resources.
   virtual void Visit(Import* r) = 0;
