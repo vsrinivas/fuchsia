@@ -192,7 +192,7 @@ std::string Describe(const TxVector& tx_vec, tx_vec_idx_t tx_vec_idx) {
     oss << std::setw(3) << +tx_vec_idx << ": ";
     oss << Describe(tx_vec.phy) << " ";
     oss << Describe(tx_vec.gi) << " ";
-    oss << ::wlan::common::kCbwStr[tx_vec.cbw] << " ";
+    oss << ::wlan::common::CbwStr(tx_vec.cbw) << " ";
     oss << "NSS " << +tx_vec.nss << " ";
     oss << "MCS " << std::setw(2) << +tx_vec.mcs_idx;
     if (!tx_vec.IsValid()) { oss << "(x)"; }

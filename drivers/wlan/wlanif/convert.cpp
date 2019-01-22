@@ -59,7 +59,7 @@ uint8_t ConvertCBW(wlan_common::CBW cbw) {
         return CBW160;
     case wlan_common::CBW::CBW80P80:
         return CBW80P80;
-    case wlan_common::CBW::CBW_COUNT:
+    default:
         ZX_ASSERT(0);
     }
 }

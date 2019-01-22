@@ -167,7 +167,7 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
         tx_stats_map->emplace(tx_vector_idx, tx_stats);
         ++tx_stats_added;
     }
-    debugmstl("%zu HT added with cbw=%s, gi=%s\n", tx_stats_added, ::wlan::common::kCbwStr[cbw],
+    debugmstl("%zu HT added with cbw=%s, gi=%s\n", tx_stats_added, ::wlan::common::CbwStr(cbw),
               debug::Describe(gi).c_str());
 }
 

@@ -32,8 +32,6 @@ enum CBW {
     CBW80 = 3,
     CBW160 = 4,
     CBW80P80 = 5,  // Non-contiguous frequency segments
-
-    CBW_COUNT,
 };
 
 typedef struct wlan_channel {

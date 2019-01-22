@@ -59,10 +59,11 @@ struct Channel {
 wlan_channel_t FromFidl(const ::fuchsia::wlan::common::WlanChan& fidl_chan);
 ::fuchsia::wlan::common::WlanChan ToFidl(const wlan_channel_t& chan);
 
-extern const char* kCbwStr[];
-
 PHY FromFidl(::fuchsia::wlan::common::PHY phy);
 ::fuchsia::wlan::common::PHY ToFidl(PHY phy);
+
+const char* CbwSuffix(uint8_t cbw);
+const char* CbwStr(uint8_t cbw);
 
 }  // namespace common
 }  // namespace wlan

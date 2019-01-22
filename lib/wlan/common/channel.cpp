@@ -23,19 +23,6 @@ namespace common {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 
-const char* kCbwStr[] = {"CBW20", "CBW40", "CBW40B", "CBW80", "CBW160", "CBW80P80", "CBW_INV"};
-
-const char* kCbwSuffix[] = {
-    // Fuchsia's short CBW notation. Not IEEE standard.
-    "",   // Vanilla plain 20 MHz bandwidth
-    "+",  // SCA, often denoted by "+1"
-    "-",  // SCB, often denoted by "-1"
-    "V",  // VHT 80 MHz
-    "W",  // VHT Wave2 160 MHz
-    "P",  // VHT Wave2 80Plus80 (not often obvious, but P is the first alphabet)
-    "!",  // Invalid
-};
-
 bool Is5Ghz(uint8_t channel_number) {
     // TODO(porce): Improve this humble function
     return (channel_number > 14);
@@ -189,32 +176,62 @@ uint8_t GetCenterChanIdx(const wlan_channel_t& chan) {
     }
 }
 
-std::string ChanStr(const wlan_channel_t& chan) {
-    char buf[7 + 1];
-
-    uint8_t cbw = chan.cbw;
-    if (cbw >= CBW_COUNT) {
-        cbw = CBW_COUNT;  // To be used to indicate invalid value.
+const char* CbwSuffix(uint8_t cbw) {
+    switch (cbw) {
+    case CBW20:
+        return "";  // Vanilla plain 20 MHz bandwidth
+    case CBW40ABOVE:
+        return "+";  // SCA, often denoted by "+1"
+    case CBW40BELOW:
+        return "-";  // SCB, often denoted by "-1"
+    case CBW80:
+        return "V";  // VHT 80 MHz
+    case CBW160:
+        return "W";  // VHT Wave2 160 MHz
+    case CBW80P80:
+        return "P";  // VHT Wave2 80Plus80 (not often obvious, but P is the first alphabet)
+    default:
+        return "?";  // Invalid
     }
+}
 
-    int offset = std::snprintf(buf, sizeof(buf), "%u%s", chan.primary, kCbwSuffix[cbw]);
-    if (cbw == CBW80P80) {
-        std::snprintf(buf + offset, sizeof(buf) - offset, "%u", chan.secondary80);
+const char* CbwStr(uint8_t cbw) {
+    switch (cbw) {
+    case CBW20:
+        return "CBW20";
+    case CBW40ABOVE:
+        return "CBW40";
+    case CBW40BELOW:
+        return "CBW40B";
+    case CBW80:
+        return "CBW80";
+    case CBW160:
+        return "CBW160";
+    case CBW80P80:
+        return "CBW80P80";
+    default:
+        return "Invalid";
+    }
+}
+
+std::string ChanStr(const wlan_channel_t& chan) {
+    char buf[8 + 1];
+    if (chan.cbw != CBW80P80) {
+        std::snprintf(buf, sizeof(buf), "%u%s", chan.primary, CbwSuffix(chan.cbw));
+    } else {
+        std::snprintf(buf, sizeof(buf), "%u+%u%s", chan.primary, chan.secondary80,
+                      CbwSuffix(chan.cbw));
     }
     return std::string(buf);
 }
 
 std::string ChanStrLong(const wlan_channel_t& chan) {
     char buf[16 + 1];
-
-    uint8_t cbw = chan.cbw;
-    if (cbw >= CBW_COUNT) {
-        cbw = CBW_COUNT;  // To be used to indicate invalid value;
-    }
-
-    int offset = std::snprintf(buf, sizeof(buf), "%u %s", chan.primary, kCbwStr[cbw]);
-    if (cbw == CBW80P80) {
-        std::snprintf(buf + offset, sizeof(buf) - offset, " %u", chan.secondary80);
+    if (chan.cbw != CBW80P80) {
+        std::snprintf(buf, sizeof(buf), "%u %s", chan.primary, CbwStr(chan.cbw));
+    } else {
+        std::snprintf(buf, sizeof(buf), "%u+%u %s", chan.primary, chan.secondary80,
+                      CbwStr(chan.cbw));
     }
     return std::string(buf);
 }
