@@ -767,16 +767,6 @@ zx_status_t Device::QueueDevicePortPacket(DevicePacket id, uint32_t status) {
     return port_.queue(&pkt);
 }
 
-zx_status_t Device::QueueDevicePortPacketUser(DevicePacket id, zx_packet_user_t user_pkt) {
-    debugfn();
-    zx_port_packet_t pkt = {};
-    pkt.key = ToPortKey(PortKeyType::kDevice, to_enum_type(id));
-    pkt.type = ZX_PKT_TYPE_USER;
-    pkt.user = user_pkt;
-    if (!port_.is_valid()) { return ZX_ERR_BAD_STATE; }
-    return port_.queue(&pkt);
-}
-
 zx_status_t Device::GetChannel(zx::channel* out) {
     ZX_DEBUG_ASSERT(out != nullptr);
 

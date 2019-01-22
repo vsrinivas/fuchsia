@@ -116,8 +116,6 @@ class Device : public DeviceInterface {
     // Queue a packet that does not contain user data, either there is no user data or user data is
     // too large and needs to be enqueued into packet_queue_ separately.
     zx_status_t QueueDevicePortPacket(DevicePacket id, uint32_t status = 0);
-    // Queue a packet that contains a small amount of data (<= 32 bytes) as a user packet.
-    zx_status_t QueueDevicePortPacketUser(DevicePacket id, zx_packet_user_t user_pkt = {});
 
     zx_status_t GetChannel(zx::channel* out) __TA_EXCLUDES(lock_);
 
