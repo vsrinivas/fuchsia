@@ -80,16 +80,14 @@ void AudioInput::OnDriverInfoFetched() {
                 << pref_chan << " channel(s) sample format(0x" << std::hex
                 << static_cast<uint32_t>(pref_fmt) << ")";
 
-  // Send the configuration request, the recompute the distance between our
-  // start and end sampling fences.
+  // Send config request; recompute distance between start|end sampling fences.
   driver_->Configure(pref_fps, pref_chan, pref_fmt, kMaxFenceDistance);
 
   int64_t dist = TimelineRate(pref_fps, ZX_SEC(1)).Scale(kMinFenceDistance);
   FXL_DCHECK(dist < std::numeric_limits<uint32_t>::max());
   driver_->SetEndFenceToStartFenceFrames(static_cast<uint32_t>(dist));
 
-  // Let the AudioDeviceManager know that we are ready to be added to the set of
-  // active audio devices.
+  // Tell AudioDeviceManager it can add us to the set of active audio devices.
   ActivateSelf();
 }
 

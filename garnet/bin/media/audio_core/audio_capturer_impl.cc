@@ -104,7 +104,7 @@ void AudioCapturerImpl::Shutdown() {
 
   payload_buf_vmo_.reset();
 
-  // Make sure we have left the set of active audio capturers.
+  // Make sure we have left the set of active AudioCapturers.
   if (InContainer()) {
     owner_->GetDeviceManager().RemoveAudioCapturer(this);
   }

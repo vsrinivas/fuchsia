@@ -75,28 +75,24 @@ class AudioDevice : public AudioObject,
   // GetSourceFormatPreference
   //
   // Returns the format that this AudioDevice prefers to use when acting as a
-  // source of audio (either an input, or an output being looped back)
+  // source of audio (either an input, or an output being looped back).
   //
-  // TODO(johngro) : Remove this once we have policy in place.  Users should be
-  // talking to the policy manager to know what inputs and outputs exist, and
-  // what formats they support, and to influence what their audio ins can be
-  // bound to or not.  "Preference" of an audio device is not a concept which
-  // belongs in the mixer.
+  // TODO(johngro): Remove this once we have audio policy. Users should talk to
+  // the policy manager to know what inputs and outputs exist, what formats they
+  // support, and to express a desired device routing. "Preference" of an audio
+  // device is not a concept which belongs in the mixer.
   virtual fuchsia::media::AudioStreamTypePtr GetSourceFormatPreference() {
     return nullptr;
   }
 
-  // Accessor set gain.  Handles limiting the gain command to what the hardware
-  // allows, and waking up the device in the event of a meaningful change in
-  // gain settings.
+  // Accessor set gain. Limits the gain command to what the hardware allows, and
+  // wakes up the device in the event of a meaningful change in gain settings.
   //
-  // Only to be called by the AudioDeviceManager, and only after the device has
-  // declared itself to have been activated.
+  // Only called by AudioDeviceManager, and only after the device is activated.
   void SetGainInfo(const ::fuchsia::media::AudioGainInfo& info,
                    uint32_t set_flags);
 
-  // Device info which can be used during device enumeration and
-  // add-notifications.
+  // Device info used during device enumeration and add-notifications.
   void GetDeviceInfo(::fuchsia::media::AudioDeviceInfo* out_info) const;
 
  protected:
@@ -162,8 +158,8 @@ class AudioDevice : public AudioObject,
   //
   // Kick off the process of shooting ourselves in the head. Note: after this
   // method is called, no new callbacks may be scheduled. When the main message
-  // loop finds out about our shutdown request, it completes this process by
-  // unlinking us from our audio renderers/capturers and calling our Cleanup.
+  // loop gets our shutdown request, it completes the process by unlinking us
+  // from our AudioRenderers/AudioCapturers and calling our Cleanup.
   void ShutdownSelf() FXL_EXCLUSIVE_LOCKS_REQUIRED(mix_domain_->token());
 
   // Check the shutting down flag.  We are in the process of shutting down when

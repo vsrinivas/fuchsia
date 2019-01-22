@@ -37,7 +37,7 @@ AudioRendererImpl::AudioRendererImpl(
 }
 
 AudioRendererImpl::~AudioRendererImpl() {
-  // assert that we have been cleanly shutdown already.
+  // Assert that we have been cleanly shutdown already.
   FXL_DCHECK(is_shutdown_);
   FXL_DCHECK(!audio_renderer_binding_.is_bound());
   FXL_DCHECK(gain_control_bindings_.size() == 0);
@@ -64,7 +64,7 @@ void AudioRendererImpl::Shutdown() {
   gain_control_bindings_.CloseAll();
   payload_buffer_.reset();
 
-  // Make sure we have left the set of active audio outs.
+  // Make sure we have left the set of active AudioRenderers.
   if (InContainer()) {
     owner_->GetDeviceManager().RemoveAudioRenderer(this);
   }
@@ -149,21 +149,19 @@ bool AudioRendererImpl::ValidateConfig() {
 
   // Compute the number of fractional frames per reference clock tick.
   //
-  // TODO(johngro): handle the case where the reference clock nominal rate is
+  // TODO(mpuryear): handle the case where the reference clock nominal rate is
   // something other than CLOCK_MONOTONIC
   frac_frames_per_ref_tick_ = TimelineRate(frac_fps, 1000000000u);
 
-  // TODO(johngro): Precompute anything we need to precompute here.
-  // Adding links to other output (and selecting resampling filters) might
-  // belong here as well.
+  // TODO(mpuryear): Precompute anything else needed here. Adding links to other
+  // outputs (and selecting resampling filters) might belong here as well.
 
   config_validated_ = true;
   return true;
 }
 
 void AudioRendererImpl::ComputePtsToFracFrames(int64_t first_pts) {
-  // We should not be calling this function if the transformation is already
-  // valid.
+  // We should not be calling this, if transformation is already valid.
   FXL_DCHECK(!pts_to_frac_frames_valid_);
   pts_to_frac_frames_ = TimelineFunction(next_frac_frame_pts_, first_pts,
                                          frac_frames_per_pts_tick_);
@@ -235,27 +233,25 @@ void AudioRendererImpl::SetPcmStreamType(
   UnlinkThrottle();
 
   // Create a new format info object so we can create links to outputs.
-  // TODO(johngro): Look into eliminating most of the format_info class when we
-  // finish removing the old audio out interface.
+  // TODO(mpuryear): Consider consolidating most of the format_info class.
   fuchsia::media::AudioStreamType cfg;
   cfg.sample_format = format.sample_format;
   cfg.channels = format.channels;
   cfg.frames_per_second = format.frames_per_second;
   format_info_ = AudioRendererFormatInfo::Create(cfg);
 
-  // Have the audio output manager initialize our set of outputs. Note; there
-  // is currently no need for a lock here. Methods called from our user-facing
-  // interfaces are serialized by nature of the fidl framework, and none of the
-  // output manager's threads should ever need to manipulate the set. Cleanup
-  // of outputs which have gone away is currently handled in a lazy fashion when
-  // the audio renderer fails to promote its weak reference during an operation
-  // involving its outputs.
+  // Have the device manager initialize our set of outputs. Note: we currently
+  // need no lock here. Method calls from user-facing interfaces are serialized
+  // by the FIDL framework, and none of the manager's threads should ever need
+  // to manipulate the set. Cleanup of outputs which have gone away is currently
+  // handled in a lazy fashion when the AudioRenderer fails to promote its weak
+  // reference during an operation involving its outputs.
   //
-  // TODO(johngro): someday, we will need to deal with recalculating properties
-  // which depend on a audio renderer's current set of outputs (for example, the
-  // minimum latency). This will probably be done using a dirty flag in the
-  // audio renderer implementations, and scheduling a job to recalculate the
-  // properties for dirty audio renderers and notifying users as appropriate.
+  // TODO(mpuryear): someday, deal with recalculating properties that depend on
+  // an AudioRenderer's current set of outputs (for example, minimum latency).
+  // This will probably be done using a dirty flag in the AudioRenderer
+  // implementation, scheduling a job to recalculate properties for dirty
+  // AudioRenderers, and notifying users as appropriate.
 
   // If we cannot promote our own weak pointer, something is seriously wrong.
   owner_->GetDeviceManager().SelectOutputsForAudioRenderer(this);

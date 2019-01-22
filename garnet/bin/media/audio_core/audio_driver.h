@@ -100,10 +100,9 @@ class AudioDriver {
   zx_koid_t stream_channel_koid() const { return stream_channel_koid_; }
   const HwGainState& hw_gain_state() const { return hw_gain_state_; }
 
-  // The following properties are only safe to access after the driver has made
-  // it past the MissingDriverInfo state.  After the MissingDriverInfo
-  // state, these members must be treated as immutable and the driver class may
-  // no longer changed them.
+  // The following properties are only safe to access after the driver is beyond
+  // the MissingDriverInfo state.  After that state, these members must be
+  // treated as immutable, and the driver class may no longer change them.
   const audio_stream_unique_id_t& persistent_unique_id() const {
     return persistent_unique_id_;
   }
@@ -258,17 +257,15 @@ class AudioDriver {
   uint32_t fifo_depth_frames_;
   zx_time_t configuration_timeout_ = ZX_TIME_INFINITE;
 
-  // A stashed copy of the currently configured format which may be queried by
-  // destinations (either outputs or audio ins) when determining what mixer to
-  // use.
+  // A stashed copy of current format, queryable by destinations (outputs or
+  // AudioCapturers) when determining which mixer to use.
   mutable std::mutex configured_format_lock_;
   fuchsia::media::AudioStreamTypePtr configured_format_
       FXL_GUARDED_BY(configured_format_lock_);
 
-  // Ring buffer state.  Note, the details of the ring buffer state are
-  // protected by a lock and changes are tracked with a generation counter.
-  // This is important as it allows AudioCapturer clients to take a snapshot of
-  // the ring buffer state during mixing/resampling operations.
+  // Ring buffer state. Note: ring-buffer state details are lock-protected and
+  // changes are tracked with generation counter. This allows AudioCapturer
+  // clients to snapshot ring-buffer state during mix/resample operations.
   mutable std::mutex ring_buffer_state_lock_;
   fbl::RefPtr<DriverRingBuffer> ring_buffer_
       FXL_GUARDED_BY(ring_buffer_state_lock_);

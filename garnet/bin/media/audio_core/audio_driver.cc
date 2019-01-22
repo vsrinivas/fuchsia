@@ -205,7 +205,7 @@ zx_status_t AudioDriver::GetDriverInfo() {
     }
   }
 
-  // Step #5.  Fetch our gain state.
+  // Step #5.  Fetch our list of supported formats.
   {
     FXL_DCHECK(format_ranges_.empty());
 
@@ -752,11 +752,11 @@ zx_status_t AudioDriver::ProcessSetFormatResponse(
     return resp.result;
   }
 
-  // TODO(johngro) : See MTWN-61.  Update audio ins and outputs to take external
-  // delay into account when sampling.
+  // TODO(johngro): See MTWN-61. Update AudioCapturers and outputs to take
+  // external delay into account when sampling.
   external_delay_nsec_ = resp.external_delay_nsec;
 
-  // Activate out ring buffer channel in our execution domain.
+  // Activate our ring buffer channel in our execution domain.
   ::dispatcher::Channel::ProcessHandler process_handler(
       [this](::dispatcher::Channel* channel) -> zx_status_t {
         OBTAIN_EXECUTION_DOMAIN_TOKEN(token, owner_->mix_domain_);
@@ -928,7 +928,7 @@ zx_status_t AudioDriver::ProcessStartResponse(
     ring_buffer_state_gen_.Next();
   }
 
-  // We are now configured.  Let our owner know about this important milestone.
+  // We are now started. Let our owner know about this important milestone.
   state_ = State::Started;
   configuration_timeout_ = ZX_TIME_INFINITE;
   SetupCommandTimeout();

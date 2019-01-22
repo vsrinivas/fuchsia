@@ -53,52 +53,52 @@ class AudioCapturerImpl
   // TODO(mpuryear): Update this comment block.
   //
   // :: WaitingForVmo ::
-  // Audio ins start in this mode.  They should have a default capture
-  // mode set, and will accept a mode change up until the point where they have
-  // a shared payload VMO assigned to them.  At this point they transition into
-  // the OperatingSync state.  Only the main service thread may transition out
-  // of this state.
+  // AudioCapturers start in this mode. They should have a default capture mode
+  // set, and will accept a mode change up until the point where they have a
+  // shared payload VMO assigned to them. At this point they transition into the
+  // OperatingSync state. Only the main service thread may transition out of
+  // this state.
   //
   // :: OperatingSync ::
   // After a mode has been assigned and a shared payload VMO has provided, the
-  // audio in is now operating in synchronous mode.  Clients may provided
+  // AudioCapturer is now operating in synchronous mode. Clients may provided
   // buffers to be filled using the CaptureAt method and may cancel these
-  // buffers using the Flush method.  They may also transition to asynchronous
+  // buffers using the Flush method. They may also transition to asynchronous
   // mode by calling StartAsyncCapture, but only when there are no pending
-  // buffers in flight.  Only the main service thread may transition out of
+  // buffers in flight. Only the main service thread may transition out of
   // this state.
   //
   // :: OperatingAsync ::
-  // Audio ins enter OperatingAsync after a successful call to
-  // StartAsyncCapture.  Threads from the mix_domain allocate and fill pending
+  // AudioCapturers enter OperatingAsync after a successful call to
+  // StartAsyncCapture. Threads from the mix_domain allocate and fill pending
   // payload buffers, then signal the main service thread in order to send them
   // back to the client over the AudioCapturerClient interface provided when
-  // starting.  CaptureAt and Flush are illegal operations while in this state.
+  // starting. CaptureAt and Flush are illegal operations while in this state.
   // clients may begin the process of returning to synchronous capture mode by
-  // calling StopAsyncCapture.  Only the main service thread may transition out
+  // calling StopAsyncCapture. Only the main service thread may transition out
   // of this state.
   //
   // :: AsyncStopping ::
-  // Audio ins enter AsyncStopping after a successful call to
-  // StopAsyncCapture.  A thread from the mix_domain will handle the details
-  // of stopping, including transferring all partially filled pending buffers to
-  // the finished queue.  Aside from setting the gain, all operations are
-  // illegal while the audio in is in the process of stopping.  Once the mix
-  // domain thread has finished cleaning up, it will transition to the
+  // AudioCapturers enter AsyncStopping after a successful call to
+  // StopAsyncCapture. A thread from the mix_domain will handle the details of
+  // stopping, including transferring all partially filled pending buffers to
+  // the finished queue. Aside from setting the gain, all operations are illegal
+  // while the AudioCapturer is in the process of stopping. Once the mix domain
+  // thread has finished cleaning up, it will transition to the
   // AsyncStoppingCallbackPending state and signal the main service thread in
-  // order to complete the process.  Only a mix domain thread may transition out
+  // order to complete the process. Only a mix domain thread may transition out
   // of this state.
   //
   // :: AsyncStoppingCallbackPending ::
-  // Audio ins enter AsyncStoppingCallbackPending after a mix domain thread has
-  // finished the process of shutting down the capture process and is ready to
-  // signal to the client that the audio in is now in synchronous capture mode
-  // again.  The main service thread will send all partially and completely
-  // filled buffers to the user, ensuring that there is at least one buffer sent
-  // indicating end-of-stream, even if that buffer needs to be of zero length.
-  // Finally, the main service thread will signal that the stopping process is
-  // finished using the client supplied callback (if any), and finally
-  // transition back to the OperatingSync state.
+  // AudioCapturers enter AsyncStoppingCallbackPending after a mix domain thread
+  // has finished the process of shutting down the capture process and is ready
+  // to signal to the client that the AudioCapturer is now in synchronous
+  // capture mode again. The main service thread will send all partially and
+  // completely filled buffers to the user, ensuring that there is at least one
+  // buffer sent indicating end-of-stream, even if that buffer needs to be of
+  // zero length. Finally, the main service thread will signal that the stopping
+  // process is finished using the client supplied callback (if any), and
+  // finally transition back to the OperatingSync state.
   enum class State {
     WaitingForVmo,
     OperatingSync,

@@ -20,10 +20,10 @@ class AudioDevice;
 class AudioObject;
 
 // AudioLink is the base class of two different versions of AudioLinks which
-// join sources of audio (audio outs, inputs, and loop-backed outputs) to
-// destinations (outputs and audio ins).
+// join sources of audio (AudioRenderers, inputs, outputs-being-looped-back) to
+// destinations (outputs and AudioCapturers).
 //
-// TODO(johngro): Finish docs.
+// TODO(mpuryear): Finish docs.
 // TODO(johngro): Manage link tracking using instrusive pointers.  Intrusive
 // storage goes at this level.
 //

@@ -6,6 +6,7 @@ library fuchsia.media;
 
 // Value
 //
+
 // Generic "value" for use within generic "Parameter" struct.
 union Value {
     bool bool_value;
@@ -23,6 +24,7 @@ union Value {
 // We want to minimize use of this generic "Parameter" structure by natively
 // defining as many stream-specific parameter semantics as we can.
 //
+
 // TODO: When possible, describe the very limited scenarios in which it would
 // still be reasonable to use a generic Parameter.
 struct Parameter {
@@ -89,6 +91,7 @@ struct Parameter {
 // FormatDetails.domain is null for a decoder.  A sub-structure whose name
 // ends in "Encoder" is for encoder output settings.
 //
+
 // TODO(dustingreen): Consider whether splitting encoder settings out separately
 // would be better.
 union AudioCompressedFormat {
@@ -99,8 +102,9 @@ union AudioCompressedFormat {
 
 enum AudioBitrateMode {
     // Used mainly when a client is configuring an encoder's output format.  May
-    // also be present in an OnOutputConfig() message from an encoder, but should
-    // not be relied upon to be present by any consumer downstream of an encoder.
+    // also be present in an OnOutputConfig() message from an encoder, but
+    // should not be relied upon to be present by any consumer downstream of an
+    // encoder.
     UNSPECIFIED = 0;
     CBR = 1;
     VBR = 2;
@@ -108,6 +112,7 @@ enum AudioBitrateMode {
 
 // AudioCompressedFormatAacEncoder
 //
+
 // Encoder settings for an AAC encoder.
 struct AudioCompressedFormatAacEncoder {
     // In SetOutputConfig():
@@ -146,12 +151,13 @@ struct AudioCompressedFormatAacEncoder {
 
 // AudioPcmMode
 //
+
 // TODO(dustingreen): Keep or discard any non-linear formats for purposes of the
 // Codec interface?
 enum AudioPcmMode {
     // 16 bit signed int linear or 32 bit float linear, for now
-    // 1-N channels ok, with "A.B" channels designated as A+B channel_count - the
-    // channel map is separately specified.  So 5.1 becomes channel_count 6.
+    // 1-N channels ok, with "A.B" channels designated as A+B channel_count -
+    // the channel map is separately specified.  So 5.1 becomes channel_count 6.
     LINEAR = 0;
     // G.711 8 bit format-defined waveform semantics
     // 1 channel
@@ -167,6 +173,7 @@ enum AudioPcmMode {
 //
 // TODO(dustingreen): Do we need more channel IDs than this?
 //
+
 // TODO(dustingreen): Check with mpuryear@ re. naming consistency for "S" vs.
 // "R" as we move these to a common definition.  Also the ordering of LS/RS vs.
 // LR/RR - probably LR/RR being first would make more sense re. how channels
@@ -198,6 +205,7 @@ enum AudioChannelId {
 //
 // PCM audio format details.
 //
+
 // TODO(dustingreen): Discuss with mpuryear@ re. where definitions for these
 // details go and make sure the common details can specify at least this much.
 struct PcmFormat {
@@ -229,8 +237,8 @@ struct PcmFormat {
     //
     // Values from AudioChannelId should be used if they are suitable.
     //
-    // If a channel has no suitable AudioChannelId, an ad-hoc value can be used in
-    // a range starting from AudioChannel_ExtendedChannelIdBase.
+    // If a channel has no suitable AudioChannelId, an ad-hoc value can be used
+    // in a range starting from AudioChannel_ExtendedChannelIdBase.
     vector<AudioChannelId>:16 channel_map;
 
     // TODO(dustingreen): Add unsigned 8 bit, float 32 bit, maybe others. FWIW,
@@ -240,6 +248,7 @@ struct PcmFormat {
 
 // AudioUncompressedFormat
 //
+
 // Uncompressed audio format details.
 union AudioUncompressedFormat {
     PcmFormat pcm;
@@ -247,6 +256,7 @@ union AudioUncompressedFormat {
 
 // AudioFormat
 //
+
 // Audio format details.
 union AudioFormat {
     AudioCompressedFormat compressed;
@@ -259,6 +269,7 @@ union AudioFormat {
 //
 // Mostly encoder settings will go under here.
 //
+
 // If a compressed video format is missing any fields here other than encoder
 // settings, it's because it's a good format and is already self-describing
 // given the mime_type + format-defined oob_bytes as appropriate +
@@ -276,10 +287,11 @@ union VideoCompressedFormat {
 //
 // Extended format-specific uncompressed video format details.
 //
+
 // TODO(dustingreen): Switch to FIDL table instead.
 union VideoUncompressedFormatSpecificDetails {
-    // TODO(dustingreen): Which formats that we care about really require special
-    // format-specific details here?
+    // TODO(dustingreen): Which formats that we care about really require
+    // special format-specific details here?
 
     // TODO(dustingreen): temp field to make the compiler happy until we have at
     // least one real field.
@@ -295,16 +307,17 @@ enum VideoColorSpace {
 //
 // Uncompressed video format details.
 //
+
 // TODO(dustingreen): Integrate with a system-wide structure for this purpose.
 struct VideoUncompressedFormat {
     // fourcc
     //
-    // A human-readable fourcc like RGBA should be 0x41424752 in the fourcc field
-    // (regardless of host endian-ness). Note that the R (first character) of the
-    // fourcc is in the low-order byte of this fourcc field.
+    // A human-readable fourcc like RGBA should be 0x41424752 in the fourcc
+    // field (regardless of host endian-ness). Note that the R (first character)
+    // of the fourcc is in the low-order byte of this fourcc field.
     //
-    // There are some fourcc codes that don't format nicely as a string.  While I
-    // don't foresee any use of any of the purely numeric fourcc codes (not
+    // There are some fourcc codes that don't format nicely as a string.  While
+    // I don't foresee any use of any of the purely numeric fourcc codes (not
     // corresponding to packed ascii character values), those would be stored
     // such that their numeric value has it's low-order byte in the low-order
     // byte of this fourcc value.  So a fourcc with "hex value" 0x00000001 would
@@ -312,21 +325,22 @@ struct VideoUncompressedFormat {
     //
     // The endian-ness of fourcc values stored in files or in network packets is
     // outside the scope of these comments, other than to state that regardless
-    // of the source of the fourcc code and the order that storage / transmission
-    // format stores these bytes, a human-readable fourcc should have its
-    // human-read first ascii character value in the low order byte of this
-    // field.
+    // of the source of the fourcc code and the order that storage /
+    // transmission format stores these bytes, a human-readable fourcc should
+    // have its human-read first ascii character value in the low order byte of
+    // this field.
     uint32 fourcc;
 
-    // For formats with different planes having different resolution, this is the
-    // resolution of the highest-resolution plane(s).  Else it's the resolution
-    // of all the planes.
+    // For formats with different planes having different resolution, this is
+    // the resolution of the highest-resolution plane(s).  Else it's the
+    // resolution of all the planes.
     uint32 primary_width_pixels;
     uint32 primary_height_pixels;
 
-    // For formats where the secondary planes are the same resolution, these fields
-    // will be the same as primary_width_pixels and primary_height_pixels.  For
-    // formats with smaller secondary resolutions, these indicate that resolution.
+    // For formats where the secondary planes are the same resolution, these
+    // fields will be the same as primary_width_pixels and
+    // primary_height_pixels.  For formats with smaller secondary resolutions,
+    // these indicate that resolution.
     uint32 secondary_width_pixels;
     uint32 secondary_height_pixels;
 
@@ -356,8 +370,8 @@ struct VideoUncompressedFormat {
 
     // These override the primary_width_pixels and primary_height_pixels for
     // purposes of display (but not for purposes of determining the pixel layout
-    // in memory).  These can crop on the right and bottom.  These must be <= the
-    // corresponding coded dimension.
+    // in memory).  These can crop on the right and bottom.  These must be <=
+    // the corresponding coded dimension.
     //
     // This value must be <= primary_width_pixels.
     uint32 primary_display_width_pixels;
@@ -368,16 +382,17 @@ struct VideoUncompressedFormat {
     // aspect ratio (AKA sample aspect ratio aka SAR) for the luma (AKA Y)
     // samples. A pixel_aspect_ratio of 1:1 mean square pixels. A
     // pixel_aspect_ratio of 2:1 would mean pixels that are displayed twice as
-    // wide as they are tall. Codec implementation should ensure these two values
-    // are relatively prime by reducing the fraction (dividing both by GCF) if
-    // necessary.
+    // wide as they are tall. Codec implementation should ensure these two
+    // values are relatively prime by reducing the fraction (dividing both by
+    // GCF) if necessary.
     //
     // When has_pixel_aspect_ratio == false, pixel_aspect_ratio_width and
     // pixel_aspect_ratio_height will both be 1, but in that case the
-    // pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just a very
-    // weak suggestion re. reasonable-ish handling, not in any way authoritative.
-    // In this case (or in any case really) the receiver of this message may have
-    // other OOB means to determine the actual pixel_aspect_ratio.
+    // pixel_aspect_ratio_width : pixel_aspect_ratio_height of 1:1 is just a
+    // very weak suggestion re. reasonable-ish handling, not in any way
+    // authoritative. In this case (or in any case really) the receiver of this
+    // message may have other OOB means to determine the actual
+    // pixel_aspect_ratio.
     bool has_pixel_aspect_ratio = false;
     uint32 pixel_aspect_ratio_width = 1;
     uint32 pixel_aspect_ratio_height = 1;
@@ -397,6 +412,7 @@ struct VideoUncompressedFormat {
 
 // VideoFormat
 //
+
 // Video (compress or uncompressed) format details.
 union VideoFormat {
     VideoCompressedFormat compressed;
@@ -405,6 +421,7 @@ union VideoFormat {
 
 // DomainFormat
 //
+
 // Domain-specific format details (audio or video, compressed or uncompressed).
 union DomainFormat {
     AudioFormat audio;
@@ -415,8 +432,9 @@ const uint64 kMaxOobBytesSize = 8192;
 
 // FormatDetails
 //
-// This describes/details the format on input or output of a StreamProcessor (separate
-// instances for input vs. output).
+
+// This describes/details the format on input or output of a StreamProcessor
+// (separate instances for input vs. output).
 struct FormatDetails {
     // Particular instances of FormatDetails will set this field to make it
     // easier for a receiver to determine if any part of the format has changed
@@ -429,8 +447,8 @@ struct FormatDetails {
     //   * input:
     //     * "audio/aac-adts" - ATDS AAC; self-contained format, but
     //       implementation for now requires oob_bytes to contain
-    //       AudioSpecificConfig() reconstructed from ADTS header data - see also
-    //       make_AudioSpecificConfig_from_ADTS_header() for now.
+    //       AudioSpecificConfig() reconstructed from ADTS header data - see
+    //       also make_AudioSpecificConfig_from_ADTS_header() for now.
     //   * output:
     //     * "audio/raw" - stereo linear 16 bit integer PCM
     //
@@ -446,8 +464,8 @@ struct FormatDetails {
     string mime_type;
 
     // Some streams have their own binary configuration structure.  For those
-    // streams we allow that binary structure to be directly conveyed to the stream processor
-    // here.
+    // streams we allow that binary structure to be directly conveyed to the
+    // stream processor here.
     //
     // audio/aac - this is an AudioSpecificConfig().
     // audio/aac-adts - this is not set.
@@ -459,10 +477,10 @@ struct FormatDetails {
     // there is no format-defined binary OOB config, this is null.
     //
     // A server can close the channel if the count of bytes is >
-    // kMaxOobBytesSize or is larger than makes any sense for the stream processor.  If
-    // any stream actually needs more than kMaxOobBytesSize bytes here, we
-    // could potentially increase this restriction some, but this interface isn't
-    // designed to support OOB config blobs that approach
+    // kMaxOobBytesSize or is larger than makes any sense for the stream
+    // processor.  If any stream actually needs more than kMaxOobBytesSize
+    // bytes here, we could potentially increase this restriction some, but
+    // this interface isn't designed to support OOB config blobs that approach
     // ZX_CHANNEL_MAX_MSG_BYTES.
     bytes? oob_bytes;
 
@@ -480,9 +498,9 @@ struct FormatDetails {
     // Encoder output format:
     //
     // The encoder's compressed data output typically needs some configuration
-    // (provided in this field) that's convenient to provide in a form that's not
-    // oob_bytes, and the codec can convert that config to oob_bytes
-    // on encoder output via OnOutputConfig().  We retain these encoder settings
+    // (provided in this field) that's convenient to provide in a form that's
+    // not oob_bytes, and the codec can convert that config to oob_bytes on
+    // encoder output via OnOutputConfig().  We retain these encoder settings
     // in the output FormatDetails to allow for cases where a downstream
     // consumer knowing the encoder settings could be useful.
     //
@@ -497,15 +515,16 @@ struct FormatDetails {
     DomainFormat? domain;
 
     // See comments above on Parameter.  At the time we lock relevant FIDL
-    // interfaces, there should be zero use of this field outside tests, but this
-    // is here in case we need to allow a stream processor client to convey additional config
-    // parameters to/from a stream processor which we didn't anticipate before locking.
+    // interfaces, there should be zero use of this field outside tests, but
+    // this is here in case we need to allow a stream processor client to
+    // convey additional config parameters to/from a stream processor which we
+    // didn't anticipate before locking.
     //
     // If there are any known "official" exceptions to the previous paragraph,
     // we'll list them here by corresponding mime_type (none so far):
     //   * "<mime_type>" - <usage_description>
     //
-    // For streams that define their own stream-specific config/OOB data, put that
-    // in oob_bytes above instead of this field.
+    // For streams that define their own stream-specific config/OOB data, put
+    // that in oob_bytes above instead of this field.
     vector<Parameter>? pass_through_parameters;
 };

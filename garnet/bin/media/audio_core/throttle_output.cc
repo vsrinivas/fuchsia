@@ -33,32 +33,26 @@ void ThrottleOutput::OnWakeup() {
 }
 
 bool ThrottleOutput::StartMixJob(MixJob* job, fxl::TimePoint process_start) {
-  // Compute our next callback time, and check to see if we are falling behind
-  // in the process.
+  // Compute the next callback time; check whether trimming is falling behind.
   last_sched_time_ = last_sched_time_ + TRIM_PERIOD;
   if (process_start > last_sched_time_) {
-    // TODO(johngro): We are falling behind on our trimming.  We should
-    // probably tell someone.
+    // TODO(mpuryear): Trimming is falling behind. We should tell someone.
     last_sched_time_ = process_start + TRIM_PERIOD;
   }
 
-  // TODO(johngro): We could optimize this trim operation by scheduling our
-  // callback to the time at which the first pending packet in our queue will
-  // end, instead of using this polling style.  This would have the addition
-  // benefit of tighten the timing on returning packets (currently, we could
-  // hold a packet for up to TRIM_PERIOD - episilon past its end pts before
-  // releasing it)
+  // TODO(mpuryear): Optimize the trim operation by scheduling callbacks for
+  // when our first pending packet ends, rather than polliing like this. This
+  // will also tighten our timing in returning packets (currently, we hold
+  // packets up to [TRIM_PERIOD-episilon] past their end PTS before releasing).
   //
-  // In order to do this, however, we would to wake up and recompute whenever
-  // the rate transformations for one of our client audio outs changes.  For
-  // now, we just poll because its simpler.
+  // To do this, we would need wake and recompute, whenever an AudioRenderer
+  // client changes its rate transformation. For now, just polling is simpler.
   SetNextSchedTime(last_sched_time_);
 
-  // The throttle output never actually mixes anything, it just provides
-  // backpressure to the pipeline by holding references to AudioPackets until
-  // after their presentation should be finished.  All we need to do here is
-  // schedule our next callback to keep things running, and let the base class
-  // implementation handle trimming the output.
+  // Throttle outputs never actually mix anything. They provide backpressure to
+  // the pipeline by holding AudioPacket references until their presentation is
+  // finished. All we must do is schedule our next callback to keep things
+  // running, and let the base class implementation handle trimming the output.
   return false;
 }
 

@@ -17,19 +17,18 @@ namespace media::audio {
 std::shared_ptr<AudioLink> AudioObject::LinkObjects(
     const fbl::RefPtr<AudioObject>& source,
     const fbl::RefPtr<AudioObject>& dest) {
-  // Assert that this is a valid source (audio ins may not be sources)
+  // Assert this source is valid (AudioCapturers are disallowed).
   FXL_DCHECK(source != nullptr);
   FXL_DCHECK((source->type() == AudioObject::Type::AudioRenderer) ||
              (source->type() == AudioObject::Type::Output) ||
              (source->type() == AudioObject::Type::Input));
 
-  // Assert that this is a valid destination (inputs and audio outs may not be
-  // destinations)
+  // Assert this destination is valid (inputs and AudioRenderers disallowed).
   FXL_DCHECK(dest != nullptr);
   FXL_DCHECK((dest->type() == AudioObject::Type::Output) ||
              (dest->type() == AudioObject::Type::AudioCapturer));
 
-  // Assert that we are not trying to connect an output to an output.
+  // Assert that we are not connecting looped-back-output to output.
   FXL_DCHECK((source->type() != AudioObject::Type::Output) ||
              (dest->type() != AudioObject::Type::Output));
 

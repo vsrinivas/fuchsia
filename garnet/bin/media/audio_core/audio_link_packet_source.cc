@@ -29,11 +29,10 @@ std::shared_ptr<AudioLinkPacketSource> AudioLinkPacketSource::Create(
   FXL_DCHECK(source);
   FXL_DCHECK(dest);
 
-  // TODO(johngro): Relax this if we get to the point where other audio objects
-  // may also be packet sources.
+  // TODO(mpuryear): Relax this when other audio objects can be packet sources.
   if (source->type() != AudioObject::Type::AudioRenderer) {
-    FXL_LOG(ERROR) << "Cannot create packet source link, packet sources must "
-                      "be audio outs";
+    FXL_LOG(ERROR) << "Cannot create packet source link; packet sources must "
+                      "be AudioRenderers";
     return nullptr;
   }
 

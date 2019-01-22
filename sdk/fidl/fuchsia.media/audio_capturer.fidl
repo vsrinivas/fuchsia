@@ -91,14 +91,14 @@ library fuchsia.media;
 // ** Asynchronous mode **
 //
 // While running in 'async' mode, clients do not need to explicitly supply
-// regions of the shared buffer to be filled by the AudioCapturer instance.
-// Instead, a client enters into 'async' mode by calling StartAsyncCapture and
-// supplying a callback interface, and a number of frames to capture
-// per-callback.  Once running in async mode, the AudioCapturer instance will
-// choose regions of the payload buffer to capture into, capture the specified
-// number of frames, then deliver those frames as StreamPackets using the
-// OnPacketCapture FIDL event.  Users may stop capturing are return the
-// AudioCapturer instance to 'sync' mode using the StopAsyncCapture method.
+// shared buffer regions to be filled by the AudioCapturer instance. Instead, a
+// client enters into 'async' mode by calling StartAsyncCapture and supplying a
+// callback interface and the number of frames to capture per-callback. Once
+// running in async mode, the AudioCapturer instance will identify which
+// payload buffer regions to capture into, capture the specified number of
+// frames, then deliver those frames as StreamPackets using the OnPacketCapture
+// FIDL event. Users may stop capturing and return the AudioCapturer instance to
+// 'sync' mode using the StopAsyncCapture method.
 //
 // It is considered an error to attempt any of the following operations.
 //
@@ -253,6 +253,7 @@ library fuchsia.media;
 //    sensitive content.  Enforce using the policy manager.
 // ++ Consider allowing the mixer to produce compressed audio.
 //
+
 [FragileBase]
 protocol AudioCapturer {
     compose StreamBufferSet;

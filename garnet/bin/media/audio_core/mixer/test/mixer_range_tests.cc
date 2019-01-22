@@ -221,8 +221,8 @@ TEST(DynamicRange, StereoToMono) {
 
 // Test mix level and noise floor, when accumulating sources.
 //
-// Mix 2 full-scale streams with gain exactly 50% (audio out 100%, master 50%),
-// then measure level and sinad. On systems with robust gain processing, a
+// Mix 2 full-scale streams with gain exactly 50% (source gain 100%, sink gain
+// 50%), then measure level and sinad. On systems with robust gain processing, a
 // post-SUM master gain stage reduces noise along with level, for the same noise
 // floor as a single FS signal with 100% gain (98,49 dB for 16,8 respectively).
 //
@@ -237,7 +237,7 @@ TEST(DynamicRange, StereoToMono) {
 // gain into account. Once our architecture contains a post-SUM master gain,
 // after applying a 0.5 master gain scaling we would expect this 91-92 dB
 // SINAD to be reduced to perhaps 98 dB. Today master gain is combined with
-// audio out gain, so it is pre-Sum.
+// AudioRenderer (stream) gain, so it is pre-Sum.
 template <typename T>
 void MeasureMixFloor(double* level_mix_db, double* sinad_mix_db) {
   MixerPtr mixer;

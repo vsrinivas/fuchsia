@@ -29,7 +29,7 @@ class StandardOutputBase : public AudioOutput {
 
  protected:
   struct MixJob {
-    // Job state set up once by an output implementation, used by all AudioOuts.
+    // Job state set up once by an output implementation, used by all renderers.
     void* buf;
     uint32_t buf_frames;
     int64_t start_pts_of;  // start PTS, expressed in output frames.
@@ -40,7 +40,7 @@ class StandardOutputBase : public AudioOutput {
     float sw_output_gain_db;
     bool sw_output_muted;
 
-    // Per-stream job state, set up for each AudioOut during SetupMix.
+    // Per-stream job state, set up for each renderer during SetupMix.
     uint32_t frames_produced;
   };
 

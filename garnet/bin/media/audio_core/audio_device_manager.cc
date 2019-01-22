@@ -581,11 +581,10 @@ void AudioDeviceManager::OnDeviceUnplugged(
   // and no updates to the routing state are needed.
   if (was_last_plugged) {
     if (device->is_output()) {
-      // This was an output.  If we are applying 'last plugged output' policy,
-      // go over our list of AudioRenderers and link them to the most recently
-      // plugged output (if any).  Then go over our list of audio ins and do
-      // the same for each of the loopback audio ins.  Note: the current hack
-      // routing policy for inputs is always 'last plugged'
+      // This was an output. If applying 'last plugged output' policy, link each
+      // AudioRenderer to the most-recently-plugged output (if any). Then do the
+      // same for each 'loopback' AudioCapturer. Note: our current (hack)
+      // routing policy for inputs is always 'last plugged'.
       FXL_DCHECK(static_cast<AudioOutput*>(device.get()) !=
                  throttle_output_.get());
 
@@ -674,7 +673,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
       }
     }
 
-    // 'loopback' audio ins should listen to this output now
+    // 'loopback' AudioCapturers should listen to this output now
     if (is_lp) {
       LinkToAudioCapturers(device);
     }
@@ -684,7 +683,7 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
     fbl::RefPtr<AudioInput> last_plugged = FindLastPluggedInput();
     auto input = static_cast<AudioInput*>(device.get());
 
-    // non-'loopback' audio ins should listen to this input now
+    // non-'loopback' AudioCapturers should listen to this input now
     if (input == last_plugged.get()) {
       LinkToAudioCapturers(device);
     }
@@ -692,10 +691,10 @@ void AudioDeviceManager::OnDevicePlugged(const fbl::RefPtr<AudioDevice>& device,
 }
 
 // New device arrived and is the most-recently-plugged.
-// *If device is an output, all 'loopback' audio ins should
-// listen to this output going forward (default output).
-// *If device is an input, then all NON-'loopback' audio ins
-// should listen to this input going forward (default input).
+// * If device is an output, all 'loopback' AudioCapturers should listen to this
+// output going forward (it is the default output).
+// * If device is an input, then all NON-'loopback' AudioCapturers should listen
+// to this input going forward (it is the default input).
 void AudioDeviceManager::LinkToAudioCapturers(
     const fbl::RefPtr<AudioDevice>& device) {
   bool link_to_loopbacks = device->is_output();

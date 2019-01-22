@@ -274,8 +274,7 @@ void DriverOutput::ApplyGainLimits(::fuchsia::media::AudioGainInfo* in_out_info,
 }
 
 void DriverOutput::ScheduleNextLowWaterWakeup() {
-  // Schedule the next callback for when we are at the low water mark behind
-  // the write pointer.
+  // Schedule next callback for the low water mark behind the write pointer.
   const auto& cm2rd_pos = clock_mono_to_ring_buf_pos_frames_;
   int64_t low_water_frames = frames_sent_ - low_water_frames_;
   int64_t low_water_time = cm2rd_pos.ApplyInverse(low_water_frames);
@@ -297,8 +296,7 @@ void DriverOutput::OnDriverInfoFetched() {
 
   zx_status_t res;
 
-  // TODO(johngro): Don't use hardcoded defaults here.  Try to pick the best
-  // match among the formats supported by the driver.
+  // TODO(mpuryear): Use the best driver-supported format, not hardwired default
   uint32_t pref_fps = kDefaultFramesPerSec;
   uint32_t pref_chan = kDefaultChannelCount;
   fuchsia::media::AudioSampleFormat pref_fmt = kDefaultAudioFmt;
@@ -358,11 +356,10 @@ void DriverOutput::OnDriverInfoFetched() {
   wav_writer_.Initialize(nullptr, pref_fmt, pref_chan, pref_fps,
                          driver_->bytes_per_frame() * 8 / pref_chan);
 
-  // Let the AudioDeviceManager that we are ready to be added to the set of
-  // active audio devices.
+  // Tell AudioDeviceManager we are ready to be an active audio device.
   ActivateSelf();
 
-  // Success, wait until configuration completes.
+  // Success; now wait until configuration completes.
   state_ = State::Configuring;
   cleanup.cancel();
 }
@@ -379,9 +376,8 @@ void DriverOutput::OnDriverConfigComplete() {
     return;
   }
 
-  // Now that our driver is completely configured, we should have all the info
-  // we need in order to compute the minimum clock lead time requrirement for
-  // this output.
+  // Now that our driver is completely configured, we have all the info needed
+  // to compute the minimum clock lead time requrirement for this output.
   int64_t fifo_depth_nsec = TimelineRate::Scale(
       driver_->fifo_depth_frames(), ZX_SEC(1), driver_->frames_per_sec());
   min_clock_lead_time_nsec_ =
