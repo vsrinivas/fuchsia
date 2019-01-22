@@ -385,8 +385,12 @@ zircon_tool_action("blob.blk") {
     ":blob.manifest",
   ]
   blob_image_path = "$target_out_dir/$target_name"
+  blob_size_list = "$root_build_dir/blob.sizes"
   outputs = [
     blob_image_path,
+# This should be an output too, but the generate_fvm template assumes that all
+# outputs of these actions are inputs to the fvm tool.
+    # blob_size_list
   ]
   depfile = blob_image_path + ".d"
   inputs = [
@@ -395,6 +399,8 @@ zircon_tool_action("blob.blk") {
   tool = "blobfs"
   args = [
     "--depfile",
+    "--sizes",
+    rebase_path(blob_size_list, root_build_dir),
     "--compress",
     rebase_path(blob_image_path, root_build_dir),
     "create",
