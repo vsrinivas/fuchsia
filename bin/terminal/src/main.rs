@@ -11,6 +11,11 @@ use fidl_fuchsia_images as images;
 use fidl_fuchsia_math::SizeF;
 use fidl_fuchsia_ui_app as viewsv2;
 use fidl_fuchsia_ui_gfx as gfx;
+use fidl_fuchsia_ui_input::{
+    ImeServiceMarker, InputEvent, InputMethodAction, InputMethodEditorClientMarker,
+    InputMethodEditorClientRequest, InputMethodEditorMarker, KeyboardEventPhase, KeyboardType,
+    TextAffinity, TextInputState, TextRange, TextSelection,
+};
 use fidl_fuchsia_ui_scenic::{self as scenic, ScenicProxy, SessionListenerRequest};
 use fidl_fuchsia_ui_viewsv1::ViewProviderRequest::CreateView;
 use fidl_fuchsia_ui_viewsv1::{
@@ -21,14 +26,16 @@ use fuchsia_app::client::connect_to_service;
 use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
-use fuchsia_ui::{Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size};
+use fuchsia_ui::{
+    Canvas, Color, FontDescription, FontFace, Paint, Point, SharedBufferPixelSink, Size,
+};
 use fuchsia_zircon::{EventPair, Handle};
-use term_model::term::{SizeInfo, Term};
-use term_model::config::{Config};
-use term_model::ansi::{Handler};
 use futures::{FutureExt, TryFutureExt, TryStreamExt};
 use std::env;
 use std::sync::{Arc, Mutex};
+use term_model::ansi::Handler;
+use term_model::config::Config;
+use term_model::term::{SizeInfo, Term};
 
 static FONT_DATA: &'static [u8] =
     include_bytes!("../../fonts/third_party/robotomono/RobotoMono-Regular.ttf");
@@ -53,10 +60,29 @@ impl ViewController {
         face: FontFacePtr, view_listener_request: ServerEnd<ViewListenerMarker>, view: ViewProxy,
         mine: EventPair, scenic: ScenicProxy,
     ) -> Result<ViewControllerPtr, Error> {
+        let ime_service = connect_to_service::<ImeServiceMarker>()?;
+        let (ime_listener, ime_listener_request) = create_endpoints::<InputMethodEditorMarker>()?;
+        let (ime_client_listener, ime_client_listener_request) =
+            create_endpoints::<InputMethodEditorClientMarker>()?;
+        let mut text_input_state = TextInputState {
+            revision: 0,
+            text: "".to_string(),
+            selection: TextSelection { base: 0, extent: 0, affinity: TextAffinity::Upstream },
+            composing: TextRange { start: 0, end: 0 },
+        };
+        ime_service.get_input_method_editor(
+            KeyboardType::Text,
+            InputMethodAction::None,
+            &mut text_input_state,
+            ime_client_listener,
+            ime_listener_request,
+        )?;
+
         let (session_listener, session_listener_request) = create_endpoints()?;
         let (session_proxy, session_request) = create_proxy()?;
         scenic.create_session(session_request, Some(session_listener))?;
         let session = Session::new(session_proxy);
+
         let view_controller = ViewController {
             face,
             _view: view,
@@ -75,16 +101,34 @@ impl ViewController {
             let view_controller = view_controller.clone();
             fasync::spawn(
                 async move {
+                    // In order to keep the channel alive, we need to move ime_listener into this block.
+                    // Otherwise it's unused, which closes the channel immediately.
+                    let _dummy = ime_listener;
+                    let mut stream = ime_client_listener_request.into_stream()?;
+                    while let Some(request) = await!(stream.try_next())? {
+                        match request {
+                            InputMethodEditorClientRequest::DidUpdateState {
+                                event: Some(event),
+                                ..
+                            } => view_controller.lock().unwrap().handle_input_event(*event),
+                            _ => (),
+                        }
+                    }
+                    Ok(())
+                }
+                    .unwrap_or_else(|e: failure::Error| eprintln!("input listener error: {:?}", e)),
+            );
+        }
+        {
+            let view_controller = view_controller.clone();
+            fasync::spawn(
+                async move {
                     let mut stream = session_listener_request.into_stream()?;
                     while let Some(request) = await!(stream.try_next())? {
                         match request {
-                            SessionListenerRequest::OnScenicEvent {
-                                events,
-                                control_handle: _,
-                            } => view_controller
-                                .lock()
-                                .unwrap()
-                                .handle_session_events(events),
+                            SessionListenerRequest::OnScenicEvent { events, control_handle: _ } => {
+                                view_controller.lock().unwrap().handle_session_events(events)
+                            }
                             _ => (),
                         }
                     }
@@ -99,14 +143,9 @@ impl ViewController {
                 async move {
                     let mut stream = view_listener_request.into_stream()?;
                     while let Some(req) = await!(stream.try_next())? {
-                        let ViewListenerRequest::OnPropertiesChanged {
-                            properties,
-                            responder,
-                        } = req;
-                        view_controller
-                            .lock()
-                            .unwrap()
-                            .handle_properties_changed(properties);
+                        let ViewListenerRequest::OnPropertiesChanged { properties, responder } =
+                            req;
+                        view_controller.lock().unwrap().handle_properties_changed(properties);
                         responder
                             .send()
                             .unwrap_or_else(|e| eprintln!("view listener error: {:?}", e))
@@ -120,9 +159,7 @@ impl ViewController {
     }
 
     fn setup_scene(&self) {
-        self.import_node
-            .resource()
-            .set_event_mask(gfx::METRICS_EVENT_MASK);
+        self.import_node.resource().set_event_mask(gfx::METRICS_EVENT_MASK);
         self.import_node.add_child(self.image_cycler.node());
     }
 
@@ -149,44 +186,42 @@ impl ViewController {
             alpha_format: images::AlphaFormat::Opaque,
         };
         {
-            let guard = self
-                .image_cycler
-                .acquire(info)
-                .expect("failed to allocate buffer");
+            let guard = self.image_cycler.acquire(info).expect("failed to allocate buffer");
             let mut face = self.face.lock().unwrap();
             let mut canvas = Canvas::<SharedBufferPixelSink>::new(guard.image().buffer(), stride);
-            let size = Size {
-                width: 14,
-                height: 22,
-            };
-            let mut font = FontDescription {
-                face: &mut face,
-                size: 20,
-                baseline: 18,
-            };
-            let term = self.term.get_or_insert_with(||
-                Term::new(&Config::default(), SizeInfo {
-                    width: physical_width as f32,
-                    height: physical_height as f32,
-                    cell_width: size.width as f32,
-                    cell_height: size.height as f32,
-                    padding_x: 0.,
-                    padding_y: 0.,
-                })
-            );
-            for c in "$ echo \"hello, world!\"".chars() {
-                term.input(c);
-            }
+            let size = Size { width: 14, height: 22 };
+            let mut font = FontDescription { face: &mut face, size: 20, baseline: 18 };
+            let term = self.term.get_or_insert_with(|| {
+                let mut term = Term::new(
+                    &Config::default(),
+                    SizeInfo {
+                        width: physical_width as f32,
+                        height: physical_height as f32,
+                        cell_width: size.width as f32,
+                        cell_height: size.height as f32,
+                        padding_x: 0.,
+                        padding_y: 0.,
+                    },
+                );
+                for c in "$ echo \"hello, world!\"".chars() {
+                    term.input(c);
+                }
+                term
+            });
             for cell in term.renderable_cells(&Config::default(), None, true) {
                 let mut buffer: [u8; 4] = [0, 0, 0, 0];
                 canvas.fill_text_cells(
                     cell.c.encode_utf8(&mut buffer),
-                    Point { x: size.width * cell.column.0 as u32, y: size.height * cell.line.0 as u32 },
-                    size, &mut font,
+                    Point {
+                        x: size.width * cell.column.0 as u32,
+                        y: size.height * cell.line.0 as u32,
+                    },
+                    size,
+                    &mut font,
                     &Paint {
                         fg: Color { r: cell.fg.r, g: cell.fg.g, b: cell.fg.b, a: 0xFF },
                         bg: Color { r: cell.bg.r, g: cell.bg.g, b: cell.bg.b, a: 0xFF },
-                    }
+                    },
                 )
             }
         }
@@ -215,6 +250,21 @@ impl ViewController {
         if let Some(view_properties) = properties.view_layout {
             self.logical_size = Some(view_properties.size);
             self.invalidate();
+        }
+    }
+
+    fn handle_input_event(&mut self, event: InputEvent) {
+        if let (Some(term), InputEvent::Keyboard(event)) = (&mut self.term, &event) {
+            if event.phase == KeyboardEventPhase::Pressed
+                || event.phase == KeyboardEventPhase::Repeat
+            {
+                if let Some(c) = std::char::from_u32(event.code_point) {
+                    if c != '\0' {
+                        term.input(c);
+                        self.invalidate();
+                    }
+                }
+            }
         }
     }
 }
@@ -321,7 +371,7 @@ impl ServiceFactory for V2ViewProvider {
 }
 
 fn main() -> Result<(), Error> {
-    env::set_var("RUST_BACKTRACE", "1");
+    env::set_var("RUST_BACKTRACE", "full");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
     let app = App::new()?;

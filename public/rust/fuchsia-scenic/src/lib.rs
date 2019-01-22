@@ -15,7 +15,6 @@ use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
 use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
 use parking_lot::Mutex;
 use shared_buffer::SharedBuffer;
-use std::collections::VecDeque;
 use std::mem;
 use std::ops::Deref;
 use std::sync::Arc;
@@ -526,14 +525,8 @@ fn get_image_size(info: &ImageInfo) -> usize {
     }
 }
 
-fn can_reuse_memory(memory: &HostMemory, desired_size: usize) -> bool {
-    let current_size = memory.size();
-    current_size >= desired_size && current_size <= desired_size * 2
-}
-
 pub struct HostImageGuard<'a> {
     cycler: &'a mut HostImageCycler,
-    memory: Option<HostMemory>,
     image: Option<HostImage>,
 }
 
@@ -545,8 +538,7 @@ impl<'a> HostImageGuard<'a> {
 
 impl<'a> Drop for HostImageGuard<'a> {
     fn drop(&mut self) {
-        self.cycler
-            .release(self.memory.take().unwrap(), self.image.take().unwrap());
+        self.cycler.release(self.image.take().unwrap());
     }
 }
 
@@ -555,7 +547,6 @@ pub struct HostImageCycler {
     content_node: ShapeNode,
     content_material: Material,
     content_shape: Option<Rectangle>,
-    pool: VecDeque<(HostMemory, HostImage)>,
 }
 
 impl HostImageCycler {
@@ -570,7 +561,6 @@ impl HostImageCycler {
             content_node,
             content_material,
             content_shape: None,
-            pool: VecDeque::with_capacity(2),
         }
     }
 
@@ -584,36 +574,16 @@ impl HostImageCycler {
         }
 
         let desired_size = get_image_size(&info);
-        self.pool
-            .retain(|(memory, _image)| can_reuse_memory(&memory, desired_size));
 
-        match self.pool.pop_front() {
-            None => {
-                let memory =
-                    HostMemory::allocate(self.node.resource.session.clone(), desired_size)?;
-                let image = HostImage::new(&memory, 0, info);
-                Ok(HostImageGuard {
-                    cycler: self,
-                    memory: Some(memory),
-                    image: Some(image),
-                })
-            }
-            Some((memory, image)) => {
-                let i = if image.info == info {
-                    image
-                } else {
-                    HostImage::new(&memory, 0, info)
-                };
-                Ok(HostImageGuard {
-                    cycler: self,
-                    memory: Some(memory),
-                    image: Some(i),
-                })
-            }
-        }
+        let memory = HostMemory::allocate(self.node.resource.session.clone(), desired_size)?;
+        let image = HostImage::new(&memory, 0, info);
+        Ok(HostImageGuard {
+            cycler: self,
+            image: Some(image),
+        })
     }
 
-    fn release(&mut self, memory: HostMemory, image: HostImage) {
+    fn release(&mut self, image: HostImage) {
         self.content_material.set_texture(&image);
         let rectangle = Rectangle::new(
             self.node.resource.session.clone(),
@@ -622,6 +592,5 @@ impl HostImageCycler {
         );
         self.content_node.set_shape(&rectangle);
         self.content_shape = Some(rectangle);
-        self.pool.push_back((memory, image));
     }
 }
