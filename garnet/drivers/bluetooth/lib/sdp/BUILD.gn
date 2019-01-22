@@ -22,6 +22,8 @@ source_set("definitions") {
 
 static_library("sdp") {
   sources = [
+    "client.cc",
+    "client.h",
     "pdu.cc",
     "pdu.h",
     "server.cc",
@@ -41,6 +43,7 @@ source_set("tests") {
   testonly = true
 
   sources = [
+    "client_unittest.cc",
     "data_element_unittest.cc",
     "pdu_unittest.cc",
     "server_unittest.cc",
