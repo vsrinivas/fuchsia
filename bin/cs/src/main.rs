@@ -27,14 +27,14 @@ struct Component {
 }
 
 impl Realm {
-    fn create(realm_path: &Path) -> Result<Realm, Error> {
-        let job_id = fs::read_to_string(&realm_path.join("job-id"))?;
-        let name = fs::read_to_string(&realm_path.join("name"))?;
+    fn create(realm_path: impl AsRef<Path>) -> Result<Realm, Error> {
+        let job_id = fs::read_to_string(&realm_path.as_ref().join("job-id"))?;
+        let name = fs::read_to_string(&realm_path.as_ref().join("name"))?;
         let realm = Realm {
             job_id: job_id.parse::<u32>()?,
             name: name,
-            child_realms: visit_child_realms(&realm_path)?,
-            child_components: visit_child_components(&realm_path)?,
+            child_realms: visit_child_realms(&realm_path.as_ref())?,
+            child_components: visit_child_components(&realm_path.as_ref())?,
         };
         Ok(realm)
     }
@@ -165,7 +165,7 @@ fn main() -> TraversalResult {
     // information about the component hierarchy.
     // See https://fuchsia.googlesource.com/docs/+/master/the-book/hub.md for
     // more information on the Hub directory structure.
-    let root_realm = Realm::create(&Path::new("/hub"))?;
+    let root_realm = Realm::create("/hub")?;
     println!("{}", root_realm);
     Ok(())
 }
