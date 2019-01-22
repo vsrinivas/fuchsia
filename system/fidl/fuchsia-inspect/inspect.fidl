@@ -39,9 +39,9 @@ struct Object {
 // structured Objects for inspection. An Object may have 0 or more children.
 [Discoverable]
 interface Inspect {
-    1: ReadData() -> (Object object);
-    2: ListChildren() -> (vector<string>? children_names);
+    ReadData() -> (Object object);
+    ListChildren() -> (vector<string>? children_names);
     // Open a child of this Object by name.
     // The name should match what is returned by ListChildren.
-    3: OpenChild(string child_name, request<Inspect> child_channel) -> (bool success);
+    OpenChild(string child_name, request<Inspect> child_channel) -> (bool success);
 };
