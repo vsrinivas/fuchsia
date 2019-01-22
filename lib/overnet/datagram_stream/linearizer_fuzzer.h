@@ -3,10 +3,10 @@
 // found in the LICENSE file.
 
 #include <vector>
+#include "garnet/lib/overnet/datagram_stream/linearizer.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
-#include "linearizer.h"
 
 namespace overnet {
 namespace linearizer_fuzzer {

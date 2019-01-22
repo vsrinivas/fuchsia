@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "aead_codec.h"
+#include "garnet/lib/overnet/packet_protocol/aead_codec.h"
 #include <random>
 #include "gtest/gtest.h"
 

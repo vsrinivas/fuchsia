@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "stream_id.h"
+#include "garnet/lib/overnet/labels/stream_id.h"
 #include <sstream>
 
 namespace overnet {

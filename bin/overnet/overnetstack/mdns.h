@@ -6,8 +6,8 @@
 
 #include <fbl/ref_ptr.h>
 #include <garnet/lib/overnet/endpoint/router_endpoint.h>
-#include "overnet_app.h"
-#include "udp_nub.h"
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
+#include "garnet/bin/overnet/overnetstack/udp_nub.h"
 
 namespace overnetstack {
 

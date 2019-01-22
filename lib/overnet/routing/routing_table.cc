@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "routing_table.h"
+#include "garnet/lib/overnet/routing/routing_table.h"
 #include <iostream>
 #include <unordered_set>
 #include "garnet/lib/overnet/protocol/varint.h"

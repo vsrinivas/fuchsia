@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include "once_fn.h"
-#include "slice.h"
+#include "garnet/lib/overnet/vocabulary/once_fn.h"
+#include "garnet/lib/overnet/vocabulary/slice.h"
 
 namespace overnet {
 

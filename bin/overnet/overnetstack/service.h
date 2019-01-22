@@ -5,7 +5,7 @@
 #pragma once
 
 #include <fuchsia/overnet/cpp/fidl.h>
-#include "overnet_app.h"
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
 
 namespace overnetstack {
 

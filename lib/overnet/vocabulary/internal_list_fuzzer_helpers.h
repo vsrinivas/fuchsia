@@ -7,7 +7,7 @@
 #include <assert.h>
 #include <list>
 #include <vector>
-#include "internal_list.h"
+#include "garnet/lib/overnet/vocabulary/internal_list.h"
 
 namespace overnet {
 namespace internal_list {

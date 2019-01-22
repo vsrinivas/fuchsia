@@ -13,7 +13,7 @@
 #include <string>
 #include <type_traits>
 #include <vector>
-#include "optional.h"
+#include "garnet/lib/overnet/vocabulary/optional.h"
 
 namespace overnet {
 

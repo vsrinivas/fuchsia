@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 #include <unordered_set>
+#include "garnet/lib/overnet/datagram_stream/receive_mode_fuzzer_helpers.h"
 #include "garnet/lib/overnet/protocol/varint.h"
-#include "receive_mode_fuzzer_helpers.h"
 
 using namespace overnet;
 

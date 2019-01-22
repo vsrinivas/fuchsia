@@ -6,7 +6,7 @@
 
 #include <assert.h>
 #include <ostream>
-#include "manual_constructor.h"
+#include "garnet/lib/overnet/vocabulary/manual_constructor.h"
 
 namespace overnet {
 

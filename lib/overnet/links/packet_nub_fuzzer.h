@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include "packet_nub.h"
+#include "garnet/lib/overnet/links/packet_nub.h"
 
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"

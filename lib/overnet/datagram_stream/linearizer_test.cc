@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "linearizer.h"
+#include "garnet/lib/overnet/datagram_stream/linearizer.h"
+#include "garnet/lib/overnet/datagram_stream/linearizer_fuzzer.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "linearizer_fuzzer.h"
 
 using testing::InSequence;
 using testing::Mock;

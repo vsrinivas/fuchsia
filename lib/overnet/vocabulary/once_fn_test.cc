@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "once_fn.h"
+#include "garnet/lib/overnet/vocabulary/once_fn.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

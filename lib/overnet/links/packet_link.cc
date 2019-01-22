@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "packet_link.h"
+#include "garnet/lib/overnet/links/packet_link.h"
 #include <iostream>
 #include <sstream>
 

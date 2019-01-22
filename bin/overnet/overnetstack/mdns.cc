@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "mdns.h"
+#include "garnet/bin/overnet/overnetstack/mdns.h"
 #include <fuchsia/mdns/cpp/fidl.h>
-#include "fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
 #include "garnet/lib/overnet/labels/node_id.h"
 #include "garnet/public/lib/fostr/fidl/fuchsia/mdns/formatting.h"
 
@@ -38,10 +38,9 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
 
   void RunLoop(uint64_t version) {
     subscription_->GetInstances(
-        version,
-        [self = fbl::RefPtr<Impl>(this)](
-            uint64_t new_version,
-            std::vector<fuchsia::mdns::MdnsServiceInstance> services) {
+        version, [self = fbl::RefPtr<Impl>(this)](
+                     uint64_t new_version,
+                     std::vector<fuchsia::mdns::MdnsServiceInstance> services) {
           // Convert list of services into a service map.
           ServiceMap new_service_map;
           for (const auto& svc : services) {
@@ -66,8 +65,8 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
             std::vector<fuchsia::netstack::SocketAddress> addresses;
             if (svc.v4_address) {
               addresses.emplace_back();
-              auto result =
-                  overnet::Status::FromZx(svc.v4_address->Clone(&addresses.back()));
+              auto result = overnet::Status::FromZx(
+                  svc.v4_address->Clone(&addresses.back()));
               if (result.is_error()) {
                 std::cout << "Failed to clone v4_address: " << result << "\n";
                 addresses.pop_back();
@@ -75,8 +74,8 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
             }
             if (svc.v6_address) {
               addresses.emplace_back();
-              auto result =
-                  overnet::Status::FromZx(svc.v6_address->Clone(&addresses.back()));
+              auto result = overnet::Status::FromZx(
+                  svc.v6_address->Clone(&addresses.back()));
               if (result.is_error()) {
                 std::cout << "Failed to clone v6_address: " << result << "\n";
                 addresses.pop_back();

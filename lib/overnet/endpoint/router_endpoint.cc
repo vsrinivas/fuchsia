@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "router_endpoint.h"
+#include "garnet/lib/overnet/endpoint/router_endpoint.h"
 #include <iostream>
 #include <memory>
 #include "garnet/lib/overnet/protocol/fidl.h"
@@ -218,8 +218,7 @@ void RouterEndpoint::ConnectionStream::BeginForkRead() {
         if (fork_frame_status->introduction.has_service_name() &&
             fork_frame_status->introduction.service_name()->find(
                 kOvernetSystemNamespace) == 0) {
-          const auto& svc =
-              fork_frame_status->introduction.service_name();
+          const auto& svc = fork_frame_status->introduction.service_name();
           enum class SystemService {
             NO_IDEA,
             GOSSIP,

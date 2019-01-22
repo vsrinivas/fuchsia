@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "packet_nub.h"
+#include "garnet/lib/overnet/links/packet_nub.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gmock/gmock.h"

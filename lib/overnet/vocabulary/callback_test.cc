@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "callback.h"
+#include "garnet/lib/overnet/vocabulary/callback.h"
 #include <memory>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"

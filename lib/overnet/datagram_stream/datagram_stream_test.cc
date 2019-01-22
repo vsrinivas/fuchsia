@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "datagram_stream.h"
+#include "garnet/lib/overnet/datagram_stream/datagram_stream.h"
 #include <memory>
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "router.h"
+#include "garnet/lib/overnet/routing/router.h"
 #include <iostream>
 #include "garnet/lib/overnet/protocol/fidl.h"
 #include "garnet/public/lib/fostr/fidl/fuchsia/overnet/protocol/formatting.h"

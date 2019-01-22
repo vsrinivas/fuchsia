@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "garnet/lib/overnet/vocabulary/internal_list_fuzzer_helpers.h"
 #include "gtest/gtest.h"
-#include "internal_list_fuzzer_helpers.h"
 
 namespace overnet {
 namespace internal_list {

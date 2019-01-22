@@ -2,10 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "overnet_app.h"
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
 #include <fuchsia/overnet/cpp/fidl.h>
-#include "bound_channel.h"
-#include "fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/bound_channel.h"
+#include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
 #include "garnet/lib/overnet/protocol/fidl.h"
 
 namespace overnetstack {

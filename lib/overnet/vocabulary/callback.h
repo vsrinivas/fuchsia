@@ -7,7 +7,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <memory>
-#include "status.h"
+#include "garnet/lib/overnet/vocabulary/status.h"
 
 namespace overnet {
 

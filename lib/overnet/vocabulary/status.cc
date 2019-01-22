@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "status.h"
+#include "garnet/lib/overnet/vocabulary/status.h"
 #include <zircon/types.h>
 #include <sstream>
 

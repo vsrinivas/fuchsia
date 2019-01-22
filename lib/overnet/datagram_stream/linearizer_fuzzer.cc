@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "linearizer_fuzzer.h"
+#include "garnet/lib/overnet/datagram_stream/linearizer_fuzzer.h"
 
 namespace overnet {
 namespace linearizer_fuzzer {

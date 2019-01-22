@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "fuchsia_port.h"
-#include "mdns.h"
-#include "overnet_app.h"
-#include "service.h"
-#include "udp_nub.h"
+#include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/mdns.h"
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
+#include "garnet/bin/overnet/overnetstack/service.h"
+#include "garnet/bin/overnet/overnetstack/udp_nub.h"
 
 namespace overnetstack {
 
@@ -25,7 +25,8 @@ class FuchsiaTimer final : public overnet::Timer {
 
   static void TaskHandler(async_dispatcher_t* async, async_task_t* task,
                           zx_status_t status) {
-    FireTimeout(static_cast<Task*>(task)->timeout, overnet::Status::FromZx(status));
+    FireTimeout(static_cast<Task*>(task)->timeout,
+                overnet::Status::FromZx(status));
   }
 
   void InitTimeout(overnet::Timeout* timeout,

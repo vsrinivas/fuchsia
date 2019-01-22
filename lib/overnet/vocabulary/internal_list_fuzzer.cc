@@ -4,7 +4,7 @@
 
 #include <stdint.h>
 #include <vector>
-#include "internal_list_fuzzer_helpers.h"
+#include "garnet/lib/overnet/vocabulary/internal_list_fuzzer_helpers.h"
 
 using namespace overnet;
 

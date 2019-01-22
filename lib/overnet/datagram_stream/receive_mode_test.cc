@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "receive_mode.h"
+#include "garnet/lib/overnet/datagram_stream/receive_mode.h"
+#include "garnet/lib/overnet/datagram_stream/receive_mode_fuzzer_helpers.h"
 #include "gtest/gtest.h"
-#include "receive_mode_fuzzer_helpers.h"
 
 namespace overnet {
 namespace receive_mode {

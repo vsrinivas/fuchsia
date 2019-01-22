@@ -5,7 +5,7 @@
 #pragma once
 
 #include <unordered_set>
-#include "receive_mode.h"
+#include "garnet/lib/overnet/datagram_stream/receive_mode.h"
 
 namespace overnet {
 namespace receive_mode {

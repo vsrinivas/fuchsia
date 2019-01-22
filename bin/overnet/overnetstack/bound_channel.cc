@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "bound_channel.h"
+#include "garnet/bin/overnet/overnetstack/bound_channel.h"
 #include <zircon/assert.h>
-#include "fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/fuchsia_port.h"
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
 #include "garnet/lib/overnet/endpoint/message_builder.h"
-#include "overnet_app.h"
 
 namespace overnetstack {
 

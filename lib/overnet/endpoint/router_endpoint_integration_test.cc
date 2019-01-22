@@ -4,12 +4,12 @@
 
 #include <array>
 #include <tuple>
+#include "garnet/lib/overnet/endpoint/router_endpoint.h"
 #include "garnet/lib/overnet/links/packet_link.h"
 #include "garnet/lib/overnet/protocol/fidl.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "gtest/gtest.h"
-#include "router_endpoint.h"
 
 //////////////////////////////////////////////////////////////////////////////
 // Two node fling

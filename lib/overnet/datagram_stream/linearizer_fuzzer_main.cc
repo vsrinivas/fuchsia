@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <vector>
-#include "linearizer_fuzzer.h"
+#include "garnet/lib/overnet/datagram_stream/linearizer_fuzzer.h"
 
 using namespace overnet;
 

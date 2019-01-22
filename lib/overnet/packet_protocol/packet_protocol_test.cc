@@ -5,13 +5,13 @@
 #include "garnet/lib/overnet/packet_protocol/packet_protocol.h"
 #include <memory>
 #include "garnet/lib/overnet/packet_protocol/aead_codec.h"
+#include "garnet/lib/overnet/packet_protocol/packet_protocol_fuzzer.h"
 #include "garnet/lib/overnet/protocol/serialization_helpers.h"
 #include "garnet/lib/overnet/testing/test_timer.h"
 #include "garnet/lib/overnet/testing/trace_cout.h"
 #include "garnet/lib/overnet/vocabulary/closed_ptr.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "packet_protocol_fuzzer.h"
 
 using testing::_;
 using testing::Mock;

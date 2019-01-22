@@ -8,10 +8,10 @@
 #include <lib/async-loop/cpp/loop.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include "garnet/bin/overnet/overnetstack/overnet_app.h"
 #include "garnet/lib/overnet/links/packet_nub.h"
 #include "lib/fsl/tasks/fd_waiter.h"
 #include "lib/fxl/files/unique_fd.h"
-#include "overnet_app.h"
 
 namespace overnetstack {
 
@@ -173,8 +173,9 @@ class UdpNub final : public UdpNubBase, public OvernetApp::Actor {
     if (result < 0) {
       OVERNET_TRACE(ERROR) << "Failed to recvfrom, errno " << errno;
       // Wait a bit before trying again to avoid spamming the log.
-      async::PostDelayedTask(async_get_default_dispatcher(),
-                             [this]() { WaitForInbound(); }, zx::sec(10));
+      async::PostDelayedTask(
+          async_get_default_dispatcher(), [this]() { WaitForInbound(); },
+          zx::sec(10));
       return;
     }
 
