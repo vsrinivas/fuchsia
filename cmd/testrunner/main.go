@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"flag"
 	"fmt"
 	"io"
@@ -101,7 +102,7 @@ func usage() {
 	fmt.Println(`testrunner [flags] tests-file
 
 		Executes all tests found in the JSON [tests-file]
-		Requires botanist.DeviceContext to have been registered and in the current
+		Fuchsia tests require botanist.DeviceContext to have been registered and in the current
 		environment; for more details see
 		https://fuchsia.googlesource.com/tools/+/master/botanist/context.go.`)
 }
@@ -145,10 +146,11 @@ func main() {
 		output.Tar = tar
 	}
 
-	// Prepare the Fuchsia DeviceContext.
+	// Prepare the Fuchsia DeviceContext, which will be nil if the testrunner is
+	// not run by botanist, which is not a failure mode.
 	devCtx, err := botanist.GetDeviceContext()
 	if err != nil {
-		log.Fatal(err)
+		log.Print(err)
 	}
 
 	// Execute.
@@ -217,6 +219,8 @@ func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
 func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanist.DeviceContext) error {
 	if len(tests) == 0 {
 		return nil
+	} else if devCtx == nil {
+		return errors.New("no DeviceContext set; cannot execute fuchsia tests")
 	}
 
 	// Initialize the connection to the Fuchsia device.
