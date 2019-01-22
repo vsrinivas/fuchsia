@@ -77,6 +77,8 @@ uint32_t log_flags = LOG_ERROR | LOG_INFO;
 
 Coordinator::Coordinator(CoordinatorConfig config) : config_(std::move(config)) {}
 
+Coordinator::~Coordinator() { drivers_.clear(); }
+
 bool Coordinator::InSuspend() const {
     return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
 }
@@ -2056,25 +2058,29 @@ static int system_driver_loader(void* arg) {
 }
 
 void Coordinator::ScanSystemDrivers() {
-    if (!system_loaded_) {
-        system_loaded_ = true;
-        // Fire up a thread to scan/load system drivers
-        // This avoids deadlocks between the devhosts hosting the block devices
-        // that these drivers may be served from and the devcoordinator loading them.
-        thrd_t t;
-        thrd_create_with_name(&t, system_driver_loader, this, "system-driver-loader");
+    if (system_loaded_) {
+        return;
+    }
+    system_loaded_ = true;
+    // Fire up a thread to scan/load system drivers.
+    // This avoids deadlocks between the devhosts hosting the block devices that
+    // these drivers may be served from and the devcoordinator loading them.
+    thrd_t t;
+    int ret = thrd_create_with_name(&t, system_driver_loader, this, "system-driver-loader");
+    if (ret == thrd_success) {
+        thrd_detach(t);
     }
 }
 
 void Coordinator::BindSystemDrivers() {
     Driver* drv;
     // Bind system drivers.
-    while ((drv = system_drivers_.pop_front()) != nullptr ) {
+    while ((drv = system_drivers_.pop_front()) != nullptr) {
         drivers_.push_back(drv);
         BindDriver(drv);
     }
     // Bind remaining fallback drivers.
-    while ((drv = fallback_drivers_.pop_front()) != nullptr ) {
+    while ((drv = fallback_drivers_.pop_front()) != nullptr) {
         printf("devcoord: fallback driver '%s' is available\n", drv->name.data());
         drivers_.push_back(drv);
         BindDriver(drv);

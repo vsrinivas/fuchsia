@@ -289,6 +289,7 @@ public:
     Coordinator& operator=(Coordinator&&) = delete;
 
     explicit Coordinator(CoordinatorConfig config);
+    ~Coordinator();
 
     zx_status_t InitializeCoreDevices();
 
@@ -370,7 +371,11 @@ public:
     }
     void set_dmctl_socket(zx::socket dmctl_socket) { dmctl_socket_ = std::move(dmctl_socket); }
 
-    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
+    const fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() const { return drivers_; }
+    const fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() const {
+        return devices_;
+    }
+
     Device& root_device() { return root_device_; }
     Device& misc_device() { return misc_device_; }
     Device& sys_device() { return sys_device_; }
