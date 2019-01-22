@@ -95,16 +95,6 @@ func (v *C.struct_ip_mreqn) Unmarshal(data []byte) error {
 	return nil
 }
 
-func (v *C.netc_get_if_info_t) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_netc_get_if_info_t
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
-}
-
 func (v *C.netc_if_info_t) MarshalTo(data []byte) (int, error) {
 	const size = C.sizeof_netc_if_info_t
 
