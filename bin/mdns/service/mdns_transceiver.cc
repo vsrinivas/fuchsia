@@ -90,30 +90,37 @@ void MdnsTransceiver::InterfacesChanged(
     inet::IpAddress address = MdnsFidlUtil::IpAddressFrom(&if_info.addr);
 
     if ((if_info.flags & fuchsia::netstack::NetInterfaceFlagUp) == 0 ||
-        address.is_loopback() || address == inet::IpAddress(0, 0, 0, 0)) {
+        address.is_loopback()) {
       continue;
     }
 
-    inet::IpAddress alternate_address;
-    if (!if_info.ipv6addrs.empty()) {
-      // TODO(dalesat): Is the first V6 address the right one?
-      alternate_address =
-          MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs.front().addr);
-    }
+    inet::IpAddress alternate_address_for_v6;
 
-    // Ensure that there's an interface transceiver for the V4 address, if it's
-    // valid.
-    if (EnsureInterfaceTransceiver(address, alternate_address, if_info.id,
-                                   if_info.name, &prev)) {
-      link_change = true;
+    if (address.is_v4() && address != inet::IpAddress(0, 0, 0, 0)) {
+      // The NIC has been provisioned with a valid V4 address. That address
+      // will be the alternate address for any V6 transceivers we create.
+      alternate_address_for_v6 = address;
+
+      inet::IpAddress alternate_address_for_v4;
+      if (!if_info.ipv6addrs.empty()) {
+        // TODO(dalesat): Is the first V6 address the right one?
+        alternate_address_for_v4 =
+            MdnsFidlUtil::IpAddressFrom(&if_info.ipv6addrs.front().addr);
+      }
+
+      // Ensure that there's an interface transceiver for the V4 address.
+      if (EnsureInterfaceTransceiver(address, alternate_address_for_v4,
+                                     if_info.id, if_info.name, &prev)) {
+        link_change = true;
+      }
     }
 
     // Ensure that there's an interface transceiver for each valid V6 address.
     // TODO(dalesat): What does it mean if there's more than one of these?
     for (auto& subnet : if_info.ipv6addrs) {
       if (EnsureInterfaceTransceiver(MdnsFidlUtil::IpAddressFrom(&subnet.addr),
-                                     address, if_info.id, if_info.name,
-                                     &prev)) {
+                                     alternate_address_for_v6, if_info.id,
+                                     if_info.name, &prev)) {
         link_change = true;
       }
     }
