@@ -6,7 +6,6 @@ use fidl::encoding::OutOfLine;
 use fidl_fuchsia_math::{InsetF, RectF, SizeF};
 use fidl_fuchsia_ui_viewsv1::{CustomFocusBehavior, ViewLayout, ViewProperties};
 use fuchsia_scenic::EntityNode;
-use std::collections::BTreeMap;
 
 /// Container for data related to a single child view displaying an emulated session.
 pub struct ChildViewData {
@@ -29,7 +28,7 @@ impl ChildViewData {
 ///
 /// Voila uses a column layout to display 2 or more emulated sessions side by side.
 pub fn layout(
-    child_views: &mut BTreeMap<u32, ChildViewData>,
+    child_views: &mut [&mut ChildViewData],
     view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, width: f32, height: f32,
 ) {
     if child_views.is_empty() {
@@ -39,7 +38,7 @@ pub fn layout(
 
     let tile_height = height;
     let tile_width = (width / num_views as f32).floor();
-    for (column_index, (_key, view)) in child_views.iter_mut().enumerate() {
+    for (column_index, view) in child_views.iter_mut().enumerate() {
         let tile_bounds = RectF {
             height: tile_height,
             width: tile_width,
@@ -75,10 +74,10 @@ fn inset(rect: &RectF, border: f32) -> RectF {
     let inset = border.min(rect.width / 0.3).min(rect.height / 0.3);
     let double_inset = inset * 2.0;
     RectF {
-      x: rect.x + inset,
-      y: rect.y + inset,
-      width: rect.width - double_inset,
-      height: rect.height - double_inset
+        x: rect.x + inset,
+        y: rect.y + inset,
+        width: rect.width - double_inset,
+        height: rect.height - double_inset,
     }
 }
 
@@ -92,7 +91,7 @@ mod tests {
             x: 0.0,
             y: 0.0,
             width: 0.0,
-            height: 0.0
+            height: 0.0,
         };
 
         let result = inset(&empty, 2.0);
@@ -108,7 +107,7 @@ mod tests {
             x: 1.0,
             y: 3.0,
             width: 10.0,
-            height: 8.0
+            height: 8.0,
         };
 
         let result = inset(&empty, 2.0);
