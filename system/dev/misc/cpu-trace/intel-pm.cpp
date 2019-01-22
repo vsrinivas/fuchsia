@@ -22,6 +22,7 @@
 #include <ddk/io-buffer.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/device.h>
+#include <ddktl/device.h>
 
 #include <fbl/alloc_checker.h>
 
@@ -31,6 +32,8 @@
 #include <zircon/syscalls.h>
 #include <zircon/syscalls/resource.h>
 #include <zircon/types.h>
+
+namespace cpuperf {
 
 // TODO(dje): Having trouble getting this working, so just punt for now.
 #define TRY_FREEZE_ON_PMI 0
@@ -79,7 +82,7 @@ static cpuperf_event_id_t misc_event_table_contents[NUM_MISC_EVENTS] = {
 // Const accessor to give the illusion of the table being const.
 static const cpuperf_event_id_t* misc_event_table = &misc_event_table_contents[0];
 
-static void pmu_init_misc_event_table();
+static void PmuInitMiscEventTable();
 
 enum arch_event_t : uint16_t {
 #define DEF_ARCH_EVENT(symbol, event_name, id, ebx_bit, event, umask, flags, readable_name, description) \
@@ -152,22 +155,61 @@ typedef struct pmu_per_trace_state {
     std::unique_ptr<io_buffer_t[]> buffers;
 } pmu_per_trace_state_t;
 
-typedef struct cpuperf_device {
-    mtx_t lock;
+// TODO(dje): add unbindable?
+class CpuperfDevice;
+using DeviceType = ddk::Device<CpuperfDevice,
+                               ddk::Openable,
+                               ddk::Closable,
+                               ddk::Ioctlable>;
+
+class CpuperfDevice : public DeviceType {
+  public:
+    explicit CpuperfDevice(zx_device_t* parent, zx::bti bti)
+        : DeviceType(parent), bti_(std::move(bti)) {}
+    ~CpuperfDevice() = default;
+
+    void DdkRelease();
+
+    // Device protocol implementation
+    zx_status_t DdkOpen(zx_device_t** dev_out, uint32_t flags);
+    zx_status_t DdkClose(uint32_t flags);
+    zx_status_t DdkIoctl(uint32_t op, const void* in_buf, size_t in_len,
+                         void* out_buf, size_t out_len, size_t* out_actual);
+
+  private:
+    // Handlers for each of the operations.
+    zx_status_t PmuGetProperties(void* reply, size_t replymax,
+                                 size_t* out_actual);
+    zx_status_t PmuAllocTrace(const void* cmd, size_t cmdlen);
+    zx_status_t PmuFreeTrace();
+    zx_status_t PmuGetAlloc(void* reply, size_t replymax,
+                            size_t* out_actual);
+    zx_status_t PmuGetBufferHandle(const void* cmd, size_t cmdlen,
+                                   void* reply, size_t replymax,
+                                   size_t* out_actual);
+    zx_status_t PmuStageConfig(const void* cmd, size_t cmdlen);
+    zx_status_t PmuGetConfig(void* reply, size_t replymax, size_t* out_actual);
+    zx_status_t PmuStart();
+    zx_status_t PmuStop();
+
+    zx_status_t IoctlWorker(uint32_t op, const void* cmd, size_t cmdlen,
+                            void* reply, size_t replymax, size_t* out_actual);
+
+    mtx_t lock_{};
 
     // Only one open of this device is supported at a time. KISS for now.
-    bool opened;
+    bool opened_ = false;
 
     // Once tracing has started various things are not allowed until it stops.
-    bool active;
+    bool active_ = false;
 
     // one entry for each trace
     // TODO(dje): At the moment we only support one trace at a time.
     // "trace" == "data collection run"
-    std::unique_ptr<pmu_per_trace_state_t> per_trace_state;
+    std::unique_ptr<pmu_per_trace_state_t> per_trace_state_;
 
-    zx::bti bti;
-} cpuperf_device_t;
+    zx::bti bti_;
+};
 
 static bool pmu_supported = false;
 // This is only valid if |pmu_supported| is true.
@@ -176,7 +218,7 @@ static zx_x86_pmu_properties_t pmu_properties;
 // maximum space, in bytes, for trace buffers (per cpu)
 #define MAX_PER_TRACE_SPACE (256 * 1024 * 1024)
 
-static uint16_t get_largest_event_id(const event_details_t* events, size_t count) {
+static uint16_t GetLargestEventId(const event_details_t* events, size_t count) {
     uint16_t largest = 0;
 
     for (size_t i = 0; i < count; ++i) {
@@ -191,9 +233,9 @@ static uint16_t get_largest_event_id(const event_details_t* events, size_t count
 // Initialize the event maps.
 // If there's a problem with the database just flag the error but don't crash.
 
-static zx_status_t initialize_event_maps() {
+static zx_status_t InitializeEventMaps() {
     static_assert(CPUPERF_MAX_EVENT < std::numeric_limits<uint16_t>::max());
-    uint16_t largest_arch_event_id = get_largest_event_id(kArchEvents, countof(kArchEvents));
+    uint16_t largest_arch_event_id = GetLargestEventId(kArchEvents, countof(kArchEvents));
     // See cpu-perf.h: The full event id is split into two pieces:
     // group type and id within that group. The event recorded in
     // |event_details_t| is the id within the group. Each id must be in
@@ -220,7 +262,7 @@ static zx_status_t initialize_event_maps() {
         arch_map[id] = i;
     }
 
-    uint16_t largest_model_event_id = get_largest_event_id(kModelEvents, countof(kModelEvents));
+    uint16_t largest_model_event_id = GetLargestEventId(kModelEvents, countof(kModelEvents));
     if (largest_model_event_id == 0 ||
         largest_model_event_id > CPUPERF_MAX_EVENT) {
         zxlogf(ERROR, "PMU: Corrupt model event database\n");
@@ -248,8 +290,8 @@ static zx_status_t initialize_event_maps() {
     return ZX_OK;
 }
 
-static zx_status_t cpuperf_init_once() {
-    pmu_init_misc_event_table();
+static zx_status_t CpuperfInitOnce() {
+    PmuInitMiscEventTable();
 
     zx_x86_pmu_properties_t props;
     zx_handle_t resource = get_root_resource();
@@ -272,7 +314,7 @@ static zx_status_t cpuperf_init_once() {
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    status = initialize_event_maps();
+    status = InitializeEventMaps();
     if (status != ZX_OK) {
         return status;
     }
@@ -301,7 +343,7 @@ static zx_status_t cpuperf_init_once() {
 
 // Helper routines for the ioctls.
 
-static void pmu_free_buffers_for_trace(pmu_per_trace_state_t* per_trace, uint32_t num_allocated) {
+static void PmuFreeBuffersForTrace(pmu_per_trace_state_t* per_trace, uint32_t num_allocated) {
     // Note: This may be called with partially allocated buffers.
     assert(per_trace->buffers);
     assert(num_allocated <= per_trace->num_buffers);
@@ -312,7 +354,7 @@ static void pmu_free_buffers_for_trace(pmu_per_trace_state_t* per_trace, uint32_
 
 // Map a fixed counter event id to its h/w register number.
 // Returns IPM_MAX_FIXED_COUNTERS if |id| is unknown.
-static unsigned pmu_fixed_counter_number(cpuperf_event_id_t id) {
+static unsigned PmuFixedCounterNumber(cpuperf_event_id_t id) {
     enum {
 #define DEF_FIXED_EVENT(symbol, event_name, id, regnum, flags, readable_name, description) \
         symbol ## _NUMBER = regnum,
@@ -330,7 +372,7 @@ static unsigned pmu_fixed_counter_number(cpuperf_event_id_t id) {
     }
 }
 
-static int pmu_compare_cpuperf_event_id(const void* ap, const void* bp) {
+static int PmuCompareCpuperfEventId(const void* ap, const void* bp) {
     auto a = reinterpret_cast<const cpuperf_event_id_t*>(ap);
     auto b = reinterpret_cast<const cpuperf_event_id_t*>(bp);
     if (*a < *b)
@@ -340,22 +382,22 @@ static int pmu_compare_cpuperf_event_id(const void* ap, const void* bp) {
     return 0;
 }
 
-static void pmu_init_misc_event_table() {
+static void PmuInitMiscEventTable() {
     qsort(misc_event_table_contents,
           countof(misc_event_table_contents),
           sizeof(misc_event_table_contents[0]),
-          pmu_compare_cpuperf_event_id);
+          PmuCompareCpuperfEventId);
 }
 
 // Map a misc event id to its ordinal (unique number in range
 // 0 ... NUM_MISC_EVENTS - 1).
 // Returns -1 if |id| is unknown.
-static int pmu_lookup_misc_event(cpuperf_event_id_t id) {
+static int PmuLookupMiscEvent(cpuperf_event_id_t id) {
     auto p = reinterpret_cast<cpuperf_event_id_t*>(
         bsearch(&id, misc_event_table,
                 countof(misc_event_table_contents),
                 sizeof(id),
-                pmu_compare_cpuperf_event_id));
+                PmuCompareCpuperfEventId));
     if (!p)
         return -1;
     ptrdiff_t result = p - misc_event_table;
@@ -363,16 +405,15 @@ static int pmu_lookup_misc_event(cpuperf_event_id_t id) {
     return (int) result;
 }
 
-static bool pmu_lbr_supported(void) {
+static bool PmuLbrSupported(void) {
     return pmu_properties.lbr_stack_size > 0;
 }
 
 
 // The userspace side of the driver.
 
-static zx_status_t pmu_get_properties(cpuperf_device_t* dev,
-                                      void* reply, size_t replymax,
-                                      size_t* out_actual) {
+zx_status_t CpuperfDevice::PmuGetProperties(void* reply, size_t replymax,
+                                            size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (!pmu_supported)
@@ -397,7 +438,7 @@ static zx_status_t pmu_get_properties(cpuperf_device_t* dev,
     props.num_programmable_events = pmu_properties.num_programmable_events;
     props.fixed_counter_width = pmu_properties.fixed_counter_width;
     props.programmable_counter_width = pmu_properties.programmable_counter_width;
-    if (pmu_lbr_supported())
+    if (PmuLbrSupported())
         props.flags |= CPUPERF_PROPERTY_FLAG_HAS_LAST_BRANCH;
 
     memcpy(reply, &props, sizeof(props));
@@ -405,13 +446,12 @@ static zx_status_t pmu_get_properties(cpuperf_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t pmu_alloc_trace(cpuperf_device_t* dev,
-                                   const void* cmd, size_t cmdlen) {
+zx_status_t CpuperfDevice::PmuAllocTrace(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
     if (!pmu_supported)
         return ZX_ERR_NOT_SUPPORTED;
-    if (dev->per_trace_state)
+    if (per_trace_state_)
         return ZX_ERR_BAD_STATE;
 
     // Note: The remaining API calls don't have to check |pmu_supported|
@@ -442,41 +482,40 @@ static zx_status_t pmu_alloc_trace(cpuperf_device_t* dev,
     uint32_t i = 0;
     for ( ; i < num_cpus; ++i) {
         zx_status_t status =
-            io_buffer_init(&per_trace->buffers[i], dev->bti.get(), alloc.buffer_size, IO_BUFFER_RW);
+            io_buffer_init(&per_trace->buffers[i], bti_.get(), alloc.buffer_size, IO_BUFFER_RW);
         if (status != ZX_OK)
             break;
     }
     if (i != num_cpus) {
-        pmu_free_buffers_for_trace(per_trace.get(), i);
+        PmuFreeBuffersForTrace(per_trace.get(), i);
         return ZX_ERR_NO_MEMORY;
     }
 
     per_trace->num_buffers = alloc.num_buffers;
     per_trace->buffer_size = alloc.buffer_size;
-    dev->per_trace_state = std::move(per_trace);
+    per_trace_state_ = std::move(per_trace);
     return ZX_OK;
 }
 
-static zx_status_t pmu_free_trace(cpuperf_device_t* dev) {
+zx_status_t CpuperfDevice::PmuFreeTrace() {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    if (dev->active)
+    if (active_)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
-    pmu_free_buffers_for_trace(per_trace, per_trace->num_buffers);
-    dev->per_trace_state.reset();
+    PmuFreeBuffersForTrace(per_trace, per_trace->num_buffers);
+    per_trace_state_.reset();
     return ZX_OK;
 }
 
-static zx_status_t pmu_get_alloc(cpuperf_device_t* dev,
-                                 void* reply, size_t replymax,
-                                 size_t* out_actual) {
+zx_status_t CpuperfDevice::PmuGetAlloc(void* reply, size_t replymax,
+                                       size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    const pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -491,13 +530,12 @@ static zx_status_t pmu_get_alloc(cpuperf_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t pmu_get_buffer_handle(cpuperf_device_t* dev,
-                                         const void* cmd, size_t cmdlen,
-                                         void* reply, size_t replymax,
-                                         size_t* out_actual) {
+zx_status_t CpuperfDevice::PmuGetBufferHandle(const void* cmd, size_t cmdlen,
+                                              void* reply, size_t replymax,
+                                              size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    const pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -543,14 +581,14 @@ typedef struct {
     bool have_timebase0_user;
 } staging_state_t;
 
-static zx_status_t pmu_stage_fixed_config(const cpuperf_config_t* icfg,
-                                          staging_state_t* ss,
-                                          unsigned input_index,
-                                          zx_x86_pmu_config_t* ocfg) {
+static zx_status_t PmuStageFixedConfig(const cpuperf_config_t* icfg,
+                                       staging_state_t* ss,
+                                       unsigned input_index,
+                                       zx_x86_pmu_config_t* ocfg) {
     const unsigned ii = input_index;
     const cpuperf_event_id_t id = icfg->events[ii];
     bool uses_timebase0 = !!(icfg->flags[ii] & CPUPERF_CONFIG_FLAG_TIMEBASE0);
-    unsigned counter = pmu_fixed_counter_number(id);
+    unsigned counter = PmuFixedCounterNumber(id);
 
     if (counter == IPM_MAX_FIXED_COUNTERS ||
             counter >= countof(ocfg->fixed_ids) ||
@@ -591,7 +629,7 @@ static zx_status_t pmu_stage_fixed_config(const cpuperf_config_t* icfg,
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
         ocfg->fixed_flags[ss->num_fixed] |= IPM_CONFIG_FLAG_PC;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_LAST_BRANCH) {
-        if (!pmu_lbr_supported()) {
+        if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -611,10 +649,10 @@ static zx_status_t pmu_stage_fixed_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
-                                                 staging_state_t* ss,
-                                                 unsigned input_index,
-                                                 zx_x86_pmu_config_t* ocfg) {
+static zx_status_t PmuStageProgrammableConfig(const cpuperf_config_t* icfg,
+                                              staging_state_t* ss,
+                                              unsigned input_index,
+                                              zx_x86_pmu_config_t* ocfg) {
     const unsigned ii = input_index;
     cpuperf_event_id_t id = icfg->events[ii];
     unsigned group = CPUPERF_EVENT_ID_GROUP(id);
@@ -689,7 +727,7 @@ static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_PC)
         ocfg->programmable_flags[ss->num_programmable] |= IPM_CONFIG_FLAG_PC;
     if (icfg->flags[ii] & CPUPERF_CONFIG_FLAG_LAST_BRANCH) {
-        if (!pmu_lbr_supported()) {
+        if (!PmuLbrSupported()) {
             zxlogf(ERROR, "%s: Last branch not supported, event [%u]\n"
                    , __func__, ii);
             return ZX_ERR_INVALID_ARGS;
@@ -709,13 +747,13 @@ static zx_status_t pmu_stage_programmable_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t pmu_stage_misc_config(const cpuperf_config_t* icfg,
-                                         staging_state_t* ss,
-                                         unsigned input_index,
-                                         zx_x86_pmu_config_t* ocfg) {
+static zx_status_t PmuStageMiscConfig(const cpuperf_config_t* icfg,
+                                      staging_state_t* ss,
+                                      unsigned input_index,
+                                      zx_x86_pmu_config_t* ocfg) {
     const unsigned ii = input_index;
     cpuperf_event_id_t id = icfg->events[ii];
-    int event = pmu_lookup_misc_event(id);
+    int event = PmuLookupMiscEvent(id);
 
     if (event < 0) {
         zxlogf(ERROR, "%s: Invalid misc event [%u]\n", __func__, ii);
@@ -747,13 +785,12 @@ static zx_status_t pmu_stage_misc_config(const cpuperf_config_t* icfg,
     return ZX_OK;
 }
 
-static zx_status_t pmu_stage_config(cpuperf_device_t* dev,
-                                    const void* cmd, size_t cmdlen) {
+zx_status_t CpuperfDevice::PmuStageConfig(const void* cmd, size_t cmdlen) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    if (dev->active)
+    if (active_)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -811,18 +848,18 @@ static zx_status_t pmu_stage_config(cpuperf_device_t* dev,
 
         switch (group) {
         case CPUPERF_GROUP_FIXED:
-            status = pmu_stage_fixed_config(icfg, ss, ii, ocfg);
+            status = PmuStageFixedConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
         case CPUPERF_GROUP_ARCH:
         case CPUPERF_GROUP_MODEL:
-            status = pmu_stage_programmable_config(icfg, ss, ii, ocfg);
+            status = PmuStageProgrammableConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
         case CPUPERF_GROUP_MISC:
-            status = pmu_stage_misc_config(icfg, ss, ii, ocfg);
+            status = PmuStageMiscConfig(icfg, ss, ii, ocfg);
             if (status != ZX_OK)
                 return status;
             break;
@@ -869,12 +906,11 @@ static zx_status_t pmu_stage_config(cpuperf_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t pmu_get_config(cpuperf_device_t* dev,
-                                  void* reply, size_t replymax,
-                                  size_t* out_actual) {
+zx_status_t CpuperfDevice::PmuGetConfig(void* reply, size_t replymax,
+                                        size_t* out_actual) {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    const pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    const pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -890,12 +926,12 @@ static zx_status_t pmu_get_config(cpuperf_device_t* dev,
     return ZX_OK;
 }
 
-static zx_status_t pmu_start(cpuperf_device_t* dev) {
+zx_status_t CpuperfDevice::PmuStart() {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    if (dev->active)
+    if (active_)
         return ZX_ERR_BAD_STATE;
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -945,7 +981,7 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
     if (status != ZX_OK)
         goto fail;
 
-    dev->active = true;
+    active_ = true;
     return ZX_OK;
 
   fail:
@@ -960,10 +996,10 @@ static zx_status_t pmu_start(cpuperf_device_t* dev) {
     }
 }
 
-static zx_status_t pmu_stop(cpuperf_device_t* dev) {
+zx_status_t CpuperfDevice::PmuStop() {
     zxlogf(TRACE, "%s called\n", __func__);
 
-    pmu_per_trace_state_t* per_trace = dev->per_trace_state.get();
+    pmu_per_trace_state_t* per_trace = per_trace_state_.get();
     if (!per_trace)
         return ZX_ERR_BAD_STATE;
 
@@ -972,131 +1008,115 @@ static zx_status_t pmu_stop(cpuperf_device_t* dev) {
         zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
                           MTRACE_CPUPERF_STOP, 0, nullptr, 0);
     if (status == ZX_OK) {
-        dev->active = false;
+        active_ = false;
         status = zx_mtrace_control(resource, MTRACE_KIND_CPUPERF,
                                    MTRACE_CPUPERF_FINI, 0, nullptr, 0);
     }
     return status;
 }
 
-zx_status_t cpuperf_ioctl_worker(cpuperf_device_t* dev, uint32_t op,
-                                 const void* cmd, size_t cmdlen,
-                                 void* reply, size_t replymax,
-                                 size_t* out_actual) {
+zx_status_t CpuperfDevice::IoctlWorker(uint32_t op,
+                                       const void* cmd, size_t cmdlen,
+                                       void* reply, size_t replymax,
+                                       size_t* out_actual) {
     assert(IOCTL_FAMILY(op) == IOCTL_FAMILY_CPUPERF);
 
     switch (op) {
     case IOCTL_CPUPERF_GET_PROPERTIES:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_get_properties(dev, reply, replymax, out_actual);
+        return PmuGetProperties(reply, replymax, out_actual);
 
     case IOCTL_CPUPERF_ALLOC_TRACE:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_alloc_trace(dev, cmd, cmdlen);
+        return PmuAllocTrace(cmd, cmdlen);
 
     case IOCTL_CPUPERF_FREE_TRACE:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_free_trace(dev);
+        return PmuFreeTrace();
 
     case IOCTL_CPUPERF_GET_ALLOC:
         if (cmdlen != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_get_alloc(dev, reply, replymax, out_actual);
+        return PmuGetAlloc(reply, replymax, out_actual);
 
     case IOCTL_CPUPERF_GET_BUFFER_HANDLE:
-        return pmu_get_buffer_handle(dev, cmd, cmdlen, reply, replymax, out_actual);
+        return PmuGetBufferHandle(cmd, cmdlen, reply, replymax, out_actual);
 
     case IOCTL_CPUPERF_STAGE_CONFIG:
         if (replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_stage_config(dev, cmd, cmdlen);
+        return PmuStageConfig(cmd, cmdlen);
 
     case IOCTL_CPUPERF_GET_CONFIG:
-        return pmu_get_config(dev, reply, replymax, out_actual);
+        return PmuGetConfig(reply, replymax, out_actual);
 
     case IOCTL_CPUPERF_START:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_start(dev);
+        return PmuStart();
 
     case IOCTL_CPUPERF_STOP:
         if (cmdlen != 0 || replymax != 0)
             return ZX_ERR_INVALID_ARGS;
-        return pmu_stop(dev);
+        return PmuStop();
 
     default:
         return ZX_ERR_INVALID_ARGS;
     }
 }
-
+
 // Devhost interface.
 
-static zx_status_t cpuperf_open(void* ctx, zx_device_t** dev_out, uint32_t flags) {
-    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
-    if (dev->opened)
+zx_status_t CpuperfDevice::DdkOpen(zx_device_t** dev_out, uint32_t flags) {
+    if (opened_)
         return ZX_ERR_ALREADY_BOUND;
 
-    dev->opened = true;
+    opened_ = true;
     return ZX_OK;
 }
 
-static zx_status_t cpuperf_close(void* ctx, uint32_t flags) {
-    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
-
-    dev->opened = false;
+zx_status_t CpuperfDevice::DdkClose(uint32_t flags) {
+    opened_ = false;
     return ZX_OK;
 }
 
-static zx_status_t cpuperf_ioctl(void* ctx, uint32_t op,
-                                 const void* cmd, size_t cmdlen,
-                                 void* reply, size_t replymax,
-                                 size_t* out_actual) {
-    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
-
-    mtx_lock(&dev->lock);
+zx_status_t CpuperfDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen,
+                                    void* reply, size_t replymax,
+                                    size_t* out_actual) {
+    mtx_lock(&lock_);
 
     ssize_t result;
     switch (IOCTL_FAMILY(op)) {
         case IOCTL_FAMILY_CPUPERF:
-            result = cpuperf_ioctl_worker(dev, op, cmd, cmdlen,
-                                          reply, replymax, out_actual);
+            result = IoctlWorker(op, cmd, cmdlen,
+                                 reply, replymax, out_actual);
             break;
         default:
             result = ZX_ERR_INVALID_ARGS;
             break;
     }
 
-    mtx_unlock(&dev->lock);
+    mtx_unlock(&lock_);
 
     return static_cast<zx_status_t>(result);
 }
 
-static void cpuperf_release(void* ctx) {
-    auto dev = reinterpret_cast<cpuperf_device_t*>(ctx);
-
+void CpuperfDevice::DdkRelease() {
     // TODO(dje): None of these should fail. What to do?
     // Suggest flagging things as busted and prevent further use.
-    pmu_stop(dev);
-    pmu_free_trace(dev);
+    PmuStop();
+    PmuFreeTrace();
 
-    delete dev;
+    delete this;
 }
 
-static zx_protocol_device_t cpuperf_device_proto = []() {
-    zx_protocol_device_t dev{};
-    dev.version = DEVICE_OPS_VERSION;
-    dev.open = cpuperf_open;
-    dev.close = cpuperf_close;
-    dev.ioctl = cpuperf_ioctl;
-    dev.release = cpuperf_release;
-    return dev;
-}();
+} // namespace cpuperf
 
 zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
-    zx_status_t status = cpuperf_init_once();
+    zx_status_t status = cpuperf::CpuperfInitOnce();
     if (status != ZX_OK) {
         return status;
     }
@@ -1107,30 +1127,25 @@ zx_status_t cpuperf_bind(void* ctx, zx_device_t* parent) {
         return status;
     }
 
+    zx::bti bti;
+    status = pdev_get_bti(&pdev, 0, bti.reset_and_get_address());
+    if (status != ZX_OK) {
+        return status;
+    }
+
     fbl::AllocChecker ac;
-    auto dev = new (&ac) cpuperf_device_t{};
+    auto dev = std::unique_ptr<cpuperf::CpuperfDevice>(
+        new (&ac) cpuperf::CpuperfDevice(parent, std::move(bti)));
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
 
-    status = pdev_get_bti(&pdev, 0, dev->bti.reset_and_get_address());
+    status = dev->DdkAdd("cpuperf");
     if (status != ZX_OK) {
-        delete dev;
-        return status;
+        zxlogf(ERROR, "%s: could not add device: %d\n", __func__, status);
+    } else {
+        // devmgr owns the memory now
+        __UNUSED auto ptr = dev.release();
     }
-
-    device_add_args_t args = [&dev]() {
-        device_add_args_t args{};
-        args.version = DEVICE_ADD_ARGS_VERSION;
-        args.name = "cpuperf";
-        args.ctx = dev;
-        args.ops = &cpuperf_device_proto;
-        return args;
-    }();
-
-    if ((status = device_add(parent, &args, nullptr)) < 0) {
-        delete dev;
-    }
-
     return status;
 }
