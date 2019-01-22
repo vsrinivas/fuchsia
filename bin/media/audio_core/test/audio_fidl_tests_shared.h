@@ -22,8 +22,14 @@ namespace test {
 // 2) Having satisfying #1, streamline test-run-time (time=resources=cost);
 // 3) Minimize false-negative test outcomes (undetected regressions).
 //
+// Finally, when waiting for a timeout, our granularity (how frequently we check
+// for response) can be coarse, but when expecting a response we can save time
+// by checking more frequently than the default 10 ms. The kDurationGranularity
+// constant should only be used in conjunction with kDurationResponseExpected.
+//
 constexpr zx::duration kDurationResponseExpected = zx::sec(5);
 constexpr zx::duration kDurationTimeoutExpected = zx::msec(50);
+constexpr zx::duration kDurationGranularity = zx::msec(1);
 
 constexpr char kConnectionErr[] =
     "Connection to fuchsia.media FIDL interface was lost!\n";

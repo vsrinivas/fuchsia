@@ -22,7 +22,7 @@ namespace test {
 class GainControlTestBase : public gtest::RealLoopFixture {
  protected:
   // Always augmented by child implementations that set up the API interface.
-  virtual void SetUp() override;
+  void SetUp() override;
   virtual bool ApiIsNull() = 0;
   bool AudioIsBound() { return audio_.is_bound(); }
 
@@ -53,9 +53,6 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   // Tests expect the API binding to disconnect, then the GainControl binding as
   // well. After the first disconnect, assert that GainControl is still bound.
   virtual bool ReceiveDisconnectCallback();
-
-  // We don't expect a callback on a separate interface's gain_control.
-  bool ReceiveNoSecondaryCallback();
 
   // Core test cases that are validated across various scenarios
   void TestSetGain();
@@ -101,7 +98,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
 //
 class RenderGainControlTest : public GainControlTestBase {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final { return !audio_renderer_.is_bound(); }
 };
 
@@ -109,7 +106,7 @@ class RenderGainControlTest : public GainControlTestBase {
 //
 class CaptureGainControlTest : public GainControlTestBase {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final { return !audio_capturer_.is_bound(); }
 };
 
@@ -147,7 +144,7 @@ class SiblingGainControlsTest : public GainControlTestBase {
 // Verify that Renderer's second GainControl receives the same notifications.
 class RendererTwoGainControlsTest : public SiblingGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final { return !audio_renderer_.is_bound(); }
 };
 
@@ -156,7 +153,7 @@ class RendererTwoGainControlsTest : public SiblingGainControlsTest {
 // Verify that Capturer's second GainControl receives the same notifications.
 class CapturerTwoGainControlsTest : public SiblingGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final { return !audio_capturer_.is_bound(); }
 };
 
@@ -187,8 +184,8 @@ class IndependentGainControlsTest : public GainControlTestBase {
   bool ReceiveGainCallback(float gain_db, bool mute) final;
   bool ReceiveNoGainCallback() final;
 
-  // Expect NO disconnect from our independent gain control -- but only do so
-  // after the first gain control disconnect has already occurred.
+  // Expect NO disconnect from our independent gain control -- after the first
+  // gain control disconnect has already occurred.
   bool ReceiveDisconnectCallback() final;
 };
 
@@ -197,7 +194,7 @@ class IndependentGainControlsTest : public GainControlTestBase {
 // Verify that Renderers' GainControls are fully independent.
 class TwoRenderersGainControlsTest : public IndependentGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final {
     return !audio_renderer_.is_bound() && audio_renderer_2_.is_bound();
   }
@@ -208,7 +205,7 @@ class TwoRenderersGainControlsTest : public IndependentGainControlsTest {
 // Verify that Renderer GainControl does not affect Capturer GainControl.
 class RendererCapturerGainControlsTest : public IndependentGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final {
     return !audio_renderer_.is_bound() && audio_capturer_.is_bound();
   }
@@ -219,7 +216,7 @@ class RendererCapturerGainControlsTest : public IndependentGainControlsTest {
 // Verify that Capturer GainControl does not affect Renderer GainControl.
 class CapturerRendererGainControlsTest : public IndependentGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final {
     return !audio_capturer_.is_bound() && audio_renderer_.is_bound();
   }
@@ -230,7 +227,7 @@ class CapturerRendererGainControlsTest : public IndependentGainControlsTest {
 // Verify that Capturers' GainControls are fully independent.
 class TwoCapturersGainControlsTest : public IndependentGainControlsTest {
  protected:
-  virtual void SetUp() override;
+  void SetUp() override;
   bool ApiIsNull() final {
     return !audio_capturer_.is_bound() && audio_capturer_2_.is_bound();
   }

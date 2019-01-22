@@ -107,11 +107,12 @@ void AudioLoopbackTest::CleanUpRenderer(unsigned int index) {
   bool flushed = false;
 
   // Flush the audio
-  audio_renderer_[index]->DiscardAllPackets([this, &flushed]() {
-    flushed = true;
-    QuitLoop();
-  });
-  EXPECT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  audio_renderer_[index]->DiscardAllPackets(
+      [this, &flushed]() { flushed = true; });
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &flushed]() { return error_occurred_ || flushed; },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
 
   EXPECT_TRUE(flushed);
   payload_buffer_[index].Unmap();
@@ -202,13 +203,14 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   int16_t* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
 
   // Add a callback for when we get our captured packet.
+  bool produced_packet = false;
   audio_capturer_[0].events().OnPacketProduced =
-      [this, &captured](fuchsia::media::StreamPacket packet) {
+      [this, &captured, &produced_packet](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
         if (captured.payload_size == 0) {
           captured = std::move(packet);
           audio_capturer_[0]->StopAsyncCaptureNoReply();
-          QuitLoop();
+          produced_packet = true;
         }
       };
 
@@ -218,10 +220,14 @@ TEST_F(AudioLoopbackTest, SingleStream) {
   audio_renderer_[0]->GetMinLeadTime([this, &sleep_duration](zx_duration_t t) {
     // Give a little wiggle room.
     sleep_duration = t + ZX_MSEC(5);
-
-    QuitLoop();
   });
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &sleep_duration]() {
+        return error_occurred_ || (sleep_duration > 0);
+      },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  ASSERT_FALSE(error_occurred_);
 
   packet.payload_offset = 0;
   packet.payload_size = playback_size_[0];
@@ -239,9 +245,14 @@ TEST_F(AudioLoopbackTest, SingleStream) {
                                int64_t ref_time, int64_t media_time) {
                              ref_time_received = ref_time;
                              media_time_received = media_time;
-                             QuitLoop();
                            });
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &ref_time_received]() {
+        return error_occurred_ || (ref_time_received > -1);
+      },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  ASSERT_FALSE(error_occurred_);
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -253,7 +264,10 @@ TEST_F(AudioLoopbackTest, SingleStream) {
 
   // Capture 10 samples of audio.
   audio_capturer_[0]->StartAsyncCapture(10);
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &produced_packet]() { return error_occurred_ || produced_packet; },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
 
   // Check that we got 10 samples as we expected.
   EXPECT_EQ(captured.payload_size / capture_sample_size_[0], 10U);
@@ -287,13 +301,14 @@ TEST_F(AudioLoopbackTest, DualStream) {
   int16_t* capture = reinterpret_cast<int16_t*>(capture_buffer_[0].start());
 
   // Add a callback for when we get our captured packet.
+  bool produced_packet = false;
   audio_capturer_[0].events().OnPacketProduced =
-      [this, &captured](fuchsia::media::StreamPacket packet) {
+      [this, &captured, &produced_packet](fuchsia::media::StreamPacket packet) {
         // We only care about the first set of captured samples
         if (captured.payload_size == 0) {
           captured = std::move(packet);
           audio_capturer_[0]->StopAsyncCaptureNoReply();
-          QuitLoop();
+          produced_packet = true;
         }
       };
 
@@ -306,10 +321,14 @@ TEST_F(AudioLoopbackTest, DualStream) {
   audio_renderer_[0]->GetMinLeadTime([this, &sleep_duration](zx_duration_t t) {
     // Give a little wiggle room.
     sleep_duration = t + ZX_MSEC(5);
-
-    QuitLoop();
   });
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &sleep_duration]() {
+        return error_occurred_ || (sleep_duration > 0);
+      },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  ASSERT_FALSE(error_occurred_);
 
   for (int i = 0; i < 2; i++) {
     packet[i].payload_offset = 0;
@@ -331,9 +350,14 @@ TEST_F(AudioLoopbackTest, DualStream) {
                                int64_t ref_time, int64_t media_time) {
                              ref_time_received = ref_time;
                              media_time_received = media_time;
-                             QuitLoop();
                            });
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &ref_time_received]() {
+        return error_occurred_ || (ref_time_received > -1);
+      },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
+  ASSERT_FALSE(error_occurred_);
 
   // We expect that media_time 0 played back at some point after the 'zero'
   // time on the system.
@@ -345,7 +369,10 @@ TEST_F(AudioLoopbackTest, DualStream) {
 
   // Capture 10 samples of audio.
   audio_capturer_[0]->StartAsyncCapture(10);
-  ASSERT_FALSE(RunLoopWithTimeout(kDurationResponseExpected)) << kTimeoutErr;
+  EXPECT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this, &produced_packet]() { return error_occurred_ || produced_packet; },
+      kDurationResponseExpected, kDurationGranularity))
+      << kTimeoutErr;
 
   // Check that we got 10 samples as we expected.
   EXPECT_EQ(captured.payload_size / capture_sample_size_[0], 10U);

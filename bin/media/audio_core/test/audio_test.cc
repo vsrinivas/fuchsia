@@ -67,10 +67,8 @@ void AudioBase::SetUp() {
 
   environment_services_ = component::GetEnvironmentServices();
   environment_services_->ConnectToService(audio_.NewRequest());
-  audio_.set_error_handler([this](zx_status_t error) {
-    error_occurred_ = true;
-    QuitLoop();
-  });
+  audio_.set_error_handler(
+      [this](zx_status_t error) { error_occurred_ = true; });
 }
 
 void AudioBase::TearDown() {
@@ -81,8 +79,11 @@ void AudioBase::TearDown() {
 
 // Expecting NOT to receive a disconnect. Wait, then check for errors.
 bool AudioBase::ReceiveNoDisconnectCallback() {
-  bool timed_out = RunLoopWithTimeout(kDurationTimeoutExpected);
+  bool timed_out = !RunLoopWithTimeoutOrUntil(
+      [this]() { return error_occurred_; }, kDurationTimeoutExpected);
+
   EXPECT_FALSE(error_occurred_);
+
   EXPECT_TRUE(timed_out) << kNoTimeoutErr;
 
   return !error_occurred_ && timed_out;
@@ -110,7 +111,6 @@ void SystemGainMuteTest::SetUp() {
     received_gain_db_ = gain_db;
     received_mute_ = muted;
     received_gain_callback_ = true;
-    QuitLoop();
   };
 
   // When clients connects to Audio, the system enqueues an action to send the
@@ -122,8 +122,10 @@ void SystemGainMuteTest::SetUp() {
   // notification of Gain|Mute settings at the time of connection. Conversely,
   // if a client DOES return before registering, even after subsequently
   // registering for the event the client has no way of learning the current
-  // Gain|Mute settings until they are changed.
-  bool timed_out = RunLoopWithTimeout(kDurationResponseExpected);
+  // Gain|Mute settings until they are changed. Wait for this callback now.
+  bool timed_out = !RunLoopWithTimeoutOrUntil(
+      [this]() { return error_occurred_ || received_gain_callback_; },
+      kDurationResponseExpected, kDurationGranularity);
   ASSERT_TRUE(audio_.is_bound());
 
   // Bail before the actual test cases, if we have no connection to service.
@@ -131,7 +133,6 @@ void SystemGainMuteTest::SetUp() {
   ASSERT_FALSE(timed_out) << kTimeoutErr;
   ASSERT_TRUE(received_gain_callback_);
 
-  // received_gain_db_/received_mute_ are the current state; change if needed.
   PresetSystemGainMute();
 }
 
@@ -163,9 +164,17 @@ void SystemGainMuteTest::SetSystemMute(bool mute) {
 
 // Expecting to receive a callback, wait for it and check for errors.
 bool SystemGainMuteTest::ReceiveGainCallback(float gain_db, bool mute) {
-  bool timed_out = RunLoopWithTimeout(kDurationResponseExpected);
+  bool timed_out = !RunLoopWithTimeoutOrUntil(
+      [this, &gain_db, &mute]() {
+        return error_occurred_ ||
+               (received_gain_db_ == gain_db && received_mute_ == mute);
+      },
+      kDurationResponseExpected, kDurationGranularity);
+
   EXPECT_FALSE(error_occurred_) << kConnectionErr;
+
   EXPECT_FALSE(timed_out) << kTimeoutErr;
+
   EXPECT_TRUE(received_gain_callback_);
 
   EXPECT_EQ(received_gain_db_, gain_db);
@@ -182,6 +191,7 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
   bool return_val = ReceiveNoDisconnectCallback();
 
   EXPECT_FALSE(received_gain_callback_);
+
   return_val = return_val && (!received_gain_callback_);
   received_gain_callback_ = false;
 
@@ -201,62 +211,107 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 // from error -- with subsequent reset of the interface ptr -- can take effect.
 //
 // Test creation and interface independence of AudioRenderer.
+// The following 3 conditions are validated:
+// 1. Audio can create AudioRenderer.
+// 2. Audio persists after created AudioRenderer is destroyed.
+// 3. AudioRenderer persists after Audio is destroyed.
 TEST_F(AudioTest, CreateAudioRenderer) {
-  // Validate Audio can create AudioRenderer interface.
+  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
+
+  fuchsia::media::AudioPtr audio_2;
+  fuchsia::media::AudioPtr audio_3;
+
+  environment_services_->ConnectToService(audio_2.NewRequest());
+  environment_services_->ConnectToService(audio_3.NewRequest());
+
+  audio_2.set_error_handler(err_handler);
+  audio_3.set_error_handler(err_handler);
+
+  fuchsia::media::AudioRendererPtr audio_renderer_2;
+  fuchsia::media::AudioRendererPtr audio_renderer_3;
+
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
+  audio_2->CreateAudioRenderer(audio_renderer_2.NewRequest());
+  audio_3->CreateAudioRenderer(audio_renderer_3.NewRequest());
+
+  audio_renderer_.set_error_handler(err_handler);
+  audio_renderer_2.set_error_handler(err_handler);
+  audio_renderer_3.set_error_handler(err_handler);
+
+  audio_renderer_2.Unbind();
+  audio_3.Unbind();
+
   // Give time for Disconnect to occur, if it must.
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+
+  // Validate Audio can create AudioRenderer interface.
   EXPECT_TRUE(audio_.is_bound());
   EXPECT_TRUE(audio_renderer_.is_bound());
 
-  // Validate that Audio persists without AudioRenderer.
-  audio_renderer_.Unbind();
-  EXPECT_FALSE(audio_renderer_.is_bound());
-  EXPECT_TRUE(ReceiveNoDisconnectCallback());
-  EXPECT_TRUE(audio_.is_bound());
+  // Validate that Audio2 persists without AudioRenderer2.
+  EXPECT_TRUE(audio_2.is_bound());
+  EXPECT_FALSE(audio_renderer_2.is_bound());
 
-  // Validate AudioRenderer persists after Audio is unbound.
-  audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
-  audio_.Unbind();
-  EXPECT_FALSE(audio_.is_bound());
-  EXPECT_TRUE(ReceiveNoDisconnectCallback());
-  EXPECT_TRUE(audio_renderer_.is_bound());
+  // Validate AudioRenderer3 persists after Audio3 is unbound.
+  EXPECT_FALSE(audio_3.is_bound());
+  EXPECT_TRUE(audio_renderer_3.is_bound());
 }
 
 // Test creation and interface independence of AudioCapturer.
+// The following 3 conditions are validated:
+// 1. Audio can create AudioCapturer.
+// 2. Audio persists after created AudioCapturer is destroyed.
+// 3. AudioCapturer persists after Audio is destroyed.
 TEST_F(AudioTest, CreateAudioCapturer) {
-  // Validate Audio can create AudioCapturer interface.
+  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
+
+  fuchsia::media::AudioPtr audio_2;
+  fuchsia::media::AudioPtr audio_3;
+
+  environment_services_->ConnectToService(audio_2.NewRequest());
+  environment_services_->ConnectToService(audio_3.NewRequest());
+
+  audio_2.set_error_handler(err_handler);
+  audio_3.set_error_handler(err_handler);
+
+  fuchsia::media::AudioCapturerPtr audio_capturer_2;
+  fuchsia::media::AudioCapturerPtr audio_capturer_3;
+
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
+  audio_2->CreateAudioCapturer(audio_capturer_2.NewRequest(), false);
+  audio_3->CreateAudioCapturer(audio_capturer_3.NewRequest(), true);
+
+  audio_capturer_.set_error_handler(err_handler);
+  audio_capturer_2.set_error_handler(err_handler);
+  audio_capturer_3.set_error_handler(err_handler);
+
+  audio_capturer_2.Unbind();
+  audio_3.Unbind();
+
+  // Give time for Disconnect to occur, if it must.
   ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+
+  // Validate Audio can create AudioCapturer interfaces.
   EXPECT_TRUE(audio_.is_bound());
   EXPECT_TRUE(audio_capturer_.is_bound());
 
-  // Validate that Audio persists without AudioCapturer.
-  audio_capturer_.Unbind();
-  EXPECT_FALSE(audio_capturer_.is_bound());
-  EXPECT_TRUE(ReceiveNoDisconnectCallback());
-  EXPECT_TRUE(audio_.is_bound());
+  // Validate that Audio2 persists without AudioCapturer2.
+  EXPECT_TRUE(audio_2.is_bound());
+  EXPECT_FALSE(audio_capturer_2.is_bound());
 
-  // Validate AudioCapturer persists after Audio is unbound.
-  audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), true);
-  audio_.Unbind();
-  EXPECT_FALSE(audio_.is_bound());
-  EXPECT_TRUE(ReceiveNoDisconnectCallback());
-  EXPECT_TRUE(audio_capturer_.is_bound());
+  // Validate AudioCapturer3 persists after Audio3 is unbound.
+  EXPECT_FALSE(audio_3.is_bound());
+  EXPECT_TRUE(audio_capturer_3.is_bound());
 }
 
 // Test setting (and re-setting) the audio output routing policy.
 TEST_F(AudioTest, SetRoutingPolicy) {
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
-  ASSERT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
-  EXPECT_TRUE(audio_.is_bound());
 
   // Setting policy again should have no effect.
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
-  EXPECT_TRUE(ReceiveNoDisconnectCallback());
-  EXPECT_TRUE(audio_.is_bound());
 
   // Setting policy to different mode.
   audio_->SetRoutingPolicy(
@@ -333,7 +388,7 @@ TEST_F(SystemGainMuteTest, SystemGainDoesntAffectSystemMute) {
 }
 
 // Test setting the systemwide Mute to the already-set value.
-// In these cases, we should receive no gain|mute callback (should timeout).
+// In these cases, we should receive no mute callback (should timeout).
 // Verify this with permutations that include Mute=true and Gain=MUTED_GAIN_DB.
 // 'No callback if no change in Mute' should be the case REGARDLESS of Gain.
 // This test relies upon Gain-Mute independence verified by previous test.
@@ -341,39 +396,25 @@ TEST_F(SystemGainMuteTest, SystemMuteNoChangeEmitsNoCallback) {
   SetSystemMute(true);
   EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, true));
 
-  // Expect: timeout (no callback); no change to Mute, regardless of Gain. If we
-  // got a callback, either way it's an error: disconnect, or System Mute event.
   SetSystemMute(true);
   EXPECT_TRUE(ReceiveNoGainCallback());
 
   SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
 
-  SetSystemMute(true);
-  EXPECT_TRUE(ReceiveNoGainCallback());
-
   SetSystemMute(false);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
-
-  SetSystemMute(false);
-  EXPECT_TRUE(ReceiveNoGainCallback());
-
-  SetSystemGain(kUnityGainDb);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, false));
 
   SetSystemMute(false);
   EXPECT_TRUE(ReceiveNoGainCallback());
 }
 
 // Test setting the systemwide Gain to the already-set value.
-// In these cases, we should receive no gain|mute callback (should timeout).
+// In these cases, we should receive no gain callback (should timeout).
 // Verify this with permutations that include Mute=true and Gain=MUTED_GAIN_DB.
 // 'No callback if no change in Gain' should be the case REGARDLESS of Mute.
 // This test relies upon Gain-Mute independence verified by previous test.
 TEST_F(SystemGainMuteTest, SystemGainNoChangeEmitsNoCallback) {
-  SetSystemGain(kUnityGainDb);
-  EXPECT_TRUE(ReceiveNoGainCallback());
-
   SetSystemMute(true);
   EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, true));
 
@@ -382,9 +423,6 @@ TEST_F(SystemGainMuteTest, SystemGainNoChangeEmitsNoCallback) {
 
   SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
-
-  SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
-  EXPECT_TRUE(ReceiveNoGainCallback());
 
   SetSystemMute(false);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
@@ -393,29 +431,20 @@ TEST_F(SystemGainMuteTest, SystemGainNoChangeEmitsNoCallback) {
   EXPECT_TRUE(ReceiveNoGainCallback());
 }
 
-// Set System Gain above allowed range. Should clamp to unity (which was
-// previous set during SetUp); thus, no new callback should be received.
+// Set System Gain above allowed range, after setting to low value.
+// Initial state of system gain is unity, which is the maximum value.
 TEST_F(SystemGainMuteTest, SystemGainTooHighIsClampedToMaximum) {
-  // Initial state of system gain is unity, which is the maximum value.
-  SetSystemGain(kTooHighGainDb);
-  EXPECT_TRUE(ReceiveNoGainCallback());
-
-  SetSystemMute(true);
-  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, true));
-}
-
-// Set System Gain below allowed range. Should clamp "up" to the minimum value
-// (which we set immediately prior); thus, no new callback should be received.
-TEST_F(SystemGainMuteTest, SystemGainTooLowIsClampedToMinimum) {
-  // Set system gain to the minimum value.
   SetSystemGain(fuchsia::media::MUTED_GAIN_DB);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
 
-  SetSystemGain(kTooLowGainDb);
-  EXPECT_TRUE(ReceiveNoGainCallback());
+  SetSystemGain(kTooHighGainDb);
+  EXPECT_TRUE(ReceiveGainCallback(kUnityGainDb, false));
+}
 
-  SetSystemMute(true);
-  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, true));
+// Set System Gain below allowed range. Should clamp "up" to the minimum val.
+TEST_F(SystemGainMuteTest, SystemGainTooLowIsClampedToMinimum) {
+  SetSystemGain(kTooLowGainDb);
+  EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
 }
 
 }  // namespace test
