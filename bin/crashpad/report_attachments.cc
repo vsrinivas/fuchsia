@@ -13,6 +13,7 @@
 #include <lib/fxl/strings/concatenate.h>
 #include <lib/fxl/strings/trim.h>
 #include <lib/syslog/cpp/logger.h>
+#include <lib/zx/debuglog.h>
 #include <third_party/crashpad/minidump/minidump_file_writer.h>
 #include <third_party/crashpad/util/file/file_writer.h>
 #include <zircon/errors.h>
@@ -35,16 +36,18 @@ std::string WriteKernelLogToFile(const std::string& dir) {
     return std::string();
   }
 
-  zx::log log;
-  zx_status_t status = zx::log::create(ZX_LOG_FLAG_READABLE, &log);
+  zx::debuglog log;
+  zx_status_t status =
+      zx::debuglog::create(zx::resource(), ZX_LOG_FLAG_READABLE, &log);
   if (status != ZX_OK) {
-    FX_LOGS(ERROR) << "zx::log::create failed " << status;
+    FX_LOGS(ERROR) << "zx::debuglog::create failed " << status;
     return std::string();
   }
 
   char buf[ZX_LOG_RECORD_MAX + 1];
   zx_log_record_t* rec = (zx_log_record_t*)buf;
-  while (log.read(ZX_LOG_RECORD_MAX, rec, 0) > 0) {
+  while (log.read(/*options=*/0, /*buffer=*/rec,
+                  /*buffer_size=*/ZX_LOG_RECORD_MAX) > 0) {
     if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
       rec->datalen--;
     }

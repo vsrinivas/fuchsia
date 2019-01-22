@@ -23,7 +23,6 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/job.h>
-#include <lib/zx/log.h>
 #include <lib/zx/object.h>
 #include <lib/zx/pmt.h>
 #include <lib/zx/port.h>
