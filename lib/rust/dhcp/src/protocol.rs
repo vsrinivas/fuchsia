@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 #![deny(warnings)]
 
+use crate::configuration::RequestedConfig;
+use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
 use std::iter::Iterator;
 use std::net::Ipv4Addr;
@@ -95,8 +97,6 @@ impl Message {
     /// Any malformed configuration options will be skipped over, leaving only
     /// well formed `ConfigOption`s in the final `Message`.
     pub fn from_buffer(buf: &[u8]) -> Option<Self> {
-        use byteorder::{BigEndian, ByteOrder};
-
         if buf.len() < OPTIONS_START_IDX {
             return None;
         }
@@ -183,6 +183,14 @@ impl Message {
         match MessageType::try_from(*maybe_dhcp_type_value) {
             Ok(dhcp_type) => Some(dhcp_type),
             Err(MessageTypeError::UnknownMessageType(_typ)) => None,
+        }
+    }
+
+    pub fn parse_to_config(&self) -> RequestedConfig {
+        RequestedConfig {
+            lease_time_s: self
+                .get_config_option(OptionCode::IpAddrLeaseTime)
+                .map(|t| BigEndian::read_u32(&t.value)),
         }
     }
 }

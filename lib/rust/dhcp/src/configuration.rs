@@ -34,6 +34,8 @@ pub struct ServerConfig {
     pub routers: Vec<Ipv4Addr>,
     /// The IPv4 addresses, in order of priority, for the default DNS servers of the local network.
     pub name_servers: Vec<Ipv4Addr>,
+    /// Maximum allowed lease time, in case client requests a specific lease duration.
+    pub max_lease_time_s: u32,
 }
 
 impl ServerConfig {
@@ -45,6 +47,7 @@ impl ServerConfig {
             managed_addrs: vec![],
             routers: vec![],
             name_servers: vec![],
+            max_lease_time_s: 60 * 60 * 24 * 7, // One week in seconds
         }
     }
 }
@@ -68,5 +71,33 @@ impl From<io::Error> for ConfigError {
 impl From<serde_json::Error> for ConfigError {
     fn from(e: serde_json::Error) -> Self {
         ConfigError::JsonError(e)
+    }
+}
+
+/// Specific config values requested by the client in an option.
+#[derive(Debug, PartialEq)]
+pub struct RequestedConfig {
+    /// Lease time requested by client in seconds.
+    pub lease_time_s: Option<u32>,
+}
+
+impl RequestedConfig {
+    pub fn new() -> Self {
+        RequestedConfig { lease_time_s: None }
+    }
+}
+
+/// Values to be provided to the client.
+#[derive(Debug, PartialEq)]
+pub struct ClientConfig {
+    /// Lease time to be provided to the client in seconds.
+    pub lease_time_s: u32,
+}
+
+impl ClientConfig {
+    pub fn new(lease_time_s: u32) -> Self {
+        ClientConfig {
+            lease_time_s: lease_time_s,
+        }
     }
 }

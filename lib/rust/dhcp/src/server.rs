@@ -2,10 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::configuration::ServerConfig;
+use crate::configuration::{ClientConfig, ServerConfig};
 use crate::protocol::{self, ConfigOption, Message, MessageType, OpCode, OptionCode};
 use byteorder::{BigEndian, ByteOrder};
 use fidl_fuchsia_hardware_ethernet_ext::MacAddress as MacAddr;
+use std::cmp;
 use std::collections::{BTreeSet, HashMap, HashSet};
 use std::net::Ipv4Addr;
 use std::ops::Fn;
@@ -71,10 +72,16 @@ where
     }
 
     fn handle_discover(&mut self, disc: Message) -> Option<Message> {
+        let client_config = self.client_config(&disc);
         let offered_ip = self.get_addr(&disc)?;
-        let mut offer = build_offer(disc, &self.config);
+        let mut offer = build_offer(disc, &self.config, &client_config);
         offer.yiaddr = offered_ip;
-        self.update_server_cache(Ipv4Addr::from(offer.yiaddr), offer.chaddr, vec![]);
+        self.update_server_cache(
+            Ipv4Addr::from(offer.yiaddr),
+            offer.chaddr,
+            vec![],
+            &client_config,
+        );
 
         Some(offer)
     }
@@ -103,11 +110,12 @@ where
 
     fn update_server_cache(
         &mut self, client_addr: Ipv4Addr, client_mac: MacAddr, client_opts: Vec<ConfigOption>,
+        client_config: &ClientConfig,
     ) {
         let config = CachedConfig {
             client_addr: client_addr,
             options: client_opts,
-            expiration: (self.time_provider)() + self.config.default_lease_time as i64,
+            expiration: (self.time_provider)() + client_config.lease_time_s as i64,
         };
         self.cache.insert(client_mac, config);
         self.pool.allocate_addr(client_addr);
@@ -203,6 +211,16 @@ where
             self.pool.free_addr(*ip);
             self.cache.remove(mac);
         });
+    }
+
+    pub fn client_config(&self, client_message: &Message) -> ClientConfig {
+        let requested_config = client_message.parse_to_config();
+        ClientConfig {
+            lease_time_s: match requested_config.lease_time_s {
+                None => self.config.default_lease_time,
+                Some(t) => cmp::min(t, self.config.max_lease_time_s),
+            },
+        }
     }
 }
 
@@ -308,7 +326,7 @@ enum ClientState {
     Renewing,
 }
 
-fn build_offer(client: Message, config: &ServerConfig) -> Message {
+fn build_offer(client: Message, config: &ServerConfig, client_config: &ClientConfig) -> Message {
     let mut offer = client;
     offer.op = OpCode::BOOTREPLY;
     offer.secs = 0;
@@ -316,16 +334,18 @@ fn build_offer(client: Message, config: &ServerConfig) -> Message {
     offer.siaddr = Ipv4Addr::new(0, 0, 0, 0);
     offer.sname = String::new();
     offer.file = String::new();
-    add_required_options(&mut offer, config, MessageType::DHCPOFFER);
+    add_required_options(&mut offer, config, client_config, MessageType::DHCPOFFER);
     add_recommended_options(&mut offer, config);
 
     offer
 }
 
-fn add_required_options(msg: &mut Message, config: &ServerConfig, msg_type: MessageType) {
+fn add_required_options(
+    msg: &mut Message, config: &ServerConfig, client_config: &ClientConfig, msg_type: MessageType,
+) {
     msg.options.clear();
     let mut lease = vec![0; 4];
-    BigEndian::write_u32(&mut lease, config.default_lease_time);
+    BigEndian::write_u32(&mut lease, client_config.lease_time_s);
     msg.options.push(ConfigOption {
         code: OptionCode::IpAddrLeaseTime,
         value: lease,
@@ -404,7 +424,12 @@ fn build_ack(req: Message, requested_ip: Ipv4Addr, config: &ServerConfig) -> Mes
     ack.secs = 0;
     ack.yiaddr = requested_ip;
     ack.options.clear();
-    add_required_options(&mut ack, config, MessageType::DHCPACK);
+    add_required_options(
+        &mut ack,
+        config,
+        &ClientConfig::new(config.default_lease_time),
+        MessageType::DHCPACK,
+    );
     add_recommended_options(&mut ack, config);
 
     ack
@@ -1394,5 +1419,64 @@ mod tests {
             }),
             "client config retained"
         );
+    }
+
+    #[test]
+    fn test_client_requested_lease_time() {
+        let mut disc = new_test_discover();
+        disc.options.push(ConfigOption {
+            code: OptionCode::IpAddrLeaseTime,
+            value: vec![0, 0, 0, 20],
+        });
+
+        let mut server = new_test_server(|| 42);
+        let result = server.dispatch(disc).unwrap();
+        assert_eq!(
+            BigEndian::read_u32(
+                &result
+                    .get_config_option(OptionCode::IpAddrLeaseTime)
+                    .unwrap()
+                    .value
+            ),
+            20
+        );
+
+        let cached_config = server
+            .cache
+            .get(&MacAddr {
+                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+            })
+            .unwrap();
+        assert_eq!(cached_config.expiration, 42 + 20);
+    }
+
+    #[test]
+    fn test_client_requested_lease_time_greater_than_max() {
+        let mut disc = new_test_discover();
+        disc.options.push(ConfigOption {
+            code: OptionCode::IpAddrLeaseTime,
+            value: vec![0, 0, 0, 20],
+        });
+
+        let mut server = new_test_server(|| 42);
+        server.config.max_lease_time_s = 10;
+        let result = server.dispatch(disc).unwrap();
+        assert_eq!(
+            BigEndian::read_u32(
+                &result
+                    .get_config_option(OptionCode::IpAddrLeaseTime)
+                    .unwrap()
+                    .value
+            ),
+            10
+        );
+
+        let cached_config = server
+            .cache
+            .get(&MacAddr {
+                octets: [0xAA, 0xBB, 0xCC, 0xDD, 0xEE, 0xFF],
+            })
+            .unwrap();
+        assert_eq!(cached_config.expiration, 42 + 10);
     }
 }
