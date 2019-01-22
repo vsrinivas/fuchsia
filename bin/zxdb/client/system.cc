@@ -11,16 +11,16 @@ namespace zxdb {
 // Schema definition -----------------------------------------------------------
 
 const char* ClientSettings::System::kSymbolPaths = "symbol-paths";
-const char* kSymbolPathsDescription = 1 + R"(
-  List of mapping databases, ELF files or directories for symbol lookup.
+const char* kSymbolPathsDescription =
+    R"(  List of mapping databases, ELF files or directories for symbol lookup.
   When a directory path is passed, the directory will be enumerated
   non-recursively to index all ELF files within. When a .txt file is passed,
   it will be treated as a mapping database from build ID to file path.
   Otherwise, the path will be loaded as an ELF file.)";
 
 const char* ClientSettings::System::kPauseNewProcesses = "pause-new-processes";
-static const char* kPauseNewProcessDescription = 1 + R"(
-  Whether a process should pause the initial thread on startup.)";
+static const char* kPauseNewProcessDescription =
+    R"(  Whether a process should pause the initial thread on startup.)";
 
 namespace {
 
