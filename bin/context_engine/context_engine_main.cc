@@ -16,7 +16,7 @@ namespace modular {
 
 class ContextEngineApp {
  public:
-  ContextEngineApp(component::StartupContext* context) {
+  ContextEngineApp(component::StartupContext* const context) {
     auto component_context =
         context
             ->ConnectToEnvironmentService<fuchsia::modular::ComponentContext>();

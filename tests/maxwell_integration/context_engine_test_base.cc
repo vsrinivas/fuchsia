@@ -6,11 +6,18 @@
 
 #include "peridot/lib/testing/wait_until_idle.h"
 
+namespace {
+
+constexpr char kContextEngineUrl[] =
+    "fuchsia-pkg://fuchsia.com/context_engine#meta/context_engine.cmx";
+
+}
+
 namespace maxwell {
 
 void ContextEngineTestBase::SetUp() {
   context_engine_ =
-      ConnectToService<fuchsia::modular::ContextEngine>("context_engine");
+      ConnectToService<fuchsia::modular::ContextEngine>(kContextEngineUrl);
   context_engine_->GetContextDebug(debug_.NewRequest());
 }
 
