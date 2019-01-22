@@ -118,8 +118,8 @@ zx_status_t Bus::ScanDownstream(void) {
                 fbl::RefPtr<Config> config;
                 pci_bdf_t bdf = { static_cast<uint8_t>(bus_id), dev_id, func_id };
                 zx_status_t status = MakeConfig(bdf, &config);
-                if (status == ZX_OK) {
-                    if (config->vendor_id() != 0xFFFF) {
+                if (status == ZX_OK) { 
+                    if (config->Read(Config::kVendorId) == PCI_INVALID_VENDOR_ID) {
                         pci_infof("found device at %02x:%02x.%1x\n", bus_id, dev_id, func_id);
                     }
                 }

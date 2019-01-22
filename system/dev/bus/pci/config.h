@@ -5,12 +5,13 @@
 // https://opensource.org/licenses/MIT
 
 #pragma once
-#include <ddktl/protocol/pciroot.h>
 #include <ddk/mmio-buffer.h>
+#include <ddktl/protocol/pciroot.h>
 #include <endian.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
+#include <stdio.h>
 #include <zircon/hw/pci.h>
 #include <zircon/types.h>
 
@@ -122,12 +123,9 @@ public:
     //
     // @return a pointer to a new Config instance on success, nullptr on failure.
     //
-    inline pci_bdf_t bdf() const { return bdf_; }
+    inline const pci_bdf_t& bdf() const { return bdf_; }
+    inline const char* addr(void) const { return addr_; };
     virtual const char* type(void) const = 0;
-
-    // Convenience
-    uint16_t vendor_id() const { return Read(kVendorId); }
-    uint16_t device_id() const { return Read(kDeviceId); }
 
     // Virtuals
     void DumpConfig(uint16_t len) const;
@@ -140,9 +138,12 @@ public:
     virtual ~Config(){};
 
 protected:
-    Config(pci_bdf_t bdf)
-        : bdf_(bdf) {}
+    Config(pci_bdf_t bdf) : bdf_(bdf) {
+        snprintf(addr_, sizeof(addr_), "%02x:%02x.%01x", bdf_.bus_id, bdf_.device_id,
+                 bdf_.function_id);
+    }
     const pci_bdf_t bdf_;
+    char addr_[8];
 };
 
 // MMIO config is the stardard method for accessing modern pci configuration space.
@@ -151,10 +152,10 @@ protected:
 class MmioConfig final : public Config {
 public:
     static zx_status_t Create(pci_bdf_t bdf,
-                       mmio_buffer_t* ecam_,
-                       uint8_t start_bus,
-                       uint8_t end_bus,
-                       fbl::RefPtr<Config>* config);
+                              mmio_buffer_t* ecam_,
+                              uint8_t start_bus,
+                              uint8_t end_bus,
+                              fbl::RefPtr<Config>* config);
     uint8_t Read(const PciReg8 addr) const final;
     uint16_t Read(const PciReg16 addr) const final;
     uint32_t Read(const PciReg32 addr) const final;
