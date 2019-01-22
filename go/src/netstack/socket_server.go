@@ -255,11 +255,7 @@ func (ios *iostate) loopRead() error {
 			out := make([]byte, C.FDIO_SOCKET_MSG_HEADER_SIZE+len(v))
 			if err := func() error {
 				var fdioSocketMsg C.struct_fdio_socket_msg
-				n, err := fdioSocketMsg.addr.Encode(sender)
-				if err != nil {
-					return err
-				}
-				fdioSocketMsg.addrlen = C.socklen_t(n)
+				fdioSocketMsg.addrlen = C.socklen_t(fdioSocketMsg.addr.Encode(ios.netProto, sender))
 				if _, err := fdioSocketMsg.MarshalTo(out[:C.FDIO_SOCKET_MSG_HEADER_SIZE]); err != nil {
 					return err
 				}
@@ -610,21 +606,15 @@ func (ios *iostate) buildIfInfos() *C.netc_get_if_info_t {
 		}
 		rep.info[index].index = C.ushort(index + 1)
 		rep.info[index].flags |= C.NETC_IFF_UP
-		if _, err := rep.info[index].addr.Encode(tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr}); err != nil {
-			log.Printf("encoding addr failed: %v", err)
-		}
-		if _, err := rep.info[index].netmask.Encode(tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)}); err != nil {
-			log.Printf("encoding netmask failed: %v", err)
-		}
+		rep.info[index].addr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: ifs.nic.Addr})
+		rep.info[index].netmask.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(ifs.nic.Netmask)})
 
 		// Long-hand for: broadaddr = ifs.nic.Addr | ^ifs.nic.Netmask
 		broadaddr := []byte(ifs.nic.Addr)
 		for i := range broadaddr {
 			broadaddr[i] |= ^ifs.nic.Netmask[i]
 		}
-		if _, err := rep.info[index].broadaddr.Encode(tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)}); err != nil {
-			log.Printf("encoding broadaddr failed: %v", err)
-		}
+		rep.info[index].broadaddr.Encode(ipv4.ProtocolNumber, tcpip.FullAddress{NIC: nicid, Addr: tcpip.Address(broadaddr)})
 		index++
 	}
 	rep.n_info = index
@@ -694,22 +684,14 @@ func (ios *iostate) opIoctl(msg *zxsocket.Msg) zx.Status {
 	return zx.ErrInvalidArgs
 }
 
-func fdioSockAddrReply(addr tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
+func fdioSockAddrReply(netProto tcpip.NetworkProtocolNumber, addr tcpip.FullAddress, msg *zxsocket.Msg) zx.Status {
 	var rep C.struct_zxrio_sockaddr_reply
-	{
-		n, err := rep.addr.Encode(addr)
-		if err != nil {
-			return errStatus(err)
-		}
-		rep.len = C.socklen_t(n)
+	rep.len = C.socklen_t(rep.addr.Encode(netProto, addr))
+	n, err := rep.MarshalTo(msg.Data[:])
+	if err != nil {
+		return errStatus(err)
 	}
-	{
-		n, err := rep.MarshalTo(msg.Data[:])
-		if err != nil {
-			return errStatus(err)
-		}
-		msg.Datalen = uint32(n)
-	}
+	msg.Datalen = uint32(n)
 	msg.SetOff(0)
 	return zx.ErrOk
 }
@@ -731,7 +713,7 @@ func (ios *iostate) opGetSockName(msg *zxsocket.Msg) zx.Status {
 	if debug {
 		log.Printf("getsockname(): %+v", a)
 	}
-	return fdioSockAddrReply(a, msg)
+	return fdioSockAddrReply(ios.netProto, a, msg)
 }
 
 func (ios *iostate) opGetPeerName(msg *zxsocket.Msg) (status zx.Status) {
@@ -739,7 +721,7 @@ func (ios *iostate) opGetPeerName(msg *zxsocket.Msg) (status zx.Status) {
 	if err != nil {
 		return zxNetError(err)
 	}
-	return fdioSockAddrReply(a, msg)
+	return fdioSockAddrReply(ios.netProto, a, msg)
 }
 
 func (ios *iostate) loopListen(inCh chan struct{}) error {

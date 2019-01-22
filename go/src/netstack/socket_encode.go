@@ -8,11 +8,14 @@
 package netstack
 
 import (
+	"encoding/binary"
 	"fmt"
 	"unsafe"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/header"
+	"github.com/google/netstack/tcpip/network/ipv4"
+	"github.com/google/netstack/tcpip/network/ipv6"
 )
 
 // #cgo CFLAGS: -D_GNU_SOURCE
@@ -136,24 +139,68 @@ func (v *C.struct_sockaddr_storage) Unmarshal(data []byte) error {
 	return nil
 }
 
+func isZeros(b []byte) bool {
+	for _, b := range b {
+		if b != 0 {
+			return false
+		}
+	}
+	return true
+}
+
 func (v *C.struct_sockaddr_storage) Decode() (tcpip.FullAddress, error) {
 	switch v.ss_family {
 	case C.AF_INET:
-		return (*C.struct_sockaddr_in)(unsafe.Pointer(v)).Decode(), nil
+		v := (*C.struct_sockaddr_in)(unsafe.Pointer(v))
+		out := tcpip.FullAddress{
+			Port: binary.BigEndian.Uint16(v.sin_port.Bytes()),
+		}
+		if b := v.sin_addr.Bytes(); !isZeros(b) {
+			out.Addr = tcpip.Address(b)
+		}
+		return out, nil
 	case C.AF_INET6:
-		return (*C.struct_sockaddr_in6)(unsafe.Pointer(v)).Decode(), nil
+		v := (*C.struct_sockaddr_in6)(unsafe.Pointer(v))
+		out := tcpip.FullAddress{
+			Port: binary.BigEndian.Uint16(v.sin6_port.Bytes()),
+		}
+		if b := v.sin6_addr.Bytes(); !isZeros(b) {
+			out.Addr = tcpip.Address(b)
+		}
+		if isLinkLocal(out.Addr) {
+			out.NIC = tcpip.NICID(v.sin6_scope_id)
+		}
+		return out, nil
 	default:
 		return tcpip.FullAddress{}, fmt.Errorf("unknown sockaddr_storage.ss_family: %d", v.ss_family)
 	}
 }
 
-func (v *C.struct_sockaddr_storage) Encode(addr tcpip.FullAddress) (int, error) {
-	switch len(addr.Addr) {
-	case header.IPv4AddressSize:
-		return C.sizeof_struct_sockaddr_in, (*C.struct_sockaddr_in)(unsafe.Pointer(v)).Encode(addr)
-	case header.IPv6AddressSize:
-		return C.sizeof_struct_sockaddr_in6, (*C.struct_sockaddr_in6)(unsafe.Pointer(v)).Encode(addr)
+func (v *C.struct_sockaddr_storage) Encode(netProto tcpip.NetworkProtocolNumber, addr tcpip.FullAddress) int {
+	switch netProto {
+	case ipv4.ProtocolNumber:
+		v := (*C.struct_sockaddr_in)(unsafe.Pointer(v))
+		copy(v.sin_addr.Bytes(), addr.Addr)
+		v.sin_family = C.AF_INET
+		binary.BigEndian.PutUint16(v.sin_port.Bytes(), addr.Port)
+		return C.sizeof_struct_sockaddr_in
+	case ipv6.ProtocolNumber:
+		v := (*C.struct_sockaddr_in6)(unsafe.Pointer(v))
+		if len(addr.Addr) == header.IPv4AddressSize {
+			// Copy address in v4-mapped format.
+			copy(v.sin6_addr.Bytes()[header.IPv6AddressSize-header.IPv4AddressSize:], addr.Addr)
+			v.sin6_addr.Bytes()[header.IPv6AddressSize-header.IPv4AddressSize-1] = 0xff
+			v.sin6_addr.Bytes()[header.IPv6AddressSize-header.IPv4AddressSize-2] = 0xff
+		} else {
+			copy(v.sin6_addr.Bytes(), addr.Addr)
+		}
+		v.sin6_family = C.AF_INET6
+		binary.BigEndian.PutUint16(v.sin6_port.Bytes(), addr.Port)
+		if isLinkLocal(addr.Addr) {
+			v.sin6_scope_id = C.uint32_t(addr.NIC)
+		}
+		return C.sizeof_struct_sockaddr_in6
 	default:
-		return 0, fmt.Errorf("unknown address family %+v", addr)
+		panic(fmt.Sprintf("unknown network protocol number: %v", netProto))
 	}
 }

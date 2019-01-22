@@ -6,13 +6,11 @@ package netstack
 
 import (
 	"encoding/binary"
-	"fmt"
 	"log"
 	"math"
 	"time"
 
 	"github.com/google/netstack/tcpip"
-	"github.com/google/netstack/tcpip/header"
 	"github.com/google/netstack/tcpip/transport/tcp"
 	"github.com/google/netstack/tcpip/transport/udp"
 )
@@ -23,53 +21,6 @@ import (
 // #include <netinet/tcp.h>
 // #include <netinet/udp.h>
 import "C"
-
-func isZeros(b []byte) bool {
-	for _, b := range b {
-		if b != 0 {
-			return false
-		}
-	}
-	return true
-}
-
-func (v *C.struct_sockaddr_in) Decode() tcpip.FullAddress {
-	out := tcpip.FullAddress{
-		Port: binary.BigEndian.Uint16(v.sin_port.Bytes()),
-	}
-	if b := v.sin_addr.Bytes(); !isZeros(b) {
-		out.Addr = tcpip.Address(b)
-	}
-	return out
-}
-
-func (v *C.struct_sockaddr_in) Encode(addr tcpip.FullAddress) error {
-	v.sin_family = C.AF_INET
-	if n := copy(v.sin_addr.Bytes(), addr.Addr); n < header.IPv4AddressSize {
-		return fmt.Errorf("short %T: %d/%d", v, n, header.IPv4AddressSize)
-	}
-	binary.BigEndian.PutUint16(v.sin_port.Bytes(), addr.Port)
-	return nil
-}
-
-func (v *C.struct_sockaddr_in6) Decode() tcpip.FullAddress {
-	out := tcpip.FullAddress{
-		Port: binary.BigEndian.Uint16(v.sin6_port.Bytes()),
-	}
-	if b := v.sin6_addr.Bytes(); !isZeros(b) {
-		out.Addr = tcpip.Address(b)
-	}
-	return out
-}
-
-func (v *C.struct_sockaddr_in6) Encode(addr tcpip.FullAddress) error {
-	v.sin6_family = C.AF_INET6
-	if n := copy(v.sin6_addr.Bytes(), addr.Addr); n < header.IPv6AddressSize {
-		return fmt.Errorf("short %T: %d/%d", v, n, header.IPv6AddressSize)
-	}
-	binary.BigEndian.PutUint16(v.sin6_port.Bytes(), addr.Port)
-	return nil
-}
 
 // Functions below are adapted from
 // github.com/google/gvisor/pkg/sentry/socket/epsocket/epsocket.go.
@@ -625,4 +576,11 @@ func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 
 	}
 	return ep.SetSockOpt(struct{}{})
+}
+
+// isLinkLocal determines if the given IPv6 address is link-local. This is the
+// case when it has the fe80::/10 prefix. This check is used to determine when
+// the NICID is relevant for a given IPv6 address.
+func isLinkLocal(addr tcpip.Address) bool {
+	return len(addr) >= 2 && addr[0] == 0xfe && addr[1]&0xc0 == 0x80
 }
