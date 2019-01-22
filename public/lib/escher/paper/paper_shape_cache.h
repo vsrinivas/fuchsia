@@ -8,8 +8,6 @@
 #include <functional>
 #include <vector>
 
-#include <lib/fit/function.h>
-
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/geometry/types.h"
 #include "lib/escher/paper/paper_renderer_config.h"
@@ -78,7 +76,7 @@ class PaperShapeCache {
   enum class ShapeType { kRect, kRoundedRect, kCircle };
 
   // Args: array of planes to clip the generated mesh, and size of the array.
-  using CacheMissMeshGenerator = fit::function<PaperShapeCacheEntry(
+  using CacheMissMeshGenerator = std::function<PaperShapeCacheEntry(
       const plane3* planes, size_t num_planes)>;
 
   // Computes a lookup key by starting with |shape_hash| and then hashing the

@@ -8,6 +8,7 @@
 
 #include "garnet/bin/mediaplayer/fidl/fidl_type_conversions.h"
 #include "garnet/bin/mediaplayer/graph/formatting.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/media/timeline/timeline.h"
 #include "lib/media/timeline/timeline_rate.h"
@@ -128,11 +129,12 @@ void FidlAudioRenderer::FlushInput(bool hold_frame_not_used, size_t input_index,
   SetEndOfStreamPts(fuchsia::media::NO_TIMESTAMP);
   input_packet_request_outstanding_ = false;
 
-  audio_renderer_->DiscardAllPackets([this, callback = std::move(callback)]() {
-    last_supplied_pts_ns_ = 0;
-    last_departed_pts_ns_ = fuchsia::media::NO_TIMESTAMP;
-    callback();
-  });
+  audio_renderer_->DiscardAllPackets(
+      fxl::MakeCopyable([this, callback = std::move(callback)]() {
+        last_supplied_pts_ns_ = 0;
+        last_departed_pts_ns_ = fuchsia::media::NO_TIMESTAMP;
+        callback();
+      }));
 }
 
 void FidlAudioRenderer::PutInputPacket(PacketPtr packet, size_t input_index) {

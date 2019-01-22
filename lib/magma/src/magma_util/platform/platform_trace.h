@@ -7,8 +7,6 @@
 
 #include <functional>
 
-#include <lib/fit/function.h>
-
 #if MAGMA_ENABLE_TRACING
 #include "trace-vthread/event_vthread.h"
 #include <trace/event.h>
@@ -54,7 +52,7 @@ public:
     virtual bool Initialize() = 0;
 
     // Invokes the given |callback| (on a different thread) when the tracing state changes.
-    virtual void SetObserver(fit::function<void(bool trace_enabled)> callback) = 0;
+    virtual void SetObserver(std::function<void(bool trace_enabled)> callback) = 0;
 };
 
 } // namespace magma

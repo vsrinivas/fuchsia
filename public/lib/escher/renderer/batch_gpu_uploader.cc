@@ -4,8 +4,6 @@
 
 #include "lib/escher/renderer/batch_gpu_uploader.h"
 
-#include <lib/fit/function.h>
-
 #include "lib/escher/util/trace_macros.h"
 #include "lib/escher/vk/gpu_mem.h"
 #include "lib/fxl/logging.h"
@@ -238,7 +236,7 @@ void BatchGpuUploader::PostWriter(
 
 void BatchGpuUploader::PostReader(
     std::unique_ptr<BatchGpuUploader::Reader> reader,
-    fit::function<void(escher::BufferPtr buffer)> callback) {
+    std::function<void(escher::BufferPtr buffer)> callback) {
   FXL_DCHECK(frame_);
   if (!reader) {
     return;
@@ -258,7 +256,7 @@ void BatchGpuUploader::PostReader(
 }
 
 void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
-                              fit::function<void()> callback) {
+                              std::function<void()> callback) {
   if (dummy_for_tests_) {
     FXL_LOG(WARNING) << "Dummy BatchGpuUploader for tests, skip submit";
     return;
@@ -281,7 +279,8 @@ void BatchGpuUploader::Submit(const escher::SemaphorePtr& upload_done_semaphore,
                     read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
                        auto buffer = pair.first;
-                       pair.second(buffer);
+                       auto read_callback = pair.second;
+                       read_callback(buffer);
                      }
                      callback();
                    });

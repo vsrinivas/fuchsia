@@ -10,7 +10,6 @@
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <fuchsia/mediacodec/cpp/fidl.h>
-#include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_frame.h>
 #include <lib/zx/bti.h>
 #include <zircon/assert.h>
@@ -64,9 +63,9 @@ class VideoDecoder {
   // In actual operation, the FrameReadyNotifier must not keep a reference on
   // the frame shared_ptr<>, as that would interfere with muting calls to
   // ReturnFrame().  See comment on Vp9Decoder::Frame::frame field.
-  using FrameReadyNotifier = fit::function<void(std::shared_ptr<VideoFrame>)>;
+  using FrameReadyNotifier = std::function<void(std::shared_ptr<VideoFrame>)>;
   using InitializeFramesHandler =
-      fit::function<zx_status_t(::zx::bti,
+      std::function<zx_status_t(::zx::bti,
                                 uint32_t,  // frame_count
                                 uint32_t,  // width
                                 uint32_t,  // height

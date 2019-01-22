@@ -5,8 +5,6 @@
 #ifndef GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SNAPSHOTTER_H_
 #define GARNET_LIB_UI_GFX_RESOURCES_SNAPSHOT_SNAPSHOTTER_H_
 
-#include <lib/fit/function.h>
-
 #include "garnet/lib/ui/gfx/resources/resource_visitor.h"
 #include "garnet/lib/ui/gfx/resources/snapshot/serializer.h"
 #include "garnet/lib/ui/scenic/scenic.h"
@@ -68,9 +66,9 @@ class Snapshotter : public ResourceVisitor {
   void VisitImage(escher::ImagePtr i);
 
   void ReadImage(escher::ImagePtr image,
-                 fit::function<void(escher::BufferPtr buffer)> callback);
+                 std::function<void(escher::BufferPtr buffer)> callback);
   void ReadBuffer(escher::BufferPtr buffer,
-                  fit::function<void(escher::BufferPtr buffer)> callback);
+                  std::function<void(escher::BufferPtr buffer)> callback);
 
   escher::BatchGpuUploaderPtr gpu_uploader_;
 

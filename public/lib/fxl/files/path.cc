@@ -16,8 +16,6 @@
 #include <list>
 #include <memory>
 
-#include <lib/fit/function.h>
-
 #include "lib/fxl/files/directory.h"
 
 namespace files {
@@ -41,7 +39,7 @@ void SafeCloseDir(DIR* dir) {
 }
 
 bool ForEachEntry(int root_fd, const std::string& path,
-                  fit::function<bool(const std::string& path)> callback) {
+                  std::function<bool(const std::string& path)> callback) {
   int dir_fd = openat(root_fd, path.c_str(), O_RDONLY);
   if (dir_fd == -1) {
     return false;

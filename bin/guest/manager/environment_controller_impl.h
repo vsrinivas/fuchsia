@@ -11,7 +11,6 @@
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/component/cpp/startup_context.h>
 #include <lib/fidl/cpp/binding_set.h>
-#include <lib/fit/function.h>
 
 #include "garnet/bin/guest/manager/guest_component.h"
 #include "garnet/bin/guest/manager/host_vsock_endpoint.h"
@@ -35,7 +34,7 @@ class EnvironmentControllerImpl : public fuchsia::guest::EnvironmentController {
   const std::string& label() const { return label_; }
   // Invoked once all bindings have been removed and this environment has been
   // orphaned.
-  void set_unbound_handler(fit::function<void()> handler);
+  void set_unbound_handler(std::function<void()> handler);
 
   void AddBinding(fidl::InterfaceRequest<EnvironmentController> request);
   fidl::VectorPtr<fuchsia::guest::InstanceInfo> ListGuests();

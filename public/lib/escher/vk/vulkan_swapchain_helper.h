@@ -5,8 +5,6 @@
 #ifndef LIB_ESCHER_VK_VULKAN_SWAPCHAIN_HELPER_H_
 #define LIB_ESCHER_VK_VULKAN_SWAPCHAIN_HELPER_H_
 
-#include <lib/fit/function.h>
-
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/vk/vulkan_swapchain.h"
 
@@ -14,7 +12,7 @@ namespace escher {
 
 class VulkanSwapchainHelper {
  public:
-  using DrawFrameCallback = fit::function<void(
+  using DrawFrameCallback = std::function<void(
       const ImagePtr& output_image, const SemaphorePtr& render_finished)>;
 
   VulkanSwapchainHelper(VulkanSwapchain swapchain, vk::Device device,

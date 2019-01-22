@@ -22,6 +22,7 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "lib/component/cpp/connect.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 #include "lib/ui/views/cpp/formatting.h"
@@ -198,7 +199,7 @@ void Presentation1::Present(
   yield_callback_ = std::move(yield_callback);
   shutdown_callback_ = std::move(shutdown_callback);
 
-  scenic_->GetDisplayInfo(
+  scenic_->GetDisplayInfo(fxl::MakeCopyable(
       [weak = weak_factory_.GetWeakPtr(),
        presentation_request = std::move(presentation_request)](
           fuchsia::ui::gfx::DisplayInfo display_info) mutable {
@@ -209,7 +210,7 @@ void Presentation1::Present(
           weak->InitializeDisplayModel(std::move(display_info));
           weak->PresentScene();
         }
-      });
+      }));
 }
 
 void Presentation1::InitializeDisplayModel(

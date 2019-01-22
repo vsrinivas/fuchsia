@@ -984,7 +984,7 @@ void Vp9Decoder::PrepareNewFrame() {
 }
 
 void Vp9Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
+  notifier_ = notifier;
 }
 
 void Vp9Decoder::SetCheckOutputReady(CheckOutputReady check_output_ready) {
@@ -1289,7 +1289,7 @@ void Vp9Decoder::InitializeHardwarePictureList() {
 }
 
 void Vp9Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {
-  initialize_frames_handler_ = std::move(handler);
+  initialize_frames_handler_ = handler;
 }
 
 void Vp9Decoder::SetErrorHandler(fit::closure error_handler) {

@@ -375,11 +375,11 @@ zx_status_t H264Decoder::Initialize() {
 }
 
 void H264Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
+  notifier_ = notifier;
 }
 
 void H264Decoder::SetInitializeFramesHandler(InitializeFramesHandler handler) {
-  initialize_frames_handler_ = std::move(handler);
+  initialize_frames_handler_ = handler;
 }
 
 void H264Decoder::SetErrorHandler(fit::closure error_handler) {

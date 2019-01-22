@@ -27,7 +27,7 @@ using ImageConversionFunction =
     fit::function<void(void*, void*, uint32_t, uint32_t)>;
 #else
 using ImageConversionFunction =
-    fit::function<void(void*, void*, uint32_t, uint32_t)>;
+    std::function<void(void*, void*, uint32_t, uint32_t)>;
 #endif
 
 // Returns the number of bytes per pixel for the given format.

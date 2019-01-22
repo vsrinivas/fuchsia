@@ -4,8 +4,6 @@
 
 #include "lib/fsl/socket/socket_drainer.h"
 
-#include <lib/fit/function.h>
-
 #include "lib/fsl/socket/strings.h"
 #include "lib/gtest/test_loop_fixture.h"
 
@@ -16,8 +14,8 @@ using SocketDrainerTest = ::gtest::TestLoopFixture;
 
 class Client : public SocketDrainer::Client {
  public:
-  Client(fit::function<void()> available_callback,
-         fit::function<void()> completion_callback)
+  Client(std::function<void()> available_callback,
+         std::function<void()> completion_callback)
       : available_callback_(std::move(available_callback)),
         completion_callback_(std::move(completion_callback)) {}
   ~Client() override {}
@@ -32,8 +30,8 @@ class Client : public SocketDrainer::Client {
   void OnDataComplete() override { completion_callback_(); }
 
   std::string value_;
-  fit::function<void()> available_callback_;
-  fit::function<void()> completion_callback_;
+  std::function<void()> available_callback_;
+  std::function<void()> completion_callback_;
 };
 
 TEST_F(SocketDrainerTest, ReadData) {

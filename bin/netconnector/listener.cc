@@ -12,6 +12,7 @@
 
 #include "garnet/lib/inet/ip_port.h"
 #include "lib/fxl/files/unique_fd.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 
 namespace netconnector {
@@ -86,10 +87,11 @@ void Listener::Worker() {
       break;
     }
 
-    async::PostTask(dispatcher_,
-                    [this, fd = std::move(connection_fd)]() mutable {
-                      new_connection_callback_(std::move(fd));
-                    });
+    async::PostTask(
+        dispatcher_,
+        fxl::MakeCopyable([this, fd = std::move(connection_fd)]() mutable {
+          new_connection_callback_(std::move(fd));
+        }));
   }
 }
 

@@ -7,8 +7,6 @@
 
 #include <vulkan/vulkan.hpp>
 
-#include <lib/fit/function.h>
-
 #include "lib/escher/base/reffable.h"
 #include "lib/escher/escher.h"
 #include "lib/escher/forward_declarations.h"
@@ -118,13 +116,13 @@ class BatchGpuUploader : public Reffable {
   // the host on Submit(). After submit, the callback will be called with the
   // buffer read from the GPU.
   void PostReader(std::unique_ptr<Reader> reader,
-                  fit::function<void(escher::BufferPtr buffer)> callback);
+                  std::function<void(escher::BufferPtr buffer)> callback);
 
   // Submits all Writers' and Reader's work to the GPU. No Writers or Readers
   // can be posted once Submit is called.
   void Submit(
       const escher::SemaphorePtr& upload_done_semaphore,
-      fit::function<void()> callback = [] {});
+      std::function<void()> callback = [] {});
 
  private:
   BatchGpuUploader(EscherWeakPtr weak_escher, int64_t frame_trace_number);
@@ -149,7 +147,7 @@ class BatchGpuUploader : public Reffable {
   // provide any dummy functionality.
   bool dummy_for_tests_ = false;
 
-  std::vector<std::pair<BufferPtr, fit::function<void(BufferPtr)>>>
+  std::vector<std::pair<BufferPtr, std::function<void(BufferPtr)>>>
       read_callbacks_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(BatchGpuUploader);

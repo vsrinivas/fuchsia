@@ -6,8 +6,6 @@
 
 #include <functional>
 
-#include <lib/fit/function.h>
-
 #include "gtest/gtest.h"
 
 namespace fxl {
@@ -19,7 +17,7 @@ namespace {
 // Loops over all substrings of |needles|, and calls |callback| for each.
 void LoopOverSubstrings(
     StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw,
+    std::function<void(std::string haystack_str, StringView haystack_sw,
                        std::string to_find_str, StringView to_find_sw,
                        int start_index)>
         callback) {
@@ -39,7 +37,7 @@ void LoopOverSubstrings(
 // Loops over all characters in |needles|, and calls |callback| for each.
 void LoopOverChars(
     StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw, char c,
+    std::function<void(std::string haystack_str, StringView haystack_sw, char c,
                        int start_index)>
         callback) {
   std::string haystack_str = haystack.ToString();
@@ -55,7 +53,7 @@ void LoopOverChars(
 // |callback| for each.
 void LoopOverCharCombinations(
     StringView haystack, StringView needles,
-    fit::function<void(std::string haystack_str, StringView haystack_sw,
+    std::function<void(std::string haystack_str, StringView haystack_sw,
                        std::string current_chars, size_t pos)>
         callback) {
   // Look for all chars combinations, and compare with string.
