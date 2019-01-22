@@ -10,7 +10,7 @@ const uint8 SDIO_FN_0 = 0;
 const uint8 SDIO_FN_1 = 1;
 const uint8 SDIO_FN_2 = 2;
 /// Including func 0
-const uint8 SDIO_MAX_FUNCS = 8;
+const uint8 SDIO_MAX_FUNCS = 9;
 
 struct SdioFuncHwInfo {
     uint32 manufacturer_id;
@@ -41,7 +41,7 @@ enum SDIO_CARD : uint32 {
 };
 
 struct SdioDeviceHwInfo {
-    /// number of sdio funcs
+    /// number of sdio funcs including func 0
     uint32 num_funcs;
     uint32 sdio_vsn;
     uint32 cccr_vsn;
