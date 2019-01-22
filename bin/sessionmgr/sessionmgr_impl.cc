@@ -690,37 +690,46 @@ void SessionmgrImpl::InitializeSessionShell(
 
 void SessionmgrImpl::RunSessionShell(
     fuchsia::modular::AppConfig session_shell_config) {
-  // |session_shell_services_| is a ServiceProvider (aka a Directory) that will
-  // be used to augment the session shell's namespace.
+  // |session_shell_services_| is a ServiceProvider (aka a Directory) that
+  // augments the session shell's namespace.
+  //
+  // |service_list| enumerates which services are made available to the session
+  // shell.
+  auto service_list = fuchsia::sys::ServiceList::New();
+
+  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::SessionShellContext>
-                 request) {
+      [this](auto request) {
         if (terminating_) {
           return;
         }
         finish_initialization_.call();
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
+
+  service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
   session_shell_services_.AddService<fuchsia::modular::ComponentContext>(
-      [this](
-          fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+      [this](auto request) {
         if (terminating_) {
           return;
         }
         finish_initialization_.call();
         session_shell_component_context_impl_->Connect(std::move(request));
       });
+
+  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+      [this](auto request) {
         if (terminating_) {
           return;
         }
         finish_initialization_.call();
         puppet_master_impl_->Connect(std::move(request));
       });
+
+  service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
   session_shell_services_.AddService<fuchsia::modular::IntelligenceServices>(
-      [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
-                 request) {
+      [this](auto request) {
         if (terminating_) {
           return;
         }
@@ -730,20 +739,16 @@ void SessionmgrImpl::RunSessionShell(
         user_intelligence_provider_impl_->GetComponentIntelligenceServices(
             std::move(component_scope), std::move(request));
       });
-  // |session_shell_service_provider_| is an InterfacePtr impl for
-  // ServiceProvider that binds to |session_shell_services_|.
-  fuchsia::sys::ServiceProviderPtr session_shell_service_provider_ptr_;
-  session_shell_services_.AddBinding(
-      session_shell_service_provider_ptr_.NewRequest());
 
-  // |service_list| specifies which services are available to the child
-  // component from which ServiceProvider. There is a lot of indirection here.
-  auto service_list = fuchsia::sys::ServiceList::New();
-  service_list->names.push_back(fuchsia::modular::ComponentContext::Name_);
-  service_list->names.push_back(fuchsia::modular::IntelligenceServices::Name_);
-  service_list->names.push_back(fuchsia::modular::PuppetMaster::Name_);
-  service_list->names.push_back(fuchsia::modular::SessionShellContext::Name_);
-  service_list->provider = std::move(session_shell_service_provider_ptr_);
+  // The services in |session_shell_services_| are provided through the
+  // connection held in |session_shell_service_provider| connected to
+  // |session_shell_services_|.
+  {
+    fuchsia::sys::ServiceProviderPtr session_shell_service_provider;
+    session_shell_services_.AddBinding(
+        session_shell_service_provider.NewRequest());
+    service_list->provider = std::move(session_shell_service_provider);
+  }
 
   session_shell_app_ = std::make_unique<AppClient<fuchsia::modular::Lifecycle>>(
       user_environment_->GetLauncher(), std::move(session_shell_config),
