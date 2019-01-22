@@ -551,7 +551,7 @@ pointer on `fidl_msg_t`.
 ### Binding
 
 FIDL also provides `fidl_bind`, defined in
-[lib/fidl/bind.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/bind.h),
+[lib/fidl/bind.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl-async/include/lib/fidl-async/bind.h),
 that binds a generated
 dispatch function to an `async_dispatcher_t`. The `fidl_bind` function creates
 an `async_wait_t` that waits for messages on the channel and calls through the

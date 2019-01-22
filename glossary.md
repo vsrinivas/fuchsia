@@ -285,7 +285,7 @@ A module is a role a [component](#Component) can play to participate in a [story
 component can be be used as a module, but typically a module is asked to show UI.  Additionally,
 a module can have a `module` metadata file which describes the Module's data compatibility and
 semantic role.
-- [module metadata format](https://fuchsia.googlesource.com/peridot/+/HEAD/docs/modular/manifests/module.md)
+- [module metadata format](https://fuchsia.googlesource.com/peridot/+/HEAD/docs/modular/module.md)
 
 #### **Scenic**
 

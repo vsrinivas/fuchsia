@@ -142,8 +142,9 @@ languages is up to the author of the tool.
 
 ### Style Guides
 
-Follow the corresponding [style guide](../#languages) for the language and area
-of Fuchsia being developed. E.g. if the tool is included with Zircon and written
+Follow the corresponding [style guide](../README.md#languages) for the language
+and area of Fuchsia being developed.
+E.g. if the tool is included with Zircon and written
 in C++, use the style guide for C++ in Zircon. Specifically, avoid creating a
 separate style guide for tools.
 
@@ -670,5 +671,3 @@ Avoid using a PID file to contain the process ID of a running executable.
 
 Avoid using a lock file to manage mutual exclusion of resource access (i.e. a
 mutex).
-
-

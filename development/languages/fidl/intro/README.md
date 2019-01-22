@@ -142,7 +142,7 @@ Requirements
 - [The compiler](https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl)
 - [C bindings](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl)
 - [C++ bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
-- [Go bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/go)
+- [Go bindings](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
 - [Rust bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
 
 ## Constituent Parts of Specification

@@ -65,7 +65,7 @@ receive a call to `open` or `write`, they will need to interpret those commands
 differently.
 
 For the purposes of this document, we’ll be focusing on the primary protocol
-used by filesystem clients: [FIDL](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
+used by filesystem clients: [FIDL](/development/languages/fidl/README.md).
 
 ## FIDL
 

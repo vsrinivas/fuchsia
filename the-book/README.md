@@ -107,6 +107,6 @@ also provides core drivers and Fuchsia's libc implementation.
 [magma]: https://fuchsia.googlesource.com/garnet/+/master/lib/magma/
 [escher]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/
 [scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui/scenic.md
-[input-manager]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui_input.md
+[input-manager]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui/input.md
 [view-manager]: https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/
 [flutter]: https://flutter.io/

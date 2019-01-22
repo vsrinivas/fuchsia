@@ -29,15 +29,18 @@ and debugging Fuchsia and programs running on Fuchsia.
  - [FIDL](languages/fidl/README.md)
  - [Go](languages/go/README.md)
  - [Rust](languages/rust/README.md)
+ - [Python](languages/python/README.md)
  - [Flutter modules](languages/dart/mods.md) - how to write a graphical module
    using Flutter
 
 ## API
 
+ - [Council](api/council.md) - Definition of the API council
  - [System](api/system.md) - Rubric for designing the Zircon System Interface
  - [FIDL](api/fidl.md) - Rubric for designing FIDL protocols
  - [C](api/c.md) - Rubric for designing C library interfaces
  - [Tools](api/tools.md) - Rubrics for designing developer tools
+ - [Devices](api/device_interfaces.md) - Rubric for designing device interfaces
 
 ## ABI
 
@@ -55,6 +58,10 @@ This section covers Fuchsia development hardware targets.
  - [Intel NUC][intel_nuc] (also [this](hardware/developing_on_nuc.md))
  - [Pixelbook](hardware/pixelbook.md)
 
+## Testing
+
+ - [Testing components](tests/test_component.md)
+
 ## Conventions
 
 This section covers Fuchsia-wide conventions and best practices.
@@ -69,6 +76,7 @@ This section covers Fuchsia-wide conventions and best practices.
 
  - [CTU analysis in Zircon](workflows/ctu_analysis.md)
  - [Persistent disks in QEMU](workflows/qemu_persistent_disk.md)
+ - [Tracing tutorial](tracing/tracing-tutorial.md)
 
 
 [acer_12]: https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md "Acer 12"

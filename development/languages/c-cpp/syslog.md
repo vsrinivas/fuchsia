@@ -49,7 +49,7 @@ FX_LOGF(INFO, NULL, "my msg: %d", 10);
 
 ### Reference
 
-[C APIs](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/syslog/include/syslog/global.h)
+[C APIs](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/syslog/include/lib/syslog/global.h)
 
 ## In C++
 
