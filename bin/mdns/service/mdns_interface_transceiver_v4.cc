@@ -40,15 +40,21 @@ int MdnsInterfaceTransceiverV4::SetOptionOutboundInterface() {
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_MULTICAST_IF,
                           &address().as_in_addr(), sizeof(struct in_addr));
   if (result < 0) {
-    FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
-                   << errno;
+    if (errno == EOPNOTSUPP) {
+      FXL_LOG(WARNING)
+          << "IP_MULTICAST_IF is not supported. Proceeding anyway.";
+      result = 0;
+    } else {
+      FXL_LOG(ERROR) << "Failed to set socket option IP_MULTICAST_IF, errno "
+                     << errno;
+    }
   }
 
   return result;
 }
 
 int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
-  int param = kTimeToLive_;
+  uint32_t param = kTimeToLive_;
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IP, IP_TTL, &param, sizeof(param));
   if (result < 0) {
@@ -59,7 +65,7 @@ int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
 }
 
 int MdnsInterfaceTransceiverV4::SetOptionMulticastTtl() {
-  uint8_t param = kTimeToLive_;
+  uint32_t param = kTimeToLive_;
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_MULTICAST_TTL,
                           &param, sizeof(param));
   if (result < 0) {
@@ -79,7 +85,7 @@ int MdnsInterfaceTransceiverV4::Bind() {
   int result = bind(socket_fd().get(), MdnsAddresses::kV4Bind.as_sockaddr(),
                     MdnsAddresses::kV4Bind.socklen());
   if (result < 0) {
-      FXL_LOG(ERROR) << "Failed to bind socket to V4 address, errno " << errno;
+    FXL_LOG(ERROR) << "Failed to bind socket to V4 address, errno " << errno;
     // TODO(dalesat): Remove the following once NET-1809 is fixed.
     if (errno == EADDRINUSE) {
       FXL_LOG(ERROR) << "(EADDRINUSE) This is probably due to NET-1809.";
