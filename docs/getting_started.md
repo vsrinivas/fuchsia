@@ -225,8 +225,6 @@ $BUILDDIR/tools/zbi -o extra.bootfs manifest
 On the booted Zircon system, the files in the bootfs will appear under /boot, so
 in the above manifest example, the "hosts" file would appear at /boot/etc/hosts.
 
-For QEMU, use the -x option to the run-zircon-* scripts to specify an extra bootfs image.
-
 ## Network Booting
 
 Network booting is supported via two mechanisms: Gigaboot and Zirconboot.
