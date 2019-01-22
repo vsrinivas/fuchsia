@@ -5,15 +5,18 @@
 use crate::server::sl4f::macros::dtag;
 use failure::{bail, Error};
 use fidl_fuchsia_bluetooth_gatt::{
-    AttributePermissions, Characteristic, Descriptor, LocalServiceDelegateMarker,
-    LocalServiceMarker, LocalServiceProxy, SecurityRequirements, Server_Marker, Server_Proxy,
-    ServiceInfo,
+    self as gatt, AttributePermissions, Characteristic, Descriptor,
+    LocalServiceDelegateControlHandle, LocalServiceDelegateMarker,
+    LocalServiceDelegateOnReadValueResponder, LocalServiceDelegateOnWriteValueResponder,
+    LocalServiceDelegateRequestStream, LocalServiceMarker, LocalServiceProxy, SecurityRequirements,
+    Server_Marker, Server_Proxy, ServiceInfo,
 };
 use fuchsia_app as app;
 use fuchsia_async as fasync;
 use fuchsia_bluetooth::error::Error as BTError;
 use fuchsia_syslog::{self, fx_log_err, fx_log_info};
 use fuchsia_zircon as zx;
+use futures::stream::TryStreamExt;
 use parking_lot::RwLock;
 use regex::Regex;
 use serde_json::value::Value;
@@ -48,13 +51,13 @@ struct InnerGattServerFacade {
     /// and updating Characteristic and Descriptor values for each service.
     attribute_value_mapping: HashMap<u64, Vec<u8>>,
 
-    // A generic counter GATT server attributes
+    /// A generic counter GATT server attributes
     generic_id_counter: Counter,
 
-    // The current Gatt Server Proxy
+    /// The current Gatt Server Proxy
     server_proxy: Option<Server_Proxy>,
 
-    // service_proxies: List of LocalServiceProxy objects in use
+    /// service_proxies: List of LocalServiceProxy objects in use
     service_proxies: Vec<LocalServiceProxy>,
 }
 
@@ -101,20 +104,188 @@ impl GattServerFacade {
     /// a byte array. Types can be Strings, u8, or generic Array.
     pub fn parse_attribute_value_to_byte_array(&self, value_to_parse: &Value) -> Vec<u8> {
         match value_to_parse {
-            Value::String(obj) => {
-                String::from(obj.as_str()).into_bytes()
-            }
-            Value::Number(obj) => {
-                match obj.as_u64() {
-                    Some(num) => vec![num as u8],
-                    None => vec![]
-                }
-            }
+            Value::String(obj) => String::from(obj.as_str()).into_bytes(),
+            Value::Number(obj) => match obj.as_u64() {
+                Some(num) => vec![num as u8],
+                None => vec![],
+            },
             Value::Array(obj) => {
-                 obj.into_iter().filter_map(|v| v.as_u64()).map(|v| v as u8).collect()
+                obj.into_iter().filter_map(|v| v.as_u64()).map(|v| v as u8).collect()
             }
             _ => vec![],
         }
+    }
+
+    pub fn on_characteristic_configuration(
+        peer_id: String,
+        notify: bool,
+        indicate: bool,
+        characteristic_id: u64,
+        control_handle: LocalServiceDelegateControlHandle,
+        service_proxy: &LocalServiceProxy,
+    ) {
+        fx_log_info!(
+            tag: &dtag!(),
+            "OnCharacteristicConfiguration: (notify: {}, indicate: {}, id: {})",
+            notify,
+            indicate,
+            peer_id
+        );
+        control_handle.shutdown();
+        let value = if indicate {
+            [0x02, 0x00].to_vec()
+        } else if notify {
+            [0x01, 0x00].to_vec()
+        } else {
+            [0x00, 0x00].to_vec()
+        };
+        let confirm = true;
+        let _result = service_proxy.notify_value(
+            characteristic_id,
+            &peer_id,
+            &mut value.to_vec().into_iter(),
+            confirm,
+        );
+    }
+
+    pub fn on_read_value(
+        id: u64,
+        offset: i32,
+        responder: LocalServiceDelegateOnReadValueResponder,
+        value_in_mapping: Option<&Vec<u8>>,
+    ) {
+        fx_log_info!(
+            tag: &dtag!(),
+            "OnReadValue request at id: {:?}, with offset: {:?}",
+            id,
+            offset
+        );
+        match value_in_mapping {
+            Some(v) => {
+                if v.len() < offset as usize {
+                    let _result = responder.send(None, gatt::ErrorCode::InvalidOffset);
+                } else {
+                    let value_to_write = v.clone().split_off(offset as usize);
+                    let _result = responder.send(
+                        Some(&mut value_to_write.to_vec().into_iter()),
+                        gatt::ErrorCode::NoError,
+                    );
+                }
+            }
+            None => {
+                // ID doesn't exist in the database
+                let _result = responder.send(None, gatt::ErrorCode::NotPermitted);
+            }
+        };
+    }
+
+    pub fn on_write_value(
+        id: u64,
+        offset: u16,
+        value: Vec<u8>,
+        responder: LocalServiceDelegateOnWriteValueResponder,
+        value_in_mapping: Option<&mut Vec<u8>>,
+    ) {
+        fx_log_info!(
+            tag: &dtag!(),
+            "OnWriteValue request at id: {:?}, with offset: {:?}, with value: {:?}",
+            id,
+            offset,
+            value
+        );
+
+        match value_in_mapping {
+            Some(v) => {
+                if v.len() < (value.len() + offset as usize) {
+                    let _result = responder.send(gatt::ErrorCode::InvalidValueLength);
+                } else if v.len() < offset as usize {
+                    let _result = responder.send(gatt::ErrorCode::InvalidOffset);
+                } else {
+                    v.splice(offset as usize.., value.into_iter());
+                    let _result = responder.send(gatt::ErrorCode::NoError);
+                }
+            }
+            None => {
+                // ID doesn't exist in the database
+                let _result = responder.send(gatt::ErrorCode::NotPermitted);
+            }
+        }
+    }
+
+    pub fn on_write_without_response(
+        id: u64,
+        offset: u16,
+        value: Vec<u8>,
+        value_in_mapping: Option<&mut Vec<u8>>,
+    ) {
+        fx_log_info!(
+            tag: &dtag!(),
+            "OnWriteWithoutResponse request at id: {:?}, with offset: {:?}, with value: {:?}",
+            id,
+            offset,
+            value
+        );
+        if let Some(v) = value_in_mapping {
+            if v.len() >= (value.len() + offset as usize) {
+                v.splice(offset as usize.., value.into_iter());
+            }
+        }
+    }
+
+    pub async fn monitor_delegate_request_stream(
+        stream: LocalServiceDelegateRequestStream,
+        mut attribute_value_mapping: HashMap<u64, Vec<u8>>,
+        service_proxy: LocalServiceProxy,
+    ) -> Result<(), Error> {
+        use fidl_fuchsia_bluetooth_gatt::LocalServiceDelegateRequest::*;
+        await!(
+            stream
+                .map_ok(move |request| match request {
+                    OnCharacteristicConfiguration {
+                        peer_id,
+                        notify,
+                        indicate,
+                        characteristic_id,
+                        control_handle,
+                    } => {
+                        GattServerFacade::on_characteristic_configuration(
+                            peer_id,
+                            notify,
+                            indicate,
+                            characteristic_id,
+                            control_handle,
+                            &service_proxy,
+                        );
+                    }
+                    OnReadValue { id, offset, responder } => {
+                        GattServerFacade::on_read_value(
+                            id,
+                            offset,
+                            responder,
+                            attribute_value_mapping.get(&id),
+                        );
+                    }
+                    OnWriteValue { id, offset, value, responder } => {
+                        GattServerFacade::on_write_value(
+                            id,
+                            offset,
+                            value,
+                            responder,
+                            attribute_value_mapping.get_mut(&id),
+                        );
+                    }
+                    OnWriteWithoutResponse { id, offset, value, .. } => {
+                        GattServerFacade::on_write_without_response(
+                            id,
+                            offset,
+                            value,
+                            attribute_value_mapping.get_mut(&id),
+                        );
+                    }
+                })
+                .try_collect::<()>()
+        )
+        .map_err(|e| e.into())
     }
 
     /// Convert a number representing permissions into AttributePermissions.
@@ -139,7 +310,9 @@ impl GattServerFacade {
     /// Example input that allows read and write: 0x01 | 0x10 = 0x11
     /// This function will convert this to the proper AttributePermission permissions.
     pub fn permissions_and_properties_from_raw_num(
-        &self, permissions: u32, properties: u32,
+        &self,
+        permissions: u32,
+        properties: u32,
     ) -> AttributePermissions {
         let mut read_encryption_required = false;
         let mut read_authentication_required = false;
@@ -222,7 +395,8 @@ impl GattServerFacade {
     }
 
     pub fn generate_descriptors(
-        &self, descriptor_list_json: &Value,
+        &self,
+        descriptor_list_json: &Value,
     ) -> Result<Vec<Descriptor>, Error> {
         let mut descriptors: Vec<Descriptor> = Vec::new();
         // Fuchsia will automatically setup these descriptors and manage them.
@@ -261,16 +435,11 @@ impl GattServerFacade {
                 None => bail!("Descriptor permissions was unable to cast to u64."),
             };
 
-            let desc_permission_attributes = self.permissions_and_properties_from_raw_num(
-                raw_descriptor_permissions,
-                properties,
-            );
+            let desc_permission_attributes = self
+                .permissions_and_properties_from_raw_num(raw_descriptor_permissions, properties);
 
             let descriptor_id = self.inner.write().generic_id_counter.next();
-            self.inner
-                .write()
-                .attribute_value_mapping
-                .insert(descriptor_id, descriptor_value);
+            self.inner.write().attribute_value_mapping.insert(descriptor_id, descriptor_value);
             let descriptor_obj = Descriptor {
                 id: descriptor_id,
                 type_: descriptor_uuid.clone(),
@@ -283,7 +452,8 @@ impl GattServerFacade {
     }
 
     pub fn generate_characteristics(
-        &self, characteristic_list_json: &Value,
+        &self,
+        characteristic_list_json: &Value,
     ) -> Result<Vec<Characteristic>, Error> {
         let mut characteristics: Vec<Characteristic> = Vec::new();
         if characteristic_list_json.is_null() {
@@ -373,19 +543,20 @@ impl GattServerFacade {
     }
 
     pub async fn publish_service(
-        &self, mut service_info: ServiceInfo, service_uuid: String,
+        &self,
+        mut service_info: ServiceInfo,
+        service_uuid: String,
     ) -> Result<(), Error> {
         let (service_local, service_remote) = zx::Channel::create()?;
         let service_local = fasync::Channel::from_channel(service_local)?;
         let service_proxy = LocalServiceProxy::new(service_local);
 
-        // _delegate_request_stream will be used in creating a GATT service delegate in the future.
-        let (delegate_client, _delegate_request_stream) =
+        let (delegate_client, delegate_request_stream) =
             fidl::endpoints::create_request_stream::<LocalServiceDelegateMarker>()?;
 
         let service_server = fidl::endpoints::ServerEnd::<LocalServiceMarker>::new(service_remote);
 
-        self.inner.write().service_proxies.push(service_proxy);
+        self.inner.write().service_proxies.push(service_proxy.clone());
 
         match &self.inner.read().server_proxy {
             Some(server) => {
@@ -404,6 +575,19 @@ impl GattServerFacade {
             }
             None => bail!("No Server Proxy created."),
         }
+        let monitor_delegate_fut = GattServerFacade::monitor_delegate_request_stream(
+            delegate_request_stream,
+            self.inner.read().attribute_value_mapping.clone(),
+            service_proxy,
+        );
+        let fut = async {
+            let result = await!(monitor_delegate_fut);
+            if let Err(err) = result {
+                fx_log_err!(tag: "publish_service",
+                    "Failed to create or monitor the gatt service delegate: {:?}", err);
+            }
+        };
+        fasync::spawn(fut);
         Ok(())
     }
 
