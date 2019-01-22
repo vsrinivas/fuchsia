@@ -325,10 +325,7 @@ func (s *State) updateStateTCPinICMP(dir Direction, seq seqnum) error {
 	return nil
 }
 
-type StatesLockKey struct {
-	addr tcpip.Address
-	port uint16
-}
+type StatesLockKey tcpip.FullAddress
 
 func makeStatesLockKey(dir Direction, srcAddr tcpip.Address, dstAddr tcpip.Address, transProto tcpip.TransportProtocolNumber, transportHeader []byte) StatesLockKey {
 	var srcPort, dstPort uint16
@@ -353,15 +350,15 @@ func makeStatesLockKey(dir Direction, srcAddr tcpip.Address, dstAddr tcpip.Addre
 		extAddr = dstAddr
 	}
 
-	return StatesLockKey{extAddr, extPort}
+	return StatesLockKey{Addr: extAddr, Port: extPort}
 }
 
 // States is a collection of State we are tracking.
 type States struct {
 	purgeEnabled uint32
 
-	mut          sync.RWMutex                    // Guards access to lockKeyToMut below
-	lockKeyToMut map[StatesLockKey]*sync.RWMutex // Guards access to individual maps below
+	mut          sync.RWMutex                  // Guards access to lockKeyToMut below
+	lockKeyToMut map[StatesLockKey]*sync.Mutex // Guards access to individual maps below
 
 	extToGwy map[Key]*State
 	lanToExt map[Key]*State
@@ -369,36 +366,20 @@ type States struct {
 
 func NewStates() *States {
 	ss := &States{
-		purgeEnabled: 0, // !!! Should this be initialised with 1? Nothing else seems to set it to 1.
-		lockKeyToMut: make(map[StatesLockKey]*sync.RWMutex),
+		purgeEnabled: 0,
+		lockKeyToMut: make(map[StatesLockKey]*sync.Mutex),
 		extToGwy:     make(map[Key]*State),
 		lanToExt:     make(map[Key]*State),
 	}
 	return ss
 }
 
-func muLock(mu *sync.RWMutex, rw bool) {
-	if rw {
-		mu.Lock()
-	} else {
-		mu.RLock()
-	}
-}
-
-func muUnlock(mu *sync.RWMutex, rw bool) {
-	if rw {
-		mu.Unlock()
-	} else {
-		mu.RUnlock()
-	}
-}
-
-func (ss *States) lock(lockKey StatesLockKey, rw bool) {
+func (ss *States) lock(lockKey StatesLockKey) {
 	ss.mut.RLock()
 
 	mu, ok := ss.lockKeyToMut[lockKey]
 	if ok {
-		muLock(mu, rw)
+		mu.Lock()
 		return
 	}
 
@@ -407,22 +388,22 @@ func (ss *States) lock(lockKey StatesLockKey, rw bool) {
 
 	mu, ok = ss.lockKeyToMut[lockKey]
 	if !ok {
-		mu = &sync.RWMutex{}
+		mu = &sync.Mutex{}
 		ss.lockKeyToMut[lockKey] = mu
 	}
 	ss.mut.Unlock()
 
 	ss.mut.RLock()
-	muLock(mu, rw)
+	mu.Lock()
 }
 
-func (ss *States) unlock(lockKey StatesLockKey, rw bool) {
-	muUnlock(ss.lockKeyToMut[lockKey], rw)
+func (ss *States) unlock(lockKey StatesLockKey) {
+	ss.lockKeyToMut[lockKey].Unlock()
 	ss.mut.RUnlock()
 }
 
 func (ss *States) enablePurge() {
-	ss.purgeEnabled = 1
+	atomic.StoreUint32(&ss.purgeEnabled, 1)
 }
 
 func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
@@ -438,7 +419,7 @@ func (ss *States) purgeExpiredEntries(pm *ports.PortManager) {
 				if debug {
 					log.Printf("packet filter: delete state: %v (ExtToGwy)", s)
 				}
-				delete(ss.lockKeyToMut, StatesLockKey{k.srcAddr, k.srcPort})
+				delete(ss.lockKeyToMut, StatesLockKey{Addr: k.srcAddr, Port: k.srcPort})
 				delete(ss.extToGwy, k)
 			}
 			if s.rsvdPort != 0 {

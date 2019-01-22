@@ -104,8 +104,8 @@ func (f *Filter) Run(dir Direction, netProto tcpip.NetworkProtocolNumber, hdr bu
 	}
 
 	lockKey := makeStatesLockKey(dir, srcAddr, dstAddr, transProto, transportHeader)
-	f.states.lock(lockKey, true)
-	defer f.states.unlock(lockKey, true)
+	f.states.lock(lockKey)
+	defer f.states.unlock(lockKey)
 
 	switch transProto {
 	case header.ICMPv4ProtocolNumber:
