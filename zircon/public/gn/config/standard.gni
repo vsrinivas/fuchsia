@@ -150,6 +150,18 @@ standard_variants = [
       }
     }
   },
+  {
+    variant = {
+      name = "lto"
+      configs = [ "$zx/public/gn/config/lto" ]
+    }
+  },
+  {
+    variant = {
+      name = "thinlto"
+      configs = [ "$zx/public/gn/config/lto:thinlto" ]
+    }
+  },
 ]
 
 # This list is appended to the $variants list for the build.  It provides

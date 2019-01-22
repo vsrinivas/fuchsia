@@ -1,0 +1,37 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("lto") {
+  compiler_flags = [
+    "-flto",
+
+    # Enable whole-program devirtualization and virtual constant propagation.
+    "-fwhole-program-vtables",
+  ]
+}
+
+declare_args() {
+  # Number of parallel ThinLTO jobs.
+  thinlto_jobs = 8
+
+  # ThinLTO cache directory path.
+  thinlto_cache_dir = rebase_path("$root_out_dir/thinlto-cache", root_build_dir)
+}
+
+config("thinlto") {
+  compiler_flags = [ "-flto=thin" ]
+  ldflags = [
+    # The ThinLTO driver launches a number of threads in parallel whose
+    # number is by default equivalent to the number of cores.  We need
+    # to limit the parallelism to avoid aggressive competition between
+    # different linker jobs.
+    "-Wl,--thinlto-jobs=$thinlto_jobs",
+
+    # Set the ThinLTO cache directory which is used to cache native
+    # object files for ThinLTO incremental builds.  This directory is
+    # not managed by Ninja and has to be cleaned manually, but it is
+    # periodically garbage-collected by the ThinLTO driver.
+    "-Wl,--thinlto-cache-dir=$thinlto_cache_dir",
+  ]
+}
