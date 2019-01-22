@@ -18,7 +18,6 @@
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/job.h>
-#include <lib/zx/log.h>
 #include <lib/zx/port.h>
 #include <lib/zx/process.h>
 #include <lib/zx/socket.h>
@@ -210,15 +209,6 @@ bool traits_test() {
         user_signaling(fifo);
         waiting(fifo);
         peering(fifo);
-    }
-
-    {
-        zx::log log;
-        ASSERT_EQ(zx::log::create(0u, &log), ZX_OK);
-        duplicating(log);
-        user_signaling(log);
-        waiting(log);
-        peering(log);
     }
 
     {
