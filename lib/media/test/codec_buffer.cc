@@ -2,9 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_buffer.h"
-
-#include "util.h"
+#include <lib/media/test/codec_buffer.h>
 
 #include <lib/fxl/logging.h>
 #include <zx/vmar.h>
@@ -72,8 +70,8 @@ CodecBuffer::~CodecBuffer() {
     zx_status_t res = zx::vmar::root_self()->unmap(
         reinterpret_cast<uintptr_t>(base_), size_bytes_);
     if (res != ZX_OK) {
-      Exit("Failed to unmap %zu byte buffer vmo (res %d) - exiting\n",
-           size_bytes_, res);
+      FXL_LOG(FATAL) << "Failed to unmap " << size_bytes_
+                     << " byte buffer vmo (res " << res << ") - exiting";
     }
     base_ = nullptr;
   }

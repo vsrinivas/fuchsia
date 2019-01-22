@@ -41,3 +41,30 @@ source_set("frame_sink") {
     "//garnet/public/lib/ui/scenic/cpp",
   ]
 }
+
+source_set("codec_client") {
+  testonly = true
+
+  sources = [
+    "codec_buffer.cc",
+    "codec_client.cc",
+    "codec_output.cc",
+  ]
+
+  include_dirs = [ "include" ]
+
+  public_configs = [ ":media_test_include_config" ]
+
+  public = [
+    "include/lib/media/test/codec_buffer.h",
+    "include/lib/media/test/codec_client.h",
+    "include/lib/media/test/codec_output.h",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.mediacodec",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

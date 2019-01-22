@@ -8,12 +8,6 @@ source_set("use_media_decoder_source_set") {
   testonly = true
 
   sources = [
-    "codec_buffer.cc",
-    "codec_buffer.h",
-    "codec_client.cc",
-    "codec_client.h",
-    "codec_output.cc",
-    "codec_output.h",
     "use_aac_decoder.cc",
     "use_aac_decoder.h",
     "use_video_decoder.cc",
@@ -33,6 +27,7 @@ source_set("use_media_decoder_source_set") {
   deps = [
     "//garnet/lib/media/codec_impl:fourcc",
     "//garnet/lib/media/raw_video_writer:raw_video_writer",
+    "//garnet/lib/media/test:codec_client",
     "//garnet/lib/media/test:frame_sink",
     "//garnet/lib/media/wav_writer:wav_writer",
     "//garnet/public/lib/component/cpp",

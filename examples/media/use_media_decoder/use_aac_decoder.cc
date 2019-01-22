@@ -2,14 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "codec_buffer.h"
-#include "codec_client.h"
-#include "codec_output.h"
 #include "util.h"
 
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fidl/cpp/clone.h>
 #include <lib/fit/defer.h>
+#include <lib/media/test/codec_buffer.h>
+#include <lib/media/test/codec_client.h>
+#include <lib/media/test/codec_output.h>
 
 #include "garnet/lib/media/wav_writer/wav_writer.h"
 
