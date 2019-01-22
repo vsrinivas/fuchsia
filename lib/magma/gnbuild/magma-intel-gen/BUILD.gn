@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 import("//garnet/lib/magma/gnbuild/magma.gni")
 
 package("magma-intel-gen") {
@@ -56,17 +57,15 @@ package("magma-intel-gen") {
   }
 }
 
-package("nonhardware-tests") {
-  testonly = true
-  package_name = "magma_intel_gen_nonhardware_tests"
-
+test_package("magma_intel_gen_nonhardware_tests") {
+  tests = []
   if (build_intel_gen) {
     deps = [
       "$mesa_build_root:tests",
       "$msd_intel_gen_build_root:tests",
     ]
 
-    tests = [
+    tests += [
       {
         name = "msd_intel_gen_nonhardware_tests"
       },
@@ -89,22 +88,29 @@ package("nonhardware-tests") {
   }
 }
 
-package("magma-intel-gen-tests") {
+test_package("magma_intel_gen_integration_tests") {
+  tests = []
+  if (build_intel_gen) {
+    deps = [
+      "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
+    ]
+
+    tests += [
+      {
+        name = "msd_intel_gen_integration_tests"
+        environments = intel_gpu_envs
+      },
+    ]
+  }
+}
+
+package("magma_intel_autorun") {
   testonly = true
   deprecated_system_image = true
 
   if (build_intel_gen) {
     deps = [
       ":autorun",
-      "$mesa_build_root:tests",
-      "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
-    ]
-
-    tests = [
-      {
-        name = "msd_intel_gen_integration_tests"
-        environments = intel_gpu_envs
-      },
     ]
 
     binaries = [

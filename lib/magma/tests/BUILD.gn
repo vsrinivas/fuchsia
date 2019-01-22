@@ -46,10 +46,7 @@ package("magma-test-build-only") {
   }
 }
 
-package("nonhardware-tests") {
-  testonly = true
-  package_name = "magma_nonhardware_tests"
-
+test_package("magma_nonhardware_tests") {
   deps = [
     "unit_tests",
   ]

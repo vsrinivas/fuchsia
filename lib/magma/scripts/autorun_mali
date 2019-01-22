@@ -11,8 +11,8 @@ else
   gtest_output_arg=--gtest_output=$GTEST_OUTPUT
 fi
 echo [UNIT TEST START=]
-/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests
-/pkgfs/packages/magma_arm_mali_nonhardware_tests/0/test/msd_arm_mali_nonhardware_tests
+run_test_component magma_unit_tests $gtest_output_arg
+run_test_component msd_arm_mali_nonhardware_tests $gtest_output_arg
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 run_test_component magma_abi_conformance_tests $gtest_output_arg

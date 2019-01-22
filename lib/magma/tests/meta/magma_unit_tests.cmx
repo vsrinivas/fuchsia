@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/magma_unit_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

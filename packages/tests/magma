@@ -4,12 +4,13 @@
         "garnet/packages/prod/vulkan"
     ],
     "packages": [
-        "//garnet/lib/magma/gnbuild/magma-arm-mali:nonhardware-tests",
-        "//garnet/lib/magma/gnbuild/magma-intel-gen:magma-intel-gen-tests",
-        "//garnet/lib/magma/gnbuild/magma-intel-gen:nonhardware-tests",
+        "//garnet/lib/magma/gnbuild/magma-arm-mali:msd_arm_mali_nonhardware_tests",
+        "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_integration_tests",
+        "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_gen_nonhardware_tests",
+        "//garnet/lib/magma/gnbuild/magma-intel-gen:magma_intel_autorun",
         "//garnet/lib/magma/gnbuild/magma-vsl-gc:nonhardware-tests",
         "//garnet/lib/magma/tests:magma_abi_conformance_tests",
-        "//garnet/lib/magma/tests:nonhardware-tests",
+        "//garnet/lib/magma/tests:magma_nonhardware_tests",
         "//garnet/lib/magma/tests:vulkan-tests"
     ]
 }

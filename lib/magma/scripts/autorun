@@ -10,17 +10,18 @@ else
   gtest_output_arg=--gtest_output=$GTEST_OUTPUT
 fi
 echo [UNIT TEST START=]
-/pkgfs/packages/magma_nonhardware_tests/0/test/magma_unit_tests
-/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/msd_intel_gen_nonhardware_tests
+run_test_component magma_unit_tests $gtest_output_arg
+run_test_component msd_intel_gen_nonhardware_tests $gtest_output_arg
 ### Mesa tests
-/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/mesa_unit_tests
-/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool
-/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_free_list_only
-/pkgfs/packages/magma_intel_gen_nonhardware_tests/0/test/state_pool_no_free
+run_test_component mesa_unit_tests $gtest_output_arg
+run_test_component fuchsia-pkg://fuchsia.com/magma_intel_gen_nonhardware_tests#meta/state_pool.cmx $gtest_output_arg
+run_test_component state_pool_free_list_only $gtest_output_arg
+run_test_component state_pool_no_free $gtest_output_arg
+run_test_component block_pool_no_free $gtest_output_arg
 echo [UNIT TEST END===]
 echo [INTEGRATION TEST START=]
 run_test_component magma_abi_conformance_tests $gtest_output_arg
-/system/test/msd_intel_gen_integration_tests --gtest_filter=-*Stress*
+run_test_component msd_intel_gen_integration_tests $gtest_output_arg --gtest_filter=-*Stress*
 run_test_component vkext $gtest_output_arg
 run_test_component vkreadback $gtest_output_arg
 echo [INTEGRATION TEST END===]
