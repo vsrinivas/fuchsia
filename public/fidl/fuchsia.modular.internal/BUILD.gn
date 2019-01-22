@@ -14,6 +14,10 @@ fidl("fuchsia.modular.internal") {
   ]
   deps = [
     "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "//peridot/public/fidl/fuchsia.ledger",
     "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
   ]
 }
