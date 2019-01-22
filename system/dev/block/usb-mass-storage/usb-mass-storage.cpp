@@ -629,7 +629,7 @@ static int ums_worker_thread(void* arg) {
     while (1) {
         if (wait) {
             status = sync_completion_wait(&ums->txn_completion, ZX_SEC(1));
-            if (status == ZX_ERR_TIMED_OUT) {
+            if (list_is_empty(&ums->queued_txns) && !ums->dead) {
                 if (ums_check_luns_ready(ums) != ZX_OK) {
                     return status;
                 }
