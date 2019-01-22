@@ -130,6 +130,14 @@ void operator delete[](void* p, size_t s) {
     return ::free(p);
 }
 
+void operator delete(void* p, std::align_val_t align) {
+    return ::free(p);
+}
+
+void operator delete(void* p, std::size_t s, std::align_val_t align) {
+    return ::free(p);
+}
+
 #endif // !__has_feature(address_sanitizer)
 
 // These are the mangled names of all the functions above.  Because these
@@ -143,6 +151,8 @@ asm(".hidden _ZdaPv");
 asm(".hidden _ZdaPvm");
 asm(".hidden _ZdlPv");
 asm(".hidden _ZdlPvm");
+asm(".hidden _ZdlPvSt11align_val_t");
+asm(".hidden _ZdlPvmSt11align_val_t");
 asm(".hidden _Znam");
 asm(".hidden _ZnamPv");
 asm(".hidden _ZnamRKSt9nothrow_t");
