@@ -13,14 +13,13 @@
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <lib/operation/block.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-
-#include "transaction.h"
 
 namespace ramdisk {
 
@@ -103,10 +102,12 @@ private:
     // - Has |asleep| set to false.
     sync_completion_t signal_;
 
+    // This is threadsafe.
+    block::UnownedOperationQueue<> txn_list_;
+
     // Guards fields of the ramdisk which may be accessed concurrently
     // from a background worker thread.
     fbl::Mutex lock_;
-    TransactionList txn_list_ TA_GUARDED(lock_);
 
     // Identifies if the device has been unbound.
     bool dead_ TA_GUARDED(lock_) = false;

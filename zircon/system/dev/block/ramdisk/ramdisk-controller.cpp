@@ -13,7 +13,6 @@
 #include <zircon/types.h>
 
 #include "ramdisk.h"
-#include "transaction.h"
 
 namespace ramdisk {
 namespace {

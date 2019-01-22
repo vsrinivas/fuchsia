@@ -13,6 +13,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ramdisk-controller.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/operation \
     system/ulib/async \
     system/ulib/ddk \
     system/ulib/ddktl \

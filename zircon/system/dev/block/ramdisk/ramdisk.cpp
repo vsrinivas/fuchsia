@@ -19,10 +19,11 @@
 #include <zircon/types.h>
 
 #include "ramdisk.h"
-#include "transaction.h"
 
 namespace ramdisk {
 namespace {
+
+using Transaction = block::UnownedOperation<>;
 
 constexpr uint64_t kMaxTransferSize = 1LLU << 19;
 
@@ -112,23 +113,23 @@ void Ramdisk::BlockImplQuery(block_info_t* info, size_t* bopsz) {
     info->max_transfer_size = kMaxTransferSize;
     fbl::AutoLock lock(&lock_);
     info->flags = flags_;
-    *bopsz = sizeof(Transaction);
+    *bopsz = Transaction::OperationSize(sizeof(block_op_t));
 }
 
 void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completion_cb,
                              void* cookie) {
-    Transaction* txn = Transaction::InitFromOp(bop, completion_cb, cookie);
+    Transaction txn(bop, completion_cb, cookie, sizeof(block_op_t));
     bool dead;
     bool read = false;
 
-    switch ((txn->op.command &= BLOCK_OP_MASK)) {
+    switch ((txn.operation()->command &= BLOCK_OP_MASK)) {
     case BLOCK_OP_READ:
         read = true;
         __FALLTHROUGH;
     case BLOCK_OP_WRITE:
-        if ((txn->op.rw.offset_dev >= block_count_) ||
-            ((block_count_ - txn->op.rw.offset_dev) < txn->op.rw.length)) {
-            txn->Complete(ZX_ERR_OUT_OF_RANGE);
+        if ((txn.operation()->rw.offset_dev >= block_count_) ||
+            ((block_count_ - txn.operation()->rw.offset_dev) < txn.operation()->rw.length)) {
+            txn.Complete(ZX_ERR_OUT_OF_RANGE);
             return;
         }
 
@@ -136,23 +137,23 @@ void Ramdisk::BlockImplQueue(block_op_t* bop, block_impl_queue_callback completi
             fbl::AutoLock lock(&lock_);
             if (!(dead = dead_)) {
                 if (!read) {
-                    block_counts_.received += txn->op.rw.length;
+                    block_counts_.received += txn.operation()->rw.length;
                 }
-                txn_list_.push_back(txn);
+                txn_list_.push(std::move(txn));
             }
         }
 
         if (dead) {
-            txn->Complete(ZX_ERR_BAD_STATE);
+            txn.Complete(ZX_ERR_BAD_STATE);
         } else {
             sync_completion_signal(&signal_);
         }
         break;
     case BLOCK_OP_FLUSH:
-        txn->Complete(ZX_OK);
+        txn.Complete(ZX_OK);
         break;
     default:
-        txn->Complete(ZX_ERR_NOT_SUPPORTED);
+        txn.Complete(ZX_ERR_NOT_SUPPORTED);
         break;
     }
 }
@@ -219,16 +220,16 @@ zx_status_t Ramdisk::BlockPartitionGetName(char* out_name, size_t capacity) {
 
 void Ramdisk::ProcessRequests() {
     zx_status_t status = ZX_OK;
-    Transaction* txn = nullptr;
+    std::optional<Transaction> txn;
     bool dead, asleep, defer;
     uint64_t blocks = 0;
-    TransactionList deferred_list;
+    block::UnownedOperationQueue<> deferred_list;
 
     for (;;) {
         for (;;) {
             {
                 fbl::AutoLock lock(&lock_);
-                txn = nullptr;
+                txn = std::nullopt;
                 dead = dead_;
                 asleep = asleep_;
                 defer = (flags_ & fuchsia_hardware_ramdisk_RAMDISK_FLAG_RESUME_ON_WAKE) != 0;
@@ -236,21 +237,21 @@ void Ramdisk::ProcessRequests() {
 
                 if (!asleep) {
                     // If we are awake, try grabbing pending transactions from the deferred list.
-                    txn = deferred_list.pop_front();
+                    txn = deferred_list.pop();
                 }
 
-                if (txn == nullptr) {
+                if (!txn) {
                     // If no transactions were available in the deferred list (or we are asleep),
                     // grab one from the regular txn_list.
-                    txn = txn_list_.pop_front();
+                    txn = txn_list_.pop();
                 }
             }
 
             if (dead) {
-                goto goodbye;
+                return;
             }
 
-            if (txn == nullptr) {
+            if (!txn) {
                 sync_completion_wait(&signal_, ZX_TIME_INFINITE);
             } else {
                 sync_completion_reset(&signal_);
@@ -258,8 +259,8 @@ void Ramdisk::ProcessRequests() {
             }
         }
 
-        uint64_t txn_blocks = txn->op.rw.length;
-        if (txn->op.command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
+        uint64_t txn_blocks = txn->operation()->rw.length;
+        if (txn->operation()->command == BLOCK_OP_READ || blocks == 0 || blocks > txn_blocks) {
             // If the ramdisk is not configured to sleep after x blocks, or the number of blocks in
             // this transaction does not exceed the pre_sleep_write_block_count, or we are
             // performing a read operation, use the current transaction length.
@@ -267,29 +268,30 @@ void Ramdisk::ProcessRequests() {
         }
 
         size_t length = blocks * block_size_;
-        size_t dev_offset = txn->op.rw.offset_dev * block_size_;
-        size_t vmo_offset = txn->op.rw.offset_vmo * block_size_;
+        size_t dev_offset = txn->operation()->rw.offset_dev * block_size_;
+        size_t vmo_offset = txn->operation()->rw.offset_vmo * block_size_;
         void* addr = reinterpret_cast<void*>(reinterpret_cast<uintptr_t>(mapping_.start()) +
                                              dev_offset);
+        auto command = txn->operation()->command;
 
         if (length > kMaxTransferSize) {
             status = ZX_ERR_OUT_OF_RANGE;
-        } else if (txn->op.command == BLOCK_OP_READ) {
+        } else if (command == BLOCK_OP_READ) {
             // A read operation should always succeed, even if the ramdisk is "asleep".
-            status = zx_vmo_write(txn->op.rw.vmo, addr, vmo_offset, length);
+            status = zx_vmo_write(txn->operation()->rw.vmo, addr, vmo_offset, length);
         } else if (asleep) {
             if (defer) {
                 // If we are asleep but resuming on wake, add txn to the deferred_list.
                 // deferred_list is only accessed by the worker_thread, so a lock is not needed.
-                deferred_list.push_back(txn);
+                deferred_list.push(std::move(*txn));
                 continue;
             } else {
                 status = ZX_ERR_UNAVAILABLE;
             }
         } else { // BLOCK_OP_WRITE
-            status = zx_vmo_read(txn->op.rw.vmo, addr, vmo_offset, length);
+            status = zx_vmo_read(txn->operation()->rw.vmo, addr, vmo_offset, length);
 
-            if (status == ZX_OK && blocks < txn->op.rw.length && defer) {
+            if (status == ZX_OK && blocks < txn->operation()->rw.length && defer) {
                 // If the first part of the transaction succeeded but the entire transaction is not
                 // complete, we need to address the remainder.
 
@@ -298,16 +300,16 @@ void Ramdisk::ProcessRequests() {
                 // deferred queue.
                 ZX_DEBUG_ASSERT_MSG(blocks <= std::numeric_limits<uint32_t>::max(),
                                     "Block count overflow");
-                txn->op.rw.length -= static_cast<uint32_t>(blocks);
-                txn->op.rw.offset_vmo += blocks;
-                txn->op.rw.offset_dev += blocks;
+                txn->operation()->rw.length -= static_cast<uint32_t>(blocks);
+                txn->operation()->rw.offset_vmo += blocks;
+                txn->operation()->rw.offset_dev += blocks;
 
                 // Add the remaining blocks to the deferred list.
-                deferred_list.push_back(txn);
+                deferred_list.push(std::move(*txn));
             }
         }
 
-        if (txn->op.command == BLOCK_OP_WRITE) {
+        if (command == BLOCK_OP_WRITE) {
             {
                 // Update the ramdisk block counts. Since we aren't failing read transactions,
                 // only include write transaction counts.
@@ -340,17 +342,6 @@ void Ramdisk::ProcessRequests() {
         }
 
         txn->Complete(status);
-    }
-
-goodbye:
-    while (txn != nullptr) {
-        txn->Complete(ZX_ERR_BAD_STATE);
-        txn = deferred_list.pop_front();
-
-        if (txn == nullptr) {
-            fbl::AutoLock lock(&lock_);
-            txn = txn_list_.pop_front();
-        }
     }
 }
 
