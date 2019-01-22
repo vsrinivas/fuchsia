@@ -31,6 +31,10 @@ class EthertapConfig {
   explicit EthertapConfig(const Mac& mac) : mac(mac) {}
 };
 
+// Helper class to create and operate Ethertap Devices.
+// Existence of the tap device is tied to object lifecycle (RAII), so if you
+// intend to connect to the ethernet device you must keep the EthertapClient
+// instance in scope.
 class EthertapClient {
  public:
   using PacketCallback = fit::function<void(const void* buf, size_t len)>;
