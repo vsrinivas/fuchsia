@@ -109,6 +109,8 @@ exec_script("//build/zircon/create_gn_rules.py",
               rebase_path(zircon_build_abi_dir),
               "--zircon-tool-build",
               rebase_path("$zircon_tools_dir/.."),
+              "--make",
+              zircon_make_path,
             ],
             "",
             zircon_files + supporting_templates)

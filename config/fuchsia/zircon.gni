@@ -38,6 +38,11 @@ declare_args() {
   # by //scripts/fx commands that rebuild Zircon so that they use `-A`
   # again next time.
   zircon_use_asan = false
+
+  # Path to `make` binary. By default, `make` is assumed to be in the
+  # path. Used in the script that generates the Zircon build rules. N.B. this
+  # path is *not* rebased, just used as is.
+  zircon_make_path = "make"
 }
 
 if (zircon_build_dir == "") {

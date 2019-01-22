@@ -470,6 +470,9 @@ def main():
     parser.add_argument('--debug',
                         help='Whether to print out debug information',
                         action='store_true')
+    parser.add_argument('--make',
+                        help='Path to make binary',
+                        required=True)
     args = parser.parse_args()
 
     out_dir = os.path.abspath(args.out)
@@ -487,7 +490,7 @@ def main():
     if debug:
         print('Building Zircon in: %s' % zircon_dir)
     make_args = [
-        'make',
+        args.make,
         'packages',
         'BUILDDIR=%s' % zircon_dir,
     ]
