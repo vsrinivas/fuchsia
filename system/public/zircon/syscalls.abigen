@@ -362,7 +362,6 @@ syscall thread_create
 
 #^ start execution on a thread
 #! handle must be of type ZX_OBJ_TYPE_THREAD and have ZX_RIGHT_MANAGE_THREAD.
-# TODO(ZX-2967): handle with ZX_RIGHT_WRITE is also accepted.
 syscall thread_start
     (handle: zx_handle_t, thread_entry: zx_vaddr_t,
         stack: zx_vaddr_t, arg1: uintptr_t, arg2: uintptr_t)
