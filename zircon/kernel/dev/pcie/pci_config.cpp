@@ -154,7 +154,7 @@ void PciMmioConfig::Write(PciReg32 addr, uint32_t val) const {
     *reg = LE32(val);
 }
 
-} // anon namespace
+} // namespace
 
 fbl::RefPtr<PciConfig> PciConfig::Create(uintptr_t base, PciAddrSpace addr_type) {
     fbl::AllocChecker ac;

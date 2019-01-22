@@ -261,29 +261,24 @@ static void mp_unplug_trampoline(void) {
 // This should be called in a thread context
 zx_status_t mp_hotplug_cpu_mask(cpu_mask_t cpu_mask) {
     DEBUG_ASSERT(!arch_ints_disabled());
-
-    zx_status_t status = ZX_OK;
-
-    mutex_acquire(&mp.hotplug_lock);
+    Guard<Mutex>(&mp.hotplug_lock);
 
     // Make sure all of the requested CPUs are offline
     if (cpu_mask & mp_get_online_mask()) {
-        status = ZX_ERR_BAD_STATE;
-        goto cleanup_mutex;
+        return ZX_ERR_BAD_STATE;
     }
 
     while (cpu_mask != 0) {
         cpu_num_t cpu_id = highest_cpu_set(cpu_mask);
         cpu_mask &= ~cpu_num_to_mask(cpu_id);
 
-        status = platform_mp_cpu_hotplug(cpu_id);
+        zx_status_t status = platform_mp_cpu_hotplug(cpu_id);
         if (status != ZX_OK) {
-            break;
+            return status;
         }
     }
-cleanup_mutex:
-    mutex_release(&mp.hotplug_lock);
-    return status;
+
+    return ZX_OK;
 }
 
 // Unplug a single CPU.  Must be called while holding the hotplug lock
@@ -364,30 +359,24 @@ cleanup_thread:
 // This should be called in a thread context
 zx_status_t mp_unplug_cpu_mask(cpu_mask_t cpu_mask) {
     DEBUG_ASSERT(!arch_ints_disabled());
-
-    zx_status_t status = ZX_OK;
-
-    mutex_acquire(&mp.hotplug_lock);
+    Guard<Mutex>(&mp.hotplug_lock);
 
     // Make sure all of the requested CPUs are online
     if (cpu_mask & ~mp_get_online_mask()) {
-        status = ZX_ERR_BAD_STATE;
-        goto cleanup_mutex;
+        return ZX_ERR_BAD_STATE;
     }
 
     while (cpu_mask != 0) {
         cpu_num_t cpu_id = highest_cpu_set(cpu_mask);
         cpu_mask &= ~cpu_num_to_mask(cpu_id);
 
-        status = mp_unplug_cpu_mask_single_locked(cpu_id);
+        zx_status_t status = mp_unplug_cpu_mask_single_locked(cpu_id);
         if (status != ZX_OK) {
-            break;
+            return status;
         }
     }
 
-cleanup_mutex:
-    mutex_release(&mp.hotplug_lock);
-    return status;
+    return ZX_OK;
 }
 
 interrupt_eoi mp_mbx_generic_irq(void*) {

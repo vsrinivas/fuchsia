@@ -10,8 +10,7 @@
 #include <err.h>
 #include <explicit-memory/bytes.h>
 #include <fbl/auto_call.h>
-#include <fbl/mutex.h>
-#include <kernel/auto_lock.h>
+#include <kernel/mutex.h>
 #include <ktl/atomic.h>
 #include <lib/crypto/prng.h>
 #include <pow2.h>
@@ -53,7 +52,7 @@ void PRNG::AddEntropy(const void* data, size_t size) {
     DEBUG_ASSERT(data || size == 0);
     ASSERT(size <= kMaxEntropy);
     // Concurrent calls to |AddEntropy| must run sequentially.
-    fbl::AutoLock guard(&mutex_);
+    Guard<Mutex> guard(&mutex_);
     // Save the key on the stack, but guarantee we clean them up
     uint8_t key[sizeof(key_)];
     auto cleanup =
@@ -64,13 +63,13 @@ void PRNG::AddEntropy(const void* data, size_t size) {
     SHA256_Init(&ctx);
     SHA256_Update(&ctx, data, size);
     {
-        AutoSpinLock guard(&spinlock_);
+        Guard<SpinLock, IrqSave> guard(&spinlock_);
         memcpy(key, key_, sizeof(key));
     }
     SHA256_Update(&ctx, key, sizeof(key));
     SHA256_Final(key, &ctx);
     {
-        AutoSpinLock guard(&spinlock_);
+        Guard<SpinLock, IrqSave> guard(&spinlock_);
         memcpy(key_, key, sizeof(key_));
     }
     // Increment how much entropy has been added, and signal if we have enough.
@@ -95,7 +94,7 @@ void PRNG::Draw(void* out, size_t size) {
         nonce = 0;
     });
     {
-        AutoSpinLock guard(&spinlock_);
+        Guard<SpinLock, IrqSave> guard(&spinlock_);
         nonce = ++nonce_;
         memcpy(key, key_, sizeof(key));
     }

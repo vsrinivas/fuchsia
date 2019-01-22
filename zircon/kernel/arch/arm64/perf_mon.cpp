@@ -20,6 +20,7 @@
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
 #include <fbl/ref_ptr.h>
 #include <kernel/align.h>
 #include <kernel/mp.h>

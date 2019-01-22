@@ -271,7 +271,7 @@ public:
     }
 
 protected:
-    Lock<fbl::Mutex>* get_lock() const final { return &lock_; }
+    Lock<Mutex>* get_lock() const final { return &lock_; }
 
     const fbl::Canary<CanaryTag<Self>::magic> canary_;
     mutable DECLARE_MUTEX(SoloDispatcher) lock_;
@@ -309,7 +309,7 @@ public:
     PeerHolder() = default;
     ~PeerHolder() = default;
 
-    Lock<fbl::Mutex>* get_lock() const { return &lock_; }
+    Lock<Mutex>* get_lock() const { return &lock_; }
 
     mutable DECLARE_MUTEX(PeerHolder) lock_;
 };

@@ -7,7 +7,7 @@
 #include <lib/oom.h>
 
 #include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <lib/console.h>
 #include <platform.h>
@@ -21,31 +21,31 @@
 #include <string.h>
 #include <sys/types.h>
 
-using fbl::AutoLock;
-
 // Guards the oom_* values below.
-static fbl::Mutex oom_mutex;
+namespace {
+DECLARE_SINGLETON_MUTEX(OomMutex);
+}  // namespace
 
 // Function to call when we hit a low-memory condition.
-static oom_lowmem_callback_t* oom_lowmem_callback TA_GUARDED(oom_mutex);
+static oom_lowmem_callback_t* oom_lowmem_callback TA_GUARDED(OomMutex::Get());
 
 // The thread, if it's running; nullptr otherwise.
-static thread_t* oom_thread TA_GUARDED(oom_mutex);
+static thread_t* oom_thread TA_GUARDED(OomMutex::Get());
 
 // True if the thread should keep running.
-static bool oom_running TA_GUARDED(oom_mutex);
+static bool oom_running TA_GUARDED(OomMutex::Get());
 
 // How long the OOM thread sleeps between checks.
-static uint64_t oom_sleep_duration_ns TA_GUARDED(oom_mutex);
+static uint64_t oom_sleep_duration_ns TA_GUARDED(OomMutex::Get());
 
 // If the PMM has fewer than this many bytes free, start killing processes.
-static uint64_t oom_redline_bytes TA_GUARDED(oom_mutex);
+static uint64_t oom_redline_bytes TA_GUARDED(OomMutex::Get());
 
 // True if the thread should print the current free value when it runs.
-static bool oom_printing TA_GUARDED(oom_mutex);
+static bool oom_printing TA_GUARDED(OomMutex::Get());
 
 // True if the thread should simulate a low-memory condition on its next loop.
-static bool oom_simulate_lowmem TA_GUARDED(oom_mutex);
+static bool oom_simulate_lowmem TA_GUARDED(OomMutex::Get());
 
 static int oom_loop(void* arg) {
     const size_t total_bytes = pmm_count_total_bytes();
@@ -62,7 +62,7 @@ static int oom_loop(void* arg) {
         oom_lowmem_callback_t* lowmem_callback = nullptr;
         uint64_t sleep_duration_ns = 0;
         {
-            AutoLock lock(&oom_mutex);
+            Guard<Mutex> guard(OomMutex::Get());
             if (!oom_running) {
                 break;
             }
@@ -116,7 +116,7 @@ static int oom_loop(void* arg) {
     return 0;
 }
 
-static void start_thread_locked() TA_REQ(oom_mutex) {
+static void start_thread_locked() TA_REQ(OomMutex::Get()) {
     DEBUG_ASSERT(oom_thread == nullptr);
     DEBUG_ASSERT(oom_running == false);
     thread_t* t = thread_create("oom", oom_loop, nullptr, HIGH_PRIORITY);
@@ -136,7 +136,7 @@ void oom_init(bool enable, uint64_t sleep_duration_ns, size_t redline_bytes,
     DEBUG_ASSERT(redline_bytes > 0);
     DEBUG_ASSERT(lowmem_callback != nullptr);
 
-    AutoLock lock(&oom_mutex);
+    Guard<Mutex> guard(OomMutex::Get());
     DEBUG_ASSERT(oom_lowmem_callback == nullptr);
     oom_lowmem_callback = lowmem_callback;
     oom_sleep_duration_ns = sleep_duration_ns;
@@ -162,7 +162,7 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
         return -1;
     }
 
-    AutoLock lock(&oom_mutex);
+    Guard<Mutex> guard(OomMutex::Get());
     if (strcmp(argv[1].str, "start") == 0) {
         if (!oom_running) {
             start_thread_locked();
@@ -177,7 +177,7 @@ static int cmd_oom(int argc, const cmd_args* argv, uint32_t flags) {
             oom_thread = nullptr;
             zx_duration_t timeout = zx_duration_mul_int64(oom_sleep_duration_ns, 4);
             zx_time_t deadline = zx_time_add_duration(current_time(), timeout);
-            lock.release();
+            guard.Release();
             zx_status_t s = thread_join(t, nullptr, deadline);
             if (s == ZX_OK) {
                 printf("OOM thread stopped.\n");

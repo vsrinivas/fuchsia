@@ -13,12 +13,13 @@
 #include <hypervisor/cpu.h>
 #include <kernel/auto_lock.h>
 #include <kernel/mp.h>
+#include <kernel/mutex.h>
 
-#include <fbl/mutex.h>
-
-static fbl::Mutex guest_mutex;
-static size_t num_guests TA_GUARDED(guest_mutex) = 0;
-static fbl::Array<VmxPage> vmxon_pages TA_GUARDED(guest_mutex);
+namespace {
+DECLARE_SINGLETON_MUTEX(GuestMutex);
+}  // namespace
+static size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
+static fbl::Array<VmxPage> vmxon_pages TA_GUARDED(GuestMutex::Get());
 
 static zx_status_t vmxon(paddr_t pa) {
     uint8_t err;
@@ -162,7 +163,7 @@ static void vmxoff_task(void* arg) {
 }
 
 zx_status_t alloc_vmx_state() {
-    fbl::AutoLock lock(&guest_mutex);
+    Guard<Mutex> guard(GuestMutex::Get());
     if (num_guests == 0) {
         fbl::AllocChecker ac;
         size_t num_cpus = arch_max_num_cpus();
@@ -191,7 +192,7 @@ zx_status_t alloc_vmx_state() {
 }
 
 zx_status_t free_vmx_state() {
-    fbl::AutoLock lock(&guest_mutex);
+    Guard<Mutex> guard(GuestMutex::Get());
     num_guests--;
     if (num_guests == 0) {
         mp_sync_exec(MP_IPI_TARGET_ALL, 0, vmxoff_task, nullptr);

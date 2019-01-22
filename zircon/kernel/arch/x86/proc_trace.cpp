@@ -35,9 +35,9 @@
 #include <err.h>
 #include <fbl/auto_lock.h>
 #include <fbl/macros.h>
-#include <fbl/mutex.h>
 #include <ktl/unique_ptr.h>
 #include <kernel/mp.h>
+#include <kernel/mutex.h>
 #include <kernel/thread.h>
 #include <lib/ktrace.h>
 #include <pow2.h>
@@ -50,8 +50,6 @@
 #include <lib/zircon-internal/mtrace.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
-
-using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
@@ -98,17 +96,17 @@ struct ipt_trace_state_t {
     } addr_ranges[IPT_MAX_NUM_ADDR_RANGES];
 };
 
-static fbl::Mutex ipt_lock;
+namespace {
+DECLARE_SINGLETON_MUTEX(IptLock);
+}  // namespace
 
-static ipt_trace_state_t* ipt_trace_state TA_GUARDED(ipt_lock);
-
-static bool active TA_GUARDED(ipt_lock) = false;
-
-static ipt_trace_mode_t trace_mode TA_GUARDED(ipt_lock) = IPT_TRACE_CPUS;
+static ipt_trace_state_t* ipt_trace_state TA_GUARDED(IptLock::Get());
+static bool active TA_GUARDED(IptLock::Get()) = false;
+static ipt_trace_mode_t trace_mode TA_GUARDED(IptLock::Get()) = IPT_TRACE_CPUS;
 
 // In cpu mode this arch_max_num_cpus.
 // In thread mode this is provided by the user.
-static uint32_t ipt_num_traces TA_GUARDED(ipt_lock);
+static uint32_t ipt_num_traces TA_GUARDED(IptLock::Get());
 
 void x86_processor_trace_init(void) {
     if (!x86_feature_test(X86_FEATURE_PT)) {
@@ -172,7 +170,7 @@ static void x86_ipt_set_mode_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 }
 
 zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     DEBUG_ASSERT(mode == IPT_TRACE_CPUS || mode == IPT_TRACE_THREADS);
     if (mode == IPT_TRACE_CPUS) {
@@ -215,7 +213,7 @@ zx_status_t x86_ipt_alloc_trace(ipt_trace_mode_t mode, uint32_t num_traces) {
 // from having to care during any cleanup.
 
 zx_status_t x86_ipt_free_trace() {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
@@ -256,7 +254,7 @@ static void x86_ipt_start_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYS
 // Begin the trace.
 
 zx_status_t x86_ipt_start() {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
@@ -336,7 +334,7 @@ static void x86_ipt_stop_cpu_task(void* raw_context) TA_NO_THREAD_SAFETY_ANALYSI
 // during any cleanup.
 
 zx_status_t x86_ipt_stop() {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
@@ -369,7 +367,7 @@ zx_status_t x86_ipt_stop() {
 
 zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
                                      const zx_x86_pt_regs_t* regs) {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;
@@ -393,7 +391,7 @@ zx_status_t x86_ipt_stage_trace_data(zx_itrace_buffer_descriptor_t descriptor,
 
 zx_status_t x86_ipt_get_trace_data(zx_itrace_buffer_descriptor_t descriptor,
                                    zx_x86_pt_regs_t* regs) {
-    AutoLock al(&ipt_lock);
+    Guard<Mutex> guard(IptLock::Get());
 
     if (!supports_pt)
         return ZX_ERR_NOT_SUPPORTED;

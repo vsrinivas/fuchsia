@@ -7,8 +7,8 @@
 #pragma once
 
 #include <lib/crypto/entropy/collector.h>
+#include <kernel/mutex.h>
 #include <zircon/types.h>
-#include <fbl/mutex.h>
 
 namespace crypto {
 
@@ -41,7 +41,7 @@ private:
 
     DISALLOW_COPY_ASSIGN_AND_MOVE(HwRngCollector);
 
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(HwRngCollector) lock_;
 };
 
 } // namespace entropy

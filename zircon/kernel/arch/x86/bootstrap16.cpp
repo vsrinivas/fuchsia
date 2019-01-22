@@ -15,7 +15,7 @@
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/auto_call.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <string.h>
 #include <trace.h>
 #include <vm/pmm.h>
@@ -24,7 +24,7 @@
 #include <zircon/types.h>
 
 static paddr_t bootstrap_phys_addr = UINT64_MAX;
-static fbl::Mutex bootstrap_lock;
+static Mutex bootstrap_lock;
 
 void x86_bootstrap16_init(paddr_t bootstrap_base) {
     DEBUG_ASSERT(!IS_PAGE_ALIGNED(bootstrap_phys_addr));

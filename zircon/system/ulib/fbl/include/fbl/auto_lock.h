@@ -11,44 +11,23 @@
 
 namespace fbl {
 
-// Introduce preprocessor definitions for the underlying mutex data type and the
-// lock/unlock operations based on whether this code is being used in the kernel
-// or in user-mode.
-#ifdef _KERNEL
-#define fbl_mutex_t mutex_t
-#define fbl_mutex_acquire mutex_acquire
-#define fbl_mutex_release mutex_release
-#else
-#define fbl_mutex_t mtx_t
-#define fbl_mutex_acquire mtx_lock
-#define fbl_mutex_release mtx_unlock
-#endif
-
+// Default AutoLock will accept any object which represents a "mutex"
+// capability, and which supports an Acquire/Release interface.
+template <typename T>
 class __TA_SCOPED_CAPABILITY AutoLock {
 public:
-    explicit AutoLock(fbl_mutex_t* mutex) __TA_ACQUIRE(mutex)
-        : mutex_(mutex), acquired_(true) {
-        fbl_mutex_acquire(mutex_);
+    explicit AutoLock(T* mutex) __TA_ACQUIRE(mutex) : mutex_(mutex) {
+        mutex_->Acquire();
     }
-
-    explicit AutoLock(Mutex* mutex) __TA_ACQUIRE(mutex)
-        :   AutoLock(mutex->GetInternal()) {}
-
-    explicit AutoLock(fbl::NullLock* mutex) __TA_ACQUIRE(mutex)
-        : mutex_(nullptr), acquired_(false) {}
-
-    ~AutoLock()  __TA_RELEASE() {
-        release();
-    }
+    ~AutoLock()  __TA_RELEASE() { release(); }
 
     // early release the mutex before the object goes out of scope
     void release() __TA_RELEASE() {
         // In typical usage, this conditional will be optimized away so
-        // that fbl_mutex_release() is called unconditionally.
-        if (acquired_) {
-            fbl_mutex_release(mutex_);
+        // that mutex_->Release() is called unconditionally.
+        if (mutex_ != nullptr) {
+            mutex_->Release();
             mutex_ = nullptr;
-            acquired_ = false;
         }
     }
 
@@ -56,16 +35,45 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
 
 private:
-    fbl_mutex_t* mutex_;
-    bool acquired_;
+    T* mutex_;
 };
 
-}  // namespace fbl
+// No-op specialization for the fbl::NullLock
+template<>
+class __TA_SCOPED_CAPABILITY AutoLock<::fbl::NullLock> {
+public:
+    explicit AutoLock(::fbl::NullLock* mutex) __TA_ACQUIRE(mutex) { }
+    ~AutoLock() __TA_RELEASE() { }
+    void release() __TA_RELEASE() { }
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
+};
 
-// Remove the underlying mutex preprocessor definitions.  Do not let them leak
-// out into the world at large.
-#undef fbl_mutex_t
-#undef fbl_mutex_acquire
-#undef fbl_mutex_release
+// Specialization for the C11 mtx_t type.  Not present in the kernel.
+#if !_KERNEL
+template<>
+class __TA_SCOPED_CAPABILITY AutoLock<mtx_t> {
+public:
+    explicit AutoLock(mtx_t* mutex) __TA_ACQUIRE(mutex)
+        : mutex_(mutex) {
+        mtx_lock(mutex_);
+    }
+    ~AutoLock()  __TA_RELEASE() { release(); }
+
+    void release() __TA_RELEASE() {
+        if (mutex_ != nullptr) {
+            mtx_unlock(mutex_);
+            mutex_ = nullptr;
+        }
+    }
+
+    // suppress default constructors
+    DISALLOW_COPY_ASSIGN_AND_MOVE(AutoLock);
+
+private:
+    mtx_t* mutex_;
+};
+#endif  // if !_KERNEL
+
+}  // namespace fbl
 
 #endif  // #ifdef __cplusplus

@@ -45,7 +45,9 @@ static char* debug_buffer;
 static bool echo = true;
 
 /* command processor state */
-static mutex_t command_lock;
+namespace {
+DECLARE_SINGLETON_MUTEX(CommandLock);
+}  // namespace
 int lastresult;
 static bool abort_script;
 
@@ -578,7 +580,7 @@ static zx_status_t command_loop(int (*get_line)(const char**, void*),
         }
 
         if (!locked)
-            mutex_acquire(&command_lock);
+            CommandLock::Get()->lock().Acquire();
 
         abort_script = false;
         lastresult = command->cmd_callback(argc, args, 0);
@@ -605,7 +607,7 @@ static zx_status_t command_loop(int (*get_line)(const char**, void*),
         abort_script = false;
 
         if (!locked)
-            mutex_release(&command_lock);
+            CommandLock::Get()->lock().Release();
     }
 
     free(outbuf);

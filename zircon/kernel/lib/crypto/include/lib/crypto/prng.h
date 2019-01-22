@@ -9,8 +9,8 @@
 #include <stddef.h>
 #include <stdint.h>
 
-#include <fbl/mutex.h>
 #include <kernel/event.h>
+#include <kernel/mutex.h>
 #include <kernel/spinlock.h>
 #include <ktl/atomic.h>
 #include <zircon/thread_annotations.h>
@@ -80,10 +80,10 @@ private:
     PRNG& operator=(const PRNG&) = delete;
 
     // Synchronizes calls to |AddEntropy|.
-    fbl::Mutex mutex_;
+    DECLARE_MUTEX(PRNG) mutex_;
 
     // Controls access to |key_| |and nonce_|.
-    SpinLock spinlock_;
+    DECLARE_SPINLOCK(PRNG) spinlock_;
 
     // ChaCha20 key and nonce as described in RFC 7539.  The key length is
     // enforced by a static assertion in the constructor.

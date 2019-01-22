@@ -8,8 +8,8 @@
 
 #include <lib/crypto/entropy/collector.h>
 #include <lib/jitterentropy/jitterentropy.h>
+#include <kernel/mutex.h>
 #include <zircon/types.h>
-#include <fbl/mutex.h>
 
 namespace crypto {
 
@@ -52,7 +52,7 @@ private:
     DISALLOW_COPY_ASSIGN_AND_MOVE(JitterentropyCollector);
 
     struct rand_data ec_;
-    fbl::Mutex lock_;
+    DECLARE_MUTEX(JitterentropyCollector) lock_;
     uint32_t mem_loops_, lfsr_loops_;
     bool use_raw_samples_;
 };

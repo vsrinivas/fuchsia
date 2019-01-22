@@ -203,7 +203,7 @@ public:
     // page source. This will no longer be the case once page allocations can be delayed.
     zx_status_t GetPage(uint64_t offset, uint pf_flags, list_node* free_list,
                         PageRequest* page_request, vm_page_t** page, paddr_t* pa) {
-        Guard<fbl::Mutex> guard{&lock_};
+        Guard<Mutex> guard{&lock_};
         return GetPageLocked(offset, pf_flags, free_list, page_request, page, pa);
     }
 
@@ -214,8 +214,8 @@ public:
         return ZX_ERR_NOT_SUPPORTED;
     }
 
-    Lock<fbl::Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
-    Lock<fbl::Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
+    Lock<Mutex>* lock() TA_RET_CAP(lock_) { return &lock_; }
+    Lock<Mutex>& lock_ref() TA_RET_CAP(lock_) { return lock_; }
 
     void AddMappingLocked(VmMapping* r) TA_REQ(lock_);
     void RemoveMappingLocked(VmMapping* r) TA_REQ(lock_);
@@ -243,7 +243,7 @@ public:
     // error value.
     template <typename T>
     static zx_status_t ForEach(T func) {
-        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
+        Guard<Mutex> guard{AllVmosLock::Get()};
         for (const auto& iter : all_vmos_) {
             zx_status_t s = func(iter);
             if (s != ZX_OK) {
@@ -287,7 +287,7 @@ private:
     DECLARE_MUTEX(VmObject) local_lock_;
 
 protected:
-    Lock<fbl::Mutex>& lock_;
+    Lock<Mutex>& lock_;
 
     // list of every mapping
     fbl::DoublyLinkedList<VmMapping*> mapping_list_ TA_GUARDED(lock_);

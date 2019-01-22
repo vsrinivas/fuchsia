@@ -84,7 +84,7 @@ size_t JitterentropyCollector::DrawEntropy(uint8_t* buf, size_t len) {
     // TODO(ZX-1024): Test jitterentropy in multi-CPU environment. Disable
     // interrupts, or otherwise ensure that jitterentropy still performs well in
     // multi-threaded systems.
-    fbl::AutoLock guard(&lock_);
+    Guard<Mutex> guard(&lock_);
 
     if (use_raw_samples_) {
         for (size_t i = 0; i < len; i++) {

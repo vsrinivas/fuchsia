@@ -418,7 +418,7 @@ static inline uint32_t thread_resched_disable_count(void) {
 // switch.
 //
 // Note that this does not disallow blocking operations
-// (e.g. mutex_acquire()).  Disabling preemption does not prevent switching
+// (e.g. mutex.Acquire()).  Disabling preemption does not prevent switching
 // away from the current thread if it blocks.
 //
 // A call to thread_preempt_disable() must be matched by a later call to

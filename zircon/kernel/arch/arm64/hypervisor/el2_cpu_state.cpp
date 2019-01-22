@@ -10,15 +10,17 @@
 #include <arch/hypervisor.h>
 #include <dev/interrupt.h>
 #include <fbl/auto_lock.h>
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <ktl/move.h>
 #include <hypervisor/cpu.h>
 #include <vm/physmap.h>
 #include <vm/pmm.h>
 
-static fbl::Mutex guest_mutex;
-static size_t num_guests TA_GUARDED(guest_mutex) = 0;
-static ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(guest_mutex);
+namespace {
+DECLARE_SINGLETON_MUTEX(GuestMutex);
+}  // namespace
+static size_t num_guests TA_GUARDED(GuestMutex::Get()) = 0;
+static ktl::unique_ptr<El2CpuState> el2_cpu_state TA_GUARDED(GuestMutex::Get());
 
 zx_status_t El2TranslationTable::Init() {
     zx_status_t status = l0_page_.Alloc(0);
@@ -129,7 +131,7 @@ El2CpuState::~El2CpuState() {
 }
 
 zx_status_t alloc_vmid(uint8_t* vmid) {
-    fbl::AutoLock lock(&guest_mutex);
+    Guard<Mutex> guard(GuestMutex::Get());
     if (num_guests == 0) {
         zx_status_t status = El2CpuState::Create(&el2_cpu_state);
         if (status != ZX_OK) {
@@ -141,7 +143,7 @@ zx_status_t alloc_vmid(uint8_t* vmid) {
 }
 
 zx_status_t free_vmid(uint8_t vmid) {
-    fbl::AutoLock lock(&guest_mutex);
+    Guard<Mutex> guard(GuestMutex::Get());
     zx_status_t status = el2_cpu_state->FreeId(vmid);
     if (status != ZX_OK) {
         return status;

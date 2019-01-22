@@ -67,7 +67,7 @@ void arch_zero_page(void *);
 
 /* The arch_blocking_disallowed() flag is used to check that in-kernel interrupt
  * handlers do not do any blocking operations.  This is a per-CPU flag.
- * Various blocking operations, such as mutex_acquire(), contain assertions
+ * Various blocking operations, such as mutex.Acquire(), contain assertions
  * that arch_blocking_disallowed() is false.
  *
  * arch_blocking_disallowed() should only be true when interrupts are

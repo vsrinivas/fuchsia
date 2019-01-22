@@ -13,6 +13,8 @@
 #include <ktl/atomic.h>
 #include <lib/crashlog.h>
 #include <kernel/cmdline.h>
+#include <kernel/lockdep.h>
+#include <kernel/mutex.h>
 #include <lib/io.h>
 #include <lib/version.h>
 #include <lk/init.h>
@@ -30,6 +32,24 @@ static_assert(DLOG_MAX_RECORD <= DLOG_SIZE, "wat");
 static_assert((DLOG_MAX_RECORD & 3) == 0, "E_DONT_DO_THAT");
 
 static uint8_t DLOG_DATA[DLOG_SIZE];
+
+struct dlog {
+    constexpr dlog(uint8_t* data_ptr) : data(data_ptr) {}
+
+    spin_lock_t lock = SPIN_LOCK_INITIAL_VALUE;
+
+    size_t head = 0;
+    size_t tail = 0;
+
+    uint8_t* const data;
+
+    bool panic = false;
+
+    event_t event = EVENT_INITIAL_VALUE(this->event, 0, EVENT_FLAG_AUTOUNSIGNAL);
+
+    DECLARE_LOCK(dlog, Mutex) readers_lock;
+    struct list_node readers = LIST_INITIAL_VALUE(this->readers);
+};
 
 static dlog_t DLOG(DLOG_DATA);
 
@@ -245,7 +265,7 @@ void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
     rdr->notify = notify;
     rdr->cookie = cookie;
 
-    mutex_acquire(&log->readers_lock);
+    Guard<Mutex> guard(&log->readers_lock);
     list_add_tail(&log->readers, &rdr->node);
 
     bool do_notify = false;
@@ -261,16 +281,14 @@ void dlog_reader_init(dlog_reader_t* rdr, void (*notify)(void*), void* cookie) {
     if (do_notify && notify) {
         notify(cookie);
     }
-
-    mutex_release(&log->readers_lock);
 }
 
 void dlog_reader_destroy(dlog_reader_t* rdr) {
     dlog_t* log = rdr->log;
-
-    mutex_acquire(&log->readers_lock);
-    list_delete(&rdr->node);
-    mutex_release(&log->readers_lock);
+    {
+        Guard<Mutex> guard(&log->readers_lock);
+        list_delete(&rdr->node);
+    }
 }
 
 // The debuglog notifier thread observes when the debuglog is
@@ -286,14 +304,15 @@ static int debuglog_notifier(void* arg) {
         event_wait(&log->event);
 
         // notify readers that new log items were posted
-        mutex_acquire(&log->readers_lock);
-        dlog_reader_t* rdr;
-        list_for_every_entry (&log->readers, rdr, dlog_reader_t, node) {
-            if (rdr->notify) {
-                rdr->notify(rdr->cookie);
+        {
+            Guard<Mutex> guard(&log->readers_lock);
+            dlog_reader_t* rdr;
+            list_for_every_entry (&log->readers, rdr, dlog_reader_t, node) {
+                if (rdr->notify) {
+                    rdr->notify(rdr->cookie);
+                }
             }
         }
-        mutex_release(&log->readers_lock);
     }
     return ZX_OK;
 }
@@ -301,6 +320,11 @@ static int debuglog_notifier(void* arg) {
 // Common bottleneck between sys_debug_write() and debuglog_dumper()
 // to reduce interleaved messages between the serial console and the
 // debuglog drainer.
+
+namespace {
+DECLARE_SINGLETON_MUTEX(DlogSerialWriteLock);
+}  // namespace
+
 void dlog_serial_write(const char* data, size_t len) {
     if (dlog_bypass_ == true) {
         // If LL DEBUG is enabled we take this path which uses a spinlock
@@ -309,10 +333,8 @@ void dlog_serial_write(const char* data, size_t len) {
         __kernel_serial_write(data, len);
     } else {
         // Otherwise we can use a mutex and avoid time under spinlock
-        static mutex_t lock;
-        mutex_acquire(&lock);
+        Guard<Mutex> guard{DlogSerialWriteLock::Get()};
         platform_dputs_thread(data, len);
-        mutex_release(&lock);
     }
 }
 

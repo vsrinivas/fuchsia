@@ -105,7 +105,7 @@ bool popcount_disallowed_types_test() {
     END_TEST;
 }
 
-}  // anon namespace
+}  // namespace
 
 UNITTEST_START_TESTCASE(popcount_tests)
 UNITTEST("32 bit", popcount32_test)

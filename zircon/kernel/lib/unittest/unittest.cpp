@@ -28,7 +28,9 @@
 #include <zircon/types.h>
 
 // Ensures unittests are not run concurrently.
-static mutex_t lock;
+namespace {
+DECLARE_SINGLETON_MUTEX(UnittestLock);
+}  // namespace
 
 /**
  * \brief Function called to dump results
@@ -219,8 +221,9 @@ static bool run_testcase_in_thread(const unittest_testcase_registration_t* testc
     return success;
 }
 
-static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags) {
-    DEBUG_ASSERT(is_mutex_held(&lock));
+static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags)
+    TA_REQ(UnittestLock::Get()) {
+    DEBUG_ASSERT(UnittestLock::Get()->lock().IsHeld());
     if (argc != 2) {
         usage(argv[0].str);
         return 0;
@@ -287,10 +290,8 @@ static int run_unittests_locked(int argc, const cmd_args* argv, uint32_t flags) 
 }
 
 static int run_unittests(int argc, const cmd_args* argv, uint32_t flags) {
-    mutex_acquire(&lock);
-    const int ret = run_unittests_locked(argc, argv, flags);
-    mutex_release(&lock);
-    return ret;
+    Guard<Mutex> guard{UnittestLock::Get()};
+    return run_unittests_locked(argc, argv, flags);
 }
 
 STATIC_COMMAND_START

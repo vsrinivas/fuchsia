@@ -61,6 +61,9 @@ void calculate_scale_factor(uint64_t tsc_freq, uint32_t* mul, int8_t* shift) {
 } // namespace
 
 extern ktl::atomic<int64_t> utc_offset;
+namespace {
+DECLARE_SINGLETON_MUTEX(UpdateBootTimeLock);
+}  // namespace
 
 zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas,
                                      zx_vaddr_t guest_paddr) {
@@ -68,8 +71,7 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
     // VCPUs, but documentation doesn't mention that it cannot happen and moreover it properly
     // protects per VCPU system time. Therefore to be on the safer side we use one global mutex
     // for protection.
-    static fbl::Mutex mutex;
-    static uint32_t version __TA_GUARDED(mutex);
+    static uint32_t version __TA_GUARDED(UpdateBootTimeLock::Get());
 
     hypervisor::GuestPtr guest_ptr;
     zx_status_t status = gpas->CreateGuestPtr(guest_paddr, sizeof(pvclock_boot_time),
@@ -81,7 +83,7 @@ zx_status_t pvclock_update_boot_time(hypervisor::GuestPhysicalAddressSpace* gpas
     ZX_DEBUG_ASSERT(boot_time != nullptr);
     memset(boot_time, 0, sizeof(*boot_time));
 
-    fbl::AutoLock lock(&mutex);
+    Guard<Mutex> guard(UpdateBootTimeLock::Get());
     zx_time_t time = utc_offset.load();
     // See the comment for pvclock_boot_time structure in arch/x86/pvclock.h
     atomic_store_relaxed_u32(&boot_time->version, version + 1);

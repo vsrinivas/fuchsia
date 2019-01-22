@@ -6,7 +6,7 @@
 
 #include "tests.h"
 
-#include <fbl/mutex.h>
+#include <kernel/mutex.h>
 #include <lib/unittest/unittest.h>
 #include <lockdep/guard_multiple.h>
 #include <lockdep/lockdep.h>
@@ -20,8 +20,8 @@ namespace test {
 bool g_try_lock_succeeds = true;
 
 // Define some proxy types to simulate different kinds of locks.
-struct Spinlock : fbl::Mutex {
-    using fbl::Mutex::Mutex;
+struct Spinlock : Mutex {
+    using Mutex::Mutex;
 
     bool AcquireIrqSave(uint64_t* flags) __TA_ACQUIRE() {
         (void)flags;
@@ -182,13 +182,13 @@ struct spinlock_t_TryIrqSave {
 };
 LOCK_DEP_POLICY_OPTION(spinlock_t, TryIrqSave, spinlock_t_TryIrqSave);
 
-struct Mutex : fbl::Mutex {
-    using fbl::Mutex::Mutex;
+struct Mutex : ::Mutex {
+    using ::Mutex::Mutex;
 };
 // Uses the default traits: fbl::LockClassState::None.
 
-struct Nestable : fbl::Mutex {
-    using fbl::Mutex::Mutex;
+struct Nestable : ::Mutex {
+    using ::Mutex::Mutex;
 };
 LOCK_DEP_TRAITS(Nestable, lockdep::LockFlagsNestable);
 

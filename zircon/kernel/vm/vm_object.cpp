@@ -36,7 +36,7 @@ VmObject::VmObject(fbl::RefPtr<VmObject> parent)
 
     // Add ourself to the global VMO list, newer VMOs at the end.
     {
-        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
+        Guard<Mutex> guard{AllVmosLock::Get()};
         all_vmos_.push_back(this);
     }
 }
@@ -56,7 +56,7 @@ VmObject::~VmObject() {
 
     // Remove ourself from the global VMO list.
     {
-        Guard<fbl::Mutex> guard{AllVmosLock::Get()};
+        Guard<Mutex> guard{AllVmosLock::Get()};
         DEBUG_ASSERT(global_list_state_.InContainer() == true);
         all_vmos_.erase(*this);
     }

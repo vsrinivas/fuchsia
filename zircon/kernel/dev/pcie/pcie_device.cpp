@@ -34,7 +34,7 @@ using fbl::AutoLock;
 
 #define LOCAL_TRACE 0
 
-namespace {  // anon namespace.  Externals do not need to know about PcieDeviceImpl
+namespace {  // namespace.  Externals do not need to know about PcieDeviceImpl
 class PcieDeviceImpl : public PcieDevice {
 public:
     static fbl::RefPtr<PcieDevice> Create(PcieUpstreamNode& upstream, uint dev_id, uint func_id);

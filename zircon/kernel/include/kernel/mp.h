@@ -106,7 +106,7 @@ struct mp_state {
     struct list_node ipi_task_list[SMP_MAX_CPUS];
 
     // lock for serializing CPU hotplug/unplug operations
-    mutex_t hotplug_lock;
+    DECLARE_LOCK(mp_state, Mutex) hotplug_lock;
 };
 
 extern struct mp_state mp;

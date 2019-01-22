@@ -183,9 +183,6 @@ struct heap {
     // holds the total size allocated from the OS for this block.
     header_t* cached_os_alloc;
 
-    // Guards all elements in this structure. See lock(), unlock().
-    mutex_t lock;
-
     // Free lists, bucketed by size. See size_to_index_helper().
     free_t* free_lists[NUMBER_OF_BUCKETS];
 
@@ -196,28 +193,14 @@ struct heap {
 };
 
 // Heap static vars.
-static struct heap theheap;
+static struct heap theheap TA_GUARDED(TheHeapLock::Get());
 
-static ssize_t heap_grow(size_t len);
-
-static void lock(void) TA_ACQ(theheap.lock) {
-    mutex_acquire(&theheap.lock);
-}
-
-static void unlock(void) TA_REL(theheap.lock) {
-    mutex_release(&theheap.lock);
-}
-
-static void dump_free(header_t* header) {
+static void dump_free(header_t* header) TA_REQ(TheHeapLock::Get()) {
     dprintf(INFO, "\t\tbase %p, end %#" PRIxPTR ", len %#zx (%zu)\n",
             header, (vaddr_t)header + header->size, header->size, header->size);
 }
 
-void cmpct_dump(bool panic_time) TA_NO_THREAD_SAFETY_ANALYSIS {
-    if (!panic_time) {
-        lock();
-    }
-
+static void cmpct_dump_locked() TA_REQ(TheHeapLock::Get()) {
     dprintf(INFO, "Heap dump (using cmpctmalloc):\n");
     dprintf(INFO, "\tsize %lu, remaining %lu, cached free %lu\n",
             (unsigned long)theheap.size,
@@ -237,17 +220,6 @@ void cmpct_dump(bool panic_time) TA_NO_THREAD_SAFETY_ANALYSIS {
             dump_free(&free_area->header);
         }
     }
-
-    if (!panic_time) {
-        unlock();
-    }
-}
-
-void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) {
-    lock();
-    *size_bytes = theheap.size;
-    *free_bytes = theheap.remaining;
-    unlock();
 }
 
 // Operates in sizes that don't include the allocation header;
@@ -305,33 +277,33 @@ static int size_to_index_freeing(size_t size) {
     return size_to_index_helper(size, &dummy, 0, 0);
 }
 
-static inline header_t* tag_as_free(void* left) {
+static inline header_t* tag_as_free(void* left) TA_REQ(TheHeapLock::Get()) {
     return (header_t*)((uintptr_t)left | FREE_BIT);
 }
 
 // Returns true if this header_t is marked as free.
-static inline bool is_tagged_as_free(const header_t* header) {
+static inline bool is_tagged_as_free(const header_t* header) TA_REQ(TheHeapLock::Get()) {
     // The free bit is stashed in the lower bit of header->left.
     return ((uintptr_t)(header->left) & FREE_BIT) != 0;
 }
 
-static inline header_t* untag(const void* left) {
+static inline header_t* untag(const void* left) TA_REQ(TheHeapLock::Get()) {
     return (header_t*)((uintptr_t)left & ~HEADER_LEFT_BIT_MASK);
 }
 
-static inline header_t* right_header(header_t* header) {
+static inline header_t* right_header(header_t* header) TA_REQ(TheHeapLock::Get()) {
     return (header_t*)((char*)header + header->size);
 }
 
-static inline void set_free_list_bit(int index) {
+static inline void set_free_list_bit(int index) TA_REQ(TheHeapLock::Get()) {
     theheap.free_list_bits[index >> 5] |= (1u << (31 - (index & 0x1f)));
 }
 
-static inline void clear_free_list_bit(int index) {
+static inline void clear_free_list_bit(int index) TA_REQ(TheHeapLock::Get()) {
     theheap.free_list_bits[index >> 5] &= ~(1u << (31 - (index & 0x1f)));
 }
 
-static int find_nonempty_bucket(int index) {
+static int find_nonempty_bucket(int index) TA_REQ(TheHeapLock::Get()) {
     uint32_t mask = (1u << (31 - (index & 0x1f))) - 1;
     mask = mask * 2 + 1;
     mask &= theheap.free_list_bits[index >> 5];
@@ -348,11 +320,11 @@ static int find_nonempty_bucket(int index) {
     return -1;
 }
 
-static bool is_start_of_os_allocation(const header_t* header) {
+static bool is_start_of_os_allocation(const header_t* header) TA_REQ(TheHeapLock::Get()) {
     return untag(header->left) == untag(NULL);
 }
 
-static void create_free_area(void* address, void* left, size_t size) {
+static void create_free_area(void* address, void* left, size_t size) TA_REQ(TheHeapLock::Get()) {
     free_t* free_area = (free_t*)address;
     free_area->header.size = size;
     free_area->header.left = tag_as_free(left);
@@ -374,11 +346,11 @@ static void create_free_area(void* address, void* left, size_t size) {
 #endif
 }
 
-static bool is_end_of_os_allocation(char* address) {
+static bool is_end_of_os_allocation(char* address) TA_REQ(TheHeapLock::Get()) {
     return ((header_t*)address)->size == 0;
 }
 
-static void free_to_os(void* ptr, size_t size) {
+static void free_to_os(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(ptr));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size));
     heap_page_free(ptr, size >> PAGE_SIZE_SHIFT);
@@ -389,7 +361,8 @@ static void free_to_os(void* ptr, size_t size) {
 // cached_os_alloc. |left_sentinel| is the start of the OS allocation, and
 // |total_size| is the (page-aligned) number of bytes that were originally
 // allocated from the OS.
-static void possibly_free_to_os(header_t *left_sentinel, size_t total_size) {
+static void possibly_free_to_os(header_t *left_sentinel, size_t total_size)
+    TA_REQ(TheHeapLock::Get()) {
     if (theheap.cached_os_alloc == NULL) {
         LTRACEF("Keeping 0x%zx-byte OS alloc @%p\n", total_size, left_sentinel);
         theheap.cached_os_alloc = left_sentinel;
@@ -408,7 +381,7 @@ static void possibly_free_to_os(header_t *left_sentinel, size_t total_size) {
 // |left| and |size| should be set to the values that the header_t would have
 // contained. This is broken out because the header_t will not contain the
 // proper size when coalescing neighboring areas.
-static void free_memory(void* address, void* left, size_t size) {
+static void free_memory(void* address, void* left, size_t size) TA_REQ(TheHeapLock::Get()) {
     left = untag(left);
     if (IS_PAGE_ALIGNED(left) &&
         is_start_of_os_allocation((const header_t*)left) &&
@@ -424,7 +397,7 @@ static void free_memory(void* address, void* left, size_t size) {
     }
 }
 
-static void unlink_free(free_t* free_area, int bucket) {
+static void unlink_free(free_t* free_area, int bucket) TA_REQ(TheHeapLock::Get()) {
     theheap.remaining -= free_area->header.size;
     ASSERT(theheap.remaining < 4000000000u);
     free_t* next = free_area->next;
@@ -443,14 +416,14 @@ static void unlink_free(free_t* free_area, int bucket) {
     }
 }
 
-static void unlink_free_unknown_bucket(free_t* free_area) {
+static void unlink_free_unknown_bucket(free_t* free_area) TA_REQ(TheHeapLock::Get()) {
     return unlink_free(
         free_area,
         size_to_index_freeing(free_area->header.size - sizeof(header_t)));
 }
 
 static void* create_allocation_header(
-    void* address, size_t offset, size_t size, void* left) {
+    void* address, size_t offset, size_t size, void* left) TA_REQ(TheHeapLock::Get()) {
 
     header_t* standalone = (header_t*)((char*)address + offset);
     standalone->left = untag(left);
@@ -458,12 +431,12 @@ static void* create_allocation_header(
     return standalone + 1;
 }
 
-static void FixLeftPointer(header_t* right, header_t* new_left) {
+static void FixLeftPointer(header_t* right, header_t* new_left) TA_REQ(TheHeapLock::Get()) {
     int tag = (uintptr_t)right->left & 1;
     right->left = (header_t*)(((uintptr_t)new_left & ~1) | tag);
 }
 
-static void check_free_fill(void* ptr, size_t size) {
+static void check_free_fill(void* ptr, size_t size) TA_REQ(TheHeapLock::Get()) {
     // The first 16 bytes of the region won't have free fill due to overlap
     // with the allocator bookkeeping.
     const size_t start = sizeof(free_t) - sizeof(header_t);
@@ -479,10 +452,79 @@ static void check_free_fill(void* ptr, size_t size) {
     }
 }
 
+static void add_to_heap(void* new_area, size_t size) TA_REQ(TheHeapLock::Get()) {
+    char* top = (char*)new_area + size;
+    // Set up the left sentinel. Its |left| field will not have FREE_BIT set,
+    // stopping attempts to coalesce left.
+    header_t* left_sentinel = (header_t*)new_area;
+    create_allocation_header(left_sentinel, 0, sizeof(header_t), NULL);
+
+    // Set up the usable memory area, which will be marked free.
+    header_t* new_header = left_sentinel + 1;
+    size_t free_size = size - 2 * sizeof(header_t);
+    create_free_area(new_header, left_sentinel, free_size);
+
+    // Set up the right sentinel. Its |left| field will not have FREE_BIT bit
+    // set, stopping attempts to coalesce right.
+    header_t* right_sentinel = (header_t*)(top - sizeof(header_t));
+    create_allocation_header(right_sentinel, 0, 0, new_header);
+}
+
+// Create a new free-list entry of at least size bytes (including the
+// allocation header).  Called with the lock, apart from during init.
+static ssize_t heap_grow(size_t size) TA_REQ(TheHeapLock::Get()) {
+    // The new free list entry will have a header on each side (the
+    // sentinels) so we need to grow the gross heap size by this much more.
+    size += 2 * sizeof(header_t);
+    size = ROUNDUP(size, PAGE_SIZE);
+
+    void* ptr = NULL;
+
+    header_t* os_alloc = (header_t*)theheap.cached_os_alloc;
+    if (os_alloc != NULL) {
+        if (os_alloc->size >= size) {
+            LTRACEF("Using saved 0x%zx-byte OS alloc @%p (>=0x%zx bytes)\n",
+                    os_alloc->size, os_alloc, size);
+            ptr = os_alloc;
+            size = os_alloc->size;
+            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr),
+                             "0x%zx bytes @%p", size, ptr);
+            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size),
+                             "0x%zx bytes @%p", size, ptr);
+        } else {
+            // We need to allocate more from the OS. Return the cached OS
+            // allocation, in case we're holding an unusually-small block
+            // that's unlikely to satisfy future calls to heap_grow().
+            LTRACEF("Returning too-small saved 0x%zx-byte OS alloc @%p "
+                    "(<0x%zx bytes)\n",
+                    os_alloc->size, os_alloc, size);
+            free_to_os(os_alloc, os_alloc->size);
+        }
+        theheap.cached_os_alloc = NULL;
+    }
+    if (ptr == NULL) {
+        ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
+        if (ptr == NULL) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        LTRACEF("Growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
+        theheap.size += size;
+    }
+
+    add_to_heap(ptr, size);
+
+    return size;
+}
+
 #ifdef HEAP_ENABLE_TESTS
 
-static void WasteFreeMemory(void) {
-    while (theheap.remaining != 0) {
+static inline size_t cmpct_heap_remaining() TA_EXCL(TheHeapLock::Get()) {
+    Guard<Mutex> guard(TheHeapLock::Get());
+    return theheap.remaining;
+}
+
+static void WasteFreeMemory(void) TA_EXCL(TheHeapLock::Get()) {
+    while (cmpct_heap_remaining() != 0) {
         cmpct_alloc(1);
     }
 }
@@ -490,24 +532,25 @@ static void WasteFreeMemory(void) {
 // If we just make a big allocation it gets rounded off.  If we actually
 // want to use a reasonably accurate amount of memory for test purposes, we
 // have to do many small allocations.
-static void* TestTrimHelper(ssize_t target) {
+static void* TestTrimHelper(ssize_t target) TA_EXCL(TheHeapLock::Get()) {
     char* answer = NULL;
-    size_t remaining = theheap.remaining;
-    while (theheap.remaining - target > 512) {
-        char* next_block = cmpct_alloc(8 + ((theheap.remaining - target) >> 2));
-        *(char**)next_block = answer;
+    size_t remaining = cmpct_heap_remaining();
+    while (cmpct_heap_remaining() - target > 512) {
+        char* next_block =
+            static_cast<char*>(cmpct_alloc(8 + ((cmpct_heap_remaining() - target) >> 2)));
+        *(static_cast<char**>(next_block)) = answer;
         answer = next_block;
-        if (theheap.remaining > remaining) {
+        if (cmpct_heap_remaining() > remaining) {
             return answer;
         }
         // Abandon attempt to hit particular freelist entry size if we
         // accidentally got more memory from the OS.
-        remaining = theheap.remaining;
+        remaining = cmpct_heap_remaining();
     }
     return answer;
 }
 
-static void TestTrimFreeHelper(char* block) {
+static void TestTrimFreeHelper(char* block) TA_EXCL(TheHeapLock::Get()) {
     while (block) {
         char* next_block = *(char**)block;
         cmpct_free(block);
@@ -515,7 +558,7 @@ static void TestTrimFreeHelper(char* block) {
     }
 }
 
-static void cmpct_test_trim(void) {
+static void cmpct_test_trim(void) TA_EXCL(TheHeapLock::Get()) {
     // XXX: Re-enable this test if we want, disabled due to float math
     return;
     WasteFreeMemory();
@@ -523,7 +566,7 @@ static void cmpct_test_trim(void) {
     size_t test_sizes[200];
     int sizes = 0;
 
-    for (size_t s = 1; s < PAGE_SIZE * 4; s = (s + 1) * 1.1) {
+    for (size_t s = 1; s < PAGE_SIZE * 4; s = static_cast<size_t>((s + 1) * 1.1)) {
         test_sizes[sizes++] = s;
         ASSERT(sizes < 200);
     }
@@ -539,9 +582,9 @@ static void cmpct_test_trim(void) {
             size_t s = test_sizes[i];
 
             char *a, *a2 = NULL;
-            a = cmpct_alloc(s);
+            a = static_cast<char*>(cmpct_alloc(s));
             if (with_second_alloc) {
-                a2 = cmpct_alloc(1);
+                a2 = static_cast<char*>(cmpct_alloc(1));
                 if (s<PAGE_SIZE>> 1) {
                     // It is the intention of the test that a is at the start
                     // of an OS allocation and that a2 is "right after" it.
@@ -588,7 +631,7 @@ static void cmpct_test_trim(void) {
                 continue;
             }
 
-            char* start_of_os_alloc = cmpct_alloc(1);
+            char* start_of_os_alloc = static_cast<char*>(cmpct_alloc(1));
 
             // If the OS allocations are very small this test does not make
             // sense.
@@ -597,7 +640,7 @@ static void cmpct_test_trim(void) {
                 continue;
             }
 
-            char* big_bit_in_the_middle = TestTrimHelper(s + wobble);
+            char* big_bit_in_the_middle = static_cast<char*>(TestTrimHelper(s + wobble));
             size_t remaining = theheap.remaining;
 
             // If the remaining is big we started a new OS allocation and the
@@ -625,7 +668,7 @@ static void cmpct_test_trim(void) {
     }
 }
 
-static void cmpct_test_buckets(void) {
+static void cmpct_test_buckets(void) TA_EXCL(TheHeapLock::Get()) {
     size_t rounded;
     unsigned bucket;
     // Check for the 8-spaced buckets up to 128.
@@ -678,12 +721,12 @@ static void cmpct_test_buckets(void) {
     }
 }
 
-static void cmpct_test_get_back_newly_freed_helper(size_t size) {
+static void cmpct_test_get_back_newly_freed_helper(size_t size) TA_EXCL(TheHeapLock::Get()) {
     void* allocated = cmpct_alloc(size);
     if (allocated == NULL) {
         return;
     }
-    char* allocated2 = cmpct_alloc(8);
+    char* allocated2 = static_cast<char*>(cmpct_alloc(8));
     char* expected_position = (char*)allocated + size;
     if (allocated2 < expected_position ||
         allocated2 > expected_position + 128) {
@@ -705,7 +748,7 @@ static void cmpct_test_get_back_newly_freed_helper(size_t size) {
     cmpct_free(allocated3);
 }
 
-static void cmpct_test_get_back_newly_freed(void) {
+static void cmpct_test_get_back_newly_freed(void) TA_EXCL(TheHeapLock::Get()) {
     size_t increment = 16;
     for (size_t i = 128; i <= 0x8000000; i *= 2, increment *= 2) {
         for (size_t j = i; j < i * 2; j += increment) {
@@ -719,9 +762,9 @@ static void cmpct_test_get_back_newly_freed(void) {
     }
 }
 
-static void cmpct_test_return_to_os(void) {
+static void cmpct_test_return_to_os(void) TA_EXCL(TheHeapLock::Get()) {
     cmpct_trim();
-    size_t remaining = theheap.remaining;
+    size_t remaining = cmpct_heap_remaining();
     // This goes in a new OS allocation since the trim above removed any free
     // area big enough to contain it.
     void* a = cmpct_alloc(5000);
@@ -737,9 +780,206 @@ static void cmpct_test_return_to_os(void) {
         return;
     }
     // No trim needed when the entire OS allocation is free.
-    ASSERT(remaining == theheap.remaining);
+    ASSERT(remaining == cmpct_heap_remaining());
+}
+#endif  // HEAP_ENABLE_TESTS
+
+/****************************************************
+ *
+ * Public API
+ *
+ ****************************************************/
+
+void* cmpct_alloc(size_t size) {
+    if (size == 0u) {
+        return NULL;
+    }
+
+    // Large allocations are no longer allowed. See ZX-1318 for details.
+    if (size > (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t))) {
+        return NULL;
+    }
+
+    size_t rounded_up;
+    int start_bucket = size_to_index_allocating(size, &rounded_up);
+
+    rounded_up += sizeof(header_t);
+
+    Guard<Mutex> guard(TheHeapLock::Get());
+    int bucket = find_nonempty_bucket(start_bucket);
+    if (bucket == -1) {
+        // Grow heap by at least 12% if we can.
+        size_t growby = MIN(HEAP_LARGE_ALLOC_BYTES,
+                            MAX(theheap.size >> 3,
+                                MAX(HEAP_GROW_SIZE, rounded_up)));
+        // Try to add a new OS allocation to the heap, reducing the size until
+        // we succeed or get too small.
+        while (heap_grow(growby) < 0) {
+            if (growby <= rounded_up) {
+                return NULL;
+            }
+            growby = MAX(growby >> 1, rounded_up);
+        }
+        bucket = find_nonempty_bucket(start_bucket);
+    }
+    free_t* head = theheap.free_lists[bucket];
+    size_t left_over = head->header.size - rounded_up;
+    // We can't carve off the rest for a new free space if it's smaller than the
+    // free-list linked structure.  We also don't carve it off if it's less than
+    // 1.6% the size of the allocation.  This is to avoid small long-lived
+    // allocations being placed right next to large allocations, hindering
+    // coalescing and returning pages to the OS.
+    if (left_over >= sizeof(free_t) && left_over > (size >> 6)) {
+        header_t* right = right_header(&head->header);
+        unlink_free(head, bucket);
+        void* free = (char*)head + rounded_up;
+        create_free_area(free, head, left_over);
+        FixLeftPointer(right, (header_t*)free);
+        head->header.size -= left_over;
+    } else {
+        unlink_free(head, bucket);
+    }
+    void* result =
+        create_allocation_header(head, 0, head->header.size, head->header.left);
+#ifdef CMPCT_DEBUG
+    check_free_fill(result, size);
+    memset(result, ALLOC_FILL, size);
+    memset(((char*)result) + size, PADDING_FILL,
+           rounded_up - size - sizeof(header_t));
+#endif
+    return result;
 }
 
+void* cmpct_realloc(void* payload, size_t size) {
+    if (payload == NULL) {
+        return cmpct_alloc(size);
+    }
+    header_t* header = (header_t*)payload - 1;
+    size_t old_size = header->size - sizeof(header_t);
+
+    void* new_payload = cmpct_alloc(size);
+    if (new_payload == NULL) {
+        return NULL;
+    }
+
+    memcpy(new_payload, payload, MIN(size, old_size));
+    cmpct_free(payload);
+    return new_payload;
+}
+
+void cmpct_free(void* payload) {
+    if (payload == NULL) {
+        return;
+    }
+
+    Guard<Mutex> guard(TheHeapLock::Get());
+
+    header_t* header = (header_t*)payload - 1;
+    DEBUG_ASSERT(!is_tagged_as_free(header)); // Double free!
+    size_t size = header->size;
+
+    header_t* left = header->left;
+    if (left != NULL && is_tagged_as_free(left)) {
+        // Coalesce with left free object.
+        unlink_free_unknown_bucket((free_t*)left);
+        header_t* right = right_header(header);
+        if (is_tagged_as_free(right)) {
+            // Coalesce both sides.
+            unlink_free_unknown_bucket((free_t*)right);
+            header_t* right_right = right_header(right);
+            FixLeftPointer(right_right, left);
+            free_memory(left, left->left, left->size + size + right->size);
+        } else {
+            // Coalesce only left.
+            FixLeftPointer(right, left);
+            free_memory(left, left->left, left->size + size);
+        }
+    } else {
+        header_t* right = right_header(header);
+        if (is_tagged_as_free(right)) {
+            // Coalesce only right.
+            header_t* right_right = right_header(right);
+            unlink_free_unknown_bucket((free_t*)right);
+            FixLeftPointer(right_right, header);
+            free_memory(header, left, size + right->size);
+        } else {
+            free_memory(header, left, size);
+        }
+    }
+}
+
+void* cmpct_memalign(size_t size, size_t alignment) {
+    if (alignment < 8) {
+        return cmpct_alloc(size);
+    }
+
+    size_t padded_size =
+        size + alignment + sizeof(free_t) + sizeof(header_t);
+
+    char* unaligned = (char*)cmpct_alloc(padded_size);
+    if (unaligned == NULL) {
+        return NULL;
+    }
+
+    Guard<Mutex> guard(TheHeapLock::Get());
+
+    size_t mask = alignment - 1;
+    uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) +
+                            sizeof(header_t) + mask;
+    char* payload = (char*)(payload_int & ~mask);
+    if (unaligned != payload) {
+        header_t* unaligned_header = (header_t*)unaligned - 1;
+        header_t* header = (header_t*)payload - 1;
+        size_t left_over = payload - unaligned;
+        create_allocation_header(
+            header, 0, unaligned_header->size - left_over, unaligned_header);
+        header_t* right = right_header(unaligned_header);
+        unaligned_header->size = left_over;
+        FixLeftPointer(right, header);
+        guard.Release();
+        cmpct_free(unaligned);
+    }
+
+    // TODO: Free the part after the aligned allocation.
+    return payload;
+}
+
+void cmpct_init(void) {
+    LTRACE_ENTRY;
+    Guard<Mutex> guard(TheHeapLock::Get());
+
+    // Initialize the free list.
+    for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
+        theheap.free_lists[i] = NULL;
+    }
+    for (int i = 0; i < BUCKET_WORDS; i++) {
+        theheap.free_list_bits[i] = 0;
+    }
+
+    size_t initial_alloc = HEAP_GROW_SIZE - 2 * sizeof(header_t);
+
+    theheap.remaining = 0;
+
+    heap_grow(initial_alloc);
+}
+
+void cmpct_dump(bool panic_time) {
+    if (panic_time) {
+        // If we are panic'ing, just skip the lock.  All bets are off anyway.
+        ([]() TA_NO_THREAD_SAFETY_ANALYSIS { cmpct_dump_locked(); })();
+    } else {
+        Guard<Mutex> guard(TheHeapLock::Get());
+        cmpct_dump_locked();
+    }
+}
+
+void cmpct_get_info(size_t* size_bytes, size_t* free_bytes) {
+    Guard<Mutex> guard(TheHeapLock::Get());
+    *size_bytes = theheap.size;
+    *free_bytes = theheap.remaining;
+}
+
+#ifdef HEAP_ENABLE_TESTS
 void cmpct_test(void) {
     cmpct_test_buckets();
     cmpct_test_get_back_newly_freed();
@@ -809,7 +1049,7 @@ void cmpct_trim(void) {
     // Look at free list entries that are at least as large as one page plus a
     // header. They might be at the start or the end of a block, so we can trim
     // them and free the page(s).
-    lock();
+    Guard<Mutex> guard(TheHeapLock::Get());
     for (int bucket = size_to_index_freeing(PAGE_SIZE);
          bucket < NUMBER_OF_BUCKETS;
          bucket++) {
@@ -895,240 +1135,4 @@ void cmpct_trim(void) {
             }
         }
     }
-    unlock();
-}
-
-void* cmpct_alloc(size_t size) {
-    if (size == 0u) {
-        return NULL;
-    }
-    // Large allocations are no longer allowed. See ZX-1318 for details.
-    if (size > (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t))) {
-        return NULL;
-    }
-
-    size_t rounded_up;
-    int start_bucket = size_to_index_allocating(size, &rounded_up);
-
-    rounded_up += sizeof(header_t);
-
-    lock();
-    int bucket = find_nonempty_bucket(start_bucket);
-    if (bucket == -1) {
-        // Grow heap by at least 12% if we can.
-        size_t growby = MIN(HEAP_LARGE_ALLOC_BYTES,
-                            MAX(theheap.size >> 3,
-                                MAX(HEAP_GROW_SIZE, rounded_up)));
-        // Try to add a new OS allocation to the heap, reducing the size until
-        // we succeed or get too small.
-        while (heap_grow(growby) < 0) {
-            if (growby <= rounded_up) {
-                unlock();
-                return NULL;
-            }
-            growby = MAX(growby >> 1, rounded_up);
-        }
-        bucket = find_nonempty_bucket(start_bucket);
-    }
-    free_t* head = theheap.free_lists[bucket];
-    size_t left_over = head->header.size - rounded_up;
-    // We can't carve off the rest for a new free space if it's smaller than the
-    // free-list linked structure.  We also don't carve it off if it's less than
-    // 1.6% the size of the allocation.  This is to avoid small long-lived
-    // allocations being placed right next to large allocations, hindering
-    // coalescing and returning pages to the OS.
-    if (left_over >= sizeof(free_t) && left_over > (size >> 6)) {
-        header_t* right = right_header(&head->header);
-        unlink_free(head, bucket);
-        void* free = (char*)head + rounded_up;
-        create_free_area(free, head, left_over);
-        FixLeftPointer(right, (header_t*)free);
-        head->header.size -= left_over;
-    } else {
-        unlink_free(head, bucket);
-    }
-    void* result =
-        create_allocation_header(head, 0, head->header.size, head->header.left);
-#ifdef CMPCT_DEBUG
-    check_free_fill(result, size);
-    memset(result, ALLOC_FILL, size);
-    memset(((char*)result) + size, PADDING_FILL,
-           rounded_up - size - sizeof(header_t));
-#endif
-    unlock();
-    return result;
-}
-
-void* cmpct_memalign(size_t size, size_t alignment) {
-    if (alignment < 8) {
-        return cmpct_alloc(size);
-    }
-
-    size_t padded_size =
-        size + alignment + sizeof(free_t) + sizeof(header_t);
-
-    char* unaligned = (char*)cmpct_alloc(padded_size);
-    if (unaligned == NULL) {
-        return NULL;
-    }
-
-    lock();
-    size_t mask = alignment - 1;
-    uintptr_t payload_int = (uintptr_t)unaligned + sizeof(free_t) +
-                            sizeof(header_t) + mask;
-    char* payload = (char*)(payload_int & ~mask);
-    if (unaligned != payload) {
-        header_t* unaligned_header = (header_t*)unaligned - 1;
-        header_t* header = (header_t*)payload - 1;
-        size_t left_over = payload - unaligned;
-        create_allocation_header(
-            header, 0, unaligned_header->size - left_over, unaligned_header);
-        header_t* right = right_header(unaligned_header);
-        unaligned_header->size = left_over;
-        FixLeftPointer(right, header);
-        unlock();
-        cmpct_free(unaligned);
-    } else {
-        unlock();
-    }
-    // TODO: Free the part after the aligned allocation.
-    return payload;
-}
-
-void cmpct_free(void* payload) {
-    if (payload == NULL) {
-        return;
-    }
-    header_t* header = (header_t*)payload - 1;
-    DEBUG_ASSERT(!is_tagged_as_free(header)); // Double free!
-    size_t size = header->size;
-    lock();
-    header_t* left = header->left;
-    if (left != NULL && is_tagged_as_free(left)) {
-        // Coalesce with left free object.
-        unlink_free_unknown_bucket((free_t*)left);
-        header_t* right = right_header(header);
-        if (is_tagged_as_free(right)) {
-            // Coalesce both sides.
-            unlink_free_unknown_bucket((free_t*)right);
-            header_t* right_right = right_header(right);
-            FixLeftPointer(right_right, left);
-            free_memory(left, left->left, left->size + size + right->size);
-        } else {
-            // Coalesce only left.
-            FixLeftPointer(right, left);
-            free_memory(left, left->left, left->size + size);
-        }
-    } else {
-        header_t* right = right_header(header);
-        if (is_tagged_as_free(right)) {
-            // Coalesce only right.
-            header_t* right_right = right_header(right);
-            unlink_free_unknown_bucket((free_t*)right);
-            FixLeftPointer(right_right, header);
-            free_memory(header, left, size + right->size);
-        } else {
-            free_memory(header, left, size);
-        }
-    }
-    unlock();
-}
-
-void* cmpct_realloc(void* payload, size_t size) {
-    if (payload == NULL) {
-        return cmpct_alloc(size);
-    }
-    header_t* header = (header_t*)payload - 1;
-    size_t old_size = header->size - sizeof(header_t);
-
-    void* new_payload = cmpct_alloc(size);
-    if (new_payload == NULL) {
-        return NULL;
-    }
-
-    memcpy(new_payload, payload, MIN(size, old_size));
-    cmpct_free(payload);
-    return new_payload;
-}
-
-static void add_to_heap(void* new_area, size_t size) {
-    char* top = (char*)new_area + size;
-    // Set up the left sentinel. Its |left| field will not have FREE_BIT set,
-    // stopping attempts to coalesce left.
-    header_t* left_sentinel = (header_t*)new_area;
-    create_allocation_header(left_sentinel, 0, sizeof(header_t), NULL);
-
-    // Set up the usable memory area, which will be marked free.
-    header_t* new_header = left_sentinel + 1;
-    size_t free_size = size - 2 * sizeof(header_t);
-    create_free_area(new_header, left_sentinel, free_size);
-
-    // Set up the right sentinel. Its |left| field will not have FREE_BIT bit
-    // set, stopping attempts to coalesce right.
-    header_t* right_sentinel = (header_t*)(top - sizeof(header_t));
-    create_allocation_header(right_sentinel, 0, 0, new_header);
-}
-
-// Create a new free-list entry of at least size bytes (including the
-// allocation header).  Called with the lock, apart from during init.
-static ssize_t heap_grow(size_t size) {
-    // The new free list entry will have a header on each side (the
-    // sentinels) so we need to grow the gross heap size by this much more.
-    size += 2 * sizeof(header_t);
-    size = ROUNDUP(size, PAGE_SIZE);
-
-    void* ptr = NULL;
-
-    header_t* os_alloc = (header_t*)theheap.cached_os_alloc;
-    if (os_alloc != NULL) {
-        if (os_alloc->size >= size) {
-            LTRACEF("Using saved 0x%zx-byte OS alloc @%p (>=0x%zx bytes)\n",
-                    os_alloc->size, os_alloc, size);
-            ptr = os_alloc;
-            size = os_alloc->size;
-            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(ptr),
-                             "0x%zx bytes @%p", size, ptr);
-            DEBUG_ASSERT_MSG(IS_PAGE_ALIGNED(size),
-                             "0x%zx bytes @%p", size, ptr);
-        } else {
-            // We need to allocate more from the OS. Return the cached OS
-            // allocation, in case we're holding an unusually-small block
-            // that's unlikely to satisfy future calls to heap_grow().
-            LTRACEF("Returning too-small saved 0x%zx-byte OS alloc @%p "
-                    "(<0x%zx bytes)\n",
-                    os_alloc->size, os_alloc, size);
-            free_to_os(os_alloc, os_alloc->size);
-        }
-        theheap.cached_os_alloc = NULL;
-    }
-    if (ptr == NULL) {
-        ptr = heap_page_alloc(size >> PAGE_SIZE_SHIFT);
-        if (ptr == NULL) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        LTRACEF("Growing heap by 0x%zx bytes, new ptr %p\n", size, ptr);
-        theheap.size += size;
-    }
-
-    add_to_heap(ptr, size);
-
-    return size;
-}
-
-void cmpct_init(void) {
-    LTRACE_ENTRY;
-
-    // Initialize the free list.
-    for (int i = 0; i < NUMBER_OF_BUCKETS; i++) {
-        theheap.free_lists[i] = NULL;
-    }
-    for (int i = 0; i < BUCKET_WORDS; i++) {
-        theheap.free_list_bits[i] = 0;
-    }
-
-    size_t initial_alloc = HEAP_GROW_SIZE - 2 * sizeof(header_t);
-
-    theheap.remaining = 0;
-
-    heap_grow(initial_alloc);
 }

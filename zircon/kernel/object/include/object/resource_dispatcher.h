@@ -56,7 +56,7 @@ public:
     template <typename T>
     static zx_status_t ForEachResource(T func, ResourceList* resource_list = &static_resource_list_)
         TA_EXCL(ResourcesLock::Get()) {
-        Guard<fbl::Mutex> guard{ResourcesLock::Get()};
+        Guard<Mutex> guard{ResourcesLock::Get()};
         return ForEachResourceLocked(func, resource_list);
     }
 

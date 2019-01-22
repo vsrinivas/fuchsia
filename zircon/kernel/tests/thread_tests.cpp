@@ -11,7 +11,6 @@
 #include <debug.h>
 #include <err.h>
 #include <fbl/algorithm.h>
-#include <fbl/mutex.h>
 #include <inttypes.h>
 #include <kernel/event.h>
 #include <kernel/mp.h>
@@ -53,12 +52,12 @@ static int mutex_thread(void* arg) {
 
     static volatile uintptr_t shared = 0;
 
-    mutex_t* m = (mutex_t*)arg;
+    auto m = reinterpret_cast<Mutex*>(arg);
 
     printf("mutex tester thread %p starting up, will go for %d iterations\n", get_current_thread(), iterations);
 
     for (i = 0; i < iterations; i++) {
-        mutex_acquire(m);
+        m->Acquire();
 
         if (shared != 0)
             panic("someone else has messed with the shared data\n");
@@ -71,7 +70,7 @@ static int mutex_thread(void* arg) {
             printf("%p: count %d\n", get_current_thread(), count);
         shared = 0;
 
-        mutex_release(m);
+        m->Release();
         if ((rand() % 5) == 0)
             thread_yield();
     }
@@ -82,11 +81,11 @@ static int mutex_thread(void* arg) {
 }
 
 static int mutex_test(void) {
-    static mutex_t imutex;
+    static Mutex imutex;
     printf("preinitialized mutex:\n");
     hexdump(&imutex, sizeof(imutex));
 
-    mutex_t m;
+    Mutex m;
 
     thread_t* threads[5];
 
@@ -117,7 +116,7 @@ static int mutex_inherit_test() {
         // working variables to pass the working thread
         struct args {
             event_t test_blocker = EVENT_INITIAL_VALUE(test_blocker, false, 0);
-            mutex_t test_mutex[inherit_test_mutex_count];
+            Mutex test_mutex[inherit_test_mutex_count];
         } args;
 
         // worker thread to stress the priority inheritance mechanism
@@ -133,7 +132,7 @@ static int mutex_inherit_test() {
 
                 // grab a random number of mutexes
                 for (uint j = 0; j < r; j++) {
-                    mutex_acquire(&args->test_mutex[j]);
+                    args->test_mutex[j].Acquire();
                 }
 
                 if (count % 1000 == 0)
@@ -146,7 +145,7 @@ static int mutex_inherit_test() {
 
                 // release in reverse order
                 for (int j = r - 1; j >= 0; j--) {
-                    mutex_release(&args->test_mutex[j]);
+                    args->test_mutex[j].Release();
                 }
             }
 

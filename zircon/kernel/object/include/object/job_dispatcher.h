@@ -127,7 +127,7 @@ public:
     // returning the error value.
     template <typename T>
     static zx_status_t ForEachJob(T func) {
-        Guard<fbl::Mutex> guard{AllJobsLock::Get()};
+        Guard<Mutex> guard{AllJobsLock::Get()};
         for (auto &job : all_jobs_list_) {
             zx_status_t s = func(&job);
             if (s != ZX_OK)

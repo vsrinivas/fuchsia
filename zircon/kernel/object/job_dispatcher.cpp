@@ -158,7 +158,7 @@ JobDispatcher::JobDispatcher(uint32_t /*flags*/,
 
     // Maintain consistent lock ordering by grabbing the all-jobs lock before
     // any individual JobDispatcher lock.
-    Guard<fbl::Mutex> guard{AllJobsLock::Get()};
+    Guard<Mutex> guard{AllJobsLock::Get()};
 
     // Set the initial job order, and try to make older jobs closer to
     // the root (both hierarchically and temporally) show up earlier
@@ -200,7 +200,7 @@ JobDispatcher::~JobDispatcher() {
         parent_->RemoveChildJob(this);
 
     {
-        Guard<fbl::Mutex> guard{AllJobsLock::Get()};
+        Guard<Mutex> guard{AllJobsLock::Get()};
         DEBUG_ASSERT(dll_all_jobs_.InContainer());
         all_jobs_list_.erase(*this);
     }
