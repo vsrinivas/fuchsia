@@ -32,7 +32,7 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
         if ((r = dev->coordinator->HandleDeviceRead(dev)) < 0) {
             if (r != ZX_ERR_STOP) {
                 log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
-                    dev, dev->name, r);
+                    dev, dev->name.data(), r);
             }
             dev->coordinator->RemoveDevice(dev, true);
             // Do not start waiting again on this device's channel again
@@ -42,7 +42,7 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
         return;
     }
     if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
-        log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name);
+        log(ERROR, "devcoord: device %p name='%s' disconnected!\n", dev, dev->name.data());
         dev->coordinator->RemoveDevice(dev, true);
         // Do not start waiting again on this device's channel again
         return;

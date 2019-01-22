@@ -297,8 +297,8 @@ public:
     void DmPrintf(const char* fmt, ...) const;
     zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
 
-    const Driver* LibnameToDriver(const char* libname) const;
-    zx_status_t LibnameToVmo(const char* libname, zx::vmo* out_vmo) const;
+    const Driver* LibnameToDriver(const fbl::String& libname) const;
+    zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
 
     zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
 

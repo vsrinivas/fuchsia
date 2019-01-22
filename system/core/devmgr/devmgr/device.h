@@ -82,8 +82,8 @@ struct Device {
     async::TaskClosure publish_task;
 
     Devhost* host = nullptr;
-    const char* name = nullptr;
-    const char* libname = nullptr;
+    fbl::String name;
+    fbl::String libname;
     fbl::String args;
     // The backoff between each driver retry. This grows exponentially.
     zx::duration backoff = zx::msec(250);
@@ -141,9 +141,6 @@ struct Device {
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> metadata;
 
     fbl::unique_ptr<zx_device_prop_t[]> props;
-
-    // Allocation backing |name| and |libname|
-    fbl::unique_ptr<char[]> name_alloc_;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
     void AddRef() const {

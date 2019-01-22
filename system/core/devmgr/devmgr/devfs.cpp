@@ -37,7 +37,7 @@ fbl::unique_ptr<Devnode> root_devnode;
 
 fbl::unique_ptr<Devnode> class_devnode;
 
-fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name);
+fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
 
 #define PNMAX 16
 const char* proto_name(uint32_t id, char buf[PNMAX]) {
@@ -308,7 +308,7 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
 
 namespace {
 
-fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
+fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const fbl::String& name) {
     auto dn = fbl::make_unique<Devnode>(name);
     if (!dn) {
         return nullptr;
@@ -318,7 +318,7 @@ fbl::unique_ptr<Devnode> devfs_mknode(Device* dev, const char* name) {
     return dn;
 }
 
-fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
+fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name) {
     fbl::unique_ptr<Devnode> dn = devfs_mknode(nullptr, name);
     if (dn == nullptr) {
         return nullptr;
@@ -328,17 +328,17 @@ fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const char* name) {
     return dn;
 }
 
-Devnode* devfs_lookup(Devnode* parent, const char* name) {
+Devnode* devfs_lookup(Devnode* parent, const fbl::String& name) {
     for (auto& child : parent->children) {
-        if (!strcmp(name, child.name.c_str())) {
+        if (name == child.name) {
             return &child;
         }
     }
     return nullptr;
 }
 
-zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino,
-                               const fbl::String& name, uint8_t type) {
+zx_status_t fill_dirent(vdirent_t* de, size_t delen, uint64_t ino, const fbl::String& name,
+                        uint8_t type) {
     size_t len = name.length();
     size_t sz = sizeof(vdirent_t) + len;
 
@@ -631,7 +631,7 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
     dir = proto_dir(dev->protocol_id);
     if (dir != nullptr) {
         char tmp[32];
-        const char* name = dev->name;
+        const char* name = dev->name.data();
 
         if (dev->protocol_id != ZX_PROTOCOL_CONSOLE) {
 
