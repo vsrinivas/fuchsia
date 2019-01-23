@@ -49,13 +49,15 @@ executable("bin") {
 }
 
 package("netconnector") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
 
-  binary = "netconnector"
+  binaries = [
+    {
+      name = "netconnector"
+    },
+  ]
 
   meta = [
     {
