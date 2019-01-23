@@ -6,6 +6,14 @@ import("//build/package.gni")
 
 # A test that exercises component functionality.
 # See CP-42 for more context.
+#
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
 template("sandbox_test_package") {
   binary_rule = "${target_name}_bin"
   binary_name = target_name
@@ -36,6 +44,9 @@ template("sandbox_test_package") {
     tests = [
       {
         name = binary_name
+        if (defined(invoker.environments)) {
+          environments = invoker.environments
+        }
       },
     ]
   }
