@@ -30,6 +30,10 @@ import("//topaz/runtime/dart_runner/dart_app.gni")
 #     being run automatically.
 #     Defaults to False.
 #
+#   environments (optional)
+#      Device environments this test should run in. Passed through to
+#      package.tests.environments in //build/package.gni.
+#
 # Example of usage:
 #
 #   dart_fuchsia_test("some_tests") {
@@ -104,6 +108,9 @@ template("dart_fuchsia_test") {
         {
           name = generated_run_test_sh_target
           dest = target_name
+          if (defined(invoker.environments)) {
+            environments = invoker.environments
+          }
         },
       ]
     }
