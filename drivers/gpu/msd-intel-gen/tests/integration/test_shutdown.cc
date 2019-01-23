@@ -29,7 +29,7 @@ private:
 
 class TestConnection : public TestBase {
 public:
-    TestConnection() { magma_create_connection2(fd(), &connection_); }
+    TestConnection() { magma_create_connection(fd(), &connection_); }
 
     ~TestConnection()
     {

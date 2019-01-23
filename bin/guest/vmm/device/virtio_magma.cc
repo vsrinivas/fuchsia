@@ -117,8 +117,10 @@ void VirtioMagma::CreateConnection(
     const virtio_magma_create_connection_t* request,
     virtio_magma_create_connection_resp_t* response) {
   FXL_DCHECK(request->hdr.type == VIRTIO_MAGMA_CMD_CREATE_CONNECTION);
-  auto connection = magma_create_connection(device_fd_.get(), 0);
-  if (!connection) {
+  magma_connection_t connection;
+  magma_status_t status =
+      magma_create_connection(device_fd_.get(), &connection);
+  if (status != MAGMA_STATUS_OK) {
     response->connection_return = -1;
     response->hdr.type = VIRTIO_MAGMA_RESP_ERR_HOST_DISCONNECTED;
     return;

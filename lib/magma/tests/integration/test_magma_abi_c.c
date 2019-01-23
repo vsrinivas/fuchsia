@@ -31,7 +31,7 @@ bool test_magma_abi_from_c(void)
     }
 
     magma_connection_t connection;
-    magma_create_connection2(fd, &connection);
+    magma_create_connection(fd, &connection);
     if (!connection) {
         printf("%s:%d magma_open returned null\n", __FILE__, __LINE__);
         result = false;

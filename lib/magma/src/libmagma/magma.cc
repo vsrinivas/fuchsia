@@ -16,20 +16,12 @@
 #include <chrono>
 #include <vector>
 
-magma_connection_t magma_create_connection(int fd, uint32_t capabilities)
+magma_status_t magma_create_connection2(int32_t file_descriptor, magma_connection_t* connection_out)
 {
-    // Here we release ownership of the connection to the client
-    uint32_t device_handle;
-    uint32_t device_notification_handle;
-    if (!magma::PlatformConnectionClient::GetHandles(fd, &device_handle,
-                                                     &device_notification_handle))
-        return DRETP(nullptr, "couldn't get handles from fd");
-
-    return magma::PlatformConnectionClient::Create(device_handle, device_notification_handle)
-        .release();
+    return magma_create_connection(file_descriptor, connection_out);
 }
 
-magma_status_t magma_create_connection2(int32_t file_descriptor, magma_connection_t* connection_out)
+magma_status_t magma_create_connection(int32_t file_descriptor, magma_connection_t* connection_out)
 {
     uint32_t primary_channel;
     uint32_t notification_channel;
