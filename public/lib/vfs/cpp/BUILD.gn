@@ -3,6 +3,7 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
+import("//build/package/component.gni")
 import("//build/test.gni")
 
 source_set("cpp") {
@@ -48,16 +49,15 @@ test("vfs_cpp_unittests") {
   ]
 }
 
-package("vfs_cpp_tests") {
-  testonly = true
-
+fuchsia_test_component("vfs_cpp_unittests_component") {
   deps = [
     ":vfs_cpp_unittests",
   ]
+  binary = "vfs_cpp_unittests"
+}
 
-  tests = [
-    {
-      name = "vfs_cpp_unittests"
-    },
-  ]
+package("vfs_cpp_tests") {
+  testonly = true
+
+  components = [ ":vfs_cpp_unittests_component" ]
 }
