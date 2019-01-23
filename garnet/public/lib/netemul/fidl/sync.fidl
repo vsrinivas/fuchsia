@@ -51,4 +51,9 @@ interface SyncManager {
     /// Subscribes to bus 'busName' with a given client name.
     /// Duplicate client names are disallowed and will cause the request to return unfulfilled.
     BusSubscribe(string busName, string clientName, request<Bus> bus);
+    /// Waits on a named counter barrier with name |barrierName|.
+    /// Functon will return true if the number of waits pending on the barrier matches or exceeds
+    /// |threshold| before  |timeout| (nsec) expires.
+    /// Use |timeout| <= 0 for indefinite wait.
+    WaitForBarrierThreshold(string barrierName, uint32 threshold, zx.duration timeout) -> (bool result);
 };

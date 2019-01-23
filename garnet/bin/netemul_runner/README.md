@@ -91,7 +91,8 @@ intrusion. This is used to go around the limitation that `/dev` is never hermeti
 Along the same lines as *NetworkContext*, `netemul_sandbox` creates a **single** *Syncmanager* instance
 (see [fuchsia.netemul.sync](../../public/lib/netemul/fidl/sync.fidl))
 that is shared between all created environments. Clients can (and are encouraged to) use the *Bus*
-service to synchronize multiple test agents that are spawned across different environments.
+service or the other provided primitives to synchronize multiple test agents that are spawned 
+across different environments.
 
 For example
 (see [netstack_socks test](test/netstack_socks/src/main.rs)

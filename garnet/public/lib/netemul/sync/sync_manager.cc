@@ -28,4 +28,26 @@ fidl::InterfaceRequestHandler<fuchsia::netemul::sync::SyncManager>
 SyncManager::GetHandler() {
   return bindings_.GetHandler(this, dispatcher_);
 }
+
+void SyncManager::WaitForBarrierThreshold(
+    ::std::string barrierName, uint32_t threshold, int64_t timeout,
+    WaitForBarrierThresholdCallback callback) {
+  auto barrier = counter_barriers_.find(barrierName);
+  if (barrier == counter_barriers_.end()) {
+    barrier =
+        counter_barriers_
+            .insert(std::make_pair(
+                barrierName, std::make_unique<CounterBarrier>(dispatcher_)))
+            .first;
+  }
+
+  barrier->second->AddWatch(threshold, timeout, std::move(callback));
+
+  if (barrier->second->empty()) {
+    counter_barriers_.erase(barrier);
+  }
+}
+
+SyncManager::~SyncManager() = default;
+
 }  // namespace netemul
