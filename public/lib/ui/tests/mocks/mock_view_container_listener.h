@@ -6,16 +6,14 @@
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_CONTAINER_LISTENER_H_
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <lib/fit/function.h>
-
 #include "lib/fxl/macros.h"
 
 namespace mozart {
 namespace test {
 
 using OnMockChildAttachedCallback =
-    fit::function<void(uint32_t, ::fuchsia::ui::viewsv1::ViewInfo)>;
-using OnMockChildUnavailable = fit::function<void(uint32_t)>;
+    std::function<void(uint32_t, ::fuchsia::ui::viewsv1::ViewInfo)>;
+using OnMockChildUnavailable = std::function<void(uint32_t)>;
 
 class MockViewContainerListener
     : public ::fuchsia::ui::viewsv1::ViewContainerListener {

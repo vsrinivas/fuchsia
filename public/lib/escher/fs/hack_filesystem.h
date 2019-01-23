@@ -10,8 +10,6 @@
 #include <unordered_set>
 #include <vector>
 
-#include <lib/fit/function.h>
-
 #include "lib/fxl/memory/ref_counted.h"
 
 #ifdef __Fuchsia__
@@ -29,7 +27,7 @@ using HackFileContents = std::string;
 using HackFilePath = std::string;
 using HackFilePathSet = std::unordered_set<HackFilePath>;
 class HackFilesystemWatcher;
-using HackFilesystemWatcherFunc = fit::function<void(HackFilePath)>;
+using HackFilesystemWatcherFunc = std::function<void(HackFilePath)>;
 
 // An in-memory file system that could be watched for content change.
 class HackFilesystem : public fxl::RefCountedThreadSafe<HackFilesystem> {

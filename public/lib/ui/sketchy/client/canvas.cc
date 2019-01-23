@@ -4,6 +4,8 @@
 
 #include "lib/ui/sketchy/client/canvas.h"
 
+#include "lib/fxl/functional/make_copyable.h"
+
 namespace sketchy_lib {
 
 Canvas::Canvas(component::StartupContext* context, async::Loop* loop)
@@ -32,7 +34,7 @@ void Canvas::Present(uint64_t time, scenic::Session::PresentCallback callback) {
     // it safe to continue using.
     commands_.clear();
   }
-  canvas_->Present(time, std::move(callback));
+  canvas_->Present(time, fxl::MakeCopyable(std::move(callback)));
 }
 
 }  // namespace sketchy_lib

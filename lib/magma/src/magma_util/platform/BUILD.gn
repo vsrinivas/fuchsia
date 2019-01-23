@@ -297,7 +297,6 @@ source_set("trace") {
 
   public_deps = [
     "zircon:trace",
-    "//zircon/public/lib/fit",
   ]
 
   allow_circular_includes_from = [ "zircon:trace" ]

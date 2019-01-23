@@ -42,7 +42,7 @@ Mpeg12Decoder::~Mpeg12Decoder() {
 }
 
 void Mpeg12Decoder::SetFrameReadyNotifier(FrameReadyNotifier notifier) {
-  notifier_ = std::move(notifier);
+  notifier_ = notifier;
 }
 
 void Mpeg12Decoder::ResetHardware() {

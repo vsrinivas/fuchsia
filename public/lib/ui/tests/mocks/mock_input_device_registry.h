@@ -9,8 +9,6 @@
 #include <unordered_map>
 
 #include <fuchsia/ui/input/cpp/fidl.h>
-#include <lib/fit/function.h>
-
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fxl/macros.h"
 #include "lib/ui/tests/mocks/mock_input_device.h"
@@ -18,7 +16,7 @@
 namespace mozart {
 namespace test {
 
-using OnDeviceCallback = fit::function<void(MockInputDevice*)>;
+using OnDeviceCallback = std::function<void(MockInputDevice*)>;
 
 class MockInputDeviceRegistry : public fuchsia::ui::input::InputDeviceRegistry {
  public:

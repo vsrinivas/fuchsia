@@ -13,6 +13,7 @@
 #include "garnet/bin/http/http_adapters.h"
 #include "garnet/bin/http/http_client.h"
 #include "garnet/bin/http/http_errors.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/url/gurl.h"
 
@@ -31,11 +32,11 @@ URLLoaderImpl::~URLLoaderImpl() {}
 
 void URLLoaderImpl::Start(oldhttp::URLRequest request, Callback callback) {
   callback_ = std::move(callback);
-  coordinator_->RequestNetworkSlot(
+  coordinator_->RequestNetworkSlot(fxl::MakeCopyable(
       [this, request = std::move(request)](fit::closure on_inactive) mutable {
         StartInternal(std::move(request));
         on_inactive();
-      });
+      }));
 }
 
 void URLLoaderImpl::FollowRedirect(Callback callback) {
@@ -60,8 +61,7 @@ void URLLoaderImpl::SendError(int error_code) {
   SendResponse(std::move(response));
 }
 
-void URLLoaderImpl::FollowRedirectInternal() { /* TODO(toshik) */
-}
+void URLLoaderImpl::FollowRedirectInternal() { /* TODO(toshik) */ }
 
 void URLLoaderImpl::SendResponse(oldhttp::URLResponse response) {
   Callback callback;

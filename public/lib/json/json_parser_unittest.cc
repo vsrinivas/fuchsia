@@ -9,8 +9,6 @@
 #include <functional>
 #include <string>
 
-#include <lib/fit/function.h>
-
 #include "gtest/gtest.h"
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/files/path.h"
@@ -57,10 +55,10 @@ class JSONParserTest : public ::testing::Test {
 
   bool ParseFromDirectory(JSONParser* parser, const std::string& dir,
                           std::string* error) {
-    fit::function<void(rapidjson::Document)> cb =
+    std::function<void(rapidjson::Document)> cb =
         std::bind(&JSONParserTest::InterpretDocument, this, parser,
                   std::placeholders::_1);
-    parser->ParseFromDirectory(dir, std::move(cb));
+    parser->ParseFromDirectory(dir, cb);
     *error = parser->error_str();
     return !parser->HasError();
   }

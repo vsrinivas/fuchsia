@@ -13,6 +13,7 @@
 #include "lib/component/cpp/connect.h"
 #include "lib/fidl/cpp/clone.h"
 #include "lib/fxl/files/file.h"
+#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/logging.h"
 #include "lib/ui/input/cpp/formatting.h"
 
@@ -36,18 +37,18 @@ App::App(const fxl::CommandLine& command_line)
 App::~App() {}
 
 Presentation::YieldCallback App::GetYieldCallback() {
-  return [this](bool yield_to_next) {
+  return fxl::MakeCopyable([this](bool yield_to_next) {
     if (yield_to_next) {
       SwitchToNextPresentation();
     } else {
       SwitchToPreviousPresentation();
     }
-  };
+  });
 }
 
 Presentation::ShutdownCallback App::GetShutdownCallback(
     Presentation* presentation) {
-  return [this, presentation] {
+  return fxl::MakeCopyable([this, presentation] {
     size_t idx;
     for (idx = 0; idx < presentations_.size(); ++idx) {
       if (presentations_[idx].get() == presentation) {
@@ -73,7 +74,7 @@ Presentation::ShutdownCallback App::GetShutdownCallback(
       layer_stack_->RemoveAllLayers();
       active_presentation_idx_ = std::numeric_limits<size_t>::max();
     }
-  };
+  });
 }
 
 void App::Present2(zx::eventpair view_holder_token,

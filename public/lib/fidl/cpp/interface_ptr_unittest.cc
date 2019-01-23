@@ -13,6 +13,7 @@
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fidl/cpp/test/async_loop_for_test.h"
 #include "lib/fidl/cpp/test/frobinator_impl.h"
+#include "lib/fxl/functional/make_copyable.h"
 
 namespace fidl {
 namespace {
@@ -262,9 +263,8 @@ TEST(InterfacePtr, MoveIntoMethodCapture) {
   EXPECT_EQ(ZX_OK, binding.Bind(ptr.NewRequest()));
 
   std::vector<std::string> grobs;
-  ptr->Grob("one", [moved = std::move(ptr), &grobs](StringPtr s) {
-    grobs.push_back(s);
-  });
+  ptr->Grob("one", fxl::MakeCopyable([moved = std::move(ptr), &grobs](
+                                         StringPtr s) { grobs.push_back(s); }));
   EXPECT_FALSE(ptr.is_bound());
   EXPECT_TRUE(grobs.empty());
 

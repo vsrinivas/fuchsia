@@ -5,15 +5,15 @@
 #ifndef GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 #define GARNET_LIB_WLAN_MLME_INCLUDE_WLAN_MLME_MAC_FRAME_H_
 
+#include <wlan/mlme/sequence.h>
+
 #include <fbl/unique_ptr.h>
-#include <lib/fit/function.h>
 #include <lib/zx/time.h>
 #include <wlan/common/bitfield.h>
 #include <wlan/common/mac_frame.h>
 #include <wlan/common/macaddr.h>
 #include <wlan/mlme/frame_validation.h>
 #include <wlan/mlme/packet.h>
-#include <wlan/mlme/sequence.h>
 #include <zircon/compiler.h>
 #include <zircon/types.h>
 
@@ -274,7 +274,7 @@ void SetSeqNo(MgmtFrameHeader* hdr, Sequence* seq);
 void SetSeqNo(MgmtFrameHeader* hdr, uint8_t aci, Sequence* seq);
 void SetSeqNo(DataFrameHeader* hdr, Sequence* seq);
 
-using MsduCallback = fit::function<void(FrameView<LlcHeader>, size_t)>;
+using MsduCallback = std::function<void(FrameView<LlcHeader>, size_t)>;
 
 // Returns a list of all LLC frames carried in an AMSDU data frame.
 zx_status_t DeaggregateAmsdu(const DataFrameView<AmsduSubframeHeader>&, MsduCallback);

@@ -5,6 +5,8 @@
 import("//build/fidl/fidl.gni")
 
 fidl("fuchsia.sys") {
+  cpp_legacy_callbacks = true
+
   sdk_category = "partner"
 
   sources = [

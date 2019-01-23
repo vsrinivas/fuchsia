@@ -6,8 +6,6 @@
 #define LIB_UI_TESTS_MOCKS_MOCK_VIEW_LISTENER_H_
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
-#include <lib/fit/function.h>
-
 #include "lib/fxl/macros.h"
 
 #include <functional>
@@ -16,7 +14,7 @@ namespace mozart {
 namespace test {
 
 using OnMockViewPropertiesCallback =
-    fit::function<void(::fuchsia::ui::viewsv1::ViewProperties)>;
+    std::function<void(::fuchsia::ui::viewsv1::ViewProperties)>;
 
 class MockViewListener : public ::fuchsia::ui::viewsv1::ViewListener {
  public:
