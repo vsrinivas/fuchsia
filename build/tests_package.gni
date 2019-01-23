@@ -8,12 +8,22 @@ import("//build/test/test_package.gni")
 # A variant of package() that only contains test executables. The test
 # executables are specified as the build products of the deps. A tests_package()
 # is always testonly = true. The deps are expected to be executable()s.
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
 template("tests_package") {
   computed_tests = []
   foreach(dep, invoker.deps) {
     computed_tests += [
       {
         name = get_label_info(dep, "name")
+        if (defined(invoker.environments)) {
+          environments = invoker.environments
+        }
       },
     ]
   }
@@ -37,12 +47,23 @@ template("tests_package") {
 # This variant, as described in
 # https://fuchsia.git.corp.google.com/docs/+/master/development/tests/test_component.md,
 # requires a .cmx file for each test.
+#
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
 template("hermetic_tests_package") {
   computed_tests = []
   foreach(dep, invoker.deps) {
     computed_tests += [
       {
         name = get_label_info(dep, "name")
+        if (defined(invoker.environments)) {
+          environments = invoker.environments
+        }
       },
     ]
   }
