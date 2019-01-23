@@ -147,7 +147,7 @@ void Osd::FlipOnVsync(uint8_t idx) {
     int rdma_channel = GetNextAvailableRdmaChannel();
     uint8_t retry_count = 0;
     while (rdma_channel == -1 && retry_count++ < kMaxRetries) {
-        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
         rdma_channel = GetNextAvailableRdmaChannel();
     }
 

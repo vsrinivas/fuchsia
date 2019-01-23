@@ -412,7 +412,7 @@ int get_next_avail_rdma_channel(vim2_display_t* display) {
                 return i;
             }
         }
-        zx_nanosleep(zx_deadline_after(ZX_USEC(10)));
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(1)));
     }
     return -1;
 }
