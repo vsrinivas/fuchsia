@@ -15,9 +15,9 @@ declare_args() {
   #     concurrently. If overridden, this directory must be a full path.
   gocache_dir = rebase_path("$root_out_dir/.gocache")
 
-  #   go_skip_vet
-  #     [bool] if true, skip vet defaults to true
-  go_skip_vet = false
+  #   go_vet_enabled
+  #     [bool] if false, go vet invocations are disabled for all builds.
+  go_vet_enabled = false
 }
 
 # A template for an action that builds a Go binary. Users should instead use the
@@ -38,7 +38,8 @@ declare_args() {
 #   skip_vet (optional)
 #     Whether to skip running go vet for this target. This flag should _only_
 #     be used for packages in the Go source tree itself that otherwise match
-#     whitelist entries in go vet all.
+#     whitelist entries in go vet all. Go vet is only run if go_vet_enabled is
+#     true.
 
 template("go_build") {
   assert(defined(invoker.gopackage),
@@ -105,8 +106,8 @@ template("go_build") {
       gocache_dir,
     ]
 
-    if ((defined(invoker.skip_vet) && invoker.skip_vet) || go_skip_vet) {
-      args += [ "--skip-vet" ]
+    if (defined(invoker.skip_vet) && !invoker.skip_vet && go_vet_enabled) {
+      args += [ "--vet" ]
     }
 
     if (is_fuchsia) {
