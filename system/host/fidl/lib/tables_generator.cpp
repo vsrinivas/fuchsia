@@ -367,7 +367,7 @@ void TablesGenerator::GenerateForward(const coded::XUnionType& xunion_type) {
     Emit(&tables_file_, ";\n");
 }
 
-const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
+const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
     switch (type->kind) {
     case flat::Type::Kind::kArray: {
         auto array_type = static_cast<const flat::ArrayType*>(type);
@@ -539,7 +539,7 @@ const coded::Type* TablesGenerator::CompileType(const flat::Type* type) {
     }
 }
 
-void TablesGenerator::CompileFields(const flat::Decl* decl) {
+void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
     switch (decl->kind) {
     case flat::Decl::Kind::kInterface: {
         auto interface_decl = static_cast<const flat::Interface*>(decl);
@@ -659,7 +659,7 @@ void TablesGenerator::CompileFields(const flat::Decl* decl) {
     }
 }
 
-void TablesGenerator::Compile(const flat::Decl* decl) {
+void CodedTypesGenerator::CompileDecl(const flat::Decl* decl) {
     switch (decl->kind) {
     case flat::Decl::Kind::kConst:
         // Nothing to do for const declarations.
@@ -752,11 +752,9 @@ void TablesGenerator::Compile(const flat::Decl* decl) {
     }
 }
 
-std::ostringstream TablesGenerator::Produce() {
-    GenerateFilePreamble();
-
+void CodedTypesGenerator::CompileCodedTypes() {
     for (const auto& decl : library_->declaration_order_) {
-        Compile(decl);
+        CompileDecl(decl);
     }
 
     for (const auto& decl : library_->declaration_order_) {
@@ -764,9 +762,15 @@ std::ostringstream TablesGenerator::Produce() {
             continue;
         CompileFields(decl);
     }
+}
 
-    for (const auto& decl : library_->declaration_order_) {
-        coded::Type* coded_type = named_coded_types_[&decl->name].get();
+std::ostringstream TablesGenerator::Produce() {
+    CompileCodedTypes();
+
+    GenerateFilePreamble();
+
+    for (const auto& decl : library()->declaration_order_) {
+        auto coded_type = CodedTypeFor(&decl->name);
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
@@ -789,8 +793,8 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
-    for (const auto& decl : library_->declaration_order_) {
-        coded::Type* coded_type = named_coded_types_[&decl->name].get();
+    for (const auto& decl : library()->declaration_order_) {
+        auto coded_type = CodedTypeFor(&decl->name);
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
@@ -813,7 +817,7 @@ std::ostringstream TablesGenerator::Produce() {
 
     Emit(&tables_file_, "\n");
 
-    for (const auto& coded_type : coded_types_) {
+    for (const auto& coded_type : coded_types()) {
         if (coded_type->coding_needed == coded::CodingNeeded::kNotNeeded)
             continue;
 
@@ -862,11 +866,11 @@ std::ostringstream TablesGenerator::Produce() {
         }
     }
 
-    for (const auto& decl : library_->declaration_order_) {
-        if (decl->name.library() != library_)
+    for (const auto& decl : library()->declaration_order_) {
+        if (decl->name.library() != library())
             continue;
 
-        coded::Type* coded_type = named_coded_types_[&decl->name].get();
+        auto coded_type = CodedTypeFor(&decl->name);
         if (!coded_type)
             continue;
         switch (coded_type->kind) {
