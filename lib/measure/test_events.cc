@@ -22,6 +22,14 @@ trace::Record::Event DurationEnd(fbl::String name, fbl::String category,
       name,      {}, trace::EventData(trace::EventData::DurationEnd{})};
 }
 
+trace::Record::Event DurationComplete(fbl::String name, fbl::String category,
+                                      uint64_t timestamp, uint64_t end_time) {
+  return trace::Record::Event{
+      timestamp, {}, category,
+      name,      {},
+      trace::EventData(trace::EventData::DurationComplete{end_time})};
+}
+
 trace::Record::Event AsyncBegin(uint64_t id, fbl::String name,
                                 fbl::String category, uint64_t timestamp) {
   return trace::Record::Event{

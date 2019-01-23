@@ -24,6 +24,8 @@ bool MeasureDuration::Process(const trace::Record::Event& event) {
       return ProcessDurationBegin(event);
     case trace::EventType::kDurationEnd:
       return ProcessDurationEnd(event);
+    case trace::EventType::kDurationComplete:
+      return ProcessDurationComplete(event);
     default:
       return true;
   }
@@ -117,6 +119,19 @@ bool MeasureDuration::ProcessDurationEnd(const trace::Record::Event& event) {
       continue;
     }
     AddResult(spec.common.id, begin_timestamp, event.timestamp);
+  }
+  return true;
+}
+
+bool MeasureDuration::ProcessDurationComplete(
+    const trace::Record::Event& event) {
+  FXL_DCHECK(event.type() == trace::EventType::kDurationComplete);
+  for (const DurationSpec& spec : specs_) {
+    if (!EventMatchesSpec(event, spec.event)) {
+      continue;
+    }
+    AddResult(spec.common.id, event.timestamp,
+              event.data.GetDurationComplete().end_time);
   }
   return true;
 }

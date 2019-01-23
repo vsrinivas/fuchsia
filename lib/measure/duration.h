@@ -61,6 +61,7 @@ class MeasureDuration {
   bool ProcessAsyncOrFlowEnd(const trace::Record::Event& event);
   bool ProcessDurationBegin(const trace::Record::Event& event);
   bool ProcessDurationEnd(const trace::Record::Event& event);
+  bool ProcessDurationComplete(const trace::Record::Event& event);
 
   void AddResult(uint64_t spec_id, trace_ticks_t from, trace_ticks_t to);
 

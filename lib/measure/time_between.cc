@@ -15,7 +15,8 @@ bool IsOfSupportedType(const trace::Record::Event& event) {
          event.type() == trace::EventType::kFlowBegin ||
          event.type() == trace::EventType::kAsyncEnd ||
          event.type() == trace::EventType::kDurationEnd ||
-         event.type() == trace::EventType::kFlowEnd;
+         event.type() == trace::EventType::kFlowEnd ||
+         event.type() == trace::EventType::kDurationComplete;
 }
 
 bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
@@ -24,7 +25,8 @@ bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
     return false;
   }
 
-  if (event.type() == trace::EventType::kInstant) {
+  if (event.type() == trace::EventType::kInstant ||
+      event.type() == trace::EventType::kDurationComplete) {
     return true;
   } else if (event.type() == trace::EventType::kAsyncBegin ||
              event.type() == trace::EventType::kDurationBegin ||
@@ -44,6 +46,8 @@ bool EventMatchesSpecWithAnchor(const trace::Record::Event& event,
 MeasureTimeBetween::MeasureTimeBetween(std::vector<TimeBetweenSpec> specs)
     : specs_(std::move(specs)) {}
 
+// TODO(fmeawad): We currently do not handle TimeBetween 2 DurationComplete
+// events that are nested.
 bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
   if (!IsOfSupportedType(event)) {
     return true;
@@ -55,13 +59,25 @@ bool MeasureTimeBetween::Process(const trace::Record::Event& event) {
     if (EventMatchesSpecWithAnchor(event, spec.second_event,
                                    spec.second_anchor) &&
         pending_time_between_.count(key)) {
-      AddResult(spec.common.id, pending_time_between_[key], event.timestamp);
+      if (spec.second_anchor == Anchor::End &&
+          event.type() == trace::EventType::kDurationComplete) {
+        AddResult(spec.common.id, pending_time_between_[key],
+                  event.data.GetDurationComplete().end_time);
+      } else {
+        AddResult(spec.common.id, pending_time_between_[key], event.timestamp);
+      }
+
       pending_time_between_.erase(key);
     }
 
     if (EventMatchesSpecWithAnchor(event, spec.first_event,
                                    spec.first_anchor)) {
-      pending_time_between_[key] = event.timestamp;
+      if (spec.first_anchor == Anchor::End &&
+          event.type() == trace::EventType::kDurationComplete) {
+        pending_time_between_[key] = event.data.GetDurationComplete().end_time;
+      } else {
+        pending_time_between_[key] = event.timestamp;
+      }
     }
   }
   return true;

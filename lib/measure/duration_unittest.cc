@@ -14,7 +14,7 @@ namespace tracing {
 namespace measure {
 namespace {
 
-TEST(MeasureDurationTest, Duration) {
+TEST(MeasureDurationTest, DurationBeginEnd) {
   std::vector<DurationSpec> specs = {
       DurationSpec({42u, {"event_foo", "category_bar"}})};
 
@@ -30,6 +30,23 @@ TEST(MeasureDurationTest, Duration) {
 
   // Add a matching end event.
   measure.Process(test::DurationEnd("event_foo", "category_bar", 16u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({6u}), results[42u]);
+}
+
+TEST(MeasureDurationTest, DurationComplete) {
+  std::vector<DurationSpec> specs = {
+      DurationSpec({42u, {"event_foo", "category_bar"}})};
+
+  MeasureDuration measure(std::move(specs));
+
+  // Add nested complete events.
+  measure.Process(
+      test::DurationComplete("something_else", "category_bar", 12u, 14u));
+  measure.Process(
+      test::DurationComplete("event_foo", "category_bar", 10u, 16u));
 
   auto results = measure.results();
   EXPECT_EQ(1u, results.size());
@@ -61,7 +78,7 @@ TEST(MeasureDurationTest, DurationTwoMeasurements) {
   EXPECT_EQ(std::vector<uint64_t>({6u}), results[43u]);
 }
 
-TEST(MeasureDurationTest, DurationNested) {
+TEST(MeasureDurationTest, DurationNestedBeginEnd) {
   std::vector<DurationSpec> specs = {
       DurationSpec({42u, {"event_foo", "category_bar"}})};
 
@@ -77,6 +94,22 @@ TEST(MeasureDurationTest, DurationNested) {
 
   // Add a matching end event.
   measure.Process(test::DurationEnd("event_foo", "category_bar", 16u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({2u, 6u}), results[42u]);
+}
+
+TEST(MeasureDurationTest, DurationNestedComplete) {
+  std::vector<DurationSpec> specs = {
+      DurationSpec({42u, {"event_foo", "category_bar"}})};
+
+  MeasureDuration measure(std::move(specs));
+
+  measure.Process(
+      test::DurationComplete("event_foo", "category_bar", 12u, 14u));
+  measure.Process(
+      test::DurationComplete("event_foo", "category_bar", 10u, 16u));
 
   auto results = measure.results();
   EXPECT_EQ(1u, results.size());
@@ -153,17 +186,12 @@ TEST(MeasureDurationTest, EventMatchingByNameAndCategory) {
       DurationSpec({43u, {"event_abc", "category_bar"}})};
 
   MeasureDuration measure(std::move(specs));
-  measure.Process(test::DurationBegin("event_foo", "category_bar", 0u));
-  measure.Process(test::DurationEnd("event_foo", "category_bar", 1u));
-
-  measure.Process(test::DurationBegin("event_foo", "category_bazinga", 0u));
-  measure.Process(test::DurationEnd("event_foo", "category_bazinga", 2u));
-
-  measure.Process(test::DurationBegin("event_abc", "category_bazinga", 0u));
-  measure.Process(test::DurationEnd("event_abc", "category_bazinga", 3u));
-
-  measure.Process(test::DurationBegin("event_abc", "category_bar", 0u));
-  measure.Process(test::DurationEnd("event_abc", "category_bar", 4u));
+  measure.Process(test::DurationComplete("event_foo", "category_bar", 0u, 1u));
+  measure.Process(
+      test::DurationComplete("event_foo", "category_bazinga", 0u, 2u));
+  measure.Process(
+      test::DurationComplete("event_abc", "category_bazinga", 0u, 3u));
+  measure.Process(test::DurationComplete("event_abc", "category_bar", 0u, 4u));
 
   auto results = measure.results();
   EXPECT_EQ(4u, results.size());

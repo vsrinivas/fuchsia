@@ -115,6 +115,43 @@ TEST(MeasureTimeBetweenTest, AnchorsSameEvent) {
   EXPECT_EQ(std::vector<uint64_t>({1u, 8u}), results[42u]);
 }
 
+TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteEndToBegin) {
+  std::vector<TimeBetweenSpec> specs = {
+      TimeBetweenSpec({42u,
+                       {"bar", "category_foo"},
+                       Anchor::End,
+                       {"bar", "category_foo"},
+                       Anchor::Begin})};
+
+  MeasureTimeBetween measure(std::move(specs));
+  measure.Process(test::DurationComplete("bar", "category_foo", 1u, 3u));
+  measure.Process(test::DurationComplete("bar", "category_foo", 4u, 8u));
+  measure.Process(test::DurationComplete("bar", "category_foo", 16u, 20u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({1u, 8u}), results[42u]);
+}
+
+TEST(MeasureTimeBetweenTest, AnchorsSameEventCompleteBeginToEnd) {
+  std::vector<TimeBetweenSpec> specs = {
+      TimeBetweenSpec({42u,
+                       {"bar", "category_foo"},
+                       Anchor::Begin,
+                       {"bar", "category_foo"},
+                       Anchor::End})};
+
+  MeasureTimeBetween measure(std::move(specs));
+  measure.Process(test::DurationComplete("bar", "category_foo", 1u, 3u));
+  measure.Process(test::DurationComplete("bar", "category_foo", 4u, 8u));
+  measure.Process(test::DurationComplete("bar", "category_foo", 16u, 20u));
+
+  auto results = measure.results();
+  EXPECT_EQ(1u, results.size());
+  EXPECT_EQ(std::vector<uint64_t>({7u, 16u}), results[42u]);
+}
+
+
 TEST(MeasureTimeBetweenTest, AsyncAndFlow) {
   std::vector<TimeBetweenSpec> specs = {TimeBetweenSpec({42u,
                                                          {"bar", "async_event"},
