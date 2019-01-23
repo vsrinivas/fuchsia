@@ -30,15 +30,15 @@
 #define MAX_PRIORITY_ADJ 4 // +/- priority levels from the base priority
 
 // ktraces just local to this file
-#define LOCAL_KTRACE 0
+#define LOCAL_KTRACE_ENABLE 0
 
-#if LOCAL_KTRACE
-#define LOCAL_KTRACE0(probe) ktrace_probe0(probe)
-#define LOCAL_KTRACE2(probe, x, y) ktrace_probe2(probe, x, y)
-#else
-#define LOCAL_KTRACE0(probe)
-#define LOCAL_KTRACE2(probe, x, y)
-#endif
+#define LOCAL_KTRACE(string, args...)                                \
+    ktrace_probe(LocalTrace<LOCAL_KTRACE_ENABLE>, TraceContext::Cpu, \
+                 KTRACE_STRING_REF(string), ##args)
+
+#define LOCAL_KTRACE_DURATION                        \
+    TraceDuration<TraceEnabled<LOCAL_KTRACE_ENABLE>, \
+                  KTRACE_GRP_SCHEDULER, TraceContext::Cpu>
 
 #define LOCAL_TRACE 0
 
@@ -273,7 +273,8 @@ static thread_t* sched_get_top_thread(cpu_num_t cpu) TA_REQ(thread_lock) {
             c->run_queue_bitmap &= ~(1u << highest_queue);
         }
 
-        LOCAL_KTRACE2("sched_get_top", newthread->priority_boost, newthread->base_priority);
+        LOCAL_KTRACE("sched_get_top", static_cast<uint32_t>(newthread->priority_boost),
+                     static_cast<uint32_t>(newthread->base_priority));
 
         return newthread;
     }
@@ -290,14 +291,14 @@ void sched_init_thread(thread_t* t, int priority) {
 }
 
 void sched_block() {
+    LOCAL_KTRACE_DURATION trace{"sched_block"_stringref};
+
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     __UNUSED thread_t* current_thread = get_current_thread();
 
     DEBUG_ASSERT(current_thread->magic == THREAD_MAGIC);
     DEBUG_ASSERT(current_thread->state != THREAD_RUNNING);
-
-    LOCAL_KTRACE0("sched_block");
 
     // we are blocking on something. the blocking code should have already stuck us on a queue
     sched_resched_internal();
@@ -329,11 +330,11 @@ static void find_cpu_and_insert(thread_t* t, bool* local_resched,
 }
 
 bool sched_unblock(thread_t* t) {
+    LOCAL_KTRACE_DURATION trace{"sched_unblock"_stringref};
+
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     DEBUG_ASSERT(t->magic == THREAD_MAGIC);
-
-    LOCAL_KTRACE0("sched_unblock");
 
     // thread is being woken up, boost its priority
     boost_thread(t);
@@ -352,10 +353,10 @@ bool sched_unblock(thread_t* t) {
 }
 
 bool sched_unblock_list(struct list_node* list) {
+    LOCAL_KTRACE_DURATION trace{"sched_unblock_list"_stringref};
+
     DEBUG_ASSERT(list);
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
-
-    LOCAL_KTRACE0("sched_unblock_list");
 
     // pop the list of threads and shove into the scheduler
     bool local_resched = false;
@@ -397,12 +398,12 @@ void sched_unblock_idle(thread_t* t) {
 
 // the thread is voluntarily giving up its time slice
 void sched_yield() {
+    LOCAL_KTRACE_DURATION trace{"sched_yield"_stringref};
+
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
     DEBUG_ASSERT(!thread_is_idle(current_thread));
-
-    LOCAL_KTRACE0("sched_yield");
 
     // consume the rest of the time slice, deboost ourself, and go to the end of a queue
     current_thread->remaining_time_slice = 0;
@@ -420,6 +421,8 @@ void sched_yield() {
 
 // the current thread is being preempted from interrupt context
 void sched_preempt() {
+    LOCAL_KTRACE_DURATION trace{"sched_preempt"_stringref};
+
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
@@ -427,7 +430,6 @@ void sched_preempt() {
 
     DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
     DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
-    LOCAL_KTRACE0("sched_preempt");
 
     current_thread->state = THREAD_READY;
 
@@ -454,6 +456,8 @@ void sched_preempt() {
 
 // the current thread is voluntarily reevaluating the scheduler on the current cpu
 void sched_reschedule() {
+    LOCAL_KTRACE_DURATION trace{"sched_reschedule"_stringref};
+
     DEBUG_ASSERT(spin_lock_held(&thread_lock));
 
     thread_t* current_thread = get_current_thread();
@@ -466,7 +470,6 @@ void sched_reschedule() {
 
     DEBUG_ASSERT(current_thread->curr_cpu == curr_cpu);
     DEBUG_ASSERT(current_thread->last_cpu == current_thread->curr_cpu);
-    LOCAL_KTRACE0("sched_reschedule");
 
     current_thread->state = THREAD_READY;
 
@@ -740,8 +743,8 @@ void sched_preempt_timer_tick(zx_time_t now) {
         return;
     }
 
-    LOCAL_KTRACE2("sched_preempt_timer_tick", (uint32_t)current_thread->user_tid,
-                  current_thread->remaining_time_slice);
+    LOCAL_KTRACE("sched_preempt_timer_tick", (uint32_t)current_thread->user_tid,
+                 static_cast<uint32_t>(current_thread->remaining_time_slice));
 
     // did this tick complete the time slice?
     DEBUG_ASSERT(now > current_thread->last_started_running);
@@ -798,8 +801,8 @@ void sched_resched_internal() {
     thread_t* oldthread = current_thread;
     oldthread->preempt_pending = false;
 
-    LOCAL_KTRACE2("resched old pri", (uint32_t)oldthread->user_tid, effec_priority(oldthread));
-    LOCAL_KTRACE2("resched new pri", (uint32_t)newthread->user_tid, effec_priority(newthread));
+    LOCAL_KTRACE("resched old pri", (uint32_t)oldthread->user_tid, oldthread->effec_priority);
+    LOCAL_KTRACE("resched new pri", (uint32_t)newthread->user_tid, newthread->effec_priority);
 
     // call this even if we're not changing threads, to handle the case where another
     // core rescheduled us but the work disappeared before we got to run.
@@ -852,8 +855,8 @@ void sched_resched_internal() {
         percpu[cpu].stats.idle_time = zx_duration_add_duration(percpu[cpu].stats.idle_time, delta);
     }
 
-    LOCAL_KTRACE2("CS timeslice old", (uint32_t)oldthread->user_tid, oldthread->remaining_time_slice);
-    LOCAL_KTRACE2("CS timeslice new", (uint32_t)newthread->user_tid, newthread->remaining_time_slice);
+    LOCAL_KTRACE("CS timeslice old", (uint32_t)oldthread->user_tid, (uint32_t)oldthread->remaining_time_slice);
+    LOCAL_KTRACE("CS timeslice new", (uint32_t)newthread->user_tid, (uint32_t)newthread->remaining_time_slice);
 
     ktrace(TAG_CONTEXT_SWITCH, (uint32_t)newthread->user_tid,
            (cpu | (oldthread->state << 8) |

@@ -6,6 +6,10 @@ import("$zx/kernel/syscalls/abigen.gni")
 
 config("config") {
   include_dirs = [ "include" ]
+  if (!is_gcc) {
+    # Silence warning in Clang about GNU extension used in string_ref.h.
+    cflags_cc = [ "-Wno-gnu-string-literal-operator-template" ]
+  }
 }
 
 source_set("ktrace") {
@@ -20,6 +24,7 @@ source_set("ktrace") {
     "$zx/kernel/lib/hypervisor",
     "$zx/system/ulib/zircon-internal",
   ]
+  public_configs = [ ":config" ]
 }
 
 abigen("ktrace-info") {
