@@ -34,6 +34,12 @@ const (
 
 	// The test output directory to create on the Fuchsia device.
 	fuchsiaOutputDir = "/data/infra/testrunner"
+
+	// The filename to use for log_listener's stdout captured during Fuchsia tests.
+	syslogStdoutFilename = "syslog-stdout.txt"
+
+	// The filename to use for log_listener's stderr captured during Fuchsia tests.
+	syslogStderrFilename = "syslog-stderr.txt"
 )
 
 // Command-line flags
@@ -77,11 +83,16 @@ func (o *TestRunnerOutput) Complete() error {
 		return err
 	}
 
-	if err := botanist.ArchiveBuffer(o.Tar.Writer, bytes, "summary.json"); err != nil {
+	if err := o.TarFile(bytes, runtests.TestSummaryFilename); err != nil {
 		return err
 	}
 
 	return o.Tar.Writer.Close()
+}
+
+// TarFile tars a file into the output archive.
+func (o *TestRunnerOutput) TarFile(bytes []byte, filename string) error {
+	return botanist.ArchiveBuffer(o.Tar.Writer, bytes, filename)
 }
 
 type testResult struct {
@@ -220,6 +231,33 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx 
 			client: sshClient,
 		},
 	}
+
+	// Record log_listener output. This goes into the output archive as "syslog.txt"
+	session, err := sshClient.NewSession()
+	if err != nil {
+		return err
+	}
+	defer session.Close()
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	syslogStdout := new(bytes.Buffer)
+	syslogStderr := new(bytes.Buffer)
+	runner := &testrunner.SSHRunner{Session: session}
+	go runner.Run(ctx, []string{"bin/log_listener"}, syslogStdout, syslogStderr)
+
+	// Ensure the syslog is always included in the output, even if tests fail.
+	// TODO(IN-824): Run fuchsia/linux/mac tests in go-routines and emit errors on channels.
+	defer func() {
+		if err := output.TarFile(syslogStdout.Bytes(), syslogStdoutFilename); err != nil {
+			log.Println(err)
+		}
+
+		if err := output.TarFile(syslogStderr.Bytes(), syslogStderrFilename); err != nil {
+			log.Println(err)
+		}
+	}()
 
 	return runTests(tests, fuchsiaTester.Test, output)
 }
