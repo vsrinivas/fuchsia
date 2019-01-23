@@ -92,6 +92,11 @@ class ArchProvider {
   // TODO: Support watchpoints.
   virtual zx_status_t InstallHWBreakpoint(zx::thread*, uint64_t address);
   virtual zx_status_t UninstallHWBreakpoint(zx::thread*, uint64_t address);
+
+  virtual zx_status_t InstallWatchpoint(zx::thread*,
+                                        const debug_ipc::AddressRange&);
+  virtual zx_status_t UninstallWatchpoint(zx::thread*,
+                                          const debug_ipc::AddressRange&);
 };
 
 }  // namespace arch

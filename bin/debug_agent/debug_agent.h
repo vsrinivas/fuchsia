@@ -12,6 +12,7 @@
 #include "garnet/bin/debug_agent/debugged_job.h"
 #include "garnet/bin/debug_agent/debugged_process.h"
 #include "garnet/bin/debug_agent/remote_api.h"
+#include "garnet/bin/debug_agent/watchpoint.h"
 #include "garnet/lib/debug_ipc/helper/stream_buffer.h"
 #include "lib/fxl/macros.h"
 #include "lib/svc/cpp/services.h"
@@ -20,8 +21,9 @@ namespace debug_agent {
 
 // Main state and control for the debug agent.
 class DebugAgent : public RemoteAPI,
+                   public ProcessStartHandler,
                    public Breakpoint::ProcessDelegate,
-                   public ProcessStartHandler {
+                   public Watchpoint::ProcessDelegate {
  public:
   // A MessageLoopZircon should already be set up on the current thread.
   //
@@ -89,11 +91,21 @@ class DebugAgent : public RemoteAPI,
   void OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                       debug_ipc::SymbolTablesReply* reply) override;
 
-  // Breakpoint::ProcessDelegate implementation.
+  // Breakpoint::ProcessDelegate implementation --------------------------------
+
   zx_status_t RegisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                                  uint64_t address) override;
   void UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
                             uint64_t address) override;
+
+  // Watchpoint::ProcessDelegate implementation --------------------------------
+
+  zx_status_t RegisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
+                                 const debug_ipc::AddressRange&) override;
+  void UnregisterWatchpoint(Watchpoint*, zx_koid_t process_koid,
+                            const debug_ipc::AddressRange&) override;
+
+  // Job/Process/Thread Management ---------------------------------------------
 
   // Returns the debugged process/thread for the given koid(s) or null if not
   // found.
@@ -118,6 +130,7 @@ class DebugAgent : public RemoteAPI,
   std::map<zx_koid_t, std::unique_ptr<DebuggedJob>> jobs_;
 
   std::map<uint32_t, Breakpoint> breakpoints_;
+  std::map<uint32_t, Watchpoint> watchpoints_;
 
   // Whether the debug agent should exit.
   // The main reason for this is receiving a QuitNow message.

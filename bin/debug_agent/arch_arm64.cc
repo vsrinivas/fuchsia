@@ -244,5 +244,17 @@ zx_status_t ArchProvider::UninstallHWBreakpoint(zx::thread*, uint64_t address) {
   return ZX_ERR_NOT_SUPPORTED;
 }
 
+zx_status_t ArchProvider::InstallWatchpoint(zx::thread*,
+                                            const debug_ipc::AddressRange&) {
+  FXL_NOTIMPLEMENTED();
+  return ZX_OK;
+}
+
+zx_status_t ArchProvider::UninstallWatchpoint(zx::thread*,
+                                              const debug_ipc::AddressRange&) {
+  FXL_NOTIMPLEMENTED();
+  return ZX_OK;
+}
+
 }  // namespace arch
 }  // namespace debug_agent

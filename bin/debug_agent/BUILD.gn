@@ -31,6 +31,8 @@ static_library("lib") {
     "process_info.cc",
     "process_info.h",
     "process_memory_accessor.h",
+    "process_watchpoint.cc",
+    "process_watchpoint.h",
     "remote_api.h",
     "remote_api_adapter.cc",
     "remote_api_adapter.h",
@@ -38,6 +40,8 @@ static_library("lib") {
     "system_info.h",
     "unwind.cc",
     "unwind.h",
+    "watchpoint.cc",
+    "watchpoint.h",
   ]
 
   if (current_cpu == "x64") {
@@ -125,8 +129,13 @@ executable("unit_tests") {
     "breakpoint_unittest.cc",
     "debugged_job_unittest.cc",
     "debugged_thread_unittest.cc",
+    "mock_arch_provider.cc",
+    "mock_arch_provider.h",
+    "mock_process.cc",
+    "mock_process.h",
     "process_breakpoint_unittest.cc",
     "process_info_unittests.cc",
+    "process_watchpoint_unittest.cc",
     "system_info_unittests.cc",
   ]
 

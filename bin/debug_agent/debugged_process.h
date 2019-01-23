@@ -15,6 +15,7 @@
 #include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/helper/zircon_exception_watcher.h"
 #include "garnet/lib/debug_ipc/protocol.h"
+#include "garnet/lib/debug_ipc/records_utils.h"
 
 #include "lib/fxl/macros.h"
 
@@ -24,6 +25,8 @@ class Breakpoint;
 class DebugAgent;
 class DebuggedThread;
 class ProcessBreakpoint;
+class ProcessWatchpoint;
+class Watchpoint;
 
 class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
                         public ProcessMemoryAccessor {
@@ -88,6 +91,9 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   zx_status_t RegisterBreakpoint(Breakpoint* bp, uint64_t address);
   void UnregisterBreakpoint(Breakpoint* bp, uint64_t address);
 
+  zx_status_t RegisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
+  void UnregisterWatchpoint(Watchpoint*, const debug_ipc::AddressRange&);
+
  private:
   // ZirconExceptionWatcher implementation.
   void OnProcessTerminated(zx_koid_t process_koid) override;
@@ -130,6 +136,12 @@ class DebuggedProcess : public debug_ipc::ZirconExceptionWatcher,
   // Maps addresses to the ProcessBreakpoint at a location. The
   // ProcessBreakpoint can hold multiple Breakpoint objects.
   std::map<uint64_t, std::unique_ptr<ProcessBreakpoint>> breakpoints_;
+
+  // Each watchpoint holds the information about what range of addresses
+  // it spans.
+  std::map<debug_ipc::AddressRange, std::unique_ptr<ProcessWatchpoint>,
+           debug_ipc::AddressRangeCompare>
+      watchpoints_;
 
   // TODO(donosoc): Allow options to stop none, initial or all threads.
   bool resume_initial_thread_;

@@ -14,6 +14,7 @@
 #include "garnet/bin/debug_agent/process_breakpoint.h"
 #include "garnet/bin/debug_agent/process_info.h"
 #include "garnet/bin/debug_agent/process_memory_accessor.h"
+#include "garnet/bin/debug_agent/process_watchpoint.h"
 #include "garnet/lib/debug_ipc/agent_protocol.h"
 #include "garnet/lib/debug_ipc/helper/message_loop_zircon.h"
 #include "garnet/lib/debug_ipc/helper/zx_status.h"
@@ -214,6 +215,27 @@ void DebuggedProcess::UnregisterBreakpoint(Breakpoint* bp, uint64_t address) {
       pair.second->WillDeleteProcessBreakpoint(found->second.get());
     breakpoints_.erase(found);
   }
+}
+
+zx_status_t DebuggedProcess::RegisterWatchpoint(
+    Watchpoint* wp, const debug_ipc::AddressRange& range) {
+  // We should not install the same watchpoint twice.
+  FXL_DCHECK(watchpoints_.find(range) != watchpoints_.end());
+
+  auto process_wp = std::make_unique<ProcessWatchpoint>(wp, this, range);
+  if (zx_status_t res = process_wp->Init(); res != ZX_OK)
+    return res;
+
+  // We let the associated Watchpoint know about this installed process wp.
+  watchpoints_[range] = std::move(process_wp);
+  return ZX_OK;
+}
+
+void DebuggedProcess::UnregisterWatchpoint(
+    Watchpoint* wp, const debug_ipc::AddressRange& range) {
+  // The process watchpoint owns the resource and will free it upon destruction.
+  auto node = watchpoints_.extract(range);
+  FXL_DCHECK(!node.empty());
 }
 
 void DebuggedProcess::OnProcessTerminated(zx_koid_t process_koid) {

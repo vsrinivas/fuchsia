@@ -187,6 +187,35 @@ struct BreakpointStats {
   bool should_delete = false;
 };
 
+// Watchpoints -----------------------------------------------------------------
+
+struct AddressRange {
+  uint64_t begin = 0;
+  uint64_t end = 0;   // Non-inclusive.
+};
+
+struct ProcessWatchpointSetings {
+  // Must be non-zero.
+  uint64_t process_koid = 0;
+
+  // Zero indicates this is a process-wide breakpoint. Otherwise, this
+  // indicates the thread to break.
+  uint64_t thread_koid = 0;
+
+  AddressRange range = {};
+};
+
+// TODO(donosoc): This settings is not exhaustive, but it's enough to get the
+//                plumbing (get it?) going.
+struct WatchpointSettings {
+  // Assigned by the client. Analogous to BreakpointSettings::breakpoint_id.
+  uint32_t watchpoint_id = 0;
+
+  Stop stop = Stop::kAll;
+
+  std::vector<ProcessWatchpointSetings> locations;
+};
+
 // Information on one loaded module.
 struct Module {
   std::string name;
