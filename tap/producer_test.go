@@ -42,16 +42,32 @@ func ExampleProducer_Skip() {
 
 func ExampleProducer_many_test() {
 	p := tap.NewProducer(os.Stdout)
-	p.Plan(3)
+	p.Plan(4)
 	p.Ok(true, "- this test passed")
 	p.Ok(false, "")
 	p.Ok(false, "- this test failed")
 	p.Skip().Ok(true, "this test is skippable")
 	// Output:
 	// TAP version 13
-	// 1..3
+	// 1..4
 	// ok 1 - this test passed
 	// not ok 2
 	// not ok 3 - this test failed
 	// ok 4 # SKIP this test is skippable
+}
+
+func ExampleProducer_skip_todo_alternating() {
+	p := tap.NewProducer(os.Stdout)
+	p.Plan(4)
+	p.Skip().Ok(true, "implement this test")
+	p.Todo().Ok(false, "oh no!")
+	p.Skip().Ok(false, "skipped another")
+	p.Todo().Skip().Todo().Ok(true, "please don't write code like this")
+	// Output:
+	// TAP version 13
+	// 1..4
+	// ok 1 # SKIP implement this test
+	// not ok 2 # TODO oh no!
+	// not ok 3 # SKIP skipped another
+	// ok 4 # TODO please don't write code like this
 }

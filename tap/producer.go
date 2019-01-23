@@ -58,20 +58,20 @@ func (p *Producer) Ok(test bool, description string) {
 	case Skip:
 		p.writeln("%s %d # SKIP %s", ok, p.testNumber, description)
 	}
+
+	p.directive = None
 }
 
 // Todo returns a new Producer that prints TODO directives.
 func (p *Producer) Todo() *Producer {
-	newP := *p
-	newP.directive = Todo
-	return &newP
+	p.directive = Todo
+	return p
 }
 
 // Skip returns a new Producer that prints SKIP directives.
 func (p *Producer) Skip() *Producer {
-	newP := *p
-	newP.directive = Skip
-	return &newP
+	p.directive = Skip
+	return p
 }
 
 func (p *Producer) writeln(format string, args ...interface{}) {
