@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <stdint.h>
 #include <assert.h>
+#include <stdint.h>
 #include <zircon/compiler.h>
 
 __BEGIN_CDECLS
@@ -16,18 +16,29 @@ __BEGIN_CDECLS
 //
 // 12 group flags
 // 12 event id bits
-//  4 spare bits
+//  4 flag bits
 //  4 bit size (in uint64_t units)
 
-#define KTRACE_TAG(evt,grp,siz)   ((((grp)&0xFFF)<<20)|(((evt)&0xFFF)<<8)|(((siz)>>3)&0x0F))
+#define KTRACE_TAG_EX(evt,grp,siz,flgs) \
+        ( (((grp)&0xFFF)<<20) | (((evt)&0xFFF)<<8) | (((flgs)&0xF)<<4) | (((siz)>>3)&0x0F) )
+
+#define KTRACE_TAG(evt,grp,siz)   KTRACE_TAG_EX(evt, grp, siz, 0)
 
 #define KTRACE_TAG_16B(e,g)       KTRACE_TAG(e,g,16)
 #define KTRACE_TAG_32B(e,g)       KTRACE_TAG(e,g,32)
 #define KTRACE_TAG_NAME(e,g)      KTRACE_TAG(e,g,48)
 
+#define KTRACE_TAG_FLAGS(tag, flags) ((tag) | (((flags)&0xF)<<4))
+
 #define KTRACE_LEN(tag)           (((tag)&0xF)<<3)
 #define KTRACE_GROUP(tag)         (((tag)>>20)&0xFFF)
 #define KTRACE_EVENT(tag)         (((tag)>>8)&0xFFF)
+#define KTRACE_FLAGS(tag)         (((tag)>>4)&0xF)
+
+#define KTRACE_NAMED_EVENT_BIT    (0x800)
+
+#define KTRACE_NAMED_EVENT(id)    ((id) | KTRACE_NAMED_EVENT_BIT)
+#define KTRACE_EVENT_NAME_ID(tag) (KTRACE_EVENT(tag) & 0x7ff)
 
 #define KTRACE_HDRSIZE            (16)
 #define KTRACE_RECSIZE            (32)
@@ -48,6 +59,10 @@ __BEGIN_CDECLS
 #define KTRACE_GRP_ARCH           0x080
 
 #define KTRACE_GRP_TO_MASK(grp)   ((grp) << 20)
+
+#define KTRACE_FLAGS_CPU          (0x1)
+#define KTRACE_FLAGS_BEGIN        (0x2)
+#define KTRACE_FLAGS_END          (0x4)
 
 typedef struct ktrace_header {
     uint32_t tag;
@@ -80,8 +95,18 @@ enum {
 #include <lib/zircon-internal/ktrace-def.h>
 };
 
-#define TAG_PROBE_16(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,16)
-#define TAG_PROBE_24(n) KTRACE_TAG(((n)|0x800),KTRACE_GRP_PROBE,24)
+#define TAG_PROBE_16(id) KTRACE_TAG(KTRACE_NAMED_EVENT(id),KTRACE_GRP_PROBE,16)
+#define TAG_PROBE_24(id) KTRACE_TAG(KTRACE_NAMED_EVENT(id),KTRACE_GRP_PROBE,24)
+#define TAG_PROBE_32(id) KTRACE_TAG(KTRACE_NAMED_EVENT(id),KTRACE_GRP_PROBE,32)
+
+#define TAG_BEGIN_DURATION_16(id, group) KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
+                                                group,16,KTRACE_FLAGS_BEGIN)
+#define TAG_END_DURATION_16(id, group)   KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
+                                                group,16,KTRACE_FLAGS_END)
+#define TAG_BEGIN_DURATION_32(id, group) KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
+                                                group,32,KTRACE_FLAGS_BEGIN)
+#define TAG_END_DURATION_32(id, group)   KTRACE_TAG_EX(KTRACE_NAMED_EVENT(id), \
+                                                group,32,KTRACE_FLAGS_END)
 
 // Actions for ktrace control
 #define KTRACE_ACTION_START     1 // options = grpmask, 0 = all
