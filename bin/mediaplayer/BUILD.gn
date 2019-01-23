@@ -62,11 +62,11 @@ executable("mediaplayer_test_util_bin") {
   sources = [
     "test/command_queue.cc",
     "test/command_queue.h",
-    "test/test_util_main.cc",
     "test/mediaplayer_test_util_params.cc",
     "test/mediaplayer_test_util_params.h",
     "test/mediaplayer_test_util_view.cc",
     "test/mediaplayer_test_util_view.h",
+    "test/test_util_main.cc",
   ]
 
   deps = [

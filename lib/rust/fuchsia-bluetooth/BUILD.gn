@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
 
 rustc_library("fuchsia-bluetooth") {
   name = "fuchsia_bluetooth"
@@ -30,13 +30,13 @@ package("tests") {
   package_name = "bt-crate-tests"
 
   deps = [
-    ":fuchsia-bluetooth"
+    ":fuchsia-bluetooth",
   ]
 
   tests = [
     {
       name = "fuchsia_bluetooth_lib_test"
       dest = "bt-crate-unittests"
-    }
+    },
   ]
 }

@@ -2,9 +2,9 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/package.gni")
 import("//build/rust/rustc_binary.gni")
 import("//build/rust/rustc_library.gni")
-import("//build/package.gni")
 
 rustc_binary("bin") {
   name = "rolldice"
@@ -41,7 +41,7 @@ package("rolldice") {
     {
       path = rebase_path("meta/rolldice.cmx")
       dest = "rolldice.cmx"
-    }
+    },
   ]
 }
 
@@ -53,6 +53,8 @@ package("rolldice-tests") {
   ]
 
   tests = [
-    { name = "rolldice_lib_lib_test" },
+    {
+      name = "rolldice_lib_lib_test"
+    },
   ]
 }

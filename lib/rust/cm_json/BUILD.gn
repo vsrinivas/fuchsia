@@ -24,20 +24,18 @@ rustc_library("cm_json") {
     "//third_party/rust-crates/rustc_deps:valico",
   ]
 
-  non_rust_deps = [
-    ":cm_schema_json"
-  ]
+  non_rust_deps = [ ":cm_schema_json" ]
 }
 
 test_package("cm_json_tests") {
-    deps = [
-        ":cm_json",
-    ]
+  deps = [
+    ":cm_json",
+  ]
 
-    tests = [
-        {
-            name = "cm_json_lib_test"
-            dest = "cm_json_tests"
-        }
-    ]
+  tests = [
+    {
+      name = "cm_json_lib_test"
+      dest = "cm_json_tests"
+    },
+  ]
 }

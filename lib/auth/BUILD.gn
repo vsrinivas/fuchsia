@@ -13,7 +13,11 @@ package("auth_lib_unittests") {
   ]
 
   tests = [
-    { name = "auth_cache_lib_test" },
-    { name = "auth_store_lib_test" },
+    {
+      name = "auth_cache_lib_test"
+    },
+    {
+      name = "auth_store_lib_test"
+    },
   ]
 }

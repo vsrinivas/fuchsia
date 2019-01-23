@@ -41,10 +41,10 @@ executable("tests") {
 
   deps = [
     ":cmx",
-    "//garnet/public/lib/json",
-    "//garnet/public/lib/pkg_url",
     "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
     "//third_party/googletest:gmock",
     "//third_party/rapidjson",
   ]

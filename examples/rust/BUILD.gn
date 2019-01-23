@@ -8,13 +8,19 @@ package("garnet-rust-examples") {
   testonly = true
 
   deps = [
-    "testing:testing-tests", #TARGET
+    "testing:testing-tests",  #TARGET
   ]
 
   # You need to include these for them to end up in the final image
   tests = [
-    { name = "testing_lib_test" },
-    { name = "testing_integration_test" },
-    { name = "testing_integration_test_two" },
+    {
+      name = "testing_lib_test"
+    },
+    {
+      name = "testing_integration_test"
+    },
+    {
+      name = "testing_integration_test_two"
+    },
   ]
 }

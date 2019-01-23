@@ -141,6 +141,7 @@ executable("tests") {
   deps = [
     ":lib",
     "//garnet/lib/debug_ipc:tests",
+
     # TODO(DX-879): Some HW capabilities (like HW breakpoints) are not well
     #               emulated by QEMU without KVM. This will sometimes make tests
     #               fail or even crash QEMU.
@@ -170,38 +171,48 @@ package("debug_agent_tests") {
   ]
 
   # Test binaries
-  binaries = [{
+  binaries = [
+    {
       shell = true
       name = "debug_agent_so_test"
-    }, {
+    },
+    {
       name = "process_loop"
-    }, {
+    },
+    {
       name = "process_spawner"
-   }]
+    },
+  ]
 
   # Add the platform specific test binaries
 
   if (current_cpu == "x64") {
-    deps += [
-      "//garnet/bin/debug_agent/test_data:write_register_test_exe",
+    deps += [ "//garnet/bin/debug_agent/test_data:write_register_test_exe" ]
+    binaries += [
+      {
+        name = "write_register_test_exe"
+      },
     ]
-    binaries += [{
-      name = "write_register_test_exe"
-    }]
   }
 
-  loadable_modules = [{
-    name = "debug_agent_test_so.so"
-  }]
+  loadable_modules = [
+    {
+      name = "debug_agent_test_so.so"
+    },
+  ]
 
-  tests = [{
-    name = "debug_agent_tests"
-  }]
+  tests = [
+    {
+      name = "debug_agent_tests"
+    },
+  ]
 
-  meta = [{
-    path = "meta/debug_agent_tests.cmx"
-    dest = "debug_agent_tests.cmx"
-  }]
+  meta = [
+    {
+      path = "meta/debug_agent_tests.cmx"
+      dest = "debug_agent_tests.cmx"
+    },
+  ]
 
   if (include_test_app) {
     deps += [ ":zxdb_test_app" ]

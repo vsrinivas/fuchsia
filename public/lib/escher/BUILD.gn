@@ -185,13 +185,11 @@ source_set("vk_mem_alloc") {
   ]
 
   sources = [
-    "vk/vk_mem_alloc.cc",
     "third_party/VulkanMemoryAllocator/vk_mem_alloc.h",
+    "vk/vk_mem_alloc.cc",
   ]
 
-  public_configs = [
-    ":vk_mem_alloc_error_suppression",
-  ]
+  public_configs = [ ":vk_mem_alloc_error_suppression" ]
 }
 
 source_set("escher") {
@@ -210,8 +208,8 @@ source_set("escher") {
   ]
 
   public_deps = [
-    ":vulkan",
     ":vk_mem_alloc",
+    ":vulkan",
     "//garnet/public/lib/escher/base:escher_base",
     "//garnet/public/lib/fxl",
   ]
@@ -271,10 +269,6 @@ source_set("escher") {
     "impl/gpu_uploader.h",
     "impl/image_cache.cc",
     "impl/image_cache.h",
-    "impl/naive_buffer.cc",
-    "impl/naive_buffer.h",
-    "impl/naive_image.cc",
-    "impl/naive_image.h",
     "impl/mesh_manager.cc",
     "impl/mesh_manager.h",
     "impl/mesh_shader_binding.cc",
@@ -307,6 +301,10 @@ source_set("escher") {
     "impl/model_shadow_map_lighting_pass.h",
     "impl/model_shadow_map_pass.cc",
     "impl/model_shadow_map_pass.h",
+    "impl/naive_buffer.cc",
+    "impl/naive_buffer.h",
+    "impl/naive_image.cc",
+    "impl/naive_image.h",
     "impl/ssdo_accelerator.cc",
     "impl/ssdo_accelerator.h",
     "impl/ssdo_sampler.cc",

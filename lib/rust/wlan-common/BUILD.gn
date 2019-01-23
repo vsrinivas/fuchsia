@@ -20,8 +20,12 @@ package("wlan-common-tests") {
   testonly = true
 
   deps = [
-    ":wlan-common"
+    ":wlan-common",
   ]
 
-  tests = [ { name = "wlan_common_lib_test" } ]
+  tests = [
+    {
+      name = "wlan_common_lib_test"
+    },
+  ]
 }

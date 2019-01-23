@@ -44,8 +44,8 @@ metrics_registry("cobalt_sw_delivery_registry") {
 
 package("amber") {
   deps = [
-    "//garnet/go/src/grand_unified_binary",
     ":cobalt_sw_delivery_registry",
+    "//garnet/go/src/grand_unified_binary",
   ]
 
   binaries = [
@@ -94,9 +94,10 @@ package("amber") {
       dest = "pkgsvr.cmx"
     },
     {
-      path = rebase_path("//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
+      path = rebase_path(
+              "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
       dest = "system_updater.cmx"
-    }
+    },
   ]
 }
 

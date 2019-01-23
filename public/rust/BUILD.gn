@@ -14,11 +14,11 @@ package("rust-crates-tests") {
     "fuchsia-cobalt",
     "fuchsia-component",
     "fuchsia-cprng",
-    "fuchsia-hyper",
-    "fuchsia-syslog",
     "fuchsia-framebuffer",
+    "fuchsia-hyper",
     "fuchsia-inspect",
     "fuchsia-merkle",
+    "fuchsia-syslog",
     "fuchsia-syslog",
     "fuchsia-trace",
     "fuchsia-vfs/fuchsia-vfs-pseudo-fs",
@@ -31,22 +31,56 @@ package("rust-crates-tests") {
   ]
 
   tests = [
-    { name = "fdio_lib_test" },
-    { name = "fuchsia_archive_lib_test" },
-    { name = "fuchsia_async_lib_test" },
-    { name = "fuchsia_cobalt_lib_test" },
-    { name = "fuchsia_cprng_lib_test" },
-    { name = "fuchsia_hyper_lib_test" },
-    { name = "fuchsia_inspect_lib_test" },
-    { name = "fuchsia_merkle_lib_test" },
-    { name = "fuchsia_syslog_lib_test" },
-    { name = "fuchsia_trace_lib_test" },
-    { name = "fuchsia_vfs_pseudo_fs_lib_test" },
-    { name = "fuchsia_zircon_lib_test" },
-    { name = "mapped_vmo_lib_test" },
-    { name = "mundane_lib_test" },
-    { name = "packet_lib_test" },
-    { name = "shared_buffer_lib_test" },
-    { name = "zerocopy_lib_test" },
+    {
+      name = "fdio_lib_test"
+    },
+    {
+      name = "fuchsia_archive_lib_test"
+    },
+    {
+      name = "fuchsia_async_lib_test"
+    },
+    {
+      name = "fuchsia_cobalt_lib_test"
+    },
+    {
+      name = "fuchsia_cprng_lib_test"
+    },
+    {
+      name = "fuchsia_hyper_lib_test"
+    },
+    {
+      name = "fuchsia_inspect_lib_test"
+    },
+    {
+      name = "fuchsia_merkle_lib_test"
+    },
+    {
+      name = "fuchsia_syslog_lib_test"
+    },
+    {
+      name = "fuchsia_trace_lib_test"
+    },
+    {
+      name = "fuchsia_vfs_pseudo_fs_lib_test"
+    },
+    {
+      name = "fuchsia_zircon_lib_test"
+    },
+    {
+      name = "mapped_vmo_lib_test"
+    },
+    {
+      name = "mundane_lib_test"
+    },
+    {
+      name = "packet_lib_test"
+    },
+    {
+      name = "shared_buffer_lib_test"
+    },
+    {
+      name = "zerocopy_lib_test"
+    },
   ]
 }

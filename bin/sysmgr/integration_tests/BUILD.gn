@@ -37,10 +37,10 @@ executable("mock_resolver") {
   ]
 
   deps = [
+    "//garnet/public/fidl/fuchsia.pkg",
     "//garnet/public/lib/component/cpp",
     "//garnet/public/lib/fidl/cpp",
     "//garnet/public/lib/fxl",
-    "//garnet/public/fidl/fuchsia.pkg",
     "//zircon/public/lib/async-default",
     "//zircon/public/lib/async-loop-cpp",
     "//zircon/public/lib/zx",
@@ -93,9 +93,9 @@ package("integration_tests") {
 
   deps = [
     ":mock_resolver",
-    ":test_sysmgr_service",
-    ":service_startup_test",
     ":package_updating_loader_test",
+    ":service_startup_test",
+    ":test_sysmgr_service",
   ]
 
   binaries = [

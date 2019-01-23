@@ -3,8 +3,8 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_binary.gni")
 import("//build/persist_logs.gni")
+import("//build/rust/rustc_binary.gni")
 
 declare_args() {
   # Controls how many bytes of space on disk are used to persist device logs.

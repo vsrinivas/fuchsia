@@ -2,10 +2,10 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/fuzzing/fuzzer.gni")
 import("//build/package.gni")
 import("//build/test.gni")
 import("//build/test/test_package.gni")
-import("//build/fuzzing/fuzzer.gni")
 
 executable("bin") {
   output_name = "mdns"
@@ -140,28 +140,31 @@ test_package("mdns_tests") {
   tests = [
     {
       name = "mdns_tests"
-    }
+    },
   ]
 }
 
 fuzz_target("packet_reader_fuzzer") {
   testonly = true
   sources = [
-    "packet_reader_fuzzer.cc",
-    "dns_reading.cc",
-    "dns_reading.h",
     "dns_message.cc",
     "dns_message.h",
-    "packet_reader.h",
+    "dns_reading.cc",
+    "dns_reading.h",
     "packet_reader.cc",
-   ]
-   deps = [
-    "//garnet/public/lib/fxl",
+    "packet_reader.h",
+    "packet_reader_fuzzer.cc",
+  ]
+  deps = [
     "//garnet/lib/inet",
-   ]
+    "//garnet/public/lib/fxl",
+  ]
 }
 
 fuzz_package("mdns_fuzzers") {
   targets = [ ":packet_reader_fuzzer" ]
-  sanitizers = [ "asan", "ubsan" ]
+  sanitizers = [
+    "asan",
+    "ubsan",
+  ]
 }

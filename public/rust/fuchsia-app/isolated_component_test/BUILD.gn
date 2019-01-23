@@ -31,7 +31,7 @@ rustc_binary("fuchsia_app_test_outer_component_bin") {
 
 test_package("fuchsia_app_test_outer_component") {
   deps = [
-    ":fuchsia_app_test_outer_component_bin"
+    ":fuchsia_app_test_outer_component_bin",
   ]
 
   tests = [
@@ -48,9 +48,9 @@ rustc_binary("fuchsia_app_test_middle_component_bin") {
     ":echos-rustc",
     "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
-    "//garnet/public/lib/fidl/rust/fidl",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
   ]
@@ -59,7 +59,7 @@ rustc_binary("fuchsia_app_test_middle_component_bin") {
 
 package("fuchsia_app_test_middle_component") {
   deps = [
-    ":fuchsia_app_test_middle_component_bin"
+    ":fuchsia_app_test_middle_component_bin",
   ]
 
   binary = "rust_crates/fuchsia_app_test_middle_component"
@@ -88,7 +88,7 @@ rustc_binary("fuchsia_app_test_inner_component_bin") {
 
 package("fuchsia_app_test_inner_component") {
   deps = [
-    ":fuchsia_app_test_inner_component_bin"
+    ":fuchsia_app_test_inner_component_bin",
   ]
 
   binary = "rust_crates/fuchsia_app_test_inner_component"

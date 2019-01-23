@@ -17,9 +17,9 @@ source_set("fostr") {
   ]
 
   if (is_fuchsia) {
-    public_deps = [ 
-      "//zircon/public/lib/zx",
+    public_deps = [
       "//garnet/public/lib/fidl/cpp",
+      "//zircon/public/lib/zx",
     ]
   } else {
     public_deps = [
@@ -28,7 +28,7 @@ source_set("fostr") {
   }
 
   deps = [
-    ":fostr_shared"
+    ":fostr_shared",
   ]
 
   public_configs = [ "//garnet/public:config" ]

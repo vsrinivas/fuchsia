@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "wlantool2"
@@ -34,18 +34,24 @@ package("wlantool2") {
     ":bin",
   ]
 
-  binaries = [ {
-    name = "rust_crates/wlantool2"
-    dest = "wlantool2"
-    } ]
+  binaries = [
+    {
+      name = "rust_crates/wlantool2"
+      dest = "wlantool2"
+    },
+  ]
 }
 
 package("wlantool2-tests") {
   testonly = true
 
   deps = [
-    ":bin"
+    ":bin",
   ]
 
-  tests = [ { name = "wlantool2_bin_test" } ]
+  tests = [
+    {
+      name = "wlantool2_bin_test"
+    },
+  ]
 }

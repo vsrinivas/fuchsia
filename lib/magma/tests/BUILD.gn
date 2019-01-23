@@ -102,6 +102,7 @@ package("vulkan-tests") {
       },
       {
         name = "vkloop"
+
         # TODO(MA-530): re-enable once working again.
         disabled = true
       },
@@ -115,6 +116,7 @@ package("vulkan-tests") {
       },
       {
         name = "vkpriority"
+
         # No available hardware to run it on; cannot run with an Intel GPU.
         disabled = true
       },

@@ -12,7 +12,7 @@ package("token_manager_integration_tests") {
   deps = [
     ":e2e_dev",
     "//garnet/bin/auth/testing/dev_auth_provider:dev_auth_provider",
-    "//garnet/bin/auth/testing/dev_auth_provider_iotid:dev_auth_provider_iotid"
+    "//garnet/bin/auth/testing/dev_auth_provider_iotid:dev_auth_provider_iotid",
   ]
 
   binaries = [
@@ -36,7 +36,8 @@ package("token_manager_integration_tests") {
       dest = "dev_auth_provider.cmx"
     },
     {
-      path = rebase_path("//garnet/bin/auth/testing/meta/dev_auth_provider_iotid.cmx")
+      path = rebase_path(
+              "//garnet/bin/auth/testing/meta/dev_auth_provider_iotid.cmx")
       dest = "dev_auth_provider_iotid.cmx"
     },
   ]

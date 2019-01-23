@@ -23,8 +23,8 @@ executable("overnetstack_unittests") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.overnet",
-    "//third_party/googletest:gtest",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
   ]
 }
 
@@ -32,15 +32,15 @@ executable("bin") {
   output_name = "overnetstack"
 
   sources = [
-    "bound_channel.h",
     "bound_channel.cc",
+    "bound_channel.h",
     "main.cc",
-    "mdns.h",
     "mdns.cc",
-    "service.h",
-    "service.cc",
-    "overnet_app.h",
+    "mdns.h",
     "overnet_app.cc",
+    "overnet_app.h",
+    "service.cc",
+    "service.h",
     "udp_nub.h",
   ]
 
@@ -84,7 +84,7 @@ package("overnetstack_tests") {
 
   tests = [
     {
-       name = "overnetstack_unittests"
-    }
+      name = "overnetstack_unittests"
+    },
   ]
 }

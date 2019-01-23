@@ -4,8 +4,8 @@
 
 import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
-import("//build/package.gni")
 import("//build/go/toolchain.gni")
+import("//build/package.gni")
 
 go_library("lib") {
   name = "system_updater"
@@ -21,14 +21,16 @@ go_library("lib") {
 
 go_test("system_updater_test") {
   gopackage = "system_updater"
-  deps = [ ":lib" ]
+  deps = [
+    ":lib",
+  ]
 }
 
 package("system_updater_tests") {
   testonly = true
 
   deps = [
-    ":system_updater_test"
+    ":system_updater_test",
   ]
 
   resources = [
@@ -39,12 +41,12 @@ package("system_updater_tests") {
     {
       path = rebase_path("test_packages")
       dest = "packages"
-    }
+    },
   ]
 
   tests = [
     {
       name = "system_updater_test"
-    }
+    },
   ]
 }

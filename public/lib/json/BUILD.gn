@@ -28,8 +28,8 @@ executable("tests") {
 
   deps = [
     ":json",
-    "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
     "//garnet/public/lib/gtest",
     "//third_party/rapidjson",
   ]

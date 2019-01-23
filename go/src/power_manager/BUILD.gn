@@ -11,16 +11,18 @@ go_library("power_manager_lib") {
   name = "power_manager"
 
   deps = [
-    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/fidl/fuchsia.power($go_toolchain)",
-    "//garnet/public/lib/syslog/go/src/syslog",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
     "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/syslog/go/src/syslog",
   ]
 }
 
 go_test("power_manager_test") {
   gopackage = "power_manager"
-  deps = [ ":power_manager_lib" ]
+  deps = [
+    ":power_manager_lib",
+  ]
 }
 
 package("power_manager_gotests") {

@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_library.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
 
 rustc_library("bt-avdtp") {
   name = "bt_avdtp"
@@ -16,8 +16,8 @@ rustc_library("bt-avdtp") {
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
     "//third_party/rust-crates/rustc_deps:pin-utils",
     "//third_party/rust-crates/rustc_deps:slab",
   ]
@@ -29,13 +29,13 @@ package("tests") {
   package_name = "bt-avdtp-tests"
 
   deps = [
-    ":bt-avdtp"
+    ":bt-avdtp",
   ]
 
   tests = [
     {
       name = "bt_avdtp_lib_test"
       dest = "bt-avdtp-unittests"
-    }
+    },
   ]
 }

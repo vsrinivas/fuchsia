@@ -24,9 +24,9 @@ package("bluetooth_tests") {
       dest = "bt-host-integration-tests"
     },
     {
-     name = "rust_crates/host_lifecycle"
-     dest = "bt-host-lifecycle-test"
-   },
+      name = "rust_crates/host_lifecycle"
+      dest = "bt-host-lifecycle-test"
+    },
   ]
 }
 

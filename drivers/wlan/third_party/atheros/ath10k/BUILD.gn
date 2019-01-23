@@ -33,10 +33,10 @@ driver_module("ath10k_driver") {
     "hif.h",
     "htc.c",
     "htc.h",
-    "htt_rx.c",
-    "htt_tx.c",
     "htt.c",
     "htt.h",
+    "htt_rx.c",
+    "htt_tx.c",
     "hw.c",
     "hw.h",
     "ieee80211.h",
@@ -60,11 +60,11 @@ driver_module("ath10k_driver") {
     "txrx.h",
     "utils.c",
     "utils.h",
-    "wmi.c",
-    "wmi.h",
     "wmi-ops.h",
     "wmi-tlv.c",
     "wmi-tlv.h",
+    "wmi.c",
+    "wmi.h",
     "wow.h",
   ]
 
@@ -111,10 +111,10 @@ if (internal_access) {
   foreach(fw_file, all_fw_files) {
     copy("ath10k-firmware-copy-" + fw_file) {
       sources = [
-        "firmware/" + fw_file
+        "firmware/" + fw_file,
       ]
       outputs = [
-        "$root_out_dir/firmware/ath10k/" + fw_file
+        "$root_out_dir/firmware/ath10k/" + fw_file,
       ]
     }
   }
@@ -127,9 +127,11 @@ package("ath10k") {
     ":ath10k_driver",
   ]
 
-  drivers = [ {
-        name = "ath10k.so"
-      } ]
+  drivers = [
+    {
+      name = "ath10k.so"
+    },
+  ]
 
   if (internal_access) {
     libraries = []
@@ -145,7 +147,7 @@ package("ath10k") {
       libraries += [
         {
           name = "firmware/ath10k/" + fw_file
-        }
+        },
       ]
     }
   }
@@ -185,8 +187,8 @@ package("ath10k_test") {
   package_name = "ath10k_test"
 
   deps = [
-    ":sparse_array_tests",
     ":bitarr_tests",
+    ":sparse_array_tests",
   ]
 
   tests = [

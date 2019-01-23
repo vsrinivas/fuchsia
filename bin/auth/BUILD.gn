@@ -55,21 +55,28 @@ package("account_handler") {
   ]
 }
 
-
 package("auth_bin_unittests") {
   testonly = true
 
   deps = [
-    "account_manager:account_manager",
     "account_handler:account_handler",
+    "account_manager:account_manager",
     "testing/dev_auth_provider:dev_auth_provider",
     "testing/dev_auth_provider_iotid:dev_auth_provider_iotid",
   ]
 
   tests = [
-    { name = "account_manager_bin_test" },
-    { name = "account_handler_bin_test" },
-    { name = "dev_auth_provider_bin_test"},
-    { name = "dev_auth_provider_iotid_bin_test"},
+    {
+      name = "account_manager_bin_test"
+    },
+    {
+      name = "account_handler_bin_test"
+    },
+    {
+      name = "dev_auth_provider_bin_test"
+    },
+    {
+      name = "dev_auth_provider_iotid_bin_test"
+    },
   ]
 }
