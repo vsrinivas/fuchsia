@@ -307,6 +307,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   fit::deferred_action<fit::closure> finish_initialization_;
 
+  // Set to |true| when sessionmgr starts its terminating sequence;  this flag
+  // can be used to determine whether to reject vending FIDL services.
+  bool terminating_ = false;
+
   FXL_DISALLOW_COPY_AND_ASSIGN(SessionmgrImpl);
 };
 

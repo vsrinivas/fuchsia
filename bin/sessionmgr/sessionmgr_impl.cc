@@ -195,19 +195,21 @@ void SessionmgrImpl::Initialize(
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
   // for the first time.
-  finish_initialization_ = fit::defer<fit::closure>([this,
-        session_shell_url = session_shell.url,
-        ledger_token_manager = std::move(ledger_token_manager),
-        story_shell = std::move(story_shell)] () mutable {
-    InitializeLedger(std::move(ledger_token_manager));
-    InitializeDeviceMap();
-    InitializeMessageQueueManager();
-    InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
-    ConnectSessionShellToStoryProvider();
-    AtEnd([this](std::function<void()> cont) { TerminateSessionShell(cont); });
-    InitializeClipboard();
-    ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
-  });
+  finish_initialization_ = fit::defer<fit::closure>(
+      [this, session_shell_url = session_shell.url,
+       ledger_token_manager = std::move(ledger_token_manager),
+       story_shell = std::move(story_shell)]() mutable {
+        InitializeLedger(std::move(ledger_token_manager));
+        InitializeDeviceMap();
+        InitializeMessageQueueManager();
+        InitializeMaxwellAndModular(session_shell_url, std::move(story_shell));
+        ConnectSessionShellToStoryProvider();
+        AtEnd([this](std::function<void()> cont) {
+          TerminateSessionShell(cont);
+        });
+        InitializeClipboard();
+        ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
+      });
 
   InitializeUser(std::move(account), std::move(agent_token_manager),
                  std::move(user_context));
@@ -351,6 +353,9 @@ void SessionmgrImpl::InitializeDeviceMap() {
       fuchsia::ledger::PageId());
   user_environment_->AddService<fuchsia::modular::DeviceMap>(
       [this](fidl::InterfaceRequest<fuchsia::modular::DeviceMap> request) {
+        if (terminating_) {
+          return;
+        }
         // device_map_impl_ may be reset before user_environment_.
         if (device_map_impl_) {
           device_map_impl_->Connect(std::move(request));
@@ -365,6 +370,9 @@ void SessionmgrImpl::InitializeClipboard() {
                                 clipboard_agent_controller_.NewRequest());
   user_environment_->AddService<fuchsia::modular::Clipboard>(
       [this](fidl::InterfaceRequest<fuchsia::modular::Clipboard> request) {
+        if (terminating_) {
+          return;
+        }
         services_from_clipboard_agent_->ConnectToService(
             fuchsia::modular::Clipboard::Name_, request.TakeChannel());
       });
@@ -421,15 +429,27 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
       startup_context_, std::move(context_engine),
       [this](fidl::InterfaceRequest<fuchsia::modular::VisibleStoriesProvider>
                  request) {
+        if (terminating_) {
+          return;
+        }
         visible_stories_handler_->AddProviderBinding(std::move(request));
       },
       [this](fidl::InterfaceRequest<fuchsia::modular::StoryProvider> request) {
+        if (terminating_) {
+          return;
+        }
         story_provider_impl_->Connect(std::move(request));
       },
       [this](fidl::InterfaceRequest<fuchsia::modular::FocusProvider> request) {
+        if (terminating_) {
+          return;
+        }
         focus_handler_->AddProviderBinding(std::move(request));
       },
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+        if (terminating_) {
+          return;
+        }
         puppet_master_impl_->Connect(std::move(request));
       }));
   AtEnd(Reset(&user_intelligence_provider_impl_));
@@ -493,8 +513,7 @@ void SessionmgrImpl::InitializeMaxwellAndModular(
                                                  kMaxwellUrl, kMaxwellUrl));
 
   user_intelligence_provider_impl_->StartAgents(
-      std::move(maxwell_app_component_context),
-      options_.session_agents,
+      std::move(maxwell_app_component_context), options_.session_agents,
       options_.startup_agents);
 
   // Setup for kModuleResolverUrl
@@ -676,23 +695,35 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_services_.AddService<fuchsia::modular::SessionShellContext>(
       [this](fidl::InterfaceRequest<fuchsia::modular::SessionShellContext>
                  request) {
+        if (terminating_) {
+          return;
+        }
         finish_initialization_.call();
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::ComponentContext>(
       [this](
           fidl::InterfaceRequest<fuchsia::modular::ComponentContext> request) {
+        if (terminating_) {
+          return;
+        }
         finish_initialization_.call();
         session_shell_component_context_impl_->Connect(std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::PuppetMaster>(
       [this](fidl::InterfaceRequest<fuchsia::modular::PuppetMaster> request) {
+        if (terminating_) {
+          return;
+        }
         finish_initialization_.call();
         puppet_master_impl_->Connect(std::move(request));
       });
   session_shell_services_.AddService<fuchsia::modular::IntelligenceServices>(
       [this](fidl::InterfaceRequest<fuchsia::modular::IntelligenceServices>
                  request) {
+        if (terminating_) {
+          return;
+        }
         finish_initialization_.call();
         fuchsia::modular::ComponentScope component_scope;
         component_scope.set_global_scope(fuchsia::modular::GlobalScope());
@@ -729,7 +760,7 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   session_shell_view_host_->ConnectView(std::move(view_owner));
-}
+}  // namespace modular
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
   session_shell_app_->Teardown(kBasicTimeout, [this, done] {
@@ -774,6 +805,7 @@ void SessionmgrImpl::SwapSessionShell(
 
 void SessionmgrImpl::Terminate(std::function<void()> done) {
   FXL_LOG(INFO) << "Sessionmgr::Terminate()";
+  terminating_ = true;
   at_end_done_ = std::move(done);
 
   TerminateRecurse(at_end_.size() - 1);
