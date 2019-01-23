@@ -112,6 +112,9 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define MPHY_TX_FSM_RETRY_COUNT 500
 #define LINK_STARTUP_UCCS_RETRY_COUNT 200
 
+#define UFS_NUTMRS_SHIFT    16
+#define UTP_UFS_STORAGE_CMD (1 << 4)
+
 // UFS HC Register Offsets
 enum {
     REG_CONTROLLER_CAPABILITIES           = 0x00,
@@ -178,6 +181,25 @@ enum uic_dme_type {
     DME_SET = 0x02,
     // Control
     DME_ENABLE = 0x12,
+};
+
+enum utp_data_tfr_dirn {
+    UTP_NO_DATA_TFR,
+    UTP_HOST_TO_DEVICE = 0x02,
+    UTP_DEVICE_TO_HOST = 0x04,
+};
+
+enum upiu_cmd_flags {
+    UPIU_CMD_FLAGS_NONE,
+    UPIU_CMD_FLAGS_MAX,
+};
+
+// UFS UPIU transaction type
+enum upiu_trans_type {
+    UPIU_TYPE_NOP_OUT   = 0x00,
+    UPIU_TYPE_QUERY_REQ = 0x16,
+    UPIU_TYPE_NOP_IN    = 0x20,
+    UPIU_TYPE_REJECT    = 0x3F,
 };
 
 enum ufs_link_change_stage {

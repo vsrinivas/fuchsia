@@ -126,14 +126,14 @@ static void ufs_create_nop_out_upiu(ufs_hba_t* hba, uint8_t free_slot) {
     uint32_t i;
 
     utrd = hba->lrb_buf[free_slot].utrd;
-    utrd->ct_flags = (uint8_t)(0x0 | (1 << 4));
+    utrd->ct_flags = (uint8_t)(UTP_NO_DATA_TFR | UTP_UFS_STORAGE_CMD);
     utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_nop_resp_upiu_t) >> 2));
     utrd->prd_table_len = 0;
     utrd->ocs = 0xf;
 
     cmd_upiu = (ufs_nop_req_upiu_t*)(hba->lrb_buf[free_slot].cmd_upiu);
-    cmd_upiu->trans_type = 0x0;
-    cmd_upiu->flags = 0x0;
+    cmd_upiu->trans_type = UPIU_TYPE_NOP_OUT;
+    cmd_upiu->flags = UPIU_CMD_FLAGS_NONE;
     cmd_upiu->res1 = 0x0;
     cmd_upiu->task_tag = free_slot;
     cmd_upiu->res2 = 0x0;
@@ -159,14 +159,13 @@ static void ufs_create_query_upiu(ufs_hba_t* hba, uint8_t opcode,
     uint32_t i;
 
     utrd = hba->lrb_buf[free_slot].utrd;
-    // UTP no data transfer and UTP STORAGE_UFS cmd
-    utrd->ct_flags = (uint8_t)(0x0 | (1 << 4));
+    utrd->ct_flags = (uint8_t)(UTP_NO_DATA_TFR | UTP_UFS_STORAGE_CMD);
     utrd->resp_upiu_len = LE16((uint16_t)(sizeof(ufs_query_req_upiu_t) >> 2));
     utrd->prd_table_len = 0;
 
     query_upiu = (ufs_query_req_upiu_t*)(hba->lrb_buf[free_slot].cmd_upiu);
-    query_upiu->trans_type = 0x16;
-    query_upiu->flags = 0x0;
+    query_upiu->trans_type = UPIU_TYPE_QUERY_REQ;
+    query_upiu->flags = UPIU_CMD_FLAGS_NONE;
     query_upiu->res1 = 0x0;
     query_upiu->task_tag = free_slot;
     query_upiu->res2 = 0x0;
@@ -521,7 +520,7 @@ static int32_t ufshc_read_nop_resp(ufs_hba_t* hba, uint8_t free_slot) {
         return UFS_NOP_OUT_OCS_FAIL;
     }
 
-    if ((resp_upiu->trans_type & 0x3F) != 0x20) {
+    if ((resp_upiu->trans_type & UPIU_TYPE_REJECT) != UPIU_TYPE_NOP_IN) {
         UFS_TRACE("Invalid nop in!\n");
         return UFS_INVALID_NOP_IN;
     }
@@ -684,7 +683,7 @@ static inline void ufshc_read_capabilities(ufs_hba_t* hba,
 
     // nutrs and nutmrs are 0 based values
     hba->nutrs = (hba->caps & MASK_TRANSFER_REQUESTS_SLOTS) + 1;
-    hba->nutmrs = ((hba->caps & MASK_TASK_MANAGEMENT_REQUEST_SLOTS) >> 16) + 1;
+    hba->nutmrs = ((hba->caps & MASK_TASK_MANAGEMENT_REQUEST_SLOTS) >> UFS_NUTMRS_SHIFT) + 1;
     UFS_TRACE("ufshcd_capabilities hba->nutrs=%d hba->nutmrs=%d.\n",
               hba->nutrs, hba->nutmrs);
 }
