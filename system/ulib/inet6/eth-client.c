@@ -82,8 +82,9 @@ zx_status_t eth_queue_tx(eth_client_t* eth, void* cookie,
         .flags = options,
         .cookie = (uint64_t)cookie,
     };
-    IORING_TRACE("eth:tx+ c=%p o=%u l=%u f=%u\n",
+    IORING_TRACE("eth:tx+ c=0x%08lx o=%u l=%u f=%u\n",
                  e.cookie, e.offset, e.length, e.flags);
+
     return zx_fifo_write(eth->tx_fifo, sizeof(e), &e, 1, NULL);
 }
 
@@ -95,7 +96,7 @@ zx_status_t eth_queue_rx(eth_client_t* eth, void* cookie,
         .flags = options,
         .cookie = (uint64_t)cookie,
     };
-    IORING_TRACE("eth:rx+ c=%p o=%u l=%u f=%u\n",
+    IORING_TRACE("eth:rx+ c=0x%08lx o=%u l=%u f=%u\n",
                  e.cookie, e.offset, e.length, e.flags);
     return zx_fifo_write(eth->rx_fifo, sizeof(e), &e, 1, NULL);
 }
@@ -114,7 +115,7 @@ zx_status_t eth_complete_tx(eth_client_t* eth, void* ctx,
     }
 
     for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
-        IORING_TRACE("eth:tx- c=%p o=%u l=%u f=%u\n",
+        IORING_TRACE("eth:tx- c=0x%08lx o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie);
     }
@@ -135,7 +136,7 @@ zx_status_t eth_complete_rx(eth_client_t* eth, void* ctx,
     }
 
     for (fuchsia_hardware_ethernet_FifoEntry* e = entries; count-- > 0; e++) {
-        IORING_TRACE("eth:rx- c=%p o=%u l=%u f=%u\n",
+        IORING_TRACE("eth:rx- c=0x%08lx o=%u l=%u f=%u\n",
                      e->cookie, e->offset, e->length, e->flags);
         func(ctx, (void*)e->cookie, e->length, e->flags);
     }
