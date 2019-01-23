@@ -99,6 +99,12 @@ class PutBenchmark : public PageWatcher {
   // contains all the keys, otherwise only the last changed key for each
   // transaction.
   std::set<size_t> keys_to_receive_;
+  // Whether all Put operations have terminated. Shut down should be blocked
+  // until this is set to true.
+  bool insertions_finished_ = false;
+  // Whether all expected watch notifications have been received. Shut down
+  // should be blocked until this is set to true.
+  bool all_watcher_notifications_received_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PutBenchmark);
 };
@@ -191,7 +197,12 @@ void PutBenchmark::OnChange(PageChange page_change,
     }
   }
   if (keys_to_receive_.empty()) {
-    ShutDown();
+    all_watcher_notifications_received_ = true;
+    // All watcher notifications have been received, waiting for put operations
+    // to finish before shutting down.
+    if (insertions_finished_) {
+      ShutDown();
+    }
   }
   callback(nullptr);
 }
@@ -243,7 +254,11 @@ void PutBenchmark::BindWatcher(std::vector<std::vector<uint8_t>> keys) {
 
 void PutBenchmark::RunSingle(int i, std::vector<std::vector<uint8_t>> keys) {
   if (i == entry_count_) {
-    // All sent, waiting for watcher notification before shutting down.
+    insertions_finished_ = true;
+    // All sent, waiting for watcher notifications before shutting down.
+    if (all_watcher_notifications_received_) {
+      ShutDown();
+    }
     return;
   }
 
