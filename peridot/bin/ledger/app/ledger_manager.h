@@ -15,6 +15,7 @@
 #include <lib/fidl/cpp/binding_set.h>
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
+#include <lib/fxl/memory/weak_ptr.h>
 #include <lib/fxl/strings/string_view.h>
 
 #include "peridot/bin/ledger/app/ledger_impl.h"
@@ -87,6 +88,7 @@ class LedgerManager : public LedgerImpl::Delegate,
 
  private:
   class PageManagerContainer;
+  using PageTracker = fit::function<bool()>;
 
   // Stores whether a given page is busy or available. After |MarkPageBusy| has
   // been called, all calls to |OnPageAvailable| will be delayed until a call to
@@ -144,9 +146,10 @@ class LedgerManager : public LedgerImpl::Delegate,
           predicate,
       fit::function<void(Status, PagePredicateResult)> callback);
 
-  // Marks the page with the given id as no longer tracked by the given
-  // operation. Returns true if the entry was found; false otherwise.
-  bool RemoveTrackedPage(storage::PageIdView page_id, uint64_t operation_id);
+  // Returns a tracking Callable object for the given page. When called, returns
+  // |true| if the page has not been opened until now, and stops tracking the
+  // page.
+  PageTracker NewPageTracker(storage::PageIdView page_id);
 
   // If the page is among the ones whose usage is being tracked, marks this page
   // as opened. See also |page_was_opened_map_|.
@@ -195,6 +198,12 @@ class LedgerManager : public LedgerImpl::Delegate,
   // was, and |PAGE_OPENED| should be returned.
   std::map<storage::PageId, std::vector<uint64_t>> page_was_opened_map_;
   uint64_t page_was_opened_id_ = 0;
+  // |tracked_pages_| counts the number of active page-tracking operations. The
+  // manager is not empty until all operations have completed.
+  uint64_t tracked_pages_ = 0;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<LedgerManager> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(LedgerManager);
 };

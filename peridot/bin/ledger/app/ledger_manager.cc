@@ -8,6 +8,7 @@
 #include <utility>
 #include <vector>
 
+#include <lib/callback/ensure_called.h>
 #include <lib/callback/scoped_callback.h>
 #include <lib/fidl/cpp/interface_request.h>
 #include <lib/fit/defer.h>
@@ -49,14 +50,11 @@ class PageConnectionNotifier {
   // active connections were closed, or because of failure to bind the requests.
   void UnregisterExternalRequests();
 
-  // Registers a new internal page request.
-  void RegisterInternalRequest();
+  // Registers a new internal page request, and return a token. The internal
+  // request is unregistered when the token is destructed.
+  ExpiringToken NewInternalRequestToken();
 
-  // Unregisters one active internal page request. This can be because the
-  // active connection was closed, or because of failure to fulfill the request.
-  void UnregisterInternalRequest();
-
-  // Sets the on_empty callaback, to be called every time this object becomes
+  // Sets the on_empty callback, to be called every time this object becomes
   // empty.
   void set_on_empty(fit::closure on_empty_callback);
 
@@ -73,16 +71,19 @@ class PageConnectionNotifier {
   const storage::PageId page_id_;
   PageUsageListener* page_usage_listener_;
 
-  // Stores whether the page was opened by an external request. Used to
-  // determine whether to send the OnPageUnused notifications when this is
-  // empty.
+  // Stores whether the page was opened by an external request but did not yet
+  // send a corresponding OnPageUnused. The OnPageUnused notification is sent as
+  // soon as all internal and external requests to the page are done.
   bool must_notify_on_page_unused_ = false;
-  // Stores whether the page is opened by an external request.
+  // Stores whether the page is currently opened by an external request.
   bool has_external_requests_ = false;
   // Stores the number of active internal requests.
   ssize_t internal_request_count_ = 0;
 
   fit::closure on_empty_callback_;
+
+  // Must be the last member.
+  fxl::WeakPtrFactory<PageConnectionNotifier> weak_factory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(PageConnectionNotifier);
 };
@@ -92,7 +93,8 @@ PageConnectionNotifier::PageConnectionNotifier(
     PageUsageListener* page_usage_listener)
     : ledger_name_(std::move(ledger_name)),
       page_id_(std::move(page_id)),
-      page_usage_listener_(page_usage_listener) {}
+      page_usage_listener_(page_usage_listener),
+      weak_factory_(this) {}
 
 PageConnectionNotifier::~PageConnectionNotifier() {}
 
@@ -113,14 +115,13 @@ void PageConnectionNotifier::UnregisterExternalRequests() {
   }
 }
 
-void PageConnectionNotifier::RegisterInternalRequest() {
+ExpiringToken PageConnectionNotifier::NewInternalRequestToken() {
   ++internal_request_count_;
-}
-
-void PageConnectionNotifier::UnregisterInternalRequest() {
-  FXL_DCHECK(internal_request_count_ > 0);
-  --internal_request_count_;
-  CheckEmpty();
+  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
+    FXL_DCHECK(internal_request_count_ > 0);
+    --internal_request_count_;
+    CheckEmpty();
+  }));
 }
 
 void PageConnectionNotifier::set_on_empty(fit::closure on_empty_callback) {
@@ -135,16 +136,15 @@ void PageConnectionNotifier::CheckEmpty() {
   if (!IsEmpty()) {
     return;
   }
+
   if (must_notify_on_page_unused_) {
-    // We must set |must_notify_on_page_unused_| to false before calling
-    // |OnPageUsed|: While |OnPageUsed| is executed it creates an internal
-    // request to the PageManagerContainer, hence triggering a call to
-    // |UnregisterInternalRequest|. Since that will be the last active request,
-    // it will then trigger |CheckEmpty|, reaching again this part of the code.
-    // Setting |must_notify_on_page_unused_| to false prevents this infinite
-    // loop.
+    // We need to keep the object alive while |OnPageUnused| runs.
+    auto token = NewInternalRequestToken();
     must_notify_on_page_unused_ = false;
     page_usage_listener_->OnPageUnused(ledger_name_, page_id_);
+    // If the page is empty at this point, destructing |token| will call
+    // |CheckEmpty()| again.
+    return;
   }
   if (on_empty_callback_) {
     on_empty_callback_();
@@ -219,10 +219,6 @@ class LedgerManager::PageManagerContainer {
   bool PageConnectionIsOpen();
 
  private:
-  // Creates a new ExpiringToken to be used while internal requests for the
-  // |PageManager| remain active.
-  ExpiringToken NewExpiringToken();
-
   // Checks whether this container is empty, and calls the |on_empty_callback_|
   // if it is.
   void CheckEmpty();
@@ -249,9 +245,6 @@ class LedgerManager::PageManagerContainer {
       internal_request_callbacks_;
   fit::closure on_empty_callback_;
 
-  // Must be the last member.
-  fxl::WeakPtrFactory<PageManagerContainer> weak_factory_;
-
   FXL_DISALLOW_COPY_AND_ASSIGN(PageManagerContainer);
 };
 
@@ -260,8 +253,7 @@ LedgerManager::PageManagerContainer::PageManagerContainer(
     PageUsageListener* page_usage_listener)
     : page_id_(page_id),
       connection_notifier_(std::move(ledger_name), std::move(page_id),
-                           page_usage_listener),
-      weak_factory_(this) {}
+                           page_usage_listener) {}
 
 LedgerManager::PageManagerContainer::~PageManagerContainer() {
   for (const auto& request : requests_) {
@@ -325,7 +317,8 @@ void LedgerManager::PageManagerContainer::NewInternalRequest(
   }
 
   if (page_manager_) {
-    callback(status_, NewExpiringToken(), page_manager_.get());
+    callback(status_, connection_notifier_.NewInternalRequestToken(),
+             page_manager_.get());
     return;
   }
 
@@ -334,6 +327,7 @@ void LedgerManager::PageManagerContainer::NewInternalRequest(
 
 void LedgerManager::PageManagerContainer::SetPageManager(
     Status status, std::unique_ptr<PageManager> page_manager) {
+  auto token = connection_notifier_.NewInternalRequestToken();
   TRACE_DURATION("ledger", "ledger_manager_set_page_manager");
 
   FXL_DCHECK(!page_manager_is_set_);
@@ -367,27 +361,21 @@ void LedgerManager::PageManagerContainer::SetPageManager(
       callback(status_, fit::defer<fit::closure>([] {}), nullptr);
       continue;
     }
-    callback(status_, NewExpiringToken(), page_manager_.get());
+    callback(status_, connection_notifier_.NewInternalRequestToken(),
+             page_manager_.get());
   }
+  internal_request_callbacks_.clear();
 
   if (page_manager_) {
     page_manager_->set_on_empty(
         [this] { connection_notifier_.UnregisterExternalRequests(); });
-  } else {
-    CheckEmpty();
   }
+  // |CheckEmpty| called when |token| goes out of scope.
 }
 
 bool LedgerManager::PageManagerContainer::PageConnectionIsOpen() {
   return (page_manager_ && !page_manager_->IsEmpty()) || !requests_.empty() ||
          !debug_requests_.empty();
-}
-
-ExpiringToken LedgerManager::PageManagerContainer::NewExpiringToken() {
-  connection_notifier_.RegisterInternalRequest();
-  return ExpiringToken(callback::MakeScoped(weak_factory_.GetWeakPtr(), [this] {
-    connection_notifier_.UnregisterInternalRequest();
-  }));
 }
 
 void LedgerManager::PageManagerContainer::CheckEmpty() {
@@ -412,7 +400,8 @@ LedgerManager::LedgerManager(
       ledger_sync_(std::move(ledger_sync)),
       ledger_impl_(environment_, this),
       merge_manager_(environment_),
-      page_usage_listener_(page_usage_listener) {
+      page_usage_listener_(page_usage_listener),
+      weak_factory_(this) {
   bindings_.set_empty_set_handler([this] { CheckEmpty(); });
   page_managers_.set_on_empty([this] { CheckEmpty(); });
   ledger_debug_bindings_.set_empty_set_handler([this] { CheckEmpty(); });
@@ -579,15 +568,15 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
     storage::PageIdView page_id,
     fit::function<void(PageManager*, fit::function<void(Status, bool)>)>
         predicate,
-    fit::function<void(Status, PagePredicateResult)> callback) {
+    fit::function<void(Status, PagePredicateResult)> callback_unsafe) {
+  // Ensure that the callback will be called, whatever happens.
+  auto callback =
+      callback::EnsureCalled(std::move(callback_unsafe), Status::ILLEGAL_STATE,
+                             PagePredicateResult::PAGE_OPENED);
+
   // Start logging whether the page has been opened during the execution of
   // this method.
-  uint64_t operation_id = page_was_opened_id_++;
-  page_was_opened_map_[page_id.ToString()].push_back(operation_id);
-  auto on_return =
-      fit::defer([this, page_id = page_id.ToString(), operation_id] {
-        RemoveTrackedPage(page_id, operation_id);
-      });
+  auto tracker = NewPageTracker(page_id);
 
   PageManagerContainer* container;
 
@@ -610,61 +599,82 @@ void LedgerManager::PageIsClosedAndSatisfiesPredicate(
   }
 
   container->NewInternalRequest(
-      [this, page_id = page_id.ToString(), operation_id,
-       predicate = std::move(predicate), on_return = std::move(on_return),
+      [this, page_id = page_id.ToString(), tracker = std::move(tracker),
+       predicate = std::move(predicate),
        callback = std::move(callback)](Status status, ExpiringToken token,
                                        PageManager* page_manager) mutable {
-        auto final_callback =
-            [token = std::move(token), callback = std::move(callback)](
-                Status status, PagePredicateResult result) mutable {
-              // The token needs to be valid while |predicate| is being
-              // computed. Invalidate it right before calling the callback.
-              token.call();
-              callback(status, result);
-            };
         if (status != Status::OK) {
-          final_callback(status, PagePredicateResult::PAGE_OPENED);
+          callback(status, PagePredicateResult::PAGE_OPENED);
           return;
         }
         FXL_DCHECK(page_manager);
-        predicate(page_manager, [this, page_id = std::move(page_id),
-                                 operation_id, on_return = std::move(on_return),
-                                 callback = std::move(final_callback)](
-                                    Status status, bool condition) mutable {
-          on_return.cancel();
-          if (!RemoveTrackedPage(page_id, operation_id) ||
-              status != Status::OK) {
-            // If |RemoveTrackedPage| returns false, this means that
-            // the page was opened during this operation and
-            // |PAGE_OPENED| must be returned.
-            callback(status, PagePredicateResult::PAGE_OPENED);
-            return;
-          }
-          callback(Status::OK, condition ? PagePredicateResult::YES
-                                         : PagePredicateResult::NO);
-        });
+        // The page_manager may be destructed before we complete.
+        auto weak_this = weak_factory_.GetWeakPtr();
+        predicate(
+            page_manager,
+            [this, page_id = std::move(page_id), tracker = std::move(tracker),
+             callback = std::move(callback), token = std::move(token),
+             weak_this](Status status, bool condition) mutable {
+              if (status != Status::OK) {
+                callback(status, PagePredicateResult::PAGE_OPENED);
+              }
+              if (!weak_this) {
+                // |callback| is called on destruction.
+                return;
+              }
+              // |token| is expected to go out of scope.
+              async::PostTask(
+                  environment_->dispatcher(),
+                  [condition, page_id = std::move(page_id),
+                   callback = std::move(callback),
+                   tracker = std::move(tracker)]() mutable {
+                    if (!tracker()) {
+                      // If |RemoveTrackedPage| returns false, this means that
+                      // the page was opened during this operation and
+                      // |PAGE_OPENED| must be returned.
+                      callback(Status::OK, PagePredicateResult::PAGE_OPENED);
+                      return;
+                    }
+                    callback(Status::OK, condition ? PagePredicateResult::YES
+                                                   : PagePredicateResult::NO);
+                  });
+            });
       });
 }
 
-bool LedgerManager::RemoveTrackedPage(storage::PageIdView page_id,
-                                      uint64_t operation_id) {
-  auto it = page_was_opened_map_.find(page_id.ToString());
-  if (it == page_was_opened_map_.end()) {
+fit::function<bool()> LedgerManager::NewPageTracker(
+    storage::PageIdView page_id) {
+  tracked_pages_++;
+  uint64_t operation_id = page_was_opened_id_++;
+  page_was_opened_map_[page_id.ToString()].push_back(operation_id);
+
+  fxl::WeakPtr<LedgerManager> weak_this = weak_factory_.GetWeakPtr();
+
+  auto stop_tracking = [this, weak_this, page_id = page_id.ToString(),
+                        operation_id] {
+    if (!weak_this) {
+      return false;
+    }
+    tracked_pages_--;
+    auto it = page_was_opened_map_.find(page_id);
+    if (it == page_was_opened_map_.end()) {
+      return false;
+    }
+    if (it->second.size() == 1) {
+      // This is the last operation for this page: delete the page's entry.
+      page_was_opened_map_.erase(it);
+      return true;
+    }
+    // Erase the operation_id, if found, from the found vector (it->second).
+    auto operation_it =
+        std::find(it->second.begin(), it->second.end(), operation_id);
+    if (operation_it != it->second.end()) {
+      it->second.erase(operation_it);
+      return true;
+    }
     return false;
-  }
-  if (it->second.size() == 1) {
-    // This is the last operation for this page: delete the page's entry.
-    page_was_opened_map_.erase(it);
-    return true;
-  }
-  // Erase the operation_id, if found, from the found vector (it->second).
-  auto operation_it =
-      std::find(it->second.begin(), it->second.end(), operation_id);
-  if (operation_it != it->second.end()) {
-    it->second.erase(operation_it);
-    return true;
-  }
-  return false;
+  };
+  return callback::EnsureCalled(std::move(stop_tracking));
 }
 
 void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
@@ -673,8 +683,9 @@ void LedgerManager::MaybeMarkPageOpened(storage::PageIdView page_id) {
 
 void LedgerManager::CheckEmpty() {
   if (on_empty_callback_ && bindings_.size() == 0 && page_managers_.empty() &&
-      ledger_debug_bindings_.size() == 0)
+      ledger_debug_bindings_.size() == 0 && tracked_pages_ == 0) {
     on_empty_callback_();
+  }
 }
 
 void LedgerManager::SetConflictResolverFactory(

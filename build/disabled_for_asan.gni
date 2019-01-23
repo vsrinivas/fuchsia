@@ -33,10 +33,6 @@ disabled_for_asan = [
   # MAC-243
   "/pkgfs/packages/guest_integration_tests/0/test/guest_integration_tests",
 
-  # LE-684
-  "/pkgfs/packages/ledger_tests/0/test/ledger_integration_tests",
-  "/pkgfs/packages/ledger_tests/0/test/ledger_unittests",
-
   # TC-351
   "/pkgfs/packages/libc-tests/0/test/libc-tests",
 

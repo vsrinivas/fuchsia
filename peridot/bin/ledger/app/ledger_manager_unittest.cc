@@ -473,6 +473,8 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedCheckPageOpened) {
 
   // Make sure PageIsClosedAndSynced terminates with a |PAGE_OPENED| result.
   storage_ptr->CallIsSyncedCallback(storage_page_id);
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(page_is_closed_and_synced_called);
   EXPECT_EQ(Status::OK, status);
   EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced);
@@ -539,6 +541,8 @@ TEST_F(LedgerManagerTest, PageIsClosedAndSyncedConcurrentCalls) {
   // Call the callback and let the first call to PageIsClosedAndSynced
   // terminate. The expected returned result is |PAGE_OPENED|.
   storage_ptr->CallIsSyncedCallback(storage_page_id);
+  RunLoopUntilIdle();
+
   EXPECT_TRUE(called1);
   EXPECT_EQ(Status::OK, status1);
   EXPECT_EQ(PagePredicateResult::PAGE_OPENED, is_closed_and_synced1);
@@ -626,6 +630,7 @@ TEST_F(LedgerManagerTest, PageIsClosedOfflineAndEmptyCanDeletePageOnCallback) {
   // Make sure the deletion finishes successfully.
   ASSERT_NE(nullptr, storage_ptr->delete_page_storage_callback);
   storage_ptr->delete_page_storage_callback(storage::Status::OK);
+  RunLoopUntilIdle();
 
   EXPECT_TRUE(page_is_empty_called);
   EXPECT_EQ(Status::OK, page_is_empty_status);
@@ -888,6 +893,8 @@ TEST_F(LedgerManagerTest, OnPageOpenedClosedUnused) {
   // Terminate the internal request. We should now see the unused page
   // notification.
   storage_ptr->CallIsSyncedCallback(storage_page_id);
+  RunLoopUntilIdle();
+
   EXPECT_EQ(2, disk_cleanup_manager_->page_opened_count);
   EXPECT_EQ(2, disk_cleanup_manager_->page_closed_count);
   EXPECT_EQ(2, disk_cleanup_manager_->page_unused_count);
