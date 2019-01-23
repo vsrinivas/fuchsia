@@ -1,5 +1,10 @@
 # Third-party Rust Crates
 
+## Overview
+OSRB approval is required for third-party crates. To get approval, you will
+need to follow the instructions under the "Process for 3rd Party Hosted
+Code" section in [this document][osrb-process].
+
 Third-party crates depended on by `rustc_binary` and `rustc_library` targets
 are stored in [`//third-party/rust-crates/rustc_deps/vendor`][3p-vendor].
 This set of crates is based on the dependencies listed in
@@ -7,10 +12,6 @@ This set of crates is based on the dependencies listed in
 and is updated by running `fx update-rustc-third-party`, which will update
 the precise versions of the crates used in the `Cargo.lock` file and download
 any necessary crates into the `vendor` dir.
-
-OSRB approval is required for third-party crates. To get approval, you will
-need to follow the instructions under the "Process for 3rd Party Hosted
-Code" section in [this document][osrb-process].
 
 ## Adding a new vendored dependency
 
@@ -21,8 +22,8 @@ the following steps:
 1. Run `scripts/fx update-rustc-third-party`. This will download all crates listed in
    [`rustc_deps/Cargo.toml`][3p-cargo-toml] as well as their dependencies and
    place them in the `vendor` directory.
-1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory. __Do not__
-   upload this change to gerrit.
+1. `git add` the `Cargo.toml`, `Cargo.lock` and `vendor` directory.
+1.  __Do not__  upload this change to gerrit yet.
 1. Get OSRB approval. Make sure to include the requested information for all
    new crates pulled in by your new dependency.
    If there are any files in the source repository that are not included when
@@ -30,9 +31,12 @@ the following steps:
    that are only used for testing but are excluded when the crate is vendored.
    If you are not a Google employee, you will need to ask a Google employee to
    do this part for you.
-1. Merge the change into [third_party/rust-crates][3p-crates].
-1. Update the git revision of `third_party/rust-crates` in
-   [integration/fuchsia/garnet/third_party][3p-manifest]:
+1. After getting the OSRB approval, upload the change to Gerrit.
+Get code-review+2, merge the change into [third_party/rust-crates][3p-crates].
+1. Auto-rollers will update the git revision.
+If you need to update the revision manually, update the git revision
+in `integration`. Update the git revision of `third_party/rust-crates` in
+   [integration/garnet/third_party][3p-manifest]:
 
 ```
 <project name="rust-crates"
@@ -41,10 +45,6 @@ the following steps:
          revision="<YOUR_NEW_REVISION_HERE>"
          gerrithost="https://fuchsia-review.googlesource.com"/>
 ```
-
-Once all that is done, navigate to `third_party/rust-crates` locally,
-run `git checkout <YOUR_NEW_REVISION_HERE>`, build Garnet to ensure that your
-change is working, then open a CL.
 
 Linking to a native library is not currently supported.
 
