@@ -19,6 +19,8 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/ring.cpp \
     $(LOCAL_DIR)/rng.cpp \
     $(LOCAL_DIR)/socket.cpp \
+    $(LOCAL_DIR)/scsi.cpp \
+    $(LOCAL_DIR)/scsilib.cpp \
     $(LOCAL_DIR)/virtio_driver.cpp \
 	$(LOCAL_DIR)/backends/pci.cpp \
 	$(LOCAL_DIR)/backends/pci_legacy.cpp \
@@ -51,5 +53,49 @@ MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-pci \
 
 MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+include make/module.mk
+
+# Unit tests
+MODULE := $(LOCAL_DIR).test
+MODULE_TYPE := usertest
+MODULE_SRCS := \
+    $(LOCAL_DIR)/device.cpp \
+    $(LOCAL_DIR)/scsi.cpp \
+    $(LOCAL_DIR)/scsilib.cpp \
+    $(LOCAL_DIR)/ring.cpp \
+    $(LOCAL_DIR)/scsi_test.cpp \
+    $(LOCAL_DIR)/test_main.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/dev/lib/fake_ddk \
+    system/ulib/async \
+    system/ulib/async.cpp \
+    system/ulib/async-loop \
+    system/ulib/async-loop.cpp \
+    system/ulib/ddk \
+    system/ulib/ddktl \
+    system/ulib/fbl \
+    system/ulib/fidl \
+    system/ulib/hid \
+    system/ulib/hwreg \
+    system/ulib/pretty \
+    system/ulib/sync \
+    system/ulib/unittest \
+    system/ulib/virtio \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+
+MODULE_LIBS := \
+    system/ulib/driver \
+    system/ulib/zircon \
+    system/ulib/c
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-pci \
+
+MODULE_COMPILEFLAGS := \
+    -I$(LOCAL_DIR)\
 
 include make/module.mk

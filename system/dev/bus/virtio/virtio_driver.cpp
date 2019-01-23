@@ -29,6 +29,7 @@
 #include "gpu.h"
 #include "input.h"
 #include "rng.h"
+#include "scsi.h"
 #include "socket.h"
 
 static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
@@ -106,6 +107,11 @@ static zx_status_t virtio_pci_bind(void* ctx, zx_device_t* bus_device) {
         virtio_device.reset(new virtio::SocketDevice(bus_device, std::move(bti),
                                                      std::move(backend)));
         break;
+    case VIRTIO_DEV_TYPE_SCSI:
+    case VIRTIO_DEV_TYPE_T_SCSI_HOST:
+        virtio_device.reset(new virtio::ScsiDevice(bus_device, std::move(bti),
+                                                   std::move(backend)));
+        break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
     }
@@ -128,17 +134,19 @@ static const zx_driver_ops_t virtio_driver_ops = {
     .release = nullptr,
 };
 
-ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 14)
+ZIRCON_DRIVER_BEGIN(virtio, virtio_driver_ops, "zircon", "0.1", 16)
     BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI),
     BI_ABORT_IF(NE, BIND_PCI_VID, VIRTIO_PCI_VENDOR_ID),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_BLOCK),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_ENTROPY),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_NETWORK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SCSI),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_BLOCK),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_CONSOLE),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_ENTROPY),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_NETWORK),
+    BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_T_SCSI_HOST),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_GPU),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_INPUT),
     BI_MATCH_IF(EQ, BIND_PCI_DID, VIRTIO_DEV_TYPE_SOCKET),

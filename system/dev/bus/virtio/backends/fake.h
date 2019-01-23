@@ -42,28 +42,40 @@ class FakeBackend : public Backend {
         state_ = State::DEVICE_RESET;
     }
     void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
-        EXPECT_GT(registers8_.count(offset), 0);
-        *value = registers8_[offset];
+        char message[80] = {};
+        snprintf(message, sizeof(message), "offset-%xh/8", offset);
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        EXPECT_GT(registers8_.count(shifted_offset), 0, message);
+        *value = registers8_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint16_t* value) override {
-        EXPECT_GT(registers16_.count(offset), 0);
-        *value = registers16_[offset];
+        char message[80] = {};
+        snprintf(message, sizeof(message), "offset-%xh/16", offset);
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        EXPECT_GT(registers16_.count(shifted_offset), 0, message);
+        *value = registers16_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint32_t* value) override {
-        EXPECT_GT(registers32_.count(offset), 0);
-        *value = registers32_[offset];
+        char message[80] = {};
+        snprintf(message, sizeof(message), "offset-%xh/32", offset);
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        EXPECT_GT(registers32_.count(shifted_offset), 0, message);
+        *value = registers32_[shifted_offset];
     }
     void ReadDeviceConfig(uint16_t offset, uint64_t* value) override {
         EXPECT_TRUE(0);  // Not Implemented.
     }
     void WriteDeviceConfig(uint16_t offset, uint8_t value) override {
-        registers8_[offset] = value;
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        registers8_[shifted_offset] = value;
     }
     void WriteDeviceConfig(uint16_t offset, uint16_t value) override {
-        registers16_[offset] = value;
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        registers16_[shifted_offset] = value;
     }
     void WriteDeviceConfig(uint16_t offset, uint32_t value) override {
-        registers32_[offset] = value;
+        auto shifted_offset = static_cast<uint16_t>(offset + kISRStatus + 1);
+        registers32_[shifted_offset] = value;
     }
     void WriteDeviceConfig(uint16_t offset, uint64_t value) override {
         EXPECT_TRUE(0);  // Not Implemented.
@@ -79,26 +91,72 @@ class FakeBackend : public Backend {
         EXPECT_GT(queue_sizes_.count(ring_index), 0);
         kicked_queues_.insert(ring_index);
     }
-    uint32_t IsrStatus() override { return 0; }
+    uint32_t IsrStatus() override { return registers8_.find(kISRStatus)->second; }
     zx_status_t InterruptValid() override { return ZX_OK; }
     zx_status_t WaitForInterrupt() override { return ZX_OK; }
 
   protected:
-    FakeBackend(std::initializer_list<std::pair<const uint16_t, uint8_t>> registers8,
-                std::initializer_list<std::pair<const uint16_t, uint16_t>> registers16,
-                std::initializer_list<std::pair<const uint16_t, uint32_t>> registers32,
-                std::initializer_list<std::pair<const uint16_t, uint16_t>> queue_sizes):
-        registers8_(registers8), registers16_(registers16), registers32_(registers32),
-        queue_sizes_(queue_sizes) {}
+    // virtio header register offsets.
+    static constexpr uint16_t kDeviceFeatures = 0;
+    static constexpr uint16_t kGuestFeatures = 4;
+    static constexpr uint16_t kQueueAddress = 8;
+    static constexpr uint16_t kQueueSize = 12;
+    static constexpr uint16_t kQueueSelect = 14;
+    static constexpr uint16_t kQueueNotify = 16;
+    static constexpr uint16_t kDeviceStatus = 18;
+    static constexpr uint16_t kISRStatus = 19;
 
-   // Returns true if a queue has been kicked (notified) and clears the notified bit.
-   bool QueueKicked(uint16_t queue_index) {
-     bool is_queue_kicked = (kicked_queues_.count(queue_index));
-     if (is_queue_kicked) {
-       kicked_queues_.erase(queue_index);
-     }
-     return is_queue_kicked;
-   }
+    explicit FakeBackend(std::initializer_list<std::pair<const uint16_t, uint16_t>> queue_sizes):
+        queue_sizes_(queue_sizes) {
+        // Bind standard virtio header registers into register maps.
+        registers32_.insert({kDeviceFeatures, 0});
+        registers32_.insert({kGuestFeatures, 0});
+        registers32_.insert({kQueueAddress, 0});
+        registers16_.insert({kQueueSize, 0});
+        registers16_.insert({kQueueSelect, 0});
+        registers16_.insert({kQueueNotify, 0});
+        registers8_.insert({kDeviceStatus, 0});
+        registers8_.insert({kISRStatus, 0});
+    }
+
+    // Returns true if a queue has been kicked (notified) and clears the notified bit.
+    bool QueueKicked(uint16_t queue_index) {
+        bool is_queue_kicked = (kicked_queues_.count(queue_index));
+        if (is_queue_kicked) {
+            kicked_queues_.erase(queue_index);
+        }
+        return is_queue_kicked;
+    }
+
+    template<typename T> void AddClassRegister(uint16_t offset, T value) {
+        if constexpr(sizeof(T) == 1) {
+            registers8_.insert({kISRStatus + 1 + offset, value});
+        } else if constexpr(sizeof(T) == 2) {
+            registers16_.insert({kISRStatus + 1 + offset, value});
+        } else if constexpr(sizeof(T) == 4) {
+            registers32_.insert({kISRStatus + 1 + offset, value});
+        }
+    }
+
+    template<typename T> void SetRegister(uint16_t offset, T value) {
+        if constexpr(sizeof(T) == 1) {
+            registers8_[offset] = value;
+        } else if constexpr(sizeof(T) == 2) {
+            registers16_[offset] = value;
+        } else if constexpr(sizeof(T) == 4) {
+            registers32_[offset] = value;
+        }
+    }
+
+    template<typename T> void ReadRegister(uint16_t offset, T* output) {
+        if constexpr(sizeof(T) == 1) {
+            *output = registers8_.find(offset)->second;
+        } else if constexpr(sizeof(T) == 2) {
+            *output = registers16_.find(offset)->second;
+        } else if constexpr(sizeof(T) == 4) {
+            *output = registers32_.find(offset)->second;
+        }
+    }
 
   private:
     enum class State {
