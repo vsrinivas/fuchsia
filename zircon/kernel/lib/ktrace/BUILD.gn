@@ -4,9 +4,15 @@
 
 import("$zx/kernel/syscalls/abigen.gni")
 
+config("config") {
+  include_dirs = [ "include" ]
+}
+
 source_set("ktrace") {
   sources = [
+    "include/lib/ktrace/string_ref.h",
     "ktrace.cpp",
+    "string_ref.cpp",
   ]
   include_dirs = [ target_gen_dir ]
   deps = [
