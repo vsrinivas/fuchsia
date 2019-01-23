@@ -8,15 +8,16 @@
 #include <functional>
 #include <vector>
 
+#include <lib/fit/function.h>
+
 #include "lib/escher/forward_declarations.h"
 #include "lib/escher/renderer/semaphore.h"
 #include "lib/escher/scene/camera.h"
 #include "lib/escher/vk/vulkan_context.h"
-
 #include "lib/fxl/macros.h"
 
 namespace escher {
-typedef std::function<void()> CommandBufferFinishedCallback;
+typedef fit::function<void()> CommandBufferFinishedCallback;
 
 namespace impl {
 

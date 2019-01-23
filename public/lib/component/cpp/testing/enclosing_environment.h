@@ -14,6 +14,8 @@
 #include <fs/synchronous-vfs.h>
 #include <fuchsia/sys/cpp/fidl.h>
 #include <lib/async/default.h>
+#include <lib/fit/function.h>
+
 #include "lib/component/cpp/testing/launcher_impl.h"
 #include "lib/fxl/logging.h"
 #include "lib/svc/cpp/services.h"
@@ -160,7 +162,7 @@ class EnclosingEnvironment {
   bool is_running() const { return running_; }
 
   // Kills the underlying environment.
-  void Kill(std::function<void()> callback = nullptr);
+  void Kill(fit::function<void()> callback = nullptr);
 
   // Creates a real component from |launch_info| in underlying environment.
   //

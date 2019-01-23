@@ -10,6 +10,7 @@
 #include <lib/async/cpp/wait.h>
 #include <lib/async/default.h>
 #include <lib/fdio/unsafe.h>
+#include <lib/fit/function.h>
 #include <zircon/types.h>
 
 #include "lib/fxl/fxl_export.h"
@@ -27,7 +28,7 @@ class FXL_EXPORT FDWaiter {
   // wait failed (e.g., because the file descriptor was closed during the wait),
   // the first argument will be the error code and the second argument will be
   // zero.
-  using Callback = std::function<void(zx_status_t, uint32_t)>;
+  using Callback = fit::function<void(zx_status_t, uint32_t)>;
 
   // Creates an asynchronous, one-shot wait for the given events on the given
   // file descriptor until the given timeout. Calls |callback| when the wait

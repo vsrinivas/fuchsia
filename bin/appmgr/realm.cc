@@ -34,7 +34,6 @@
 #include "lib/fsl/vmo/strings.h"
 #include "lib/fxl/files/directory.h"
 #include "lib/fxl/files/file.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/fxl/strings/concatenate.h"
 #include "lib/fxl/strings/string_printf.h"
 #include "lib/fxl/strings/substitute.h"
@@ -408,37 +407,35 @@ void Realm::Resolve(fidl::StringPtr name,
     return;
   }
 
-  loader_->LoadUrl(
-      canon_url,
-      fxl::MakeCopyable([this, callback = std::move(callback)](
-                            fuchsia::sys::PackagePtr package) mutable {
-        zx::vmo binary;
-        fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
-        if (!package) {
-          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
-          return;
-        }
-        if (!package->data) {
-          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
-          return;
-        }
-        binary.swap(package->data->vmo);
+  loader_->LoadUrl(canon_url, [this, callback = std::move(callback)](
+                                  fuchsia::sys::PackagePtr package) mutable {
+    zx::vmo binary;
+    fidl::InterfaceHandle<fuchsia::ldsvc::Loader> loader;
+    if (!package) {
+      callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+      return;
+    }
+    if (!package->data) {
+      callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+      return;
+    }
+    binary.swap(package->data->vmo);
 
-        if (!package->directory) {
-          callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
-          return;
-        }
-        fxl::UniqueFD dirfd =
-            fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
+    if (!package->directory) {
+      callback(ZX_ERR_NOT_FOUND, std::move(binary), std::move(loader));
+      return;
+    }
+    fxl::UniqueFD dirfd =
+        fsl::OpenChannelAsFileDescriptor(std::move(package->directory));
 
-        zx::channel chan;
-        if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
-          callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
-          return;
-        }
-        loader.set_channel(std::move(chan));
-        callback(ZX_OK, std::move(binary), std::move(loader));
-      }));
+    zx::channel chan;
+    if (DynamicLibraryLoader::Start(std::move(dirfd), &chan) != ZX_OK) {
+      callback(ZX_ERR_INTERNAL, std::move(binary), std::move(loader));
+      return;
+    }
+    loader.set_channel(std::move(chan));
+    callback(ZX_OK, std::move(binary), std::move(loader));
+  });
 }
 
 void Realm::CreateComponent(
@@ -484,21 +481,19 @@ void Realm::CreateComponent(
 
     // launch_info is moved before LoadUrl() gets at its first argument.
     fidl::StringPtr url = launch_info.url;
-    loader_->LoadUrl(
-        url,
-        fxl::MakeCopyable([this, launch_info = std::move(launch_info),
+    loader_->LoadUrl(url, [this, launch_info = std::move(launch_info),
                            component_request = std::move(component_request),
                            callback = std::move(callback)](
                               fuchsia::sys::PackagePtr package) mutable {
-          if (package && package->directory) {
-            CreateComponentFromPackage(
-                std::move(package), std::move(launch_info),
-                std::move(component_request), std::move(callback));
-          } else {
-            component_request.SetReturnValues(
-                kComponentCreationFailed, TerminationReason::PACKAGE_NOT_FOUND);
-          }
-        }));
+      if (package && package->directory) {
+        CreateComponentFromPackage(std::move(package), std::move(launch_info),
+                                   std::move(component_request),
+                                   std::move(callback));
+      } else {
+        component_request.SetReturnValues(kComponentCreationFailed,
+                                          TerminationReason::PACKAGE_NOT_FOUND);
+      }
+    });
   } else {
     // Component from scheme that maps to a runner.
     CreateComponentWithRunnerForScheme(launcher_type, std::move(launch_info),

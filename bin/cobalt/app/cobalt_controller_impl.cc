@@ -8,8 +8,6 @@
 #include <mutex>
 #include <vector>
 
-#include "lib/fxl/functional/make_copyable.h"
-
 namespace cobalt {
 
 using encoder::ShippingManager;

@@ -5,13 +5,15 @@
 #ifndef GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_DRIVER_H_
 #define GARNET_LIB_MAGMA_SRC_SYS_DRIVER_MAGMA_DRIVER_H_
 
+#include <lib/fit/function.h>
+
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 #include "msd.h"
 
 #include "magma_system_device.h"
 
-using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver_t, std::function<void(msd_driver_t*)>>;
+using msd_driver_unique_ptr_t = std::unique_ptr<msd_driver_t, fit::function<void(msd_driver_t*)>>;
 
 static inline msd_driver_unique_ptr_t MsdDriverUniquePtr(msd_driver_t* driver)
 {

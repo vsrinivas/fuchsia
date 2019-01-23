@@ -6,6 +6,8 @@
 #define LIB_UI_TESTS_MOCKS_MOCK_INPUT_DEVICE_H_
 
 #include <fuchsia/ui/input/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
 
@@ -13,7 +15,7 @@ namespace mozart {
 namespace test {
 
 using OnReportCallback =
-    std::function<void(fuchsia::ui::input::InputReport report)>;
+    fit::function<void(fuchsia::ui::input::InputReport report)>;
 
 class MockInputDevice : public fuchsia::ui::input::InputDevice {
  public:
@@ -21,7 +23,7 @@ class MockInputDevice : public fuchsia::ui::input::InputDevice {
                   fuchsia::ui::input::DeviceDescriptor descriptor,
                   fidl::InterfaceRequest<fuchsia::ui::input::InputDevice>
                       input_device_request,
-                  const OnReportCallback& on_report_callback);
+                  OnReportCallback on_report_callback);
   ~MockInputDevice();
 
   uint32_t id() { return id_; }

@@ -3,6 +3,9 @@
 // found in the LICENSE file.
 
 #include "lib/fxl/functional/bind_callback.h"
+
+#include <lib/fit/function.h>
+
 #include "gtest/gtest.h"
 
 namespace fxl {
@@ -28,7 +31,7 @@ class SampleBinderClass {
 
 TEST(BindCallback, UnwrapNoArgs) {
   int counter = 0;
-  std::function<void()> cb;
+  fit::function<void()> cb;
   {
     SampleBinderClass dummy(counter);
     cb = BindWeakUnwrap(dummy.GetWeakPtr(), [](SampleBinderClass& sender) {
@@ -46,7 +49,7 @@ TEST(BindCallback, UnwrapNoArgs) {
 
 TEST(BindCallback, UnwrapArgs) {
   int counter = 0;
-  std::function<void(int)> cb;
+  fit::function<void(int)> cb;
   {
     SampleBinderClass dummy(counter);
     cb = BindWeakUnwrap<int>(dummy.GetWeakPtr(),
@@ -65,7 +68,7 @@ TEST(BindCallback, UnwrapArgs) {
 
 TEST(BindCallback, BindWeakSelf) {
   int counter = 0;
-  std::function<void()> cb;
+  fit::function<void()> cb;
   {
     SampleBinderClass dummy(counter);
     cb = BindWeakSelf(dummy.GetWeakPtr(), &SampleBinderClass::incrementBy, 2);
@@ -82,7 +85,7 @@ TEST(BindCallback, BindWeakSelf) {
 TEST(BindCallback, BindWeakPlaceHolder) {
   int counter = 0;
 
-  std::function<void(int)> cb;
+  fit::function<void(int)> cb;
   {
     SampleBinderClass dummy(counter);
 

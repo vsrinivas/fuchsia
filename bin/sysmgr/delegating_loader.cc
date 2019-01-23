@@ -77,9 +77,9 @@ void DelegatingLoader::LoadUrl(std::string url, LoadUrlCallback callback) {
   }
 
   if (package_updating_fallback_) {
-    package_updating_fallback_->LoadUrl(url, callback);
+    package_updating_fallback_->LoadUrl(url, std::move(callback));
   } else {
-    parent_fallback_->LoadUrl(url, callback);
+    parent_fallback_->LoadUrl(url, std::move(callback));
   }
 }
 

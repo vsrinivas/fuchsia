@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_APP_CPP_TESTING_FAKE_LAUNCHER_H_
-#define LIB_APP_CPP_TESTING_FAKE_LAUNCHER_H_
+#ifndef LIB_COMPONENT_CPP_TESTING_FAKE_LAUNCHER_H_
+#define LIB_COMPONENT_CPP_TESTING_FAKE_LAUNCHER_H_
 
 #include <fs/service.h>
 #include <fuchsia/sys/cpp/fidl.h>
+#include <lib/fit/function.h>
 
 #include "lib/fidl/cpp/binding.h"
 
@@ -24,7 +25,7 @@ class FakeLauncher : public fuchsia::sys::Launcher {
   FakeLauncher(const FakeLauncher&) = delete;
   FakeLauncher& operator=(const FakeLauncher&) = delete;
 
-  using ComponentConnector = std::function<void(
+  using ComponentConnector = fit::function<void(
       fuchsia::sys::LaunchInfo,
       fidl::InterfaceRequest<fuchsia::sys::ComponentController>)>;
 
@@ -55,4 +56,4 @@ class FakeLauncher : public fuchsia::sys::Launcher {
 }  // namespace testing
 }  // namespace component
 
-#endif  // LIB_APP_CPP_TESTING_FAKE_LAUNCHER_H_
+#endif  // LIB_COMPONENT_CPP_TESTING_FAKE_LAUNCHER_H_

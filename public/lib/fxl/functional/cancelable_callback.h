@@ -7,13 +7,15 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/memory/weak_ptr.h"
 
 namespace fxl {
 
-// CancelableCallback is a wrapper around std::function that allows the
+// CancelableCallback is a wrapper around fit::function that allows the
 // cancellation of a callback. CancelableCallback takes a reference on the
 // wrapped callback until this object is destroyed or Reset()/Cancel() are
 // called.
@@ -46,7 +48,7 @@ class CancelableCallback<void(Args...)> {
  public:
   CancelableCallback() : weak_ptr_factory_(this) {}
 
-  explicit CancelableCallback(std::function<void(Args...)> callback)
+  explicit CancelableCallback(fit::function<void(Args...)> callback)
       : callback_(std::move(callback)), weak_ptr_factory_(this) {
     FXL_DCHECK(callback_);
     BindWrapper();
@@ -65,11 +67,11 @@ class CancelableCallback<void(Args...)> {
   // Returns a callback that can be disabled by calling Cancel(). This returns a
   // null callback if this object currently does not wrap around a callback,
   // e.g. after a call to Cancel() or when in default-constructed state.
-  const std::function<void(Args...)>& callback() const { return wrapper_; }
+  fit::function<void(Args...)> callback() { return wrapper_.share(); }
 
   // Sets |callback| as the closure that may be canceled. |callback| may not be
   // null. Outstanding and any previously wrapped callbacks are canceled.
-  void Reset(std::function<void(Args...)> callback) {
+  void Reset(fit::function<void(Args...)> callback) {
     FXL_DCHECK(callback);
     Cancel();
 
@@ -90,10 +92,10 @@ class CancelableCallback<void(Args...)> {
 
   // The closure that wraps around |callback_|. This acts as the cancelable
   // closure that gets vended out to clients.
-  std::function<void(Args...)> wrapper_;
+  fit::function<void(Args...)> wrapper_;
 
   // The stored closure that may be canceled.
-  std::function<void(Args...)> callback_;
+  fit::function<void(Args...)> callback_;
 
   // Used to make sure that |wrapper_| is not run when this object is destroyed.
   fxl::WeakPtrFactory<CancelableCallback> weak_ptr_factory_;
