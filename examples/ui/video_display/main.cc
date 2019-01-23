@@ -10,6 +10,11 @@
 
 #include "garnet/examples/ui/video_display/simple_camera_view.h"
 
+/*
+  To run this code, log in and then run the following command:
+  > fx shell sessionctl add_mod fuchsia-pkg://fuchsia.com/video_display#meta/video_display.cmx
+*/
+
 int main(int argc, const char** argv) {
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   trace::TraceProvider trace_provider(loop.dispatcher());

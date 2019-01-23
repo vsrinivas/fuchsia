@@ -264,12 +264,10 @@ zx_status_t VideoDisplay::ConnectToCamera(
         DisconnectFromCamera();
         return status;
       }
-      const std::vector<fuchsia::camera::VideoFormat>& call_formats =
-          formats_ptr;
-      for (auto&& f : call_formats) {
+      for (auto&& f : formats_ptr) {
         formats.push_back(f);
       }
-      format_index += call_formats.size();
+      format_index += formats_ptr.size();
     } while (formats.size() < total_format_count);
 
     FXL_LOG(INFO) << "Available formats: " << formats.size();

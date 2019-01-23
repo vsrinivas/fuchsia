@@ -51,7 +51,7 @@ zx_status_t run_camera() {
   uint32_t total_format_count;
   uint32_t format_index = 0;
   do {
-    std::vector<VideoFormat> formats;
+    std::vector<VideoFormat> call_formats;
     status = client.camera()->GetFormats(format_index, &formats,
                                          &total_format_count, &driver_status);
     if (status != ZX_OK) {
@@ -59,7 +59,6 @@ zx_status_t run_camera() {
       return status;
     }
 
-    const std::vector<VideoFormat>& call_formats = formats;
     for (auto&& f : call_formats) {
       formats.push_back(f);
     }
@@ -103,13 +102,19 @@ zx_status_t run_camera() {
   }
 
   stream.events().OnFrameAvailable =
-      [&stream, &frame_counter](FrameAvailableEvent frame) {
-        printf("Received FrameNotify Event %d at index: %u\n", frame_counter++,
+      [&stream, &loop, &frame_counter](FrameAvailableEvent frame) {
+        printf("Received FrameNotify Event %d at index: %u\n", frame_counter,
                frame.buffer_id);
 
-        stream->ReleaseFrame(frame.buffer_id);
-        if (frame_counter > 10) {
-          stream->Stop();
+        if (frame.frame_status == fuchsia::camera::FrameStatus::OK) {
+          stream->ReleaseFrame(frame.buffer_id);
+          if (frame_counter++ > 10) {
+            stream->Stop();
+            loop.Quit();
+          }
+        } else {
+          FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
+                         << static_cast<int>(frame.frame_status);
         }
       };
 
