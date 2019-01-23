@@ -16,6 +16,8 @@ class Blob {
   String hash;
   String sourcePath = "Unknown";
   int size;
+  int sizeOnHost;
+  int estimatedCompressedSize;
   int count;
 
   int get saved {
@@ -86,49 +88,64 @@ class BlobStats {
       if (blob == null) {
         var blob = new Blob();
         blob.hash = hash;
-        blob.size = stat.size;
-
-        // TODO(smklein): This is a heuristic matching the internals of blobs.
-        // As this heuristic changes (or the compression algorithm is altered),
-        // this code must be updated.
-        const int minimumSaving = 65536;
-
-        bool compression = argResults[lz4Compression] | argResults[zstdCompression];
-        if (blob.size > minimumSaving && compression) {
-          String tmpPath = Directory.systemTemp.path + "/compressed." + hash;
-          var compressedFile = new File(tmpPath);
-          try {
-            if (argResults[lz4Compression]) {
-              var result = await Process.run("lz4", ["-1", path, tmpPath], runInShell: true);
-              if (result.exitCode > 0) {
-                print("Could not compress $path");
-                continue;
-              }
-            } else if (argResults[zstdCompression]) {
-              var result = await Process.run("zstd", [path, "-o", tmpPath], runInShell: true);
-              if (result.exitCode > 0) {
-                print("Could not compress $path");
-                continue;
-              }
-            } else {
-              print("Bad compression algorithm");
-            }
-            var stat = await compressedFile.stat();
-            if (stat.type == FileSystemEntityType.NOT_FOUND) {
-              print("Could not compress $path");
-              continue;
-            }
-            if (stat.size < blob.size - minimumSaving) {
-              blob.size = stat.size;
-            }
-          } finally {
-            await compressedFile.delete();
-          }
-        }
-
+        blob.sizeOnHost = stat.size;
+        blob.estimatedCompressedSize =
+            await estimateCompressedBlobSize(stat.size, hash, path);
         blob.count = 0;
         blobsByHash[hash] = blob;
       }
+    }
+  }
+
+  Future estimateCompressedBlobSize(int size, String hash, String path) async {
+    // TODO(smklein): This is a heuristic matching the internals of blobs.
+    // As this heuristic changes (or the compression algorithm is altered),
+    // this code must be updated.
+    const int minimumSaving = 65536;
+
+    bool compression = argResults[lz4Compression] | argResults[zstdCompression];
+    if (size > minimumSaving && compression) {
+      String tmpPath = Directory.systemTemp.path + "/compressed." + hash;
+      var compressedFile = new File(tmpPath);
+      try {
+        if (argResults[lz4Compression]) {
+          var result =
+              await Process.run("lz4", ["-1", path, tmpPath]);
+          if (result.exitCode > 0) {
+            print("Could not compress $path");
+            return size;
+          }
+        } else if (argResults[zstdCompression]) {
+          var result = await Process.run("zstd", [path, "-o", tmpPath]);
+          if (result.exitCode > 0) {
+            print("Could not compress $path");
+            return size;
+          }
+        } else {
+          print("Bad compression algorithm");
+        }
+        var stat = await compressedFile.stat();
+        if (stat.type == FileSystemEntityType.NOT_FOUND) {
+          print("Could not compress $path");
+          return size;
+        }
+        if (stat.size < size - minimumSaving) {
+          return stat.size;
+        }
+      } finally {
+        await compressedFile.delete();
+      }
+    }
+    return size; // No compression
+  }
+
+  Future addBlobSizes(String path) async {
+    var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
+    for (var line in lines) {
+      var parts = line.split("=");
+      var hash = parts[0];
+      var blob = blobsByHash[hash];
+      blob.size = int.parse(parts[1]);
     }
   }
 
@@ -348,8 +365,10 @@ class BlobStats {
 
 Future main(List<String> args) async {
   final parser = new ArgParser()
-    ..addFlag(lz4Compression, abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
-    ..addFlag(zstdCompression, abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size");
+    ..addFlag(lz4Compression,
+        abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
+    ..addFlag(zstdCompression,
+        abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size");
   argResults = parser.parse(args);
   var suffix;
   if (argResults.rest.length > 0) {
@@ -358,6 +377,7 @@ Future main(List<String> args) async {
 
   var stats = new BlobStats(Directory.current, suffix);
   await stats.addManifest("blob.manifest");
+  await stats.addBlobSizes("blob.sizes");
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
   stats.computeStats();
   stats.printBlobs(40);
