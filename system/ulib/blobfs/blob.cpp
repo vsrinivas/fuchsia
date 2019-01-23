@@ -23,6 +23,7 @@
 #include <digest/digest.h>
 #include <fbl/auto_call.h>
 #include <fbl/ref_ptr.h>
+#include <fbl/string_buffer.h>
 #include <fbl/string_piece.h>
 #include <fs/metrics.h>
 #include <fuchsia/io/c/fidl.h>
@@ -42,6 +43,18 @@ using digest::Digest;
 using digest::MerkleTree;
 
 } // namespace
+
+// Blob's vmo names have following pattern
+// "blob-1abc8" or "compressedBlob-5c"
+constexpr char kBlobVmoNamePrefix[] = "blob";
+constexpr char kCompressedBlobVmoNamePrefix[] = "compressedBlob";
+
+void FormatVmoName(const char* prefix,
+                   fbl::StringBuffer<ZX_MAX_NAME_LEN>* vmo_name,
+                   size_t index) {
+    vmo_name->Clear();
+    vmo_name->AppendPrintf("%s-%lx", prefix, index);
+}
 
 zx_status_t Blob::Verify() const {
     TRACE_DURATION("blobfs", "Blobfs::Verify");
@@ -94,7 +107,9 @@ zx_status_t Blob::InitVmos() {
         return ZX_ERR_OUT_OF_RANGE;
     }
 
-    zx_status_t status = mapping_.CreateAndMap(vmo_size, "blob");
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
+    FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
+    zx_status_t status = mapping_.CreateAndMap(vmo_size, vmo_name.c_str());
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialize vmo; error: %d\n", status);
         return status;
@@ -135,7 +150,10 @@ zx_status_t Blob::InitCompressed() {
         FS_TRACE_ERROR("Multiplication overflow\n");
         return ZX_ERR_OUT_OF_RANGE;
     }
-    zx_status_t status = compressed_mapper.CreateAndMap(compressed_size, "compressed-blob");
+
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
+    FormatVmoName(kCompressedBlobVmoNamePrefix, &vmo_name, Ino());
+    zx_status_t status = compressed_mapper.CreateAndMap(compressed_size, vmo_name.c_str());
     if (status != ZX_OK) {
         FS_TRACE_ERROR("Failed to initialized compressed vmo; error: %d\n", status);
         return status;
@@ -319,9 +337,11 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
         return status;
     }
 
+    fbl::StringBuffer<ZX_MAX_NAME_LEN> vmo_name;
     if (inode_.blob_size >= kCompressionMinBytesSaved) {
         size_t max = Compressor::BufferMax(inode_.blob_size);
-        status = write_info->compressed_blob.CreateAndMap(max, "compressed-blob");
+        FormatVmoName(kCompressedBlobVmoNamePrefix, &vmo_name, Ino());
+        status = write_info->compressed_blob.CreateAndMap(max, vmo_name.c_str());
         if (status != ZX_OK) {
             return status;
         }
@@ -335,7 +355,8 @@ zx_status_t Blob::SpaceAllocate(uint64_t size_data) {
 
     // Open VMOs, so we can begin writing after allocate succeeds.
     fzl::OwnedVmoMapper mapping;
-    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize, "blob")) != ZX_OK) {
+    FormatVmoName(kBlobVmoNamePrefix, &vmo_name, Ino());
+    if ((status = mapping.CreateAndMap(inode_.block_count * kBlobfsBlockSize, vmo_name.c_str())) != ZX_OK) {
         return status;
     }
     if ((status = blobfs_->AttachVmo(mapping.vmo(), &vmoid_)) != ZX_OK) {
@@ -827,7 +848,7 @@ zx_status_t Blob::Getattr(vnattr_t* a) {
     LatencyEvent event(&blobfs_->GetMutableVnodeMetrics()->get_attr, blobfs_->CollectingMetrics());
     memset(a, 0, sizeof(vnattr_t));
     a->mode = V_TYPE_FILE | V_IRUSR;
-    a->inode = fuchsia_io_INO_UNKNOWN;
+    a->inode = Ino();
     a->size = SizeData();
     a->blksize = kBlobfsBlockSize;
     a->blkcount = inode_.block_count * (kBlobfsBlockSize / VNATTR_BLKSIZE);

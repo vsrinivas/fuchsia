@@ -112,6 +112,9 @@ public:
         return map_index_;
     }
 
+    // Returns a unique identifier for this blob
+    size_t Ino() const { return map_index_; }
+
     void PopulateInode(uint32_t node_index);
 
     uint64_t SizeData() const;
