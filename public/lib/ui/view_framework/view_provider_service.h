@@ -9,6 +9,8 @@
 #include <vector>
 
 #include <fuchsia/ui/viewsv1/cpp/fidl.h>
+#include <lib/fit/function.h>
+
 #include "lib/component/cpp/startup_context.h"
 #include "lib/fidl/cpp/binding_set.h"
 #include "lib/fxl/macros.h"
@@ -28,7 +30,7 @@ struct ViewContext {
 // A callback to create a view in response to a call to
 // |ViewProvider.CreateView()|.
 using ViewFactory =
-    std::function<std::unique_ptr<BaseView>(ViewContext context)>;
+    fit::function<std::unique_ptr<BaseView>(ViewContext context)>;
 
 // Publishes a view provider as an outgoing service of the application.
 // The views created by the view provider are owned by it and will be destroyed

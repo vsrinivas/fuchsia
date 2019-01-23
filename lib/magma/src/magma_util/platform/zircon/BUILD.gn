@@ -250,6 +250,7 @@ source_set("port") {
 
   deps = [
     "$magma_build_root/src/magma_util",
+    "$zircon_build_root/public/lib/fit",
     "$zircon_build_root/public/lib/zx",
   ]
 }
@@ -269,8 +270,12 @@ source_set("trace") {
     "$magma_build_root/src/magma_util",
   ]
 
+  public_deps = [
+    "//zircon/public/lib/fit",
+  ]
+
   if (magma_enable_tracing) {
-    public_deps = [
+    public_deps += [
       "$zircon_build_root/public/lib/async-cpp",
       "$zircon_build_root/public/lib/async-loop-cpp",
       "$zircon_build_root/public/lib/trace",

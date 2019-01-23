@@ -16,12 +16,12 @@
 #include <lib/zx/time.h>
 #include <lib/zx/vmar.h>
 #include <lib/zx/vmo.h>
-#include <limits>
 #include <stdio.h>
-#include <utility>
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/types.h>
+#include <limits>
+#include <utility>
 
 #include "lib/component/cpp/connect.h"
 #include "lib/component/cpp/startup_context.h"
@@ -328,7 +328,8 @@ void FxProcessor::OnMinLeadTimeChanged(int64_t new_min_lead_time_nsec) {
 }
 
 void FxProcessor::RequestKeystrokeMessage() {
-  keystroke_waiter_.Wait(handle_keystroke_thunk_, STDIN_FILENO, POLLIN);
+  keystroke_waiter_.Wait(std::move(handle_keystroke_thunk_), STDIN_FILENO,
+                         POLLIN);
 }
 
 void FxProcessor::HandleKeystroke(zx_status_t status, uint32_t events) {
@@ -479,9 +480,9 @@ void FxProcessor::ProcessInput() {
   }
 
   // Schedule our next processing callback.
-  async::PostDelayedTask(async_get_default_dispatcher(),
-                         [this]() { ProcessInput(); },
-                         zx::nsec(PROCESS_CHUNK_TIME));
+  async::PostDelayedTask(
+      async_get_default_dispatcher(), [this]() { ProcessInput(); },
+      zx::nsec(PROCESS_CHUNK_TIME));
 }
 
 void FxProcessor::ProduceOutputPackets(fuchsia::media::StreamPacket* out_pkt1,

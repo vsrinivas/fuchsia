@@ -10,7 +10,6 @@
 #include "garnet/lib/ui/gfx/tests/util.h"
 
 #include "lib/fsl/handles/object_info.h"
-#include "lib/fxl/functional/make_copyable.h"
 #include "lib/ui/scenic/cpp/commands.h"
 
 namespace scenic_impl {
@@ -171,39 +170,37 @@ TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
   bool expiry_cb_called = false;
   bool did_resolve = false;
 
-  async::PostTask(
-      dispatcher(),
-      fxl::MakeCopyable([this, &import, &resource, linker, &expiry_cb_called,
-                         &did_resolve,
-                         destination = std::move(destination)]() mutable {
-        // Set an expiry callback that checks the resource expired for the right
-        // reason and signal the latch.
-        linker->SetOnExpiredCallback(
-            [&linker, &expiry_cb_called](
-                Resource*, ResourceLinker::ExpirationCause cause) {
-              ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed,
-                        cause);
-              ASSERT_EQ(0u, linker->NumUnresolvedImports());
-              ASSERT_EQ(0u, linker->NumExports());
-              expiry_cb_called = true;
-            });
+  async::PostTask(dispatcher(), [this, &import, &resource, linker,
+                                 &expiry_cb_called, &did_resolve,
+                                 destination =
+                                     std::move(destination)]() mutable {
+    // Set an expiry callback that checks the resource expired for the right
+    // reason and signal the latch.
+    linker->SetOnExpiredCallback(
+        [&linker, &expiry_cb_called](Resource*,
+                                     ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kExportTokenClosed, cause);
+          ASSERT_EQ(0u, linker->NumUnresolvedImports());
+          ASSERT_EQ(0u, linker->NumExports());
+          expiry_cb_called = true;
+        });
 
-        linker->SetOnImportResolvedCallback(
-            [&did_resolve](Import* import, Resource* resource,
-                           ImportResolutionResult cause) -> void {
-              did_resolve = true;
-            });
-        import = fxl::MakeRefCounted<Import>(
-            session_.get(), 1, ::fuchsia::ui::gfx::ImportSpec::NODE,
-            linker->GetWeakPtr());
-        ASSERT_TRUE(linker->ImportResource(
-            import.get(),
-            ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-            std::move(destination)));              // import handle
+    linker->SetOnImportResolvedCallback(
+        [&did_resolve](Import* import, Resource* resource,
+                       ImportResolutionResult cause) -> void {
+          did_resolve = true;
+        });
+    import = fxl::MakeRefCounted<Import>(session_.get(), 1,
+                                         ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                         linker->GetWeakPtr());
+    ASSERT_TRUE(linker->ImportResource(
+        import.get(),
+        ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+        std::move(destination)));              // import handle
 
-        ASSERT_EQ(1u, linker->NumUnresolvedImports());
-        ASSERT_FALSE(did_resolve);
-      }));
+    ASSERT_EQ(1u, linker->NumUnresolvedImports());
+    ASSERT_FALSE(did_resolve);
+  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(expiry_cb_called);
@@ -261,28 +258,25 @@ TEST_F(ResourceLinkerTest, CanExportWithDeadDestinationHandle) {
   scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
-  async::PostTask(
-      dispatcher(),
-      fxl::MakeCopyable([this, &resource, linker, source = std::move(source),
-                         &called]() mutable {
-        resource = fxl::MakeRefCounted<EntityNode>(session_.get(),
-                                                   1 /* resource id */);
+  async::PostTask(dispatcher(), [this, &resource, linker,
+                                 source = std::move(source),
+                                 &called]() mutable {
+    resource =
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
-        ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
-        ASSERT_EQ(1u, linker->NumExports());
+    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
+    ASSERT_EQ(1u, linker->NumExports());
 
-        // Set an expiry callback that checks the resource expired for the right
-        // reason and signal the latch.
-        linker->SetOnExpiredCallback(
-            [linker, &called](Resource*,
-                              ResourceLinker::ExpirationCause cause) {
-              ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound,
-                        cause);
-              ASSERT_EQ(0u, linker->NumUnresolvedImports());
-              ASSERT_EQ(0u, linker->NumExports());
-              called = true;
-            });
-      }));
+    // Set an expiry callback that checks the resource expired for the right
+    // reason and signal the latch.
+    linker->SetOnExpiredCallback(
+        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+          ASSERT_EQ(0u, linker->NumUnresolvedImports());
+          ASSERT_EQ(0u, linker->NumExports());
+          called = true;
+        });
+  });
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(called);
 }
@@ -296,31 +290,28 @@ TEST_F(ResourceLinkerTest,
   scenic_impl::gfx::ResourcePtr resource;
   bool called = false;
 
-  async::PostTask(
-      dispatcher(),
-      fxl::MakeCopyable([this, &resource, linker, source = std::move(source),
-                         &destination, &called]() mutable {
-        // Register the resource.
-        resource = fxl::MakeRefCounted<EntityNode>(session_.get(),
-                                                   1 /* resource id */);
+  async::PostTask(dispatcher(), [this, &resource, linker,
+                                 source = std::move(source), &destination,
+                                 &called]() mutable {
+    // Register the resource.
+    resource =
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
-        ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
-        ASSERT_EQ(1u, linker->NumExports());
+    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
+    ASSERT_EQ(1u, linker->NumExports());
 
-        // Set an expiry callback that checks the resource expired for the right
-        // reason and signal the latch.
-        linker->SetOnExpiredCallback(
-            [linker, &called](Resource*,
-                              ResourceLinker::ExpirationCause cause) {
-              ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound,
-                        cause);
-              ASSERT_EQ(0u, linker->NumExports());
-              called = true;
-            });
+    // Set an expiry callback that checks the resource expired for the right
+    // reason and signal the latch.
+    linker->SetOnExpiredCallback(
+        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kNoImportsBound, cause);
+          ASSERT_EQ(0u, linker->NumExports());
+          called = true;
+        });
 
-        // Release the destination handle.
-        destination.reset();
-      }));
+    // Release the destination handle.
+    destination.reset();
+  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(called);
@@ -336,39 +327,36 @@ TEST_F(ResourceLinkerTest,
   ImportPtr import;
   bool did_resolve = false;
 
-  async::PostTask(
-      dispatcher(), fxl::MakeCopyable([this, &import, &resource, linker,
-                                       source = std::move(source), &destination,
-                                       &did_resolve]() mutable {
-        // Register the resource.
-        resource = fxl::MakeRefCounted<EntityNode>(session_.get(),
-                                                   1 /* resource id */);
+  async::PostTask(dispatcher(), [this, &import, &resource, linker,
+                                 source = std::move(source), &destination,
+                                 &did_resolve]() mutable {
+    // Register the resource.
+    resource =
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
 
-        // Import.
-        linker->SetOnImportResolvedCallback(
-            [&did_resolve, linker](Import* import, Resource* resource,
-                                   ImportResolutionResult cause) -> void {
-              did_resolve = true;
-              ASSERT_FALSE(resource);
-              ASSERT_EQ(ImportResolutionResult::kExportHandleDiedBeforeBind,
-                        cause);
-              ASSERT_EQ(0u, linker->NumUnresolvedImports());
-            });
+    // Import.
+    linker->SetOnImportResolvedCallback(
+        [&did_resolve, linker](Import* import, Resource* resource,
+                               ImportResolutionResult cause) -> void {
+          did_resolve = true;
+          ASSERT_FALSE(resource);
+          ASSERT_EQ(ImportResolutionResult::kExportHandleDiedBeforeBind, cause);
+          ASSERT_EQ(0u, linker->NumUnresolvedImports());
+        });
 
-        import = fxl::MakeRefCounted<Import>(
-            session_.get(), 2, ::fuchsia::ui::gfx::ImportSpec::NODE,
-            linker->GetWeakPtr());
-        linker->ImportResource(
-            import.get(),
-            ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
-            CopyEventPair(destination));           // import handle
+    import = fxl::MakeRefCounted<Import>(session_.get(), 2,
+                                         ::fuchsia::ui::gfx::ImportSpec::NODE,
+                                         linker->GetWeakPtr());
+    linker->ImportResource(import.get(),
+                           ::fuchsia::ui::gfx::ImportSpec::NODE,  // import spec
+                           CopyEventPair(destination));  // import handle
 
-        ASSERT_EQ(1u, linker->NumUnresolvedImports());
+    ASSERT_EQ(1u, linker->NumUnresolvedImports());
 
-        // Release both destination and source handles.
-        destination.reset();
-        source.reset();
-      }));
+    // Release both destination and source handles.
+    destination.reset();
+    source.reset();
+  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(did_resolve);
@@ -381,28 +369,25 @@ TEST_F(ResourceLinkerTest, ResourceDeathAutomaticallyCleansUpResourceExport) {
   ResourceLinker* linker = resource_linker_.get();
   bool called = false;
 
-  async::PostTask(
-      dispatcher(), fxl::MakeCopyable([this, linker, source = std::move(source),
-                                       &destination, &called]() mutable {
-        // Register the resource.
-        auto resource = fxl::MakeRefCounted<EntityNode>(session_.get(),
-                                                        1 /* resource id */);
-        ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
-        ASSERT_EQ(1u, linker->NumExports());
+  async::PostTask(dispatcher(), [this, linker, source = std::move(source),
+                                 &destination, &called]() mutable {
+    // Register the resource.
+    auto resource =
+        fxl::MakeRefCounted<EntityNode>(session_.get(), 1 /* resource id */);
+    ASSERT_TRUE(linker->ExportResource(resource.get(), std::move(source)));
+    ASSERT_EQ(1u, linker->NumExports());
 
-        // Set an expiry callback that checks the resource expired for the right
-        // reason and signal the latch.
-        linker->SetOnExpiredCallback(
-            [linker, &called](Resource*,
-                              ResourceLinker::ExpirationCause cause) {
-              ASSERT_EQ(ResourceLinker::ExpirationCause::kResourceDestroyed,
-                        cause);
-              ASSERT_EQ(0u, linker->NumExports());
-              called = true;
-            });
+    // Set an expiry callback that checks the resource expired for the right
+    // reason and signal the latch.
+    linker->SetOnExpiredCallback(
+        [linker, &called](Resource*, ResourceLinker::ExpirationCause cause) {
+          ASSERT_EQ(ResourceLinker::ExpirationCause::kResourceDestroyed, cause);
+          ASSERT_EQ(0u, linker->NumExports());
+          called = true;
+        });
 
-        // |resource| gets destroyed now since its out of scope.
-      }));
+    // |resource| gets destroyed now since its out of scope.
+  });
 
   EXPECT_TRUE(RunLoopUntilIdle());
   ASSERT_TRUE(called);

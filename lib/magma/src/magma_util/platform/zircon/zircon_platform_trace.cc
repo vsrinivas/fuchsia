@@ -6,6 +6,8 @@
 
 #include <memory>
 
+#include <lib/fit/function.h>
+
 #include "magma_util/dlog.h"
 #include "magma_util/macros.h"
 
@@ -48,12 +50,12 @@ bool ZirconPlatformTraceObserver::Initialize()
     return true;
 }
 
-void ZirconPlatformTraceObserver::SetObserver(std::function<void(bool)> callback)
+void ZirconPlatformTraceObserver::SetObserver(fit::function<void(bool)> callback)
 {
     observer_.Stop();
     enabled_ = false;
 
-    observer_.Start(loop_.dispatcher(), [this, callback] {
+    observer_.Start(loop_.dispatcher(), [this, callback = std::move(callback)] {
         bool enabled = trace_state() == TRACE_STARTED;
         if (this->enabled_ != enabled) {
             this->enabled_ = enabled;

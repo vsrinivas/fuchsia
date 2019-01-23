@@ -44,9 +44,9 @@ class PendingResponse {
   // called at most once among all the copies.
   //
   // The reason |PendingResponse| objects are copiable is so that they can be
-  // held by an std::function, which is also copyable. Typically, a
+  // held by an fit::function, which is also copyable. Typically, a
   // |PendingResponse| object is held as a member of another object that
-  // implements operator(), which can be wrapped by std::function.
+  // implements operator(), which can be wrapped by fit::function.
   PendingResponse(const PendingResponse& other);
   PendingResponse& operator=(const PendingResponse& other);
 
@@ -77,8 +77,8 @@ class PendingResponse {
 
  private:
   // This class should be small enough to fit into the inline storage for an
-  // std::function to avoid allocating additional storage when processing
-  // messages. Currently, std::function has space for three pointers.
+  // fit::function to avoid allocating additional storage when processing
+  // messages. Currently, fit::function has space for three pointers.
   zx_txid_t txid_;
   WeakStubController* weak_controller_;
 };

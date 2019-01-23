@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
 #define GARNET_BIN_APPMGR_RUNNER_HOLDER_H_
 
+#include <lib/fit/function.h>
 #include <lib/zx/vmo.h>
 
 #include <fuchsia/sys/cpp/fidl.h>
@@ -25,7 +26,7 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   RunnerHolder(Services services,
                fuchsia::sys::ComponentControllerPtr controller,
                fuchsia::sys::LaunchInfo launch_info, Realm* realm,
-               std::function<void()> error_handler = nullptr);
+               fit::function<void()> error_handler = nullptr);
   ~RunnerHolder();
 
   void StartComponent(
@@ -45,7 +46,7 @@ class RunnerHolder : public ComponentContainer<ComponentBridge> {
   fuchsia::sys::ComponentControllerPtr controller_;
   fuchsia::sys::RunnerPtr runner_;
   ComponentControllerImpl* impl_object_;
-  std::function<void()> error_handler_;
+  fit::function<void()> error_handler_;
   std::unordered_map<ComponentBridge*, std::unique_ptr<ComponentBridge>>
       components_;
   uint64_t component_id_counter_;

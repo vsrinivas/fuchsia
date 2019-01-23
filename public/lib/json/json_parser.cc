@@ -12,6 +12,7 @@
 #include <string>
 
 #include <lib/fit/function.h>
+
 #include "lib/fxl/files/file.h"
 #include "lib/fxl/macros.h"
 #include "lib/fxl/strings/join_strings.h"
@@ -22,7 +23,7 @@
 namespace json {
 namespace {
 
-using ErrorCallback = std::function<void(size_t, const std::string&)>;
+using ErrorCallback = fit::function<void(size_t, const std::string&)>;
 using fxl::StringPrintf;
 
 void GetLineAndColumnForOffset(const std::string& input, size_t offset,

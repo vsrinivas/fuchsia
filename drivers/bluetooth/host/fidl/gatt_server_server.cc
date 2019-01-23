@@ -13,8 +13,6 @@
 
 #include "helpers.h"
 
-#include "lib/fxl/functional/make_copyable.h"
-
 using fuchsia::bluetooth::ErrorCode;
 using fuchsia::bluetooth::Status;
 using GattErrorCode = fuchsia::bluetooth::gatt::ErrorCode;
@@ -340,7 +338,7 @@ void GattServerServer::OnReadRequest(::btlib::gatt::IdType service_id,
 
   auto* delegate = iter->second->delegate();
   ZX_DEBUG_ASSERT(delegate);
-  delegate->OnReadValue(id, offset, fxl::MakeCopyable(std::move(cb)));
+  delegate->OnReadValue(id, offset, std::move(cb));
 }
 
 void GattServerServer::OnWriteRequest(::btlib::gatt::IdType service_id,
@@ -366,8 +364,7 @@ void GattServerServer::OnWriteRequest(::btlib::gatt::IdType service_id,
     responder(GattErrorCodeFromFidl(error_code, false /* is_read */));
   };
 
-  delegate->OnWriteValue(id, offset, std::move(fidl_value),
-                         fxl::MakeCopyable(std::move(cb)));
+  delegate->OnWriteValue(id, offset, std::move(fidl_value), std::move(cb));
 }
 
 void GattServerServer::OnCharacteristicConfig(::btlib::gatt::IdType service_id,

@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_EXAMPLES_UI_HELLO_VIEWS_VIEW_PROVIDER_SERVICE_H_
-#define GARNET_EXAMPLES_UI_HELLO_VIEWS_VIEW_PROVIDER_SERVICE_H_
+#ifndef GARNET_EXAMPLES_UI_HELLO_VIEWS_EXAMPLE_VIEW_PROVIDER_SERVICE_H_
+#define GARNET_EXAMPLES_UI_HELLO_VIEWS_EXAMPLE_VIEW_PROVIDER_SERVICE_H_
 
 #include <fuchsia/sys/cpp/fidl.h>
 #include <fuchsia/ui/app/cpp/fidl.h>
+#include <lib/fit/function.h>
 #include <lib/zx/eventpair.h>
 
 #include "lib/component/cpp/startup_context.h"
@@ -25,7 +26,7 @@ struct ViewContext {
 
 // A callback to create a view in response to a call to
 // |ViewProvider.CreateView()|.
-using ViewFactory = std::function<void(ViewContext context)>;
+using ViewFactory = fit::function<void(ViewContext context)>;
 
 // A basic implementation of the |ViewProvider| interface which Scenic clients
 // can use to create and expose custom Views to other Scenic clients.
@@ -56,4 +57,4 @@ class ExampleViewProviderService : public fuchsia::ui::app::ViewProvider {
 
 }  // namespace hello_views
 
-#endif  // GARNET_EXAMPLES_UI_HELLO_VIEWS_VIEW_PROVIDER_SERVICE_H_
+#endif  // GARNET_EXAMPLES_UI_HELLO_VIEWS_EXAMPLE_VIEW_PROVIDER_SERVICE_H_

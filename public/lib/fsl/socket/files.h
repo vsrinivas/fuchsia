@@ -5,10 +5,11 @@
 #ifndef LIB_FSL_SOCKET_FILES_H_
 #define LIB_FSL_SOCKET_FILES_H_
 
-#include <lib/async/dispatcher.h>
-#include <lib/zx/socket.h>
-
 #include <functional>
+
+#include <lib/async/dispatcher.h>
+#include <lib/fit/function.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/files/unique_fd.h"
 #include "lib/fxl/fxl_export.h"
@@ -22,7 +23,7 @@ namespace fsl {
 FXL_EXPORT void CopyToFileDescriptor(
     zx::socket source, fxl::UniqueFD destination,
     async_dispatcher_t* dispatcher,
-    std::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>
+    fit::function<void(bool /*success*/, fxl::UniqueFD /*destination*/)>
         callback);
 
 // Asynchronously copies data from source file to the destination. The given
@@ -31,8 +32,7 @@ FXL_EXPORT void CopyToFileDescriptor(
 FXL_EXPORT void CopyFromFileDescriptor(
     fxl::UniqueFD source, zx::socket destination,
     async_dispatcher_t* dispatcher,
-    std::function<void(bool /*success*/, fxl::UniqueFD /*source*/)>
-        callback);
+    fit::function<void(bool /*success*/, fxl::UniqueFD /*source*/)> callback);
 
 }  // namespace fsl
 

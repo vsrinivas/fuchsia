@@ -5,7 +5,6 @@
 #include <lib/async/cpp/task.h>
 
 #include "garnet/bin/tts/tts_speaker.h"
-#include "lib/fxl/functional/make_copyable.h"
 
 namespace tts {
 
@@ -141,10 +140,10 @@ void TtsSpeaker::SendPendingAudio() {
 
     if (eos && (todo == bytes_to_send)) {
       audio_renderer_->SendPacket(
-          std::move(pkt), fxl::MakeCopyable([speak_complete_cbk = std::move(
-                                                 speak_complete_cbk_)]() {
+          std::move(pkt),
+          [speak_complete_cbk = std::move(speak_complete_cbk_)]() {
             speak_complete_cbk();
-          }));
+          });
     } else if (todo == bytes_till_low_water) {
       audio_renderer_->SendPacket(
           std::move(pkt), [thiz = shared_from_this(), new_rd_pos = tx_ptr_]() {

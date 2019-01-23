@@ -13,8 +13,8 @@ MockViewContainerListener::MockViewContainerListener()
 MockViewContainerListener::MockViewContainerListener(
     OnMockChildAttachedCallback child_attached_callback,
     OnMockChildUnavailable child_unavailable_callback)
-    : child_attached_callback_(child_attached_callback),
-      child_unavailable_callback_(child_unavailable_callback) {}
+    : child_attached_callback_(std::move(child_attached_callback)),
+      child_unavailable_callback_(std::move(child_unavailable_callback)) {}
 
 MockViewContainerListener::~MockViewContainerListener() {}
 

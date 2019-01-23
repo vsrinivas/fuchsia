@@ -5,9 +5,10 @@
 #ifndef LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 #define LIB_FSL_SOCKET_BLOCKING_DRAIN_H_
 
-#include <lib/zx/socket.h>
-
 #include <functional>
+
+#include <lib/fit/function.h>
+#include <lib/zx/socket.h>
 
 #include "lib/fxl/fxl_export.h"
 
@@ -18,7 +19,7 @@ namespace fsl {
 // socket has been drained, |false| if an error occured.
 FXL_EXPORT bool BlockingDrainFrom(
     zx::socket source,
-    std::function<size_t(const void*, uint32_t)> write_bytes);
+    fit::function<size_t(const void*, uint32_t)> write_bytes);
 
 }  // namespace fsl
 

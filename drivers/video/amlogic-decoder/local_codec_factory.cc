@@ -11,6 +11,7 @@
 #include "codec_adapter_vp9.h"
 
 #include <lib/fidl/cpp/clone.h>
+#include <lib/fit/function.h>
 #include <lib/media/codec_impl/codec_admission_control.h>
 #include <optional>
 
@@ -21,7 +22,7 @@ struct CodecAdapterFactory {
 
   // This typedef is just for local readability here, not for use outside this
   // struct.
-  using CreateFunction = std::function<std::unique_ptr<CodecAdapter>(
+  using CreateFunction = fit::function<std::unique_ptr<CodecAdapter>(
       std::mutex& lock, CodecAdapterEvents*, DeviceCtx*)>;
 
   bool multi_instance;

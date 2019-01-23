@@ -7,9 +7,11 @@
 
 #include <functional>
 
+#include <lib/fit/function.h>
+
 namespace fxl {
 
-typedef std::function<void()> Closure;
+typedef fit::function<void()> Closure;
 
 }  // namespace fxl
 
