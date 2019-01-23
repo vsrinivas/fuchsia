@@ -6,6 +6,29 @@ import("//build/package.gni")
 import("//third_party/cobalt_config/metrics_registry.gni")
 import("//third_party/protobuf/proto_library.gni")
 
+metrics_registry("metrics_registry") {
+  project_name = "fuchsia_system_metrics"
+  namespace = "fuchsia_system_metrics"
+  generate_cc = true
+  generate_binarypb = false
+}
+
+source_set("system_metrics_daemon_lib") {
+  sources = [
+    "system_metrics_daemon.cc",
+    "system_metrics_daemon.h",
+  ]
+
+  public_deps = [
+    ":metrics_registry_cc",
+    "//garnet/bin/cobalt/utils:clock",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
 executable("system-metrics") {
   output_name = "cobalt_system_metrics_bin"
 
@@ -14,21 +37,13 @@ executable("system-metrics") {
   ]
 
   deps = [
+    ":system_metrics_daemon_lib",
     "//garnet/public/lib/component/cpp",
-    "//garnet/public/lib/fsl",
-    "//zircon/public/fidl/fuchsia-cobalt",
-    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
-    "//zircon/public/lib/async-loop-cpp",
   ]
-}
-
-metrics_registry("cobalt_system_metrics_registry") {
-  project_id = 102
 }
 
 package("cobalt_system_metrics") {
   deps = [
-    ":cobalt_system_metrics_registry",
     ":system-metrics",
   ]
 
@@ -39,14 +54,25 @@ package("cobalt_system_metrics") {
     },
   ]
 
-  resources = [
-    {
-      path = rebase_path(get_label_info(":cobalt_system_metrics_registry",
-                                        "target_gen_dir") +
-                         "/cobalt_system_metrics_registry.pb")
-      dest = "cobalt_system_metrics_registry.pb"
-    },
+  binary = "cobalt_system_metrics_bin"
+}
+
+executable("cobalt_system_metrics_unittests") {
+  testonly = true
+
+  sources = [
+    "system_metrics_daemon_test.cc",
   ]
 
-  binary = "cobalt_system_metrics_bin"
+  deps = [
+    ":system_metrics_daemon_lib",
+    "//garnet/bin/cobalt/testing:fake_clock_lib",
+    "//garnet/bin/cobalt/testing:fake_logger_lib",
+    "//garnet/bin/cobalt/utils:clock",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
 }

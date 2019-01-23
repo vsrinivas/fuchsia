@@ -20,6 +20,7 @@ package("cobalt_tests") {
     ":cobalt_encoder_unittests",
     "app:app",
     "app:cobalt_app_unittests",
+    "system-metrics:cobalt_system_metrics_unittests",
     "testapp:cobalt_testapp",
     "testapp:generate_legacy_testapp_metrics",
     "testapp:generate_testapp_metrics",
@@ -50,6 +51,10 @@ package("cobalt_tests") {
   tests = [
     {
       name = "cobalt_app_unittests"
+    },
+
+    {
+      name = "cobalt_system_metrics_unittests"
     },
 
     {

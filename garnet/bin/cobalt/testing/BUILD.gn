@@ -1,0 +1,28 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("fake_logger_lib") {
+  testonly = true
+  sources = [
+    "fake_logger.cc",
+    "fake_logger.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-cobalt",
+  ]
+}
+
+source_set("fake_clock_lib") {
+  testonly = true
+  sources = [
+    "fake_clock.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/cobalt/utils:clock",
+  ]
+}
