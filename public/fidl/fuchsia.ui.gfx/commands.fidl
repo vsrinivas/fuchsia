@@ -38,7 +38,6 @@ union Command {
   SetShapeCmd set_shape;
   SetMaterialCmd set_material;
   SetClipCmd set_clip;
-  SetClipPlanesCmd set_clip_planes;
   SetHitTestBehaviorCmd set_hit_test_behavior;
   SetViewPropertiesCmd set_view_properties;
   TakeSnapshotCmdHACK take_snapshot_cmd;
@@ -349,7 +348,7 @@ struct SetMaterialCmd {
   uint32 material_id;
 };
 
-// Sets/clears a node's clip.  DEPRECATED: use SetClipPlanesCmd.
+// Sets/clears a node's clip.
 //
 // Constraints:
 // - |node_id| refs a |Node| with the has_clip characteristic.
@@ -373,16 +372,6 @@ struct SetClipCmd {
   uint32 node_id;
   uint32 clip_id;
   bool clip_to_self;
-};
-
-// Sets the list of clip planes that apply to a Node and all of its children.  Replaces
-// the list set by any previous SetClipPlanesCmd.
-//
-// - |node_id| refs a |Node| with the has_clip characteristic.
-// - |clip_planes| is the new list of oriented clip planes.
-struct SetClipPlanesCmd {
-  uint32 node_id;
-  vector<Plane3> clip_planes;
 };
 
 // Sets a node's hit test behavior.

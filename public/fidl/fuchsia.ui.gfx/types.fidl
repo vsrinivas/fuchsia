@@ -48,13 +48,6 @@ struct Quaternion {
   float32 w;
 };
 
-// Oriented plane described by a normal vector and a distance
-// from the origin along that vector.
-struct Plane3 {
-  vec3 dir;
-  float32 dist;
-};
-
 struct FactoredTransform {
   vec3 translation;
   vec3 scale;

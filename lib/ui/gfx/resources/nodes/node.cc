@@ -334,17 +334,6 @@ bool Node::SetClipToSelf(bool clip_to_self) {
   return true;
 }
 
-bool Node::SetClipPlanes(std::vector<escher::plane3> clip_planes) {
-  if (!(type_flags() & kHasClip)) {
-    error_reporter()->ERROR()
-            << "scenic::gfx::Node::SetClipPlanes(): node of type " << type_name()
-            << " cannot have clip params set.";
-    return false;
-  }
-  clip_planes_ = std::move(clip_planes);
-  return true;
-}
-
 bool Node::SetHitTestBehavior(
     ::fuchsia::ui::gfx::HitTestBehavior hit_test_behavior) {
   hit_test_behavior_ = hit_test_behavior;

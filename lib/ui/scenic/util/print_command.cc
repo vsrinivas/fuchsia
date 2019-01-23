@@ -56,8 +56,6 @@ std::ostream& operator<<(std::ostream& stream,
       return stream << "SetMaterial";
     case Command::Tag::kSetClip:
       return stream << "SetClip";
-    case Command::Tag::kSetClipPlanes:
-      return stream << "SetClipPlanes";
     case Command::Tag::kSetHitTestBehavior:
       return stream << "SetHitTestBehavior";
     case Command::Tag::kSetViewProperties:
