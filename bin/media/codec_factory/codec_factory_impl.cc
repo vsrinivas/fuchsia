@@ -13,8 +13,12 @@ namespace {
 // instance that we got via other means (not by starting an isolate, but via a
 // factory registration initiated by a driver process, or by discovering a
 // device, or similar).
-const std::string kIsolateUrlOmx = "codec_runner_sw_omx";
-const std::string kIsolateUrlFfmpeg = "codec_runner_sw_ffmpeg";
+const std::string kIsolateUrlOmx =
+    "fuchsia-pkg://fuchsia.com/codec_runner_sw_omx#meta/"
+    "codec_runner_sw_omx.cmx";
+const std::string kIsolateUrlFfmpeg =
+    "fuchsia-pkg://fuchsia.com/codec_runner_sw_ffmpeg#meta/"
+    "codec_runner_sw_ffmpeg.cmx";
 
 // TODO(turnage): Devise a better routing system between ffmpeg and omx codec
 // factories. Using this should be fine for now because omx does not service

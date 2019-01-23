@@ -19,14 +19,16 @@ group("tools") {
 }
 
 package("audio_core") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     "//garnet/bin/media/audio_core",
     "//garnet/bin/media/audio_core/audiofx",
   ]
 
-  binary = "audio_core"
+  binaries = [
+    {
+      name = "audio_core"
+    },
+  ]
 
   loadable_modules = [
     {
@@ -44,13 +46,15 @@ package("audio_core") {
 }
 
 package("codec_factory") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     "//garnet/bin/media/codec_factory:codec_factory",
   ]
 
-  binary = "codec_factory"
+  binaries = [
+    {
+      name = "codec_factory"
+    },
+  ]
 
   meta = [
     {
@@ -62,8 +66,6 @@ package("codec_factory") {
 
 # This package is only really expected to be used by the codec_factory package.
 package("codec_runner_sw_omx") {
-  deprecated_bare_package_url = "//build"
-
   meta = [
     {
       path = rebase_path("codecs/meta/codec_runner_sw_omx.cmx")
@@ -78,7 +80,11 @@ package("codec_runner_sw_omx") {
     "//garnet/bin/media/codecs/sw/omx/dec/aac:libcodec_sw_omx_dec_aac",
   ]
 
-  binary = "codec_runner_sw_omx"
+  binaries = [
+    {
+      name = "codec_runner_sw_omx"
+    },
+  ]
 
   loadable_modules = [
     {
@@ -89,8 +95,6 @@ package("codec_runner_sw_omx") {
 
 # This package is only really expected to be used by the codec_factory package.
 package("codec_runner_sw_ffmpeg") {
-  deprecated_bare_package_url = "//build"
-
   meta = [
     {
       path = rebase_path("codecs/meta/codec_runner_sw_ffmpeg.cmx")
@@ -102,5 +106,9 @@ package("codec_runner_sw_ffmpeg") {
     "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
   ]
 
-  binary = "codec_runner_sw_ffmpeg"
+  binaries = [
+    {
+      name = "codec_runner_sw_ffmpeg"
+    },
+  ]
 }
