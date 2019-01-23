@@ -4,6 +4,8 @@
 
 import("//build/rust/rustc_binary.gni")
 import("//build/host.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
 
 rustc_binary("cmc") {
   name = "cmc"
@@ -28,6 +30,63 @@ rustc_binary("cmc") {
   non_rust_deps = [
     "//garnet/lib/rust/cm_json:cm_schema_json"
   ]
+}
+
+rustc_binary("cmc_integration_test_bin") {
+  name = "cmc_integration_test"
+  edition = "2018"
+  source_root = "tests/integration_test.rs"
+  deps = [
+    "//garnet/lib/rust/cm_fidl",
+    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
+}
+
+rustc_binary("example_bin") {
+  name = "example"
+  edition = "2018"
+  source_root = "tests/example.rs"
+}
+
+fuchsia_component("example_component") {
+  deps = [
+    ":example_bin",
+  ]
+  name = "example"
+  binary = "example"
+  manifest = rebase_path("meta/example.cml")
+  testonly = true
+}
+
+fuchsia_component("cmc_integration_test_component") {
+  deps = [
+    ":cmc_integration_test_bin",
+  ]
+
+  resources = [
+    {
+      if (is_debug) {
+        path = rebase_path("tests/golden_debug.cm")
+      } else {
+        path = rebase_path("tests/golden_release.cm")
+      }
+      dest = "golden.cm"
+    }
+  ]
+
+  binary = "cmc_integration_test"
+  manifest = rebase_path("meta/cmc_integration_test.cmx")
+  test = true
+}
+
+package("cmc_integration_test") {
+  components = [
+    ":example_component",
+    ":cmc_integration_test_component"
+  ]
+  testonly = true
 }
 
 install_host_tools("install") {
