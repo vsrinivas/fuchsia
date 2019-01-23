@@ -149,7 +149,6 @@ template("fuchsia_component") {
         public_deps = component.public_deps
       }
       component.deps += [ ":$compiled" ]
-      compiled_outputs = []
       compiled_outputs = get_target_outputs(":$compiled")
 
       # Collect the component's primary manifest.

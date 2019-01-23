@@ -94,7 +94,6 @@ template("cmx_validate") {
   }
 }
 
-
 # Compiles a cml file
 #
 # The cm_compile template will compile a cml file into a cm file. It will
@@ -125,19 +124,21 @@ template("cm_compile") {
                              "testonly",
                              "visibility",
                            ])
-
     tool = "//garnet/bin/cmc/"
     tool_output_name = "cmc"
 
-    formatted_output = "$target_out_dir/$target_name"
+    compiled_output = "$target_out_dir/$target_name"
+    inputs = [
+      invoker.data,
+    ]
     outputs = [
-      formatted_output,
+      compiled_output,
     ]
 
     args = [
       "compile",
       "--output",
-      rebase_path(formatted_output),
+      rebase_path(compiled_output),
       invoker.data,
     ]
 
@@ -187,6 +188,7 @@ template("cmx_merge") {
     tool_output_name = "cmc"
 
     merged_output = "$target_out_dir/$target_name"
+    inputs = invoker.sources
     outputs = [
       merged_output,
     ]
@@ -238,6 +240,9 @@ template("cmx_format") {
     tool_output_name = "cmc"
 
     formatted_output = "$target_out_dir/$target_name"
+    inputs = [
+      invoker.data,
+    ]
     outputs = [
       formatted_output,
     ]
