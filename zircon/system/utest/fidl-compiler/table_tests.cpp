@@ -149,6 +149,22 @@ table Foo {
 };
 )FIDL"));
 
+    // Keywords as field names.
+    EXPECT_TRUE(Compiles(R"FIDL(
+library fidl.test.tables;
+
+struct struct {
+    bool field;
+};
+
+table Foo {
+    1: int64 table;
+    2: bool library;
+    3: uint32 uint32;
+    4: struct member;
+};
+)FIDL"));
+
     END_TEST;
 }
 

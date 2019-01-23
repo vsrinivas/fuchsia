@@ -41,7 +41,61 @@ bool parsing_reserved_words_in_struct_test() {
     TestLibrary library(R"FIDL(
 library example;
 
+struct struct {
+    bool field;
+};
+
 struct InStruct {
+    struct foo;
+
+    bool as;
+    bool library;
+    bool using;
+
+    bool array;
+    bool handle;
+    bool request;
+    bool string;
+    bool vector;
+
+    bool bool;
+    bool int8;
+    bool int16;
+    bool int32;
+    bool int64;
+    bool uint8;
+    bool uint16;
+    bool uint32;
+    bool uint64;
+    bool float32;
+    bool float64;
+
+    bool true;
+    bool false;
+
+    bool reserved;
+};
+)FIDL");
+    EXPECT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
+// Test that otherwise reserved words can be appropriarely parsed when context
+// is clear.
+bool parsing_reserved_words_in_union_test() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+struct struct {
+    bool field;
+};
+
+union InUnion {
+    struct foo;
+
     bool as;
     bool library;
     bool using;
@@ -83,6 +137,11 @@ bool parsing_reserved_words_in_interface_test() {
     TestLibrary library(R"FIDL(
 library example;
 
+struct struct {
+    bool field;
+};
+
+
 interface InInterface {
     01: as(bool as);
     02: library(bool library);
@@ -110,6 +169,8 @@ interface InInterface {
     52: false(bool false);
 
     61: reserved(bool reserved);
+
+    foo(struct arg, int32 arg2, struct arg3);
 };
 )FIDL");
     EXPECT_TRUE(library.Compile());
@@ -234,6 +295,7 @@ struct Empty {
 BEGIN_TEST_CASE(parser_tests);
 RUN_TEST(bad_compound_identifier_test);
 RUN_TEST(parsing_reserved_words_in_struct_test);
+RUN_TEST(parsing_reserved_words_in_union_test);
 RUN_TEST(parsing_reserved_words_in_interface_test);
 RUN_TEST(bad_char_at_sign_test);
 RUN_TEST(bad_char_slash_test);

@@ -466,16 +466,12 @@ Parser::ParseEnumDeclaration(std::unique_ptr<raw::AttributeList> attributes, AST
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        TOKEN_ATTR_CASES:
-            // intentional fallthrough for attribute parsing
-        TOKEN_TYPE_CASES:
-            members.emplace_back(ParseEnumMember());
-            return More;
+        if (Peek().kind() == Token::Kind::kRightCurly) {
+          ConsumeToken(OfKind(Token::Kind::kRightCurly));
+          return Done;
+        } else {
+          members.emplace_back(ParseEnumMember());
+          return More;
         }
     };
 
@@ -514,11 +510,7 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
     ASTScope scope(this);
     std::vector<std::unique_ptr<raw::Parameter>> parameter_list;
 
-    switch (Peek().combined()) {
-    default:
-        break;
-
-    TOKEN_TYPE_CASES:
+    if (Peek().kind() != Token::Kind::kRightParen) {
         auto parameter = ParseParameter();
         parameter_list.emplace_back(std::move(parameter));
         if (!Ok())
@@ -527,16 +519,9 @@ std::unique_ptr<raw::ParameterList> Parser::ParseParameterList() {
             ConsumeToken(OfKind(Token::Kind::kComma));
             if (!Ok())
                 return Fail();
-            switch (Peek().combined()) {
-            TOKEN_TYPE_CASES:
-                parameter_list.emplace_back(ParseParameter());
-                if (!Ok())
-                    return Fail();
-                break;
-
-            default:
+            parameter_list.emplace_back(ParseParameter());
+            if (!Ok())
                 return Fail();
-            }
         }
     }
 
@@ -716,16 +701,12 @@ Parser::ParseStructDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        TOKEN_ATTR_CASES:
-            // intentional fallthrough for attribute parsing
-        TOKEN_TYPE_CASES:
-            members.emplace_back(ParseStructMember());
-            return More;
+        if (Peek().kind() == Token::Kind::kRightCurly) {
+          ConsumeToken(OfKind(Token::Kind::kRightCurly));
+          return Done;
+        } else {
+          members.emplace_back(ParseStructMember());
+          return More;
         }
     };
 
@@ -859,16 +840,12 @@ Parser::ParseUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
         return Fail();
 
     auto parse_member = [&members, this]() {
-        switch (Peek().combined()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        TOKEN_ATTR_CASES:
-            // intentional fallthrough for attribute parsing
-        TOKEN_TYPE_CASES:
-            members.emplace_back(ParseUnionMember());
-            return More;
+        if (Peek().kind() == Token::Kind::kRightCurly) {
+          ConsumeToken(OfKind(Token::Kind::kRightCurly));
+          return Done;
+        } else {
+          members.emplace_back(ParseUnionMember());
+          return More;
         }
     };
 
@@ -928,16 +905,12 @@ Parser::ParseXUnionDeclaration(std::unique_ptr<raw::AttributeList> attributes, A
         return Fail();
 
     auto parse_member = [&]() {
-        switch (Peek().combined()) {
-        default:
-            ConsumeToken(OfKind(Token::Kind::kRightCurly));
-            return Done;
-
-        TOKEN_ATTR_CASES:
-            // intentional fallthrough for attribute parsing
-        TOKEN_TYPE_CASES:
-            members.emplace_back(ParseXUnionMember());
-            return More;
+        if (Peek().kind() == Token::Kind::kRightCurly) {
+          ConsumeToken(OfKind(Token::Kind::kRightCurly));
+          return Done;
+        } else {
+          members.emplace_back(ParseXUnionMember());
+          return More;
         }
     };
 

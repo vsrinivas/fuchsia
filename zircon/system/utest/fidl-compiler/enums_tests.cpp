@@ -146,6 +146,23 @@ enum Fruit : uint64 {
     END_TEST;
 }
 
+bool GoodEnumTestKeywordNames() {
+    BEGIN_TEST;
+
+    TestLibrary library(R"FIDL(
+library example;
+
+enum Fruit : uint64 {
+    library = 1;
+    enum = 2;
+    uint64 = 3;
+};
+)FIDL");
+    ASSERT_TRUE(library.Compile());
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(enums_tests);
@@ -157,5 +174,6 @@ RUN_TEST(BadEnumTestUnsignedWithNegativeMember);
 RUN_TEST(BadEnumTestInferredUnsignedWithNegativeMember);
 RUN_TEST(BadEnumTestMemberOverflow);
 RUN_TEST(BadEnumTestDuplicateMember);
+RUN_TEST(GoodEnumTestKeywordNames);
 
 END_TEST_CASE(enums_tests);
