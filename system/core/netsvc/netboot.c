@@ -33,7 +33,7 @@ static uint32_t last_ack_arg = 0;
 #define PAGE_ROUNDUP(x) ((x + PAGE_SIZE - 1) & ~(PAGE_SIZE - 1))
 #define MAX_ADVERTISE_DATA_LEN 256
 
-static bool xfer_active = false;
+bool xfer_active = false;
 
 typedef struct nbfilecontainer {
     nbfile file;

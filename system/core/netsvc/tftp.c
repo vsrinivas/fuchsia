@@ -460,6 +460,8 @@ static int transport_timeout_set(uint32_t timeout_ms, void* transport_cookie) {
     return 0;
 }
 
+extern bool xfer_active;
+
 static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     int ret = tftp_init(&session, tftp_session_scratch,
                         sizeof(tftp_session_scratch));
@@ -480,11 +482,14 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     transport_info.timeout_ms = TFTP_TIMEOUT_SECS * 1000;
     tftp_transport_interface transport_ifc = {transport_send, NULL, transport_timeout_set};
     tftp_session_set_transport_interface(session, &transport_ifc);
+
+    xfer_active = true;
 }
 
 static void end_connection(void) {
     session = NULL;
     tftp_next_timeout = ZX_TIME_INFINITE;
+    xfer_active = false;
 }
 
 void tftp_timeout_expired(void) {
