@@ -39,19 +39,19 @@ class TestMemoryAccessor : public ElfLib::MemoryAccessor {
         .sh_addr = kAddrPoison,
     });
     size_t stuff_hdr = PushData(Elf64_Shdr{
-        .sh_name = 2,
+        .sh_name = 11,
         .sh_type = SHT_LOUSER,
         .sh_size = 15,
         .sh_addr = kAddrPoison,
     });
     size_t strtab_hdr = PushData(Elf64_Shdr{
-        .sh_name = 3,
+        .sh_name = 18,
         .sh_type = SHT_STRTAB,
         .sh_size = 16,
         .sh_addr = kAddrPoison,
     });
     size_t symtab_hdr = PushData(Elf64_Shdr{
-        .sh_name = 4,
+        .sh_name = 26,
         .sh_type = SHT_SYMTAB,
         .sh_size = sizeof(Elf64_Sym),
         .sh_addr = kAddrPoison,

@@ -85,7 +85,7 @@ class ElfLib {
 
   // Get a string from the .strtab section. Return nullptr if the index is
   // invalid.
-  const std::string* GetString(size_t index);
+  std::optional<std::string> GetString(size_t index);
 
   // Get a symbol from the symbol table. Return nullptr if there is no such
   // symbol.
@@ -99,7 +99,6 @@ class ElfLib {
   std::vector<Elf64_Shdr> sections_;
   std::vector<Elf64_Phdr> segments_;
   std::vector<Elf64_Sym> symbols_;
-  std::vector<std::string> strings_;
   std::map<size_t, std::vector<uint8_t>> section_data_;
   std::map<size_t, std::vector<uint8_t>> segment_data_;
   std::map<std::string, size_t> section_names_;

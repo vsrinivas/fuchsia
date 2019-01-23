@@ -7,19 +7,25 @@
 #include "garnet/lib/elflib/elflib.h"
 
 namespace elflib {
-
 namespace {
 
-// Load the standard ELF string table format
-void LoadStringTable(const std::vector<uint8_t>& content,
-                     std::vector<std::string>* strings) {
-  const uint8_t* data = content.data();
-  const uint8_t* end = data + content.size();
+// Pull a null-terminated string out of an array of bytes at an offset. Returns
+// empty string if there is no null terminator.
+std::string GetNullTerminatedStringAt(const std::vector<uint8_t>& data,
+                                      size_t offset) {
+  size_t check = offset;
 
-  while (data != end) {
-    strings->emplace_back(reinterpret_cast<const char*>(data));
-    data += strings->back().size() + 1;
+  while (check < data.size() && data[check]) {
+    check++;
   }
+
+  if (check >= data.size()) {
+    return std::string();
+  }
+
+  const char* start = reinterpret_cast<const char*>(data.data()) + offset;
+
+  return std::string(start);
 }
 
 }  // namespace
@@ -197,15 +203,12 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
       return nullptr;
     }
 
-    std::vector<std::string> strings;
-    LoadStringTable(*section_name_data, &strings);
-
     size_t idx = 0;
     // We know sections_ is populated from the GetSectionData above
     for (const auto& section : sections_) {
-      if (section.sh_name < strings.size()) {
-        section_names_[strings[section.sh_name]] = idx;
-      }
+      auto name =
+          GetNullTerminatedStringAt(*section_name_data, section.sh_name);
+      section_names_[name] = idx;
 
       idx++;
     }
@@ -220,22 +223,14 @@ const std::vector<uint8_t>* ElfLib::GetSectionData(const std::string& name) {
   return GetSectionData(iter->second);
 }
 
-const std::string* ElfLib::GetString(size_t index) {
-  if (strings_.empty()) {
-    const std::vector<uint8_t>* string_data = GetSectionData(".strtab");
+std::optional<std::string> ElfLib::GetString(size_t index) {
+  const std::vector<uint8_t>* string_data = GetSectionData(".strtab");
 
-    if (!string_data) {
-      return nullptr;
-    }
-
-    LoadStringTable(*string_data, &strings_);
+  if (!string_data) {
+    return std::nullopt;
   }
 
-  if (index >= strings_.size()) {
-    return nullptr;
-  }
-
-  return &strings_[index];
+  return GetNullTerminatedStringAt(*string_data, index);
 }
 
 bool ElfLib::LoadSymbols() {
@@ -261,9 +256,9 @@ const Elf64_Sym* ElfLib::GetSymbol(const std::string& name) {
   }
 
   for (const auto& symbol : symbols_) {
-    const std::string* got_name = GetString(symbol.st_name);
+    auto got_name = GetString(symbol.st_name);
 
-    if (got_name != nullptr && *got_name == name) {
+    if (got_name && *got_name == name) {
       return &symbol;
     }
   }
@@ -279,9 +274,9 @@ std::optional<std::map<std::string, Elf64_Sym>> ElfLib::GetAllSymbols() {
   std::map<std::string, Elf64_Sym> out;
 
   for (const auto& symbol : symbols_) {
-    const std::string* got_name = GetString(symbol.st_name);
+    auto got_name = GetString(symbol.st_name);
 
-    if (got_name != nullptr) {
+    if (got_name) {
       out[*got_name] = symbol;
     }
   }
