@@ -25,7 +25,14 @@ nullptr
 {{- end }}
 {{- end }}
 
+{{- define "ForwardParams" -}}
+  {{- range $index, $param := . -}}
+    {{- if $index }}, {{ end -}} std::move({{ $param.Name }})
+  {{- end -}}
+{{- end }}
+
 {{- define "InterfaceDeclaration" }}
+{{- $interface := . }}
 {{ "" }}
   {{- range .Methods }}
     {{- if .LLProps.EncodeRequest }}
@@ -142,8 +149,95 @@ class {{ .Name }} final {
     ::zx::channel channel_;
   };
 
-};
+  {{- if .Methods }}
+{{ "" }}
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = {{ $interface.Name }};
+    using _Base = ::fidl::CompleterBase;
+{{ "" }}
+    {{- range .Methods }}
+      {{- if .HasRequest }}
+        {{- if .HasResponse }}
+    class {{ .Name }}CompleterBase : public _Base {
+     public:
+      void {{ template "ReplyCFlavorMethodSignature" . }};
+          {{- if .Response }}
+      void {{ template "ReplyCallerAllocateMethodSignature" . }};
+      void {{ template "ReplyInPlaceMethodSignature" . }};
+          {{- end }}
 
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using {{ .Name }}Completer = ::fidl::Completer<{{ .Name }}CompleterBase>;
+        {{- else }}
+    using {{ .Name }}Completer = ::fidl::Completer<>;
+        {{- end }}
+
+    virtual void {{ .Name }}(
+        {{- template "Params" .Request }}{{ if .Request }}, {{ end -}}
+        {{ .Name }}Completer::Sync _completer) = 0;
+{{ "" }}
+      {{- end }}
+    {{- end }}
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch{{ template "SyncServerDispatchMethodSignature" }};
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch{{ template "SyncServerDispatchMethodSignature" }};
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+  {{- end }}
+
+  {{- /* Events */}}
+  {{- if .Methods }}
+{{ "" }}
+    {{- range .Methods }}
+      {{- /* Events have no "request" part of the call; they are unsolicited. */}}
+      {{- if .HasRequest -}} {{ continue }} {{- end }}
+      {{- if not .HasResponse -}} {{ continue }} {{- end -}}
+{{ "" }}
+      {{- range .DocComments }}
+  //{{ . }}
+      {{- end }}
+  static zx_status_t {{ template "SendEventCFlavorMethodSignature" . }};
+      {{- if .Response }}
+{{ "" }}
+        {{- range .DocComments }}
+  //{{ . }}
+        {{- end }}
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t {{ template "SendEventCallerAllocateMethodSignature" . }};
+      {{- end }}
+      {{- if .Response }}
+{{ "" }}
+        {{- range .DocComments }}
+  //{{ . }}
+        {{- end }}
+  // Messages are encoded in-place.
+  static zx_status_t {{ template "SendEventInPlaceMethodSignature" . }};
+      {{- end }}
+{{ "" }}
+    {{- end }}
+  {{- end }}
+};
 {{- end }}
 
 {{- define "InterfaceTraits" -}}
@@ -180,6 +274,12 @@ static_assert(offsetof({{ $interface.Namespace }}::{{ $interface.Name }}::{{ $me
 {{- define "FillRequestStructMembers" }}
 {{- range $param := . }}
   _request.{{ $param.Name }} = std::move({{ $param.Name }});
+{{- end }}
+{{- end }}
+
+{{- define "FillResponseStructMembers" }}
+{{- range $param := . }}
+  _response.{{ $param.Name }} = std::move({{ $param.Name }});
 {{- end }}
 {{- end }}
 
@@ -223,6 +323,43 @@ extern "C" const fidl_type_t {{ .ResponseTypeName }};
     {{- template "SyncRequestInPlaceMethodDefinition" . }}
   {{- end }}
 {{ "" }}
+{{- end }}
+
+{{- if .Methods }}
+{{ template "SyncServerTryDispatchMethodDefinition" . }}
+{{ template "SyncServerDispatchMethodDefinition" . }}
+{{- end }}
+
+{{- if .Methods }}
+{{ "" }}
+  {{- range .Methods }}
+    {{- if not .HasResponse -}} {{ continue }} {{- end }}
+    {{- if not .HasRequest }}
+{{ "" }}
+      {{- template "SendEventCFlavorMethodDefinition" . }}
+      {{- if .Response }}
+{{ "" }}
+        {{- template "SendEventCallerAllocateMethodDefinition" . }}
+      {{- end }}
+      {{- if .Response }}
+{{ "" }}
+        {{- template "SendEventInPlaceMethodDefinition" . }}
+      {{- end }}
+{{ "" }}
+    {{- else }}
+{{ "" }}
+      {{- template "ReplyCFlavorMethodDefinition" . }}
+      {{- if .Response }}
+{{ "" }}
+        {{- template "ReplyCallerAllocateMethodDefinition" . }}
+      {{- end }}
+      {{- if .Response }}
+{{ "" }}
+        {{- template "ReplyInPlaceMethodDefinition" . }}
+      {{- end }}
+{{ "" }}
+    {{- end }}
+  {{- end }}
 {{- end }}
 
 {{- end }}

@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <zircon/fidl.h>
 
@@ -96,6 +97,60 @@ class KitchenSink final {
     ::zx::channel channel_;
   };
 
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = KitchenSink;
+    using _Base = ::fidl::CompleterBase;
+
+    using MethodACompleter = ::fidl::Completer<>;
+
+    virtual void MethodA(int64_t a, int64_t b, MethodACompleter::Sync _completer) = 0;
+
+    class MethodBCompleterBase : public _Base {
+     public:
+      void Reply(int64_t result);
+      void Reply(::fidl::BytePart _buffer, int64_t result);
+      void Reply(::fidl::DecodedMessage<MethodBResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
+
+    virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int64_t a, int64_t b);
+
+  // Messages are encoded in-place.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
+
 };
 
 
@@ -174,6 +229,60 @@ class ChannelProtocol final {
    private:
     ::zx::channel channel_;
   };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = ChannelProtocol;
+    using _Base = ::fidl::CompleterBase;
+
+    using MethodACompleter = ::fidl::Completer<>;
+
+    virtual void MethodA(int64_t a, int64_t b, MethodACompleter::Sync _completer) = 0;
+
+    class MethodBCompleterBase : public _Base {
+     public:
+      void Reply(int64_t result);
+      void Reply(::fidl::BytePart _buffer, int64_t result);
+      void Reply(::fidl::DecodedMessage<MethodBResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
+
+    virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int64_t a, int64_t b);
+
+  // Messages are encoded in-place.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
 
 };
 
@@ -254,6 +363,60 @@ class SocketControlProtocol final {
     ::zx::channel channel_;
   };
 
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = SocketControlProtocol;
+    using _Base = ::fidl::CompleterBase;
+
+    using MethodACompleter = ::fidl::Completer<>;
+
+    virtual void MethodA(int64_t a, int64_t b, MethodACompleter::Sync _completer) = 0;
+
+    class MethodBCompleterBase : public _Base {
+     public:
+      void Reply(int64_t result);
+      void Reply(::fidl::BytePart _buffer, int64_t result);
+      void Reply(::fidl::DecodedMessage<MethodBResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
+
+    virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int64_t a, int64_t b);
+
+  // Messages are encoded in-place.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
+
 };
 
 
@@ -332,6 +495,60 @@ class OvernetStreamProtocol final {
    private:
     ::zx::channel channel_;
   };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = OvernetStreamProtocol;
+    using _Base = ::fidl::CompleterBase;
+
+    using MethodACompleter = ::fidl::Completer<>;
+
+    virtual void MethodA(int64_t a, int64_t b, MethodACompleter::Sync _completer) = 0;
+
+    class MethodBCompleterBase : public _Base {
+     public:
+      void Reply(int64_t result);
+      void Reply(::fidl::BytePart _buffer, int64_t result);
+      void Reply(::fidl::DecodedMessage<MethodBResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using MethodBCompleter = ::fidl::Completer<MethodBCompleterBase>;
+
+    virtual void MethodB(int64_t a, int64_t b, MethodBCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, int64_t a, int64_t b);
+
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, int64_t a, int64_t b);
+
+  // Messages are encoded in-place.
+  static zx_status_t SendEventAEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<EventAResponse> params);
 
 };
 

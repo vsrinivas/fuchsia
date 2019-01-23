@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
@@ -170,6 +171,62 @@ class TestInterface final {
    private:
     ::zx::channel channel_;
   };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = TestInterface;
+    using _Base = ::fidl::CompleterBase;
+
+    class ConsumeSimpleStructCompleterBase : public _Base {
+     public:
+      void Reply(int32_t status, int32_t field);
+      void Reply(::fidl::BytePart _buffer, int32_t status, int32_t field);
+      void Reply(::fidl::DecodedMessage<ConsumeSimpleStructResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ConsumeSimpleStructCompleter = ::fidl::Completer<ConsumeSimpleStructCompleterBase>;
+
+    virtual void ConsumeSimpleStruct(SimpleStruct arg, ConsumeSimpleStructCompleter::Sync _completer) = 0;
+
+    class ConsumeSimpleUnionCompleterBase : public _Base {
+     public:
+      void Reply(uint32_t index, int32_t field);
+      void Reply(::fidl::BytePart _buffer, uint32_t index, int32_t field);
+      void Reply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ConsumeSimpleUnionCompleter = ::fidl::Completer<ConsumeSimpleUnionCompleterBase>;
+
+    virtual void ConsumeSimpleUnion(SimpleUnion arg, ConsumeSimpleUnionCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
 
 };
 

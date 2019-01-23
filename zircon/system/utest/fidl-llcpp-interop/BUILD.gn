@@ -11,12 +11,16 @@ if (current_toolchain != default_toolchain) {
   test("fidl-llcpp-interop") {
     sources = [
       "basictypes_tests.cpp",
+      "controlflow_tests.cpp",
+      "dirent_tests.cpp",
       "generated/fidl_llcpp_basictypes.cpp",
+      "generated/fidl_llcpp_controlflow.cpp",
       "generated/fidl_llcpp_dirent.cpp",
     ]
     include_dirs = [ "generated" ]
     deps = [
       ":fidl.test.llcpp.basictypes.c",
+      ":fidl.test.llcpp.controlflow.c",
       ":fidl.test.llcpp.dirent.c",
       "$zx/system/ulib/async:async-cpp",
       "$zx/system/ulib/async:async-default",
@@ -24,7 +28,9 @@ if (current_toolchain != default_toolchain) {
       "$zx/system/ulib/fbl",
       "$zx/system/ulib/fdio",
       "$zx/system/ulib/fidl",
+      "$zx/system/ulib/fidl:fidl-llcpp",
       "$zx/system/ulib/fidl-async",
+      "$zx/system/ulib/fidl-async:fidl-async-cpp",
       "$zx/system/ulib/fidl-utils",
       "$zx/system/ulib/unittest",
       "$zx/system/ulib/zircon",
@@ -38,6 +44,13 @@ fidl_library("fidl.test.llcpp.basictypes") {
   visibility = [ ":*" ]
   sources = [
     "basictypes.fidl",
+  ]
+}
+
+fidl_library("fidl.test.llcpp.controlflow") {
+  visibility = [ ":*" ]
+  sources = [
+    "controlflow.fidl",
   ]
 }
 

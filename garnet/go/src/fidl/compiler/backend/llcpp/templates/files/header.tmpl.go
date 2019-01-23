@@ -16,6 +16,7 @@ const Header = `
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/transaction.h>
 {{ range .HandleTypes -}}
 #include <lib/zx/{{ . }}.h>
 {{ end -}}

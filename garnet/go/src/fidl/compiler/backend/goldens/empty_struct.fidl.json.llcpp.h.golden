@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <zircon/fidl.h>
 
 namespace test {

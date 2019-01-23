@@ -30,13 +30,13 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
   constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<{{ .Name }}Request>();
 
   {{- if .LLProps.StackAllocRequest }}
-  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] {{- if not .LLProps.NeedToLinearize }} = {} {{- end }};
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] {{- if not .LLProps.LinearizeRequest }} = {} {{- end }};
   {{- else }}
   std::unique_ptr<uint8_t[]> _write_bytes_unique_ptr(new uint8_t[_kWriteAllocSize]);
   uint8_t* _write_bytes = _write_bytes_unique_ptr.get();
   {{- end }}
 
-  {{- if .LLProps.NeedToLinearize }}
+  {{- if .LLProps.LinearizeRequest }}
   {{ .Name }}Request _request = {};
   {{- else }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_write_bytes);
@@ -44,7 +44,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
   _request._hdr.ordinal = {{ .OrdinalName }};
   {{- template "FillRequestStructMembers" .Request -}}
 
-  {{- if .LLProps.NeedToLinearize }}
+  {{- if .LLProps.LinearizeRequest }}
   auto _linearize_result = ::fidl::Linearize(&_request, ::fidl::BytePart(_write_bytes,
                                                                          _kWriteAllocSize));
   if (_linearize_result.status != ZX_OK) {
@@ -86,10 +86,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCF
   return ZX_OK;
 
   {{- else }}
-  const auto& _oneway = _encode_request_result.message;
-  return this->channel_.write(0,
-                              _oneway.bytes().data(), _oneway.bytes().actual(),
-                              _oneway.handles().data(), _oneway.handles().actual());
+  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

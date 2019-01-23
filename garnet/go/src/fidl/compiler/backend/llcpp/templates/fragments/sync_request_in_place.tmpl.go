@@ -56,10 +56,7 @@ const SyncRequestInPlace = `
   return _decode_result.status;
     {{- end }}
   {{- else }}
-  const auto& _oneway = _encode_request_result.message;
-  return this->channel_.write(0,
-                              _oneway.bytes().data(), _oneway.bytes().actual(),
-                              _oneway.handles().data(), _oneway.handles().actual());
+  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

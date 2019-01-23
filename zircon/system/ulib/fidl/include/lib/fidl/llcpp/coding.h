@@ -172,6 +172,50 @@ struct MaybeSelectResponseType<true, RequestType, ResponseType> {
 
 } // namespace
 
+template <typename FidlType>
+DecodeResult<FidlType> DecodeAs(fidl_msg_t* msg) {
+    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+    if (msg->num_handles > EncodedMessage<FidlType>::kResolvedMaxHandles) {
+        zx_handle_close_many(msg->handles, msg->num_handles);
+        return DecodeResult<FidlType>(ZX_ERR_INVALID_ARGS, "too many handles");
+    }
+    return fidl::Decode(fidl::EncodedMessage<FidlType>(msg));
+}
+
+// Write |encoded_msg| down a channel. Used for sending one-way calls and events.
+template <typename FidlType>
+zx_status_t Write(const zx::unowned_channel& chan, EncodedMessage<FidlType> encoded_msg) {
+    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+    auto status = chan->write(0,
+                              encoded_msg.bytes().data(), encoded_msg.bytes().actual(),
+                              encoded_msg.handles().data(), encoded_msg.handles().actual());
+    encoded_msg.ReleaseBytesAndHandles();
+    return status;
+}
+
+// Write |encoded_msg| down a channel. Used for sending one-way calls and events.
+template <typename FidlType>
+zx_status_t Write(const zx::channel& chan, EncodedMessage<FidlType> encoded_msg) {
+    return Write(zx::unowned_channel(chan), std::move(encoded_msg));
+}
+
+// Encode and write |decoded_msg| down a channel. Used for sending one-way calls and events.
+template <typename FidlType>
+zx_status_t Write(const zx::unowned_channel& chan, DecodedMessage<FidlType> decoded_msg) {
+    static_assert(IsFidlMessage<FidlType>::value, "FIDL transactional message type required");
+    fidl::EncodeResult<FidlType> encode_result = fidl::Encode(std::move(decoded_msg));
+    if (encode_result.status != ZX_OK) {
+        return encode_result.status;
+    }
+    return Write(chan, std::move(encode_result.message));
+}
+
+// Encode and write |decoded_msg| down a channel. Used for sending one-way calls and events.
+template <typename FidlType>
+zx_status_t Write(const zx::channel& chan, DecodedMessage<FidlType> decoded_msg) {
+    return Write(zx::unowned_channel(chan), std::move(decoded_msg));
+}
+
 // If |RequestType::ResponseType| exists, use that. Otherwise, fallback to |ResponseType|.
 template <typename RequestType, typename ResponseType>
 struct SelectResponseType {
@@ -214,6 +258,7 @@ EncodeResult<ResponseType> Call(zx::channel& chan,
         uint32_t actual_num_handles = 0u;
         result.status = chan.call(
             0u, zx::time::infinite(), &args, &actual_num_bytes, &actual_num_handles);
+        request.ReleaseBytesAndHandles();
         if (result.status != ZX_OK) {
             return;
         }

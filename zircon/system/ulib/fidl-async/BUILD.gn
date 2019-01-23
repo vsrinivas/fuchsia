@@ -14,3 +14,25 @@ library("fidl-async") {
     "$zx/system/ulib/zircon",
   ]
 }
+
+library("fidl-async-cpp") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/fidl-async/cpp/bind.h",
+    "lib/fidl-async/cpp/channel_transaction.h",
+  ]
+  sources = [
+    "llcpp_bind.cpp",
+    "llcpp_channel_transaction.cpp",
+  ]
+  deps = [
+    "$zx/system/ulib/async",
+    "$zx/system/ulib/fidl",
+    "$zx/system/ulib/fidl:fidl-llcpp",
+    "$zx/system/ulib/zircon",
+  ]
+  public_deps = [
+    # <lib/fidl-async/cpp/channel_transaction.h> has #include <lib/zx/channel.h>.
+    "$zx/system/ulib/zx:headers",
+  ]
+}

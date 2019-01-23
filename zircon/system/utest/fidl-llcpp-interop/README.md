@@ -1,7 +1,7 @@
 ## Generated LLCPP code for unit tests
 
-These files (`fidl_llcpp_basic.cpp`, `fidl_llcpp_basic.h`) are checked in for the time being, due to
-the Golang-based `fidlgen` not accessible from Zircon yet.
+These files (`fidl_llcpp_basic.cpp`, `fidl_llcpp_basic.h`, etc) are checked in for the time being,
+due to the Golang-based `fidlgen` not accessible from Zircon yet.
 To generate these files, first build Zircon and Garnet using `fx`, then run this command:
 
 ```bash

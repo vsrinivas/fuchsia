@@ -8,6 +8,7 @@
 #include <lib/fidl/llcpp/array_wrapper.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/fidl/llcpp/traits.h>
+#include <lib/fidl/llcpp/transaction.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
 #include <zircon/fidl.h>
@@ -175,6 +176,89 @@ class DirEntTestInterface final {
    private:
     ::zx::channel channel_;
   };
+
+  // Pure-virtual interface to be implemented by a server.
+  class Interface {
+   public:
+    Interface() = default;
+    virtual ~Interface() = default;
+    using _Outer = DirEntTestInterface;
+    using _Base = ::fidl::CompleterBase;
+
+    class CountNumDirectoriesCompleterBase : public _Base {
+     public:
+      void Reply(int64_t num_dir);
+      void Reply(::fidl::BytePart _buffer, int64_t num_dir);
+      void Reply(::fidl::DecodedMessage<CountNumDirectoriesResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using CountNumDirectoriesCompleter = ::fidl::Completer<CountNumDirectoriesCompleterBase>;
+
+    virtual void CountNumDirectories(::fidl::VectorView<DirEnt> dirents, CountNumDirectoriesCompleter::Sync _completer) = 0;
+
+    class ReadDirCompleterBase : public _Base {
+     public:
+      void Reply(::fidl::VectorView<DirEnt> dirents);
+      void Reply(::fidl::BytePart _buffer, ::fidl::VectorView<DirEnt> dirents);
+      void Reply(::fidl::DecodedMessage<ReadDirResponse> params);
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ReadDirCompleter = ::fidl::Completer<ReadDirCompleterBase>;
+
+    virtual void ReadDir(ReadDirCompleter::Sync _completer) = 0;
+
+    class ConsumeDirectoriesCompleterBase : public _Base {
+     public:
+      void Reply();
+
+     protected:
+      using ::fidl::CompleterBase::CompleterBase;
+    };
+
+    using ConsumeDirectoriesCompleter = ::fidl::Completer<ConsumeDirectoriesCompleterBase>;
+
+    virtual void ConsumeDirectories(::fidl::VectorView<DirEnt> dirents, ConsumeDirectoriesCompleter::Sync _completer) = 0;
+
+    using OneWayDirentsCompleter = ::fidl::Completer<>;
+
+    virtual void OneWayDirents(::fidl::VectorView<DirEnt> dirents, ::zx::eventpair ep, OneWayDirentsCompleter::Sync _completer) = 0;
+
+  };
+
+  // Attempts to dispatch the incoming message to a handler function in the server implementation.
+  // If there is no matching handler, it returns false, leaving the message and transaction intact.
+  // In all other cases, it consumes the message and returns true.
+  // It is possible to chain multiple TryDispatch functions in this manner.
+  static bool TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Dispatches the incoming message to one of the handlers functions in the interface.
+  // If there is no matching handler, it closes all the handles in |msg| and closes the channel with
+  // a |ZX_ERR_NOT_SUPPORTED| epitaph, before returning false. The message should then be discarded.
+  static bool Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn);
+
+  // Same as |Dispatch|, but takes a |void*| instead of |Interface*|. Only used with |fidl::Bind|
+  // to reduce template expansion.
+  // Do not call this method manually. Use |Dispatch| instead.
+  static bool TypeErasedDispatch(void* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+    return Dispatch(static_cast<Interface*>(impl), msg, txn);
+  }
+
+  // Event
+  static zx_status_t SendOnDirentsEvent(::zx::unowned_channel _chan, ::fidl::VectorView<DirEnt> dirents);
+
+  // Event
+  // Caller provides the backing storage for FIDL message via response buffers.
+  static zx_status_t SendOnDirentsEvent(::zx::unowned_channel _chan, ::fidl::BytePart _buffer, ::fidl::VectorView<DirEnt> dirents);
+
+  // Event
+  // Messages are encoded in-place.
+  static zx_status_t SendOnDirentsEvent(::zx::unowned_channel _chan, ::fidl::DecodedMessage<OnDirentsResponse> params);
 
 };
 

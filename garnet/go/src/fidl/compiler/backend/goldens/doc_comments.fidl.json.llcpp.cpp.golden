@@ -24,10 +24,41 @@ zx_status_t Interface::SyncClient::Method() {
   if (_encode_request_result.status != ZX_OK) {
     return _encode_request_result.status;
   }
-  const auto& _oneway = _encode_request_result.message;
-  return this->channel_.write(0,
-                              _oneway.bytes().data(), _oneway.bytes().actual(),
-                              _oneway.handles().data(), _oneway.handles().actual());
+  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
+}
+
+
+bool Interface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kInterface_Method_Ordinal: {
+      auto result = ::fidl::DecodeAs<MethodRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      impl->Method(
+        Interface::MethodCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool Interface::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
 }
 
 

@@ -9,6 +9,7 @@
 #include <cstdint>
 #include <iterator>
 #include <lib/fidl/cpp/message_part.h>
+#include <lib/fidl/cpp/message.h>
 #include <lib/fidl/internal_callable_traits.h>
 #include <lib/fidl/llcpp/traits.h>
 #include <type_traits>
@@ -71,11 +72,29 @@ class EncodedMessage final : public internal::EncodedMessageHandleHolder<FidlTyp
 
     using Super = internal::EncodedMessageHandleHolder<FidlType::MaxNumHandles>;
 
+public:
+    // The maximum number of handles allowed in a message of this type, given the constraints
+    // of a zircon channel packet.
     constexpr static uint32_t kResolvedMaxHandles = Super::kResolvedMaxHandles;
 
-public:
     // Instantiates an empty buffer with no bytes or handles.
     EncodedMessage() = default;
+
+    // Construct an |EncodedMessage| borrowing the bytes and taking ownership of handles in |msg|.
+    // The number of handles in |msg| must not exceed |kResolvedMaxHandles|.
+    explicit EncodedMessage(fidl_msg_t* msg) {
+        bytes_ = fidl::BytePart(static_cast<uint8_t*>(msg->bytes), msg->num_bytes, msg->num_bytes);
+        ZX_ASSERT(msg->num_handles <= kResolvedMaxHandles);
+        if (kResolvedMaxHandles > 0) {
+            memcpy(handles_.data(), msg->handles, sizeof(zx_handle_t) * msg->num_handles);
+            for (uint32_t i = 0; i < msg->num_handles; i++) {
+                msg->handles[i] = ZX_HANDLE_INVALID;
+            }
+            handles_.set_actual(msg->num_handles);
+        } else {
+            handles_.set_actual(0);
+        }
+    }
 
     EncodedMessage(EncodedMessage&& other) noexcept {
         if (this != &other) {
@@ -97,7 +116,7 @@ public:
     // Instantiates an EncodedMessage which points to a buffer region with caller-managed memory.
     // It does not take ownership of that buffer region.
     // Also initializes an empty handles part.
-    EncodedMessage(BytePart bytes) :
+    explicit EncodedMessage(BytePart bytes) :
         bytes_(std::move(bytes)) { }
 
     ~EncodedMessage() {
@@ -117,6 +136,11 @@ public:
     const BytePart& bytes() const { return bytes_; }
 
     const HandlePart& handles() const { return handles_; }
+
+    // Take ownership of bytes and handles and assemble into a |fidl::Message|.
+    Message ToAnyMessage() {
+        return Message(std::move(bytes_), std::move(handles_));
+    }
 
     // Clears the contents of the EncodedMessage then invokes Callback
     // to initialize the EncodedMessage in-place then returns the callback's result.
@@ -140,6 +164,7 @@ private:
         }
         if (handles_.actual() > 0) {
 #ifdef __Fuchsia__
+            ZX_DEBUG_ASSERT(handles_.actual() <= kResolvedMaxHandles);
             zx_handle_close_many(handles_.data(), handles_.actual());
 #else
             // How did we have handles if not on Fuchsia? Something bad happened...

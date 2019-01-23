@@ -2,9 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <fidl/test/llcpp/basictypes/c/fidl.h>
 #include <lib/async-loop/loop.h>
-#include <lib/fidl-utils/bind.h>
+#include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl-async/bind.h>
+#include <lib/fidl-async/cpp/bind.h>
 #include <lib/fidl/llcpp/coding.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/eventpair.h>
@@ -19,8 +22,8 @@
 // Interface under test
 #include "generated/fidl_llcpp_basictypes.h"
 
-// C server implementation
-namespace internal_c {
+// test utility functions
+namespace {
 
 bool IsPeerValid(const zx::unowned_eventpair& handle) {
     zx_signals_t observed_signals = {};
@@ -40,6 +43,17 @@ bool IsPeerValid(const zx::unowned_eventpair& handle) {
 bool IsPeerValid(zx_handle_t handle) {
     return IsPeerValid(zx::unowned_eventpair(handle));
 }
+
+template <typename T, size_t N>
+constexpr uint32_t ArrayCount(T const (&array)[N]) {
+    static_assert(N < UINT32_MAX, "Array is too large!");
+    return N;
+}
+
+}
+
+// C server implementation
+namespace internal_c {
 
 zx_status_t ConsumeSimpleStruct(void* ctx,
                                 const fidl_test_llcpp_basictypes_SimpleStruct* arg,
@@ -102,6 +116,7 @@ zx_status_t ServerDispatch(void* ctx,
 
 }
 
+// LLCPP client tests: interop between C server and LLCPP client
 namespace {
 
 bool SpinUpAsyncCServerHelper(zx::channel server, async_loop_t** out_loop) {
@@ -398,13 +413,160 @@ bool SyncCallerAllocateCallUnionTest() {
 
 }
 
+// LLCPP sync server tests: interop between C client and LLCPP server
+namespace {
+
+namespace gen = fidl::test::llcpp::basictypes;
+
+class Server : public gen::TestInterface::Interface {
+public:
+    void ConsumeSimpleStruct(gen::SimpleStruct arg,
+                             ConsumeSimpleStructCompleter::Sync txn) override {
+        num_struct_calls_.fetch_add(1);
+        // Verify that all the handles are valid channels
+        if (!IsPeerValid(zx::unowned_eventpair(arg.ep))) {
+            txn.Reply(ZX_ERR_INVALID_ARGS, -1);
+            return;
+        }
+        for (auto& row : arg.arr) {
+            for (auto& handle : row) {
+                if (!IsPeerValid(zx::unowned_eventpair(handle))) {
+                    txn.Reply(ZX_ERR_INVALID_ARGS, -1);
+                    return;
+                }
+            }
+        }
+        // Loop back field argument
+        txn.Reply(ZX_OK, arg.field);
+    }
+
+    void ConsumeSimpleUnion(gen::SimpleUnion arg,
+                            ConsumeSimpleUnionCompleter::Sync txn) override {
+        num_union_calls_.fetch_add(1);
+        if (arg.is_field_a()) {
+            txn.Reply(0, arg.field_a());
+        } else if (arg.is_field_b()) {
+            txn.Reply(1, arg.field_b());
+        } else {
+            txn.Reply(std::numeric_limits<uint32_t>::max(), -1);
+        }
+    }
+
+    uint64_t num_struct_calls() const { return num_struct_calls_.load(); }
+    uint64_t num_union_calls() const { return num_union_calls_.load(); }
+
+private:
+    std::atomic<uint64_t> num_struct_calls_ = 0;
+    std::atomic<uint64_t> num_union_calls_ = 0;
+};
+
+bool SpinUp(zx::channel server, Server* impl, std::unique_ptr<async::Loop> *out_loop) {
+    BEGIN_HELPER;
+
+    auto loop = std::make_unique<async::Loop>(&kAsyncLoopConfigAttachToThread);
+    zx_status_t status = fidl::Bind(loop->dispatcher(),
+                                    std::move(server),
+                                    impl);
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(loop->StartThread("test_llcpp_basictypes_server"), ZX_OK);
+    *out_loop = std::move(loop);
+
+    END_HELPER;
+}
+
+bool ServerUnionTest() {
+    BEGIN_TEST;
+
+    Server server_impl;
+    zx::channel client_chan, server_chan;
+    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    std::unique_ptr<async::Loop> loop;
+    ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, &loop));
+
+    constexpr uint32_t kNumIterations = 100;
+    for (uint32_t i = 0; i < kNumIterations; i++) {
+        ASSERT_EQ(server_impl.num_struct_calls(), 0);
+        ASSERT_EQ(server_impl.num_union_calls(), i);
+
+        fidl_test_llcpp_basictypes_SimpleUnion simple_union = {};
+        simple_union.tag = fidl_test_llcpp_basictypes_SimpleUnionTag_field_a;
+        simple_union.field_a = 5;
+        uint32_t index = std::numeric_limits<uint32_t>::max();
+        int32_t field;
+        ASSERT_EQ(fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleUnion(client_chan.get(),
+                                                                             &simple_union,
+                                                                             &index,
+                                                                             &field),
+                  ZX_OK);
+        ASSERT_EQ(index, 0);
+        ASSERT_EQ(field, 5);
+    }
+    ASSERT_EQ(server_impl.num_union_calls(), kNumIterations);
+
+    END_TEST;
+}
+
+bool ServerStructTest() {
+    BEGIN_TEST;
+
+    Server server_impl;
+    zx::channel client_chan, server_chan;
+    ASSERT_EQ(zx::channel::create(0, &client_chan, &server_chan), ZX_OK);
+    std::unique_ptr<async::Loop> loop;
+    ASSERT_TRUE(SpinUp(std::move(server_chan), &server_impl, &loop));
+
+    fidl_test_llcpp_basictypes_SimpleStruct simple_struct = {};
+    simple_struct.field = 123;
+    // make sure array shape is as expected (5 by 4)
+    constexpr size_t kNumRow = 5;
+    constexpr size_t kNumCol = 4;
+    constexpr size_t kNumHandlesInArray = kNumRow * kNumCol;
+    static_assert(ArrayCount(simple_struct.arr) == kNumRow);
+    static_assert(ArrayCount(simple_struct.arr[0]) == kNumCol);
+    // insert handles to be sent over
+    zx::eventpair single_handle_payload;
+    zx::eventpair single_handle_ourside;
+    ASSERT_EQ(zx::eventpair::create(0, &single_handle_ourside, &single_handle_payload), ZX_OK);
+    std::unique_ptr<zx::eventpair[]> handle_payload(new zx::eventpair[kNumHandlesInArray]);
+    std::unique_ptr<zx::eventpair[]> handle_our_side(new zx::eventpair[kNumHandlesInArray]);
+    for (size_t i = 0; i < kNumHandlesInArray; i++) {
+        ASSERT_EQ(zx::eventpair::create(0, &handle_our_side[i], &handle_payload[i]), ZX_OK);
+    }
+    // fill the |ep| field
+    simple_struct.ep = single_handle_payload.release();
+    // fill the 2D handles array
+    for (size_t i = 0; i < kNumRow; i++) {
+        for (size_t j = 0; j < kNumCol; j++) {
+            simple_struct.arr[i][j] = handle_payload[i * kNumCol + j].release();
+        }
+    }
+
+    // call
+    int32_t out_status;
+    int32_t out_field;
+    zx_status_t status = fidl_test_llcpp_basictypes_TestInterfaceConsumeSimpleStruct(
+        client_chan.get(), &simple_struct, &out_status, &out_field);
+
+    ASSERT_EQ(status, ZX_OK);
+    ASSERT_EQ(out_status, ZX_OK);
+    ASSERT_EQ(out_field, 123);
+    ASSERT_EQ(server_impl.num_struct_calls(), 1);
+    ASSERT_EQ(server_impl.num_union_calls(), 0);
+
+    END_TEST;
+}
+
+}
+
 BEGIN_TEST_CASE(llcpp_basictypes_tests)
-RUN_NAMED_TEST_SMALL("raw channel call (passing struct)", RawChannelCallStructTest)
-RUN_NAMED_TEST_SMALL("raw channel call (passing union)", RawChannelCallUnionTest)
-RUN_NAMED_TEST_SMALL("generated binding (passing struct)", SyncCallStructTest)
-RUN_NAMED_TEST_SMALL("generated binding (passing union)", SyncCallUnionTest)
-RUN_NAMED_TEST_SMALL("generated binding (passing struct, caller allocating)",
+RUN_NAMED_TEST_SMALL("client: raw channel call (passing struct)", RawChannelCallStructTest)
+RUN_NAMED_TEST_SMALL("client: raw channel call (passing union)", RawChannelCallUnionTest)
+RUN_NAMED_TEST_SMALL("client: generated binding (passing struct)", SyncCallStructTest)
+RUN_NAMED_TEST_SMALL("client: generated binding (passing union)", SyncCallUnionTest)
+RUN_NAMED_TEST_SMALL("client: generated binding (passing struct, caller allocating)",
                      SyncCallerAllocateCallStructTest)
-RUN_NAMED_TEST_SMALL("generated binding (passing union, caller allocating)",
+RUN_NAMED_TEST_SMALL("client: generated binding (passing union, caller allocating)",
                      SyncCallerAllocateCallUnionTest)
+RUN_NAMED_TEST_SMALL("server: passing union", ServerUnionTest)
+RUN_NAMED_TEST_SMALL("server: passing struct", ServerStructTest)
 END_TEST_CASE(llcpp_basictypes_tests);

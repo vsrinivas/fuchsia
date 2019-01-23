@@ -114,7 +114,8 @@ func TestCompileInterface(t *testing.T) {
 						LLProps: LLProps{
 							InterfaceName:      "Test",
 							CBindingCompatible: true,
-							NeedToLinearize:    false,
+							LinearizeRequest:   false,
+							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
 							EncodeRequest:      false,
@@ -162,7 +163,8 @@ func TestCompileInterface(t *testing.T) {
 						LLProps: LLProps{
 							InterfaceName:      "Test",
 							CBindingCompatible: true,
-							NeedToLinearize:    false,
+							LinearizeRequest:   false,
+							LinearizeResponse:  false,
 							StackAllocRequest:  true,
 							StackAllocResponse: true,
 							EncodeRequest:      false,

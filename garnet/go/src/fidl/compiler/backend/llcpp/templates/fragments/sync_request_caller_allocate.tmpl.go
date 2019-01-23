@@ -26,8 +26,12 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
   {{- if not .Request }}
   FIDL_ALIGNDECL uint8_t _write_bytes[sizeof({{ .Name }}Request)] = {};
   ::fidl::BytePart _request_buffer(_write_bytes, sizeof(_write_bytes));
+  {{- else }}
+  if (_request_buffer.capacity() < {{ .Name }}Request::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   {{- end }}
-  {{- if .LLProps.NeedToLinearize }}
+  {{- if .LLProps.LinearizeRequest }}
   {{ .Name }}Request _request = {};
   {{- else }}
   auto& _request = *reinterpret_cast<{{ .Name }}Request*>(_request_buffer.data());
@@ -35,7 +39,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
   _request._hdr.ordinal = {{ .OrdinalName }};
   {{- template "FillRequestStructMembers" .Request -}}
 
-  {{- if .LLProps.NeedToLinearize }}
+  {{- if .LLProps.LinearizeRequest }}
   auto _linearize_result = ::fidl::Linearize(&_request, std::move(_request_buffer));
   if (_linearize_result.status != ZX_OK) {
     return _linearize_result.status;
@@ -70,10 +74,7 @@ zx_status_t {{ .LLProps.InterfaceName }}::SyncClient::{{ template "SyncRequestCa
     {{- template "ReturnResponseStructMembers" .Response }}
   return ZX_OK;
   {{- else }}
-  const auto& _oneway = _encode_request_result.message;
-  return this->channel_.write(0,
-                              _oneway.bytes().data(), _oneway.bytes().actual(),
-                              _oneway.handles().data(), _oneway.handles().actual());
+  return ::fidl::Write(this->channel_, std::move(_encode_request_result.message));
   {{- end }}
 }
 {{- end }}

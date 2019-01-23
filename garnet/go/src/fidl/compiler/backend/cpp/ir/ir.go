@@ -226,7 +226,8 @@ type Method struct {
 type LLProps struct {
 	InterfaceName      string
 	CBindingCompatible bool
-	NeedToLinearize    bool
+	LinearizeRequest   bool
+	LinearizeResponse  bool
 	StackAllocRequest  bool
 	StackAllocResponse bool
 	EncodeRequest      bool
@@ -686,9 +687,10 @@ func (m Method) NewLLProps(r Interface) LLProps {
 		// If the response is not inline, then we cannot generate an out-parameter-style binding,
 		// because the out-of-line pointers would outlive their underlying managed storage.
 		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
-		NeedToLinearize:    len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
-		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
-		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
+		LinearizeRequest:   len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
+		LinearizeResponse:  len(m.Response) > 0 && m.ResponseMaxOutOfLine > 0,
+		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize + m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize + m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
 		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0,
 		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0,
 	}

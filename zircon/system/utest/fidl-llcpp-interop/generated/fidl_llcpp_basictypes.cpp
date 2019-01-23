@@ -56,6 +56,9 @@ zx_status_t TestInterface::SyncClient::ConsumeSimpleStruct(SimpleStruct arg, int
 }
 
 zx_status_t TestInterface::SyncClient::ConsumeSimpleStruct(::fidl::BytePart _request_buffer, SimpleStruct arg, ::fidl::BytePart _response_buffer, int32_t* out_status, int32_t* out_field) {
+  if (_request_buffer.capacity() < ConsumeSimpleStructRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   auto& _request = *reinterpret_cast<ConsumeSimpleStructRequest*>(_request_buffer.data());
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
   _request.arg = std::move(arg);
@@ -134,6 +137,9 @@ zx_status_t TestInterface::SyncClient::ConsumeSimpleUnion(SimpleUnion arg, uint3
 }
 
 zx_status_t TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _request_buffer, SimpleUnion arg, ::fidl::BytePart _response_buffer, uint32_t* out_index, int32_t* out_field) {
+  if (_request_buffer.capacity() < ConsumeSimpleUnionRequest::PrimarySize) {
+    return ZX_ERR_BUFFER_TOO_SMALL;
+  }
   auto& _request = *reinterpret_cast<ConsumeSimpleUnionRequest*>(_request_buffer.data());
   _request._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
   _request.arg = std::move(arg);
@@ -177,6 +183,114 @@ zx_status_t TestInterface::SyncClient::ConsumeSimpleUnion(::fidl::BytePart _requ
       ::fidl::DecodedMessage<TestInterface::ConsumeSimpleUnionResponse>());
   }
   return ::fidl::Decode(std::move(_call_result.message));
+}
+
+
+bool TestInterface::TryDispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  if (msg->num_bytes < sizeof(fidl_message_header_t)) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_INVALID_ARGS);
+    return true;
+  }
+  fidl_message_header_t* hdr = reinterpret_cast<fidl_message_header_t*>(msg->bytes);
+  switch (hdr->ordinal) {
+    case kTestInterface_ConsumeSimpleStruct_Ordinal: {
+      auto result = ::fidl::DecodeAs<ConsumeSimpleStructRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ConsumeSimpleStruct(std::move(message->arg),
+        Interface::ConsumeSimpleStructCompleter::Sync(txn));
+      return true;
+    }
+    case kTestInterface_ConsumeSimpleUnion_Ordinal: {
+      auto result = ::fidl::DecodeAs<ConsumeSimpleUnionRequest>(msg);
+      if (result.status != ZX_OK) {
+        txn->Close(ZX_ERR_INVALID_ARGS);
+        return true;
+      }
+      auto message = result.message.message();
+      impl->ConsumeSimpleUnion(std::move(message->arg),
+        Interface::ConsumeSimpleUnionCompleter::Sync(txn));
+      return true;
+    }
+    default: {
+      return false;
+    }
+  }
+}
+
+bool TestInterface::Dispatch(Interface* impl, fidl_msg_t* msg, ::fidl::Transaction* txn) {
+  bool found = TryDispatch(impl, msg, txn);
+  if (!found) {
+    zx_handle_close_many(msg->handles, msg->num_handles);
+    txn->Close(ZX_ERR_NOT_SUPPORTED);
+  }
+  return found;
+}
+
+
+void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(int32_t status, int32_t field) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleStructResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ConsumeSimpleStructResponse*>(_write_bytes);
+  _response._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
+  _response.status = std::move(status);
+  _response.field = std::move(field);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleStructResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleStructResponse>(std::move(_response_bytes)));
+}
+
+void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(::fidl::BytePart _buffer, int32_t status, int32_t field) {
+  if (_buffer.capacity() < ConsumeSimpleStructResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ConsumeSimpleStructResponse*>(_buffer.data());
+  _response._hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
+  _response.status = std::move(status);
+  _response.field = std::move(field);
+  _buffer.set_actual(sizeof(ConsumeSimpleStructResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleStructResponse>(std::move(_buffer)));
+}
+
+void TestInterface::Interface::ConsumeSimpleStructCompleterBase::Reply(::fidl::DecodedMessage<ConsumeSimpleStructResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleStruct_Ordinal;
+  CompleterBase::SendReply(std::move(params));
+}
+
+
+void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(uint32_t index, int32_t field) {
+  constexpr uint32_t _kWriteAllocSize = ::fidl::internal::ClampedMessageSize<ConsumeSimpleUnionResponse>();
+  FIDL_ALIGNDECL uint8_t _write_bytes[_kWriteAllocSize] = {};
+  auto& _response = *reinterpret_cast<ConsumeSimpleUnionResponse*>(_write_bytes);
+  _response._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
+  _response.index = std::move(index);
+  _response.field = std::move(field);
+  ::fidl::BytePart _response_bytes(_write_bytes, _kWriteAllocSize, sizeof(ConsumeSimpleUnionResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(std::move(_response_bytes)));
+}
+
+void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(::fidl::BytePart _buffer, uint32_t index, int32_t field) {
+  if (_buffer.capacity() < ConsumeSimpleUnionResponse::PrimarySize) {
+    CompleterBase::Close(ZX_ERR_INTERNAL);
+    return;
+  }
+  auto& _response = *reinterpret_cast<ConsumeSimpleUnionResponse*>(_buffer.data());
+  _response._hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
+  _response.index = std::move(index);
+  _response.field = std::move(field);
+  _buffer.set_actual(sizeof(ConsumeSimpleUnionResponse));
+  CompleterBase::SendReply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse>(std::move(_buffer)));
+}
+
+void TestInterface::Interface::ConsumeSimpleUnionCompleterBase::Reply(::fidl::DecodedMessage<ConsumeSimpleUnionResponse> params) {
+  params.message()->_hdr = {};
+  params.message()->_hdr.ordinal = kTestInterface_ConsumeSimpleUnion_Ordinal;
+  CompleterBase::SendReply(std::move(params));
 }
 
 
