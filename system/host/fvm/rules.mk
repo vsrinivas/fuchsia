@@ -37,6 +37,7 @@ MODULE_HOST_LIBS := \
     system/ulib/fvm.hostlib \
     system/ulib/fbl.hostlib \
     system/ulib/fs.hostlib \
+    system/ulib/fs-host.hostlib \
     system/ulib/digest.hostlib \
     system/ulib/minfs.hostlib \
 

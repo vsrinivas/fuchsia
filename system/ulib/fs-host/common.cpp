@@ -34,6 +34,8 @@ struct {
         "Length in bytes of minfs partition"},
     {"compress", Option::kCompress, "",        nullptr,
         "Compress files before adding them to blobfs"},
+    {"sizes", Option::kSizes, "[file]", nullptr,
+        "Record sizes of written entries to file"},
     {"help",     Option::kHelp,     "",        nullptr,
         "Display this message"},
 };
@@ -230,11 +232,10 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         opts[index] = {nullptr, 0, nullptr, 0};
 
         int opt_index;
-        int c = getopt_long(argc, argv, "+dro:l:ch", opts, &opt_index);
+        int c = getopt_long(argc, argv, "+dro:l:cs:h", opts, &opt_index);
         if (c < 0) {
             break;
         }
-
         switch (c) {
         case 'd':
             depfile_needed = true;
@@ -251,6 +252,14 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
         case 'c':
             compress_ = true;
             break;
+        case 's': {
+            const char* const sizes_file = optarg;
+            if (!size_recorder_.OpenSizeFile(sizes_file)) {
+                fprintf(stderr, "error: cannot open '%s'\n", sizes_file);
+                return ZX_ERR_IO;
+            }
+            break;
+        }
         case 'h':
         default:
             return Usage();
@@ -371,6 +380,7 @@ zx_status_t FsCreator::ProcessArgs(int argc, char** argv) {
                 return status;
             }
         } else if (ProcessCustom(argc, argv, &processed) != ZX_OK) {
+            fprintf(stderr, "ProcessCustom failed\n");
             return Usage();
         }
 

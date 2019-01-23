@@ -10,7 +10,9 @@ MODULE := $(LOCAL_DIR).hostlib
 
 MODULE_TYPE := hostlib
 
-MODULE_SRCS := $(LOCAL_DIR)/common.cpp
+MODULE_SRCS := \
+    $(LOCAL_DIR)/common.cpp \
+    $(LOCAL_DIR)/file_size_recorder.cpp \
 
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \

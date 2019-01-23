@@ -341,7 +341,7 @@ bool AddFileBlobfs(blobfs::Blobfs* bs, size_t size) {
     fbl::unique_ptr<uint8_t[]> data;
     ASSERT_TRUE(GenerateData(size, &data));
     ASSERT_EQ(write(datafd.get(), data.get(), size), size, "Failed to write data to file");
-    ASSERT_EQ(blobfs::blobfs_add_blob(bs, datafd.get()), ZX_OK, "Failed to add blob");
+    ASSERT_EQ(blobfs::blobfs_add_blob(bs, nullptr, datafd.get()), ZX_OK, "Failed to add blob");
     ASSERT_EQ(unlink(new_file), 0);
     END_HELPER;
 }

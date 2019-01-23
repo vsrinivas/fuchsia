@@ -131,6 +131,9 @@ MODULE_SRCS := \
     $(COMMON_SRCS) \
     $(LOCAL_DIR)/host.cpp \
 
+MODULE_HOST_LIBS := \
+    system/ulib/fs-host \
+
 MODULE_COMPILEFLAGS := \
     -Werror-implicit-function-declaration \
     -Wstrict-prototypes -Wwrite-strings \

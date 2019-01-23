@@ -19,6 +19,7 @@
 #include <fbl/auto_call.h>
 #include <fbl/macros.h>
 #include <fbl/unique_ptr.h>
+#include <fs-host/common.h>
 #include <fs/block-txn.h>
 #include <fs/trace.h>
 
@@ -116,8 +117,8 @@ zx_status_t buffer_compress(const FileMapping& mapping, MerkleInfo* out_info) {
 
 // Given a buffer (and pre-computed merkle tree), add the buffer as a
 // blob in Blobfs.
-zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& mapping,
-                                               const MerkleInfo& info) {
+zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, 
+                                               const FileMapping& mapping, const MerkleInfo& info) {
     ZX_ASSERT(mapping.length() == info.length);
     const void* data;
 
@@ -165,6 +166,13 @@ zx_status_t blobfs_add_mapped_blob_with_merkle(Blobfs* bs, const FileMapping& ma
     inode->extents[0].SetStart(start_block);
     inode->extents[0].SetLength(static_cast<BlockCountType>(inode->block_count));
     inode->extent_count = 1;
+
+    if (size_recorder) {
+        char digest_buf[65];
+        info.digest.ToString(digest_buf, sizeof(digest_buf));
+
+        size_recorder->AppendSizeInformation(digest_buf, kBlobfsBlockSize * inode->block_count);
+    }
 
     if ((status = bs->WriteData(inode, info.merkle.get(), data)) != ZX_OK) {
         return status;
@@ -280,7 +288,7 @@ zx_status_t blobfs_preprocess(int data_fd, bool compress, MerkleInfo* out_info) 
     return status;
 }
 
-zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
+zx_status_t blobfs_add_blob(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd) {
     FileMapping mapping;
     zx_status_t status = mapping.Map(data_fd);
     if (status != ZX_OK) {
@@ -294,17 +302,17 @@ zx_status_t blobfs_add_blob(Blobfs* bs, int data_fd) {
         return status;
     }
 
-    return blobfs_add_mapped_blob_with_merkle(bs, mapping, info);
+    return blobfs_add_mapped_blob_with_merkle(bs, size_recorder, mapping, info);
 }
 
-zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, int data_fd, const MerkleInfo& info) {
+zx_status_t blobfs_add_blob_with_merkle(Blobfs* bs, FileSizeRecorder* size_recorder, int data_fd, const MerkleInfo& info) {
     FileMapping mapping;
     zx_status_t status = mapping.Map(data_fd);
     if (status != ZX_OK) {
         return status;
     }
 
-    return blobfs_add_mapped_blob_with_merkle(bs, mapping, info);
+    return blobfs_add_mapped_blob_with_merkle(bs, size_recorder, mapping, info);
 }
 
 zx_status_t blobfs_fsck(fbl::unique_fd fd, off_t start, off_t end,

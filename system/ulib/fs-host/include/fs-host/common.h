@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#pragma once
+
 #include <fcntl.h>
 #include <mutex>
 #include <stdio.h>
@@ -13,6 +15,7 @@
 #include <fbl/unique_fd.h>
 #include <fbl/vector.h>
 #include <zircon/types.h>
+#include <fs-host/file_size_recorder.h>
 
 // The "manifest" command is only being retained here for backwards compatibility.
 //TODO(planders): Once all clients have switched create/add with --manifest, remove this command.
@@ -33,6 +36,7 @@ enum class Option {
     kOffset,
     kLength,
     kCompress,
+    kSizes,
     kHelp,
 };
 
@@ -58,9 +62,7 @@ class FsCreator {
 public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(FsCreator);
 
-    FsCreator(uint64_t data_blocks) : data_blocks_(data_blocks),command_(Command::kNone),
-                                      offset_(0), length_(0), read_only_(false), compress_(false),
-                                      depfile_lock_() {}
+    FsCreator(uint64_t data_blocks) : data_blocks_(data_blocks) {}
     virtual ~FsCreator() {}
 
     // Process the command line arguments and run the specified command.
@@ -118,6 +120,8 @@ protected:
     off_t GetLength() const { return length_; }
     bool ShouldCompress() const { return compress_; }
 
+    FileSizeRecorder* size_recorder() { return &size_recorder_; }
+
     fbl::unique_fd fd_;
 
     off_t data_blocks_;
@@ -137,11 +141,14 @@ private:
     // large as it needs to be to contain all specified files (specifiles).
     zx_status_t ResizeFile(off_t requested_size, struct stat stats);
 
-    Command command_;
-    off_t offset_;
-    off_t length_;
-    bool read_only_;
-    bool compress_;
+    Command command_{Command::kNone};
+    off_t offset_{0};
+    off_t length_{0};
+    bool read_only_{false};
+    bool compress_{false};
     std::mutex depfile_lock_;
     fbl::unique_fd depfile_;
+
+    FileSizeRecorder size_recorder_;
 };
+
