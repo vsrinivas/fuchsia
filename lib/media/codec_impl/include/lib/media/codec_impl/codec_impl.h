@@ -65,10 +65,15 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   CodecImpl(
       std::unique_ptr<CodecAdmission> codec_admission,
       async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-      std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params>
-          video_decoder_params,
+      std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
+  CodecImpl(
+      std::unique_ptr<CodecAdmission> codec_admission,
+      async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
+      std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
 
+  // TODO(rjascani): Remove after soft transition
   CodecImpl(std::unique_ptr<CodecAdmission> codec_admission,
             async_dispatcher_t* shared_fidl_dispatcher,
             thrd_t shared_fidl_thread,
@@ -147,6 +152,13 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   void QueueInputEndOfStream(uint64_t stream_lifetime_ordinal) override;
 
  private:
+  CodecImpl(
+      std::unique_ptr<CodecAdmission> codec_admission,
+      async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
+      std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
+      std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
+      fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
+
   // For FailFatalLocked().
   //
   // Tradeoff: sharing more code vs. having a fatal error not depend on calling
@@ -225,8 +237,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
     bool future_discarded_ = false;
     bool future_flush_end_of_stream_ = false;
     // Starts as nullptr for each new stream with implicit fallback to
-    // initial_input_format_details_, but can be overridden on a per-stream basis
-    // with QueueInputFormatDetails().
+    // initial_input_format_details_, but can be overridden on a per-stream
+    // basis with QueueInputFormatDetails().
     std::unique_ptr<fuchsia::media::FormatDetails> input_format_details_;
     // This defaults to _true_, so that we send the OOB bytes to the HW for each
     // stream, if we have any oob_bytes to send.
@@ -399,6 +411,8 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // Using unique_ptr<> for its optional-ness here.
   const std::unique_ptr<const fuchsia::mediacodec::CreateDecoder_Params>
       decoder_params_;
+  const std::unique_ptr<const fuchsia::mediacodec::CreateEncoder_Params>
+      encoder_params_;
 
   // Regardless of which type of codec was created, these track the input
   // FormatDetails.
@@ -480,8 +494,7 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // FailLocked() has already been called with a specific error string (in which
   // case the caller will likely want to just return).
   __WARN_UNUSED_RESULT bool ValidateBufferSettingsVsConstraintsLocked(
-      CodecPort port,
-      const fuchsia::media::StreamBufferSettings& settings,
+      CodecPort port, const fuchsia::media::StreamBufferSettings& settings,
       const fuchsia::media::StreamBufferConstraints& constraints);
 
   // Returns true if the port is done configuring (last buffer was added).
@@ -550,9 +563,9 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
   // last_required_buffer_constraints_version_ordinal_[port].
   uint64_t last_provided_buffer_constraints_version_ordinal_[kPortCount] = {};
 
-  // For CodecImpl, the initial StreamOutputConfig can be the first sent message.
-  // If sent that early, the StreamOutputConfig is likely to change again before
-  // any output data is emitted, but it _may not_.
+  // For CodecImpl, the initial StreamOutputConfig can be the first sent
+  // message. If sent that early, the StreamOutputConfig is likely to change
+  // again before any output data is emitted, but it _may not_.
   std::unique_ptr<const fuchsia::media::StreamOutputConfig> output_config_;
 
   // The core codec indicated that it didn't like an output config that had this
