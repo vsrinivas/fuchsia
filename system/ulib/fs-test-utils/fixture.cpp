@@ -260,6 +260,33 @@ zx_status_t Fixture::Mount() {
     return ZX_OK;
 }
 
+zx_status_t Fixture::Fsck() const {
+    const fbl::String& block_dev = GetFsBlockDevice().c_str();
+    if (block_dev.empty()) {
+        // the block device doesn't exist, in which case there's nothing to
+        // check. since this is a test fixture, that's probably not what wanted,
+        // so surface the error.
+        LOG_ERROR(ZX_ERR_BAD_STATE, "Fsck called on an empty fixture\n");
+        return ZX_ERR_BAD_STATE;
+    }
+
+    // set up the fsck options
+    fsck_options_t fsck_options = default_fsck_options;
+    fsck_options.never_modify = true;
+    fsck_options.force = true;
+
+    // run fsck
+    zx_status_t result = fsck(block_dev.c_str(), options_.fs_type,
+                              &fsck_options, launch_stdio_sync);
+    if (result != ZX_OK) {
+        LOG_ERROR(result, "Fsck failed on device at block_device_path:%s\n",
+                  block_dev.c_str());
+        return result;
+    }
+
+    return ZX_OK;
+}
+
 zx_status_t Fixture::Umount() {
     if (fs_state_ != ResourceState::kAllocated) {
         return ZX_OK;

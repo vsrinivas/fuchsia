@@ -159,6 +159,9 @@ public:
         return res;
     }
 
+    // Checks the disk with fsck.
+    zx_status_t Fsck() const;
+
     // Sets up MemFs and Ramdisk, allocating resources for the tests.
     zx_status_t SetUpTestCase();
 

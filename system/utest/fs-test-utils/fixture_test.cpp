@@ -5,6 +5,7 @@
 #include <fcntl.h>
 #include <stdio.h>
 
+#include <blobfs/common.h>
 #include <fbl/auto_call.h>
 #include <fbl/function.h>
 #include <fbl/string.h>
@@ -441,6 +442,102 @@ bool RemountIsOk() {
     END_TEST;
 }
 
+bool FsckIsOk() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    // running fsck on a freshly formatted disk should never fail.
+    ASSERT_EQ(fixture.Fsck(), ZX_OK);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+
+    END_TEST;
+}
+
+bool FsckFails() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    // corrupt the disk!
+    // right now we don't have a way to manipulate the internals of the
+    // filesystem to get it into a corrupt state, so we take advantage of the
+    // fact that we know where things are on disk and can just muck with them
+    // directly. we just set a giant array to all 1 and squash the node map.
+    uint8_t data[8192];
+    memset(data, 0xffffffff, 8192);
+    int dev = open(fixture.GetFsBlockDevice().c_str(), O_RDWR);
+    if (dev < 0) {
+        LOG_ERROR(0, "failed to open device\n");
+    }
+    ASSERT_EQ(blobfs::writeblk(dev, 1, data), ZX_OK);
+    int r3 = close(dev);
+    if (r3 < 0) {
+        LOG_ERROR(0, "failed to close\n");
+    }
+    sync();
+    // fsck should fail...the filesystem is obviously corrupt!
+    ASSERT_EQ(fixture.Fsck(), ZX_ERR_BAD_STATE);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+
+    END_TEST;
+}
+
+bool FsckMounted() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(fixture.Fsck(), ZX_ERR_BAD_STATE);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+
+    END_TEST;
+}
+
+bool FsckUnformatted() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.fs_format = false;
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(fixture.Fsck(), ZX_ERR_BAD_STATE);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+
+    END_TEST;
+}
+
+bool FsckNoBlockDevice() {
+    BEGIN_TEST;
+    FixtureOptions options = FixtureOptions::Default(DISK_FORMAT_BLOBFS);
+    options.use_ramdisk = false;
+    options.fs_format = false;
+    options.fs_mount = false;
+
+    Fixture fixture(options);
+    ASSERT_EQ(fixture.SetUpTestCase(), ZX_OK);
+    ASSERT_EQ(fixture.SetUp(), ZX_OK);
+    ASSERT_EQ(fixture.Fsck(), ZX_ERR_BAD_STATE);
+    ASSERT_EQ(fixture.TearDown(), ZX_OK);
+    ASSERT_EQ(fixture.TearDownTestCase(), ZX_OK);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(FixtureTest);
 RUN_TEST(RamdiskSetupAndCleanup);
 RUN_TEST(DiskIsFormattedCorrectlyNoFvm);
@@ -452,6 +549,11 @@ RUN_TEST(SkipMountIsOk);
 RUN_TEST(MountIsOk);
 RUN_TEST(UmountIsOk);
 RUN_TEST(RemountIsOk);
+RUN_TEST(FsckIsOk);
+RUN_TEST(FsckFails);
+RUN_TEST(FsckMounted);
+RUN_TEST(FsckUnformatted);
+RUN_TEST(FsckNoBlockDevice);
 END_TEST_CASE(FixtureTest);
 
 } // namespace
