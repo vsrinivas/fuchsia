@@ -112,8 +112,7 @@ class BlobStats {
       var compressedFile = new File(tmpPath);
       try {
         if (argResults[lz4Compression]) {
-          var result =
-              await Process.run("lz4", ["-1", path, tmpPath]);
+          var result = await Process.run("lz4", ["-1", path, tmpPath]);
           if (result.exitCode > 0) {
             print("Could not compress $path");
             return size;
@@ -327,18 +326,21 @@ class BlobStats {
         var blobName = path; //path.split("/").last;
         var blobTree = {};
         blobTree["n"] = blobName;
-        blobTree["k"] = "s"; // kind=symbol
+        blobTree["k"] = "s"; // kind=blob
         if (blobName.endsWith(".dilp") || blobName.endsWith(".aotsnapshot")) {
-          blobTree["t"] = "t"; // type=local text ("blue")
+          blobTree["t"] = "dart"; // type=Dart ("blue")
         } else {
-          blobTree["t"] = "T"; // type=global text ("red")
+          blobTree["t"] = "?"; // type=Other ("red")
         }
+        blobTree["c"] = blob.count;
         blobTree["value"] = blob.proportional;
+        blobTree["originalSize"] = blob.sizeOnHost;
+        blobTree["estimatedCompressedSize"] = blob.estimatedCompressedSize;
         pkgTree["children"].add(blobTree);
-        // Mark blobs with exactly one reference as "unique symbols" ("green")
-        // The visualizer helpfully computes the sum of all unique "symbols" within a package.
+        // Mark blobs with exactly one reference as "unique blobs" ("green")
+        // The visualizer helpfully computes the sum of all unique "blobs" within a package.
         if (blob.count == 1) {
-          blobTree["t"] = "u";
+          blobTree["t"] = "unique";
         }
       });
     }
@@ -351,14 +353,13 @@ class BlobStats {
     await sink.close();
 
     await new Directory(pathJoin(outputDir.path, "d3")).create(recursive: true);
-    var d3Dir =
-        buildDir.path + "/../../third_party/dart/runtime/third_party/d3/src/";
+    var d3Dir = pathJoin(buildDir.path, "../../scripts/third_party/d3/");
     for (var file in ["LICENSE", "d3.js"]) {
       await new File(d3Dir + file).copy(pathJoin(outputDir.path, "d3", file));
     }
-    var templateDir = pathJoin(buildDir.path,
-        "../../third_party/dart/runtime/third_party/binary_size/src/template/");
-    for (var file in ["index.html", "D3SymbolTreeMap.js"]) {
+    var templateDir =
+        pathJoin(buildDir.path, "../../scripts/blobstats/template/");
+    for (var file in ["index.html", "D3BlobTreeMap.js"]) {
       await new File(templateDir + file).copy(pathJoin(outputDir.path, file));
     }
 
