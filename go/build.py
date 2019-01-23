@@ -18,8 +18,6 @@ from gen_library_metadata import get_sources
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--fuchsia-root', help='Path to root of Fuchsia project',
-                        required=True)
     parser.add_argument('--godepfile', help='Path to godepfile tool', required=True)
     parser.add_argument('--root-out-dir', help='Path to root of build output',
                         required=True)

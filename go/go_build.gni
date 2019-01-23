@@ -83,8 +83,6 @@ template("go_build") {
     args = [
       "--godepfile",
       rebase_path(godepfile, "", root_build_dir),
-      "--fuchsia-root",
-      rebase_path("//."),
       "--root-out-dir",
       rebase_path(root_out_dir, root_build_dir),
       "--depfile",
