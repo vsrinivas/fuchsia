@@ -8,15 +8,16 @@ import("//build/host.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/testing/test_spec.gni")
 
-# Declared Arguments:
-#
-#   gocache_dir
-#     Directory GOCACHE environment variable will be set to. This directory
-#     will have build and test results cached, and is safe to be written to
-#     concurrently. If overridden, this directory must be a full path.
-#
 declare_args() {
+  #   gocache_dir
+  #     Directory GOCACHE environment variable will be set to. This directory
+  #     will have build and test results cached, and is safe to be written to
+  #     concurrently. If overridden, this directory must be a full path.
   gocache_dir = rebase_path("$root_out_dir/.gocache")
+
+  #   go_skip_vet
+  #     [bool] if true, skip vet defaults to true
+  go_skip_vet = false
 }
 
 # A template for an action that builds a Go binary. Users should instead use the
@@ -104,7 +105,7 @@ template("go_build") {
       gocache_dir,
     ]
 
-    if (defined(invoker.skip_vet) && invoker.skip_vet) {
+    if ((defined(invoker.skip_vet) && invoker.skip_vet) || go_skip_vet) {
       args += [ "--skip-vet" ]
     }
 
