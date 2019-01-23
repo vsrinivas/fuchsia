@@ -140,16 +140,6 @@ static void resume_thread_from_exception(zx_handle_t thread, zx_handle_t excepti
         return;
     }
 
-    // For now, we turn policy exceptions into non-fatal warnings, by
-    // resuming the thread when these exceptions occur.  TODO(ZX-922):
-    // Remove this and make these exceptions fatal after the system has
-    // received some amount of testing with ZX_POL_BAD_HANDLE enabled as a
-    // warning.
-    if (excp_type == ZX_EXCP_POLICY_ERROR) {
-        resume_thread(thread, exception_port, true);
-        return;
-    }
-
 #if !defined(__x86_64__)
 Fail:
 #endif
