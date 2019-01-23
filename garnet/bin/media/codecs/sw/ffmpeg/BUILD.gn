@@ -23,6 +23,8 @@ executable("codec_runner_sw_ffmpeg") {
     "codec_adapter_ffmpeg.h",
     "codec_adapter_ffmpeg_decoder.cc",
     "codec_adapter_ffmpeg_decoder.h",
+    "codec_adapter_ffmpeg_encoder.cc",
+    "codec_adapter_ffmpeg_encoder.h",
     "codec_runner_app.cc",
     "codec_runner_app.h",
     "local_single_codec_factory.cc",

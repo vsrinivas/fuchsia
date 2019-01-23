@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "codec_adapter_ffmpeg_encoder.h"
+
+#include <lib/media/codec_impl/codec_buffer.h>
+
+CodecAdapterFfmpegEncoder::CodecAdapterFfmpegEncoder(
+    std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
+    : CodecAdapterFfmpeg(lock, codec_adapter_events) {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+CodecAdapterFfmpegEncoder::~CodecAdapterFfmpegEncoder() = default;
+
+void CodecAdapterFfmpegEncoder::ProcessInputLoop() {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+void CodecAdapterFfmpegEncoder::UnreferenceOutputPacket(CodecPacket* packet) {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+void CodecAdapterFfmpegEncoder::UnreferenceClientBuffers() {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+}
+
+std::pair<fuchsia::media::FormatDetails, size_t>
+CodecAdapterFfmpegEncoder::OutputFormatDetails() {
+  ZX_ASSERT_MSG(false, "Not implemented.");
+  return {fuchsia::media::FormatDetails{}, 0};
+}

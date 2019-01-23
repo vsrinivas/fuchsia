@@ -34,6 +34,34 @@ class LocalSingleCodecFactory : public fuchsia::mediacodec::CodecFactory {
       override;
 
  private:
+  template <typename Adapter, typename Params>
+  void VendCodecAdapter(
+      Params params,
+      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request) {
+    codec_admission_control_->TryAddCodec(
+        /*multi_instance=*/true,
+        [this, params = std::move(params),
+         codec_request = std::move(codec_request)](
+            std::unique_ptr<CodecAdmission> codec_admission) mutable {
+          if (!codec_admission) {
+            // ~codec_request closes channel.
+            return;
+          }
+
+          auto codec_impl = std::make_unique<CodecImpl>(
+              std::move(codec_admission), fidl_dispatcher_, thrd_current(),
+              std::make_unique<Params>(std::move(params)),
+              std::move(codec_request));
+
+          codec_impl->SetCoreCodecAdapter(
+              std::make_unique<Adapter>(codec_impl->lock(), codec_impl.get()));
+
+          // This hands off the codec impl to the creator of |this| and is
+          // expected to |~this|.
+          factory_done_callback_(std::move(codec_impl));
+        });
+  }
+
   async_dispatcher_t* fidl_dispatcher_;
   fidl::Binding<CodecFactory, LocalSingleCodecFactory*> binding_;
   // Returns the codec implementation and requests drop of self.

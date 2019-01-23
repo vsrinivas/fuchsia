@@ -7,6 +7,7 @@
 #include <lib/component/cpp/startup_context.h>
 
 #include "codec_adapter_ffmpeg_decoder.h"
+#include "codec_adapter_ffmpeg_encoder.h"
 
 LocalSingleCodecFactory::LocalSingleCodecFactory(
     async_dispatcher_t* fidl_dispatcher,
@@ -26,36 +27,13 @@ LocalSingleCodecFactory::LocalSingleCodecFactory(
 void LocalSingleCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params decoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) {
-  codec_admission_control_->TryAddCodec(
-      /*multi_instance=*/false,
-      [this, decoder_params = std::move(decoder_params),
-       decoder_request = std::move(decoder_request)](
-          std::unique_ptr<CodecAdmission> codec_admission) mutable {
-        if (!codec_admission) {
-          // ~decoder_request closes channel.
-          return;
-        }
-
-        auto codec_impl = std::make_unique<CodecImpl>(
-            std::move(codec_admission), fidl_dispatcher_, thrd_current(),
-            std::make_unique<fuchsia::mediacodec::CreateDecoder_Params>(
-                std::move(decoder_params)),
-            ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>(
-                decoder_request.TakeChannel()));
-
-        codec_impl->SetCoreCodecAdapter(
-            std::make_unique<CodecAdapterFfmpegDecoder>(codec_impl->lock(),
-                                                        codec_impl.get()));
-
-        // This hands off the codec impl to the creator of |this| and is
-        // expected to |~this|.
-        factory_done_callback_(std::move(codec_impl));
-      });
+  VendCodecAdapter<CodecAdapterFfmpegDecoder>(std::move(decoder_params),
+                                              std::move(decoder_request));
 }
 
 void LocalSingleCodecFactory::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {
-  // We have no encoders to provide.
-  // ~encoder_request
+  VendCodecAdapter<CodecAdapterFfmpegEncoder>(std::move(encoder_params),
+                                              std::move(encoder_request));
 }
