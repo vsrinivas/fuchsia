@@ -455,9 +455,12 @@ void x86_exception_handler(x86_iframe_t* frame) {
     bool from_user = is_from_user(frame);
 
     // deliver the interrupt
-    ktrace_tiny(TAG_IRQ_ENTER, ((uint32_t)frame->vector << 8) | arch_curr_cpu_num());
+    const auto entry_vector = frame->vector;
+    ktrace_tiny(TAG_IRQ_ENTER, (static_cast<uint32_t>(entry_vector) << 8) | arch_curr_cpu_num());
 
     handle_exception_types(frame);
+
+    ktrace_tiny(TAG_IRQ_EXIT, (static_cast<uint32_t>(entry_vector) << 8) | arch_curr_cpu_num());
 
     bool do_preempt = int_handler_finish(&state);
 
@@ -471,8 +474,6 @@ void x86_exception_handler(x86_iframe_t* frame) {
 
     if (do_preempt)
         thread_preempt();
-
-    ktrace_tiny(TAG_IRQ_EXIT, ((uint)frame->vector << 8) | arch_curr_cpu_num());
 
     DEBUG_ASSERT_MSG(arch_ints_disabled(),
                      "ints disabled on way out of exception, vector %" PRIu64 " IP %#" PRIx64 "\n",
