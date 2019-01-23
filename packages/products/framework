@@ -4,7 +4,7 @@
         "garnet/packages/config/netconnector",
         "garnet/packages/prod/cobalt_client",
         "garnet/packages/prod/mdns",
-        "garnet/packages/prod/mdns_util",
+        "garnet/packages/prod/mdns-util",
         "garnet/packages/prod/netconnector",
         "peridot/packages/prod/clipboard_agent",
         "peridot/packages/prod/cloud_provider_firestore",
