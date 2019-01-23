@@ -9,6 +9,7 @@ import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/fvm.gni")
+import("//build/images/max_fvm_size.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
 import("//build/package.gni")
@@ -738,6 +739,11 @@ images += [
     ]
   },
 ]
+
+# Record the maximum allowable FVM size in the build directory for later steps
+# to check against.
+max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
+write_file(max_fvm_size_file, max_fvm_size)
 
 # fvm.blk creates an FVM partition image containing the blob partition produced
 # by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
