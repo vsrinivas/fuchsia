@@ -13,7 +13,6 @@ t
 blk.bin
 *.dSYM
 scripts/toolpaths.local
-clang-format
 compile_commands.json
 .vscode
 *_BACKUP_*

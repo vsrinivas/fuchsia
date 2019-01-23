@@ -6,17 +6,8 @@
 # license that can be found in the LICENSE file or at
 # https://opensource.org/licenses/MIT
 
-SCRIPTSDIR=`dirname $0`
-CLANGFMT=$SCRIPTSDIR/clang-format
+ZIRCON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+CLANG_DIR="${ZIRCON_ROOT}/prebuilt/downloads/clang/bin"
+CLANG_FMT="${CLANG_DIR}/clang-format"
 
-if [ ! -f "$CLANGFMT" ]; then
-  echo "local clang-format not found. Running scripts/fetch-clang-fmt to get it."
-  ( cd $SCRIPTSDIR && ./fetch-clang-fmt )
-fi
-
-if [ ! -f $CLANGFMT ]; then
-  echo "$CLANGFMT still not found. Exiting."
-  exit 0
-fi
-
-$CLANGFMT -i -style=file $@
+exec "$CLANG_FMT" -i -style=file "$@"
