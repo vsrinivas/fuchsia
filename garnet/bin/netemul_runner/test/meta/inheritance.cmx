@@ -1,0 +1,6 @@
+{
+    "program": {
+        "data": "meta/inheritance_run.cmx"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/netemul_runner#meta/netemul_runner.cmx"
+}

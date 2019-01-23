@@ -1,0 +1,49 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "children": [
+                    {
+                        "inherit_services": true,
+                        "name": "child-inherits",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "inherit"
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "inherit_services": false,
+                        "name": "child-no-inherit",
+                        "test": [
+                            {
+                                "arguments": [
+                                    "no-inherit"
+                                ]
+                            }
+                        ]
+                    }
+                ],
+                "name": "root",
+                "services": {
+                    "fuchsia.netemul.example.Counter": {
+                        "arguments": [
+                            "serve"
+                        ]
+                    }
+                }
+            }
+        }
+    },
+    "program": {
+        "binary": "test/inheritance"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.example.Counter",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

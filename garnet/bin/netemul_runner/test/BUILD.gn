@@ -11,6 +11,7 @@ test_package("netemul_sandbox_test") {
     "//garnet/bin/netemul_runner/test/dummy_proc",
     "//garnet/bin/netemul_runner/test/easy_netstack_cfg",
     "//garnet/bin/netemul_runner/test/env_build",
+    "//garnet/bin/netemul_runner/test/inheritance",
     "//garnet/bin/netemul_runner/test/netstack_socks",
     "//garnet/bin/netemul_runner/test/svc_list",
   ]
@@ -35,6 +36,10 @@ test_package("netemul_sandbox_test") {
     {
       path = rebase_path("meta/easy_netstack_cfg_run.cmx")
       dest = "easy_netstack_cfg_run.cmx"
+    },
+    {
+      path = rebase_path("meta/inheritance_run.cmx")
+      dest = "inheritance_run.cmx"
     },
   ]
 
@@ -62,6 +67,9 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "easy_netstack_cfg"
+    },
+    {
+      name = "inheritance"
     },
   ]
 }
