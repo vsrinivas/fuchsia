@@ -438,45 +438,80 @@ TEST_F(VirtioWlTest, Recv) {
             ZX_OK);
   RunLoopUntilIdle();
 
-  size_t buffer_size =
-      sizeof(virtio_wl_ctrl_vfd_new_t) * fbl::count_of(handles) +
-      sizeof(virtio_wl_ctrl_vfd_recv_t) +
-      sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
+  virtio_wl_ctrl_vfd_new_t* new_vfd_cmd[2];
+  size_t buffer_size = sizeof(virtio_wl_ctrl_vfd_recv_t) +
+                       sizeof(uint32_t) * fbl::count_of(handles) + sizeof(data);
   uint8_t* buffer;
-  uint16_t descriptor_id;
+  uint16_t descriptor_id[3];
   ASSERT_EQ(DescriptorChainBuilder(in_queue_)
                 .AppendWritableDescriptor(&buffer, buffer_size)
-                .Build(&descriptor_id),
+                .Build(&descriptor_id[0]),
             ZX_OK);
-  virtio_wl_ctrl_vfd_new_t* new_vfd_cmd =
-      reinterpret_cast<virtio_wl_ctrl_vfd_new_t*>(buffer);
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&new_vfd_cmd[0],
+                                          sizeof(virtio_wl_ctrl_vfd_new_t))
+                .Build(&descriptor_id[1]),
+            ZX_OK);
+  ASSERT_EQ(DescriptorChainBuilder(in_queue_)
+                .AppendWritableDescriptor(&new_vfd_cmd[1],
+                                          sizeof(virtio_wl_ctrl_vfd_new_t))
+                .Build(&descriptor_id[2]),
+            ZX_OK);
   virtio_wl_ctrl_vfd_recv_t* header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(new_vfd_cmd +
-                                                   fbl::count_of(handles));
+      reinterpret_cast<virtio_wl_ctrl_vfd_recv_t*>(buffer);
   uint32_t* vfds = reinterpret_cast<uint32_t*>(header + 1);
-
   ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_IN), ZX_OK);
+
+  // Descriptors should be returned in the order:
+  //   descriptor_id[1] -> NEW_VFD (VMO)
+  //   descriptor_id[2] -> NEW_VFD (SOCKET)
+  //   descriptor_id[0] -> RECV
+  // This is because the RECV message is read out of the channel directly into
+  // descriptor_id[0], but then we see the new VFDs that need to be created
+  // first.
+
+  // descriptor_id[1] -> NEW_VFD (VMO)
   ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
   auto used_elem = in_queue_.NextUsed();
   EXPECT_TRUE(used_elem);
-  EXPECT_EQ(used_elem->id, descriptor_id);
+  EXPECT_EQ(used_elem->id, descriptor_id[1]);
+  EXPECT_EQ(used_elem->len, sizeof(virtio_wl_ctrl_vfd_new_t));
+
+  // descriptor_id[2] -> NEW_VFD (SOCKET)
+  used_elem = in_queue_.NextUsed();
+  if (!used_elem) {
+    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+    used_elem = in_queue_.NextUsed();
+  }
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id[2]);
+  EXPECT_EQ(used_elem->len, sizeof(virtio_wl_ctrl_vfd_new_t));
+
+  // descriptor_id[0] -> RECV
+  used_elem = in_queue_.NextUsed();
+  if (!used_elem) {
+    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+    used_elem = in_queue_.NextUsed();
+  }
+  EXPECT_TRUE(used_elem);
+  EXPECT_EQ(used_elem->id, descriptor_id[0]);
   EXPECT_EQ(used_elem->len, buffer_size);
 
-  EXPECT_EQ(new_vfd_cmd[0].hdr.type, VIRTIO_WL_CMD_VFD_NEW);
-  EXPECT_EQ(new_vfd_cmd[0].hdr.flags, 0u);
-  EXPECT_EQ(new_vfd_cmd[0].vfd_id,
+  EXPECT_EQ(new_vfd_cmd[0]->hdr.type, VIRTIO_WL_CMD_VFD_NEW);
+  EXPECT_EQ(new_vfd_cmd[0]->hdr.flags, 0u);
+  EXPECT_EQ(new_vfd_cmd[0]->vfd_id,
             static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE));
-  EXPECT_EQ(new_vfd_cmd[0].flags,
+  EXPECT_EQ(new_vfd_cmd[0]->flags,
             static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
-  EXPECT_GT(new_vfd_cmd[0].pfn, 0u);
-  EXPECT_EQ(new_vfd_cmd[0].size, static_cast<uint32_t>(PAGE_SIZE));
-  EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd[0].pfn * PAGE_SIZE), 0xaa);
+  EXPECT_GT(new_vfd_cmd[0]->pfn, 0u);
+  EXPECT_EQ(new_vfd_cmd[0]->size, static_cast<uint32_t>(PAGE_SIZE));
+  EXPECT_EQ(*reinterpret_cast<uint8_t*>(new_vfd_cmd[0]->pfn * PAGE_SIZE), 0xaa);
 
-  EXPECT_EQ(new_vfd_cmd[1].hdr.type, VIRTIO_WL_CMD_VFD_NEW_PIPE);
-  EXPECT_EQ(new_vfd_cmd[1].hdr.flags, 0u);
-  EXPECT_EQ(new_vfd_cmd[1].vfd_id,
+  EXPECT_EQ(new_vfd_cmd[1]->hdr.type, VIRTIO_WL_CMD_VFD_NEW_PIPE);
+  EXPECT_EQ(new_vfd_cmd[1]->hdr.flags, 0u);
+  EXPECT_EQ(new_vfd_cmd[1]->vfd_id,
             static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
-  EXPECT_EQ(new_vfd_cmd[1].flags,
+  EXPECT_EQ(new_vfd_cmd[1]->flags,
             static_cast<uint32_t>(VIRTIO_WL_VFD_READ | VIRTIO_WL_VFD_WRITE));
 
   EXPECT_EQ(header->hdr.type, VIRTIO_WL_CMD_VFD_RECV);
@@ -487,55 +522,59 @@ TEST_F(VirtioWlTest, Recv) {
   EXPECT_EQ(vfds[1], static_cast<uint32_t>(VIRTWL_NEXT_VFD_ID_BASE + 1));
   EXPECT_EQ(*reinterpret_cast<uint32_t*>(vfds + fbl::count_of(handles)), 1234u);
 
-  // Check that closing shared memory works as expected.
-  virtio_wl_ctrl_vfd_t request = {};
-  request.hdr.type = VIRTIO_WL_CMD_VFD_CLOSE;
-  request.vfd_id = VIRTWL_NEXT_VFD_ID_BASE;
-  virtio_wl_ctrl_hdr_t* response;
-  ASSERT_EQ(DescriptorChainBuilder(out_queue_)
-                .AppendReadableDescriptor(&request, sizeof(request))
-                .AppendWritableDescriptor(&response, sizeof(*response))
-                .Build(&descriptor_id),
-            ZX_OK);
+  {  // Check that closing shared memory works as expected.
+    uint16_t descriptor_id;
+    virtio_wl_ctrl_vfd_t request = {};
+    request.hdr.type = VIRTIO_WL_CMD_VFD_CLOSE;
+    request.vfd_id = VIRTWL_NEXT_VFD_ID_BASE;
+    virtio_wl_ctrl_hdr_t* response;
+    ASSERT_EQ(DescriptorChainBuilder(out_queue_)
+                  .AppendReadableDescriptor(&request, sizeof(request))
+                  .AppendWritableDescriptor(&response, sizeof(*response))
+                  .Build(&descriptor_id),
+              ZX_OK);
 
-  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  used_elem = out_queue_.NextUsed();
-  EXPECT_TRUE(used_elem);
-  EXPECT_EQ(used_elem->id, descriptor_id);
-  EXPECT_EQ(used_elem->len, sizeof(*response));
-  EXPECT_EQ(response->type, VIRTIO_WL_RESP_OK);
+    ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+    used_elem = out_queue_.NextUsed();
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(*response));
+    EXPECT_EQ(response->type, VIRTIO_WL_RESP_OK);
+  }
 
-  // Check that writing to pipe works as expected.
-  uint8_t send_request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t)];
-  virtio_wl_ctrl_vfd_send_t* send_header =
-      reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(send_request);
-  send_header->hdr.type = VIRTIO_WL_CMD_VFD_SEND;
-  send_header->vfd_id = VIRTWL_NEXT_VFD_ID_BASE + 1;
-  send_header->vfd_count = 0;
-  *reinterpret_cast<uint32_t*>(send_header + 1) = 1234u;  // payload
-  virtio_wl_ctrl_hdr_t* send_response;
-  ASSERT_EQ(
-      DescriptorChainBuilder(out_queue_)
-          .AppendReadableDescriptor(&send_request, sizeof(send_request))
-          .AppendWritableDescriptor(&send_response, sizeof(*send_response))
-          .Build(&descriptor_id),
-      ZX_OK);
+  {  // Check that writing to pipe works as expected.
+    uint16_t descriptor_id = 0;
+    uint8_t send_request[sizeof(virtio_wl_ctrl_vfd_send_t) + sizeof(uint32_t)];
+    virtio_wl_ctrl_vfd_send_t* send_header =
+        reinterpret_cast<virtio_wl_ctrl_vfd_send_t*>(send_request);
+    send_header->hdr.type = VIRTIO_WL_CMD_VFD_SEND;
+    send_header->vfd_id = VIRTWL_NEXT_VFD_ID_BASE + 1;
+    send_header->vfd_count = 0;
+    *reinterpret_cast<uint32_t*>(send_header + 1) = 1234u;  // payload
+    virtio_wl_ctrl_hdr_t* send_response;
+    ASSERT_EQ(
+        DescriptorChainBuilder(out_queue_)
+            .AppendReadableDescriptor(&send_request, sizeof(send_request))
+            .AppendWritableDescriptor(&send_response, sizeof(*send_response))
+            .Build(&descriptor_id),
+        ZX_OK);
 
-  ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
-  ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
-  used_elem = out_queue_.NextUsed();
-  EXPECT_TRUE(used_elem);
-  EXPECT_EQ(used_elem->id, descriptor_id);
-  EXPECT_EQ(used_elem->len, sizeof(*send_response));
-  EXPECT_EQ(send_response->type, VIRTIO_WL_RESP_OK);
+    ASSERT_EQ(wl_->NotifyQueue(VIRTWL_VQ_OUT), ZX_OK);
+    ASSERT_EQ(WaitOnInterrupt(), ZX_OK);
+    used_elem = out_queue_.NextUsed();
+    EXPECT_TRUE(used_elem);
+    EXPECT_EQ(used_elem->id, descriptor_id);
+    EXPECT_EQ(used_elem->len, sizeof(*send_response));
+    EXPECT_EQ(send_response->type, VIRTIO_WL_RESP_OK);
 
-  uint32_t pipe_data;
-  size_t actual_bytes;
-  ASSERT_EQ(socket.read(0, &pipe_data, sizeof(pipe_data), &actual_bytes),
-            ZX_OK);
-  EXPECT_EQ(actual_bytes, sizeof(pipe_data));
-  EXPECT_EQ(pipe_data, 1234u);
+    uint32_t pipe_data;
+    size_t actual_bytes;
+    ASSERT_EQ(socket.read(0, &pipe_data, sizeof(pipe_data), &actual_bytes),
+              ZX_OK);
+    EXPECT_EQ(actual_bytes, sizeof(pipe_data));
+    EXPECT_EQ(pipe_data, 1234u);
+  }
 
   channels_.clear();
 }

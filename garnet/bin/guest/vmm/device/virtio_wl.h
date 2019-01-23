@@ -5,6 +5,7 @@
 #ifndef GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_
 #define GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_
 
+#include <deque>
 #include <unordered_map>
 
 #include <lib/async/cpp/wait.h>
@@ -131,6 +132,7 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   void DispatchPendingEvents();
   bool AcquireWritableDescriptor(VirtioQueue* queue, VirtioChain* chain,
                                  VirtioDescriptor* desc);
+  bool CreatePendingVfds();
 
   std::array<VirtioQueue, VIRTWL_QUEUE_COUNT> queues_;
   zx::vmar vmar_;
@@ -141,6 +143,27 @@ class VirtioWl : public DeviceBase<VirtioWl>,
   std::unordered_map<uint32_t, zx_signals_t> ready_vfds_;
   uint32_t next_vfd_id_ = VIRTWL_NEXT_VFD_ID_BASE;
   std::unique_ptr<VirtioMagma> magma_;
+
+  // A pending VFD is a zircon handle that will will be converted into a VFD
+  // by sending a NEW_VFD command back to the guest.
+  struct PendingVfd {
+    // The handle to turn into a VFD.
+    zx_handle_info handle_info;
+
+    // The VFD id that has been assigned. This must be honored as it will have
+    // already been written into the command payload associated for the
+    // associated RECV message.
+    uint32_t vfd_id;
+
+    // If this is valid, it will be returned _after_ the new VFD command for
+    // this handle is sent.
+    //
+    // This will only be set on the VFD associated with last handle sent with
+    // a RECV command. This is because the VFD ids in that RECV command will
+    // not be valid until _all_ the VFDs are created.
+    VirtioChain payload;
+  };
+  std::deque<PendingVfd> pending_vfds_;
 };
 
 #endif  // GARNET_BIN_GUEST_VMM_DEVICE_VIRTIO_WL_H_
