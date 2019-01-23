@@ -5,11 +5,10 @@
 import("//build/package.gni")
 
 package("dev_auth_providers") {
-
   testonly = true
   deps = [
     ":dev_auth_provider",
-    ":dev_auth_provider_iotid"
+    ":dev_auth_provider_iotid",
   ]
 
   binaries = [
@@ -18,18 +17,17 @@ package("dev_auth_providers") {
     },
     {
       name = "rust_crates/dev_auth_provider_iotid"
-    }
+    },
   ]
 
   meta = [
     {
-        path = rebase_path("meta/dev_auth_provider.cmx"),
-        dest = "dev_auth_provider.cmx",
+      path = rebase_path("meta/dev_auth_provider.cmx")
+      dest = "dev_auth_provider.cmx"
     },
     {
-        path = rebase_path("meta/dev_auth_provider_iotid.cmx"),
-        dest = "dev_auth_provider_iotid.cmx",
+      path = rebase_path("meta/dev_auth_provider_iotid.cmx")
+      dest = "dev_auth_provider_iotid.cmx"
     },
   ]
 }
-
