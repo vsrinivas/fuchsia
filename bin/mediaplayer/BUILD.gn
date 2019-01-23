@@ -6,13 +6,15 @@ import("//build/package.gni")
 import("//build/test/test_package.gni")
 
 package("mediaplayer") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":mediaplayer_bin",
   ]
 
-  binary = "mediaplayer"
+  binaries = [
+    {
+      name = "mediaplayer"
+    },
+  ]
 
   meta = [
     {
@@ -83,9 +85,11 @@ executable("mediaplayer_test_util_bin") {
 }
 
 package("mediaplayer_test_util") {
-  deprecated_bare_package_url = "//build"
-
-  binary = "mediaplayer_test_util"
+  binaries = [
+    {
+      name = "mediaplayer_test_util"
+    },
+  ]
 
   testonly = true
 
