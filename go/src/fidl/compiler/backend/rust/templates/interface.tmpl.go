@@ -496,7 +496,7 @@ impl futures::stream::FusedStream for {{ $interface.Name }}RequestStream {
 }
 
 impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
-        /// Consume a channel to make a {{ $interface.Name }}RequestStream
+	/// Consume a channel to make a {{ $interface.Name }}RequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -504,12 +504,20 @@ impl fidl::endpoints::RequestStream for {{ $interface.Name }}RequestStream {
 		}
 	}
 
-        /// ControlHandle for the remote connection
+   /// ControlHandle for the remote connection
 	type ControlHandle = {{ $interface.Name }}ControlHandle;
 
-        /// Get a ControlHandle for {{ $interface.Name }}
+   /// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
 		{{ $interface.Name }}ControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
+		(self.inner, self.msg_buf)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self {
+		Self { inner, msg_buf }
 	}
 }
 

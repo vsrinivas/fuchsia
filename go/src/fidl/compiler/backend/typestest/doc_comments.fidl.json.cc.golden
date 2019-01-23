@@ -8,8 +8,8 @@ namespace name {
 
 namespace {
   
-constexpr uint32_t kInterface_Method_GenOrdinal = 1061382220u;
-constexpr uint32_t kInterface_Method_Ordinal = 1u;
+constexpr uint32_t kInterface_Method_GenOrdinal = 1u;
+constexpr uint32_t kInterface_Method_Ordinal = 1061382220u;
 extern "C" const fidl_type_t test_name_InterfaceMethodRequestTable;
 
 }  // namespace

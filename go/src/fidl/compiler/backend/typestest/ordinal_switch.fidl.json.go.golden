@@ -12,12 +12,12 @@ import (
 
 
 const (
-	SwitchingOrdinalsOrdinalFiveOrdinal uint32 = 5
-	SwitchingOrdinalsOrdinalFiveGenOrdinal uint32 = 2005164903
+	SwitchingOrdinalsOrdinalFiveOrdinal uint32 = 2005164903
+	SwitchingOrdinalsOrdinalFiveGenOrdinal uint32 = 5
 	SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal uint32 = 667506719
 	SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal uint32 = 667506719
-	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint32 = 15
-	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint32 = 1467258273
+	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint32 = 1467258273
+	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint32 = 15
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal uint32 = 2146190926
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal uint32 = 2146190926
 )

@@ -9,8 +9,8 @@
       "name": "test.name/SwitchingOrdinals",
       "methods": [
         {
-          "ordinal": 5,
-          "generated_ordinal": 2005164903,
+          "ordinal": 2005164903,
+          "generated_ordinal": 5,
           "name": "OrdinalFive",
           "has_request": true,
           "maybe_request": [],
@@ -29,8 +29,8 @@
           "has_response": false
         },
         {
-          "ordinal": 15,
-          "generated_ordinal": 1467258273,
+          "ordinal": 1467258273,
+          "generated_ordinal": 15,
           "name": "EventOrdinalFifteen",
           "has_request": false,
           "has_response": true,

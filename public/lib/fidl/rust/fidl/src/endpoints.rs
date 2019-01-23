@@ -5,10 +5,11 @@
 //! Wrapper types for the endpoints of a connection.
 
 use {
-    crate::Error,
+    crate::{Error, ServeInner},
     fuchsia_async as fasync,
     fuchsia_zircon as zx,
     std::marker::PhantomData,
+    std::sync::Arc,
 };
 
 /// A marker for a particular FIDL service.
@@ -44,6 +45,18 @@ pub trait RequestStream: Sized {
 
     /// Create a request stream from the given channel.
     fn from_channel(inner: fasync::Channel) -> Self;
+
+    /// Convert this channel into its underlying components.
+    fn into_inner(self) -> (Arc<ServeInner>, Option<zx::MessageBuf>);
+
+    /// Create this channel from its underlying components.
+    fn from_inner(inner: Arc<ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self;
+
+    /// Convert this FIDL request stream into a request stream of another FIDL protocol.
+    fn cast_stream<T: RequestStream>(self) -> T {
+        let inner = self.into_inner();
+        T::from_inner(inner.0, inner.1)
+    }
 }
 
 /// The `Client` end of a FIDL connection.

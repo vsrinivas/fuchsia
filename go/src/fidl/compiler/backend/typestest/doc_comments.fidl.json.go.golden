@@ -121,8 +121,8 @@ func (u *Table) ClearField() {
 	u.FieldPresent = false
 }
 const (
-	InterfaceMethodOrdinal uint32 = 1
-	InterfaceMethodGenOrdinal uint32 = 1061382220
+	InterfaceMethodOrdinal uint32 = 1061382220
+	InterfaceMethodGenOrdinal uint32 = 1
 )
 
 type InterfaceMethodRequest struct {

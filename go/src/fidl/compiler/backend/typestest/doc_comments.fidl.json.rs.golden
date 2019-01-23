@@ -107,7 +107,7 @@ impl InterfaceSynchronousProxy {
 	///
 	/// method comment #3
 	pub fn method(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				1,
+				1061382220,
 			)}
 }
 
@@ -165,7 +165,7 @@ impl InterfaceProxy {
 impl InterfaceProxyInterface for InterfaceProxy {
 	fn method(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 1)
+		self.client.send(&mut (), 1061382220)
 	}}
 
 pub struct InterfaceEventStream {
@@ -316,7 +316,7 @@ impl<T: Interface> futures::Future for InterfaceServer<T> {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-					1 | 1061382220 => {
+					1061382220 | 1 => {
 						let mut req: () = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 						let control_handle = InterfaceControlHandle {
@@ -352,7 +352,7 @@ impl futures::stream::FusedStream for InterfaceRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for InterfaceRequestStream {
-        /// Consume a channel to make a InterfaceRequestStream
+	/// Consume a channel to make a InterfaceRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -360,12 +360,20 @@ impl fidl::endpoints::RequestStream for InterfaceRequestStream {
 		}
 	}
 
-        /// ControlHandle for the remote connection
+   /// ControlHandle for the remote connection
 	type ControlHandle = InterfaceControlHandle;
 
-        /// Get a ControlHandle for Interface
+   /// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
 		InterfaceControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
+		(self.inner, self.msg_buf)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self {
+		Self { inner, msg_buf }
 	}
 }
 
@@ -399,7 +407,7 @@ impl Stream for InterfaceRequestStream {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-				1 | 1061382220 => {
+				1061382220 | 1 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 					let control_handle = InterfaceControlHandle {

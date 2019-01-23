@@ -8,13 +8,13 @@ namespace name {
 namespace {
 
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_OrdinalFive_Ordinal = 5u;
+constexpr uint32_t kSwitchingOrdinals_OrdinalFive_Ordinal = 2005164903u;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOrdinalFiveRequestTable;
 [[maybe_unused]]
 constexpr uint32_t kSwitchingOrdinals_OnlyGeneratedOrdinal_Ordinal = 667506719u;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsOnlyGeneratedOrdinalRequestTable;
 [[maybe_unused]]
-constexpr uint32_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 15u;
+constexpr uint32_t kSwitchingOrdinals_EventOrdinalFifteen_Ordinal = 1467258273u;
 extern "C" const fidl_type_t test_name_SwitchingOrdinalsEventOrdinalFifteenEventTable;
 [[maybe_unused]]
 constexpr uint32_t kSwitchingOrdinals_EventOnlyGeneratedOrdinal_Ordinal = 2146190926u;

@@ -47,7 +47,7 @@ impl SwitchingOrdinalsSynchronousProxy {
 		self.client.into_channel()
 	}
 	pub fn ordinal_five(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
-				5,
+				2005164903,
 			)}
 	pub fn only_generated_ordinal(&mut self,) -> Result<(), fidl::Error> {self.client.send(&mut (),
 				667506719,
@@ -110,7 +110,7 @@ impl SwitchingOrdinalsProxy {
 impl SwitchingOrdinalsProxyInterface for SwitchingOrdinalsProxy {
 	fn ordinal_five(&self,
 	)-> Result<(), fidl::Error> {
-		self.client.send(&mut (), 5)
+		self.client.send(&mut (), 2005164903)
 	}
 	fn only_generated_ordinal(&self,
 	)-> Result<(), fidl::Error> {
@@ -144,7 +144,7 @@ impl Stream for SwitchingOrdinalsEventStream {
 		let (bytes, handles) = buf.split_mut();
 		let (tx_header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			15 | 1467258273 => {
+			1467258273 | 15 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut out_tuple)?;
 				Ok((
@@ -298,7 +298,7 @@ impl<T: SwitchingOrdinals> futures::Future for SwitchingOrdinalsServer<T> {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-					5 | 2005164903 => {
+					2005164903 | 5 => {
 						let mut req: () = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 						let control_handle = SwitchingOrdinalsControlHandle {
@@ -344,7 +344,7 @@ impl futures::stream::FusedStream for SwitchingOrdinalsRequestStream {
 }
 
 impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
-        /// Consume a channel to make a SwitchingOrdinalsRequestStream
+	/// Consume a channel to make a SwitchingOrdinalsRequestStream
 	fn from_channel(channel: ::fuchsia_async::Channel) -> Self {
 		Self {
 			inner: ::std::sync::Arc::new(fidl::ServeInner::new(channel)),
@@ -352,12 +352,20 @@ impl fidl::endpoints::RequestStream for SwitchingOrdinalsRequestStream {
 		}
 	}
 
-        /// ControlHandle for the remote connection
+   /// ControlHandle for the remote connection
 	type ControlHandle = SwitchingOrdinalsControlHandle;
 
-        /// Get a ControlHandle for SwitchingOrdinals
+   /// ControlHandle for the remote connection
 	fn control_handle(&self) -> Self::ControlHandle {
 		SwitchingOrdinalsControlHandle { inner: self.inner.clone() }
+	}
+
+	fn into_inner(self) -> (::std::sync::Arc<fidl::ServeInner>, Option<zx::MessageBuf>) {
+		(self.inner, self.msg_buf)
+	}
+
+	fn from_inner(inner: ::std::sync::Arc<fidl::ServeInner>, msg_buf: Option<zx::MessageBuf>) -> Self {
+		Self { inner, msg_buf }
 	}
 }
 
@@ -391,7 +399,7 @@ impl Stream for SwitchingOrdinalsRequestStream {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-				5 | 2005164903 => {
+				2005164903 | 5 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {
@@ -525,7 +533,7 @@ impl SwitchingOrdinalsControlHandle {
 		let header = fidl::encoding::TransactionHeader {
 			tx_id: 0,
 			flags: 0,
-			ordinal: 15,
+			ordinal: 1467258273,
 		};
 
 		let mut response = ();
