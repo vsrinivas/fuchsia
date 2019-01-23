@@ -135,6 +135,10 @@ static int cmd_threadstats(int argc, const cmd_args* argv, uint32_t flags) {
         printf("\tyields: %lu\n", percpu[i].stats.yields);
         printf("\ttimer interrupts: %lu\n", percpu[i].stats.timer_ints);
         printf("\ttimers: %lu\n", percpu[i].stats.timers);
+#if WITH_FAIR_SCHEDULER
+        printf("\ttotal weight: %d\n", percpu[i].fair_runqueue.GetTotalWeight().raw_value());
+        printf("\trunnable tasks: %zu\n", percpu[i].fair_runqueue.GetRunnableTasks());
+#endif
     }
 
     return 0;
@@ -194,7 +198,8 @@ void RecurringCallback::Toggle() {
         started_ = false;
     }
 }
-}
+
+} // anonymous namespace
 
 static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
     static RecurringCallback cb([]() {
@@ -263,6 +268,28 @@ static int cmd_threadload(int argc, const cmd_args* argv, uint32_t flags) {
     return 0;
 }
 
+#if WITH_FAIR_SCHEDULER
+static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
+    static RecurringCallback callback([]() {
+        printf("----------------------------------------------------\n");
+        for (uint i = 0; i < SMP_MAX_CPUS; i++) {
+            Guard<spin_lock_t, NoIrqSave> thread_lock_guard{ThreadLock::Get()};
+
+            if (!mp_is_cpu_active(i)) {
+                continue;
+            }
+
+            printf("thread queue cpu %2u:\n", i);
+            percpu[i].fair_runqueue.Dump();
+        }
+        printf("\n");
+    });
+
+    callback.Toggle();
+
+    return 0;
+}
+#else
 static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
     static RecurringCallback cb([]() {
         for (uint i = 0; i < SMP_MAX_CPUS; i++) {
@@ -287,3 +314,4 @@ static int cmd_threadq(int argc, const cmd_args* argv, uint32_t flags) {
 
     return 0;
 }
+#endif

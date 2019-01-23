@@ -77,6 +77,29 @@ spin_lock_t thread_lock __CPU_ALIGN_EXCLUSIVE = SPIN_LOCK_INITIAL_VALUE;
 static void thread_exit_locked(thread_t* current_thread, int retcode) __NO_RETURN;
 static void thread_do_suspend(void);
 
+const char* ToString(enum thread_state state) {
+    switch (state) {
+    case THREAD_INITIAL:
+        return "initial";
+    case THREAD_READY:
+        return "ready";
+    case THREAD_RUNNING:
+        return "running";
+    case THREAD_BLOCKED:
+        return "blocked";
+    case THREAD_BLOCKED_READ_LOCK:
+        return "blocked read lock";
+    case THREAD_SLEEPING:
+        return "sleeping";
+    case THREAD_SUSPENDED:
+        return "suspended";
+    case THREAD_DEATH:
+        return "death";
+    default:
+        return "[unknown]";
+    }
+}
+
 static void init_thread_lock_state(thread_t* t) {
 #if WITH_LOCK_DEP
     auto* state = reinterpret_cast<lockdep::ThreadLockState*>(&t->lock_state);

@@ -12,6 +12,7 @@
 #include <arch/thread.h>
 #include <debug.h>
 #include <kernel/cpu.h>
+#include <kernel/fair_task_state.h>
 #include <kernel/spinlock.h>
 #include <kernel/timer.h>
 #include <kernel/wait.h>
@@ -36,6 +37,9 @@ enum thread_state {
     THREAD_SUSPENDED,
     THREAD_DEATH,
 };
+
+// Returns a string constant for the given thread state.
+const char* ToString(enum thread_state state);
 
 enum thread_user_state_change {
     THREAD_USER_STATE_EXIT,
@@ -114,6 +118,15 @@ typedef struct thread {
     int base_priority;
     int priority_boost;
     int inherited_priority;
+
+#if WITH_FAIR_SCHEDULER
+    // state used by the fair scheduler.
+    // TODO(eieio): Find a way to abstract the O(1) scheduler state so that code
+    // outside of the sched implementation uses a uniform interface to
+    // manipulate priority. This makes it possible to eliminate redundant state
+    // when one scheduler or another is enabled.
+    FairTaskState fair_task_state;
+#endif
 
     // current cpu the thread is either running on or in the ready queue, undefined otherwise
     cpu_num_t curr_cpu;

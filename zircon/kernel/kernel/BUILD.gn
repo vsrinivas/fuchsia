@@ -2,6 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/kernel/params.gni")
+
 source_set("kernel") {
   sources = [
     "brwlock.cpp",
@@ -14,11 +16,17 @@ source_set("kernel") {
     "mp.cpp",
     "mutex.cpp",
     "percpu.cpp",
-    "sched.cpp",
     "thread.cpp",
     "timer.cpp",
     "wait.cpp",
   ]
+
+  if (enable_fair_scheduler) {
+    sources += [ "fair_scheduler.cpp" ]
+  } else {
+    sources += [ "sched.cpp" ]
+  }
+
   deps = [
     "$zx/kernel/dev/interrupt",
     "$zx/kernel/lib/console",

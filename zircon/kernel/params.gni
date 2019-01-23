@@ -33,6 +33,12 @@ declare_args() {
   # Enable kernel lock dependency tracking.
   enable_lock_dep = false
 
+  # Enable fair scheduler.
+  enable_fair_scheduler = false
+
+  # Enable detailed scheduler traces.
+  detailed_scheduler_tracing = false
+
   # Enable userspace PCI and disable kernel PCI.
   enable_user_pci = false
 

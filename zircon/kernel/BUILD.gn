@@ -32,6 +32,9 @@ if (current_toolchain == default_toolchain) {
                   # <kernel/spinlock.h> has #include <lockdep/lock_policy.h>.
                   "$zx/system/ulib/lockdep:headers.config",
 
+                  # <kernel/{fair_scheduler,fair_task_state.h> has #include <ffl/fixed.h>.
+                  "$zx/system/ulib/ffl:headers.config",
+
                   # <kernel/thread.h> has #include <vm/kstack.h>.
                   "vm:headers.config",
 
@@ -67,6 +70,7 @@ if (current_toolchain == default_toolchain) {
     configs = [
       ":headers",
       ":lock_dep",
+      ":scheduler",
       ":standalone",
       ":warnings",
       "arch/$zircon_cpu:kernel",
@@ -156,6 +160,21 @@ if (current_toolchain == default_toolchain) {
     }
     if (enable_lock_dep_tests) {
       defines += [ "WITH_LOCK_DEP_TESTS=1" ]
+    }
+  }
+
+  config("scheduler") {
+    visibility = [ ":*" ]
+    defines = []
+    if (enable_fair_scheduler) {
+      defines += [
+        "WITH_FAIR_SCHEDULER=1",
+      ]
+    }
+    if (detailed_scheduler_tracing) {
+      defines += [
+        "WITH_DETAILED_SCHEDULER_TRACING=1",
+      ]
     }
   }
 
