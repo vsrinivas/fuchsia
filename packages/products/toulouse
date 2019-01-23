@@ -12,7 +12,7 @@
     "garnet/packages/prod/insntrace",
     "garnet/packages/prod/iquery",
     "garnet/packages/prod/kernel_crash_checker",
-    "garnet/packages/prod/mdns_util",
+    "garnet/packages/prod/mdns-util",
     "garnet/packages/prod/memory_monitor",
     "garnet/packages/prod/net-cli",
     "garnet/packages/prod/netcfg",

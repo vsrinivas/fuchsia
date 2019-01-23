@@ -13,7 +13,7 @@
         "garnet/packages/prod/logger",
         "garnet/packages/prod/log_listener",
         "garnet/packages/prod/mdns",
-        "garnet/packages/prod/mdns_util",
+        "garnet/packages/prod/mdns-util",
         "garnet/packages/prod/media_audio",
         "garnet/packages/prod/media_codec",
         "garnet/packages/prod/netstack",

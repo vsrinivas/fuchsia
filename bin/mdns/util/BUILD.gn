@@ -11,23 +11,23 @@ package("util") {
 
   binaries = [
     {
-      name = "mdns_util"
+      name = "mdns-util"
       shell = true
     },
   ]
 
-  package_name = "mdns_util"
+  package_name = "mdns-util"
 
   meta = [
     {
-      path = rebase_path("meta/mdns_util.cmx")
-      dest = "mdns_util.cmx"
+      path = rebase_path("meta/mdns-util.cmx")
+      dest = "mdns-util.cmx"
     },
   ]
 }
 
 executable("bin") {
-  output_name = "mdns_util"
+  output_name = "mdns-util"
 
   sources = [
     "formatting.cc",
