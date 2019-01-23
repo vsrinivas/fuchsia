@@ -297,7 +297,8 @@ void BatchGpuUploader::Submit(fit::function<void()> callback) {
 
   TRACE_DURATION("gfx", "BatchGpuUploader::SubmitBatch");
   frame_->EndFrame(std::move(batched_commands_done_semaphore_),
-                   [callback, read_callbacks = std::move(read_callbacks_)]() {
+                   [callback = std::move(callback),
+                    read_callbacks = std::move(read_callbacks_)]() {
                      for (auto& pair : read_callbacks) {
                        auto buffer = pair.first;
                        pair.second(buffer);
