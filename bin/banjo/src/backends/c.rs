@@ -4,12 +4,12 @@
 
 use {
     crate::ast::{self, BanjoAst, Constant},
-    crate::backends::Backend, failure::{format_err, Error},
+    crate::backends::Backend,
+    failure::{format_err, Error},
     heck::SnakeCase,
     std::io,
     std::iter,
 };
-
 
 pub struct CBackend<'a, W: io::Write> {
     w: &'a mut W,
@@ -43,7 +43,11 @@ fn get_doc_comment(attrs: &ast::Attrs, tabs: usize) -> String {
         if attr.key == "Doc" {
             if let Some(ref val) = attr.val {
                 let tabs: String = iter::repeat(' ').take(tabs * 4).collect();
-                return val.trim_end().split("\n").map(|line| format!("{}//{}\n", tabs, line)).collect();
+                return val
+                    .trim_end()
+                    .split("\n")
+                    .map(|line| format!("{}//{}\n", tabs, line))
+                    .collect();
             }
         }
     }
@@ -63,14 +67,10 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
         ast::Ty::UInt64 => Ok(String::from("uint64_t")),
         ast::Ty::USize => Ok(String::from("size_t")),
         ast::Ty::Voidptr => Ok(String::from("void*")),
-        ast::Ty::Str{..} => Ok(String::from("const char*")),
-        ast::Ty::Vector{ref ty, ..} => {
-            ty_to_c_str(ast, ty)
-        }
-        ast::Ty::Array{ref ty, ..} => {
-            ty_to_c_str(ast, ty)
-        }
-        ast::Ty::Ident{id, ..} => {
+        ast::Ty::Str { .. } => Ok(String::from("const char*")),
+        ast::Ty::Vector { ref ty, .. } => ty_to_c_str(ast, ty),
+        ast::Ty::Array { ref ty, .. } => ty_to_c_str(ast, ty),
+        ast::Ty::Ident { id, .. } => {
             if id == "zx.status" {
                 Ok("zx_status_t".to_string())
             } else {
@@ -82,7 +82,7 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
                 }
             }
         }
-        ast::Ty::Handle{..} => Ok(String::from("zx_handle_t")),
+        ast::Ty::Handle { .. } => Ok(String::from("zx_handle_t")),
         t => Err(format_err!("unknown type in ty_to_c_str {:?}", t)),
     }
 }
@@ -105,70 +105,111 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
 }
 
 fn name_buffer(ty: &str) -> &'static str {
-    if ty == "void" { "buffer" } else { "list" }
+    if ty == "void" {
+        "buffer"
+    } else {
+        "list"
+    }
 }
 fn name_size(ty: &str) -> &'static str {
-    if ty == "void" { "size" } else { "count" }
+    if ty == "void" {
+        "size"
+    } else {
+        "count"
+    }
 }
 
 fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String), Error> {
     // Return parameter if a primitive type.
-    if method.out_params.get(0).map_or(false, |p| p.1.is_primitive()) {
+    if method
+        .out_params
+        .get(0)
+        .map_or(false, |p| p.1.is_primitive())
+    {
         Ok((true, ty_to_c_str(ast, &method.out_params[0].1)?))
     } else {
         Ok((false, "void".to_string()))
     }
 }
 fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
-    m.in_params.iter().map(|(name, ty)| {
-        match ty {
-            ast::Ty::Ident{id, ..} => {
-                match ast.id_to_type(id) {
-                    ast::Ty::Interface => {
-                        let ty_name = ty_to_c_str(ast, ty).unwrap();
-                        if ty_name == "zx_status_t" {
-                            Ok(format!("{} {}", ty_name, to_c_name(name)))
-                        } else {
-                            Ok(format!("const {}* {}", ty_name, to_c_name(name)))
+    m.in_params
+        .iter()
+        .map(|(name, ty)| {
+            match ty {
+                ast::Ty::Ident { id, .. } => {
+                    match ast.id_to_type(id) {
+                        ast::Ty::Interface => {
+                            let ty_name = ty_to_c_str(ast, ty).unwrap();
+                            if ty_name == "zx_status_t" {
+                                Ok(format!("{} {}", ty_name, to_c_name(name)))
+                            } else {
+                                Ok(format!("const {}* {}", ty_name, to_c_name(name)))
+                            }
                         }
-                    },
-                    ast::Ty::Struct | ast::Ty::Union => {
-                        let ty_name = ty_to_c_str(ast, ty).unwrap();
-                        // TODO: Using nullability to determine whether param is mutable is a hack.
-                        let prefix = if ty.is_nullable() { "" } else { "const " };
-                        Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
-                    },
-                    ast::Ty::Enum => {
-                        Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
-                    },
-                    ast::Ty::Bool | ast::Ty::Int8 | ast::Ty::Int16 | ast::Ty::Int32 | ast::Ty::Int64 |
-                    ast::Ty::UInt8 | ast::Ty::UInt16 | ast::Ty::UInt32 | ast::Ty::UInt64 |
-                    ast::Ty::USize | ast::Ty::Voidptr =>  {
-                        Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
+                        ast::Ty::Struct | ast::Ty::Union => {
+                            let ty_name = ty_to_c_str(ast, ty).unwrap();
+                            // TODO: Using nullability to determine whether param is mutable is a hack.
+                            let prefix = if ty.is_nullable() { "" } else { "const " };
+                            Ok(format!("{}{}* {}", prefix, ty_name, to_c_name(name)))
+                        }
+                        ast::Ty::Enum => Ok(format!(
+                            "{} {}",
+                            ty_to_c_str(ast, ty).unwrap(),
+                            to_c_name(name)
+                        )),
+                        ast::Ty::Bool
+                        | ast::Ty::Int8
+                        | ast::Ty::Int16
+                        | ast::Ty::Int32
+                        | ast::Ty::Int64
+                        | ast::Ty::UInt8
+                        | ast::Ty::UInt16
+                        | ast::Ty::UInt32
+                        | ast::Ty::UInt64
+                        | ast::Ty::USize
+                        | ast::Ty::Voidptr => Ok(format!(
+                            "{} {}",
+                            ty_to_c_str(ast, ty).unwrap(),
+                            to_c_name(name)
+                        )),
+                        e => Err(format_err!("unsupported: {}", e)),
                     }
-                    e => Err(format_err!("unsupported: {}", e)),
                 }
-            },
-            ast::Ty::Vector {..} => {
-                let ty = ty_to_c_str(ast, ty).unwrap();
-                Ok(format!("const {ty}* {name}_{buffer}, size_t {name}_{size}",
-                           buffer = name_buffer(&ty),
-                           size = name_size(&ty),
-                           ty = ty,
-                           name = to_c_name(name)))
-            },
-            _ => Ok(format!("{} {}", ty_to_c_str(ast, ty).unwrap(), to_c_name(name)))
-        }
-    }).collect()
+                ast::Ty::Vector { .. } => {
+                    let ty = ty_to_c_str(ast, ty).unwrap();
+                    Ok(format!(
+                        "const {ty}* {name}_{buffer}, size_t {name}_{size}",
+                        buffer = name_buffer(&ty),
+                        size = name_size(&ty),
+                        ty = ty,
+                        name = to_c_name(name)
+                    ))
+                }
+                _ => Ok(format!(
+                    "{} {}",
+                    ty_to_c_str(ast, ty).unwrap(),
+                    to_c_name(name)
+                )),
+            }
+        })
+        .collect()
 }
 
-fn get_out_params(m: &ast::Method, name: &str, ast: &BanjoAst) -> Result<(Vec<String>, String), Error> {
+fn get_out_params(
+    m: &ast::Method, name: &str, ast: &BanjoAst,
+) -> Result<(Vec<String>, String), Error> {
     if m.attributes.has_attribute("Async") {
-        return Ok((vec![format!("{protocol_name}_{method_name}_callback callback",
-                               protocol_name = to_c_name(name),
-                               method_name = to_c_name(&m.name)),
-                       "void* cookie".to_string()],
-                  "void".to_string()));
+        return Ok((
+            vec![
+                format!(
+                    "{protocol_name}_{method_name}_callback callback",
+                    protocol_name = to_c_name(name),
+                    method_name = to_c_name(&m.name)
+                ),
+                "void* cookie".to_string(),
+            ],
+            "void".to_string(),
+        ));
     }
 
     let (skip, return_param) = get_first_param(ast, m)?;
@@ -204,18 +245,21 @@ fn get_out_params(m: &ast::Method, name: &str, ast: &BanjoAst) -> Result<(Vec<St
 }
 
 fn get_in_args(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
-    Ok(m.in_params.iter().map(|(name, ty)| {
-        match ty {
-            ast::Ty::Vector {..} => {
+    Ok(m.in_params
+        .iter()
+        .map(|(name, ty)| match ty {
+            ast::Ty::Vector { .. } => {
                 let ty = ty_to_c_str(ast, ty).unwrap();
-                format!("{name}_{buffer}, {name}_{size}",
-                        buffer = name_buffer(&ty),
-                        size = name_size(&ty),
-                        name = to_c_name(name))
+                format!(
+                    "{name}_{buffer}, {name}_{size}",
+                    buffer = name_buffer(&ty),
+                    size = name_size(&ty),
+                    name = to_c_name(name)
+                )
             }
-            _ => format!("{}", to_c_name(name))
-        }
-    }).collect())
+            _ => format!("{}", to_c_name(name)),
+        })
+        .collect())
 }
 
 fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), Error> {
@@ -225,31 +269,47 @@ fn get_out_args(m: &ast::Method, ast: &BanjoAst) -> Result<(Vec<String>, bool), 
 
     let (skip, _) = get_first_param(ast, m)?;
     let skip_amt = if skip { 1 } else { 0 };
-    Ok((m.out_params.iter().skip(skip_amt).map(|(name, ty)| {
-        match ty {
-            ast::Ty::Interface {..} => format!("{}", to_c_name(name)),
-            ast::Ty::Vector {..} => {
-                let ty_name = ty_to_c_str(ast, ty).unwrap();
-                if ty.is_nullable() {
-                    format!("out_{name}_{buffer}, {name}_{size}",
+    Ok((
+        m.out_params
+            .iter()
+            .skip(skip_amt)
+            .map(|(name, ty)| match ty {
+                ast::Ty::Interface { .. } => format!("{}", to_c_name(name)),
+                ast::Ty::Vector { .. } => {
+                    let ty_name = ty_to_c_str(ast, ty).unwrap();
+                    if ty.is_nullable() {
+                        format!(
+                            "out_{name}_{buffer}, {name}_{size}",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
-                            name = to_c_name(name))
-                } else {
-                    format!("out_{name}_{buffer}, {name}_{size}, out_{name}_actual",
+                            name = to_c_name(name)
+                        )
+                    } else {
+                        format!(
+                            "out_{name}_{buffer}, {name}_{size}, out_{name}_actual",
                             buffer = name_buffer(&ty_name),
                             size = name_size(&ty_name),
-                            name = to_c_name(name))
+                            name = to_c_name(name)
+                        )
+                    }
                 }
-            },
-            _ => format!("out_{}", to_c_name(name))
-        }
-    }).collect(), skip))
+                _ => format!("out_{}", to_c_name(name)),
+            })
+            .collect(),
+        skip,
+    ))
 }
 
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
-fn filter_interface<'a>(decl: &'a ast::Decl) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {ref name, ref methods, ref attributes} = *decl  {
+fn filter_interface<'a>(
+    decl: &'a ast::Decl,
+) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+    if let ast::Decl::Interface {
+        ref name,
+        ref methods,
+        ref attributes,
+    } = *decl
+    {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-interface\"" {
                 return Some((name, methods, attributes));
@@ -260,8 +320,15 @@ fn filter_interface<'a>(decl: &'a ast::Decl) -> Option<(&'a String, &'a Vec<ast:
 }
 
 /// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
-fn filter_protocol<'a>(decl: &'a ast::Decl) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
-    if let ast::Decl::Interface {ref name, ref methods, ref attributes} = *decl  {
+fn filter_protocol<'a>(
+    decl: &'a ast::Decl,
+) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
+    if let ast::Decl::Interface {
+        ref name,
+        ref methods,
+        ref attributes,
+    } = *decl
+    {
         if let Some(layout) = attributes.get_attribute("Layout") {
             if layout == "\"ddk-callback\"" || layout == "\"ddk-interface\"" {
                 None
@@ -277,253 +344,425 @@ fn filter_protocol<'a>(decl: &'a ast::Decl) -> Option<(&'a String, &'a Vec<ast::
 }
 
 impl<'a, W: io::Write> CBackend<'a, W> {
-    fn codegen_enum_decl(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Enum { ref name, ref ty, ref variants, .. } = *decl {
-                Some((name, ty, variants))
-            } else {
-                None
-            } 
-        }).map(|(name, ty, variants)| {
-            let enum_defines = variants.iter().map(|v| {
-                Ok(format!("#define {c_name}_{v_name} {c_size}",
-                           c_name = to_c_name(name).to_uppercase(),
-                           v_name = to_c_name(v.name.as_str()).to_uppercase(),
-                           c_size = size_to_c_str(ty, &v.size)))
-            }).collect::<Result<Vec<_>, Error>>()?.join("\n");
-            Ok(format!("typedef {ty} {c_name}_t;\n{enum_defines}",
-                       c_name = to_c_name(name),
-                       ty = ty_to_c_str(ast, ty)?,
-                       enum_defines = enum_defines))
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+    fn codegen_enum_decl(
+        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Enum {
+                    ref name,
+                    ref ty,
+                    ref variants,
+                    ..
+                } = *decl
+                {
+                    Some((name, ty, variants))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, ty, variants)| {
+                let enum_defines = variants
+                    .iter()
+                    .map(|v| {
+                        Ok(format!(
+                            "#define {c_name}_{v_name} {c_size}",
+                            c_name = to_c_name(name).to_uppercase(),
+                            v_name = to_c_name(v.name.as_str()).to_uppercase(),
+                            c_size = size_to_c_str(ty, &v.size)
+                        ))
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join("\n");
+                Ok(format!(
+                    "typedef {ty} {c_name}_t;\n{enum_defines}",
+                    c_name = to_c_name(name),
+                    ty = ty_to_c_str(ast, ty)?,
+                    enum_defines = enum_defines
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_constant_defs(&self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst) -> Result<String, Error> {
-        namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Constant { ref name, ref ty, ref value, ref attributes } = *decl {
-                Some((name, ty, value, attributes))
-            } else {
-                None
-            }
-        }).map(|(name, ty, value, attrs)| {
-            let mut accum = String::new();
-            accum.push_str(get_doc_comment(attrs, 0).as_str());
-            accum.push_str(format!("#define {name} {value}",
-                                   name = name,
-                                   value = size_to_c_str(ty, value)).as_str());
-            Ok(accum)
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
-    }
-
-
-    fn codegen_union_decl(&self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst) -> Result<String, Error> {
-        Ok(namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Union { ref name, .. } = *decl {
-                Some(name)
-            } else {
-                None
-            } 
-        }).map(|name| {
-            format!("typedef union {c_name} {c_name}_t;",
-                    c_name = to_c_name(name))
-        }).collect::<Vec<_>>().join("\n"))
-    }
-
-    fn codegen_union_defs(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Union { ref name, ref fields, ref attributes, .. } = *decl {
-                Some((name, fields, attributes))
-            } else {
-                None
-            } 
-        }).map(|(name, fields, attrs)| {
-            let members = fields.iter().map(|f| {
+    fn codegen_constant_defs(
+        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Constant {
+                    ref name,
+                    ref ty,
+                    ref value,
+                    ref attributes,
+                } = *decl
+                {
+                    Some((name, ty, value, attributes))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, ty, value, attrs)| {
                 let mut accum = String::new();
-                accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
-                accum.push_str(format!("    {ty} {c_name};",
-                                       c_name = to_c_name(f.ident.as_str()),
-                                       ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                accum.push_str(get_doc_comment(attrs, 0).as_str());
+                accum.push_str(
+                    format!(
+                        "#define {name} {value}",
+                        name = name,
+                        value = size_to_c_str(ty, value)
+                    )
+                    .as_str(),
+                );
                 Ok(accum)
-            }).collect::<Result<Vec<_>, Error>>()?.join("\n");
-            let mut accum = String::new();
-            accum.push_str(get_doc_comment(attrs, 0).as_str());
-            accum.push_str(format!(include_str!("templates/c/struct.h"),
-                                   c_name = to_c_name(name),
-                                   decl = "union",
-                                   members = members).as_str());
-            Ok(accum)
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_struct_decl(&self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst) -> Result<String, Error> {
-        Ok(namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Struct { ref name, .. } = *decl {
-                Some(name)
-            } else {
-                None
-            } 
-        }).map(|name| {
-            format!("typedef struct {c_name} {c_name}_t;",
-                    c_name = to_c_name(name))
-        }).collect::<Vec<_>>().join("\n"))
+    fn codegen_union_decl(
+        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Union { ref name, .. } = *decl {
+                    Some(name)
+                } else {
+                    None
+                }
+            })
+            .map(|name| {
+                format!(
+                    "typedef union {c_name} {c_name}_t;",
+                    c_name = to_c_name(name)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
     }
 
-    fn codegen_struct_defs(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace.iter().filter_map(|decl| {
-            if let ast::Decl::Struct { ref name, ref fields, ref attributes } = *decl {
-                Some((name, fields, attributes))
-            } else {
-                None
-            } 
-        }).map(|(name, fields, attrs)| {
-            let members = fields.iter().map(|f| {
+    fn codegen_union_defs(
+        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Union {
+                    ref name,
+                    ref fields,
+                    ref attributes,
+                    ..
+                } = *decl
+                {
+                    Some((name, fields, attributes))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, fields, attrs)| {
+                let members = fields
+                    .iter()
+                    .map(|f| {
+                        let mut accum = String::new();
+                        accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
+                        accum.push_str(
+                            format!(
+                                "    {ty} {c_name};",
+                                c_name = to_c_name(f.ident.as_str()),
+                                ty = ty_to_c_str(ast, &f.ty)?
+                            )
+                            .as_str(),
+                        );
+                        Ok(accum)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join("\n");
                 let mut accum = String::new();
-                accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
-                accum.push_str(format!("    {ty} {c_name};",
-                                       c_name = to_c_name(f.ident.as_str()),
-                                       ty = ty_to_c_str(ast, &f.ty)?).as_str());
+                accum.push_str(get_doc_comment(attrs, 0).as_str());
+                accum.push_str(
+                    format!(
+                        include_str!("templates/c/struct.h"),
+                        c_name = to_c_name(name),
+                        decl = "union",
+                        members = members
+                    )
+                    .as_str(),
+                );
                 Ok(accum)
-            }).collect::<Result<Vec<_>, Error>>()?.join("\n");
-            let mut accum = String::new();
-            accum.push_str(get_doc_comment(attrs, 0).as_str());
-            accum.push_str(format!(include_str!("templates/c/struct.h"),
-                                   c_name = to_c_name(name),
-                                   decl = "struct",
-                                   members = members).as_str());
-            Ok(accum)
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_protocol_def(&self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst) -> Result<String, Error> {
-        let fns = methods.iter().map(|m| {
-            let (out_params, return_param) = get_out_params(&m, name, ast)?;
-            let in_params = get_in_params(&m, ast)?;
+    fn codegen_struct_decl(
+        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Struct { ref name, .. } = *decl {
+                    Some(name)
+                } else {
+                    None
+                }
+            })
+            .map(|name| {
+                format!(
+                    "typedef struct {c_name} {c_name}_t;",
+                    c_name = to_c_name(name)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
+    }
 
-            let params = iter::once("void* ctx".to_string()).chain(in_params)
-                                                            .chain(out_params)
-                                                            .collect::<Vec<_>>()
-                                                            .join(", ");
-            Ok(format!("    {return_param} (*{fn_name})({params});",
+    fn codegen_struct_defs(
+        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .iter()
+            .filter_map(|decl| {
+                if let ast::Decl::Struct {
+                    ref name,
+                    ref fields,
+                    ref attributes,
+                } = *decl
+                {
+                    Some((name, fields, attributes))
+                } else {
+                    None
+                }
+            })
+            .map(|(name, fields, attrs)| {
+                let members = fields
+                    .iter()
+                    .map(|f| {
+                        let mut accum = String::new();
+                        accum.push_str(get_doc_comment(&f.attributes, 1).as_str());
+                        accum.push_str(
+                            format!(
+                                "    {ty} {c_name};",
+                                c_name = to_c_name(f.ident.as_str()),
+                                ty = ty_to_c_str(ast, &f.ty)?
+                            )
+                            .as_str(),
+                        );
+                        Ok(accum)
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?
+                    .join("\n");
+                let mut accum = String::new();
+                accum.push_str(get_doc_comment(attrs, 0).as_str());
+                accum.push_str(
+                    format!(
+                        include_str!("templates/c/struct.h"),
+                        c_name = to_c_name(name),
+                        decl = "struct",
+                        members = members
+                    )
+                    .as_str(),
+                );
+                Ok(accum)
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
+    }
+
+    fn codegen_protocol_def(
+        &self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        let fns = methods
+            .iter()
+            .map(|m| {
+                let (out_params, return_param) = get_out_params(&m, name, ast)?;
+                let in_params = get_in_params(&m, ast)?;
+
+                let params = iter::once("void* ctx".to_string())
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+                Ok(format!(
+                    "    {return_param} (*{fn_name})({params});",
+                    return_param = return_param,
+                    params = params,
+                    fn_name = to_c_name(m.name.as_str())
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()?
+            .join("\n");
+        let protocol = if protocol { "protocol_" } else { "" };
+        Ok(format!(
+            include_str!("templates/c/protocol_ops.h"),
+            c_name = to_c_name(name),
+            protocol = protocol,
+            fns = fns
+        ))
+    }
+
+    fn codegen_helper_def(
+        &self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        methods
+            .iter()
+            .map(|m| {
+                let mut accum = String::new();
+                accum.push_str(get_doc_comment(&m.attributes, 0).as_str());
+
+                let (out_params, return_param) = get_out_params(&m, name, ast)?;
+                let in_params = get_in_params(&m, ast)?;
+
+                let protocol = if protocol { "_protocol" } else { "" };
+                let first_param = format!("const {}{}_t* proto", to_c_name(name), protocol);
+
+                let params = iter::once(first_param)
+                    .chain(in_params)
+                    .chain(out_params)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                accum.push_str(
+                    format!(
+                        "static inline {return_param} {protocol_name}_{fn_name}({params}) {{\n",
                         return_param = return_param,
                         params = params,
-                        fn_name = to_c_name(m.name.as_str())))
-        }).collect::<Result<Vec<_>, Error>>()?.join("\n");
-        let protocol = if protocol { "protocol_" } else { "" };
-        Ok(format!(include_str!("templates/c/protocol_ops.h"),
-                   c_name = to_c_name(name),
-                   protocol = protocol,
-                   fns = fns))
+                        protocol_name = to_c_name(name),
+                        fn_name = to_c_name(m.name.as_str())
+                    )
+                    .as_str(),
+                );
+
+                let (out_args, skip) = get_out_args(&m, ast)?;
+                let in_args = get_in_args(&m, ast)?;
+
+                let args = iter::once("proto->ctx".to_string())
+                    .chain(in_args)
+                    .chain(out_args)
+                    .collect::<Vec<_>>()
+                    .join(", ");
+
+                let return_statement = if skip { "return " } else { "" };
+
+                accum.push_str(
+                    format!(
+                        "    {return_statement}proto->ops->{fn_name}({args});\n",
+                        return_statement = return_statement,
+                        args = args,
+                        fn_name = to_c_name(m.name.as_str())
+                    )
+                    .as_str(),
+                );
+                accum.push_str("}\n");
+                Ok(accum)
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_helper_def(&self, name: &str, methods: &Vec<ast::Method>, protocol: bool, ast: &BanjoAst) -> Result<String, Error> {
-        methods.iter().map(|m| {
-            let mut accum = String::new();
-            accum.push_str(get_doc_comment(&m.attributes, 0).as_str());
-
-            let (out_params, return_param) = get_out_params(&m, name, ast)?;
-            let in_params = get_in_params(&m, ast)?;
-
-            let protocol = if protocol { "_protocol" } else { "" };
-            let first_param = format!("const {}{}_t* proto", to_c_name(name), protocol);
-
-            let params = iter::once(first_param).chain(in_params)
-                                                .chain(out_params)
-                                                .collect::<Vec<_>>()
-                                                .join(", ");
-
-            accum.push_str(format!("static inline {return_param} {protocol_name}_{fn_name}({params}) {{\n",
-                                   return_param = return_param,
-                                   params = params,
-                                   protocol_name = to_c_name(name),
-                                   fn_name = to_c_name(m.name.as_str())).as_str());
-
-            let (out_args, skip) = get_out_args(&m, ast)?;
-            let in_args = get_in_args(&m, ast)?;
-
-            let args = iter::once("proto->ctx".to_string()).chain(in_args)
-                                                           .chain(out_args)
-                                                           .collect::<Vec<_>>()
-                                                           .join(", ");
-
-            let return_statement = if skip { "return " } else { "" };
-
-            accum.push_str(format!("    {return_statement}proto->ops->{fn_name}({args});\n",
-                                   return_statement = return_statement,
-                                   args = args,
-                                   fn_name = to_c_name(m.name.as_str())).as_str());
-            accum.push_str("}\n");
-            Ok(accum)
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+    fn codegen_protocol_defs(
+        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .into_iter()
+            .filter_map(filter_protocol)
+            .map(|(name, methods, _)| {
+                Ok(format!(
+                    include_str!("templates/c/protocol.h"),
+                    protocol_name = to_c_name(name),
+                    protocol_def = self.codegen_protocol_def(name, methods, true, ast)?,
+                    helper_def = self.codegen_helper_def(name, methods, true, ast)?
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_protocol_defs(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace.into_iter().filter_map(filter_protocol).map(|(name, methods, _)| {
-            Ok(format!(include_str!("templates/c/protocol.h"),
-                       protocol_name = to_c_name(name),
-                       protocol_def = self.codegen_protocol_def(name, methods, true, ast)?,
-                       helper_def = self.codegen_helper_def(name, methods, true, ast)?))
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+    fn codegen_interface_defs(
+        &self, namespace: &Vec<ast::Decl>, ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        namespace
+            .into_iter()
+            .filter_map(filter_interface)
+            .map(|(name, methods, _)| {
+                Ok(format!(
+                    include_str!("templates/c/interface.h"),
+                    protocol_name = to_c_name(name),
+                    protocol_def = self.codegen_protocol_def(name, methods, false, ast)?,
+                    helper_def = self.codegen_helper_def(name, methods, false, ast)?
+                ))
+            })
+            .collect::<Result<Vec<_>, Error>>()
+            .map(|x| x.join("\n"))
     }
 
-    fn codegen_interface_defs(&self, namespace: &Vec<ast::Decl>, ast: &BanjoAst) -> Result<String, Error> {
-        namespace.into_iter().filter_map(filter_interface).map(|(name, methods, _)| {
-            Ok(format!(include_str!("templates/c/interface.h"),
-                       protocol_name = to_c_name(name),
-                       protocol_def = self.codegen_protocol_def(name, methods, false, ast)?,
-                       helper_def = self.codegen_helper_def(name, methods, false, ast)?))
-        }).collect::<Result<Vec<_>, Error>>()
-          .map(|x| x.join("\n"))
+    fn codegen_protocol_decl(
+        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .into_iter()
+            .filter_map(filter_protocol)
+            .map(|(name, _, _)| {
+                format!(
+                    "typedef struct {c_name}_protocol {c_name}_protocol_t;",
+                    c_name = to_c_name(name)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
     }
 
-    fn codegen_protocol_decl(&self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst) -> Result<String, Error> {
-        Ok(namespace.into_iter().filter_map(filter_protocol).map(|(name, _, _)| {
-            format!("typedef struct {c_name}_protocol {c_name}_protocol_t;",
-                    c_name = to_c_name(name))
-        }).collect::<Vec<_>>().join("\n"))
-    }
-
-    fn codegen_interface_decl(&self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst) -> Result<String, Error> {
-        Ok(namespace.into_iter().filter_map(filter_interface).map(|(name, _, _)| {
-            format!("typedef struct {c_name} {c_name}_t;",
-                    c_name = to_c_name(name))
-        }).collect::<Vec<_>>().join("\n"))
+    fn codegen_interface_decl(
+        &self, namespace: &Vec<ast::Decl>, _ast: &BanjoAst,
+    ) -> Result<String, Error> {
+        Ok(namespace
+            .into_iter()
+            .filter_map(filter_interface)
+            .map(|(name, _, _)| {
+                format!(
+                    "typedef struct {c_name} {c_name}_t;",
+                    c_name = to_c_name(name)
+                )
+            })
+            .collect::<Vec<_>>()
+            .join("\n"))
     }
 
     fn codegen_includes(&self, ast: &BanjoAst) -> Result<String, Error> {
-        Ok(ast.namespaces.iter().filter(|n| *n.0 != ast.primary_namespace)
-                                .filter(|n| *n.0 != "zx")
-                                .map(|n| {
-            format!("#include <{}.h>", n.0.replace('.', "/"))
-        }).collect::<Vec<_>>().join("\n"))
+        Ok(ast
+            .namespaces
+            .iter()
+            .filter(|n| *n.0 != ast.primary_namespace)
+            .filter(|n| *n.0 != "zx")
+            .map(|n| format!("#include <{}.h>", n.0.replace('.', "/")))
+            .collect::<Vec<_>>()
+            .join("\n"))
     }
 }
 
 impl<'a, W: io::Write> Backend<'a, W> for CBackend<'a, W> {
     fn codegen(&mut self, ast: BanjoAst) -> Result<(), Error> {
-        self.w
-            .write_fmt(format_args!(include_str!("templates/c/header.h"),
-                                    includes = self.codegen_includes(&ast)?,
-                                    primary_namespace = ast.primary_namespace))?;
+        self.w.write_fmt(format_args!(
+            include_str!("templates/c/header.h"),
+            includes = self.codegen_includes(&ast)?,
+            primary_namespace = ast.primary_namespace
+        ))?;
 
         let namespace = &ast.namespaces[&ast.primary_namespace];
-        self.w
-            .write_fmt(format_args!(include_str!("templates/c/body.h"),
-                                    enum_decls = self.codegen_enum_decl(namespace, &ast)?,
-                                    union_decls = self.codegen_union_decl(namespace, &ast)?,
-                                    struct_decls = self.codegen_struct_decl(namespace, &ast)?,
-                                    interface_decls = self.codegen_interface_decl(namespace, &ast)?,
-                                    protocol_decls = self.codegen_protocol_decl(namespace, &ast)?,
-                                    constant_definitions = self.codegen_constant_defs(namespace, &ast)?,
-                                    union_definitions = self.codegen_union_defs(namespace, &ast)?,
-                                    struct_definitions = self.codegen_struct_defs(namespace, &ast)?,
-                                    interface_definitions = self.codegen_interface_defs(namespace, &ast)?,
-                                    protocol_definitions = self.codegen_protocol_defs(namespace, &ast)?))?;
+        self.w.write_fmt(format_args!(
+            include_str!("templates/c/body.h"),
+            enum_decls = self.codegen_enum_decl(namespace, &ast)?,
+            union_decls = self.codegen_union_decl(namespace, &ast)?,
+            struct_decls = self.codegen_struct_decl(namespace, &ast)?,
+            interface_decls = self.codegen_interface_decl(namespace, &ast)?,
+            protocol_decls = self.codegen_protocol_decl(namespace, &ast)?,
+            constant_definitions = self.codegen_constant_defs(namespace, &ast)?,
+            union_definitions = self.codegen_union_defs(namespace, &ast)?,
+            struct_definitions = self.codegen_struct_defs(namespace, &ast)?,
+            interface_definitions = self.codegen_interface_defs(namespace, &ast)?,
+            protocol_definitions = self.codegen_protocol_defs(namespace, &ast)?
+        ))?;
         Ok(())
     }
 }

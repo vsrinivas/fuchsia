@@ -8,7 +8,10 @@ use {
     pest::iterators::{Pair, Pairs},
     serde_derive::Serialize,
     std::fmt,
-    std::{collections::{HashMap, HashSet, VecDeque}, str::FromStr},
+    std::{
+        collections::{HashMap, HashSet, VecDeque},
+        str::FromStr,
+    },
 };
 
 #[derive(Debug, Fail)]
@@ -75,7 +78,10 @@ impl Attrs {
                     }
                 }
                 Rule::attribute_list => {
-                    let attr_string = inner_pair.as_str().trim_start_matches('[').trim_end_matches(']');
+                    let attr_string = inner_pair
+                        .as_str()
+                        .trim_start_matches('[')
+                        .trim_end_matches(']');
                     let attr_pairs = attr_string.split(",");
                     for ap in attr_pairs {
                         if !ap.contains("=") {
@@ -158,15 +164,31 @@ pub enum Ty {
     UInt64,
     Float32,
     Float64,
-    Str { size: Option<Constant>, nullable: bool },
-    Vector { ty: Box<Ty>, size: Option<Constant>, nullable: bool },
-    Array { ty: Box<Ty>, size: Constant },
+    Str {
+        size: Option<Constant>,
+        nullable: bool,
+    },
+    Vector {
+        ty: Box<Ty>,
+        size: Option<Constant>,
+        nullable: bool,
+    },
+    Array {
+        ty: Box<Ty>,
+        size: Constant,
+    },
     Interface,
     Struct,
     Union,
     Enum,
-    Handle {ty: HandleTy, nullable: bool},
-    Ident {id: String, nullable: bool},
+    Handle {
+        ty: HandleTy,
+        nullable: bool,
+    },
+    Ident {
+        id: String,
+        nullable: bool,
+    },
 }
 
 impl fmt::Display for Ty {
@@ -181,27 +203,26 @@ impl fmt::Display for Ty {
 impl Ty {
     pub fn is_primitive(&self) -> bool {
         match self {
-            Ty::Ident{id, ..} => {
+            Ty::Ident { id, .. } => {
                 if id == "zx.status" {
-                    return true
+                    return true;
                 } else {
-                    return false
+                    return false;
                 }
-            },
-            Ty::Str {..} | Ty::Vector {..} | Ty::Array {..} | Ty::Handle {..} => false,
-            _ => true
+            }
+            Ty::Str { .. } | Ty::Vector { .. } | Ty::Array { .. } | Ty::Handle { .. } => false,
+            _ => true,
         }
     }
     pub fn is_nullable(&self) -> bool {
         match self {
-            Ty::Str{nullable,  ..} => *nullable,
-            Ty::Vector{nullable, ..} => *nullable,
-            Ty::Ident{nullable, ..} => *nullable,
-            Ty::Handle{nullable, ..} => *nullable,
-            _  => false,
+            Ty::Str { nullable, .. } => *nullable,
+            Ty::Vector { nullable, .. } => *nullable,
+            Ty::Ident { nullable, .. } => *nullable,
+            Ty::Handle { nullable, .. } => *nullable,
+            _ => false,
         }
     }
-
 
     pub fn from_pair(pair: &Pair<'_, Rule>) -> Result<Self, ParseError> {
         let rule = pair.as_rule();
@@ -220,9 +241,7 @@ impl Ty {
                 "float32" => Ok(Ty::Float32),
                 "float64" => Ok(Ty::Float64),
                 "voidptr" => Ok(Ty::Voidptr),
-                _e => Err(ParseError::UnrecognizedType(
-                    pair.as_str().to_string(),
-                )),
+                _e => Err(ParseError::UnrecognizedType(pair.as_str().to_string())),
             },
             Rule::handle_type => {
                 let mut ty = HandleTy::Handle;
@@ -252,20 +271,21 @@ impl Ty {
                                 _e => {
                                     return Err(ParseError::UnrecognizedType(
                                         inner_pair.as_str().to_string(),
-                                    ))
+                                    ));
                                 }
                             }
                         }
-                        Rule::nullable => { nullable = true; }
+                        Rule::nullable => {
+                            nullable = true;
+                        }
                         _e => {
                             return Err(ParseError::UnrecognizedType(
                                 inner_pair.as_str().to_string(),
-                            ))
+                            ));
                         }
-,
                     }
                 }
-                Ok(Ty::Handle{ty, nullable})
+                Ok(Ty::Handle { ty, nullable })
             }
             Rule::integer_type => match pair.as_str() {
                 "usize" => Ok(Ty::USize),
@@ -291,12 +311,14 @@ impl Ty {
                 let nullable = if let Some(pair) = iter.next() {
                     match pair.as_rule() {
                         Rule::nullable => true,
-                        e => { return Err(ParseError::UnexpectedToken(e)); }
+                        e => {
+                            return Err(ParseError::UnexpectedToken(e));
+                        }
                     }
                 } else {
                     false
                 };
-                Ok(Ty::Ident{id, nullable})
+                Ok(Ty::Ident { id, nullable })
             }
             Rule::string_type => {
                 let mut size = None;
@@ -309,7 +331,9 @@ impl Ty {
                         Rule::nullable => {
                             nullable = true;
                         }
-                        e => { return Err(ParseError::UnexpectedToken(e)); }
+                        e => {
+                            return Err(ParseError::UnexpectedToken(e));
+                        }
                     }
                 }
                 Ok(Ty::Str { size, nullable })
@@ -327,14 +351,14 @@ impl Ty {
                         Rule::nullable => {
                             nullable = true;
                         }
-                        e => { return Err(ParseError::UnexpectedToken(e)); }
+                        e => {
+                            return Err(ParseError::UnexpectedToken(e));
+                        }
                     }
                 }
                 Ok(Ty::Vector { ty, size, nullable })
             }
-            _e => Err(ParseError::UnrecognizedType(
-                pair.as_str().to_string(),
-            )),
+            _e => Err(ParseError::UnrecognizedType(pair.as_str().to_string())),
         }
     }
 }
@@ -442,7 +466,7 @@ impl Method {
                                 let ty = Ty::from_pair(&param.next().unwrap())?;
                                 let name = String::from(param.next().unwrap().as_str());
                                 in_params.push((name, ty));
-                            },
+                            }
                             e => return Err(ParseError::UnexpectedToken(e)),
                         }
                     }
@@ -454,7 +478,7 @@ impl Method {
                                 let ty = Ty::from_pair(&param.next().unwrap())?;
                                 let name = String::from(param.next().unwrap().as_str());
                                 out_params.push((name, ty));
-                            },
+                            }
                             e => return Err(ParseError::UnexpectedToken(e)),
                         }
                     }
@@ -478,7 +502,7 @@ pub enum Decl {
         name: String,
         fields: Vec<StructField>,
     },
-    Interface{
+    Interface {
         attributes: Attrs,
         name: String,
         methods: Vec<Method>,
@@ -539,44 +563,43 @@ impl BanjoAst {
 
         for decl in self.namespaces[namespace].iter() {
             match decl {
-                Decl::Interface {name, ..} => {
+                Decl::Interface { name, .. } => {
                     if name == ident {
                         return Ty::Interface;
                     }
                 }
-                Decl::Struct {name, ..} => {
+                Decl::Struct { name, .. } => {
                     if name == ident {
                         return Ty::Struct;
                     }
-                },
-                Decl::Union {name, ..} => {
+                }
+                Decl::Union { name, .. } => {
                     if name == ident {
                         return Ty::Union;
                     }
-                },
-                Decl::Enum {name, ..} => {
+                }
+                Decl::Enum { name, .. } => {
                     if name == ident {
                         return Ty::Enum;
                     }
-                },
-                Decl::Alias (to, from) => {
+                }
+                Decl::Alias(to, from) => {
                     if to == ident {
                         return self.id_to_type(from);
                     }
-                },
-                Decl::Constant {name, ty, ..} => {
+                }
+                Decl::Constant { name, ty, .. } => {
                     if name == ident {
                         return (*ty).clone();
                     }
-                },
+                }
             }
         }
         panic!("Unidentified {}", fq_ident);
     }
 
     pub fn parse_decl(
-        pair: Pair<'_, Rule>,
-        _namespaces: &HashMap<String, Vec<Decl>>,
+        pair: Pair<'_, Rule>, _namespaces: &HashMap<String, Vec<Decl>>,
     ) -> Result<Decl, ParseError> {
         match pair.as_rule() {
             Rule::struct_declaration => {
@@ -692,9 +715,7 @@ impl BanjoAst {
                         Rule::constant => {
                             value = Constant::from_str(inner_pair.clone().into_span().as_str())?;
                         }
-                        e =>  {
-                            return Err(ParseError::UnexpectedToken(e))
-                        }
+                        e => return Err(ParseError::UnexpectedToken(e)),
                     }
                 }
                 Ok(Decl::Constant {
@@ -704,44 +725,38 @@ impl BanjoAst {
                     value,
                 })
             }
-            e => {
-                Err(ParseError::UnexpectedToken(e))
-            }
+            e => Err(ParseError::UnexpectedToken(e)),
         }
     }
 
     fn type_to_decl(&self, ty: &Ty) -> Option<&Decl> {
         match ty {
-            Ty::Array{ref ty, ..} => {
-                self.type_to_decl(ty)
-            }
-            Ty::Vector{ref ty, ..} => {
-                self.type_to_decl(ty)
-            }
-            Ty::Ident{id, ..} => {
+            Ty::Array { ref ty, .. } => self.type_to_decl(ty),
+            Ty::Vector { ref ty, .. } => self.type_to_decl(ty),
+            Ty::Ident { id, .. } => {
                 // check if FQ
                 let v: Vec<&str> = id.rsplitn(2, '.').collect();
-                let (namespace, ident) =  if v.len() > 1 {
+                let (namespace, ident) = if v.len() > 1 {
                     (v[1], v[0])
                 } else {
                     (self.primary_namespace.as_str(), id.as_str())
                 };
                 for decl in self.namespaces[namespace].iter() {
                     match decl {
-                        Decl::Interface {name, ..} |
-                        Decl::Struct {name, ..} |
-                        Decl::Union {name, ..} |
-                        Decl::Enum {name, ..} |
-                        Decl::Constant {name, ..} => {
+                        Decl::Interface { name, .. }
+                        | Decl::Struct { name, .. }
+                        | Decl::Union { name, .. }
+                        | Decl::Enum { name, .. }
+                        | Decl::Constant { name, .. } => {
                             if name == ident {
                                 return Some(decl);
                             }
-                        },
-                        Decl::Alias (to, from) => {
+                        }
+                        Decl::Alias(to, from) => {
                             if to == ident {
                                 return self.type_to_decl(&self.id_to_type(from));
                             }
-                        },
+                        }
                     }
                 }
                 None
@@ -766,7 +781,7 @@ impl BanjoAst {
         };
 
         match decl {
-            Decl::Interface { methods, ..} => {
+            Decl::Interface { methods, .. } => {
                 for method in methods {
                     for (_, ty) in method.in_params.iter() {
                         maybe_add_decl(&ty);
@@ -776,23 +791,23 @@ impl BanjoAst {
                     }
                 }
             }
-            Decl::Struct { fields, ..} => {
+            Decl::Struct { fields, .. } => {
                 for field in fields {
                     maybe_add_decl(&field.ty);
                 }
             }
-            Decl::Union {fields, ..} => {
+            Decl::Union { fields, .. } => {
                 for field in fields {
                     maybe_add_decl(&field.ty);
                 }
             }
-            Decl::Alias (_to, from) =>  {
+            Decl::Alias(_to, from) => {
                 maybe_add_decl(&self.id_to_type(from));
             }
             // TODO(surajmalhtora): Implement constant.
-            Decl::Constant {..} => (),
+            Decl::Constant { .. } => (),
             // Enum cannot have dependencies.
-            Decl::Enum {..} => (),
+            Decl::Enum { .. } => (),
         };
 
         Ok(edges)
@@ -822,10 +837,11 @@ impl BanjoAst {
         let inverse_dependencies = inverse_dependencies;
 
         // Start with all decls that have no incoming edges.
-        let mut decls_without_deps = degrees.iter()
-                                            .filter(|(_, &degrees)| degrees == 0)
-                                            .map(|(&decl, _)| decl)
-                                            .collect::<VecDeque<_>>();
+        let mut decls_without_deps = degrees
+            .iter()
+            .filter(|(_, &degrees)| degrees == 0)
+            .map(|(&decl, _)| decl)
+            .collect::<VecDeque<_>>();
 
         let mut decl_order = Vec::new();
         // Pull one out of the queue.
@@ -848,7 +864,9 @@ impl BanjoAst {
 
         if decl_order.len() != degrees.len() {
             // We didn't visit all the edges! There was a cycle.
-            return Err(ParseError::InvalidDeps(String::from("There is a cycle in the declarations")));
+            return Err(ParseError::InvalidDeps(String::from(
+                "There is a cycle in the declarations",
+            )));
         }
 
         Ok(())

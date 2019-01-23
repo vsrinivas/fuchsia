@@ -5,16 +5,20 @@
 #![deny(warnings)]
 
 use {
-    crate::{parser::{Rule, BanjoParser}, ast::BanjoAst, backends::*},
+    crate::{
+        ast::BanjoAst,
+        backends::*,
+        parser::{BanjoParser, Rule},
+    },
     failure::Error,
+    pest::Parser,
     std::{fs::File, io, io::Read, path::PathBuf, str::FromStr},
     structopt::StructOpt,
-    pest::Parser,
 };
 
-mod parser;
 mod ast;
 mod backends;
+mod parser;
 
 #[derive(Debug)]
 enum BackendName {
