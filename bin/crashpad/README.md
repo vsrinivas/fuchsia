@@ -7,27 +7,31 @@ the devices' logs. We use
 [Crashpad](https://chromium.googlesource.com/crashpad/crashpad/+/master/README.md)
 as the third-party client library to talk to the remote crash server.
 
+We control via JSON configuration files whether we upload the Crashpad reports
+to a crash server and if so, to which crash server. By default, we create a
+Crashpad report, but we do not upload it.
+
 ## Adding report annotations
 
 We collect various info in addition to the stack trace, e.g., process names,
 board names, that we add as annotations to the crash reports. To add a new
 annotation, simply add a new field in the map returned by
-[::fuchsia::crash::MakeAnnotations()](https://fuchsia.googlesource.com/garnet/+/master/bin/crashpad/report_annotations.h).
+[::fuchsia::crash::MakeDefaultAnnotations()](https://fuchsia.googlesource.com/garnet/+/master/bin/crashpad/report_annotations.h).
 
 ## Testing
 
-To test your changes, on a real device, we have some unit tests and two helper
-programs to simulate a kernel crash and a C userspace crash.
+To test your changes, on a real device, we have some unit tests and some helper
+programs to simulate various crashes.
 
-To run the unit tests:
+For the helper programs, you first need to add the package wrapping the config
+telling Crashpad to upload to a crash server and which server to upload to.
 
 ```sh
-(host) $ fx run-test-component crashpad_analyzer_tests
+(host)$ fx set --monolith garnet/packages/config/crashpad_upload_to_prod_server --product ...
 ```
 
-As for the helper programs, after running each one of them (see commands in
-sections below), you should then look each time for the following line in the
-syslog:
+Then, after running each one of the helper programs (see commands in sections
+below), you should then look each time for the following line in the syslog:
 
 ```sh
 (host)$ fx syslog --tag crash
@@ -39,6 +43,14 @@ successfully uploaded crash report at $URL...
 Click on the URL (contact frousseau if you don't have access and think you
 should) and check that the report matches your expectations, e.g., the new
 annotation is set to the expected value.
+
+### Unit tests
+
+To run the unit tests:
+
+```sh
+(host) $ fx run-test crashpad_analyzer_tests
+```
 
 ### Kernel crash
 
@@ -58,6 +70,16 @@ The following command will cause a write to address 0x0:
 
 ```sh
 (target)$ crasher
+```
+
+You can immediately look at the syslog.
+
+### Dart crash
+
+The following command will cause an uncaught Dart exception:
+
+```sh
+(target)$ run fuchsia-pkg://fuchsia.com/crasher_dart#meta/crasher_dart.cmx
 ```
 
 You can immediately look at the syslog.
