@@ -313,8 +313,6 @@ package("set_renderer_params") {
 }
 
 package("set_root_view") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     "set_root_view",
   ]
