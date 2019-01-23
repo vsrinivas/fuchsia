@@ -8,7 +8,6 @@
 #include <functional>
 #include <string>
 
-#include <lib/fxl/functional/closure.h>
 #include <lib/fxl/macros.h>
 
 #include "peridot/bin/sessionmgr/agent_runner/agent_runner_storage.h"
@@ -22,7 +21,7 @@ class FakeAgentRunnerStorage : public AgentRunnerStorage {
 
   // |AgentRunnerStorage|
   void Initialize(NotificationDelegate* /*delegate*/,
-                  const fxl::Closure done) override {
+                  const std::function<void()> done) override {
     done();
   }
 
