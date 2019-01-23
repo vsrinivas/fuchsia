@@ -3,27 +3,15 @@
 # found in the LICENSE file.
 
 import("//build/package.gni")
-import("//build/rust/rustc_staticlib.gni")
+import("//build/rust/rustc_library.gni")
 
-rustc_staticlib("wlan-mlme") {
+rustc_library("wlan-mlme") {
   name = "wlan_mlme"
   version = "0.1.0"
   with_unit_tests = true
   edition = "2018"
-  with_unit_tests = true
 
-  deps = [
-    "//garnet/public/rust/zerocopy",
-    "//third_party/rust-crates/rustc_deps:bitfield",
-    "//third_party/rust-crates/rustc_deps:byteorder",
-    "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:num",
-  ]
-  non_rust_deps = []
-
-  public = [
-    "abi.h",
-  ]
+  deps = []
 }
 
 package("wlan-mlme-tests") {
@@ -35,7 +23,7 @@ package("wlan-mlme-tests") {
 
   tests = [
     {
-      name = "wlan_mlme_staticlib_test"
+      name = "wlan_mlme_lib_test"
     },
   ]
 }

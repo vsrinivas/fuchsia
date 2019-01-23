@@ -93,7 +93,7 @@ source_set("mlme") {
   ]
 
   public_deps = [
-    "//garnet/lib/rust/wlan-mlme",
+    "//garnet/lib/rust/wlan-mlme-c",
     "//garnet/lib/wlan/common",
     "//garnet/lib/wlan/protocol",
     "//garnet/public/fidl/fuchsia.wlan.mlme",
