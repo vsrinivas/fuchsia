@@ -12,12 +12,6 @@ namespace devmgr {
 Device::Device(Coordinator* coord)
     : coordinator(coord), publish_task([this] { coordinator->HandleNewDevice(this); }) {}
 
-Device::~Device() {
-    // TODO: cancel any pending rpc responses.  This clear is a hack to prevent
-    // pending's dtor from asserting.
-    pending.clear();
-}
-
 // Handle inbound messages from devhost to devices
 void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
                       async::WaitBase* wait, zx_status_t status,

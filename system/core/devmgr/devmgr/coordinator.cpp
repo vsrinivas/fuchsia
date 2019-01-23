@@ -1391,22 +1391,10 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
         }
     }
 
-    // This should be a Controller reply then.
-    fbl::unique_ptr<PendingOperation> pending = dev->pending.pop_front();
-    if (pending == nullptr) {
-        log(ERROR, "devcoord: rpc: spurious status message\n");
-        return ZX_OK;
-    }
-
     // TODO: Check txid on the message
-    switch (pending->op()) {
-        case PendingOperation::Op::kBind: {
-            if (hdr->ordinal != fuchsia_device_manager_ControllerBindDriverOrdinal &&
-                hdr->ordinal != fuchsia_device_manager_ControllerBindDriverGenOrdinal) {
-                log(ERROR, "devcoord: rpc: bind-driver '%s' received wrong reply ordinal %08x\n",
-                    dev->name.data(), hdr->ordinal);
-                return ZX_ERR_IO;
-            }
+    switch (hdr->ordinal) {
+        case fuchsia_device_manager_ControllerBindDriverOrdinal:
+        case fuchsia_device_manager_ControllerBindDriverGenOrdinal: {
             const char* err_msg = nullptr;
             r = fidl_decode_msg(&fuchsia_device_manager_ControllerBindDriverResponseTable,
                                 &fidl_msg, &err_msg);
@@ -1424,13 +1412,8 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
             //TODO: try next driver, clear BOUND flag
             break;
         }
-        case PendingOperation::Op::kSuspend: {
-            if (hdr->ordinal != fuchsia_device_manager_ControllerSuspendOrdinal &&
-                hdr->ordinal != fuchsia_device_manager_ControllerSuspendGenOrdinal) {
-                log(ERROR, "devcoord: rpc: suspend '%s' received wrong reply ordinal %08x\n",
-                    dev->name.data(), hdr->ordinal);
-                return ZX_ERR_IO;
-            }
+        case fuchsia_device_manager_ControllerSuspendOrdinal:
+        case fuchsia_device_manager_ControllerSuspendGenOrdinal: {
             const char* err_msg = nullptr;
             r = fidl_decode_msg(&fuchsia_device_manager_ControllerSuspendResponseTable, &fidl_msg,
                                 &err_msg);
@@ -1445,9 +1428,8 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
                 log(ERROR, "devcoord: rpc: suspend '%s' status %d\n", dev->name.data(),
                     resp->status);
             }
-            auto ctx = static_cast<SuspendContext*>(pending->context());
-            ctx->set_status(resp->status);
-            ContinueSuspend(ctx);
+            suspend_context_.set_status(resp->status);
+            ContinueSuspend(&suspend_context_);
             break;
         }
         default:
@@ -1539,24 +1521,16 @@ static zx_status_t dc_create_proxy(Coordinator* coordinator, Device* parent) {
 
 // send message to devhost, requesting the binding of a driver to a device
 static zx_status_t dh_bind_driver(Device* dev, const char* libname) {
-    auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kBind, nullptr);
-    if (pending == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-
     zx::vmo vmo;
-    zx_status_t r;
-    if ((r = dev->coordinator->LibnameToVmo(libname, &vmo)) < 0) {
-        return r;
+    zx_status_t status = dev->coordinator->LibnameToVmo(libname, &vmo);
+    if (status != ZX_OK) {
+        return status;
     }
-
-    if ((r = dh_send_bind_driver(dev, libname, std::move(vmo))) != ZX_OK) {
-        return r;
+    status = dh_send_bind_driver(dev, libname, std::move(vmo));
+    if (status != ZX_OK) {
+        return status;
     }
-
     dev->flags |= DEV_CTX_BOUND;
-
-    dev->pending.push_back(std::move(pending));
     return ZX_OK;
 }
 
@@ -1706,22 +1680,14 @@ static zx_status_t dc_suspend_devhost(Devhost* dh, SuspendContext* ctx) {
     log(DEVLC, "devcoord: suspend devhost %p device '%s' (%p)\n",
         dh, dev->name.data(), dev);
 
-    zx_status_t r;
-    if ((r = dh_send_suspend(dev, ctx->sflags())) != ZX_OK) {
-        return r;
+    zx_status_t status = dh_send_suspend(dev, ctx->sflags());
+    if (status != ZX_OK) {
+        return status;
     }
 
     dh->flags() |= Devhost::Flags::kSuspend;
-
-    auto pending = fbl::make_unique<PendingOperation>(PendingOperation::Op::kSuspend, ctx);
-    if (pending == nullptr) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    dev->pending.push_back(std::move(pending));
-
     // TODO(teisenbe/kulakowski) Make SuspendContext automatically refcounted.
     ctx->AddRef();
-
     return ZX_OK;
 }
 
@@ -1780,25 +1746,6 @@ static void process_suspend_list(SuspendContext* ctx) {
     }
 }
 
-static bool check_pending(const Device* dev) {
-    const PendingOperation* pending = nullptr;
-    if (dev->proxy) {
-        if (!dev->proxy->pending.is_empty()) {
-            pending = &dev->proxy->pending.back();
-        }
-    } else {
-        if (!dev->pending.is_empty()) {
-            pending = &dev->pending.back();
-        }
-    }
-    if ((pending == nullptr) || (pending->op() != PendingOperation::Op::kSuspend)) {
-        return false;
-    } else {
-        log(ERROR, "  devhost with device '%s' timed out\n", dev->name.data());
-        return true;
-    }
-}
-
 static int suspend_timeout_thread(void* arg) {
     // 10 seconds
     zx_nanosleep(zx_deadline_after(ZX_SEC(10)));
@@ -1811,12 +1758,6 @@ static int suspend_timeout_thread(void* arg) {
         }
         log(ERROR, "devcoord: suspend time out\n");
         log(ERROR, "  sflags: 0x%08x\n", ctx->sflags());
-        for (const auto& dev : coordinator->devices()) {
-            check_pending(&dev);
-        }
-        check_pending(&coordinator->root_device());
-        check_pending(&coordinator->misc_device());
-        check_pending(&coordinator->sys_device());
     }
     if (coordinator->suspend_fallback()) {
         dc_suspend_fallback(coordinator->root_resource(), ctx->sflags());

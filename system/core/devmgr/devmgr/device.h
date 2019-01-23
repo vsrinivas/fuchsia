@@ -19,35 +19,8 @@ class Devhost;
 struct Devnode;
 class SuspendContext;
 
-class PendingOperation {
-public:
-    enum class Op : uint32_t {
-        kBind = 1,
-        kSuspend = 2,
-    };
-
-    PendingOperation(Op op, SuspendContext* context) : op_(op), context_(context) {}
-
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>>& node_state(
-            PendingOperation& obj) {
-            return obj.node_;
-        }
-    };
-
-    Op op() const { return op_; }
-    SuspendContext* context() const { return context_; }
-
-private:
-    fbl::DoublyLinkedListNodeState<fbl::unique_ptr<PendingOperation>> node_;
-
-    Op op_;
-    SuspendContext* context_;
-};
-
 struct Device {
     explicit Device(Coordinator* coord);
-    ~Device();
 
     // Begins waiting in |dispatcher| on |dev->wait|.  This transfers a
     // reference of |dev| to the dispatcher.  The dispatcher returns ownership
@@ -123,10 +96,6 @@ struct Device {
 
     // list of all child devices of this device
     fbl::DoublyLinkedList<Device*, Node> children;
-
-    // list of outstanding requests from the devcoord
-    // to this device's devhost, awaiting a response
-    fbl::DoublyLinkedList<fbl::unique_ptr<PendingOperation>, PendingOperation::Node> pending;
 
     // listnode for this device in the all devices list
     fbl::DoublyLinkedListNodeState<Device*> anode;
