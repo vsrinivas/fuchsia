@@ -79,6 +79,60 @@ bool socket_basic() {
     END_TEST;
 }
 
+bool socket_peek() {
+    BEGIN_TEST;
+
+    size_t count;
+    zx_handle_t h[2];
+    uint32_t read_data[] = {0, 0};
+    constexpr uint32_t write_data[] = {0xdeadbeef, 0xc0ffee};
+
+    ASSERT_EQ(zx_socket_create(0, h, h + 1), ZX_OK, "");
+
+    EXPECT_EQ(zx_socket_write(h[0], 0u, &write_data[0], sizeof(write_data[0]), &count), ZX_OK, "");
+    EXPECT_EQ(count, sizeof(write_data[0]), "");
+    EXPECT_EQ(zx_socket_write(h[0], 0u, &write_data[1], sizeof(write_data[1]), &count), ZX_OK, "");
+    EXPECT_EQ(count, sizeof(write_data[1]), "");
+
+    EXPECT_EQ(zx_socket_read(h[1], ZX_SOCKET_PEEK, read_data, sizeof(read_data), &count),
+              ZX_OK, "");
+    EXPECT_EQ(count, sizeof(read_data), "");
+    EXPECT_EQ(read_data[0], write_data[0], "");
+    EXPECT_EQ(read_data[1], write_data[1], "");
+
+    // The message should still be pending for h1 to read.
+    EXPECT_EQ(get_satisfied_signals(h[0]), ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(get_satisfied_signals(h[1]), ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE, "");
+
+    memset(read_data, 0, sizeof(read_data));
+    EXPECT_EQ(zx_socket_read(h[1], 0u, read_data, sizeof(read_data), &count), ZX_OK, "");
+    EXPECT_EQ(count, sizeof(read_data), "");
+    EXPECT_EQ(read_data[0], write_data[0], "");
+    EXPECT_EQ(read_data[1], write_data[1], "");
+
+    zx_handle_close(h[0]);
+    zx_handle_close(h[1]);
+
+    END_TEST;
+}
+
+bool socket_peek_empty() {
+    BEGIN_TEST;
+
+    zx_handle_t h[2];
+    ASSERT_EQ(zx_socket_create(0, h, h + 1), ZX_OK, "");
+
+    size_t count;
+    char data;
+    EXPECT_EQ(zx_socket_read(h[0], ZX_SOCKET_PEEK, &data, sizeof(data), &count),
+              ZX_ERR_SHOULD_WAIT, "");
+
+    zx_handle_close(h[0]);
+    zx_handle_close(h[1]);
+
+    END_TEST;
+}
+
 bool socket_signals() {
     BEGIN_TEST;
 
@@ -837,6 +891,63 @@ bool socket_datagram() {
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(info.rx_buf_available, 0u, "");
 
+    zx_handle_close(h0);
+    zx_handle_close(h1);
+
+    END_TEST;
+}
+
+bool socket_datagram_peek() {
+    BEGIN_TEST;
+
+    size_t count;
+    zx_handle_t h0, h1;
+
+    ASSERT_EQ(zx_socket_create(ZX_SOCKET_DATAGRAM, &h0, &h1), ZX_OK, "");
+
+    EXPECT_EQ(zx_socket_write(h0, 0u, "pkt1", 5u, &count), ZX_OK, "");
+    EXPECT_EQ(zx_socket_write(h0, 0u, "pkt2", 5u, &count), ZX_OK, "");
+
+    char buffer[16];
+
+    // Short peek.
+    EXPECT_EQ(zx_socket_read(h1, ZX_SOCKET_PEEK, buffer, 3, &count), ZX_OK, "");
+    EXPECT_EQ(count, 3u, "");
+    EXPECT_EQ(memcmp(buffer, "pkt", 3), 0, "");
+
+    // Full peek should still see the 1st packet.
+    EXPECT_EQ(zx_socket_read(h1, ZX_SOCKET_PEEK, buffer, 5, &count), ZX_OK, "");
+    EXPECT_EQ(count, 5u, "");
+    EXPECT_EQ(memcmp(buffer, "pkt1", 5), 0, "");
+
+    // Read and consume the 1st packet.
+    EXPECT_EQ(zx_socket_read(h1, 0u, buffer, 5, &count), ZX_OK, "");
+
+    // Now peek should see the 2nd packet.
+    EXPECT_EQ(zx_socket_read(h1, ZX_SOCKET_PEEK, buffer, 5, &count), ZX_OK, "");
+    EXPECT_EQ(count, 5u, "");
+    EXPECT_EQ(memcmp(buffer, "pkt2", 5), 0, "");
+
+    zx_handle_close(h0);
+    zx_handle_close(h1);
+
+    END_TEST;
+}
+
+bool socket_datagram_peek_empty() {
+    BEGIN_TEST;
+
+    zx_handle_t h[2];
+    ASSERT_EQ(zx_socket_create(ZX_SOCKET_DATAGRAM, h, h + 1), ZX_OK, "");
+
+    size_t count;
+    char data;
+    EXPECT_EQ(zx_socket_read(h[0], ZX_SOCKET_PEEK, &data, sizeof(data), &count),
+              ZX_ERR_SHOULD_WAIT, "");
+
+    zx_handle_close(h[0]);
+    zx_handle_close(h[1]);
+
     END_TEST;
 }
 
@@ -859,17 +970,16 @@ bool socket_datagram_no_short_write() {
     size_t buffer_size = info.tx_buf_max * 2;
     EXPECT_GT(buffer_size, 0u, "");
 
-    void* buffer = calloc(buffer_size, 1u);
-    EXPECT_NONNULL(buffer, "");
+    fbl::Array<char> buffer(new char[buffer_size]{}, buffer_size);
+    EXPECT_NONNULL(buffer.get(), "");
 
     size_t written = ~0u;
-    status = zx_socket_write(h0, 0u, buffer, buffer_size, &written);
+    status = zx_socket_write(h0, 0u, buffer.get(), buffer_size, &written);
     EXPECT_EQ(status, ZX_ERR_OUT_OF_RANGE, "");
     // Since the syscall failed, it should not have overwritten this output
     // parameter.
     EXPECT_EQ(written, ~0u, "");
 
-    free(buffer);
     zx_handle_close(h0);
     zx_handle_close(h1);
 
@@ -980,6 +1090,59 @@ bool socket_control_plane() {
     signals1 = get_satisfied_signals(h1);
     EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
+
+    END_TEST;
+}
+
+bool socket_control_plane_peek() {
+    BEGIN_TEST;
+
+    zx_handle_t h0, h1;
+    ASSERT_EQ(zx_socket_create(ZX_SOCKET_HAS_CONTROL, &h0, &h1), ZX_OK, "");
+
+    size_t count;
+    EXPECT_EQ(zx_socket_write(h0, ZX_SOCKET_CONTROL, "hello0", 6u, &count), ZX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+
+    char rbuf[10] = {0};
+
+    EXPECT_EQ(zx_socket_read(h1, ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK, rbuf, sizeof(rbuf), &count),
+              ZX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+    EXPECT_EQ(memcmp(rbuf, "hello0", 6), 0, "");
+
+    // The message should still be pending for h1 to read.
+    EXPECT_EQ(get_satisfied_signals(h0), ZX_SOCKET_WRITABLE, "");
+    EXPECT_EQ(get_satisfied_signals(h1),
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE | ZX_SOCKET_CONTROL_READABLE, "");
+
+    rbuf[0] = '\0';
+    EXPECT_EQ(zx_socket_read(h1, ZX_SOCKET_CONTROL, rbuf, sizeof(rbuf), &count), ZX_OK, "");
+    EXPECT_EQ(count, 6u, "");
+    EXPECT_EQ(memcmp(rbuf, "hello0", 6), 0, "");
+
+    EXPECT_EQ(get_satisfied_signals(h0), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
+    EXPECT_EQ(get_satisfied_signals(h1), ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
+
+    zx_handle_close(h0);
+    zx_handle_close(h1);
+
+    END_TEST;
+}
+
+bool socket_control_plane_peek_empty() {
+    BEGIN_TEST;
+
+    zx_handle_t h[2];
+    ASSERT_EQ(zx_socket_create(ZX_SOCKET_HAS_CONTROL, h, h + 1), ZX_OK, "");
+
+    size_t count;
+    char data;
+    EXPECT_EQ(zx_socket_read(h[0], ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK, &data, sizeof(data), &count),
+              ZX_ERR_SHOULD_WAIT, "");
+
+    zx_handle_close(h[0]);
+    zx_handle_close(h[1]);
 
     END_TEST;
 }
@@ -1217,6 +1380,8 @@ bool socket_share_consumes_on_failure() {
 
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
+RUN_TEST(socket_peek)
+RUN_TEST(socket_peek_empty)
 RUN_TEST(socket_signals)
 RUN_TEST(socket_peer_closed_signal)
 RUN_TEST(socket_peer_closed_set_property)
@@ -1227,9 +1392,13 @@ RUN_TEST(socket_bytes_outstanding_shutdown_write)
 RUN_TEST(socket_bytes_outstanding_shutdown_read)
 RUN_TEST(socket_short_write)
 RUN_TEST(socket_datagram)
+RUN_TEST(socket_datagram_peek)
+RUN_TEST(socket_datagram_peek_empty)
 RUN_TEST(socket_datagram_no_short_write)
 RUN_TEST(socket_control_plane_absent)
 RUN_TEST(socket_control_plane)
+RUN_TEST(socket_control_plane_peek)
+RUN_TEST(socket_control_plane_peek_empty)
 RUN_TEST(socket_control_plane_shutdown)
 RUN_TEST(socket_accept)
 RUN_TEST(socket_share_invalid_handle)

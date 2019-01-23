@@ -24,6 +24,11 @@
 class SocketDispatcher final :
     public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
 public:
+    enum class ReadType {
+        kConsume,
+        kPeek
+    };
+
     static zx_status_t Create(uint32_t flags, fbl::RefPtr<Dispatcher>* dispatcher0,
                               fbl::RefPtr<Dispatcher>* dispatcher1, zx_rights_t* rights);
 
@@ -42,9 +47,9 @@ public:
 
     zx_status_t HalfClose();
 
-    zx_status_t Read(user_out_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t Read(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
 
-    zx_status_t ReadControl(user_out_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t ReadControl(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
 
     // On success, the share queue takes ownership of |h|. On failure,
     // |h| is closed.

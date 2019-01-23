@@ -33,8 +33,10 @@ only the first available datagram in the socket (if one is present).
 If *buffer* is too small for the datagram, then the read will be
 truncated, and any remaining bytes in the datagram will be discarded.
 
-If *options* is set to **ZX_SOCKET_CONTROL**, then `zx_socket_read()`
-attempts to read from the socket control plane.
+Supported *options* are:
+
+* **ZX_SOCKET_CONTROL** to read from the socket control plane.
+* **ZX_SOCKET_PEEK** to leave the message in the socket.
 
 To determine how many bytes are available to read, use the **rx_buf_available**
 field of the resulting `zx_info_socket_t`, which you can obtain using the

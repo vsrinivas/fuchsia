@@ -295,7 +295,7 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
     return status;
 }
 
-zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<void> dst, size_t len,
                                    size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
@@ -316,42 +316,47 @@ zx_status_t SocketDispatcher::Read(user_out_ptr<void> dst, size_t len,
         return ZX_ERR_SHOULD_WAIT;
     }
 
-    bool was_full = is_full();
+    size_t st = 0;
+    if (type == ReadType::kPeek) {
+        st = data_.Peek(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
+    } else {
+        bool was_full = is_full();
 
-    auto st = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
+        st = data_.Read(dst, len, flags_ & ZX_SOCKET_DATAGRAM);
 
-    zx_signals_t clear = 0u;
-    zx_signals_t set = 0u;
+        zx_signals_t clear = 0u;
+        zx_signals_t set = 0u;
 
-    // Deassert signal if we fell below the read threshold
-    if ((read_threshold_ > 0) && (data_.size() < read_threshold_))
-        clear |= ZX_SOCKET_READ_THRESHOLD;
+        // Deassert signal if we fell below the read threshold
+        if ((read_threshold_ > 0) && (data_.size() < read_threshold_))
+            clear |= ZX_SOCKET_READ_THRESHOLD;
 
-    if (is_empty()) {
-        clear |= ZX_SOCKET_READABLE;
-    }
-    if (set || clear) {
-        UpdateStateLocked(clear, set);
-        clear = set = 0u;
-    }
-    if (peer_) {
-        // Assert (write threshold) signal if space available is above
-        // threshold.
-        size_t peer_write_threshold = peer_->write_threshold_;
-        if (peer_write_threshold > 0 &&
-            ((data_.max_size() - data_.size()) >= peer_write_threshold))
-            set |= ZX_SOCKET_WRITE_THRESHOLD;
-        if (was_full && (st > 0))
-            set |= ZX_SOCKET_WRITABLE;
-        if (set)
-            peer_->UpdateStateLocked(0u, set);
+        if (is_empty()) {
+            clear |= ZX_SOCKET_READABLE;
+        }
+        if (set || clear) {
+            UpdateStateLocked(clear, set);
+            clear = set = 0u;
+        }
+        if (peer_) {
+            // Assert (write threshold) signal if space available is above
+            // threshold.
+            size_t peer_write_threshold = peer_->write_threshold_;
+            if (peer_write_threshold > 0 &&
+                ((data_.max_size() - data_.size()) >= peer_write_threshold))
+                set |= ZX_SOCKET_WRITE_THRESHOLD;
+            if (was_full && (st > 0))
+                set |= ZX_SOCKET_WRITABLE;
+            if (set)
+                peer_->UpdateStateLocked(0u, set);
+        }
     }
 
     *nread = static_cast<size_t>(st);
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
+zx_status_t SocketDispatcher::ReadControl(ReadType type, user_out_ptr<void> dst, size_t len,
                                           size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
@@ -368,10 +373,12 @@ zx_status_t SocketDispatcher::ReadControl(user_out_ptr<void> dst, size_t len,
     if (dst.copy_array_to_user(&control_msg_->msg, copy_len) != ZX_OK)
         return ZX_ERR_INVALID_ARGS; // Invalid user buffer.
 
-    control_msg_len_ = 0;
-    UpdateStateLocked(ZX_SOCKET_CONTROL_READABLE, 0u);
-    if (peer_)
-        peer_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
+    if (type == ReadType::kConsume) {
+        control_msg_len_ = 0;
+        UpdateStateLocked(ZX_SOCKET_CONTROL_READABLE, 0u);
+        if (peer_)
+            peer_->UpdateStateLocked(0u, ZX_SOCKET_CONTROL_WRITABLE);
+    }
 
     *nread = copy_len;
     return ZX_OK;

@@ -283,12 +283,12 @@ typedef uint64_t zx_off_t;
 #define ZX_CHANNEL_MAX_MSG_HANDLES          ((uint32_t)64u)
 
 // Socket options and limits.
-// These options can be passed to zx_socket_shutdown()
+// These options can be passed to zx_socket_shutdown().
 #define ZX_SOCKET_SHUTDOWN_WRITE            ((uint32_t)1u << 0)
 #define ZX_SOCKET_SHUTDOWN_READ             ((uint32_t)1u << 1)
 #define ZX_SOCKET_SHUTDOWN_MASK             (ZX_SOCKET_SHUTDOWN_WRITE | ZX_SOCKET_SHUTDOWN_READ)
 
-// These can be passed to zx_socket_create()
+// These can be passed to zx_socket_create().
 #define ZX_SOCKET_STREAM                    ((uint32_t)0u)
 #define ZX_SOCKET_DATAGRAM                  ((uint32_t)1u << 0)
 #define ZX_SOCKET_HAS_CONTROL               ((uint32_t)1u << 1)
@@ -297,6 +297,9 @@ typedef uint64_t zx_off_t;
 
 // These can be passed to zx_socket_read() and zx_socket_write().
 #define ZX_SOCKET_CONTROL                   ((uint32_t)1u << 2)
+
+// These can be passed to zx_socket_read().
+#define ZX_SOCKET_PEEK                      ((uint32_t)1u << 3)
 
 // Flags which can be used to to control cache policy for APIs which map memory.
 #define ZX_CACHE_POLICY_CACHED              ((uint32_t)0u)

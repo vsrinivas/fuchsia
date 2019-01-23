@@ -91,6 +91,9 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
     if (!buffer && size > 0)
         return ZX_ERR_INVALID_ARGS;
 
+    if (options & ~(ZX_SOCKET_CONTROL | ZX_SOCKET_PEEK))
+        return ZX_ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<SocketDispatcher> socket;
@@ -98,17 +101,15 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
-    size_t nread;
+    SocketDispatcher::ReadType type =
+        (options & ZX_SOCKET_PEEK) ? SocketDispatcher::ReadType::kPeek
+                                   : SocketDispatcher::ReadType::kConsume;
 
-    switch (options) {
-    case 0:
-        status = socket->Read(buffer, size, &nread);
-        break;
-    case ZX_SOCKET_CONTROL:
-        status = socket->ReadControl(buffer, size, &nread);
-        break;
-    default:
-        return ZX_ERR_INVALID_ARGS;
+    size_t nread;
+    if (options & ZX_SOCKET_CONTROL) {
+        status = socket->ReadControl(type, buffer, size, &nread);
+    } else {
+        status = socket->Read(type, buffer, size, &nread);
     }
 
     // Caller may ignore results if desired.
