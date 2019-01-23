@@ -401,7 +401,7 @@ void MtUsb::HandleEndpointTxLocked(Endpoint* ep) {
     auto txcsr = TXCSR_PERI::Get(ep_num);
 
     if (txcsr.ReadFrom(mmio).txpktrdy()) {
-       return;
+        return;
     }
 
     usb_request_t* req = ep->current_req;
@@ -423,6 +423,7 @@ void MtUsb::HandleEndpointTxLocked(Endpoint* ep) {
                 if (write_length > ep->max_packet_size) {
                     write_length = ep->max_packet_size;
                 }
+
                 FifoWrite(ep_num, buffer + ep->cur_offset, write_length);
                 ep->cur_offset += write_length;
 
@@ -583,7 +584,7 @@ void MtUsb::FifoWrite(uint8_t ep_index, const void* buf, size_t length) {
     auto remaining = length;
     auto src = static_cast<const uint8_t*>(buf);
 
-   auto fifo = FIFO_8::Get(ep_index).FromValue(0);
+    auto fifo = FIFO_8::Get(ep_index).FromValue(0);
 
     while (remaining-- > 0) {
         fifo.set_fifo_data(*src++).WriteTo(mmio);
@@ -643,22 +644,22 @@ int MtUsb::IrqThread() {
         .set_usbcom(1)
         .WriteTo(mmio);
 
-   // Configure all endpoints other than endpoint zero to use 1024 byte FIFOs.
-    constexpr uint32_t fifo_size = 1024 >> 3;   // FIFO size is measured in 8 byte units.
+   // Configure all endpoints other than endpoint zero to use 512 byte double-buffered FIFOs.
+    constexpr uint32_t fifo_size = 512 >> 3;   // FIFO size is measured in 8 byte units.
     uint32_t fifo_addr = (64 >> 3);             // First 64 bytes used for endpoint zero.
     for (uint8_t i = 1; i <= NUM_EPS; i++) {
         INDEX::Get().FromValue(0).set_selected_endpoint(i).WriteTo(mmio);
 
         ZX_DEBUG_ASSERT(fifo_addr < UINT16_MAX);
         TXFIFOADD::Get().FromValue(0).set_txfifoadd(static_cast<uint16_t>(fifo_addr)).WriteTo(mmio);
-        fifo_addr += fifo_size;
+        fifo_addr += 2*fifo_size; // double-buffered
 
         ZX_DEBUG_ASSERT(fifo_addr < UINT16_MAX);
         RXFIFOADD::Get().FromValue(0).set_rxfifoadd(static_cast<uint16_t>(fifo_addr)).WriteTo(mmio);
-        fifo_addr += fifo_size;
+        fifo_addr += 2*fifo_size; // double-buffered
 
-        TXFIFOSZ::Get().FromValue(0).set_txdpb(1).set_txsz(FIFO_SIZE_1024).WriteTo(mmio);
-        RXFIFOSZ::Get().FromValue(0).set_rxdpb(1).set_rxsz(FIFO_SIZE_1024).WriteTo(mmio);
+        TXFIFOSZ::Get().FromValue(0).set_txdpb(1).set_txsz(FIFO_SIZE_512).WriteTo(mmio);
+        RXFIFOSZ::Get().FromValue(0).set_rxdpb(1).set_rxsz(FIFO_SIZE_512).WriteTo(mmio);
     }
 
     while (true) {
