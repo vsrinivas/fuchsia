@@ -123,7 +123,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.sys.Environment",
     "fuchsia.sys.Launcher",
     "fuchsia.wlan.service.Wlan",
-    // TODO(IN-458): This entry is temporary, until IN-458 is resolved.
+    // TODO(PT-88): This entry is temporary, until PT-88 is resolved.
     "fuchsia.tracing.TraceController",
     nullptr,
     // DO NOT ADD MORE ENTRIES TO THIS LIST.
