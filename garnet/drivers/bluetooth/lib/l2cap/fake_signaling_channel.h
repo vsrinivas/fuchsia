@@ -11,6 +11,13 @@
 
 #include "garnet/drivers/bluetooth/lib/l2cap/signaling_channel.h"
 
+// Helper for FakeSignalingChannel::AddOutbound to add file and line numbers of
+// the test call site that expected the command, and to reduce one level of
+// braces in the responses. |fake_sig| should be a FakeSignalingChannel lvalue.
+#define EXPECT_OUTBOUND_REQ(fake_sig, req_code, req_payload, ...)   \
+  (fake_sig).AddOutbound(__FILE__, __LINE__, req_code, req_payload, \
+                         {__VA_ARGS__})
+
 namespace btlib {
 namespace l2cap {
 namespace internal {
@@ -21,9 +28,14 @@ namespace testing {
 // inbound and outbound expected transactions are not synchronized.
 class FakeSignalingChannel : public SignalingChannelInterface {
  public:
+  using TransactionId = size_t;
+
+  // Simulated response's command code and payload.
+  using Response = std::pair<Status, common::BufferView>;
+
   // |dispatcher| is the test message loop's dispatcher
   explicit FakeSignalingChannel(async_dispatcher_t* dispatcher);
-  ~FakeSignalingChannel() override = default;
+  ~FakeSignalingChannel() override;
 
   // SignalingChannelInterface overrides
   bool SendRequest(CommandCode req_code, const common::ByteBuffer& payload,
@@ -31,16 +43,18 @@ class FakeSignalingChannel : public SignalingChannelInterface {
   void ServeRequest(CommandCode req_code, RequestDelegate cb) override;
 
   // Add an expected outbound request, which FakeSignalingChannel will respond
-  // to with a series of responses. The request's contents will be expected to
-  // match |req_code| and |req_payload|. The corresponding request handler will
-  // be expected to handle as many responses as are provided here for testing.
-  // |responses| should be a comma-delimited list of
-  // std::pair<Status rsp_status, common::BufferView rsp_payload>.
-  template <typename... Responses>
-  void AddOutbound(CommandCode req_code, common::BufferView req_payload,
-                   Responses... responses) {
-    transactions_.push_back(Transaction{req_code, req_payload, {responses...}});
-  }
+  // to with the contents of |responses|. The request's contents will be
+  // expected to match |req_code| and |req_payload|. The request's response
+  // handler will be expected to handle all responses provided here.
+  // Returns a handle that can be used to provide additional responses with
+  // |ReceiveResponses|. |file| and |line| will be used to trace test failures.
+  TransactionId AddOutbound(const char* file, int line, CommandCode req_code,
+                            common::BufferView req_payload,
+                            std::vector<Response> responses);
+
+  // Receive additional responses to an already received request.
+  void ReceiveResponses(TransactionId id,
+                        const std::vector<Response>& responses);
 
   // Simulate reception of an inbound request with |req_code| and |req_payload|,
   // then expect a corresponding outbound response with payload |rsp_payload|.
@@ -61,12 +75,25 @@ class FakeSignalingChannel : public SignalingChannelInterface {
       ChannelId local_cid, ChannelId remote_cid);
 
  private:
-  // Expected outbound request and response(s) that this fake send(s) back
+  // Expected outbound request and response(s) that this fake sends back
   struct Transaction {
-    CommandCode request_code;
-    common::BufferView req_payload;
-    std::vector<std::pair<Status, common::BufferView>> responses;
+    const char* const file;
+    const int line;
+    const CommandCode request_code;
+    const common::BufferView req_payload;
+    const std::vector<std::pair<Status, common::BufferView>> responses;
+
+    // Assigned when the request is actually sent
+    SignalingChannel::ResponseHandler response_callback = nullptr;
+
+    // Does not include responses handled in |ReceiveResponses|.
+    size_t responses_handled = 0UL;
   };
+
+  // Simulate reception of |responses|, calling |transaction.response_callback|
+  // on each response until it returns false. Returns the number of invocations.
+  size_t TriggerResponses(const Transaction& transaction,
+                          const std::vector<Response>& responses);
 
   // Test a previously-registered request handler by simulating an inbound
   // request of |req_code| and |req_payload|. The test will assert-fail if no

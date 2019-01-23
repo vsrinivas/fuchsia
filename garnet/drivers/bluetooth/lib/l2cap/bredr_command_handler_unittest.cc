@@ -78,9 +78,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConnReqRej) {
 
       // Remote (relative to rejecter) CID
       LowerBits(kBadLocalCId), UpperBits(kBadLocalCId));
-  fake_sig()->AddOutbound(
-      kConnectionRequest, expected_conn_req.view(),
-      std::make_pair(SignalingChannel::Status::kReject, rej_rsp.view()));
+  EXPECT_OUTBOUND_REQ(*fake_sig(), kConnectionRequest, expected_conn_req.view(),
+                      {SignalingChannel::Status::kReject, rej_rsp.view()});
 
   bool cb_called = false;
   auto on_conn_rsp = [&cb_called, kBadLocalCId](
@@ -120,9 +119,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConnReqRspOk) {
 
       // Status (No further information available)
       0x00, 0x00);
-  fake_sig()->AddOutbound(
-      kConnectionRequest, expected_conn_req.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, ok_conn_rsp.view()));
+  EXPECT_OUTBOUND_REQ(*fake_sig(), kConnectionRequest, expected_conn_req.view(),
+                      {SignalingChannel::Status::kSuccess, ok_conn_rsp.view()});
 
   bool cb_called = false;
   auto on_conn_rsp =
@@ -177,10 +175,10 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConnReqRspPendingAuthThenOk) {
 
       // Status (No further information available)
       0x00, 0x00);
-  fake_sig()->AddOutbound(
-      kConnectionRequest, expected_conn_req.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, pend_conn_rsp.view()),
-      std::make_pair(SignalingChannel::Status::kSuccess, ok_conn_rsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *fake_sig(), kConnectionRequest, expected_conn_req.view(),
+      {SignalingChannel::Status::kSuccess, pend_conn_rsp.view()},
+      {SignalingChannel::Status::kSuccess, ok_conn_rsp.view()});
 
   int cb_count = 0;
   auto on_conn_rsp =
@@ -375,9 +373,9 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConfigReqRspPendingEmpty) {
       'l', 'o', 'l', 'z');
   const BufferView& rsp_options = pending_config_req.view(6, 4);
 
-  fake_sig()->AddOutbound(kConfigurationRequest, expected_config_req.view(),
-                          std::make_pair(SignalingChannel::Status::kSuccess,
-                                         pending_config_req.view()));
+  EXPECT_OUTBOUND_REQ(
+      *fake_sig(), kConfigurationRequest, expected_config_req.view(),
+      {SignalingChannel::Status::kSuccess, pending_config_req.view()});
 
   bool cb_called = false;
   BrEdrCommandHandler::ConfigurationResponseCallback on_config_rsp =
@@ -412,9 +410,9 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundDisconReqRspOk) {
   // the response's payload should be the same as the request's
   const ByteBuffer& ok_discon_rsp = expected_discon_req;
 
-  fake_sig()->AddOutbound(
-      kDisconnectionRequest, expected_discon_req.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, ok_discon_rsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *fake_sig(), kDisconnectionRequest, expected_discon_req.view(),
+      {SignalingChannel::Status::kSuccess, ok_discon_rsp.view()});
 
   bool cb_called = false;
   BrEdrCommandHandler::DisconnectionResponseCallback on_discon_req =
@@ -453,9 +451,9 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundDisconReqRej) {
       // Destination CID (relative to rejecter)
       LowerBits(kLocalCId), UpperBits(kLocalCId));
 
-  fake_sig()->AddOutbound(
-      kDisconnectionRequest, expected_discon_req.view(),
-      std::make_pair(SignalingChannel::Status::kReject, rej_cid.view()));
+  EXPECT_OUTBOUND_REQ(*fake_sig(), kDisconnectionRequest,
+                      expected_discon_req.view(),
+                      {SignalingChannel::Status::kReject, rej_cid.view()});
 
   bool cb_called = false;
   BrEdrCommandHandler::DisconnectionResponseCallback on_discon_cb =

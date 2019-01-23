@@ -5,7 +5,7 @@
 #include "garnet/drivers/bluetooth/lib/l2cap/fake_signaling_channel.h"
 
 #include "garnet/drivers/bluetooth/lib/common/test_helpers.h"
-#include "lib/gtest/test_loop_fixture.h"
+#include "gtest/gtest.h"
 
 namespace btlib {
 namespace l2cap {
@@ -20,16 +20,16 @@ namespace {
 class Expecter : public SignalingChannel::Responder {
  public:
   void Send(const common::ByteBuffer& rsp_payload) override {
-    FAIL() << "Unexpected local response " << rsp_payload.AsString();
+    ADD_FAILURE() << "Unexpected local response " << rsp_payload.AsString();
   }
 
   void RejectNotUnderstood() override {
-    FAIL() << "Unexpected local rejection, \"Not Understood\"";
+    ADD_FAILURE() << "Unexpected local rejection, \"Not Understood\"";
   }
 
   void RejectInvalidChannelId(ChannelId local_cid,
                               ChannelId remote_cid) override {
-    FAIL() << fxl::StringPrintf(
+    ADD_FAILURE() << fxl::StringPrintf(
         "Unexpected local rejection, \"Invalid Channel ID\" local: %#.4x "
         "remote: %#.4x",
         local_cid, remote_cid);
@@ -87,38 +87,75 @@ FakeSignalingChannel::FakeSignalingChannel(async_dispatcher_t* dispatcher)
   ZX_DEBUG_ASSERT(dispatcher_);
 }
 
+FakeSignalingChannel::~FakeSignalingChannel() {
+  // Add a test failure for each expected request that wasn't received
+  for (size_t i = expected_transaction_index_; i < transactions_.size(); i++) {
+    ADD_FAILURE_AT(transactions_[i].file, transactions_[i].line)
+        << "Outbound request [" << i << "] expected "
+        << transactions_[i].responses.size() << " responses";
+  }
+}
+
 bool FakeSignalingChannel::SendRequest(CommandCode req_code,
                                        const common::ByteBuffer& payload,
                                        SignalingChannel::ResponseHandler cb) {
   if (expected_transaction_index_ >= transactions_.size()) {
+    ADD_FAILURE() << "Received unexpected outbound command after handling "
+                  << transactions_.size();
     return false;
   }
 
-  const Transaction& transaction = transactions_[expected_transaction_index_];
+  Transaction& transaction = transactions_[expected_transaction_index_];
+  ::testing::ScopedTrace trace(transaction.file, transaction.line,
+                               "Outbound request expected here");
   EXPECT_EQ(transaction.request_code, req_code);
   EXPECT_TRUE(common::ContainersEqual(transaction.req_payload, payload));
+  EXPECT_TRUE(cb);
+  transaction.response_callback = std::move(cb);
 
   // Simulate the remote's response(s)
-  async::PostTask(dispatcher_, [this, cb = std::move(cb),
-                                index = expected_transaction_index_]() {
-    size_t responses_handled = 0;
-    const Transaction& transaction = transactions_[index];
-    for (auto& response : transaction.responses) {
-      responses_handled++;
-      if (!cb(response.first, response.second)) {
-        break;
-      }
-    }
-    ASSERT_EQ(transaction.responses.size(), responses_handled);
+  async::PostTask(dispatcher_, [this, index = expected_transaction_index_]() {
+    Transaction& transaction = transactions_[index];
+    transaction.responses_handled =
+        TriggerResponses(transaction, transaction.responses);
   });
 
   expected_transaction_index_++;
   return (transaction.request_code == req_code);
 }
 
+void FakeSignalingChannel::ReceiveResponses(
+    TransactionId id,
+    const std::vector<FakeSignalingChannel::Response>& responses) {
+  if (id >= transactions_.size()) {
+    FAIL() << "Can't trigger response to unknown outbound request " << id;
+  }
+
+  const Transaction& transaction = transactions_[id];
+  {
+    ::testing::ScopedTrace trace(transaction.file, transaction.line,
+                                 "Outbound request expected here");
+    ASSERT_TRUE(transaction.response_callback)
+        << "Can't trigger responses for outbound request that hasn't been sent";
+    EXPECT_EQ(transaction.responses.size(), transaction.responses_handled)
+        << "Not all original simulated responses have been handled";
+  }
+  TriggerResponses(transaction, responses);
+}
+
 void FakeSignalingChannel::ServeRequest(CommandCode req_code,
                                         SignalingChannel::RequestDelegate cb) {
   request_handlers_[req_code] = std::move(cb);
+}
+
+FakeSignalingChannel::TransactionId FakeSignalingChannel::AddOutbound(
+    const char* file, int line, CommandCode req_code,
+    common::BufferView req_payload,
+    std::vector<FakeSignalingChannel::Response> responses) {
+  transactions_.push_back(Transaction{file, line, req_code,
+                                      std::move(req_payload),
+                                      std::move(responses), nullptr});
+  return transactions_.size() - 1;
 }
 
 void FakeSignalingChannel::ReceiveExpect(
@@ -139,6 +176,28 @@ void FakeSignalingChannel::ReceiveExpectRejectInvalidChannelId(
     ChannelId local_cid, ChannelId remote_cid) {
   RejectInvalidChannelIdExpecter expecter(local_cid, remote_cid);
   ReceiveExpectInternal(req_code, req_payload, &expecter);
+}
+
+size_t FakeSignalingChannel::TriggerResponses(
+    const FakeSignalingChannel::Transaction& transaction,
+    const std::vector<FakeSignalingChannel::Response>& responses) {
+  ::testing::ScopedTrace trace(transaction.file, transaction.line,
+                               "Outbound request expected here");
+  size_t responses_handled = 0;
+  for (auto& [status, payload] : responses) {
+    responses_handled++;
+    if (!transaction.response_callback(status, payload) ||
+        ::testing::Test::HasFatalFailure()) {
+      break;
+    }
+  }
+
+  EXPECT_EQ(responses.size(), responses_handled) << fxl::StringPrintf(
+      "Outbound command (code %d, at %zu) handled fewer responses than "
+      "expected",
+      transaction.request_code, transaction.responses_handled);
+
+  return responses_handled;
 }
 
 // Test evaluator for inbound requests with type-erased, bound expected requests

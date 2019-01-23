@@ -326,9 +326,9 @@ class L2CAP_BrEdrDynamicChannelTest : public ::gtest::TestLoopFixture {
 };
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, FailConnectChannel) {
-  sig()->AddOutbound(kConnectionRequest, kConnReq.view(),
-                     std::make_pair(SignalingChannel::Status::kSuccess,
-                                    kRejectConnRsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConnectionRequest, kConnReq.view(),
+      {SignalingChannel::Status::kSuccess, kRejectConnRsp.view()});
 
   // Build channel and operate it directly to be able to inspect it in the
   // connected but not open state.
@@ -366,12 +366,11 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, FailConnectChannel) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailConfig) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(kConfigurationRequest, kConfigReq.view(),
-                     std::make_pair(SignalingChannel::Status::kReject,
-                                    kRejNotUnderstood.view()));
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kReject, kRejNotUnderstood.view()});
 
   // Build channel and operate it directly to be able to inspect it in the
   // connected but not open state.
@@ -410,9 +409,9 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailConfig) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailInvalidResponse) {
-  sig()->AddOutbound(kConnectionRequest, kConnReq.view(),
-                     std::make_pair(SignalingChannel::Status::kSuccess,
-                                    kInvalidConnRsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConnectionRequest, kConnReq.view(),
+      {SignalingChannel::Status::kSuccess, kInvalidConnRsp.view()});
 
   // Build channel and operate it directly to be able to inspect it in the
   // connected but not open state.
@@ -442,15 +441,13 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailInvalidResponse) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndLocalCloseChannel) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   auto open_cb = [&open_cb_count](auto chan) {
@@ -497,12 +494,11 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndLocalCloseChannel) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndRemoteCloseChannel) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
 
   int open_cb_count = 0;
   auto open_cb = [&open_cb_count](auto chan) { open_cb_count++; };
@@ -537,17 +533,15 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndRemoteCloseChannel) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelWithPendingConn) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess,
-                     kPendingConnRsp.view()),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConnectionRequest, kConnReq.view(),
+      {SignalingChannel::Status::kSuccess, kPendingConnRsp.view()},
+      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   registry()->OpenOutbound(kPsm, [&open_cb_count](auto chan) {
@@ -568,17 +562,15 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelWithPendingConn) {
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelMismatchConnRsp) {
   // The first Connection Response (pending) has a different ID than the final
   // Connection Response (success).
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess,
-                     kPendingConnRspWithId.view()),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConnectionRequest, kConnReq.view(),
+      {SignalingChannel::Status::kSuccess, kPendingConnRspWithId.view()},
+      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   registry()->OpenOutbound(kPsm, [&open_cb_count](auto chan) {
@@ -597,17 +589,14 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelMismatchConnRsp) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigPending) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess,
-                     kPendingConfigRsp.view()),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kPendingConfigRsp.view()},
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   registry()->OpenOutbound(kPsm, [&open_cb_count](auto chan) {
@@ -626,15 +615,13 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigPending) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigWrongId) {
-  sig()->AddOutbound(
-      kConnectionRequest, kConnReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConnRsp.view()));
-  sig()->AddOutbound(kConfigurationRequest, kConfigReq.view(),
-                     std::make_pair(SignalingChannel::Status::kSuccess,
-                                    kUnknownIdConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kUnknownIdConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   registry()->OpenOutbound(kPsm, [&open_cb_count](auto chan) {
@@ -651,12 +638,11 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigWrongId) {
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionOk) {
-  sig()->AddOutbound(
-      kConfigurationRequest, kConfigReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kOkConfigRsp.view()));
-  sig()->AddOutbound(
-      kDisconnectionRequest, kDisconReq.view(),
-      std::make_pair(SignalingChannel::Status::kSuccess, kDisconRsp.view()));
+  EXPECT_OUTBOUND_REQ(
+      *sig(), kConfigurationRequest, kConfigReq.view(),
+      {SignalingChannel::Status::kSuccess, kOkConfigRsp.view()});
+  EXPECT_OUTBOUND_REQ(*sig(), kDisconnectionRequest, kDisconReq.view(),
+                      {SignalingChannel::Status::kSuccess, kDisconRsp.view()});
 
   int open_cb_count = 0;
   DynamicChannelCallback open_cb = [&open_cb_count](auto chan) {
