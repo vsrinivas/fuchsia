@@ -361,7 +361,7 @@ func genKeys(keysDst string, t *testing.T) {
 
 	// copy the root.json, which is the manifest for the empty repo into the keys
 	// directory. The InitRepo method will want to ingest this.
-	err = copyFile(filepath.Join(keysDst, rootJSONName),
+	err = copyFile(filepath.Join(keysDst, rootManifest),
 		filepath.Join(storePath, "staged", "root.json"))
 
 	if err != nil {

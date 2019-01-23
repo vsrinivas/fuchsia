@@ -21,8 +21,12 @@ import (
 )
 
 var keySet = []string{"timestamp.json", "targets.json", "snapshot.json"}
+var roles = []string{"timestamp", "targets", "snapshot"}
 
-const rootJSONName = "root_manifest.json"
+// The root manifest is consumed from the development repository in order to
+// share provenance between development instances. This should not be used in
+// production settings.
+const rootManifest = "root_manifest.json"
 
 type ErrFileAddFailed string
 
@@ -56,13 +60,27 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 	// If we're copying pre-made keys from some source, then we need to do that
 	// before initializing the repositroy.
 	if k != keysDir {
+		// Note: if populateKeys encounters that all keys are already present, it does
+		// not perform any overwrites, it skips all copying. This prevents overwriting
+		// keys that have been updated in target repositories by way of revocations,
+		// additional signing, and so on.
 		if e := populateKeys(keysDir, k); e != nil {
 			return nil, e
 		}
 
+		// If a repository does not have a root manifest, and the source keys
+		// directory does have a root manifest, then copy that over. The root manifest
+		// is not necessary for repository initialziation, it represents a
+		// pre-initialized repository as a starting point in the history chain. This
+		// whole path should probably be removed in the future.
 		rootOut := filepath.Join(r, "repository", "root.json")
-		if e := copyFile(rootOut, filepath.Join(k, rootJSONName)); e != nil {
-			return nil, e
+		if _, err := os.Stat(rootOut); os.IsNotExist(err) {
+			rootManifestPath := filepath.Join(k, rootManifest)
+			if _, err := os.Stat(rootManifestPath); err == nil {
+				if e := copyFile(rootOut, rootManifestPath); e != nil {
+					return nil, e
+				}
+			}
 		}
 	}
 
@@ -74,8 +92,30 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 
 	// If we're constructing the roles ourself, we use the repo initialized above.
 	if k == keysDir {
-		for _, role := range []string{"root", "targets", "snapshot", "timestamp"} {
-			if ss, err := s.GetSigningKeys(role); err != nil || len(ss) == 0 {
+		// Only look for the "online" key set, if any one is missing, then we must
+		// generate a full suite of keys including the root key
+		genKeys := false
+		for _, k := range roles {
+			if _, err := s.GetSigningKeys(k); err != nil {
+				genKeys = true
+			}
+		}
+
+		if genKeys {
+			// Only generate a new root role if none are already present.
+			if _, err := s.GetSigningKeys("root"); err != nil {
+				_, err := repo.GenKey("root")
+				if err != nil {
+					return nil, err
+				}
+			}
+
+			// When generating new subordinate role keys because of any being missing, it
+			// is safe to unconditionally regenerate them. It would be better to identify
+			// any that are not signed by the current root keys, and instead sign them,
+			// but this all needs a significant rework including new UX for managing key
+			// material before that is really safe/possible.
+			for _, role := range roles {
 				_, err := repo.GenKey(role)
 				if err != nil {
 					return nil, err
@@ -247,7 +287,20 @@ func copyFile(dst string, src string) error {
 // populateKeys copies the keys necessary for publishing from a source path.
 // Note that we don't copy a root key anywhere. The root key is only needed for
 // signing these keys and we assume it is maintained outside the repo somewhere.
+// If all of the keys are already present in the destination path, all of the
+// copies are skipped.
 func populateKeys(destPath string, srcPath string) error {
+	found := 0
+	for _, k := range keySet {
+		keyDest := filepath.Join(destPath, k)
+		if _, err := os.Stat(keyDest); err == nil {
+			found++
+		}
+	}
+	if found == len(keySet) {
+		return nil
+	}
+
 	for _, k := range keySet {
 		if err := copyFile(filepath.Join(destPath, k), filepath.Join(srcPath, k)); err != nil {
 			return err
