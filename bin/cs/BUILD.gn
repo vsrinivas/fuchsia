@@ -11,7 +11,12 @@ rustc_binary("bin") {
   edition = "2018"
 
   deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:structopt",
+    "//zircon/public/fidl/fuchsia-inspect:fuchsia-inspect-rustc",
   ]
 }
 

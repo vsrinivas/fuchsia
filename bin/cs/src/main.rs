@@ -3,9 +3,14 @@
 // found in the LICENSE file.
 
 use failure::{err_msg, Error};
-use std::fmt;
-use std::fs;
-use std::path::Path;
+use inspect::{generate_inspect_object_tree, InspectObject, InspectValue};
+use std::{
+    fmt, fs,
+    path::{Path, PathBuf},
+};
+use structopt::StructOpt;
+
+mod inspect;
 
 type ComponentsResult = Result<Vec<Component>, Error>;
 type RealmsResult = Result<Vec<Realm>, Error>;
@@ -16,13 +21,6 @@ struct Realm {
     job_id: u32,
     name: String,
     child_realms: Vec<Realm>,
-    child_components: Vec<Component>,
-}
-
-struct Component {
-    job_id: u32,
-    name: String,
-    url: String,
     child_components: Vec<Component>,
 }
 
@@ -66,6 +64,14 @@ impl fmt::Display for Realm {
     }
 }
 
+struct Component {
+    job_id: u32,
+    name: String,
+    path: PathBuf,
+    url: String,
+    child_components: Vec<Component>,
+}
+
 impl Component {
     fn create(component_path: &Path) -> Result<Component, Error> {
         let job_id = fs::read_to_string(&component_path.join("job-id"))?;
@@ -74,6 +80,7 @@ impl Component {
         let component = Component {
             job_id: job_id.parse::<u32>()?,
             name: name,
+            path: component_path.to_path_buf(),
             url: url,
             child_components: visit_child_components(&component_path)?,
         };
@@ -140,6 +147,32 @@ fn find_id_directory(dir: &Path) -> DirEntryResult {
     return Err(err_msg("Directory not found"));
 }
 
+fn visit_threads(component_path: &Path, exclude_properties: &Vec<String>) -> TraversalResult {
+    let channel_path = component_path.join("system_objects/threads/.channel");
+    let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_properties)?;
+    visit_inspect_object(0, &inspect_object);
+    Ok(())
+}
+
+fn visit_inspect_object(depth: usize, inspect_object: &InspectObject) {
+    let indent = " ".repeat(depth);
+    println!("{}{}", indent, inspect_object.name);
+    for property in &inspect_object.properties {
+        println!(
+            "{} {}:{}",
+            indent,
+            property.key,
+            match &property.value {
+                InspectValue::Text(s) => s.clone(),
+                InspectValue::Binary => String::from("<binary>"),
+            },
+        );
+    }
+    for child in &inspect_object.child_inspect_objects {
+        visit_inspect_object(depth + 1, child);
+    }
+}
+
 /// Traverses a directory of named components, and recurses into each component directory.
 /// Each component visited is added to the |child_components| vector.
 fn visit_child_components(parent_path: &Path) -> ComponentsResult {
@@ -160,12 +193,59 @@ fn visit_child_components(parent_path: &Path) -> ComponentsResult {
     Ok(child_components)
 }
 
+fn inspect_realm(job_id: u32, exclude_properties: &Vec<String>, realm: &Realm) -> TraversalResult {
+    for component in &realm.child_components {
+        inspect_component(job_id, exclude_properties, component)?;
+    }
+    for child_realm in &realm.child_realms {
+        inspect_realm(job_id, exclude_properties, child_realm)?;
+    }
+    Ok(())
+}
+
+fn inspect_component(
+    job_id: u32, exclude_properties: &Vec<String>, component: &Component,
+) -> TraversalResult {
+    if component.job_id == job_id {
+        visit_threads(&component.path, exclude_properties)?;
+    }
+    for component in &component.child_components {
+        inspect_component(job_id, exclude_properties, component)?;
+    }
+    Ok(())
+}
+
+#[derive(StructOpt, Debug)]
+#[structopt(
+    name = "Component Statistics (cs) Reporting Tool",
+    about = "Displays information about components on the system."
+)]
+struct Opt {
+    /// Recursively output the Inspect trees of the components in the provided
+    /// job Id.
+    #[structopt(short = "i", long = "inspect")]
+    job_id: Option<u32>,
+
+    // Properties to exclude from display when presenting Inspect trees.
+    #[structopt(
+        short = "e",
+        long = "exclude-properties",
+        raw(use_delimiter = "true"),
+        default_value = "stack,stacks"
+    )]
+    exclude_properties: Vec<String>,
+}
+
 fn main() -> TraversalResult {
     // Visit the directory /hub and recursively traverse it, outputting
     // information about the component hierarchy.
     // See https://fuchsia.googlesource.com/docs/+/master/the-book/hub.md for
     // more information on the Hub directory structure.
+    let opt = Opt::from_args();
     let root_realm = Realm::create("/hub")?;
-    println!("{}", root_realm);
+    match opt.job_id {
+        Some(job_id) => inspect_realm(job_id, &opt.exclude_properties, &root_realm)?,
+        _ => println!("{}", root_realm),
+    };
     Ok(())
 }
