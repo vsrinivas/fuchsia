@@ -350,8 +350,7 @@ public:
     void Mexec(zx::vmo kernel, zx::vmo bootdata);
 
     void Suspend(uint32_t flags);
-    void ContinueSuspend(SuspendContext* ctx);
-    Devhost* BuildSuspendList(SuspendContext* ctx);
+    void BuildSuspendList();
 
     void DriverAdded(Driver* drv, const char* version);
     void DriverAddedInit(Driver* drv, const char* version);
@@ -434,6 +433,7 @@ private:
     bool system_available_ = false;
     bool system_loaded_ = false;
 
+    void Suspend(SuspendContext ctx);
     fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
 };
 
