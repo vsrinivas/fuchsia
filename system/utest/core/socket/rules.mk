@@ -11,11 +11,15 @@ MODULE_TYPE := usertest
 MODULE_USERTEST_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/socket.c \
+    $(LOCAL_DIR)/socket.cpp \
 
 MODULE_NAME := socket-test
 
 MODULE_LIBS := \
     system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
+
+MODULE_STATIC_LIBS := \
+    system/ulib/fbl \
+    system/ulib/zxcpp \
 
 include make/module.mk

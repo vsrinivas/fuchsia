@@ -3,27 +3,31 @@
 // found in the LICENSE file.
 
 #include <assert.h>
-#include <zircon/syscalls.h>
-#include <unittest/unittest.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
 
-static zx_signals_t get_satisfied_signals(zx_handle_t handle) {
+#include <fbl/array.h>
+#include <unittest/unittest.h>
+#include <zircon/syscalls.h>
+
+namespace {
+
+zx_signals_t get_satisfied_signals(zx_handle_t handle) {
     zx_signals_t pending = 0;
     zx_object_wait_one(handle, 0u, 0u, &pending);
     return pending;
 }
 
-static bool socket_basic(void) {
+bool socket_basic() {
     BEGIN_TEST;
 
     zx_status_t status;
     size_t count;
 
     zx_handle_t h[2];
-    uint32_t read_data[] = { 0, 0 };
+    uint32_t read_data[] = {0, 0};
 
     status = zx_socket_create(0, h, h + 1);
     ASSERT_EQ(status, ZX_OK, "");
@@ -44,7 +48,7 @@ static bool socket_basic(void) {
     status = zx_socket_read(h[0], 0u, read_data, sizeof(read_data), &count);
     EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
 
-    static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
+    constexpr uint32_t write_data[] = {0xdeadbeef, 0xc0ffee};
     status = zx_socket_write(h[0], 0u, &write_data[0], sizeof(write_data[0]), &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, sizeof(write_data[0]), "");
@@ -75,7 +79,7 @@ static bool socket_basic(void) {
     END_TEST;
 }
 
-static bool socket_signals(void) {
+bool socket_signals() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -92,12 +96,12 @@ static bool socket_signals(void) {
     EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE, "");
 
     const size_t kAllSize = 128 * 1024;
-    char* big_buf =  (char*) malloc(kAllSize);
-    ASSERT_NONNULL(big_buf, "");
+    fbl::Array<char> big_buf(new char[kAllSize], kAllSize);
+    ASSERT_NONNULL(big_buf.get(), "");
 
-    memset(big_buf, 0x66, kAllSize);
+    memset(big_buf.get(), 0x66, kAllSize);
 
-    status = zx_socket_write(h0, 0u, big_buf, kAllSize / 16, &count);
+    status = zx_socket_write(h0, 0u, big_buf.get(), kAllSize / 16, &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, kAllSize / 16, "");
 
@@ -107,7 +111,7 @@ static bool socket_signals(void) {
     EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE, "");
     EXPECT_EQ(signals1, ZX_SOCKET_READABLE | ZX_SOCKET_WRITABLE, "");
 
-    status = zx_socket_read(h1, 0u, big_buf, kAllSize, &count);
+    status = zx_socket_read(h1, 0u, big_buf.get(), kAllSize, &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, kAllSize / 16, "");
 
@@ -136,11 +140,10 @@ static bool socket_signals(void) {
 
     zx_handle_close(h0);
 
-    free(big_buf);
     END_TEST;
 }
 
-static bool socket_signals2(void) {
+bool socket_signals2() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -174,7 +177,7 @@ static bool socket_signals2(void) {
      */
 
     /* Set valid Read/Write thresholds and verify */
-#define SOCKET2_SIGNALTEST_RX_THRESHOLD     101
+    constexpr size_t SOCKET2_SIGNALTEST_RX_THRESHOLD = 101;
     count = SOCKET2_SIGNALTEST_RX_THRESHOLD;
     status = zx_object_set_property(h0, ZX_PROP_SOCKET_RX_THRESHOLD,
                                     &count, sizeof(size_t));
@@ -196,7 +199,6 @@ static bool socket_signals2(void) {
                                     &count, sizeof(size_t));
     ASSERT_EQ(status, ZX_OK, "object_get_property");
     ASSERT_EQ(count, write_threshold, "");
-
 
     /* Make sure duplicates get the same thresholds ! */
     zx_handle_t h0_clone, h1_clone;
@@ -330,11 +332,10 @@ static bool socket_signals2(void) {
      * Next write enough data to de-assert WRITE Threshold
      */
     bufsize = write_threshold - (SOCKET2_SIGNALTEST_RX_THRESHOLD + 1);
-    char *buf2 =  (char *)malloc(bufsize);
-    status = zx_socket_write(h1, 0u, buf2, bufsize, &count);
+    fbl::Array<char> buf2(new char[bufsize], bufsize);
+    status = zx_socket_write(h1, 0u, buf2.get(), bufsize, &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, bufsize, "");
-    free(buf2);
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
     signals0_clone = get_satisfied_signals(h0_clone);
@@ -353,11 +354,10 @@ static bool socket_signals2(void) {
      * re-assert the write threshold signals.
      */
     bufsize += 10;
-    buf2 =  (char *)malloc(bufsize);
-    status = zx_socket_read(h0, 0u, buf2, bufsize, &count);
+    buf2.reset(new char[bufsize], bufsize);
+    status = zx_socket_read(h0, 0u, buf2.get(), bufsize, &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, bufsize, "");
-    free(buf2);
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
     signals0_clone = get_satisfied_signals(h0_clone);
@@ -378,7 +378,7 @@ static bool socket_signals2(void) {
     END_TEST;
 }
 
-static bool socket_peer_closed_signal(void) {
+bool socket_peer_closed_signal() {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
@@ -390,7 +390,7 @@ static bool socket_peer_closed_signal(void) {
     END_TEST;
 }
 
-static bool socket_peer_closed_set_property(void) {
+bool socket_peer_closed_set_property() {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
@@ -406,7 +406,7 @@ static bool socket_peer_closed_set_property(void) {
     END_TEST;
 }
 
-static bool socket_shutdown_write(void) {
+bool socket_shutdown_write() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -434,8 +434,8 @@ static bool socket_shutdown_write(void) {
     signals1 = get_satisfied_signals(h1);
 
     EXPECT_EQ(signals0,
-        ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
-        "");
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED, "");
 
     status = zx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -473,14 +473,16 @@ static bool socket_shutdown_write(void) {
     EXPECT_EQ(status, ZX_OK, "");
 
     signals1 = get_satisfied_signals(h1);
-    EXPECT_EQ(signals1, ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED, "");
+    EXPECT_EQ(signals1,
+              ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED,
+              "");
 
     zx_handle_close(h1);
 
     END_TEST;
 }
 
-static bool socket_shutdown_read(void) {
+bool socket_shutdown_read() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -507,7 +509,8 @@ static bool socket_shutdown_read(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED, "");
 
     status = zx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -544,14 +547,14 @@ static bool socket_shutdown_read(void) {
     END_TEST;
 }
 
-static bool socket_bytes_outstanding(void) {
+bool socket_bytes_outstanding() {
     BEGIN_TEST;
 
     zx_status_t status;
     size_t count;
 
     zx_handle_t h[2];
-    uint32_t read_data[] = { 0, 0 };
+    uint32_t read_data[] = {0, 0};
 
     status = zx_socket_create(0, h, h + 1);
     ASSERT_EQ(status, ZX_OK, "");
@@ -559,7 +562,7 @@ static bool socket_bytes_outstanding(void) {
     status = zx_socket_read(h[0], 0u, read_data, sizeof(read_data), &count);
     EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
 
-    static const uint32_t write_data[] = { 0xdeadbeef, 0xc0ffee };
+    constexpr uint32_t write_data[] = {0xdeadbeef, 0xc0ffee};
     status = zx_socket_write(h[0], 0u, &write_data[0], sizeof(write_data[0]), &count);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_EQ(count, sizeof(write_data[0]), "");
@@ -592,7 +595,7 @@ static bool socket_bytes_outstanding(void) {
     END_TEST;
 }
 
-static bool socket_bytes_outstanding_shutdown_write(void) {
+bool socket_bytes_outstanding_shutdown_write() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -620,8 +623,8 @@ static bool socket_bytes_outstanding_shutdown_write(void) {
     signals1 = get_satisfied_signals(h1);
 
     EXPECT_EQ(signals0,
-        ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
-        "");
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED, "");
 
     status = zx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -666,8 +669,7 @@ static bool socket_bytes_outstanding_shutdown_write(void) {
     END_TEST;
 }
 
-
-static bool socket_bytes_outstanding_shutdown_read(void) {
+bool socket_bytes_outstanding_shutdown_read() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -694,7 +696,8 @@ static bool socket_bytes_outstanding_shutdown_read(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
 
-    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED, "");
 
     status = zx_socket_write(h0, 0u, "abcde", 5u, &count);
@@ -739,7 +742,7 @@ static bool socket_bytes_outstanding_shutdown_read(void) {
     END_TEST;
 }
 
-static bool socket_short_write(void) {
+bool socket_short_write() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -750,20 +753,19 @@ static bool socket_short_write(void) {
 
     // TODO(qsr): Request socket buffer and use (socket_buffer + 1).
     const size_t buffer_size = 256 * 1024 + 1;
-    char* buffer = malloc(buffer_size);
+    fbl::Array<char> buffer(new char[buffer_size], buffer_size);
     size_t written = ~(size_t)0; // This should get overwritten by the syscall.
-    status = zx_socket_write(h0, 0u, buffer, buffer_size, &written);
+    status = zx_socket_write(h0, 0u, buffer.get(), buffer_size, &written);
     EXPECT_EQ(status, ZX_OK, "");
     EXPECT_LT(written, buffer_size, "");
 
-    free(buffer);
     zx_handle_close(h0);
     zx_handle_close(h1);
 
     END_TEST;
 }
 
-static bool socket_datagram(void) {
+bool socket_datagram() {
     BEGIN_TEST;
 
     size_t count;
@@ -838,7 +840,7 @@ static bool socket_datagram(void) {
     END_TEST;
 }
 
-static bool socket_datagram_no_short_write(void) {
+bool socket_datagram_no_short_write() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -874,7 +876,7 @@ static bool socket_datagram_no_short_write(void) {
     END_TEST;
 }
 
-static bool socket_control_plane_absent(void) {
+bool socket_control_plane_absent() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -901,7 +903,7 @@ static bool socket_control_plane_absent(void) {
     END_TEST;
 }
 
-static bool socket_control_plane(void) {
+bool socket_control_plane() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -924,7 +926,8 @@ static bool socket_control_plane(void) {
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
     EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE, "");
-    EXPECT_EQ(signals1, ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
+    EXPECT_EQ(signals1,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_CONTROL_WRITABLE, "");
 
     status = zx_socket_write(h0, ZX_SOCKET_CONTROL, "hi", 2u, NULL);
     EXPECT_EQ(status, ZX_ERR_SHOULD_WAIT, "");
@@ -981,7 +984,7 @@ static bool socket_control_plane(void) {
     END_TEST;
 }
 
-static bool socket_control_plane_shutdown(void) {
+bool socket_control_plane_shutdown() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -1005,8 +1008,10 @@ static bool socket_control_plane_shutdown(void) {
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
-    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE
-                        | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_WRITABLE | ZX_SOCKET_READABLE |
+                  ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_CONTROL_WRITABLE, "");
 
     status = zx_socket_write(h0, ZX_SOCKET_CONTROL, "hello1", 6u, &count);
@@ -1019,14 +1024,16 @@ static bool socket_control_plane_shutdown(void) {
 
     signals0 = get_satisfied_signals(h0);
     signals1 = get_satisfied_signals(h1);
-    EXPECT_EQ(signals0, ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE
-                        | ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED, "");
+    EXPECT_EQ(signals0,
+              ZX_SOCKET_WRITABLE | ZX_SOCKET_CONTROL_READABLE | ZX_SOCKET_READABLE |
+                  ZX_SOCKET_PEER_WRITE_DISABLED,
+              "");
     EXPECT_EQ(signals1, ZX_SOCKET_WRITE_DISABLED | ZX_SOCKET_CONTROL_READABLE, "");
 
     END_TEST;
 }
 
-static bool socket_accept(void) {
+bool socket_accept() {
     BEGIN_TEST;
 
     zx_status_t status;
@@ -1124,7 +1131,7 @@ static bool socket_accept(void) {
     END_TEST;
 }
 
-bool socket_share_invalid_handle(void) {
+bool socket_share_invalid_handle() {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
@@ -1140,7 +1147,7 @@ bool socket_share_invalid_handle(void) {
     END_TEST;
 }
 
-bool socket_zero_size(void) {
+bool socket_zero_size() {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
@@ -1178,7 +1185,7 @@ bool socket_zero_size(void) {
     END_TEST;
 }
 
-bool socket_share_consumes_on_failure(void) {
+bool socket_share_consumes_on_failure() {
     BEGIN_TEST;
 
     zx_handle_t socket[2];
@@ -1205,6 +1212,8 @@ bool socket_share_consumes_on_failure(void) {
 
     END_TEST;
 }
+
+} // namespace
 
 BEGIN_TEST_CASE(socket_tests)
 RUN_TEST(socket_basic)
