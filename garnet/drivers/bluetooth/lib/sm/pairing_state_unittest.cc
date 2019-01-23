@@ -87,6 +87,12 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     auth_failure_status_ = status;
   }
 
+  // Called by |pairing_| when the link security properties change.
+  void OnNewSecurityProperties(const SecurityProperties& sec) override {
+    new_sec_props_count_++;
+    new_sec_props_ = sec;
+  }
+
   void UpgradeSecurity(SecurityLevel level) {
     ZX_DEBUG_ASSERT(pairing_);
     pairing_->UpgradeSecurity(level, [this](auto status, const auto& props) {
@@ -245,6 +251,9 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     return auth_failure_status_;
   }
 
+  int new_sec_props_count() const { return new_sec_props_count_; }
+  const SecurityProperties& new_sec_props() const { return new_sec_props_; }
+
   const std::optional<LTK>& ltk() const { return pairing_data_.ltk; }
   const std::optional<Key>& irk() const { return pairing_data_.irk; }
   const std::optional<DeviceAddress>& identity() const {
@@ -293,6 +302,11 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   // recent value that it was called with.
   int pairing_data_callback_count_ = 0;
   PairingData pairing_data_;
+
+  // Number of times the link security properties have been notified via
+  // OnNewSecurityProperties().
+  int new_sec_props_count_ = 0;
+  SecurityProperties new_sec_props_;
 
   // State tracking the OnPairingComplete event.
   int pairing_complete_count_ = 0;
@@ -401,6 +415,8 @@ class SMP_MasterPairingTest : public SMP_PairingStateTest {
     fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
                                                  true /* enabled */);
     RunLoopUntilIdle();
+    EXPECT_EQ(1, new_sec_props_count());
+    EXPECT_EQ(level, new_sec_props().level());
   }
 
  private:
@@ -1100,6 +1116,7 @@ TEST_F(SMP_MasterPairingTest, EncryptionWithSTKFails) {
   EXPECT_EQ(0u, fake_link()->ltk()->rand());
 
   // The host should have requested encryption.
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
   EXPECT_EQ(1, fake_link()->start_encryption_count());
 
   fake_link()->TriggerEncryptionChangeCallback(
@@ -1113,6 +1130,11 @@ TEST_F(SMP_MasterPairingTest, EncryptionWithSTKFails) {
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
   EXPECT_EQ(hci::StatusCode::kPinOrKeyMissing,
             auth_failure_status().protocol_error());
+
+  // No security property update should have been sent since the security
+  // properties have not changed.
+  EXPECT_EQ(0, new_sec_props_count());
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
 }
 
 TEST_F(SMP_MasterPairingTest, EncryptionDisabledInPhase2) {
@@ -1126,6 +1148,7 @@ TEST_F(SMP_MasterPairingTest, EncryptionDisabledInPhase2) {
 
   // The host should have requested encryption.
   EXPECT_EQ(1, fake_link()->start_encryption_count());
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
 
   fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
                                                false /* enabled */);
@@ -1136,6 +1159,11 @@ TEST_F(SMP_MasterPairingTest, EncryptionDisabledInPhase2) {
   EXPECT_EQ(0, auth_failure_callback_count());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, pairing_status().protocol_error());
   EXPECT_EQ(ErrorCode::kUnspecifiedReason, received_error_code());
+
+  // No security property update should have been sent since the security
+  // properties have not changed.
+  EXPECT_EQ(0, new_sec_props_count());
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
 }
 
 // Tests that the pairing procedure ends after encryption with the STK if there
@@ -1172,6 +1200,10 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithoutKeyExchange) {
   EXPECT_EQ(SecurityLevel::kEncrypted, sec_props().level());
   EXPECT_EQ(16u, sec_props().enc_key_size());
   EXPECT_FALSE(sec_props().secure_connections());
+
+  // The security properties should have been updated to match the STK.
+  EXPECT_EQ(1, new_sec_props_count());
+  EXPECT_EQ(sec_props(), pairing()->security());
 
   ASSERT_TRUE(fake_link()->ltk());
 }
@@ -1289,6 +1321,13 @@ TEST_F(SMP_MasterPairingTest, Phase3EncryptionWithLTKFails) {
   EXPECT_EQ(pairing_status(), pairing_complete_status());
   EXPECT_EQ(hci::StatusCode::kPinOrKeyMissing,
             auth_failure_status().protocol_error());
+
+  // Security properties should have been notified twice (once for the STK and
+  // LTK each).
+  EXPECT_EQ(2, new_sec_props_count());
+
+  // The link is not secure since encryption failed.
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
 }
 
 // Pairing completes after obtaining encryption information only.
@@ -1340,6 +1379,10 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithEncKey) {
   EXPECT_EQ(kLTK, ltk()->key().value());
   EXPECT_EQ(kRand, ltk()->key().rand());
   EXPECT_EQ(kEDiv, ltk()->key().ediv());
+
+  // No security property update should have been sent for the LTK. This is
+  // because the LTK and the STK are expected to have the same properties.
+  EXPECT_EQ(1, new_sec_props_count());
 }
 
 TEST_F(SMP_MasterPairingTest, Phase3IRKReceivedTwice) {
@@ -1471,19 +1514,22 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
   uint64_t kRand = 5;
   uint16_t kEDiv = 20;
 
+  // The link should be assigned the STK as its link key.
+  EXPECT_EQ(stk, fake_link()->ltk()->value());
+
   // Receive EncKey
   ReceiveEncryptionInformation(kLTK);
   ReceiveMasterIdentification(kRand, kEDiv);
   RunLoopUntilIdle();
 
-  // Pairing still pending. No request to re-encrypt with the LTK should have
-  // been made (the link should be encrypted with the STK).
+  // Pairing still pending. SMP should have assigned the LTK to the link without
+  // requesting to re-encrypt with the LTK (i.e. the link should remain
+  // encrypted with the STK until pairing is complete).
   EXPECT_EQ(0, pairing_failed_count());
   EXPECT_EQ(0, pairing_callback_count());
   EXPECT_EQ(0, pairing_complete_count());
   EXPECT_TRUE(fake_link()->ltk());
-  EXPECT_NE(kLTK, fake_link()->ltk()->value());
-  EXPECT_EQ(stk, fake_link()->ltk()->value());
+  EXPECT_EQ(kLTK, fake_link()->ltk()->value());
   EXPECT_EQ(1, fake_link()->start_encryption_count());
 
   // Receive IdKey
@@ -1532,22 +1578,32 @@ TEST_F(SMP_MasterPairingTest, Phase3CompleteWithAllKeys) {
   EXPECT_EQ(kPeerAddr, *identity());
 }
 
-TEST_F(SMP_MasterPairingTest, SetCurrentSecurityFailsDuringPairing) {
+TEST_F(SMP_MasterPairingTest, AssignLongTermKeyFailsDuringPairing) {
   UpgradeSecurity(SecurityLevel::kEncrypted);  // Initiate pairing.
   SecurityProperties sec_props(SecurityLevel::kAuthenticated, 16, false);
-  EXPECT_FALSE(pairing()->SetCurrentSecurity(LTK(sec_props, hci::LinkKey())));
+  EXPECT_FALSE(pairing()->AssignLongTermKey(LTK(sec_props, hci::LinkKey())));
+  EXPECT_EQ(0, fake_link()->start_encryption_count());
   EXPECT_EQ(SecurityLevel::kNoSecurity, pairing()->security().level());
 }
 
-TEST_F(SMP_MasterPairingTest, SetCurrentSecurity) {
+TEST_F(SMP_MasterPairingTest, AssignLongTermKey) {
   SecurityProperties sec_props(SecurityLevel::kAuthenticated, 16, false);
   LTK ltk(sec_props, hci::LinkKey());
 
-  EXPECT_TRUE(pairing()->SetCurrentSecurity(ltk));
+  EXPECT_TRUE(pairing()->AssignLongTermKey(ltk));
   EXPECT_EQ(1, fake_link()->start_encryption_count());
-  EXPECT_EQ(SecurityLevel::kAuthenticated, pairing()->security().level());
   ASSERT_TRUE(fake_link()->ltk());
   EXPECT_EQ(ltk.key(), *fake_link()->ltk());
+
+  // The link security level is not assigned until successful encryption.
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
+  fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
+                                               true /* enabled */);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, new_sec_props_count());
+  EXPECT_EQ(sec_props, new_sec_props());
+  EXPECT_EQ(sec_props, pairing()->security());
 }
 
 TEST_F(SMP_SlavePairingTest, ReceiveSecondPairingRequestWhilePairing) {
@@ -1741,26 +1797,36 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
 
 // TODO(armansito): Add tests for Phase 3 in slave role
 
-TEST_F(SMP_SlavePairingTest, SetCurrentSecurityFailsDuringPairing) {
+TEST_F(SMP_SlavePairingTest, AssignLongTermKeyFailsDuringPairing) {
   ReceivePairingRequest();
   RunLoopUntilIdle();
   SecurityProperties sec_props(SecurityLevel::kAuthenticated, 16, false);
-  EXPECT_FALSE(pairing()->SetCurrentSecurity(LTK(sec_props, hci::LinkKey())));
+  EXPECT_FALSE(pairing()->AssignLongTermKey(LTK(sec_props, hci::LinkKey())));
+  EXPECT_EQ(0, fake_link()->start_encryption_count());
   EXPECT_EQ(SecurityLevel::kNoSecurity, pairing()->security().level());
 }
 
-TEST_F(SMP_SlavePairingTest, SetCurrentSecurity) {
+TEST_F(SMP_SlavePairingTest, AssignLongTermKey) {
   SecurityProperties sec_props(SecurityLevel::kAuthenticated, 16, false);
   LTK ltk(sec_props, hci::LinkKey());
 
-  EXPECT_TRUE(pairing()->SetCurrentSecurity(ltk));
-  EXPECT_EQ(SecurityLevel::kAuthenticated, pairing()->security().level());
+  EXPECT_TRUE(pairing()->AssignLongTermKey(ltk));
   ASSERT_TRUE(fake_link()->ltk());
   EXPECT_EQ(ltk.key(), *fake_link()->ltk());
 
   // No encryption request should have been made as the master is expected to do
   // it.
   EXPECT_EQ(0, fake_link()->start_encryption_count());
+
+  // The link security level is not assigned until successful encryption.
+  EXPECT_EQ(SecurityProperties(), pairing()->security());
+  fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
+                                               true /* enabled */);
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, new_sec_props_count());
+  EXPECT_EQ(sec_props, new_sec_props());
+  EXPECT_EQ(sec_props, pairing()->security());
 }
 
 }  // namespace

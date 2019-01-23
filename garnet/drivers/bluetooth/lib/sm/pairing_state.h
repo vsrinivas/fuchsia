@@ -57,7 +57,7 @@ class PairingState final : public Bearer::Listener {
     virtual void OnPairingComplete(Status status) = 0;
 
     // Called when new pairing data has been obtained for this peer.
-    virtual void OnNewPairingData(const sm::PairingData& data) = 0;
+    virtual void OnNewPairingData(const PairingData& data) = 0;
 
     // Called when the link layer authentication procedure fails. This likely
     // indicates that the LTK or STK used to encrypt the connection was rejected
@@ -65,6 +65,9 @@ class PairingState final : public Bearer::Listener {
     //
     // The underlying link will disconnect after this callback runs.
     virtual void OnAuthenticationFailure(hci::Status status) = 0;
+
+    // Called when the security properties of the link change.
+    virtual void OnNewSecurityProperties(const SecurityProperties& sec) = 0;
   };
 
   // |link|: The LE logical link over which pairing procedures occur.
@@ -89,11 +92,10 @@ class PairingState final : public Bearer::Listener {
   // will be disconnected by the controller (Vol 2, Part E, 7.8.24;
   // hci::Connection guarantees this by severing the link directly).
   //
-  // TODO(armansito): The failure path is less obvious when the local device is
-  // the slave since there is no way to immediately tell whether |ltk| is still
-  // valid or not, since the master initiates the authentication procedure. Make
-  // sure that we disconnect the link in that case?
-  bool SetCurrentSecurity(const LTK& ltk);
+  // This function is mainly intended to assign an existing LTK to a connection
+  // (e.g. from bonding data). This function overwrites any previously assigned
+  // LTK.
+  bool AssignLongTermKey(const LTK& ltk);
 
   // TODO(armansito): Add function to register a BR/EDR link and SMP channel.
 
@@ -206,9 +208,6 @@ class PairingState final : public Bearer::Listener {
     common::UInt128 ltk_bytes;  // LTK without ediv/rand
     common::UInt128 irk;
     common::DeviceAddress identity_address;
-
-    // Keys obtained during pairing.
-    std::optional<hci::LinkKey> ltk;  // LTK with ediv/rand
   };
 
   // Represents a pending request to update the security level.
@@ -220,6 +219,10 @@ class PairingState final : public Bearer::Listener {
     SecurityLevel level;
     PairingCallback callback;
   };
+
+  // Assign the current security properties and notify the delegate of the
+  // change.
+  void SetSecurityProperties(const SecurityProperties& sec);
 
   // Aborts an ongoing legacy pairing procedure.
   void AbortLegacyPairing(ErrorCode error_code);
@@ -244,10 +247,18 @@ class PairingState final : public Bearer::Listener {
   // Pairing Phase 2.
   void EndLegacyPairingPhase2();
 
+  // Called to send all agreed upon keys to the peer during Phase 3.
+  void SendLocalKeys();
+
   // Completes the legacy pairing process by cleaning up pairing state, updates
   // the current security level, and notifies parties that have requested
   // security.
   void CompleteLegacyPairing();
+
+  // Directly assigns the current |ltk_| and the underlying |le_link_|'s link
+  // key. This function does not initiation link layer encryption and can be
+  // called during and outside of pairing.
+  void AssignLongTermKeyInternal(const LTK& ltk);
 
   // Bearer::Listener overrides:
   void OnPairingFailed(Status status) override;
@@ -284,6 +295,10 @@ class PairingState final : public Bearer::Listener {
   fxl::WeakPtr<hci::Connection> le_link_;
   std::unique_ptr<Bearer> le_smp_;  // SMP data bearer for the LE-U link.
   SecurityProperties le_sec_;  // Current security properties of the LE-U link.
+
+  // The current LTK assigned to this connection. This can be assigned directly
+  // by calling AssignLongTermKey() or as a result of a pairing procedure.
+  std::optional<LTK> ltk_;
 
   // The state of the LE legacy pairing procedure, if any.
   std::unique_ptr<LegacyState> legacy_state_;

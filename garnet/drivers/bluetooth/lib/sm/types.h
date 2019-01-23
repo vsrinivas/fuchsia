@@ -89,6 +89,10 @@ class SecurityProperties final {
            sc_ == other.sc_;
   }
 
+  bool operator!=(const SecurityProperties& other) const {
+    return !(*this == other);
+  }
+
  private:
   SecurityLevel level_;
   size_t enc_key_size_;

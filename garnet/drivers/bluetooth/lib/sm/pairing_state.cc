@@ -137,21 +137,22 @@ void PairingState::Reset(IOCapability io_capability) {
   le_smp_->set_io_capability(io_capability);
 }
 
-bool PairingState::SetCurrentSecurity(const LTK& ltk) {
+bool PairingState::AssignLongTermKey(const LTK& ltk) {
   if (legacy_state_) {
-    bt_log(TRACE, "sm", "Cannot directly set LTK while pairing is in progress");
+    bt_log(TRACE, "sm",
+           "Cannot directly assign LTK while pairing is in progress");
     return false;
   }
 
-  le_link_->set_link_key(ltk.key());
+  AssignLongTermKeyInternal(ltk);
+
+  // Try to initiate encryption if we are the master.
   if (le_link_->role() == hci::Connection::Role::kMaster &&
       !le_link_->StartEncryption()) {
     bt_log(ERROR, "sm", "Failed to initiate authentication procedure");
-    le_link_->set_link_key({});
     return false;
   }
 
-  le_sec_ = ltk.security();
   return true;
 }
 
@@ -179,6 +180,17 @@ void PairingState::UpgradeSecurity(SecurityLevel level,
 
   request_queue_.emplace(level, std::move(callback));
   BeginLegacyPairingPhase1(level);
+}
+
+void PairingState::SetSecurityProperties(const SecurityProperties& sec) {
+  if (sec != le_sec_) {
+    bt_log(TRACE, "sm",
+           "security properties changed - handle: %#.4x, new: %s, old: %s",
+           le_link_->handle(), sec.ToString().c_str(),
+           le_sec_.ToString().c_str());
+    le_sec_ = sec;
+    delegate_->OnNewSecurityProperties(le_sec_);
+  }
 }
 
 void PairingState::AbortLegacyPairing(ErrorCode error_code) {
@@ -308,8 +320,8 @@ void PairingState::EndLegacyPairingPhase2() {
 
   // Update the current security level. Even though the link is encrypted with
   // the STK (i.e. a temporary key) it provides a level of security.
-  le_sec_ = FeaturesToProperties(*legacy_state_->features);
   legacy_state_->stk_encrypted = true;
+  SetSecurityProperties(FeaturesToProperties(*legacy_state_->features));
 
   // If the slave has no keys to send then we're done with pairing. Since we're
   // only encrypted with the STK, the pairing will be short-term (this is the
@@ -342,12 +354,12 @@ void PairingState::CompleteLegacyPairing() {
   le_smp_->StopTimer();
 
   // The security properties of all keys are determined by the security
-  // properties of the link used to distribute them. This is reflected by
-  // |le_sec_|.
+  // properties of the link used to distribute them. This is already reflected
+  // by |le_sec_|.
 
   PairingData pairing_data;
-  if (legacy_state_->ltk) {
-    pairing_data.ltk = LTK(le_sec_, *legacy_state_->ltk);
+  if (ltk_) {
+    pairing_data.ltk = *ltk_;
   }
 
   if (legacy_state_->has_irk) {
@@ -674,10 +686,11 @@ void PairingState::OnMasterIdentification(uint16_t ediv, uint64_t random) {
     return;
   }
 
-  // Store the LTK. We'll notify it when pairing is complete.
-  hci::LinkKey ltk(legacy_state_->ltk_bytes, random, ediv);
+  // The security properties of the LTK are determined by the current link
+  // properties (i.e. the properties of the STK).
+  AssignLongTermKeyInternal(
+      LTK(le_sec_, hci::LinkKey(legacy_state_->ltk_bytes, random, ediv)));
   legacy_state_->obtained_remote_keys |= KeyDistGen::kEncKey;
-  legacy_state_->ltk = ltk;
 
   // "EncKey" received. Complete pairing if possible.
   OnExpectedKeyReceived();
@@ -768,10 +781,24 @@ void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
     delegate_->OnAuthenticationFailure(status);
   }
 
-  // TODO(armansito): Have separate subroutines to handle this event for legacy
-  // and secure connections.
+  if (!enabled) {
+    bt_log(TRACE, "sm", "encryption disabled (handle: %#.4x)",
+           le_link_->handle());
+    SetSecurityProperties(sm::SecurityProperties());
+  } else if (!legacy_state_) {
+    bt_log(TRACE, "sm", "encryption enabled while not pairing");
+    // If encryption was enabled while not pairing, then the link key must match
+    // |ltk_|. We update the security properties based on that key. Otherwise,
+    // we let the pairing handlers below determine the security properties (i.e.
+    // EndLegacyPairingPhase2() and CompleteLegacyPairing().
+    ZX_DEBUG_ASSERT(le_link_->ltk());
+    ZX_DEBUG_ASSERT(ltk_);
+    ZX_DEBUG_ASSERT(*le_link_->ltk() == ltk_->key());
+    SetSecurityProperties(ltk_->security());
+  }
+
+  // Nothing to do if no pairing is in progress.
   if (!legacy_state_) {
-    bt_log(SPEW, "sm", "ignoring encryption change while not pairing");
     return;
   }
 
@@ -813,17 +840,20 @@ void PairingState::OnExpectedKeyReceived() {
   // We are no longer in Phase 3.
   ZX_DEBUG_ASSERT(!legacy_state_->InPhase3());
 
-  // Complete pairing now if we didn't receive a LTK. Otherwise we'll mark it as
-  // complete when the link is encrypted with it.
-  if (!legacy_state_->ltk) {
+  // Complete pairing now if we don't need to wait for encryption using the LTK.
+  // Otherwise we'll mark it as complete when the link is encrypted with it.
+  if (legacy_state_->IsComplete()) {
     CompleteLegacyPairing();
     return;
   }
 
-  le_link_->set_link_key(*legacy_state_->ltk);
-  if (!le_link_->StartEncryption()) {
-    bt_log(ERROR, "sm", "failed to start encryption");
-    AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+  if (ltk_ && legacy_state_->features->initiator) {
+    ZX_DEBUG_ASSERT(le_link_->ltk());
+    ZX_DEBUG_ASSERT(*le_link_->ltk() == ltk_->key());
+    if (!le_link_->StartEncryption()) {
+      bt_log(ERROR, "sm", "failed to start encryption");
+      AbortLegacyPairing(ErrorCode::kUnspecifiedReason);
+    }
   }
 }
 
@@ -839,6 +869,11 @@ void PairingState::LEPairingAddresses(const DeviceAddress** out_initiator,
     *out_initiator = &le_link_->peer_address();
     *out_responder = &le_link_->local_address();
   }
+}
+
+void PairingState::AssignLongTermKeyInternal(const LTK& ltk) {
+  ltk_ = ltk;
+  le_link_->set_link_key(ltk.key());
 }
 
 }  // namespace sm

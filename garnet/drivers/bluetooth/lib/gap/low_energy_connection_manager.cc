@@ -158,8 +158,8 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
     // Encrypt the link with the current LTK if it exists.
     if (ltk) {
-      bt_log(INFO, "gap-le", "encrypting link with existing LTK");
-      pairing_->SetCurrentSecurity(*ltk);
+      bt_log(INFO, "gap-le", "assigning existing LTK");
+      pairing_->AssignLongTermKey(*ltk);
     }
 
     // Initialize the GATT layer.
@@ -176,14 +176,12 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
 
     bt_log(TRACE, "gap-le", "received security upgrade request");
 
-    pairing_->UpgradeSecurity(
-        level, [handle, dd = data_domain_, cb = std::move(callback)](
-                   sm::Status status, const auto& sp) {
-          bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
-                 status.ToString().c_str(), sp.ToString().c_str());
-          dd->AssignLinkSecurityProperties(handle, sp);
-          cb(status);
-        });
+    pairing_->UpgradeSecurity(level, [handle, cb = std::move(callback)](
+                                         sm::Status status, const auto& sp) {
+      bt_log(INFO, "gap-le", "pairing status: %s, properties: %s",
+             status.ToString().c_str(), sp.ToString().c_str());
+      cb(status);
+    });
   }
 
   // sm::PairingState::Delegate override:
@@ -209,11 +207,6 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
                : "",
            pairing_data.csrk ? "csrk " : "", id().c_str());
 
-    // Update the data plane with the correct link security level.
-    ZX_DEBUG_ASSERT(pairing_);
-    data_domain_->AssignLinkSecurityProperties(link_->handle(),
-                                               pairing_->security());
-
     if (!conn_mgr_->device_cache()->StoreLowEnergyBond(id_, pairing_data)) {
       bt_log(ERROR, "gap-le", "failed to cache bonding data (id: %s)",
              id().c_str());
@@ -236,13 +229,14 @@ class LowEnergyConnection final : public sm::PairingState::Delegate {
     // stored link key is not valid.
     bt_log(ERROR, "gap-le", "link layer authentication failed: %s",
            status.ToString().c_str());
+  }
 
-    // Report the link to be non-secure.
-    // TODO(armansito): sm::PairingState::security() should accurately reflect
-    // the link security properties. It can currently contain a stale value
-    // following authentication failures.
-    data_domain_->AssignLinkSecurityProperties(link_->handle(),
-                                               sm::SecurityProperties());
+  // sm::PairingState::Delegate override:
+  void OnNewSecurityProperties(const sm::SecurityProperties& sec) override {
+    bt_log(TRACE, "gap-le", "new link security properties: %s",
+           sec.ToString().c_str());
+    // Update the data plane with the correct link security level.
+    data_domain_->AssignLinkSecurityProperties(link_->handle(), sec);
   }
 
   // sm::PairingState::Delegate override:
