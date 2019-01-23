@@ -32,7 +32,7 @@ enum class System : int8_t {
 // Sets a Unit's system. A unit can only belong to a single system.
 // Calling SetSystem on a Unit that already has a system defined
 // will overwrite the current system.
-void SetSystem(hid::unit::System system, Unit& unit);
+void SetSystem(Unit& unit, hid::unit::System system);
 hid::unit::System GetSystem(const Unit& unit);
 
 // The functions below set the exponent for various measurements.
@@ -60,7 +60,7 @@ int GetLuminousExp(const Unit& unit);
 
 // Convert a value from one unit to another.
 // Returns False if it is impossible to do the conversion.
-bool ConvertUnits(double val_in, const Unit& unit_in, double& val_out, const Unit& unit_out);
+bool ConvertUnits(const Unit& unit_in, double val_in, const Unit& unit_out, double* val_out);
 
 } // namespace unit
 } // namespace hid

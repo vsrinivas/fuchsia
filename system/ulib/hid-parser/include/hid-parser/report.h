@@ -20,11 +20,11 @@ struct Report {
 // Extracts the data from report that has been translated
 // into the logical units described by attr.unit. This is the recommended
 // extraction function for users of this library.
-bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double& value_out);
+bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* value_out);
 
 // Extracts the data already converted as a given unit
 bool ExtractWithUnit(const Report& report, const hid::Attributes& attr,
-                     double& value_out, const Unit& unit_out);
+                     const Unit& unit_out, double* value_out);
 
 // Helper functions that extracts the raw byte data from a report. This is only
 // recommended for users that know what they are doing and are willing to

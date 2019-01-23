@@ -85,11 +85,16 @@ bool ExtractUint(const Report& report, const hid::Attributes& attr, uint32_t* va
     return ExtractUint<uint32_t>(report, attr, value_out);
 }
 
-bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double& value_out) {
+bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double* value_out) {
+    if (value_out == nullptr) {
+        return false;
+    }
+
     uint32_t uint_out;
     bool ret = ExtractUint(report, attr, &uint_out);
-    if (!ret)
+    if (!ret) {
         return false;
+    }
 
     // If the minimum value is less than zero, then the maximum
     // value and the value itself are an unsigned number. Otherwise they
@@ -114,19 +119,19 @@ bool ExtractAsUnit(const Report& report, const hid::Attributes& attr, double& va
 
     double resolution =
         static_cast<double>(logc_max - attr.logc_mm.min) / static_cast<double>(phys_max - phys_min);
-    value_out = val / resolution;
+    *value_out = val / resolution;
 
     return true;
 }
 
 bool ExtractWithUnit(const Report& report, const hid::Attributes& attr,
-                     double& value_out, const Unit& unit_out) {
+                     const Unit& unit_out, double* value_out) {
     double val = 0;
-    if (!ExtractAsUnit(report, attr, val)) {
+    if (!ExtractAsUnit(report, attr, &val)) {
         return false;
     }
 
-    return unit::ConvertUnits(val, attr.unit, value_out, unit_out);
+    return unit::ConvertUnits(attr.unit, val, unit_out, value_out);
 }
 
 } // namespace hid

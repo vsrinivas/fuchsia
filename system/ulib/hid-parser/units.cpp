@@ -146,7 +146,7 @@ bool ConvertTemperature(double val_in, const hid::Unit& unit_in, double& val_out
 namespace hid {
 namespace unit {
 
-void SetSystem(hid::unit::System system, Unit& unit) {
+void SetSystem(Unit& unit, hid::unit::System system) {
     SetUnitTypeExp(unit.type, static_cast<int8_t>(system), system_shift);
 }
 
@@ -214,7 +214,7 @@ int GetLuminousExp(const Unit& unit) {
     return GetUnitTypeExp(unit.type, luminous_shift);
 }
 
-bool ConvertUnits(double val_in, const hid::Unit& unit_in, double& val_out, const hid::Unit& unit_out) {
+bool ConvertUnits(const Unit& unit_in, double val_in, const Unit& unit_out, double* val_out) {
     // If the units don't have the same measurements it's impossible to do a conversion.
     if ((unit_in.type & ~system_mask) != (unit_out.type & ~system_mask)) {
         return false;
@@ -223,7 +223,7 @@ bool ConvertUnits(double val_in, const hid::Unit& unit_in, double& val_out, cons
     double val = val_in * pow(10.0, unit_in.exp - unit_out.exp);
 
     if (unit_in.type == unit_out.type) {
-        val_out = val;
+        *val_out = val;
         return true;
     }
 
@@ -239,7 +239,7 @@ bool ConvertUnits(double val_in, const hid::Unit& unit_in, double& val_out, cons
         return false;
     }
 
-    val_out = val;
+    *val_out = val;
     return true;
 }
 
