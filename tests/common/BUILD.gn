@@ -26,9 +26,9 @@ executable("common_null_module_bin") {
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }
@@ -44,7 +44,6 @@ package("common_null_module") {
 
   meta = [
     {
-
       path = "common_null_module.cmx"
       dest = "common_null_module.cmx"
     },
@@ -63,9 +62,9 @@ executable("common_active_module_bin") {
   deps = [
     ":defs",
     "//garnet/public/fidl/fuchsia.ui.viewsv1",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//zircon/public/lib/async-loop-cpp",
   ]
 }

@@ -82,7 +82,8 @@ package("ledger_tests") {
     },
     {
       # This test must be started by validation_firestore and will fail if started on its own.
-      path = rebase_path("tests/cloud_provider/cloud_provider_validation_tests.cmx")
+      path = rebase_path(
+              "tests/cloud_provider/cloud_provider_validation_tests.cmx")
       dest = "cloud_provider_validation_tests.cmx"
     },
   ]

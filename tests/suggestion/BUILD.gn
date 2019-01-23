@@ -29,10 +29,10 @@ executable_package("suggestion_test_module") {
   deps = [
     ":defs",
     "//garnet/public/lib/callback",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/lib/testing:component_base",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -54,10 +54,10 @@ executable_package("suggestion_test_session_shell") {
 
   deps = [
     ":defs",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/lib/testing:component_main",
     "//peridot/lib/testing:session_shell_base",
     "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
   ]
 }

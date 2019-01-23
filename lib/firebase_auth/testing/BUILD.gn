@@ -38,10 +38,10 @@ source_set("service_account_provider") {
   testonly = true
 
   sources = [
-    "service_account_token_minter.cc",
-    "service_account_token_minter.h",
     "service_account_token_manager.cc",
     "service_account_token_manager.h",
+    "service_account_token_minter.cc",
+    "service_account_token_minter.h",
   ]
 
   public_deps = [
@@ -111,10 +111,10 @@ source_set("unittests") {
   sources = [
     "credentials_unittest.cc",
     "json_schema_unittest.cc",
-    "service_account_test_util.h",
     "service_account_test_util.cc",
-    "service_account_token_minter_unittest.cc",
+    "service_account_test_util.h",
     "service_account_token_manager_unittest.cc",
+    "service_account_token_minter_unittest.cc",
   ]
 
   deps = [

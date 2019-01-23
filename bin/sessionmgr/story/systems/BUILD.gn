@@ -21,9 +21,9 @@ source_set("story_visibility_system") {
   ]
 
   deps = [
-    "//peridot/public/fidl/fuchsia.modular.storymodel",
     "//peridot/bin/sessionmgr/story:system",
     "//peridot/bin/sessionmgr/story/model",
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
   ]
 }
 
@@ -38,8 +38,8 @@ executable("story_visibility_system_unittest") {
     ":story_visibility_system",
     "//peridot/bin/sessionmgr/story/model",
     "//peridot/bin/sessionmgr/story/model/testing",
-    "//third_party/googletest:gtest",
     "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
     "//third_party/googletest:gtest_main",
   ]
 }

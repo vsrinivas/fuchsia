@@ -7,8 +7,8 @@ import("//peridot/build/tests_package.gni")
 # Convenience dep for most Systems.
 group("model") {
   public_deps = [
-    ":story_observer",
     ":story_mutator",
+    ":story_observer",
     "//peridot/public/fidl/fuchsia.modular.storymodel",
   ]
 }
@@ -17,6 +17,7 @@ hermetic_tests_package("story_model_unittests") {
   deps = [
     ":apply_mutations_unittest",
     ":story_model_owner_unittest",
+
     # DISALBED: FLAKY ":ledger_story_model_storage_unittest",
   ]
 }
@@ -44,8 +45,8 @@ source_set("story_mutator") {
 
 source_set("story_model_storage") {
   sources = [
-    "story_model_storage.h",
     "story_model_storage.cc",
+    "story_model_storage.h",
   ]
 
   public_deps = [
@@ -85,8 +86,8 @@ executable("apply_mutations_unittest") {
 
 source_set("noop_story_model_storage") {
   sources = [
-    "noop_story_model_storage.h",
     "noop_story_model_storage.cc",
+    "noop_story_model_storage.h",
   ]
 
   public_deps = [
@@ -101,8 +102,8 @@ source_set("noop_story_model_storage") {
 
 source_set("ledger_story_model_storage") {
   sources = [
-    "ledger_story_model_storage.h",
     "ledger_story_model_storage.cc",
+    "ledger_story_model_storage.h",
   ]
 
   public_deps = [
@@ -114,9 +115,9 @@ source_set("ledger_story_model_storage") {
     ":story_model_storage",
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:array_to_string",
     "//peridot/lib/ledger_client:page_client",
     "//peridot/lib/ledger_client:promise",
-    "//peridot/lib/fidl:array_to_string",
     "//peridot/public/fidl/fuchsia.ledger",
   ]
 }
@@ -147,9 +148,9 @@ source_set("story_model_owner") {
   ]
 
   public_deps = [
-    "//peridot/public/fidl/fuchsia.modular.storymodel",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular.storymodel",
   ]
 
   deps = [

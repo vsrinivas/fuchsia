@@ -8,7 +8,7 @@ import("//peridot/build/executable_package.gni")
 executable_package("component_context_test_module") {
   testonly = true
 
-    meta = [
+  meta = [
     {
       path = "meta/component_context_test_module.cmx"
       dest = "component_context_test_module.cmx"
@@ -23,9 +23,9 @@ executable_package("component_context_test_module") {
     ":component_context_test_service",
     ":defs",
     "//garnet/public/lib/callback",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
@@ -35,7 +35,7 @@ executable_package("component_context_test_module") {
 executable_package("component_context_test_one_agent") {
   testonly = true
 
-    meta = [
+  meta = [
     {
       path = "meta/component_context_test_one_agent.cmx"
       dest = "component_context_test_one_agent.cmx"
@@ -50,9 +50,9 @@ executable_package("component_context_test_one_agent") {
     ":component_context_test_service",
     ":defs",
     "//garnet/public/lib/fsl",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/lib/message_queue/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
@@ -62,7 +62,7 @@ executable_package("component_context_test_one_agent") {
 executable_package("component_context_test_two_agent") {
   testonly = true
 
-    meta = [
+  meta = [
     {
       path = "meta/component_context_test_two_agent.cmx"
       dest = "component_context_test_two_agent.cmx"
@@ -75,9 +75,9 @@ executable_package("component_context_test_two_agent") {
 
   deps = [
     ":defs",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
   ]
@@ -86,7 +86,7 @@ executable_package("component_context_test_two_agent") {
 executable_package("component_context_test_unstoppable_agent") {
   testonly = true
 
-    meta = [
+  meta = [
     {
       path = "meta/component_context_test_unstoppable_agent.cmx"
       dest = "component_context_test_unstoppable_agent.cmx"
@@ -99,9 +99,9 @@ executable_package("component_context_test_unstoppable_agent") {
 
   deps = [
     ":defs",
-    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/public/fidl/fuchsia.modular",
     "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
     "//peridot/tests/common:defs",
     "//zircon/public/lib/async-loop-cpp",
   ]

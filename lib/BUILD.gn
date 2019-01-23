@@ -19,8 +19,8 @@ executable("peridot_lib_unittests") {
     "//peridot/lib/module_manifest:unittests",
     "//peridot/lib/rng:unittests",
     "//peridot/lib/scoped_tmpfs:unittests",
-    "//peridot/lib/socket:unittests",
     "//peridot/lib/session_shell_settings:unittests",
+    "//peridot/lib/socket:unittests",
     "//peridot/lib/util:unittests",
     "//third_party/googletest:gtest_main",
   ]

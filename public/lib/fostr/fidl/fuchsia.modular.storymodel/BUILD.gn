@@ -8,7 +8,7 @@ fostr_fidl("fuchsia.modular.storymodel") {
   fidl_target = "//peridot/public/fidl/fuchsia.modular.storymodel"
 
   deps = [
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
     "//garnet/public/lib/fostr/fidl/fuchsia.sys2",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
   ]
 }

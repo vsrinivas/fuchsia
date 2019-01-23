@@ -112,7 +112,6 @@ fuzz_target("encoding_fuzzer") {
     ":lib",
     "//peridot/bin/ledger/storage/public",
   ]
-  corpora = [
-    "848002de6109d94118c57d79b2a8c0cfbd16ba8691bb390e3eb7437089ad99cc"
-  ]
+  corpora =
+      [ "848002de6109d94118c57d79b2a8c0cfbd16ba8691bb390e3eb7437089ad99cc" ]
 }

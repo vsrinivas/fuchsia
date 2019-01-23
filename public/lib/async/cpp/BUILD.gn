@@ -23,8 +23,8 @@ source_set("operation") {
 
   public_deps = [
     ":future",
-    "//garnet/public/lib/fxl",
     "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/fxl",
   ]
 
   deps = [

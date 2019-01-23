@@ -8,15 +8,15 @@ fostr_fidl("fuchsia.modular") {
   fidl_target = "//peridot/public/fidl/fuchsia.modular"
 
   deps = [
-    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
-    "//garnet/public/lib/fostr/fidl/fuchsia.images",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
-    "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/fostr/fidl/fuchsia.auth",
+    "//garnet/public/lib/fostr/fidl/fuchsia.images",
     "//garnet/public/lib/fostr/fidl/fuchsia.media",
-    "//peridot/public/lib/fostr/fidl/fuchsia.ledger",
-    "//peridot/public/lib/fostr/fidl/fuchsia.speech",
-    "//peridot/public/lib/fostr/fidl/fuchsia.modular.auth",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mem",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.policy",
     "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
+    "//peridot/public/lib/fostr/fidl/fuchsia.ledger",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular.auth",
+    "//peridot/public/lib/fostr/fidl/fuchsia.speech",
   ]
 }
