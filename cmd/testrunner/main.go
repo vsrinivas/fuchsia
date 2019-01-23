@@ -23,8 +23,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// TODO(IN-824): Produce a tar archive of all output files.
-
 const (
 	// Default amount of time to wait before failing to perform any IO action.
 	defaultIOTimeout = 1 * time.Minute
@@ -53,9 +51,9 @@ var (
 
 // TestRunnerOutput manages the output of this test runner.
 type TestRunnerOutput struct {
-	Summary *SummaryRecorder
-	TAP     *TAPRecorder
-	Tar     *TarRecorder
+	Summary *SummaryOutput
+	TAP     *TAPOutput
+	Tar     *TarOutput
 }
 
 func (o *TestRunnerOutput) Record(result testResult) {
@@ -83,16 +81,11 @@ func (o *TestRunnerOutput) Complete() error {
 		return err
 	}
 
-	if err := o.TarFile(bytes, runtests.TestSummaryFilename); err != nil {
+	if err := o.Tar.TarFile(bytes, runtests.TestSummaryFilename); err != nil {
 		return err
 	}
 
-	return o.Tar.Writer.Close()
-}
-
-// TarFile tars a file into the output archive.
-func (o *TestRunnerOutput) TarFile(bytes []byte, filename string) error {
-	return botanist.ArchiveBuffer(o.Tar.Writer, bytes, filename)
+	return o.Tar.Close()
 }
 
 type testResult struct {
@@ -134,14 +127,14 @@ func main() {
 
 	// Prepare test output drivers.
 	output := &TestRunnerOutput{
-		TAP:     NewTAPRecorder(os.Stdout, len(tests)),
-		Summary: &SummaryRecorder{},
+		TAP:     NewTAPOutput(os.Stdout, len(tests)),
+		Summary: &SummaryOutput{},
 	}
 	defer output.Complete()
 
-	// Add an archive Recorder if specified.
+	// Add an archive Output if specified.
 	if archive != "" {
-		tar, err := NewTarRecorder(archive)
+		tar, err := NewTarOutput(archive)
 		if err != nil {
 			log.Fatalf("failed to initialize tar recorder: %v", err)
 		}
@@ -250,11 +243,15 @@ func runFuchsiaTests(tests []testsharder.Test, output *TestRunnerOutput, devCtx 
 	// Ensure the syslog is always included in the output, even if tests fail.
 	// TODO(IN-824): Run fuchsia/linux/mac tests in go-routines and emit errors on channels.
 	defer func() {
-		if err := output.TarFile(syslogStdout.Bytes(), syslogStdoutFilename); err != nil {
+		if output.Tar == nil {
+			return
+		}
+
+		if err := output.Tar.TarFile(syslogStdout.Bytes(), syslogStdoutFilename); err != nil {
 			log.Println(err)
 		}
 
-		if err := output.TarFile(syslogStderr.Bytes(), syslogStderrFilename); err != nil {
+		if err := output.Tar.TarFile(syslogStderr.Bytes(), syslogStderrFilename); err != nil {
 			log.Println(err)
 		}
 	}()
@@ -268,12 +265,10 @@ func runTests(tests []testsharder.Test, tester Tester, output *TestRunnerOutput)
 		if err != nil {
 			log.Println(err)
 		}
-
 		if result != nil {
 			output.Record(*result)
 		}
 	}
-
 	return nil
 }
 
@@ -286,7 +281,6 @@ func runTest(ctx context.Context, test testsharder.Test, tester Tester) (*testRe
 		result = runtests.TestFailure
 		log.Println(err)
 	}
-
 	// Record the test details in the summary.
 	return &testResult{
 		Name:   test.Name,
