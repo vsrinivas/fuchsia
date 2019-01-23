@@ -499,6 +499,9 @@ interface MergeResultProvider : ErrorNotifier {
     /// |Merge()| calls fails, i.e. |status| is not |OK|, all following calls will
     /// fail with the same error.
     ///
+    /// If a key/value pair is sent multiple times in one or several |Merge()|
+    /// call, only the last pair is taken into account.
+    ///
     /// For all keys for which no merged value has been set (either here or
     /// through |MergeNonConflictingEntries()| below), the left value will be
     /// used. It is thus not necessary to send a MergedValue with a |LEFT| value
