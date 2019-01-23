@@ -69,22 +69,22 @@ PciLegacyBackend::~PciLegacyBackend() {
 }
 
 // value pointers are used to maintain type safety with field width
-void PciLegacyBackend::DeviceConfigRead(uint16_t offset, uint8_t* value) {
+void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint8_t* value) {
     fbl::AutoLock lock(&lock_);
     IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
-void PciLegacyBackend::DeviceConfigRead(uint16_t offset, uint16_t* value) {
+void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint16_t* value) {
     fbl::AutoLock lock(&lock_);
     IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
-void PciLegacyBackend::DeviceConfigRead(uint16_t offset, uint32_t* value) {
+void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint32_t* value) {
     fbl::AutoLock lock(&lock_);
     IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
-void PciLegacyBackend::DeviceConfigRead(uint16_t offset, uint64_t* value) {
+void PciLegacyBackend::ReadDeviceConfig(uint16_t offset, uint64_t* value) {
     fbl::AutoLock lock(&lock_);
     auto val = reinterpret_cast<uint32_t*>(value);
 
@@ -92,21 +92,21 @@ void PciLegacyBackend::DeviceConfigRead(uint16_t offset, uint64_t* value) {
     IoReadLocked(static_cast<uint16_t>(device_cfg_offset_ + offset + sizeof(uint32_t)), &val[1]);
 }
 
-void PciLegacyBackend::DeviceConfigWrite(uint16_t offset, uint8_t value) {
+void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint8_t value) {
     fbl::AutoLock lock(&lock_);
     IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
-void PciLegacyBackend::DeviceConfigWrite(uint16_t offset, uint16_t value) {
+void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint16_t value) {
     fbl::AutoLock lock(&lock_);
     IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
 
-void PciLegacyBackend::DeviceConfigWrite(uint16_t offset, uint32_t value) {
+void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint32_t value) {
     fbl::AutoLock lock(&lock_);
     IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), value);
 }
-void PciLegacyBackend::DeviceConfigWrite(uint16_t offset, uint64_t value) {
+void PciLegacyBackend::WriteDeviceConfig(uint16_t offset, uint64_t value) {
     fbl::AutoLock lock(&lock_);
     auto words = reinterpret_cast<uint32_t*>(&value);
     IoWriteLocked(static_cast<uint16_t>(device_cfg_offset_ + offset), words[0]);

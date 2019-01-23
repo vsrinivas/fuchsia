@@ -73,9 +73,9 @@ protected:
     // Device config management
     zx_status_t CopyDeviceConfig(void* _buf, size_t len) const;
     template <typename T>
-    T ReadDeviceConfig(uint16_t offset, T* val) { return backend_->DeviceConfigRead(offset, val); }
+    void ReadDeviceConfig(uint16_t offset, T* val) { backend_->ReadDeviceConfig(offset, val); }
     template <typename T>
-    void WriteDeviceConfig(uint16_t offset, T val) { backend_->DeviceConfigWrite(offset, val); }
+    void WriteDeviceConfig(uint16_t offset, T val) { backend_->WriteDeviceConfig(offset, val); }
 
     zx_device_t* bus_device() const { return bus_device_; }
     static int IrqThreadEntry(void* arg);

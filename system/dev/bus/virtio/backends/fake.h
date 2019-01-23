@@ -41,31 +41,31 @@ class FakeBackend : public Backend {
         EXPECT_EQ(state_, State::DEVICE_VOID);
         state_ = State::DEVICE_RESET;
     }
-    void DeviceConfigRead(uint16_t offset, uint8_t* value) override {
+    void ReadDeviceConfig(uint16_t offset, uint8_t* value) override {
         EXPECT_GT(registers8_.count(offset), 0);
         *value = registers8_[offset];
     }
-    void DeviceConfigRead(uint16_t offset, uint16_t* value) override {
+    void ReadDeviceConfig(uint16_t offset, uint16_t* value) override {
         EXPECT_GT(registers16_.count(offset), 0);
         *value = registers16_[offset];
     }
-    void DeviceConfigRead(uint16_t offset, uint32_t* value) override {
+    void ReadDeviceConfig(uint16_t offset, uint32_t* value) override {
         EXPECT_GT(registers32_.count(offset), 0);
         *value = registers32_[offset];
     }
-    void DeviceConfigRead(uint16_t offset, uint64_t* value) override {
+    void ReadDeviceConfig(uint16_t offset, uint64_t* value) override {
         EXPECT_TRUE(0);  // Not Implemented.
     }
-    void DeviceConfigWrite(uint16_t offset, uint8_t value) override {
+    void WriteDeviceConfig(uint16_t offset, uint8_t value) override {
         registers8_[offset] = value;
     }
-    void DeviceConfigWrite(uint16_t offset, uint16_t value) override {
+    void WriteDeviceConfig(uint16_t offset, uint16_t value) override {
         registers16_[offset] = value;
     }
-    void DeviceConfigWrite(uint16_t offset, uint32_t value) override {
+    void WriteDeviceConfig(uint16_t offset, uint32_t value) override {
         registers32_[offset] = value;
     }
-    void DeviceConfigWrite(uint16_t offset, uint64_t value) override {
+    void WriteDeviceConfig(uint16_t offset, uint64_t value) override {
         EXPECT_TRUE(0);  // Not Implemented.
     }
     uint16_t GetRingSize(uint16_t index) override {

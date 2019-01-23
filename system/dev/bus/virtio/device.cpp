@@ -91,7 +91,7 @@ zx_status_t Device::CopyDeviceConfig(void* _buf, size_t len) const {
     assert(_buf);
 
     for (uint16_t i = 0; i < len; i++) {
-        backend_->DeviceConfigRead(i, static_cast<uint8_t*>(_buf) + i);
+        backend_->ReadDeviceConfig(i, static_cast<uint8_t*>(_buf) + i);
     }
 
     return ZX_OK;

@@ -40,14 +40,14 @@ public:
     virtual void DeviceReset() = 0;
 
     //// Read/Write the device config
-    virtual void DeviceConfigRead(uint16_t offset, uint8_t* value) = 0;
-    virtual void DeviceConfigRead(uint16_t offset, uint16_t* value) = 0;
-    virtual void DeviceConfigRead(uint16_t offset, uint32_t* value) = 0;
-    virtual void DeviceConfigRead(uint16_t offset, uint64_t* value) = 0;
-    virtual void DeviceConfigWrite(uint16_t offset, uint8_t value) = 0;
-    virtual void DeviceConfigWrite(uint16_t offset, uint16_t value) = 0;
-    virtual void DeviceConfigWrite(uint16_t offset, uint32_t value) = 0;
-    virtual void DeviceConfigWrite(uint16_t offset, uint64_t value) = 0;
+    virtual void ReadDeviceConfig(uint16_t offset, uint8_t* value) = 0;
+    virtual void ReadDeviceConfig(uint16_t offset, uint16_t* value) = 0;
+    virtual void ReadDeviceConfig(uint16_t offset, uint32_t* value) = 0;
+    virtual void ReadDeviceConfig(uint16_t offset, uint64_t* value) = 0;
+    virtual void WriteDeviceConfig(uint16_t offset, uint8_t value) = 0;
+    virtual void WriteDeviceConfig(uint16_t offset, uint16_t value) = 0;
+    virtual void WriteDeviceConfig(uint16_t offset, uint32_t value) = 0;
+    virtual void WriteDeviceConfig(uint16_t offset, uint64_t value) = 0;
 
     // Ring methods vary based on backend due to config offsets and field sizes.
     virtual uint16_t GetRingSize(uint16_t index) = 0;

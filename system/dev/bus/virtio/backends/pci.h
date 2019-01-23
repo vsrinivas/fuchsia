@@ -50,14 +50,14 @@ public:
     // devices they will have their device config copied over via
     // CopyDeviceConfig when device config interrupts are asserted and will not
     // need to call these directly.
-    void DeviceConfigRead(uint16_t offset, uint8_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint16_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint32_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint64_t* value) override;
-    void DeviceConfigWrite(uint16_t offset, uint8_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint16_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint32_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint64_t value) override;
+    void ReadDeviceConfig(uint16_t offset, uint8_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint16_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint32_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint64_t* value) override;
+    void WriteDeviceConfig(uint16_t offset, uint8_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint16_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint32_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint64_t value) override;
 
     // Handle the virtio queues for the device. Due to configuration layouts changing
     // depending on backend this has to be handled by the backend itself.
@@ -99,14 +99,14 @@ public:
 
     // These handle writing to/from a device's device config to allow derived
     // virtio devices to work with fields only they know about.
-    void DeviceConfigRead(uint16_t offset, uint8_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint16_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint32_t* value) override;
-    void DeviceConfigRead(uint16_t offset, uint64_t* value) override;
-    void DeviceConfigWrite(uint16_t offset, uint8_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint16_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint32_t value) override;
-    void DeviceConfigWrite(uint16_t offset, uint64_t value) override;
+    void ReadDeviceConfig(uint16_t offset, uint8_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint16_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint32_t* value) override;
+    void ReadDeviceConfig(uint16_t offset, uint64_t* value) override;
+    void WriteDeviceConfig(uint16_t offset, uint8_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint16_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint32_t value) override;
+    void WriteDeviceConfig(uint16_t offset, uint64_t value) override;
 
     // Callbacks called during PciBackend's parsing of capabilities in Bind()
     void CommonCfgCallbackLocked(const virtio_pci_cap_t& cap) TA_REQ(lock_);

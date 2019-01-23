@@ -135,42 +135,42 @@ zx_status_t PciModernBackend::Init() {
 }
 
 // value pointers are used to maintain type safety with field width
-void PciModernBackend::DeviceConfigRead(uint16_t offset, uint8_t* value) {
+void PciModernBackend::ReadDeviceConfig(uint16_t offset, uint8_t* value) {
     fbl::AutoLock lock(&lock_);
     MmioRead(reinterpret_cast<volatile uint8_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigRead(uint16_t offset, uint16_t* value) {
+void PciModernBackend::ReadDeviceConfig(uint16_t offset, uint16_t* value) {
     fbl::AutoLock lock(&lock_);
     MmioRead(reinterpret_cast<volatile uint16_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigRead(uint16_t offset, uint32_t* value) {
+void PciModernBackend::ReadDeviceConfig(uint16_t offset, uint32_t* value) {
     fbl::AutoLock lock(&lock_);
     MmioRead(reinterpret_cast<volatile uint32_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigRead(uint16_t offset, uint64_t* value) {
+void PciModernBackend::ReadDeviceConfig(uint16_t offset, uint64_t* value) {
     fbl::AutoLock lock(&lock_);
     MmioRead(reinterpret_cast<volatile uint64_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigWrite(uint16_t offset, uint8_t value) {
+void PciModernBackend::WriteDeviceConfig(uint16_t offset, uint8_t value) {
     fbl::AutoLock lock(&lock_);
     MmioWrite(reinterpret_cast<volatile uint8_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigWrite(uint16_t offset, uint16_t value) {
+void PciModernBackend::WriteDeviceConfig(uint16_t offset, uint16_t value) {
     fbl::AutoLock lock(&lock_);
     MmioWrite(reinterpret_cast<volatile uint16_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigWrite(uint16_t offset, uint32_t value) {
+void PciModernBackend::WriteDeviceConfig(uint16_t offset, uint32_t value) {
     fbl::AutoLock lock(&lock_);
     MmioWrite(reinterpret_cast<volatile uint32_t*>(device_cfg_ + offset), value);
 }
 
-void PciModernBackend::DeviceConfigWrite(uint16_t offset, uint64_t value) {
+void PciModernBackend::WriteDeviceConfig(uint16_t offset, uint64_t value) {
     fbl::AutoLock lock(&lock_);
     MmioWrite(reinterpret_cast<volatile uint64_t*>(device_cfg_ + offset), value);
 }
