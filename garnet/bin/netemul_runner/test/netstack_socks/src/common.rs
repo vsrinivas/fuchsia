@@ -6,7 +6,6 @@ use {
     failure::{Error, ResultExt},
     fidl_fuchsia_netemul_sync::{BusMarker, Event, SyncManagerMarker},
     fuchsia_app::client,
-    futures::TryStreamExt,
 };
 
 const BUS_NAME: &str = "evt_bus";
@@ -36,23 +35,14 @@ impl BusConnection {
     }
 
     pub async fn wait_for_event(&self, code: i32) -> Result<(), Error> {
-        let mut stream = self
-            .bus
-            .take_event_stream()
-            .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_sync::BusEvent::OnBusData { data } => match data.code {
-                    Some(rcv_code) => {
-                        if rcv_code == code {
-                            futures::future::ok(Some(()))
-                        } else {
-                            futures::future::ok(None)
-                        }
-                    }
-                    None => futures::future::ok(None),
-                },
-                _ => futures::future::ok(None),
-            });
-        await!(stream.try_next())?;
+        let _ = await!(self.bus.wait_for_event(
+            Event {
+                code: Some(code),
+                message: None,
+                arguments: None,
+            },
+            0
+        ))?;
         Ok(())
     }
 }

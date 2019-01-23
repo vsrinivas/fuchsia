@@ -10,7 +10,6 @@ use {
     fuchsia_app::client,
     fuchsia_async::{self as fasync, TimeoutExt},
     fuchsia_zircon::DurationNum,
-    futures::TryStreamExt,
     std::io::{Read, Write},
     std::net::{SocketAddr, TcpListener, TcpStream},
     structopt::StructOpt,
@@ -39,26 +38,7 @@ impl BusConnection {
     }
 
     pub async fn wait_for_client(&mut self, expect: &'static str) -> Result<(), Error> {
-        let clients = await!(self.bus.get_clients())?;
-        if clients.contains(&String::from(expect)) {
-            return Ok(());
-        }
-
-        let mut stream = self
-            .bus
-            .take_event_stream()
-            .try_filter_map(|event| match event {
-                fidl_fuchsia_netemul_sync::BusEvent::OnClientAttached { client } => {
-                    if client == expect {
-                        futures::future::ok(Some(()))
-                    } else {
-                        futures::future::ok(None)
-                    }
-                }
-                _ => futures::future::ok(None),
-            });
-
-        await!(stream.try_next())?;
+        let _ = await!(self.bus.wait_for_clients(&mut vec![expect].drain(..), 0))?;
         Ok(())
     }
 }

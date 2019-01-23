@@ -51,11 +51,6 @@ impl BusConnection {
         Ok(())
     }
 
-    pub async fn get_clients(&self) -> Result<Vec<String>, Error> {
-        let res = await!(self.bus.get_clients())?;
-        Ok(res)
-    }
-
     pub async fn wait_for_event(&self, code: i32) -> Result<(), Error> {
         let mut stream = self
             .bus
