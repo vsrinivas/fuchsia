@@ -22,6 +22,10 @@ type SubprocessRunner struct {
 	// WD is the working directory of the subprocesses; if unspecified, that
 	// of the current process will be used.
 	WD string
+
+	// Env is the environment of the subprocess, following the usual convention of a list of
+	// strings of the form "<environment variable name>=<value>".
+	Env []string
 }
 
 // Run executes the given command.
@@ -32,6 +36,7 @@ func (r *SubprocessRunner) Run(ctx context.Context, command []string, stdout io.
 		Stdout:      stdout,
 		Stderr:      stderr,
 		Dir:         r.WD,
+		Env:         r.Env,
 		SysProcAttr: &syscall.SysProcAttr{Setpgid: true},
 	}
 

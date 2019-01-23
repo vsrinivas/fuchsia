@@ -179,7 +179,10 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanis
 	}
 
 	localTester := &SubprocessTester{
-		WD: localWD,
+		wd: localWD,
+	}
+	if devCtx != nil {
+		localTester.env = []string{devCtx.EnvironEntry()}
 	}
 
 	if err := runTests(linux, localTester.Test, output); err != nil {
