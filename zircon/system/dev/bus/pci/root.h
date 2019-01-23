@@ -7,11 +7,12 @@
 
 #pragma once
 
+#include "ref_counted.h"
+#include "upstream_node.h"
 #include <fbl/intrusive_wavl_tree.h>
 #include <fbl/macros.h>
 #include <fbl/ref_ptr.h>
 #include <zircon/compiler.h>
-#include "upstream_node.h"
 
 namespace pci {
 // Forward declaration of Bus to avoid recursive header inclusion between
@@ -20,8 +21,14 @@ class Bus;
 
 class PciRoot : public UpstreamNode {
 public:
+    // Implement refcounting for UpstreamNode
+    PCI_IMPLEMENT_REFCOUNTED;
+
     // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(PciRoot);
+    PciRoot(const PciRoot&) = delete;
+    PciRoot(PciRoot&&) = delete;
+    PciRoot& operator=(const PciRoot&) = delete;
+    PciRoot& operator=(PciRoot&&) = delete;
     virtual ~PciRoot() {}
 
     // Properties

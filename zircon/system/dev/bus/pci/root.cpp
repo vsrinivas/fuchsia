@@ -5,15 +5,15 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
+#include "root.h"
+#include "common.h"
+#include "upstream_node.h"
 #include <assert.h>
 #include <err.h>
 #include <fbl/algorithm.h>
 #include <fbl/limits.h>
 #include <inttypes.h>
 #include <string.h>
-#include "common.h"
-#include "root.h"
-#include "upstream_node.h"
 
 namespace pci {
 

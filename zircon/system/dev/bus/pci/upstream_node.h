@@ -7,6 +7,8 @@
 
 #pragma once
 
+#include "device.h"
+#include "ref_counted.h"
 #include <ddktl/protocol/pciroot.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/macros.h>
@@ -25,18 +27,19 @@
 
 namespace pci {
 
-// A forward declaration until pci::Device is ported to userspace.
-class Device : public fbl::DoublyLinkedListable<pci::Device*> {};
-
 class PciAllocator;
 class UpstreamNode {
 public:
     enum class Type { ROOT,
                       BRIDGE };
-    virtual ~UpstreamNode();
+    // UpstreamNode must have refcounting implemented by its derived classes Root or Bridge
+    PCI_REQUIRE_REFCOUNTED;
 
     // Disallow copying, assigning and moving.
-    DISALLOW_COPY_ASSIGN_AND_MOVE(UpstreamNode);
+    UpstreamNode(const UpstreamNode&) = delete;
+    UpstreamNode(UpstreamNode&&) = delete;
+    UpstreamNode& operator=(const UpstreamNode&) = delete;
+    UpstreamNode& operator=(UpstreamNode&&) = delete;
 
     Type type() const { return type_; }
     uint32_t managed_bus_id() const { return managed_bus_id_; }
@@ -46,21 +49,22 @@ public:
     virtual PciAllocator& mmio_hi_regions() = 0;
     virtual PciAllocator& pio_regions() = 0;
 
-    zx_status_t LinkDevice(pci::Device* device);
-    zx_status_t UnlinkDevice(pci::Device* device);
+    void LinkDevice(pci::Device* device) { downstream_.push_back(device); }
+    void UnlinkDevice(pci::Device* device) { downstream_.erase(*device); }
 
 protected:
     UpstreamNode(Type type, uint32_t mbus_id)
         : type_(type),
           managed_bus_id_(mbus_id) {}
+    virtual ~UpstreamNode() = default;
 
     virtual void AllocateDownstreamBars();
+    // Disable all devices directly connected to this bridge.
     virtual void DisableDownstream();
-    virtual void ScanDownstream();
+    // Unplug all devices directly connected to this bridge.
     virtual void UnplugDownstream();
-
     // The list of all devices immediately under this root/bridge.
-    fbl::DoublyLinkedList<pci::Device*> downstream_list_;
+    fbl::DoublyLinkedList<pci::Device*> downstream_;
 
 private:
     const Type type_;
@@ -85,7 +89,7 @@ public:
     PciAllocation& operator=(const PciAllocation&) = delete;
     PciAllocation& operator=(PciAllocation&&) = delete;
 
-    virtual ~PciAllocation() {}
+    virtual ~PciAllocation() = default;
     virtual zx_paddr_t base() = 0;
     virtual size_t size() = 0;
 
@@ -119,14 +123,14 @@ private:
 
 class PciAllocator {
 public:
-    virtual ~PciAllocator() {}
+    virtual ~PciAllocator() = default;
     virtual zx_status_t GetRegion(zx_paddr_t base,
                                   size_t size,
                                   fbl::unique_ptr<PciAllocation> out_alloc) = 0;
     virtual zx_status_t AddAddressSpace(fbl::unique_ptr<PciAllocation> alloc) = 0;
 
 protected:
-    PciAllocator() {};
+    PciAllocator() = default;
 };
 
 // PciRootAllocators are an implementation of PciAllocator designed
@@ -142,7 +146,6 @@ public:
     PciRootAllocator& operator=(const PciRootAllocator&) = delete;
     PciRootAllocator& operator=(PciRootAllocator&&) = delete;
 
-    virtual ~PciRootAllocator(){};
     zx_status_t GetRegion(zx_paddr_t base,
                           size_t size,
                           fbl::unique_ptr<PciAllocation> alloc) final;
@@ -164,7 +167,7 @@ private:
 // TODO(cja) implement this when bridge is ported over in the near future.
 class PciRegionAllocator : public PciAllocator {
 public:
-    PciRegionAllocator(){};
+    PciRegionAllocator() = default;
     // These should not be copied, assigned, or moved
     PciRegionAllocator(const PciRegionAllocator&) = delete;
     PciRegionAllocator(PciRegionAllocator&&) = delete;

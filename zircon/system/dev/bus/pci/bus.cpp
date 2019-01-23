@@ -5,8 +5,10 @@
 // https://opensource.org/licenses/MIT
 //
 #include "bus.h"
+#include "bridge.h"
 #include "common.h"
 #include "config.h"
+#include "device.h"
 
 #include <ddk/binding.h>
 #include <ddk/debug.h>
@@ -14,8 +16,10 @@
 #include <ddk/mmio-buffer.h>
 #include <ddk/platform-defs.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/vector.h>
 
 namespace pci {
+Bus::AllDevicesList Bus::device_list_;
 
 // Creates the PCI bus driver instance and attempts initialization.
 zx_status_t Bus::Create(zx_device_t* parent) {
@@ -71,15 +75,30 @@ zx_status_t Bus::Initialize() {
     }
 
     // Stash the ops/ctx pointers for the pciroot protocol so we can pass
-    // them to the allocators provided by Pci(e)Root
+    // them to the allocators provided by Pci(e)Root. The initial root is
+    // created to manage the start of the bus id range given to use by the
+    // pciroot protocol.
     fbl::AllocChecker ac;
-    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(0, &pciroot_));
+    root_ = fbl::unique_ptr<PciRoot>(new (&ac) PciRoot(info_.start_bus_num, &pciroot_));
     if (!ac.check()) {
         pci_errorf("failed to allocate root bookkeeping!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
+    // Begin our bus scan starting at our root
     ScanDownstream();
+    pci_infof("AllDevicesList:\n");
+    for (auto& dev : device_list_) {
+        pci_infof("\t%s %s\n", dev.config()->addr(), dev.is_bridge() ? "(b)" : "");
+    }
+
+    pci_infof("cleaning up devices\n");
+    root_->DisableDownstream();
+    root_->UnplugDownstream();
+    pci_infof("done.\n");
+
+    // Ensure the topology was cleaned up properly.
+    ZX_DEBUG_ASSERT(device_list_.size() == 0);
     return ZX_OK;
 }
 
@@ -107,36 +126,85 @@ zx_status_t Bus::MapEcam(void) {
     return ZX_OK;
 }
 
-zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* config) {
+zx_status_t Bus::MakeConfig(pci_bdf_t bdf, fbl::RefPtr<Config>* out_config) {
+    zx_status_t status;
     if (has_ecam_) {
-        return MmioConfig::Create(bdf, &ecam_, info_.start_bus_num, info_.end_bus_num, config);
+        status = MmioConfig::Create(bdf, &ecam_, info_.start_bus_num, info_.end_bus_num, out_config);
     } else {
-        return ProxyConfig::Create(bdf, &pciroot_, config);
+        status = ProxyConfig::Create(bdf, &pciroot_, out_config);
     }
+
+    if (status != ZX_OK) {
+        pci_errorf("failed to create config for %02x:%02x:%1x: %d!\n", bdf.bus_id, bdf.device_id,
+                   bdf.function_id, status);
+    }
+
+    return status;
 }
 
-// Scan downstream starting at the start bus number provided to use by the platform.
+// Scan downstream starting at the bus id managed by the Bus's Root.
 // In the process of scanning, take note of bridges found and configure any that are
 // unconfigured. In the end the Bus should have a list of all devides, and all bridges
-// should have a list of references to their own downstream devices.
+// should have a list of pointers to their own downstream devices.
 zx_status_t Bus::ScanDownstream(void) {
-    pci_infof("ScanDownstream %u:%u\n", info_.start_bus_num, info_.end_bus_num);
-    for (uint16_t bus_id = info_.start_bus_num; bus_id <= info_.end_bus_num; bus_id++) {
-        for (uint8_t dev_id = 0; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
-            for (uint8_t func_id = 0; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
-                fbl::RefPtr<Config> config;
-                pci_bdf_t bdf = { static_cast<uint8_t>(bus_id), dev_id, func_id };
-                zx_status_t status = MakeConfig(bdf, &config);
-                if (status == ZX_OK) { 
-                    if (config->Read(Config::kVendorId) != PCI_INVALID_VENDOR_ID) {
-                        pci_infof("found device at %02x:%02x.%1x\n", bus_id, dev_id, func_id);
-                    }
+    BridgeList bridge_list;
+    pci_tracef("ScanDownstream %u:%u\n", info_.start_bus_num, info_.end_bus_num);
+    // First scan the root.
+    ScanBus(root_.get(), &bridge_list);
+    // Process any bridges found underthe root, any bridges under those bridges, etc...
+    // It's important that we scan in the order we discover bridges (DFS) because
+    // when we implement bus id assignment it will affect the overall numbering
+    // scheme of the bus topology.
+    while (bridge_list.size() > 0) {
+        auto bridge = bridge_list.erase(0);
+        // 1. Scan the bus below to add devices to our downstream
+        ScanBus(bridge.get(), &bridge_list);
+        // 2. Confirm devices are in our downstream list
+        // 3. Allocate bars for the downstream list
+        // 4. Enable the downstream devices
+    }
+    return ZX_OK;
+}
+
+void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
+    uint32_t bus_id = upstream->managed_bus_id();
+    pci_tracef("scanning bus %d\n", bus_id);
+    for (uint8_t dev_id = 0; dev_id < PCI_MAX_DEVICES_PER_BUS; dev_id++) {
+        for (uint8_t func_id = 0; func_id < PCI_MAX_FUNCTIONS_PER_DEVICE; func_id++) {
+            fbl::RefPtr<Config> config;
+            pci_bdf_t bdf = {static_cast<uint8_t>(bus_id), dev_id, func_id};
+            zx_status_t status = MakeConfig(bdf, &config);
+            if (status != ZX_OK) {
+                continue;
+            }
+
+            // Check that the device is valid by verifying the vendor and device ids.
+            if (config->Read(Config::kVendorId) == PCI_INVALID_VENDOR_ID) {
+                continue;
+            }
+
+            bool is_bridge = ((config->Read(Config::kHeaderType) & PCI_HEADER_TYPE_MASK)
+                                == PCI_HEADER_TYPE_BRIDGE);
+            printf("\tfound %s at %02x:%02x.%1x\n", (is_bridge) ? "bridge" : "device",
+                   bus_id, dev_id, func_id);
+
+            // If we found a bridge, add it to our bridge list and initialize / enumerate it after
+            // we finish scanning this bus
+            if (is_bridge) {
+                fbl::RefPtr<Bridge> bridge;
+                uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
+                status = Bridge::Create(std::move(config), upstream, mbus_id, &bridge);
+                if (status != ZX_OK) {
+                    continue;
                 }
+
+                bridge_list->push_back(bridge);
+            } else {
+                // Create a device
+                pci::Device::Create(std::move(config), upstream);
             }
         }
     }
-
-    return ZX_OK;
 }
 
 void Bus::DdkRelease() {

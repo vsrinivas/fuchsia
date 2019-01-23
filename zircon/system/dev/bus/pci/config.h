@@ -138,7 +138,8 @@ public:
     virtual ~Config(){};
 
 protected:
-    Config(pci_bdf_t bdf) : bdf_(bdf) {
+    Config(pci_bdf_t bdf)
+        : bdf_(bdf) {
         snprintf(addr_, sizeof(addr_), "%02x:%02x.%01x", bdf_.bus_id, bdf_.device_id,
                  bdf_.function_id);
     }

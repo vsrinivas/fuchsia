@@ -63,9 +63,9 @@ zx_status_t MmioConfig::Create(pci_bdf_t bdf,
                                uint8_t end_bus,
                                fbl::RefPtr<Config>* config) {
     if (bdf.bus_id < start_bus ||
-            bdf.bus_id > end_bus ||
-            bdf.device_id >= PCI_MAX_DEVICES_PER_BUS ||
-            bdf.function_id >= PCI_MAX_FUNCTIONS_PER_DEVICE) {
+        bdf.bus_id > end_bus ||
+        bdf.device_id >= PCI_MAX_DEVICES_PER_BUS ||
+        bdf.function_id >= PCI_MAX_FUNCTIONS_PER_DEVICE) {
         return ZX_ERR_INVALID_ARGS;
     }
 
