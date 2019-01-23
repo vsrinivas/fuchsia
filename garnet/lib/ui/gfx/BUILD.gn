@@ -8,11 +8,7 @@ declare_args() {
   # 0 - use normal swapchain
   # 1 - use vulkan swapchain, but wait for real display
   # 2 - use vulkan swapchain with fixed-size fake display
-  if (target_cpu == "arm64") {
-    scenic_vulkan_swapchain = 1
-  } else {
-    scenic_vulkan_swapchain = 0
-  }
+  scenic_vulkan_swapchain = 0
   scenic_ignore_vsync = false
 }
 
