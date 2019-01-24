@@ -9,6 +9,7 @@
 #ifndef LIB_FXL_MEMORY_WEAK_PTR_H_
 #define LIB_FXL_MEMORY_WEAK_PTR_H_
 
+#include <inttypes.h>
 #include <utility>
 
 #include "lib/fxl/logging.h"
@@ -140,11 +141,16 @@ template <typename T>
 class WeakPtrFactory {
  public:
   explicit WeakPtrFactory(T* ptr) : ptr_(ptr) { FXL_DCHECK(ptr_); }
-  ~WeakPtrFactory() { InvalidateWeakPtrs(); }
+  ~WeakPtrFactory() {
+    InvalidateWeakPtrs();
+    FXL_DCHECK(*reinterpret_cast<uintptr_t volatile*>(const_cast<T**>(&ptr_)) =
+                   kPoisonedPointer);
+  }
 
   // Gets a new weak pointer, which will be valid until either
   // |InvalidateWeakPtrs()| is called or this object is destroyed.
   WeakPtr<T> GetWeakPtr() {
+    FXL_DCHECK(reinterpret_cast<uintptr_t>(ptr_) != kPoisonedPointer);
     if (!flag_)
       flag_ = MakeRefCounted<internal::WeakPtrFlag>();
     return WeakPtr<T>(ptr_, flag_.Clone());
@@ -165,6 +171,10 @@ class WeakPtrFactory {
   bool HasWeakPtrs() const { return flag_ && !flag_->HasOneRef(); }
 
  private:
+  // Value to poison |ptr_| with in debug mode to ensure that weak pointer are
+  // not generated once this class has been destroyed.
+  // Value must be different from 0, and invalid as a real pointer address.
+  static constexpr uintptr_t kPoisonedPointer = 1;
   // Note: See weak_ptr_internal.h for an explanation of why we store the
   // pointer here, instead of in the "flag".
   T* const ptr_;
