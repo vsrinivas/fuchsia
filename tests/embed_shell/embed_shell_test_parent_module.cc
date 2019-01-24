@@ -27,20 +27,23 @@ namespace {
 class TestModule {
  public:
   TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::app::ViewProvider> /*view_provider_request*/)
-      : module_host_(module_host) {
+             fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>
+                 view_provider_request)
+      : module_host_(module_host),
+        app_view_provider_(std::move(view_provider_request)) {
     modular::testing::Init(module_host->startup_context(), __FILE__);
     ScheduleDone();
     StartChildModule();
   }
 
   TestModule(modular::ModuleHost* const module_host,
-             fidl::InterfaceRequest<
-                 fuchsia::ui::viewsv1::ViewProvider> /*view_provider_request*/)
+             fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
+                 view_provider_request)
       : TestModule(
             module_host,
-            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {}
+            fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider>(nullptr)) {
+    views1_view_provider_ = std::move(view_provider_request);
+  }
 
   void Terminate(const std::function<void()>& done) {
     modular::testing::Done(done);
@@ -76,6 +79,12 @@ class TestModule {
   modular::ModuleHost* const module_host_;
   fuchsia::modular::ModuleControllerPtr child_module_;
   fuchsia::ui::viewsv1token::ViewOwnerPtr child_view_;
+
+  // We keep the view provider around so that story shell can hold a view for
+  // us, but don't do anything with it.
+  fidl::InterfaceRequest<fuchsia::ui::viewsv1::ViewProvider>
+      views1_view_provider_;
+  fidl::InterfaceRequest<fuchsia::ui::app::ViewProvider> app_view_provider_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(TestModule);
 };

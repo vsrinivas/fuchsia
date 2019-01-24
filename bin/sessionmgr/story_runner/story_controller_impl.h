@@ -148,6 +148,54 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void StopBulk(bool bulk, StopCallback done);
 
  private:
+  // Operations implemented here.
+  class AddIntentCall;
+  class DefocusCall;
+  class FocusCall;
+  class KillModuleCall;
+  class LaunchModuleCall;
+  class LaunchModuleInShellCall;
+  class OnModuleDataUpdatedCall;
+  class ResolveParameterCall;
+  class StartCall;
+  class StopCall;
+  class StopModuleCall;
+  class StopModuleAndStoryIfEmptyCall;
+  class StartSnapshotLoaderCall;
+  class UpdateSnapshotCall;
+
+  // For each *running* Module in the Story, there is one RunningModInfo.
+  struct RunningModInfo {
+    // NOTE: |module_data| is a cached copy of what is stored in
+    // |story_storage_|, the source of truth. It is updated in two
+    // places:
+    //
+    // 1) In LaunchModuleCall (used by LaunchModuleInShellCall) in the case
+    // that either a) the module isn't running yet or b) ModuleData.intent
+    // differs from what is cached.
+    //
+    // 2) Indirectly from OnModuleDataUpdated(), which is called when another
+    // device updates the Module by calling LaunchModuleInShellCall. However,
+    // this only happens if the Module is EXTERNAL (it was not explicitly added
+    // by another Module).
+    //
+    // TODO(thatguy): we should ensure that the local cached copy is always
+    // up to date no matter what.
+    fuchsia::modular::ModuleDataPtr module_data;
+    std::unique_ptr<ModuleContextImpl> module_context_impl;
+    std::unique_ptr<ModuleControllerImpl> module_controller_impl;
+  };
+
+  // A module's story shell-related information that we pend until we are able
+  // to pass it off to the story shell.
+  struct PendingViewForStoryShell {
+    std::vector<std::string> module_path;
+    fuchsia::modular::ModuleManifestPtr module_manifest;
+    fuchsia::modular::SurfaceRelationPtr surface_relation;
+    fuchsia::modular::ModuleSource module_source;
+    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
+  };
+
   // |StoryController|
   void Stop(StopCallback done) override;
   void GetInfo(GetInfoCallback callback) override;
@@ -184,7 +232,7 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   void NotifyOneStoryWatcher(
       const fuchsia::modular::storymodel::StoryModel& model,
       fuchsia::modular::StoryWatcher* watcher);
-  void ProcessPendingViews();
+  void ProcessPendingStoryShellViews();
   std::set<fuchsia::modular::LinkPath> GetActiveLinksInternal();
 
   bool IsExternalModule(const std::vector<std::string>& module_path);
@@ -201,6 +249,21 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // Destroys the Environment created for this story, tearing down all
   // processes.
   void DestroyStoryEnvironment();
+
+  // Finds the active RunningModInfo for a module at the given module path. May
+  // return nullptr if the module at the path is not running, regardless of
+  // whether a module at that path is known to the story.
+  RunningModInfo* FindRunningModInfo(
+      const std::vector<std::string>& module_path);
+
+  // Finds the active RunningModInfo for the story shell anchor of a module
+  // with the given |running_mod_info|. The anchor is the closest ancestor
+  // module of the given module that is not embedded and actually known to the
+  // story shell. This requires that it must be running, otherwise it cannot be
+  // connected to the story shell. May return nullptr if the anchor module, or
+  // any intermediate module, is not running, regardless of whether a module at
+  // such path is known to the story.
+  RunningModInfo* FindAnchor(RunningModInfo* running_mod_info);
 
   // The ID of the story, copied from |story_observer_| for convenience in
   // transitioning clients.  TODO(thatguy): Remove users of this in favor of
@@ -240,56 +303,13 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   // not yet sent to story shell.
   std::set<fidl::StringPtr> connected_views_;
 
-  // Holds the view of a non-embedded running module (identified by its
-  // serialized module path) until its parent is connected to story shell. Story
-  // shell cannot display views whose parents are not yet displayed.
-  struct PendingView {
-    std::vector<std::string> module_path;
-    fuchsia::modular::ModuleManifestPtr module_manifest;
-    fuchsia::modular::SurfaceRelationPtr surface_relation;
-    fuchsia::modular::ModuleSource module_source;
-    fuchsia::ui::viewsv1token::ViewOwnerPtr view_owner;
-  };
-  std::map<std::string, PendingView> pending_views_;
+  // Since story shell cannot display views whose parents are not yet displayed,
+  // |pending_story_shell_views_| holds the view of a non-embedded running
+  // module (identified by its serialized module path) until its parent is
+  // connected to story shell.
+  std::map<std::string, PendingViewForStoryShell> pending_story_shell_views_;
 
-  // The first ingredient of a story: Modules. For each *running* Module in the
-  // Story, there is one RunningModInfo.
-  struct RunningModInfo {
-    // NOTE: |module_data| is a cached copy of what is stored in
-    // |story_storage_|, the source of truth. It is updated in two
-    // places:
-    //
-    // 1) In LaunchModuleCall (used by LaunchModuleInShellCall) in the case
-    // that either a) the module isn't running yet or b) ModuleData.intent
-    // differs from what is cached.
-    //
-    // 2) Indirectly from OnModuleDataUpdated(), which is called when another
-    // device updates the Module by calling LaunchModuleInShellCall. However,
-    // this only happens if the Module is EXTERNAL (it was not explicitly added
-    // by another Module).
-    //
-    // TODO(thatguy): we should ensure that the local cached copy is always
-    // up to date no matter what.
-    fuchsia::modular::ModuleDataPtr module_data;
-    std::unique_ptr<ModuleContextImpl> module_context_impl;
-    std::unique_ptr<ModuleControllerImpl> module_controller_impl;
-  };
   std::vector<RunningModInfo> running_mod_infos_;
-
-  // Finds the active RunningModInfo for a module at the given module path. May
-  // return nullptr if the module at the path is not running, regardless of
-  // whether a module at that path is known to the story.
-  RunningModInfo* FindRunningModInfo(
-      const std::vector<std::string>& module_path);
-
-  // Finds the active RunningModInfo for the story shell anchor of a module
-  // with the given |running_mod_info|. The anchor is the closest ancestor
-  // module of the given module that is not embedded and actually known to the
-  // story shell. This requires that it must be running, otherwise it cannot be
-  // connected to the story shell. May return nullptr if the anchor module, or
-  // any intermediate module, is not running, regardless of whether a module at
-  // such path is known to the story.
-  RunningModInfo* FindAnchor(RunningModInfo* running_mod_info);
 
   // The second ingredient of a story: Links. They connect Modules.
   fidl::BindingSet<Link, std::unique_ptr<LinkImpl>> link_impls_;
@@ -311,22 +331,6 @@ class StoryControllerImpl : fuchsia::modular::StoryController {
   OperationQueue operation_queue_;
 
   fxl::WeakPtrFactory<StoryControllerImpl> weak_factory_;
-
-  // Operations implemented here.
-  class AddIntentCall;
-  class DefocusCall;
-  class FocusCall;
-  class KillModuleCall;
-  class LaunchModuleCall;
-  class LaunchModuleInShellCall;
-  class OnModuleDataUpdatedCall;
-  class ResolveParameterCall;
-  class StartCall;
-  class StopCall;
-  class StopModuleCall;
-  class StopModuleAndStoryIfEmptyCall;
-  class StartSnapshotLoaderCall;
-  class UpdateSnapshotCall;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(StoryControllerImpl);
 };

@@ -29,7 +29,6 @@
     },
     {
       "name": "embed_shell",
-      "disabled": true,
       "exec": [
         "basemgr",
         "--test",
@@ -94,7 +93,6 @@
     },
     {
       "name": "story_shell",
-      "disabled": true,
       "exec": [
         "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
         "--test",

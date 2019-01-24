@@ -389,6 +389,12 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
         story_controller_impl_, fidl::Clone(module_data_),
         std::move(module_controller_request_), view_owner_.NewRequest(),
         [this, flow] { LoadModuleManifest(flow); }));
+    view_owner_.set_error_handler([module_url =
+                                       module_data_.module_url](zx_status_t) {
+      FXL_LOG(ERROR) << "ViewOwner associated with module_url=" << module_url
+                     << " died. This module likely won't be able to display "
+                        "anything on the screen.";
+    });
   }
 
   void LoadModuleManifest(FlowToken flow) {
@@ -401,6 +407,10 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
             });
   }
 
+  // We only add a module to story shell if it's either a root module or its
+  // anchor module is already known to story shell. Otherwise, we pend its view
+  // (StoryControllerImpl::pending_story_shell_views_) and pass it to the story
+  // shell once its anchor module is ready.
   void MaybeConnectViewToStoryShell(FlowToken flow) {
     // If this is called during Stop(), story_shell_ might already have been
     // reset. TODO(mesch): Then the whole operation should fail.
@@ -408,10 +418,8 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
       return;
     }
 
-    // We only add a module to story shell if its either a root module or its
-    // anchor is already known to story shell.
-
     if (module_data_.module_path.size() == 1) {
+      // This is a root module; pass it's view on to the story shell.
       ConnectViewToStoryShell(flow, "");
       return;
     }
@@ -439,11 +447,12 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
       module_data_.surface_relation->Clone(surface_relation_clone.get());
     }
 
-    story_controller_impl_->pending_views_.emplace(
+    story_controller_impl_->pending_story_shell_views_.emplace(
         ModulePathToSurfaceID(module_data_.module_path),
-        PendingView{module_data_.module_path, std::move(manifest_clone),
-                    std::move(surface_relation_clone),
-                    module_data_.module_source, std::move(view_owner_)});
+        PendingViewForStoryShell{
+            module_data_.module_path, std::move(manifest_clone),
+            std::move(surface_relation_clone), module_data_.module_source,
+            std::move(view_owner_)});
   }
 
   void ConnectViewToStoryShell(FlowToken flow,
@@ -463,7 +472,7 @@ class StoryControllerImpl::LaunchModuleInShellCall : public Operation<> {
                                                      std::move(surface_info));
 
     story_controller_impl_->connected_views_.emplace(surface_id);
-    story_controller_impl_->ProcessPendingViews();
+    story_controller_impl_->ProcessPendingStoryShellViews();
     story_controller_impl_->story_shell_->FocusSurface(surface_id);
   }
 
@@ -554,8 +563,8 @@ class StoryControllerImpl::StopCall : public Operation<> {
 
     story_controller_impl_->DetachView([cont] { cont(false); });
 
-    async::PostDelayedTask(
-        async_get_default_dispatcher(), [cont] { cont(true); }, kBasicTimeout);
+    async::PostDelayedTask(async_get_default_dispatcher(),
+                           [cont] { cont(true); }, kBasicTimeout);
   }
 
   void StopStory() {
@@ -855,7 +864,7 @@ class StoryControllerImpl::AddIntentCall
             std::move(module_controller_request_),
             std::move(view_owner_request_), [this, flow] {
               // LaunchModuleInShellCall above already calls
-              // ProcessPendingViews(). NOTE(thatguy): This
+              // ProcessPendingStoryShellViews(). NOTE(thatguy): This
               // cannot be moved into LaunchModuleCall, because
               // LaunchModuleInShellCall uses LaunchModuleCall
               // as the very first step of its operation. This
@@ -864,7 +873,7 @@ class StoryControllerImpl::AddIntentCall
               // surface-relation parent (which we do as the
               // second part of LaunchModuleInShellCall).  So
               // we must defer to here.
-              story_controller_impl_->ProcessPendingViews();
+              story_controller_impl_->ProcessPendingStoryShellViews();
             }));
       }
     }
@@ -1153,7 +1162,8 @@ void StoryControllerImpl::ReleaseModule(
                           });
   FXL_DCHECK(fit != running_mod_infos_.end());
   fit->module_controller_impl.release();
-  pending_views_.erase(ModulePathToSurfaceID(fit->module_data->module_path));
+  pending_story_shell_views_.erase(
+      ModulePathToSurfaceID(fit->module_data->module_path));
   running_mod_infos_.erase(fit);
 }
 
@@ -1243,7 +1253,7 @@ void StoryControllerImpl::AddModuleToStory(
       nullptr /* view_owner_request */, std::move(callback)));
 }
 
-void StoryControllerImpl::ProcessPendingViews() {
+void StoryControllerImpl::ProcessPendingStoryShellViews() {
   // NOTE(mesch): As it stands, this machinery to send modules in traversal
   // order to the story shell is N^3 over the lifetime of the story, where N
   // is the number of modules. This function is N^2, and it's called once for
@@ -1257,7 +1267,7 @@ void StoryControllerImpl::ProcessPendingViews() {
 
   std::vector<fidl::StringPtr> added_keys;
 
-  for (auto& kv : pending_views_) {
+  for (auto& kv : pending_story_shell_views_) {
     auto* const running_mod_info = FindRunningModInfo(kv.second.module_path);
     if (!running_mod_info) {
       continue;
@@ -1292,9 +1302,9 @@ void StoryControllerImpl::ProcessPendingViews() {
 
   if (added_keys.size()) {
     for (auto& key : added_keys) {
-      pending_views_.erase(key);
+      pending_story_shell_views_.erase(key);
     }
-    ProcessPendingViews();
+    ProcessPendingStoryShellViews();
   }
 }
 
@@ -1491,10 +1501,8 @@ StoryControllerImpl::RunningModInfo* StoryControllerImpl::FindAnchor(
   auto* anchor = FindRunningModInfo(
       ParentModulePath(running_mod_info->module_data->module_path));
 
-  // Traverse up until there is a non-embedded module. We recognize
-  // non-embedded modules by having a non-null SurfaceRelation. If the root
-  // module is there at all, it has a non-null surface relation.
-  while (anchor && !anchor->module_data->surface_relation) {
+  // Traverse up until there is a non-embedded module.
+  while (anchor && anchor->module_data->is_embedded) {
     anchor =
         FindRunningModInfo(ParentModulePath(anchor->module_data->module_path));
   }

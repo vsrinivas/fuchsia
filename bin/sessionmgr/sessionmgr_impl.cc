@@ -765,7 +765,7 @@ void SessionmgrImpl::RunSessionShell(
   session_shell_app_->services().ConnectToService(view_provider.NewRequest());
   view_provider->CreateView(view_owner.NewRequest(), nullptr);
   session_shell_view_host_->ConnectView(std::move(view_owner));
-}  // namespace modular
+}
 
 void SessionmgrImpl::TerminateSessionShell(const std::function<void()>& done) {
   session_shell_app_->Teardown(kBasicTimeout, [this, done] {
