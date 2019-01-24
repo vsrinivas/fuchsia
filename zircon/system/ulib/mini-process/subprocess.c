@@ -6,8 +6,14 @@
 #include <mini-process/mini-process.h>
 
 // This function is the entire program that the child process will execute. It
-// gets directly mapped into the child process via zx_vmo_write() so it must not
-// reference any addressable entity outside it.
+// gets directly mapped into the child process via zx_vmo_write() so it,
+//
+// 1. must not reference any addressable entity outside the function
+//
+// 2. must fit entirely within its containing VMO
+//
+// If you find that this program is crashing for no apparent reason, check to
+// see if it has outgrown its VMO. See kSizeLimit in mini-process.c.
 void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
     if (fnptr == 0) {
         // In this mode we don't have a VDSO so we don't care what the handle is
@@ -76,6 +82,19 @@ void minipr_thread_loop(zx_handle_t channel, uintptr_t fnptr) {
                 if (what & MINIP_CMD_CREATE_EVENT) {
                     what &= ~MINIP_CMD_CREATE_EVENT;
                     cmd.status = ctx.event_create(0u, &handle[0]);
+                    goto reply;
+                }
+                if (what & MINIP_CMD_CREATE_PROFILE) {
+                    what &= ~MINIP_CMD_CREATE_PROFILE;
+
+                    // zx_profile_create() needs a handle to the root job, but we don't have one so
+                    // we're passing ZX_HANDLE_INVALID. It is expected that this call will fail.
+                    //
+                    // Note, we're passing NULL instead of a pointer to a properly initialized
+                    // zx_profile_info_t. That's to prevent the compiler from getting smart and
+                    // using a pre-computed structure in the data segment. This function is
+                    // "injected" into the mini-process so there can be no external dependencies.
+                    cmd.status = ctx.profile_create(ZX_HANDLE_INVALID, NULL, &handle[0]);
                     goto reply;
                 }
                 if (what & MINIP_CMD_CREATE_CHANNEL) {

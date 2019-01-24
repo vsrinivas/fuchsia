@@ -12,6 +12,7 @@ typedef struct {
     __typeof(zx_object_wait_one)*   object_wait_one;
     __typeof(zx_object_signal)*     object_signal;
     __typeof(zx_event_create)*      event_create;
+    __typeof(zx_profile_create)*    profile_create;
     __typeof(zx_channel_create)*    channel_create;
     __typeof(zx_channel_read)*      channel_read;
     __typeof(zx_channel_write)*     channel_write;

@@ -189,6 +189,16 @@ static bool EnforceDenyEvent() {
     END_TEST;
 }
 
+static bool EnforceDenyProfile() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {{ZX_POL_NEW_PROFILE, ZX_POL_ACTION_DENY}};
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
+
+    END_TEST;
+}
+
 static bool EnforceDenyChannel() {
     BEGIN_TEST;
 
@@ -202,9 +212,13 @@ static bool EnforceDenyChannel() {
 static bool EnforceDenyAny() {
     BEGIN_TEST;
 
-    zx_policy_basic_t policy[] = { { ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY } };
-    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)), MINIP_CMD_CREATE_EVENT,
-                         ZX_ERR_ACCESS_DENIED);
+    zx_policy_basic_t policy[] = {{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY}};
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_EVENT, ZX_ERR_ACCESS_DENIED);
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
+    TestInvokingPolicy(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                       MINIP_CMD_CREATE_CHANNEL, ZX_ERR_ACCESS_DENIED);
 
     END_TEST;
 }
@@ -364,6 +378,18 @@ static bool TestExceptionOnNewEventButAllow() {
     END_TEST;
 }
 
+static bool TestExceptionOnNewProfileAndDeny() {
+    BEGIN_TEST;
+
+    zx_policy_basic_t policy[] = {
+        {ZX_POL_NEW_PROFILE, ZX_POL_ACTION_DENY | ZX_POL_ACTION_EXCEPTION},
+    };
+    TestInvokingPolicyWithException(policy, static_cast<uint32_t>(fbl::count_of(policy)),
+                                    MINIP_CMD_CREATE_PROFILE, ZX_ERR_ACCESS_DENIED);
+
+    END_TEST;
+}
+
 // Test ZX_POL_BAD_HANDLE when syscalls are allowed to continue.
 static bool TestErrorOnBadHandle() {
     BEGIN_TEST;
@@ -426,12 +452,14 @@ RUN_TEST(InvalidCallsAbs)
 RUN_TEST(InvalidCallsRel)
 RUN_TEST(AbsThenRel)
 RUN_TEST(EnforceDenyEvent)
+RUN_TEST(EnforceDenyProfile)
 RUN_TEST(EnforceDenyChannel)
 RUN_TEST(EnforceDenyAny)
 RUN_TEST(EnforceAllowAny)
 RUN_TEST(EnforceDenyButEvent)
 RUN_TEST(TestExceptionOnNewEventAndDeny)
 RUN_TEST(TestExceptionOnNewEventButAllow)
+RUN_TEST(TestExceptionOnNewProfileAndDeny)
 RUN_TEST(TestErrorOnBadHandle)
 RUN_TEST(TestExceptionOnBadHandle)
 RUN_TEST(TestGetInfoOnBadHandle)

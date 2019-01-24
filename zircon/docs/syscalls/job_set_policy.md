@@ -79,6 +79,8 @@ Where *condition* is one of
   a new timer.
 + **ZX_POL_NEW_PROCESS** a process under this job is attempting to create
   a new process.
++ **ZX_POL_NEW_PROFILE** a process under this job is attempting to create
+  a new profile.
 + **ZX_POL_NEW_ANY** is a special *condition* that stands for all of
   the above **ZX_NEW** condtions such as **ZX_POL_NEW_VMO**,
   **ZX_POL_NEW_CHANNEL**, **ZX_POL_NEW_EVENT**, **ZX_POL_NEW_EVENTPAIR**,

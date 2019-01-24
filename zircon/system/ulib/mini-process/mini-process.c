@@ -31,6 +31,7 @@ static zx_status_t write_ctx_message(
         .object_wait_one = get_syscall_addr(&zx_object_wait_one, vdso_base),
         .object_signal = get_syscall_addr(&zx_object_signal, vdso_base),
         .event_create = get_syscall_addr(&zx_event_create, vdso_base),
+        .profile_create = get_syscall_addr(&zx_profile_create, vdso_base),
         .channel_create = get_syscall_addr(&zx_channel_create, vdso_base),
         .channel_read = get_syscall_addr(&zx_channel_read, vdso_base),
         .channel_write = get_syscall_addr(&zx_channel_write, vdso_base),
@@ -56,7 +57,7 @@ static zx_status_t prepare_stack_vmo(zx_handle_t vmar, zx_vaddr_t* stack_base, z
     zx_object_set_property(stack_vmo, ZX_PROP_NAME, vmo_name, sizeof(vmo_name));
 
     // We assume that the code to execute is less than kSizeLimit bytes.
-    const uint32_t kSizeLimit = 1000;
+    const uint32_t kSizeLimit = 2000;
     status = zx_vmo_write(stack_vmo, &minipr_thread_loop, 0u, kSizeLimit);
     if (status != ZX_OK)
         goto exit;

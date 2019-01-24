@@ -28,12 +28,15 @@ KCOUNTER(profile_set,    "kernel.profile.set");
 zx_status_t sys_profile_create(zx_handle_t root_job,
                                user_in_ptr<const zx_profile_info_t> user_profile_info,
                                user_out_handle* out) {
-    // TODO(ZX-3352): check job policy.
-
     auto up = ProcessDispatcher::GetCurrent();
 
+    zx_status_t status = up->QueryBasicPolicy(ZX_POL_NEW_PROFILE);
+    if (status != ZX_OK) {
+        return status;
+    }
+
     fbl::RefPtr<JobDispatcher> job;
-    auto status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
+    status = up->GetDispatcherWithRights(root_job, ZX_RIGHT_MANAGE_PROCESS, &job);
     if (status != ZX_OK) {
         return status;
     }

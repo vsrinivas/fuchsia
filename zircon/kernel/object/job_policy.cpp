@@ -48,7 +48,8 @@ union Encoding {
         uint64_t new_fifo        :  4;
         uint64_t new_timer       :  4;
         uint64_t new_process     :  4;
-        uint64_t unused_bits     : 15;
+        uint64_t new_profile     :  4;
+        uint64_t unused_bits     : 11;
         uint64_t cookie_mode     :  1;  // see kPolicyInCookie.
     };
 
@@ -76,6 +77,7 @@ const uint32_t kNewObjectPolicies[]{
     ZX_POL_NEW_FIFO,
     ZX_POL_NEW_TIMER,
     ZX_POL_NEW_PROCESS,
+    ZX_POL_NEW_PROFILE,
 };
 static_assert(
     fbl::count_of(kNewObjectPolicies) + 4 == ZX_POL_MAX,
@@ -145,6 +147,9 @@ zx_status_t AddPartial(uint32_t mode, pol_cookie_t existing_policy,
         break;
     case ZX_POL_NEW_PROCESS:
         POLMAN_SET_ENTRY(mode, existing.new_process, policy, result.new_process);
+        break;
+    case ZX_POL_NEW_PROFILE:
+        POLMAN_SET_ENTRY(mode, existing.new_profile, policy, result.new_profile);
         break;
     default:
         return ZX_ERR_NOT_SUPPORTED;
@@ -242,6 +247,7 @@ uint32_t JobPolicy::QueryBasicPolicy(uint32_t condition) const {
     case ZX_POL_NEW_FIFO: return GetEffectiveAction(existing.new_fifo);
     case ZX_POL_NEW_TIMER: return GetEffectiveAction(existing.new_timer);
     case ZX_POL_NEW_PROCESS: return GetEffectiveAction(existing.new_process);
+    case ZX_POL_NEW_PROFILE: return GetEffectiveAction(existing.new_profile);
     case ZX_POL_VMAR_WX: return GetEffectiveAction(existing.vmar_wx);
     default: return ZX_POL_ACTION_DENY;
     }

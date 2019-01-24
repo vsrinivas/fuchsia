@@ -42,8 +42,9 @@ typedef struct zx_policy_basic {
 #define ZX_POL_NEW_FIFO                     10u
 #define ZX_POL_NEW_TIMER                    11u
 #define ZX_POL_NEW_PROCESS                  12u
+#define ZX_POL_NEW_PROFILE                  13u
 #ifdef _KERNEL
-#define ZX_POL_MAX                          13u
+#define ZX_POL_MAX                          14u
 #endif
 
 // Policy actions.
