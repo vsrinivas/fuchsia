@@ -312,7 +312,12 @@ fn start_scan_txn(
     sme: &fidl_sme::ClientSmeProxy,
 ) -> Result<fidl_sme::ScanTransactionProxy, failure::Error> {
     let (scan_txn, remote) = create_proxy()?;
-    let mut req = fidl_sme::ScanRequest { timeout: AUTO_CONNECT_SCAN_TIMEOUT_SECONDS };
+    let mut req = fidl_sme::ScanRequest {
+        timeout: AUTO_CONNECT_SCAN_TIMEOUT_SECONDS,
+        // TODO(WLAN-943): This means that we won't be able to auto-connect to a hidden network.
+        //                 Consider in what cases we should do an active scan.
+        scan_type: fidl_common::ScanType::Passive,
+    };
     sme.scan(&mut req, remote)?;
     Ok(scan_txn)
 }
@@ -330,6 +335,7 @@ fn start_connect_txn(
             override_cbw: false,
             cbw: fidl_common::Cbw::Cbw20,
         },
+        scan_type: fidl_common::ScanType::Passive,
     };
     sme.connect(&mut req, Some(remote))?;
     Ok(connect_txn)

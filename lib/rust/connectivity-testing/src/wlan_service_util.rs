@@ -54,6 +54,7 @@ pub async fn connect_to_network(
             override_cbw: false,
             cbw: fidl_common::Cbw::Cbw20,
         },
+        scan_type: fidl_common::ScanType::Passive,
     };
 
     let _result = iface_sme_proxy.connect(&mut req, Some(connection_remote))?;
@@ -156,6 +157,7 @@ fn start_scan_transaction(
     let (scan_txn, remote) = endpoints::create_proxy()?;
     let mut req = fidl_sme::ScanRequest {
         timeout: SCAN_TIMEOUT_SECONDS,
+        scan_type: fidl_common::ScanType::Passive,
     };
     iface_sme_proxy.scan(&mut req, remote)?;
     Ok(scan_txn)

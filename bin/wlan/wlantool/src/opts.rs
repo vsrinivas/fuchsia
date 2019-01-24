@@ -35,6 +35,14 @@ arg_enum!{
     }
 }
 
+arg_enum!{
+    #[derive(PartialEq, Copy, Clone, Debug)]
+    pub enum ScanTypeArg {
+        Active,
+        Passive,
+    }
+}
+
 impl ::std::convert::From<RoleArg> for wlan::MacRole {
     fn from(arg: RoleArg) -> Self {
         match arg {
@@ -60,6 +68,15 @@ impl ::std::convert::From<CbwArg> for wlan_common::Cbw {
             CbwArg::Cbw20 => wlan_common::Cbw::Cbw20,
             CbwArg::Cbw40 => wlan_common::Cbw::Cbw40,
             CbwArg::Cbw80 => wlan_common::Cbw::Cbw80,
+        }
+    }
+}
+
+impl ::std::convert::From<ScanTypeArg> for wlan_common::ScanType {
+    fn from(arg: ScanTypeArg) -> Self {
+        match arg {
+            ScanTypeArg::Active => wlan_common::ScanType::Active,
+            ScanTypeArg::Passive => wlan_common::ScanType::Passive,
         }
     }
 }
@@ -161,7 +178,13 @@ pub enum ClientCmd {
     #[structopt(name = "scan")]
     Scan {
         #[structopt(raw(required = "true"))]
-        iface_id: u16
+        iface_id: u16,
+        #[structopt(short = "s", long = "scan-type", default_value = "passive",
+                    raw(possible_values = "&ScanTypeArg::variants()"),
+                    raw(case_insensitive = "true"),
+                    help = "Experimental. Default scan type on each channel. \
+                            Behavior may differ on DFS channel")]
+        scan_type: ScanTypeArg,
     },
     #[structopt(name = "connect")]
     Connect {
@@ -177,6 +200,12 @@ pub enum ClientCmd {
         #[structopt(short = "w", long = "cbw", raw(possible_values = "&CbwArg::variants()"),
                      raw(case_insensitive = "true"), help = "Specify an upper bound")]
         cbw: Option<CbwArg>,
+        #[structopt(short = "s", long = "scan-type", default_value = "passive",
+                    raw(possible_values = "&ScanTypeArg::variants()"),
+                    raw(case_insensitive = "true"),
+                    help = "Experimental. Default scan type on each channel. \
+                            Behavior may differ on DFS channel")]
+        scan_type: ScanTypeArg,
     },
     #[structopt(name = "disconnect")]
     Disconnect {

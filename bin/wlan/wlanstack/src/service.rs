@@ -310,6 +310,7 @@ mod tests {
     use super::*;
 
     use fidl::endpoints::create_proxy;
+    use fidl_fuchsia_wlan_common as fidl_common;
     use fidl_fuchsia_wlan_device::{self as fidl_dev, PhyRequest, PhyRequestStream};
     use fidl_fuchsia_wlan_device_service::{IfaceListItem, PhyListItem};
     use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeMarker};
@@ -689,7 +690,8 @@ mod tests {
 
     fn fake_scan_request() -> fidl_sme::ScanRequest {
         fidl_sme::ScanRequest{
-            timeout: 41
+            timeout: 41,
+            scan_type: fidl_common::ScanType::Passive,
         }
     }
 

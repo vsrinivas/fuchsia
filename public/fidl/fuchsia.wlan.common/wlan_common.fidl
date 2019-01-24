@@ -46,3 +46,8 @@ enum Band : uint8 {
 };
 
 // LINT.ThenChange(//garnet/lib/wlan/protocol/include/wlan/protocol/info.h)
+
+enum ScanType {
+    ACTIVE = 1;
+    PASSIVE = 2;
+};

@@ -15,6 +15,7 @@ rustc_library("wlan-sme") {
     "//garnet/lib/rust/eapol",
     "//garnet/lib/rust/wlan-common",
     "//garnet/lib/rust/wlan-rsn",
+    "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/public/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
     "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
     "//garnet/public/rust/fuchsia-zircon",

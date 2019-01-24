@@ -23,6 +23,8 @@ use structopt::StructOpt;
 mod opts;
 use crate::opts::*;
 
+const SCAN_REQUEST_TIMEOUT_SEC: u8 = 10;
+
 type WlanSvc = DeviceServiceProxy;
 
 fn main() -> Result<(), Error> {
@@ -148,14 +150,17 @@ async fn do_iface(cmd: opts::IfaceCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
 
 async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
     match cmd {
-        opts::ClientCmd::Scan { iface_id } => {
+        opts::ClientCmd::Scan { iface_id, scan_type } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints::create_proxy()?;
-            let mut req = fidl_sme::ScanRequest { timeout: 10 };
+            let mut req = fidl_sme::ScanRequest {
+                timeout: SCAN_REQUEST_TIMEOUT_SEC,
+                scan_type: scan_type.into(),
+            };
             sme.scan(&mut req, remote).context("error sending scan request")?;
             await!(handle_scan_transaction(local))
         }
-        opts::ClientCmd::Connect { iface_id, ssid, password, phy, cbw } => {
+        opts::ClientCmd::Connect { iface_id, ssid, password, phy, cbw, scan_type } => {
             let sme = await!(get_client_sme(wlan_svc, iface_id))?;
             let (local, remote) = endpoints::create_proxy()?;
             let mut req = fidl_sme::ConnectRequest {
@@ -167,6 +172,7 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
                     override_cbw: cbw.is_some(),
                     cbw: cbw.unwrap_or(CbwArg::Cbw80).into(),
                 },
+                scan_type: scan_type.into(),
             };
             sme.connect(&mut req, Some(remote)).context("error sending connect request")?;
             await!(handle_connect_transaction(local))

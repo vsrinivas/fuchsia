@@ -38,6 +38,7 @@ interface ScanTransaction {
 
 struct ScanRequest {
     uint8 timeout; // seconds
+    fuchsia.wlan.common.ScanType scan_type;
 };
 
 enum ConnectResultCode {
@@ -69,6 +70,7 @@ struct ConnectRequest {
     vector<uint8>:64 password;
 
     ConnectPhyParams params;
+    fuchsia.wlan.common.ScanType scan_type;
 };
 
 struct ClientStatusResponse {

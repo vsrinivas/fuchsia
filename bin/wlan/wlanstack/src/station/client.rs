@@ -4,6 +4,7 @@
 
 use failure::bail;
 use fidl::{endpoints::RequestStream, endpoints::ServerEnd};
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme::{self as fidl_sme, ClientSmeRequest};
 use futures::{prelude::*, select, stream::FuturesUnordered};
@@ -13,8 +14,7 @@ use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{client as client_sme, DeviceInfo, InfoStream};
-use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult,
-                       ConnectPhyParams, DiscoveryError,
+use wlan_sme::client::{BssInfo, ConnectionAttemptId, ConnectResult, DiscoveryError,
                        EssDiscoveryResult, EssInfo, InfoEvent, ScanTxnId};
 use fuchsia_zircon as zx;
 
@@ -110,12 +110,12 @@ async fn handle_fidl_request(sme: &Mutex<Sme>, request: fidl_sme::ClientSmeReque
     -> Result<(), fidl::Error>
 {
     match request {
-        ClientSmeRequest::Scan { txn, .. } => {
-            Ok(await!(scan(sme, txn))
+        ClientSmeRequest::Scan { req, txn, .. } => {
+            Ok(await!(scan(sme, txn, req.scan_type))
                 .unwrap_or_else(|e| error!("Error handling a scan transaction: {:?}", e)))
         },
         ClientSmeRequest::Connect { req, txn, .. } => {
-            Ok(await!(connect(sme, req.ssid, req.password, txn, req.params))
+            Ok(await!(connect(sme, txn, req))
                 .unwrap_or_else(|e| error!("Error handling a connect transaction: {:?}", e)))
         },
         ClientSmeRequest::Disconnect { responder } => {
@@ -126,32 +126,28 @@ async fn handle_fidl_request(sme: &Mutex<Sme>, request: fidl_sme::ClientSmeReque
     }
 }
 
-async fn scan(sme: &Mutex<Sme>, txn: ServerEnd<fidl_sme::ScanTransactionMarker>)
+async fn scan(sme: &Mutex<Sme>, txn: ServerEnd<fidl_sme::ScanTransactionMarker>,
+              scan_type: fidl_common::ScanType)
     -> Result<(), failure::Error>
 {
     let handle = txn.into_stream()?.control_handle();
-    let receiver = sme.lock().unwrap().on_scan_command();
+    let receiver = sme.lock().unwrap().on_scan_command(scan_type);
     let result = await!(receiver).unwrap_or(Err(DiscoveryError::InternalError));
     let send_result = send_scan_results(handle, result);
     filter_out_peer_closed(send_result)?;
     Ok(())
 }
 
-async fn connect(sme: &Mutex<Sme>, ssid: Vec<u8>, password: Vec<u8>,
+async fn connect(sme: &Mutex<Sme>,
                  txn: Option<ServerEnd<fidl_sme::ConnectTransactionMarker>>,
-                 params: fidl_sme::ConnectPhyParams)
+                 req: fidl_sme::ConnectRequest)
     -> Result<(), failure::Error>
 {
     let handle = match txn {
         None => None,
         Some(txn) => Some(txn.into_stream()?.control_handle())
     };
-
-    let params = ConnectPhyParams {
-        phy: if params.override_phy { Some(params.phy) } else { None },
-        cbw: if params.override_cbw { Some(params.cbw) } else { None },
-    };
-    let receiver = sme.lock().unwrap().on_connect_command(ssid, password, params);
+    let receiver = sme.lock().unwrap().on_connect_command(req);
     let result = await!(receiver).unwrap_or(ConnectResult::Failed);
     let send_result = send_connect_result(handle, result);
     filter_out_peer_closed(send_result)?;

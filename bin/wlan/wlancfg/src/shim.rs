@@ -158,7 +158,10 @@ fn start_scan_txn(
     client: &Client, legacy_req: legacy::ScanRequest,
 ) -> Result<fidl_sme::ScanTransactionProxy, fidl::Error> {
     let (scan_txn, remote) = create_proxy()?;
-    let mut req = fidl_sme::ScanRequest { timeout: legacy_req.timeout };
+    let mut req = fidl_sme::ScanRequest {
+        timeout: legacy_req.timeout,
+        scan_type: fidl_common::ScanType::Passive,
+    };
     client.sme.scan(&mut req, remote)?;
     Ok(scan_txn)
 }
