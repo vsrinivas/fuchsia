@@ -2,17 +2,45 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "block.h"
+
 #include "usb-mass-storage.h"
-
 #include <ddk/debug.h>
-
+#include <fbl/alloc_checker.h>
 #include <stdio.h>
 #include <string.h>
+#define block_op_to_txn(op) containerof(op, Transaction, op)
 
-static void ums_block_queue(void* ctx, block_op_t* op, block_impl_queue_callback completion_cb,
-                            void* cookie) {
-    ums_block_t* dev = static_cast<ums_block_t*>(ctx);
-    ums_txn_t* txn = block_op_to_txn(op);
+namespace ums {
+zx_status_t UmsBlockDevice::Add() {
+    char name[16];
+    snprintf(name, sizeof(name), "lun-%03d", parameters_.lun);
+    zx_status_t status = DdkAdd(name);
+    if (status == ZX_OK) {
+        AddRef();
+    }
+    return status;
+}
+
+void UmsBlockDevice::DdkRelease() {
+    __UNUSED bool released = Release();
+}
+
+zx_off_t UmsBlockDevice::DdkGetSize() {
+    return parameters_.block_size * parameters_.total_blocks;
+}
+
+void UmsBlockDevice::BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+    info_out->block_size = parameters_.block_size;
+    info_out->block_count = parameters_.total_blocks;
+    info_out->max_transfer_size = static_cast<uint32_t>(parameters_.max_transfer);
+    info_out->flags = parameters_.flags;
+    *block_op_size_out = sizeof(Transaction);
+}
+
+void UmsBlockDevice::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
+                                    void* cookie) {
+    Transaction* txn = block_op_to_txn(op);
     txn->completion_cb = completion_cb;
     txn->cookie = cookie;
 
@@ -31,62 +59,8 @@ static void ums_block_queue(void* ctx, block_op_t* op, block_impl_queue_callback
         completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, &txn->op);
         return;
     }
-
-    ums_t* ums = block_to_ums(dev);
-    txn->dev = dev;
-
-    mtx_lock(&ums->txn_lock);
-    list_add_tail(&ums->queued_txns, &txn->node);
-    mtx_unlock(&ums->txn_lock);
-    sync_completion_signal(&ums->txn_completion);
+    txn->dev = this;
+    queue_callback_(txn);
 }
 
-static void ums_get_info(void* ctx, block_info_t* info) {
-    ums_block_t* dev = static_cast<ums_block_t*>(ctx);
-    ums_t* ums = block_to_ums(dev);
-    memset(info, 0, sizeof(*info));
-    info->block_size = dev->block_size;
-    info->block_count = dev->total_blocks;
-    info->max_transfer_size = static_cast<uint32_t>(ums->max_transfer);
-    info->flags = dev->flags;
-}
-
-static void ums_block_query(void* ctx, block_info_t* info_out, size_t* block_op_size_out) {
-    ums_get_info(ctx, info_out);
-    *block_op_size_out = sizeof(ums_txn_t);
-}
-
-static block_impl_protocol_ops_t ums_block_ops = []() {
-    block_impl_protocol_ops_t ops = {};
-    ops.query = ums_block_query;
-    ops.queue = ums_block_queue;
-    return ops;
-}();
-
-static zx_off_t ums_block_get_size(void* ctx) {
-    ums_block_t* dev = static_cast<ums_block_t*>(ctx);
-    ;
-    return dev->block_size * dev->total_blocks;
-}
-
-static zx_protocol_device_t ums_block_proto = []() {
-    zx_protocol_device_t ops = {};
-    ops.version = DEVICE_OPS_VERSION;
-    ops.get_size = ums_block_get_size;
-    return ops;
-}();
-
-extern "C" {
-zx_status_t ums_block_add_device(ums_t* ums, ums_block_t* dev) {
-    char name[16];
-    snprintf(name, sizeof(name), "lun-%03d", dev->lun);
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = name;
-    args.ctx = dev;
-    args.ops = const_cast<zx_protocol_device_t*>(&ums_block_proto);
-    args.proto_id = ZX_PROTOCOL_BLOCK_IMPL;
-    args.proto_ops = const_cast<block_impl_protocol_ops_t*>(&ums_block_ops);
-    return device_add(ums->zxdev, &args, &dev->zxdev);
-}
-}
+} // namespace ums
