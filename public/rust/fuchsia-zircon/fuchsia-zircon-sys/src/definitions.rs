@@ -32,7 +32,7 @@ extern {
 
     pub fn zx_system_get_version(
         version: *mut u8,
-        version_len: u32
+        version_len: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_system_get_physmem(
@@ -40,7 +40,7 @@ extern {
 
     pub fn zx_cache_flush(
         addr: *const u8,
-        len: usize,
+        len: zx_size_t,
         options: u32
         ) -> zx_status_t;
 
@@ -219,7 +219,7 @@ extern {
     pub fn zx_thread_create(
         process: zx_handle_t,
         name: *const u8,
-        name_len: u32,
+        name_len: zx_size_t,
         options: u32,
         out: *mut zx_handle_t
         ) -> zx_status_t;
@@ -236,7 +236,7 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        len: u64,
+        len: zx_size_t,
         actual: *mut u64
         ) -> zx_status_t;
 
@@ -244,7 +244,7 @@ extern {
         handle: zx_handle_t,
         kind: u32,
         buffer: *const u8,
-        buffer_len: u32
+        buffer_len: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_thread_set_priority(
@@ -258,7 +258,7 @@ extern {
     pub fn zx_process_create(
         job: zx_handle_t,
         name: *const u8,
-        name_len: u32,
+        name_len: zx_size_t,
         options: u32,
         proc_handle: *mut zx_handle_t,
         vmar_handle: *mut zx_handle_t
@@ -277,7 +277,7 @@ extern {
         proc_: zx_handle_t,
         vaddr: usize,
         buffer: *mut u8,
-        len: usize,
+        len: zx_size_t,
         actual: *mut usize
         ) -> zx_status_t;
 
@@ -285,7 +285,7 @@ extern {
         proc_: zx_handle_t,
         vaddr: usize,
         buffer: *const u8,
-        len: usize,
+        len: zx_size_t,
         actual: *mut usize
         ) -> zx_status_t;
 
@@ -412,14 +412,14 @@ extern {
         handle: zx_handle_t,
         data: *mut u8,
         offset: u64,
-        len: usize
+        len: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_vmo_write(
         handle: zx_handle_t,
         data: *const u8,
         offset: u64,
-        len: usize
+        len: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_vmo_get_size(
@@ -473,28 +473,28 @@ extern {
         vmar_offset: usize,
         vmo_handle: zx_handle_t,
         vmo_offset: u64,
-        len: usize,
+        len: zx_size_t,
         mapped_addr: *mut usize
         ) -> zx_status_t;
 
     pub fn zx_vmar_unmap(
         vmar_handle: zx_handle_t,
         addr: usize,
-        len: usize
+        len: usize,
         ) -> zx_status_t;
 
     pub fn zx_vmar_protect(
         vmar_handle: zx_handle_t,
         options: zx_vm_option_t,
         addr: usize,
-        len: usize
+        len: usize,
         ) -> zx_status_t;
 
     pub fn zx_vmar_root_self() -> zx_handle_t;
 
     pub fn zx_cprng_draw(
         buffer: *mut u8,
-        len: usize
+        len: usize,
         );
 
     pub fn zx_cprng_add_entropy(
@@ -564,7 +564,7 @@ extern {
         handle: zx_handle_t,
         data: *mut u8,
         offset: u32,
-        len: u32,
+        len: zx_size_t,
         actual: *mut u32
         ) -> zx_status_t;
 
@@ -588,24 +588,24 @@ extern {
         action: u32,
         options: u32,
         ptr: *mut u8,
-        size: u32
+        size: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_debug_read(
         handle: zx_handle_t,
         buffer: *mut u8,
-        length: u32
+        length: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_debug_write(
         buffer: *const u8,
-        length: u32
+        length: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_debug_send_command(
         resource_handle: zx_handle_t,
         buffer: *const u8,
-        length: u32
+        length: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_interrupt_create(
@@ -627,15 +627,9 @@ extern {
         handle: zx_handle_t
         ) -> zx_status_t;
 
-    pub fn zx_mmap_device_io(
-        handle: zx_handle_t,
-        io_addr: u32,
-        len: u32
-        ) -> zx_status_t;
-
     pub fn zx_vmo_create_contiguous(
         rsrc_handle: zx_handle_t,
-        size: usize,
+        size: zx_size_t,
         alignment_log2: u32,
         out: *mut zx_handle_t
         ) -> zx_status_t;
@@ -652,26 +646,6 @@ extern {
         width: *mut u32,
         height: *mut u32,
         stride: *mut u32
-        ) -> zx_status_t;
-
-    pub fn zx_set_framebuffer(
-        handle: zx_handle_t,
-        vaddr: *mut u8,
-        len: u32,
-        format: u32,
-        width: u32,
-        height: u32,
-        stride: u32
-        ) -> zx_status_t;
-
-    pub fn zx_set_framebuffer_vmo(
-        handle: zx_handle_t,
-        vmo: zx_handle_t,
-        len: u32,
-        format: u32,
-        width: u32,
-        height: u32,
-        stride: u32
         ) -> zx_status_t;
 
     pub fn zx_pci_get_nth_device(
@@ -717,22 +691,6 @@ extern {
         out_config: *mut zx_pci_resource_t
         ) -> zx_status_t;
 
-    pub fn zx_pci_io_write(
-        handle: zx_handle_t,
-        bar_num: u32,
-        offset: u32,
-        len: u32,
-        value: u32
-        ) -> zx_status_t;
-
-    pub fn zx_pci_io_read(
-        handle: zx_handle_t,
-        bar_num: u32,
-        offset: u32,
-        len: u32,
-        out_value: *mut u32
-        ) -> zx_status_t;
-
     pub fn zx_pci_map_interrupt(
         handle: zx_handle_t,
         which_irq: i32,
@@ -754,7 +712,7 @@ extern {
     pub fn zx_pci_init(
         handle: zx_handle_t,
         init_buf: *const zx_pci_init_arg_t,
-        len: u32
+        len: u32 // actually is u32
         ) -> zx_status_t;
 
     pub fn zx_pci_add_subtract_io_range(
@@ -777,9 +735,9 @@ extern {
         parent_rsrc: zx_handle_t,
         options: u32,
         base: u64,
-        len: usize,
+        size: usize,
         name: *const u8,
-        name_len: u32,
+        name_size: zx_size_t,
         resource_out: *mut zx_handle_t
         ) -> zx_status_t;
 
@@ -820,21 +778,20 @@ extern {
         vcpu: zx_handle_t,
         kind: u32,
         buffer: *mut u8,
-        len: u32
+        buffer_size: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_vcpu_write_state(
         vcpu: zx_handle_t,
         kind: u32,
         buffer: *const u8,
-        len: u32
+        buffer_size: zx_size_t,
         ) -> zx_status_t;
 
     pub fn zx_system_mexec(
-        kernel: zx_handle_t,
-        bootimage: zx_handle_t,
-        cmdline: *const u8,
-        cmdline_len: u32
+        resource: zx_handle_t,
+        kernel_vmo: zx_handle_t,
+        bootimage_vmo: zx_handle_t,
         ) -> zx_status_t;
 
     pub fn zx_syscall_test_0(
@@ -905,6 +862,4 @@ extern {
         b: isize,
         c: isize
         ) -> zx_status_t;
-
-
 }
