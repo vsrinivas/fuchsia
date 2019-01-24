@@ -4,32 +4,43 @@
 
 import("//build/compiled_action.gni")
 
-declare_args() {
-  # Directory containing files named by their merkleroot content IDs in
-  # ASCII hex.  The //build/image:pm_publish_blobs target populates
-  # this with copies of build products, but never removes old files.
-  amber_repository_dir = "$root_out_dir/amber-files"
+amber_repository_dir = "$root_out_dir/amber-files"
 
-  # Directory containing signing keys used by pm publish.
-  amber_keys_dir = "//garnet/go/src/amber/keys"
+# Directory containing developer signing keys.
+amber_keys_dir = "//garnet/go/src/amber/keys"
 
-  amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
-}
+# Directory containing files named by their merkleroot content IDs in
+# ASCII hex.  The //build/image:pm_publish_blobs target populates
+# this with copies of build products, but never removes old files.
+amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
 
 template("pm_publish") {
   # These files are copied from amber_keys_dir into $amber_repository_dir/keys.
-  pm_copied_keys_files = [
-    "snapshot.json",
-    "targets.json",
-    "timestamp.json",
-  ]
-  # These files are read from $amber_keys_dir by amber-publish.
-  amber_keys_files = [
-    "root.json",
-    "root_manifest.json",
-  ]
+
+  copy("keys") {
+    sources = [
+      "$amber_keys_dir/snapshot.json",
+      "$amber_keys_dir/targets.json",
+      "$amber_keys_dir/timestamp.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/keys/{{source_file_part}}"
+    ]
+  }
+
+  copy("root_manifest") {
+    sources = [
+      "$amber_keys_dir/root_manifest.json"
+    ]
+
+    outputs = [
+      "$amber_repository_dir/repository/root.json"
+    ]
+  }
 
   compiled_action(target_name) {
+
     tool = "//garnet/go/src/pm:pm_bin"
     tool_output_name = "pm"
 
@@ -41,26 +52,24 @@ template("pm_publish") {
                              "testonly",
                              "visibility",
                            ])
+    deps += [
+      ":keys",
+      ":root_manifest",
+    ]
 
     assert(inputs == [ inputs[0] ],
            "pm_publish(\"$target_name\") requires exactly one input")
 
     outputs = [
-      "$amber_repository_dir/repository/root.json",
+      "$amber_repository_dir/repository/snapshot.json",
+      "$amber_repository_dir/repository/targets.json",
+      "$amber_repository_dir/repository/timestamp.json",
     ]
-    foreach(file, pm_copied_keys_files) {
-      outputs += [ "$amber_repository_dir/keys/$file" ]
-    }
-    foreach(file, amber_keys_files + pm_copied_keys_files) {
-      inputs += [ "$amber_keys_dir/$file" ]
-    }
 
     args = [
       "publish",
       "-r",
       rebase_path(amber_repository_dir, root_build_dir),
-      "-k",
-      rebase_path(amber_keys_dir, root_build_dir),
       "-ps",
       "-f",
       rebase_path(inputs[0]),

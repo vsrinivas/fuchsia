@@ -24,7 +24,7 @@ test_packages = [
   "build",
   "cmd/pm/genkey",
   "keys",
-  "publish",
+  "repo",
 ]
 
 foreach(pkg, test_packages) {

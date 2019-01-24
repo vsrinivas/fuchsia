@@ -12,7 +12,6 @@ import (
 	"path/filepath"
 
 	"fuchsia.googlesource.com/pm/build"
-	"fuchsia.googlesource.com/pm/publish"
 	"fuchsia.googlesource.com/pm/repo"
 )
 
@@ -38,9 +37,14 @@ func Run(cfg *build.Config, args []string) error {
 	config.ApplyDefaults()
 
 	os.MkdirAll(config.RepoDir, os.ModePerm)
-	os.MkdirAll(config.KeyDir, os.ModePerm)
 
-	_, err := publish.InitRepo(config.RepoDir, config.KeyDir)
+	r, err := repo.New(config.RepoDir)
+	if err != nil {
+		return err
+	}
+	if err := r.Init(); err != nil {
+		return err
+	}
 
-	return err
+	return r.GenKeys()
 }

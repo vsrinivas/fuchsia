@@ -18,7 +18,6 @@ import (
 	"fuchsia.googlesource.com/far"
 	"fuchsia.googlesource.com/pm/build"
 	"fuchsia.googlesource.com/pm/pkg"
-	"fuchsia.googlesource.com/pm/publish"
 	"fuchsia.googlesource.com/pm/repo"
 )
 
@@ -57,7 +56,6 @@ func Run(cfg *build.Config, args []string) error {
 	config := &repo.Config{}
 	//config.Vars(fs)
 	fs.StringVar(&config.RepoDir, "r", "", "Path to the TUF repository directory.")
-	fs.StringVar(&config.KeyDir, "k", "", "Directory containing the signing keys.")
 	verbose := fs.Bool("v", false, "Print out more informational messages.")
 	verTime := fs.Bool("vt", false, "Set repo versioning based on time rather than a monotonic increment")
 
@@ -111,17 +109,7 @@ func Run(cfg *build.Config, args []string) error {
 		return fmt.Errorf("repository path %q is not a directory", config.RepoDir)
 	}
 
-	// make sure the key directory exists and is actually a directory.
-	fi, err = os.Stat(config.KeyDir)
-	if err != nil {
-		return fmt.Errorf("key path %q is not valid: %s", config.KeyDir, err)
-	}
-
-	if !fi.IsDir() {
-		return fmt.Errorf("key path %q is not a directory", config.KeyDir)
-	}
-
-	repo, err := publish.InitRepo(config.RepoDir, config.KeyDir)
+	repo, err := repo.New(config.RepoDir)
 	if err != nil {
 		return fmt.Errorf("error initializing repo: %s", err)
 	}

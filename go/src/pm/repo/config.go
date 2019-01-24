@@ -32,16 +32,14 @@ func platformDataDir() string {
 // Config contains a common runtime configuration for repository manipulations.
 type Config struct {
 	RepoDir string
-	KeyDir  string
 }
 
 func (c *Config) Vars(fs *flag.FlagSet) {
 	fs.StringVar(&c.RepoDir, "repo", "", "path to repostory directory")
-	fs.StringVar(&c.KeyDir, "keys", "", "path to keys directory")
 }
 
 func (c *Config) ApplyDefaults() {
-	if c.RepoDir != "" && c.KeyDir != "" {
+	if c.RepoDir != "" {
 		return
 	}
 
@@ -54,9 +52,5 @@ func (c *Config) ApplyDefaults() {
 		if c.RepoDir == "" {
 			c.RepoDir = filepath.Join(platformDataDir(), "amber-files")
 		}
-	}
-
-	if c.KeyDir == "" {
-		c.KeyDir = filepath.Join(c.RepoDir, "keys")
 	}
 }
