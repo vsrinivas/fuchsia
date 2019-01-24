@@ -6,9 +6,8 @@ use {
     failure::Error,
     fidl::endpoints::RequestStream,
     fidl_fuchsia_bluetooth_control::{
-        PairingDelegateRequest,
-        PairingDelegateRequestStream,
-        PairingMethod},
+        PairingDelegateRequest, PairingDelegateRequestStream, PairingMethod,
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::error::Error as BtError,
     futures::prelude::*,
@@ -108,6 +107,7 @@ fn prompt_for_local_input() -> Option<String> {
             if input.len() == 0 {
                 None
             } else {
+                println!("Entered: {}", input);
                 Some(input)
             }
         }
@@ -175,5 +175,6 @@ pub fn pairing_delegate(channel: fasync::Channel) -> impl Future<Output = Result
                 }
             };
             future::ready(Ok(()))
-        }).map_err(|e| e.into())
+        })
+        .map_err(|e| e.into())
 }
