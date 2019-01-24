@@ -25,7 +25,7 @@ __BEGIN_CDECLS
 typedef zx_status_t(fidl_dispatch_t)(void* ctx, fidl_txn_t* txn,
                                      fidl_msg_t* msg, const void* ops);
 
-// Binds a |dispatch| function to channel| using |dispatcher|.
+// Binds a |dispatch| function to |channel| using |dispatcher|.
 //
 // This function adds an |async_wait_t| to the given |dispatcher| that waits
 // asynchronously for new messages to arrive on |channel|. When a message
@@ -47,8 +47,10 @@ typedef zx_status_t(fidl_dispatch_t)(void* ctx, fidl_txn_t* txn,
 // must be invoked on |fidl_txn_t|, and ZX_ERR_ASYNC must be returned.
 //
 // Returns whether |fidl_bind| was able to begin waiting on the given |channel|.
-// Upon any error, |channel| is closed and the binding is terminated. Shutting down
-// the |dispatcher| also results in |channel| being closed.
+// Upon any error, |channel| is closed and the binding is terminated.
+//
+// The |dispatcher| takes ownership of the channel. Shutting down the |dispatcher|
+// results in |channel| being closed.
 //
 // It is safe to shutdown the dispatcher at any time.
 //

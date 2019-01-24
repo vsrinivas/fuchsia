@@ -6,6 +6,7 @@
 #include <lib/fidl-async/bind.h>
 #include <stdlib.h>
 #include <string.h>
+#include <zircon/assert.h>
 #include <zircon/syscalls.h>
 
 typedef struct fidl_binding {
@@ -65,7 +66,8 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher,
                                      ZX_CHANNEL_MAX_MSG_HANDLES,
                                      &msg.num_bytes, &msg.num_handles);
             if (status == ZX_ERR_SHOULD_WAIT) {
-                break;
+                // This occurs when someone else has read the message we were expecting.
+                goto shutdown;
             }
             if (status != ZX_OK || msg.num_bytes < sizeof(fidl_message_header_t)) {
                 goto shutdown;
@@ -80,17 +82,22 @@ static void fidl_message_handler(async_dispatcher_t* dispatcher,
             status = binding->dispatch(binding->ctx, &conn.txn, &msg, binding->ops);
             switch (status) {
             case ZX_OK:
-                status = async_begin_wait(dispatcher, wait);
-                if (status != ZX_OK) {
-                    goto shutdown;
-                }
-                return;
+                continue;
             case ZX_ERR_ASYNC:
                 return;
             default:
                 goto shutdown;
             }
         }
+
+        // Only |status| == ZX_OK will lead here
+        if (async_begin_wait(dispatcher, wait) == ZX_OK) {
+            return;
+        } else {
+            goto shutdown;
+        }
+    } else {
+        ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_PEER_CLOSED);
     }
 
 shutdown:
