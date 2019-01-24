@@ -438,6 +438,7 @@ zx_status_t pci_init(zx_device_t* parent,
         .proto_ops = get_pciroot_ops(),
         .proxy_args = nullptr,
         .flags = 0,
+        .client_remote = ZX_HANDLE_INVALID,
     };
 
     // These are cached here to work around dev_ctx potentially going out of scope
