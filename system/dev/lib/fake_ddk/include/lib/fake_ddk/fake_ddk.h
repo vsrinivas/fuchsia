@@ -35,9 +35,9 @@ extern zx_device_t* kFakeParent;
 //
 // Note that this class is not thread safe. Only one test at a time is supported.
 class Bind {
-  public:
+public:
     Bind();
-    ~Bind() { instance_ = nullptr; }
+    virtual ~Bind() { instance_ = nullptr; }
 
     // Verifies that the whole process of bind and unbind went as expected.
     bool Ok();
@@ -62,28 +62,30 @@ class Bind {
     static Bind* Instance() { return instance_; }
 
     // Internal fake implementation of ddk functionality.
-    zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
-                          device_add_args_t* args, zx_device_t** out);
+    virtual zx_status_t DeviceAdd(zx_driver_t* drv, zx_device_t* parent,
+                                  device_add_args_t* args, zx_device_t** out);
 
     // Internal fake implementation of ddk functionality.
-    zx_status_t DeviceRemove(zx_device_t* device);
+    virtual zx_status_t DeviceRemove(zx_device_t* device);
 
     // Internal fake implementation of ddk functionality.
-    zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data, size_t length);
+    virtual zx_status_t DeviceAddMetadata(zx_device_t* dev, uint32_t type, const void* data,
+                                          size_t length);
 
     // Internal fake implementation of ddk functionality.
-    void DeviceMakeVisible(zx_device_t* dev);
+    virtual void DeviceMakeVisible(zx_device_t* dev);
 
     // Internal fake implementation of ddk functionality.
-    zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id, void* protocol);
+    virtual zx_status_t DeviceGetProtocol(const zx_device_t* device, uint32_t proto_id,
+                                          void* protocol);
 
     // Internal fake implementation of ddk functionality.
-    const char* DeviceGetName(zx_device_t* device);
+    virtual const char* DeviceGetName(zx_device_t* device);
 
     // Internal fake implementation of ddk functionality.
-    zx_off_t DeviceGetSize(zx_device_t* device);
+    virtual zx_off_t DeviceGetSize(zx_device_t* device);
 
-  private:
+protected:
     static Bind* instance_;
 
     bool bad_parent_ = false;
@@ -100,4 +102,4 @@ class Bind {
     fbl::Array<ProtocolEntry> protocols_;
 };
 
-}  // namespace fake_ddk
+} // namespace fake_ddk
