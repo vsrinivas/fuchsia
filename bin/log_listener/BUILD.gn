@@ -43,13 +43,12 @@ package("log_listener_shell") {
 }
 
 fuchsia_component("log_listener_component") {
-  name = "log_listener"
+  manifest = rebase_path("meta/log_listener.cmx")
   deps = [
     ":bin",
   ]
 
   binary = "rust_crates/log_listener"
-  manifest = rebase_path("meta/log_listener.cmx")
 }
 
 package("log_listener") {

@@ -11,13 +11,12 @@ rustc_binary("hello_world_bin") {
 }
 
 fuchsia_component("hello_world_component") {
-  name = "hello_world"
+  manifest = rebase_path("meta/hello_world.cml")
   deps = [
     ":hello_world_bin",
   ]
 
   binary = "hello_world"
-  manifest = rebase_path("meta/hello_world.cml")
 }
 
 package("hello_world_hippo") {

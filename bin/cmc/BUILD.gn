@@ -51,16 +51,16 @@ rustc_binary("example_bin") {
 }
 
 fuchsia_component("example_component") {
+  manifest = rebase_path("meta/example.cml")
   deps = [
     ":example_bin",
   ]
-  name = "example"
   binary = "example"
-  manifest = rebase_path("meta/example.cml")
   testonly = true
 }
 
 fuchsia_component("cmc_integration_test_component") {
+  manifest = rebase_path("meta/cmc_integration_test.cmx")
   deps = [
     ":cmc_integration_test_bin",
   ]
@@ -77,7 +77,6 @@ fuchsia_component("cmc_integration_test_component") {
   ]
 
   binary = "cmc_integration_test"
-  manifest = rebase_path("meta/cmc_integration_test.cmx")
   test = true
 }
 

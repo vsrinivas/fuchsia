@@ -27,14 +27,13 @@ rustc_binary("bin") {
 }
 
 fuchsia_component("logger_component") {
-  name = "logger"
+  manifest = rebase_path("meta/logger.cmx")
 
   deps = [
     ":bin",
   ]
 
   binary = "rust_crates/logger"
-  manifest = rebase_path("meta/logger.cmx")
 }
 
 package("logger") {
