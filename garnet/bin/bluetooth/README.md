@@ -24,6 +24,7 @@ For more orientation, see
 - [Detailed Source Layout](../../docs/bluetooth_source_layout.md)
 
 ## Getting Started
+
 ### API Examples
 
 Examples using Fuchsia's Bluetooth Low Energy APIs for all four LE roles can be
@@ -36,8 +37,9 @@ Eddystone beacons. This is built in topaz by default.
 - __LE broadcaster__: see [`eddystone_advertiser`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/eddystone_advertiser/).
 This is a Flutter module that can advertise any entered URL as an Eddystone
 beacon.
-- __LE peripheral__: see the [`ble_rect`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_rect/)
-and [`bt-le-battery-service`](../../examples/bluetooth/bt-le-battery-service) examples.
+- __LE peripheral__: see the [`ble_rect`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_rect/),
+[`bt-le-battery-service`](../../examples/bluetooth/bt-le-battery-service), and
+[`bt-le-heart-rate-peripheral`](../../examples/bluetooth/bt-le-heart-rate-peripheral) examples.
 - __LE central__: see [`ble_scanner`](https://fuchsia.googlesource.com/topaz/+/master/examples/bluetooth/ble_scanner/).
 
 ### Control API
@@ -50,18 +52,18 @@ pairing/bonding, and other settings.
 [`bt-cli`](tools/bt-cli) is a command-line front-end
 for this API:
 
-```
-$ bt-cli
-bluetooth> list-adapters
-  Adapter 0
-    id: bf004a8b-d691-4298-8c79-130b83e047a1
-    address: 00:1A:7D:DA:0A
-bluetooth>
-```
+  ```
+  $ bt-cli
+  bluetooth> list-adapters
+    Adapter 0
+      id: bf004a8b-d691-4298-8c79-130b83e047a1
+      address: 00:1A:7D:DA:0A
+  bluetooth>
+  ```
 
 We also have a Flutter [module](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module)
 that acts as a Bluetooth system menu based on this API at
-[topaz/app/bluetooth_settings](https://fuchsia.googlesource.com/topaz/+/master/app/bluetooth_settings/).
+[topaz/bin/bluetooth\_settings](https://fuchsia.googlesource.com/topaz/+/master/bin/bluetooth_settings/).
 
 ### Tools
 
@@ -70,49 +72,77 @@ available command line tools for testing/debugging.
 
 ### Running Tests
 
-#### Unit tests
-The `bluetooth_tests` package contains Bluetooth test binaries. This package is
-defined in the [tests BUILD file](tests/BUILD.gn).
+Your build configuration may or may not include Bluetooth tests. Ensure
+Bluetooth tests are built and installed when paving or OTA'ing with `fx set`:
 
-Host subsystem tests are compiled into a single [GoogleTest](https://github.com/google/googletest) binary,
-which gets installed at `/system/test/bluetooth_unittests`.
-
-##### Running on real hardware
-* Run all the tests:
   ```
-  $ runtests -t bt-host-unittests
+  $ fx set x64 --preinstall="garnet/packages/tests/bluetooth"
   ```
 
+#### Tests
+
+Bluetooth test packages are listed in
+[tests/bluetooth](../../packages/tests/bluetooth) and each contains at least one
+test binary. Refer to package definitions for each package's binaries.
+
+Each test binary is a [component](https://fuchsia.googlesource.com/docs/+/HEAD/glossary.md#component)
+whose runtime environment is defined by its [`.cmx` component manifest](https://fuchsia.googlesource.com/docs/+/HEAD/the-book/package_metadata.md#Component-Manifest)
+
+For example, `bt-host-unittests` is a [Google Test](https://github.com/google/googletest)
+binary that contains all the C++ bt-host subsystem unit tests and is a part of
+the [`bluetooth-tests`](tests/BUILD.gn) package.
+
+##### Running on a Fuchsia device
+
+* Run all the bt-host unit tests from the target shell:
+
+  ```
+  $ run-test-component bt-host-unittests
+  ```
 
 * Or use the `--gtest_filter`
 [flag](https://github.com/google/googletest/blob/master/googletest/docs/advanced.md#running-a-subset-of-the-tests) to run a subset of the tests:
 
   ```
   # This only runs the L2CAP unit tests.
-  $ /pkgfs/packages/bluetooth_tests/0/test/bt-host-unittests --gtest_filter=L2CAP_*
+  $ run-test-component bt-host-unittests --gtest_filter=L2CAP_\*
   ```
-  (We specify the full path in this case, because runtests doesn't allow us to pass through arbitrary arguments to the test binary.)
-
 
 * And use the `--verbose` flag to set log verbosity:
 
   ```
-  # This logs all messages logged using FXL_VLOG (up to level 2)
-  $ /pkgfs/packages/bluetooth_tests/0/test/bt-host-unittests --verbose=2
+  # This logs all messages logged using FXL_VLOG up to level 2 (equivalent to ::btlib::common::LogSeverity:SPEW)
+  $ run-test-component bt-host-unittests --verbose=2
   ```
 
+* After making library or test changes, you can push the test package and run it
+from your development shell:
+
+  ```
+  $ fx run-test bluetooth-tests -t bt-host-unittests -- --gtest_filter=L2CAP_\*
+  ```
+
+Note the use of the package name `bluetooth-tests` and the extra `--` used to
+separate arguments passed to the test binary.
+
+See [Developing with Fuchsia packages](https://fuchsia.googlesource.com/docs/+/HEAD/development/workflows/package_update.md)
+for more details on the package-based workflow.
+
 ##### Running on QEMU
+
 If you don't have physical hardware available, you can run the tests in QEMU using the same commands as above. A couple of tips will help run the tests a little more quickly.
 
 * Run the VM with hardware virtualization support: `fx run -k`
 * Disable unnecessary logging for the tests:
+
   ```
-  $ /pkgfs/packages/bluetooth_tests/0/test/bt-host-unittests --quiet=10
+  $ run-test-component bt-host-unittests --quiet=10
   ```
 
 With these two tips, the full bt-host-unittests suite runs in ~2 seconds.
 
 #### Integration Tests
+
 TODO(armansito): Describe integration tests
 
 ### Controlling Log Verbosity
@@ -121,18 +151,20 @@ TODO(armansito): Describe integration tests
 
 The most reliable way to enable higher log verbosity is with kernel command line parameters. These can be configured through the `fx set` command:
 
-```
-fx set x64 --args="kernel_cmdline_files=[\"$FUCHSIA_DIR/kernel_cmdline.txt\"]"
-```
-Add the commands to the `$FUCHSIA_DIR/kernel_cmdline.txt`, e.g. to enable full logging for the usb transport, intel hci and host drivers:
-```
-$ cat $FUCHSIA_DIR/kernel_cmdline.txt
-driver.bt_host.log=+trace,+spew,+info,+error,+warn
-driver.bt_hci_intel.log=+trace,+spew,+info,+error,+warn
-driver.bt_transport_usb.log=+trace,+info,+error,+warn
-```
+  ```
+  fx set x64 --args="kernel_cmdline_files=[\"//kernel_cmdline.txt\"]"
+  ```
 
-(Hci drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_fake`)
+Add the commands to `$FUCHSIA_DIR/kernel_cmdline.txt`, e.g. to enable full logging for the USB transport, Intel HCI, and host drivers:
+
+  ```
+  $ cat $FUCHSIA_DIR/kernel_cmdline.txt
+  driver.bt_host.log=+trace,+spew,+info,+error,+warn
+  driver.bt_hci_intel.log=+trace,+spew,+info,+error,+warn
+  driver.bt_transport_usb.log=+trace,+info,+error,+warn
+  ```
+
+(HCI drivers other than Intel can also be set. Other hci drivers include `bt_hci_atheros`, `bt_hci_passthrough`, and `bt_hci_fake`)
 
 Using `fx set` writes these values into the image, so they will survive a restart.
 
@@ -146,17 +178,12 @@ The mapping between environment service names and their handlers is defined in
 Add the `--verbose` option to the Bluetooth entries to increase verbosity, for
 example:
 
-```
-...
-    "bluetooth::control::AdapterManager": [ "bluetooth", "--verbose=2" ],
-    "bluetooth::gatt::Server": [ "bluetooth", "--verbose=2" ],
-    "bluetooth::low_energy::Central": [ "bluetooth", "--verbose=2" ],
-    "bluetooth::low_energy::Peripheral": [ "bluetooth", "--verbose=2" ],
-...
+  ```
+  ...
+      "bluetooth::control::AdapterManager": [ "bluetooth", "--verbose=2" ],
+      "bluetooth::gatt::Server": [ "bluetooth", "--verbose=2" ],
+      "bluetooth::low_energy::Central": [ "bluetooth", "--verbose=2" ],
+      "bluetooth::low_energy::Peripheral": [ "bluetooth", "--verbose=2" ],
+  ...
 
-```
-
-#### bthost
-
-The bthost driver currently uses the FXL logging system. To enable maximum log
-verbosity, set the `BT_DEBUG` macro to `1` in [drivers/bluetooth/host/driver.cc](../../drivers/bluetooth/host/driver.cc).
+  ```
