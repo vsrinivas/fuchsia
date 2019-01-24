@@ -12,7 +12,6 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
 	"log"
 	"os"
 	"time"
@@ -196,13 +195,8 @@ func execute(tests []testsharder.Test, output *TestRunnerOutput, devCtx *botanis
 	return runFuchsiaTests(fuchsia, output, devCtx)
 }
 
-func sshIntoNode(nodename, privateKeyPath string) (*ssh.Client, error) {
-	privateKey, err := ioutil.ReadFile(privateKeyPath)
-	if err != nil {
-		return nil, err
-	}
-
-	signer, err := ssh.ParsePrivateKey(privateKey)
+func sshIntoNode(nodename, privateKey string) (*ssh.Client, error) {
+	signer, err := ssh.ParsePrivateKey([]byte(privateKey))
 	if err != nil {
 		return nil, err
 	}
