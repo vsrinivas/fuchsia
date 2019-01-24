@@ -9,11 +9,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 MODULE := $(LOCAL_DIR)
 
 MODULE_SRCS += \
-	$(LOCAL_DIR)/counters.cpp \
-	$(LOCAL_DIR)/counters_tests.cpp
-
-MODULE_DEPS += \
-	kernel/lib/console \
-	kernel/lib/unittest
+	$(LOCAL_DIR)/counters.cpp
 
 include make/module.mk

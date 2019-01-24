@@ -20,26 +20,30 @@
 
 namespace {
 
-constexpr char kShortOptions[] = "ltv";
+constexpr char kShortOptions[] = "ltvw::";
 constexpr struct option kLongOptions[] = {
-    { "list", 0, nullptr, 'l' },
-    { "terse", 0, nullptr, 't' },
-    { "verbose", 0, nullptr, 'v' },
+    { "list",       no_argument,        nullptr, 'l' },
+    { "terse",      no_argument,        nullptr, 't' },
+    { "verbose",    no_argument,        nullptr, 'v' },
+    { "watch",      optional_argument,  nullptr, 'w' },
     { nullptr, 0, nullptr, 0 }
 };
 
+constexpr int default_period = 3;
+
 void usage(const char* myname) {
     printf("\
-Usage: %s [-ltv] [--list] [--terse] [--verbose] [PREFIX...]\n\
+Usage: %s [-ltvw] [--list] [--terse] [--verbose] [--watch [period]] [PREFIX...]\n\
 Prints one counter per line.\n\
 With --list or -l, show names and types rather than values.\n\
 With --terse or -t, show only values and no names.\n\
 With --verbose or -v, show space-separated lists of per-CPU values.\n\
+With --watch or -w, keep showing the values every [period] seconds, default is %d seconds.\n\
 Otherwise values are aggregated summaries across all CPUs.\n\
 If PREFIX arguments are given, only matching names are shown.\n\
 Results are always sorted by name.\n\
 ",
-           myname);
+           myname, default_period);
 };
 
 constexpr char kVmoFileDir[] = "/boot/kernel";
@@ -47,7 +51,10 @@ constexpr char kVmoFileDir[] = "/boot/kernel";
 }  // anonymous namespace
 
 int main(int argc, char** argv) {
-    bool list = false, terse = false, verbose = false;
+    bool list = false;
+    bool terse = false;
+    bool verbose = false;
+    int  period = 0;
 
     int opt;
     while ((opt = getopt_long(argc, argv, kShortOptions, kLongOptions,
@@ -62,6 +69,16 @@ int main(int argc, char** argv) {
         case 'v':
             verbose = true;
             break;
+        case 'w':
+            // default to every 3 seconds.
+            period = optarg ? atoi(optarg) : default_period;
+            if (period < 1) {
+                fprintf(stderr, "watch period must be greater than 1\n");
+                return 1;
+            } else {
+                printf("watch mode every %d seconds\n", period);
+            }
+            break;
         default:
             usage(argv[0]);
             return 1;
@@ -70,7 +87,15 @@ int main(int argc, char** argv) {
 
     if (list + terse + verbose > 1) {
         fprintf(stderr,
-                "%s: --list, --terse, and --verbose are mutually exclusive",
+                "%s: --list, --terse, and --verbose are mutually exclusive\n",
+                argv[0]);
+        usage(argv[0]);
+        return 1;
+    }
+
+    if (list + period > 1) {
+        fprintf(stderr,
+                "%s: --list and --watch are mutually exclusive\n",
                 argv[0]);
         usage(argv[0]);
         return 1;
@@ -191,80 +216,100 @@ int main(int argc, char** argv) {
         return false;
     };
 
-    for (size_t i = 0; i < desc->num_counters(); ++i) {
-        const auto& entry = desc->descriptor_table[i];
-        if (matches(entry.name)) {
-            if (list) {
-                fputs(entry.name, stdout);
-                switch (entry.type) {
-                case counters::Type::kSum:
-                    puts(" sum");
-                    break;
-                case counters::Type::kMin:
-                    puts(" min");
-                    break;
-                case counters::Type::kMax:
-                    puts(" max");
-                    break;
-                default:
-                    printf(" ??? unknown type %" PRIu64 " ???\n",
-                           static_cast<uint64_t>(entry.type));
-                }
-            } else {
-                if (!terse) {
-                    printf("%s =%s", entry.name,
-                           !verbose ? " " :
-                           entry.type == counters::Type::kMin ? " min(" :
-                           entry.type == counters::Type::kMax ? " max(" :
-                           " ");
-                }
-                int64_t value = 0;
-                for (uint64_t cpu = 0; cpu < desc->max_cpus; ++cpu) {
-                    const int64_t cpu_value =
-                        arena[(cpu * desc->num_counters()) + i];
-                    if (verbose) {
-                        printf("%s%" PRId64,
-                               cpu == 0 ? "" :
-                               entry.type == counters::Type::kSum ? " + " :
-                               ", ",
-                               cpu_value);
-                    }
+    size_t times = 1;
+    zx_time_t deadline = 0;
+    bool match_failed = false;
+
+    while (true) {
+        if (period != 0) {
+            deadline = zx_deadline_after(ZX_SEC(period));
+            printf("[%zu]\n", times);
+        }
+
+        for (size_t i = 0; i < desc->num_counters(); ++i) {
+            const auto& entry = desc->descriptor_table[i];
+            if (matches(entry.name)) {
+                if (list) {
+                    fputs(entry.name, stdout);
                     switch (entry.type) {
                     case counters::Type::kSum:
-                    default:
-                        value += cpu_value;
+                        puts(" sum");
                         break;
                     case counters::Type::kMin:
-                        if (cpu_value < value) {
-                            value = cpu_value;
-                        }
+                        puts(" min");
                         break;
                     case counters::Type::kMax:
-                        if (cpu_value > value) {
-                            value = cpu_value;
-                        }
+                        puts(" max");
                         break;
+                    default:
+                        printf(" ??? unknown type %" PRIu64 " ???\n",
+                               static_cast<uint64_t>(entry.type));
                     }
-                }
-                if (verbose) {
-                    printf("%s = %" PRId64 "\n",
-                           entry.type == counters::Type::kSum ? "" : ")",
-                           value);
                 } else {
-                    printf("%" PRId64 "\n", value);
+                    if (!terse) {
+                        printf("%s =%s", entry.name,
+                               !verbose ? " " :
+                               entry.type == counters::Type::kMin ? " min(" :
+                               entry.type == counters::Type::kMax ? " max(" :
+                               " ");
+                    }
+                    int64_t value = 0;
+                    for (uint64_t cpu = 0; cpu < desc->max_cpus; ++cpu) {
+                        const int64_t cpu_value =
+                            arena[(cpu * desc->num_counters()) + i];
+                        if (verbose) {
+                            printf("%s%" PRId64,
+                                   cpu == 0 ? "" :
+                                   entry.type == counters::Type::kSum ? " + " :
+                                   ", ",
+                                   cpu_value);
+                        }
+                        switch (entry.type) {
+                        case counters::Type::kSum:
+                        default:
+                            value += cpu_value;
+                            break;
+                        case counters::Type::kMin:
+                            if (cpu_value < value) {
+                                value = cpu_value;
+                            }
+                            break;
+                        case counters::Type::kMax:
+                            if (cpu_value > value) {
+                                value = cpu_value;
+                            }
+                            break;
+                        }
+                    }
+                    if (verbose) {
+                        printf("%s = %" PRId64 "\n",
+                               entry.type == counters::Type::kSum ? "" : ")",
+                               value);
+                    } else {
+                        printf("%" PRId64 "\n", value);
+                    }
                 }
             }
         }
-    }
 
-    // Check that each prefix was actually used.
-    int status = 0;
-    for (auto it = matched.begin(); it != matched.end(); ++it) {
-        if (!*it) {
-            fprintf(stderr, "%s: prefix not found\n",
-                    argv[optind + (it - matched.begin())]);
-            status = 1;
+        // Check that each prefix was actually used.
+        if (times == 1) {
+            for (auto it = matched.begin(); it != matched.end(); ++it) {
+                if (!*it) {
+                    fprintf(stderr, "%s: prefix not found\n",
+                            argv[optind + (it - matched.begin())]);
+                    match_failed = true;
+                }
+            }
         }
-    }
-    return status;
+
+        if ((period == 0) || match_failed) {
+            break;
+        }
+
+        zx_nanosleep(deadline);
+        ++times;
+    }  // while
+
+    return match_failed ? 1: 0;
 }
