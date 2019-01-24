@@ -4,6 +4,7 @@
 
 #include <map>
 
+#include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/mock_frame.h"
 #include "garnet/bin/zxdb/client/stack.h"
 #include "garnet/bin/zxdb/symbols/function.h"
@@ -43,6 +44,65 @@ class MockStackDelegate : public Stack::Delegate {
 };
 
 }  // namespace
+
+// Tests fingerprint computations involving inline frames.
+TEST(Stack, InlineFingerprint) {
+  constexpr uint64_t kTopSP = 0x2000;
+  constexpr uint64_t kMiddleSP = 0x2020;
+  constexpr uint64_t kBottomSP = 0x2040;
+
+  // Create two physical frames.
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
+  debug_ipc::StackFrame phys_middle_record(0x1010, kMiddleSP, kMiddleSP);
+  Location middle_location(Location::State::kSymbolized, phys_middle_record.ip);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
+
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
+                                              top_location);
+  auto phys_middle = std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_middle_record, middle_location);
+  auto phys_bottom = std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_bottom_record, bottom_location);
+
+  std::vector<std::unique_ptr<Frame>> frames;
+
+  // Top frame has two inline functions expanded on top of it. This uses the
+  // same Location object for simplicity, in real life these will be different.
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+
+  // Physical top frame below those.
+  frames.push_back(std::move(phys_top));
+
+  // Middle frame has one inline function expanded on top of it.
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_middle_record, middle_location, phys_middle.get()));
+  frames.push_back(std::move(phys_middle));
+
+  // Bottom frame has no inline frame.
+  frames.push_back(std::move(phys_bottom));
+
+  MockStackDelegate delegate;
+  Stack stack(&delegate);
+  stack.SetFramesForTest(std::move(frames), true);
+
+  // The top frames (physical and inline) have the middle frame's SP as their
+  // fingerprint, along with the inline count.
+  EXPECT_EQ(FrameFingerprint(kMiddleSP, 2), stack.GetFrameFingerprint(0));
+  EXPECT_EQ(FrameFingerprint(kMiddleSP, 1), stack.GetFrameFingerprint(1));
+  EXPECT_EQ(FrameFingerprint(kMiddleSP, 0), stack.GetFrameFingerprint(2));
+
+  // Middle frames have the bottom frame's SP.
+  EXPECT_EQ(FrameFingerprint(kBottomSP, 1), stack.GetFrameFingerprint(3));
+  EXPECT_EQ(FrameFingerprint(kBottomSP, 0), stack.GetFrameFingerprint(4));
+
+  // Since there's nothing below the bottom frame, it gets its own SP.
+  EXPECT_EQ(FrameFingerprint(kBottomSP, 0), stack.GetFrameFingerprint(5));
+}
 
 // Tests that stack frames inside inline functions are expanded so that the
 // inline functions have their own "inline" frames.

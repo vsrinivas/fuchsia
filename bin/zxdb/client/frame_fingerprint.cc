@@ -7,12 +7,19 @@
 namespace zxdb {
 
 bool FrameFingerprint::operator==(const FrameFingerprint& other) const {
-  return frame_address_ == other.frame_address_;
+  return frame_address_ == other.frame_address_ &&
+         inline_count_ == other.inline_count_;
 }
 
 // static
 bool FrameFingerprint::Newer(const FrameFingerprint& left,
                              const FrameFingerprint& right) {
+  if (left.frame_address_ == right.frame_address_) {
+    // Inline functions (in the same physical frame) are newer if the inline
+    // stack depth is higher.
+    return left.inline_count_ > right.inline_count_;
+  }
+
   // Stacks grow "down" so bigger addresses represent older frames.
   return left.frame_address_ < right.frame_address_;
 }

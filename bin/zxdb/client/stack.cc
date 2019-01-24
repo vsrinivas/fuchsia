@@ -108,16 +108,25 @@ FrameFingerprint Stack::GetFrameFingerprint(size_t frame_index) const {
     return FrameFingerprint();
   }
 
-  // The frame address requires looking at the previous frame. When this is the
-  // last entry, we can't do that. This returns the frame base pointer instead
-  // which will at least identify the frame in some ways, and can be used to
-  // see if future frames are younger.
-  size_t prev_frame_index = frame_index + 1;
-  if (prev_frame_index == frames_.size())
-    return FrameFingerprint(frames_[frame_index]->GetStackPointer());
+  // Compute the inline frame count. This is the number of steps from the
+  // requested frame index to the current physical frame.
+  uint32_t inline_count = 0;
+  while (frame_index + inline_count < frames_.size() &&
+         frames_[frame_index + inline_count]->IsInline())
+    inline_count++;
 
-  // Use the previous frame's stack pointer. See frame_fingerprint.h.
-  return FrameFingerprint(frames_[prev_frame_index]->GetStackPointer());
+  // The stack pointer we want is the one from right before the current
+  // physical frame (see frame_fingerprint.h).
+  //
+  // When this is the last entry, we can't do that. This returns the frame base
+  // pointer instead which will at least identify the frame in some ways, and
+  // can be used to see if future frames are younger.
+  size_t before_physical_frame_index = frame_index + inline_count + 1;
+  if (before_physical_frame_index == frames_.size())
+    return FrameFingerprint(frames_[frame_index]->GetStackPointer(), 0);
+
+  return FrameFingerprint(
+      frames_[before_physical_frame_index]->GetStackPointer(), inline_count);
 }
 
 void Stack::SyncFrames(std::function<void()> callback) {

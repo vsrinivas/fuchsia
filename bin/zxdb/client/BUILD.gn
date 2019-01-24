@@ -182,6 +182,7 @@ source_set("tests") {
     "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
     "finish_thread_controller_unittest.cc",
+    "frame_fingerprint_unittest.cc",
     "frame_impl_unittest.cc",
     "memory_dump_unittest.cc",
     "minidump_unittest.cc",

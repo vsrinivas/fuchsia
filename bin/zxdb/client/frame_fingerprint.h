@@ -54,14 +54,24 @@ namespace zxdb {
 //
 // Because the "frame address" is actually the stack pointer of the previous
 // frame, the getter for this object is on the Stack (GetFrameFingerprint).
+//
+// INLINE FUNCTIONS
+// ----------------
+//
+// The above description deals with physical stack frames. Inline frames
+// share the same physical stack frame.
+//
+// To differentiate the depth when inside inline frames of the same functions,
+// the fingerprint also keeps a depth of inline function calls. The frame
+// address comes from the stack pointer before the current physical frame.
 class FrameFingerprint {
  public:
   FrameFingerprint() = default;
 
   // We currently don't have a use for "function begin" so it is not included
   // here. It may be necessary in the future.
-  explicit FrameFingerprint(uint64_t frame_address)
-      : frame_address_(frame_address) {}
+  explicit FrameFingerprint(uint64_t frame_address, uint32_t inline_count)
+      : frame_address_(frame_address), inline_count_(inline_count) {}
 
   bool is_valid() const { return frame_address_ != 0; }
 
@@ -71,12 +81,18 @@ class FrameFingerprint {
 
   // Computes "left Newer than right". This doesn't use operator < or > because
   // it's ambiguous whether a newer frame is "less" or "greater".
-  static bool Newer(const FrameFingerprint& left, const FrameFingerprint& right);
+  static bool Newer(const FrameFingerprint& left,
+                    const FrameFingerprint& right);
 
  private:
   // The address of the stack immediately before the function call (i.e. the
   // stack pointer of the previous frame). See the class documentation above.
   uint64_t frame_address_ = 0;
+
+  // When this frame is a physical frame, the inline count will be 0. Higher
+  // counts indicate the nesting depth of inline function calls at the current
+  // location.
+  uint32_t inline_count_ = 0;
 };
 
 }  // namespace zxdb
