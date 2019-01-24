@@ -28,11 +28,11 @@ rustc_library("carnelian") {
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:euclid",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:font-rs",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:itertools",
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:rusttype",
     "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
   ]
 }
@@ -56,7 +56,6 @@ rustc_binary("spinning_square_example") {
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:euclid",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:font-rs",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:itertools",
     "//third_party/rust-crates/rustc_deps:lazy_static",
@@ -85,7 +84,6 @@ rustc_binary("embedding_example") {
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:euclid",
     "//third_party/rust-crates/rustc_deps:failure",
-    "//third_party/rust-crates/rustc_deps:font-rs",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:itertools",
     "//third_party/rust-crates/rustc_deps:lazy_static",
