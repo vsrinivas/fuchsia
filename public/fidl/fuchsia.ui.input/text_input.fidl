@@ -5,52 +5,52 @@
 library fuchsia.ui.input;
 
 enum KeyboardType {
-  TEXT = 0;
-  NUMBER = 1;
-  PHONE = 2;
-  DATETIME = 3;
+    TEXT = 0;
+    NUMBER = 1;
+    PHONE = 2;
+    DATETIME = 3;
 };
 
 enum InputMethodAction {
-  UNSPECIFIED = 0;
-  NONE = 1;
-  GO = 2;
-  SEARCH = 3;
-  SEND = 4;
-  NEXT = 5;
-  DONE = 6;
-  PREVIOUS = 7;
+    UNSPECIFIED = 0;
+    NONE = 1;
+    GO = 2;
+    SEARCH = 3;
+    SEND = 4;
+    NEXT = 5;
+    DONE = 6;
+    PREVIOUS = 7;
 };
 
 // The current text, selection, and composing state for editing a run of text.
 struct TextInputState {
-  // Current state revision to avoid race conditions.
-  uint32 revision;
+    // Current state revision to avoid race conditions.
+    uint32 revision;
 
-  // The current text being edited.
-  string text;
+    // The current text being edited.
+    string text;
 
-  // The range of text that is currently selected.
-  TextSelection selection;
+    // The range of text that is currently selected.
+    TextSelection selection;
 
-  // The range of text that is still being composed.
-  TextRange composing;
+    // The range of text that is still being composed.
+    TextRange composing;
 };
 
 // A interface for interacting with a text input control.
 interface InputMethodEditor {
-  1: SetKeyboardType(KeyboardType keyboard_type);
-  2: SetState(TextInputState state);
-  3: InjectInput(InputEvent event);
+    SetKeyboardType(KeyboardType keyboard_type);
+    SetState(TextInputState state);
+    InjectInput(InputEvent event);
 
-  // TODO(TEXT-19): remove these in a later change, after PlatformView has been
-  // switched over to open/close on the input_connection_ instead.
-  4: Show();
-  5: Hide();
+    // TODO(TEXT-19): remove these in a later change, after PlatformView has been
+    // switched over to open/close on the input_connection_ instead.
+    Show();
+    Hide();
 };
 
 // An interface to receive information from |TextInputService|.
 interface InputMethodEditorClient {
-  1: DidUpdateState(TextInputState state, InputEvent? event);
-  2: OnAction(InputMethodAction action);
+    DidUpdateState(TextInputState state, InputEvent? event);
+    OnAction(InputMethodAction action);
 };

@@ -6,7 +6,7 @@ library fuchsia.ui.gfx;
 
 // Provides information about a display.
 struct DisplayInfo {
-  // The size of the display, in physical pixels.
-  uint32 width_in_px;
-  uint32 height_in_px;
+    // The size of the display, in physical pixels.
+    uint32 width_in_px;
+    uint32 height_in_px;
 };

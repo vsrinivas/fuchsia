@@ -12,20 +12,20 @@ const uint32 kSizeChangeHintEventMask = 2;
 // These are all of the types of events which can be reported by a |Session|.
 // Use |SetEventMaskCmd| to enable event delivery for a resource.
 union Event {
-  // Events which are controlled by a mask.
-  MetricsEvent metrics;
+    // Events which are controlled by a mask.
+    MetricsEvent metrics;
 
-  SizeChangeHintEvent size_change_hint;
+    SizeChangeHintEvent size_change_hint;
 
-  // Events which are always delivered, regardless of mask.
-  ImportUnboundEvent import_unbound;
-  ViewConnectedEvent view_connected;
-  ViewDisconnectedEvent view_disconnected;
-  ViewHolderDisconnectedEvent view_holder_disconnected;
-  ViewAttachedToSceneEvent view_attached_to_scene;
-  ViewDetachedFromSceneEvent view_detached_from_scene;
-  ViewPropertiesChangedEvent view_properties_changed;
-  ViewStateChangedEvent view_state_changed;
+    // Events which are always delivered, regardless of mask.
+    ImportUnboundEvent import_unbound;
+    ViewConnectedEvent view_connected;
+    ViewDisconnectedEvent view_disconnected;
+    ViewHolderDisconnectedEvent view_holder_disconnected;
+    ViewAttachedToSceneEvent view_attached_to_scene;
+    ViewDetachedFromSceneEvent view_detached_from_scene;
+    ViewPropertiesChangedEvent view_properties_changed;
+    ViewStateChangedEvent view_state_changed;
 };
 
 // Provides rendering target metrics information about the specified node.
@@ -39,8 +39,8 @@ union Event {
 // Subscribe to this event to receive information about the scale factors you
 // should apply when generating textures for your nodes.
 struct MetricsEvent {
-  uint32 node_id;
-  Metrics metrics;
+    uint32 node_id;
+    Metrics metrics;
 };
 
 // Delivered in response to a size change hint from a parent node
@@ -54,21 +54,21 @@ struct MetricsEvent {
 // will need in the near future for your nodes. The canonical use case is to
 // pre-allocate memory to avoid repeated re-allocations.
 struct SizeChangeHintEvent {
-  uint32 node_id;
-  float32 width_change_factor;
-  float32 height_change_factor;
+    uint32 node_id;
+    float32 width_change_factor;
+    float32 height_change_factor;
 };
 
 // Delivered when the imported resource with the given ID is no longer bound to
 // its host resource, or if the imported resource can not be bound because
 // the host resource is not available.
 struct ImportUnboundEvent {
-  uint32 resource_id;
+    uint32 resource_id;
 };
 
 // Delivered to a ViewHolder's Session when its peer View is connected.
 struct ViewConnectedEvent {
-  uint32 view_holder_id;
+    uint32 view_holder_id;
 };
 
 // Delivered to a ViewHolder's Session when its peer View is disconnected or
@@ -77,7 +77,7 @@ struct ViewConnectedEvent {
 // If the View is destroyed before the connection is established, then this
 // event will be delivered immediately when the ViewHolder attempts to connect.
 struct ViewDisconnectedEvent {
-  uint32 view_holder_id;
+    uint32 view_holder_id;
 };
 
 // Delivered to a View's Session when its peer ViewHolder is disconnected or
@@ -86,7 +86,7 @@ struct ViewDisconnectedEvent {
 // If the ViewHolder is destroyed before the connection is established, then
 // this event will be delivered immediately when the View attempts to connect.
 struct ViewHolderDisconnectedEvent {
-  uint32 view_id;
+    uint32 view_id;
 };
 
 // Delivered to a View's Session when the parent ViewHolder for the given View
@@ -96,8 +96,8 @@ struct ViewHolderDisconnectedEvent {
 // chain of parent-child relationships between the Scene node and the
 // ViewHolder node.
 struct ViewAttachedToSceneEvent {
-  uint32 view_id;
-  ViewProperties properties;
+    uint32 view_id;
+    ViewProperties properties;
 };
 
 // Delivered to a View's Session when the parent ViewHolder for the given View
@@ -110,18 +110,18 @@ struct ViewAttachedToSceneEvent {
 // chain of parent-child relationships between the Scene node and the
 // ViewHolder node.
 struct ViewDetachedFromSceneEvent {
-  uint32 view_id;
+    uint32 view_id;
 };
 
 // Delivered when the parent ViewHolder for the given View makes a change to
 // the View's properties.
 struct ViewPropertiesChangedEvent {
-  uint32 view_id;
-  ViewProperties properties;
+    uint32 view_id;
+    ViewProperties properties;
 };
 
 // Delivered to a ViewHolder's Session when its peer View's state has changed.
 struct ViewStateChangedEvent {
-  uint32 view_holder_id;
-  ViewState state;
+    uint32 view_holder_id;
+    ViewState state;
 };

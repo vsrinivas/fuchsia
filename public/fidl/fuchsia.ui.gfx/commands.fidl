@@ -204,7 +204,7 @@ struct AddPartCmd {
 };
 
 interface SnapshotCallbackHACK {
-    1: OnData(fuchsia.mem.Buffer data);
+    OnData(fuchsia.mem.Buffer data);
 };
 
 struct TakeSnapshotCmdHACK {
