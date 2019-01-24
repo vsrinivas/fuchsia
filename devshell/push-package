@@ -59,7 +59,7 @@ function main {
       amber_ctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
       manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
       if [ -s \"\$manifest_path\" ]; then
-        run module_package_indexer \"\${c}\" 0;
+        run fuchsia-pkg://fuchsia.com/module_package_indexer#meta/module_package_indexer.cmx \"\${c}\" 0;
       fi
     done;
     exit \$code
