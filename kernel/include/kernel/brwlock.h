@@ -154,7 +154,10 @@ private:
 
 #define DECLARE_BRWLOCK(container_type) LOCK_DEP_INSTRUMENT(container_type, BrwLock)
 
-// Configure fbl::Guard<BrwLock, BrwLock::Reader> and fbl::Guard<BrwLock, BrwLock::Writer>
-// to acquire read and write locks through the given policies.
-LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Reader, BrwLock::ReaderPolicy);
+// Configure fbl::Guard<BrwLock, BrwLock::Writer> write locks through the given policy.
 LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Writer, BrwLock::WriterPolicy);
+
+// Policy for read locks is currently disabled as `Guard` will currently make the thread
+// analysis think that an exclusive lock has been acquire instead of a shared lock. Once `Guard`
+// has been fixed this can be uncommented.
+// LOCK_DEP_POLICY_OPTION(BrwLock, BrwLock::Reader, BrwLock::ReaderPolicy);
