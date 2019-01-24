@@ -6,18 +6,20 @@ library fuchsia.mdns;
 
 using fuchsia.netstack;
 
-// mDNS service interface.
+// Primary mDNS service interface.
 [Discoverable]
-interface MdnsService {
+interface Controller {
     // Gets the addresses for the specified host name. |host_name| may not end in
     // a '.'.
     ResolveHostName(string host_name, uint32 timeout_ms)
-        -> (fuchsia.netstack.SocketAddress? v4_address, fuchsia.netstack.SocketAddress? v6_address);
+        -> (fuchsia.netstack.SocketAddress? v4_address,
+            fuchsia.netstack.SocketAddress? v6_address);
 
     // Subscribes to a service. The subscription lasts until |subscription| is
     // unbound. |service_name| must end in '._tcp.' or '._udp.'.
+    // TODO(dalesat): Replace request<ServiceSubscription> with ServiceSubscriber.
     SubscribeToService(string service_name,
-                       request<MdnsServiceSubscription> subscription);
+                       request<ServiceSubscription> subscription);
 
     // Publishes a service instance available at the specified port. The service
     // is published until it is unpublished via |UnpublishServiceInstance|.
@@ -28,7 +30,7 @@ interface MdnsService {
     PublishServiceInstance(string service_name,
                            string instance_name,
                            uint16 port,
-                           vector<string>? text) -> (MdnsResult result);
+                           vector<string>? text) -> (Result result);
 
     // Ends publication started with |PublishServiceInstance|. |service_name| must
     // end in '._tcp.' or '._udp.'. |instance_name| must not end in a '.'.
@@ -39,12 +41,12 @@ interface MdnsService {
     // |responder| is consulted for initial announcements and to answer queries.
     // The service is published until the |responder| channel closes. In addition
     // to announcements and queries for the service type, all queries for subtypes
-    // are answered subject to filtering through the |MdnsResponder|. If subtype
+    // are answered subject to filtering through the |Responder|. If subtype
     // announcement is desired, a call to |SetSubtypes| is required to set the
     // list of announced subtypes.
     AddResponder(string service_name,
                  string instance_name,
-                 MdnsResponder responder);
+                 Responder responder);
 
     // Sets the subtypes for a service instance currently being published due to
     // a call to |PublishServiceInstance| or |AddResponder|.  |service_name| must
@@ -52,8 +54,8 @@ interface MdnsService {
     // instance published with |PublishServiceInstance|, the specified subtypes
     // will be announced, and queries for the subtypes will be answered. For an
     // instance published with |AddResponder|, the specified subtypes will be
-    // announced subject to filtering through the |MdnsResponder|. All subtype
-    // queries are forwarded to the |MdnsResponder|, so this method has no effect
+    // announced subject to filtering through the |Responder|. All subtype
+    // queries are forwarded to the |Responder|, so this method has no effect
     // in that regard.
     SetSubtypes(string service_name,
                 string instance_name,
@@ -64,7 +66,7 @@ interface MdnsService {
     // not needed for the |PublishServiceInstance| case. For instances published
     // with |AddResponder|, this method is typically used when the port or text
     // associated with the instance changes. All announcements are filtered
-    // through the |MdnsResponder|, which can reply with the new port and text
+    // through the |Responder|, which can reply with the new port and text
     // values.
     ReannounceInstance(string service_name, string instance_name);
 
@@ -73,7 +75,7 @@ interface MdnsService {
 };
 
 // Result values for instance publishing.
-enum MdnsResult : int32 {
+enum Result : int32 {
     OK = 0;
     INVALID_SERVICE_NAME = -1;
     INVALID_INSTANCE_NAME = -2;
@@ -86,16 +88,18 @@ enum MdnsResult : int32 {
 const uint64 kInitialInstances = 0;
 
 // Represents a subscription.
-interface MdnsServiceSubscription {
+// TODO(dalesat): Replace this with ServiceSubscriber, a client-implemented
+// interface that is not susceptible to channel overrun.
+interface ServiceSubscription {
     // Gets the known service instances. To get the list immediately, call
     // |GetInstances(kInitialInstances)|. To get updates thereafter, pass the
     // version sent in the previous callback.
     GetInstances(uint64 version_last_seen)
-        -> (uint64 version, vector<MdnsServiceInstance> instances);
+        -> (uint64 version, vector<ServiceInstance> instances);
 };
 
 // Describes a service instance.
-struct MdnsServiceInstance {
+struct ServiceInstance {
     string service_name;
     string instance_name;
     fuchsia.netstack.SocketAddress? v4_address;
@@ -104,24 +108,24 @@ struct MdnsServiceInstance {
 };
 
 // Client-supplied responder interface.
-interface MdnsResponder {
+interface Responder {
     // Updates the status of the instance publication.
-    UpdateStatus(MdnsResult result);
+    UpdateStatus(Result result);
 
     // Provides instance information for initial announcements and query responses
-    // relating to the service instance specified in |MdnsService.AddResponder|.
+    // relating to the service instance specified in |Service.AddResponder|.
     // |query| indicates whether data is requested for an initial announcement
     // (false) or in response to a query (true). If the publication relates to a
     // subtype of the service, |subtype| contains the subtype, otherwise it is
     // null. If |publication| is null, no announcement or response is transmitted.
     // Strings in |text| are transmitted in the TXT record.
     GetPublication(bool query, string? subtype)
-        -> (MdnsPublication? publication);
+        -> (Publication? publication);
 };
 
 // Describes an initial instance publication or query response. |port| is host-
 // endian.
-struct MdnsPublication {
+struct Publication {
     uint16 port;
     vector<string>? text;
     uint32 ptr_ttl_seconds = 4500; // default 75 minutes

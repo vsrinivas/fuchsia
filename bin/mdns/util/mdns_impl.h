@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MDNS_TOOL_MDNS_IMPL_H_
-#define GARNET_BIN_MDNS_TOOL_MDNS_IMPL_H_
+#ifndef GARNET_BIN_MDNS_UTIL_MDNS_IMPL_H_
+#define GARNET_BIN_MDNS_UTIL_MDNS_IMPL_H_
 
 #include <fuchsia/mdns/cpp/fidl.h>
 #include <lib/fit/function.h>
@@ -17,7 +17,7 @@
 
 namespace mdns {
 
-class MdnsImpl : public fuchsia::mdns::MdnsResponder {
+class MdnsImpl : public fuchsia::mdns::Responder {
  public:
   MdnsImpl(component::StartupContext* startup_context, MdnsParams* params,
            fit::closure quit_callback);
@@ -45,16 +45,16 @@ class MdnsImpl : public fuchsia::mdns::MdnsResponder {
                const std::vector<std::string>& announce,
                const std::vector<std::string>& text);
 
-  // MdnsResponder implementation:
-  void UpdateStatus(fuchsia::mdns::MdnsResult result) override;
+  // Responder implementation:
+  void UpdateStatus(fuchsia::mdns::Result result) override;
 
   void GetPublication(bool query, fidl::StringPtr subtype,
                       GetPublicationCallback callback) override;
 
   fit::closure quit_callback_;
-  fuchsia::mdns::MdnsServicePtr mdns_service_;
+  fuchsia::mdns::ControllerPtr controller_;
   ServiceSubscriber subscriber_;
-  fidl::Binding<fuchsia::mdns::MdnsResponder> binding_;
+  fidl::Binding<fuchsia::mdns::Responder> binding_;
   fsl::FDWaiter fd_waiter_;
 
   uint16_t publication_port_;
@@ -65,4 +65,4 @@ class MdnsImpl : public fuchsia::mdns::MdnsResponder {
 
 }  // namespace mdns
 
-#endif  // GARNET_BIN_MDNS_TOOL_MDNS_IMPL_H_
+#endif  // GARNET_BIN_MDNS_UTIL_MDNS_IMPL_H_

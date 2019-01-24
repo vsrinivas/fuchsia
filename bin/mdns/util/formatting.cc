@@ -11,7 +11,7 @@
 namespace mdns {
 
 std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::mdns::MdnsServiceInstance& value) {
+                         const fuchsia::mdns::ServiceInstance& value) {
   os << value.service_name << " " << value.instance_name;
   os << fostr::Indent;
 
