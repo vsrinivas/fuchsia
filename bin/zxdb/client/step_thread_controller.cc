@@ -14,11 +14,14 @@
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
 
+// ERASEME
+#include "lib/fxl/strings/string_printf.h"
+
 namespace zxdb {
 
 StepThreadController::StepThreadController(StepMode mode) : step_mode_(mode) {}
-StepThreadController::StepThreadController(AddressRange range)
-    : step_mode_(StepMode::kAddressRange), current_range_(range) {}
+StepThreadController::StepThreadController(AddressRanges ranges)
+    : step_mode_(StepMode::kAddressRange), current_ranges_(ranges) {}
 StepThreadController::~StepThreadController() = default;
 
 void StepThreadController::InitWithThread(Thread* thread,
@@ -36,17 +39,15 @@ void StepThreadController::InitWithThread(Thread* thread,
     LineDetails line_details =
         thread->GetProcess()->GetSymbols()->LineDetailsForAddress(ip);
     file_line_ = line_details.file_line();
-    current_range_ = line_details.GetExtent();
+    current_ranges_ = AddressRanges(line_details.GetExtent());
 
     original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
 
-    Log("Stepping in %s:%d [0x%" PRIx64 ", 0x%" PRIx64 ")",
-        file_line_.file().c_str(), file_line_.line(), current_range_.begin(),
-        current_range_.end());
+    Log("Stepping in %s:%d %s",
+        file_line_.file().c_str(), file_line_.line(), current_ranges_.ToString().c_str());
   } else {
     // In the "else" cases, the range will already have been set up.
-    Log("Stepping in [0x%" PRIx64 ", 0x%" PRIx64 ")", current_range_.begin(),
-        current_range_.end());
+    Log("Stepping in %s", current_ranges_.ToString().c_str());
   }
 
   cb(Err());
@@ -55,9 +56,22 @@ void StepThreadController::InitWithThread(Thread* thread,
 ThreadController::ContinueOp StepThreadController::GetContinueOp() {
   if (finish_unsymolized_function_)
     return finish_unsymolized_function_->GetContinueOp();
-  if (current_range_.empty())
+
+  // The stack shouldn't be empty when stepping in a range, but in case it is,
+  // fall back to single-step.
+  const auto& stack = thread()->GetStack();
+  if (current_ranges_.empty() || stack.empty())
     return ContinueOp::StepInstruction();
-  return ContinueOp::StepInRange(current_range_);
+
+  // Use the IP from the top of the stack to figure out which range to send
+  // to the agent (it only accepts one, while we can have a set).
+  if (auto inside = current_ranges_.GetRangeContaining(stack[0]->GetAddress()))
+    return ContinueOp::StepInRange(*inside);
+
+  // Don't generally expect to be continuing in a range that we're not
+  // currently inside of. But it could be the caller is expecting the next
+  // instruction to be in that range, so fall back to single-step mode.
+  return ContinueOp::StepInstruction();
 }
 
 ThreadController::StopOp StepThreadController::OnThreadStop(
@@ -106,23 +120,17 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   // function that we call from here.
   FXL_DCHECK(!finish_unsymolized_function_);
 
-  // Most uses of "step in range" will return "stop" here since the program
-  // won't prematurely stop while executing a line of code. But the code could
-  // crash or there could be a breakpoint in the middle, and those don't
-  // count as leaving the range.
   const auto& stack = thread()->GetStack();
   if (stack.empty())
     return kStop;  // Agent sent bad state, give up trying to step.
 
   uint64_t ip = stack[0]->GetAddress();
-  if (current_range_.InRange(ip)) {
-    Log("In existing range: [0x%" PRIx64 ", 0x%" PRIx64 ")",
-        current_range_.begin(), current_range_.end());
+  if (current_ranges_.InRange(ip)) {
+    Log("In existing range: %s", current_ranges_.ToString().c_str());
     return kContinue;
   }
 
-  Log("Left range: [0x%" PRIx64 ", 0x%" PRIx64 ")", current_range_.begin(),
-      current_range_.end());
+  Log("Left range: %s", current_ranges_.ToString().c_str());
 
   if (step_mode_ == StepMode::kSourceLine) {
     ProcessSymbols* process_symbols = thread()->GetProcess()->GetSymbols();
@@ -170,7 +178,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         // need to add logic to step over the dynamic loader when its resolving
         // the import.
         Log("In function with no symbols, single-stepping.");
-        current_range_ = AddressRange();  // No range = step by instruction.
+        current_ranges_ = AddressRanges();  // No range: step by instruction.
         return kContinue;
       } else if (FrameFingerprint::Newer(
                      thread()->GetStack().GetFrameFingerprint(0),
@@ -194,10 +202,10 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
       }
     }
 
-    // When stepping by source line the current_range_ will be the entry for
+    // When stepping by source line the current_ranges_ will be the entry for
     // the current line in the line table. But we could have a line table
     // like this:
-    //    line 10  <= current_range_
+    //    line 10  <= current_ranges_
     //    line 11
     //    line 10
     // Initially we were stepping in the range of the first "line 10" entry.
@@ -211,9 +219,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
     // or line 0, and continues stepping in that range.
     if (line_details.file_line().line() == 0 ||
         line_details.file_line() == file_line_) {
-      current_range_ = line_details.GetExtent();
-      Log("Got new range for line: [0x%" PRIx64 ", 0x%" PRIx64 ")",
-          current_range_.begin(), current_range_.end());
+      current_ranges_ = AddressRanges(line_details.GetExtent());
+      Log("Got new range for line: %s", current_ranges_.ToString().c_str());
       return kContinue;
     }
   }

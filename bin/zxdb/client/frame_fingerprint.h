@@ -53,7 +53,7 @@ namespace zxdb {
 // this by looking at the previous frame's SP.
 //
 // Because the "frame address" is actually the stack pointer of the previous
-// frame, the getter for this object is on the Thread (GetFrameFingerprint).
+// frame, the getter for this object is on the Stack (GetFrameFingerprint).
 class FrameFingerprint {
  public:
   FrameFingerprint() = default;

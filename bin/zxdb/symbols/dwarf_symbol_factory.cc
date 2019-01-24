@@ -36,8 +36,8 @@ namespace {
 // Generates ranges for a CodeBlock. The attributes may be not present, this
 // function will compute what it can given the information (which may be an
 // empty vector).
-CodeBlock::CodeRanges GetCodeRanges(const llvm::DWARFDie& die) {
-  CodeBlock::CodeRanges code_ranges;
+AddressRanges GetCodeRanges(const llvm::DWARFDie& die) {
+  AddressRanges::RangeVector code_ranges;
 
   // It would be trivially more efficient to get the DW_AT_ranges, etc.
   // attributes out when we're iterating through the DIE. But the address
@@ -45,7 +45,7 @@ CodeBlock::CodeRanges GetCodeRanges(const llvm::DWARFDie& die) {
   // and 5. It's easier to let LLVM deal with this complexity.
   auto expected_ranges = die.getAddressRanges();
   if (!expected_ranges || expected_ranges->empty())
-    return code_ranges;
+    return AddressRanges();
 
   code_ranges.reserve(expected_ranges->size());
   for (const llvm::DWARFAddressRange& range : *expected_ranges) {
@@ -53,10 +53,8 @@ CodeBlock::CodeRanges GetCodeRanges(const llvm::DWARFDie& die) {
       code_ranges.emplace_back(range.LowPC, range.HighPC);
   }
 
-  // Generally DWARF will put these in order, but we want to guarantee they're
-  // sorted.
-  std::sort(code_ranges.begin(), code_ranges.end(), AddressRangeBeginCmp());
-  return code_ranges;
+  // Can't trust DWARF to have stored them in any particular order.
+  return AddressRanges(AddressRanges::kNonCanonical, std::move(code_ranges));
 }
 
 // Extracts a FileLine if possible from the given input. If the optional values

@@ -7,7 +7,7 @@
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
-#include "garnet/bin/zxdb/common/address_range.h"
+#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/symbols/file_line.h"
 
 namespace zxdb {
@@ -25,7 +25,7 @@ class StepThreadController : public ThreadController {
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues
   // execution as long as the IP is in range.
-  explicit StepThreadController(AddressRange range);
+  explicit StepThreadController(AddressRanges ranges);
 
   ~StepThreadController() override;
 
@@ -63,7 +63,7 @@ class StepThreadController : public ThreadController {
   // Range of addresses we're currently stepping in. This may change when we're
   // stepping over source lines and wind up in a region with no line numbers.
   // It will be empty when stepping by instruction.
-  AddressRange current_range_;
+  AddressRanges current_ranges_;
 
   bool stop_on_no_symbols_ = false;
 

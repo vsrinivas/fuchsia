@@ -49,7 +49,7 @@ TEST_F(StepThreadControllerTest, SofwareException) {
 
   // Continue the thread with the controller stepping in range.
   auto step_into = std::make_unique<StepThreadController>(
-      AddressRange(kBeginAddr, kEndAddr));
+      AddressRanges(AddressRange(kBeginAddr, kEndAddr)));
   bool continued = false;
   thread()->ContinueWith(std::move(step_into), [&continued](const Err& err) {
     if (!err.has_error())

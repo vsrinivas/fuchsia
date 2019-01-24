@@ -108,7 +108,7 @@ TEST(FindVariable, FindLocalVariable) {
   uint64_t kFunctionBeginAddr = 0x1000;
   uint64_t kFunctionEndAddr = 0x2000;
   function->set_code_ranges(
-      {AddressRange(kFunctionBeginAddr, kFunctionEndAddr)});
+      AddressRanges(AddressRange(kFunctionBeginAddr, kFunctionEndAddr)));
   function->set_parent(LazySymbol(ns));
 
   // Function parameters.
@@ -130,7 +130,8 @@ TEST(FindVariable, FindLocalVariable) {
   uint64_t kBlockBeginAddr = 0x1100;
   uint64_t kBlockEndAddr = 0x1200;
   auto block = fxl::MakeRefCounted<CodeBlock>(Symbol::kTagLexicalBlock);
-  block->set_code_ranges({AddressRange(kBlockBeginAddr, kBlockEndAddr)});
+  block->set_code_ranges(
+      AddressRanges(AddressRange(kBlockBeginAddr, kBlockEndAddr)));
   block->set_parent(LazySymbol(function));
   function->set_inner_blocks({LazySymbol(block)});
 

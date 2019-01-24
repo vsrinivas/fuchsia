@@ -9,6 +9,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/step_thread_controller.h"
 #include "garnet/bin/zxdb/client/thread.h"
+#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/symbols/line_details.h"
 #include "garnet/bin/zxdb/symbols/process_symbols.h"
@@ -21,8 +22,8 @@ StepOverThreadController::StepOverThreadController(StepMode mode)
   FXL_DCHECK(mode != StepMode::kAddressRange);
 }
 
-StepOverThreadController::StepOverThreadController(AddressRange range)
-    : step_into_(std::make_unique<StepThreadController>(range)) {}
+StepOverThreadController::StepOverThreadController(AddressRanges range)
+    : step_into_(std::make_unique<StepThreadController>(std::move(range))) {}
 
 StepOverThreadController::~StepOverThreadController() = default;
 

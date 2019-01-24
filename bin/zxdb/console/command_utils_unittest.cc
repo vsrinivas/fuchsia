@@ -262,7 +262,7 @@ TEST(CommandUtils, FormatLocation) {
   fxl::RefPtr<Function> function(
       fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram));
   function->set_assigned_name("Func");
-  function->set_code_ranges({{0x1200, 0x1300}});
+  function->set_code_ranges(AddressRanges(AddressRange(0x1200, 0x1300)));
   EXPECT_EQ("Func() + 0x34 (no line info)",
             FormatLocation(Location(0x1234, FileLine(), 0, symbol_context,
                                     LazySymbol(function)),

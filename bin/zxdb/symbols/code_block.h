@@ -6,7 +6,7 @@
 
 #include <vector>
 
-#include "garnet/bin/zxdb/common/address_range.h"
+#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/symbols/symbol.h"
 
 namespace zxdb {
@@ -19,10 +19,6 @@ class SymbolContext;
 class CodeBlock : public Symbol {
  public:
   // Construct with fxl::MakeRefCounted().
-
-  // A [begin, end) range of code blocks. These are addresses RELATIVE to the
-  // beginning of the module they're inside of.
-  using CodeRanges = std::vector<AddressRange>;
 
   // Symbol overrides.
   const CodeBlock* AsCodeBlock() const override;
@@ -43,8 +39,8 @@ class CodeBlock : public Symbol {
   // convenient to just have one type representing both.
   //
   // These ranges will be RELATIVE to the module.
-  const CodeRanges& code_ranges() const { return code_ranges_; }
-  void set_code_ranges(CodeRanges r) { code_ranges_ = std::move(r); }
+  const AddressRanges& code_ranges() const { return code_ranges_; }
+  void set_code_ranges(AddressRanges r) { code_ranges_ = std::move(r); }
 
   // Computes the full code range covering all sub-ranges. There can be
   // multiple code ranges that can be discontiguous so not everything in this
@@ -102,7 +98,7 @@ class CodeBlock : public Symbol {
   ~CodeBlock() override;
 
  private:
-  CodeRanges code_ranges_;
+  AddressRanges code_ranges_;
   std::vector<LazySymbol> inner_blocks_;
   std::vector<LazySymbol> variables_;
 };

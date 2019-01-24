@@ -6,6 +6,8 @@
 
 #include <stdint.h>
 
+#include <string>
+
 namespace zxdb {
 
 class AddressRange {
@@ -23,6 +25,29 @@ class AddressRange {
     return addr >= begin_ && addr < end_;
   }
 
+  bool Contains(const AddressRange& other) const {
+    return other.begin_ >= begin_ && other.end_ <= end_;
+  }
+  bool Overlaps(const AddressRange& other) const {
+    return other.begin_ < end_ && other.end_ >= begin_;
+  }
+
+  // Returns a new range covering both inputs (|this| and |other|). If the
+  // inputs don't touch, the result will also cover the in-between addresses.
+  // Use the AddressRanges class if you need to represent multiple
+  // discontiguous ranges.
+  [[nodiscard]] AddressRange Union(const AddressRange& other) const;
+
+  bool operator==(const AddressRange& other) const {
+    return begin_ == other.begin_ && end_ == other.end_;
+  }
+  bool operator!=(const AddressRange& other) const {
+    return !operator==(other);
+  }
+
+  // Returns a string representing this set of ranges for debugging purposes.
+  std::string ToString() const;
+
  private:
   uint64_t begin_ = 0;
   uint64_t end_ = 0;
@@ -35,6 +60,15 @@ struct AddressRangeBeginCmp {
     if (a.begin() == b.begin())
       return a.size() < b.size();
     return a.begin() < b.begin();
+  }
+};
+
+// Compares an address with the ending of a range. For searching for an address
+// using lower_bound address in a sorted list of ranges. Using this comparator,
+// lower_bound will find the element that contains the item if it exists.
+struct AddressRangeEndAddrCmp {
+  bool operator()(const AddressRange& range, uint64_t addr) const {
+    return range.end() < addr;
   }
 };
 

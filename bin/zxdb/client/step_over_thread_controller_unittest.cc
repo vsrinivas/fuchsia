@@ -6,6 +6,7 @@
 #include "garnet/bin/zxdb/client/process.h"
 #include "garnet/bin/zxdb/client/thread.h"
 #include "garnet/bin/zxdb/client/thread_controller_test.h"
+#include "garnet/bin/zxdb/common/address_ranges.h"
 #include "garnet/bin/zxdb/common/err.h"
 #include "garnet/lib/debug_ipc/protocol.h"
 
@@ -44,7 +45,7 @@ TEST_F(StepOverThreadControllerTest, InOutFinish) {
 
   // Continue the thread with the controller stepping in range.
   auto step_over = std::make_unique<StepOverThreadController>(
-      AddressRange(kBeginAddr, kEndAddr));
+      AddressRanges(AddressRange(kBeginAddr, kEndAddr)));
   bool continued = false;
   thread()->ContinueWith(std::move(step_over), [&continued](const Err& err) {
     if (!err.has_error())

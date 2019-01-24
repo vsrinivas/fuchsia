@@ -10,10 +10,10 @@
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
 #include "garnet/bin/zxdb/client/step_mode.h"
 #include "garnet/bin/zxdb/client/thread_controller.h"
-#include "garnet/bin/zxdb/common/address_range.h"
 
 namespace zxdb {
 
+class AddressRanges;
 class FinishThreadController;
 class Frame;
 class StepThreadController;
@@ -35,7 +35,7 @@ class StepOverThreadController : public ThreadController {
 
   // Constructor for a kAddressRange mode (the mode is implicit). Continues
   // execution as long as the IP is in range.
-  explicit StepOverThreadController(AddressRange range);
+  explicit StepOverThreadController(AddressRanges range);
 
   ~StepOverThreadController() override;
 

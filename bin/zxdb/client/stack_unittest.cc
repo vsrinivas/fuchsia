@@ -70,13 +70,13 @@ TEST(Stack, InlineExpansion) {
       fxl::MakeRefCounted<Function>(Symbol::kTagInlinedSubroutine);
   bottom_inline_func->set_assigned_name("Inline");
   bottom_inline_func->set_code_ranges(
-      {AddressRange(kBottomAddr, kBottomAddr + 8)});
+      AddressRanges(AddressRange(kBottomAddr, kBottomAddr + 8)));
   bottom_inline_func->set_call_line(inline_call_line);
 
   auto bottom_func = fxl::MakeRefCounted<Function>(Symbol::kTagSubprogram);
   bottom_func->set_assigned_name("Bottom");
   bottom_func->set_code_ranges(
-      {AddressRange(kBottomAddr - 8, kBottomAddr + 16)});
+      AddressRanges(AddressRange(kBottomAddr - 8, kBottomAddr + 16)));
 
   // For convenience, the inline function is nested inside the "bottom" func.
   // This is not something you can actually do in C++ and will give a name
@@ -86,8 +86,8 @@ TEST(Stack, InlineExpansion) {
 
   // The location returned by the symbol function will have the file/line
   // inside the inline function.
-  Location bottom_location(kBottomAddr, inline_exec_line, 0,
-                           symbol_context, LazySymbol(bottom_inline_func));
+  Location bottom_location(kBottomAddr, inline_exec_line, 0, symbol_context,
+                           LazySymbol(bottom_inline_func));
   delegate.AddLocation(bottom_location);
 
   Stack stack(&delegate);
