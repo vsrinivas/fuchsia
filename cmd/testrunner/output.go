@@ -10,6 +10,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"strings"
 
 	"fuchsia.googlesource.com/tools/botanist"
 	"fuchsia.googlesource.com/tools/runtests"
@@ -67,6 +68,9 @@ type SummaryOutput struct {
 
 func (o *SummaryOutput) Record(result testResult) {
 	pathInArchive := path.Join(result.Name, runtests.TestOutputFilename)
+	// Strip any leading //, contributed by Linux/Mac test names, so that
+	// pathInArchive gives a valid relative path.
+	pathInArchive = strings.TrimLeft(pathInArchive, "//")
 	o.Summary.Tests = append(o.Summary.Tests, runtests.TestDetails{
 		Name:       result.Name,
 		OutputFile: pathInArchive,
