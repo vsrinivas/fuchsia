@@ -67,6 +67,10 @@ class BufferedPseudoFile : public File {
                         uint64_t* out_actual) override;
     zx_status_t Truncate(uint64_t length) override;
 
+    uint64_t GetLength() override;
+
+    size_t GetCapacity() override;
+
     // Connection implementation:
     zx_status_t Bind(zx::channel request,
                      async_dispatcher_t* dispatcher) override;
@@ -74,7 +78,7 @@ class BufferedPseudoFile : public File {
     void SendOnOpenEvent(zx_status_t status) override;
 
     // Node implementation
-    zx_status_t Close(Connection* connection) override;
+    std::unique_ptr<Connection> Close(Connection* connection) override;
 
    protected:
     uint32_t GetAdditionalAllowedFlags() const override;
@@ -92,6 +96,11 @@ class BufferedPseudoFile : public File {
     // true if the file was written into
     bool dirty_ = false;
   };
+
+  // |File| implementations:
+  uint64_t GetLength() override;
+
+  size_t GetCapacity() override;
 
   ReadHandler const read_handler_;
   WriteHandler const write_handler_;

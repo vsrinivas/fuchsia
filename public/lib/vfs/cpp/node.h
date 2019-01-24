@@ -31,9 +31,9 @@ class Node {
   Node(const Node&) = delete;
   Node& operator=(const Node&) = delete;
 
-  // Notifies |Node| that it should remove |connection| from its list as it is
-  // getting closed.
-  virtual zx_status_t Close(Connection* connection);
+  // Notifies |Node| that it should remove and return
+  // |connection| from its list as it is getting closed.
+  virtual std::unique_ptr<Connection> Close(Connection* connection);
 
   // Implementation of |fuchsia.io.Node/Describe|.
   //
@@ -86,11 +86,6 @@ class Node {
   // Sends OnOpen event on error status if |OPEN_FLAG_DESCRIBE| is set.
   void SendOnOpenEventOnError(uint32_t flags, zx::channel request,
                               zx_status_t status);
-
-  // Destroys the given connection.
-  //
-  // The underlying channel is closed.
-  void RemoveConnection(Connection* connection);
 
   // Store given connection.
   void AddConnection(std::unique_ptr<Connection> connection);

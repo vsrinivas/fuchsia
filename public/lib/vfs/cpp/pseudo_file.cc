@@ -50,6 +50,20 @@ uint32_t BufferedPseudoFile::GetProhibitiveFlags() const {
   return fuchsia::io::OPEN_FLAG_APPEND;
 }
 
+uint64_t BufferedPseudoFile::GetLength() {
+  // this should never be called
+  ZX_DEBUG_ASSERT(false);
+
+  return 0u;
+}
+
+size_t BufferedPseudoFile::GetCapacity() {
+  // this should never be called
+  ZX_DEBUG_ASSERT(false);
+
+  return buffer_capacity_;
+}
+
 BufferedPseudoFile::Content::Content(BufferedPseudoFile* file, uint32_t flags,
                                      std::vector<uint8_t> content)
     : Connection(flags),
@@ -119,6 +133,12 @@ zx_status_t BufferedPseudoFile::Content::Truncate(uint64_t length) {
   return ZX_OK;
 }
 
+uint64_t BufferedPseudoFile::Content::GetLength() { return buffer_.size(); }
+
+size_t BufferedPseudoFile::Content::GetCapacity() {
+  return file_->buffer_capacity_;
+}
+
 void BufferedPseudoFile::Content::SetInputLength(size_t length) {
   ZX_DEBUG_ASSERT(length <= file_->buffer_capacity_);
 
@@ -141,8 +161,9 @@ zx_status_t BufferedPseudoFile::Content::Bind(zx::channel request,
   return status;
 }
 
-zx_status_t BufferedPseudoFile::Content::Close(Connection* connection) {
-  Node::Close(connection);
+std::unique_ptr<Connection> BufferedPseudoFile::Content::Close(
+    Connection* connection) {
+  File::Close(connection);
   return file_->Close(this);
 }
 

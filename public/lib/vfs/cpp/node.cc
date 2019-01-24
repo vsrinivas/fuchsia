@@ -24,9 +24,13 @@ Node::Node() = default;
 
 Node::~Node() = default;
 
-zx_status_t Node::Close(Connection* connection) {
-  RemoveConnection(connection);
-  return ZX_OK;
+std::unique_ptr<Connection> Node::Close(Connection* connection) {
+  auto connection_iterator = std::find_if(
+      connections_.begin(), connections_.end(),
+      [connection](const auto& entry) { return entry.get() == connection; });
+  auto ret = std::move(*connection_iterator);
+  connections_.erase(connection_iterator);
+  return ret;
 }
 
 zx_status_t Node::Sync() { return ZX_ERR_NOT_SUPPORTED; }
@@ -102,12 +106,6 @@ void Node::SendOnOpenEventOnError(uint32_t flags, zx::channel request,
   msg.hdr.ordinal = fuchsia_io_NodeOnOpenOrdinal;
   msg.s = status;
   request.write(0, &msg, sizeof(msg), nullptr, 0);
-}
-
-void Node::RemoveConnection(Connection* connection) {
-  connections_.erase(std::find_if(
-      connections_.begin(), connections_.end(),
-      [connection](const auto& entry) { return entry.get() == connection; }));
 }
 
 void Node::AddConnection(std::unique_ptr<Connection> connection) {

@@ -109,11 +109,32 @@ void FileConnection::WriteAt(std::vector<uint8_t> data, uint64_t offset,
   callback(status, actual);
 }
 
-void FileConnection::Seek(int64_t offset, fuchsia::io::SeekOrigin start,
+void FileConnection::Seek(int64_t new_offset, fuchsia::io::SeekOrigin seek,
                           SeekCallback callback) {
-  // TODO: Check flags.
-  // TODO: Implement seek.
-  callback(ZX_OK, 0u);
+  int64_t cur_len = vn_->GetLength();
+  size_t capacity = vn_->GetCapacity();
+  uint64_t calculated_offset = 0u;
+  switch (seek) {
+    case fuchsia::io::SeekOrigin::START:
+      calculated_offset = new_offset;
+      break;
+    case fuchsia::io::SeekOrigin::CURRENT:
+      calculated_offset = offset() + new_offset;
+      break;
+    case fuchsia::io::SeekOrigin::END:
+      calculated_offset = cur_len + new_offset;
+      break;
+    default:
+      callback(ZX_ERR_INVALID_ARGS, 0u);
+      return;
+  }
+
+  if (static_cast<size_t>(calculated_offset) > capacity) {
+    callback(ZX_ERR_OUT_OF_RANGE, offset());
+    return;
+  }
+  set_offset(calculated_offset);
+  callback(ZX_OK, offset());
 }
 
 void FileConnection::Truncate(uint64_t length, TruncateCallback callback) {

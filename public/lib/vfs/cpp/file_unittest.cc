@@ -46,6 +46,10 @@ class TestFile : public vfs::File {
     return ZX_OK;
   }
 
+  uint64_t GetLength() override { return buffer_->size(); }
+
+  size_t GetCapacity() override { return buffer_->size(); }
+
  private:
   std::vector<uint8_t>* buffer_;
 };

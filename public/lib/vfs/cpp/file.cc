@@ -39,6 +39,8 @@ zx_status_t File::CreateConnection(uint32_t flags,
   return ZX_OK;
 }
 
+size_t File::GetCapacity() { return std::numeric_limits<size_t>::max(); }
+
 bool File::IsDirectory() const { return false; }
 
 }  // namespace vfs

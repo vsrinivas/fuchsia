@@ -50,6 +50,17 @@ class File : public Node {
   // Override that describes this object as a file.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
 
+  // Returns current file length.
+  //
+  // All implementations should implement this.
+  virtual uint64_t GetLength() = 0;
+
+  // Returns file capacity.
+  //
+  // Seek() uses this to return ZX_ERR_OUT_OF_RANGE if new seek is more than
+  // this value.
+  virtual size_t GetCapacity();
+
  protected:
   zx_status_t CreateConnection(
       uint32_t flags, std::unique_ptr<Connection>* connection) override;
