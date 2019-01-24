@@ -16,6 +16,7 @@ import sys
 ROOT_PUBSPECS = [
     'third_party/dart/pkg/analyzer',
     'third_party/dart/pkg/build_integration',
+    'third_party/dart/pkg/expect',
     'third_party/dart/pkg/front_end',
     'third_party/dart/pkg/kernel',
     'third_party/dart/pkg/testing',
