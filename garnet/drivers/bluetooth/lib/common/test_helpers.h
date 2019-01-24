@@ -9,8 +9,33 @@
 #include <iostream>
 
 #include "garnet/drivers/bluetooth/lib/common/byte_buffer.h"
-
+#include "gtest/gtest.h"
 #include "lib/fxl/strings/string_printf.h"
+
+// Run |statement| and return if a fatal test error occurred. Include the file
+// name and line number in the output.
+//
+// This is useful for running test helpers in subroutines. For example, if a
+// test helper posted ASSERTs checks inside of a dispatcher task:
+//
+//   RETURN_IF_FATAL(RunLoopUntilIdle());
+//
+// would return if any of the tasks had an ASSERT failure.
+//
+// Fatal failures in Google Test such as ASSERT_* failures and calls to FAIL()
+// set a global flag for the failure (see testing::Test::HasFatalFailure) and
+// return from the function where they occur. However, the change in flow
+// control is limited to that subroutine scope. Test code higher up the stack
+// must propagate the failure in order to exit the test.
+//
+// Note in the above example, if a task in the test loop has a fatal failure, it
+// does not prevent the remaining due tasks in the loop from running. The test
+// case would not exit until RunLoopFromIdle returns.
+#define RETURN_IF_FATAL(statement)      \
+  do {                                  \
+    SCOPED_TRACE("");                   \
+    ASSERT_NO_FATAL_FAILURE(statement); \
+  } while (false)
 
 namespace btlib {
 namespace common {
