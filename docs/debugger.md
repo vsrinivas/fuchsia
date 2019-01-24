@@ -60,20 +60,31 @@ fx build
 
 ## Running
 
-### 1. Boot with networking
+### Preparation: Boot with networking
 
-Boot the target system with networking support. For
-[QEMU support](https://fuchsia.googlesource.com/docs/+/HEAD/getting_started.md)
-you may get some prompts for extra steps required:
+Boot the target system with networking support. For QEMU you'll need to set up
+a bridge interface so your target is visible (Googlers see
+[go/zxdb-networking](http://goto.google.com/zxdb-networking)).
+
+Then run:
 
 ```sh
-fx run -N -u scripts/start-dhcp-server.sh
+fx run -N
 ```
 
-### 2. Run the debug agent on the target
+### Simple method
 
-You will also want to note the target's IP address (run `ifconfig` _on the
-target_ to see this).
+You can use the fx utility to start the debug agent and connect automatically.
+
+```sh
+fx debug
+```
+### Manual method
+
+In some cases you may want to run the debug agent and connect manually. To do
+so, follow these steps:
+
+#### 1. Run the debug agent on the target
 
 On the target system pick a port and run the debug agent:
 
@@ -81,28 +92,43 @@ On the target system pick a port and run the debug agent:
 run debug_agent --port=2345
 ```
 
-### 3. Run the client and connect
+You will also want to note the target's IP address. Run `ifconfig` _on the
+target_ to see this, or run `fx netaddr` on the host.
+
+For QEMU, we recommend using IPv6 and link local addresses. These addresses
+have to be annotated with the interface they apply to, so make sure the address
+you use includes the appropriate interface (should be the name of the bridge
+device).
+
+The address should look like this:
+
+```
+fe80::5054:4d:fe63:5e7a%br0
+```
+
+#### 2. Run the client and connect
 
 On the host system (where you do the build), run the client. Use the IP
 address of the target and the port you picked above in the `connect` command.
 
 ```sh
 out/x64/host_x64/zxdb
-[zxdb] connect 192.168.3.20:2345
+[zxdb] connect [fe80::5054:4d:fe63:5e7a%br0]:2345
 ```
 (Substitute your build directory as-needed).
 
 If you're connecting or running many times, there are command-line switches:
 
 ```sh
-zxdb -c 192.168.3.53:2345 -r /bin/cowsay
+zxdb -c [fe80::5054:4d:fe63:5e7a%br0]:2345 -r /bin/cowsay
 ```
 
 See `help connect` for more examples, including IPv6 syntax.
 
-### 4. Read the user guide
+### Read the user guide
 
-The [user guide](debugger_usage.md) has detailed instructions!
+Once you're connected, the [user guide](debugger_usage.md) has detailed
+instructions!
 
 ## Tips
 
