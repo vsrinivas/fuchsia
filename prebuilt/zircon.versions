@@ -21,18 +21,6 @@ fuchsia/gcc/mac-amd64
 	git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
 	91ce4adeea757742fe77183cff9c246dd190dd97
 
-fuchsia/qemu/linux-amd64
-	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
-	9cc486c5b18a0be515c39a280ca9a309c54cf994
-
-fuchsia/qemu/linux-arm64
-	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
-	b1b61a39e3ab0935cd030f27e01740578b04b967
-
-fuchsia/qemu/mac-amd64
-	git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
-	2d3358ae9a569b2d4a474f498b32b202a152134f
-
 fuchsia/sysroot/linux-amd64
 	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
 	ae0677829357edb199c21e76b1ea31eb8ef62817
@@ -40,6 +28,18 @@ fuchsia/sysroot/linux-amd64
 fuchsia/sysroot/linux-arm64
 	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
 	f116a841ddf6d1755bde918b8f07763bdee5e06d
+
+fuchsia/third_party/qemu/linux-amd64
+	git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f
+	EGRzM1wQ9Bgi9BpiN93gRfEywhKkkrbLEhFjs0HbeAQC
+
+fuchsia/third_party/qemu/linux-arm64
+	git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f
+	Aw_-CcJGehDbKjgYGoIfn2Q9jsnaO6Z_McT1TTjtI1QC
+
+fuchsia/third_party/qemu/mac-amd64
+	git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f
+	PWYIo8mW5T21MA0l4lRPahWJqGLqhgXK2Jwev2rpTuYC
 
 fuchsia/tools/symbolize/linux-amd64
 	git_revision:7140d924a314402c36bae66f34d0e77587ffb825

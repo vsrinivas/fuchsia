@@ -40,4 +40,4 @@ fuchsia/tools/symbolize/${platform} git_revision:7140d924a314402c36bae66f34d0e77
 
 # QEMU
 @Subdir qemu
-fuchsia/qemu/${platform} git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
+fuchsia/third_party/qemu/${platform} git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f
