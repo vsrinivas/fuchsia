@@ -14,7 +14,7 @@
 
 static zx_handle_t loghandle;
 static logpacket_t pkt;
-static int pkt_len;
+static size_t pkt_len;
 
 static volatile uint32_t seqno = 1;
 static volatile uint32_t pending = 0;
@@ -33,7 +33,7 @@ static unsigned num_unacked = 0;
 // How long to wait between sending.
 static zx_duration_t send_delay = SEND_DELAY_SHORT;
 
-static int get_log_line(char* out) {
+static size_t get_log_line(char* out) {
     char buf[ZX_LOG_RECORD_MAX + 1];
     zx_log_record_t* rec = (zx_log_record_t*)buf;
     for (;;) {
@@ -80,7 +80,7 @@ static void debuglog_send(void) {
         strncpy(pkt.nodename, nodename, sizeof(pkt.nodename) - 1);
         pkt_len = 0;
         while (pkt_len < (MAX_LOG_DATA - MAX_LOG_LINE)) {
-            int r = get_log_line(pkt.data + pkt_len);
+            size_t r = get_log_line(pkt.data + pkt_len);
             if (r > 0) {
                 pkt_len += r;
             } else {
@@ -108,7 +108,7 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
     if ((len != 8) || is_mcast) {
         return;
     }
-    logpacket_t* pkt = data;
+    logpacket_t* pkt = reinterpret_cast<logpacket_t*>(data);
     if ((pkt->magic != NB_DEBUGLOG_MAGIC) || (pkt->seqno != seqno)) {
         return;
     }

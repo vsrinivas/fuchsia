@@ -98,8 +98,9 @@ void update_timeouts(void) {
     zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
                              debuglog_next_timeout : tftp_next_timeout;
     if (next_timeout != ZX_TIME_INFINITE) {
-        netifc_set_timer((next_timeout < now) ? 0 :
-                         (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
+        uint32_t ms = static_cast<uint32_t>(
+            (next_timeout < now) ? 0 : (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
+        netifc_set_timer(ms);
     }
 }
 

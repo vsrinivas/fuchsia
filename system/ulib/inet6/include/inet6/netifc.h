@@ -4,6 +4,10 @@
 
 #pragma once
 
+#include <zircon/compiler.h>
+
+__BEGIN_CDECLS
+
 // setup networking
 // if interface != NULL, only use the given topological path for networking
 int netifc_open(const char* interface);
@@ -29,3 +33,5 @@ void netifc_recv(void* data, size_t len);
 bool netifc_send_pending(void);
 
 void netifc_get_info(uint8_t* addr, uint16_t* mtu);
+
+__END_CDECLS

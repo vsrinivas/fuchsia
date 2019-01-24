@@ -128,7 +128,7 @@ void netboot_advertise(const char* nodename) {
     if (xfer_active) return;
 
     uint8_t buffer[sizeof(nbmsg) + MAX_ADVERTISE_DATA_LEN];
-    nbmsg* msg = (void*)buffer;
+    nbmsg* msg = reinterpret_cast<nbmsg*>(buffer);
     msg->magic = NB_MAGIC;
     msg->cookie = 0;
     msg->cmd = NB_ADVERTISE;
@@ -153,7 +153,17 @@ static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
 
 static void nb_read(uint32_t cookie, uint32_t arg,
                     const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
-    static netfilemsg m = { .hdr.magic = NB_MAGIC, .hdr.cmd = NB_ACK};
+    static netfilemsg m = {
+        .hdr =
+            {
+                .magic = NB_MAGIC,
+                .cookie = 0,
+                .cmd = NB_ACK,
+                .arg = 0,
+                .data = {},
+            },
+        .data = {},
+    };
     static size_t msg_size = 0;
     static uint32_t blocknum = (uint32_t) -1;
     if (arg == blocknum) {
@@ -164,9 +174,9 @@ static void nb_read(uint32_t cookie, uint32_t arg,
             msg_size = sizeof(m.hdr);
         }
     } else if (arg == 0 || arg == blocknum + 1) {
-        int result = netfile_read(&m.data, sizeof(m.data));
+        ssize_t result = netfile_read(&m.data, sizeof(m.data));
         if (result < 0) {
-            m.hdr.arg = result;
+            m.hdr.arg = static_cast<uint32_t>(result);
             msg_size = sizeof(m.hdr);
         } else {
             // Note that the response does not use actual size as the argument,
@@ -186,7 +196,13 @@ static void nb_read(uint32_t cookie, uint32_t arg,
 
 static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg,
                      const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
-    static nbmsg m =  {.magic = NB_MAGIC, .cmd = NB_ACK};
+    static nbmsg m = {
+        .magic = NB_MAGIC,
+        .cookie = 0,
+        .cmd = NB_ACK,
+        .arg = 0,
+        .data = {},
+    };
     static uint32_t blocknum = (uint32_t) -1;
     if (arg == blocknum) {
         // Request to repeat last write, verify that cookie is unchanged
@@ -194,8 +210,8 @@ static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg
             m.arg = -EIO;
         }
     } else if (arg == 0 || arg == blocknum + 1) {
-        int result = netfile_write(data, len);
-        m.arg = result > 0 ? 0 : result;
+        ssize_t result = netfile_write(data, len);
+        m.arg = static_cast<uint32_t>(result > 0 ? 0 : result);
         blocknum = arg;
     }
     m.cookie = cookie;
@@ -214,10 +230,10 @@ static void nb_close(uint32_t cookie,
 
 static zx_status_t do_dmctl_mexec(void) {
     zx_handle_t kernel, bootdata;
+    // TODO(scottmg): range check nbcmdline.file.size rather than just casting.
     zx_status_t status =
-        netboot_prepare_zbi(nbkernel.data, nbbootdata.data,
-                            nbcmdline.file.data, nbcmdline.file.size,
-                            &kernel, &bootdata);
+        netboot_prepare_zbi(nbkernel.data, nbbootdata.data, nbcmdline.file.data,
+                            static_cast<uint32_t>(nbcmdline.file.size), &kernel, &bootdata);
     if (status != ZX_OK) {
         return status;
     }
@@ -258,7 +274,7 @@ static zx_status_t do_dmctl_mexec(void) {
 static void bootloader_recv(void* data, size_t len,
                             const ip6_addr_t* daddr, uint16_t dport,
                             const ip6_addr_t* saddr, uint16_t sport) {
-    nbmsg* msg = data;
+    nbmsg* msg = reinterpret_cast<nbmsg*>(data);
     nbmsg ack;
 
     bool do_transmit = true;
@@ -328,7 +344,7 @@ static void bootloader_recv(void* data, size_t len,
         }
         if (msg->arg != active->offset) {
             // printf("netboot: < received chunk at offset %d but current offset is %zu\n", msg->arg, active->offset);
-            ack.arg = active->offset;
+            ack.arg = static_cast<uint32_t>(active->offset);
             ack.cmd = NB_ACK;
         } else if ((active->offset + len) > active->size) {
             ack.cmd = NB_ERROR_TOO_LARGE;
@@ -412,7 +428,7 @@ transmit:
 void netboot_recv(void *data, size_t len, bool is_mcast,
                   const ip6_addr_t* daddr, uint16_t dport,
                   const ip6_addr_t* saddr, uint16_t sport) {
-    nbmsg* msg = data;
+    nbmsg* msg = reinterpret_cast<nbmsg*>(data);
     // Not enough bytes to be a message
     if ((len < sizeof(*msg)) ||
         (msg->magic != NB_MAGIC)) {
@@ -425,7 +441,7 @@ void netboot_recv(void *data, size_t len, bool is_mcast,
     }
 
     switch (msg->cmd) {
-    case NB_QUERY:
+    case NB_QUERY: {
         if (strcmp((char*)msg->data, "*") &&
             strcmp((char*)msg->data, nodename)) {
             break;
@@ -440,6 +456,7 @@ void netboot_recv(void *data, size_t len, bool is_mcast,
         memcpy(buf + sizeof(nbmsg), nodename, dlen);
         udp6_send(buf, sizeof(nbmsg) + dlen, saddr, sport, dport, false);
         break;
+    }
     case NB_SHELL_CMD:
         if (!is_mcast) {
             netboot_run_cmd((char*) msg->data);

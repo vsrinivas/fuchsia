@@ -12,12 +12,12 @@ MODULE_TYPE := userapp
 MODULE_GROUP := core
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/debuglog.c \
-    $(LOCAL_DIR)/device_id.c \
-    $(LOCAL_DIR)/netboot.c \
-    $(LOCAL_DIR)/netfile.c \
-    $(LOCAL_DIR)/netsvc.c \
-    $(LOCAL_DIR)/tftp.c \
+    $(LOCAL_DIR)/debuglog.cpp \
+    $(LOCAL_DIR)/device_id.cpp \
+    $(LOCAL_DIR)/netboot.cpp \
+    $(LOCAL_DIR)/netfile.cpp \
+    $(LOCAL_DIR)/netsvc.cpp \
+    $(LOCAL_DIR)/tftp.cpp \
     $(LOCAL_DIR)/zbi.cpp \
 
 MODULE_STATIC_LIBS := \

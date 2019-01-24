@@ -9,6 +9,8 @@
 
 #include <inet6/inet6.h>
 
+#include <atomic>
+
 #include <zircon/types.h>
 #include <zircon/boot/netboot.h>
 
@@ -31,13 +33,13 @@ typedef struct netfilemsg_t {
 
 int netfile_open(const char* filename, uint32_t arg, size_t* file_size);
 
-int netfile_offset_read(void *data_out, off_t offset, size_t max_len);
+ssize_t netfile_offset_read(void *data_out, off_t offset, size_t max_len);
 
-int netfile_read(void* data_out, size_t data_sz);
+ssize_t netfile_read(void* data_out, size_t data_sz);
 
-int netfile_offset_write(const char *data, off_t offset, size_t length);
+ssize_t netfile_offset_write(const char *data, off_t offset, size_t length);
 
-int netfile_write(const char* data, size_t len);
+ssize_t netfile_write(const char* data, size_t len);
 
 int netfile_close(void);
 
@@ -57,8 +59,8 @@ void netboot_run_cmd(const char* cmd);
 
 // TFTP interface
 extern zx_time_t tftp_next_timeout;
-extern atomic_bool paving_in_progress;
-extern atomic_int paver_exit_code;
+extern std::atomic<bool> paving_in_progress;
+extern std::atomic<int> paver_exit_code;
 
 void tftp_recv(void *data, size_t len,
                const ip6_addr_t* daddr, uint16_t dport,

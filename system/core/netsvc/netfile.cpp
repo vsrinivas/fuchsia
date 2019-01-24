@@ -24,7 +24,9 @@
 
 netfile_state netfile = {
     .fd = -1,
+    .offset = 0,
     .needs_rename = false,
+    .filename = {0},
 };
 
 static int netfile_mkdir(const char* filename) {
@@ -111,7 +113,7 @@ err:
     return -errno;
 }
 
-int netfile_offset_read(void* data_out, off_t offset, size_t max_len) {
+ssize_t netfile_offset_read(void* data_out, off_t offset, size_t max_len) {
     if (netfile.fd < 0) {
         printf("netsvc: read, but no open file\n");
         return -EBADF;
@@ -125,7 +127,7 @@ int netfile_offset_read(void* data_out, off_t offset, size_t max_len) {
     return netfile_read(data_out, max_len);
 }
 
-int netfile_read(void *data_out, size_t data_sz) {
+ssize_t netfile_read(void *data_out, size_t data_sz) {
     if (netfile.fd < 0) {
         printf("netsvc: read, but no open file\n");
         return -EBADF;
@@ -142,7 +144,7 @@ int netfile_read(void *data_out, size_t data_sz) {
     return n;
 }
 
-int netfile_offset_write(const char* data, off_t offset, size_t length) {
+ssize_t netfile_offset_write(const char* data, off_t offset, size_t length) {
     if (netfile.fd < 0) {
         printf("netsvc: write, but no open file\n");
         return -EBADF;
@@ -156,7 +158,7 @@ int netfile_offset_write(const char* data, off_t offset, size_t length) {
     return netfile_write(data, length);
 }
 
-int netfile_write(const char* data, size_t len) {
+ssize_t netfile_write(const char* data, size_t len) {
     if (netfile.fd < 0) {
         printf("netsvc: write, but no open file\n");
         return -EBADF;

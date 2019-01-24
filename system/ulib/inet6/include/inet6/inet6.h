@@ -9,7 +9,10 @@
 #include <stdint.h>
 #include <stdlib.h>
 
+#include <zircon/compiler.h>
 #include <zircon/types.h>
+
+__BEGIN_CDECLS
 
 typedef struct mac_addr mac_addr_t;
 typedef union ip6_addr ip6_addr_t;
@@ -179,3 +182,5 @@ unsigned ip6_checksum(ip6_hdr_t* ip, unsigned type, size_t length);
 // network stack via eth_send() or, in the event of an error, release
 // via eth_put_buffer().
 //
+
+__END_CDECLS
