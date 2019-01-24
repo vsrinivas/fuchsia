@@ -165,6 +165,14 @@ impl MgmtHdr {
     pub fn seq_ctrl(&self) -> u16 {
         LittleEndian::read_u16(&self.seq_ctrl)
     }
+
+    /// Returns the length in bytes of a mgmt header including all its fixed and optional
+    /// fields (if they are present).
+    pub fn len(has_ht_ctrl: bool) -> usize {
+        let mut bytes = std::mem::size_of::<DataHdr>();
+        bytes += if has_ht_ctrl { std::mem::size_of::<RawHtControl>() } else { 0 };
+        bytes
+    }
 }
 
 // IEEE Std 802.11-2016, 9.3.2.1
@@ -192,19 +200,38 @@ impl DataHdr {
     pub fn seq_ctrl(&self) -> u16 {
         LittleEndian::read_u16(&self.seq_ctrl)
     }
+
+    /// Returns the length in bytes of a data header including all its fixed and optional
+    /// fields (if they are present).
+    pub fn len(has_addr4: bool, has_qos_ctrl: bool, has_ht_ctrl: bool) -> usize {
+        let mut bytes = std::mem::size_of::<DataHdr>();
+        bytes += if has_addr4 { std::mem::size_of::<MacAddr>() } else { 0 };
+        bytes += if has_qos_ctrl { std::mem::size_of::<RawQosControl>() } else { 0 };
+        bytes += if has_ht_ctrl { std::mem::size_of::<RawHtControl>() } else { 0 };
+        bytes
+    }
 }
+
+type RawHtControl = [u8; 4];
+type RawQosControl = [u8; 2];
 
 pub enum MacFrame<B> {
     Mgmt {
+        // Management Header: fixed fields
         mgmt_hdr: LayoutVerified<B, MgmtHdr>,
-        ht_ctrl: Option<LayoutVerified<B, [u8; 4]>>,
+        // Management Header: optional fields
+        ht_ctrl: Option<LayoutVerified<B, RawHtControl>>,
+        // Body
         body: B,
     },
     Data {
+        // Data Header: fixed fields
         data_hdr: LayoutVerified<B, DataHdr>,
+        // Data Header: optional fields
         addr4: Option<LayoutVerified<B, MacAddr>>,
-        qos_ctrl: Option<LayoutVerified<B, [u8; 2]>>,
-        ht_ctrl: Option<LayoutVerified<B, [u8; 4]>>,
+        qos_ctrl: Option<LayoutVerified<B, RawQosControl>>,
+        ht_ctrl: Option<LayoutVerified<B, RawHtControl>>,
+        // Body
         body: B,
     },
     Unsupported {
@@ -213,20 +240,23 @@ pub enum MacFrame<B> {
 }
 
 impl<B: ByteSlice> MacFrame<B> {
-    /// Padding is optional and follows after the MAC header.
-    pub fn parse(bytes: B, padding: usize) -> Option<MacFrame<B>> {
+    /// If `body_aligned` is |true| the frame's body is expected to be 4 byte aligned.
+    pub fn parse(bytes: B, body_aligned: bool) -> Option<MacFrame<B>> {
         let fc = FrameControl::from_bytes(&bytes[..])?;
         match fc.frame_type() {
             FRAME_TYPE_MGMT => {
+                // Parse fixed header fields:
                 let (mgmt_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                let body = skip(body, padding)?;
 
-                // HT Control field is optional.
-                let (ht_ctrl, body) = if fc.htc_order() {
-                    let (ht_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
-                    (Some(ht_ctrl), body)
+                // Parse optional header fields:
+                let (ht_ctrl, body) = parse_ht_ctrl_if_present(&fc, body)?;
+
+                // Skip optional padding if body alignment is used.
+                let body = if body_aligned {
+                    let full_hdr_len = MgmtHdr::len(ht_ctrl.is_some());
+                    skip_body_alignment_padding(full_hdr_len, body)?
                 } else {
-                    (None, body)
+                    body
                 };
 
                 Some(MacFrame::Mgmt {
@@ -236,32 +266,21 @@ impl<B: ByteSlice> MacFrame<B> {
                 })
             }
             FRAME_TYPE_DATA => {
+                // Parse fixed header fields:
                 let (data_hdr, body) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                let body = skip(body, padding)?;
 
-                // addr4 field is optional.
-                let (addr4, body) = if fc.to_ds() && fc.from_ds() {
-                    let (addr4, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
-                    (Some(addr4), body)
-                } else {
-                    (None, body)
-                };
+                // Parse optional header fields:
+                let (addr4, body) = parse_addr4_if_present(&fc, body)?;
+                let (qos_ctrl, body) = parse_qos_if_present(&fc, body)?;
+                let (ht_ctrl, body) = parse_ht_ctrl_if_present(&fc, body)?;
 
-                // QoS Control field is optional.
-                let has_qos_ctrl = fc.frame_subtype() & BITMASK_QOS != 0;
-                let (qos_ctrl, body) = if has_qos_ctrl {
-                    let (qos_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
-                    (Some(qos_ctrl), body)
-                } else {
-                    (None, body)
-                };
-
-                // HT Control field is optional.
-                let (ht_ctrl, body) = if fc.htc_order() {
-                    let (ht_ctrl, body) = LayoutVerified::new_unaligned_from_prefix(body)?;
-                    (Some(ht_ctrl), body)
-                } else {
-                    (None, body)
+                // Skip optional padding if body alignment is used.
+                let body = if body_aligned {
+                    let full_hdr_len = DataHdr::len(addr4.is_some(), qos_ctrl.is_some(),
+                                                    ht_ctrl.is_some());
+                    skip_body_alignment_padding(full_hdr_len, body)?
+                } else  {
+                    body
                 };
 
                 Some(MacFrame::Data {
@@ -275,6 +294,56 @@ impl<B: ByteSlice> MacFrame<B> {
             type_ => Some(MacFrame::Unsupported { type_ }),
         }
     }
+}
+
+
+/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding a
+/// `MacAddr` if it is present and the remaining bytes.
+fn parse_addr4_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
+    -> Option<(Option<LayoutVerified<B, MacAddr>>, B)>
+{
+    if fc.to_ds() && fc.from_ds() {
+        let (addr4, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+        Some((Some(addr4), bytes))
+    } else {
+        Some((None, bytes))
+    }
+}
+
+
+/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
+/// `QosControl` if it is present and the remaining bytes.
+fn parse_qos_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
+    -> Option<(Option<LayoutVerified<B, RawQosControl>>, B)>
+{
+    if fc.frame_subtype() & BITMASK_QOS != 0 {
+        let (qos_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+        Some((Some(qos_ctrl), bytes))
+    } else {
+        Some((None, bytes))
+    }
+}
+
+/// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
+/// `HtControl` if it is present and the remaining bytes.
+fn parse_ht_ctrl_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
+                                          -> Option<(Option<LayoutVerified<B, RawHtControl>>, B)>
+{
+    if fc.htc_order() {
+        let (ht_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+        Some((Some(ht_ctrl), bytes))
+    } else {
+        Some((None, bytes))
+    }
+}
+
+/// Skips optional padding required for body alignment.
+fn skip_body_alignment_padding<B: ByteSlice>(hdr_len: usize,  bytes: B) -> Option<B> {
+    const OPTIONAL_BODY_ALIGNMENT_BYTES: usize = 4;
+
+    let padded_len = round_up(hdr_len, OPTIONAL_BODY_ALIGNMENT_BYTES);
+    let padding = padded_len - hdr_len;
+    skip(bytes, padding)
 }
 
 // IEEE Std 802.11-2016, 9.3.3.3
@@ -353,15 +422,15 @@ impl AssocRespHdr {
 
 pub enum MgmtSubtype<B> {
     Beacon {
-        hdr: LayoutVerified<B, BeaconHdr>,
+        bcn_hdr: LayoutVerified<B, BeaconHdr>,
         elements: B,
     },
     Authentication {
-        hdr: LayoutVerified<B, AuthHdr>,
+        auth_hdr: LayoutVerified<B, AuthHdr>,
         elements: B,
     },
     AssociationResp {
-        hdr: LayoutVerified<B, AssocRespHdr>,
+        assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>,
         elements: B,
     },
     Unsupported {
@@ -373,16 +442,16 @@ impl<B: ByteSlice> MgmtSubtype<B> {
     pub fn parse(subtype: u16, bytes: B) -> Option<MgmtSubtype<B>> {
         match subtype {
             MGMT_SUBTYPE_BEACON => {
-                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::Beacon { hdr, elements })
+                let (bcn_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtSubtype::Beacon { bcn_hdr, elements })
             }
             MGMT_SUBTYPE_AUTH => {
-                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::Authentication { hdr, elements })
+                let (auth_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtSubtype::Authentication { auth_hdr, elements })
             }
             MGMT_SUBTYPE_ASSOC_RESP => {
-                let (hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
-                Some(MgmtSubtype::AssociationResp { hdr, elements })
+                let (assoc_resp_hdr, elements) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
+                Some(MgmtSubtype::AssociationResp { assoc_resp_hdr, elements })
             }
             subtype => Some(MgmtSubtype::Unsupported { subtype }),
         }
@@ -514,7 +583,7 @@ mod tests {
     use super::*;
     use std::mem::transmute;
 
-    fn make_mgmt_frame(ht_ctrl: bool, padding: bool) -> Vec<u8> {
+    fn make_mgmt_frame(ht_ctrl: bool) -> Vec<u8> {
         #[cfg_attr(rustfmt, rustfmt_skip)]
         let mut bytes = vec![
             1, if ht_ctrl { 128 } else { 1 }, // fc
@@ -524,9 +593,6 @@ mod tests {
             5, 5, 5, 5, 5, 5, // addr3
             6, 6, // sequence control
         ];
-        if padding {
-            bytes.extend_from_slice(&[7, 7, 7, 7]);
-        }
         if ht_ctrl {
             bytes.extend_from_slice(&[8, 8, 8, 8]);
         }
@@ -570,17 +636,59 @@ mod tests {
             7, 7, 7, // DSAP, SSAP & control
             8, 8, 8, // OUI
             9, 9, // eth type
+            // Trailing bytes
+            10, 10, 10,
         ]);
+        bytes
+    }
 
-        // Some trailing bytes.
-        bytes.extend_from_slice(&[10, 10, 10]);
+    fn make_data_frame_with_padding() -> Vec<u8> {
+        let mut fc = FrameControl(0);
+        fc.set_frame_type(FRAME_TYPE_DATA);
+        fc.set_frame_subtype(DATA_SUBTYPE_QOS_DATA);
+        let fc: [u8; 2] = unsafe { transmute(fc.value().to_le()) };
+
+        #[cfg_attr(rustfmt, rustfmt_skip)]
+        let bytes = vec![
+            // Data Header
+            fc[0], fc[1], // fc
+            2, 2, // duration
+            3, 3, 3, 3, 3, 3, // addr1
+            4, 4, 4, 4, 4, 4, // addr2
+            5, 5, 5, 5, 5, 5, // addr3
+            6, 6, // sequence control
+            // QoS Control
+            1, 1,
+            // Padding
+            2, 2,
+            // Body
+            7, 7, 7,
+        ];
         bytes
     }
 
     #[test]
+    fn mgmt_hdr_len() {
+        assert_eq!(MgmtHdr::len(false), 24);
+        assert_eq!(MgmtHdr::len(true), 28);
+    }
+
+    #[test]
+    fn data_hdr_len() {
+        assert_eq!(DataHdr::len(false, false, false), 24);
+        assert_eq!(DataHdr::len(true, false, false), 30);
+        assert_eq!(DataHdr::len(false, true, false), 26);
+        assert_eq!(DataHdr::len(false, false, true), 28);
+        assert_eq!(DataHdr::len(true, true, false), 32);
+        assert_eq!(DataHdr::len(false, true, true), 30);
+        assert_eq!(DataHdr::len(true, false, true), 34);
+        assert_eq!(DataHdr::len(true, true, true), 36);
+    }
+
+    #[test]
     fn parse_mgmt_frame() {
-        let bytes = make_mgmt_frame(false, false);
-        match MacFrame::parse(&bytes[..], 0) {
+        let bytes = make_mgmt_frame(false);
+        match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Mgmt {
                 mgmt_hdr,
                 ht_ctrl,
@@ -600,29 +708,12 @@ mod tests {
     }
 
     #[test]
-    fn parse_mgmt_frame_with_ht_ctrl_padding() {
-        let bytes = make_mgmt_frame(true, true);
-        match MacFrame::parse(&bytes[..], 4) {
-            Some(MacFrame::Mgmt {
-                mgmt_hdr,
-                ht_ctrl,
-                body,
-            }) => {
-                assert_eq!([6, 6], mgmt_hdr.seq_ctrl);
-                assert_eq!([8, 8, 8, 8], *ht_ctrl.expect("ht_ctrl not present"));
-                assert_eq!(&[9, 9, 9], &body[..]);
-            }
-            _ => panic!("failed parsing mgmt frame"),
-        };
-    }
-
-    #[test]
     fn parse_mgmt_frame_too_short_unsupported() {
         // Valid MGMT header must have a minium length of 24 bytes.
-        assert!(MacFrame::parse(&[0; 22][..], 0).is_none());
+        assert!(MacFrame::parse(&[0; 22][..], false).is_none());
 
         // Unsupported frame type.
-        match MacFrame::parse(&[0xFF; 24][..], 0) {
+        match MacFrame::parse(&[0xFF; 24][..], false) {
             Some(MacFrame::Unsupported { type_ }) => assert_eq!(3, type_),
             _ => panic!("didn't detect unsupported frame"),
         };
@@ -638,10 +729,10 @@ mod tests {
             0,5,1,2,3,4,5 // SSID IE: "12345"
         ];
         match MgmtSubtype::parse(MGMT_SUBTYPE_BEACON, &bytes[..]) {
-            Some(MgmtSubtype::Beacon { hdr, elements }) => {
-                assert_eq!(0x0101010101010101, hdr.timestamp());
-                assert_eq!(0x0202, hdr.beacon_interval());
-                assert_eq!(0x0303, hdr.capabilities());
+            Some(MgmtSubtype::Beacon { bcn_hdr, elements }) => {
+                assert_eq!(0x0101010101010101, bcn_hdr.timestamp());
+                assert_eq!(0x0202, bcn_hdr.beacon_interval());
+                assert_eq!(0x0303, bcn_hdr.capabilities());
                 assert_eq!(&[0, 5, 1, 2, 3, 4, 5], &elements[..]);
             }
             _ => panic!("failed parsing beacon frame"),
@@ -651,7 +742,7 @@ mod tests {
     #[test]
     fn parse_data_frame() {
         let bytes = make_data_frame(None, None);
-        match MacFrame::parse(&bytes[..], 0) {
+        match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Data {
                 data_hdr,
                 addr4,
@@ -680,9 +771,21 @@ mod tests {
     }
 
     #[test]
+    fn parse_data_frame_with_padding() {
+        let bytes = make_data_frame_with_padding();
+        match MacFrame::parse(&bytes[..], true) {
+            Some(MacFrame::Data { qos_ctrl, body, .. }) => {
+                assert_eq!([1, 1], *qos_ctrl.expect("qos_ctrl not present"));
+                assert_eq!(&[7, 7, 7], &body[..]);
+            }
+            _ => panic!("failed parsing data frame"),
+        };
+    }
+
+    #[test]
     fn parse_llc_with_addr4_ht_ctrl() {
         let bytes = make_data_frame(Some([1, 2, 3, 4, 5, 6]), Some([4, 3, 2, 1]));
-        match MacFrame::parse(&bytes[..], 0) {
+        match MacFrame::parse(&bytes[..], false) {
             Some(MacFrame::Data { data_hdr, body, .. }) => {
                 let fc = FrameControl(data_hdr.frame_ctrl());
                 match DataSubtype::parse(fc.frame_subtype(), &body[..]) {
@@ -774,7 +877,6 @@ mod tests {
                 _ => panic!("unexpected MSDU: {:x?}", msdu),
             }
         }
-        assert!(found_msdus.0);
-        assert!(found_msdus.1);
+        assert_eq!((true, true), found_msdus);
     }
 }
