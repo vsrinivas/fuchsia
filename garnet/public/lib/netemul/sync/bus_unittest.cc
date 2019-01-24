@@ -175,6 +175,25 @@ class BusTest : public TestWithEnvironment {
     return true;
   }
 
+  void TestEventWaiting(BusSync* c1, BusAsync* c2, bool expect_result,
+                        Bus::FEvent wait, Bus::FEvent publish,
+                        const std::string& test_caller) {
+    int64_t timeout = zx::msec(expect_result ? 0 : 15).to_nsecs();
+    bool got_callback = false;
+    (*c2)->WaitForEvent(
+        std::move(wait), timeout,
+        [&got_callback, expect_result, test_caller](bool result) {
+          EXPECT_EQ(result, expect_result) << test_caller;
+          got_callback = true;
+        });
+    bool published = false;
+    // send whatever on the bus to make sure wait is in effect.
+    (*c2)->EnsurePublish(Bus::FEvent(), [&published]() { published = true; });
+    WAIT_FOR_OK(published) << test_caller;
+    ASSERT_OK((*c1)->EnsurePublish(std::move(publish)));
+    WAIT_FOR_OK(got_callback) << test_caller;
+  }
+
   std::unique_ptr<EnclosingEnvironment> test_env_;
   std::unique_ptr<async::Loop> svc_loop_;
   std::unique_ptr<SyncManager> svc_;
@@ -245,6 +264,248 @@ TEST_F(BusTest, CrossTalk) {
   // received:
   ASSERT_FALSE(received_data);
   ASSERT_TRUE(cli1.is_bound());
+}
+
+TEST_F(BusTest, ClientObservation) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusSync cli3;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c3", cli3.NewRequest()));
+  std::vector<std::string> clients;
+  ASSERT_OK(cli3->GetClients(&clients));
+  ASSERT_TRUE(VectorSetEquals(clients, {"c3"}));
+
+  BusAsync cli1;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c1", cli1.NewRequest()));
+  ASSERT_TRUE(cli1.is_bound());
+
+  bool ok = false;
+  cli1.events().OnClientAttached = [&ok](fidl::StringPtr client) {
+    ASSERT_EQ(client, "c2");
+    ok = true;
+  };
+  cli1.events().OnClientDetached = [&ok](fidl::StringPtr client) {
+    ASSERT_EQ(client, "c2");
+    ok = true;
+  };
+
+  ASSERT_OK(cli3->GetClients(&clients));
+  ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c3"}));
+
+  {
+    BusAsync cli2;
+    ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c2", cli2.NewRequest()));
+    ASSERT_TRUE(cli2.is_bound());
+
+    // wait for OnClientAttached event to fire
+    WAIT_FOR_OK_AND_RESET(ok);
+
+    ASSERT_OK(cli3->GetClients(&clients));
+    ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c2", "c3"}));
+  }
+  // cli2 went away, wait for client detached event
+  WAIT_FOR_OK_AND_RESET(ok);
+
+  // check again that it went away
+  ASSERT_OK(cli3->GetClients(&clients));
+  ASSERT_TRUE(VectorSetEquals(clients, {"c1", "c3"}));
+
+  // make sure to unbind cli1 first
+  cli1.Unbind();
+}
+
+TEST_F(BusTest, WaitForClients) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusSync cli1;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c1", cli1.NewRequest()));
+
+  BusAsync cli_async;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
+
+  bool got_callback = false;
+  cli_async->WaitForClients(
+      {"c1"}, zx::msec(0).to_nsecs(),
+      [&got_callback](bool result, std::vector<std::string> absent) {
+        EXPECT_TRUE(result);
+        EXPECT_TRUE(absent.empty());
+        got_callback = true;
+      });
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  cli_async->WaitForClients(
+      {"doesn't exist"}, zx::msec(10).to_nsecs(),
+      [&got_callback](bool result, std::vector<std::string> absent) {
+        EXPECT_FALSE(result);
+        ASSERT_EQ(absent.size(), 1ul);
+        EXPECT_EQ(absent[0], "doesn't exist");
+        got_callback = true;
+      });
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  cli_async->WaitForClients(
+      {"c1", "c2"}, zx::msec(1000).to_nsecs(),
+      [&got_callback](bool result, std::vector<std::string> absent) {
+        EXPECT_TRUE(result);
+        EXPECT_TRUE(absent.empty());
+        got_callback = true;
+      });
+  RunLoopUntilIdle();
+  EXPECT_FALSE(got_callback);
+  BusSync cli2;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c2", cli2.NewRequest()));
+
+  WAIT_FOR_OK_AND_RESET(got_callback);
+}
+
+TEST_F(BusTest, DestroyWithClientWaiting) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusAsync cli_async;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
+
+  cli_async->WaitForClients({"c1"}, zx::msec(0).to_nsecs(),
+                            [](bool result, std::vector<std::string> absent) {
+                              FAIL() << "Mustn't reach callback";
+                            });
+}
+
+TEST_F(BusTest, WaitForEvent) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusSync cli1;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c1", cli1.NewRequest()));
+
+  BusAsync cli_async;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
+
+  bool got_callback = false;
+  bool published = false;
+  Bus::FEvent e1;
+  // check that timeout fires
+  cli_async->WaitForEvent(std::move(e1), zx::msec(1).to_nsecs(),
+                          [&got_callback](bool result) {
+                            EXPECT_FALSE(result);
+                            got_callback = true;
+                          });
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  int evt_counter = 0;
+  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) {
+    evt_counter++;
+  };
+
+  // check that callback fires with simple event with code
+  Bus::FEvent evt_wait, evt_snd;
+  FillEventData(&evt_wait, 1);
+  evt_wait.Clone(&evt_snd);
+  cli_async->WaitForEvent(std::move(evt_wait), zx::msec(0).to_nsecs(),
+                          [&got_callback](bool result) {
+                            EXPECT_TRUE(result);
+                            got_callback = true;
+                          });
+  // just send whatever on the bus to guarantee that wait is already in effect
+  cli_async->EnsurePublish(Bus::FEvent(), [&published]() { published = true; });
+  WAIT_FOR_OK_AND_RESET(published);
+  cli1->Publish(std::move(evt_snd));
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  // check that callback fires on second event
+  FillEventData(&evt_wait, 1);
+  FillEventData(&evt_snd, 2);
+  cli_async->WaitForEvent(std::move(evt_wait), zx::msec(0).to_nsecs(),
+                          [&got_callback](bool result) {
+                            EXPECT_TRUE(result);
+                            got_callback = true;
+                          });
+  // just send whatever on the bus to guarantee that wait is already in effect
+  cli_async->EnsurePublish(Bus::FEvent(), [&published]() { published = true; });
+  WAIT_FOR_OK_AND_RESET(published);
+  cli1->EnsurePublish(std::move(evt_snd));
+  EXPECT_FALSE(got_callback);
+  FillEventData(&evt_snd, 1);
+  cli1->EnsurePublish(std::move(evt_snd));
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  // check that event sent by same client doesn't trigger callback
+  FillEventData(&evt_wait, 1);
+  FillEventData(&evt_snd, 2);
+  cli_async->WaitForEvent(std::move(evt_wait), zx::msec(15).to_nsecs(),
+                          [&got_callback](bool result) {
+                            EXPECT_FALSE(result);
+                            got_callback = true;
+                          });
+  cli_async->EnsurePublish(std::move(evt_snd),
+                           [&published]() { published = true; });
+  WAIT_FOR_OK_AND_RESET(published);
+  WAIT_FOR_OK_AND_RESET(got_callback);
+
+  EXPECT_EQ(evt_counter,
+            3);  // check that all events actually made into the event callback
+}
+
+TEST_F(BusTest, EventWaitingEquality) {
+  SyncManagerSync bm;
+  GetSyncManager(bm.NewRequest());
+
+  BusSync cli1;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "c1", cli1.NewRequest()));
+
+  BusAsync cli_async;
+  ASSERT_OK(bm->BusSubscribe(kMainTestBus, "async", cli_async.NewRequest()));
+
+  int evt_counter = 0;
+  cli_async.events().OnBusData = [&evt_counter](Bus::FEvent data) {
+    evt_counter++;
+  };
+
+  Bus::FEvent wait, publish;
+  FillEventData(&wait, 1);
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
+                   "code match");
+
+  FillEventData(&wait, 0, "msg");
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
+                   "message match");
+
+  FillEventData(&wait, 0, "", {1, 2, 3});
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
+                   "arg match");
+
+  FillEventData(&wait, 2);
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
+                   std::move(publish), "code mismatch");
+
+  FillEventData(&wait, 0, "bla");
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
+                   std::move(publish), "message mismatch");
+
+  FillEventData(&wait, 0, "", {4, 5, 6});
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
+                   std::move(publish), "arg mismatch");
+
+  FillEventData(&wait, 1, "msg", {4, 5, 6});
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, false, std::move(wait),
+                   std::move(publish), "all match/arg mismatch");
+
+  FillEventData(&wait, 1, "msg", {1, 2, 3});
+  FillEventData(&publish, 1, "msg", {1, 2, 3});
+  TestEventWaiting(&cli1, &cli_async, true, std::move(wait), std::move(publish),
+                   "all match");
+
+  EXPECT_EQ(evt_counter,
+            8);  // check that all events actually made into the event callback
 }
 
 }  // namespace testing

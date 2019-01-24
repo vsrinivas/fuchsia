@@ -12,9 +12,14 @@
 namespace netemul {
 
 class BusBinding;
+class WaitForClientsWatch;
 class Bus {
  public:
   using FBus = fuchsia::netemul::sync::Bus;
+  using WaitForClientsCallback =
+      fuchsia::netemul::sync::Bus::WaitForClientsCallback;
+  using WaitForEventCallback =
+      fuchsia::netemul::sync::Bus::WaitForEventCallback;
   using FEvent = fuchsia::netemul::sync::Event;
   using Ptr = std::unique_ptr<Bus>;
 
@@ -31,10 +36,14 @@ class Bus {
   void NotifyClientDetached(const std::string& client);
   void NotifyClientAttached(const std::string& client);
   const std::unordered_map<std::string, ClientBinding>& clients();
+  void WaitForClients(std::vector<std::string> clients, int64_t timeout,
+                      WaitForClientsCallback callback);
+  bool CheckClientWatch(WaitForClientsWatch* watch);
 
  private:
   async_dispatcher_t* dispatcher_;
   std::unordered_map<std::string, ClientBinding> clients_;
+  std::vector<std::unique_ptr<WaitForClientsWatch>> client_watches_;
 };
 
 }  // namespace netemul

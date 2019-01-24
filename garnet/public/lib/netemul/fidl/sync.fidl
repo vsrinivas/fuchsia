@@ -1,4 +1,5 @@
 library fuchsia.netemul.sync;
+using zx;
 
 /// Simple data structure passed on netemul bus.
 table Event {
@@ -29,6 +30,17 @@ interface Bus {
     -> OnClientAttached(string client);
     /// Notifies a client was detached.
     -> OnClientDetached(string client);
+    /// Waits for up to |timeout| (nsec) for all the clients in |clients|.
+    /// Returns true if all clients are present on the bus before timeout expired.
+    /// If |result| is false, |absent| will contain the entries in |clients| that still weren't
+    /// present on the bus when the timout expired.
+    /// Use |timeout| <= 0 for indefinite wait.
+    WaitForClients(vector<string> clients, zx.duration timeout) -> (bool result, vector<string>? absent);
+    /// Waits for up to |timeout| (nsec) for an event that matches |data|.
+    /// Event equality is performed by comparing *all* set fields in |data|.
+    /// Returns true if event was received before timeout expired.
+    /// Use |timeout| <= 0 for indefinite wait.
+    WaitForEvent(Event data, zx.duration timeout) -> (bool result);
 };
 
 /// The SyncManager is the entry point to attach a client to a bus or use other synchronization
