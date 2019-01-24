@@ -658,22 +658,17 @@ void Realm::CreateComponentFromPackage(
 
   // TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
   if (!is_fuchsia_pkg_url) {
-    std::string pkg_url_error =
-        "Component " + fp.GetDefaultComponentName() +
-        " was launched without using fuchsia-pkg URLs! Use " +
-        package->resolved_url + "#" + fp.GetDefaultComponentCmxPath() +
-        " instead. See https://fuchsia.googlesource.com/docs/+/master/" +
-        "glossary.md#fuchsia_pkg-url for more information.";
-    if (!cmx.deprecated_bare_package_url()) {
-      FXL_LOG(ERROR) << pkg_url_error << " The component was not whitelisted"
-                     << " to launch with bare package URLs, and it cannot be"
-                     << " launched!";
-      component_request.SetReturnValues(kComponentCreationFailed,
-                                        TerminationReason::INTERNAL_ERROR);
-      return;
-    } else {
-      FXL_LOG(WARNING) << pkg_url_error;
-    }
+    FXL_LOG(ERROR)
+        << "Component " << fp.GetDefaultComponentName()
+        << " was launched without using fuchsia-pkg URLs! Use "
+        << package->resolved_url << "#" << fp.GetDefaultComponentCmxPath()
+        << " instead. See https://fuchsia.googlesource.com/docs/+/master/"
+        << "glossary.md#fuchsia_pkg-url for more information. The component "
+        << "was not whitelisted to launch with bare package URLs, and it "
+        << "cannot be launched!";
+    component_request.SetReturnValues(kComponentCreationFailed,
+                                      TerminationReason::INTERNAL_ERROR);
+    return;
   }
 
   RuntimeMetadata runtime;
