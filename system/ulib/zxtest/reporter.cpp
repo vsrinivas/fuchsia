@@ -210,7 +210,7 @@ void Reporter::OnIterationEnd(const Runner& runner, int iteration) {
                 Pluralize(iteration_summary_.skipped));
     }
     if (iteration_summary_.failed > 0) {
-        fprintf(stream_, "[  FAILED  ] %lu test%si, listed below:\n", iteration_summary_.failed,
+        fprintf(stream_, "[  FAILED  ] %lu test%s, listed below:\n", iteration_summary_.failed,
                 Pluralize(iteration_summary_.failed));
         if (iteration_summary_.failed_tests.size() > 0) {
             for (auto& failed_test : iteration_summary_.failed_tests) {

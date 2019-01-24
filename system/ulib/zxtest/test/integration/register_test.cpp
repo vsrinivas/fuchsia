@@ -6,7 +6,7 @@
 
 #include <zircon/assert.h>
 #include <zxtest/base/test-info.h>
-#include <zxtest/cpp/zxtest.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 TEST(Test, AutoRegister) {}
@@ -24,8 +24,7 @@ void Verify() {
     // This is using internals to obtain a handle on the test info, through the TestRef.
     // This will either fail at compile time because this variable does not exist(macro error),
     // or at runtime because the test failed to register (logic error).
-    const zxtest::TestInfo& test_info =
-        runner->GetTestInfo(_ZXTEST_TEST_REF(Test, AutoRegister));
+    const zxtest::TestInfo& test_info = runner->GetTestInfo(_ZXTEST_TEST_REF(Test, AutoRegister));
     ZX_ASSERT_MSG(test_info.name() == "AutoRegister", "TEST registered test with the wrong name.");
     const zxtest::TestInfo& fixture_info =
         runner->GetTestInfo(_ZXTEST_TEST_REF(TestFixture, AutoRegister));

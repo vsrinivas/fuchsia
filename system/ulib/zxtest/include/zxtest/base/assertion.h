@@ -29,7 +29,7 @@ public:
     const SourceLocation& location() const { return location_; }
 
     // Returns a general description of the asserted condition.
-    const fbl::String& description() const { return desc_; }
+    const fbl::String& description() const { return description_; }
 
     // Returns the expected value of an equality. For example in ASSERT_EQ(actual, expected) returns
     // the text representation of expected, as it was captured on compile time.
@@ -54,7 +54,7 @@ public:
 private:
     // Text indicating the nature of the assertion. Whether it was expected to be equal, not equal,
     // etc.
-    fbl::String desc_;
+    fbl::String description_;
     fbl::String expected_;
     fbl::String expected_eval_;
     fbl::String actual_;
@@ -66,18 +66,35 @@ private:
 };
 
 // Helper functions used on assertion reporting contexts.
+namespace internal {
+// Returns a string with the Hex representation of the contents of the buffer pointed by
+// ptr. If |ptr| is nullptr, returns "<nullptr>". If |size| is 0 returns <empty>.
+fbl::String ToHex(void* ptr, size_t size);
+} // namespace internal
 
 // Specializations exist for primitive types, pointers and |fbl::String|.
-template <typename T>
-fbl::String PrintValue(T value) {
+template <typename T> fbl::String PrintValue(T value) {
     // TODO(gevalentino): By default generate a hex represetation of the memory contents of value.
-    return "";
+    return internal::ToHex(&value, sizeof(value));
 }
 
+// Template Specialization for integers and char pointers.
+template <> fbl::String PrintValue(int32_t value);
+template <> fbl::String PrintValue(uint32_t value);
+template <> fbl::String PrintValue(int64_t value);
+template <> fbl::String PrintValue(uint64_t value);
+template <> fbl::String PrintValue(const char* value);
+template <> fbl::String PrintValue(const fbl::String& value);
+
 // For pointers just print the address.
-template <typename T>
-fbl::String PrintValue(T* value) {
-    return fbl::StringPrintf("%p", static_cast<void*>(value));
+template <typename T> fbl::String PrintValue(T* value) {
+    return fbl::StringPrintf("%p", static_cast<const void*>(value));
 }
+
+// Overloads for string compare.
+bool StrCmp(const char* actual, const char* expected);
+bool StrCmp(const char* actual, const fbl::String& expected);
+bool StrCmp(const fbl::String& actual, const char* expected);
+bool StrCmp(const fbl::String& actual, const fbl::String& expected);
 
 } // namespace zxtest

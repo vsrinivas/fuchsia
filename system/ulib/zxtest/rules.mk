@@ -108,6 +108,8 @@ TEST_DIR := $(LOCAL_DIR)/test/integration/
 
 MODULE_SRCS := \
     $(TEST_DIR)/helper.cpp \
+    $(TEST_DIR)/assertions_test.c \
+    $(TEST_DIR)/assertions_test.cpp \
     $(TEST_DIR)/register_test.c \
     $(TEST_DIR)/register_test.cpp \
     $(TEST_DIR)/main.cpp \

@@ -5,7 +5,7 @@
 #include "helper.h"
 
 #include <zircon/assert.h>
-#include <zxtest/c/zxtest.h>
+#include <zxtest/zxtest.h>
 
 static int called = 0;
 

@@ -9,7 +9,9 @@
 #include <zxtest/cpp/zxtest.h>
 
 int main(int argc, char** argv) {
-    int res = zxtest::RunAllTests(argc, argv);
+    zxtest::RunAllTests(argc, argv);
     zxtest::test::CheckAll();
-    return res;
+    fprintf(stdout, "All Checks Passed. Assertion errors displayed in the standard output is from "
+                    "validating the assertion mechanisms.\n ");
+    return 0;
 }
