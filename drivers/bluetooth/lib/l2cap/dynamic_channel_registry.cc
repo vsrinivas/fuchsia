@@ -118,10 +118,13 @@ void DynamicChannelRegistry::ActivateChannel(DynamicChannel* channel,
     if (channel->IsConnected()) {
       channel->Disconnect();
     }
-    RemoveChannel(channel);
     if (pass_failed) {
       open_cb(nullptr);
     }
+
+    // This lambda is owned by the channel, so captures are no longer valid
+    // after this call.
+    RemoveChannel(channel);
   };
 
   channel->Open(std::move(return_chan));
