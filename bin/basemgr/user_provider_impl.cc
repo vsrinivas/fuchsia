@@ -28,11 +28,15 @@ constexpr char kUserProviderAppUrl[] = "user_provider_url";
 
 // Dev auth provider configuration
 constexpr char kDevAuthProviderType[] = "dev";
-constexpr char kDevAuthProviderUrl[] = "dev_auth_provider";
+constexpr char kDevAuthProviderUrl[] =
+    "fuchsia-pkg://fuchsia.com/dev_auth_provider#meta/"
+    "dev_auth_provider.cmx";
 
 // Google auth provider configuration
 constexpr char kGoogleAuthProviderType[] = "google";
-constexpr char kGoogleAuthProviderUrl[] = "google_auth_provider";
+constexpr char kGoogleAuthProviderUrl[] =
+    "fuchsia-pkg://fuchsia.com/google_auth_provider#meta/"
+    "google_auth_provider.cmx";
 
 fuchsia::modular::auth::AccountPtr Convert(
     const fuchsia::modular::UserStorage* const user) {

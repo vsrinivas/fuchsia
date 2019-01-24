@@ -30,7 +30,7 @@
     {
       "name": "embed_shell",
       "exec": [
-        "basemgr",
+        "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx",
         "--test",
         "--account_provider=fuchsia-pkg://fuchsia.com/dev_token_manager#meta/dev_token_manager.cmx",
         "--base_shell=fuchsia-pkg://fuchsia.com/dev_base_shell#meta/dev_base_shell.cmx",

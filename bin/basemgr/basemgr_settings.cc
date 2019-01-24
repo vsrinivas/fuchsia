@@ -18,14 +18,18 @@ BasemgrSettings::BasemgrSettings(const fxl::CommandLine& command_line) {
       "base_shell",
       "fuchsia-pkg://fuchsia.com/userpicker_base_shell#meta/"
       "userpicker_base_shell.cmx");
-  story_shell.url =
-      command_line.GetOptionValueWithDefault("story_shell", "mondrian");
+  story_shell.url = command_line.GetOptionValueWithDefault(
+      "story_shell", "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx");
   sessionmgr.url = command_line.GetOptionValueWithDefault(
       "sessionmgr", "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx");
   session_shell.url = command_line.GetOptionValueWithDefault(
-      "session_shell", "ermine_session_shell");
+      "session_shell",
+      "fuchsia-pkg://fuchsia.com/ermine_session_shell#meta/"
+      "ermine_session_shell.cmx");
   account_provider.url = command_line.GetOptionValueWithDefault(
-      "account_provider", "token_manager_factory");
+      "account_provider",
+      "fuchsia-pkg://fuchsia.com/token_manager_factory#meta/"
+      "token_manager_factory.cmx");
 
   disable_statistics = command_line.HasOption("disable_statistics");
   no_minfs = command_line.HasOption("no_minfs");
