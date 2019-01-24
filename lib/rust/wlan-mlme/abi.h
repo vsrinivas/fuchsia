@@ -13,36 +13,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 
-#define rust_mlme_DSSS_PARAM_SET_IE_BODY_LEN 1
-
-#define rust_mlme_FRAME_TYPE_MGMT 0
-
-#define rust_mlme_IE_ID_DSSS_PARAM_SET 3
-
-#define rust_mlme_IE_ID_SSID 0
-
-#define rust_mlme_IE_ID_SUPPORTED_RATES 1
-
-#define rust_mlme_IE_ID_TIM 5
-
-#define rust_mlme_MGMT_SUBTYPE_ASSOC_RESP 1
-
-#define rust_mlme_MGMT_SUBTYPE_AUTH 11
-
-#define rust_mlme_MGMT_SUBTYPE_BEACON 8
-
-#define rust_mlme_SSID_IE_MAX_BODY_LEN 32
-
-#define rust_mlme_SSID_IE_MIN_BODY_LEN 0
-
-#define rust_mlme_SUPP_RATES_IE_MAX_BODY_LEN 8
-
-#define rust_mlme_SUPP_RATES_IE_MIN_BODY_LEN 1
-
-#define rust_mlme_TIM_IE_MAX_PVB_LEN 251
-
-#define rust_mlme_TIM_IE_MIN_PVB_LEN 1
-
 typedef struct {
   void (*return_buffer)(void *);
   void *raw;
