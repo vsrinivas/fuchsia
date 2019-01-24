@@ -10,6 +10,7 @@ group("tests") {
     ":apptests",
     ":pixeltests",
     ":unittests",
+    ":viewstate_apptests",
   ]
 }
 
@@ -126,6 +127,34 @@ executable("pixeltests") {
     "//garnet/public/lib/fsl",
     "//garnet/public/lib/fxl",
     "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/gfx/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-cpp",
+  ]
+}
+
+executable("viewstate_apptests") {
+  output_name = "gfx_viewstate_apptests"
+
+  testonly = true
+  sources = [
+    "gfx_viewstate_apptest.cc",
+  ]
+  include_dirs = [
+    "//garnet/public/lib/escher",
+    "//third_party/glm",
+  ]
+  deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/base_view/cpp",
     "//garnet/public/lib/ui/gfx/cpp",
     "//garnet/public/lib/ui/scenic/cpp",
     "//third_party/googletest:gtest_main",
