@@ -61,7 +61,7 @@ __attribute__((format(printf, 4, 5))) static inline T dret(const char* file, int
     (magma::kMagmaDretEnable ? (ret == 0 ? ret : magma::dret(__FILE__, __LINE__, ret, nullptr))    \
                              : ret)
 
-// Must provide const char* msg as the 2nd paramter; other parameters optional.
+// Must provide const char* msg as the 2nd parameter; other parameters optional.
 #define DRET_MSG(ret, ...)                                                                         \
     (magma::kMagmaDretEnable                                                                       \
          ? (ret == 0 ? ret : magma::dret(__FILE__, __LINE__, ret, __VA_ARGS__))                    \
@@ -79,7 +79,7 @@ __attribute__((format(printf, 3, 4))) static inline bool dret_false(const char* 
     return false;
 }
 
-// Must provide const char* msg as the 2nd paramter; other parameters optional.
+// Must provide const char* msg as the 2nd parameter; other parameters optional.
 #define DRETF(ret, ...)                                                                            \
     (magma::kMagmaDretEnable                                                                       \
          ? (ret == true ? true : magma::dret_false(__FILE__, __LINE__, __VA_ARGS__))               \
@@ -96,7 +96,7 @@ __attribute__((format(printf, 3, 4))) static inline void dret_null(const char* f
     printf("\n");
 }
 
-// Must provide const char* msg as the 2nd paramter; other parameters optional.
+// Must provide const char* msg as the 2nd parameter; other parameters optional.
 #define DRETP(ret, ...)                                                                            \
     (magma::kMagmaDretEnable                                                                       \
          ? (ret != nullptr ? ret : (magma::dret_null(__FILE__, __LINE__, __VA_ARGS__), nullptr))   \

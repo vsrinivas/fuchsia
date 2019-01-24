@@ -67,7 +67,7 @@ Vulkan Development
 
     b) Gpu hang
 
-    If a command buffer fails to complete within a certain amount of time, the gpu driver should detect the condition and treat it as if a fault occured.
+    If a command buffer fails to complete within a certain amount of time, the gpu driver should detect the condition and treat it as if a fault occurred.
     Again, may be an application error or driver bug. If you believe your app is innocent, please file a Magma ticket and include at least this portion of the log, plus ideally a recipe to repro:
 
         > [WARNING] Suspected GPU hang: last submitted sequence number 0x1007 master_interrupt_control 0x80000000
