@@ -57,7 +57,7 @@ static size_t get_log_line(char* out) {
     }
 }
 
-int debuglog_init(void) {
+int debuglog_init() {
     if (zx_debuglog_create(ZX_HANDLE_INVALID, ZX_LOG_FLAG_READABLE, &loghandle) < 0) {
         return -1;
     }
@@ -73,7 +73,7 @@ int debuglog_init(void) {
 
 // If we have an outstanding (unacknowledged) log, resend it. Otherwise, send new logs, if we
 // have any.
-static void debuglog_send(void) {
+static void debuglog_send() {
     if (pending == 0) {
         pkt.magic = NB_DEBUGLOG_MAGIC;
         pkt.seqno = seqno;
@@ -122,7 +122,7 @@ void debuglog_recv(void* data, size_t len, bool is_mcast) {
     debuglog_send();
 }
 
-void debuglog_timeout_expired(void) {
+void debuglog_timeout_expired() {
     if (pending) {
         // No reply. If noone is listening, reduce send rate.
         if (++num_unacked >= kUnackedThreshold) {

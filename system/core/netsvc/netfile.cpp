@@ -176,7 +176,7 @@ ssize_t netfile_write(const char* data, size_t len) {
     return len;
 }
 
-int netfile_close(void) {
+int netfile_close() {
     int result = 0;
     if (netfile.fd < 0) {
         printf("netsvc: close, but no open file\n");
@@ -199,7 +199,7 @@ int netfile_close(void) {
 
 // Clean up if we abort before finishing a write. Close out and unlink it, rather than
 // leaving an incomplete file.
-void netfile_abort_write(void) {
+void netfile_abort_write() {
     if (netfile.fd < 0) {
         return;
     }

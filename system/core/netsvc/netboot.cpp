@@ -35,10 +35,10 @@ static uint32_t last_ack_arg = 0;
 
 bool xfer_active = false;
 
-typedef struct nbfilecontainer {
+struct nbfilecontainer_t {
     nbfile file;
     zx_handle_t data; // handle to vmo that backs netbootfile.
-} nbfilecontainer_t;
+};
 
 static nbfilecontainer_t nbkernel;
 static nbfilecontainer_t nbbootdata;
@@ -230,7 +230,7 @@ static void nb_close(uint32_t cookie, const ip6_addr_t* saddr, uint16_t sport, u
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
-static zx_status_t do_dmctl_mexec(void) {
+static zx_status_t do_dmctl_mexec() {
     zx_handle_t kernel, bootdata;
     // TODO(scottmg): range check nbcmdline.file.size rather than just casting.
     zx_status_t status =

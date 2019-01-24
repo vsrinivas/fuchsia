@@ -34,12 +34,12 @@
 
 // Identifies what the file being streamed over TFTP should be
 // used for.
-typedef enum netfile_type {
+enum netfile_type_t {
     netboot, // A bootfs file
     paver,   // A disk image which should be paved to disk
-} netfile_type_t;
+};
 
-typedef struct {
+struct file_info_t {
     bool is_write;
     char filename[PATH_MAX + 1];
     netfile_type_t type;
@@ -61,13 +61,13 @@ typedef struct {
         thrd_t buf_copy_thrd;
         sync_completion_t data_ready; // Allows read thread to block on buffer writes
     } paver;
-} file_info_t;
+};
 
-typedef struct {
+struct transport_info_t {
     ip6_addr_t dest_addr;
     uint16_t dest_port;
     uint32_t timeout_ms;
-} transport_info_t;
+};
 
 static char tftp_session_scratch[SCRATCHSZ];
 char tftp_out_scratch[SCRATCHSZ];
@@ -493,13 +493,13 @@ static void initialize_connection(const ip6_addr_t* saddr, uint16_t sport) {
     xfer_active = true;
 }
 
-static void end_connection(void) {
+static void end_connection() {
     session = NULL;
     tftp_next_timeout = ZX_TIME_INFINITE;
     xfer_active = false;
 }
 
-void tftp_timeout_expired(void) {
+void tftp_timeout_expired() {
     tftp_status result =
         tftp_timeout(session, tftp_out_scratch, &last_msg_size, sizeof(tftp_out_scratch),
                      &transport_info.timeout_ms, &file_info);
@@ -524,7 +524,7 @@ void tftp_timeout_expired(void) {
     }
 }
 
-static void report_metrics(void) {
+static void report_metrics() {
     char buf[256];
     if (session && tftp_get_metrics(session, buf, sizeof(buf)) == TFTP_NO_ERROR) {
         printf("netsvc: metrics: %s\n", buf);
@@ -576,11 +576,11 @@ void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
     end_connection();
 }
 
-bool tftp_has_pending(void) {
+bool tftp_has_pending() {
     return session && tftp_session_has_pending(session);
 }
 
-void tftp_send_next(void) {
+void tftp_send_next() {
     last_msg_size = sizeof(tftp_out_scratch);
     tftp_prepare_data(session, tftp_out_scratch, &last_msg_size, &transport_info.timeout_ms,
                       &file_info);

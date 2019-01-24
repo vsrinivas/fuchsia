@@ -82,7 +82,7 @@ void netifc_recv(void* data, size_t len) {
     eth_recv(data, len);
 }
 
-bool netifc_send_pending(void) {
+bool netifc_send_pending() {
     if (!tftp_has_pending()) {
         return false;
     }
@@ -90,7 +90,7 @@ bool netifc_send_pending(void) {
     return tftp_has_pending();
 }
 
-void update_timeouts(void) {
+void update_timeouts() {
     zx_time_t now = zx_clock_get_monotonic();
     zx_time_t next_timeout =
         (debuglog_next_timeout < tftp_next_timeout) ? debuglog_next_timeout : tftp_next_timeout;
