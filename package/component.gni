@@ -13,16 +13,15 @@ import("//build/images/manifest.gni")
 # Parameters
 #
 #   name (optional)
-#     [path] Defines name of the component. Cmx destination depends on this
-#     name, so if name = foo, cmx would be copied to meta/foo.cmx in assembled
-#     package.
+#     Ignored. Will be removed after a soft transition.
 #
-#     If not provided, defaults to $target_name
-#
-#   manifest (optional)
+#   manifest (required)
 #     [path] Defines the manifest source path for this component.
 #
-#     By default it would look for meta/$name.cmx file relative to your BUILD.gn.
+#   manifest_dest (optional)
+#     [path] Defines the destination of the component manifest within the assembled package.
+#
+#     If not provided, defaults to "meta/<manifest>.cmx" if manifest was .cmx, and "meta/<manifest>.cm" if manfiest was .cml.
 #
 #   binary (required)
 #     [path] The path to the the primary binary for the component.
@@ -85,16 +84,42 @@ template("fuchsia_component") {
                                "resources",
                                "visibility",
                                "manifest",
+                               "manifest_dest",
                                "test",
                              ])
+      if (defined(name)) {
+        not_needed([ "name" ])
+      }
+
+      assert(defined(manifest),
+             "Component $component_label should define manifest")
+      manifest_extension = get_path_info(manifest, "extension")
+      assert(
+          manifest_extension == "cmx" || manifest_extension == "cml",
+          "Component $component_label's manifest $manifest should have extension .cmx or .cml")
+      if (!defined(manifest_dest)) {
+        if (manifest_extension == "cmx") {
+          manifest_dest = "meta/" + get_path_info(manifest, "file")
+        } else {
+          manifest_dest = "meta/" + get_path_info(manifest, "name") + ".cm"
+        }
+      } else {
+        manifest_dest_extension = get_path_info(manifest_dest, "extension")
+        if (manifest_extension == "cmx") {
+          assert(
+              manifest_dest_extension == "cmx",
+              "Component $component_label's manifest_dest $manifest_dest should have extension .cmx")
+        } else {
+          assert(
+              manifest_dest_extension == "cm",
+              "Component $component_label's manifest_dest $manifest_dest should have extension .cm")
+        }
+      }
 
       # remove this check once we support dart and flutter
       assert(defined(binary), "Component $component_label should define binary")
       if (!defined(deps)) {
         deps = []
-      }
-      if (!defined(name)) {
-        name = target_name
       }
       if (!defined(data_deps)) {
         data_deps = []
@@ -118,7 +143,8 @@ template("fuchsia_component") {
 
     component_manifest = []
     if (get_path_info(component.manifest, "extension") == "cmx") {
-      validate = "validate_" + target_name + "_${component.name}.cmx"
+      validate = "validate_" + target_name + "_" +
+                 get_path_info(component.manifest_dest, "file")
 
       cmx_validate(validate) {
         data = component.manifest
@@ -129,16 +155,17 @@ template("fuchsia_component") {
         public_deps = component.public_deps
       }
       component.deps += [ ":$validate" ]
-      
+
       # Collect the component's primary manifest.
       component_manifest += [
         {
-          dest = "meta/${component.name}.cmx"
+          dest = component.manifest_dest
           source = rebase_path(component.manifest)
         },
       ]
     } else if (get_path_info(component.manifest, "extension") == "cml") {
-      compiled = "compiled_" + target_name + "_${component.name}.cm"
+      compiled = "compiled_" + target_name + "_" +
+                 get_path_info(component.manifest_dest, "file")
 
       cm_compile(compiled) {
         data = component.manifest
@@ -154,7 +181,7 @@ template("fuchsia_component") {
       # Collect the component's primary manifest.
       component_manifest += [
         {
-          dest = "meta/${component.name}.cm"
+          dest = component.manifest_dest
           source = rebase_path(compiled_outputs[0])
         },
       ]
