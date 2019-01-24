@@ -21,7 +21,7 @@
 #include <lib/component/cpp/service_provider_impl.h>
 #include <lib/fidl/cpp/binding.h>
 #include <lib/fidl/cpp/interface_ptr.h>
-#include <lib/fit/defer.h>
+#include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 #include <zx/eventpair.h>
 
@@ -305,7 +305,10 @@ class SessionmgrImpl : fuchsia::modular::internal::Sessionmgr,
 
   OperationQueue operation_queue_;
 
-  fit::deferred_action<fit::closure> finish_initialization_;
+  // Part of Initialize() that is deferred until the first environment service
+  // request is received from the session shell, in order to accelerate the
+  // startup of session shell.
+  fit::function<void()> finish_initialization_{[]{}};
 
   // Set to |true| when sessionmgr starts its terminating sequence;  this flag
   // can be used to determine whether to reject vending FIDL services.

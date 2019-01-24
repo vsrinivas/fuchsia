@@ -195,10 +195,15 @@ void SessionmgrImpl::Initialize(
   // shell (see how RunSessionShell() initializes session_shell_services_) to
   // lazily initialize the following services only once they are requested
   // for the first time.
-  finish_initialization_ = fit::defer<fit::closure>(
-      [this, session_shell_url = session_shell.url,
+  finish_initialization_ =
+      [this, called = false, session_shell_url = session_shell.url,
        ledger_token_manager = std::move(ledger_token_manager),
        story_shell = std::move(story_shell)]() mutable {
+        if (called) {
+          return;
+        }
+        called = true;
+
         InitializeLedger(std::move(ledger_token_manager));
         InitializeDeviceMap();
         InitializeMessageQueueManager();
@@ -209,7 +214,7 @@ void SessionmgrImpl::Initialize(
         });
         InitializeClipboard();
         ReportEvent(ModularEvent::BOOTED_TO_SESSIONMGR);
-      });
+      };
 
   InitializeUser(std::move(account), std::move(agent_token_manager),
                  std::move(user_context));
@@ -703,7 +708,7 @@ void SessionmgrImpl::RunSessionShell(
         if (terminating_) {
           return;
         }
-        finish_initialization_.call();
+        finish_initialization_();
         session_shell_context_bindings_.AddBinding(this, std::move(request));
       });
 
@@ -713,7 +718,7 @@ void SessionmgrImpl::RunSessionShell(
         if (terminating_) {
           return;
         }
-        finish_initialization_.call();
+        finish_initialization_();
         session_shell_component_context_impl_->Connect(std::move(request));
       });
 
@@ -723,7 +728,7 @@ void SessionmgrImpl::RunSessionShell(
         if (terminating_) {
           return;
         }
-        finish_initialization_.call();
+        finish_initialization_();
         puppet_master_impl_->Connect(std::move(request));
       });
 
@@ -733,7 +738,7 @@ void SessionmgrImpl::RunSessionShell(
         if (terminating_) {
           return;
         }
-        finish_initialization_.call();
+        finish_initialization_();
         fuchsia::modular::ComponentScope component_scope;
         component_scope.set_global_scope(fuchsia::modular::GlobalScope());
         user_intelligence_provider_impl_->GetComponentIntelligenceServices(
