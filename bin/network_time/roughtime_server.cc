@@ -25,7 +25,7 @@ namespace time_server {
 bool RoughTimeServer::IsValid() const { return valid_; }
 
 Status RoughTimeServer::GetTimeFromServer(
-    roughtime::rough_time_t* timestamp) const {
+    roughtime::rough_time_t* timestamp_us) const {
   if (!IsValid()) {
     FX_LOGS(ERROR) << "time server not supported: " << address_;
     return NOT_SUPPORTED;
@@ -98,7 +98,9 @@ Status RoughTimeServer::GetTimeFromServer(
   do {
     r = send(sock_fd, request.data(), request.size(), 0);
   } while (r == -1 && errno == EINTR);
-  const uint64_t start_us = zx_clock_get(ZX_CLOCK_MONOTONIC);
+
+  // clock_get returns ns since start of clock. See zircon/docs/syscalls/clock_get.md.
+  const zx_time_t start_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
     FX_LOGS(ERROR) << "send on UDP socket" << strerror(errno);
@@ -127,7 +129,7 @@ Status RoughTimeServer::GetTimeFromServer(
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
-  const uint64_t end_us = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx_time_t end_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
 
   if (buf_len == -1) {
     FX_LOGS(ERROR) << "recv from UDP socket: " << strerror(errno);
@@ -136,14 +138,15 @@ Status RoughTimeServer::GetTimeFromServer(
 
   uint32_t radius;
   std::string error;
-  if (!roughtime::ParseResponse(timestamp, &radius, &error, public_key_,
+  if (!roughtime::ParseResponse(timestamp_us, &radius, &error, public_key_,
                                 recv_buf, buf_len, nonce)) {
     FX_LOGS(ERROR) << "response from " << address_
                    << " failed verification: " << error;
     return BAD_RESPONSE;
   }
 
-  *timestamp += (end_us - start_us) / 2;
+  // roughtime::rough_time_t is us since UNIX epoch. See third_party/roughtime/protocol.h.
+  *timestamp_us += (end_ns - start_ns) / 2 / 1'000;
   return OK;
 }
 

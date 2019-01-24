@@ -49,8 +49,8 @@ bool Timezone::UpdateSystemTime(int tries) {
 
   for (int i = 0; i < tries; i++) {
     FX_VLOGS(1) << "Updating system time, attempt: " << i + 1;
-    roughtime::rough_time_t timestamp;
-    Status ret = server->GetTimeFromServer(&timestamp);
+    roughtime::rough_time_t timestamp_us;
+    Status ret = server->GetTimeFromServer(&timestamp_us);
     if (ret == NETWORK_ERROR) {
       if (i != tries - 1) {
         FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
@@ -64,7 +64,7 @@ bool Timezone::UpdateSystemTime(int tries) {
       FX_LOGS(ERROR) << "Error with roughtime server, abort";
       return false;
     }
-    if (SetSystemTime(timestamp / 1'000'000)) {
+    if (SetSystemTime(timestamp_us / 1'000'000)) {
       break;
     }
   }
