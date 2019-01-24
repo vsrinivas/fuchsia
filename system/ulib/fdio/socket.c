@@ -23,13 +23,6 @@ static inline zxio_socket_t* fdio_get_zxio_socket(fdio_t* io) {
     return (zxio_socket_t*)fdio_get_zxio(io);
 }
 
-static ssize_t zxsio_write(fdio_t* io, const void* data, size_t len) {
-    zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    size_t actual = 0u;
-    zx_status_t status = zxs_send(&sio->socket, data, len, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
-}
-
 static ssize_t zxsio_recvfrom(fdio_t* io, void* data, size_t len, int flags,
                               struct sockaddr* restrict addr,
                               socklen_t* restrict addrlen) {
@@ -152,7 +145,7 @@ static void zxsio_wait_begin_stream(fdio_t* io, uint32_t events, zx_handle_t* ha
         if (events & POLLIN) {
             // signal when a listening socket gets an incoming connection
             // or a connecting socket gets connected and receives data
-            signals |= ZX_SOCKET_ACCEPT |
+            signals |= ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_ACCEPT |
                        ZX_SOCKET_READABLE | ZX_SOCKET_PEER_WRITE_DISABLED | ZX_SOCKET_PEER_CLOSED;
         }
         if (events & POLLOUT) {
@@ -183,7 +176,7 @@ static void zxsio_wait_end_stream(fdio_t* io, zx_signals_t signals, uint32_t* _e
             events |= POLLOUT;
         }
     } else {
-        if (signals & (ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED)) {
+        if (signals & (ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED)) {
             events |= POLLIN;
         }
         if (signals & ZXSIO_SIGNAL_OUTGOING) {
@@ -293,10 +286,18 @@ static zx_status_t zxsio_close(fdio_t* io) {
 static ssize_t zxsio_ioctl(fdio_t* io, uint32_t op, const void* in_buf,
                            size_t in_len, void* out_buf, size_t out_len) {
     zxio_socket_t* sio = fdio_get_zxio_socket(io);
-    size_t actual = 0u;
-    zx_status_t status = zxs_ioctl(&sio->socket, op, in_buf, in_len, out_buf,
-                                   out_len, &actual);
-    return status != ZX_OK ? status : (ssize_t)actual;
+    int16_t out_code;
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlIoctl(
+        sio->socket.socket, op, in_buf, in_len, &out_code, out_buf, out_len,
+        &actual);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (out_code) {
+        return errno_to_fdio_status(out_code);
+    }
+    return (ssize_t)actual;
 }
 
 static zx_status_t fdio_socket_shutdown(fdio_t* io, int how) {

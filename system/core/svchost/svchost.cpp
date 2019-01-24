@@ -5,6 +5,7 @@
 #include "sysmem.h"
 
 #include <fbl/algorithm.h>
+#include <fuchsia/net/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
 #include <lib/logger/provider.h>
@@ -116,7 +117,7 @@ static constexpr const char* deprecated_services[] = {
     "fuchsia.logger.LogSink",
     // Interface to resolve shell commands.
     "fuchsia.process.Resolver",
-    "fuchsia.net.LegacySocketProvider",
+    fuchsia_net_SocketProvider_Name,
     // Legacy interface for netstack, defined in //garnet
     "fuchsia.netstack.Netstack",
     // New interface for netstack (WIP), defined in //zircon

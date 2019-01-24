@@ -71,33 +71,42 @@ static zx_status_t get_service_with_retries(const char* path, zx_handle_t* saved
 static zx_status_t get_socket_provider(zx_handle_t* out) {
     static zx_handle_t saved = ZX_HANDLE_INVALID;
     static mtx_t lock = MTX_INIT;
-    return get_service_with_retries("/svc/" fuchsia_net_LegacySocketProvider_Name, &saved, &lock, out);
+    return get_service_with_retries("/svc/" fuchsia_net_SocketProvider_Name, &saved, &lock, out);
 }
 
 __EXPORT
 int socket(int domain, int type, int protocol) {
-    fdio_t* io = NULL;
-
     zx_handle_t socket_provider;
     zx_status_t status = get_socket_provider(&socket_provider);
     if (status != ZX_OK) {
         return ERRNO(EIO);
     }
 
-    zxs_socket_t socket = {};
-    status = zxs_socket(socket_provider, domain,
-                        type & ~(SOCK_NONBLOCK | SOCK_CLOEXEC), protocol, NULL,
-                        0u, &socket);
+    int16_t out_code;
+    zx_handle_t socket;
+    // We're going to manage blocking on the client side, so always ask the
+    // provider for a non-blocking socket.
+    status = fuchsia_net_SocketProviderSocket(
+        socket_provider, domain, type | SOCK_NONBLOCK, protocol, &out_code, &socket);
     if (status != ZX_OK) {
-        return STATUS(status);
+        return ERROR(status);
+    }
+    if (out_code) {
+      return ERRNO(out_code);
     }
 
-    if (socket.flags & ZXS_FLAG_DATAGRAM) {
-        io = fdio_socket_create_datagram(socket.socket, 0);
+    zxs_socket_t out_socket;
+    status = zxs_socket(socket, &out_socket);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+
+    fdio_t* io;
+    if (out_socket.flags & ZXS_FLAG_DATAGRAM) {
+        io = fdio_socket_create_datagram(socket, 0);
     } else {
-        io = fdio_socket_create_stream(socket.socket, 0);
+        io = fdio_socket_create_stream(socket, 0);
     }
-
     if (io == NULL) {
         return ERRNO(EIO);
     }
@@ -110,8 +119,8 @@ int socket(int domain, int type, int protocol) {
     // if (type & SOCK_CLOEXEC) {
     // }
 
-    int fd;
-    if ((fd = fdio_bind_to_fd(io, -1, 0)) < 0) {
+    int fd = fdio_bind_to_fd(io, -1, 0);
+    if (fd < 0) {
         io->ops->close(io);
         fdio_release(io);
         return ERRNO(EMFILE);
@@ -127,33 +136,49 @@ int connect(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t status = zxs_connect(socket, addr, len);
+    int16_t out_code;
+    zx_status_t status = fuchsia_net_SocketControlConnect(
+        socket->socket, (const uint8_t*)addr, len, &out_code);
+    if (status != ZX_OK) {
+        fdio_release(io);
+        return ERROR(status);
+    }
+    if (out_code == EINPROGRESS) {
+        bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
 
-    if (status == ZX_ERR_SHOULD_WAIT) {
-        if (io->ioflag & IOFLAG_NONBLOCK) {
+        if (nonblocking) {
             io->ioflag |= IOFLAG_SOCKET_CONNECTING;
-            fdio_release(io);
-            return ERRNO(EINPROGRESS);
+        } else {
+            zx_signals_t observed;
+            status = zx_object_wait_one(
+                socket->socket, ZXSIO_SIGNAL_OUTGOING, ZX_TIME_INFINITE,
+                &observed);
+            if (status != ZX_OK) {
+                fdio_release(io);
+                return ERROR(status);
+            }
+            // Call Connect() again after blocking to find connect's result.
+            status = fuchsia_net_SocketControlConnect(
+                socket->socket, (const uint8_t*)addr, len, &out_code);
+            if (status != ZX_OK) {
+                fdio_release(io);
+                return ERROR(status);
+            }
         }
-
-        zx_signals_t observed = ZX_SIGNAL_NONE;
-        status = zx_object_wait_one(socket->socket, ZXSIO_SIGNAL_OUTGOING,
-                                    ZX_TIME_INFINITE, &observed);
-        if (status != ZX_OK) {
-            fdio_release(io);
-            return ERRNO(EIO);
-        }
-
-        // Call Connect() again after blocking to find connect's result.
-        status = zxs_connect(socket, addr, len);
     }
 
-    if (status == ZX_OK) {
-        io->ioflag |= IOFLAG_SOCKET_CONNECTED;
-    }
+    switch (out_code) {
+      case 0: {
+          io->ioflag |= IOFLAG_SOCKET_CONNECTED;
+          fdio_release(io);
+          return out_code;
+      }
 
-    fdio_release(io);
-    return STATUS(status);
+      default: {
+          fdio_release(io);
+          return ERRNO(out_code);
+      }
+    }
 }
 
 __EXPORT
@@ -164,9 +189,17 @@ int bind(int fd, const struct sockaddr* addr, socklen_t len) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t status = zxs_bind(socket, addr, len);
+    int16_t out_code;
+    zx_status_t status = fuchsia_net_SocketControlBind(
+        socket->socket, (const uint8_t*)(addr), len, &out_code);
     fdio_release(io);
-    return STATUS(status);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+    if (out_code) {
+        return ERRNO(out_code);
+    }
+    return out_code;
 }
 
 __EXPORT
@@ -177,20 +210,29 @@ int listen(int fd, int backlog) {
         return ERRNO(EBADF);
     }
 
-    zx_status_t status = zxs_listen(socket, backlog);
-
-    if (status == ZX_OK) {
-        io->ioflag |= IOFLAG_SOCKET_DID_LISTEN;
+    int16_t out_code;
+    zx_status_t status = fuchsia_net_SocketControlListen(
+        socket->socket, backlog, &out_code);
+    if (status != ZX_OK) {
+        fdio_release(io);
+        return ERROR(status);
+    }
+    if (out_code) {
+        fdio_release(io);
+        return ERRNO(out_code);
     }
 
     fdio_release(io);
-    return STATUS(status);
+    return out_code;
 }
 
 __EXPORT
 int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             int flags) {
     if (flags & ~SOCK_NONBLOCK) {
+        return ERRNO(EINVAL);
+    }
+    if ((addr == NULL) != (len == NULL)) {
         return ERRNO(EINVAL);
     }
 
@@ -200,68 +242,115 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
         return ERRNO(EBADF);
     }
 
-    if (!(io->ioflag & IOFLAG_SOCKET_DID_LISTEN)) {
-        fdio_release(io);
-        return ERROR(ZX_ERR_BAD_STATE);
-    }
-
     bool nonblocking = io->ioflag & IOFLAG_NONBLOCK;
 
     int nfd = fdio_reserve_fd(0);
     if (nfd < 0) {
+        fdio_release(io);
         return nfd;
     }
 
-    size_t actual = 0u;
-    zxs_socket_t accepted;
-    memset(&accepted, 0, sizeof(accepted));
     zx_status_t status;
+    int16_t out_code;
+    zx_handle_t accepted;
     for (;;) {
-        status = zxs_accept(socket, addr, len ? *len : 0u, &actual, &accepted);
-        if (status != ZX_ERR_SHOULD_WAIT || nonblocking) {
-            break;
-        }
-        zx_signals_t observed = ZX_SIGNAL_NONE;
-        status = zx_object_wait_one(socket->socket,
-                                    ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED,
-                                    ZX_TIME_INFINITE, &observed);
+        // We're going to manage blocking on the client side, so always ask the
+        // provider for a non-blocking socket.
+        status = fuchsia_net_SocketControlAccept(
+            socket->socket, flags | SOCK_NONBLOCK, &out_code);
         if (status != ZX_OK) {
             break;
         }
-        if (observed & ZX_SOCKET_ACCEPT) {
-            continue;
+
+        // This condition should also apply to EAGAIN; it happens to have the
+        // same value as EWOULDBLOCK.
+        if (out_code == EWOULDBLOCK) {
+            if (!nonblocking) {
+                zx_signals_t observed;
+                status = zx_object_wait_one(
+                    socket->socket,
+                    ZXSIO_SIGNAL_INCOMING | ZX_SOCKET_PEER_CLOSED,
+                    ZX_TIME_INFINITE, &observed);
+                if (status != ZX_OK) {
+                    break;
+                }
+                if (observed & ZXSIO_SIGNAL_INCOMING) {
+                    continue;
+                }
+                ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
+                status = ZX_ERR_PEER_CLOSED;
+                break;
+            }
         }
-        ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
-        status = ZX_ERR_PEER_CLOSED;
+        if (out_code) {
+            break;
+        }
+
+        status = zx_socket_accept(socket->socket, &accepted);
+        if (status == ZX_ERR_SHOULD_WAIT) {
+            // Someone got in before us. If we're a blocking socket, try again.
+            if (!nonblocking) {
+                zx_signals_t observed;
+                status = zx_object_wait_one(
+                    socket->socket,
+                    ZX_SOCKET_ACCEPT | ZX_SOCKET_PEER_CLOSED,
+                    ZX_TIME_INFINITE, &observed);
+                if (status != ZX_OK) {
+                    break;
+                }
+                if (observed & ZX_SOCKET_ACCEPT) {
+                    continue;
+                }
+                ZX_ASSERT(observed & ZX_SOCKET_PEER_CLOSED);
+                status = ZX_ERR_PEER_CLOSED;
+            }
+        }
         break;
     }
     fdio_release(io);
-    if (status == ZX_ERR_SHOULD_WAIT) {
-        fdio_release_reserved(nfd);
-        return ERRNO(EWOULDBLOCK);
-    } else if (status != ZX_OK) {
+
+    if (status != ZX_OK) {
         fdio_release_reserved(nfd);
         return ERROR(status);
     }
+    if (out_code) {
+        fdio_release_reserved(nfd);
+        return ERRNO(out_code);
+    }
 
-    fdio_t* io2 = NULL;
-    if ((io2 = fdio_socket_create_stream(accepted.socket, IOFLAG_SOCKET_CONNECTED)) == NULL) {
+    if (len) {
+        int16_t out_code;
+        size_t actual;
+        zx_status_t status = fuchsia_net_SocketControlGetPeerName(
+            accepted, &out_code, (uint8_t*)addr, *len, &actual);
+        if (status != ZX_OK) {
+            zx_handle_close(accepted);
+            fdio_release_reserved(nfd);
+            return ERROR(status);
+        }
+        if (out_code) {
+            zx_handle_close(accepted);
+            fdio_release_reserved(nfd);
+            return ERRNO(out_code);
+        }
+        *len = actual;
+    }
+
+    fdio_t* accepted_io = fdio_socket_create_stream(accepted, IOFLAG_SOCKET_CONNECTED);
+    if (accepted_io == NULL) {
+        zx_handle_close(accepted);
         fdio_release_reserved(nfd);
         return ERROR(ZX_ERR_NO_RESOURCES);
     }
 
     if (flags & SOCK_NONBLOCK) {
-        io2->ioflag |= IOFLAG_NONBLOCK;
+        accepted_io->ioflag |= IOFLAG_NONBLOCK;
     }
 
-    if (len != NULL) {
-        *len = actual;
-    }
-
-    if ((nfd = fdio_assign_reserved(nfd, io2)) < 0) {
-        io2->ops->close(io2);
-        fdio_release(io2);
-        return -1;
+    nfd = fdio_assign_reserved(nfd, accepted_io);
+    if (nfd < 0) {
+        accepted_io->ops->close(accepted_io);
+        fdio_release(accepted_io);
     }
     return nfd;
 }
@@ -333,7 +422,7 @@ int getaddrinfo(const char* __restrict node,
     fuchsia_net_AddrInfoStatus status = 0;
     uint32_t nres = 0;
     fuchsia_net_AddrInfo ai[4];
-    r = fuchsia_net_LegacySocketProviderGetAddrInfo(
+    r = fuchsia_net_SocketProviderGetAddrInfo(
           sp, node, node_size, service, service_size, ht, &status, &nres, ai);
 
     if (r != ZX_OK) {
@@ -359,9 +448,9 @@ int getaddrinfo(const char* __restrict node,
     };
     struct res_entry* entry = calloc(nres, sizeof(struct res_entry));
 
-    for (uint32_t i = 0; i < nres; i++) {
-        entry[i].ai.ai_flags = ai[i].flags;
-        entry[i].ai.ai_family = ai[i].family;
+    for (uint8_t i = 0; i < nres; i++) {
+        entry[i].ai.ai_flags    = ai[i].flags;
+        entry[i].ai.ai_family   = ai[i].family;
         entry[i].ai.ai_socktype = ai[i].sock_type;
         entry[i].ai.ai_protocol = ai[i].protocol;
         entry[i].ai.ai_addr = (struct sockaddr*) &entry[i].addr_storage;
@@ -433,13 +522,19 @@ int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(EBADF);
     }
 
-    size_t actual = 0u;
-    zx_status_t status = zxs_getsockname(socket, addr, *len, &actual);
-    if (status == ZX_OK) {
-        *len = actual;
-    }
+    int16_t out_code;
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetSockName(
+        socket->socket, &out_code, (uint8_t*)addr, *len, &actual);
     fdio_release(io);
-    return STATUS(status);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+    if (out_code) {
+        return ERRNO(out_code);
+    }
+    *len = actual;
+    return out_code;
 }
 
 __EXPORT
@@ -454,13 +549,19 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
         return ERRNO(EBADF);
     }
 
-    size_t actual = 0u;
-    zx_status_t status = zxs_getpeername(socket, addr, *len, &actual);
-    if (status == ZX_OK) {
-        *len = actual;
-    }
+    int16_t out_code;
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetPeerName(
+        socket->socket, &out_code, (uint8_t*)addr, *len, &actual);
     fdio_release(io);
-    return STATUS(status);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+    if (out_code) {
+        return ERRNO(out_code);
+    }
+    *len = actual;
+    return out_code;
 }
 
 __EXPORT
@@ -472,38 +573,20 @@ int getsockopt(int fd, int level, int optname, void* restrict optval,
         return ERRNO(EBADF);
     }
 
-    zx_status_t r;
-    if (level == SOL_SOCKET && optname == SO_ERROR) {
-        if (optval == NULL || optlen == NULL || *optlen < sizeof(int)) {
-            r = ZX_ERR_INVALID_ARGS;
-        } else {
-            zx_status_t status;
-            size_t actual = 0u;
-            r = zxs_getsockopt(socket, SOL_SOCKET, SO_ERROR, &status,
-                               sizeof(status), &actual);
-            if (r == ZX_OK) {
-                int errno_ = 0;
-                if (status != ZX_OK) {
-                    errno_ = fdio_status_to_errno(status);
-                }
-                *(int*)optval = errno_;
-                *optlen = sizeof(int);
-            }
-        }
-    } else {
-        if (optval == NULL || optlen == NULL) {
-            r = ZX_ERR_INVALID_ARGS;
-        } else {
-            size_t actual = 0u;
-            r = zxs_getsockopt(socket, level, optname, optval, *optlen, &actual);
-            if (r == ZX_OK) {
-                *optlen = actual;
-            }
-        }
-    }
+    int16_t out_code;
+    size_t actual;
+    zx_status_t status = fuchsia_net_SocketControlGetSockOpt(
+        socket->socket, level, optname, &out_code, optval, *optlen,
+        &actual);
     fdio_release(io);
-
-    return STATUS(r);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+    if (out_code) {
+        return ERRNO(out_code);
+    }
+    *optlen = actual;
+    return out_code;
 }
 
 __EXPORT
@@ -515,14 +598,15 @@ int setsockopt(int fd, int level, int optname, const void* optval,
         return ERRNO(EBADF);
     }
 
-    zxs_option_t option = {
-        .level = level,
-        .name = optname,
-        .value = optval,
-        .length = optlen,
-    };
-
-    zx_status_t status = zxs_setsockopts(socket, &option, 1u);
+    int16_t out_code;
+    zx_status_t status = fuchsia_net_SocketControlSetSockOpt(
+        socket->socket, level, optname, optval, optlen, &out_code);
     fdio_release(io);
-    return STATUS(status);
+    if (status != ZX_OK) {
+        return ERROR(status);
+    }
+    if (out_code) {
+        return ERRNO(out_code);
+    }
+    return out_code;
 }

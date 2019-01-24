@@ -19,6 +19,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-logger \
     system/fidl/fuchsia-mem \
+    system/fidl/fuchsia-net \
     system/fidl/fuchsia-process \
     system/fidl/fuchsia-profile \
     system/fidl/fuchsia-sysmem \

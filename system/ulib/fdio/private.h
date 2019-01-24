@@ -4,11 +4,11 @@
 
 #pragma once
 
+#include <errno.h>
 #include <fuchsia/io/c/fidl.h>
 #include <lib/fdio/limits.h>
 #include <lib/fdio/vfs.h>
 #include <lib/zxio/ops.h>
-#include <errno.h>
 #include <stdarg.h>
 #include <stdatomic.h>
 #include <stdbool.h>
@@ -77,7 +77,6 @@ typedef struct fdio_ops {
 #define IOFLAG_SOCKET_CONNECTING    (1 << 4)
 #define IOFLAG_SOCKET_CONNECTED     (1 << 5)
 #define IOFLAG_NONBLOCK             (1 << 6)
-#define IOFLAG_SOCKET_DID_LISTEN    (1 << 7)
 
 // The subset of fdio_t per-fd flags queryable via fcntl.
 // Static assertions in unistd.c ensure we aren't colliding.
@@ -251,7 +250,6 @@ extern fdio_state_t __fdio_global_state;
 #define fdio_root_init (__fdio_global_state.init)
 #define fdio_root_ns (__fdio_global_state.ns)
 
-
 // Enable low level debug chatter, which requires a kernel that
 // doesn't check the resource argument to zx_debuglog_create()
 //
@@ -264,7 +262,9 @@ extern fdio_state_t __fdio_global_state;
 void fdio_lldebug_printf(unsigned level, const char* fmt, ...);
 #define LOG(level, fmt...) fdio_lldebug_printf(level, fmt)
 #else
-#define LOG(level, fmt...) do {} while (0)
+#define LOG(level, fmt...) \
+    do {                   \
+    } while (0)
 #endif
 
 void fdio_set_debug_level(unsigned level);
@@ -304,7 +304,7 @@ int fdio_reserve_fd(int starting_fd);
 
 // Assign the given |io| to the reserved |fd|. If |fd| is not reserved, then -1
 // is returned and errno is set to EINVAL.
-int fdio_assign_reserved(int fd, fdio_t *io);
+int fdio_assign_reserved(int fd, fdio_t* io);
 
 // Unassign the reservation at |fd|. If |fd| does not resolve to a reservation
 // then -1 is returned and errno is set to EINVAL, otherwise |fd| is returned.

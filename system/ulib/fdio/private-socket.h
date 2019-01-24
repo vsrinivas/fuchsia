@@ -9,6 +9,13 @@
 
 #include "private.h"
 
+// SIO signals
+#define ZXSIO_SIGNAL_INCOMING  ZX_USER_SIGNAL_0
+#define ZXSIO_SIGNAL_OUTGOING  ZX_USER_SIGNAL_1
+// TODO(tamird): ERROR seems to be unused.
+#define ZXSIO_SIGNAL_ERROR     ZX_USER_SIGNAL_2
+#define ZXSIO_SIGNAL_CONNECTED ZX_USER_SIGNAL_3
+
 __BEGIN_CDECLS
 
 // Returns a pointer to the |zxs_socket_t| inside the given |fd|, if such a

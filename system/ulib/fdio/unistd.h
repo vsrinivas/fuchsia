@@ -20,6 +20,7 @@ zx_status_t __fdio_open_at(fdio_t** io, int dirfd, const char* path, int flags, 
 zx_status_t __fdio_open(fdio_t** io, const char* path, int flags, uint32_t mode);
 
 int fdio_status_to_errno(zx_status_t status);
+zx_status_t errno_to_fdio_status(int16_t out_code);
 
 // set errno to the closest match for error and return -1
 static inline int ERROR(zx_status_t error) {
