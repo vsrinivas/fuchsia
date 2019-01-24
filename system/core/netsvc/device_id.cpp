@@ -8,11 +8,11 @@
 #include "device_id.h"
 #include "eff_short_wordlist_1.h"
 
-#define APPEND_WORD(NUM, SEP)                            \
-    word = dictionary[(NUM) % DICEWARE_DICTIONARY_SIZE]; \
-    memcpy(dest, word, strlen(word));                    \
-    dest += strlen(word);                                \
-    *dest = SEP;                                         \
+#define APPEND_WORD(NUM, SEP)                                                                      \
+    word = dictionary[(NUM) % DICEWARE_DICTIONARY_SIZE];                                           \
+    memcpy(dest, word, strlen(word));                                                              \
+    dest += strlen(word);                                                                          \
+    *dest = SEP;                                                                                   \
     dest++;
 
 void device_id_get(unsigned char mac[6], char out[DEVICE_ID_MAX]) {

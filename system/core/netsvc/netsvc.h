@@ -4,40 +4,40 @@
 
 #pragma once
 
-#include <stdio.h>
 #include <limits.h>
+#include <stdio.h>
 
 #include <inet6/inet6.h>
 
 #include <atomic>
 
-#include <zircon/types.h>
 #include <zircon/boot/netboot.h>
+#include <zircon/types.h>
 
 // netfile interface
 typedef struct netfile_state_t {
-    int      fd;
-    off_t    offset;
+    int fd;
+    off_t offset;
     // false: Filename is the open file and final destination
     // true : Filename is final destination; open file has a magic tmp suffix
-    bool     needs_rename;
-    char     filename[PATH_MAX];
+    bool needs_rename;
+    char filename[PATH_MAX];
 } netfile_state;
 
 extern netfile_state netfile;
 
 typedef struct netfilemsg_t {
-    nbmsg   hdr;
+    nbmsg hdr;
     uint8_t data[1024];
 } netfilemsg;
 
 int netfile_open(const char* filename, uint32_t arg, size_t* file_size);
 
-ssize_t netfile_offset_read(void *data_out, off_t offset, size_t max_len);
+ssize_t netfile_offset_read(void* data_out, off_t offset, size_t max_len);
 
 ssize_t netfile_read(void* data_out, size_t data_sz);
 
-ssize_t netfile_offset_write(const char *data, off_t offset, size_t length);
+ssize_t netfile_offset_write(const char* data, off_t offset, size_t length);
 
 ssize_t netfile_write(const char* data, size_t len);
 
@@ -51,8 +51,7 @@ extern bool netbootloader;
 
 void netboot_advertise(const char* nodename);
 
-void netboot_recv(void* data, size_t len, bool is_mcast,
-                  const ip6_addr_t* daddr, uint16_t dport,
+void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr, uint16_t dport,
                   const ip6_addr_t* saddr, uint16_t sport);
 
 void netboot_run_cmd(const char* cmd);
@@ -62,8 +61,7 @@ extern zx_time_t tftp_next_timeout;
 extern std::atomic<bool> paving_in_progress;
 extern std::atomic<int> paver_exit_code;
 
-void tftp_recv(void *data, size_t len,
-               const ip6_addr_t* daddr, uint16_t dport,
+void tftp_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport);
 
 void tftp_timeout_expired(void);

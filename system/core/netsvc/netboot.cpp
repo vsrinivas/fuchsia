@@ -20,8 +20,8 @@
 #include <inet6/netifc.h>
 #include <lib/fdio/util.h>
 #include <zircon/boot/netboot.h>
-#include <zircon/processargs.h>
 #include <zircon/process.h>
+#include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 
 static uint32_t last_cookie = 0;
@@ -37,7 +37,7 @@ bool xfer_active = false;
 
 typedef struct nbfilecontainer {
     nbfile file;
-    zx_handle_t data;   // handle to vmo that backs netbootfile.
+    zx_handle_t data; // handle to vmo that backs netbootfile.
 } nbfilecontainer_t;
 
 static nbfilecontainer_t nbkernel;
@@ -47,8 +47,7 @@ static nbfilecontainer_t nbcmdline;
 // Pointer to the currently active transfer.
 static nbfile* active;
 
-static zx_status_t nbfilecontainer_init(size_t size,
-                                        nbfilecontainer_t* target) {
+static zx_status_t nbfilecontainer_init(size_t size, nbfilecontainer_t* target) {
     zx_status_t st = ZX_OK;
 
     assert(target);
@@ -62,7 +61,8 @@ static zx_status_t nbfilecontainer_init(size_t size,
         printf("netbootloader: warning, reusing a previously initialized container\n");
 
         // Unmap the vmo from the address space.
-        st = zx_vmar_unmap(zx_vmar_root_self(), (uintptr_t)target->file.data, target->file.size);
+        st = zx_vmar_unmap(zx_vmar_root_self(), reinterpret_cast<uintptr_t>(target->file.data),
+                           target->file.size);
         if (st != ZX_OK) {
             printf("netbootloader: failed to unmap existing vmo, st = %d\n", st);
             return st;
@@ -78,14 +78,15 @@ static zx_status_t nbfilecontainer_init(size_t size,
     st = zx_vmo_create(size, 0, &target->data);
     if (st != ZX_OK) {
         printf("netbootloader: Could not create a netboot vmo of size = %lu "
-               "retcode = %d\n", size, st);
+               "retcode = %d\n",
+               size, st);
         return st;
     }
     zx_object_set_property(target->data, ZX_PROP_NAME, "netboot", 7);
 
     uintptr_t buffer;
-    st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE,
-                     0, target->data, 0, size, &buffer);
+    st = zx_vmar_map(zx_vmar_root_self(), ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, 0, target->data, 0,
+                     size, &buffer);
     if (st != ZX_OK) {
         printf("netbootloader: failed to map data vmo for buffer, st = %d\n", st);
         zx_handle_close(target->data);
@@ -94,7 +95,7 @@ static zx_status_t nbfilecontainer_init(size_t size,
 
     target->file.offset = 0;
     target->file.size = size;
-    target->file.data = (uint8_t*)buffer;
+    target->file.data = reinterpret_cast<uint8_t*>(buffer);
 
     return ZX_OK;
 }
@@ -116,7 +117,8 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
     st = nbfilecontainer_init(size, result);
     if (st != ZX_OK) {
         printf("netbootloader: failed to initialize file container for "
-               "file = '%s', retcode = %d\n", name, st);
+               "file = '%s', retcode = %d\n",
+               name, st);
         return NULL;
     }
 
@@ -125,7 +127,8 @@ nbfile* netboot_get_buffer(const char* name, size_t size) {
 
 void netboot_advertise(const char* nodename) {
     // Don't advertise if a transfer is active.
-    if (xfer_active) return;
+    if (xfer_active)
+        return;
 
     uint8_t buffer[sizeof(nbmsg) + MAX_ADVERTISE_DATA_LEN];
     nbmsg* msg = reinterpret_cast<nbmsg*>(buffer);
@@ -134,15 +137,15 @@ void netboot_advertise(const char* nodename) {
     msg->cmd = NB_ADVERTISE;
     msg->arg = NB_VERSION_CURRENT;
 
-    snprintf((char*)msg->data, MAX_ADVERTISE_DATA_LEN, "version=%s;nodename=%s",
+    snprintf(reinterpret_cast<char*>(msg->data), MAX_ADVERTISE_DATA_LEN, "version=%s;nodename=%s",
              BOOTLOADER_VERSION, nodename);
-    const size_t data_len = strlen((char*)msg->data) + 1;
-    udp6_send(buffer, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes,
-              NB_ADVERT_PORT, NB_SERVER_PORT, false);
+    const size_t data_len = strlen(reinterpret_cast<char*>(msg->data)) + 1;
+    udp6_send(buffer, sizeof(nbmsg) + data_len, &ip6_ll_all_nodes, NB_ADVERT_PORT, NB_SERVER_PORT,
+              false);
 }
 
-static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
-                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+static void nb_open(const char* filename, uint32_t cookie, uint32_t arg, const ip6_addr_t* saddr,
+                    uint16_t sport, uint16_t dport) {
     nbmsg m;
     m.magic = NB_MAGIC;
     m.cookie = cookie;
@@ -151,8 +154,8 @@ static void nb_open(const char* filename, uint32_t cookie, uint32_t arg,
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
-static void nb_read(uint32_t cookie, uint32_t arg,
-                    const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+static void nb_read(uint32_t cookie, uint32_t arg, const ip6_addr_t* saddr, uint16_t sport,
+                    uint16_t dport) {
     static netfilemsg m = {
         .hdr =
             {
@@ -165,7 +168,7 @@ static void nb_read(uint32_t cookie, uint32_t arg,
         .data = {},
     };
     static size_t msg_size = 0;
-    static uint32_t blocknum = (uint32_t) -1;
+    static uint32_t blocknum = static_cast<uint32_t>(-1);
     if (arg == blocknum) {
         // Request to resend last message, verify that the cookie is unchanged
         if (cookie != m.hdr.cookie) {
@@ -203,7 +206,7 @@ static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg
         .arg = 0,
         .data = {},
     };
-    static uint32_t blocknum = (uint32_t) -1;
+    static uint32_t blocknum = static_cast<uint32_t>(-1);
     if (arg == blocknum) {
         // Request to repeat last write, verify that cookie is unchanged
         if (cookie != m.cookie) {
@@ -218,8 +221,7 @@ static void nb_write(const char* data, size_t len, uint32_t cookie, uint32_t arg
     udp6_send(&m, sizeof(m), saddr, sport, dport, false);
 }
 
-static void nb_close(uint32_t cookie,
-                     const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
+static void nb_close(uint32_t cookie, const ip6_addr_t* saddr, uint16_t sport, uint16_t dport) {
     nbmsg m;
     m.magic = NB_MAGIC;
     m.cookie = cookie;
@@ -254,15 +256,13 @@ static zx_status_t do_dmctl_mexec(void) {
     if (status != ZX_OK) {
         return status;
     }
-    status = fuchsia_device_manager_ExternalControllerPerformMexec(dmctl, kernel,
-                                                                   bootdata);
+    status = fuchsia_device_manager_ExternalControllerPerformMexec(dmctl, kernel, bootdata);
     zx_handle_close(dmctl);
     if (status != ZX_OK) {
         return status;
     }
 
-    status = zx_object_wait_one(wait_handle, ZX_USER_SIGNAL_0,
-                                ZX_TIME_INFINITE, NULL);
+    status = zx_object_wait_one(wait_handle, ZX_USER_SIGNAL_0, ZX_TIME_INFINITE, NULL);
     zx_handle_close(wait_handle);
     if (status != ZX_OK) {
         return status;
@@ -271,8 +271,7 @@ static zx_status_t do_dmctl_mexec(void) {
     return ZX_ERR_INTERNAL;
 }
 
-static void bootloader_recv(void* data, size_t len,
-                            const ip6_addr_t* daddr, uint16_t dport,
+static void bootloader_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                             const ip6_addr_t* saddr, uint16_t sport) {
     nbmsg* msg = reinterpret_cast<nbmsg*>(data);
     nbmsg ack;
@@ -288,8 +287,7 @@ static void bootloader_recv(void* data, size_t len,
         return;
     len -= sizeof(nbmsg);
 
-    if ((last_cookie == msg->cookie) &&
-        (last_cmd == msg->cmd) && (last_arg == msg->arg)) {
+    if ((last_cookie == msg->cookie) && (last_cmd == msg->cmd) && (last_arg == msg->arg)) {
         // host must have missed the ack. resend
         ack.magic = NB_MAGIC;
         ack.cookie = last_cookie;
@@ -317,20 +315,20 @@ static void bootloader_recv(void* data, size_t len,
                 msg->data[i] = '.';
             }
         }
-        active = netboot_get_buffer((const char*)msg->data, msg->arg);
+        active = netboot_get_buffer(reinterpret_cast<const char*>(msg->data), msg->arg);
         if (active) {
             active->offset = 0;
             ack.arg = msg->arg;
             size_t prefix_len = strlen(NB_FILENAME_PREFIX);
             const char* filename;
-            if (!strncmp((char*)msg->data, NB_FILENAME_PREFIX, prefix_len)) {
-                filename = &((const char*)msg->data)[prefix_len];
+            if (!strncmp(reinterpret_cast<char*>(msg->data), NB_FILENAME_PREFIX, prefix_len)) {
+                filename = &(reinterpret_cast<const char*>(msg->data))[prefix_len];
             } else {
-                filename = (const char*)msg->data;
+                filename = reinterpret_cast<const char*>(msg->data);
             }
             printf("netboot: Receive File '%s'...\n", filename);
         } else {
-            printf("netboot: Rejected File '%s'...\n", (char*) msg->data);
+            printf("netboot: Rejected File '%s'...\n", reinterpret_cast<char*>(msg->data));
             ack.cmd = NB_ERROR_BAD_FILE;
         }
         break;
@@ -343,7 +341,8 @@ static void bootloader_recv(void* data, size_t len,
             return;
         }
         if (msg->arg != active->offset) {
-            // printf("netboot: < received chunk at offset %d but current offset is %zu\n", msg->arg, active->offset);
+            // printf("netboot: < received chunk at offset %d but current offset is %zu\n",
+            // msg->arg, active->offset);
             ack.arg = static_cast<uint32_t>(active->offset);
             ack.cmd = NB_ACK;
         } else if ((active->offset + len) > active->size) {
@@ -415,7 +414,7 @@ transmit:
     }
 
     if (do_reboot) {
-        int fd  = open("/dev/misc/dmctl", O_WRONLY);
+        int fd = open("/dev/misc/dmctl", O_WRONLY);
         if (fd < 0) {
             printf("netboot: Reboot failed: %s\n", strerror(errno));
         } else {
@@ -425,13 +424,11 @@ transmit:
     }
 }
 
-void netboot_recv(void *data, size_t len, bool is_mcast,
-                  const ip6_addr_t* daddr, uint16_t dport,
+void netboot_recv(void* data, size_t len, bool is_mcast, const ip6_addr_t* daddr, uint16_t dport,
                   const ip6_addr_t* saddr, uint16_t sport) {
     nbmsg* msg = reinterpret_cast<nbmsg*>(data);
     // Not enough bytes to be a message
-    if ((len < sizeof(*msg)) ||
-        (msg->magic != NB_MAGIC)) {
+    if ((len < sizeof(*msg)) || (msg->magic != NB_MAGIC)) {
         return;
     }
     len -= sizeof(*msg);
@@ -442,8 +439,8 @@ void netboot_recv(void *data, size_t len, bool is_mcast,
 
     switch (msg->cmd) {
     case NB_QUERY: {
-        if (strcmp((char*)msg->data, "*") &&
-            strcmp((char*)msg->data, nodename)) {
+        if (strcmp(reinterpret_cast<char*>(msg->data), "*") &&
+            strcmp(reinterpret_cast<char*>(msg->data), nodename)) {
             break;
         }
         size_t dlen = strlen(nodename) + 1;
@@ -459,19 +456,20 @@ void netboot_recv(void *data, size_t len, bool is_mcast,
     }
     case NB_SHELL_CMD:
         if (!is_mcast) {
-            netboot_run_cmd((char*) msg->data);
+            netboot_run_cmd(reinterpret_cast<char*>(msg->data));
             return;
         }
         break;
     case NB_OPEN:
-        nb_open((char*)msg->data, msg->cookie, msg->arg, saddr, sport, dport);
+        nb_open(reinterpret_cast<char*>(msg->data), msg->cookie, msg->arg, saddr, sport, dport);
         break;
     case NB_READ:
         nb_read(msg->cookie, msg->arg, saddr, sport, dport);
         break;
     case NB_WRITE:
         len--; // NB NUL-terminator is not part of the data
-        nb_write((char*)msg->data, len, msg->cookie, msg->arg, saddr, sport, dport);
+        nb_write(reinterpret_cast<char*>(msg->data), len, msg->cookie, msg->arg, saddr, sport,
+                 dport);
         break;
     case NB_CLOSE:
         nb_close(msg->cookie, saddr, sport, dport);

@@ -9,8 +9,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <unistd.h>
 #include <sys/stat.h>
+#include <unistd.h>
 
 #include <inet6/inet6.h>
 #include <inet6/netifc.h>
@@ -53,9 +53,10 @@ static int netfile_mkdir(const char* filename) {
     }
 }
 
-int netfile_open(const char *filename, uint32_t arg, size_t* file_size) {
+int netfile_open(const char* filename, uint32_t arg, size_t* file_size) {
     if (netfile.fd >= 0) {
-        printf("netsvc: closing still-open '%s', replacing with '%s'\n", netfile.filename, filename);
+        printf("netsvc: closing still-open '%s', replacing with '%s'\n", netfile.filename,
+               filename);
         close(netfile.fd);
         netfile.fd = -1;
     }
@@ -87,7 +88,7 @@ again: // label here to catch filename=/path/to/new/directory/
         }
         strcat(netfile.filename, TMP_SUFFIX);
         netfile.needs_rename = true;
-        netfile.fd = open(netfile.filename, O_WRONLY|O_CREAT|O_TRUNC);
+        netfile.fd = open(netfile.filename, O_WRONLY | O_CREAT | O_TRUNC);
         netfile.filename[len] = '\0';
         if (netfile.fd < 0 && errno == ENOENT) {
             if (netfile_mkdir(filename) == 0) {
@@ -127,7 +128,7 @@ ssize_t netfile_offset_read(void* data_out, off_t offset, size_t max_len) {
     return netfile_read(data_out, max_len);
 }
 
-ssize_t netfile_read(void *data_out, size_t data_sz) {
+ssize_t netfile_read(void* data_out, size_t data_sz) {
     if (netfile.fd < 0) {
         printf("netsvc: read, but no open file\n");
         return -EBADF;
@@ -164,7 +165,7 @@ ssize_t netfile_write(const char* data, size_t len) {
         return -EBADF;
     }
     ssize_t n = write(netfile.fd, data, len);
-    if (n != (ssize_t)len) {
+    if (n != static_cast<ssize_t>(len)) {
         printf("netsvc: error writing %s: %d\n", netfile.filename, errno);
         int result = (errno == 0) ? -EIO : -errno;
         close(netfile.fd);

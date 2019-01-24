@@ -35,7 +35,7 @@ static zx_duration_t send_delay = SEND_DELAY_SHORT;
 
 static size_t get_log_line(char* out) {
     char buf[ZX_LOG_RECORD_MAX + 1];
-    zx_log_record_t* rec = (zx_log_record_t*)buf;
+    zx_log_record_t* rec = reinterpret_cast<zx_log_record_t*>(buf);
     for (;;) {
         if (zx_debuglog_read(loghandle, 0, rec, ZX_LOG_RECORD_MAX) > 0) {
             if (rec->datalen && (rec->data[rec->datalen - 1] == '\n')) {
@@ -47,9 +47,9 @@ static size_t get_log_line(char* out) {
             }
             rec->data[rec->datalen] = 0;
             snprintf(out, MAX_LOG_LINE, "[%05d.%03d] %05" PRIu64 ".%05" PRIu64 "> %s\n",
-                     (int)(rec->timestamp / 1000000000ULL),
-                     (int)((rec->timestamp / 1000000ULL) % 1000ULL),
-                     rec->pid, rec->tid, rec->data);
+                     static_cast<int>(rec->timestamp / 1000000000ULL),
+                     static_cast<int>((rec->timestamp / 1000000ULL) % 1000ULL), rec->pid, rec->tid,
+                     rec->data);
             return strlen(out);
         } else {
             return 0;

@@ -28,25 +28,23 @@
 
 bool netbootloader = false;
 
-static void run_program(const char *progname, const char** argv, zx_handle_t h) {
+static void run_program(const char* progname, const char** argv, zx_handle_t h) {
     zx_handle_t logger = ZX_HANDLE_INVALID;
     zx_debuglog_create(ZX_HANDLE_INVALID, 0, &logger);
 
     fdio_spawn_action_t actions[] = {
         {.action = FDIO_SPAWN_ACTION_SET_NAME, .name = {.data = progname}},
         {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-         .h = {.id = PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO),
-               .handle = logger}},
-        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE,
-         .h = {.id = PA_HND(PA_USER0, 0), .handle = h}},
+         .h = {.id = PA_HND(PA_FDIO_LOGGER, 0 | FDIO_FLAG_USE_FOR_STDIO), .handle = logger}},
+        {.action = FDIO_SPAWN_ACTION_ADD_HANDLE, .h = {.id = PA_HND(PA_USER0, 0), .handle = h}},
     };
 
     size_t action_count = (h == ZX_HANDLE_INVALID) ? 2 : 3;
     uint32_t flags = FDIO_SPAWN_CLONE_ALL & ~FDIO_SPAWN_CLONE_STDIO;
     char err_msg[FDIO_SPAWN_ERR_MSG_MAX_LENGTH];
 
-    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv,
-                                        NULL, action_count, actions, NULL, err_msg);
+    zx_status_t status = fdio_spawn_etc(ZX_HANDLE_INVALID, flags, argv[0], argv, NULL, action_count,
+                                        actions, NULL, err_msg);
 
     if (status != ZX_OK) {
         printf("netsvc: cannot launch %s: %d: %s\n", argv[0], status, err_msg);
@@ -54,15 +52,14 @@ static void run_program(const char *progname, const char** argv, zx_handle_t h) 
 }
 
 void netboot_run_cmd(const char* cmd) {
-    const char* argv[] = { "/boot/bin/sh", "-c", cmd, NULL };
+    const char* argv[] = {"/boot/bin/sh", "-c", cmd, NULL};
     printf("net cmd: %s\n", cmd);
     run_program("net:sh", argv, ZX_HANDLE_INVALID);
 }
 
 const char* nodename = "zircon";
 
-void udp6_recv(void* data, size_t len,
-               const ip6_addr_t* daddr, uint16_t dport,
+void udp6_recv(void* data, size_t len, const ip6_addr_t* daddr, uint16_t dport,
                const ip6_addr_t* saddr, uint16_t sport) {
 
     bool mcast = (memcmp(daddr, &ip6_ll_all_nodes, sizeof(ip6_addr_t)) == 0);
@@ -95,8 +92,8 @@ bool netifc_send_pending(void) {
 
 void update_timeouts(void) {
     zx_time_t now = zx_clock_get_monotonic();
-    zx_time_t next_timeout = (debuglog_next_timeout < tftp_next_timeout) ?
-                             debuglog_next_timeout : tftp_next_timeout;
+    zx_time_t next_timeout =
+        (debuglog_next_timeout < tftp_next_timeout) ? debuglog_next_timeout : tftp_next_timeout;
     if (next_timeout != ZX_TIME_INFINITE) {
         uint32_t ms = static_cast<uint32_t>(
             (next_timeout < now) ? 0 : (zx_time_sub_time(next_timeout, now)) / ZX_MSEC(1));
@@ -104,15 +101,14 @@ void update_timeouts(void) {
     }
 }
 
-static const char* zedboot_banner =
-"              _ _                 _   \n"
-"             | | |               | |  \n"
-"  _______  __| | |__   ___   ___ | |_ \n"
-" |_  / _ \\/ _` | '_ \\ / _ \\ / _ \\| __|\n"
-"  / /  __/ (_| | |_) | (_) | (_) | |_ \n"
-" /___\\___|\\__,_|_.__/ \\___/ \\___/ \\__|\n"
-"                                      \n"
-"\n";
+static const char* zedboot_banner = "              _ _                 _   \n"
+                                    "             | | |               | |  \n"
+                                    "  _______  __| | |__   ___   ___ | |_ \n"
+                                    " |_  / _ \\/ _` | '_ \\ / _ \\ / _ \\| __|\n"
+                                    "  / /  __/ (_| | |_) | (_) | (_) | |_ \n"
+                                    " /___\\___|\\__,_|_.__/ \\___/ \\___/ \\__|\n"
+                                    "                                      \n"
+                                    "\n";
 
 int main(int argc, char** argv) {
     unsigned char mac[6];
