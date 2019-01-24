@@ -194,7 +194,10 @@ func (ifs *ifState) staticAddressChanged(newAddr tcpip.Address, netmask tcpip.Ad
 	ifs.ns.mu.Lock()
 	ifs.nic.Addr = newAddr
 	ifs.nic.Netmask = netmask
+	ifs.nic.Routes = append(ifs.nic.Routes, subnetRoute(newAddr, netmask, ifs.nic.ID))
 	ifs.ns.mu.Unlock()
+
+	ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTables())
 
 	OnInterfacesChanged()
 }
