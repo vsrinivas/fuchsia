@@ -37,9 +37,8 @@ class AgentContextImpl::InitializeCall : public Operation<> {
   InitializeCall(AgentContextImpl* const agent_context_impl,
                  fuchsia::sys::Launcher* const launcher,
                  fuchsia::modular::AppConfig agent_config)
-      : Operation(
-            "AgentContextImpl::InitializeCall", [] {},
-            agent_context_impl->url_),
+      : Operation("AgentContextImpl::InitializeCall", [] {},
+                  agent_context_impl->url_),
         agent_context_impl_(agent_context_impl),
         launcher_(launcher),
         agent_config_(std::move(agent_config)) {}
@@ -280,18 +279,17 @@ void AgentContextImpl::Authorize(
     fuchsia::auth::AppConfig app_config,
     fidl::InterfaceHandle<fuchsia::auth::AuthenticationUIContext>
         auth_ui_context,
-    std::vector<::std::string> app_scopes,
-    fidl::StringPtr user_profile_id, fidl::StringPtr auth_code,
-    AuthorizeCallback callback) {
+    std::vector<::std::string> app_scopes, fidl::StringPtr user_profile_id,
+    fidl::StringPtr auth_code, AuthorizeCallback callback) {
   FXL_LOG(ERROR) << "AgentContextImpl::Authorize() not supported from agent "
                  << "context";
   callback(fuchsia::auth::Status::INVALID_REQUEST, nullptr);
 }
 
-void AgentContextImpl::GetAccessToken(
-    fuchsia::auth::AppConfig app_config, std::string user_profile_id,
-    std::vector<::std::string> app_scopes,
-    GetAccessTokenCallback callback) {
+void AgentContextImpl::GetAccessToken(fuchsia::auth::AppConfig app_config,
+                                      std::string user_profile_id,
+                                      std::vector<::std::string> app_scopes,
+                                      GetAccessTokenCallback callback) {
   FXL_CHECK(token_manager_);
 
   FXL_DLOG(INFO) << "AgentContextImpl::GetAccessToken() invoked for user:"
@@ -353,12 +351,13 @@ void AgentContextImpl::StopAgentIfIdle() {
                                     }));
 }
 
-void AgentContextImpl::StopForTeardown() {
+void AgentContextImpl::StopForTeardown(const std::function<void()>& callback) {
   FXL_DLOG(INFO) << "AgentContextImpl::StopForTeardown() " << url_;
   operation_queue_.Add(new StopCall(true /* is agent runner terminating? */,
-                                    this, [this](bool stopped) {
+                                    this, [this, callback](bool stopped) {
                                       FXL_DCHECK(stopped);
                                       agent_runner_->RemoveAgent(url_);
+                                      callback();
                                       // |this| is no longer valid at this
                                       // point.
                                     }));

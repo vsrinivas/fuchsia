@@ -65,7 +65,8 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
 
   // This is called when agents are done being removed
   auto called = std::make_shared<bool>(false);
-  auto cont = [this, called, callback](const bool from_timeout) {
+  auto termination_callback = [this, called,
+                               callback](const bool from_timeout) {
     if (*called) {
       return;
     }
@@ -79,19 +80,22 @@ void AgentRunner::Teardown(const std::function<void()>& callback) {
     callback();
   };
 
-  termination_callback_ = [cont] { cont(false); };
-
   for (auto& it : running_agents_) {
     // The running agent will call |AgentRunner::RemoveAgent()| to remove itself
     // from the agent runner. When all agents are done being removed,
-    // |RemoveAgent()| will call |termination_callback_|.
-    it.second->StopForTeardown();
+    // |termination_callback| will be executed.
+    it.second->StopForTeardown([this, termination_callback]() {
+      if (running_agents_.empty()) {
+        termination_callback(/* from_timeout= */ false);
+      }
+    });
   }
 
-  auto cont_timeout = [cont] { cont(true); };
-
   async::PostDelayedTask(async_get_default_dispatcher(),
-                         std::move(cont_timeout), kTeardownTimeout);
+                         [termination_callback] {
+                           termination_callback(/* from_timeout= */ true);
+                         },
+                         kTeardownTimeout);
 }
 
 void AgentRunner::EnsureAgentIsRunning(const std::string& agent_url,
@@ -188,9 +192,7 @@ void AgentRunner::ConnectToEntityProvider(
 void AgentRunner::RemoveAgent(const std::string agent_url) {
   running_agents_.erase(agent_url);
 
-  if (*terminating_ && running_agents_.empty()) {
-    FXL_DCHECK(termination_callback_);
-    termination_callback_();
+  if (*terminating_) {
     return;
   }
 
