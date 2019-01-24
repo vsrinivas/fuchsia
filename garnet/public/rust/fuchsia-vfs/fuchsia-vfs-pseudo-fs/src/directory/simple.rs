@@ -2,14 +2,16 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-//! Implementation of a pseudo directory trait.
-
-#![warn(missing_docs)]
+//! Implementation of a "simple" pseudo directory.  See [`Simple`] for details.
 
 use {
     crate::common::send_on_open_with_error,
-    crate::directory::entry::{DirectoryEntry, EntryInfo},
-    crate::directory::watcher_connection::WatcherConnection,
+    crate::directory::{
+        controllable::Controllable,
+        entry::{DirectoryEntry, EntryInfo},
+        watcher_connection::WatcherConnection,
+        DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES,
+    },
     byteorder::{LittleEndian, WriteBytesExt},
     fidl::encoding::OutOfLine,
     fidl::endpoints::ServerEnd,
@@ -19,7 +21,8 @@ use {
         MODE_PROTECTION_MASK, MODE_TYPE_DIRECTORY, MODE_TYPE_FILE, OPEN_FLAG_APPEND,
         OPEN_FLAG_CREATE, OPEN_FLAG_CREATE_IF_ABSENT, OPEN_FLAG_DESCRIBE, OPEN_FLAG_DIRECTORY,
         OPEN_FLAG_NODE_REFERENCE, OPEN_FLAG_TRUNCATE, OPEN_RIGHT_ADMIN, OPEN_RIGHT_READABLE,
-        OPEN_RIGHT_WRITABLE, WATCH_EVENT_ADDED, WATCH_MASK_ADDED,
+        OPEN_RIGHT_WRITABLE, WATCH_EVENT_ADDED, WATCH_EVENT_REMOVED, WATCH_MASK_ADDED,
+        WATCH_MASK_REMOVED,
     },
     fuchsia_async::Channel,
     fuchsia_zircon::{
@@ -32,7 +35,6 @@ use {
         task::Waker,
         Future, Poll,
     },
-    libc::S_IRUSR,
     std::{
         collections::BTreeMap, io::Write, iter, iter::ExactSizeIterator, marker::Unpin,
         mem::size_of, ops::Bound, pin::Pin,
@@ -127,9 +129,6 @@ enum ConnectionState {
     Closed,
 }
 
-/// POSIX emulation layer access attributes set by default for directories created with empty().
-pub const DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES: u32 = S_IRUSR;
-
 /// Creates an empty directory.
 ///
 /// POSIX access attributes are set to [`DEFAULT_DIRECTORY_PROTECTION_ATTRIBUTES`].
@@ -151,24 +150,20 @@ impl<'entries> Simple<'entries> {
     /// Adds a child entry to this directory.  The directory will own the child entry item and will
     /// run it as part of the directory own `poll()` invocation.
     ///
-    /// `name` should not exceed [`MAX_FILENAME`] bytes in length.  If there is already an entry
-    /// with the same name, no action is taken and [`Status::ALREADY_EXISTS`] is returned.
-    pub fn add_entry<DE>(&mut self, name: &str, entry: DE) -> Result<(), Status>
+    /// In case of any error new entry returned along with the status code.
+    ///
+    /// Possible errors are:
+    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * An entry with the same name is already present in the directory.
+    pub fn add_entry<DE>(
+        &mut self,
+        name: &str,
+        entry: DE,
+    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)>
     where
         DE: DirectoryEntry + 'entries,
     {
-        assert_eq_size!(u64, usize);
-        if name.len() as u64 >= MAX_FILENAME {
-            return Err(Status::INVALID_ARGS);
-        }
-
-        if self.entries.contains_key(name) {
-            return Err(Status::ALREADY_EXISTS);
-        }
-
-        self.send_watcher_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name);
-        let _ = self.entries.insert(name.to_string(), Box::new(entry));
-        Ok(())
+        self.add_boxed_entry(name, Box::new(entry))
     }
 
     fn send_watcher_event(&mut self, mask: u32, event: u8, name: &str) {
@@ -319,8 +314,8 @@ impl<'entries> Simple<'entries> {
             }
             DirectoryRequest::SetAttr { flags: _, attributes: _, responder } => {
                 // According to zircon/system/fidl/fuchsia-io/io.fidl the only flag that might be
-                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by the
-                // Simple.
+                // modified through this call is OPEN_FLAG_APPEND, and it is not supported by a
+                // Simple directory.
                 responder.send(ZX_ERR_NOT_SUPPORTED)?;
             }
             DirectoryRequest::Ioctl { opcode: _, max_out: _, handles: _, in_: _, responder } => {
@@ -560,6 +555,46 @@ impl<'entries> DirectoryEntry for Simple<'entries> {
     }
 }
 
+impl<'entries> Controllable<'entries> for Simple<'entries> {
+    fn add_boxed_entry(
+        &mut self,
+        name: &str,
+        entry: Box<DirectoryEntry + 'entries>,
+    ) -> Result<(), (Status, Box<DirectoryEntry + 'entries>)> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err((Status::INVALID_ARGS, entry));
+        }
+
+        if self.entries.contains_key(name) {
+            return Err((Status::ALREADY_EXISTS, entry));
+        }
+
+        self.send_watcher_event(WATCH_MASK_ADDED, WATCH_EVENT_ADDED, name);
+        let _ = self.entries.insert(name.to_string(), entry);
+        Ok(())
+    }
+
+    /// Removes a child entry from this directory.  In case an entry with the matching name was
+    /// found, the entry will be returned to the caller.
+    ///
+    /// Possible errors are:
+    ///   * `name` exceeding [`MAX_FILENAME`] bytes in length.
+    ///   * An entry with the same name is already present in the directory.
+    fn remove_entry(
+        &mut self,
+        name: &str,
+    ) -> Result<Option<Box<DirectoryEntry + 'entries>>, Status> {
+        assert_eq_size!(u64, usize);
+        if name.len() as u64 >= MAX_FILENAME {
+            return Err(Status::INVALID_ARGS);
+        }
+
+        self.send_watcher_event(WATCH_MASK_REMOVED, WATCH_EVENT_REMOVED, name);
+        Ok(self.entries.remove(name))
+    }
+}
+
 impl<'entries> Unpin for Simple<'entries> {}
 
 impl<'entries> Future for Simple<'entries> {
@@ -643,24 +678,22 @@ mod tests {
     use super::*;
 
     use {
+        crate::directory::test_utils::{
+            run_server_client, run_server_client_with_open_requests_channel,
+            DirentsSameInodeBuilder,
+        },
         crate::file::{read_only, read_write, write_only},
         crate::test_utils::open_get_proxy,
-        fidl::endpoints::{create_proxy, ServerEnd},
+        fidl::endpoints::create_proxy,
         fidl_fuchsia_io::{
             DirectoryEvent, DirectoryMarker, DirectoryObject, DirectoryProxy, FileEvent,
             FileMarker, FileObject, SeekOrigin, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
             INO_UNKNOWN, MODE_TYPE_DIRECTORY,
         },
-        fuchsia_async as fasync,
-        futures::channel::mpsc,
-        futures::{select, Future, FutureExt, SinkExt},
+        futures::SinkExt,
         libc::{S_IRGRP, S_IROTH, S_IRUSR, S_IXGRP, S_IXOTH, S_IXUSR},
-        pin_utils::pin_mut,
         proc_macro_hack::proc_macro_hack,
-        std::{
-            io::Write,
-            sync::atomic::{AtomicUsize, Ordering},
-        },
+        std::sync::atomic::{AtomicUsize, Ordering},
     };
 
     // Create level import of this macro does not affect nested modules.  And as attributes can
@@ -669,131 +702,6 @@ mod tests {
     // "issue #52234 <https://github.com/rust-lang/rust/issues/52234>".
     #[proc_macro_hack(support_nested)]
     use fuchsia_vfs_pseudo_fs_macros::pseudo_directory;
-
-    fn run_server_client<GetClientRes>(
-        flags: u32,
-        server: impl DirectoryEntry,
-        get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        run_server_client_with_mode(flags, 0, server, get_client)
-    }
-
-    fn run_server_client_with_mode<GetClientRes>(
-        flags: u32,
-        mode: u32,
-        mut server: impl DirectoryEntry,
-        get_client: impl FnOnce(DirectoryProxy) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        let mut exec = fasync::Executor::new().expect("Executor creation failed");
-
-        let (client_proxy, server_end) =
-            create_proxy::<DirectoryMarker>().expect("Failed to create connection endpoints");
-
-        server
-            .open(
-                flags,
-                mode,
-                &mut iter::empty(),
-                ServerEnd::<NodeMarker>::new(server_end.into_channel()),
-            )
-            .expect("open() failed");
-
-        let client = get_client(client_proxy);
-
-        let future = server.join(client);
-        // TODO: How to limit the execution time?  run_until_stalled() does not trigger timers, so
-        // I can not do this:
-        //
-        //   let timeout = 300.millis();
-        //   let future = future.on_timeout(
-        //       timeout.after_now(),
-        //       || panic!("Test did not finish in {}ms", timeout.millis()));
-
-        // As our clients are async generators, we need to pin this future explicitly.
-        // All async generators are !Unpin by default.
-        pin_mut!(future);
-        let _ = exec.run_until_stalled(&mut future);
-    }
-
-    type OpenRequestArgs<'path> =
-        (u32, u32, Box<Iterator<Item = &'path str>>, ServerEnd<DirectoryMarker>);
-
-    fn run_server_client_with_open_requests_channel<'path, GetClientRes>(
-        mut server: impl DirectoryEntry,
-        get_client: impl FnOnce(mpsc::Sender<OpenRequestArgs<'path>>) -> GetClientRes,
-    ) where
-        GetClientRes: Future<Output = ()>,
-    {
-        let mut exec = fasync::Executor::new().expect("Executor creation failed");
-
-        let (open_requests_tx, open_requests_rx) = mpsc::channel::<OpenRequestArgs<'path>>(0);
-
-        let server_wrapper = async move {
-            let mut open_requests_rx = open_requests_rx.fuse();
-            loop {
-                select! {
-                    _ = server => panic!("directory should never complete"),
-                    open_req = open_requests_rx.next() => {
-                        if let Some((flags, mode, mut path, server_end)) = open_req {
-                            server
-                                .open(flags, mode, &mut path,
-                                      ServerEnd::new(server_end.into_channel()))
-                                .expect("open() failed");
-                        }
-                    },
-                    complete => return,
-                }
-            }
-        };
-
-        let client = get_client(open_requests_tx);
-
-        let future = server_wrapper.join(client);
-
-        // As our clients are async generators, we need to pin this future explicitly.
-        // All async generators are !Unpin by default.
-        pin_mut!(future);
-        let _ = exec.run_until_stalled(&mut future);
-    }
-
-    /// A helper to build the "expected" output for a read_dirents call.
-    struct DirentsSameInodeBuilder {
-        expected: Vec<u8>,
-        inode: u64,
-    }
-
-    impl DirentsSameInodeBuilder {
-        fn new(inode: u64) -> Self {
-            DirentsSameInodeBuilder { expected: vec![], inode }
-        }
-
-        fn add(&mut self, type_: u8, name: &[u8]) -> &mut Self {
-            assert!(
-                name.len() < MAX_FILENAME as usize,
-                "Expected entry name should not exceed MAX_FILENAME ({}) bytes.\n\
-                 Got: {:?}\n\
-                 Length: {} bytes",
-                MAX_FILENAME,
-                name,
-                name.len()
-            );
-
-            self.expected.write_u64::<LittleEndian>(self.inode).unwrap();
-            self.expected.write_u8(name.len() as u8).unwrap();
-            self.expected.write_u8(type_).unwrap();
-            self.expected.write(name).unwrap();
-
-            self
-        }
-
-        fn into_vec(self) -> Vec<u8> {
-            self.expected
-        }
-    }
 
     #[test]
     fn empty_directory() {

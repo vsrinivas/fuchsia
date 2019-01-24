@@ -4,17 +4,21 @@
 
 //! A macro to generate pseudo directory trees using a small DSL.
 
-use fuchsia_zircon::Status;
+use {crate::directory::entry::DirectoryEntry, fuchsia_zircon::Status};
 
 /// A helper function used by the pseudo_directory! macro, to report nice errors in case
 /// add_entry() fails.
 #[doc(hidden)]
-pub fn unwrap_add_entry_span(entry: &str, location: &str, res: Result<(), Status>) {
+pub fn unwrap_add_entry_span<'entry>(
+    entry: &str,
+    location: &str,
+    res: Result<(), (Status, Box<DirectoryEntry + 'entry>)>,
+) {
     if res.is_ok() {
         return;
     }
 
-    let status = res.unwrap_err();
+    let (status, _) = res.unwrap_err();
     let custom_error_text;
     let error_text = match status {
         Status::INVALID_ARGS => {

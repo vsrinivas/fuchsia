@@ -10,16 +10,17 @@ use {
     fidl::endpoints::ServerEnd,
     fidl_fuchsia_io::{
         NodeMarker, DIRENT_TYPE_BLOCK_DEVICE, DIRENT_TYPE_DIRECTORY, DIRENT_TYPE_FILE,
-        DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET, DIRENT_TYPE_UNKNOWN,
+        DIRENT_TYPE_SERVICE, DIRENT_TYPE_SOCKET, DIRENT_TYPE_UNKNOWN, INO_UNKNOWN,
     },
     futures::{future::FusedFuture, Future},
-    std::marker::Unpin,
+    std::{fmt, marker::Unpin},
     void::Void,
 };
 
 /// Information about a directory entry, used to populate ReadDirents() output.
 /// The first element is the inode number, or INO_UNKNOWN (from io.fidl) if not set, and the second
 /// element is one of the DIRENT_TYPE_* constants defined in the io.fidl.
+#[derive(PartialEq, Eq, Clone)]
 pub struct EntryInfo(u64, u8);
 
 impl EntryInfo {
@@ -44,6 +45,29 @@ impl EntryInfo {
     /// Retrives the `type_` argument of the [`EntryInfo::new()`] constructor.
     pub fn type_(&self) -> u8 {
         self.1
+    }
+}
+
+impl fmt::Debug for EntryInfo {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let new_type_str;
+        let type_str = match self.type_() {
+            DIRENT_TYPE_UNKNOWN => "Unknown",
+            DIRENT_TYPE_DIRECTORY => "Directory",
+            DIRENT_TYPE_BLOCK_DEVICE => "BlockDevice",
+            DIRENT_TYPE_FILE => "File",
+            DIRENT_TYPE_SOCKET => "Socket",
+            DIRENT_TYPE_SERVICE => "Service",
+            new_type => {
+                new_type_str = format!("Unexpected EntryInfo type ({})", new_type);
+                &new_type_str
+            }
+        };
+        if self.inode() == INO_UNKNOWN {
+            write!(f, "{}(INO_UNKNOWN)", type_str)
+        } else {
+            write!(f, "{}({})", type_str, self.inode())
+        }
     }
 }
 
