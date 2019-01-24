@@ -47,6 +47,21 @@ zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
     return ZX_OK;
 }
 
+zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param) {
+    zx_status_t status;
+
+    zx::channel allocator2_client;
+    zx::channel allocator2_server;
+    status = zx::channel::create(0, &allocator2_client, &allocator2_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fdio_service_connect("/svc/fuchsia.sysmem.Allocator2", allocator2_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    *allocator2_client_param = std::move(allocator2_client);
+    return ZX_OK;
+}
+
 zx_koid_t get_koid(zx_handle_t handle) {
     zx_info_handle_basic_t info;
     zx_status_t status = zx_object_get_info(
@@ -60,7 +75,52 @@ zx_koid_t get_koid(zx_handle_t handle) {
     return info.koid;
 }
 
+zx_status_t verify_connectivity(zx::channel& allocator2_client) {
+    zx_status_t status;
+
+    zx::channel collection_client;
+    zx::channel collection_server;
+    status = zx::channel::create(0, &collection_client, &collection_server);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(), collection_server.release());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = fuchsia_sysmem_BufferCollectionSync(collection_client.get());
+    ASSERT_EQ(status, ZX_OK, "");
+
+    return ZX_OK;
+}
+
 }  // namespace
+
+extern "C" bool test_sysmem_driver_connection(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator2_client;
+    status = connect_to_sysmem_driver(&allocator2_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = verify_connectivity(allocator2_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    END_TEST;
+}
+
+extern "C" bool test_sysmem_service_connection(void) {
+    BEGIN_TEST;
+
+    zx_status_t status;
+    zx::channel allocator2_client;
+    status = connect_to_sysmem_service(&allocator2_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    status = verify_connectivity(allocator2_client);
+    ASSERT_EQ(status, ZX_OK, "");
+
+    END_TEST;
+}
 
 extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     BEGIN_TEST;
@@ -512,6 +572,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
 }
 
 BEGIN_TEST_CASE(sysmem_tests)
+    RUN_TEST(test_sysmem_driver_connection)
+    RUN_TEST(test_sysmem_service_connection)
     RUN_TEST(test_sysmem_token_one_participant_no_image_constraints)
     RUN_TEST(test_sysmem_token_one_participant_with_image_constraints)
     RUN_TEST(test_sysmem_no_token)

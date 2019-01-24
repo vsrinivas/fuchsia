@@ -409,6 +409,21 @@ zx_status_t svchost_start(bool require_system) {
     // services such as crashsvc and the profile service.
     launchpad_add_handle(lp, root_job_copy.release(), PA_HND(PA_USER0, 1));
 
+    // Give svchost access to /dev/class/sysmem, to enable svchost to forward sysmem service
+    // requests to the sysmem driver.  Create a namespace containing /dev/class/sysmem.
+    const char* nametable[1] = {};
+    uint32_t count = 0;
+    zx::channel fs_handle = devmgr::fs_clone("dev/class/sysmem");
+    if (fs_handle.is_valid()) {
+        nametable[count] = "/sysmem";
+        launchpad_add_handle(lp, fs_handle.release(), PA_HND(PA_NS_DIR, count++));
+    } else {
+        launchpad_abort(lp, ZX_ERR_BAD_STATE, "devmgr: failed to clone /dev/class/sysmem");
+        // The launchpad_go() call below will fail, but will still free lp.
+    }
+
+    launchpad_set_nametable(lp, count, nametable);
+
     const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
         printf("devmgr: launchpad %s (%s) failed: %s: %d\n",

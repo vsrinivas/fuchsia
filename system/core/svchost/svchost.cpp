@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "sysmem.h"
+
 #include <fbl/algorithm.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/fdio/util.h>
@@ -172,6 +174,7 @@ int main(int argc, char** argv) {
     zx_service_provider_instance_t service_providers[] = {
         {.provider = launcher_get_service_provider(), .ctx = nullptr},
         {.provider = sysmem_get_service_provider(), .ctx = nullptr},
+        {.provider = sysmem2_get_service_provider(), .ctx = nullptr},
         {.provider = profile_get_service_provider(),
          .ctx = reinterpret_cast<void*>(static_cast<uintptr_t>(profile_root_job_copy))},
     };
@@ -184,7 +187,6 @@ int main(int argc, char** argv) {
             return 1;
         }
     }
-
 
     // if full system is not required drop simple logger service.
     zx_service_provider_instance_t logger_service{.provider = logger_get_service_provider(),

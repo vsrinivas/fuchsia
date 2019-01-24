@@ -11,6 +11,7 @@ MODULE_GROUP := core
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/svchost.cpp \
+    $(LOCAL_DIR)/sysmem.cpp \
     $(LOCAL_DIR)/crashsvc.cpp
 
 MODULE_FIDL_LIBS := \
@@ -29,6 +30,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/svc \
     system/ulib/process-launcher \
     system/ulib/sysmem \
+    system/ulib/sysmem-connector \
     system/ulib/fs \
     system/ulib/async \
     system/ulib/async.cpp \
