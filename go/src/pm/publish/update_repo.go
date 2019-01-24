@@ -95,15 +95,16 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 		// Only look for the "online" key set, if any one is missing, then we must
 		// generate a full suite of keys including the root key
 		genKeys := false
-		for _, k := range roles {
-			if _, err := s.GetSigningKeys(k); err != nil {
+		for _, role := range roles {
+			// FilesystemStore.GetSigningKeys returns nil, nil in the case where os.IsNotExist(err)
+			if sk, err := s.GetSigningKeys(role); err != nil || err == nil && sk == nil {
 				genKeys = true
 			}
 		}
 
 		if genKeys {
 			// Only generate a new root role if none are already present.
-			if _, err := s.GetSigningKeys("root"); err != nil {
+			if sk, err := s.GetSigningKeys("root"); err != nil || err == nil && sk == nil {
 				_, err := repo.GenKey("root")
 				if err != nil {
 					return nil, err
@@ -121,6 +122,7 @@ func InitRepo(r string, k string) (*UpdateRepo, error) {
 					return nil, err
 				}
 			}
+
 		}
 	}
 
