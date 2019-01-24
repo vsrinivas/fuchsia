@@ -4,6 +4,10 @@
 
 LOCAL_DIR := $(GET_LOCAL_DIR)
 
+#
+# Build sysmem implementation driver.
+#
+
 MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := driver
@@ -53,10 +57,27 @@ MODULE_BANJO_LIBS := \
 MODULE_COMPILEFLAGS += \
     -Isystem/ulib/fit/include \
 
-# This helps stack crawls work better for easier debugging, but should always be
-# commented out at TOT.
+include make/module.mk
+
 #
-# TODO(dustingreen): Remove this comment entirely.
-MODULE_COMPILEFLAGS += $(KEEP_FRAME_POINTER_COMPILEFLAGS)
+# Build sysmem proxy client driver.
+#
+
+MODULE := $(LOCAL_DIR).proxy
+
+MODULE_TYPE := driver
+
+MODULE_SRCS += \
+    $(LOCAL_DIR)/sysmem-proxy-client.c \
+
+MODULE_STATIC_LIBS := system/ulib/ddk
+
+MODULE_LIBS := system/ulib/driver system/ulib/zircon system/ulib/c
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-sysmem \
+    system/banjo/ddk-protocol-platform-bus \
+    system/banjo/ddk-protocol-platform-device \
+    system/banjo/ddk-protocol-platform-proxy \
 
 include make/module.mk

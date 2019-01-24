@@ -73,4 +73,4 @@ ZIRCON_DRIVER_BEGIN(sysmem, sysmem_driver_ops, "zircon", "0.1", 4)
     BI_ABORT_IF(NE, BIND_PLATFORM_DEV_PID, PDEV_PID_GENERIC),
     BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_SYSMEM),
 ZIRCON_DRIVER_END(sysmem)
-    // clang-format on
+// clang-format on
