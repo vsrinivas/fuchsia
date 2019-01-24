@@ -346,21 +346,20 @@ size_t SparseByteBuffer::CleanUpExcept(size_t goal, size_t protected_start,
   // Second and lastly we clean up regions after the protected range,
   // prioritizing clean up of regions farther from the range.
   iter = --regions_.end();
-  while (to_free > 0 && iter->first >= protected_start) {
+  bool seen_last_region = false;
+  while (to_free > 0 && iter->first >= protected_start && !seen_last_region) {
+    seen_last_region = iter == regions_.begin();
     Region candidate = Region(iter);
+    if (!seen_last_region) {
+      --iter;
+    }
+
     size_t candidate_end = candidate.position() + candidate.size();
     size_t excess_after =
         protected_end < candidate_end ? candidate_end - protected_end : 0;
     size_t shrink_amount = std::min({to_free, candidate.size(), excess_after});
-    bool last_region = iter == regions_.begin();
     ShrinkRegionBack(candidate, shrink_amount);
     to_free -= shrink_amount;
-
-    if (last_region) {
-      break;
-    };
-
-    --iter;
   }
 
   FXL_DCHECK(goal >= to_free);
