@@ -8,6 +8,7 @@
 #include <lib/fsl/io/fd.h>
 #include <lib/fxl/files/unique_fd.h>
 #include <lib/fxl/logging.h>
+#include <lib/fxl/strings/concatenate.h>
 #include <lib/pkg_url/fuchsia_pkg_url.h>
 #include "garnet/lib/cmx/cmx.h"
 
@@ -15,6 +16,7 @@ namespace netemul {
 using component::StartupContext;
 static const char* kSandbox =
     "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx";
+static const char* kComponentArg = "--component=";
 
 Runner::Runner(async_dispatcher_t* dispatcher) {
   if (dispatcher == nullptr) {
@@ -92,14 +94,17 @@ void Runner::RunComponent(
   launchpkg << "fuchsia-pkg://fuchsia.com/" << fp.package_name() << "#"
             << cmx.program_meta().data();
 
-  auto sandbox_arg = launchpkg.str();
-
   auto linfo = std::move(startup_info.launch_info);
+  auto incoming_args = std::move(linfo.arguments);
   linfo.url = kSandbox;
-  linfo.arguments->push_back(sandbox_arg);
-  linfo.arguments->insert(linfo.arguments->end(),
-                          startup_info.launch_info.arguments->begin(),
-                          startup_info.launch_info.arguments->end());
+  linfo.arguments->clear();
+  linfo.arguments->push_back(
+      fxl::Concatenate({std::string(kComponentArg), launchpkg.str()}));
+  if (!incoming_args->empty()) {
+    linfo.arguments->push_back("--");
+    linfo.arguments->insert(linfo.arguments->end(), incoming_args->begin(),
+                            incoming_args->end());
+  }
 
   launcher_->CreateComponent(std::move(linfo), std::move(controller));
 }

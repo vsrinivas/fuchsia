@@ -46,4 +46,6 @@ interface ManagedEnvironment {
     GetLauncher(request<fuchsia.sys.Launcher> launcher);
     /// Creates a nested managed environment.
     CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
+    /// Connects to a service named |name| provided by this environment.
+    ConnectToService(string name, handle<channel> req);
 };

@@ -18,10 +18,29 @@ and provides the FIDL service *fuchsia.sys.Runner*. It expects the `program.data
 test component's `cmx` manifest to point to another `cmx` file within the same component package.
 
 `netemul_sandbox` is responsible for creating sandboxed environments that can be configured to
-run integration tests. It'll simply configure the environment and run the component passed as its
-first command-line argument.
+run integration tests. `netemul_sandbox` has two modes of operation: enclosing process or service
+provider, and it is selected based on its command-line arguments. 
 
- ## Sample setup
+In enclosing process mode, `netemul_sandbox` receives a component as a fuchsia package url as a 
+command-line argument and proceeds to create a hermetic environment and then launch the provided 
+component within it. The exit code of the `netemul_sandbox` process will mimic the component's. When
+using enclosing process, clients will typically setup a layout for the test using the netemul 
+(facet)[#facet] in the component-under-test's cmx manifest.
+
+In service provider mode, `netemul_sandbox` will expose the 
+[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) interface that allows
+users to create netemul's managed environments or run full sandboxes from components. 
+
+In sum, users have two options to use netemul for a given component under test: 
+* use `netemul_runner`, which will use `netemul_sandbox` in enclosing process mode and spawn the
+component under test *within* a netemul environment. See [Runner sample setup](#runner-sample-setup)
+for an example of how to run a component like this.
+* use `netemul_sandbox` as a service provider injected into the component under test's environment
+by using the standard `fuchsia.test` facet. The component under test can then simply use the provided
+[fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) service to spawn and
+control hermetic environments and emulated networks.
+
+## Runner sample setup
 
 To have a test run on the sandbox, you'll typically use the following pattern:
 
@@ -45,6 +64,36 @@ To have a test run on the sandbox, you'll typically use the following pattern:
 
 `netemul_sandbox`'s [tests](test)
 use the pattern thoroughly and can be a good source of examples.
+
+## Sandbox service sample setup
+
+If your component under test doesn't need to (or shouldn't) be *inside* a netemul environment, you 
+can use the  [fuchsia.netemul.sandbox.Sandbox](../../public/lib/netemul/fidl/sandbox.fidl) service
+by injecting it into your test component's environment. Your component's cmx manifest will look like:
+```json
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.netemul.sandbox.Sandbox": "fuchsia-pkg://fuchsia.com/netemul_sandbox#meta/netemul_sandbox.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/my_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.sandbox.Sandbox"
+        ]
+    }
+}
+```
+
+The `fuchsia.test` facet when run by `run_test_component` (the standard way of running tests) will
+spawn an instance of the sandbox service for use by the component under test.
+
+A rust example of how to use the sandbox service can be found [here](test/sandbox_service/src/main.rs).
 
 
 ## Services

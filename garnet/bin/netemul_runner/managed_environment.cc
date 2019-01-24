@@ -3,6 +3,8 @@
 // found in the LICENSE file.
 
 #include "managed_environment.h"
+#include <lib/fxl/strings/string_printf.h>
+#include <random>
 
 namespace netemul {
 
@@ -98,9 +100,12 @@ void ManagedEnvironment::Create(const fuchsia::sys::EnvironmentPtr& parent,
       .inherit_parent_services = false};
 
   // Nested environments without a name are not allowed, if empty name is
-  // provided, replace it with a default value:
+  // provided, replace it with a default *randomized* value.
+  // Randomness there is necessary due to appmgr rules for environments with
+  // same name.
   if (options.name.empty()) {
-    options.name = "netemul-env";
+    std::random_device rnd;
+    options.name = fxl::StringPrintf("netemul-env-%08x", rnd());
   }
 
   env_ = EnclosingEnvironment::Create(options.name, parent, std::move(services),
@@ -134,6 +139,10 @@ void ManagedEnvironment::Bind(
 ManagedLoggerCollection& ManagedEnvironment::loggers() {
   ZX_ASSERT(loggers_);
   return *loggers_;
+}
+
+void ManagedEnvironment::ConnectToService(std::string name, zx::channel req) {
+  env_->ConnectToService(name, std::move(req));
 }
 
 }  // namespace netemul

@@ -33,3 +33,15 @@ fidl("sync") {
     "sync.fidl",
   ]
 }
+
+fidl("sandbox") {
+  name = "fuchsia.netemul.sandbox"
+  sources = [
+    "sandbox.fidl",
+  ]
+
+  deps = [
+    ":environment",
+    "$garnet_sdk_fidl/fuchsia.sys",
+  ]
+}

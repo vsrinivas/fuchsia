@@ -13,6 +13,7 @@ test_package("netemul_sandbox_test") {
     "//garnet/bin/netemul_runner/test/env_build",
     "//garnet/bin/netemul_runner/test/inheritance",
     "//garnet/bin/netemul_runner/test/netstack_socks",
+    "//garnet/bin/netemul_runner/test/sandbox_service",
     "//garnet/bin/netemul_runner/test/svc_list",
   ]
 
@@ -70,6 +71,10 @@ test_package("netemul_sandbox_test") {
     },
     {
       name = "inheritance"
+    },
+    {
+      name = "sandbox_service_bin_test"
+      dest = "sandbox_service"
     },
   ]
 }

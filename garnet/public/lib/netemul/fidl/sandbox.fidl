@@ -1,0 +1,28 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netemul.sandbox;
+using fuchsia.netemul.environment;
+using fuchsia.netemul.network;
+using fuchsia.sys;
+
+/// Describes options to launch tests in sandboxed environments.
+struct LaunchOptions {
+    /// Package URL to launch.
+    string package_url;
+    /// Arguments to pass to root component.
+    vector<string> arguments;
+    /// Optional override of fuchsia.netemul facet (as text content).
+    string? cmx_override;
+};
+
+[Discoverable]
+interface Sandbox {
+    /// Creates a new empty environment |root_env| configured by |options|.
+    CreateEnvironment(request<fuchsia.netemul.environment.ManagedEnvironment> root_env, fuchsia.netemul.environment.EnvironmentOptions options);
+    /// Creates a new sandbox and runs a test with the specified |options|.
+    /// Clients may request access to the created sandbox's root environment with |root_env|.
+    /// Returns the sandbox |exit_code| upon termination.
+    RunTest(LaunchOptions options, request<fuchsia.netemul.environment.ManagedEnvironment>? root_env) -> (int64 exit_code, fuchsia.sys.TerminationReason reason);
+};

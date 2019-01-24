@@ -17,6 +17,11 @@ class SandboxEnv {
  public:
   using Ptr = std::shared_ptr<SandboxEnv>;
 
+  // Creates a sandbox environment with empty package (no root component)
+  SandboxEnv() = default;
+
+  // Creates a sandbox environment with |package_name| and a root component
+  // directory |dir|
   SandboxEnv(std::string package_name, fxl::UniqueFD dir)
       : package_name_(std::move(package_name)), package_dir_(std::move(dir)) {}
 

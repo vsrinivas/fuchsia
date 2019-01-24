@@ -177,6 +177,10 @@ void Sandbox::LoadPackage(fuchsia::sys::PackagePtr package) {
                       root_ = ManagedEnvironment::CreateRoot(
                           parent_env_, sandbox_env_, std::move(root_options));
                       root_->SetRunningCallback([this]() {
+                        if (root_environment_created_callback_) {
+                          root_environment_created_callback_(root_.get());
+                        }
+
                         // configure root environment:
                         async::PostTask(helper_loop_->dispatcher(), [this]() {
                           if (!ConfigureRootEnvironment()) {

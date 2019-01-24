@@ -44,6 +44,8 @@ class ManagedEnvironment
   void CreateChildEnvironment(fidl::InterfaceRequest<FManagedEnvironment> me,
                               Options options) override;
 
+  void ConnectToService(std::string name, zx::channel req) override;
+
   ManagedLauncher& launcher() { return *launcher_; }
 
   void SetRunningCallback(EnvironmentRunningCallback cb) {

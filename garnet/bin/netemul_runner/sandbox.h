@@ -28,6 +28,8 @@ class Sandbox {
   using TerminationCallback =
       fit::function<void(int64_t code, TerminationReason reason)>;
   using PackageLoadedCallback = fit::function<void()>;
+  using RootEnvironmentCreatedCallback =
+      fit::function<void(ManagedEnvironment*)>;
   explicit Sandbox(SandboxArgs args);
 
   void SetTerminationCallback(TerminationCallback callback) {
@@ -38,6 +40,11 @@ class Sandbox {
 
   void SetPackageLoadedCallback(PackageLoadedCallback callback) {
     package_loaded_callback_ = std::move(callback);
+  }
+
+  void SetRootEnvironmentCreatedCallback(
+      RootEnvironmentCreatedCallback callback) {
+    root_environment_created_callback_ = std::move(callback);
   }
 
   const SandboxEnv::Ptr& sandbox_environment() { return sandbox_env_; }
@@ -81,6 +88,7 @@ class Sandbox {
   SandboxEnv::Ptr sandbox_env_;
   TerminationCallback termination_callback_;
   PackageLoadedCallback package_loaded_callback_;
+  RootEnvironmentCreatedCallback root_environment_created_callback_;
   fuchsia::sys::EnvironmentPtr parent_env_;
   fuchsia::sys::LoaderPtr loader_;
   ManagedEnvironment::Ptr root_;
