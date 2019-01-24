@@ -91,7 +91,7 @@ def check_all(directory, dep_map, layer, is_root=True):
         has_all_files = True
         def verify(package):
             if package not in known_deps:
-                print('Missing dependency in %s: %s' % (all_package, package))
+                print('The "all" package %s does not import package %s' % (all_package, package))
                 return False
             return True
         for file in filenames:
