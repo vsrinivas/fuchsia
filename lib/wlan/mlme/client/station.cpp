@@ -22,6 +22,7 @@
 #include <wlan/mlme/rates_elements.h>
 #include <wlan/mlme/sequence.h>
 #include <wlan/mlme/service.h>
+#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 
 #include <fuchsia/wlan/mlme/c/fidl.h>
 #include <zircon/status.h>
@@ -382,39 +383,21 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
     // Authentication notification received. Cancel pending timeout.
     timer_mgr_.Cancel(auth_timeout_);
 
-    auto auth = frame.body();
-    if (auth->auth_algorithm_number != auth_alg_) {
-        errorf("mismatched authentication algorithm (expected %u, got %u)\n", auth_alg_,
-               auth->auth_algorithm_number);
+    auto pkt = frame.Take();
+    bool body_aligned = IsBodyAligned(*pkt);
+    rust_mlme_buffer_t buf = IntoRustMlmeBuffer(std::move(pkt));
+    zx_status_t status = rust_mlme_is_valid_open_auth_resp(buf, body_aligned);
+    if (status == ZX_OK) {
+        state_ = WlanState::kAuthenticated;
+        debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
+        service::SendAuthConfirm(device_, join_ctx_->bssid(),
+                                 wlan_mlme::AuthenticateResultCodes::SUCCESS);
+    } else {
         state_ = WlanState::kIdle;
         service::SendAuthConfirm(device_, join_ctx_->bssid(),
                                  wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
-        return ZX_ERR_INVALID_ARGS;
     }
-
-    // This assumes Open System authentication.
-    if (auth->auth_txn_seq_number != 2) {
-        errorf("unexpected auth txn sequence number (expected 2, got %u)\n",
-               auth->auth_txn_seq_number);
-        state_ = WlanState::kIdle;
-        service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                                 wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
-        return ZX_ERR_INVALID_ARGS;
-    }
-
-    if (auth->status_code != status_code::kSuccess) {
-        errorf("authentication failed (status code=%u)\n", auth->status_code);
-        state_ = WlanState::kIdle;
-        service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                                 wlan_mlme::AuthenticateResultCodes::AUTHENTICATION_REJECTED);
-        return ZX_ERR_BAD_STATE;
-    }
-
-    state_ = WlanState::kAuthenticated;
-    debugjoin("authenticated to %s\n", join_ctx_->bssid().ToString().c_str());
-    service::SendAuthConfirm(device_, join_ctx_->bssid(),
-                             wlan_mlme::AuthenticateResultCodes::SUCCESS);
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t Station::HandleDeauthentication(MgmtFrame<Deauthentication>&& frame) {

@@ -371,8 +371,20 @@ impl BeaconHdr {
     }
 }
 
+// IEEE Std 802.11-2016, 9.4.1.1
+#[repr(u16)]
+pub enum AuthAlgorithm {
+    Open = 0,
+    _SharedKey = 1,
+    _FastBssTransition = 2,
+    Sae = 3,
+    // 4-65534 Reserved
+    _VendorSpecific = 65535,
+}
+
 // IEEE Std 802.11-2016, 9.3.3.12
 #[repr(C, packed)]
+#[derive(Default)]
 pub struct AuthHdr {
     pub auth_alg_num: [u8; 2],
     pub auth_txn_seq_num: [u8; 2],
@@ -386,12 +398,24 @@ impl AuthHdr {
         LittleEndian::read_u16(&self.auth_alg_num)
     }
 
+    pub fn set_auth_alg_num(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.auth_alg_num, val)
+    }
+
     pub fn auth_txn_seq_num(&self) -> u16 {
         LittleEndian::read_u16(&self.auth_txn_seq_num)
     }
 
+    pub fn set_auth_txn_seq_num(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.auth_txn_seq_num, val)
+    }
+
     pub fn status_code(&self) -> u16 {
         LittleEndian::read_u16(&self.status_code)
+    }
+
+    pub fn set_status_code(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.status_code, val)
     }
 }
 
@@ -571,6 +595,14 @@ impl<B: ByteSlice> DataSubtype<B> {
             subtype => Some(DataSubtype::Unsupported { subtype }),
         }
     }
+}
+
+
+// IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
+#[repr(u16)]
+pub enum StatusCode {
+    Success = 0,
+    // ... defined remaining status codes.
 }
 
 fn round_up<T: Unsigned + Copy>(value: T, multiple: T) -> T {

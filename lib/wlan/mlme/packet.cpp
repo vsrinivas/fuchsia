@@ -39,6 +39,23 @@ wlan_tx_packet_t Packet::AsWlanTxPacket() {
     return tx_pkt;
 }
 
+bool IsBodyAligned(const Packet& pkt) {
+    auto rx = pkt.ctrl_data<wlan_rx_info_t>();
+    return rx != nullptr && rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
+}
+
+rust_mlme_buffer_t IntoRustMlmeBuffer(fbl::unique_ptr<Packet> packet) {
+    auto* pkt = packet.release();
+    return rust_mlme_buffer_t {
+            .data = pkt->data(),
+            .len = pkt->len(),
+            .raw = pkt,
+            .return_buffer = [](void *raw) {
+                fbl::unique_ptr<Packet>(static_cast<Packet *>(raw)).reset();
+            },
+    };
+}
+
 void LogAllocationFail(Buffer::Size size) {
     BufferDebugger<SmallBufferAllocator, LargeBufferAllocator, HugeBufferAllocator,
                    kBufferDebugEnabled>::Fail(size);

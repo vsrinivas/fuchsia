@@ -2,7 +2,10 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+//! C bindings for wlan-mlme crate.
+
 // Allow while bringing up MLME.
 #![allow(unused)]
 
+pub mod auth;
 pub mod buffer;

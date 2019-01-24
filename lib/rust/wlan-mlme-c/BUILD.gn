@@ -12,9 +12,10 @@ rustc_staticlib("wlan-mlme-c") {
   edition = "2018"
 
   deps = [
-    "//garnet/lib/rust/wlan-common",
+    "//garnet/lib/rust/wlan-mlme",
     "//garnet/public/rust/fuchsia-zircon",
     "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:log",
   ]
   non_rust_deps = []
 

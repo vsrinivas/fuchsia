@@ -11,6 +11,7 @@
 #include <fbl/intrusive_double_list.h>
 #include <fbl/slab_allocator.h>
 #include <fbl/unique_ptr.h>
+#include <garnet/lib/rust/wlan-mlme-c/bindings.h>
 #include <wlan/common/logging.h>
 #include <wlan/protocol/mac.h>
 #include <zircon/types.h>
@@ -254,6 +255,9 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     ethmac_netbuf_t* ext_data_ = nullptr;
     uint16_t ext_offset_ = 0;
 };
+
+rust_mlme_buffer_t IntoRustMlmeBuffer(fbl::unique_ptr<Packet> packet);
+bool IsBodyAligned(const Packet& pkt);
 
 class PacketQueue {
    public:

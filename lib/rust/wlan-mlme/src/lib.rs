@@ -4,3 +4,7 @@
 
 // Allow while bringing up MLME.
 #![allow(unused)]
+
+pub use wlan_common as common;
+
+pub mod auth;
