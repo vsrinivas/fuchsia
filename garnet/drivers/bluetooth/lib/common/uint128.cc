@@ -4,16 +4,12 @@
 
 #include "uint128.h"
 
-#include <zircon/syscalls.h>
+#include "random.h"
 
 namespace btlib {
 namespace common {
 
-UInt128 RandomUInt128() {
-  UInt128 value;
-  zx_cprng_draw(value.data(), value.size());
-  return value;
-}
+UInt128 RandomUInt128() { return Random<UInt128>(); }
 
 }  // namespace common
 }  // namespace btlib

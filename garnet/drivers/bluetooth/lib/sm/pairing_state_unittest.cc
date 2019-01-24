@@ -128,6 +128,17 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
         pairing_random_count_++;
         pairing_random_ = reader.payload<PairingRandomValue>();
         break;
+      case kEncryptionInformation:
+        enc_info_count_++;
+        enc_info_ = reader.payload<EncryptionInformationParams>();
+        break;
+      case kMasterIdentification: {
+        const auto& params = reader.payload<MasterIdentificationParams>();
+        master_ident_count_++;
+        ediv_ = le16toh(params.ediv);
+        rand_ = le64toh(params.rand);
+        break;
+      }
       default:
         FAIL() << "Sent unsupported SMP command";
     }
@@ -272,9 +283,15 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   int pairing_response_count() const { return pairing_response_count_; }
   int pairing_confirm_count() const { return pairing_confirm_count_; }
   int pairing_random_count() const { return pairing_random_count_; }
+  int enc_info_count() const { return enc_info_count_; }
+  int master_ident_count() const { return master_ident_count_; }
 
   const UInt128& pairing_confirm() const { return pairing_confirm_; }
   const UInt128& pairing_random() const { return pairing_random_; }
+  const UInt128& enc_info() const { return enc_info_; }
+  uint16_t ediv() const { return ediv_; }
+  uint64_t rand() const { return rand_; }
+  const PairingData& pairing_data() const { return pairing_data_; }
 
   const ByteBuffer& local_pairing_cmd() const { return local_pairing_cmd_; }
   const ByteBuffer& peer_pairing_cmd() const { return peer_pairing_cmd_; }
@@ -326,10 +343,16 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
   int pairing_response_count_ = 0;
   int pairing_confirm_count_ = 0;
   int pairing_random_count_ = 0;
+  int enc_info_count_ = 0;
+  int master_ident_count_ = 0;
 
-  // Values that have been sent by the peer.
+  // Values that have we have sent to the peer.
   UInt128 pairing_confirm_;
   UInt128 pairing_random_;
+  UInt128 enc_info_;
+  uint16_t ediv_;
+  uint64_t rand_;
+
   ErrorCode received_error_code_ = ErrorCode::kNoError;
 
   fbl::RefPtr<l2cap::testing::FakeChannel> fake_chan_;
@@ -448,6 +471,67 @@ class SMP_SlavePairingTest : public SMP_PairingStateTest {
                              uint8_t max_enc_key_size = kMaxEncryptionKeySize) {
     ReceivePairingFeatures(ioc, auth_req, max_enc_key_size,
                            true /* peer_initiator */);
+  }
+
+  void FastForwardToSTK(UInt128* out_stk,
+                        SecurityLevel level = SecurityLevel::kEncrypted,
+                        KeyDistGenField remote_keys = 0,
+                        KeyDistGenField local_keys = 0) {
+    PairingRequestParams pairing_params;
+    pairing_params.io_capability = IOCapability::kNoInputNoOutput;
+    pairing_params.auth_req = 0;
+    pairing_params.max_encryption_key_size = kMaxEncryptionKeySize;
+    pairing_params.initiator_key_dist_gen = remote_keys;
+    pairing_params.responder_key_dist_gen = local_keys;
+    ReceivePairingFeatures(pairing_params, true /* peer_initiator */);
+
+    // Run the loop until the harness caches the feature exchange PDUs (preq &
+    // pres) so that we can generate a valid confirm value.
+    RunLoopUntilIdle();
+    EXPECT_EQ(0, pairing_request_count());
+    EXPECT_EQ(1, pairing_response_count());
+
+    // The master initiates the Phase 2 keys.
+    EXPECT_EQ(0, pairing_confirm_count());
+    EXPECT_EQ(0, pairing_random_count());
+
+    UInt128 mconfirm, mrand;
+    GenerateMatchingConfirmAndRandom(&mconfirm, &mrand);
+    ReceivePairingConfirm(mconfirm);
+    RunLoopUntilIdle();
+    EXPECT_EQ(1, pairing_confirm_count());
+    EXPECT_EQ(0, pairing_random_count());
+
+    ReceivePairingRandom(mrand);
+    RunLoopUntilIdle();
+    EXPECT_EQ(1, pairing_confirm_count());
+    EXPECT_EQ(1, pairing_random_count());
+    EXPECT_EQ(0, pairing_failed_count());
+    EXPECT_EQ(0, pairing_callback_count());
+
+    ZX_DEBUG_ASSERT(out_stk);
+
+    UInt128 tk;
+    tk.fill(0);
+    util::S1(tk, pairing_random(), mrand, out_stk);
+  }
+
+  void FastForwardToSTKEncrypted(
+      UInt128* out_stk, SecurityLevel level = SecurityLevel::kEncrypted,
+      KeyDistGenField remote_keys = 0, KeyDistGenField local_keys = 0) {
+    FastForwardToSTK(out_stk, level, remote_keys, local_keys);
+
+    ASSERT_TRUE(fake_link()->ltk());
+
+    // No local start encryption request should be made.
+    EXPECT_EQ(0, fake_link()->start_encryption_count());
+
+    // Pretend that the master succeeded in encrypting the connection.
+    fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
+                                                 true /* enabled */);
+    RunLoopUntilIdle();
+    EXPECT_EQ(1, new_sec_props_count());
+    EXPECT_EQ(level, new_sec_props().level());
   }
 
  private:
@@ -1795,7 +1879,93 @@ TEST_F(SMP_SlavePairingTest, LegacyPhase2ConfirmValuesExchanged) {
   EXPECT_EQ(expected_confirm, pairing_confirm());
 }
 
-// TODO(armansito): Add tests for Phase 3 in slave role
+TEST_F(SMP_SlavePairingTest, LegacyPhase3LocalLTKDistributionNoRemoteKeys) {
+  EXPECT_EQ(0, enc_info_count());
+  EXPECT_EQ(0, master_ident_count());
+
+  UInt128 stk;
+  FastForwardToSTKEncrypted(&stk, SecurityLevel::kEncrypted,
+                            0u,                    // remote keys
+                            KeyDistGen::kEncKey);  // local keys
+
+  // Local LTK, EDiv, and Rand should be sent to the peer.
+  EXPECT_EQ(1, enc_info_count());
+  EXPECT_EQ(1, master_ident_count());
+  ASSERT_TRUE(fake_link()->ltk());
+  EXPECT_EQ(enc_info(), fake_link()->ltk()->value());
+  EXPECT_EQ(ediv(), fake_link()->ltk()->ediv());
+  EXPECT_EQ(rand(), fake_link()->ltk()->rand());
+
+  // This LTK should be stored with the pairing data but the pairing callback
+  // shouldn't be called because pairing wasn't initiated by UpgradeSecurity().
+  EXPECT_EQ(0, pairing_failed_count());
+  EXPECT_EQ(0, pairing_callback_count());
+
+  // Pairing is considered complete when all keys have been distributed even if
+  // we're still encrypted with the STK. This is because the master may not
+  // always re-encrypt the link with the LTK until a reconnection.
+  EXPECT_EQ(1, pairing_data_callback_count());
+
+  // Nonetheless the link should have been assigned the LTK.
+  ASSERT_TRUE(pairing_data().ltk);
+  EXPECT_EQ(fake_link()->ltk(), pairing_data().ltk->key());
+
+  // Make sure that an encryption change has no effect.
+  fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
+                                               true /* enabled */);
+  RunLoopUntilIdle();
+  EXPECT_EQ(1, pairing_data_callback_count());
+
+  // No additional security property update should have been sent since the STK
+  // and LTK have the same properties.
+  EXPECT_EQ(1, new_sec_props_count());
+}
+
+TEST_F(SMP_SlavePairingTest, LegacyPhase3LocalLTKDistributionWithRemoteKeys) {
+  EXPECT_EQ(0, enc_info_count());
+  EXPECT_EQ(0, master_ident_count());
+
+  UInt128 stk;
+  FastForwardToSTKEncrypted(&stk, SecurityLevel::kEncrypted,
+                            KeyDistGen::kIdKey,    // remote keys
+                            KeyDistGen::kEncKey);  // local keys
+
+  // Local LTK, EDiv, and Rand should be sent to the peer.
+  EXPECT_EQ(1, enc_info_count());
+  EXPECT_EQ(1, master_ident_count());
+  ASSERT_TRUE(fake_link()->ltk());
+  EXPECT_EQ(enc_info(), fake_link()->ltk()->value());
+  EXPECT_EQ(ediv(), fake_link()->ltk()->ediv());
+  EXPECT_EQ(rand(), fake_link()->ltk()->rand());
+
+  // This LTK should be stored with the pairing data but the pairing callback
+  // shouldn't be called because pairing wasn't initiated by UpgradeSecurity().
+  EXPECT_EQ(0, pairing_failed_count());
+  EXPECT_EQ(0, pairing_callback_count());
+
+  // Still waiting for master's keys.
+  EXPECT_EQ(0, pairing_data_callback_count());
+
+  const auto kIrk = common::RandomUInt128();
+  ReceiveIdentityResolvingKey(kIrk);
+  ReceiveIdentityAddress(kPeerAddr);
+  RunLoopUntilIdle();
+
+  // Pairing is considered complete when all keys have been distributed even if
+  // we're still encrypted with the STK. This is because the master may not
+  // always re-encrypt the link with the LTK until a reconnection.
+  EXPECT_EQ(1, pairing_data_callback_count());
+
+  // The peer should have sent us its identity information.
+  ASSERT_TRUE(pairing_data().irk);
+  EXPECT_EQ(kIrk, pairing_data().irk->value());
+  ASSERT_TRUE(pairing_data().identity_address);
+  EXPECT_EQ(kPeerAddr, *pairing_data().identity_address);
+
+  // Nonetheless the link should have been assigned the LTK.
+  ASSERT_TRUE(pairing_data().ltk);
+  EXPECT_EQ(fake_link()->ltk(), pairing_data().ltk->key());
+}
 
 TEST_F(SMP_SlavePairingTest, AssignLongTermKeyFailsDuringPairing) {
   ReceivePairingRequest();

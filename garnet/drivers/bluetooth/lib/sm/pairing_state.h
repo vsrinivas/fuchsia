@@ -159,6 +159,14 @@ class PairingState final : public Bearer::Listener {
     // True if all keys that are expected from the remote have been received.
     bool RequestedKeysObtained() const;
 
+    // True if all local keys that were agreed to be distributed have been sent
+    // to the peer.
+    bool LocalKeysSent() const;
+
+    bool KeyExchangeComplete() const {
+      return RequestedKeysObtained() && LocalKeysSent();
+    }
+
     bool ShouldReceiveLTK() const;       // True if peer should send the LTK
     bool ShouldReceiveIdentity() const;  // True if peer should send identity
     bool ShouldSendLTK() const;          // True if we should send the LTK
@@ -186,6 +194,9 @@ class PairingState final : public Bearer::Listener {
 
     // The remote keys that have been obtained so far.
     KeyDistGenField obtained_remote_keys;
+
+    // True, if all local keys have been sent to the peer.
+    bool sent_local_keys;
 
     // Data used to generate STK and confirm values in Phase 2.
     bool has_tk;

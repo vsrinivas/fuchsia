@@ -332,11 +332,12 @@ void Bearer::BuildPairingParameters(PairingRequestParams* params,
   *out_remote_keys = KeyDistGen::kIdKey;
 
   // When we are the master, we request that the slave send us encryption
-  // information as it is required to do so (Vol 3, Part H, 2.4.2.3).
-  // TODO(armansito): Support generating and distributing encryption information
-  // as slave.
+  // information as it is required to do so (Vol 3, Part H, 2.4.2.3). Otherwise
+  // we always request to distribute it.
   if (role_ == hci::Connection::Role::kMaster) {
     *out_remote_keys |= KeyDistGen::kEncKey;
+  } else {
+    *out_local_keys |= KeyDistGen::kEncKey;
   }
 }
 
@@ -392,7 +393,8 @@ void Bearer::OnPairingRequest(const PacketReader& reader) {
 
   // Start pairing timer.
   ZX_DEBUG_ASSERT(!timeout_task_.is_pending());
-  timeout_task_.PostDelayed(async_get_default_dispatcher(), zx::sec(kPairingTimeout));
+  timeout_task_.PostDelayed(async_get_default_dispatcher(),
+                            zx::sec(kPairingTimeout));
 
   PacketWriter writer(kPairingResponse, pdu.get());
   KeyDistGenField local_keys, remote_keys;

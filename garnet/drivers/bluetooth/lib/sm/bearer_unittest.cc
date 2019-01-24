@@ -619,7 +619,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderJustWorks) {
       0x01,  // AuthReq: bonding, no MITM
       0x10,  // encr. key size: 16 (default max)
       0x02,  // initiator keys: identity only
-      0x00   // responder keys: none
+      0x01   // responder keys: enc key
   );
   // clang-format on
 
@@ -635,12 +635,39 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderJustWorks) {
   EXPECT_TRUE(ContainersEqual(kRequest, preq()));
   EXPECT_TRUE(ContainersEqual(kResponse, pres()));
 
-  // We don't support generating local keys yet.
-  EXPECT_EQ(0u, features().local_key_distribution);
+  // We send the LTK when we are the responder.
+  EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
 
   // The remote should send us identity information since we requested it and it
   // promised it.
   EXPECT_TRUE(KeyDistGen::kIdKey & features().remote_key_distribution);
+}
+
+TEST_F(SMP_BearerTest, FeatureExchangeResponderSendsOnlyRequestedKeys) {
+  NewBearer(hci::Connection::Role::kSlave);
+
+  // clang-format off
+  const auto kRequest = CreateStaticByteBuffer(
+      0x01,  // code: Pairing Response
+      0x00,  // IO cap.: DisplayOnly
+      0x00,  // OOB: not present
+      0x00,  // AuthReq: MITM not required
+      0x07,  // encr. key size: 7 (default min)
+      0x02,  // initiator keys: identity only
+      0x02   // responder keys: identity only. Responder shouldn't send it.
+  );
+  const auto kResponse = CreateStaticByteBuffer(
+      0x02,  // code: Pairing Response
+      0x03,  // IO cap.: NoInputNoOutput
+      0x00,  // OOB: not present
+      0x01,  // AuthReq: bonding, no MITM
+      0x10,  // encr. key size: 16 (default max)
+      0x02,  // initiator keys: identity only
+      0x00   // responder keys: none
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kRequest, kResponse));
 }
 
 TEST_F(SMP_BearerTest, FeatureExchangeResponderMITM) {
@@ -664,7 +691,7 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderMITM) {
       0x01,  // AuthReq: bonding, no MITM
       0x10,  // encr. key size: 16 (default max)
       0x02,  // initiator keys: identity only
-      0x00   // responder keys: none
+      0x01   // responder keys: enc key
   );
   // clang-format on
 
@@ -680,8 +707,8 @@ TEST_F(SMP_BearerTest, FeatureExchangeResponderMITM) {
   EXPECT_TRUE(ContainersEqual(kRequest, preq()));
   EXPECT_TRUE(ContainersEqual(kResponse, pres()));
 
-  // We don't support generating local keys yet.
-  EXPECT_EQ(0u, features().local_key_distribution);
+  // We send the LTK when we are the responder.
+  EXPECT_TRUE(KeyDistGen::kEncKey & features().local_key_distribution);
 
   // The remote should send us identity information since we requested it and it
   // promised it.

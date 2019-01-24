@@ -18,6 +18,7 @@ using UInt128 = std::array<uint8_t, 16>;
 static_assert(sizeof(UInt128) == 16, "UInt128 must take up exactly 16 bytes");
 
 // Returns a random 128-bit value.
+// TODO(armansito): Remove this in favor of using Random<UInt128>() directly.
 UInt128 RandomUInt128();
 
 }  // namespace common

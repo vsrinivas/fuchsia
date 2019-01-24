@@ -16,6 +16,7 @@ source_set("common") {
     "manufacturer_names.cc",
     "manufacturer_names.h",
     "packet_view.h",
+    "random.h",
     "run_or_post.cc",
     "run_or_post.h",
     "run_task_sync.cc",

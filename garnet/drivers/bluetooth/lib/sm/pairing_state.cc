@@ -5,6 +5,7 @@
 #include "pairing_state.h"
 
 #include "garnet/drivers/bluetooth/lib/common/log.h"
+#include "garnet/drivers/bluetooth/lib/common/random.h"
 
 #include "util.h"
 
@@ -35,6 +36,7 @@ PairingState::LegacyState::LegacyState(uint64_t id)
       stk_encrypted(false),
       ltk_encrypted(false),
       obtained_remote_keys(0u),
+      sent_local_keys(false),
       has_tk(false),
       has_peer_confirm(false),
       has_peer_rand(false),
@@ -52,11 +54,11 @@ bool PairingState::LegacyState::InPhase2() const {
 }
 
 bool PairingState::LegacyState::InPhase3() const {
-  return features && stk_encrypted && !RequestedKeysObtained();
+  return features && stk_encrypted && !KeyExchangeComplete();
 }
 
 bool PairingState::LegacyState::IsComplete() const {
-  return features && stk_encrypted && RequestedKeysObtained() &&
+  return features && stk_encrypted && KeyExchangeComplete() &&
          !WaitingForEncryptionWithLTK();
 }
 
@@ -70,6 +72,13 @@ bool PairingState::LegacyState::RequestedKeysObtained() const {
   // Return true if we expect no keys from the remote.
   return !features->remote_key_distribution ||
          (features->remote_key_distribution == obtained_remote_keys);
+}
+
+bool PairingState::LegacyState::LocalKeysSent() const {
+  ZX_DEBUG_ASSERT(features);
+
+  // Return true if we didn't agree to send any keys.
+  return !features->local_key_distribution || sent_local_keys;
 }
 
 bool PairingState::LegacyState::ShouldReceiveLTK() const {
@@ -93,7 +102,12 @@ bool PairingState::LegacyState::ShouldSendIdentity() const {
 }
 
 bool PairingState::LegacyState::WaitingForEncryptionWithLTK() const {
-  return (ShouldReceiveLTK() || ShouldSendLTK()) && !ltk_encrypted;
+  // When we are the responder we consider the pairing to be done after all keys
+  // have been exchanged and do not wait for the master to encrypt with the LTK.
+  // This is because some LE central implementations leave the link encrypted
+  // with the STK until a re-connection.
+  return features->initiator && (ShouldReceiveLTK() || ShouldSendLTK()) &&
+         !ltk_encrypted;
 }
 
 PairingState::PendingRequest::PendingRequest(SecurityLevel level,
@@ -323,27 +337,48 @@ void PairingState::EndLegacyPairingPhase2() {
   legacy_state_->stk_encrypted = true;
   SetSecurityProperties(FeaturesToProperties(*legacy_state_->features));
 
-  // If the slave has no keys to send then we're done with pairing. Since we're
-  // only encrypted with the STK, the pairing will be short-term (this is the
-  // case if the "bonding" flag was not set).
+  if (legacy_state_->InPhase3()) {
+    if (legacy_state_->features->initiator &&
+        !legacy_state_->RequestedKeysObtained()) {
+      ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
+      bt_log(TRACE, "sm", "waiting to receive keys from the responder");
+      return;
+    }
+
+    // TODO(armansito): Add a test case for distributing the local keys here as
+    // the initiator. We currently only distribute the LTK and we only do so
+    // when we are the responder.
+    if (!legacy_state_->LocalKeysSent()) {
+      SendLocalKeys();
+    }
+  }
+
+  // If there are no keys left to exchange then we're done with pairing. Since
+  // we're only encrypted with the STK, the pairing will be short-term (this is
+  // the case if the "bonding" flag was not set).
   if (legacy_state_->IsComplete()) {
     CompleteLegacyPairing();
-
-    // TODO(NET-1088): Make sure IsComplete() returns false if we're the slave
-    // and have keys to distribute.
-    return;
   }
+}
 
+void PairingState::SendLocalKeys() {
+  ZX_DEBUG_ASSERT(legacy_state_);
   ZX_DEBUG_ASSERT(legacy_state_->InPhase3());
+  ZX_DEBUG_ASSERT(!legacy_state_->LocalKeysSent());
 
-  if (legacy_state_->features->initiator) {
-    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kMaster);
-    bt_log(TRACE, "sm", "waiting to receive keys from the slave");
-  } else {
-    ZX_DEBUG_ASSERT(le_smp_->role() == hci::Connection::Role::kSlave);
+  if (legacy_state_->ShouldSendLTK()) {
+    // Generate completely random values for LTK, EDiv, and Rand.
+    hci::LinkKey key(common::RandomUInt128(), common::Random<uint64_t>(),
+                     common::Random<uint16_t>());
 
-    // TODO(NET-1088): Distribute the slave's (local) keys now.
+    // Assign the link key to make it available when the master initiates
+    // encryption. The security properties of the LTK are based on the current
+    // properties under which it gets exchanged.
+    AssignLongTermKeyInternal(LTK(le_sec_, key));
+    le_smp_->SendEncryptionKey(key);
   }
+
+  legacy_state_->sent_local_keys = true;
 }
 
 void PairingState::CompleteLegacyPairing() {
@@ -587,8 +622,12 @@ void PairingState::OnPairingRandom(const UInt128& random) {
 
   // Generate the STK.
   UInt128 stk;
-  util::S1(legacy_state_->tk, legacy_state_->peer_rand,
-           legacy_state_->local_rand, &stk);
+  UInt128* initiator_rand = &legacy_state_->local_rand;
+  UInt128* responder_rand = &legacy_state_->peer_rand;
+  if (!legacy_state_->features->initiator) {
+    std::swap(initiator_rand, responder_rand);
+  }
+  util::S1(legacy_state_->tk, *responder_rand, *initiator_rand, &stk);
 
   // Mask the key based on the requested encryption key size.
   uint8_t key_size = legacy_state_->features->encryption_key_size;
@@ -835,6 +874,10 @@ void PairingState::OnExpectedKeyReceived() {
     ZX_DEBUG_ASSERT(legacy_state_->InPhase3());
     bt_log(TRACE, "sm", "more keys pending");
     return;
+  }
+
+  if (legacy_state_->features->initiator && !legacy_state_->LocalKeysSent()) {
+    SendLocalKeys();
   }
 
   // We are no longer in Phase 3.
