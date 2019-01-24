@@ -671,15 +671,33 @@ struct ResetRequest {
 
 // MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
 
+// See dot11CountryString of IEEE Std 802.11-2016, Annex C
+const uint8 countryEnvironAll = 32;        // an ASCII ' ' character
+const uint8 countryEnvironOutdoor = 79;    // an ASCII 'O' character
+const uint8 countryEnvironIndoor = 73;     // an ASCII 'I' character
+const uint8 countryEnvironNonCountry = 88; // an ASCII 'X' character
+
+// Information derived from Country Element, IEEE Std 802.11-2016, 9.4.2.9.
+struct Country {
+    array<uint8>:2 alpha2; // ISO 3116-1
+
+    // countryEnviron constant from above
+    // or Operating Class Table number from IEEE Std 802.11-2016 Annex D.
+    uint8 suffix;
+};
+
 struct StartRequest {
     vector<uint8>:32 ssid;
     BSSTypes bss_type;
     uint16 beacon_period; // in TU
     uint8 dtim_period;
 
-    // Temporary field to support AP channel selection until
-    // MLME-CHANNELSWITCH.request is supported.
+    // PHY parameter sets
     uint8 channel;
+
+    // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
+    // See also dot11MultiDomainCapabilityActivated.
+    Country country;
 
     vector<uint8>:32 mesh_id;
 
@@ -690,6 +708,20 @@ struct StartRequest {
     // BSS was started. The RSNE must be available when the BSS is started, and thus, this is the
     // right place to transfer the RSNE to the MLME.
     vector<uint8>? rsne;
+
+    // Combined with what MLME knows about the device capabilities,
+    // following parameters determine what to be advertised to the peer
+    // (in Beacons/ProbeResponse/AssociationResponse). Effectively this way replaces the following
+    // fields originally defined in MLME-START.request.
+    // TODO(WLAN-909): Replace phy and cbw with full-fledged parameters below.
+    // - Capability Information
+    // - HT Capabilities
+    // - HT Operation
+    // - VHT Capabilities
+    // - VHT Operation
+    // - Extended Capabilities
+    fuchsia.wlan.common.PHY phy;
+    fuchsia.wlan.common.CBW cbw;
 };
 
 // MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3)

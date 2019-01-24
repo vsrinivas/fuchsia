@@ -11,6 +11,7 @@ mod rsn;
 mod test_utils;
 
 use failure::{bail, ensure};
+use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
 use futures::channel::mpsc;
 use log::{debug, info, error, warn};
@@ -483,8 +484,14 @@ fn create_start_request(config: &Config, ap_rsn: Option<&RsnCfg>) -> fidl_mlme::
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
+        country: fidl_mlme::Country { // TODO(WLAN-870): Get config from wlancfg
+            alpha2: ['U' as u8, 'S' as u8],
+            suffix: fidl_mlme::COUNTRY_ENVIRON_ALL,
+        },
         rsne: rsne_bytes,
         mesh_id: vec![],
+        phy: fidl_common::Phy::Ht,  // TODO(WLAN-908, WLAN-909): Use dynamic value
+        cbw: fidl_common::Cbw::Cbw20,
     }
 }
 

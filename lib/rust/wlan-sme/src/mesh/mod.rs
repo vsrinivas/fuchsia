@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use {
+    fidl_fuchsia_wlan_common::{self as fidl_common},
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     futures::channel::mpsc,
     log::{error},
@@ -118,8 +119,15 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
+        country: fidl_mlme::Country { // TODO(WLAN-870): Get config from wlancfg
+            alpha2: ['U' as u8, 'S' as u8],
+            suffix: fidl_mlme::COUNTRY_ENVIRON_ALL,
+        },
         rsne: None,
         mesh_id: config.mesh_id.clone(),
+        phy: fidl_common::Phy::Ht,  // TODO(WLAN-908, WLAN-909): Use dynamic value
+        cbw: fidl_common::Cbw::Cbw20,
+
     }
 }
 
