@@ -54,7 +54,7 @@ int MdnsInterfaceTransceiverV4::SetOptionOutboundInterface() {
 }
 
 int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
-  uint32_t param = kTimeToLive_;
+  int param = kTimeToLive_;
   int result =
       setsockopt(socket_fd().get(), IPPROTO_IP, IP_TTL, &param, sizeof(param));
   if (result < 0) {
@@ -65,7 +65,7 @@ int MdnsInterfaceTransceiverV4::SetOptionUnicastTtl() {
 }
 
 int MdnsInterfaceTransceiverV4::SetOptionMulticastTtl() {
-  uint32_t param = kTimeToLive_;
+  int param = kTimeToLive_;
   int result = setsockopt(socket_fd().get(), IPPROTO_IP, IP_MULTICAST_TTL,
                           &param, sizeof(param));
   if (result < 0) {

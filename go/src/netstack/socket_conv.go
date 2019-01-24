@@ -492,11 +492,18 @@ func setSockOptIPv6(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 func setSockOptIP(ep tcpip.Endpoint, name int16, optVal []byte) *tcpip.Error {
 	switch name {
 	case C.IP_MULTICAST_TTL:
-		if len(optVal) < sizeOfInt32 {
+		if len(optVal) == 0 {
 			return tcpip.ErrInvalidOptionValue
 		}
 
-		v := int32(binary.LittleEndian.Uint32(optVal))
+		if len(optVal) > sizeOfInt32 {
+			optVal = optVal[:sizeOfInt32]
+		}
+		var v int32
+		for i, b := range optVal {
+			v += int32(b) << uint(i*8)
+		}
+
 		if v == -1 {
 			// Linux translates -1 to 1.
 			v = 1
