@@ -22,6 +22,10 @@
 
 namespace {
 
+// Variable to quickly re-enable the hardcoded touchpad reports.
+// TODO(ZX-3219): Remove this once touchpads are stable
+bool USE_TOUCHPAD_HARDCODED_REPORTS = false;
+
 bool log_err(ssize_t rc, const std::string& what, const std::string& name) {
   FXL_LOG(ERROR) << "hid: could not get " << what << " from " << name
                  << " (status=" << rc << ")";
@@ -208,13 +212,15 @@ bool FdioHidDecoder::ParseProtocol(const fzl::FdioCaller& caller,
     *protocol = Protocol::ParadiseV3Touch;
     return true;
   }
-  if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
-    *protocol = Protocol::ParadiseV1TouchPad;
-    return true;
-  }
-  if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
-    *protocol = Protocol::ParadiseV2TouchPad;
-    return true;
+  if (USE_TOUCHPAD_HARDCODED_REPORTS) {
+    if (is_paradise_touchpad_v1_report_desc(desc.data(), desc.size())) {
+      *protocol = Protocol::ParadiseV1TouchPad;
+      return true;
+    }
+    if (is_paradise_touchpad_v2_report_desc(desc.data(), desc.size())) {
+      *protocol = Protocol::ParadiseV2TouchPad;
+      return true;
+    }
   }
   if (is_egalax_touchscreen_report_desc(desc.data(), desc.size())) {
     *protocol = Protocol::EgalaxTouch;
