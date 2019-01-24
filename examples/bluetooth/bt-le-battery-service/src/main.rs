@@ -8,9 +8,7 @@ use {
     failure::{bail, Error, ResultExt},
     fidl_fuchsia_bluetooth_gatt as gatt,
     fidl_fuchsia_power::{
-        PowerManagerMarker,
-        PowerManagerWatcherMarker,
-        PowerManagerWatcherRequest,
+        PowerManagerMarker, PowerManagerWatcherMarker, PowerManagerWatcherRequest,
         PowerManagerWatcherRequestStream,
     },
     fuchsia_app::client::connect_to_service,
@@ -125,7 +123,7 @@ async fn gatt_service_delegate(
                 // Writing to the battery level characteristic is not permitted.
                 responder.send(gatt::ErrorCode::NotPermitted)?;
             }
-            OnWriteWithoutResponse { .. } => { }
+            OnWriteWithoutResponse { .. } => {}
         }
     }
     Ok(())
@@ -161,14 +159,14 @@ fn main() -> Result<(), Error> {
     // Initialize internal state.
     let state = BatteryState::new(service_proxy);
 
-    // No security is required.
+    // Require encryption to access the battery level.
     let read_sec = Box::new(gatt::SecurityRequirements {
-        encryption_required: false,
+        encryption_required: true,
         authentication_required: false,
         authorization_required: false,
     });
     let update_sec = Box::new(gatt::SecurityRequirements {
-        encryption_required: false,
+        encryption_required: true,
         authentication_required: false,
         authorization_required: false,
     });
