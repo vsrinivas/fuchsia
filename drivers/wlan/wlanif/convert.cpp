@@ -15,7 +15,7 @@ namespace wlanif {
 
 namespace wlan_common = ::fuchsia::wlan::common;
 namespace wlan_mlme = ::fuchsia::wlan::mlme;
-
+namespace wlan_stats = ::fuchsia::wlan::stats;
 
 uint8_t ConvertBSSType(wlan_mlme::BSSTypes bss_type) {
     switch (bss_type) {

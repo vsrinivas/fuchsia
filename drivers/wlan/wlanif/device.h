@@ -16,9 +16,7 @@
 
 namespace wlanif {
 
-namespace wlan_mlme = ::fuchsia::wlan::mlme;
-
-class Device : public wlan_mlme::MLME {
+class Device : public ::fuchsia::wlan::mlme::MLME {
    public:
     Device(zx_device_t* device, wlanif_impl_protocol_t wlanif_impl_proto);
     ~Device();
@@ -36,29 +34,29 @@ class Device : public wlan_mlme::MLME {
     void EthRelease();
 
     // wlanif_protocol_t (::fuchsia::wlan::mlme -> wlanif-impl)
-    void StartScan(wlan_mlme::ScanRequest req) override;
-    void JoinReq(wlan_mlme::JoinRequest req) override;
-    void AuthenticateReq(wlan_mlme::AuthenticateRequest req) override;
-    void AuthenticateResp(wlan_mlme::AuthenticateResponse resp) override;
-    void DeauthenticateReq(wlan_mlme::DeauthenticateRequest req) override;
-    void AssociateReq(wlan_mlme::AssociateRequest req) override;
-    void AssociateResp(wlan_mlme::AssociateResponse resp) override;
-    void DisassociateReq(wlan_mlme::DisassociateRequest req) override;
-    void ResetReq(wlan_mlme::ResetRequest req) override;
-    void StartReq(wlan_mlme::StartRequest req) override;
-    void StopReq(wlan_mlme::StopRequest req) override;
-    void SetKeysReq(wlan_mlme::SetKeysRequest req) override;
-    void DeleteKeysReq(wlan_mlme::DeleteKeysRequest req) override;
-    void EapolReq(wlan_mlme::EapolRequest req) override;
+    void StartScan(::fuchsia::wlan::mlme::ScanRequest req) override;
+    void JoinReq(::fuchsia::wlan::mlme::JoinRequest req) override;
+    void AuthenticateReq(::fuchsia::wlan::mlme::AuthenticateRequest req) override;
+    void AuthenticateResp(::fuchsia::wlan::mlme::AuthenticateResponse resp) override;
+    void DeauthenticateReq(::fuchsia::wlan::mlme::DeauthenticateRequest req) override;
+    void AssociateReq(::fuchsia::wlan::mlme::AssociateRequest req) override;
+    void AssociateResp(::fuchsia::wlan::mlme::AssociateResponse resp) override;
+    void DisassociateReq(::fuchsia::wlan::mlme::DisassociateRequest req) override;
+    void ResetReq(::fuchsia::wlan::mlme::ResetRequest req) override;
+    void StartReq(::fuchsia::wlan::mlme::StartRequest req) override;
+    void StopReq(::fuchsia::wlan::mlme::StopRequest req) override;
+    void SetKeysReq(::fuchsia::wlan::mlme::SetKeysRequest req) override;
+    void DeleteKeysReq(::fuchsia::wlan::mlme::DeleteKeysRequest req) override;
+    void EapolReq(::fuchsia::wlan::mlme::EapolRequest req) override;
     void QueryDeviceInfo(QueryDeviceInfoCallback cb) override;
     void StatsQueryReq() override;
     void ListMinstrelPeers(ListMinstrelPeersCallback cb) override;
-    void GetMinstrelStats(wlan_mlme::MinstrelStatsRequest req,
+    void GetMinstrelStats(::fuchsia::wlan::mlme::MinstrelStatsRequest req,
                           GetMinstrelStatsCallback cb) override;
-    void SendMpOpenAction(wlan_mlme::MeshPeeringOpenAction req) override;
-    void SetControlledPort(wlan_mlme::SetControlledPortRequest req) override;
-    void SendMpConfirmAction(wlan_mlme::MeshPeeringConfirmAction req) override;
-    void MeshPeeringEstablished(wlan_mlme::MeshPeeringParams params) override;
+    void SendMpOpenAction(::fuchsia::wlan::mlme::MeshPeeringOpenAction req) override;
+    void SetControlledPort(::fuchsia::wlan::mlme::SetControlledPortRequest req) override;
+    void SendMpConfirmAction(::fuchsia::wlan::mlme::MeshPeeringConfirmAction req) override;
+    void MeshPeeringEstablished(::fuchsia::wlan::mlme::MeshPeeringParams params) override;
 
     // wlanif_impl_ifc (wlanif-impl -> ::fuchsia::wlan::mlme)
     void OnScanResult(wlanif_scan_result_t* result);
@@ -114,7 +112,7 @@ class Device : public wlan_mlme::MLME {
     wlanif_query_info query_info_ __TA_GUARDED(lock_);
 
     async::Loop loop_;
-    fidl::Binding<wlan_mlme::MLME> binding_ __TA_GUARDED(lock_);
+    fidl::Binding<::fuchsia::wlan::mlme::MLME> binding_ __TA_GUARDED(lock_);
 };
 
 }  // namespace wlanif
