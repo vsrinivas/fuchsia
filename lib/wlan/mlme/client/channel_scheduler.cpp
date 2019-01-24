@@ -65,8 +65,9 @@ void ChannelScheduler::GoOffChannel() {
         on_channel_ = false;
     }
     pending_off_channel_request_ = false;
-    ResetTimer(timer_->Now() + off_channel_request_.duration);
+    timer_->CancelTimer();
     device_->SetChannel(off_channel_request_.chan);
+    timer_->SetTimer(timer_->Now() + off_channel_request_.duration);
     off_channel_request_.handler->BeginOffChannelTime();
 }
 

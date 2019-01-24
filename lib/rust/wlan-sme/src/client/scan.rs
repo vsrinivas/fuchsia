@@ -11,6 +11,9 @@ use std::sync::Arc;
 
 use crate::client::{DeviceInfo, Ssid};
 
+const PASSIVE_SCAN_MIN_CHANNEL_TIME_MILLIS: u32 = 100;
+const PASSIVE_SCAN_MAX_CHANNEL_TIME_MILLIS: u32 = 200;
+
 // Scans can be performed for two different purposes:
 //      1) Discover available wireless networks. These scans are initiated by the "user",
 //         i.e. a client process that talks to SME, and thus have 'tokens' to identify
@@ -257,8 +260,8 @@ fn new_join_scan_request<T>(mlme_txn_id: u64,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         channel_list: Some(get_channels_to_scan(&device_info)),
-        min_channel_time: 100,
-        max_channel_time: 300,
+        min_channel_time: PASSIVE_SCAN_MIN_CHANNEL_TIME_MILLIS,
+        max_channel_time: PASSIVE_SCAN_MAX_CHANNEL_TIME_MILLIS,
         ssid_list: None
     }
 }
@@ -273,8 +276,8 @@ fn new_discovery_scan_request(mlme_txn_id: u64,
         scan_type: fidl_mlme::ScanTypes::Passive,
         probe_delay: 0,
         channel_list: Some(get_channels_to_scan(&device_info)),
-        min_channel_time: 100,
-        max_channel_time: 300,
+        min_channel_time: PASSIVE_SCAN_MIN_CHANNEL_TIME_MILLIS,
+        max_channel_time: PASSIVE_SCAN_MAX_CHANNEL_TIME_MILLIS,
         ssid_list: None
     }
 }
