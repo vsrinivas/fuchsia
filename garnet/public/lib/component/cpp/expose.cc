@@ -130,6 +130,24 @@ Metric CallbackMetric(Metric::ValueCallback callback) {
 Object::Object(fbl::String name) : name_(name) {
   FXL_CHECK(std::find(name_.begin(), name_.end(), '\0') == name_.end())
       << "Object name cannot contain null bytes";
+  bindings_.set_empty_set_handler([this] {
+    fbl::RefPtr<Object> self_if_bindings;
+    fbl::AutoLock lock(&mutex_);
+    FXL_DCHECK(self_if_bindings_);
+    self_if_bindings = std::move(self_if_bindings_);
+    self_if_bindings_ = nullptr;
+    // The reference is dropped after the mutex is released, so the Object is
+    // still alive when the mutex is released.
+  });
+}
+
+void Object::AddBinding(fidl::InterfaceRequest<Inspect> chan) {
+  fbl::AutoLock lock(&mutex_);
+  if (!self_if_bindings_) {
+    FXL_DCHECK(bindings_.size() == 0);
+    self_if_bindings_ = fbl::WrapRefPtr(this);
+  }
+  bindings_.AddBinding(this, std::move(chan));
 }
 
 void Object::ReadData(ReadDataCallback callback) { callback(ToFidl()); }
@@ -149,8 +167,7 @@ void Object::OpenChild(std::string name,
     return;
   }
 
-  fbl::AutoLock lock(&(child->mutex_));
-  child->bindings_.AddBinding(child, std::move(child_channel));
+  child->AddBinding(std::move(child_channel));
   callback(true);
 }
 
@@ -278,9 +295,7 @@ zx_status_t Object::GetFile(fbl::RefPtr<Vnode>* out_vnode, uint64_t id,
     // Inspect implementation.
     auto ref = fbl::WrapRefPtr(this);
     *out_vnode = fbl::MakeRefCounted<fs::Service>([ref](zx::channel chan) {
-      fbl::AutoLock lock(&ref->mutex_);
-      ref->bindings_.AddBinding(
-          ref, fidl::InterfaceRequest<Inspect>(std::move(chan)));
+      ref->AddBinding(fidl::InterfaceRequest<Inspect>(std::move(chan)));
       return ZX_OK;
     });
     return ZX_OK;

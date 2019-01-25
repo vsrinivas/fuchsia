@@ -297,13 +297,13 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   void PopulateChildVector(StringOutputVector* out_vector)
       __TA_EXCLUDES(mutex_);
 
+  // Adds a new binding.
+  void AddBinding(fidl::InterfaceRequest<Inspect> chan);
+
   // Mutex protecting fields below.
   mutable fbl::Mutex mutex_;
   // The name of this object.
   fbl::String name_;
-  // The bindings for channels connected to this |Inspect|.
-  fidl::BindingSet<fuchsia::inspect::Inspect, fbl::RefPtr<Object>> bindings_
-      __TA_GUARDED(mutex_);
   // |Property| for this object, keyed by name.
   std::unordered_map<std::string, Property> properties_ __TA_GUARDED(mutex_);
   // |Property| for this object, keyed by name.
@@ -313,6 +313,17 @@ class Object : public fuchsia::inspect::Inspect, public fs::LazyDir {
   std::map<std::string, fbl::RefPtr<Object>> children_ __TA_GUARDED(mutex_);
   // Callback for retrieving lazily generated children. May be empty.
   ChildrenCallback lazy_object_callback_ __TA_GUARDED(mutex_);
+
+  // The bindings for channels connected to this |Inspect|. The object itself is
+  // owned by |self_if_bindings_| below.
+  fidl::BindingSet<fuchsia::inspect::Inspect, Object*> bindings_
+      __TA_GUARDED(mutex_);
+
+  // A self RefPtr, held only if |bindings_| is non-empty. Allows avoiding
+  // circular ownership. Recursive destruction is impossible because the object
+  // will not be destructed while pointing to itself.
+  // TODO(FIDL-452): change when FIDL supports storing self RefPtrs.
+  fbl::RefPtr<Object> self_if_bindings_ __TA_GUARDED(mutex_);
 };
 
 }  // namespace component
