@@ -105,8 +105,6 @@ executable("bin") {
 }
 
 package("debug_agent") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
@@ -160,7 +158,6 @@ package("debug_agent_tests") {
   testonly = true
 
   package_name = "debug_agent_tests"
-  deprecated_bare_package_url = "//build"
 
   # TODO(DX-909): Some HW capabilities (like HW breakpoints) are not well
   #               emulated by QEMU without KVM. This will sometimes make tests
