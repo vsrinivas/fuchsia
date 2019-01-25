@@ -79,6 +79,7 @@ func (n *Client) Discover(nodename string, fuchsia bool) (*net.UDPAddr, error) {
 	if err != nil {
 		return nil, fmt.Errorf("failed to bind to udp6 port: %v\n", err)
 	}
+	defer conn.Close()
 
 	n.Cookie++
 	req := netbootMessage{
@@ -114,7 +115,7 @@ func (n *Client) Discover(nodename string, fuchsia bool) (*net.UDPAddr, error) {
 		if err != nil {
 			return nil, err
 		}
-		var useable bool
+
 		// Enumerate all interface addresses and find the usable ones.
 		for _, addr := range addrs {
 			var ip net.IP
@@ -127,9 +128,7 @@ func (n *Client) Discover(nodename string, fuchsia bool) (*net.UDPAddr, error) {
 			if ip == nil || ip.To16() == nil {
 				continue
 			}
-			useable = true
-		}
-		if useable {
+
 			// Send a broadcast query command using the interface.
 			conn.WriteToUDP(buf.Bytes(), &net.UDPAddr{
 				IP:   net.IPv6linklocalallnodes,
@@ -179,6 +178,7 @@ func (n *Client) Beacon() (*net.UDPAddr, error) {
 		IP:   net.IPv6zero,
 		Port: advertPort,
 	})
+	defer conn.Close()
 
 	conn.SetReadDeadline(time.Now().Add(n.Timeout))
 
@@ -251,10 +251,10 @@ func sendPacket(msg *netbootHeader, addr *net.UDPAddr) error {
 	}
 
 	conn, err := net.ListenUDP("udp6", &net.UDPAddr{IP: net.IPv6zero})
-	defer conn.Close()
 	if err != nil {
 		return fmt.Errorf("failed to create a socket: %v\n", err)
 	}
+	defer conn.Close()
 
 	_, err = conn.WriteToUDP(buf.Bytes(), &net.UDPAddr{
 		IP:   addr.IP,
