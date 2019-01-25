@@ -9,6 +9,7 @@
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
 #include "lib/inspect/inspect.h"
+#include "lib/inspect/reader.h"
 
 namespace fuchsia {
 namespace inspect {
@@ -20,6 +21,10 @@ void PrintTo(const Object& object, std::ostream* os);
 }  // namespace fuchsia
 
 namespace inspect {
+
+// Printer for ObjectHierarchy wrapper.
+void PrintTo(const ObjectHierarchy& hierarchy, std::ostream* os);
+
 namespace testing {
 
 // Type for a matcher matching an Object.
@@ -32,6 +37,12 @@ using MetricsMatcher =
 // Type for a matcher matching a vector of properties.
 using PropertiesMatcher =
     ::testing::Matcher<const std::vector<::fuchsia::inspect::Property>&>;
+
+// Type for a matcher that matches a base path on an |ObjectHierarchy|.
+using PrefixPathMatcher = ::testing::Matcher<const std::vector<std::string>&>;
+
+// Type for a matcher that matches a vector of |ObjectHierarchy| children.
+using ChildrenMatcher = ::testing::Matcher<const std::vector<ObjectHierarchy>&>;
 
 namespace internal {
 
@@ -125,6 +136,17 @@ class PropertyListMatcher
 // Matches a particular DoubleMetric with the given name and value.
 ::testing::Matcher<const fuchsia::inspect::Metric&> DoubleMetricIs(
     const std::string& name, double value);
+
+// Matcher for the object inside an ObjectHierarchy.
+::testing::Matcher<const ObjectHierarchy&> ObjectMatches(ObjectMatcher matcher);
+
+// Matcher for the base path inside an ObjectHierarchy.
+::testing::Matcher<const ObjectHierarchy&> PrefixPathMatches(
+    PrefixPathMatcher matcher);
+
+// Matcher for the children of the object in an ObjectHierarchy.
+::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(
+    ChildrenMatcher matcher);
 
 }  // namespace testing
 }  // namespace inspect

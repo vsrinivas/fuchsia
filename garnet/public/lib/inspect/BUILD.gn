@@ -10,6 +10,17 @@ source_set("inspect") {
 
   public_deps = [
     "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/fit",
     "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("reader") {
+  sources = [
+    "reader.cc",
+    "reader.h",
+  ]
+  public_deps = [
+    ":inspect",
   ]
 }

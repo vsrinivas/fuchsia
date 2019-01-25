@@ -299,6 +299,9 @@ class Object final {
   // Output the contents of this object as a FIDL struct.
   fuchsia::inspect::Object object() const;
 
+  // Get an ObjectDir wrapping this Object's state.
+  component::ObjectDir object_dir() const;
+
   // Output the list of this object's children as a FIDL-compatible vector.
   ::component::Object::StringOutputVector children() const;
 

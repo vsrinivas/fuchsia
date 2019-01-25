@@ -47,6 +47,13 @@ void PrintTo(const ::fuchsia::inspect::Object& object, std::ostream* os) {
 }  // namespace fuchsia
 
 namespace inspect {
+
+void PrintTo(const ::inspect::ObjectHierarchy& hierarchy, std::ostream* os) {
+  *os << "ObjectHierarchy(" << ::testing::PrintToString(hierarchy.object())
+      << ", " << ::testing::PrintToString(hierarchy.GetPrefixPath()) << ", "
+      << ::testing::PrintToString(hierarchy.children().size()) << " children)";
+}
+
 namespace testing {
 
 internal::NameMatchesMatcher::NameMatchesMatcher(std::string name)
@@ -199,6 +206,22 @@ void internal::PropertyListMatcher::DescribeNegationTo(
           &fuchsia::inspect::Metric::value,
           ::testing::Property(&fuchsia::inspect::MetricValue::double_value,
                               ::testing::Eq(value))));
+}
+
+::testing::Matcher<const ObjectHierarchy&> ObjectMatches(
+    ObjectMatcher matcher) {
+  return ::testing::Property(&ObjectHierarchy::object, std::move(matcher));
+}
+
+::testing::Matcher<const ObjectHierarchy&> PrefixPathMatches(
+    PrefixPathMatcher matcher) {
+  return ::testing::Property(&ObjectHierarchy::GetPrefixPath,
+                             std::move(matcher));
+}
+
+::testing::Matcher<const ObjectHierarchy&> ChildrenMatch(
+    ChildrenMatcher matcher) {
+  return ::testing::Property(&ObjectHierarchy::children, std::move(matcher));
 }
 
 }  // namespace testing

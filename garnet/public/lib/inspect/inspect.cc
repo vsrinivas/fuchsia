@@ -100,6 +100,10 @@ fuchsia::inspect::Object Object::object() const {
   return object_ ? object_->object()->ToFidl() : fuchsia::inspect::Object();
 }
 
+component::ObjectDir Object::object_dir() const {
+  return object_ ? component::ObjectDir(object_->object()) : ObjectDir();
+}
+
 component::Object::StringOutputVector Object::children() const {
   return object_ ? object_->object()->GetChildren()
                  : component::Object::StringOutputVector();
