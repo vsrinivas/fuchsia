@@ -14,6 +14,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS := \
     $(LOCAL_DIR)/allocator.cpp \
+    $(LOCAL_DIR)/amlogic_memory_allocator.cpp \
     $(LOCAL_DIR)/binding.cpp \
     $(LOCAL_DIR)/buffer_collection.cpp \
     $(LOCAL_DIR)/buffer_collection_token.cpp \

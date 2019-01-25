@@ -1099,14 +1099,28 @@ LogicalBufferCollection::Allocate(zx_status_t* allocation_result) {
 zx_status_t LogicalBufferCollection::AllocateVmo(
     const fuchsia_sysmem_SingleBufferSettings* settings, zx::vmo* vmo) {
     if (settings->buffer_settings.is_secure) {
-        // TODO(dustingreen): Optionally (per board) pre-allocate a
-        // physically-contiguous VMO with board-specific size (for use as secure
-        // mem), have a page heap, dole out portions of that VMO or
-        // non-copy-on-write child VMOs of that VMO.
-        LogError("BufferMemorySettings.is_secure not yet implemented");
-        return ZX_ERR_NO_MEMORY;
-    }
-    if (settings->buffer_settings.is_physically_contiguous) {
+        ProtectedMemoryAllocator* allocator = parent_device_->protected_allocator();
+        if (!allocator) {
+            LogError("No protected memory allocator");
+            return ZX_ERR_NOT_SUPPORTED;
+        }
+
+        zx::vmo raw_vmo;
+        zx_status_t status = allocator->Allocate(settings->buffer_settings.size_bytes, &raw_vmo);
+        if (status != ZX_OK) {
+            LogError("Protected allocate failed - size_bytes: %u "
+                     "status: %d",
+                     settings->buffer_settings.size_bytes, status);
+            // sanitize to ZX_ERR_NO_MEMORY regardless of why.
+            status = ZX_ERR_NO_MEMORY;
+            return status;
+        }
+        status = raw_vmo.duplicate(kSysmemVmoRights, vmo);
+        if (status != ZX_OK) {
+            LogError("zx::object::duplicate() failed - status: %d", status);
+            return status;
+        }
+    } else if (settings->buffer_settings.is_physically_contiguous) {
         // TODO(dustingreen): Optionally (per board) pre-allocate a
         // physically-contiguous VMO with board-specific size, have a page heap,
         // dole out portions of that VMO or non-copy-on-write child VMOs of that

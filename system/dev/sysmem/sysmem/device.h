@@ -11,8 +11,13 @@
 #include <ddk/driver.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/sysmem.h>
+#include <fbl/unique_ptr.h>
+#include <fbl/vector.h>
 #include <fuchsia/sysmem/c/fidl.h>
 #include <lib/zx/bti.h>
+#include <region-alloc/region-alloc.h>
+
+#include "protected_memory_allocator.h"
 
 #include <limits>
 #include <map>
@@ -51,6 +56,8 @@ public:
     BufferCollectionToken* FindTokenByServerChannelKoid(
         zx_koid_t token_server_koid);
 
+    ProtectedMemoryAllocator* protected_allocator() { return protected_allocator_.get(); }
+
 private:
     zx_device_t* parent_device_ = nullptr;
     Driver* parent_driver_ = nullptr;
@@ -71,6 +78,8 @@ private:
     // This map allows us to look up the BufferCollectionToken by the koid of
     // the server end of a BufferCollectionToken channel.
     std::map<zx_koid_t, BufferCollectionToken*> tokens_by_koid_;
+
+    fbl::unique_ptr<ProtectedMemoryAllocator> protected_allocator_;
 };
 
 #endif // ZIRCON_SYSTEM_DEV_SYSMEM_SYSMEM_DEVICE_H_

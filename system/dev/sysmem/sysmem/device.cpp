@@ -5,16 +5,19 @@
 #include "device.h"
 
 #include "allocator.h"
+#include "amlogic_memory_allocator.h"
 #include "buffer_collection_token.h"
 #include "macros.h"
 #include "sysmem-proxy.h"
 
 #include <ddk/device.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <lib/fidl-async-2/simple_binding.h>
 #include <lib/fidl-utils/bind.h>
 #include <lib/zx/event.h>
 #include <zircon/assert.h>
+#include <zircon/device/sysmem.h>
 
 namespace {
 
@@ -125,19 +128,40 @@ zx_status_t Device::Bind() {
         return status;
     }
 
-    pdev_device_info_t info;
-    status = pdev_get_device_info(&pdev_, &info);
-    if (status != ZX_OK) {
-        DRIVER_ERROR("pdev_get_device_info() failed");
-        return status;
+    uint64_t protected_memory_size = 0;
+
+    sysmem_metadata_t metadata;
+
+    size_t metadata_actual;
+    status = device_get_metadata(parent_device_, SYSMEM_METADATA, &metadata, sizeof(metadata), &metadata_actual);
+    if (status == ZX_OK && metadata_actual == sizeof(metadata)) {
+        pdev_device_info_vid_ = metadata.vid;
+        pdev_device_info_pid_ = metadata.pid;
+        protected_memory_size = metadata.protected_memory_size;
     }
-    pdev_device_info_vid_ = info.vid;
-    pdev_device_info_pid_ = info.pid;
 
     status = pdev_get_bti(&pdev_, 0, bti_.reset_and_get_address());
     if (status != ZX_OK) {
         DRIVER_ERROR("Failed pdev_get_bti() - status: %d", status);
         return status;
+    }
+
+    zx::bti bti_copy;
+    status = bti_.duplicate(ZX_RIGHT_SAME_RIGHTS, &bti_copy);
+    if (status != ZX_OK) {
+        DRIVER_ERROR("BTI duplicate failed: %d", status);
+        return status;
+    }
+
+    // TODO: Separate protected memory allocator into separate driver or library
+    if (pdev_device_info_vid_ == PDEV_VID_AMLOGIC && protected_memory_size > 0) {
+        auto amlogic_allocator = fbl::make_unique<AmlogicMemoryAllocator>(std::move(bti_copy));
+        status = amlogic_allocator->Init(protected_memory_size);
+        if (status != ZX_OK) {
+            DRIVER_ERROR("Failed to init allocator for amlogic protected memory: %d", status);
+            return status;
+        }
+        protected_allocator_ = std::move(amlogic_allocator);
     }
 
     pbus_protocol_t pbus;

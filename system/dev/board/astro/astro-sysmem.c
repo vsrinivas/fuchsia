@@ -2,11 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "astro.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include "astro.h"
+#include <zircon/device/sysmem.h>
 
 static const pbus_bti_t sysmem_btis[] = {
     {
@@ -15,6 +16,19 @@ static const pbus_bti_t sysmem_btis[] = {
     },
 };
 
+static const sysmem_metadata_t sysmem_metadata = {
+    .vid = PDEV_VID_AMLOGIC,
+    .pid = PDEV_PID_AMLOGIC_S905D2,
+    .protected_memory_size = 16 * 1024 * 1024,
+};
+
+static const pbus_metadata_t sysmem_metadata_list[] = {
+    {
+        .type = SYSMEM_METADATA,
+        .data_buffer = &sysmem_metadata,
+        .data_size = sizeof(sysmem_metadata),
+    }};
+
 static const pbus_dev_t sysmem_dev = {
     .name = "sysmem",
     .vid = PDEV_VID_GENERIC,
@@ -22,6 +36,8 @@ static const pbus_dev_t sysmem_dev = {
     .did = PDEV_DID_SYSMEM,
     .bti_list = sysmem_btis,
     .bti_count = countof(sysmem_btis),
+    .metadata_list = sysmem_metadata_list,
+    .metadata_count = countof(sysmem_metadata_list),
 };
 
 zx_status_t astro_sysmem_init(aml_bus_t* bus) {
