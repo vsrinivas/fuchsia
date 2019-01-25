@@ -11,6 +11,7 @@ import 'package:args/args.dart';
 ArgResults argResults;
 const lz4Compression = "lz4-compression";
 const zstdCompression = "zstd-compression";
+const output = "output";
 
 class Blob {
   String hash;
@@ -52,6 +53,7 @@ String pathJoin(String part1, String part2, [String part3]) {
 
 class BlobStats {
   Directory buildDir;
+  Directory outputDir;
   String suffix;
   Map<String, Blob> blobsByHash = new Map<String, Blob>();
   int duplicatedSize = 0;
@@ -59,7 +61,8 @@ class BlobStats {
   List<File> pendingPackages = new List<File>();
   List<Package> packages = new List<Package>();
 
-  BlobStats(Directory this.buildDir, String this.suffix);
+  BlobStats(
+      Directory this.buildDir, Directory this.outputDir, String this.suffix);
 
   Future addManifest(String path) async {
     var lines = await new File(pathJoin(buildDir.path, path)).readAsLines();
@@ -340,42 +343,57 @@ class BlobStats {
       });
     }
 
-    var sink = new File(pathJoin(buildDir.path, "data.js")).openWrite();
+    await outputDir.create(recursive: true);
+
+    var sink = new File(pathJoin(outputDir.path, "data.js")).openWrite();
     sink.write("var tree_data=");
     sink.write(json.encode(rootTree));
     await sink.close();
 
-    await new Directory(pathJoin(buildDir.path, "d3")).create(recursive: true);
+    await new Directory(pathJoin(outputDir.path, "d3")).create(recursive: true);
     var d3Dir =
         buildDir.path + "/../../third_party/dart/runtime/third_party/d3/src/";
     for (var file in ["LICENSE", "d3.js"]) {
-      await new File(d3Dir + file).copy(pathJoin(buildDir.path, "d3", file));
+      await new File(d3Dir + file).copy(pathJoin(outputDir.path, "d3", file));
     }
     var templateDir = pathJoin(buildDir.path,
         "../../third_party/dart/runtime/third_party/binary_size/src/template/");
     for (var file in ["index.html", "D3SymbolTreeMap.js"]) {
-      await new File(templateDir + file).copy(pathJoin(buildDir.path, file));
+      await new File(templateDir + file).copy(pathJoin(outputDir.path, file));
     }
 
     print("");
     print("  Wrote visualization to file://" +
-        pathJoin(buildDir.path, "index.html"));
+        pathJoin(outputDir.path, "index.html"));
   }
 }
 
 Future main(List<String> args) async {
   final parser = new ArgParser()
+    ..addFlag("help", abbr: "h", help: "give this help")
+    ..addOption(output, abbr: "o", help: "Directory to output report to")
     ..addFlag(lz4Compression,
         abbr: "l", defaultsTo: false, help: "Use (lz4) compressed size")
     ..addFlag(zstdCompression,
         abbr: "z", defaultsTo: false, help: "Use (zstd) compressed size");
+
   argResults = parser.parse(args);
+  if (argResults["help"]) {
+    print("Usage: fx blobstats [OPTION]...\n\nOptions:\n" + parser.usage);
+    return;
+  }
+
   var suffix;
   if (argResults.rest.length > 0) {
     suffix = argResults.rest[0];
   }
 
-  var stats = new BlobStats(Directory.current, suffix);
+  var outputDir = Directory.current;
+  if (argResults[output] != null) {
+    outputDir = new Directory(argResults[output]);
+  }
+
+  var stats = new BlobStats(Directory.current, outputDir, suffix);
   await stats.addManifest("blob.manifest");
   await stats.addBlobSizes("blob.sizes");
   await stats.computePackagesInParallel(Platform.numberOfProcessors);
