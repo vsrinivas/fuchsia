@@ -1,0 +1,56 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.light;
+using zx;
+
+const uint8 LIGHT_NAME_LEN = 32;
+
+enum Capability {
+    // This capability indicates that the light supports setting brightness to a uint8_t value.
+    // If this capability is not supported, the light only supports off and on state.
+    BRIGHTNESS = 0;
+    // This capability indicates that the light supports setting an RGB value.
+    RGB = 1;
+};
+
+struct Rgb {
+    uint8 red;
+    uint8 green;
+    uint8 blue;
+};
+
+[Layout = "Simple"]
+interface Light {
+    // Returns a board specific name for the light.
+    // For example, "mute" for a microphone mute indicator light, "bluetooth" for
+    // Bluetooth pairing light, etc.
+    GetName() -> (string:LIGHT_NAME_LEN? name);
+
+    // Returns the number of physical lights.
+    // This will typically be 1 for a simple LED, but may be greater than one for an array of LEDs
+    // or a more complicated lighting device.
+    // The multiple lights are addressed using "index" parameter in the calls below.
+    GetCount() -> (uint32 count);
+
+    // Returns true if the light with given index
+    HasCapability(uint32 index, Capability capability) -> (bool has);
+
+    // Returns the current value (zero or non-zero for simple lights, or 0 - 255 for lights
+    // that support brightness). Returns error for RGB lights.
+    GetSimpleValue(uint32 index) -> (zx.status status, uint8 value);
+
+    // Sets the current value (zero or non-zero for simple lights, or 0 - 255 for lights
+    // that support brightness). Returns error for RGB lights.
+    SetSimpleValue(uint32 index, uint8 value) -> (zx.status status);
+
+    // Returns the current RGB value for the light. Returns error for non-RGB lights.
+    GetRgbValue(uint32 index) -> (zx.status status, Rgb value);
+
+    // Sets the current RGB value for the light. Returns error for non-RGB lights.
+    SetRgbValue(uint32 index, Rgb value) -> (zx.status status);
+
+    // TODO: Ideas for future expansion
+    // - Hardware blinking configuration, for lights that have hardware or MCU support for blinking.
+};

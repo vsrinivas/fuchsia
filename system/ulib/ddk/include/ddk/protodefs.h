@@ -97,6 +97,7 @@ DDK_PROTOCOL_DEF(ETH_BOARD,      'pETB', "ethernet-board", PF_NOPUB)
 DDK_PROTOCOL_DEF(ETH_MAC,        'pETM', "ethernet-mac", PF_NOPUB)
 DDK_PROTOCOL_DEF(QMI_TRANSPORT,  'pQMI', "qmi-transport", 0)
 DDK_PROTOCOL_DEF(MIPI_CSI,       'pMIP', "mipi-csi", PF_NOPUB)
+DDK_PROTOCOL_DEF(LIGHT,          'pLIG', "light", 0)
 // Protocol definition at garnet/magma/src/magma_util/platform/zircon/zircon_platform_ioctl.h
 DDK_PROTOCOL_DEF(GPU,            'pGPU', "gpu", 0)
 DDK_PROTOCOL_DEF(RTC,            'pRTC', "rtc", 0)
