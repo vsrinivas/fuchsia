@@ -19,7 +19,8 @@ namespace modular {
 
 namespace {
 
-constexpr char kUsageLogUrl[] = "usage_log";
+constexpr char kUsageLogUrl[] =
+    "fuchsia-pkg://fuchsia.com/usage_log#meta/usage_log.cmx";
 constexpr char kKronkUrl[] = "kronk";
 constexpr char kStoryInfoAgentUrl[] =
     "fuchsia-pkg://fuchsia.com/story_info#meta/story_info.cmx";
