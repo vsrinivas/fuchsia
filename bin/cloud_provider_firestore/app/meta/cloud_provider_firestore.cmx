@@ -8,8 +8,7 @@
         ],
         "services": [
             "fuchsia.tracelink.Registry",
-            "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.net.LegacySocketProvider"
+            "fuchsia.cobalt.LoggerFactory"
         ]
     }
 }

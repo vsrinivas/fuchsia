@@ -9,7 +9,6 @@
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.AgentContext",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.sys.Launcher",

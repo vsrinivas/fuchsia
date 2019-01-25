@@ -9,7 +9,6 @@
             "fuchsia.modular.ModuleContext",
             "fuchsia.modular.PuppetMaster",
             "fuchsia.modular.SessionShellContext",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",

@@ -5,7 +5,6 @@
     "sandbox": {
         "services": [
             "fuchsia.cobalt.LoggerFactory",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",
             "fuchsia.sys.Loader",

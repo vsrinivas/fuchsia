@@ -9,7 +9,6 @@
             "fuchsia.modular.examples.simple",
             "fuchsia.modular.ComponentContext",
             "fuchsia.modular.ModuleContext",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.oldhttp.HttpService",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.sys.Launcher",
