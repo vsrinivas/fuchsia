@@ -202,6 +202,24 @@ xunion XUnionWithUnboundedOutOfLineObject {
   string s;
 };
 
+interface SomeInterface {};
+
+struct UsingSomeInterface {
+  SomeInterface value;
+};
+
+struct UsingOptSomeInterface {
+  SomeInterface? value;
+};
+
+struct UsingRequestSomeInterface {
+  request<SomeInterface> value;
+};
+
+struct UsingOptRequestSomeInterface {
+  request<SomeInterface>? value;
+};
+
 )FIDL") {}
 };
 
@@ -479,6 +497,39 @@ static bool xunions() {
     END_TEST;
 }
 
+bool interfaces_and_request_of_interfaces() {
+    BEGIN_TEST;
+
+    MaxBytesLibrary test_library;
+    EXPECT_TRUE(test_library.Compile());
+
+    auto using_some_interface = test_library.LookupStruct("UsingSomeInterface");
+    EXPECT_NONNULL(using_some_interface);
+    EXPECT_EQ(using_some_interface->typeshape.Size(), 4);
+    EXPECT_EQ(using_some_interface->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_some_interface->typeshape.MaxOutOfLine(), 0);
+
+    auto using_opt_some_interface = test_library.LookupStruct("UsingOptSomeInterface");
+    EXPECT_NONNULL(using_opt_some_interface);
+    EXPECT_EQ(using_opt_some_interface->typeshape.Size(), 4);
+    EXPECT_EQ(using_opt_some_interface->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_opt_some_interface->typeshape.MaxOutOfLine(), 0);
+
+    auto using_request_some_interface = test_library.LookupStruct("UsingRequestSomeInterface");
+    EXPECT_NONNULL(using_request_some_interface);
+    EXPECT_EQ(using_request_some_interface->typeshape.Size(), 4);
+    EXPECT_EQ(using_request_some_interface->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_request_some_interface->typeshape.MaxOutOfLine(), 0);
+
+    auto using_opt_request_some_interface = test_library.LookupStruct("UsingOptRequestSomeInterface");
+    EXPECT_NONNULL(using_opt_request_some_interface);
+    EXPECT_EQ(using_opt_request_some_interface->typeshape.Size(), 4);
+    EXPECT_EQ(using_opt_request_some_interface->typeshape.Alignment(), 4);
+    EXPECT_EQ(using_opt_request_some_interface->typeshape.MaxOutOfLine(), 0);
+
+    END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(max_bytes_tests);
@@ -491,4 +542,5 @@ RUN_TEST(vectors);
 RUN_TEST(strings);
 RUN_TEST(arrays);
 RUN_TEST(xunions);
+RUN_TEST(interfaces_and_request_of_interfaces);
 END_TEST_CASE(max_bytes_tests);
