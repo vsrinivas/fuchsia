@@ -275,14 +275,30 @@ void TestCaseShuffle() {
                                          }),
                   "TestCase failed to register a test.");
 
+    test_case.Filter(nullptr);
+
     // With seed = 0 and 3 tests, using musl implementation of random , we get 2 3 1 run order.
     LifecycleObserver observer;
-    test_case.Shuffle(0);
+    test_case.Shuffle(3);
     test_case.Run(&observer, &driver);
 
-    ZX_ASSERT_MSG(run_order[0] == 2, "Shuffle failed.");
-    ZX_ASSERT_MSG(run_order[1] == 3, "Shuffle failed.");
-    ZX_ASSERT_MSG(run_order[2] == 1, "Shuffle failed.");
+    test_case.UnShuffle();
+    test_case.Shuffle(3);
+    test_case.Run(&observer, &driver);
+
+    // Same seed same order.
+    ZX_ASSERT_MSG(run_order[0] == run_order[3], "Shuffle failed.");
+    ZX_ASSERT_MSG(run_order[1] == run_order[4], "Shuffle failed.");
+    ZX_ASSERT_MSG(run_order[2] == run_order[5], "Shuffle failed.");
+
+    test_case.UnShuffle();
+    test_case.Shuffle(5);
+    test_case.Run(&observer, &driver);
+
+    // Different seeds different order.
+    ZX_ASSERT_MSG(run_order[6] != run_order[3] || run_order[7] != run_order[4] ||
+                      run_order[8] != run_order[5],
+                  "Shuffle failed.");
 }
 
 void TestCaseUnShuffle() {

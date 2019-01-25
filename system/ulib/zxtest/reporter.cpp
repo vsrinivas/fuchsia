@@ -6,13 +6,30 @@
 
 #include <utility>
 
+#ifdef __Fuchsia__
+#include <lib/zx/time.h>
+#else
+#include <sys/time.h>
+#endif
 #include <zxtest/base/reporter.h>
 #include <zxtest/base/runner.h>
 
 namespace zxtest {
 namespace {
 
-template <typename T> const char* Pluralize(T value, bool capitalize = false) {
+uint64_t now() {
+#ifdef __Fuchsia__
+    return (zx::clock::get_monotonic() - zx::time(0)).to_nsecs();
+#else
+    struct timeval tv;
+    if (gettimeofday(&tv, nullptr) < 0)
+        return 0u;
+    return tv.tv_sec * 1000000000ull + tv.tv_usec * 1000ull;
+#endif
+}
+
+template <typename T>
+const char* Pluralize(T value, bool capitalize = false) {
     if (value > 1) {
         return capitalize ? "S" : "s";
     }
@@ -23,6 +40,17 @@ template <typename T> const char* Pluralize(T value, bool capitalize = false) {
 
 namespace internal {
 
+Timer::Timer()
+    : start_(now()) {}
+
+void Timer::Reset() {
+    start_ = now();
+}
+
+int64_t Timer::GetElapsedTime() const {
+    return (now() - start_) / 1000000;
+}
+
 void IterationSummary::Reset() {
     failed = 0;
     passed = 0;
@@ -31,7 +59,8 @@ void IterationSummary::Reset() {
 }
 } // namespace internal
 
-Reporter::Reporter(FILE* stream) : stream_(stream) {}
+Reporter::Reporter(FILE* stream)
+    : stream_(stream) {}
 
 void Reporter::OnProgramStart(const Runner& runner) {
     timers_.program.Reset();

@@ -11,7 +11,6 @@
 
 int main(int argc, char** argv) {
     zxtest::internal::Timer test_timer, iteration_timer, test_case_timer;
-    // TODO(gevalentino): Make it print some meaningful output.
     fprintf(stdout, "[==========] Running %lu tests from 1 test case.\n",
             countof(zxtest::test::kRegisteredTests));
     iteration_timer.Reset();

@@ -8,7 +8,6 @@
 
 #include <fbl/string.h>
 #include <fbl/vector.h>
-#include <lib/zx/time.h>
 #include <zxtest/base/observer.h>
 
 namespace zxtest {
@@ -24,17 +23,15 @@ namespace internal {
 // Helper class to measure a timer interval.
 class Timer {
 public:
-    Timer() : start_(zx::ticks::now()) {}
+    Timer();
 
-    void Reset() { start_ = zx::ticks::now(); }
+    void Reset();
 
     // Gets the amount of milliseconds since |start_|.
-    int64_t GetElapsedTime() const {
-        return (zx::ticks::now() - start_) / (zx::ticks::per_second() / 1000);
-    }
+    int64_t GetElapsedTime() const;
 
 private:
-    zx::ticks start_;
+    uint64_t start_;
 };
 
 // Summary about test results.

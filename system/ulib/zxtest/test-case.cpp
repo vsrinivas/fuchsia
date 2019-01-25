@@ -50,7 +50,7 @@ void TestCase::Filter(TestCase::FilterFn filter) {
     selected_indexes_.swap(filtered_indexes);
 }
 
-void TestCase::Shuffle(std::uint32_t random_seed) {
+void TestCase::Shuffle(uint32_t random_seed) {
     for (unsigned long i = 1; i < selected_indexes_.size(); ++i) {
         unsigned long j = rand_r(&random_seed) % (i + 1);
         if (j != i) {
