@@ -194,6 +194,11 @@ zx_status_t MtkSdmmc::Bind() {
 }
 
 zx_status_t MtkSdmmc::Init() {
+    // Set the clock mode to single data rate; if not starting from POR it could be anything. The
+    // clock mode must be set before calling SdmmcSetBusFreq as it is used when calculating the
+    // divider.
+    SdmmcSetTiming(SDMMC_TIMING_LEGACY);
+
     // Set bus clock to f_OD (400 kHZ) for identification mode.
     SdmmcSetBusFreq(kIdentificationModeBusFreq);
 
