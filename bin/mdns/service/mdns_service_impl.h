@@ -18,19 +18,19 @@
 
 namespace mdns {
 
-class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
+class MdnsServiceImpl : public fuchsia::mdns::Controller {
  public:
   MdnsServiceImpl(component::StartupContext* startup_context);
 
   ~MdnsServiceImpl() override;
 
-  // MdnsService implementation.
+  // Controller implementation.
   void ResolveHostName(std::string host_name, uint32_t timeout_ms,
                        ResolveHostNameCallback callback) override;
 
   void SubscribeToService(
       std::string service_name,
-      fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription>
+      fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription>
           subscription_request) override;
 
   void PublishServiceInstance(std::string service_name,
@@ -42,7 +42,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
                                 std::string instance_name) override;
 
   void AddResponder(std::string service_name, std::string instance_name,
-                    fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder>
+                    fidl::InterfaceHandle<fuchsia::mdns::Responder>
                         responder_handle) override;
 
   void SetSubtypes(std::string service_name, std::string instance_name,
@@ -55,10 +55,10 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
 
  private:
   class Subscriber : public Mdns::Subscriber,
-                     public fuchsia::mdns::MdnsServiceSubscription {
+                     public fuchsia::mdns::ServiceSubscription {
    public:
     Subscriber(
-        fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription> request,
+        fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription> request,
         fit::closure deleter);
 
     ~Subscriber() override;
@@ -81,14 +81,14 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
 
     void UpdatesComplete() override;
 
-    // MdnsServiceSubscription implementation.
+    // ServiceSubscription implementation.
     void GetInstances(uint64_t version_last_seen,
                       GetInstancesCallback callback) override;
 
    private:
-    fidl::Binding<fuchsia::mdns::MdnsServiceSubscription> binding_;
+    fidl::Binding<fuchsia::mdns::ServiceSubscription> binding_;
     media::FidlPublisher<GetInstancesCallback> instances_publisher_;
-    std::unordered_map<std::string, fuchsia::mdns::MdnsServiceInstancePtr>
+    std::unordered_map<std::string, fuchsia::mdns::ServiceInstancePtr>
         instances_by_name_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(Subscriber);
@@ -118,7 +118,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   // Publisher for AddResponder.
   class ResponderPublisher : public Mdns::Publisher {
    public:
-    ResponderPublisher(fuchsia::mdns::MdnsResponderPtr responder,
+    ResponderPublisher(fuchsia::mdns::ResponderPtr responder,
                        fit::closure deleter);
 
     // Mdns::Publisher implementation.
@@ -128,7 +128,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
                         fit::function<void(std::unique_ptr<Mdns::Publication>)>
                             callback) override;
 
-    fuchsia::mdns::MdnsResponderPtr responder_;
+    fuchsia::mdns::ResponderPtr responder_;
 
     FXL_DISALLOW_COPY_AND_ASSIGN(ResponderPublisher);
   };
@@ -137,7 +137,7 @@ class MdnsServiceImpl : public fuchsia::mdns::MdnsService {
   void Start();
 
   component::StartupContext* startup_context_;
-  fidl::BindingSet<fuchsia::mdns::MdnsService> bindings_;
+  fidl::BindingSet<fuchsia::mdns::Controller> bindings_;
   mdns::Mdns mdns_;
   size_t next_subscriber_id_ = 0;
   std::unordered_map<size_t, std::unique_ptr<Subscriber>> subscribers_by_id_;

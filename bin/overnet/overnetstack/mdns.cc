@@ -21,7 +21,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
     std::cerr << "Querying mDNS for overnet services [" << kServiceName
               << "]\n";
     auto svc = startup_context
-                   ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>();
+                   ->ConnectToEnvironmentService<fuchsia::mdns::Controller>();
     svc->SubscribeToService(kServiceName, subscription_.NewRequest());
     RunLoop(0);
   }
@@ -40,7 +40,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
     subscription_->GetInstances(
         version, [self = fbl::RefPtr<Impl>(this)](
                      uint64_t new_version,
-                     std::vector<fuchsia::mdns::MdnsServiceInstance> services) {
+                     std::vector<fuchsia::mdns::ServiceInstance> services) {
           // Convert list of services into a service map.
           ServiceMap new_service_map;
           for (const auto& svc : services) {
@@ -179,7 +179,7 @@ class MdnsIntroducer::Impl : public fbl::RefCounted<MdnsIntroducer> {
   }
 
   UdpNub* const nub_;
-  fuchsia::mdns::MdnsServiceSubscriptionPtr subscription_;
+  fuchsia::mdns::ServiceSubscriptionPtr subscription_;
   ServiceMap last_result_;
 };
 
@@ -198,26 +198,25 @@ MdnsIntroducer::~MdnsIntroducer() {}
 class MdnsAdvertisement::Impl {
  public:
   Impl(component::StartupContext* startup_context, UdpNub* nub)
-      : service_(
+      : controller_(
             startup_context
-                ->ConnectToEnvironmentService<fuchsia::mdns::MdnsService>()),
+                ->ConnectToEnvironmentService<fuchsia::mdns::Controller>()),
         node_id_(nub->node_id()) {
     std::cerr << "Requesting mDNS advertisement for " << node_id_ << " on port "
               << nub->port() << "\n";
-    service_->PublishServiceInstance(
+    controller_->PublishServiceInstance(
         kServiceName, node_id_.ToString(), nub->port(), {},
-        [node_id = node_id_,
-         port = nub->port()](fuchsia::mdns::MdnsResult result) {
+        [node_id = node_id_, port = nub->port()](fuchsia::mdns::Result result) {
           std::cout << "Advertising " << node_id << " on port " << port
                     << " via mdns gets: " << result << "\n";
         });
   }
   ~Impl() {
-    service_->UnpublishServiceInstance(kServiceName, node_id_.ToString());
+    controller_->UnpublishServiceInstance(kServiceName, node_id_.ToString());
   }
 
  private:
-  const fuchsia::mdns::MdnsServicePtr service_;
+  const fuchsia::mdns::ControllerPtr controller_;
   const overnet::NodeId node_id_;
 };
 

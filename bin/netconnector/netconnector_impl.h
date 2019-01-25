@@ -96,7 +96,7 @@ class NetConnectorImpl : public fuchsia::netconnector::NetConnector {
   std::unordered_map<ServiceAgent*, std::unique_ptr<ServiceAgent>>
       service_agents_;
 
-  fuchsia::mdns::MdnsServicePtr mdns_service_;
+  fuchsia::mdns::ControllerPtr mdns_controller_;
   mdns::ServiceSubscriber mdns_subscriber_;
 
   media::FidlPublisher<GetKnownDeviceNamesCallback> device_names_publisher_;
