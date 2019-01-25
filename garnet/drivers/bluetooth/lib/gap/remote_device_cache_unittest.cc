@@ -66,7 +66,9 @@ class GAP_RemoteDeviceCacheTest : public ::gtest::TestLoopFixture {
   void TearDown() { RunLoopUntilIdle(); }
 
  protected:
-  bool NewDevice(const DeviceAddress& addr, bool connectable) {
+  // Creates a new RemoteDevice, and caches a pointer to that device.
+  __WARN_UNUSED_RESULT bool NewDevice(const DeviceAddress& addr,
+                                      bool connectable) {
     auto* dev = cache_.NewDevice(addr, connectable);
     if (!dev) {
       return false;
@@ -125,7 +127,7 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUp) {
 
 TEST_F(GAP_RemoteDeviceCacheTest, LookUpBrEdrDeviceByLePublicAlias) {
   ASSERT_FALSE(cache()->FindDeviceByAddress(kAddrLeAlias));
-  NewDevice(kAddrBrEdr, true);
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
   auto* dev = cache()->FindDeviceByAddress(kAddrBrEdr);
   ASSERT_TRUE(dev);
   EXPECT_EQ(device(), dev);
@@ -138,7 +140,7 @@ TEST_F(GAP_RemoteDeviceCacheTest, LookUpBrEdrDeviceByLePublicAlias) {
 
 TEST_F(GAP_RemoteDeviceCacheTest, LookUpLeDeviceByBrEdrAlias) {
   EXPECT_FALSE(cache()->FindDeviceByAddress(kAddrBrEdr));
-  NewDevice(kAddrLeAlias, true);
+  ASSERT_TRUE(NewDevice(kAddrLeAlias, true));
   auto* dev = cache()->FindDeviceByAddress(kAddrLeAlias);
   ASSERT_TRUE(dev);
   EXPECT_EQ(device(), dev);
@@ -162,7 +164,7 @@ TEST_F(GAP_RemoteDeviceCacheTest, ForEachEmpty) {
 
 TEST_F(GAP_RemoteDeviceCacheTest, ForEach) {
   int count = 0;
-  NewDevice(kAddrLePublic, true);
+  ASSERT_TRUE(NewDevice(kAddrLePublic, true));
   cache()->ForEach([&](const auto& dev) {
     count++;
     EXPECT_EQ(device()->identifier(), dev.identifier());
@@ -198,7 +200,7 @@ TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceIdentityKnown) {
 }
 
 TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceInitialTechnologyIsClassic) {
-  NewDevice(kAddrBrEdr, true);
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
 
   // A device initialized with a BR/EDR address should start out as a
   // classic-only.
@@ -233,8 +235,7 @@ TEST_F(GAP_RemoteDeviceCacheTest, NewDeviceInitialTechnologyLowEnergy) {
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        DisallowNewLowEnergyDeviceIfBrEdrDeviceExists) {
-  NewDevice(kAddrBrEdr, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
 
   // Try to add new LE device with a public identity address containing the same
   // value as the existing BR/EDR device's BD_ADDR.
@@ -244,8 +245,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        DisallowNewBrEdrDeviceIfLowEnergyDeviceExists) {
-  NewDevice(kAddrLeAlias, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrLeAlias, true));
 
   // Try to add new BR/EDR device with BD_ADDR containing the same value as the
   // existing LE device's public identity address.
@@ -255,8 +255,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        BrEdrDeviceBecomesDualModeWithAdvertisingData) {
-  NewDevice(kAddrBrEdr, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
   ASSERT_TRUE(device()->bredr());
   ASSERT_FALSE(device()->le());
 
@@ -273,8 +272,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        BrEdrDeviceBecomesDualModeWhenConnectedOverLowEnergy) {
-  NewDevice(kAddrBrEdr, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
   ASSERT_TRUE(device()->bredr());
   ASSERT_FALSE(device()->le());
 
@@ -290,8 +288,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        BrEdrDeviceBecomesDualModeWithLowEnergyConnParams) {
-  NewDevice(kAddrBrEdr, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
   ASSERT_TRUE(device()->bredr());
   ASSERT_FALSE(device()->le());
 
@@ -306,8 +303,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        BrEdrDeviceBecomesDualModeWithLowEnergyPreferredConnParams) {
-  NewDevice(kAddrBrEdr, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrBrEdr, true));
   ASSERT_TRUE(device()->bredr());
   ASSERT_FALSE(device()->le());
 
@@ -322,8 +318,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        LowEnergyDeviceBecomesDualModeWithInquiryData) {
-  NewDevice(kAddrLeAlias, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrLeAlias, true));
   ASSERT_TRUE(device()->le());
   ASSERT_FALSE(device()->bredr());
 
@@ -343,8 +338,7 @@ TEST_F(GAP_RemoteDeviceCacheTest,
 
 TEST_F(GAP_RemoteDeviceCacheTest,
        LowEnergyDeviceBecomesDualModeWhenConnectedOverClassic) {
-  NewDevice(kAddrLeAlias, true);
-  ASSERT_TRUE(device());
+  ASSERT_TRUE(NewDevice(kAddrLeAlias, true));
   ASSERT_TRUE(device()->le());
   ASSERT_FALSE(device()->bredr());
 
@@ -363,7 +357,7 @@ class GAP_RemoteDeviceCacheTest_BondingTest : public GAP_RemoteDeviceCacheTest {
  public:
   void SetUp() {
     was_called_ = false;
-    NewDevice(kAddrLePublic, true);
+    ASSERT_TRUE(NewDevice(kAddrLePublic, true));
     cache()->set_device_bonded_callback(
         [this](const auto&) { was_called_ = true; });
     EXPECT_FALSE(was_called_);
@@ -639,7 +633,7 @@ class GAP_RemoteDeviceCacheTest_UpdateCallbackTest
  public:
   void SetUp() {
     was_called_ = false;
-    NewDevice(*DevAddr, true);
+    ASSERT_TRUE(NewDevice(*DevAddr, true));
     cache()->set_device_updated_callback(
         [this](const auto&) { was_called_ = true; });
     ir_.bd_addr = device()->address().value();
