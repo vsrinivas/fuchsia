@@ -169,6 +169,7 @@ static inline void ath10k_tx_h_seq_no(struct ieee80211_vif* vif,
 #endif  // NEEDS PORTING
 
 zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif);
+zx_status_t ath10k_mac_stop_ap(struct ath10k_vif* arvif);
 zx_status_t ath10k_mac_ap_assoc_with_sta(struct ath10k* ar, wlan_assoc_ctx_t* assoc);
 zx_status_t ath10k_mac_ap_disassoc_sta(struct ath10k* ar, const uint8_t* peer_addr);
 

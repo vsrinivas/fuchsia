@@ -37,6 +37,8 @@
 
 // clang-format off
 
+static const uint8_t bcast_addr[ETH_ALEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+
 // The mask of bit |x|.
 #ifndef BIT
 #define BIT(x) (1 << (x))
@@ -1857,25 +1859,6 @@ static zx_status_t ath10k_control_beaconing(struct ath10k_vif* arvif) {
     struct ath10k* ar = arvif->ar;
     zx_status_t ret;
 
-#if 0 // NEEDS PORTING
-    ASSERT_MTX_HELD(&arvif->ar->conf_mutex);
-
-    if (!info->enable_beacon) {
-        ret = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
-        if (ret)
-            ath10k_warn("failed to down vdev_id %i: %d\n",
-                        arvif->vdev_id, ret);
-
-        arvif->is_up = false;
-
-        mtx_lock(&arvif->ar->data_lock);
-        ath10k_mac_vif_beacon_free(arvif);
-        mtx_unlock(&arvif->ar->data_lock);
-
-        return;
-    }
-#endif // NEEDS PORTING
-
     arvif->tx_seq_no = 0x1000;
 
     // AID 0 is reserved for AP.
@@ -1943,14 +1926,34 @@ zx_status_t ath10k_mac_start_ap(struct ath10k_vif* arvif) {
     // In the protected AP mode, the firmware requires a broadcast peer existed before the group key
     // (WLAN_KEY_TYPE_GROUP) can be added. Otherwise, the firmware will reject that key.
     // Since group key will be added per AP, add the peer here.
-    uint8_t broadcast[] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
-    ret = ath10k_peer_create(ar, arvif->vdev_id, broadcast, WMI_PEER_TYPE_DEFAULT);
+    ret = ath10k_peer_create(ar, arvif->vdev_id, bcast_addr, WMI_PEER_TYPE_DEFAULT);
     if (ret != ZX_OK) {
         ath10k_warn("Failed to create the peer for group key: %s\n", zx_status_get_string(ret));
     }
 
     mtx_unlock(&ar->conf_mutex);
     return ret;
+}
+
+zx_status_t ath10k_mac_stop_ap(struct ath10k_vif* arvif) {
+    struct ath10k* ar = arvif->ar;
+    mtx_lock(&ar->conf_mutex);
+
+    zx_status_t status = ath10k_wmi_vdev_down(ar, arvif->vdev_id);
+    if (status != ZX_OK) {
+        ath10k_err("failed to down vdev_id %i: %s\n", arvif->vdev_id, zx_status_get_string(status));
+        mtx_unlock(&ar->conf_mutex);
+        return status;
+    }
+
+    status = ath10k_peer_delete(ar, arvif->vdev_id, bcast_addr);
+    if (status != ZX_OK) {
+        ath10k_warn("failed to delete the peer for group key: %s\n", zx_status_get_string(status));
+    }
+
+    arvif->is_up = false;
+    mtx_unlock(&ar->conf_mutex);
+    return ZX_OK;
 }
 
 #if 0 // NEEDS PORTING

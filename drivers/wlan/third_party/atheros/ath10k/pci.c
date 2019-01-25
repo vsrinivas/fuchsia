@@ -3090,8 +3090,7 @@ static zx_status_t ath10k_pci_enable_beaconing(void* ctx, uint32_t options,
     struct ath10k_vif* arvif = &ar->arvif;
 
     if (!bcn_cfg) {
-        ath10k_err("We don't support disabling beacon yet.\n");
-        return ZX_ERR_NOT_SUPPORTED;
+        return ath10k_mac_stop_ap(arvif);
     }
 
     if (bcn_cfg->tmpl.packet_head.data_size > ATH10K_MAX_BCN_TMPL_SIZE) {
