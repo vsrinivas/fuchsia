@@ -148,6 +148,13 @@ void GainControlTestBase::SetUpGainControl2OnCapturer2() {
   SetUpGainControl2();
 }
 
+// For tests that cause a GainControl to disconnect, set these expectations.
+void GainControlTestBase::SetNegativeExpectations() {
+  expect_null_api_ = true;
+  expect_error_ = true;
+  expect_null_gain_control_ = true;
+}
+
 // Set Gain, asserting that state is already reset so error can be detected.
 void GainControlTestBase::SetGain(float gain_db) {
   // On initialization and every Receive...Callback(), this is set to false.
@@ -287,10 +294,12 @@ void GainControlTestBase::TestDuplicateSetMute() {
   EXPECT_TRUE(ReceiveNoGainCallback());
 }
 
-// For RenderGainControlTest_Negative/CaptureGainControlTest_Negative.
+// For negative expectations.
 //
 // Setting gain too high should cause a disconnect.
 void GainControlTestBase::TestSetGainTooHigh() {
+  SetNegativeExpectations();
+
   constexpr float expect_gain_db = kTooHighGainDb;
   SetGain(expect_gain_db);
 
@@ -300,6 +309,8 @@ void GainControlTestBase::TestSetGainTooHigh() {
 
 // Setting gain too low should cause a disconnect.
 void GainControlTestBase::TestSetGainTooLow() {
+  SetNegativeExpectations();
+
   constexpr float expect_gain_db = kTooLowGainDb;
   SetGain(expect_gain_db);
 
@@ -323,7 +334,9 @@ void RenderGainControlTest::SetUp() {
 // Single renderer with one gain control: Gain, Mute and GainMute combo.
 //
 TEST_F(RenderGainControlTest, SetGain) { TestSetGain(); }
+
 TEST_F(RenderGainControlTest, SetMute) { TestSetMute(); }
+
 TEST_F(RenderGainControlTest, SetGainMute) { TestSetGainMute(); }
 
 // TODO(mpuryear): Ramp-related tests (render). Relevant FIDL signature is:
@@ -331,8 +344,16 @@ TEST_F(RenderGainControlTest, SetGainMute) { TestSetGainMute(); }
 
 // TODO(mpuryear): Validate GainChange notifications of gainramps.
 
-TEST_F(RenderGainControlTest, DuplicateSetGain) { TestDuplicateSetGain(); }
+// N.B. DuplicateSetGain behavior is tested in RendererTwoGainControlsTest.
 TEST_F(RenderGainControlTest, DuplicateSetMute) { TestDuplicateSetMute(); }
+
+TEST_F(RenderGainControlTest, SetGainTooHigh) { TestSetGainTooHigh(); }
+
+TEST_F(RenderGainControlTest, SetGainTooLow) { TestSetGainTooLow(); }
+
+// TODO(mpuryear): SetGain(NAN) - should have no effect
+
+// TODO(mpuryear): Ramp-related negative tests, across all scenarios
 
 // CaptureGainControlTest
 //
@@ -346,48 +367,33 @@ void CaptureGainControlTest::SetUp() {
 // Single capturer with one gain control
 //
 TEST_F(CaptureGainControlTest, SetGain) { TestSetGain(); }
+
 TEST_F(CaptureGainControlTest, SetMute) { TestSetMute(); }
+
 TEST_F(CaptureGainControlTest, SetGainMute) { TestSetGainMute(); }
 
 // TODO(mpuryear): Ramp-related tests (capture)
 
 TEST_F(CaptureGainControlTest, DuplicateSetGain) { TestDuplicateSetGain(); }
-TEST_F(CaptureGainControlTest, DuplicateSetMute) { TestDuplicateSetMute(); }
+// N.B. DuplicateSetMute behavior is tested in CapturerTwoGainControlsTest.
 
-// RenderGainControlTest_Negative
-// Specialization when we expect GainControl/AudioRenderer to disconnect.
-//
-void RenderGainControlTest_Negative::SetUp() {
-  RenderGainControlTest::SetUp();
+TEST_F(CaptureGainControlTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
+TEST_F(CaptureGainControlTest, SetGainTooLow) { TestSetGainTooLow(); }
 
-TEST_F(RenderGainControlTest_Negative, SetGainTooHigh) { TestSetGainTooHigh(); }
-TEST_F(RenderGainControlTest_Negative, SetGainTooLow) { TestSetGainTooLow(); }
-// TODO(mpuryear): Ramp-related negative tests, across all scenarios
-
-// CaptureGainControlTest_Negative
-// Specialization when we expect GainControl/AudioCapturer to disconnect.
-//
-void CaptureGainControlTest_Negative::SetUp() {
-  CaptureGainControlTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
-
-TEST_F(CaptureGainControlTest_Negative, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
-TEST_F(CaptureGainControlTest_Negative, SetGainTooLow) { TestSetGainTooLow(); }
+// TODO(mpuryear): SetGain(NAN) - should have no effect
 
 // SiblingGainControlsTest
 // On a renderer/capturer, sibling GainControls receive identical notifications.
 //
+// For tests that cause a GainControl to disconnect, set these expectations.
+void SiblingGainControlsTest::SetNegativeExpectations() {
+  GainControlTestBase::SetNegativeExpectations();
+
+  expect_null_gain_control_2_ = true;
+  expect_error_2_ = true;
+}
+
 // Tests expect a gain callback on both gain_controls, with the provided gain_db
 // and mute values -- and no errors.
 bool SiblingGainControlsTest::ReceiveGainCallback(float gain_db, bool mute) {
@@ -492,15 +498,20 @@ void RendererTwoGainControlsTest::SetUp() {
 TEST_F(RendererTwoGainControlsTest, BothControlsReceiveGainNotifications) {
   TestSetGain();
 }
+
 TEST_F(RendererTwoGainControlsTest, BothControlsReceiveMuteNotifications) {
   TestSetMute();
 }
+
 TEST_F(RendererTwoGainControlsTest, DuplicateSetGain) {
   TestDuplicateSetGain();
 }
-TEST_F(RendererTwoGainControlsTest, DuplicateSetMute) {
-  TestDuplicateSetMute();
-}
+
+// N.B. DuplicateSetMute behavior is tested in RendererGainControlTest.
+
+TEST_F(RendererTwoGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
+
+TEST_F(RendererTwoGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
 
 // CapturerTwoGainControlsTest
 // Capturer with two gain controls: both should receive identical notifications.
@@ -516,55 +527,19 @@ void CapturerTwoGainControlsTest::SetUp() {
 TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveGainNotifications) {
   TestSetGain();
 }
+
 TEST_F(CapturerTwoGainControlsTest, BothControlsReceiveMuteNotifications) {
   TestSetMute();
 }
-TEST_F(CapturerTwoGainControlsTest, DuplicateSetGain) {
-  TestDuplicateSetGain();
-}
+
+// N.B. DuplicateSetGain behavior is tested in CapturerGainControlTest.
 TEST_F(CapturerTwoGainControlsTest, DuplicateSetMute) {
   TestDuplicateSetMute();
 }
 
-// RendererTwoGainControlsTest_Negative
-// Specialization when we expect GainControls and Renderer to disconnect.
-//
-void RendererTwoGainControlsTest_Negative::SetUp() {
-  RendererTwoGainControlsTest::SetUp();
+TEST_F(CapturerTwoGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
-  expect_null_api_ = true;
-  expect_null_gain_control_ = true;
-  expect_null_gain_control_2_ = true;
-  expect_error_ = true;
-  expect_error_2_ = true;
-}
-
-TEST_F(RendererTwoGainControlsTest_Negative, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
-TEST_F(RendererTwoGainControlsTest_Negative, SetGainTooLow) {
-  TestSetGainTooLow();
-}
-
-// CapturerTwoGainControlsTest_Negative
-// Specialization when we expect GainControls and Capturer to disconnect.
-//
-void CapturerTwoGainControlsTest_Negative::SetUp() {
-  CapturerTwoGainControlsTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_null_gain_control_ = true;
-  expect_null_gain_control_2_ = true;
-  expect_error_ = true;
-  expect_error_2_ = true;
-}
-
-TEST_F(CapturerTwoGainControlsTest_Negative, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
-TEST_F(CapturerTwoGainControlsTest_Negative, SetGainTooLow) {
-  TestSetGainTooLow();
-}
+TEST_F(CapturerTwoGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
 
 // IndependentGainControlsTest
 // Verify that GainControls on different API instances are fully independent.
@@ -681,6 +656,9 @@ TEST_F(TwoRenderersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
   TestSetMute();
 }
 
+// We expect primary GainControl/Renderer to disconnect.
+TEST_F(TwoRenderersGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
+
 // RendererCapturerGainControlsTest
 // Renderer gain control should not affect capturer gain control.
 //
@@ -697,6 +675,11 @@ void RendererCapturerGainControlsTest::SetUp() {
 TEST_F(RendererCapturerGainControlsTest,
        OtherInstanceReceivesNoGainNotification) {
   TestSetGain();
+}
+
+// We expect primary GainControl/Renderer to disconnect.
+TEST_F(RendererCapturerGainControlsTest, SetGainTooHigh) {
+  TestSetGainTooHigh();
 }
 
 // CapturerRendererGainControlsTest
@@ -717,6 +700,11 @@ TEST_F(CapturerRendererGainControlsTest,
   TestSetGain();
 }
 
+// We expect primary GainControl/Capturer to disconnect.
+TEST_F(CapturerRendererGainControlsTest, SetGainTooHigh) {
+  TestSetGainTooHigh();
+}
+
 // TwoCapturersGainControlsTest
 // Two capturers, each with a gain control: we expect no cross-impact.
 //
@@ -734,64 +722,7 @@ TEST_F(TwoCapturersGainControlsTest, OtherInstanceReceivesNoMuteNotification) {
   TestSetMute();
 }
 
-// TwoRenderersGainControlsTest_Negative
-// Specialization when we expect one GainControl/Renderer to disconnect.
-//
-void TwoRenderersGainControlsTest_Negative::SetUp() {
-  TwoRenderersGainControlsTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
-
-TEST_F(TwoRenderersGainControlsTest_Negative, SetGainTooLow) {
-  TestSetGainTooLow();
-}
-
-// RendererCapturerGainControlsTest_Negative
-// Specialization when we expect one GainControl/Renderer to disconnect.
-//
-void RendererCapturerGainControlsTest_Negative::SetUp() {
-  RendererCapturerGainControlsTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
-
-TEST_F(RendererCapturerGainControlsTest_Negative, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
-
-// CapturerRendererGainControlsTest_Negative
-// Specialization when we expect one GainControl/Capturer to disconnect.
-//
-void CapturerRendererGainControlsTest_Negative::SetUp() {
-  CapturerRendererGainControlsTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
-
-TEST_F(CapturerRendererGainControlsTest_Negative, SetGainTooHigh) {
-  TestSetGainTooHigh();
-}
-
-// TwoCapturersGainControlsTest_Negative
-// Specialization when we expect one GainControl/Capturer to disconnect.
-//
-void TwoCapturersGainControlsTest_Negative::SetUp() {
-  TwoCapturersGainControlsTest::SetUp();
-
-  expect_null_api_ = true;
-  expect_error_ = true;
-  expect_null_gain_control_ = true;
-}
-
-TEST_F(TwoCapturersGainControlsTest_Negative, SetGainTooLow) {
-  TestSetGainTooLow();
-}
+// We expect primary GainControl/Capturer to disconnect.
+TEST_F(TwoCapturersGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
 
 }  // namespace media::audio::test

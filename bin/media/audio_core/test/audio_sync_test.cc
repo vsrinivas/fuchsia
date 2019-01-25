@@ -37,11 +37,6 @@ class AudioSyncTest : public gtest::RealLoopFixture {
 };
 
 //
-// TODO(mpuryear): AudioSyncTest_Negative class and tests, for cases where
-// we expect AudioSync binding to disconnect, and AudioSyncPtr to be reset.
-//
-
-//
 // AudioCoreSync validation
 // Tests of the synchronously-proxied Audio interface: AudioSync.
 //

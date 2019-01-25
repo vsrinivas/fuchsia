@@ -41,13 +41,6 @@ class AudioRendererSyncTest : public gtest::RealLoopFixture {
 };
 
 //
-// AudioRendererSyncTest_Negative
-//
-// Separate test class, purely for test case categorization, for cases in which
-// we expect the binding to disconnect -- and the AudioRendererSyncPtr to reset.
-class AudioRendererSyncTest_Negative : public AudioRendererSyncTest {};
-
-//
 // AudioRendererSync validation
 //
 // Basic validation of GetMinLeadTime() for the synchronous AudioRenderer.
@@ -58,6 +51,8 @@ TEST_F(AudioRendererSyncTest, GetMinLeadTime) {
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
       << kConnectionErr;
   EXPECT_GE(min_lead_time, 0) << "No MinLeadTime update received";
+
+  // TODO(mpuryear): test GetMinLeadTime with nullptr
 }
 
 // Before renderers are operational, multiple SetPcmStreamTypes should succeed.
@@ -87,12 +82,9 @@ TEST_F(AudioRendererSyncTest, SetPcmFormat) {
   EXPECT_GE(min_lead_time, 0);
 }
 
-//
-// AudioRendererSync negative validation
-//
 // Before setting format, PlayNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
-TEST_F(AudioRendererSyncTest_Negative, PlayNoReplyNoFormatCausesDisconnect) {
+TEST_F(AudioRendererSyncTest, PlayNoReplyNoFormatCausesDisconnect) {
   int64_t min_lead_time = -1;
   // First, make sure we still have a renderer at all.
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));
@@ -109,7 +101,7 @@ TEST_F(AudioRendererSyncTest_Negative, PlayNoReplyNoFormatCausesDisconnect) {
 
 // Before setting format, PauseNoReply should cause a Disconnect.
 // GetMinLeadTime is our way of verifying whether the connection survived.
-TEST_F(AudioRendererSyncTest_Negative, PauseNoReplyWithoutFormat) {
+TEST_F(AudioRendererSyncTest, PauseNoReplyWithoutFormatCausesDisconnect) {
   int64_t min_lead_time = -1;
   // First, make sure we still have a renderer at all.
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time));

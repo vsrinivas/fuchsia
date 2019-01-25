@@ -19,6 +19,8 @@ class AudioRendererTest : public gtest::RealLoopFixture {
  protected:
   void SetUp() override;
   void TearDown() override;
+  void SetNegativeExpectations();
+  void ExpectDisconnect();
 
   std::shared_ptr<component::Services> environment_services_;
   fuchsia::media::AudioPtr audio_;
@@ -28,17 +30,6 @@ class AudioRendererTest : public gtest::RealLoopFixture {
   bool error_occurred_ = false;
   bool expect_error_ = false;
   bool expect_renderer_ = true;
-};
-
-//
-// AudioRendererTestNegative
-//
-// A specialization of AudioRendererTest to validate scenarios where we expect
-// AudioRenderer bindings to disconnect (Audio bindings should be OK).
-class AudioRendererTest_Negative : public AudioRendererTest {
- protected:
-  void SetUp() override;
-  void ExpectDisconnect();
 };
 
 //
@@ -57,6 +48,11 @@ void AudioRendererTest::SetUp() {
   audio_renderer_.set_error_handler(err_handler);
 }
 
+void AudioRendererTest::SetNegativeExpectations() {
+  expect_error_ = true;
+  expect_renderer_ = false;
+}
+
 void AudioRendererTest::TearDown() {
   ASSERT_TRUE(audio_.is_bound());
   EXPECT_EQ(expect_error_, error_occurred_);
@@ -65,29 +61,45 @@ void AudioRendererTest::TearDown() {
   ::gtest::RealLoopFixture::TearDown();
 }
 
-//
-// AudioRendererTest_Negative implementation
-//
-void AudioRendererTest_Negative::SetUp() {
-  AudioRendererTest::SetUp();
-
-  expect_error_ = true;
-  expect_renderer_ = false;
-}
-
-void AudioRendererTest_Negative::ExpectDisconnect() {
+void AudioRendererTest::ExpectDisconnect() {
   EXPECT_TRUE(RunLoopWithTimeoutOrUntil([this]() { return error_occurred_; },
                                         kDurationResponseExpected,
                                         kDurationGranularity));
 }
 
 //
+// AudioRenderer implements the base classes StreamBufferSet and StreamSink.
+
+//
+// StreamBufferSet validation
+//
+// TODO(mpuryear): test AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+// Also negative testing: bad id, null or bad handle
+
+// TODO(mpuryear): test RemovePayloadBuffer(uint32 id);
+// Also negative testing: unknown or already-removed id
+
+//
+// StreamSink validation
+//
+
+// TODO(mpuryear): test SendPacket(StreamPacket packet) -> ();
+// Also negative testing: malformed packet
+
+// TODO(mpuryear): test SendPacketNoReply(StreamPacket packet);
+// Also negative testing: malformed packet
+
+// TODO(mpuryear): test EndOfStream();
+// Also proper sequence of callbacks/completions
+
+// TODO(mpuryear): test DiscardAllPackets() -> ();
+// Also when no packets, when started
+
+// TODO(mpuryear): test DiscardAllPacketsNoReply();
+// Also when no packets, when started
+
+//
 // AudioRenderer validation
-//
-//
-// TODO(mpuryear): Remaining test coverage work within AudioRenderer:
-// SetPtsUnits, SetPtsContinuityThreshold, SetReferenceClock;
-// Also, positive coverage for Play, PlayNoReply, Pause, PauseNoReply,
 //
 
 // AudioRenderer contains an internal state machine. To enter the "configured"
@@ -95,10 +107,6 @@ void AudioRendererTest_Negative::ExpectDisconnect() {
 // SetPayloadBuffer calls. From a Configured state only, it then transitions to
 // "operational" mode when any packets are enqueued (received and not yet played
 // and/or released).
-
-// TODO(mpuryear): add tests to validate the following --
-// **** Basic API validation for asynchronous AudioRenderer:
-// SetPayloadBuffer, SendPacket, SendPacketNoReply, Flush.
 
 // **** Before we enter Configured mode:
 // SendPacket before SetPcmStreamType must fail.
@@ -143,22 +151,29 @@ TEST_F(AudioRendererTest, SetPcmStreamType) {
 }
 
 // TODO(mpuryear): test SetPtsUnits(uint32 tick_per_sec_num,uint32 denom);
+// Also negative testing: zero values, nullptrs, huge num/small denom
 
 // TODO(mpuryear): test SetPtsContinuityThreshold(float32 threshold_sec);
+// Also negative testing: NaN, negative, very large, infinity
 
 // TODO(mpuryear): test SetReferenceClock(handle reference_clock);
+// Also negative testing: null handle, bad handle, handle to something else
 
 // TODO(mpuryear): test Play(int64 ref_time, int64 med)->(int64 ref, int64 med);
 // Verify success after setting format and submitting buffers.
+// Also: when already in Play, very positive vals, very negative vals
 
 // TODO(mpuryear): test PlayNoReply(int64 reference_time, int64 media_time);
 // Verify success after setting format and submitting buffers.
+// Also: when already in Play, very positive vals, very negative vals
 
 // TODO(mpuryear): test Pause()->(int64 reference_time, int64 media_time);
 // Verify success after setting format and submitting buffers.
+// Also: when already in Pause
 
 // TODO(mpuryear): test PauseNoReply();
 // Verify success after setting format and submitting buffers.
+// Also: when already in Pause
 
 // Validate MinLeadTime events, when enabled.
 TEST_F(AudioRendererTest, EnableMinLeadTimeEvents) {
@@ -284,13 +299,11 @@ TEST_F(AudioRendererTest, BindGainControl) {
 }
 
 //
-// AudioRendererTest_Negative
-//
-// Separate test class for cases in which we expect the AudioRenderer binding to
+// SetStreamType is not yet implemented. We expect the AudioRenderer binding to
 // disconnect, and our AudioRenderer interface ptr to be reset.
-//
-// SetStreamType is not yet implemented and expected to cause a Disconnect.
-TEST_F(AudioRendererTest_Negative, SetStreamType) {
+TEST_F(AudioRendererTest, SetStreamType) {
+  SetNegativeExpectations();
+
   fuchsia::media::AudioStreamType stream_format;
   stream_format.sample_format = fuchsia::media::AudioSampleFormat::SIGNED_16;
   stream_format.channels = 1;
@@ -306,13 +319,10 @@ TEST_F(AudioRendererTest_Negative, SetStreamType) {
   ExpectDisconnect();
 }
 
-// TODO(mpuryear): negative tests for the following:
-//    SetPtsUnits(uint32 tick_per_sec_num,uint32 denom)
-//    SetPtsContinuityThreshold(float32 threshold_sec)
-//    SetReferenceClock(handle reference_clock)
-
 // Before setting format, Play should not succeed.
-TEST_F(AudioRendererTest_Negative, PlayWithoutFormat) {
+TEST_F(AudioRendererTest, PlayWithoutFormat) {
+  SetNegativeExpectations();
+
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -331,7 +341,9 @@ TEST_F(AudioRendererTest_Negative, PlayWithoutFormat) {
 }
 
 // After setting format but before submitting buffers, Play should not succeed.
-TEST_F(AudioRendererTest_Negative, PlayWithoutBuffers) {
+TEST_F(AudioRendererTest, PlayWithoutBuffers) {
+  SetNegativeExpectations();
+
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -356,7 +368,9 @@ TEST_F(AudioRendererTest_Negative, PlayWithoutBuffers) {
 }
 
 // Before setting format, PlayNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest_Negative, PlayNoReplyWithoutFormat) {
+TEST_F(AudioRendererTest, PlayNoReplyWithoutFormat) {
+  SetNegativeExpectations();
+
   audio_renderer_->PlayNoReply(fuchsia::media::NO_TIMESTAMP,
                                fuchsia::media::NO_TIMESTAMP);
 
@@ -365,7 +379,9 @@ TEST_F(AudioRendererTest_Negative, PlayNoReplyWithoutFormat) {
 }
 
 // Before setting format, Pause should not succeed.
-TEST_F(AudioRendererTest_Negative, PauseWithoutFormat) {
+TEST_F(AudioRendererTest, PauseWithoutFormat) {
+  SetNegativeExpectations();
+
   int64_t ref_time_received = -1;
   int64_t media_time_received = -1;
 
@@ -382,7 +398,9 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutFormat) {
 }
 
 // After setting format but before submitting buffers, Pause should not succeed.
-TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
+TEST_F(AudioRendererTest, PauseWithoutBuffers) {
+  SetNegativeExpectations();
+
   fuchsia::media::AudioStreamType format;
   format.sample_format = fuchsia::media::AudioSampleFormat::FLOAT;
   format.channels = 1;
@@ -405,7 +423,9 @@ TEST_F(AudioRendererTest_Negative, PauseWithoutBuffers) {
 }
 
 // Before setting format, PauseNoReply should cause a Disconnect.
-TEST_F(AudioRendererTest_Negative, PauseNoReplyWithoutFormat) {
+TEST_F(AudioRendererTest, PauseNoReplyWithoutFormat) {
+  SetNegativeExpectations();
+
   audio_renderer_->PauseNoReply();
 
   // Disconnect callback should be received.

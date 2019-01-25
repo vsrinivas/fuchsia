@@ -197,11 +197,6 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 }
 
 //
-// TODO(mpuryear): AudioTest_Negative class and tests, for cases where we
-// expect Audio binding to disconnect -- and Audio interface ptr to be reset.
-//
-
-//
 // Audio validation
 // Tests of the asynchronous Audio interface.
 //
@@ -317,6 +312,10 @@ TEST_F(AudioTest, SetRoutingPolicy) {
   EXPECT_TRUE(ReceiveNoDisconnectCallback());
   EXPECT_TRUE(audio_.is_bound());
 }
+
+// TODO(mpuryear): Test cases where we expect Audio binding to disconnect.
+// Possibilities: null/malformed request (CreateAudioRenderer / Capturer),
+// out-of-range enum (SetOutputRoutingPolicy), NAN float (SetSystemGain).
 
 //
 // Validation of System Gain and Mute

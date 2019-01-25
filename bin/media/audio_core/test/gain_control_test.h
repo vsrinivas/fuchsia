@@ -40,6 +40,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   void SetUpGainControl2OnCapturer();
   void SetUpGainControl2OnRenderer2();
   void SetUpGainControl2OnCapturer2();
+  virtual void SetNegativeExpectations();
 
   void SetGain(float gain_db);
   void SetMute(bool mute);
@@ -110,27 +111,13 @@ class CaptureGainControlTest : public GainControlTestBase {
   bool ApiIsNull() final { return !audio_capturer_.is_bound(); }
 };
 
-// RenderGainControlTest_Negative
-//
-// Specialization when we expect GainControl/AudioRenderer to disconnect.
-class RenderGainControlTest_Negative : public RenderGainControlTest {
- protected:
-  void SetUp() final;
-};
-
-// CaptureGainControlTest_Negative
-//
-// Specialization when we expect GainControl/AudioCapturer to disconnect.
-class CaptureGainControlTest_Negative : public CaptureGainControlTest {
- protected:
-  void SetUp() final;
-};
-
 // SiblingGainControlsTest
 //
 // On a renderer/capturer, sibling GainControls receive identical notifications.
 class SiblingGainControlsTest : public GainControlTestBase {
  protected:
+  void SetNegativeExpectations() override;
+
   // Absorb a gain callback from the sibling GainControl as well.
   bool ReceiveGainCallback(float gain_db, bool mute) final;
   bool ReceiveNoGainCallback() final;
@@ -155,24 +142,6 @@ class CapturerTwoGainControlsTest : public SiblingGainControlsTest {
  protected:
   void SetUp() override;
   bool ApiIsNull() final { return !audio_capturer_.is_bound(); }
-};
-
-// RendererTwoGainControlsTest_Negative
-//
-// Specialization when we expect GainControls and Renderer to disconnect.
-class RendererTwoGainControlsTest_Negative
-    : public RendererTwoGainControlsTest {
- protected:
-  void SetUp() final;
-};
-
-// CapturerTwoGainControlsTest_Negative
-//
-// Specialization when we expect GainControls and Capturer to disconnect.
-class CapturerTwoGainControlsTest_Negative
-    : public CapturerTwoGainControlsTest {
- protected:
-  void SetUp() final;
 };
 
 // IndependentGainControlsTest
@@ -231,42 +200,6 @@ class TwoCapturersGainControlsTest : public IndependentGainControlsTest {
   bool ApiIsNull() final {
     return !audio_capturer_.is_bound() && audio_capturer_2_.is_bound();
   }
-};
-
-// TwoRenderersGainControlsTest_Negative
-//
-// Specialization when we expect one GainControl/Renderer to disconnect.
-class TwoRenderersGainControlsTest_Negative
-    : public TwoRenderersGainControlsTest {
- protected:
-  void SetUp() final;
-};
-
-// RendererCapturerGainControlsTest_Negative
-//
-// Specialization when we expect one GainControl/Renderer to disconnect.
-class RendererCapturerGainControlsTest_Negative
-    : public RendererCapturerGainControlsTest {
- protected:
-  void SetUp() final;
-};
-
-// CapturerRendererGainControlsTest_Negative
-//
-// Specialization when we expect one GainControl/Capturer to disconnect.
-class CapturerRendererGainControlsTest_Negative
-    : public CapturerRendererGainControlsTest {
- protected:
-  void SetUp() final;
-};
-
-// TwoCapturersGainControlsTest_Negative
-//
-// Specialization when we expect one GainControl/Capturer to disconnect.
-class TwoCapturersGainControlsTest_Negative
-    : public TwoCapturersGainControlsTest {
- protected:
-  void SetUp() final;
 };
 
 }  // namespace test
