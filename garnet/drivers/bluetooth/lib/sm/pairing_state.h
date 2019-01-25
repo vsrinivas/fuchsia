@@ -282,6 +282,7 @@ class PairingState final : public Bearer::Listener {
   void OnMasterIdentification(uint16_t ediv, uint64_t random) override;
   void OnIdentityResolvingKey(const common::UInt128& irk) override;
   void OnIdentityAddress(const common::DeviceAddress& address) override;
+  void OnSecurityRequest(AuthReqField auth_req) override;
 
   // Called when the encryption state of the LE link changes.
   void OnEncryptionChange(hci::Status status, bool enabled);

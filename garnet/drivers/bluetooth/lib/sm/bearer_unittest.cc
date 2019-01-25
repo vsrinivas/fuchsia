@@ -104,6 +104,12 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest,
     identity_addr_ = address;
   }
 
+  // Bearer::Listener override:
+  void OnSecurityRequest(AuthReqField auth_req) override {
+    security_request_count_++;
+    security_request_auth_req_ = auth_req;
+  }
+
   Bearer* bearer() const { return bearer_.get(); }
   l2cap::testing::FakeChannel* fake_chan() const { return fake_chan_.get(); }
 
@@ -121,6 +127,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest,
   int master_id_count() const { return master_id_count_; }
   int irk_count() const { return irk_count_; }
   int identity_addr_count() const { return identity_addr_count_; }
+  int security_request_count() const { return security_request_count_; }
 
   const UInt128& confirm_value() const { return confirm_value_; }
   const UInt128& random_value() const { return random_value_; }
@@ -129,6 +136,9 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest,
   uint64_t rand() const { return rand_; }
   const UInt128& irk() const { return irk_; }
   const DeviceAddress& identity_addr() const { return identity_addr_; }
+  AuthReqField security_request_auth_req() const {
+    return security_request_auth_req_;
+  }
 
  private:
   fbl::RefPtr<l2cap::testing::FakeChannel> fake_chan_;
@@ -147,6 +157,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest,
   int master_id_count_ = 0;
   int irk_count_ = 0;
   int identity_addr_count_ = 0;
+  int security_request_count_ = 0;
   UInt128 confirm_value_;
   UInt128 random_value_;
   UInt128 ltk_;
@@ -154,6 +165,7 @@ class SMP_BearerTest : public l2cap::testing::FakeChannelTest,
   uint64_t rand_ = 0;
   UInt128 irk_;
   DeviceAddress identity_addr_;
+  AuthReqField security_request_auth_req_ = 0u;
 
   fxl::WeakPtrFactory<SMP_BearerTest> weak_ptr_factory_;
 
@@ -1125,6 +1137,86 @@ TEST_F(SMP_BearerTest, OnIdentityAddressInformationCallbackRandom) {
   RunLoopUntilIdle();
   EXPECT_EQ(1, identity_addr_count());
   EXPECT_EQ(kExpected, identity_addr());
+}
+
+TEST_F(SMP_BearerTest, OnSecurityRequestMalformed) {
+  // clang-format off
+  const auto kFailure = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x0A   // reason: Invalid Parameters
+  );
+  const auto kSecurityRequest1 = CreateStaticByteBuffer(
+      0x0B,        // code: Security Request
+      0x00, 0x00   // malformed 2-byte payload
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kSecurityRequest1, kFailure));
+  EXPECT_EQ(0, security_request_count());
+
+  // clang-format off
+  const auto kSecurityRequest2 = CreateStaticByteBuffer(
+      0x0B  // code: Security Request
+            // missing payload
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kSecurityRequest2, kFailure));
+  EXPECT_EQ(0, security_request_count());
+}
+
+TEST_F(SMP_BearerTest, OnSecurityRequestWhilePairing) {
+  bearer()->InitiateFeatureExchange();
+  ASSERT_TRUE(bearer()->pairing_started());
+
+  // clang-format off
+  const auto kSecurityRequest = CreateStaticByteBuffer(
+      0x0B,  // code: Security Request
+      0x00   // auth_req
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kSecurityRequest);
+  RunLoopUntilIdle();
+
+  // The request should be ignored during pairing.
+  EXPECT_EQ(0, security_request_count());
+}
+
+TEST_F(SMP_BearerTest, OnSecurityRequestFromMaster) {
+  NewBearer(hci::Connection::Role::kSlave);
+
+  // clang-format off
+  const auto kFailure = CreateStaticByteBuffer(
+      0x05,  // code: Pairing Failed
+      0x07   // reason: Command Not Supported
+  );
+  const auto kSecurityRequest = CreateStaticByteBuffer(
+      0x0B,  // code: Security Request
+      0x00   // auth_req
+  );
+  // clang-format on
+
+  EXPECT_TRUE(ReceiveAndExpect(kSecurityRequest, kFailure));
+  EXPECT_EQ(0, security_request_count());
+}
+
+TEST_F(SMP_BearerTest, OnSecurityRequest) {
+  constexpr AuthReqField kAuthReq = 5u;  // (value is unimportant)
+
+  // clang-format off
+  const auto kSecurityRequest = CreateStaticByteBuffer(
+      0x0B,     // code: Security Request
+      kAuthReq  // auth_req
+  );
+  // clang-format on
+
+  fake_chan()->Receive(kSecurityRequest);
+  RunLoopUntilIdle();
+
+  // The request should be ignored during pairing.
+  EXPECT_EQ(1, security_request_count());
+  EXPECT_EQ(kAuthReq, security_request_auth_req());
 }
 
 }  // namespace

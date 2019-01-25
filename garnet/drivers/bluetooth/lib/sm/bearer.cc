@@ -604,6 +604,30 @@ void Bearer::OnIdentityAddressInformation(const PacketReader& reader) {
                     params.bd_addr));
 }
 
+void Bearer::OnSecurityRequest(const PacketReader& reader) {
+  // Ignore the security request if pairing is in progress.
+  if (pairing_started() || feature_exchange_pending_) {
+    bt_log(TRACE, "sm", "ignoring \"Security Request\" while already pairing");
+    return;
+  }
+
+  if (reader.payload_size() != sizeof(AuthReqField)) {
+    bt_log(TRACE, "sm", "malformed \"Security Request\" payload");
+    SendPairingFailed(ErrorCode::kInvalidParameters);
+    return;
+  }
+
+  // Reject the command if we are not the master.
+  if (role_ != hci::Connection::Role::kMaster) {
+    bt_log(TRACE, "sm", "rejecting \"Security Request\" as master");
+    SendPairingFailed(ErrorCode::kCommandNotSupported);
+    return;
+  }
+
+  ZX_DEBUG_ASSERT(listener_);
+  listener_->OnSecurityRequest(reader.payload<AuthReqField>());
+}
+
 void Bearer::SendPairingFailed(ErrorCode ecode) {
   auto pdu = NewPDU(sizeof(ErrorCode));
   PacketWriter writer(kPairingFailed, pdu.get());
@@ -668,9 +692,7 @@ void Bearer::OnRxBFrame(const l2cap::SDU& sdu) {
         OnIdentityAddressInformation(reader);
         break;
       case kSecurityRequest:
-        // TODO(NET-1292): Handle this properly. We special case it so that it
-        // gets ignored instead of falling through to the error case.
-        bt_log(WARN, "sm", "\"Security Request\" not handled");
+        OnSecurityRequest(reader);
         break;
       default:
         bt_log(SPEW, "sm", "unsupported command: %#.2x", reader.code());

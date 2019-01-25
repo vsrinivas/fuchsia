@@ -211,6 +211,14 @@ class SMP_PairingStateTest : public l2cap::testing::FakeChannelTest,
     fake_chan()->Receive(buffer);
   }
 
+  void ReceiveSecurityRequest(AuthReqField auth_req = 0u) {
+    StaticByteBuffer<sizeof(Header) + sizeof(AuthReqField)> buffer;
+    buffer[0] = kSecurityRequest;
+    buffer[1] = auth_req;
+    fake_chan()->Receive(buffer);
+    RunLoopUntilIdle();
+  }
+
   void GenerateConfirmValue(const UInt128& random, UInt128* out_value,
                             bool peer_initiator = false, uint32_t tk = 0) {
     ZX_DEBUG_ASSERT(out_value);
@@ -1690,6 +1698,59 @@ TEST_F(SMP_MasterPairingTest, AssignLongTermKey) {
   EXPECT_EQ(sec_props, pairing()->security());
 }
 
+TEST_F(SMP_MasterPairingTest, ReceiveSecurityRequest) {
+  ReceiveSecurityRequest(AuthReq::kMITM);
+  RunLoopUntilIdle();
+
+  // Should have requested pairing with MITM protection.
+  EXPECT_EQ(1, pairing_request_count());
+  const auto& params = local_pairing_cmd().view(1).As<PairingRequestParams>();
+  EXPECT_TRUE(params.auth_req & AuthReq::kMITM);
+}
+
+TEST_F(SMP_MasterPairingTest, ReceiveSecurityRequestWhenPaired) {
+  UInt128 stk;
+  FastForwardToSTKEncrypted(&stk, SecurityLevel::kEncrypted,
+                            KeyDistGen::kEncKey);
+  EXPECT_EQ(stk, fake_link()->ltk()->value());
+  EXPECT_EQ(1, pairing_request_count());
+
+  // Receiving a security request now should have no effect since pairing is
+  // still in progress.
+  ReceiveSecurityRequest();
+  EXPECT_EQ(1, pairing_request_count());
+
+  // Receive EncKey and wait until the link is encrypted with the LTK.
+  UInt128 kLTK{{1, 2, 3, 4, 5, 6, 7, 8, 7, 6, 5, 4, 3, 2, 1, 0}};
+  uint64_t kRand = 5;
+  uint16_t kEDiv = 20;
+  ReceiveEncryptionInformation(kLTK);
+  ReceiveMasterIdentification(kRand, kEDiv);
+  RunLoopUntilIdle();
+  fake_link()->TriggerEncryptionChangeCallback(hci::Status(),
+                                               true /* enabled */);
+  RunLoopUntilIdle();
+  ASSERT_EQ(1, pairing_complete_count());
+  ASSERT_TRUE(pairing_status());
+  ASSERT_TRUE(ltk());
+  ASSERT_EQ(SecurityLevel::kEncrypted, sec_props().level());
+  ASSERT_EQ(2, fake_link()->start_encryption_count());  // Twice for STK & LTK
+  ASSERT_EQ(1, pairing_request_count());
+
+  // Receive a security request with the no MITM requirement. This should
+  // trigger an encryption key refresh and no pairing request.
+  ReceiveSecurityRequest();
+  EXPECT_EQ(1, pairing_request_count());
+  ASSERT_EQ(3, fake_link()->start_encryption_count());  // Twice for STK & LTK
+
+  // Receive a security request with a higher security requirement. This should
+  // trigger a pairing request.
+  ReceiveSecurityRequest(AuthReq::kMITM);
+  EXPECT_EQ(2, pairing_request_count());
+  const auto& params = local_pairing_cmd().view(1).As<PairingRequestParams>();
+  EXPECT_TRUE(params.auth_req & AuthReq::kMITM);
+}
+
 TEST_F(SMP_SlavePairingTest, ReceiveSecondPairingRequestWhilePairing) {
   ReceivePairingRequest();
   RunLoopUntilIdle();
@@ -1997,6 +2058,11 @@ TEST_F(SMP_SlavePairingTest, AssignLongTermKey) {
   EXPECT_EQ(1, new_sec_props_count());
   EXPECT_EQ(sec_props, new_sec_props());
   EXPECT_EQ(sec_props, pairing()->security());
+}
+
+TEST_F(SMP_SlavePairingTest, ReceiveSecurityRequest) {
+  ReceiveSecurityRequest();
+  EXPECT_EQ(ErrorCode::kCommandNotSupported, received_error_code());
 }
 
 }  // namespace

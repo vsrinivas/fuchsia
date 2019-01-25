@@ -813,6 +813,43 @@ void PairingState::OnIdentityAddress(
   OnExpectedKeyReceived();
 }
 
+void PairingState::OnSecurityRequest(AuthReqField auth_req) {
+  ZX_DEBUG_ASSERT(!legacy_state_);
+  ZX_DEBUG_ASSERT(le_link_);
+  ZX_DEBUG_ASSERT(le_link_->role() == hci::Connection::Role::kMaster);
+
+  SecurityLevel requested_level;
+  if (auth_req & AuthReq::kMITM) {
+    requested_level = SecurityLevel::kAuthenticated;
+  } else {
+    requested_level = SecurityLevel::kEncrypted;
+  }
+
+  // If we already have a LTK and its security properties satisfy the request,
+  // then we start link layer encryption (which will either encrypt the link or
+  // perform a key refresh). See Vol 3, Part H, Figure 2.7 for the algorithm.
+  // TODO(armansito): This should compare the peer's SC requirement against the
+  // LTK's security properties. Since we currently don't support LE Secure
+  // Connections we assume that no local LTK ever satisfies this. If the peer
+  // requests SC, then we'll initiate pairing as normal and let the peer accept
+  // or reject the request.
+  if (ltk_ && (ltk_->security().level() >= requested_level) &&
+      !(auth_req & AuthReq::kSC)) {
+    // The existing key satisfies the security requirement.
+    bt_log(TRACE, "sm", "responding to security request using existing LTK");
+    ZX_DEBUG_ASSERT(le_link_->ltk());
+    ZX_DEBUG_ASSERT(*le_link_->ltk() == ltk_->key());
+    le_link_->StartEncryption();
+    return;
+  }
+
+  // Initiate pairing.
+  UpgradeSecurity(requested_level, [](Status status, const auto& security) {
+    bt_log(TRACE, "sm", "security request resolved - %s %s",
+           status.ToString().c_str(), security.ToString().c_str());
+  });
+}
+
 void PairingState::OnEncryptionChange(hci::Status status, bool enabled) {
   // First notify the delegate in case of failure.
   if (bt_is_error(status, ERROR, "sm", "link layer authentication failed")) {

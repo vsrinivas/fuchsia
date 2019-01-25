@@ -96,6 +96,11 @@ class Bearer final {
     // Called when the "Identity Address" is received from the peer during Phase
     // 3.
     virtual void OnIdentityAddress(const common::DeviceAddress& address) = 0;
+
+    // Called when a "Security Request" is received from the peer (see Vol 3,
+    // Part H, 2.4.6) (Note: A device in the link layer master role is not
+    // allowed to send this request).
+    virtual void OnSecurityRequest(AuthReqField auth_req) = 0;
   };
 
   // Initializes this Bearer with the following parameters:
@@ -198,6 +203,7 @@ class Bearer final {
   void OnMasterIdentification(const PacketReader& reader);
   void OnIdentityInformation(const PacketReader& reader);
   void OnIdentityAddressInformation(const PacketReader& reader);
+  void OnSecurityRequest(const PacketReader& reader);
 
   // Sends a Pairing Failed command to the peer.
   void SendPairingFailed(ErrorCode ecode);
