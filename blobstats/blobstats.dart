@@ -327,21 +327,27 @@ class BlobStats {
         var blobTree = {};
         blobTree["n"] = blobName;
         blobTree["k"] = "s"; // kind=blob
-        if (blobName.endsWith(".dilp") || blobName.endsWith(".aotsnapshot")) {
-          blobTree["t"] = "dart"; // type=Dart ("blue")
+        var isUnique = blob.count == 1;
+        var isDart =
+            blobName.endsWith(".dilp") || blobName.endsWith(".aotsnapshot");
+        if (isDart) {
+          if (isUnique) {
+            blobTree["t"] = "uniDart";
+          } else {
+            blobTree["t"] = "dart"; // type=Shared Dart ("blue")
+          }
         } else {
-          blobTree["t"] = "?"; // type=Other ("red")
+          if (isUnique) {
+            blobTree["t"] = "unique";
+          } else {
+            blobTree["t"] = "?"; // type=Other ("red")
+          }
         }
         blobTree["c"] = blob.count;
         blobTree["value"] = blob.proportional;
         blobTree["originalSize"] = blob.sizeOnHost;
         blobTree["estimatedCompressedSize"] = blob.estimatedCompressedSize;
         pkgTree["children"].add(blobTree);
-        // Mark blobs with exactly one reference as "unique blobs" ("green")
-        // The visualizer helpfully computes the sum of all unique "blobs" within a package.
-        if (blob.count == 1) {
-          blobTree["t"] = "unique";
-        }
       });
     }
 

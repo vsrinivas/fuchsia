@@ -70,6 +70,7 @@ D3BlobTreeMap._BLOB_TYPE_DESCRIPTIONS = {
   'dart': 'Shared Dart',
   '?': 'Shared Unrecognized',
   'unique': 'Unique',
+  'uniDart': 'Unique Dart',
 };
 D3BlobTreeMap._BLOB_TYPES = [];
 for (var blob_type in D3BlobTreeMap._BLOB_TYPE_DESCRIPTIONS) {
@@ -94,6 +95,7 @@ D3BlobTreeMap._colorArray = [
   'rgb(148,116,204)',  // Shared Dart - Deep Purple 300
   'rgb(255,213,79)',  // Unique - Amber 300
   'rgb(77,208,225)',  // Shared Other - Cyan 300
+  'rgb(161,136,127)', // Unique Dart - Brown 300
 ];
 
 D3BlobTreeMap._initColorMap = function() {
@@ -128,7 +130,7 @@ D3BlobTreeMap.prototype.init = function() {
 }
 
 /**
- * Sets the data displayed by the treemap and laying out the map.
+ * Sets the data displayed by the treemap and lays out the map.
  */
 D3BlobTreeMap.prototype._setData = function(data) {
   this._treeData = data;
