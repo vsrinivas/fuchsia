@@ -1467,7 +1467,7 @@ action("amber_publish_blobs") {
   }
   script = "manifest.py"
   args = [
-    "--copytree",
+    "--copy-contentaddr",
     "--output=" + rebase_path(amber_repository_blobs_dir),
     "--stamp=" + rebase_path("$amber_repository_dir.stamp"),
   ]

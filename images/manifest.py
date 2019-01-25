@@ -260,8 +260,8 @@ def common_parse_args(parser):
 
 def parse_args():
     parser = argparse.ArgumentParser(description='Read manifest files.')
-    parser.add_argument('--copytree', action='store_true', default=False,
-                        help='Output directory tree of copies, not manifest')
+    parser.add_argument('--copy-contentaddr', action='store_true', default=False,
+                        help='Copy to content-addressed targets, not manifest')
     parser.add_argument('--sources', action='store_true', default=False,
                         help='Write source file per line, not manifest entry')
     parser.add_argument('--contents',
@@ -285,9 +285,9 @@ def parse_args():
                         metavar='FILE',
                         help='Touch FILE at the end.')
     args = common_parse_args(parser)
-    if args.copytree:
+    if args.copy_contentaddr:
         if args.contents:
-            parser.error('--copytree is incompatible with --contents')
+            parser.error('--copy-contentaddr is incompatible with --contents')
         args.unique = True
         args.sources = True
     return args
@@ -309,15 +309,18 @@ def main():
         else:
             output_sets[entry.group].add(line)
     for output_filename, output_set in zip(args.output, output_sets):
-        if args.copytree:
+        if args.copy_contentaddr:
+            created_dirs = set()
             for target, source in output_set.iteritems():
-                try:
-                    os.makedirs(os.path.join(output_filename,
-                                             os.path.dirname(target)))
-                except OSError as exc:
-                    if exc.errno != errno.EEXIST:
-                        raise exc
-                shutil.copyfile(source, os.path.join(output_filename, target))
+                target_path = os.path.join(output_filename, target)
+                if os.path.exists(target_path):
+                    continue
+                target_dir = os.path.dirname(target_path)
+                if target_dir not in created_dirs:
+                    if not os.path.exists(target_dir):
+                        os.makedirs(target_dir)
+                    created_dirs.add(target_dir)
+                shutil.copyfile(source, target_path)
         else:
             with open(output_filename, 'w') as file:
                 file.write(''.join(sorted(
