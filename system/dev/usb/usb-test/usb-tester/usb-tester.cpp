@@ -246,7 +246,7 @@ zx_status_t TestRequest::GetDataUnscattered(fbl::Array<uint8_t>* out_data) {
     return ZX_OK;
 }
 
-zx_status_t UsbTester::BulkLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+zx_status_t UsbTester::BulkLoopback(const fuchsia_hardware_usb_tester_BulkTestParams* params,
                                     const fuchsia_hardware_usb_tester_SgList* out_sg_list,
                                     const fuchsia_hardware_usb_tester_SgList* in_sg_list) {
     if (params->len > kReqMaxLen) {
@@ -342,24 +342,29 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
     return ZX_OK;
 }
 
-zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTestParams* params,
                                      fuchsia_hardware_usb_tester_IsochResult* result) {
-    if (params->len > kReqMaxLen) {
+    IsochLoopbackIntf* intf = &isoch_loopback_intf_;
+    uint16_t packet_size = fbl::min(params->packet_size,
+                                    fbl::min(intf->in_max_packet, intf->out_max_packet));
+    if (packet_size < params->packet_size) {
+        zxlogf(ERROR, "requested packet size %u, using max packet size %u\n",
+               params->packet_size, packet_size);
+    }
+    size_t num_reqs = params->num_packets;
+    size_t total_len = packet_size * num_reqs;
+    if (total_len > kReqMaxLen) {
         return ZX_ERR_INVALID_ARGS;
     }
-    IsochLoopbackIntf* intf = &isoch_loopback_intf_;
 
     zx_status_t status = usb_set_interface(&usb_, intf->intf_num, intf->alt_setting);
     if (status != ZX_OK) {
         zxlogf(ERROR, "usb_set_interface got err: %d\n", status);
         return status;
     }
-    // TODO(jocelyndang): optionally allow the user to specify a packet size.
-    uint16_t packet_size = fbl::min(intf->in_max_packet, intf->out_max_packet);
-    size_t num_reqs = fbl::round_up(params->len, packet_size) / packet_size;
 
     zxlogf(TRACE, "allocating %lu reqs of packet size %u, total bytes %lu\n",
-           num_reqs, packet_size, params->len);
+           num_reqs, packet_size, total_len);
 
     fbl::Vector<TestRequest> in_reqs;
     fbl::Vector<TestRequest> out_reqs;
@@ -424,7 +429,7 @@ static zx_status_t fidl_SetModeFwloader(void* ctx, fidl_txn_t* txn) {
 }
 
 static zx_status_t fidl_BulkLoopback(void* ctx,
-                                     const fuchsia_hardware_usb_tester_TestParams* params,
+                                     const fuchsia_hardware_usb_tester_BulkTestParams* params,
                                      const fuchsia_hardware_usb_tester_SgList* out_sg_list,
                                      const fuchsia_hardware_usb_tester_SgList* in_sg_list,
                                      fidl_txn_t* txn) {
@@ -434,7 +439,7 @@ static zx_status_t fidl_BulkLoopback(void* ctx,
 }
 
 static zx_status_t fidl_IsochLoopback(void* ctx,
-                                      const fuchsia_hardware_usb_tester_TestParams* params,
+                                      const fuchsia_hardware_usb_tester_IsochTestParams* params,
                                       fidl_txn_t* txn) {
     auto* usb_tester = static_cast<UsbTester*>(ctx);
     fuchsia_hardware_usb_tester_IsochResult result = {};

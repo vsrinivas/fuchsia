@@ -91,10 +91,10 @@ public:
     // FIDL message implementation.
     zx_status_t SetModeFwloader();
     // Tests the loopback of data from the bulk OUT EP to the bulk IN EP.
-    zx_status_t BulkLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+    zx_status_t BulkLoopback(const fuchsia_hardware_usb_tester_BulkTestParams* params,
                              const fuchsia_hardware_usb_tester_SgList* out_sg_list,
                              const fuchsia_hardware_usb_tester_SgList* in_sg_list);
-    zx_status_t IsochLoopback(const fuchsia_hardware_usb_tester_TestParams* params,
+    zx_status_t IsochLoopback(const fuchsia_hardware_usb_tester_IsochTestParams* params,
                               fuchsia_hardware_usb_tester_IsochResult* result);
     void GetVersion(uint8_t* major_version, uint8_t* minor_version);
 
