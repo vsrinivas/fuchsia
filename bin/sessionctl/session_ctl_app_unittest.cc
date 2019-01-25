@@ -82,8 +82,9 @@ TEST_F(SessionCtlAppTest, GetUsage) {
 
 TEST_F(SessionCtlAppTest, AddMod) {
   // Add a mod
-  auto command_line =
-      fxl::CommandLineFromInitializerList({"sessionctl", "add_mod", "mod_url"});
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "add_mod",
+       "fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx"});
   SessionCtlApp sessionctl = CreateSessionCtl(command_line);
   RunLoopUntilCommandExecutes([&] {
     return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
@@ -95,6 +96,8 @@ TEST_F(SessionCtlAppTest, AddMod) {
   EXPECT_EQ("mod_url", story_data->story_name);
   EXPECT_EQ("mod_url",
             test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
@@ -111,8 +114,9 @@ TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   auto story_data = GetStoryData("s");
   ASSERT_TRUE(story_data);
   EXPECT_EQ("s", story_data->story_name);
-  EXPECT_EQ("m",
-            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ("m", test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ("fuchsia-pkg://fuchsia.com/mod_url#meta/mod_url.cmx",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 

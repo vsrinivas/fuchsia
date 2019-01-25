@@ -66,22 +66,22 @@ add_mod
   Defaults --focus_mod and --focus_story to 'true'.
 
   MOD_URL
-    Mods have a unique "mod_url". It's the mod package's name.
-    In BUILD.gn fuchsia_package_name = "mod_url" or mod_url comes from
-    flutter_app("mod_url") when there is no fuchsia_package_name set.
+    This can be either the mod's full package url or the mod component's name.
+    The mod components name will be converted to the following package url
+    format: fuchsia-pkg://fuchsia.com/MOD_URL#meta/MOD_URL.cmx.
 
   optional: --story_name, --mod_name, --focus_mod, --focus_story
 
 remove_mod
   Usage: [--story_name=foo] remove_mod MOD_NAME
 
-  Removes an existing mod by name. If the mod was added with add_mod, 
+  Removes an existing mod by name. If the mod was added with add_mod,
   use the value you passed to add_mod's --mod_name flag or the default
   value which would be the mod_url.
   Defaults --story_name to MOD_NAME.
 
   MOD_NAME
-      The name of the mod.
+    The name of the mod.
 
   optional: --story_name
 

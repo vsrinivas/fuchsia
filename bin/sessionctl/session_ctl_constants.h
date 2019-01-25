@@ -28,6 +28,11 @@ constexpr char kStoryNameFlagString[] = "story_name";
 // the user does not set a required flag.
 constexpr char kGetUsageErrorString[] = "GetUsage";
 
+// Fuchsia package paths for add_mod
+constexpr char kFuchsiaPkgPrefix[] = "fuchsia-pkg://";
+constexpr char kFuchsiaPkgPath[] = "fuchsia-pkg://fuchsia.com/%s#meta/%s.cmx";
+
+// hub paths to debug services.
 constexpr char kSessionCtlServiceGlobPath[] =
     "/hub/c/sessionmgr.cmx/*/out/debug/sessionctl";
 constexpr char kBasemgrDebugServiceGlobPath[] =

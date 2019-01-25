@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <regex>
+
 #include "peridot/bin/sessionctl/session_ctl_app.h"
 #include "peridot/bin/sessionctl/session_ctl_constants.h"
 
@@ -76,6 +78,21 @@ std::string SessionCtlApp::ExecuteAddModCommand(
   std::string mod_url = command_line.positional_args().at(1);
   std::string mod_name = mod_url;
   std::string story_name = mod_url;
+
+  if (mod_url.find(kFuchsiaPkgPrefix) == 0) {
+    // Extract the component name from the mod url and use it as the mod and
+    // story name
+    std::regex pkg_regex(".*#meta/(\\w+)\\.cmx");
+    std::smatch match;
+    if (std::regex_search(mod_url, match, pkg_regex)) {
+      mod_name = match[1];
+      story_name = match[1];
+    }
+  } else {
+    // Replace mod url short name with full package path
+    mod_url =
+        fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
+  }
 
   // If the following options aren't specified, their respective values will
   // remain unchanged.
