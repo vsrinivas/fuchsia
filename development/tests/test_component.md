@@ -97,10 +97,10 @@ enable this workaround you need to allow some system services:
 "facets": {
   "fuchsia.test": {
     "system-services": [
-      "fuchsia.netstack.Netstack",
-      "fuchsia.net.LegacySocketProvider",
       "fuchsia.net.Connectivity",
-      "fuchsia.net.stack.Stack"
+      "fuchsia.net.SocketProvider",
+      "fuchsia.net.stack.Stack",
+      "fuchsia.netstack.Netstack"
     ]
   }
 }
