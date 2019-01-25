@@ -51,10 +51,12 @@ TEST_F(AudioRendererSyncTest, GetMinLeadTime) {
   ASSERT_EQ(ZX_OK, audio_renderer_sync_->GetMinLeadTime(&min_lead_time))
       << kConnectionErr;
   EXPECT_GE(min_lead_time, 0) << "No MinLeadTime update received";
-
-  // TODO(mpuryear): test GetMinLeadTime with nullptr
 }
 
+// GetMinLeadTime(nullptr) results in the synchronous proxy terminating the
+// client process, with no service-side impact -- no reason to test that here.
+
+//
 // Before renderers are operational, multiple SetPcmStreamTypes should succeed.
 // We test twice because of previous bug, where the first succeeded but any
 // subsequent call (before Play) would cause a FIDL channel disconnect.

@@ -649,7 +649,7 @@ void AudioRendererImpl::PauseNoReply() { Pause(nullptr); }
 void AudioRendererImpl::SetGain(float gain_db) {
   // Anywhere we set stream_gain_db_, we should perform this range check.
   if (gain_db > fuchsia::media::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::MUTED_GAIN_DB) {
+      gain_db < fuchsia::media::MUTED_GAIN_DB || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
     Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
     return;
@@ -678,8 +678,8 @@ void AudioRendererImpl::SetGainWithRamp(float gain_db,
                                         zx_duration_t duration_ns,
                                         fuchsia::media::AudioRamp rampType) {
   if (gain_db > fuchsia::media::MAX_GAIN_DB ||
-      gain_db < fuchsia::media::MUTED_GAIN_DB) {
-    FXL_LOG(ERROR) << "Ramp gain value (" << gain_db << ") out of range.";
+      gain_db < fuchsia::media::MUTED_GAIN_DB || isnan(gain_db)) {
+    FXL_LOG(ERROR) << "SetGainWithRamp(" << gain_db << " dB) out of range.";
     Shutdown();  // Use fit::defer() pattern if more than 1 error return case.
     return;
   }

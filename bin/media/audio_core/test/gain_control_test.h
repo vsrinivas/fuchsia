@@ -63,6 +63,7 @@ class GainControlTestBase : public gtest::RealLoopFixture {
   void TestDuplicateSetMute();
   void TestSetGainTooHigh();
   void TestSetGainTooLow();
+  void TestSetGainNaN();
 
   fuchsia::media::AudioRendererPtr audio_renderer_;
   fuchsia::media::AudioCapturerPtr audio_capturer_;

@@ -6,6 +6,7 @@
 
 #include <fuchsia/media/cpp/fidl.h>
 #include <lib/gtest/real_loop_fixture.h>
+#include <cmath>
 
 #include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
@@ -318,6 +319,18 @@ void GainControlTestBase::TestSetGainTooLow() {
   EXPECT_FALSE(gain_control_.is_bound());
 }
 
+// Setting stream-specific gain to NAN should cause both FIDL channels
+// (renderer/capturer and gain_control) to disconnect.
+void GainControlTestBase::TestSetGainNaN() {
+  SetNegativeExpectations();
+
+  constexpr float expect_gain_db = NAN;
+  SetGain(expect_gain_db);
+
+  EXPECT_TRUE(ReceiveDisconnectCallback()) << "Bindings did not disconnect!";
+  EXPECT_FALSE(gain_control_.is_bound());
+}
+
 //
 // Basic GainControl validation with single instance.
 //
@@ -351,7 +364,7 @@ TEST_F(RenderGainControlTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 TEST_F(RenderGainControlTest, SetGainTooLow) { TestSetGainTooLow(); }
 
-// TODO(mpuryear): SetGain(NAN) - should have no effect
+TEST_F(RenderGainControlTest, SetGainNaN) { TestSetGainNaN(); }
 
 // TODO(mpuryear): Ramp-related negative tests, across all scenarios
 
@@ -381,7 +394,7 @@ TEST_F(CaptureGainControlTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 TEST_F(CaptureGainControlTest, SetGainTooLow) { TestSetGainTooLow(); }
 
-// TODO(mpuryear): SetGain(NAN) - should have no effect
+TEST_F(CaptureGainControlTest, SetGainNaN) { TestSetGainNaN(); }
 
 // SiblingGainControlsTest
 // On a renderer/capturer, sibling GainControls receive identical notifications.
@@ -513,6 +526,8 @@ TEST_F(RendererTwoGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 TEST_F(RendererTwoGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
 
+TEST_F(RendererTwoGainControlsTest, SetGainNaN) { TestSetGainNaN(); }
+
 // CapturerTwoGainControlsTest
 // Capturer with two gain controls: both should receive identical notifications.
 //
@@ -540,6 +555,8 @@ TEST_F(CapturerTwoGainControlsTest, DuplicateSetMute) {
 TEST_F(CapturerTwoGainControlsTest, SetGainTooHigh) { TestSetGainTooHigh(); }
 
 TEST_F(CapturerTwoGainControlsTest, SetGainTooLow) { TestSetGainTooLow(); }
+
+TEST_F(CapturerTwoGainControlsTest, SetGainNaN) { TestSetGainNaN(); }
 
 // IndependentGainControlsTest
 // Verify that GainControls on different API instances are fully independent.

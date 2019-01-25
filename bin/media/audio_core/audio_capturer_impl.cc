@@ -1390,7 +1390,7 @@ void AudioCapturerImpl::BindGainControl(
 void AudioCapturerImpl::SetGain(float gain_db) {
   // Before setting stream_gain_db_, we should always perform this range check.
   if ((gain_db < fuchsia::media::MUTED_GAIN_DB) ||
-      (gain_db > fuchsia::media::MAX_GAIN_DB)) {
+      (gain_db > fuchsia::media::MAX_GAIN_DB) || isnan(gain_db)) {
     FXL_LOG(ERROR) << "SetGain(" << gain_db << " dB) out of range.";
     Shutdown();
     return;

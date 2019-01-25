@@ -5,6 +5,7 @@
 #include <fuchsia/media/cpp/fidl.h>
 
 #include <lib/gtest/real_loop_fixture.h>
+#include <cmath>
 
 #include "garnet/bin/media/audio_core/test/audio_fidl_tests_shared.h"
 #include "lib/component/cpp/environment_services_helper.h"
@@ -208,24 +209,30 @@ bool SystemGainMuteTest::ReceiveNoGainCallback() {
 // 1. Audio can create AudioRenderer.
 // 2. Audio persists after created AudioRenderer is destroyed.
 // 3. AudioRenderer persists after Audio is destroyed.
+// 4. Asynchronous Audio can create synchronous AudioCapturers, too.
 TEST_F(AudioTest, CreateAudioRenderer) {
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
   fuchsia::media::AudioPtr audio_2;
   fuchsia::media::AudioPtr audio_3;
+  fuchsia::media::AudioPtr audio_4;
 
   environment_services_->ConnectToService(audio_2.NewRequest());
   environment_services_->ConnectToService(audio_3.NewRequest());
+  environment_services_->ConnectToService(audio_4.NewRequest());
 
   audio_2.set_error_handler(err_handler);
   audio_3.set_error_handler(err_handler);
+  audio_4.set_error_handler(err_handler);
 
   fuchsia::media::AudioRendererPtr audio_renderer_2;
   fuchsia::media::AudioRendererPtr audio_renderer_3;
+  fuchsia::media::AudioRendererSyncPtr audio_renderer_sync;
 
   audio_->CreateAudioRenderer(audio_renderer_.NewRequest());
   audio_2->CreateAudioRenderer(audio_renderer_2.NewRequest());
   audio_3->CreateAudioRenderer(audio_renderer_3.NewRequest());
+  audio_4->CreateAudioRenderer(audio_renderer_sync.NewRequest());
 
   audio_renderer_.set_error_handler(err_handler);
   audio_renderer_2.set_error_handler(err_handler);
@@ -248,6 +255,37 @@ TEST_F(AudioTest, CreateAudioRenderer) {
   // Validate AudioRenderer3 persists after Audio3 is unbound.
   EXPECT_FALSE(audio_3.is_bound());
   EXPECT_TRUE(audio_renderer_3.is_bound());
+
+  // Validate AudioRendererSync was successfully created.
+  EXPECT_TRUE(audio_4.is_bound());
+  EXPECT_TRUE(audio_renderer_sync.is_bound());
+}
+
+// Test behavior of null or bad parameters. Both cases should cleanly fail
+// without causing the Audio FIDL channel to disconnect.
+TEST_F(AudioTest, CreateBadAudioRenderer) {
+  // Passing in a null request should have no effect.
+  audio_->CreateAudioRenderer(nullptr);
+
+  // Malformed request should not affect audio2
+  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
+  fuchsia::media::AudioPtr audio_2;
+  environment_services_->ConnectToService(audio_2.NewRequest());
+  audio_2.set_error_handler(err_handler);
+
+  // Corrupt the contents of this request.
+  fidl::InterfaceRequest<fuchsia::media::AudioRenderer> bad_request;
+  uint32_t garbage = 0xF0B4783C;
+  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  audio_->CreateAudioRenderer(std::move(bad_request));
+
+  // Give time for Disconnect to occur, if it must.
+  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+
+  EXPECT_TRUE(audio_.is_bound());
+  EXPECT_TRUE(audio_2.is_bound());
+
+  // TODO(mpuryear): test cases where inner contents of request are corrupt.
 }
 
 // Test creation and interface independence of AudioCapturer.
@@ -255,24 +293,30 @@ TEST_F(AudioTest, CreateAudioRenderer) {
 // 1. Audio can create AudioCapturer.
 // 2. Audio persists after created AudioCapturer is destroyed.
 // 3. AudioCapturer persists after Audio is destroyed.
+// 4. Asynchronous Audio can create synchronous AudioCapturers, too.
 TEST_F(AudioTest, CreateAudioCapturer) {
   auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
 
   fuchsia::media::AudioPtr audio_2;
   fuchsia::media::AudioPtr audio_3;
+  fuchsia::media::AudioPtr audio_4;
 
   environment_services_->ConnectToService(audio_2.NewRequest());
   environment_services_->ConnectToService(audio_3.NewRequest());
+  environment_services_->ConnectToService(audio_4.NewRequest());
 
   audio_2.set_error_handler(err_handler);
   audio_3.set_error_handler(err_handler);
+  audio_4.set_error_handler(err_handler);
 
   fuchsia::media::AudioCapturerPtr audio_capturer_2;
   fuchsia::media::AudioCapturerPtr audio_capturer_3;
+  fuchsia::media::AudioCapturerSyncPtr audio_capturer_sync;
 
   audio_->CreateAudioCapturer(audio_capturer_.NewRequest(), false);
   audio_2->CreateAudioCapturer(audio_capturer_2.NewRequest(), false);
   audio_3->CreateAudioCapturer(audio_capturer_3.NewRequest(), true);
+  audio_4->CreateAudioCapturer(audio_capturer_sync.NewRequest(), false);
 
   audio_capturer_.set_error_handler(err_handler);
   audio_capturer_2.set_error_handler(err_handler);
@@ -295,6 +339,37 @@ TEST_F(AudioTest, CreateAudioCapturer) {
   // Validate AudioCapturer3 persists after Audio3 is unbound.
   EXPECT_FALSE(audio_3.is_bound());
   EXPECT_TRUE(audio_capturer_3.is_bound());
+
+  // Validate AudioCapturerSync was successfully created.
+  EXPECT_TRUE(audio_4.is_bound());
+  EXPECT_TRUE(audio_capturer_sync.is_bound());
+}
+
+// Test behavior of null or bad parameters. Both cases should cleanly fail
+// without causing the Audio FIDL channel to disconnect.
+TEST_F(AudioTest, CreateBadAudioCapturer) {
+  // Passing in a null request should have no effect.
+  audio_->CreateAudioCapturer(nullptr, false);
+
+  // Malformed request should not affect audio2
+  auto err_handler = [this](zx_status_t error) { error_occurred_ = true; };
+  fuchsia::media::AudioPtr audio_2;
+  environment_services_->ConnectToService(audio_2.NewRequest());
+  audio_2.set_error_handler(err_handler);
+
+  // Corrupt the contents of this request.
+  fidl::InterfaceRequest<fuchsia::media::AudioCapturer> bad_request;
+  uint32_t garbage = 0xF0B4783C;
+  memmove(&bad_request, &garbage, sizeof(uint32_t));
+  audio_2->CreateAudioCapturer(std::move(bad_request), true);
+
+  // Give time for Disconnect to occur, if it must.
+  EXPECT_TRUE(ReceiveNoDisconnectCallback()) << kConnectionErr;
+
+  EXPECT_TRUE(audio_.is_bound());
+  EXPECT_TRUE(audio_2.is_bound());
+
+  // TODO(mpuryear): test cases where inner contents of request are corrupt.
 }
 
 // Test setting (and re-setting) the audio output routing policy.
@@ -306,16 +381,16 @@ TEST_F(AudioTest, SetRoutingPolicy) {
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS);
 
+  // Out-of-range enum should cause debug message, but no disconnect.
+  audio_->SetRoutingPolicy(
+      static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u));
+
   // Setting policy to different mode.
   audio_->SetRoutingPolicy(
       fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT);
   EXPECT_TRUE(ReceiveNoDisconnectCallback());
   EXPECT_TRUE(audio_.is_bound());
 }
-
-// TODO(mpuryear): Test cases where we expect Audio binding to disconnect.
-// Possibilities: null/malformed request (CreateAudioRenderer / Capturer),
-// out-of-range enum (SetOutputRoutingPolicy), NAN float (SetSystemGain).
 
 //
 // Validation of System Gain and Mute
@@ -442,6 +517,12 @@ TEST_F(SystemGainMuteTest, SystemGainTooHighIsClampedToMaximum) {
 TEST_F(SystemGainMuteTest, SystemGainTooLowIsClampedToMinimum) {
   SetSystemGain(kTooLowGainDb);
   EXPECT_TRUE(ReceiveGainCallback(fuchsia::media::MUTED_GAIN_DB, false));
+}
+
+// Set System Gain to malformed float. Should cause no change, nor disconnect.
+TEST_F(SystemGainMuteTest, SystemGainNanHasNoEffect) {
+  SetSystemGain(NAN);
+  EXPECT_TRUE(ReceiveNoGainCallback());
 }
 
 }  // namespace media::audio::test

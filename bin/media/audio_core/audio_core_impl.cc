@@ -49,8 +49,8 @@ AudioCoreImpl::AudioCoreImpl() : device_manager_(this) {
   // manager so that we wait until we are certain that we have discovered and
   // probed the capabilities of all of the pre-existing inputs and outputs
   // before proceeding.  See MTWN-118
-  async::PostDelayedTask(dispatcher_, [this]() { PublishServices(); },
-                         zx::msec(50));
+  async::PostDelayedTask(
+      dispatcher_, [this]() { PublishServices(); }, zx::msec(50));
 }
 
 AudioCoreImpl::~AudioCoreImpl() {
@@ -105,6 +105,12 @@ void AudioCoreImpl::CreateAudioCapturer(
 }
 
 void AudioCoreImpl::SetSystemGain(float gain_db) {
+  // NAN is undefined and "signless". We cannot simply clamp it into range.
+  if (isnan(gain_db)) {
+    FXL_LOG(ERROR) << "Invalid system gain " << gain_db
+                   << " dB -- making no change";
+    return;
+  }
   gain_db = std::max(std::min(gain_db, kMaxSystemAudioGainDb),
                      fuchsia::media::MUTED_GAIN_DB);
 

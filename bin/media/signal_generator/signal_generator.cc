@@ -197,8 +197,7 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", at stream gain %.3f dB", stream_gain_db_);
   }
   if (set_stream_mute_) {
-    printf(", after setting stream Mute to %s",
-           stream_mute_ ? "TRUE" : "FALSE");
+    printf(", after explicitly %smuting this stream", stream_mute_ ? "" : "un");
   }
 
   printf(".\nSignal will play for %.3f seconds, using %u buffers of %u frames",
@@ -208,7 +207,7 @@ void MediaApp::DisplayConfigurationSettings() {
     printf(", after setting ");
   }
   if (set_system_gain_) {
-    printf("System Gain to %.3fdB%s", system_gain_db_,
+    printf("System Gain to %.3f dB%s", system_gain_db_,
            set_system_mute_ ? " and " : "");
   }
   if (set_system_mute_) {

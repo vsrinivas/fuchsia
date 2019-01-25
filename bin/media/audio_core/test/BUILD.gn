@@ -9,6 +9,7 @@ executable("audio_fidl_tests_bin") {
   output_name = "audio_fidl_tests"
 
   sources = [
+    "audio_capturer_test.cc",
     "audio_fidl_tests.cc",
     "audio_fidl_tests_shared.h",
     "audio_renderer_sync_test.cc",

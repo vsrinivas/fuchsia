@@ -48,6 +48,13 @@ TEST_F(AudioSyncTest, CreateAudioRenderer) {
   EXPECT_TRUE(audio_renderer_sync_.is_bound());
   EXPECT_TRUE(audio_sync_.is_bound());
 
+  // Validate synchronous Audio can create asynchronous AudioRenderers, too.
+  fuchsia::media::AudioRendererPtr audio_renderer;
+  EXPECT_EQ(ZX_OK,
+            audio_sync_->CreateAudioRenderer(audio_renderer.NewRequest()));
+  EXPECT_TRUE(audio_sync_.is_bound());
+  EXPECT_TRUE(audio_renderer.is_bound());
+
   // Validate that Audio persists without AudioRenderer.
   audio_renderer_sync_.Unbind();
   EXPECT_TRUE(audio_sync_.is_bound());
@@ -61,6 +68,24 @@ TEST_F(AudioSyncTest, CreateAudioRenderer) {
   EXPECT_FALSE(audio_sync_.is_bound());
 }
 
+// Test behavior of null or bad parameters. Both cases should cleanly fail
+// without causing the Audio FIDL channel to disconnect.
+TEST_F(AudioSyncTest, CreateBadAudioRenderer) {
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS, audio_sync_->CreateAudioRenderer(nullptr));
+  EXPECT_TRUE(audio_sync_.is_bound());
+
+  // Corrupt the contents of this request.
+  fidl::InterfaceRequest<fuchsia::media::AudioRenderer> bad_request;
+  uint32_t garbage = 0xF0B4783C;
+  memmove(&bad_request, &garbage, sizeof(uint32_t));
+
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            audio_sync_->CreateAudioRenderer(std::move(bad_request)));
+  EXPECT_TRUE(audio_sync_.is_bound());
+
+  // TODO(mpuryear): test cases where inner contents of request are corrupt.
+}
+
 // Test creation and interface independence of AudioCapturer.
 TEST_F(AudioSyncTest, CreateAudioCapturer) {
   // Validate Audio can create AudioCapturer interface.
@@ -68,6 +93,13 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
                        audio_capturer_sync_.NewRequest(), true));
   EXPECT_TRUE(audio_capturer_sync_.is_bound());
   EXPECT_TRUE(audio_sync_.is_bound());
+
+  // Validate synchronous Audio can create asynchronous AudioCapturers, too.
+  fuchsia::media::AudioCapturerPtr audio_capturer;
+  EXPECT_EQ(ZX_OK, audio_sync_->CreateAudioCapturer(audio_capturer.NewRequest(),
+                                                    false));
+  EXPECT_TRUE(audio_sync_.is_bound());
+  EXPECT_TRUE(audio_capturer.is_bound());
 
   // Validate that Audio persists without AudioCapturer.
   audio_capturer_sync_.Unbind();
@@ -79,6 +111,25 @@ TEST_F(AudioSyncTest, CreateAudioCapturer) {
   audio_sync_.Unbind();
   EXPECT_TRUE(audio_capturer_sync_.is_bound());
   EXPECT_FALSE(audio_sync_.is_bound());
+}
+
+// Test behavior of null or bad parameters. Both cases should cleanly fail
+// without causing the Audio FIDL channel to disconnect.
+TEST_F(AudioSyncTest, CreateBadAudioCapturer) {
+  EXPECT_EQ(ZX_ERR_INVALID_ARGS,
+            audio_sync_->CreateAudioCapturer(nullptr, true));
+  EXPECT_TRUE(audio_sync_.is_bound());
+
+  // Corrupt the contents of this request.
+  fidl::InterfaceRequest<fuchsia::media::AudioCapturer> bad_request;
+  uint32_t garbage = 0xF0B4783C;
+  memmove(&bad_request, &garbage, sizeof(uint32_t));
+
+  EXPECT_EQ(ZX_ERR_BAD_HANDLE,
+            audio_sync_->CreateAudioCapturer(std::move(bad_request), false));
+  EXPECT_TRUE(audio_sync_.is_bound());
+
+  // TODO(mpuryear): test cases where inner contents of request are corrupt.
 }
 
 // Test the setting of audio output routing policy.
@@ -93,10 +144,16 @@ TEST_F(AudioSyncTest, SetRoutingPolicy) {
             audio_sync_->SetRoutingPolicy(
                 fuchsia::media::AudioOutputRoutingPolicy::ALL_PLUGGED_OUTPUTS));
 
+  // Out-of-range enum should cause debug message, but no error nor disconnect.
+  EXPECT_EQ(ZX_OK,
+            audio_sync_->SetRoutingPolicy(
+                static_cast<fuchsia::media::AudioOutputRoutingPolicy>(-1u)));
+
   // Leave this persistent systemwide setting in the default state!
   EXPECT_EQ(ZX_OK,
             audio_sync_->SetRoutingPolicy(
                 fuchsia::media::AudioOutputRoutingPolicy::LAST_PLUGGED_OUTPUT));
+  EXPECT_TRUE(audio_sync_.is_bound());
 }
 
 }  // namespace media::audio::test
