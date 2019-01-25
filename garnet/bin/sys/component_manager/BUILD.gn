@@ -16,6 +16,7 @@ rustc_binary("bin") {
     "$garnet_sdk_fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//garnet/public/lib/fidl/rust/fidl",
     "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-zircon",
@@ -24,6 +25,8 @@ rustc_binary("bin") {
     "//third_party/rust-crates/rustc_deps:lazy_static",
     "//third_party/rust-crates/rustc_deps:url",
     "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+    "//zircon/public/fidl/fuchsia-process:fuchsia-process-rustc",
+    "//zircon/public/fidl/fuchsia-ldsvc:fuchsia-ldsvc-rustc",
   ]
 }
 

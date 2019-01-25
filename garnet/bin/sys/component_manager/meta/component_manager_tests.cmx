@@ -1,5 +1,13 @@
 {
     "program": {
         "binary": "test/component_manager_tests"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.process.Launcher"
+        ]
     }
 }
