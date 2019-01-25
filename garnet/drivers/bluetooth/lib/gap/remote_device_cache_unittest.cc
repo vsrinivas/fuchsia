@@ -76,6 +76,10 @@ class GAP_RemoteDeviceCacheTest : public ::gtest::TestLoopFixture {
   }
 
   RemoteDeviceCache* cache() { return &cache_; }
+  // Returns the cached pointer to the device created in the most recent call to
+  // NewDevice(). The caller must ensure that the device has not expired out of
+  // the cache. (Tests of cache expiration should generally subclass the
+  // GAP_RemoteDeviceCacheExpirationTest fixture.)
   RemoteDevice* device() { return device_; }
 
  private:
@@ -956,198 +960,260 @@ TEST_F(GAP_RemoteDeviceCacheTest_BrEdrUpdateCallbackTest,
   EXPECT_EQ(call_count, 2U);
 }
 
-class GAP_RemoteDeviceCacheTest_ExpirationTest
-    : public GAP_RemoteDeviceCacheTest {
+class GAP_RemoteDeviceCacheExpirationTest : public ::gtest::TestLoopFixture {
  public:
   void SetUp() {
-    NewDevice(kAddrLePublic, true);
-    device_id_ = device()->identifier();
-    device_addr_ = device()->address();
-    ASSERT_TRUE(device()->temporary());
+    auto* dev = cache_.NewDevice(kAddrLePublic, true /*connectable*/);
+    ASSERT_TRUE(dev);
+    ASSERT_TRUE(dev->temporary());
+    device_addr_ = dev->address();
+    device_id_ = dev->identifier();
+  }
+
+  void TearDown() { RunLoopUntilIdle(); }
+
+  RemoteDevice* GetDefaultDevice() { return cache_.FindDeviceById(device_id_); }
+  RemoteDevice* GetDeviceById(const std::string& id) {
+    return cache_.FindDeviceById(id);
+  }
+  bool IsDefaultDeviceAddressInCache() {
+    return cache_.FindDeviceByAddress(device_addr_);
+  }
+  bool IsDefaultDevicePresent() { return GetDefaultDevice(); }
+  RemoteDevice* NewDevice(const common::DeviceAddress& address,
+                          bool connectable) {
+    return cache_.NewDevice(address, connectable);
   }
 
  private:
+  RemoteDeviceCache cache_;
+  common::DeviceAddress device_addr_;
   std::string device_id_;
-  DeviceAddress device_addr_;
 };
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        TemporaryDiesSixtySecondsAfterBirth) {
   RunLoopFor(kCacheTimeout);
-  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        TemporaryLivesForSixtySecondsAfterBirth) {
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        TemporaryLivesForSixtySecondsSinceLastSeen) {
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  ASSERT_TRUE(IsDefaultDevicePresent());
 
   // Tickle device, and verify it sticks around for another cache timeout.
-  device()->SetName("nombre");
+  GetDefaultDevice()->SetName("nombre");
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        TemporaryDiesSixtySecondsAfterLastSeen) {
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  ASSERT_TRUE(IsDefaultDevicePresent());
 
   // Tickle device, and verify it expires after cache timeout.
-  device()->SetName("nombre");
+  GetDefaultDevice()->SetName("nombre");
   RunLoopFor(kCacheTimeout);
-  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        CanMakeNonTemporaryJustBeforeSixtySeconds) {
   // At last possible moment, make device non-temporary,
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
-  device()->MutLe().SetConnectionState(
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  ASSERT_FALSE(device()->temporary());
+  ASSERT_FALSE(GetDefaultDevice()->temporary());
 
-  // Verify that devices survives.
+  // Verify that the device survives.
   RunLoopFor(kCacheTimeout * 10);
-  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        LEConnectedDeviceLivesMuchMoreThanSixtySeconds) {
-  device()->MutLe().SetConnectionState(
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
   RunLoopFor(kCacheTimeout * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
-  EXPECT_FALSE(device()->temporary());
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  EXPECT_FALSE(GetDefaultDevice()->temporary());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        BREDRConnectedDeviceLivesMuchMoreThanSixtySeconds) {
-  device()->MutBrEdr().SetConnectionState(
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutBrEdr().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
   RunLoopFor(kCacheTimeout * 10);
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
-  EXPECT_FALSE(device()->temporary());
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  EXPECT_FALSE(GetDefaultDevice()->temporary());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        LEPublicDeviceRemainsNonTemporaryOnDisconnect) {
-  ASSERT_EQ(kAddrLePublic, device()->address());
-  device()->MutLe().SetConnectionState(
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  ASSERT_EQ(kAddrLePublic, GetDefaultDevice()->address());
+  GetDefaultDevice()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kConnected);
-  ASSERT_FALSE(device()->temporary());
+  ASSERT_FALSE(GetDefaultDevice()->temporary());
 
   RunLoopFor(zx::sec(61));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
-  ASSERT_TRUE(device()->identity_known());
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  ASSERT_TRUE(GetDefaultDevice()->identity_known());
 
-  device()->MutLe().SetConnectionState(
+  GetDefaultDevice()->MutLe().SetConnectionState(
       RemoteDevice::ConnectionState::kNotConnected);
-  EXPECT_FALSE(device()->temporary());
+  EXPECT_FALSE(GetDefaultDevice()->temporary());
 
   RunLoopFor(kCacheTimeout);
-  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        LERandomDeviceBecomesTemporaryOnDisconnect) {
-  ASSERT_TRUE(NewDevice(kAddrLeRandom, true));
-  ASSERT_TRUE(device()->temporary());
-  ASSERT_FALSE(device()->identity_known());
+  // Create our RemoteDevice, and get it into the kConnected state.
+  std::string custom_device_id;
+  {
+    auto* custom_device = NewDevice(kAddrLeRandom, true);
+    ASSERT_TRUE(custom_device);
+    ASSERT_TRUE(custom_device->temporary());
+    ASSERT_FALSE(custom_device->identity_known());
+    custom_device_id = custom_device->identifier();
 
-  device()->MutLe().SetConnectionState(
-      RemoteDevice::ConnectionState::kConnected);
-  ASSERT_FALSE(device()->temporary());
-  ASSERT_FALSE(device()->identity_known());
+    custom_device->MutLe().SetConnectionState(
+        RemoteDevice::ConnectionState::kConnected);
+    ASSERT_FALSE(custom_device->temporary());
+    ASSERT_FALSE(custom_device->identity_known());
+  }
 
+  // Verify that the connected device does not expire out of the cache.
+  // Then disconnect the device, in preparation for the next stage of our test.
+  {
+    RunLoopFor(zx::sec(61));
+    auto* custom_device = GetDeviceById(custom_device_id);
+    ASSERT_TRUE(custom_device);
+    ASSERT_FALSE(custom_device->identity_known());
+
+    custom_device->MutLe().SetConnectionState(
+        RemoteDevice::ConnectionState::kNotConnected);
+    EXPECT_TRUE(custom_device->temporary());
+    EXPECT_FALSE(custom_device->identity_known());
+  }
+
+  // Verify that the disconnected device expires out of the cache.
   RunLoopFor(zx::sec(61));
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
-  ASSERT_FALSE(device()->identity_known());
-
-  device()->MutLe().SetConnectionState(
-      RemoteDevice::ConnectionState::kNotConnected);
-  EXPECT_TRUE(device()->temporary());
-  EXPECT_FALSE(device()->identity_known());
-
-  RunLoopFor(zx::sec(61));
-  EXPECT_FALSE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_FALSE(GetDeviceById(custom_device_id));
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        BREDRDeviceRemainsNonTemporaryOnDisconnect) {
-  NewDevice(kAddrBrEdr, true);
-  device()->MutBrEdr().SetConnectionState(
-      RemoteDevice::ConnectionState::kConnected);
-  RunLoopFor(kCacheTimeout * 10);
-  ASSERT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
-  ASSERT_TRUE(device()->identity_known());
-  EXPECT_FALSE(device()->temporary());
+  // Create our RemoteDevice, and get it into the kConnected state.
+  std::string custom_device_id;
+  {
+    auto* custom_device = NewDevice(kAddrBrEdr, true);
+    ASSERT_TRUE(custom_device);
+    custom_device->MutBrEdr().SetConnectionState(
+        RemoteDevice::ConnectionState::kConnected);
+    custom_device_id = custom_device->identifier();
+  }
 
-  device()->MutBrEdr().SetConnectionState(
-      RemoteDevice::ConnectionState::kNotConnected);
-  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
-  EXPECT_FALSE(device()->temporary());
+  // Verify that the connected device does not expire out of the cache.
+  // Then disconnect the device, in preparation for the next stage of our test.
+  {
+    RunLoopFor(kCacheTimeout * 10);
+    auto* custom_device = GetDeviceById(custom_device_id);
+    ASSERT_TRUE(custom_device);
+    ASSERT_TRUE(custom_device->identity_known());
+    EXPECT_FALSE(custom_device->temporary());
 
+    custom_device->MutBrEdr().SetConnectionState(
+        RemoteDevice::ConnectionState::kNotConnected);
+    ASSERT_TRUE(GetDeviceById(custom_device_id));
+    EXPECT_FALSE(custom_device->temporary());
+  }
+
+  // Verify that the disconnected device does _not_ expire out of the cache.
+  // We expect the device to remain, because BrEdr devices are non-temporary
+  // even when disconnected.
   RunLoopFor(kCacheTimeout);
-  EXPECT_EQ(device(), cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(GetDeviceById(custom_device_id));
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, ExpirationUpdatesAddressMap) {
+TEST_F(GAP_RemoteDeviceCacheExpirationTest, ExpirationUpdatesAddressMap) {
+  ASSERT_TRUE(IsDefaultDeviceAddressInCache());
   RunLoopFor(kCacheTimeout);
-  EXPECT_FALSE(cache()->FindDeviceByAddress(device()->address()));
+  EXPECT_FALSE(IsDefaultDeviceAddressInCache());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        SetAdvertisingDataUpdatesExpiration) {
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  device()->MutLe().SetAdvertisingData(kTestRSSI, StaticByteBuffer<1>{});
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutLe().SetAdvertisingData(kTestRSSI,
+                                                 StaticByteBuffer<1>{});
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        SetBrEdrInquiryDataFromInquiryResultUpdatesExpiration) {
   hci::InquiryResult ir;
-  ir.bd_addr = device()->address().value();
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  ir.bd_addr = GetDefaultDevice()->address().value();
+
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  device()->MutBrEdr().SetInquiryData(ir);
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutBrEdr().SetInquiryData(ir);
+
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest,
+TEST_F(GAP_RemoteDeviceCacheExpirationTest,
        SetBrEdrInquiryDataFromInquiryResultRSSIUpdatesExpiration) {
   hci::InquiryResultRSSI irr;
-  irr.bd_addr = device()->address().value();
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  irr.bd_addr = GetDefaultDevice()->address().value();
+
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  device()->MutBrEdr().SetInquiryData(irr);
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutBrEdr().SetInquiryData(irr);
+
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
 TEST_F(
-    GAP_RemoteDeviceCacheTest_ExpirationTest,
+    GAP_RemoteDeviceCacheExpirationTest,
     SetBrEdrInquiryDataFromExtendedInquiryResultEventParamsUpdatesExpiration) {
   hci::ExtendedInquiryResultEventParams eirep;
-  eirep.bd_addr = device()->address().value();
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  eirep.bd_addr = GetDefaultDevice()->address().value();
+
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  device()->MutBrEdr().SetInquiryData(eirep);
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->MutBrEdr().SetInquiryData(eirep);
+
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
-TEST_F(GAP_RemoteDeviceCacheTest_ExpirationTest, SetNameUpdatesExpiration) {
+TEST_F(GAP_RemoteDeviceCacheExpirationTest, SetNameUpdatesExpiration) {
   RunLoopFor(kCacheTimeout - zx::msec(1));
-  device()->SetName({});
+  ASSERT_TRUE(IsDefaultDevicePresent());
+  GetDefaultDevice()->SetName({});
   RunLoopFor(zx::msec(1));
-  EXPECT_TRUE(cache()->FindDeviceById(device()->identifier()));
+  EXPECT_TRUE(IsDefaultDevicePresent());
 }
 
 }  // namespace
