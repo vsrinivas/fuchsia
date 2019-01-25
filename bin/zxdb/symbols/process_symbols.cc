@@ -77,14 +77,14 @@ void ProcessSymbols::SetModules(
     ModuleInfo* info = SaveModuleInfo(modules[added_index], &sym_load_err);
     if (sym_load_err.has_error())
       load_errors.push_back(std::move(sym_load_err));
-    else if (info->symbols)
+    else if (info->symbols->module_ref())
       added_modules.push_back(info->symbols.get());
   }
 
   // Update the TargetSymbols.
   target_symbols_->RemoveAllModules();
   for (auto& [base, mod_info] : modules_) {
-    if (mod_info.symbols) {
+    if (mod_info.symbols->module_ref()) {
       target_symbols_->AddModule(fxl::RefPtr<SystemSymbols::ModuleRef>(
           mod_info.symbols->module_ref()));
     }
@@ -119,7 +119,7 @@ void ProcessSymbols::InjectModuleForTesting(
 std::vector<ModuleSymbolStatus> ProcessSymbols::GetStatus() const {
   std::vector<ModuleSymbolStatus> result;
   for (const auto& [base, mod_info] : modules_) {
-    if (mod_info.symbols) {
+    if (mod_info.symbols->module_ref()) {
       result.push_back(mod_info.symbols->module_symbols()->GetStatus());
       // ModuleSymbols doesn't know the name or base address so fill in now.
       result.back().name = mod_info.name;
@@ -143,7 +143,7 @@ ProcessSymbols::GetLoadedModuleSymbols() const {
   std::vector<const LoadedModuleSymbols*> result;
   result.reserve(modules_.size());
   for (const auto& [base, mod_info] : modules_) {
-    if (mod_info.symbols)
+    if (mod_info.symbols->module_ref())
       result.push_back(mod_info.symbols.get());
   }
   return result;
@@ -158,7 +158,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
     if (options.symbolize) {
       // Symbolize one address.
       const ModuleInfo* info = InfoForAddress(input_location.address);
-      if (!info || !info->symbols) {
+      if (!info || !info->symbols->module_ref()) {
         // Can't symbolize.
         return std::vector<Location>{
             Location(Location::State::kSymbolized, input_location.address)};
@@ -176,7 +176,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
   // Symbol and file/line resolution both requires iterating over all modules.
   std::vector<Location> result;
   for (const auto& [base, mod_info] : modules_) {
-    if (mod_info.symbols) {
+    if (mod_info.symbols->module_ref()) {
       const LoadedModuleSymbols* loaded = mod_info.symbols.get();
       for (Location& location : loaded->module_symbols()->ResolveInputLocation(
                loaded->symbol_context(), input_location, options))
@@ -188,7 +188,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
 
 LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
-  if (!info || !info->symbols)
+  if (!info || !info->symbols->module_ref())
     return LineDetails();
   return info->symbols->module_symbols()->LineDetailsForAddress(
       info->symbols->symbol_context(), address);
@@ -196,7 +196,7 @@ LineDetails ProcessSymbols::LineDetailsForAddress(uint64_t address) const {
 
 bool ProcessSymbols::HaveSymbolsLoadedForModuleAt(uint64_t address) const {
   const ModuleInfo* info = InfoForAddress(address);
-  return info && info->symbols;
+  return info && info->symbols->module_ref();
 }
 
 ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
@@ -213,6 +213,8 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
+    info.symbols = std::make_unique<LoadedModuleSymbols>(
+        nullptr, module.base);
   } else {
     // Success, make the LoadedModuleSymbols.
     info.symbols = std::make_unique<LoadedModuleSymbols>(
