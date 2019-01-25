@@ -62,14 +62,16 @@ if [[ -z "${target}" ]]; then
   exit 1
 fi
 
+debug_agent_pkg="fuchsia-pkg://fuchsia.com/debug_agent#meta/debug_agent.cmx"
+
 # Leave the SSH connection open. Will be closed on script end.
 # We branch out on whether the user used the verbose-agent flag. If so, we
 # redirect the debug agent output to /dev/null.
 echo -e "Attempting to start the Debug Agent."
 if [[ -z "${agent_out}" ]]; then
-  (fx-command-run "ssh" "${target}" "run debug_agent --port=${port}" &) &
+  (fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port}" &) &
 else
-  (fx-command-run "ssh" "${target}" "run debug_agent --port=${port}" &) > "${agent_out}" 2>&1 &
+  (fx-command-run "ssh" "${target}" "run ${debug_agent_pkg} --port=${port}" &) > "${agent_out}" 2>&1 &
 fi
 fx_ssh_pid="$!"
 
