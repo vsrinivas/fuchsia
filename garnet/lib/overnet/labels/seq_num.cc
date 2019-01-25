@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/lib/overnet/labels/seq_num.h"
+#include <string.h>
 #include <iomanip>
 #include <sstream>
 

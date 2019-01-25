@@ -150,9 +150,11 @@ TEST_P(PacketProtocolTest, SendOnePacket) {
   // Calling Process on it should succeed and trigger the completion callback
   // for the send.
   EXPECT_CALL(ps, SendCallback(Property(&Status::is_ok, true)));
-  EXPECT_THAT(
-      packet_protocol->Process(TimeStamp::Epoch(), SeqNum(1, 1), ack).status,
-      Pointee(Slice()));
+  packet_protocol->Process(TimeStamp::Epoch(), SeqNum(1, 1), ack,
+                           [](auto status) {
+                             EXPECT_TRUE(status.is_ok()) << status.AsStatus();
+                             EXPECT_EQ(*status, nullptr);
+                           });
 }
 
 // Exposed some bugs in the fuzzer, and a bug whereby empty ack frames caused a

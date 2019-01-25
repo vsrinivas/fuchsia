@@ -35,23 +35,25 @@ class PacketLink : public Link, private PacketProtocol::PacketSender {
   const uint64_t label_;
   uint64_t metrics_version_ = 1;
   PacketProtocol protocol_;
-  bool sending_ = false;
   Optional<MessageWithPayload> stashed_;
+  bool sending_ = false;
+
+  class LinkSendRequest final : public PacketProtocol::SendRequest {
+   public:
+    LinkSendRequest(PacketLink* link);
+    ~LinkSendRequest();
+
+    Slice GenerateBytes(LazySliceArgs args) override;
+    void Ack(const Status& status) override;
+
+   private:
+    const Op op_ = ScopedOp::current();
+    PacketLink* const link_;
+    bool blocking_sends_ = true;
+  };
 
   // data for a send
   std::vector<Slice> send_slices_;
-
-  struct Emitting {
-    Emitting(Timer* timer, TimeStamp when, Slice slice, Callback<void> done,
-             StatusCallback timer_cb)
-        : slice(std::move(slice)),
-          done(std::move(done)),
-          timeout(timer, when, std::move(timer_cb)) {}
-    Slice slice;
-    Callback<void> done;
-    Timeout timeout;
-  };
-  Optional<Emitting> emitting_;
 
   std::queue<Message> outgoing_;
 };

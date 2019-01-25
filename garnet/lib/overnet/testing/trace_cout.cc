@@ -49,7 +49,12 @@ void TraceCout::Render(TraceOutput output) {
     file++;
   }
 
-  auto pfx = padded(12, [=](auto& out) { out << sev << timer_->Now(); });
+  auto pfx = padded(12, [=](auto& out) {
+    out << sev;
+    if (timer_) {
+      out << timer_->Now();
+    }
+  });
 
   std::cout << pfx << padded(-40, [=](auto& out) { out << file << ":"; })
             << padded(3, [=](auto& out) { out << output.line; }) << ": "

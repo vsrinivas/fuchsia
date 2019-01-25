@@ -35,6 +35,15 @@ BBR::BBR(Timer* timer, RandFunc rand, uint32_t mss, Optional<TimeDelta> srtt)
   ValidateState();
 }
 
+BBR::~BBR() {
+  if (transmit_request_ != nullptr) {
+    transmit_request_->Cancel();
+  }
+  while (auto front = active_transmits_.Front()) {
+    front->Cancel();
+  }
+}
+
 void BBR::ValidateState() { assert(cwnd_bytes_ != 0); }
 
 void BBR::EnterStartup() {
@@ -91,8 +100,8 @@ void BBR::HandleRestartFromIdle() {
   }
 }
 
-void BBR::CheckFullPipe(const Ack& ack, const RateSample& rs) {
-  if (filled_pipe_ || !round_start_ || rs.is_app_limited) {
+void BBR::CheckFullPipe(const Ack& ack) {
+  if (filled_pipe_ || !round_start_ || last_sample_is_app_limited_) {
     // No need to check for a full pipe now.
     return;
   }
@@ -185,161 +194,220 @@ void BBR::OnAck(const Ack& ack) {
   OVERNET_TRACE(DEBUG) << "end-ack packets_in_flight=" << packets_in_flight_
                        << " bytes_in_flight=" << bytes_in_flight_
                        << " cwnd=" << cwnd_bytes_;
-  if (bytes_in_flight_ < cwnd_bytes_ && queued_packet_) {
-    QueuedPacketReady();
+  if (bytes_in_flight_ < cwnd_bytes_ && transmit_request_ &&
+      !transmit_request_->ready_.empty()) {
+    transmit_request_->Ready();
   }
   ValidateState();
 }
 
-void BBR::RequestTransmit(StatusCallback ready) {
-  ScopedModule<BBR> in_bbr(this);
-  ValidateState();
-  if (queued_packet_) {
-    assert(false);
-    return;
+BBR::TransmitRequest::TransmitRequest(BBR* bbr, StatusCallback ready)
+    : bbr_(bbr), ready_(std::move(ready)) {
+  ScopedModule<BBR> in_bbr(bbr_);
+  bbr_->ValidateState();
+  assert(bbr_->transmit_request_ == nullptr);
+  bbr_->transmit_request_ = this;
+  bbr_->active_transmits_.PushBack(this);
+  OVERNET_TRACE(DEBUG)
+      << "RequestTransmit: packets_in_flight=" << bbr_->packets_in_flight_
+      << " bytes_in_flight=" << bbr_->bytes_in_flight_
+      << " cwnd=" << bbr_->cwnd_bytes_
+      << (bbr_->bytes_in_flight_ >= bbr_->cwnd_bytes_ ? " PAUSED" : "");
+  paused_ = bbr_->bytes_in_flight_ >= bbr_->cwnd_bytes_;
+  if (!paused_) {
+    Ready();
   }
-  OVERNET_TRACE(DEBUG) << "RequestTransmit: packets_in_flight="
-                       << packets_in_flight_
-                       << " bytes_in_flight=" << bytes_in_flight_
-                       << " cwnd=" << cwnd_bytes_
-                       << (bytes_in_flight_ >= cwnd_bytes_ ? " PAUSED" : "");
-  queued_packet_.Reset(std::move(ready));
-  queued_packet_paused_ = bytes_in_flight_ >= cwnd_bytes_;
-  if (!queued_packet_paused_) {
-    QueuedPacketReady();
-  }
-  ValidateState();
+  // We may be moved after the Ready() call, so use the originally provided
+  // pointer here.
+  bbr->ValidateState();
 }
 
-void BBR::QueuedPacketReady() {
+BBR::TransmitRequest::~TransmitRequest() { Cancel(); }
+
+BBR::TransmitRequest::TransmitRequest(TransmitRequest&& other)
+    : bbr_(other.bbr_),
+      ready_(std::move(other.ready_)),
+      timeout_(std::move(other.timeout_)),
+      paused_(other.paused_),
+      reserved_bytes_(other.reserved_bytes_) {
+  if (bbr_) {
+    bbr_->active_transmits_.PushBack(this);
+    bbr_->active_transmits_.Remove(&other);
+  }
+  if (bbr_ && bbr_->transmit_request_ == &other) {
+    bbr_->transmit_request_ = this;
+  }
+  other.bbr_ = nullptr;
+}
+
+void BBR::TransmitRequest::Ready() {
   OVERNET_TRACE(DEBUG) << "QueuedPacketReady: packets_in_flight="
-                       << packets_in_flight_
-                       << " bytes_in_flight=" << bytes_in_flight_
-                       << " cwnd=" << cwnd_bytes_
-                       << " last_send_time=" << last_send_time_;
-  assert(queued_packet_);
-  HandleRestartFromIdle();
-  packets_in_flight_++;
+                       << bbr_->packets_in_flight_
+                       << " bytes_in_flight=" << bbr_->bytes_in_flight_
+                       << " cwnd=" << bbr_->cwnd_bytes_
+                       << " last_send_time=" << bbr_->last_send_time_;
+  assert(bbr_->transmit_request_ == this);
+  bbr_->transmit_request_ = nullptr;
+  bbr_->HandleRestartFromIdle();
+  bbr_->packets_in_flight_++;
   // We reserve away one packet's worth of sending here, and clear it
   // later in ScheduleTransmit once we know the actual packet length.
   // This prevents accidental floods of messages getting queued in lower
   // layers.
-  bytes_in_flight_ += mss_;
-  auto cb = queued_packet_.Take();
-  if (timer_->Now() >= last_send_time_) {
+  bbr_->bytes_in_flight_ += bbr_->mss_;
+  reserved_bytes_ = true;
+  auto cb = std::move(ready_);
+  if (bbr_->timer_->Now() >= bbr_->last_send_time_) {
     cb(Status::Ok());
   } else {
-    queued_packet_timeout_.Reset(timer_, last_send_time_, std::move(cb));
+    timeout_ = std::make_unique<Timeout>(bbr_->timer_, bbr_->last_send_time_,
+                                         std::move(cb));
   }
 }
 
-void BBR::CancelRequestTransmit() {
-  ScopedModule<BBR> in_bbr(this);
-  ValidateState();
-  queued_packet_timeout_.Reset();
-  queued_packet_.Reset();
-  ValidateState();
+void BBR::TransmitRequest::Cancel() {
+  if (bbr_ != nullptr) {
+    auto bbr = bbr_;
+    bbr_ = nullptr;
+    ScopedModule<BBR> in_bbr(bbr);
+    OVERNET_TRACE(DEBUG) << "Cancel: reserved_bytes=" << reserved_bytes_
+                         << " waiting=" << !ready_.empty()
+                         << " head=" << (bbr->transmit_request_ == this);
+    if (bbr->transmit_request_ == this) {
+      bbr->transmit_request_ = nullptr;
+    }
+    if (reserved_bytes_) {
+      bbr->bytes_in_flight_ -= bbr->mss_;
+      bbr->packets_in_flight_--;
+    }
+    bbr->active_transmits_.Remove(this);
+    // Always move the last send time forward, to avoid potentially
+    // infinite recursion trying to send a new packet.
+    bbr->last_send_time_ = std::max(
+        bbr->timer_->Now() + TimeDelta::FromMilliseconds(1),
+        bbr->last_send_time_ + bbr->PacingRate().SendTimeForBytes(bbr->mss_));
+    if (reserved_bytes_ && bbr->bytes_in_flight_ < bbr->cwnd_bytes_ &&
+        bbr->transmit_request_ && !bbr->transmit_request_->ready_.empty()) {
+      // Releasing the reservation might mean another packet can come through!
+      bbr->transmit_request_->Ready();
+    }
+    timeout_.reset();
+    if (!ready_.empty()) {
+      ready_(Status::Cancelled());
+    }
+  }
 }
 
-BBR::SentPacket BBR::ScheduleTransmit(OutgoingPacket packet) {
-  ScopedModule<BBR> in_bbr(this);
+BBR::SentPacket BBR::TransmitRequest::Sent(OutgoingPacket packet) {
+  ScopedModule<BBR> in_bbr(bbr_);
 
-  ValidateState();
+  bbr_->ValidateState();
 
   if (packet.sequence == 1) {
-    delivered_time_ = timer_->Now();
+    bbr_->delivered_time_ = bbr_->timer_->Now();
   }
 
   // Subtract out the reserved mss packet length that we applied in
   // QueuedPacketReady first.
-  assert(bytes_in_flight_ >= mss_);
-  bytes_in_flight_ -= mss_;
-  bytes_in_flight_ += packet.size;
+  assert(reserved_bytes_);
+  assert(bbr_->bytes_in_flight_ >= bbr_->mss_);
+  bbr_->bytes_in_flight_ -= bbr_->mss_;
+  bbr_->bytes_in_flight_ += packet.size;
+  reserved_bytes_ = false;
 
-  OVERNET_TRACE(DEBUG) << "ScheduleTransmit packet.sequence=" << packet.sequence
+  OVERNET_TRACE(DEBUG) << "Sent packet.sequence=" << packet.sequence
                        << " packet.size=" << packet.size
-                       << " last_sent_packet=" << last_sent_packet_;
+                       << " last_sent_packet=" << bbr_->last_sent_packet_;
 
-  assert(packet.sequence == last_sent_packet_ + 1);
-  last_sent_packet_ = packet.sequence;
+  assert(packet.sequence > bbr_->last_sent_packet_);
+  bbr_->last_sent_packet_ = packet.sequence;
 
-  const auto now = timer_->Now();
+  const auto now = bbr_->timer_->Now();
   TimeStamp send_time =
-      last_send_time_ + std::max(TimeDelta::FromMicroseconds(1),
-                                 PacingRate().SendTimeForBytes(packet.size));
-  OVERNET_TRACE(DEBUG) << "ScheduleTransmit bytes_in_flight="
-                       << bytes_in_flight_ << " mss=" << mss_
+      bbr_->last_send_time_ +
+      std::max(TimeDelta::FromMicroseconds(1),
+               bbr_->PacingRate().SendTimeForBytes(packet.size));
+  OVERNET_TRACE(DEBUG) << "Sent bytes_in_flight=" << bbr_->bytes_in_flight_
+                       << " mss=" << bbr_->mss_
                        << " packet_size=" << packet.size
-                       << " pacing_rate=" << PacingRate()
+                       << " pacing_rate=" << bbr_->PacingRate()
                        << " send_time_for_bytes="
-                       << PacingRate().SendTimeForBytes(packet.size)
-                       << " last_send_time=" << last_send_time_ << " ("
-                       << (timer_->Now() - last_send_time_) << " ago)"
+                       << bbr_->PacingRate().SendTimeForBytes(packet.size)
+                       << " last_send_time=" << bbr_->last_send_time_ << " ("
+                       << (bbr_->timer_->Now() - bbr_->last_send_time_)
+                       << " ago)"
                        << " initial_send_time=" << send_time
-                       << " rtt=" << rtt();
+                       << " rtt=" << bbr_->rtt();
   if (send_time < now) {
     send_time = now;
-  } else if (queued_packet_paused_) {
-    app_limited_seq_ =
-        delivered_seq_ + std::max(packets_in_flight_, uint64_t(1));
+  } else if (paused_) {
+    bbr_->app_limited_seq_ =
+        bbr_->delivered_seq_ + std::max(bbr_->packets_in_flight_, uint64_t(1));
   }
-  std::swap(last_send_time_, send_time);
+  std::swap(bbr_->last_send_time_, send_time);
 
-  ValidateState();
+  bbr_->ValidateState();
 
-  if (bytes_in_flight_ < cwnd_bytes_ && queued_packet_) {
+  if (bbr_->bytes_in_flight_ < bbr_->cwnd_bytes_ && bbr_->transmit_request_ &&
+      !bbr_->transmit_request_->ready_.empty()) {
     // Releasing the reservation might mean another packet can come through!
-    QueuedPacketReady();
+    bbr_->transmit_request_->Ready();
   }
 
-  return SentPacket{packet,
-                    delivered_bytes_,
-                    recovery_ == Recovery::Fast,
-                    app_limited_seq_ != 0,
-                    now,
-                    delivered_time_};
+  SentPacket sp{packet,
+                bbr_->delivered_bytes_,
+                bbr_->recovery_ == Recovery::Fast,
+                bbr_->app_limited_seq_ != 0,
+                now,
+                bbr_->delivered_time_};
+
+  bbr_->active_transmits_.Remove(this);
+  bbr_ = nullptr;
+
+  return sp;
 }
 
 void BBR::UpdateModelAndState(TimeStamp now, const Ack& ack) {
-  const RateSample rs = SampleBandwidth(now, ack);
-  UpdateBtlBw(ack, rs);
+  UpdateBandwidthAndRtt(now, ack);
   CheckCyclePhase(now, ack);
-  CheckFullPipe(ack, rs);
+  CheckFullPipe(ack);
   CheckDrain(now, ack);
-  UpdateRTprop(now, ack, rs);
   CheckProbeRTT(now, ack);
 }
 
-BBR::RateSample BBR::SampleBandwidth(TimeStamp now, const Ack& ack) {
-  if (ack.acked_packets.empty()) {
-    return RateSample{Bandwidth::Zero(), TimeDelta::NegativeInf(), false};
-  }
+BBR::RateSample BBR::SampleBandwidth(TimeStamp now,
+                                     const SentPacket& acked_sent_packet) {
+  delivered_bytes_ += acked_sent_packet.outgoing.size;
+  OVERNET_TRACE(DEBUG) << "ack: sent=" << acked_sent_packet.send_time
+                       << " delivered_time_at_send="
+                       << acked_sent_packet.delivered_time_at_send
+                       << " delivered_bytes_at_send="
+                       << acked_sent_packet.delivered_bytes_at_send
+                       << " size=" << acked_sent_packet.outgoing.size
+                       << " seq=" << acked_sent_packet.outgoing.sequence;
 
-  for (const SentPacket& p : ack.acked_packets) {
-    delivered_bytes_ += p.outgoing.size;
-    OVERNET_TRACE(DEBUG) << "ack: sent=" << p.send_time
-                         << " delivered_time_at_send="
-                         << p.delivered_time_at_send
-                         << " size=" << p.outgoing.size;
-  }
-
-  const SentPacket& back = ack.acked_packets.back();
-  delivered_seq_ = back.outgoing.sequence;
+  delivered_seq_ = acked_sent_packet.outgoing.sequence;
   delivered_time_ = now;
-  const TimeDelta interval = delivered_time_ - back.delivered_time_at_send;
-  first_sent_time_ = back.send_time;
+  const TimeDelta interval =
+      delivered_time_ - acked_sent_packet.delivered_time_at_send;
+  first_sent_time_ = acked_sent_packet.send_time;
 
   // Clear app-limited field if bubble is Ack'd.
   if (app_limited_seq_ != 0 && delivered_seq_ > app_limited_seq_) {
     app_limited_seq_ = 0;
   }
 
-  const uint64_t delivered = delivered_bytes_ - back.delivered_bytes_at_send;
+  const uint64_t delivered =
+      delivered_bytes_ - acked_sent_packet.delivered_bytes_at_send;
 
   OVERNET_TRACE(DEBUG) << "SampleBandwidth: interval=" << interval
                        << " delivered=" << delivered
                        << " delivered_time_at_send="
-                       << back.delivered_time_at_send;
+                       << acked_sent_packet.delivered_time_at_send
+                       << " delivered_bytes_at_send="
+                       << acked_sent_packet.delivered_bytes_at_send << " rtt="
+                       << std::max(TimeDelta::Zero(),
+                                   now - acked_sent_packet.send_time);
 
   if (interval < kMinRTT) {
     return RateSample{Bandwidth::Zero(), TimeDelta::NegativeInf(), false};
@@ -348,8 +416,8 @@ BBR::RateSample BBR::SampleBandwidth(TimeStamp now, const Ack& ack) {
                        << Bandwidth::BytesPerTime(delivered, interval);
   return RateSample{
       Bandwidth::BytesPerTime(delivered, interval),
-      std::max(TimeDelta::Zero(), now - back.send_time),
-      back.is_app_limited,
+      std::max(TimeDelta::Zero(), now - acked_sent_packet.send_time),
+      acked_sent_packet.is_app_limited,
   };
 }
 
@@ -359,28 +427,30 @@ void BBR::UpdateControlParameters(const Ack& ack) {
   SetCwnd(ack);
 }
 
-void BBR::UpdateBtlBw(const Ack& ack, const RateSample& rs) {
-  if (!UpdateRound(ack)) {
-    return;
+void BBR::UpdateBandwidthAndRtt(TimeStamp now, const Ack& ack) {
+  TimeDelta min_rtt = TimeDelta::PositiveInf();
+  for (const auto& acked_sent_packet : ack.acked_packets) {
+    auto rs = SampleBandwidth(now, acked_sent_packet);
+    if (rs.delivery_rate >= bottleneck_bandwidth_filter_.best_estimate() ||
+        !rs.is_app_limited) {
+      bottleneck_bandwidth_filter_.Update(round_count_, rs.delivery_rate);
+    }
+    if (rs.rtt > TimeDelta::Zero()) {
+      min_rtt = std::min(min_rtt, rs.rtt);
+    }
   }
-  OVERNET_TRACE(DEBUG)
-      << "Add BW est?: round_count=" << round_count_
-      << " delivery_rate=" << rs.delivery_rate
-      << " app_limited=" << rs.is_app_limited << " current_best_estimate="
-      << bottleneck_bandwidth_filter_.best_estimate() << ' '
-      << (rs.delivery_rate >= bottleneck_bandwidth_filter_.best_estimate() ||
-                  !rs.is_app_limited
-              ? "YES"
-              : "NO");
-  if (rs.delivery_rate >= bottleneck_bandwidth_filter_.best_estimate() ||
-      !rs.is_app_limited) {
-    bottleneck_bandwidth_filter_.Update(round_count_, rs.delivery_rate);
+  UpdateRound(ack);
+  rtprop_expired_ = (now > rtprop_stamp_ + kRTpropFilterLength);
+  if (min_rtt > TimeDelta::Zero() && (min_rtt < rtprop_ || rtprop_expired_)) {
+    rtprop_ = min_rtt;
+    rtprop_stamp_ = now;
   }
 }
 
-bool BBR::UpdateRound(const Ack& ack) {
+void BBR::UpdateRound(const Ack& ack) {
   if (ack.acked_packets.empty()) {
-    return false;
+    round_start_ = false;
+    return;
   }
   const auto& last_packet_acked = ack.acked_packets.back();
   if (last_packet_acked.delivered_bytes_at_send >=
@@ -388,18 +458,8 @@ bool BBR::UpdateRound(const Ack& ack) {
     next_round_delivered_bytes_ = delivered_bytes_;
     round_count_++;
     round_start_ = true;
-    return true;
   } else {
     round_start_ = false;
-    return false;
-  }
-}
-
-void BBR::UpdateRTprop(TimeStamp now, const Ack& ack, const RateSample& rs) {
-  rtprop_expired_ = (now > rtprop_stamp_ + kRTpropFilterLength);
-  if (rs.rtt >= TimeDelta::Zero() && (rs.rtt < rtprop_ || rtprop_expired_)) {
-    rtprop_ = rs.rtt;
-    rtprop_stamp_ = now;
   }
 }
 

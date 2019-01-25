@@ -139,6 +139,15 @@ inline constexpr TimeStamp operator+(TimeStamp a, TimeDelta b) {
   return TimeStamp::AfterEpoch(a.after_epoch() + b);
 }
 
+inline constexpr TimeStamp operator-(TimeStamp a, TimeDelta b) {
+  return TimeStamp::AfterEpoch(a.after_epoch() - b);
+}
+
+inline TimeStamp& operator+=(TimeStamp& a, TimeDelta b) {
+  a = a + b;
+  return a;
+}
+
 inline constexpr TimeDelta operator*(int multiplier, TimeDelta x) {
   if (multiplier == 0)
     return TimeDelta::Zero();

@@ -31,10 +31,7 @@ class Optional {
       storage_.Init(std::move(*other.storage_.get()));
     }
   }
-  ~Optional() {
-    if (set_)
-      storage_.Destroy();
-  }
+  ~Optional() { Reset(); }
   void Reset() {
     if (set_) {
       set_ = false;

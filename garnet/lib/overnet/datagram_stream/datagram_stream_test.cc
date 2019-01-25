@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 using testing::_;
+using testing::Invoke;
 using testing::Mock;
 using testing::Pointee;
 using testing::Property;
@@ -81,8 +82,11 @@ class DGStream : public DatagramStream {
   }
 };
 
+static const auto kDefaultSliceArgs =
+    LazySliceArgs{Border::None(), std::numeric_limits<uint32_t>::max(), false};
+
 TEST(DatagramStream, UnreliableSend) {
-  StrictMock<MockLink> link;
+  MockLink link;
   StrictMock<MockDoneCB> done_cb;
 
   TestTimer timer;
@@ -108,8 +112,7 @@ TEST(DatagramStream, UnreliableSend) {
       .Push(Slice::FromContainer({1, 2, 3}), Callback<void>::Ignored());
   Mock::VerifyAndClearExpectations(&link);
 
-  EXPECT_EQ(message->make_payload(LazySliceArgs{
-                Border::None(), std::numeric_limits<uint32_t>::max(), false}),
+  EXPECT_EQ(message->make_payload(kDefaultSliceArgs),
             Slice::FromContainer({0, 0x80, 1, 0, 1, 2, 3}));
   EXPECT_EQ(message->header.src(), NodeId(1));
   EXPECT_EQ(message->header.destinations().size(), size_t(1));
@@ -120,12 +123,18 @@ TEST(DatagramStream, UnreliableSend) {
 }
 
 TEST(DatagramStream, ReadThenRecv) {
+  TraceCout renderer0(nullptr);
+  ScopedRenderer scoped_render0(&renderer0);
   TestTimer timer;
   TraceCout renderer(&timer);
   ScopedRenderer scoped_render(&renderer);
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;
+
+  EXPECT_CALL(link, Forward(_)).WillRepeatedly(Invoke([](auto msg) {
+    msg->make_payload(kDefaultSliceArgs);
+  }));
 
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&link));
@@ -169,6 +178,10 @@ TEST(DatagramStream, RecvThenRead) {
 
   MockLink link;
   StrictMock<MockPullCB> pull_cb;
+
+  EXPECT_CALL(link, Forward(_)).WillRepeatedly(Invoke([](auto msg) {
+    msg->make_payload(kDefaultSliceArgs);
+  }));
 
   auto expect_all_done = [&]() {
     EXPECT_TRUE(Mock::VerifyAndClearExpectations(&link));

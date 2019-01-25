@@ -23,14 +23,17 @@ void PacketLink::Close(Callback<void> quiesced) {
   while (!outgoing_.empty()) {
     outgoing_.pop();
   }
-  if (emitting_) {
-    emitting_->timeout.Cancel();
-  }
   protocol_.Close(std::move(quiesced));
 }
 
 void PacketLink::Forward(Message message) {
+  // TODO(ctiller): do some real thinking about what this value should be
+  constexpr size_t kMaxBufferedMessages = 32;
   ScopedModule<PacketLink> scoped_module(this);
+  if (outgoing_.size() >= kMaxBufferedMessages) {
+    auto drop = std::move(outgoing_.front());
+    outgoing_.pop();
+  }
   bool send_immediately = !sending_ && outgoing_.empty();
   OVERNET_TRACE(DEBUG) << "Forward sending=" << sending_
                        << " outgoing=" << outgoing_.size()
@@ -43,33 +46,67 @@ void PacketLink::Forward(Message message) {
 
 fuchsia::overnet::protocol::LinkMetrics PacketLink::GetLinkMetrics() {
   ScopedModule<PacketLink> scoped_module(this);
+  // Advertise MSS as smaller than it is to account for some bugs that exist
+  // right now.
+  // TODO(ctiller): eliminate this - we should be precise.
+  constexpr uint32_t kUnderadvertiseMaximumSendSize = 32;
   fuchsia::overnet::protocol::LinkMetrics m;
   m.set_label(fuchsia::overnet::protocol::LinkLabel{
       router_->node_id().as_fidl(), peer_.as_fidl(), label_,
       metrics_version_++});
-  m.set_bw_link(protocol_.BottleneckBandwidth().bits_per_second());
-  m.set_rtt(protocol_.RoundTripTime().as_us());
-  m.set_mss(std::max(32u, protocol_.mss()) - 32);
+  m.set_bw_link(protocol_.bottleneck_bandwidth().bits_per_second());
+  m.set_rtt(protocol_.round_trip_time().as_us());
+  m.set_mss(
+      std::max(kUnderadvertiseMaximumSendSize, protocol_.maximum_send_size()) -
+      kUnderadvertiseMaximumSendSize);
   return m;
 }
 
 void PacketLink::SchedulePacket() {
   assert(!sending_);
   assert(!outgoing_.empty() || stashed_.has_value());
-  sending_ = true;
-  OVERNET_TRACE(DEBUG) << "Schedule";
-  protocol_.Send(
-      [this, op = ScopedOp::current()](auto arg) mutable {
-        ScopedModule<PacketLink> scoped_module(this);
-        ScopedOp scoped_op(op);
-        auto pkt = BuildPacket(arg);
-        sending_ = false;
-        if (stashed_.has_value() || !outgoing_.empty()) {
-          SchedulePacket();
-        }
-        return pkt;
-      },
-      StatusCallback::Ignored());
+  auto r = new LinkSendRequest(this);
+  OVERNET_TRACE(DEBUG) << "Schedule " << r;
+  protocol_.Send(PacketProtocol::SendRequestHdl(r));
+}
+
+PacketLink::LinkSendRequest::LinkSendRequest(PacketLink* link) : link_(link) {
+  assert(!link->sending_);
+  link->sending_ = true;
+}
+
+PacketLink::LinkSendRequest::~LinkSendRequest() { assert(!blocking_sends_); }
+
+Slice PacketLink::LinkSendRequest::GenerateBytes(LazySliceArgs args) {
+  auto link = link_;
+  ScopedModule<PacketLink> scoped_module(link_);
+  ScopedOp scoped_op(op_);
+  OVERNET_TRACE(DEBUG) << "LinkSendRequest[" << this << "]: GenerateBytes";
+  assert(blocking_sends_);
+  assert(link->sending_);
+  blocking_sends_ = false;
+  auto pkt = link->BuildPacket(args);
+  link->sending_ = false;
+  OVERNET_TRACE(DEBUG) << "LinkSendRequest[" << this << "]: Generated " << pkt;
+  if (link->stashed_.has_value() || !link->outgoing_.empty()) {
+    link->SchedulePacket();
+  }
+  return pkt;
+}
+
+void PacketLink::LinkSendRequest::Ack(const Status& status) {
+  ScopedModule<PacketLink> scoped_module(link_);
+  ScopedOp scoped_op(op_);
+  OVERNET_TRACE(DEBUG) << "LinkSendRequest[" << this
+                       << "]: Ack status=" << status
+                       << " blocking_sends=" << blocking_sends_;
+  if (blocking_sends_) {
+    assert(status.is_error());
+    assert(link_->sending_);
+    link_->sending_ = false;
+    blocking_sends_ = false;
+  }
+  delete this;
 }
 
 Slice PacketLink::BuildPacket(LazySliceArgs args) {
@@ -160,10 +197,10 @@ Slice PacketLink::BuildPacket(LazySliceArgs args) {
 }
 
 void PacketLink::SendPacket(SeqNum seq, LazySlice data, Callback<void> done) {
-  assert(!emitting_);
   const auto prefix_length = 1 + seq.wire_length();
-  auto data_slice = data(LazySliceArgs{Border::Prefix(prefix_length),
-                                       protocol_.mss() - prefix_length, false});
+  auto data_slice =
+      data(LazySliceArgs{Border::Prefix(prefix_length),
+                         protocol_.maximum_send_size() - prefix_length, false});
   auto send_slice = data_slice.WithPrefix(prefix_length, [seq](uint8_t* p) {
     *p++ = 0;
     seq.Write(p);
@@ -200,22 +237,23 @@ void PacketLink::Process(TimeStamp received, Slice packet) {
   }
   packet.TrimBegin(p - begin);
   // begin, p, end are no longer valid.
-  auto packet_status =
-      protocol_.Process(received, *seq_status.get(), std::move(packet));
-  if (packet_status.status.is_error()) {
-    OVERNET_TRACE(WARNING) << "Packet header parse failure: "
-                           << packet_status.status.AsStatus();
-    return;
-  }
-  if (*packet_status.status.get()) {
-    auto body_status =
-        ProcessBody(received, std::move(*packet_status.status.get()->get()));
-    if (body_status.is_error()) {
-      OVERNET_TRACE(WARNING)
-          << "Packet body parse failure: " << body_status << std::endl;
-      return;
-    }
-  }
+  protocol_.Process(
+      received, *seq_status.get(), std::move(packet),
+      [this, received](auto packet_status) {
+        if (packet_status.is_error()) {
+          OVERNET_TRACE(WARNING)
+              << "Packet header parse failure: " << packet_status.AsStatus();
+          return;
+        }
+        if (auto* msg = *packet_status) {
+          auto body_status = ProcessBody(received, std::move(msg->payload));
+          if (body_status.is_error()) {
+            OVERNET_TRACE(WARNING)
+                << "Packet body parse failure: " << body_status;
+            return;
+          }
+        }
+      });
 }
 
 Status PacketLink::ProcessBody(TimeStamp received, Slice packet) {

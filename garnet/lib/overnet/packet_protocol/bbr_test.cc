@@ -151,10 +151,10 @@ class Simulator : private TestTimer,
   // Send a packet through the simulator, and call then() once it's sent.
   template <class F>
   void SendPacket(int packet_size, F then) {
-    bbr_.RequestTransmit(
-        StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
+    transmit_request_.Reset(
+        &bbr_, StatusCallback(ALLOCATED_CALLBACK, [=](const Status& status) {
           if (status.is_ok()) {
-            auto sent_packet = bbr_.ScheduleTransmit(
+            auto sent_packet = transmit_request_->Sent(
                 BBR::OutgoingPacket{next_seq_++, uint64_t(packet_size)});
             then();
             SimulatePacket(sent_packet);
@@ -212,6 +212,7 @@ class Simulator : private TestTimer,
 
   std::mt19937 rng_{12345};
   BBR bbr_;
+  Optional<BBR::TransmitRequest> transmit_request_;
 
   BandwidthGate bottleneck_{this};
   Meter outgoing_meter_;

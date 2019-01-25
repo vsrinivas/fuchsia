@@ -178,21 +178,22 @@ void DatagramStream::Close(const Status& status, Callback<void> quiesced) {
       FinishClosing();
       return;
     case CloseState::OPEN:
+      close_state_ = status.is_error()
+                         ? CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR
+                         : CloseState::LOCAL_CLOSE_REQUESTED_OK;
       if (status.is_error()) {
         CancelReceives();
       }
       local_close_status_ = status;
       on_quiesced_.emplace_back(std::move(quiesced));
       receive_mode_.Close(status);
-      close_state_ = status.is_error()
-                         ? CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR
-                         : CloseState::LOCAL_CLOSE_REQUESTED_OK;
       SendCloseAndFlushQuiesced(0);
       return;
   }
 }
 
 void DatagramStream::SendCloseAndFlushQuiesced(int retry_number) {
+  constexpr int kMaxCloseRetries = 3;
   assert(close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_OK ||
          close_state_ == CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR);
   OVERNET_TRACE(DEBUG) << "SendClose: status=" << *local_close_status_
@@ -201,14 +202,18 @@ void DatagramStream::SendCloseAndFlushQuiesced(int retry_number) {
   packet_protocol_.Send(
       [this](auto args) {
         ScopedModule<DatagramStream> scoped_module(this);
+        OVERNET_TRACE(DEBUG)
+            << "SendClose WRITE next_message_id=" << next_message_id_
+            << " local_close_status=" << local_close_status_;
         return MessageFragment::EndOfStream(next_message_id_,
                                             *local_close_status_)
             .Write(args.desired_border);
       },
       [this, retry_number](const Status& send_status) mutable {
         ScopedModule<DatagramStream> scoped_module(this);
-        OVERNET_TRACE(DEBUG) << "SendClose ACK status=" << send_status
-                             << " retry=" << retry_number;
+        OVERNET_TRACE(DEBUG)
+            << "SendClose ACK status=" << send_status
+            << " retry=" << retry_number << " close_state=" << close_state_;
         switch (close_state_) {
           case CloseState::OPEN:
           case CloseState::REMOTE_CLOSED:
@@ -222,7 +227,7 @@ void DatagramStream::SendCloseAndFlushQuiesced(int retry_number) {
           case CloseState::LOCAL_CLOSE_REQUESTED_OK:
           case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
             if (send_status.code() == StatusCode::UNAVAILABLE &&
-                retry_number != 5) {
+                retry_number != kMaxCloseRetries) {
               SendCloseAndFlushQuiesced(retry_number + 1);
             } else {
               if (send_status.is_error()) {
@@ -274,6 +279,8 @@ void DatagramStream::FinishClosing() {
   close_state_ = CloseState::CLOSING_PROTOCOL;
   CancelReceives();
   packet_protocol_.Close([this]() {
+    OVERNET_TRACE(DEBUG) << "FinishClosing/ProtocolClosed: state="
+                         << close_state_;
     close_state_ = CloseState::CLOSED;
 
     auto unregister_status = router_->UnregisterStream(peer_, stream_id_, this);
@@ -310,138 +317,140 @@ struct NoDiscard {
 
 void DatagramStream::HandleMessage(SeqNum seq, TimeStamp received, Slice data) {
   ScopedModule<DatagramStream> scoped_module(this);
-  switch (close_state_) {
-    // In these states we process messages:
-    case CloseState::OPEN:
-    case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-    case CloseState::REMOTE_CLOSED:
-    case CloseState::DRAINING_LOCAL_CLOSED_OK:
-      break;
-    // In these states we do not:
-    case CloseState::CLOSING_PROTOCOL:
-    case CloseState::CLOSED:
-    case CloseState::QUIESCED:
-    case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
-      return;
-  }
 
-  auto pkt_status = packet_protocol_.Process(received, seq, std::move(data));
-  if (pkt_status.status.is_error()) {
-    OVERNET_TRACE(WARNING) << "Failed to process packet: "
-                           << pkt_status.status.AsStatus();
-    return;
-  }
-  auto payload = std::move(pkt_status.status.value());
-  if (!payload || !payload->length()) {
-    return;
-  }
-  OVERNET_TRACE(DEBUG) << "Process payload " << payload;
-  auto msg_status = MessageFragment::Parse(std::move(*payload));
-  if (msg_status.is_error()) {
-    OVERNET_TRACE(WARNING) << "Failed to parse message: "
-                           << msg_status.AsStatus();
-    return;
-  }
-  auto msg = std::move(*msg_status.get());
-  OVERNET_TRACE(DEBUG) << "Payload type=" << static_cast<int>(msg.type())
-                       << " msg=" << msg.message();
-  switch (msg.type()) {
-    case MessageFragment::Type::Chunk: {
-      OVERNET_TRACE(DEBUG) << "chunk offset=" << msg.chunk().offset
-                           << " length=" << msg.chunk().slice.length()
-                           << " end-of-message=" << msg.chunk().end_of_message;
-      // Got a chunk of data: add it to the relevant incoming message.
-      largest_incoming_message_id_seen_ =
-          std::max(largest_incoming_message_id_seen_, msg.message());
-      const uint64_t msg_id = msg.message();
-      auto it = messages_.find(msg_id);
-      if (it == messages_.end()) {
-        it = messages_
-                 .emplace(std::piecewise_construct,
-                          std::forward_as_tuple(msg_id),
-                          std::forward_as_tuple(this, msg_id))
-                 .first;
-        if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
-          pkt_status.Nack();
-        }
-        receive_mode_.Begin(
-            msg_id, [this, msg_id](const Status& status) mutable {
-              if (status.is_error()) {
-                OVERNET_TRACE(WARNING) << "Receive failed: " << status;
-                return;
-              }
-              auto it = messages_.find(msg_id);
-              if (it == messages_.end()) {
-                return;
-              }
-              unclaimed_messages_.PushBack(&it->second);
-              MaybeContinueReceive();
-            });
-      } else {
-        if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
-          pkt_status.Nack();
-        }
-      }
-    } break;
-    case MessageFragment::Type::MessageCancel: {
-      // Aborting a message: this is like a close to the incoming message.
-      largest_incoming_message_id_seen_ =
-          std::max(largest_incoming_message_id_seen_, msg.message());
-      auto it = messages_.find(msg.message());
-      if (it == messages_.end()) {
-        it = messages_
-                 .emplace(std::piecewise_construct,
-                          std::forward_as_tuple(msg.message()),
-                          std::forward_as_tuple(this, msg.message()))
-                 .first;
-      }
-      it->second.Close(msg.status()).Ignore();
-    } break;
-    case MessageFragment::Type::StreamEnd:
-      // TODO(ctiller): handle case of ok termination with outstanding
-      // messages.
-      RequestedClose requested_close{msg.message(), msg.status()};
-      OVERNET_TRACE(DEBUG) << "peer requests close with status "
-                           << msg.status();
-      if (requested_close_.has_value()) {
-        if (*requested_close_ != requested_close) {
-          OVERNET_TRACE(WARNING)
-              << "Non-duplicate last message id received: previously got "
-              << requested_close_->last_message_id << " with status "
-              << requested_close_->status << " now have " << msg.message()
-              << " with status " << msg.status();
-        }
-        return;
-      }
-      requested_close_ = requested_close;
-      auto enact_remote_close = [this](const Status& status) {
-        packet_protocol_.RequestSendAck();
+  OVERNET_TRACE(DEBUG) << "DatagramStream.HandleMessage: data=" << data
+                       << " close_state=" << close_state_;
+
+  packet_protocol_.Process(
+      received, seq, std::move(data), [this](auto status_or_message) {
         switch (close_state_) {
+          // In these states we process messages:
           case CloseState::OPEN:
-            close_state_ = CloseState::REMOTE_CLOSED;
-            receive_mode_.Close(status);
-            break;
-          case CloseState::REMOTE_CLOSED:
-            assert(false);
-            break;
           case CloseState::LOCAL_CLOSE_REQUESTED_OK:
-          case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
+          case CloseState::REMOTE_CLOSED:
           case CloseState::DRAINING_LOCAL_CLOSED_OK:
-            FinishClosing();
             break;
+          // In these states we do not:
+          case CloseState::CLOSING_PROTOCOL:
           case CloseState::CLOSED:
           case CloseState::QUIESCED:
-          case CloseState::CLOSING_PROTOCOL:
-            break;
+          case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
+            return;
         }
-      };
-      if (requested_close_->status.is_error()) {
-        enact_remote_close(requested_close_->status);
-      } else {
-        receive_mode_.Begin(msg.message(), std::move(enact_remote_close));
-      }
-      break;
-  }
+        if (status_or_message.is_error()) {
+          OVERNET_TRACE(WARNING)
+              << "Failed to process packet: " << status_or_message.AsStatus();
+          return;
+        }
+        if (!*status_or_message) {
+          return;
+        }
+        auto payload = std::move((*status_or_message)->payload);
+        OVERNET_TRACE(DEBUG) << "Process payload " << payload;
+        auto msg_status = MessageFragment::Parse(std::move(payload));
+        if (msg_status.is_error()) {
+          OVERNET_TRACE(WARNING)
+              << "Failed to parse message: " << msg_status.AsStatus();
+          return;
+        }
+        auto msg = std::move(*msg_status.get());
+        OVERNET_TRACE(DEBUG) << "Payload type=" << static_cast<int>(msg.type())
+                             << " msg=" << msg.message();
+        switch (msg.type()) {
+          case MessageFragment::Type::Chunk: {
+            OVERNET_TRACE(DEBUG)
+                << "chunk offset=" << msg.chunk().offset
+                << " length=" << msg.chunk().slice.length()
+                << " end-of-message=" << msg.chunk().end_of_message;
+            // Got a chunk of data: add it to the relevant incoming message.
+            largest_incoming_message_id_seen_ =
+                std::max(largest_incoming_message_id_seen_, msg.message());
+            const uint64_t msg_id = msg.message();
+            auto it = messages_.find(msg_id);
+            if (it == messages_.end()) {
+              it = messages_
+                       .emplace(std::piecewise_construct,
+                                std::forward_as_tuple(msg_id),
+                                std::forward_as_tuple(this, msg_id))
+                       .first;
+              if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
+                (*status_or_message)->Nack();
+              }
+              receive_mode_.Begin(
+                  msg_id, [this, msg_id](const Status& status) mutable {
+                    if (status.is_error()) {
+                      OVERNET_TRACE(WARNING) << "Receive failed: " << status;
+                      return;
+                    }
+                    auto it = messages_.find(msg_id);
+                    if (it == messages_.end()) {
+                      return;
+                    }
+                    unclaimed_messages_.PushBack(&it->second);
+                    MaybeContinueReceive();
+                  });
+            } else {
+              if (!it->second.Push(std::move(*msg.mutable_chunk()))) {
+                (*status_or_message)->Nack();
+              }
+            }
+          } break;
+          case MessageFragment::Type::MessageCancel: {
+            // Aborting a message: this is like a close to the incoming message.
+            largest_incoming_message_id_seen_ =
+                std::max(largest_incoming_message_id_seen_, msg.message());
+            auto it = messages_.find(msg.message());
+            if (it == messages_.end()) {
+              it = messages_
+                       .emplace(std::piecewise_construct,
+                                std::forward_as_tuple(msg.message()),
+                                std::forward_as_tuple(this, msg.message()))
+                       .first;
+            }
+            it->second.Close(msg.status()).Ignore();
+          } break;
+          case MessageFragment::Type::StreamEnd:
+            // TODO(ctiller): handle case of ok termination with outstanding
+            // messages.
+            RequestedClose requested_close{msg.message(), msg.status()};
+            OVERNET_TRACE(DEBUG)
+                << "peer requests close with status " << msg.status();
+            if (requested_close_.has_value()) {
+              if (*requested_close_ != requested_close) {
+                OVERNET_TRACE(WARNING)
+                    << "Failed to parse message: " << msg_status.AsStatus();
+                return;
+              }
+              return;
+            }
+            requested_close_ = requested_close;
+            auto enact_remote_close = [this](const Status& status) {
+              switch (close_state_) {
+                case CloseState::OPEN:
+                  close_state_ = CloseState::REMOTE_CLOSED;
+                  receive_mode_.Close(status);
+                  break;
+                case CloseState::REMOTE_CLOSED:
+                  assert(false);
+                  break;
+                case CloseState::LOCAL_CLOSE_REQUESTED_OK:
+                case CloseState::LOCAL_CLOSE_REQUESTED_WITH_ERROR:
+                case CloseState::DRAINING_LOCAL_CLOSED_OK:
+                  FinishClosing();
+                  break;
+                case CloseState::CLOSED:
+                case CloseState::QUIESCED:
+                case CloseState::CLOSING_PROTOCOL:
+                  break;
+              }
+            };
+            if (requested_close_->status.is_error()) {
+              enact_remote_close(requested_close_->status);
+            } else {
+              receive_mode_.Begin(msg.message(), std::move(enact_remote_close));
+            }
+        }
+      });
 }
 
 void DatagramStream::MaybeContinueReceive() {
@@ -680,23 +689,38 @@ void DatagramStream::SendNextChunk() {
       }
     }
     Slice Finish() {
-      return MessageFragment(message_id(), std::move(send_.chunk))
-          .Write(args_->desired_border);
+      if (send_.chunk.has_value()) {
+        return MessageFragment(message_id(), std::move(*send_.chunk))
+            .Write(args_->desired_border);
+      } else {
+        return Slice();
+      }
     }
 
     DatagramStream* stream() const { return send_.state.stream(); }
     uint64_t message_id() const { return send_.state.message_id(); }
-    const ChunkAndState& chunk_and_state() const { return send_; }
+    ChunkAndState chunk_and_state() const {
+      if (send_.chunk.has_value()) {
+        return ChunkAndState{*send_.chunk, send_.state};
+      } else {
+        return ChunkAndState{Chunk{0, false, Slice()}, send_.state};
+      }
+    }
 
    private:
-    ChunkAndState send_;
+    struct ChunkAndOptState {
+      Optional<Chunk> chunk;
+      StateRef state;
+    };
+    ChunkAndOptState send_;
     const LazySliceArgs* const args_;
 
-    static ChunkAndState Pull(DatagramStream* stream,
-                              const LazySliceArgs* args) {
+    static ChunkAndOptState Pull(DatagramStream* stream,
+                                 const LazySliceArgs* args) {
       ScopedModule<DatagramStream> in_dgs(stream);
       auto fst = stream->pending_send_.begin();
       auto pending_send = std::move(fst->what);
+      auto cb = std::move(fst->started);
       stream->pending_send_.erase(fst);
       // We should remove zero-length chunks before arriving here.
       // Otherwise we cannot ensure that there'll be an actual chunk in the
@@ -706,9 +730,16 @@ void DatagramStream::SendNextChunk() {
           varint::WireSizeFor(pending_send.state.message_id());
       OVERNET_TRACE(DEBUG) << "Format: ofs=" << pending_send.chunk.offset
                            << " len=" << pending_send.chunk.slice.length()
+                           << " eom=" << pending_send.chunk.end_of_message
                            << " desired_border=" << args->desired_border
                            << " max_length=" << args->max_length
                            << " message_id_length=" << (int)message_id_length;
+      if (args->max_length <=
+          message_id_length + varint::WireSizeFor(pending_send.chunk.offset)) {
+        stream->SendChunk(pending_send.state, std::move(pending_send.chunk),
+                          std::move(cb));
+        return ChunkAndOptState{Nothing, pending_send.state};
+      }
       assert(args->max_length >
              message_id_length +
                  varint::WireSizeFor(pending_send.chunk.offset));
@@ -721,7 +752,7 @@ void DatagramStream::SendNextChunk() {
                           Callback<void>::Ignored());
         pending_send.chunk = std::move(first);
       }
-      return pending_send;
+      return ChunkAndOptState{pending_send.chunk, pending_send.state};
     }
   };
 
@@ -902,7 +933,6 @@ void DatagramStream::ReceiveOp::Close(const Status& status) {
   OVERNET_TRACE(DEBUG) << "Close incoming_message=" << incoming_message_
                        << " status=" << status;
   if (closed_) {
-    assert(!stream_->unclaimed_receives_.Contains(this));
     return;
   }
   closed_ = true;

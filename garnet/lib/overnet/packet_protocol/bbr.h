@@ -10,11 +10,12 @@
 #include "garnet/lib/overnet/packet_protocol/windowed_filter.h"
 #include "garnet/lib/overnet/vocabulary/bandwidth.h"
 #include "garnet/lib/overnet/vocabulary/callback.h"
+#include "garnet/lib/overnet/vocabulary/internal_list.h"
 #include "garnet/lib/overnet/vocabulary/optional.h"
 
 namespace overnet {
 
-class BBR {
+class BBR final {
  public:
   inline static constexpr auto kModule = Module::BBR;
 
@@ -41,10 +42,32 @@ class BBR {
   using RandFunc = std::function<uint32_t()>;
 
   BBR(Timer* timer, RandFunc rand, uint32_t mss, Optional<TimeDelta> srtt);
+  ~BBR();
 
-  void RequestTransmit(StatusCallback ready);
-  void CancelRequestTransmit();
-  SentPacket ScheduleTransmit(OutgoingPacket packet);
+  class TransmitRequest final {
+   public:
+    explicit TransmitRequest(BBR* bbr, StatusCallback ready);
+    TransmitRequest(const TransmitRequest&) = delete;
+    TransmitRequest& operator=(const TransmitRequest&) = delete;
+    TransmitRequest(TransmitRequest&&);
+    TransmitRequest& operator=(TransmitRequest&&);
+    ~TransmitRequest();
+    SentPacket Sent(OutgoingPacket packet);
+    void Cancel();
+
+   private:
+    friend class BBR;
+
+    void Ready();
+
+    BBR* bbr_;
+    StatusCallback ready_;
+    std::unique_ptr<Timeout> timeout_;
+    InternalListNode<TransmitRequest> active_transmits_link_;
+    bool paused_;
+    bool reserved_bytes_ = false;
+  };
+
   void OnAck(const Ack& ack);
 
   uint64_t mss() const { return mss_; }
@@ -104,6 +127,9 @@ class BBR {
   }
 
  private:
+  InternalList<TransmitRequest, &TransmitRequest::active_transmits_link_>
+      active_transmits_;
+
   struct Gain {
     uint16_t numerator;
     uint16_t denominator;
@@ -144,12 +170,11 @@ class BBR {
   void UpdateModelAndState(TimeStamp now, const Ack& ack);
   void UpdateControlParameters(const Ack& ack);
 
-  void UpdateBtlBw(const Ack& ack, const RateSample& rs);
+  void UpdateBandwidthAndRtt(TimeStamp now, const Ack& ack);
   void CheckCyclePhase(TimeStamp now, const Ack& ack);
-  void CheckFullPipe(const Ack& ack, const RateSample& rs);
+  void CheckFullPipe(const Ack& ack);
   void CheckDrain(TimeStamp now, const Ack& ack);
   void CheckProbeRTT(TimeStamp now, const Ack& ack);
-  void UpdateRTprop(TimeStamp now, const Ack& ack, const RateSample& rs);
 
   void SetPacingRate() { SetPacingRateWithGain(pacing_gain_); }
   void SetCwnd(const Ack& ack);
@@ -157,7 +182,7 @@ class BBR {
   void HandleRestartFromIdle();
   void HandleProbeRTT(TimeStamp now, const Ack& ack);
 
-  bool UpdateRound(const Ack& ack);
+  void UpdateRound(const Ack& ack);
   void UpdateTargetCwnd() {
     target_cwnd_bytes_ = std::max(uint64_t(3 * mss_), Inflight(cwnd_gain_));
   }
@@ -176,7 +201,8 @@ class BBR {
   bool IsNextCyclePhase(TimeStamp now, const Ack& ack) const;
   Bandwidth PacingRate() const;
 
-  RateSample SampleBandwidth(TimeStamp now, const Ack& ack);
+  RateSample SampleBandwidth(TimeStamp now,
+                             const SentPacket& acked_sent_packet);
 
   void SaveCwnd();
   void RestoreCwnd();
@@ -238,12 +264,10 @@ class BBR {
     return "<<unknown>>";
   }
 
-  Optional<StatusCallback> queued_packet_;
-  Optional<Timeout> queued_packet_timeout_;
-
   const uint32_t mss_;
   WindowedFilter<uint64_t, Bandwidth, MaxFilter> bottleneck_bandwidth_filter_{
       10, 0, Bandwidth::Zero()};
+  TransmitRequest* transmit_request_ = nullptr;
   Gain pacing_gain_ = HighGain();
   Gain cwnd_gain_ = HighGain();
   State state_ = State::Startup;
@@ -257,7 +281,6 @@ class BBR {
   bool packet_conservation_ = false;
   bool idle_start_ = false;
   bool probe_rtt_round_done_ = false;
-  bool queued_packet_paused_;
   uint8_t full_bw_count_ = 0;
   uint8_t cycle_index_;
   uint64_t packets_in_flight_ = 0;
@@ -271,6 +294,7 @@ class BBR {
   uint64_t last_sent_packet_ = 0;
   uint64_t exit_recovery_at_seq_ = 0;
   uint64_t app_limited_seq_ = 0;
+  bool last_sample_is_app_limited_ = false;
   Bandwidth full_bw_ = Bandwidth::Zero();
   TimeStamp cycle_stamp_ = TimeStamp::Epoch();
   TimeStamp probe_rtt_done_stamp_ = TimeStamp::Epoch();

@@ -38,13 +38,8 @@ bool PacketProtocolFuzzer::CompleteSend(uint8_t sender_idx, uint8_t status) {
   auto slice = send->data(LazySliceArgs{
       Border::None(), std::numeric_limits<uint32_t>::max(), false});
   if (status == 0 && slice.length() > 0) {
-    auto process_status = (*packet_protocol(3 - sender_idx))
-                              ->Process(timer_.Now(), send->seq, slice);
-    if (process_status.status.is_error()) {
-      std::cerr << "Expected Process() to return ok, got: "
-                << process_status.status.AsStatus() << "\n";
-      abort();
-    }
+    (*packet_protocol(3 - sender_idx))
+        ->Process(timer_.Now(), send->seq, slice, [](auto process_status) {});
   }
   return true;
 }

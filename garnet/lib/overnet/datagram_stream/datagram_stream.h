@@ -137,7 +137,8 @@ class DatagramStream : private Router::StreamHandler,
         Module::DATAGRAM_STREAM_INCOMING_MESSAGE;
 
     IncomingMessage(DatagramStream* stream, uint64_t msg_id)
-        : linearizer_(2 * stream->packet_protocol_.mss()), msg_id_(msg_id) {}
+        : linearizer_(2 * stream->packet_protocol_.maximum_send_size()),
+          msg_id_(msg_id) {}
 
     void Pull(StatusOrCallback<Optional<Slice>>&& done) {
       ScopedModule<IncomingMessage> in_im(this);
@@ -439,6 +440,10 @@ class DatagramStream : private Router::StreamHandler,
       return !operator==(other);
     }
   };
+  friend std::ostream& operator<<(std::ostream& out, const RequestedClose& rc) {
+    return out << "{last_msg=" << rc.last_message_id << "; status=" << rc.status
+               << "}";
+  }
   Optional<RequestedClose> requested_close_;
 
   struct ChunkAndState {

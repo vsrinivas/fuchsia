@@ -25,7 +25,7 @@ class AckFrame {
    private:
     const AckFrame* const ack_frame_;
     const uint8_t ack_to_seq_length_;
-    const uint8_t ack_delay_us_length_;
+    const uint8_t delay_and_flags_length_;
     std::vector<uint8_t> nack_length_;
     size_t wire_length_;
   };
@@ -76,16 +76,16 @@ class AckFrame {
 
   uint64_t ack_to_seq() const { return ack_to_seq_; }
   uint64_t ack_delay_us() const { return ack_delay_us_; }
+  bool partial() const { return partial_; }
   const std::vector<uint64_t>& nack_seqs() const { return nack_seqs_; }
 
   // Move ack_to_seq back in time such that the total ack frame will fit
   // within mss. DelayFn is a function uint64_t -> TimeDelta that returns the
   // ack delay (in microseconds) for a given sequence number.
   template <class DelayFn>
-  bool AdjustForMSS(uint32_t mss, DelayFn delay_fn) {
-    bool adjusted = false;
+  void AdjustForMSS(uint32_t mss, DelayFn delay_fn) {
     while (!nack_seqs_.empty() && WrittenLength() > mss) {
-      adjusted = true;
+      partial_ = true;
       if (ack_to_seq_ != nack_seqs_[0]) {
         OVERNET_TRACE(DEBUG) << "Trim too long ack (" << WrittenLength()
                              << " > " << mss << " by moving ack " << ack_to_seq_
@@ -100,12 +100,15 @@ class AckFrame {
       }
       ack_delay_us_ = delay_fn(ack_to_seq_);
     }
-    return adjusted;
   }
 
  private:
+  uint64_t DelayAndFlags() const;
   uint64_t WrittenLength() const;
 
+  // Flag indicating that this ack is only a partial acknowledgement, and
+  // there's more to come.
+  bool partial_ = false;
   // All messages with sequence number prior to ack_to_seq_ are implicitly
   // acknowledged.
   uint64_t ack_to_seq_;

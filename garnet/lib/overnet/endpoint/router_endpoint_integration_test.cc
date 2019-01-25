@@ -109,6 +109,13 @@ class InProcessLinkImpl final
   }
 
   void Emit(Slice packet) {
+    const auto now = timer_->Now();
+    if (now.after_epoch() == TimeDelta::PositiveInf()) {
+      OVERNET_TRACE(DEBUG)
+          << "Packet sim is infinitely in the future: drop packet";
+      return;
+    }
+
     auto delay = simulator_->ChoosePacketDelivery(
         LinkState{link_id_, outstanding_packets_}, packet.length());
     OVERNET_TRACE(DEBUG) << "Packet sim says " << delay << " for " << packet;
@@ -116,20 +123,20 @@ class InProcessLinkImpl final
       return;
     }
     outstanding_packets_++;
+    const auto at = now + *delay;
     timer_->At(
-        timer_->Now() + *delay,
-        Callback<void>(ALLOCATED_CALLBACK, [self = shared_from_this(),
-                                            now = timer_->Now(), packet]() {
-          ScopedOp scoped_op(Op::New(OpType::INCOMING_PACKET));
-          auto strong_partner = self->partner_.lock();
-          OVERNET_TRACE(DEBUG)
-              << (strong_partner == nullptr ? "DROP" : "EMIT")
-              << " PACKET from " << self->from_ << " " << packet;
-          self->outstanding_packets_--;
-          if (strong_partner) {
-            strong_partner->Process(now, packet);
-          }
-        }));
+        at, Callback<void>(
+                ALLOCATED_CALLBACK, [self = shared_from_this(), packet, at]() {
+                  ScopedOp scoped_op(Op::New(OpType::INCOMING_PACKET));
+                  auto strong_partner = self->partner_.lock();
+                  OVERNET_TRACE(DEBUG)
+                      << (strong_partner == nullptr ? "DROP" : "EMIT")
+                      << " PACKET from " << self->from_ << " " << packet;
+                  self->outstanding_packets_--;
+                  if (strong_partner) {
+                    strong_partner->Process(at, packet);
+                  }
+                }));
   }
 
  private:
@@ -173,19 +180,24 @@ class Env {
   virtual RouterEndpoint* endpoint2() = 0;
 
   void AwaitConnected() {
+    OVERNET_TRACE(INFO) << "Test waiting for connection";
     while (!endpoint1()->HasRouteTo(endpoint2()->node_id()) ||
            !endpoint2()->HasRouteTo(endpoint1()->node_id())) {
       endpoint1()->BlockUntilNoBackgroundUpdatesProcessing();
       endpoint2()->BlockUntilNoBackgroundUpdatesProcessing();
       test_timer_.StepUntilNextEvent();
     }
+    OVERNET_TRACE(INFO) << "Test connected";
   }
 
-  void FlushTodo(
-      std::function<bool()> until,
-      TimeStamp deadline = TimeStamp::AfterEpoch(TimeDelta::FromHours(1))) {
+  void FlushTodo(std::function<bool()> until,
+                 TimeDelta timeout = TimeDelta::FromMinutes(10)) {
+    FlushTodo(until, test_timer_.Now() + timeout);
+  }
+
+  void FlushTodo(std::function<bool()> until, TimeStamp deadline) {
     bool stepped = false;
-    while (test_timer_.Now() < deadline + TimeDelta::FromHours(1)) {
+    while (test_timer_.Now() < deadline) {
       if (until())
         break;
       if (!test_timer_.StepUntilNextEvent())
@@ -233,6 +245,7 @@ class TwoNode final : public Env {
         }));
       }));
       FlushTodo([&done] { return done; });
+      EXPECT_TRUE(done);
     }
   }
 
@@ -286,6 +299,7 @@ class ThreeNode final : public Env {
         }));
       }));
       FlushTodo([&done] { return done; });
+      EXPECT_TRUE(done);
     }
   }
 

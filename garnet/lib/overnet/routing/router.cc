@@ -249,7 +249,11 @@ Status Router::RegisterStream(NodeId peer, StreamId stream_id,
                               StreamHandler* stream_handler) {
   ScopedModule<Router> scoped_module(this);
   OVERNET_TRACE(DEBUG) << "RegisterStream: " << peer << "/" << stream_id
-                       << " at " << stream_handler;
+                       << " at " << stream_handler
+                       << " shutting_down=" << shutting_down_;
+  if (shutting_down_) {
+    return Status(StatusCode::FAILED_PRECONDITION, "Router shutting down");
+  }
   return stream_holder(peer, stream_id)->SetHandler(stream_handler);
 }
 
@@ -257,7 +261,8 @@ Status Router::UnregisterStream(NodeId peer, StreamId stream_id,
                                 StreamHandler* stream_handler) {
   ScopedModule<Router> scoped_module(this);
   OVERNET_TRACE(DEBUG) << "UnregisterStream: " << peer << "/" << stream_id
-                       << " at " << stream_handler;
+                       << " at " << stream_handler
+                       << " shutting_down=" << shutting_down_;
   auto it = streams_.find(LocalStreamId{peer, stream_id});
   if (it == streams_.end()) {
     return Status(StatusCode::FAILED_PRECONDITION, "Stream not registered");

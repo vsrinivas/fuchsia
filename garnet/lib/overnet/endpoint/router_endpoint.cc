@@ -96,7 +96,14 @@ RouterEndpoint::ConnectionStream* RouterEndpoint::GetOrCreateConnectionStream(
   if (it != connection_streams_.end()) {
     return &it->second;
   }
-  OVERNET_TRACE(DEBUG) << "Creating connection stream for peer " << peer;
+  if (closing_) {
+    OVERNET_TRACE(DEBUG) << node_id()
+                         << " skip creating connection stream for peer " << peer
+                         << " as we're closing";
+    return nullptr;
+  }
+  OVERNET_TRACE(DEBUG) << node_id() << " creating connection stream for peer "
+                       << peer;
   auto* stream =
       &connection_streams_
            .emplace(std::piecewise_construct, std::forward_as_tuple(peer),

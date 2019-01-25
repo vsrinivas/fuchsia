@@ -33,7 +33,7 @@ TEST(AckFrame, NoNack) {
 TEST(AckFrame, OneNack) {
   AckFrame h(5, 10);
   h.AddNack(2);
-  RoundTrip(h, {5, 10, 3});
+  RoundTrip(h, {5, 20, 3});
 }
 
 TEST(AckFrame, ThreeNacks) {
@@ -41,7 +41,7 @@ TEST(AckFrame, ThreeNacks) {
   h.AddNack(4);
   h.AddNack(3);
   h.AddNack(2);
-  RoundTrip(h, {5, 42, 1, 1, 1});
+  RoundTrip(h, {5, 84, 1, 1, 1});
 }
 
 }  // namespace ack_frame_test
