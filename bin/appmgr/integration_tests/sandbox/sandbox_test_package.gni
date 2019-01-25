@@ -24,9 +24,10 @@ template("sandbox_test_package") {
     forward_variables_from(invoker,
                            "*",
                            [
+                             "environments",
+                             "output_name",
                              "target_name",
                              "testonly",
-                             "output_name",
                            ])
   }
 
@@ -44,9 +45,7 @@ template("sandbox_test_package") {
     tests = [
       {
         name = binary_name
-        if (defined(invoker.environments)) {
-          environments = invoker.environments
-        }
+        forward_variables_from(invoker, [ "environments" ])
       },
     ]
   }
