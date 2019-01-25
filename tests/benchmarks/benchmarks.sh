@@ -16,12 +16,6 @@ runbench_read_arguments "$@"
 # Run "local" Ledger benchmarks.  These don't need external services to function
 # properly.
 
-# TODO(LE-425): Fix & re-enable this test.
-# runbench_exec "${OUT_DIR}/ledger.add_many_pages.json" \
-#    trace record \
-#    --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/DISABLED_add_many_pages.tspec \
-#    --benchmark-results-file="${OUT_DIR}/ledger.add_many_pages.json"
-
 runbench_exec "${OUT_DIR}/ledger.add_new_page_precached.json" \
     trace record \
     --spec-file=/pkgfs/packages/ledger_benchmarks/0/data/add_new_page_precached.tspec \
