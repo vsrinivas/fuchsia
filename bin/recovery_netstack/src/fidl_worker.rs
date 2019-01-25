@@ -15,9 +15,9 @@ use {
     log::error,
 };
 
-pub struct FidlServer;
+pub struct FidlWorker;
 
-impl FidlServer {
+impl FidlWorker {
     pub fn spawn(self, event_chan: mpsc::UnboundedSender<Event>) -> Result<(), Error> {
         fasync::spawn_local(
             ServicesServer::new()

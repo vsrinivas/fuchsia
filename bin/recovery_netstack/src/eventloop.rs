@@ -11,8 +11,7 @@
 //! This is implemented with a single mpsc queue for all event types - `EventLoop` holds the
 //! consumer, and any event handling that requires state within `EventLoop` holds a producer,
 //! allowing it to delegate work to the `EventLoop` by sending a message. In this documentation, we
-//! call anything that holds a producer a "worker" (for instance, the `FidlServer` is what is
-//! called a "worker" in the documentation).
+//! call anything that holds a producer a "worker".
 //!
 //! Having a single queue for all of the message types is beneficial, since in guarantees a FIFO
 //! ordering for all messages - whichever messages arrive first, will be handled first.
@@ -216,8 +215,8 @@ pub struct EventLoop {
 impl EventLoop {
     pub fn new() -> Self {
         let (event_send, event_recv) = futures::channel::mpsc::unbounded::<Event>();
-        let fidl_server = crate::fuchsia_net_stack::FidlServer;
-        fidl_server.spawn(event_send.clone());
+        let fidl_worker = crate::fidl_worker::FidlWorker;
+        fidl_worker.spawn(event_send.clone());
         EventLoop {
             ctx: Context::new(
                 StackState::default(),

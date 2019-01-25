@@ -9,7 +9,7 @@
 #![deny(unreachable_patterns)]
 
 mod eventloop;
-mod fuchsia_net_stack;
+mod fidl_worker;
 
 use crate::eventloop::EventLoop;
 
