@@ -121,7 +121,7 @@ class InfraBss : public BssInterface, public RemoteClient::Listener {
     // MLME-START.request holds all information required to correctly configure
     // and start a BSS.
     ::fuchsia::wlan::mlme::StartRequest start_req_;
-    TimerManager2<common::MacAddr> timer_mgr_;
+    TimerManager<common::MacAddr> timer_mgr_;
 };
 
 }  // namespace wlan

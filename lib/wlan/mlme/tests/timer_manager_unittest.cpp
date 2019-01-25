@@ -35,20 +35,20 @@ class MockedTimer : public Timer {
     timekeeper::TestClock clock;
 };
 
-struct TimerManager2Test : public ::testing::Test {
-    TimerManager2Test() {
+struct TimerManagerTest : public ::testing::Test {
+    TimerManagerTest() {
         auto timer_box = fbl::make_unique<MockedTimer>();
         timer = timer_box.get();
-        timer_manager = fbl::make_unique<TimerManager2<std::string>>(std::move(timer_box));
+        timer_manager = fbl::make_unique<TimerManager<std::string>>(std::move(timer_box));
     }
 
     timekeeper::TestClock* clock() { return &timer->clock; }
 
     MockedTimer* timer;
-    fbl::unique_ptr<TimerManager2<std::string>> timer_manager;
+    fbl::unique_ptr<TimerManager<std::string>> timer_manager;
 };
 
-TEST_F(TimerManager2Test, HandleTimeout) {
+TEST_F(TimerManagerTest, HandleTimeout) {
     TimeoutId one, two, three, four, five;
     timer_manager->Schedule(zx::time(300), "three", &three);
     timer_manager->Schedule(zx::time(100), "one", &one);
@@ -82,7 +82,7 @@ TEST_F(TimerManager2Test, HandleTimeout) {
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
-TEST_F(TimerManager2Test, CancelNearestEvent) {
+TEST_F(TimerManagerTest, CancelNearestEvent) {
     TimeoutId foo, bar;
     timer_manager->Schedule(zx::time(100), "foo", &foo);
     timer_manager->Schedule(zx::time(200), "bar", &bar);
@@ -104,7 +104,7 @@ TEST_F(TimerManager2Test, CancelNearestEvent) {
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
-TEST_F(TimerManager2Test, HandleLastTimeout) {
+TEST_F(TimerManagerTest, HandleLastTimeout) {
     timer_manager->Schedule(zx::time(100), "foo", nullptr);
     EXPECT_EQ(zx::time(100), timer->deadline);
     EXPECT_EQ(1u, timer_manager->NumScheduled());
@@ -119,7 +119,7 @@ TEST_F(TimerManager2Test, HandleLastTimeout) {
     EXPECT_EQ(timer->deadline, zx::time(0));
 }
 
-TEST_F(TimerManager2Test, SchedulingAtLaterTimeDoesNotResetTimer) {
+TEST_F(TimerManagerTest, SchedulingAtLaterTimeDoesNotResetTimer) {
     timer_manager->Schedule(zx::time(300), "foo", nullptr);
     EXPECT_EQ(zx::time(300), timer->deadline);
 
@@ -127,7 +127,7 @@ TEST_F(TimerManager2Test, SchedulingAtLaterTimeDoesNotResetTimer) {
     EXPECT_EQ(zx::time(300), timer->deadline);
 }
 
-TEST_F(TimerManager2Test, SchedulingAtEarlierTimeResetsTimer) {
+TEST_F(TimerManagerTest, SchedulingAtEarlierTimeResetsTimer) {
     timer_manager->Schedule(zx::time(400), "foo", nullptr);
     EXPECT_EQ(zx::time(400), timer->deadline);
 
@@ -135,7 +135,7 @@ TEST_F(TimerManager2Test, SchedulingAtEarlierTimeResetsTimer) {
     EXPECT_EQ(zx::time(300), timer->deadline);
 }
 
-TEST_F(TimerManager2Test, ScheduleAnotherTimeoutInCallback) {
+TEST_F(TimerManagerTest, ScheduleAnotherTimeoutInCallback) {
     timer_manager->Schedule(zx::time(200), "foo", nullptr);
     clock()->Set(zx::time(200));
 
@@ -158,7 +158,7 @@ TEST_F(TimerManager2Test, ScheduleAnotherTimeoutInCallback) {
     EXPECT_EQ(1u, timer_manager->NumScheduled());
 }
 
-TEST_F(TimerManager2Test, EventsWithSameDeadlineReportedInSchedulingOrder) {
+TEST_F(TimerManagerTest, EventsWithSameDeadlineReportedInSchedulingOrder) {
     constexpr size_t N = 20;
     TimeoutId ids[N];
     for (size_t i = 0; i < N; ++i) {
@@ -176,7 +176,7 @@ TEST_F(TimerManager2Test, EventsWithSameDeadlineReportedInSchedulingOrder) {
     EXPECT_EQ(0u, timer_manager->NumScheduled());
 }
 
-TEST_F(TimerManager2Test, CancelAll) {
+TEST_F(TimerManagerTest, CancelAll) {
     TimeoutId foo, bar;
     timer_manager->Schedule(zx::time(100), "foo", &foo);
     timer_manager->Schedule(zx::time(200), "bar", &bar);

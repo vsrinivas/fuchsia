@@ -36,7 +36,7 @@ class Packet;
 
 class Station : public ClientInterface {
    public:
-    Station(DeviceInterface* device, TimerManager2<>&& timer_mgr, ChannelScheduler* chan_sched,
+    Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
             JoinContext* join_ctx);
     ~Station() = default;
 
@@ -129,7 +129,7 @@ class Station : public ClientInterface {
     zx_status_t NotifyAssocContext();
 
     DeviceInterface* device_;
-    TimerManager2<> timer_mgr_;
+    TimerManager<> timer_mgr_;
     ChannelScheduler* chan_sched_;
     Sequence seq_;
     JoinContext* join_ctx_;

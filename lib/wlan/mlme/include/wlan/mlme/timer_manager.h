@@ -24,15 +24,15 @@ class TimeoutId {
     bool operator!=(const TimeoutId& that) const { return !(*this == that); }
 
    private:
-    template <typename Event> friend class TimerManager2;
+    template <typename Event> friend class TimerManager;
     uint64_t id_ = 0;
 
     explicit TimeoutId(uint64_t id) : id_(id) {}
 };
 
-template <typename Event = std::tuple<>> class TimerManager2 {
+template <typename Event = std::tuple<>> class TimerManager {
    public:
-    explicit TimerManager2(fbl::unique_ptr<Timer> timer) : timer_(std::move(timer)) {}
+    explicit TimerManager(fbl::unique_ptr<Timer> timer) : timer_(std::move(timer)) {}
 
     // If the call succeeds, the returned TimeoutId is guaranteed to not be equal to 'TimeoutId{}'
     zx_status_t Schedule(zx::time deadline, const Event& event, TimeoutId* out_id) {

@@ -25,7 +25,7 @@ struct HwmpState {
 
     uint32_t our_hwmp_seqno = 0;
     uint32_t next_path_discovery_id = 0;
-    TimerManager2<TimedEvent> timer_mgr;
+    TimerManager<TimedEvent> timer_mgr;
     std::unordered_map<uint64_t, TargetState> state_by_target;
 
     explicit HwmpState(fbl::unique_ptr<Timer> timer)

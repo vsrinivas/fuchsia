@@ -39,7 +39,7 @@ using common::dBm;
 
 // TODO(hahnr): Revisit frame construction to reduce boilerplate code.
 
-Station::Station(DeviceInterface* device, TimerManager2<>&& timer_mgr, ChannelScheduler* chan_sched,
+Station::Station(DeviceInterface* device, TimerManager<>&& timer_mgr, ChannelScheduler* chan_sched,
                  JoinContext* join_ctx)
     : device_(device),
       timer_mgr_(std::move(timer_mgr)),
