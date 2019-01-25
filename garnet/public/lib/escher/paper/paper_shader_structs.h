@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef LIB_ESCHER_PAPER_SHADER_STRUCTS_H_
-#define LIB_ESCHER_PAPER_SHADER_STRUCTS_H_
+#ifndef LIB_ESCHER_PAPER_PAPER_SHADER_STRUCTS_H_
+#define LIB_ESCHER_PAPER_PAPER_SHADER_STRUCTS_H_
 
 #include "lib/escher/geometry/types.h"
 
@@ -49,12 +49,19 @@ struct PaperShaderMeshInstance {
 };
 
 // Struct that defines a grepable common layout for C++ and GLSL code.
-struct PaperShaderCameraAmbient {
-  mat4 vp_matrix;
+struct PaperShaderSceneData {
   vec3 ambient_light_color;
 
   static constexpr size_t kDescriptorSet = 0;
   static constexpr size_t kDescriptorBinding = 0;
+};
+
+// Struct that defines a grepable common layout for C++ and GLSL code.
+struct PaperShaderCamera {
+  mat4 vp_matrix;
+
+  static constexpr size_t kDescriptorSet = 0;
+  static constexpr size_t kDescriptorBinding = 1;
 };
 
 // Struct that defines a grepable common layout for C++ and GLSL code.
@@ -67,7 +74,7 @@ struct PaperShaderPointLight {
   float __padding2;
 
   static constexpr size_t kDescriptorSet = 0;
-  static constexpr size_t kDescriptorBinding = 1;
+  static constexpr size_t kDescriptorBinding = 2;
 };
 
 // Struct that defines common layout for C++ and GLSL code.
@@ -77,4 +84,4 @@ struct PaperShaderPushConstants {
 
 }  // namespace escher
 
-#endif  // LIB_ESCHER_PAPER_SHADER_STRUCTS_H_
+#endif  // LIB_ESCHER_PAPER_PAPER_SHADER_STRUCTS_H_

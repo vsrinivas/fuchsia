@@ -94,13 +94,67 @@ PaperRenderer2::~PaperRenderer2() { escher()->Cleanup(); }
 PaperRenderer2::FrameData::FrameData(
     const FramePtr& frame_in, const PaperScenePtr& scene_in,
     const ImagePtr& output_image_in,
-    std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures)
+    std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+    const std::vector<Camera>& cameras_in)
     : frame(frame_in),
       scene(scene_in),
       output_image(output_image_in),
       depth_texture(std::move(depth_and_msaa_textures.first)),
       msaa_texture(std::move(depth_and_msaa_textures.second)),
-      gpu_uploader(BatchGpuUploader::New(frame->escher()->GetWeakPtr())) {}
+      gpu_uploader(BatchGpuUploader::New(frame->escher()->GetWeakPtr())) {
+  // Scale the camera viewports to pixel coordinates in the output framebuffer.
+  for (auto& cam : cameras_in) {
+    mat4 vp_matrix = cam.projection() * cam.transform();
+    vk::Rect2D rect = cam.viewport().vk_rect_2d(output_image->width(),
+                                                output_image->height());
+    vk::Viewport viewport(rect.offset.x, rect.offset.y, rect.extent.width,
+                          rect.extent.height, 0, 1);
+
+    // TODO(before-submit): document this if/else.  Probably say more about
+    // cameras in the header file.
+    UniformBinding binding;
+    if (auto buffer = cam.latched_pose_buffer()) {
+      // TODO(before-submit): keep buffer alive.
+      binding.descriptor_set_index = PaperShaderCamera::kDescriptorSet;
+      binding.binding_index = PaperShaderCamera::kDescriptorBinding;
+      binding.buffer = buffer.get();
+      binding.offset = cam.latched_pose_buffer_vp_matrix_offset();
+      binding.size = sizeof(mat4);
+
+      // For example, if we start needing additional fields in PaperShaderCamera
+      // then we can no longer directly use the camera's pose buffer.
+      static_assert(sizeof(PaperShaderCamera) == sizeof(mat4));
+    } else {
+      auto pair = NewPaperShaderUniformBinding<PaperShaderCamera>(frame);
+      pair.first->vp_matrix = cam.projection() * cam.transform();
+      binding = pair.second;
+    }
+    cameras.push_back({.binding = binding, .rect = rect, .viewport = viewport});
+  }
+
+  // Generate a UniformBinding for global scene data (e.g. ambient lighting).
+  {
+    auto writable_binding =
+        NewPaperShaderUniformBinding<PaperShaderSceneData>(frame);
+    writable_binding.first->ambient_light_color = scene->ambient_light.color;
+    scene_uniform_bindings.push_back(writable_binding.second);
+  }
+
+  // Generate a UniformBinding containing data for all point lights, if any.
+  auto num_lights = scene->num_point_lights();
+  if (num_lights > 0) {
+    auto writable_binding =
+        NewPaperShaderUniformBinding<PaperShaderPointLight>(frame, num_lights);
+    auto* point_lights = writable_binding.first;
+    for (size_t i = 0; i < num_lights; ++i) {
+      const PaperPointLight& light = scene->point_lights[i];
+      point_lights[i].position = vec4(light.position, 1);
+      point_lights[i].color = vec4(light.color, 1);
+      point_lights[i].falloff = light.falloff;
+    }
+    scene_uniform_bindings.push_back(writable_binding.second);
+  }
+}
 
 PaperRenderer2::FrameData::~FrameData() = default;
 
@@ -144,23 +198,49 @@ bool PaperRenderer2::SupportsShadowType(
 
 void PaperRenderer2::BeginFrame(const FramePtr& frame,
                                 const PaperScenePtr& scene,
-                                const Camera& camera,
+                                const std::vector<Camera>& cameras,
                                 const ImagePtr& output_image) {
   TRACE_DURATION("gfx", "PaperRenderer2::BeginFrame");
-  FXL_DCHECK(!frame_data_);
+  FXL_DCHECK(!frame_data_ && !cameras.empty());
+
+  mat4 camera_transform = cameras[0].transform();
+  for (auto& c : cameras) {
+    // All cameras must have the same transform, because this transform is
+    // used for sorting draw calls in |draw_call_factory_|.  This is useful
+    // for stereo cameras; more changes will be necessary to remove this DCHECK
+    // to allow multiple cameras for other use-cases.
+    FXL_DCHECK(camera_transform == c.transform());
+  }
 
   frame_data_ = std::make_unique<FrameData>(
       frame, scene, output_image,
-      ObtainDepthAndMsaaTextures(frame, output_image->info()));
+      ObtainDepthAndMsaaTextures(frame, output_image->info()), cameras);
 
   frame->command_buffer()->TakeWaitSemaphore(
       output_image, vk::PipelineStageFlagBits::eColorAttachmentOutput);
+
   shape_cache_.BeginFrame(frame_data_->gpu_uploader.get(),
                           frame->frame_number());
 
-  frame_data_->scene_uniform_bindings =
-      draw_call_factory_.BeginFrame(frame, scene.get(), &transform_stack_,
-                                    &render_queue_, &shape_cache_, camera);
+  {
+    // A camera's transform doesn't move the camera; it is applied to the rest
+    // of the scene to "move it away from the camera".  Therefore, the camera's
+    // position in the scene can be obtained by inverting it and applying it to
+    // the origin, or equivalently by inverting the transform and taking the
+    // rightmost (translation) column.
+    vec3 camera_pos(glm::column(glm::inverse(camera_transform), 3));
+
+    // The camera points down the negative-Z axis, so its world-space direction
+    // can be obtained by applying the camera transform to the direction vector
+    // [0, 0, -1, 0] (remembering that directions vectors have a w-coord of 0,
+    // vs. 1 for position vectors).  This is equivalent to taking the negated
+    // third column of the transform.
+    vec3 camera_dir = -vec3(glm::column(camera_transform, 2));
+
+    draw_call_factory_.BeginFrame(frame, scene.get(), &transform_stack_,
+                                  &render_queue_, &shape_cache_, camera_pos,
+                                  camera_dir);
+  }
 }
 
 void PaperRenderer2::EndFrame() {
@@ -169,23 +249,30 @@ void PaperRenderer2::EndFrame() {
 
   frame_data_->gpu_uploader->Submit();
 
+  auto* cmd_buf = frame_data_->frame->cmds();
+  for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
+    binding.Bind(cmd_buf);
+  }
+
   render_queue_.Sort();
   {
-    auto* cmd_buf = frame_data_->frame->cmds();
-    for (UniformBinding& binding : frame_data_->scene_uniform_bindings) {
-      binding.Bind(cmd_buf);
-    }
+    for (uint32_t camera_index = 0; camera_index < frame_data_->cameras.size();
+         ++camera_index) {
+      // Install the current camera.
+      frame_data_->cameras[camera_index].binding.Bind(cmd_buf);
 
-    switch (config_.shadow_type) {
-      case PaperRendererShadowType::kNone:
-        GenerateCommandsForNoShadows();
-        break;
-      case PaperRendererShadowType::kShadowVolume:
-        GenerateCommandsForShadowVolumes();
-        break;
-      default:
-        FXL_DCHECK(false) << "Unsupported shadow type: " << config_.shadow_type;
-        GenerateCommandsForNoShadows();
+      switch (config_.shadow_type) {
+        case PaperRendererShadowType::kNone:
+          GenerateCommandsForNoShadows(camera_index);
+          break;
+        case PaperRendererShadowType::kShadowVolume:
+          GenerateCommandsForShadowVolumes(camera_index);
+          break;
+        default:
+          FXL_DCHECK(false)
+              << "Unsupported shadow type: " << config_.shadow_type;
+          GenerateCommandsForNoShadows(camera_index);
+      }
     }
   }
   render_queue_.Clear();
@@ -275,16 +362,22 @@ void PaperRenderer2::DrawLegacyObject(const Object& obj,
   Draw(&drawable, flags);
 }
 
-void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp) {
-  const ImagePtr& output_image = frame_data_->output_image;
-  const TexturePtr& depth_texture = frame_data_->depth_texture;
-  const TexturePtr& msaa_texture = frame_data_->msaa_texture;
+void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp,
+                                        ResourceRecycler* recycler,
+                                        const FrameData& frame_data,
+                                        uint32_t camera_index) {
+  const ImagePtr& output_image = frame_data.output_image;
+  const TexturePtr& depth_texture = frame_data.depth_texture;
+  const TexturePtr& msaa_texture = frame_data.msaa_texture;
+
+  FXL_DCHECK(camera_index < frame_data.cameras.size());
+  rp->render_area = frame_data.cameras[camera_index].rect;
 
   static constexpr uint32_t kRenderTargetAttachmentIndex = 0;
   static constexpr uint32_t kResolveTargetAttachmentIndex = 1;
   {
     rp->color_attachments[kRenderTargetAttachmentIndex] =
-        ImageView::New(escher()->resource_recycler(), output_image);
+        ImageView::New(recycler, output_image);
     rp->num_color_attachments = 1;
     // Clear and store color attachment 0, the sole color attachment.
     rp->clear_attachments = 1u << kRenderTargetAttachmentIndex;
@@ -333,16 +426,19 @@ void PaperRenderer2::InitRenderPassInfo(RenderPassInfo* rp) {
 // - still use the lights, allowing a BRDF, distance-based-falloff etc.
 // The right answer is probably to separate the shadow algorithm from the
 // lighting model.
-void PaperRenderer2::GenerateCommandsForNoShadows() {
+void PaperRenderer2::GenerateCommandsForNoShadows(uint32_t camera_index) {
   TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForNoShadows");
   const FramePtr& frame = frame_data_->frame;
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  InitRenderPassInfo(&render_pass_info);
+  InitRenderPassInfo(&render_pass_info, escher()->resource_recycler(),
+                     *frame_data_.get(), camera_index);
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started no-shadows render pass");
+
+  cmd_buf->SetViewport(frame_data_->cameras[camera_index].viewport);
 
   {
     PaperRenderQueueContext context;
@@ -357,7 +453,7 @@ void PaperRenderer2::GenerateCommandsForNoShadows() {
   frame->AddTimestamp("finished no-shadows render pass");
 }
 
-void PaperRenderer2::GenerateCommandsForShadowVolumes() {
+void PaperRenderer2::GenerateCommandsForShadowVolumes(uint32_t camera_index) {
   TRACE_DURATION("gfx", "PaperRenderer2::GenerateCommandsForShadowVolumes");
   const uint32_t width = frame_data_->output_image->width();
   const uint32_t height = frame_data_->output_image->height();
@@ -365,10 +461,14 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes() {
   CommandBuffer* cmd_buf = frame->cmds();
 
   RenderPassInfo render_pass_info;
-  InitRenderPassInfo(&render_pass_info);
+  InitRenderPassInfo(&render_pass_info, escher()->resource_recycler(),
+                     *frame_data_.get(), camera_index);
 
   cmd_buf->BeginRenderPass(render_pass_info);
   frame->AddTimestamp("started shadow_volume render pass");
+
+  const CameraData& cam_data = frame_data_->cameras[camera_index];
+  cmd_buf->SetViewport(cam_data.viewport);
 
   PaperRenderQueueContext context;
 
@@ -396,8 +496,10 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes() {
   for (uint32_t i = 0; i < num_point_lights; ++i) {
     // Must clear the stencil buffer for every light except the first one.
     if (i != 0) {
+      // Must clear the stencil buffer for every light except the first one.
       cmd_buf->ClearDepthStencilAttachmentRect(
-          {0, 0}, {width, height}, render_pass_info.clear_depth_stencil,
+          cam_data.rect.offset, cam_data.rect.extent,
+          render_pass_info.clear_depth_stencil,
           vk::ImageAspectFlagBits::eStencil);
 
       if (config_.debug) {
@@ -406,7 +508,9 @@ void PaperRenderer2::GenerateCommandsForShadowVolumes() {
         cmd_buf->SetWireframe(false);
       }
     }
-    cmd_buf->PushConstants(PaperShaderPushConstants{.light_index = i});
+    cmd_buf->PushConstants(PaperShaderPushConstants{
+        .light_index = i,
+    });
 
     // Emit commands for stencil shadow geometry.
     {

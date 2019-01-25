@@ -91,7 +91,7 @@ class PaperRenderer2 final : public Renderer {
   //   - |Draw()| each object in the scene.
   //   - |EndFrame()| emits the Vulkan commands that actually render the scene.
   void BeginFrame(const FramePtr& frame, const PaperScenePtr& scene,
-                  const escher::Camera& camera,
+                  const std::vector<Camera>& cameras,
                   const escher::ImagePtr& output_image);
 
   // See |BeginFrame()|.  After telling the renderer to draw the scene content,
@@ -134,11 +134,19 @@ class PaperRenderer2 final : public Renderer {
                           const PaperRendererConfig& config);
   PaperRenderer2(const PaperRenderer2&) = delete;
 
+  // Store relevant info from cameras passed to BeginFrame().
+  struct CameraData {
+    UniformBinding binding;
+    vk::Rect2D rect;
+    vk::Viewport viewport;
+  };
+
   // Stores all per-frame data in one place.
   struct FrameData {
     FrameData(const FramePtr& frame, const PaperScenePtr& scene,
               const ImagePtr& output_image,
-              std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures);
+              std::pair<TexturePtr, TexturePtr> depth_and_msaa_textures,
+              const std::vector<Camera>& cameras);
     ~FrameData();
     FramePtr frame;
     PaperScenePtr scene;
@@ -147,6 +155,8 @@ class PaperRenderer2 final : public Renderer {
     TexturePtr msaa_texture;
 
     size_t num_lights;
+
+    std::vector<CameraData> cameras;
 
     // UniformBindings returned by PaperDrawCallFactory::BeginFrame().  These
     // contain camera and lighting parameters that are shared between draw
@@ -164,9 +174,12 @@ class PaperRenderer2 final : public Renderer {
       const FramePtr& frame, const ImageInfo& info);
 
   // Called during EndFrame().
-  void GenerateCommandsForNoShadows();
-  void GenerateCommandsForShadowVolumes();
-  void InitRenderPassInfo(RenderPassInfo* render_pass_info);
+  void GenerateCommandsForNoShadows(uint32_t camera_index);
+  void GenerateCommandsForShadowVolumes(uint32_t camera_index);
+  static void InitRenderPassInfo(RenderPassInfo* render_pass_info,
+                                 ResourceRecycler* recycler,
+                                 const FrameData& frame_data,
+                                 uint32_t camera_index);
 
   PaperRendererConfig config_;
 

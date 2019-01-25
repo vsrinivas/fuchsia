@@ -28,15 +28,23 @@ layout(location = 4) in vec2 inBlendWeight;
 
 // ***** DESCRIPTOR BINDINGS ********************************
 
+// TODO(before-submit): maybe don't reuse this define for both camera params
+// and scene globals.
 #ifdef USE_PAPER_SHADER_CAMERA_AMBIENT
-layout(set = 0, binding = 0) uniform PaperShaderCameraAmbient {
-  mat4 vp_matrix;
+// Struct that defines a grepable common layout for C++ and GLSL code.
+layout(set = 0, binding = 0) uniform PaperShaderSceneData {
   vec3 ambient_light_color;
+};
+
+layout(set = 0, binding = 1) uniform PaperShaderCamera {
+  mat4 vp_matrix;
 };
 #endif  // USE_PAPER_SHADER_CAMERA_AMBIENT
 
+
 #ifdef USE_PAPER_SHADER_POINT_LIGHT
-struct PointLight {
+// Struct that defines a grepable common layout for C++ and GLSL code.
+struct PaperShaderPointLight {
   vec4 position;  // world-space
   vec4 color;     // RGB intensities
   // Only the x component is used, the rest are padding to handle GLSL packing
@@ -44,10 +52,10 @@ struct PointLight {
   vec4 falloff;
 };
 
-layout(set = 0, binding = 1) uniform PointShaderPointLight {
+layout(set = 0, binding = 2) uniform PointLightUniforms {
   // TODO(ES-153): don't clamp to 2.  Should provide the number of lights as
   // a pre-processor constant (this doesn't mean that we need to use them all).
-  PointLight point_lights[2];
+  PaperShaderPointLight point_lights[2];
 };
 #endif  // USE_PAPER_SHADER_POINT_LIGHT
 

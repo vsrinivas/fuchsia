@@ -181,60 +181,19 @@ void PaperDrawCallFactory::SetConfig(const PaperRendererConfig& config) {
   // add other shadow techniques.
 }
 
-std::vector<UniformBinding> PaperDrawCallFactory::BeginFrame(
-    const FramePtr& frame, PaperScene* scene,
-    PaperTransformStack* transform_stack, PaperRenderQueue* render_queue,
-    PaperShapeCache* shape_cache, const Camera& camera) {
+void PaperDrawCallFactory::BeginFrame(const FramePtr& frame, PaperScene* scene,
+                                      PaperTransformStack* transform_stack,
+                                      PaperRenderQueue* render_queue,
+                                      PaperShapeCache* shape_cache,
+                                      vec3 camera_pos, vec3 camera_dir) {
   FXL_DCHECK(!frame_ && frame && transform_stack && render_queue &&
              shape_cache);
   frame_ = frame;
   transform_stack_ = transform_stack;
   render_queue_ = render_queue;
   shape_cache_ = shape_cache;
-
-  // A camera's transform doesn't move the camera; it is applied to the rest of
-  // the scene to "move it away from the camera".  Therefore, the camera's
-  // position in the scene can be obtained by inverting it and applying it to
-  // the origin, or equivalently by inverting the transform and taking the
-  // rightmost (translation) column.
-  camera_pos_ = vec3(glm::column(glm::inverse(camera.transform()), 3));
-
-  // The camera points down the negative-Z axis, so its world-space direction
-  // can be obtained by applying the camera transform to the direction vector
-  // [0, 0, -1, 0] (remembering that directions vectors have a w-coord of 0, vs.
-  // 1 for position vectors).  This is equivalent to taking the negated third
-  // column of the transform.
-  camera_dir_ = -vec3(glm::column(camera.transform(), 2));
-
-  // Populated below, then returned.
-  std::vector<UniformBinding> scene_uniforms;
-
-  // Generate a UniformBinding for the camera and ambient light data.
-  {
-    auto writable_binding =
-        NewPaperShaderUniformBinding<PaperShaderCameraAmbient>(frame);
-    writable_binding.first->vp_matrix =
-        camera.projection() * camera.transform();
-    writable_binding.first->ambient_light_color = scene->ambient_light.color;
-    scene_uniforms.push_back(writable_binding.second);
-  }
-
-  // Generate a uniform binding containing data for all point lights, if any.
-  num_lights_ = scene->num_point_lights();
-  if (num_lights_ > 0) {
-    auto writable_binding =
-        NewPaperShaderUniformBinding<PaperShaderPointLight>(frame, num_lights_);
-    auto* point_lights = writable_binding.first;
-    for (size_t i = 0; i < num_lights_; ++i) {
-      const PaperPointLight& light = scene->point_lights[i];
-      point_lights[i].position = vec4(light.position, 1);
-      point_lights[i].color = vec4(light.color, 1);
-      point_lights[i].falloff = light.falloff;
-    }
-    scene_uniforms.push_back(writable_binding.second);
-  }
-
-  return scene_uniforms;
+  camera_pos_ = camera_pos;
+  camera_dir_ = camera_dir;
 }
 
 void PaperDrawCallFactory::EndFrame() {
@@ -247,7 +206,6 @@ void PaperDrawCallFactory::EndFrame() {
 
   camera_pos_ = vec3(0, 0, 0);
   camera_dir_ = vec3(0, 0, 0);
-  num_lights_ = 0;
 }
 
 PaperDrawCallFactory::SortKey PaperDrawCallFactory::SortKey::NewOpaque(

@@ -92,12 +92,10 @@ class PaperDrawCallFactory final {
   //
   // |camera| and |transform_stack| could be used to obtain LOD-appropriate
   // meshes from |shape_cache|, but this is not currently implemented.
-  std::vector<UniformBinding> BeginFrame(const FramePtr& frame,
-                                         PaperScene* scene,
-                                         PaperTransformStack* transform_stack,
-                                         PaperRenderQueue* render_queue,
-                                         PaperShapeCache* shape_cache,
-                                         const Camera& camera);
+  void BeginFrame(const FramePtr& frame, PaperScene* scene,
+                  PaperTransformStack* transform_stack,
+                  PaperRenderQueue* render_queue, PaperShapeCache* shape_cache,
+                  vec3 camera_pos, vec3 camera_dir);
   // Cleanup.
   void EndFrame();
 
@@ -112,7 +110,6 @@ class PaperDrawCallFactory final {
   PaperShapeCache* shape_cache_ = nullptr;
   vec3 camera_pos_;
   vec3 camera_dir_;
-  size_t num_lights_;
 
   // Cache for |object_data| used by RenderQueueItems in both the opaque and
   // translucent queues.
