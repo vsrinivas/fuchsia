@@ -141,10 +141,9 @@ func Boot(ctx context.Context, addr *net.UDPAddr, bootMode int, imgs []build.Ima
 	hasRAMKernel := files[len(files)-1].name == kernelNetsvcName
 	n := netboot.NewClient(time.Second)
 	if hasRAMKernel {
-		return n.Reboot(addr)
-	} else {
 		return n.Boot(addr)
 	}
+	return n.Reboot(addr)
 }
 
 // A file to send to netsvc.
