@@ -55,8 +55,8 @@ class LegacyLowEnergyScannerTest : public TestingBase,
     settings.ApplyLegacyLEConfig();
     test_device()->set_settings(settings);
 
-    scanner_ = std::make_unique<LegacyLowEnergyScanner>(
-        this, transport(), dispatcher());
+    scanner_ = std::make_unique<LegacyLowEnergyScanner>(this, transport(),
+                                                        dispatcher());
 
     test_device()->StartCmdChannel(test_cmd_chan());
     test_device()->StartAclChannel(test_acl_chan());
@@ -371,64 +371,76 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // kRandomAddress3).
 
   // Result 0
-  auto iter = results.find(kPublicAddress1);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kPublicAddress1);
+    EXPECT_NE(iter, results.end());
 
-  auto& result_pair = iter->second;
-  EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
-  EXPECT_EQ(kPublicAddress1, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
+    EXPECT_EQ(kPublicAddress1, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 1
-  iter = results.find(kRandomAddress1);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress1);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
-  EXPECT_EQ(kRandomAddress1, result_pair.first.address);
-  EXPECT_FALSE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
+    EXPECT_EQ(kRandomAddress1, result_pair.first.address);
+    EXPECT_FALSE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 2
-  iter = results.find(kPublicAddress2);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kPublicAddress2);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kPublicAddress2, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kPublicAddress2, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 3
-  iter = results.find(kRandomAddress2);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress2);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainScanRsp, result_pair.second);
-  EXPECT_EQ(kRandomAddress2, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainScanRsp, result_pair.second);
+    EXPECT_EQ(kRandomAddress2, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 4
-  iter = results.find(kRandomAddress3);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress3);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kRandomAddress3, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kRandomAddress3, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 5
-  iter = results.find(kRandomAddress4);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress4);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kRandomAddress4, result_pair.first.address);
-  EXPECT_FALSE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kRandomAddress4, result_pair.first.address);
+    EXPECT_FALSE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   EXPECT_TRUE(results.empty());
 }
@@ -506,64 +518,76 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // AddFakeDevices(). All Scan Response PDUs should have been ignored.
 
   // Result 0
-  auto iter = results.find(kPublicAddress1);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kPublicAddress1);
+    EXPECT_NE(iter, results.end());
 
-  auto& result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kPublicAddress1, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kPublicAddress1, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 1
-  iter = results.find(kRandomAddress1);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress1);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kRandomAddress1, result_pair.first.address);
-  EXPECT_FALSE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kRandomAddress1, result_pair.first.address);
+    EXPECT_FALSE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 2
-  iter = results.find(kPublicAddress2);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kPublicAddress2);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kPublicAddress2, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kPublicAddress2, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 3
-  iter = results.find(kRandomAddress2);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress2);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ("", result_pair.second);
-  EXPECT_EQ(kRandomAddress2, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ("", result_pair.second);
+    EXPECT_EQ(kRandomAddress2, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 4
-  iter = results.find(kRandomAddress3);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress3);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kRandomAddress3, result_pair.first.address);
-  EXPECT_TRUE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kRandomAddress3, result_pair.first.address);
+    EXPECT_TRUE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   // Result 5
-  iter = results.find(kRandomAddress4);
-  EXPECT_NE(iter, results.end());
+  {
+    const auto& iter = results.find(kRandomAddress4);
+    EXPECT_NE(iter, results.end());
 
-  result_pair = iter->second;
-  EXPECT_EQ(kPlainAdvData, result_pair.second);
-  EXPECT_EQ(kRandomAddress4, result_pair.first.address);
-  EXPECT_FALSE(result_pair.first.connectable);
-  results.erase(iter);
+    const auto& result_pair = iter->second;
+    EXPECT_EQ(kPlainAdvData, result_pair.second);
+    EXPECT_EQ(kRandomAddress4, result_pair.first.address);
+    EXPECT_FALSE(result_pair.first.connectable);
+    results.erase(iter);
+  }
 
   EXPECT_TRUE(results.empty());
 }
