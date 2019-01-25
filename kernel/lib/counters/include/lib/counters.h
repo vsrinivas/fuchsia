@@ -19,8 +19,8 @@
 //   - after N seconds how many outstanding <x> things are allocated?
 //   - up to this point has <Y> ever happened?
 //
-// Currently the only query interface to the counters is the console
-// k counters command. Issue 'k counters help' to learn what it can do.
+// Currently the only query interface to the counters is the kcounter command.
+// Issue 'kcounter --help' to learn what it can do.
 //
 // Kernel counters public API:
 // 1- define a new counter.
@@ -32,7 +32,7 @@
 //    or
 //      kcounter_max(counter_name, value);
 //
-// By default with KCOUNTER, the `k counters` presentation will calculate a
+// By default with KCOUNTER, the `kcounter` presentation will calculate a
 // sum() across cores rather than summing. KCOUNTER_MAX() calculates the max()
 // of the counters across cores.
 //

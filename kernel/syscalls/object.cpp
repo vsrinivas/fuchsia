@@ -479,7 +479,7 @@ zx_status_t sys_object_get_info(zx_handle_t handle, uint32_t topic,
             stats.timer_ints = cpu->stats.timer_ints;
             stats.timers = cpu->stats.timers;
             stats.page_faults = cpu->stats.page_faults;
-            stats.exceptions = 0; // deprecated, use "k counters" for now.
+            stats.exceptions = 0; // deprecated, use "kcounter" command for now.
             stats.syscalls = cpu->stats.syscalls;
             stats.reschedule_ipis = cpu->stats.reschedule_ipis;
             stats.generic_ipis = cpu->stats.generic_ipis;

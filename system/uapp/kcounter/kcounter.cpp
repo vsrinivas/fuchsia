@@ -20,8 +20,9 @@
 
 namespace {
 
-constexpr char kShortOptions[] = "ltvw::";
+constexpr char kShortOptions[] = "hltvw::";
 constexpr struct option kLongOptions[] = {
+    { "help",       no_argument,        nullptr, 'h' },
     { "list",       no_argument,        nullptr, 'l' },
     { "terse",      no_argument,        nullptr, 't' },
     { "verbose",    no_argument,        nullptr, 'v' },
@@ -33,8 +34,9 @@ constexpr int default_period = 3;
 
 void usage(const char* myname) {
     printf("\
-Usage: %s [-ltvw] [--list] [--terse] [--verbose] [--watch [period]] [PREFIX...]\n\
+Usage: %s [-hltvw] [--help] [--list] [--terse] [--verbose] [--watch [period]] [PREFIX...]\n\
 Prints one counter per line.\n\
+With --help or -h, display this help and exit.\n\
 With --list or -l, show names and types rather than values.\n\
 With --terse or -t, show only values and no names.\n\
 With --verbose or -v, show space-separated lists of per-CPU values.\n\
@@ -51,6 +53,7 @@ constexpr char kVmoFileDir[] = "/boot/kernel";
 }  // anonymous namespace
 
 int main(int argc, char** argv) {
+    bool help = false;
     bool list = false;
     bool terse = false;
     bool verbose = false;
@@ -60,6 +63,9 @@ int main(int argc, char** argv) {
     while ((opt = getopt_long(argc, argv, kShortOptions, kLongOptions,
                               nullptr)) != -1) {
         switch (opt) {
+        case 'h':
+            help = true;
+            break;
         case 'l':
             list = true;
             break;
@@ -83,6 +89,11 @@ int main(int argc, char** argv) {
             usage(argv[0]);
             return 1;
         }
+    }
+
+    if (help) {
+        usage(argv[0]);
+        return 0;
     }
 
     if (list + terse + verbose > 1) {
