@@ -4,26 +4,6 @@
 
 library fuchsia.net;
 
-// Legacy interface to create a socket
-enum SocketDomain {
-    inet = 2;
-    inet6 = 10;
-};
-
-enum SocketType {
-    stream = 1;
-    dgram = 2;
-};
-
-enum SocketProtocol {
-    ip = 0;
-    icmp = 1;
-    tcp = 6;
-    udp = 17;
-    ipv6 = 41;
-    icmpv6 = 58;
-};
-
 enum AddrInfoStatus {
     ok = 0;
     // invalid flags
@@ -61,17 +41,6 @@ struct AddrInfo {
     int32 protocol;
     AddrStorage addr; // TODO(FIDL-323): replace with vector<uint8>:16.
     uint16 port;
-};
-
-// TODO(NET-1865): remove this, SocketDomain, SocketType, and SocketProtocol
-// after Chromium rolls.
-[Discoverable, Layout = "Simple"]
-interface LegacySocketProvider {
-    OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
-        -> (handle<socket>? s, int32 status);
-    // TODO(FIDL-323): use vector<AddInfo>:4.
-    GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
-        -> (AddrInfoStatus status, uint32 nres, array<AddrInfo>:4 res);
 };
 
 // Chosen to match `sizeof(struct sockaddr_storage)`.

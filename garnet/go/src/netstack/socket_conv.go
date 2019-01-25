@@ -38,10 +38,10 @@ import "C"
 
 const sizeOfInt32 int = 4
 
-func GetSockOpt(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, level, name int16, legacy bool) (interface{}, *tcpip.Error) {
+func GetSockOpt(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, level, name int16) (interface{}, *tcpip.Error) {
 	switch level {
 	case C.SOL_SOCKET:
-		return getSockOptSocket(ep, transProto, name, legacy)
+		return getSockOptSocket(ep, transProto, name)
 
 	case C.SOL_TCP:
 		return getSockOptTCP(ep, name)
@@ -65,7 +65,7 @@ func GetSockOpt(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, lev
 	return nil, tcpip.ErrUnknownProtocol
 }
 
-func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, name int16, legacy bool) (interface{}, *tcpip.Error) {
+func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumber, name int16) (interface{}, *tcpip.Error) {
 	switch name {
 	case C.SO_TYPE:
 		switch transProto {
@@ -86,11 +86,7 @@ func getSockOptSocket(ep tcpip.Endpoint, transProto tcpip.TransportProtocolNumbe
 		if err == nil {
 			return int32(0), nil
 		}
-		if legacy {
-			return int32(zxNetError(err)), nil
-		} else {
-			return int32(tcpipErrorToCode(err)), nil
-		}
+		return int32(tcpipErrorToCode(err)), nil
 
 	case C.SO_PEERCRED:
 		return nil, tcpip.ErrNotSupported

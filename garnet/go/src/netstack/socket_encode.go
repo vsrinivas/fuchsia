@@ -67,40 +67,6 @@ func (v *C.struct_fdio_socket_msg) MarshalTo(data []byte) (int, error) {
 	return n, nil
 }
 
-func (v *C.struct_zxrio_sockopt_req_reply) opt() []byte {
-	b := v.optval[:]
-	return *(*[]byte)(unsafe.Pointer(&b))
-}
-
-func (v *C.struct_zxrio_sockopt_req_reply) Unmarshal(data []byte) error {
-	const size = C.sizeof_struct_zxrio_sockopt_req_reply
-
-	if n := copy((*[size]byte)(unsafe.Pointer(v))[:], data); n < size {
-		return fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return nil
-}
-
-func (v *C.struct_zxrio_sockopt_req_reply) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_struct_zxrio_sockopt_req_reply
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
-}
-
-func (v *C.struct_zxrio_sockaddr_reply) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_struct_zxrio_sockaddr_reply
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
-}
-
 func (v *C.struct_ip_mreq) Unmarshal(data []byte) error {
 	const size = C.sizeof_struct_ip_mreq
 
@@ -136,16 +102,6 @@ func (v *C.netc_if_info_t) Marshal() []byte {
 		panic(fmt.Sprintf("short %T: %d/%d", v, n, size))
 	}
 	return b
-}
-
-func (v *C.netc_if_info_t) MarshalTo(data []byte) (int, error) {
-	const size = C.sizeof_netc_if_info_t
-
-	n := copy(data, (*[size]byte)(unsafe.Pointer(v))[:])
-	if n < size {
-		return 0, fmt.Errorf("short %T: %d/%d", v, n, size)
-	}
-	return n, nil
 }
 
 func (v *C.struct_in_addr) Bytes() []byte {

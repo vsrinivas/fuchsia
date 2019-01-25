@@ -5,7 +5,6 @@
 package netstack
 
 import (
-	"fmt"
 	"log"
 	"syscall/zx"
 
@@ -30,68 +29,6 @@ import "C"
 
 type socketProviderImpl struct {
 	ns *Netstack
-}
-
-var _ net.LegacySocketProvider = (*socketProviderImpl)(nil)
-
-func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.TransportProtocolNumber, error) {
-	switch typ {
-	case net.SocketTypeStream:
-		switch protocol {
-		case net.SocketProtocolIp, net.SocketProtocolTcp:
-			return tcp.ProtocolNumber, nil
-		default:
-			return 0, zx.Error{
-				Status: zx.ErrNotSupported,
-				Text:   fmt.Sprintf("unsupported SOCK_STREAM protocol: %d", protocol),
-			}
-		}
-	case net.SocketTypeDgram:
-		switch protocol {
-		case net.SocketProtocolIp, net.SocketProtocolUdp:
-			return udp.ProtocolNumber, nil
-		case net.SocketProtocolIcmp:
-			return ping.ProtocolNumber4, nil
-		default:
-			return 0, zx.Error{
-				Status: zx.ErrNotSupported,
-				Text:   fmt.Sprintf("unsupported SOCK_DGRAM protocol: %d", protocol),
-			}
-		}
-	}
-	return 0, zx.Error{
-		Status: zx.ErrNotSupported,
-		Text:   fmt.Sprintf("unsupported protocol: %d/%d", typ, protocol),
-	}
-}
-
-func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p net.SocketProtocol) (zx.Socket, int32, error) {
-	var netProto tcpip.NetworkProtocolNumber
-	switch d {
-	case net.SocketDomainInet:
-		netProto = ipv4.ProtocolNumber
-	case net.SocketDomainInet6:
-		netProto = ipv6.ProtocolNumber
-	default:
-		return zx.Socket(zx.HandleInvalid), int32(zx.ErrNotSupported), nil
-	}
-
-	transProto, err := sockProto(t, p)
-	if err != nil {
-		return zx.Socket(zx.HandleInvalid), int32(errStatus(err)), nil
-	}
-
-	{
-		wq := new(waiter.Queue)
-		ep, err := sp.ns.mu.stack.NewEndpoint(transProto, netProto, wq)
-		if err != nil {
-			if debug {
-				log.Printf("socket: new endpoint: %v", err)
-			}
-			return zx.Socket(zx.HandleInvalid), int32(zx.ErrInternal), nil
-		}
-		return newIostate(sp.ns, netProto, transProto, wq, ep, false, true), int32(zx.ErrOk), nil
-	}
 }
 
 var _ net.SocketProvider = (*socketProviderImpl)(nil)
@@ -137,7 +74,7 @@ func (sp *socketProviderImpl) Socket(domain, typ, protocol int16) (int16, zx.Soc
 	if err != nil {
 		return tcpipErrorToCode(err), zx.Socket(zx.HandleInvalid), nil
 	}
-	return 0, newIostate(sp.ns, netProto, transProto, wq, ep, false, false), nil
+	return 0, newIostate(sp.ns, netProto, transProto, wq, ep, false), nil
 }
 
 func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *net.AddrInfoHints) (net.AddrInfoStatus, uint32, [4]net.AddrInfo, error) {
@@ -156,16 +93,17 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 		}
 	}
 
-	transProto, err := sockProto(net.SocketType(hints.SockType), net.SocketProtocol(hints.Protocol))
-	if err != nil {
+	code, transProto := toTransProto(int16(hints.SockType), int16(hints.Protocol))
+	if code != 0 {
 		if debug {
-			log.Printf("getaddrinfo: sockProto: %v", err)
+			log.Printf("getaddrinfo: sockProto: %d", code)
 		}
 		return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
 	}
 
 	var port uint16
 	if service != nil && *service != "" {
+		var err error
 		if port, err = serviceLookup(*service, transProto); err != nil {
 			if debug {
 				log.Printf("getaddrinfo: serviceLookup: %v", err)
@@ -190,6 +128,7 @@ func (sp *socketProviderImpl) GetAddrInfo(node *string, service *string, hints *
 			return net.AddrInfoStatusSystemError, 0, [4]net.AddrInfo{}, nil
 		}
 	default:
+		var err error
 		if addrs, err = sp.ns.dnsClient.LookupIP(*node); err != nil {
 			addrs = append(addrs, util.Parse(*node))
 			if debug {
