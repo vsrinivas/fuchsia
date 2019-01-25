@@ -6,10 +6,6 @@
 
 #![deny(missing_docs)]
 #![deny(warnings)]
-#![allow(unknown_lints)] // TODO: Remove
-#![feature(vec_resize_default)]
-#![feature(tool_lints)]
-#![allow(stable_features)]
 // just in case we forget to add #[forbid(unsafe_code)] on new module
 // definitions
 #![deny(unsafe_code)]

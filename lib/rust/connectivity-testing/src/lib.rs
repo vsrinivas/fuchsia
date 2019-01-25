@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#![allow(stable_features)] // transpose_result stabilization
-#![feature(async_await, await_macro, futures_api, transpose_result)]
+#![feature(async_await, await_macro, futures_api)]
 #![deny(warnings)]
 
 /// The connectivity-testing crate provides a set of helper functions intended to be used by

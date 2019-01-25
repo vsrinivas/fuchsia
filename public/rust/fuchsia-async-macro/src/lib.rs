@@ -65,8 +65,6 @@
 //! compilation errors will be generated should `#[test]` be specified before
 //! `#[fuchsia_async::run_until_stalled]`.
 
-#![allow(stable_features)]
-#![feature(extern_crate_item_prelude)]
 #![deny(warnings)]
 
 extern crate proc_macro;

@@ -4,10 +4,7 @@
 
 //! A networking stack.
 
-#![feature(async_await, await_macro, futures_api, pin)]
-// In case we roll the toolchain and something we're using as a feature has been
-// stabilized.
-#![allow(stable_features)]
+#![feature(async_await, await_macro, futures_api)]
 #![deny(missing_docs)]
 #![deny(unreachable_patterns)]
 
