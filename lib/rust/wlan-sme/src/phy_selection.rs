@@ -4,8 +4,8 @@
 
 use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme};
-use crate::client::{ConnectPhyParams};
 use log::{error};
+use wlan_common::RadioConfig;
 
 use crate::DeviceInfo;
 
@@ -88,7 +88,7 @@ pub fn get_device_band_info<'a>(device_info: &'a DeviceInfo, channel: u8)
 
 pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
                       device_info: &DeviceInfo,
-                      params: &ConnectPhyParams)
+                      radio_cfg: &RadioConfig)
     -> (fidl_common::Phy, fidl_common::Cbw)
 {
     let band_cap = match get_device_band_info(device_info, bss.chan.primary) {
@@ -111,9 +111,9 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
             fidl_common::Phy::Vht
         };
 
-    let phy_to_use = match params.phy {
+    let phy_to_use = match radio_cfg.phy {
         None => supported_phy,
-        Some(override_phy) => std::cmp::min(override_phy, supported_phy),
+        Some(override_phy) => std::cmp::min(override_phy.to_fidl(), supported_phy),
     };
 
     let best_cbw = match phy_to_use {
@@ -131,9 +131,12 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
         },
     };
 
-    let cbw_to_use = match params.cbw {
+    let cbw_to_use = match radio_cfg.cbw {
         None => best_cbw,
-        Some(override_cbw) => std::cmp::min(best_cbw, override_cbw),
+        Some(override_cbw) => {
+            let (cbw, _) = override_cbw.to_fidl();
+            std::cmp::min(best_cbw, cbw)
+        },
     };
     (phy_to_use, cbw_to_use)
 }
@@ -142,10 +145,10 @@ pub fn derive_phy_cbw(bss: &fidl_mlme::BssDescription,
 mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
+    use wlan_common::{channel::{Cbw, Phy}, RadioConfig};
     use crate::client::test_utils::{fake_5ghz_band_capabilities, fake_ht_capabilities,
                                     fake_ht_operation, fake_vht_bss_description,
                                     fake_vht_capabilities, fake_vht_operation};
-    use crate::client::{ConnectPhyParams};
 
     #[test]
     fn band_id() {
@@ -255,7 +258,7 @@ mod tests {
             let got =
                 derive_phy_cbw(&fake_vht_bss_description(),
                                &fake_device_info_vht(fidl_mlme::ChanWidthSet::TwentyForty),
-                               &fake_overrider_empty());
+                               &RadioConfig::default());
             assert_eq!(want, got);
         }
         {
@@ -328,17 +331,11 @@ mod tests {
         }
     }
 
-    fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::Cbw) -> ConnectPhyParams {
-        ConnectPhyParams {
-            phy: Some(phy),
-            cbw: Some(cbw),
-        }
-    }
-
-    fn fake_overrider_empty() -> ConnectPhyParams {
-        ConnectPhyParams {
-            phy: None,
-            cbw: None,
+    fn fake_overrider(phy: fidl_common::Phy, cbw: fidl_common::Cbw) -> RadioConfig {
+        RadioConfig {
+            phy: Some(Phy::from_fidl(phy)),
+            cbw: Some(Cbw::from_fidl(cbw, 0)),
+            primary_chan: None,
         }
     }
 

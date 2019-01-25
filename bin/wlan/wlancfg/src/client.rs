@@ -329,11 +329,13 @@ fn start_connect_txn(
     let mut req = fidl_sme::ConnectRequest {
         ssid: ssid.to_vec(),
         password: password.to_vec(),
-        params: fidl_sme::ConnectPhyParams {
+        radio_cfg: fidl_sme::RadioConfig {
             override_phy: false,
             phy: fidl_common::Phy::Ht,
             override_cbw: false,
             cbw: fidl_common::Cbw::Cbw20,
+            override_primary_chan: false,
+            primary_chan: 0,
         },
         scan_type: fidl_common::ScanType::Passive,
     };

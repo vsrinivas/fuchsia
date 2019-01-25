@@ -166,11 +166,13 @@ async fn do_client(cmd: opts::ClientCmd, wlan_svc: WlanSvc) -> Result<(), Error>
             let mut req = fidl_sme::ConnectRequest {
                 ssid: ssid.as_bytes().to_vec(),
                 password: password.unwrap_or(String::new()).as_bytes().to_vec(),
-                params: fidl_sme::ConnectPhyParams {
+                radio_cfg: fidl_sme::RadioConfig {
                     override_phy: phy.is_some(),
                     phy: phy.unwrap_or(PhyArg::Vht).into(),
                     override_cbw: cbw.is_some(),
                     cbw: cbw.unwrap_or(CbwArg::Cbw80).into(),
+                    override_primary_chan: false,
+                    primary_chan: 0,
                 },
                 scan_type: scan_type.into(),
             };

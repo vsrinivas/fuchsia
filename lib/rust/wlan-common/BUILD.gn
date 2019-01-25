@@ -13,6 +13,7 @@ rustc_library("wlan-common") {
 
   deps = [
     "//garnet/public/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//garnet/lib/wlan/fidl:sme-rustc",
     "//garnet/public/rust/zerocopy",
     "//third_party/rust-crates/rustc_deps:bitfield",
     "//third_party/rust-crates/rustc_deps:byteorder",

@@ -58,18 +58,20 @@ interface ConnectTransaction {
     -> OnFinished(ConnectResultCode code);
 };
 
-struct ConnectPhyParams {
+struct RadioConfig {
     bool override_phy;
     fuchsia.wlan.common.PHY phy;
     bool override_cbw;
     fuchsia.wlan.common.CBW cbw;
+    bool override_primary_chan;
+    uint8 primary_chan;
 };
 
 struct ConnectRequest {
     vector<uint8>:32 ssid;
     vector<uint8>:64 password;
 
-    ConnectPhyParams params;
+    RadioConfig radio_cfg;
     fuchsia.wlan.common.ScanType scan_type;
 };
 

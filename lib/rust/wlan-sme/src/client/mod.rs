@@ -18,6 +18,7 @@ use futures::channel::{mpsc, oneshot};
 use log::error;
 use std::collections::HashMap;
 use std::sync::Arc;
+use wlan_common::RadioConfig;
 
 use super::{DeviceInfo, InfoStream, MlmeRequest, MlmeStream, Ssid};
 
@@ -60,16 +61,10 @@ use self::internal::*;
 
 pub type TimeStream = timer::TimeStream<Event>;
 
-#[derive(Debug, PartialEq)]
-pub struct ConnectPhyParams {
-    pub phy: Option<fidl_common::Phy>,
-    pub cbw: Option<fidl_common::Cbw>,
-}
-
 pub struct ConnectConfig {
     responder: Responder<ConnectResult>,
     password: Vec<u8>,
-    params: ConnectPhyParams,
+    radio_cfg: RadioConfig,
 }
 
 // An automatically increasing sequence number that uniquely identifies a logical
@@ -181,17 +176,13 @@ impl ClientSme {
                               -> oneshot::Receiver<ConnectResult> {
         let (responder, receiver) = Responder::new();
         self.context.info_sink.send(InfoEvent::ConnectStarted);
-        let params = ConnectPhyParams {
-            phy: if req.params.override_phy { Some(req.params.phy) } else { None },
-            cbw: if req.params.override_cbw { Some(req.params.cbw) } else { None },
-        };
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(
             JoinScan {
                 ssid: req.ssid,
                 token: ConnectConfig {
                     responder,
                     password: req.password,
-                    params,
+                    radio_cfg: RadioConfig::from_fidl(req.radio_cfg),
                 },
                 scan_type: req.scan_type,
             });
@@ -265,7 +256,7 @@ impl super::Station for ClientSme {
                                             bss: Box::new(clone_bss_desc(&best_bss)),
                                             responder: Some(token.responder),
                                             rsna,
-                                            params: token.params,
+                                            radio_cfg: token.radio_cfg,
                                         };
                                         state.connect(cmd, &mut self.context)
                                     },
@@ -361,6 +352,7 @@ mod tests {
     use super::*;
     use fidl_fuchsia_wlan_mlme as fidl_mlme;
     use std::error::Error;
+    use wlan_common::RadioConfig;
 
     use super::test_utils::{expect_info_event, fake_protected_bss_description,
                             fake_unprotected_bss_description};
@@ -598,12 +590,7 @@ mod tests {
         fidl_sme::ConnectRequest {
             ssid,
             password,
-            params: fidl_sme::ConnectPhyParams {
-                override_phy: false,
-                phy: fidl_common::Phy::Ht,
-                override_cbw: false,
-                cbw: fidl_common::Cbw::Cbw40,
-            },
+            radio_cfg: RadioConfig::default().to_fidl(),
             scan_type: fidl_common::ScanType::Passive,
         }
     }

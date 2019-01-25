@@ -4,11 +4,12 @@
 
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BssDescription, MlmeEvent};
 use log::{error, warn};
+use wlan_common::RadioConfig;
 use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
-use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent, Status};
+use super::{ConnectFailure, ConnectResult, InfoEvent, Status};
 use super::rsn::Rsna;
 
 use crate::MlmeRequest;
@@ -42,7 +43,7 @@ pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
     pub responder: Option<Responder<ConnectResult>>,
     pub rsna: Option<Rsna>,
-    pub params: ConnectPhyParams
+    pub radio_cfg: RadioConfig
 }
 
 #[derive(Debug)]
@@ -71,7 +72,7 @@ pub enum State {
         bss: Box<BssDescription>,
         last_rssi: Option<i8>,
         link_state: LinkState,
-        params: ConnectPhyParams,
+        radio_cfg: RadioConfig,
     },
 }
 
@@ -147,7 +148,7 @@ impl State {
                                             rsna_timeout,
                                             resp_timeout: None,
                                         },
-                                        params: cmd.params,
+                                        radio_cfg: cmd.radio_cfg,
                                     }
                                 }
                             },
@@ -158,7 +159,7 @@ impl State {
                                     bss: cmd.bss,
                                     last_rssi: None,
                                     link_state: LinkState::LinkUp(None),
-                                    params: cmd.params,
+                                    radio_cfg: cmd.radio_cfg,
                                 }
                             }
                         }
@@ -173,7 +174,7 @@ impl State {
                 },
                 _ => State::Associating{ cmd }
             },
-            State::Associated { bss, last_rssi, link_state, params, } => match event {
+            State::Associated { bss, last_rssi, link_state, radio_cfg, } => match event {
                 MlmeEvent::DisassociateInd{ .. } => {
                     let (responder, mut rsna) = match link_state {
                         LinkState::LinkUp(rsna) => (None, rsna),
@@ -189,7 +190,7 @@ impl State {
                         bss,
                         responder,
                         rsna,
-                        params,
+                        radio_cfg,
                     };
                     context.att_id += 1;
                     to_associating_state(cmd, &context.mlme_sink)
@@ -206,7 +207,7 @@ impl State {
                         bss,
                         last_rssi: Some(ind.rssi_dbm),
                         link_state,
-                        params,
+                        radio_cfg,
                     }
                 },
                 MlmeEvent::EapolInd{ ref ind } if bss.rsn.is_some() => match link_state {
@@ -225,7 +226,7 @@ impl State {
                                 report_connect_finished(responder, &context,
                                                         ConnectResult::Success, None);
                                 let link_state = LinkState::LinkUp(Some(rsna));
-                                State::Associated { bss, last_rssi, link_state, params, }
+                                State::Associated { bss, last_rssi, link_state, radio_cfg, }
                             },
                             RsnaStatus::Failed(result) => {
                                 report_connect_finished(responder, &context, result, None);
@@ -235,7 +236,7 @@ impl State {
                             RsnaStatus::Unchanged => {
                                 let link_state = LinkState::EstablishingRsna {
                                     responder, rsna, rsna_timeout, resp_timeout };
-                                State::Associated { bss, last_rssi, link_state, params, }
+                                State::Associated { bss, last_rssi, link_state, radio_cfg, }
                             },
                             RsnaStatus::Progressed { new_resp_timeout } => {
                                 cancel(&mut resp_timeout);
@@ -244,7 +245,7 @@ impl State {
                                 }
                                 let link_state = LinkState::EstablishingRsna {
                                     responder, rsna, rsna_timeout, resp_timeout};
-                                State::Associated { bss, last_rssi, link_state, params, }
+                                State::Associated { bss, last_rssi, link_state, radio_cfg, }
                             }
                         }
                     },
@@ -256,18 +257,18 @@ impl State {
                             s => error!("unexpected RsnaStatus in LinkUp state: {:?}", s),
                         };
                         let link_state = LinkState::LinkUp(Some(rsna));
-                        State::Associated { bss, last_rssi, link_state, params, }
+                        State::Associated { bss, last_rssi, link_state, radio_cfg, }
                     },
                     _ => panic!("expected Link to carry RSNA because bss.rsn is present"),
                 }
-                _ => State::Associated{ bss, last_rssi, link_state, params, }
+                _ => State::Associated{ bss, last_rssi, link_state, radio_cfg, }
             },
         }
     }
 
     pub fn handle_timeout(self, event_id: EventId, event: Event, context: &mut Context) -> Self {
         match self {
-            State::Associated { bss, last_rssi, link_state, params } => match link_state {
+            State::Associated { bss, last_rssi, link_state, radio_cfg } => match link_state {
                 LinkState::EstablishingRsna { responder, rsna,
                                               mut rsna_timeout, mut resp_timeout } => {
                     match event {
@@ -284,7 +285,7 @@ impl State {
                             if !triggered(&resp_timeout, event_id) {
                                 let link_state = LinkState::EstablishingRsna {
                                     responder, rsna, rsna_timeout, resp_timeout, };
-                                return State::Associated { bss, last_rssi, link_state, params }
+                                return State::Associated { bss, last_rssi, link_state, radio_cfg }
                             }
 
                             if attempt < event::KEY_FRAME_EXCHANGE_MAX_ATTEMPTS {
@@ -295,7 +296,7 @@ impl State {
                                 resp_timeout.replace(id);
                                 let link_state = LinkState::EstablishingRsna {
                                     responder, rsna, rsna_timeout, resp_timeout, };
-                                State::Associated { bss, last_rssi, link_state, params }
+                                State::Associated { bss, last_rssi, link_state, radio_cfg }
                             } else {
                                 error!("timeout waiting for key frame for last attempt; deauth");
                                 cancel(&mut resp_timeout);
@@ -308,11 +309,11 @@ impl State {
                         _ => {
                             let link_state = LinkState::EstablishingRsna {
                                 responder, rsna, rsna_timeout, resp_timeout };
-                            State::Associated { bss, last_rssi, link_state, params }
+                            State::Associated { bss, last_rssi, link_state, radio_cfg }
                         },
                     }
                 },
-                _ => State::Associated { bss, last_rssi, link_state, params },
+                _ => State::Associated { bss, last_rssi, link_state, radio_cfg },
             },
             _ => self,
         }
@@ -323,7 +324,7 @@ impl State {
 
         let mut selected_bss = clone_bss_desc(&cmd.bss);
         let (phy_to_use, cbw_to_use)
-            = derive_phy_cbw(&selected_bss, &context.device_info, &cmd.params);
+            = derive_phy_cbw(&selected_bss, &context.device_info, &cmd.radio_cfg);
         selected_bss.chan.cbw = cbw_to_use;
 
         context.mlme_sink.send(MlmeRequest::Join(
@@ -575,6 +576,7 @@ mod tests {
     use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
+    use wlan_common::RadioConfig;
     use wlan_rsn::{NegotiatedRsne, rsna::UpdateSink, rsne::RsnCapabilities};
 
     use crate::client::test_utils::{
@@ -1279,7 +1281,7 @@ mod tests {
             bss: Box::new(unprotected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
             responder: Some(responder),
             rsna: None,
-            params: ConnectPhyParams { phy: None, cbw: None, },
+            radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)
     }
@@ -1290,7 +1292,7 @@ mod tests {
             bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
             responder: Some(responder),
             rsna: None,
-            params: ConnectPhyParams { phy: None, cbw: None, },
+            radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)
     }
@@ -1308,7 +1310,7 @@ mod tests {
                 negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
                 supplicant: Box::new(supplicant),
             }),
-            params: ConnectPhyParams { phy: None, cbw: None, },
+            radio_cfg: RadioConfig::default(),
         };
         (cmd, receiver)
     }
@@ -1361,7 +1363,7 @@ mod tests {
                 rsna_timeout: None,
                 resp_timeout: None,
             },
-            params: ConnectPhyParams { phy: None, cbw: None },
+            radio_cfg: RadioConfig::default(),
         }
     }
 
@@ -1370,7 +1372,7 @@ mod tests {
             bss,
             last_rssi: None,
             link_state: LinkState::LinkUp(None),
-            params: ConnectPhyParams { phy: None, cbw: None, },
+            radio_cfg: RadioConfig::default(),
         }
     }
 
