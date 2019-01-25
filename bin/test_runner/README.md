@@ -15,11 +15,22 @@ The JSON file specified by `--test_file` parameter looks similar to this:
   "tests":[
     {
       "name":"dummy_session_shell",
-      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --session_shell=dummy_session_shell"
+      "exec":[
+        "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx ",
+        "--ledger_repository_for_testing ",
+        "--base_shell=fuchsia-pkg://fuchsia.com/dummy_base_shell#meta/dummy_base_shell.cmx ",
+        "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx"
+      ]
     },
     {
       "name":"parent_child",
-      "exec":"basemgr --ledger_repository_for_testing --base_shell=dummy_base_shell --session_shell=dev_session_shell --session_shell_args=--root_module=/system/test/modular_tests/parent_module"
+      "exec":[
+        "fuchsia-pkg://fuchsia.com/basemgr#meta/basemgr.cmx ",
+        "--ledger_repository_for_testing ",
+        "--base_shell=fuchsia-pkg://fuchsia.com/dummy_base_shell#meta/dummy_base_shell.cmx ",
+        "--session_shell=fuchsia-pkg://fuchsia.com/dev_session_shell#meta/dev_session_shell.cmx ",
+        "--session_shell_args=--root_module=fuchsia-pkg://fuchsia.com/parent_module#meta/parent_module.cmx"
+      ]
     }
 }
 ```
