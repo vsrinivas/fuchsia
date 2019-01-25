@@ -962,7 +962,21 @@ zx_status_t Device::EthQueueTx(uint32_t options, ethmac_netbuf_t* netbuf) {
 }
 
 zx_status_t Device::EthSetParam(uint32_t param, int32_t value, const void* data, size_t data_size) {
-    return ZX_ERR_NOT_SUPPORTED;
+    zx_status_t status = ZX_ERR_NOT_SUPPORTED;
+
+    switch (param) {
+    case ETHMAC_SETPARAM_PROMISC:
+        // See WLAN-259: In short, the bridge mode doesn't require WLAN promiscuous mode enabled.
+        //               So we give a warning and return OK here to continue the bridging.
+        // TODO(WLAN-491): To implement the real promiscuous mode.
+        if (value == 1) {  // Only warn when enabling.
+            warnf("wlanif: WLAN promiscuous not supported yet. see WLAN-491\n");
+        }
+        status = ZX_OK;
+        break;
+    }
+
+    return status;
 }
 
 void Device::SetEthmacStatusLocked(bool online) {
