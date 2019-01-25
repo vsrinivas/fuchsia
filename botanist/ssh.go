@@ -59,7 +59,7 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 		client, err = ssh.Dial(network, address.String(), config)
 		return err
 	}, nil); err != nil {
-		return nil, fmt.Errorf("cannot connect to address '%s': %v", address, err)
+		return nil, fmt.Errorf("cannot connect to address %q: %v", address, err)
 	}
 
 	return client, nil
@@ -67,10 +67,16 @@ func ConnectSSH(ctx context.Context, address net.Addr, config *ssh.ClientConfig)
 
 // SSHIntoNode connects to the device with the given nodename.
 func SSHIntoNode(ctx context.Context, nodename string, config *ssh.ClientConfig) (*ssh.Client, error) {
+	// Retry discovering the address of the node, as the netstack might not yet be up.
 	netbootClient := netboot.NewClient(defaultIOTimeout)
-	address, err := netbootClient.Discover(nodename, true)
+	var address *net.UDPAddr
+	var err error
+	err = retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 60), func() error {
+		address, err = netbootClient.Discover(nodename, true)
+		return err
+	}, nil)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("cannot find node %q: %v", nodename, err)
 	}
 
 	address.Port = SSHPort
