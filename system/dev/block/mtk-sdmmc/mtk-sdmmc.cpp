@@ -124,7 +124,8 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
         .max_transfer_size_non_dma = config.fifo_depth,
         // The datasheet claims that MSDC0 supports EMMC4.5 (and HS400), however there does not
         // appear to be a data strobe input pin on the chip.
-        .prefs = SDMMC_HOST_PREFS_DISABLE_HS400
+        // TODO(bradenkell): Re-enable HS200 after fixing the paving/stability issues.
+        .prefs = SDMMC_HOST_PREFS_DISABLE_HS400 | SDMMC_HOST_PREFS_DISABLE_HS200
     };
 
     zx::interrupt irq;
