@@ -205,7 +205,10 @@ source_set("fxl_printers") {
   ]
 }
 
-executable("fxl_unittests") {
+# TODO(IN-819): In the future we may want to use output_name here so that the a
+# host test and on-device test are named the same for the purposes of fx
+# run-test/run-host-tests.
+executable("fxl_unittests_bin") {
   testonly = true
 
   sources = [
@@ -260,17 +263,15 @@ executable("fxl_unittests") {
 }
 
 if (is_fuchsia) {
-  package("unittests_package") {
+  package("fxl_unittests") {
     testonly = true
 
-    package_name = "fxl_unittests"
-
     deps = [
-      ":fxl_unittests",
+      ":fxl_unittests_bin",
     ]
     tests = [
       {
-        name = "fxl_unittests"
+        name = "fxl_unittests_bin"
       },
     ]
   }
