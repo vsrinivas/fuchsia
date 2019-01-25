@@ -92,8 +92,8 @@ void ufshc_check_h8(volatile void* regs) {
         // MPHY TX_FSM_State TX1
         tx_fsm_val_1 = ufshc_uic_cmd_read(regs, DME_GET, UPRO_MPHY_FSM_TX1);
         if ((tx_fsm_val_0 == 0x1) && (tx_fsm_val_1 == 0x1)) {
-            UFS_TRACE("ufs_hi3660_check_hibern8 val0=0x%x val1=0x%x \n",
-                      tx_fsm_val_0, tx_fsm_val_1);
+            UFS_DBG("tx_fsm_val_0=0x%x tx_fsm_val_1=0x%x.\n",
+                    tx_fsm_val_0, tx_fsm_val_1);
             break;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
@@ -152,7 +152,7 @@ static void ufs_create_nop_out_upiu(ufs_hba_t* hba, uint8_t free_slot) {
 
 static void ufs_create_query_upiu(ufs_hba_t* hba, uint8_t opcode,
                                   uint8_t query_func, uint8_t sel,
-                                  uint8_t flag, uint8_t index,
+                                  uint8_t flag, uint8_t index, uint16_t len,
                                   const uint8_t* ret_val, uint8_t free_slot) {
     ufs_query_req_upiu_t* query_upiu;
     utp_tfr_req_desc_t* utrd;
@@ -180,8 +180,9 @@ static void ufs_create_query_upiu(ufs_hba_t* hba, uint8_t opcode,
     query_upiu->tsf[3] = sel;
     query_upiu->tsf[4] = 0x0;
     query_upiu->tsf[5] = 0x0;
-    query_upiu->tsf[6] = 0x0;
-    query_upiu->tsf[7] = 0x0;
+    query_upiu->tsf[6] = len & 0xff;
+    query_upiu->tsf[7] = (uint8_t)(len >> 8);
+
     // Value or Flag update
     query_upiu->tsf[8] = ret_val[3];
     query_upiu->tsf[9] = ret_val[2];
@@ -204,17 +205,17 @@ static zx_status_t ufshc_wait_for_active(volatile void* regs,
 
     while (true) {
         uint32_t reg_value = readl(regs + REG_CONTROLLER_ENABLE);
-        UFS_TRACE("REG_CONTROLLER_ENABLE = 0x%x.\n", reg_value);
         if ((reg_value & mask) == 1) {
-            UFS_TRACE("UFS HC controller is active.\n");
+            UFS_DBG("UFS HC controller is active.\n");
             break;
         }
+        UFS_DBG("UFS HC CTRL_EN=0x%x.\n", reg_value);
 
         if (zx_clock_get_monotonic() > deadline) {
             UFS_ERROR("UFS HC: timed out while waiting for reset!\n");
             return ZX_ERR_TIMED_OUT;
         }
-        usleep(5 * 1000);
+        zx_nanosleep(zx_deadline_after(ZX_USEC(5)));
     }
 
     return ZX_OK;
@@ -262,7 +263,7 @@ static zx_status_t ufshc_link_startup(volatile void* regs) {
         for (i = 0; i <= LINK_STARTUP_UCCS_RETRY_COUNT; i++) {
             if (readl(regs + REG_INTERRUPT_STATUS) & UFS_IS_UCCS_BIT) {
                 writel(UFS_IS_UCCS_BIT, regs + REG_INTERRUPT_STATUS);
-                UFS_TRACE("UFS HC Link INT status OK.\n");
+                UFS_DBG("UFS HC Link INT status OK.\n");
                 break;
             }
             zx_nanosleep(zx_deadline_after(ZX_MSEC(2)));
@@ -272,7 +273,7 @@ static zx_status_t ufshc_link_startup(volatile void* regs) {
             writel(UFS_IS_UE_BIT, regs + REG_INTERRUPT_STATUS);
             if (readl(regs + REG_CONTROLLER_STATUS) & UFS_IS_ULSS_BIT)
                 writel(UFS_IS_ULSS_BIT, regs + REG_INTERRUPT_STATUS);
-            UFS_TRACE("UFS HC link_startup startup OK.\n");
+            UFS_DBG("UFS HC link_startup startup OK.\n");
 
             ufshc_reg_read_clear(regs);
             return ZX_OK;
@@ -334,7 +335,7 @@ static zx_status_t ufshc_memory_alloc(ufshc_dev_t* dev) {
 
     hba->lrb_buf = calloc(1, lrb_size);
     if (!hba->lrb_buf) {
-        UFS_ERROR("Could not allocated display structure!\n");
+        UFS_ERROR("Failed to allocate LRB!\n");
         return ZX_ERR_NO_MEMORY;
     }
 
@@ -516,21 +517,168 @@ static int32_t ufshc_read_nop_resp(ufs_hba_t* hba, uint8_t free_slot) {
     // Release xfer request
     hba->outstanding_xfer_reqs &= ~(1 << free_slot);
     if (utrd->ocs != 0x0) {
-        UFS_TRACE("Send nop out ocs error! utrd->ocs=0x%x\n", utrd->ocs);
+        UFS_DBG("Send nop out ocs error! utrd->ocs=0x%x.\n", utrd->ocs);
         return UFS_NOP_OUT_OCS_FAIL;
     }
 
     if ((resp_upiu->trans_type & UPIU_TYPE_REJECT) != UPIU_TYPE_NOP_IN) {
-        UFS_TRACE("Invalid nop in!\n");
+        UFS_DBG("Invalid NOP IN!\n");
         return UFS_INVALID_NOP_IN;
     }
 
     if (resp_upiu->resp != 0x0) {
-        UFS_TRACE("nop in response errpr,resp = 0x%x\n", resp_upiu->resp);
+        UFS_DBG("NOP IN response err, resp = 0x%x.\n", resp_upiu->resp);
         return UFS_NOP_RESP_FAIL;
     }
 
     return 0;
+}
+
+static inline zx_status_t ufs_get_query_func(uint8_t opcode, uint8_t* query_func) {
+    switch (opcode) {
+    case SET_FLAG_OPCODE:
+        *query_func = STANDARD_WR_REQ;
+        break;
+    case READ_FLAG_OPCODE:
+    case READ_DESC_OPCODE:
+        *query_func = STANDARD_RD_REQ;
+        break;
+    default:
+        return ZX_ERR_INVALID_ARGS;
+        break;
+    };
+
+    return ZX_OK;
+}
+
+static zx_status_t ufshc_query_dev_desc(ufshc_dev_t* dev, uint8_t opcode,
+                                        uint8_t desc_idn, uint8_t desc_idx,
+                                        void** desc_buf, uint16_t* desc_len) {
+    uint8_t ret_val[4];
+    uint8_t query_func = 0;
+    uint8_t free_slot;
+    ufs_utp_resp_upiu_t* resp_upiu;
+    zx_status_t status;
+    ufs_hba_t* hba = &dev->ufs_hba;
+    volatile void* regs = dev->ufshc_mmio.vaddr;
+    uint8_t* tmp_buf;
+
+    status = ufs_get_query_func(opcode, &query_func);
+    if (status != ZX_OK)
+        return status;
+
+    for (uint32_t i = 0; i < 4; i++) {
+        ret_val[i] = 0x0;
+    }
+
+    free_slot = ufshc_get_xfer_free_slot(hba);
+    if (BAD_SLOT == free_slot)
+        return ZX_ERR_NO_RESOURCES;
+
+    resp_upiu = hba->lrb_buf[free_slot].resp_upiu;
+    ufs_create_query_upiu(hba, opcode, query_func, 0, desc_idn,
+                          desc_idx, *desc_len, &ret_val[0], free_slot);
+
+    // Flush and invalidate cache before we start transfer
+    ufshc_flush_and_invalidate_descs(hba);
+
+    status = ufshc_wait_for_cmd_completion(hba, (1 << free_slot), regs);
+    if (status != ZX_OK) {
+        UFS_ERROR("UFS Query Descriptor fail!\n");
+        return status;
+    }
+
+    status = ufs_read_query_resp(hba, ret_val, free_slot);
+    if (status != ZX_OK)
+        return status;
+
+    // Fill the response desc buffer and length.
+    *((uint8_t**)desc_buf) = (void*)resp_upiu;
+    tmp_buf = (uint8_t*)resp_upiu;
+    *desc_len = tmp_buf[UFS_UPIU_REQ_HDR_LEN + UFS_RESP_LEN_OFF_L] |
+                tmp_buf[UFS_UPIU_REQ_HDR_LEN + UFS_RESP_LEN_OFF_H] << 8;
+
+    return status;
+}
+
+static zx_status_t ufs_get_desc_len(ufshc_dev_t* dev,
+                                    uint8_t desc_idn,
+                                    uint16_t* desc_len) {
+    zx_status_t status;
+    void* resp_upiu;
+
+    status = ufshc_query_dev_desc(dev, READ_DESC_OPCODE, desc_idn,
+                                  0, &resp_upiu, desc_len);
+    if (status != ZX_OK)
+        return status;
+
+    UFS_DBG("UFS device descriptor length is 0x%x\n", *desc_len);
+    return ZX_OK;
+}
+
+static zx_status_t ufs_read_dev_desc(ufshc_dev_t* dev, void** resp_upiu) {
+    zx_status_t status;
+    uint16_t len = UFS_READ_DESC_MIN_LEN;
+
+    // Get the Device descriptor length first
+    status = ufs_get_desc_len(dev, DEVICE_DESC_IDN, &len);
+    if (status != ZX_OK) {
+        UFS_ERROR("Get DEVICE_DESC Length Fail!\n");
+        return status;
+    }
+
+    status = ufshc_query_dev_desc(dev, READ_DESC_OPCODE, DEVICE_DESC_IDN,
+                                  0, resp_upiu, &len);
+    if (status != ZX_OK) {
+        UFS_ERROR("Query DEVICE_DESC Fail!\n");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+static void ufs_update_num_lun(ufs_query_req_upiu_t* resp_upiu,
+                               ufs_hba_t* hba) {
+    uint8_t* data_ptr;
+
+    // Response UPIU buffer has size of ALLIGNED_UPIU_SIZE bytes
+    // allocated in UFS command descriptor
+    data_ptr = (uint8_t*)resp_upiu;
+    // Skip the query request header to read the response data.
+    data_ptr += sizeof(ufs_query_req_upiu_t);
+
+    hba->num_lun = data_ptr[UFS_DEV_DESC_NUM_LUNS];
+    UFS_DBG("UFS Number of LUN=%d\n", hba->num_lun);
+}
+
+static void ufs_fill_manf_id(ufs_query_req_upiu_t* resp_upiu,
+                             ufs_hba_t* hba) {
+    uint8_t* data_ptr;
+
+    // Response UPIU buffer has size of ALLIGNED_UPIU_SIZE bytes
+    // allocated in UFS command descriptor
+    data_ptr = (uint8_t*)resp_upiu;
+    // Skip the query request header to read the response data.
+    data_ptr += sizeof(ufs_query_req_upiu_t);
+
+    hba->manufacturer_id = data_ptr[UFS_DEV_DESC_MANF_ID_H] << 8 |
+                           data_ptr[UFS_DEV_DESC_MANF_ID_L];
+    UFS_DBG("Found UFS device. Manf_ID=0x%x.\n", hba->manufacturer_id);
+}
+
+static zx_status_t ufshc_get_device_info(ufshc_dev_t* dev) {
+    ufs_hba_t* hba = &dev->ufs_hba;
+    void* resp_upiu;
+    zx_status_t status;
+
+    status = ufs_read_dev_desc(dev, &resp_upiu);
+    if (status != ZX_OK)
+        return status;
+
+    ufs_update_num_lun(resp_upiu, hba);
+    ufs_fill_manf_id(resp_upiu, hba);
+
+    return ZX_OK;
 }
 
 static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba,
@@ -550,8 +698,8 @@ static zx_status_t ufshc_send_nop_out_cmd(ufs_hba_t* hba,
         ufshc_flush_and_invalidate_descs(hba);
 
         status = ufshc_wait_for_cmd_completion(hba, (1 << free_slot), regs);
-        if (status == 0) {
-            if ((status = ufshc_read_nop_resp(hba, free_slot)) == 0x0)
+        if (status == ZX_OK) {
+            if ((status = ufshc_read_nop_resp(hba, free_slot)) == ZX_OK)
                 break;
         }
         zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
@@ -571,25 +719,18 @@ static zx_status_t ufshc_do_flag_opn(ufshc_dev_t* dev, uint8_t opcode,
     ufs_hba_t* hba = &dev->ufs_hba;
     uint8_t ret_val[4];
     uint8_t free_slot;
-    uint8_t query_func;
+    uint8_t query_func = 0;
     int32_t i;
     zx_status_t status;
 
-    switch (opcode) {
-    case SET_FLAG_OPCODE:
-        query_func = STANDARD_WR_REQ;
-        break;
-    case READ_FLAG_OPCODE:
-        query_func = STANDARD_RD_REQ;
-        if (!flag_res) {
-            UFS_ERROR("Flag result ptr cannot be NULL!\n");
-            return ZX_ERR_INVALID_ARGS;
-        }
-        break;
-    default:
+    status = ufs_get_query_func(opcode, &query_func);
+    if (status != ZX_OK)
+        return status;
+
+    if ((query_func == STANDARD_RD_REQ) && !flag_res) {
+        UFS_ERROR("Flag result ptr cannot be NULL!\n");
         return ZX_ERR_INVALID_ARGS;
-        break;
-    };
+    }
 
     for (i = 0; i < 4; i++)
         ret_val[i] = 0x0;
@@ -599,13 +740,13 @@ static zx_status_t ufshc_do_flag_opn(ufshc_dev_t* dev, uint8_t opcode,
         return ZX_ERR_NO_RESOURCES;
 
     ufs_create_query_upiu(hba, opcode, query_func, 0,
-                          flag, 0, &ret_val[0], free_slot);
+                          flag, 0, 0, &ret_val[0], free_slot);
 
     // Flush and invalidate cache before we start transfer
     ufshc_flush_and_invalidate_descs(hba);
 
     status = ufshc_wait_for_cmd_completion(hba, (1 << free_slot), regs);
-    if (status != 0) {
+    if (status != ZX_OK) {
         UFS_ERROR("UFS query response fail for slot=0x%x.\n", free_slot);
         return status;
     }
@@ -684,14 +825,14 @@ static inline void ufshc_read_capabilities(ufs_hba_t* hba,
     // nutrs and nutmrs are 0 based values
     hba->nutrs = (hba->caps & MASK_TRANSFER_REQUESTS_SLOTS) + 1;
     hba->nutmrs = ((hba->caps & MASK_TASK_MANAGEMENT_REQUEST_SLOTS) >> UFS_NUTMRS_SHIFT) + 1;
-    UFS_TRACE("ufshcd_capabilities hba->nutrs=%d hba->nutmrs=%d.\n",
-              hba->nutrs, hba->nutmrs);
+    UFS_DBG("ufshcd_capabilities hba->nutrs=%d hba->nutmrs=%d.\n",
+            hba->nutrs, hba->nutmrs);
 }
 
 static inline void ufshc_get_ufs_version(ufs_hba_t* hba,
                                          volatile void* regs) {
     hba->ufs_version = readl(regs + REG_UFS_VERSION);
-    UFS_TRACE("hba->ufs_version=%u.\n", hba->ufs_version);
+    UFS_DBG("hba->ufs_version=%u.\n", hba->ufs_version);
 }
 
 static zx_status_t ufshc_host_init(ufshc_dev_t* dev) {
@@ -744,13 +885,17 @@ zx_status_t ufshc_init(ufshc_dev_t* dev,
         UFS_ERROR("UFS HC enabling failed!:%d\n", status);
         return status;
     }
-    UFS_TRACE("UFS HC enable SUCCESS.\n");
+    UFS_DBG("UFS HC enable Success.\n");
 
     status = ufshc_host_init(dev);
     if (status != ZX_OK)
         goto fail;
 
     status = ufshc_device_init(dev);
+    if (status != ZX_OK)
+        goto fail;
+
+    status = ufshc_get_device_info(dev);
     if (status != ZX_OK)
         goto fail;
 

@@ -238,7 +238,7 @@ static zx_status_t hisi_ufs_bind(void* ctx, zx_device_t* parent) {
         UFS_ERROR("UFS HC enabling failed!status=%d\n", status);
         goto fail;
     }
-    UFS_TRACE("UFS HC enable SUCCESS.\n");
+    UFS_DBG("UFS HC Initialization Success.\n");
 
     // Create the device.
     device_add_args_t args = {

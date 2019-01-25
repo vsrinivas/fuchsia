@@ -48,8 +48,16 @@ static inline uint16_t SWAP_16(uint16_t x) {
                                    __LINE__, ##__VA_ARGS__)
 #define UFS_WARN(fmt, ...) zxlogf(WARN, "[%s:%d]" fmt, __func__, \
                                   __LINE__, ##__VA_ARGS__)
-#define UFS_TRACE(fmt, ...) zxlogf(TRACE, "[%s:%d]" fmt, __func__, \
-                                   __LINE__, ##__VA_ARGS__)
+#define UFS_INFO(fmt, ...) zxlogf(INFO, "[%s:%d]" fmt, __func__, \
+                                  __LINE__, ##__VA_ARGS__)
+// Uncomment below line for more logs
+// #define UFS_DEBUG
+#ifdef UFS_DEBUG
+#define UFS_DBG(fmt, ...) zxlogf(INFO, "[%s:%d]" fmt, __func__, \
+                                 __LINE__, ##__VA_ARGS__)
+#else
+#define UFS_DBG(fmt, ...) /*nothing*/
+#endif
 
 // HCE - Host Controller Enable 34h
 #define CONTROLLER_ENABLE  UFS_BIT(0)
@@ -75,14 +83,18 @@ static inline uint16_t SWAP_16(uint16_t x) {
 #define UFS_SCTRL_SYSCTRL         0x5C
 
 // UFS Command codes
-#define READ_FLAG_OPCODE 0x05
-#define SET_FLAG_OPCODE  0x06
+#define READ_DESC_OPCODE  0x01
+#define WRITE_DESC_OPCODE 0x02
+#define READ_FLAG_OPCODE  0x05
+#define SET_FLAG_OPCODE   0x06
 
 #define FLAG_ID_FDEVICE_INIT 0x01
 
 // Descriptor Idns
 #define STANDARD_RD_REQ 0x01
 #define STANDARD_WR_REQ 0x81
+#define DEVICE_DESC_IDN 0x00
+#define DEVICE_DESC_LEN 0x40
 
 #define ALIGNED_UPIU_SIZE 512
 
@@ -114,6 +126,16 @@ static inline uint16_t SWAP_16(uint16_t x) {
 
 #define UFS_NUTMRS_SHIFT    16
 #define UTP_UFS_STORAGE_CMD (1 << 4)
+
+#define UFS_UPIU_REQ_HDR_LEN 12
+#define UFS_RESP_LEN_OFF_H   6
+#define UFS_RESP_LEN_OFF_L   7
+
+// UFS device descriptor offsets
+#define UFS_DEV_DESC_NUM_LUNS  0x06
+#define UFS_DEV_DESC_MANF_ID_H 0x18
+#define UFS_DEV_DESC_MANF_ID_L 0x19
+#define UFS_READ_DESC_MIN_LEN  0x02
 
 // UFS HC Register Offsets
 enum {
@@ -396,11 +418,7 @@ typedef struct {
     ufs_utp_cmd_upiu_t* cmd_upiu;
     ufs_utp_resp_upiu_t* resp_upiu;
     ufshcd_prd_t* prdt;
-    uint16_t sense_buf_len;
-    uint8_t sense_buf;
 } ufs_hcd_lrb_t;
-
-struct ufs_hba;
 
 typedef struct {
     const char* name;
@@ -413,6 +431,8 @@ typedef struct ufs_hba {
     uint8_t nutrs;
     uint32_t caps;
     uint32_t ufs_version;
+    uint8_t num_lun;
+    uint16_t manufacturer_id;
 
     // UFS Command descriptor
     io_buffer_t ucdl_dma_buf;
