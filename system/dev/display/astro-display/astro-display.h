@@ -79,6 +79,10 @@ private:
     void PopulateAddedDisplayArgs(added_display_args_t* args);
     void PopulatePanelType() TA_REQ(display_lock_);
 
+    // This function enables the display hardware. This function is disruptive and causes
+    // unexpected pixels to be visible on the screen.
+    zx_status_t DisplayInit() TA_REQ(display_lock_);
+
     // Zircon handles
     zx::bti                             bti_;
     zx::interrupt                       inth_;
@@ -118,6 +122,8 @@ private:
     // boards that we don't support. Those boards will depend on U-Boot
     // to set things up
     bool                                skip_disp_init_ TA_GUARDED(display_lock_);
+
+    bool                                full_init_done_ = false;
 
     // board revision and panel type detected by the display driver
     uint8_t                             panel_type_ TA_GUARDED(display_lock_);

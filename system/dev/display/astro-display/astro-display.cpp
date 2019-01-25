@@ -81,6 +81,119 @@ void AstroDisplay::PopulateAddedDisplayArgs(added_display_args_t* args) {
     args->cursor_info_count = 0;
 }
 
+zx_status_t AstroDisplay::DisplayInit() {
+    zx_status_t status;
+    fbl::AllocChecker ac;
+    if (!skip_disp_init_) {
+        // Detect panel type
+        PopulatePanelType();
+
+        if (panel_type_ == PANEL_TV070WSM_FT) {
+            init_disp_table_ = &kDisplaySettingTV070WSM_FT;
+        } else if (panel_type_ == PANEL_P070ACB_FT) {
+            init_disp_table_ = &kDisplaySettingP070ACB_FT;
+        } else {
+            DISP_ERROR("Unsupported panel detected!\n");
+            status = ZX_ERR_NOT_SUPPORTED;
+            return status;
+        }
+
+        // Populated internal structures based on predefined tables
+        CopyDisplaySettings();
+
+        // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
+        // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
+        // relationship established. We'll have to revisit the calculation if this ratio cannot
+        // be met.
+        if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
+            DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
+            status = ZX_ERR_INVALID_ARGS;
+            return status;
+        }
+
+        // Setup VPU and VPP units first
+        vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        status = vpu_->Init(parent_);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not initialize VPU object\n");
+            return status;
+        }
+
+        vpu_->PowerOff();
+        vpu_->PowerOn();
+        vpu_->VppInit();
+
+        clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        status = clock_->Init(parent_);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not initialize Clock object\n");
+            return status;
+        }
+
+        // Enable all display related clocks
+        status = clock_->Enable(disp_setting_);
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not enable display clocks!\n");
+            return status;
+        }
+
+        // Program and Enable DSI Host Interface
+        dsi_host_ = fbl::make_unique_checked<astro_display::AmlDsiHost>(&ac,
+                                                                        parent_,
+                                                                        clock_->GetBitrate(),
+                                                                        panel_type_);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        status = dsi_host_->Init();
+        if (status != ZX_OK) {
+            DISP_ERROR("Could not initialize DSI Host\n");
+            return status;
+        }
+
+        status = dsi_host_->HostOn(disp_setting_);
+        if (status != ZX_OK) {
+            DISP_ERROR("DSI Host On failed! %d\n", status);
+            return status;
+        }
+    }
+    osd_ = fbl::make_unique_checked<astro_display::Osd>(&ac,
+                                                        width_,
+                                                        height_,
+                                                        disp_setting_.h_active,
+                                                        disp_setting_.v_active);
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    // Initialize osd object
+    status = osd_->Init(parent_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not initialize OSD object\n");
+        return status;
+    }
+
+    if (!skip_disp_init_) {
+        osd_->HwInit();
+    }
+
+    // Configure osd layer
+    current_image_valid_= false;
+    status = osd_->Configure();
+    if (status != ZX_OK) {
+        DISP_ERROR("OSD configuration failed!\n");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 // part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
 uint32_t AstroDisplay::DisplayControllerImplComputeLinearStride(uint32_t width,
                                                                 zx_pixel_format_t format) {
@@ -195,6 +308,15 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config
 
     uint8_t addr;
     if (display_count == 1 && display_configs[0]->layer_count) {
+       if (!full_init_done_) {
+            zx_status_t status;
+            if ((status = DisplayInit()) != ZX_OK) {
+                DISP_ERROR("Display Hardware Initialization failed! %d\n", status);
+                ZX_ASSERT(0);
+            }
+            full_init_done_ = true;
+        }
+
         // Since Astro does not support plug'n play (fixed display), there is no way
         // a checked configuration could be invalid at this point.
         addr = (uint8_t) (uint64_t) display_configs[0]->layer_list[0]->cfg.primary.image.handle;
@@ -203,7 +325,9 @@ void AstroDisplay::DisplayControllerImplApplyConfiguration( const display_config
         osd_->FlipOnVsync(addr);
     } else {
         current_image_valid_= false;
-        osd_->Disable();
+        if (full_init_done_) {
+            osd_->Disable();
+        }
     }
 }
 
@@ -240,15 +364,12 @@ void AstroDisplay::PopulatePanelType() {
 }
 
 zx_status_t AstroDisplay::SetupDisplayInterface() {
-    zx_status_t status;
     fbl::AutoLock lock(&display_lock_);
 
     // Figure out board rev and panel type for Astro only
     if (board_info_.pid == PDEV_PID_ASTRO) {
-        //TODO(payamm): set to true for now until we figure out bootloader to userspace handoff
-        skip_disp_init_ = true;
         panel_type_ = PANEL_UNKNOWN;
-
+        skip_disp_init_ = false;
         if (board_info_.board_revision < BOARD_REV_EVT_1) {
             DISP_INFO("Unsupported Board REV (%d). Will skip display driver initialization\n",
                 board_info_.board_revision);
@@ -258,120 +379,8 @@ zx_status_t AstroDisplay::SetupDisplayInterface() {
         skip_disp_init_ = true;
     }
 
-    if (!skip_disp_init_) {
-        // Detect panel type
-        PopulatePanelType();
-
-        if (panel_type_ == PANEL_TV070WSM_FT) {
-            init_disp_table_ = &kDisplaySettingTV070WSM_FT;
-        } else if (panel_type_ == PANEL_P070ACB_FT) {
-            init_disp_table_ = &kDisplaySettingP070ACB_FT;
-        } else {
-            DISP_ERROR("Unsupported panel detected!\n");
-            status = ZX_ERR_NOT_SUPPORTED;
-            return status;
-        }
-
-        // Populated internal structures based on predefined tables
-        CopyDisplaySettings();
-    }
-
     format_ = ZX_PIXEL_FORMAT_RGB_x888;
     stride_ = DisplayControllerImplComputeLinearStride(width_, format_);
-
-    if (!skip_disp_init_) {
-        // Ensure Max Bit Rate / pixel clock ~= 8 (8.xxx). This is because the clock calculation
-        // part of code assumes a clock factor of 1. All the LCD tables from Astro have this
-        // relationship established. We'll have to revisit the calculation if this ratio cannot
-        // be met.
-        if (init_disp_table_->bit_rate_max / (init_disp_table_->lcd_clock / 1000 / 1000) != 8) {
-            DISP_ERROR("Max Bit Rate / pixel clock != 8\n");
-            status = ZX_ERR_INVALID_ARGS;
-            return status;
-        }
-
-        // Setup VPU and VPP units first
-        fbl::AllocChecker ac;
-        vpu_ = fbl::make_unique_checked<astro_display::Vpu>(&ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        status = vpu_->Init(parent_);
-        if (status != ZX_OK) {
-            DISP_ERROR("Could not initialize VPU object\n");
-            return status;
-        }
-        vpu_->PowerOff();
-        vpu_->PowerOn();
-        vpu_->VppInit();
-
-        clock_ = fbl::make_unique_checked<astro_display::AstroDisplayClock>(&ac);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        status = clock_->Init(parent_);
-        if (status != ZX_OK) {
-            DISP_ERROR("Could not initialize Clock object\n");
-            return status;
-        }
-
-        // Enable all display related clocks
-        status = clock_->Enable(disp_setting_);
-        if (status != ZX_OK) {
-            DISP_ERROR("Could not enable display clocks!\n");
-            return status;
-        }
-
-        // Program and Enable DSI Host Interface
-        dsi_host_ = fbl::make_unique_checked<astro_display::AmlDsiHost>(&ac,
-                                                                        parent_,
-                                                                        clock_->GetBitrate(),
-                                                                        panel_type_);
-        if (!ac.check()) {
-            return ZX_ERR_NO_MEMORY;
-        }
-        status = dsi_host_->Init();
-        if (status != ZX_OK) {
-            DISP_ERROR("Could not initialize DSI Host\n");
-            return status;
-        }
-
-        status = dsi_host_->HostOn(disp_setting_);
-        if (status != ZX_OK) {
-            DISP_ERROR("DSI Host On failed! %d\n", status);
-            return status;
-        }
-    }
-
-    /// OSD
-    // Create internal osd object
-    fbl::AllocChecker ac;
-    osd_ = fbl::make_unique_checked<astro_display::Osd>(&ac,
-                                                        width_,
-                                                        height_,
-                                                        disp_setting_.h_active,
-                                                        disp_setting_.v_active);
-    if (!ac.check()) {
-        return ZX_ERR_NO_MEMORY;
-    }
-    // Initialize osd object
-    status = osd_->Init(parent_);
-    if (status != ZX_OK) {
-        DISP_ERROR("Could not initialize OSD object\n");
-        return status;
-    }
-
-    if (!skip_disp_init_) {
-        osd_->HwInit();
-    }
-
-    // Configure osd layer
-    current_image_valid_= false;
-    status = osd_->Configure();
-    if (status != ZX_OK) {
-        DISP_ERROR("OSD configuration failed!\n");
-        return status;
-    }
 
     {
         // Reset imported_images_ bitmap
