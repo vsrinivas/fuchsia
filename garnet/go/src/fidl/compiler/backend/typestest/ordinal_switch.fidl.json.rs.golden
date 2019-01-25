@@ -144,7 +144,7 @@ impl Stream for SwitchingOrdinalsEventStream {
 		let (bytes, handles) = buf.split_mut();
 		let (tx_header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 		futures::Poll::Ready(Some(match tx_header.ordinal {
-			1467258273 | 15 => {
+			1467258273 | 1467258273 => {
 				let mut out_tuple: () = fidl::encoding::Decodable::new_empty();
 				fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut out_tuple)?;
 				Ok((
@@ -298,7 +298,7 @@ impl<T: SwitchingOrdinals> futures::Future for SwitchingOrdinalsServer<T> {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-					2005164903 | 5 => {
+					2005164903 | 2005164903 => {
 						let mut req: () = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 						let control_handle = SwitchingOrdinalsControlHandle {
@@ -399,7 +399,7 @@ impl Stream for SwitchingOrdinalsRequestStream {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-				2005164903 | 5 => {
+				2005164903 | 2005164903 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 					let control_handle = SwitchingOrdinalsControlHandle {

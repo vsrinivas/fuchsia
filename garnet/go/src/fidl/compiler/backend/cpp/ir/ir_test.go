@@ -246,7 +246,7 @@ func TestCompileTable(t *testing.T) {
 						Name:              "second",
 						Ordinal:           2,
 						FieldPresenceName: "has_second_",
-						FieldDataName:     "second_",
+						FieldDataName:     "second_value_",
 						MethodHasName:     "has_second",
 						MethodClearName:   "clear_second",
 						ValueUnionName:    "ValueUnion_second",

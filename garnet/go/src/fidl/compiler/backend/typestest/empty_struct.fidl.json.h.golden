@@ -18,19 +18,19 @@ class Empty  {
 
   static inline ::std::unique_ptr<Empty> New() { return ::std::make_unique<Empty>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Empty* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Empty* value, size_t _offset);
   zx_status_t Clone(Empty* result) const;
 };
 
-bool operator==(const Empty& lhs, const Empty& rhs);
-inline bool operator!=(const Empty& lhs, const Empty& rhs) {
-  return !(lhs == rhs);
+bool operator==(const Empty& _lhs, const Empty& _rhs);
+inline bool operator!=(const Empty& _lhs, const Empty& _rhs) {
+  return !(_lhs == _rhs);
 }
 
-inline zx_status_t Clone(const ::test::name::Empty& value,
-                         ::test::name::Empty* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(const ::test::name::Empty& _value,
+                         ::test::name::Empty* _result) {
+  return _value.Clone(_result);
 }
 
 using EmptyPtr = ::std::unique_ptr<Empty>;

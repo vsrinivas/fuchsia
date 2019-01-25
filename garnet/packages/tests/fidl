@@ -1,6 +1,7 @@
 {
     "labels": [
-        "//garnet/tests/fidl-changes"
+        "//garnet/tests/fidl-changes",
+        "//garnet/tests/fidl-dangerous-identifiers"
     ],
     "packages": [
         "//garnet/public/lib/fidl/cpp:fidl_tests",

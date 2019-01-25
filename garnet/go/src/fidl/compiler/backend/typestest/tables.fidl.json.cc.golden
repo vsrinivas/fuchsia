@@ -17,71 +17,71 @@ OlderSimpleTable::OlderSimpleTable() :
 OlderSimpleTable::OlderSimpleTable(OlderSimpleTable&& other) {
   has_x_ = other.has_x_;
   if (has_x_) {
-    Construct(&x_.value, std::move(other.x_.value));
+    Construct(&x_value_.value, std::move(other.x_value_.value));
   }
 }
 
 OlderSimpleTable::~OlderSimpleTable() {
   if (has_x_) {
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
 }
 
 OlderSimpleTable& OlderSimpleTable::operator=(OlderSimpleTable&& other) {
   if (other.has_x_) {
     if (has_x_) {
-      x_.value = std::move(other.x_.value);
+      x_value_.value = std::move(other.x_value_.value);
     } else {
       has_x_ = true;
-      Construct(&x_.value, std::move(other.x_.value));
+      Construct(&x_value_.value, std::move(other.x_value_.value));
     }
   } else if (has_x_) {
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   return *this;
 }
 
-void OlderSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
+void OlderSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_x_) max_ordinal = 1;
-  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
-void OlderSimpleTable::Decode(::fidl::Decoder* decoder, OlderSimpleTable* value, size_t offset) {
-  fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
+void OlderSimpleTable::Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
-  base = decoder->GetOffset(encoded->data);
+  base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
     } else {
-      value->clear_x();
+      _value->clear_x();
     }
   } else {
     goto done_1;
@@ -92,13 +92,13 @@ void OlderSimpleTable::Decode(::fidl::Decoder* decoder, OlderSimpleTable* value,
   // Clear unset values.
 clear_all:
 done_1:
-  value->clear_x();
+  _value->clear_x();
   return;
 }
 
 zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   if (has_x_) {
-    zx_status_t _status = ::fidl::Clone(x_.value, result->mutable_x());
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK)
       return _status;
   } else {
@@ -107,15 +107,15 @@ zx_status_t OlderSimpleTable::Clone(OlderSimpleTable* result) const {
   return ZX_OK;
 }
 
-bool operator==(const OlderSimpleTable& lhs, const OlderSimpleTable& rhs) {
-  if (lhs.has_x()) {
-    if (!rhs.has_x()) {
+bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
+  if (_lhs.has_x()) {
+    if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.x(), *rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
-  } else if (rhs.has_x()) {
+  } else if (_rhs.has_x()) {
     return false;
   }
   return true;
@@ -135,137 +135,137 @@ NewerSimpleTable::NewerSimpleTable() :
 NewerSimpleTable::NewerSimpleTable(NewerSimpleTable&& other) {
   has_x_ = other.has_x_;
   if (has_x_) {
-    Construct(&x_.value, std::move(other.x_.value));
+    Construct(&x_value_.value, std::move(other.x_value_.value));
   }
   has_y_ = other.has_y_;
   if (has_y_) {
-    Construct(&y_.value, std::move(other.y_.value));
+    Construct(&y_value_.value, std::move(other.y_value_.value));
   }
   has_z_ = other.has_z_;
   if (has_z_) {
-    Construct(&z_.value, std::move(other.z_.value));
+    Construct(&z_value_.value, std::move(other.z_value_.value));
   }
 }
 
 NewerSimpleTable::~NewerSimpleTable() {
   if (has_x_) {
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   if (has_y_) {
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
   if (has_z_) {
-    Destruct(&z_.value);
+    Destruct(&z_value_.value);
   }
 }
 
 NewerSimpleTable& NewerSimpleTable::operator=(NewerSimpleTable&& other) {
   if (other.has_x_) {
     if (has_x_) {
-      x_.value = std::move(other.x_.value);
+      x_value_.value = std::move(other.x_value_.value);
     } else {
       has_x_ = true;
-      Construct(&x_.value, std::move(other.x_.value));
+      Construct(&x_value_.value, std::move(other.x_value_.value));
     }
   } else if (has_x_) {
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   if (other.has_y_) {
     if (has_y_) {
-      y_.value = std::move(other.y_.value);
+      y_value_.value = std::move(other.y_value_.value);
     } else {
       has_y_ = true;
-      Construct(&y_.value, std::move(other.y_.value));
+      Construct(&y_value_.value, std::move(other.y_value_.value));
     }
   } else if (has_y_) {
     has_y_ = false;
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
   if (other.has_z_) {
     if (has_z_) {
-      z_.value = std::move(other.z_.value);
+      z_value_.value = std::move(other.z_value_.value);
     } else {
       has_z_ = true;
-      Construct(&z_.value, std::move(other.z_.value));
+      Construct(&z_value_.value, std::move(other.z_value_.value));
     }
   } else if (has_z_) {
     has_z_ = false;
-    Destruct(&z_.value);
+    Destruct(&z_value_.value);
   }
   return *this;
 }
 
-void NewerSimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
+void NewerSimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_x_) max_ordinal = 1;
   if (has_y_) max_ordinal = 5;
   if (has_z_) max_ordinal = 6;
-  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &y_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &y_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_z_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &z_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &z_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
-void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value, size_t offset) {
-  fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
+void NewerSimpleTable::Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
-  base = decoder->GetOffset(encoded->data);
+  base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
     } else {
-      value->clear_x();
+      _value->clear_x();
     }
   } else {
     goto done_1;
@@ -273,11 +273,11 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
   if (count >= 5) {
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_y(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_y(), _decoder->GetOffset(presence));
     } else {
-      value->clear_y();
+      _value->clear_y();
     }
   } else {
     goto done_5;
@@ -285,11 +285,11 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
   if (count >= 6) {
     size_t envelope_base = base + (6 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_z(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_z(), _decoder->GetOffset(presence));
     } else {
-      value->clear_z();
+      _value->clear_z();
     }
   } else {
     goto done_6;
@@ -300,31 +300,31 @@ void NewerSimpleTable::Decode(::fidl::Decoder* decoder, NewerSimpleTable* value,
   // Clear unset values.
 clear_all:
 done_1:
-  value->clear_x();
+  _value->clear_x();
 done_5:
-  value->clear_y();
+  _value->clear_y();
 done_6:
-  value->clear_z();
+  _value->clear_z();
   return;
 }
 
 zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   if (has_x_) {
-    zx_status_t _status = ::fidl::Clone(x_.value, result->mutable_x());
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK)
       return _status;
   } else {
     result->clear_x();
   }
   if (has_y_) {
-    zx_status_t _status = ::fidl::Clone(y_.value, result->mutable_y());
+    zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
     if (_status != ZX_OK)
       return _status;
   } else {
     result->clear_y();
   }
   if (has_z_) {
-    zx_status_t _status = ::fidl::Clone(z_.value, result->mutable_z());
+    zx_status_t _status = ::fidl::Clone(z_value_.value, result->mutable_z());
     if (_status != ZX_OK)
       return _status;
   } else {
@@ -333,35 +333,35 @@ zx_status_t NewerSimpleTable::Clone(NewerSimpleTable* result) const {
   return ZX_OK;
 }
 
-bool operator==(const NewerSimpleTable& lhs, const NewerSimpleTable& rhs) {
-  if (lhs.has_x()) {
-    if (!rhs.has_x()) {
+bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
+  if (_lhs.has_x()) {
+    if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.x(), *rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
-  } else if (rhs.has_x()) {
+  } else if (_rhs.has_x()) {
     return false;
   }
-  if (lhs.has_y()) {
-    if (!rhs.has_y()) {
+  if (_lhs.has_y()) {
+    if (!_rhs.has_y()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.y(), *rhs.y())) {
+    if (!::fidl::Equals(*_lhs.y(), *_rhs.y())) {
       return false;
     }
-  } else if (rhs.has_y()) {
+  } else if (_rhs.has_y()) {
     return false;
   }
-  if (lhs.has_z()) {
-    if (!rhs.has_z()) {
+  if (_lhs.has_z()) {
+    if (!_rhs.has_z()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.z(), *rhs.z())) {
+    if (!::fidl::Equals(*_lhs.z(), *_rhs.z())) {
       return false;
     }
-  } else if (rhs.has_z()) {
+  } else if (_rhs.has_z()) {
     return false;
   }
   return true;
@@ -379,104 +379,104 @@ SimpleTable::SimpleTable() :
 SimpleTable::SimpleTable(SimpleTable&& other) {
   has_x_ = other.has_x_;
   if (has_x_) {
-    Construct(&x_.value, std::move(other.x_.value));
+    Construct(&x_value_.value, std::move(other.x_value_.value));
   }
   has_y_ = other.has_y_;
   if (has_y_) {
-    Construct(&y_.value, std::move(other.y_.value));
+    Construct(&y_value_.value, std::move(other.y_value_.value));
   }
 }
 
 SimpleTable::~SimpleTable() {
   if (has_x_) {
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   if (has_y_) {
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
 }
 
 SimpleTable& SimpleTable::operator=(SimpleTable&& other) {
   if (other.has_x_) {
     if (has_x_) {
-      x_.value = std::move(other.x_.value);
+      x_value_.value = std::move(other.x_value_.value);
     } else {
       has_x_ = true;
-      Construct(&x_.value, std::move(other.x_.value));
+      Construct(&x_value_.value, std::move(other.x_value_.value));
     }
   } else if (has_x_) {
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   if (other.has_y_) {
     if (has_y_) {
-      y_.value = std::move(other.y_.value);
+      y_value_.value = std::move(other.y_value_.value);
     } else {
       has_y_ = true;
-      Construct(&y_.value, std::move(other.y_.value));
+      Construct(&y_value_.value, std::move(other.y_value_.value));
     }
   } else if (has_y_) {
     has_y_ = false;
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
   return *this;
 }
 
-void SimpleTable::Encode(::fidl::Encoder* encoder, size_t offset) {
+void SimpleTable::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   if (has_x_) max_ordinal = 1;
   if (has_y_) max_ordinal = 5;
-  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   if (has_x_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &x_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &x_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   if (has_y_) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
-        &y_.value,
-        encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
+        _encoder,
+        &y_value_.value,
+        _encoder->Alloc(::fidl::CodingTraits<int64_t>::encoded_size));
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
 }
 
-void SimpleTable::Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t offset) {
-  fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
+void SimpleTable::Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
-  base = decoder->GetOffset(encoded->data);
+  base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
   if (count >= 1) {
     size_t envelope_base = base + (1 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_x(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_x(), _decoder->GetOffset(presence));
     } else {
-      value->clear_x();
+      _value->clear_x();
     }
   } else {
     goto done_1;
@@ -484,11 +484,11 @@ void SimpleTable::Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t of
   if (count >= 5) {
     size_t envelope_base = base + (5 - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_y(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_y(), _decoder->GetOffset(presence));
     } else {
-      value->clear_y();
+      _value->clear_y();
     }
   } else {
     goto done_5;
@@ -499,22 +499,22 @@ void SimpleTable::Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t of
   // Clear unset values.
 clear_all:
 done_1:
-  value->clear_x();
+  _value->clear_x();
 done_5:
-  value->clear_y();
+  _value->clear_y();
   return;
 }
 
 zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   if (has_x_) {
-    zx_status_t _status = ::fidl::Clone(x_.value, result->mutable_x());
+    zx_status_t _status = ::fidl::Clone(x_value_.value, result->mutable_x());
     if (_status != ZX_OK)
       return _status;
   } else {
     result->clear_x();
   }
   if (has_y_) {
-    zx_status_t _status = ::fidl::Clone(y_.value, result->mutable_y());
+    zx_status_t _status = ::fidl::Clone(y_value_.value, result->mutable_y());
     if (_status != ZX_OK)
       return _status;
   } else {
@@ -523,25 +523,25 @@ zx_status_t SimpleTable::Clone(SimpleTable* result) const {
   return ZX_OK;
 }
 
-bool operator==(const SimpleTable& lhs, const SimpleTable& rhs) {
-  if (lhs.has_x()) {
-    if (!rhs.has_x()) {
+bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs) {
+  if (_lhs.has_x()) {
+    if (!_rhs.has_x()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.x(), *rhs.x())) {
+    if (!::fidl::Equals(*_lhs.x(), *_rhs.x())) {
       return false;
     }
-  } else if (rhs.has_x()) {
+  } else if (_rhs.has_x()) {
     return false;
   }
-  if (lhs.has_y()) {
-    if (!rhs.has_y()) {
+  if (_lhs.has_y()) {
+    if (!_rhs.has_y()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.y(), *rhs.y())) {
+    if (!::fidl::Equals(*_lhs.y(), *_rhs.y())) {
       return false;
     }
-  } else if (rhs.has_y()) {
+  } else if (_rhs.has_y()) {
     return false;
   }
   return true;

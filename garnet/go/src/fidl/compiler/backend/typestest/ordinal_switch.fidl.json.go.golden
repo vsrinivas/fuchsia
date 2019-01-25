@@ -13,11 +13,11 @@ import (
 
 const (
 	SwitchingOrdinalsOrdinalFiveOrdinal uint32 = 2005164903
-	SwitchingOrdinalsOrdinalFiveGenOrdinal uint32 = 5
+	SwitchingOrdinalsOrdinalFiveGenOrdinal uint32 = 2005164903
 	SwitchingOrdinalsOnlyGeneratedOrdinalOrdinal uint32 = 667506719
 	SwitchingOrdinalsOnlyGeneratedOrdinalGenOrdinal uint32 = 667506719
 	SwitchingOrdinalsEventOrdinalFifteenOrdinal uint32 = 1467258273
-	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint32 = 15
+	SwitchingOrdinalsEventOrdinalFifteenGenOrdinal uint32 = 1467258273
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalOrdinal uint32 = 2146190926
 	SwitchingOrdinalsEventOnlyGeneratedOrdinalGenOrdinal uint32 = 2146190926
 )
@@ -121,7 +121,7 @@ func (p *SwitchingOrdinalsInterface) OnlyGeneratedOrdinal() error {
 
 func (p *SwitchingOrdinalsInterface) ExpectEventOrdinalFifteen() error {
 	resp_ := SwitchingOrdinalsEventOrdinalFifteenResponse{}
-	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, &resp_, SwitchingOrdinalsEventOrdinalFifteenGenOrdinal)
+	err := ((*_bindings.ChannelProxy)(p)).Recv(SwitchingOrdinalsEventOrdinalFifteenOrdinal, &resp_)
 	return err
 }
 
@@ -153,9 +153,6 @@ type SwitchingOrdinalsStub struct {
 
 func (s *SwitchingOrdinalsStub) Dispatch(ord uint32, b_ []byte, h_ []_zx.Handle) (_bindings.Payload, error) {
 	switch ord {
-	case SwitchingOrdinalsOrdinalFiveGenOrdinal:
-		fallthrough
-	
 	case SwitchingOrdinalsOrdinalFiveOrdinal:
 		in_ := SwitchingOrdinalsOrdinalFiveRequest{}
 		if err_ := _bindings.Unmarshal(b_, h_, &in_); err_ != nil {

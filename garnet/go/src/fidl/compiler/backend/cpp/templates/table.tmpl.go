@@ -36,12 +36,12 @@ class {{ .Name }}  {
     }
     return &{{ .FieldDataName }}.value;
   }
-  void set_{{ .Name }}({{ .Type.Decl }} value) {
+  void set_{{ .Name }}({{ .Type.Decl }} _value) {
     if (!{{ .FieldPresenceName }}) {
       {{ .FieldPresenceName }} = true;
-      Construct(&{{ .FieldDataName }}.value, std::move(value));
+      Construct(&{{ .FieldDataName }}.value, std::move(_value));
     } else {
-      {{ .FieldDataName }}.value = std::move(value);
+      {{ .FieldDataName }}.value = std::move(_value);
     }
   }
   void {{ .MethodClearName }}() {
@@ -60,9 +60,9 @@ class {{ .Name }}  {
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
-  zx_status_t Clone({{ .Name }}* result) const;
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
+  zx_status_t Clone({{ .Name }}* _result) const;
 
  private:
   template <class T, class... Args>
@@ -93,9 +93,9 @@ class {{ .Name }}  {
   {{- end }}
 };
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  return !(lhs == rhs);
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
+inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
@@ -108,7 +108,7 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 {{ .Name }}::{{ .Name }}() :
 {{- range $index, $element := .Members }}
   {{if $index}},{{end}}
-  has_{{ $element.Name }}_(false)
+  {{ $element.FieldPresenceName }}(false)
 {{- end }} {
 }
 
@@ -146,52 +146,52 @@ const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
   return *this;
 }
 
-void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
+void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   size_t max_ordinal = 0;
   {{- range .Members }}
   if ({{ .FieldPresenceName }}) max_ordinal = {{ .Ordinal }};
   {{- end }}
-  ::fidl::EncodeVectorPointer(encoder, max_ordinal, offset);
+  ::fidl::EncodeVectorPointer(_encoder, max_ordinal, _offset);
   if (max_ordinal == 0) return;
-  size_t base = encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
+  size_t base = _encoder->Alloc(max_ordinal * 2 * sizeof(uint64_t));
   {{- range .Members }}
   if ({{ .FieldPresenceName }}) {
-    const size_t length_before = encoder->CurrentLength();
-    const size_t handles_before = encoder->CurrentHandleCount();
+    const size_t length_before = _encoder->CurrentLength();
+    const size_t handles_before = _encoder->CurrentHandleCount();
     ::fidl::Encode(
-        encoder,
+        _encoder,
         &{{ .FieldDataName }}.value,
-        encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size));
+        _encoder->Alloc(::fidl::CodingTraits<{{ .Type.Decl }}>::encoded_size));
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
     uint64_t num_bytes_then_num_handles =
-        (encoder->CurrentLength() - length_before) |
-        ((encoder->CurrentHandleCount() - handles_before) << 32);
-    ::fidl::Encode(encoder, &num_bytes_then_num_handles, envelope_base);
-    *encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
+        (_encoder->CurrentLength() - length_before) |
+        ((_encoder->CurrentHandleCount() - handles_before) << 32);
+    ::fidl::Encode(_encoder, &num_bytes_then_num_handles, envelope_base);
+    *_encoder->GetPtr<uintptr_t>(envelope_base + sizeof(uint64_t)) = FIDL_ALLOC_PRESENT;
   }
   {{- end }}
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
-  fidl_vector_t* encoded = decoder->GetPtr<fidl_vector_t>(offset);
+void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+  fidl_vector_t* encoded = _decoder->GetPtr<fidl_vector_t>(_offset);
   size_t base;
   size_t count;
   if (!encoded->data) {
     goto clear_all;
   }
 
-  base = decoder->GetOffset(encoded->data);
+  base = _decoder->GetOffset(encoded->data);
   count = encoded->count;
 
   {{- range .Members }}
   if (count >= {{ .Ordinal }}) {
     size_t envelope_base = base + ({{ .Ordinal }} - 1) * 2 * sizeof(uint64_t);
     uint64_t presence;
-    ::fidl::Decode(decoder, &presence, envelope_base + sizeof(uint64_t));
+    ::fidl::Decode(_decoder, &presence, envelope_base + sizeof(uint64_t));
     if (presence != 0) {
-      ::fidl::Decode(decoder, value->mutable_{{ .Name }}(), decoder->GetOffset(presence));
+      ::fidl::Decode(_decoder, _value->mutable_{{ .Name }}(), _decoder->GetOffset(presence));
     } else {
-      value->{{ .MethodClearName }}();
+      _value->{{ .MethodClearName }}();
     }
   } else {
     goto done_{{ .Ordinal }};
@@ -204,7 +204,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 clear_all:
   {{- range .Members }}
 done_{{ .Ordinal }}:
-  value->{{ .MethodClearName }}();
+  _value->{{ .MethodClearName }}();
   {{- end }}
   return;
 }
@@ -222,16 +222,16 @@ zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
   return ZX_OK;
 }
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- range .Members }}
-  if (lhs.{{ .MethodHasName }}()) {
-    if (!rhs.{{ .MethodHasName }}()) {
+  if (_lhs.{{ .MethodHasName }}()) {
+    if (!_rhs.{{ .MethodHasName }}()) {
       return false;
     }
-    if (!::fidl::Equals(*lhs.{{ .Name }}(), *rhs.{{ .Name }}())) {
+    if (!::fidl::Equals(*_lhs.{{ .Name }}(), *_rhs.{{ .Name }}())) {
       return false;
     }
-  } else if (rhs.{{ .MethodHasName }}()) {
+  } else if (_rhs.{{ .MethodHasName }}()) {
     return false;
   }
   {{- end }}
@@ -244,9 +244,9 @@ template <>
 struct CodingTraits<{{ .Namespace }}::{{ .Name }}>
     : public EncodableCodingTraits<{{ .Namespace }}::{{ .Name }}, {{ .Size }}> {};
 
-inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
+inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
                          {{ .Namespace }}::{{ .Name }}* result) {
-  return value.Clone(result);
+  return _value.Clone(result);
 }
 {{- end }}
 `

@@ -30,8 +30,8 @@ class {{ .Name }} {
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset);
   zx_status_t Clone({{ .Name }}* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -65,7 +65,7 @@ class {{ .Name }} {
   }
 
  private:
-  friend bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
+  friend bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
 
   using Variant = fit::internal::variant<fit::internal::monostate
   {{- range .Members -}}
@@ -75,9 +75,9 @@ class {{ .Name }} {
   Variant value_;
 };
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  return !(lhs == rhs);
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
+inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
@@ -104,13 +104,13 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
   return *this;
 }
 
-void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
-  fidl_union_tag_t tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(encoder, &tag, offset);
-  switch (tag) {
+void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(_encoder, &_tag, _offset);
+  switch (_tag) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
-    ::fidl::Encode(encoder, &{{ .Name }}(), offset + {{ .Offset }});
+    ::fidl::Encode(_encoder, &{{ .Name }}(), _offset + {{ .Offset }});
     break;
   {{- end }}
    default:
@@ -118,53 +118,53 @@ void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
   }
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
-  fidl_union_tag_t tag;
-  ::fidl::Decode(decoder, &tag, offset);
-  switch (tag) {
+void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* _value, size_t _offset) {
+  fidl_union_tag_t _tag;
+  ::fidl::Decode(_decoder, &_tag, _offset);
+  switch (_tag) {
   {{- range $index, $member := .Members }}
    case {{ $index }}:
     {
-      {{ .Type.Decl }} member{};
-      ::fidl::Decode(decoder, &member, offset + {{ .Offset }});
-      value->set_{{ .Name }}(std::move(member));
+      {{ .Type.Decl }} _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + {{ .Offset }});
+      _value->set_{{ .Name }}(std::move(_member));
       break;
     }
   {{- end }}
    default:
-    value->value_.emplace<0>();
+    _value->value_.emplace<0>();
   }
 }
 
-zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
-  zx_status_t status = ZX_OK;
+zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
+  zx_status_t _status = ZX_OK;
   switch (Which()) {
     {{- range $index, $member := .Members }}
     case Tag::{{ .TagName }}:
       {
-        {{ .Type.Decl }} member{};
-        status = ::fidl::Clone({{ .Name }}(), &member);
-        if (status == ZX_OK) {
-	  result->set_{{ .Name }}(std::move(member));
+        {{ .Type.Decl }} _member{};
+        _status = ::fidl::Clone({{ .Name }}(), &_member);
+        if (_status == ZX_OK) {
+	  _result->set_{{ .Name }}(std::move(_member));
         }
       }
       break;
     {{- end }}
     case Tag::Invalid:
-      result->value_.emplace<0>();
+      _result->value_.emplace<0>();
       break;
   }
-  return status;
+  return _status;
 }
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  if (lhs.Which() != rhs.Which()) {
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
+  if (_lhs.Which() != _rhs.Which()) {
     return false;
   }
-  switch (lhs.Which()) {
+  switch (_lhs.Which()) {
     {{- range $index, $member := .Members }}
     case {{ $.Name }}::Tag::{{ .TagName }}:
-      return ::fidl::Equals(lhs.{{ .Name }}(), rhs.{{ .Name }}());
+      return ::fidl::Equals(_lhs.{{ .Name }}(), _rhs.{{ .Name }}());
     {{- end }}
     case {{ .Name }}::Tag::Invalid:
       return true;

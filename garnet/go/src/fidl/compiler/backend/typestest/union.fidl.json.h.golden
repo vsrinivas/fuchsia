@@ -27,8 +27,8 @@ class Union {
 
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   zx_status_t Clone(Union* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -79,15 +79,15 @@ class Union {
   }
 
  private:
-  friend bool operator==(const Union& lhs, const Union& rhs);
+  friend bool operator==(const Union& _lhs, const Union& _rhs);
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t, ::std::string, ::std::vector<::std::string>>;
   Variant value_;
 };
 
-bool operator==(const Union& lhs, const Union& rhs);
-inline bool operator!=(const Union& lhs, const Union& rhs) {
-  return !(lhs == rhs);
+bool operator==(const Union& _lhs, const Union& _rhs);
+inline bool operator!=(const Union& _lhs, const Union& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 inline zx_status_t Clone(const ::test::name::Union& value,

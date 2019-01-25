@@ -299,6 +299,7 @@ var reservedWords = map[string]bool{
 	"not":              true,
 	"not_eq":           true,
 	"nullptr":          true,
+	"offsetof":         true,
 	"operator":         true,
 	"or":               true,
 	"or_eq":            true,
@@ -340,8 +341,16 @@ var reservedWords = map[string]bool{
 	"xunion":           true,
 
 	// names used in specific contexts e.g. union accessors
-	"which":           true,
+	"FidlType":        true,
+	"New":             true,
+	"Tag":             true,
+	"Which":           true,
 	"has_invalid_tag": true,
+	"which":           true,
+	// TODO(ianloic) add: "Clone"
+	// There are Clone methods on a couple of interfaces that are used
+	// across layers so this will be a breaking change.
+	// FIDL-461
 }
 
 var primitiveTypes = map[types.PrimitiveSubtype]string{
@@ -376,7 +385,8 @@ func formatLibrary(library types.LibraryIdentifier, sep string) string {
 	for _, part := range library {
 		parts = append(parts, string(part))
 	}
-	return changeIfReserved(types.Identifier(strings.Join(parts, sep)), "")
+	name := strings.Join(parts, sep)
+	return changeIfReserved(types.Identifier(name), "")
 }
 
 func formatNamespace(library types.LibraryIdentifier) string {
@@ -424,6 +434,15 @@ func (c *compiler) compileCompoundIdentifier(eci types.EncodedCompoundIdentifier
 	}
 	strs = append(strs, changeIfReserved(val.Name, ext))
 	return strings.Join(strs, "::")
+}
+
+func (c *compiler) compileTableType(eci types.EncodedCompoundIdentifier) string {
+	val := types.ParseCompoundIdentifier(eci)
+	if c.isInExternalLibrary(val) {
+		log.Fatal("Can't create table type for external identifier: ", val)
+	}
+
+	return fmt.Sprintf("%s_%sTable", c.symbolPrefix, val.Name)
 }
 
 func (c *compiler) compileLiteral(val types.Literal) string {
@@ -629,13 +648,13 @@ func (c *compiler) maxOutOfLineFromParameterArray(val []types.Parameter) int {
 
 func (m Method) NewLLProps(r Interface) LLProps {
 	return LLProps{
-		InterfaceName:      r.Name,
+		InterfaceName: r.Name,
 		// If the response is not inline, then we cannot generate an out-parameter-style binding,
 		// because the out-of-line pointers would outlive their underlying managed storage.
 		CBindingCompatible: m.ResponseMaxOutOfLine == 0,
 		NeedToLinearize:    len(m.Request) > 0 && m.RequestMaxOutOfLine > 0,
-		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize + m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
-		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize + m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocRequest:  len(m.Request) == 0 || (m.RequestSize+m.RequestMaxOutOfLine) < llcppMaxStackAllocSize,
+		StackAllocResponse: len(m.Response) == 0 || (m.ResponseSize+m.ResponseMaxOutOfLine) < llcppMaxStackAllocSize,
 		EncodeRequest:      m.RequestMaxOutOfLine > 0 || m.RequestMaxHandles > 0,
 		DecodeResponse:     m.ResponseMaxOutOfLine > 0 || m.ResponseMaxHandles > 0,
 	}
@@ -721,7 +740,7 @@ func (c *compiler) compileStruct(val types.Struct) Struct {
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
 		Name:         name,
-		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		TableType:    c.compileTableType(val.Name),
 		Members:      []StructMember{},
 		Size:         val.Size,
 		MaxHandles:   val.MaxHandles,
@@ -756,7 +775,7 @@ func (c *compiler) compileTableMember(val types.TableMember) TableMember {
 		DefaultValue:      defaultValue,
 		Ordinal:           val.Ordinal,
 		FieldPresenceName: fmt.Sprintf("has_%s_", val.Name),
-		FieldDataName:     fmt.Sprintf("%s_", val.Name),
+		FieldDataName:     fmt.Sprintf("%s_value_", val.Name),
 		MethodHasName:     fmt.Sprintf("has_%s", val.Name),
 		MethodClearName:   fmt.Sprintf("clear_%s", val.Name),
 		ValueUnionName:    fmt.Sprintf("ValueUnion_%s", val.Name),
@@ -781,7 +800,7 @@ func (c *compiler) compileTable(val types.Table) Table {
 		Attributes:     val.Attributes,
 		Namespace:      c.namespace,
 		Name:           name,
-		TableType:      fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		TableType:      c.compileTableType(val.Name),
 		Members:        nil,
 		Size:           val.Size,
 		BiggestOrdinal: 0,
@@ -818,8 +837,8 @@ func (c *compiler) compileUnion(val types.Union) Union {
 	r := Union{
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
-		Name:         name,
-		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		Name:         changeIfReserved(types.Identifier(name), ""),
+		TableType:    c.compileTableType(val.Name),
 		Members:      []UnionMember{},
 		Size:         val.Size,
 		MaxHandles:   val.MaxHandles,
@@ -852,7 +871,7 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 		Attributes:   val.Attributes,
 		Namespace:    c.namespace,
 		Name:         name,
-		TableType:    fmt.Sprintf("%s_%sTable", c.symbolPrefix, name),
+		TableType:    c.compileTableType(val.Name),
 		Size:         val.Size,
 		MaxHandles:   val.MaxHandles,
 		MaxOutOfLine: val.MaxOutOfLine,
@@ -867,10 +886,16 @@ func (c *compiler) compileXUnion(val types.XUnion) XUnion {
 
 func Compile(r types.Root) Root {
 	root := Root{}
-	library := types.ParseLibraryName(r.Name)
+	library := make(types.LibraryIdentifier, 0)
+	raw_library := make(types.LibraryIdentifier, 0)
+	for _, identifier := range types.ParseLibraryName(r.Name) {
+		safe_name := changeIfReserved(identifier, "")
+		library = append(library, types.Identifier(safe_name))
+		raw_library = append(raw_library, identifier)
+	}
 	c := compiler{
 		formatNamespace(library),
-		formatLibraryPrefix(library),
+		formatLibraryPrefix(raw_library),
 		&r.Decls,
 		types.ParseLibraryName(r.Name),
 		make(map[types.HandleSubtype]bool),

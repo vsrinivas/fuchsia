@@ -17,7 +17,7 @@ class OlderSimpleTable  {
   static const fidl_type_t* FidlType;
   
   const int64_t* x() const {
-    return has_x_ ? &x_.value : nullptr;
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -26,16 +26,16 @@ class OlderSimpleTable  {
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value);
+      Construct(&x_value_.value);
     }
-    return &x_.value;
+    return &x_value_.value;
   }
-  void set_x(int64_t value) {
+  void set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value, std::move(value));
+      Construct(&x_value_.value, std::move(_value));
     } else {
-      x_.value = std::move(value);
+      x_value_.value = std::move(_value);
     }
   }
   void clear_x() {
@@ -43,7 +43,7 @@ class OlderSimpleTable  {
       return;
     }
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
 
   OlderSimpleTable();
@@ -53,9 +53,9 @@ class OlderSimpleTable  {
 
   static inline ::std::unique_ptr<OlderSimpleTable> New() { return ::std::make_unique<OlderSimpleTable>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, OlderSimpleTable* value, size_t offset);
-  zx_status_t Clone(OlderSimpleTable* result) const;
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, OlderSimpleTable* _value, size_t _offset);
+  zx_status_t Clone(OlderSimpleTable* _result) const;
 
  private:
   template <class T, class... Args>
@@ -74,12 +74,12 @@ class OlderSimpleTable  {
 
     int64_t value;
   };
-  ValueUnion_x x_;
+  ValueUnion_x x_value_;
 };
 
-bool operator==(const OlderSimpleTable& lhs, const OlderSimpleTable& rhs);
-inline bool operator!=(const OlderSimpleTable& lhs, const OlderSimpleTable& rhs) {
-  return !(lhs == rhs);
+bool operator==(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs);
+inline bool operator!=(const OlderSimpleTable& _lhs, const OlderSimpleTable& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 using OlderSimpleTablePtr = ::std::unique_ptr<OlderSimpleTable>;
@@ -89,7 +89,7 @@ class NewerSimpleTable  {
   static const fidl_type_t* FidlType;
   
   const int64_t* x() const {
-    return has_x_ ? &x_.value : nullptr;
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -98,16 +98,16 @@ class NewerSimpleTable  {
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value);
+      Construct(&x_value_.value);
     }
-    return &x_.value;
+    return &x_value_.value;
   }
-  void set_x(int64_t value) {
+  void set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value, std::move(value));
+      Construct(&x_value_.value, std::move(_value));
     } else {
-      x_.value = std::move(value);
+      x_value_.value = std::move(_value);
     }
   }
   void clear_x() {
@@ -115,11 +115,11 @@ class NewerSimpleTable  {
       return;
     }
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   
   const int64_t* y() const {
-    return has_y_ ? &y_.value : nullptr;
+    return has_y_ ? &y_value_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;
@@ -128,16 +128,16 @@ class NewerSimpleTable  {
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
-      Construct(&y_.value);
+      Construct(&y_value_.value);
     }
-    return &y_.value;
+    return &y_value_.value;
   }
-  void set_y(int64_t value) {
+  void set_y(int64_t _value) {
     if (!has_y_) {
       has_y_ = true;
-      Construct(&y_.value, std::move(value));
+      Construct(&y_value_.value, std::move(_value));
     } else {
-      y_.value = std::move(value);
+      y_value_.value = std::move(_value);
     }
   }
   void clear_y() {
@@ -145,11 +145,11 @@ class NewerSimpleTable  {
       return;
     }
     has_y_ = false;
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
   
   const int64_t* z() const {
-    return has_z_ ? &z_.value : nullptr;
+    return has_z_ ? &z_value_.value : nullptr;
   }
   bool has_z() const {
     return has_z_;
@@ -158,16 +158,16 @@ class NewerSimpleTable  {
   int64_t* mutable_z() {
     if (!has_z_) {
       has_z_ = true;
-      Construct(&z_.value);
+      Construct(&z_value_.value);
     }
-    return &z_.value;
+    return &z_value_.value;
   }
-  void set_z(int64_t value) {
+  void set_z(int64_t _value) {
     if (!has_z_) {
       has_z_ = true;
-      Construct(&z_.value, std::move(value));
+      Construct(&z_value_.value, std::move(_value));
     } else {
-      z_.value = std::move(value);
+      z_value_.value = std::move(_value);
     }
   }
   void clear_z() {
@@ -175,7 +175,7 @@ class NewerSimpleTable  {
       return;
     }
     has_z_ = false;
-    Destruct(&z_.value);
+    Destruct(&z_value_.value);
   }
 
   NewerSimpleTable();
@@ -185,9 +185,9 @@ class NewerSimpleTable  {
 
   static inline ::std::unique_ptr<NewerSimpleTable> New() { return ::std::make_unique<NewerSimpleTable>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, NewerSimpleTable* value, size_t offset);
-  zx_status_t Clone(NewerSimpleTable* result) const;
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, NewerSimpleTable* _value, size_t _offset);
+  zx_status_t Clone(NewerSimpleTable* _result) const;
 
  private:
   template <class T, class... Args>
@@ -208,26 +208,26 @@ class NewerSimpleTable  {
 
     int64_t value;
   };
-  ValueUnion_x x_;
+  ValueUnion_x x_value_;
   union ValueUnion_y {
     ValueUnion_y() {}
     ~ValueUnion_y() {}
 
     int64_t value;
   };
-  ValueUnion_y y_;
+  ValueUnion_y y_value_;
   union ValueUnion_z {
     ValueUnion_z() {}
     ~ValueUnion_z() {}
 
     int64_t value;
   };
-  ValueUnion_z z_;
+  ValueUnion_z z_value_;
 };
 
-bool operator==(const NewerSimpleTable& lhs, const NewerSimpleTable& rhs);
-inline bool operator!=(const NewerSimpleTable& lhs, const NewerSimpleTable& rhs) {
-  return !(lhs == rhs);
+bool operator==(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs);
+inline bool operator!=(const NewerSimpleTable& _lhs, const NewerSimpleTable& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 using NewerSimpleTablePtr = ::std::unique_ptr<NewerSimpleTable>;
@@ -237,7 +237,7 @@ class SimpleTable  {
   static const fidl_type_t* FidlType;
   
   const int64_t* x() const {
-    return has_x_ ? &x_.value : nullptr;
+    return has_x_ ? &x_value_.value : nullptr;
   }
   bool has_x() const {
     return has_x_;
@@ -246,16 +246,16 @@ class SimpleTable  {
   int64_t* mutable_x() {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value);
+      Construct(&x_value_.value);
     }
-    return &x_.value;
+    return &x_value_.value;
   }
-  void set_x(int64_t value) {
+  void set_x(int64_t _value) {
     if (!has_x_) {
       has_x_ = true;
-      Construct(&x_.value, std::move(value));
+      Construct(&x_value_.value, std::move(_value));
     } else {
-      x_.value = std::move(value);
+      x_value_.value = std::move(_value);
     }
   }
   void clear_x() {
@@ -263,11 +263,11 @@ class SimpleTable  {
       return;
     }
     has_x_ = false;
-    Destruct(&x_.value);
+    Destruct(&x_value_.value);
   }
   
   const int64_t* y() const {
-    return has_y_ ? &y_.value : nullptr;
+    return has_y_ ? &y_value_.value : nullptr;
   }
   bool has_y() const {
     return has_y_;
@@ -276,16 +276,16 @@ class SimpleTable  {
   int64_t* mutable_y() {
     if (!has_y_) {
       has_y_ = true;
-      Construct(&y_.value);
+      Construct(&y_value_.value);
     }
-    return &y_.value;
+    return &y_value_.value;
   }
-  void set_y(int64_t value) {
+  void set_y(int64_t _value) {
     if (!has_y_) {
       has_y_ = true;
-      Construct(&y_.value, std::move(value));
+      Construct(&y_value_.value, std::move(_value));
     } else {
-      y_.value = std::move(value);
+      y_value_.value = std::move(_value);
     }
   }
   void clear_y() {
@@ -293,7 +293,7 @@ class SimpleTable  {
       return;
     }
     has_y_ = false;
-    Destruct(&y_.value);
+    Destruct(&y_value_.value);
   }
 
   SimpleTable();
@@ -303,9 +303,9 @@ class SimpleTable  {
 
   static inline ::std::unique_ptr<SimpleTable> New() { return ::std::make_unique<SimpleTable>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, SimpleTable* value, size_t offset);
-  zx_status_t Clone(SimpleTable* result) const;
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, SimpleTable* _value, size_t _offset);
+  zx_status_t Clone(SimpleTable* _result) const;
 
  private:
   template <class T, class... Args>
@@ -325,19 +325,19 @@ class SimpleTable  {
 
     int64_t value;
   };
-  ValueUnion_x x_;
+  ValueUnion_x x_value_;
   union ValueUnion_y {
     ValueUnion_y() {}
     ~ValueUnion_y() {}
 
     int64_t value;
   };
-  ValueUnion_y y_;
+  ValueUnion_y y_value_;
 };
 
-bool operator==(const SimpleTable& lhs, const SimpleTable& rhs);
-inline bool operator!=(const SimpleTable& lhs, const SimpleTable& rhs) {
-  return !(lhs == rhs);
+bool operator==(const SimpleTable& _lhs, const SimpleTable& _rhs);
+inline bool operator!=(const SimpleTable& _lhs, const SimpleTable& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 using SimpleTablePtr = ::std::unique_ptr<SimpleTable>;
@@ -349,23 +349,23 @@ template <>
 struct CodingTraits<::test::name::OlderSimpleTable>
     : public EncodableCodingTraits<::test::name::OlderSimpleTable, 16> {};
 
-inline zx_status_t Clone(const ::test::name::OlderSimpleTable& value,
+inline zx_status_t Clone(const ::test::name::OlderSimpleTable& _value,
                          ::test::name::OlderSimpleTable* result) {
-  return value.Clone(result);
+  return _value.Clone(result);
 }
 template <>
 struct CodingTraits<::test::name::NewerSimpleTable>
     : public EncodableCodingTraits<::test::name::NewerSimpleTable, 16> {};
 
-inline zx_status_t Clone(const ::test::name::NewerSimpleTable& value,
+inline zx_status_t Clone(const ::test::name::NewerSimpleTable& _value,
                          ::test::name::NewerSimpleTable* result) {
-  return value.Clone(result);
+  return _value.Clone(result);
 }
 template <>
 struct CodingTraits<::test::name::SimpleTable>
     : public EncodableCodingTraits<::test::name::SimpleTable, 16> {};
 
-inline zx_status_t Clone(const ::test::name::SimpleTable& value,
+inline zx_status_t Clone(const ::test::name::SimpleTable& _value,
                          ::test::name::SimpleTable* result) {
-  return value.Clone(result);
+  return _value.Clone(result);
 }}  // namespace fidl

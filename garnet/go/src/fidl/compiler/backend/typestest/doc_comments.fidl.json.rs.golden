@@ -316,7 +316,7 @@ impl<T: Interface> futures::Future for InterfaceServer<T> {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-					1061382220 | 1 => {
+					1061382220 | 1061382220 => {
 						let mut req: () = fidl::encoding::Decodable::new_empty();
 						fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 						let control_handle = InterfaceControlHandle {
@@ -407,7 +407,7 @@ impl Stream for InterfaceRequestStream {
 			let (header, body_bytes) = fidl::encoding::decode_transaction_header(bytes)?;
 
 			match header.ordinal {
-				1061382220 | 1 => {
+				1061382220 | 1061382220 => {
 					let mut req: () = fidl::encoding::Decodable::new_empty();
 					fidl::encoding::Decoder::decode_into(body_bytes, handles, &mut req)?;
 					let control_handle = InterfaceControlHandle {

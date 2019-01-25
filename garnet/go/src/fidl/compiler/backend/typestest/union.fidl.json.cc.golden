@@ -21,102 +21,102 @@ Union& Union::operator=(Union&& other) {
   return *this;
 }
 
-void Union::Encode(::fidl::Encoder* encoder, size_t offset) {
-  fidl_union_tag_t tag = static_cast<fidl_union_tag_t>(Which());
-  ::fidl::Encode(encoder, &tag, offset);
-  switch (tag) {
+void Union::Encode(::fidl::Encoder* _encoder, size_t _offset) {
+  fidl_union_tag_t _tag = static_cast<fidl_union_tag_t>(Which());
+  ::fidl::Encode(_encoder, &_tag, _offset);
+  switch (_tag) {
    case 0:
-    ::fidl::Encode(encoder, &Primitive(), offset + 8);
+    ::fidl::Encode(_encoder, &Primitive(), _offset + 8);
     break;
    case 1:
-    ::fidl::Encode(encoder, &StringNeedsConstructor(), offset + 8);
+    ::fidl::Encode(_encoder, &StringNeedsConstructor(), _offset + 8);
     break;
    case 2:
-    ::fidl::Encode(encoder, &VectorStringAlsoNeedsConstructor(), offset + 8);
+    ::fidl::Encode(_encoder, &VectorStringAlsoNeedsConstructor(), _offset + 8);
     break;
    default:
     break;
   }
 }
 
-void Union::Decode(::fidl::Decoder* decoder, Union* value, size_t offset) {
-  fidl_union_tag_t tag;
-  ::fidl::Decode(decoder, &tag, offset);
-  switch (tag) {
+void Union::Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset) {
+  fidl_union_tag_t _tag;
+  ::fidl::Decode(_decoder, &_tag, _offset);
+  switch (_tag) {
    case 0:
     {
-      int32_t member{};
-      ::fidl::Decode(decoder, &member, offset + 8);
-      value->set_Primitive(std::move(member));
+      int32_t _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 8);
+      _value->set_Primitive(std::move(_member));
       break;
     }
    case 1:
     {
-      ::std::string member{};
-      ::fidl::Decode(decoder, &member, offset + 8);
-      value->set_StringNeedsConstructor(std::move(member));
+      ::std::string _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 8);
+      _value->set_StringNeedsConstructor(std::move(_member));
       break;
     }
    case 2:
     {
-      ::std::vector<::std::string> member{};
-      ::fidl::Decode(decoder, &member, offset + 8);
-      value->set_VectorStringAlsoNeedsConstructor(std::move(member));
+      ::std::vector<::std::string> _member{};
+      ::fidl::Decode(_decoder, &_member, _offset + 8);
+      _value->set_VectorStringAlsoNeedsConstructor(std::move(_member));
       break;
     }
    default:
-    value->value_.emplace<0>();
+    _value->value_.emplace<0>();
   }
 }
 
-zx_status_t Union::Clone(Union* result) const {
-  zx_status_t status = ZX_OK;
+zx_status_t Union::Clone(Union* _result) const {
+  zx_status_t _status = ZX_OK;
   switch (Which()) {
     case Tag::kPrimitive:
       {
-        int32_t member{};
-        status = ::fidl::Clone(Primitive(), &member);
-        if (status == ZX_OK) {
-	  result->set_Primitive(std::move(member));
+        int32_t _member{};
+        _status = ::fidl::Clone(Primitive(), &_member);
+        if (_status == ZX_OK) {
+	  _result->set_Primitive(std::move(_member));
         }
       }
       break;
     case Tag::kStringNeedsConstructor:
       {
-        ::std::string member{};
-        status = ::fidl::Clone(StringNeedsConstructor(), &member);
-        if (status == ZX_OK) {
-	  result->set_StringNeedsConstructor(std::move(member));
+        ::std::string _member{};
+        _status = ::fidl::Clone(StringNeedsConstructor(), &_member);
+        if (_status == ZX_OK) {
+	  _result->set_StringNeedsConstructor(std::move(_member));
         }
       }
       break;
     case Tag::kVectorStringAlsoNeedsConstructor:
       {
-        ::std::vector<::std::string> member{};
-        status = ::fidl::Clone(VectorStringAlsoNeedsConstructor(), &member);
-        if (status == ZX_OK) {
-	  result->set_VectorStringAlsoNeedsConstructor(std::move(member));
+        ::std::vector<::std::string> _member{};
+        _status = ::fidl::Clone(VectorStringAlsoNeedsConstructor(), &_member);
+        if (_status == ZX_OK) {
+	  _result->set_VectorStringAlsoNeedsConstructor(std::move(_member));
         }
       }
       break;
     case Tag::Invalid:
-      result->value_.emplace<0>();
+      _result->value_.emplace<0>();
       break;
   }
-  return status;
+  return _status;
 }
 
-bool operator==(const Union& lhs, const Union& rhs) {
-  if (lhs.Which() != rhs.Which()) {
+bool operator==(const Union& _lhs, const Union& _rhs) {
+  if (_lhs.Which() != _rhs.Which()) {
     return false;
   }
-  switch (lhs.Which()) {
+  switch (_lhs.Which()) {
     case Union::Tag::kPrimitive:
-      return ::fidl::Equals(lhs.Primitive(), rhs.Primitive());
+      return ::fidl::Equals(_lhs.Primitive(), _rhs.Primitive());
     case Union::Tag::kStringNeedsConstructor:
-      return ::fidl::Equals(lhs.StringNeedsConstructor(), rhs.StringNeedsConstructor());
+      return ::fidl::Equals(_lhs.StringNeedsConstructor(), _rhs.StringNeedsConstructor());
     case Union::Tag::kVectorStringAlsoNeedsConstructor:
-      return ::fidl::Equals(lhs.VectorStringAlsoNeedsConstructor(), rhs.VectorStringAlsoNeedsConstructor());
+      return ::fidl::Equals(_lhs.VectorStringAlsoNeedsConstructor(), _rhs.VectorStringAlsoNeedsConstructor());
     case Union::Tag::Invalid:
       return true;
     default:

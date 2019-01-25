@@ -103,19 +103,19 @@ class Struct  {
 
   static inline ::std::unique_ptr<Struct> New() { return ::std::make_unique<Struct>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Struct* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Struct* value, size_t _offset);
   zx_status_t Clone(Struct* result) const;
 };
 
-bool operator==(const Struct& lhs, const Struct& rhs);
-inline bool operator!=(const Struct& lhs, const Struct& rhs) {
-  return !(lhs == rhs);
+bool operator==(const Struct& _lhs, const Struct& _rhs);
+inline bool operator!=(const Struct& _lhs, const Struct& _rhs) {
+  return !(_lhs == _rhs);
 }
 
-inline zx_status_t Clone(const ::test::name::Struct& value,
-                         ::test::name::Struct* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(const ::test::name::Struct& _value,
+                         ::test::name::Struct* _result) {
+  return _value.Clone(_result);
 }
 
 using StructPtr = ::std::unique_ptr<Struct>;
@@ -138,8 +138,8 @@ class Union {
 
   static inline ::std::unique_ptr<Union> New() { return ::std::make_unique<Union>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Union* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Union* _value, size_t _offset);
   zx_status_t Clone(Union* result) const;
 
   bool has_invalid_tag() const { return Which() == Tag::Invalid; }
@@ -172,15 +172,15 @@ class Union {
   }
 
  private:
-  friend bool operator==(const Union& lhs, const Union& rhs);
+  friend bool operator==(const Union& _lhs, const Union& _rhs);
 
   using Variant = fit::internal::variant<fit::internal::monostate, int32_t>;
   Variant value_;
 };
 
-bool operator==(const Union& lhs, const Union& rhs);
-inline bool operator!=(const Union& lhs, const Union& rhs) {
-  return !(lhs == rhs);
+bool operator==(const Union& _lhs, const Union& _rhs);
+inline bool operator!=(const Union& _lhs, const Union& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 inline zx_status_t Clone(const ::test::name::Union& value,
@@ -201,7 +201,7 @@ class Table  {
   //
   // table field comment #3
   const int32_t* Field() const {
-    return has_Field_ ? &Field_.value : nullptr;
+    return has_Field_ ? &Field_value_.value : nullptr;
   }
   bool has_Field() const {
     return has_Field_;
@@ -213,16 +213,16 @@ class Table  {
   int32_t* mutable_Field() {
     if (!has_Field_) {
       has_Field_ = true;
-      Construct(&Field_.value);
+      Construct(&Field_value_.value);
     }
-    return &Field_.value;
+    return &Field_value_.value;
   }
-  void set_Field(int32_t value) {
+  void set_Field(int32_t _value) {
     if (!has_Field_) {
       has_Field_ = true;
-      Construct(&Field_.value, std::move(value));
+      Construct(&Field_value_.value, std::move(_value));
     } else {
-      Field_.value = std::move(value);
+      Field_value_.value = std::move(_value);
     }
   }
   void clear_Field() {
@@ -230,7 +230,7 @@ class Table  {
       return;
     }
     has_Field_ = false;
-    Destruct(&Field_.value);
+    Destruct(&Field_value_.value);
   }
 
   Table();
@@ -240,9 +240,9 @@ class Table  {
 
   static inline ::std::unique_ptr<Table> New() { return ::std::make_unique<Table>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, Table* value, size_t offset);
-  zx_status_t Clone(Table* result) const;
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, Table* _value, size_t _offset);
+  zx_status_t Clone(Table* _result) const;
 
  private:
   template <class T, class... Args>
@@ -261,12 +261,12 @@ class Table  {
 
     int32_t value;
   };
-  ValueUnion_Field Field_;
+  ValueUnion_Field Field_value_;
 };
 
-bool operator==(const Table& lhs, const Table& rhs);
-inline bool operator!=(const Table& lhs, const Table& rhs) {
-  return !(lhs == rhs);
+bool operator==(const Table& _lhs, const Table& _rhs);
+inline bool operator!=(const Table& _lhs, const Table& _rhs) {
+  return !(_lhs == _rhs);
 }
 
 using TablePtr = ::std::unique_ptr<Table>;
@@ -299,7 +299,7 @@ template <>
 struct CodingTraits<::test::name::Table>
     : public EncodableCodingTraits<::test::name::Table, 16> {};
 
-inline zx_status_t Clone(const ::test::name::Table& value,
+inline zx_status_t Clone(const ::test::name::Table& _value,
                          ::test::name::Table* result) {
-  return value.Clone(result);
+  return _value.Clone(result);
 }}  // namespace fidl

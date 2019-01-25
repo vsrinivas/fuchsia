@@ -25,19 +25,19 @@ class {{ .Name }}  {
 
   static inline ::std::unique_ptr<{{ .Name }}> New() { return ::std::make_unique<{{ .Name }}>(); }
 
-  void Encode(::fidl::Encoder* encoder, size_t offset);
-  static void Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset);
+  void Encode(::fidl::Encoder* _encoder, size_t _offset);
+  static void Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset);
   zx_status_t Clone({{ .Name }}* result) const;
 };
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs);
-inline bool operator!=(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
-  return !(lhs == rhs);
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs);
+inline bool operator!=(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
+  return !(_lhs == _rhs);
 }
 
-inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& value,
-                         {{ .Namespace }}::{{ .Name }}* result) {
-  return value.Clone(result);
+inline zx_status_t Clone(const {{ .Namespace }}::{{ .Name }}& _value,
+                         {{ .Namespace }}::{{ .Name }}* _result) {
+  return _value.Clone(_result);
 }
 
 using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
@@ -47,31 +47,31 @@ using {{ .Name }}Ptr = ::std::unique_ptr<{{ .Name }}>;
 extern "C" const fidl_type_t {{ .TableType }};
 const fidl_type_t* {{ .Name }}::FidlType = &{{ .TableType }};
 
-void {{ .Name }}::Encode(::fidl::Encoder* encoder, size_t offset) {
+void {{ .Name }}::Encode(::fidl::Encoder* _encoder, size_t _offset) {
   {{- range .Members }}
-  ::fidl::Encode(encoder, &{{ .Name }}, offset + {{ .Offset }});
+  ::fidl::Encode(_encoder, &{{ .Name }}, _offset + {{ .Offset }});
   {{- end }}
 }
 
-void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t offset) {
+void {{ .Name }}::Decode(::fidl::Decoder* _decoder, {{ .Name }}* value, size_t _offset) {
   {{- range .Members }}
-  ::fidl::Decode(decoder, &value->{{ .Name }}, offset + {{ .Offset }});
+  ::fidl::Decode(_decoder, &value->{{ .Name }}, _offset + {{ .Offset }});
   {{- end }}
 }
 
-zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {
+zx_status_t {{ .Name }}::Clone({{ .Name }}* _result) const {
   {{- range $index, $member := .Members }}
   {{ if not $index }}zx_status_t {{ end -}}
-  _status = ::fidl::Clone({{ .Name }}, &result->{{ .Name }});
+  _status = ::fidl::Clone({{ .Name }}, &_result->{{ .Name }});
   if (_status != ZX_OK)
     return _status;
   {{- end }}
   return ZX_OK;
 }
 
-bool operator==(const {{ .Name }}& lhs, const {{ .Name }}& rhs) {
+bool operator==(const {{ .Name }}& _lhs, const {{ .Name }}& _rhs) {
   {{- range $index, $member := .Members }}
-  if (!::fidl::Equals(lhs.{{ .Name }}, rhs.{{ .Name }})) {
+  if (!::fidl::Equals(_lhs.{{ .Name }}, _rhs.{{ .Name }})) {
     return false;
   }
   {{- end }}
