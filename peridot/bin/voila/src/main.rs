@@ -2,21 +2,28 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#![feature(async_await, await_macro, futures_api)]
+
 use carnelian::{App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
-use failure::Error;
+use failure::{Error, ResultExt};
 use fidl::endpoints::create_endpoints;
+use fidl_fuchsia_modular::AppConfig;
+use fidl_fuchsia_modular_internal::{SessionmgrMarker, UserContextMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
-use fidl_fuchsia_ui_viewsv1::ViewProviderMarker;
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
 use fuchsia_app::client::{App as LaunchedApp, Launcher};
+use fuchsia_async as fasync;
 use fuchsia_scenic::{Circle, EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
+use log::warn;
 use parking_lot::Mutex;
 use std::collections::BTreeMap;
 use std::{any::Any, cell::RefCell};
 
 mod layout;
+mod user_context;
 
 use crate::layout::{layout, ChildViewData};
+use crate::user_context::UserContext;
 
 struct VoilaAppAssistant {}
 
@@ -31,7 +38,7 @@ impl AppAssistant for VoilaAppAssistant {
             circle_node: ShapeNode::new(session.clone()),
             width: 0.0,
             height: 0.0,
-            child_sessions: BTreeMap::new(),
+            replicas: BTreeMap::new(),
         }))))
     }
 }
@@ -41,35 +48,70 @@ struct VoilaViewAssistant {
     circle_node: ShapeNode,
     width: f32,
     height: f32,
-    child_sessions: BTreeMap<u32, ChildSessionData>,
+    replicas: BTreeMap<u32, ReplicaData>,
 }
 
-/// Represents an emulated session and holds its internal state.
-struct ChildSessionData {
+/// Represents an emulated replica and holds its internal state.
+struct ReplicaData {
     #[allow(unused)]
-    app: LaunchedApp,
+    sessionmgr_app: LaunchedApp,
     view: ChildViewData,
 }
 
 impl VoilaViewAssistant {
-    fn create_and_setup_view(
+    fn create_replica(
         &mut self, key: u32, url: &str, session: &SessionPtr,
         view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, import_node: &ImportNode,
     ) -> Result<(), Error> {
         let app = Launcher::new()?.launch(url.to_string(), None)?;
-        let view_provider = app.connect_to_service(ViewProviderMarker)?;
+        let sessionmgr = app.connect_to_service(SessionmgrMarker)?;
+
+        // Set up shell configs.
+        let mut session_shell_config = AppConfig {
+            url: "ermine_session_shell".to_string(),
+            args: None,
+        };
+        let mut story_shell_config = AppConfig {
+            url: "mondrian".to_string(),
+            args: None,
+        };
+
+        // Set up views.
         let (view_owner_client, view_owner_server) = create_endpoints::<ViewOwnerMarker>()?;
-        view_provider.create_view(view_owner_server, None)?;
         let host_node = EntityNode::new(session.clone());
         let host_import_token = host_node.export_as_request();
         import_node.add_child(&host_node);
         let view_data = ChildViewData::new(key, host_node);
-        let session_data = ChildSessionData {
-            app: app,
+        let session_data = ReplicaData {
+            sessionmgr_app: app,
             view: view_data,
         };
-        self.child_sessions.insert(key, session_data);
+        self.replicas.insert(key, session_data);
         view_container.add_child(key, view_owner_client, host_import_token)?;
+
+        // Set up UserContext.
+        let (user_context_client, user_context_server) = create_endpoints::<UserContextMarker>()?;
+        let user_context = UserContext {};
+        let stream = user_context_server.into_stream()?;
+
+        fasync::spawn(
+            async move {
+                await!(user_context.handle_requests_from_stream(stream)).unwrap_or_else(|err| {
+                    warn!("Error handling UserContext request channel: {:?}", err);
+                })
+            },
+        );
+        sessionmgr
+            .initialize(
+                None, /* account */
+                &mut session_shell_config,
+                &mut story_shell_config,
+                None, /* ledger_token_manager */
+                None, /* agent_token_manager */
+                user_context_client,
+                Some(view_owner_server),
+            )
+            .context("Failed to issue initialize request for sessionmgr")?;
         Ok(())
     }
 }
@@ -100,16 +142,16 @@ impl ViewAssistant for VoilaViewAssistant {
         });
         self.circle_node.set_material(&material);
 
-        self.create_and_setup_view(
+        self.create_replica(
             1,
-            "fuchsia-pkg://fuchsia.com/spinning_square_rs#meta/spinning_square_rs.cmx",
+            "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
             context.session,
             context.view_container,
             context.import_node,
         )?;
-        self.create_and_setup_view(
+        self.create_replica(
             2,
-            "fuchsia-pkg://fuchsia.com/noodles#meta/noodles.cmx",
+            "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
             context.session,
             context.view_container,
             context.import_node,
@@ -137,7 +179,7 @@ impl ViewAssistant for VoilaViewAssistant {
         self.circle_node.set_translation(center_x, center_y, 8.0);
 
         let mut views: Vec<&mut ChildViewData> = self
-            .child_sessions
+            .replicas
             .iter_mut()
             .map(|(_key, child_session)| &mut child_session.view)
             .collect();
