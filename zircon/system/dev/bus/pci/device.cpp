@@ -135,6 +135,7 @@ zx_status_t Device::InitLocked() {
 }
 
 zx_status_t Device::ModifyCmd(uint16_t clr_bits, uint16_t set_bits) {
+    fbl::AutoLock dev_lock(&dev_lock_);
     // In order to keep internal bookkeeping coherent, and interactions between
     // MSI/MSI-X and Legacy IRQ mode safe, API users may not directly manipulate
     // the legacy IRQ enable/disable bit.  Just ignore them if they try to

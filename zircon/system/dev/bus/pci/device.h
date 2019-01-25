@@ -23,6 +23,7 @@
 #include <zircon/compiler.h>
 #include <zircon/errors.h>
 #include <zircon/hw/pci.h>
+#include <zircon/thread_annotations.h>
 
 namespace pci {
 
@@ -68,7 +69,8 @@ public:
     // @param clr_bits The mask of bits to be cleared.
     // @param clr_bits The mask of bits to be set.
     // @return A zx_status_t indicating success or failure of the operation.
-    zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits);
+    zx_status_t ModifyCmd(uint16_t clr_bits, uint16_t set_bits)
+        TA_EXCL(dev_lock_);
 
     // Enable or disable bus mastering in a device's configuration.
     //
@@ -129,8 +131,8 @@ public:
         return (!disabled_ && (ret->allocation != nullptr)) ? ret : nullptr;
     }
 
-    virtual void Unplug();
-    void SetQuirksDone() { quirks_done_ = true; }
+    virtual void Unplug() TA_EXCL(dev_lock_);
+    void SetQuirksDone() TA_REQ(dev_lock_) { quirks_done_ = true; }
     const fbl::RefPtr<Config>& config() const { return cfg_; }
 
     bool plugged_in() const { return plugged_in_; }
@@ -198,21 +200,24 @@ protected:
     // Allow our upstream to disable / Unplug us
     friend class UpstreamNode;
     Device(fbl::RefPtr<Config>&& config, UpstreamNode* upstream, bool is_bridge);
-    zx_status_t Init();
-    zx_status_t InitLocked();
+    zx_status_t Init() TA_EXCL(dev_lock_);
+    zx_status_t InitLocked() TA_REQ(dev_lock_);
     fbl::Mutex* dev_lock() { return &dev_lock_; }
 
-    void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits);
-    void AssignCmdLocked(uint16_t value) { ModifyCmdLocked(0xFFFF, value); }
+    void ModifyCmdLocked(uint16_t clr_bits, uint16_t set_bits)
+        TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_);
+    void AssignCmdLocked(uint16_t value) TA_REQ(dev_lock_) TA_EXCL(cmd_reg_lock_) {
+        ModifyCmdLocked(0xFFFF, value);
+    }
 
-    zx_status_t ProbeBarsLocked();
-    zx_status_t ProbeBarLocked(uint32_t bar_id);
+    zx_status_t ProbeBarsLocked() TA_REQ(dev_lock_);
+    zx_status_t ProbeBarLocked(uint32_t bar_id) TA_REQ(dev_lock_);
     // TODO(cja): port zx_status_t ProbeCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseStdCapabilitiesLocked();
     // TODO(cja): port zx_status_t ParseExtCapabilitiesLocked();
 
     // BAR allocation
-    virtual zx_status_t AllocateBars();
+    virtual zx_status_t AllocateBars() TA_EXCL(dev_lock_);
     // TODO(cja): port zx_status_t AllocateBarsLocked();
     // TODO(cja): port zx_status_t AllocateBarLocked(BarInfo& info);
 
@@ -220,8 +225,8 @@ protected:
     // continue to enumerate, but users will only be able to access config (and
     // only in a read only fashion).  BAR windows, bus mastering, and interrupts
     // will all be disabled.
-    virtual void Disable();
-    void DisableLocked();
+    virtual void Disable() TA_EXCL(dev_lock_);
+    void DisableLocked() TA_REQ(dev_lock_);
 
     fbl::Mutex cmd_reg_lock_;       // Protection for access to the command register.
     const bool is_bridge_;          // True if this device is also a bridge
@@ -234,10 +239,10 @@ protected:
     uint8_t rev_id_;                // The device's revision ID (from cfg)
 
     /* State related to lifetime management */
-    mutable fbl::Mutex dev_lock_;
     bool plugged_in_ = false;
     bool disabled_ = false;
     bool quirks_done_ = false;
+    mutable fbl::Mutex dev_lock_;
 
     // Info about the BARs computed and cached during the initial setup/probe,
     // indexed by starting BAR register index.

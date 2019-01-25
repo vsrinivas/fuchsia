@@ -50,19 +50,19 @@ public:
     bool supports_32bit_pio() const { return supports_32bit_pio_; }
 
     // Device overrides
-    void Unplug() final;
-    void Dump() const override;
+    void Dump() const final;
+    void Unplug() final TA_EXCL(dev_lock_);
 
 protected:
-    zx_status_t AllocateBars() override;
-    zx_status_t AllocateBridgeWindowsLocked();
-    void Disable() override;
+    zx_status_t AllocateBars() final TA_EXCL(dev_lock_);
+    zx_status_t AllocateBridgeWindowsLocked() TA_REQ(dev_lock_);
+    void Disable() final;
 
 private:
     Bridge(fbl::RefPtr<Config>&&, UpstreamNode* upstream, uint8_t mbus_id);
-    zx_status_t Init();
+    zx_status_t Init() TA_EXCL(dev_lock_);
 
-    zx_status_t ParseBusWindowsLocked();
+    zx_status_t ParseBusWindowsLocked() TA_REQ(dev_lock_);
 
     PciRegionAllocator pf_mmio_regions_;
     PciRegionAllocator mmio_lo_regions_;
