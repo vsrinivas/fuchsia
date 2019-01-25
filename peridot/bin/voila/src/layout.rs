@@ -30,9 +30,9 @@ impl ChildViewData {
 pub fn layout(
     child_views: &mut [&mut ChildViewData],
     view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, width: f32, height: f32,
-) {
+) -> Result<(), failure::Error> {
     if child_views.is_empty() {
-        return;
+        return Ok(());
     }
     let num_views = child_views.len();
 
@@ -61,13 +61,12 @@ pub fn layout(
                 },
             })),
         };
-        view_container
-            .set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))
-            .unwrap();
+        view_container.set_child_properties(view.key, Some(OutOfLine(&mut view_properties)))?;
         view.host_node
             .set_translation(tile_bounds.x, tile_bounds.y, 0.0);
         view.bounds = Some(tile_bounds);
     }
+    Ok(())
 }
 
 fn inset(rect: &RectF, border: f32) -> RectF {

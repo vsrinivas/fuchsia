@@ -183,7 +183,7 @@ impl ViewAssistant for VoilaViewAssistant {
             .iter_mut()
             .map(|(_key, child_session)| &mut child_session.view)
             .collect();
-        layout(&mut views, context.view_container, self.width, self.height);
+        layout(&mut views, context.view_container, self.width, self.height)?;
         Ok(())
     }
 
