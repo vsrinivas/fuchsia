@@ -9,6 +9,7 @@
 #include "bus.h"
 #include "common.h"
 #include "config.h"
+#include "device.h"
 #include <assert.h>
 #include <err.h>
 #include <fbl/alloc_checker.h>
@@ -20,18 +21,22 @@
 namespace pci {
 
 // Bridges rely on most of the protected Device members when they can
-Bridge::Bridge(fbl::RefPtr<Config>&& config, UpstreamNode* upstream, uint8_t mbus_id)
-    : pci::Device(std::move(config), upstream, true),
+Bridge::Bridge(fbl::RefPtr<Config>&& config,
+               UpstreamNode* upstream,
+               BusLinkInterface* bli,
+               uint8_t mbus_id)
+    : pci::Device(std::move(config), upstream, bli, true),
       UpstreamNode(UpstreamNode::Type::BRIDGE, mbus_id) {
     /* Assign the driver-wide region pool to this bridge's allocators. */
 }
 
 zx_status_t Bridge::Create(fbl::RefPtr<Config>&& config,
                            UpstreamNode* upstream,
+                           BusLinkInterface* bli,
                            uint8_t mbus_id,
                            fbl::RefPtr<pci::Bridge>* out_bridge) {
     fbl::AllocChecker ac;
-    auto raw_bridge = new (&ac) Bridge(std::move(config), upstream, mbus_id);
+    auto raw_bridge = new (&ac) Bridge(std::move(config), upstream, bli, mbus_id);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -43,7 +48,7 @@ zx_status_t Bridge::Create(fbl::RefPtr<Config>&& config,
     }
 
     fbl::RefPtr<pci::Device> dev = fbl::AdoptRef(raw_bridge);
-    Bus::LinkDeviceToBus(dev);
+    bli->LinkDevice(dev);
     *out_bridge = fbl::RefPtr<Bridge>::Downcast(dev);
     return ZX_OK;
 }

@@ -29,6 +29,7 @@ namespace pci {
 
 // UpstreamNode includes device.h, so only forward declare it here.
 class UpstreamNode;
+class BusLinkInterface;
 
 // struct used to fetch information about a configured base address register
 struct BarInfo {
@@ -48,7 +49,9 @@ struct BarInfo {
 class Device : public fbl::DoublyLinkedListable<Device*> {
 public:
     // Create, but do not initialize, a device.
-    static zx_status_t Create(fbl::RefPtr<Config>&& config, UpstreamNode* upstream);
+    static zx_status_t Create(fbl::RefPtr<Config>&& config,
+                              UpstreamNode* upstream,
+                              BusLinkInterface* bli);
     virtual ~Device();
 
     // Bridge or DeviceImpl will need to implement refcounting
@@ -199,7 +202,10 @@ public:
 protected:
     // Allow our upstream to disable / Unplug us
     friend class UpstreamNode;
-    Device(fbl::RefPtr<Config>&& config, UpstreamNode* upstream, bool is_bridge);
+    Device(fbl::RefPtr<Config>&& config,
+           UpstreamNode* upstream,
+           BusLinkInterface* bli,
+           bool is_bridge);
     zx_status_t Init() TA_EXCL(dev_lock_);
     zx_status_t InitLocked() TA_REQ(dev_lock_);
     fbl::Mutex* dev_lock() { return &dev_lock_; }
@@ -251,6 +257,8 @@ protected:
 
     // An upstream node will outlive its downstream devices
     UpstreamNode* upstream_; // The upstream node in the device graph.
+    BusLinkInterface* const bli_;
+
 private:
     // Capabilities
     // TODO(cja): Port over the capability support from kernel pci.

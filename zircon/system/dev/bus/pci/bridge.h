@@ -26,6 +26,7 @@ class Bridge : public pci::Device,
 public:
     static zx_status_t Create(fbl::RefPtr<Config>&& config,
                               UpstreamNode* upstream,
+                              BusLinkInterface* bli,
                               uint8_t mbus_id,
                               fbl::RefPtr<pci::Bridge>* out_bridge);
     // Derived device objects need to have refcounting implemented
@@ -59,7 +60,7 @@ protected:
     void Disable() final;
 
 private:
-    Bridge(fbl::RefPtr<Config>&&, UpstreamNode* upstream, uint8_t mbus_id);
+    Bridge(fbl::RefPtr<Config>&&, UpstreamNode* upstream, BusLinkInterface* bli, uint8_t mbus_id);
     zx_status_t Init() TA_EXCL(dev_lock_);
 
     zx_status_t ParseBusWindowsLocked() TA_REQ(dev_lock_);

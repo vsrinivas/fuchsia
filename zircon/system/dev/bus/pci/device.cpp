@@ -5,9 +5,9 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include "device.h"
 #include "bus.h"
 #include "common.h"
+#include "device.h"
 #include "ref_counted.h"
 #include "upstream_node.h"
 #include <assert.h>
@@ -30,7 +30,9 @@ namespace { // anon namespace.  Externals do not need to know about DeviceImpl
 
 class DeviceImpl : public Device {
 public:
-    static zx_status_t Create(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream);
+    static zx_status_t Create(fbl::RefPtr<Config>&& cfg,
+                              UpstreamNode* upstream,
+                              BusLinkInterface* bli);
 
     // Implement ref counting, do not let derived classes override.
     PCI_IMPLEMENT_REFCOUNTED;
@@ -39,13 +41,15 @@ public:
     DISALLOW_COPY_ASSIGN_AND_MOVE(DeviceImpl);
 
 protected:
-    DeviceImpl(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream)
-        : Device(std::move(cfg), upstream, false) {}
+    DeviceImpl(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream, BusLinkInterface* bli)
+        : Device(std::move(cfg), upstream, bli, false) {}
 };
 
-zx_status_t DeviceImpl::Create(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream) {
+zx_status_t DeviceImpl::Create(fbl::RefPtr<Config>&& cfg,
+                               UpstreamNode* upstream,
+                               BusLinkInterface* bli) {
     fbl::AllocChecker ac;
-    auto raw_dev = new (&ac) DeviceImpl(std::move(cfg), upstream);
+    auto raw_dev = new (&ac) DeviceImpl(std::move(cfg), upstream, bli);
     if (!ac.check()) {
         pci_errorf("Out of memory attemping to create PCIe device %s.\n", cfg->addr());
         return ZX_ERR_NO_MEMORY;
@@ -58,16 +62,21 @@ zx_status_t DeviceImpl::Create(fbl::RefPtr<Config>&& cfg, UpstreamNode* upstream
         return status;
     }
 
-    Bus::LinkDeviceToBus(dev);
+    bli->LinkDevice(dev);
     return ZX_OK;
 }
+
 } // namespace
 
-Device::Device(fbl::RefPtr<Config>&& config, UpstreamNode* upstream, bool is_bridge)
+Device::Device(fbl::RefPtr<Config>&& config,
+               UpstreamNode* upstream,
+               BusLinkInterface* bli,
+               bool is_bridge)
     : is_bridge_(is_bridge),
       cfg_(std::move(config)),
       bar_count_(is_bridge ? PCI_BAR_REGS_PER_BRIDGE : PCI_BAR_REGS_PER_DEVICE),
-      upstream_(upstream) {}
+      upstream_(upstream),
+      bli_(bli) {}
 
 Device::~Device() {
     // We should already be unlinked from the bus's device tree.
@@ -84,8 +93,9 @@ Device::~Device() {
 }
 
 zx_status_t Device::Create(fbl::RefPtr<Config>&& config,
-                           UpstreamNode* upstream) {
-    return DeviceImpl::Create(std::move(config), upstream);
+                           UpstreamNode* upstream,
+                           BusLinkInterface* bli) {
+    return DeviceImpl::Create(std::move(config), upstream, bli);
 }
 
 zx_status_t Device::Init() {
@@ -319,7 +329,7 @@ void Device::Unplug() {
     // everything in the command register
     ZX_DEBUG_ASSERT(disabled_);
     upstream_->UnlinkDevice(this);
-    Bus::UnlinkDeviceFromBus(this);
+    bli_->UnlinkDevice(this);
     plugged_in_ = false;
     pci_tracef("device [%s] unplugged\n", cfg_->addr());
 }

@@ -19,7 +19,6 @@
 #include <fbl/vector.h>
 
 namespace pci {
-Bus::AllDevicesList Bus::device_list_;
 
 // Creates the PCI bus driver instance and attempts initialization.
 zx_status_t Bus::Create(zx_device_t* parent) {
@@ -193,7 +192,7 @@ void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
             if (is_bridge) {
                 fbl::RefPtr<Bridge> bridge;
                 uint8_t mbus_id = config->Read(Config::kSecondaryBusId);
-                status = Bridge::Create(std::move(config), upstream, mbus_id, &bridge);
+                status = Bridge::Create(std::move(config), upstream, this, mbus_id, &bridge);
                 if (status != ZX_OK) {
                     continue;
                 }
@@ -201,7 +200,7 @@ void Bus::ScanBus(UpstreamNode* upstream, BridgeList* bridge_list) {
                 bridge_list->push_back(bridge);
             } else {
                 // Create a device
-                pci::Device::Create(std::move(config), upstream);
+                pci::Device::Create(std::move(config), upstream, this);
             }
         }
     }

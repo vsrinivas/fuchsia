@@ -17,26 +17,40 @@
 
 namespace pci {
 
+// This interface allows for bridges/devices to add and remove themselves from the
+// device list of their particular bus instance without exposing the rest of the
+// bus's interface to them or using static methods. This becomes more important
+// as multiple bus instances with differing segment groups become a reality.
+class BusLinkInterface {
+public:
+    virtual ~BusLinkInterface(){}
+    virtual void LinkDevice(fbl::RefPtr<pci::Device> device) = 0;
+    virtual void UnlinkDevice(pci::Device* device) = 0;
+};
+
 class Bus;
 using PciBusType = ddk::Device<Bus>;
-
-class Bus : public PciBusType {
+class Bus : public PciBusType,
+            public BusLinkInterface {
 public:
     using BridgeList = fbl::Vector<fbl::RefPtr<Bridge>>;
-    using AllDevicesList = fbl::WAVLTree<pci_bdf_t,
-                                         fbl::RefPtr<pci::Device>,
-                                         pci::Device::KeyTraitsSortByBdf,
-                                         pci::Device::BusListTraits>;
+    using DeviceList = fbl::WAVLTree<pci_bdf_t,
+                                     fbl::RefPtr<pci::Device>,
+                                     pci::Device::KeyTraitsSortByBdf,
+                                     pci::Device::BusListTraits>;
     static zx_status_t Create(zx_device_t* parent);
-    static void LinkDeviceToBus(fbl::RefPtr<pci::Device> device) {
+    void DdkRelease();
+
+    // Accessors for the device list, used by BusLinkInterface
+    void LinkDevice(fbl::RefPtr<pci::Device> device) final {
+        fbl::AutoLock dev_list_lock(&dev_list_lock_);
         device_list_.insert(device);
     }
 
-    static void UnlinkDeviceFromBus(pci::Device* device) {
+    void UnlinkDevice(pci::Device* device) final {
+        fbl::AutoLock dev_list_lock(&dev_list_lock_);
         device_list_.erase(*device);
     }
-
-    void DdkRelease();
 
 private:
     // Our constructor exists to fulfill the mixin constructors
@@ -59,17 +73,14 @@ private:
 
     // members
     ddk::PcirootProtocolClient pciroot_;
-
     pci_platform_info_t info_;
     mmio_buffer_t ecam_;
     bool has_ecam_;
     fbl::unique_ptr<PciRoot> root_;
+    mutable fbl::Mutex dev_list_lock_;
 
-    // A global list of all devices in the system is shared across PCI bus instances.
     // Devices are keyed by BDF so they should not experience any collisions.
-    // TODO(cja): what about segment group?
-    BridgeList bridge_list_;
-    static AllDevicesList device_list_;
+    DeviceList device_list_;
 };
 
 } // namespace pci
