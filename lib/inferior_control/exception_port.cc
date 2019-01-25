@@ -283,25 +283,29 @@ void ExceptionPort::Worker() {
 void PrintException(FILE* out, const Thread* thread, zx_excp_type_t type,
                     const zx_exception_context_t& context) {
   if (ZX_EXCP_IS_ARCH(type)) {
-    fprintf(out, "Thread %s received exception %s\n",
+    fprintf(out, "Thread %s: received exception %s\n",
             thread->GetDebugName().c_str(),
             debugger_utils::ExceptionToString(type, context).c_str());
     zx_vaddr_t pc = thread->registers()->GetPC();
     fprintf(out, "PC 0x%" PRIxPTR "\n", pc);
   } else {
-    const char* thread_name = thread->GetDebugName().c_str();
+    // Remember that we can't do this:
+    // const char* thread_name = thread->GetDebugName().c_str();
+    // The lifetime of the c++ string object ends at the ;.
+    std::string thread_name = thread->GetDebugName();
     switch (type) {
       case ZX_EXCP_THREAD_STARTING:
-        fprintf(out, "Thread %s is starting\n", thread_name);
+        fprintf(out, "Thread %s: starting\n", thread_name.c_str());
         break;
       case ZX_EXCP_THREAD_EXITING:
-        fprintf(out, "Thread %s is exiting\n", thread_name);
+        fprintf(out, "Thread %s: exiting\n", thread_name.c_str());
         break;
       case ZX_EXCP_POLICY_ERROR:
-        fprintf(out, "Thread %s got policy error\n", thread_name);
+        fprintf(out, "Thread %s: policy error\n", thread_name.c_str());
         break;
       default:
-        fprintf(out, "Unknown exception %u\n", type);
+        fprintf(out, "Thread %s: unknown exception %u\n",
+                thread_name.c_str(), type);
         break;
     }
   }
