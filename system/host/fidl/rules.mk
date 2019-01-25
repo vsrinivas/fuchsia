@@ -15,6 +15,7 @@ MODULE_COMPILEFLAGS := -O0 -g
 MODULE_SRCS := \
     $(LOCAL_DIR)/lib/attributes.cpp \
     $(LOCAL_DIR)/lib/c_generator.cpp \
+    $(LOCAL_DIR)/lib/coded_types_generator.cpp \
     $(LOCAL_DIR)/lib/error_reporter.cpp \
     $(LOCAL_DIR)/lib/flat_ast.cpp \
     $(LOCAL_DIR)/lib/formatter.cpp \
