@@ -9,8 +9,8 @@ import (
 	"bytes"
 	"encoding/binary"
 	"errors"
+	"fmt"
 	"net"
-	"os"
 	"syscall"
 
 	"golang.org/x/sys/unix"
@@ -37,45 +37,41 @@ type logpacket struct {
 // LogListener is Zircon's debug log listener.
 type LogListener struct {
 	seq      uint32
-	conn     net.PacketConn
+	conn     *net.UDPConn
 	nodename string
 }
 
 // NewLogListener creates and connects a new instance of debug log listener.
 func NewLogListener(nodename string) (*LogListener, error) {
-	syscall.ForkLock.RLock()
-	fd, err := syscall.Socket(syscall.AF_INET6, syscall.SOCK_DGRAM, syscall.IPPROTO_UDP)
-	if err == nil {
-		unix.CloseOnExec(fd)
+	conn, err := net.ListenUDP("udp6", &net.UDPAddr{
+		IP:   net.IPv6zero,
+		Port: debugPort,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("failed to bind to udp6 port: %v\n", err)
 	}
-	syscall.ForkLock.RUnlock()
+
+	rawConn, err := conn.SyscallConn()
 	if err != nil {
 		return nil, err
 	}
 
 	// SO_REUSEADDR and SO_REUSEPORT allows binding to the same port multiple
 	// times which is necessary in the case when there are multiple instances.
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, unix.SO_REUSEADDR, 1); err != nil {
-		syscall.Close(fd)
+	var fderr error
+	if err = rawConn.Control(func(fd uintptr) {
+		if fderr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, unix.SO_REUSEADDR, 1); fderr != nil {
+			return
+		}
+
+		if fderr = syscall.SetsockoptInt(int(fd), syscall.SOL_SOCKET, unix.SO_REUSEPORT, 1); fderr != nil {
+			return
+		}
+	}); err != nil {
 		return nil, err
 	}
-
-	if err := syscall.SetsockoptInt(fd, syscall.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
-		syscall.Close(fd)
-		return nil, err
-	}
-
-	// Bind the socket to the default debug log listener port.
-	if err := syscall.Bind(fd, &syscall.SockaddrInet6{Port: debugPort}); err != nil {
-		syscall.Close(fd)
-		return nil, err
-	}
-
-	f := os.NewFile(uintptr(fd), "")
-	conn, err := net.FilePacketConn(f)
-	f.Close()
-	if err != nil {
-		return nil, err
+	if fderr != nil {
+		return nil, fderr
 	}
 
 	return &LogListener{
