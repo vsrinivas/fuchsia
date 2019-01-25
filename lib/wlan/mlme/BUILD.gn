@@ -89,7 +89,6 @@ source_set("mlme") {
     "rates_elements.cpp",
     "service.cpp",
     "timer.cpp",
-    "timer_manager.cpp",
     "validate_frame.cpp",
   ]
 

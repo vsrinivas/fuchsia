@@ -76,7 +76,7 @@ struct Peer {
 
 class MinstrelRateSelector {
    public:
-    MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence,
+    MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer, ProbeSequence&& probe_sequence,
                          zx::duration update_interval);
     void AddPeer(const wlan_assoc_ctx_t& assoc_ctx);
     void RemovePeer(const common::MacAddr& addr);
@@ -99,8 +99,8 @@ class MinstrelRateSelector {
     // Holds MAC addresses of peers with at least one status report but has not been processed.
     std::unordered_set<common::MacAddr, common::MacAddrHasher> outdated_peers_;
     std::unordered_map<common::MacAddr, Peer, common::MacAddrHasher> peer_map_;
-    TimerManager timer_mgr_;
-    TimedEvent next_update_event_;
+    TimerManager2<> timer_mgr_;
+    TimeoutId next_update_;
 
     const ProbeSequence probe_sequence_;
     const zx::duration update_interval_;

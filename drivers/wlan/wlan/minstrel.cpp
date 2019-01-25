@@ -171,9 +171,10 @@ void AddSupportedHt(std::unordered_map<tx_vec_idx_t, TxStats>* tx_stats_map, CBW
               debug::Describe(gi).c_str());
 }
 
-MinstrelRateSelector::MinstrelRateSelector(TimerManager&& timer_mgr, ProbeSequence&& probe_sequence,
+MinstrelRateSelector::MinstrelRateSelector(fbl::unique_ptr<Timer>&& timer,
+                                           ProbeSequence&& probe_sequence,
                                            zx::duration update_interval)
-    : timer_mgr_(std::move(timer_mgr)),
+    : timer_mgr_(std::move(timer)),
       probe_sequence_(std::move(probe_sequence)),
       update_interval_(update_interval) {}
 
@@ -261,8 +262,8 @@ void MinstrelRateSelector::AddPeer(const wlan_assoc_ctx_t& assoc_ctx) {
 
     debugmstl("Minstrel peer added: %s\n", addr.ToString().c_str());
     if (peer_map_.empty()) {
-        ZX_DEBUG_ASSERT(!next_update_event_.IsActive());
-        timer_mgr_.Schedule(timer_mgr_.Now() + update_interval_, &next_update_event_);
+        ZX_DEBUG_ASSERT(next_update_ == TimeoutId{});
+        timer_mgr_.Schedule(timer_mgr_.Now() + update_interval_, {}, &next_update_);
     } else if (GetPeer(addr) != nullptr) {
         warnf("Peer %s already exists. Forgot to clean up?\n", addr.ToString().c_str());
     }
@@ -281,7 +282,10 @@ void MinstrelRateSelector::RemovePeer(const common::MacAddr& addr) {
 
     outdated_peers_.erase(addr);
     peer_map_.erase(iter);
-    if (peer_map_.empty()) { next_update_event_.Cancel(); }
+    if (peer_map_.empty()) {
+        timer_mgr_.Cancel(next_update_);
+        next_update_ = {};
+    }
     debugmstl("peer %s removed.\n", addr.ToString().c_str());
 }
 
@@ -401,14 +405,15 @@ void UpdateStatsPeer(Peer* peer) {
 }
 
 bool MinstrelRateSelector::HandleTimeout() {
-    zx::time now = timer_mgr_.HandleTimeout();
-    if (next_update_event_.Triggered(now)) {
-        timer_mgr_.Schedule(now + update_interval_, &next_update_event_);
-        UpdateStats();
-        return true;
-    } else {
-        return false;
-    }
+    bool handled = false;
+    timer_mgr_.HandleTimeout([&](auto now, auto _event, auto timeout_id) {
+        if (next_update_ == timeout_id) {
+            timer_mgr_.Schedule(now + update_interval_, {}, &next_update_);
+            UpdateStats();
+            handled = true;
+        }
+    });
+    return handled;
 }
 
 tx_vec_idx_t GetNextProbe(Peer* peer, const ProbeSequence& probe_sequence) {
@@ -539,7 +544,7 @@ zx_status_t MinstrelRateSelector::GetStatsToFidl(const common::MacAddr& peer_add
 }
 
 bool MinstrelRateSelector::IsActive() const {
-    return next_update_event_.IsActive();
+    return next_update_ != TimeoutId{};
 }
 
 namespace debug {
