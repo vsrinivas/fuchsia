@@ -84,6 +84,10 @@ typedef uint32_t zx_pci_irq_swizzle_lut_t[ZX_PCI_MAX_DEVICES_PER_BUS]
                                          [ZX_PCI_MAX_FUNCTIONS_PER_DEVICE]
                                          [ZX_PCI_MAX_LEGACY_IRQ_PINS];
 
+// We support up to 224 IRQs on a system, this is the maximum supported by
+// LAPICs (today) so this should be a safe number.
+#define ZX_PCI_MAX_IRQS 224
+
 typedef struct zx_pci_init_arg {
     zx_pci_irq_swizzle_lut_t dev_pin_to_global_irq;
 
@@ -92,7 +96,7 @@ typedef struct zx_pci_init_arg {
         uint32_t global_irq;
         bool level_triggered;
         bool active_high;
-    } irqs[64];
+    } irqs[ZX_PCI_MAX_IRQS];
 
     uint32_t addr_window_count;
     struct {
