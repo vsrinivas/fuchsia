@@ -4,9 +4,9 @@
 
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/component/cpp/expose.h>
+#include <lib/inspect/testing/inspect.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "matchers.h"
 
 namespace {
 
@@ -14,13 +14,14 @@ using component::Metric;
 using component::Object;
 using component::Property;
 using testing::UnorderedElementsAre;
+using namespace inspect::testing;
 
 TEST(Property, StringValue) {
   Property a("test");
 
-  EXPECT_THAT(a.ToFidl("key"), StringProperty("key", "test"));
+  EXPECT_THAT(a.ToFidl("key"), StringPropertyIs("key", "test"));
   a.Set("test2");
-  EXPECT_THAT(a.ToFidl("key"), StringProperty("key", "test2"));
+  EXPECT_THAT(a.ToFidl("key"), StringPropertyIs("key", "test2"));
 }
 
 TEST(Property, VectorValue) {
@@ -30,21 +31,21 @@ TEST(Property, VectorValue) {
 
   Property a(test_vector);
 
-  EXPECT_THAT(a.ToFidl("key"), ByteVectorProperty("key", test_vector));
+  EXPECT_THAT(a.ToFidl("key"), ByteVectorPropertyIs("key", test_vector));
   test_vector.push_back('a');
   a.Set(test_vector);
-  EXPECT_THAT(a.ToFidl("key"), ByteVectorProperty("key", test_vector));
+  EXPECT_THAT(a.ToFidl("key"), ByteVectorPropertyIs("key", test_vector));
 }
 
 TEST(Property, StringCallback) {
   Property a([] { return std::string("test"); });
 
   // Check callback is called.
-  EXPECT_THAT(a.ToFidl("key"), StringProperty("key", "test"));
+  EXPECT_THAT(a.ToFidl("key"), StringPropertyIs("key", "test"));
 
   // Set to new callback, cancelling token. New value should be present.
   a.Set([] { return std::string("test2"); });
-  EXPECT_THAT(a.ToFidl("key"), StringProperty("key", "test2"));
+  EXPECT_THAT(a.ToFidl("key"), StringPropertyIs("key", "test2"));
 }
 
 TEST(Property, VectorCallback) {
@@ -52,59 +53,59 @@ TEST(Property, VectorCallback) {
 
   // Check callback is called.
   EXPECT_THAT(a.ToFidl("key"),
-              ByteVectorProperty("key", Property::ByteVector(2, 'a')));
+              ByteVectorPropertyIs("key", Property::ByteVector(2, 'a')));
 
   // Set to new callback, cancelling token. New value should be present.
   a.Set([] { return Property::ByteVector(2, 'b'); });
   EXPECT_THAT(a.ToFidl("key"),
-              ByteVectorProperty("key", Property::ByteVector(2, 'b')));
+              ByteVectorPropertyIs("key", Property::ByteVector(2, 'b')));
 }
 
 TEST(Metric, SetValue) {
   Metric a;
 
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", 0));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", 0));
 
   a.SetInt(-10);
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", -10));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", -10));
 
   a.SetUInt(1000);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 1000));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 1000));
 
   a.SetDouble(1.25);
-  EXPECT_THAT(a.ToFidl("key"), DoubleMetric("key", 1.25));
+  EXPECT_THAT(a.ToFidl("key"), DoubleMetricIs("key", 1.25));
 }
 
 TEST(Metric, Arithmetic) {
   Metric a;
 
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", 0));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", 0));
 
   a.Sub(10);
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", -10));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", -10));
   a.Sub(1.5);
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", -11));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", -11));
 
   a.SetUInt(0);
   a.Add(1);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 1));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 1));
   // Check that overflowing works properly.
   // Subtracting below 0 should wrap around.
   // Adding and subtracting by a double should also wrap.
   a.Sub(2);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 0xFFFFFFFFFFFFFFFF));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 0xFFFFFFFFFFFFFFFF));
   a.Add(2.12);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 1));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 1));
   a.Sub(2.12);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 0xFFFFFFFFFFFFFFFF));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 0xFFFFFFFFFFFFFFFF));
   a.Add(-1);
-  EXPECT_THAT(a.ToFidl("key"), UIntMetric("key", 0xFFFFFFFFFFFFFFFE));
+  EXPECT_THAT(a.ToFidl("key"), UIntMetricIs("key", 0xFFFFFFFFFFFFFFFE));
 
   a.SetDouble(1.25);
   a.Add(0.5);
-  EXPECT_THAT(a.ToFidl("key"), DoubleMetric("key", 1.75));
+  EXPECT_THAT(a.ToFidl("key"), DoubleMetricIs("key", 1.75));
   a.Sub(1);
-  EXPECT_THAT(a.ToFidl("key"), DoubleMetric("key", 0.75));
+  EXPECT_THAT(a.ToFidl("key"), DoubleMetricIs("key", 0.75));
 }
 
 TEST(Metric, ValueCallback) {
@@ -112,11 +113,11 @@ TEST(Metric, ValueCallback) {
       [](Metric* out_metric) { out_metric->SetInt(10); });
 
   // Check callback is called.
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", 10));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", 10));
 
   // Set to new callback, cancelling token. New value should be present.
   a.SetCallback([](Metric* out_metric) { out_metric->SetInt(11); });
-  EXPECT_THAT(a.ToFidl("key"), IntMetric("key", 11));
+  EXPECT_THAT(a.ToFidl("key"), IntMetricIs("key", 11));
 }
 
 TEST(Object, Name) {
@@ -134,13 +135,13 @@ TEST(Object, ReadData) {
   fuchsia::inspect::Object obj;
   object->ReadData(
       [&obj](fuchsia::inspect::Object val) { obj = std::move(val); });
-  EXPECT_STREQ("test", obj.name.c_str());
-  EXPECT_THAT(*obj.properties,
-              UnorderedElementsAre(StringProperty("property", "value")));
-  EXPECT_THAT(*obj.metrics,
-              UnorderedElementsAre(IntMetric("int metric", -10),
-                                   UIntMetric("uint metric", 0xFF),
-                                   DoubleMetric("double metric", 0.25)));
+  EXPECT_THAT(obj, AllOf(NameMatches("test"),
+                         PropertyList(UnorderedElementsAre(
+                             StringPropertyIs("property", "value"))),
+                         MetricList(UnorderedElementsAre(
+                             IntMetricIs("int metric", -10),
+                             UIntMetricIs("uint metric", 0xFF),
+                             DoubleMetricIs("double metric", 0.25)))));
 }
 
 component::Object::StringOutputVector ListChildren(

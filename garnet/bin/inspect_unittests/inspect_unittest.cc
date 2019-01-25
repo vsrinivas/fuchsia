@@ -5,15 +5,17 @@
 #include <fuchsia/inspect/cpp/fidl.h>
 #include <lib/fit/defer.h>
 #include <lib/inspect/inspect.h>
+#include <lib/inspect/testing/inspect.h>
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
-#include "matchers.h"
 
 namespace {
 
 using inspect::Object;
+using testing::AllOf;
 using testing::IsEmpty;
 using testing::UnorderedElementsAre;
+using namespace inspect::testing;
 
 TEST(Inspect, Object) {
   Object obj("test");
@@ -62,8 +64,9 @@ TEST(Inspect, ChildChaining) {
   {
     ValueWrapper v(root.CreateChild("child"), 100);
     EXPECT_THAT(*root.children(), UnorderedElementsAre("child"));
-    EXPECT_THAT(*v.object().object().metrics,
-                UnorderedElementsAre(IntMetric("value", 100)));
+    EXPECT_THAT(
+        v.object().object(),
+        AllOf(MetricList(UnorderedElementsAre(IntMetricIs("value", 100)))));
   }
   // Check that the child is removed when it goes out of scope.
   EXPECT_THAT(*root.children(), IsEmpty());
@@ -107,37 +110,40 @@ TEST(Inspect, Metrics) {
     auto metric_double = root.CreateDoubleMetric("double", 0.25);
     metric_double.Add(1);
     metric_double.Subtract(0.5);
-    EXPECT_THAT(
-        *root.object().metrics,
-        UnorderedElementsAre(IntMetric("int", -9), UIntMetric("uint", 9),
-                             DoubleMetric("double", 0.75)));
+    EXPECT_THAT(root.object(),
+                AllOf(MetricList(UnorderedElementsAre(
+                    IntMetricIs("int", -9), UIntMetricIs("uint", 9),
+                    DoubleMetricIs("double", 0.75)))));
   }
   // Check that the metrics are removed when they goes out of scope.
-  EXPECT_THAT(*root.object().metrics, IsEmpty());
+  EXPECT_THAT(root.object(), AllOf(MetricList(IsEmpty())));
 
   {
     // Test that a later metric overwrites an earlier metric with the same name.
     auto metric_int = root.CreateIntMetric("value", -10);
     auto metric_uint = root.CreateUIntMetric("value", 10);
-    EXPECT_THAT(*root.object().metrics,
-                UnorderedElementsAre(UIntMetric("value", 10)));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(MetricList(UnorderedElementsAre(UIntMetricIs("value", 10)))));
 
     // Deleting any of the owners deletes the value.
     metric_int = root.CreateIntMetric("other", 0);
-    EXPECT_THAT(*root.object().metrics,
-                UnorderedElementsAre(IntMetric("other", 0)));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(MetricList(UnorderedElementsAre(IntMetricIs("other", 0)))));
 
     // Adding to the deleted value does nothing.
     metric_uint.Add(100);
-    EXPECT_THAT(*root.object().metrics,
-                UnorderedElementsAre(IntMetric("other", 0)));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(MetricList(UnorderedElementsAre(IntMetricIs("other", 0)))));
 
     // Setting the deleted value recreates it.
     // TODO(CF-275): Fix this behavior.
     metric_uint.Set(100);
-    EXPECT_THAT(
-        *root.object().metrics,
-        UnorderedElementsAre(UIntMetric("value", 100), IntMetric("other", 0)));
+    EXPECT_THAT(root.object(),
+                AllOf(MetricList(UnorderedElementsAre(
+                    UIntMetricIs("value", 100), IntMetricIs("other", 0)))));
   }
 }
 
@@ -153,15 +159,17 @@ TEST(Inspect, MetricCallbacks) {
         [defer = std::move(defer), &metric_value](component::Metric* value) {
           value->SetInt(metric_value++);
         });
-    EXPECT_THAT(*root.object().metrics,
-                UnorderedElementsAre(IntMetric("value", -100)));
-    EXPECT_THAT(*root.object().metrics,
-                UnorderedElementsAre(IntMetric("value", -99)));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(MetricList(UnorderedElementsAre(IntMetricIs("value", -100)))));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(MetricList(UnorderedElementsAre(IntMetricIs("value", -99)))));
     EXPECT_FALSE(defer_called);
   }
   // Check that the callback is removed and destroyed (defer called) when it
   // goes out of scope.
-  EXPECT_THAT(*root.object().metrics, IsEmpty());
+  EXPECT_THAT(root.object(), AllOf(MetricList(IsEmpty())));
   EXPECT_TRUE(defer_called);
 }
 
@@ -172,33 +180,34 @@ TEST(Inspect, Properties) {
     property_string.Set("valid");
     auto property_vector =
         root.CreateByteVectorProperty("vec", inspect::VectorValue(3, 'a'));
-    EXPECT_THAT(*root.object().properties,
-                UnorderedElementsAre(
-                    StringProperty("str", "valid"),
-                    ByteVectorProperty("vec", inspect::VectorValue(3, 'a'))));
+    EXPECT_THAT(
+        root.object(),
+        AllOf(PropertyList(UnorderedElementsAre(
+            StringPropertyIs("str", "valid"),
+            ByteVectorPropertyIs("vec", inspect::VectorValue(3, 'a'))))));
   }
   // Check that the properties are removed when they goes out of scope.
-  EXPECT_THAT(*root.object().properties, IsEmpty());
+  EXPECT_THAT(root.object(), AllOf(PropertyList(IsEmpty())));
 
   {
     // Test that a later property overwrites an earlier property with the same
     // name.
     auto property_string = root.CreateStringProperty("string", "a");
     auto property_other = root.CreateStringProperty("string", "b");
-    EXPECT_THAT(*root.object().properties,
-                UnorderedElementsAre(StringProperty("string", "b")));
+    EXPECT_THAT(root.object(), AllOf(PropertyList(UnorderedElementsAre(
+                                   StringPropertyIs("string", "b")))));
 
     // Deleting any of the owners deletes the value.
     property_string = root.CreateStringProperty("not_string", "b");
-    EXPECT_THAT(*root.object().properties,
-                UnorderedElementsAre(StringProperty("not_string", "b")));
+    EXPECT_THAT(root.object(), AllOf(PropertyList(UnorderedElementsAre(
+                                   StringPropertyIs("not_string", "b")))));
 
     // Setting the deleted value recreates it.
     // TODO(CF-275): Fix this behavior.
     property_other.Set("c");
-    EXPECT_THAT(*root.object().properties,
-                UnorderedElementsAre(StringProperty("not_string", "b"),
-                                     StringProperty("string", "c")));
+    EXPECT_THAT(root.object(), AllOf(PropertyList(UnorderedElementsAre(
+                                   StringPropertyIs("not_string", "b"),
+                                   StringPropertyIs("string", "c")))));
   }
 }
 
@@ -222,15 +231,15 @@ TEST(Inspect, PropertyCallbacks) {
           return vec;
         });
     EXPECT_THAT(
-        *root.object().properties,
-        UnorderedElementsAre(
-            StringProperty("string", "12"),
-            ByteVectorProperty("vector", inspect::VectorValue(4, 'a'))));
+        root.object(),
+        AllOf(PropertyList(UnorderedElementsAre(
+            StringPropertyIs("string", "12"),
+            ByteVectorPropertyIs("vector", inspect::VectorValue(4, 'a'))))));
     EXPECT_THAT(
-        *root.object().properties,
-        UnorderedElementsAre(
-            StringProperty("string", "122"),
-            ByteVectorProperty("vector", inspect::VectorValue(5, 'a'))));
+        root.object(),
+        AllOf(PropertyList(UnorderedElementsAre(
+            StringPropertyIs("string", "122"),
+            ByteVectorPropertyIs("vector", inspect::VectorValue(5, 'a'))))));
     EXPECT_FALSE(defer_called1);
     EXPECT_FALSE(defer_called2);
   }
