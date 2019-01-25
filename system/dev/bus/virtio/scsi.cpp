@@ -107,20 +107,28 @@ zx_status_t ScsiDevice::WorkerThread() {
     fbl::AutoLock lock(&lock_);
 
     // Execute TEST UNIT READY on every possible target to find potential disks.
+    // TODO(ZX-2314): For SCSI-3 targets, we could optimize this by using REPORT LUNS.
+    //
+    // virtio-scsi nominally supports multiple channels, but the device support is not
+    // complete. The device encoding for targets in commands does not allow encoding the
+    // channel number, so we do not attempt to scan beyond channel 0 here.
+    //
+    // QEMU and GCE disagree on the definition of the max_target and max_lun config fields;
+    // QEMU's max_target/max_lun refer to the last valid whereas GCE's refers to the first
+    // invalid target/lun. Use <= to handle both.
+    //
     // TODO(ZX-2314): Move probe sequence to ScsiLib -- have it call down into LLDs to execute
     // commands.
-    for (auto channel = 0u; channel < config_.max_channel; channel++) {
-        for (uint8_t target = 0u; target < config_.max_target; target++) {
-            for (uint16_t lun = 0u; lun < config_.max_lun; lun++) {
-                scsi::TestUnitReadyCDB cdb = {};
-                cdb.opcode = scsi::Opcode::TEST_UNIT_READY;
+    for (uint8_t target = 0u; target <= config_.max_target; target++) {
+        for (uint16_t lun = 0u; lun <= config_.max_lun; lun++) {
+            scsi::TestUnitReadyCDB cdb = {};
+            cdb.opcode = scsi::Opcode::TEST_UNIT_READY;
 
-                auto status = ExecuteCommandSync(
-                    /*target=*/target,
-                    /*lun=*/lun, reinterpret_cast<uint8_t*>(&cdb), sizeof(cdb));
-                if (status == ZX_OK) {
-                    scsi::Disk::Create(device_, /*target=*/target, /*lun=*/lun);
-                }
+            auto status = ExecuteCommandSync(
+                /*target=*/target,
+                /*lun=*/lun, reinterpret_cast<uint8_t*>(&cdb), sizeof(cdb));
+            if (status == ZX_OK) {
+                scsi::Disk::Create(device_, /*target=*/target, /*lun=*/lun);
             }
         }
     }
@@ -152,6 +160,14 @@ zx_status_t ScsiDevice::Init() {
                                        &config_.max_target);
     Device::ReadDeviceConfig<uint32_t>(offsetof(virtio_scsi_config, max_lun),
                                        &config_.max_lun);
+
+    // Validate config.
+    {
+        fbl::AutoLock lock(&lock_);
+        if (config_.max_channel > 1) {
+            zxlogf(WARN, "config_.max_channel %d not expected.\n", config_.max_channel);
+        }
+    }
 
     Device::DriverStatusAck();
 
