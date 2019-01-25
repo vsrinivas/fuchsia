@@ -71,7 +71,7 @@ class Device : public ::fuchsia::wlan::mlme::MLME {
     void DisassociateConf(wlanif_disassoc_confirm_t* resp);
     void DisassociateInd(wlanif_disassoc_indication_t* ind);
     void StartConf(wlanif_start_confirm_t* resp);
-    void StopConf();
+    void StopConf(wlanif_stop_confirm_t* resp);
     void EapolConf(wlanif_eapol_confirm_t* resp);
     void SignalReport(wlanif_signal_report_indication_t* ind);
     void EapolInd(wlanif_eapol_indication_t* ind);

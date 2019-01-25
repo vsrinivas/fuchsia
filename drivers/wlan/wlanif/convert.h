@@ -40,6 +40,7 @@ uint8_t ConvertAuthResultCode(::fuchsia::wlan::mlme::AuthenticateResultCodes res
 ::fuchsia::wlan::mlme::AssociateResultCodes ConvertAssocResultCode(uint8_t code);
 uint8_t ConvertAssocResultCode(::fuchsia::wlan::mlme::AssociateResultCodes code);
 ::fuchsia::wlan::mlme::StartResultCodes ConvertStartResultCode(uint8_t code);
+::fuchsia::wlan::mlme::StopResultCodes ConvertStopResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::EapolResultCodes ConvertEapolResultCode(uint8_t code);
 ::fuchsia::wlan::mlme::MacRole ConvertMacRole(uint8_t role);
 void ConvertBandCapabilities(::fuchsia::wlan::mlme::BandCapabilities* fidl_band,

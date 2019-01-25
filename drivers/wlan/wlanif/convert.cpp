@@ -791,6 +791,19 @@ wlan_mlme::StartResultCodes ConvertStartResultCode(uint8_t code) {
     }
 }
 
+wlan_mlme::StopResultCodes ConvertStopResultCode(uint8_t code) {
+    switch (code) {
+    case WLAN_STOP_RESULT_SUCCESS:
+        return wlan_mlme::StopResultCodes::SUCCESS;
+    case WLAN_STOP_RESULT_BSS_ALREADY_STOPPED:
+        return wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED;
+    case WLAN_STOP_RESULT_INTERNAL_ERROR:
+        return wlan_mlme::StopResultCodes::INTERNAL_ERROR;
+    default:
+        ZX_ASSERT(0);
+    }
+}
+
 wlan_mlme::EapolResultCodes ConvertEapolResultCode(uint8_t code) {
     switch (code) {
     case WLAN_EAPOL_RESULT_SUCCESS:

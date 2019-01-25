@@ -342,6 +342,16 @@ typedef struct wlanif_start_confirm {
 } wlanif_start_confirm_t;
 
 enum {
+    WLAN_STOP_RESULT_SUCCESS = 0,
+    WLAN_STOP_RESULT_BSS_ALREADY_STOPPED = 1,
+    WLAN_STOP_RESULT_INTERNAL_ERROR = 2,
+};
+
+typedef struct wlanif_stop_confirm {
+    uint8_t result_code;  // WLAN_STOP_RESULT_*
+} wlanif_stop_confirm_t;
+
+enum {
     WLAN_EAPOL_RESULT_SUCCESS = 0,
     WLAN_EAPOL_RESULT_TRANSMISSION_FAILURE = 1,
 };
@@ -463,7 +473,7 @@ typedef struct wlanif_impl_ifc {
     void (*disassoc_conf)(void* cookie, wlanif_disassoc_confirm_t* resp);
     void (*disassoc_ind)(void* cookie, wlanif_disassoc_indication_t* ind);
     void (*start_conf)(void* cookie, wlanif_start_confirm_t* resp);
-    void (*stop_conf)(void* cookie);
+    void (*stop_conf)(void* cookie, wlanif_stop_confirm_t* resp);
     void (*eapol_conf)(void* cookie, wlanif_eapol_confirm_t* resp);
 
     // MLME extensions

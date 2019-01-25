@@ -74,8 +74,8 @@ static wlanif_impl_ifc_t wlanif_impl_ifc_ops = {
                         { DEV(cookie)->DisassociateInd(ind); },
     .start_conf = [](void* cookie, wlanif_start_confirm_t* resp)
                       { DEV(cookie)->StartConf(resp); },
-    .stop_conf = [](void* cookie)
-                     { DEV(cookie)->StopConf(); },
+    .stop_conf = [](void* cookie, wlanif_stop_confirm_t* resp)
+                     { DEV(cookie)->StopConf(resp); },
     .eapol_conf = [](void* cookie, wlanif_eapol_confirm_t* resp)
                       { DEV(cookie)->EapolConf(resp); },
 
@@ -840,16 +840,19 @@ void Device::StartConf(wlanif_start_confirm_t* resp) {
     binding_.events().StartConf(std::move(fidl_resp));
 }
 
-void Device::StopConf() {
+void Device::StopConf(wlanif_stop_confirm_t* resp) {
     std::lock_guard<std::mutex> lock(lock_);
 
-    SetEthmacStatusLocked(false);
+    if (resp->result_code == WLAN_STOP_RESULT_SUCCESS) { SetEthmacStatusLocked(false); }
 
     if (!binding_.is_bound()) {
         return;
     }
 
-    binding_.events().StopConf();
+    wlan_mlme::StopConfirm fidl_resp;
+    fidl_resp.result_code = ConvertStopResultCode(resp->result_code);
+
+    binding_.events().StopConf(fidl_resp);
 }
 
 void Device::EapolConf(wlanif_eapol_confirm_t* resp) {

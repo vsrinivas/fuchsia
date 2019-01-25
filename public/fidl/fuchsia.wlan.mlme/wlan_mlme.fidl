@@ -712,6 +712,16 @@ struct StopRequest {
     vector<uint8>:32 ssid;
 };
 
+enum StopResultCodes {
+    SUCCESS = 0;
+    BSS_ALREADY_STOPPED = 1;
+    INTERNAL_ERROR = 2;
+};
+
+struct StopConfirm {
+    StopResultCodes result_code;
+};
+
 // MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
 
 enum KeyType {
@@ -874,7 +884,7 @@ interface MLME {
     -> StartConf(StartConfirm resp);
 
     StopReq(StopRequest req);
-    -> StopConf();
+    -> StopConf(StopConfirm resp);
 
     SetKeysReq(SetKeysRequest req);
 
