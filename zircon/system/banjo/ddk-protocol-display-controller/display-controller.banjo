@@ -11,6 +11,11 @@ using zx;
 enum ZxPixelFormat : uint32 {
 };
 
+// using ZxUnownedHandle = uint32;
+// TODO(ZX-3369) replace with normal banjo type.
+enum ZxUnownedHandle : uint32 {
+};
+
 /// The image is linear and VMO backed.
 const uint32 IMAGE_TYPE_SIMPLE = 0;
 
@@ -391,4 +396,11 @@ interface DisplayControllerImpl {
     /// Allocates a VMO of the requested size which can be used for images.
     // TODO: move this functionality into a seperate video buffer management system.
     AllocateVmo(uint64 size) -> (zx.status s, handle<vmo> vmo);
+
+    // Connects the handle to the sysmem service.
+    GetSysmemConnection(handle<channel> sysmem_handle) -> (zx.status s);
+
+    // Set sysmem buffer collection contraints needed to ensure an image can be imported with config
+    // |config| on the fuchsia.sysmem.BufferCollection handle |collection|.
+    SetBufferCollectionConstraints(Image config, ZxUnownedHandle collection) -> (zx.status s);
 };

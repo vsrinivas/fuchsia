@@ -14,11 +14,12 @@
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/device.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/sysmem/c/fidl.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
 #include <stdint.h>
@@ -322,6 +323,69 @@ static zx_status_t allocate_vmo(void* ctx, uint64_t size, zx_handle_t* vmo_out) 
     return status;
 }
 
+static zx_status_t get_sysmem_connection(void* ctx, zx_handle_t handle) {
+    vim2_display_t* display = static_cast<vim2_display_t*>(ctx);
+    zx::channel request_handle(handle);
+
+    zx_status_t status = sysmem_connect(&display->sysmem, request_handle.release());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not connect to sysmem\n");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+static zx_status_t set_buffer_collection_constraints(
+    void* ctx, const image_t* config, uint32_t client_endpoint) {
+    fuchsia_sysmem_BufferCollectionConstraints constraints = {};
+    constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
+    constraints.has_buffer_memory_constraints = true;
+    fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
+        constraints.buffer_memory_constraints;
+    buffer_constraints.min_size_bytes = 0;
+    buffer_constraints.max_size_bytes = 0xffffffff;
+    buffer_constraints.physically_contiguous_required = true;
+    buffer_constraints.secure_required = false;
+    buffer_constraints.secure_permitted = false;
+    constraints.image_format_constraints_count = 1;
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
+    if (config->pixel_format == ZX_PIXEL_FORMAT_NV12) {
+        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
+        image_constraints.color_spaces_count = 1;
+        image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_REC709;
+    } else {
+        image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+        image_constraints.color_spaces_count = 1;
+        image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+    }
+    image_constraints.min_coded_width = 0;
+    image_constraints.max_coded_width = 0xffffffff;
+    image_constraints.min_coded_height = 0;
+    image_constraints.max_coded_height = 0xffffffff;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = 32;
+    image_constraints.start_offset_divisor = 32;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+
+    zx_status_t status = fuchsia_sysmem_BufferCollectionSetConstraints(client_endpoint, true,
+                                                                       &constraints);
+
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to set constraints");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 static display_controller_impl_protocol_ops_t display_controller_ops = {
     .set_display_controller_interface = vim_set_display_controller_interface,
     .import_vmo_image = vim_import_vmo_image,
@@ -330,6 +394,8 @@ static display_controller_impl_protocol_ops_t display_controller_ops = {
     .apply_configuration = vim_apply_configuration,
     .compute_linear_stride = vim_compute_linear_stride,
     .allocate_vmo = allocate_vmo,
+    .get_sysmem_connection = get_sysmem_connection,
+    .set_buffer_collection_constraints = set_buffer_collection_constraints,
 };
 
 static uint32_t get_bus_count(void* ctx) {
@@ -684,6 +750,12 @@ zx_status_t vim2_display_bind(void* ctx, zx_device_t* parent) {
     status = device_get_protocol(parent, ZX_PROTOCOL_AMLOGIC_CANVAS, &display->canvas);
     if (status != ZX_OK) {
         DISP_ERROR("Could not get Display CANVAS protocol\n");
+        return status;
+    }
+
+    status = device_get_protocol(parent, ZX_PROTOCOL_SYSMEM, &display->sysmem);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get Display SYSMEM protocol\n");
         return status;
     }
 

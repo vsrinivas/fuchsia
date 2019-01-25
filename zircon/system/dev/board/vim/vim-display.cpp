@@ -77,6 +77,7 @@ static const pbus_bti_t vim_display_btis[] = {
 };
 
 static const uint32_t vim_display_protocols[] = {
+    ZX_PROTOCOL_SYSMEM,
     ZX_PROTOCOL_AMLOGIC_CANVAS,
 };
 

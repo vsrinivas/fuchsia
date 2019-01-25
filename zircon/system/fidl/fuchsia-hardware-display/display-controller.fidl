@@ -414,4 +414,16 @@ interface Controller {
     // Allocates a VMO of the requested size which can be used for images.
     // TODO: move this into a separate video buffer management system.
     AllocateVmo(uint64 size) -> (zx.status res, handle<vmo>? vmo);
+
+    // Import a sysmem buffer collection token. |collection_id| must not
+    // already be in use.
+    // TODO: Use fuchsia.sysmem.BufferCollectionToken after GN conversion.
+    ImportBufferCollection(uint64 collection_id, handle collection_token) -> (zx.status res);
+
+    // Release an imported buffer collection.
+    ReleaseBufferCollection(uint64 collection_id) -> (zx.status res);
+
+    // Takes an imported buffer collection and sets the constraints
+    // on it so that it can be imported with a specific config.
+    SetBufferCollectionConstraints(uint64 collection_id, ImageConfig config) -> (zx.status res);
 };

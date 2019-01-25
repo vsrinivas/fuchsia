@@ -50,6 +50,13 @@ public:
                                                  size_t display_count);
     uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
+    zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+    zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
+                                                                    uint32_t collection) {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
 
     // Required functions for DeviceType
     void DdkUnbind();

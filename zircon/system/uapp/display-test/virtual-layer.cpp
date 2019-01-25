@@ -109,11 +109,21 @@ bool PrimaryLayer::Init(zx_handle_t dc_handle) {
     uint32_t fg_color = get_fg_color();
     uint32_t bg_color = alpha_enable_ ? 0x3fffffff : 0xffffffff;
 
+#if defined(USE_SYSMEM)
+    images_[0] = Image::CreateWithSysmem(
+        dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+#else
     images_[0] = Image::Create(
             dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+#endif
     if (layer_flipping_) {
+#if defined(USE_SYSMEM)
+        images_[1] = Image::CreateWithSysmem(
+            dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+#else
         images_[1] = Image::Create(
                 dc_handle, image_width_, image_height_, image_format_, fg_color, bg_color, false);
+#endif
     } else {
         images_[0]->Render(-1, -1);
     }

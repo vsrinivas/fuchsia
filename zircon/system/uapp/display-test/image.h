@@ -38,6 +38,10 @@ typedef struct image_import {
 
 class Image {
 public:
+    static Image* CreateWithSysmem(zx_handle_t dc_handle,
+                                   uint32_t width, uint32_t height, zx_pixel_format_t format,
+                                   uint32_t fg_color, uint32_t bg_color, bool cursor);
+
     static Image* Create(zx_handle_t dc_handle,
                          uint32_t width, uint32_t height, zx_pixel_format_t format,
                          uint32_t fg_color, uint32_t bg_color, bool cursor);

@@ -28,6 +28,7 @@ MODULE_STATIC_LIBS := system/dev/audio/lib/simple-audio-stream \
                       system/ulib/digest \
                       system/ulib/dispatcher-pool \
                       system/ulib/sync \
+                      system/ulib/fidl \
                       system/ulib/fbl \
                       system/ulib/fzl \
                       system/ulib/hwreg \
@@ -41,6 +42,7 @@ MODULE_LIBS := system/ulib/driver \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-amlogiccanvas \
+    system/banjo/ddk-protocol-sysmem \
     system/banjo/ddk-protocol-display-controller \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-i2cimpl \
@@ -48,5 +50,7 @@ MODULE_BANJO_LIBS := \
 
 MODULE_HEADER_DEPS := \
     system/dev/lib/amlogic
+
+MODULE_FIDL_LIBS := system/fidl/fuchsia-sysmem
 
 include make/module.mk
