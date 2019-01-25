@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_MDNS_UTIL_FORMATTING_H_
-#define GARNET_BIN_MDNS_UTIL_FORMATTING_H_
+#ifndef GARNET_BIN_MDNS_TOOL_FORMATTING_H_
+#define GARNET_BIN_MDNS_TOOL_FORMATTING_H_
 
 #include <iomanip>
 #include <iostream>
@@ -30,10 +30,10 @@ std::ostream& operator<<(std::ostream& os, const fidl::VectorPtr<T>& value) {
 }
 
 std::ostream& operator<<(std::ostream& os,
-                         const fuchsia::mdns::ServiceInstance& value);
+                         const fuchsia::mdns::MdnsServiceInstance& value);
 std::ostream& operator<<(std::ostream& os,
                          const fuchsia::netstack::SocketAddress& value);
 
 }  // namespace mdns
 
-#endif  // GARNET_BIN_MDNS_UTIL_FORMATTING_H_
+#endif  // GARNET_BIN_MDNS_TOOL_FORMATTING_H_

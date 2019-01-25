@@ -4,7 +4,7 @@
     },
     "sandbox": {
         "services": [
-            "fuchsia.mdns.Controller",
+            "fuchsia.mdns.MdnsService",
             "fuchsia.net.LegacySocketProvider",
             "fuchsia.netconnector.NetConnector",
             "fuchsia.netstack.Netstack",

@@ -17,14 +17,14 @@ class MdnsFidlUtil {
  public:
   static const std::string kFuchsiaServiceName;
 
-  static fuchsia::mdns::ServiceInstancePtr CreateServiceInstance(
+  static fuchsia::mdns::MdnsServiceInstancePtr CreateServiceInstance(
       const std::string& service_name, const std::string& instance_name,
       const inet::SocketAddress& v4_address,
       const inet::SocketAddress& v6_address,
       const std::vector<std::string>& text);
 
   static void UpdateServiceInstance(
-      const fuchsia::mdns::ServiceInstancePtr& service_instance,
+      const fuchsia::mdns::MdnsServiceInstancePtr& service_instance,
       const inet::SocketAddress& v4_address,
       const inet::SocketAddress& v6_address,
       const std::vector<std::string>& text);
@@ -44,7 +44,7 @@ class MdnsFidlUtil {
   static inet::IpAddress IpAddressFrom(const fuchsia::net::IpAddress* addr);
 
   static std::unique_ptr<Mdns::Publication> Convert(
-      const fuchsia::mdns::PublicationPtr& publication_ptr);
+      const fuchsia::mdns::MdnsPublicationPtr& publication_ptr);
 };
 
 }  // namespace mdns

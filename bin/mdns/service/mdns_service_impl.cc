@@ -67,8 +67,8 @@ void MdnsServiceImpl::Start() {
   // TODO(dalesat): Make this a config item or delegate to another party.
   PublishServiceInstance(
       kPublishAs, host_name, kPublishPort, fidl::VectorPtr<std::string>(),
-      [this](fuchsia::mdns::Result result) {
-        if (result != fuchsia::mdns::Result::OK) {
+      [this](fuchsia::mdns::MdnsResult result) {
+        if (result != fuchsia::mdns::MdnsResult::OK) {
           FXL_LOG(ERROR) << "Failed to publish as " << kPublishAs << ", result "
                          << static_cast<uint32_t>(result);
         }
@@ -96,7 +96,7 @@ void MdnsServiceImpl::ResolveHostName(std::string host_name,
 
 void MdnsServiceImpl::SubscribeToService(
     std::string service_name,
-    fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription>
+    fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription>
         subscription_request) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
     return;
@@ -117,12 +117,12 @@ void MdnsServiceImpl::PublishServiceInstance(
     fidl::VectorPtr<std::string> text,
     PublishServiceInstanceCallback callback) {
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    callback(fuchsia::mdns::Result::INVALID_SERVICE_NAME);
+    callback(fuchsia::mdns::MdnsResult::INVALID_SERVICE_NAME);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    callback(fuchsia::mdns::Result::INVALID_INSTANCE_NAME);
+    callback(fuchsia::mdns::MdnsResult::INVALID_INSTANCE_NAME);
     return;
   }
 
@@ -131,7 +131,7 @@ void MdnsServiceImpl::PublishServiceInstance(
 
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {
-    callback(fuchsia::mdns::Result::ALREADY_PUBLISHED_LOCALLY);
+    callback(fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY);
     return;
   }
 
@@ -165,19 +165,21 @@ void MdnsServiceImpl::UnpublishServiceInstance(std::string service_name,
 
 void MdnsServiceImpl::AddResponder(
     std::string service_name, std::string instance_name,
-    fidl::InterfaceHandle<fuchsia::mdns::Responder> responder_handle) {
+    fidl::InterfaceHandle<fuchsia::mdns::MdnsResponder> responder_handle) {
   FXL_DCHECK(responder_handle);
 
   auto responder_ptr = responder_handle.Bind();
   FXL_DCHECK(responder_ptr);
 
   if (!MdnsNames::IsValidServiceName(service_name)) {
-    responder_ptr->UpdateStatus(fuchsia::mdns::Result::INVALID_SERVICE_NAME);
+    responder_ptr->UpdateStatus(
+        fuchsia::mdns::MdnsResult::INVALID_SERVICE_NAME);
     return;
   }
 
   if (!MdnsNames::IsValidInstanceName(instance_name)) {
-    responder_ptr->UpdateStatus(fuchsia::mdns::Result::INVALID_INSTANCE_NAME);
+    responder_ptr->UpdateStatus(
+        fuchsia::mdns::MdnsResult::INVALID_INSTANCE_NAME);
     return;
   }
 
@@ -192,7 +194,7 @@ void MdnsServiceImpl::AddResponder(
   if (!mdns_.PublishServiceInstance(service_name, instance_name,
                                     publisher.get())) {
     publisher->responder_->UpdateStatus(
-        fuchsia::mdns::Result::ALREADY_PUBLISHED_LOCALLY);
+        fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_LOCALLY);
     return;
   }
 
@@ -245,7 +247,7 @@ void MdnsServiceImpl::ReannounceInstance(std::string service_name,
 void MdnsServiceImpl::SetVerbose(bool value) { mdns_.SetVerbose(value); }
 
 MdnsServiceImpl::Subscriber::Subscriber(
-    fidl::InterfaceRequest<fuchsia::mdns::ServiceSubscription> request,
+    fidl::InterfaceRequest<fuchsia::mdns::MdnsServiceSubscription> request,
     fit::closure deleter)
     : binding_(this, std::move(request)) {
   binding_.set_error_handler(
@@ -256,7 +258,7 @@ MdnsServiceImpl::Subscriber::Subscriber(
 
   instances_publisher_.SetCallbackRunner(
       [this](GetInstancesCallback callback, uint64_t version) {
-        std::vector<fuchsia::mdns::ServiceInstance> instances(
+        std::vector<fuchsia::mdns::MdnsServiceInstance> instances(
             instances_by_name_.size());
 
         size_t i = 0;
@@ -314,8 +316,8 @@ MdnsServiceImpl::SimplePublisher::SimplePublisher(
       callback_(std::move(callback)) {}
 
 void MdnsServiceImpl::SimplePublisher::ReportSuccess(bool success) {
-  callback_(success ? fuchsia::mdns::Result::OK
-                    : fuchsia::mdns::Result::ALREADY_PUBLISHED_ON_SUBNET);
+  callback_(success ? fuchsia::mdns::MdnsResult::OK
+                    : fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET);
 }
 
 void MdnsServiceImpl::SimplePublisher::GetPublication(
@@ -325,7 +327,7 @@ void MdnsServiceImpl::SimplePublisher::GetPublication(
 }
 
 MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
-    fuchsia::mdns::ResponderPtr responder, fit::closure deleter)
+    fuchsia::mdns::MdnsResponderPtr responder, fit::closure deleter)
     : responder_(std::move(responder)) {
   FXL_DCHECK(responder_);
 
@@ -339,8 +341,8 @@ MdnsServiceImpl::ResponderPublisher::ResponderPublisher(
 void MdnsServiceImpl::ResponderPublisher::ReportSuccess(bool success) {
   FXL_DCHECK(responder_);
   responder_->UpdateStatus(
-      success ? fuchsia::mdns::Result::OK
-              : fuchsia::mdns::Result::ALREADY_PUBLISHED_ON_SUBNET);
+      success ? fuchsia::mdns::MdnsResult::OK
+              : fuchsia::mdns::MdnsResult::ALREADY_PUBLISHED_ON_SUBNET);
 }
 
 void MdnsServiceImpl::ResponderPublisher::GetPublication(
@@ -349,8 +351,8 @@ void MdnsServiceImpl::ResponderPublisher::GetPublication(
   FXL_DCHECK(responder_);
   responder_->GetPublication(
       query, subtype,
-      [callback =
-           std::move(callback)](fuchsia::mdns::PublicationPtr publication_ptr) {
+      [callback = std::move(callback)](
+          fuchsia::mdns::MdnsPublicationPtr publication_ptr) {
         callback(MdnsFidlUtil::Convert(publication_ptr));
       });
 }
