@@ -8,8 +8,6 @@ import("//peridot/bin/ledger/testing/sync_params.gni")
 visibility = [ "//peridot/bin/ledger/*" ]
 
 package("ledger_benchmarks") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
