@@ -14,7 +14,7 @@
 + [object_set_cookie](syscalls/object_set_cookie.md) - write an object cookie
 + [object_set_property](syscalls/object_set_property.md) - modify an object property
 + [object_signal](syscalls/object_signal.md) - set or clear the user signals on an object
-+ [object_signal_peer](syscalls/object_signal.md) - set or clear the user signals in the opposite end
++ [object_signal_peer](syscalls/object_signal_peer.md) - set or clear the user signals in the opposite end
 + [object_wait_many](syscalls/object_wait_many.md) - wait for signals on multiple objects
 + [object_wait_one](syscalls/object_wait_one.md) - wait for signals on one object
 + [object_wait_async](syscalls/object_wait_async.md) - asynchronous notifications on signal change
