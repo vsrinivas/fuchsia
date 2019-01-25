@@ -42,7 +42,7 @@ namespace {
 
 // The contents of each repository are organized in the following way:
 //   <base_path>
-//   ├── <serialization-version>
+//   ├── <serialization_version>
 //   │   ├── name
 //   │   ├── cache/
 //   │   ├── page_usage_db/
@@ -53,16 +53,19 @@ namespace {
 // - <base_path>/
 //   The base path of this repository. It is defined by the channel given in
 //   |LedgerRepositoryFactory::GetRepository| (see the internal.fidl API).
-// - <base_path>/content/
-//   Contains all the contents of this repository. It is used to store the
-//   `name` file, `page_usage_db/` (see below), and is also used by
-//   |LedgerRepositoryImpl| to store this repository's Ledger instances.
-// - <base_path>/content/name
+// - <base_path>/<serialization_version>/
+//   Stores all the contents of this repository for that serialization
+//   version. It is used to store the `name` file, and subdirectories `cache/`,
+//   `page_usage_db/` and `ledgers/` (see below).
+// - <base_path>/<serialization_version>/name
 //   Stores the name of the repository, which is randomly chosen on creation.
-// - <base_path>/content/cache/
+// - <base_path>/<serialization_version>/cache/
 //   The path used by |LevelDbFactory| as the cache directory.
-// - <base_path>/content/page_usage_db/
+// - <base_path>/<serialization_version>/page_usage_db/
 //   The path used by |DiskCleanupManagerImpl| to store statistics on pages.
+// - <base_path>/<serialization_version>/ledgers/
+//   The path used by |LedgerRepositoryImpl| to store all Ledger instances for
+//   this repository.
 // - <base_path>/staging/
 //   The staging path. Used for removing all contents of this repository.
 //

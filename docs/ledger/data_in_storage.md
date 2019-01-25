@@ -13,7 +13,7 @@ include:
 All data and metadata added in storage are persisted using LevelDB. For each
 [page](data_organization.md#Pages) a separate LevelDB instance is created in a
 dedicated filesystem path of the form:
-`{repo_dir}/content/{ledger_dir}/{page_id_base64}/leveldb`.
+`{repo_dir}/{serialization_version}/ledgers/{ledger_dir}/{page_id_base64}/leveldb`.
 
 Additionally, metadata about all pages of a single user are persisted in a
 separate LevelDB instance. This includes information such as the last time a
