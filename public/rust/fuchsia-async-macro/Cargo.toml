@@ -6,7 +6,7 @@
 name = "fuchsia-async-macro"
 version = "0.1.0"
 edition = "2018"
-license = "BSD-3-Clause"
+license-file = "LICENSE"
 authors = ["rust-fuchsia@fuchsia.com"]
 description = "Procedural macros for writing async entry points in fuchsia"
 repository = "https://fuchsia.googlesource.com"

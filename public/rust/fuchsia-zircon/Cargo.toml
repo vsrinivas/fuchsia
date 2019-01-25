@@ -1,12 +1,11 @@
 # Copyright 2018 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
-cargo-features = ["edition"]
 
 [package]
 name = "fuchsia-zircon"
 version = "0.3.3"
-license = "BSD-3-Clause"
+license-file = "LICENSE"
 authors = ["rust-fuchsia@fuchsia.com"]
 description = "Rust crate for Fuchsia OS"
 repository = "https://fuchsia.googlesource.com"

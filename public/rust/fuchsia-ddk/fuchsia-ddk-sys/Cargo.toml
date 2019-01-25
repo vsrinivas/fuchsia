@@ -1,7 +1,11 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
 [package]
 name = "fuchsia-ddk-sys"
 version = "0.1.0"
-license = "BSD-3-Clause"
+license-file = "LICENSE"
 authors = ["Andrew Walbran <qwandor@google.com>", "Anthony Stange <stange@google.com>"]
 description = "Low-level Rust DDK for the Zircon kernel"
 repository = "https://fuchsia.googlesource.com/ddk-rs/"

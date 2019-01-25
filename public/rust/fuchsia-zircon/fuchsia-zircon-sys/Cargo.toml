@@ -4,7 +4,7 @@
 [package]
 name = "fuchsia-zircon-sys"
 version = "0.3.3"
-license = "BSD-3-Clause"
+license-file = "LICENSE"
 authors = ["rust-fuchsia@fuchsia.com"]
 description = "Rust crate for Fuchsia OS"
 repository = "https://fuchsia.googlesource.com"
