@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"io"
+	"path"
 
 	"fuchsia.googlesource.com/tools/testrunner"
 	"fuchsia.googlesource.com/tools/testsharder"
@@ -65,6 +66,7 @@ type FuchsiaTester struct {
 }
 
 func (t *FuchsiaTester) Test(ctx context.Context, test testsharder.Test, stdout io.Writer, stderr io.Writer) error {
-	test.Command = []string{"runtests", "-t", test.Location, "-o", t.remoteOutputDir + "runtests"}
+	name := path.Base(test.Location)
+	test.Command = []string{"runtests", "-t", name, "-o", t.remoteOutputDir + "runtests"}
 	return t.delegate.Test(ctx, test, stdout, stderr)
 }
