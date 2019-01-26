@@ -12,9 +12,6 @@ import("//build/images/manifest.gni")
 #
 # Parameters
 #
-#   name (optional)
-#     Ignored. Will be removed after a soft transition.
-#
 #   manifest (required)
 #     [path] Defines the manifest source path for this component.
 #
@@ -75,7 +72,6 @@ template("fuchsia_component") {
     component = {
       forward_variables_from(invoker,
                              [
-                               "name",
                                "binary",
                                "data_deps",
                                "deps",
@@ -87,10 +83,6 @@ template("fuchsia_component") {
                                "manifest_dest",
                                "test",
                              ])
-      if (defined(name)) {
-        not_needed([ "name" ])
-      }
-
       assert(defined(manifest),
              "Component $component_label should define manifest")
       manifest_extension = get_path_info(manifest, "extension")
