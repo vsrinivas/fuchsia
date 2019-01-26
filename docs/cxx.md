@@ -122,14 +122,14 @@ also includes [bootloader](../bootloader).  The few C++ standard library
 headers that don't involve `std::` APIs can still be used directly.  See the
 next section.
 
-No other C++ standard headers should be used in kernel code.  Instead, any
-library facilities worthwhile to have in the kernel (such as `std::move`) will
-be provided via kernel-specific APIs (such as `fbl::move`, perhaps eventually
-in a kernel-specific namespace).  The kernel's implementations of these APIs
-may in fact rely on toolchain headers providing `std::` implementations that
-are aliased to kernel API names.  But only those API implementations and very
-special cases in certain library headers should ever use `std::` in source
-code built into the kernel.
+No other C++ standard headers should be used in kernel code.  Instead,
+any library facilities worthwhile to have in the kernel (such as
+`std::move`) are provided via kernel-specific APIs (such as
+`ktl::move`).  The kernel's implementations of these APIs may in fact
+rely on toolchain headers providing `std::` implementations that are
+aliased to kernel API names.  But only those API implementations and
+very special cases in certain library headers should ever use `std::`
+in source code built into the kernel.
 
 #### Universal headers
 
