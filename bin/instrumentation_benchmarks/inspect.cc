@@ -52,12 +52,12 @@ class PropertyItem : public component::ExposedObject {
   void set(ByteVector vector_value) { object_dir().set_prop(kValue, std::move(vector_value)); }
 };
 
-// Measure the time taken to increment an IntMetric.
-bool TestCreationAndDestruction(perftest::RepeatState* state) {
-  state->DeclareStep("CreateMetric");
-  state->DeclareStep("DestroyMetric");
-  state->DeclareStep("CreateProperty");
-  state->DeclareStep("DestroyProperty");
+// Measure the time taken to create and destroy metrics and properties.
+bool TestExposedObjectLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("MetricCreate");
+  state->DeclareStep("MetricDestroy");
+  state->DeclareStep("PropertyCreate");
+  state->DeclareStep("PropertyDestroy");
   while (state->KeepRunning()) {
     {
       NumericItem item;
@@ -73,7 +73,7 @@ bool TestCreationAndDestruction(perftest::RepeatState* state) {
 }
 
 // Measure the time taken to increment an IntMetric.
-bool TestIncrement(perftest::RepeatState* state) {
+bool TestExposedObjectIncrement(perftest::RepeatState* state) {
   NumericItem item;
   while (state->KeepRunning()) {
     item.increment();
@@ -91,7 +91,7 @@ bool TestIncrementPath(perftest::RepeatState* state, ObjectPath path) {
 }
 
 // Measure the time taken to change a String property.
-bool TestString(perftest::RepeatState* state, int size) {
+bool TestExposedObjectSetString(perftest::RepeatState* state, int size) {
   PropertyItem item;
   std::string string;
   string.resize(size, 'a');
@@ -102,7 +102,7 @@ bool TestString(perftest::RepeatState* state, int size) {
 }
 
 // Measure the time taken to change a ByteVector property.
-bool TestVector(perftest::RepeatState* state, int size) {
+bool TestExposedObjectSetVector(perftest::RepeatState* state, int size) {
   PropertyItem item;
   ByteVector vector;
   vector.resize(size, 'a');
@@ -112,7 +112,7 @@ bool TestVector(perftest::RepeatState* state, int size) {
   return true;
 }
 
-bool TestParentage(perftest::RepeatState* state) {
+bool TestExposedObjectParenting(perftest::RepeatState* state) {
   NumericItem parent;
   NumericItem child1;
   NumericItem child2;
@@ -145,22 +145,28 @@ bool TestParentage(perftest::RepeatState* state) {
   return true;
 }
 
+// /pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks -p
+
 void RegisterTests() {
-  perftest::RegisterTest("Inspect/CreateDestroy", TestCreationAndDestruction);
-  perftest::RegisterTest("Inspect/Increment", TestIncrement);
-  perftest::RegisterTest("Inspect/Parentage", TestParentage);
-  perftest::RegisterTest("Inspect/Path0", TestIncrementPath, kPath0);
-  perftest::RegisterTest("Inspect/Path1", TestIncrementPath, kPath1);
-  perftest::RegisterTest("Inspect/Path2", TestIncrementPath, kPath2);
-  perftest::RegisterTest("Inspect/Path10", TestIncrementPath, kPath10);
-  perftest::RegisterTest(fxl::StringPrintf("Inspect/String%d", kSmallPropertySize).c_str(),
-                         TestString, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Inspect/String%d", kLargePropertySize).c_str(),
-                         TestString, kLargePropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Inspect/Vector%d", kSmallPropertySize).c_str(),
-                         TestVector, kSmallPropertySize);
-  perftest::RegisterTest(fxl::StringPrintf("Inspect/Vector%d", kLargePropertySize).c_str(),
-                         TestVector, kLargePropertySize);
+  perftest::RegisterTest("Expose/ExposedObject/Lifecycle", TestExposedObjectLifecycle);
+  perftest::RegisterTest("Expose/ExposedObject/Increment", TestExposedObjectIncrement);
+  perftest::RegisterTest("Expose/ExposedObject/Parenting", TestExposedObjectParenting);
+  perftest::RegisterTest("Expose/ExposedObject/Path/0", TestIncrementPath, kPath0);
+  perftest::RegisterTest("Expose/ExposedObject/Path/1", TestIncrementPath, kPath1);
+  perftest::RegisterTest("Expose/ExposedObject/Path/2", TestIncrementPath, kPath2);
+  perftest::RegisterTest("Expose/ExposedObject/Path/10", TestIncrementPath, kPath10);
+  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetString/%d",
+                                           kSmallPropertySize).c_str(),
+                         TestExposedObjectSetString, kSmallPropertySize);
+  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetString/%d",
+                                           kLargePropertySize).c_str(),
+                         TestExposedObjectSetString, kLargePropertySize);
+  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetVector/%d",
+                                           kSmallPropertySize).c_str(),
+                         TestExposedObjectSetVector, kSmallPropertySize);
+  perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetVector/%d",
+                                           kLargePropertySize).c_str(),
+                         TestExposedObjectSetVector, kLargePropertySize);
 }
 PERFTEST_CTOR(RegisterTests);
 
