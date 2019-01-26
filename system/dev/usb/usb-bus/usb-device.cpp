@@ -106,6 +106,10 @@ void UsbDevice::StopCallbackThread() {
 void UsbDevice::RequestComplete(usb_request_t* req) {
     fbl::AutoLock lock(&callback_lock_);
 
+    if (req->cb_on_error_only && req->response.status == ZX_OK) {
+        return;
+    }
+
     // move original request to completed_reqs list so it can be completed on the callback_thread
     UsbRequestInternal* req_int = USB_REQ_TO_DEV_INTERNAL(req, parent_req_size_);
     list_add_tail(&completed_reqs_, &req_int->node);
@@ -293,12 +297,6 @@ void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t
         .ctx = this,
     };
     hci_.RequestQueue(req, &complete);
-}
-
-zx_status_t UsbDevice::UsbConfigureBatchCallback(uint8_t ep_address,
-                                                 const usb_batch_request_complete_t* complete_cb) {
-    // TODO(jocelyndang): implement this.
-    return ZX_ERR_NOT_SUPPORTED;
 }
 
 usb_speed_t UsbDevice::UsbGetSpeed() {

@@ -8,11 +8,6 @@ using ddk.protocol.usb.request;
 using zircon.hw.usb;
 using zx;
 
-[Layout="ddk-callback"]
-interface UsbBatchRequestComplete {
-    Callback(vector<ddk.protocol.usb.request.UsbRequest> reqs) -> ();
-};
-
 [Layout = "ddk-protocol"]
 interface Usb {
     // Initiates a control transfer with the device in the OUT direction.
@@ -26,14 +21,6 @@ interface Usb {
     /// Queues a USB request.
     RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,
                  ddk.protocol.usb.request.UsbRequestComplete? complete_cb) -> ();
-
-    /// Configures an endpoint to batch multiple requests to a single callback.
-    /// Requests will receive a callback if they have set require_batch_cb to true, or an error occurs.
-    ///   ep_address: the endpoint which requests will be queued on.
-    ///   complete_cb: callback for the batch of completed requests.
-    ///   cookie: user data passed to the |complete_cb|.
-    ConfigureBatchCallback(uint8 ep_address, UsbBatchRequestComplete complete_cb)
-                           -> (zx.status status);
 
     /// Returns the speed of the device.
     GetSpeed() -> (zircon.hw.usb.UsbSpeed s);

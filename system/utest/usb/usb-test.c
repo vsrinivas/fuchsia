@@ -197,11 +197,49 @@ static bool usb_isoch_loopback_test(void) {
     END_TEST;
 }
 
+static bool usb_callbacks_opt_out_test(void) {
+    BEGIN_TEST;
+
+    zx_handle_t dev_svc;
+    if (open_test_device(&dev_svc) != ZX_OK) {
+        unittest_printf_critical(" [SKIPPING]");
+        return true;
+    }
+    ASSERT_NE(dev_svc, ZX_HANDLE_INVALID, "Invalid device service handle");
+
+    fuchsia_hardware_usb_tester_IsochTestParams params = {
+        .data_pattern = fuchsia_hardware_usb_tester_DataPatternType_CONSTANT,
+        .num_packets = 64,
+        .packet_size = 1024,
+        .packet_opts_len = params.num_packets
+    };
+    size_t reqs_per_callback = 10;
+    for (size_t i = 0; i < params.num_packets; ++i) {
+        // Set a callback on every 10 requests, and also on the last request.
+        bool set_cb = ((i + 1) % reqs_per_callback == 0) ||
+                      (i == params.num_packets - 1);
+        params.packet_opts[i].set_cb = set_cb;
+        params.packet_opts[i].expect_cb = set_cb;
+    }
+
+    zx_status_t status;
+    fuchsia_hardware_usb_tester_IsochResult result = {};
+    ASSERT_EQ(fuchsia_hardware_usb_tester_DeviceIsochLoopback(dev_svc, &params, &status, &result),
+              ZX_OK, "failed to call DeviceIsochLoopback");
+    ASSERT_EQ(status, ZX_OK, "");
+    ASSERT_TRUE(usb_isoch_verify_result(&result), "callbacks test failed: 10 reqs per callback");
+
+    close(dev_svc);
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(usb_tests)
 RUN_TEST(usb_root_hubs_test)
 RUN_TEST(usb_bulk_loopback_test)
 RUN_TEST(usb_bulk_scatter_gather_test)
 RUN_TEST(usb_isoch_loopback_test)
+RUN_TEST(usb_callbacks_opt_out_test)
 END_TEST_CASE(usb_tests)
 
 int main(int argc, char** argv) {

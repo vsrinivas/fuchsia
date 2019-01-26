@@ -38,17 +38,19 @@ inline uint8_t LSB(int n) { return static_cast<uint8_t>(n & 0xFF); }
 
 namespace usb {
 
-std::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, size_t req_size) {
+std::optional<TestRequest> TestRequest::Create(size_t len, uint8_t ep_address, size_t req_size,
+                                               bool set_cb, bool expect_cb) {
     usb_request_t* usb_req;
     zx_status_t status = usb_request_alloc(&usb_req, len, ep_address, req_size);
     if (status != ZX_OK) {
         return std::nullopt;
     }
-    return TestRequest(usb_req);
+    return TestRequest(usb_req, set_cb, expect_cb);
 }
 
 std::optional<TestRequest> TestRequest::Create(const fuchsia_hardware_usb_tester_SgList& sg_list,
-                                               uint8_t ep_address, size_t req_size) {
+                                               uint8_t ep_address, size_t req_size, bool set_cb,
+                                               bool expect_cb) {
     size_t buffer_size = 0;
     // We need to allocate a usb request buffer that covers all the scatter gather entries.
     for (uint64_t i = 0; i < sg_list.len; ++i) {
@@ -72,10 +74,14 @@ std::optional<TestRequest> TestRequest::Create(const fuchsia_hardware_usb_tester
         usb_request_release(usb_req);
         return std::nullopt;
     }
-    return TestRequest(usb_req);
+    return TestRequest(usb_req, set_cb, expect_cb);
 }
 
-TestRequest::TestRequest(usb_request_t* usb_req) : usb_req_(usb_req) {
+TestRequest::TestRequest(usb_request_t* usb_req, bool set_cb, bool expect_cb)
+    : usb_req_(usb_req),
+      expect_cb_(expect_cb),
+      got_cb_(false) {
+    usb_req_->cb_on_error_only = !set_cb;
 }
 
 TestRequest::~TestRequest() {
@@ -86,7 +92,10 @@ TestRequest::~TestRequest() {
 
 void TestRequest::RequestCompleteCallback(void* ctx, usb_request_t* request) {
     ZX_DEBUG_ASSERT(ctx != nullptr);
-    sync_completion_signal(reinterpret_cast<sync_completion_t*>(ctx));
+    auto test_req = reinterpret_cast<TestRequest*>(ctx);
+    test_req->got_cb_ = true;
+    zxlogf(TRACE, "%p: complete callback\n", request);
+    sync_completion_signal(&test_req->completion_);
 }
 
 zx_status_t TestRequest::WaitComplete(usb_protocol_t* usb) {
@@ -153,19 +162,33 @@ zx_status_t TestRequest::FillData(fuchsia_hardware_usb_tester_DataPatternType da
     return ZX_OK;
 }
 
-zx_status_t UsbTester::AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
-                                     fbl::Vector<TestRequest>* out_test_reqs, size_t req_size) {
+zx_status_t UsbTester::AllocIsochTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
+                                          fbl::Vector<TestRequest>* out_test_reqs, size_t req_size,
+                                          const fuchsia_hardware_usb_tester_PacketOptions* opts,
+                                          size_t opts_len) {
 
     fbl::AllocChecker ac;
     out_test_reqs->reserve(num_reqs, &ac);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
+
+    fuchsia_hardware_usb_tester_PacketOptions default_opts =
+        { .set_cb = true, .set_error = false, .expect_cb = true };
+
     for (size_t i = 0; i < num_reqs; ++i) {
-        auto test_req = TestRequest::Create(len, ep_addr, req_size);
+        auto& req_opts = i < opts_len ? opts[i] : default_opts;
+        auto test_req = TestRequest::Create(len, ep_addr, req_size,
+                                            req_opts.set_cb, req_opts.expect_cb);
         if (!test_req.has_value()) {
             return ZX_ERR_NO_MEMORY;
         }
+        if (req_opts.set_error) {
+            // Zero length isoch requests will fail.
+            test_req->Get()->header.length = 0;
+        }
+        zxlogf(SPEW, "%lu (%p): set callback=%d, set_error=%d expect_cb=%d\n",
+               i, test_req->Get(), req_opts.set_cb, req_opts.set_error, req_opts.expect_cb);
         out_test_reqs->push_back(std::move(test_req.value()));
     }
     return ZX_OK;
@@ -173,7 +196,9 @@ zx_status_t UsbTester::AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_add
 
 void UsbTester::WaitTestReqs(const fbl::Vector<TestRequest>& test_reqs) {
     for (auto& test_req : test_reqs) {
-        test_req.WaitComplete(&usb_);
+        if (test_req.expect_cb()) {
+            test_req.WaitComplete(&usb_);
+        }
     }
 }
 
@@ -342,6 +367,34 @@ zx_status_t UsbTester::VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
     return ZX_OK;
 }
 
+zx_status_t UsbTester::VerifyCallbacks(const fbl::Vector<TestRequest>& reqs) {
+    size_t num_cbs = 0;
+    size_t i = 0;
+    for (auto& req : reqs) {
+        if (req.Get()->response.status == ZX_OK) {
+            if (req.expect_cb() != req.got_cb()) {
+                zxlogf(ERROR, "%lu (%p): %s\n", i, req.Get(),
+                       req.expect_cb() ? "missing callback" : "got unexpected callback");
+                return ZX_ERR_IO;
+            }
+        } else {
+            // Requests with errors should always get callbacks. Sometimes isochronous
+            // requests may fail unexpectedly.
+            if (!req.got_cb()) {
+                zxlogf(ERROR, "%lu (%p): missing callback for erroneous request\n", i, req.Get());
+                return ZX_ERR_IO;
+            }
+        }
+        if (req.got_cb()) {
+            num_cbs++;
+        }
+        i++;
+    }
+    zxlogf(TRACE, "got %lu/%lu callbacks\n", num_cbs, i);
+    return ZX_OK;
+}
+
+
 zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTestParams* params,
                                      fuchsia_hardware_usb_tester_IsochResult* result) {
     IsochLoopbackIntf* intf = &isoch_loopback_intf_;
@@ -370,12 +423,13 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
     fbl::Vector<TestRequest> out_reqs;
     // We will likely get a few empty IN requests, as there is a delay between the start of an
     // OUT transfer and it being received. Allocate a few more IN requests to account for this.
-    status = AllocTestReqs(num_reqs + kIsochAdditionalInReqs, packet_size, intf->in_addr,
-                           &in_reqs, parent_req_size_);
+    status = AllocIsochTestReqs(num_reqs + kIsochAdditionalInReqs, packet_size, intf->in_addr,
+                                &in_reqs, parent_req_size_, nullptr, 0);
     if (status != ZX_OK) {
         goto done;
     }
-    status = AllocTestReqs(num_reqs, packet_size, intf->out_addr, &out_reqs, parent_req_size_);
+    status = AllocIsochTestReqs(num_reqs, packet_size, intf->out_addr, &out_reqs, parent_req_size_,
+                                params->packet_opts, params->packet_opts_len);
     if (status != ZX_OK) {
         goto done;
     }
@@ -400,6 +454,10 @@ zx_status_t UsbTester::IsochLoopback(const fuchsia_hardware_usb_tester_IsochTest
 
     size_t num_passed;
     status = VerifyLoopback(out_reqs, in_reqs, &num_passed);
+    if (status != ZX_OK) {
+        goto done;
+    }
+    status = VerifyCallbacks(out_reqs);
     if (status != ZX_OK) {
         goto done;
     }

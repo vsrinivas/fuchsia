@@ -58,13 +58,18 @@ struct UsbRequest {
 
     usize alloc_size;
 
-    /// For requests queued on endpoints which have batching enabled via
-    /// usb_configure_batch_callback().
-    /// Set by the requester if a callback is required on this request's completion.
+    /// Set by the requester if the callback should be skipped on successful completion.
     /// This is useful for isochronous requests, where the requester does not care about
     /// most callbacks.
-    /// The requester should ensure the last request has this set to true.
-    bool require_batch_cb;
+    /// The requester is in charge of keeping track of the order of queued requests and
+    /// requeuing silently completed requests.
+    ///
+    /// If the requester receives a success callback, they may assume requests queued
+    /// prior to it at the same endpoint have silently completed.
+    /// If the requester receives an error callback, they will receive an additional
+    /// callback when the request queued prior to the erroneous request completes, if any.
+    /// This is as errors are reported as soon as possible rather than preserving queue order.
+    bool cb_on_error_only;
 };
 
 [Layout="ddk-callback"]

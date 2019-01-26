@@ -30,17 +30,21 @@ class TestRequest {
 public:
     // Creates a request for transferring |len| bytes at the given |ep_address|.
     static std::optional<TestRequest> Create(size_t len, uint8_t ep_address,
-                                             size_t parent_req_size);
+                                             size_t parent_req_size, bool set_cb = true,
+                                             bool expect_cb = true);
 
     // Creates a request for transferring data using the given scatter gather list.
     static std::optional<TestRequest> Create(const fuchsia_hardware_usb_tester_SgList& sg_list,
-                                             uint8_t ep_address, size_t parent_req_size);
+                                             uint8_t ep_address, size_t parent_req_size,
+                                             bool set_cb = true, bool expect_cb = true);
     ~TestRequest();
 
     void MoveHelper(TestRequest& other) {
         if (usb_req_) { usb_request_release(usb_req_); }
         usb_req_ = other.usb_req_;
         other.usb_req_ = nullptr;
+        expect_cb_ = other.expect_cb_;
+        got_cb_ = other.got_cb_;
     }
 
     TestRequest(TestRequest&& other) : usb_req_(nullptr) { MoveHelper(other); }
@@ -63,15 +67,22 @@ public:
     // Returns the underlying usb request.
     usb_request_t* Get() const { return usb_req_; }
     usb_request_complete_t* GetCompleteCb() { return &req_complete_; }
+
+    bool expect_cb() const { return expect_cb_; }
+    bool got_cb() const { return got_cb_; }
+
 private:
-    explicit TestRequest(usb_request_t* usb_req);
+    explicit TestRequest(usb_request_t* usb_req, bool set_cb, bool expect_cb);
     static void RequestCompleteCallback(void* ctx, usb_request_t* request);
     usb_request_complete_t req_complete_ = {
         .callback = RequestCompleteCallback,
-        .ctx = &completion_,
+        .ctx = this,
      };
     usb_request_t* usb_req_;
     sync_completion_t completion_;
+
+    bool expect_cb_;
+    bool got_cb_;
 };
 
 class UsbTester;
@@ -122,8 +133,10 @@ private:
     zx_status_t Bind();
 
     // Allocates the test requests and adds them to the out_test_reqs list.
-    zx_status_t AllocTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
-                              fbl::Vector<TestRequest>* out_test_reqs, size_t parent_req_size);
+    zx_status_t AllocIsochTestReqs(size_t num_reqs, size_t len, uint8_t ep_addr,
+                                   fbl::Vector<TestRequest>* out_test_reqs, size_t parent_req_size,
+                                   const fuchsia_hardware_usb_tester_PacketOptions* packet_opts,
+                                   size_t packet_opts_len);
     // Waits for the completion of each request contained in the test_reqs list in sequential
     // order.
     // The caller should check each request for its completion status.
@@ -141,6 +154,8 @@ private:
     zx_status_t VerifyLoopback(const fbl::Vector<TestRequest>& out_reqs,
                                const fbl::Vector<TestRequest>& in_reqs,
                                size_t* out_num_passed);
+    // Returns ZX_OK if callbacks were received only when expected.
+    zx_status_t VerifyCallbacks(const fbl::Vector<TestRequest>& reqs);
 
     usb_protocol_t usb_;
 

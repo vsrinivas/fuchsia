@@ -50,8 +50,6 @@ class UsbDevice : public UsbDeviceType,
                              int64_t timeout, void* out_read_buffer, size_t read_size,
                              size_t* out_read_actual);
     void UsbRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
-    zx_status_t UsbConfigureBatchCallback(uint8_t ep_address,
-                                          const usb_batch_request_complete_t* complete_cb);
     usb_speed_t UsbGetSpeed();
     zx_status_t UsbSetInterface(uint8_t interface_number, uint8_t alt_setting);
     uint8_t UsbGetConfiguration();

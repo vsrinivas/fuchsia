@@ -144,12 +144,6 @@ static void usb_interface_request_queue(void* ctx, usb_request_t* usb_request,
     usb_request_queue(&intf->comp->usb, usb_request, complete_cb);
 }
 
-static zx_status_t usb_interface_configure_batch_callback(void* ctx, uint8_t ep_address,
-                                                          const usb_batch_request_complete_t*
-                                                                                complete_cb) {
-    usb_interface_t* intf = ctx;
-    return usb_configure_batch_callback(&intf->comp->usb, ep_address, complete_cb);
-}
 
 static usb_speed_t usb_interface_get_speed(void* ctx) {
     usb_interface_t* intf = ctx;
@@ -354,7 +348,6 @@ usb_protocol_ops_t usb_device_protocol = {
     .control_out = usb_interface_control_out,
     .control_in = usb_interface_control_in,
     .request_queue = usb_interface_request_queue,
-    .configure_batch_callback = usb_interface_configure_batch_callback,
     .get_speed = usb_interface_get_speed,
     .set_interface = usb_interface_set_interface,
     .get_configuration = usb_interface_get_configuration,
