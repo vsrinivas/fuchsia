@@ -42,7 +42,7 @@ static zx_status_t ramdisk_driver_bind(void* ctx, zx_device_t* parent) {
 
     // (3) map the VMO into our address space
     status = zx_vmar_map(zx_vmar_root_self(), 0, ramdev->vmo, 0, RAMDISK_SIZE,
-                         ZX_VM_PERM_READ | ZX_VM_PERM_WRITE, &ramdev->mapped_addr);
+                         ZX_VM_FLAG_PERM_READ | ZX_VM_FLAG_PERM_WRITE, &ramdev->mapped_addr);
     if (status != ZX_OK) {
         goto cleanup;
     }
@@ -105,7 +105,7 @@ The binding function, **ramdisk_driver_bind()**, does the following:
     that points to the entire
     [VMO](../objects/vm_object.md) (because
     we specified `RAMDISK_SIZE` as the mapping size argument) and gives us read and
-    write access (because of the `ZX_VM_PERM_*` flags).
+    write access (because of the `ZX_VM_FLAG_PERM_*` flags).
     The pointer is stored in our context block's `mapped_addr` member.
 4.  Adds our device via **device_add()**,
     just like all the examples we've seen above.
