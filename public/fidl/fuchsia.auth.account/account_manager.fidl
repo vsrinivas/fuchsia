@@ -87,14 +87,14 @@ struct AccountAuthState {
 interface AccountManager {
     // Returns a vector of all unlocked accounts provisioned on the current
     // device.
-    1: GetAccountIds()
-           -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
+    GetAccountIds()
+        -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
 
     // Returns a vector of all unlocked accounts provisioned on the current device
     // and the current authentication state for each.
-    2: GetAccountAuthStates() -> (
-           Status status,
-           vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states);
+    GetAccountAuthStates() -> (
+        Status status,
+        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states);
 
     // Connects an interface to read properties of and perform operations on
     // one account.
@@ -107,11 +107,11 @@ interface AccountManager {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    3: GetAccount(
-           LocalAccountId id,
-           fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-           request<Account> account)
-           -> (Status status);
+    GetAccount(
+        LocalAccountId id,
+        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+        request<Account> account)
+        -> (Status status);
 
     // Connects an interface that will receive changes in the provisioned
     // accounts and their authentication state.
@@ -122,10 +122,10 @@ interface AccountManager {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    4: RegisterAccountListener(
-           AccountListener listener,
-           AccountListenerOptions options)
-           -> (Status status);
+    RegisterAccountListener(
+        AccountListener listener,
+        AccountListenerOptions options)
+        -> (Status status);
 
     // TODO(jsankey): Define a method to return a list of accounts that have
     // been provisioned on the current device but not unlocked in the current
@@ -140,7 +140,7 @@ interface AccountManager {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    100: RemoveAccount(LocalAccountId id) -> (Status status);
+    RemoveAccount(LocalAccountId id) -> (Status status);
 
     // Adds a Fuchsia account to the current device based on authenticating
     // to a service provider (such as Google). If the service provider account
@@ -159,10 +159,10 @@ interface AccountManager {
     //                   successful
     //          |account_id| The identifier of the newly added account, if the
     //                       operation was successful.
-    101: ProvisionFromAuthProvider(
-             fuchsia.auth.AuthenticationContextProvider auth_context_provider,
-             string auth_provider_type)
-             -> (Status status, LocalAccountId? account_id);
+    ProvisionFromAuthProvider(
+        fuchsia.auth.AuthenticationContextProvider auth_context_provider,
+        string auth_provider_type)
+        -> (Status status, LocalAccountId? account_id);
 
     // Adds a new, initially empty, Fuchsia account to the current device.
     //
@@ -170,9 +170,8 @@ interface AccountManager {
     //                   successful
     //          |account_id| The identifier of the newly added account, if the
     //                       operation was successful.
-    102: ProvisionNewAccount() -> (Status status, LocalAccountId? account_id);
+    ProvisionNewAccount() -> (Status status, LocalAccountId? account_id);
 
- 
     // TODO(jsankey): Add methods to provision by authenticating directly to an
     //                existing Fuchsia account.
 
@@ -207,22 +206,22 @@ interface AccountListener {
     // OnInitialize is only called if AccountListenerOptions.initial_state was
     // set when creating the AccountListener. All OnInitialize calls will be
     // completed before any other calls on the interface.
-    1: OnInitialize(AccountAuthState account_auth_state) -> ();
+    OnInitialize(AccountAuthState account_auth_state) -> ();
 
     // A method that is called when a new account is added to the device.
     // This method is only called if AccountListenerOptions.add_account was
     // set when creating the AccountListener.
-    2: OnAccountAdded(LocalAccountId id) -> ();
+    OnAccountAdded(LocalAccountId id) -> ();
 
     // A method that is called when a provisioned account is removed.
     // This method is only called if AccountListenerOptions.remove_account was
     // set when creating the AccountListener.
 
-    3: OnAccountRemoved(LocalAccountId id) -> ();
+    OnAccountRemoved(LocalAccountId id) -> ();
 
     // A method that is called when the authentication state of any provisioned
     // account changes.
-    4: OnAuthStateChanged(AccountAuthState account_auth_state) -> ();
+    OnAuthStateChanged(AccountAuthState account_auth_state) -> ();
 };
 
 // An interface to receive events when the authentication state of an account
@@ -233,11 +232,11 @@ interface AccountListener {
 // should be sent to the listener.
 interface AuthListener {
     // A method that is called when the AccountListener is first connected.
-    1: OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
+    OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
 
     // A method that is called when the authentication state of the account
     // changes.
-    2: OnAuthStateChanged(fuchsia.auth.AuthState auth_state) -> ();
+    OnAuthStateChanged(fuchsia.auth.AuthState auth_state) -> ();
 };
 
 // An interface that is extended by other interfaces defining an entity
@@ -249,8 +248,8 @@ interface AuthListener {
 [FragileBase]
 interface AuthTarget {
     // Returns the current |AuthState| of the target.
-    1000: GetAuthState()
-              -> (Status status, fuchsia.auth.AuthState? auth_state);
+    GetAuthState()
+        -> (Status status, fuchsia.auth.AuthState? auth_state);
 
     // Connects an interface that will receive changes in the authentication
     // state of the target.
@@ -264,11 +263,11 @@ interface AuthTarget {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    1001: RegisterAuthListener(
-              AuthListener listener,
-              bool initial_state,
-              fuchsia.auth.AuthChangeGranularity granularity)
-              -> (Status status);
+    RegisterAuthListener(
+        AuthListener listener,
+        bool initial_state,
+        fuchsia.auth.AuthChangeGranularity granularity)
+        -> (Status status);
 
     // TODO(jsankey): Add methods that request in increase in the
     //                authentication state or authentication for a
@@ -286,8 +285,8 @@ interface Account : AuthTarget {
 
     // Returns a vector of all the personae defined for the account.
     // NOTE: Currently all Fuchsia accounts have exactly one persona.
-    100: GetPersonaIds()
-             -> (vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT persona_ids);
+    GetPersonaIds()
+        -> (vector<LocalPersonaId>:MAX_PERSONAE_PER_ACCOUNT persona_ids);
 
     // Connects an interface to read properties of and access tokens for
     // the default persona for the account.
@@ -298,8 +297,8 @@ interface Account : AuthTarget {
     //                   successful
     //          |id| The identifier for the default persona if the operation
     //               was successful
-    101: GetDefaultPersona(request<Persona> persona)
-             -> (Status status, LocalPersonaId? id);
+    GetDefaultPersona(request<Persona> persona)
+        -> (Status status, LocalPersonaId? id);
 
     // Connects an interface to read properties of and access tokens for
     // one of the personae for the account.
@@ -309,8 +308,8 @@ interface Account : AuthTarget {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    102: GetPersona(LocalPersonaId id, request<Persona> persona)
-             -> (Status status);
+    GetPersona(LocalPersonaId id, request<Persona> persona)
+        -> (Status status);
 
     // TODO(jsankey): Add methods to create, delete, and manage personae.
 
@@ -322,8 +321,8 @@ interface Account : AuthTarget {
     //                   successful
     //          The |ServiceProviderAccount| used for recovery if the operation
     //          was successful and a recovery account exists.
-    200: GetRecoveryAccount()
-             -> (Status status, fuchsia.auth.ServiceProviderAccount? account);
+    GetRecoveryAccount()
+        -> (Status status, fuchsia.auth.ServiceProviderAccount? account);
 
     // Sets the service provider account that can be used to access the Fuchsia
     // account if more direct methods of authentication are not available.
@@ -334,8 +333,8 @@ interface Account : AuthTarget {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    201: SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
-             -> (Status status);
+    SetRecoveryAccount(fuchsia.auth.ServiceProviderAccount account)
+        -> (Status status);
 
     // TODO(jsankey): Add a method to remove the recovery account.
 };
@@ -359,10 +358,10 @@ interface Persona : AuthTarget {
     //
     // Returns: |status| A |Status| indicating whether the operation was
     //                   successful
-    100: GetTokenManager(
-             // TODO(jsankey): Migrate token manager to a more appropriate form
-             // of software identity.
-             string application_url,
-             request<fuchsia.auth.TokenManager> token_manager)
-             -> (Status status);
+    GetTokenManager(
+        // TODO(jsankey): Migrate token manager to a more appropriate form
+        // of software identity.
+        string application_url,
+        request<fuchsia.auth.TokenManager> token_manager)
+        -> (Status status);
 };
