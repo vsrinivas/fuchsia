@@ -101,5 +101,8 @@ foreach(cpu, standard_fuchsia_cpus) {
       "$zx/system/utest",
       "$zx/third_party/uapp",
     ]
+    if (cpu == "x64") {
+      deps += [ "$zx/bootloader" ]
+    }
   }
 }

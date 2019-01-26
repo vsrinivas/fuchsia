@@ -1,0 +1,25 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(toolchain.environment == "efi")
+
+source_set("src") {
+  sources = [
+    "cmdline.c",
+    "device_id.c",
+    "diskio.c",
+    "framebuffer.c",
+    "inet6.c",
+    "misc.c",
+    "netboot.c",
+    "netifc.c",
+    "osboot.c",
+    "pci.c",
+    "zircon.c",
+  ]
+  include_dirs = [ "." ]
+  deps = [
+    "$zx/system/ulib/tftp",
+  ]
+}

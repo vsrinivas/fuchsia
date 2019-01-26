@@ -20,6 +20,8 @@
 
 #ifdef __clang__
 #define PRIx64 "llx"
+#define PRIu64 "llu"
 #else
 #define PRIx64 "lx"
+#define PRIu64 "lu"
 #endif

@@ -1,0 +1,20 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(toolchain.environment == "efi")
+
+source_set("lib") {
+  sources = [
+    "console-printf.c",
+    "ctype.c",
+    "efi/guids.c",
+    "inet.c",
+    "loadfile.c",
+    "printf.c",
+    "stdlib.c",
+    "string.c",
+    "strings.c",
+    "xefi.c",
+  ]
+}
