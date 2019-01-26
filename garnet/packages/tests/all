@@ -50,6 +50,7 @@
         "garnet/packages/tests/iquery_test",
         "garnet/packages/tests/inspect_unittests",
         "garnet/packages/tests/json",
+        "garnet/packages/tests/kms",
         "garnet/packages/tests/lib",
         "garnet/packages/tests/lib_component",
         "garnet/packages/tests/libc",
