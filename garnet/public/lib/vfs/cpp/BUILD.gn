@@ -24,6 +24,8 @@ source_set("cpp") {
     "internal/node_connection.h",
     "node.cc",
     "node.h",
+    "pseudo_dir.cc",
+    "pseudo_dir.h",
     "pseudo_file.cc",
     "pseudo_file.h",
   ]
@@ -40,6 +42,7 @@ source_set("cpp") {
 test("vfs_cpp_unittests") {
   sources = [
     "file_unittest.cc",
+    "pseudo_dir_unittest.cc",
     "pseudo_file_unittest.cc",
   ]
 

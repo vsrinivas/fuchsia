@@ -17,7 +17,7 @@ void Directory::Describe(fuchsia::io::NodeInfo* out_info) {
   out_info->set_directory(fuchsia::io::DirectoryObject());
 }
 
-zx_status_t Directory::Lookup(const std::string& name, Node** out_node) {
+zx_status_t Directory::Lookup(const std::string& name, Node** out_node) const {
   return ZX_ERR_NOT_FOUND;
 }
 

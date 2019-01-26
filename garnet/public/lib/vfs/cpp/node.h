@@ -8,8 +8,12 @@
 #include <fuchsia/io/cpp/fidl.h>
 #include <lib/async/dispatcher.h>
 #include <lib/fidl/cpp/binding.h>
+#include <limits.h>
 
 namespace vfs {
+
+bool IsValidName(const std::string& name);
+
 class Connection;
 
 // An object in a file system.

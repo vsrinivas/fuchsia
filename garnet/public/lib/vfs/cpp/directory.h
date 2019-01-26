@@ -33,7 +33,9 @@ class Directory : public Node {
   //
   // The entry is returned via |out_node|. The returned entry is owned by this
   // directory.
-  virtual zx_status_t Lookup(const std::string& name, Node** out_node);
+  //
+  // Returns |ZX_ERR_NOT_FOUND| if no entry exists.
+  virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
   // TODO: Add support for enumeration.
 

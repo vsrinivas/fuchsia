@@ -20,6 +20,12 @@ constexpr uint32_t kCommonAllowedFlags =
 
 }  // namespace
 
+bool IsValidName(const std::string& name) {
+  return name.length() <= NAME_MAX &&
+         memchr(name.data(), '/', name.length()) == nullptr && name != "." &&
+         name != "..";
+}
+
 Node::Node() = default;
 
 Node::~Node() = default;
