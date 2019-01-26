@@ -25,27 +25,36 @@ TEST(FuchsiaPkgUrl, Parse) {
   EXPECT_FALSE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#"));
 
   EXPECT_TRUE(fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world"));
+  EXPECT_EQ("fuchsia.com", fp.host_name());
   EXPECT_EQ("component_hello_world", fp.package_name());
+  EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("", fp.resource_path());
 
   EXPECT_TRUE(fp.Parse(
       "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello_world.cmx"));
+  EXPECT_EQ("fuchsia.com", fp.host_name());
   EXPECT_EQ("component_hello_world", fp.package_name());
+  EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("meta/hello_world.cmx", fp.resource_path());
 
   EXPECT_TRUE(
       fp.Parse("fuchsia-pkg://fuchsia.com/component_hello_world#meta/stuff"));
+  EXPECT_EQ("fuchsia.com", fp.host_name());
   EXPECT_EQ("component_hello_world", fp.package_name());
+  EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("meta/stuff", fp.resource_path());
 
-  EXPECT_TRUE(
-      fp.Parse("fuchsia-pkg://example.com/data-package#stuff"));
+  EXPECT_TRUE(fp.Parse("fuchsia-pkg://example.com/data-package#stuff"));
+  EXPECT_EQ("example.com", fp.host_name());
   EXPECT_EQ("data-package", fp.package_name());
+  EXPECT_EQ("0", fp.variant());
   EXPECT_EQ("stuff", fp.resource_path());
 
   EXPECT_TRUE(
-      fp.Parse("fuchsia-pkg://example.com/data-package/variant#stuff"));
+      fp.Parse("fuchsia-pkg://example.com/data-package/variant123#stuff"));
+  EXPECT_EQ("example.com", fp.host_name());
   EXPECT_EQ("data-package", fp.package_name());
+  EXPECT_EQ("variant123", fp.variant());
   EXPECT_EQ("stuff", fp.resource_path());
 }
 
@@ -54,6 +63,12 @@ TEST(FuchsiaPkgUrl, pkgfs_dir_path) {
   EXPECT_TRUE(fp.Parse(
       "fuchsia-pkg://fuchsia.com/component_hello_world#meta/hello_world.cmx"));
   EXPECT_EQ("/pkgfs/packages/component_hello_world/0", fp.pkgfs_dir_path());
+
+  EXPECT_TRUE(fp.Parse(
+      "fuchsia-pkg://fuchsia.com/component_hello_world/variant123#meta/"
+      "hello_world.cmx"));
+  EXPECT_EQ("/pkgfs/packages/component_hello_world/variant123",
+            fp.pkgfs_dir_path());
 }
 
 TEST(FuchsiaPkgUrl, GetComponentDefaults) {

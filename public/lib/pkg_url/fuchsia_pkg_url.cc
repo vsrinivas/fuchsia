@@ -18,7 +18,8 @@ static const std::string kFuchsiaPkgPrefix = "fuchsia-pkg://";
 // 2: package name
 // 3: package variant
 // 4: resource path
-static const std::regex* const kFuchsiaPkgRexp = new std::regex("^fuchsia-pkg://([^/]+)/([^/#]+)(?:/([^/#]+))?(?:#(.+))?$");
+static const std::regex* const kFuchsiaPkgRexp =
+    new std::regex("^fuchsia-pkg://([^/]+)/([^/#]+)(?:/([^/#]+))?(?:#(.+))?$");
 
 // static
 bool FuchsiaPkgUrl::IsFuchsiaPkgScheme(const std::string& url) {
@@ -45,24 +46,26 @@ bool FuchsiaPkgUrl::Parse(const std::string& url) {
 
   url_ = match_data[0].str();
 
-  repo_name_ = match_data[1].str();
+  host_name_ = match_data[1].str();
   package_name_ = match_data[2].str();
-  // TODO(CP-110): variant_ = match_data[3].str();
+  variant_ = match_data[3].str();
+  if (variant_.empty()) {
+    // TODO(CF-105): Currently this defaults to "0" if not present, but variant
+    // will eventually be required in fuchsia-pkg URLs.
+    variant_ = "0";
+  }
   resource_path_ = match_data[4].str();
 
   return true;
 }
 
 std::string FuchsiaPkgUrl::pkgfs_dir_path() const {
-  // TODO(CP-105): We're currently hardcoding version 0 of the package,
-  // but we'll eventually need to do something smarter.
-  return fxl::Substitute("/pkgfs/packages/$0/0", package_name_);
+  return fxl::Substitute("/pkgfs/packages/$0/$1", package_name_, variant_);
 }
 
 std::string FuchsiaPkgUrl::package_path() const {
-  // TODO(CP-105): We're currently hardcoding version 0 of the package,
-  // but we'll eventually need to do something smarter.
-  return fxl::Substitute("fuchsia-pkg://$0/$1/0", repo_name_, package_name_);
+  return fxl::Substitute("fuchsia-pkg://$0/$1/$2", host_name_, package_name_,
+                         variant_);
 }
 
 const std::string& FuchsiaPkgUrl::ToString() const { return url_; }

@@ -30,7 +30,9 @@ class FuchsiaPkgUrl {
 
   bool Parse(const std::string& url);
 
+  const std::string& host_name() const { return host_name_; }
   const std::string& package_name() const { return package_name_; }
+  const std::string& variant() const { return variant_; }
   const std::string& resource_path() const { return resource_path_; }
   std::string package_path() const;
   std::string pkgfs_dir_path() const;
@@ -39,8 +41,9 @@ class FuchsiaPkgUrl {
 
  private:
   std::string url_;
-  std::string repo_name_;
+  std::string host_name_;
   std::string package_name_;
+  std::string variant_;
   std::string resource_path_;
 };
 
