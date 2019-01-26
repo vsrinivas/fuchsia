@@ -125,7 +125,7 @@ TEST_F(HubTest, Services) {
 }
 
 TEST_F(HubTest, ScopePolicy) {
-  constexpr char kGlobUrl[] = "glob";
+  constexpr char kGlobUrl[] = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
   // create nested environment
   // test that we can see nested env
   auto nested_env =
@@ -138,11 +138,11 @@ TEST_F(HubTest, ScopePolicy) {
                {"/hub/r/hubscopepolicytest"}, 1);
 
   // test that we can see check_hub_path
-  RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob"}, 0);
+  RunComponent(nested_env->launcher_ptr(), kGlobUrl, {"/hub/c/glob.cmx"}, 0);
 }
 
 TEST_F(HubTest, ThreadFiles) {
-  std::string glob_url = "glob";
+  std::string glob_url = "fuchsia-pkg://fuchsia.com/glob#meta/glob.cmx";
 
   auto nested_env =
       CreateNewEnclosingEnvironment("hubscopepolicytest", CreateServices());
@@ -151,7 +151,7 @@ TEST_F(HubTest, ThreadFiles) {
 
   // test that we can see threads for the new component
   RunComponent(nested_env->launcher_ptr(), glob_url,
-               {"/hub/c/glob/*/system_objects/threads/*"}, 0);
+               {"/hub/c/glob.cmx/*/system_objects/threads/*"}, 0);
 }
 
 }  // namespace

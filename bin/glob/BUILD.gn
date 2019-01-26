@@ -13,8 +13,6 @@ executable("bin") {
 }
 
 package("glob") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]
