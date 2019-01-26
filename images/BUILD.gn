@@ -1030,7 +1030,6 @@ group("images") {
   testonly = true
   deps = [
     ":ids.txt",
-    ":netboot-script",
     ":paver-script",
     "zedboot",
   ]
