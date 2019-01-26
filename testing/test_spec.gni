@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("//build/testing/environments.gni")
 import("//build/testing/platforms.gni")
 
 # Extension identifying a test spec JSON file.
@@ -65,35 +66,16 @@ template("test_spec") {
     envs_specified = defined(environments)
 
     if (!envs_specified) {
-      environments = [
-        {
-          dimensions = {
-            device_type = "QEMU"
-          }
-        },
-      ]
+      environments = [ qemu_env ]
     }
 
     if (current_cpu == "x64" && !envs_specified) {
       # TODO(joshuaseaton): This is temporary until we are confident that all
       # tests that need to specify hardware are doing so.
-      environments += [
-        {
-          dimensions = {
-            device_type = "Intel NUC Kit NUC7i5DNHE"
-          }
-        },
-      ]
+      environments += [ nuc_env ]
     } else if (current_cpu == "arm64" && !envs_specified) {
       # TODO(IN-571): Remove after vim2s are ready to be targeted.
-      environments += [
-        {
-          dimensions = {
-            device_type = "Khadas Vim2 Max"
-          }
-          label = "vim2"
-        },
-      ]
+      environments += [ vim2_env ]
     }
   } else if (is_linux || is_mac) {
     if (defined(output_dir)) {
@@ -104,20 +86,11 @@ template("test_spec") {
     }
 
     if (!defined(environments)) {
-      environments = [
-        {
-          dimensions = {
-            if (is_linux) {
-              os = "Linux"  # Used to target a Linux VM.
-            } else if (is_mac) {
-              os = "Mac"  # Used to target a Mac VM.
-            }
-          }
-
-          # TODO(IN-819) Use this label only for bring-up; delete afterward.
-          label = "host"
-        },
-      ]
+      if (is_linux) {
+        environments = [ linux_env ]
+      } else if (is_mac) {
+        environments = [ mac_env ]
+      }
     }
   } else {
     assert(false, "$current_os not supported")
