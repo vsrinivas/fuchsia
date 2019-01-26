@@ -11,6 +11,7 @@
 #include <fbl/type_support.h>
 #include <zircon/compiler.h>
 
+#include <type_traits>
 #include <utility>
 
 namespace fbl {
@@ -107,7 +108,7 @@ public:
     // T as an implicit upcast regardless of whether or not T has a virtual
     // destructor.
     template <typename U,
-              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
     unique_ptr(unique_ptr<U>&& o) : ptr_(o.release()) {
         static_assert(is_same<T, const U>::value ||
                 (is_class<T>::value == is_class<U>::value &&

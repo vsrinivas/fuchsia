@@ -148,13 +148,6 @@ constexpr T&& forward(typename remove_reference<T>::type&& t) {
 template<class T, class U> struct is_same : false_type {};
 template<class T> struct is_same<T, T> : true_type {};
 
-// enable_if:
-
-template<bool B, class T = void> struct enable_if { };
-template<class T> struct enable_if<true, T> {
-    typedef T type;
-};
-
 // conditional:
 
 template<bool B, class T, class F>

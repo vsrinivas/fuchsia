@@ -26,7 +26,7 @@ constexpr const char kTaFileExtension[] = ".ta";
 constexpr size_t kTaPathLength = kUuidNameLength + (sizeof(kTaFileExtension) - 1u);
 
 template <typename SRC_T, typename DST_T>
-static constexpr typename fbl::enable_if<
+static constexpr typename std::enable_if<
     fbl::is_unsigned_integer<SRC_T>::value &&
     fbl::is_unsigned_integer<DST_T>::value>::type
 SplitInto32BitParts(SRC_T src, DST_T* dst_hi, DST_T* dst_lo) {
@@ -39,7 +39,7 @@ SplitInto32BitParts(SRC_T src, DST_T* dst_hi, DST_T* dst_lo) {
 }
 
 template <typename SRC_T, typename DST_T>
-static constexpr typename fbl::enable_if<
+static constexpr typename std::enable_if<
     fbl::is_unsigned_integer<SRC_T>::value &&
     fbl::is_unsigned_integer<DST_T>::value>::type
 JoinFrom32BitParts(SRC_T src_hi, SRC_T src_lo, DST_T* dst) {

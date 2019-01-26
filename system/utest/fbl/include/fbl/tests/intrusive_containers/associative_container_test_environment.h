@@ -540,13 +540,13 @@ private:
     struct CopyUtil;
 
     template <typename Traits>
-    struct CopyUtil<Traits, typename fbl::enable_if<Traits::CanCopy == true>::type> {
+    struct CopyUtil<Traits, typename std::enable_if<Traits::CanCopy == true>::type> {
         static constexpr bool CanCopy = Traits::CanCopy;
         static const PtrType& Op(PtrType& ptr) { return ptr; }
     };
 
     template <typename Traits>
-    struct CopyUtil<Traits, typename fbl::enable_if<Traits::CanCopy == false>::type> {
+    struct CopyUtil<Traits, typename std::enable_if<Traits::CanCopy == false>::type> {
         static constexpr bool CanCopy = Traits::CanCopy;
 #if TEST_WILL_NOT_COMPILE || 0
         static const PtrType& Op(PtrType& ptr) { return ptr; }

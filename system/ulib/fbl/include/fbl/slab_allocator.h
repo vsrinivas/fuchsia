@@ -15,6 +15,7 @@
 #include <fbl/type_support.h>
 #include <fbl/unique_ptr.h>
 #include <new>
+#include <type_traits>
 #include <utility>
 #include <zircon/compiler.h>
 
@@ -375,7 +376,7 @@ struct SlabOriginSetter {
 // have (or need) a slab_origin.  Their "origin setter" is a no-op.
 template <typename SATraits>
 struct SlabOriginSetter<SATraits,
-                        typename enable_if<
+                        typename std::enable_if<
                             (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC) ||
                             (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
                         >::type> {
@@ -700,7 +701,7 @@ struct SlabAllocatorTraits {
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename enable_if<
+                    typename std::enable_if<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED) ||
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
                     >::type>
@@ -736,7 +737,7 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename enable_if<
+                    typename std::enable_if<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::INSTANCED)
                     >::type> {
 public:
@@ -768,7 +769,7 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename enable_if<
+                    typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == false) &&
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::MANUAL_DELETE)
                     >::type> {
@@ -839,7 +840,7 @@ using UnlockedManualDeleteSlabAllocatorTraits =
 ////////////////////////////////////////////////////////////////////////////////
 template <typename SATraits>
 class SlabAllocator<SATraits,
-                    typename enable_if<
+                    typename std::enable_if<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
                     >::type> {
 public:
@@ -879,7 +880,7 @@ private:
 
 template <typename SATraits>
 class SlabAllocated<SATraits,
-                    typename enable_if<
+                    typename std::enable_if<
                         (SATraits::AllocatorFlavor == SlabAllocatorFlavor::STATIC)
                     >::type> {
 public:

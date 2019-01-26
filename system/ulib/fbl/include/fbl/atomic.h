@@ -8,6 +8,7 @@
 
 #include <stddef.h>
 #include <stdint.h>
+#include <type_traits>
 
 // fbl::atomic<T> provides typesafe C++ atomics on integral types,
 // enums, and pointers (including function pointers). It does not
@@ -356,12 +357,12 @@ bool atomic_compare_exchange_strong(volatile atomic<T>* atomic_ptr, T* expected,
 }
 
 template <typename T>
-typename enable_if<!is_pointer<T>::value, T>::type
+typename std::enable_if<!is_pointer<T>::value, T>::type
 atomic_fetch_add(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_add(value, order);
 }
 template <typename T>
-typename enable_if<!is_pointer<T>::value, T>::type
+typename std::enable_if<!is_pointer<T>::value, T>::type
 atomic_fetch_add(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_add(value, order);
 }
@@ -375,12 +376,12 @@ T* atomic_fetch_add(volatile atomic<T*>* atomic_ptr, ptrdiff_t value, memory_ord
 }
 
 template <typename T>
-typename enable_if<!is_pointer<T>::value, T>::type
+typename std::enable_if<!is_pointer<T>::value, T>::type
 atomic_fetch_sub(atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_sub(value, order);
 }
 template <typename T>
-typename enable_if<!is_pointer<T>::value, T>::type
+typename std::enable_if<!is_pointer<T>::value, T>::type
 atomic_fetch_sub(volatile atomic<T>* atomic_ptr, T value, memory_order order = memory_order_seq_cst) {
     return atomic_ptr->fetch_sub(value, order);
 }

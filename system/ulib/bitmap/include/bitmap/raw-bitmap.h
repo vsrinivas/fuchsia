@@ -107,7 +107,7 @@ public:
 
     // Increases the bitmap size
     template <typename U = Storage>
-    typename fbl::enable_if<internal::has_grow<U>::value, zx_status_t>::type
+    typename std::enable_if<internal::has_grow<U>::value, zx_status_t>::type
     Grow(size_t size) {
         if (size < size_) {
             return ZX_ERR_INVALID_ARGS;
@@ -140,7 +140,7 @@ public:
     }
 
     template <typename U = Storage>
-    typename fbl::enable_if<!internal::has_grow<U>::value, zx_status_t>::type
+    typename std::enable_if<!internal::has_grow<U>::value, zx_status_t>::type
     Grow(size_t size) {
         return ZX_ERR_NO_RESOURCES;
     }

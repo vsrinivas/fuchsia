@@ -54,7 +54,7 @@ size_t TestBase::allocated_obj_count_;
 template <typename SATraits, typename = void> struct ReleaseHelper;
 
 template <typename SATraits>
-struct ReleaseHelper<SATraits, typename fbl::enable_if<
+struct ReleaseHelper<SATraits, typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == false) &&
                         (SATraits::AllocatorFlavor == fbl::SlabAllocatorFlavor::INSTANCED)
                     >::type> {
@@ -71,7 +71,7 @@ struct ReleaseHelper<SATraits, typename fbl::enable_if<
 };
 
 template <typename SATraits>
-struct ReleaseHelper<SATraits, typename fbl::enable_if<
+struct ReleaseHelper<SATraits, typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == false) &&
                         (SATraits::AllocatorFlavor == fbl::SlabAllocatorFlavor::MANUAL_DELETE)
                     >::type> {
@@ -89,7 +89,7 @@ struct ReleaseHelper<SATraits, typename fbl::enable_if<
 };
 
 template <typename SATraits>
-struct ReleaseHelper<SATraits, typename fbl::enable_if<
+struct ReleaseHelper<SATraits, typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == true) &&
                         (SATraits::AllocatorFlavor != fbl::SlabAllocatorFlavor::STATIC)
                     >::type> {
@@ -99,7 +99,7 @@ struct ReleaseHelper<SATraits, typename fbl::enable_if<
 };
 
 template <typename SATraits>
-struct ReleaseHelper<SATraits, typename fbl::enable_if<
+struct ReleaseHelper<SATraits, typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == false) &&
                         (SATraits::AllocatorFlavor == fbl::SlabAllocatorFlavor::STATIC)
                     >::type> {
@@ -109,7 +109,7 @@ struct ReleaseHelper<SATraits, typename fbl::enable_if<
 };
 
 template <typename SATraits>
-struct ReleaseHelper<SATraits, typename fbl::enable_if<
+struct ReleaseHelper<SATraits, typename std::enable_if<
                         (SATraits::PtrTraits::IsManaged == true) &&
                         (SATraits::AllocatorFlavor == fbl::SlabAllocatorFlavor::STATIC)
                     >::type> {

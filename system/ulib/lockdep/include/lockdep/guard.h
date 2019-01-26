@@ -36,13 +36,13 @@ struct IsNestable {
 
 // Enable if the given T is nestable and uses same type as LockType.
 template <typename T, typename LockType>
-using EnableIfNestable = typename fbl::enable_if<
+using EnableIfNestable = typename std::enable_if<
     fbl::is_same<GetLockType<T>, LockType>::value &&
     IsNestable<GetLockType<T>>::Value>::type;
 
 // Enable if the given T is not nestable and uses same type as LockType.
 template <typename T, typename LockType>
-using EnableIfNotNestable = typename fbl::enable_if<
+using EnableIfNotNestable = typename std::enable_if<
     fbl::is_same<GetLockType<T>, LockType>::value &&
     !IsNestable<GetLockType<T>>::Value>::type;
 

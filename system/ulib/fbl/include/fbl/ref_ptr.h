@@ -11,6 +11,7 @@
 #include <fbl/type_support.h>
 
 #include <utility>
+#include <type_traits>
 
 namespace fbl {
 
@@ -70,7 +71,7 @@ public:
     //
     // @see the notes in unique_ptr.h
     template <typename U,
-              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(const RefPtr<U>& r) : RefPtr(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
                       (!is_class<T>::value ||
@@ -105,7 +106,7 @@ public:
     //
     // @see the notes in RefPtr.h
     template <typename U,
-              typename = typename enable_if<is_convertible_pointer<U*, T*>::value>::type>
+              typename = typename std::enable_if<is_convertible_pointer<U*, T*>::value>::type>
     RefPtr(RefPtr<U>&& r) : ptr_(r.ptr_) {
         static_assert((is_class<T>::value == is_class<U>::value) &&
                       (!is_class<T>::value ||

@@ -5,6 +5,7 @@
 #pragma once
 
 #include <stdint.h>
+#include <type_traits>
 
 namespace fbl {
 namespace tests {
@@ -71,8 +72,8 @@ class Lfsr;
 #define MAKE_LFSR(_bits, _gen)                                                  \
 template <typename T>                                                           \
 class Lfsr<T,                                                                   \
-           typename enable_if<is_unsigned_integer<T>::value &&                  \
-                              ((sizeof(T) << 3) == _bits)>::type                \
+           typename std::enable_if<is_unsigned_integer<T>::value &&             \
+                                  ((sizeof(T) << 3) == _bits)>::type            \
           > : public internal::Lfsr<uint ## _bits ## _t, _gen> {                \
 public:                                                                         \
     using CoreType = uint ## _bits ## _t;                                       \
