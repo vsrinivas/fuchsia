@@ -110,23 +110,24 @@ ComponentControllerBase::ComponentControllerBase(
       label_(std::move(label)),
       hub_instance_id_(std::move(hub_instance_id)),
       hub_(fbl::AdoptRef(new fs::PseudoDir())),
-      exported_dir_(std::move(exported_dir)),
       ns_(std::move(ns)) {
   if (request.is_valid()) {
     binding_.Bind(std::move(request));
     binding_.set_error_handler([this](zx_status_t status) { Kill(); });
   }
 
-  if (!exported_dir_) {
+  if (!exported_dir) {
     return;
   }
+  exported_dir_.Bind(std::move(exported_dir), async_get_default_dispatcher());
 
   if (client_request) {
     if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-      fdio_service_connect_at(exported_dir_.get(), "public",
+      fdio_service_connect_at(exported_dir_.channel().get(), "public",
                               client_request.release());
     } else if (export_dir_type == ExportedDirType::kLegacyFlatLayout) {
-      fdio_service_clone_to(exported_dir_.get(), client_request.release());
+      fdio_service_clone_to(exported_dir_.channel().get(),
+                            client_request.release());
     }
   }
 
@@ -134,32 +135,31 @@ ComponentControllerBase::ComponentControllerBase(
   hub_.AddEntry("url", std::move(url));
   hub_.AddEntry("args", std::move(args));
   if (export_dir_type == ExportedDirType::kPublicDebugCtrlLayout) {
-    zx_handle_t dir_client = fdio_service_clone(exported_dir_.get());
-    if (dir_client == ZX_HANDLE_INVALID) {
-      FXL_LOG(ERROR) << "Failed to clone exported directory.";
-    } else {
-      zx::channel chan(std::move(dir_client));
-      out_wait_ = std::make_unique<OutputWait>(
-          this, exported_dir_.get(), ZX_CHANNEL_PEER_CLOSED | ZX_USER_SIGNAL_0);
-      output_dir_ = fbl::AdoptRef(new fs::RemoteDir(std::move(chan)));
-      zx_status_t status = out_wait_->Begin(async_get_default_dispatcher());
-      FXL_DCHECK(status == ZX_OK);
-    }
-  }
-}
+    exported_dir_->Clone(fuchsia::io::OPEN_FLAG_DESCRIBE |
+                             fuchsia::io::OPEN_RIGHT_READABLE |
+                             fuchsia::io::OPEN_RIGHT_WRITABLE,
+                         cloned_exported_dir_.NewRequest());
 
-void ComponentControllerBase::OutputDirectoryHandler(
-    async_dispatcher_t* dispatcher, async::WaitBase* wait, zx_status_t status,
-    const zx_packet_signal* signal) {
-  // Publish the output directory only if it was mounted.
-  // Vfs directories signal USER_SIGNAL_0 when mounted.
-  if (signal->observed & ZX_USER_SIGNAL_0) {
-    hub_.PublishOut(output_dir_);
-    TRACE_DURATION_BEGIN("appmgr", "ComponentController::OnDirectoryReady");
-    binding_.events().OnDirectoryReady();
-    TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
+    cloned_exported_dir_.events().OnOpen =
+        [this](zx_status_t status,
+               std::unique_ptr<fuchsia::io::NodeInfo> info) {
+          if (status != ZX_OK) {
+            FXL_LOG(WARNING) << "could not bind out directory for component"
+                             << label_ << "): " << status;
+            return;
+          }
+          auto output_dir = fbl::AdoptRef(
+              new fs::RemoteDir(cloned_exported_dir_.Unbind().TakeChannel()));
+          hub_.PublishOut(std::move(output_dir));
+          TRACE_DURATION_BEGIN("appmgr",
+                               "ComponentController::OnDirectoryReady");
+          binding_.events().OnDirectoryReady();
+          TRACE_DURATION_END("appmgr", "ComponentController::OnDirectoryReady");
+        };
+
+    cloned_exported_dir_.set_error_handler(
+        [this](zx_status_t status) { cloned_exported_dir_.Unbind(); });
   }
-  out_wait_.reset();
 }
 
 ComponentControllerBase::~ComponentControllerBase() {}
