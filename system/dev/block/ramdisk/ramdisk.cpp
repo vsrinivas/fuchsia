@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <limits>
 #include <memory>
 
@@ -9,7 +10,6 @@
 #include <threads.h>
 
 #include <ddk/driver.h>
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/zx/vmo.h>
@@ -26,7 +26,7 @@ namespace {
 
 constexpr uint64_t kMaxTransferSize = 1LLU << 19;
 
-static fbl::atomic<uint64_t> g_ramdisk_count = 0;
+static std::atomic<uint64_t> g_ramdisk_count = 0;
 
 } // namespace
 
