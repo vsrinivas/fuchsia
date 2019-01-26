@@ -102,6 +102,8 @@ template("c_toolchain") {
     tc_target += "apple-darwin"
   } else if (invoker.os == "win") {
     tc_target += "windows-msvc"
+  } else if (invoker.os == "linux") {
+    tc_target += "linux-gnu"
   } else {
     tc_target += invoker.os
   }

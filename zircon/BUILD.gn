@@ -6,51 +6,66 @@ import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 # Build the native host tools intended for developer use.
-environment_redirect("tools-${host_os}-${host_cpu}") {
+_tools_targets = [ "tools" ]
+foreach(host, standard_build_hosts) {
+  _tools_targets += [ "tools-${host.os}-${host.cpu}" ]
+  environment_redirect("tools-${host.os}-${host.cpu}.redirect") {
+    visibility = [ ":*" ]
+    testonly = true
+    environment_label = "$zx/public/gn/toolchain:host"
+    cpu = host.cpu
+    os = host.os
+    deps = [
+      "$zx/system/host:tools",
+    ]
+  }
+}
+
+group("tools.redirect") {
+  visibility = [ ":*" ]
   testonly = true
-  environment_label = "$zx/public/gn/toolchain:host"
-  cpu = host_cpu
-  os = host_os
-  deps = [
-    "$zx/system/host:tools",
+  public_deps = [
+    ":tools-${host_os}-${host_cpu}",
   ]
 }
 
 if (current_toolchain == default_toolchain) {
   # Install the host developer tools for the running host platform in the
   # "$root_build_dir/tools/" directory.
-  tools_rspfile = "$target_gen_dir/tools.rsp"
-  generated_file("tools._rsp") {
-    testonly = true
-    visibility = [ ":tools" ]
-    outputs = [
-      tools_rspfile,
-    ]
-    deps = [
-      ":tools-${host_os}-${host_cpu}",
-    ]
-    output_conversion = "list lines"
-    data_keys = [ "tool_executables" ]
-  }
+  foreach(tools_target, _tools_targets) {
+    tools_rspfile = "$target_gen_dir/${tools_target}.rsp"
+    generated_file("$tools_target.rsp") {
+      visibility = [ ":$tools_target" ]
+      testonly = true
+      outputs = [
+        tools_rspfile,
+      ]
+      deps = [
+        ":$tools_target.redirect",
+      ]
+      output_conversion = "list lines"
+      data_keys = [ "tool_executables" ]
+    }
 
-  action("tools") {
-    testonly = true
-    deps = [
-      ":tools._rsp",
-    ]
-    script = "$zx/scripts/copy-files"
-    depfile = "$target_out_dir/$target_name.d"
-    outputs = [
-      depfile,
-    ]
-    sources = [
-      tools_rspfile,
-    ]
-    args = [
-      "tools",
-      rebase_path(depfile, root_build_dir),
-      rebase_path(tools_rspfile, root_build_dir),
-    ]
+    action(tools_target) {
+      testonly = true
+      deps = [
+        ":$tools_target.rsp",
+      ]
+      script = "$zx/scripts/copy-files"
+      depfile = "$target_out_dir/$target_name.d"
+      outputs = [
+        depfile,
+      ]
+      sources = [
+        tools_rspfile,
+      ]
+      args = [
+        tools_target,
+        rebase_path(depfile, root_build_dir),
+        rebase_path(tools_rspfile, root_build_dir),
+      ]
+    }
   }
 }
 

@@ -19,14 +19,8 @@ toolchain_with_tools("stub") {
   propagates_configs = true
 }
 
-environment("host") {
-  cpu = host_cpu
-  os = host_os
-
-  globals = {
-    is_host = true
-  }
-  strip = true
+# This defines user and host toolchains.
+standard_environments("") {
 }
 
 standard_host = false

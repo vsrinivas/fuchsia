@@ -869,3 +869,48 @@ template("environment") {
 set_defaults("environment") {
   configs = standard_configs
 }
+
+# Define environments based on $standard_environments.
+#
+# $target_name is a suffix on the `name` fields in $standard_environments
+# elements and must start with ".".  Parameters are generally as for
+# environment() except $cpu and $os cannot be set and $configs has
+# $standard_configs (and others) prepended rather than being preset.
+#
+template("standard_environments") {
+  assert(target_name == "" || get_path_info(target_name, "extension") != "",
+         "standard_environments() name must start with `.`")
+  foreach(env, standard_environments) {
+    foreach(target, env.targets) {
+      environment("${env.name}${target_name}") {
+        forward_variables_from(target, "*")
+        forward_variables_from(env,
+                               "*",
+                               [
+                                 "configs",
+                                 "name",
+                                 "targets",
+                               ])
+
+        # Let the invoker clobber most settings.
+        forward_variables_from(invoker,
+                               "*",
+                               [
+                                 "configs",
+                                 "cpu",
+                                 "os",
+                               ])
+
+        # The invoker can have used `configs -=` to remove some of the
+        # default configs set above.  Now append the base environment's
+        # configs and the invoker's.
+        if (defined(env.configs)) {
+          configs += env.configs
+        }
+        if (defined(invoker.configs)) {
+          configs += invoker.configs
+        }
+      }
+    }
+  }
+}

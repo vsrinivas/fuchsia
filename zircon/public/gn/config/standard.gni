@@ -46,6 +46,19 @@ standard_configs = [
   # TODO(ZX-1895): "$zx/public/gn/config:symbol_visibility_hidden",
 ]
 
+# See environment().  These are the environments that are
+# vanilla bases to make derived environments from.
+standard_environments = [
+  {
+    name = "host"
+    targets = standard_build_hosts
+    globals = {
+      is_host = true
+    }
+    strip = true
+  },
+]
+
 # This list has the same structure as $variants (see
 # $zx/public/gn/toolchain/environment.gni) but it just supplies definitions
 # of variants with standard names.  The $variants list can refer to
