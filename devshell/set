@@ -5,10 +5,12 @@
 
 ### set up a build directory
 
-## usage: fx set TARGET [[--build-dir] OUTDIR]
-##               [--boards B1,B2,...]
-##               [--products P1,P2,...]
-##               [--packages P1,P2,...]
+## usage: fx set TARGET [OUTDIR]
+##               [--board NAME|PATH]
+##               [--product NAME|PATH]
+##               [--monolith PATH]
+##               [--preinstall PATH]
+##               [--available PATH]
 ##               [--netboot]
 ##               [--args ARG] [--help-args [ARG]] [--variant VARIANT]
 ##               [--goma|--no-goma] [--no-ensure-goma]
@@ -30,31 +32,46 @@
 ## If GN succeeds, this also points subsequent `fx` commands at OUTDIR,
 ## just as `fx use` does and ensures Goma is ready (if enabled).
 ##
+## NAME|PATH can be provided as arugments to --board and --product. In the
+## case of NAME the name is searched for in //layer/board/NAME.gni, otherwise it
+## is treated as a PATH.
+##
 ## optional arguments:
-##   --build-dir OUTDIR    Using this option is deprecated.  It's the same
-##                         as just giving OUTDIR as a non-option argument.
-##   --board               Use the listed board target definition.
-##   --product             Include the listed product in the build. Defaults to
+##   --board               Use the given board target definition. Board
+##                         configurations are used to modulate hardware specific
+##                         behavior, such as configuring the set of drivers
+##                         included, or adding peripheral specific configurations.
+##                         If no board is given, a default board for the architecture
+##                         is selected from the current layer, e.g.
+##                         garnet/boards/x64.gni.
+##   --product             Include the given product in the build. Defaults to
 ##                         the default product for the current layer (e.g.,
 ##                         "garnet/products/default.gni" for the Garnet layer).
+##                         Product configurations define a set of packages to be
+##                         included in the monolith, preinstall and available
+##                         package sets, as well as product oriented configurations.
+##   --monolith            Additional packages to be built and included in the
+##                         monolithic system image. Monolith is the set of packages
+##                         that make up an OTA image.
+##                         If the --monolith argument is given multiple times,
+##                         all the specified packages are included in this set.
+##                         These packages are added to the available set defined
+##                         by the board and product specifications.
+##   --preinstall          Additional packages to be built and included in the
+##                         system image alongside the monolithic system image.
+##                         Packages in preinstall are not part of OTA updates,
+##                         instead they are updated dynamically.
+##                         If the --preinstall argument is given multiple times,
+##                         all the specified packages are included in this set.
+##                         These packages are added to the available set defined
+##                         by the board and product specifications.
 ##   --available           Additional packages to be built and included in the
 ##                         set of packages available for pushing dynamically.
 ##                         If the --available argument is given multiple times,
 ##                         all the specified available are included in this set.
 ##                         These packages are added to the available set defined
 ##                         by the board and product specifications.
-##   --preinstall          Additional packages to be built and included in the
-##                         system image alongside the monolithic system image.
-##                         If the --preinstall argument is given multiple times,
-##                         all the specified packages are included in this set.
-##                         These packages are added to the available set defined
-##                         by the board and product specifications.
-##   --monolith            Additional packages to be built and included in the
-##                         monolithic system image.
-##                         If the --monolith argument is given multiple times,
-##                         all the specified packages are included in this set.
-##                         These packages are added to the available set defined
-##                         by the board and product specifications.
+##   --netboot             Ensure that a network ramboot image is always built.
 ##   --variant             Pass a `select_variant=[VARIANT*,...]` GN build argument
 ##                         collecting all the --variant arguments in order.
 ##   --fuzz-with           Pass a sanitizer name, e.g. "--fuzz-with asan" to
@@ -94,10 +111,8 @@
 ##                         files usable with that IDE. Useful values include "vs"
 ##                         for Visual Studio or "xcode" for Xcode.
 ##   --release             an alias for "--args=is_debug=false"
-##   --zircon-arg ARG      Additional arguments to pass to Zircon make. Can be given
-##                         multiple times.
 ##
-##  Deprecated flags:
+## Deprecated flags:
 ##
 ##   --boards              Use the listed board target definition (seperated by
 ##                         comas) in the build, each board results in an import
@@ -119,6 +134,17 @@
 ##                         build.
 ##                         This flag is deprecated, please use one of
 ##                         --available, --preinstall, or --monolith.
+##   --zircon-arg ARG      Additional arguments to pass to Zircon make. Can be given
+##                         multiple times.
+##
+## Example:
+##
+##   $ fx set x64 kitchensink --product ermine --available topaz/packages/kitchen_sink
+##   -> architecture: x64
+##      build directory: out/kitchensink
+##      board: topaz/boards/x64.gni
+##      product: topaz/products/ermine.gni
+##      available: topaz/packages/kitchen_sink (all other packages)
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 
@@ -253,6 +279,7 @@ function main {
         shift
         ;;
       --boards)
+        echo >&2 "--boards is deprecated, --board is preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -262,6 +289,7 @@ function main {
         shift
         ;;
       --products)
+        echo >&2 "--products is deprecated, --product is preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -271,6 +299,7 @@ function main {
         shift
         ;;
       --packages)
+        echo >&2 "--packages is deprecated, --monolith, --preinstall or --available are preferred"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -280,6 +309,7 @@ function main {
         shift
         ;;
       --zircon-arg)
+        echo >&2 "--zircon-arg is deprecated, common use case is no longer required"
         if [[ $# -lt 2 ]]; then
           fx-command-help
           return 1
@@ -289,16 +319,6 @@ function main {
         ;;
       --netboot)
         extra_packages+=('build/packages/netboot')
-        ;;
-      # TODO(mcgrathr): Remove this after a deprecation period.
-      --build-dir)
-        if [[ $# -lt 2 ]]; then
-          fx-command-help
-          return 1
-        fi
-        echo >&2 "NOTE: The --build-dir switch is deprecated; give $2 alone."
-        build_dir="$2"
-        shift
         ;;
       --goma)
         use_goma=1
@@ -484,12 +504,8 @@ function main {
     gn_args+=" import(\"//${product}\")"
   done
 
-  if [[ -z "${boards}" ]]; then
-    gn_args+=" fuchsia_packages=["
-  else
-    # Board configs MUST declare fuchsia_packages.
-    gn_args+=" fuchsia_packages+=["
-  fi
+  # Board configs MUST declare fuchsia_packages, and boards must be non-empty.
+  gn_args+=" fuchsia_packages+=["
   for package in ${packages[@]} ${extra_packages[@]}; do
     gn_args+="\"${package}\","
   done
