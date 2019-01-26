@@ -19,19 +19,25 @@
 namespace {
 
 constexpr char kUsageMessage[] = R"""(
-Creates a ram-nand device using a saved image file.
+Creates a ram-nand device using an optional saved image file.
 
+To use an image file:
 nand-loader image_file
+
+To create an empty 32 MB ram-nand device:
+nand-loader --num-blocks 128
 
 Options:
   --page-size (-p) xxx : NAND page size. Default: 4096.
   --block-size (-b) xxx : NAND pages per block. Default: 64.
+  --num-blocks (-n) xxx : number of NAND blocks. Not valid with an image file.
 )""";
 
 struct Config {
     const char* path;
     uint32_t page_size;
     uint32_t block_size;
+    uint32_t num_blocks;
 };
 
 bool GetOptions(int argc, char** argv, Config* config) {
@@ -39,11 +45,12 @@ bool GetOptions(int argc, char** argv, Config* config) {
         struct option options[] = {
             {"page-size", required_argument, nullptr, 'p'},
             {"block-size", required_argument, nullptr, 'b'},
+            {"num-blocks", required_argument, nullptr, 'n'},
             {"help", no_argument, nullptr, 'h'},
             {nullptr, 0, nullptr, 0},
         };
         int opt_index;
-        int c = getopt_long(argc, argv, "p:b:h", options, &opt_index);
+        int c = getopt_long(argc, argv, "p:b:n:h", options, &opt_index);
         if (c < 0) {
             break;
         }
@@ -54,21 +61,29 @@ bool GetOptions(int argc, char** argv, Config* config) {
         case 'b':
             config->block_size = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
             break;
+        case 'n':
+            config->num_blocks = static_cast<uint32_t>(strtoul(optarg, NULL, 0));
+            break;
         case 'h':
+        default:
             return false;
         }
     }
     if (argc == optind + 1) {
         config->path = argv[optind];
-        return true;
     }
-    return false;
+    return true;
 }
 
 bool ValidateOptions(const Config& config) {
-    if (!config.path) {
+    if (!config.path && !config.num_blocks) {
         printf("Image file needed\n");
         printf("%s\n", kUsageMessage);
+        return false;
+    }
+
+    if (config.path && config.num_blocks) {
+        printf("Cannot specify size with an image file\n");
         return false;
     }
 
@@ -84,6 +99,7 @@ fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
     fuchsia_hardware_nand_Info info = {};
     info.page_size = config.page_size;
     info.pages_per_block = config.block_size;
+    info.num_blocks = config.num_blocks;
     info.ecc_bits = 8;
     info.oob_size = 8;
     info.nand_class = fuchsia_hardware_nand_Class_FTL;
@@ -92,6 +108,10 @@ fuchsia_hardware_nand_Info GetNandInfo(const Config& config) {
 
 // Sets the vmo and nand size from the contents of the input file.
 bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* device_config) {
+    if (!path) {
+        return true;
+    }
+
     fbl::unique_fd in(open(path, O_RDONLY));
     if (!in) {
         printf("Unable to open image file\n");
@@ -137,7 +157,7 @@ bool FinishDeviceConfig(const char* path, fuchsia_hardware_nand_RamNandInfo* dev
 }  // namespace
 
 int main(int argc, char** argv) {
-    Config config = {nullptr, 4096, 64};
+    Config config = {nullptr, 4096, 64, 0};
     if (!GetOptions(argc, argv, &config)) {
         printf("%s\n", kUsageMessage);
         return -1;
