@@ -31,7 +31,7 @@ impl CryptoProviderError {
 }
 
 /// A cryptography provider that could support cryptography operations.
-pub trait CryptoProvider: Debug + Send {
+pub trait CryptoProvider: Debug + Send + Sync {
     /// Return a list of supported algorithms.
     fn supported_asymmetric_algorithms(&self) -> Vec<AsymmetricKeyAlgorithm>;
 

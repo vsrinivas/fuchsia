@@ -69,11 +69,11 @@ pub const ASYMMETRIC_KEY_ALGORITHMS: &[AsymmetricKeyAlgorithm] = &[
 ];
 
 /// The key attributes structure to be stored as attribute file.
-pub struct KeyAttributes {
+pub struct KeyAttributes<'a> {
     pub asymmetric_key_algorithm: Option<AsymmetricKeyAlgorithm>,
     pub key_type: KeyType,
     pub key_origin: KeyOrigin,
-    pub provider: Box<dyn CryptoProvider>,
+    pub provider: &'a dyn CryptoProvider,
     pub key_data: Vec<u8>,
 }
 
@@ -103,20 +103,6 @@ macro_rules! debug_err_fn {
         |err| {
             use ::log::error;
             error!($($arg)*, err);
-            $return_err
-        }
-    )
-}
-
-/// Create a closure which emits a error message and returns an error.
-///
-/// Creates a closure that would return the first argument and print an error message with the
-/// rest of the arguments.
-macro_rules! debug_err_fn_without_err {
-    ($return_err:expr, $($arg:tt)*) => (
-        || {
-            use ::log::error;
-            error!($($arg)*);
             $return_err
         }
     )

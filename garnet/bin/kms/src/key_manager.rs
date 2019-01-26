@@ -18,7 +18,7 @@ use std::fs;
 use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc, Mutex, RwLock};
 
 const PROVIDER_NAME: &str = "MundaneSoftwareProvider";
 const KEY_FOLDER: &str = "/data/kms";
@@ -46,7 +46,7 @@ pub struct KeyManager {
     /// A map of key_name -> key_object.
     key_map: Arc<Mutex<HashMap<String, Arc<Mutex<dyn KmsKey>>>>>,
     /// All the available crypto providers.
-    crypto_provider_map: Mutex<HashMap<&'static str, Box<dyn CryptoProvider>>>,
+    crypto_provider_map: RwLock<HashMap<&'static str, Box<dyn CryptoProvider>>>,
     /// The path to the key folder to store key data and attributes.
     key_folder: String,
 }
@@ -55,7 +55,7 @@ impl KeyManager {
     pub fn new() -> Self {
         KeyManager {
             key_map: Arc::new(Mutex::new(HashMap::new())),
-            crypto_provider_map: Mutex::new(HashMap::new()),
+            crypto_provider_map: RwLock::new(HashMap::new()),
             key_folder: KEY_FOLDER.to_string(),
         }
     }
@@ -69,17 +69,18 @@ impl KeyManager {
     pub fn handle_request(&self, req: KeyManagerRequest) -> Result<(), fidl::Error> {
         match req {
             KeyManagerRequest::GenerateAsymmetricKey { key_name, key, responder } => {
-                let provider = self.get_provider(PROVIDER_NAME).unwrap();
-                // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
-                match self.generate_asymmetric_key_and_bind(
-                    &key_name,
-                    key,
-                    AsymmetricKeyAlgorithm::EcdsaSha512P521,
-                    provider,
-                ) {
-                    Ok(()) => responder.send(Status::Ok)?,
-                    Err(status) => responder.send(status)?,
-                }
+                self.with_provider(PROVIDER_NAME, |provider| {
+                    // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
+                    match self.generate_asymmetric_key_and_bind(
+                        &key_name,
+                        key,
+                        AsymmetricKeyAlgorithm::EcdsaSha512P521,
+                        provider.unwrap(),
+                    ) {
+                        Ok(()) => responder.send(Status::Ok),
+                        Err(status) => responder.send(status),
+                    }
+                })
             }
             KeyManagerRequest::GenerateAsymmetricKeyWithAlgorithm {
                 key_name,
@@ -87,39 +88,52 @@ impl KeyManager {
                 key,
                 responder,
             } => {
-                let provider = self.get_provider(PROVIDER_NAME).unwrap();
-                match self.generate_asymmetric_key_and_bind(&key_name, key, key_algorithm, provider)
-                {
-                    Ok(()) => responder.send(Status::Ok)?,
-                    Err(status) => responder.send(status)?,
-                }
+                self.with_provider(PROVIDER_NAME, |provider| {
+                    match self.generate_asymmetric_key_and_bind(
+                        &key_name,
+                        key,
+                        key_algorithm,
+                        provider.unwrap(),
+                    ) {
+                        Ok(()) => responder.send(Status::Ok),
+                        Err(status) => responder.send(status),
+                    }
+                })
             }
             KeyManagerRequest::GetAsymmetricPrivateKey { key_name, key, responder } => {
                 match self.get_asymmetric_private_key_and_bind(&key_name, key) {
-                    Ok(()) => responder.send(Status::Ok)?,
-                    Err(status) => responder.send(status)?,
+                    Ok(()) => responder.send(Status::Ok),
+                    Err(status) => responder.send(status),
                 }
             }
             KeyManagerRequest::ImportAsymmetricPrivateKey {
-                data: _,
-                key_name: _,
-                key_algorithm: _,
-                key: _,
+                data,
+                key_name,
+                key_algorithm,
+                key,
                 responder,
             } => {
-                responder.send(Status::Ok)?;
+                self.with_provider(PROVIDER_NAME, |provider| {;
+                    match self.import_asymmetric_private_key_and_bind(
+                        &data,
+                        &key_name,
+                        key_algorithm,
+                        key,
+                        provider.unwrap(),
+                    ) {
+                        Ok(()) => responder.send(Status::Ok),
+                        Err(status) => responder.send(status),
+                    }
+                })
             }
             KeyManagerRequest::SealData { plain_text: _, responder } => {
-                responder.send(Status::Ok, None)?;
+                responder.send(Status::Ok, None)
             }
             KeyManagerRequest::UnsealData { cipher_text: _, responder } => {
-                responder.send(Status::Ok, None)?;
+                responder.send(Status::Ok, None)
             }
-            KeyManagerRequest::DeleteKey { key_name: _, responder } => {
-                responder.send(Status::Ok)?;
-            }
+            KeyManagerRequest::DeleteKey { key_name: _, responder } => responder.send(Status::Ok),
         }
-        Ok(())
     }
 
     /// Bind an in_memory asymmetric key object to a channel initiated by user.
@@ -200,7 +214,7 @@ impl KeyManager {
         key_name: &str,
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
         key_algorithm: AsymmetricKeyAlgorithm,
-        provider: Box<dyn CryptoProvider>,
+        provider: &dyn CryptoProvider,
     ) -> Result<(), Status> {
         let key_to_bind = self.generate_asymmetric_key(key_name, key_algorithm, provider)?;
         self.bind_asymmetric_key_to_server(key_name, key_to_bind, key)
@@ -220,9 +234,52 @@ impl KeyManager {
         &self,
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
-        provider: Box<dyn CryptoProvider>,
+        provider: &dyn CryptoProvider,
     ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
         self.generate_or_import_asymmetric_key(key_name, key_algorithm, provider, None)
+    }
+
+    /// Import an asymmetric key object and bind the imported key to the user channel.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The imported key data.
+    /// * `key_name` - The name for the key to be imported.
+    /// * `key_algorithm` - The algorithm for the key to be imported.
+    /// * `key` - The server end of the user channel to bind
+    /// * `provider` - The crypto provider to parse the key with.
+    fn import_asymmetric_private_key_and_bind(
+        &self,
+        data: &[u8],
+        key_name: &str,
+        key_algorithm: AsymmetricKeyAlgorithm,
+        key: ServerEnd<AsymmetricPrivateKeyMarker>,
+        provider: &dyn CryptoProvider,
+    ) -> Result<(), Status> {
+        let key_to_bind =
+            self.import_asymmetric_private_key(data, &key_name, key_algorithm, provider)?;
+        self.bind_asymmetric_key_to_server(&key_name, key_to_bind, key)
+    }
+
+    /// Import an asymmetric key object.
+    ///
+    /// Import an asymmetric key object, write the key data and key attributes to file. Insert the
+    /// in memory key object into key map and return the key object.
+    ///
+    /// # Arguments
+    ///
+    /// * `data` - The imported key data.
+    /// * `key_name` - The name for the key to be imported.
+    /// * `key_algorithm` - The algorithm for the key to be imported.
+    /// * `provider` - The crypto provider to parse the key with.
+    fn import_asymmetric_private_key(
+        &self,
+        data: &[u8],
+        key_name: &str,
+        key_algorithm: AsymmetricKeyAlgorithm,
+        provider: &dyn CryptoProvider,
+    ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
+        self.generate_or_import_asymmetric_key(key_name, key_algorithm, provider, Some(data))
     }
 
     /// Generate or import an asymmetric key object depending on whether imported_key_data is None.
@@ -230,23 +287,20 @@ impl KeyManager {
         &self,
         key_name: &str,
         key_algorithm: AsymmetricKeyAlgorithm,
-        provider: Box<dyn CryptoProvider>,
+        provider: &dyn CryptoProvider,
         imported_key_data: Option<&[u8]>,
     ) -> Result<Arc<Mutex<KmsAsymmetricKey>>, Status> {
         // Check whether the algorithm is valid.
-        Self::check_asymmmetric_supported_algorithms(key_algorithm, &provider)?;
+        Self::check_asymmmetric_supported_algorithms(key_algorithm, provider)?;
         // Create a new symmetric key object and store it into the key map. Need to make sure
         // we hold a mutable lock to the key_map during the whole operation to prevent dead lock.
         let mut key_map = self.key_map.lock().unwrap();
-        if key_map.contains_key(key_name) {
-            return Err(Status::KeyAlreadyExists);
-        }
-        if self.key_file_exists(key_name) {
+        if key_map.contains_key(key_name) || self.key_file_exists(key_name) {
             return Err(Status::KeyAlreadyExists);
         }
         let new_key = match imported_key_data {
-            None => KmsAsymmetricKey::new(&(*provider), key_name, key_algorithm),
-            Some(data) => KmsAsymmetricKey::import_key(&(*provider), data, key_name, key_algorithm),
+            Some(data) => KmsAsymmetricKey::import_key(provider, data, key_name, key_algorithm),
+            None => KmsAsymmetricKey::new(provider, key_name, key_algorithm),
         }?;
         {
             self.write_key_attributes_to_file(
@@ -294,7 +348,8 @@ impl KeyManager {
             Some(key) => Ok(Arc::clone(key)),
             None => {
                 // The key is not in key map, read it from file.
-                let key_attributes = self.read_key_attributes_from_file(key_name)?;
+                let provider_map = self.crypto_provider_map.read().unwrap();
+                let key_attributes = self.read_key_attributes_from_file(key_name, &provider_map)?;
                 let asym_key = KmsAsymmetricKey::parse_key(key_name, key_attributes)?;
                 let key_to_bind = Arc::new(Mutex::new(asym_key));
                 let key_to_insert = Arc::clone(&key_to_bind);
@@ -307,7 +362,7 @@ impl KeyManager {
     /// Check whether a key algorithm is a valid asymmetric key algorithm and supported by provider.
     fn check_asymmmetric_supported_algorithms(
         key_algorithm: AsymmetricKeyAlgorithm,
-        provider: &Box<dyn CryptoProvider>,
+        provider: &dyn CryptoProvider,
     ) -> Result<(), Status> {
         if provider
             .supported_asymmetric_algorithms()
@@ -376,7 +431,11 @@ impl KeyManager {
         Ok(fs::read(key_attributes_path)?)
     }
 
-    fn read_key_attributes_from_file(&self, key_name: &str) -> Result<KeyAttributes, Status> {
+    fn read_key_attributes_from_file<'a>(
+        &self,
+        key_name: &str,
+        provider_map: &'a HashMap<&'static str, Box<dyn CryptoProvider>>,
+    ) -> Result<KeyAttributes<'a>, Status> {
         // Read the key attributes from file and parse it.
         let key_attributes_string = self.read_key_attributes(&key_name).map_err(|err| {
             if err.kind() == ErrorKind::NotFound {
@@ -398,50 +457,49 @@ impl KeyManager {
             Status::InternalError,
             "Failed to parse key attributes: {:?}, the stored key data is corrupted!"
         ))?;
-        let provider = {
-            match self.get_provider(&key_attributes_json.provider_name) {
-                Some(provider) => Ok(provider),
-                None => Err(debug_err!(
-                    Status::InternalError,
-                    "Failed to find provider! The stored key data is corrupted!"
-                )),
-            }
-        }?;
+        let provider_name: &str = &key_attributes_json.provider_name;
+        let provider = provider_map.get(provider_name).ok_or(debug_err!(
+            Status::InternalError,
+            "Failed to find provider! The stored key data is corrupted!"
+        ))?;
         let key_type = key_attributes_json.key_type;
-        let asymmetric_key_algorithm = Some(
-            AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or_else(
-                debug_err_fn_without_err!(
+        let asymmetric_key_algorithm =
+            Some(AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or(
+                debug_err!(
                     Status::InternalError,
                     "Failed to convert key_algortihm! The stored key data is corrupted!"
                 ),
-            )?,
-        );
-        let key_origin = KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or_else(
-            debug_err_fn_without_err!(
+            )?);
+        let key_origin =
+            KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or(debug_err!(
                 Status::InternalError,
                 "Failed to convert key_origin! The stored key data is corrupted!"
-            ),
-        )?;
+            ))?;
         Ok(KeyAttributes {
             asymmetric_key_algorithm,
             key_type,
             key_origin,
-            provider,
+            provider: provider.as_ref(),
             key_data: key_attributes_json.key_data,
         })
     }
 
-    pub fn get_provider(&self, provider_name: &str) -> Option<Box<dyn CryptoProvider>> {
-        let provider_map = &self.crypto_provider_map.lock().unwrap();
-        match provider_map.get(provider_name) {
-            Some(provider) => Some(provider.clone()),
-            None => None,
-        }
+    /// Get a crypto provider according to name and pass that provider to a function.
+    ///
+    /// The input function takes an Option<&dyn CryptoProvider> as argument and the output would
+    /// be the output of this function. During the function, a read lock to the crypto_provider_map
+    /// would be hold to prevent modification to the map.
+    pub fn with_provider<O, F: FnOnce(Option<&dyn CryptoProvider>) -> O>(
+        &self,
+        name: &str,
+        f: F,
+    ) -> O {
+        f(self.crypto_provider_map.read().unwrap().get(name).map(|provider| provider.as_ref()))
     }
 
     #[cfg(test)]
     pub fn add_provider(&mut self, provider: Box<dyn CryptoProvider>) {
-        let provider_map = &mut self.crypto_provider_map.lock().unwrap();
+        let provider_map = &mut self.crypto_provider_map.write().unwrap();
         if provider_map.contains_key(provider.get_name()) {
             panic!("Two providers should not have the same name!");
         }
@@ -473,7 +531,7 @@ mod tests {
         let mock_provider = Box::new(MockProvider::new());
         mock_provider.set_result(&test_output_data);
         let key = key_manager
-            .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.box_clone())
+            .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.as_ref())
             .unwrap();
         let key = key.lock().unwrap();
         assert_eq!(TEST_KEY_NAME, key.get_key_name());
@@ -501,7 +559,7 @@ mod tests {
         let result = key_manager.generate_asymmetric_key(
             TEST_KEY_NAME,
             key_algorithm,
-            mock_provider.box_clone(),
+            mock_provider.as_ref(),
         );
         if let Err(Status::InternalError) = result {
             assert!(true);
@@ -528,7 +586,7 @@ mod tests {
         key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
         let key_info = {
             let key = key_manager
-                .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.box_clone())
+                .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.as_ref())
                 .unwrap();
             let key_info = {
                 let key = key.lock().unwrap();
@@ -567,5 +625,93 @@ mod tests {
             assert!(false);
         }
         tmp_key_folder.close().unwrap();
+    }
+
+    #[test]
+    fn test_import_asymmetric_key_mock_provider() {
+        for algorithm in ASYMMETRIC_KEY_ALGORITHMS.iter() {
+            import_asymmetric_key_mock_provider(*algorithm);
+        }
+    }
+
+    fn import_asymmetric_key_mock_provider(key_algorithm: AsymmetricKeyAlgorithm) {
+        let tmp_key_folder = tempdir().unwrap();
+        let mut key_manager = KeyManager::new();
+        key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
+        let mock_provider = Box::new(MockProvider::new());
+        let test_input_data = common::generate_random_data(32);
+        let test_output_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_output_data);
+        let key = key_manager
+            .import_asymmetric_private_key(
+                &test_input_data,
+                TEST_KEY_NAME,
+                key_algorithm,
+                mock_provider.as_ref(),
+            )
+            .unwrap();
+        let key = key.lock().unwrap();
+        assert_eq!(TEST_KEY_NAME, key.get_key_name());
+        assert_eq!(test_output_data, key.get_key_data());
+        assert_eq!(key_algorithm, key.get_key_algorithm());
+        assert_eq!(KeyOrigin::Imported, key.get_key_origin());
+        assert_eq!(mock_provider.get_name(), key.get_provider_name());
+        assert_eq!(mock_provider.get_called_key_data(), test_input_data);
+        assert_eq!(mock_provider.get_called_key_name(), TEST_KEY_NAME);
+    }
+
+    #[test]
+    fn test_import_asymmetric_key_mock_already_exists() {
+        let tmp_key_folder = tempdir().unwrap();
+        let mut key_manager = KeyManager::new();
+        key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
+        let key_algorithm = AsymmetricKeyAlgorithm::EcdsaSha512P521;
+        let test_input_data = common::generate_random_data(32);
+        let test_output_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_output_data);
+        let _key_to_bind = key_manager.import_asymmetric_private_key(
+            &test_input_data,
+            TEST_KEY_NAME,
+            key_algorithm,
+            mock_provider.as_ref(),
+        );
+        let result = key_manager.import_asymmetric_private_key(
+            &test_input_data,
+            TEST_KEY_NAME,
+            key_algorithm,
+            mock_provider.as_ref(),
+        );
+        if let Err(Status::KeyAlreadyExists) = result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn test_import_asymmetric_key_mock_already_exists_generated() {
+        let tmp_key_folder = tempdir().unwrap();
+        let mut key_manager = KeyManager::new();
+        key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
+        let key_algorithm = AsymmetricKeyAlgorithm::EcdsaSha512P521;
+        let test_input_data = common::generate_random_data(32);
+        let test_output_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_output_data);
+        let _key_to_bind = key_manager
+            .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.as_ref())
+            .unwrap();
+        let result = key_manager.import_asymmetric_private_key(
+            &test_input_data,
+            TEST_KEY_NAME,
+            key_algorithm,
+            mock_provider.as_ref(),
+        );
+        if let Err(Status::KeyAlreadyExists) = result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
     }
 }
