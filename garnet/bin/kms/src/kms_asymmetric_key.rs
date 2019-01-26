@@ -2,10 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{KeyRequestType, KeyType, KmsKey};
+use crate::common::{KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{AsymmetricProviderKey, CryptoProvider};
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
-use log::error;
 
 pub struct KmsAsymmetricKey {
     provider_key: Box<dyn AsymmetricProviderKey>,
@@ -43,7 +42,7 @@ impl KmsKey for KmsAsymmetricKey {
 
     fn delete(&mut self) -> Result<(), Status> {
         // Inform the provider to delete key.
-        self.provider_key.delete().map_err(|_| -> Status { Status::InternalError })?;
+        self.provider_key.delete().map_err(|_| Status::InternalError)?;
         self.deleted = true;
         Ok(())
     }
@@ -63,17 +62,48 @@ impl KmsAsymmetricKey {
         key_algorithm: AsymmetricKeyAlgorithm,
     ) -> Result<Self, Status> {
         // Ask the provider to generate a provider key.
-        let provider_key =
-            provider.generate_asymmetric_key(key_algorithm, key_name).map_err(|err| -> Status {
-                error!("Failed to generate asymmetric key: {:?}", err);
-                Status::InternalError
-            })?;
+        let provider_key = provider.generate_asymmetric_key(key_algorithm, key_name).map_err(
+            debug_err_fn!(Status::InternalError, "Failed to generate asymmetric key: {:?}"),
+        )?;
         // Create the key object.
         Ok(KmsAsymmetricKey {
             provider_key,
             key_name: key_name.to_string(),
             deleted: false,
             key_origin: KeyOrigin::Generated,
+        })
+    }
+
+    /// Parse the key data and generate a new KmsAsymmetricKey object.
+    ///
+    /// # Arguments
+    ///
+    /// * `key_name` - The name for the new key.
+    /// * `key_attributes` - The attributes for the new key.
+    pub fn parse_key(key_name: &str, key_attributes: KeyAttributes) -> Result<Self, Status> {
+        if key_attributes.key_type != KeyType::AsymmetricPrivateKey {
+            // The key is a different type.
+            return Err(Status::KeyNotFound);
+        }
+        // It is safe to unwrap here because KeyType would always be AsymmetricPrivateKey when
+        // we called read_key_attributes_from_file in key_manager and asymmetric_key_algorithm
+        // would never be None.
+        let key_algorithm = key_attributes.asymmetric_key_algorithm.unwrap();
+        // Ask the provider to parse the key.
+        let provider_key = key_attributes
+            .provider
+            .parse_asymmetric_key(&key_attributes.key_data, key_algorithm)
+            .map_err(debug_err_fn!(
+                Status::ParseKeyError,
+                "Failed to parse asymmetric key data: {:?}"
+            ))?;
+
+        // Create the key object.
+        Ok(KmsAsymmetricKey {
+            provider_key,
+            key_name: key_name.to_string(),
+            deleted: false,
+            key_origin: key_attributes.key_origin,
         })
     }
 
@@ -92,10 +122,7 @@ impl KmsAsymmetricKey {
         key_algorithm: AsymmetricKeyAlgorithm,
     ) -> Result<Self, Status> {
         let provider_key = provider.import_asymmetric_key(data, key_algorithm, key_name).map_err(
-            |err| -> Status {
-                error!("Failed to import asymmetric key: {:?}", err);
-                Status::ParseKeyError
-            },
+            debug_err_fn!(Status::ParseKeyError, "Failed to import asymmetric key: {:?}"),
         )?;
         // Create the key object.
         Ok(KmsAsymmetricKey {

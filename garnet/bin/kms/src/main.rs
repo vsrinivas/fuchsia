@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #![feature(async_await, await_macro)]
+#[macro_use]
 mod common;
 mod crypto_provider;
 mod key_manager;
@@ -16,7 +17,7 @@ use fidl_fuchsia_kms::{KeyManagerMarker, KeyManagerRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use futures::prelude::*;
-use log::warn;
+use log::error;
 use std::sync::Arc;
 
 fn main() -> Result<(), Error> {
@@ -41,6 +42,6 @@ fn spawn(chan: fasync::Channel, key_manager: Arc<KeyManager>) {
             }
             Ok(())
         }
-            .unwrap_or_else(|e: fidl::Error| warn!("Error handling KMS request: {:?}", e)),
+            .unwrap_or_else(|e: fidl::Error| error!("Error handling KMS request: {:?}", e)),
     );
 }

@@ -4,7 +4,8 @@
 
 use std::str;
 
-use fidl_fuchsia_kms::{AsymmetricPrivateKeyRequest, Status};
+use crate::crypto_provider::CryptoProvider;
+use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
 use serde_derive::{Deserialize, Serialize};
 
 pub enum KeyRequestType {
@@ -53,8 +54,6 @@ pub trait KmsKey: Send {
     fn get_key_data(&self) -> Vec<u8>;
 }
 
-#[cfg(test)]
-use fidl_fuchsia_kms::AsymmetricKeyAlgorithm;
 /// A list of all the supported asymmetric key algorithms.
 #[cfg(test)]
 pub const ASYMMETRIC_KEY_ALGORITHMS: &[AsymmetricKeyAlgorithm] = &[
@@ -68,6 +67,60 @@ pub const ASYMMETRIC_KEY_ALGORITHMS: &[AsymmetricKeyAlgorithm] = &[
     AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha2563072,
     AsymmetricKeyAlgorithm::RsaSsaPkcs1Sha2564096,
 ];
+
+/// The key attributes structure to be stored as attribute file.
+pub struct KeyAttributes {
+    pub asymmetric_key_algorithm: Option<AsymmetricKeyAlgorithm>,
+    pub key_type: KeyType,
+    pub key_origin: KeyOrigin,
+    pub provider: Box<dyn CryptoProvider>,
+    pub key_data: Vec<u8>,
+}
+
+/// Emit a error message and return an error.
+///
+/// Invoke the `error!` macro on all but the first argument. A call to
+/// `debug_err!(err, ...)` is an expression whose value is the expression `err`.
+#[macro_export]
+macro_rules! debug_err {
+    ($err:expr, $($arg:tt)*) => (
+        // TODO(joshlf): Uncomment once attributes are allowed on expressions
+        // #[cfg_attr(feature = "cargo-clippy", allow(block_in_if_condition_stmt))]
+        {
+            use ::log::error;
+            error!($($arg)*);
+            $err
+        }
+    )
+}
+
+/// Create a closure which emits a error message and turn original error to a new error.
+///
+/// Creates a closure that would return the first argument and print an error message with the
+/// original error that is used to call the closure as the last argument to the error message.
+macro_rules! debug_err_fn {
+    ($return_err:expr, $($arg:tt)*) => (
+        |err| {
+            use ::log::error;
+            error!($($arg)*, err);
+            $return_err
+        }
+    )
+}
+
+/// Create a closure which emits a error message and returns an error.
+///
+/// Creates a closure that would return the first argument and print an error message with the
+/// rest of the arguments.
+macro_rules! debug_err_fn_without_err {
+    ($return_err:expr, $($arg:tt)*) => (
+        || {
+            use ::log::error;
+            error!($($arg)*);
+            $return_err
+        }
+    )
+}
 
 #[cfg(test)]
 pub fn generate_random_data(size: u32) -> Vec<u8> {

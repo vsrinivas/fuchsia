@@ -2,10 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
-
-use crate::common::{KeyRequestType, KeyType, KmsKey};
+use crate::common::{KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::CryptoProvider;
 use crate::kms_asymmetric_key::KmsAsymmetricKey;
 use fidl::endpoints::ServerEnd;
@@ -16,11 +13,12 @@ use fuchsia_async as fasync;
 use futures::prelude::*;
 use log::error;
 use serde_derive::{Deserialize, Serialize};
+use std::collections::HashMap;
 use std::fs;
-use std::io::Error;
-use std::io::Write;
+use std::io::{Error, ErrorKind};
 use std::path::{Path, PathBuf};
 use std::str;
+use std::sync::{Arc, Mutex};
 
 const PROVIDER_NAME: &str = "MundaneSoftwareProvider";
 const KEY_FOLDER: &str = "/data/kms";
@@ -31,6 +29,7 @@ struct KeyAttributesJson {
     pub key_type: KeyType,
     pub key_origin: u32,
     pub provider_name: String,
+    pub key_data: Vec<u8>,
 }
 
 /// Manages a key object map, delegates operation to key object and manages storage for key data.
@@ -47,7 +46,7 @@ pub struct KeyManager {
     /// A map of key_name -> key_object.
     key_map: Arc<Mutex<HashMap<String, Arc<Mutex<dyn KmsKey>>>>>,
     /// All the available crypto providers.
-    crypto_provider_map: Mutex<HashMap<String, Box<dyn CryptoProvider>>>,
+    crypto_provider_map: Mutex<HashMap<&'static str, Box<dyn CryptoProvider>>>,
     /// The path to the key folder to store key data and attributes.
     key_folder: String,
 }
@@ -72,15 +71,14 @@ impl KeyManager {
             KeyManagerRequest::GenerateAsymmetricKey { key_name, key, responder } => {
                 let provider = self.get_provider(PROVIDER_NAME).unwrap();
                 // Default algorithm for asymmetric key is ECDSA-SHA512-P521.
-                if let Err(status) = self.generate_asymmetric_key_and_bind(
+                match self.generate_asymmetric_key_and_bind(
                     &key_name,
                     key,
                     AsymmetricKeyAlgorithm::EcdsaSha512P521,
                     provider,
                 ) {
-                    responder.send(status)?;
-                } else {
-                    responder.send(Status::Ok)?;
+                    Ok(()) => responder.send(Status::Ok)?,
+                    Err(status) => responder.send(status)?,
                 }
             }
             KeyManagerRequest::GenerateAsymmetricKeyWithAlgorithm {
@@ -90,16 +88,17 @@ impl KeyManager {
                 responder,
             } => {
                 let provider = self.get_provider(PROVIDER_NAME).unwrap();
-                if let Err(status) =
-                    self.generate_asymmetric_key_and_bind(&key_name, key, key_algorithm, provider)
+                match self.generate_asymmetric_key_and_bind(&key_name, key, key_algorithm, provider)
                 {
-                    responder.send(status)?;
-                } else {
-                    responder.send(Status::Ok)?;
+                    Ok(()) => responder.send(Status::Ok)?,
+                    Err(status) => responder.send(status)?,
                 }
             }
-            KeyManagerRequest::GetAsymmetricPrivateKey { key_name: _, key: _, responder } => {
-                responder.send(Status::Ok)?;
+            KeyManagerRequest::GetAsymmetricPrivateKey { key_name, key, responder } => {
+                match self.get_asymmetric_private_key_and_bind(&key_name, key) {
+                    Ok(()) => responder.send(Status::Ok)?,
+                    Err(status) => responder.send(status)?,
+                }
             }
             KeyManagerRequest::ImportAsymmetricPrivateKey {
                 data: _,
@@ -136,10 +135,10 @@ impl KeyManager {
         key_to_bind: Arc<Mutex<dyn KmsKey>>,
         key: ServerEnd<AsymmetricPrivateKeyMarker>,
     ) -> Result<(), Status> {
-        let mut request_stream = key.into_stream().map_err(|err| {
-            error!("Error creating AsymmetricKey request stream {:?}", err);
-            Status::InternalError
-        })?;
+        let mut request_stream = key.into_stream().map_err(debug_err_fn!(
+            Status::InternalError,
+            "Error creating AsymmetricKey request stream {:?}"
+        ))?;
         // Need to clone the key_name to be move into the async function.
         let key_name = String::from(key_name);
         // Copy the key map into the async function.
@@ -250,13 +249,13 @@ impl KeyManager {
             Some(data) => KmsAsymmetricKey::import_key(&(*provider), data, key_name, key_algorithm),
         }?;
         {
-            self.create_and_write_key_data(new_key.get_key_name(), &new_key.get_key_data())?;
             self.write_key_attributes_to_file(
                 new_key.get_key_name(),
                 Some(new_key.get_key_algorithm()),
                 new_key.get_key_type(),
                 new_key.get_key_origin(),
                 new_key.get_provider_name(),
+                &new_key.get_key_data(),
             )?;
         }
         let key_to_bind = Arc::new(Mutex::new(new_key));
@@ -264,6 +263,45 @@ impl KeyManager {
         key_map.insert(key_name.to_string(), key_to_insert);
 
         Ok(key_to_bind)
+    }
+
+    /// Get an asymmetric key object and bind it to the user channel.
+    ///
+    /// # Arguments
+    ///
+    /// * `key_name` - The name for the key to be find.
+    /// * `key` - The server end of the user channel to bind.
+    fn get_asymmetric_private_key_and_bind(
+        &self,
+        key_name: &str,
+        key: ServerEnd<AsymmetricPrivateKeyMarker>,
+    ) -> Result<(), Status> {
+        let key_to_bind = self.get_asymmetric_private_key(&key_name)?;
+        self.bind_asymmetric_key_to_server(&key_name, key_to_bind, key)
+    }
+
+    /// Get an asymmetric key object.
+    ///
+    /// Find the asymmetric key object for the key name in the key map. If none is found, try to
+    /// load the key object into memory from storage.
+    ///
+    /// # Arguments
+    ///
+    /// * `key_name` - The name for the key to be find.
+    fn get_asymmetric_private_key(&self, key_name: &str) -> Result<Arc<Mutex<dyn KmsKey>>, Status> {
+        let mut key_map = self.key_map.lock().unwrap();
+        match key_map.get(key_name) {
+            Some(key) => Ok(Arc::clone(key)),
+            None => {
+                // The key is not in key map, read it from file.
+                let key_attributes = self.read_key_attributes_from_file(key_name)?;
+                let asym_key = KmsAsymmetricKey::parse_key(key_name, key_attributes)?;
+                let key_to_bind = Arc::new(Mutex::new(asym_key));
+                let key_to_insert = Arc::clone(&key_to_bind);
+                key_map.insert(key_name.to_string(), key_to_insert);
+                Ok(key_to_bind)
+            }
+        }
     }
 
     /// Check whether a key algorithm is a valid asymmetric key algorithm and supported by provider.
@@ -283,31 +321,13 @@ impl KeyManager {
         Ok(())
     }
 
-    fn get_key_path(&self, key_name: &str) -> PathBuf {
-        Path::new(&self.key_folder).join(format!("{}.key", key_name))
-    }
-
     fn get_key_attributes_path(&self, key_name: &str) -> PathBuf {
         Path::new(&self.key_folder).join(format!("{}.attr", key_name))
     }
 
     fn key_file_exists(&self, key_name: &str) -> bool {
-        let key_path = self.get_key_path(key_name);
+        let key_path = self.get_key_attributes_path(key_name);
         key_path.is_file()
-    }
-
-    fn create_and_write_key_data(&self, key_name: &str, key_data: &[u8]) -> Result<(), Status> {
-        || -> Result<(), Error> {
-            fs::create_dir_all(&self.key_folder)?;
-            let key_path = self.get_key_path(key_name);
-            let mut f = fs::File::create(&key_path)?;
-            f.write_all(key_data)?;
-            Ok(())
-        }()
-        .map_err(|err| -> Status {
-            error!("Failed to create and write to key file: {:?}", err);
-            Status::InternalError
-        })
     }
 
     fn write_key_attributes(
@@ -315,9 +335,7 @@ impl KeyManager {
         key_name: &str,
         serialized_key_attributes: &str,
     ) -> Result<(), Error> {
-        if !Path::new(&self.key_folder).exists() {
-            fs::create_dir_all(&self.key_folder)?;
-        }
+        fs::create_dir_all(&self.key_folder)?;
         let key_attributes_path = self.get_key_attributes_path(key_name);
         fs::write(key_attributes_path, serialized_key_attributes)?;
         Ok(())
@@ -334,6 +352,7 @@ impl KeyManager {
         key_type: KeyType,
         key_origin: KeyOrigin,
         provider_name: &str,
+        key_data: &[u8],
     ) -> Result<(), Status> {
         let key_algorithm_num = match asymmetric_key_algorithm {
             Some(alg) => alg.into_primitive(),
@@ -344,12 +363,71 @@ impl KeyManager {
             key_type,
             key_origin: key_origin.into_primitive(),
             provider_name: provider_name.to_string(),
+            key_data: key_data.to_vec(),
         };
         let key_attributes_string = serde_json::to_string(&key_attributes)
             .expect("Failed to encode key attributes to JSON format.");
-        self.write_key_attributes(key_name, &key_attributes_string).map_err(|err| -> Status {
-            error!("Failed to write key attributes: {:?}", err);
-            Status::InternalError
+        self.write_key_attributes(key_name, &key_attributes_string)
+            .map_err(debug_err_fn!(Status::InternalError, "Failed to write key attributes: {:?}"))
+    }
+
+    fn read_key_attributes(&self, key_name: &str) -> Result<Vec<u8>, Error> {
+        let key_attributes_path = self.get_key_attributes_path(key_name);
+        Ok(fs::read(key_attributes_path)?)
+    }
+
+    fn read_key_attributes_from_file(&self, key_name: &str) -> Result<KeyAttributes, Status> {
+        // Read the key attributes from file and parse it.
+        let key_attributes_string = self.read_key_attributes(&key_name).map_err(|err| {
+            if err.kind() == ErrorKind::NotFound {
+                return Status::KeyNotFound;
+            }
+            debug_err!(
+                Status::InternalError,
+                "Failed to read key attributes from key file: {:?}",
+                err
+            )
+        })?;
+        let key_attributes_string =
+            str::from_utf8(&key_attributes_string).map_err(debug_err_fn!(
+                Status::InternalError,
+                "Failed to parse JSON string as UTF8: {:?}! The stored key data is corrupted!"
+            ))?;
+        let key_attributes_json: KeyAttributesJson = serde_json::from_str(&key_attributes_string)
+            .map_err(debug_err_fn!(
+            Status::InternalError,
+            "Failed to parse key attributes: {:?}, the stored key data is corrupted!"
+        ))?;
+        let provider = {
+            match self.get_provider(&key_attributes_json.provider_name) {
+                Some(provider) => Ok(provider),
+                None => Err(debug_err!(
+                    Status::InternalError,
+                    "Failed to find provider! The stored key data is corrupted!"
+                )),
+            }
+        }?;
+        let key_type = key_attributes_json.key_type;
+        let asymmetric_key_algorithm = Some(
+            AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or_else(
+                debug_err_fn_without_err!(
+                    Status::InternalError,
+                    "Failed to convert key_algortihm! The stored key data is corrupted!"
+                ),
+            )?,
+        );
+        let key_origin = KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or_else(
+            debug_err_fn_without_err!(
+                Status::InternalError,
+                "Failed to convert key_origin! The stored key data is corrupted!"
+            ),
+        )?;
+        Ok(KeyAttributes {
+            asymmetric_key_algorithm,
+            key_type,
+            key_origin,
+            provider,
+            key_data: key_attributes_json.key_data,
         })
     }
 
@@ -359,6 +437,15 @@ impl KeyManager {
             Some(provider) => Some(provider.clone()),
             None => None,
         }
+    }
+
+    #[cfg(test)]
+    pub fn add_provider(&mut self, provider: Box<dyn CryptoProvider>) {
+        let provider_map = &mut self.crypto_provider_map.lock().unwrap();
+        if provider_map.contains_key(provider.get_name()) {
+            panic!("Two providers should not have the same name!");
+        }
+        provider_map.insert(provider.get_name(), provider);
     }
 }
 
@@ -417,6 +504,64 @@ mod tests {
             mock_provider.box_clone(),
         );
         if let Err(Status::InternalError) = result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+        tmp_key_folder.close().unwrap();
+    }
+
+    #[test]
+    fn test_get_asymmetric_key_mock_provider() {
+        for algorithm in ASYMMETRIC_KEY_ALGORITHMS.iter() {
+            get_asymmetric_key_mock_provider(*algorithm);
+        }
+    }
+
+    fn get_asymmetric_key_mock_provider(key_algorithm: AsymmetricKeyAlgorithm) {
+        let tmp_key_folder = tempdir().unwrap();
+        let mut key_manager = KeyManager::new();
+        let mock_provider = Box::new(MockProvider::new());
+        let test_key_data = common::generate_random_data(32);
+        mock_provider.set_result(&test_key_data);
+        key_manager.add_provider(mock_provider.box_clone());
+        key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
+        let key_info = {
+            let key = key_manager
+                .generate_asymmetric_key(TEST_KEY_NAME, key_algorithm, mock_provider.box_clone())
+                .unwrap();
+            let key_info = {
+                let key = key.lock().unwrap();
+                (key.get_key_name().to_string(), key.get_key_data())
+            };
+            let same_key = key_manager.get_asymmetric_private_key(TEST_KEY_NAME).unwrap();
+            let same_key_lock = same_key.lock().unwrap();
+            assert_eq!(same_key_lock.get_key_name(), &key_info.0);
+            assert_eq!(same_key_lock.get_key_data(), key_info.1);
+            key_info
+        };
+
+        // Clean up the cache
+        KeyManager::clean_up(Arc::clone(&key_manager.key_map), TEST_KEY_NAME);
+
+        // If we read again, it should read from file.
+        let new_key_to_bind = key_manager.get_asymmetric_private_key(TEST_KEY_NAME).unwrap();
+        let same_key_lock = new_key_to_bind.lock().unwrap();
+        assert_eq!(same_key_lock.get_key_name(), &key_info.0);
+        assert_eq!(same_key_lock.get_key_data(), key_info.1);
+        assert_eq!(mock_provider.get_called_key_data(), key_info.1);
+        tmp_key_folder.close().unwrap();
+    }
+
+    #[test]
+    fn test_get_asymmetric_key_mock_provider_non_exists() {
+        let tmp_key_folder = tempdir().unwrap();
+        let mut key_manager = KeyManager::new();
+        key_manager.add_provider(Box::new(MockProvider::new()));
+        key_manager.set_key_folder(tmp_key_folder.path().to_str().unwrap());
+        // If we read again, it should read from file.
+        let result = key_manager.get_asymmetric_private_key(TEST_KEY_NAME);
+        if let Err(Status::KeyNotFound) = result {
             assert!(true);
         } else {
             assert!(false);
