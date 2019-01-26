@@ -9,13 +9,14 @@ use fdio::fdio_sys::{fdio_ioctl, IOCTL_FAMILY_DISPLAY_CONTROLLER, IOCTL_KIND_GET
 use fdio::make_ioctl;
 use fidl_fuchsia_hardware_display::{ControllerEvent, ControllerProxy, ImageConfig, ImagePlane};
 use fuchsia_async as fasync;
+use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon::{
     self as zx,
     sys::{
         zx_cache_flush, zx_cache_policy_t::ZX_CACHE_POLICY_WRITE_COMBINING, zx_handle_t,
         ZX_CACHE_FLUSH_DATA,
     },
-    Handle, Vmar, VmarFlags, Vmo,
+    Handle, VmarFlags, Vmo,
 };
 use futures::{future, StreamExt, TryFutureExt, TryStreamExt};
 use shared_buffer::SharedBuffer;
@@ -211,7 +212,7 @@ impl Frame {
             .unwrap_or_else(|_err| println!("set_cache_policy failed"));
 
         // map image VMO
-        let pixel_buffer_addr = Vmar::root_self().map(
+        let pixel_buffer_addr = vmar_root_self().map(
             0,
             &image_vmo,
             0,
@@ -300,7 +301,7 @@ impl Drop for Frame {
     fn drop(&mut self) {
         unsafe {
             let (ptr, len) = self.pixel_buffer.as_ptr_len();
-            Vmar::root_self().unmap(ptr as usize, len).unwrap();
+            vmar_root_self().unmap(ptr as usize, len).unwrap();
         }
     }
 }

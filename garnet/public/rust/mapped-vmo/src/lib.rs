@@ -7,6 +7,7 @@
 #![deny(warnings)]
 #![deny(missing_docs)]
 
+use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon::{self as zx, VmarFlags};
 
 /// An object representing a mapping into an address space.
@@ -20,7 +21,7 @@ impl Mapping {
     /// Create a Mapping and map it in the root address space.
     pub fn create(size: usize, flags: VmarFlags) -> Result<Self, zx::Status> {
         let vmo = zx::Vmo::create(size as u64)?;
-        let addr = zx::Vmar::root_self().map(0, &vmo, 0, size, flags)?;
+        let addr = vmar_root_self().map(0, &vmo, 0, size, flags)?;
         Ok(Mapping { addr, size })
     }
 
@@ -31,7 +32,7 @@ impl Mapping {
         size: usize,
         flags: VmarFlags,
     ) -> Result<Self, zx::Status> {
-        let addr = zx::Vmar::root_self().map(0, vmo, 0, size, flags)?;
+        let addr = vmar_root_self().map(0, vmo, 0, size, flags)?;
         Ok(Mapping { addr, size })
     }
 
@@ -56,7 +57,7 @@ impl Mapping {
     // will effectively have no meaning after this function
     // completes.
     unsafe fn release(&mut self) {
-        zx::Vmar::root_self().unmap(self.addr, self.size as usize).ok();
+        vmar_root_self().unmap(self.addr, self.size as usize).ok();
     }
 }
 
@@ -98,7 +99,7 @@ impl MappedVmo {
     /// from the MappedVmo.
     pub fn resize(&mut self, size: usize, flags: VmarFlags) -> Result<(), zx::Status> {
         self.vmo.set_size(size as u64)?;
-        let addr = zx::Vmar::root_self().map(0, &self.vmo, 0, size, flags)?;
+        let addr = vmar_root_self().map(0, &self.vmo, 0, size, flags)?;
         unsafe {
             self.mapping.release();
         }

@@ -6,7 +6,7 @@
 
 use bitflags::bitflags;
 use crate::ok;
-use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Unowned, Vmo};
+use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Vmo};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
@@ -19,13 +19,6 @@ pub struct Vmar(Handle);
 impl_handle_based!(Vmar);
 
 impl Vmar {
-    pub fn root_self() -> Unowned<'static, Vmar> {
-        unsafe {
-            let handle = sys::zx_vmar_root_self();
-            Unowned::from_raw_handle(handle)
-        }
-    }
-
     pub fn allocate(
         &self, offset: usize, size: usize, flags: VmarFlags,
     ) -> Result<(Vmar, usize), Status> {

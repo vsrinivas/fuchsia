@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 use crate::ethernet_sys as sys;
+use fuchsia_runtime::vmar_root_self;
 use fuchsia_zircon as zx;
 use shared_buffer::SharedBuffer;
 use std::fmt;
@@ -117,7 +118,7 @@ impl BufferPool {
     /// `buffer_size`.
     pub fn new(vmo: zx::Vmo, buffer_size: usize) -> Result<BufferPool, zx::Status> {
         let len = vmo.get_size()? as usize;
-        let mapped = zx::Vmar::root_self().map(
+        let mapped = vmar_root_self().map(
             0,
             &vmo,
             0,
@@ -216,7 +217,7 @@ impl fmt::Debug for BufferPool {
 impl Drop for BufferPool {
     fn drop(&mut self) {
         unsafe {
-            zx::Vmar::root_self().unmap(self.base as usize, self.len).unwrap();
+            vmar_root_self().unmap(self.base as usize, self.len).unwrap();
         }
     }
 }

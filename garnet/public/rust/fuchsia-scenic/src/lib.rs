@@ -12,7 +12,8 @@ use fidl_fuchsia_ui_gfx::{
     RectangleArgs, ResourceArgs, RoundedRectangleArgs, ShapeNodeArgs, Value,
 };
 use fidl_fuchsia_ui_scenic::{Command, SessionProxy};
-use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, Vmar, VmarFlags, Vmo};
+use fuchsia_runtime::vmar_root_self;
+use fuchsia_zircon::{Event, EventPair, HandleBased, Rights, Status, VmarFlags, Vmo};
 use parking_lot::Mutex;
 use shared_buffer::SharedBuffer;
 use std::mem;
@@ -453,7 +454,7 @@ impl MemoryMapping {
     }
 
     fn new(vmo: &Vmo, offset: u64, len: usize, flags: VmarFlags) -> Result<MemoryMapping, Status> {
-        let addr = Vmar::root_self().map(0, vmo, offset, len, flags)?;
+        let addr = vmar_root_self().map(0, vmo, offset, len, flags)?;
         Ok(MemoryMapping { addr, len })
     }
 
@@ -465,7 +466,7 @@ impl MemoryMapping {
 impl Drop for MemoryMapping {
     fn drop(&mut self) {
         unsafe {
-            Vmar::root_self().unmap(self.addr, self.len).unwrap();
+            vmar_root_self().unmap(self.addr, self.len).unwrap();
         }
     }
 }

@@ -11,6 +11,7 @@ rustc_library("fuchsia-framebuffer") {
   deps = [
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/shared-buffer",
     "//third_party/rust-crates/rustc_deps:failure",
