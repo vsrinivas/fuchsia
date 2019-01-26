@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <atomic>
 #include <fbl/algorithm.h>
 #include <fbl/array.h>
-#include <fbl/atomic.h>
 #include <lib/zx/vmar.h>
 #include <string.h>
 #include <zircon/process.h>
@@ -25,7 +25,7 @@ bool Vmo::CheckVmar(uint64_t offset, uint64_t len, const void* expected) {
         uint64_t actual_val = base_[i];
         // Make sure we deterministically read from the vmar before reading the
         // expected value, in case things get remapped.
-        fbl::atomic_thread_fence(fbl::memory_order_seq_cst);
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         uint64_t expected_val = expected
                                     ? static_cast<const uint64_t*>(expected)[i]
                                     : base_val_ + i;
@@ -123,7 +123,7 @@ bool UserPager::ReplaceVmo(Vmo* vmo, zx::vmo* old_vmo) {
              ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_SPECIFIC_OVERWRITE, &addr)) != ZX_OK) {
         return false;
     }
-    fbl::atomic_thread_fence(fbl::memory_order_seq_cst);
+    std::atomic_thread_fence(std::memory_order_seq_cst);
 
     vmo->base_val_ = next_base_;
     next_base_ += (vmo->size_ / sizeof(uint64_t));
