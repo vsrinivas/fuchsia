@@ -1,0 +1,143 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.kms;
+
+using fuchsia.mem as mem;
+
+const uint8 MAX_KEY_NAME_SIZE = 32;
+
+enum Status {
+    OK = 0;
+    // Internal unexpected error.
+    INTERNAL_ERROR = 1;
+    // When trying to create/import a new key however another key with the same name already exists.
+    KEY_ALREADY_EXISTS = 2;
+    // When the key you are trying to use is not found.
+    KEY_NOT_FOUND = 3;
+    // When the key material could not be parsed.
+    PARSE_KEY_ERROR = 4;
+};
+
+enum AsymmetricKeyAlgorithm {
+    RSA_SSA_PSS_SHA256_2048 = 1;
+    RSA_SSA_PSS_SHA256_3072 = 2;
+    RSA_SSA_PSS_SHA256_4096 = 3;
+    RSA_SSA_PKCS1_SHA256_2048 = 4;
+    RSA_SSA_PKCS1_SHA256_3072 = 5;
+    RSA_SSA_PKCS1_SHA256_4096 = 6;
+    ECDSA_SHA256_P256 = 7;
+    ECDSA_SHA512_P384 = 8;
+    ECDSA_SHA512_P521 = 9;
+};
+
+enum KeyOrigin {
+    // The key was generated in this KMS instance.
+    GENERATED = 1;
+    // The key was imported.
+    IMPORTED = 2;
+};
+
+struct Signature {
+    vector<uint8>:512 bytes;
+};
+
+struct PublicKey {
+    vector<uint8>:256 bytes;
+};
+
+[Discoverable]
+interface KeyManager {
+    // Seal data to an encrypted form.
+    //
+    // Seal data to an encrypted form. The sealed data can only be unsealed by the same KMS instance
+    // by using UnsealData.
+    SealData(mem.Buffer plain_text) -> (Status status, mem.Buffer? cipher_text);
+
+    // Unseal sealed data.
+    //
+    // Unseal data previously sealed by this KMS instance.
+    UnsealData(mem.Buffer cipher_text) -> (Status status, mem.Buffer? plain_text);
+
+    // Generate an asymmetric key.
+    //
+    // Generate an asymmetric key using |key_name| as the unique name. |key| is the generated
+    // asymmetric key interface request. If the |key_name| is not unique, you would get
+    // KEY_ALREADY_EXISTS. The generated key can be used to sign data. The algorithm used for
+    // generating asymmetric key is ECDSA_SHA512_P521.
+    GenerateAsymmetricKey(
+        string:MAX_KEY_NAME_SIZE key_name,
+        request<AsymmetricPrivateKey> key) -> (Status status);
+
+    // Generate an asymmetric key with a specific algorithm.
+    //
+    // Generate an asymmetric key using |key_name| as the unique name and |key_algorithm| as
+    // algorithm. |key| is the generated asymmetric key interface request. If the |key_name| is not
+    // unique, you would get KEY_ALREADY_EXISTS. The supported key_algorithms are:
+    // RsaSsaPssSha2562048
+    // RsaSsaPssSha2563072
+    // RsaSsaPssSha2564096
+    // RsaSsaPkcs1Sha2562048
+    // RsaSsaPkcs1Sha2563072
+    // RsaSsaPkcs1Sha2564096
+    // EcdsaSha256P256
+    // EcdsaSha512P384
+    // EcdsaSha512P521
+    // The generated key can be used to encrypt and decrypt data.
+    GenerateAsymmetricKeyWithAlgorithm(
+        string:MAX_KEY_NAME_SIZE key_name,
+        AsymmetricKeyAlgorithm key_algorithm,
+        request<AsymmetricPrivateKey> key) -> (Status status);
+
+    // Import an asymmetric private key with a specific algorithm.
+    //
+    // Import an asymmetric private key using |key_name| as the unique name, |key_algorithm| as
+    // algorithm and |data| as key data. |key| is imported asymmetric key interface request. Key
+    // data should be in asn.1 encoded DER format. If the |key_name| is not unique, you would get
+    // KEY_ALREADY_EXISTS. The supported key_algorithms are:
+    // RsaSsaPssSha2562048
+    // RsaSsaPssSha2563072
+    // RsaSsaPssSha2564096
+    // RsaSsaPkcs1Sha2562048
+    // RsaSsaPkcs1Sha2563072
+    // RsaSsaPkcs1Sha2564096
+    // EcdsaSha256P256
+    // EcdsaSha512P384
+    // EcdsaSha512P521
+    ImportAsymmetricPrivateKey(
+        vector<uint8> data,
+        string:MAX_KEY_NAME_SIZE key_name,
+        AsymmetricKeyAlgorithm key_algorithm,
+        request<AsymmetricPrivateKey> key) -> (Status status);
+
+    // Get an asymmetric private key handle.
+    //
+    // Get an asymmetric private key handle using the |key_name|. If such key is not found, would
+    // return KEY_NOT_FOUND.
+    GetAsymmetricPrivateKey(
+        string:MAX_KEY_NAME_SIZE key_name,
+        request<AsymmetricPrivateKey> key) -> (Status status);
+
+    // Delete a key.
+    //
+    // Delete a key for |key_name|.  For all the current handle to the deleted key, they would
+    // become invalid and all following requests on those handles would return KEY_NOT_FOUND, user
+    // should close the invalid handles once get KEY_NOT_FOUND Status.
+    DeleteKey(string:MAX_KEY_NAME_SIZE key_name) -> (Status status);
+};
+
+[FragileBase]
+interface Key {
+    // Get the key origin (generated/imported).
+    GetKeyOrigin() -> (Status status, KeyOrigin key_origin);
+};
+
+interface AsymmetricPrivateKey : Key {
+    // Sign |data| using the current key.
+    Sign(mem.Buffer data) -> (Status status, Signature? signature);
+    // Get the DER format public key for the current private key.
+    GetPublicKey() -> (Status status, PublicKey? public_key);
+    // Get the key algorithm.
+    GetKeyAlgorithm() -> (Status status, AsymmetricKeyAlgorithm key_algorithm);
+};
