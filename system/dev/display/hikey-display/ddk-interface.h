@@ -6,6 +6,8 @@
 
 #include <unistd.h>
 
+#include <atomic>
+
 #include <zircon/compiler.h>
 #include <zircon/pixelformat.h>
 #include <zircon/thread_annotations.h>
@@ -21,7 +23,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>
@@ -68,7 +69,7 @@ private:
     int VSyncThread();
     void PopulateAddedDisplayArgs(added_display_args_t* args);
 
-    fbl::atomic_bool vsync_shutdown_flag_ = false;
+    std::atomic_bool vsync_shutdown_flag_ = false;
 
     // Thread handles
     thrd_t vsync_thread_;
