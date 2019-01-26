@@ -62,7 +62,7 @@ zx_protocol_device_t IntelHDAController::CONTROLLER_DEVICE_THUNKS = {
 #undef DEV
 
 IntelHDAController::IntelHDAController()
-    : state_(static_cast<StateStorage>(State::STARTING)),
+    : state_(State::STARTING),
       id_(device_id_gen_.fetch_add(1u)) {
     snprintf(log_prefix_, sizeof(log_prefix_), "IHDA Controller (unknown BDF)");
 }

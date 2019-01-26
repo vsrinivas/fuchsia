@@ -65,8 +65,7 @@ public:
     static void        DriverRelease(void* ctx);
 
 private:
-    using StateStorage = uint32_t;
-    enum class State : StateStorage {
+    enum class State : uint32_t {
         STARTING,
         OPERATING,
         SHUTTING_DOWN,
@@ -94,9 +93,8 @@ private:
     void RootDeviceRelease();
 
     // State control
-    // TODO(johngro) : extend fbl::atomic to support enum classes as well.
-    void  SetState(State state) { state_.store(static_cast<StateStorage>(state)); }
-    State GetState()            { return static_cast<State>(state_.load()); }
+    void  SetState(State state) { state_.store(state); }
+    State GetState()            { return state_.load(); }
 
     // Codec lifetime maanagement
     fbl::RefPtr<IntelHDACodec> GetCodec(uint id);
@@ -135,7 +133,7 @@ private:
     fbl::RefPtr<dispatcher::ExecutionDomain> default_domain_;
 
     // State machine and IRQ related events.
-    std::atomic<StateStorage>            state_;
+    std::atomic<State>                   state_;
     fbl::RefPtr<dispatcher::Interrupt>   irq_;
     fbl::RefPtr<dispatcher::WakeupEvent> irq_wakeup_event_;
 
