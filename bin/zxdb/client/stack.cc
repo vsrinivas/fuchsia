@@ -95,12 +95,15 @@ Stack::Stack(Delegate* delegate) : delegate_(delegate) {}
 
 Stack::~Stack() = default;
 
-FrameFingerprint Stack::GetFrameFingerprint(size_t frame_index) const {
+FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
+  size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
+
   // See function comment in thread.h for more. We need to look at the next
   // frame, so either we need to know we got them all or the caller wants the
-  // 0th one. We should always have the top two stack entries if available,
-  // so having only one means we got them all.
-  FXL_DCHECK(frame_index == 0 || has_all_frames());
+  // topmost physical frame (or any of its inline frames). We should always
+  // have the top two physical stack entries if available, so having only one
+  // means we got them all.
+  FXL_DCHECK(frame_index <= GetTopInlineFrameCount() || has_all_frames());
 
   // Should reference a valid index in the array.
   if (frame_index >= frames_.size()) {
@@ -127,6 +130,22 @@ FrameFingerprint Stack::GetFrameFingerprint(size_t frame_index) const {
 
   return FrameFingerprint(
       frames_[before_physical_frame_index]->GetStackPointer(), inline_count);
+}
+
+size_t Stack::GetTopInlineFrameCount() const {
+  for (size_t i = 0; i < frames_.size(); i++) {
+    if (!frames_[i]->IsInline())
+      return i;
+  }
+
+  // Should always have a non-inline frame if there are any.
+  FXL_DCHECK(frames_.empty());
+  return 0;
+}
+
+void Stack::SetHideTopInlineFrameCount(size_t hide_count) {
+  FXL_DCHECK(hide_count <= GetTopInlineFrameCount());
+  hide_top_inline_frame_count_ = hide_count;
 }
 
 void Stack::SyncFrames(std::function<void()> callback) {

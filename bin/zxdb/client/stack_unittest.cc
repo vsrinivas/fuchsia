@@ -190,4 +190,51 @@ TEST(Stack, InlineExpansion) {
   EXPECT_EQ(top_func.get(), loc.symbol().Get()->AsFunction());
 }
 
+TEST(Stack, InlineHiding) {
+  constexpr uint64_t kTopSP = 0x2000;
+  constexpr uint64_t kBottomSP = 0x2020;
+
+  // Create two physical frames.
+  debug_ipc::StackFrame phys_top_record(0x1000, kTopSP, kTopSP);
+  Location top_location(Location::State::kSymbolized, phys_top_record.ip);
+  debug_ipc::StackFrame phys_bottom_record(0x1020, kBottomSP, kBottomSP);
+  Location bottom_location(Location::State::kSymbolized, phys_bottom_record.ip);
+
+  auto phys_top = std::make_unique<MockFrame>(nullptr, nullptr, phys_top_record,
+                                              top_location);
+  auto phys_bottom = std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_bottom_record, bottom_location);
+
+  std::vector<std::unique_ptr<Frame>> frames;
+
+  // Top frame has two inline functions expanded on top of it.
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+  frames.push_back(std::make_unique<MockFrame>(
+      nullptr, nullptr, phys_top_record, top_location, phys_top.get()));
+
+  // Physical top frame below those.
+  frames.push_back(std::move(phys_top));
+
+  // Bottom frame has no inline frame.
+  frames.push_back(std::move(phys_bottom));
+
+  MockStackDelegate delegate;
+  Stack stack(&delegate);
+
+  // With no frames, there should be no inline frames.
+  EXPECT_EQ(0u, stack.GetTopInlineFrameCount());
+
+  // Setting the frames should give the two inline ones, followed by two
+  // physical ones.
+  stack.SetFramesForTest(std::move(frames), true);
+  EXPECT_EQ(4u, stack.size());
+  EXPECT_EQ(2u, stack.GetTopInlineFrameCount());
+
+  // Hide both inline frames, the top frame should now be the physical one.
+  stack.SetHideTopInlineFrameCount(2);
+  EXPECT_EQ(2u, stack.size());
+  EXPECT_EQ(2u, stack.GetTopInlineFrameCount());
+}
+
 }  // namespace zxdb

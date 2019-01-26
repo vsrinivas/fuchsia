@@ -19,6 +19,8 @@ class FrameFingerprint;
 // exception. If a thread is running, blocked (not in an exception), or in any
 // other state, the stack frames are not available.
 //
+// PARTIAL AND COMPLETE STACKS
+// ---------------------------
 // When a thread is suspended or blocked in an exception, it will have its
 // top frame available (the current IP and stack position) and the next (the
 // calling frame) if possible.
@@ -26,6 +28,18 @@ class FrameFingerprint;
 // If the full backtrace is needed, SyncFrames() can be called which will
 // compute the full backtrace and issue the callback when complete. This
 // backtrace will be cached until the thread is resumed.
+//
+// INLINE FRAMES
+// -------------
+// The thread's current position can be in multiple inline frames at the same
+// time (the first address of an inline function is both the first instruction
+// of that function, and the virtual "call" of that function in the outer
+// frame). This only applies to the topmost set of inline frames since anything
+// below the first physical frame is unambiguous).
+//
+// To make stepping work as expected, code can adjust which of these ambiguous
+// inline frames the stack reports is the top, and inline frames above that are
+// hidden from the normal size() and operator[] functions.
 class Stack {
  public:
   // Provides a way for this class to talk to the environment.
@@ -44,8 +58,7 @@ class Stack {
     // requires stack frames be constructed with different symbols than just
     // looking up the address in the symbols.
     virtual std::unique_ptr<Frame> MakeFrameForStack(
-        const debug_ipc::StackFrame& input,
-        Location location) = 0;
+        const debug_ipc::StackFrame& input, Location location) = 0;
 
     virtual Location GetSymbolizedLocationForStackFrame(
         const debug_ipc::StackFrame& input) = 0;
@@ -60,12 +73,17 @@ class Stack {
   // the top 1-2 (see class-level comment above).
   bool has_all_frames() const { return has_all_frames_; }
 
-  size_t size() const { return frames_.size(); }
+  size_t size() const { return frames_.size() - hide_top_inline_frame_count_; }
   bool empty() const { return frames_.empty(); }
 
   // Access into the individual frames. The topmost stack frame is index 0.
-  Frame* operator[](size_t index) { return frames_[index].get(); }
-  const Frame* operator[](size_t index) const { return frames_[index].get(); }
+  // There may be hidden inline frames above index 0.
+  Frame* operator[](size_t index) {
+    return frames_[index + hide_top_inline_frame_count_].get();
+  }
+  const Frame* operator[](size_t index) const {
+    return frames_[index + hide_top_inline_frame_count_].get();
+  }
 
   // Computes the stack frame fingerprint for the stack frame at the given
   // index. This function requires that that the previous stack frame
@@ -77,6 +95,34 @@ class Stack {
   //
   // See frame.h for a discussion on stack frames.
   FrameFingerprint GetFrameFingerprint(size_t frame_index) const;
+
+  // Sets the number of inline frames at the top of the stack to show. See the
+  // class-level comment above for more.
+  //
+  // Anything trimmed should have its current position at the beginning of a
+  // code range of an inline function for this trimming to make logical sense.
+  // The number of inline frames at the top of the stack can be modified.
+  //
+  // The "top inline frame count" is the number of inline frames above the
+  // topmost physical frame that exist in the stack. This does not change when
+  // the hide count is modified.
+  //
+  // From 0 to "top inline frame count" of inline frames can be hidden or
+  // unhidden. By default they are all visible (hide count = 0).
+  size_t GetTopInlineFrameCount() const;
+  size_t hide_top_inline_frame_count() const {
+    return hide_top_inline_frame_count_;
+  }
+  void SetHideTopInlineFrameCount(size_t hide_count);
+
+  // Queries the size and for frames at indices ignoring any hidden inline
+  // frames. With FrameAtIndexIndcludingHiddenInline(), the 0th index is always
+  // the innermost inline frame and is not affected by
+  // SetTopInlineFrameShowCount().
+  size_t SizeIncludingHiddenInline() const { return frames_.size(); }
+  Frame* FrameAtIndexIncludingHiddenInline(size_t index) {
+    return frames_[index].get();
+  }
 
   // Requests that all frame information be updated. This can be used to
   // (asynchronously) populate the frames when a Stack has only partial
@@ -110,6 +156,10 @@ class Stack {
 
   std::vector<std::unique_ptr<Frame>> frames_;
   bool has_all_frames_ = false;
+
+  // Number of frames to hide from size() and operator[] that are inline frames
+  // at the top of the stack that shouldn't be exposed right now.
+  size_t hide_top_inline_frame_count_ = 0;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Stack);
 };
