@@ -33,10 +33,6 @@ fuchsia/rust/mac-amd64
 	git_revision:0b1669d96cee9dec9035a50fdf0a967a68605f98
 	MUdVTuigKS0F05P-sujMet8d-KpDq6Ds3PPrOTdgkeIC
 
-fuchsia/sysroot/linux-amd64
-	git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
-	ae0677829357edb199c21e76b1ea31eb8ef62817
-
 fuchsia/tools/breakpad/linux-amd64
 	git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
 	06a7be742e031741bedb5fc71b5fc389374aabfd
