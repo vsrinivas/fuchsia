@@ -22,8 +22,8 @@ const uint32 MAX_ID_LENGTH = 256;
 enum Status {
     // The command completed successfully
     OK = 0;
-    // An internal error occurred. This usually indicates a bug within the Account
-    // Manager itself. Retry is optional.
+    // An internal error occurred. This usually indicates a bug within the
+    // Account Manager itself. Retry is optional.
     INTERNAL_ERROR = 1;
     // The request was malformed in some way, such as using an empty string for
     // the user_profile_id. The request should not be retried.
@@ -37,8 +37,8 @@ enum Status {
     // The requested account or persona is not present on the current device.
     // The request should not be retried.
     NOT_FOUND = 5;
-    // Some other problem occurred that cannot be classified using one of the more
-    // specific statuses. Retry is optional.
+    // Some other problem occurred that cannot be classified using one of the
+    // more specific statuses. Retry is optional.
     UNKNOWN_ERROR = 6;
 
     // TODO(jsankey): Add additional statuses as needed. Examples are likely to
@@ -90,8 +90,8 @@ interface AccountManager {
     GetAccountIds()
         -> (vector<LocalAccountId>:MAX_ACCOUNTS_PER_DEVICE account_ids);
 
-    // Returns a vector of all unlocked accounts provisioned on the current device
-    // and the current authentication state for each.
+    // Returns a vector of all unlocked accounts provisioned on the current
+    // device and the current authentication state for each.
     GetAccountAuthStates() -> (
         Status status,
         vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states);
@@ -114,7 +114,9 @@ interface AccountManager {
         -> (Status status);
 
     // Connects an interface that will receive changes in the provisioned
-    // accounts and their authentication state.
+    // accounts and their authentication state. Optionally this interface will
+    // also receive the initial set of accounts and authentication states onto
+    // which changes may be applied.
     //
     // |listener| The client end of an |AccountListener| channel
     // |options| An |AccountListenerOptions| that defines the set of events to
@@ -199,14 +201,21 @@ struct AccountListenerOptions {
 //
 // AccountListeners may be registered through the AccountManager interface
 // and this registration also defines which types of event should be sent to
-// the listener.
+// the listener. Optionally, the AccountListener will recieve an initial state
+// event onto which the change events may be safely accumulated.
+//
+// All methods include an empty response to follow the "Throttle push using
+// acknowledgements" FIDL design pattern.
 interface AccountListener {
-    // A method that is called once for each provisioned account on the device
-    // when the AccountListener is first connected.
-    // OnInitialize is only called if AccountListenerOptions.initial_state was
-    // set when creating the AccountListener. All OnInitialize calls will be
-    // completed before any other calls on the interface.
-    OnInitialize(AccountAuthState account_auth_state) -> ();
+    // A method that is called to communicate the initial set of accounts and
+    // their authentication states. OnInitialize is called exactly once if and
+    // only if AccountListenerOptions.initial_state was set when creating the
+    // AccountListener. When called, it will always be the first call on the
+    // interface. If no accounts are present on the device the vector will be
+    // empty.
+    OnInitialize(
+        vector<AccountAuthState>:MAX_ACCOUNTS_PER_DEVICE account_auth_states)
+        -> ();
 
     // A method that is called when a new account is added to the device.
     // This method is only called if AccountListenerOptions.add_account was
@@ -230,6 +239,9 @@ interface AccountListener {
 // AuthListeners may be registered through the |AuthTarget| interface and this
 // registration also defines the types of authentication state changes that
 // should be sent to the listener.
+//
+// All methods include an empty response to follow the "Throttle push using
+// acknowledgements" FIDL design pattern.
 interface AuthListener {
     // A method that is called when the AccountListener is first connected.
     OnInitialize(fuchsia.auth.AuthState auth_state) -> ();
