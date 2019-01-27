@@ -18,8 +18,8 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/device/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>
@@ -30,6 +30,7 @@
 #include <lib/fzl/vmo-mapper.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/block.h>
 #include <zircon/status.h>
@@ -48,6 +49,8 @@
 
 namespace paver {
 namespace {
+
+using volume_info_t = fuchsia_hardware_block_volume_VolumeInfo;
 
 static Partition PartitionType(const Command command) {
     switch (command) {
@@ -458,9 +461,9 @@ fbl::unique_fd FvmPartitionFormat(fbl::unique_fd partition_fd, size_t slice_size
             fvm_fd = TryBindToFvmDriver(partition_fd, zx::sec(3));
             if (fvm_fd) {
                 LOG("Found already formatted FVM.\n");
-                fvm_info_t info;
-                ssize_t r = ioctl_block_fvm_query(fvm_fd.get(), &info);
-                if (r >= 0) {
+                volume_info_t info;
+                zx_status_t status = fvm_query(fvm_fd.get(), &info);
+                if (status == ZX_OK) {
                     if (info.slice_size == slice_size) {
                         return fvm_fd;
                     } else {
@@ -781,10 +784,9 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     }
 
     // Contend with issues from an image that may be too large for this device.
-    fvm_info_t info;
-    ssize_t result = ioctl_block_fvm_query(fvm_fd.get(), &info);
-    if (result < 0) {
-        zx_status_t status = static_cast<zx_status_t>(result);
+    volume_info_t info;
+    status = fvm_query(fvm_fd.get(), &info);
+    if (status != ZX_OK) {
         ERROR("Failed to acquire FVM info: %s\n", zx_status_get_string(status));
         return status;
     }
@@ -829,6 +831,8 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
         return ZX_ERR_NO_MEMORY;
     }
 
+    fzl::FdioCaller volume_manager(std::move(fvm_fd));
+
     // Now that all partitions are preallocated, begin streaming data to them.
     for (size_t p = 0; p < parts.size(); p++) {
         vmoid_t vmoid;
@@ -869,15 +873,17 @@ zx_status_t FvmStreamPartitions(fbl::unique_fd partition_fd, fbl::unique_fd src_
     for (size_t p = 0; p < parts.size(); p++) {
         // Upgrade the old partition (currently active) to the new partition (currently
         // inactive) so the new partition persists.
-        upgrade_req_t upgrade;
-        memset(&upgrade, 0, sizeof(upgrade));
-        if (ioctl_block_get_partition_guid(parts[p].new_part.get(), &upgrade.new_guid,
+        fuchsia_hardware_block_partition_GUID guid;
+        if (ioctl_block_get_partition_guid(parts[p].new_part.get(), &guid.value,
                                            GUID_LEN) < 0) {
             ERROR("Failed to get unique GUID of new partition\n");
             return ZX_ERR_BAD_STATE;
         }
 
-        if (ioctl_block_fvm_upgrade(fvm_fd.get(), &upgrade) < 0) {
+        zx_status_t status;
+        zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerActivate(
+            volume_manager.borrow_channel(), &guid, &guid, &status);
+        if (io_status != ZX_OK || status != ZX_OK) {
             ERROR("Failed to upgrade partition\n");
             return ZX_ERR_IO;
         }

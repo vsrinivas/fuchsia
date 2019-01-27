@@ -20,7 +20,9 @@
 #include <lib/fdio/util.h>
 #include <lib/fdio/vfs.h>
 #include <lib/fdio/watcher.h>
+#include <lib/fzl/fdio.h>
 #include <fs/client.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/device/vfs.h>
@@ -198,24 +200,51 @@ zx_status_t fvm_destroy(const char* path) {
         return -1;
     }
 
-    fvm_info_t fvm_info;
-    ssize_t r;
-    if ((r = ioctl_block_fvm_query(driver_fd.get(), &fvm_info)) <= 0) {
-        fprintf(stderr, "fvm_destroy: Failed to query fvm: %ld\n", r);
+    fuchsia_hardware_block_volume_VolumeInfo volume_info;
+    zx_status_t status = fvm_query(driver_fd.get(), &volume_info);
+    if (status != ZX_OK) {
+        fprintf(stderr, "fvm_destroy: Failed to query fvm: %d\n", status);
         return -1;
     }
-
-    return fvm_overwrite(path, fvm_info.slice_size);
+    return fvm_overwrite(path, volume_info.slice_size);
 }
 
 // Helper function to allocate, find, and open VPartition.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request) {
-    ssize_t r;
-    if ((r = ioctl_block_fvm_alloc_partition(fvm_fd, request)) != ZX_OK) {
+    fzl::FdioCaller caller((fbl::unique_fd(fvm_fd)));
+    auto cleanup = fbl::MakeAutoCall([&caller] {
+        caller.release().release();
+    });
+
+    fuchsia_hardware_block_partition_GUID type_guid;
+    memcpy(type_guid.value, request->type, GUID_LEN);
+    fuchsia_hardware_block_partition_GUID instance_guid;
+    memcpy(instance_guid.value, request->guid, GUID_LEN);
+
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition(
+        caller.borrow_channel(), request->slice_count, &type_guid, &instance_guid,
+        request->name, NAME_LEN, request->flags, &status);
+    if (io_status != ZX_OK || status != ZX_OK) {
         return -1;
     }
 
     return open_partition(request->guid, request->type, ZX_SEC(10), nullptr);
+}
+
+zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out) {
+    fzl::FdioCaller caller((fbl::unique_fd(fvm_fd)));
+    auto cleanup = fbl::MakeAutoCall([&caller] {
+        caller.release().release();
+    });
+
+    zx_status_t status;
+    zx_status_t io_status = fuchsia_hardware_block_volume_VolumeManagerQuery(
+        caller.borrow_channel(), &status, out);
+    if (io_status != ZX_OK) {
+        return io_status;
+    }
+    return status;
 }
 
 int open_partition(const uint8_t* uniqueGUID, const uint8_t* typeGUID,

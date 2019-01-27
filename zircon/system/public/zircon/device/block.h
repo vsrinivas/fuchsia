@@ -36,9 +36,6 @@
 // otherwise, closing the client fifo is sufficient to shut down the server.
 #define IOCTL_BLOCK_FIFO_CLOSE \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 10)
-// Allocate a virtual partition with the requested length.
-#define IOCTL_BLOCK_FVM_ALLOC_PARTITION \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 11)
 // Extend a virtual partition.
 #define IOCTL_BLOCK_FVM_EXTEND \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 12)
@@ -56,23 +53,6 @@
 // (or unallocated) vslices starting from each vslice.
 #define IOCTL_BLOCK_FVM_VSLICE_QUERY \
     IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 16)
-// Atomically marks a vpartition (by instance GUID) as inactive, while finding
-// another partition (by instance GUID) and marking it as active.
-//
-// If the "old" partition does not exist, the GUID is ignored.
-// If the "old" partition is the same as the "new" partition, the "old"
-// GUID is ignored (as in, "Upgrade" only activates).
-// If the "new" partition does not exist, |ZX_ERR_NOT_FOUND| is returned.
-//
-// This function does not destroy the "old" partition, it just marks it as
-// inactive -- to reclaim that space, the "old" partition must be explicitly
-// destroyed.  This destruction can also occur automatically when the FVM driver
-// is rebound (i.e., on reboot).
-//
-// This function may be useful for A/B updates within the FVM,
-// since it will allow "activating" updated partitions.
-#define IOCTL_BLOCK_FVM_UPGRADE \
-    IOCTL(IOCTL_KIND_DEFAULT, IOCTL_FAMILY_BLOCK, 17)
 // Prints stats about the block device to the provided buffer and optionally
 // clears the counters
 #define IOCTL_BLOCK_GET_STATS   \
@@ -151,9 +131,6 @@ typedef struct {
     uint32_t flags; // Refer to fvm.h for options here; default is zero.
 } alloc_req_t;
 
-// ssize_t ioctl_block_fvm_alloc_partition(int fd, const alloc_req_t* req);
-IOCTL_WRAPPER_IN(ioctl_block_fvm_alloc_partition, IOCTL_BLOCK_FVM_ALLOC_PARTITION, alloc_req_t);
-
 typedef struct {
     size_t offset; // Both in units of "slice". "0" = slice 0, "1" = slice 1, etc...
     size_t length;
@@ -198,14 +175,6 @@ IOCTL_WRAPPER_OUT(ioctl_block_fvm_query, IOCTL_BLOCK_FVM_QUERY, fvm_info_t);
 //                                      query_response_t* response);
 IOCTL_WRAPPER_INOUT(ioctl_block_fvm_vslice_query, IOCTL_BLOCK_FVM_VSLICE_QUERY,
                     query_request_t, query_response_t);
-
-typedef struct {
-    uint8_t old_guid[GUID_LEN];
-    uint8_t new_guid[GUID_LEN];
-} upgrade_req_t;
-
-// ssize_t ioctl_block_fvm_upgrade(int fd, const upgrade_req_t* req);
-IOCTL_WRAPPER_IN(ioctl_block_fvm_upgrade, IOCTL_BLOCK_FVM_UPGRADE, upgrade_req_t);
 
 // ssize_t ioctl_block_get_stats(int fd, bool clear, block_stats_t* out)
 IOCTL_WRAPPER_INOUT(ioctl_block_get_stats, IOCTL_BLOCK_GET_STATS, bool, block_stats_t);

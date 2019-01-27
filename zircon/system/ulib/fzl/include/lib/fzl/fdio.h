@@ -47,6 +47,13 @@ public:
         return io_ != nullptr;
     }
 
+    // Returns a const reference to the underlying fd.
+    //
+    // The reference to |fd| must not outlast the lifetime of the FdioCaller.
+    const fbl::unique_fd& fd() const {
+        return fd_;
+    }
+
     // This channel is borrowed, but returned as a zx_handle_t for convenience.
     //
     // It should not be closed.

@@ -4,9 +4,11 @@
 
 #pragma once
 
-#include <zircon/device/block.h>
 #include <stdlib.h>
 #include <string.h>
+
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <zircon/device/block.h>
 
 __BEGIN_CDECLS
 
@@ -24,6 +26,9 @@ zx_status_t fvm_overwrite(const char* path, size_t slice_size);
 //
 // Returns an open fd to the new partition on success, -1 on error.
 int fvm_allocate_partition(int fvm_fd, const alloc_req_t* request);
+
+// Query the volume manager for info.
+zx_status_t fvm_query(int fvm_fd, fuchsia_hardware_block_volume_VolumeInfo* out);
 
 // Waits for a partition with a GUID pair to appear, and opens it.
 //

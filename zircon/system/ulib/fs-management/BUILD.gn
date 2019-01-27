@@ -16,6 +16,9 @@ library("fs-management") {
     "mkfs.cpp",
     "mount.cpp",
   ]
+  public_deps = [
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
+  ]
   deps = [
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/digest",

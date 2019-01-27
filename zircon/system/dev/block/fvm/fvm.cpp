@@ -14,6 +14,7 @@
 #include <fbl/array.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
@@ -526,7 +527,7 @@ zx_status_t VPartitionManager::FreeSlicesLocked(VPartition* vp, size_t vslice_st
     return WriteFvmLocked();
 }
 
-void VPartitionManager::Query(fvm_info_t* info) {
+void VPartitionManager::Query(volume_info_t* info) {
     info->slice_size = SliceSize();
     info->vslice_count = VSliceMax();
     {
@@ -577,68 +578,67 @@ vpart_entry_t* VPartitionManager::GetVPartEntryLocked(size_t index) const {
 
 // Device protocol (FVM)
 
-zx_status_t VPartitionManager::DdkIoctl(uint32_t op, const void* cmd, size_t cmdlen, void* reply,
-                                        size_t max, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_BLOCK_FVM_ALLOC_PARTITION: {
-        if (cmdlen < sizeof(alloc_req_t))
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        const alloc_req_t* request = static_cast<const alloc_req_t*>(cmd);
+zx_status_t VPartitionManager::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_block_volume_VolumeManager_dispatch(this, txn, msg, Ops());
+}
 
-        if (request->slice_count >= std::numeric_limits<uint32_t>::max()) {
-            return ZX_ERR_OUT_OF_RANGE;
-        } else if (request->slice_count == 0) {
-            return ZX_ERR_OUT_OF_RANGE;
-        }
+zx_status_t VPartitionManager::FIDLAllocatePartition(
+        uint64_t slice_count,
+        const fuchsia_hardware_block_partition_GUID* type,
+        const fuchsia_hardware_block_partition_GUID* instance,
+        const char* name_data, size_t name_size, uint32_t flags, fidl_txn_t* txn) {
+    const auto reply = fuchsia_hardware_block_volume_VolumeManagerAllocatePartition_reply;
 
-        zx_status_t status;
-        fbl::unique_ptr<VPartition> vpart;
-        {
-            fbl::AutoLock lock(&lock_);
-            size_t vpart_entry;
-            if ((status = FindFreeVPartEntryLocked(&vpart_entry)) != ZX_OK) {
-                return status;
-            }
-
-            if ((status = VPartition::Create(this, vpart_entry, &vpart)) != ZX_OK) {
-                return status;
-            }
-
-            auto entry = GetVPartEntryLocked(vpart_entry);
-            entry->init(request->type, request->guid, 0, request->name,
-                        request->flags & kVPartAllocateMask);
-
-            if ((status = AllocateSlicesLocked(vpart.get(), 0, request->slice_count)) != ZX_OK) {
-                entry->slices = 0; // Undo VPartition allocation
-                return status;
-            }
-        }
-        if ((status = AddPartition(std::move(vpart))) != ZX_OK) {
-            return status;
-        }
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_FVM_QUERY: {
-        if (max < sizeof(fvm_info_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        fvm_info_t* info = static_cast<fvm_info_t*>(reply);
-        Query(info);
-        *out_actual = sizeof(fvm_info_t);
-        return ZX_OK;
-    }
-    case IOCTL_BLOCK_FVM_UPGRADE: {
-        if (cmdlen < sizeof(upgrade_req_t)) {
-            return ZX_ERR_BUFFER_TOO_SMALL;
-        }
-        const upgrade_req_t* req = static_cast<const upgrade_req_t*>(cmd);
-        return Upgrade(req->old_guid, req->new_guid);
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
+    if (slice_count >= std::numeric_limits<uint32_t>::max()) {
+        return reply(txn, ZX_ERR_OUT_OF_RANGE);
+    } else if (slice_count == 0) {
+        return reply(txn, ZX_ERR_OUT_OF_RANGE);
+    } else if (name_size > fuchsia_hardware_block_partition_NAME_LENGTH) {
+        return reply(txn , ZX_ERR_INVALID_ARGS);
     }
 
-    return ZX_ERR_NOT_SUPPORTED;
+    char name[fuchsia_hardware_block_partition_NAME_LENGTH + 1] = {};
+    strlcpy(name, name_data, name_size);
+
+    zx_status_t status;
+    fbl::unique_ptr<VPartition> vpart;
+    {
+        fbl::AutoLock lock(&lock_);
+        size_t vpart_entry;
+        if ((status = FindFreeVPartEntryLocked(&vpart_entry)) != ZX_OK) {
+            return reply(txn, status);
+        }
+
+        if ((status = VPartition::Create(this, vpart_entry, &vpart)) != ZX_OK) {
+            return reply(txn, status);
+        }
+
+        auto entry = GetVPartEntryLocked(vpart_entry);
+        entry->init(type->value, instance->value, 0, name, flags & kVPartAllocateMask);
+
+        if ((status = AllocateSlicesLocked(vpart.get(), 0, slice_count)) != ZX_OK) {
+            entry->slices = 0; // Undo VPartition allocation
+            return reply(txn, status);
+        }
+    }
+    if ((status = AddPartition(std::move(vpart))) != ZX_OK) {
+        return reply(txn, status);
+    }
+
+    return reply(txn, ZX_OK);
+}
+
+zx_status_t VPartitionManager::FIDLQuery(fidl_txn_t* txn) {
+    fuchsia_hardware_block_volume_VolumeInfo info;
+    Query(&info);
+    return fuchsia_hardware_block_volume_VolumeManagerQuery_reply(txn, ZX_OK, &info);
+}
+
+zx_status_t VPartitionManager::FIDLActivate(const fuchsia_hardware_block_partition_GUID* old_guid,
+                                            const fuchsia_hardware_block_partition_GUID* new_guid,
+                                            fidl_txn_t* txn) {
+    zx_status_t status = Upgrade(old_guid->value, new_guid->value);
+    return fuchsia_hardware_block_volume_VolumeManagerActivate_reply(txn, status);
 }
 
 void VPartitionManager::DdkUnbind() {

@@ -8,6 +8,7 @@ test("fvm") {
   ]
   deps = [
     "$zx/system/fidl/fuchsia-device:c",
+    "$zx/system/fidl/fuchsia-hardware-block-volume:c",
     "$zx/system/fidl/fuchsia-io:c",
     "$zx/system/ulib/async",
     "$zx/system/ulib/async:async-cpp",

@@ -418,9 +418,10 @@ zx_status_t VPartition::BlockVolumeShrink(const slice_extent_t* extent) {
 }
 
 zx_status_t VPartition::BlockVolumeQuery(parent_volume_info_t* out_info) {
-    // TODO(smklein): Replace fvm_info_t with parent_volume_info_t.
-    static_assert(sizeof(parent_volume_info_t) == sizeof(fvm_info_t), "Info Mismatch");
-    fvm_info_t* info = reinterpret_cast<fvm_info_t*>(out_info);
+    // TODO(smklein): Ensure Banjo (parent_volume_info_t) and FIDL (volume_info_t)
+    // are aligned.
+    static_assert(sizeof(parent_volume_info_t) == sizeof(volume_info_t), "Info Mismatch");
+    volume_info_t* info = reinterpret_cast<volume_info_t*>(out_info);
     mgr_->Query(info);
     return ZX_OK;
 }
