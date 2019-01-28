@@ -2,8 +2,8 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/rust/rustc_binary.gni")
 import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
 
 rustc_binary("bin") {
   name = "bt_mgr"
@@ -21,23 +21,21 @@ rustc_binary("bin") {
     "//garnet/public/rust/fdio",
     "//garnet/public/rust/fuchsia-app",
     "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
     "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
     "//garnet/public/rust/fuchsia-zircon",
-    "//third_party/rust-crates/rustc_deps:serde",
-    "//garnet/public/rust/fuchsia-syslog",
-    "//third_party/rust-crates/rustc_deps:serde_derive",
-    "//third_party/rust-crates/rustc_deps:toml",
-    "//third_party/rust-crates/rustc_deps:serde_json",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:toml",
   ]
 }
 
 package("bt-mgr") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":bin",
   ]

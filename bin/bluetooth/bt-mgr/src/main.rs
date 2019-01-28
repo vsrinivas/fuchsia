@@ -11,7 +11,7 @@ use {
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fuchsia_app::{server::ServicesServer, client::Launcher},
+    fuchsia_app::{client::Launcher, server::ServicesServer},
     fuchsia_async as fasync,
     fuchsia_bluetooth::make_clones,
     fuchsia_syslog::{self as syslog, fx_log_info},
@@ -32,7 +32,10 @@ fn main() -> Result<(), Error> {
         .unwrap();
     let btgap = Arc::new(Mutex::new(
         launcher
-            .launch(String::from("bt-gap"), None)
+            .launch(
+                String::from("fuchsia-pkg://fuchsia.com/bt-gap#meta/bt-gap.cmx"),
+                None,
+            )
             .context("Failed to launch bt-gap (bluetooth) service")
             .unwrap(),
     ));
@@ -72,10 +75,10 @@ fn main() -> Result<(), Error> {
         .start()
         .map_err(|e| e.context("error starting service server"))?;
 
-        let io_config_fut = config::set_capabilities();
-        executor
-            .run_singlethreaded(server.try_join(io_config_fut))
-            .context("bt-mgr failed to execute future")
-            .map_err(|e| e.into())
-            .map(|_| ())
+    let io_config_fut = config::set_capabilities();
+    executor
+        .run_singlethreaded(server.try_join(io_config_fut))
+        .context("bt-mgr failed to execute future")
+        .map_err(|e| e.into())
+        .map(|_| ())
 }
