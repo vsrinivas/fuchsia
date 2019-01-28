@@ -163,9 +163,7 @@ Gain::AScale Gain::GetGainScale(float src_gain_db, float dest_gain_db) {
     } else if (effective_gain_db >= kMaxGainDb) {
       combined_gain_scale_ = kMaxScale;
     } else {
-      // Else, we do need to compute the combined gain-scale. Note: multiply-by-
-      // .05 equals divide-by-20 -- and is faster on non-optimized builds. Note:
-      // 0.05 must be double (not float), for the precision we require.
+      // Else, we do need to compute the combined gain-scale.
       combined_gain_scale_ = DbToScale(effective_gain_db);
     }
   }

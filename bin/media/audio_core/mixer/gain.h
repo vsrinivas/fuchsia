@@ -45,6 +45,9 @@ class Gain {
   // Amplitude scale factors are expressed as 32-bit IEEE-754 floating point.
   using AScale = float;
 
+  // Note: multiply-by-.05 equals divide-by-20 -- and is faster on non-optimized
+  // builds. Note: 0.05 must be double (not float), for the precision we
+  // require.
   static AScale DbToScale(float gain_db) { return pow(10.0f, gain_db * 0.05); }
   static float ScaleToDb(AScale scale) { return std::log10(scale) * 20.0f; }
   // Higher-precision (but slower) version currently used only by fidelity tests
