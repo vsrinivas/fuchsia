@@ -6,7 +6,6 @@ import("//build/package.gni")
 
 package("frank_media_config") {
   deprecated_system_image = true
-  package_name = "frank_media_config"
   resources = [
     {
       dest = "media/audio/settings/default/34384e7da9d52c8062a9765baeb6053a-output.json"
