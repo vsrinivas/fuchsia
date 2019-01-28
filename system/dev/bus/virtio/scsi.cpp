@@ -30,7 +30,8 @@ namespace virtio {
 static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun) {
     req->lun[0] = 1;
     req->lun[1] = target;
-    memcpy(&req->lun[2], &lun, sizeof(lun));
+    req->lun[2] = 0x40 | static_cast<uint8_t>(lun >> 8);
+    req->lun[3] = static_cast<uint8_t>(lun) & 0xff;
 }
 
 zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t* cdb,
