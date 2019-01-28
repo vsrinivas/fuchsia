@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include <optional>
 #include <vector>
 
 #include "garnet/bin/zxdb/symbols/location.h"
@@ -84,6 +85,9 @@ class Stack {
   const Frame* operator[](size_t index) const {
     return frames_[index + hide_top_inline_frame_count_].get();
   }
+
+  // Returns the index of the frame pointer in this stack if it is there.
+  std::optional<size_t> IndexForFrame(const Frame* frame) const;
 
   // Computes the stack frame fingerprint for the stack frame at the given
   // index. This function requires that that the previous stack frame

@@ -95,6 +95,14 @@ Stack::Stack(Delegate* delegate) : delegate_(delegate) {}
 
 Stack::~Stack() = default;
 
+std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
+  for (size_t i = 0; i < frames_.size(); i++) {
+    if (frames_[i].get() == frame)
+      return i;
+  }
+  return std::nullopt;
+}
+
 FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
   size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
 

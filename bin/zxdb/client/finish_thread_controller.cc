@@ -12,14 +12,31 @@
 
 namespace zxdb {
 
-FinishThreadController::FinishThreadController(FromFrame, const Frame* frame)
-    : ThreadController(),
-      frame_ip_(frame->GetAddress()),
-      frame_sp_(frame->GetStackPointer()) {}
+FinishThreadController::FinishThreadController(const Stack& stack,
+                                               size_t frame_to_finish) {
+  FXL_DCHECK(frame_to_finish < stack.size());
 
-FinishThreadController::FinishThreadController(
-    ToFrame, uint64_t to_address, const FrameFingerprint& to_frame_fingerprint)
-    : to_address_(to_address), to_frame_fingerprint_(to_frame_fingerprint) {}
+  if (frame_to_finish == stack.size() - 1) {
+    if (stack.has_all_frames()) {
+      // Request to finish the oldest stack frame.
+      to_address_ = 0;
+      from_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish);
+    } else {
+      // Need to sync frames so we can find the calling one. Save the IP and
+      // SP which will be used to re-find the frame in question.
+      // TODO(brettw) this won't handle inline frame selection properly.
+      frame_ip_ = stack[frame_to_finish]->GetAddress();
+      frame_ip_ = stack[frame_to_finish]->GetStackPointer();
+    }
+  } else {
+    // Common case where the frame to finish has a previous frame and the
+    // frame fingerprint and return address are known.
+    FXL_DCHECK(stack.size() > frame_to_finish + 1);
+    // TODO(brettw) this won't handle inline frame selection properly.
+    to_address_ = stack[frame_to_finish + 1]->GetAddress();
+    from_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish);
+  }
+}
 
 FinishThreadController::~FinishThreadController() = default;
 
@@ -39,24 +56,17 @@ void FinishThreadController::InitWithThread(
     Thread* thread, std::function<void(const Err&)> cb) {
   set_thread(thread);
 
-  if (HaveAddressAndFingerprint()) {
+  if (from_frame_fingerprint_.is_valid()) {
     // The fingerprint was already computed in the constructor, can skip
     // directly to setting up the breakpoint.
     InitWithFingerprint(std::move(cb));
   } else {
-    // Need to make sure the frames are available to find the fingerprint
-    // (fingerprint computation requires both the destination frame and the
-    // frame before the destination frame).
-    Stack& stack = thread->GetStack();
-    if (stack.has_all_frames()) {
-      InitWithStack(stack, std::move(cb));
-    } else {
-      // Need to asynchronously request the thread's frames. We can capture
-      // |this| here since the thread owns this thread controller.
-      stack.SyncFrames([ this, cb = std::move(cb) ]() {
-        InitWithStack(this->thread()->GetStack(), std::move(cb));
-      });
-    }
+    // Need to request stack frames to get the frame fingerpring and return
+    // address (both of which require previous frames). We can capture |this|
+    // here since the thread owns this thread controller.
+    thread->GetStack().SyncFrames([ this, cb = std::move(cb) ]() {
+      InitWithStack(this->thread()->GetStack(), std::move(cb));
+    });
   }
 }
 
@@ -66,8 +76,8 @@ ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
   return ContinueOp::Continue();
 }
 
-void FinishThreadController::InitWithStack(
-    const Stack& stack, std::function<void(const Err&)> cb) {
+void FinishThreadController::InitWithStack(const Stack& stack,
+                                           std::function<void(const Err&)> cb) {
   // Note if this was called asynchronously the thread could be resumed
   // and it could have no frames, or totally different ones.
 
@@ -94,8 +104,7 @@ void FinishThreadController::InitWithStack(
   }
 
   // The stack frame to exit to is just the next one up.
-  size_t step_to_index = requested_index + 1;
-  to_address_ = stack[step_to_index]->GetAddress();
+  to_address_ = stack[requested_index + 1]->GetAddress();
   if (!to_address_) {
     // Often the bottom-most stack frame will have a 0 IP which obviously
     // we can't return to. Treat this the same as when returning from the
@@ -103,19 +112,23 @@ void FinishThreadController::InitWithStack(
     cb(Err());
     return;
   }
-  to_frame_fingerprint_ =
-      thread()->GetStack().GetFrameFingerprint(step_to_index);
+  from_frame_fingerprint_ =
+      thread()->GetStack().GetFrameFingerprint(requested_index);
   InitWithFingerprint(std::move(cb));
-}
-
-bool FinishThreadController::HaveAddressAndFingerprint() const {
-  return to_address_ != 0 && to_frame_fingerprint_.is_valid();
 }
 
 void FinishThreadController::InitWithFingerprint(
     std::function<void(const Err&)> cb) {
+  if (to_address_ == 0) {
+    // There is no return address. This will happen when trying to finish the
+    // oldest stack frame. Nothing to do.
+    cb(Err());
+    return;
+  }
+
   until_controller_ = std::make_unique<UntilThreadController>(
-      InputLocation(to_address_), to_frame_fingerprint_);
+      InputLocation(to_address_), from_frame_fingerprint_,
+      UntilThreadController::kRunUntilOlderFrame);
 
   // Give the "until" controller a dummy callback and execute the callback
   // ASAP. The until controller executes the callback once it knows that the

@@ -20,10 +20,12 @@ UntilThreadController::UntilThreadController(InputLocation location)
     : ThreadController(), location_(std::move(location)), weak_factory_(this) {}
 
 UntilThreadController::UntilThreadController(InputLocation location,
-                                             FrameFingerprint newest_frame)
+                                             FrameFingerprint newest_frame,
+                                             FrameComparison cmp)
     : ThreadController(),
       location_(std::move(location)),
-      newest_threadhold_frame_(newest_frame),
+      threshold_frame_(newest_frame),
+      comparison_(cmp),
       weak_factory_(this) {}
 
 UntilThreadController::~UntilThreadController() {
@@ -44,7 +46,7 @@ void UntilThreadController::InitWithThread(Thread* thread,
   // Frame-tied triggers can't be one-shot because we need to check the stack
   // every time it triggers. In the non-frame case the one-shot breakpoint will
   // be slightly more efficient.
-  settings.one_shot = !newest_threadhold_frame_.is_valid();
+  settings.one_shot = !threshold_frame_.is_valid();
 
   breakpoint_ = GetSystem()->CreateNewInternalBreakpoint()->GetWeakPtr();
   // The breakpoint may post the callback asynchronously, so we can't be sure
@@ -94,7 +96,7 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
     return kContinue;
   }
 
-  if (!newest_threadhold_frame_.is_valid()) {
+  if (!threshold_frame_.is_valid()) {
     Log("No frame check required.");
     return kStop;
   }
@@ -106,8 +108,14 @@ ThreadController::StopOp UntilThreadController::OnThreadStop(
   }
 
   FrameFingerprint current_frame = stack.GetFrameFingerprint(0);
-  if (FrameFingerprint::Newer(current_frame, newest_threadhold_frame_)) {
+  if (FrameFingerprint::Newer(current_frame, threshold_frame_)) {
     Log("In newer frame, ignoring.");
+    return kContinue;
+  }
+  if (comparison_ == kRunUntilOlderFrame && current_frame == threshold_frame_) {
+    // In kRunUntilOlderFrame mode, the threshold frame fingerprint itself
+    // is one that should continue running.
+    Log("In threshold frame, ignoring.");
     return kContinue;
   }
   Log("Found target frame (or older).");

@@ -230,7 +230,7 @@ void ThreadImpl::OnException(
     const std::vector<fxl::WeakPtr<Breakpoint>>& hit_breakpoints) {
 #if defined(DEBUG_THREAD_CONTROLLERS)
   ThreadController::LogRaw("----------\r\nGot exception @ 0x%" PRIx64,
-                           frames_[0]->GetAddress());
+                           stack_[0]->GetAddress());
 #endif
   bool should_stop;
   if (controllers_.empty()) {

@@ -22,6 +22,16 @@ class Target;
 
 class UntilThreadController : public ThreadController {
  public:
+  enum FrameComparison {
+    // The program will run until the current frame is older than the given
+    // one. In this case if the frame fingerprints compare equal, the
+    // program will continue to run. Anything older will stop.
+    kRunUntilOlderFrame,
+
+    // Stops when the current frame is the same as or older than the given one.
+    kRunUntilEqualOrOlderFrame
+  };
+
   // Runs a thread until the given location. The location will only be matched
   // if the stack base pointer position of the location is greater than end_sp
   // this means that the stack has grown up to a higher frame. When end_bp is
@@ -30,10 +40,11 @@ class UntilThreadController : public ThreadController {
   // options (as a subset of "finish" for example).
   explicit UntilThreadController(InputLocation location);
 
-  // Runs to the given location until the current frame is either equal to
-  // |newest_frame|, or older than it. This allows stepping backward in the
-  // call stack.
-  UntilThreadController(InputLocation location, FrameFingerprint newest_frame);
+  // Runs to the given location until the current frame compares to the given
+  // frame according to the given comparator. This allows stepping backward in
+  // the call stack.
+  UntilThreadController(InputLocation location, FrameFingerprint newest_frame,
+                        FrameComparison cmp);
 
   ~UntilThreadController() override;
 
@@ -56,11 +67,12 @@ class UntilThreadController : public ThreadController {
 
   InputLocation location_;
 
-  // Indicates the frame. Any frame equal to this or older means stop, newer
-  // frames than this keep running.
+  // Indicates the frame. This frame is compared to the current one according
+  // to the comparison_ function.
   //
-  // When no frame checking is needed, this will be !is_valid().
-  FrameFingerprint newest_threadhold_frame_;
+  // When no frame checking is needed, the threshold frame will be !is_valid().
+  FrameFingerprint threshold_frame_;
+  FrameComparison comparison_ = kRunUntilOlderFrame;
 
   std::function<void(const Err&)> error_callback_;
 

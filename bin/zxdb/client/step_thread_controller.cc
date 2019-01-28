@@ -188,9 +188,8 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         // unsymbolized code.
         Log("Called unsymbolized function, stepping out.");
         FXL_DCHECK(original_frame_fingerprint_.is_valid());
-        finish_unsymolized_function_ = std::make_unique<FinishThreadController>(
-            FinishThreadController::ToFrame(), stack[1]->GetAddress(),
-            original_frame_fingerprint_);
+        finish_unsymolized_function_ =
+            std::make_unique<FinishThreadController>(stack, 0);
         finish_unsymolized_function_->InitWithThread(thread(),
                                                      [](const Err&) {});
         return kContinue;

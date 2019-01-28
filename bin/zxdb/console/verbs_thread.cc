@@ -277,8 +277,15 @@ Err DoFinish(ConsoleContext* context, const Command& cmd) {
   if (err.has_error())
     return err;
 
+  const Stack& stack = cmd.thread()->GetStack();
+  size_t frame_index;
+  if (auto found_frame_index = stack.IndexForFrame(cmd.frame()))
+    frame_index = *found_frame_index;
+  else
+    return Err("Internal error, frame not found in current thread.");
+
   auto controller = std::make_unique<FinishThreadController>(
-      FinishThreadController::FromFrame(), cmd.frame());
+      stack, frame_index);
   cmd.thread()->ContinueWith(std::move(controller), [](const Err& err) {
     if (err.has_error())
       Console::get()->Output(err);

@@ -125,9 +125,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
   // Since the IPC will serialize the command, we know that successful
   // breakpoint sets will arrive before telling the thread to continue.
   Log("In a new frame, passing through to 'finish'.");
-  finish_ = std::make_unique<FinishThreadController>(
-      FinishThreadController::ToFrame(), stack[1]->GetAddress(),
-      frame_fingerprint_);
+  finish_ = std::make_unique<FinishThreadController>(stack, 0);
   finish_->InitWithThread(thread(), [](const Err&) {});
   return finish_->OnThreadStop(stop_type, hit_breakpoints);
 }

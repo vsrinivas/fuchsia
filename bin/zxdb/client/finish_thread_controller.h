@@ -15,24 +15,14 @@ class Frame;
 class Stack;
 class UntilThreadController;
 
+// Thread controller that runs a given stack frame to its completion. This
+// can finish more than one frame at once, and there could be a combination of
+// physical and inline frames being exited from.
 class FinishThreadController : public ThreadController {
  public:
-  // Tag classes that make the constructor variants more clear at the call
-  // sites (it's hard to tell whether the argument is being stepped "from" or
-  // "to").
-  class FromFrame {};
-  class ToFrame {};
-
-  // Steps out of / "from" the given frame, leaving execution at the next
-  // instruction in the calling (older) frame.
-  FinishThreadController(FromFrame, const Frame* frame);
-
-  // Steps "to" to the given frame address/fingerprint. Any newer frame
-  // fingerprints will be ignored (execution will continue). The thread will
-  // only stop at the address when the current frame matches (or is older than)
-  // the to_frame_fingerprint.
-  FinishThreadController(ToFrame, uint64_t to_address,
-                         const FrameFingerprint& to_frame_fingerprint);
+  // Finishes the given frame of the stack, leaving control at frame
+  // |frame_to_finish + 1] when the controller is complete.
+  FinishThreadController(const Stack& stack, size_t frame_to_finish);
 
   ~FinishThreadController() override;
 
@@ -58,14 +48,21 @@ class FinishThreadController : public ThreadController {
 
   // The instruction and stack pointer of the frame when the address and
   // fingerprint are not known. The SP allows disambiguation for two frames
-  // at the same address.
+  // at the same address. These will be nonzero only when we need to
+  // asynchronously request data to compute the address or fingerprint.
   uint64_t frame_ip_ = 0;
   uint64_t frame_sp_ = 0;
 
-  // When set, to_address_ will be nonzero and to_frame_fingerprint_ will be
-  // is_valid(). See HaveAddressAndFingerprint().
+  // The from_frame_fingerprint_ will indicate the frame we're trying to
+  // finish. This being valid indicates that the stack has been fetched and
+  // the frame in question located.
+  //
+  // The to_address_ will be the address we're returning to. This will be
+  // computed at the same time as from_frame_fingerprint_, but may be 0 if
+  // the user is trying to finish the oldest stack frame (there's no address
+  // to return to).
   uint64_t to_address_ = 0;
-  FrameFingerprint to_frame_fingerprint_;
+  FrameFingerprint from_frame_fingerprint_;
 
   // Will be non-null when stepping out. During initialization or when stepping
   // out of the earliest stack frame, this can be null.

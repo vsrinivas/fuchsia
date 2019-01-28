@@ -43,7 +43,11 @@ class FinishThreadControllerTest : public ThreadControllerTest {
 TEST_F(FinishThreadControllerTest, Finish) {
   // Notify of thread stop.
   auto break_notification = MakeBreakNotification();
+  auto& break_frames = break_notification.thread.frames;
   InjectException(break_notification);
+
+  constexpr uint64_t kBottomBase = kReturnBase + 0x10;
+  debug_ipc::StackFrame bottom_frame(kReturnAddress, kBottomBase, kBottomBase);
 
   // Supply three frames for when the thread requests them: the top one (of the
   // stop above), the one we'll return to, and the one before that (so the
@@ -54,20 +58,17 @@ TEST_F(FinishThreadControllerTest, Finish) {
   expected_reply.record = break_notification.thread;
   expected_reply.record.stack_amount =
       debug_ipc::ThreadRecord::StackAmount::kFull;
-  expected_reply.record.frames.emplace_back(kReturnAddress, kReturnBase,
-                                            kReturnBase);
+  expected_reply.record.frames.push_back(bottom_frame);
   mock_remote_api()->set_thread_status_reply(expected_reply);
-
-  const Frame* frame_zero = thread()->GetStack()[0];
 
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
-  thread()->ContinueWith(std::make_unique<FinishThreadController>(
-                             FinishThreadController::FromFrame(), frame_zero),
-                         [&out_err](const Err& err) {
-                           out_err = err;
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                         });
+  thread()->ContinueWith(
+      std::make_unique<FinishThreadController>(thread()->GetStack(), 0),
+      [&out_err](const Err& err) {
+        out_err = err;
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   loop().Run();
 
   TestThreadObserver thread_observer(thread());
@@ -80,21 +81,21 @@ TEST_F(FinishThreadControllerTest, Finish) {
   ASSERT_EQ(kReturnAddress, mock_remote_api()->last_breakpoint_address());
   ASSERT_EQ(0, mock_remote_api()->breakpoint_remove_count());
 
-  // Simulate a hit of the breakpoint. This stack pointer is too small
-  // (indicating a recursive call) so it should not trigger.
-  break_notification.thread.frames.clear();
-  break_notification.thread.frames.emplace_back(
-      kReturnAddress, kInitialBase - 0x100, kInitialBase - 0x100);
+  // Simulate a hit of the breakpoint. This stack frame is a recursive call
+  // above the frame we're returning to so it should not trigger.
+  break_frames.emplace(break_frames.begin(), kReturnAddress,
+                       kInitialBase - 0x100, kInitialBase - 0x100);
   break_notification.hit_breakpoints.emplace_back();
   break_notification.hit_breakpoints[0].breakpoint_id =
       mock_remote_api()->last_breakpoint_id();
   InjectException(break_notification);
   EXPECT_FALSE(thread_observer.got_stopped());
 
-  // Simulate a breakpoint hit with a lower BP. This should trigger a thread
-  // stop.
-  break_notification.thread.frames[0].sp = kReturnBase;
-  break_notification.thread.frames[0].bp = kReturnBase;
+  // Simulate a breakpoint hit with a lower BP (erase the two top ones = the
+  // recursive call and the old top one). Need to add the bottom frame so there
+  // are two (for computing the fingerprint).
+  break_frames.erase(break_frames.begin(), break_frames.begin() + 2);
+  break_frames.push_back(bottom_frame);
   InjectException(break_notification);
   EXPECT_TRUE(thread_observer.got_stopped());
   EXPECT_EQ(1, mock_remote_api()->breakpoint_remove_count());
@@ -117,16 +118,14 @@ TEST_F(FinishThreadControllerTest, BottomStackFrame) {
       debug_ipc::ThreadRecord::StackAmount::kFull;
   mock_remote_api()->set_thread_status_reply(expected_reply);
 
-  Frame* frame_zero = thread()->GetStack()[0];
-
   EXPECT_EQ(0, mock_remote_api()->breakpoint_add_count());
   Err out_err;
-  thread()->ContinueWith(std::make_unique<FinishThreadController>(
-                             FinishThreadController::FromFrame(), frame_zero),
-                         [&out_err](const Err& err) {
-                           out_err = err;
-                           debug_ipc::MessageLoop::Current()->QuitNow();
-                         });
+  thread()->ContinueWith(
+      std::make_unique<FinishThreadController>(thread()->GetStack(), 0),
+      [&out_err](const Err& err) {
+        out_err = err;
+        debug_ipc::MessageLoop::Current()->QuitNow();
+      });
   loop().Run();
 
   TestThreadObserver thread_observer(thread());
