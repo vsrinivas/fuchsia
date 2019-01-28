@@ -11,7 +11,7 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.auth.account.AccountManager": "account_manager"
+                "fuchsia.auth.account.AccountManager": "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"
             }
         }
     }

@@ -121,7 +121,7 @@ fn start_provider_with_test_fonts() -> Result<(App, fonts::ProviderProxy), Error
     let launcher = Launcher::new().context("Failed to open launcher service")?;
     let app = launcher
         .launch_with_options(
-            "fonts".to_string(),
+            "fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(),
             Some(vec![
                 "--font-manifest".to_string(),
                 "/test_fonts/manifest.json".to_string(),
