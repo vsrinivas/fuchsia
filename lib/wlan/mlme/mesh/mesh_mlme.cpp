@@ -74,20 +74,12 @@ static zx_status_t BuildMeshBeacon(wlan_channel_t channel, DeviceInterface* devi
     return BuildBeacon(c, buffer, tim_ele_offset);
 }
 
-MeshMlme::MeshMlme(DeviceInterface* device)
-    : device_(device), deduplicator_(kMaxReceivedFrameCacheSize) {}
+MeshMlme::MeshState::MeshState(fbl::unique_ptr<Timer> timer)
+    : hwmp(std::move(timer)), deduplicator(kMaxReceivedFrameCacheSize) {}
+
+MeshMlme::MeshMlme(DeviceInterface* device) : device_(device) {}
 
 zx_status_t MeshMlme::Init() {
-    fbl::unique_ptr<Timer> timer;
-    ObjectId timer_id;
-    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
-    timer_id.set_target(to_enum_type(ObjectTarget::kHwmp));
-    zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
-    if (status != ZX_OK) {
-        errorf("[mesh-mlme] Failed to create the HWMP timer: %s\n", zx_status_get_string(status));
-        return status;
-    }
-    hwmp_ = std::make_unique<HwmpState>(std::move(timer));
     return ZX_OK;
 }
 
@@ -95,6 +87,9 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
     if (auto start_req = msg.As<wlan_mlme::StartRequest>()) {
         auto code = Start(*start_req);
         return service::SendStartConfirm(device_, code);
+    } else if (auto stop_req = msg.As<wlan_mlme::StopRequest>()) {
+        auto code = Stop();
+        return service::SendStopConfirm(device_, code);
     } else if (auto mp_open = msg.As<wlan_mlme::MeshPeeringOpenAction>()) {
         SendPeeringOpen(*mp_open);
         return ZX_OK;
@@ -110,10 +105,20 @@ zx_status_t MeshMlme::HandleMlmeMsg(const BaseMlmeMsg& msg) {
 }
 
 wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartRequest>& req) {
-    if (joined_) { return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED; }
+    if (state_) { return wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED; }
+
+    fbl::unique_ptr<Timer> timer;
+    ObjectId timer_id;
+    timer_id.set_subtype(to_enum_type(ObjectSubtype::kTimer));
+    timer_id.set_target(to_enum_type(ObjectTarget::kHwmp));
+    zx_status_t status = device_->GetTimer(ToPortKey(PortKeyType::kMlme, timer_id.val()), &timer);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] Failed to create the HWMP timer: %s\n", zx_status_get_string(status));
+        return wlan_mlme::StartResultCodes::INTERNAL_ERROR;
+    }
 
     wlan_channel_t channel = GetChannel(req.body()->channel);
-    zx_status_t status = device_->SetChannel(channel);
+    status = device_->SetChannel(channel);
     if (status != ZX_OK) {
         errorf("[mesh-mlme] failed to set channel to %s: %s\n", common::ChanStr(channel).c_str(),
                zx_status_get_string(status));
@@ -139,8 +144,24 @@ wlan_mlme::StartResultCodes MeshMlme::Start(const MlmeMsg<wlan_mlme::StartReques
     }
 
     device_->SetStatus(ETHMAC_STATUS_ONLINE);
-    joined_ = true;
+    state_.emplace(std::move(timer));
     return wlan_mlme::StartResultCodes::SUCCESS;
+}
+
+wlan_mlme::StopResultCodes MeshMlme::Stop() {
+    if (!state_) { return wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED; };
+
+    // TODO(gbonik): call clear_assoc for all peers once we have a list of peers
+
+    zx_status_t status = device_->EnableBeaconing(nullptr);
+    if (status != ZX_OK) {
+        errorf("[mesh-mlme] failed to disable beaconing: %s\n", zx_status_get_string(status));
+        return wlan_mlme::StopResultCodes::INTERNAL_ERROR;
+    }
+
+    device_->SetStatus(0);
+    state_.reset();
+    return wlan_mlme::StopResultCodes::SUCCESS;
 }
 
 void MeshMlme::SendPeeringOpen(const MlmeMsg<wlan_mlme::MeshPeeringOpenAction>& req) {
@@ -218,6 +239,8 @@ static constexpr size_t GetDataFrameBufferSize(size_t eth_payload_len) {
 }
 
 void MeshMlme::HandleEthTx(EthFrame&& frame) {
+    if (!state_) { return; }
+
     auto packet = GetWlanPacket(GetDataFrameBufferSize(frame.body_len()));
     if (packet == nullptr) { return; }
     BufferWriter w(*packet);
@@ -234,10 +257,10 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
             w.WriteValue(frame.hdr()->src);
         }
     } else {
-        auto proxy_info = path_table_.GetProxyInfo(frame.hdr()->dest);
+        auto proxy_info = state_->path_table.GetProxyInfo(frame.hdr()->dest);
         auto mesh_dest = proxy_info == nullptr ? frame.hdr()->dest : proxy_info->mesh_target;
 
-        auto path = path_table_.GetPath(mesh_dest);
+        auto path = state_->path_table.GetPath(mesh_dest);
         if (path == nullptr) {
             // TODO(gbonik): buffer the frame
             TriggerPathDiscovery(mesh_dest);
@@ -263,6 +286,8 @@ void MeshMlme::HandleEthTx(EthFrame&& frame) {
 }
 
 zx_status_t MeshMlme::HandleAnyWlanFrame(fbl::unique_ptr<Packet> pkt) {
+    if (!state_) { return ZX_OK; }
+
     if (auto possible_mgmt_frame = MgmtFrameView<>::CheckType(pkt.get())) {
         if (auto mgmt_frame = possible_mgmt_frame.CheckLength()) {
             return HandleAnyMgmtFrame(mgmt_frame.IntoOwned(std::move(pkt)));
@@ -313,14 +338,17 @@ zx_status_t MeshMlme::HandleSelfProtectedAction(common::MacAddr src_addr, Buffer
 }
 
 void MeshMlme::HandleMeshAction(const MgmtFrameHeader& mgmt, BufferReader* r) {
+    ZX_ASSERT(state_);
+
     auto mesh_action_header = r->Read<MeshActionHeader>();
     if (mesh_action_header == nullptr) { return; }
 
     switch (mesh_action_header->mesh_action) {
     case action::kHwmpMeshPathSelection: {
         // TODO(gbonik): pass the actual airtime metric
-        auto packets_to_tx = HandleHwmpAction(r->ReadRemaining(), mgmt.addr2, self_addr(), 100,
-                                              CreateMacHeaderWriter(), hwmp_.get(), &path_table_);
+        auto packets_to_tx =
+            HandleHwmpAction(r->ReadRemaining(), mgmt.addr2, self_addr(), 100,
+                             CreateMacHeaderWriter(), &state_->hwmp, &state_->path_table);
         while (!packets_to_tx.is_empty()) {
             SendMgmtFrame(packets_to_tx.Dequeue());
         }
@@ -340,9 +368,11 @@ zx_status_t MeshMlme::HandleMpmOpenAction(common::MacAddr src_addr, BufferReader
 }
 
 void MeshMlme::TriggerPathDiscovery(const common::MacAddr& target) {
+    ZX_ASSERT(state_);
+
     PacketQueue packets_to_tx;
     zx_status_t status = InitiatePathDiscovery(target, self_addr(), CreateMacHeaderWriter(),
-                                               hwmp_.get(), path_table_, &packets_to_tx);
+                                               &state_->hwmp, state_->path_table, &packets_to_tx);
     if (status != ZX_OK) {
         errorf("[mesh-mlme] Failed to initiate path discovery: %s\n", zx_status_get_string(status));
         return;
@@ -408,7 +438,9 @@ void MeshMlme::HandleDataFrame(fbl::unique_ptr<Packet> packet) {
     // TODO(gbonik): drop frames from non-peers
 
     // Drop if duplicate
-    if (deduplicator_.DeDuplicate(GetMeshSrcAddr(*header), header->mesh_ctrl->seq)) { return; }
+    if (state_->deduplicator.DeDuplicate(GetMeshSrcAddr(*header), header->mesh_ctrl->seq)) {
+        return;
+    }
 
     if (ShouldDeliverData(header->mac_header)) { DeliverData(*header, *packet, r.ReadBytes()); }
 
@@ -463,7 +495,7 @@ std::optional<common::MacAddr> MeshMlme::GetNextHopForForwarding(
     if (header.mac_header.addr4 != nullptr) {
         // Individually addressed frame: addr3 is the mesh destination
         if (header.mac_header.fixed->addr3 == self_addr()) { return {}; }
-        auto path = path_table_.GetPath(header.mac_header.fixed->addr3);
+        auto path = state_->path_table.GetPath(header.mac_header.fixed->addr3);
         if (path == nullptr) { return {}; }
         return {path->next_hop};
     } else {
@@ -488,11 +520,13 @@ void MeshMlme::ForwardData(const common::ParsedMeshDataHeader& header,
 }
 
 zx_status_t MeshMlme::HandleTimeout(const ObjectId id) {
+    if (!state_) { return ZX_OK; }
+
     switch (id.target()) {
     case to_enum_type(ObjectTarget::kHwmp): {
         PacketQueue packets_to_tx;
-        zx_status_t status = HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(), hwmp_.get(),
-                                               path_table_, &packets_to_tx);
+        zx_status_t status = HandleHwmpTimeout(self_addr(), CreateMacHeaderWriter(), &state_->hwmp,
+                                               state_->path_table, &packets_to_tx);
         if (status != ZX_OK) {
             errorf("[mesh-mlme] Failed to rearm the HWMP timer: %s\n",
                    zx_status_get_string(status));

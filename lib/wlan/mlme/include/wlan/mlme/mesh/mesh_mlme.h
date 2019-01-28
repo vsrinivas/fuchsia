@@ -33,6 +33,7 @@ class MeshMlme : public Mlme {
 
     ::fuchsia::wlan::mlme::StartResultCodes Start(
         const MlmeMsg<::fuchsia::wlan::mlme::StartRequest>& req);
+    ::fuchsia::wlan::mlme::StopResultCodes Stop();
     void SendPeeringOpen(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringOpenAction>& req);
     void SendPeeringConfirm(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringConfirmAction>& req);
     void ConfigurePeering(const MlmeMsg<::fuchsia::wlan::mlme::MeshPeeringParams>& params);
@@ -62,14 +63,18 @@ class MeshMlme : public Mlme {
 
     MacHeaderWriter CreateMacHeaderWriter();
 
+    struct MeshState {
+        HwmpState hwmp;
+        PathTable path_table;
+        DeDuplicator deduplicator;
+
+        explicit MeshState(fbl::unique_ptr<Timer> timer);
+    };
+
     DeviceInterface* const device_;
-    bool joined_ = false;
     Sequence seq_;
     uint32_t mesh_seq_ = 0;
-    std::unique_ptr<HwmpState> hwmp_;
-    PathTable path_table_;
-
-    DeDuplicator deduplicator_;
+    std::optional<MeshState> state_;
 };
 
 }  // namespace wlan

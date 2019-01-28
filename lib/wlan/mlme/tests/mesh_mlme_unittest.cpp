@@ -14,24 +14,58 @@ namespace wlan_mlme = ::fuchsia::wlan::mlme;
 
 namespace wlan {
 
+struct MeshMlmeTest : public ::testing::Test {
+    MeshMlmeTest() : mlme(&device) {
+        device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
+        mlme.Init();
+    }
+
+    wlan_mlme::StartResultCodes JoinMesh() {
+        wlan_mlme::StartRequest join;
+        zx_status_t status =
+            mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
+        EXPECT_EQ(ZX_OK, status);
+
+        auto msgs = device.GetServiceMsgs<wlan_mlme::StartConfirm>();
+        EXPECT_EQ(msgs.size(), 1ULL);
+        return msgs[0].body()->result_code;
+    }
+
+    wlan_mlme::StopResultCodes LeaveMesh() {
+        wlan_mlme::StopRequest leave;
+        zx_status_t status =
+            mlme.HandleMlmeMsg(MlmeMsg<wlan_mlme::StopRequest>(std::move(leave), 123));
+        EXPECT_EQ(ZX_OK, status);
+
+        auto msgs = device.GetServiceMsgs<wlan_mlme::StopConfirm>();
+        EXPECT_EQ(msgs.size(), 1ULL);
+        return msgs[0].body()->result_code;
+    }
+
+    MockDevice device;
+    MeshMlme mlme;
+};
+
 static fbl::unique_ptr<Packet> MakeWlanPacket(Span<const uint8_t> bytes) {
     auto packet = GetWlanPacket(bytes.size());
     memcpy(packet->data(), bytes.data(), bytes.size());
     return packet;
 }
 
-static void JoinMesh(MeshMlme* mlme) {
-    wlan_mlme::StartRequest join;
-    zx_status_t status =
-        mlme->HandleMlmeMsg(MlmeMsg<wlan_mlme::StartRequest>(std::move(join), 123));
-    EXPECT_EQ(ZX_OK, status);
+TEST_F(MeshMlmeTest, JoinLeave) {
+    EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+    EXPECT_TRUE(device.beaconing_enabled);
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::BSS_ALREADY_STARTED_OR_JOINED);
+    EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::SUCCESS);
+    EXPECT_FALSE(device.beaconing_enabled);
+    EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::BSS_ALREADY_STOPPED);
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+    EXPECT_TRUE(device.beaconing_enabled);
 }
 
-TEST(MeshMlme, HandleMpmOpen) {
-    MockDevice device;
-    MeshMlme mlme(&device);
-    mlme.Init();
-    JoinMesh(&mlme);
+TEST_F(MeshMlmeTest, HandleMpmOpen) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
     // clang-format off
     const uint8_t frame[] = {
@@ -69,12 +103,8 @@ TEST(MeshMlme, HandleMpmOpen) {
     }
 }
 
-TEST(MeshMlme, DeliverProxiedData) {
-    MockDevice device;
-    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
-    MeshMlme mlme(&device);
-    mlme.Init();
-    JoinMesh(&mlme);
+TEST_F(MeshMlmeTest, DeliverProxiedData) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
     // Simulate receiving a data frame
     zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
@@ -122,12 +152,51 @@ TEST(MeshMlme, DeliverProxiedData) {
     EXPECT_RANGES_EQ(expected, eth_frames[0]);
 }
 
-TEST(MeshMlme, HandlePreq) {
-    MockDevice device;
-    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
-    MeshMlme mlme(&device);
-    mlme.Init();
-    JoinMesh(&mlme);
+TEST_F(MeshMlmeTest, DoNotDeliverWhenNotJoined) {
+    auto packet = [] (uint8_t mesh_seq) {
+        return test_utils::MakeWlanPacket({
+            // clang-format off
+            // Data header
+            0x88, 0x03, // fc: qos data, 4-address, no ht ctl
+            0x00, 0x00, // duration
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr1
+            0x22, 0x22, 0x22, 0x22, 0x22, 0x22, // addr2
+            0x11, 0x11, 0x11, 0x11, 0x11, 0x11, // addr3: mesh da = ra
+            0x00, 0x00, // seq ctl
+            0x44, 0x44, 0x44, 0x44, 0x44, 0x44, // addr4
+            0x00, 0x01, // qos ctl: mesh control present
+            // Mesh control
+            0x00, 0x20, // flags, ttl
+            mesh_seq, 0xbb, 0xcc, 0xdd, // seq
+            // LLC header
+            0xaa, 0xaa, 0x03, // dsap ssap ctrl
+            0x00, 0x00, 0x00, // oui
+            0x12, 0x34, // protocol id
+            // Payload
+            0xde, 0xad, 0xbe, 0xef,
+            // clang-format on
+        });
+    };
+
+    // Receive a frame while not joined: expect it to be dropped
+    EXPECT_EQ(mlme.HandleFramePacket(packet(1)), ZX_OK);
+    EXPECT_TRUE(device.GetEthPackets().empty());
+
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
+
+    // Receive a frame while joined: expect it to be delivered
+    EXPECT_EQ(mlme.HandleFramePacket(packet(2)), ZX_OK);
+    EXPECT_EQ(device.GetEthPackets().size(), 1u);
+
+    EXPECT_EQ(LeaveMesh(), wlan_mlme::StopResultCodes::SUCCESS);
+
+    // Again, receive a frame while not joined: expect it to be dropped
+    EXPECT_EQ(mlme.HandleFramePacket(packet(3)), ZX_OK);
+    EXPECT_TRUE(device.GetEthPackets().empty());
+}
+
+TEST_F(MeshMlmeTest, HandlePreq) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
     zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({
         // clang-format off
@@ -170,12 +239,8 @@ TEST(MeshMlme, HandlePreq) {
     EXPECT_EQ(packet.data()[26], 131);  // prep element
 }
 
-TEST(MeshMlme, DeliverDuplicateData) {
-    MockDevice device;
-    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
-    MeshMlme mlme(&device);
-    mlme.Init();
-    JoinMesh(&mlme);
+TEST_F(MeshMlmeTest, DeliverDuplicateData) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
     auto mesh_packet = [](uint8_t addr, uint8_t seq, uint8_t data) {
         // clang-format off
@@ -272,12 +337,8 @@ TEST(MeshMlme, DeliverDuplicateData) {
     }
 }
 
-TEST(MeshMlme, DataForwarding) {
-    MockDevice device;
-    device.state->set_address(common::MacAddr("11:11:11:11:11:11"));
-    MeshMlme mlme(&device);
-    mlme.Init();
-    JoinMesh(&mlme);
+TEST_F(MeshMlmeTest, DataForwarding) {
+    EXPECT_EQ(JoinMesh(), wlan_mlme::StartResultCodes::SUCCESS);
 
     // Receive a PREP to establish a path to 33:33:33:33:33:33 via 22:22:22:22:22:22
     zx_status_t status = mlme.HandleFramePacket(test_utils::MakeWlanPacket({

@@ -151,5 +151,11 @@ zx_status_t SendStartConfirm(DeviceInterface* device, wlan_mlme::StartResultCode
     return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStartConfOrdinal);
 }
 
+zx_status_t SendStopConfirm(DeviceInterface* device, wlan_mlme::StopResultCodes code) {
+    wlan_mlme::StopConfirm msg;
+    msg.result_code = code;
+    return SendServiceMsg(device, &msg, fuchsia_wlan_mlme_MLMEStopConfOrdinal);
+}
+
 }  // namespace service
 }  // namespace wlan
