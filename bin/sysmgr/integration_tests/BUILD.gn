@@ -86,8 +86,6 @@ executable("package_updating_loader_test") {
 }
 
 package("integration_tests") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
   package_name = "sysmgr_integration_tests"
 
