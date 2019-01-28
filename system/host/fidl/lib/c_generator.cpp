@@ -488,8 +488,9 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
         }
         case flat::Type::Kind::kArray: {
             auto array_type = static_cast<const flat::ArrayType*>(type);
-            array_counts.push_back(array_type->element_count->value);
-            type = array_type->element_type;
+            auto element_count = static_cast<const flat::Size&>(array_type->element_count->Value());
+            array_counts.push_back(element_count.value);
+            type = array_type->element_type.get();
             continue;
         }
         }
@@ -499,7 +500,7 @@ void ArrayCountsAndElementTypeName(const flat::Library* library, const flat::Typ
 template <typename T>
 CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     std::string name = NameIdentifier(decl.name);
-    const flat::Type* type = decl.type_ctor->type;
+    const flat::Type* type = decl.type.get();
     auto decl_kind = GetDeclKind(library, type);
     auto type_name = NameFlatCType(type, decl_kind);
     std::string element_type_name;
@@ -516,10 +517,11 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     }
     case flat::Type::Kind::kVector: {
         auto vector_type = static_cast<const flat::VectorType*>(type);
-        const auto element_type = vector_type->element_type;
+        const flat::Type* element_type = vector_type->element_type.get();
         element_type_name =
             NameFlatCType(element_type, GetDeclKind(library, element_type));
-        max_num_elements = vector_type->element_count->value;
+        max_num_elements =
+            static_cast<const flat::Size&>(vector_type->element_count.get()->Value()).value;
         break;
     }
     case flat::Type::Kind::kIdentifier: {
@@ -531,7 +533,8 @@ CGenerator::Member CreateMember(const flat::Library* library, const T& decl) {
     case flat::Type::Kind::kString: {
         auto string_type = static_cast<const flat::StringType*>(type);
         nullability = string_type->nullability;
-        max_num_elements = string_type->max_size->value;
+        max_num_elements =
+            static_cast<const flat::Size&>(string_type->max_size.get()->Value()).value;
         break;
     }
     case flat::Type::Kind::kHandle:
@@ -908,10 +911,10 @@ void CGenerator::ProduceConstDeclaration(const NamedConst& named_const) {
         return;
     }
 
-    switch (ci.type_ctor->type->kind) {
+    switch (ci.type->kind) {
     case flat::Type::Kind::kPrimitive:
         GeneratePrimitiveDefine(named_const.name,
-                                static_cast<const flat::PrimitiveType*>(ci.type_ctor->type)->subtype,
+                                static_cast<flat::PrimitiveType*>(ci.type.get())->subtype,
                                 static_cast<flat::LiteralConstant*>(ci.value.get())->literal->location().data());
         break;
     case flat::Type::Kind::kString:

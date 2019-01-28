@@ -15,9 +15,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = array_type_map_.find(array_type);
         if (iter != array_type_map_.end())
             return iter->second;
-        auto coded_element_type = CompileType(array_type->element_type);
-        uint32_t array_size = array_type->shape.Size();
-        uint32_t element_size = array_type->element_type->shape.Size();
+        auto coded_element_type = CompileType(array_type->element_type.get());
+        uint32_t array_size = array_type->size;
+        uint32_t element_size = array_type->element_type->size;
         auto name = NameCodedArray(coded_element_type->coded_name, array_size);
         auto coded_array_type = std::make_unique<coded::ArrayType>(
             std::move(name), coded_element_type, array_size, element_size);
@@ -30,8 +30,9 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = vector_type_map_.find(vector_type);
         if (iter != vector_type_map_.end())
             return iter->second;
-        auto coded_element_type = CompileType(vector_type->element_type);
-        uint32_t max_count = vector_type->element_count->value;
+        auto coded_element_type = CompileType(vector_type->element_type.get());
+        uint32_t max_count =
+            static_cast<const flat::Size&>(vector_type->element_count->Value()).value;
         uint32_t element_size = coded_element_type->size;
         StringView element_name = coded_element_type->coded_name;
         auto name = NameCodedVector(element_name, max_count, vector_type->nullability);
@@ -46,7 +47,8 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = string_type_map_.find(string_type);
         if (iter != string_type_map_.end())
             return iter->second;
-        uint32_t max_size = string_type->max_size->value;
+        uint32_t max_size =
+            static_cast<const flat::Size&>(string_type->max_size->Value()).value;
         auto name = NameCodedString(max_size, string_type->nullability);
         auto coded_string_type = std::make_unique<coded::StringType>(std::move(name), max_size,
                                                                      string_type->nullability);
@@ -71,7 +73,7 @@ const coded::Type* CodedTypesGenerator::CompileType(const flat::Type* type) {
         auto iter = request_type_map_.find(request_type);
         if (iter != request_type_map_.end())
             return iter->second;
-        auto name = NameCodedRequestHandle(NameName(request_type->interface_type->name, "_", "_"), request_type->nullability);
+        auto name = NameCodedRequestHandle(NameName(request_type->name, "_", "_"), request_type->nullability);
         auto coded_request_type =
             std::make_unique<coded::RequestHandleType>(std::move(name), request_type->nullability);
         request_type_map_[request_type] = coded_request_type.get();
@@ -194,7 +196,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 for (const auto& parameter : message.members) {
                     std::string parameter_name =
                         coded_message->coded_name + "_" + std::string(parameter.name.data());
-                    auto coded_parameter_type = CompileType(parameter.type_ctor->type);
+                    auto coded_parameter_type = CompileType(parameter.type.get());
                     if (coded_parameter_type->coding_needed == coded::CodingNeeded::kNeeded)
                         request_fields.emplace_back(coded_parameter_type,
                                                     parameter.fieldshape.Offset());
@@ -223,7 +225,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member : struct_decl->members) {
             std::string member_name =
                 coded_struct->coded_name + "_" + std::string(member.name.data());
-            auto coded_member_type = CompileType(member.type_ctor->type);
+            auto coded_member_type = CompileType(member.type.get());
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
                 struct_fields.emplace_back(coded_member_type, member.fieldshape.Offset());
         }
@@ -237,7 +239,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
         for (const auto& member : union_decl->members) {
             std::string member_name =
                 union_struct->coded_name + "_" + std::string(member.name.data());
-            auto coded_member_type = CompileType(member.type_ctor->type);
+            auto coded_member_type = CompileType(member.type.get());
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded) {
                 union_members.push_back(coded_member_type);
             } else {
@@ -262,7 +264,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
 
         for (const auto& member_pair : members) {
             const auto& member = *member_pair.second;
-            auto coded_member_type = CompileType(member.type_ctor->type);
+            auto coded_member_type = CompileType(member.type.get());
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded) {
                 coded_xunion->fields.emplace_back(coded_member_type, member.ordinal->value);
             }
@@ -286,7 +288,7 @@ void CodedTypesGenerator::CompileFields(const flat::Decl* decl) {
                 continue;
             std::string member_name =
                 coded_table->coded_name + "_" + std::string(member.maybe_used->name.data());
-            auto coded_member_type = CompileType(member.maybe_used->type_ctor->type);
+            auto coded_member_type = CompileType(member.maybe_used->type.get());
             if (coded_member_type->coding_needed == coded::CodingNeeded::kNeeded)
                 table_fields.emplace_back(coded_member_type, member.ordinal->value);
         }

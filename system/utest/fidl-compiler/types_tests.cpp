@@ -14,14 +14,9 @@ namespace flat {
 #define CHECK_PRIMITIVE_TYPE(N, S)                                     \
     {                                                                  \
         auto the_type_name = Name(library_ptr, N);                     \
-        const Type* the_type;                                          \
-        ASSERT_TRUE(typespace.Create(                                  \
-            the_type_name,                                             \
-            nullptr /* maybe_arg_type */,                              \
-            nullptr /* maybe_handle_subtype */,                        \
-            nullptr /* maybe_size */,                                  \
-            types::Nullability::kNonnullable,                          \
-            &the_type));                                               \
+        auto the_type = typespace.Lookup(                              \
+            the_type_name, types::Nullability::kNonnullable,           \
+            Typespace::LookupMode::kNoForwardReferences);              \
         ASSERT_NE(the_type, nullptr, N);                               \
         auto the_type_p = static_cast<const PrimitiveType*>(the_type); \
         ASSERT_EQ(the_type_p->subtype, S, N);                          \
@@ -32,8 +27,7 @@ namespace flat {
 bool root_types_with_no_library_in_lookup() {
     BEGIN_TEST;
 
-    Typespace typespace = Typespace::RootTypes(nullptr);
-
+    Typespace typespace = Typespace::RootTypes();
     Library* library_ptr = nullptr;
 
     CHECK_PRIMITIVE_TYPE("bool", types::PrimitiveSubtype::kBool);
@@ -56,7 +50,7 @@ bool root_types_with_no_library_in_lookup() {
 bool root_types_with_some_library_in_lookup() {
     BEGIN_TEST;
 
-    Typespace typespace = Typespace::RootTypes(nullptr);
+    Typespace typespace = Typespace::RootTypes();
 
     TestLibrary library("library fidl.test;");
     ASSERT_TRUE(library.Compile());
@@ -77,27 +71,9 @@ bool root_types_with_some_library_in_lookup() {
     END_TEST;
 }
 
-bool alias_not_of_primitive() {
-    BEGIN_TEST;
-
-    TestLibrary library(R"FIDL(
-library example;
-
-using some_alias = string;
-
-)FIDL");
-    EXPECT_FALSE(library.Compile());
-    auto errors = library.errors();
-    ASSERT_EQ(errors.size(), 1);
-    ASSERT_STR_STR(errors[0].c_str(), "may only alias primitive types, found string");
-
-    END_TEST;
-}
-
 BEGIN_TEST_CASE(types_tests);
 RUN_TEST(root_types_with_no_library_in_lookup);
 RUN_TEST(root_types_with_some_library_in_lookup);
-RUN_TEST(alias_not_of_primitive);
 END_TEST_CASE(types_tests);
 
 } // namespace flat

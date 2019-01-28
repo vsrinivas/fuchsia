@@ -21,7 +21,7 @@ static fidl::SourceFile MakeSourceFile(const std::string& filename, const std::s
 class SharedAmongstLibraries {
 public:
     SharedAmongstLibraries() :
-        typespace(fidl::flat::Typespace::RootTypes(&error_reporter)) {}
+        typespace(fidl::flat::Typespace::RootTypes()) {}
 
     fidl::ErrorReporter error_reporter;
     fidl::flat::Typespace typespace;
