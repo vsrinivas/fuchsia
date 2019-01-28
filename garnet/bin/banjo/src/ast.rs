@@ -547,6 +547,53 @@ impl BanjoAst {
         panic!("Unidentified {}", fq_ident);
     }
 
+    pub fn id_to_attributes(&self, fq_ident: &str) -> Option<&Attrs> {
+        // check if FQ
+        let v: Vec<&str> = fq_ident.rsplitn(2, '.').collect();
+        let mut namespace = self.primary_namespace.as_str();
+        let mut ident = fq_ident;
+        if v.len() > 1 {
+            namespace = v[1];
+            ident = v[0];
+        }
+
+        for decl in self.namespaces[namespace].iter() {
+            match decl {
+                Decl::Interface { name, attributes, .. } => {
+                    if name == ident {
+                        return Some(attributes);
+                    }
+                }
+                Decl::Struct { name, attributes, .. } => {
+                    if name == ident {
+                        return Some(attributes);
+                    }
+                }
+                Decl::Union { name, attributes, .. } => {
+                    if name == ident {
+                        return Some(attributes);
+                    }
+                }
+                Decl::Enum { name, attributes, .. } => {
+                    if name == ident {
+                        return Some(attributes);
+                    }
+                }
+                Decl::Alias(to, from) => {
+                    if to == ident {
+                        return self.id_to_attributes(from);
+                    }
+                }
+                Decl::Constant { name, attributes, .. } => {
+                    if name == ident {
+                        return Some(attributes);
+                    }
+                }
+            }
+        }
+        None
+    }
+
     pub fn parse_decl(
         pair: Pair<'_, Rule>,
         _namespaces: &HashMap<String, Vec<Decl>>,

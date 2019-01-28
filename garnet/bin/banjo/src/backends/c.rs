@@ -87,6 +87,26 @@ fn ty_to_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
     }
 }
 
+fn interface_to_ops_c_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
+    if let ast::Ty::Ident { id, .. } = ty {
+        if ast.id_to_type(id) == ast::Ty::Interface {
+            return Ok(to_c_name(id.clone().as_str()) + "_ops_t");
+        }
+    }
+    Err(format_err!("unknown ident type in interface_to_ops_c_str {:?}", ty))
+}
+
+fn not_callback(ast: &ast::BanjoAst, id: &str) -> bool {
+    if let Some(attributes) = ast.id_to_attributes(id) {
+        if let Some(layout) = attributes.get_attribute("Layout") {
+            if layout == " \"ddk-callback\"" {
+                return false;
+            }
+        }
+    }
+    true
+}
+
 fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
     match cons {
         Constant::SizedConstant(size) => match ty {
@@ -100,7 +120,7 @@ fn size_to_c_str(ty: &ast::Ty, cons: &ast::Constant) -> String {
             ast::Ty::UInt64 => String::from(format!("UINT32_C({})", size)),
             s => panic!("don't handles this sized const: {}", s),
         },
-        _ => panic!("don't handles sized const yet"),
+        Constant::SizedRaw(size) => size.to_string(),
     }
 }
 
@@ -127,7 +147,7 @@ fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String
         Ok((false, "void".to_string()))
     }
 }
-fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> {
+fn get_in_params(m: &ast::Method, transform: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
         .map(|(name, ty)| {
@@ -138,6 +158,10 @@ fn get_in_params(m: &ast::Method, ast: &BanjoAst) -> Result<Vec<String>, Error> 
                             let ty_name = ty_to_c_str(ast, ty).unwrap();
                             if ty_name == "zx_status_t" {
                                 Ok(format!("{} {}", ty_name, to_c_name(name)))
+                            } else if transform && not_callback(ast, id) {
+                                let ty_name = interface_to_ops_c_str(ast, ty).unwrap();
+                                Ok(format!("void* {name}_ctx, {ty_name}* {name}_ops",
+                                           ty_name=ty_name, name=to_c_name(name)))
                             } else {
                                 Ok(format!("const {}* {}", ty_name, to_c_name(name)))
                             }
@@ -540,7 +564,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
             .iter()
             .map(|m| {
                 let (out_params, return_param) = get_out_params(&m, name, ast)?;
-                let in_params = get_in_params(&m, ast)?;
+                let in_params = get_in_params(&m, false, ast)?;
 
                 let params = iter::once("void* ctx".to_string())
                     .chain(in_params)
@@ -579,7 +603,7 @@ impl<'a, W: io::Write> CBackend<'a, W> {
                 accum.push_str(get_doc_comment(&m.attributes, 0).as_str());
 
                 let (out_params, return_param) = get_out_params(&m, name, ast)?;
-                let in_params = get_in_params(&m, ast)?;
+                let in_params = get_in_params(&m, true, ast)?;
 
                 let protocol = if protocol { "_protocol" } else { "" };
                 let first_param = format!("const {}{}_t* proto", to_c_name(name), protocol);
@@ -603,6 +627,19 @@ impl<'a, W: io::Write> CBackend<'a, W> {
 
                 let (out_args, skip) = get_out_args(&m, ast)?;
                 let in_args = get_in_args(&m, ast)?;
+
+                let proto_args = m.in_params.iter().filter_map(|(name, ty)| {
+                    if let ast::Ty::Ident { id, .. } =  ty {
+                        if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                            return Some((to_c_name(name), ty_to_c_str(ast, ty).unwrap()));
+                        }
+                    }
+                    None
+                }).collect::<Vec<_>>();
+                for (name, ty) in proto_args.iter() {
+                    accum.push_str(format!(include_str!("templates/c/proto_transform.h"),
+                                    ty = ty, name = name).as_str());
+                }
 
                 let args = iter::once("proto->ctx".to_string())
                     .chain(in_args)

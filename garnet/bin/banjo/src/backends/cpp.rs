@@ -112,6 +112,26 @@ fn ty_to_cpp_str(ast: &ast::BanjoAst, wrappers: bool, ty: &ast::Ty) -> Result<St
     }
 }
 
+fn interface_to_ops_cpp_str(ast: &ast::BanjoAst, ty: &ast::Ty) -> Result<String, Error> {
+    if let ast::Ty::Ident { id, .. } = ty {
+        if ast.id_to_type(id) == ast::Ty::Interface {
+            return Ok(to_c_name(id.clone().as_str()) + "_ops_t");
+        }
+    }
+    Err(format_err!("unknown ident type in interface_to_ops_cpp_str {:?}", ty))
+}
+
+fn not_callback(ast: &ast::BanjoAst, id: &str) -> bool {
+    if let Some(attributes) = ast.id_to_attributes(id) {
+        if let Some(layout) = attributes.get_attribute("Layout") {
+            if layout == " \"ddk-callback\"" {
+            return false;
+            }
+        }
+    }
+    true
+}
+
 fn name_buffer(ty: &str) -> &'static str {
     if ty == "void" {
         "buffer"
@@ -135,7 +155,7 @@ fn get_first_param(ast: &BanjoAst, method: &ast::Method) -> Result<(bool, String
         Ok((false, "void".to_string()))
     }
 }
-fn get_in_params(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
+fn get_in_params(m: &ast::Method, wrappers: bool, transform: bool, ast: &BanjoAst) -> Result<Vec<String>, Error> {
     m.in_params
         .iter()
         .map(|(name, ty)| {
@@ -146,6 +166,10 @@ fn get_in_params(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<
                             let ty_name = ty_to_cpp_str(ast, wrappers, ty).unwrap();
                             if ty_name == "zx_status_t" {
                                 Ok(format!("{} {}", ty_name, to_c_name(name)))
+                            } else if transform && not_callback(ast, id) {
+                                let ty_name = interface_to_ops_cpp_str(ast, ty).unwrap();
+                                Ok(format!("void* {name}_ctx, {ty_name}* {name}_ops",
+                                           ty_name=ty_name, name=to_c_name(name)))
                             } else {
                                 Ok(format!("const {}* {}", ty_name, to_c_name(name)))
                             }
@@ -161,7 +185,10 @@ fn get_in_params(m: &ast::Method, wrappers: bool, ast: &BanjoAst) -> Result<Vec<
                             ty_to_cpp_str(ast, wrappers, ty).unwrap(),
                             to_c_name(name)
                         )),
-                        e => Err(format_err!("unsupported: {}", e)),
+                        ty => {
+                            let ty_name = ty_to_cpp_str(ast, wrappers, &ty).unwrap();
+                            Ok(format!("{} {}", ty_name, to_c_name(name)))
+                        }
                     }
                 }
                 ast::Ty::Vector { .. } => {
@@ -308,13 +335,13 @@ fn get_out_args(
     ))
 }
 
-/// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-protocol".
+/// Checks whether a decl is an interface, and if it is an interface, checks that it is a "ddk-interface".
 fn filter_interface<'a>(
     decl: &'a ast::Decl,
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == "\"ddk-interface\"" {
+            if layout == " \"ddk-interface\"" {
                 return Some((name, methods, attributes));
             }
         }
@@ -328,17 +355,14 @@ fn filter_protocol<'a>(
 ) -> Option<(&'a String, &'a Vec<ast::Method>, &'a ast::Attrs)> {
     if let ast::Decl::Interface { ref name, ref methods, ref attributes } = *decl {
         if let Some(layout) = attributes.get_attribute("Layout") {
-            if layout == "\"ddk-callback\"" || layout == "\"ddk-interface\"" {
-                None
-            } else {
-                Some((name, methods, attributes))
+            if layout == " \"ddk-protocol\"" {
+                return Some((name, methods, attributes));
             }
         } else {
-            Some((name, methods, attributes))
+            return Some((name, methods, attributes));
         }
-    } else {
-        None
     }
+    None
 }
 
 pub struct CppInternalBackend<'a, W: io::Write> {
@@ -362,7 +386,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .iter()
             .map(|m| {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
-                let in_params = get_in_params(&m, true, ast)?;
+                let in_params = get_in_params(&m, true, false, ast)?;
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
@@ -390,7 +414,7 @@ impl<'a, W: io::Write> CppInternalBackend<'a, W> {
             .iter()
             .map(|m| {
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
-                let in_params = get_in_params(&m, true, ast)?;
+                let in_params = get_in_params(&m, true, false, ast)?;
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
@@ -516,7 +540,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
             accum.push_str(get_doc_comment(&m.attributes, 1).as_str());
 
             let (out_params, return_param) = get_out_params(&m, name, false, ast)?;
-            let in_params = get_in_params(&m, false, ast)?;
+            let in_params = get_in_params(&m, false, false, ast)?;
 
             let params = iter::once("void* ctx".to_string()).chain(in_params)
                                                             .chain(out_params)
@@ -582,7 +606,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                 accum.push_str(get_doc_comment(&m.attributes, 1).as_str());
 
                 let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
-                let in_params = get_in_params(&m, true, ast)?;
+                let in_params = get_in_params(&m, true, true, ast)?;
 
                 let params = in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
 
@@ -598,6 +622,19 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
 
                 let (out_args, skip) = get_out_args(&m, true, ast)?;
                 let in_args = get_in_args(&m, false, ast)?;
+
+                let proto_args = m.in_params.iter().filter_map(|(name, ty)| {
+                    if let ast::Ty::Ident { id, .. } =  ty {
+                        if ast.id_to_type(id) == ast::Ty::Interface && not_callback(ast, id) {
+                            return Some((to_c_name(name), ty_to_cpp_str(ast, true, ty).unwrap()));
+                        }
+                    }
+                    None
+                }).collect::<Vec<_>>();
+                for (name, ty) in proto_args.iter() {
+                    accum.push_str(format!(include_str!("templates/cpp/proto_transform.h"),
+                                    ty = ty, name = name).as_str());
+                }
 
                 let args = iter::once("ctx_".to_string())
                     .chain(in_args)
@@ -738,7 +775,7 @@ impl<'a, W: io::Write> CppBackend<'a, W> {
                     .iter()
                     .map(|m| {
                         let (out_params, return_param) = get_out_params(&m, name, true, ast)?;
-                        let in_params = get_in_params(&m, true, ast)?;
+                        let in_params = get_in_params(&m, true, false, ast)?;
 
                         let params =
                             in_params.into_iter().chain(out_params).collect::<Vec<_>>().join(", ");
