@@ -4,11 +4,17 @@
 
 #pragma once
 
-#include <ddk/device.h>
+#include <threads.h>
+
 #include <ddk/io-buffer.h>
-#include <ddk/protocol/gpioimpl.h>
-#include <ddk/protocol/iommu.h>
-#include <ddk/protocol/platform/bus.h>
+#include <ddktl/device.h>
+#include <ddktl/protocol/gpioimpl.h>
+#include <ddktl/protocol/iommu.h>
+#include <ddktl/protocol/platform/bus.h>
+
+#include <fbl/macros.h>
+
+namespace vim {
 
 // BTI IDs for our devices
 enum {
@@ -24,57 +30,51 @@ enum {
     BTI_SYSMEM,
 };
 
-typedef struct {
-    pbus_protocol_t pbus;
-    gpio_impl_protocol_t gpio;
-    zx_device_t* parent;
-    iommu_protocol_t iommu;
-} vim_bus_t;
+class Vim;
+using VimType = ddk::Device<Vim>;
 
-// vim-gpio.c
-zx_status_t vim_gpio_init(vim_bus_t* bus);
+// This is the main class for the VIM2 board driver.
+class Vim : public VimType {
+public:
+    explicit Vim(zx_device_t* parent, pbus_protocol_t* pbus, iommu_protocol_t* iommu)
+        : VimType(parent), pbus_(pbus), iommu_(iommu) {}
 
-// vim-i2c.c
-zx_status_t vim_i2c_init(vim_bus_t* bus);
+    static zx_status_t Create(void* ctx,zx_device_t* parent);
+    
+    // Device protocol implementation.
+    void DdkRelease();
 
-// vim-mali.c
-zx_status_t vim_mali_init(vim_bus_t* bus, uint32_t bti_index);
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(Vim);
 
-// vim-uart.c
-zx_status_t vim_uart_init(vim_bus_t* bus);
+    zx_status_t Start();
+    zx_status_t GpioInit();
+    zx_status_t I2cInit();
+    zx_status_t MaliInit();
+    zx_status_t UartInit();
+    zx_status_t UsbInit();
+    zx_status_t SdEmmcInit();
+    zx_status_t SdioInit();
+    zx_status_t EthInit();
+    zx_status_t ThermalInit();
+    zx_status_t DisplayInit();
+    zx_status_t VideoInit();
+    zx_status_t Led2472gInit();
+    zx_status_t RtcInit();
+    zx_status_t CanvasInit();
+    zx_status_t ClkInit();
+    zx_status_t EnableWifi32K();
+    zx_status_t SysmemInit();
 
-// vim-usb.c
-zx_status_t vim_usb_init(vim_bus_t* bus);
+    int Thread();
 
-// vim-sd-emmc.c
-zx_status_t vim_sd_emmc_init(vim_bus_t* bus);
+    ddk::PBusProtocolClient pbus_;
+    ddk::IommuProtocolClient iommu_;
+    ddk::GpioImplProtocolClient gpio_impl_;
+    thrd_t thread_;
 
-// vim-sd-emmc.c
-zx_status_t vim_sdio_init(vim_bus_t* bus);
+    bool enable_gpio_test_;
+};
 
-// vim-eth.c
-zx_status_t vim_eth_init(vim_bus_t* bus);
+} //namespace vim
 
-// vim-fanctl.c
-zx_status_t vim2_thermal_init(vim_bus_t* bus);
-
-// vim-display.c
-zx_status_t vim_display_init(vim_bus_t* bus);
-
-// vim-video.c
-zx_status_t vim_video_init(vim_bus_t* bus);
-
-// vim-led2472g.c
-zx_status_t vim_led2472g_init(vim_bus_t* bus);
-
-// vim-rtc.c
-zx_status_t vim_rtc_init(vim_bus_t* bus);
-
-// vim-canvas.c
-zx_status_t vim2_canvas_init(vim_bus_t* bus);
-
-// vim-clk.c
-zx_status_t vim_clk_init(vim_bus_t* bus);
-
-// vim-sysmem.c
-zx_status_t vim_sysmem_init(vim_bus_t* bus);
