@@ -146,6 +146,38 @@ void RunnerRunAllTests() {
     ZX_ASSERT_MSG(test_2_counter == 1, "test_2 was not executed.\n");
 }
 
+void RunnerRunOnlyFilteredTests() {
+    Runner runner(Reporter(/*stream*/ nullptr));
+    int test_counter = 0;
+    int test_2_counter = 0;
+    Runner::Options options = Runner::kDefaultOptions;
+    options.filter = "TestCase.*";
+
+    TestRef ref = runner.RegisterTest<Test, FakeTest>(
+        kTestCaseName, kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_counter));
+    TestRef ref2 = runner.RegisterTest<Test, FakeTest>(
+        "TestCase2", kTestName, kFileName, kLineNumber, FakeTest::MakeFactory(&test_2_counter));
+
+    ZX_ASSERT_MSG(ref.test_case_index != ref2.test_case_index,
+                  "Different TestCase share same index.\n");
+
+    // Verify that the runner actually claims to hold two tests from one test case.
+    ZX_ASSERT_MSG(runner.summary().registered_test_count == 2,
+                  "Test failed to register correctly.\n");
+    ZX_ASSERT_MSG(runner.summary().registered_test_case_count == 2,
+                  "TestCase failed to register correctly.\n");
+
+    ZX_ASSERT_MSG(runner.Run(options) == 0, "Test Execution Failed.\n");
+
+    // Check that the active count reflects a filter matching all.
+    ZX_ASSERT_MSG(runner.summary().active_test_count == 1, "Failed to filter tests.\n");
+    ZX_ASSERT_MSG(runner.summary().active_test_case_count == 1, "Failed to filter tests.\n");
+
+    // Check that both tests were executed once.
+    ZX_ASSERT_MSG(test_counter == 1, "test was filtered.\n");
+    ZX_ASSERT_MSG(test_2_counter == 0, "test_2 was not filtered.\n");
+}
+
 void RunnerRunAllTestsSameTestCase() {
     Runner runner(Reporter(/*stream*/ nullptr));
     int test_counter = 0;
@@ -375,6 +407,68 @@ void RunnerOptionsParseFromCmdLineErrors() {
 
     // Just in case it returns errors, this will give insight into where the problem is.
     ZX_ASSERT_MSG(!errors.is_empty(), "Runner::Options::FromArgs should return error.\n.");
+}
+
+void FilterOpFilterEmptyMatchesAll() {
+    constexpr char kPattern[] = "";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName), "FilterOp failed to recognize a full match.");
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName2), "FilterOp failed to recognize a mismatch.");
+}
+
+void FilterOpFilterFullMatch() {
+    constexpr char kPattern[] = "TestCase.TestName";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName), "FilterOp failed to recognize a full match.");
+    ZX_ASSERT_MSG(!filter(kTestCaseName, kTestName2), "FilterOp failed to recognize a mismatch.");
+}
+
+void FilterOpFilterFullNegativeMatch() {
+    constexpr char kPattern[] = "-TestCase.TestName";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(!filter(kTestCaseName, kTestName),
+                  "FilterOp failed to recognize a full negative match.");
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName2),
+                  "FilterOp failed to recognize a negative mismatch.");
+}
+
+void FilterOpFilterPartialMatch() {
+    constexpr char kPattern[] = "TestCase.TestName*";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName),
+                  "FilterOp failed to recognize a partial match.");
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName2),
+                  "FilterOp failed to recognize a partial match.");
+}
+
+void FilterOpFilterMultiMatch() {
+    constexpr char kPattern[] = "TestCase.TestName:TestCase.TestName2";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName),
+                  "FilterOp failed to recognize first of multiple patterns.");
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName2),
+                  "FilterOp failed to recognize second of multiple patterns.");
+}
+
+void FilterOpFilterCombined() {
+    constexpr char kPattern[] = "TestCase.TestName:-TestCase.TestName2";
+    FilterOp filter;
+    filter.pattern = kPattern;
+
+    ZX_ASSERT_MSG(filter(kTestCaseName, kTestName),
+                  "FilterOp failed to recognize first of multiple patterns.");
+    ZX_ASSERT_MSG(!filter(kTestCaseName, kTestName2),
+                  "FilterOp failed to recognize second of multiple patterns.");
 }
 
 } // namespace test

@@ -88,6 +88,14 @@ struct RunnerSummary {
     size_t registered_test_case_count = 0;
 };
 
+// Holds the pattern used for filtering.
+struct FilterOp {
+    // Returns true if the test_case and test matches |pattern|.
+    bool operator()(const fbl::String& test_case, const fbl::String& test) const;
+
+    fbl::String pattern;
+};
+
 // This class is the entry point for test and constructs registration.
 class Runner {
 public:

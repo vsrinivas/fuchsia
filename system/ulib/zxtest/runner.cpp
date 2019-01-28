@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <fbl/string_piece.h>
 #include <zxtest/base/runner.h>
 
 namespace zxtest {
@@ -141,10 +142,10 @@ void Runner::List(const Runner::Options& options) {
 void Runner::Filter(const fbl::String& pattern) {
     summary_.active_test_count = 0;
     summary_.active_test_case_count = 0;
-
+    const FilterOp filter_op = {.pattern = pattern};
     for (auto& test_case : test_cases_) {
         // TODO(gevalentino): replace with filter function.
-        test_case.Filter(nullptr);
+        test_case.Filter(filter_op);
         if (test_case.MatchingTestCount() > 0) {
             summary_.active_test_case_count++;
             summary_.active_test_count += test_case.MatchingTestCount();
@@ -184,6 +185,66 @@ int RunAllTests(int argc, char** argv) {
     }
 
     return Runner::GetInstance()->Run(options);
+}
+
+namespace {
+bool MatchPatterns(fbl::StringPiece pattern, fbl::StringPiece str) {
+    static constexpr auto match_pattern = [](const char* pattern, const char* str) -> bool {
+        auto advance = [](const char* pattern, const char* str, auto& self) -> bool {
+            switch (*pattern) {
+            // Single characeter matching for gTest
+            case '?':
+                return *str != '\0' && self(pattern + 1, str + 1, self);
+            // Wild card matches anything.
+            case '*':
+                return (*str != '\0' && self(pattern, str + 1, self)) ||
+                       self(pattern + 1, str, self);
+            // Pattern completed or another pattern in the list.
+            case '\0':
+            case ':':
+                return *str == '\0';
+            // 1:1 match
+            default:
+                return *str == *pattern && self(pattern + 1, str + 1, self);
+            };
+        };
+        return advance(pattern, str, advance);
+    };
+
+    bool has_next = true;
+    const char* curr_pattern = pattern.data();
+    while (has_next) {
+        if (match_pattern(curr_pattern, str.data())) {
+            return true;
+        }
+        curr_pattern = strchr(curr_pattern, ':');
+        has_next = (curr_pattern != nullptr);
+        // Skip ':'
+        curr_pattern++;
+    }
+
+    return false;
+}
+
+} // namespace
+
+bool FilterOp::operator()(const fbl::String& test_case, const fbl::String& test) const {
+    fbl::String full_test_name = fbl::StringPrintf("%s.%s", test_case.c_str(), test.c_str());
+
+    const char* p = pattern.c_str();
+    const char* d = strchr(p, '-');
+    fbl::StringPiece positive, negative;
+
+    // No negative string.
+    if (d == nullptr) {
+        positive = fbl::StringPiece(p, pattern.size());
+    } else {
+        size_t delta = d - p;
+        positive = fbl::StringPiece(p, delta);
+        negative = fbl::StringPiece(d + 1, pattern.size() - delta - 1);
+    }
+    return (positive.empty() || MatchPatterns(positive, full_test_name)) &&
+           (negative.empty() || !MatchPatterns(negative, full_test_name));
 }
 
 } // namespace zxtest

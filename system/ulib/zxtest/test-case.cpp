@@ -81,6 +81,10 @@ bool TestCase::RegisterTest(const fbl::String& name, const SourceLocation& locat
 }
 
 void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
+    if (selected_indexes_.size() == 0) {
+        return;
+    }
+
     auto tear_down = fbl::MakeAutoCall([this, event_broadcaster] {
         tear_down_();
         event_broadcaster->OnTestCaseEnd(*this);

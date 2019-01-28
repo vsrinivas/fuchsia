@@ -98,6 +98,7 @@ void RunnerRegisterTest();
 void RunnerRegisterTestWithCustomFactory();
 void RunnerRunAllTests();
 void RunnerRunAllTestsSameTestCase();
+void RunnerRunOnlyFilteredTests();
 void RunnerRepeatTests();
 void RunnerListTests();
 
@@ -111,6 +112,14 @@ void TestDriverImplReset();
 // Verify that we parse options correctly.
 void RunnerOptionsParseFromCmdLineShort();
 void RunnerOptionsParseFromCmdLineLong();
+
+// Verify that the current Filter implementation matches gTest expectations.
+void FilterOpFilterEmptyMatchesAll();
+void FilterOpFilterFullMatch();
+void FilterOpFilterPartialMatch();
+void FilterOpFilterFullNegativeMatch();
+void FilterOpFilterMultiMatch();
+void FilterOpFilterCombined();
 
 struct RegisteredTest {
     const char* name = nullptr;
@@ -156,13 +165,19 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(RunnerRegisterTestWithCustomFactory),
     RUN_TEST(RunnerRunAllTests),
     RUN_TEST(RunnerRunAllTestsSameTestCase),
+    RUN_TEST(RunnerRunOnlyFilteredTests),
     RUN_TEST(RunnerListTests),
     RUN_TEST(TestDriverImplFatalFailureEndsTest),
     RUN_TEST(TestDriverImplNonFatalFailureDoesNotEndTest),
     RUN_TEST(TestDriverImplReset),
     RUN_TEST(TestDriverImplResetOnTestCompletion),
     RUN_TEST(RunnerOptionsParseFromCmdLineShort),
-    RUN_TEST(RunnerOptionsParseFromCmdLineLong),
+    RUN_TEST(FilterOpFilterEmptyMatchesAll),
+    RUN_TEST(FilterOpFilterFullMatch),
+    RUN_TEST(FilterOpFilterFullNegativeMatch),
+    RUN_TEST(FilterOpFilterPartialMatch),
+    RUN_TEST(FilterOpFilterMultiMatch),
+    RUN_TEST(FilterOpFilterCombined),
 };
 
 #undef RUN_TEST
