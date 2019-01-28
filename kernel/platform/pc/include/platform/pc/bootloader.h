@@ -31,6 +31,9 @@ typedef struct pc_bootloader_info {
     zbi_swfb_t fb;
     zbi_uart_t uart;
     zbi_nvram_t nvram;
+
+    uint64_t platform_id_size;
+    zbi_platform_id_t platform_id;
 } pc_bootloader_info_t;
 
 extern pc_bootloader_info_t bootloader;

@@ -86,6 +86,12 @@ static bool early_console_disabled;
 
 zbi_result_t process_zbi_item(zbi_header_t* hdr, void* payload, void* cookie) {
     switch (hdr->type) {
+    case ZBI_TYPE_PLATFORM_ID:
+        if (hdr->length >= sizeof(zbi_platform_id_t)) {
+            memcpy(&bootloader.platform_id, payload, sizeof(zbi_platform_id_t));
+            bootloader.platform_id_size = sizeof(zbi_platform_id_t);
+        }
+        break;
     case ZBI_TYPE_ACPI_RSDP:
         if (hdr->length >= sizeof(uint64_t)) {
             bootloader.acpi_rsdp = *((uint64_t*)payload);
@@ -496,7 +502,6 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
                ctx.ret);
         return ctx.ret;
     }
-
     zbi::Zbi image(bootdata, len);
     zbi_result_t result;
 
@@ -513,6 +518,19 @@ zx_status_t platform_mexec_patch_zbi(uint8_t* bootdata, const size_t len) {
         return ZX_ERR_INTERNAL;
     }
 
+    // Append platform id
+    if (bootloader.platform_id_size) {
+        result = image.AppendSection(sizeof(bootloader.platform_id),
+                                     ZBI_TYPE_PLATFORM_ID, kNoZbiExtra,
+                                     kNoZbiFlags,
+                                     reinterpret_cast<uint8_t *>(&bootloader.platform_id));
+        if (result != ZBI_RESULT_OK) {
+            printf("mexec: Failed to append platform id to bootdata. "
+                   "len = %lu, section length = %lu, retcode = %d\n", len,
+                   sizeof(bootloader.platform_id), result);
+            return ZX_ERR_INTERNAL;
+        }
+    }
     // Append information about the framebuffer to the bootdata
     if (bootloader.fb.base) {
         result = image.AppendSection(sizeof(bootloader.fb),
