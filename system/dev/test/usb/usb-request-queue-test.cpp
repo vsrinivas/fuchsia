@@ -53,6 +53,28 @@ bool MultipleRequestTest() {
     END_TEST;
 }
 
+bool MoveTest() {
+    BEGIN_TEST;
+    usb::RequestQueue<void> queue1;
+    usb::RequestQueue<void> queue2;
+
+    for (size_t i = 0; i < 10; i++) {
+        std::optional<Request> request;
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
+                  ZX_OK);
+        queue1.push(std::move(*request));
+    }
+
+    queue2 = std::move(queue1);
+    EXPECT_TRUE(queue1.pop() == std::nullopt);
+
+    for (size_t i = 0; i < 10; i++) {
+        EXPECT_TRUE(queue2.pop() != std::nullopt);
+    }
+    EXPECT_TRUE(queue2.pop() == std::nullopt);
+    END_TEST;
+}
+
 bool ReleaseTest() {
     BEGIN_TEST;
     usb::RequestQueue<void> queue;
@@ -203,6 +225,7 @@ BEGIN_TEST_CASE(UsbRequestQueueTests)
 RUN_TEST_SMALL(TrivialLifetimeTest)
 RUN_TEST_SMALL(SingleRequestTest)
 RUN_TEST_SMALL(MultipleRequestTest)
+RUN_TEST_SMALL(MoveTest)
 RUN_TEST_SMALL(ReleaseTest)
 RUN_TEST_SMALL(MultipleLayerTest)
 RUN_TEST_SMALL(MultipleLayerWithStorageTest)

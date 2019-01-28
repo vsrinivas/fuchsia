@@ -493,6 +493,19 @@ public:
         release();
     }
 
+    BaseQueue(BaseQueue&& other) {
+        fbl::AutoLock al(&other.lock_);
+        queue_.swap(other.queue_);
+    }
+
+    BaseQueue& operator=(BaseQueue&& other) {
+        fbl::AutoLock al1(&lock_);
+        fbl::AutoLock al2(&other.lock_);
+        queue_.swap(other.queue_);
+        other.queue_.clear();
+        return *this;
+    }
+
     void push(ReqType req) {
         fbl::AutoLock al(&lock_);
         auto* node = req.node();
