@@ -70,6 +70,43 @@ if (current_toolchain == default_toolchain) {
       ]
     }
   }
+
+  # TODO(BLD-353): Temporary hacks for integrating with the legacy Fuchsia
+  # GN build.
+  host_tests_rspfile = "$target_gen_dir/host_tests.rsp"
+  generated_file("host_tests.rsp") {
+    testonly = true
+    visibility = [ ":legacy-host_tests" ]
+    outputs = [
+      host_tests_rspfile,
+    ]
+    deps = [
+      "system/utest:host",
+    ]
+    output_conversion = "list lines"
+    data_keys = [ "link_output" ]
+    walk_keys = [ "link_barrier" ]
+  }
+
+  action("legacy-host_tests") {
+    testonly = true
+    deps = [
+      ":host_tests.rsp",
+    ]
+    script = "$zx/scripts/copy-files"
+    depfile = "$target_out_dir/$target_name.d"
+    outputs = [
+      depfile,
+    ]
+    sources = [
+      host_tests_rspfile,
+    ]
+    args = [
+      "host_tests",
+      rebase_path(depfile, root_build_dir),
+      rebase_path(host_tests_rspfile, root_build_dir),
+    ]
+  }
 }
 
 group("default") {
