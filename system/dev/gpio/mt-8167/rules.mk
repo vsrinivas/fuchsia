@@ -10,6 +10,7 @@ MODULE_TYPE := driver
 
 MODULE_SRCS += \
     $(LOCAL_DIR)/mt8167-gpio.cpp \
+    $(LOCAL_DIR)/binding.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/ddk \
