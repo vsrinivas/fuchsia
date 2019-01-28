@@ -383,68 +383,6 @@ bool RamdiskTestReleaseDuringAccess(void) {
     END_TEST;
 }
 
-bool RamdiskTestReleaseDuringFifoAccess(void) {
-    BEGIN_TEST;
-    ramdisk_client_t* ramdisk = GetRamdisk(PAGE_SIZE, 512);
-    ASSERT_NONNULL(ramdisk);
-
-    int block_fd = ramdisk_get_block_fd(ramdisk);
-    // Set up fifo, txn, client, vmo...
-    zx::fifo fifo;
-    ssize_t expected = sizeof(fifo);
-    ASSERT_EQ(ioctl_block_get_fifos(block_fd, fifo.reset_and_get_address()), expected,
-              "Failed to get FIFO");
-    groupid_t group = 0;
-    block_client::Client client;
-    ASSERT_EQ(block_client::Client::Create(std::move(fifo), &client), ZX_OK);
-    uint64_t vmo_size = PAGE_SIZE * 3;
-    zx_handle_t vmo;
-    ASSERT_EQ(zx_vmo_create(vmo_size, 0, &vmo), ZX_OK, "Failed to create VMO");
-    zx_handle_t xfer_vmo;
-    ASSERT_EQ(zx_handle_duplicate(vmo, ZX_RIGHT_SAME_RIGHTS, &xfer_vmo), ZX_OK);
-    vmoid_t vmoid;
-    expected = sizeof(vmoid_t);
-    ASSERT_EQ(ioctl_block_attach_vmo(block_fd, &xfer_vmo, &vmoid), expected,
-              "Failed to attach vmo");
-    block_fifo_request_t request;
-    request.group      = group;
-    request.vmoid      = vmoid;
-    request.opcode     = BLOCKIO_WRITE;
-    request.length     = 1;
-    request.vmo_offset = 0;
-    request.dev_offset = 0;
-
-    typedef struct thread_args {
-        block_fifo_request_t* request;
-        block_client::Client* client;
-    } thread_args_t;
-
-    // Spin up a background thread to repeatedly access
-    // the first few blocks.
-    auto bg_thread = [](void* arg) {
-        thread_args_t* ta = reinterpret_cast<thread_args_t*>(arg);
-        zx_status_t status;
-        while ((status = ta->client->Transaction(ta->request, 1)) == ZX_OK) {}
-        return (status == ZX_ERR_BAD_STATE) ? 0 : -1;
-    };
-
-    thread_args_t args;
-    args.request = &request;
-    args.client = &client;
-
-    thrd_t thread;
-    ASSERT_EQ(thrd_create(&thread, bg_thread, (void*)&args), thrd_success);
-    // Let the background thread warm up a little bit...
-    usleep(10000);
-    // ... and close the entire ramdisk from undearneath it!
-    ASSERT_EQ(ramdisk_destroy(ramdisk), ZX_OK);
-
-    int res;
-    ASSERT_EQ(thrd_join(thread, &res), thrd_success);
-    ASSERT_EQ(res, 0, "Background thread failed");
-    END_TEST;
-}
-
 bool RamdiskTestMultiple(void) {
     uint8_t buf[PAGE_SIZE];
     uint8_t out[PAGE_SIZE];
@@ -1586,7 +1524,6 @@ RUN_TEST_SMALL(RamdiskTestFilesystem)
 RUN_TEST_SMALL(RamdiskTestRebind)
 RUN_TEST_SMALL(RamdiskTestBadRequests)
 RUN_TEST_SMALL(RamdiskTestReleaseDuringAccess)
-RUN_TEST_SMALL(RamdiskTestReleaseDuringFifoAccess)
 RUN_TEST_SMALL(RamdiskTestMultiple)
 RUN_TEST_SMALL(RamdiskTestFifoNoOp)
 RUN_TEST_SMALL(RamdiskTestFifoBasic)
