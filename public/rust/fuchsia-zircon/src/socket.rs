@@ -33,6 +33,23 @@ bitflags! {
     }
 }
 
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Default)]
+    pub struct SocketReadOpts: u32 {
+        const CONTROL = 1 << 2;
+        const PEEK = 1 << 3;
+    }
+}
+
+bitflags! {
+    #[repr(transparent)]
+    #[derive(Default)]
+    pub struct SocketWriteOpts: u32 {
+        const CONTROL = 1 << 2;
+    }
+}
+
 #[repr(C)]
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub struct SocketInfo {
@@ -100,12 +117,20 @@ impl Socket {
     /// Wraps
     /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
     pub fn write(&self, bytes: &[u8]) -> Result<usize, Status> {
+        self.write_opts(bytes, SocketWriteOpts::default())
+    }
+
+    /// Write the given bytes into the socket, with options.
+    /// Return value (on success) is number of bytes actually written.
+    ///
+    /// Wraps
+    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
+    pub fn write_opts(&self, bytes: &[u8], opts: SocketWriteOpts) -> Result<usize, Status> {
         let mut actual = 0;
-        let opts = 0;
         let status = unsafe {
             sys::zx_socket_write(
                 self.raw_handle(),
-                opts,
+                opts.bits(),
                 bytes.as_ptr(),
                 bytes.len(),
                 &mut actual,
@@ -120,12 +145,20 @@ impl Socket {
     /// Wraps
     /// [zx_socket_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_read.md).
     pub fn read(&self, bytes: &mut [u8]) -> Result<usize, Status> {
+        self.read_opts(bytes, SocketReadOpts::default())
+    }
+
+    /// Read the given bytes from the socket, with options.
+    /// Return value (on success) is number of bytes actually read.
+    ///
+    /// Wraps
+    /// [zx_socket_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_read.md).
+    pub fn read_opts(&self, bytes: &mut [u8], opts: SocketReadOpts) -> Result<usize, Status> {
         let mut actual = 0;
-        let opts = 0;
         let status = unsafe {
             sys::zx_socket_read(
                 self.raw_handle(),
-                opts,
+                opts.bits(),
                 bytes.as_mut_ptr(),
                 bytes.len(),
                 &mut actual,
@@ -172,6 +205,8 @@ unsafe_handle_properties!(object: Socket,
         {query_ty: SOCKET_TX_THRESHOLD, tag: SocketTxThresholdTag, prop_ty: usize, get:get_tx_threshold, set: set_tx_threshold},
     ]
 );
+
+// TODO(wesleyac): Test control plane and peeking
 
 #[cfg(test)]
 mod tests {
