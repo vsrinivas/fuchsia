@@ -226,7 +226,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspNotSupported) {
       // Result = Not supported
       0x01, 0x00);
 
-  fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspConnlessMtu) {
@@ -253,7 +254,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspConnlessMtu) {
       // Data (MTU)
       0xdc, 0x02);
 
-  fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspExtendedFeatures) {
@@ -280,7 +282,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspExtendedFeatures) {
       // Data (Mask)
       0x0c, 0xb0, 0xce, 0xfa);
 
-  fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspFixedChannels) {
@@ -307,7 +310,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundInfoReqRspFixedChannels) {
       // Data (Mask)
       0xde, 0xc0, 0xad, 0x4b, 0x0d, 0xf0, 0xfe, 0xca);
 
-  fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kInformationRequest, info_req, expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConfigReqEmptyRspOkEmpty) {
@@ -340,7 +344,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConfigReqEmptyRspOkEmpty) {
       // Result = Pending
       0x04, 0x00);
 
-  fake_sig()->ReceiveExpect(kConfigurationRequest, config_req, expected_rsp);
+  RETURN_IF_FATAL(fake_sig()->ReceiveExpect(kConfigurationRequest, config_req,
+                                            expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, OutboundConfigReqRspPendingEmpty) {
@@ -492,7 +497,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundDisconReqRspOk) {
   // Disconnection Response payload
   auto expected_rsp = discon_req;
 
-  fake_sig()->ReceiveExpect(kDisconnectionRequest, discon_req, expected_rsp);
+  RETURN_IF_FATAL(fake_sig()->ReceiveExpect(kDisconnectionRequest, discon_req,
+                                            expected_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundDisconReqRej) {
@@ -515,8 +521,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundDisconReqRej) {
   // Disconnection Response payload
   auto expected_rsp = discon_req;
 
-  fake_sig()->ReceiveExpectRejectInvalidChannelId(
-      kDisconnectionRequest, discon_req, kLocalCId, kRemoteCId);
+  RETURN_IF_FATAL(fake_sig()->ReceiveExpectRejectInvalidChannelId(
+      kDisconnectionRequest, discon_req, kLocalCId, kRemoteCId));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqRspPending) {
@@ -554,7 +560,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqRspPending) {
       UpperBits(
           static_cast<uint16_t>(ConnectionStatus::kAuthorizationPending)));
 
-  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp));
 }
 
 TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqBadPsm) {
@@ -592,7 +599,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqBadPsm) {
       LowerBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)),
       UpperBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)));
 
-  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp));
   EXPECT_FALSE(req_cb_called);
 }
 
@@ -629,7 +637,8 @@ TEST_F(L2CAP_BrEdrCommandHandlerTest, InboundConnReqNonDynamicSrcCId) {
       LowerBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)),
       UpperBits(static_cast<uint16_t>(ConnectionStatus::kNoInfoAvailable)));
 
-  fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp);
+  RETURN_IF_FATAL(
+      fake_sig()->ReceiveExpect(kConnectionRequest, conn_req, conn_rsp));
   EXPECT_FALSE(req_cb_called);
 }
 

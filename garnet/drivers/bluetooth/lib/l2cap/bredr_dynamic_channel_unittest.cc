@@ -351,7 +351,7 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, FailConnectChannel) {
 
   channel->Open(std::move(open_result_cb));
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
   EXPECT_EQ(1, open_result_cb_count);
   EXPECT_FALSE(channel->IsConnected());
@@ -392,7 +392,7 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailConfig) {
   set_channel_close_cb([&close_cb_count](auto) { close_cb_count++; });
 
   channel->Open(std::move(open_result_cb));
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
   EXPECT_TRUE(channel->IsConnected());
 
   // A connected channel should have a valid remote channel ID.
@@ -430,7 +430,7 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, ConnectChannelFailInvalidResponse) {
   set_channel_close_cb([&close_cb_count](auto) { close_cb_count++; });
 
   channel->Open(std::move(open_result_cb));
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
   EXPECT_FALSE(channel->IsConnected());
   EXPECT_FALSE(channel->IsOpen());
   EXPECT_EQ(1, open_result_cb_count);
@@ -469,16 +469,16 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndLocalCloseChannel) {
 
   registry()->OpenOutbound(kPsm, std::move(open_cb));
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, open_cb_count);
   EXPECT_EQ(0, close_cb_count);
 
   registry()->CloseChannel(kLocalCId);
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
   EXPECT_EQ(1, open_cb_count);
 
@@ -487,7 +487,7 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndLocalCloseChannel) {
 
   // Repeated closure of the same channel should not have any effect.
   registry()->CloseChannel(kLocalCId);
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
   EXPECT_EQ(1, open_cb_count);
   EXPECT_EQ(0, close_cb_count);
@@ -515,16 +515,16 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenAndRemoteCloseChannel) {
 
   registry()->OpenOutbound(kPsm, std::move(open_cb));
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, open_cb_count);
   EXPECT_EQ(0, close_cb_count);
 
-  sig()->ReceiveExpect(kDisconnectionRequest, kInboundDisconReq,
-                       kInboundDisconRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kDisconnectionRequest, kInboundDisconReq,
+                                       kInboundDisconRsp));
 
   EXPECT_EQ(1, open_cb_count);
 
@@ -551,10 +551,10 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelWithPendingConn) {
     EXPECT_EQ(kRemoteCId, chan->remote_cid());
   });
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, open_cb_count);
 }
@@ -580,10 +580,10 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelMismatchConnRsp) {
     EXPECT_EQ(kRemoteCId, chan->remote_cid());
   });
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, open_cb_count);
 }
@@ -606,10 +606,10 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigPending) {
     EXPECT_EQ(kRemoteCId, chan->remote_cid());
   });
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, open_cb_count);
 }
@@ -629,10 +629,10 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigWrongId) {
     EXPECT_FALSE(chan);
   });
 
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
-  sig()->ReceiveExpectRejectInvalidChannelId(
-      kConfigurationRequest, kInboundConfigReq, kLocalCId, kInvalidChannelId);
+  RETURN_IF_FATAL(sig()->ReceiveExpectRejectInvalidChannelId(
+      kConfigurationRequest, kInboundConfigReq, kLocalCId, kInvalidChannelId));
 
   EXPECT_EQ(1, open_cb_count);
 }
@@ -668,28 +668,23 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionOk) {
   set_service_request_cb(std::move(service_request_cb));
 
   int close_cb_count = 0;
-  set_channel_close_cb([&close_cb_count](auto chan) {
-    ASSERT_TRUE(chan);
-    EXPECT_EQ(kLocalCId, chan->local_cid());
-    EXPECT_EQ(kRemoteCId, chan->remote_cid());
-    close_cb_count++;
-  });
+  set_channel_close_cb([&close_cb_count](auto chan) { close_cb_count++; });
 
-  sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq, kInboundOkConnRsp);
-  RunLoopUntilIdle();
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq,
+                                       kInboundOkConnRsp));
+  RETURN_IF_FATAL(RunLoopUntilIdle());
 
   EXPECT_EQ(1, service_request_cb_count);
   EXPECT_EQ(0, open_cb_count);
 
-  RunLoopUntilIdle();
-
-  sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
-                       kInboundOkConfigRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
 
   EXPECT_EQ(1, service_request_cb_count);
   EXPECT_EQ(1, open_cb_count);
 
   registry()->CloseChannel(kLocalCId);
+  EXPECT_EQ(0, close_cb_count);
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidPsm) {
@@ -706,8 +701,8 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidPsm) {
 
   set_service_request_cb(std::move(service_request_cb));
 
-  sig()->ReceiveExpect(kConnectionRequest, kInboundInvalidPsmConnReq,
-                       kInboundBadPsmConnRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(
+      kConnectionRequest, kInboundInvalidPsmConnReq, kInboundBadPsmConnRsp));
   RunLoopUntilIdle();
 }
 
@@ -724,8 +719,8 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionUnsupportedPsm) {
 
   set_service_request_cb(std::move(service_request_cb));
 
-  sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq,
-                       kInboundBadPsmConnRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq,
+                                       kInboundBadPsmConnRsp));
   RunLoopUntilIdle();
 
   EXPECT_EQ(1, service_request_cb_count);
@@ -744,8 +739,8 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidSrcCId) {
 
   set_service_request_cb(std::move(service_request_cb));
 
-  sig()->ReceiveExpect(kConnectionRequest, kInboundBadCIdConnReq,
-                       kInboundBadCIdConnRsp);
+  RETURN_IF_FATAL(sig()->ReceiveExpect(
+      kConnectionRequest, kInboundBadCIdConnReq, kInboundBadCIdConnRsp));
   RunLoopUntilIdle();
 }
 
