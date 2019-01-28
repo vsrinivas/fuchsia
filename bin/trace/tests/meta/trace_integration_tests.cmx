@@ -3,11 +3,11 @@
         "fuchsia.test": {
             "injected-services": {
                 "fuchsia.tracelink.Registry": [
-                    "trace_manager",
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ],
                 "fuchsia.tracing.TraceController": [
-                    "trace_manager",
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
                     "--verbose=2"
                 ]
             }
