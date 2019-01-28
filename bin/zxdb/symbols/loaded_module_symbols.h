@@ -8,7 +8,9 @@
 #include <string>
 #include <vector>
 
+#include "garnet/bin/zxdb/symbols/input_location.h"
 #include "garnet/bin/zxdb/symbols/location.h"
+#include "garnet/bin/zxdb/symbols/resolve_options.h"
 #include "garnet/bin/zxdb/symbols/system_symbols.h"
 #include "garnet/public/lib/fxl/macros.h"
 
@@ -38,6 +40,46 @@ class LoadedModuleSymbols {
   // Most functions in ModuleSymbols take a symbol context to convert between
   // absolute addresses in memory to ones relative to the module load address.
   const SymbolContext& symbol_context() const { return symbol_context_; }
+
+  // Converts the given InputLocation into one or more locations. If the
+  // location is an address, it will be be returned whether or not the address
+  // is inside this module (it will be symbolized if possible). If the input is
+  // a function or file/line, they could match more than one location and all
+  // locations will be returned.
+  //
+  // If symbolize is true, the results will be symbolized, otherwise the
+  // output locations will be regular addresses (this will be slightly faster).
+  //
+  // LINE LOOKUP
+  // -----------
+  // Finds the addresses for all instantiations of the given line. Often there
+  // will be one result, but inlining and templates could duplicate the code.
+  //
+  // It may not be possible to return the exact line. The line could have been
+  // optimized out, it could have been a continuation of an earlier line, or
+  // there could be no code at that line in the first place. This function will
+  // try its best to find the best line if an exact match isn't possible.
+  //
+  // This function will also match multiple different input files according to
+  // FindFileMatches() rules. If you don't want this, we can add a field to
+  // ResolveOptions to disable this and force exact matches.
+  //
+  // If you need to find out the exact actual location that this resolved to,
+  // look up the resulting address again.
+  //
+  // If the file wasn't found or contains no code, it will return an empty
+  // vector. If the file exists and contains code, it will always return
+  // *something*.
+  //
+  // SYMBOL LOOKUP
+  // -------------
+  // Returns the addresses for the given function name. The function name must
+  // be an exact match. The addresses will indicate the start of the function.
+  // Since a function implementation can be duplicated more than once, there
+  // can be multiple results.
+  std::vector<Location> ResolveInputLocation(
+      const InputLocation& input_location,
+      const ResolveOptions& options = ResolveOptions()) const;
 
  private:
   fxl::RefPtr<SystemSymbols::ModuleRef> module_;

@@ -35,8 +35,7 @@ fxl::WeakPtr<const ProcessSymbols> ProcessSymbols::GetWeakPtr() const {
   return weak_factory_.GetWeakPtr();
 }
 
-void ProcessSymbols::SetModules(
-    const std::vector<debug_ipc::Module>& modules) {
+void ProcessSymbols::SetModules(const std::vector<debug_ipc::Module>& modules) {
   // Map from load address to index into |modules| argument.
   std::map<uint64_t, size_t> new_module_address_to_index;
 
@@ -138,8 +137,8 @@ std::vector<ModuleSymbolStatus> ProcessSymbols::GetStatus() const {
   return result;
 }
 
-std::vector<const LoadedModuleSymbols*>
-ProcessSymbols::GetLoadedModuleSymbols() const {
+std::vector<const LoadedModuleSymbols*> ProcessSymbols::GetLoadedModuleSymbols()
+    const {
   std::vector<const LoadedModuleSymbols*> result;
   result.reserve(modules_.size());
   for (const auto& [base, mod_info] : modules_) {
@@ -164,8 +163,7 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
             Location(Location::State::kSymbolized, input_location.address)};
       }
       // Have the module the address.
-      return info->symbols->module_symbols()->ResolveInputLocation(
-          info->symbols->symbol_context(), input_location, options);
+      return info->symbols->ResolveInputLocation(input_location, options);
     }
 
     // No-op conversion of address -> address.
@@ -178,8 +176,8 @@ std::vector<Location> ProcessSymbols::ResolveInputLocation(
   for (const auto& [base, mod_info] : modules_) {
     if (mod_info.symbols->module_ref()) {
       const LoadedModuleSymbols* loaded = mod_info.symbols.get();
-      for (Location& location : loaded->module_symbols()->ResolveInputLocation(
-               loaded->symbol_context(), input_location, options))
+      for (Location& location :
+           loaded->ResolveInputLocation(input_location, options))
         result.push_back(std::move(location));
     }
   }
@@ -213,8 +211,7 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
-    info.symbols = std::make_unique<LoadedModuleSymbols>(
-        nullptr, module.base);
+    info.symbols = std::make_unique<LoadedModuleSymbols>(nullptr, module.base);
   } else {
     // Success, make the LoadedModuleSymbols.
     info.symbols = std::make_unique<LoadedModuleSymbols>(
