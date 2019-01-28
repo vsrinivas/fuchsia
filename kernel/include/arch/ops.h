@@ -36,6 +36,9 @@ static cpu_num_t arch_curr_cpu_num(void);
 static uint arch_max_num_cpus(void);
 static uint arch_cpu_features(void);
 
+uint8_t arch_get_hw_breakpoint_count();
+uint8_t arch_get_hw_watchpoint_count();
+
 void arch_disable_cache(uint flags);
 void arch_enable_cache(uint flags);
 

@@ -142,7 +142,9 @@ zx_status_t arch_set_vector_regs(struct thread* thread, const zx_thread_state_ve
 }
 
 zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_regs* out) {
+    *out = {};
     out->hw_bps_count = arm64_hw_breakpoint_count();
+    out->hw_wps_count = arm64_hw_watchpoint_count();
     Guard<spin_lock_t, IrqSave> thread_lock_guard{ThreadLock::Get()};
 
     // The kernel ensures that this state is being kept up to date, so we can safely copy the
@@ -151,15 +153,6 @@ zx_status_t arch_get_debug_regs(struct thread* thread, zx_thread_state_debug_reg
         out->hw_bps[i].dbgbcr = thread->arch.debug_state.hw_bps[i].dbgbcr;
         out->hw_bps[i].dbgbvr = thread->arch.debug_state.hw_bps[i].dbgbvr;
     }
-
-    // Hacked through the last debug registers for now for development.
-    // THIS CODE WILL GO AWAY!
-    // This normally doesn't affect functionality as normally a CPU implementation has around six
-    // debug registers.
-    // TODO(ZX-3038): This should be exposed through a standard interface.
-    //                Either the sysinfo fidl, the vDSO info mapping or some other mechanism.
-    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 1].dbgbvr = __arm_rsr64("id_aa64dfr0_el1");
-    out->hw_bps[AARCH64_MAX_HW_BREAKPOINTS - 2].dbgbvr = __arm_rsr64("mdscr_el1");
 
     return ZX_OK;
 }
@@ -207,4 +200,13 @@ zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) 
     // There are no GS register on ARM.
     (void)in;
     return ZX_ERR_NOT_SUPPORTED;
+}
+
+uint8_t arch_get_hw_breakpoint_count() {
+  return arm64_hw_breakpoint_count();
+}
+
+uint8_t arch_get_hw_watchpoint_count() {
+  return arm64_hw_watchpoint_count();
+
 }

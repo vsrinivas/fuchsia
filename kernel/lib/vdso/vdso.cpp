@@ -227,7 +227,11 @@ const VDso* VDso::Create() {
     // can warn if the initializer list omits any member.
     *constants_window.data() = (vdso_constants) {
         arch_max_num_cpus(),
-        {arch_cpu_features()},
+        {
+          arch_cpu_features(),
+          arch_get_hw_breakpoint_count(),
+          arch_get_hw_watchpoint_count(),
+        },
         arch_dcache_line_size(),
         arch_icache_line_size(),
         per_second,

@@ -187,6 +187,8 @@
 /* Bits 11:12, 14:15 and 32:63 must be cleared to 0. Bit 10 must be set to 1. */
 #define X86_DR7_MASK ((1ul << 10) | X86_DR7_LE | X86_DR7_GE)
 
+#define HW_DEBUG_REGISTERS_COUNT 4
+
 #ifndef __ASSEMBLER__
 
 #include <zircon/compiler.h>

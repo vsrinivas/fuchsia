@@ -75,7 +75,11 @@
 #define ARM64_DBGBCR_MASK ((0b10u << ARM64_DBGBCR_PMC_SHIFT) | \
                            ARM64_DBGBCR_BAS)
 
+// ARMv8 assures at least 2 hw registers.
+#define ARM64_MIN_HW_BREAKPOINTS 2
 #define ARM64_MAX_HW_BREAKPOINTS 16
+#define ARM64_MIN_HW_WATCHPOINTS 2
+#define ARM64_MAX_HW_WATCHPOINTS 16
 
 #include <zircon/compiler.h>
 #include <sys/types.h>
@@ -109,6 +113,7 @@ bool arm64_validate_debug_state(arm64_debug_state_t *debug_state);
 
 /* Returns the amount of HW breakpoints present in this CPU. */
 uint8_t arm64_hw_breakpoint_count();
+uint8_t arm64_hw_watchpoint_count();
 
 /* Read from the CPU registers into |debug_state|. */
 void arm64_read_hw_debug_regs(arm64_debug_state_t* debug_state);

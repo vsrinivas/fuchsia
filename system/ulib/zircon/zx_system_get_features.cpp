@@ -7,6 +7,8 @@
 #include <zircon/compiler.h>
 #include <zircon/features.h>
 #include <zircon/syscalls.h>
+#include <zircon/threads.h>
+
 #include <zircon/types.h>
 
 #include "private.h"
@@ -20,6 +22,14 @@ zx_status_t _zx_system_get_features(uint32_t kind, uint32_t* features) {
         }
 
         *features = cpu_features;
+        return ZX_OK;
+    }
+    case ZX_FEATURE_KIND_HW_BREAKPOINT_COUNT: {
+        *features = DATA_CONSTANTS.features.hw_breakpoint_count;
+        return ZX_OK;
+    }
+    case ZX_FEATURE_KIND_HW_WATCHPOINT_COUNT: {
+        *features = DATA_CONSTANTS.features.hw_watchpoint_count;
         return ZX_OK;
     }
     default:

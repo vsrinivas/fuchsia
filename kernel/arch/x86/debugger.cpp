@@ -458,3 +458,13 @@ zx_status_t arch_set_x86_register_gs(struct thread* thread, const uint64_t* in) 
     thread->arch.gs_base = *in;
     return ZX_OK;
 }
+
+// NOTE: While x86 supports up to 4 hw breakpoints/watchpoints, there is a catch:
+//       They are shared, so (breakpoints + watchpoints) <= HW_DEBUG_REGISTERS_COUNT.
+uint8_t arch_get_hw_breakpoint_count() {
+    return HW_DEBUG_REGISTERS_COUNT;
+}
+
+uint8_t arch_get_hw_watchpoint_count() {
+    return HW_DEBUG_REGISTERS_COUNT;
+}

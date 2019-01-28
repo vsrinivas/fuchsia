@@ -16,7 +16,7 @@
 // hash. There is also a 4 byte 'git-' prefix, and possibly a 6 byte
 // '-dirty' suffix. Let's be generous and use 64 bytes.
 #define MAX_BUILDID_SIZE 64
-#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8 + MAX_BUILDID_SIZE)
+#define VDSO_CONSTANTS_SIZE (4 * 4 + 2 * 8 + 2 * 4 + MAX_BUILDID_SIZE)
 
 #ifndef __ASSEMBLER__
 
@@ -39,6 +39,10 @@ struct vdso_constants {
     // bits are valid.
     struct {
         uint32_t cpu;
+
+        // Total amount of debug registers available in the system.
+        uint32_t hw_breakpoint_count;
+        uint32_t hw_watchpoint_count;
     } features;
 
     // Number of bytes in a data cache line.

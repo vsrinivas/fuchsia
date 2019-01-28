@@ -42,13 +42,22 @@ bool arm64_validate_debug_state(arm64_debug_state_t* state) {
 }
 
 uint8_t arm64_hw_breakpoint_count() {
-    // TODO(donoso): Eventually this should be cached as a boot time constant.
     uint64_t dfr0 = __arm_rsr64("id_aa64dfr0_el1");
     uint8_t count = (uint8_t)(((dfr0 & ARM64_ID_AADFR0_EL1_BRPS) >>
-                               ARM64_ID_AADFR0_EL1_BRPS_SHIFT) +
-                              1lu);
+                               ARM64_ID_AADFR0_EL1_BRPS_SHIFT) + 1lu);
     // ARMv8 assures at least 2 hw registers.
-    DEBUG_ASSERT(count >= 2 && count <= 16);
+    DEBUG_ASSERT(count >= ARM64_MIN_HW_BREAKPOINTS &&
+                 count <= ARM64_MAX_HW_BREAKPOINTS);
+    return count;
+}
+
+uint8_t arm64_hw_watchpoint_count() {
+    uint64_t dfr0 = __arm_rsr64("id_aa64dfr0_el1");
+    uint8_t count = (uint8_t)(((dfr0 & ARM64_ID_AADFR0_EL1_WRPS) >>
+                               ARM64_ID_AADFR0_EL1_WRPS_SHIFT) + 1lu);
+    // ARMv8 assures at least 2 hw registers.
+    DEBUG_ASSERT(count >= ARM64_MIN_HW_WATCHPOINTS &&
+                 count <= ARM64_MAX_HW_WATCHPOINTS);
     return count;
 }
 
