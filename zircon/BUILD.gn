@@ -2,6 +2,7 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+import("$zx/public/gn/build_api_module.gni")
 import("$zx/public/gn/config/standard.gni")
 import("$zx/public/gn/toolchain/environment_redirect.gni")
 import("$zx/public/gn/zbi.gni")
@@ -138,4 +139,35 @@ foreach(cpu, standard_fuchsia_cpus) {
       deps += [ "$zx/bootloader" ]
     }
   }
+}
+
+# This is the top-level build API module that just lists all the others.
+# Each element of the list is the simple name of the API module; the
+# module's contents are found at "$root_build_dir/$target_name.json".
+# Type: list(string)
+build_api_module("api") {
+  data_keys = [ "build_api_modules" ]
+  deps = [
+    ":buildargs",
+  ]
+}
+
+# This just regurgitates the build arguments specified to `gn gen`.  This is
+# the exact JSON representation of the settings in "$root_build_dir/args.gn".
+# It does not include build arguments left to their default values.  So to
+# reproduce the settings of this build, one could put in `args.gn`:
+# ```
+#   forward_variables_from(read_file("buildargs.json", "json"), "*")
+# ```
+# Type: scope
+build_api_module("buildargs") {
+  # The file does not exist at all if `gn gen` is run with no `--args`.  But
+  # read_file() can't handle an optional file and there's no direct way to test
+  # for file existence from GN.
+  contents = exec_script("/bin/sh",
+                         [
+                           "-c",
+                           "test ! -e args.gn || cat args.gn",
+                         ],
+                         "scope")
 }
