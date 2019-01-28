@@ -68,26 +68,32 @@ zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t
 
     // Wait for request to complete.
     sync_completion_t sync;
-    // annotalysis is unable to determine that ScsiDevice::lock_ is held when the IrqRingUpdate
-    // lambda is invoked.
-    request_queue_.IrqRingUpdate([this, &sync](vring_used_elem* elem) TA_NO_THREAD_SAFETY_ANALYSIS {
-        auto index = static_cast<uint16_t>(elem->id);
+    for (;;) {
+        // annotalysis is unable to determine that ScsiDevice::lock_ is held when the IrqRingUpdate
+        // lambda is invoked.
+        request_queue_.IrqRingUpdate(
+            [this, &sync](vring_used_elem* elem) TA_NO_THREAD_SAFETY_ANALYSIS {
+            auto index = static_cast<uint16_t>(elem->id);
 
-        // Synchronously reclaim the entire descriptor chain.
-        for (;;) {
-            vring_desc const* desc = request_queue_.DescFromIndex(index);
-            const bool has_next = desc->flags & VRING_DESC_F_NEXT;
-            const uint16_t next = desc->next;
+            // Synchronously reclaim the entire descriptor chain.
+            for (;;) {
+                vring_desc const* desc = request_queue_.DescFromIndex(index);
+                const bool has_next = desc->flags & VRING_DESC_F_NEXT;
+                const uint16_t next = desc->next;
 
-            this->request_queue_.FreeDesc(index);
-            if (!has_next) {
-                break;
+                this->request_queue_.FreeDesc(index);
+                if (!has_next) {
+                    break;
+                }
+                index = next;
             }
-            index = next;
+            sync_completion_signal(&sync);
+        });
+        auto status = sync_completion_wait_deadline(&sync, ZX_MSEC(5));
+        if (status == ZX_OK) {
+            break;
         }
-        sync_completion_signal(&sync);
-    });
-    sync_completion_wait(&sync, ZX_TIME_INFINITE);
+    }
 
     // If there was either a transport or SCSI level error, return a failure.
     if (resp->response || resp->status) {
