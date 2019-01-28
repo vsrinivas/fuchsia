@@ -100,7 +100,7 @@ test("tests") {
   ]
 }
 
-package("service") {
+package("mdns") {
   deps = [
     ":bin",
   ]
@@ -111,8 +111,6 @@ package("service") {
     },
   ]
 
-  package_name = "mdns"
-
   meta = [
     {
       path = rebase_path("meta/mdns.cmx")
@@ -121,9 +119,8 @@ package("service") {
   ]
 }
 
-package("config") {
+package("mdns_config") {
   deprecated_system_image = true
-  package_name = "mdns_config"
   resources = [
     {
       dest = "sysmgr/mdns.config"

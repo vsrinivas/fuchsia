@@ -4,7 +4,7 @@
 
 import("//build/package.gni")
 
-package("util") {
+package("mdns-util") {
   deps = [
     ":bin",
   ]
@@ -15,8 +15,6 @@ package("util") {
       shell = true
     },
   ]
-
-  package_name = "mdns-util"
 
   meta = [
     {

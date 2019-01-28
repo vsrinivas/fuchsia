@@ -3,6 +3,6 @@
         "garnet/packages/config/network"
     ],
     "packages": [
-        "//garnet/bin/mdns/service:config"
+        "//garnet/bin/mdns/service:mdns_config"
     ]
 }
