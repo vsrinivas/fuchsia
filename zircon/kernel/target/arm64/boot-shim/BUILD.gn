@@ -109,8 +109,10 @@ template("boot_shim") {
       output_name = shim_name
       output_extension = "bin"
       metadata = {
+        # For the //:images build_api_module().
         images = [
           {
+            label = get_label_info(":$target_name", "label_with_toolchain")
             if (defined(invoker.image_metadata)) {
               forward_variables_from(invoker.image_metadata, "*")
             }
@@ -129,6 +131,7 @@ template("boot_shim") {
             }
             path = rebase_path("$output_dir/$output_name.$output_extension",
                                root_build_dir)
+            cpu = current_cpu
           },
         ]
       }

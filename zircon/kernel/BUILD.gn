@@ -343,11 +343,14 @@ if (current_toolchain == default_toolchain) {
       ":image",
     ]
     metadata = {
+      # For the //:images build_api_module().
       images = [
         {
-          type = "zbi"
+          label = get_label_info(":$target_name", "label_with_toolchain")
           name = "kernel"
+          type = "zbi"
           path = output_path
+          cpu = current_cpu
         },
       ]
 

@@ -54,6 +54,7 @@ if (current_toolchain == default_toolchain) {
     output_path = rebase_path("$output_dir/$target_name.$output_extension",
                               root_build_dir)
     metadata = {
+      # For the //:images build_api_module().
       images = []
       foreach(name,
               [
@@ -62,9 +63,11 @@ if (current_toolchain == default_toolchain) {
               ]) {
         images += [
           {
+            label = get_label_info(":$target_name", "label_with_toolchain")
             name = name
             type = "kernel"
             path = output_path
+            cpu = current_cpu
           },
         ]
       }

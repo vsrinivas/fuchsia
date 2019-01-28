@@ -57,14 +57,16 @@ if (current_toolchain == default_toolchain) {
       "-Wl,/entry:efi_main",
     ]
 
-    # TODO(mcgrathr): Temporary kludge for legacy Fuchsia GN build integration.
+    # For the //:images build_api_module().
     metadata = {
       images = [
         {
+          label = get_label_info(":$target_name", "label_with_toolchain")
           name = "bootloader"
           type = "efi"
           path = rebase_path("$root_out_dir/$output_name.$output_extension",
                              root_build_dir)
+          cpu = current_cpu
         },
       ]
     }
