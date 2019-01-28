@@ -20,14 +20,15 @@
 //! messages, since they can be thought of as the entrypoint for the whole loop (as nothing happens
 //! until a FIDL call is made).
 //!
-//! # FIDL Server
+//! # FIDL Worker
 //!
-//! The FIDL part of the event loop implements the fuchsia.net.stack.Stack interface. The type of
-//! the event loop message for a FIDL call is simply the generated FIDL type. When the event loop
-//! starts up, we use `fuchsia_app` to start a FIDL server that simply sends all of the events it
-//! receives to the event loop (via the sender end of the mpsc queue). When `EventLoop` receives
-//! this message, it calls the `handle_fidl_request` method, which, depending on what the request
-//! is, either:
+//! The FIDL part of the event loop implements the fuchsia.net.stack.Stack and
+//! fuchsia.net.SocketProvider interfaces. The type of the event loop message for a FIDL call is
+//! simply the generated FIDL type. When the event loop starts up, we use `fuchsia_app` to start a
+//! FIDL server that simply sends all of the events it receives to the event loop (via the sender
+//! end of the mpsc queue). When `EventLoop` receives this message, it calls the
+//! `handle_fidl_stack_request` or `handle_fidl_socket_provider_request` method, which, depending
+//! on what the request is, either:
 //!
 //! * Responds with the requested information.
 //! * Modifies the state of the netstack in the requested way.
@@ -83,6 +84,7 @@ use fidl::endpoints::{RequestStream, ServiceMarker};
 use fidl_fuchsia_hardware_ethernet as fidl_ethernet;
 use fidl_fuchsia_hardware_ethernet_ext::{EthernetInfo, EthernetStatus, MacAddress};
 use fidl_fuchsia_net as fidl_net;
+use fidl_fuchsia_net::SocketProviderRequest;
 use fidl_fuchsia_net_ext as fidl_net_ext;
 use fidl_fuchsia_net_stack as fidl_net_stack;
 use fidl_fuchsia_net_stack::{
@@ -197,7 +199,9 @@ impl EthernetWorker {
 /// The events that can trigger an action in the event loop.
 pub enum Event {
     /// A request from the fuchsia.net.stack.Stack FIDL interface.
-    FidlEvent(StackRequest),
+    FidlStackEvent(StackRequest),
+    /// A request from the fuchsia.net.SocketProvider FIDL interface.
+    FidlSocketProviderEvent(SocketProviderRequest),
     /// An event from an ethernet interface. Either a status change or a frame.
     EthEvent((DeviceId, eth::Event)),
     /// An indication that an ethernet device is ready to be used.
@@ -246,8 +250,11 @@ impl EventLoop {
                     eth_worker.spawn(self.ctx.dispatcher().event_send.clone());
                     setup.responder.send(None, eth_id.id());
                 }
-                Some(Event::FidlEvent(req)) => {
-                    await!(self.handle_fidl_request(req));
+                Some(Event::FidlStackEvent(req)) => {
+                    await!(self.handle_fidl_stack_request(req));
+                }
+                Some(Event::FidlSocketProviderEvent(req)) => {
+                    await!(self.handle_fidl_socket_provider_request(req));
                 }
                 Some(Event::EthEvent((id, eth::Event::StatusChanged))) => {
                     info!("device {:?} status changed", id.id());
@@ -272,7 +279,30 @@ impl EventLoop {
         Ok(())
     }
 
-    async fn handle_fidl_request(&mut self, req: StackRequest) {
+    async fn handle_fidl_socket_provider_request(&mut self, req: SocketProviderRequest) {
+        match req {
+            SocketProviderRequest::Socket {
+                domain,
+                type_,
+                protocol,
+                responder,
+            } => match (domain as i32, type_ as i32) {
+                _ => {
+                    responder.send(libc::ENOSYS as i16, None);
+                }
+            },
+            SocketProviderRequest::GetAddrInfo {
+                node,
+                service,
+                hints,
+                responder,
+            } => {
+                // TODO(wesleyac)
+            }
+        }
+    }
+
+    async fn handle_fidl_stack_request(&mut self, req: StackRequest) {
         match req {
             StackRequest::AddEthernetInterface {
                 topological_path,
@@ -383,8 +413,7 @@ impl EventLoop {
 
     fn fidl_enable_interface(&mut self, id: u64, responder: StackEnableInterfaceResponder) {}
 
-    fn fidl_disable_interface(&mut self, id: u64, responder: StackDisableInterfaceResponder) {
-    }
+    fn fidl_disable_interface(&mut self, id: u64, responder: StackDisableInterfaceResponder) {}
 
     fn fidl_add_interface_address(
         &mut self, id: u64, addr: InterfaceAddress, responder: StackAddInterfaceAddressResponder,
