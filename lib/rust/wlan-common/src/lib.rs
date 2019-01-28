@@ -10,6 +10,7 @@
 
 #[macro_use]
 mod utils;
+pub mod buffer_writer;
 pub mod channel;
 pub mod ie;
 pub mod mac;
