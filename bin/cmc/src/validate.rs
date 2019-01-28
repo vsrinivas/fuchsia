@@ -398,22 +398,6 @@ mod tests {
             }),
             result = Ok(()),
         },
-        test_cm_exposes_all_valid_chars => {
-            input = json!({
-                "exposes": [
-                    {
-                        "type": "service",
-                        "source_path": "/svc/fuchsia.ui.Scenic",
-                        "source": {
-                            "relation": "child",
-                            "child_name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
-                        },
-                        "target_path": "/svc/fuchsia.ui.Scenic"
-                    },
-                ]
-            }),
-            result = Ok(()),
-        },
         test_cm_exposes_missing_props => {
             input = json!({
                 "exposes": [ {} ]
@@ -566,12 +550,12 @@ mod tests {
                         "source_path": "/svc/fuchsia.logger.LogSink",
                         "source": {
                             "relation": "child",
-                            "child_name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+                            "child_name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                         },
                         "targets": [
                             {
                                 "target_path": "/svc/fuchsia.logger.SysLog",
-                                "child_name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+                                "child_name": "abcdefghijklmnopqrstuvwxyz0123456789_-."
                             }
                         ]
                     }
@@ -742,22 +726,11 @@ mod tests {
             input = json!({
                 "children": [
                     {
-                        "name": "System-logger2",
+                        "name": "system-logger2",
                         "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
                     },
                     {
-                        "name": "ABCabc123_-",
-                        "uri": "https://www.google.com/gmail"
-                    }
-                ]
-            }),
-            result = Ok(()),
-        },
-        test_cm_children_all_valid_chars => {
-            input = json!({
-                "children": [
-                    {
-                        "name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "name": "abc123_-",
                         "uri": "https://www.google.com/gmail"
                     }
                 ]
@@ -800,6 +773,110 @@ mod tests {
                 "facets": 55
             }),
             result = Err(Error::parse("Type of the value is wrong at /facets")),
+        },
+
+        // constraints
+        test_cm_path => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "/foo/?!@#$%/Bar",
+                        "target_path": "/bar/&*()/Baz"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_path_invalid => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "foo/",
+                        "target_path": "/bar"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /uses/0/source_path")),
+        },
+        test_cm_path_too_long => {
+            input = json!({
+                "uses": [
+                    {
+                        "type": "directory",
+                        "source_path": "/".repeat(1025),
+                        "target_path": "/bar"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /uses/0/source_path")),
+        },
+        test_cm_name => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_name_invalid => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "#bad",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    }
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+        },
+        test_cm_name_too_long => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "a".repeat(101),
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /children/0/name")),
+        },
+        test_cm_uri => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "my+awesome-scheme.2://abc123!@#$%.com"
+                    }
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cm_uri_invalid => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://"
+                    }
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /children/0/uri")),
+        },
+        test_cm_uri_too_long => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": &format!("fuchsia-pkg://{}", "a".repeat(4083))
+                    }
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /children/0/uri")),
         },
     }
 
@@ -876,11 +953,11 @@ mod tests {
         test_cml_expose_all_valid_chars => {
             input = json!({
                 "expose": [
-                    { "service": "/loggers/fuchsia.logger.Log", "from": "#ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-" }
+                    { "service": "/loggers/fuchsia.logger.Log", "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-." }
                 ],
                 "children": [
                     {
-                        "name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
                         "uri": "https://www.google.com/gmail"
                     }
                 ]
@@ -975,17 +1052,17 @@ mod tests {
                 "offer": [
                     {
                         "service": "/svc/fuchsia.logger.Log",
-                        "from": "#ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "from": "#abcdefghijklmnopqrstuvwxyz0123456789_-",
                         "targets": [
                             {
-                                "to": "#ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-"
+                                "to": "#abcdefghijklmnopqrstuvwxyz0123456789_-"
                             }
                         ]
                     }
                 ],
                 "children": [
                     {
-                        "name": "ABCDEFGHIJILMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789_-",
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-",
                         "uri": "https://www.google.com/gmail"
                     }
                 ]
@@ -1127,17 +1204,6 @@ mod tests {
             }),
             result = Err(Error::parse("This property is required at /children/0/name, This property is required at /children/0/uri")),
         },
-        test_cml_children_bad_name => {
-            input = json!({
-                "children": [
-                    {
-                        "name": "#bad",
-                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
-                    }
-                ]
-            }),
-            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
-        },
         test_cml_children_duplicate_names => {
            input = json!({
                "children": [
@@ -1172,6 +1238,115 @@ mod tests {
                 "facets": 55
             }),
             result = Err(Error::parse("Type of the value is wrong at /facets")),
+        },
+
+        // constraints
+        test_cml_path => {
+            input = json!({
+                "use": [
+                  { "directory": "/foo/?!@#$%/Bar" },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_path_invalid => {
+            input = json!({
+                "use": [
+                  { "service": "foo/" },
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /use/0/service")),
+        },
+        test_cml_path_too_long => {
+            input = json!({
+                "use": [
+                  { "service": "/".repeat(1025) },
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /use/0/service")),
+        },
+        test_cml_relative_id_too_long => {
+            input = json!({
+                "expose": [
+                    {
+                        "service": "/loggers/fuchsia.logger.Log",
+                        "from": &format!("#{}", "a".repeat(101)),
+                    },
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /expose/0/from")),
+        },
+        test_cml_child_name => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "abcdefghijklmnopqrstuvwxyz0123456789_-.",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_child_name_invalid => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "#bad",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    },
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /children/0/name")),
+        },
+        test_cml_child_name_too_long => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "a".repeat(101),
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+                    }
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /children/0/name")),
+        },
+        test_cml_uri => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "my+awesome-scheme.2://abc123!@#$%.com",
+                    },
+                ]
+            }),
+            result = Ok(()),
+        },
+        test_cml_uri_invalid => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://",
+                    },
+                ]
+            }),
+            result = Err(Error::parse("Pattern condition is not met at /children/0/uri")),
+        },
+        test_cml_uri_too_long => {
+            input = json!({
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": &format!("fuchsia-pkg://{}", "a".repeat(4083)),
+                    },
+                ]
+            }),
+            result = Err(Error::parse("MaxLength condition is not met at /children/0/uri")),
         },
     }
 
