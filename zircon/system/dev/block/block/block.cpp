@@ -25,6 +25,10 @@
 #include <ddktl/protocol/block/volume.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
+#include <fuchsia/hardware/block/c/fidl.h>
+#include <fuchsia/hardware/block/partition/c/fidl.h>
+#include <fuchsia/hardware/block/volume/c/fidl.h>
+#include <lib/fidl-utils/bind.h>
 #include <lib/zx/fifo.h>
 #include <lib/zx/vmo.h>
 #include <zircon/boot/image.h>
@@ -40,6 +44,7 @@ class BlockDevice;
 using BlockDeviceType = ddk::Device<BlockDevice,
                                     ddk::GetProtocolable,
                                     ddk::Ioctlable,
+                                    ddk::Messageable,
                                     ddk::Unbindable,
                                     ddk::Readable,
                                     ddk::Writable,
@@ -64,6 +69,7 @@ public:
     zx_status_t DdkGetProtocol(uint32_t proto_id, void* out_protocol);
     zx_status_t DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len,
                          void* reply, size_t reply_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
     zx_status_t DdkRead(void* buf, size_t buf_len, zx_off_t off, size_t* actual);
     zx_status_t DdkWrite(const void* buf, size_t buf_len, zx_off_t off, size_t* actual);
     zx_off_t DdkGetSize();
@@ -80,6 +86,72 @@ private:
                           size_t out_len, size_t* out_actual);
     zx_status_t Rebind();
     zx_status_t DoIo(void* buf, size_t buf_len, zx_off_t off, bool write);
+
+    zx_status_t FidlBlockGetInfo(fidl_txn_t* txn);
+    zx_status_t FidlBlockGetStats(bool clear, fidl_txn_t* txn);
+    zx_status_t FidlBlockGetFifo(fidl_txn_t* txn);
+    zx_status_t FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn);
+    zx_status_t FidlBlockCloseFifo(fidl_txn_t* txn);
+    zx_status_t FidlBlockRebindDevice(fidl_txn_t* txn);
+    zx_status_t FidlPartitionGetTypeGuid(fidl_txn_t* txn);
+    zx_status_t FidlPartitionGetInstanceGuid(fidl_txn_t* txn);
+    zx_status_t FidlPartitionGetName(fidl_txn_t* txn);
+    zx_status_t FidlVolumeQuery(fidl_txn_t* txn);
+    zx_status_t FidlVolumeQuerySlices(const uint64_t* start_slices_data, size_t start_slices_count,
+                                      fidl_txn_t* txn);
+    zx_status_t FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
+    zx_status_t FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count, fidl_txn_t* txn);
+    zx_status_t FidlVolumeDestroy(fidl_txn_t* txn);
+
+    static const fuchsia_hardware_block_Block_ops* BlockOps() {
+        using Binder = fidl::Binder<BlockDevice>;
+        static const fuchsia_hardware_block_Block_ops kOps = {
+            .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
+            .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
+            .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
+            .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
+            .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
+            .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+        };
+        return &kOps;
+    }
+
+    static const fuchsia_hardware_block_partition_Partition_ops* PartitionOps() {
+        using Binder = fidl::Binder<BlockDevice>;
+        static const fuchsia_hardware_block_partition_Partition_ops kOps = {
+            .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
+            .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
+            .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
+            .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
+            .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
+            .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+            .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
+            .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
+            .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
+        };
+        return &kOps;
+    }
+
+    static const fuchsia_hardware_block_volume_Volume_ops* VolumeOps() {
+        using Binder = fidl::Binder<BlockDevice>;
+        static const fuchsia_hardware_block_volume_Volume_ops kOps = {
+            .GetInfo = Binder::BindMember<&BlockDevice::FidlBlockGetInfo>,
+            .GetStats = Binder::BindMember<&BlockDevice::FidlBlockGetStats>,
+            .GetFifo = Binder::BindMember<&BlockDevice::FidlBlockGetFifo>,
+            .AttachVmo = Binder::BindMember<&BlockDevice::FidlBlockAttachVmo>,
+            .CloseFifo = Binder::BindMember<&BlockDevice::FidlBlockCloseFifo>,
+            .RebindDevice = Binder::BindMember<&BlockDevice::FidlBlockRebindDevice>,
+            .GetTypeGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetTypeGuid>,
+            .GetInstanceGuid = Binder::BindMember<&BlockDevice::FidlPartitionGetInstanceGuid>,
+            .GetName = Binder::BindMember<&BlockDevice::FidlPartitionGetName>,
+            .Query = Binder::BindMember<&BlockDevice::FidlVolumeQuery>,
+            .QuerySlices = Binder::BindMember<&BlockDevice::FidlVolumeQuerySlices>,
+            .Extend = Binder::BindMember<&BlockDevice::FidlVolumeExtend>,
+            .Shrink = Binder::BindMember<&BlockDevice::FidlVolumeShrink>,
+            .Destroy = Binder::BindMember<&BlockDevice::FidlVolumeDestroy>,
+        };
+        return &kOps;
+    }
 
     // The block protocol of the device we are binding against.
     ddk::BlockImplProtocolClient parent_protocol_;
@@ -189,7 +261,7 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         }
         size_t block_op_size = 0;
         parent_protocol_.Query(info, &block_op_size);
-        // set or clear BLOCK_FLAG_BOOTPART appropriately
+        // Set or clear BLOCK_FLAG_BOOTPART appropriately.
         if (has_bootpart_) {
             info->flags |= BLOCK_FLAG_BOOTPART;
         } else {
@@ -329,6 +401,16 @@ zx_status_t BlockDevice::DdkIoctl(uint32_t op, const void* cmd, size_t cmd_len, 
         return parent_volume_protocol_.Destroy();
     default:
         return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+zx_status_t BlockDevice::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    if (parent_volume_protocol_.is_valid()) {
+        return fuchsia_hardware_block_volume_Volume_dispatch(this, txn, msg, VolumeOps());
+    } else if (parent_partition_protocol_.is_valid()) {
+        return fuchsia_hardware_block_partition_Partition_dispatch(this, txn, msg, PartitionOps());
+    } else {
+        return fuchsia_hardware_block_Block_dispatch(this, txn, msg, BlockOps());
     }
 }
 
@@ -492,6 +574,151 @@ zx_status_t BlockDevice::GetStats(const void* cmd, size_t cmd_len, void* reply,
         return ZX_ERR_NOT_SUPPORTED;
     }
 }
+
+zx_status_t BlockDevice::FidlBlockGetInfo(fidl_txn_t* txn) {
+    block_info_t info;
+    size_t block_op_size = 0;
+    parent_protocol_.Query(&info, &block_op_size);
+    // Set or clear BLOCK_FLAG_BOOTPART appropriately.
+    if (has_bootpart_) {
+        info.flags |= BLOCK_FLAG_BOOTPART;
+    } else {
+        info.flags &= ~BLOCK_FLAG_BOOTPART;
+    }
+
+    static_assert(sizeof(block_info_t) == sizeof(fuchsia_hardware_block_BlockInfo),
+                  "Unsafe to cast between internal / FIDL types");
+
+    return fuchsia_hardware_block_BlockGetInfo_reply(
+            txn, ZX_OK, reinterpret_cast<const fuchsia_hardware_block_BlockInfo*>(&info));
+}
+
+zx_status_t BlockDevice::FidlBlockGetStats(bool clear, fidl_txn_t* txn) {
+    fbl::AutoLock lock(&stat_lock_);
+    if (!enable_stats_) {
+        return fuchsia_hardware_block_BlockGetStats_reply(txn, ZX_ERR_NOT_SUPPORTED, nullptr);
+    }
+
+    fuchsia_hardware_block_BlockStats stats = {};
+    stats.ops = stats_.total_ops;
+    stats.blocks = stats_.total_blocks;
+    stats.reads = stats_.total_reads;
+    stats.blocks_read = stats_.total_blocks_read;
+    stats.writes = stats_.total_writes;
+    stats.blocks_written = stats_.total_blocks_written;
+    if (clear) {
+        stats_.total_ops = 0;
+        stats_.total_blocks = 0;
+        stats_.total_reads = 0;
+        stats_.total_blocks_read = 0;
+        stats_.total_writes = 0;
+        stats_.total_blocks_written = 0;
+    }
+    return fuchsia_hardware_block_BlockGetStats_reply(txn, ZX_OK, &stats);
+}
+
+zx_status_t BlockDevice::FidlBlockGetFifo(fidl_txn_t* txn) {
+    zx::fifo fifo;
+    zx_status_t status = server_manager_.StartServer(&self_protocol_, &fifo);
+    return fuchsia_hardware_block_BlockGetFifo_reply(txn, status, fifo.release());
+}
+
+zx_status_t BlockDevice::FidlBlockAttachVmo(zx_handle_t vmo, fidl_txn_t* txn) {
+    fuchsia_hardware_block_VmoID vmoid = { fuchsia_hardware_block_VMOID_INVALID };
+    zx_status_t status = server_manager_.AttachVmo(zx::vmo(vmo), &vmoid.id);
+    return fuchsia_hardware_block_BlockAttachVmo_reply(txn, status, &vmoid);
+}
+
+zx_status_t BlockDevice::FidlBlockCloseFifo(fidl_txn_t* txn) {
+    return fuchsia_hardware_block_BlockCloseFifo_reply(txn, server_manager_.CloseFifoServer());
+}
+
+zx_status_t BlockDevice::FidlBlockRebindDevice(fidl_txn_t* txn) {
+    return fuchsia_hardware_block_BlockRebindDevice_reply(txn, Rebind());
+}
+
+zx_status_t BlockDevice::FidlPartitionGetTypeGuid(fidl_txn_t* txn) {
+    fuchsia_hardware_block_partition_GUID guid;
+    static_assert(sizeof(guid.value) == sizeof(guid_t), "Mismatched GUID size");
+    guid_t* guid_ptr = reinterpret_cast<guid_t*>(&guid.value[0]);
+    zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_TYPE, guid_ptr);
+    return fuchsia_hardware_block_partition_PartitionGetTypeGuid_reply(
+            txn, status, status != ZX_OK ? nullptr : &guid);
+}
+
+zx_status_t BlockDevice::FidlPartitionGetInstanceGuid(fidl_txn_t* txn) {
+    fuchsia_hardware_block_partition_GUID guid;
+    static_assert(sizeof(guid.value) == sizeof(guid_t), "Mismatched GUID size");
+    guid_t* guid_ptr = reinterpret_cast<guid_t*>(&guid.value[0]);
+    zx_status_t status = parent_partition_protocol_.GetGuid(GUIDTYPE_INSTANCE, guid_ptr);
+    return fuchsia_hardware_block_partition_PartitionGetInstanceGuid_reply(
+            txn, status, status != ZX_OK ? nullptr : &guid);
+}
+
+zx_status_t BlockDevice::FidlPartitionGetName(fidl_txn_t* txn) {
+    char name[fuchsia_hardware_block_partition_NAME_LENGTH];
+    zx_status_t status = parent_partition_protocol_.GetName(name, sizeof(name));
+
+    const char* out_name = nullptr;
+    size_t out_name_length = 0;
+    if (status == ZX_OK) {
+        out_name = name;
+        out_name_length = strnlen(name, sizeof(name));
+    }
+    return fuchsia_hardware_block_partition_PartitionGetName_reply(
+            txn, status, out_name, out_name_length);
+}
+
+zx_status_t BlockDevice::FidlVolumeQuery(fidl_txn_t* txn) {
+    fuchsia_hardware_block_volume_VolumeInfo info;
+    static_assert(sizeof(parent_volume_info_t) == sizeof(info), "Mismatched volume info");
+    zx_status_t status =
+            parent_volume_protocol_.Query(reinterpret_cast<parent_volume_info_t*>(&info));
+    return fuchsia_hardware_block_volume_VolumeQuery_reply(
+            txn, status, status != ZX_OK ? nullptr : &info);
+}
+
+zx_status_t BlockDevice::FidlVolumeQuerySlices(const uint64_t* start_slices_data,
+                                               size_t start_slices_count, fidl_txn_t* txn) {
+    fuchsia_hardware_block_volume_VsliceRange
+            ranges[fuchsia_hardware_block_volume_MAX_SLICE_REQUESTS];
+    memset(ranges, 0, sizeof(ranges));
+    size_t range_count = 0;
+    static_assert(sizeof(fuchsia_hardware_block_volume_VsliceRange) ==
+                  sizeof(slice_region_t), "Mismatched range size");
+    auto banjo_ranges = reinterpret_cast<slice_region_t*>(ranges);
+    zx_status_t status = parent_volume_protocol_.QuerySlices(start_slices_data,
+                                                             start_slices_count,
+                                                             banjo_ranges,
+                                                             fbl::count_of(ranges),
+                                                             &range_count);
+    return fuchsia_hardware_block_volume_VolumeQuerySlices_reply(
+            txn, status, ranges, range_count);
+}
+
+zx_status_t BlockDevice::FidlVolumeExtend(uint64_t start_slice, uint64_t slice_count,
+                                          fidl_txn_t* txn) {
+    slice_extent_t extent;
+    extent.offset = start_slice;
+    extent.length = slice_count;
+    zx_status_t status = parent_volume_protocol_.Extend(&extent);
+    return fuchsia_hardware_block_volume_VolumeExtend_reply(txn, status);
+}
+
+zx_status_t BlockDevice::FidlVolumeShrink(uint64_t start_slice, uint64_t slice_count,
+                                          fidl_txn_t* txn) {
+    slice_extent_t extent;
+    extent.offset = start_slice;
+    extent.length = slice_count;
+    zx_status_t status = parent_volume_protocol_.Shrink(&extent);
+    return fuchsia_hardware_block_volume_VolumeShrink_reply(txn, status);
+}
+
+zx_status_t BlockDevice::FidlVolumeDestroy(fidl_txn_t* txn) {
+    zx_status_t status = parent_volume_protocol_.Destroy();
+    return fuchsia_hardware_block_volume_VolumeDestroy_reply(txn, status);
+}
+
 
 zx_status_t BlockDevice::Bind(void* ctx, zx_device_t* dev) {
     auto bdev = std::make_unique<BlockDevice>(dev);
