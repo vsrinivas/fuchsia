@@ -34,6 +34,7 @@ struct Tokens;
 
 impl mesh_sme::Tokens for Tokens {
     type JoinToken = oneshot::Sender<mesh_sme::JoinMeshResult>;
+    type LeaveToken = oneshot::Sender<mesh_sme::LeaveMeshResult>;
 }
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::MeshSmeMarker>;
@@ -89,6 +90,7 @@ async fn serve_fidl(sme: Arc<Mutex<Sme>>,
 fn handle_user_event(e: UserEvent<Tokens>) {
     match e {
         UserEvent::JoinMeshFinished { token, result } => token.send(result).unwrap_or_else(|_| ()),
+        UserEvent::LeaveMeshFinished { token, result } => token.send(result).unwrap_or_else(|_| ()),
     }
 }
 
@@ -117,6 +119,10 @@ async fn handle_fidl_request(sme: Arc<Mutex<Sme>>, request: fidl_sme::MeshSmeReq
             let code = await!(join_mesh(sme, config));
             responder.send(code)
         },
+        fidl_sme::MeshSmeRequest::Leave { responder } => {
+            let code = await!(leave_mesh(sme));
+            responder.send(code)
+        },
     }
 }
 
@@ -138,8 +144,26 @@ async fn join_mesh(sme: Arc<Mutex<Sme>>, config: fidl_sme::MeshConfig)
 fn convert_join_mesh_result(result: mesh_sme::JoinMeshResult) -> fidl_sme::JoinMeshResultCode {
     match result {
         mesh_sme::JoinMeshResult::Success => fidl_sme::JoinMeshResultCode::Success,
+        mesh_sme::JoinMeshResult::Canceled => fidl_sme::JoinMeshResultCode::Canceled,
         mesh_sme::JoinMeshResult::InternalError => fidl_sme::JoinMeshResultCode::InternalError,
         mesh_sme::JoinMeshResult::InvalidArguments => fidl_sme::JoinMeshResultCode::InvalidArguments,
         mesh_sme::JoinMeshResult::DfsUnsupported => fidl_sme::JoinMeshResultCode::DfsUnsupported,
+    }
+}
+
+async fn leave_mesh(sme: Arc<Mutex<Sme>>) -> fidl_sme::LeaveMeshResultCode {
+    let (sender, receiver) = oneshot::channel();
+    sme.lock().unwrap().on_leave_command(sender);
+    let r = await!(receiver).unwrap_or_else(|_| {
+        error!("Responder for Leave Mesh command was dropped without sending a response");
+        mesh_sme::LeaveMeshResult::InternalError
+    });
+    convert_leave_mesh_result(r)
+}
+
+fn convert_leave_mesh_result(result: mesh_sme::LeaveMeshResult) -> fidl_sme::LeaveMeshResultCode {
+    match result {
+        mesh_sme::LeaveMeshResult::Success => fidl_sme::LeaveMeshResultCode::Success,
+        mesh_sme::LeaveMeshResult::InternalError => fidl_sme::LeaveMeshResultCode::InternalError,
     }
 }

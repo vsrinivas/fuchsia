@@ -122,6 +122,12 @@ enum JoinMeshResultCode {
     DFS_UNSUPPORTED = 4;
 };
 
+enum LeaveMeshResultCode {
+    SUCCESS = 0;
+    INTERNAL_ERROR = 1;
+};
+
 interface MeshSme {
     Join(MeshConfig config) -> (JoinMeshResultCode code);
+    Leave() -> (LeaveMeshResultCode code);
 };

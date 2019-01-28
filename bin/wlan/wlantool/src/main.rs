@@ -250,6 +250,11 @@ async fn do_mesh(cmd: opts::MeshCmd, wlan_svc: WlanSvc) -> Result<(), Error> {
                 _ => { println!("{:?}", r ); },
             }
         },
+        opts::MeshCmd::Leave { iface_id } => {
+            let sme = await!(get_mesh_sme(wlan_svc, iface_id))?;
+            let r = await!(sme.leave());
+            println!("{:?}", r);
+        }
     }
     Ok(())
 }

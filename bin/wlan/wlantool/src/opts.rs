@@ -252,4 +252,9 @@ pub enum MeshCmd {
         // TODO(porce): Expand to support PHY and CBW
         channel: u8,
     },
+    #[structopt(name = "leave")]
+    Leave {
+        #[structopt(raw(required = "true"))]
+        iface_id: u16,
+    }
 }

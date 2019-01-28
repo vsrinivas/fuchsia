@@ -7,6 +7,7 @@ use {
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     futures::channel::mpsc,
     log::{error},
+    std::mem,
     wlan_common::channel::{Channel, Cbw},
     crate::{
         clone_utils,
@@ -27,6 +28,7 @@ const DEFAULT_DTIM_PERIOD: u8 = 1;
 // trait that enables us to group them into a single generic parameter.
 pub trait Tokens {
     type JoinToken;
+    type LeaveToken;
 }
 
 mod internal {
@@ -36,14 +38,56 @@ use self::internal::*;
 
 pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 
+// A list of pending join/leave requests to be maintained in the intermediate
+// 'Joining'/'Leaving' states where we are waiting for a reply from MLME and cannot
+// serve the requests immediately.
+struct PendingRequests<T: Tokens> {
+    leave: Vec<T::LeaveToken>,
+    join: Option<(T::JoinToken, Config)>,
+}
+
+impl<T: Tokens> PendingRequests<T> {
+    pub fn new() -> Self {
+        PendingRequests { leave: Vec::new(), join: None }
+    }
+
+    pub fn enqueue_leave(&mut self, user_sink: &UserSink<T>, token: T::LeaveToken) {
+        self.replace_join_request(user_sink, None);
+        self.leave.push(token);
+    }
+
+    pub fn enqueue_join(&mut self, user_sink: &UserSink<T>, token: T::JoinToken, config: Config) {
+        self.replace_join_request(user_sink, Some((token, config)));
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.leave.is_empty() && self.join.is_none()
+    }
+
+    fn replace_join_request(
+        &mut self,
+        user_sink: &UserSink<T>,
+        req: Option<(T::JoinToken, Config)>)
+    {
+        if let Some((old_token, _)) = mem::replace(&mut self.join, req) {
+            report_join_finished(user_sink, old_token, JoinMeshResult::Canceled);
+        }
+    }
+}
+
 enum State<T: Tokens> {
     Idle,
     Joining {
         token: T::JoinToken,
         config: Config,
+        pending: PendingRequests<T>,
     },
     Joined {
         config: Config,
+    },
+    Leaving {
+        config: Config,
+        pending: PendingRequests<T>,
     }
 }
 
@@ -65,9 +109,16 @@ pub struct Config {
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum JoinMeshResult {
     Success,
+    Canceled,
     InternalError,
     InvalidArguments,
     DfsUnsupported,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum LeaveMeshResult {
+    Success,
+    InternalError,
 }
 
 // A message from the Mesh node to a user or a group of listeners
@@ -77,27 +128,77 @@ pub enum UserEvent<T: Tokens> {
         token: T::JoinToken,
         result: JoinMeshResult,
     },
+    LeaveMeshFinished {
+        token: T::LeaveToken,
+        result: LeaveMeshResult,
+    }
 }
 
 impl<T: Tokens> MeshSme<T> {
-    pub fn on_join_command(&mut self, token: T::JoinToken, config: Config){
+    pub fn on_join_command(&mut self, token: T::JoinToken, config: Config) {
+        if let Err(result) = validate_config(&config) {
+            report_join_finished(&self.user_sink, token, result);
+            return;
+        }
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => {
-                if let Err(result) = validate_config(&config) {
-                    report_join_finished(&self.user_sink, token, result);
-                    State::Idle
-                } else {
-                    self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
-                    State::Joining { token, config }
-                }
+                self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
+                State::Joining { token, pending: PendingRequests::new(), config }
             },
-            s@ State::Joining { .. } | s@ State::Joined { .. } => {
-                // TODO(gbonik): Leave then re-join
-                error!("cannot join mesh because already joined or joining");
-                report_join_finished(&self.user_sink, token, JoinMeshResult::InternalError);
-                s
+            State::Joining { token: cur_token, config: cur_config, mut pending } => {
+                pending.enqueue_join(&self.user_sink, token, config);
+                State::Joining { token: cur_token, config: cur_config, pending }
+            },
+            State::Joined { config: cur_config } => {
+                self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
+                let mut pending = PendingRequests::new();
+                pending.enqueue_join(&self.user_sink, token, config);
+                State::Leaving { config: cur_config, pending }
+            },
+            State::Leaving { config: cur_config, mut pending } => {
+                pending.enqueue_join(&self.user_sink, token, config);
+                State::Leaving { config: cur_config, pending }
             }
         });
+    }
+
+    pub fn on_leave_command(&mut self, token: T::LeaveToken) {
+        self.state = Some(match self.state.take().unwrap() {
+            State::Idle => {
+                report_leave_finished(&self.user_sink, token, LeaveMeshResult::Success);
+                State::Idle
+            },
+            State::Joining { token: cur_token, config, mut pending } => {
+                pending.enqueue_leave(&self.user_sink, token);
+                State::Joining { token: cur_token, pending, config }
+            },
+            State::Joined { config } => {
+                self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
+                let mut pending = PendingRequests::new();
+                pending.enqueue_leave(&self.user_sink, token);
+                State::Leaving { config, pending }
+            },
+            State::Leaving { config, mut pending } => {
+                pending.enqueue_leave(&self.user_sink, token);
+                State::Leaving { config, pending }
+            }
+        });
+    }
+}
+
+fn on_back_to_idle<T: Tokens>(
+    pending: PendingRequests<T>,
+    user_sink: &UserSink<T>,
+    mlme_sink: &MlmeSink
+) -> State<T> {
+    for token in pending.leave {
+        report_leave_finished(user_sink, token, LeaveMeshResult::Success);
+    }
+    if let Some((token, config)) = pending.join {
+        mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
+        State::Joining { token, config, pending: PendingRequests::new() }
+    } else {
+        State::Idle
     }
 }
 
@@ -131,25 +232,37 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
     }
 }
 
+fn create_stop_request() -> fidl_mlme::StopRequest {
+    fidl_mlme::StopRequest { ssid: vec![], }
+}
+
 impl<T: Tokens> super::Station for MeshSme<T> {
     type Event = ();
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
         self.state = Some(match self.state.take().unwrap() {
             State::Idle => State::Idle,
-            State::Joining { token, config } => match event {
+            State::Joining { token, pending, config } => match event {
                 MlmeEvent::StartConf { resp } => match resp.result_code {
                     fidl_mlme::StartResultCodes::Success => {
                         report_join_finished(&self.user_sink, token, JoinMeshResult::Success);
-                        State::Joined { config }
+                        if pending.is_empty() {
+                            State::Joined { config }
+                        } else {
+                            // If there are any pending join/leave commands that arrived while we
+                            // were waiting for 'Start' to complete, then start leaving immediately,
+                            // and then process the pending commands once the 'Stop' call completes.
+                            self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
+                            State::Leaving { config, pending }
+                        }
                     },
                     other => {
                         error!("failed to join mesh: {:?}", other);
                         report_join_finished(&self.user_sink, token, JoinMeshResult::InternalError);
-                        State::Idle
+                        on_back_to_idle(pending, &self.user_sink, &self.mlme_sink)
                     }
                 },
-                _ => State::Joining { token, config },
+                _ => State::Joining { token, pending, config },
             },
             State::Joined { config } => match event {
                 MlmeEvent::IncomingMpOpenAction { action } => {
@@ -187,6 +300,25 @@ impl<T: Tokens> super::Station for MeshSme<T> {
                 },
                 _ => State::Joined { config },
             },
+            State::Leaving { config, pending } => match event {
+                MlmeEvent::StopConf { resp } => match resp.result_code {
+                    fidl_mlme::StopResultCodes::Success =>
+                        on_back_to_idle(pending, &self.user_sink, &self.mlme_sink),
+                    other => {
+                        error!("failed to leave mesh: {:?}", other);
+                        for token in pending.leave {
+                            report_leave_finished(
+                                    &self.user_sink, token, LeaveMeshResult::InternalError);
+                        }
+                        if let Some((token, _)) = pending.join {
+                            report_join_finished(
+                                    &self.user_sink, token, JoinMeshResult::InternalError);
+                        }
+                        State::Joined { config }
+                    }
+                },
+                _ => State::Leaving { config, pending }
+            }
         });
     }
 
@@ -221,6 +353,12 @@ fn report_join_finished<T: Tokens>(user_sink: &UserSink<T>,
                                    result: JoinMeshResult)
 {
     user_sink.send(UserEvent::JoinMeshFinished { token, result });
+}
+
+fn report_leave_finished<T: Tokens>(user_sink: &UserSink<T>, token: T::LeaveToken,
+                                    result: LeaveMeshResult)
+{
+    user_sink.send(UserEvent::LeaveMeshFinished { token, result });
 }
 
 impl<T: Tokens> MeshSme<T> {
