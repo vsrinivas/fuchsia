@@ -167,6 +167,9 @@ template("shared_library") {
                              ])
 
       # Elaborate the toolchain's defaults to compute the output file name.
+      if (!defined(output_dir)) {
+        output_dir = target_out_dir
+      }
       if (!defined(output_name)) {
         output_name = target_name
       }
@@ -174,7 +177,7 @@ template("shared_library") {
       if (!defined(output_extension)) {
         output_extension = "so"
       }
-      output_file = "$target_out_dir/lib$output_name"
+      output_file = "$output_dir/lib$output_name"
       if (output_extension != "") {
         output_file += ".$output_extension"
       }
@@ -1027,6 +1030,9 @@ template("_basic_executable") {
                            ])
 
     # Elaborate the toolchain's defaults to compute the output file name.
+    if (!defined(output_dir)) {
+      output_dir = target_out_dir
+    }
     if (!defined(output_name)) {
       output_name = target_name
     }
@@ -1034,7 +1040,7 @@ template("_basic_executable") {
     if (!defined(output_extension)) {
       output_extension = toolchain.executable_extension
     }
-    output_file = "$target_out_dir/$output_name"
+    output_file = "$output_dir/$output_name"
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
@@ -1210,6 +1216,9 @@ template("host_tool") {
                              "testonly",
                              "visibility",
                            ])
+    if (!defined(output_dir)) {
+      output_dir = target_out_dir
+    }
     if (!defined(output_name)) {
       output_name = target_name
     }
@@ -1218,7 +1227,7 @@ template("host_tool") {
       output_extension = toolchain.executable_extension
     }
     if (is_host) {
-      tool_executable = "$target_out_dir/$output_name"
+      tool_executable = "$output_dir/$output_name"
       tool_extension = ""
       if (output_extension != "") {
         tool_extension = ".$output_extension"
@@ -1277,6 +1286,9 @@ template("_loadable_module") {
                            ])
 
     # Elaborate the toolchain's defaults to compute the output file name.
+    if (!defined(output_dir)) {
+      output_dir = target_out_dir
+    }
     if (!defined(output_name)) {
       output_name = target_name
     }
@@ -1284,7 +1296,7 @@ template("_loadable_module") {
     if (!defined(output_extension)) {
       output_extension = "so"
     }
-    output_file = "$target_out_dir/$output_name"
+    output_file = "$output_dir/$output_name"
     if (output_extension != "") {
       output_file += ".$output_extension"
     }
