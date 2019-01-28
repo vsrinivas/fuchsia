@@ -156,6 +156,7 @@ func (ns *Netstack) removeInterfaceAddress(nic tcpip.NICID, protocol tcpip.Netwo
 				panic(fmt.Sprintf("Interface state table out of sync: NIC [%d] known to third_party/netstack not found in garnet/netstack", nic))
 			} else {
 				ifs.staticAddressChanged(addr, netmask)
+				ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTablesLocked())
 			}
 		}
 		return nil
@@ -195,6 +196,7 @@ func (ns *Netstack) setInterfaceAddress(nic tcpip.NICID, protocol tcpip.NetworkP
 			panic(fmt.Sprintf("Interface state table out of sync: NIC [%d] known to third_party/netstack not found in garnet/netstack", nic))
 		} else {
 			ifs.staticAddressChanged(addr, subnet.Mask())
+			ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTablesLocked())
 		}
 		return nil
 	}(); err != nil {
@@ -214,10 +216,6 @@ func (ifs *ifState) staticAddressChanged(newAddr tcpip.Address, netmask tcpip.Ad
 	ifs.mu.nic.Netmask = netmask
 	ifs.mu.nic.Routes = append(ifs.mu.nic.Routes, subnetRoute(newAddr, netmask, ifs.mu.nic.ID))
 	ifs.mu.Unlock()
-
-	ifs.ns.mu.Lock()
-	ifs.ns.mu.stack.SetRouteTable(ifs.ns.flattenRouteTablesLocked())
-	ifs.ns.mu.Unlock()
 }
 
 func (ifs *ifState) dhcpAcquired(oldAddr, newAddr tcpip.Address, config dhcp.Config) {
