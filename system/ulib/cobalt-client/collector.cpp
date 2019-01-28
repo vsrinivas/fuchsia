@@ -25,10 +25,12 @@ namespace {
 
 #ifdef __Fuchsia__
 internal::CobaltOptions MakeCobaltOptions(CollectorOptions options) {
-    ZX_DEBUG_ASSERT_MSG(options.load_config, "Must define a load_config function.");
+    ZX_DEBUG_ASSERT_MSG(options.load_config || options.project_id >= 0,
+                        "Must define a load_config function or a valid project_id.");
     internal::CobaltOptions cobalt_options;
     cobalt_options.logger_deadline_first_attempt = options.initial_response_deadline;
     cobalt_options.logger_deadline = options.response_deadline;
+    cobalt_options.project_id = options.project_id;
     cobalt_options.config_reader = std::move(options.load_config);
     cobalt_options.service_connect = [](const char* service_path,
                                         zx::channel service) -> zx_status_t {

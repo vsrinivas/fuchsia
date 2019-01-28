@@ -49,6 +49,31 @@ zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
     return logger_factory_client->write(0l, msg, msg_size, handles, num_handles);
 }
 
+zx_status_t SendLoggerSimpleCreateRequest(zx::channel* logger_factory_client,
+                                          zx::channel* logger_svc, int64_t project_id,
+                                          ReleaseStage release_stage) {
+    uint32_t msg_size = sizeof(fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequest);
+    FIDL_ALIGNDECL uint8_t msg[msg_size];
+    memset(msg, 0, sizeof(msg));
+    fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequest* request =
+        reinterpret_cast<fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequest*>(msg);
+    request->hdr.txid = kFactoryRequestTxnId;
+    request->hdr.ordinal = fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdOrdinal;
+    request->logger = logger_svc->release();
+    request->project_id = static_cast<uint32_t>(project_id);
+
+    request->release_stage = static_cast<fbl::underlying_type<ReleaseStage>::type>(release_stage);
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t num_handles = 0;
+    zx_status_t result =
+        fidl_encode(&fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectIdRequestTable, msg,
+                    msg_size, handles, ZX_CHANNEL_MAX_MSG_HANDLES, &num_handles, nullptr);
+    if (result != ZX_OK) {
+        return result;
+    }
+    return logger_factory_client->write(0l, msg, msg_size, handles, num_handles);
+}
+
 zx_status_t ReadLoggerSimpleCreateResponse(zx::channel* logger, fuchsia_cobalt_Status* out_status) {
     uint32_t msg_size = sizeof(fuchsia_cobalt_LoggerSimpleLogIntHistogramResponse);
     FIDL_ALIGNDECL uint8_t msg[msg_size];
@@ -162,18 +187,30 @@ bool CobaltLogger::TrySendLoggerRequest() {
         ZX_OK) {
         return false;
     }
-    // Write a CreateLogger message into the channel.
-    zx::vmo config;
-    size_t config_size;
-    if (!options_.config_reader(&config, &config_size)) {
-        return false;
-    }
-    zx_status_t res;
 
-    if ((res = SendLoggerSimpleCreateRequest(&logger_factory_client, &logger_service, &config,
-                                             config_size, options_.release_stage)) != ZX_OK) {
+    zx_status_t res;
+    if (options_.config_reader) {
+        // Write a CreateLogger message into the channel.
+        zx::vmo config;
+        size_t config_size;
+        if (!options_.config_reader(&config, &config_size)) {
+            return false;
+        }
+
+        if ((res = SendLoggerSimpleCreateRequest(&logger_factory_client, &logger_service, &config,
+                                                 config_size, options_.release_stage)) != ZX_OK) {
+            return false;
+        }
+    } else if (options_.project_id >= 0) {
+        if ((res = SendLoggerSimpleCreateRequest(&logger_factory_client, &logger_service,
+                                                 options_.project_id, options_.release_stage)) !=
+            ZX_OK) {
+            return false;
+        }
+    } else {
         return false;
     }
+
     is_first_attempt_ = true;
     logger_factory_.reset(logger_factory_client.release());
     logger_.reset(logger_client.release());

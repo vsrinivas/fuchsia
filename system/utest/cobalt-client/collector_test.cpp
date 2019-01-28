@@ -31,6 +31,9 @@ static_assert(kThreads % 2 == 0, "Use even number of threads for simplcity");
 // Number of times to perform an operation in a given thread.
 constexpr size_t kOperations = 50;
 
+// Project Id.
+constexpr int64_t kProjectId = 10;
+
 // Metric Id to be used by default MetricOptions.
 constexpr uint32_t kMetricId = 1;
 
@@ -118,6 +121,24 @@ bool TestGeneralAvailability() {
 bool ConstructFromOptionsTest() {
     BEGIN_TEST;
     CollectorOptions options = MakeCollectorOptions();
+    Collector collector = Collector(std::move(options));
+    // Sanity check nothing crashes.
+    auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
+    auto counter = Counter(MakeMetricOptions(), &collector);
+
+    histogram.Add(1);
+    counter.Increment();
+
+    collector.Flush();
+    END_TEST;
+}
+
+// Sanity Check
+bool ConstructFromOptionsWithProjectIdTest() {
+    BEGIN_TEST;
+    CollectorOptions options = MakeCollectorOptions();
+    options.load_config = nullptr;
+    options.project_id = kProjectId;
     Collector collector = Collector(std::move(options));
     // Sanity check nothing crashes.
     auto histogram = Histogram<kBuckets>(MakeHistogramOptions(), &collector);
@@ -355,8 +376,7 @@ int FlushFn(void* vargs) {
 // Verify that if we flush while the histograms and counters are being updated,
 // no data is lost, meaning that the sum of the persisted data and the local data
 // is equal to the expected value.
-template <bool should_fail>
-bool FlushMultithreadTest() {
+template <bool should_fail> bool FlushMultithreadTest() {
     BEGIN_TEST;
     HistogramOptions options = MakeHistogramOptions();
     // Preallocate with the number of logs to prevent realloc problems.
@@ -451,6 +471,7 @@ END_TEST_CASE(CollectorOptionsTest)
 
 BEGIN_TEST_CASE(CollectorTest)
 RUN_TEST(ConstructFromOptionsTest)
+RUN_TEST(ConstructFromOptionsWithProjectIdTest)
 RUN_TEST(AddCounterTest)
 RUN_TEST(AddCounterMultipleTest)
 RUN_TEST(AddHistogramTest)

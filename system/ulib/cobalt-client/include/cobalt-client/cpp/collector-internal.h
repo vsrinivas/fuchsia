@@ -38,6 +38,10 @@ struct CobaltOptions {
     // Performs a connection to a service at a given path.
     fbl::Function<zx_status_t(const char* service_path, zx::channel service)> service_connect;
 
+    // The Id of the cobalt project to use. This is a registered project in Cobalt's metric
+    // registry. If this value is -1, then config reader must be set.
+    int64_t project_id = -1;
+
     // Which release stage to use for persisting metrics.
     ReleaseStage release_stage;
 };
@@ -45,6 +49,7 @@ struct CobaltOptions {
 class CobaltLogger : public Logger {
 public:
     CobaltLogger() = delete;
+    // instance from cobalt service;
     explicit CobaltLogger(CobaltOptions options);
     CobaltLogger(const CobaltLogger&) = delete;
     CobaltLogger(CobaltLogger&&) = delete;

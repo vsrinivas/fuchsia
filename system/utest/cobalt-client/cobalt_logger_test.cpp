@@ -32,6 +32,9 @@ constexpr uint32_t kNumBuckets = 10;
 // Value of the counter.
 constexpr uint32_t kCounterValue = 21;
 
+// Project Id
+constexpr int64_t kProjectId = 25;
+
 // Metric Id.
 constexpr uint32_t kMetricId = 25;
 
@@ -108,8 +111,7 @@ private:
 // Handles RPC calls to LoggerFactory.
 class FakeLoggerFactory {
 public:
-    FakeLoggerFactory()
-        : logger_binder_(nullptr) {}
+    FakeLoggerFactory() : logger_binder_(nullptr) {}
 
     zx_status_t CreateLogger(const fuchsia_cobalt_ProjectProfile* profile, zx_handle_t logger,
                              fidl_txn_t* txn) {
@@ -135,6 +137,21 @@ public:
         return fuchsia_cobalt_LoggerFactoryCreateLoggerSimple_reply(txn, logger_create_status);
     }
 
+    zx_status_t CreateLoggerSimpleFromProjectId(int64_t project_id,
+                                                fuchsia_cobalt_ReleaseStage release_stage,
+                                                zx_handle_t logger, fidl_txn_t* txn) {
+        EXPECT_EQ(project_id, kProjectId);
+        EXPECT_EQ(release_stage,
+                  static_cast<fbl::underlying_type<ReleaseStage>::type>(kReleaseStage));
+        if (logger_binder_) {
+            logger_binder_(logger);
+        } else {
+            zx_handle_close(logger);
+        }
+        return fuchsia_cobalt_LoggerFactoryCreateLoggerSimpleFromProjectId_reply(
+            txn, logger_create_status);
+    }
+
     zx_status_t Bind(async_dispatcher_t* dispatcher, zx::channel channel) {
         using Binder = fidl::Binder<FakeLoggerFactory>;
         static constexpr fuchsia_cobalt_LoggerFactory_ops_t kOps = {
@@ -143,7 +160,8 @@ public:
             .CreateLoggerFromProjectName = nullptr,
             .CreateLoggerSimpleFromProjectName = nullptr,
             .CreateLoggerFromProjectId = nullptr,
-            .CreateLoggerSimpleFromProjectId = nullptr,
+            .CreateLoggerSimpleFromProjectId =
+                Binder::BindMember<&FakeLoggerFactory::CreateLoggerSimpleFromProjectId>,
         };
         return Binder::BindOps<fuchsia_cobalt_LoggerFactory_dispatch>(
             dispatcher, std::move(channel), this, &kOps);
@@ -180,9 +198,24 @@ CobaltOptions MakeOptions(bool config_reader, zx::channel* svc_channel,
     return options;
 }
 
+CobaltOptions MakeOptions(int64_t project_id, zx::channel* svc_channel,
+                          zx_status_t service_connect = ZX_OK) {
+    CobaltOptions options;
+    options.service_path.AppendPrintf("%s", kSvcPath);
+    options.logger_deadline = zx::nsec(5);
+    options.logger_deadline_first_attempt = zx::msec(5);
+    options.project_id = project_id;
+    options.service_connect = [svc_channel, service_connect](const char* path,
+                                                             zx::channel channel) {
+        svc_channel->reset(channel.release());
+        return service_connect;
+    };
+    options.release_stage = ReleaseStage::kDebug;
+    return options;
+}
+
 // Template for providing checks on FIDL calls.
-template <typename MetricType, typename BufferType>
-class CobaltLoggerTestBase {
+template <typename MetricType, typename BufferType> class CobaltLoggerTestBase {
 public:
     // Verify we do not keep waiting on reply, after we failed to connect to the initial
     // service (LoggerFactory).
@@ -227,6 +260,30 @@ public:
     static bool ServiceReplied() {
         BEGIN_TEST;
         Context context;
+        fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
+        // In order to capture the other endpoint of the channel, we need to attempt to
+        // connect first. This will set |Context::channels::factory| to the other endpoint.
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
+        // We set a bad status, so the reply is handled, but we are not able to log.
+        context.services.factory.set_logger_create_status(fuchsia_cobalt_Status_INVALID_ARGUMENTS);
+        // Now we can start servicing factory requests.
+        ASSERT_TRUE(context.StartFactoryService());
+        ASSERT_TRUE(context.services.ProcessAllMessages());
+
+        // Now that the service has started, but no bound SimpleLoggerService exists,
+        // the log will still fail, BUT we will not longer be waiting for a reply.
+        ASSERT_EQ(logger->WaitForReply(), ZX_OK);
+        ASSERT_FALSE(Log(MakeRemoteMetricInfo(), logger.get()));
+        ASSERT_FALSE(logger->IsListeningForReply());
+        END_TEST;
+    }
+
+    // When we connect to the service (LoggerFactory), and the service replied,
+    // the we should no longer be listeining for a reply.
+    static bool ServiceWithProjectIdReplied() {
+        BEGIN_TEST;
+        Context context;
+        context.return_values.project_id = kProjectId;
         fbl::unique_ptr<CobaltLogger> logger = context.MakeLogger();
         // In order to capture the other endpoint of the channel, we need to attempt to
         // connect first. This will set |Context::channels::factory| to the other endpoint.
@@ -330,12 +387,12 @@ private:
 
         struct ReturnValues {
             bool config_reader = true;
+            int64_t project_id = -1;
             zx_status_t service_connect = ZX_OK;
         };
 
         struct Services {
-            Services()
-                : loop(nullptr), factory() {}
+            Services() : loop(nullptr), factory() {}
 
             bool ProcessAllMessages() {
                 BEGIN_HELPER;
@@ -354,8 +411,14 @@ private:
         };
 
         fbl::unique_ptr<CobaltLogger> MakeLogger() {
-            CobaltOptions options = MakeOptions(return_values.config_reader, &channels.factory,
-                                                return_values.service_connect);
+            CobaltOptions options;
+            if (return_values.project_id < 0) {
+                options = MakeOptions(return_values.config_reader, &channels.factory,
+                                      return_values.service_connect);
+            } else {
+                options = MakeOptions(return_values.project_id, &channels.factory,
+                                      return_values.service_connect);
+            }
             fbl::unique_ptr<CobaltLogger> logger =
                 fbl::make_unique<CobaltLogger>(std::move(options));
             services.loop->StartThread("FactoryServiceThread");
@@ -428,6 +491,7 @@ RUN_TEST(LogHistogramTest::ServiceConnectionFailed)
 RUN_TEST(LogHistogramTest::ConfigurationReadFailed)
 RUN_TEST(LogHistogramTest::ServiceConnectedWaitsForReply)
 RUN_TEST(LogHistogramTest::ServiceReplied)
+RUN_TEST(LogHistogramTest::ServiceWithProjectIdReplied)
 RUN_TEST(LogHistogramTest::RetryOnFactoryPeerClosed)
 RUN_TEST(LogHistogramTest::RetryOnLoggerPeerClosed)
 RUN_TEST(LogHistogramTest::LogSuccessfully)
@@ -435,6 +499,7 @@ RUN_TEST(LogCounterTest::ServiceConnectionFailed)
 RUN_TEST(LogCounterTest::ConfigurationReadFailed)
 RUN_TEST(LogCounterTest::ServiceConnectedWaitsForReply)
 RUN_TEST(LogCounterTest::ServiceReplied)
+RUN_TEST(LogCounterTest::ServiceWithProjectIdReplied)
 RUN_TEST(LogCounterTest::RetryOnFactoryPeerClosed)
 RUN_TEST(LogCounterTest::RetryOnLoggerPeerClosed)
 RUN_TEST(LogCounterTest::LogSuccessfully)
