@@ -5,9 +5,7 @@
 import("//build/fidl/fidl.gni")
 import("//build/package.gni")
 
-package("mediaplayer") {
-  package_name = "mediaplayer_examples"
-
+package("mediaplayer_examples") {
   deps = [
     "audio_player",
     "audio_player_rust",
