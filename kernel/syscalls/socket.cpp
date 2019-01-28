@@ -54,6 +54,9 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
     if ((size > 0u) && !buffer)
         return ZX_ERR_INVALID_ARGS;
 
+    if (options & ~ZX_SOCKET_CONTROL)
+        return ZX_ERR_INVALID_ARGS;
+
     auto up = ProcessDispatcher::GetCurrent();
 
     fbl::RefPtr<SocketDispatcher> socket;
@@ -61,19 +64,12 @@ zx_status_t sys_socket_write(zx_handle_t handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
+    SocketDispatcher::Plane plane =
+        (options & ZX_SOCKET_CONTROL) ? SocketDispatcher::Plane::kControl
+                                      : SocketDispatcher::Plane::kData;
+
     size_t nwritten;
-    switch (options) {
-    case 0:
-        status = socket->Write(buffer, size, &nwritten);
-        break;
-    case ZX_SOCKET_CONTROL:
-        status = socket->WriteControl(buffer, size);
-        if (status == ZX_OK)
-            nwritten = size;
-        break;
-    default:
-        return ZX_ERR_INVALID_ARGS;
-    }
+    status = socket->Write(plane, buffer, size, &nwritten);
 
     // Caller may ignore results if desired.
     if (status == ZX_OK && actual)
@@ -101,16 +97,15 @@ zx_status_t sys_socket_read(zx_handle_t handle, uint32_t options,
     if (status != ZX_OK)
         return status;
 
+    SocketDispatcher::Plane plane =
+        (options & ZX_SOCKET_CONTROL) ? SocketDispatcher::Plane::kControl
+                                      : SocketDispatcher::Plane::kData;
     SocketDispatcher::ReadType type =
         (options & ZX_SOCKET_PEEK) ? SocketDispatcher::ReadType::kPeek
                                    : SocketDispatcher::ReadType::kConsume;
 
     size_t nread;
-    if (options & ZX_SOCKET_CONTROL) {
-        status = socket->ReadControl(type, buffer, size, &nread);
-    } else {
-        status = socket->Read(type, buffer, size, &nread);
-    }
+    status = socket->Read(plane, type, buffer, size, &nread);
 
     // Caller may ignore results if desired.
     if (status == ZX_OK && actual)

@@ -182,8 +182,26 @@ zx_status_t SocketDispatcher::ShutdownOtherLocked(uint32_t how) {
     return ZX_OK;
 }
 
-zx_status_t SocketDispatcher::Write(user_in_ptr<const void> src, size_t len,
-                                    size_t* nwritten) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Write(Plane plane, user_in_ptr<const void> src, size_t len,
+                                    size_t* nwritten) {
+    canary_.Assert();
+
+    if (plane == Plane::kData) {
+        return WriteData(src, len, nwritten);
+    } else {
+        zx_status_t status = WriteControl(src, len);
+
+        // No partial control messages, on success we wrote everything.
+        if (status == ZX_OK) {
+            *nwritten = len;
+        }
+
+        return status;
+    }
+}
+
+zx_status_t SocketDispatcher::WriteData(user_in_ptr<const void> src, size_t len,
+                                        size_t* nwritten) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     LTRACE_ENTRY;
@@ -295,8 +313,19 @@ zx_status_t SocketDispatcher::WriteSelfLocked(user_in_ptr<const void> src, size_
     return status;
 }
 
-zx_status_t SocketDispatcher::Read(ReadType type, user_out_ptr<void> dst, size_t len,
-                                   size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
+zx_status_t SocketDispatcher::Read(Plane plane, ReadType type, user_out_ptr<void> dst, size_t len,
+                                   size_t* nread) {
+    canary_.Assert();
+
+    if (plane == Plane::kData) {
+        return ReadData(type, dst, len, nread);
+    } else {
+        return ReadControl(type, dst, len, nread);
+    }
+}
+
+zx_status_t SocketDispatcher::ReadData(ReadType type, user_out_ptr<void> dst, size_t len,
+                                       size_t* nread) TA_NO_THREAD_SAFETY_ANALYSIS {
     canary_.Assert();
 
     LTRACE_ENTRY;

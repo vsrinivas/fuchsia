@@ -24,6 +24,11 @@
 class SocketDispatcher final :
     public PeeredDispatcher<SocketDispatcher, ZX_DEFAULT_SOCKET_RIGHTS> {
 public:
+    enum class Plane {
+        kData,
+        kControl
+    };
+
     enum class ReadType {
         kConsume,
         kPeek
@@ -38,18 +43,14 @@ public:
     zx_obj_type_t get_type() const final { return ZX_OBJ_TYPE_SOCKET; }
 
     // Socket methods.
-    zx_status_t Write(user_in_ptr<const void> src, size_t len, size_t* written);
-
-    zx_status_t WriteControl(user_in_ptr<const void> src, size_t len);
+    zx_status_t Write(Plane plane, user_in_ptr<const void> src, size_t len, size_t* written);
 
     // Shut this endpoint of the socket down for reading, writing, or both.
     zx_status_t Shutdown(uint32_t how);
 
     zx_status_t HalfClose();
 
-    zx_status_t Read(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
-
-    zx_status_t ReadControl(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t Read(Plane plane, ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
 
     // On success, the share queue takes ownership of |h|. On failure,
     // |h| is closed.
@@ -83,6 +84,10 @@ private:
                      zx_signals_t starting_signals, uint32_t flags,
                      ktl::unique_ptr<ControlMsg> control_msg);
     void Init(fbl::RefPtr<SocketDispatcher> other);
+    zx_status_t ReadData(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t ReadControl(ReadType type, user_out_ptr<void> dst, size_t len, size_t* nread);
+    zx_status_t WriteData(user_in_ptr<const void> src, size_t len, size_t* written);
+    zx_status_t WriteControl(user_in_ptr<const void> src, size_t len);
     zx_status_t WriteSelfLocked(user_in_ptr<const void> src, size_t len, size_t* nwritten) TA_REQ(get_lock());
     zx_status_t WriteControlSelfLocked(user_in_ptr<const void> src, size_t len) TA_REQ(get_lock());
     zx_status_t UserSignalSelfLocked(uint32_t clear_mask, uint32_t set_mask) TA_REQ(get_lock());
