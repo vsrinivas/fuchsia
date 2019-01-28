@@ -9,6 +9,7 @@
             "fuchsia.bluetooth.gatt.Server",
             "fuchsia.bluetooth.le.Central",
             "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.bluetooth.snoop.Snoop",
             "fuchsia.logger.LogSink",
             "fuchsia.sys.Launcher"
         ]

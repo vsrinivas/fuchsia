@@ -14,9 +14,11 @@ use {
 static CONFIG_FILE_PATH: &'static str = "/pkg/data/default.json";
 
 #[derive(Serialize, Deserialize)]
-struct Config {
+pub struct Config {
     #[serde(rename = "io-capability")]
-    io: IoConfig
+    io: IoConfig,
+    #[serde(rename = "autostart-snoop")]
+    autostart_snoop: bool,
 }
 
 #[derive(Serialize, Deserialize)]
@@ -44,25 +46,28 @@ pub enum OutputCapabilityTypeDef {
     Display = 1,
 }
 
-pub async fn set_capabilities() -> Result<(), Error> {
-    let mut config = OpenOptions::new()
-        .read(true)
-        .write(false)
-        .open(CONFIG_FILE_PATH).unwrap();
+impl Config {
+    pub fn load() -> Result<Config, Error> {
+        let mut config = OpenOptions::new()
+            .read(true)
+            .write(false)
+            .open(CONFIG_FILE_PATH).unwrap();
 
-    let mut contents = String::new();
-    config
-        .read_to_string(&mut contents)
-        .expect("The io config file is corrupted");
+        let mut contents = String::new();
+        config
+            .read_to_string(&mut contents)
+            .expect("The bt-mgr config file is corrupted");
 
-    let bt_svc = connect_to_service::<ControlMarker>()
-        .expect("failed to connect to bluetooth control interface");
+        Ok(serde_json::from_str(contents.as_str())?)
+    }
 
-    match serde_json::from_str(contents.as_str()) {
-        Ok(conf) => {
-            let conf: Config = conf;
-            bt_svc.set_io_capabilities(conf.io.input, conf.io.output).map_err(Into::into)
-        },
-        Err(e) => Err(e.into())
+    pub fn autostart_snoop(&self) -> bool {
+        self.autostart_snoop
+    }
+
+    pub async fn set_capabilities(&self) -> Result<(), Error> {
+        let bt_svc = connect_to_service::<ControlMarker>()
+            .expect("failed to connect to bluetooth control interface");
+        bt_svc.set_io_capabilities(self.io.input, self.io.output).map_err(Into::into)
     }
 }

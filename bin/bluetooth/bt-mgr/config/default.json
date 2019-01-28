@@ -2,5 +2,6 @@
   "io-capability": {
     "input": "Keyboard",
     "output": "Display"
-  }
+  },
+  "autostart-snoop": true
 }

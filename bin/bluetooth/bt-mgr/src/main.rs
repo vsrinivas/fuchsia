@@ -11,10 +11,14 @@ use {
     fidl_fuchsia_bluetooth_control::ControlMarker,
     fidl_fuchsia_bluetooth_gatt::Server_Marker,
     fidl_fuchsia_bluetooth_le::{CentralMarker, PeripheralMarker},
-    fuchsia_app::{client::Launcher, server::ServicesServer},
+    fidl_fuchsia_bluetooth_snoop::SnoopMarker,
+    fuchsia_app::{
+        server::ServicesServer,
+        client::{connect_to_service, Launcher},
+    },
     fuchsia_async as fasync,
     fuchsia_bluetooth::make_clones,
-    fuchsia_syslog::{self as syslog, fx_log_info},
+    fuchsia_syslog::{self as syslog, fx_log_info, fx_log_warn},
     futures::TryFutureExt,
     parking_lot::Mutex,
     std::sync::Arc,
@@ -25,7 +29,17 @@ mod config;
 fn main() -> Result<(), Error> {
     syslog::init_with_tags(&["bt-mgr"]).expect("Can't init logger");
     fx_log_info!("Starting bt-mgr...");
+
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
+    let cfg = config::Config::load()?;
+
+    // Start bt-snoop service before anything else.
+    if cfg.autostart_snoop() {
+        let res = connect_to_service::<SnoopMarker>();
+        if let Err(e) = res {
+            fx_log_warn!("Failed to start snoop service: {}", e);
+        }
+    }
 
     let launcher = Launcher::new()
         .context("Failed to open launcher service")
@@ -75,7 +89,7 @@ fn main() -> Result<(), Error> {
         .start()
         .map_err(|e| e.context("error starting service server"))?;
 
-    let io_config_fut = config::set_capabilities();
+    let io_config_fut = cfg.set_capabilities();
     executor
         .run_singlethreaded(server.try_join(io_config_fut))
         .context("bt-mgr failed to execute future")
