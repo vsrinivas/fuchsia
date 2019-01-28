@@ -373,7 +373,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 0
   {
     const auto& iter = results.find(kPublicAddress1);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
@@ -385,7 +385,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 1
   {
     const auto& iter = results.find(kRandomAddress1);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kAdvDataAndScanRsp, result_pair.second);
@@ -397,7 +397,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 2
   {
     const auto& iter = results.find(kPublicAddress2);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -409,7 +409,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 3
   {
     const auto& iter = results.find(kRandomAddress2);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainScanRsp, result_pair.second);
@@ -421,7 +421,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 4
   {
     const auto& iter = results.find(kRandomAddress3);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -433,7 +433,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, ActiveScanResults) {
   // Result 5
   {
     const auto& iter = results.find(kRandomAddress4);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -520,7 +520,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 0
   {
     const auto& iter = results.find(kPublicAddress1);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -532,7 +532,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 1
   {
     const auto& iter = results.find(kRandomAddress1);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -544,7 +544,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 2
   {
     const auto& iter = results.find(kPublicAddress2);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -556,7 +556,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 3
   {
     const auto& iter = results.find(kRandomAddress2);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ("", result_pair.second);
@@ -568,7 +568,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 4
   {
     const auto& iter = results.find(kRandomAddress3);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
@@ -580,7 +580,7 @@ TEST_F(HCI_LegacyLowEnergyScannerTest, PassiveScanResults) {
   // Result 5
   {
     const auto& iter = results.find(kRandomAddress4);
-    EXPECT_NE(iter, results.end());
+    ASSERT_NE(iter, results.end());
 
     const auto& result_pair = iter->second;
     EXPECT_EQ(kPlainAdvData, result_pair.second);
