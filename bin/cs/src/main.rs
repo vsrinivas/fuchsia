@@ -147,10 +147,10 @@ fn find_id_directory(dir: &Path) -> DirEntryResult {
     return Err(err_msg("Directory not found"));
 }
 
-fn visit_threads(component_path: &Path, exclude_properties: &Vec<String>) -> TraversalResult {
+fn visit_threads(component_path: &Path, exclude_objects: &Vec<String>) -> TraversalResult {
     let channel_path = component_path.join("system_objects/threads/.channel");
-    let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_properties)?;
-    visit_inspect_object(0, &inspect_object);
+    let inspect_object = generate_inspect_object_tree(&channel_path, &exclude_objects)?;
+    visit_inspect_object(1, &inspect_object);
     Ok(())
 }
 
@@ -159,7 +159,7 @@ fn visit_inspect_object(depth: usize, inspect_object: &InspectObject) {
     println!("{}{}", indent, inspect_object.name);
     for property in &inspect_object.properties {
         println!(
-            "{} {}:{}",
+            "{} {}: {}",
             indent,
             property.key,
             match &property.value {
@@ -193,24 +193,25 @@ fn visit_child_components(parent_path: &Path) -> ComponentsResult {
     Ok(child_components)
 }
 
-fn inspect_realm(job_id: u32, exclude_properties: &Vec<String>, realm: &Realm) -> TraversalResult {
+fn inspect_realm(job_id: u32, exclude_objects: &Vec<String>, realm: &Realm) -> TraversalResult {
     for component in &realm.child_components {
-        inspect_component(job_id, exclude_properties, component)?;
+        inspect_component(job_id, exclude_objects, component)?;
     }
     for child_realm in &realm.child_realms {
-        inspect_realm(job_id, exclude_properties, child_realm)?;
+        inspect_realm(job_id, exclude_objects, child_realm)?;
     }
     Ok(())
 }
 
 fn inspect_component(
-    job_id: u32, exclude_properties: &Vec<String>, component: &Component,
+    job_id: u32, exclude_objects: &Vec<String>, component: &Component,
 ) -> TraversalResult {
     if component.job_id == job_id {
-        visit_threads(&component.path, exclude_properties)?;
+        println!("{}", component);
+        visit_threads(&component.path, exclude_objects)?;
     }
     for component in &component.child_components {
-        inspect_component(job_id, exclude_properties, component)?;
+        inspect_component(job_id, exclude_objects, component)?;
     }
     Ok(())
 }
@@ -229,11 +230,11 @@ struct Opt {
     // Properties to exclude from display when presenting Inspect trees.
     #[structopt(
         short = "e",
-        long = "exclude-properties",
+        long = "exclude-objects",
         raw(use_delimiter = "true"),
-        default_value = "stack,stacks"
+        default_value = "stack,all_thread_stacks"
     )]
-    exclude_properties: Vec<String>,
+    exclude_objects: Vec<String>,
 }
 
 fn main() -> TraversalResult {
@@ -244,7 +245,7 @@ fn main() -> TraversalResult {
     let opt = Opt::from_args();
     let root_realm = Realm::create("/hub")?;
     match opt.job_id {
-        Some(job_id) => inspect_realm(job_id, &opt.exclude_properties, &root_realm)?,
+        Some(job_id) => inspect_realm(job_id, &opt.exclude_objects, &root_realm)?,
         _ => println!("{}", root_realm),
     };
     Ok(())

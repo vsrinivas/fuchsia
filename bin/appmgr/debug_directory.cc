@@ -15,7 +15,7 @@ namespace component {
 
 DebugDirectory::ProcessThreads::ProcessThreads(const zx::process* process)
     : ExposedObject("threads"), process_(process) {
-  auto all_dir = component::ObjectDir::Make("all");
+  auto all_dir = component::ObjectDir::Make("all_thread_stacks");
   all_dir.set_prop("stacks", [this]() -> std::string {
     return StringPrintf("\n%s", DebugInfoRetriever::GetInfo(process_).data());
   });
@@ -30,15 +30,18 @@ DebugDirectory::ProcessThreads::ProcessThreads(const zx::process* process)
         for (const auto& thread : threads) {
           auto koid_string = StringPrintf("%lu", thread.koid);
           auto thread_obj = component::ObjectDir::Make(koid_string);
+          thread_obj.set_prop("koid", koid_string);
+          thread_obj.set_prop("name", thread.name.data());
+          out_children->push_back(thread_obj.object());
+
           auto koid = thread.koid;
-          thread_obj.set_prop("stack", [this, koid]() -> std::string {
+          auto stack_obj = component::ObjectDir::Make("stack");
+          stack_obj.set_prop("dump", [this, koid]() -> std::string {
             zx_koid_t koids[] = {koid};
             return StringPrintf(
                 "\n%s", DebugInfoRetriever::GetInfo(process_, koids, 1).data());
           });
-          thread_obj.set_prop("koid", koid_string);
-          thread_obj.set_prop("name", thread.name.data());
-          out_children->push_back(thread_obj.object());
+          thread_obj.set_child(stack_obj.object());
         }
       });
 }

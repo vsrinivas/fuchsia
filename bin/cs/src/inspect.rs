@@ -25,7 +25,7 @@ pub struct InspectObject {
 
 impl InspectObject {
     pub fn create(
-        exclude_properties: &Vec<String>, client_channel: zx::Channel,
+        exclude_objects: &Vec<String>, client_channel: zx::Channel,
     ) -> Result<InspectObject, Error> {
         let mut inspect = fidl_fuchsia_inspect::InspectSynchronousProxy::new(client_channel);
         let obj = inspect.read_data(zx::Time::INFINITE)?;
@@ -33,9 +33,6 @@ impl InspectObject {
         let mut inspect_properties = Vec::new();
         if let Some(properties) = obj.properties {
             for property in &properties {
-                if exclude_properties.contains(&property.key) {
-                    continue;
-                }
                 inspect_properties.push(InspectProperty {
                     key: property.key.clone(),
                     value: match &property.value {
@@ -48,13 +45,16 @@ impl InspectObject {
         let mut child_inspect_objects = Vec::new();
         if let Some(children) = inspect.list_children(zx::Time::INFINITE)? {
             for child in &children {
+                if exclude_objects.contains(&child) {
+                    continue;
+                }
                 let (client, service) = zx::Channel::create()?;
                 inspect.open_child(
                     child,
                     fidl::endpoints::ServerEnd::new(service),
                     zx::Time::INFINITE,
                 )?;
-                child_inspect_objects.push(InspectObject::create(exclude_properties, client)?);
+                child_inspect_objects.push(InspectObject::create(exclude_objects, client)?);
             }
         }
         Ok(InspectObject {
@@ -69,9 +69,9 @@ impl InspectObject {
 /// Inspect object tree consistenting of properties that the component broadcasts
 /// about itself.
 pub fn generate_inspect_object_tree(
-    path: &Path, exclude_properties: &Vec<String>,
+    path: &Path, exclude_objects: &Vec<String>,
 ) -> Result<InspectObject, Error> {
     let (client, service) = zx::Channel::create()?;
     fdio::service_connect(path.to_string_lossy().as_ref(), service)?;
-    Ok(InspectObject::create(exclude_properties, client)?)
+    Ok(InspectObject::create(exclude_objects, client)?)
 }
