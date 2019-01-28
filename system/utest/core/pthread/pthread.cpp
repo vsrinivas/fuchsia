@@ -4,7 +4,6 @@
 
 #include <pthread.h>
 
-#include <assert.h>
 #include <errno.h>
 #include <inttypes.h>
 #include <stdio.h>
@@ -13,12 +12,15 @@
 #include <time.h>
 #include <unistd.h>
 
+#include <fbl/atomic.h>
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-static int process_waked = 0;
+// This is accessed by by both the cond_threads, and the main
+// thread. The latter does so not under the mutex.
+static fbl::atomic_int thread_waked = 0;
 static int thread_with_lock = 0;
 
 static void log(const char* str) {
@@ -84,7 +86,7 @@ static void* cond_thread1(void* arg) {
     pthread_cond_wait(&cond, &mutex);
     log("thread 1 waiting again\n");
     pthread_cond_wait(&cond, &mutex);
-    process_waked++;
+    thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
     log("thread 1 done\n");
     return NULL;
@@ -96,7 +98,7 @@ static void* cond_thread2(void* arg) {
     pthread_cond_wait(&cond, &mutex);
     log("thread 2 waiting again\n");
     pthread_cond_wait(&cond, &mutex);
-    process_waked++;
+    thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
     log("thread 2 done\n");
     return NULL;
@@ -108,10 +110,26 @@ static void* cond_thread3(void* arg) {
     pthread_cond_wait(&cond, &mutex);
     log("thread 3 waiting again\n");
     pthread_cond_wait(&cond, &mutex);
-    process_waked++;
+    thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
     log("thread 3 done\n");
     return NULL;
+}
+
+// Polls for the correct wake count. This is expected to be fast. It
+// polls since there's no great way to otherwise observe the scheduler
+// state in this test. 10 seconds is chosen to be enough less than
+// infinity to allow other tests to complete should this hang, and big
+// enough to allow most plausible delays in scheduling.
+static bool poll_waked_threads(int expected_count) {
+    zx_time_t start = zx_clock_get_monotonic();
+    for (int tries = 0; tries < (ZX_SEC(10) / ZX_MSEC(1)); ++tries) {
+        zx_nanosleep(start + ZX_MSEC(tries));
+        if (thread_waked.load() == expected_count) {
+            return true;
+        }
+    }
+    return false;
 }
 
 bool pthread_test(void) {
@@ -137,18 +155,15 @@ bool pthread_test(void) {
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(300)));
-    EXPECT_EQ(process_waked, 1, "Only 1 process should have woken up");
+    EXPECT_TRUE(poll_waked_threads(1), "Exactly 1 process should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    EXPECT_EQ(process_waked, 2, "Only 2 processes should have woken up");
+    EXPECT_TRUE(poll_waked_threads(2), "Exactly 2 processes should have woken up");
 
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    EXPECT_EQ(process_waked, 3, "Only 3 processes should have woken up");
+    EXPECT_TRUE(poll_waked_threads(3), "Exactly 3 processes should have woken up");
 
     log("joining cond threads\n");
     pthread_join(thread1, NULL);
