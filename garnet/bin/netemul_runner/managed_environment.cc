@@ -145,4 +145,13 @@ void ManagedEnvironment::ConnectToService(std::string name, zx::channel req) {
   env_->ConnectToService(name, std::move(req));
 }
 
+void ManagedEnvironment::AddDevice(
+    fuchsia::netemul::environment::VirtualDevice device) {
+  virtual_devices_.AddEntry(device.path, device.device.Bind());
+}
+
+void ManagedEnvironment::RemoveDevice(::std::string path) {
+  virtual_devices_.RemoveEntry(path);
+}
+
 }  // namespace netemul

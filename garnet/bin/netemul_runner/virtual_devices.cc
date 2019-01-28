@@ -42,6 +42,12 @@ void VirtualDevices::AddEntry(const std::string& path,
     }
   }
 
+  dev.set_error_handler([this, path](zx_status_t status) {
+    // when we get an error to the device server channel, we
+    // must remove it from vfs:
+    RemoveEntry(path);
+  });
+
   auto status = dir->AddEntry(
       *last,
       fbl::AdoptRef(new fs::Service([dev = std::move(dev)](zx::channel chann) {
@@ -53,6 +59,34 @@ void VirtualDevices::AddEntry(const std::string& path,
       })));
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Can't add device entry " << path << ": "
+                   << zx_status_get_string(status);
+  }
+}
+
+void VirtualDevices::RemoveEntry(const std::string& path) {
+  auto components =
+      fxl::SplitString(path, "/", fxl::WhiteSpaceHandling::kKeepWhitespace,
+                       fxl::SplitResult::kSplitWantNonEmpty);
+  if (components.empty()) {
+    FXL_LOG(ERROR) << "Invalid device mount path '" << path << "'";
+    return;
+  }
+
+  fbl::RefPtr<fs::PseudoDir> dir = dir_;
+  auto last = components.end() - 1;
+  for (auto i = components.begin(); i != last; i++) {
+    fbl::RefPtr<fs::Vnode> node;
+    if (dir->Lookup(&node, *i) == ZX_OK) {
+      dir.reset(reinterpret_cast<fs::PseudoDir*>(node.get()));
+    } else {
+      FXL_LOG(INFO) << "Can't find device path " << path;
+      return;
+    }
+  }
+
+  auto status = dir->RemoveEntry(*last);
+  if (status != ZX_OK) {
+    FXL_LOG(ERROR) << "Can't remove device entry " << path << ": "
                    << zx_status_get_string(status);
   }
 }

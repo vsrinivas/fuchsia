@@ -46,6 +46,9 @@ class ManagedEnvironment
 
   void ConnectToService(std::string name, zx::channel req) override;
 
+  void AddDevice(fuchsia::netemul::environment::VirtualDevice device) override;
+  void RemoveDevice(::std::string path) override;
+
   ManagedLauncher& launcher() { return *launcher_; }
 
   void SetRunningCallback(EnvironmentRunningCallback cb) {

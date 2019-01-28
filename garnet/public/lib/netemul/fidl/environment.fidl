@@ -48,4 +48,8 @@ interface ManagedEnvironment {
     CreateChildEnvironment(request<ManagedEnvironment> child_env, EnvironmentOptions options);
     /// Connects to a service named |name| provided by this environment.
     ConnectToService(string name, handle<channel> req);
+    /// Exposes new virtual device |device| for all components within this environment
+    AddDevice(VirtualDevice device);
+    /// Removes virtual device mounted at |path| (relative to /vdev)
+    RemoveDevice(string path);
 };

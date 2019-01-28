@@ -21,6 +21,7 @@ class VirtualDevices {
   VirtualDevices();
 
   void AddEntry(const std::string& path, fidl::InterfacePtr<DevProxy> dev);
+  void RemoveEntry(const std::string& path);
 
   zx::channel OpenAsDirectory();
 

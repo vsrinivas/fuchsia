@@ -1,0 +1,39 @@
+{
+    "facets": {
+        "fuchsia.netemul": {
+            "environment": {
+                "devices": [
+                    "ep1"
+                ]
+            },
+            "networks": [
+                {
+                    "endpoints": [
+                        {
+                            "name": "ep1"
+                        },
+                        {
+                            "name": "ep2"
+                        },
+                        {
+                            "name": "ep3"
+                        }
+                    ],
+                    "name": "net"
+                }
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/dynamic_devices"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext"
+        ]
+    }
+}

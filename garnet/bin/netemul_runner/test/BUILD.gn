@@ -9,6 +9,7 @@ test_package("netemul_sandbox_test") {
     "//garnet/bin/netemul_runner:sandbox_unittest",
     "//garnet/bin/netemul_runner/model:model_unittest",
     "//garnet/bin/netemul_runner/test/dummy_proc",
+    "//garnet/bin/netemul_runner/test/dynamic_devices",
     "//garnet/bin/netemul_runner/test/easy_netstack_cfg",
     "//garnet/bin/netemul_runner/test/env_build",
     "//garnet/bin/netemul_runner/test/inheritance",
@@ -41,6 +42,10 @@ test_package("netemul_sandbox_test") {
     {
       path = rebase_path("meta/inheritance_run.cmx")
       dest = "inheritance_run.cmx"
+    },
+    {
+      path = rebase_path("meta/dynamic_devices_run.cmx")
+      dest = "dynamic_devices_run.cmx"
     },
   ]
 
@@ -75,6 +80,9 @@ test_package("netemul_sandbox_test") {
     {
       name = "sandbox_service_bin_test"
       dest = "sandbox_service"
+    },
+    {
+      name = "dynamic_devices"
     },
   ]
 }
