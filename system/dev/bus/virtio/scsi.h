@@ -40,6 +40,8 @@ public:
 
     const char* tag() const override { return "virtio-scsi"; }
 
+    static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun);
+
 private:
     zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t* cdb, size_t cdb_length)
         TA_REQ(lock_);

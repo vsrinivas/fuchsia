@@ -27,7 +27,7 @@
 namespace virtio {
 
 // Fill in req->lun with a single-level LUN structure representing target:lun.
-static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun) {
+void ScsiDevice::FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun) {
     req->lun[0] = 1;
     req->lun[1] = target;
     req->lun[2] = 0x40 | static_cast<uint8_t>(lun >> 8);

@@ -42,8 +42,42 @@ bool InitTest() {
     END_TEST;
 }
 
+bool EncodeLunTest() {
+    BEGIN_TEST;
+    // Test that the virtio-scsi device correctly encodes single-level LUN structures.
+
+    // Test encoding of target=1, LUN=1.
+    struct virtio_scsi_req_cmd req = {};
+    virtio::ScsiDevice::FillLUNStructure(&req, /*target=*/1, /*lun=*/1);
+    EXPECT_EQ(req.lun[0], 1);
+    EXPECT_EQ(req.lun[1], 1);
+    // Expect flat addressing, single-level LUN structure.
+    EXPECT_EQ(req.lun[2], 0x40 | 0x0);
+    EXPECT_EQ(req.lun[3], 0x1);
+
+    memset(&req, 0, sizeof(req));
+
+    // Test encoding of target=0, LUN=8191.
+    virtio::ScsiDevice::FillLUNStructure(&req, /*target=*/0, /*lun=*/8191);
+    EXPECT_EQ(req.lun[0], 1);
+    EXPECT_EQ(req.lun[1], 0);
+    EXPECT_EQ(req.lun[2], 0x40 | 0x1F);
+    EXPECT_EQ(req.lun[3], 0xFF);
+
+    memset(&req, 0, sizeof(req));
+    // Test encoding of target=0, LUN=16383 (highest allowed LUN).
+    virtio::ScsiDevice::FillLUNStructure(&req, /*target=*/0, /*lun=*/16383);
+    EXPECT_EQ(req.lun[0], 1);
+    EXPECT_EQ(req.lun[1], 0);
+    EXPECT_EQ(req.lun[2], 0x40 | 0x3F);
+    EXPECT_EQ(req.lun[3], 0xFF);
+
+    END_TEST;
+}
+
 }  // anonymous namespace
 
 BEGIN_TEST_CASE(ScsiDriverTests)
 RUN_TEST_SMALL(InitTest)
+RUN_TEST_SMALL(EncodeLunTest)
 END_TEST_CASE(ScsiDriverTests)
