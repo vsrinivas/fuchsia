@@ -219,6 +219,8 @@ function main {
   esac
   shift
 
+  cd "${FUCHSIA_DIR}"
+
   local gn_cmd='gen'
   local -a gn_switches=(--check)
   local gn_args="target_cpu=\"${arch}\""
