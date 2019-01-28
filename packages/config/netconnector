@@ -3,6 +3,6 @@
         "garnet/packages/config/network"
     ],
     "packages": [
-        "//garnet/bin/netconnector:config"
+        "//garnet/bin/netconnector:netconnector_config"
     ]
 }

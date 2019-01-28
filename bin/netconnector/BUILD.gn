@@ -74,9 +74,8 @@ package("netconnector") {
   ]
 }
 
-package("config") {
+package("netconnector_config") {
   deprecated_system_image = true
-  package_name = "netconnector_config"
   resources = [
     {
       dest = "sysmgr/netconnector.config"
