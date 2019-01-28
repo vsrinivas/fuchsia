@@ -80,7 +80,7 @@ pub fn read_only<OnRead>(on_read: OnRead) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
 {
-    read_only_attr(on_read, DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES)
+    read_only_attr(DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES, on_read)
 }
 
 /// See [`read_only()`].  Wraps the callback, allowing it to return a String instead of a Vec<u8>,
@@ -90,25 +90,25 @@ where
     OnReadStr: FnMut() -> Result<String, Status>,
 {
     PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
         Some(move || on_read().map(|content| content.into_bytes())),
         0,
         None,
-        DEFAULT_READ_ONLY_PROTECTION_ATTRIBUTES,
     )
 }
 
 /// Same as [`read_only()`] but also allows to select custom attributes for the POSIX emulation
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
-pub fn read_only_attr<OnRead>(on_read: OnRead, protection_attributes: u32) -> impl PseudoFile
+pub fn read_only_attr<OnRead>(protection_attributes: u32, on_read: OnRead) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
 {
     PseudoFileImpl::<_, fn(Vec<u8>) -> Result<(), Status>>::new(
+        protection_attributes & MODE_PROTECTION_MASK,
         Some(on_read),
         0,
         None,
-        protection_attributes & MODE_PROTECTION_MASK,
     )
 }
 
@@ -125,7 +125,7 @@ pub fn write_only<OnWrite>(capacity: u64, on_write: OnWrite) -> impl PseudoFile
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    write_only_attr(capacity, on_write, DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES)
+    write_only_attr(DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES, capacity, on_write)
 }
 
 /// See [`write_only()`].  Only allows valid UTF-8 content to be written into the file.  Written
@@ -136,13 +136,13 @@ where
     OnWriteStr: FnMut(String) -> Result<(), Status>,
 {
     PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
+        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
         None,
         capacity,
         Some(move |bytes: Vec<u8>| match String::from_utf8(bytes) {
             Ok(content) => on_write(content),
             Err(_) => Err(Status::INVALID_ARGS),
         }),
-        DEFAULT_WRITE_ONLY_PROTECTION_ATTRIBUTES,
     )
 }
 
@@ -150,18 +150,18 @@ where
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
 pub fn write_only_attr<OnWrite>(
+    protection_attributes: u32,
     capacity: u64,
     on_write: OnWrite,
-    protection_attributes: u32,
 ) -> impl PseudoFile
 where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
     PseudoFileImpl::<fn() -> Result<Vec<u8>, Status>, _>::new(
+        protection_attributes & MODE_PROTECTION_MASK,
         None,
         capacity,
         Some(on_write),
-        protection_attributes & MODE_PROTECTION_MASK,
     )
 }
 
@@ -189,7 +189,7 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
-    read_write_attr(on_read, capacity, on_write, DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES)
+    read_write_attr(DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES, on_read, capacity, on_write)
 }
 
 /// See [`read_write()`].  Wraps the read callback, allowing it to return a [`String`] instead of a
@@ -207,13 +207,13 @@ where
     OnWriteStr: FnMut(String) -> Result<(), Status>,
 {
     PseudoFileImpl::new(
+        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
         Some(move || on_read().map(|content| content.into_bytes())),
         capacity,
         Some(move |bytes: Vec<u8>| match String::from_utf8(bytes) {
             Ok(content) => on_write(content),
             Err(_) => Err(Status::INVALID_ARGS),
         }),
-        DEFAULT_READ_WRITE_PROTECTION_ATTRIBUTES,
     )
 }
 
@@ -221,20 +221,20 @@ where
 /// layer.  Note that only the MODE_PROTECTION_MASK part of the protection_attributes argument will
 /// be stored.
 pub fn read_write_attr<OnRead, OnWrite>(
+    protection_attributes: u32,
     on_read: OnRead,
     capacity: u64,
     on_write: OnWrite,
-    protection_attributes: u32,
 ) -> impl PseudoFile
 where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
     PseudoFileImpl::new(
+        protection_attributes & MODE_PROTECTION_MASK,
         Some(on_read),
         capacity,
         Some(on_write),
-        protection_attributes & MODE_PROTECTION_MASK,
     )
 }
 
@@ -291,6 +291,12 @@ where
     OnRead: FnMut() -> Result<Vec<u8>, Status>,
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
+    /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
+    /// have no meaning for the file operation itself, but may have consequences to the POSIX
+    /// emulation layer - for example, it makes sense to remove the read flags from a read-only
+    /// file.  This field should only have set bits in the MODE_PROTECTION_MASK part.
+    protection_attributes: u32,
+
     /// A handler to be invoked to populate the content buffer when a connection to this file is
     /// opened.
     on_read: Option<OnRead>,
@@ -304,12 +310,6 @@ where
     /// A handler to be invoked to "update" the file content, if it was modified during a
     /// connection lifetime.
     on_write: Option<OnWrite>,
-
-    /// MODE_PROTECTION_MASK attributes returned by this file through io.fild:Node::GetAttr.  They
-    /// have no meaning for the file operation itself, but may have consequences to the POSIX
-    /// emulation layer - for example, it makes sense to remove the read flags from a read-only
-    /// file.  This field should only have set bits in the MODE_PROTECTION_MASK part.
-    protection_attributes: u32,
 
     /// All the currently open connections for this file.
     connections: FuturesUnordered<StreamFuture<FileConnection>>,
@@ -339,16 +339,16 @@ where
     OnWrite: FnMut(Vec<u8>) -> Result<(), Status>,
 {
     fn new(
+        protection_attributes: u32,
         on_read: Option<OnRead>,
         capacity: u64,
         on_write: Option<OnWrite>,
-        protection_attributes: u32,
     ) -> Self {
         PseudoFileImpl {
+            protection_attributes,
             on_read,
             capacity,
             on_write,
-            protection_attributes,
             connections: FuturesUnordered::new(),
         }
     }
@@ -1756,10 +1756,9 @@ mod tests {
     fn get_attr_read_only_attr() {
         run_server_client(
             OPEN_RIGHT_READABLE,
-            read_only_attr(
-                || Ok(b"Content".to_vec()),
-                S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR,
-            ),
+            read_only_attr(S_IXOTH | S_IROTH | S_IXGRP | S_IRGRP | S_IXUSR | S_IRUSR, || {
+                Ok(b"Content".to_vec())
+            }),
             async move |proxy| {
                 assert_get_attr!(
                     proxy,
@@ -1783,7 +1782,7 @@ mod tests {
     fn get_attr_write_only_attr() {
         run_server_client(
             OPEN_RIGHT_WRITABLE,
-            write_only_attr(10, |_content| panic!("No changes"), S_IWOTH | S_IWGRP | S_IWUSR),
+            write_only_attr(S_IWOTH | S_IWGRP | S_IWUSR, 10, |_content| panic!("No changes")),
             async move |proxy| {
                 assert_get_attr!(
                     proxy,
@@ -1807,9 +1806,6 @@ mod tests {
         run_server_client(
             OPEN_RIGHT_READABLE | OPEN_RIGHT_WRITABLE,
             read_write_attr(
-                || Ok(b"Content".to_vec()),
-                10,
-                |_content| panic!("No changes"),
                 S_IXOTH
                     | S_IROTH
                     | S_IWOTH
@@ -1819,6 +1815,9 @@ mod tests {
                     | S_IXUSR
                     | S_IRUSR
                     | S_IWUSR,
+                || Ok(b"Content".to_vec()),
+                10,
+                |_content| panic!("No changes"),
             ),
             async move |proxy| {
                 assert_get_attr!(

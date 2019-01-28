@@ -47,13 +47,13 @@ use {
 /// children, also "running" direct entries when the directory itself is run via [`Future::poll`].
 /// See [`DirectoryEntry`] documentation for details.
 pub struct PseudoDirectory<'entries> {
-    entries: BTreeMap<String, Box<DirectoryEntry + 'entries>>,
-
     /// MODE_PROTECTION_MASK attributes returned by this directory through io.fidl:Node::GetAttr.
     /// They have no meaning for the directory operation itself, but may have consequences to the
     /// POSIX emulation layer.  This field should only have set bits in the MODE_PROTECTION_MASK
     /// part.
     protection_attributes: u32,
+
+    entries: BTreeMap<String, Box<DirectoryEntry + 'entries>>,
 
     connections: FuturesUnordered<StreamFuture<DirectoryConnection>>,
 
@@ -141,8 +141,8 @@ impl<'entries> PseudoDirectory<'entries> {
     /// Creates an empty directory with the specified POSIX access attributes.
     pub fn empty_attr(protection_attributes: u32) -> Self {
         PseudoDirectory {
-            entries: BTreeMap::new(),
             protection_attributes,
+            entries: BTreeMap::new(),
             connections: FuturesUnordered::new(),
             watchers: Vec::new(),
         }
