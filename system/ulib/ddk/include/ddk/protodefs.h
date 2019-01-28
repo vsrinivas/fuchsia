@@ -104,6 +104,7 @@ DDK_PROTOCOL_DEF(RTC,            'pRTC', "rtc", 0)
 DDK_PROTOCOL_DEF(TEE,            'pTEE', "tee", 0)
 DDK_PROTOCOL_DEF(VSOCK,          'pVSK', "vsock", 0)
 DDK_PROTOCOL_DEF(SYSMEM,         'pSyM', "sysmem", 0)
+DDK_PROTOCOL_DEF(MLG,            'pMLG', "mlg", 0)
 
 #undef DDK_PROTOCOL_DEF
 #endif
