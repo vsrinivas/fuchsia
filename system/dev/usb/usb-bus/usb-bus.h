@@ -43,6 +43,8 @@ public:
     zx_status_t UsbBusInterfaceReinitializeDevice(uint32_t device_id);
 
 private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(UsbBus);
+
     zx_status_t Init();
 
     zx_status_t GetDeviceId(zx_device_t* device, uint32_t* out);
@@ -52,6 +54,5 @@ private:
     // Array of all our USB devices.
     fbl::Array<fbl::RefPtr<UsbDevice>> devices_;
 };
-
 
 } // namespace usb_bus

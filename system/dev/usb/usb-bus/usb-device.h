@@ -14,6 +14,7 @@
 #include <fbl/ref_ptr.h>
 #include <usb/usb-request.h>
 #include <lib/sync/completion.h>
+#include <usb/request-cpp.h>
 #include <zircon/hw/usb.h>
 
 #include <optional>
@@ -97,6 +98,12 @@ class UsbDevice : public UsbDeviceType,
     inline usb_speed_t GetSpeed() const { return speed_; }
 
 private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(UsbDevice);
+
+    using Request = usb::Request<void>;
+    using UnownedRequest = usb::UnownedRequest<void>;
+    using UnownedRequestQueue = usb::UnownedRequestQueue<void>;
+
     zx_status_t Init();
 
     int CallbackThread();
@@ -140,16 +147,14 @@ private:
     // completion used for signalling callback_thread
     sync_completion_t callback_thread_completion_;
     // list of requests that need to have client's completion callback called
-    list_node_t completed_reqs_ __TA_GUARDED(callback_lock_);
+    UnownedRequestQueue completed_reqs_ __TA_GUARDED(callback_lock_);
     // mutex that protects the callback_* members above
     fbl::Mutex callback_lock_;
 
-    // pool of requests that can be reused
-    usb_request_pool_t free_reqs_ __TA_GUARDED(free_reqs_lock_);
-    fbl::Mutex free_reqs_lock_;
+    // Pool of requests USB control requests with zero data.
+    usb::RequestPool<void> free_reqs_;
 
     size_t parent_req_size_;
-    size_t req_size_;
 };
 
 } // namespace usb_bus

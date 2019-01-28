@@ -19,7 +19,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/sync \
     system/ulib/utf_conversion \
+    system/dev/lib/operation \
     system/dev/lib/usb \
+    system/ulib/zx \
     system/ulib/zxcpp \
 
 MODULE_LIBS := \
