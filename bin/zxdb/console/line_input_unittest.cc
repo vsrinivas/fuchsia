@@ -45,6 +45,15 @@ class TestLineInput : public LineInputBase {
     return result;
   }
 
+  void SetLine(const std::string& input) {
+    cur_line() = input;
+    set_pos(input.size());
+  }
+
+  void SetPos(size_t pos) {
+    set_pos(pos);
+  }
+
  protected:
   void Write(const std::string& data) { output_.append(data); }
 
@@ -223,12 +232,12 @@ TEST(LineInput, NegAck) {
   input.BeginReadLine();
 
   // Empty should remain with them prompt.
-  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
   EXPECT_EQ(input.line(), "");
 
   // Adding characters and then Control-U should clear.
   input.OnInputStr("12345");
-  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
   EXPECT_EQ(input.line(), "");
 
   // In the middle of the line should clear until the cursor.
@@ -237,9 +246,55 @@ TEST(LineInput, NegAck) {
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
   EXPECT_FALSE(input.OnInputStr(TERM_LEFT));
-  EXPECT_FALSE(input.OnInput(21));  // 21 = Control-U
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlU));
   EXPECT_EQ(input.line(), "6789");
   EXPECT_EQ(input.pos(), 0u);
+}
+
+TEST(LineInput, EndOfTransimission) {
+  TestLineInput input("[zxdb] ");
+  input.BeginReadLine();
+
+  //             v
+  input.SetLine("First Second Third");
+  input.SetPos(0);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "First Second Third");
+
+  //               v
+  input.SetLine("First Second Third");
+  input.SetPos(2);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "rst Second Third");
+
+  //                  v
+  input.SetLine("First Second Third");
+  input.SetPos(5);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), " Second Third");
+
+  //                     v
+  input.SetLine("First Second Third");
+  input.SetPos(8);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "First cond Third");
+
+  //                         v
+  input.SetLine("First Second Third");
+  input.SetPos(12);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "First  Third");
+
+  //                            v
+  input.SetLine("First Second Third");
+  input.SetPos(15);
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "First Second ird");
+
+  //                               v
+  input.SetLine("First Second Third");
+  EXPECT_FALSE(input.OnInput(SpecialCharacters::kKeyControlW));
+  EXPECT_EQ(input.line(), "First Second ");
 }
 
 }  // namespace zxdb

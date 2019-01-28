@@ -15,31 +15,16 @@
 #include <termios.h>
 #endif
 
-#include "garnet/public/lib/fxl/logging.h"
+#include "lib/fxl/logging.h"
+#include "lib/fxl/strings/split_string.h"
 
 namespace zxdb {
 
+const char* SpecialCharacters::kTermBeginningOfLine = "\r";
+const char* SpecialCharacters::kTermClearToEnd = "\x1b[0K";
+const char* SpecialCharacters::kTermCursorToColFormat = "\r\x1b[%dC";
+
 namespace {
-
-constexpr char kKeyControlA = 1;
-constexpr char kKeyControlB = 2;
-constexpr char kKeyControlE = 5;
-constexpr char kKeyControlF = 6;
-constexpr char kKeyControlH = 8;
-constexpr char kKeyTab = 9;
-constexpr char kKeyNewline = 10;
-constexpr char kKeyFormFeed = 12;
-constexpr char kKeyEnter = 13;
-constexpr char kKeyControlN = 14;
-constexpr char kKeyControlP = 16;
-constexpr char kKeyControlU = 21;
-constexpr char kKeyEsc = 27;
-constexpr char kKeyBackspace = 127;
-
-// Escape sequences for terminal output.
-const char kTermBeginningOfLine[] = "\r";
-const char kTermClearToEnd[] = "\x1b[0K";
-const char kTermCursorToColFormat[] = "\r\x1b[%dC";  // printf format.
 
 size_t GetTerminalMaxCols(int fileno) {
 #ifdef __Fuchsia__
@@ -82,7 +67,7 @@ bool LineInputBase::OnInput(char c) {
 
   if (completion_mode_) {
     // Special keys for completion mode.
-    if (c == kKeyTab) {
+    if (c == SpecialCharacters::kKeyTab) {
       HandleTab();
       return false;
     }
@@ -93,42 +78,45 @@ bool LineInputBase::OnInput(char c) {
   }
 
   switch (c) {
-    case kKeyControlA:
+    case SpecialCharacters::kKeyControlA:
       MoveHome();
       break;
-    case kKeyControlB:
+    case SpecialCharacters::kKeyControlB:
       MoveLeft();
       break;
-    case kKeyControlE:
+    case SpecialCharacters::kKeyControlE:
       MoveEnd();
       break;
-    case kKeyControlF:
+    case SpecialCharacters::kKeyControlF:
       MoveRight();
       break;
-    case kKeyFormFeed:
+    case SpecialCharacters::kKeyFormFeed:
       HandleFormFeed();
       break;
-    case kKeyTab:
+    case SpecialCharacters::kKeyTab:
       HandleTab();
       break;
-    case kKeyNewline:
-    case kKeyEnter:
+    case SpecialCharacters::kKeyNewline:
+    case SpecialCharacters::kKeyEnter:
       HandleEnter();
       return true;
-    case kKeyControlN:
+    case SpecialCharacters::kKeyControlN:
       MoveDown();
       break;
-    case kKeyControlP:
+    case SpecialCharacters::kKeyControlP:
       MoveUp();
       break;
-    case kKeyControlU:
+    case SpecialCharacters::kKeyControlU:
       HandleNegAck();
       break;
-    case kKeyEsc:
+    case SpecialCharacters::kKeyControlW:
+      HandleEndOfTransimission();
+      break;
+    case SpecialCharacters::kKeyEsc:
       reading_escaped_input_ = true;
       break;
-    case kKeyControlH:
-    case kKeyBackspace:
+    case SpecialCharacters::kKeyControlH:
+    case SpecialCharacters::kKeyBackspace:
       HandleBackspace();
       break;
     default:
@@ -156,8 +144,8 @@ void LineInputBase::Hide() {
     return;
 
   std::string cmd;
-  cmd += kTermBeginningOfLine;
-  cmd += kTermClearToEnd;
+  cmd += SpecialCharacters::kTermBeginningOfLine;
+  cmd += SpecialCharacters::kTermClearToEnd;
 
   Write(cmd);
   EnsureNoRawMode();
@@ -286,6 +274,33 @@ void LineInputBase::HandleNegAck() {
   RepaintLine();
 }
 
+void LineInputBase::HandleEndOfTransimission() {
+  const auto& line = cur_line();
+  if (line.empty())
+    return;
+
+  // We search for the last space that's before the cursor.
+  size_t latest_space = 0;
+  for (size_t i = 0; i < line.size(); i++) {
+    if (i >= pos_)
+      break;
+
+    if (line[i] == ' ')
+      latest_space = i;
+  }
+
+  // Ctrl-w removes from the latest space until the cursor.
+  std::string new_line;
+  if (latest_space > 0)
+    new_line.append(line.substr(0, latest_space + 1));
+  new_line.append(line.substr(pos_));
+
+  size_t diff = line.size() - new_line.size();
+  pos_ -= diff;
+  cur_line() = std::move(new_line);
+  RepaintLine();
+}
+
 void LineInputBase::HandleFormFeed() {
   Write("\033c");  // Form feed.
   RepaintLine();
@@ -367,7 +382,7 @@ void LineInputBase::RepaintLine() {
   std::string buf;
   buf.reserve(64);
 
-  buf += kTermBeginningOfLine;
+  buf += SpecialCharacters::kTermBeginningOfLine;
 
   // Only print up to max_cols_ - 1 to leave room for the cursor at the end.
   std::string line_data = prompt_ + cur_line();
@@ -388,10 +403,11 @@ void LineInputBase::RepaintLine() {
     buf += line_data;
   }
 
-  buf += kTermClearToEnd;
+  buf += SpecialCharacters::kTermClearToEnd;
 
   char forward_buf[32];
-  snprintf(forward_buf, sizeof(forward_buf), kTermCursorToColFormat,
+  snprintf(forward_buf, sizeof(forward_buf),
+           SpecialCharacters::kTermCursorToColFormat,
            static_cast<int>(pos_in_cols));
   buf += forward_buf;
 

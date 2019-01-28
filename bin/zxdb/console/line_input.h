@@ -14,6 +14,29 @@ struct termios;
 
 namespace zxdb {
 
+struct SpecialCharacters {
+  static constexpr char kKeyControlA = 1;
+  static constexpr char kKeyControlB = 2;
+  static constexpr char kKeyControlE = 5;
+  static constexpr char kKeyControlF = 6;
+  static constexpr char kKeyControlH = 8;
+  static constexpr char kKeyTab = 9;
+  static constexpr char kKeyNewline = 10;
+  static constexpr char kKeyFormFeed = 12;
+  static constexpr char kKeyEnter = 13;
+  static constexpr char kKeyControlN = 14;
+  static constexpr char kKeyControlP = 16;
+  static constexpr char kKeyControlU = 21;
+  static constexpr char kKeyControlW = 23;
+  static constexpr char kKeyEsc = 27;
+  static constexpr char kKeyBackspace = 127;
+
+  // Escape sequences for terminal output.
+  static const char* kTermBeginningOfLine;
+  static const char* kTermClearToEnd;
+  static const char* kTermCursorToColFormat;  // printf format.
+};
+
 // This class implements a push model for input of characters, allowing it to
 // be used in asynchronous contexts.
 //
@@ -84,6 +107,12 @@ class LineInputBase {
   virtual void EnsureRawMode() {}
   virtual void EnsureNoRawMode() {}
 
+  // Helper to return the current line of text.
+  std::string& cur_line() { return history_[history_index_]; }
+
+  // Useful for testing.
+  void set_pos(size_t pos) { pos_ = pos; }
+
  private:
   void HandleEscapedInput(char c);
 
@@ -94,6 +123,8 @@ class LineInputBase {
   void HandleTab();
   // NegAck is the name of Ctrl-U in ASCII world.
   void HandleNegAck();
+  // EndOfTransimission is the name for Ctrl-W in ASCII world.
+  void HandleEndOfTransimission();
 
   void Insert(char c);
   void MoveLeft();
@@ -108,9 +139,6 @@ class LineInputBase {
 
   void RepaintLine();
   void ResetLineState();
-
-  // Helper to return the current line of text.
-  std::string& cur_line() { return history_[history_index_]; }
 
   const std::string prompt_;
   size_t max_cols_ = 0;
