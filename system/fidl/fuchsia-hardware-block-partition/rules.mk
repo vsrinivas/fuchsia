@@ -1,4 +1,4 @@
-# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
@@ -10,10 +10,12 @@ MODULE_TYPE := fidl
 
 MODULE_PACKAGE := fidl
 
-MODULE_FIDL_LIBRARY := fuchsia.hardware.block
+MODULE_FIDL_LIBRARY := fuchsia.hardware.block.partition
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/block.fidl \
-    $(LOCAL_DIR)/ftl.fidl \
+    $(LOCAL_DIR)/partition.fidl \
+
+MODULE_FIDL_DEPS := \
+    system/fidl/fuchsia-hardware-block \
 
 include make/module.mk

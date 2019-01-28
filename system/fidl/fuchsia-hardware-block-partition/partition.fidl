@@ -1,0 +1,33 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.block.partition;
+using zx;
+using fuchsia.hardware.block as block;
+
+const uint32 GUID_LENGTH = 16;
+const uint32 NAME_LENGTH = 24;
+
+// A Globally Unique IDentifier, which may be utilized to identify
+// a partition.
+struct GUID {
+    array<uint8>:GUID_LENGTH value;
+};
+
+// Partition describes a region of one or more block devices, labelled
+// with distinguishing identifiers.
+[Layout = "Simple", FragileBase]
+interface Partition : block.Block {
+    // Gets the type GUID of the partition (if one exists).
+    // If the partition has no type GUID, ZX_ERR_NOT_SUPPORTED is returned.
+    GetTypeGuid() -> (zx.status status, GUID? guid);
+
+    // Gets the instance GUID of the partition (if one exists).
+    // If the partition has no instance GUID, ZX_ERR_NOT_SUPPORTED is returned.
+    GetInstanceGuid() -> (zx.status status, GUID? guid);
+
+    // Gets the name of the partition (if one exists).
+    // If the partition has no name, ZX_ERR_NOT_SUPPORTED is returned.
+    GetName() -> (zx.status status, string:NAME_LENGTH? name);
+};
