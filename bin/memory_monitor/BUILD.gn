@@ -51,3 +51,14 @@ package("memory_monitor") {
         dest = "memory_monitor.cmx"
       } ]
 }
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "memory_monitor_config"
+  resources = [
+    {
+      dest = "sysmgr/memory_monitor.config"
+      path = rebase_path("memory_monitor.config")
+    },
+  ]
+}
