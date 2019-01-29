@@ -17,9 +17,10 @@ import (
 )
 
 var (
-	colors        color.EnableColor
-	jsonOutput    string
-	idsPath       string
+	buildIDDirPath string
+	colors         color.EnableColor
+	jsonOutput     string
+	idsPath        string
 	// TODO(jakehehrlich): Make idsRel always true and remove this flag.
 	idsRel        bool
 	level         logger.LogLevel
@@ -30,6 +31,7 @@ func init() {
 	colors = color.ColorAuto
 	level = logger.InfoLevel
 
+	flag.StringVar(&buildIDDirPath, "build-id-dir", "", "path to .build-id directory")
 	flag.StringVar(&llvmSymboPath, "llvm-symbolizer", "llvm-symbolizer", "path to llvm-symbolizer")
 	flag.StringVar(&idsPath, "ids", "", "path to ids.txt")
 	flag.Var(&colors, "color", "use color in output, can be never, auto, always")
@@ -84,10 +86,11 @@ func main() {
 
 	// Construct the nodes of the pipeline
 	symbolizer := symbolize.NewLLVMSymbolizer(llvmSymboPath)
-	repo := symbolize.NewRepo()
-	err := repo.AddSource(symbolize.NewIDsSource(idsPath, idsRel))
-	if err != nil {
-		log.Fatalf("%v\n", err)
+	var repo symbolize.Repository
+	if buildIDDirPath != "" {
+		repo = symbolize.NewBuildIDRepo(buildIDDirPath)
+	} else {
+		repo = symbolize.NewIDsTxtRepo(idsPath, idsRel)
 	}
 	demuxer := symbolize.NewDemuxer(repo, symbolizer)
 	tap := symbolize.NewTriggerTap()
@@ -97,8 +100,7 @@ func main() {
 	presenter := symbolize.NewBasicPresenter(os.Stdout, painter.Enabled())
 
 	// Build the pipeline to start presenting.
-	err = symbolizer.Start(ctx)
-	if err != nil {
+	if err := symbolizer.Start(ctx); err != nil {
 		log.Fatalf("%v\n", err)
 	}
 	inputLines := symbolize.StartParsing(ctx, os.Stdin)

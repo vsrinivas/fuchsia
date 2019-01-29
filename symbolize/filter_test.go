@@ -65,12 +65,8 @@ func TestBasic(t *testing.T) {
 	// Get a line parser
 	parseLine := GetLineParser()
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make an actual filter using those two mock objects
-	filter := NewFilter(repo, symbo)
+	filter := NewFilter(testBinaries, symbo)
 
 	// parse some example lines
 	err := filter.addModule(Module{"libc.elf", "4fcb712aa6387724a9f465a32cd8c14b", 1})
@@ -143,18 +139,12 @@ func TestBacktrace(t *testing.T) {
 			0x44987: {{NewOptStr("duff.h"), 64, NewOptStr("duffcopy")}, {NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
-	// mock ids.txt
-	repo := NewRepo()
-	err := repo.AddSource(testBinaries)
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// make an actual filter using those two mock objects
-	filter := NewFilter(repo, symbo)
+	filter := NewFilter(testBinaries, symbo)
 
 	// add some context
-	err = filter.addModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
+	err := filter.addModule(Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -201,16 +191,9 @@ func TestReset(t *testing.T) {
 			0x44987: {{NewOptStr("memcpy.c"), 76, NewOptStr("memcpy")}},
 		}},
 	})
-	// mock ids.txt
-	repo := NewRepo()
-	err = repo.AddSource(testBinaries)
-
-	if err != nil {
-		t.Fatal(err)
-	}
 
 	// make an actual filter using those two mock objects
-	filter := NewFilter(repo, symbo)
+	filter := NewFilter(testBinaries, symbo)
 
 	// add some context
 	mod := Module{"libc.so", "4fcb712aa6387724a9f465a32cd8c14b", 1}

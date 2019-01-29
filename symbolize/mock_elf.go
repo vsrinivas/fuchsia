@@ -5,7 +5,7 @@
 package symbolize
 
 import (
-	"time"
+	"fmt"
 
 	"fuchsia.googlesource.com/tools/elflib"
 )
@@ -19,12 +19,14 @@ var testBinaries = mockSource{
 	{Filepath: "testdata/libcrypto.elf", BuildID: "12ef5c50b3ed3599c07c02d4509311be"},
 }
 
-// GetBinaries implements Source.
-func (m mockSource) getBinaries() ([]elflib.BinaryFileRef, error) {
-	return []elflib.BinaryFileRef(m), nil
-}
-
-func (m mockSource) getModTime() (*time.Time, error) {
-	out := time.Unix(1, 0)
-	return &out, nil
+func (m mockSource) GetBuildObject(buildID string) (string, error) {
+	for _, file := range testBinaries {
+		if file.BuildID == buildID {
+			if err := file.Verify(); err != nil {
+				return "", err
+			}
+			return file.Filepath, nil
+		}
+	}
+	return "", fmt.Errorf("could not find file associated with %s", buildID)
 }

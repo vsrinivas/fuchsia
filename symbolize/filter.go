@@ -95,6 +95,10 @@ func (m *missingObjError) Error() string {
 	return fmt.Sprintf("could not find file for module %s with build ID %s: %v", m.name, m.buildid, m.err)
 }
 
+type Repository interface {
+	GetBuildObject(buildID string) (string, error)
+}
+
 // Filter represents the state needed to process a log.
 type Filter struct {
 	// handles for llvm-symbolizer
@@ -104,7 +108,7 @@ type Filter struct {
 	modules           map[uint64]Module
 	modNamesByBuildID map[string]string
 	// Symbolizer repository
-	repo *SymbolizerRepo
+	repo Repository
 }
 
 // TODO (jakehehrlich): Consider making FindInfoForAddress private.
@@ -145,7 +149,7 @@ func (s *Filter) findInfoForAddress(vaddr uint64) (addressInfo, error) {
 }
 
 // NewFilter creates a new filter
-func NewFilter(repo *SymbolizerRepo, symbo Symbolizer) *Filter {
+func NewFilter(repo Repository, symbo Symbolizer) *Filter {
 	return &Filter{
 		modules:           make(map[uint64]Module),
 		modNamesByBuildID: make(map[string]string),

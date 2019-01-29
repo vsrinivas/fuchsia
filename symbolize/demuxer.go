@@ -69,11 +69,11 @@ type Demuxer struct {
 	// Use same symbolizer for all
 	symbolizer Symbolizer
 	// Use same repo for all
-	repo *SymbolizerRepo
+	repo Repository
 }
 
 // NewDemuxer creates a new demuxer.
-func NewDemuxer(repo *SymbolizerRepo, symbo Symbolizer) *Demuxer {
+func NewDemuxer(repo Repository, symbo Symbolizer) *Demuxer {
 	return &Demuxer{
 		repo:       repo,
 		symbolizer: symbo,

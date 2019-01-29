@@ -48,8 +48,7 @@ func TestDumpfile(t *testing.T) {
 		"[123.456] 01234.05678> {{{dumpfile:llvm-cov:test}}}\n"
 
 	symbo := newMockSymbolizer([]mockModule{})
-	repo := NewRepo()
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 	tap := NewTriggerTap()
 	tHandler := &triggerTester{t: t}
 	tap.AddHandler(tHandler.HandleDump)
@@ -107,8 +106,7 @@ func TestDumpfile(t *testing.T) {
 func TestSyslog(t *testing.T) {
 	msg := "[123.456][1234][05678][klog] INFO: Blarg\n"
 	symbo := newMockSymbolizer([]mockModule{})
-	repo := NewRepo()
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
@@ -128,8 +126,7 @@ func TestColor(t *testing.T) {
 		"[0.0] 1234.5678> \033[1m\033[31m this line tests adjacent state changes\n" +
 		"[0.0] 01234.5678> \033[1m\033[31m this line will eventully test non-redundent reset \033[1m\n"
 	symbo := newMockSymbolizer([]mockModule{})
-	repo := NewRepo()
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 	ctx := context.Background()
 	in := StartParsing(ctx, strings.NewReader(msg))
 	out := demuxer.Start(ctx, in)
@@ -148,10 +145,8 @@ func TestColor(t *testing.T) {
 func TestKeepLeadingSpace(t *testing.T) {
 	// mock the input and outputs of llvm-symbolizer
 	symbo := newMockSymbolizer([]mockModule{})
-	// mock ids.txt
-	repo := NewRepo()
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[0.000] 00000.00000>      \tkeep\n"
@@ -176,12 +171,8 @@ func ExampleDummyProcess() {
 		}},
 	})
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -218,12 +209,8 @@ func ExampleDemux() {
 		}},
 	})
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> keep {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -256,12 +243,8 @@ func ExampleNoHeaderBacktrace() {
 		}},
 	})
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "{{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -302,12 +285,8 @@ func ExampleNewBacktracePresenter() {
 		}},
 	})
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +
@@ -351,12 +330,8 @@ func ExampleBadAddr() {
 		}},
 	})
 
-	// mock ids.txt
-	repo := NewRepo()
-	repo.AddSource(testBinaries)
-
 	// make a demuxer
-	demuxer := NewDemuxer(repo, symbo)
+	demuxer := NewDemuxer(testBinaries, symbo)
 
 	// define a little message that will need to be parsed
 	msg := "[131.200] 1234.5678> {{{module:1:libc.so:elf:4fcb712aa6387724a9f465a32cd8c14b}}}\n" +

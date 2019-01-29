@@ -9,39 +9,27 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"time"
 
 	"fuchsia.googlesource.com/tools/elflib"
 )
 
-// TODO(jakehehrlich): Make this private.
-
-// BinaryFileSource is a source of binary files that can be reloaded. It might
-// be an ids.txt file, it might just be a single binary file, or it might be
-// another list of binaries coming from somewhere else. Currently the interface
-// assumes that all binaries from a source will be files on the same system.
-// Eventully we might relax this assumption.
-type BinaryFileSource interface {
-	// Extracts the set of binaries from this source.
-	getBinaries() ([]elflib.BinaryFileRef, error)
-	getModTime() (*time.Time, error)
-}
-
 // idsSource is a BinaryFileSource parsed from ids.txt
-type idsSource struct {
+type IDsTxtRepo struct {
+	lock      sync.RWMutex
+	cached    map[string]elflib.BinaryFileRef
 	pathToIDs string
 	rel       bool
 }
 
-func NewIDsSource(pathToIDs string, rel bool) BinaryFileSource {
-	return &idsSource{pathToIDs, rel}
+func NewIDsTxtRepo(pathToIDs string, rel bool) *IDsTxtRepo {
+	return &IDsTxtRepo{
+		cached:    make(map[string]elflib.BinaryFileRef),
+		pathToIDs: pathToIDs,
+		rel:       rel,
+	}
 }
 
-func (i *idsSource) name() string {
-	return i.pathToIDs
-}
-
-func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
+func (i *IDsTxtRepo) getBinaries() ([]elflib.BinaryFileRef, error) {
 	file, err := os.Open(i.pathToIDs)
 	if err != nil {
 		return nil, err
@@ -62,110 +50,76 @@ func (i *idsSource) getBinaries() ([]elflib.BinaryFileRef, error) {
 	return out, nil
 }
 
-func (i *idsSource) getModTime() (*time.Time, error) {
-	info, err := os.Stat(i.pathToIDs)
-	if err != nil {
-		return nil, err
-	}
-	out := info.ModTime()
-	return &out, nil
-}
-
-type buildInfo struct {
-	filepath string
-	buildID  string
-}
-
-type modTimeSource struct {
-	BinaryFileSource
-	modTime time.Time
-}
-
-// SymbolizerRepo keeps track of build objects and source files used in those build objects.
-type SymbolizerRepo struct {
-	lock    sync.RWMutex
-	sources []modTimeSource
-	// TODO (jakehehrlich): give 'builds' a more descriptive name
-	builds map[string]*buildInfo
-}
-
-func (s *SymbolizerRepo) addObject(build, filename string) {
-	s.lock.Lock()
-	defer s.lock.Unlock()
-	s.builds[build] = &buildInfo{
-		filepath: filename,
-		buildID:  build,
-	}
-}
-
-func NewRepo() *SymbolizerRepo {
-	return &SymbolizerRepo{
-		builds: make(map[string]*buildInfo),
-	}
-}
-
-func (s *SymbolizerRepo) loadSource(sourcePtr *modTimeSource) error {
-	source := *sourcePtr
-	time, err := source.getModTime()
-	if err != nil {
-		return err
-	}
-	if !time.After(source.modTime) {
-		return nil
-	}
-	sourcePtr.modTime = *time
-	bins, err := source.getBinaries()
-	if err != nil {
-		return err
-	}
-	// TODO: Do this in paralell.
-	// Verify each binary
-	for _, bin := range bins {
-		if err := bin.Verify(); err != nil {
-			return err
-		}
-	}
-	for _, bin := range bins {
-		s.addObject(bin.BuildID, bin.Filepath)
-	}
-	return nil
-}
-
-// AddSource adds a source of binaries and all contained binaries.
-func (s *SymbolizerRepo) AddSource(source BinaryFileSource) error {
-	s.sources = append(s.sources, modTimeSource{source, time.Unix(0, 0)})
-	return s.loadSource(&s.sources[len(s.sources)-1])
-}
-
-func (s *SymbolizerRepo) reloadSources() error {
-	for _, source := range s.sources {
-		if err := s.loadSource(&source); err != nil {
-			return err
-		}
-	}
-	return nil
-}
-
-func (s *SymbolizerRepo) readInfo(buildid string) (*buildInfo, bool) {
-	s.lock.RLock()
-	info, ok := s.builds[buildid]
-	s.lock.RUnlock()
+func (i *IDsTxtRepo) readFromCache(buildID string) (elflib.BinaryFileRef, bool) {
+	i.lock.RLock()
+	defer i.lock.RUnlock()
+	info, ok := i.cached[buildID]
 	return info, ok
 }
 
-// GetBuildObject lets you get the build object associated with a build ID.
-func (s *SymbolizerRepo) GetBuildObject(buildid string) (string, error) {
-	// No defer is used here because we don't want to hold the read lock
-	// for very long.
-	info, ok := s.readInfo(buildid)
-	if !ok {
-		// If we don't recognize that build ID, reload all sources.
-		s.reloadSources()
-		info, ok = s.readInfo(buildid)
-		if !ok {
-			// If we still don't know about that build, return an error.
-			return "", fmt.Errorf("unrecognized build ID %s", buildid)
+func (i *IDsTxtRepo) updateCache() error {
+	i.lock.Lock()
+	defer i.lock.Unlock()
+	bins, err := i.getBinaries()
+	if err != nil {
+		return err
+	}
+	newCache := make(map[string]elflib.BinaryFileRef)
+	// TODO(jakehehrlich): Do this in parallel.
+	for _, bin := range bins {
+		newCache[bin.BuildID] = bin
+	}
+	i.cached = newCache
+	return nil
+}
+
+func (i *IDsTxtRepo) GetBuildObject(buildID string) (string, error) {
+	if file, ok := i.readFromCache(buildID); ok && file.Verify() != nil {
+		return file.Filepath, nil
+	}
+	if err := i.updateCache(); err != nil {
+		return "", err
+	}
+	if file, ok := i.readFromCache(buildID); ok {
+		if err := file.Verify(); err != nil {
+			return "", err
+		}
+		return file.Filepath, nil
+	}
+	return "", fmt.Errorf("could not find file for %s", buildID)
+}
+
+type CompositeRepo struct {
+	repos []Repository
+}
+
+// AddRepo adds a repo to be checked that has lower priority than any other
+// previouslly added repo. This operation is not thread safe.
+func (c *CompositeRepo) AddRepo(repo Repository) {
+	c.repos = append(c.repos, repo)
+}
+
+func (c *CompositeRepo) GetBuildObject(buildID string) (string, error) {
+	for _, repo := range c.repos {
+		if file, err := repo.GetBuildObject(buildID); err != nil {
+			return file, nil
 		}
 	}
-	return info.filepath, nil
+	return "", fmt.Errorf("could not find file for %s", buildID)
+}
+
+type NewBuildIDRepo string
+
+func (b NewBuildIDRepo) GetBuildObject(buildID string) (string, error) {
+	if len(buildID) < 4 {
+		return "", fmt.Errorf("build ID must be the hex representation of at least 2 bytes")
+	}
+	bin := elflib.BinaryFileRef{
+		Filepath: filepath.Join(string(b), buildID[:2], buildID[2:]) + ".debug",
+		BuildID:  buildID,
+	}
+	if err := bin.Verify(); err != nil {
+		return "", err
+	}
+	return bin.Filepath, nil
 }
