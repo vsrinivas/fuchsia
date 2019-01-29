@@ -13,7 +13,7 @@ communication protocols, typically defined using FIDL. These protocols are
 spoken over various kernel primitives, including channels and sockets.
 
 The `fuchsia.io` FIDL library provides protocols for file and directory
-operations. Fuchsia uses the `fuchsia.io` protocols to provide a namespaces to
+operations. Fuchsia uses the `fuchsia.io` protocols to provide a namespace to
 components through which components can access system services and resources.
 The names in these namespaces follow certain conventions, which are part of the
 system ABI. See [namespaces](../../the-book/namespaces.md) for more details.
@@ -154,7 +154,7 @@ Fuchsia uses the ELF data format for executables. When loading an executable
 into a process, the loader parses contents of the executable as ELF. The loader
 reads the `INTERP` directive from the executable and resolves that name as a
 file in the `lib` directory of the package that contained the executable. The
-loader then parses contents of the `INTERP` file an ELF shared library,
+loader then parses the contents of the `INTERP` file as an ELF shared library,
 relocates the library, and maps the library into the newly created process.
 
 #### Startup message
@@ -187,7 +187,7 @@ system ABI.
 #### Job policy
 
 Processes are run in jobs, which can apply policy to the processes and jobs they
-contain. The job policy applies to processes is part of the system ABI. For
+contain. The job policy applied to processes is part of the system ABI. For
 example, components run in processes with `ZX_POL_NEW_PROCESS` set to
 `ZX_POL_ACTION_DENY`, which forces components to use the
 `fuchsia.process.Launcher` service to create processes rather than issuing the
