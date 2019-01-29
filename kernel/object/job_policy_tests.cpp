@@ -85,6 +85,25 @@ static bool add_basic_policy_unmodified_on_error() {
     END_TEST;
 }
 
+static bool add_basic_policy_deny_any() {
+    BEGIN_TEST;
+
+    JobPolicy p;
+    zx_policy_basic_t policy{ZX_POL_NEW_ANY, ZX_POL_ACTION_DENY};
+    ASSERT_EQ(ZX_OK, p.AddBasicPolicy(ZX_JOB_POL_ABSOLUTE, &policy, 1), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_VMO), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_CHANNEL), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENT), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_EVENTPAIR), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PORT), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_SOCKET), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_FIFO), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_TIMER), "");
+    ASSERT_EQ(ZX_POL_ACTION_DENY, p.QueryBasicPolicy(ZX_POL_NEW_PROCESS), "");
+
+    END_TEST;
+}
+
 static bool set_get_timer_slack() {
     BEGIN_TEST;
 
@@ -103,5 +122,6 @@ UNITTEST("initial_state", initial_state)
 UNITTEST("add_basic_policy_absolute", add_basic_policy_absolute)
 UNITTEST("add_basic_policy_relative", add_basic_policy_relative)
 UNITTEST("add_basic_policy_unmodified_on_error", add_basic_policy_unmodified_on_error)
+UNITTEST("add_basic_policy_deny_any", add_basic_policy_deny_any)
 UNITTEST("set_get_timer_slack", set_get_timer_slack)
 UNITTEST_END_TESTCASE(job_policy_tests, "job_policy", "JobPolicy tests");

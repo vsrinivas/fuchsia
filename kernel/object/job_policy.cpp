@@ -6,6 +6,7 @@
 
 #include <assert.h>
 #include <err.h>
+#include <fbl/algorithm.h>
 #include <kernel/deadline.h>
 #include <zircon/syscalls/policy.h>
 
@@ -63,8 +64,22 @@ constexpr uint32_t kPolicyActionValidBits =
 // space of a single uint64_t so the 'union' trick works.
 static_assert(sizeof(Encoding) == sizeof(pol_cookie_t), "bitfield issue");
 
-// Make sure that adding new policies forces updating this file.
-static_assert(ZX_POL_MAX == 13u, "please update PolicyManager AddPolicy and QueryBasicPolicy");
+// It is critical that this array contain all "new object" policies because it's used to implement
+// ZX_NEW_ANY.
+const uint32_t kNewObjectPolicies[]{
+    ZX_POL_NEW_VMO,
+    ZX_POL_NEW_CHANNEL,
+    ZX_POL_NEW_EVENT,
+    ZX_POL_NEW_EVENTPAIR,
+    ZX_POL_NEW_PORT,
+    ZX_POL_NEW_SOCKET,
+    ZX_POL_NEW_FIFO,
+    ZX_POL_NEW_TIMER,
+    ZX_POL_NEW_PROCESS,
+};
+static_assert(
+    fbl::count_of(kNewObjectPolicies) + 4 == ZX_POL_MAX,
+    "please update JobPolicy::AddPartial, JobPolicy::QueryBasicPolicy, and kNewObjectPolicies");
 
 bool CanSetEntry(uint64_t existing, uint32_t new_action) {
     if (Encoding::is_default(existing))
@@ -184,8 +199,8 @@ zx_status_t JobPolicy::AddBasicPolicy(uint32_t mode,
 
         if (in.condition == ZX_POL_NEW_ANY) {
             // loop over all ZX_POL_NEW_xxxx conditions.
-            for (uint32_t it = ZX_POL_NEW_VMO; it <= ZX_POL_NEW_TIMER; ++it) {
-                if ((res = AddPartial(mode, new_cookie, it, in.policy, &partials[it])) < 0) {
+            for (auto pol : kNewObjectPolicies) {
+                if ((res = AddPartial(mode, new_cookie, pol, in.policy, &partials[pol])) < 0) {
                     return res;
                 }
             }
