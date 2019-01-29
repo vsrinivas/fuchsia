@@ -56,3 +56,22 @@ pub trait Station {
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
 pub type InfoStream = mpsc::UnboundedReceiver<InfoEvent>;
+
+
+mod responder {
+    use futures::channel::oneshot;
+
+    #[derive(Debug)]
+    pub struct Responder<T>(oneshot::Sender<T>);
+
+    impl<T> Responder<T> {
+        pub fn new() -> (Self, oneshot::Receiver<T>) {
+            let (sender, receiver) = oneshot::channel();
+            (Responder(sender), receiver)
+        }
+
+        pub fn respond(self, result: T) {
+            self.0.send(result).unwrap_or_else(|_| ());
+        }
+    }
+}

@@ -8,23 +8,24 @@ use wlan_rsn::key::exchange::Key;
 use wlan_rsn::rsna::{self, SecAssocUpdate, SecAssocStatus};
 
 use super::bss::convert_bss_description;
-use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent, Status, Tokens};
+use super::{ConnectFailure, ConnectPhyParams, ConnectResult, InfoEvent, Status};
 use super::rsn::Rsna;
 
 use crate::MlmeRequest;
 use crate::client::{Context, event::{self, Event}, report_connect_finished};
 use crate::clone_utils::clone_bss_desc;
 use crate::phy_selection::{derive_phy_cbw};
+use crate::responder::Responder;
 use crate::sink::MlmeSink;
 use crate::timer::EventId;
 
 const DEFAULT_JOIN_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 const DEFAULT_AUTH_FAILURE_TIMEOUT: u32 = 20; // beacon intervals
 
-#[derive(Debug, PartialEq)]
-pub enum LinkState<T: Tokens> {
+#[derive(Debug)]
+pub enum LinkState {
     EstablishingRsna {
-        token: Option<T::ConnectToken>,
+        responder: Option<Responder<ConnectResult>>,
         rsna: Rsna,
         // Timeout for the total duration RSNA may take to complete.
         rsna_timeout: Option<EventId>,
@@ -36,10 +37,10 @@ pub enum LinkState<T: Tokens> {
     LinkUp(Option<Rsna>)
 }
 
-#[derive(Debug, PartialEq)]
-pub struct ConnectCommand<T> {
+#[derive(Debug)]
+pub struct ConnectCommand {
     pub bss: Box<BssDescription>,
-    pub token: Option<T>,
+    pub responder: Option<Responder<ConnectResult>>,
     pub rsna: Option<Rsna>,
     pub params: ConnectPhyParams
 }
@@ -54,28 +55,28 @@ pub enum RsnaStatus {
     },
 }
 
-#[derive(Debug, PartialEq)]
-pub enum State<T: Tokens> {
+#[derive(Debug)]
+pub enum State {
     Idle,
     Joining {
-        cmd: ConnectCommand<T::ConnectToken>,
+        cmd: ConnectCommand,
     },
     Authenticating {
-        cmd: ConnectCommand<T::ConnectToken>,
+        cmd: ConnectCommand,
     },
     Associating {
-        cmd: ConnectCommand<T::ConnectToken>,
+        cmd: ConnectCommand,
     },
     Associated {
         bss: Box<BssDescription>,
         last_rssi: Option<i8>,
-        link_state: LinkState<T>,
+        link_state: LinkState,
         params: ConnectPhyParams,
     },
 }
 
-impl<T: Tokens> State<T> {
-    pub fn on_mlme_event(self, event: MlmeEvent, context: &mut Context<T>) -> Self {
+impl State {
+    pub fn on_mlme_event(self, event: MlmeEvent, context: &mut Context) -> Self {
         match self {
             State::Idle => {
                 warn!("Unexpected MLME message while Idle: {:?}", event);
@@ -94,7 +95,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Join request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
+                        report_connect_finished(cmd.responder, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::JoinFailure(other)),
                         );
                         State::Idle
@@ -111,7 +112,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Authenticate request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
+                        report_connect_finished(cmd.responder, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::AuthenticationFailure(other)),
                         );
                         State::Idle
@@ -127,7 +128,7 @@ impl<T: Tokens> State<T> {
                         match cmd.rsna {
                             Some(mut rsna) => match rsna.supplicant.start() {
                                 Err(e) => {
-                                    handle_supplicant_start_failure(cmd.token, cmd.bss,
+                                    handle_supplicant_start_failure(cmd.responder, cmd.bss,
                                                                     &context, e);
                                     State::Idle
                                 },
@@ -141,7 +142,7 @@ impl<T: Tokens> State<T> {
                                         bss: cmd.bss,
                                         last_rssi: None,
                                         link_state: LinkState::EstablishingRsna {
-                                            token: cmd.token,
+                                            responder: cmd.responder,
                                             rsna,
                                             rsna_timeout,
                                             resp_timeout: None,
@@ -151,7 +152,7 @@ impl<T: Tokens> State<T> {
                                 }
                             },
                             None => {
-                                report_connect_finished(cmd.token, &context,
+                                report_connect_finished(cmd.responder, &context,
                                                         ConnectResult::Success, None);
                                 State::Associated {
                                     bss: cmd.bss,
@@ -164,7 +165,7 @@ impl<T: Tokens> State<T> {
                     },
                     other => {
                         error!("Associate request failed with result code {:?}", other);
-                        report_connect_finished(cmd.token, &context, ConnectResult::Failed,
+                        report_connect_finished(cmd.responder, &context, ConnectResult::Failed,
                                                 Some(ConnectFailure::AssociationFailure(other)),
                         );
                         State::Idle
@@ -174,9 +175,10 @@ impl<T: Tokens> State<T> {
             },
             State::Associated { bss, last_rssi, link_state, params, } => match event {
                 MlmeEvent::DisassociateInd{ .. } => {
-                    let (token, mut rsna) = match link_state {
+                    let (responder, mut rsna) = match link_state {
                         LinkState::LinkUp(rsna) => (None, rsna),
-                        LinkState::EstablishingRsna{ token, rsna, .. } => (token, Some(rsna)),
+                        LinkState::EstablishingRsna{ responder, rsna, .. }
+                                => (responder, Some(rsna)),
                     };
                     // Client is disassociating. The ESS-SA must be kept alive but reset.
                     if let Some(rsna) = &mut rsna {
@@ -185,7 +187,7 @@ impl<T: Tokens> State<T> {
 
                     let cmd = ConnectCommand{
                         bss,
-                        token,
+                        responder,
                         rsna,
                         params,
                     };
@@ -193,9 +195,9 @@ impl<T: Tokens> State<T> {
                     to_associating_state(cmd, &context.mlme_sink)
                 },
                 MlmeEvent::DeauthenticateInd{ ind } => {
-                    if let LinkState::EstablishingRsna{ token, .. } = link_state {
+                    if let LinkState::EstablishingRsna{ responder, .. } = link_state {
                         let connect_result = deauth_code_to_connect_result(ind.reason_code);
-                        report_connect_finished(token, &context, connect_result, None);
+                        report_connect_finished(responder, &context, connect_result, None);
                     }
                     State::Idle
                 },
@@ -208,7 +210,7 @@ impl<T: Tokens> State<T> {
                     }
                 },
                 MlmeEvent::EapolInd{ ref ind } if bss.rsn.is_some() => match link_state {
-                    LinkState::EstablishingRsna{ token, mut rsna, rsna_timeout,
+                    LinkState::EstablishingRsna{ responder, mut rsna, rsna_timeout,
                                                  mut resp_timeout } => {
                         match process_eapol_ind(context, &mut rsna, &ind) {
                             RsnaStatus::Established => {
@@ -220,19 +222,19 @@ impl<T: Tokens> State<T> {
                                 ));
                                 context.info_sink.send(
                                     InfoEvent::RsnaEstablished { att_id: context.att_id });
-                                report_connect_finished(token, &context,
+                                report_connect_finished(responder, &context,
                                                         ConnectResult::Success, None);
                                 let link_state = LinkState::LinkUp(Some(rsna));
                                 State::Associated { bss, last_rssi, link_state, params, }
                             },
                             RsnaStatus::Failed(result) => {
-                                report_connect_finished(token, &context, result, None);
+                                report_connect_finished(responder, &context, result, None);
                                 send_deauthenticate_request(bss, &context.mlme_sink);
                                 State::Idle
                             },
                             RsnaStatus::Unchanged => {
                                 let link_state = LinkState::EstablishingRsna {
-                                    token, rsna, rsna_timeout, resp_timeout };
+                                    responder, rsna, rsna_timeout, resp_timeout };
                                 State::Associated { bss, last_rssi, link_state, params, }
                             },
                             RsnaStatus::Progressed { new_resp_timeout } => {
@@ -241,7 +243,7 @@ impl<T: Tokens> State<T> {
                                     resp_timeout.replace(id);
                                 }
                                 let link_state = LinkState::EstablishingRsna {
-                                    token, rsna, rsna_timeout, resp_timeout};
+                                    responder, rsna, rsna_timeout, resp_timeout};
                                 State::Associated { bss, last_rssi, link_state, params, }
                             }
                         }
@@ -263,16 +265,17 @@ impl<T: Tokens> State<T> {
         }
     }
 
-    pub fn handle_timeout(self, event_id: EventId, event: Event, context: &mut Context<T>) -> Self {
+    pub fn handle_timeout(self, event_id: EventId, event: Event, context: &mut Context) -> Self {
         match self {
             State::Associated { bss, last_rssi, link_state, params } => match link_state {
-                LinkState::EstablishingRsna { token, rsna, mut rsna_timeout, mut resp_timeout } => {
+                LinkState::EstablishingRsna { responder, rsna,
+                                              mut rsna_timeout, mut resp_timeout } => {
                     match event {
                         Event::EstablishingRsnaTimeout if triggered(&rsna_timeout,
                                                                     event_id) => {
                             error!("timeout establishing RSNA; deauthenticating");
                             cancel(&mut rsna_timeout);
-                            report_connect_finished(token, &context, ConnectResult::Failed,
+                            report_connect_finished(responder, &context, ConnectResult::Failed,
                                                     Some(ConnectFailure::RsnaTimeout));
                             send_deauthenticate_request(bss, &context.mlme_sink);
                             State::Idle
@@ -280,7 +283,7 @@ impl<T: Tokens> State<T> {
                         Event::KeyFrameExchangeTimeout { bssid, sta_addr, frame, attempt } => {
                             if !triggered(&resp_timeout, event_id) {
                                 let link_state = LinkState::EstablishingRsna {
-                                    token, rsna, rsna_timeout, resp_timeout, };
+                                    responder, rsna, rsna_timeout, resp_timeout, };
                                 return State::Associated { bss, last_rssi, link_state, params }
                             }
 
@@ -291,12 +294,12 @@ impl<T: Tokens> State<T> {
                                                           attempt + 1);
                                 resp_timeout.replace(id);
                                 let link_state = LinkState::EstablishingRsna {
-                                    token, rsna, rsna_timeout, resp_timeout, };
+                                    responder, rsna, rsna_timeout, resp_timeout, };
                                 State::Associated { bss, last_rssi, link_state, params }
                             } else {
                                 error!("timeout waiting for key frame for last attempt; deauth");
                                 cancel(&mut resp_timeout);
-                                report_connect_finished(token, &context, ConnectResult::Failed,
+                                report_connect_finished(responder, &context, ConnectResult::Failed,
                                                         Some(ConnectFailure::RsnaTimeout));
                                 send_deauthenticate_request(bss, &context.mlme_sink);
                                 State::Idle
@@ -304,7 +307,7 @@ impl<T: Tokens> State<T> {
                         },
                         _ => {
                             let link_state = LinkState::EstablishingRsna {
-                                token, rsna, rsna_timeout, resp_timeout };
+                                responder, rsna, rsna_timeout, resp_timeout };
                             State::Associated { bss, last_rssi, link_state, params }
                         },
                     }
@@ -315,7 +318,7 @@ impl<T: Tokens> State<T> {
         }
     }
 
-    pub fn connect(self, cmd: ConnectCommand<T::ConnectToken>, context: &mut Context<T>) -> Self {
+    pub fn connect(self, cmd: ConnectCommand, context: &mut Context) -> Self {
         self.disconnect_internal(context);
 
         let mut selected_bss = clone_bss_desc(&cmd.bss);
@@ -338,19 +341,19 @@ impl<T: Tokens> State<T> {
         State::Joining { cmd }
     }
 
-    pub fn disconnect(self, context: &Context<T>) -> Self {
+    pub fn disconnect(self, context: &Context) -> Self {
         self.disconnect_internal(context);
         State::Idle
     }
 
-    fn disconnect_internal(self, context: &Context<T>) {
+    fn disconnect_internal(self, context: &Context) {
         match self {
             State::Idle => {},
             State::Joining { cmd } | State::Authenticating { cmd }  => {
-                report_connect_finished(cmd.token, &context, ConnectResult::Canceled, None);
+                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled, None);
             },
             State::Associating{ cmd, .. } => {
-                report_connect_finished(cmd.token, &context, ConnectResult::Canceled, None);
+                report_connect_finished(cmd.responder, &context, ConnectResult::Canceled, None);
                 send_deauthenticate_request(cmd.bss, &context.mlme_sink);
             },
             State::Associated { bss, .. } => {
@@ -405,9 +408,8 @@ fn deauth_code_to_connect_result(reason_code: fidl_mlme::ReasonCode) -> ConnectR
     }
 }
 
-fn process_eapol_ind<T: Tokens>(context: &mut Context<T>, rsna: &mut Rsna,
-                                ind: &fidl_mlme::EapolIndication)
-                                -> RsnaStatus
+fn process_eapol_ind(context: &mut Context, rsna: &mut Rsna, ind: &fidl_mlme::EapolIndication)
+    -> RsnaStatus
 {
     let mic_size = rsna.negotiated_rsne.mic_size;
     let eapol_pdu = &ind.data[..];
@@ -466,9 +468,8 @@ fn process_eapol_ind<T: Tokens>(context: &mut Context<T>, rsna: &mut Rsna,
     RsnaStatus::Progressed { new_resp_timeout }
 }
 
-fn send_eapol_frame<T: Tokens>(context: &mut Context<T>, bssid: [u8; 6], sta_addr: [u8; 6],
-                               frame: eapol::KeyFrame, attempt: u32)
-                               -> EventId
+fn send_eapol_frame(context: &mut Context, bssid: [u8; 6], sta_addr: [u8; 6],
+                    frame: eapol::KeyFrame, attempt: u32) -> EventId
 {
     let resp_timeout_id = context.timer.schedule(Event::KeyFrameExchangeTimeout {
         bssid,
@@ -536,10 +537,7 @@ fn send_deauthenticate_request(current_bss: Box<BssDescription>,
     ));
 }
 
-fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &MlmeSink)
-    -> State<T>
-    where T: Tokens
-{
+fn to_associating_state(cmd: ConnectCommand, mlme_sink: &MlmeSink) -> State {
     let s_rsne_data = cmd.rsna.as_ref().map(|rsna| {
         let s_rsne = rsna.negotiated_rsne.to_full_rsne();
         let mut buf = Vec::with_capacity(s_rsne.len());
@@ -556,15 +554,16 @@ fn to_associating_state<T>(cmd: ConnectCommand<T::ConnectToken>, mlme_sink: &Mlm
     State::Associating { cmd }
 }
 
-fn handle_supplicant_start_failure<T>(token: Option<T::ConnectToken>, bss: Box<BssDescription>,
-                                      context: &Context<T>, e: failure::Error) where T: Tokens
+fn handle_supplicant_start_failure(responder: Option<Responder<ConnectResult>>,
+                                   bss: Box<BssDescription>,
+                                   context: &Context, e: failure::Error)
 {
     error!("deauthenticating; could not start Supplicant: {}", e);
     send_deauthenticate_request(bss, &context.mlme_sink);
 
     // TODO(hahnr): Report RSNA specific failure instead.
     let reason = fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified;
-    report_connect_finished(token, &context,
+    report_connect_finished(responder, &context,
                             ConnectResult::Failed,
                             Some(ConnectFailure::AssociationFailure(reason)));
 }
@@ -573,7 +572,7 @@ fn handle_supplicant_start_failure<T>(token: Option<T::ConnectToken>, bss: Box<B
 mod tests {
     use super::*;
     use failure::format_err;
-    use futures::channel::mpsc;
+    use futures::channel::{mpsc, oneshot};
     use std::error::Error;
     use std::sync::Arc;
     use wlan_rsn::{NegotiatedRsne, rsna::UpdateSink, rsne::RsnCapabilities};
@@ -587,26 +586,17 @@ mod tests {
         MockSupplicantController,
 
     };
-    use crate::client::{InfoSink, TimeStream, UserEvent, UserStream, UserSink};
+    use crate::client::{InfoSink, TimeStream};
     use crate::{DeviceInfo, InfoStream, MlmeStream, Ssid, test_utils, timer};
-
-    #[derive(Debug, PartialEq)]
-    struct FakeTokens;
-
-    impl Tokens for FakeTokens {
-        type ScanToken = u32;
-        type ConnectToken = u32;
-    }
 
     #[test]
     fn associate_happy_path_unprotected() {
         let mut h = TestHelper::new();
 
         let state = idle_state();
-        let command = connect_command_one();
+        let (command, receiver) = connect_command_one();
         let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
-        let command_token = command.token.unwrap();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
@@ -632,7 +622,7 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         // User should be notified that we are connected
-        expect_connect_result(&mut h.user_stream, command_token, ConnectResult::Success);
+        expect_result(receiver, ConnectResult::Success);
 
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 1 });
         expect_info_event(
@@ -646,10 +636,9 @@ mod tests {
         let (supplicant, suppl_mock) = mock_supplicant();
 
         let state = idle_state();
-        let command = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_rsna(supplicant);
         let bss_ssid = command.bss.ssid.clone();
         let bssid = command.bss.bssid.clone();
-        let command_token = command.token.unwrap();
 
         // Issue a "connect" command
         let state = state.connect(command, &mut h.context);
@@ -696,7 +685,7 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_set_ctrl_port(&mut h.mlme_stream, bssid, fidl_mlme::ControlledPortState::Open);
-        expect_connect_result(&mut h.user_stream, command_token, ConnectResult::Success);
+        expect_result(receiver, ConnectResult::Success);
         expect_info_event(&mut h.info_stream, InfoEvent::RsnaEstablished { att_id: 1 });
         expect_info_event(
             &mut h.info_stream,
@@ -707,8 +696,9 @@ mod tests {
     fn join_failure() {
         let mut h = TestHelper::new();
 
+        let (cmd, receiver) = connect_command_one();
         // Start in a "Joining" state
-        let state = State::Joining::<FakeTokens> { cmd: connect_command_one() };
+        let state = State::Joining { cmd };
 
         // (mlme->sme) Send an unsuccessful JoinConf
         let join_conf = MlmeEvent::JoinConf {
@@ -717,14 +707,10 @@ mod tests {
             }
         };
         let state = state.on_mlme_event(join_conf, &mut h.context);
-        assert_eq!(idle_state(), state);
+        assert_idle(state);
 
         // User should be notified that connection attempt failed
-        expect_connect_result(
-            &mut h.user_stream,
-            connect_command_one().token.unwrap(),
-            ConnectResult::Failed,
-        );
+        expect_result(receiver, ConnectResult::Failed);
 
         expect_info_event(
             &mut h.info_stream,
@@ -741,26 +727,24 @@ mod tests {
     fn authenticate_failure() {
         let mut h = TestHelper::new();
 
+        let (cmd, receiver) = connect_command_one();
+
         // Start in an "Authenticating" state
-        let state = State::Authenticating::<FakeTokens> { cmd: connect_command_one() };
+        let state = State::Authenticating { cmd };
 
         // (mlme->sme) Send an unsuccessful AuthenticateConf
         let auth_conf = MlmeEvent::AuthenticateConf {
             resp: fidl_mlme::AuthenticateConfirm {
-                peer_sta_address: connect_command_one().bss.bssid,
+                peer_sta_address: connect_command_one().0.bss.bssid,
                 auth_type: fidl_mlme::AuthenticationTypes::OpenSystem,
                 result_code: fidl_mlme::AuthenticateResultCodes::Refused,
             }
         };
         let state = state.on_mlme_event(auth_conf, &mut h.context);
-        assert_eq!(idle_state(), state);
+        assert_idle(state);
 
         // User should be notified that connection attempt failed
-        expect_connect_result(
-            &mut h.user_stream,
-            connect_command_one().token.unwrap(),
-            ConnectResult::Failed,
-        );
+        expect_result(receiver, ConnectResult::Failed);
 
         expect_info_event(
             &mut h.info_stream,
@@ -777,21 +761,19 @@ mod tests {
     fn associate_failure() {
         let mut h = TestHelper::new();
 
+        let (cmd, receiver) = connect_command_one();
+
         // Start in an "Associating" state
-        let state = State::Associating::<FakeTokens> { cmd: connect_command_one() };
+        let state = State::Associating { cmd };
 
         // (mlme->sme) Send an unsuccessful AssociateConf
         let assoc_conf = create_assoc_conf(
             fidl_mlme::AssociateResultCodes::RefusedReasonUnspecified);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
-        assert_eq!(idle_state(), state);
+        assert_idle(state);
 
         // User should be notified that connection attempt failed
-        expect_connect_result(
-            &mut h.user_stream,
-            connect_command_one().token.unwrap(),
-            ConnectResult::Failed,
-        );
+        expect_result(receiver, ConnectResult::Failed);
 
         expect_info_event(
             &mut h.info_stream,
@@ -807,44 +789,46 @@ mod tests {
     #[test]
     fn connect_while_joining() {
         let mut h = TestHelper::new();
-        let state = joining_state(connect_command_one());
-        let state = state.connect(connect_command_two(), &mut h.context);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
-        assert_eq!(joining_state(connect_command_two()), state);
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = joining_state(cmd_one);
+        let (cmd_two, _receiver_two) = connect_command_two();
+        let state = state.connect(cmd_two, &mut h.context);
+        expect_result(receiver_one, ConnectResult::Canceled);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        assert_joining(state, &connect_command_two().0.bss);
     }
 
     #[test]
     fn connect_while_authenticating() {
         let mut h = TestHelper::new();
-        let state = authenticating_state(connect_command_one());
-        let state = state.connect(connect_command_two(), &mut h.context);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
-        assert_eq!(joining_state(connect_command_two()), state);
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = authenticating_state(cmd_one);
+        let (cmd_two, _receiver_two) = connect_command_two();
+        let state = state.connect(cmd_two, &mut h.context);
+        expect_result(receiver_one, ConnectResult::Canceled);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        assert_joining(state, &connect_command_two().0.bss);
     }
 
     #[test]
     fn connect_while_associating() {
         let mut h = TestHelper::new();
-        let state = associating_state(connect_command_one());
-        let state = state.connect(connect_command_two(), &mut h.context);
+        let (cmd_one, receiver_one) = connect_command_one();
+        let state = associating_state(cmd_one);
+        let (cmd_two, _receiver_two) = connect_command_two();
+        let state = state.connect(cmd_two, &mut h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
-        assert_eq!(joining_state(connect_command_two()), state);
+        expect_result(receiver_one, ConnectResult::Canceled);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        assert_joining(state, &connect_command_two().0.bss);
     }
 
     #[test]
     fn supplicant_fails_to_start_while_associating() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
-        let token = command.token.unwrap();
         let state = associating_state(command);
 
         suppl_mock.set_start_failure(format_err!("failed to start supplicant"));
@@ -854,7 +838,7 @@ mod tests {
         let _state = state.on_mlme_event(assoc_conf, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_connect_result(&mut h.user_stream, token, ConnectResult::Failed);
+        expect_result(receiver, ConnectResult::Failed);
         expect_info_event(&mut h.info_stream, InfoEvent::AssociationSuccess { att_id: 0 });
         expect_info_event(
             &mut h.info_stream,
@@ -871,7 +855,7 @@ mod tests {
     fn bad_eapol_frame_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, mut receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -883,6 +867,8 @@ mod tests {
         let eapol_ind = create_eapol_ind(bssid.clone(), vec![1, 2, 3, 4]);
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
+        assert_eq!(Ok(None), receiver.try_recv());
+
         match state {
             State::Associated { link_state, .. } => match link_state {
                 LinkState::EstablishingRsna { .. } => (), // expected path
@@ -892,7 +878,6 @@ mod tests {
         }
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
-        expect_stream_empty(&mut h.user_stream, "unexpected event in user stream");
         expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
     }
 
@@ -900,7 +885,7 @@ mod tests {
     fn supplicant_fails_to_process_eapol_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, mut receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
         let state = establishing_rsna_state(command);
 
@@ -910,6 +895,8 @@ mod tests {
         let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
         let state = state.on_mlme_event(eapol_ind, &mut h.context);
 
+        assert_eq!(Ok(None), receiver.try_recv());
+
         match state {
             State::Associated { link_state, .. } => match link_state {
                 LinkState::EstablishingRsna { .. } => (), // expected path
@@ -919,7 +906,6 @@ mod tests {
         }
 
         expect_stream_empty(&mut h.mlme_stream, "unexpected event in mlme stream");
-        expect_stream_empty(&mut h.user_stream, "unexpected event in user stream");
         expect_stream_empty(&mut h.info_stream, "unexpected event in info stream");
     }
 
@@ -927,9 +913,8 @@ mod tests {
     fn wrong_password_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
-        let token = command.token.unwrap();
         let state = establishing_rsna_state(command);
 
         // (mlme->sme) Send an EapolInd, mock supplicant with wrong password status
@@ -937,7 +922,7 @@ mod tests {
         let _state = on_eapol_ind(state, &mut h, bssid, &suppl_mock, vec![update]);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_connect_result(&mut h.user_stream, token, ConnectResult::BadCredentials);
+        expect_result(receiver, ConnectResult::BadCredentials);
         expect_info_event(
             &mut h.info_stream,
             InfoEvent::ConnectFinished {
@@ -951,12 +936,11 @@ mod tests {
     fn overall_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, _suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
-        let token = command.token.unwrap();
 
         // Start in an "Associating" state
-        let state = State::Associating::<FakeTokens> { cmd: command };
+        let state = State::Associating { cmd: command };
         let assoc_conf = create_assoc_conf(fidl_mlme::AssociateResultCodes::Success);
         let state = state.on_mlme_event(assoc_conf, &mut h.context);
 
@@ -971,16 +955,15 @@ mod tests {
         let _state = state.handle_timeout(timed_event.id, timed_event.event, &mut h.context);
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_connect_result(&mut h.user_stream, token, ConnectResult::Failed);
+        expect_result(receiver, ConnectResult::Failed);
     }
 
     #[test]
     fn key_frame_exchange_timeout_while_establishing_rsna() {
         let mut h = TestHelper::new();
         let (supplicant, suppl_mock) = mock_supplicant();
-        let command = connect_command_rsna(supplicant);
+        let (command, receiver) = connect_command_rsna(supplicant);
         let bssid = command.bss.bssid.clone();
-        let token = command.token.unwrap();
         let state = establishing_rsna_state(command);
 
         // (mlme->sme) Send an EapolInd, mock supplication with key frame
@@ -1001,68 +984,67 @@ mod tests {
         }
 
         expect_deauth_req(&mut h.mlme_stream, bssid, fidl_mlme::ReasonCode::StaLeaving);
-        expect_connect_result(&mut h.user_stream, token, ConnectResult::Failed);
+        expect_result(receiver, ConnectResult::Failed);
     }
 
 
     #[test]
     fn connect_while_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_one().bss);
-        let state = state.connect(connect_command_two(), &mut h.context);
+        let state = link_up_state(connect_command_one().0.bss);
+        let state = state.connect(connect_command_two().0, &mut h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_join_request(&mut h.mlme_stream, &connect_command_two().bss.ssid);
-        assert_eq!(joining_state(connect_command_two()), state);
+        expect_join_request(&mut h.mlme_stream, &connect_command_two().0.bss.ssid);
+        assert_joining(state, &connect_command_two().0.bss);
     }
 
     #[test]
     fn disconnect_while_idle() {
         let mut h = TestHelper::new();
         let new_state = idle_state().disconnect(&h.context);
-        assert_eq!(idle_state(), new_state);
-        // Expect no messages to the MLME or the user
+        assert_idle(new_state);
+        // Expect no messages to the MLME
         assert!(h.mlme_stream.try_next().is_err());
-        assert!(h.user_stream.try_next().is_err());
     }
 
     #[test]
     fn disconnect_while_joining() {
-        let mut h = TestHelper::new();
-        let state = joining_state(connect_command_one());
+        let h = TestHelper::new();
+        let (cmd, receiver) = connect_command_one();
+        let state = joining_state(cmd);
         let state = state.disconnect(&h.context);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        assert_eq!(idle_state(), state);
+        expect_result(receiver, ConnectResult::Canceled);
+        assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_authenticating() {
-        let mut h = TestHelper::new();
-        let state = authenticating_state(connect_command_one());
+        let h = TestHelper::new();
+        let (cmd, receiver) = connect_command_one();
+        let state = authenticating_state(cmd);
         let state = state.disconnect(&h.context);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        assert_eq!(idle_state(), state);
+        expect_result(receiver, ConnectResult::Canceled);
+        assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_associating() {
         let mut h = TestHelper::new();
-        let state = associating_state(connect_command_one());
+        let (cmd, receiver) = connect_command_one();
+        let state = associating_state(cmd);
         let state = state.disconnect(&h.context);
         let state = exchange_deauth(state, &mut h);
-        expect_connect_result(&mut h.user_stream, connect_command_one().token.unwrap(),
-                              ConnectResult::Canceled);
-        assert_eq!(idle_state(), state);
+        expect_result(receiver, ConnectResult::Canceled);
+        assert_idle(state);
     }
 
     #[test]
     fn disconnect_while_link_up() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_one().bss);
+        let state = link_up_state(connect_command_one().0.bss);
         let state = state.disconnect(&h.context);
         let state = exchange_deauth(state, &mut h);
-        assert_eq!(idle_state(), state);
+        assert_idle(state);
     }
 
     #[test]
@@ -1071,23 +1053,23 @@ mod tests {
         let state = idle_state();
         assert_eq!(h.context.att_id, 0);
 
-        let state = state.connect(connect_command_one(), &mut h.context);
+        let state = state.connect(connect_command_one().0, &mut h.context);
         assert_eq!(h.context.att_id, 1);
 
         let state = state.disconnect(&h.context);
         assert_eq!(h.context.att_id, 1);
 
-        let state = state.connect(connect_command_two(), &mut h.context);
+        let state = state.connect(connect_command_two().0, &mut h.context);
         assert_eq!(h.context.att_id, 2);
 
-        let _state = state.connect(connect_command_one(), &mut h.context);
+        let _state = state.connect(connect_command_one().0, &mut h.context);
         assert_eq!(h.context.att_id, 3);
     }
 
     #[test]
     fn increment_att_id_on_disassociate_ind() {
         let mut h = TestHelper::new();
-        let state = link_up_state(connect_command_no_token().bss);
+        let state = link_up_state(Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])));
         assert_eq!(h.context.att_id, 0);
 
         let disassociate_ind = MlmeEvent::DisassociateInd {
@@ -1098,39 +1080,35 @@ mod tests {
         };
 
         let state = state.on_mlme_event(disassociate_ind, &mut h.context);
-        assert_eq!(associating_state(connect_command_no_token()), state);
+        assert_associating(state, &unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8]));
         assert_eq!(h.context.att_id, 1);
     }
 
     struct TestHelper {
         mlme_stream: MlmeStream,
-        user_stream: UserStream<FakeTokens>,
         info_stream: InfoStream,
         time_stream: TimeStream,
-        context: Context<FakeTokens>,
+        context: Context,
     }
 
     impl TestHelper {
         fn new() -> Self {
             let (mlme_sink, mlme_stream) = mpsc::unbounded();
-            let (user_sink, user_stream) = mpsc::unbounded();
             let (info_sink, info_stream) = mpsc::unbounded();
             let (timer, time_stream) = timer::create_timer();
             let context = Context {
                 device_info: Arc::new(fake_device_info()),
                 mlme_sink: MlmeSink::new(mlme_sink),
-                user_sink: UserSink::new(user_sink),
                 info_sink: InfoSink::new(info_sink),
                 timer,
                 att_id: 0,
             };
-            TestHelper { mlme_stream, user_stream, info_stream, time_stream, context }
+            TestHelper { mlme_stream, info_stream, time_stream, context }
         }
     }
 
-    fn on_eapol_ind(state: State<FakeTokens>, helper: &mut TestHelper, bssid: [u8; 6],
-                    suppl_mock: &MockSupplicantController, update_sink: UpdateSink)
-                    -> State<FakeTokens> {
+    fn on_eapol_ind(state: State, helper: &mut TestHelper, bssid: [u8; 6],
+                    suppl_mock: &MockSupplicantController, update_sink: UpdateSink) -> State {
         suppl_mock.set_on_eapol_frame_results(update_sink);
         // (mlme->sme) Send an EapolInd
         let eapol_ind = create_eapol_ind(bssid.clone(), test_utils::eapol_key_frame_bytes());
@@ -1175,11 +1153,11 @@ mod tests {
         }
     }
 
-    fn exchange_deauth(state: State<FakeTokens>, h: &mut TestHelper) -> State<FakeTokens> {
+    fn exchange_deauth(state: State, h: &mut TestHelper) -> State {
         // (sme->mlme) Expect a DeauthenticateRequest
         match h.mlme_stream.try_next().unwrap() {
             Some(MlmeRequest::Deauthenticate(req)) => {
-                assert_eq!(connect_command_one().bss.bssid, req.peer_sta_address);
+                assert_eq!(connect_command_one().0.bss.bssid, req.peer_sta_address);
             },
             other => panic!("expected a Deauthenticate request, got {:?}", other),
         }
@@ -1187,7 +1165,7 @@ mod tests {
         // (mlme->sme) Send a DeauthenticateConf as a response
         let deauth_conf = MlmeEvent::DeauthenticateConf {
             resp: fidl_mlme::DeauthenticateConfirm {
-                peer_sta_address: connect_command_one().bss.bssid,
+                peer_sta_address: connect_command_one().0.bss.bssid,
             }
         };
         state.on_mlme_event(deauth_conf, &mut h.context)
@@ -1197,7 +1175,7 @@ mod tests {
         // (sme->mlme) Expect a JoinRequest
         match mlme_stream.try_next().unwrap() {
             Some(MlmeRequest::Join(req)) => assert_eq!(ssid, &req.selected_bss.ssid[..]),
-            _ => panic!("expect set keys req to MLME"),
+            other => panic!("expect join req to MLME, got {:?}", other),
         }
     }
 
@@ -1282,16 +1260,10 @@ mod tests {
         }
     }
 
-    fn expect_connect_result(user_stream: &mut UserStream<FakeTokens>,
-                             expected_token: u32,
-                             expected_result: ConnectResult) {
-        match user_stream.try_next().unwrap() {
-            Some(UserEvent::ConnectFinished { token, result }) => {
-                assert_eq!(expected_token, token);
-                assert_eq!(expected_result, result);
-            },
-            other => panic!("expected a ConnectFinished event, got {:?}", other)
-        }
+    fn expect_result<T>(mut receiver: oneshot::Receiver<T>, expected_result: T)
+        where T: PartialEq + ::std::fmt::Debug
+    {
+        assert_eq!(Ok(Some(expected_result)), receiver.try_recv());
     }
 
     fn expect_stream_empty<T>(stream: &mut mpsc::UnboundedReceiver<T>, error_msg: &str) {
@@ -1301,70 +1273,90 @@ mod tests {
         }
     }
 
-    fn connect_command_one() -> ConnectCommand<u32> {
-        ConnectCommand {
+    fn connect_command_one() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
+        let (responder, receiver) = Responder::new();
+        let cmd = ConnectCommand {
             bss: Box::new(unprotected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7])),
-            token: Some(123_u32),
+            responder: Some(responder),
             rsna: None,
             params: ConnectPhyParams { phy: None, cbw: None, },
-        }
+        };
+        (cmd, receiver)
     }
 
-    fn connect_command_two() -> ConnectCommand<u32> {
-        ConnectCommand {
+    fn connect_command_two() -> (ConnectCommand, oneshot::Receiver<ConnectResult>) {
+        let (responder, receiver) = Responder::new();
+        let cmd = ConnectCommand {
             bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
-            token: Some(456_u32),
+            responder: Some(responder),
             rsna: None,
             params: ConnectPhyParams { phy: None, cbw: None, },
-        }
+        };
+        (cmd, receiver)
     }
 
-    fn connect_command_no_token() -> ConnectCommand<u32> {
-        ConnectCommand {
-            bss: Box::new(unprotected_bss(b"bar".to_vec(), [8, 8, 8, 8, 8, 8])),
-            token: None,
-            rsna: None,
-            params: ConnectPhyParams { phy: None, cbw: None, },
-        }
-    }
-
-    fn connect_command_rsna(supplicant: MockSupplicant) -> ConnectCommand<u32> {
+    fn connect_command_rsna(supplicant: MockSupplicant)
+            -> (ConnectCommand, oneshot::Receiver<ConnectResult>)
+    {
+        let (responder, receiver) = Responder::new();
         let bss = protected_bss(b"foo".to_vec(), [7, 7, 7, 7, 7, 7]);
         let rsne = test_utils::wpa2_psk_ccmp_rsne_with_caps(RsnCapabilities(0));
-        ConnectCommand {
+        let cmd = ConnectCommand {
             bss: Box::new(bss),
-            token: Some(123_u32),
+            responder: Some(responder),
             rsna: Some(Rsna {
                 negotiated_rsne: NegotiatedRsne::from_rsne(&rsne).expect("invalid NegotiatedRsne"),
                 supplicant: Box::new(supplicant),
             }),
             params: ConnectPhyParams { phy: None, cbw: None, },
-        }
+        };
+        (cmd, receiver)
     }
 
-    fn idle_state() -> State<FakeTokens> {
+    fn idle_state() -> State {
         State::Idle
     }
 
-    fn joining_state(cmd: ConnectCommand<u32>) -> State<FakeTokens> {
+    fn assert_idle(state: State) {
+        match state {
+            State::Idle => {},
+            other => panic!("Expected an Idle state, got {:?}", other),
+        }
+    }
+
+    fn joining_state(cmd: ConnectCommand) -> State {
         State::Joining { cmd }
     }
 
-    fn authenticating_state(cmd: ConnectCommand<u32>) -> State<FakeTokens> {
+    fn assert_joining(state: State, bss: &BssDescription) {
+        match state {
+            State::Joining { cmd } => { assert_eq!(cmd.bss.as_ref(), bss); },
+            other => panic!("Expected a Joining state, got {:?}", other),
+        }
+    }
+
+    fn authenticating_state(cmd: ConnectCommand) -> State {
         State::Authenticating { cmd }
     }
 
-    fn associating_state(cmd: ConnectCommand<u32>) -> State<FakeTokens> {
+    fn associating_state(cmd: ConnectCommand) -> State {
         State::Associating { cmd }
     }
 
-    fn establishing_rsna_state(cmd: ConnectCommand<u32>) -> State<FakeTokens> {
+    fn assert_associating(state: State, bss: &BssDescription) {
+        match state {
+            State::Associating { cmd } => { assert_eq!(cmd.bss.as_ref(), bss); },
+            other => panic!("Expected an Associating state, got {:?}", other),
+        }
+    }
+
+    fn establishing_rsna_state(cmd: ConnectCommand) -> State {
         let rsna = cmd.rsna.expect("expect rsna for establishing_rsna_state");
         State::Associated {
             bss: cmd.bss,
             last_rssi: None,
             link_state: LinkState::EstablishingRsna {
-                token: cmd.token,
+                responder: cmd.responder,
                 rsna,
                 rsna_timeout: None,
                 resp_timeout: None,
@@ -1373,7 +1365,7 @@ mod tests {
         }
     }
 
-    fn link_up_state(bss: Box<fidl_mlme::BssDescription>) -> State<FakeTokens> {
+    fn link_up_state(bss: Box<fidl_mlme::BssDescription>) -> State {
         State::Associated {
             bss,
             last_rssi: None,

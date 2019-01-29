@@ -93,7 +93,7 @@ pub enum ScanResult<D, J> {
 pub type JoinScanResult = Result<Vec<BssDescription>, JoinScanFailure>;
 pub type DiscoveryResult = Result<Vec<BssDescription>, DiscoveryError>;
 
-#[derive(Debug, Fail)]
+#[derive(Clone, Debug, Fail)]
 pub enum DiscoveryError {
     #[fail(display = "Scanning not supported by device")]
     NotSupported,

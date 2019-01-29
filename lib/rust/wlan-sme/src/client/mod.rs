@@ -13,7 +13,7 @@ pub mod test_utils;
 
 use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent, ScanRequest};
-use futures::channel::mpsc;
+use futures::channel::{mpsc, oneshot};
 use log::error;
 use std::collections::HashMap;
 use std::sync::Arc;
@@ -27,19 +27,12 @@ use self::rsn::get_rsna;
 use self::state::{ConnectCommand, State};
 
 use crate::clone_utils::clone_bss_desc;
+use crate::responder::Responder;
 use crate::sink::{InfoSink, MlmeSink};
 use crate::timer::{self, TimedEvent};
 
 pub use self::bss::{BssInfo, EssInfo};
 pub use self::scan::{DiscoveryError};
-
-// A token is an opaque value that identifies a particular request from a user.
-// To avoid parameterizing over many different token types, we introduce a helper
-// trait that enables us to group them into a single generic parameter.
-pub trait Tokens {
-    type ScanToken;
-    type ConnectToken;
-}
 
 // This is necessary to trick the private-in-public checker.
 // A private module is not allowed to include private types in its interface,
@@ -49,15 +42,13 @@ mod internal {
     use std::sync::Arc;
 
     use crate::DeviceInfo;
-    use crate::client::{ConnectionAttemptId, event::Event, Tokens};
-    use crate::sink::{InfoSink, MlmeSink, UnboundedSink};
+    use crate::client::{ConnectionAttemptId, event::Event};
+    use crate::sink::{InfoSink, MlmeSink};
     use crate::timer::Timer;
 
-    pub type UserSink<T> = UnboundedSink<super::UserEvent<T>>;
-    pub struct Context<T: Tokens> {
+    pub struct Context {
         pub device_info: Arc<DeviceInfo>,
         pub mlme_sink: MlmeSink,
-        pub user_sink: UserSink<T>,
         pub info_sink: InfoSink,
         pub(crate) timer: Timer<Event>,
         pub att_id: ConnectionAttemptId,
@@ -66,7 +57,6 @@ mod internal {
 
 use self::internal::*;
 
-pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 pub type TimeStream = timer::TimeStream<Event>;
 
 #[derive(Debug, PartialEq)]
@@ -75,24 +65,23 @@ pub struct ConnectPhyParams {
     pub cbw: Option<fidl_common::Cbw>,
 }
 
-pub struct ConnectConfig<T> {
-    user_token: T,
+pub struct ConnectConfig {
+    responder: Responder<ConnectResult>,
     password: Vec<u8>,
     params: ConnectPhyParams,
 }
 
 // An automatically increasing sequence number that uniquely identifies a logical
-// connection attempt. Similar to ConnectToken except it is not necessarily tied to a
-// particular external command. For example, a new connection attempt can be triggered
+// connection attempt. For example, a new connection attempt can be triggered
 // by a DisassociateInd message from the MLME.
 pub type ConnectionAttemptId = u64;
 
 pub type ScanTxnId = u64;
 
-pub struct ClientSme<T: Tokens> {
-    state: Option<State<T>>,
-    scan_sched: ScanScheduler<T::ScanToken, ConnectConfig<T::ConnectToken>>,
-    context: Context<T>,
+pub struct ClientSme {
+    state: Option<State>,
+    scan_sched: ScanScheduler<Responder<EssDiscoveryResult>, ConnectConfig>,
+    context: Context,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -114,19 +103,6 @@ pub enum ConnectFailure {
 }
 
 pub type EssDiscoveryResult = Result<Vec<EssInfo>, DiscoveryError>;
-
-// A message from the Client to a user or a group of listeners
-#[derive(Debug)]
-pub enum UserEvent<T: Tokens> {
-    ScanFinished {
-        tokens: Vec<T::ScanToken>,
-        result: EssDiscoveryResult,
-    },
-    ConnectFinished {
-        token: T::ConnectToken,
-        result: ConnectResult,
-    },
-}
 
 #[derive(Debug, PartialEq)]
 pub enum InfoEvent {
@@ -176,11 +152,10 @@ pub enum Standard {
     Ac
 }
 
-impl<T: Tokens> ClientSme<T> {
-    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, UserStream<T>, InfoStream, TimeStream) {
+impl ClientSme {
+    pub fn new(info: DeviceInfo) -> (Self, MlmeStream, InfoStream, TimeStream) {
         let device_info = Arc::new(info);
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let (user_sink, user_stream) = mpsc::unbounded();
         let (info_sink, info_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
         (
@@ -189,7 +164,6 @@ impl<T: Tokens> ClientSme<T> {
                 scan_sched: ScanScheduler::new(Arc::clone(&device_info)),
                 context: Context {
                     mlme_sink: MlmeSink::new(mlme_sink),
-                    user_sink: UserSink::new(user_sink),
                     info_sink: InfoSink::new(info_sink),
                     device_info,
                     timer,
@@ -197,30 +171,27 @@ impl<T: Tokens> ClientSme<T> {
                 },
             },
             mlme_stream,
-            user_stream,
             info_stream,
             time_stream,
         )
     }
 
     pub fn on_connect_command(&mut self, ssid: Ssid, password: Vec<u8>,
-                              token: T::ConnectToken, params: ConnectPhyParams) {
+                              params: ConnectPhyParams) -> oneshot::Receiver<ConnectResult> {
+        let (responder, receiver) = Responder::new();
         self.context.info_sink.send(InfoEvent::ConnectStarted);
         let (canceled_token, req) = self.scan_sched.enqueue_scan_to_join(
             JoinScan {
                 ssid,
-                token: ConnectConfig {
-                    user_token: token,
-                    password,
-                    params,
-                },
+                token: ConnectConfig { responder, password, params },
             });
         // If the new scan replaced an existing pending JoinScan, notify the existing transaction
         if let Some(token) = canceled_token {
-            report_connect_finished(Some(token.user_token), &self.context,
+            report_connect_finished(Some(token.responder), &self.context,
                                     ConnectResult::Canceled, None);
         }
         self.send_scan_request(req);
+        receiver
     }
 
     pub fn on_disconnect_command(&mut self) {
@@ -228,9 +199,11 @@ impl<T: Tokens> ClientSme<T> {
             |state| state.disconnect(&self.context));
     }
 
-    pub fn on_scan_command(&mut self, token: T::ScanToken) {
-        let req = self.scan_sched.enqueue_scan_to_discover(DiscoveryScan{ token });
+    pub fn on_scan_command(&mut self) -> oneshot::Receiver<EssDiscoveryResult> {
+        let (responder, receiver) = Responder::new();
+        let req = self.scan_sched.enqueue_scan_to_discover(DiscoveryScan{ token: responder });
         self.send_scan_request(req);
+        receiver
     }
 
     pub fn status(&self) -> Status {
@@ -255,7 +228,7 @@ impl<T: Tokens> ClientSme<T> {
     }
 }
 
-impl<T: Tokens> super::Station for ClientSme<T> {
+impl super::Station for ClientSme {
     type Event = Event;
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
@@ -278,7 +251,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                     Ok(rsna) => {
                                         let cmd = ConnectCommand {
                                             bss: Box::new(clone_bss_desc(&best_bss)),
-                                            token: Some(token.user_token),
+                                            responder: Some(token.responder),
                                             rsna,
                                             params: token.params,
                                         };
@@ -286,7 +259,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                                     },
                                     Err(err) => {
                                         error!("cannot join BSS {:02X?} {}", best_bss.bssid, err);
-                                        report_connect_finished(Some(token.user_token),
+                                        report_connect_finished(Some(token.responder),
                                                                 &self.context,
                                                                 ConnectResult::Failed, None);
                                         state
@@ -295,7 +268,7 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                             },
                             None => {
                                 error!("no matching BSS found");
-                                report_connect_finished(Some(token.user_token),
+                                report_connect_finished(Some(token.responder),
                                                         &self.context,
                                                         ConnectResult::Failed,
                                                         Some(ConnectFailure::NoMatchingBssFound));
@@ -303,16 +276,14 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                             }
                         }
                     },
-                    ScanResult::JoinScanFinished {token, result: Err(e) } => {
+                    ScanResult::JoinScanFinished { token, result: Err(e) } => {
                         error!("cannot join network because scan failed: {:?}", e);
                         let (result, failure) = match e {
                             JoinScanFailure::Canceled => (ConnectResult::Canceled, None),
                             JoinScanFailure::ScanFailed(code) =>
                                 (ConnectResult::Failed, Some(ConnectFailure::ScanFailure(code)))
                         };
-                        report_connect_finished(Some(token.user_token),
-                                                &self.context,
-                                                result, failure);
+                        report_connect_finished(Some(token.responder), &self.context, result, failure);
                         state
                     },
                     ScanResult::DiscoveryFinished { tokens, result } => {
@@ -337,10 +308,9 @@ impl<T: Tokens> super::Station for ClientSme<T> {
                             },
                             Err(e) => Err(e)
                         };
-                        self.context.user_sink.send(UserEvent::ScanFinished {
-                            tokens,
-                            result
-                        });
+                        for responder in tokens {
+                            responder.respond(result.clone());
+                        }
                         state
                     }
                 }
@@ -361,17 +331,12 @@ impl<T: Tokens> super::Station for ClientSme<T> {
     }
 }
 
-fn report_connect_finished<T>(token: Option<T::ConnectToken>,
-                              context: &Context<T>,
-                              result: ConnectResult,
-                              failure: Option<ConnectFailure>)
-    where T: Tokens
-{
-    if let Some(token) = token {
-        context.user_sink.send(UserEvent::ConnectFinished {
-            token,
-            result: result.clone(),
-        });
+fn report_connect_finished(responder: Option<Responder<ConnectResult>>,
+                           context: &Context,
+                           result: ConnectResult,
+                           failure: Option<ConnectFailure>) {
+    if let Some(responder) = responder {
+        responder.respond(result.clone());
     }
     context.info_sink.send(InfoEvent::ConnectFinished {
         result,
@@ -387,7 +352,6 @@ mod tests {
 
     use super::test_utils::{expect_info_event, fake_protected_bss_description,
                             fake_unprotected_bss_description};
-    use super::UserEvent::ConnectFinished;
 
     use crate::Station;
 
@@ -395,15 +359,15 @@ mod tests {
 
     #[test]
     fn status_connecting_to() {
-        let (mut sme, _mlme_stream, _user_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, _mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
         // Issue a connect command and expect the status to change appropriately.
         // We also check that the association machine state is still disconnected
         // to make sure that the status comes from the scanner.
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
-                               ConnectPhyParams { phy: None, cbw: None });
+        let _receiver = sme.on_connect_command(b"foo".to_vec(), vec![],
+                                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -430,8 +394,8 @@ mod tests {
 
         // Even if we scheduled a scan to connect to another network "bar", we should
         // still report that we are connecting to "foo".
-        sme.on_connect_command(b"bar".to_vec(), vec![], 10,
-                               ConnectPhyParams { phy: None, cbw: None});
+        let _receiver_2 = sme.on_connect_command(b"bar".to_vec(), vec![],
+                                                 ConnectPhyParams { phy: None, cbw: None});
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
                    sme.status());
 
@@ -447,14 +411,14 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, _user_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
         // Issue a connect command and verify that connecting_to status is changed for upper
         // layer (but not underlying state machine) and a scan request is sent to MLME.
-        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10,
-                               ConnectPhyParams { phy: None, cbw: None });
+        let _receiver = sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(),
+                                               ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -494,12 +458,13 @@ mod tests {
 
     #[test]
     fn connecting_password_supplied_for_unprotected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
-        sme.on_connect_command(b"foo".to_vec(), "somepass".as_bytes().to_vec(), 10,
-                               ConnectPhyParams { phy: None, cbw: None });
+        let mut connect_fut = sme.on_connect_command(
+                b"foo".to_vec(), b"somepass".to_vec(),
+                ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
         assert_eq!(Status{ connected_to: None, connecting_to: Some(b"foo".to_vec()) },
@@ -542,21 +507,16 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, .. } = user_event {
-            assert_eq!(result, ConnectResult::Failed);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
+        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
     }
 
     #[test]
     fn connecting_no_password_supplied_for_protected_network() {
-        let (mut sme, mut mlme_stream, mut user_stream, _info_stream, _time_stream) = create_sme();
+        let (mut sme, mut mlme_stream, _info_stream, _time_stream) = create_sme();
         assert_eq!(Status{ connected_to: None, connecting_to: None },
                    sme.status());
 
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
+        let mut connect_fut = sme.on_connect_command(b"foo".to_vec(), vec![],
                                ConnectPhyParams { phy: None, cbw: None });
         assert_eq!(None,
                    sme.state.as_ref().unwrap().status().connecting_to);
@@ -598,20 +558,15 @@ mod tests {
         }
 
         // User should get a message that connection failed
-        let user_event = user_stream.try_next().unwrap().expect("expect message for user");
-        if let ConnectFinished { result, .. } = user_event {
-            assert_eq!(result, ConnectResult::Failed);
-        } else {
-            panic!("unexpected user event type in sent message");
-        }
+        assert_eq!(Ok(Some(ConnectResult::Failed)), connect_fut.try_recv());
     }
 
     #[test]
     fn connecting_generates_info_events() {
-        let (mut sme, _mlme_stream, _user_stream, mut info_stream, _time_stream) = create_sme();
+        let (mut sme, _mlme_stream, mut info_stream, _time_stream) = create_sme();
 
-        sme.on_connect_command(b"foo".to_vec(), vec![], 10,
-                               ConnectPhyParams { phy: None, cbw: None });
+        let _receiver = sme.on_connect_command(b"foo".to_vec(), vec![],
+                                               ConnectPhyParams { phy: None, cbw: None });
         expect_info_event(&mut info_stream, InfoEvent::ConnectStarted);
         expect_info_event(&mut info_stream, InfoEvent::MlmeScanStart { txn_id: 1 } );
 
@@ -631,14 +586,7 @@ mod tests {
         expect_info_event(&mut info_stream, InfoEvent::AssociationStarted { att_id: 1 } );
     }
 
-    struct FakeTokens;
-    impl Tokens for FakeTokens {
-        type ScanToken = i32;
-        type ConnectToken = i32;
-    }
-
-    fn create_sme() -> (ClientSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, InfoStream,
-                        TimeStream) {
+    fn create_sme() -> (ClientSme, MlmeStream, InfoStream, TimeStream) {
         ClientSme::new(DeviceInfo {
             addr: CLIENT_ADDR,
             bands: vec![],
