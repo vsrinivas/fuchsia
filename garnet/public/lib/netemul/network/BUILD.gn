@@ -33,6 +33,7 @@ source_set("network_service") {
     "fake_endpoint.cc",
     "fake_endpoint.h",
     "interceptors/interceptor.h",
+    "interceptors/latency.h",
     "interceptors/packet_loss.h",
     "network.cc",
     "network.h",
