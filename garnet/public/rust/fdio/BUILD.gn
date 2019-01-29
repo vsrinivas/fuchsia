@@ -9,8 +9,9 @@ rustc_library("fdio") {
   version = "0.2.0"
   edition = "2018"
   deps = [
+    "//garnet/public/rust/fuchsia-runtime",
     "//garnet/public/rust/fuchsia-zircon",
     "//garnet/public/rust/fuchsia-zircon/fuchsia-zircon-sys",
-    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:bitflags"
   ]
 }

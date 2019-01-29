@@ -11,14 +11,16 @@ pub mod fdio_sys;
 pub use self::fdio_sys::fdio_ioctl as ioctl_raw;
 
 use {
+    ::bitflags::bitflags,
     fuchsia_zircon::{
         self as zx,
         prelude::*,
-        sys,
+        sys::{self, zx_handle_t, zx_status_t},
     },
     std::{
         ffi::{self, CString, CStr},
         fs::File,
+        marker::PhantomData,
         os::{
             raw,
             unix::{
@@ -131,6 +133,296 @@ pub fn device_get_topo_path(dev: &File) -> Result<String, zx::Status> {
     };
     topo.truncate((size - 1) as usize);
     String::from_utf8(topo).map_err(|_| zx::Status::IO)
+}
+
+bitflags! {
+    /// Options to allow some or all of the environment of the running process
+    /// to be shared with the process being spawned.
+    pub struct SpawnOptions: u32 {
+        /// Provide the spawned process with the job in which the process was created.
+        ///
+        /// The job will be available to the new process as the PA_JOB_DEFAULT argument
+        /// (exposed in Rust as `fuchsia_runtim::job_default()`).
+        const CLONE_JOB = fdio_sys::FDIO_SPAWN_CLONE_JOB;
+
+        /// Provide the spawned process with the shared library loader via the
+        /// PA_LDSVC_LOADER argument.
+        const DEFAULT_LOADER = fdio_sys::FDIO_SPAWN_DEFAULT_LDSVC;
+
+        /// Clones the filesystem namespace into the spawned process.
+        const CLONE_NAMESPACE = fdio_sys::FDIO_SPAWN_CLONE_NAMESPACE;
+
+        /// Clones file descriptors 0, 1, and 2 into the spawned process.
+        ///
+        /// Skips any of these file descriptors that are closed without
+        /// generating an error.
+        const CLONE_STDIO = fdio_sys::FDIO_SPAWN_CLONE_STDIO;
+
+        /// Clones the environment into the spawned process.
+        const CLONE_ENVIRONMENT = fdio_sys::FDIO_SPAWN_CLONE_ENVIRON;
+
+        /// Clones the namespace, stdio, and environment into the spawned process.
+        const CLONE_ALL = fdio_sys::FDIO_SPAWN_CLONE_ALL;
+    }
+}
+
+// TODO: someday we'll have custom DSTs which will make this unnecessary.
+fn nul_term_from_slice(argv: &[&CStr]) -> Vec<*const raw::c_char> {
+    argv.iter().map(|cstr| cstr.as_ptr())
+        .chain(std::iter::once(0 as *const raw::c_char))
+        .collect()
+}
+
+/// Spawn a process in the given `job`.
+pub fn spawn(
+    job: &zx::Job,
+    options: SpawnOptions,
+    path: &CStr,
+    argv: &[&CStr],
+) -> Result<zx::Process, zx::Status> {
+    let job = job.raw_handle();
+    let flags = options.bits();
+    let path = path.as_ptr();
+    let argv = nul_term_from_slice(argv);
+    let mut process_out = 0;
+
+    // Safety: spawn consumes no handles and frees no pointers, and only
+    // produces a valid process upon success.
+    let status = unsafe {
+        fdio_sys::fdio_spawn(job, flags, path, argv.as_ptr(), &mut process_out)
+    };
+    zx::ok(status)?;
+    Ok(zx::Process::from(unsafe { zx::Handle::from_raw(process_out) }))
+}
+
+/// An action to take in `spawn_etc`.
+#[repr(transparent)]
+pub struct SpawnAction<'a>(fdio_sys::fdio_spawn_action_t, PhantomData<&'a ()>);
+
+impl<'a> SpawnAction<'a> {
+    /// Clone a file descriptor into the new process.
+    ///
+    /// `local_fd`: File descriptor within the current process.
+    /// `target_fd`: File descriptor within the new process that will receive the clone.
+    pub fn clone_fd(local_fd: &'a File, target_fd: i32) -> Self {
+        // Safety: `local_fd` is a valid file descriptor so long as we're inside the
+        // 'a lifetime.
+        Self(fdio_sys::fdio_spawn_action_t {
+            action_tag: fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD,
+            action_value: fdio_sys::fdio_spawn_action_union_t {
+                fd: fdio_sys::fdio_spawn_action_fd_t {
+                    local_fd: local_fd.as_raw_fd(),
+                    target_fd,
+                },
+            },
+        }, PhantomData)
+    }
+
+    /// Transfer a file descriptor into the new process.
+    ///
+    /// `local_fd`: File descriptor within the current process.
+    /// `target_fd`: File descriptor within the new process that will receive the transfer.
+    pub fn transfer_fd(local_fd: File, target_fd: i32) -> Self {
+        // Safety: ownership of `local_fd` is consumed, so `Self` can live arbitrarily long.
+        // When the action is executed, the fd will be transferred.
+        Self(fdio_sys::fdio_spawn_action_t {
+            action_tag: fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD,
+            action_value: fdio_sys::fdio_spawn_action_union_t {
+                fd: fdio_sys::fdio_spawn_action_fd_t {
+                    local_fd: local_fd.into_raw_fd(),
+                    target_fd,
+                },
+            }
+        }, PhantomData)
+    }
+
+    /// Add the given entry to the namespace of the spawned process.
+    ///
+    /// If `SpawnOptions::CLONE_NAMESPACE` is set, the namespace entry is added
+    /// to the cloned namespace from the calling process.
+    pub fn add_namespace_entry(prefix: &'a CStr, handle: zx::Handle) -> Self {
+        // Safety: ownership of the `handle` is consumed.
+        // The prefix string must stay valid through the 'a lifetime.
+        Self(fdio_sys::fdio_spawn_action_t {
+            action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY,
+            action_value: fdio_sys::fdio_spawn_action_union_t {
+                ns: fdio_sys::fdio_spawn_action_ns_t {
+                    prefix: prefix.as_ptr(),
+                    handle: handle.into_raw(),
+                },
+            },
+        }, PhantomData)
+    }
+
+    /// Add the given handle to the process arguments of the spawned process.
+    pub fn add_handle(
+        kind: fuchsia_runtime::HandleType,
+        handle: zx::Handle,
+    ) -> Self {
+        // Safety: ownership of the `handle` is consumed.
+        // The prefix string must stay valid through the 'a lifetime.
+        Self(fdio_sys::fdio_spawn_action_t {
+            action_tag: fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE,
+            action_value: fdio_sys::fdio_spawn_action_union_t {
+                h: fdio_sys::fdio_spawn_action_h_t {
+                    id: kind as u32,
+                    handle: handle.into_raw(),
+                },
+            },
+        }, PhantomData)
+    }
+
+    /// Sets the name of the spawned process to the given name.
+    pub fn set_name(name: &'a CStr) -> Self {
+        // Safety: the `name` pointer must be valid at least as long as `Self`.
+        Self(fdio_sys::fdio_spawn_action_t {
+            action_tag: fdio_sys::FDIO_SPAWN_ACTION_SET_NAME,
+            action_value: fdio_sys::fdio_spawn_action_union_t {
+                name: fdio_sys::fdio_spawn_action_name_t {
+                    data: name.as_ptr(),
+                },
+            },
+        }, PhantomData)
+    }
+
+    fn is_null(&self) -> bool {
+        self.0.action_tag == 0
+    }
+
+    /// Nullifies the action to prevent the inner contents from being dropped.
+    fn nullify(&mut self) {
+        // Assert that our null value doesn't conflict with any "real" actions.
+        debug_assert!(
+            (fdio_sys::FDIO_SPAWN_ACTION_CLONE_FD != 0)
+            && (fdio_sys::FDIO_SPAWN_ACTION_TRANSFER_FD != 0)
+            && (fdio_sys::FDIO_SPAWN_ACTION_ADD_NS_ENTRY != 0)
+            && (fdio_sys::FDIO_SPAWN_ACTION_ADD_HANDLE != 0)
+            && (fdio_sys::FDIO_SPAWN_ACTION_SET_NAME != 0)
+        );
+        self.0.action_tag = 0;
+    }
+}
+
+fn spawn_with_actions(
+    job: &zx::Job,
+    options: SpawnOptions,
+    argv: &[&CStr],
+    environ: &[&CStr],
+    actions: &mut [SpawnAction],
+    spawn_fn: impl FnOnce(
+        zx_handle_t, // job
+        u32, // flags
+        *const *const raw::c_char, // argv
+        *const *const raw::c_char, // environ
+        usize, // action_count
+        *const fdio_sys::fdio_spawn_action_t, // actions
+        *mut zx_handle_t, // process_out,
+        *mut [raw::c_char; fdio_sys::FDIO_SPAWN_ERR_MSG_MAX_LENGTH as usize], // err_msg_out
+    ) -> zx_status_t,
+) -> Result<zx::Process, (zx::Status, String)> {
+    let job = job.raw_handle();
+    let flags = options.bits();
+    let argv = nul_term_from_slice(argv);
+    let environ = nul_term_from_slice(environ);
+
+    if actions.iter().any(|a| a.is_null()) {
+        return Err((zx::Status::INVALID_ARGS, "null SpawnAction".to_string()));
+    }
+    // Safety: actions are repr(transparent) wrappers around fdio_spawn_action_t
+    let action_count = actions.len();
+    let actions_ptr: *const SpawnAction = actions.as_ptr();
+    let actions_ptr = actions_ptr as *const fdio_sys::fdio_spawn_action_t;
+
+    let mut process_out = 0;
+    let mut err_msg_out = [0 as raw::c_char; fdio_sys::FDIO_SPAWN_ERR_MSG_MAX_LENGTH as usize];
+
+    let status = spawn_fn(
+        job,
+        flags,
+        argv.as_ptr(),
+        environ.as_ptr(),
+        action_count,
+        actions_ptr,
+        &mut process_out,
+        &mut err_msg_out,
+    );
+
+    zx::ok(status)
+        .map_err(|status| {
+            let err_msg = unsafe { CStr::from_ptr(err_msg_out.as_ptr()) }
+                .to_string_lossy()
+                .into_owned();
+            (status, err_msg)
+        })?;
+
+    // Clear out the actions so we can't unsafely re-use them in a future call.
+    actions.iter_mut().for_each(|a| a.nullify());
+    Ok(zx::Process::from(unsafe { zx::Handle::from_raw(process_out) }))
+}
+
+/// Spawn a process in the given `job` using a series of `SpawnAction`s.
+/// All `SpawnAction`s are nullified after their use in this function.
+pub fn spawn_etc(
+    job: &zx::Job,
+    options: SpawnOptions,
+    path: &CStr,
+    argv: &[&CStr],
+    environ: &[&CStr],
+    actions: &mut [SpawnAction],
+) -> Result<zx::Process, (zx::Status, String)> {
+    let path = path.as_ptr();
+    spawn_with_actions(
+        job,
+        options,
+        argv,
+        environ,
+        actions,
+        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| {
+            unsafe { fdio_sys::fdio_spawn_etc(
+                job,
+                flags,
+                path,
+                argv,
+                environ,
+                action_count,
+                actions_ptr,
+                process_out,
+                err_msg_out,
+            ) }
+        }
+    )
+}
+
+/// Spawn a process in the given job using an executable VMO.
+pub fn spawn_vmo(
+    job: &zx::Job,
+    options: SpawnOptions,
+    executable_vmo: zx::Vmo,
+    argv: &[&CStr],
+    environ: &[&CStr],
+    actions: &mut [SpawnAction],
+) -> Result<zx::Process, (zx::Status, String)> {
+    let executable_vmo = executable_vmo.into_raw();
+    spawn_with_actions(
+        job,
+        options,
+        argv,
+        environ,
+        actions,
+        |job, flags, argv, environ, action_count, actions_ptr, process_out, err_msg_out| {
+            unsafe { fdio_sys::fdio_spawn_vmo(
+                job,
+                flags,
+                executable_vmo,
+                argv,
+                environ,
+                action_count,
+                actions_ptr,
+                process_out,
+                err_msg_out,
+            ) }
+        }
+    )
 }
 
 /// Events that can occur while watching a directory, including files that already exist prior to

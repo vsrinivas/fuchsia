@@ -74,6 +74,18 @@ pub const FDIO_MAX_HANDLES: raw::c_uint = 3;
 pub const FDIO_CHUNK_SIZE: raw::c_uint = 8192;
 pub const FDIO_IOCTL_MAX_INPUT: raw::c_uint = 1024;
 pub const FDIO_MAX_FILENAME: raw::c_uint = 255;
+pub const FDIO_SPAWN_ACTION_CLONE_FD: u32 = 1;
+pub const FDIO_SPAWN_ACTION_TRANSFER_FD: u32 = 2;
+pub const FDIO_SPAWN_ACTION_ADD_NS_ENTRY: u32 = 3;
+pub const FDIO_SPAWN_ACTION_ADD_HANDLE: u32 = 4;
+pub const FDIO_SPAWN_ACTION_SET_NAME: u32 = 5;
+pub const FDIO_SPAWN_CLONE_JOB: u32 = 0x1;
+pub const FDIO_SPAWN_DEFAULT_LDSVC: u32 = 0x2;
+pub const FDIO_SPAWN_CLONE_NAMESPACE: u32 = 0x4;
+pub const FDIO_SPAWN_CLONE_STDIO: u32 = 0x8;
+pub const FDIO_SPAWN_CLONE_ENVIRON: u32 = 0x10;
+pub const FDIO_SPAWN_CLONE_ALL: u32 = 0xFFFF;
+pub const FDIO_SPAWN_ERR_MSG_MAX_LENGTH: u32 = 1024;
 pub const ZXRIO_ONE_HANDLE: raw::c_uint = 256;
 pub const ZXRIO_STATUS: raw::c_uint = 0;
 pub const ZXRIO_CLOSE: raw::c_uint = 1;
@@ -1488,6 +1500,49 @@ pub type watchdir_func_t = ::std::option::Option<
                          -> zx_status_t,
 >;
 
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fdio_spawn_action_t {
+    pub action_tag: u32,
+    pub action_value: fdio_spawn_action_union_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub union fdio_spawn_action_union_t {
+    pub fd: fdio_spawn_action_fd_t,
+    pub ns: fdio_spawn_action_ns_t,
+    pub h: fdio_spawn_action_h_t,
+    pub name: fdio_spawn_action_name_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fdio_spawn_action_fd_t {
+    pub local_fd: raw::c_int,
+    pub target_fd: raw::c_int,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fdio_spawn_action_ns_t {
+    pub prefix: *const raw::c_char,
+    pub handle: zx_handle_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fdio_spawn_action_h_t {
+    pub id: u32,
+    pub handle: zx_handle_t,
+}
+
+#[repr(C)]
+#[derive(Copy, Clone)]
+pub struct fdio_spawn_action_name_t {
+    pub data: *const raw::c_char,
+}
+
 #[link(name = "fdio")]
 extern "C" {
     pub fn zxrio_handler(
@@ -1630,6 +1685,35 @@ extern "C" {
         h: zx_handle_t,
     ) -> zx_status_t;
     pub fn fdio_service_clone(h: zx_handle_t) -> zx_handle_t;
+    pub fn fdio_spawn(
+        job: zx_handle_t,
+        flags: u32,
+        path: *const raw::c_char,
+        argv: *const *const raw::c_char,
+        process_out: *mut zx_handle_t,
+    ) -> zx_status_t;
+    pub fn fdio_spawn_etc(
+        job: zx_handle_t,
+        flags: u32,
+        path: *const raw::c_char,
+        argv: *const *const raw::c_char,
+        environ: *const *const raw::c_char,
+        action_count: usize,
+        actions: *const fdio_spawn_action_t,
+        process_out: *mut zx_handle_t,
+        err_msg_out: *mut [raw::c_char; FDIO_SPAWN_ERR_MSG_MAX_LENGTH as usize],
+    ) -> zx_status_t;
+    pub fn fdio_spawn_vmo(
+        job: zx_handle_t,
+        flags: u32,
+        executable_vmo: zx_handle_t,
+        argv: *const *const raw::c_char,
+        environ: *const *const raw::c_char,
+        action_count: usize,
+        actions: *const fdio_spawn_action_t,
+        process_out: *mut zx_handle_t,
+        err_msg_out: *mut [raw::c_char; FDIO_SPAWN_ERR_MSG_MAX_LENGTH as usize],
+    ) -> zx_status_t;
     pub fn fdio_watch_directory(
         dirfd: raw::c_int,
         cb: watchdir_func_t,
