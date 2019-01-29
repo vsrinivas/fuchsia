@@ -6,6 +6,10 @@ use std::str;
 
 use crate::crypto_provider::CryptoProvider;
 use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
+use fidl_fuchsia_mem::Buffer;
+#[cfg(test)]
+use fuchsia_zircon as zx;
+use log::error;
 use serde_derive::{Deserialize, Serialize};
 
 pub enum KeyRequestType {
@@ -108,6 +112,20 @@ macro_rules! debug_err_fn {
     )
 }
 
+/// Create a closure which emits a error message and returns an error.
+///
+/// Creates a closure that takes no argument and return the first argument and print an error
+/// message.
+macro_rules! debug_err_fn_no_argument {
+    ($return_err:expr, $($arg:tt)*) => (
+        || {
+            use ::log::error;
+            error!($($arg)*);
+            $return_err
+        }
+    )
+}
+
 #[cfg(test)]
 pub fn generate_random_data(size: u32) -> Vec<u8> {
     use rand::Rng;
@@ -118,4 +136,26 @@ pub fn generate_random_data(size: u32) -> Vec<u8> {
         random_data.push(byte);
     }
     random_data
+}
+
+/// Read data from a VMO buffer.
+pub fn buffer_to_data(buffer: Buffer) -> Result<Vec<u8>, Status> {
+    let buffer_size = buffer.size;
+    let buffer_vmo = buffer.vmo;
+
+    let mut input = vec![0; buffer_size as usize];
+    buffer_vmo
+        .read(&mut input, 0)
+        .map_err(debug_err_fn!(Status::InternalError, "Failed to read data from vmo: {:?}."))?;
+    Ok(input)
+}
+
+/// Write data into a VMO buffer.
+#[cfg(test)]
+pub fn data_to_buffer(data: &[u8]) -> Result<Buffer, Status> {
+    let vmo = zx::Vmo::create_with_opts(zx::VmoOptions::NON_RESIZABLE, data.len() as u64)
+        .map_err(debug_err_fn!(Status::InternalError, "Failed to create vmo: {:?}"))?;
+    vmo.write(&data, 0)
+        .map_err(debug_err_fn!(Status::InternalError, "Failed to write data to vmo: {:?}"))?;
+    Ok(Buffer { vmo, size: data.len() as u64 })
 }

@@ -7,6 +7,7 @@ library fuchsia.kms;
 using fuchsia.mem as mem;
 
 const uint8 MAX_KEY_NAME_SIZE = 32;
+const uint32 MAX_DATA_SIZE = 65536;
 
 enum Status {
     OK = 0;
@@ -18,6 +19,8 @@ enum Status {
     KEY_NOT_FOUND = 3;
     // When the key material could not be parsed.
     PARSE_KEY_ERROR = 4;
+    // When the size for input data is larger than MAX_DATA_SIZE.
+    INPUT_TOO_LARGE = 5;
 };
 
 enum AsymmetricKeyAlgorithm {
@@ -52,7 +55,7 @@ protocol KeyManager {
     // Seal data to an encrypted form.
     //
     // Seal data to an encrypted form. The sealed data can only be unsealed by the same KMS instance
-    // by using UnsealData.
+    // by using UnsealData. |plain_text| needs to be less than MAX_DATA_SIZE bytes.
     SealData(mem.Buffer plain_text) -> (Status status, mem.Buffer? cipher_text);
 
     // Unseal sealed data.
@@ -136,7 +139,7 @@ protocol Key {
 protocol AsymmetricPrivateKey {
     compose Key;
 
-    // Sign |data| using the current key.
+    // Sign |data| using the current key. |data| needs to be less than MAX_DATA_SIZE bytes.
     Sign(mem.Buffer data) -> (Status status, Signature? signature);
     // Get the DER format public key for the current private key.
     GetPublicKey() -> (Status status, PublicKey? public_key);

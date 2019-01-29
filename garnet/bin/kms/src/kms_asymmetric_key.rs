@@ -2,9 +2,14 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use crate::common::{KeyAttributes, KeyRequestType, KeyType, KmsKey};
+use crate::common::{self as common, KeyAttributes, KeyRequestType, KeyType, KmsKey};
 use crate::crypto_provider::{AsymmetricProviderKey, CryptoProvider};
-use fidl_fuchsia_kms::{AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Status};
+use fidl::encoding::OutOfLine;
+use fidl_fuchsia_kms::{
+    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Signature, Status,
+    MAX_DATA_SIZE,
+};
+use fidl_fuchsia_mem::Buffer;
 
 pub struct KmsAsymmetricKey {
     provider_key: Box<dyn AsymmetricProviderKey>,
@@ -133,6 +138,25 @@ impl KmsAsymmetricKey {
         })
     }
 
+    /// Sign a piece of data. Return the signature.
+    ///
+    /// # Arguments
+    ///
+    /// * `buffer` - The input data buffer, need to be less than 32k bytes. Otherwise InputTooLarge
+    ///     would be returned.
+    fn sign(&self, buffer: Buffer) -> Result<Vec<u8>, Status> {
+        if buffer.size > MAX_DATA_SIZE.into() {
+            return Err(Status::InputTooLarge);
+        }
+        let input = common::buffer_to_data(buffer)?;
+        if self.is_deleted() {
+            return Err(Status::KeyNotFound);
+        }
+        self.provider_key
+            .sign(&input)
+            .map_err(debug_err_fn!(Status::InternalError, "Failed to sign data: {:?}"))
+    }
+
     pub fn get_key_algorithm(&self) -> AsymmetricKeyAlgorithm {
         self.provider_key.get_key_algorithm()
     }
@@ -141,10 +165,105 @@ impl KmsAsymmetricKey {
         self.key_origin
     }
 
-    pub fn handle_asym_request(
-        &self,
-        _req: AsymmetricPrivateKeyRequest,
-    ) -> Result<(), fidl::Error> {
-        Ok(())
+    pub fn handle_asym_request(&self, req: AsymmetricPrivateKeyRequest) -> Result<(), fidl::Error> {
+        match req {
+            AsymmetricPrivateKeyRequest::Sign { data, responder } => match self.sign(data) {
+                Ok(signature) => {
+                    responder.send(Status::Ok, Some(OutOfLine(&mut Signature { bytes: signature })))
+                }
+                Err(status) => responder.send(status, None),
+            },
+            AsymmetricPrivateKeyRequest::GetPublicKey { responder } => {
+                responder.send(Status::Ok, None)
+            }
+            AsymmetricPrivateKeyRequest::GetKeyAlgorithm { responder } => {
+                let key_algorithm = self.get_key_algorithm();
+                if self.is_deleted() {
+                    responder.send(Status::KeyNotFound, key_algorithm)
+                } else {
+                    responder.send(Status::Ok, key_algorithm)
+                }
+            }
+            AsymmetricPrivateKeyRequest::GetKeyOrigin { responder } => {
+                let origin = self.get_key_origin();
+                if self.is_deleted() {
+                    responder.send(Status::KeyNotFound, origin)
+                } else {
+                    responder.send(Status::Ok, origin)
+                }
+            }
+        }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::common::{self as common, ASYMMETRIC_KEY_ALGORITHMS};
+    use crate::crypto_provider::mock_provider::MockProvider;
+    static TEST_KEY_NAME: &str = "TestKey";
+
+    #[test]
+    fn test_sign_mock_provider() {
+        for algorithm in ASYMMETRIC_KEY_ALGORITHMS.iter() {
+            sign_mock_provider(*algorithm);
+        }
+    }
+
+    fn sign_mock_provider(key_algorithm: AsymmetricKeyAlgorithm) {
+        let test_output_data = common::generate_random_data(32);
+        let test_key_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let test_key =
+            KmsAsymmetricKey::new(&*mock_provider, TEST_KEY_NAME, key_algorithm).unwrap();
+
+        let test_sign_data = common::generate_random_data(32);
+        let signature = test_key.sign(common::data_to_buffer(&test_sign_data).unwrap()).unwrap();
+        assert_eq!(test_key.get_key_data(), test_key_data);
+        assert_eq!(signature, test_output_data);
+    }
+
+    #[test]
+    fn sign_mock_provider_input_too_large() {
+        let key_algorithm = AsymmetricKeyAlgorithm::EcdsaSha256P256;
+        let test_output_data = common::generate_random_data(32);
+        let test_key_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let test_key =
+            KmsAsymmetricKey::new(&*mock_provider, TEST_KEY_NAME, key_algorithm).unwrap();
+
+        // Input is 1 byte larger than the maximum data size.
+        let test_sign_data = common::generate_random_data(MAX_DATA_SIZE + 1);
+        let result = test_key.sign(common::data_to_buffer(&test_sign_data).unwrap());
+        if Err(Status::InputTooLarge) == result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
+    }
+
+    #[test]
+    fn sign_mock_provider_key_deleted() {
+        let key_algorithm = AsymmetricKeyAlgorithm::EcdsaSha256P256;
+        let test_key_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_key_data);
+        // Make sure the delete operation on the key succeed.
+        mock_provider.set_key_result(Ok(Vec::new()));
+        let mut test_key =
+            KmsAsymmetricKey::new(&*mock_provider, TEST_KEY_NAME, key_algorithm).unwrap();
+        test_key.delete().unwrap();
+
+        let test_sign_data = common::generate_random_data(32);
+        let result = test_key.sign(common::data_to_buffer(&test_sign_data).unwrap());
+        if Err(Status::KeyNotFound) == result {
+            assert!(true);
+        } else {
+            assert!(false);
+        }
     }
 }

@@ -530,23 +530,25 @@ impl KeyManager {
             "Failed to parse key attributes: {:?}, the stored key data is corrupted!"
         ))?;
         let provider_name: &str = &key_attributes_json.provider_name;
-        let provider = provider_map.get(provider_name).ok_or(debug_err!(
+        let provider = provider_map.get(provider_name).ok_or_else(debug_err_fn_no_argument!(
             Status::InternalError,
             "Failed to find provider! The stored key data is corrupted!"
         ))?;
         let key_type = key_attributes_json.key_type;
-        let asymmetric_key_algorithm =
-            Some(AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or(
-                debug_err!(
+        let asymmetric_key_algorithm = Some(
+            AsymmetricKeyAlgorithm::from_primitive(key_attributes_json.key_algorithm).ok_or_else(
+                debug_err_fn_no_argument!(
                     Status::InternalError,
                     "Failed to convert key_algortihm! The stored key data is corrupted!"
                 ),
-            )?);
-        let key_origin =
-            KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or(debug_err!(
+            )?,
+        );
+        let key_origin = KeyOrigin::from_primitive(key_attributes_json.key_origin).ok_or_else(
+            debug_err_fn_no_argument!(
                 Status::InternalError,
                 "Failed to convert key_origin! The stored key data is corrupted!"
-            ))?;
+            ),
+        )?;
         Ok(KeyAttributes {
             asymmetric_key_algorithm,
             key_type,
