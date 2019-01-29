@@ -20,6 +20,11 @@ namespace {
 
 using ByteVector = component::Property::ByteVector;
 using component::ObjectPath;
+using component::Metric;
+using component::IntMetric;
+using component::UIntMetric;
+using component::DoubleMetric;
+using component::CallbackMetric;
 
 const char kValue[] = "value";
 const int kSmallPropertySize = 8;
@@ -145,6 +150,190 @@ bool TestExposedObjectParenting(perftest::RepeatState* state) {
   return true;
 }
 
+bool TestIntMetricLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    Metric item = IntMetric(5);
+    state->NextStep();
+  }
+  return true;
+}
+
+bool TestIntMetricSet(perftest::RepeatState* state) {
+  Metric item = IntMetric(5);
+  while (state->KeepRunning()) {
+    item.SetInt(5);
+  }
+  return true;
+}
+
+bool TestIntMetricAdd(perftest::RepeatState* state) {
+  Metric item = IntMetric(5);
+  while (state->KeepRunning()) {
+    item.Add(5);
+  }
+  return true;
+}
+
+bool TestIntMetricSub(perftest::RepeatState* state) {
+  Metric item = IntMetric(5);
+  while (state->KeepRunning()) {
+    item.Sub(5);
+  }
+  return true;
+}
+
+bool TestIntMetricToString(perftest::RepeatState* state) {
+  Metric item = IntMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToString());
+  }
+  return true;
+}
+
+bool TestIntMetricToFidl(perftest::RepeatState* state) {
+  Metric item = IntMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToFidl("a_name"));
+  }
+  return true;
+}
+
+bool TestUIntMetricLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    Metric item = UIntMetric(5);
+    state->NextStep();
+  }
+  return true;
+}
+
+bool TestUIntMetricSet(perftest::RepeatState* state) {
+  Metric item = UIntMetric(5);
+  while (state->KeepRunning()) {
+    item.SetInt(5);
+  }
+  return true;
+}
+
+bool TestUIntMetricAdd(perftest::RepeatState* state) {
+  Metric item = UIntMetric(5);
+  while (state->KeepRunning()) {
+    item.Add(5);
+  }
+  return true;
+}
+
+bool TestUIntMetricSub(perftest::RepeatState* state) {
+  Metric item = UIntMetric(5);
+  while (state->KeepRunning()) {
+    item.Sub(5);
+  }
+  return true;
+}
+
+bool TestUIntMetricToString(perftest::RepeatState* state) {
+  Metric item = UIntMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToString());
+  }
+  return true;
+}
+
+bool TestUIntMetricToFidl(perftest::RepeatState* state) {
+  Metric item = UIntMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToFidl("a_name"));
+  }
+  return true;
+}
+
+bool TestDoubleMetricLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    Metric item = DoubleMetric(5);
+    state->NextStep();
+  }
+  return true;
+}
+
+bool TestDoubleMetricSet(perftest::RepeatState* state) {
+  Metric item = DoubleMetric(5);
+  while (state->KeepRunning()) {
+    item.SetDouble(5);
+  }
+  return true;
+}
+
+bool TestDoubleMetricAdd(perftest::RepeatState* state) {
+  Metric item = DoubleMetric(5);
+  while (state->KeepRunning()) {
+    item.Add(5);
+  }
+  return true;
+}
+
+bool TestDoubleMetricSub(perftest::RepeatState* state) {
+  Metric item = DoubleMetric(5);
+  while (state->KeepRunning()) {
+    item.Sub(5);
+  }
+  return true;
+}
+
+bool TestDoubleMetricToString(perftest::RepeatState* state) {
+  Metric item = DoubleMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToString());
+  }
+  return true;
+}
+
+bool TestDoubleMetricToFidl(perftest::RepeatState* state) {
+  Metric item = DoubleMetric(5);
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToFidl("a_name"));
+  }
+  return true;
+}
+
+bool TestCallbackMetricLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+    state->NextStep();
+  }
+  return true;
+}
+
+bool TestCallbackMetricSet(perftest::RepeatState* state) {
+  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  while (state->KeepRunning()) {
+    item.SetCallback([](Metric* out_metric) { out_metric->SetInt(10); });
+  }
+  return true;
+}
+
+bool TestCallbackMetricToString(perftest::RepeatState* state) {
+  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToString());
+  }
+  return true;
+}
+
+bool TestCallbackMetricToFidl(perftest::RepeatState* state) {
+  Metric item = CallbackMetric([](Metric* out_metric) { out_metric->SetInt(10); });
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(item.ToFidl("a_name"));
+  }
+  return true;
+}
+
 // /pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks -p
 
 void RegisterTests() {
@@ -167,6 +356,32 @@ void RegisterTests() {
   perftest::RegisterTest(fxl::StringPrintf("Expose/ExposedObject/SetVector/%d",
                                            kLargePropertySize).c_str(),
                          TestExposedObjectSetVector, kLargePropertySize);
+
+  perftest::RegisterTest("Expose/IntMetric/Lifecycle", TestIntMetricLifecycle);
+  perftest::RegisterTest("Expose/IntMetric/Set", TestIntMetricSet);
+  perftest::RegisterTest("Expose/IntMetric/Add", TestIntMetricAdd);
+  perftest::RegisterTest("Expose/IntMetric/Sub", TestIntMetricSub);
+  perftest::RegisterTest("Expose/IntMetric/ToString", TestIntMetricToString);
+  perftest::RegisterTest("Expose/IntMetric/ToFidl", TestIntMetricToFidl);
+
+  perftest::RegisterTest("Expose/UIntMetric/Lifecycle", TestUIntMetricLifecycle);
+  perftest::RegisterTest("Expose/UIntMetric/Set", TestUIntMetricSet);
+  perftest::RegisterTest("Expose/UIntMetric/Add", TestUIntMetricAdd);
+  perftest::RegisterTest("Expose/UIntMetric/Sub", TestUIntMetricSub);
+  perftest::RegisterTest("Expose/UIntMetric/ToString", TestUIntMetricToString);
+  perftest::RegisterTest("Expose/UIntMetric/ToFidl", TestUIntMetricToFidl);
+
+  perftest::RegisterTest("Expose/DoubleMetric/Lifecycle", TestDoubleMetricLifecycle);
+  perftest::RegisterTest("Expose/DoubleMetric/Set", TestDoubleMetricSet);
+  perftest::RegisterTest("Expose/DoubleMetric/Add", TestDoubleMetricAdd);
+  perftest::RegisterTest("Expose/DoubleMetric/Sub", TestDoubleMetricSub);
+  perftest::RegisterTest("Expose/DoubleMetric/ToString", TestDoubleMetricToString);
+  perftest::RegisterTest("Expose/DoubleMetric/ToFidl", TestDoubleMetricToFidl);
+
+  perftest::RegisterTest("Expose/CallbackMetric/Lifecycle", TestCallbackMetricLifecycle);
+  perftest::RegisterTest("Expose/CallbackMetric/Set", TestCallbackMetricSet);
+  perftest::RegisterTest("Expose/CallbackMetric/ToString", TestCallbackMetricToString);
+  perftest::RegisterTest("Expose/CallbackMetric/ToFidl", TestCallbackMetricToFidl);
 }
 PERFTEST_CTOR(RegisterTests);
 
