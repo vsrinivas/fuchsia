@@ -269,21 +269,22 @@ FshostConnections::FshostConnections(zx::channel devfs_root, zx::channel svc_roo
     : devfs_root_(std::move(devfs_root)), svc_root_(std::move(svc_root)),
       fs_root_(std::move(fs_root)), event_(std::move(event)) {}
 
-zx::channel FshostConnections::Open(const char* path) const {
+zx_status_t FshostConnections::Open(const char* path, zx::channel* out_connection) const {
+    zx::channel connection;
+    zx_status_t status = ZX_OK;
     if (!strcmp(path, "svc")) {
-        return zx::channel(fdio_service_clone(svc_root_.get()));
+        connection.reset(fdio_service_clone(svc_root_.get()));
+    } else if (!strcmp(path, "dev")) {
+        connection.reset(fdio_service_clone(devfs_root_.get()));
+    } else {
+        zx::channel server;
+        status = zx::channel::create(0, &connection, &server);
+        if (status == ZX_OK) {
+            status = fdio_open_at(fs_root_.get(), path, kFsDirFlags, server.release());
+        }
     }
-    if (!strcmp(path, "dev")) {
-        return zx::channel(fdio_service_clone(devfs_root_.get()));
-    }
-    zx::channel client, server;
-    if (zx::channel::create(0, &client, &server) != ZX_OK) {
-        return zx::channel();
-    }
-    if (fdio_open_at(fs_root_.get(), path, kFsDirFlags, server.release()) != ZX_OK) {
-        return zx::channel();
-    }
-    return client;
+    *out_connection = std::move(connection);
+    return status;
 }
 
 zx_status_t FshostConnections::CreateNamespace() {
@@ -298,7 +299,12 @@ zx_status_t FshostConnections::CreateNamespace() {
         printf("fshost: cannot bind /fs to namespace: %d\n", status);
         return status;
     }
-    if ((status = fdio_ns_bind(ns, "/system", Open("system").release())) != ZX_OK) {
+    zx::channel system_connection;
+    if ((status = Open("system", &system_connection)) != ZX_OK) {
+        printf("devmgr: cannot open connection to /system: %d\n", status);
+        return status;
+    }
+    if ((status = fdio_ns_bind(ns, "/system", system_connection.release())) != ZX_OK) {
         printf("devmgr: cannot bind /system to namespace: %d\n", status);
         return status;
     }
@@ -306,7 +312,12 @@ zx_status_t FshostConnections::CreateNamespace() {
 }
 
 zx::channel fs_clone(const char* path) {
-    return g_fshost->GetConnections().Open(path);
+    zx::channel connection;
+    if (g_fshost->GetConnections().Open(path, &connection) == ZX_OK) {
+        return connection;
+    } else {
+        return zx::channel();
+    }
 }
 
 } // namespace devmgr

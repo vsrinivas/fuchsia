@@ -29,9 +29,7 @@ public:
                       zx::event event);
 
     // Synchronously opens a connection on the requested path.
-    //
-    // TODO: Return an error code, instead of "invalid handle", on error.
-    zx::channel Open(const char* path) const;
+    zx_status_t Open(const char* path, zx::channel* out_connection) const;
 
     // Create and install the namespace for the current process, using
     // the owned channels as connections.
