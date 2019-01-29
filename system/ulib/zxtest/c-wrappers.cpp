@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cinttypes>
 #include <memory.h>
 
 #include <zxtest/base/assertion.h>
@@ -61,4 +62,52 @@ void zxtest_runner_notify_assertion(const char* desc, const char* expected,
 
 bool zxtest_runner_should_abort_current_test(void) {
     return zxtest::Runner::GetInstance()->ShouldAbortCurrentTest();
+}
+
+size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%" PRIi32, val);
+}
+
+size_t _zxtest_print_uint32(int32_t val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%" PRIu32, val);
+}
+
+size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%" PRIi64, val);
+}
+
+size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%" PRIu64, val);
+}
+
+size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%s", (val) ? "true" : "false");
+}
+
+size_t _zxtest_print_str(const char* val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%s", (val == NULL) ? "nullptr" : val);
+}
+
+size_t _zxtest_print_ptr(const void* val, char* buffer, size_t buffer_size) {
+    return snprintf(buffer, buffer_size, "%p", val);
+}
+
+size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buffer_size) {
+    if (buffer_size == 0 || buffer_size < 2 * size + 1) {
+        return 3 * size + 1;
+    }
+
+    if (val == NULL) {
+        snprintf(buffer, 4, "nullptr");
+    }
+
+    for (size_t curr = 0; curr < size; ++curr) {
+        snprintf(buffer + 3 * curr, buffer_size - curr, "%02X%*s", *((uint8_t*)(val) + curr),
+                 (curr < size - 1) ? 1 : 0, " ");
+    }
+    return 0;
+}
+
+void zxtest_c_clean_buffer(char** buffer) {
+    free(*buffer);
 }

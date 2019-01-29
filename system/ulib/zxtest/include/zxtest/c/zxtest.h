@@ -42,44 +42,23 @@ bool zxtest_runner_should_abort_current_test(void);
 int zxtest_run_all_tests(int argc, char** argv);
 
 // Internal for generating human readable output in C.
-static size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%d", val);
-}
-static size_t _zxtest_print_uint32(int32_t val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%u", val);
-}
-static size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%ld", val);
-}
-static size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%lu", val);
-}
-static size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%s", (val) ? "true" : "false");
-}
-static size_t _zxtest_print_str(const char* val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%s", (val == NULL) ? "nullptr" : val);
-}
-static size_t _zxtest_print_ptr(const void* val, char* buffer, size_t buffer_size) {
-    return snprintf(buffer, buffer_size, "%p", val);
-}
+size_t _zxtest_print_int32(int32_t val, char* buffer, size_t buffer_size);
 
-static size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buffer_size) {
-    if (buffer_size == 0 || buffer_size < 2 * size + 1) {
-        return 3 * size + 1;
-    }
+size_t _zxtest_print_uint32(int32_t val, char* buffer, size_t buffer_size);
 
-    if (val == NULL) {
-        snprintf(buffer, 4, "nullptr");
-    }
+size_t _zxtest_print_int64(int64_t val, char* buffer, size_t buffer_size);
 
-    for (size_t curr = 0; curr < size; ++curr) {
-        snprintf(buffer + 3 * curr, buffer_size - curr, "%02X%*s", *((uint8_t*)(val) + curr),
-                 (curr < size - 1) ? 1 : 0, " ");
-    }
-    return 0;
-}
+size_t _zxtest_print_uint64(uint64_t val, char* buffer, size_t buffer_size);
 
+size_t _zxtest_print_bool(bool val, char* buffer, size_t buffer_size);
+
+size_t _zxtest_print_str(const char* val, char* buffer, size_t buffer_size);
+
+size_t _zxtest_print_ptr(const void* val, char* buffer, size_t buffer_size);
+
+size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size_t buffer_size);
+
+void zxtest_c_clean_buffer(char** buffer);
 #ifdef __cplusplus
 }
 #endif
@@ -94,15 +73,15 @@ static size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size
 #define _ZXTEST_REGISTER_FN(TestCase, Test) TestCase##_##Test##_register_fn
 
 // Register a test as part of a TestCase.
-#define TEST(TestCase, Test)                                                            \
-    static zxtest_test_ref_t _ZXTEST_TEST_REF(TestCase, Test) = {.test_index = 0,       \
-                                                                 .test_case_index = 0}; \
-    static void _ZXTEST_TEST_FN(TestCase, Test)(void);                                  \
-    static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor)); \
-    void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                    \
-        _ZXTEST_TEST_REF(TestCase, Test) = zxtest_runner_register_test(                 \
-            #TestCase, #Test, __FILE__, __LINE__, &_ZXTEST_TEST_FN(TestCase, Test));    \
-    }                                                                                   \
+#define TEST(TestCase, Test)                                                                       \
+    static zxtest_test_ref_t _ZXTEST_TEST_REF(TestCase, Test) = {.test_index = 0,                  \
+                                                                 .test_case_index = 0};            \
+    static void _ZXTEST_TEST_FN(TestCase, Test)(void);                                             \
+    static void _ZXTEST_REGISTER_FN(TestCase, Test)(void) __attribute__((constructor));            \
+    void _ZXTEST_REGISTER_FN(TestCase, Test)(void) {                                               \
+        _ZXTEST_TEST_REF(TestCase, Test) = zxtest_runner_register_test(                            \
+            #TestCase, #Test, __FILE__, __LINE__, &_ZXTEST_TEST_FN(TestCase, Test));               \
+    }                                                                                              \
     void _ZXTEST_TEST_FN(TestCase, Test)(void)
 
 // Helper function to print variables.
@@ -123,33 +102,29 @@ static size_t _zxtest_print_hex(const void* val, size_t size, char* buffer, size
 
 #define _ZXTEST_NULLPTR NULL
 
-#define _ZXTEST_HEX_PRINTER(var, buffer, size) \
+#define _ZXTEST_HEX_PRINTER(var, buffer, size)                                                     \
     _zxtest_print_hex((const void*)&var, sizeof(__typeof__(var)), buffer, size)
 
-static void zxtest_c_clean_buffer(char** buffer) {
-    free(*buffer);
-}
-
-#define _ZXTEST_PRINT_BUFFER_NAME(var, type, line, printer)                                   \
-    char str_placeholder_##type##_##line = '\0';                                              \
-    size_t buff_size_##type##_##line = printer(var, &str_placeholder_##type##_##line, 1) + 1; \
-    char* str_buffer_##type##_##line __attribute__((cleanup(zxtest_c_clean_buffer))) =        \
-        (char*)malloc(buff_size_##type##_##line * sizeof(char));                              \
-    memset(str_buffer_##type##_##line, '\0', buff_size_##type##_##line);                      \
+#define _ZXTEST_PRINT_BUFFER_NAME(var, type, line, printer)                                        \
+    char str_placeholder_##type##_##line = '\0';                                                   \
+    size_t buff_size_##type##_##line = printer(var, &str_placeholder_##type##_##line, 1) + 1;      \
+    char* str_buffer_##type##_##line __attribute__((cleanup(zxtest_c_clean_buffer))) =             \
+        (char*)malloc(buff_size_##type##_##line * sizeof(char));                                   \
+    memset(str_buffer_##type##_##line, '\0', buff_size_##type##_##line);                           \
     printer(var, str_buffer_##type##_##line, buff_size_##type##_##line)
 
-#define _ZXTEST_LOAD_PRINT_VAR(var, type, line) \
+#define _ZXTEST_LOAD_PRINT_VAR(var, type, line)                                                    \
     _ZXTEST_PRINT_BUFFER_NAME(var, type, line, _ZXTEST_SPRINT_PRINTER)
 
-#define _ZXTEST_LOAD_PRINT_HEX(var, type, line) \
+#define _ZXTEST_LOAD_PRINT_HEX(var, type, line)                                                    \
     _ZXTEST_PRINT_BUFFER_NAME(var, type, line, _ZXTEST_HEX_PRINTER)
 
 #define _ZXTEST_TOKEN(token) token
 #define _ZXTEST_GET_PRINT_VAR(var, type, line) str_buffer_##type##_##line
 
 // Provides an alias for assertion mechanisms.
-#define _ZXTEST_ASSERT(desc, expected, expected_var, actual, actual_var, file, line, is_fatal)   \
-    zxtest_runner_notify_assertion(desc, expected, expected_var, actual, actual_var, file, line, \
+#define _ZXTEST_ASSERT(desc, expected, expected_var, actual, actual_var, file, line, is_fatal)     \
+    zxtest_runner_notify_assertion(desc, expected, expected_var, actual, actual_var, file, line,   \
                                    is_fatal)
 
 #define _ZXTEST_ABORT_IF_ERROR zxtest_runner_should_abort_current_test()

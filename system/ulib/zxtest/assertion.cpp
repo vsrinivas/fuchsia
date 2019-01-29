@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <cinttypes>
 #include <stdint.h>
 
 #include <fbl/string_buffer.h>
@@ -45,28 +46,23 @@ fbl::String ToHex(void* ptr, size_t size) {
 
 } // namespace internal
 
-template <>
-fbl::String PrintValue(int32_t value) {
-    return fbl::StringPrintf("%d", value);
+template <> fbl::String PrintValue(int32_t value) {
+    return fbl::StringPrintf("%" PRIi32, value);
 }
 
-template <>
-fbl::String PrintValue(int64_t value) {
-    return fbl::StringPrintf("%ld", value);
+template <> fbl::String PrintValue(int64_t value) {
+    return fbl::StringPrintf("%" PRIi64, value);
 }
 
-template <>
-fbl::String PrintValue(uint64_t value) {
-    return fbl::StringPrintf("%lu", value);
+template <> fbl::String PrintValue(uint64_t value) {
+    return fbl::StringPrintf("%" PRIu64, value);
 }
 
-template <>
-fbl::String PrintValue(const char* value) {
+template <> fbl::String PrintValue(const char* value) {
     return fbl::StringPrintf("%s", value);
 }
 
-template <>
-fbl::String PrintValue(const fbl::String& value) {
+template <> fbl::String PrintValue(const fbl::String& value) {
     return value;
 }
 
