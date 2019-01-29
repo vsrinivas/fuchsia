@@ -128,6 +128,10 @@ interface Coordinator {
     0x10000018: GetMetadata(uint32 key)
                     -> (zx.status status, vector<uint8>:METADATA_MAX? data);
 
+    /// Retrieve the metadata size associated with this device and the given key.
+    GetMetadataSize(uint32 key)
+                    -> (zx.status status, uint64 size);
+
     /// Add metadata blob associated with this device and the given key.
     /// TODO(teisenbe): Document the behavior of calling this twice with the same
     /// key.  I believe the current behavior results in inaccessible data that is

@@ -1117,6 +1117,30 @@ zx_status_t devhost_get_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t t
     return ZX_OK;
 }
 
+zx_status_t devhost_get_metadata_size(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
+                                        size_t* out_length) {
+
+    const zx::channel& rpc = *dev->rpc;
+    if (!rpc.is_valid()) {
+        return ZX_ERR_IO_REFUSED;
+    }
+    log_rpc(dev, "get-metadata");
+    zx_status_t call_status;
+    zx_status_t status = fuchsia_device_manager_CoordinatorGetMetadataSize(
+            rpc.get(), type, &call_status, out_length);
+    if (status != ZX_OK) {
+        log(ERROR, "devhost: rpc:get-metadata sending failed: %d\n", status);
+        return status;
+    }
+    if (call_status != ZX_OK) {
+        if (call_status != ZX_ERR_NOT_FOUND) {
+            log(ERROR, "devhost: rpc:get-metadata failed: %d\n", call_status);
+        }
+        return call_status;
+    }
+    return ZX_OK;
+}
+
 zx_status_t devhost_add_metadata(const fbl::RefPtr<zx_device_t>& dev, uint32_t type,
                                  const void* data, size_t length) {
     if (!data && length) {

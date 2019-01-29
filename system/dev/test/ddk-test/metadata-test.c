@@ -20,9 +20,14 @@ static bool add_metadata_test(void) {
     status = device_get_metadata(ddk_test_dev, 1, buffer,sizeof(buffer), &actual);
     ASSERT_EQ(status, ZX_ERR_NOT_FOUND, "device_get_metadata did not return ZX_ERR_NOT_FOUND");
 
+    status = device_get_metadata_size(ddk_test_dev, 1, &actual);
+    ASSERT_EQ(status, ZX_ERR_NOT_FOUND, "device_get_metadata_size should return ZX_ERR_NOT_FOUND");
+
     status = device_add_metadata(ddk_test_dev, 1, TEST_STRING, strlen(TEST_STRING) + 1);
     ASSERT_EQ(status, ZX_OK, "device_add_metadata failed");
 
+    status = device_get_metadata_size(ddk_test_dev, 1, &actual);
+    ASSERT_EQ(strlen(TEST_STRING)+1, actual, "Incorrect output length was returned.");
     status = device_get_metadata(ddk_test_dev, 1, buffer, sizeof(buffer), &actual);
     ASSERT_EQ(status, ZX_OK, "device_get_metadata failed");
     ASSERT_EQ(actual, strlen(TEST_STRING) + 1, "");

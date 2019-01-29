@@ -1122,6 +1122,37 @@ zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, s
     return ZX_ERR_NOT_FOUND;
 }
 
+zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* size) {
+    // search dev and its parent devices for a match
+    Device* test = dev;
+    while (test) {
+        for (const auto& md : test->metadata) {
+            if (md.type == type) {
+                *size = md.length;
+                return ZX_OK;
+            }
+        }
+        test = test->parent;
+    }
+
+    // if no metadata is found, check list of metadata added via device_publish_metadata()
+    char path[fuchsia_device_manager_PATH_MAX];
+    zx_status_t status = GetTopoPath(dev, path, sizeof(path));
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    for (const auto& md : published_metadata_) {
+        const char* md_path = md.Data() + md.length;
+        if (md.type == type && path_is_child(md_path, path)) {
+            *size = md.length;
+            return ZX_OK;
+        }
+    }
+
+    return ZX_ERR_NOT_FOUND;
+}
+
 zx_status_t Coordinator::AddMetadata(Device* dev, uint32_t type, const void* data,
                                      uint32_t length) {
     fbl::unique_ptr<Metadata> md;
@@ -1303,6 +1334,16 @@ static zx_status_t fidl_GetMetadata(void* ctx, uint32_t key, fidl_txn_t* txn) {
     return fuchsia_device_manager_CoordinatorGetMetadata_reply(txn, status, data, actual);
 }
 
+static zx_status_t fidl_GetMetadataSize(void* ctx, uint32_t key, fidl_txn_t* txn) {
+    auto dev = static_cast<Device*>(ctx);
+    size_t size;
+    zx_status_t status = dev->coordinator->GetMetadataSize(dev, key, &size);
+    if (status != ZX_OK) {
+        return fuchsia_device_manager_CoordinatorGetMetadataSize_reply(txn, status, 0);
+    }
+    return fuchsia_device_manager_CoordinatorGetMetadataSize_reply(txn, status, size);
+}
+
 static zx_status_t fidl_AddMetadata(void* ctx, uint32_t key,
                                     const uint8_t* data_data, size_t data_count, fidl_txn_t* txn) {
     static_assert(fuchsia_device_manager_METADATA_MAX <= UINT32_MAX);
@@ -1440,6 +1481,7 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
     .GetTopologicalPath = fidl_GetTopologicalPath,
     .LoadFirmware = fidl_LoadFirmware,
     .GetMetadata = fidl_GetMetadata,
+    .GetMetadataSize = fidl_GetMetadataSize,
     .AddMetadata = fidl_AddMetadata,
     .PublishMetadata = fidl_PublishMetadata,
     .DmCommand = fidl_DmCommand,

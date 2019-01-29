@@ -237,6 +237,13 @@ __EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type,
     return devhost_get_metadata(dev_ref, type, buf, buflen, actual);
 }
 
+__EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type,
+                                                size_t* out_size) {
+    ApiAutoLock lock;
+    auto dev_ref = fbl::WrapRefPtr(dev);
+    return devhost_get_metadata_size(dev_ref, type, out_size);
+}
+
 __EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type,
                                          const void* data, size_t length) {
     ApiAutoLock lock;

@@ -328,6 +328,7 @@ public:
 
     zx_status_t GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
                             size_t* actual);
+    zx_status_t GetMetadataSize(Device* dev, uint32_t type, size_t* size);
     zx_status_t AddMetadata(Device* dev, uint32_t type, const void* data, uint32_t length);
     zx_status_t PublishMetadata(Device* dev, const char* path, uint32_t type, const void* data,
                                 uint32_t length);
