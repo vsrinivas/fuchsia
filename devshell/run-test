@@ -6,43 +6,66 @@
 ### build a test package and run on target.
 ### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
 
-## usage: fx run-test PKG_TARGET [runtests flags]
+## usage: fx run-test [-t|--test <test_name>] PKG_TARGET -- [-args -to -test]
 ## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
 ## target, and executes it.
 ##
 ## If using this command, please run 'fx build' again before paving your device
 ## because 'fx build updates' used by this script does not build images so it
 ## can leave paver in weird state.
-##
 ## Arguments:
-##   All arguments are passed directly to `runtests`, see `fx run-test -h` for all flags.
+##   -t|--test    Test to run. If not specified, it will run all tests in PKG_TARGET.
 
 set -e
 
 source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
 fx-config-read
 
-function main {
-  if [[ $# -lt 1 ]]; then
-    fx-command-help
-    exit 1
-  fi
+function usage {
+  fx-command-help run-test
+}
 
-  case "$1" in
-  -h|--help)
-    fx-command-help
-    echo -e >&2 "\nRuntests help follows:"
-    fx-command-run shell runtests -h
-    exit 0
-    ;;
-  -*)
-    echo >&2 "error: first given argument \"$1\" looks like a flag, a package name must be supplied before all flags."
-    exit 1
-    ;;
-  *)
-    target="$1"
-    shift
-  esac
+
+function main {
+  all_args="$@"
+  test_args="${all_args#* -- }"
+
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  test=""
+  target=""
+
+  while (($#)); do
+    case $1 in
+      -t|--test)
+        shift  # name
+        if [[ -z "$1" ]]; then
+          echo "Missing parameter: <test_name>" >&2
+          usage
+          exit 1
+        fi
+        test="$1"
+        ;;
+      --)
+        break
+        ;;
+      *)
+        if [[ "$target" == "" ]]; then
+          target="$1"
+        else
+          usage
+          exit 1
+        fi
+        ;;
+    esac
+    shift  # value
+  done
+
+  if [[ $target == "" ]]; then
+    usage
+    return 1
+  fi
 
   if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
     echo "WARNING: It looks like amber-srv is not running."
@@ -57,7 +80,13 @@ function main {
   echo -e "\nPush package to device"
   fx-command-run push-package "${target}"
 
-  fx-command-run shell runtests "pkgfs/packages/${target}/0/test" "$@"
+  if [[ "${test}" == "" ]]; then
+    echo -e "\nRun all tests in ${target}"
+    fx-command-run shell runtests "pkgfs/packages/${target}/0/test" -- "$test_args"
+  else
+    fx-command-run shell runtests -t ${test} "pkgfs/packages/${target}/0/test" -- "$test_args"
+  fi
 }
+
 
 main "$@"
