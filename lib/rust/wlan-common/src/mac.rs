@@ -285,11 +285,7 @@ impl<B: ByteSlice> MacFrame<B> {
                     body
                 };
 
-                Some(MacFrame::Mgmt {
-                    mgmt_hdr,
-                    ht_ctrl,
-                    body,
-                })
+                Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body })
             }
             FRAME_TYPE_DATA => {
                 // Parse fixed header fields:
@@ -302,32 +298,26 @@ impl<B: ByteSlice> MacFrame<B> {
 
                 // Skip optional padding if body alignment is used.
                 let body = if body_aligned {
-                    let full_hdr_len = DataHdr::len(addr4.is_some(), qos_ctrl.is_some(),
-                                                    ht_ctrl.is_some());
+                    let full_hdr_len =
+                        DataHdr::len(addr4.is_some(), qos_ctrl.is_some(), ht_ctrl.is_some());
                     skip_body_alignment_padding(full_hdr_len, body)?
-                } else  {
+                } else {
                     body
                 };
 
-                Some(MacFrame::Data {
-                    data_hdr,
-                    addr4,
-                    qos_ctrl,
-                    ht_ctrl,
-                    body,
-                })
+                Some(MacFrame::Data { data_hdr, addr4, qos_ctrl, ht_ctrl, body })
             }
             type_ => Some(MacFrame::Unsupported { type_ }),
         }
     }
 }
 
-
 /// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding a
 /// `MacAddr` if it is present and the remaining bytes.
-fn parse_addr4_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
-    -> Option<(Option<LayoutVerified<B, MacAddr>>, B)>
-{
+fn parse_addr4_if_present<B: ByteSlice>(
+    fc: &FrameControl,
+    bytes: B,
+) -> Option<(Option<LayoutVerified<B, MacAddr>>, B)> {
     if fc.to_ds() && fc.from_ds() {
         let (addr4, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
         Some((Some(addr4), bytes))
@@ -336,12 +326,12 @@ fn parse_addr4_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
     }
 }
 
-
 /// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
 /// `QosControl` if it is present and the remaining bytes.
-fn parse_qos_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
-    -> Option<(Option<LayoutVerified<B, RawQosControl>>, B)>
-{
+fn parse_qos_if_present<B: ByteSlice>(
+    fc: &FrameControl,
+    bytes: B,
+) -> Option<(Option<LayoutVerified<B, RawQosControl>>, B)> {
     if fc.frame_subtype() & BITMASK_QOS != 0 {
         let (qos_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
         Some((Some(qos_ctrl), bytes))
@@ -352,9 +342,10 @@ fn parse_qos_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
 
 /// Returns |None| if parsing fails. Otherwise returns |Some(tuple)| with `tuple` holding the
 /// `HtControl` if it is present and the remaining bytes.
-fn parse_ht_ctrl_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
-                                          -> Option<(Option<LayoutVerified<B, RawHtControl>>, B)>
-{
+fn parse_ht_ctrl_if_present<B: ByteSlice>(
+    fc: &FrameControl,
+    bytes: B,
+) -> Option<(Option<LayoutVerified<B, RawHtControl>>, B)> {
     if fc.htc_order() {
         let (ht_ctrl, bytes) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
         Some((Some(ht_ctrl), bytes))
@@ -364,7 +355,7 @@ fn parse_ht_ctrl_if_present<B: ByteSlice>(fc: &FrameControl,  bytes: B)
 }
 
 /// Skips optional padding required for body alignment.
-fn skip_body_alignment_padding<B: ByteSlice>(hdr_len: usize,  bytes: B) -> Option<B> {
+fn skip_body_alignment_padding<B: ByteSlice>(hdr_len: usize, bytes: B) -> Option<B> {
     const OPTIONAL_BODY_ALIGNMENT_BYTES: usize = 4;
 
     let padded_len = round_up(hdr_len, OPTIONAL_BODY_ALIGNMENT_BYTES);
@@ -471,21 +462,10 @@ impl AssocRespHdr {
 }
 
 pub enum MgmtSubtype<B> {
-    Beacon {
-        bcn_hdr: LayoutVerified<B, BeaconHdr>,
-        elements: B,
-    },
-    Authentication {
-        auth_hdr: LayoutVerified<B, AuthHdr>,
-        elements: B,
-    },
-    AssociationResp {
-        assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>,
-        elements: B,
-    },
-    Unsupported {
-        subtype: u16,
-    },
+    Beacon { bcn_hdr: LayoutVerified<B, BeaconHdr>, elements: B },
+    Authentication { auth_hdr: LayoutVerified<B, AuthHdr>, elements: B },
+    AssociationResp { assoc_resp_hdr: LayoutVerified<B, AssocRespHdr>, elements: B },
+    Unsupported { subtype: u16 },
 }
 
 impl<B: ByteSlice> MgmtSubtype<B> {
@@ -596,14 +576,8 @@ impl<'a> Iterator for AmsduReader<'a> {
 
 pub enum DataSubtype<B> {
     // QoS or regular data type.
-    Data {
-        is_qos: bool,
-        hdr: LayoutVerified<B, LlcHdr>,
-        payload: B,
-    },
-    Unsupported {
-        subtype: u16,
-    },
+    Data { is_qos: bool, hdr: LayoutVerified<B, LlcHdr>, payload: B },
+    Unsupported { subtype: u16 },
 }
 
 impl<B: ByteSlice> DataSubtype<B> {
@@ -612,17 +586,12 @@ impl<B: ByteSlice> DataSubtype<B> {
             DATA_SUBTYPE_DATA | DATA_SUBTYPE_QOS_DATA => {
                 let (hdr, payload) = LayoutVerified::new_unaligned_from_prefix(bytes)?;
                 let is_qos = subtype == DATA_SUBTYPE_QOS_DATA;
-                Some(DataSubtype::Data {
-                    hdr,
-                    is_qos,
-                    payload,
-                })
+                Some(DataSubtype::Data { hdr, is_qos, payload })
             }
             subtype => Some(DataSubtype::Unsupported { subtype }),
         }
     }
 }
-
 
 // IEEE Std 802.11-2016, 9.4.1.9, Table 9-46
 #[repr(u16)]
@@ -747,11 +716,7 @@ mod tests {
     fn parse_mgmt_frame() {
         let bytes = make_mgmt_frame(false);
         match MacFrame::parse(&bytes[..], false) {
-            Some(MacFrame::Mgmt {
-                mgmt_hdr,
-                ht_ctrl,
-                body,
-            }) => {
+            Some(MacFrame::Mgmt { mgmt_hdr, ht_ctrl, body }) => {
                 assert_eq!([1, 1], mgmt_hdr.frame_ctrl);
                 assert_eq!([2, 2], mgmt_hdr.duration);
                 assert_eq!([3, 3, 3, 3, 3, 3], mgmt_hdr.addr1);
@@ -801,13 +766,7 @@ mod tests {
     fn parse_data_frame() {
         let bytes = make_data_frame(None, None);
         match MacFrame::parse(&bytes[..], false) {
-            Some(MacFrame::Data {
-                data_hdr,
-                addr4,
-                qos_ctrl,
-                ht_ctrl,
-                body,
-            }) => {
+            Some(MacFrame::Data { data_hdr, addr4, qos_ctrl, ht_ctrl, body }) => {
                 assert_eq!([0b10001000, 0], data_hdr.frame_ctrl);
                 assert_eq!([2, 2], data_hdr.duration);
                 assert_eq!([3, 3, 3, 3, 3, 3], data_hdr.addr1);
@@ -855,7 +814,7 @@ mod tests {
                         assert_eq!([8, 8, 8], hdr.oui);
                         assert_eq!([9, 9], hdr.protocol_id);
                         assert_eq!(&[10, 10, 10], payload);
-                    },
+                    }
                     _ => panic!("failed parsing LLC"),
                 }
             }

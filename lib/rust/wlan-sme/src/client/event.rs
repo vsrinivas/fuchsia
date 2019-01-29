@@ -5,8 +5,8 @@
 use eapol;
 use fuchsia_zircon::{self as zx, prelude::DurationNum};
 
-use crate::MacAddr;
 use crate::timer::TimeoutDuration;
+use crate::MacAddr;
 
 pub const ESTABLISHING_RSNA_TIMEOUT_SECONDS: i64 = 3;
 pub const KEY_FRAME_EXCHANGE_TIMEOUT_MILLIS: i64 = 200;
@@ -19,7 +19,7 @@ pub enum Event {
         bssid: MacAddr,
         sta_addr: MacAddr,
         frame: eapol::KeyFrame,
-        attempt: u32
+        attempt: u32,
     },
 }
 

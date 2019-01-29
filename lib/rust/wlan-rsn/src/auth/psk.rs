@@ -41,8 +41,7 @@ mod tests {
     use hex::FromHex;
 
     fn assert_psk(password: &str, ssid: &str, expected: &str) {
-        let psk = compute(password.as_bytes(), ssid.as_bytes())
-            .expect("computing PSK failed");
+        let psk = compute(password.as_bytes(), ssid.as_bytes()).expect("computing PSK failed");
         let expected = Vec::from_hex(expected).unwrap();
         assert_eq!(&psk[..], &expected[..]);
     }
@@ -100,38 +99,28 @@ mod tests {
 
     #[test]
     fn test_psk_ascii_bounds_password() {
-        let result = compute(
-            "\x20ASCII Bound Test \x7E".as_bytes(),
-            "Some SSID".as_bytes(),
-        );
+        let result = compute("\x20ASCII Bound Test \x7E".as_bytes(), "Some SSID".as_bytes());
         assert!(result.is_ok());
     }
 
     #[test]
     fn test_psk_invalid_unicode_char_password() {
-        let result = compute(
-            "refuse unicode \u{00DF} chars".as_bytes(),
-            "Some SSID".as_bytes(),
-        );
+        let result = compute("refuse unicode \u{00DF} chars".as_bytes(), "Some SSID".as_bytes());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_unicode_valid_length_password() {
         // Five characters but 10 bytes.
-        let result = compute(
-            "\u{00DF}\u{00DF}\u{00DF}\u{00DF}\u{00DF}".as_bytes(),
-            "Some SSID".as_bytes(),
-        );
+        let result =
+            compute("\u{00DF}\u{00DF}\u{00DF}\u{00DF}\u{00DF}".as_bytes(), "Some SSID".as_bytes());
         assert!(result.is_err());
     }
 
     #[test]
     fn test_psk_too_long_ssid() {
-        let result = compute(
-            "ThisIsAPassword".as_bytes(),
-            "123456789012345678901234567890123".as_bytes(),
-        );
+        let result =
+            compute("ThisIsAPassword".as_bytes(), "123456789012345678901234567890123".as_bytes());
         assert!(result.is_err());
     }
 }

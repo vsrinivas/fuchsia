@@ -6,9 +6,9 @@
 
 pub mod ap;
 pub mod client;
+pub mod clone_utils;
 pub mod mesh;
 pub mod phy_selection;
-pub mod clone_utils;
 mod sink;
 #[cfg(test)]
 pub mod test_utils;
@@ -56,7 +56,6 @@ pub trait Station {
 
 pub type MlmeStream = mpsc::UnboundedReceiver<MlmeRequest>;
 pub type InfoStream = mpsc::UnboundedReceiver<InfoEvent>;
-
 
 mod responder {
     use futures::channel::oneshot;

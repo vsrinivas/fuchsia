@@ -3,16 +3,16 @@
 // found in the LICENSE file.
 
 use fidl_fuchsia_wlan_mlme::BssDescription;
-use std::collections::HashMap;
-use std::collections::hash_map::Entry;
 use std::cmp::Ordering;
+use std::collections::hash_map::Entry;
+use std::collections::HashMap;
 use std::hash::Hash;
 use wlan_rsn::rsne;
 
-use crate::Ssid;
-use crate::clone_utils::clone_bss_desc;
-use crate::client::Standard;
 use super::rsn::is_rsn_compatible;
+use crate::client::Standard;
+use crate::clone_utils::clone_bss_desc;
+use crate::Ssid;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BssInfo {
@@ -41,7 +41,8 @@ pub fn convert_bss_description(bss: &BssDescription) -> BssInfo {
 }
 
 pub fn compare_bss(left: &BssDescription, right: &BssDescription) -> Ordering {
-    is_bss_compatible(left).cmp(&is_bss_compatible(right))
+    is_bss_compatible(left)
+        .cmp(&is_bss_compatible(right))
         .then(get_rx_dbm(left).cmp(&get_rx_dbm(right)))
 }
 
@@ -64,9 +65,9 @@ fn is_bss_compatible(bss: &BssDescription) -> bool {
         // compatiblity.
         Some(rsn) if bss.cap.privacy => match rsne::from_bytes(&rsn[..]).to_full_result() {
             Ok(a_rsne) => is_rsn_compatible(&a_rsne),
-            _ => false
+            _ => false,
         },
-        Some(_) => false
+        Some(_) => false,
     }
 }
 
@@ -81,14 +82,15 @@ pub fn group_networks(bss_set: &[BssDescription]) -> Vec<EssInfo> {
         match bss_by_ssid.entry(bss.ssid.clone()) {
             Entry::Vacant(e) => {
                 e.insert(vec![clone_bss_desc(bss)]);
-            },
+            }
             Entry::Occupied(mut e) => {
                 e.get_mut().push(clone_bss_desc(bss));
             }
         };
     }
 
-    bss_by_ssid.values()
+    bss_by_ssid
+        .values()
         .filter_map(|bss_list| get_best_bss(bss_list))
         .map(|bss| EssInfo { best_bss: convert_bss_description(&bss) })
         .collect()
@@ -110,7 +112,9 @@ where
     let mut info_map: HashMap<T, usize> = HashMap::new();
     for bss in bss_list {
         match info_map.entry(f(&bss)) {
-            Entry::Vacant(e) => { e.insert(1); },
+            Entry::Vacant(e) => {
+                e.insert(1);
+            }
             Entry::Occupied(mut e) => {
                 *e.get_mut() += 1;
             }
@@ -155,8 +159,10 @@ mod tests {
     #[test]
     fn compare() {
         //  BSSes with the same RCPI, RSSI, and protection are equivalent.
-        assert_eq!(Ordering::Equal, compare_bss(
-            &bss(-10, -30, ProtectionCfg::Wpa2), &bss(-10, -30, ProtectionCfg::Wpa2)));
+        assert_eq!(
+            Ordering::Equal,
+            compare_bss(&bss(-10, -30, ProtectionCfg::Wpa2), &bss(-10, -30, ProtectionCfg::Wpa2))
+        );
         // Compatibility takes priority over everything else
         assert_bss_cmp(&bss(-10, -10, ProtectionCfg::Wep), &bss(-50, -50, ProtectionCfg::Wpa2));
         // RCPI in dBmh takes priority over RSSI in dBmh
@@ -200,25 +206,30 @@ mod tests {
 
     #[test]
     fn convert_bss() {
-        assert_eq!(convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)), BssInfo {
-            bssid: [0u8; 6],
-            ssid: vec![],
-            rx_dbm: -5,
-            channel: 1,
-            protected: true,
-            compatible: true,
-        });
+        assert_eq!(
+            convert_bss_description(&bss(-30, -10, ProtectionCfg::Wpa2)),
+            BssInfo {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rx_dbm: -5,
+                channel: 1,
+                protected: true,
+                compatible: true,
+            }
+        );
 
-        assert_eq!(convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)), BssInfo {
-            bssid: [0u8; 6],
-            ssid: vec![],
-            rx_dbm: -5,
-            channel: 1,
-            protected: true,
-            compatible: false,
-        });
+        assert_eq!(
+            convert_bss_description(&bss(-30, -10, ProtectionCfg::Wep)),
+            BssInfo {
+                bssid: [0u8; 6],
+                ssid: vec![],
+                rx_dbm: -5,
+                channel: 1,
+                protected: true,
+                compatible: false,
+            }
+        );
     }
-
 
     #[test]
     fn group_networks_by_ssid() {
@@ -286,7 +297,11 @@ mod tests {
             vht_cap: None,
             vht_op: None,
 
-            chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
+            chan: fidl_common::WlanChan {
+                primary: 1,
+                secondary80: 0,
+                cbw: fidl_common::Cbw::Cbw20,
+            },
             rssi_dbm: _rssi_dbm,
         };
         ret
@@ -295,76 +310,54 @@ mod tests {
     fn fake_wpa1_rsne() -> Vec<u8> {
         vec![
             // Element header
-            48, 18,
-            // Version
-            1, 0,
-            // Group Cipher: TKIP
-            0x00, 0x0F, 0xAC, 2,
-            // 1 Pairwise Cipher: TKIP
+            48, 18, // Version
+            1, 0, // Group Cipher: TKIP
+            0x00, 0x0F, 0xAC, 2, // 1 Pairwise Cipher: TKIP
+            1, 0, 0x00, 0x0F, 0xAC, 2, // 1 AKM: PSK
             1, 0, 0x00, 0x0F, 0xAC, 2,
-            // 1 AKM: PSK
-            1, 0, 0x00, 0x0F, 0xAC, 2
         ]
     }
 
     fn fake_wpa2_rsne() -> Vec<u8> {
         vec![
             // Element header
-            48, 18,
-            // Version
-            1, 0,
-            // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4,
-            // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4,
-            // 1 AKM: PSK
-            1, 0, 0x00, 0x0F, 0xAC, 2
+            48, 18, // Version
+            1, 0, // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM: PSK
+            1, 0, 0x00, 0x0F, 0xAC, 2,
         ]
     }
 
     fn fake_wpa3_rsne() -> Vec<u8> {
         vec![
             // Element header
-            48, 18,
-            // Version
-            1, 0,
-            // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4,
-            // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4,
-            // 1 AKM:  SAE
-            1, 0, 0x00, 0x0F, 0xAC, 8
+            48, 18, // Version
+            1, 0, // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM:  SAE
+            1, 0, 0x00, 0x0F, 0xAC, 8,
         ]
     }
 
     fn fake_wpa2_wpa3_mixed_mode_rsne() -> Vec<u8> {
         vec![
             // Element header
-            48, 18,
-            // Version
-            1, 0,
-            // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4,
-            // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4,
-            // 2 AKM:  SAE, PSK
-            2, 0,
-            0x00, 0x0F, 0xAC, 8,
-            0x00, 0x0F, 0xAC, 2
+            48, 18, // Version
+            1, 0, // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 2 AKM:  SAE, PSK
+            2, 0, 0x00, 0x0F, 0xAC, 8, 0x00, 0x0F, 0xAC, 2,
         ]
     }
 
     fn fake_eap_rsne() -> Vec<u8> {
         vec![
             // Element header
-            48, 18,
-            // Version
-            1, 0,
-            // Group Cipher: CCMP-128
-            0x00, 0x0F, 0xAC, 4,
-            // 1 Pairwise Cipher: CCMP-128
-            1, 0, 0x00, 0x0F, 0xAC, 4,
-            // 1 AKM:  802.1X
+            48, 18, // Version
+            1, 0, // Group Cipher: CCMP-128
+            0x00, 0x0F, 0xAC, 4, // 1 Pairwise Cipher: CCMP-128
+            1, 0, 0x00, 0x0F, 0xAC, 4, // 1 AKM:  802.1X
             1, 0, 0x00, 0x0F, 0xAC, 1,
         ]
     }

@@ -3,18 +3,15 @@
 // found in the LICENSE file.
 
 use failure::{bail, format_err};
-use fidl_fuchsia_wlan_common::{self as fidl_common};
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme as fidl_mlme;
-use std::sync::{Arc, atomic::{AtomicBool, Ordering}, Mutex};
+use std::sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc, Mutex,
+};
 use wlan_rsn::{rsna::UpdateSink, rsne::RsnCapabilities};
 
-use crate::{
-    client::rsn::Supplicant,
-    InfoEvent,
-    InfoStream,
-    Ssid,
-    test_utils
-};
+use crate::{client::rsn::Supplicant, test_utils, InfoEvent, InfoStream, Ssid};
 
 fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescription {
     fidl_mlme::BssDescription {
@@ -52,20 +49,13 @@ fn fake_bss_description(ssid: Ssid, rsn: Option<Vec<u8>>) -> fidl_mlme::BssDescr
         ht_op: None,
         vht_cap: None,
         vht_op: None,
-        chan: fidl_common::WlanChan {
-            primary: 1,
-            secondary80: 0,
-            cbw: fidl_common::Cbw::Cbw20,
-        },
+        chan: fidl_common::WlanChan { primary: 1, secondary80: 0, cbw: fidl_common::Cbw::Cbw20 },
         rssi_dbm: 0,
     }
 }
 
 pub fn fake_bss_with_bssid(ssid: Ssid, bssid: [u8; 6]) -> fidl_mlme::BssDescription {
-    fidl_mlme::BssDescription {
-        bssid,
-        .. fake_unprotected_bss_description(ssid)
-    }
+    fidl_mlme::BssDescription { bssid, ..fake_unprotected_bss_description(ssid) }
 }
 
 pub fn fake_unprotected_bss_description(ssid: Ssid) -> fidl_mlme::BssDescription {
@@ -85,16 +75,12 @@ pub fn fake_vht_bss_description() -> fidl_mlme::BssDescription {
         ht_op: Some(Box::new(fake_ht_operation())),
         vht_cap: Some(Box::new(fake_vht_capabilities())),
         vht_op: Some(Box::new(fake_vht_operation())),
-        .. bss
+        ..bss
     }
 }
 
-pub fn fake_chan(primary :u8) -> fidl_common::WlanChan {
-    fidl_common::WlanChan {
-        primary,
-        cbw: fidl_common::Cbw::Cbw20,
-        secondary80: 0,
-    }
+pub fn fake_chan(primary: u8) -> fidl_common::WlanChan {
+    fidl_common::WlanChan { primary, cbw: fidl_common::Cbw::Cbw20, secondary80: 0 }
 }
 
 pub fn expect_info_event(info_stream: &mut InfoStream, expected_event: InfoEvent) {
@@ -133,7 +119,6 @@ pub fn fake_ht_capabilities() -> fidl_mlme::HtCapabilities {
         asel_cap: fake_asel_capability(),
     }
 }
-
 
 fn fake_ht_cap_info() -> fidl_mlme::HtCapabilityInfo {
     fidl_mlme::HtCapabilityInfo {
@@ -225,7 +210,6 @@ pub fn fake_ht_operation() -> fidl_mlme::HtOperation {
     }
 }
 
-
 fn fake_ht_op_info() -> fidl_mlme::HtOperationInfo {
     fidl_mlme::HtOperationInfo {
         secondary_chan_offset: fidl_mlme::SecChanOffset::SecondaryAbove as u8,
@@ -272,7 +256,7 @@ fn fake_vht_capabilities_info() -> fidl_mlme::VhtCapabilitiesInfo {
         link_adapt: fidl_mlme::VhtLinkAdaptation::NoFeedback as u8,
         rx_ant_pattern: true,
         tx_ant_pattern: true,
-        ext_nss_bw:2,
+        ext_nss_bw: 2,
     }
 }
 
@@ -297,9 +281,7 @@ pub fn fake_vht_operation() -> fidl_mlme::VhtOperation {
 }
 
 fn fake_basic_vht_mcs_nss() -> fidl_mlme::BasicVhtMcsNss {
-    fidl_mlme::BasicVhtMcsNss {
-        max_mcs: [fidl_mlme::VhtMcs::Set0To9 as u8; 8],
-    }
+    fidl_mlme::BasicVhtMcsNss { max_mcs: [fidl_mlme::VhtMcs::Set0To9 as u8; 8] }
 }
 
 pub fn fake_5ghz_band_capabilities() -> fidl_mlme::BandCapabilities {
@@ -323,11 +305,7 @@ pub fn mock_supplicant() -> (MockSupplicant, MockSupplicantController) {
         start_failure: start_failure.clone(),
         on_eapol_frame: sink.clone(),
     };
-    let mock = MockSupplicantController {
-        started,
-        start_failure,
-        mock_on_eapol_frame: sink,
-    };
+    let mock = MockSupplicantController { started, start_failure, mock_on_eapol_frame: sink };
     (supplicant, mock)
 }
 
@@ -353,11 +331,19 @@ impl Supplicant for MockSupplicant {
         let _ = self.on_eapol_frame.lock().unwrap().as_mut().map(|updates| updates.clear());
     }
 
-    fn on_eapol_frame(&mut self, update_sink: &mut UpdateSink, _frame: &eapol::Frame)
-                      -> Result<(), failure::Error> {
-        self.on_eapol_frame.lock().unwrap().as_mut().map(|updates| {
-            update_sink.extend(updates.drain(..));
-        }).map_err(|e| format_err!("{:?}", e))
+    fn on_eapol_frame(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        _frame: &eapol::Frame,
+    ) -> Result<(), failure::Error> {
+        self.on_eapol_frame
+            .lock()
+            .unwrap()
+            .as_mut()
+            .map(|updates| {
+                update_sink.extend(updates.drain(..));
+            })
+            .map_err(|e| format_err!("{:?}", e))
     }
 }
 

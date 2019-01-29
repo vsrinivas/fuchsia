@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::integrity;
 use crate::key::exchange::{
     handshake::group_key::{self, Config, GroupKeyHandshakeFrame},
@@ -10,8 +9,9 @@ use crate::key::exchange::{
 };
 use crate::key::gtk::Gtk;
 use crate::key_data;
-use crate::rsna::{KeyFrameState, KeyFrameKeyDataState, UpdateSink, SecAssocUpdate};
+use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, SecAssocUpdate, UpdateSink};
 use crate::Error;
+use bytes::Bytes;
 use eapol;
 use failure::{self, bail};
 
@@ -24,14 +24,16 @@ pub struct Supplicant {
 
 impl Supplicant {
     // IEEE Std 802.11-2016, 12.7.7.2
-    pub fn on_eapol_key_frame(&mut self, update_sink: &mut UpdateSink, msg1: GroupKeyHandshakeFrame)
-        -> Result<(), failure::Error>
-    {
+    pub fn on_eapol_key_frame(
+        &mut self,
+        update_sink: &mut UpdateSink,
+        msg1: GroupKeyHandshakeFrame,
+    ) -> Result<(), failure::Error> {
         let frame = match &msg1.get() {
             KeyFrameState::UnverifiedMic(unverified) => {
                 let frame = unverified.verify_mic(&self.kck[..], &self.cfg.akm)?;
                 frame
-            },
+            }
             KeyFrameState::NoMic(_) => bail!("msg1 of Group-Key Handshake must carry a MIC"),
         };
 
@@ -40,10 +42,10 @@ impl Supplicant {
         let key_data = match &msg1.get_key_data() {
             KeyFrameKeyDataState::Unencrypted(_) => {
                 bail!("msg1 of Group-Key Handshake must carry encrypted key data")
-            },
+            }
             KeyFrameKeyDataState::Encrypted(encrypted) => {
                 encrypted.decrypt(&self.kek[..], &self.cfg.akm)?
-            },
+            }
         };
         let elements = key_data::extract_elements(&key_data[..])?;
         for ele in elements {
@@ -93,9 +95,7 @@ impl Supplicant {
 
         // Update the frame's MIC.
         let akm = &self.cfg.akm;
-        let integrity_alg = akm
-            .integrity_algorithm()
-            .ok_or(Error::UnsupportedAkmSuite)?;
+        let integrity_alg = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
         let mic_len = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
         update_mic(&self.kck[..], mic_len, integrity_alg, &mut msg2)?;
 

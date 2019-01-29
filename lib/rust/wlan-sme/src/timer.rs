@@ -26,10 +26,7 @@ pub struct TimedEvent<E> {
 
 impl<E: Clone> Clone for TimedEvent<E> {
     fn clone(&self) -> Self {
-        TimedEvent {
-            id: self.id,
-            event: self.event.clone(),
-        }
+        TimedEvent { id: self.id, event: self.event.clone() }
     }
 }
 
@@ -50,16 +47,17 @@ impl<E> Timer<E> {
         id
     }
 
-    pub fn schedule(&mut self, event: E) -> EventId where E: TimeoutDuration {
+    pub fn schedule(&mut self, event: E) -> EventId
+    where
+        E: TimeoutDuration,
+    {
         self.schedule_at(event.timeout_duration().after_now(), event)
     }
 }
 
 impl<E: fmt::Debug> fmt::Debug for Timer<E> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        f.debug_struct("Timer")
-            .field("sender", &self.sender)
-            .finish()
+        f.debug_struct("Timer").field("sender", &self.sender).finish()
     }
 }
 
@@ -75,7 +73,9 @@ mod tests {
 
     type Event = u32;
     impl TimeoutDuration for Event {
-        fn timeout_duration(&self) -> zx::Duration { 10.seconds() }
+        fn timeout_duration(&self) -> zx::Duration {
+            10.seconds()
+        }
     }
 
     #[test]

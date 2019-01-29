@@ -16,7 +16,7 @@ impl<T> UnboundedSink<T> {
 
     pub fn send(&self, msg: T) {
         match self.sink.unbounded_send(msg) {
-            Ok(()) => {},
+            Ok(()) => {}
             Err(e) => {
                 if e.is_full() {
                     panic!("Did not expect an unbounded channel to be full: {:?}", e);

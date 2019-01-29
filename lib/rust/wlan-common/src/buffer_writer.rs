@@ -3,22 +3,21 @@
 // found in the LICENSE file.
 
 use {
-    failure::{Error, ensure, format_err},
+    failure::{ensure, format_err, Error},
     zerocopy::{self, LayoutVerified, Unaligned},
 };
 
-pub use zerocopy::ByteSliceMut as ByteSliceMut;
+pub use zerocopy::ByteSliceMut;
 
 pub struct BufferWriter<B: ByteSliceMut> {
     buf: B,
     written_bytes: usize,
 }
 
-impl <B: ByteSliceMut> BufferWriter<B> {
+impl<B: ByteSliceMut> BufferWriter<B> {
     pub fn new(buf: B) -> Self {
-        Self {written_bytes: 0, buf}
+        Self { written_bytes: 0, buf }
     }
-
 
     /// Writes a single given `byte` and returns a `BufferWriter` to write remaining bytes of the
     /// original buffer.
@@ -26,10 +25,7 @@ impl <B: ByteSliceMut> BufferWriter<B> {
         ensure!(self.buf.len() >= 1, "buffer too short");
         let (mut data, remaining) = self.buf.split_at(1);
         data[0] = byte;
-        Ok(Self {
-            buf: remaining,
-            written_bytes: self.written_bytes + 1
-        })
+        Ok(Self { buf: remaining, written_bytes: self.written_bytes + 1 })
     }
 
     /// Writes the given `bytes` and returns a `BufferWriter` to write remaining bytes of the
@@ -38,10 +34,7 @@ impl <B: ByteSliceMut> BufferWriter<B> {
         ensure!(self.buf.len() >= bytes.len(), "buffer too short");
         let (mut data, remaining) = self.buf.split_at(bytes.len());
         data.copy_from_slice(bytes);
-        Ok(Self {
-            buf: remaining,
-            written_bytes: self.written_bytes + bytes.len()
-        })
+        Ok(Self { buf: remaining, written_bytes: self.written_bytes + bytes.len() })
     }
 
     /// Reserves and zeroes a typed chunk of bytes of size |mem::size_of::<T>|.
@@ -50,10 +43,10 @@ impl <B: ByteSliceMut> BufferWriter<B> {
     pub fn reserve_zeroed<T: Unaligned>(mut self) -> Result<(LayoutVerified<B, T>, Self), Error> {
         let (data, remaining) = LayoutVerified::new_unaligned_from_prefix_zeroed(self.buf)
             .ok_or(format_err!("buffer too short"))?;
-        Ok((data, Self {
-            buf: remaining,
-            written_bytes: self.written_bytes + std::mem::size_of::<T>()
-        }))
+        Ok((
+            data,
+            Self { buf: remaining, written_bytes: self.written_bytes + std::mem::size_of::<T>() },
+        ))
     }
 
     pub fn written_bytes(&self) -> usize {
@@ -80,7 +73,8 @@ mod tests {
     fn reserve_zeroed_for_type() {
         let mut buf = [1u8; 5];
         let (mut data, w) = BufferWriter::new(&mut buf[..])
-            .reserve_zeroed::<[u8; 3]>().expect("failed writing buffer");
+            .reserve_zeroed::<[u8; 3]>()
+            .expect("failed writing buffer");
         data[0] = 42;
         // Don't write `data[1]`: BufferWriter should zero this byte.
         data[2] = 43;
@@ -94,9 +88,12 @@ mod tests {
     fn write_bytes() {
         let mut buf = [1u8; 5];
         let w = BufferWriter::new(&mut buf[..])
-            .write_byte(42).expect("failed writing buffer")
-            .write_byte(43).expect("failed writing buffer")
-            .write_bytes(&[2, 3]).expect("failed writing buffer");
+            .write_byte(42)
+            .expect("failed writing buffer")
+            .write_byte(43)
+            .expect("failed writing buffer")
+            .write_bytes(&[2, 3])
+            .expect("failed writing buffer");
 
         assert_eq!(4, w.written_bytes());
         assert_eq!(1, w.remaining_bytes());

@@ -26,12 +26,7 @@ pub struct Header {
 
 impl Header {
     pub fn new(type_: u8, len: u8, oui: &[u8], data_type: u8) -> Header {
-        let mut hdr = Header {
-            type_,
-            len,
-            data_type,
-            ..Default::default()
-        };
+        let mut hdr = Header { type_, len, data_type, ..Default::default() };
         hdr.oui.copy_from_slice(oui);
         hdr
     }
@@ -82,16 +77,9 @@ impl Gtk {
         let mut gtk_info = GtkInfo(0);
         gtk_info.set_key_id(key_id);
         gtk_info.set_tx(tx as u8);
-        let gtk = Gtk {
-            info: gtk_info,
-            gtk: gtk.to_vec(),
-        };
+        let gtk = Gtk { info: gtk_info, gtk: gtk.to_vec() };
 
-        let mut hdr = Header {
-            type_: TYPE,
-            data_type: GTK_DATA_TYPE,
-            ..Default::default()
-        };
+        let mut hdr = Header { type_: TYPE, data_type: GTK_DATA_TYPE, ..Default::default() };
         hdr.oui.copy_from_slice(&OUI[..]);
         hdr.len = (gtk.len() + 4) as u8;
 
@@ -206,44 +194,26 @@ mod tests {
 
     #[test]
     fn test_gtk_len() {
-        let gtk_kde = Gtk {
-            info: GtkInfo(0),
-            gtk: vec![],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(0), gtk: vec![] };
         assert_eq!(gtk_kde.len(), 2);
 
-        let gtk_kde = Gtk {
-            info: GtkInfo(0),
-            gtk: vec![0; 16],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(0), gtk: vec![0; 16] };
         assert_eq!(gtk_kde.len(), 18);
 
-        let gtk_kde = Gtk {
-            info: GtkInfo(0),
-            gtk: vec![0; 8],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(0), gtk: vec![0; 8] };
         assert_eq!(gtk_kde.len(), 10);
 
-        let gtk_kde = Gtk {
-            info: GtkInfo(0),
-            gtk: vec![0; 4],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(0), gtk: vec![0; 4] };
         assert_eq!(gtk_kde.len(), 6);
 
-        let gtk_kde = Gtk {
-            info: GtkInfo(0),
-            gtk: vec![0; 32],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(0), gtk: vec![0; 32] };
         assert_eq!(gtk_kde.len(), 34);
     }
 
     #[test]
     fn test_gtk_as_bytes() {
         let mut buf = Vec::with_capacity(256);
-        let gtk_kde = Gtk {
-            info: GtkInfo(3),
-            gtk: vec![42; 32],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(3), gtk: vec![42; 32] };
         gtk_kde.as_bytes(&mut buf);
 
         let mut expected: Vec<u8> = vec![0x03, 0x00];
@@ -254,10 +224,7 @@ mod tests {
     #[test]
     fn test_gtk_as_bytes_too_short() {
         let mut buf = Vec::with_capacity(32);
-        let gtk_kde = Gtk {
-            info: GtkInfo(3),
-            gtk: vec![42; 32],
-        };
+        let gtk_kde = Gtk { info: GtkInfo(3), gtk: vec![42; 32] };
         gtk_kde.as_bytes(&mut buf);
     }
 

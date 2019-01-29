@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bitfield::bitfield;
-use bytes::{BufMut, Bytes};
 use crate::akm;
 use crate::cipher;
 use crate::pmkid;
 use crate::suite_selector;
+use bitfield::bitfield;
+use bytes::{BufMut, Bytes};
 
 use nom::{call, cond, count, do_parse, eof, error_position, expr_res, named, take, try_parse};
 use nom::{le_u16, le_u8, IResult};
@@ -32,7 +32,7 @@ pub struct Rsne {
     pub group_mgmt_cipher_suite: Option<cipher::Cipher>,
 }
 
-bitfield!{
+bitfield! {
     #[derive(PartialOrd, PartialEq, Clone)]
     pub struct RsnCapabilities(u16);
     impl Debug;
@@ -265,12 +265,9 @@ mod tests {
             0x00, 0x0f, 0xac, 0x02, // akm suite list
             0xa8, 0x04, // rsn capabilities
             0x01, 0x00, // pmk id count
-
             // pmk id list
             0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
-            0x10, 0x11,
-
-            0x00, 0x0f, 0xac, 0x04, // group management cipher suite
+            0x10, 0x11, 0x00, 0x0f, 0xac, 0x04, // group management cipher suite
         ];
         let result = from_bytes(&frame);
         assert!(result.is_done());
@@ -281,8 +278,10 @@ mod tests {
 
         let oui: &[u8] = &[0x00, 0x0f, 0xac];
         assert!(rsne.group_data_cipher_suite.is_some());
-        assert_eq!(rsne.group_data_cipher_suite,
-                   Some(cipher::Cipher{ oui: Bytes::from(oui), suite_type: cipher::CCMP_128}));
+        assert_eq!(
+            rsne.group_data_cipher_suite,
+            Some(cipher::Cipher { oui: Bytes::from(oui), suite_type: cipher::CCMP_128 })
+        );
         assert_eq!(rsne.pairwise_cipher_suites.len(), 1);
         assert_eq!(rsne.pairwise_cipher_suites[0].oui, Bytes::from(oui));
         assert_eq!(rsne.pairwise_cipher_suites[0].suite_type, cipher::CCMP_128);
@@ -305,13 +304,17 @@ mod tests {
 
         assert_eq!(rsn_capabilities.value(), 0xa8 + (0x04 << 8));
 
-        let pmkids: &[u8] = &[0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B,
-                              0x0C, 0x0D, 0x0E, 0x0F, 0x10, 0x11];
+        let pmkids: &[u8] = &[
+            0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0x0A, 0x0B, 0x0C, 0x0D, 0x0E, 0x0F,
+            0x10, 0x11,
+        ];
         assert_eq!(rsne.pmkids.len(), 1);
         assert_eq!(rsne.pmkids[0], Bytes::from(pmkids));
 
-        assert_eq!(rsne.group_mgmt_cipher_suite,
-                   Some(cipher::Cipher{ oui: Bytes::from(oui), suite_type: cipher::CCMP_128}));
+        assert_eq!(
+            rsne.group_mgmt_cipher_suite,
+            Some(cipher::Cipher { oui: Bytes::from(oui), suite_type: cipher::CCMP_128 })
+        );
     }
 
     #[test]

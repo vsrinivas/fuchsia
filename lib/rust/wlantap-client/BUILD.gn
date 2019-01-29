@@ -19,4 +19,3 @@ rustc_library("wlantap-client") {
     "//third_party/rust-crates/rustc_deps:failure",
   ]
 }
-

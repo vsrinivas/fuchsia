@@ -4,7 +4,11 @@
 
 use bytes::Bytes;
 use failure::bail;
-use wlan_rsn::{akm, cipher, NegotiatedRsne, rsne::{Rsne, RsnCapabilities}, OUI};
+use wlan_rsn::{
+    akm, cipher,
+    rsne::{RsnCapabilities, Rsne},
+    NegotiatedRsne, OUI,
+};
 
 fn make_cipher(suite_type: u8) -> cipher::Cipher {
     cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
@@ -68,7 +72,7 @@ mod tests {
         // Compliant with IEEE Std 802.11-2016, 9.4.2.25.
         let expected: Vec<u8> = vec![
             0x30, 0x14, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04, 0x01, 0x00, 0x00, 0x0f, 0xac, 0x04,
-            0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00
+            0x01, 0x00, 0x00, 0x0f, 0xac, 0x02, 0x00, 0x00,
         ];
         let rsne = create_wpa2_psk_rsne();
         let mut actual = Vec::with_capacity(rsne.len());
@@ -86,8 +90,10 @@ mod tests {
 
     #[test]
     fn test_supplicant_rsne_has_too_many_suites() {
-        let s_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
-        let a_rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
+        let s_rsne =
+            make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
+        let a_rsne =
+            make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::EAP, akm::PSK]);
         let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
         assert!(format!("{:?}", result.unwrap_err()).contains("InvalidNegotiatedRsne"));
@@ -132,8 +138,10 @@ mod tests {
 
         let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
-        assert_eq!(format!("{}", result.unwrap_err()),
-                   "supplicant RSNE has invalid mgmt frame protection")
+        assert_eq!(
+            format!("{}", result.unwrap_err()),
+            "supplicant RSNE has invalid mgmt frame protection"
+        )
     }
 
     #[test]
@@ -152,8 +160,10 @@ mod tests {
 
         let result = is_valid_rsne_subset(&s_rsne, &a_rsne);
         assert!(result.is_err());
-        assert_eq!(format!("{}", result.unwrap_err()),
-                   "authenticator RSNE has invalid mgmt frame protection")
+        assert_eq!(
+            format!("{}", result.unwrap_err()),
+            "authenticator RSNE has invalid mgmt frame protection"
+        )
     }
 
     #[test]

@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use byteorder::{BigEndian, ByteOrder};
 use crate::keywrap::Algorithm;
 use crate::Error;
+use byteorder::{BigEndian, ByteOrder};
 use crypto::aes::KeySize;
 use crypto::aessafe;
 use crypto::blockmodes::{self, EcbDecryptor, EcbEncryptor, PaddingProcessor};
@@ -82,10 +82,7 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.1 - Uses index based wrapping
     fn wrap(&self, key: &[u8], p: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = p.len() / 8;
-        ensure!(
-            p.len() % 8 == 0 && n >= 2,
-            Error::InvalidAesKeywrapDataLength(p.len())
-        );
+        ensure!(p.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(p.len()));
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];
@@ -130,10 +127,7 @@ impl Algorithm for NistAes {
     // RFC 3394, 2.2.2 - uses index based unwrapping
     fn unwrap(&self, key: &[u8], c: &[u8]) -> Result<Vec<u8>, failure::Error> {
         let n = c.len() / 8 - 1;
-        ensure!(
-            c.len() % 8 == 0 && n >= 2,
-            Error::InvalidAesKeywrapDataLength(c.len())
-        );
+        ensure!(c.len() % 8 == 0 && n >= 2, Error::InvalidAesKeywrapDataLength(c.len()));
 
         let keysize = NistAes::keysize(key.len())?;
         let mut b = vec![0u8; BLOCK_SIZE];

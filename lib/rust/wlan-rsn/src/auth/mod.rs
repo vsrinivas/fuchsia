@@ -20,9 +20,11 @@ impl Method {
     }
 
     // Unused as only PSK is supported so far.
-    pub fn on_eapol_key_frame(&self, _update_sink: &mut UpdateSink, _frame: VerifiedKeyFrame)
-        -> Result<(), failure::Error>
-    {
+    pub fn on_eapol_key_frame(
+        &self,
+        _update_sink: &mut UpdateSink,
+        _frame: VerifiedKeyFrame,
+    ) -> Result<(), failure::Error> {
         Ok(())
     }
 }

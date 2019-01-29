@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use fidl_fuchsia_wlan_common::{self as fidl_common};
+use fidl_fuchsia_wlan_common as fidl_common;
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, BandCapabilities};
 
 pub fn clone_capability_info(c: &fidl_mlme::CapabilityInfo) -> fidl_mlme::CapabilityInfo {
@@ -37,30 +37,24 @@ pub fn clone_vht_mcs_nss(m: &fidl_mlme::VhtMcsNss) -> fidl_mlme::VhtMcsNss {
 }
 
 pub fn clone_basic_vht_mcs_nss(m: &fidl_mlme::BasicVhtMcsNss) -> fidl_mlme::BasicVhtMcsNss {
-    fidl_mlme::BasicVhtMcsNss {
-        max_mcs: m.max_mcs.clone(),
-        ..*m
-    }
+    fidl_mlme::BasicVhtMcsNss { max_mcs: m.max_mcs.clone(), ..*m }
 }
 
-pub fn clone_vht_capabilities_info(i: &fidl_mlme::VhtCapabilitiesInfo) -> fidl_mlme::VhtCapabilitiesInfo {
-    fidl_mlme::VhtCapabilitiesInfo {
-        ..*i
-    }
+pub fn clone_vht_capabilities_info(
+    i: &fidl_mlme::VhtCapabilitiesInfo,
+) -> fidl_mlme::VhtCapabilitiesInfo {
+    fidl_mlme::VhtCapabilitiesInfo { ..*i }
 }
 
 pub fn clone_vht_capabilities(c: &fidl_mlme::VhtCapabilities) -> fidl_mlme::VhtCapabilities {
     fidl_mlme::VhtCapabilities {
         vht_cap_info: clone_vht_capabilities_info(&c.vht_cap_info),
-        vht_mcs_nss: clone_vht_mcs_nss(&c.vht_mcs_nss)
+        vht_mcs_nss: clone_vht_mcs_nss(&c.vht_mcs_nss),
     }
 }
 
 pub fn clone_vht_operation(o: &fidl_mlme::VhtOperation) -> fidl_mlme::VhtOperation {
-    fidl_mlme::VhtOperation {
-        basic_mcs: clone_basic_vht_mcs_nss(&o.basic_mcs),
-        ..*o
-    }
+    fidl_mlme::VhtOperation { basic_mcs: clone_basic_vht_mcs_nss(&o.basic_mcs), ..*o }
 }
 
 pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescription {
@@ -84,10 +78,10 @@ pub fn clone_bss_desc(d: &fidl_mlme::BssDescription) -> fidl_mlme::BssDescriptio
         rsni_dbh: d.rsni_dbh,
 
         ht_cap: d.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
-        ht_op:  d.ht_op.as_ref().map(|v| Box::new(clone_ht_operation(v))),
+        ht_op: d.ht_op.as_ref().map(|v| Box::new(clone_ht_operation(v))),
 
         vht_cap: d.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
-        vht_op:  d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
+        vht_op: d.vht_op.as_ref().map(|v| Box::new(clone_vht_operation(v))),
 
         chan: fidl_common::WlanChan {
             primary: d.chan.primary,
@@ -106,7 +100,7 @@ pub fn clone_band_cap(b: &BandCapabilities) -> BandCapabilities {
         channels: b.channels.clone(),
         ht_cap: b.ht_cap.as_ref().map(|v| Box::new(clone_ht_capabilities(v))),
         vht_cap: b.vht_cap.as_ref().map(|v| Box::new(clone_vht_capabilities(v))),
-        cap: clone_capability_info(&b.cap)
+        cap: clone_capability_info(&b.cap),
     }
 }
 
@@ -115,9 +109,7 @@ pub fn clone_bands(bv: &Vec<BandCapabilities>) -> Vec<BandCapabilities> {
 }
 
 pub fn clone_mesh_configuration(c: &fidl_mlme::MeshConfiguration) -> fidl_mlme::MeshConfiguration {
-    fidl_mlme::MeshConfiguration {
-        .. *c
-    }
+    fidl_mlme::MeshConfiguration { ..*c }
 }
 
 pub fn clone_mesh_peering_common(c: &fidl_mlme::MeshPeeringCommon) -> fidl_mlme::MeshPeeringCommon {
@@ -129,6 +121,6 @@ pub fn clone_mesh_peering_common(c: &fidl_mlme::MeshPeeringCommon) -> fidl_mlme:
         ht_op: c.ht_op.as_ref().map(|x| Box::new(clone_ht_operation(x))),
         vht_cap: c.vht_cap.as_ref().map(|x| Box::new(clone_vht_capabilities(x))),
         vht_op: c.vht_op.as_ref().map(|x| Box::new(clone_vht_operation(x))),
-        .. *c
+        ..*c
     }
 }

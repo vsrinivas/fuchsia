@@ -2,11 +2,11 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::akm::Akm;
 use crate::cipher::Cipher;
 use crate::key::exchange::{self, handshake::group_key::supplicant::Supplicant};
-use crate::rsna::{Role, UpdateSink, VerifiedKeyFrame, KeyFrameState, KeyFrameKeyDataState};
+use crate::rsna::{KeyFrameKeyDataState, KeyFrameState, Role, UpdateSink, VerifiedKeyFrame};
+use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
 
@@ -45,14 +45,8 @@ impl<'a> GroupKeyHandshakeFrame<'a> {
             !frame.key_info.install(),
             "installbit must not be set in Group Key Handshake messages"
         );
-        ensure!(
-            frame.key_info.key_mic(),
-            "MIC bit must be set in Group Key Handshake messages"
-        );
-        ensure!(
-            frame.key_info.secure(),
-            "secure bit must be set in Group Key Handshake messages"
-        );
+        ensure!(frame.key_info.key_mic(), "MIC bit must be set in Group Key Handshake messages");
+        ensure!(frame.key_info.secure(), "secure bit must be set in Group Key Handshake messages");
         ensure!(
             !frame.key_info.error(),
             "error bit must not be set in Group Key Handshake messages"
@@ -173,7 +167,6 @@ impl GroupKey {
 fn is_zero(slice: &[u8]) -> bool {
     slice.iter().all(|&x| x == 0)
 }
-
 
 #[cfg(test)]
 mod tests {

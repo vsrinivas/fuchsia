@@ -27,10 +27,7 @@ impl Device {
     /// Opens the given path and creates a `Device` for that device node.
     pub fn new<P: AsRef<Path>>(path: P) -> Result<Self, zx::Status> {
         let dev = OpenOptions::new().read(true).write(true).open(&path)?;
-        Ok(Self {
-            path: PathBuf::from(fdio::device_get_topo_path(&dev)?),
-            node: dev,
-        })
+        Ok(Self { path: PathBuf::from(fdio::device_get_topo_path(&dev)?), node: dev })
     }
 
     /// Returns a reference to the topological path of the device.

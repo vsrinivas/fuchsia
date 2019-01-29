@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::{BufMut, BytesMut};
 use crate::crypto_utils::prf;
+use bytes::{BufMut, BytesMut};
 use failure::{self, bail};
 use num::bigint::{BigUint, RandBigInt};
 use rand::OsRng;
@@ -33,9 +33,7 @@ impl NonceReader {
         buf.put_slice(sta_addr);
         let k = OsRng::new()?.gen_biguint(256).to_bytes_le();
         let init = prf(&k[..], "Init Counter", &buf[..], 256)?;
-        Ok(Arc::new(NonceReader {
-            key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])),
-        }))
+        Ok(Arc::new(NonceReader { key_counter: Mutex::new(BigUint::from_bytes_le(&init[..])) }))
     }
 
     pub fn next(&self) -> Result<Nonce, failure::Error> {

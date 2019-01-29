@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::suite_selector;
 use crate::Error;
+use bytes::Bytes;
 use failure::{self, ensure};
 use std::fmt;
 
@@ -116,7 +116,7 @@ impl Cipher {
         }
     }
 
-    #[deprecated(note="use `tk_bytes` instead")]
+    #[deprecated(note = "use `tk_bytes` instead")]
     pub fn tk_bits(&self) -> Option<u16> {
         return_none_if_unknown_usage!(self);
 
@@ -142,10 +142,6 @@ impl suite_selector::Factory for Cipher {
 
 impl fmt::Debug for Cipher {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:02X}-{:02X}-{:02X}:{}",
-            self.oui[0], self.oui[1], self.oui[2], self.suite_type
-        )
+        write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
     }
 }

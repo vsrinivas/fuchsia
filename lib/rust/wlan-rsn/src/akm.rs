@@ -2,12 +2,12 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::crypto_utils;
 use crate::integrity::{self, hmac_sha1::HmacSha1};
 use crate::keywrap;
 use crate::suite_selector;
 use crate::Error;
+use bytes::Bytes;
 use failure::{self, ensure};
 use std::fmt;
 
@@ -106,7 +106,7 @@ impl Akm {
         }
     }
 
-    #[deprecated(note="use `kck_bytes` instead")]
+    #[deprecated(note = "use `kck_bytes` instead")]
     pub fn kck_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 
@@ -118,7 +118,7 @@ impl Akm {
         }
     }
 
-    #[deprecated(note="use `kek_bytes` instead")]
+    #[deprecated(note = "use `kek_bytes` instead")]
     pub fn kek_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 
@@ -130,7 +130,7 @@ impl Akm {
         }
     }
 
-    #[deprecated(note="use `pmk_bytes` instead")]
+    #[deprecated(note = "use `pmk_bytes` instead")]
     pub fn pmk_bits(&self) -> Option<u16> {
         return_none_if_unknown_algo!(self);
 
@@ -192,10 +192,6 @@ impl suite_selector::Factory for Akm {
 
 impl fmt::Debug for Akm {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "{:02X}-{:02X}-{:02X}:{}",
-            self.oui[0], self.oui[1], self.oui[2], self.suite_type
-        )
+        write!(f, "{:02X}-{:02X}-{:02X}:{}", self.oui[0], self.oui[1], self.oui[2], self.suite_type)
     }
 }

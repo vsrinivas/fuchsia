@@ -10,12 +10,17 @@ use {
 /// Validates whether a given authentication header is a valid response to an open authentication
 /// request.
 pub fn is_valid_open_auth_resp(auth: &mac::AuthHdr) -> Result<(), Error> {
-    ensure!(auth.auth_alg_num() == mac::AuthAlgorithm::Open as u16,
-            "invalid auth_alg_num: {}", auth.auth_alg_num());
-    ensure!(auth.auth_txn_seq_num() == 2,
-            "invalid auth_txn_seq_num: {}", auth.auth_txn_seq_num());
-    ensure!(auth.status_code() == mac::StatusCode::Success as u16,
-            "invalid status_code: {}", auth.status_code());
+    ensure!(
+        auth.auth_alg_num() == mac::AuthAlgorithm::Open as u16,
+        "invalid auth_alg_num: {}",
+        auth.auth_alg_num()
+    );
+    ensure!(auth.auth_txn_seq_num() == 2, "invalid auth_txn_seq_num: {}", auth.auth_txn_seq_num());
+    ensure!(
+        auth.status_code() == mac::StatusCode::Success as u16,
+        "invalid status_code: {}",
+        auth.status_code()
+    );
     Ok(())
 }
 

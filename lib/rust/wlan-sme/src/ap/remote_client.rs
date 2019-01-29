@@ -9,18 +9,18 @@ use std::boxed::Box;
 use std::collections::HashMap;
 use wlan_rsn::{
     key::exchange::Key,
-    rsna::{UpdateSink, SecAssocStatus, SecAssocUpdate},
+    rsna::{SecAssocStatus, SecAssocUpdate, UpdateSink},
 };
 
 use crate::{
-    MacAddr, MlmeRequest,
     ap::{
-        Context,
         aid::{self, AssociationId},
         authenticator::Authenticator,
         event::{self, ClientEvent, Event},
+        Context,
     },
     timer::EventId,
+    MacAddr, MlmeRequest,
 };
 
 #[derive(Debug)]
@@ -32,21 +32,15 @@ pub struct RemoteClient {
 }
 
 impl RemoteClient {
-    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<Authenticator>>)
-           -> Self {
-        RemoteClient {
-            addr,
-            aid,
-            authenticator,
-            key_exchange_timeout: None,
-        }
+    fn new(addr: MacAddr, aid: AssociationId, authenticator: Option<Box<Authenticator>>) -> Self {
+        RemoteClient { addr, aid, authenticator, key_exchange_timeout: None }
     }
 
     pub fn handle_timeout(&mut self, event_id: EventId, event: ClientEvent, ctx: &mut Context) {
         match event {
             ClientEvent::KeyExchangeTimeout { attempt }
-                if triggered(&self.key_exchange_timeout, event_id) => {
-
+                if triggered(&self.key_exchange_timeout, event_id) =>
+            {
                 if attempt < event::KEY_EXCHANGE_MAX_ATTEMPTS {
                     self.initiate_key_exchange(ctx, attempt + 1);
                 } else {
@@ -55,7 +49,7 @@ impl RemoteClient {
                         fidl_mlme::DeauthenticateRequest {
                             peer_sta_address: self.addr.clone(),
                             reason_code: fidl_mlme::ReasonCode::FourwayHandshakeTimeout,
-                        }
+                        },
                     ));
                 }
             }
@@ -63,9 +57,11 @@ impl RemoteClient {
         }
     }
 
-    pub fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication, ctx: &mut Context)
-        -> Result<(), failure::Error> {
-
+    pub fn handle_eapol_ind(
+        &mut self,
+        ind: fidl_mlme::EapolIndication,
+        ctx: &mut Context,
+    ) -> Result<(), failure::Error> {
         let authenticator = match self.authenticator.as_mut() {
             Some(authenticator) => authenticator,
             None => bail!("ignoring EapolInd msg; BSS is not protected"),
@@ -79,7 +75,7 @@ impl RemoteClient {
                     Ok(()) => self.process_authenticator_updates(&update_sink, ctx),
                     Err(e) => bail!("failed processing EAPoL key frame: {}", e),
                 }
-            },
+            }
             Err(_) => bail!("error parsing EAPoL key frame"),
         }
         Ok(())
@@ -111,13 +107,11 @@ impl RemoteClient {
                     let mut buf = Vec::with_capacity(frame.len());
                     frame.as_bytes(false, &mut buf);
                     let a_addr = ctx.device_info.addr.clone();
-                    ctx.mlme_sink.send(MlmeRequest::Eapol(
-                        fidl_mlme::EapolRequest {
-                            src_addr: a_addr,
-                            dst_addr: self.addr.clone(),
-                            data: buf,
-                        }
-                    ));
+                    ctx.mlme_sink.send(MlmeRequest::Eapol(fidl_mlme::EapolRequest {
+                        src_addr: a_addr,
+                        dst_addr: self.addr.clone(),
+                        data: buf,
+                    }));
                 }
                 SecAssocUpdate::Key(key) => self.send_key(key, ctx),
                 SecAssocUpdate::Status(status) => match status {
@@ -127,49 +121,43 @@ impl RemoteClient {
                             fidl_mlme::SetControlledPortRequest {
                                 peer_sta_address: self.addr.clone(),
                                 state: fidl_mlme::ControlledPortState::Open,
-                            }
+                            },
                         ));
                     }
                     _ => (),
-                }
+                },
             }
         }
     }
 
     fn send_key(&mut self, key: &Key, ctx: &mut Context) {
         let set_key_descriptor = match key {
-            Key::Ptk(ptk) => {
-                fidl_mlme::SetKeyDescriptor {
-                    key: ptk.tk().to_vec(),
-                    key_id: 0,
-                    key_type: fidl_mlme::KeyType::Pairwise,
-                    address: self.addr.clone(),
-                    rsc: [0u8; 8],
-                    cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
-                    cipher_suite_type: ptk.cipher.suite_type,
-                }
-            }
-            Key::Gtk(gtk) => {
-                fidl_mlme::SetKeyDescriptor {
-                    key: gtk.tk().to_vec(),
-                    key_id: gtk.key_id() as u16,
-                    key_type: fidl_mlme::KeyType::Group,
-                    address: [0xFFu8; 6],
-                    rsc: [0u8; 8],
-                    cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
-                    cipher_suite_type: gtk.cipher.suite_type,
-                }
-            }
+            Key::Ptk(ptk) => fidl_mlme::SetKeyDescriptor {
+                key: ptk.tk().to_vec(),
+                key_id: 0,
+                key_type: fidl_mlme::KeyType::Pairwise,
+                address: self.addr.clone(),
+                rsc: [0u8; 8],
+                cipher_suite_oui: eapol::to_array(&ptk.cipher.oui[..]),
+                cipher_suite_type: ptk.cipher.suite_type,
+            },
+            Key::Gtk(gtk) => fidl_mlme::SetKeyDescriptor {
+                key: gtk.tk().to_vec(),
+                key_id: gtk.key_id() as u16,
+                key_type: fidl_mlme::KeyType::Group,
+                address: [0xFFu8; 6],
+                rsc: [0u8; 8],
+                cipher_suite_oui: eapol::to_array(&gtk.cipher.oui[..]),
+                cipher_suite_type: gtk.cipher.suite_type,
+            },
             _ => {
                 error!("unsupported key type in UpdateSink");
                 return;
             }
         };
-        ctx.mlme_sink.send(MlmeRequest::SetKeys(
-            fidl_mlme::SetKeysRequest {
-                keylist: vec![set_key_descriptor]
-            }
-        ));
+        ctx.mlme_sink.send(MlmeRequest::SetKeys(fidl_mlme::SetKeysRequest {
+            keylist: vec![set_key_descriptor],
+        }));
     }
 }
 
@@ -188,8 +176,11 @@ pub struct Map {
 }
 
 impl Map {
-    pub fn add_client(&mut self, addr: MacAddr, authenticator: Option<Box<Authenticator>>)
-                      -> Result<AssociationId, failure::Error> {
+    pub fn add_client(
+        &mut self,
+        addr: MacAddr,
+        authenticator: Option<Box<Authenticator>>,
+    ) -> Result<AssociationId, failure::Error> {
         ensure!(self.get_client(&addr).is_none(), "client already exists in map");
 
         let aid = self.aid_map.assign_aid()?;
@@ -216,25 +207,17 @@ impl Map {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::{
+        ap::{event::Event, test_utils::MockAuthenticator, TimeStream},
+        sink::MlmeSink,
+        test_utils, timer, DeviceInfo, MacAddr, MlmeStream,
+    };
     use {
         futures::channel::mpsc,
         std::{
             error::Error,
             sync::{Arc, Mutex},
         },
-    };
-    use crate::{
-        ap::{
-            event::Event,
-            test_utils::MockAuthenticator,
-            TimeStream,
-        },
-        DeviceInfo,
-        MacAddr,
-        MlmeStream,
-        sink::MlmeSink,
-        test_utils,
-        timer,
     };
 
     const AP_ADDR: MacAddr = [0x11, 0x22, 0x33, 0x44, 0x55, 0x66];
@@ -258,7 +241,7 @@ mod tests {
                 assert_eq!(eapol_req.src_addr, AP_ADDR);
                 assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
                 assert_eq!(eapol_req.data, test_utils::eapol_key_frame_bytes());
-            },
+            }
             _ => panic!("expect eapol response sent to MLME"),
         }
 
@@ -272,7 +255,8 @@ mod tests {
             dst_addr: AP_ADDR,
             data: test_utils::eapol_key_frame_bytes(),
         };
-        remote_client.handle_eapol_ind(eapol_ind, &mut ctx)
+        remote_client
+            .handle_eapol_ind(eapol_ind, &mut ctx)
             .expect("expect handle_eapol_ind to succeed");
 
         // Verify that remote client then send out request to set those keys
@@ -287,7 +271,7 @@ mod tests {
                 assert_eq!(k.rsc, [0u8; 8]);
                 assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
                 assert_eq!(k.cipher_suite_type, 4);
-            },
+            }
             _ => panic!("expect set keys req to MLME"),
         }
 
@@ -302,7 +286,7 @@ mod tests {
                 assert_eq!(k.rsc, [0u8; 8]);
                 assert_eq!(k.cipher_suite_oui, [0x00, 0x0F, 0xAC]);
                 assert_eq!(k.cipher_suite_type, 4);
-            },
+            }
             _ => panic!("expect set keys req to MLME"),
         }
 
@@ -331,7 +315,7 @@ mod tests {
                     assert_eq!(eapol_req.src_addr, AP_ADDR);
                     assert_eq!(eapol_req.dst_addr, CLIENT_ADDR);
                     assert_eq!(eapol_req.data, test_utils::eapol_key_frame_bytes());
-                },
+                }
                 _ => panic!("expect eapol response sent to MLME - attempt {}", i),
             }
 
@@ -353,7 +337,7 @@ mod tests {
             MlmeRequest::Deauthenticate(deauth_req) => {
                 assert_eq!(deauth_req.peer_sta_address, CLIENT_ADDR);
                 assert_eq!(deauth_req.reason_code, fidl_mlme::ReasonCode::FourwayHandshakeTimeout);
-            },
+            }
             _ => panic!("expect deauth req to MLME"),
         }
     }
@@ -369,7 +353,7 @@ mod tests {
 
         // Clear out the SetCtrlPort request
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
-            MlmeRequest::SetCtrlPort(..) => (),  // expected path
+            MlmeRequest::SetCtrlPort(..) => (), // expected path
             _ => panic!("expect set ctrl port req to MLME"),
         }
 
@@ -429,8 +413,7 @@ mod tests {
         assert_eq!(format!("{}", result.unwrap_err()), "client already exists in map");
     }
 
-    fn add_client(client_map: &mut Map, addr: MacAddr)
-                  -> Result<AssociationId, failure::Error> {
+    fn add_client(client_map: &mut Map, addr: MacAddr) -> Result<AssociationId, failure::Error> {
         client_map.add_client(addr, None)
     }
 
@@ -444,24 +427,17 @@ mod tests {
     fn remote_client() -> (RemoteClient, MockAuthenticatorController) {
         let mock_initiate = Arc::new(Mutex::new(UpdateSink::default()));
         let mock_on_eapol_frame = Arc::new(Mutex::new(UpdateSink::default()));
-        let authenticator = MockAuthenticator::new(mock_initiate.clone(),
-                                                   mock_on_eapol_frame.clone());
+        let authenticator =
+            MockAuthenticator::new(mock_initiate.clone(), mock_on_eapol_frame.clone());
         let remote_client = RemoteClient::new(CLIENT_ADDR, AID, Some(Box::new(authenticator)));
         (remote_client, MockAuthenticatorController { mock_initiate, mock_on_eapol_frame })
     }
 
     fn make_env() -> (Context, MlmeStream, TimeStream) {
-        let device_info = DeviceInfo {
-            addr: AP_ADDR,
-            bands: vec![],
-        };
+        let device_info = DeviceInfo { addr: AP_ADDR, bands: vec![] };
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
-        let ctx = Context {
-            device_info,
-            mlme_sink: MlmeSink::new(mlme_sink),
-            timer,
-        };
+        let ctx = Context { device_info, mlme_sink: MlmeSink::new(mlme_sink), timer };
         (ctx, mlme_stream, time_stream)
     }
 

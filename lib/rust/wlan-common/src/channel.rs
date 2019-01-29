@@ -44,18 +44,14 @@ impl Cbw {
         }
     }
 
-    pub fn from_fidl(
-        fidl_cbw: fidl_common::Cbw, fidl_secondary80: u8,
-    ) -> Self {
+    pub fn from_fidl(fidl_cbw: fidl_common::Cbw, fidl_secondary80: u8) -> Self {
         match fidl_cbw {
             fidl_common::Cbw::Cbw20 => Cbw::Cbw20,
             fidl_common::Cbw::Cbw40 => Cbw::Cbw40,
             fidl_common::Cbw::Cbw40Below => Cbw::Cbw40Below,
             fidl_common::Cbw::Cbw80 => Cbw::Cbw80,
             fidl_common::Cbw::Cbw160 => Cbw::Cbw160,
-            fidl_common::Cbw::Cbw80P80 => Cbw::Cbw80P80 {
-                secondary80: fidl_secondary80,
-            },
+            fidl_common::Cbw::Cbw80P80 => Cbw::Cbw80P80 { secondary80: fidl_secondary80 },
         }
     }
 }
@@ -164,10 +160,7 @@ impl Channel {
     // Return of Ok() does not imply the channel under test is valid.
     fn get_center_chan_idx(&self) -> Result<u8, failure::Error> {
         if !self.is_primary_valid() {
-            bail!(
-                "cannot get center channel index for an invalid primary channel {}",
-                self
-            );
+            bail!("cannot get center channel index for an invalid primary channel {}", self);
         }
 
         let p = self.primary;
@@ -182,10 +175,7 @@ impl Channel {
                 116..=128 => Ok(122),
                 132..=144 => Ok(138),
                 148..=161_ => Ok(155),
-                _ => bail!(
-                    "cannot get center channel index for invalid channel {}",
-                    self
-                ),
+                _ => bail!("cannot get center channel index for invalid channel {}", self),
             },
             Cbw::Cbw160 => {
                 // See IEEE Std 802.11-2016 Table 9-252 and 9-253.
@@ -194,10 +184,7 @@ impl Channel {
                 match p {
                     36..=64 => Ok(50),
                     100..=128 => Ok(114),
-                    _ => bail!(
-                        "cannot get center channel index for invalid channel {}",
-                        self
-                    ),
+                    _ => bail!("cannot get center channel index for invalid channel {}", self),
                 }
             }
         }
@@ -305,18 +292,11 @@ impl Channel {
 
     pub fn to_fidl(&self) -> fidl_common::WlanChan {
         let (cbw, secondary80) = self.cbw.to_fidl();
-        fidl_common::WlanChan {
-            primary: self.primary,
-            cbw,
-            secondary80,
-        }
+        fidl_common::WlanChan { primary: self.primary, cbw, secondary80 }
     }
 
     pub fn from_fidl(c: fidl_common::WlanChan) -> Self {
-        Channel {
-            primary: c.primary,
-            cbw: Cbw::from_fidl(c.cbw, c.secondary80),
-        }
+        Channel { primary: c.primary, cbw: Cbw::from_fidl(c.cbw, c.secondary80) }
     }
 }
 
@@ -352,14 +332,8 @@ mod tests {
 
     #[test]
     fn test_band_start_freq() {
-        assert_eq!(
-            BASE_FREQ_2GHZ,
-            Channel::new(1, Cbw::Cbw20).get_band_start_freq().unwrap()
-        );
-        assert_eq!(
-            BASE_FREQ_5GHZ,
-            Channel::new(100, Cbw::Cbw20).get_band_start_freq().unwrap()
-        );
+        assert_eq!(BASE_FREQ_2GHZ, Channel::new(1, Cbw::Cbw20).get_band_start_freq().unwrap());
+        assert_eq!(BASE_FREQ_5GHZ, Channel::new(100, Cbw::Cbw20).get_band_start_freq().unwrap());
         assert!(Channel::new(15, Cbw::Cbw20).get_band_start_freq().is_err());
         assert!(Channel::new(200, Cbw::Cbw20).get_band_start_freq().is_err());
     }
@@ -367,79 +341,31 @@ mod tests {
     #[test]
     fn test_get_center_chan_idx() {
         assert!(Channel::new(1, Cbw::Cbw80).get_center_chan_idx().is_err());
-        assert_eq!(
-            9,
-            Channel::new(11, Cbw::Cbw40Below)
-                .get_center_chan_idx()
-                .unwrap()
-        );
-        assert_eq!(
-            8,
-            Channel::new(6, Cbw::Cbw40).get_center_chan_idx().unwrap()
-        );
-        assert_eq!(
-            36,
-            Channel::new(36, Cbw::Cbw20).get_center_chan_idx().unwrap()
-        );
-        assert_eq!(
-            38,
-            Channel::new(36, Cbw::Cbw40).get_center_chan_idx().unwrap()
-        );
+        assert_eq!(9, Channel::new(11, Cbw::Cbw40Below).get_center_chan_idx().unwrap());
+        assert_eq!(8, Channel::new(6, Cbw::Cbw40).get_center_chan_idx().unwrap());
+        assert_eq!(36, Channel::new(36, Cbw::Cbw20).get_center_chan_idx().unwrap());
+        assert_eq!(38, Channel::new(36, Cbw::Cbw40).get_center_chan_idx().unwrap());
+        assert_eq!(42, Channel::new(36, Cbw::Cbw80).get_center_chan_idx().unwrap());
+        assert_eq!(50, Channel::new(36, Cbw::Cbw160).get_center_chan_idx().unwrap());
         assert_eq!(
             42,
-            Channel::new(36, Cbw::Cbw80).get_center_chan_idx().unwrap()
-        );
-        assert_eq!(
-            50,
-            Channel::new(36, Cbw::Cbw160).get_center_chan_idx().unwrap()
-        );
-        assert_eq!(
-            42,
-            Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 })
-                .get_center_chan_idx()
-                .unwrap()
+            Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).get_center_chan_idx().unwrap()
         );
     }
 
     #[test]
     fn test_get_center_freq() {
-        assert_eq!(
-            2412 as MHz,
-            Channel::new(1, Cbw::Cbw20).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            2437 as MHz,
-            Channel::new(6, Cbw::Cbw20).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            2447 as MHz,
-            Channel::new(6, Cbw::Cbw40).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            2427 as MHz,
-            Channel::new(6, Cbw::Cbw40Below).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            5180 as MHz,
-            Channel::new(36, Cbw::Cbw20).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            5190 as MHz,
-            Channel::new(36, Cbw::Cbw40).get_center_freq().unwrap()
-        );
+        assert_eq!(2412 as MHz, Channel::new(1, Cbw::Cbw20).get_center_freq().unwrap());
+        assert_eq!(2437 as MHz, Channel::new(6, Cbw::Cbw20).get_center_freq().unwrap());
+        assert_eq!(2447 as MHz, Channel::new(6, Cbw::Cbw40).get_center_freq().unwrap());
+        assert_eq!(2427 as MHz, Channel::new(6, Cbw::Cbw40Below).get_center_freq().unwrap());
+        assert_eq!(5180 as MHz, Channel::new(36, Cbw::Cbw20).get_center_freq().unwrap());
+        assert_eq!(5190 as MHz, Channel::new(36, Cbw::Cbw40).get_center_freq().unwrap());
+        assert_eq!(5210 as MHz, Channel::new(36, Cbw::Cbw80).get_center_freq().unwrap());
+        assert_eq!(5250 as MHz, Channel::new(36, Cbw::Cbw160).get_center_freq().unwrap());
         assert_eq!(
             5210 as MHz,
-            Channel::new(36, Cbw::Cbw80).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            5250 as MHz,
-            Channel::new(36, Cbw::Cbw160).get_center_freq().unwrap()
-        );
-        assert_eq!(
-            5210 as MHz,
-            Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 })
-                .get_center_freq()
-                .unwrap()
+            Channel::new(36, Cbw::Cbw80P80 { secondary80: 155 }).get_center_freq().unwrap()
         );
     }
 

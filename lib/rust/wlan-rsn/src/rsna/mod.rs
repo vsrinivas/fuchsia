@@ -5,7 +5,7 @@
 use crate::akm::Akm;
 use crate::cipher::{Cipher, GROUP_CIPHER_SUITE, TKIP};
 use crate::key::exchange::Key;
-use crate::rsne::{Rsne, RsnCapabilities};
+use crate::rsne::{RsnCapabilities, Rsne};
 use crate::Error;
 use eapol;
 use failure::{self, bail, ensure};
@@ -27,16 +27,10 @@ pub struct NegotiatedRsne {
 
 impl NegotiatedRsne {
     pub fn from_rsne(rsne: &Rsne) -> Result<NegotiatedRsne, failure::Error> {
-        ensure!(
-            rsne.group_data_cipher_suite.is_some(),
-            Error::InvalidNegotiatedRsne
-        );
+        ensure!(rsne.group_data_cipher_suite.is_some(), Error::InvalidNegotiatedRsne);
         let group_data = rsne.group_data_cipher_suite.as_ref().unwrap();
 
-        ensure!(
-            rsne.pairwise_cipher_suites.len() == 1,
-            Error::InvalidNegotiatedRsne
-        );
+        ensure!(rsne.pairwise_cipher_suites.len() == 1, Error::InvalidNegotiatedRsne);
         let pairwise = &rsne.pairwise_cipher_suites[0];
 
         ensure!(rsne.akm_suites.len() == 1, Error::InvalidNegotiatedRsne);
@@ -69,7 +63,7 @@ pub struct EncryptedKeyData<'a> {
     key_data: &'a [u8],
 }
 
-impl <'a> EncryptedKeyData<'a> {
+impl<'a> EncryptedKeyData<'a> {
     pub fn decrypt(&self, kek: &[u8], akm: &Akm) -> Result<Vec<u8>, failure::Error> {
         Ok(akm.keywrap_algorithm().ok_or(Error::UnsupportedAkmSuite)?.unwrap(kek, self.key_data)?)
     }
@@ -79,10 +73,8 @@ pub struct UnverifiedMic<'a> {
     frame: &'a eapol::KeyFrame,
 }
 
-impl <'a> UnverifiedMic<'a> {
-    pub fn verify_mic(&self, kck: &[u8], akm: &Akm)
-        -> Result<&'a eapol::KeyFrame, failure::Error>
-    {
+impl<'a> UnverifiedMic<'a> {
+    pub fn verify_mic(&self, kck: &[u8], akm: &Akm) -> Result<&'a eapol::KeyFrame, failure::Error> {
         // IEEE Std 802.11-2016, 12.7.2 h)
         // IEEE Std 802.11-2016, 12.7.2 b.6)
         let mic_bytes = akm.mic_bytes().ok_or(Error::UnsupportedAkmSuite)?;
@@ -91,8 +83,11 @@ impl <'a> UnverifiedMic<'a> {
         // If a MIC is set but the PTK was not yet derived, the MIC cannot be verified.
         let mut buf = Vec::with_capacity(self.frame.len());
         self.frame.as_bytes(true, &mut buf);
-        let valid_mic = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?
-            .verify(kck, &buf[..], &self.frame.key_mic[..]);
+        let valid_mic = akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?.verify(
+            kck,
+            &buf[..],
+            &self.frame.key_mic[..],
+        );
         ensure!(valid_mic, Error::InvalidMic);
 
         Ok(self.frame)
@@ -104,10 +99,10 @@ pub enum KeyFrameKeyDataState<'a> {
     Unencrypted(&'a [u8]),
 }
 
-impl <'a> KeyFrameKeyDataState<'a> {
+impl<'a> KeyFrameKeyDataState<'a> {
     pub fn from_frame(frame: &'a eapol::KeyFrame) -> KeyFrameKeyDataState<'a> {
-        if frame.key_info.encrypted_key_data()  {
-            KeyFrameKeyDataState::Encrypted(EncryptedKeyData{ key_data: &frame.key_data[..] })
+        if frame.key_info.encrypted_key_data() {
+            KeyFrameKeyDataState::Encrypted(EncryptedKeyData { key_data: &frame.key_data[..] })
         } else {
             KeyFrameKeyDataState::Unencrypted(&frame.key_data[..])
         }
@@ -119,10 +114,10 @@ pub enum KeyFrameState<'a> {
     NoMic(&'a eapol::KeyFrame),
 }
 
-impl <'a> KeyFrameState<'a> {
+impl<'a> KeyFrameState<'a> {
     pub fn from_frame(frame: &'a eapol::KeyFrame) -> KeyFrameState<'a> {
-        if frame.key_info.key_mic()  {
-            KeyFrameState::UnverifiedMic(UnverifiedMic{ frame })
+        if frame.key_info.key_mic() {
+            KeyFrameState::UnverifiedMic(UnverifiedMic { frame })
         } else {
             KeyFrameState::NoMic(frame)
         }
@@ -132,7 +127,7 @@ impl <'a> KeyFrameState<'a> {
     /// Only use this if you know what you are doing.
     pub fn unsafe_get_raw(&self) -> &'a eapol::KeyFrame {
         match self {
-            KeyFrameState::UnverifiedMic(UnverifiedMic{ frame }) => frame,
+            KeyFrameState::UnverifiedMic(UnverifiedMic { frame }) => frame,
             KeyFrameState::NoMic(frame) => frame,
         }
     }
@@ -182,10 +177,7 @@ impl<'a> VerifiedKeyFrame<'a> {
             eapol::KEY_TYPE_PAIRWISE => {}
             eapol::KEY_TYPE_GROUP_SMK => {
                 // IEEE Std 802.11-2016, 12.7.2 b.4 ii)
-                ensure!(
-                    !frame.key_info.install(),
-                    Error::InvalidInstallBitGroupSmkHandshake
-                );
+                ensure!(!frame.key_info.install(), Error::InvalidInstallBitGroupSmkHandshake);
             }
             _ => bail!(Error::UnsupportedKeyDerivation),
         };
@@ -208,20 +200,14 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 b.9)
         if let Role::Authenticator = sender {
-            ensure!(
-                !frame.key_info.request(),
-                Error::InvalidRequestBitAuthenticator
-            );
+            ensure!(!frame.key_info.request(), Error::InvalidRequestBitAuthenticator);
         }
 
         // IEEE Std 802.11-2016, 12.7.2 b.10)
         // Encrypted key data is validated at the end once all other validations succeeded.
 
         // IEEE Std 802.11-2016, 12.7.2 b.11)
-        ensure!(
-            !frame.key_info.smk_message(),
-            Error::SmkHandshakeNotSupported
-        );
+        ensure!(!frame.key_info.smk_message(), Error::SmkHandshakeNotSupported);
 
         // IEEE Std 802.11-2016, 12.7.2 c)
         match frame.key_info.key_type() {
@@ -237,20 +223,26 @@ impl<'a> VerifiedKeyFrame<'a> {
                 Role::Supplicant if frame.key_len != 0 => {
                     let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
-                    ensure!(frame.key_len == tk_len, Error::InvalidKeyLength(frame.key_len, tk_len));
-                },
+                    ensure!(
+                        frame.key_len == tk_len,
+                        Error::InvalidKeyLength(frame.key_len, tk_len)
+                    );
+                }
                 // Authenticator must use the pairwise cipher's key length.
                 Role::Authenticator => {
                     let tk_bits = rsne.pairwise.tk_bits().ok_or(Error::UnsupportedCipherSuite)?;
                     let tk_len = tk_bits / 8;
-                    ensure!(frame.key_len == tk_len, Error::InvalidKeyLength(frame.key_len, tk_len));
-                },
+                    ensure!(
+                        frame.key_len == tk_len,
+                        Error::InvalidKeyLength(frame.key_len, tk_len)
+                    );
+                }
                 _ => {}
             },
             // IEEE Std 802.11-2016, 12.7.2 c) does not specify the expected value for frames
             // involved in exchanging the GTK. Thus, leave validation and enforcement of this
             // requirement to the selected key exchange method.
-            eapol::KEY_TYPE_GROUP_SMK => {},
+            eapol::KEY_TYPE_GROUP_SMK => {}
             _ => bail!(Error::UnsupportedKeyDerivation),
         };
 
@@ -262,16 +254,22 @@ impl<'a> VerifiedKeyFrame<'a> {
                 Role::Supplicant => {
                     ensure!(
                         frame.key_replay_counter >= key_replay_counter,
-                        Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter)
+                        Error::InvalidKeyReplayCounter(
+                            frame.key_replay_counter,
+                            key_replay_counter
+                        )
                     );
-                },
+                }
                 // Authenticator must send messages with a strictly larger key replay counter.
                 Role::Authenticator => {
                     ensure!(
                         frame.key_replay_counter > key_replay_counter,
-                        Error::InvalidKeyReplayCounter(frame.key_replay_counter, key_replay_counter)
+                        Error::InvalidKeyReplayCounter(
+                            frame.key_replay_counter,
+                            key_replay_counter
+                        )
                     );
-                },
+                }
             }
         }
 
@@ -291,10 +289,7 @@ impl<'a> VerifiedKeyFrame<'a> {
 
         // IEEE Std 802.11-2016, 12.7.2 i) & j)
         // IEEE Std 802.11-2016, 12.7.2 b.10)
-        ensure!(
-            frame.key_data_len as usize == frame.key_data.len(),
-            Error::InvalidKeyDataLength
-        );
+        ensure!(frame.key_data_len as usize == frame.key_data.len(), Error::InvalidKeyDataLength);
 
         Ok(VerifiedKeyFrame { frame })
     }
@@ -366,20 +361,16 @@ pub type UpdateSink = Vec<SecAssocUpdate>;
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
     use crate::akm;
     use crate::cipher;
+    use crate::rsna::{test_util, NegotiatedRsne, Role};
     use crate::rsne::Rsne;
     use crate::suite_selector::OUI;
-    use crate::rsna::{test_util, Role, NegotiatedRsne};
+    use bytes::Bytes;
 
     #[test]
     fn test_negotiated_rsne_from_rsne() {
-        let rsne = make_rsne(
-            Some(cipher::GCMP_256),
-            vec![cipher::CCMP_128],
-            vec![akm::PSK],
-        );
+        let rsne = make_rsne(Some(cipher::GCMP_256), vec![cipher::CCMP_128], vec![akm::PSK]);
         NegotiatedRsne::from_rsne(&rsne).expect("error, could not create negotiated RSNE");
 
         let rsne = make_rsne(None, vec![cipher::CCMP_128], vec![akm::PSK]);
@@ -411,7 +402,6 @@ mod tests {
         let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
         assert!(result.is_ok(), "failed verifying message: {}", result.unwrap_err());
 
-
         msg2.key_len = 0;
         msg2 = test_util::finalize_key_frame(msg2, Some(s_ptk.kck()));
         let result = VerifiedKeyFrame::from_key_frame(&msg2, &Role::Authenticator, &rsne, 12);
@@ -438,11 +428,7 @@ mod tests {
 
     #[test]
     fn test_to_rsne() {
-        let rsne = make_rsne(
-            Some(cipher::CCMP_128),
-            vec![cipher::CCMP_128],
-            vec![akm::PSK],
-        );
+        let rsne = make_rsne(Some(cipher::CCMP_128), vec![cipher::CCMP_128], vec![akm::PSK]);
         let negotiated_rsne = NegotiatedRsne::from_rsne(&rsne)
             .expect("error, could not create negotiated RSNE")
             .to_full_rsne();
@@ -450,17 +436,11 @@ mod tests {
     }
 
     fn make_cipher(suite_type: u8) -> cipher::Cipher {
-        cipher::Cipher {
-            oui: Bytes::from(&OUI[..]),
-            suite_type,
-        }
+        cipher::Cipher { oui: Bytes::from(&OUI[..]), suite_type }
     }
 
     fn make_akm(suite_type: u8) -> akm::Akm {
-        akm::Akm {
-            oui: Bytes::from(&OUI[..]),
-            suite_type,
-        }
+        akm::Akm { oui: Bytes::from(&OUI[..]), suite_type }
     }
 
     fn make_rsne(data: Option<u8>, pairwise: Vec<u8>, akms: Vec<u8>) -> Rsne {

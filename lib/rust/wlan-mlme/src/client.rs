@@ -4,7 +4,10 @@
 
 use {
     failure::Error,
-    wlan_common::{mac, buffer_writer::{BufferWriter, ByteSliceMut}},
+    wlan_common::{
+        buffer_writer::{BufferWriter, ByteSliceMut},
+        mac,
+    },
 };
 
 type MacAddr = [u8; 6];
@@ -12,10 +15,12 @@ type MacAddr = [u8; 6];
 /// Fills a given buffer with a null-data frame which will be send from a client to an AP.
 /// Fails if the given buffer is too short.
 /// Returns the amount of bytes written to the buffer.
-pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(buf: B, bssid: MacAddr,
-                                                    client_addr: MacAddr, seq_ctrl: u16)
-    -> Result<usize, Error>
-{
+pub fn write_keep_alive_resp_frame<B: ByteSliceMut>(
+    buf: B,
+    bssid: MacAddr,
+    client_addr: MacAddr,
+    seq_ctrl: u16,
+) -> Result<usize, Error> {
     let (mut data_hdr, w) = BufferWriter::new(buf).reserve_zeroed::<mac::DataHdr>()?;
     let mut fc = mac::FrameControl(0);
     fc.set_frame_type(mac::FRAME_TYPE_DATA);
@@ -39,13 +44,17 @@ mod tests {
         let written_bytes = write_keep_alive_resp_frame(&mut buf[..], [1; 6], [2; 6], 42)
             .expect("failed writing frame");
         assert_eq!(24, written_bytes);
-        assert_eq!([0b01001000, 0b1, // Frame Control
-                    0, 0,  // Duration
-                    1, 1, 1, 1, 1, 1,  // addr1
-                    2, 2, 2, 2, 2, 2,  // addr2
-                    1, 1, 1, 1, 1, 1,  // addr3
-                    42, 0, // Sequence Control
-                    3 // Trailing bytes
-                   ], buf);
+        assert_eq!(
+            [
+                0b01001000, 0b1, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                42, 0, // Sequence Control
+                3  // Trailing bytes
+            ],
+            buf
+        );
     }
 }

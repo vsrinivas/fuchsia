@@ -3,23 +3,22 @@
 // found in the LICENSE file.
 
 use super::*;
-use bytes::Bytes;
 use crate::akm::{self, Akm};
 use crate::cipher::{self, Cipher};
 use crate::crypto_utils::nonce::NonceReader;
-use crate::key::exchange::{
-    handshake::fourway::{self, Fourway},
+use crate::key::exchange::handshake::fourway::{self, Fourway};
+use crate::key::{
+    gtk::{Gtk, GtkProvider},
+    ptk::Ptk,
 };
-use crate::key::{ptk::Ptk, gtk::{Gtk, GtkProvider}};
 use crate::key_data;
 use crate::key_data::kde;
-use crate::rsna::{
-    SecAssocUpdate, NegotiatedRsne, VerifiedKeyFrame
-};
-use crate::{Authenticator, Supplicant};
 use crate::psk;
+use crate::rsna::{NegotiatedRsne, SecAssocUpdate, VerifiedKeyFrame};
 use crate::rsne::Rsne;
 use crate::suite_selector::OUI;
+use crate::{Authenticator, Supplicant};
+use bytes::Bytes;
 use hex::FromHex;
 use std::sync::{Arc, Mutex};
 
@@ -28,22 +27,13 @@ pub const A_ADDR: [u8; 6] = [0x1D, 0xE3, 0xFD, 0xDF, 0xCB, 0xD3];
 
 pub fn get_a_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    });
-    rsne.pairwise_cipher_suites.push(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    });
-    rsne.pairwise_cipher_suites.push(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::TKIP,
-    });
-    rsne.akm_suites.push(Akm {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: akm::PSK,
-    });
+    rsne.group_data_cipher_suite =
+        Some(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites
+        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites
+        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::TKIP });
+    rsne.akm_suites.push(Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK });
     rsne
 }
 
@@ -55,18 +45,11 @@ pub fn get_rsne_bytes(rsne: &Rsne) -> Vec<u8> {
 
 pub fn get_s_rsne() -> Rsne {
     let mut rsne = Rsne::new();
-    rsne.group_data_cipher_suite = Some(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    });
-    rsne.pairwise_cipher_suites.push(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    });
-    rsne.akm_suites.push(Akm {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: akm::PSK,
-    });
+    rsne.group_data_cipher_suite =
+        Some(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
+    rsne.pairwise_cipher_suites
+        .push(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 });
+    rsne.akm_suites.push(Akm { oui: Bytes::from(&OUI[..]), suite_type: akm::PSK });
     rsne
 }
 
@@ -74,31 +57,34 @@ pub fn get_supplicant() -> Supplicant {
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("error computing PSK");
-    Supplicant::new_wpa2psk_ccmp128(nonce_rdr,
-                                    psk,
-                                    test_util::S_ADDR,
-                                    test_util::get_s_rsne(),
-                                    test_util::A_ADDR,
-                                    test_util::get_a_rsne())
-        .expect("could not create Supplicant")
+    Supplicant::new_wpa2psk_ccmp128(
+        nonce_rdr,
+        psk,
+        test_util::S_ADDR,
+        test_util::get_s_rsne(),
+        test_util::A_ADDR,
+        test_util::get_a_rsne(),
+    )
+    .expect("could not create Supplicant")
 }
 
 pub fn get_authenticator() -> Authenticator {
-    let gtk_provider = GtkProvider::new(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    }).expect("error creating GtkProvider");
+    let gtk_provider =
+        GtkProvider::new(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 })
+            .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     let psk = psk::compute("ThisIsAPassword".as_bytes(), "ThisIsASSID".as_bytes())
         .expect("error computing PSK");
-    Authenticator::new_wpa2psk_ccmp128(nonce_rdr,
-                                       Arc::new(Mutex::new(gtk_provider)),
-                                       psk,
-                                       test_util::S_ADDR,
-                                       test_util::get_s_rsne(),
-                                       test_util::A_ADDR,
-                                       test_util::get_a_rsne())
-        .expect("could not create Authenticator")
+    Authenticator::new_wpa2psk_ccmp128(
+        nonce_rdr,
+        Arc::new(Mutex::new(gtk_provider)),
+        psk,
+        test_util::S_ADDR,
+        test_util::get_s_rsne(),
+        test_util::A_ADDR,
+        test_util::get_a_rsne(),
+    )
+    .expect("could not create Authenticator")
 }
 
 pub fn get_ptk(anonce: &[u8], snonce: &[u8]) -> Ptk {
@@ -120,27 +106,22 @@ pub fn get_pmk() -> Vec<u8> {
 
 pub fn compute_mic(kck: &[u8], frame: &eapol::KeyFrame) -> Vec<u8> {
     let akm = get_akm();
-    let integrity_alg = akm
-        .integrity_algorithm()
-        .expect("error AKM has no known integrity Algorithm");
+    let integrity_alg =
+        akm.integrity_algorithm().expect("error AKM has no known integrity Algorithm");
     let mut buf = Vec::with_capacity(frame.len());
     frame.as_bytes(true, &mut buf);
     let written = buf.len();
     buf.truncate(written);
-    let mut mic: Vec<u8> = integrity_alg
-        .compute(kck, &buf[..])
-        .expect("error computing MIC for message");
+    let mut mic: Vec<u8> =
+        integrity_alg.compute(kck, &buf[..]).expect("error computing MIC for message");
     mic.truncate(mic_len());
     mic
 }
 
 pub fn encrypt_key_data(kek: &[u8], key_data: &[u8]) -> Vec<u8> {
-    let keywrap_alg = get_akm()
-        .keywrap_algorithm()
-        .expect("error AKM has no known keywrap Algorithm");
-    keywrap_alg
-        .wrap(kek, key_data)
-        .expect("could not encrypt key data")
+    let keywrap_alg =
+        get_akm().keywrap_algorithm().expect("error AKM has no known keywrap Algorithm");
+    keywrap_alg.wrap(kek, key_data).expect("could not encrypt key data")
 }
 
 pub fn mic_len() -> usize {
@@ -175,12 +156,7 @@ where
     msg
 }
 
-pub fn get_4whs_msg3<F>(
-    ptk: &Ptk,
-    anonce: &[u8],
-    gtk: &[u8],
-    msg_modifier: F,
-) -> eapol::KeyFrame
+pub fn get_4whs_msg3<F>(ptk: &Ptk, anonce: &[u8], gtk: &[u8], msg_modifier: F) -> eapol::KeyFrame
 where
     F: Fn(&mut eapol::KeyFrame),
 {
@@ -227,8 +203,9 @@ where
     msg
 }
 
-pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F)
-    -> eapol::KeyFrame where F: Fn(&mut eapol::KeyFrame),
+pub fn get_group_key_hs_msg1<F>(ptk: &Ptk, gtk: &[u8], msg_modifier: F) -> eapol::KeyFrame
+where
+    F: Fn(&mut eapol::KeyFrame),
 {
     let mut buf = Vec::with_capacity(256);
 
@@ -274,10 +251,9 @@ pub fn is_zero(slice: &[u8]) -> bool {
 }
 
 pub fn make_fourway_cfg(role: Role) -> fourway::Config {
-    let gtk_provider = GtkProvider::new(Cipher {
-        oui: Bytes::from(&OUI[..]),
-        suite_type: cipher::CCMP_128,
-    }).expect("error creating GtkProvider");
+    let gtk_provider =
+        GtkProvider::new(Cipher { oui: Bytes::from(&OUI[..]), suite_type: cipher::CCMP_128 })
+            .expect("error creating GtkProvider");
     let nonce_rdr = NonceReader::new(&S_ADDR[..]).expect("error creating Reader");
     fourway::Config::new(
         role,
@@ -287,7 +263,8 @@ pub fn make_fourway_cfg(role: Role) -> fourway::Config {
         test_util::get_a_rsne(),
         nonce_rdr,
         Some(Arc::new(Mutex::new(gtk_provider))),
-    ).expect("could not construct PTK exchange method")
+    )
+    .expect("could not construct PTK exchange method")
 }
 
 pub fn make_handshake(role: Role) -> Fourway {
@@ -306,9 +283,7 @@ pub fn finalize_key_frame(mut frame: eapol::KeyFrame, kck: Option<&[u8]>) -> eap
     frame
 }
 
-fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64)
-                 -> VerifiedKeyFrame
-{
+fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64) -> VerifiedKeyFrame {
     let rsne = NegotiatedRsne::from_rsne(&test_util::get_s_rsne())
         .expect("could not derive negotiated RSNE");
 
@@ -318,24 +293,39 @@ fn make_verified(frame: &eapol::KeyFrame, role: Role, key_replay_counter: u64)
 }
 
 fn extract_eapol_resp(updates: &[SecAssocUpdate]) -> eapol::KeyFrame {
-    updates.iter().filter_map(|u| match u {
-        SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
-        _ => None,
-    }).next().expect("updates do not contain EAPOL frame").clone()
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::TxEapolKeyFrame(resp) => Some(resp),
+            _ => None,
+        })
+        .next()
+        .expect("updates do not contain EAPOL frame")
+        .clone()
 }
 
 fn extract_reported_ptk(updates: &[SecAssocUpdate]) -> Ptk {
-    updates.iter().filter_map(|u| match u {
-        SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
-        _ => None,
-    }).next().expect("updates do not contain PTK").clone()
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Ptk(ptk)) => Some(ptk),
+            _ => None,
+        })
+        .next()
+        .expect("updates do not contain PTK")
+        .clone()
 }
 
 fn extract_reported_gtk(updates: &[SecAssocUpdate]) -> Gtk {
-    updates.iter().filter_map(|u| match u {
-        SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
-        _ => None,
-    }).next().expect("updates do not contain GTK").clone()
+    updates
+        .iter()
+        .filter_map(|u| match u {
+            SecAssocUpdate::Key(Key::Gtk(gtk)) => Some(gtk),
+            _ => None,
+        })
+        .next()
+        .expect("updates do not contain GTK")
+        .clone()
 }
 
 pub struct FourwayTestEnv {
@@ -363,9 +353,11 @@ impl FourwayTestEnv {
         msg1
     }
 
-    pub fn send_msg1_to_supplicant(&mut self, msg1: eapol::KeyFrame, krc: u64)
-                               -> (eapol::KeyFrame, Ptk)
-    {
+    pub fn send_msg1_to_supplicant(
+        &mut self,
+        msg1: eapol::KeyFrame,
+        krc: u64,
+    ) -> (eapol::KeyFrame, Ptk) {
         let verified_msg1 = make_verified(&msg1, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -387,14 +379,18 @@ impl FourwayTestEnv {
         assert!(result.is_err(), "Supplicant successfully processed illegal msg #1");
     }
 
-    pub fn send_msg2_to_authenticator(&mut self, msg2: eapol::KeyFrame, expected_krc: u64, next_krc: u64)
-                                  -> (eapol::KeyFrame, Ptk)
-    {
+    pub fn send_msg2_to_authenticator(
+        &mut self,
+        msg2: eapol::KeyFrame,
+        expected_krc: u64,
+        next_krc: u64,
+    ) -> (eapol::KeyFrame, Ptk) {
         let verified_msg2 = make_verified(&msg2, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut a_update_sink = vec![];
-        let result = self.authenticator.on_eapol_key_frame(&mut a_update_sink, next_krc, verified_msg2);
+        let result =
+            self.authenticator.on_eapol_key_frame(&mut a_update_sink, next_krc, verified_msg2);
         assert!(result.is_ok(), "Authenticator failed processing msg #2: {}", result.unwrap_err());
         let msg3 = extract_eapol_resp(&a_update_sink[..]);
         let a_ptk = extract_reported_ptk(&a_update_sink[..]);
@@ -402,9 +398,11 @@ impl FourwayTestEnv {
         (msg3, a_ptk)
     }
 
-    pub fn send_msg3_to_supplicant(&mut self, msg3: eapol::KeyFrame, krc: u64)
-                               -> (eapol::KeyFrame, Gtk)
-    {
+    pub fn send_msg3_to_supplicant(
+        &mut self,
+        msg3: eapol::KeyFrame,
+        krc: u64,
+    ) -> (eapol::KeyFrame, Gtk) {
         let verified_msg3 = make_verified(&msg3, Role::Supplicant, krc);
 
         // Send message #1 to Supplicant and extract responses.
@@ -426,14 +424,13 @@ impl FourwayTestEnv {
         assert!(result.is_err(), "Supplicant successfully processed illegal msg #3");
     }
 
-    pub fn send_msg4_to_authenticator(&mut self, msg4: eapol::KeyFrame, expected_krc: u64)
-                                  -> Gtk
-    {
+    pub fn send_msg4_to_authenticator(&mut self, msg4: eapol::KeyFrame, expected_krc: u64) -> Gtk {
         let verified_msg4 = make_verified(&msg4, Role::Authenticator, expected_krc);
 
         // Send message #1 to Supplicant and extract responses.
         let mut a_update_sink = vec![];
-        let result = self.authenticator.on_eapol_key_frame(&mut a_update_sink, expected_krc, verified_msg4);
+        let result =
+            self.authenticator.on_eapol_key_frame(&mut a_update_sink, expected_krc, verified_msg4);
         assert!(result.is_ok(), "Authenticator failed processing msg #4: {}", result.unwrap_err());
         let a_gtk = extract_reported_gtk(&a_update_sink[..]);
 

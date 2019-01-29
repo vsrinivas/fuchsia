@@ -17,10 +17,7 @@ const VALID_PRF_BIT_SIZES: [usize; 6] = [128, 192, 256, 384, 512, 704];
 // HMAC-SHA1 is considered insecure but is required to be used in IEEE 802.11's PRF.
 #[allow(deprecated)]
 pub(crate) fn prf(k: &[u8], a: &str, b: &[u8], bits: usize) -> Result<Vec<u8>, failure::Error> {
-    ensure!(
-        VALID_PRF_BIT_SIZES.contains(&bits),
-        Error::InvalidBitSize(bits)
-    );
+    ensure!(VALID_PRF_BIT_SIZES.contains(&bits), Error::InvalidBitSize(bits));
 
     let mut result: Vec<u8> = Vec::with_capacity(bits / 8);
     let iterations = (bits + 159) / 160;
@@ -58,12 +55,7 @@ mod tests {
     #[test]
     fn test_prf_test_case_2() {
         let key = "Jefe".as_bytes();
-        let actual = prf(
-            &key[..],
-            "prefix",
-            "what do ya want for nothing?".as_bytes(),
-            512,
-        );
+        let actual = prf(&key[..], "prefix", "what do ya want for nothing?".as_bytes(), 512);
         assert_eq!(actual.is_ok(), true);
 
         let expected = Vec::from_hex("51f4de5b33f249adf81aeb713a3c20f4fe631446fabdfa58244759ae58ef9009a99abf4eac2ca5fa87e692c440eb40023e7babb206d61de7b92f41529092b8fc").unwrap();
@@ -97,12 +89,7 @@ mod tests {
     #[test]
     fn test_prf_test_case_65_2() {
         let key = "Jefe".as_bytes();
-        let actual = prf(
-            &key[..],
-            "prefix-2",
-            "what do ya want for nothing?".as_bytes(),
-            256,
-        );
+        let actual = prf(&key[..], "prefix-2", "what do ya want for nothing?".as_bytes(), 256);
         assert_eq!(actual.is_ok(), true);
 
         let expected =
@@ -141,12 +128,7 @@ mod tests {
     #[test]
     fn test_prf_empty_key() {
         let key: [u8; 0] = [];
-        let actual = prf(
-            &key[..],
-            "something is happening",
-            "Lorem ipsum".as_bytes(),
-            256,
-        );
+        let actual = prf(&key[..], "something is happening", "Lorem ipsum".as_bytes(), 256);
         assert_eq!(actual.is_ok(), true);
 
         let expected =
@@ -191,12 +173,7 @@ mod tests {
     fn test_prf_valid_bit_sizes() {
         for bits in &VALID_BIT_SIZES {
             let result = prf("".as_bytes(), "", "".as_bytes(), *bits as usize);
-            assert_eq!(
-                result.is_ok(),
-                true,
-                "expected success with valid bit size: {:?}",
-                *bits
-            );
+            assert_eq!(result.is_ok(), true, "expected success with valid bit size: {:?}", *bits);
         }
     }
 
@@ -207,12 +184,7 @@ mod tests {
                 continue;
             }
             let result = prf("".as_bytes(), "", "".as_bytes(), bits as usize);
-            assert_eq!(
-                result.is_err(),
-                true,
-                "expected failure with wrong bit size: {:?}",
-                bits
-            );
+            assert_eq!(result.is_err(), true, "expected failure with wrong bit size: {:?}", bits);
         }
     }
 }

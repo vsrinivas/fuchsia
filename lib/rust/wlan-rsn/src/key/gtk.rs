@@ -4,7 +4,6 @@
 
 // Remove once GtkProvider is used.
 #[allow(unused)]
-
 use crate::cipher::Cipher;
 use crate::crypto_utils::prf;
 use crate::Error;
@@ -27,10 +26,7 @@ fn generate_random_gtk(len: usize) -> Box<[u8]> {
 impl GtkProvider {
     pub fn new(cipher: Cipher) -> Result<GtkProvider, failure::Error> {
         let tk_bytes = cipher.tk_bytes().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
-        Ok(GtkProvider {
-            cipher,
-            key: generate_random_gtk(tk_bytes)
-        })
+        Ok(GtkProvider { cipher, key: generate_random_gtk(tk_bytes) })
     }
 
     pub fn get_gtk(&self) -> Result<Gtk, failure::Error> {
@@ -49,8 +45,7 @@ pub struct Gtk {
 
 impl Gtk {
     pub fn from_gtk(gtk: Vec<u8>, key_id: u8, cipher: Cipher) -> Result<Gtk, failure::Error> {
-        let tk_bits = cipher.tk_bits()
-            .ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
+        let tk_bits = cipher.tk_bits().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
         let tk_len = (tk_bits / 8) as usize;
         ensure!(gtk.len() >= tk_len, "GTK must be larger than the resulting TK");
 
@@ -65,8 +60,7 @@ impl Gtk {
         gnonce: &[u8; 32],
         cipher: Cipher,
     ) -> Result<Gtk, failure::Error> {
-        let tk_bits = cipher.tk_bits()
-            .ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
+        let tk_bits = cipher.tk_bits().ok_or(Error::GtkHierarchyUnsupportedCipherError)?;
 
         // data length = 6 (aa) + 32 (gnonce)
         let mut data: [u8; 38] = [0; 38];
@@ -74,12 +68,7 @@ impl Gtk {
         data[6..].copy_from_slice(&gnonce[..]);
 
         let gtk_bytes = prf(gmk, "Group key expansion", &data, tk_bits as usize)?;
-        Ok(Gtk {
-            gtk: gtk_bytes,
-            key_id,
-            tk_len: (tk_bits / 8) as usize,
-            cipher,
-        })
+        Ok(Gtk { gtk: gtk_bytes, key_id, tk_len: (tk_bits / 8) as usize, cipher })
     }
 
     pub fn tk(&self) -> &[u8] {
@@ -94,9 +83,9 @@ impl Gtk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
     use crate::cipher;
     use crate::suite_selector::OUI;
+    use bytes::Bytes;
     use std::collections::HashSet;
 
     #[test]
@@ -106,7 +95,8 @@ mod tests {
             let provider = GtkProvider::new(Cipher {
                 oui: Bytes::from(&OUI[..]),
                 suite_type: cipher::CCMP_128,
-            }).expect("failed creating GTK Provider");
+            })
+            .expect("failed creating GTK Provider");
             let gtk = provider.get_gtk().expect("could not read GTK").tk().to_vec();
             assert!(gtk.iter().any(|&x| x != 0));
             assert!(!gtks.contains(&gtk));

@@ -7,12 +7,15 @@ pub struct StateMachine<S> {
     state: Option<S>,
 }
 
-impl <S> StateMachine<S> {
+impl<S> StateMachine<S> {
     pub fn new(state: S) -> Self {
         StateMachine { state: Some(state) }
     }
 
-    pub fn replace_state<F>(&mut self, map: F) where F: FnOnce(S) -> S {
+    pub fn replace_state<F>(&mut self, map: F)
+    where
+        F: FnOnce(S) -> S,
+    {
         self.state = Some(map(self.state.take().expect("State can never be None")));
     }
 

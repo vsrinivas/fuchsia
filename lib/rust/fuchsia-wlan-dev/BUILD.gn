@@ -16,4 +16,3 @@ rustc_library("fuchsia-wlan-dev") {
     "//garnet/public/rust/fuchsia-zircon",
   ]
 }
-

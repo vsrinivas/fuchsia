@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::crypto_utils::nonce::Nonce;
 use crate::integrity;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
@@ -10,9 +9,12 @@ use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data;
-use crate::rsna::{KeyFrameState, KeyFrameKeyDataState, UpdateSink, NegotiatedRsne, SecAssocUpdate};
+use crate::rsna::{
+    KeyFrameKeyDataState, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
+};
 use crate::rsne::Rsne;
 use crate::Error;
+use bytes::Bytes;
 use eapol;
 use failure::{self, bail, ensure};
 use log::{error, info};
@@ -89,17 +91,17 @@ fn handle_message_3(
     let frame = match &msg3.get() {
         KeyFrameState::UnverifiedMic(unverified) => {
             unverified.verify_mic(kck, &negotiated_rsne.akm)?
-        },
+        }
         KeyFrameState::NoMic(_) => bail!("msg3 of 4-Way Handshake must carry a MIC"),
     };
 
     let key_data = match &msg3.get_key_data() {
         KeyFrameKeyDataState::Unencrypted(_) => {
             bail!("msg3 of 4-Way Handshake must carry encrypted key data")
-        },
+        }
         KeyFrameKeyDataState::Encrypted(encrypted) => {
             encrypted.decrypt(kek, &negotiated_rsne.akm)?
-        },
+        }
     };
 
     let mut gtk: Option<key_data::kde::Gtk> = None;
@@ -163,20 +165,9 @@ fn create_message_4(
 
 #[derive(Debug, PartialEq)]
 pub enum State {
-    AwaitingMsg1 {
-        pmk: Vec<u8>,
-        cfg: Config,
-    },
-    AwaitingMsg3 {
-        pmk: Vec<u8>,
-        ptk: Ptk,
-        anonce: Nonce,
-        cfg: Config,
-    },
-    Completed {
-        pmk: Vec<u8>,
-        cfg: Config,
-    },
+    AwaitingMsg1 { pmk: Vec<u8>, cfg: Config },
+    AwaitingMsg3 { pmk: Vec<u8>, ptk: Ptk, anonce: Nonce, cfg: Config },
+    Completed { pmk: Vec<u8>, cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
@@ -205,27 +196,27 @@ impl State {
                             Err(e) => {
                                 error!("error: {}", e);
                                 return State::AwaitingMsg1 { pmk, cfg };
-                            },
+                            }
                             Ok((msg2, ptk, anonce)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg2));
                                 update_sink.push(SecAssocUpdate::Key(Key::Ptk(ptk.clone())));
                                 State::AwaitingMsg3 { pmk, ptk, cfg, anonce }
                             }
                         }
-                    },
+                    }
                     unexpected_msg => {
                         error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
                         State::AwaitingMsg1 { pmk, cfg }
-                    },
+                    }
                 }
-            },
+            }
             State::AwaitingMsg3 { pmk, ptk, cfg, .. } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     // Restart handshake if first message was received.
                     fourway::MessageNumber::Message1 => {
                         State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
-                    },
+                    }
                     // Third message of the handshake is only processed once to prevent replay
                     // attacks.
                     fourway::MessageNumber::Message3 => {
@@ -233,21 +224,20 @@ impl State {
                             Err(e) => {
                                 error!("error: {}", e);
                                 State::AwaitingMsg1 { pmk, cfg }
-                            },
+                            }
                             Ok((msg4, gtk)) => {
                                 update_sink.push(SecAssocUpdate::TxEapolKeyFrame(msg4));
                                 update_sink.push(SecAssocUpdate::Key(Key::Gtk(gtk)));
                                 State::Completed { pmk, cfg }
                             }
                         }
-                    },
+                    }
                     unexpected_msg => {
                         error!("error: {}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
                         State::AwaitingMsg1 { pmk, cfg }
-                    },
+                    }
                 }
-
-            },
+            }
             State::Completed { pmk, cfg } => {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
@@ -255,17 +245,18 @@ impl State {
                     fourway::MessageNumber::Message1 => {
                         info!("restarting already completed 4-Way Handshake");
                         State::AwaitingMsg1 { pmk, cfg }.on_eapol_key_frame(update_sink, frame)
-                    },
+                    }
                     unexpected_msg => {
-                        error!("ignoring message {:?}; 4-Way Handshake already completed",
-                               unexpected_msg);
+                        error!(
+                            "ignoring message {:?}; 4-Way Handshake already completed",
+                            unexpected_msg
+                        );
                         State::Completed { pmk, cfg }
                     }
                 }
-            },
+            }
         }
     }
-
 
     pub fn anonce(&self) -> Option<&[u8]> {
         match self {

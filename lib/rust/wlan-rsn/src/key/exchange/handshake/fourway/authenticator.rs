@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-use bytes::Bytes;
 use crate::crypto_utils::nonce::Nonce;
 use crate::integrity;
 use crate::key::exchange::handshake::fourway::{self, Config, FourwayHandshakeFrame};
@@ -10,33 +9,20 @@ use crate::key::exchange::Key;
 use crate::key::gtk::Gtk;
 use crate::key::ptk::Ptk;
 use crate::key_data::{self, kde};
-use crate::rsna::{derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink};
+use crate::rsna::{
+    derive_key_descriptor_version, KeyFrameState, NegotiatedRsne, SecAssocUpdate, UpdateSink,
+};
 use crate::Error;
+use bytes::Bytes;
 use failure::{self, bail, ensure};
 use log::error;
 
 #[derive(Debug, PartialEq)]
 pub enum State {
-    Idle {
-        pmk: Vec<u8>,
-        cfg: Config,
-    },
-    AwaitingMsg2 {
-        pmk: Vec<u8>,
-        cfg: Config,
-        anonce: Nonce,
-        last_krc: u64,
-    },
-    AwaitingMsg4 {
-        pmk: Vec<u8>,
-        ptk: Ptk,
-        gtk: Gtk,
-        cfg: Config,
-        last_krc: u64,
-    },
-    Completed {
-        cfg: Config,
-    },
+    Idle { pmk: Vec<u8>, cfg: Config },
+    AwaitingMsg2 { pmk: Vec<u8>, cfg: Config, anonce: Nonce, last_krc: u64 },
+    AwaitingMsg4 { pmk: Vec<u8>, ptk: Ptk, gtk: Gtk, cfg: Config, last_krc: u64 },
+    Completed { cfg: Config },
 }
 
 pub fn new(cfg: Config, pmk: Vec<u8>) -> State {
@@ -51,22 +37,27 @@ impl State {
                     Ok(nonce) => nonce,
                     Err(e) => {
                         error!("error generating anonce: {}", e);
-                        return State::Idle { cfg, pmk }
+                        return State::Idle { cfg, pmk };
                     }
                 };
                 match initiate_internal(update_sink, &cfg, krc, &anonce[..]) {
-                    Ok(()) => State::AwaitingMsg2 {anonce, cfg, pmk, last_krc: krc + 1 },
+                    Ok(()) => State::AwaitingMsg2 { anonce, cfg, pmk, last_krc: krc + 1 },
                     Err(e) => {
                         error!("error: {}", e);
                         State::Idle { cfg, pmk }
                     }
                 }
-            },
+            }
             other_state => other_state,
         }
     }
 
-    pub fn on_eapol_key_frame(self, update_sink: &mut UpdateSink, _krc: u64, frame: FourwayHandshakeFrame) -> Self {
+    pub fn on_eapol_key_frame(
+        self,
+        update_sink: &mut UpdateSink,
+        _krc: u64,
+        frame: FourwayHandshakeFrame,
+    ) -> Self {
         match self {
             State::Idle { cfg, pmk } => {
                 error!("received EAPOL Key frame before initiate 4-Way Handshake");
@@ -76,31 +67,42 @@ impl State {
                 // Safe since the frame is only used for deriving the message number.
                 match fourway::message_number(frame.get().unsafe_get_raw()) {
                     fourway::MessageNumber::Message2 => {
-                        match process_message_2(update_sink, &pmk[..], &cfg, &anonce[..], last_krc, last_krc + 1, frame) {
+                        match process_message_2(
+                            update_sink,
+                            &pmk[..],
+                            &cfg,
+                            &anonce[..],
+                            last_krc,
+                            last_krc + 1,
+                            frame,
+                        ) {
                             Ok((ptk, gtk)) => {
                                 State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc: last_krc + 1 }
-                            },
+                            }
                             Err(e) => {
                                 error!("error: {}", e);
                                 State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
-                            },
+                            }
                         }
                     }
                     unexpected_msg => {
-                        error!("error: {:?}", Error::Unexpected4WayHandshakeMessage(unexpected_msg));
+                        error!(
+                            "error: {:?}",
+                            Error::Unexpected4WayHandshakeMessage(unexpected_msg)
+                        );
                         State::AwaitingMsg2 { pmk, cfg, anonce, last_krc }
                     }
                 }
-            },
+            }
             State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc } => {
                 match process_message_4(update_sink, &cfg, &ptk, &gtk, last_krc, frame) {
                     Ok(()) => State::Completed { cfg },
                     Err(e) => {
                         error!("error: {}", e);
                         State::AwaitingMsg4 { pmk, ptk, gtk, cfg, last_krc }
-                    },
+                    }
                 }
-            },
+            }
             other_state => other_state,
         }
     }
@@ -115,7 +117,12 @@ impl State {
     }
 }
 
-fn initiate_internal(update_sink: &mut UpdateSink, cfg: &Config, krc: u64, anonce: &[u8]) -> Result<(), failure::Error> {
+fn initiate_internal(
+    update_sink: &mut UpdateSink,
+    cfg: &Config,
+    krc: u64,
+    anonce: &[u8],
+) -> Result<(), failure::Error> {
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let krc = krc + 1;
     let msg1 = create_message_1(anonce, &rsne, krc)?;
@@ -134,7 +141,8 @@ fn process_message_2(
 ) -> Result<(Ptk, Gtk), failure::Error> {
     let ptk = handle_message_2(&pmk[..], &cfg, &anonce[..], last_krc, frame)?;
 
-    let gtk = cfg.gtk_provider.as_ref().expect("GtkProvider is missing").lock().unwrap().get_gtk()?;
+    let gtk =
+        cfg.gtk_provider.as_ref().expect("GtkProvider is missing").lock().unwrap().get_gtk()?;
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let msg3 = create_message_3(&cfg, ptk.kck(), ptk.kek(), &gtk, &anonce[..], &rsne, next_krc)?;
 
@@ -205,26 +213,19 @@ pub fn handle_message_2(
     let snonce = &frame.get().unsafe_get_raw().key_nonce[..];
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
 
-    let ptk = Ptk::new(
-        pmk,
-        &cfg.a_addr,
-        &cfg.s_addr,
-        anonce,
-        snonce,
-        &rsne.akm,
-        rsne.pairwise,
-    )?;
+    let ptk = Ptk::new(pmk, &cfg.a_addr, &cfg.s_addr, anonce, snonce, &rsne.akm, rsne.pairwise)?;
 
     // PTK was computed, verify the frame's MIC.
     let frame = match &frame.get() {
-        KeyFrameState::UnverifiedMic(unverified) => {
-            unverified.verify_mic(ptk.kck(), &rsne.akm)?
-        },
+        KeyFrameState::UnverifiedMic(unverified) => unverified.verify_mic(ptk.kck(), &rsne.akm)?,
         KeyFrameState::NoMic(_) => bail!("msg2 of 4-Way Handshake must carry a MIC"),
     };
-    ensure!(frame.key_replay_counter == krc,
-            "error, expected Supplicant response to message {:?} but was {:?} in msg #2",
-            krc, frame.key_replay_counter);
+    ensure!(
+        frame.key_replay_counter == krc,
+        "error, expected Supplicant response to message {:?} but was {:?} in msg #2",
+        krc,
+        frame.key_replay_counter
+    );
 
     // TODO(hahnr): Key data must carry RSNE. Verify.
 
@@ -252,11 +253,8 @@ fn create_message_3(
 
     // Add optional padding and encrypt the key data.
     key_data::add_padding(&mut key_data);
-    let encrypted_key_data = rsne
-        .akm
-        .keywrap_algorithm()
-        .ok_or(Error::UnsupportedAkmSuite)?
-        .wrap(kek, &key_data[..])?;
+    let encrypted_key_data =
+        rsne.akm.keywrap_algorithm().ok_or(Error::UnsupportedAkmSuite)?.wrap(kek, &key_data[..])?;
 
     // Construct message.
     let version = derive_key_descriptor_version(eapol::KeyDescriptor::Ieee802dot11, rsne);
@@ -291,10 +289,7 @@ fn create_message_3(
     msg3.update_packet_body_len();
 
     // Compute and update the frame's MIC.
-    let integrity_alg = rsne
-        .akm
-        .integrity_algorithm()
-        .ok_or(Error::UnsupportedAkmSuite)?;
+    let integrity_alg = rsne.akm.integrity_algorithm().ok_or(Error::UnsupportedAkmSuite)?;
     update_mic(kck, rsne.mic_size as usize, integrity_alg, &mut msg3)?;
 
     Ok(msg3)
@@ -305,19 +300,19 @@ pub fn handle_message_4(
     cfg: &Config,
     kck: &[u8],
     krc: u64,
-    frame: FourwayHandshakeFrame
+    frame: FourwayHandshakeFrame,
 ) -> Result<(), failure::Error> {
     let rsne = NegotiatedRsne::from_rsne(&cfg.s_rsne)?;
     let frame = match &frame.get() {
-        KeyFrameState::UnverifiedMic(unverified) => {
-            unverified.verify_mic(kck, &rsne.akm)?
-        },
+        KeyFrameState::UnverifiedMic(unverified) => unverified.verify_mic(kck, &rsne.akm)?,
         KeyFrameState::NoMic(_) => bail!("msg4 of 4-Way Handshake must carry a MIC"),
     };
     ensure!(
         frame.key_replay_counter == krc,
         "error, expected Supplicant response to message {:?} but was {:?} in msg #4",
-        krc, frame.key_replay_counter);
+        krc,
+        frame.key_replay_counter
+    );
 
     // Note: The message's integrity was already verified by low layers.
 

@@ -39,8 +39,12 @@ impl Method {
         frame: VerifiedKeyFrame,
     ) -> Result<(), failure::Error> {
         match self {
-            Method::FourWayHandshake(hs) => hs.on_eapol_key_frame(update_sink, key_replay_counter, frame),
-            Method::GroupKeyHandshake(hs) => hs.on_eapol_key_frame(update_sink, key_replay_counter, frame),
+            Method::FourWayHandshake(hs) => {
+                hs.on_eapol_key_frame(update_sink, key_replay_counter, frame)
+            }
+            Method::GroupKeyHandshake(hs) => {
+                hs.on_eapol_key_frame(update_sink, key_replay_counter, frame)
+            }
         }
     }
     pub fn initiate(

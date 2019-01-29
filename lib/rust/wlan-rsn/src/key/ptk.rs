@@ -23,19 +23,12 @@ pub struct Ptk {
 }
 
 impl Ptk {
-    pub fn from_ptk(ptk: Vec<u8>, akm: &Akm, cipher: Cipher)
-                    -> Result<Self, failure::Error> {
+    pub fn from_ptk(ptk: Vec<u8>, akm: &Akm, cipher: Cipher) -> Result<Self, failure::Error> {
         let kck_len = akm.kck_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
         let kek_len = akm.kek_bytes().ok_or(Error::PtkHierarchyUnsupportedAkmError)? as usize;
         let tk_len = cipher.tk_bytes().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
         ensure!(kck_len + kek_len + tk_len == ptk.len(), "invalid ptk length");
-        Ok(Ptk {
-            ptk,
-            kck_len,
-            kek_len,
-            tk_len,
-            cipher,
-        })
+        Ok(Ptk { ptk, kck_len, kek_len, tk_len, cipher })
     }
 
     // IEEE 802.11-2016, 12.7.1.3
@@ -48,10 +41,7 @@ impl Ptk {
         akm: &Akm,
         cipher: Cipher,
     ) -> Result<Ptk, failure::Error> {
-        ensure!(
-            anonce.len() == 32 && snonce.len() == 32,
-            Error::InvalidNonceSize(anonce.len())
-        );
+        ensure!(anonce.len() == 32 && snonce.len() == 32, Error::InvalidNonceSize(anonce.len()));
 
         let pmk_len = akm
             .pmk_bits()
@@ -59,15 +49,9 @@ impl Ptk {
             .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
         ensure!(pmk.len() == pmk_len, Error::PtkHierarchyInvalidPmkError);
 
-        let kck_bits = akm
-            .kck_bits()
-            .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
-        let kek_bits = akm
-            .kek_bits()
-            .ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
-        let tk_bits = cipher
-            .tk_bits()
-            .ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
+        let kck_bits = akm.kck_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let kek_bits = akm.kek_bits().ok_or(Error::PtkHierarchyUnsupportedAkmError)?;
+        let tk_bits = cipher.tk_bits().ok_or(Error::PtkHierarchyUnsupportedCipherError)?;
         let prf_bits = kck_bits + kek_bits + tk_bits;
 
         // data length = 6 (aa) + 6 (spa) + 32 (anonce) + 32 (snonce)
@@ -107,10 +91,10 @@ impl Ptk {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use bytes::Bytes;
     use crate::akm::{Akm, PSK};
     use crate::cipher::{Cipher, CCMP_128, TKIP};
     use crate::suite_selector::{Factory, OUI};
+    use bytes::Bytes;
     use hex::FromHex;
 
     struct TestData {
@@ -129,31 +113,19 @@ mod tests {
         let spa = <[u8; 6]>::from_hex("b0b1b2b3b4b5").unwrap();
         let anonce = <[u8; 32]>::from_hex(
             "e0e1e2e3e4e5e6e7e8e9f0f1f2f3f4f5f6f7f8f9fafbfcfdfeff000102030405",
-        ).unwrap();
+        )
+        .unwrap();
         let snonce = <[u8; 32]>::from_hex(
             "c0c1c2c3c4c5c6c7c8c9d0d1d2d3d4d5d6d7d8d9dadbdcdddedfe0e1e2e3e4e5",
-        ).unwrap();
-        TestData {
-            pmk,
-            aa,
-            spa,
-            anonce,
-            snonce,
-        }
+        )
+        .unwrap();
+        TestData { pmk, aa, spa, anonce, snonce }
     }
 
     fn new_ptk(data: &TestData, akm_suite: u8, cipher_suite: u8) -> Result<Ptk, failure::Error> {
         let akm = Akm::new(Bytes::from(&OUI[..]), akm_suite).unwrap();
         let cipher = Cipher::new(Bytes::from(&OUI[..]), cipher_suite).unwrap();
-        Ptk::new(
-            &data.pmk[..],
-            &data.aa,
-            &data.spa,
-            &data.anonce,
-            &data.snonce,
-            &akm,
-            cipher,
-        )
+        Ptk::new(&data.pmk[..], &data.aa, &data.spa, &data.anonce, &data.snonce, &akm, cipher)
     }
 
     // IEEE Std 802.11-2016, J.7.1 & J.7.2

@@ -3,8 +3,8 @@
 // found in the LICENSE file.
 
 use {
-    bitfield::bitfield,
     crate::buffer_writer::BufferWriter,
+    bitfield::bitfield,
     failure::{bail, ensure, Error},
     zerocopy::{AsBytes, ByteSlice, ByteSliceMut, FromBytes, LayoutVerified, Unaligned},
 };
@@ -142,41 +142,40 @@ impl<B: ByteSliceMut> InfoElementWriter<B> {
     }
 
     pub fn write_ssid(mut self, ssid: &[u8]) -> Result<Self, Error> {
+        ensure!(ssid.len() <= SSID_IE_MAX_BODY_LEN, "SSID '{:x?}' > 32 bytes", ssid);
         ensure!(
-            ssid.len() <= SSID_IE_MAX_BODY_LEN,
-            "SSID '{:x?}' > 32 bytes",
-            ssid
+            self.w.remaining_bytes() >= IE_HDR_LEN + ssid.len(),
+            "buffer too short to write SSID IE"
         );
-        ensure!(self.w.remaining_bytes() >= IE_HDR_LEN + ssid.len(),
-                "buffer too short to write SSID IE");
         let w = self.w.write_bytes(&[IE_ID_SSID, ssid.len() as u8])?.write_bytes(ssid)?;
         Ok(InfoElementWriter { w })
     }
 
     pub fn write_supported_rates(mut self, rates: &[u8]) -> Result<Self, Error> {
-        ensure!(
-            rates.len() >= SUPP_RATES_IE_MIN_BODY_LEN,
-            "supported rates is empty",
-        );
+        ensure!(rates.len() >= SUPP_RATES_IE_MIN_BODY_LEN, "supported rates is empty",);
         ensure!(
             rates.len() <= SUPP_RATES_IE_MAX_BODY_LEN,
             "too many supported rates; max: {}, got: {}",
             SUPP_RATES_IE_MAX_BODY_LEN,
             rates.len()
         );
-        ensure!(self.w.remaining_bytes() >= IE_HDR_LEN + rates.len(),
-                "buffer too short to write supported rates IE");
+        ensure!(
+            self.w.remaining_bytes() >= IE_HDR_LEN + rates.len(),
+            "buffer too short to write supported rates IE"
+        );
 
-        let w = self.w.write_bytes(&[IE_ID_SUPPORTED_RATES, rates.len() as u8])?
-            .write_bytes(rates)?;
+        let w =
+            self.w.write_bytes(&[IE_ID_SUPPORTED_RATES, rates.len() as u8])?.write_bytes(rates)?;
         Ok(InfoElementWriter { w })
     }
 
     pub fn write_dsss_param_set(mut self, chan: u8) -> Result<Self, Error> {
-        ensure!(self.w.remaining_bytes() >= IE_HDR_LEN + DSSS_PARAM_SET_IE_BODY_LEN,
-                "buffer too short to write DSSS param set IE");
-        let w = self.w.write_bytes(&[IE_ID_DSSS_PARAM_SET, DSSS_PARAM_SET_IE_BODY_LEN as u8,
-                                   chan])?;
+        ensure!(
+            self.w.remaining_bytes() >= IE_HDR_LEN + DSSS_PARAM_SET_IE_BODY_LEN,
+            "buffer too short to write DSSS param set IE"
+        );
+        let w =
+            self.w.write_bytes(&[IE_ID_DSSS_PARAM_SET, DSSS_PARAM_SET_IE_BODY_LEN as u8, chan])?;
         Ok(InfoElementWriter { w })
     }
 
@@ -191,10 +190,14 @@ impl<B: ByteSliceMut> InfoElementWriter<B> {
             TIM_IE_MAX_PVB_LEN,
             tim.partial_virtual_bmp.len()
         );
-        ensure!(self.w.remaining_bytes() >= IE_HDR_LEN + tim.len(),
-                "buffer too short to write TIM IE");
+        ensure!(
+            self.w.remaining_bytes() >= IE_HDR_LEN + tim.len(),
+            "buffer too short to write TIM IE"
+        );
 
-        let w = self.w.write_bytes(&[IE_ID_TIM, tim.len() as u8])?
+        let w = self
+            .w
+            .write_bytes(&[IE_ID_TIM, tim.len() as u8])?
             .write_bytes(&[tim.dtim_count, tim.dtim_period, tim.bmp_ctrl])?
             .write_bytes(&tim.partial_virtual_bmp[..])?;
         Ok(InfoElementWriter { w })
@@ -249,12 +252,7 @@ impl<B: ByteSlice> InfoElement<B> {
                     DSSS_PARAM_SET_IE_BODY_LEN,
                     DSSS_PARAM_SET_IE_BODY_LEN,
                 )?;
-                Some((
-                    InfoElement::DsssParamSet {
-                        channel: param_set[0],
-                    },
-                    remaining,
-                ))
+                Some((InfoElement::DsssParamSet { channel: param_set[0] }, remaining))
             }
             // IEEE Std 802.11-2016, 9.4.2.6
             IE_ID_TIM => Some((InfoElement::Tim(parse_tim(body)?), remaining)),
@@ -610,8 +608,8 @@ mod tests {
     #[test]
     fn write_ssid_too_large() {
         let mut buf = vec![0u8; 50];
-        let result = InfoElementWriter::new(BufferWriter::new(&mut buf[..]))
-            .write_ssid(&[4u8; 33][..]);
+        let result =
+            InfoElementWriter::new(BufferWriter::new(&mut buf[..])).write_ssid(&[4u8; 33][..]);
         assert!(result.is_err());
         assert!(is_zero(&buf[..]));
     }
@@ -661,8 +659,8 @@ mod tests {
     #[test]
     fn write_supported_rates_no_rates() {
         let mut buf = vec![0u8; 50];
-        let result = InfoElementWriter::new(BufferWriter::new(&mut buf[..]))
-            .write_supported_rates(&[]);
+        let result =
+            InfoElementWriter::new(BufferWriter::new(&mut buf[..])).write_supported_rates(&[]);
         assert!(result.is_err());
         assert!(is_zero(&buf[..]));
     }
@@ -690,8 +688,8 @@ mod tests {
     #[test]
     fn write_dsss_param_set_buffer_too_short() {
         let mut buf = vec![0u8; 2];
-        let result = InfoElementWriter::new(BufferWriter::new(&mut buf[..]))
-            .write_dsss_param_set(77);
+        let result =
+            InfoElementWriter::new(BufferWriter::new(&mut buf[..])).write_dsss_param_set(77);
         assert!(result.is_err());
         assert!(is_zero(&buf[..]));
     }
@@ -718,12 +716,11 @@ mod tests {
     #[test]
     fn write_tim_too_short_buffer() {
         let mut buf = vec![0u8; 5];
-        let result = InfoElementWriter::new(BufferWriter::new(&mut buf[..]))
-            .write_tim(&Tim {
-                dtim_count: 1,
-                dtim_period: 2,
-                bmp_ctrl: 3,
-                partial_virtual_bmp: &mut [1u8, 2, 3, 4, 5, 6][..],
+        let result = InfoElementWriter::new(BufferWriter::new(&mut buf[..])).write_tim(&Tim {
+            dtim_count: 1,
+            dtim_period: 2,
+            bmp_ctrl: 3,
+            partial_virtual_bmp: &mut [1u8, 2, 3, 4, 5, 6][..],
         });
         assert!(result.is_err());
         assert!(is_zero(&buf[..]));
@@ -852,10 +849,7 @@ mod tests {
 
         let mut bmp_ctrl = BitmapControl(0);
         bmp_ctrl.set_offset(1);
-        let tim = Tim {
-            bmp_ctrl: bmp_ctrl.value(),
-            ..tim
-        };
+        let tim = Tim { bmp_ctrl: bmp_ctrl.value(), ..tim };
         // Offset of 1 means "skip 16 bits"
         assert!(!tim.is_traffic_buffered(15));
         assert!(!tim.is_traffic_buffered(16));

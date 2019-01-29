@@ -3,21 +3,16 @@
 // found in the LICENSE file.
 
 use {
-    fidl_fuchsia_wlan_common::{self as fidl_common},
+    crate::{
+        clone_utils, phy_selection::get_device_band_info, responder::Responder, sink::MlmeSink,
+        timer::TimedEvent, DeviceInfo, MlmeRequest,
+    },
+    fidl_fuchsia_wlan_common as fidl_common,
     fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent},
     futures::channel::{mpsc, oneshot},
-    log::{error},
+    log::error,
     std::mem,
-    wlan_common::channel::{Channel, Cbw},
-    crate::{
-        clone_utils,
-        DeviceInfo,
-        MlmeRequest,
-        phy_selection::get_device_band_info,
-        responder::Responder,
-        sink::MlmeSink,
-        timer::TimedEvent,
-    },
+    wlan_common::channel::{Cbw, Channel},
 };
 
 const DEFAULT_BEACON_PERIOD: u16 = 1000;
@@ -58,18 +53,9 @@ impl PendingRequests {
 
 enum State {
     Idle,
-    Joining {
-        responder: Responder<JoinMeshResult>,
-        config: Config,
-        pending: PendingRequests,
-    },
-    Joined {
-        config: Config,
-    },
-    Leaving {
-        config: Config,
-        pending: PendingRequests,
-    }
+    Joining { responder: Responder<JoinMeshResult>, config: Config, pending: PendingRequests },
+    Joined { config: Config },
+    Leaving { config: Config, pending: PendingRequests },
 }
 
 pub struct MeshSme {
@@ -112,17 +98,17 @@ impl MeshSme {
             State::Idle => {
                 self.mlme_sink.send(MlmeRequest::Start(create_start_request(&config)));
                 State::Joining { responder, pending: PendingRequests::new(), config }
-            },
+            }
             State::Joining { responder: cur_responder, config: cur_config, mut pending } => {
                 pending.enqueue_join(responder, config);
                 State::Joining { responder: cur_responder, config: cur_config, pending }
-            },
+            }
             State::Joined { config: cur_config } => {
                 self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
                 let mut pending = PendingRequests::new();
                 pending.enqueue_join(responder, config);
                 State::Leaving { config: cur_config, pending }
-            },
+            }
             State::Leaving { config: cur_config, mut pending } => {
                 pending.enqueue_join(responder, config);
                 State::Leaving { config: cur_config, pending }
@@ -137,17 +123,17 @@ impl MeshSme {
             State::Idle => {
                 responder.respond(LeaveMeshResult::Success);
                 State::Idle
-            },
+            }
             State::Joining { responder: cur_responder, config, mut pending } => {
                 pending.enqueue_leave(responder);
                 State::Joining { responder: cur_responder, pending, config }
-            },
+            }
             State::Joined { config } => {
                 self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
                 let mut pending = PendingRequests::new();
                 pending.enqueue_leave(responder);
                 State::Leaving { config, pending }
-            },
+            }
             State::Leaving { config, mut pending } => {
                 pending.enqueue_leave(responder);
                 State::Leaving { config, pending }
@@ -187,20 +173,20 @@ fn create_start_request(config: &Config) -> fidl_mlme::StartRequest {
         beacon_period: DEFAULT_BEACON_PERIOD,
         dtim_period: DEFAULT_DTIM_PERIOD,
         channel: config.channel,
-        country: fidl_mlme::Country { // TODO(WLAN-870): Get config from wlancfg
+        country: fidl_mlme::Country {
+            // TODO(WLAN-870): Get config from wlancfg
             alpha2: ['U' as u8, 'S' as u8],
             suffix: fidl_mlme::COUNTRY_ENVIRON_ALL,
         },
         rsne: None,
         mesh_id: config.mesh_id.clone(),
-        phy: fidl_common::Phy::Ht,  // TODO(WLAN-908, WLAN-909): Use dynamic value
+        phy: fidl_common::Phy::Ht, // TODO(WLAN-908, WLAN-909): Use dynamic value
         cbw: fidl_common::Cbw::Cbw20,
-
     }
 }
 
 fn create_stop_request() -> fidl_mlme::StopRequest {
-    fidl_mlme::StopRequest { ssid: vec![], }
+    fidl_mlme::StopRequest { ssid: vec![] }
 }
 
 impl super::Station for MeshSme {
@@ -222,7 +208,7 @@ impl super::Station for MeshSme {
                             self.mlme_sink.send(MlmeRequest::Stop(create_stop_request()));
                             State::Leaving { config, pending }
                         }
-                    },
+                    }
                     other => {
                         error!("failed to join mesh: {:?}", other);
                         responder.respond(JoinMeshResult::InternalError);
@@ -235,11 +221,15 @@ impl super::Station for MeshSme {
                 MlmeEvent::IncomingMpOpenAction { action } => {
                     // TODO(gbonik): implement a proper MPM state machine
                     println!("received an MPM Open action: {:?}", action);
-                    if mesh_profile_matches(&config.mesh_id, &get_mesh_config(),
-                                            &action.common.mesh_id, &action.common.mesh_config) {
+                    if mesh_profile_matches(
+                        &config.mesh_id,
+                        &get_mesh_config(),
+                        &action.common.mesh_id,
+                        &action.common.mesh_config,
+                    ) {
                         let aid = 1;
-                        if let Some(params) = create_peering_params(
-                                    &self.device_info, &config, &action.common, aid)
+                        if let Some(params) =
+                            create_peering_params(&self.device_info, &config, &action.common, aid)
                         {
                             self.mlme_sink.send(MlmeRequest::MeshPeeringEstablished(params));
 
@@ -248,14 +238,14 @@ impl super::Station for MeshSme {
                             let open = fidl_mlme::MeshPeeringOpenAction {
                                 common: fidl_mlme::MeshPeeringCommon {
                                     local_link_id: 0,
-                                    .. clone_utils::clone_mesh_peering_common(&action.common)
+                                    ..clone_utils::clone_mesh_peering_common(&action.common)
                                 },
                             };
                             self.mlme_sink.send(MlmeRequest::SendMpOpenAction(open));
                             let conf = fidl_mlme::MeshPeeringConfirmAction {
                                 common: fidl_mlme::MeshPeeringCommon {
                                     local_link_id: 0,
-                                    .. action.common
+                                    ..action.common
                                 },
                                 peer_link_id: action.common.local_link_id,
                                 aid,
@@ -264,13 +254,14 @@ impl super::Station for MeshSme {
                         }
                     }
                     State::Joined { config }
-                },
+                }
                 _ => State::Joined { config },
             },
             State::Leaving { config, pending } => match event {
                 MlmeEvent::StopConf { resp } => match resp.result_code {
-                    fidl_mlme::StopResultCodes::Success =>
-                        on_back_to_idle(pending, &self.mlme_sink),
+                    fidl_mlme::StopResultCodes::Success => {
+                        on_back_to_idle(pending, &self.mlme_sink)
+                    }
                     other => {
                         error!("failed to leave mesh: {:?}", other);
                         for responder in pending.leave {
@@ -282,8 +273,8 @@ impl super::Station for MeshSme {
                         State::Joined { config }
                     }
                 },
-                _ => State::Leaving { config, pending }
-            }
+                _ => State::Leaving { config, pending },
+            },
         });
     }
 
@@ -292,12 +283,12 @@ impl super::Station for MeshSme {
     }
 }
 
-fn create_peering_params(device_info: &DeviceInfo,
-                         config: &Config,
-                         peer: &fidl_mlme::MeshPeeringCommon,
-                         local_aid: u16)
-    -> Option<fidl_mlme::MeshPeeringParams>
-{
+fn create_peering_params(
+    device_info: &DeviceInfo,
+    config: &Config,
+    peer: &fidl_mlme::MeshPeeringCommon,
+    local_aid: u16,
+) -> Option<fidl_mlme::MeshPeeringParams> {
     let band_caps = match get_device_band_info(device_info, config.channel) {
         Some(x) => x,
         None => {
@@ -306,29 +297,24 @@ fn create_peering_params(device_info: &DeviceInfo,
         }
     };
     let rates = peer.rates.iter().filter(|x| band_caps.basic_rates.contains(x)).cloned().collect();
-    Some(fidl_mlme::MeshPeeringParams {
-        peer_sta_address: peer.peer_sta_address,
-        local_aid,
-        rates
-    })
+    Some(fidl_mlme::MeshPeeringParams { peer_sta_address: peer.peer_sta_address, local_aid, rates })
 }
 
 impl MeshSme {
     pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let sme = MeshSme {
-            mlme_sink: MlmeSink::new(mlme_sink),
-            state: Some(State::Idle),
-            device_info,
-        };
+        let sme =
+            MeshSme { mlme_sink: MlmeSink::new(mlme_sink), state: Some(State::Idle), device_info };
         (sme, mlme_stream)
     }
 }
 
-fn mesh_profile_matches(our_mesh_id: &[u8],
-                        ours: &fidl_mlme::MeshConfiguration,
-                        their_mesh_id: &[u8],
-                        theirs: &fidl_mlme::MeshConfiguration) -> bool {
+fn mesh_profile_matches(
+    our_mesh_id: &[u8],
+    ours: &fidl_mlme::MeshConfiguration,
+    their_mesh_id: &[u8],
+    theirs: &fidl_mlme::MeshConfiguration,
+) -> bool {
     // IEEE Std 802.11-2016, 14.2.3
     their_mesh_id == our_mesh_id
         && theirs.active_path_sel_proto_id == ours.active_path_sel_proto_id
@@ -340,11 +326,11 @@ fn mesh_profile_matches(our_mesh_id: &[u8],
 
 fn get_mesh_config() -> fidl_mlme::MeshConfiguration {
     fidl_mlme::MeshConfiguration {
-        active_path_sel_proto_id: 1, // HWMP
+        active_path_sel_proto_id: 1,  // HWMP
         active_path_sel_metric_id: 1, // Airtime
-        congest_ctrl_method_id: 0, // Inactive
-        sync_method_id: 1, // Neighbor offset sync
-        auth_proto_id: 0, // No auth
+        congest_ctrl_method_id: 0,    // Inactive
+        sync_method_id: 1,            // Neighbor offset sync
+        auth_proto_id: 0,             // No auth
         mesh_formation_info: 0,
         mesh_capability: 0x9, // accept additional peerings (0x1) + forwarding (0x8)
     }
@@ -356,12 +342,15 @@ mod tests {
 
     #[test]
     fn test_validate_config() {
-        assert_eq!(Err(JoinMeshResult::InvalidArguments),
-                   validate_config(&Config { mesh_id: vec![], channel: 15}));
-        assert_eq!(Err(JoinMeshResult::DfsUnsupported),
-                   validate_config(&Config { mesh_id: vec![], channel: 52}));
-        assert_eq!(Ok(()),
-                   validate_config(&Config { mesh_id: vec![], channel: 40}));
+        assert_eq!(
+            Err(JoinMeshResult::InvalidArguments),
+            validate_config(&Config { mesh_id: vec![], channel: 15 })
+        );
+        assert_eq!(
+            Err(JoinMeshResult::DfsUnsupported),
+            validate_config(&Config { mesh_id: vec![], channel: 52 })
+        );
+        assert_eq!(Ok(()), validate_config(&Config { mesh_id: vec![], channel: 40 }));
     }
 
 }

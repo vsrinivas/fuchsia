@@ -22,10 +22,7 @@ struct SnsMap {
 
 impl SnsMap {
     pub fn new(modulo_divisor: SequenceNum) -> Self {
-        Self {
-            inner: HashMap::new(),
-            modulo_divisor,
-        }
+        Self { inner: HashMap::new(), modulo_divisor }
     }
 
     pub fn next(&mut self, entry: &SnsEntryHash) -> SequenceNum {
@@ -50,10 +47,7 @@ pub struct SequenceManager {
 
 impl SequenceManager {
     pub fn new() -> Self {
-        Self {
-            sns_map1024: SnsMap::new(1024),
-            sns_map4096: SnsMap::new(4096),
-        }
+        Self { sns_map1024: SnsMap::new(1024), sns_map4096: SnsMap::new(4096) }
     }
 
     pub fn next_sns1(&mut self, sta_addr: &MacAddr) -> SequenceNum {

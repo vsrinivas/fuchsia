@@ -16,16 +16,17 @@ pub extern "C" fn rust_mlme_is_valid_open_auth_resp(buf: Buffer, has_body_aligne
             let fc = mac::FrameControl(mgmt_hdr.frame_ctrl());
             match mac::MgmtSubtype::parse(fc.frame_subtype(), body) {
                 Some(mac::MgmtSubtype::Authentication { auth_hdr, .. }) => {
-                    let status: zx::Status = auth::is_valid_open_auth_resp(&auth_hdr).map_err(|e| {
-                        error!("error, invalid Authentication response: {}", e);
-                        zx::Status::IO_REFUSED
-                    }).into();
+                    let status: zx::Status = auth::is_valid_open_auth_resp(&auth_hdr)
+                        .map_err(|e| {
+                            error!("error, invalid Authentication response: {}", e);
+                            zx::Status::IO_REFUSED
+                        })
+                        .into();
                     status.into_raw()
-                },
-                _ => zx::sys::ZX_ERR_IO_REFUSED
+                }
+                _ => zx::sys::ZX_ERR_IO_REFUSED,
             }
-        },
+        }
         _ => zx::sys::ZX_ERR_IO_REFUSED,
     }
 }
-

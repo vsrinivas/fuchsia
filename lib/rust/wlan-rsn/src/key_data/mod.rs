@@ -4,9 +4,9 @@
 
 pub mod kde;
 
-use bytes::BufMut;
 use crate::rsne;
 use crate::Error;
+use bytes::BufMut;
 use failure::{self, ensure};
 use nom::IResult::{Done, Incomplete};
 use nom::{call, error_position, many0, named, take, try_parse};
@@ -21,17 +21,16 @@ pub enum Element {
     UnsupportedIe(u8, u8),
 }
 impl Element {
-
     pub fn as_bytes(&self, buf: &mut Vec<u8>) {
         match self {
             Element::Gtk(hdr, gtk) => {
                 hdr.as_bytes(buf);
                 gtk.as_bytes(buf);
-            },
+            }
             Element::Rsne(rsne) => {
                 rsne.as_bytes(buf);
-            },
-            _ => {},
+            }
+            _ => {}
         }
     }
 }
@@ -74,19 +73,14 @@ pub fn extract_elements(key_data: &[u8]) -> Result<Vec<Element>, failure::Error>
         Error::InvaidKeyDataLength(key_data.len())
     );
 
-    parse_elements(key_data)
-        .to_full_result()
-        .map_err(|e| Error::InvalidKeyData(e).into())
+    parse_elements(key_data).to_full_result().map_err(|e| Error::InvalidKeyData(e).into())
 }
 
 // IEEE Std 802.11-2016, 12.7.2 j)
 // Adds padding to a given key data if necessary and truncates all remaining bytes of the buffer.
 pub fn add_padding(buf: &mut Vec<u8>) {
-    let padding_len = if buf.len() < 16 {
-        16 - buf.len()
-    } else {
-        ((buf.len() + 7) / 8) * 8 - buf.len()
-    };
+    let padding_len =
+        if buf.len() < 16 { 16 - buf.len() } else { ((buf.len() + 7) / 8) * 8 - buf.len() };
 
     if padding_len != 0 {
         // Buffer too small to hold padding; grow buffer.
