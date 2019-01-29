@@ -6,6 +6,7 @@
 # Not listed here are tools whose only use is via GN rules in this build,
 # such as abigen.
 group("tools") {
+  testonly = true
   deps = [
     "$zx/third_party/uapp/mkfs-msdosfs",
     "banjo",
@@ -15,6 +16,7 @@ group("tools") {
     "loglistener",
     "merkleroot",
     "netprotocol",
+    "runtests",
     "xdc-server",
     "zbi",
   ]

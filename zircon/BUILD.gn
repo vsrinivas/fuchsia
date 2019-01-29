@@ -7,6 +7,7 @@ import("$zx/public/gn/toolchain/environment_redirect.gni")
 
 # Build the native host tools intended for developer use.
 environment_redirect("tools-${host_os}-${host_cpu}") {
+  testonly = true
   environment_label = "$zx/public/gn/toolchain:host"
   cpu = host_cpu
   os = host_os
@@ -20,6 +21,7 @@ if (current_toolchain == default_toolchain) {
   # "$root_build_dir/tools/" directory.
   tools_rspfile = "$target_gen_dir/tools.rsp"
   generated_file("tools._rsp") {
+    testonly = true
     visibility = [ ":tools" ]
     outputs = [
       tools_rspfile,
@@ -32,6 +34,7 @@ if (current_toolchain == default_toolchain) {
   }
 
   action("tools") {
+    testonly = true
     deps = [
       ":tools._rsp",
     ]
@@ -52,6 +55,7 @@ if (current_toolchain == default_toolchain) {
 }
 
 group("default") {
+  testonly = true
   deps = [
     ":tools",
   ]

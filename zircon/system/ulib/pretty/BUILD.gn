@@ -1,0 +1,33 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("pretty") {
+  sdk = "static"
+  sdk_headers = [
+    "pretty/hexdump.h",
+    "pretty/sizes.h",
+  ]
+  kernel = true
+  host = true
+  static = true
+  sources = [
+    "hexdump.c",
+    "sizes.c",
+  ]
+  if (!is_kernel && is_fuchsia) {
+    deps = [
+      "$zx/system/ulib/fdio",
+    ]
+  }
+}
+
+test("pretty-test") {
+  sources = [
+    "test.c",
+  ]
+  deps = [
+    ":pretty",
+    "$zx/system/ulib/unittest",
+  ]
+}

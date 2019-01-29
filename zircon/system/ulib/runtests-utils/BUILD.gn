@@ -1,0 +1,53 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("runtests-utils") {
+  testonly = true
+  host = true
+  sources = [
+    "discover-and-run-tests.cpp",
+    "runtests-utils.cpp",
+  ]
+  public_deps = [
+    # <runtests-utils/runtests-utils.h> has #include <lib/zircon-internal/fnv1hash.h>.
+    "$zx/system/ulib/zircon-internal:headers",
+  ]
+  deps = [
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/unittest",
+    "$zx/system/ulib/zircon-internal",
+  ]
+  if (is_fuchsia) {
+    sources += [
+      "fuchsia-run-test.cpp",
+      "log-exporter.cpp",
+    ]
+    public_deps += [
+      # <runtests-utils/log-exporter.h> has #include <lib/fidl/cpp/message_buffer.h>.
+      "$zx/system/ulib/fidl:headers",
+
+      # <runtests-utils/log-exporter.h> has #include <fuchsia/logger/c/fidl.h>.
+      "$zx/system/fidl/fuchsia-logger:c.headers",
+
+      # <runtests-utils/log-exporter.h> has #include <lib/async-loop/cpp/loop.h>.
+      "$zx/system/ulib/async-loop:async-loop-cpp.headers",
+    ]
+    deps += [
+      "$zx/system/fidl/fuchsia-logger:c",
+      "$zx/system/ulib/async",
+      "$zx/system/ulib/async:async-cpp",
+      "$zx/system/ulib/async-loop",
+      "$zx/system/ulib/async-loop:async-loop-cpp",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/fidl",
+      "$zx/system/ulib/loader-service",
+      "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zircon",
+      "$zx/system/ulib/zx",
+      "$zx/system/ulib/zxcpp",
+    ]
+  } else {
+    sources += [ "posix-run-test.cpp" ]
+  }
+}

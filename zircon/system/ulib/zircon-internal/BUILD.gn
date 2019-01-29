@@ -1,0 +1,24 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("zircon-internal") {
+  sdk = "source"
+  sdk_headers = [
+    "lib/zircon-internal/device/cpu-trace/cpu-perf.h",
+    "lib/zircon-internal/device/cpu-trace/intel-pm-events.inc",
+    "lib/zircon-internal/device/cpu-trace/intel-pm.h",
+    "lib/zircon-internal/device/cpu-trace/intel-pt.h",
+    "lib/zircon-internal/device/cpu-trace/skylake-misc-events.inc",
+    "lib/zircon-internal/device/cpu-trace/skylake-pm-events.inc",
+    "lib/zircon-internal/fnv1hash.h",
+    "lib/zircon-internal/ktrace-def.h",
+    "lib/zircon-internal/ktrace.h",
+    "lib/zircon-internal/macros.h",
+    "lib/zircon-internal/mtrace.h",
+    "lib/zircon-internal/xorshiftrand.h",
+  ]
+  kernel = true
+  host = true
+  sources = []
+}
