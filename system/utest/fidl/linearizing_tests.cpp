@@ -338,21 +338,6 @@ bool linearize_struct_with_many_handles() {
 bool linearize_simple_table() {
     BEGIN_TEST;
 
-    // Define the memory-layout of the inline object
-    using SimpleTable = fidl::VectorView<fidl_envelope_t>;
-    struct SimpleTableEnvelopes {
-        alignas(FIDL_ALIGNMENT)
-        fidl_envelope_t x;
-        fidl_envelope_t reserved1;
-        fidl_envelope_t reserved2;
-        fidl_envelope_t reserved3;
-        fidl_envelope_t y;
-    };
-    struct IntStruct {
-        alignas(FIDL_ALIGNMENT)
-        int64_t v;
-    };
-
     SimpleTableEnvelopes envelopes = {};
     SimpleTable simple_table;
     simple_table.set_count(5);
@@ -587,6 +572,69 @@ bool linearize_table_field_2() {
 
 } // namespace
 
+bool linearize_xunion_empty_invariant_empty() {
+    BEGIN_TEST;
+
+    // Non-zero ordinal with empty envelope is an error
+    SampleXUnionStruct xunion = {};
+    xunion.xu.header = (fidl_xunion_t) {
+        .tag = kSampleXUnionIntStructOrdinal,
+        .padding = 0,
+        .envelope = {}
+    };
+    constexpr uint32_t buf_size = 512;
+    uint8_t buffer[buf_size];
+    const char* error = nullptr;
+    zx_status_t status;
+    uint32_t actual_num_bytes = 0;
+    status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable,
+                            &xunion,
+                            buffer,
+                            buf_size,
+                            &actual_num_bytes,
+                            &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+    EXPECT_STR_EQ(error, "empty xunion must have zero as ordinal");
+
+    END_TEST;
+}
+
+bool linearize_xunion_empty_invariant_zero_ordinal() {
+    BEGIN_TEST;
+
+    // Zero ordinal with non-empty envelope is an error
+    IntStruct int_struct = {
+        .v = 100
+    };
+    SampleXUnionStruct xunion = {};
+    xunion.xu.header = (fidl_xunion_t) {
+        .tag = 0,
+        .padding = 0,
+        .envelope = (fidl_envelope_t) {
+            .num_bytes = 8,
+            .num_handles = 0,
+            .data = &int_struct
+        }
+    };
+    constexpr uint32_t buf_size = 512;
+    uint8_t buffer[buf_size];
+    const char* error = nullptr;
+    zx_status_t status;
+    uint32_t actual_num_bytes = 0;
+    status = fidl_linearize(&fidl_test_coding_SampleXUnionStructTable,
+                            &xunion,
+                            buffer,
+                            buf_size,
+                            &actual_num_bytes,
+                            &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+    EXPECT_STR_EQ(error, "xunion with zero as ordinal must be empty");
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
@@ -607,6 +655,12 @@ RUN_TEST(linearize_simple_table)
 RUN_TEST(linearize_table_field_1)
 RUN_TEST(linearize_table_field_2)
 END_TEST_CASE(tables)
+
+BEGIN_TEST_CASE(xunions)
+RUN_TEST(linearize_xunion_empty_invariant_empty)
+RUN_TEST(linearize_xunion_empty_invariant_zero_ordinal)
+END_TEST_CASE(xunions)
+
 
 } // namespace
 } // namespace fidl

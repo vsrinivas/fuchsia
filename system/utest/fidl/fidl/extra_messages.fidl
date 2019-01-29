@@ -56,3 +56,12 @@ table TableOfStructWithHandle {
     1: StructWithHandle a;
     2: StructWithManyHandles b;
 };
+
+xunion SampleXUnion {
+    IntStruct i;
+    SimpleTable st;
+};
+
+struct SampleXUnionStruct {
+    SampleXUnion xu;
+};
