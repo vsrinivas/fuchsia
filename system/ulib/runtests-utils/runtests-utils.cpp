@@ -308,12 +308,9 @@ int DiscoverTestsInListFile(FILE* test_list_file, fbl::Vector<fbl::String>* test
             }
             return errno;
         }
-        printf("line = %s\n", line);
-        printf("line_length == %zd, line[line_length-1] = %c\n", line_length, line[line_length-1]);
         // Don't include trailing space.
         while (line_length && isspace(line[line_length - 1])) {
             line_length -= 1;
-            printf("line_length == %zd, line[line_length-1] = %c\n", line_length, line[line_length-1]);
         }
         if (!line_length) {
             continue;
