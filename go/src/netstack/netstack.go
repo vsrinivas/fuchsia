@@ -15,6 +15,7 @@ import (
 	"netstack/dns"
 	"netstack/fidlconv"
 	"netstack/filter"
+	"netstack/link"
 	"netstack/link/bridge"
 	"netstack/link/eth"
 	"netstack/link/stats"
@@ -75,10 +76,10 @@ type dhcpState struct {
 // Each ifState tracks the state of a network interface.
 type ifState struct {
 	ns  *Netstack
-	eth eth.Controller
+	eth link.Controller
 	mu  struct {
 		sync.Mutex
-		state eth.State
+		state link.State
 		// TODO(NET-1223): remove and replace with refs to stack via ns
 		nic *netiface.NIC
 		dhcpState
@@ -270,14 +271,14 @@ func (ifs *ifState) setDHCPStatusLocked(enabled bool) {
 	d.enabled = enabled
 }
 
-func (ifs *ifState) stateChange(s eth.State) {
+func (ifs *ifState) stateChange(s link.State) {
 	ifs.ns.mu.Lock()
 	ifs.mu.Lock()
 	switch s {
-	case eth.StateClosed:
+	case link.StateClosed:
 		delete(ifs.ns.mu.ifStates, ifs.mu.nic.ID)
 		fallthrough
-	case eth.StateDown:
+	case link.StateDown:
 		log.Printf("NIC %s: stopped", ifs.mu.nic.Name)
 		if ifs.cancel != nil {
 			ifs.cancel()
@@ -296,9 +297,9 @@ func (ifs *ifState) stateChange(s eth.State) {
 		ifs.mu.nic.Addr = "\x00\x00\x00\x00"
 		ifs.mu.nic.DNSServers = nil
 
-	case eth.StateStarted:
+	case link.StateStarted:
 		// Only call `restarted` if we are not in the initial state (which means we're still starting).
-		if ifs.mu.state != eth.StateUnknown {
+		if ifs.mu.state != link.StateUnknown {
 			log.Printf("NIC %s: restarting", ifs.mu.nic.Name)
 			ifs.ctx, ifs.cancel = context.WithCancel(context.Background())
 			ifs.mu.nic.Routes = defaultRouteTable(ifs.mu.nic.ID, "")
@@ -438,7 +439,7 @@ func (ns *Netstack) addLoopback() error {
 		cancel: cancel,
 	}
 
-	ifs.mu.state = eth.StateStarted
+	ifs.mu.state = link.StateStarted
 	ifs.mu.nic = nic
 
 	ns.mu.Lock()
@@ -540,7 +541,7 @@ func (ns *Netstack) addEndpoint(makeEndpoint func(*ifState) (stack.LinkEndpoint,
 		ctx:    ctx,
 		cancel: cancel,
 	}
-	ifs.mu.state = eth.StateUnknown
+	ifs.mu.state = link.StateUnknown
 	ifs.mu.nic = &netiface.NIC{
 		Addr:    "\x00\x00\x00\x00",
 		Netmask: "\xff\xff\xff\xff",

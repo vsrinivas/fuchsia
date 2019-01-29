@@ -9,7 +9,7 @@ import (
 	"sort"
 
 	"netstack/fidlconv"
-	"netstack/link/eth"
+	"netstack/link"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
@@ -41,7 +41,7 @@ func getInterfaceInfo(ifs *ifState) *stack.InterfaceInfo {
 	// TODO(tkilbourn): distinguish between enabled and link up
 	enablementStatus := stack.EnablementStatusDisabled
 	physicalStatus := stack.PhysicalStatusDown
-	if ifs.mu.state == eth.StateStarted {
+	if ifs.mu.state == link.StateStarted {
 		enablementStatus = stack.EnablementStatusEnabled
 		physicalStatus = stack.PhysicalStatusUp
 	}

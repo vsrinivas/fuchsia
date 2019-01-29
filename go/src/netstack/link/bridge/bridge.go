@@ -8,7 +8,7 @@ import (
 	"strings"
 	"sync"
 
-	"netstack/link/eth"
+	"netstack/link"
 
 	"github.com/google/netstack/tcpip"
 	"github.com/google/netstack/tcpip/buffer"
@@ -17,7 +17,7 @@ import (
 
 var _ stack.LinkEndpoint = (*Endpoint)(nil)
 var _ stack.NetworkDispatcher = (*Endpoint)(nil)
-var _ eth.Controller = (*Endpoint)(nil)
+var _ link.Controller = (*Endpoint)(nil)
 
 type Endpoint struct {
 	links           map[tcpip.LinkAddress]*BridgeableEndpoint
@@ -28,7 +28,7 @@ type Endpoint struct {
 	linkAddress     tcpip.LinkAddress
 	mu              struct {
 		sync.Mutex
-		onStateChange func(eth.State)
+		onStateChange func(link.State)
 	}
 }
 
@@ -89,7 +89,7 @@ func (ep *Endpoint) Up() error {
 	ep.mu.Unlock()
 
 	if onStateChange != nil {
-		onStateChange(eth.StateStarted)
+		onStateChange(link.StateStarted)
 	}
 
 	return nil
@@ -102,7 +102,7 @@ func (ep *Endpoint) Up() error {
 // implementation directly.
 //
 // Down and Close are the same, except they call the OnStateChange callback
-// with eth.StateDown and eth.StateClose respectively.
+// with link.StateDown and link.StateClose respectively.
 func (ep *Endpoint) Down() error {
 	for _, l := range ep.links {
 		l.SetBridge(nil)
@@ -113,7 +113,7 @@ func (ep *Endpoint) Down() error {
 	ep.mu.Unlock()
 
 	if onStateChange != nil {
-		onStateChange(eth.StateDown)
+		onStateChange(link.StateDown)
 	}
 
 	return nil
@@ -126,7 +126,7 @@ func (ep *Endpoint) Down() error {
 // implementation directly.
 //
 // Down and Close are the same, except they call the OnStateChange callback
-// with eth.StateDown and eth.StateClose respectively.
+// with link.StateDown and link.StateClose respectively.
 func (ep *Endpoint) Close() error {
 	for _, l := range ep.links {
 		l.SetBridge(nil)
@@ -137,13 +137,13 @@ func (ep *Endpoint) Close() error {
 	ep.mu.Unlock()
 
 	if onStateChange != nil {
-		onStateChange(eth.StateClosed)
+		onStateChange(link.StateClosed)
 	}
 
 	return nil
 }
 
-func (ep *Endpoint) SetOnStateChange(f func(eth.State)) {
+func (ep *Endpoint) SetOnStateChange(f func(link.State)) {
 	ep.mu.Lock()
 	defer ep.mu.Unlock()
 

@@ -49,6 +49,7 @@ import (
 	"syscall/zx/zxwait"
 	"unsafe"
 
+	"netstack/link"
 	"netstack/trace"
 
 	"fidl/fuchsia/hardware/ethernet"
@@ -56,7 +57,7 @@ import (
 
 const ZXSIO_ETH_SIGNAL_STATUS = zx.SignalUser0
 
-var _ Controller = (*Client)(nil)
+var _ link.Controller = (*Client)(nil)
 
 // A Client is an ethernet client.
 // It connects to a zircon ethernet driver using a FIFO-based protocol.
@@ -69,8 +70,8 @@ type Client struct {
 	path   string
 
 	mu        sync.Mutex
-	state     State
-	stateFunc func(State)
+	state     link.State
+	stateFunc func(link.State)
 	arena     *Arena
 	tmpbuf    []ethernet.FifoEntry // used to fill rx and drain tx
 	recvbuf   []ethernet.FifoEntry // packets received
@@ -148,7 +149,7 @@ func NewClient(clientName string, topo string, device ethernet.Device, arena *Ar
 	return c, nil
 }
 
-func (c *Client) SetOnStateChange(f func(State)) {
+func (c *Client) SetOnStateChange(f func(link.State)) {
 	c.mu.Lock()
 	defer c.mu.Unlock()
 	c.stateFunc = f
@@ -158,7 +159,7 @@ func (c *Client) Path() string {
 	return c.path
 }
 
-func (c *Client) changeStateLocked(s State) {
+func (c *Client) changeStateLocked(s link.State) {
 	c.state = s
 	if fn := c.stateFunc; fn != nil {
 		fn(s)
@@ -169,13 +170,13 @@ func (c *Client) changeStateLocked(s State) {
 func (c *Client) Up() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.state != StateStarted {
+	if c.state != link.StateStarted {
 		if status, err := c.device.Start(); err != nil {
 			return err
 		} else if err := checkStatus(status, "Start"); err != nil {
 			return err
 		}
-		c.changeStateLocked(StateStarted)
+		c.changeStateLocked(link.StateStarted)
 	}
 
 	return nil
@@ -185,11 +186,11 @@ func (c *Client) Up() error {
 func (c *Client) Down() error {
 	c.mu.Lock()
 	defer c.mu.Unlock()
-	if c.state != StateDown {
+	if c.state != link.StateDown {
 		if err := c.device.Stop(); err != nil {
 			return err
 		}
-		c.changeStateLocked(StateDown)
+		c.changeStateLocked(link.StateDown)
 	}
 	return nil
 }
@@ -202,7 +203,7 @@ func (c *Client) Close() error {
 }
 
 func (c *Client) closeLocked() error {
-	if c.state == StateClosed {
+	if c.state == link.StateClosed {
 		return nil
 	}
 	err := c.device.Stop()
@@ -216,7 +217,7 @@ func (c *Client) closeLocked() error {
 	c.recvbuf = c.recvbuf[:0]
 	c.sendbuf = c.sendbuf[:0]
 	c.arena.freeAll(c)
-	c.changeStateLocked(StateClosed)
+	c.changeStateLocked(link.StateClosed)
 
 	return err
 }
@@ -413,9 +414,9 @@ func (c *Client) WaitRecv() {
 				c.mu.Lock()
 				switch status {
 				case LinkDown:
-					c.changeStateLocked(StateDown)
+					c.changeStateLocked(link.StateDown)
 				case LinkUp:
-					c.changeStateLocked(StateStarted)
+					c.changeStateLocked(link.StateStarted)
 				}
 				c.mu.Unlock()
 
@@ -449,28 +450,4 @@ const (
 func (c *Client) GetStatus() (LinkStatus, error) {
 	status, err := c.device.GetStatus()
 	return LinkStatus(status & ethernet.DeviceStatusOnline), err
-}
-
-type State int
-
-const (
-	StateUnknown State = iota
-	StateStarted
-	StateDown
-	StateClosed
-)
-
-func (s State) String() string {
-	switch s {
-	case StateUnknown:
-		return "eth unknown state"
-	case StateStarted:
-		return "eth started"
-	case StateDown:
-		return "eth down"
-	case StateClosed:
-		return "eth stopped"
-	default:
-		return fmt.Sprintf("eth bad state (%d)", s)
-	}
 }

@@ -2,7 +2,20 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-package eth
+package link
+
+import (
+  "fmt"
+)
+
+type State int
+
+const (
+	StateUnknown State = iota
+	StateStarted
+	StateDown
+	StateClosed
+)
 
 type Controller interface {
 	Up() error
@@ -15,4 +28,19 @@ type Controller interface {
 	// (e.g. loopback, bridge).
 	Path() string
 	SetPromiscuousMode(bool) error
+}
+
+func (s State) String() string {
+	switch s {
+	case StateUnknown:
+		return "link unknown state"
+	case StateStarted:
+		return "link started"
+	case StateDown:
+		return "link down"
+	case StateClosed:
+		return "link stopped"
+	default:
+		return fmt.Sprintf("link bad state (%d)", s)
+	}
 }

@@ -13,7 +13,7 @@ import (
 	"syscall/zx/zxwait"
 
 	"netstack/fidlconv"
-	"netstack/link/eth"
+	"netstack/link"
 
 	"fidl/fuchsia/hardware/ethernet"
 	"fidl/fuchsia/net"
@@ -64,7 +64,7 @@ func (ifs *ifState) toNetInterfaceLocked() (netstack.NetInterface, error) {
 	}
 
 	var flags uint32
-	if ifs.mu.state == eth.StateStarted {
+	if ifs.mu.state == link.StateStarted {
 		flags |= netstack.NetInterfaceFlagUp
 	}
 	if ifs.mu.dhcpState.enabled {
