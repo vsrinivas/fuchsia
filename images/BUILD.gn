@@ -9,9 +9,9 @@ import("//build/gn/packages.gni")
 import("//build/images/boot.gni")
 import("//build/images/custom_signing.gni")
 import("//build/images/fvm.gni")
-import("//build/images/max_fvm_size.gni")
 import("//build/images/json.gni")
 import("//build/images/manifest.gni")
+import("//build/images/max_fvm_size.gni")
 import("//build/package.gni")
 import("//build/sdk/sdk_atom.gni")
 import("//build/sdk/sdk_molecule.gni")
@@ -388,8 +388,8 @@ zircon_tool_action("blob.blk") {
   blob_size_list = "$root_build_dir/blob.sizes"
   outputs = [
     blob_image_path,
-# This should be an output too, but the generate_fvm template assumes that all
-# outputs of these actions are inputs to the fvm tool.
+    # This should be an output too, but the generate_fvm template assumes that all
+    # outputs of these actions are inputs to the fvm tool.
     # blob_size_list
   ]
   depfile = blob_image_path + ".d"
@@ -1241,22 +1241,26 @@ action("update.manifest") {
   deps = []
 
   foreach(entry, update_manifest) {
-    entry_sources = []
+    entry_source = ""
     if (defined(entry.deps)) {
       deps += entry.deps
     }
 
     if (defined(entry.sources)) {
-      entry_sources += entry.sources
+      # TODO(BLD-354): We should only have single source
+      sources = []
+      sources += entry.sources
+      entry_source = sources[0]
     } else if (defined(entry.deps)) {
       foreach(label, entry.deps) {
-        entry_sources += get_target_outputs(label)
+        # TODO(BLD-354): We should only have single output
+        dep_outputs = []
+        dep_outputs += get_target_outputs(label)
+        entry_source = dep_outputs[0]
       }
     }
-    foreach(source, entry_sources) {
-      source = rebase_path(source, root_build_dir)
-      args += [ "--entry=${entry.target}=${source}" ]
-    }
+    entry_source = rebase_path(entry_source, root_build_dir)
+    args += [ "--entry=${entry.target}=${entry_source}" ]
   }
 }
 
