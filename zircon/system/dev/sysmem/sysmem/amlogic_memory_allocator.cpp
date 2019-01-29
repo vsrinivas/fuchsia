@@ -78,3 +78,9 @@ zx_status_t AmlogicMemoryAllocator::Allocate(size_t size, zx::vmo* vmo) {
     }
     return ZX_OK;
 }
+
+zx_status_t AmlogicMemoryAllocator::GetProtectedMemoryInfo(uint64_t* base, uint64_t* size) {
+    *base = start_;
+    *size = size_;
+    return ZX_OK;
+}

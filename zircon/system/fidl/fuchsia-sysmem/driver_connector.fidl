@@ -31,4 +31,8 @@ protocol DriverConnector {
     // |allocator_request| will be served by the sysmem driver (or the channel
     // will close).
     Connect(request<Allocator2> allocator_request);
+
+    // Get information about the physical layout of protected memory, for use by sysmem-assistant.
+    // TODO(MTWN-231): Connect directly between sysmem and the TEE driver and remove this.
+    GetProtectedMemoryInfo() -> (zx.status status, uint64 base_address, uint64 size);
 };

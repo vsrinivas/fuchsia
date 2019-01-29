@@ -36,6 +36,8 @@ public:
 
     zx_status_t Connect(zx_handle_t allocator_request);
 
+    zx_status_t GetProtectedMemoryInfo(fidl_txn* txn);
+
     const zx::bti& bti();
 
     uint32_t pdev_device_info_vid();

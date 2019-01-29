@@ -23,6 +23,7 @@ namespace {
 
 fuchsia_sysmem_DriverConnector_ops_t driver_connector_ops = {
     .Connect = fidl::Binder<Device>::BindMember<&Device::Connect>,
+    .GetProtectedMemoryInfo = fidl::Binder<Device>::BindMember<&Device::GetProtectedMemoryInfo>,
 };
 
 zx_status_t sysmem_message(void* device_ctx, fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -224,6 +225,17 @@ zx_status_t Device::Connect(zx_handle_t allocator_request) {
     // The Allocator is channel-owned / self-owned.
     Allocator::CreateChannelOwned(std::move(local_allocator_request), this);
     return ZX_OK;
+}
+
+zx_status_t Device::GetProtectedMemoryInfo(fidl_txn* txn) {
+    if (!protected_allocator_) {
+        return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, ZX_ERR_NOT_SUPPORTED, 0u, 0u);
+    }
+
+    uint64_t base;
+    uint64_t size;
+    zx_status_t status = protected_allocator_->GetProtectedMemoryInfo(&base, &size);
+    return fuchsia_sysmem_DriverConnectorGetProtectedMemoryInfo_reply(txn, status, base, size);
 }
 
 const zx::bti& Device::bti() {
