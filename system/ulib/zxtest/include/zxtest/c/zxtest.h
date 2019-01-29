@@ -129,3 +129,5 @@ void zxtest_c_clean_buffer(char** buffer);
 
 #define _ZXTEST_ABORT_IF_ERROR zxtest_runner_should_abort_current_test()
 #define _ZXTEST_STRCMP(actual, expected) (strcmp(actual, expected) == 0)
+
+#define _ZXTEST_AUTO_VAR_TYPE(var) __typeof__(var)

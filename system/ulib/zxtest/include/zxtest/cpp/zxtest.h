@@ -62,3 +62,5 @@
 #define _ZXTEST_ABORT_IF_ERROR zxtest::Runner::GetInstance()->ShouldAbortCurrentTest()
 
 #define _ZXTEST_STRCMP(actual, expected) zxtest::StrCmp(actual, expected)
+
+#define _ZXTEST_AUTO_VAR_TYPE(var) auto

@@ -52,13 +52,15 @@ static void zxtest_clean_buffer(char** buffer) {
 
 #define _ASSERT_VAR_BYTES(op, expected, actual, fatal, file, line, desc, ...)                      \
     do {                                                                                           \
-        if (!(op(actual, expected))) {                                                             \
+        const _ZXTEST_AUTO_VAR_TYPE(actual) _actual = (actual);                                    \
+        const _ZXTEST_AUTO_VAR_TYPE(expected) _expected = (expected);                              \
+        if (!(op(_actual, _expected))) {                                                           \
             _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
             _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
-            _ZXTEST_LOAD_PRINT_HEX(actual, act, line);                                             \
-            _ZXTEST_LOAD_PRINT_HEX(expected, exptd, line);                                         \
-            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(expected, exptd, line),    \
-                           #actual, _ZXTEST_GET_PRINT_VAR(actual, act, line), file, line, fatal);  \
+            _ZXTEST_LOAD_PRINT_HEX(_actual, act, line);                                            \
+            _ZXTEST_LOAD_PRINT_HEX(_expected, exptd, line);                                        \
+            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
+                           #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
             if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                 \
                 return;                                                                            \
             }                                                                                      \
@@ -67,13 +69,15 @@ static void zxtest_clean_buffer(char** buffer) {
 
 #define _ASSERT_VAR(op, expected, actual, fatal, file, line, desc, ...)                            \
     do {                                                                                           \
-        if (!(op(actual, expected))) {                                                             \
+        const _ZXTEST_AUTO_VAR_TYPE(actual) _actual = (actual);                                    \
+        const _ZXTEST_AUTO_VAR_TYPE(expected) _expected = (expected);                              \
+        if (!(op(_actual, _expected))) {                                                           \
             _LOAD_BUFFER(msg_buffer, desc, __VA_ARGS__);                                           \
             _GEN_ASSERT_DESC(msg_buffer, req_size, desc, ##__VA_ARGS__);                           \
-            _ZXTEST_LOAD_PRINT_VAR(actual, act, line);                                             \
-            _ZXTEST_LOAD_PRINT_VAR(expected, exptd, line);                                         \
-            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(expected, exptd, line),    \
-                           #actual, _ZXTEST_GET_PRINT_VAR(actual, act, line), file, line, fatal);  \
+            _ZXTEST_LOAD_PRINT_VAR(_actual, act, line);                                            \
+            _ZXTEST_LOAD_PRINT_VAR(_expected, exptd, line);                                        \
+            _ZXTEST_ASSERT(msg_buffer, #expected, _ZXTEST_GET_PRINT_VAR(_expected, exptd, line),   \
+                           #actual, _ZXTEST_GET_PRINT_VAR(_actual, act, line), file, line, fatal); \
             if (fatal && _ZXTEST_ABORT_IF_ERROR) {                                                 \
                 return;                                                                            \
             }                                                                                      \
@@ -153,8 +157,8 @@ static void zxtest_clean_buffer(char** buffer) {
                 "Expected " #val1 " is null pointer.", ##__VA_ARGS__)
 
 #define ASSERT_NOT_NULL(val1, ...)                                                                 \
-    _ASSERT_VAR(_NE, val1, NULL, true, __FILE__, __LINE__, "Expected " #val1 " non null pointer.", \
-                ##__VA_ARGS__)
+    _ASSERT_VAR(_NE, val1, _ZXTEST_NULLPTR, true, __FILE__, __LINE__,                              \
+                "Expected " #val1 " non null pointer.", ##__VA_ARGS__)
 
 #define EXPECT_NOT_NULL(val1, ...)                                                                 \
     _ASSERT_VAR(_EQ, val1, _ZXTEST_NULLPTR, false, __FILE__, __LINE__,                             \

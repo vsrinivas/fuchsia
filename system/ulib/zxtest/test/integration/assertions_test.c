@@ -307,3 +307,30 @@ TEST(ZXTestCAssertionTest, AssertBytesEq) {
     ASSERT_BYTES_EQ(a, b, "ASSERT_BYTES_EQ identity failed.");
     ZX_ASSERT_MSG(_ZXTEST_ABORT_IF_ERROR, "Assert was did not abort test.");
 }
+
+static int called = 0;
+static int getter_called = 0;
+static int Increase(void) {
+    return ++called;
+}
+
+static int Get(void) {
+    getter_called++;
+    return called;
+}
+
+TEST(ZXTestCAssertionTest, AssertSingleCall) {
+    called = 0;
+    getter_called = 0;
+    EXPECT_EQ(Get(), Increase());
+    ZX_ASSERT_MSG(called == 1, "ASSERT_* evaluating multiple times.");
+    ZX_ASSERT_MSG(getter_called == 1, "ASSERT_* evaluating multiple times.");
+}
+
+TEST(ZXTestCAssertionTest, AssertBytesSingleCall) {
+    called = 0;
+    getter_called = 0;
+    EXPECT_BYTES_EQ(Get(), Increase());
+    ZX_ASSERT_MSG(called == 1, "ASSERT_BYTES_* evaluating multiple times.");
+    ZX_ASSERT_MSG(getter_called == 1, "ASSERT_* evaluating multiple times.");
+}
