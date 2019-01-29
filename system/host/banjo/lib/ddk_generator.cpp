@@ -74,7 +74,7 @@ void EmitFileComment(std::ostream* file, banjo::StringView name) {
     *file << "// Use of this source code is governed by a BSD-style license that can be\n";
     *file << "// found in the LICENSE file.\n\n";
     *file << "// WARNING: THIS FILE IS MACHINE GENERATED. DO NOT EDIT.\n";
-    *file << "//          MODIFY system/banjo/ddk-protocol-" << name <<  "/" << name
+    *file << "//          MODIFY system/banjo/ddk-protocol-" << name << "/" << name
           << ".banjo INSTEAD.\n\n";
 }
 
@@ -110,11 +110,13 @@ std::vector<StringView> SplitString(const std::string& src, char delimiter) {
 
         if (end == std::string::npos) {
             StringView view(&src[start], src.size() - start);
-            if (!view.empty()) result.push_back(view);
+            if (!view.empty())
+                result.push_back(view);
             start = std::string::npos;
         } else {
             StringView view(&src[start], end - start);
-            if (!view.empty()) result.push_back(view);
+            if (!view.empty())
+                result.push_back(view);
             start = end + 1;
         }
     }
@@ -151,7 +153,8 @@ void EmitMemberDecl(std::ostream* file, const DdkGenerator::Member& member, bool
         } else {
             const auto prefix = member.nullability == types::Nullability::kNullable ? "" : "const ";
             *file << prefix << member.element_type << (output ? "** " : "* ")
-                  << NameBuffer(member) << ";\n" << kIndent << "size_t " << NameCount(member);
+                  << NameBuffer(member) << ";\n"
+                  << kIndent << "size_t " << NameCount(member);
         }
         break;
     case flat::Type::Kind::kString:
@@ -189,8 +192,10 @@ void EmitMemberDecl(std::ostream* file, const DdkGenerator::Member& member, bool
     }
 }
 
+// If tranform is true, interface structs will be inlined as void* ctx and
+// foo_ops_t* ops members.
 void EmitMethodInParamDecl(std::ostream* file, const DdkGenerator::Member& member,
-                           bool emit_name = true) {
+                           bool emit_name = true, bool transform = false) {
     const auto member_name = emit_name ? " " + member.name : "";
     switch (member.kind) {
     case flat::Type::Kind::kArray:
@@ -222,7 +227,17 @@ void EmitMethodInParamDecl(std::ostream* file, const DdkGenerator::Member& membe
             *file << member.type << member_name;
             break;
         case flat::Decl::Kind::kInterface:
-            *file << member.type << "*" << member_name;
+            if (transform &&
+                member.name.find("cb") == std::string::npos &&
+                member.name.find("callback") == std::string::npos &&
+                member.name.find("func") == std::string::npos) {
+                const auto ctx = emit_name ? member_name + "_ctx" : "";
+                const auto ops = emit_name ? member_name + "_ops" : "";
+                const auto type = member.type.substr(6, member.type.size() - 8) + "_ops_t";
+                *file << "void*" << ctx << ", " << type << "*" << ops;
+            } else {
+                *file << member.type << "*" << member_name;
+            }
             break;
         case flat::Decl::Kind::kStruct:
         case flat::Decl::Kind::kUnion:
@@ -232,7 +247,7 @@ void EmitMethodInParamDecl(std::ostream* file, const DdkGenerator::Member& membe
                 *file << member.type << member_name;
                 break;
             case types::Nullability::kNonnullable:
-                *file << "const " << member.type << "*" <<  member_name;
+                *file << "const " << member.type << "*" << member_name;
                 break;
             }
             break;
@@ -299,7 +314,7 @@ void EmitMethodOutParamDecl(std::ostream* file, const DdkGenerator::Member& memb
 void EmitMethodDeclHelper(std::ostream* file, StringView method_name,
                           const std::vector<DdkGenerator::Member>& input,
                           const std::vector<DdkGenerator::Member>& output,
-                          StringView ctx) {
+                          StringView ctx, bool transform = false) {
     const bool return_first = ReturnFirst(output);
     if (return_first) {
         *file << output[0].type << " ";
@@ -317,7 +332,7 @@ void EmitMethodDeclHelper(std::ostream* file, StringView method_name,
         } else {
             *file << ", ";
         }
-        EmitMethodInParamDecl(file, member);
+        EmitMethodInParamDecl(file, member, true, transform);
     }
     for (auto member = output.begin() + (return_first ? 1 : 0); member != output.end();
          member++) {
@@ -336,6 +351,12 @@ void EmitProtocolMethodDecl(std::ostream* file, StringView method_name,
     EmitMethodDeclHelper(file, method_name, input, output, "");
 }
 
+void EmitProtocolMethodDeclTransform(std::ostream* file, StringView method_name,
+                                     const std::vector<DdkGenerator::Member>& input,
+                                     const std::vector<DdkGenerator::Member>& output) {
+    EmitMethodDeclHelper(file, method_name, input, output, "", true);
+}
+
 void EmitProtocolMethodWithCtxDecl(std::ostream* file, StringView method_name,
                                    const std::vector<DdkGenerator::Member>& input,
                                    const std::vector<DdkGenerator::Member>& output) {
@@ -347,7 +368,7 @@ void EmitProtocolMethodWithSpecificCtxDecl(std::ostream* file, const std::string
                                            const std::vector<DdkGenerator::Member>& input,
                                            const std::vector<DdkGenerator::Member>& output) {
     EmitMethodDeclHelper(file, method_name, input, output,
-                         "const " + protocol_name + "_t* proto");
+                         "const " + protocol_name + "_t* proto", true);
 }
 
 void EmitProtocolMethodPtrDecl(std::ostream* file, const std::string& method_name,
@@ -366,7 +387,7 @@ void EmitProtocolMethodTemplateDecl(std::ostream* file,
 void EmitMethodImplHelper(std::ostream* file, StringView method_name,
                           const std::vector<DdkGenerator::Member>& input,
                           const std::vector<DdkGenerator::Member>& output,
-                          StringView ctx, bool save_ret=false) {
+                          StringView ctx, bool save_ret = false) {
     const bool return_first = ReturnFirst(output);
     if (return_first)
         *file << (save_ret ? "auto ret = " : "return ");
@@ -412,7 +433,22 @@ void EmitMethodImplHelper(std::ostream* file, StringView method_name,
 void EmitDdkProtocolMethodImpl(std::ostream* file, const std::string& method_name,
                                const std::vector<DdkGenerator::Member>& input,
                                const std::vector<DdkGenerator::Member>& output) {
-    EmitMethodImplHelper(file,  "proto->ops->" + method_name, input, output,
+    for (auto& member : input) {
+        if (member.kind == flat::Type::Kind::kIdentifier &&
+            member.decl_kind == flat::Decl::Kind::kInterface &&
+            member.name.find("cb") == std::string::npos &&
+            member.name.find("callback") == std::string::npos &&
+            member.name.find("func") == std::string::npos) {
+            *file << member.type << " " << member.name << "2 = {\n";
+            *file << kIndent << kIndent << kIndent << ".ops = " << member.name << "_ops,\n";
+            *file << kIndent << kIndent << kIndent << ".ctx = " << member.name << "_ctx,\n";
+            *file << kIndent << kIndent << "};\n";
+            *file << kIndent << kIndent << member.type << "* " << member.name
+                  << " = &" << member.name << "2;\n";
+            *file << kIndent << kIndent;
+        }
+    }
+    EmitMethodImplHelper(file, "proto->ops->" + method_name, input, output,
                          "proto->ctx");
     *file << ");\n";
 }
@@ -427,7 +463,7 @@ void EmitDdktlProtocolMethodImpl(std::ostream* file, const std::string& method_n
     }
     for (auto& member : output) {
         if (member.kind == flat::Type::Kind::kHandle) {
-            *file << kIndent << kIndent <<  member.type << " out_" << member.name << "2;\n";
+            *file << kIndent << kIndent << member.type << " out_" << member.name << "2;\n";
             member.name = member.name + "2";
             member.address_of = true;
         }
@@ -437,7 +473,7 @@ void EmitDdktlProtocolMethodImpl(std::ostream* file, const std::string& method_n
     *file << ");\n";
     for (auto& member : output) {
         if (member.kind == flat::Type::Kind::kHandle) {
-            *file << kIndent << kIndent <<  "*out_"
+            *file << kIndent << kIndent << "*out_"
                   << member.name.substr(0, member.name.size() - 1) << " = out_"
                   << member.name << ".release();\n";
         }
@@ -450,6 +486,22 @@ void EmitDdktlProtocolMethodImpl(std::ostream* file, const std::string& method_n
 void EmitClientMethodImpl(std::ostream* file, const std::string& method_name,
                           std::vector<DdkGenerator::Member>& input,
                           std::vector<DdkGenerator::Member>& output) {
+
+    for (auto& member : input) {
+        if (member.kind == flat::Type::Kind::kIdentifier &&
+            member.decl_kind == flat::Decl::Kind::kInterface && 
+            member.name.find("cb") == std::string::npos &&
+            member.name.find("callback") == std::string::npos &&
+            member.name.find("func") == std::string::npos) {
+            *file << member.type << " " << member.name << "2 = {\n";
+            *file << kIndent << kIndent << kIndent << ".ops = " << member.name << "_ops,\n";
+            *file << kIndent << kIndent << kIndent << ".ctx = " << member.name << "_ctx,\n";
+            *file << kIndent << kIndent << "};\n";
+            *file << kIndent << kIndent << member.type << "* " << member.name
+                  << " = &" << member.name << "2;\n";
+            *file << kIndent << kIndent;
+        }
+    }
     for (auto& member : input) {
         if (member.kind == flat::Type::Kind::kHandle) {
             member.name = member.name + ".release()";
@@ -476,7 +528,7 @@ void EmitCallbackMethodImpl(std::ostream* file, const std::string& method_name,
             break;
         case flat::Type::Kind::kVector:
             *file << kIndent << "memcpy(ctx->" << NameBuffer(member) << ", " << NameBuffer(member)
-                  << ", sizeof(*" << NameBuffer(member) <<  ") * " << NameCount(member) << ");\n";
+                  << ", sizeof(*" << NameBuffer(member) << ") * " << NameCount(member) << ");\n";
             *file << kIndent << "*ctx->" << name << "_actual = " << NameCount(member) << ";\n";
             break;
         case flat::Type::Kind::kString:
@@ -703,7 +755,9 @@ std::vector<uint32_t> ArrayCounts(const flat::Library* library, const flat::Type
     std::vector<uint32_t> array_counts;
     for (;;) {
         switch (type->kind) {
-        default: { return array_counts; }
+        default: {
+            return array_counts;
+        }
         case flat::Type::Kind::kArray: {
             auto array_type = static_cast<const flat::ArrayType*>(type);
             uint32_t element_count = array_type->element_count.Value();
@@ -771,12 +825,14 @@ std::string HandleToZxWrapper(const flat::HandleType* handle_type) {
         return "zx::bti";
     case types::HandleSubtype::kProfile:
         return "zx::profile";
-    default: { abort(); }
+    default: {
+        abort();
+    }
     }
 }
 
 std::string NameType(const flat::Type* type, const flat::Decl::Kind& decl_kind,
-                     bool handle_wrappers=false) {
+                     bool handle_wrappers = false) {
     for (;;) {
         switch (type->kind) {
         case flat::Type::Kind::kHandle:
@@ -829,17 +885,21 @@ std::string NameType(const flat::Type* type, const flat::Decl::Kind& decl_kind,
                 return std::string(
                     "const " + ToSnakeCase(identifier_type->name.name().data()) + "_t");
             }
-            default: { abort(); }
+            default: {
+                abort();
+            }
             }
         }
-        default: { abort(); }
+        default: {
+            abort();
+        }
         }
     }
 }
 
 template <typename T>
 DdkGenerator::Member CreateMember(const flat::Library* library, const T& decl,
-                                  bool handle_wrappers=false) {
+                                  bool handle_wrappers = false, bool transform = false) {
     std::string name = NameIdentifier(decl.name);
     const flat::Type* type = decl.type.get();
     auto decl_kind = GetDeclKind(library, type);
@@ -887,7 +947,7 @@ void GetMethodParameters(const flat::Library* library,
                          const DdkGenerator::NamedMethod& method_info,
                          std::vector<DdkGenerator::Member>* input,
                          std::vector<DdkGenerator::Member>* output,
-                         bool handle_wrappers=false) {
+                         bool handle_wrappers = false) {
     input->reserve(method_info.input_parameters.size() + (method_info.async ? 2 : 0));
     for (const auto& parameter : method_info.input_parameters) {
         input->push_back(CreateMember(library, parameter, handle_wrappers));
@@ -931,13 +991,13 @@ void DdkGenerator::GeneratePrologues() {
             continue;
         if (dep_library->HasAttribute("Internal"))
             continue;
-        EmitIncludeHeader(&file_, "<" +  ToLispCase(StringJoin(dep_library->name(), "/")) + ".h>");
+        EmitIncludeHeader(&file_, "<" + ToLispCase(StringJoin(dep_library->name(), "/")) + ".h>");
     }
     EmitIncludeHeader(&file_, "<zircon/compiler.h>");
     EmitIncludeHeader(&file_, "<zircon/types.h>");
 
     EmitBlank(&file_);
-    file_ <<  "__BEGIN_CDECLS;\n";
+    file_ << "__BEGIN_CDECLS;\n";
 }
 
 void DdktlGenerator::GeneratePrologues() {
@@ -945,13 +1005,13 @@ void DdktlGenerator::GeneratePrologues() {
     EmitHeaderGuard(&file_);
     EmitBlank(&file_);
     EmitIncludeHeader(&file_, "<ddk/driver.h>");
-    EmitIncludeHeader(&file_, "<" +  ToLispCase(LibraryName(library_, "/")) + ".h>");
+    EmitIncludeHeader(&file_, "<" + ToLispCase(LibraryName(library_, "/")) + ".h>");
     for (const auto& dep_library : library_->dependencies()) {
         if (dep_library == library_)
             continue;
         if (dep_library->HasAttribute("Internal"))
             continue;
-        EmitIncludeHeader(&file_, "<" +  ToLispCase(StringJoin(dep_library->name(), "/")) + ".h>");
+        EmitIncludeHeader(&file_, "<" + ToLispCase(StringJoin(dep_library->name(), "/")) + ".h>");
     }
     EmitIncludeHeader(&file_, "<ddktl/device-internal.h>");
     EmitIncludeHeader(&file_, "<zircon/assert.h>");
@@ -983,7 +1043,7 @@ void DdktlGenerator::GeneratePrologues() {
     }
 
     for (const auto& include : includes) {
-        EmitIncludeHeader(&file_, "<lib/zx/" + include  + ".h>");
+        EmitIncludeHeader(&file_, "<lib/zx/" + include + ".h>");
     }
 
     EmitBlank(&file_);
@@ -994,7 +1054,7 @@ void DdktlGenerator::GeneratePrologues() {
 }
 
 void DdkGenerator::GenerateEpilogues() {
-    file_ <<  "__END_CDECLS;\n";
+    file_ << "__END_CDECLS;\n";
 }
 
 void DdktlGenerator::GenerateEpilogues() {
@@ -1074,7 +1134,8 @@ void DdkGenerator::GenerateStructDeclaration(StringView name, const std::vector<
         file_ << kIndent;
         EmitMemberDecl(&file_, member, helper && !first);
         file_ << ";\n";
-        if (first) first = false;
+        if (first)
+            first = false;
     }
     if (packed) {
         file_ << "} __attribute__((__packed__));\n";
@@ -1373,7 +1434,8 @@ void DdktlGenerator::ProduceEnumForwardDeclaration(const NamedEnum& named_enum) 
 
 void DdkGenerator::ProduceStructForwardDeclaration(const NamedStruct& named_struct) {
     // TODO: Hack - structs with no members are defined in a different header.
-    if (named_struct.struct_info.members.empty()) return;
+    if (named_struct.struct_info.members.empty())
+        return;
 
     GenerateStructTypedef(named_struct.name, named_struct.type_name);
 }
@@ -1470,7 +1532,8 @@ void DdkGenerator::ProduceProtocolImplementation(const NamedInterface& named_int
 
     // Emit Protocol async helper functions.
     for (const auto& method_info : named_interface.methods) {
-        if (!method_info.async || !method_info.generate_sync_method) continue;
+        if (!method_info.async || !method_info.generate_sync_method)
+            continue;
         // Generate context struct.
         std::vector<DdkGenerator::Member> members;
         members.reserve(method_info.output_parameters.size() + 1);
@@ -1576,7 +1639,8 @@ void DdktlGenerator::ProduceExample(const NamedInterface& named_interface) {
 }
 
 void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_interface) {
-    if (named_interface.type == InterfaceType::kCallback) return;
+    if (named_interface.type == InterfaceType::kCallback)
+        return;
 
     const auto& sc_name = named_interface.snake_case_name;
     const auto& cc_name = named_interface.camel_case_name;
@@ -1601,7 +1665,7 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
               << "// Can only inherit from one base_protocol implementation.\n";
         file_ << kIndent << kIndent << kIndent << "ZX_ASSERT(dev->ddk_proto_id_ == 0);\n";
         file_ << kIndent << kIndent << kIndent << "dev->ddk_proto_id_ = ZX_PROTOCOL_"
-            << ToSnakeCase(named_interface.shortname, true) << ";\n";
+              << ToSnakeCase(named_interface.shortname, true) << ";\n";
         file_ << kIndent << kIndent << kIndent << "dev->ddk_proto_ops_ = &" << ops << ";\n";
         file_ << kIndent << kIndent << "}\n";
     }
@@ -1633,7 +1697,8 @@ void DdktlGenerator::ProduceProtocolImplementation(const NamedInterface& named_i
 }
 
 void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_interface) {
-    if (named_interface.type == InterfaceType::kCallback) return;
+    if (named_interface.type == InterfaceType::kCallback)
+        return;
 
     const auto& sc_name = named_interface.snake_case_name;
     const auto& cc_name = named_interface.camel_case_name;
@@ -1680,7 +1745,7 @@ void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_int
 
         EmitDocstring(&file_, method_info, true);
         file_ << kIndent;
-        EmitProtocolMethodDecl(&file_, method_info.proxy_name, input, output);
+        EmitProtocolMethodDeclTransform(&file_, method_info.proxy_name, input, output);
         file_ << ") const {\n"
               << kIndent << kIndent;
         EmitClientMethodImpl(&file_, method_info.c_name, input, output);
@@ -1695,7 +1760,8 @@ void DdktlGenerator::ProduceClientImplementation(const NamedInterface& named_int
 }
 
 void DdktlGenerator::ProduceProtocolSubclass(const NamedInterface& named_interface) {
-    if (named_interface.type == InterfaceType::kCallback) return;
+    if (named_interface.type == InterfaceType::kCallback)
+        return;
 
     const auto& sc_name = named_interface.snake_case_name;
     const auto& cc_name = named_interface.camel_case_name;
@@ -1732,7 +1798,8 @@ void DdktlGenerator::ProduceProtocolSubclass(const NamedInterface& named_interfa
 
 void DdkGenerator::ProduceStructDeclaration(const NamedStruct& named_struct) {
     // TODO: Hack - structs with no members are defined in a different header.
-    if (named_struct.struct_info.members.empty()) return;
+    if (named_struct.struct_info.members.empty())
+        return;
 
     std::vector<DdkGenerator::Member> members =
         GenerateMembers(library_, named_struct.struct_info.members);

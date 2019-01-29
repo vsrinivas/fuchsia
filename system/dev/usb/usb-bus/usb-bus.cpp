@@ -52,12 +52,7 @@ zx_status_t UsbBus::Init() {
         return status;
     }
 
-    // TODO(surajmalhotra) is there a better way to do this?
-    usb_bus_interface_t intf = {
-        .ops = &usb_bus_interface_ops_,
-        .ctx = this,
-    };
-    hci_.SetBusInterface(&intf);
+    hci_.SetBusInterface(this, &usb_bus_interface_ops_);
 
     return ZX_OK;
 }
@@ -222,7 +217,7 @@ zx_status_t UsbBus::UsbBusSetHubInterface(zx_device_t* usb_device, const usb_hub
 }
 
 void UsbBus::DdkUnbind() {
-    hci_.SetBusInterface(nullptr);
+    hci_.SetBusInterface(nullptr, nullptr);
 
     for (auto device : devices_) {
         if (device != nullptr) {

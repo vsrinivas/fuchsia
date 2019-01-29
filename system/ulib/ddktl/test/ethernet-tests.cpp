@@ -55,8 +55,7 @@ class TestEthmacIfc : public ddk::Device<TestEthmacIfc>,
     ethmac_ifc_t ethmac_ifc() { return {&ethmac_ifc_ops_, this}; }
 
     zx_status_t StartProtocol(ddk::EthmacProtocolClient* client) {
-        const ethmac_ifc_t ifc = ethmac_ifc();
-        return client->Start(&ifc);
+        return client->Start(this, &ethmac_ifc_ops_);
     }
 
   private:
@@ -207,7 +206,7 @@ static bool test_ethmac_protocol() {
     EXPECT_EQ(ZX_OK, ethmac_query(&proto, 0, nullptr), "");
     proto.ops->stop(proto.ctx);
     ethmac_ifc_t ifc = {nullptr, nullptr};
-    EXPECT_EQ(ZX_OK, ethmac_start(&proto, &ifc), "");
+    EXPECT_EQ(ZX_OK, ethmac_start(&proto, ifc.ctx, ifc.ops), "");
     ethmac_netbuf_t netbuf = {};
     EXPECT_EQ(ZX_OK, ethmac_queue_tx(&proto, 0, &netbuf), "");
     EXPECT_EQ(ZX_OK, ethmac_set_param(&proto, 0, 0, nullptr, 0), "");
@@ -236,7 +235,7 @@ static bool test_ethmac_protocol_client() {
 
     EXPECT_EQ(ZX_OK, client.Query(0, nullptr), "");
     client.Stop();
-    EXPECT_EQ(ZX_OK, client.Start(&ifc), "");
+    EXPECT_EQ(ZX_OK, client.Start(ifc.ctx, ifc.ops), "");
     ethmac_netbuf_t netbuf = {};
     EXPECT_EQ(ZX_OK, client.QueueTx(0, &netbuf), "");
     EXPECT_EQ(ZX_OK, client.SetParam(0, 0, nullptr, 0));

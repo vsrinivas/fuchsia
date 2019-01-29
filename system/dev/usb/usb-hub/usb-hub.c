@@ -508,10 +508,7 @@ static zx_status_t usb_hub_bind(void* ctx, zx_device_t* device) {
         return status;
     }
 
-    static usb_hub_interface_t hub_intf;
-    hub_intf.ops = &_hub_interface;
-    hub_intf.ctx = hub;
-    usb_bus_set_hub_interface(&bus, hub->usb_device, &hub_intf);
+    usb_bus_set_hub_interface(&bus, hub->usb_device, hub, &_hub_interface);
 
     int ret = thrd_create_with_name(&hub->thread, usb_hub_thread, hub, "usb_hub_thread");
     if (ret != thrd_success) {

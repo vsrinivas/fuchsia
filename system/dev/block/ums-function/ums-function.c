@@ -607,11 +607,7 @@ zx_status_t usb_ums_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    usb_function_interface_t intf = {
-        .ops = &ums_device_ops,
-        .ctx = ums,
-    };
-    usb_function_set_interface(&ums->function, &intf);
+    usb_function_set_interface(&ums->function, ums, &ums_device_ops);
 
     return ZX_OK;
 

@@ -92,8 +92,8 @@ static inline zx_status_t hid_op_query(hid_device_t* hid, uint32_t options, hid_
     return hid->hid.ops->query(hid->hid.ctx, options, info);
 }
 
-static inline zx_status_t hid_op_start(hid_device_t* hid, const hidbus_ifc_t* ifc) {
-    return hidbus_start(&hid->hid, ifc);
+static inline zx_status_t hid_op_start(hid_device_t* hid, void* ctx, hidbus_ifc_ops_t* ops) {
+    return hidbus_start(&hid->hid, ctx, ops);
 }
 
 static inline void hid_op_stop(hid_device_t* hid) {
@@ -692,7 +692,7 @@ static zx_status_t hid_bind(void* ctx, zx_device_t* parent) {
     }
 
     // TODO: delay calling start until we've been opened by someone
-    status = hid_op_start(hiddev, &(hidbus_ifc_t){&hid_ifc_ops, hiddev});
+    status = hid_op_start(hiddev, hiddev, &hid_ifc_ops);
     if (status != ZX_OK) {
         zxlogf(ERROR, "hid: could not start hid device: %d\n", status);
         device_remove(hiddev->zxdev);

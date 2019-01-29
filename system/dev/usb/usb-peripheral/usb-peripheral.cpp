@@ -79,12 +79,7 @@ zx_status_t UsbPeripheral::Init() {
         return status;
     }
 
-    // TODO(surajmalhotra) is there a better way to do this?
-    usb_dci_interface_t intf = {
-        .ops = &usb_dci_interface_ops_,
-        .ctx = this,
-    };
-    dci_.SetInterface(&intf);
+    dci_.SetInterface(this, &usb_dci_interface_ops_);
 
 #if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
     // Set compile time configuration, if we have one.

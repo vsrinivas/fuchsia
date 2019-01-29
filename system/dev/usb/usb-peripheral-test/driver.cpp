@@ -335,9 +335,6 @@ static zx_status_t usb_test_bind(void* ctx, zx_device_t* parent) {
     list_initialize(&test->intr_reqs);
 
     device_add_args_t args = {};
-    usb_function_interface_t intf = {};
-    intf.ops = &device_ops;
-    intf.ctx = test;
 
     status = usb_function_alloc_interface(&test->function, &descriptors.intf.bInterfaceNumber);
     if (status != ZX_OK) {
@@ -409,7 +406,7 @@ static zx_status_t usb_test_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    usb_function_set_interface(&test->function, &intf);
+    usb_function_set_interface(&test->function, test, &device_ops);
 
     return ZX_OK;
 

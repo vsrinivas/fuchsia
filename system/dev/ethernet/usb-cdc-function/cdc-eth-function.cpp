@@ -631,10 +631,6 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
     mtx_init(&cdc->rx_mutex, mtx_plain);
     mtx_init(&cdc->intr_mutex, mtx_plain);
 
-    usb_function_interface_t intf = {};
-    intf.ops = &device_ops;
-    intf.ctx = cdc;
-
     cdc->bulk_max_packet = BULK_MAX_PACKET; // FIXME(voydanoff) USB 3.0 support
     cdc->parent_req_size = usb_function_get_request_size(&cdc->function);
     uint64_t req_size = cdc->parent_req_size + sizeof(usb_req_internal_t);
@@ -727,7 +723,7 @@ zx_status_t usb_cdc_bind(void* ctx, zx_device_t* parent) {
         goto fail;
     }
 
-    usb_function_set_interface(&cdc->function, &intf);
+    usb_function_set_interface(&cdc->function, cdc, &device_ops);
 
     return ZX_OK;
 

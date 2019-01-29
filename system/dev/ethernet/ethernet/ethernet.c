@@ -665,8 +665,7 @@ static zx_status_t eth_start_locked(ethdev_t* edev) TA_NO_THREAD_SAFETY_ANALYSIS
         // Release the lock to allow other device operations in callback routine.
         // Re-acquire lock afterwards.
         mtx_unlock(&edev0->lock);
-        const ethmac_ifc_t ifc = {&ethmac_ifc, edev0};
-        status = ethmac_start(&edev->edev0->mac, &ifc);
+        status = ethmac_start(&edev->edev0->mac, edev0, &ethmac_ifc);
         mtx_lock(&edev0->lock);
         // Check whether unbind was called while we were unlocked.
         if (edev->state & ETHDEV_DEAD) {
