@@ -2,24 +2,56 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <ddktl/mmio.h>
-
 #include <hwreg/bitfields.h>
-#include <hwreg/mmio.h>
-
+#include <soc/mt8167/mt8167-hw.h>
 #include <zircon/types.h>
+
+// Define weak specialization methods that can be overridden in tests. There is a slight performance
+// hit as doing this prevents the MMIO accesses from being inlined.
+template <>
+template <>
+__WEAK uint16_t ddk::MmioBuffer::Read<uint16_t>(zx_off_t offs) const {
+    return Read<uint16_t>(offs);
+}
+
+template <>
+template <>
+__WEAK void ddk::MmioBuffer::Write<uint16_t>(uint16_t val, zx_off_t offs) const {
+    Write<uint16_t>(val, offs);
+}
+
+namespace {
+// There are 2 sets of GPIO Pull settings register banks, those under GPIO and those under IOCFG.
+// Those under the GPIO have a consistent numbering mapping such that the register offsets
+// can be calculated based on the GPIO number.  The GPIOs that fall into IOCFG are marked as '0'
+// in kGpioPullInGpioRegs and return false in GpioPullEnReg/GpioPullSelReg methods to indicate that
+// they are not supported in the GPIO registers so we then try IoConfigReg methods. Note that the
+// last 3 GPIO numbers in the array don't fall under GPIO or IOCFG (as any other number past 127).
+static constexpr bool kGpioPullInGpioRegs[][16] = {
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0}, // 0 (first GPIO in this line).
+    {0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1}, // 16.
+    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1}, // 32.
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // 48.
+    {1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1}, // 64.
+    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1}, // 80.
+    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0}, // 96.
+    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0}, // 112 (first is 112, last is 127).
+};
+
+} // namespace
 
 namespace gpio {
 
-constexpr bool kGpioPullValid[][16] = {
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0, 0},
-    {0, 0, 1, 1, 1, 0, 0, 0, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 1},
-    {1, 1, 1, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0},
-    {0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 0, 0, 0},
+enum PullAmount {
+    kNoPull,
+    kPull10K,
+    kPull50K,
+    kPull10K50K,
+    kPull75K,
+    kPull2K,
+    kPull75K2K,
+    kPull200K,
+    kPull75K200K,
 };
 
 // GPIO MODE defines PINMUX for this device
@@ -131,7 +163,8 @@ public:
 
 private:
     bool PullEnableInternal(size_t idx, bool val) const {
-        if (idx >= countof(kGpioPullValid) || !kGpioPullValid[idx / 16][idx % 16]) {
+        if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(bool) ||
+            !kGpioPullInGpioRegs[idx / 16][idx % 16]) {
             return false;
         }
         ModifyBit(idx, val);
@@ -148,7 +181,8 @@ public:
 
 private:
     bool SetPullInternal(size_t idx, bool up) const {
-        if (idx >= countof(kGpioPullValid) || !kGpioPullValid[idx / 16][idx % 16]) {
+        if (idx >= sizeof(kGpioPullInGpioRegs) / sizeof(bool) ||
+            !kGpioPullInGpioRegs[idx / 16][idx % 16]) {
             return false;
         }
         ModifyBit(idx, up);
@@ -162,42 +196,89 @@ public:
         : ddk::MmioBuffer(mmio) {}
     bool SetPullUp(size_t idx) const { return SetPullInternal(idx, true); }
     bool SetPullDown(size_t idx) const { return SetPullInternal(idx, false); }
-    bool PullEnable(size_t idx) const { return PullEnableInternal(idx, true); }
-    bool PullDisable(size_t idx) const { return PullEnableInternal(idx, false); }
+    bool PullEnable(size_t idx, PullAmount amount) const { return PullEnableInternal(idx, amount); }
+    bool PullDisable(size_t idx) const { return PullEnableInternal(idx, kNoPull); }
 
 private:
+    // This list pull settings not in the GPIO register set, but only here in IOCFG.
+    static constexpr struct {
+        size_t idx;
+        uint32_t reg_offset;
+        uint32_t up_down_bit;
+        uint32_t pull_bit_start;
+        PullAmount pull_amount_sets_reg_to_1;
+        PullAmount pull_amount_sets_reg_to_2;
+        PullAmount pull_amount_sets_reg_to_3;
+    } pull_regs[] = {
+        // clang-format off
+        {  14, 0x550, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        {  15, 0x560,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        {  16, 0x560,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        {  17, 0x560, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+
+        {  21, 0x560, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        {  22, 0x570,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        {  23, 0x570,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+
+        {  40, 0x580,  2,  0, kPull75K,   kPull2K,     kPull75K2K},
+        {  41, 0x580,  6,  4, kPull75K,   kPull2K,     kPull75K2K},
+        {  42, 0x590,  2,  0, kPull75K, kPull200K,   kPull75K200K},
+        {  43, 0x590,  6,  4, kPull75K, kPull200K,   kPull75K200K},
+
+        {  68, 0x550, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        {  69, 0x550,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        {  70, 0x540,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        {  71, 0x540, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        {  72, 0x540, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        {  73, 0x550,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+
+        { 104, 0x540,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        { 105, 0x530, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        { 106, 0x520, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        { 107, 0x530,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        { 108, 0x530,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        { 109, 0x530, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        { 110, 0x510, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        { 111, 0x510, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        { 112, 0x510,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        { 113, 0x510,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        { 114, 0x520, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        { 115, 0x520,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        { 116, 0x520,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        { 117, 0x500, 14, 12, kPull10K,  kPull50K,    kPull10K50K},
+        { 118, 0x500, 10,  8, kPull10K,  kPull50K,    kPull10K50K},
+        { 119, 0x500,  6,  4, kPull10K,  kPull50K,    kPull10K50K},
+        { 120, 0x500,  2,  0, kPull10K,  kPull50K,    kPull10K50K},
+        // clang-format on
+    };
+
     bool SetPullInternal(size_t idx, bool up) const {
-        switch (idx) {
-        case 40:
-            ModifyBit<uint32_t>(!up, 2, 0x580);
-            return true;
-        case 41:
-            ModifyBit<uint32_t>(!up, 6, 0x580);
-            return true;
-        case 42:
-            ModifyBit<uint32_t>(!up, 2, 0x590);
-            return true;
-        case 43:
-            ModifyBit<uint32_t>(!up, 6, 0x590);
-            return true;
+        for (auto& i : pull_regs) {
+            if (i.idx == idx) {
+                ModifyBit<uint16_t>(!up, i.up_down_bit, i.reg_offset);
+                return true;
+            }
         }
         return false;
     }
-    bool PullEnableInternal(size_t idx, bool enable) const {
-        constexpr uint32_t r75K = 1;
-        switch (idx) {
-        case 40:
-            ModifyBits(enable ? r75K : 0, 0, 2, 0x580);
-            return true;
-        case 41:
-            ModifyBits(enable ? r75K : 0, 4, 2, 0x580);
-            return true;
-        case 42:
-            ModifyBits(enable ? r75K : 0, 0, 2, 0x590);
-            return true;
-        case 43:
-            ModifyBits(enable ? r75K : 0, 4, 2, 0x590);
-            return true;
+    bool PullEnableInternal(size_t idx, PullAmount pull) const {
+        for (auto& i : pull_regs) {
+            if (i.idx == idx) {
+                uint16_t val;
+                if (pull == kNoPull) {
+                    val = 0;
+                } else if (pull == i.pull_amount_sets_reg_to_1) {
+                    val = 1;
+                } else if (pull == i.pull_amount_sets_reg_to_2) {
+                    val = 2;
+                } else if (pull == i.pull_amount_sets_reg_to_3) {
+                    val = 3;
+                } else {
+                    return false; // Not supported pull amount for this GPIO.
+                }
+                ModifyBits<uint16_t>(val, i.pull_bit_start, 2, i.reg_offset);
+                return true;
+            }
         }
         return false;
     }

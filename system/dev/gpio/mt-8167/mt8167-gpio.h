@@ -4,22 +4,19 @@
 
 #pragma once
 
-#include <ddk/platform-defs.h>
-#include <ddk/protocol/gpioimpl.h>
-#include <ddk/protocol/platform/bus.h>
-#include <ddk/protocol/platform-device-lib.h>
-#include <ddk/protocol/platform/device.h>
+#include <threads.h>
 
+#include <ddk/platform-defs.h>
+#include <ddk/protocol/platform-device-lib.h>
+#include <ddk/protocol/platform/bus.h>
+#include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/protocol/gpioimpl.h>
-
 #include <fbl/array.h>
-
-#include <hw/reg.h>
-#include <hwreg/mmio.h>
-
 #include <lib/zx/interrupt.h>
 #include <lib/zx/port.h>
+
+#include "mt8167-gpio-regs.h"
 
 namespace gpio {
 
@@ -59,6 +56,9 @@ public:
     zx_status_t GpioImplReleaseInterrupt(uint32_t index);
     zx_status_t GpioImplSetPolarity(uint32_t index, uint32_t polarity);
 
+protected:
+    fbl::Array<zx::interrupt> interrupts_; // Protected to be changed in unit tests.
+
 private:
     void ShutDown();
     int Thread();
@@ -74,6 +74,5 @@ private:
     zx::interrupt int_;
     zx::port port_;
     thrd_t thread_;
-    fbl::Array<zx::interrupt> interrupts_;
 };
 } // namespace gpio

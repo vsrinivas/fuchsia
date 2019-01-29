@@ -8,20 +8,13 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include <ddk/protocol/gpioimpl.h>
-
 #include <fbl/alloc_checker.h>
-#include <fbl/auto_call.h>
 #include <fbl/unique_ptr.h>
-
 #include <hw/reg.h>
-
 #include <soc/mt8167/mt8167-hw.h>
-
 #include <zircon/syscalls/port.h>
 #include <zircon/types.h>
 
-#include "mt8167-gpio-regs.h"
 #include "mt8167-gpio.h"
 
 namespace gpio {
@@ -80,6 +73,13 @@ zx_status_t Mt8167GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
     }
 
     // If not supported above, try IO Config.
+    // TODO(andresoportus): We only support enable/disable pull through the GPIO protocol, so
+    // until we allow passing particular pull amounts we can specify here different pull amounts
+    // for particular GPIOs.
+    PullAmount pull_amount = kPull10K;
+    if (index >= 40 && index <= 43) {
+        pull_amount = kPull75K;
+    }
     switch (pull_mode) {
     case GPIO_NO_PULL:
         if (iocfg_.PullDisable(index)) {
@@ -87,12 +87,12 @@ zx_status_t Mt8167GpioDevice::GpioImplConfigIn(uint32_t index, uint32_t flags) {
         }
         break;
     case GPIO_PULL_UP:
-        if (iocfg_.PullEnable(index) && iocfg_.SetPullUp(index)) {
+        if (iocfg_.PullEnable(index, pull_amount) && iocfg_.SetPullUp(index)) {
             return ZX_OK;
         }
         break;
     case GPIO_PULL_DOWN:
-        if (iocfg_.PullEnable(index) && iocfg_.SetPullDown(index)) {
+        if (iocfg_.PullEnable(index, pull_amount) && iocfg_.SetPullDown(index)) {
             return ZX_OK;
         }
         break;
@@ -352,4 +352,3 @@ zx_status_t mt8167_gpio_bind(void* ctx, zx_device_t* parent) {
 }
 
 } // namespace gpio
-
