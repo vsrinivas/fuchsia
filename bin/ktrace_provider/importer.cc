@@ -33,11 +33,12 @@ constexpr trace_thread_state_t ToTraceThreadState(int value) {
     case 2:  // THREAD_RUNNING
       return ZX_THREAD_STATE_RUNNING;
     case 3:  // THREAD_BLOCKED
-    case 4:  // THREAD_SLEEPING
+    case 4:  // THREAD_BLOCKED_READ_LOCK
+    case 5:  // THREAD_SLEEPING
       return ZX_THREAD_STATE_BLOCKED;
-    case 5:  // THREAD_SUSPENDED
+    case 6:  // THREAD_SUSPENDED
       return ZX_THREAD_STATE_SUSPENDED;
-    case 6:  // THREAD_DEATH
+    case 7:  // THREAD_DEATH
       return ZX_THREAD_STATE_DEAD;
     default:  // ???
       FXL_LOG(WARNING) << "Imported unknown thread state from ktrace: "
