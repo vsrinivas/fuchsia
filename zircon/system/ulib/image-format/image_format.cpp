@@ -4,6 +4,7 @@
 
 #include "lib/image-format/image_format.h"
 
+#include <fbl/algorithm.h>
 #include <zircon/assert.h>
 
 #include <map>
@@ -67,8 +68,7 @@ bool ImageFormatIsPixelFormatEqual(const fuchsia_sysmem_PixelFormat& a, const fu
 }
 
 bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSpace& color_space, const fuchsia_sysmem_PixelFormat& pixel_format) {
-    // Not yet supported.
-    ZX_DEBUG_ASSERT(!pixel_format.has_format_modifier);
+    // Ignore pixel format modifier - assume it has already been checked.
     auto color_space_sampling_info_iter = kColorSpaceSamplingInfo.find(color_space.type);
     if (color_space_sampling_info_iter == kColorSpaceSamplingInfo.end()) {
         return false;
@@ -97,19 +97,30 @@ bool ImageFormatIsSupportedColorSpaceForPixelFormat(const fuchsia_sysmem_ColorSp
 }
 
 bool ImageFormatIsSupported(const fuchsia_sysmem_PixelFormat* pixel_format) {
-    if (pixel_format->has_format_modifier) {
-        return false;
-    }
     switch (pixel_format->type) {
         case fuchsia_sysmem_PixelFormatType_INVALID:
         case fuchsia_sysmem_PixelFormatType_MJPEG:
             return false;
         case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
         case fuchsia_sysmem_PixelFormatType_BGRA32:
+            if (pixel_format->has_format_modifier) {
+                switch (pixel_format->format_modifier.value) {
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+                    return true;
+                default:
+                    return false;
+                }
+            }
+            return true;
         case fuchsia_sysmem_PixelFormatType_I420:
         case fuchsia_sysmem_PixelFormatType_M420:
         case fuchsia_sysmem_PixelFormatType_NV12:
         case fuchsia_sysmem_PixelFormatType_YUY2:
+            if (pixel_format->has_format_modifier) {
+                return false;
+            }
             return true;
     }
     return false;
@@ -167,6 +178,16 @@ uint32_t ImageFormatStrideBytesPerWidthPixel(
     return 0u;
 }
 
+// See
+// https://01.org/sites/default/files/documentation/intel-gfx-prm-osrc-skl-vol05-memory_views.pdf
+constexpr uint32_t kIntelTileByteSize = 4096;
+constexpr uint32_t kIntelYTilePixelWidth = 32;
+constexpr uint32_t kIntelYTileHeight = 4096 / kIntelYTilePixelWidth;
+constexpr uint32_t kIntelXTilePixelWidth = 128;
+constexpr uint32_t kIntelXTileHeight = 4096 / kIntelXTilePixelWidth;
+constexpr uint32_t kIntelYFTilePixelWidth = 32; // For a 4 byte per component format
+constexpr uint32_t kIntelYFTileHeight = 4096 / kIntelYFTilePixelWidth;
+
 uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) {
     ZX_DEBUG_ASSERT(ImageFormatIsSupported(&image_format->pixel_format));
     uint64_t coded_height = image_format->coded_height;
@@ -179,6 +200,31 @@ uint64_t ImageFormatImageSize(const fuchsia_sysmem_ImageFormat_2* image_format) 
             return 0u;
         case fuchsia_sysmem_PixelFormatType_R8G8B8A8:
         case fuchsia_sysmem_PixelFormatType_BGRA32:
+            if (image_format->pixel_format.has_format_modifier) {
+                switch (image_format->pixel_format.format_modifier.value) {
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_X_TILED:
+                    return fbl::round_up(image_format->coded_width, kIntelXTilePixelWidth) /
+                           kIntelXTilePixelWidth *
+                           fbl::round_up(image_format->coded_height, kIntelXTileHeight) /
+                           kIntelXTileHeight * kIntelTileByteSize;
+
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_Y_TILED:
+                    return fbl::round_up(image_format->coded_width, kIntelYTilePixelWidth) /
+                           kIntelYTilePixelWidth *
+                           fbl::round_up(image_format->coded_height, kIntelYTileHeight) /
+                           kIntelYTileHeight * kIntelTileByteSize;
+
+                case fuchsia_sysmem_FORMAT_MODIFIER_INTEL_I915_YF_TILED:
+                    return fbl::round_up(image_format->coded_width, kIntelYFTilePixelWidth) /
+                           kIntelYFTilePixelWidth *
+                           fbl::round_up(image_format->coded_height, kIntelYFTileHeight) /
+                           kIntelYFTileHeight * kIntelTileByteSize;
+                default:
+                    // impossible; checked previously.
+                    ZX_DEBUG_ASSERT(false);
+                    return 0u;
+                }
+            }
             return coded_height * bytes_per_row;
         case fuchsia_sysmem_PixelFormatType_I420:
             return coded_height * bytes_per_row * 3 / 2;

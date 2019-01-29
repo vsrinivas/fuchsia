@@ -511,10 +511,11 @@ bool LogicalBufferCollection::CheckImageFormatConstraints(
         LogError("PixelFormatType INVALID not allowed");
         return false;
     }
-    if (constraints->pixel_format.has_format_modifier) {
-        LogError("has_format_modifier == true not yet implemented");
+    if (!ImageFormatIsSupported(&constraints->pixel_format)) {
+        LogError("Unsupported pixel format");
         return false;
     }
+
     if (!constraints->color_spaces_count) {
         LogError("color_spaces_count == 0 not allowed");
         return false;
@@ -1167,6 +1168,19 @@ zx_status_t LogicalBufferCollection::AllocateVmo(
     return ZX_OK;
 }
 
+static int32_t clamp_difference(int32_t a, int32_t b) {
+    int32_t raw_result = a - b;
+
+    int32_t cooked_result = raw_result;
+    if (cooked_result > 0) {
+        cooked_result = 1;
+    } else if (cooked_result < 0) {
+        cooked_result = -1;
+    }
+    ZX_DEBUG_ASSERT(cooked_result == 0 || cooked_result == 1 || cooked_result == -1);
+    return cooked_result;
+}
+
 // 1 means a > b, 0 means ==, -1 means a < b.
 //
 // TODO(dustingreen): Pay attention to constraints_->usage, by checking any
@@ -1178,25 +1192,24 @@ int32_t LogicalBufferCollection::CompareImageFormatConstraintsTieBreaker(
     // If there's not any cost difference, fall back to choosing the
     // pixel_format that has the larger type enum value as a tie-breaker.
 
-    // For now, require that there's no format modifier.  Later we'll want to
-    // tie break based on that information also.
-    ZX_DEBUG_ASSERT(!a->pixel_format.has_format_modifier);
-    ZX_DEBUG_ASSERT(!b->pixel_format.has_format_modifier);
+    int32_t result = clamp_difference(static_cast<int32_t>(a->pixel_format.type),
+                                      static_cast<int32_t>(b->pixel_format.type));
 
-    int32_t raw_result = static_cast<int32_t>(a->pixel_format.type) -
-                         static_cast<int32_t>(b->pixel_format.type);
+    if (result != 0)
+        return result;
 
-    int32_t cooked_result = raw_result;
-    if (cooked_result > 0) {
-        cooked_result = 1;
-    } else if (cooked_result < 0) {
-        cooked_result = -1;
+    result = clamp_difference(static_cast<int32_t>(a->pixel_format.has_format_modifier),
+                              static_cast<int32_t>(b->pixel_format.has_format_modifier));
+
+    if (result != 0)
+        return result;
+
+    if (a->pixel_format.has_format_modifier && b->pixel_format.has_format_modifier) {
+        result = clamp_difference(static_cast<int32_t>(a->pixel_format.format_modifier.value),
+                                  static_cast<int32_t>(b->pixel_format.format_modifier.value));
     }
 
-    ZX_DEBUG_ASSERT(cooked_result == 0 || cooked_result == 1 ||
-                    cooked_result == -1);
-
-    return cooked_result;
+    return result;
 }
 
 int32_t LogicalBufferCollection::CompareImageFormatConstraintsByIndex(
