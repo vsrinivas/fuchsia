@@ -15,17 +15,19 @@ pub const BCAST_ADDR: MacAddr = [0xFF; 6];
 
 // IEEE Std 802.11-2016, 9.2.4.1.3
 // Frame types:
-const FRAME_TYPE_MGMT: u16 = 0;
-const FRAME_TYPE_DATA: u16 = 2;
+pub const FRAME_TYPE_MGMT: u16 = 0;
+pub const FRAME_TYPE_DATA: u16 = 2;
 // Management subtypes:
-const MGMT_SUBTYPE_ASSOC_RESP: u16 = 0x01;
-const MGMT_SUBTYPE_BEACON: u16 = 0x08;
-const MGMT_SUBTYPE_AUTH: u16 = 0x0B;
+pub const MGMT_SUBTYPE_ASSOC_RESP: u16 = 0x01;
+pub const MGMT_SUBTYPE_BEACON: u16 = 0x08;
+pub const MGMT_SUBTYPE_AUTH: u16 = 0x0B;
 // Data subtypes:
-const DATA_SUBTYPE_DATA: u16 = 0x00;
-const DATA_SUBTYPE_QOS_DATA: u16 = 0x08;
+pub const DATA_SUBTYPE_DATA: u16 = 0x00;
+pub const DATA_SUBTYPE_NULL_DATA: u16 = 0x04;
+pub const DATA_SUBTYPE_QOS_DATA: u16 = 0x08;
 
 // IEEE Std 802.11-2016, 9.2.4.1.3, Table 9-1
+const BITMASK_NULL: u16 = 1 << 2;
 const BITMASK_QOS: u16 = 1 << 3;
 
 // IEEE Std 802.11-2016, 9.2.4.1.1
@@ -166,6 +168,18 @@ impl MgmtHdr {
         LittleEndian::read_u16(&self.seq_ctrl)
     }
 
+    pub fn set_frame_ctrl(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.frame_ctrl, val)
+    }
+
+    pub fn set_duration(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.duration, val)
+    }
+
+    pub fn set_seq_ctrl(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.seq_ctrl, val)
+    }
+
     /// Returns the length in bytes of a mgmt header including all its fixed and optional
     /// fields (if they are present).
     pub fn len(has_ht_ctrl: bool) -> usize {
@@ -199,6 +213,18 @@ impl DataHdr {
 
     pub fn seq_ctrl(&self) -> u16 {
         LittleEndian::read_u16(&self.seq_ctrl)
+    }
+
+    pub fn set_frame_ctrl(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.frame_ctrl, val)
+    }
+
+    pub fn set_duration(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.duration, val)
+    }
+
+    pub fn set_seq_ctrl(&mut self, val: u16) {
+        LittleEndian::write_u16(&mut self.seq_ctrl, val)
     }
 
     /// Returns the length in bytes of a data header including all its fixed and optional

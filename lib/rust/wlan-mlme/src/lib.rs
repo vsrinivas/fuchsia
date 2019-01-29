@@ -8,3 +8,4 @@
 pub use wlan_common as common;
 
 pub mod auth;
+pub mod client;

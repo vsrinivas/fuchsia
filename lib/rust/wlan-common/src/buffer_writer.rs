@@ -4,8 +4,10 @@
 
 use {
     failure::{Error, ensure, format_err},
-    zerocopy::{ByteSliceMut, LayoutVerified, Unaligned},
+    zerocopy::{self, LayoutVerified, Unaligned},
 };
+
+pub use zerocopy::ByteSliceMut as ByteSliceMut;
 
 pub struct BufferWriter<B: ByteSliceMut> {
     buf: B,
