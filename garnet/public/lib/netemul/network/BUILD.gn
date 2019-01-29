@@ -35,6 +35,7 @@ source_set("network_service") {
     "interceptors/interceptor.h",
     "interceptors/latency.h",
     "interceptors/packet_loss.h",
+    "interceptors/reorder.h",
     "network.cc",
     "network.h",
     "network_context.cc",

@@ -3,8 +3,10 @@
 // found in the LICENSE file.
 
 #include <lib/gtest/real_loop_fixture.h>
+#include <unordered_set>
 #include "latency.h"
 #include "packet_loss.h"
+#include "reorder.h"
 
 namespace netemul {
 namespace testing {
@@ -22,6 +24,15 @@ class ControlledRand {
 };
 
 int64_t ControlledRand::NextRand = 0;
+
+void NoReorder(std::vector<InterceptPacket>* packets) {
+  // do nothing
+}
+
+void ReverseOrder(std::vector<InterceptPacket>* packets) {
+  // just deliver packets in reverse order
+  std::reverse(packets->begin(), packets->end());
+}
 
 class InterceptorsTest : public gtest::RealLoopFixture {
  public:
@@ -142,6 +153,107 @@ TEST_F(InterceptorsTest, LatencyFlush) {
 
   // no packets should have passed
   EXPECT_EQ(pass_count, 0);
+}
+
+TEST_F(InterceptorsTest, ReorderRealRand) {
+  std::unordered_set<uint8_t> rcv;
+  interceptor::Reorder reorder(5, zx::msec(0), [&rcv](InterceptPacket packet) {
+    auto value = packet.data()[0];
+    std::cout << "received packet " << (int)value << std::endl;
+    rcv.insert(value);
+  });
+  for (uint8_t i = 0; i < 5; i++) {
+    EXPECT_TRUE(rcv.empty());
+    reorder.Intercept(MakeSingleBytePacket(i));
+  }
+  EXPECT_EQ(rcv.size(), 5ul);
+  for (uint8_t i = 0; i < 5; i++) {
+    EXPECT_TRUE(rcv.find(i) != rcv.end());
+  }
+}
+
+TEST_F(InterceptorsTest, ReorderFakeRand) {
+  // test reordering with some forced deterministic ordering algorithms:
+  constexpr int packet_count = 5;
+  uint8_t no_reorder_count = 0;
+  uint8_t reverse_count = packet_count;
+  interceptor::Reorder<NoReorder> no_reorder(
+      packet_count, zx::msec(0), [&no_reorder_count](InterceptPacket packet) {
+        EXPECT_EQ(packet.data()[0], no_reorder_count);
+        no_reorder_count++;
+      });
+  interceptor::Reorder<ReverseOrder> reverse(
+      packet_count, zx::msec(0), [&reverse_count](InterceptPacket packet) {
+        reverse_count--;
+        EXPECT_EQ(packet.data()[0], reverse_count);
+      });
+
+  for (uint8_t i = 0; i < packet_count; i++) {
+    EXPECT_EQ(no_reorder_count, 0);
+    EXPECT_EQ(reverse_count, packet_count);
+    no_reorder.Intercept(MakeSingleBytePacket(i));
+    reverse.Intercept(MakeSingleBytePacket(i));
+  }
+  // after we hit the packet count buffer limit check that the counts are what
+  // we expect:
+  EXPECT_EQ(reverse_count, 0);
+  EXPECT_EQ(no_reorder_count, 5);
+
+  // send more packets but don't hit threshold:
+  no_reorder.Intercept(MakeSingleBytePacket(100));
+  reverse.Intercept(MakeSingleBytePacket(100));
+
+  // counts should not change
+  EXPECT_EQ(reverse_count, 0);
+  EXPECT_EQ(no_reorder_count, 5);
+}
+
+TEST_F(InterceptorsTest, ReorderTick) {
+  // test that tick works. Send |packet_count| packets on a |threshold| >
+  // |packet_count| threshold interceptor. Expect to get packets regardless due
+  // to tick if tick is set, and no packets if tick is not set.
+  constexpr int packet_count = 5;
+  constexpr int threshold = 25;
+
+  int tick_count = 0;
+  interceptor::Reorder<NoReorder> reorder_with_tick(
+      threshold, zx::msec(1),
+      [&tick_count](InterceptPacket packet) { tick_count++; });
+  interceptor::Reorder<NoReorder> reorder_no_tick(
+      threshold, zx::msec(0), [](InterceptPacket packet) {
+        FAIL() << "Should never pass through packets";
+      });
+
+  for (uint8_t i = 0; i < packet_count; i++) {
+    EXPECT_EQ(tick_count, 0);
+    reorder_with_tick.Intercept(MakeSingleBytePacket(i));
+    reorder_no_tick.Intercept(MakeSingleBytePacket(i));
+  }
+  // didn't hit threshold, so tick count should still be zero
+  EXPECT_EQ(tick_count, 0);
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&tick_count]() { return tick_count == packet_count; }, zx::sec(2)));
+}
+
+TEST_F(InterceptorsTest, ReorderFlush) {
+  // Verify that flushing pending packets gets us all the unused packets back:
+  constexpr int threshold = 3;
+  constexpr int packet_count = 5;
+  interceptor::Reorder<NoReorder> reorder(threshold, zx::msec(0),
+                                          [](InterceptPacket packet) {});
+  for (uint8_t i = 0; i < packet_count; i++) {
+    reorder.Intercept(MakeSingleBytePacket(i));
+  }
+  auto flush = reorder.Flush();
+  ASSERT_EQ(flush.size(), static_cast<size_t>(packet_count - threshold));
+  auto it = flush.begin();
+  // packets gotten from Flush() should start their count at |threshold| and go
+  // up to |packet_count|
+  for (int i = threshold; i < packet_count; i++) {
+    EXPECT_EQ(it->data()[0], i);
+    it++;
+  }
 }
 
 }  // namespace testing

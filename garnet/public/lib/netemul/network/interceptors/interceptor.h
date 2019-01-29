@@ -17,6 +17,7 @@ class InterceptPacket {
   InterceptPacket(std::vector<uint8_t> data, data::Consumer::Ptr origin)
       : data_(std::move(data)), origin_(std::move(origin)) {}
   InterceptPacket(InterceptPacket&& other) = default;
+  InterceptPacket& operator=(InterceptPacket&& other) = default;
 
   const std::vector<uint8_t>& data() { return data_; }
   const data::Consumer::Ptr& origin() { return origin_; }
