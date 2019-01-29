@@ -330,7 +330,7 @@ void TestDriverImplResetOnTestCompletion() {
 }
 
 void RunnerOptionsParseFromCmdLineShort() {
-    const char* kArgs[12] = {};
+    const char* kArgs[13] = {};
     kArgs[0] = "mybin";
     kArgs[1] = "-f";
     kArgs[2] = "+*:-ZxTest";
@@ -341,8 +341,9 @@ void RunnerOptionsParseFromCmdLineShort() {
     kArgs[7] = "10";
     kArgs[8] = "-l";
     kArgs[9] = "false";
-    kArgs[10] = "-h";
-    kArgs[11] = "true";
+    kArgs[10] = "-b";
+    kArgs[11] = "-h";
+    kArgs[12] = "true";
 
     fbl::Vector<fbl::String> errors;
     Runner::Options options =
@@ -360,10 +361,12 @@ void RunnerOptionsParseFromCmdLineShort() {
     ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly.\n");
     ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly.\n");
     ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly.\n");
+    ZX_ASSERT_MSG(options.break_on_failure,
+                  "Runner::Options::break_on_failure not parsed correctly.\n");
 }
 
 void RunnerOptionsParseFromCmdLineLong() {
-    const char* kArgs[12] = {};
+    const char* kArgs[13] = {};
     kArgs[0] = "mybin";
     kArgs[1] = "--gtest_filter";
     kArgs[2] = "+*:-ZxTest";
@@ -374,8 +377,9 @@ void RunnerOptionsParseFromCmdLineLong() {
     kArgs[7] = "10";
     kArgs[8] = "--gtest_list_tests";
     kArgs[9] = "false";
-    kArgs[10] = "--help";
-    kArgs[11] = "true";
+    kArgs[10] = "--gtest_break_on_failure";
+    kArgs[11] = "--help";
+    kArgs[12] = "true";
 
     fbl::Vector<fbl::String> errors;
     Runner::Options options =
@@ -393,13 +397,15 @@ void RunnerOptionsParseFromCmdLineLong() {
     ZX_ASSERT_MSG(options.shuffle, "Runner::Options::shuffle not parsed correctly\n.");
     ZX_ASSERT_MSG(options.list, "Runner::Options::list not parsed correctly\n.");
     ZX_ASSERT_MSG(!options.help, "Runner::Options::help not parsed correctly\n.");
+    ZX_ASSERT_MSG(options.break_on_failure,
+                  "Runner::Options::break_on_failure not parsed correctly.\n");
 }
 
 void RunnerOptionsParseFromCmdLineErrors() {
     const char* kArgs[3] = {};
     kArgs[0] = "mybin";
     kArgs[1] = "--gtest_repeat";
-    kArgs[2] = "-1";
+    kArgs[2] = "-2";
 
     fbl::Vector<fbl::String> errors;
     Runner::Options options =

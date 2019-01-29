@@ -68,6 +68,11 @@ public:
         return test_infos_[selected_indexes_[index]];
     }
 
+    // Test case will return upon encountering the first test failure.
+    void SetReturnOnFailure(bool should_return_on_failure) {
+        return_on_failure_ = should_return_on_failure;
+    }
+
 private:
     // Keeps track of the tests that were selected
     fbl::Vector<unsigned long> selected_indexes_;
@@ -83,6 +88,9 @@ private:
 
     // Called after all tests in |test_infos_| are executed.
     internal::TearDownTestCaseFn tear_down_;
+
+    // Finishes the test execution upon encoutering the first failure.
+    bool return_on_failure_ = false;
 };
 
 } // namespace zxtest

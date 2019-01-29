@@ -348,5 +348,51 @@ void TestCaseUnShuffle() {
     ZX_ASSERT_MSG(run_order[2] == 3, "UNShuffle failed.");
 }
 
+void TestCaseRunUntilFailure() {
+    TestDriverStub stub_driver;
+    TestCase test_case(kTestCaseName, &Stub, &Stub);
+    const SourceLocation kLocation = {.filename = "test.cpp", .line_number = 1};
+    const fbl::String kTestName = "TestName";
+    bool third_test_executed = false;
+
+    ZX_ASSERT_MSG(test_case.RegisterTest(kTestName, kLocation,
+                                         [](TestDriver* driver) {
+                                             auto test = Test::Create<FakeTest>(driver);
+                                             test->body = []() {};
+                                             return test;
+                                         }),
+                  "TestCase failed to register a test.");
+
+    ZX_ASSERT_MSG(test_case.RegisterTest("TestName2", kLocation,
+                                         [&stub_driver](TestDriver* driver) {
+                                             auto test = Test::Create<FakeTest>(driver);
+                                             test->body = [&stub_driver]() {
+                                                 stub_driver.NotifyFail();
+                                             };
+                                             return test;
+                                         }),
+                  "TestCase failed to register a test.");
+
+    ZX_ASSERT_MSG(test_case.RegisterTest("TestName3", kLocation,
+                                         [&third_test_executed](TestDriver* driver) {
+                                             auto test = Test::Create<FakeTest>(driver);
+                                             test->body = [&third_test_executed]() {
+                                                 third_test_executed = true;
+                                             };
+                                             return test;
+                                         }),
+                  "TestCase failed to register a test.");
+
+    test_case.Filter(nullptr);
+
+    // With seed = 0 and 3 tests, using musl implementation of random , we get 2 3 1 run order.
+    LifecycleObserver observer;
+    test_case.SetReturnOnFailure(true);
+    test_case.Run(&observer, &stub_driver);
+
+    ZX_ASSERT_MSG(!third_test_executed,
+                  "TestCase::SetReturnOnFailure did not return on first test case failure.");
+}
+
 } // namespace test
 } // namespace zxtest

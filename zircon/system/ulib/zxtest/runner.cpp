@@ -93,10 +93,11 @@ TestRef Runner::RegisterTest(const fbl::String& test_case_name, const fbl::Strin
 
 int Runner::Run(const Runner::Options& options) {
     summary_.total_iterations = options.repeat;
-    Filter(options.filter);
+    EnforceOptions(options);
 
     event_broadcaster_.OnProgramStart(*this);
-    for (int i = 0; i < options.repeat; ++i) {
+    bool end_execution = false;
+    for (int i = 0; i < options.repeat && !end_execution; ++i) {
         event_broadcaster_.OnIterationStart(*this, i);
         event_broadcaster_.OnEnvironmentSetUp(*this);
         for (auto& test_case : test_cases_) {
@@ -105,6 +106,14 @@ int Runner::Run(const Runner::Options& options) {
             }
 
             test_case.Run(&event_broadcaster_, &test_driver_);
+
+            // If there was any kind of failure, we should stop executing any other
+            // test case and just finish. TearDown do get called, this is treated
+            // as if everything ended here.
+            if (options.break_on_failure && test_driver_.HadAnyFailures()) {
+                end_execution = true;
+                break;
+            }
 
             if (options.shuffle) {
                 test_case.UnShuffle();
@@ -120,7 +129,7 @@ int Runner::Run(const Runner::Options& options) {
 
 void Runner::List(const Runner::Options& options) {
     summary_.total_iterations = options.repeat;
-    Filter(options.filter);
+    EnforceOptions(options);
     FILE* output = reporter_.stream();
 
     if (output == nullptr) {
@@ -139,16 +148,17 @@ void Runner::List(const Runner::Options& options) {
     }
 }
 
-void Runner::Filter(const fbl::String& pattern) {
+void Runner::EnforceOptions(const Runner::Options& options) {
     summary_.active_test_count = 0;
     summary_.active_test_case_count = 0;
-    const FilterOp filter_op = {.pattern = pattern};
+    const FilterOp filter_op = {.pattern = options.filter};
     for (auto& test_case : test_cases_) {
         // TODO(gevalentino): replace with filter function.
         test_case.Filter(filter_op);
         if (test_case.MatchingTestCount() > 0) {
             summary_.active_test_case_count++;
             summary_.active_test_count += test_case.MatchingTestCount();
+            test_case.SetReturnOnFailure(options.break_on_failure);
         }
     }
 }

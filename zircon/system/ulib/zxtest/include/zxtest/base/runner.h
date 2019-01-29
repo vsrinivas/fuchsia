@@ -123,6 +123,9 @@ public:
 
         // When set list all registered tests.
         bool list = false;
+
+        // Whether the test suite should stop running upon encountering the first fatal failure.
+        bool break_on_failure = false;
     };
 
     // Default Runner options.
@@ -185,7 +188,7 @@ private:
                          const SourceLocation& location, internal::TestFactory factory,
                          internal::SetUpTestCaseFn set_up, internal::TearDownTestCaseFn tear_down);
 
-    void Filter(const fbl::String& pattern);
+    void EnforceOptions(const Runner::Options& options);
 
     // List of registered test cases.
     fbl::Vector<TestCase> test_cases_;

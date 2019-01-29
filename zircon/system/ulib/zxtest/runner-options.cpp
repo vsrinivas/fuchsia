@@ -46,21 +46,21 @@ char* GetOptArg(int opt, int argc, char** argv) {
 } // namespace
 
 void Options::Usage(char* bin, FILE* stream) {
-    fprintf(stream, "\nUsage:\n");
-    fprintf(stream, "  %s  [OPTIONS]\n", bin);
-    fprintf(stream, "\n");
-    fprintf(stream, "  [OPTIONS]\n");
-    fprintf(stream, "  --help[-h]                       Prints this message.\n");
-    fprintf(stream, "  --gtest_filter[-f] PATTERN       Runner will consider only registered\n");
-    fprintf(stream, "                                   tests that match PATTERN.\n");
-    fprintf(stream, "  --gtest_list_tests[-l] BOOL      Runner will list all registed tests\n");
-    fprintf(stream, "                                   that would be executed.\n");
-    fprintf(stream, "  --gtest_shuffle[-s] BOOL         Runner will shuffle test and test case\n");
-    fprintf(stream, "                                   execution order.\n");
-    fprintf(stream, "  --gtest_repeat[-i] REPEAT        Runner will run REPEAT iterations of\n");
-    fprintf(stream, "                                   each test case.\n");
+    fprintf(stream, "    Usage: %s  [OPTIONS]", bin);
     fprintf(stream,
-            "  --gtest_random_seed[-r] SEED     Runner will use SEED for random decisions.\n");
+            "    [OPTIONS]"
+            "    --help[-h]                         Prints this message."
+            "    --gtest_filter[-f] PATTERN         Runner will consider only registered"
+            "                                       tests that match PATTERN."
+            "    --gtest_list_tests[-l] BOOL        Runner will list all registed tests"
+            "                                       that would be executed."
+            "    --gtest_shuffle[-s] BOOL           Runner will shuffle test and test case"
+            "                                       execution order."
+            "    --gtest_repeat[-i] REPEAT          Runner will run REPEAT iterations of"
+            "                                       each test case. If -1 will run until killed."
+            "    --gtest_random_seed[-r] SEED       Runner will use SEED for random decisions."
+            "    --gtest_break_on_failure[-b] BOOL  Runner will break upon encountering the first"
+            "                                       fatal failure.");
 }
 
 Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* errors) {
@@ -73,6 +73,7 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
         {"gtest_shuffle", optional_argument, nullptr, 's'},
         {"gtest_repeat", required_argument, nullptr, 'i'},
         {"gtest_random_seed", required_argument, nullptr, 'r'},
+        {"gtest_break_on_failure", optional_argument, nullptr, 'b'},
         {0, 0, 0, 0},
     };
     Runner::Options options;
@@ -82,8 +83,7 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
     int c = -1;
     int option_index = -1;
     char* val = nullptr;
-    while ((c = getopt_long(argc, argv, "f::l::s::i:r:h::", opts, &option_index)) >= 0) {
-
+    while ((c = getopt_long(argc, argv, "f::l::b::s::i:r:h::", opts, &option_index)) >= 0) {
         val = optarg;
         if (val == nullptr) {
             // Verifies that the flag value could be in the form -f value not just -fValue.
@@ -105,15 +105,18 @@ Options Options::FromArgs(int argc, char** argv, fbl::Vector<fbl::String>* error
         case 'l':
             options.list = GetBoolFlag(val);
             break;
+        case 'b':
+            options.break_on_failure = GetBoolFlag(val);
+            break;
         case 's':
             options.shuffle = GetBoolFlag(val);
             break;
         case 'i': {
             int iters = atoi(val);
-            if (iters <= 0) {
+            if (iters < -1 || iters == 0) {
                 options.help = true;
                 errors->push_back(fbl::StringPrintf(
-                    "--gtest_repeat(-i) must take a positive value. (value was %d)", iters));
+                    "--gtest_repeat(-i) must take a positive value or -1. (value was %d)", iters));
                 return options;
             }
             options.repeat = iters;

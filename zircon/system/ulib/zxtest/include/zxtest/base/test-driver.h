@@ -25,7 +25,7 @@ public:
     // Called when a test is skipped..
     virtual void Skip() = 0;
 
-    // Return true if the is allowed to continue execution.
+    // Return true if the test is allowed to continue execution.
     virtual bool Continue() const = 0;
 
     // Returns the current status of the test.

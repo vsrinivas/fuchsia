@@ -61,6 +61,7 @@ void TestCaseRegisterDuplicatedTestFails();
 
 // Verify that |Testcase::Run| executes TestCase set up and tear down in the correct order.
 void TestCaseRun();
+void TestCaseRunUntilFailure();
 
 // Verify that |TestCase::Filter| works as expected.
 void TestCaseFilter();
@@ -112,6 +113,7 @@ void TestDriverImplReset();
 // Verify that we parse options correctly.
 void RunnerOptionsParseFromCmdLineShort();
 void RunnerOptionsParseFromCmdLineLong();
+void RunnerOptionsParseFromCmdLineErrors();
 
 // Verify that the current Filter implementation matches gTest expectations.
 void FilterOpFilterEmptyMatchesAll();
@@ -141,6 +143,7 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestCaseRegisterTest),
     RUN_TEST(TestCaseRegisterDuplicatedTestFails),
     RUN_TEST(TestCaseRun),
+    RUN_TEST(TestCaseRunUntilFailure),
     RUN_TEST(TestCaseFilter),
     RUN_TEST(TestCaseFilterNoMatches),
     RUN_TEST(TestCaseFilterAllMatching),
@@ -172,6 +175,8 @@ static constexpr RegisteredTest kRegisteredTests[] = {
     RUN_TEST(TestDriverImplReset),
     RUN_TEST(TestDriverImplResetOnTestCompletion),
     RUN_TEST(RunnerOptionsParseFromCmdLineShort),
+    RUN_TEST(RunnerOptionsParseFromCmdLineLong),
+    RUN_TEST(RunnerOptionsParseFromCmdLineErrors),
     RUN_TEST(FilterOpFilterEmptyMatchesAll),
     RUN_TEST(FilterOpFilterFullMatch),
     RUN_TEST(FilterOpFilterFullNegativeMatch),

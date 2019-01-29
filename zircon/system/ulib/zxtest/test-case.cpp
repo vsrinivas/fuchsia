@@ -110,6 +110,9 @@ void TestCase::Run(LifecycleObserver* event_broadcaster, TestDriver* driver) {
             break;
         case TestStatus::kFailed:
             event_broadcaster->OnTestFailure(*this, test_info);
+            if (return_on_failure_) {
+                return;
+            }
             break;
         default:
             break;
