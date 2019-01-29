@@ -56,7 +56,7 @@ __BEGIN_CDECLS;
 
 // global binding variables at 0x00XX
 #define BIND_FLAGS            0x0000 // value of the flags register
-#define BIND_PROTOCOL         0x0001 // primary protcol of the device
+#define BIND_PROTOCOL         0x0001 // primary protocol of the device
 #define BIND_AUTOBIND         0x0002 // if this is an automated bind/load
 
 // pci binding variables at 0x01XX

@@ -20,7 +20,7 @@
 // USB control request to write data to the device.
 #define USB_PERIPHERAL_TEST_SET_DATA 1
 
-// USB control request to read badk data set by USB_PERIPHERAL_TEST_SET_DATA.
+// USB control request to read back data set by USB_PERIPHERAL_TEST_SET_DATA.
 #define USB_PERIPHERAL_TEST_GET_DATA 2
 
 // USB control request to request the device to send an interrupt request

@@ -378,7 +378,7 @@ typedef struct {
 
 // Note: Processing unit descriptors contain two inlined variable length arrays,
 // each with descriptor data following them.  They are therefor described using
-// 3 structure definitions which are logically concatinated, but separated by
+// 3 structure definitions which are logically concatenated, but separated by
 // the inline arrays.
 typedef struct {
     uint8_t bLength;
