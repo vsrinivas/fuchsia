@@ -28,7 +28,8 @@ void CodecRunnerApp::Run() {
             // This runner only expects a single Local Codec Factory to ever be
             // requested.
             FXL_DCHECK(!codec_factory_);
-            startup_context_->outgoing().deprecated_services()
+            startup_context_->outgoing()
+                .deprecated_services()
                 ->RemoveService<fuchsia::mediacodec::CodecFactory>();
 
             codec_factory_ = std::make_unique<LocalSingleCodecFactory>(

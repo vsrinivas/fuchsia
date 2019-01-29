@@ -30,7 +30,6 @@ CodecAdapterFfmpegDecoder::CodecAdapterFfmpegDecoder(
     std::mutex& lock, CodecAdapterEvents* codec_adapter_events)
     : CodecAdapter(lock, codec_adapter_events),
       input_queue_(),
-      free_output_buffers_(),
       free_output_packets_(),
       input_processing_loop_(&kAsyncLoopConfigNoAttachToThread) {
   ZX_DEBUG_ASSERT(codec_adapter_events);
@@ -65,7 +64,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecStartStream() {
   // sequence. Nothing else ought to be happening during CoreCodecStartStream
   // (in this or any other thread).
   input_queue_.Reset();
-  free_output_buffers_.Reset(/*keep_data=*/true);
+  output_buffer_pool_.Reset(/*keep_data=*/true);
   free_output_packets_.Reset(/*keep_data=*/true);
 
   zx_status_t post_result = async::PostTask(input_processing_loop_.dispatcher(),
@@ -96,7 +95,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecQueueInputEndOfStream() {
 
 void CodecAdapterFfmpegDecoder::CoreCodecStopStream() {
   input_queue_.StopAllWaits();
-  free_output_buffers_.StopAllWaits();
+  output_buffer_pool_.StopAllWaits();
   free_output_packets_.StopAllWaits();
 
   WaitForInputProcessingLoopToEnd();
@@ -118,7 +117,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecAddBuffer(CodecPort port,
   if (port != kOutputPort) {
     return;
   }
-  free_output_buffers_.Push(std::move(buffer));
+  output_buffer_pool_.AddBuffer(buffer);
 }
 
 void CodecAdapterFfmpegDecoder::CoreCodecConfigureBuffers(
@@ -148,7 +147,7 @@ void CodecAdapterFfmpegDecoder::CoreCodecEnsureBuffersNotConfigured(
     // We don't do anything with input buffers.
     return;
   }
-  free_output_buffers_.Reset();
+  output_buffer_pool_.Reset();
   free_output_packets_.Reset();
 
   {
@@ -160,12 +159,9 @@ void CodecAdapterFfmpegDecoder::CoreCodecEnsureBuffersNotConfigured(
     // ~ to_drop
   }
 
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    // Given that we currently fail the codec on mid-stream output format
-    // change (elsewhere), the decoder won't have frames referenced here.
-    ZX_DEBUG_ASSERT(in_use_by_decoder_.empty());
-  }
+  // Given that we currently fail the codec on mid-stream output format
+  // change (elsewhere), the decoder won't have frames referenced here.
+  ZX_DEBUG_ASSERT(!output_buffer_pool_.has_buffers_in_use());
 }
 
 std::unique_ptr<const fuchsia::media::StreamOutputConfig>
@@ -254,25 +250,6 @@ void CodecAdapterFfmpegDecoder::CoreCodecMidStreamOutputBufferReConfigFinish() {
   // Nothing to do here for now.
 }
 
-// static
-void CodecAdapterFfmpegDecoder::BufferFreeCallbackRouter(void* opaque,
-                                                         uint8_t* data) {
-  auto decoder = reinterpret_cast<CodecAdapterFfmpegDecoder*>(opaque);
-  decoder->BufferFreeHandler(data);
-}
-
-void CodecAdapterFfmpegDecoder::BufferFreeHandler(uint8_t* data) {
-  const CodecBuffer* buffer;
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    auto buffer_iter = in_use_by_decoder_.find(data);
-    ZX_DEBUG_ASSERT(buffer_iter != in_use_by_decoder_.end());
-    in_use_by_decoder_.erase(data);
-    buffer = buffer_iter->second.buffer;
-  }
-  free_output_buffers_.Push(std::move(buffer));
-}
-
 void CodecAdapterFfmpegDecoder::ProcessInputLoop() {
   std::optional<CodecInputItem> maybe_input_item;
   while ((maybe_input_item = input_queue_.WaitForElement())) {
@@ -351,45 +328,16 @@ int CodecAdapterFfmpegDecoder::GetBuffer(
         /*output_re_config_required=*/need_new_buffers);
   }
 
-  std::optional<const CodecBuffer*> maybe_buffer =
-      free_output_buffers_.WaitForElement();
-  if (!maybe_buffer) {
-    // This should only happen if the stream is stopped. In this case we let
-    // ffmpeg allocate some memory just so it can conclude gracefully.
+  BufferPool::Status status = output_buffer_pool_.AttachFrameToBuffer(
+      frame, decoded_output_info, flags);
+  if (status == BufferPool::SHUTDOWN) {
+    // This stream is stopping. We let ffmpeg allocate just so it can exit
+    // cleanly.
     return avcodec_default_get_buffer2(avcodec_context, frame, flags);
-  }
-  ZX_ASSERT(*maybe_buffer);
-  const CodecBuffer* buffer = *maybe_buffer;
-
-  AVBufferRef* buffer_ref = av_buffer_create(
-      buffer->buffer_base(), static_cast<int>(buffer_size),
-      BufferFreeCallbackRouter, reinterpret_cast<void*>(this), flags);
-
-  int frame_bytes_or_error =
-      av_image_fill_arrays(frame->data, frame->linesize, buffer_ref->data,
-                           static_cast<AVPixelFormat>(frame->format),
-                           frame->width, frame->height, 1);
-
-  // IYUV is not YV12. Ffmpeg only decodes into IYUV. The difference between
-  // YV12 and IYUV is the order of the U and V planes. Here we trick Ffmpeg
-  // into writing them in YV12 order relative to one another.
-  std::swap(frame->data[1], frame->data[2]);
-
-  if (frame_bytes_or_error < 0) {
-    return frame_bytes_or_error;
-  }
-  frame->buf[0] = buffer_ref;
-  // ffmpeg says to set extended_data to data if we're not using extended_data
-  frame->extended_data = frame->data;
-
-  ZX_DEBUG_ASSERT(buffer->buffer_base() == frame->data[0]);
-  {
-    std::lock_guard<std::mutex> lock(lock_);
-    in_use_by_decoder_.emplace(
-        buffer->buffer_base(),
-        BufferAllocation{
-            .buffer = buffer,
-            .bytes_used = static_cast<size_t>(frame_bytes_or_error)});
+  } else if (status != BufferPool::OK) {
+    events_->onCoreCodecFailCodec(
+        "Could not find output buffer; BufferPool::Status: %d", status);
+    return -1;
   }
 
   return 0;
@@ -419,17 +367,12 @@ void CodecAdapterFfmpegDecoder::DecodeFrames() {
     }
     auto output_packet = *maybe_output_packet;
 
-    BufferAllocation buffer_alloc;
-    {
-      std::lock_guard<std::mutex> lock(lock_);
-      auto codec_buffer_iter = in_use_by_decoder_.find(frame->data[0]);
-      ZX_ASSERT(codec_buffer_iter != in_use_by_decoder_.end());
-      buffer_alloc = codec_buffer_iter->second;
-    }
+    auto buffer_alloc = output_buffer_pool_.FindBufferByFrame(frame.get());
+    ZX_ASSERT(buffer_alloc);
 
-    output_packet->SetBuffer(buffer_alloc.buffer);
+    output_packet->SetBuffer(buffer_alloc->buffer);
     output_packet->SetStartOffset(0);
-    output_packet->SetValidLengthBytes(buffer_alloc.bytes_used);
+    output_packet->SetValidLengthBytes(buffer_alloc->bytes_used);
     output_packet->SetTimstampIsh(frame->pts);
 
     {

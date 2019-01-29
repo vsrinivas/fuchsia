@@ -15,6 +15,7 @@
 #include <lib/media/codec_impl/codec_input_item.h>
 
 #include "avcodec_context.h"
+#include "buffer_pool.h"
 #include "mpsc_queue.h"
 
 class CodecAdapterFfmpegDecoder : public CodecAdapter {
@@ -49,21 +50,6 @@ class CodecAdapterFfmpegDecoder : public CodecAdapter {
   void CoreCodecMidStreamOutputBufferReConfigFinish() override;
 
  private:
-  struct BufferAllocation {
-    const CodecBuffer* buffer;
-    size_t bytes_used;
-  };
-
-  // Reads the opaque pointer from our free callback and routes it to our
-  // instance. The opaque pointer is provided when we set up a free callback
-  // when providing buffers to the decoder in GetBuffer.
-  static void BufferFreeCallbackRouter(void* opaque, uint8_t* data);
-
-  // A callback handler for when buffers are freed by the decoder, which returns
-  // them to our pool. The opaque pointer is provided when we set up a free
-  // callback when providing buffers to the decoder in GetBuffer.
-  void BufferFreeHandler(uint8_t* data);
-
   // Processes input in a loop. Should only execute on input_processing_thread_.
   // Loops for the lifetime of a stream.
   void ProcessInputLoop();
@@ -78,18 +64,10 @@ class CodecAdapterFfmpegDecoder : public CodecAdapter {
   void WaitForInputProcessingLoopToEnd();
 
   BlockingMpscQueue<CodecInputItem> input_queue_;
-  BlockingMpscQueue<const CodecBuffer*> free_output_buffers_;
   BlockingMpscQueue<CodecPacket*> free_output_packets_;
+  BufferPool output_buffer_pool_;
   std::optional<AvCodecContext::DecodedOutputInfo> decoded_output_info_
       FXL_GUARDED_BY(lock_);
-
-  // When no references exist to our buffers in the decoder's refcounting
-  // anymore, the decoder will execute our BufferFreeHandler that looks up our
-  // buffer here and adds it to our free list.
-  //
-  // We also look here when frames come out of the decoder, to associate an
-  // output packet with the the buffer.
-  std::map<uint8_t*, BufferAllocation> in_use_by_decoder_ FXL_GUARDED_BY(lock_);
   // This keeps buffers alive via the decoder's refcount until the client is
   // done with them.
   std::map<CodecPacket*, AvCodecContext::AVFramePtr> in_use_by_client_

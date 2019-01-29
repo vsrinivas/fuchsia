@@ -16,6 +16,8 @@ executable("codec_runner_sw_ffmpeg") {
   sources = [
     "avcodec_context.cc",
     "avcodec_context.h",
+    "buffer_pool.cc",
+    "buffer_pool.h",
     "codec_adapter_ffmpeg_decoder.cc",
     "codec_adapter_ffmpeg_decoder.h",
     "codec_runner_app.cc",
