@@ -84,6 +84,9 @@ class FrameFingerprint {
   static bool Newer(const FrameFingerprint& left,
                     const FrameFingerprint& right);
 
+  static bool NewerOrEqual(const FrameFingerprint& left,
+                           const FrameFingerprint& right);
+
  private:
   // The address of the stack immediately before the function call (i.e. the
   // stack pointer of the previous frame). See the class documentation above.

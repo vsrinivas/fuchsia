@@ -13,13 +13,19 @@
 
 namespace zxdb {
 
-class Frame;
+class FinishPhysicalFrameThreadController;
 class Stack;
-class UntilThreadController;
+class StepOverThreadController;
 
 // Thread controller that runs a given stack frame to its completion. This
-// can finish more than one frame at once, and there could be a combination of
-// physical and inline frames being exited from.
+// can finish more than one frame at once, and there could be any combination
+// of physical and inline frames being exited from.
+//
+// This works by first finishing to the nearest physical frame using the
+// FinishPhysicalFrameThreadController (if there is no physical frame above the
+// one being finished, this will be a no-op). Then any inline frames will be
+// iteratively finished using the StepOverThreadController to step over the
+// inline code ranges until the desired frame is reached.
 class FinishThreadController : public ThreadController {
  public:
   // Finishes the given frame of the stack, leaving control at frame
@@ -38,32 +44,31 @@ class FinishThreadController : public ThreadController {
   const char* GetName() const override { return "Finish"; }
 
  private:
-  // Called when both the frame fingerprint and the thread are known. Does
-  // final initialization.
-  void InitWithFingerprintAndThread();
+  // Creates the controller for stepping out of the inline function at the top
+  // of the stack. Issues the callback in all cases. Returns false on failure.
+  bool CreateInlineStepOverController(std::function<void(const Err&)> cb);
 
-  // The from_frame_fingerprint_ will indicate the frame we're trying to
-  // finish. This being valid indicates that the stack has been fetched and
-  // the frame in question located (the operation may be async).
-  //
-  // This uses std::optional so the fingerprint can be tested to see if it's
-  // been set, even if the stack returns the null fingerprint (might happen
-  // for the bottom of the stack).
-  //
-  // The to_address_ will be the address we're returning to. This will be
-  // computed at the same time as from_frame_fingerprint_, but may be 0 if
-  // the user is trying to finish the oldest stack frame (there's no address
-  // to return to).
-  uint64_t to_address_ = 0;
-  std::optional<FrameFingerprint> from_frame_fingerprint_;
+  // Index of the frame to finish. Invalid after the thread is resumed.
+  size_t frame_to_finish_;
 
-  // The fingerprint can be computed asynchronously with initialization. This
-  // holds the InitWithThread callback for InitWithFingerprintAndThread().
-  std::function<void(const Err&)> init_callback_;
+#ifndef NDEBUG
+  // IP of the frame to step out of. This is a sanity check to make sure the
+  // stack didn't change between construction and InitWithThread.
+  uint64_t frame_ip_;
+#endif
 
-  // Will be non-null when stepping out. During initialization or when stepping
-  // out of the earliest stack frame, this can be null.
-  std::unique_ptr<UntilThreadController> until_controller_;
+  // Will be non-null when stepping out of the nearest physical frame. When
+  // doing the subsequent inline step this will be null.
+  std::unique_ptr<FinishPhysicalFrameThreadController> finish_physical_controller_;
+
+  // The frame being stepped out of. This will be set when the frame being
+  // stepped out of is an inline frame. Otherwise, only the physical frame
+  // stepper is required.
+  FrameFingerprint from_inline_frame_fingerprint_;
+
+  // Will be non-null when stepping out of inline frames. When doing the
+  // initial step out of a physical frame, this will be null.
+  std::unique_ptr<StepOverThreadController> step_over_controller_;
 
   fxl::WeakPtrFactory<FinishThreadController> weak_factory_;
 };

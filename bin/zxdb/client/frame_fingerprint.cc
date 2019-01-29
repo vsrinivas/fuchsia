@@ -24,4 +24,10 @@ bool FrameFingerprint::Newer(const FrameFingerprint& left,
   return left.frame_address_ < right.frame_address_;
 }
 
+// static
+bool FrameFingerprint::NewerOrEqual(const FrameFingerprint& left,
+                                    const FrameFingerprint& right) {
+  return Newer(left, right) || left == right;
+}
+
 }  // namespace

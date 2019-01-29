@@ -16,6 +16,7 @@ static_library("client") {
     "breakpoint_settings.h",
     "client_object.h",
     "disassembler.h",
+    "finish_physical_frame_thread_controller.h",
     "finish_thread_controller.h",
     "frame.h",
     "frame_fingerprint.h",
@@ -57,6 +58,7 @@ static_library("client") {
     "breakpoint_location_impl.h",
     "client_object.cc",
     "disassembler.cc",
+    "finish_physical_frame_thread_controller.cc",
     "finish_thread_controller.cc",
     "frame.cc",
     "frame_fingerprint.cc",
@@ -181,6 +183,7 @@ source_set("tests") {
   sources = [
     "breakpoint_impl_unittest.cc",
     "disassembler_unittest.cc",
+    "finish_physical_frame_thread_controller_unittest.cc",
     "finish_thread_controller_unittest.cc",
     "frame_fingerprint_unittest.cc",
     "frame_impl_unittest.cc",
