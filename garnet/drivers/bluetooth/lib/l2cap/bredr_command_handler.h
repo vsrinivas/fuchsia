@@ -82,6 +82,8 @@ class BrEdrCommandHandler final {
   // object should not be accessed.
   class Response {
    public:
+    explicit Response(Status status) : status_(status) {}
+
     Status status() const { return status_; }
 
     // These are valid for reading if the response format contains them;
@@ -96,6 +98,9 @@ class BrEdrCommandHandler final {
    protected:
     friend class BrEdrCommandHandler;
 
+    // Fills the reject fields of |rsp|. Returns true if successful.
+    bool ParseReject(const common::ByteBuffer& rej_payload_buf);
+
     Status status_;
     ChannelId local_cid_ = kInvalidChannelId;
     ChannelId remote_cid_ = kInvalidChannelId;
@@ -104,23 +109,33 @@ class BrEdrCommandHandler final {
 
   class ConnectionResponse : public Response {
    public:
+    using PayloadT = ConnectionResponsePayload;
+    static constexpr const char* kName = "Connection Response";
+
+    using Response::Response;  // Inherit ctor
+    void Decode(const common::ByteBuffer& payload_buf);
+
     ConnectionResult result() const { return result_; }
     ConnectionStatus conn_status() const { return conn_status_; }
 
    private:
-    friend class BrEdrCommandHandler;
-
     ConnectionResult result_;
     ConnectionStatus conn_status_;
   };
 
   class ConfigurationResponse : public Response {
    public:
+    using PayloadT = ConfigurationResponsePayload;
+    static constexpr const char* kName = "Configuration Response";
+
+    using Response::Response;  // Inherit ctor
+    void Decode(const common::ByteBuffer& payload_buf);
+
     uint16_t flags() const { return flags_; }
     ConfigurationResult result() const { return result_; }
     const common::ByteBuffer& options() const { return options_; }
 
-    // TODO(NET-1084): Replace raw payload access with abstraction over parsed
+    // TODO(BT-466): Replace raw option access with abstraction over parsed
     // options.
 
    private:
@@ -129,15 +144,28 @@ class BrEdrCommandHandler final {
     uint16_t flags_;
     ConfigurationResult result_;
 
-    // View into the payload received from the peer. It is only valid for the
-    // duration of the ConfigurationResponseCallback invocation.
+    // View into the raw options received from the peer. It is only valid for
+    // the duration of the ConfigurationResponseCallback invocation.
     common::BufferView options_;
   };
 
-  using DisconnectionResponse = Response;
+  class DisconnectionResponse : public Response {
+   public:
+    using PayloadT = DisconnectionResponsePayload;
+    static constexpr const char* kName = "Disconnection Response";
+
+    using Response::Response;  // Inherit ctor
+    void Decode(const common::ByteBuffer& payload_buf);
+  };
 
   class InformationResponse : public Response {
    public:
+    using PayloadT = InformationResponsePayload;
+    static constexpr const char* kName = "Information Response";
+
+    using Response::Response;  // Inherit ctor
+    void Decode(const common::ByteBuffer& payload_buf);
+
     InformationType type() const { return type_; }
     InformationResult result() const { return result_; }
 
@@ -296,9 +324,14 @@ class BrEdrCommandHandler final {
   void ServeInformationRequest(InformationRequestCallback cb);
 
  private:
-  // Fills the reject fields of |rsp|. Returns true if successful.
-  bool ParseReject(const common::ByteBuffer& rej_payload_buf,
-                   Response* rsp) const;
+  // Returns a function that decodes a response status and payload into a
+  // |ResponseT| object and invokes |cb| with it.
+  // |ResponseT| needs to have
+  //  - |Decode| function that accepts a buffer of at least
+  //    |sizeof(ResponseT::PayloadT)| bytes
+  //  - |kName| string literal
+  template <class ResponseT, typename CallbackT>
+  SignalingChannel::ResponseHandler BuildResponseHandler(CallbackT rsp_cb);
 
   SignalingChannelInterface* const sig_;  // weak
 };

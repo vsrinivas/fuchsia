@@ -16,6 +16,58 @@ namespace internal {
 using common::BufferView;
 using common::ByteBuffer;
 
+bool BrEdrCommandHandler::Response::ParseReject(
+    const ByteBuffer& rej_payload_buf) {
+  auto& rej_payload = rej_payload_buf.As<CommandRejectPayload>();
+  reject_reason_ = static_cast<RejectReason>(letoh16(rej_payload.reason));
+  if (reject_reason() == RejectReason::kInvalidCID) {
+    if (rej_payload_buf.size() - sizeof(CommandRejectPayload) < 4) {
+      bt_log(
+          ERROR, "l2cap-bredr",
+          "cmd: ignoring malformed Command Reject Invalid Channel ID, size %zu",
+          rej_payload_buf.size());
+      return false;
+    }
+
+    remote_cid_ = (rej_payload.data[1] << 8) + rej_payload.data[0];
+    local_cid_ = (rej_payload.data[3] << 8) + rej_payload.data[2];
+  }
+  return true;
+}
+
+void BrEdrCommandHandler::ConnectionResponse::Decode(
+    const ByteBuffer& payload_buf) {
+  auto& conn_rsp_payload = payload_buf.As<PayloadT>();
+  remote_cid_ = letoh16(conn_rsp_payload.dst_cid);
+  local_cid_ = letoh16(conn_rsp_payload.src_cid);
+  result_ = static_cast<ConnectionResult>(letoh16(conn_rsp_payload.result));
+  conn_status_ =
+      static_cast<ConnectionStatus>(letoh16(conn_rsp_payload.status));
+}
+
+void BrEdrCommandHandler::ConfigurationResponse::Decode(
+    const ByteBuffer& payload_buf) {
+  common::PacketView<PayloadT> config_rsp(
+      &payload_buf, payload_buf.size() - sizeof(PayloadT));
+  local_cid_ = letoh16(config_rsp.header().src_cid);
+  flags_ = letoh16(config_rsp.header().flags);
+  result_ =
+      static_cast<ConfigurationResult>(letoh16(config_rsp.header().result));
+  options_ = config_rsp.payload_data().view();
+}
+
+void BrEdrCommandHandler::DisconnectionResponse::Decode(
+    const ByteBuffer& payload_buf) {
+  auto& disconn_rsp_payload = payload_buf.As<PayloadT>();
+  local_cid_ = letoh16(disconn_rsp_payload.src_cid);
+  remote_cid_ = letoh16(disconn_rsp_payload.dst_cid);
+}
+
+void BrEdrCommandHandler::InformationResponse::Decode(
+    const ByteBuffer& payload_buf) {
+  // TODO(BT-356): Implement Information Response decoding
+}
+
 BrEdrCommandHandler::Responder::Responder(
     SignalingChannel::Responder* sig_responder, ChannelId local_cid,
     ChannelId remote_cid)
@@ -127,33 +179,7 @@ BrEdrCommandHandler::BrEdrCommandHandler(SignalingChannelInterface* sig)
 bool BrEdrCommandHandler::SendConnectionRequest(uint16_t psm,
                                                 ChannelId local_cid,
                                                 ConnectionResponseCallback cb) {
-  auto on_conn_rsp = [cb = std::move(cb), this](Status status,
-                                                const ByteBuffer& rsp_payload) {
-    ConnectionResponse rsp;
-    rsp.status_ = status;
-    if (status == Status::kReject) {
-      if (!ParseReject(rsp_payload, &rsp)) {
-        return false;
-      }
-      return cb(rsp);
-    }
-
-    if (rsp_payload.size() != sizeof(ConnectionResponsePayload)) {
-      bt_log(TRACE, "l2cap-bredr",
-             "cmd: ignoring malformed Connection Response, size %zu",
-             rsp_payload.size());
-      return false;
-    }
-
-    auto& conn_rsp_payload = rsp_payload.As<ConnectionResponsePayload>();
-    rsp.remote_cid_ = letoh16(conn_rsp_payload.dst_cid);
-    rsp.local_cid_ = letoh16(conn_rsp_payload.src_cid);
-    rsp.result_ =
-        static_cast<ConnectionResult>(letoh16(conn_rsp_payload.result));
-    rsp.conn_status_ =
-        static_cast<ConnectionStatus>(letoh16(conn_rsp_payload.status));
-    return cb(rsp);
-  };
+  auto on_conn_rsp = BuildResponseHandler<ConnectionResponse>(std::move(cb));
 
   ConnectionRequestPayload payload = {htole16(psm), htole16(local_cid)};
   return sig_->SendRequest(kConnectionRequest,
@@ -164,34 +190,8 @@ bool BrEdrCommandHandler::SendConnectionRequest(uint16_t psm,
 bool BrEdrCommandHandler::SendConfigurationRequest(
     ChannelId remote_cid, uint16_t flags, const ByteBuffer& options,
     ConfigurationResponseCallback cb) {
-  auto on_config_rsp = [cb = std::move(cb), this](
-                           Status status, const ByteBuffer& rsp_payload) {
-    ConfigurationResponse rsp;
-    rsp.status_ = status;
-    if (status == Status::kReject) {
-      if (!ParseReject(rsp_payload, &rsp)) {
-        return false;
-      }
-      return cb(rsp);
-    }
-
-    if (rsp_payload.size() < sizeof(ConfigurationResponsePayload)) {
-      bt_log(TRACE, "l2cap-bredr",
-             "cmd: ignore malformed Configuration Response, size %zu",
-             rsp_payload.size());
-      return false;
-    }
-
-    common::PacketView<ConfigurationResponsePayload> config_rsp(
-        &rsp_payload,
-        rsp_payload.size() - sizeof(ConfigurationResponsePayload));
-    rsp.local_cid_ = letoh16(config_rsp.header().src_cid);
-    rsp.flags_ = letoh16(config_rsp.header().flags);
-    rsp.result_ =
-        static_cast<ConfigurationResult>(letoh16(config_rsp.header().result));
-    rsp.options_ = config_rsp.payload_data().view();
-    return cb(rsp);
-  };
+  auto on_config_rsp =
+      BuildResponseHandler<ConfigurationResponse>(std::move(cb));
 
   common::DynamicByteBuffer config_req_buf(sizeof(ConfigurationRequestPayload) +
                                            options.size());
@@ -207,29 +207,8 @@ bool BrEdrCommandHandler::SendConfigurationRequest(
 bool BrEdrCommandHandler::SendDisconnectionRequest(
     ChannelId remote_cid, ChannelId local_cid,
     DisconnectionResponseCallback cb) {
-  auto on_discon_rsp = [cb = std::move(cb), this](
-                           Status status, const ByteBuffer& rsp_payload) {
-    DisconnectionResponse rsp;
-    rsp.status_ = status;
-    if (status == Status::kReject) {
-      if (!ParseReject(rsp_payload, &rsp)) {
-        return false;
-      }
-      return cb(rsp);
-    }
-
-    if (rsp_payload.size() != sizeof(DisconnectionResponsePayload)) {
-      bt_log(TRACE, "l2cap-bredr",
-             "cmd ignoring malformed Disconnection Response, size %zu",
-             rsp_payload.size());
-      return false;
-    }
-
-    auto& disconn_rsp_payload = rsp_payload.As<DisconnectionResponsePayload>();
-    rsp.local_cid_ = letoh16(disconn_rsp_payload.src_cid);
-    rsp.remote_cid_ = letoh16(disconn_rsp_payload.dst_cid);
-    return cb(rsp);
-  };
+  auto on_discon_rsp =
+      BuildResponseHandler<DisconnectionResponse>(std::move(cb));
 
   DisconnectionRequestPayload payload = {htole16(remote_cid),
                                          htole16(local_cid)};
@@ -240,13 +219,13 @@ bool BrEdrCommandHandler::SendDisconnectionRequest(
 
 bool BrEdrCommandHandler::SendInformationRequest(
     InformationType type, InformationResponseCallback cb) {
-  // TODO(NET-1135): Implement requesting remote features and fixed channels
+  // TODO(BT-356): Implement requesting remote features and fixed channels
   bt_log(ERROR, "l2cap-bredr", "cmd: Information Request not sent");
   return false;
 }
 
 void BrEdrCommandHandler::ServeConnectionRequest(ConnectionRequestCallback cb) {
-  auto on_conn_req = [this, cb = std::move(cb)](
+  auto on_conn_req = [cb = std::move(cb)](
                          const ByteBuffer& request_payload,
                          SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() != sizeof(ConnectionRequestPayload)) {
@@ -292,7 +271,7 @@ void BrEdrCommandHandler::ServeConnectionRequest(ConnectionRequestCallback cb) {
 
 void BrEdrCommandHandler::ServeConfigurationRequest(
     ConfigurationRequestCallback cb) {
-  auto on_config_req = [this, cb = std::move(cb)](
+  auto on_config_req = [cb = std::move(cb)](
                            const ByteBuffer& request_payload,
                            SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() < sizeof(ConfigurationRequestPayload)) {
@@ -318,7 +297,7 @@ void BrEdrCommandHandler::ServeConfigurationRequest(
 
 void BrEdrCommandHandler::ServeDisconnectionRequest(
     DisconnectionRequestCallback cb) {
-  auto on_discon_req = [this, cb = std::move(cb)](
+  auto on_discon_req = [cb = std::move(cb)](
                            const ByteBuffer& request_payload,
                            SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() != sizeof(DisconnectionRequestPayload)) {
@@ -341,7 +320,7 @@ void BrEdrCommandHandler::ServeDisconnectionRequest(
 
 void BrEdrCommandHandler::ServeInformationRequest(
     InformationRequestCallback cb) {
-  auto on_info_req = [this, cb = std::move(cb)](
+  auto on_info_req = [cb = std::move(cb)](
                          const ByteBuffer& request_payload,
                          SignalingChannel::Responder* sig_responder) {
     if (request_payload.size() != sizeof(InformationRequestPayload)) {
@@ -361,24 +340,28 @@ void BrEdrCommandHandler::ServeInformationRequest(
   sig_->ServeRequest(kInformationRequest, std::move(on_info_req));
 }
 
-bool BrEdrCommandHandler::ParseReject(
-    const ByteBuffer& rej_payload_buf,
-    BrEdrCommandHandler::Response* rsp) const {
-  auto& rej_payload = rej_payload_buf.As<CommandRejectPayload>();
-  rsp->reject_reason_ = static_cast<RejectReason>(letoh16(rej_payload.reason));
-  if (rsp->reject_reason() == RejectReason::kInvalidCID) {
-    if (rej_payload_buf.size() - sizeof(CommandRejectPayload) < 4) {
-      bt_log(ERROR, "l2cap-bredr",
-             "cmd: ignoring malformed Command Reject Invalid "
-             "Channel ID, size ",
-             rej_payload_buf.size());
+template <class ResponseT, typename CallbackT>
+SignalingChannel::ResponseHandler BrEdrCommandHandler::BuildResponseHandler(
+    CallbackT rsp_cb) {
+  return [rsp_cb = std::move(rsp_cb)](Status status,
+                                      const ByteBuffer& rsp_payload) {
+    ResponseT rsp(status);
+    if (status == Status::kReject) {
+      if (!rsp.ParseReject(rsp_payload)) {
+        return false;
+      }
+      return rsp_cb(rsp);
+    }
+
+    if (rsp_payload.size() < sizeof(typename ResponseT::PayloadT)) {
+      bt_log(TRACE, "l2cap-bredr", "cmd: ignoring malformed \"%s\", size %zu",
+             ResponseT::kName, rsp_payload.size());
       return false;
     }
 
-    rsp->remote_cid_ = (rej_payload.data[1] << 8) + rej_payload.data[0];
-    rsp->local_cid_ = (rej_payload.data[3] << 8) + rej_payload.data[2];
-  }
-  return true;
+    rsp.Decode(rsp_payload);
+    return rsp_cb(rsp);
+  };
 }
 
 }  // namespace internal
