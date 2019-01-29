@@ -55,8 +55,9 @@ bool destroy_gpt(int fd, uint64_t block_size, uint64_t offset,
                   (ssize_t)sizeof(zero),
                   "Failed to pwrite");
     }
-
-    ASSERT_EQ(fsync(fd), 0, "Failed to fsync");
+    // fsync is not supported in rpc-server.cpp
+    // TODO(ZX-3294) to fix this
+    // ASSERT_EQ(fsync(fd), 0, "Failed to fsync");
     END_HELPER;
 }
 

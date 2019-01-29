@@ -598,9 +598,9 @@ static const fuchsia_io_File_ops_t kFileOps = []() {
 }();
 
 static zx_status_t fidl_node_sync(void* ctx, fidl_txn_t* txn) {
-    // TODO(smklein): Integrate with the block protocol? This used to forward IOCTL_DEVICE_SYNC,
-    // which was implemented as a no-op in all drivers.
-    return fuchsia_io_NodeSync_reply(txn, ZX_OK);
+    // TODO(ZX-3294): We may want to support sync through the block
+    // protocol, but in the interim, it is unsupported.
+    return fuchsia_io_NodeSync_reply(txn, ZX_ERR_NOT_SUPPORTED);
 }
 
 static zx_status_t fidl_node_getattr(void* ctx, fidl_txn_t* txn) {
