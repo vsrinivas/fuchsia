@@ -52,7 +52,8 @@ impl KnownEssStore {
     }
 
     pub fn new_with_paths(
-        storage_path: PathBuf, tmp_storage_path: PathBuf,
+        storage_path: PathBuf,
+        tmp_storage_path: PathBuf,
     ) -> Result<Self, failure::Error> {
         let ess_list: Vec<EssJsonRead> = match fs::File::open(&storage_path) {
             Ok(file) => match serde_json::from_reader(file) {
@@ -101,7 +102,9 @@ impl KnownEssStore {
         self.write(guard)
     }
 
-    pub fn known_network_count(&self) -> usize { self.ess_by_ssid.lock().len() }
+    pub fn known_network_count(&self) -> usize {
+        self.ess_by_ssid.lock().len()
+    }
 
     fn write(&self, guard: MutexGuard<EssMap>) -> Result<(), failure::Error> {
         let temp_file = TempFile::create(&self.tmp_storage_path)?;
@@ -255,5 +258,7 @@ mod tests {
             .expect("Failed to create an KnownEssStore")
     }
 
-    fn ess(password: &[u8]) -> KnownEss { KnownEss { password: password.to_vec() } }
+    fn ess(password: &[u8]) -> KnownEss {
+        KnownEss { password: password.to_vec() }
+    }
 }

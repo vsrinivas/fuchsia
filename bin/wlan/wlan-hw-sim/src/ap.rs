@@ -6,10 +6,9 @@
 pub mod tests {
     use crate::{config, mac_frames, test_utils};
     use {
-        fidl_fuchsia_wlan_common as wlan_common,
-        fidl, fidl_fuchsia_wlan_device as wlan_device,
-        fidl_fuchsia_wlan_device_service as fidl_wlan_service,
-        fidl_fuchsia_wlan_sme as fidl_sme, fidl_fuchsia_wlan_tap as wlantap, fuchsia_app as app,
+        fidl, fidl_fuchsia_wlan_common as wlan_common, fidl_fuchsia_wlan_device as wlan_device,
+        fidl_fuchsia_wlan_device_service as fidl_wlan_service, fidl_fuchsia_wlan_sme as fidl_sme,
+        fidl_fuchsia_wlan_tap as wlantap, fuchsia_app as app,
         fuchsia_async::{self as fasync, temp::TempStreamExt, TimeoutExt},
         fuchsia_zircon::{self as zx, prelude::*},
         futures::channel::mpsc,
@@ -41,9 +40,7 @@ pub mod tests {
                 .expect("Failed to connect to wlan service");
         let (watcher_proxy, watcher_server_end) =
             fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");
-        wlan_service
-            .watch_devices(watcher_server_end)
-            .expect("wlan watch_devices call fails");
+        wlan_service.watch_devices(watcher_server_end).expect("wlan watch_devices call fails");
 
         // Create wlantap PHY
         let mut helper =
@@ -57,9 +54,7 @@ pub mod tests {
         );
 
         let sme_fut = get_ap_sme(&wlan_service, iface_id)
-            .on_timeout(5.seconds().after_now(), || {
-                panic!("timeout retrieving ap sme")
-            });
+            .on_timeout(5.seconds().after_now(), || panic!("timeout retrieving ap sme"));
         let sme = exec.run_singlethreaded(sme_fut);
 
         // Stop AP in case it was already started
@@ -71,9 +66,8 @@ pub mod tests {
             password: vec![],
             channel: 11,
         };
-        let result_code = exec
-            .run_singlethreaded(sme.start(&mut config))
-            .expect("expect start ap result code");
+        let result_code =
+            exec.run_singlethreaded(sme.start(&mut config)).expect("expect start ap result code");
         assert_eq!(result_code, fidl_sme::StartApResultCode::Success);
 
         // (client->ap) send a mock auth req
@@ -108,10 +102,7 @@ pub mod tests {
                 let mut reader = Cursor::new(&args.packet.data);
                 let header = mac_frames::MgmtHeader::from_reader(&mut reader)
                     .expect("frame does not have valid mgmt header");
-                assert_eq!(
-                    header.frame_control.typ(),
-                    mac_frames::FrameControlType::Mgmt as u16
-                );
+                assert_eq!(header.frame_control.typ(), mac_frames::FrameControlType::Mgmt as u16);
                 assert_eq!(
                     header.frame_control.subtype(),
                     mac_frames::MgmtSubtype::Authentication as u16
@@ -147,10 +138,7 @@ pub mod tests {
                 let mut reader = Cursor::new(&args.packet.data);
                 let header = mac_frames::MgmtHeader::from_reader(&mut reader)
                     .expect("frame does not have valid mgmt header");
-                assert_eq!(
-                    header.frame_control.typ(),
-                    mac_frames::FrameControlType::Mgmt as u16
-                );
+                assert_eq!(header.frame_control.typ(), mac_frames::FrameControlType::Mgmt as u16);
                 if header.frame_control.subtype() == mac_frames::MgmtSubtype::Action as u16 {
                     return;
                 }
@@ -193,7 +181,8 @@ pub mod tests {
     }
 
     async fn get_ap_sme(
-        wlan_service: &fidl_wlan_service::DeviceServiceProxy, iface_id: u16,
+        wlan_service: &fidl_wlan_service::DeviceServiceProxy,
+        iface_id: u16,
     ) -> fidl_sme::ApSmeProxy {
         let (proxy, remote) =
             fidl::endpoints::create_proxy().expect("fail to create fidl endpoints");

@@ -11,7 +11,8 @@ use {
 };
 
 pub fn create_wlantap_config(
-    hw_mac_address: [u8; 6], mac_role: wlan_device::MacRole,
+    hw_mac_address: [u8; 6],
+    mac_role: wlan_device::MacRole,
 ) -> wlantap::WlantapPhyConfig {
     use fidl_fuchsia_wlan_device::{DriverFeature, SupportedPhy};
     wlantap::WlantapPhyConfig {

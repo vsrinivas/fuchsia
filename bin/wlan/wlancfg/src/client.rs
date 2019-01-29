@@ -59,7 +59,9 @@ enum ManualRequest {
 }
 
 pub fn new_client(
-    iface_id: u16, sme: fidl_sme::ClientSmeProxy, ess_store: Arc<KnownEssStore>,
+    iface_id: u16,
+    sme: fidl_sme::ClientSmeProxy,
+    ess_store: Arc<KnownEssStore>,
 ) -> (Client, impl Future<Output = ()>) {
     let (req_sender, req_receiver) = mpsc::unbounded();
     let sme_event_stream = sme.take_event_stream();
@@ -79,10 +81,11 @@ struct Services {
 }
 
 async fn serve(
-    iface_id: u16, services: Services, sme_event_stream: fidl_sme::ClientSmeEventStream,
+    iface_id: u16,
+    services: Services,
+    sme_event_stream: fidl_sme::ClientSmeEventStream,
     req_stream: mpsc::UnboundedReceiver<ManualRequest>,
-)
-{
+) {
     let state_machine = auto_connect_state(services, req_stream.into_future()).into_state_machine();
     let removal_watcher = sme_event_stream.map_ok(|_| ()).try_collect::<()>();
     select! {
@@ -100,7 +103,8 @@ async fn serve(
 }
 
 async fn auto_connect_state(
-    services: Services, mut next_req: NextReqFut,
+    services: Services,
+    mut next_req: NextReqFut,
 ) -> Result<State, failure::Error> {
     println!("wlancfg: Starting auto-connect loop");
     let auto_connected = auto_connect(&services);
@@ -117,10 +121,10 @@ async fn auto_connect_state(
 }
 
 fn handle_manual_request(
-    services: Services, req: Option<ManualRequest>,
+    services: Services,
+    req: Option<ManualRequest>,
     req_stream: mpsc::UnboundedReceiver<ManualRequest>,
-) -> Result<State, failure::Error>
-{
+) -> Result<State, failure::Error> {
     match req {
         Some(ManualRequest::Connect(req)) => {
             Ok(manual_connect_state(services, req_stream.into_future(), req).into_state())
@@ -164,7 +168,9 @@ async fn attempt_auto_connect(services: &Services) -> Result<Option<Vec<u8>>, fa
 }
 
 async fn connect_to_known_network(
-    sme: &fidl_sme::ClientSmeProxy, ssid: Vec<u8>, ess: KnownEss,
+    sme: &fidl_sme::ClientSmeProxy,
+    ssid: Vec<u8>,
+    ess: KnownEss,
 ) -> Result<bool, failure::Error> {
     let ssid_str = String::from_utf8_lossy(&ssid).into_owned();
     println!("wlancfg: Auto-connecting to '{}'", ssid_str);
@@ -182,7 +188,9 @@ async fn connect_to_known_network(
 }
 
 async fn manual_connect_state(
-    services: Services, mut next_req: NextReqFut, req: ConnectRequest,
+    services: Services,
+    mut next_req: NextReqFut,
+    req: ConnectRequest,
 ) -> Result<State, failure::Error> {
     println!(
         "wlancfg: Connecting to '{}' because of a manual request from the user",
@@ -232,7 +240,8 @@ fn go_to_auto_connect_state(services: Services, next_req: NextReqFut) -> State {
 }
 
 async fn connected_state(
-    services: Services, mut next_req: NextReqFut,
+    services: Services,
+    mut next_req: NextReqFut,
 ) -> Result<State, failure::Error> {
     let disconnected = wait_for_disconnection(services.clone());
     pin_mut!(disconnected);
@@ -258,7 +267,9 @@ async fn wait_for_disconnection(services: Services) -> Result<(), failure::Error
 }
 
 async fn disconnected_state(
-    responder: oneshot::Sender<()>, services: Services, mut next_req: NextReqFut,
+    responder: oneshot::Sender<()>,
+    services: Services,
+    mut next_req: NextReqFut,
 ) -> Result<State, failure::Error> {
     // First, ask the SME to disconnect and wait for its response.
     // In the meantime, also listen to user requests.
@@ -323,7 +334,9 @@ fn start_scan_txn(
 }
 
 fn start_connect_txn(
-    sme: &fidl_sme::ClientSmeProxy, ssid: &[u8], password: &[u8],
+    sme: &fidl_sme::ClientSmeProxy,
+    ssid: &[u8],
+    password: &[u8],
 ) -> Result<fidl_sme::ConnectTransactionProxy, failure::Error> {
     let (connect_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ConnectRequest {
@@ -909,7 +922,8 @@ mod tests {
     }
 
     fn send_manual_connect_request(
-        client: &Client, ssid: &[u8],
+        client: &Client,
+        ssid: &[u8],
     ) -> oneshot::Receiver<fidl_sme::ConnectResultCode> {
         let (responder, receiver) = oneshot::channel();
         client
@@ -923,7 +937,8 @@ mod tests {
     }
 
     fn poll_sme_req(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) -> Poll<ClientSmeRequest> {
         exec.run_until_stalled(next_sme_req).map(|(req, stream)| {
             *next_sme_req = stream.into_future();
@@ -933,10 +948,10 @@ mod tests {
     }
 
     fn send_scan_results(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
         ssids: &[&[u8]],
-    )
-    {
+    ) {
         let txn = match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Scan { txn, .. }) => txn,
             Poll::Pending => panic!("expected a request to be available"),
@@ -952,10 +967,11 @@ mod tests {
     }
 
     fn send_sme_status(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
-        connected_to: Option<Box<fidl_sme::BssInfo>>, connecting_to_ssid: Vec<u8>,
-    )
-    {
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        connected_to: Option<Box<fidl_sme::BssInfo>>,
+        connecting_to_ssid: Vec<u8>,
+    ) {
         let responder = match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Status { responder }) => responder,
             Poll::Pending => panic!("expected a request to be available"),
@@ -966,7 +982,8 @@ mod tests {
     }
 
     fn send_default_sme_status(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         let ssid = b"foo";
         let bss_info = bss_info(&ssid[..]);
@@ -974,7 +991,8 @@ mod tests {
     }
 
     fn expect_status_req_to_sme(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Status { .. }) => (),
@@ -983,10 +1001,12 @@ mod tests {
     }
 
     fn exchange_connect_with_sme(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8], expected_password: &[u8], code: fidl_sme::ConnectResultCode,
-    )
-    {
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        expected_ssid: &[u8],
+        expected_password: &[u8],
+        code: fidl_sme::ConnectResultCode,
+    ) {
         let txn = expect_connect_req_to_sme(exec, next_sme_req, expected_ssid, expected_password);
         txn.control_handle()
             .send_on_finished(code)
@@ -994,10 +1014,11 @@ mod tests {
     }
 
     fn expect_connect_req_to_sme(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
-        expected_ssid: &[u8], expected_password: &[u8],
-    ) -> fidl_sme::ConnectTransactionRequestStream
-    {
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        expected_ssid: &[u8],
+        expected_password: &[u8],
+    ) -> fidl_sme::ConnectTransactionRequestStream {
         match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Connect { req, txn, .. }) => {
                 assert_eq!(expected_ssid, &req.ssid[..]);
@@ -1011,14 +1032,16 @@ mod tests {
     }
 
     fn exchange_disconnect_with_sme(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) {
         let responder = expect_disconnect_req_to_sme(exec, next_sme_req);
         responder.send().expect("failed to respond to Disconnect request");
     }
 
     fn expect_disconnect_req_to_sme(
-        exec: &mut fasync::Executor, next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
+        exec: &mut fasync::Executor,
+        next_sme_req: &mut StreamFuture<ClientSmeRequestStream>,
     ) -> fidl_sme::ClientSmeDisconnectResponder {
         match poll_sme_req(exec, next_sme_req) {
             Poll::Ready(ClientSmeRequest::Disconnect { responder }) => responder,

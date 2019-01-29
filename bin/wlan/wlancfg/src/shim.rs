@@ -26,7 +26,9 @@ pub struct Client {
 pub struct ClientRef(Arc<Mutex<Option<Client>>>);
 
 impl ClientRef {
-    pub fn new() -> Self { ClientRef(Arc::new(Mutex::new(None))) }
+    pub fn new() -> Self {
+        ClientRef(Arc::new(Mutex::new(None)))
+    }
 
     pub fn set_if_empty(&self, client: Client) {
         let mut c = self.0.lock().unwrap();
@@ -57,7 +59,9 @@ impl ClientRef {
 const MAX_CONCURRENT_WLAN_REQUESTS: usize = 1000;
 
 pub async fn serve_legacy(
-    requests: legacy::WlanRequestStream, client: ClientRef, ess_store: Arc<KnownEssStore>,
+    requests: legacy::WlanRequestStream,
+    client: ClientRef,
+    ess_store: Arc<KnownEssStore>,
 ) -> Result<(), fidl::Error> {
     await!(requests.try_for_each_concurrent(MAX_CONCURRENT_WLAN_REQUESTS, |req| handle_request(
         &client,
@@ -67,7 +71,9 @@ pub async fn serve_legacy(
 }
 
 async fn handle_request(
-    client: &ClientRef, req: legacy::WlanRequest, ess_store: Arc<KnownEssStore>,
+    client: &ClientRef,
+    req: legacy::WlanRequest,
+    ess_store: Arc<KnownEssStore>,
 ) -> Result<(), fidl::Error> {
     match req {
         legacy::WlanRequest::Scan { req, responder } => {
@@ -141,10 +147,7 @@ async fn scan<'a>(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy
                 return Err(internal_error());
             }
 
-            Ok(aps
-                .into_iter()
-                .map(|ess| convert_bss_info(ess.best_bss))
-                .collect())
+            Ok(aps.into_iter().map(|ess| convert_bss_info(ess.best_bss)).collect())
         }
     );
 
@@ -155,7 +158,8 @@ async fn scan<'a>(client: &ClientRef, legacy_req: legacy::ScanRequest) -> legacy
 }
 
 fn start_scan_txn(
-    client: &Client, legacy_req: legacy::ScanRequest,
+    client: &Client,
+    legacy_req: legacy::ScanRequest,
 ) -> Result<fidl_sme::ScanTransactionProxy, fidl::Error> {
     let (scan_txn, remote) = create_proxy()?;
     let mut req = fidl_sme::ScanRequest {
@@ -186,13 +190,14 @@ fn convert_bss_info(bss: fidl_sme::BssInfo) -> legacy::Ap {
         chan: fidl_common::WlanChan {
             primary: bss.channel,
             secondary80: 0,
-            cbw: fidl_common::Cbw::Cbw20
+            cbw: fidl_common::Cbw::Cbw20,
         },
     }
 }
 
 fn connect(
-    client: &ClientRef, legacy_req: legacy::ConnectConfig,
+    client: &ClientRef,
+    legacy_req: legacy::ConnectConfig,
 ) -> impl Future<Output = legacy::Error> {
     future::ready(client.get())
         .and_then(move |client| {

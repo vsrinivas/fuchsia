@@ -11,9 +11,9 @@ extern crate serde_derive;
 
 mod opts;
 
+use crate::opts::Opt;
 use connectivity_testing::wlan_ap_service_util;
 use connectivity_testing::wlan_service_util;
-use crate::opts::Opt;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_wlan_device_service::{DeviceServiceMarker, DeviceServiceProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
@@ -110,9 +110,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                 }
 
                 if query_iface_response.role == fidl_fuchsia_wlan_device::MacRole::Ap {
-                    match await!(wlan_ap_service_util::get_iface_ap_sme_proxy(
-                        &wlan_svc, iface
-                    )) {
+                    match await!(wlan_ap_service_util::get_iface_ap_sme_proxy(&wlan_svc, iface)) {
                         Ok(ap_sme_proxy) => {
                             let mut wlan_ap_iface = WlanApIface::new(ap_sme_proxy);
                             wlan_ap_iface.ap_interface_status = true;
@@ -166,9 +164,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 let mut wlan_client_results = WlanClientResultsPerAP::new();
 
-                let scan_results_return = await!(wlan_service_util::perform_scan(
-                    &wlan_client_iface.sme_proxy
-                ));
+                let scan_results_return =
+                    await!(wlan_service_util::perform_scan(&wlan_client_iface.sme_proxy));
 
                 let scan_results = match scan_results_return {
                     Ok(scan_results) => scan_results,
@@ -179,10 +176,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     }
                 };
 
-                if scan_results
-                    .iter()
-                    .find(|&ap| ap.best_bss.ssid == target_ssid.to_vec())
-                    != None
+                if scan_results.iter().find(|&ap| ap.best_bss.ssid == target_ssid.to_vec()) != None
                 {
                     wlan_client_results.found_ap_in_scan = true;
                 }
@@ -226,9 +220,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                     test_pass = false;
                 }
 
-                wlan_ap_iface
-                    .iface_client_results
-                    .insert(*client_iface_id, wlan_client_results);
+                wlan_ap_iface.iface_client_results.insert(*client_iface_id, wlan_client_results);
             }
 
             if wlan_ap_iface.ap_start_success == true {
@@ -287,10 +279,7 @@ struct WlanClientIface {
 
 impl WlanClientIface {
     pub fn new(sme_proxy: fidl_sme::ClientSmeProxy) -> WlanClientIface {
-        WlanClientIface {
-            sme_proxy: sme_proxy,
-            client_interface_status: false,
-        }
+        WlanClientIface { sme_proxy: sme_proxy, client_interface_status: false }
     }
 }
 

@@ -5,11 +5,11 @@
 #![allow(deprecated)] // Necessary for AsciiExt usage from clap args_enum macro
 
 use clap::{_clap_count_exprs, arg_enum};
-use fidl_fuchsia_wlan_device as wlan;
 use fidl_fuchsia_wlan_common as wlan_common;
+use fidl_fuchsia_wlan_device as wlan;
 use structopt::StructOpt;
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Copy, Clone, Debug)]
     pub enum RoleArg {
         Client,
@@ -17,7 +17,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Copy, Clone, Debug)]
     pub enum PhyArg {
         Erp,
@@ -26,7 +26,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Copy, Clone, Debug)]
     pub enum CbwArg {
         Cbw20,
@@ -35,7 +35,7 @@ arg_enum!{
     }
 }
 
-arg_enum!{
+arg_enum! {
     #[derive(PartialEq, Copy, Clone, Debug)]
     pub enum ScanTypeArg {
         Active,
@@ -127,8 +127,13 @@ pub enum IfaceCmd {
         /// id of the phy that will host the iface
         phy_id: u16,
 
-        #[structopt(short = "r", long = "role", raw(possible_values = "&RoleArg::variants()"),
-                    default_value = "Client", raw(case_insensitive = "true"))]
+        #[structopt(
+            short = "r",
+            long = "role",
+            raw(possible_values = "&RoleArg::variants()"),
+            default_value = "Client",
+            raw(case_insensitive = "true")
+        )]
         /// role of the new iface
         role: RoleArg,
     },
@@ -153,9 +158,7 @@ pub enum IfaceCmd {
         iface_id: u16,
     },
     #[structopt(name = "stats")]
-    Stats {
-        iface_id: Option<u16>,
-    },
+    Stats { iface_id: Option<u16> },
     #[structopt(name = "minstrel")]
     Minstrel(MinstrelCmd),
 }
@@ -163,14 +166,9 @@ pub enum IfaceCmd {
 #[derive(StructOpt, Clone, Debug)]
 pub enum MinstrelCmd {
     #[structopt(name = "list")]
-    List {
-        iface_id: Option<u16>,
-    },
+    List { iface_id: Option<u16> },
     #[structopt(name = "show")]
-    Show {
-        iface_id: Option<u16>,
-        peer_addr: Option<String>,
-    },
+    Show { iface_id: Option<u16>, peer_addr: Option<String> },
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -179,11 +177,15 @@ pub enum ClientCmd {
     Scan {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
-        #[structopt(short = "s", long = "scan-type", default_value = "passive",
-                    raw(possible_values = "&ScanTypeArg::variants()"),
-                    raw(case_insensitive = "true"),
-                    help = "Experimental. Default scan type on each channel. \
-                            Behavior may differ on DFS channel")]
+        #[structopt(
+            short = "s",
+            long = "scan-type",
+            default_value = "passive",
+            raw(possible_values = "&ScanTypeArg::variants()"),
+            raw(case_insensitive = "true"),
+            help = "Experimental. Default scan type on each channel. \
+                    Behavior may differ on DFS channel"
+        )]
         scan_type: ScanTypeArg,
     },
     #[structopt(name = "connect")]
@@ -194,17 +196,31 @@ pub enum ClientCmd {
         ssid: String,
         #[structopt(short = "p", long = "password", help = "WPA2 PSK")]
         password: Option<String>,
-        #[structopt(short = "y", long = "phy", raw(possible_values = "&PhyArg::variants()"),
-                    raw(case_insensitive = "true"), help = "Specify an upper bound")]
+        #[structopt(
+            short = "y",
+            long = "phy",
+            raw(possible_values = "&PhyArg::variants()"),
+            raw(case_insensitive = "true"),
+            help = "Specify an upper bound"
+        )]
         phy: Option<PhyArg>,
-        #[structopt(short = "w", long = "cbw", raw(possible_values = "&CbwArg::variants()"),
-                     raw(case_insensitive = "true"), help = "Specify an upper bound")]
+        #[structopt(
+            short = "w",
+            long = "cbw",
+            raw(possible_values = "&CbwArg::variants()"),
+            raw(case_insensitive = "true"),
+            help = "Specify an upper bound"
+        )]
         cbw: Option<CbwArg>,
-        #[structopt(short = "s", long = "scan-type", default_value = "passive",
-                    raw(possible_values = "&ScanTypeArg::variants()"),
-                    raw(case_insensitive = "true"),
-                    help = "Experimental. Default scan type on each channel. \
-                            Behavior may differ on DFS channel")]
+        #[structopt(
+            short = "s",
+            long = "scan-type",
+            default_value = "passive",
+            raw(possible_values = "&ScanTypeArg::variants()"),
+            raw(case_insensitive = "true"),
+            help = "Experimental. Default scan type on each channel. \
+                    Behavior may differ on DFS channel"
+        )]
         scan_type: ScanTypeArg,
     },
     #[structopt(name = "disconnect")]
@@ -216,7 +232,7 @@ pub enum ClientCmd {
     Status {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
-    }
+    },
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -256,5 +272,5 @@ pub enum MeshCmd {
     Leave {
         #[structopt(raw(required = "true"))]
         iface_id: u16,
-    }
+    },
 }

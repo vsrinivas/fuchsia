@@ -137,9 +137,8 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
                 if opt.disconnect_test_enabled {
                     let start = Instant::now();
-                    let result = await!(wlan_service_util::disconnect_from_network(
-                        &wlaniface.sme_proxy
-                    ));
+                    let result =
+                        await!(wlan_service_util::disconnect_from_network(&wlaniface.sme_proxy));
                     match result {
                         Ok(()) => {
                             total_disconnect_time_ms +=
@@ -246,10 +245,7 @@ struct WlanIface {
 
 impl WlanIface {
     pub fn new(sme_proxy: fidl_sme::ClientSmeProxy, report: TestReport) -> WlanIface {
-        WlanIface {
-            sme_proxy: sme_proxy,
-            report: report,
-        }
+        WlanIface { sme_proxy: sme_proxy, report: report }
     }
 }
 

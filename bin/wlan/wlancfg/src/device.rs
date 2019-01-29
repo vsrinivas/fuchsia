@@ -22,7 +22,9 @@ pub struct Listener {
 }
 
 pub async fn handle_event(
-    listener: &Listener, evt: DeviceWatcherEvent, ess_store: Arc<KnownEssStore>,
+    listener: &Listener,
+    evt: DeviceWatcherEvent,
+    ess_store: Arc<KnownEssStore>,
 ) {
     println!("wlancfg got event: {:?}", evt);
     match evt {
@@ -87,7 +89,9 @@ async fn query_phy(listener: &Listener, phy_id: u16) -> Result<wlan::PhyInfo, fa
 }
 
 async fn on_iface_added(
-    listener: &Listener, iface_id: u16, ess_store: Arc<KnownEssStore>,
+    listener: &Listener,
+    iface_id: u16,
+    ess_store: Arc<KnownEssStore>,
 ) -> Result<(), failure::Error> {
     let service = listener.proxy.clone();
     let legacy_client = listener.legacy_client.clone();

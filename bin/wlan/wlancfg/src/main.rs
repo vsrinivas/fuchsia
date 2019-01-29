@@ -27,11 +27,14 @@ use std::sync::Arc;
 #[derive(Debug, Copy, Clone, Eq, PartialEq)]
 pub enum Never {}
 impl Never {
-    pub fn into_any<T>(self) -> T { match self {} }
+    pub fn into_any<T>(self) -> T {
+        match self {}
+    }
 }
 
 fn serve_fidl(
-    _client_ref: shim::ClientRef, ess_store: Arc<KnownEssStore>,
+    _client_ref: shim::ClientRef,
+    ess_store: Arc<KnownEssStore>,
 ) -> impl Future<Output = Result<Never, Error>> {
     future::ready(
         ServicesServer::new()

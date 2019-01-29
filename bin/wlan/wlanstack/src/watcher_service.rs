@@ -4,6 +4,9 @@
 
 use failure::format_err;
 use fidl::endpoints::{RequestStream, ServerEnd};
+use fidl_fuchsia_wlan_device_service::{
+    self as fidl_svc, DeviceWatcherControlHandle, DeviceWatcherRequestStream,
+};
 use futures::channel::mpsc::{self, UnboundedReceiver, UnboundedSender};
 use futures::prelude::*;
 use futures::try_join;
@@ -11,74 +14,67 @@ use log::error;
 use parking_lot::Mutex;
 use std::collections::HashMap;
 use std::sync::Arc;
-use fidl_fuchsia_wlan_device_service::{self as fidl_svc, DeviceWatcherControlHandle, DeviceWatcherRequestStream};
 
-use crate::Never;
 use crate::watchable_map::{MapEvent, WatchableMap};
+use crate::Never;
 
 // In reality, P and I are always PhyDevice and IfaceDevice, respectively.
 // They are generic solely for the purpose of mocking for tests.
-pub fn serve_watchers<P, I>(phys: Arc<WatchableMap<u16, P>>,
-                            ifaces: Arc<WatchableMap<u16, I>>,
-                            phy_events: UnboundedReceiver<MapEvent<u16, P>>,
-                            iface_events: UnboundedReceiver<MapEvent<u16, I>>)
-    -> (WatcherService<P, I>, impl Future<Output = Result<Never, failure::Error>>)
-    where P: 'static, I: 'static
+pub fn serve_watchers<P, I>(
+    phys: Arc<WatchableMap<u16, P>>,
+    ifaces: Arc<WatchableMap<u16, I>>,
+    phy_events: UnboundedReceiver<MapEvent<u16, P>>,
+    iface_events: UnboundedReceiver<MapEvent<u16, I>>,
+) -> (WatcherService<P, I>, impl Future<Output = Result<Never, failure::Error>>)
+where
+    P: 'static,
+    I: 'static,
 {
-    let inner = Arc::new(Mutex::new(Inner {
-        watchers: HashMap::new(),
-        next_watcher_id: 0,
-        phys,
-        ifaces
-    }));
+    let inner =
+        Arc::new(Mutex::new(Inner { watchers: HashMap::new(), next_watcher_id: 0, phys, ifaces }));
     let (reaper_sender, reaper_receiver) = mpsc::unbounded();
-    let s = WatcherService {
-        inner: Arc::clone(&inner),
-        reaper_queue: reaper_sender
-    };
+    let s = WatcherService { inner: Arc::clone(&inner), reaper_queue: reaper_sender };
 
     let fut = async move {
         let phy_fut = notify_phy_watchers(phy_events, &inner);
         let iface_fut = notify_iface_watchers(iface_events, &inner);
         let reaper_fut = reap_watchers(&inner, reaper_receiver);
-        try_join!(phy_fut, iface_fut, reaper_fut)
-            .map(|x: (Never, Never, Never)| x.0)
+        try_join!(phy_fut, iface_fut, reaper_fut).map(|x: (Never, Never, Never)| x.0)
     };
     (s, fut)
 }
 
 pub struct WatcherService<P, I> {
     inner: Arc<Mutex<Inner<P, I>>>,
-    reaper_queue: UnboundedSender<ReaperTask>
+    reaper_queue: UnboundedSender<ReaperTask>,
 }
 
 // Manual clone impl since #derive uses incorrect trait bounds
 impl<P, I> Clone for WatcherService<P, I> {
     fn clone(&self) -> Self {
-        WatcherService {
-            inner: self.inner.clone(),
-            reaper_queue: self.reaper_queue.clone()
-        }
+        WatcherService { inner: self.inner.clone(), reaper_queue: self.reaper_queue.clone() }
     }
 }
 
 impl<P, I> WatcherService<P, I> {
-    pub fn add_watcher(&self, endpoint: ServerEnd<fidl_svc::DeviceWatcherMarker>)
-        -> Result<(), fidl::Error>
-    {
+    pub fn add_watcher(
+        &self,
+        endpoint: ServerEnd<fidl_svc::DeviceWatcherMarker>,
+    ) -> Result<(), fidl::Error> {
         let stream = endpoint.into_stream()?;
         let handle = stream.control_handle();
         let mut guard = self.inner.lock();
         let inner = &mut *guard;
-        self.reaper_queue.unbounded_send(ReaperTask {
-            watcher_channel: stream,
-            watcher_id: inner.next_watcher_id
-        }).expect("failed to submit a task to the watcher reaper: {}");
-        inner.watchers.insert(inner.next_watcher_id, Watcher {
-            handle,
-            sent_phy_snapshot: false,
-            sent_iface_snapshot: false
-        });
+        self.reaper_queue
+            .unbounded_send(ReaperTask {
+                watcher_channel: stream,
+                watcher_id: inner.next_watcher_id,
+            })
+            .expect("failed to submit a task to the watcher reaper: {}");
+        inner.watchers.insert(
+            inner.next_watcher_id,
+            Watcher { handle, sent_phy_snapshot: false, sent_iface_snapshot: false },
+        );
         inner.phys.request_snapshot();
         inner.ifaces.request_snapshot();
         inner.next_watcher_id += 1;
@@ -101,8 +97,9 @@ struct Watcher {
 
 impl<P, I> Inner<P, I> {
     fn notify_watchers<F, G>(&mut self, sent_snapshot: F, send_event: G)
-        where F: Fn(&Watcher) -> bool,
-              G: Fn(&DeviceWatcherControlHandle) -> Result<(), fidl::Error>
+    where
+        F: Fn(&Watcher) -> bool,
+        G: Fn(&DeviceWatcherControlHandle) -> Result<(), fidl::Error>,
     {
         self.watchers.retain(|_, w| {
             if sent_snapshot(w) {
@@ -114,10 +111,14 @@ impl<P, I> Inner<P, I> {
         })
     }
 
-    fn send_snapshot<F, G, T>(&mut self, sent_snapshot: F, send_on_add: G,
-                              snapshot: Arc<HashMap<u16, T>>)
-        where F: Fn(&mut Watcher) -> &mut bool,
-              G: Fn(&DeviceWatcherControlHandle, u16) -> Result<(), fidl::Error>
+    fn send_snapshot<F, G, T>(
+        &mut self,
+        sent_snapshot: F,
+        send_on_add: G,
+        snapshot: Arc<HashMap<u16, T>>,
+    ) where
+        F: Fn(&mut Watcher) -> &mut bool,
+        G: Fn(&DeviceWatcherControlHandle, u16) -> Result<(), fidl::Error>,
     {
         self.watchers.retain(|_, w| {
             if !*sent_snapshot(w) {
@@ -142,35 +143,45 @@ fn handle_send_result(handle: &DeviceWatcherControlHandle, r: Result<(), fidl::E
     r.is_ok()
 }
 
-async fn notify_phy_watchers<P, I>(mut events: UnboundedReceiver<MapEvent<u16, P>>,
-                                   inner: &Mutex<Inner<P, I>>)
-    -> Result<Never, failure::Error>
-{
+async fn notify_phy_watchers<P, I>(
+    mut events: UnboundedReceiver<MapEvent<u16, P>>,
+    inner: &Mutex<Inner<P, I>>,
+) -> Result<Never, failure::Error> {
     while let Some(e) = await!(events.next()) {
         match e {
-            MapEvent::KeyInserted(id) => inner.lock().notify_watchers(
-                    |w| w.sent_phy_snapshot, |h| h.send_on_phy_added(id)),
-            MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(
-                    |w| w.sent_phy_snapshot, |h| h.send_on_phy_removed(id)),
+            MapEvent::KeyInserted(id) => {
+                inner.lock().notify_watchers(|w| w.sent_phy_snapshot, |h| h.send_on_phy_added(id))
+            }
+            MapEvent::KeyRemoved(id) => {
+                inner.lock().notify_watchers(|w| w.sent_phy_snapshot, |h| h.send_on_phy_removed(id))
+            }
             MapEvent::Snapshot(s) => inner.lock().send_snapshot(
-                    |w| &mut w.sent_phy_snapshot, |h, id| h.send_on_phy_added(id), s)
+                |w| &mut w.sent_phy_snapshot,
+                |h, id| h.send_on_phy_added(id),
+                s,
+            ),
         }
     }
     Err(format_err!("stream of events from the phy device map has ended unexpectedly"))
 }
 
-async fn notify_iface_watchers<P, I>(mut events: UnboundedReceiver<MapEvent<u16, I>>,
-                                     inner: &Mutex<Inner<P, I>>)
-    -> Result<Never, failure::Error>
-{
+async fn notify_iface_watchers<P, I>(
+    mut events: UnboundedReceiver<MapEvent<u16, I>>,
+    inner: &Mutex<Inner<P, I>>,
+) -> Result<Never, failure::Error> {
     while let Some(e) = await!(events.next()) {
         match e {
-            MapEvent::KeyInserted(id) => inner.lock().notify_watchers(
-                    |w| w.sent_iface_snapshot, |h| h.send_on_iface_added(id)),
-            MapEvent::KeyRemoved(id) => inner.lock().notify_watchers(
-                    |w| w.sent_iface_snapshot, |h| h.send_on_iface_removed(id)),
+            MapEvent::KeyInserted(id) => inner
+                .lock()
+                .notify_watchers(|w| w.sent_iface_snapshot, |h| h.send_on_iface_added(id)),
+            MapEvent::KeyRemoved(id) => inner
+                .lock()
+                .notify_watchers(|w| w.sent_iface_snapshot, |h| h.send_on_iface_removed(id)),
             MapEvent::Snapshot(s) => inner.lock().send_snapshot(
-                    |w| &mut w.sent_iface_snapshot, |h, id| h.send_on_iface_added(id), s)
+                |w| &mut w.sent_iface_snapshot,
+                |h, id| h.send_on_iface_added(id),
+                s,
+            ),
         }
     }
     Err(format_err!("stream of events from the iface device map has ended unexpectedly"))
@@ -185,9 +196,10 @@ struct ReaperTask {
 /// Performing this clean up solely when notification fails is not sufficient:
 /// in the scenario where devices are not being added or removed, but new clients come and go,
 /// the watcher list could grow without bound.
-async fn reap_watchers<P, I>(inner: &Mutex<Inner<P, I>>, watchers: UnboundedReceiver<ReaperTask>)
-    -> Result<Never, failure::Error>
-{
+async fn reap_watchers<P, I>(
+    inner: &Mutex<Inner<P, I>>,
+    watchers: UnboundedReceiver<ReaperTask>,
+) -> Result<Never, failure::Error> {
     const REAP_CONCURRENT_LIMIT: usize = 10000;
     await!(watchers.for_each_concurrent(REAP_CONCURRENT_LIMIT, move |w| {
         // Wait for the other side to close the channel (or an error to occur)
@@ -216,8 +228,8 @@ mod tests {
         let (helper, future) = setup();
         pin_mut!(future);
         assert_eq!(0, helper.service.inner.lock().watchers.len());
-        let (client_end, server_end) = fidl::endpoints::create_endpoints()
-            .expect("Failed to create endpoints");
+        let (client_end, server_end) =
+            fidl::endpoints::create_endpoints().expect("Failed to create endpoints");
 
         // Add a watcher and check that it was added to the map
         helper.service.add_watcher(server_end).expect("add_watcher failed");
@@ -242,8 +254,8 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (proxy, server_end) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
         helper.phys.insert(20, 2000);
@@ -259,16 +271,16 @@ mod tests {
         assert_eq!(3, events.len());
         // Sadly, generated Event struct doesn't implement PartialEq
         match &events[0] {
-            &DeviceWatcherEvent::OnPhyAdded{ phy_id: 20 } => {},
-            other => panic!("Expected OnPhyAdded(20), got {:?}", other)
+            &DeviceWatcherEvent::OnPhyAdded { phy_id: 20 } => {}
+            other => panic!("Expected OnPhyAdded(20), got {:?}", other),
         }
         match &events[1] {
-            &DeviceWatcherEvent::OnPhyAdded{ phy_id: 30 } => {},
-            other => panic!("Expected OnPhyAdded(30), got {:?}", other)
+            &DeviceWatcherEvent::OnPhyAdded { phy_id: 30 } => {}
+            other => panic!("Expected OnPhyAdded(30), got {:?}", other),
         }
         match &events[2] {
-            &DeviceWatcherEvent::OnPhyRemoved{ phy_id: 20 } => {},
-            other => panic!("Expected OnPhyRemoved(20), got {:?}", other)
+            &DeviceWatcherEvent::OnPhyRemoved { phy_id: 20 } => {}
+            other => panic!("Expected OnPhyRemoved(20), got {:?}", other),
         }
     }
 
@@ -277,8 +289,8 @@ mod tests {
         let exec = &mut fasync::Executor::new().expect("Failed to create an executor");
         let (helper, future) = setup();
         pin_mut!(future);
-        let (proxy, server_end) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
 
         helper.ifaces.insert(50, 5000);
@@ -292,12 +304,12 @@ mod tests {
         let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(2, events.len());
         match &events[0] {
-            &DeviceWatcherEvent::OnIfaceAdded{ iface_id: 50 } => {},
-            other => panic!("Expected OnIfaceAdded(50), got {:?}", other)
+            &DeviceWatcherEvent::OnIfaceAdded { iface_id: 50 } => {}
+            other => panic!("Expected OnIfaceAdded(50), got {:?}", other),
         }
         match &events[1] {
-            &DeviceWatcherEvent::OnIfaceRemoved{ iface_id: 50 } => {},
-            other => panic!("Expected OnIfaceRemoved(50), got {:?}", other)
+            &DeviceWatcherEvent::OnIfaceRemoved { iface_id: 50 } => {}
+            other => panic!("Expected OnIfaceRemoved(50), got {:?}", other),
         }
     }
 
@@ -313,8 +325,8 @@ mod tests {
         helper.phys.remove(&20);
 
         // Now add the watcher and pump the events
-        let (proxy, server_end) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
             panic!("server future returned an error: {:?}", e);
@@ -324,8 +336,8 @@ mod tests {
         let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(1, events.len());
         match &events[0] {
-            &DeviceWatcherEvent::OnPhyAdded{ phy_id: 30 } => {},
-            other => panic!("Expected OnPhyAdded(30), got {:?}", other)
+            &DeviceWatcherEvent::OnPhyAdded { phy_id: 30 } => {}
+            other => panic!("Expected OnPhyAdded(30), got {:?}", other),
         }
     }
 
@@ -341,8 +353,8 @@ mod tests {
         helper.ifaces.remove(&20);
 
         // Now add the watcher and pump the events
-        let (proxy, server_end) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy, server_end) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
             panic!("server future returned an error: {:?}", e);
@@ -352,8 +364,8 @@ mod tests {
         let events = fetch_events(exec, proxy.take_event_stream());
         assert_eq!(1, events.len());
         match &events[0] {
-            &DeviceWatcherEvent::OnIfaceAdded{ iface_id: 30 } => {},
-            other => panic!("Expected OnIfaceAdded(30), got {:?}", other)
+            &DeviceWatcherEvent::OnIfaceAdded { iface_id: 30 } => {}
+            other => panic!("Expected OnIfaceAdded(30), got {:?}", other),
         }
     }
 
@@ -366,13 +378,13 @@ mod tests {
         helper.ifaces.insert(20, 2000);
 
         // Add first watcher
-        let (proxy_one, server_end_one) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy_one, server_end_one) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_one).expect("add_watcher failed (1)");
 
         // Add second watcher
-        let (proxy_two, server_end_two) = fidl::endpoints::create_proxy()
-            .expect("Failed to create endpoints");
+        let (proxy_two, server_end_two) =
+            fidl::endpoints::create_proxy().expect("Failed to create endpoints");
         helper.service.add_watcher(server_end_two).expect("add_watcher failed (2)");
 
         // Deliver events
@@ -397,13 +409,10 @@ mod tests {
         let (client_chan, server_chan) = zx::Channel::create().unwrap();
         // Make a channel without a WRITE permission to make sure sending an event fails
         let server_handle: zx::Handle = server_chan.into();
-        let reduced_chan: zx::Channel = server_handle
-            .replace(zx::Rights::READ | zx::Rights::WAIT)
-            .unwrap()
-            .into();
+        let reduced_chan: zx::Channel =
+            server_handle.replace(zx::Rights::READ | zx::Rights::WAIT).unwrap().into();
 
-        helper.service.add_watcher(ServerEnd::new(reduced_chan))
-            .expect("add_watcher failed");
+        helper.service.add_watcher(ServerEnd::new(reduced_chan)).expect("add_watcher failed");
         if let Poll::Ready(Err(e)) = exec.run_until_stalled(&mut future) {
             panic!("future returned an error (1): {:?}", e);
         }
@@ -434,13 +443,16 @@ mod tests {
         let (ifaces, iface_events) = WatchableMap::new();
         let phys = Arc::new(phys);
         let ifaces = Arc::new(ifaces);
-        let (service, future) = serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
+        let (service, future) =
+            serve_watchers(phys.clone(), ifaces.clone(), phy_events, iface_events);
         let helper = Helper { phys, ifaces, service };
         (helper, future)
     }
 
-    fn fetch_events(exec: &mut fasync::Executor,
-                    stream: fidl_svc::DeviceWatcherEventStream) -> Vec<DeviceWatcherEvent> {
+    fn fetch_events(
+        exec: &mut fasync::Executor,
+        stream: fidl_svc::DeviceWatcherEventStream,
+    ) -> Vec<DeviceWatcherEvent> {
         let events = Arc::new(Mutex::new(Some(Vec::new())));
         let events_two = events.clone();
         let mut event_fut = stream

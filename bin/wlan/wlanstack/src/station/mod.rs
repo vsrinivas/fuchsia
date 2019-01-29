@@ -17,20 +17,28 @@ use log::warn;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
-use wlan_sme::{Station, MlmeRequest, MlmeStream, timer::{TimeEntry, TimedEvent}};
+use wlan_sme::{
+    timer::{TimeEntry, TimedEvent},
+    MlmeRequest, MlmeStream, Station,
+};
 
 use crate::fidl_util::is_peer_closed;
-use crate::Never;
 use crate::stats_scheduler::StatsRequest;
+use crate::Never;
 
 // The returned future successfully terminates when MLME closes the channel
-async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEventStream,
-                                      station: Arc<Mutex<STA>>, mut mlme_stream: MlmeStream,
-                                      stats_requests: SRS, time_stream: TS)
-    -> Result<(), failure::Error>
-    where STA: Station,
-          SRS: Stream<Item = StatsRequest> + Unpin,
-          TS: Stream<Item = TimeEntry<<STA as wlan_sme::Station>::Event>> + Unpin,
+async fn serve_mlme_sme<STA, SRS, TS>(
+    proxy: MlmeProxy,
+    mut event_stream: MlmeEventStream,
+    station: Arc<Mutex<STA>>,
+    mut mlme_stream: MlmeStream,
+    stats_requests: SRS,
+    time_stream: TS,
+) -> Result<(), failure::Error>
+where
+    STA: Station,
+    SRS: Stream<Item = StatsRequest> + Unpin,
+    TS: Stream<Item = TimeEntry<<STA as wlan_sme::Station>::Event>> + Unpin,
 {
     let (mut stats_sender, stats_receiver) = mpsc::channel(1);
     let stats_fut = serve_stats(proxy.clone(), stats_requests, stats_receiver);
@@ -69,9 +77,9 @@ async fn serve_mlme_sme<STA, SRS, TS>(proxy: MlmeProxy, mut event_stream: MlmeEv
     }
 }
 
-fn make_timer_stream<E>(time_stream: impl Stream<Item = TimeEntry<E>>)
-    -> impl Stream<Item = TimedEvent<E>> {
-
+fn make_timer_stream<E>(
+    time_stream: impl Stream<Item = TimeEntry<E>>,
+) -> impl Stream<Item = TimedEvent<E>> {
     time_stream
         .map(|(deadline, timed_event)| fasync::Timer::new(deadline).map(|_| timed_event))
         .buffer_unordered(usize::max_value())
@@ -97,8 +105,10 @@ fn forward_mlme_request(req: MlmeRequest, proxy: &MlmeProxy) -> Result<(), fidl:
     }
 }
 
-fn handle_stats_resp(stats_sender: &mut mpsc::Sender<IfaceStats>,
-                     resp: fidl_mlme::StatsQueryResponse) -> Result<(), failure::Error> {
+fn handle_stats_resp(
+    stats_sender: &mut mpsc::Sender<IfaceStats>,
+    resp: fidl_mlme::StatsQueryResponse,
+) -> Result<(), failure::Error> {
     stats_sender.try_send(resp.stats).or_else(|e| {
         if e.is_full() {
             // We only expect one response from MLME per each request, so the bounded
@@ -111,14 +121,18 @@ fn handle_stats_resp(stats_sender: &mut mpsc::Sender<IfaceStats>,
     })
 }
 
-async fn serve_stats<S>(proxy: MlmeProxy, mut stats_requests: S,
-                        mut responses: mpsc::Receiver<IfaceStats>)
-    -> Result<Never, failure::Error>
-    where S: Stream<Item = StatsRequest> + Unpin
+async fn serve_stats<S>(
+    proxy: MlmeProxy,
+    mut stats_requests: S,
+    mut responses: mpsc::Receiver<IfaceStats>,
+) -> Result<Never, failure::Error>
+where
+    S: Stream<Item = StatsRequest> + Unpin,
 {
     while let Some(req) = await!(stats_requests.next()) {
-        proxy.stats_query_req().map_err(
-                |e| format_err!("Failed to send a StatsReq to MLME: {}", e))?;
+        proxy
+            .stats_query_req()
+            .map_err(|e| format_err!("Failed to send a StatsReq to MLME: {}", e))?;
         match await!(responses.next()) {
             Some(response) => req.reply(response),
             None => bail!("Stream of stats responses has ended unexpectedly"),
@@ -133,8 +147,8 @@ mod tests {
     use {
         fuchsia_zircon::{self as zx, prelude::DurationNum},
         futures::channel::mpsc::{self, UnboundedSender},
-        pin_utils::pin_mut,
         futures::Poll,
+        pin_utils::pin_mut,
     };
 
     type Event = u32;

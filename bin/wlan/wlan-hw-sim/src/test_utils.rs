@@ -64,15 +64,9 @@ where
 impl TestHelper {
     pub fn begin_test(exec: &mut fasync::Executor, config: wlantap::WlantapPhyConfig) -> Self {
         let wlantap = Wlantap::open().expect("Failed to open wlantapctl");
-        let proxy = wlantap
-            .create_phy(config)
-            .expect("Failed to create wlantap PHY");
+        let proxy = wlantap.create_phy(config).expect("Failed to create wlantap PHY");
         let event_stream = Some(proxy.take_event_stream());
-        let mut helper = TestHelper {
-            _wlantap: wlantap,
-            proxy: Arc::new(proxy),
-            event_stream,
-        };
+        let mut helper = TestHelper { _wlantap: wlantap, proxy: Arc::new(proxy), event_stream };
         helper.wait_for_wlanmac_start(exec);
         helper
     }
@@ -99,8 +93,12 @@ impl TestHelper {
     }
 
     pub fn run<T, E, F, H>(
-        &mut self, exec: &mut fasync::Executor, timeout: zx::Duration, context: &str,
-        event_handler: H, future: F,
+        &mut self,
+        exec: &mut fasync::Executor,
+        timeout: zx::Duration,
+        context: &str,
+        event_handler: H,
+        future: F,
     ) -> Result<T, E>
     where
         H: FnMut(wlantap::WlantapPhyEvent),
@@ -112,9 +110,7 @@ impl TestHelper {
                 event_handler,
                 main_future: future,
             }
-            .on_timeout(timeout.after_now(), || {
-                panic!("Did not complete in time: {}", context)
-            }),
+            .on_timeout(timeout.after_now(), || panic!("Did not complete in time: {}", context)),
         );
         match res {
             Ok((item, stream)) => {

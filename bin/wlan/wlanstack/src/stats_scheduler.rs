@@ -4,7 +4,7 @@
 
 use fidl_fuchsia_wlan_stats::IfaceStats;
 use fuchsia_zircon as zx;
-use futures::channel::{oneshot, mpsc};
+use futures::channel::{mpsc, oneshot};
 use futures::prelude::*;
 use parking_lot::Mutex;
 use std::sync::Arc;
@@ -19,25 +19,22 @@ pub type StatsRef = Arc<Mutex<IfaceStats>>;
 type Responder = oneshot::Sender<StatsRef>;
 
 pub struct StatsScheduler {
-    queue: mpsc::UnboundedSender<Responder>
+    queue: mpsc::UnboundedSender<Responder>,
 }
 
-pub fn create_scheduler()
-    -> (StatsScheduler, impl Stream<Item = StatsRequest>)
-{
+pub fn create_scheduler() -> (StatsScheduler, impl Stream<Item = StatsRequest>) {
     let (sender, receiver) = mpsc::unbounded();
-    let scheduler = StatsScheduler{ queue: sender };
+    let scheduler = StatsScheduler { queue: sender };
     let req_stream = receiver
-        .map(Ok).group_available()
+        .map(Ok)
+        .group_available()
         .map_ok(StatsRequest)
         .map(|x| x.unwrap_or_else(Never::into_any));
     (scheduler, req_stream)
 }
 
 impl StatsScheduler {
-    pub fn get_stats(&self)
-        -> impl Future<Output = Result<StatsRef, zx::Status>>
-    {
+    pub fn get_stats(&self) -> impl Future<Output = Result<StatsRef, zx::Status>> {
         let (sender, receiver) = oneshot::channel();
         // Ignore the error: if the other side is closed, `sender` will be immediately
         // dropped, and `receiver` will be notified
@@ -83,14 +80,14 @@ mod tests {
         match res1 {
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock()),
             Poll::Ready(Err(e)) => panic!("request future 1 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 1 returned 'Pending'")
+            Poll::Pending => panic!("request future 1 returned 'Pending'"),
         }
 
         let res2 = exec.run_until_stalled(&mut fut2);
         match res2 {
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(100), *r.lock()),
             Poll::Ready(Err(e)) => panic!("request future 2 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 2 returned 'Pending'")
+            Poll::Pending => panic!("request future 2 returned 'Pending'"),
         }
 
         let mut fut3 = sched.get_stats();
@@ -99,7 +96,7 @@ mod tests {
         match res3 {
             Poll::Ready(Ok(r)) => assert_eq!(fake_iface_stats(200), *r.lock()),
             Poll::Ready(Err(e)) => panic!("request future 3 returned an error: {:?}", e),
-            Poll::Pending => panic!("request future 3 returned 'Pending'")
+            Poll::Pending => panic!("request future 3 returned 'Pending'"),
         }
     }
 
@@ -161,10 +158,7 @@ mod tests {
     }
 
     fn fake_counter(count: u64) -> Counter {
-        Counter {
-            count: count,
-            name: "foo".to_string(),
-        }
+        Counter { count: count, name: "foo".to_string() }
     }
 
 }

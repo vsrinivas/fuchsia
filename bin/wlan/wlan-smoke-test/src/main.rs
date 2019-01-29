@@ -11,8 +11,8 @@ extern crate serde_derive;
 
 mod opts;
 
-use connectivity_testing::wlan_service_util;
 use crate::opts::Opt;
+use connectivity_testing::wlan_service_util;
 use failure::{bail, Error, ResultExt};
 use fidl_fuchsia_net_oldhttp::{self as http, HttpServiceProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
@@ -107,7 +107,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
                             wlan_iface.scan_found_target_ssid = true;
                         }
                     }
-                },
+                }
                 _ => println!("scan failed"),
             };
 
@@ -140,14 +140,11 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             while dhcp_check_attempts < 3 && !wlan_iface.dhcp_success {
                 // check if there is a non-zero ip addr as a first check for dhcp success
-                let ip_addrs = match await!(get_ip_addrs_for_wlan_iface(
-                    &wlan_svc,
-                    &network_svc,
-                    *iface_id
-                )) {
-                    Ok(result) => result,
-                    Err(_) => continue,
-                };
+                let ip_addrs =
+                    match await!(get_ip_addrs_for_wlan_iface(&wlan_svc, &network_svc, *iface_id)) {
+                        Ok(result) => result,
+                        Err(_) => continue,
+                    };
                 if check_dhcp_complete(ip_addrs) {
                     wlan_iface.dhcp_success = true;
                 } else {
@@ -159,9 +156,7 @@ fn run_test(opt: Opt, test_results: &mut TestResults) -> Result<(), Error> {
 
             // after testing, check if we need to disconnect
             if requires_disconnect {
-                match await!(wlan_service_util::disconnect_from_network(
-                    &wlan_iface.sme_proxy
-                )) {
+                match await!(wlan_service_util::disconnect_from_network(&wlan_iface.sme_proxy)) {
                     Err(_) => wlan_iface.disconnect_success = false,
                     _ => wlan_iface.disconnect_success = true,
                 };
@@ -250,7 +245,8 @@ struct WlanIface {
 
 impl WlanIface {
     pub fn new(
-        sme_proxy: fidl_sme::ClientSmeProxy, status: fidl_sme::ClientStatusResponse,
+        sme_proxy: fidl_sme::ClientSmeProxy,
+        status: fidl_sme::ClientStatusResponse,
     ) -> WlanIface {
         WlanIface {
             sme_proxy: sme_proxy,
@@ -270,7 +266,9 @@ fn report_results(test_results: &TestResults) {
 }
 
 fn is_connect_to_target_network_needed<T: AsRef<[u8]>>(
-    stay_connected: bool, target_ssid: T, status: &fidl_sme::ClientStatusResponse,
+    stay_connected: bool,
+    target_ssid: T,
+    status: &fidl_sme::ClientStatusResponse,
 ) -> bool {
     if !stay_connected {
         // doesn't matter if we are connected, we will force a reconnection
@@ -297,7 +295,8 @@ fn create_url_request<T: Into<String>>(url_string: T) -> http::UrlRequest {
 }
 
 async fn fetch_and_discard_url(
-    http_service: HttpServiceProxy, mut url_request: http::UrlRequest,
+    http_service: HttpServiceProxy,
+    mut url_request: http::UrlRequest,
 ) -> Result<(), Error> {
     // Create a UrlLoader instance
     let (s, p) = zx::Channel::create().context("failed to create zx channel")?;
@@ -310,11 +309,7 @@ async fn fetch_and_discard_url(
     let response = await!(loader_proxy.start(&mut url_request))?;
 
     if let Some(e) = response.error {
-        bail!(
-            "UrlLoaderProxy error - code:{} ({})",
-            e.code,
-            e.description.unwrap_or("".into())
-        )
+        bail!("UrlLoaderProxy error - code:{} ({})", e.code, e.description.unwrap_or("".into()))
     }
 
     let mut socket = match response.body.map(|x| *x) {
@@ -331,7 +326,9 @@ async fn fetch_and_discard_url(
 }
 
 async fn get_ip_addrs_for_wlan_iface<'a>(
-    wlan_svc: &'a DeviceServiceProxy, network_svc: &'a StackProxy, wlan_iface_id: u16,
+    wlan_svc: &'a DeviceServiceProxy,
+    network_svc: &'a StackProxy,
+    wlan_iface_id: u16,
 ) -> Result<Vec<netstack::InterfaceAddress>, Error> {
     // temporary implementation for getting the ip addrs for a wlan iface.  A more robust
     // lookup will be designed and implemented in the future (TODO: <bug already filed?>)

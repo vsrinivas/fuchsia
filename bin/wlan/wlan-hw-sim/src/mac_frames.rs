@@ -92,10 +92,7 @@ pub struct SeqControl {
 impl SeqControl {
     #[cfg(test)]
     fn decode(num: u16) -> Self {
-        Self {
-            frag_num: num & 0x0F,
-            seq_num: num >> 4,
-        }
+        Self { frag_num: num & 0x0F, seq_num: num >> 4 }
     }
     fn encode(&self) -> u16 {
         self.frag_num | (self.seq_num << 4)
@@ -142,11 +139,8 @@ impl DataHeader {
         } else {
             None
         };
-        let ht_control = if frame_control.htc_order() {
-            Some(reader.read_u32::<LittleEndian>()?)
-        } else {
-            None
-        };
+        let ht_control =
+            if frame_control.htc_order() { Some(reader.read_u32::<LittleEndian>()?) } else { None };
         Ok(Self {
             frame_control,
             duration,
@@ -181,13 +175,7 @@ impl LlcHeader {
         let mut oui = [0u8; 3];
         reader.read(&mut oui)?;
         let protocol_id = reader.read_u16::<LittleEndian>()?;
-        Ok(Self {
-            dsap,
-            ssap,
-            control,
-            oui,
-            protocol_id,
-        })
+        Ok(Self { dsap, ssap, control, oui, protocol_id })
     }
 }
 // IEEE Std 802.11-2016, 9.3.3.2
@@ -214,20 +202,9 @@ impl MgmtHeader {
         let mut addr3 = [0u8; 6];
         reader.read(&mut addr3)?;
         let seq_control = SeqControl::decode(reader.read_u16::<LittleEndian>()?);
-        let ht_control = if frame_control.htc_order() {
-            Some(reader.read_u32::<LittleEndian>()?)
-        } else {
-            None
-        };
-        Ok(Self {
-            frame_control,
-            duration,
-            addr1,
-            addr2,
-            addr3,
-            seq_control,
-            ht_control,
-        })
+        let ht_control =
+            if frame_control.htc_order() { Some(reader.read_u32::<LittleEndian>()?) } else { None };
+        Ok(Self { frame_control, duration, addr1, addr2, addr3, seq_control, ht_control })
     }
 }
 
@@ -252,11 +229,7 @@ impl AuthenticationFields {
         let auth_algorithm_number = reader.read_u16::<LittleEndian>()?;
         let auth_txn_seq_number = reader.read_u16::<LittleEndian>()?;
         let status_code = reader.read_u16::<LittleEndian>()?;
-        Ok(Self {
-            auth_algorithm_number,
-            auth_txn_seq_number,
-            status_code,
-        })
+        Ok(Self { auth_algorithm_number, auth_txn_seq_number, status_code })
     }
 }
 
@@ -273,11 +246,7 @@ impl AssociationResponseFields {
         let capability_info = CapabilityInfo(reader.read_u16::<LittleEndian>()?);
         let status_code = reader.read_u16::<LittleEndian>()?;
         let association_id = reader.read_u16::<LittleEndian>()?;
-        Ok(Self {
-            capability_info,
-            status_code,
-            association_id,
-        })
+        Ok(Self { capability_info, status_code, association_id })
     }
 }
 
@@ -301,33 +270,36 @@ impl<W: io::Write> MacFrameWriter<W> {
     }
 
     pub fn beacon(
-        mut self, header: &MgmtHeader, beacon: &BeaconFields,
+        mut self,
+        header: &MgmtHeader,
+        beacon: &BeaconFields,
     ) -> io::Result<ElementWriter<W>> {
         self.write_mgmt_header(header, MgmtSubtype::Beacon)?;
         self.w.write_u64::<LittleEndian>(beacon.timestamp)?;
         self.w.write_u16::<LittleEndian>(beacon.beacon_interval)?;
-        self.w
-            .write_u16::<LittleEndian>(beacon.capability_info.0 as u16)?;
+        self.w.write_u16::<LittleEndian>(beacon.capability_info.0 as u16)?;
         Ok(ElementWriter { w: self.w })
     }
 
     pub fn authentication(
-        mut self, header: &MgmtHeader, auth: &AuthenticationFields,
+        mut self,
+        header: &MgmtHeader,
+        auth: &AuthenticationFields,
     ) -> io::Result<ElementWriter<W>> {
         self.write_mgmt_header(header, MgmtSubtype::Authentication)?;
-        self.w
-            .write_u16::<LittleEndian>(auth.auth_algorithm_number)?;
+        self.w.write_u16::<LittleEndian>(auth.auth_algorithm_number)?;
         self.w.write_u16::<LittleEndian>(auth.auth_txn_seq_number)?;
         self.w.write_u16::<LittleEndian>(auth.status_code)?;
         Ok(ElementWriter { w: self.w })
     }
 
     pub fn association_response(
-        mut self, header: &MgmtHeader, assoc: &AssociationResponseFields,
+        mut self,
+        header: &MgmtHeader,
+        assoc: &AssociationResponseFields,
     ) -> io::Result<ElementWriter<W>> {
         self.write_mgmt_header(header, MgmtSubtype::AssociationResponse)?;
-        self.w
-            .write_u16::<LittleEndian>(assoc.capability_info.0 as u16)?;
+        self.w.write_u16::<LittleEndian>(assoc.capability_info.0 as u16)?;
         self.w.write_u16::<LittleEndian>(assoc.status_code)?;
         self.w.write_u16::<LittleEndian>(assoc.association_id)?;
         Ok(ElementWriter { w: self.w })
@@ -343,8 +315,7 @@ impl<W: io::Write> MacFrameWriter<W> {
         self.w.write_all(&header.addr1)?;
         self.w.write_all(&header.addr2)?;
         self.w.write_all(&header.addr3)?;
-        self.w
-            .write_u16::<LittleEndian>(header.seq_control.encode())?;
+        self.w.write_u16::<LittleEndian>(header.seq_control.encode())?;
         if let Some(ht_control) = header.ht_control {
             self.w.write_u32::<LittleEndian>(ht_control)?;
         }
@@ -353,7 +324,10 @@ impl<W: io::Write> MacFrameWriter<W> {
 
     #[cfg(test)]
     pub fn data(
-        mut self, data_header: &DataHeader, llc_header: &LlcHeader, payload: &[u8],
+        mut self,
+        data_header: &DataHeader,
+        llc_header: &LlcHeader,
+        payload: &[u8],
     ) -> io::Result<Self> {
         self.write_data_header(data_header, DataSubtype::Data)?;
         self.write_llc_header(llc_header)?;
@@ -372,8 +346,7 @@ impl<W: io::Write> MacFrameWriter<W> {
         self.w.write_all(&header.addr1)?;
         self.w.write_all(&header.addr2)?;
         self.w.write_all(&header.addr3)?;
-        self.w
-            .write_u16::<LittleEndian>(header.seq_control.encode())?;
+        self.w.write_u16::<LittleEndian>(header.seq_control.encode())?;
         if let Some(addr4) = header.addr4 {
             self.w.write_all(&addr4)?;
         }
@@ -456,10 +429,7 @@ mod tests {
                     addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                     addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
                     addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
-                    seq_control: SeqControl {
-                        frag_num: 5,
-                        seq_num: 0xABC,
-                    },
+                    seq_control: SeqControl { frag_num: 5, seq_num: 0xABC },
                     ht_control: None,
                 },
                 &BeaconFields {
@@ -499,21 +469,12 @@ mod tests {
         ];
         let hdr = MgmtHeader::from_reader(&mut bytes).expect("reading mgmt header");
         assert_eq!(hdr.frame_control.typ(), FrameControlType::Mgmt as u16);
-        assert_eq!(
-            hdr.frame_control.subtype(),
-            MgmtSubtype::Authentication as u16
-        );
+        assert_eq!(hdr.frame_control.subtype(), MgmtSubtype::Authentication as u16);
         assert_eq!(hdr.duration, 0x9876);
         assert_eq!(hdr.addr1, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
         assert_eq!(hdr.addr2, [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]);
         assert_eq!(hdr.addr3, [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12]);
-        assert_eq!(
-            hdr.seq_control,
-            SeqControl {
-                frag_num: 5,
-                seq_num: 0xABC
-            }
-        );
+        assert_eq!(hdr.seq_control, SeqControl { frag_num: 5, seq_num: 0xABC });
         assert_eq!(hdr.ht_control, None);
 
         let body = AuthenticationFields::from_reader(&mut bytes).expect("reading auth fields");
@@ -532,10 +493,7 @@ mod tests {
                     addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                     addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
                     addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
-                    seq_control: SeqControl {
-                        frag_num: 5,
-                        seq_num: 0xABC,
-                    },
+                    seq_control: SeqControl { frag_num: 5, seq_num: 0xABC },
                     ht_control: None,
                 },
                 &AuthenticationFields {
@@ -570,21 +528,12 @@ mod tests {
         ];
         let hdr = MgmtHeader::from_reader(&mut bytes).expect("reading mgmt header");
         assert_eq!(hdr.frame_control.typ(), FrameControlType::Mgmt as u16);
-        assert_eq!(
-            hdr.frame_control.subtype(),
-            MgmtSubtype::AssociationResponse as u16
-        );
+        assert_eq!(hdr.frame_control.subtype(), MgmtSubtype::AssociationResponse as u16);
         assert_eq!(hdr.duration, 0x8765);
         assert_eq!(hdr.addr1, [0x01, 0x02, 0x03, 0x04, 0x05, 0x06]);
         assert_eq!(hdr.addr2, [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C]);
         assert_eq!(hdr.addr3, [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12]);
-        assert_eq!(
-            hdr.seq_control,
-            SeqControl {
-                frag_num: 6,
-                seq_num: 0xDEF
-            }
-        );
+        assert_eq!(hdr.seq_control, SeqControl { frag_num: 6, seq_num: 0xDEF });
         assert_eq!(hdr.ht_control, None);
 
         let body = AssociationResponseFields::from_reader(&mut bytes).expect("reading assoc resp");
@@ -603,10 +552,7 @@ mod tests {
                     addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                     addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
                     addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
-                    seq_control: SeqControl {
-                        frag_num: 6,
-                        seq_num: 0xDEF,
-                    },
+                    seq_control: SeqControl { frag_num: 6, seq_num: 0xDEF },
                     ht_control: None,
                 },
                 &AssociationResponseFields {
@@ -645,14 +591,8 @@ mod tests {
             1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, // payload
         ] as &[u8];
         let data_header = DataHeader::from_reader(&mut bytes).expect("reading data header");
-        assert_eq!(
-            data_header.frame_control.typ(),
-            FrameControlType::Data as u16
-        );
-        assert_eq!(
-            data_header.frame_control.subtype(),
-            DataSubtype::Data as u16
-        );
+        assert_eq!(data_header.frame_control.typ(), FrameControlType::Data as u16);
+        assert_eq!(data_header.frame_control.subtype(), DataSubtype::Data as u16);
         assert_eq!(data_header.addr1, [0x65, 0x74, 0x68, 0x6e, 0x65, 0x74]);
         assert_eq!(data_header.addr2, [0x67, 0x62, 0x6f, 0x6e, 0x69, 0x6b]);
         assert_eq!(data_header.addr3, [0x62, 0x73, 0x73, 0x62, 0x73, 0x73]);
@@ -667,10 +607,7 @@ mod tests {
         let mut payload = vec![];
         let bytes_read = io::Read::read_to_end(&mut bytes, &mut payload).expect("reading payload");
         assert_eq!(bytes_read, 15);
-        assert_eq!(
-            &payload[..],
-            &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]
-        );
+        assert_eq!(&payload[..], &[1u8, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15]);
     }
 
     #[test]
@@ -683,10 +620,7 @@ mod tests {
                     addr1: [0x01, 0x02, 0x03, 0x04, 0x05, 0x06],
                     addr2: [0x07, 0x08, 0x09, 0x0A, 0x0B, 0x0C],
                     addr3: [0x0D, 0x0E, 0x0F, 0x10, 0x11, 0x12],
-                    seq_control: SeqControl {
-                        frag_num: 6,
-                        seq_num: 0xDEF,
-                    },
+                    seq_control: SeqControl { frag_num: 6, seq_num: 0xDEF },
                     addr4: None,
                     qos_control: None,
                     ht_control: None,

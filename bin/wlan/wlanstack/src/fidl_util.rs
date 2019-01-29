@@ -10,6 +10,6 @@ pub fn is_peer_closed(e: &fidl::Error) -> bool {
         | fidl::Error::ServerRequestRead(zx::Status::PEER_CLOSED)
         | fidl::Error::ClientRead(zx::Status::PEER_CLOSED)
         | fidl::Error::ClientWrite(zx::Status::PEER_CLOSED) => true,
-        _ => false
+        _ => false,
     }
 }

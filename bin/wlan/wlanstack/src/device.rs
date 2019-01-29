@@ -15,20 +15,17 @@ use {
         stream::{FuturesUnordered, Stream, StreamExt, TryStreamExt},
     },
     log::{error, info},
-    std::{
-        marker::Unpin,
-        sync::Arc,
-    },
+    std::{marker::Unpin, sync::Arc},
     wlan_sme::{self, clone_utils},
 };
 
 use crate::{
     device_watch::{self, NewIfaceDevice},
     mlme_query_proxy::MlmeQueryProxy,
-    Never,
     station,
     stats_scheduler::{self, StatsScheduler},
     watchable_map::WatchableMap,
+    Never,
 };
 
 pub struct PhyDevice {
@@ -81,10 +78,7 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
     info!("new phy #{}: {}", new_phy.id, new_phy.device.path().to_string_lossy());
     let id = new_phy.id;
     let event_stream = new_phy.proxy.take_event_stream();
-    phys.insert(id, PhyDevice {
-        proxy: new_phy.proxy,
-        device: new_phy.device,
-    });
+    phys.insert(id, PhyDevice { proxy: new_phy.proxy, device: new_phy.device });
     let r = await!(event_stream.map_ok(|_| ()).try_collect::<()>());
     phys.remove(&id);
     if let Err(e) = r {
@@ -93,7 +87,10 @@ async fn serve_phy(phys: &PhyMap, new_phy: device_watch::NewPhyDevice) {
     info!("phy removed: #{}", id);
 }
 
-pub async fn serve_ifaces(ifaces: Arc<IfaceMap>, cobalt_sender: CobaltSender) -> Result<Never, Error> {
+pub async fn serve_ifaces(
+    ifaces: Arc<IfaceMap>,
+    cobalt_sender: CobaltSender,
+) -> Result<Never, Error> {
     let mut new_ifaces = device_watch::watch_iface_devices()?;
     let mut active_ifaces = FuturesUnordered::new();
     loop {
@@ -111,7 +108,11 @@ pub async fn serve_ifaces(ifaces: Arc<IfaceMap>, cobalt_sender: CobaltSender) ->
     }
 }
 
-async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cobalt_sender: CobaltSender) {
+async fn query_and_serve_iface(
+    new_iface: NewIfaceDevice,
+    ifaces: &IfaceMap,
+    cobalt_sender: CobaltSender,
+) {
     let NewIfaceDevice { id, device, proxy } = new_iface;
     let event_stream = proxy.take_event_stream();
     let (stats_sched, stats_reqs) = stats_scheduler::create_scheduler();
@@ -127,22 +128,20 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cob
     let (sme, sme_fut) = match result {
         Ok(x) => x,
         Err(e) => {
-            error!("Failed to create SME for new iface '{}': {}",
-                   device.path().display(), e);
+            error!("Failed to create SME for new iface '{}': {}", device.path().display(), e);
             return;
         }
     };
 
-    info!("new iface #{} with role '{:?}': {}",
-          id, device_info.role, device.path().to_string_lossy());
+    info!(
+        "new iface #{} with role '{:?}': {}",
+        id,
+        device_info.role,
+        device.path().to_string_lossy()
+    );
     let mlme_query = MlmeQueryProxy::new(proxy);
-    ifaces.insert(id, IfaceDevice {
-        sme_server: sme,
-        stats_sched,
-        device,
-        mlme_query,
-        device_info,
-    });
+    ifaces
+        .insert(id, IfaceDevice { sme_server: sme, stats_sched, device, mlme_query, device_info });
 
     let r = await!(sme_fut);
     if let Err(e) = r {
@@ -152,38 +151,45 @@ async fn query_and_serve_iface(new_iface: NewIfaceDevice, ifaces: &IfaceMap, cob
     info!("iface removed: {}", id);
 }
 
-fn create_sme<S>(proxy: fidl_mlme::MlmeProxy,
-                 event_stream: fidl_mlme::MlmeEventStream,
-                 device_info: &DeviceInfo,
-                 stats_requests: S,
-                 cobalt_sender: CobaltSender)
-    -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
-    where S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static
+fn create_sme<S>(
+    proxy: fidl_mlme::MlmeProxy,
+    event_stream: fidl_mlme::MlmeEventStream,
+    device_info: &DeviceInfo,
+    stats_requests: S,
+    cobalt_sender: CobaltSender,
+) -> Result<(SmeServer, impl Future<Output = Result<(), Error>>), Error>
+where
+    S: Stream<Item = stats_scheduler::StatsRequest> + Send + Unpin + 'static,
 {
     let role = device_info.role;
-    let device_info =
-        wlan_sme::DeviceInfo {
-            addr: device_info.mac_addr,
-            bands: clone_utils::clone_bands(&device_info.bands),
-        };
+    let device_info = wlan_sme::DeviceInfo {
+        addr: device_info.mac_addr,
+        bands: clone_utils::clone_bands(&device_info.bands),
+    };
 
     match role {
         fidl_mlme::MacRole::Client => {
             let (sender, receiver) = mpsc::unbounded();
             let fut = station::client::serve(
-                proxy, device_info, event_stream, receiver, stats_requests, cobalt_sender);
+                proxy,
+                device_info,
+                event_stream,
+                receiver,
+                stats_requests,
+                cobalt_sender,
+            );
             Ok((SmeServer::Client(sender), FutureObj::new(Box::new(fut))))
-        },
+        }
         fidl_mlme::MacRole::Ap => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = station::ap::serve(
-                proxy, device_info, event_stream, receiver, stats_requests);
+            let fut =
+                station::ap::serve(proxy, device_info, event_stream, receiver, stats_requests);
             Ok((SmeServer::Ap(sender), FutureObj::new(Box::new(fut))))
-        },
+        }
         fidl_mlme::MacRole::Mesh => {
             let (sender, receiver) = mpsc::unbounded();
-            let fut = station::mesh::serve(
-                proxy, device_info, event_stream, receiver, stats_requests);
+            let fut =
+                station::mesh::serve(proxy, device_info, event_stream, receiver, stats_requests);
             Ok((SmeServer::Mesh(sender), FutureObj::new(Box::new(fut))))
         }
     }

@@ -3,8 +3,15 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/wlanphy", "class/wlanif" ],
-        "services": [ "fuchsia.cobalt.LoggerFactory" ],
-        "system": [ "data/wlanstack2" ]
+        "dev": [
+            "class/wlanphy",
+            "class/wlanif"
+        ],
+        "services": [
+            "fuchsia.cobalt.LoggerFactory"
+        ],
+        "system": [
+            "data/wlanstack2"
+        ]
     }
 }

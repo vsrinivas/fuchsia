@@ -4,24 +4,24 @@
 
 use futures::ready;
 use futures::stream::{Fuse, Stream, StreamExt};
-use futures::task::{Poll, LocalWaker};
+use futures::task::{LocalWaker, Poll};
 use pin_utils::{unsafe_pinned, unsafe_unpinned};
 use std::marker::Unpin;
 use std::pin::Pin;
 
-pub struct GroupAvailable<S, T, E> where S: Stream<Item = Result<T, E>> {
+pub struct GroupAvailable<S, T, E>
+where
+    S: Stream<Item = Result<T, E>>,
+{
     stream: Fuse<S>,
     error: Option<E>,
 }
 
-impl<S, T, E> Unpin for GroupAvailable<S, T, E>
-where
-    S: Unpin + Stream<Item = Result<T, E>>
-{}
+impl<S, T, E> Unpin for GroupAvailable<S, T, E> where S: Unpin + Stream<Item = Result<T, E>> {}
 
 impl<S, T, E> GroupAvailable<S, T, E>
 where
-    S: Unpin + Stream<Item = Result<T, E>>
+    S: Unpin + Stream<Item = Result<T, E>>,
 {
     // Safety: projecting to `Fuse<S>` is safe because GroupAvailable is `!Unpin`
     // when `S` is `!Unpin`, and `GroupAvailable` doesn't move out of `stream`.
@@ -32,14 +32,11 @@ where
 
 impl<S, T, E> Stream for GroupAvailable<S, T, E>
 where
-    S: Unpin + Stream<Item = Result<T, E>>
+    S: Unpin + Stream<Item = Result<T, E>>,
 {
     type Item = Result<Vec<T>, E>;
 
-    fn poll_next(
-        mut self: Pin<&mut Self>,
-        lw: &LocalWaker,
-    ) -> Poll<Option<Self::Item>> {
+    fn poll_next(mut self: Pin<&mut Self>, lw: &LocalWaker) -> Poll<Option<Self::Item>> {
         if let Some(e) = self.as_mut().error().take() {
             return Poll::Ready(Some(Err(e)));
         }
@@ -71,10 +68,7 @@ pub trait GroupAvailableExt: Stream {
         Self: Stream<Item = Result<T, E>>,
         Self: Sized,
     {
-        GroupAvailable {
-            stream: self.fuse(),
-            error: None
-        }
+        GroupAvailable { stream: self.fuse(), error: None }
     }
 }
 
@@ -93,9 +87,11 @@ mod tests {
     #[test]
     fn empty() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
-        let (item, _) = exec.run_singlethreaded(
-            stream::empty::<Result<(), Never>>().group_available().try_into_future())
-                .unwrap_or_else(Never::into_any);
+        let (item, _) = exec
+            .run_singlethreaded(
+                stream::empty::<Result<(), Never>>().group_available().try_into_future(),
+            )
+            .unwrap_or_else(Never::into_any);
         assert!(item.is_none());
     }
 
@@ -129,10 +125,8 @@ mod tests {
     fn buffer_error() {
         let mut exec = fasync::Executor::new().expect("Failed to create an executor");
 
-        let mut s = stream::iter(vec![Ok(10i32), Ok(20i32), Err(-30i32)])
-            .group_available();
-        let item = exec.run_singlethreaded(s.try_next())
-            .expect("expected a successful value");
+        let mut s = stream::iter(vec![Ok(10i32), Ok(20i32), Err(-30i32)]).group_available();
+        let item = exec.run_singlethreaded(s.try_next()).expect("expected a successful value");
         assert_eq!(Some(vec![10i32, 20i32]), item);
 
         let res = exec.run_singlethreaded(s.try_next());

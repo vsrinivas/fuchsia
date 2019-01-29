@@ -3,15 +3,15 @@
 // found in the LICENSE file.
 
 use failure::format_err;
-use fidl_fuchsia_wlan_mlme as fidl_mlme;
 use fidl_fuchsia_wlan_device as fidl_wlan_dev;
+use fidl_fuchsia_wlan_mlme as fidl_mlme;
+use fuchsia_vfs_watcher::{WatchEvent, Watcher};
 use fuchsia_wlan_dev as wlan_dev;
-use fuchsia_vfs_watcher::{Watcher, WatchEvent};
 use fuchsia_zircon::Status as zx_Status;
 use futures::prelude::*;
 use log::{error, info};
-use std::io;
 use std::fs::File;
+use std::io;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 
@@ -30,20 +30,14 @@ pub struct NewIfaceDevice {
     pub device: wlan_dev::Device,
 }
 
-pub fn watch_phy_devices()
-    -> io::Result<impl Stream<Item = io::Result<NewPhyDevice>>>
-{
+pub fn watch_phy_devices() -> io::Result<impl Stream<Item = io::Result<NewPhyDevice>>> {
     Ok(watch_new_devices(PHY_PATH)?
         .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_phy(&path))))))
 }
 
-pub fn watch_iface_devices()
-    -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>>
-{
+pub fn watch_iface_devices() -> io::Result<impl Stream<Item = io::Result<NewIfaceDevice>>> {
     Ok(watch_new_devices(IFACE_PATH)?
-        .try_filter_map(|path| {
-            future::ready(Ok(handle_open_error(&path, new_iface(&path))))
-        }))
+        .try_filter_map(|path| future::ready(Ok(handle_open_error(&path, new_iface(&path))))))
 }
 
 fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<T> {
@@ -57,15 +51,15 @@ fn handle_open_error<T>(path: &PathBuf, r: Result<T, failure::Error>) -> Option<
     r.ok()
 }
 
-fn watch_new_devices<P: AsRef<Path>>(path: P)
-    -> io::Result<impl Stream<Item = io::Result<PathBuf>>>
-{
+fn watch_new_devices<P: AsRef<Path>>(
+    path: P,
+) -> io::Result<impl Stream<Item = io::Result<PathBuf>>> {
     let dir = File::open(&path)?;
     let watcher = Watcher::new(&dir)?;
     Ok(watcher.try_filter_map(move |msg| {
         future::ready(Ok(match msg.event {
             WatchEvent::EXISTING | WatchEvent::ADD_FILE => Some(path.as_ref().join(msg.filename)),
-            _ => None
+            _ => None,
         }))
     }))
 }
@@ -74,23 +68,22 @@ fn new_phy(path: &PathBuf) -> Result<NewPhyDevice, failure::Error> {
     let id = id_from_path(path)?;
     let device = wlan_dev::Device::new(path)?;
     let proxy = wlan_dev::connect_wlan_phy(&device)?;
-    Ok(NewPhyDevice{ id, proxy, device })
+    Ok(NewPhyDevice { id, proxy, device })
 }
 
 fn new_iface(path: &PathBuf) -> Result<NewIfaceDevice, failure::Error> {
     let id = id_from_path(path)?;
     let device = wlan_dev::Device::new(path)?;
     let proxy = fidl_mlme::MlmeProxy::new(wlan_dev::connect_wlan_iface(&device)?);
-    Ok(NewIfaceDevice{ id, proxy, device })
+    Ok(NewIfaceDevice { id, proxy, device })
 }
 
 fn id_from_path(path: &PathBuf) -> Result<u16, failure::Error> {
-    let file_name = path.file_name().ok_or_else(
-        || format_err!("Invalid device path"))?;
-    let file_name_str = file_name.to_str().ok_or_else(
-        || format_err!("Filename is not valid UTF-8"))?;
-    let id = u16::from_str(&file_name_str).map_err(
-        |e| format_err!("Failed to parse device filename as a numeric ID: {}", e))?;
+    let file_name = path.file_name().ok_or_else(|| format_err!("Invalid device path"))?;
+    let file_name_str =
+        file_name.to_str().ok_or_else(|| format_err!("Filename is not valid UTF-8"))?;
+    let id = u16::from_str(&file_name_str)
+        .map_err(|e| format_err!("Failed to parse device filename as a numeric ID: {}", e))?;
     Ok(id)
 }
 
@@ -110,16 +103,21 @@ mod tests {
         let mut new_phy_stream = watch_phy_devices().expect("watch_phy_devices() failed");
         let wlantap = wlantap_client::Wlantap::open().expect("Failed to connect to wlantapctl");
         let _tap_phy = wlantap.create_phy(create_wlantap_config(*b"wtchph"));
-        for _ in 0..10 { // 5 is more than enough even for Toulouse but let's be generous
-            let new_phy = exec.run_singlethreaded(
-                new_phy_stream.next().on_timeout(2.seconds().after_now(),
-                                                 || panic!("No more phys"))
-            )
+        for _ in 0..10 {
+            // 5 is more than enough even for Toulouse but let's be generous
+            let new_phy = exec
+                .run_singlethreaded(
+                    new_phy_stream
+                        .next()
+                        .on_timeout(2.seconds().after_now(), || panic!("No more phys")),
+                )
                 .expect("new_phy_stream ended without yielding a phy")
                 .expect("new_phy_stream returned an error");
-            let query_resp = exec.run_singlethreaded(new_phy.proxy.query())
-                .expect("phy query failed");
-            if b"wtchph" == &query_resp.info.hw_mac_address { return; }
+            let query_resp =
+                exec.run_singlethreaded(new_phy.proxy.query()).expect("phy query failed");
+            if b"wtchph" == &query_resp.info.hw_mac_address {
+                return;
+            }
         }
         panic!("Did not get the phy we are looking for");
     }
@@ -131,12 +129,15 @@ mod tests {
                 dev_path: None,
                 hw_mac_address: mac_addr,
                 supported_phys: vec![
-                    SupportedPhy::Dsss, SupportedPhy::Cck, SupportedPhy::Ofdm, SupportedPhy::Ht
+                    SupportedPhy::Dsss,
+                    SupportedPhy::Cck,
+                    SupportedPhy::Ofdm,
+                    SupportedPhy::Ht,
                 ],
                 driver_features: vec![],
                 mac_roles: vec![fidl_wlan_dev::MacRole::Client],
                 caps: vec![],
-                bands: vec![create_2_4_ghz_band_info()]
+                bands: vec![create_2_4_ghz_band_info()],
             },
             name: String::from("devwatchtap"),
             quiet: false,
@@ -144,7 +145,7 @@ mod tests {
     }
 
     fn create_2_4_ghz_band_info() -> fidl_wlan_dev::BandInfo {
-        fidl_wlan_dev::BandInfo{
+        fidl_wlan_dev::BandInfo {
             band_id: fidl_common::Band::WlanBand2Ghz,
             ht_caps: Some(Box::new(fidl_mlme::HtCapabilities {
                 ht_cap_info: fidl_mlme::HtCapabilityInfo {
@@ -210,15 +211,14 @@ mod tests {
                     antenna_idx_feedback: false,
                     rx_asel: false,
                     tx_sounding_ppdu: false,
-                }
-
+                },
             })),
             vht_caps: None,
             basic_rates: vec![2, 4, 11, 22, 12, 18, 24, 36, 48, 72, 96, 108],
             supported_channels: fidl_wlan_dev::ChannelList {
                 base_freq: 2407,
-                channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14]
-            }
+                channels: vec![1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14],
+            },
         }
     }
 }

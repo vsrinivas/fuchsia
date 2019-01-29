@@ -5,34 +5,42 @@
 use failure::bail;
 use fidl_fuchsia_wlan_mlme::{MlmeEventStream, MlmeProxy};
 use fidl_fuchsia_wlan_sme as fidl_sme;
-use futures::{select, Stream};
 use futures::channel::mpsc;
 use futures::prelude::*;
 use futures::stream::FuturesUnordered;
+use futures::{select, Stream};
 use log::error;
 use pin_utils::pin_mut;
 use std::marker::Unpin;
 use std::sync::{Arc, Mutex};
 use wlan_sme::{ap as ap_sme, DeviceInfo};
 
-use crate::Never;
 use crate::stats_scheduler::StatsRequest;
+use crate::Never;
 
 pub type Endpoint = fidl::endpoints::ServerEnd<fidl_sme::ApSmeMarker>;
 type Sme = ap_sme::ApSme;
 
-pub async fn serve<S>(proxy: MlmeProxy,
-                      device_info: DeviceInfo,
-                      event_stream: MlmeEventStream,
-                      new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
-                      stats_requests: S)
-    -> Result<(), failure::Error>
-    where S: Stream<Item = StatsRequest> + Send + Unpin
+pub async fn serve<S>(
+    proxy: MlmeProxy,
+    device_info: DeviceInfo,
+    event_stream: MlmeEventStream,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+    stats_requests: S,
+) -> Result<(), failure::Error>
+where
+    S: Stream<Item = StatsRequest> + Send + Unpin,
 {
     let (sme, mlme_stream, time_stream) = Sme::new(device_info);
     let sme = Arc::new(Mutex::new(sme));
     let mlme_sme = super::serve_mlme_sme(
-        proxy, event_stream, Arc::clone(&sme), mlme_stream, stats_requests, time_stream);
+        proxy,
+        event_stream,
+        Arc::clone(&sme),
+        mlme_stream,
+        stats_requests,
+        time_stream,
+    );
     let sme_fidl = serve_fidl(&sme, new_fidl_clients);
     pin_mut!(mlme_sme);
     pin_mut!(sme_fidl);
@@ -43,10 +51,10 @@ pub async fn serve<S>(proxy: MlmeProxy,
     Ok(())
 }
 
-async fn serve_fidl(sme: &Mutex<Sme>,
-                    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>)
-    -> Result<Never, failure::Error>
-{
+async fn serve_fidl(
+    sme: &Mutex<Sme>,
+    new_fidl_clients: mpsc::UnboundedReceiver<Endpoint>,
+) -> Result<Never, failure::Error> {
     let mut new_fidl_clients = new_fidl_clients.fuse();
     let mut fidl_clients = FuturesUnordered::new();
     loop {
@@ -77,14 +85,15 @@ async fn serve_fidl_endpoint(sme: &Mutex<Sme>, endpoint: Endpoint) {
     }
 }
 
-async fn handle_fidl_request(sme: &Mutex<Sme>, request: fidl_sme::ApSmeRequest)
-    -> Result<(), ::fidl::Error>
-{
+async fn handle_fidl_request(
+    sme: &Mutex<Sme>,
+    request: fidl_sme::ApSmeRequest,
+) -> Result<(), ::fidl::Error> {
     match request {
         fidl_sme::ApSmeRequest::Start { config, responder } => {
             let r = await!(start(sme, config));
             responder.send(r)?;
-        },
+        }
         fidl_sme::ApSmeRequest::Stop { responder } => {
             await!(stop(sme));
             responder.send()?;
@@ -94,11 +103,8 @@ async fn handle_fidl_request(sme: &Mutex<Sme>, request: fidl_sme::ApSmeRequest)
 }
 
 async fn start(sme: &Mutex<Sme>, config: fidl_sme::ApConfig) -> fidl_sme::StartApResultCode {
-    let sme_config = ap_sme::Config {
-        ssid: config.ssid,
-        password: config.password,
-        channel: config.channel,
-    };
+    let sme_config =
+        ap_sme::Config { ssid: config.ssid, password: config.password, channel: config.channel };
 
     let receiver = sme.lock().unwrap().on_start_command(sme_config);
     let r = await!(receiver).unwrap_or_else(|_| {
@@ -115,8 +121,9 @@ fn convert_start_result_code(r: ap_sme::StartResult) -> fidl_sme::StartApResultC
         ap_sme::StartResult::InternalError => fidl_sme::StartApResultCode::InternalError,
         ap_sme::StartResult::Canceled => fidl_sme::StartApResultCode::Canceled,
         ap_sme::StartResult::TimedOut => fidl_sme::StartApResultCode::TimedOut,
-        ap_sme::StartResult::PreviousStartInProgress =>
-            fidl_sme::StartApResultCode::PreviousStartInProgress,
+        ap_sme::StartResult::PreviousStartInProgress => {
+            fidl_sme::StartApResultCode::PreviousStartInProgress
+        }
         ap_sme::StartResult::InvalidArguments => fidl_sme::StartApResultCode::InvalidArguments,
         ap_sme::StartResult::DfsUnsupported => fidl_sme::StartApResultCode::DfsUnsupported,
     }

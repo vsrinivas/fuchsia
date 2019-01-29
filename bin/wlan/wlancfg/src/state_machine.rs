@@ -34,12 +34,16 @@ impl<E> Future for StateMachine<E> {
 
 pub trait IntoStateExt<E>: Future<Output = Result<State<E>, E>> {
     fn into_state(self) -> State<E>
-    where Self: Sized + Send + 'static {
+    where
+        Self: Sized + Send + 'static,
+    {
         State(FutureObj::new(Box::new(self)))
     }
 
     fn into_state_machine(self) -> StateMachine<E>
-    where Self: Sized + Send + 'static {
+    where
+        Self: Sized + Send + 'static,
+    {
         StateMachine { cur_state: self.into_state() }
     }
 }
@@ -71,7 +75,8 @@ mod tests {
     }
 
     async fn sum_state(
-        current: u32, stream: mpsc::UnboundedReceiver<u32>,
+        current: u32,
+        stream: mpsc::UnboundedReceiver<u32>,
     ) -> Result<State<u32>, u32> {
         let (number, stream) = await!(stream.into_future());
         match number {
