@@ -6,26 +6,13 @@ library fuchsia.camera;
 
 using fuchsia.sysmem;
 
-// For the bitfield of CameraControlType:
-// These are different modes in which an application can request a stream.
-// Default value: no stream.
-const uint32 CAMERA_CTRL_NONE = 0x0;
-// Normal video or image stream:
-const uint32 CAMERA_CTRL_OUTPUT_STREAM = 0x1;
-// Attach to another running stream, using whatever settings that stream
-// is configure with.
-const uint32 CAMERA_CTRL_SNOOP_STREAM = 0x2;
-// Just enable the ability to set configuration parameters for the camera.
-const uint32 CAMERA_CTRL_CONFIGURATION = 0x4;
-// Some devices accept data back.  Configure a Stream going back to the camera.
-const uint32 CAMERA_CTRL_INPUT_STREAM = 0x8;
-
-//  Indicates what 'permissions' you are requesting for the Stream.
-struct CameraAccessRequest {
+// A stream that the camera manager can provide.  Video streams reference a
+// a camera, but may have additional hardware and bandwidth restrictions
+// from and ISP or other processing units.
+struct VideoStream {
     // The camera_id corresponds to the camera_id that is given in the DeviceInfo
     // received from GetDevices.
     uint64 camera_id;
-    uint32 control; // CameraControlType
     // The requested video format.  Note that this is field is necessary to
     // set The frame rate, even when calling CreateStream.
     // When calling CreateStream, format.format should match buffer_info.format.
@@ -45,20 +32,14 @@ interface Manager {
     GetDevices() -> (vector<DeviceInfo> descriptions);
 
     // Get all the available formats for a camera.
-    // TODO(CAM-17): Add pagination to support cameras with over 16 formats.
     // |camera_id| is obtained from a DeviceInfo returned by GetDevices.
-    GetFormats(uint64 camera_id) -> (vector<VideoFormat> formats);
+    2: GetFormats(uint64 camera_id, uint32 index)
+           -> (vector<VideoFormat> formats, uint32 total_format_count);
 
     // Create a Stream with the specified access rights.  This may not succeed.
     // If it does succeed, the Stream will have the rights indicated.
     // |buffer_info| contains a set of buffers to be used with the Stream.
-    CreateStream(CameraAccessRequest request,
-                 fuchsia.sysmem.BufferCollectionInfo buffer_info,
-                 request<Stream> stream);
-
-    // Get a camera stream, and have the camera manager allocate the buffers,
-    // assuming no special memory requirements.
-    GetStreamAndBufferCollection(CameraAccessRequest request,
-                                 request<Stream> stream)
-        -> (fuchsia.sysmem.BufferCollectionInfo buffer_info);
+    3: CreateStream(VideoStream request,
+                    fuchsia.sysmem.BufferCollectionInfo buffer_info,
+                    request<Stream> stream, handle<eventpair> client_token);
 };

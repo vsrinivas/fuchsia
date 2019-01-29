@@ -110,26 +110,36 @@ void CameraManagerImpl::GetDevices(GetDevicesCallback callback) {
   callback(std::move(device_descriptions));
 }
 
-void CameraManagerImpl::GetFormats(uint64_t camera_id,
+void CameraManagerImpl::GetFormats(uint64_t camera_id, uint32_t index,
                                    GetFormatsCallback callback) {
-  fidl::VectorPtr<fuchsia::camera::VideoFormat> formats;
+  const std::vector<fuchsia::camera::VideoFormat>* formats;
   for (auto& device : active_devices_) {
     if (device->id() == camera_id) {
       formats = device->GetFormats();
       break;
     }
   }
-  callback(std::move(formats));
+
+  size_t min_index = std::min((size_t)index, formats->size() - 1);
+  size_t max_index =
+      std::min(min_index + fuchsia::camera::MAX_FORMATS_PER_RESPONSE - 1,
+               formats->size() - 1) +
+      1;
+
+  callback(std::vector<fuchsia::camera::VideoFormat>(&(*formats)[min_index],
+                                                     &(*formats)[max_index]),
+           formats->size());
 }
 
 void CameraManagerImpl::CreateStream(
-    fuchsia::camera::CameraAccessRequest request,
+    fuchsia::camera::VideoStream request,
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    zx::eventpair client_token) {
   for (auto& device : active_devices_) {
     if (device->id() == request.camera_id) {
       device->CreateStream(std::move(buffer_collection), request.format.rate,
-                           std::move(stream));
+                           std::move(stream), std::move(client_token));
       break;
     }
   }

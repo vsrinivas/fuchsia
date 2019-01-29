@@ -90,7 +90,14 @@ void VideoDeviceClient::Startup(StartupCallback callback) {
 void VideoDeviceClient::CreateStream(
     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
     fuchsia::camera::FrameRate frame_rate,
-    fidl::InterfaceRequest<fuchsia::camera::Stream> stream) {
+    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+    zx::eventpair client_token) {
+  /*
+    NOTE: Why do we want to do this in the first place?
+    Why don't we let the driver police its own streams instead of doing double
+    bookeeping?
+  */
+
   // Limit the number of stream connections to a camera by only allowing
   // one connection per available output stream.  This doesn't support
   // multiple applications connecting to the same stream, or having multiple
@@ -120,12 +127,12 @@ void VideoDeviceClient::CreateStream(
   // from active_streams_.
   active_streams_.push_back(std::move(video_stream));
   camera_control_->CreateStream(std::move(buffer_collection), frame_rate,
-                                std::move(stream), std::move(driver_token));
+                                std::move(stream), std::move(client_token));
 }
 
-fidl::VectorPtr<fuchsia::camera::VideoFormat> VideoDeviceClient::GetFormats()
+const std::vector<fuchsia::camera::VideoFormat>* VideoDeviceClient::GetFormats()
     const {
-  return fidl::VectorPtr<fuchsia::camera::VideoFormat>(formats_);
+  return &formats_;
 }
 
 // static
@@ -152,12 +159,15 @@ VideoDeviceClient::VideoStream::Create(VideoDeviceClient* owner,
   stream->stream_token_waiter_ = std::make_unique<async::Wait>(
       stream->stream_token_.get(), ZX_EVENTPAIR_PEER_CLOSED,
       std::bind([owner, stream_ptr = stream.get()]() {
+        FXL_LOG(INFO)
+            << "ZX_EVENTPAIR_PEER_CLOSED received, removing active stream.";
         owner->RemoveActiveStream(stream_ptr);
       }));
 
   status = stream->stream_token_waiter_->Begin(async_get_default_dispatcher());
   if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't begin wait. status: " << status;
+    FXL_LOG(ERROR) << "Couldn't begin stream_token_waiter_ wait. status: "
+                   << status;
     return nullptr;
   }
 

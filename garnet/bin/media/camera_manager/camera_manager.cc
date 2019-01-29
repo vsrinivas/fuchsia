@@ -7,6 +7,7 @@
 #include <lib/async-loop/cpp/loop.h>
 
 int main(int argc, const char** argv) {
+  FXL_LOG(INFO) << "Camera Manager Starting";
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
   camera::CameraManagerImpl app(&loop);
   loop.Run();

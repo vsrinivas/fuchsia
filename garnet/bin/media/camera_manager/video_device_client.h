@@ -43,7 +43,7 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   uint64_t id() const { return device_info_.camera_id; }
 
   // Get the formats that this device supports.  This is a local call.
-  fidl::VectorPtr<fuchsia::camera::VideoFormat> GetFormats() const;
+  const std::vector<fuchsia::camera::VideoFormat> *GetFormats() const;
 
   // Attempt to establish a stream interface to the device.
   // If a connection is not possible, |stream| will not be connected,
@@ -51,7 +51,8 @@ class VideoDeviceClient : public fbl::RefCounted<VideoDeviceClient> {
   // handle will be deleted.
   void CreateStream(fuchsia::sysmem::BufferCollectionInfo buffer_collection,
                     fuchsia::camera::FrameRate frame_rate,
-                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
+                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                    zx::eventpair client_token);
 
  private:
   VideoDeviceClient() = default;

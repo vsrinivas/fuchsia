@@ -18,11 +18,28 @@ class Client {
 
   fuchsia::camera::ControlSyncPtr& camera();
 
+  fuchsia::camera::ManagerSyncPtr& manager();
+
   zx_status_t Open(int dev_id);
+
+  // use camera manager - open connections, request device info
+  zx_status_t StartManager();
+
+  // use camera driver - open connections, request device info
+  zx_status_t StartDriver();
+
+  zx_status_t LoadVideoFormats(
+      std::function<zx_status_t(
+          uint32_t index, std::vector<fuchsia::camera::VideoFormat>* formats,
+          uint32_t* total_format_count)>
+          get_formats);
+
+  std::vector<fuchsia::camera::VideoFormat> formats_;
 
  private:
   fuchsia::camera::ControlSyncPtr camera_control_;
   std::unique_ptr<component::StartupContext> context_;
+  fuchsia::camera::ManagerSyncPtr manager_;
 };
 
 }  // namespace camera

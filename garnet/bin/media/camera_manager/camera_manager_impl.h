@@ -43,21 +43,15 @@ class CameraManagerImpl : public fuchsia::camera::Manager {
 
   // Get all the available formats for a camera.
   // TODO(CAM-17): Add pagination to support cameras with over 16 formats.
-  void GetFormats(uint64_t camera_id, GetFormatsCallback callback);
+  void GetFormats(uint64_t camera_id, uint32_t index,
+                  GetFormatsCallback callback);
 
   // Establish a camera stream connection, which allows camera image data
   // to be passed over a set of buffers.
-  void CreateStream(fuchsia::camera::CameraAccessRequest request,
+  void CreateStream(fuchsia::camera::VideoStream request,
                     fuchsia::sysmem::BufferCollectionInfo buffer_collection,
-                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream);
-
-  // Get a camera stream, and have the camera manager allocate the buffers,
-  // assuming no special memory requirements.
-  // TODO(CAM-16): Fill out this function, or delete it from the interface.
-  void GetStreamAndBufferCollection(
-      fuchsia::camera::CameraAccessRequest request,
-      fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
-      GetStreamAndBufferCollectionCallback callback) {}
+                    fidl::InterfaceRequest<fuchsia::camera::Stream> stream,
+                    zx::eventpair client_token);
 
  private:
   // Called when a device is enumerated, or when this class starts, and

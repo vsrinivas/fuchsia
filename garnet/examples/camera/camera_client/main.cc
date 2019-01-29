@@ -2,6 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <iostream>
+
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/default.h>
 #include <lib/fxl/logging.h>
@@ -36,40 +38,18 @@ zx_status_t Gralloc(fuchsia::camera::VideoFormat format, uint32_t num_buffers,
   return ZX_OK;
 }
 
-zx_status_t run_camera() {
+zx_status_t run_camera(bool use_camera_manager) {
+  printf("Connecting to camera using %s\n",
+         use_camera_manager ? "camera manager" : "camera driver");
+
   async::Loop loop(&kAsyncLoopConfigAttachToThread);
 
   camera::Client client;
-  zx_status_t status = client.Open(0);
-  if (status != ZX_OK) {
-    FXL_LOG(ERROR) << "Couldn't open camera client (status " << status << ")";
-    return status;
-  }
 
-  std::vector<VideoFormat> formats;
-  zx_status_t driver_status;
-  uint32_t total_format_count;
-  uint32_t format_index = 0;
-  do {
-    std::vector<VideoFormat> call_formats;
-    status = client.camera()->GetFormats(format_index, &formats,
-                                         &total_format_count, &driver_status);
-    if (status != ZX_OK) {
-      FXL_LOG(ERROR) << "Couldn't get camera formats (status " << status << ")";
-      return status;
-    }
-
-    for (auto&& f : call_formats) {
-      formats.push_back(f);
-    }
-    format_index += call_formats.size();
-  } while (formats.size() < total_format_count);
-
-  printf("Available formats: %d\n", (int)formats.size());
-  for (int i = 0; i < (int)formats.size(); i++) {
-    printf("format[%d] - width: %d, height: %d, stride: %u\n", i,
-           formats[i].format.width, formats[i].format.height,
-           static_cast<uint32_t>(formats[i].format.planes[0].bytes_per_row));
+  if (use_camera_manager) {
+    client.StartManager();
+  } else {
+    client.StartDriver();
   }
 
   int frame_counter = 0;
@@ -77,7 +57,8 @@ zx_status_t run_camera() {
 
   static constexpr uint16_t kNumberOfBuffers = 8;
   fuchsia::sysmem::BufferCollectionInfo buffer_collection;
-  status = Gralloc(formats[0], kNumberOfBuffers, &buffer_collection);
+  zx_status_t status =
+      Gralloc(client.formats_[0], kNumberOfBuffers, &buffer_collection);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't allocate buffers (status " << status;
     return status;
@@ -93,30 +74,41 @@ zx_status_t run_camera() {
     FXL_LOG(ERROR) << "Couldn't create driver token. status: " << status;
     return status;
   }
-  status = client.camera()->CreateStream(std::move(buffer_collection),
-                                         formats[0].rate, stream.NewRequest(),
-                                         std::move(driver_token));
+
+  if (use_camera_manager) {
+    VideoStream request = {.camera_id = 0, .format = client.formats_[0]};
+
+    status = client.manager()->CreateStream(
+        request, std::move(buffer_collection), stream.NewRequest(),
+        std::move(driver_token));
+  } else {
+    status = client.camera()->CreateStream(
+        std::move(buffer_collection), client.formats_[0].rate,
+        stream.NewRequest(), std::move(driver_token));
+  }
+
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Couldn't set camera format. status: " << status;
     return status;
   }
 
-  stream.events().OnFrameAvailable =
-      [&stream, &loop, &frame_counter](FrameAvailableEvent frame) {
-        printf("Received FrameNotify Event %d at index: %u\n", frame_counter,
-               frame.buffer_id);
+  stream.events().OnFrameAvailable = [&stream, &loop, &frame_counter](
+                                         FrameAvailableEvent frame) {
+    printf("Received FrameNotify Event %d at index: %u\n", frame_counter,
+           frame.buffer_id);
 
-        if (frame.frame_status == fuchsia::camera::FrameStatus::OK) {
-          stream->ReleaseFrame(frame.buffer_id);
-          if (frame_counter++ > 10) {
-            stream->Stop();
-            loop.Quit();
-          }
-        } else {
-          FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
-                         << static_cast<int>(frame.frame_status);
-        }
-      };
+    if (frame.frame_status == fuchsia::camera::FrameStatus::OK) {
+      stream->ReleaseFrame(frame.buffer_id);
+      if (frame_counter++ > 10) {
+        FXL_LOG(INFO) << "Counted 10 frames, stopping stream and quitting loop";
+        stream->Stop();
+        loop.Quit();
+      }
+    } else {
+      FXL_LOG(ERROR) << "Error set on incoming frame. Error: "
+                     << static_cast<int>(frame.frame_status);
+    }
+  };
 
   stream->Start();
 
@@ -131,7 +123,16 @@ zx_status_t run_camera() {
 int main(int argc, const char** argv) {
   printf("hello camera client\n");
 
-  zx_status_t result = run_camera();
+  bool use_camera_manager = true;
+  for (int i = 1; i < argc; ++i) {
+    if (!strcmp("--driver", argv[i])) {
+      use_camera_manager = false;
+    } else if (!strcmp("--manager", argv[i])) {
+      use_camera_manager = true;
+    }
+  }
+
+  zx_status_t result = run_camera(use_camera_manager);
 
   return result == ZX_OK ? 0 : -1;
 }

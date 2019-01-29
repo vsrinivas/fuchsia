@@ -3,7 +3,15 @@
         "binary": "bin/app"
     },
     "sandbox": {
-        "dev": [ "class/camera" ],
-        "features": [ "persistent-storage" ]
+        "dev": [
+            "class/camera"
+        ],
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.camera.Manager"
+        ]
     }
 }
