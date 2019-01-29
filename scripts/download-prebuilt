@@ -209,7 +209,11 @@ for_each_package() {
     */${PLATFORM})
       package="${package%/*}"
       # Subdirectories are packed in .zip files.
-      download_file="${package}.zip"
+      if [[ "$package" == third_party/* ]]; then
+        download_file="${package#*/}.zip"
+      else
+        download_file="${package}.zip"
+      fi
       single_file=false
       package_suffix="/${PLATFORM}"
       ;;
