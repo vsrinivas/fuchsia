@@ -6,7 +6,7 @@
 #define LIB_FIDL_INTERNAL_H_
 
 #include <assert.h>
-#include <stdint.h>
+#include <cstdint>
 
 #include <lib/fidl/coding.h>
 #include <zircon/syscalls/object.h>
@@ -33,6 +33,13 @@ enum FidlNullability : uint32_t {
 constexpr inline uint64_t FidlAlign(uint32_t offset) {
     constexpr uint64_t alignment_mask = FIDL_ALIGNMENT - 1;
     return (offset + alignment_mask) & ~alignment_mask;
+}
+
+// Determine if the pointer is aligned to |FIDL_ALIGNMENT|.
+inline bool IsAligned(uint8_t* ptr) {
+    auto uintptr = reinterpret_cast<std::uintptr_t>(ptr);
+    constexpr uintptr_t kAlignment = FIDL_ALIGNMENT;
+    return uintptr % kAlignment == 0;
 }
 
 // Add |size| to out-of-line |offset|, maintaining alignment. For example, a pointer to a struct

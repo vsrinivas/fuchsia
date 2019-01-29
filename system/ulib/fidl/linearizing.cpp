@@ -212,6 +212,10 @@ zx_status_t fidl_linearize(const fidl_type_t* type, void* value, uint8_t* buffer
         set_error("Cannot linearize with null destination buffer");
         return ZX_ERR_INVALID_ARGS;
     }
+    if (!fidl::IsAligned(buffer)) {
+        set_error("Destination buffer must be aligned to FIDL_ALIGNMENT");
+        return ZX_ERR_INVALID_ARGS;
+    }
 
     size_t primary_size;
     zx_status_t status;

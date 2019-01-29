@@ -55,6 +55,34 @@ bool linearize_present_nonnullable_string() {
     END_TEST;
 }
 
+bool linearize_present_nonnullable_string_unaligned_error() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_string_inline_data message = {};
+    constexpr const char* kStr = "hello!";
+    constexpr size_t kLength = 6;
+
+    char some_other_string[kLength] = {0};
+    message.string = fidl_string_t{kLength, some_other_string};
+    memcpy(some_other_string, kStr, kLength);
+
+    const char* error = nullptr;
+    zx_status_t status;
+    uint32_t actual_num_bytes = 0;
+
+    // Pass in an unaligned storage
+    constexpr uint32_t buf_size = 32u + FIDL_ALIGN(kLength);
+    std::unique_ptr<uint8_t[]> buf(new uint8_t[buf_size * 2]);
+    uint8_t* unaligned_ptr = buf.get() + 1;
+    status = fidl_linearize(&unbounded_nonnullable_string_message_type,
+                            &message, unaligned_ptr, buf_size, &actual_num_bytes, &error);
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+    ASSERT_STR_STR(error, "must be aligned to FIDL_ALIGNMENT");
+
+    END_TEST;
+}
+
 bool linearize_present_nonnullable_longer_string() {
     BEGIN_TEST;
 
@@ -639,6 +667,10 @@ BEGIN_TEST_CASE(strings)
 RUN_TEST(linearize_present_nonnullable_string)
 RUN_TEST(linearize_present_nonnullable_longer_string)
 END_TEST_CASE(strings)
+
+BEGIN_TEST_CASE(unaligned)
+RUN_TEST(linearize_present_nonnullable_string_unaligned_error)
+END_TEST_CASE(unaligned)
 
 BEGIN_TEST_CASE(vectors)
 RUN_TEST(linearize_vector_of_uint32)

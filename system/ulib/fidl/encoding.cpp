@@ -216,6 +216,10 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
         set_error("Cannot encode null bytes");
         return ZX_ERR_INVALID_ARGS;
     }
+    if (!fidl::IsAligned(reinterpret_cast<uint8_t*>(bytes))) {
+        set_error("Bytes must be aligned to FIDL_ALIGNMENT");
+        return ZX_ERR_INVALID_ARGS;
+    }
     if (handles == nullptr && max_handles != 0) {
         set_error("Cannot provide non-zero handle count and null handle pointer");
         return ZX_ERR_INVALID_ARGS;

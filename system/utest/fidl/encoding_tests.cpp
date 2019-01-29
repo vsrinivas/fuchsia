@@ -158,28 +158,6 @@ bool encode_null_encode_parameters() {
     END_TEST;
 }
 
-bool encode_single_present_handle() {
-    BEGIN_TEST;
-
-    nonnullable_handle_message_layout message = {};
-    message.inline_struct.handle = dummy_handle_0;
-
-    zx_handle_t handles[1] = {};
-
-    const char* error = nullptr;
-    uint32_t actual_handles = 0u;
-    auto status = fidl_encode(&nonnullable_handle_message_type, &message, sizeof(message), handles,
-                              ArrayCount(handles), &actual_handles, &error);
-
-    EXPECT_EQ(status, ZX_OK);
-    EXPECT_NULL(error, error);
-    EXPECT_EQ(actual_handles, 1u);
-    EXPECT_EQ(handles[0], dummy_handle_0);
-    EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
-
-    END_TEST;
-}
-
 bool encode_single_present_handle_unaligned_error() {
     BEGIN_TEST;
 
@@ -206,6 +184,55 @@ bool encode_single_present_handle_unaligned_error() {
 
     EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
     EXPECT_NONNULL(error);
+
+    END_TEST;
+}
+
+bool encode_present_nonnullable_string_unaligned_error() {
+    BEGIN_TEST;
+
+    unbounded_nonnullable_string_message_layout message = {};
+    message.inline_struct.string = fidl_string_t{6, &message.data[0]};
+    memcpy(message.data, "hello!", 6);
+
+    // Copy the message to unaligned storage one byte off from true alignment
+    unbounded_nonnullable_string_message_layout message_storage[2];
+    uint8_t* unaligned_ptr = reinterpret_cast<uint8_t*>(&message_storage[0]) + 1;
+    memcpy(unaligned_ptr, &message, sizeof(message));
+    auto unaligned_msg = reinterpret_cast<unbounded_nonnullable_string_message_layout*>(
+        unaligned_ptr);
+    unaligned_msg->inline_struct.string.data = &unaligned_msg->data[0];
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&unbounded_nonnullable_string_message_type, unaligned_msg,
+                              sizeof(message), nullptr, 0, &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_ERR_INVALID_ARGS);
+    EXPECT_NONNULL(error);
+    ASSERT_STR_STR(error, "must be aligned to FIDL_ALIGNMENT");
+
+    END_TEST;
+}
+
+bool encode_single_present_handle() {
+    BEGIN_TEST;
+
+    nonnullable_handle_message_layout message = {};
+    message.inline_struct.handle = dummy_handle_0;
+
+    zx_handle_t handles[1] = {};
+
+    const char* error = nullptr;
+    uint32_t actual_handles = 0u;
+    auto status = fidl_encode(&nonnullable_handle_message_type, &message, sizeof(message), handles,
+                              ArrayCount(handles), &actual_handles, &error);
+
+    EXPECT_EQ(status, ZX_OK);
+    EXPECT_NULL(error, error);
+    EXPECT_EQ(actual_handles, 1u);
+    EXPECT_EQ(handles[0], dummy_handle_0);
+    EXPECT_EQ(message.inline_struct.handle, FIDL_HANDLE_PRESENT);
 
     END_TEST;
 }
@@ -1741,9 +1768,13 @@ BEGIN_TEST_CASE(null_parameters)
 RUN_TEST(encode_null_encode_parameters)
 END_TEST_CASE(null_parameters)
 
+BEGIN_TEST_CASE(unaligned)
+RUN_TEST(encode_single_present_handle_unaligned_error)
+RUN_TEST(encode_present_nonnullable_string_unaligned_error)
+END_TEST_CASE(unaligned)
+
 BEGIN_TEST_CASE(handles)
 RUN_TEST(encode_single_present_handle)
-RUN_TEST(encode_single_present_handle_unaligned_error)
 RUN_TEST(encode_multiple_present_handles)
 RUN_TEST(encode_single_absent_handle)
 RUN_TEST(encode_multiple_absent_handles)
