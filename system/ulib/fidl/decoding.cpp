@@ -241,22 +241,28 @@ zx_status_t fidl_decode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
                type,
                StartingPoint { reinterpret_cast<uint8_t*>(bytes) });
 
-    if (decoder.status() == ZX_OK) {
-        if (!decoder.DidConsumeAllBytes()) {
-            set_error("message did not decode all provided bytes");
-            return ZX_ERR_INVALID_ARGS;
-        }
-        if (!decoder.DidConsumeAllHandles()) {
-            set_error("message did not decode all provided handles");
-            return ZX_ERR_INVALID_ARGS;
-        }
-    } else {
+    auto drop_all_handles = [&] () {
 #ifdef __Fuchsia__
         if (handles) {
             // Return value intentionally ignored. This is best-effort cleanup.
             (void)zx_handle_close_many(handles, num_handles);
         }
 #endif
+    };
+
+    if (decoder.status() == ZX_OK) {
+        if (!decoder.DidConsumeAllBytes()) {
+            set_error("message did not decode all provided bytes");
+            drop_all_handles();
+            return ZX_ERR_INVALID_ARGS;
+        }
+        if (!decoder.DidConsumeAllHandles()) {
+            set_error("message did not decode all provided handles");
+            drop_all_handles();
+            return ZX_ERR_INVALID_ARGS;
+        }
+    } else {
+        drop_all_handles();
     }
 
     return decoder.status();

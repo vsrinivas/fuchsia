@@ -243,19 +243,25 @@ zx_status_t fidl_encode(const fidl_type_t* type, void* bytes, uint32_t num_bytes
                type,
                StartingPoint { reinterpret_cast<uint8_t*>(bytes) });
 
+    auto drop_all_handles = [&] () {
+        *out_actual_handles = 0;
+#ifdef __Fuchsia__
+        if (handles) {
+            // Return value intentionally ignored. This is best-effort cleanup.
+            (void)zx_handle_close_many(handles, max_handles);
+        }
+#endif
+    };
+
     if (encoder.status() == ZX_OK) {
         if (!encoder.DidConsumeAllBytes()) {
             set_error("message did not encode all provided bytes");
+            drop_all_handles();
             return ZX_ERR_INVALID_ARGS;
         }
         *out_actual_handles = encoder.handle_idx();
     } else {
-#ifdef __Fuchsia__
-        if (handles) {
-            // Return value intentionally ignored. This is best-effort cleanup.
-            zx_handle_close_many(handles, max_handles);
-        }
-#endif
+        drop_all_handles();
     }
 
     return encoder.status();
