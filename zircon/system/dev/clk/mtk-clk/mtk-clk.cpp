@@ -4,15 +4,17 @@
 
 #include "mtk-clk.h"
 
+#include <ddk/binding.h>
+#include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/pdev.h>
 #include <fbl/algorithm.h>
 #include <fbl/alloc_checker.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/clk/c/fidl.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>
-#include <zircon/device/clk.h>
 
 namespace clk {
 
@@ -73,6 +75,26 @@ static struct clock_info clks[] = {
     {.idx = 67, .name = "mmpll"},
     {.idx = 69, .name = "aud1pll"},
     {.idx = 70, .name = "aud2pll"},
+};
+
+zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
+    auto dev = static_cast<MtkClk*>(ctx);
+    fuchsia_hardware_clk_FrequencyInfo info;
+
+    dev->ClkMeasure(clk, &info);
+
+    return fuchsia_hardware_clk_DeviceMeasure_reply(txn, &info);
+}
+
+zx_status_t fidl_clk_get_count(void* ctx, fidl_txn_t* txn) {
+    auto dev = static_cast<MtkClk*>(ctx);
+
+    return fuchsia_hardware_clk_DeviceGetCount_reply(txn, dev->GetClkCount());
+}
+
+static const fuchsia_hardware_clk_Device_ops_t fidl_ops_ = {
+    .Measure = fidl_clk_measure,
+    .GetCount = fidl_clk_get_count,
 };
 
 namespace {
@@ -174,7 +196,7 @@ zx_status_t MtkClk::ClkDisable(uint32_t index) {
     return ZX_OK;
 }
 
-zx_status_t MtkClk::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
+zx_status_t MtkClk::ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info) {
     if (clk >= fbl::count_of(clks)) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -211,36 +233,29 @@ zx_status_t MtkClk::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
     return ZX_OK;
 }
 
-zx_status_t MtkClk::DdkIoctl(uint32_t op, const void* in_buf,
-                             size_t in_len, void* out_buf,
-                             size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_CLK_MEASURE: {
-        if (in_buf == nullptr || in_len != sizeof(uint32_t) ||
-            out_buf == nullptr || out_len != sizeof(clk_freq_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto index = *(static_cast<const uint32_t*>(in_buf));
-        auto* info = static_cast<clk_freq_info_t*>(out_buf);
-        *out_actual = sizeof(clk_freq_info_t);
-        return ClkMeasure(index, info);
-    }
-    case IOCTL_CLK_GET_COUNT: {
-        if (out_buf == nullptr || out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto* num_count = static_cast<uint32_t*>(out_buf);
-        *num_count = static_cast<uint32_t>(fbl::count_of(clks));
-        *out_actual = sizeof(uint32_t);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+uint32_t MtkClk::GetClkCount() {
+    return static_cast<uint32_t>(fbl::count_of(clks));
 }
 
-}  // namespace clk
+zx_status_t MtkClk::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_clk_Device_dispatch(this, txn, msg, &fidl_ops_);
+}
 
-extern "C" zx_status_t mtk_clk_bind(void* ctx, zx_device_t* parent) {
+} // namespace clk
+
+zx_status_t mtk_clk_bind(void* ctx, zx_device_t* parent) {
     return clk::MtkClk::Create(parent);
 }
+
+static zx_driver_ops_t mtk_clk_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = mtk_clk_bind;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(mtk_clk, mtk_clk_driver_ops, "zircon", "0.1", 3)
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_MEDIATEK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_MEDIATEK_CLK),
+    ZIRCON_DRIVER_END(mtk_clk)

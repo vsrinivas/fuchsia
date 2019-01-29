@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.clk;
+using zx;
+
+const uint32 NAME_LEN = 30;
+
+struct FrequencyInfo {
+    array<uint8>:NAME_LEN clk_name;
+    uint64 clk_freq;
+};
+
+[Layout = "Simple"]
+interface Device {
+    Measure(uint32 clk) -> (FrequencyInfo info);
+    GetCount() -> (uint32 count);
+};

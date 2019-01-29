@@ -11,7 +11,8 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/types.h>
-#include <zircon/device/clk.h>
+#include <fuchsia/hardware/clk/c/fidl.h>
+#include <lib/fdio/util.h>
 
 int usage(const char* cmd) {
     fprintf(
@@ -77,26 +78,38 @@ char* guess_dev(void) {
     return NULL;
 }
 
-int measure_clk_util(int fd, uint32_t idx) {
-    clk_freq_info_t info;
-    ssize_t rc = ioctl_clk_measure(fd, &idx, &info);
+int measure_clk_util(zx_handle_t ch, uint32_t idx) {
+    fuchsia_hardware_clk_FrequencyInfo info;
+    ssize_t rc = fuchsia_hardware_clk_DeviceMeasure(ch, idx, &info);
+
     if (rc < 0) {
         fprintf(stderr, "ERROR: Failed to measure clock: %zd\n", rc);
         return rc;
     }
-    printf("[%4d][%4d MHz] %s\n", idx, info.clk_freq, info.clk_name);
+
+    printf("[%4d][%4ld MHz] %s\n", idx, info.clk_freq, info.clk_name);
     return 0;
 }
 
 int measure_clk(const char* path, uint32_t idx, bool clk) {
     int fd = open(path, O_RDWR);
+
     if (fd < 0) {
         fprintf(stderr, "ERROR: Failed to open clock device: %d\n", fd);
         return -1;
     }
 
+    zx_handle_t ch;
+    zx_status_t status = fdio_get_service_handle(fd, &ch);
+
+    if (status != ZX_OK) {
+        fprintf(stderr, "Failed to get service handle: %d!\n", status);
+        return status;
+    }
+
     uint32_t num_clocks = 0;
-    ssize_t rc = ioctl_clk_get_count(fd, &num_clocks);
+    ssize_t rc = fuchsia_hardware_clk_DeviceGetCount(ch, &num_clocks);
+
     if (rc < 0) {
         fprintf(stderr, "ERROR: Failed to get num_clocks: %zd\n", rc);
         return rc;
@@ -107,15 +120,16 @@ int measure_clk(const char* path, uint32_t idx, bool clk) {
             fprintf(stderr, "ERROR: Invalid clock index.\n");
             return -1;
         }
-        return measure_clk_util(fd, idx);
+        return measure_clk_util(ch, idx);
     } else {
         for (uint32_t i = 0; i < num_clocks; i++) {
-            rc = measure_clk_util(fd, i);
+            rc = measure_clk_util(ch, i);
             if (rc < 0) {
                 return rc;
             }
         }
     }
+
     return 0;
 }
 

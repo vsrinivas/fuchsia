@@ -4,7 +4,6 @@
 
 driver("mtk-clk") {
   sources = [
-    "binding.c",
     "mtk-clk.cpp",
   ]
   deps = [
@@ -15,9 +14,11 @@ driver("mtk-clk") {
     "$zx/system/banjo/ddk-protocol-platform-device",
     "$zx/system/dev/lib/mmio",
     "$zx/system/dev/lib/mt8167",
+    "$zx/system/fidl/fuchsia-hardware-clk:c",
     "$zx/system/ulib/ddk",
     "$zx/system/ulib/ddktl",
     "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fidl",
     "$zx/system/ulib/hwreg",
     "$zx/system/ulib/sync",
     "$zx/system/ulib/zircon",

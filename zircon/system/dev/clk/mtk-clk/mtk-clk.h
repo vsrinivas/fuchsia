@@ -5,14 +5,14 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/clk.h>
-#include <zircon/device/clk.h>
+#include <lib/mmio/mmio.h>
+#include <fuchsia/hardware/clk/c/fidl.h>
 
 namespace clk {
 
 class MtkClk;
-using DeviceType = ddk::Device<MtkClk, ddk::Ioctlable>;
+using DeviceType = ddk::Device<MtkClk, ddk::Messageable>;
 
 class MtkClk : public DeviceType, public ddk::ClkProtocol<MtkClk, ddk::base_protocol> {
 public:
@@ -25,17 +25,17 @@ public:
     zx_status_t ClkEnable(uint32_t index);
     zx_status_t ClkDisable(uint32_t index);
 
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf,
-                         size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual);
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
+
+    zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info);
+    uint32_t GetClkCount();
 
 private:
     MtkClk(zx_device_t* parent, ddk::MmioBuffer mmio)
         : DeviceType(parent), mmio_(std::move(mmio)) {}
 
-    zx_status_t ClkMeasure(uint32_t clk, clk_freq_info_t* info);
-
     ddk::MmioBuffer mmio_;
 };
 
-}  // namespace clk
+} // namespace clk
+

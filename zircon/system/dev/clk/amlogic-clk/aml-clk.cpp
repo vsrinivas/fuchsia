@@ -7,12 +7,16 @@
 #include "aml-g12a-blocks.h"
 #include "aml-g12b-blocks.h"
 #include "aml-gxl-blocks.h"
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/device.h>
+#include <ddk/driver.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
+#include <fuchsia/hardware/clk/c/fidl.h>
 #include <string.h>
 
 namespace amlogic_clock {
@@ -224,7 +228,7 @@ zx_status_t AmlClock::ClkDisable(uint32_t clk) {
 // This API measures the clk frequency for clk.
 // Following implementation is adopted from Amlogic SDK,
 // there is absolutely no documentation.
-zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq) {
+zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq) {
     // Set the measurement gate to 64uS.
     uint32_t value = 64 - 1;
     msr_mmio_->Write32(value, clk_msr_offsets_.reg0_offset);
@@ -260,7 +264,7 @@ zx_status_t AmlClock::ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq) {
     return ZX_ERR_TIMED_OUT;
 }
 
-zx_status_t AmlClock::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
+zx_status_t AmlClock::ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info) {
     if (clk >= clk_table_.size()) {
         return ZX_ERR_INVALID_ARGS;
     }
@@ -275,41 +279,37 @@ zx_status_t AmlClock::ClkMeasure(uint32_t clk, clk_freq_info_t* info) {
     return ClkMeasureUtil(clk, &info->clk_freq);
 }
 
+uint32_t AmlClock::GetClkCount() {
+    return static_cast<uint32_t>(clk_table_.size());
+}
+
 void AmlClock::ShutDown() {
     hiu_mmio_.reset();
     msr_mmio_.reset();
 }
 
-zx_status_t AmlClock::DdkIoctl(uint32_t op, const void* in_buf,
-                               size_t in_len, void* out_buf,
-                               size_t out_len, size_t* out_actual) {
-    switch (op) {
-    case IOCTL_CLK_MEASURE: {
-        if (in_buf == nullptr || in_len != sizeof(uint32_t) ||
-            out_buf == nullptr || out_len != sizeof(clk_freq_info_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto index = *(static_cast<const uint32_t*>(in_buf));
-        auto* info = static_cast<clk_freq_info_t*>(out_buf);
-        if (clk_msr_) {
-            *out_actual = sizeof(clk_freq_info_t);
-            return ClkMeasure(index, info);
-        } else {
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
-    case IOCTL_CLK_GET_COUNT: {
-        if (out_buf == nullptr || out_len != sizeof(uint32_t)) {
-            return ZX_ERR_INVALID_ARGS;
-        }
-        auto* num_count = static_cast<uint32_t*>(out_buf);
-        *num_count = static_cast<uint32_t>(clk_table_.size());
-        *out_actual = sizeof(uint32_t);
-        return ZX_OK;
-    }
-    default:
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+zx_status_t fidl_clk_measure(void* ctx, uint32_t clk, fidl_txn_t* txn) {
+    auto dev = static_cast<AmlClock*>(ctx);
+    fuchsia_hardware_clk_FrequencyInfo info;
+
+    dev->ClkMeasure(clk, &info);
+
+    return fuchsia_hardware_clk_DeviceMeasure_reply(txn, &info);
+}
+
+zx_status_t fidl_clk_get_count(void* ctx, fidl_txn_t* txn) {
+    auto dev = static_cast<AmlClock*>(ctx);
+
+    return fuchsia_hardware_clk_DeviceGetCount_reply(txn, dev->GetClkCount());
+}
+
+static const fuchsia_hardware_clk_Device_ops_t fidl_ops_ = {
+    .Measure = fidl_clk_measure,
+    .GetCount = fidl_clk_get_count,
+};
+
+zx_status_t AmlClock::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
+    return fuchsia_hardware_clk_Device_dispatch(this, txn, msg, &fidl_ops_);
 }
 
 void AmlClock::DdkUnbind() {
@@ -323,6 +323,23 @@ void AmlClock::DdkRelease() {
 
 } // namespace amlogic_clock
 
-extern "C" zx_status_t aml_clk_bind(void* ctx, zx_device_t* parent) {
+zx_status_t aml_clk_bind(void* ctx, zx_device_t* parent) {
     return amlogic_clock::AmlClock::Create(parent);
 }
+
+static constexpr zx_driver_ops_t aml_clk_driver_ops = []() {
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = aml_clk_bind;
+    return ops;
+}();
+
+ZIRCON_DRIVER_BEGIN(aml_clk, aml_clk_driver_ops, "zircon", "0.1", 6)
+BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PDEV),
+    BI_ABORT_IF(NE, BIND_PLATFORM_DEV_VID, PDEV_VID_AMLOGIC),
+    // we support multiple SOC variants.
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_AXG_CLK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_GXL_CLK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12A_CLK),
+    BI_MATCH_IF(EQ, BIND_PLATFORM_DEV_DID, PDEV_DID_AMLOGIC_G12B_CLK),
+    ZIRCON_DRIVER_END(aml_clk)

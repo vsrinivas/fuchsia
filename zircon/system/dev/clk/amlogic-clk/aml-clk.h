@@ -10,12 +10,12 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <fbl/array.h>
 #include <fbl/mutex.h>
 #include <hwreg/mmio.h>
-#include <zircon/device/clk.h>
+#include <lib/mmio/mmio.h>
+#include <fuchsia/hardware/clk/c/fidl.h>
 #include <zircon/thread_annotations.h>
 
 #include <optional>
@@ -25,7 +25,7 @@ namespace amlogic_clock {
 class AmlClock;
 using DeviceType = ddk::Device<AmlClock,
                                ddk::Unbindable,
-                               ddk::Ioctlable>;
+                               ddk::Messageable>;
 
 class AmlClock : public DeviceType,
                  public ddk::ClkProtocol<AmlClock, ddk::base_protocol> {
@@ -42,14 +42,14 @@ public:
     zx_status_t ClkDisable(uint32_t clk);
 
     // CLK IOCTL implementation.
-    zx_status_t ClkMeasure(uint32_t clk, clk_freq_info_t* info);
+    zx_status_t ClkMeasure(uint32_t clk, fuchsia_hardware_clk_FrequencyInfo* info);
+    uint32_t GetClkCount();
+
+    zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 
     // Device protocol implementation.
     void DdkUnbind();
     void DdkRelease();
-    zx_status_t DdkIoctl(uint32_t op, const void* in_buf,
-                         size_t in_len, void* out_buf,
-                         size_t out_len, size_t* out_actual);
 
     void ShutDown();
 
@@ -59,7 +59,7 @@ private:
     // Initialize platform device.
     zx_status_t InitPdev(zx_device_t* parent);
     // Clock measure helper API.
-    zx_status_t ClkMeasureUtil(uint32_t clk, uint32_t* clk_freq);
+    zx_status_t ClkMeasureUtil(uint32_t clk, uint64_t* clk_freq);
     // MMIO helper APIs.
     zx_status_t InitHiuRegs(pdev_device_info_t* info);
     zx_status_t InitMsrRegs(pdev_device_info_t* info);
