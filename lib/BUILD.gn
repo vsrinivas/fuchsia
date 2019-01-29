@@ -25,11 +25,22 @@ package("garnet_lib_tests") {
 
   deps = [
     ":unittests",
+    "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
   ]
 
   tests = [
     {
       name = "garnet_lib_unittests"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                  "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
+                  "target_gen_dir") + "/test_metrics_registry.pb")
+      dest = "test_metrics_registry.pb"
     },
   ]
 }
