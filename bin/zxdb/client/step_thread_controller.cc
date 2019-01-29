@@ -120,7 +120,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
   // function that we call from here.
   FXL_DCHECK(!finish_unsymolized_function_);
 
-  const auto& stack = thread()->GetStack();
+  Stack& stack = thread()->GetStack();
   if (stack.empty())
     return kStop;  // Agent sent bad state, give up trying to step.
 

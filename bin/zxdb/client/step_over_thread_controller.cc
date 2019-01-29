@@ -92,7 +92,7 @@ ThreadController::StopOp StepOverThreadController::OnThreadStop(
     return kStop;
   }
 
-  const auto& stack = thread()->GetStack();
+  Stack& stack = thread()->GetStack();
   if (stack.size() < 2) {
     Log("In a newer frame but there are not enough frames to step out.");
     return kStop;
