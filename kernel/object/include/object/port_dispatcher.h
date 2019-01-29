@@ -7,6 +7,7 @@
 #pragma once
 
 #include <object/dispatcher.h>
+#include <object/excp_port.h>
 #include <object/semaphore.h>
 #include <object/state_observer.h>
 
@@ -77,7 +78,6 @@
 //   when cancellation happens and the port still owns the packet.
 //
 
-class ExceptionPort;
 class PortDispatcher;
 class PortObserver;
 struct PortPacket;
@@ -199,18 +199,18 @@ public:
     bool CancelQueued(PortPacket* port_packet);
 
 private:
-    friend class ExceptionPort;
+    friend ExceptionPort;
 
     explicit PortDispatcher(uint32_t options);
 
     // Adopts a RefPtr to |eport|, and adds it to |eports_|.
-    // Called by ExceptionPort.
-    void LinkExceptionPort(ExceptionPort* eport);
+    // Called by ExceptionPort under |eport|'s lock.
+    void LinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
     // Removes |eport| from |eports_|, dropping its RefPtr.
     // Does nothing if |eport| is not on the list.
-    // Called by ExceptionPort.
-    void UnlinkExceptionPort(ExceptionPort* eport);
+    // Called by ExceptionPort under |eport|'s lock.
+    void UnlinkExceptionPortEportLocked(ExceptionPort* eport) TA_REQ(eport->lock_);
 
     fbl::Canary<fbl::magic("PORT")> canary_;
     const uint32_t options_;

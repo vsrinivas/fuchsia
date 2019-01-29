@@ -59,6 +59,7 @@ public:
 
     // Validates that this eport is associated with the given instance.
     bool PortMatches(const PortDispatcher* port, bool allow_null);
+    bool PortMatchesLocked(const PortDispatcher* port, bool allow_null) TA_REQ(lock_);
 
     static void BuildArchReport(zx_exception_report_t* report, uint32_t type,
                                 const arch_exception_context_t* arch_context);

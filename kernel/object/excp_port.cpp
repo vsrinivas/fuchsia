@@ -60,7 +60,9 @@ ExceptionPort::ExceptionPort(Type type, fbl::RefPtr<PortDispatcher> port, uint64
     : type_(type), port_key_(port_key), port_(port) {
     LTRACE_ENTRY_OBJ;
     DEBUG_ASSERT(port_ != nullptr);
-    port_->LinkExceptionPort(this);
+
+    Guard<fbl::Mutex> guard{&lock_};
+    port_->LinkExceptionPortEportLocked(this);
 }
 
 ExceptionPort::~ExceptionPort() {
@@ -204,20 +206,22 @@ void ExceptionPort::OnTargetUnbind() {
         // We may not have a target if the binding (Set*Target) never happened,
         // so don't require that we're bound.
         target_.reset();
-    }
-    // It should actually be safe to hold our lock while calling into
-    // the PortDispatcher, but there's no reason to.
 
-    // Unlink ourselves from the PortDispatcher's list.
-    // No-op if this method was ultimately called from
-    // PortDispatcher:on_zero_handles (via ::OnPortZeroHandles).
-    port->UnlinkExceptionPort(this);
+        // Unlink ourselves from the PortDispatcher's list.
+        // No-op if this method was ultimately called from
+        // PortDispatcher:on_zero_handles (via ::OnPortZeroHandles).
+        port->UnlinkExceptionPortEportLocked(this);
+    }
 
     LTRACE_EXIT_OBJ;
 }
 
 bool ExceptionPort::PortMatches(const PortDispatcher *port, bool allow_null) {
     Guard<fbl::Mutex> guard{&lock_};
+    return PortMatchesLocked(port, allow_null);
+}
+
+bool ExceptionPort::PortMatchesLocked(const PortDispatcher *port, bool allow_null) {
     return (allow_null && port_ == nullptr) || port_.get() == port;
 }
 

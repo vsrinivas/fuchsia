@@ -451,20 +451,20 @@ bool PortDispatcher::CancelQueued(PortPacket* port_packet) {
     return false;
 }
 
-void PortDispatcher::LinkExceptionPort(ExceptionPort* eport) {
+void PortDispatcher::LinkExceptionPortEportLocked(ExceptionPort* eport) {
     canary_.Assert();
 
     Guard<fbl::Mutex> guard{get_lock()};
-    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ false));
+    DEBUG_ASSERT_COND(eport->PortMatchesLocked(this, /* allow_null */ false));
     DEBUG_ASSERT(!eport->InContainer());
     eports_.push_back(ktl::move(AdoptRef(eport)));
 }
 
-void PortDispatcher::UnlinkExceptionPort(ExceptionPort* eport) {
+void PortDispatcher::UnlinkExceptionPortEportLocked(ExceptionPort* eport) {
     canary_.Assert();
 
     Guard<fbl::Mutex> guard{get_lock()};
-    DEBUG_ASSERT_COND(eport->PortMatches(this, /* allow_null */ true));
+    DEBUG_ASSERT_COND(eport->PortMatchesLocked(this, /* allow_null */ true));
     if (eport->InContainer()) {
         eports_.erase(*eport);
     }
