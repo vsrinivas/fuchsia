@@ -713,7 +713,7 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
     // we see here are those we generate in the VMM, e.g. GP faults in vmexit handlers. Therefore
     // we simplify interrupt priority to 1) NMIs, 2) interrupts, and 3) generated exceptions. See
     // Volume 3, Section 6.9, Table 6-2.
-    uint32_t vector;
+    uint32_t vector = X86_INT_COUNT;
     hypervisor::InterruptType type = local_apic_state->interrupt_tracker.TryPop(X86_INT_NMI);
     if (type != hypervisor::InterruptType::INACTIVE) {
         vector = X86_INT_NMI;
@@ -724,6 +724,8 @@ static zx_status_t local_apic_maybe_interrupt(AutoVmcs* vmcs, LocalApicState* lo
         if (type == hypervisor::InterruptType::INACTIVE) {
             return ZX_OK;
         }
+        // If type isn't inactive, then Pop should have initialized vector to a valid value.
+        DEBUG_ASSERT(vector != X86_INT_COUNT);
     }
 
     // NMI injection is blocked if an NMI is already being serviced (Volume 3, Section 24.4.2,
