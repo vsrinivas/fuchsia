@@ -18,9 +18,11 @@
 const char* kSysmemDevicePath = "/dev/class/sysmem/000";
 
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionConstraintsTable;
-using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints, &fuchsia_sysmem_BufferCollectionConstraintsTable>;
+using BufferCollectionConstraints = FidlStruct<fuchsia_sysmem_BufferCollectionConstraints,
+                                               &fuchsia_sysmem_BufferCollectionConstraintsTable>;
 extern const fidl_type_t fuchsia_sysmem_BufferCollectionInfo_2Table;
-using BufferCollectionInfo = FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, &fuchsia_sysmem_BufferCollectionInfo_2Table>;
+using BufferCollectionInfo =
+    FidlStruct<fuchsia_sysmem_BufferCollectionInfo_2, &fuchsia_sysmem_BufferCollectionInfo_2Table>;
 
 namespace {
 
@@ -40,7 +42,8 @@ zx_status_t connect_to_sysmem_driver(zx::channel* allocator2_client_param) {
     status = zx::channel::create(0, &allocator2_client, &allocator2_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_DriverConnectorConnect(driver_client.get(), allocator2_server.release());
+    status =
+        fuchsia_sysmem_DriverConnectorConnect(driver_client.get(), allocator2_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     *allocator2_client_param = std::move(allocator2_client);
@@ -64,13 +67,8 @@ zx_status_t connect_to_sysmem_service(zx::channel* allocator2_client_param) {
 
 zx_koid_t get_koid(zx_handle_t handle) {
     zx_info_handle_basic_t info;
-    zx_status_t status = zx_object_get_info(
-        handle,
-        ZX_INFO_HANDLE_BASIC,
-        &info,
-        sizeof(info),
-        nullptr,
-        nullptr);
+    zx_status_t status =
+        zx_object_get_info(handle, ZX_INFO_HANDLE_BASIC, &info, sizeof(info), nullptr, nullptr);
     ASSERT_EQ(status, ZX_OK, "");
     return info.koid;
 }
@@ -83,7 +81,8 @@ zx_status_t verify_connectivity(zx::channel& allocator2_client) {
     status = zx::channel::create(0, &collection_client, &collection_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(), collection_server.release());
+    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(),
+                                                                  collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     status = fuchsia_sysmem_BufferCollectionSync(collection_client.get());
@@ -92,7 +91,7 @@ zx_status_t verify_connectivity(zx::channel& allocator2_client) {
     return ZX_OK;
 }
 
-}  // namespace
+} // namespace
 
 extern "C" bool test_sysmem_driver_connection(void) {
     BEGIN_TEST;
@@ -135,7 +134,8 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     status = zx::channel::create(0, &token_client, &token_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(), token_server.release());
+    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(),
+                                                               token_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx::channel collection_client;
@@ -144,7 +144,8 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(allocator2_client.get(), token_client.release(), collection_server.release());
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
@@ -159,12 +160,14 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
         .secure_permitted = false,
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
-    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, constraints.release());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx_status_t allocation_status;
     BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
-    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &allocation_status, buffer_collection_info.get());
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_EQ(status, ZX_OK, "");
@@ -182,7 +185,7 @@ extern "C" bool test_sysmem_token_one_participant_no_image_constraints(void) {
             uint64_t size_bytes = 0;
             status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
             ASSERT_EQ(status, ZX_OK, "");
-            ASSERT_EQ(size_bytes, 64*1024, "");
+            ASSERT_EQ(size_bytes, 64 * 1024, "");
         } else {
             ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
         }
@@ -204,7 +207,8 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     status = zx::channel::create(0, &token_client, &token_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(), token_server.release());
+    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client.get(),
+                                                               token_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx::channel collection_client;
@@ -213,7 +217,8 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(allocator2_client.get(), token_client.release(), collection_server.release());
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client.get(), token_client.release(), collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
@@ -221,7 +226,8 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     constraints->min_buffer_count_for_camping = 3;
     constraints->has_buffer_memory_constraints = true;
     constraints->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
-        // This min_size_bytes is intentionally too small to hold the min_coded_width and min_coded_height in NV12
+        // This min_size_bytes is intentionally too small to hold the min_coded_width and
+        // min_coded_height in NV12
         // format.
         .min_size_bytes = 64 * 1024,
         .max_size_bytes = 128 * 1024,
@@ -230,13 +236,15 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
         .secure_permitted = false,
     };
     constraints->image_format_constraints_count = 1;
-    fuchsia_sysmem_ImageFormatConstraints& image_constraints = constraints->image_format_constraints[0];
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints->image_format_constraints[0];
     image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
     image_constraints.color_spaces_count = 1;
     image_constraints.color_space[0] = fuchsia_sysmem_ColorSpace{
         .type = fuchsia_sysmem_ColorSpaceType_REC709,
     };
-    // The min dimensions intentionally imply a min size that's larger than buffer_memory_constraints.min_size_bytes.
+    // The min dimensions intentionally imply a min size that's larger than
+    // buffer_memory_constraints.min_size_bytes.
     image_constraints.min_coded_width = 256;
     image_constraints.max_coded_width = std::numeric_limits<uint32_t>::max();
     image_constraints.min_coded_height = 256;
@@ -252,12 +260,14 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
     image_constraints.display_width_divisor = 1;
     image_constraints.display_height_divisor = 1;
 
-    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, constraints.release());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx_status_t allocation_status;
     BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
-    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &allocation_status, buffer_collection_info.get());
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_EQ(status, ZX_OK, "");
@@ -278,11 +288,14 @@ extern "C" bool test_sysmem_token_one_participant_with_image_constraints(void) {
             uint64_t size_bytes = 0;
             status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
             ASSERT_EQ(status, ZX_OK, "");
-            // The portion of the VMO the client can use is large enough to hold the min image size, despite the min
-            // buffer size being smaller.
-            ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes, 64*1024 * 3 / 2, "");
+            // The portion of the VMO the client can use is large enough to hold the min image size,
+            // despite the min buffer size being smaller.
+            ASSERT_GE(buffer_collection_info->settings.buffer_settings.size_bytes,
+                      64 * 1024 * 3 / 2, "");
             // The vmo has room for the nominal size of the portion of the VMO the client can use.
-            ASSERT_LE(buffer_collection_info->buffers[i].vmo_usable_start + buffer_collection_info->settings.buffer_settings.size_bytes, size_bytes, "");
+            ASSERT_LE(buffer_collection_info->buffers[i].vmo_usable_start +
+                          buffer_collection_info->settings.buffer_settings.size_bytes,
+                      size_bytes, "");
         } else {
             ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
         }
@@ -304,7 +317,8 @@ extern "C" bool test_sysmem_no_token(void) {
     status = zx::channel::create(0, &collection_client, &collection_server);
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(), collection_server.release());
+    status = fuchsia_sysmem_Allocator2AllocateNonSharedCollection(allocator2_client.get(),
+                                                                  collection_server.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     BufferCollectionConstraints constraints(BufferCollectionConstraints::Default);
@@ -319,12 +333,14 @@ extern "C" bool test_sysmem_no_token(void) {
         .secure_permitted = false,
     };
     ZX_DEBUG_ASSERT(constraints->image_format_constraints_count == 0);
-    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true, constraints.release());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client.get(), true,
+                                                           constraints.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx_status_t allocation_status;
     BufferCollectionInfo buffer_collection_info(BufferCollectionInfo::Default);
-    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client.get(), &allocation_status, buffer_collection_info.get());
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client.get(), &allocation_status, buffer_collection_info.get());
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_EQ(status, ZX_OK, "");
@@ -342,7 +358,7 @@ extern "C" bool test_sysmem_no_token(void) {
             uint64_t size_bytes = 0;
             status = zx_vmo_get_size(buffer_collection_info->buffers[i].vmo, &size_bytes);
             ASSERT_EQ(status, ZX_OK, "");
-            ASSERT_EQ(size_bytes, 64*1024, "");
+            ASSERT_EQ(size_bytes, 64 * 1024, "");
         } else {
             ASSERT_EQ(buffer_collection_info->buffers[i].vmo, ZX_HANDLE_INVALID, "");
         }
@@ -366,7 +382,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
 
     // Client 1 creates a token and new LogicalBufferCollection using
     // AllocateSharedCollection().
-    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client_1.get(), token_server_1.release());
+    status = fuchsia_sysmem_Allocator2AllocateSharedCollection(allocator2_client_1.get(),
+                                                               token_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx::channel token_client_2;
@@ -378,7 +395,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     // test is single proc, so both clients are coming from this client
     // process - normally the two clients would be in separate processes with
     // token_client_2 transferred to another participant).
-    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
+    status = fuchsia_sysmem_BufferCollectionTokenDuplicate(
+        token_client_1.get(), std::numeric_limits<uint32_t>::max(), token_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     zx::channel collection_client_1;
@@ -387,7 +405,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_1.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client_1.get(), token_client_1.release(), collection_server_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     BufferCollectionConstraints constraints_1(BufferCollectionConstraints::Default);
@@ -395,7 +414,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     constraints_1->min_buffer_count_for_camping = 3;
     constraints_1->has_buffer_memory_constraints = true;
     constraints_1->buffer_memory_constraints = fuchsia_sysmem_BufferMemoryConstraints{
-        // This min_size_bytes is intentionally too small to hold the min_coded_width and min_coded_height in NV12
+        // This min_size_bytes is intentionally too small to hold the min_coded_width and
+        // min_coded_height in NV12
         // format.
         .min_size_bytes = 64 * 1024,
         // Allow a max that's just large enough to accomodate the size implied
@@ -406,13 +426,15 @@ extern "C" bool test_sysmem_multiple_participants(void) {
         .secure_permitted = false,
     };
     constraints_1->image_format_constraints_count = 1;
-    fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 = constraints_1->image_format_constraints[0];
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints_1 =
+        constraints_1->image_format_constraints[0];
     image_constraints_1.pixel_format.type = fuchsia_sysmem_PixelFormatType_NV12;
     image_constraints_1.color_spaces_count = 1;
     image_constraints_1.color_space[0] = fuchsia_sysmem_ColorSpace{
         .type = fuchsia_sysmem_ColorSpaceType_REC709,
     };
-    // The min dimensions intentionally imply a min size that's larger than buffer_memory_constraints.min_size_bytes.
+    // The min dimensions intentionally imply a min size that's larger than
+    // buffer_memory_constraints.min_size_bytes.
     image_constraints_1.min_coded_width = 256;
     image_constraints_1.max_coded_width = std::numeric_limits<uint32_t>::max();
     image_constraints_1.min_coded_height = 256;
@@ -435,7 +457,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     constraints_2->image_format_constraints[0].min_coded_width = 512;
     constraints_2->image_format_constraints[0].min_coded_height = 512;
 
-    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true, constraints_1.release());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_1.get(), true,
+                                                           constraints_1.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     // Client 2 connects to sysmem separately.
@@ -457,10 +480,12 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     ASSERT_EQ(status, ZX_OK, "");
 
     ASSERT_NE(token_client_2.get(), ZX_HANDLE_INVALID, "");
-    status = fuchsia_sysmem_Allocator2BindSharedCollection(allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
+    status = fuchsia_sysmem_Allocator2BindSharedCollection(
+        allocator2_client_2.get(), token_client_2.release(), collection_server_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
-    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true, constraints_2.release());
+    status = fuchsia_sysmem_BufferCollectionSetConstraints(collection_client_2.get(), true,
+                                                           constraints_2.release());
     ASSERT_EQ(status, ZX_OK, "");
 
     //
@@ -472,7 +497,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     BufferCollectionInfo buffer_collection_info_1(BufferCollectionInfo::Default);
     // This helps with a later exact equality check.
     memset(buffer_collection_info_1.get(), 0, sizeof(*buffer_collection_info_1.get()));
-    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_1.get(), &allocation_status, buffer_collection_info_1.get());
     // This is the first round-trip to/from sysmem.  A failure here can be due
     // to any step above failing async.
     ASSERT_EQ(status, ZX_OK, "");
@@ -481,7 +507,8 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     BufferCollectionInfo buffer_collection_info_2(BufferCollectionInfo::Default);
     // This helps with a later exact equality check.
     memset(buffer_collection_info_2.get(), 0, sizeof(*buffer_collection_info_2.get()));
-    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(collection_client_2.get(), &allocation_status, buffer_collection_info_2.get());
+    status = fuchsia_sysmem_BufferCollectionWaitForBuffersAllocated(
+        collection_client_2.get(), &allocation_status, buffer_collection_info_2.get());
     ASSERT_EQ(status, ZX_OK, "");
     ASSERT_EQ(allocation_status, ZX_OK, "");
 
@@ -499,13 +526,12 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     // struct copy
     fuchsia_sysmem_BufferCollectionInfo_2 copy_2 = *buffer_collection_info_2.get();
     for (uint32_t i = 0; i < countof(buffer_collection_info_1->buffers); ++i) {
-        ASSERT_EQ(
-            buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID,
-            buffer_collection_info_2->buffers[i].vmo != ZX_HANDLE_INVALID,
-            "");
+        ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID,
+                  buffer_collection_info_2->buffers[i].vmo != ZX_HANDLE_INVALID, "");
         if (buffer_collection_info_1->buffers[i].vmo != ZX_HANDLE_INVALID) {
             // The handle values must be different.
-            ASSERT_NE(buffer_collection_info_1->buffers[i].vmo, buffer_collection_info_2->buffers[i].vmo, "");
+            ASSERT_NE(buffer_collection_info_1->buffers[i].vmo,
+                      buffer_collection_info_2->buffers[i].vmo, "");
             // For now, the koid(s) are expected to be equal.  This is not a
             // fundamental check, in that sysmem could legitimately change in
             // future to vend separate child VMOs (of the same portion of a
@@ -537,8 +563,10 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     // min_size_bytes.  In other words, the portion of the VMO the client can
     // use is large enough to hold the min image size, despite the min buffer
     // size being smaller.
-    ASSERT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2, "");
-    ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false, "");
+    ASSERT_GE(buffer_collection_info_1->settings.buffer_settings.size_bytes, (512 * 512) * 3 / 2,
+              "");
+    ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_physically_contiguous, false,
+              "");
     ASSERT_EQ(buffer_collection_info_1->settings.buffer_settings.is_secure, false, "");
     // We specified image_format_constraints so the result must also have
     // image_format_constraints.
@@ -560,8 +588,12 @@ extern "C" bool test_sysmem_multiple_participants(void) {
             // The vmo has room for the nominal size of the portion of the VMO
             // the client can use.  These checks should pass even if sysmem were
             // to vend different child VMOs to the two participants.
-            ASSERT_LE(buffer_collection_info_1->buffers[i].vmo_usable_start + buffer_collection_info_1->settings.buffer_settings.size_bytes, size_bytes_1, "");
-            ASSERT_LE(buffer_collection_info_2->buffers[i].vmo_usable_start + buffer_collection_info_2->settings.buffer_settings.size_bytes, size_bytes_2, "");
+            ASSERT_LE(buffer_collection_info_1->buffers[i].vmo_usable_start +
+                          buffer_collection_info_1->settings.buffer_settings.size_bytes,
+                      size_bytes_1, "");
+            ASSERT_LE(buffer_collection_info_2->buffers[i].vmo_usable_start +
+                          buffer_collection_info_2->settings.buffer_settings.size_bytes,
+                      size_bytes_2, "");
         } else {
             ASSERT_EQ(buffer_collection_info_1->buffers[i].vmo, ZX_HANDLE_INVALID, "");
             ASSERT_EQ(buffer_collection_info_2->buffers[i].vmo, ZX_HANDLE_INVALID, "");
@@ -571,6 +603,7 @@ extern "C" bool test_sysmem_multiple_participants(void) {
     END_TEST;
 }
 
+// clang-format off
 BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_driver_connection)
     RUN_TEST(test_sysmem_service_connection)
@@ -579,3 +612,4 @@ BEGIN_TEST_CASE(sysmem_tests)
     RUN_TEST(test_sysmem_no_token)
     RUN_TEST(test_sysmem_multiple_participants)
 END_TEST_CASE(sysmem_tests)
+// clang-format on
