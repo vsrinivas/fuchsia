@@ -61,7 +61,7 @@ public:
     ProcessMemReader(const zx::process& proc)
         : process_(proc) {}
 
-    // TODO (jakehehrlich): Make this interface zero-copy (by returning a
+    // TODO (jakehehrlich): Make this interface zero-copy (by returning
     // a pointer rather than copying for instance). It's important that
     // the lifetime of the underlying storage is correctly managed.
     template <typename T>
