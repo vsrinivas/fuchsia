@@ -15,6 +15,7 @@ import (
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
 	"syscall/zx/mxerror"
+	"syscall/zx/mxnet"
 	"syscall/zx/zxsocket"
 	"syscall/zx/zxwait"
 
@@ -47,12 +48,7 @@ const debug = false
 const logListen = false
 const logAccept = false
 
-const (
-	ZXSIO_SIGNAL_INCOMING  = zx.SignalUser0
-	ZXSIO_SIGNAL_OUTGOING  = zx.SignalUser1
-	ZXSIO_SIGNAL_CONNECTED = zx.SignalUser3
-	LOCAL_SIGNAL_CLOSING   = zx.SignalUser5
-)
+const LOCAL_SIGNAL_CLOSING = zx.SignalUser5
 
 type iostate struct {
 	wq *waiter.Queue
@@ -218,13 +214,13 @@ func (ios *legacyIostate) loopRead() error {
 				}
 				notifyCh = outCh
 			} else if !connected {
-				var signals zx.Signals = ZXSIO_SIGNAL_OUTGOING
+				var signals zx.Signals = mxnet.MXSIO_SIGNAL_OUTGOING
 				switch err {
 				case nil, tcpip.ErrWouldBlock:
 					connected = true
 					ios.wq.EventUnregister(&outEntry)
 
-					signals |= ZXSIO_SIGNAL_CONNECTED
+					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
 				default:
 					notifyCh = outCh
 				}
@@ -408,7 +404,7 @@ func (ios *iostate) loopRead() error {
 					ios.wq.EventUnregister(&outEntry)
 
 					ios.incomingAssertedMu.Lock()
-					switch err := ios.dataHandle.Handle().SignalPeer(0, ZXSIO_SIGNAL_INCOMING); mxerror.Status(err) {
+					switch err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING); mxerror.Status(err) {
 					case zx.ErrOk, zx.ErrPeerClosed:
 					default:
 						panic(err)
@@ -420,13 +416,13 @@ func (ios *iostate) loopRead() error {
 					continue
 				}
 			} else if !connected {
-				var signals zx.Signals = ZXSIO_SIGNAL_OUTGOING
+				var signals zx.Signals = mxnet.MXSIO_SIGNAL_OUTGOING
 				switch err {
 				case nil, tcpip.ErrWouldBlock:
 					connected = true
 					ios.wq.EventUnregister(&outEntry)
 
-					signals |= ZXSIO_SIGNAL_CONNECTED
+					signals |= mxnet.MXSIO_SIGNAL_CONNECTED
 				}
 
 				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
@@ -1123,7 +1119,7 @@ func (ios *legacyIostate) opConnect(msg *zxsocket.Msg) (status zx.Status) {
 
 	if err := ios.ep.Connect(addr); err != nil {
 		if err == tcpip.ErrConnectStarted {
-			switch err := ios.dataHandle.Handle().SignalPeer(ZXSIO_SIGNAL_OUTGOING, 0); mxerror.Status(err) {
+			switch err := ios.dataHandle.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_OUTGOING, 0); mxerror.Status(err) {
 			case zx.ErrOk, zx.ErrPeerClosed:
 			default:
 				panic(err)
@@ -1316,7 +1312,7 @@ func (ios *iostate) Accept(flags int16) (int16, error) {
 	// while we clear the signal.
 	ios.incomingAssertedMu.Lock()
 	if ios.ep.Readiness(waiter.EventIn) == 0 {
-		if err := ios.dataHandle.Handle().SignalPeer(ZXSIO_SIGNAL_INCOMING, 0); err != nil {
+		if err := ios.dataHandle.Handle().SignalPeer(mxnet.MXSIO_SIGNAL_INCOMING, 0); err != nil {
 			panic(err)
 		}
 	}
