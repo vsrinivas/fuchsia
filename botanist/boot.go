@@ -204,7 +204,7 @@ func transfer(ctx context.Context, addr *net.UDPAddr, files []*netsvcFile) error
 
 	// Attempt the whole process of sending every file over and retry on failure of any file.
 	// This behavior more closely aligns with that of the bootserver.
-	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 10), func() error {
+	return retry.Retry(ctx, retry.WithMaxRetries(retry.NewConstantBackoff(time.Second), 20), func() error {
 		for _, f := range files {
 			select {
 			case <-ctx.Done():
