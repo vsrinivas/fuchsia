@@ -18,7 +18,7 @@ namespace fidl {
 
 // Builder helps FIDL clients store decoded objects in a buffer.
 //
-// Objects are allocated sequentually in the buffer with appropriate alignment
+// Objects are allocated sequentially in the buffer with appropriate alignment
 // for in-place encoding. The client is responsible for ordering the objects in
 // the buffer appropriately.
 class Builder {
@@ -76,7 +76,7 @@ public:
     //
     // The allocated objects are placed in the returned buffer in the order in
     // which they were allocated, with appropriate alignment for a FIDL message.
-    // The returned buffer's capacity cooresponds to the capacity originally
+    // The returned buffer's capacity corresponds to the capacity originally
     // provided to this builder in its constructor.
     BytePart Finalize();
 
