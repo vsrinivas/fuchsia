@@ -12,11 +12,11 @@
 #include <zircon/assert.h>
 
 #include "garnet/bin/appmgr/component_container.h"
-#include "garnet/bin/appmgr/debug_directory.h"
 #include "garnet/bin/appmgr/debug_info_retriever.h"
 #include "garnet/bin/appmgr/hub/component_hub.h"
 #include "garnet/bin/appmgr/hub/hub_info.h"
 #include "garnet/bin/appmgr/namespace.h"
+#include "garnet/bin/appmgr/system_objects_directory.h"
 
 #include "lib/fidl/cpp/binding.h"
 #include "lib/fxl/macros.h"
@@ -186,7 +186,7 @@ class ComponentControllerImpl : public ComponentControllerBase {
 
   TerminationCallback termination_callback_;
 
-  DebugDirectory debug_directory_;
+  SystemObjectsDirectory system_objects_directory_;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(ComponentControllerImpl);
 };

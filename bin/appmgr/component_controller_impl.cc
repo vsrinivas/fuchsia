@@ -188,14 +188,14 @@ ComponentControllerImpl::ComponentControllerImpl(
       koid_(std::to_string(fsl::GetKoid(process_.get()))),
       wait_(this, process_.get(), ZX_TASK_TERMINATED),
       termination_callback_(std::move(termination_callback)),
-      debug_directory_(DuplicateProcess(process_)) {
+      system_objects_directory_(DuplicateProcess(process_)) {
   zx_status_t status = wait_.Begin(async_get_default_dispatcher());
   FXL_DCHECK(status == ZX_OK);
 
   hub()->SetJobId(std::to_string(fsl::GetKoid(job_.get())));
   hub()->SetProcessId(koid_);
 
-  hub()->AddEntry("system_objects", debug_directory_.object());
+  hub()->AddEntry("system_objects", system_objects_directory_.object());
 
   hub()->AddIncomingServices(this->incoming_services());
 }

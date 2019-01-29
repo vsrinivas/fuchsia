@@ -8,8 +8,6 @@ source_set("lib") {
   sources = [
     "component_controller_impl.cc",
     "component_controller_impl.h",
-    "debug_directory.cc",
-    "debug_directory.h",
     "debug_info_retriever.cc",
     "debug_info_retriever.h",
     "dynamic_library_loader.cc",
@@ -38,6 +36,8 @@ source_set("lib") {
     "scheme_map.h",
     "service_provider_dir_impl.cc",
     "service_provider_dir_impl.h",
+    "system_objects_directory.cc",
+    "system_objects_directory.h",
     "util.cc",
     "util.h",
   ]

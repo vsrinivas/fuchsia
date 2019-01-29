@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef GARNET_BIN_APPMGR_DEBUG_DIRECTORY_H_
-#define GARNET_BIN_APPMGR_DEBUG_DIRECTORY_H_
+#ifndef GARNET_BIN_APPMGR_SYSTEM_OBJECTS_DIRECTORY_H_
+#define GARNET_BIN_APPMGR_SYSTEM_OBJECTS_DIRECTORY_H_
 
 #include <fbl/string.h>
 #include <fs/lazy-dir.h>
@@ -14,10 +14,10 @@
 
 namespace component {
 
-class DebugDirectory : public component::ExposedObject {
+class SystemObjectsDirectory : public component::ExposedObject {
  public:
-  explicit DebugDirectory(zx::process process)
-      : ExposedObject("debug_objects"),
+  explicit SystemObjectsDirectory(zx::process process)
+      : ExposedObject("system_objects"),
         process_(std::move(process)),
         threads_(std::make_unique<ProcessThreads>(&process_)) {
     add_child(threads_.get());
@@ -49,4 +49,4 @@ class DebugDirectory : public component::ExposedObject {
 
 }  // namespace component
 
-#endif  // GARNET_BIN_APPMGR_DEBUG_DIRECTORY_H_
+#endif  // GARNET_BIN_APPMGR_SYSTEM_OBJECTS_DIRECTORY_H_

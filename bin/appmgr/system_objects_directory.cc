@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "debug_directory.h"
+#include "system_objects_directory.h"
 
 #include <fs/pseudo-file.h>
 #include <lib/fxl/strings/string_printf.h>
@@ -13,7 +13,8 @@ using fxl::StringPrintf;
 
 namespace component {
 
-DebugDirectory::ProcessThreads::ProcessThreads(const zx::process* process)
+SystemObjectsDirectory::ProcessThreads::ProcessThreads(
+    const zx::process* process)
     : ExposedObject("threads"), process_(process) {
   auto all_dir = component::ObjectDir::Make("all_thread_stacks");
   all_dir.set_prop("stacks", [this]() -> std::string {
@@ -46,7 +47,8 @@ DebugDirectory::ProcessThreads::ProcessThreads(const zx::process* process)
       });
 }
 
-void DebugDirectory::ProcessThreads::GetThreads(fbl::Vector<ThreadInfo>* out) {
+void SystemObjectsDirectory::ProcessThreads::GetThreads(
+    fbl::Vector<ThreadInfo>* out) {
   zx_koid_t thread_ids[kMaxThreads];
   size_t num_ids;
   if (process_->get_info(ZX_INFO_PROCESS_THREADS, thread_ids,
