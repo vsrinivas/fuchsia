@@ -49,9 +49,8 @@ bool Timezone::UpdateSystemTime(int tries) {
 
   for (int i = 0; i < tries; i++) {
     FX_VLOGS(1) << "Updating system time, attempt: " << i + 1;
-    roughtime::rough_time_t timestamp_us;
-    Status ret = server->GetTimeFromServer(&timestamp_us);
-    if (ret == NETWORK_ERROR) {
+    auto ret = server->GetTimeFromServer();
+    if (ret.first == NETWORK_ERROR) {
       if (i != tries - 1) {
         FX_VLOGS(1) << "Can't get time, sleeping for 1 sec";
         sleep(1);
@@ -60,18 +59,20 @@ bool Timezone::UpdateSystemTime(int tries) {
         return false;
       }
       continue;
-    } else if (ret != OK) {
-      FX_LOGS(ERROR) << "Error with roughtime server, abort";
+    } else if (ret.first != OK || !ret.second) {
+      FX_LOGS(ERROR) << "Error with roughtime server [" << ret.first
+                     << "], abort";
       return false;
     }
-    if (SetSystemTime(timestamp_us / 1'000'000)) {
+    if (SetSystemTime(*ret.second)) {
       break;
     }
   }
   return true;
 }
 
-bool Timezone::SetSystemTime(time_t epoch_seconds) {
+bool Timezone::SetSystemTime(zx::time_utc time) {
+  int64_t epoch_seconds = time.get() / 1'000'000'000;
   struct tm ptm;
   gmtime_r(&epoch_seconds, &ptm);
   fuchsia_hardware_rtc_Time rtc;

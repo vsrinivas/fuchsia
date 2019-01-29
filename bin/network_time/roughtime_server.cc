@@ -24,17 +24,17 @@ namespace time_server {
 
 bool RoughTimeServer::IsValid() const { return valid_; }
 
-Status RoughTimeServer::GetTimeFromServer(
-    roughtime::rough_time_t* timestamp_us) const {
+std::pair<Status, std::optional<zx::time_utc>>
+RoughTimeServer::GetTimeFromServer() const {
   if (!IsValid()) {
     FX_LOGS(ERROR) << "time server not supported: " << address_;
-    return NOT_SUPPORTED;
+    return {NOT_SUPPORTED, {}};
   }
   // Create Socket
   const size_t colon_offset = address_.rfind(':');
   if (colon_offset == std::string::npos) {
     FX_LOGS(ERROR) << "no port number in server address: " << address_;
-    return NOT_SUPPORTED;
+    return {NOT_SUPPORTED, {}};
   }
 
   std::string host(address_.substr(0, colon_offset));
@@ -61,20 +61,20 @@ Status RoughTimeServer::GetTimeFromServer(
       FX_LOGS(ERROR) << "resolving " << address_ << ": " << gai_strerror(err);
       logged_once_ = true;
     }
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
   auto ac1 = fit::defer([&]() { freeaddrinfo(addrs); });
   fxl::UniqueFD sock_ufd(
       socket(addrs->ai_family, addrs->ai_socktype, addrs->ai_protocol));
   if (!sock_ufd.is_valid()) {
     FX_LOGS(ERROR) << "creating UDP socket: " << strerror(errno);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
   int sock_fd = sock_ufd.get();
 
   if (connect(sock_fd, addrs->ai_addr, addrs->ai_addrlen)) {
     FX_LOGS(ERROR) << "connecting UDP socket: " << strerror(errno);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
 
   char dest_str[INET6_ADDRSTRLEN];
@@ -83,7 +83,7 @@ Status RoughTimeServer::GetTimeFromServer(
 
   if (err != 0) {
     FX_LOGS(ERROR) << "getnameinfo: " << gai_strerror(err);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
 
   FX_VLOGS(1) << "Sending request to " << dest_str << ", port " << port_str;
@@ -99,12 +99,13 @@ Status RoughTimeServer::GetTimeFromServer(
     r = send(sock_fd, request.data(), request.size(), 0);
   } while (r == -1 && errno == EINTR);
 
-  // clock_get returns ns since start of clock. See zircon/docs/syscalls/clock_get.md.
-  const zx_time_t start_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  // clock_get returns ns since start of clock. See
+  // zircon/docs/syscalls/clock_get.md.
+  const zx::time start{zx_clock_get(ZX_CLOCK_MONOTONIC)};
 
   if (r < 0 || static_cast<size_t>(r) != request.size()) {
     FX_LOGS(ERROR) << "send on UDP socket" << strerror(errno);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
 
   uint8_t recv_buf[roughtime::kMinRequestSize];
@@ -117,37 +118,39 @@ Status RoughTimeServer::GetTimeFromServer(
   int ret = poll(&readfd, 1, timeout);
   if (ret < 0) {
     FX_LOGS(ERROR) << "poll on UDP socket: " << strerror(errno);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
   if (ret == 0) {
     FX_LOGS(ERROR) << "timeout while poll";
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
   if (readfd.revents != POLLIN) {
     FX_LOGS(ERROR) << "poll, revents = " << readfd.revents;
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
   buf_len = recv(sock_fd, recv_buf, sizeof(recv_buf), 0 /* flags */);
 
-  const zx_time_t end_ns = zx_clock_get(ZX_CLOCK_MONOTONIC);
+  const zx::time end{zx_clock_get(ZX_CLOCK_MONOTONIC)};
+  const zx::duration drift = (end - start) / 2;
 
   if (buf_len == -1) {
     FX_LOGS(ERROR) << "recv from UDP socket: " << strerror(errno);
-    return NETWORK_ERROR;
+    return {NETWORK_ERROR, {}};
   }
 
   uint32_t radius;
   std::string error;
-  if (!roughtime::ParseResponse(timestamp_us, &radius, &error, public_key_,
+  uint64_t timestamp_us;
+  if (!roughtime::ParseResponse(&timestamp_us, &radius, &error, public_key_,
                                 recv_buf, buf_len, nonce)) {
     FX_LOGS(ERROR) << "response from " << address_
                    << " failed verification: " << error;
-    return BAD_RESPONSE;
+    return {BAD_RESPONSE, {}};
   }
 
-  // roughtime::rough_time_t is us since UNIX epoch. See third_party/roughtime/protocol.h.
-  *timestamp_us += (end_ns - start_ns) / 2 / 1'000;
-  return OK;
+  // zx_time_t is nanoseconds, timestamp_us is microseconds.
+  zx::time_utc timestamp{ZX_USEC(timestamp_us)};
+  return {OK, timestamp - drift};
 }
 
 }  // namespace time_server

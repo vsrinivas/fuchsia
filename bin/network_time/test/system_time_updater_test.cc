@@ -7,6 +7,8 @@
 #include <time.h>
 #include <thread>
 
+#include <lib/zx/time.h>
+
 #include "garnet/bin/network_time/timezone.h"
 #include "garnet/public/lib/fxl/files/scoped_temp_dir.h"
 #include "gmock/gmock.h"
@@ -116,7 +118,7 @@ class SystemTimeUpdaterTest : public TestWithEnvironment {
         chrono::duration_cast<chrono::seconds>(
             expected_utc_time.time_since_epoch())
             .count();
-    Timezone::SetSystemTime(expected_epoch_seconds);
+    Timezone::SetSystemTime(zx::time_utc(ZX_SEC(expected_epoch_seconds)));
   }
 
   // Launch the system time update service using the production config file.

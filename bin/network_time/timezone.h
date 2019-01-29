@@ -5,8 +5,9 @@
 #ifndef GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
 #define GARNET_BIN_NETWORK_TIME_TIMEZONE_H_
 
-#include <stdint.h>
+#include <lib/zx/time.h>
 #include <sys/time.h>
+
 #include <string>
 #include <utility>
 
@@ -17,7 +18,7 @@ class Timezone {
  public:
   bool Run();
   bool UpdateSystemTime(int tries);
-  static bool SetSystemTime(time_t epoch_seconds);
+  static bool SetSystemTime(zx::time_utc time);
   Timezone(std::string server_config_file)
       : server_config_file_(std::move(server_config_file)) {}
   ~Timezone() = default;

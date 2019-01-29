@@ -83,13 +83,12 @@ TEST(RoughTimeServerTest, TestServerRequest) {
       << "binding udp: " << strerror(errno);
   std::thread t1(listen, sock);
 
-  roughtime::rough_time_t t;
-  time_server::Status ret;
+  std::pair<time_server::Status, std::optional<zx::time_utc>> ret;
   int attempts = 3;
   do {
     attempts--;
-    ret = server.GetTimeFromServer(&t);
-  } while (attempts > 0 && ret == time_server::Status::NETWORK_ERROR);
+    ret = server.GetTimeFromServer();
+  } while (attempts > 0 && ret.first == time_server::Status::NETWORK_ERROR);
   t1.join();
 }
 
