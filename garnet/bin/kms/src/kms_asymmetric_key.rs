@@ -6,7 +6,7 @@ use crate::common::{self as common, KeyAttributes, KeyRequestType, KeyType, KmsK
 use crate::crypto_provider::{AsymmetricProviderKey, CryptoProvider};
 use fidl::encoding::OutOfLine;
 use fidl_fuchsia_kms::{
-    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, Signature, Status,
+    AsymmetricKeyAlgorithm, AsymmetricPrivateKeyRequest, KeyOrigin, PublicKey, Signature, Status,
     MAX_DATA_SIZE,
 };
 use fidl_fuchsia_mem::Buffer;
@@ -165,6 +165,17 @@ impl KmsAsymmetricKey {
         self.key_origin
     }
 
+    /// Get the DER encoded public key.
+    fn get_der_public_key(&self) -> Result<Vec<u8>, Status> {
+        if self.is_deleted() {
+            return Err(Status::KeyNotFound);
+        }
+        Ok(self
+            .provider_key
+            .get_der_public_key()
+            .map_err(debug_err_fn!(Status::InternalError, "Failed to get public key: {:?}"))?)
+    }
+
     pub fn handle_asym_request(&self, req: AsymmetricPrivateKeyRequest) -> Result<(), fidl::Error> {
         match req {
             AsymmetricPrivateKeyRequest::Sign { data, responder } => match self.sign(data) {
@@ -174,7 +185,11 @@ impl KmsAsymmetricKey {
                 Err(status) => responder.send(status, None),
             },
             AsymmetricPrivateKeyRequest::GetPublicKey { responder } => {
-                responder.send(Status::Ok, None)
+                match self.get_der_public_key() {
+                    Ok(public_key) => responder
+                        .send(Status::Ok, Some(OutOfLine(&mut PublicKey { bytes: public_key }))),
+                    Err(status) => responder.send(status, None),
+                }
             }
             AsymmetricPrivateKeyRequest::GetKeyAlgorithm { responder } => {
                 let key_algorithm = self.get_key_algorithm();
@@ -265,5 +280,27 @@ mod tests {
         } else {
             assert!(false);
         }
+    }
+
+    #[test]
+    fn get_get_public_key_mock_provider() {
+        for algorithm in ASYMMETRIC_KEY_ALGORITHMS.iter() {
+            get_public_key_mock_provider(*algorithm);
+        }
+    }
+
+    fn get_public_key_mock_provider(key_algorithm: AsymmetricKeyAlgorithm) {
+        let test_key_data = common::generate_random_data(32);
+        let test_output_data = common::generate_random_data(32);
+        let mock_provider = Box::new(MockProvider::new());
+        mock_provider.set_result(&test_key_data);
+        mock_provider.set_key_result(Ok(test_output_data.clone()));
+        let test_key =
+            KmsAsymmetricKey::new(&*mock_provider, TEST_KEY_NAME, key_algorithm).unwrap();
+
+        let public_key = test_key.get_der_public_key().unwrap();
+        // The key data should be the output data from generate_key call.
+        assert_eq!(test_key.get_key_data(), test_key_data);
+        assert_eq!(public_key, test_output_data);
     }
 }
