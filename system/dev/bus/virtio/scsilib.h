@@ -19,6 +19,7 @@ enum class Opcode : uint8_t {
     MODE_SENSE_6 = 0x1A,
     READ_16 = 0x88,
     WRITE_16 = 0x8A,
+    READ_CAPACITY_16 = 0x9E,
 };
 
 // SCSI command structures (CDBs)
@@ -91,6 +92,28 @@ struct ModeSense6ParameterHeader {
 } __PACKED;
 
 static_assert(sizeof(ModeSense6ParameterHeader) == 4, "Mode sense 6 parameters must be 4 bytes");
+
+struct ReadCapacity16CDB {
+    Opcode opcode;
+    uint8_t service_action;
+    uint64_t reserved;
+    uint32_t allocation_length;
+    uint8_t pmi;
+    uint8_t control;
+} __PACKED;
+
+static_assert(sizeof(ReadCapacity16CDB) == 16, "Read Capacity 16 CDB must be 16 bytes");
+
+struct ReadCapacity16ParameterData {
+    uint64_t returned_logical_block_address;
+    uint32_t block_length_in_bytes;
+    uint8_t prot_info;
+    uint8_t logical_blocks_exponent_info;
+    uint16_t lowest_aligned_logical_block;
+    uint8_t reserved[16];
+} __PACKED;
+
+static_assert(sizeof(ReadCapacity16ParameterData) == 32, "Read Capacity 16 Params are 32 bytes");
 
 class Disk;
 using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::Unbindable>;
