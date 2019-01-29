@@ -281,6 +281,7 @@ class L2CAP_BrEdrDynamicChannelTest : public ::gtest::TestLoopFixture {
   }
 
   void TearDown() override {
+    RunLoopUntilIdle();
     registry_ = nullptr;
     signaling_channel_ = nullptr;
     service_request_cb_ = nullptr;
@@ -614,6 +615,35 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigPending) {
   EXPECT_EQ(1, open_cb_count);
 }
 
+TEST_F(L2CAP_BrEdrDynamicChannelTest,
+       OpenChannelRemoteDisconnectWhileConfiguring) {
+  EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
+                      {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
+  auto config_id =
+      EXPECT_OUTBOUND_REQ(*sig(), kConfigurationRequest, kConfigReq.view());
+
+  int open_cb_count = 0;
+  registry()->OpenOutbound(kPsm, [&open_cb_count](auto chan) {
+    open_cb_count++;
+    EXPECT_FALSE(chan);
+  });
+
+  RETURN_IF_FATAL(RunLoopUntilIdle());
+
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kDisconnectionRequest, kInboundDisconReq,
+                                       kInboundDisconRsp));
+
+  // Response handler should return false ("no more responses") when called, so
+  // trigger single responses rather than a set of two.
+  RETURN_IF_FATAL(sig()->ReceiveResponses(
+      config_id,
+      {{SignalingChannel::Status::kSuccess, kPendingConfigRsp.view()}}));
+  RETURN_IF_FATAL(sig()->ReceiveResponses(
+      config_id, {{SignalingChannel::Status::kSuccess, kOkConfigRsp.view()}}));
+
+  EXPECT_EQ(1, open_cb_count);
+}
+
 TEST_F(L2CAP_BrEdrDynamicChannelTest, OpenChannelConfigWrongId) {
   EXPECT_OUTBOUND_REQ(*sig(), kConnectionRequest, kConnReq.view(),
                       {SignalingChannel::Status::kSuccess, kOkConnRsp.view()});
@@ -685,6 +715,53 @@ TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionOk) {
 
   registry()->CloseChannel(kLocalCId);
   EXPECT_EQ(0, close_cb_count);
+}
+
+TEST_F(L2CAP_BrEdrDynamicChannelTest,
+       InboundConnectionRemoteDisconnectWhileConfiguring) {
+  auto config_id =
+      EXPECT_OUTBOUND_REQ(*sig(), kConfigurationRequest, kConfigReq.view());
+
+  int open_cb_count = 0;
+  DynamicChannelCallback open_cb = [&open_cb_count](auto chan) {
+    open_cb_count++;
+    FAIL() << "Failed-to-open inbound channels shouldn't trip open callback";
+  };
+
+  int service_request_cb_count = 0;
+  ServiceRequestCallback service_request_cb =
+      [&service_request_cb_count, open_cb = std::move(open_cb)](
+          PSM psm) mutable -> DynamicChannelCallback {
+    service_request_cb_count++;
+    EXPECT_EQ(kPsm, psm);
+    if (psm == kPsm) {
+      return open_cb.share();
+    }
+    return nullptr;
+  };
+
+  set_service_request_cb(std::move(service_request_cb));
+
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConnectionRequest, kInboundConnReq,
+                                       kInboundOkConnRsp));
+  RunLoopUntilIdle();
+
+  EXPECT_EQ(1, service_request_cb_count);
+  EXPECT_EQ(0, open_cb_count);
+
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kConfigurationRequest, kInboundConfigReq,
+                                       kInboundOkConfigRsp));
+  RETURN_IF_FATAL(sig()->ReceiveExpect(kDisconnectionRequest, kInboundDisconReq,
+                                       kInboundDisconRsp));
+
+  // Drop response received after the channel is disconnected.
+  RETURN_IF_FATAL(sig()->ReceiveResponses(
+      config_id, {{SignalingChannel::Status::kSuccess, kOkConfigRsp.view()}}));
+
+  EXPECT_EQ(1, service_request_cb_count);
+
+  // Channel that failed to open shouldn't have triggered channel open callback.
+  EXPECT_EQ(0, open_cb_count);
 }
 
 TEST_F(L2CAP_BrEdrDynamicChannelTest, InboundConnectionInvalidPsm) {

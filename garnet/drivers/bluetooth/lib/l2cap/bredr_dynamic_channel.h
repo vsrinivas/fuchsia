@@ -168,6 +168,8 @@ class BrEdrDynamicChannel final : public DynamicChannel {
   // This shall be reset to nullptr after invocation to enforce its single-use
   // semantics. See |DynamicChannel::Open| for details.
   fit::closure open_result_cb_;
+
+  fxl::WeakPtrFactory<BrEdrDynamicChannel> weak_ptr_factory_;
 };
 
 }  // namespace internal

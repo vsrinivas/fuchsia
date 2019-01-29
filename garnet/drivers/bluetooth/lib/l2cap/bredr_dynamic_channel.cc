@@ -292,7 +292,11 @@ void BrEdrDynamicChannel::OnRxDisconReq(
 
   state_ |= kDisconnected;
   responder->Send();
-  OnDisconnected();
+  if (opened()) {
+    OnDisconnected();
+  } else {
+    PassOpenError();
+  }
 }
 
 void BrEdrDynamicChannel::CompleteInboundConnection(
@@ -315,7 +319,8 @@ BrEdrDynamicChannel::BrEdrDynamicChannel(
     ChannelId remote_cid)
     : DynamicChannel(registry, psm, local_cid, remote_cid),
       signaling_channel_(signaling_channel),
-      state_(0u) {
+      state_(0u),
+      weak_ptr_factory_(this) {
   ZX_DEBUG_ASSERT(signaling_channel_);
   ZX_DEBUG_ASSERT(local_cid != kInvalidChannelId);
 }
@@ -345,7 +350,12 @@ void BrEdrDynamicChannel::TrySendLocalConfig() {
   BrEdrCommandHandler cmd_handler(signaling_channel_);
   if (!cmd_handler.SendConfigurationRequest(
           remote_cid(), 0, common::BufferView(),
-          fit::bind_member(this, &BrEdrDynamicChannel::OnRxConfigRsp))) {
+          [self = weak_ptr_factory_.GetWeakPtr()](auto& rsp) {
+            if (self) {
+              return self->OnRxConfigRsp(rsp);
+            }
+            return false;
+          })) {
     bt_log(ERROR, "l2cap-bredr",
            "Channel %#.4x: Failed to send Configuration Request", local_cid());
     PassOpenError();
