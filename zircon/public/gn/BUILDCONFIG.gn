@@ -37,6 +37,9 @@ set_default_toolchain(toolchain.label)
 # The toolchain can specify pervasive globals.
 forward_variables_from(toolchain.globals, "*")
 
+# Shorthand for `current_os == "fuchsia"`.
+is_fuchsia = current_os == "fuchsia"
+
 if (!defined(is_gcc)) {
   # True iff $current_toolchain builds with GCC rather than Clang.
   is_gcc = false
@@ -53,6 +56,214 @@ if (!defined(is_host)) {
 if (!defined(is_kernel)) {
   # True iff $current_toolchain builds kernel-like code.
   is_kernel = false
+}
+
+###
+### "Non-terminal" (library) target types.
+### These are compiling targets that never do variant selection.
+###
+
+# Build a library, possibly in several ways.
+#
+# This template is the way to specify any library that follows the convention
+# of having an `include/` subdirectory of the source directory that needs to
+# get into the `#include` search path of all users of the library.
+#
+# This defines multiple related targets, depending on the parameters.  Each
+# subtarget is named `$target_name.<something>`.  The main target name is an
+# alias for the "preferred" subtarget (see below).  When the target is the
+# main target for its directory (i.e. the target name matches the directory
+# name), then each subtarget also has an alias called just `<something>`.  So
+# for example, `//some/lib:static` is an alias for `//some/lib:lib.static` and
+# dependents can refer to either label equivalently.  Other targets in the
+# same directory must be referred to directly, e.g. `//some/lib:otherlib` or
+# `//some/lib:otherlib.static`.
+#
+# The subtargets are described below, after the parameters.
+#
+# Parameters
+#
+#   host
+#     Optional: True if this library can be used in host-side code, e.g.
+#     to be a dependency of a host_tool().
+#     Type: bool
+#     Default: false
+#
+#   kernel
+#     Optional: True if this library can be used in the kernel.
+#     Type: bool
+#     Default: false
+#
+#   static
+#     Optional: True if this library can be statically linked in user code.
+#     Type: bool
+#     Default: !$kernel
+#
+#   shared
+#     Optional: True if this library can be made a shared library for user code.
+#     Type: bool
+#     Default: false
+#
+#   sdk
+#     Optional: Indicates this library will be published for use in the legacy
+#     Fuchsia build.  (Later, this will control publishing to the SDK proper;
+#     but the details may well change by then.)  If this is present, then
+#     $sdk_headers is required.
+#     Type: "static" or "shared" or "source"
+#
+#   sdk_headers
+#     Optional: Required if $sdk is set.  This must list all the header files
+#     in the `include/` directory; names should be relative to `include/`.
+#     Note this must list not only the "public" header files, but also any
+#     internal headers used by those, since it controls what files will be
+#     available at all to legacy/SDK users of the library.
+#     Type: list(string)
+#
+#   See source_set() for other parameters.
+#
+# Subtargets
+#
+#   "$target_name.headers"
+#     This target is always generated.  Dependents get access to the header
+#     files in the `include/' subdirectory but do not link in any code.  The
+#     main target is an alias for this *only* in contexts where no other
+#     subtargets are defined.
+#
+#   "$target_name.shared"
+#     This target is generated only if $shared is true, and only ever
+#     generated in user environments.  The kernel and host environments never
+#     build shared libraries.  The main target is an alias for this when it's
+#     generated.
+#
+#   "$target_name.static"
+#     This target is generated in user environments if $static is true (the
+#     default), in kernel environments if $kernel is true, and in host
+#     environments if $host is true.  The main target is an alias for this
+#     when $shared is not set (and in non-user environments when $shared is
+#     ignored).
+#
+template("library") {
+  _library_name = target_name
+  host = defined(invoker.host) && invoker.host
+  kernel = defined(invoker.kernel) && invoker.kernel
+  shared = defined(invoker.shared) && invoker.shared
+  if (defined(invoker.static)) {
+    static = invoker.static
+  } else {
+    static = !kernel
+  }
+  if (defined(invoker.sdk)) {
+    # TODO(BLD-353): This will be used later for the legacy build
+    # integration and/or SDK generated, which isn't implemented yet.  The
+    # parameters are supported (and ignored) now so that library()
+    # invocations can be written now with complete information and not all
+    # need the sdk bits filled in later.
+    not_needed(invoker,
+               [
+                 "sdk",
+                 "sdk_headers",
+               ])
+  }
+  _library_params = [
+    "kernel",
+    "host",
+    "shared",
+    "static",
+  ]
+  assert(host || kernel || static || shared,
+         "library(\"$target_name\") must build somewhere!" +
+             " `host`, `kernel`, `static`, or `shared` must be true")
+
+  # Not all of these will be referenced in all toolchains.
+  not_needed(_library_params)
+
+  # A specialized toolchain might not support shared libraries.
+  shared = shared && defined(toolchain.shlib)
+
+  # Empty libraries are useless, so do a source set instead.
+  # TODO(crbug.com/gn/16): Empty library works OK and the source_set
+  # case tickles a GN bug.  Remove `&& false` when the bug is fixed.
+  if (invoker.sources == [] && false) {
+    static_library = "source_set"
+  } else {
+    static_library = "static_library"
+  }
+  not_needed([ "static_library" ])
+
+  targets = false
+  if (is_host) {
+    if (host) {
+      targets = true
+      target(static_library, _library_name) {
+        if (static_library == "static_library") {
+          complete_static_lib = true
+        }
+        forward_variables_from(invoker, "*", _library_params)
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += [ ":${_library_name}.headers" ]
+      }
+    }
+  }
+
+  if (!targets) {
+    # In this toolchain there are no actual targets, only the headers.
+    not_needed(invoker, "*")
+    group(_library_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [
+        ":${_library_name}.headers",
+      ]
+    }
+  }
+
+  group("${_library_name}.headers") {
+    public_configs = [ ":_library.config.$_library_name" ]
+
+    # The public_deps here represent header dependencies.
+    forward_variables_from(invoker,
+                           [
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (defined(visibility)) {
+      visibility += [ ":$_library_name" ]
+      if (!is_kernel) {
+        visibility += [
+          ":${_library_name}.sources",
+          ":${_library_name}.static",
+          ":${_library_name}.shared",
+        ]
+      }
+    }
+  }
+
+  config("_library.config.$_library_name") {
+    visibility = [ "${_library_name}.headers" ]
+    include_dirs = [ "include" ]
+  }
+
+  # If this library is the main target for the directory, then give its
+  # auxiliary targets aliases `dir:headers`, `dir:static`, `dir:shared`.
+  if (get_label_info(":$_library_name", "name") ==
+      get_path_info(get_label_info(":$_library_name", "dir"), "file")) {
+    group("headers") {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      public_deps = [
+        ":${_library_name}.headers",
+      ]
+    }
+  }
 }
 
 ###
@@ -87,8 +298,6 @@ if (!defined(is_kernel)) {
 #   They will be forwarded to the underlying ${target.type} target.
 #
 template("_variant_target") {
-  assert(defined(invoker.configs))
-
   target = {
     main_metadata = {
     }
@@ -559,6 +768,53 @@ template("executable") {
   }
 }
 
+# Build a test executable.
+#
+# test() is like executable() except that it's a separate target type for
+# $variants matching, and it always sets $testonly so that dependents must
+# also set $testonly.
+#
+# Parameters
+#
+#   install_path
+#     Optional: Install path where this test executable will appear in a
+#     BOOTFS or package filesystem image built containing it.  Set this to
+#     false to prevent the file being included in the filesystem image
+#     altogether.
+#     Default: "test/$test_group/$output_name"
+#     Type: string or false
+#
+#   test_group
+#     Optional: Used to set the default $install_path.
+#     Type: string
+#     Default: "sys"
+#
+# See executable() for additional parameters and details.
+template("test") {
+  if (is_kernel) {
+    # test() can appear in kernel toolchain contexts only because it's used in
+    # the BUILD.gn files for some libraries that are shared between user and
+    # kernel.  The test() can only be instantiated in the user environment.
+    # In the kernel environment, it's just silently ignored.
+    not_needed(invoker, "*")
+    not_needed([ "target_name" ])
+  } else {
+    _basic_executable(target_name) {
+      target_type = "test"
+      testonly = true
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "target_type",
+                               "test_group",
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker, [ "visibility" ])
+    }
+  }
+}
+
 # Build a C/C++ executable for a "host-style" command-line tool.
 #
 # A host_tool() target can be the $tool parameter to host_tool_action().
@@ -641,8 +897,10 @@ template("host_tool") {
 _compile_target_types = [
   "executable",
   "host_tool",
+  "library",
   "source_set",
   "static_library",
+  "test",
 ]
 
 # Apply set_defaults($target_name) according to ${toolchain.configs}.

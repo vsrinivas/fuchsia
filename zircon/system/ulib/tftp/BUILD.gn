@@ -1,0 +1,51 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+library("tftp") {
+  sdk = "static"
+  sdk_headers = [ "tftp/tftp.h" ]
+  kernel = true
+  host = true
+  static = true
+  sources = [
+    "tftp.c",
+  ]
+  if (toolchain.environment == "efi") {
+    defines = [ "TFTP_EFILIB" ]
+  } else if (is_host) {
+    defines = [ "TFTP_HOSTLIB" ]
+  }
+  if (!is_kernel && is_fuchsia) {
+    defines = [ "TFTP_USERLIB" ]
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+  }
+}
+
+if (!is_kernel) {
+  test("tftp-test") {
+    output_name = "tftp-test"
+    sources = [
+      "tftp-file-test.cpp",
+      "tftp-test.cpp",
+    ]
+    deps = [
+      "$zx/system/ulib/fbl",
+      "$zx/system/ulib/fdio",
+      "$zx/system/ulib/tftp",
+      "$zx/system/ulib/unittest",
+      "$zx/system/ulib/zxcpp",
+    ]
+  }
+
+  host_tool("tftp-example") {
+    sources = [
+      "tftp-example.c",
+    ]
+    deps = [
+      ":tftp",
+    ]
+  }
+}
