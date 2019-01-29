@@ -167,6 +167,21 @@ func (n *Client) Discover(nodename string, fuchsia bool) (*net.UDPAddr, error) {
 		// The netstack link-local address has 11th byte always set to 0xff, set
 		// this byte to transform netsvc address to netstack address if needed.
 		addr.IP[11] = 0xff
+	} else {
+		// Bind a local UDP socket to the remote nodename address. Inspect the local address
+		// that was assigned.
+		conn, err := net.DialUDP(addr.Network(), nil, addr)
+		if err != nil {
+			return nil, err
+		}
+		defer conn.Close()
+
+		udpAddr, ok := conn.LocalAddr().(*net.UDPAddr)
+		if !ok {
+			return nil, fmt.Errorf("got %s but wanted a UDP address", udpAddr)
+		}
+
+		addr = udpAddr
 	}
 
 	return addr, nil
