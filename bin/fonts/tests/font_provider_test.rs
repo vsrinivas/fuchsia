@@ -56,7 +56,7 @@ async fn get_font_info_basic(
 fn start_provider_with_default_fonts() -> Result<(App, fonts::ProviderProxy), Error> {
     let launcher = Launcher::new().context("Failed to open launcher service")?;
     let app = launcher
-        .launch("fonts".to_string(), None)
+        .launch("fuchsia-pkg://fuchsia.com/fonts#meta/fonts.cmx".to_string(), None)
         .context("Failed to launch fonts::Provider")?;
 
     let font_provider = app
