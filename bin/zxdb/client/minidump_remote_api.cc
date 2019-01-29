@@ -204,8 +204,7 @@ void PopulateRegistersX86_64(const crashpad::CPUContextX86_64& ctx,
     AddReg(category, R::kX64_rflags, ctx.rflags);
   }
 
-  category = MakeCategory(
-      pos, debug_ipc::RegisterCategory::Type::kFP, reply);
+  category = MakeCategory(pos, debug_ipc::RegisterCategory::Type::kFP, reply);
   if (category != nullptr) {
     AddReg(category, R::kX64_fcw, ctx.fxsave.fcw);
     AddReg(category, R::kX64_fsw, ctx.fxsave.fsw);
@@ -426,6 +425,18 @@ void MinidumpRemoteAPI::Modules(
   Succeed(cb, reply);
 }
 
+void MinidumpRemoteAPI::SymbolTables(
+    const debug_ipc::SymbolTablesRequest& request,
+    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
+  if (!minidump_) {
+    ErrNoDump(cb);
+    return;
+  }
+
+  debug_ipc::SymbolTablesReply reply;
+  Succeed(cb, reply);
+}
+
 void MinidumpRemoteAPI::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {
@@ -584,14 +595,14 @@ void MinidumpRemoteAPI::AddressSpace(
 }
 
 void MinidumpRemoteAPI::JobFilter(
-      const debug_ipc::JobFilterRequest& request,
-      std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
+    const debug_ipc::JobFilterRequest& request,
+    std::function<void(const Err&, debug_ipc::JobFilterReply)> cb) {
   ErrNoLive(cb);
 }
 
 void MinidumpRemoteAPI::WriteMemory(
-      const debug_ipc::WriteMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+    const debug_ipc::WriteMemoryRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
   ErrNoLive(cb);
 }
 

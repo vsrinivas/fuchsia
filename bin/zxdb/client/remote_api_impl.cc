@@ -54,6 +54,12 @@ void RemoteAPIImpl::Modules(
   Send(request, std::move(cb));
 }
 
+void RemoteAPIImpl::SymbolTables(
+    const debug_ipc::SymbolTablesRequest& request,
+    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
+  Send(request, std::move(cb));
+}
+
 void RemoteAPIImpl::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {
@@ -97,8 +103,8 @@ void RemoteAPIImpl::ReadRegisters(
 }
 
 void RemoteAPIImpl::WriteRegisters(
-      const debug_ipc::WriteRegistersRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
+    const debug_ipc::WriteRegistersRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb) {
   Send(request, std::move(cb));
 }
 
@@ -133,8 +139,8 @@ void RemoteAPIImpl::JobFilter(
 }
 
 void RemoteAPIImpl::WriteMemory(
-      const debug_ipc::WriteMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+    const debug_ipc::WriteMemoryRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
   Send(request, std::move(cb));
 }
 

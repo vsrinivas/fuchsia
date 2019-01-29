@@ -42,6 +42,9 @@ class RemoteAPI {
   virtual void Modules(
       const debug_ipc::ModulesRequest& request,
       std::function<void(const Err&, debug_ipc::ModulesReply)> cb);
+  virtual void SymbolTables(
+      const debug_ipc::SymbolTablesRequest& request,
+      std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb);
   virtual void Pause(const debug_ipc::PauseRequest& request,
                      std::function<void(const Err&, debug_ipc::PauseReply)> cb);
   virtual void QuitAgent(

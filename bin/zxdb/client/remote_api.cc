@@ -44,6 +44,12 @@ void RemoteAPI::Modules(
   FXL_NOTREACHED();
 }
 
+void RemoteAPI::SymbolTables(
+    const debug_ipc::SymbolTablesRequest& request,
+    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
+  FXL_NOTREACHED();
+}
+
 void RemoteAPI::Pause(
     const debug_ipc::PauseRequest& request,
     std::function<void(const Err&, debug_ipc::PauseReply)> cb) {
@@ -123,8 +129,8 @@ void RemoteAPI::JobFilter(
 }
 
 void RemoteAPI::WriteMemory(
-      const debug_ipc::WriteMemoryRequest& request,
-      std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
+    const debug_ipc::WriteMemoryRequest& request,
+    std::function<void(const Err&, debug_ipc::WriteMemoryReply)> cb) {
   FXL_NOTREACHED();
 }
 
