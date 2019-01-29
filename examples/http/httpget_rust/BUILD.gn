@@ -22,8 +22,6 @@ rustc_binary("bin") {
 }
 
 package("httpget_rust") {
-  deprecated_bare_package_url = "//build"
-
   meta = [
     {
       path = rebase_path("meta/httpget_rust.cmx")
