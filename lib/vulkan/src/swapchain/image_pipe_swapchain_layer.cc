@@ -628,6 +628,7 @@ DestroyInstance(VkInstance instance, const VkAllocationCallbacks* pAllocator) {
   dispatch_key key = get_dispatch_key(instance);
   LayerData* my_data = GetLayerDataPtr(key, layer_data_map);
 
+  my_data->instance_dispatch_table->DestroyInstance(instance, pAllocator);
   delete my_data->instance_dispatch_table;
   layer_data_map.erase(key);
 }
