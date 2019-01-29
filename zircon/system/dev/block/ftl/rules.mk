@@ -100,3 +100,49 @@ MODULE_BANJO_LIBS := \
 MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)
 
 include make/module.mk
+
+# Integration tests:
+
+MODULE := $(LOCAL_DIR).integration
+
+MODULE_NAME := ftl-integration
+
+MODULE_TYPE := usertest
+
+TEST_DIR := $(LOCAL_DIR)/test
+
+MODULE_SRCS += \
+    $(TEST_DIR)/ftl_integration_test.cpp \
+    $(TEST_DIR)/ftl_test_observer.cpp \
+    $(TEST_DIR)/integration_main.cpp \
+    $(TEST_DIR)/launch.cpp \
+
+MODULE_STATIC_LIBS := \
+    system/ulib/devmgr-integration-test \
+    system/ulib/devmgr-launcher \
+    system/ulib/fbl \
+    system/ulib/ramdevice-client \
+    system/ulib/sync \
+    system/ulib/zx \
+    system/ulib/zxcpp \
+    system/ulib/zxtest \
+
+MODULE_LIBS := \
+    system/ulib/c \
+    system/ulib/fdio \
+    system/ulib/launchpad \
+    system/ulib/zircon \
+
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-hardware-block \
+    system/fidl/fuchsia-hardware-nand \
+
+MODULE_BANJO_LIBS := \
+    system/banjo/ddk-protocol-badblock \
+    system/banjo/ddk-protocol-block \
+    system/banjo/ddk-protocol-block-partition \
+    system/banjo/ddk-protocol-nand \
+
+MODULE_COMPILEFLAGS := -I$(LOCAL_DIR)
+
+include make/module.mk

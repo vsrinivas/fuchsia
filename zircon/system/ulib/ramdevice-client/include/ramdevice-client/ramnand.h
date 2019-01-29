@@ -75,6 +75,8 @@ public:
         return nullptr;
     }
 
+    const fbl::unique_fd& devfs_root() { return parent_->devfs_root(); }
+
 private:
     RamNand(fbl::unique_fd fd, fbl::RefPtr<RamNandCtl> ctl)
         : fd_(std::move(fd)), path_(std::nullopt), parent_(ctl) {}
