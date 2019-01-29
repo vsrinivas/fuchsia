@@ -1,4 +1,4 @@
-use cm_fidl;
+use cm_fidl_translator;
 use failure::Error;
 use fidl_fuchsia_data as fd;
 use fidl_fuchsia_sys2::{
@@ -14,7 +14,7 @@ fn main() {
     let golden_cm = read_cm("/pkg/data/golden.cm").expect("could not open golden.cm");
     assert_eq!(&cm_content, &golden_cm);
 
-    let cm_decl = cm_fidl::translate(&cm_content).expect("could not translate cm");
+    let cm_decl = cm_fidl_translator::translate(&cm_content).expect("could not translate cm");
     let expected_decl = {
         let program = fd::Dictionary{entries: vec![
             fd::Entry{

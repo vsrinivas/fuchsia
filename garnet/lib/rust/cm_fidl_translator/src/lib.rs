@@ -2,21 +2,30 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+use cm_fidl_validator;
 use cm_json::{self, cm, Error};
-use fidl_fuchsia_data as fd;
+use fidl_fuchsia_data as fdata;
 use fidl_fuchsia_sys2::{
     CapabilityType, ChildDecl, ComponentDecl, ExposeDecl, OfferDecl, OfferTarget, Relation,
     RelativeId, UseDecl,
 };
 use serde_json::{Map, Value};
 
-// Read in a CML file and produce the equivalent FIDL.
+/// Converts the contents of a CM file and produces the equivalent FIDL.
+/// The mapping between CM-JSON and CM-FIDL is 1-1. The only difference is the language semantics
+/// used to express particular data structures.
+/// This function also applies cm_fidl_validator to the generated FIDL.
 pub fn translate(buffer: &str) -> Result<ComponentDecl, Error> {
     let json = cm_json::from_json_str(&buffer)?;
     cm_json::validate_json(&json, cm_json::CM_SCHEMA)?;
     let document: cm::Document = serde_json::from_str(&buffer)
         .map_err(|e| Error::parse(format!("Couldn't read input as struct: {}", e)))?;
-    translate_cm(document)
+    let decl = translate_cm(document)?;
+    cm_fidl_validator::validate(&decl).map_err(|errs| {
+        let errs_str: Vec<String> = errs.iter().map(|e| format!("{}", e)).collect();
+        Error::parse(errs_str.join(","))
+    })?;
+    Ok(decl)
 }
 
 fn translate_cm(document: cm::Document) -> Result<ComponentDecl, Error> {
@@ -104,48 +113,43 @@ fn translate_offers(offer_in: Vec<cm::Offer>) -> Result<Vec<OfferDecl>, Error> {
 fn translate_children(children_in: Vec<cm::Child>) -> Result<Vec<ChildDecl>, Error> {
     let mut out_children = vec![];
     for child in children_in {
-        out_children.push(ChildDecl {
-            name: Some(child.name),
-            uri: Some(child.uri),
-        });
+        out_children.push(ChildDecl { name: Some(child.name), uri: Some(child.uri) });
     }
     Ok(out_children)
 }
 
-fn dictionary_from_map(in_obj: Map<String, serde_json::Value>) -> Result<fd::Dictionary, Error> {
-    let mut dict = fd::Dictionary { entries: vec![] };
+fn dictionary_from_map(in_obj: Map<String, serde_json::Value>) -> Result<fdata::Dictionary, Error> {
+    let mut dict = fdata::Dictionary { entries: vec![] };
     do_dictionary_from_map(in_obj, &mut dict)?;
     Ok(dict)
 }
 
 fn do_dictionary_from_map(
-    in_obj: Map<String, Value>, out: &mut fd::Dictionary,
+    in_obj: Map<String, Value>,
+    out: &mut fdata::Dictionary,
 ) -> Result<(), Error> {
     for (k, v) in in_obj {
         if let Some(value) = convert_value(v)? {
-            out.entries.push(fd::Entry {
-                key: k,
-                value: Some(value),
-            });
+            out.entries.push(fdata::Entry { key: k, value: Some(value) });
         }
     }
     Ok(())
 }
 
-fn convert_value(v: Value) -> Result<Option<Box<fd::Value>>, Error> {
+fn convert_value(v: Value) -> Result<Option<Box<fdata::Value>>, Error> {
     Ok(match v {
         Value::Null => None,
-        Value::Bool(b) => Some(Box::new(fd::Value::Bit(b))),
+        Value::Bool(b) => Some(Box::new(fdata::Value::Bit(b))),
         Value::Number(n) => {
             if let Some(i) = n.as_i64() {
-                Some(Box::new(fd::Value::Inum(i)))
+                Some(Box::new(fdata::Value::Inum(i)))
             } else if let Some(f) = n.as_f64() {
-                Some(Box::new(fd::Value::Fnum(f)))
+                Some(Box::new(fdata::Value::Fnum(f)))
             } else {
                 return Err(Error::Parse(format!("Number is out of range: {}", n)));
             }
         }
-        Value::String(s) => Some(Box::new(fd::Value::Str(s.clone()))),
+        Value::String(s) => Some(Box::new(fdata::Value::Str(s.clone()))),
         Value::Array(a) => {
             let mut values = vec![];
             for v in a {
@@ -153,13 +157,13 @@ fn convert_value(v: Value) -> Result<Option<Box<fd::Value>>, Error> {
                     values.push(Some(value));
                 }
             }
-            let vector = fd::Vector { values };
-            Some(Box::new(fd::Value::Vec(vector)))
+            let vector = fdata::Vector { values };
+            Some(Box::new(fdata::Value::Vec(vector)))
         }
         Value::Object(o) => {
-            let mut dict = fd::Dictionary { entries: vec![] };
+            let mut dict = fdata::Dictionary { entries: vec![] };
             do_dictionary_from_map(o, &mut dict)?;
-            Some(Box::new(fd::Value::Dict(dict)))
+            Some(Box::new(fdata::Value::Dict(dict)))
         }
     })
 }
@@ -208,14 +212,14 @@ mod tests {
             $(
                 $test_name:ident => {
                     input = $input:expr,
-                    output = $result:expr,
+                    output = $output:expr,
                 },
             )+
         ) => {
             $(
                 #[test]
                 fn $test_name() {
-                    translate_test($input, $result);
+                    translate_test($input, $output);
                 }
             )+
         }
@@ -236,14 +240,14 @@ mod tests {
             ]
         });
 
-        let expected_res: Result<ComponentDecl, Error> = Err(Error::validate_schema(CM_SCHEMA,
+        let expected_res: Result<ComponentDecl, Error> = Err(Error::validate_schema(
+            CM_SCHEMA,
             "Pattern condition is not met at /exposes/0/type",
         ));
         let res = translate(&format!("{}", input));
         assert_eq!(format!("{:?}", res), format!("{:?}", expected_res));
     }
 
-    #[test]
     test_translate! {
         test_translate_empty => {
             input = json!({}),
@@ -256,10 +260,10 @@ mod tests {
                 }
             }),
             output = {
-                let program = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let program = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "binary".to_string(),
-                        value: Some(Box::new(fd::Value::Str("bin/app".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
                     }
                 ]};
                 let mut decl = new_component_decl();
@@ -278,22 +282,22 @@ mod tests {
                 }
             }),
             output = {
-                let program = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let program = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "bool".to_string(),
-                        value: Some(Box::new(fd::Value::Bit(true))),
+                        value: Some(Box::new(fdata::Value::Bit(true))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "float".to_string(),
-                        value: Some(Box::new(fd::Value::Fnum(3.14))),
+                        value: Some(Box::new(fdata::Value::Fnum(3.14))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "int".to_string(),
-                        value: Some(Box::new(fd::Value::Inum(-42))),
+                        value: Some(Box::new(fdata::Value::Inum(-42))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "string".to_string(),
-                        value: Some(Box::new(fd::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -316,30 +320,30 @@ mod tests {
                 }
             }),
             output = {
-                let dict_inner = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let dict_inner = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "string".to_string(),
-                        value: Some(Box::new(fd::Value::Str("bar".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("bar".to_string()))),
                     },
                 ]};
-                let vector = fd::Vector{values: vec![
-                    Some(Box::new(fd::Value::Dict(dict_inner))),
-                    Some(Box::new(fd::Value::Inum(-42)))
+                let vector = fdata::Vector{values: vec![
+                    Some(Box::new(fdata::Value::Dict(dict_inner))),
+                    Some(Box::new(fdata::Value::Inum(-42)))
                 ]};
-                let dict_outer = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let dict_outer = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "array".to_string(),
-                        value: Some(Box::new(fd::Value::Vec(vector))),
+                        value: Some(Box::new(fdata::Value::Vec(vector))),
                     },
                 ]};
-                let program = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let program = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "bool".to_string(),
-                        value: Some(Box::new(fd::Value::Bit(true))),
+                        value: Some(Box::new(fdata::Value::Bit(true))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "obj".to_string(),
-                        value: Some(Box::new(fd::Value::Dict(dict_outer))),
+                        value: Some(Box::new(fdata::Value::Dict(dict_outer))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -400,6 +404,12 @@ mod tests {
                         },
                         "target_path": "/volumes/blobfs"
                     }
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    }
                 ]
             }),
             output = {
@@ -423,8 +433,15 @@ mod tests {
                         target_path: Some("/volumes/blobfs".to_string()),
                     },
                 ];
+                let children = vec![
+                    ChildDecl{
+                        name: Some("logger".to_string()),
+                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                    },
+                ];
                 let mut decl = new_component_decl();
                 decl.exposes = Some(exposes);
+                decl.children = Some(children);
                 decl
             },
         },
@@ -440,11 +457,11 @@ mod tests {
                         "targets": [
                             {
                                 "target_path": "/data/realm_assets",
-                                "child_name": "echo_server"
+                                "child_name": "logger"
                             },
                             {
                                 "target_path": "/data/assets",
-                                "child_name": "hello_world"
+                                "child_name": "netstack"
                             }
                         ]
                     },
@@ -471,11 +488,21 @@ mod tests {
                         "targets": [
                             {
                                 "target_path": "/svc/fuchsia.logger.SysLog",
-                                "child_name": "echo_server"
+                                "child_name": "netstack"
                             }
                         ]
                     }
-                ]
+                ],
+                "children": [
+                    {
+                        "name": "logger",
+                        "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm"
+                    },
+                    {
+                        "name": "netstack",
+                        "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm"
+                    }
+                ],
             }),
             output = {
                 let offers = vec![
@@ -489,11 +516,11 @@ mod tests {
                         targets: Some(vec![
                             OfferTarget{
                                 target_path: Some("/data/realm_assets".to_string()),
-                                child_name: Some("echo_server".to_string()),
+                                child_name: Some("logger".to_string()),
                             },
                             OfferTarget{
                                 target_path: Some("/data/assets".to_string()),
-                                child_name: Some("hello_world".to_string()),
+                                child_name: Some("netstack".to_string()),
                             },
                         ]),
                     },
@@ -521,13 +548,24 @@ mod tests {
                         targets: Some(vec![
                             OfferTarget{
                                 target_path: Some("/svc/fuchsia.logger.SysLog".to_string()),
-                                child_name: Some("echo_server".to_string()),
+                                child_name: Some("netstack".to_string()),
                             },
                         ]),
                     },
                 ];
+                let children = vec![
+                    ChildDecl{
+                        name: Some("logger".to_string()),
+                        uri: Some("fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm".to_string()),
+                    },
+                    ChildDecl{
+                        name: Some("netstack".to_string()),
+                        uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
+                    },
+                ];
                 let mut decl = new_component_decl();
                 decl.offers = Some(offers);
+                decl.children = Some(children);
                 decl
             },
         },
@@ -572,22 +610,22 @@ mod tests {
                 }
             }),
             output = {
-                let vector = fd::Vector{values: vec![
-                    Some(Box::new(fd::Value::Str("me".to_string()))),
-                    Some(Box::new(fd::Value::Str("you".to_string()))),
+                let vector = fdata::Vector{values: vec![
+                    Some(Box::new(fdata::Value::Str("me".to_string()))),
+                    Some(Box::new(fdata::Value::Str("you".to_string()))),
                 ]};
-                let facets = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let facets = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "authors".to_string(),
-                        value: Some(Box::new(fd::Value::Vec(vector))),
+                        value: Some(Box::new(fdata::Value::Vec(vector))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "title".to_string(),
-                        value: Some(Box::new(fd::Value::Str("foo".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("foo".to_string()))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "year".to_string(),
-                        value: Some(Box::new(fd::Value::Inum(2018))),
+                        value: Some(Box::new(fdata::Value::Inum(2018))),
                     },
                 ]};
                 let mut decl = new_component_decl();
@@ -649,10 +687,10 @@ mod tests {
                 }
             }),
             output = {
-                let program = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let program = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "binary".to_string(),
-                        value: Some(Box::new(fd::Value::Str("bin/app".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("bin/app".to_string()))),
                     },
                 ]};
                 let uses = vec![
@@ -699,14 +737,14 @@ mod tests {
                         uri: Some("fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm".to_string()),
                     },
                 ];
-                let facets = fd::Dictionary{entries: vec![
-                    fd::Entry{
+                let facets = fdata::Dictionary{entries: vec![
+                    fdata::Entry{
                         key: "author".to_string(),
-                        value: Some(Box::new(fd::Value::Str("Fuchsia".to_string()))),
+                        value: Some(Box::new(fdata::Value::Str("Fuchsia".to_string()))),
                     },
-                    fd::Entry{
+                    fdata::Entry{
                         key: "year".to_string(),
-                        value: Some(Box::new(fd::Value::Inum(2018))),
+                        value: Some(Box::new(fdata::Value::Inum(2018))),
                     },
                 ]};
                 ComponentDecl{

@@ -65,9 +65,9 @@ rustc_binary("cmc_integration_test_bin") {
   edition = "2018"
   source_root = "tests/integration_test.rs"
   deps = [
-    "//garnet/lib/rust/cm_fidl",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//garnet/lib/rust/cm_fidl_translator",
     "//third_party/rust-crates/rustc_deps:failure",
   ]
 }

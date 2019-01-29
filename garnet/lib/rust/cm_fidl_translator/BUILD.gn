@@ -6,16 +6,15 @@ import("//build/rust/rustc_library.gni")
 import("//build/test/test_package.gni")
 import("//build/testing/environments.gni")
 
-rustc_library("cm_fidl") {
+rustc_library("cm_fidl_translator") {
   with_unit_tests = true
   edition = "2018"
   deps = [
+    "//garnet/lib/rust/cm_fidl_validator",
     "//garnet/lib/rust/cm_json",
     "//sdk/fidl/fuchsia.data:fuchsia.data-rustc",
     "//sdk/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
     "//third_party/rust-crates/rustc_deps:json5",
-    "//third_party/rust-crates/rustc_deps:lazy_static",
-    "//third_party/rust-crates/rustc_deps:regex",
     "//third_party/rust-crates/rustc_deps:serde",
     "//third_party/rust-crates/rustc_deps:serde_derive",
     "//third_party/rust-crates/rustc_deps:serde_json",
@@ -25,15 +24,15 @@ rustc_library("cm_fidl") {
   non_rust_deps = [ "//garnet/lib/rust/cm_json:cm_schema_json" ]
 }
 
-test_package("cm_fidl_tests") {
+test_package("cm_fidl_translator_tests") {
   deps = [
-    ":cm_fidl",
+    ":cm_fidl_translator",
   ]
 
   tests = [
     {
-      name = "cm_fidl_lib_test"
-      dest = "cm_fidl_tests"
+      name = "cm_fidl_translator_lib_test"
+      dest = "cm_fidl_translator_tests"
       environments = basic_envs
     },
   ]

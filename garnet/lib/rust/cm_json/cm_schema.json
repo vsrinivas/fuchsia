@@ -176,6 +176,7 @@
             "type": "array",
             "title": "Offered capability targets",
             "uniqueItems": true,
+            "minItems": 1,
             "items": {
               "$id": "/properties/offers/items/properties/targets/items",
               "type": "object",

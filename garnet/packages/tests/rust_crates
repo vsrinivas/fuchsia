@@ -1,7 +1,8 @@
 {
     "packages": [
         "//garnet/bin/cmc:cmc_integration_test",
-        "//garnet/lib/rust/cm_fidl:cm_fidl_tests",
+        "//garnet/lib/rust/cm_fidl_translator:cm_fidl_translator_tests",
+        "//garnet/lib/rust/cm_fidl_validator:cm_fidl_validator_tests",
         "//garnet/lib/rust/cm_json:cm_json_tests",
         "//garnet/lib/rust/connectivity-testing:connectivity-testing-tests",
         "//garnet/lib/rust/escaped-cstring:escaped-cstring-tests",
