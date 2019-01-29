@@ -33,6 +33,6 @@ while getopts "c:mh" FLAG; do
 done
 shift $((OPTIND-1))
 
-"${ZIRCON_DIR}/kernel/target/arm64/board/cleo/package-image.sh" -B "${ZIRCON_DIR}/build-arm64" "${EXTRA_ARGS[@]}"
+"${ZIRCON_DIR}/kernel/target/arm64/board/cleo/package-image.sh" -B "${ZIRCON_DIR}/build-arm64" -r "${EXTRA_ARGS[@]}"
 
 "${SCRIPTS_DIR}/flash-avb" -b cleo "$@"

@@ -27,6 +27,7 @@ BOOT_IMG=
 VBMETA_IMG=
 ZIRCON_BOOTIMAGE=
 MKBOOTIMG_ARGS=
+USE_RAMDISK=true
 
 function HELP {
     echo "help:"
@@ -44,6 +45,7 @@ function HELP {
     echo "-m                                : Add mexec option to command line"
     echo "-M                                : membase for mkbootimg (default ${MEMBASE})"
     echo "-o                                : output boot.img file (defaults to <build-dir>/<board>-boot.img)"
+    echo "-r                                : don't add a ramdisk to the boot image"
     echo "-v                                : output vbmeta.img file (defaults to <build-dir>/<board>-vbmeta.img)"
     echo "-z                                : input zircon ZBI file (defaults to <build-dir>/<board>-boot.img)"
     exit 1
@@ -53,7 +55,7 @@ function HELP {
 DTB_OFFSET=0x03000000
 BOOT_PARTITION_SIZE=33554432
 
-while getopts "ab:B:c:C::d:D:ghK:lmM:r:o:v:z:" FLAG; do
+while getopts "ab:B:c:C::d:D:ghK:lmM:o:rv:z:" FLAG; do
     case $FLAG in
         a) USE_AVB=true;;
         b) BOARD="${OPTARG}";;
@@ -69,6 +71,7 @@ while getopts "ab:B:c:C::d:D:ghK:lmM:r:o:v:z:" FLAG; do
         m) MEXEC=true;;
         M) MEMBASE="${OPTARG}";;
         o) BOOT_IMG="${OPTARG}";;
+        r) USE_RAMDISK=false;;
         v) VBMETA_IMG="${OPTARG}";;
         z) ZIRCON_BOOTIMAGE="${OPTARG}";;
         \?)
@@ -178,11 +181,17 @@ fi
 RAMDISK="${BUILD_DIR}/dummy-ramdisk"
 echo "foo" > "${RAMDISK}"
 
+if [[ ${USE_RAMDISK} == true ]]; then
+    RAMDISK_OPTION="--ramdisk ${RAMDISK}"
+else
+    RAMDISK_OPTION=""
+fi
+
 # create our boot.img
 "${MKBOOTIMG}" \
     --kernel "${COMPRESSED_BOOTIMAGE_DTB}" \
     --kernel_offset ${KERNEL_OFFSET} \
-    --ramdisk "${RAMDISK}" \
+    ${RAMDISK_OPTION} \
     --base ${MEMBASE} \
     --tags_offset 0xE000000 \
     --cmdline "${MKBOOTIMG_CMDLINE}" \
