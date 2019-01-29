@@ -8,6 +8,8 @@
 #ifndef ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
 #define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_LOG_EXPORTER_H_
 
+#include <memory>
+
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -133,7 +135,7 @@ private:
 // |error| error to set in case of failure.
 //
 // Returns nullptr if it is not possible to launch Log Exporter.
-fbl::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
+std::unique_ptr<LogExporter> LaunchLogExporter(fbl::StringPiece syslog_path,
                                                ExporterLaunchError* error);
 
 } // namespace runtests

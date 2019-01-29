@@ -6,7 +6,8 @@
 
 #include <stdio.h>
 
-#include <fbl/unique_ptr.h>
+#include <memory>
+
 #include <runtests-utils/runtests-utils.h>
 
 namespace runtests {
@@ -17,7 +18,7 @@ namespace runtests {
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-fbl::unique_ptr<Result> PosixRunTest(const char* argv[],
+std::unique_ptr<Result> PosixRunTest(const char* argv[],
                                      const char* output_dir,
                                      const char* output_filename);
 

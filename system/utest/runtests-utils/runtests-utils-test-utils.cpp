@@ -105,20 +105,6 @@ int NumEntriesInDir(const char* dir_path) {
     return num_entries;
 }
 
-// Returns true if and only if the contents of |file| match |expected|.
-bool CompareFileContents(FILE* file, const char* expected) {
-    BEGIN_HELPER;
-    // Get the size of the file contents, copy it into a buffer, and compare.
-    ASSERT_EQ(0, fseek(file, 0, SEEK_END));
-    const long unsigned int size = ftell(file);
-    rewind(file);
-    fbl::unique_ptr<char[]> buf(new char[size + 1]);
-    buf[size] = 0;
-    ASSERT_EQ(size, fread(buf.get(), sizeof(char), size, file));
-    EXPECT_STR_EQ(expected, buf.get());
-    END_HELPER;
-}
-
 // Computes the relative path within |output_dir| of the output file of the
 // test at |test_path|, setting |output_file_rel_path| as its value if
 // successful.

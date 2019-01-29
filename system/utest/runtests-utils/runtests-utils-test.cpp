@@ -12,10 +12,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <memory>
+
 #include <fbl/auto_call.h>
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
-#include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <runtests-utils/runtests-utils.h>
 #include <unittest/unittest.h>
@@ -28,6 +29,7 @@ namespace {
 
 static constexpr char kEchoSuccessAndArgs[] = "echo Success! $@";
 static constexpr char kEchoFailureAndArgs[] = "echo Failure!  $@ 1>&2\nexit 77";
+static constexpr size_t kOneMegabyte = 1 << 20;
 
 bool ParseTestNamesEmptyStr() {
     BEGIN_TEST;
@@ -172,14 +174,15 @@ bool MkDirAllParentDoesNotExist() {
 bool WriteSummaryJSONSucceeds() {
     BEGIN_TEST;
 
-    // TODO(IN-499): Use fmemopen instead of tmpfile.
-    FILE* output_file = tmpfile();
-    ASSERT_NONNULL(output_file);
-    fbl::Vector<fbl::unique_ptr<Result>> results;
-    results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
-    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    // A reasonable guess that the function won't output more than this.
+    std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
+    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
+    fbl::Vector<std::unique_ptr<Result>> results;
+    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", "/tmp/file_path",
-                                  output_file));
+                                  buf_file));
+    fclose(buf_file);
     // We don't have a JSON parser in zircon right now, so just hard-code the
     // expected output.
     const char kExpectedJSONOutput[] = R"({
@@ -200,8 +203,7 @@ bool WriteSummaryJSONSucceeds() {
   }
 }
 )";
-    EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
-    fclose(output_file);
+    EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
 
     END_TEST;
 }
@@ -209,14 +211,15 @@ bool WriteSummaryJSONSucceeds() {
 bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
     BEGIN_TEST;
 
-    // TODO(IN-499): Use fmemopen instead of tmpfile.
-    FILE* output_file = tmpfile();
-    ASSERT_NONNULL(output_file);
-    fbl::Vector<fbl::unique_ptr<Result>> results;
-    results.push_back(fbl::make_unique<Result>("/a", SUCCESS, 0));
-    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    // A reasonable guess that the function won't output more than this.
+    std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
+    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
+    fbl::Vector<std::unique_ptr<Result>> results;
+    results.push_back(std::make_unique<Result>("/a", SUCCESS, 0));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_EQ(0, WriteSummaryJSON(results, "output.txt", /*syslog_path=*/"",
-                                  output_file));
+                                  buf_file));
+    fclose(buf_file);
     // With an empty syslog_path, we expect no values under "outputs" and
     // "syslog_file" to be generated in the JSON output.
     const char kExpectedJSONOutput[] = R"({
@@ -235,26 +238,24 @@ bool WriteSummaryJSONSucceedsWithoutSyslogPath() {
 }
 )";
 
-    EXPECT_TRUE(CompareFileContents(output_file, kExpectedJSONOutput));
-    fclose(output_file);
-
+    EXPECT_STR_EQ(kExpectedJSONOutput, buf.get());
     END_TEST;
 }
 
 bool WriteSummaryJSONBadTestName() {
     BEGIN_TEST;
 
-    // TODO(IN-499): Use fmemopen instead of tmpfile.
-    FILE* output_file = tmpfile();
-    ASSERT_NONNULL(output_file);
+    // A reasonable guess that the function won't output more than this.
+    std::unique_ptr<char[]> buf(new char[kOneMegabyte]);
+    FILE* buf_file = fmemopen(buf.get(), kOneMegabyte, "w");
     // A test name and output file consisting entirely of slashes should trigger
     // an error.
-    fbl::Vector<fbl::unique_ptr<Result>> results;
-    results.push_back(fbl::make_unique<Result>("///", SUCCESS, 0));
-    results.push_back(fbl::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
+    fbl::Vector<std::unique_ptr<Result>> results;
+    results.push_back(std::make_unique<Result>("///", SUCCESS, 0));
+    results.push_back(std::make_unique<Result>("b", FAILED_TO_LAUNCH, 0));
     ASSERT_NE(0, WriteSummaryJSON(results, /*output_file_basename=*/"///",
-                                  /*syslog_path=*/"/", output_file));
-    fclose(output_file);
+                                  /*syslog_path=*/"/", buf_file));
+    fclose(buf_file);
 
     END_TEST;
 }
@@ -304,7 +305,7 @@ bool RunTestSuccess() {
     fbl::String test_name = JoinPath(test_dir.path(), "succeed.sh");
     const char* argv[] = {test_name.c_str(), nullptr};
     ScopedScriptFile script(argv[0], "exit 0");
-    fbl::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
@@ -324,7 +325,7 @@ bool RunTestSuccessWithStdout() {
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    fbl::unique_ptr<Result> result =
+    std::unique_ptr<Result> result =
         PlatformRunTest(argv, nullptr, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
@@ -353,7 +354,7 @@ bool RunTestFailureWithStderr() {
     ScopedScriptFile script(argv[0], script_contents);
 
     fbl::String output_filename = JoinPath(test_dir.path(), "test.out");
-    fbl::unique_ptr<Result> result =
+    std::unique_ptr<Result> result =
         PlatformRunTest(argv, nullptr, output_filename.c_str());
 
     FILE* output_file = fopen(output_filename.c_str(), "r");
@@ -375,7 +376,7 @@ bool RunTestFailureToLoadFile() {
 
     const char* argv[] = {"i/do/not/exist/", nullptr};
 
-    fbl::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(FAILED_TO_LAUNCH, result->launch_status);
 
@@ -451,13 +452,15 @@ bool DiscoverTestsInDirGlobsIgnore() {
 
 bool DiscoverTestsInListFileWithTrailingWhitespace() {
     BEGIN_TEST;
-    // TODO(IN-499): Use fmemopen instead of tmpfile.
-    FILE* test_list_file = tmpfile();
-    ASSERT_NONNULL(test_list_file);
-    fprintf(test_list_file, "trailing/tab\t\n");
-    fprintf(test_list_file, "trailing/space \n");
-    fprintf(test_list_file, "trailing/return\r");
-    rewind(test_list_file);
+    const char* lines[] = {"trailing/tab\t\n", "trailing/space \n", "trailing/return\r"};
+    size_t total_size = strlen(lines[0]) + strlen(lines[1]) + strlen(lines[2]);
+    std::unique_ptr<char[]> buf(new char[total_size]);
+    FILE* test_list_file = fmemopen(buf.get(), total_size, "w");
+    fprintf(test_list_file, "%s", lines[0]);
+    fprintf(test_list_file, "%s", lines[1]);
+    fprintf(test_list_file, "%s", lines[2]);
+    fclose(test_list_file);
+    test_list_file = fmemopen(buf.get(), total_size, "r");
     fbl::Vector<fbl::String> test_paths;
     EXPECT_EQ(0, DiscoverTestsInListFile(test_list_file, &test_paths));
     EXPECT_EQ(3, test_paths.size());
@@ -476,7 +479,7 @@ bool RunTestsWithVerbosity() {
         JoinPath(test_dir.path(), "succeed.sh");
     ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
     int num_failed = 0;
-    fbl::Vector<fbl::unique_ptr<Result>> results;
+    fbl::Vector<std::unique_ptr<Result>> results;
     const signed char verbosity = 77;
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";
@@ -509,7 +512,7 @@ bool RunTestsWithArguments() {
   ScopedScriptFile succeed_file(succeed_file_name, kEchoSuccessAndArgs);
   int num_failed = 0;
   const signed char verbosity = -1;
-  fbl::Vector<fbl::unique_ptr<Result>> results;
+  fbl::Vector<std::unique_ptr<Result>> results;
   fbl::Vector<fbl::String> args{"first", "second", "third", "-4", "--", "-", "seventh"};
   const fbl::String output_dir = JoinPath(test_dir.path(), "output");
   const char output_file_base_name[] = "output.txt";
@@ -824,9 +827,9 @@ RUN_TEST(MkDirAllParentDoesNotExist)
 END_TEST_CASE(MkDirAll)
 
 BEGIN_TEST_CASE(WriteSummaryJSON)
-RUN_TEST_MEDIUM(WriteSummaryJSONSucceeds)
-RUN_TEST_MEDIUM(WriteSummaryJSONSucceedsWithoutSyslogPath)
-RUN_TEST_MEDIUM(WriteSummaryJSONBadTestName)
+RUN_TEST(WriteSummaryJSONSucceeds)
+RUN_TEST(WriteSummaryJSONSucceedsWithoutSyslogPath)
+RUN_TEST(WriteSummaryJSONBadTestName)
 END_TEST_CASE(WriteSummaryJSON)
 
 BEGIN_TEST_CASE(ResolveGlobs)

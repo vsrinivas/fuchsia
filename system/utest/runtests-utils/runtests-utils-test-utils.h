@@ -143,9 +143,6 @@ private:
 // Returns the number of files or subdirectories in a given directory.
 int NumEntriesInDir(const char* dir_path);
 
-// Returns true if and only if the contents of |file| match |expected|.
-bool CompareFileContents(FILE* file, const char* expected);
-
 // Computes the relative path within |output_dir| of the output file of the
 // test at |test_path|, setting |output_file_rel_path| as its value if
 // successful.

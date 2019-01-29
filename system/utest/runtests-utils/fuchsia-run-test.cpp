@@ -152,7 +152,7 @@ bool RunTestDontPublishData() {
     ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
 
     const char* argv[] = {test_name.c_str(), nullptr};
-    fbl::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
+    std::unique_ptr<Result> result = PlatformRunTest(argv, nullptr, nullptr);
     EXPECT_STR_EQ(argv[0], result->name.c_str());
     EXPECT_EQ(SUCCESS, result->launch_status);
     EXPECT_EQ(0, result->return_code);
@@ -168,7 +168,7 @@ bool RunTestsPublishData() {
     fbl::String test_name = JoinPath(test_dir.path(), "publish-data-helper");
     ScopedTestFile file(test_name.c_str(), "/boot/bin/publish-data-helper");
     int num_failed = 0;
-    fbl::Vector<fbl::unique_ptr<Result>> results;
+    fbl::Vector<std::unique_ptr<Result>> results;
     const signed char verbosity = 77;
     const fbl::String output_dir = JoinPath(test_dir.path(), "output");
     const char output_file_base_name[] = "output.txt";

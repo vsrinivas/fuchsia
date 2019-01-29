@@ -251,7 +251,7 @@ void LogExporter::NotifyFileError(const char* error) {
     }
 }
 
-fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
+std::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_path,
                                                ExporterLaunchError* error) {
     *error = NO_ERROR;
     fbl::String syslog_path_str = fbl::String(syslog_path.data());
@@ -305,7 +305,7 @@ fbl::unique_ptr<LogExporter> LaunchLogExporter(const fbl::StringPiece syslog_pat
     }
 
     // Connect log exporter channel to object and start message loop on it.
-    auto log_exporter = fbl::make_unique<LogExporter>(std::move(listener_request),
+    auto log_exporter = std::make_unique<LogExporter>(std::move(listener_request),
                                                       syslog_file);
     log_exporter->set_error_handler([](zx_status_t status) {
         if (status != ZX_ERR_CANCELED) {

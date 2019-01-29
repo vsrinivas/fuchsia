@@ -290,7 +290,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     // TODO(mknyszek): Sort test_paths for deterministic behavior. Should be easy after ZX-1751.
     stopwatch->Start();
     int failed_count = 0;
-    fbl::Vector<fbl::unique_ptr<Result>> results;
+    fbl::Vector<std::unique_ptr<Result>> results;
     if (!RunTests(RunTest, test_paths, test_args, output_dir, kOutputFileName, verbosity,
                   &failed_count, &results)) {
         return EXIT_FAILURE;
@@ -326,7 +326,7 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     if (failed_count) {
         printf("\nThe following tests failed:\n");
     }
-    for (const fbl::unique_ptr<Result>& result : results) {
+    for (const std::unique_ptr<Result>& result : results) {
         switch (result->launch_status) {
         case SUCCESS:
             break;

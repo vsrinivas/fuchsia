@@ -63,7 +63,7 @@ int main(int argc, char** argv) {
     const char* output_dir = GetOutputDir(argc, argv);
 
     // Start Log Listener.
-    fbl::unique_ptr<runtests::LogExporter> log_exporter_ptr;
+    std::unique_ptr<runtests::LogExporter> log_exporter_ptr;
     if (output_dir != nullptr) {
         int error = runtests::MkDirAll(output_dir);
         if (error) {

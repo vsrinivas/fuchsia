@@ -6,9 +6,9 @@
 #define ZIRCON_SYSTEM_ULIB_RUNTESTS_UTILS_INCLUDE_RUNTESTS_UTILS_FUCHSIA_RUN_TEST_H_
 
 #include <stdio.h>
+#include <memory>
 
 #include <fbl/string.h>
-#include <fbl/unique_ptr.h>
 #include <runtests-utils/runtests-utils.h>
 
 namespace runtests {
@@ -42,7 +42,7 @@ void TestFileComponentInfo(const fbl::String path,
 // |output_filename| is the name of the file to which the test binary's output
 //   will be written. May be nullptr, in which case the output will not be
 //   redirected.
-fbl::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
+std::unique_ptr<Result> FuchsiaRunTest(const char* argv[],
                                        const char* output_dir,
                                        const char* output_filename);
 
