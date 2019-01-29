@@ -32,6 +32,8 @@ source_set("network_service") {
     "endpoint_manager.h",
     "fake_endpoint.cc",
     "fake_endpoint.h",
+    "interceptors/interceptor.h",
+    "interceptors/packet_loss.h",
     "network.cc",
     "network.h",
     "network_context.cc",
@@ -55,6 +57,7 @@ executable("network_test_bin") {
 
   sources = [
     "ethertap_client_unittest.cc",
+    "interceptors/interceptors_unittest.cc",
     "network_service_unittest.cc",
   ]
 
