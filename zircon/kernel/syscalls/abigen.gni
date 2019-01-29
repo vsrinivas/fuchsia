@@ -1,0 +1,45 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/host_tool_action.gni")
+
+# Generate syscall bindings/information from `syscalls.abigen`.
+#
+# Parameters
+#
+#   gen
+#     Required: List of scopes describing `abigen` output files.
+#     Type: scope as follows
+#       outputs
+#         Required: As for action().
+#         Type: list(file)
+#       args
+#         Required: Output-related arguments to `abigen`.
+#         This should contain switches and the $root_build_dir-relative
+#         form of the files named in $outputs.
+#         Type: list(string)
+#
+template("abigen") {
+  host_tool_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "$zx/system/host/abigen"
+
+    outputs = []
+    args = []
+    foreach(gen, invoker.gen) {
+      outputs += gen.outputs
+      args += gen.args + rebase_path(gen.outputs, root_build_dir)
+    }
+
+    sources = [
+      "$zx/system/public/zircon/syscalls.abigen",
+    ]
+    args += rebase_path(sources, root_build_dir)
+  }
+}

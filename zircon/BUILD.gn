@@ -72,6 +72,27 @@ if (current_toolchain == default_toolchain) {
 group("default") {
   testonly = true
   deps = [
+    ":all-cpu",
     ":tools",
   ]
+}
+
+group("all-cpu") {
+  testonly = true
+  deps = []
+  foreach(cpu, standard_fuchsia_cpus) {
+    # TODO: When everything builds, this will be reorganized.
+    deps += [ ":what-builds-$cpu" ]
+  }
+}
+
+foreach(cpu, standard_fuchsia_cpus) {
+  environment_redirect("what-builds-$cpu") {
+    visibility = [ ":*" ]
+    environment_label = "$zx/public/gn/toolchain:user"
+    cpu = cpu
+    deps = [
+      "$zx/system/ulib/zircon",
+    ]
+  }
 }

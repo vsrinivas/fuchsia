@@ -1,0 +1,2 @@
+# GCC looks for -lstdc++ but we actually use -lc++.
+INPUT ( libc++.a )

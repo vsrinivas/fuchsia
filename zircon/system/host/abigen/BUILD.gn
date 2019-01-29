@@ -1,0 +1,19 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+host_tool("abigen") {
+  sources = [
+    "abigen.cpp",
+    "abigen_generator.cpp",
+    "generator.cpp",
+    "header_generator.cpp",
+    "json_generator.cpp",
+    "kernel_wrapper_generator.cpp",
+    "parser/parser.cpp",
+    "rust_binding_generator.cpp",
+    "syscall_parser.cpp",
+    "types.cpp",
+    "vdso_wrapper_generator.cpp",
+  ]
+}

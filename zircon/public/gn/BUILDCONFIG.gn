@@ -37,6 +37,13 @@ set_default_toolchain(toolchain.label)
 # The toolchain can specify pervasive globals.
 forward_variables_from(toolchain.globals, "*")
 
+# This is the name for $current_cpu that's used in Zircon file names.
+if (current_cpu == "x64") {
+  zircon_cpu = "x86"
+} else if (current_cpu != "") {
+  zircon_cpu = current_cpu
+}
+
 # Shorthand for `current_os == "fuchsia"`.
 is_fuchsia = current_os == "fuchsia"
 
@@ -62,6 +69,130 @@ if (!defined(is_kernel)) {
 ### "Non-terminal" (library) target types.
 ### These are compiling targets that never do variant selection.
 ###
+
+# This is for doing the actual shared_library() or loadable_module()
+# target in a toolchain that supports them directly.  That is, either
+# ${toolchain.label} == ${toolchain.shlib} or this is a toolchain that
+# was defined with `solink = true` so there is no ${toolchain.shlib}.
+template("_shlib_toolchain_target") {
+  assert(!is_kernel,
+         "${invoker.target_type}() targets don't work in kernel toolchains")
+
+  target(invoker.target_type, target_name) {
+    # visibility and data_deps get special treatment in ${toolchain.shlib}.
+    if (defined(toolchain.shlib)) {
+      if (defined(invoker.visibility)) {
+        # Make sure we're visible to the redirector groups defined below.
+        visibility = invoker.visibility + [ ":$target_name" ]
+      }
+      if (defined(invoker.data_deps)) {
+        # Redirect data_deps to the non-shlib toolchain.  Any label listed
+        # with an explicit toolchain is fine as is.  But a bare label was
+        # intended for the main toolchain and the shlib toolchain is an
+        # implementation detail that's mostly hidden.  There's no way to
+        # distinguish a bare label from one that explicitly used the shlib
+        # toolchain, but there should be no reason to do that.
+        data_deps = []
+        foreach(label, invoker.data_deps) {
+          if (get_label_info(label, "toolchain") == current_toolchain) {
+            label = get_label_info(label, "label_no_toolchain")
+            label += "(${toolchain.label})"
+          }
+          data_deps += [ label ]
+        }
+      }
+    } else {
+      forward_variables_from(invoker,
+                             [
+                               "data_deps",
+                               "visibility",
+                             ])
+    }
+
+    # Everything else is passed through (everything in solink toolchains).
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "data_deps",
+                             "target_type",
+                             "visibility",
+                           ])
+  }
+}
+
+# See `gn help shared_library`.  Instead use library() with `shared = true`.
+#
+# This has the same API as described by `gn help shared_library`.  The
+# difference from the built-in behavior is the implicit redirect to the
+# shlib toolchain when in an environment() that set `shlib = true`.
+template("shared_library") {
+  if (!defined(toolchain.shlib) || current_toolchain == toolchain.shlib) {
+    # This is the toolchain that actually builds the libraries.
+    _shlib_toolchain_target(target_name) {
+      target_type = "shared_library"
+      forward_variables_from(invoker,
+                             "*",
+                             [
+                               "metadata",
+                               "target_type",
+                               "testonly",
+                               "visibility",
+                             ])
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+
+      # Elaborate the toolchain's defaults to compute the output file name.
+      if (!defined(output_name)) {
+        output_name = target_name
+      }
+      output_name += toolchain.output_name_suffix
+      if (!defined(output_extension)) {
+        output_extension = "so"
+      }
+      output_file = "$target_out_dir/lib$output_name"
+      if (output_extension != "") {
+        output_file += ".$output_extension"
+      }
+
+      metadata = {
+        if (defined(invoker.metadata)) {
+          forward_variables_from(invoker.metadata, "*")
+        }
+
+        # Every terminal target provides these metadata keys.  The first is
+        # used as the data key for the output of the link, as a file name
+        # relative to $root_build_dir appropriate for command-line contexts.
+        # The second is used as a walk key to provide a dependency barrier
+        # against e.g. shared_library() deps or other executable() data_deps.
+        # The last is provided only on ELF platforms, to indicate all the link
+        # outputs that should be checked for a build ID if collecting an
+        # exhaustive list via metadata.
+        link_output = [ rebase_path(output_file + toolchain.link_output_suffix,
+                                    root_build_dir) ]
+        link_barrier = []
+        if (current_os != "mac" && current_os != "win") {
+          elf_link_output = link_output
+        }
+      }
+    }
+  } else {
+    # In the main toolchain, just redirect to the shlib toolchain.
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      not_needed(invoker, "*")
+      public_deps = [
+        ":$target_name(${toolchain.shlib})",
+      ]
+    }
+  }
+}
 
 # Build a library, possibly in several ways.
 #
@@ -205,6 +336,125 @@ template("library") {
         public_deps += [ ":${_library_name}.headers" ]
       }
     }
+  } else if (static || shared) {
+    targets = true
+    source_set("${_library_name}._sources") {
+      visibility = [
+        ":${_library_name}.static",
+        ":${_library_name}.shared",
+      ]
+      forward_variables_from(invoker,
+                             "*",
+                             _library_params + [
+                                   "data_deps",
+                                   "install_path",
+                                   "public_deps",
+                                   "visibility",
+                                 ])
+      if (!defined(deps)) {
+        deps = []
+      }
+      deps += [ ":${_library_name}.headers" ]
+      if (defined(invoker.data_deps)) {
+        # Redirect data_deps to the non-shlib toolchain.
+        data_deps = []
+        foreach(label, invoker.data_deps) {
+          if (get_label_info(label, "toolchain") == current_toolchain) {
+            label += "(${toolchain.label})"
+          }
+          data_deps += [ label ]
+        }
+      }
+    }
+    if (static) {
+      target(static_library, "${_library_name}.static") {
+        if (static_library == "static_library") {
+          complete_static_lib = true
+        }
+        output_name = _library_name
+        forward_variables_from(invoker,
+                               [
+                                 "configs",
+                                 "data_deps",
+                                 "public_deps",
+                                 "testonly",
+                                 "visibility",
+                               ])
+        if (!defined(public_deps)) {
+          public_deps = []
+        }
+        public_deps += [ ":${_library_name}.headers" ]
+        deps = [
+          ":${_library_name}._sources",
+        ]
+      }
+    }
+    if (shared) {
+      if (defined(invoker.install_path)) {
+        install_path = invoker.install_path
+      } else {
+        install_path = "lib/${toolchain.libprefix}lib${_library_name}.so"
+      }
+      shared_library("${_library_name}.shared") {
+        output_name = _library_name
+        forward_variables_from(invoker,
+                               [
+                                 "configs",
+                                 "ldflags",
+                                 "libs",
+                                 "lib_dirs",
+                                 "testonly",
+                                 "visibility",
+                               ])
+
+        # Everything that depends on the library gets the headers.
+        # It also gets the explicit `public_deps`, which includes
+        # any header dependencies or public config()s.
+        public_deps = [
+          ":${_library_name}.headers",
+        ]
+        if (defined(invoker.public_deps)) {
+          public_deps += invoker.public_deps
+        }
+
+        # The library depends on the source_set().  It also depends on the
+        # `deps` from the source_set() so as to get any config()
+        # dependencies that affect linking rather than just compilation.
+        # Other dependencies are redundant since the source_set() already
+        # has them, but they don't hurt.
+        deps = [
+          ":${_library_name}._sources",
+        ]
+        if (defined(invoker.deps)) {
+          deps += invoker.deps
+        }
+
+        # An explicit `install_path = false` means this DSO is not installed.
+        if (install_path != false) {
+          metadata = {
+            manifest_inputs = [ "$target_out_dir/lib${output_name}.so" ]
+            manifest_lines = [ "${install_path}=" +
+                               rebase_path(manifest_inputs[0], root_build_dir) ]
+          }
+        }
+      }
+    }
+    group(_library_name) {
+      forward_variables_from(invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (shared) {
+        public_deps = [
+          ":${_library_name}.shared",
+        ]
+      } else {
+        public_deps = [
+          ":${_library_name}.static",
+        ]
+      }
+    }
   }
 
   if (!targets) {
@@ -262,6 +512,32 @@ template("library") {
       public_deps = [
         ":${_library_name}.headers",
       ]
+    }
+    if (!is_kernel && !is_host) {
+      if (static) {
+        group("static") {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          public_deps = [
+            ":${_library_name}.static",
+          ]
+        }
+      }
+      if (shared) {
+        group("shared") {
+          forward_variables_from(invoker,
+                                 [
+                                   "testonly",
+                                   "visibility",
+                                 ])
+          public_deps = [
+            ":${_library_name}.shared",
+          ]
+        }
+      }
     }
   }
 }
@@ -898,6 +1174,7 @@ _compile_target_types = [
   "executable",
   "host_tool",
   "library",
+  "shared_library",
   "source_set",
   "static_library",
   "test",

@@ -1,0 +1,164 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/kernel/syscalls/abigen.gni")
+import("$zx/public/gn/toolchain/environment_redirect.gni")
+
+# The vDSO can't be built with instrumentation.
+exclude_tags = [ "instrumented" ]
+
+if (toolchain.tags + exclude_tags - exclude_tags != toolchain.tags ||
+    toolchain.environment != "user") {
+  # References from other toolchains just redirect.  This prevents extra
+  # abigen runs in other toolchains just to get identical generated headers.
+  foreach(target,
+          [
+            "zircon",
+            "headers",
+          ]) {
+    environment_redirect(target) {
+      environment_label = "$zx/public/gn/toolchain:user"
+      deps = [
+        ":$target",
+      ]
+    }
+  }
+} else {
+  # TODO(mcgrathr): Rename the source files and the abigen switch.
+  if (zircon_cpu == "x86") {
+    zircon_cpu = "x86-64"
+    abigen_cpu = "x86"
+  } else if (zircon_cpu == "arm64") {
+    abigen_cpu = "arm"
+  }
+
+  library("zircon") {
+    sdk = "shared"
+    sdk_headers = [ "zircon/status.h" ]  # TODO(BLD-353)
+    shared = true
+    static = false
+
+    # The vDSO is never installed as a file, only baked into the kernel.
+    install_path = false
+
+    sources = [
+      "data.S",
+      "syscall-wrappers.cpp",
+      "zx_cache_flush.cpp",
+      "zx_channel_call.cpp",
+      "zx_cprng_draw.cpp",
+      "zx_deadline_after.cpp",
+      "zx_status_get_string.cpp",
+      "zx_system_get_dcache_line_size.cpp",
+      "zx_system_get_features.cpp",
+      "zx_system_get_num_cpus.cpp",
+      "zx_system_get_physmem.cpp",
+      "zx_system_get_version.cpp",
+      "zx_ticks_get.cpp",
+      "zx_ticks_per_second.cpp",
+    ]
+
+    configs += [ ":config" ]
+    deps = [
+      ":generate",
+      ":syscall-asm",
+      "$zx/kernel/lib/vdso:headers",
+    ]
+    public_deps = [
+      ":generated-public-headers",
+    ]
+
+    # Instruct the linker to preserve the hidden alternate entry points.
+    # Note, "./" makes GN realize this is a file rather than a -l switch.
+    libs = [ "./alternates.ld" ]
+
+    if (toolchain.environment == "user") {
+      # This doesn't get normal default deps on libc.
+      configs -= [ "$zx/public/gn/config:user" ]
+      if (is_gcc) {
+        # However, GCC's <x86intrin.h> needs <stdlib.h> indirectly.
+        configs += [ "$zx/system/ulib/c:headers" ]
+      }
+    }
+  }
+
+  # Everything with ":config" in configs needs ":generate" in deps.
+  config("config") {
+    visibility = [ ":*" ]
+
+    # This library should not depend on libc.
+    cflags = [ "-ffreestanding" ]
+    configs = [ "$zx/public/gn/config:no_sanitizers" ]
+
+    include_dirs = [ target_gen_dir ]
+  }
+
+  source_set("syscall-asm") {
+    sources = [
+      "syscalls-$zircon_cpu.S",
+      "zx_futex_wake_handle_close_thread_exit-$zircon_cpu.S",
+      "zx_vmar_unmap_handle_close_thread_exit-$zircon_cpu.S",
+    ]
+    configs += [ ":config" ]
+    deps = [
+      ":generate",
+      "$zx/kernel/syscalls:syscall-abi",
+    ]
+    if (toolchain.environment == "user") {
+      configs -= [ "$zx/public/gn/config:user" ]
+    }
+  }
+
+  group("generated-public-headers") {
+    public_configs = [ ":generated-public-headers.config" ]
+    deps = [
+      ":generate",
+    ]
+  }
+
+  config("generated-public-headers.config") {
+    visibility = [ ":generated-public-headers" ]
+    include_dirs = [ root_gen_dir ]
+  }
+
+  abigen("generate") {
+    visibility = [ ":*" ]
+    gen = [
+      # These are the public headers.
+      {
+        args = [ "-user-header" ]
+        outputs = [
+          "$root_gen_dir/zircon/syscalls/definitions.h",
+        ]
+      },
+      {
+        args = [ "-rust" ]
+        outputs = [
+          "$root_gen_dir/zircon/syscalls/definitions.rs",
+        ]
+      },
+
+      # TODO(mcgrathr): Drop the zircon/ prefix from the remaining files.
+      # These are private.
+      {
+        args = [ "-vdso-header" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-vdso-definitions.h",
+        ]
+      },
+      {
+        args = [ "-vdso-wrappers" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscall-vdso-wrappers.inc",
+        ]
+      },
+      {
+        args = [ "-${abigen_cpu}-asm" ]
+        outputs = [
+          "$target_gen_dir/zircon/syscalls-$zircon_cpu.S",
+        ]
+      },
+    ]
+  }
+}

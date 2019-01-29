@@ -215,6 +215,19 @@ config("relative_paths") {
   ldflags = compiler_flags
 }
 
+config("nostdlib") {
+  # Don't actually use -nostdlib, because the builtins (or libgcc) are what
+  # we want and are otherwise annoying to find and specify.  It's just the
+  # -lc (and -lc++) that we really want to defeat, and that's handled by
+  # giving a -L that will find exactly nothing but a dummy libc.so.
+  ldflags = [ "-nostartfiles" ]
+  lib_dirs = [ "libc-dummy" ]
+  if (is_gcc) {
+    # Include this in every link.
+    libs = [ "$zx/scripts/dso_handle.ld" ]
+  }
+}
+
 config("data_sections") {
   cflags = [ "-fdata-sections" ]
 }
@@ -305,6 +318,23 @@ config("symbol_level") {
     # TODOD: ??? This produces the .pdb file, but it doesn't seem
     # to get the DWARF data out of the main output file.
     ldflags += [ "-Wl,/debug:full" ]
+  }
+}
+
+config("werror") {
+  cflags = [
+    "-Werror",
+
+    # Declarations marked as deprecated should not cause build failures.
+    # Rather they should emit warnings to notify developers about the use
+    # of deprecated interfaces.
+    "-Wno-error=deprecated-declarations",
+
+    # Do not add additional `-Wno-error=...` switches to this config!
+  ]
+
+  if (current_os == "win") {
+    ldflags = [ "-Wl,/WX" ]
   }
 }
 
@@ -407,8 +437,60 @@ config("thread_safety_annotations") {
   }
 }
 
+config("no_stack_protector") {
+  cflags = [ "-fno-stack-protector" ]
+}
+
+config("no_safestack") {
+  cflags = [ "-fno-sanitize=safe-stack" ]
+  configs = [ ":no_stack_protector" ]
+}
+
+config("no_sanitizers") {
+  cflags = [ "-fno-sanitize=all" ]
+  configs = [ ":no_stack_protector" ]
+}
+
+# Compile code appropriately to be linked into a shared library.
+config("shared_library_config") {
+  if (current_os != "mac") {
+    # Assembly code can use `#ifdef __PIC__`.
+    compiler_flags = [ "-fPIC" ]
+    asmflags = compiler_flags
+    cflags = compiler_flags
+    ldflags = compiler_flags
+  }
+}
+
+# Don't allow dangling undefined references in shared libraries.
+# All references should be satisfied by link-time library dependencies.
+config("no_undefined_symbols") {
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-undefined,error" ]
+  } else {
+    ldflags = [ "-Wl,-z,defs" ]
+  }
+}
+
 config("visibility_hidden") {
   cflags = [ "-fvisibility=hidden" ]
+}
+
+config("machine") {
+  ldflags = []
+  if (current_cpu == "arm64") {
+    # The linker rewrites instructions to work around a CPU bug.
+    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+  }
+  if (is_fuchsia) {
+    # TODO(ZX-2300): Really need to get this nailed down once and for all
+    # and set by default in the compiler driver (Clang at least).
+    ldflags += [ "-Wl,-z,max-page-size=4096" ]
+  }
+}
+
+config("user") {
+  defines = [ "_ALL_SOURCE" ]
 }
 
 config("static-libc++") {

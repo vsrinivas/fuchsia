@@ -1,0 +1,54 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("abigen.gni")
+
+group("syscall-abi") {
+  visibility = [
+    ":*",
+    "$zx/system/ulib/zircon:*",
+  ]
+
+  public_configs = [ ":syscall-abi.config" ]
+  deps = [
+    ":syscall-abi.generate",
+  ]
+}
+
+config("syscall-abi.config") {
+  visibility = [ ":syscall-abi" ]
+  include_dirs = [ target_gen_dir ]
+}
+
+abigen("syscall-abi.generate") {
+  visibility = [ ":syscall-abi" ]
+
+  # TODO(mcgrathr): Rename these from <zircon/...> to <lib/syscalls/...>?
+  gen = [
+    {
+      args = [ "-numbers" ]
+      outputs = [
+        "$target_gen_dir/zircon/zx-syscall-numbers.h",
+      ]
+    },
+    {
+      args = [ "-kernel-header" ]
+      outputs = [
+        "$target_gen_dir/zircon/syscall-definitions.h",
+      ]
+    },
+    {
+      args = [ "-kernel-wrappers" ]
+      outputs = [
+        "$target_gen_dir/zircon/syscall-kernel-wrappers.inc",
+      ]
+    },
+    {
+      args = [ "-kernel-branch" ]
+      outputs = [
+        "$target_gen_dir/zircon/syscall-kernel-branches.S",
+      ]
+    },
+  ]
+}

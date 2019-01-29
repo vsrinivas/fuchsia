@@ -1,0 +1,9 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# TODO: So far this is just here to get <lib/vdso-constants.h> visible to
+# $zx/system/ulib/zircon code.
+library("vdso") {
+  sources = []
+}

@@ -2,6 +2,12 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+# All the $current_cpu values that `current_os == "fuchsia"` supports.
+standard_fuchsia_cpus = [
+  "arm64",
+  "x64",
+]
+
 # All the {cpu, os} combinations supported as build or SDK hosts.  The
 # build will define toolchains for all of these.  Successful
 # cross-compilation may require that a sysroot be installed and configured.
@@ -30,6 +36,7 @@ if (host_os == "mac") {
 standard_configs = [
   "$zx/public/gn/config:compiler",
   "$zx/public/gn/config:language",
+  "$zx/public/gn/config:machine",
   "$zx/public/gn/config:relative_paths",
   "$zx/public/gn/config:assert_level",
   "$zx/public/gn/config:opt_level",
@@ -44,6 +51,32 @@ standard_configs = [
   "$zx/public/gn/config:thread_safety_annotations",
 
   # TODO(ZX-1895): "$zx/public/gn/config:symbol_visibility_hidden",
+
+  {
+    # Additional configs apply only to code built into shared libraries.
+    # This means everything in a ${toolchain.shlib} toolchain, not just code
+    # directly in the `sources` of a shared_library() or library() target.
+    shlib = true
+    add = [
+      "$zx/public/gn/config:shared_library_config",
+      "$zx/public/gn/config:no_undefined_symbols",
+    ]
+  },
+]
+
+# Additional configs apply to code built for Fuchsia but not to host code.
+standard_fuchsia_configs = [
+  "$zx/public/gn/config:nostdlib",
+  "$zx/public/gn/config:werror",
+]
+
+# Additional configs apply to normal userland Fuchsia code.
+standard_fuchsia_user_configs = [
+  "$zx/public/gn/config:user",
+  {
+    types = [ "host_tool" ]
+    add = [ "$zx/system/ulib/fdio" ]
+  },
 ]
 
 # See environment().  These are the environments that are
@@ -56,6 +89,20 @@ standard_environments = [
       is_host = true
     }
     strip = true
+  },
+  {
+    name = "user"
+    targets = []
+    foreach(cpu, standard_fuchsia_cpus) {
+      targets += [
+        {
+          cpu = cpu
+        },
+      ]
+    }
+    configs = standard_fuchsia_configs + standard_fuchsia_user_configs
+    shlib = true
+    strip = "--strip-sections"
   },
 ]
 

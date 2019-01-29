@@ -1,0 +1,4 @@
+/*
+ * This is an empty input linker script just to be found as -lm.
+ * See $zx/public/gn/config/BUILD.gn:nostdlib.
+ */

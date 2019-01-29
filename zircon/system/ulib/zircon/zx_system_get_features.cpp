@@ -7,9 +7,6 @@
 #include <zircon/compiler.h>
 #include <zircon/features.h>
 #include <zircon/syscalls.h>
-#include <zircon/threads.h>
-
-#include <zircon/types.h>
 
 #include "private.h"
 
