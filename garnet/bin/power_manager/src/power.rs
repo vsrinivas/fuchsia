@@ -18,7 +18,7 @@ use std::mem;
 use std::os::raw;
 use std::ptr;
 
-const IOCTL_POWER_GET_INFO: raw::c_int = make_ioctl!(
+const IOCTL_POWER_GET_INFO: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_POWER,
     1
@@ -31,7 +31,7 @@ pub struct ioctl_power_get_info_t {
     pub state: uint32_t,
 }
 
-const IOCTL_POWER_GET_BATTERY_INFO: raw::c_int = make_ioctl!(
+const IOCTL_POWER_GET_BATTERY_INFO: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_POWER,
     2
@@ -59,7 +59,7 @@ impl ioctl_power_get_battery_info_t {
     }
 }
 
-const IOCTL_POWER_GET_STATE_CHANGE_EVENT: raw::c_int = make_ioctl!(
+const IOCTL_POWER_GET_STATE_CHANGE_EVENT: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_GET_HANDLE,
     fdio_sys::IOCTL_FAMILY_POWER,
     3

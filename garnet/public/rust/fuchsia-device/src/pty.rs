@@ -47,13 +47,13 @@ pub fn get_window_size() -> Result<pty_window_size_t, Error> {
     }
 }
 
-const IOCTL_PTY_GET_WINDOW_SIZE: raw::c_int = make_ioctl!(
+const IOCTL_PTY_GET_WINDOW_SIZE: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_PTY,
     0x01
 );
 
-const IOCTL_PTY_SET_WINDOW_SIZE: raw::c_int = make_ioctl!(
+const IOCTL_PTY_SET_WINDOW_SIZE: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_PTY,
     0x20

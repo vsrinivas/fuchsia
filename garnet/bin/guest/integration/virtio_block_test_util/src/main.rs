@@ -16,7 +16,7 @@ use structopt::StructOpt;
 
 const BLOCK_DEV_DIR: &str = "/dev/class/block";
 
-const IOCTL_BLOCK_GET_INFO: raw::c_int = make_ioctl!(
+const IOCTL_BLOCK_GET_INFO: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_BLOCK,
     1

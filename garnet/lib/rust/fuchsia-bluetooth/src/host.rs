@@ -38,7 +38,7 @@ pub fn open_host_channel(device: &File) -> Result<zircon::Handle, Error> {
     }
 }
 
-const IOCTL_BT_HOST_OPEN_CHANNEL: raw::c_int = make_ioctl!(
+const IOCTL_BT_HOST_OPEN_CHANNEL: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_GET_HANDLE,
     fdio_sys::IOCTL_FAMILY_BT_HOST,
     0

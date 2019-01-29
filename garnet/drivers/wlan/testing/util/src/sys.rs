@@ -43,7 +43,7 @@ pub fn destroy_test_device(device: &File) -> Result<(), Error> {
     Ok(interface.destroy()?)
 }
 
-const IOCTL_DEVICE_BIND: raw::c_int = make_ioctl!(
+const IOCTL_DEVICE_BIND: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     0

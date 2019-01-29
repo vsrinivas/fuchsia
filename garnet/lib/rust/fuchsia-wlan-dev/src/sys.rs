@@ -56,7 +56,7 @@ pub fn connect_wlaniface_device(device: &File) -> Result<zx::Channel, zx::Status
 }
 
 const IOCTL_WLANPHY_CONNECT: raw::c_int =
-    make_ioctl!(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANPHY, 0);
+    make_ioctl(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANPHY, 0);
 
 const IOCTL_WLAN_GET_CHANNEL: raw::c_int =
-    make_ioctl!(fdio_sys::IOCTL_KIND_GET_HANDLE, fdio_sys::IOCTL_FAMILY_WLAN, 0);
+    make_ioctl(fdio_sys::IOCTL_KIND_GET_HANDLE, fdio_sys::IOCTL_FAMILY_WLAN, 0);

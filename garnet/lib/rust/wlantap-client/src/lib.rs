@@ -65,4 +65,4 @@ impl Wlantap {
 }
 
 const IOCTL_WLANTAP_CREATE_WLANPHY: raw::c_int =
-    make_ioctl!(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANTAP, 0);
+    make_ioctl(fdio_sys::IOCTL_KIND_SET_HANDLE, fdio_sys::IOCTL_FAMILY_WLANTAP, 0);

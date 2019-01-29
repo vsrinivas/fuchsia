@@ -135,19 +135,19 @@ fn open_rdwr<P: AsRef<Path>>(path: P) -> Result<File, Error> {
 
 // Ioctl definitions for the above calls.
 // TODO(bwb): move out to a generic crate
-const IOCTL_DEVICE_BIND: raw::c_int = make_ioctl!(
+const IOCTL_DEVICE_BIND: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     0
 );
 
-const IOCTL_DEVICE_GET_DRIVER_NAME: raw::c_int = make_ioctl!(
+const IOCTL_DEVICE_GET_DRIVER_NAME: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     2
 );
 
-const IOCTL_BT_HCI_GET_SNOOP_CHANNEL: raw::c_int = make_ioctl!(
+const IOCTL_BT_HCI_GET_SNOOP_CHANNEL: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_GET_HANDLE,
     fdio_sys::IOCTL_FAMILY_BT_HCI,
     2

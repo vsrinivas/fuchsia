@@ -30,7 +30,7 @@ pub fn connect_transport_device(device: &File) -> Result<zx::Channel, zx::Status
     }
 }
 
-const IOCTL_QMI_GET_CHANNEL: raw::c_int = make_ioctl!(
+const IOCTL_QMI_GET_CHANNEL: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_GET_HANDLE,
     fdio_sys::IOCTL_FAMILY_QMI,
     0
@@ -56,7 +56,7 @@ pub fn set_network_status(device: &File, state: bool) -> Result<(), zx::Status> 
     }
 }
 
-const IOCTL_QMI_SET_NETWORK: raw::c_int = make_ioctl!(
+const IOCTL_QMI_SET_NETWORK: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_QMI,
     1

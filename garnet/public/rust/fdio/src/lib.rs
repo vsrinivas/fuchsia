@@ -231,16 +231,9 @@ where
     }
 }
 
-// TODO(raggi): when const fn is stable, replace the macro with const fn.
-#[macro_export]
-macro_rules! make_ioctl {
-    ($kind:expr, $family:expr, $number:expr) => {
-        (((($kind) & 0xF) << 20) | ((($family) & 0xFF) << 8) | (($number) & 0xFF))
-    };
-}
 /// Calculates an IOCTL value from kind, family and number.
-pub fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> raw::c_int {
-    make_ioctl!(kind, family, number)
+pub const fn make_ioctl(kind: raw::c_int, family: raw::c_int, number: raw::c_int) -> raw::c_int {
+    ((kind & 0xF) << 20) | ((family & 0xFF) << 8) | (number & 0xFF)
 }
 
 pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
@@ -253,7 +246,7 @@ pub fn get_vmo_copy_from_file(file: &File) -> Result<zx::Vmo, zx::Status> {
     }
 }
 
-pub const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl!(
+pub const IOCTL_DEVICE_GET_TOPO_PATH: raw::c_int = make_ioctl(
     fdio_sys::IOCTL_KIND_DEFAULT,
     fdio_sys::IOCTL_FAMILY_DEVICE,
     4
