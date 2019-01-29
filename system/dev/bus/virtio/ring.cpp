@@ -138,12 +138,17 @@ void Ring::SubmitChain(uint16_t desc_index) {
     struct vring_avail* avail = ring_.avail;
 
     avail->ring[avail->idx & ring_.num_mask] = desc_index;
-    //mb();
+    // Write memory barrier before updating avail->idx; updates to the descriptor ring must be
+    // visible before an updated avail->idx.
+    hw_wmb();
     avail->idx++;
 }
 
 void Ring::Kick() {
     LTRACE_ENTRY;
+    // Write memory barrier before notifying the device. Updates to avail->idx must be visible
+    // before the device sees the wakeup notification (so it processes the latest descriptors).
+    hw_mb();
 
     device_->RingKick(index_);
 }
