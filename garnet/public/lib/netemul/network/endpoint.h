@@ -62,7 +62,7 @@ class Endpoint : public fuchsia::netemul::network::Endpoint,
  protected:
   friend EndpointManager;
 
-  fidl::InterfaceHandle<FEndpoint> Bind();
+  void Bind(fidl::InterfaceRequest<FEndpoint> req);
 
  private:
   EndpointClosedCallback closed_callback_;

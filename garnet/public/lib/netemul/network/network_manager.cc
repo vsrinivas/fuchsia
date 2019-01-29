@@ -19,16 +19,16 @@ void NetworkManager::ListNetworks(
   callback(std::move(rsp));
 }
 
-void NetworkManager::CreateNetwork(
-    ::std::string name, fuchsia::netemul::network::NetworkConfig config,
-    NetworkManager::CreateNetworkCallback callback) {
+zx_status_t NetworkManager::CreateNetwork(
+    std::string name, netemul::Network::Config config,
+    fidl::InterfaceRequest<netemul::Network::FNetwork> req) {
   if (name.empty()) {
     // empty name not allowed
-    callback(ZX_ERR_INVALID_ARGS, fidl::InterfaceHandle<Network::FNetwork>());
+    return ZX_ERR_INVALID_ARGS;
   } else if (nets_.find(name) == nets_.end()) {  // no network with same name
     // create new network
     auto net = std::make_unique<Network>(parent_, name, std::move(config));
-    auto binding = net->Bind();
+    net->Bind(std::move(req));
 
     net->SetClosedCallback([this](const Network& net) {
       // erase network when all its bindings go away
@@ -38,22 +38,45 @@ void NetworkManager::CreateNetwork(
     nets_.insert(std::make_pair<std::string, Network::Ptr>(std::string(name),
                                                            std::move(net)));
 
-    callback(ZX_OK, std::move(binding));
+    return ZX_OK;
   } else {
     // name already exists, decline creation
-    callback(ZX_ERR_ALREADY_EXISTS, fidl::InterfaceHandle<Network::FNetwork>());
+    return ZX_ERR_ALREADY_EXISTS;
+  }
+}
+
+void NetworkManager::CreateNetwork(
+    std::string name, Network::Config config,
+    NetworkManager::CreateNetworkCallback callback) {
+  fidl::InterfaceHandle<Network::FNetwork> handle;
+  auto status =
+      CreateNetwork(std::move(name), std::move(config), handle.NewRequest());
+  if (status != ZX_OK) {
+    handle.TakeChannel();  // dispose of channel
+  }
+  callback(status, std::move(handle));
+}
+
+Network* NetworkManager::GetNetwork(const std::string& name) {
+  auto neti = nets_.find(name);
+  if (neti == nets_.end()) {
+    return nullptr;
+  } else {
+    return neti->second.get();
   }
 }
 
 void NetworkManager::GetNetwork(::std::string name,
                                 NetworkManager::GetNetworkCallback callback) {
   auto neti = nets_.find(name);
+  fidl::InterfaceHandle<Network::FNetwork> handle;
   if (neti == nets_.end()) {
     // no network with such name
-    callback(fidl::InterfaceHandle<Network::FNetwork>());
+    callback(std::move(handle));
   } else {
     auto& net = neti->second;
-    callback(net->Bind());
+    net->Bind(handle.NewRequest());
+    callback(std::move(handle));
   }
 }
 

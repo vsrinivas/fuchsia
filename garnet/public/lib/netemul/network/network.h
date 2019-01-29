@@ -27,6 +27,9 @@ class Network : public fuchsia::netemul::network::Network {
 
   const std::string& name() const { return name_; }
 
+  // Attaches named endpoint to network
+  zx_status_t AttachEndpoint(std::string name);
+
   // fidl interface implementations:
   void GetConfig(GetConfigCallback callback) override;
   void GetName(GetNameCallback callback) override;
@@ -46,7 +49,7 @@ class Network : public fuchsia::netemul::network::Network {
  protected:
   friend NetworkManager;
 
-  fidl::InterfaceHandle<FNetwork> Bind();
+  void Bind(fidl::InterfaceRequest<FNetwork> req);
 
  private:
   ClosedCallback closed_callback_;

@@ -19,10 +19,15 @@ class NetworkManager : public fuchsia::netemul::network::NetworkManager {
 
   explicit NetworkManager(NetworkContext* context);
 
+  // create network
+  zx_status_t CreateNetwork(std::string name, Network::Config config,
+                            fidl::InterfaceRequest<Network::FNetwork> req);
+  // Gets a network with name
+  Network* GetNetwork(const std::string& name);
+
   // fidl interface implementations:
   void ListNetworks(ListNetworksCallback callback) override;
-  void CreateNetwork(::std::string name,
-                     fuchsia::netemul::network::NetworkConfig config,
+  void CreateNetwork(std::string name, Network::Config config,
                      CreateNetworkCallback callback) override;
   void GetNetwork(::std::string name, GetNetworkCallback callback) override;
 

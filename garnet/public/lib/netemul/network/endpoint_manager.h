@@ -21,13 +21,15 @@ class EndpointManager : public fuchsia::netemul::network::EndpointManager {
 
   explicit EndpointManager(NetworkContext* context);
 
+  // create endpoint
+  zx_status_t CreateEndpoint(std::string name, Endpoint::Config config,
+                             fidl::InterfaceRequest<Endpoint::FEndpoint> req);
+
   // fidl interface implementations:
   void ListEndpoints(ListEndpointsCallback callback) override;
-  void CreateEndpoint(::std::string name,
-                      fuchsia::netemul::network::EndpointConfig config,
+  void CreateEndpoint(std::string name, Endpoint::Config config,
                       CreateEndpointCallback callback) override;
-  void GetEndpoint(::std::string name,
-                   GetEndpointCallback callback) override;
+  void GetEndpoint(::std::string name, GetEndpointCallback callback) override;
 
   // Request to install a data sink on a named endpoint
   zx_status_t InstallSink(std::string endpoint, data::BusConsumer::Ptr sink,

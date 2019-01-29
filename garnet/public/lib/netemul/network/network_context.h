@@ -11,10 +11,16 @@
 
 namespace netemul {
 
+class SetupHandle;
 class NetworkContext : public fuchsia::netemul::network::NetworkContext {
  public:
   using FNetworkContext = fuchsia::netemul::network::NetworkContext;
+  using NetworkSetup = fuchsia::netemul::network::NetworkSetup;
+  using EndpointSetup = fuchsia::netemul::network::EndpointSetup;
+  using FSetupHandle = fuchsia::netemul::network::SetupHandle;
+
   explicit NetworkContext(async_dispatcher_t* dispatcher = nullptr);
+  ~NetworkContext();
 
   async_dispatcher_t* dispatcher() { return dispatcher_; }
 
@@ -22,12 +28,16 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
 
   EndpointManager& endpoint_manager() { return endpoint_manager_; }
 
+  zx_status_t Setup(std::vector<NetworkSetup> setup,
+                    fidl::InterfaceRequest<FSetupHandle> req);
+
   void GetNetworkManager(
       ::fidl::InterfaceRequest<NetworkManager::FNetworkManager> net_manager)
       override;
   void GetEndpointManager(
       fidl::InterfaceRequest<EndpointManager::FEndpointManager> endp_manager)
       override;
+  void Setup(std::vector<NetworkSetup> setup, SetupCallback callback) override;
 
   fidl::InterfaceRequestHandler<FNetworkContext> GetHandler();
 
@@ -35,7 +45,10 @@ class NetworkContext : public fuchsia::netemul::network::NetworkContext {
   async_dispatcher_t* dispatcher_;
   NetworkManager network_manager_;
   EndpointManager endpoint_manager_;
+  std::vector<std::unique_ptr<SetupHandle>> setup_handles_;
   fidl::BindingSet<FNetworkContext> bindings_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(NetworkContext);
 };
 
 }  // namespace netemul

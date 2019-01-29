@@ -68,8 +68,8 @@ Network::Network(NetworkContext* context, std::string name,
 
 Network::~Network() {}
 
-fidl::InterfaceHandle<Network::FNetwork> Network::Bind() {
-  return bindings_.AddBinding(this, parent_->dispatcher());
+void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
+  bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
 }
 
 void Network::GetConfig(Network::GetConfigCallback callback) {
@@ -97,20 +97,24 @@ void Network::SetConfig(fuchsia::netemul::network::NetworkConfig config,
   callback(ZX_OK);
 }
 
+zx_status_t Network::AttachEndpoint(std::string name) {
+  data::Consumer::Ptr src;
+  auto status = parent_->endpoint_manager().InstallSink(
+      std::move(name), bus_->GetPointer(), &src);
+
+  if (status != ZX_OK) {
+    return status;
+  } else if (!src) {
+    return ZX_ERR_INTERNAL;
+  }
+
+  bus_->sinks().emplace_back(std::move(src));
+  return ZX_OK;
+}
+
 void Network::AttachEndpoint(::std::string name,
                              Network::AttachEndpointCallback callback) {
-  data::Consumer::Ptr src;
-  auto status =
-      parent_->endpoint_manager().InstallSink(name, bus_->GetPointer(), &src);
-
-  if (status == ZX_OK) {
-    if (src) {
-      bus_->sinks().emplace_back(std::move(src));
-    } else {
-      status = ZX_ERR_INTERNAL;
-    }
-  }
-  callback(status);
+  callback(AttachEndpoint(std::move(name)));
 }
 
 void Network::RemoveEndpoint(::std::string name,

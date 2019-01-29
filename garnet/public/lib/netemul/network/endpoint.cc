@@ -173,8 +173,8 @@ void Endpoint::ServeDevice(zx::channel channel) {
   impl_->ConnectEthernetDevice(std::move(channel));
 }
 
-fidl::InterfaceHandle<Endpoint::FEndpoint> Endpoint::Bind() {
-  return bindings_.AddBinding(this, parent_->dispatcher());
+void Endpoint::Bind(fidl::InterfaceRequest<FEndpoint> req) {
+  bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
 }
 
 zx_status_t Endpoint::InstallSink(data::BusConsumer::Ptr sink,

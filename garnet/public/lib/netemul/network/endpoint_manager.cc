@@ -19,52 +19,64 @@ void EndpointManager::ListEndpoints(
   callback(std::move(rsp));
 }
 
-void EndpointManager::CreateEndpoint(
-    ::std::string name, fuchsia::netemul::network::EndpointConfig config,
-    EndpointManager::CreateEndpointCallback callback) {
-  zx_status_t result = ZX_OK;
-  fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
+zx_status_t EndpointManager::CreateEndpoint(
+    std::string name, Endpoint::Config config,
+    fidl::InterfaceRequest<Endpoint::FEndpoint> req) {
   if (name.empty()) {
     // empty name not allowed
-    result = ZX_ERR_INVALID_ARGS;
-  } else if (endpoints_.find(name) == endpoints_.end()) {
+    return ZX_ERR_INVALID_ARGS;
+  } else if (endpoints_.find(name) != endpoints_.end()) {
+    return ZX_ERR_ALREADY_EXISTS;
+  } else {
     // we only support ethertap backing for now
     if (config.backing ==
         fuchsia::netemul::network::EndpointBacking::ETHERTAP) {
       auto ep = std::make_unique<Endpoint>(parent_, std::string(name),
                                            std::move(config));
-      result = ep->Startup();
-
-      if (result == ZX_OK) {
-        ep->SetClosedCallback([this](const Endpoint& e) {
-          // erase endpoint from map
-          endpoints_.erase(e.name());
-        });
-
-        auto binding = ep->Bind();
-        endpoints_.insert(std::make_pair<std::string, Endpoint::Ptr>(
-            std::string(name), std::move(ep)));
-        handle = std::move(binding);
+      auto result = ep->Startup();
+      if (result != ZX_OK) {
+        return result;
       }
+
+      ep->SetClosedCallback([this](const Endpoint& e) {
+        // erase endpoint from map
+        endpoints_.erase(e.name());
+      });
+
+      ep->Bind(std::move(req));
+      endpoints_.insert(std::make_pair<std::string, Endpoint::Ptr>(
+          std::string(name), std::move(ep)));
     } else {
-      result = ZX_ERR_INVALID_ARGS;
+      return ZX_ERR_INVALID_ARGS;
     }
-  } else {
-    result = ZX_ERR_ALREADY_EXISTS;
   }
 
-  callback(result, std::move(handle));
+  return ZX_OK;
+}
+
+void EndpointManager::CreateEndpoint(
+    std::string name, Endpoint::Config config,
+    EndpointManager::CreateEndpointCallback callback) {
+  fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
+  auto status =
+      CreateEndpoint(std::move(name), std::move(config), handle.NewRequest());
+  if (status != ZX_OK) {
+    handle.TakeChannel().reset();  // destroy underlying channel
+  }
+  callback(status, std::move(handle));
 }
 
 void EndpointManager::GetEndpoint(
     ::std::string name, EndpointManager::GetEndpointCallback callback) {
   auto ep_it = endpoints_.find(name);
+  fidl::InterfaceHandle<Endpoint::FEndpoint> handle;
   if (ep_it == endpoints_.end()) {
     // no network with such name
-    callback(fidl::InterfaceHandle<Endpoint::FEndpoint>());
+    callback(std::move(handle));
   } else {
     auto& net = ep_it->second;
-    callback(net->Bind());
+    net->Bind(handle.NewRequest());
+    callback(std::move(handle));
   }
 }
 

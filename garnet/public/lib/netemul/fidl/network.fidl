@@ -121,9 +121,38 @@ interface Endpoint {
     GetProxy(request<DeviceProxy> proxy);
 };
 
+/// Convenience struct for creating entire network setups.
+struct NetworkSetup {
+    /// Network name, must be unique in network context.
+    string name;
+    /// NetworkConfig to use when creating network.
+    NetworkConfig config;
+    /// Collection of endpoints to create and attach to network.
+    vector<EndpointSetup> endpoints;
+};
+
+/// Convenience struct for creating endpoints along with network setup.
+struct EndpointSetup {
+    /// Endpoint name, must be unique in network context.
+    string name;
+    /// Optional endpoint config, if not provided defaults will be used.
+    /// Default values are: mtu = 1500, backing = ETHERTAP, mac = randomized.
+    EndpointConfig? config;
+};
+
+/// Handle returned when using NetworkContext.Setup for quick network configuration.
+/// Networks and endpoints created by Setup are tied to the lifecycle of the SetupHandle's channel.
+interface SetupHandle {
+};
+
 /// Main entry point to manage virtual networks and endpoints.
 [Discoverable]
 interface NetworkContext {
     GetNetworkManager(request<NetworkManager> net_manager);
     GetEndpointManager(request<EndpointManager> endp_manager);
+    /// Creates a collection of networks described by |networks|.
+    /// |status| is ZX_OK for success
+    /// |setup_handle| is a resource that references and maintains the lifecycle of
+    ///                the created networks and endpoints.
+    Setup(vector<NetworkSetup> networks) -> (zx.status status, SetupHandle? setup_handle);
 };

@@ -33,6 +33,8 @@ class NetworkServiceTest : public TestWithEnvironment {
   using FNetwork = Network::FNetwork;
   using FEndpoint = Endpoint::FEndpoint;
   using FFakeEndpoint = FakeEndpoint::FFakeEndpoint;
+  using NetworkSetup = NetworkContext::NetworkSetup;
+  using EndpointSetup = NetworkContext::EndpointSetup;
 
  protected:
   void SetUp() override {
@@ -75,13 +77,18 @@ class NetworkServiceTest : public TestWithEnvironment {
   void GetServices(fidl::InterfaceRequest<FNetworkManager> nm,
                    fidl::InterfaceRequest<FEndpointManager> epm) {
     fidl::InterfacePtr<FNetworkContext> netc;
-    test_env_->ConnectToService(netc.NewRequest());
+    GetNetworkContext(netc.NewRequest());
     netc->GetNetworkManager(std::move(nm));
     netc->GetEndpointManager(std::move(epm));
   }
 
   void StartServices() {
     GetServices(net_manager_.NewRequest(), endp_manager_.NewRequest());
+  }
+
+  void GetNetworkContext(
+      fidl::InterfaceRequest<NetworkContext::FNetworkContext> req) {
+    test_env_->ConnectToService(std::move(req));
   }
 
   void CreateNetwork(const char* name,
@@ -593,6 +600,129 @@ TEST_F(NetworkServiceTest, FakeEndpoints) {
     fake_ep->Write(fidl::VectorPtr<uint8_t>(test_buff1));
     WAIT_FOR_OK_AND_RESET(ok);
   }
+}
+
+TEST_F(NetworkServiceTest, NetworkContext) {
+  StartServices();
+  fidl::SynchronousInterfacePtr<FNetworkContext> context;
+  GetNetworkContext(context.NewRequest());
+
+  zx_status_t status;
+  fidl::InterfaceHandle<NetworkContext::FSetupHandle> setup_handle;
+  std::vector<NetworkSetup> net_setup;
+  auto& net1 = net_setup.emplace_back();
+  net1.name = "main_net";
+  auto& ep1_setup = net1.endpoints.emplace_back();
+  ep1_setup.name = "ep1";
+  auto& ep2_setup = net1.endpoints.emplace_back();
+  ep2_setup.name = "ep2";
+  auto& alt_net_setup = net_setup.emplace_back();
+  alt_net_setup.name = "alt_net";
+
+  // create two nets and two endpoints:
+  ASSERT_OK(context->Setup(std::move(net_setup), &status, &setup_handle));
+  ASSERT_OK(status);
+  ASSERT_TRUE(setup_handle.is_valid());
+
+  // check that both networks and endpoints were created:
+  fidl::InterfaceHandle<Network::FNetwork> network;
+  ASSERT_OK(net_manager_->GetNetwork("main_net", &network));
+  ASSERT_TRUE(network.is_valid());
+  ASSERT_OK(net_manager_->GetNetwork("alt_net", &network));
+  ASSERT_TRUE(network.is_valid());
+  fidl::InterfaceHandle<Endpoint::FEndpoint> ep1_h, ep2_h;
+  ASSERT_OK(endp_manager_->GetEndpoint("ep1", &ep1_h));
+  ASSERT_TRUE(ep1_h.is_valid());
+  ASSERT_OK(endp_manager_->GetEndpoint("ep2", &ep2_h));
+  ASSERT_TRUE(ep2_h.is_valid());
+
+  {
+    // check that endpoints were attached to the same network:
+    auto ep1 = ep1_h.BindSync();
+    auto ep2 = ep2_h.BindSync();
+    fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> eth1_h;
+    fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> eth2_h;
+    ASSERT_OK(ep1->GetEthernetDevice(&eth1_h));
+    ASSERT_TRUE(eth1_h.is_valid());
+    ASSERT_OK(ep2->GetEthernetDevice(&eth2_h));
+    ASSERT_TRUE(eth2_h.is_valid());
+    // create both ethernet clients
+    EthernetClient eth1(dispatcher(), eth1_h.Bind());
+    EthernetClient eth2(dispatcher(), eth2_h.Bind());
+    bool ok = false;
+
+    // configure both ethernet clients:
+    eth1.Setup(TestEthBuffConfig, [&ok](zx_status_t status) {
+      ASSERT_OK(status);
+      ok = true;
+    });
+    WAIT_FOR_OK_AND_RESET(ok);
+    eth2.Setup(TestEthBuffConfig, [&ok](zx_status_t status) {
+      ASSERT_OK(status);
+      ok = true;
+    });
+    WAIT_FOR_OK_AND_RESET(ok);
+
+    // create some test buffs
+    uint8_t test_buff[TEST_BUF_SIZE];
+    for (size_t i = 0; i < TEST_BUF_SIZE; i++) {
+      test_buff[i] = static_cast<uint8_t>(i);
+    }
+    // install callbacks on the ethernet interface:
+    eth2.SetDataCallback([&ok, &test_buff](const void* data, size_t len) {
+      ASSERT_EQ(TEST_BUF_SIZE, len);
+      ASSERT_EQ(0, memcmp(data, test_buff, len));
+      ok = true;
+    });
+    ASSERT_OK(eth1.Send(test_buff, TEST_BUF_SIZE));
+    WAIT_FOR_OK_AND_RESET(ok);
+  }  // test above performed in closed scope so all bindings are destroyed after
+  // it's done
+
+  // check that attempting to setup with repeated network name will fail:
+  std::vector<NetworkSetup> repeated_net_name;
+  fidl::InterfaceHandle<NetworkContext::FSetupHandle> dummy_handle;
+  auto& repeated_cfg = repeated_net_name.emplace_back();
+  repeated_cfg.name = "main_net";
+  ASSERT_OK(
+      context->Setup(std::move(repeated_net_name), &status, &dummy_handle));
+  ASSERT_NOK(status);
+  ASSERT_FALSE(dummy_handle.is_valid());
+
+  // check that attempting to setup with invalid ep name will fail, and all
+  // setup is discarded
+  std::vector<NetworkSetup> repeated_ep_name;
+  auto& good_net = repeated_ep_name.emplace_back();
+  good_net.name = "good_net";
+  auto& repeated_ep1_setup = good_net.endpoints.emplace_back();
+  repeated_ep1_setup.name = "ep1";
+
+  ASSERT_OK(
+      context->Setup(std::move(repeated_ep_name), &status, &dummy_handle));
+  ASSERT_NOK(status);
+  ASSERT_FALSE(dummy_handle.is_valid());
+  ASSERT_OK(net_manager_->GetNetwork("good_net", &network));
+  ASSERT_FALSE(network.is_valid());
+
+  // finally, destroy the setup_handle and verify that all the created networks
+  // and endpoints go away:
+  setup_handle.TakeChannel().reset();
+
+  // wait until |main_net| disappears:
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [this]() {
+        fidl::InterfaceHandle<Network::FNetwork> network;
+        EXPECT_EQ(ZX_OK, net_manager_->GetNetwork("main_net", &network));
+        return !network.is_valid();
+      },
+      zx::sec(2)));
+  // assert that all other networks and endpoints also disappear:
+  ASSERT_OK(net_manager_->GetNetwork("alt_net", &network));
+  ASSERT_FALSE(network.is_valid());
+  ASSERT_OK(endp_manager_->GetEndpoint("ep1", &ep1_h));
+  ASSERT_FALSE(ep1_h.is_valid());
+  ASSERT_OK(endp_manager_->GetEndpoint("ep2", &ep2_h));
+  ASSERT_FALSE(ep2_h.is_valid());
 }
 
 }  // namespace testing
