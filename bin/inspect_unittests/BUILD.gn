@@ -4,6 +4,7 @@
 
 import("//build/package.gni")
 import("//build/package/component.gni")
+import("//build/test/test_package.gni")
 
 executable("bin") {
   output_name = "inspect_unittests"
@@ -32,7 +33,15 @@ fuchsia_test_component("inspect_unittests_component") {
   binary = "inspect_unittests"
 }
 
-package("inspect_unittests") {
-  testonly = true
-  components = [ ":inspect_unittests_component" ]
+# TODO(IN-933): Convert back to package
+test_package("inspect_unittests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "inspect_unittests"
+    },
+  ]
 }

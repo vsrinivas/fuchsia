@@ -2,8 +2,8 @@
     "facets": {
         "fuchsia.test": {
             "injected-services": {
-                "fuchsia.logger.Log": "logger",
-                "fuchsia.logger.LogSink": "logger"
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx"
             }
         }
     },

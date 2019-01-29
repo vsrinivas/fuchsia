@@ -5,6 +5,7 @@
 import("//build/package.gni")
 import("//build/package/component.gni")
 import("//build/test.gni")
+import("//build/test/test_package.gni")
 
 source_set("cpp") {
   sources = [
@@ -56,8 +57,15 @@ fuchsia_test_component("vfs_cpp_unittests_component") {
   binary = "vfs_cpp_unittests"
 }
 
-package("vfs_cpp_tests") {
-  testonly = true
+# TODO(IN-933): Convert back to package
+test_package("vfs_cpp_tests") {
+  deps = [
+    ":vfs_cpp_unittests",
+  ]
 
-  components = [ ":vfs_cpp_unittests_component" ]
+  tests = [
+    {
+      name = "vfs_cpp_unittests"
+    },
+  ]
 }

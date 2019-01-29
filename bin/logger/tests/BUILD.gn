@@ -2,13 +2,25 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
-import("//build/package.gni")
+import("//build/test/test_package.gni")
 
-package("logger_integration_tests") {
-  testonly = true
-  components = [
-    "rust:test_component",
-    "cpp:test_component",
-    "go/src:test_component",
+# TODO(IN-933): Convert back to package
+test_package("logger_integration_tests") {
+  deps = [
+    "cpp:logger_integration_cpp_tests",
+    "go/src:logger_integration_go_tests",
+    "rust:bin",
+  ]
+
+  tests = [
+    {
+      name = "logger_integration_go_tests"
+    },
+    {
+      name = "logger_integration_bin_test"
+    },
+    {
+      name = "logger_integration_cpp_tests"
+    },
   ]
 }
