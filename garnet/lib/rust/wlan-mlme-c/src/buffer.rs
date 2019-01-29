@@ -108,7 +108,7 @@ pub struct OutBuf {
 }
 
 impl OutBuf {
-    fn from(buf: InBuf, written_bytes: usize) -> Self {
+    pub fn from(buf: InBuf, written_bytes: usize) -> Self {
         let outbuf = OutBuf { raw: buf.raw, data: buf.data, written_bytes };
         std::mem::forget(buf);
         outbuf

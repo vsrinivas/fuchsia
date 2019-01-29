@@ -7,13 +7,12 @@
 /// the raw value of the given `zx::Status`.
 /// This macro is comparable to Rust's try macro.
 macro_rules! unwrap_or_bail {
-    ($result:expr, $status:expr) => {
+    ($result:expr, $e:expr) => {
         match $result {
             Ok(x) => x,
             Err(e) => {
                 error!("error: {}", e);
-                // TODO(hahnr): Use `into()` instead once zx::Status implements Into<zx_status_t>.
-                return $status.into_raw();
+                return $e.into();
             }
         }
     };

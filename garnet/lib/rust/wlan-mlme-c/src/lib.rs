@@ -8,7 +8,11 @@
 #![allow(unused)]
 
 #[macro_use]
+extern crate log;
+
+#[macro_use]
 pub mod utils;
 
 pub mod auth;
 pub mod buffer;
+pub mod client;
