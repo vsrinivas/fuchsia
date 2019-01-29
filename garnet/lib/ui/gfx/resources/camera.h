@@ -44,6 +44,8 @@ class Camera : public Resource {
 
   escher::Camera GetEscherCamera(const escher::ViewingVolume& volume) const;
 
+  escher::hmd::PoseBuffer GetEscherPoseBuffer() const;
+
   // Projects the provided |ray| into the coordinate space of this camera's
   // scene.
   //

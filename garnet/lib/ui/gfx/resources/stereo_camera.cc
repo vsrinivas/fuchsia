@@ -28,13 +28,6 @@ escher::Camera StereoCamera::GetEscherCamera(Eye eye) const {
 
   camera.SetViewport(viewports_[eye]);
 
-  if (pose_buffer_) {
-    escher::hmd::PoseBuffer escher_pose_buffer(pose_buffer_->escher_buffer(),
-                                               num_entries_, base_time_,
-                                               time_interval_);
-    camera.SetPoseBuffer(escher_pose_buffer);
-  }
-
   return camera;
 }
 

@@ -124,13 +124,13 @@ ModelDisplayListBuilder::ModelDisplayListBuilder(
 
   BufferPtr vp_uniform_buffer;
   uint32_t vp_uniform_buffer_offset = 0;
-  if (camera.pose_buffer()) {
+  if (camera.latched_pose_buffer()) {
     // If the camera has a pose buffer bind the output of the late latching
     // shader to the VP uniform.
     vp_uniform_buffer = camera.latched_pose_buffer();
     // Pose buffer latching shader writes the latched pose before the VP matrix
     // so we need to offset past it.
-    vp_uniform_buffer_offset = sizeof(hmd::Pose);
+    vp_uniform_buffer_offset = camera.latched_pose_buffer_vp_matrix_offset();
     // Keep the latched pose buffer alive for the lifetime of the display list.
     resources_.push_back(camera.latched_pose_buffer());
   } else {

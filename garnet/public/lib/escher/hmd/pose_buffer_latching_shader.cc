@@ -144,7 +144,7 @@ BufferPtr PoseBufferLatchingShader::LatchStereoPose(
   auto command_buffer = frame->command_buffer();
 
   // This should be guaranteed by checks at a higher layer.  For example,
-  // Scenic checks this in Session::ApplySetCamerPoseBufferCmd().
+  // Scenic checks this in Session::ApplySetCameraPoseBufferCmd().
   FXL_DCHECK(latch_time >= pose_buffer.base_time);
 
   uint32_t latch_index =

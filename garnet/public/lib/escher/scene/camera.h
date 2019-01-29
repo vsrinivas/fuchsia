@@ -35,15 +35,15 @@ class Camera {
   const mat4& transform() const { return transform_; }
   const mat4& projection() const { return projection_; }
 
-  void SetPoseBuffer(const hmd::PoseBuffer& pose_buffer) {
-    pose_buffer_ = pose_buffer;
-  }
-  const hmd::PoseBuffer& pose_buffer() const { return pose_buffer_; }
-
-  void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer) {
+  void SetLatchedPoseBuffer(const BufferPtr& latched_pose_buffer,
+                            uint32_t vp_matrix_offset) {
     latched_pose_buffer_ = latched_pose_buffer;
+    latched_pose_buffer_vp_matrix_offset_ = vp_matrix_offset;
   }
   const BufferPtr& latched_pose_buffer() const { return latched_pose_buffer_; }
+  uint32_t latched_pose_buffer_vp_matrix_offset() const {
+    return latched_pose_buffer_vp_matrix_offset_;
+  }
 
   // This viewport class is independent of framebuffer size.
   // All values are specified over the range [0,1].
@@ -64,11 +64,11 @@ class Camera {
  private:
   mat4 transform_;
   mat4 projection_;
-  hmd::PoseBuffer pose_buffer_;
 
   // Contains the latched pose and vp matrices latched out of pose_buffer_.
   // See pose_buffer_latching_shader.h for details on buffer layout.
   BufferPtr latched_pose_buffer_;
+  uint32_t latched_pose_buffer_vp_matrix_offset_ = 0;
 
   Viewport viewport_;
 };

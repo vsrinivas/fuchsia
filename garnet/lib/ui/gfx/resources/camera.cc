@@ -45,13 +45,14 @@ escher::Camera Camera::GetEscherCamera(
     camera = escher::Camera::NewPerspective(
         volume, glm::lookAt(eye_position_, eye_look_at_, eye_up_), fovy_);
   }
-  if (pose_buffer_) {
-    escher::hmd::PoseBuffer escher_pose_buffer(pose_buffer_->escher_buffer(),
-                                               num_entries_, base_time_,
-                                               time_interval_);
-    camera.SetPoseBuffer(escher_pose_buffer);
-  }
   return camera;
+}
+
+escher::hmd::PoseBuffer Camera::GetEscherPoseBuffer() const {
+  return pose_buffer_
+             ? escher::hmd::PoseBuffer(pose_buffer_->escher_buffer(),
+                                       num_entries_, base_time_, time_interval_)
+             : escher::hmd::PoseBuffer();  // NOTE: has operator bool
 }
 
 std::pair<escher::ray4, escher::mat4> Camera::ProjectRayIntoScene(

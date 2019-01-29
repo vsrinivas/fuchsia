@@ -219,27 +219,51 @@ void EngineRenderer::DrawLayer(const escher::FramePtr& frame,
       break;
   }
 
-  auto draw_frame_lambda = [this, paper_renderer{paper_renderer_.get()}, frame,
+  auto draw_frame_lambda = [paper_renderer{paper_renderer_.get()}, frame,
                             target_presentation_time, &stage, &model,
                             &output_image, &shadow_map,
                             &overlay_model](escher::Camera camera) {
-    if (camera.pose_buffer()) {
-      camera.SetLatchedPoseBuffer(pose_buffer_latching_shader_->LatchPose(
-          frame, camera, camera.pose_buffer(), target_presentation_time));
-    }
     paper_renderer->DrawFrame(frame, stage, model, camera, output_image,
                               shadow_map, overlay_model);
   };
 
   if (renderer->camera()->IsKindOf<StereoCamera>()) {
     auto stereo_camera = renderer->camera()->As<StereoCamera>();
-    for (const auto eye : {StereoCamera::Eye::LEFT, StereoCamera::Eye::RIGHT}) {
-      escher::Camera camera = stereo_camera->GetEscherCamera(eye);
-      draw_frame_lambda(camera);
+    escher::Camera left_camera =
+        stereo_camera->GetEscherCamera(StereoCamera::Eye::LEFT);
+    escher::Camera right_camera =
+        stereo_camera->GetEscherCamera(StereoCamera::Eye::RIGHT);
+
+    escher::BufferPtr latched_pose_buffer;
+    if (escher::hmd::PoseBuffer pose_buffer =
+            renderer->camera()->GetEscherPoseBuffer()) {
+      latched_pose_buffer = pose_buffer_latching_shader_->LatchStereoPose(
+          frame, left_camera, right_camera, pose_buffer,
+          target_presentation_time);
+      left_camera.SetLatchedPoseBuffer(
+          latched_pose_buffer,
+          escher::hmd::PoseBufferLatchingShader::kLeftVpMatrixOffset);
+      right_camera.SetLatchedPoseBuffer(
+          latched_pose_buffer,
+          escher::hmd::PoseBufferLatchingShader::kRightVpMatrixOffset);
     }
+
+    draw_frame_lambda(left_camera);
+    draw_frame_lambda(right_camera);
   } else {
     escher::Camera camera =
         renderer->camera()->GetEscherCamera(stage.viewing_volume());
+
+    escher::BufferPtr latched_pose_buffer;
+    if (escher::hmd::PoseBuffer pose_buffer =
+            renderer->camera()->GetEscherPoseBuffer()) {
+      latched_pose_buffer = pose_buffer_latching_shader_->LatchPose(
+          frame, camera, pose_buffer, target_presentation_time);
+      camera.SetLatchedPoseBuffer(
+          latched_pose_buffer,
+          escher::hmd::PoseBufferLatchingShader::kLeftVpMatrixOffset);
+    }
+
     draw_frame_lambda(camera);
   }
 }

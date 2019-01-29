@@ -51,6 +51,10 @@ class PoseBufferLatchingShader {
                             int64_t latch_time,
                             bool host_accessible_output = false);
 
+  static constexpr uint32_t kLeftVpMatrixOffset = sizeof(Pose);
+  static constexpr uint32_t kRightVpMatrixOffset =
+      kLeftVpMatrixOffset + 16 * sizeof(float);
+
  private:
   const EscherWeakPtr escher_;
   std::unique_ptr<impl::ComputeShader> kernel_;
