@@ -166,7 +166,7 @@ void ThreadImpl::JumpTo(uint64_t new_address,
       cb(Err("Thread destroyed."));
     } else {
       // Success, update the current stack before issuing the callback.
-      thread->SyncFramesForStack([cb = std::move(cb)]() { cb(Err()); });
+      thread->SyncFramesForStack(std::move(cb));
     }
   });
 }
@@ -300,7 +300,7 @@ void ThreadImpl::OnException(
   }
 }
 
-void ThreadImpl::SyncFramesForStack(std::function<void()> callback) {
+void ThreadImpl::SyncFramesForStack(std::function<void(const Err&)> callback) {
   debug_ipc::ThreadStatusRequest request;
   request.process_koid = process_->GetKoid();
   request.thread_koid = koid_;
@@ -308,10 +308,12 @@ void ThreadImpl::SyncFramesForStack(std::function<void()> callback) {
   session()->remote_api()->ThreadStatus(request, [
     callback = std::move(callback), thread = weak_factory_.GetWeakPtr()
   ](const Err& err, debug_ipc::ThreadStatusReply reply) {
-    if (!thread)
+    if (!thread) {
+      callback(Err("Thread destroyed."));
       return;
+    }
     thread->SetMetadata(reply.record);
-    callback();
+    callback(Err());
   });
 }
 

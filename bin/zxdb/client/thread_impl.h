@@ -61,7 +61,7 @@ class ThreadImpl final : public Thread, public Stack::Delegate {
 
  private:
   // Stack::Delegate implementation.
-  void SyncFramesForStack(std::function<void()> callback) override;
+  void SyncFramesForStack(std::function<void(const Err&)> callback) override;
   std::unique_ptr<Frame> MakeFrameForStack(
       const debug_ipc::StackFrame& input, Location location) override;
   Location GetSymbolizedLocationForStackFrame(

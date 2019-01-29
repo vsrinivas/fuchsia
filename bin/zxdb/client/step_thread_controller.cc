@@ -41,7 +41,7 @@ void StepThreadController::InitWithThread(Thread* thread,
     file_line_ = line_details.file_line();
     current_ranges_ = AddressRanges(line_details.GetExtent());
 
-    original_frame_fingerprint_ = thread->GetStack().GetFrameFingerprint(0);
+    original_frame_fingerprint_ = *thread->GetStack().GetFrameFingerprint(0);
 
     Log("Stepping in %s:%d %s",
         file_line_.file().c_str(), file_line_.line(), current_ranges_.ToString().c_str());
@@ -181,7 +181,7 @@ ThreadController::StopOp StepThreadController::OnThreadStopIgnoreType(
         current_ranges_ = AddressRanges();  // No range: step by instruction.
         return kContinue;
       } else if (FrameFingerprint::Newer(
-                     thread()->GetStack().GetFrameFingerprint(0),
+                     *thread()->GetStack().GetFrameFingerprint(0),
                      original_frame_fingerprint_)) {
         // Called a new stack frame that has no symbols. We need to "finish" to
         // step over the unsymbolized code to automatically step over the

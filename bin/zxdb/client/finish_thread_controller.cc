@@ -16,11 +16,12 @@ FinishThreadController::FinishThreadController(const Stack& stack,
                                                size_t frame_to_finish) {
   FXL_DCHECK(frame_to_finish < stack.size());
 
+  // TODO(brettw) use new async frame fingerprint computation here.
   if (frame_to_finish == stack.size() - 1) {
     if (stack.has_all_frames()) {
       // Request to finish the oldest stack frame.
       to_address_ = 0;
-      from_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish);
+      from_frame_fingerprint_ = *stack.GetFrameFingerprint(frame_to_finish);
     } else {
       // Need to sync frames so we can find the calling one. Save the IP and
       // SP which will be used to re-find the frame in question.
@@ -34,7 +35,7 @@ FinishThreadController::FinishThreadController(const Stack& stack,
     FXL_DCHECK(stack.size() > frame_to_finish + 1);
     // TODO(brettw) this won't handle inline frame selection properly.
     to_address_ = stack[frame_to_finish + 1]->GetAddress();
-    from_frame_fingerprint_ = stack.GetFrameFingerprint(frame_to_finish);
+    from_frame_fingerprint_ = *stack.GetFrameFingerprint(frame_to_finish);
   }
 }
 
@@ -64,8 +65,8 @@ void FinishThreadController::InitWithThread(
     // Need to request stack frames to get the frame fingerpring and return
     // address (both of which require previous frames). We can capture |this|
     // here since the thread owns this thread controller.
-    thread->GetStack().SyncFrames([ this, cb = std::move(cb) ]() {
-      InitWithStack(this->thread()->GetStack(), std::move(cb));
+    thread->GetStack().SyncFrames([ this, cb = std::move(cb) ](const Err& err) {
+      InitWithStack(err, this->thread()->GetStack(), std::move(cb));
     });
   }
 }
@@ -76,10 +77,14 @@ ThreadController::ContinueOp FinishThreadController::GetContinueOp() {
   return ContinueOp::Continue();
 }
 
-void FinishThreadController::InitWithStack(const Stack& stack,
+void FinishThreadController::InitWithStack(const Err& err, const Stack& stack,
                                            std::function<void(const Err&)> cb) {
   // Note if this was called asynchronously the thread could be resumed
   // and it could have no frames, or totally different ones.
+  if (err.has_error()) {
+    cb(err);
+    return;
+  }
 
   // Find the frame corresponding to the requested one.
   constexpr size_t kNotFound = std::numeric_limits<size_t>::max();
@@ -113,7 +118,7 @@ void FinishThreadController::InitWithStack(const Stack& stack,
     return;
   }
   from_frame_fingerprint_ =
-      thread()->GetStack().GetFrameFingerprint(requested_index);
+      *thread()->GetStack().GetFrameFingerprint(requested_index);
   InitWithFingerprint(std::move(cb));
 }
 

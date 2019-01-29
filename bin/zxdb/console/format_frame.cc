@@ -87,14 +87,14 @@ void OutputFrameList(Thread* thread, bool include_params, bool long_format) {
   // Always request an up-to-date frame list from the agent. Various things
   // could have changed and the user is manually requesting a new list, so
   // don't rely on the cached copy even if Stack::has_all_frames() is true.
-  thread->GetStack().SyncFrames(
-      [ thread = thread->GetWeakPtr(), include_params, long_format ]() {
-        Console* console = Console::get();
-        if (thread)
-          ListCompletedFrames(thread.get(), include_params, long_format);
-        else
-          console->Output("Thread exited, no frames.\n");
-      });
+  thread->GetStack().SyncFrames([thread = thread->GetWeakPtr(), include_params,
+                                 long_format](const Err& err) {
+    Console* console = Console::get();
+    if (!err.has_error() && thread)
+      ListCompletedFrames(thread.get(), include_params, long_format);
+    else
+      console->Output("Thread exited, no frames.\n");
+  });
 }
 
 void FormatFrame(const Frame* frame, bool include_params, OutputBuffer* out,

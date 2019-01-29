@@ -8,8 +8,10 @@
 
 #include "garnet/bin/zxdb/client/frame.h"
 #include "garnet/bin/zxdb/client/frame_fingerprint.h"
+#include "garnet/bin/zxdb/common/err.h"
 #include "garnet/bin/zxdb/expr/expr_eval_context.h"
 #include "garnet/bin/zxdb/symbols/function.h"
+#include "garnet/lib/debug_ipc/helper/message_loop.h"
 #include "garnet/lib/debug_ipc/records.h"
 #include "lib/fxl/logging.h"
 #include "lib/fxl/macros.h"
@@ -91,9 +93,11 @@ Location LocationForInlineFrameChain(
 
 }  // namespace
 
-Stack::Stack(Delegate* delegate) : delegate_(delegate) {}
+Stack::Stack(Delegate* delegate) : delegate_(delegate), weak_factory_(this) {}
 
 Stack::~Stack() = default;
+
+fxl::WeakPtr<Stack> Stack::GetWeakPtr() { return weak_factory_.GetWeakPtr(); }
 
 std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
   for (size_t i = 0; i < frames_.size(); i++) {
@@ -103,15 +107,9 @@ std::optional<size_t> Stack::IndexForFrame(const Frame* frame) const {
   return std::nullopt;
 }
 
-FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
+std::optional<FrameFingerprint> Stack::GetFrameFingerprint(
+    size_t virtual_frame_index) const {
   size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
-
-  // See function comment in thread.h for more. We need to look at the next
-  // frame, so either we need to know we got them all or the caller wants the
-  // topmost physical frame (or any of its inline frames). We should always
-  // have the top two physical stack entries if available, so having only one
-  // means we got them all.
-  FXL_DCHECK(frame_index <= GetTopInlineFrameCount() || has_all_frames());
 
   // Should reference a valid index in the array.
   if (frame_index >= frames_.size()) {
@@ -128,16 +126,93 @@ FrameFingerprint Stack::GetFrameFingerprint(size_t virtual_frame_index) const {
 
   // The stack pointer we want is the one from right before the current
   // physical frame (see frame_fingerprint.h).
-  //
-  // When this is the last entry, we can't do that. This returns the frame base
-  // pointer instead which will at least identify the frame in some ways, and
-  // can be used to see if future frames are younger.
   size_t before_physical_frame_index = frame_index + inline_count + 1;
-  if (before_physical_frame_index == frames_.size())
+  if (before_physical_frame_index == frames_.size()) {
+    if (!has_all_frames())
+      return std::nullopt;  // Not synchronously available.
+
+    // For the bottom frame, this returns the frame base pointer instead which
+    // will at least identify the frame in some ways, and can be used to see if
+    // future frames are younger.
     return FrameFingerprint(frames_[frame_index]->GetStackPointer(), 0);
+  }
 
   return FrameFingerprint(
       frames_[before_physical_frame_index]->GetStackPointer(), inline_count);
+}
+
+void Stack::GetFrameFingerprint(
+    size_t virtual_frame_index,
+    std::function<void(const Err&, size_t new_index, FrameFingerprint)> cb) {
+  size_t frame_index = virtual_frame_index + hide_top_inline_frame_count_;
+  FXL_DCHECK(frame_index < frames_.size());
+
+  // Identify the frame in question across the async call by its combination of
+  // IP, SP, and inline nesting count.
+  uint64_t ip = frames_[frame_index]->GetAddress();
+  uint64_t sp = frames_[frame_index]->GetStackPointer();
+  uint32_t inline_count = 0;
+  while (frame_index + inline_count < frames_.size() &&
+         frames_[frame_index + inline_count]->IsInline())
+    inline_count++;
+
+  // This callback is issued when the full stack is available.
+  auto on_full_stack =
+      [ weak_stack = GetWeakPtr(), ip, sp, inline_count,
+        cb = std::move(cb) ](const Err& err) {
+    if (err.has_error()) {
+      cb(err, 0, FrameFingerprint());
+      return;
+    }
+    if (!weak_stack) {
+      cb(Err("Thread destroyed."), 0, FrameFingerprint());
+      return;
+    }
+    const auto& frames = weak_stack->frames_;
+
+    // Re-find the first frame index with matching IP/SP.
+    bool found_frame = false;
+    int new_index = 0;
+    for (int i = static_cast<int>(frames.size()) - 1; i >= 0; i--) {
+      if (frames[i]->GetAddress() == ip && frames[i]->GetStackPointer() == sp) {
+        new_index = i;
+        found_frame = true;
+        break;
+      }
+    }
+
+    if (found_frame && inline_count) {
+      // Check inline frames.
+      new_index -= inline_count;
+      if (new_index >= 0) {
+        // Inline frame still in range, it must have the same IP/SP.
+        if (frames[new_index]->GetAddress() != ip ||
+            frames[new_index]->GetStackPointer() != sp)
+          found_frame = false;
+      } else {
+        found_frame = false;
+      }
+    }
+    if (!found_frame) {
+      cb(Err("Frame destroyed."), 0, FrameFingerprint());
+      return;
+    }
+
+    // Should always have a fingerprint after syncing the stack.
+    auto found_fingerprint = weak_stack->GetFrameFingerprint(new_index);
+    FXL_DCHECK(found_fingerprint);
+    cb(Err(), new_index, *found_fingerprint);
+  };
+
+  if (has_all_frames()) {
+    // All frames are available, don't force a recomputation of the stack. But
+    // the caller still expects an async response.
+    debug_ipc::MessageLoop::Current()->PostTask(
+        FROM_HERE,
+        [on_full_stack = std::move(on_full_stack)]() { on_full_stack(Err()); });
+  } else {
+    SyncFrames(std::move(on_full_stack));
+  }
 }
 
 size_t Stack::GetTopInlineFrameCount() const {
@@ -156,7 +231,7 @@ void Stack::SetHideTopInlineFrameCount(size_t hide_count) {
   hide_top_inline_frame_count_ = hide_count;
 }
 
-void Stack::SyncFrames(std::function<void()> callback) {
+void Stack::SyncFrames(std::function<void(const Err&)> callback) {
   delegate_->SyncFramesForStack(std::move(callback));
 }
 

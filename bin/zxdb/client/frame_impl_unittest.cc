@@ -66,7 +66,7 @@ class MockThread : public Thread, public Stack::Delegate {
 
  private:
   // Stack::Delegate implementation.
-  void SyncFramesForStack(std::function<void()> callback) override {
+  void SyncFramesForStack(std::function<void(const Err&)> callback) override {
     FXL_NOTREACHED();  // All frames are available.
   }
   std::unique_ptr<Frame> MakeFrameForStack(

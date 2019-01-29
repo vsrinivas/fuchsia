@@ -89,7 +89,7 @@ TEST_F(ThreadImplTest, Frames) {
 
   // Asynchronously request the frames.
   thread->GetStack().SyncFrames(
-      []() { debug_ipc::MessageLoop::Current()->QuitNow(); });
+      [](const Err&) { debug_ipc::MessageLoop::Current()->QuitNow(); });
   loop().Run();
 
   // The thread should have the new stack we provided.

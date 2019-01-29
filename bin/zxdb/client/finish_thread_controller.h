@@ -38,7 +38,7 @@ class FinishThreadController : public ThreadController {
  private:
   // Callback for when the thread has loaded its stack frames. This will
   // compute the to_frame_fingerprint_.
-  void InitWithStack(const Stack& stack, std::function<void(const Err&)> cb);
+  void InitWithStack(const Err& err, const Stack& stack, std::function<void(const Err&)> cb);
 
   bool HaveAddressAndFingerprint() const;
 
