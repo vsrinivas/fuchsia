@@ -290,6 +290,7 @@ executable("device_tests") {
     "virtio_net_test.cc",
     "virtio_queue_fake.cc",
     "virtio_queue_fake.h",
+    "virtio_queue_test.cc",
     "virtio_rng_test.cc",
     "virtio_wl_unittest.cc",
   ]

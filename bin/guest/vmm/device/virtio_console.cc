@@ -41,7 +41,7 @@ class ConsoleStream : public StreamBase {
     // If |process_descriptor| return ZX_ERR_SHOULD_WAIT, we may be in the
     // middle of processing a descriptor chain, therefore we should continue
     // where we left off.
-    if (chain_.HasDescriptor()) {
+    if (chain_.IsValid()) {
       goto process;
     }
     for (; queue_.NextChain(&chain_); chain_.Return()) {

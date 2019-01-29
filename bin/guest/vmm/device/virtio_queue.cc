@@ -154,6 +154,31 @@ zx_status_t VirtioQueue::Return(uint16_t index, uint32_t len, uint8_t actions) {
 VirtioChain::VirtioChain(VirtioQueue* queue, uint16_t head)
     : queue_(queue), head_(head), next_(head), has_next_(true) {}
 
+VirtioChain::~VirtioChain() { FXL_CHECK(!IsValid()) << "Descriptor chain leak."; }
+
+VirtioChain::VirtioChain(VirtioChain&& o)
+    : queue_(o.queue_),
+      used_(o.used_),
+      head_(o.head_),
+      next_(o.next_),
+      has_next_(o.has_next_) {
+  o.Reset();
+}
+
+VirtioChain& VirtioChain::operator=(VirtioChain&& o) {
+  FXL_CHECK(!IsValid())
+      << "Moving into valid chain. This would leak a descriptor chain.";
+
+  queue_ = o.queue_;
+  used_ = o.used_;
+  head_ = o.head_;
+  next_ = o.next_;
+  has_next_ = o.has_next_;
+
+  o.Reset();
+  return *this;
+}
+
 bool VirtioChain::IsValid() const { return queue_ != nullptr; }
 
 bool VirtioChain::HasDescriptor() const { return has_next_; }
@@ -175,9 +200,18 @@ bool VirtioChain::NextDescriptor(VirtioDescriptor* desc) {
 uint32_t* VirtioChain::Used() { return &used_; }
 
 void VirtioChain::Return(uint8_t actions) {
+  FXL_CHECK(IsValid()) << "Attempting to return an invalid descriptor";
   zx_status_t status = queue_->Return(head_, used_, actions);
   if (status != ZX_OK) {
     FXL_LOG(ERROR) << "Failed to return descriptor chain to queue " << status;
   }
-  has_next_ = false;
+  Reset();
+}
+
+void VirtioChain::Reset() {
+  queue_ = nullptr;
+  used_ = 0;
+  head_ = 0;
+  next_ = 0;
+  has_next_ = 0;
 }

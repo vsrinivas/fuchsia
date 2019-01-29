@@ -171,17 +171,72 @@ class VirtioQueue {
   friend class VirtioQueueFake;
 };
 
+// A |VirtioChain| is a linked list of buffer descriptors, read from the a
+// |VirtioQueue|.
+//
+// When a chain is read out of a queue, there will be at least one
+// |VirtioDescriptor|, made availale by calling |NextDescriptor| on the chain.
+// If more descriptors are available (indicated by the VRING_DESC_F_NEXT flag),
+// then the subsequent descriptors will be made available further calls to
+// |NextDescriptor|.
+//
+// When processing of the chain is completed, it must be returned back to the
+// driver by calling |Return|. Once a chain has been returned, there must not
+// be any further interactions with |VirtioDescriptor|s that have been read
+// from the chain.
+//
+// If any bytes have been written to the chain, then the |Used| value must be
+// set the the exact number of bytes that have written to the chain. Reading
+// bytes from a chain does not impact the |Used| count.
+//
+// Ex, to iterate over every descriptor in a |VirtioChain|:
+//
+// void ProcessQueue(VirtioQueue* queue) {
+//   VirtioChain chain;
+//   VirtioDescriptor descriptor;
+//   while (queue->NextChain(&chain)) {
+//       // There was a descriptor chain in the queue. It was been read from the
+//       // avail ring and written to |chain|.
+//       while (chain.NextDescriptor(&descriptor)) {
+//         // |descriptor| describes a single buffer in the chain.
+//         if (descriptor.writable) {
+//           uint32_t bytes_written = WriteToDescriptor(descriptor.addr, descriptor.len);
+//
+//           // Increment the |Used| value by the number of bytes written.
+//           *chain.Used() += bytes_written;
+//         } else {
+//           ReadFromDescriptor(descriptor.addr, descriptor.len);
+//         }
+//       }
+//       // Write the chain to the used ring, passing ownership back to the driver.
+//       chain.Return();
+//     }
+//   }
+// }
 class VirtioChain {
  public:
+  // Creates a new, invalid descriptor.
   VirtioChain() = default;
+
+  // Creates a new, valid descriptor chain rooted at descriptor |head| in
+  // |queue|.
   VirtioChain(VirtioQueue* queue, uint16_t head);
-  VirtioChain(VirtioChain&&) = default;
-  VirtioChain& operator=(VirtioChain&&) = default;
+
+  ~VirtioChain();
+
+  // When a |VirtioChain| is moved, the source becomes invalid. This ensures
+  // only one instance will be responsible for returning the chain back to the
+  // drivers.
+  VirtioChain(VirtioChain&&);
+  VirtioChain& operator=(VirtioChain&&);
 
   VirtioChain(const VirtioChain&) = delete;
   VirtioChain& operator=(const VirtioChain&) = delete;
 
+  // Returns |true| iff this chain is valid. A valid chain must be returned
+  // back to the driver before the VirtioChain destructor runs.
   bool IsValid() const;
+
   bool HasDescriptor() const;
   bool NextDescriptor(VirtioDescriptor* desc);
   uint32_t* Used();
@@ -189,6 +244,8 @@ class VirtioChain {
                                 VirtioQueue::InterruptAction::TRY_INTERRUPT);
 
  private:
+  void Reset();
+
   VirtioQueue* queue_ = nullptr;
   uint32_t used_ = 0;
   uint16_t head_ = 0;
