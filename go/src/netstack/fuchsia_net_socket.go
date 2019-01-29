@@ -5,9 +5,9 @@
 package netstack
 
 import (
+	"fmt"
 	"log"
 	"syscall/zx"
-	"syscall/zx/mxerror"
 
 	"netstack/util"
 
@@ -41,7 +41,10 @@ func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.Transport
 		case net.SocketProtocolIp, net.SocketProtocolTcp:
 			return tcp.ProtocolNumber, nil
 		default:
-			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_STREAM protocol: %d", protocol)
+			return 0, zx.Error{
+				Status: zx.ErrNotSupported,
+				Text:   fmt.Sprintf("unsupported SOCK_STREAM protocol: %d", protocol),
+			}
 		}
 	case net.SocketTypeDgram:
 		switch protocol {
@@ -50,10 +53,16 @@ func sockProto(typ net.SocketType, protocol net.SocketProtocol) (tcpip.Transport
 		case net.SocketProtocolIcmp:
 			return ping.ProtocolNumber4, nil
 		default:
-			return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported SOCK_DGRAM protocol: %d", protocol)
+			return 0, zx.Error{
+				Status: zx.ErrNotSupported,
+				Text:   fmt.Sprintf("unsupported SOCK_DGRAM protocol: %d", protocol),
+			}
 		}
 	}
-	return 0, mxerror.Errorf(zx.ErrNotSupported, "unsupported protocol: %d/%d", typ, protocol)
+	return 0, zx.Error{
+		Status: zx.ErrNotSupported,
+		Text:   fmt.Sprintf("unsupported protocol: %d/%d", typ, protocol),
+	}
 }
 
 func (sp *socketProviderImpl) OpenSocket(d net.SocketDomain, t net.SocketType, p net.SocketProtocol) (zx.Socket, int32, error) {
