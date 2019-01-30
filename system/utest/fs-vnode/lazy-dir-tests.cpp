@@ -5,7 +5,6 @@
 #include <fbl/vector.h>
 #include <fs/lazy-dir.h>
 #include <fs/pseudo-file.h>
-#include <fs/vfs.h>
 #include <unittest/unittest.h>
 
 #include <utility>

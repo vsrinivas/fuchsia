@@ -9,10 +9,8 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/auto_lock.h>
-#include <fs/vfs.h>
 #include <fuchsia/io/c/fidl.h>
 #include <zircon/assert.h>
-#include <zircon/device/vfs.h>
 #include <zircon/syscalls.h>
 
 namespace fs {

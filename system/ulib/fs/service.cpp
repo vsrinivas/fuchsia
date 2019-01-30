@@ -6,8 +6,6 @@
 
 #include <utility>
 
-#include <zircon/device/vfs.h>
-
 namespace fs {
 
 Service::Service(Connector connector)

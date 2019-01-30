@@ -22,11 +22,8 @@
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
-#include <fbl/intrusive_hash_table.h>
 #include <fbl/mutex.h>
 #include <fs/client.h>
-#include <fs/mount_channel.h>
-#include <fs/vnode.h>
 #endif // __Fuchsia__
 
 #include <fbl/function.h>
@@ -71,6 +68,39 @@ typedef struct vdircookie {
     uint64_t n;
     void* p;
 } vdircookie_t;
+
+#ifdef __Fuchsia__
+
+// MountChannel functions exactly the same as a channel, except that it
+// intentionally destructs by sending a clean "shutdown" signal to the
+// underlying filesystem. Up until the point that a remote handle is
+// attached to a vnode, this wrapper guarantees not only that the
+// underlying handle gets closed on error, but also that the sub-filesystem
+// is released (which cleans up the underlying connection to the block
+// device).
+class MountChannel {
+public:
+    constexpr MountChannel() = default;
+    explicit MountChannel(zx_handle_t handle)
+        : channel_(handle) {}
+    explicit MountChannel(zx::channel channel)
+        : channel_(std::move(channel)) {}
+    MountChannel(MountChannel&& other)
+        : channel_(std::move(other.channel_)) {}
+
+    zx::channel TakeChannel() { return std::move(channel_); }
+
+    ~MountChannel() {
+        if (channel_.is_valid()) {
+            vfs_unmount_handle(channel_.release(), 0);
+        }
+    }
+
+private:
+    zx::channel channel_;
+};
+
+#endif // __Fuchsia__
 
 // The Vfs object contains global per-filesystem state, which
 // may be valid across a collection of Vnodes.
@@ -185,8 +215,6 @@ private:
     zx_status_t InstallRemoteLocked(fbl::RefPtr<Vnode> vn, MountChannel h) FS_TA_REQUIRES(vfs_lock_);
     zx_status_t UninstallRemoteLocked(fbl::RefPtr<Vnode> vn,
                                       zx::channel* h) FS_TA_REQUIRES(vfs_lock_);
-
-    fbl::HashTable<zx_koid_t, std::unique_ptr<VnodeToken>> vnode_tokens_;
 
     // Non-intrusive node in linked list of vnodes acting as mount points
     class MountNode final : public fbl::DoublyLinkedListable<fbl::unique_ptr<MountNode>> {

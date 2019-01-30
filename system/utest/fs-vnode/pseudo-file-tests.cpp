@@ -7,7 +7,6 @@
 #include <fbl/vector.h>
 #include <initializer_list>
 #include <unittest/unittest.h>
-#include <zircon/device/vfs.h>
 
 #define EXPECT_FSTR_EQ(expected, actual)                                \
     EXPECT_BYTES_EQ(reinterpret_cast<const uint8_t*>(expected.c_str()), \
