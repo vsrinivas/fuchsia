@@ -19,6 +19,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <trace.h>
+#include <vm/bootreserve.h>
 #include <vm/fault.h>
 #include <vm/page_source.h>
 #include <vm/physmap.h>
@@ -227,15 +228,14 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
             ASSERT(page);
 
             if (page->state == VM_PAGE_STATE_WIRED) {
-                // it's wired to the kernel, so we can just use it directly
-            } else if (page->state == VM_PAGE_STATE_FREE) {
-                list_node list = LIST_INITIAL_VALUE(list);
-                ASSERT(pmm_alloc_range(pa, 1, &list) == ZX_OK);
-                page->state = VM_PAGE_STATE_WIRED;
+                boot_reserve_unwire_page(page);
             } else {
+                // This function is only valid for memory in the boot image,
+                // which should all be wired.
                 panic("page used to back static vmo in unusable state: paddr %#" PRIxPTR " state %u\n", pa,
                       page->state);
             }
+            InitializeVmPage(page);
 
             // XXX hack to work around the ref pointer to the base class
             auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());

@@ -52,6 +52,11 @@ public:
     static zx_status_t CreateContiguous(uint32_t pmm_alloc_flags, uint64_t size,
                                         uint8_t alignment_log2, fbl::RefPtr<VmObject>* vmo);
 
+    // Creates a VMO whose initial contents are taken from the boot image.
+    //
+    // Creating a VMO using this method is destructive. Once the VMO is released, its
+    // pages will be released into the general purpose page pool, so it is not possible
+    // to create multiple VMOs for the same region using this method.
     static zx_status_t CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* vmo);
 
     static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src,

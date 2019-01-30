@@ -85,6 +85,13 @@ void boot_reserve_wire() {
     }
 }
 
+void boot_reserve_unwire_page(struct vm_page* page) {
+    DEBUG_ASSERT(page->state == VM_PAGE_STATE_WIRED);
+    page->state = VM_PAGE_STATE_ALLOC;
+    // Remove from the reserved page list.
+    list_delete(&page->queue_node);
+}
+
 static paddr_t upper_align(paddr_t range_pa, size_t range_len, size_t len) {
     return (range_pa + range_len - len);
 }

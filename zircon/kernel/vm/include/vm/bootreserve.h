@@ -45,3 +45,6 @@ zx_status_t boot_reserve_range_search(paddr_t range_pa, size_t range_len, size_t
 //
 // Returns the same value the callback |cb| returns.
 bool boot_reserve_foreach(const fbl::Function<bool(reserve_range_t)>& cb);
+
+// Unwires |page| and leaves it in an the ALLOC state.
+void boot_reserve_unwire_page(struct vm_page* page);
