@@ -340,7 +340,8 @@ zx_status_t AudioDeviceStream::GetString(audio_stream_string_id_t id,
 }
 
 zx_status_t AudioDeviceStream::PlugMonitor(float duration) {
-    zx_time_t deadline = zx_deadline_after(ZX_SEC(static_cast<double>(duration)));
+    const double duration_ns = static_cast<double>(duration) * ZX_SEC(1);
+    const zx_time_t deadline = zx_deadline_after(static_cast<zx_duration_t>(duration_ns));
     audio_stream_cmd_plug_detect_resp resp;
     zx_status_t res = GetPlugState(&resp, true);
     if (res != ZX_OK)
