@@ -107,6 +107,7 @@ public:
 // BUG(ZX-2868): We currently never free these after allocating them
 struct Devnode {
     explicit Devnode(fbl::String name);
+    ~Devnode();
 
     Devnode(const Devnode&) = delete;
     Devnode& operator=(const Devnode&) = delete;
@@ -549,8 +550,11 @@ Devnode::Devnode(fbl::String name)
     : name(std::move(name)) {
 }
 
-DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
+Devnode::~Devnode() {
+    devfs_remove(this);
+}
 
+DcIostate::DcIostate(Devnode* dn) : devnode_(dn) {
     devnode_->iostate.push_back(this);
 }
 
