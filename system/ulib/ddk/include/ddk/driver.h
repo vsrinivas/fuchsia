@@ -98,7 +98,7 @@ typedef struct device_add_args {
     // the proxy device in the new devhost
     const char* proxy_args;
 
-    // One or more of DEVICE_ADD_*
+    // Zero or more of DEVICE_ADD_*
     uint32_t flags;
 
     // Optional channel passed to the |dev| that serves as an open connection for the client.
