@@ -22,7 +22,7 @@ bool TrivialLifetimeTest() {
 bool SingleRequestTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
               ZX_OK);
 
     usb::RequestPool pool;
@@ -40,7 +40,7 @@ bool MultipleRequestTest() {
 
     for (size_t i = 0; i < 10; i++) {
         std::optional<Request> request;
-        ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
         pool.Add(std::move(*request));
     }
@@ -59,8 +59,7 @@ bool MultipleSizeTest() {
     for (size_t i = 0; i < 10; i++) {
         const size_t size = kParentReqSize + i * 8;
         std::optional<Request> request;
-        ASSERT_EQ(Request::Alloc(&request, 0, 0,
-                                 Request::RequestSize(size)),
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, size),
                   ZX_OK);
         pool.Add(std::move(*request));
     }
@@ -79,7 +78,7 @@ bool ReleaseTest() {
 
     for (size_t i = 0; i < 10; i++) {
         std::optional<Request> request;
-        ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize),
+        ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
         pool.Add(std::move(*request));
     }

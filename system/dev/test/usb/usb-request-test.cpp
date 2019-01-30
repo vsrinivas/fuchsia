@@ -16,13 +16,12 @@ namespace {
 using Request = usb::Request<void>;
 
 constexpr size_t kParentReqSize = sizeof(usb_request_t);
-constexpr size_t kReqSize = Request::RequestSize(kParentReqSize);
 constexpr usb_request_complete_t kNoCallback = {};
 
 bool AllocTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
+    EXPECT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize), ZX_OK);
     END_TEST;
 }
 
@@ -31,7 +30,7 @@ bool InitTest() {
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kReqSize), ZX_OK);
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize), ZX_OK);
     EXPECT_EQ(request->Init(vmo, 0, 0, 0),
               ZX_OK);
     END_TEST;
@@ -42,7 +41,7 @@ bool AllocVmoTest() {
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE, 0, &vmo), ZX_OK);
     std::optional<Request> request;
-    EXPECT_EQ(Request::AllocVmo(&request, vmo, 0, 0, 0, kReqSize),
+    EXPECT_EQ(Request::AllocVmo(&request, vmo, 0, 0, 0, kParentReqSize),
               ZX_OK);
     END_TEST;
 }
@@ -50,7 +49,7 @@ bool AllocVmoTest() {
 bool CopyTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize),
               ZX_OK);
 
     constexpr uint8_t kSampleData[] = "blahblahblah";
@@ -66,7 +65,7 @@ bool CopyTest() {
 bool MmapTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize),
               ZX_OK);
 
     constexpr uint8_t kSampleData[] = "blahblahblah";
@@ -82,7 +81,7 @@ bool MmapTest() {
 bool CacheOpTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheOp(USB_REQUEST_CACHE_INVALIDATE, 0, 0), ZX_OK);
@@ -99,7 +98,7 @@ bool CacheOpTest() {
 bool CacheFlushTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheFlush(0, 0), ZX_OK);
@@ -112,7 +111,7 @@ bool CacheFlushTest() {
 bool CacheFlushInvalidateTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kReqSize),
+    EXPECT_EQ(Request::Alloc(&request, ZX_PAGE_SIZE, 0, kParentReqSize),
               ZX_OK);
 
     EXPECT_EQ(request->CacheFlushInvalidate(0, 0), ZX_OK);
@@ -130,7 +129,7 @@ bool PhysMapTest() {
     zx::unowned_bti bti(bti_handle);
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
@@ -146,7 +145,7 @@ bool PhysIterTest() {
     zx::unowned_bti bti(bti_handle);
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
@@ -169,7 +168,7 @@ bool PhysIterTest() {
 bool SetScatterGatherListTest() {
     BEGIN_TEST;
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 3, 1, kReqSize),
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 3, 1, kParentReqSize),
               ZX_OK);
     // Wrap around the end of the request.
     constexpr phys_iter_sg_entry_t kWrapped[] = {
@@ -194,7 +193,7 @@ bool InvalidScatterGatherListTest() {
     zx::vmo vmo;
     ASSERT_EQ(zx::vmo::create(ZX_PAGE_SIZE * 3, 0, &vmo), ZX_OK);
     std::optional<Request> request;
-    ASSERT_EQ(Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kReqSize),
+    ASSERT_EQ(Request::AllocVmo(&request, vmo, PAGE_SIZE, PAGE_SIZE * 3, 0, kParentReqSize),
               ZX_OK);
 
     constexpr phys_iter_sg_entry_t kOutOfBounds[] = {
@@ -219,7 +218,7 @@ bool ScatterGatherPhysIterTest() {
     zx::unowned_bti bti(bti_handle);
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kReqSize),
+    ASSERT_EQ(Request::Alloc(&request, PAGE_SIZE * 4, 1, kParentReqSize),
               ZX_OK);
 
     ASSERT_EQ(request->PhysMap(*bti), ZX_OK);
@@ -276,15 +275,13 @@ bool MultipleSectionTest() {
     constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
     constexpr size_t kSecondLayerReqSize =
         usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
-    constexpr size_t kThirdLayerReqSize =
-        usb::UnownedRequest<void>::RequestSize(kSecondLayerReqSize);
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kThirdLayerReqSize), ZX_OK);
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
 
     usb::UnownedRequest request2(request->take(), kNoCallback, kFirstLayerReqSize);
-    usb::UnownedRequest request3(request2.take(), kNoCallback, kSecondLayerReqSize);
-    request = usb::Request(request3.take(), kBaseReqSize);
+    usb::UnownedRequest request3(request2.take(), kNoCallback, kBaseReqSize);
+    request = usb::Request(request3.take(), kSecondLayerReqSize);
 
     END_TEST;
 }
@@ -303,8 +300,6 @@ bool CallbackTest() {
     BEGIN_TEST;
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
     constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
-    constexpr size_t kSecondLayerReqSize =
-        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
 
     bool called = false;
     auto callback = [](void* ctx, usb_request_t* request) {
@@ -318,9 +313,9 @@ bool CallbackTest() {
     };
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kFirstLayerReqSize), ZX_OK);
 
-    usb::UnownedRequest<void> request2(request->take(), complete_cb, kFirstLayerReqSize);
+    usb::UnownedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
     request2.Complete(ZX_OK, 0);
     EXPECT_TRUE(called);
 
@@ -331,14 +326,12 @@ bool AutoCallbackTest() {
     BEGIN_TEST;
     constexpr size_t kBaseReqSize = sizeof(usb_request_t);
     constexpr size_t kFirstLayerReqSize = Request::RequestSize(kBaseReqSize);
-    constexpr size_t kSecondLayerReqSize =
-        usb::UnownedRequest<void>::RequestSize(kFirstLayerReqSize);
 
     bool called = false;
     auto callback = [](void* ctx, usb_request_t* request) {
         *static_cast<bool*>(ctx) = true;
         // We take ownership.
-        Request unused(request, kBaseReqSize);
+        Request unused(request, kFirstLayerReqSize);
     };
     usb_request_complete_t complete_cb = {
         .callback = callback,
@@ -346,10 +339,10 @@ bool AutoCallbackTest() {
     };
 
     std::optional<Request> request;
-    ASSERT_EQ(Request::Alloc(&request, 0, 0, kSecondLayerReqSize), ZX_OK);
+    ASSERT_EQ(Request::Alloc(&request, 0, 0, kFirstLayerReqSize), ZX_OK);
 
     {
-        usb::UnownedRequest<void> request2(request->take(), complete_cb, kFirstLayerReqSize);
+        usb::UnownedRequest<void> request2(request->take(), complete_cb, kBaseReqSize);
     }
     EXPECT_TRUE(called);
 

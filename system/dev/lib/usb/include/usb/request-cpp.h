@@ -69,7 +69,7 @@ namespace usb {
 // const size_t op_size = usb::Request<>::RequestSize(parent_req_size);
 // for (int i = 0; i < kNumRequest; i++) {
 //     std::optional<usb::Request> request;
-//     request = usb::Request::Alloc(op_size, parent_req_size);
+//     request = usb::Request::Alloc(op_size, DATA_SIZE, EP_ADDRESS, parent_req_size);
 //
 //     if (!request) return ZX_ERR_NO_MEMORY;
 //     pool.add(std::move(*request));
@@ -200,8 +200,8 @@ public:
 
     // Creates a new usb request with payload space of data_size.
     static zx_status_t Alloc(std::optional<Request>* out, uint64_t data_size,
-                             uint8_t ep_address, size_t req_size,
-                             size_t parent_req_size = sizeof(usb_request_t)) {
+                             uint8_t ep_address, size_t parent_req_size) {
+        const size_t req_size = RequestSize(parent_req_size);
         usb_request_t* request;
         zx_status_t status = usb_request_alloc(&request, data_size, ep_address, req_size);
         if (status == ZX_OK) {
@@ -216,7 +216,8 @@ public:
     // Creates a new usb request with the given VMO.
     static zx_status_t AllocVmo(std::optional<Request>* out, const zx::vmo& vmo,
                                 uint64_t vmo_offset, uint64_t length, uint8_t ep_address,
-                                size_t req_size, size_t parent_req_size = sizeof(usb_request_t)) {
+                                size_t parent_req_size) {
+        const size_t req_size = RequestSize(parent_req_size);
         usb_request_t* request;
         zx_status_t status = usb_request_alloc_vmo(&request, vmo.get(), vmo_offset, length,
                                                    ep_address, req_size);
