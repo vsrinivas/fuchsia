@@ -11,7 +11,7 @@ use fuchsia_zircon as zx;
 
 use crate::{Fixed, NewId, ObjectId};
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub enum ArgKind {
     Int,
     Uint,
@@ -31,7 +31,7 @@ pub enum Arg {
     String(String),
     Object(ObjectId),
     NewId(NewId),
-    Array(Vec<u8>),
+    Array(Array),
     Handle(zx::Handle),
 }
 
@@ -71,7 +71,7 @@ impl Arg {
     impl_unwrap_arg!(unwrap_object, ObjectId, Object);
     impl_unwrap_arg!(unwrap_new_id, ObjectId, NewId);
     impl_unwrap_arg!(unwrap_string, String, String);
-    impl_unwrap_arg!(unwrap_array, Vec<u8>, Array);
+    impl_unwrap_arg!(unwrap_array, Array, Array);
     impl_unwrap_arg!(unwrap_handle, zx::Handle, Handle);
 }
 
@@ -107,9 +107,26 @@ impl Arg {
     impl_as_arg!(as_object, ObjectId, Object);
     impl_as_arg!(as_new_id, ObjectId, NewId);
     impl_as_arg!(as_string, String, String);
-    impl_as_arg!(as_array, Vec<u8>, Array);
+    impl_as_arg!(as_array, Array, Array);
     impl_as_arg!(as_handle, zx::Handle, Handle);
 }
+
+/// Simple conversion from the inner arg types to the Arg wrapper.
+macro_rules! impl_from_for_arg(
+    ($enumtype:ident, $type:ty) => (
+        impl From<$type> for Arg {
+            fn from(v: $type) -> Self {
+                Arg::$enumtype(v)
+            }
+        }
+    )
+);
+impl_from_for_arg!(Int, i32);
+impl_from_for_arg!(Uint, u32);
+impl_from_for_arg!(Fixed, Fixed);
+impl_from_for_arg!(String, String);
+impl_from_for_arg!(Array, Array);
+impl_from_for_arg!(Handle, zx::Handle);
 
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct MessageHeader {
@@ -118,6 +135,7 @@ pub struct MessageHeader {
     pub length: u16,
 }
 
+#[derive(Debug)]
 pub struct Message {
     byte_buf: io::Cursor<Vec<u8>>,
     handle_buf: Vec<zx::Handle>,
@@ -177,7 +195,7 @@ impl Message {
             Arg::Object(i) => self.byte_buf.write_u32::<NativeEndian>(i),
             Arg::NewId(i) => self.byte_buf.write_u32::<NativeEndian>(i),
             Arg::String(s) => self.write_slice(s.as_bytes(), true),
-            Arg::Array(vec) => self.write_slice(vec.as_slice(), false),
+            Arg::Array(a) => self.write_slice(a.as_slice(), false),
             Arg::Handle(h) => {
                 self.handle_buf.push(h);
                 Ok(())
@@ -201,7 +219,7 @@ impl Message {
                     })
                 })
                 .map(Arg::String),
-            ArgKind::Array => self.read_slice(false).map(Arg::Array),
+            ArgKind::Array => self.read_slice(false).map(|v| Arg::Array(v.into())),
             ArgKind::Handle => {
                 if !self.handle_buf.is_empty() {
                     Ok(Arg::Handle(self.handle_buf.remove(0)))
@@ -321,6 +339,85 @@ impl From<zx::MessageBuf> for Message {
     }
 }
 
+/// Wrapper around the array data provided by the wayland wire format.
+///
+/// On the wire, wl_array arguments are simple byte arrays. Protocol
+/// documentation may specify a specific interpretation of the bytes, however
+/// this is not directly modeled in the protocol XML.
+///
+/// For example, the wl_keyboard::enter event has an argument for the set of
+/// keys pressed at the time of the event:
+///
+///   <arg name="keys" type="array" summary="the currently pressed keys"/>
+///
+/// While not explitly stated, |keys| is an array of |uint| arguments. These are
+/// packed into the array using the same rules used to write consecutive |uint|
+/// arguments to a Message.
+// We use a |Message| internally here to reuse the same argument serialization
+// logic used for full messages. The semantics of Array is similar to a message
+// that cannot contain any handles.
+#[derive(Debug)]
+pub struct Array(Message);
+
+impl Array {
+    /// Creates a new, empty Array.
+    pub fn new() -> Self {
+        Self(Message::new())
+    }
+
+    /// Creates a new Array that contains the bytes stored in the provided Vec.
+    pub fn from_vec(v: Vec<u8>) -> Self {
+        Self(Message::from_parts(v, vec![]))
+    }
+
+    /// Access the array data as a slice.
+    pub fn as_slice(&self) -> &[u8] {
+        self.0.bytes()
+    }
+
+    /// Extracts the Array data as a Vec<u8>.
+    pub fn into_vec(self) -> Vec<u8> {
+        let (bytes, _) = self.0.take();
+        bytes
+    }
+
+    /// Returns the length (in bytes) of the array.
+    pub fn len(&self) -> usize {
+        self.0.bytes().len()
+    }
+
+    /// Writes an Arg to the end of this Array, increasing its size.
+    ///
+    /// Note that arrays cannot contain handles and it is an error to attempt
+    /// to write an `Arg::Handle` to an array.
+    pub fn push<T: Into<Arg>>(&mut self, arg: T) -> io::Result<()> {
+        let arg = arg.into();
+        if let Arg::Handle(_) = &arg {
+            Err(io::Error::new(io::ErrorKind::InvalidInput, "Arrays cannot contain handles"))
+        } else {
+            self.0.write_arg(arg)
+        }
+    }
+
+    /// Reads an Arg out of this Array and return the value.
+    ///
+    /// Note that arrays cannot contain handles and it is an error to attempt
+    /// to read an `ArgKind::Handle` from an array.
+    pub fn read_arg(&mut self, kind: ArgKind) -> io::Result<Arg> {
+        if kind == ArgKind::Handle {
+            Err(io::Error::new(io::ErrorKind::InvalidInput, "Arrays cannot contain handles"))
+        } else {
+            self.0.read_arg(kind)
+        }
+    }
+}
+
+impl From<Vec<u8>> for Array {
+    fn from(v: Vec<u8>) -> Self {
+        Self::from_vec(v)
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -361,12 +458,8 @@ mod tests {
         assert!(message.write_arg(Arg::Fixed(Fixed::from_bits(FIXED_VALUE))).is_ok());
         assert!(message.write_arg(Arg::Object(OBJECT_VALUE)).is_ok());
         assert!(message.write_arg(Arg::NewId(NEW_ID_VALUE)).is_ok());
-        assert!(message
-            .write_arg(Arg::String(STRING_VALUE.to_owned()))
-            .is_ok());
-        assert!(message
-            .write_arg(Arg::Array(ARRAY_VALUE.to_owned()))
-            .is_ok());
+        assert!(message.write_arg(Arg::String(STRING_VALUE.to_owned())).is_ok());
+        assert!(message.write_arg(Arg::Array(ARRAY_VALUE.to_owned().into())).is_ok());
         assert!(message.write_arg(Arg::Handle(h1.into())).is_ok());
 
         let (bytes, handles) = message.take();
@@ -512,5 +605,23 @@ mod tests {
         assert!(!message.is_empty());
         let _ = message.read_arg(ArgKind::Handle).unwrap();
         assert!(message.is_empty());
+    }
+
+    #[test]
+    fn array_read_write() -> Result<(), Error> {
+        let mut message = Message::new();
+        let mut array = Array::new();
+        array.push(3)?;
+        array.push(-2)?;
+        array.push(Fixed::from_float(-2.0))?;
+        message.write_arg(array.into())?;
+        message.rewind();
+
+        let mut array = message.read_arg(ArgKind::Array)?.as_array()?;
+        assert_eq!(3, array.read_arg(ArgKind::Uint)?.as_uint()?);
+        assert_eq!(-2, array.read_arg(ArgKind::Int)?.as_int()?);
+        assert_eq!(Fixed::from_float(-2.), array.read_arg(ArgKind::Fixed)?.as_fixed()?);
+
+        Ok(())
     }
 }

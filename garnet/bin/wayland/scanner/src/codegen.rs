@@ -37,7 +37,7 @@ impl<W: io::Write> Codegen<W> {
 #![allow(warnings)]
 use bitflags::*;
 use failure;
-use fuchsia_wayland_core::{{ArgKind, Arg, Enum, Fixed, FromArgs, IntoMessage, Message,
+use fuchsia_wayland_core::{{ArgKind, Arg, Array, Enum, Fixed, FromArgs, IntoMessage, Message,
                             MessageGroupSpec, MessageHeader, MessageSpec, MessageType,
                             NewId, NewObject, ObjectId, EncodeError, DecodeError,
                             Interface }};"
@@ -411,7 +411,17 @@ impl FromArgs for Request {{
             } else {
                 self.codegen_value_enum(e)?;
             }
+            self.codegen_enum_into_arg(e)?;
         }
+        Ok(())
+    }
+
+    fn codegen_enum_into_arg(&mut self, e: &ast::Enum) -> Result {
+        writeln!(self.w, "impl Into<Arg> for {} {{", e.rust_name())?;
+        writeln!(self.w, "    fn into(self) -> Arg {{")?;
+        writeln!(self.w, "        Arg::Uint(self.bits())")?;
+        writeln!(self.w, "    }}")?;
+        writeln!(self.w, "}}")?;
         Ok(())
     }
 
@@ -546,7 +556,7 @@ fn format_dispatch_arg_rust(arg: &ast::Arg) -> Cow<str> {
                 "ObjectId".into()
             }
         }
-        ArgKind::Array => "Vec<u8>".into(),
+        ArgKind::Array => "Array".into(),
         ArgKind::Fd => "fuchsia_zircon::Handle".into(),
     }
 }
@@ -562,7 +572,7 @@ fn format_wire_arg_rust(arg: &ast::Arg) -> Cow<str> {
         ArgKind::String => "String",
         ArgKind::Object => "ObjectId",
         ArgKind::NewId => "NewId",
-        ArgKind::Array => "Vec<u8>",
+        ArgKind::Array => "Array",
         ArgKind::Fd => "fuchsia_zircon::Handle",
     }
     .into()

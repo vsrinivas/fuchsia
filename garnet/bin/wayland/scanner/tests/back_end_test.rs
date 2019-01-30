@@ -262,7 +262,7 @@ mod test {
     #[test]
     fn test_serialize_array() {
         let (bytes, handles) = TestInterfaceEvent::Array {
-            arg: ARRAY_VALUE.to_vec(),
+            arg: ARRAY_VALUE.to_vec().into(),
         }
         .into_message(SENDER_ID)
         .unwrap()
@@ -275,11 +275,11 @@ mod test {
     fn test_deserialize_array() {
         let request = TestInterfaceRequest::from_args(
             6, /* opcode */
-            vec![Arg::Array(ARRAY_VALUE.to_vec())],
+            vec![Arg::Array(ARRAY_VALUE.to_vec().into())],
         )
         .unwrap();
 
-        assert_match!(request, TestInterfaceRequest::Array{arg} => assert_eq!(arg, ARRAY_VALUE));
+        assert_match!(request, TestInterfaceRequest::Array{arg} => assert_eq!(arg.into_vec(), ARRAY_VALUE));
     }
 
     static HANDLE_MESSAGE_BYTES: &'static [u8] = &[
@@ -347,7 +347,7 @@ mod test {
                 Arg::Object(OBJECT_VALUE),
                 Arg::Handle(s2.into_handle()),
                 Arg::String(STRING_VALUE.to_string()),
-                Arg::Array(ARRAY_VALUE.to_vec()),
+                Arg::Array(ARRAY_VALUE.to_vec().into()),
             ],
         )
         .unwrap();
@@ -384,7 +384,7 @@ mod test {
             object_arg: OBJECT_VALUE,
             handle_arg2: s2.into_handle(),
             string_arg: STRING_VALUE.to_string(),
-            array_arg: ARRAY_VALUE.to_vec(),
+            array_arg: ARRAY_VALUE.to_vec().into(),
         };
         let message = event.into_message(SENDER_ID).unwrap();
         let (message_bytes, message_handles) = message.take();
