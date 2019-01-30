@@ -24,6 +24,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
+#include <memory>
 #include <fs-management/mount.h>
 #include <fs-management/ramdisk.h>
 #include <lib/fdio/debug.h>
@@ -113,9 +114,19 @@ zx_status_t SyncIO(zx_device_t* dev, uint32_t cmd, void* buf, size_t off, size_t
     size_t bsz = info.block_size;
     ZX_DEBUG_ASSERT(off / bsz <= UINT32_MAX);
     ZX_DEBUG_ASSERT(len / bsz <= UINT32_MAX);
-
-    char raw[op_size];
-    block_op_t* block = reinterpret_cast<block_op_t*>(raw);
+    fbl::AllocChecker ac;
+    std::unique_ptr<char[]> raw;
+    if constexpr (alignof(block_op_t) > __STDCPP_DEFAULT_NEW_ALIGNMENT__) {
+        raw = std::unique_ptr<char[]>(
+            new (static_cast<std::align_val_t>(alignof(block_op_t)), &ac) char[op_size]);
+    } else {
+        raw = std::unique_ptr<char[]>(
+            new (&ac) char[op_size]);
+    }
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+    block_op_t* block = reinterpret_cast<block_op_t*>(raw.get());
 
     sync_completion_t completion;
     sync_completion_reset(&completion);
