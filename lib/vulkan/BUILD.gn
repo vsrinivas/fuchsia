@@ -75,8 +75,6 @@ sdk_atom("vulkan_layers") {
 }
 
 package("image-pipe-swapchain-tests") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
@@ -100,8 +98,6 @@ package("image-pipe-swapchain-tests") {
 }
 
 package("vkcube_on_scenic") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
@@ -131,8 +127,6 @@ package("vkcube_on_scenic") {
 }
 
 package("vkcube_on_fb") {
-  deprecated_bare_package_url = "//build"
-
   testonly = true
 
   deps = [
