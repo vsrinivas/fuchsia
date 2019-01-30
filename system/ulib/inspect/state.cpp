@@ -26,7 +26,7 @@ private:
     // any changes to the buffer.
     void Acquire(Block* block) {
         uint64_t* ptr = &block->payload.u64;
-        __atomic_fetch_add(ptr, 1, fbl::memory_order_acq_rel);
+        __atomic_fetch_add(ptr, 1, std::memory_order_acq_rel);
     }
 
     // Release the generation count lock.
@@ -35,7 +35,7 @@ private:
     // the buffer are committed.
     void Release(Block* block) {
         uint64_t* ptr = &block->payload.u64;
-        __atomic_fetch_add(ptr, 1, fbl::memory_order_release);
+        __atomic_fetch_add(ptr, 1, std::memory_order_release);
     }
     BlockIndex target_;
     Heap* heap_;

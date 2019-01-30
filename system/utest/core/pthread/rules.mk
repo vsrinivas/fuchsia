@@ -18,6 +18,4 @@ MODULE_NAME := pthread-test
 MODULE_LIBS := \
     system/ulib/unittest system/ulib/fdio system/ulib/zircon system/ulib/c
 
-MODULE_STATIC_LIBS := system/ulib/fbl
-
 include make/module.mk

@@ -89,7 +89,7 @@ using _ptr_type ## _container_type ## TestTraits =                              
 // tested container type.  If new static storage is needed for testing custom
 // pointer type or custom deleters, it should be declared here.
 #define DECLARE_TEST_STORAGE(_container_type) \
-    template <> fbl::atomic<size_t> TestCustomDeleter< \
+    template <> std::atomic<size_t> TestCustomDeleter< \
         StdUniquePtrCustomDeleter ## _container_type ## TestObj \
     >::delete_count_{0}
 

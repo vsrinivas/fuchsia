@@ -18,7 +18,6 @@
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
 
-#include <fbl/atomic.h>
 #include <fbl/auto_lock.h>
 #include <fbl/mutex.h>
 #include <fbl/unique_ptr.h>

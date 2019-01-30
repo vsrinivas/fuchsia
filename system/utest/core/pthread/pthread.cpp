@@ -12,7 +12,8 @@
 #include <time.h>
 #include <unistd.h>
 
-#include <fbl/atomic.h>
+#include <atomic>
+
 #include <zircon/syscalls.h>
 #include <unittest/unittest.h>
 
@@ -20,7 +21,7 @@ static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
 // This is accessed by by both the cond_threads, and the main
 // thread. The latter does so not under the mutex.
-static fbl::atomic_int thread_waked = 0;
+static std::atomic_int thread_waked = 0;
 static int thread_with_lock = 0;
 
 static void log(const char* str) {

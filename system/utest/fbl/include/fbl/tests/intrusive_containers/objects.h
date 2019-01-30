@@ -5,12 +5,12 @@
 #pragma once
 
 #include <fbl/alloc_checker.h>
-#include <fbl/atomic.h>
 #include <fbl/ref_counted.h>
 #include <fbl/ref_ptr.h>
 #include <fbl/unique_ptr.h>
 #include <unittest/unittest.h>
 
+#include <atomic>
 #include <memory>
 #include <utility>
 
@@ -77,7 +77,7 @@ public:
     static size_t delete_count() { return delete_count_.load(); }
 
 private:
-    static fbl::atomic<size_t> delete_count_;
+    static std::atomic<size_t> delete_count_;
 };
 
 // Container test objects are objects which...

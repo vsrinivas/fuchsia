@@ -4,7 +4,6 @@
 
 #pragma once
 
-#include <fbl/atomic.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
 #include <lib/inspect/block.h>

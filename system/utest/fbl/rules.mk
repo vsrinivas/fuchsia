@@ -11,7 +11,6 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 fbl_common_tests := \
     $(LOCAL_DIR)/algorithm_tests.cpp \
     $(LOCAL_DIR)/array_tests.cpp \
-    $(LOCAL_DIR)/atomic_tests.cpp \
     $(LOCAL_DIR)/auto_call_tests.cpp \
     $(LOCAL_DIR)/forward_tests.cpp \
     $(LOCAL_DIR)/function_tests.cpp \
