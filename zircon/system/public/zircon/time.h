@@ -6,18 +6,34 @@
 
 #pragma once
 
+#include <stdint.h>
 #include <zircon/compiler.h>
-#include <zircon/types.h>
 
-// These functions perform overflow-safe time arithmetic, clamping to ZX_TIME_INFINITE in case of
-// overflow and ZX_TIME_INFINITE_PAST in case of underflow.
+__BEGIN_CDECLS
+
+// absolute time in nanoseconds (generally with respect to the monotonic clock)
+typedef int64_t zx_time_t;
+// a duration in nanoseconds
+typedef int64_t zx_duration_t;
+// a duration in hardware ticks
+typedef uint64_t zx_ticks_t;
+
+#define ZX_TIME_INFINITE INT64_MAX
+#define ZX_TIME_INFINITE_PAST INT64_MIN
+
+// These functions perform overflow-safe time arithmetic and unit conversion, clamping to
+// ZX_TIME_INFINITE in case of overflow and ZX_TIME_INFINITE_PAST in case of underflow.
 //
 // C++ code should use zx::time and zx::duration instead.
 //
-// The naming scheme is zx_<first argument>_<operation>_<second argument>.
+// For arithmetic the naming scheme is:
+//     zx_<first argument>_<operation>_<second argument>
 //
-// TODO(maniscalco): Consider expanding the set of operations to include division, modulo, unit
-// conversion, and floating point math.
+// For unit conversion the naming scheme is:
+//     zx_duration_from_<unit of argument>
+//
+// TODO(maniscalco): Consider expanding the set of operations to include division, modulo, and
+// floating point math.
 
 __CONSTEXPR static inline zx_time_t zx_time_add_duration(zx_time_t time, zx_duration_t duration) {
     zx_time_t x = 0;
@@ -94,3 +110,44 @@ __CONSTEXPR static inline zx_duration_t zx_duration_mul_int64(zx_duration_t dura
     }
     return x;
 }
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_nsec(int64_t n) {
+    return zx_duration_mul_int64(1, n);
+}
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_usec(int64_t n) {
+    return zx_duration_mul_int64(1000, n);
+}
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_msec(int64_t n) {
+    return zx_duration_mul_int64(1000000, n);
+}
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_sec(int64_t n) {
+    return zx_duration_mul_int64(1000000000, n);
+}
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_min(int64_t n) {
+    return zx_duration_mul_int64(60000000000, n);
+}
+
+__CONSTEXPR static inline zx_duration_t zx_duration_from_hour(int64_t n) {
+    return zx_duration_mul_int64(3600000000000, n);
+}
+
+// Similar to the functions above, these macros perform overflow-safe unit conversion. Prefer to use
+// the functions above instead of these macros.
+#define ZX_NSEC(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1LL * (n))) : (zx_duration_from_nsec(n)))
+#define ZX_USEC(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_NSEC(n))) : (zx_duration_from_usec(n)))
+#define ZX_MSEC(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_USEC(n))) : (zx_duration_from_msec(n)))
+#define ZX_SEC(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(1000LL * ZX_MSEC(n))) : (zx_duration_from_sec(n)))
+#define ZX_MIN(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * ZX_SEC(n))) : (zx_duration_from_min(n)))
+#define ZX_HOUR(n) \
+    (__ISCONSTANT(n) ? ((zx_duration_t)(60LL * ZX_MIN(n))) : (zx_duration_from_hour(n)))
+
+__END_CDECLS

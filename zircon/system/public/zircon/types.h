@@ -12,6 +12,7 @@
 #include <zircon/errors.h>
 #include <zircon/limits.h>
 #include <zircon/rights.h>
+#include <zircon/time.h>
 
 #ifndef __cplusplus
 #ifndef _KERNEL
@@ -37,21 +38,6 @@ typedef uint32_t zx_handle_t;
 
 // See errors.h for the values zx_status_t can take.
 typedef int32_t zx_status_t;
-
-// absolute time in nanoseconds (generally with respect to the monotonic clock)
-typedef int64_t zx_time_t;
-// a duration in nanoseconds
-typedef int64_t zx_duration_t;
-// a duration in hardware ticks
-typedef uint64_t zx_ticks_t;
-#define ZX_TIME_INFINITE INT64_MAX
-#define ZX_TIME_INFINITE_PAST INT64_MIN
-#define ZX_NSEC(n) ((zx_duration_t)(1LL * (n)))
-#define ZX_USEC(n) ((zx_duration_t)(1000LL * (n)))
-#define ZX_MSEC(n) ((zx_duration_t)(1000000LL * (n)))
-#define ZX_SEC(n)  ((zx_duration_t)(1000000000LL * (n)))
-#define ZX_MIN(n)  (ZX_SEC(n) * 60LL)
-#define ZX_HOUR(n) (ZX_MIN(n) * 60LL)
 
 // clock ids
 typedef uint32_t zx_clock_t;
