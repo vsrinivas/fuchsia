@@ -3,6 +3,7 @@
 // found in the LICENSE file.
 
 #include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
+#include "garnet/bin/zxdb/symbols/location.h"
 #include "garnet/bin/zxdb/symbols/module_symbols.h"
 
 namespace zxdb {
@@ -24,8 +25,24 @@ fxl::WeakPtr<LoadedModuleSymbols> LoadedModuleSymbols::GetWeakPtr() {
 
 std::vector<Location> LoadedModuleSymbols::ResolveInputLocation(
     const InputLocation& input_location, const ResolveOptions& options) const {
-  return module_symbols()->ResolveInputLocation(symbol_context(),
-                                                input_location, options);
+  std::vector<Location> ret;
+
+  if (module_) {
+    ret = module_symbols()->ResolveInputLocation(symbol_context(),
+                                                 input_location, options);
+  }
+
+  if (input_location.type == InputLocation::Type::kElfSymbol ||
+      input_location.type == InputLocation::Type::kSymbol) {
+    for (const auto& sym : elf_symbols_) {
+      if (sym.name == input_location.symbol) {
+        ret.emplace_back(Location::State::kAddress, sym.value);
+        break;
+      }
+    }
+  }
+
+  return ret;
 }
 
 }  // namespace zxdb

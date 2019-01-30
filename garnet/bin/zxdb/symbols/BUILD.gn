@@ -207,6 +207,7 @@ source_set("tests") {
     "dwarf_test_util.h",
     "find_line_unittest.cc",
     "function_type_unittest.cc",
+    "loaded_module_symbols_unittest.cc",
     "member_ptr_unittest.cc",
     "mock_symbol_data_provider_unittest.cc",
     "modified_type_unittest.cc",

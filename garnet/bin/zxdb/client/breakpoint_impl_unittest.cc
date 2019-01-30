@@ -20,6 +20,10 @@ namespace {
 
 using debug_ipc::MessageLoop;
 
+constexpr char* kElfSymbolBuildID = "e1ff11e";
+constexpr char* kElfSymbolName = "test_elf_sym";
+constexpr uint64_t kElfSymbolAddress = 42;
+
 class BreakpointSink : public RemoteAPI {
  public:
   using AddPair = std::pair<
@@ -54,8 +58,15 @@ class BreakpointSink : public RemoteAPI {
       const debug_ipc::SymbolTablesRequest& request,
       std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb)
       override {
-    MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb]() { cb(Err(), debug_ipc::SymbolTablesReply()); });
+    MessageLoop::Current()->PostTask(FROM_HERE, [cb, request]() {
+      debug_ipc::SymbolTablesReply reply;
+      if (request.build_id == kElfSymbolBuildID) {
+        reply.symbols.emplace_back();
+        reply.symbols[0].name = kElfSymbolName;
+        reply.symbols[0].value = kElfSymbolAddress;
+      }
+      cb(Err(), reply);
+    });
   }
 
   std::vector<AddPair> adds;
@@ -207,6 +218,71 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   ASSERT_EQ(1u, sink().removes.size());
   EXPECT_EQ(out.breakpoint.breakpoint_id,
             sink().removes[0].first.breakpoint_id);
+}
+
+TEST_F(BreakpointImplTest, ElfSymbols) {
+  BreakpointImpl bp(&session(), false);
+
+  // Make a disabled symbolic breakpoint.
+  const std::string kFunctionName = kElfSymbolName;
+  BreakpointSettings in;
+  in.enabled = true;
+  in.scope = BreakpointSettings::Scope::kSystem;
+  in.location.type = InputLocation::Type::kSymbol;
+  in.location.symbol = kFunctionName;
+
+  // Setting the settings with no process shouldn't update the backend.
+  Err err = SyncSetSettings(bp, in);
+  EXPECT_FALSE(err.has_error());
+  ASSERT_TRUE(sink().adds.empty());
+
+  TargetImpl* target = session().system_impl().GetTargetImpls()[0];
+
+  // Create a process for it. Since the process doesn't resolve the symbol
+  // yet, no messages should be sent.
+  const uint64_t koid = 5678;
+  target->CreateProcessForTesting(koid, "test");
+  ASSERT_TRUE(sink().adds.empty());
+
+  // Make a fake module. Our back end will reply that it contains an ELF symbol
+  // as soon as it sees the build ID.
+  const uint64_t kModule1Base = 0x1000000;
+  std::unique_ptr<MockModuleSymbols> module1 =
+      std::make_unique<MockModuleSymbols>("myfile1.so");
+
+  // Cause the process to load the module. We have to keep the module_ref
+  // alive for this to stay cached in the SystemSymbols.
+  const std::string kBuildID1 = kElfSymbolBuildID;
+  fxl::RefPtr<SystemSymbols::ModuleRef> module1_ref =
+      session().system().GetSymbols()->InjectModuleForTesting(
+          kBuildID1, std::move(module1));
+
+  // Cause the process to load module 1.
+  std::vector<debug_ipc::Module> modules;
+  debug_ipc::Module load1;
+  load1.name = "test";
+  load1.base = kModule1Base;
+  load1.build_id = kBuildID1;
+  modules.push_back(load1);
+  target->process()->OnModules(modules, std::vector<uint64_t>());
+
+  StopOnLoadModuleObserver observer;
+  target->process()->AddObserver(&observer);
+  MessageLoop::Current()->Run();
+
+  // That should have notified the breakpoint which should have added the
+  // address to the backend.
+  ASSERT_FALSE(sink().adds.empty());
+  debug_ipc::AddOrChangeBreakpointRequest out = sink().adds[0].first;
+  EXPECT_FALSE(out.breakpoint.one_shot);
+  EXPECT_EQ(debug_ipc::Stop::kAll, out.breakpoint.stop);
+
+  // Location should be for the same process, with no thread restriction.
+  ASSERT_EQ(1u, out.breakpoint.locations.size());
+  EXPECT_EQ(koid, out.breakpoint.locations[0].process_koid);
+  EXPECT_EQ(0u, out.breakpoint.locations[0].thread_koid);
+
+  EXPECT_EQ(kElfSymbolAddress, out.breakpoint.locations[0].address);
 }
 
 // Tests that address breakpoints are enabled immediately even when no symbols

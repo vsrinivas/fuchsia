@@ -62,11 +62,9 @@ class GlobalSymbolDataProvider : public SymbolDataProvider {
         });
   }
   void WriteMemory(uint64_t address, std::vector<uint8_t> data,
-      std::function<void(const Err&)> cb) override {
+                   std::function<void(const Err&)> cb) override {
     debug_ipc::MessageLoop::Current()->PostTask(
-        FROM_HERE, [cb = std::move(cb)]() {
-          cb(GetContextError());
-        });
+        FROM_HERE, [cb = std::move(cb)]() { cb(GetContextError()); });
   }
 };
 
@@ -137,6 +135,9 @@ std::vector<Location> ModuleSymbolsImpl::ResolveInputLocation(
     const SymbolContext& symbol_context, const InputLocation& input_location,
     const ResolveOptions& options) const {
   switch (input_location.type) {
+    case InputLocation::Type::kElfSymbol:
+      // This will be handled elsewhere.
+      // Fall through and return nothing.
     case InputLocation::Type::kNone:
       return std::vector<Location>();
     case InputLocation::Type::kLine:
@@ -224,9 +225,7 @@ std::vector<std::string> ModuleSymbolsImpl::FindFileMatches(
   return index_.FindFileMatches(name);
 }
 
-const ModuleSymbolIndex& ModuleSymbolsImpl::GetIndex() const {
-  return index_;
-}
+const ModuleSymbolIndex& ModuleSymbolsImpl::GetIndex() const { return index_; }
 
 LazySymbol ModuleSymbolsImpl::IndexDieRefToSymbol(
     const ModuleSymbolIndexNode::DieRef& die_ref) const {
@@ -409,8 +408,8 @@ void ModuleSymbolsImpl::ResolveLineInputLocationForFile(
     LineTableImpl line_table(context_.get(), unit);
 
     // Complication 1 above: find all matches for this line in the unit.
-    std::vector<LineMatch> unit_matches = GetAllLineTableMatchesInUnit(
-        line_table, canonical_file, line_number);
+    std::vector<LineMatch> unit_matches =
+        GetAllLineTableMatchesInUnit(line_table, canonical_file, line_number);
 
     matches.insert(matches.end(), unit_matches.begin(), unit_matches.end());
   }

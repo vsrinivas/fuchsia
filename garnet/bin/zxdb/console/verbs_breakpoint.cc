@@ -2,7 +2,6 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/client/breakpoint.h"
 #include "garnet/bin/zxdb/client/breakpoint_location.h"
 #include "garnet/bin/zxdb/client/breakpoint_settings.h"
@@ -15,6 +14,7 @@
 #include "garnet/bin/zxdb/console/format_context.h"
 #include "garnet/bin/zxdb/console/input_location_parser.h"
 #include "garnet/bin/zxdb/console/output_buffer.h"
+#include "garnet/bin/zxdb/console/verbs.h"
 #include "garnet/bin/zxdb/symbols/location.h"
 #include "lib/fxl/strings/string_printf.h"
 
@@ -25,6 +25,7 @@ namespace {
 constexpr int kStopSwitch = 1;
 constexpr int kEnableSwitch = 2;
 constexpr int kTypeSwitch = 3;
+constexpr int kElfSymbolSwitch = 4;
 
 // Callback for when updating a breakpoint is done.
 void CreateOrEditBreakpointComplete(fxl::WeakPtr<Breakpoint> breakpoint,
@@ -153,10 +154,15 @@ Err CreateOrEditBreakpoint(ConsoleContext* context, const Command& cmd,
         settings.location = InputLocation(cmd.frame()->GetAddress());
     }
   } else if (cmd.args().size() == 1u) {
-    Err err =
-        ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
-    if (err.has_error())
-      return err;
+    if (cmd.HasSwitch(kElfSymbolSwitch) &&
+        cmd.GetSwitchValue(kElfSymbolSwitch) == "true") {
+      settings.location = InputLocation(cmd.args()[0], true);
+    } else {
+      Err err =
+          ParseInputLocation(cmd.frame(), cmd.args()[0], &settings.location);
+      if (err.has_error())
+        return err;
+    }
   } else {
     return Err(ErrType::kInput,
                "Expecting only one arg for the location.\n"
@@ -216,6 +222,13 @@ Location arguments
 )" LOCATION_ARG_HELP("break")
         R"(
 Options
+
+  --elf-symbol=[ true | false ]
+
+      Parses the location as a name to be looked up directly in the ELF symbol
+      tables. This will often yield different addresses than normal resolution.
+      For example it will yield locations in the PLT for symbols with PLT
+      linkage.
 
   --enable=[ true | false ]
   -e [ true | false ]
@@ -432,12 +445,14 @@ void AppendBreakpointVerbs(std::map<Verb, VerbRecord>* verbs) {
   SwitchRecord enable_switch(kEnableSwitch, true, "enable", 'e');
   SwitchRecord stop_switch(kStopSwitch, true, "stop", 's');
   SwitchRecord type_switch(kTypeSwitch, true, "type", 't');
+  SwitchRecord elf_symbol_switch(kElfSymbolSwitch, true, "elf-symbol");
 
   VerbRecord break_record(&DoBreak, {"break", "b"}, kBreakShortHelp, kBreakHelp,
                           CommandGroup::kBreakpoint);
   break_record.switches.push_back(enable_switch);
   break_record.switches.push_back(stop_switch);
   break_record.switches.push_back(type_switch);
+  break_record.switches.push_back(elf_symbol_switch);
   (*verbs)[Verb::kBreak] = break_record;
 
   // Note: if "edit" becomes more general than just for breakpoints, we'll
