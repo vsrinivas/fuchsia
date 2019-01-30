@@ -23,7 +23,6 @@ use fidl_fuchsia_ui_viewsv1::{
     ViewProviderMarker, ViewProviderRequestStream, ViewProxy,
 };
 use fuchsia_app::client::connect_to_service;
-use fuchsia_app::server::ServiceFactory;
 use fuchsia_async as fasync;
 use fuchsia_scenic::{HostImageCycler, ImportNode, Session, SessionPtr};
 use fuchsia_ui::{
@@ -342,43 +341,20 @@ impl App {
     }
 }
 
-struct V1ViewProvider {
-    app: AppPtr,
-}
-
-impl ServiceFactory for V1ViewProvider {
-    fn service_name(&self) -> &str {
-        ViewProviderMarker::NAME
-    }
-
-    fn spawn_service(&mut self, channel: fasync::Channel) {
-        App::spawn_v1_view_provider_server(&self.app, channel);
-    }
-}
-
-struct V2ViewProvider {
-    app: AppPtr,
-}
-
-impl ServiceFactory for V2ViewProvider {
-    fn service_name(&self) -> &str {
-        viewsv2::ViewProviderMarker::NAME
-    }
-
-    fn spawn_service(&mut self, channel: fasync::Channel) {
-        App::spawn_v2_view_provider_server(&self.app, channel);
-    }
-}
-
 fn main() -> Result<(), Error> {
     env::set_var("RUST_BACKTRACE", "full");
 
     let mut executor = fasync::Executor::new().context("Error creating executor")?;
-    let app = App::new()?;
+    let app_for_v1 = App::new()?;
+    let app_for_v2 = app_for_v1.clone();
 
     let fut = fuchsia_app::server::ServicesServer::new()
-        .add_service(V1ViewProvider { app: app.clone() })
-        .add_service(V2ViewProvider { app: app.clone() })
+        .add_service((ViewProviderMarker::NAME, move |chan| {
+            App::spawn_v1_view_provider_server(&app_for_v1, chan)
+        }))
+        .add_service((viewsv2::ViewProviderMarker::NAME, move |chan| {
+            App::spawn_v2_view_provider_server(&app_for_v2, chan)
+        }))
         .start()
         .context("Error starting view provider server")?;
 
