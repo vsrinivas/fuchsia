@@ -58,7 +58,9 @@ def main():
                 continue
             namespace = result.group(1)
             if namespace not in args.namespaces:
-                print('Invalid namespace %s (%s)' % (namespace, file))
+                print(
+                    'Invalid namespace %s (%s), namespace must begin with one of [%s].'
+                    % (namespace, file, ', '.join(NAMESPACES)))
                 has_errors = True
 
     return 1 if has_errors else 0
