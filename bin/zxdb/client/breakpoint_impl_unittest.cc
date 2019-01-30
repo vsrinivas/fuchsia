@@ -6,6 +6,7 @@
 
 #include "garnet/bin/zxdb/client/breakpoint_impl.h"
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/remote_api_test.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
@@ -49,8 +50,22 @@ class BreakpointSink : public RemoteAPI {
         FROM_HERE, [cb]() { cb(Err(), debug_ipc::RemoveBreakpointReply()); });
   }
 
+  void SymbolTables(
+      const debug_ipc::SymbolTablesRequest& request,
+      std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb)
+      override {
+    MessageLoop::Current()->PostTask(
+        FROM_HERE, [cb]() { cb(Err(), debug_ipc::SymbolTablesReply()); });
+  }
+
   std::vector<AddPair> adds;
   std::vector<RemovePair> removes;
+};
+
+class StopOnLoadModuleObserver : public ProcessObserver {
+  void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
+    MessageLoop::Current()->QuitNow();
+  }
 };
 
 class BreakpointImplTest : public RemoteAPITest {
@@ -147,6 +162,10 @@ TEST_F(BreakpointImplTest, DynamicLoading) {
   load1.build_id = kBuildID1;
   modules.push_back(load1);
   target->process()->OnModules(modules, std::vector<uint64_t>());
+
+  StopOnLoadModuleObserver observer;
+  target->process()->AddObserver(&observer);
+  MessageLoop::Current()->Run();
 
   // That should have notified the breakpoint which should have added the two
   // addresses to the backend.

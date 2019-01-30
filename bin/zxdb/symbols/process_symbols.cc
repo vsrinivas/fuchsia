@@ -211,11 +211,12 @@ ProcessSymbols::ModuleInfo* ProcessSymbols::SaveModuleInfo(
     // Error, but it may be expected.
     if (!ExpectSymbolsForName(module.name))
       *symbol_load_err = Err();
-    info.symbols = std::make_unique<LoadedModuleSymbols>(nullptr, module.base);
+    info.symbols = std::make_unique<LoadedModuleSymbols>(
+        nullptr, module.build_id, module.base);
   } else {
     // Success, make the LoadedModuleSymbols.
     info.symbols = std::make_unique<LoadedModuleSymbols>(
-        std::move(module_symbols), module.base);
+        std::move(module_symbols), module.build_id, module.base);
   }
 
   auto inserted_iter =

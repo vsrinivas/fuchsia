@@ -35,7 +35,7 @@ void MockRemoteAPI::ThreadStatus(
     std::function<void(const Err&, debug_ipc::ThreadStatusReply)> cb) {
   // Returns the canned response.
   debug_ipc::MessageLoop::Current()->PostTask(
-      FROM_HERE, [ cb, response = thread_status_reply_ ]() {
+      FROM_HERE, [cb, response = thread_status_reply_]() {
         cb(Err(), std::move(response));
       });
 }
@@ -61,6 +61,13 @@ void MockRemoteAPI::WriteRegisters(
     reply.status = 0;
     cb(Err(), reply);
   });
+}
+
+void MockRemoteAPI::SymbolTables(
+    const debug_ipc::SymbolTablesRequest& request,
+    std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb) {
+  debug_ipc::MessageLoop::Current()->PostTask(
+      FROM_HERE, [cb]() { cb(Err(), debug_ipc::SymbolTablesReply()); });
 }
 
 }  // namespace zxdb

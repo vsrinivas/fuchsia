@@ -5,6 +5,7 @@
 #include "garnet/bin/zxdb/client/thread_controller_test.h"
 
 #include "garnet/bin/zxdb/client/process_impl.h"
+#include "garnet/bin/zxdb/client/process_observer.h"
 #include "garnet/bin/zxdb/client/session.h"
 #include "garnet/bin/zxdb/client/system.h"
 #include "garnet/bin/zxdb/client/target_impl.h"
@@ -12,6 +13,12 @@
 #include "garnet/bin/zxdb/symbols/mock_module_symbols.h"
 
 namespace zxdb {
+
+class StopOnLoadModuleObserver : public ProcessObserver {
+  void DidLoadModuleSymbols(Process* process, LoadedModuleSymbols* module) {
+    debug_ipc::MessageLoop::Current()->QuitNow();
+  }
+};
 
 // static
 const uint64_t ThreadControllerTest::kUnsymbolizedModuleAddress = 0x4000000;
@@ -51,6 +58,11 @@ void ThreadControllerTest::SetUp() {
 
   TargetImpl* target = session().system_impl().GetTargetImpls()[0];
   target->process()->OnModules(modules, std::vector<uint64_t>());
+
+  StopOnLoadModuleObserver observer;
+  target->process()->AddObserver(&observer);
+  debug_ipc::MessageLoop::Current()->Run();
+  target->process()->RemoveObserver(&observer);
 }
 
 std::unique_ptr<RemoteAPI> ThreadControllerTest::GetRemoteAPIImpl() {

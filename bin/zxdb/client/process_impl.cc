@@ -14,6 +14,7 @@
 #include "garnet/bin/zxdb/client/target_impl.h"
 #include "garnet/bin/zxdb/client/thread_impl.h"
 #include "garnet/bin/zxdb/symbols/input_location.h"
+#include "garnet/bin/zxdb/symbols/loaded_module_symbols.h"
 #include "garnet/public/lib/fxl/logging.h"
 
 namespace zxdb {
@@ -55,7 +56,7 @@ void ProcessImpl::GetModules(
   debug_ipc::ModulesRequest request;
   request.process_koid = koid_;
   session()->remote_api()->Modules(
-      request, [ process = weak_factory_.GetWeakPtr(), callback ](
+      request, [process = weak_factory_.GetWeakPtr(), callback](
                    const Err& err, debug_ipc::ModulesReply reply) {
         if (process)
           process->symbols_.SetModules(reply.modules);
@@ -94,7 +95,7 @@ void ProcessImpl::SyncThreads(std::function<void()> callback) {
   debug_ipc::ThreadsRequest request;
   request.process_koid = koid_;
   session()->remote_api()->Threads(
-      request, [ callback, process = weak_factory_.GetWeakPtr() ](
+      request, [callback, process = weak_factory_.GetWeakPtr()](
                    const Err& err, debug_ipc::ThreadsReply reply) {
         if (process) {
           process->UpdateThreads(reply.threads);
@@ -241,8 +242,22 @@ void ProcessImpl::UpdateThreads(
 }
 
 void ProcessImpl::DidLoadModuleSymbols(LoadedModuleSymbols* module) {
-  for (auto& observer : observers())
-    observer.DidLoadModuleSymbols(this, module);
+  debug_ipc::SymbolTablesRequest request;
+
+  request.process_koid = koid_;
+  request.base = module->load_address();
+  request.build_id = module->build_id();
+
+  session()->remote_api()->SymbolTables(
+      request,
+      [this, module](const Err& err, debug_ipc::SymbolTablesReply reply) {
+        if (!err.has_error()) {
+          module->SetElfSymbols(reply.symbols);
+        }
+
+        for (auto& observer : observers())
+          observer.DidLoadModuleSymbols(this, module);
+      });
 }
 
 void ProcessImpl::WillUnloadModuleSymbols(LoadedModuleSymbols* module) {

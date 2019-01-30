@@ -67,6 +67,10 @@ class MockRemoteAPI : public RemoteAPI {
       const debug_ipc::WriteRegistersRequest& request,
       std::function<void(const Err&, debug_ipc::WriteRegistersReply)> cb)
       override;
+  void SymbolTables(
+      const debug_ipc::SymbolTablesRequest& request,
+      std::function<void(const Err&, debug_ipc::SymbolTablesReply)> cb)
+      override;
 
  private:
   debug_ipc::ThreadStatusReply thread_status_reply_;
