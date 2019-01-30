@@ -198,7 +198,8 @@ zx_status_t VmObjectPaged::CreateContiguous(uint32_t pmm_alloc_flags, uint64_t s
     return ZX_OK;
 }
 
-zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* obj) {
+zx_status_t VmObjectPaged::CreateFromWiredPages(const void* data, size_t size, bool exclusive,
+                                                fbl::RefPtr<VmObject>* obj) {
     LTRACEF("data %p, size %zu\n", data, size);
 
     fbl::RefPtr<VmObject> vmo;
@@ -241,6 +242,14 @@ zx_status_t VmObjectPaged::CreateFromROData(const void* data, size_t size, fbl::
             auto vmo2 = static_cast<VmObjectPaged*>(vmo.get());
             vmo2->AddPage(page, count * PAGE_SIZE);
         }
+    }
+
+    if (exclusive && !is_physmap_addr(data)) {
+        // unmap it from the kernel
+        // NOTE: this means the image can no longer be referenced from original pointer
+        status = VmAspace::kernel_aspace()->arch_aspace().Unmap(
+                reinterpret_cast<vaddr_t>(data), size / PAGE_SIZE, nullptr);
+        ASSERT(status == ZX_OK);
     }
 
     *obj = ktl::move(vmo);

@@ -52,12 +52,17 @@ public:
     static zx_status_t CreateContiguous(uint32_t pmm_alloc_flags, uint64_t size,
                                         uint8_t alignment_log2, fbl::RefPtr<VmObject>* vmo);
 
-    // Creates a VMO whose initial contents are taken from the boot image.
+    // Creates a VMO from wired pages.
     //
     // Creating a VMO using this method is destructive. Once the VMO is released, its
     // pages will be released into the general purpose page pool, so it is not possible
     // to create multiple VMOs for the same region using this method.
-    static zx_status_t CreateFromROData(const void* data, size_t size, fbl::RefPtr<VmObject>* vmo);
+    //
+    // |exclusive| indicates whether or not the created vmo should have exlusive access to
+    // the pages. If exclusive is true, then [data, data + size) will be unmapped from the
+    // kernel address space (unless they lie in the physmap).
+    static zx_status_t CreateFromWiredPages(const void* data, size_t size, bool exclusive,
+                                            fbl::RefPtr<VmObject>* vmo);
 
     static zx_status_t CreateExternal(fbl::RefPtr<PageSource> src, uint32_t options,
                                       uint64_t size, fbl::RefPtr<VmObject>* vmo);

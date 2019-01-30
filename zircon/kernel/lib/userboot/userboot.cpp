@@ -96,6 +96,10 @@ private:
     const VDso* vdso_;
 };
 
+// Keep a global reference to the kcounters vmo so that the kcounters
+// memory always remains valid, even if userspace closes the last handle.
+static fbl::RefPtr<VmObject> kcounters_vmo_ref;
+
 } // anonymous namespace
 
 
@@ -308,7 +312,7 @@ static zx_status_t attempt_userboot() {
     stack_vmo->set_name(STACK_VMO_NAME, sizeof(STACK_VMO_NAME) - 1);
 
     fbl::RefPtr<VmObject> rootfs_vmo;
-    status = VmObjectPaged::CreateFromROData(rbase, rsize, &rootfs_vmo);
+    status = VmObjectPaged::CreateFromWiredPages(rbase, rsize, true, &rootfs_vmo);
     if (status != ZX_OK)
         return status;
     rootfs_vmo->set_name(RAMDISK_VMO_NAME, sizeof(RAMDISK_VMO_NAME) - 1);
@@ -358,9 +362,9 @@ static zx_status_t attempt_userboot() {
         return status;
 
     fbl::RefPtr<VmObject> kcountdesc_vmo;
-    status = VmObjectPaged::CreateFromROData(CounterDesc().VmoData(),
-                                             CounterDesc().VmoDataSize(),
-                                             &kcountdesc_vmo);
+    status = VmObjectPaged::CreateFromWiredPages(CounterDesc().VmoData(),
+                                                 CounterDesc().VmoDataSize(),
+                                                 true, &kcountdesc_vmo);
     if (status != ZX_OK) {
         return status;
     }
@@ -371,13 +375,16 @@ static zx_status_t attempt_userboot() {
     if (status != ZX_OK) {
         return status;
     }
+
     fbl::RefPtr<VmObject> kcounters_vmo;
-    status = VmObjectPaged::CreateFromROData(CounterArena().VmoData(),
-                                             CounterArena().VmoDataSize(),
-                                             &kcounters_vmo);
+    status = VmObjectPaged::CreateFromWiredPages(CounterArena().VmoData(),
+                                                 CounterArena().VmoDataSize(),
+                                                 false, &kcounters_vmo);
     if (status != ZX_OK) {
         return status;
     }
+    kcounters_vmo_ref = kcounters_vmo;
+
     kcounters_vmo->set_name(counters::kArenaVmoName,
                              sizeof(counters::kArenaVmoName) - 1);
     status = get_vmo_handle(ktl::move(kcounters_vmo), true, nullptr,
