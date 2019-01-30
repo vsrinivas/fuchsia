@@ -96,6 +96,7 @@ typedef struct wlanif_auth_ind {
     uint8_t auth_type;  // WLAN_AUTH_TYPE_*
 } wlanif_auth_ind_t;
 
+// Deauthentication reasons: IEEE Std 802.11-2016, 9.4.1.7 (Table 9-45)
 enum {
     // 0 Reserved
     WLAN_DEAUTH_REASON_UNSPECIFIED = 1,
@@ -327,7 +328,7 @@ typedef struct wlanif_disassoc_confirm {
 
 typedef struct wlanif_disassoc_indication {
     uint8_t peer_sta_address[ETH_ALEN];
-    uint16_t reason_code;
+    uint16_t reason_code;  // WLAN_DEAUTH_REASON_*
 } wlanif_disassoc_indication_t;
 
 enum {
