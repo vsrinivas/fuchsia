@@ -37,10 +37,18 @@ class Directory : public Node {
   // Returns |ZX_ERR_NOT_FOUND| if no entry exists.
   virtual zx_status_t Lookup(const std::string& name, Node** out_node) const;
 
-  // TODO: Add support for enumeration.
-
   // Override that describes this object as a directory.
   void Describe(fuchsia::io::NodeInfo* out_info) override;
+
+  // Enumerates Directory
+  //
+  // |offset| will start with 0 and then implementation can set offset as it
+  // pleases.
+  //
+  // Returns |ZX_OK| if able to read atleast one dentry else returns
+  // |ZX_ERR_INVALID_ARGS| with |out_actual| as 0 and |out_offset| as |offset|.
+  virtual zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
+                              uint64_t* out_offset, uint64_t* out_actual) = 0;
 
  protected:
   zx_status_t CreateConnection(

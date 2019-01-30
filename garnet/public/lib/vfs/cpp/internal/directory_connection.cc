@@ -71,9 +71,23 @@ void DirectoryConnection::Unlink(::std::string path, UnlinkCallback callback) {
 }
 
 void DirectoryConnection::ReadDirents(uint64_t max_bytes,
-                                      ReadDirentsCallback callback) {}
+                                      ReadDirentsCallback callback) {
+  uint64_t new_offset = 0, out_bytes = 0;
+  std::vector<uint8_t> vec(max_bytes);
+  zx_status_t status =
+      vn_->Readdir(offset(), vec.data(), max_bytes, &new_offset, &out_bytes);
+  ZX_DEBUG_ASSERT(out_bytes <= max_bytes);
+  vec.resize(out_bytes);
+  if (status == ZX_OK) {
+    set_offset(new_offset);
+  }
+  callback(status, std::move(vec));
+}
 
-void DirectoryConnection::Rewind(RewindCallback callback) {}
+void DirectoryConnection::Rewind(RewindCallback callback) {
+  set_offset(0);
+  callback(ZX_OK);
+}
 
 void DirectoryConnection::GetToken(GetTokenCallback callback) {
   callback(ZX_ERR_NOT_SUPPORTED, zx::handle());

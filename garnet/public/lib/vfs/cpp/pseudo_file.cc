@@ -4,6 +4,7 @@
 
 #include <lib/vfs/cpp/pseudo_file.h>
 
+#include <lib/fdio/vfs.h>
 #include <lib/vfs/cpp/flags.h>
 #include <lib/vfs/cpp/internal/file_connection.h>
 #include <zircon/assert.h>
@@ -34,6 +35,22 @@ zx_status_t BufferedPseudoFile::CreateConnection(
   }
   *connection = std::make_unique<BufferedPseudoFile::Content>(
       this, flags, std::move(output));
+  return ZX_OK;
+}
+
+zx_status_t BufferedPseudoFile::GetAttr(
+    fuchsia::io::NodeAttributes* out_attributes) {
+  out_attributes->mode = fuchsia::io::MODE_TYPE_FILE;
+  if (read_handler_ != nullptr)
+    out_attributes->mode |= V_IRUSR;
+  if (write_handler_)
+    out_attributes->mode |= V_IWUSR;
+  out_attributes->id = fuchsia::io::INO_UNKNOWN;
+  out_attributes->content_size = 0;
+  out_attributes->storage_size = 0;
+  out_attributes->link_count = 1;
+  out_attributes->creation_time = 0;
+  out_attributes->modification_time = 0;
   return ZX_OK;
 }
 
@@ -97,6 +114,11 @@ uint32_t BufferedPseudoFile::Content::GetAdditionalAllowedFlags() const {
 
 uint32_t BufferedPseudoFile::Content::GetProhibitiveFlags() const {
   return file_->GetProhibitiveFlags();
+}
+
+zx_status_t BufferedPseudoFile::Content::GetAttr(
+    fuchsia::io::NodeAttributes* out_attributes) {
+  return file_->GetAttr(out_attributes);
 }
 
 zx_status_t BufferedPseudoFile::Content::WriteAt(std::vector<uint8_t> data,

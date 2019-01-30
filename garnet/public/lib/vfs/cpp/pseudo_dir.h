@@ -13,8 +13,9 @@
 namespace vfs {
 
 // A pseudo-directory is a directory-like object whose entries are constructed
-// by a program at runtime.  The client can lookup, enumerate, and watch these
-// directory entries but it cannot create, remove, or rename them.
+// by a program at runtime.  The client can lookup, enumerate, and watch(not yet
+// implemented) these directory entries but it cannot create, remove, or rename
+// them.
 //
 // This class is thread-safe.
 class PseudoDir : public Directory {
@@ -56,6 +57,12 @@ class PseudoDir : public Directory {
 
   // |Directory| implementation:
   zx_status_t Lookup(const std::string& name, Node** out_node) const final;
+
+  // |Node| implementations:
+  zx_status_t GetAttr(fuchsia::io::NodeAttributes* out_attributes) override;
+
+  zx_status_t Readdir(uint64_t offset, void* data, uint64_t len,
+                      uint64_t* out_offset, uint64_t* out_actual) override;
 
  private:
   class Entry {

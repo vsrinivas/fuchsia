@@ -3,7 +3,10 @@
 // found in the LICENSE file.
 
 #include "lib/vfs/cpp/pseudo_dir.h"
-#include "lib/gtest/real_loop_fixture.h"
+
+#include <lib/fdio/vfs.h>
+#include <lib/gtest/real_loop_fixture.h>
+#include <lib/vfs/cpp/pseudo_file.h>
 
 namespace {
 
@@ -155,6 +158,386 @@ TEST_F(PseudoDirUnit, AddAfterRemove) {
   vfs::Node* n;
   ASSERT_EQ(ZX_OK, dir_.Lookup("new_node", &n));
   ASSERT_EQ(new_node.get(), n);
+}
+
+class Dirent {
+ public:
+  uint64_t ino_;
+  uint8_t type_;
+  uint8_t size_;
+  std::string name_;
+
+  uint64_t size_in_bytes_;
+
+  static Dirent DirentForDot() { return DirentForDirectory("."); }
+
+  static Dirent DirentForDirectory(const std::string& name) {
+    return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_DIRECTORY,
+                  name);
+  }
+
+  static Dirent DirentForFile(const std::string& name) {
+    return Dirent(fuchsia::io::INO_UNKNOWN, fuchsia::io::DIRENT_TYPE_FILE,
+                  name);
+  }
+
+  std::string String() {
+    return "Dirent:\nino: " + std ::to_string(ino_) +
+           "\ntype: " + std ::to_string(type_) +
+           "\nsize: " + std ::to_string(size_) + "\nname: " + name_;
+  }
+
+ private:
+  Dirent(uint64_t ino, uint8_t type, const std::string& name)
+      : ino_(ino),
+        type_(type),
+        size_(static_cast<uint8_t>(name.length())),
+        name_(name) {
+    ZX_DEBUG_ASSERT(name.length() <= static_cast<uint64_t>(NAME_MAX));
+    size_in_bytes_ = sizeof(vdirent_t) + size_;
+  }
+};
+
+class DirectoryWrapper {
+ public:
+  DirectoryWrapper() : loop_(&kAsyncLoopConfigNoAttachToThread) {
+    loop_.StartThread("vfs test thread");
+  }
+
+  void AddEntry(const std::string& name, std::unique_ptr<vfs::Node> node,
+                zx_status_t expected_status = ZX_OK) {
+    ASSERT_EQ(expected_status, dir_.AddEntry(name, std::move(node)));
+  }
+
+  void AddSharedEntry(const std::string& name, std::shared_ptr<vfs::Node> node,
+                      zx_status_t expected_status = ZX_OK) {
+    ASSERT_EQ(expected_status, dir_.AddSharedEntry(name, std::move(node)));
+  }
+
+  fuchsia::io::DirectorySyncPtr Serve(
+      int flags = fuchsia::io::OPEN_RIGHT_READABLE) {
+    fuchsia::io::DirectorySyncPtr ptr;
+    dir_.Serve(flags, ptr.NewRequest().TakeChannel(), loop_.dispatcher());
+    return ptr;
+  }
+
+  void AddReadOnlyFile(const std::string& file_name,
+                       const std::string& file_content,
+                       zx_status_t expected_status = ZX_OK) {
+    auto read_fn = [file_content](std::vector<uint8_t>* output) {
+      output->resize(file_content.length());
+      std::copy(file_content.begin(), file_content.end(), output->begin());
+      return ZX_OK;
+    };
+
+    auto file =
+        std::make_unique<vfs::BufferedPseudoFile>(std::move(read_fn), nullptr);
+
+    AddEntry(file_name, std::move(file));
+  }
+
+  vfs::PseudoDir& dir() { return dir_; };
+
+ private:
+  vfs::PseudoDir dir_;
+  async::Loop loop_;
+};
+
+class PseudoDirConnection : public gtest::RealLoopFixture {
+ protected:
+  void AssertReadDirents(fuchsia::io::DirectorySyncPtr& ptr, uint64_t max_bytes,
+                         std::vector<Dirent>& expected_dirents,
+                         zx_status_t expected_status = ZX_OK) {
+    std::vector<uint8_t> out_dirents;
+    zx_status_t status;
+    ptr->ReadDirents(max_bytes, &status, &out_dirents);
+    ASSERT_EQ(expected_status, status);
+    if (status != ZX_OK) {
+      return;
+    }
+    uint64_t expected_size = 0;
+    for (auto& d : expected_dirents) {
+      expected_size += d.size_in_bytes_;
+    }
+    EXPECT_EQ(expected_size, out_dirents.size());
+    uint64_t offset = 0;
+    auto data_ptr = out_dirents.data();
+    for (auto& d : expected_dirents) {
+      SCOPED_TRACE(d.String());
+      ASSERT_LE(sizeof(vdirent_t), out_dirents.size() - offset);
+      vdirent_t* de = reinterpret_cast<vdirent_t*>(data_ptr + offset);
+      EXPECT_EQ(d.ino_, de->ino);
+      EXPECT_EQ(d.size_, de->size);
+      EXPECT_EQ(d.type_, de->type);
+      ASSERT_LE(d.size_in_bytes_, out_dirents.size() - offset);
+      EXPECT_EQ(d.name_, std::string(de->name, de->size));
+
+      offset += sizeof(vdirent_t) + de->size;
+    }
+  }
+
+  void AssertRewind(fuchsia::io::DirectorySyncPtr& ptr,
+                    zx_status_t expected_status = ZX_OK) {
+    zx_status_t status;
+    ptr->Rewind(&status);
+    ASSERT_EQ(expected_status, status);
+  }
+  DirectoryWrapper dir_;
+};
+
+TEST_F(PseudoDirConnection, ReadDirSimple) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("file3", "file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {
+      Dirent::DirentForDot(),         Dirent::DirentForDirectory("subdir"),
+      Dirent::DirentForFile("file1"), Dirent::DirentForFile("file2"),
+      Dirent::DirentForFile("file3"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents);
+}
+
+TEST_F(PseudoDirConnection, ReadDirOnEmptyDirectory) {
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {
+      Dirent::DirentForDot(),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents);
+}
+
+TEST_F(PseudoDirConnection, ReadDirSizeLessThanFirstEntry) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents;
+  AssertReadDirents(ptr, sizeof(vdirent_t), expected_dirents,
+                    ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(PseudoDirConnection, ReadDirSizeLessThanEntry) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {Dirent::DirentForDot()};
+  AssertReadDirents(ptr, sizeof(vdirent_t) + 1, expected_dirents);
+  std::vector<Dirent> empty_dirents;
+  AssertReadDirents(ptr, sizeof(vdirent_t), empty_dirents, ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(PseudoDirConnection, ReadDirInParts) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("file3", "file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForFile("file1"),
+      Dirent::DirentForFile("file2"),
+      Dirent::DirentForFile("file3"),
+  };
+  AssertReadDirents(ptr, 2 * sizeof(vdirent_t) + 10, expected_dirents1);
+  AssertReadDirents(ptr, 3 * sizeof(vdirent_t) + 20, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, ReadDirWithExactBytes) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("file3", "file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {
+      Dirent::DirentForDot(),         Dirent::DirentForDirectory("subdir"),
+      Dirent::DirentForFile("file1"), Dirent::DirentForFile("file2"),
+      Dirent::DirentForFile("file3"),
+  };
+  uint64_t exact_size = 0;
+  for (auto& d : expected_dirents) {
+    exact_size += d.size_in_bytes_;
+  }
+
+  AssertReadDirents(ptr, exact_size, expected_dirents);
+}
+
+TEST_F(PseudoDirConnection, ReadDirInPartsWithExactBytes) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("file3", "file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForFile("file1"),
+      Dirent::DirentForFile("file2"),
+      Dirent::DirentForFile("file3"),
+  };
+  uint64_t exact_size1 = 0;
+  for (auto& d : expected_dirents1) {
+    exact_size1 += d.size_in_bytes_;
+  }
+
+  uint64_t exact_size2 = 0;
+  for (auto& d : expected_dirents2) {
+    exact_size2 += d.size_in_bytes_;
+  }
+
+  AssertReadDirents(ptr, exact_size1, expected_dirents1);
+  AssertReadDirents(ptr, exact_size2, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, ReadDirAfterFullRead) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+
+  std::vector<Dirent> empty_dirents;
+
+  AssertReadDirents(ptr, 1024, expected_dirents);
+  AssertReadDirents(ptr, 1024, empty_dirents);
+}
+
+TEST_F(PseudoDirConnection, RewindWorksAfterFullRead) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+
+  std::vector<Dirent> empty_dirents;
+
+  AssertReadDirents(ptr, 1024, expected_dirents);
+  AssertReadDirents(ptr, 1024, empty_dirents);
+
+  AssertRewind(ptr);
+
+  AssertReadDirents(ptr, 1024, expected_dirents);
+}
+
+TEST_F(PseudoDirConnection, RewindWorksAfterPartialRead) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+  dir_.AddReadOnlyFile("file1", "file1");
+  dir_.AddReadOnlyFile("file2", "file2");
+  dir_.AddReadOnlyFile("file3", "file3");
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForFile("file1"),
+      Dirent::DirentForFile("file2"),
+      Dirent::DirentForFile("file3"),
+  };
+  AssertReadDirents(ptr, 2 * sizeof(vdirent_t) + 10, expected_dirents1);
+  AssertRewind(ptr);
+  AssertReadDirents(ptr, 2 * sizeof(vdirent_t) + 10, expected_dirents1);
+  AssertReadDirents(ptr, 3 * sizeof(vdirent_t) + 20, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, ReadDirAfterAddingEntry) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents1);
+
+  dir_.AddReadOnlyFile("file1", "file1");
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForFile("file1"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, ReadDirAndRewindAfterAddingEntry) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents1);
+
+  dir_.AddReadOnlyFile("file1", "file1");
+  AssertRewind(ptr);
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+      Dirent::DirentForFile("file1"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents2);
+}
+
+TEST_F(PseudoDirConnection, ReadDirAfterRemovingEntry) {
+  auto subdir = std::make_shared<vfs::PseudoDir>();
+  dir_.AddSharedEntry("subdir", subdir);
+
+  auto ptr = dir_.Serve();
+
+  std::vector<Dirent> expected_dirents1 = {
+      Dirent::DirentForDot(),
+      Dirent::DirentForDirectory("subdir"),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents1);
+  std::vector<Dirent> empty_dirents;
+  ASSERT_EQ(ZX_OK, dir_.dir().RemoveEntry("subdir"));
+  AssertReadDirents(ptr, 1024, empty_dirents);
+
+  // rewind and check again
+  AssertRewind(ptr);
+
+  std::vector<Dirent> expected_dirents2 = {
+      Dirent::DirentForDot(),
+  };
+  AssertReadDirents(ptr, 1024, expected_dirents2);
 }
 
 }  // namespace
