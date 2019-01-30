@@ -324,7 +324,7 @@ zx_status_t Mt8167GpioDevice::Create(zx_device_t* parent) {
     }
 
     mmio_buffer_t eint_mmio;
-    status = pdev_map_mmio_buffer(&pdev, 0, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
+    status = pdev_map_mmio_buffer(&pdev, 2, ZX_CACHE_POLICY_UNCACHED_DEVICE, &eint_mmio);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_map_mmio_buffer gpio failed %d\n", __FUNCTION__, status);
         return status;
