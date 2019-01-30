@@ -87,6 +87,7 @@
         "garnet/packages/prod/scpi",
         "garnet/packages/prod/ssh",
         "garnet/packages/prod/stash",
+        "garnet/packages/prod/sysmem_connector",
         "garnet/packages/prod/sysmgr",
         "garnet/packages/prod/telephony",
         "garnet/packages/prod/terminal",

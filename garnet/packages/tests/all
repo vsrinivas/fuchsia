@@ -93,6 +93,7 @@
         "garnet/packages/tests/stash",
         "garnet/packages/tests/svc",
         "garnet/packages/tests/syslog",
+        "garnet/packages/tests/sysmem_connector",
         "garnet/packages/tests/sysmgr_tests",
         "garnet/packages/tests/sysmgr",
         "garnet/packages/tests/system_monitor",

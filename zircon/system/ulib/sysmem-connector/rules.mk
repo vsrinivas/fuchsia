@@ -8,10 +8,10 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
+MODULE_COMPILEFLAGS += -fvisibility=hidden
+
 MODULE_SRCS := \
     $(LOCAL_DIR)/sysmem-connector.cpp \
-
-MODULE_COMPILEFLAGS += -fvisibility=hidden
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-sysmem
@@ -26,5 +26,9 @@ MODULE_STATIC_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/fdio \
+
+# We do src for now.  After we move to GN, it may be worth seeing if we
+# can share better as .so, since the interface to sysmem-connector is C ABI.
+MODULE_PACKAGE := src
 
 include make/module.mk

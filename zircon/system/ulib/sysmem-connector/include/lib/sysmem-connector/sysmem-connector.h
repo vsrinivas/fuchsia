@@ -21,7 +21,7 @@ typedef struct sysmem_connector sysmem_connector_t;
 // |sysmem_device_path| must remain valid for lifetime of sysmem_connector_t.
 // This is the path to the directory of sysmem device instances (just one
 // device instance will actually exist, unless something is going wrong).
-zx_status_t sysmem_connector_init(const char* sysmem_directory_path, sysmem_connector_t** out_connector);
+__EXPORT zx_status_t sysmem_connector_init(const char* sysmem_directory_path, sysmem_connector_t** out_connector);
 
 // allocator2_request is consumed.  A call to this function doesn't guarantee
 // that the request will reach the sysmem driver, only that the connector has
@@ -31,11 +31,11 @@ zx_status_t sysmem_connector_init(const char* sysmem_directory_path, sysmem_conn
 // may sit in the queue for that duration - there isn't a timeout, because that
 // would probably do more harm than good, since sysmem is always supposed to be
 // running.
-void sysmem_connector_queue_connection_request(
+__EXPORT void sysmem_connector_queue_connection_request(
     sysmem_connector_t* connector,
     zx_handle_t allocator2_request);
 
 // This call is not allowed to fail.
-void sysmem_connector_release(sysmem_connector_t* connector);
+__EXPORT void sysmem_connector_release(sysmem_connector_t* connector);
 
 __END_CDECLS

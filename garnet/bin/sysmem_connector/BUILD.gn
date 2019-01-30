@@ -1,0 +1,76 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("sysmem_connector") {
+  output_name = "sysmem_connector"
+
+  sources = [
+    "app.cc",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/sysmem-connector",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+package("sysmem_connector_package") {
+  deps = [
+    ":sysmem_connector",
+  ]
+
+  binaries = [
+    {
+      name = "sysmem_connector"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/sysmem_connector.cmx")
+      dest = "sysmem_connector.cmx"
+    },
+  ]
+}
+
+executable("sysmem_connector_test") {
+  testonly = true
+  output_name = "sysmem_connector_test"
+
+  sources = [
+    "test/sysmem_connector_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-sysmem",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+test_package("sysmem_connector_test_package") {
+  deps = [
+    ":sysmem_connector_test",
+  ]
+
+  tests = [
+    {
+      name = "sysmem_connector_test"
+      # For now, this test is disabled on CI/CQ, because those use a test
+      # sandbox that prevents access to /dev/class/sysmem.
+      #
+      # TODO(dustingreen): Set up this test to run similarly to HW-dependent
+      # tests, in CQ if possible,
+      disabled = true
+    }
+  ]
+}

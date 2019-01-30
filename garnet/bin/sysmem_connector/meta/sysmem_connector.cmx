@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/sysmem_connector"
+    },
+    "sandbox": {
+        "dev": [
+            "class/sysmem"
+        ],
+        "features": [],
+        "services": [
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}
