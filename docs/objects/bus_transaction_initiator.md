@@ -24,22 +24,27 @@ these addresses are issued with a different transaction ID, the transaction
 may fail and the issuing device may need a reset in order to continue functioning.
 
 A BTI manages a list of quarantined PMTs.  If a PMT was created from a BTI using
-**bti_pin**(), and the PMT's handle is released without **pmt_unpin**() being
+[`zx_bti_pin()`], and the PMT's handle is released without [`zx_pmt_unpin()`] being
 called, the PMT will be quarantined.  Quarantined PMTs will prevent their
 underlying physical memory from being released to the system for reuse, in order
 to prevent DMA to memory that has since been reallocated.  The quarantine may be
-cleared by invoking **bti_release_quarantine**().
+cleared by invoking [`zx_bti_release_quarantine()`].
 
 TODO(teisenbe): Add details about failed transaction notification.
 
 ## SEE ALSO
 
-+ [pmt](pinned_memory_token.md) - Pinned Memory Tokens
-+ [vm_object](vm_object.md) - Virtual Memory Objects
+ - [pmt](pinned_memory_token.md) - Pinned Memory Tokens
+ - [vm_object](vm_object.md) - Virtual Memory Objects
 
 ## SYSCALLS
 
-+ [bti_create](../syscalls/bti_create.md) - create a new bus transaction initiator
-+ [bti_pin](../syscalls/bti_pin.md) - pin memory and grant access to it to the BTI
-+ [bti_release_quarantine](../syscalls/bti_release_quarantine.md) - release quarantined PMTs
-+ [pmt_unpin](../syscalls/pmt_unpin.md) - revoke access and unpin memory
+ - [`zx_bti_create()`] - create a new bus transaction initiator
+ - [`zx_bti_pin()`] - pin memory and grant access to it to the BTI
+ - [`zx_bti_release_quarantine()`] - release quarantined PMTs
+ - [`zx_pmt_unpin()`] - revoke access and unpin memory
+
+[`zx_bti_create()`]: ../syscalls/bti_create.md)
+[`zx_bti_pin()`]: ../syscalls/bti_pin.md
+[`zx_bti_release_quarantine()`]: ../syscalls/bti_release_quarantine.md
+[`zx_pmt_unpin()`]: ../syscalls/pmt_unpin.md

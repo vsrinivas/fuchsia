@@ -15,32 +15,42 @@ VMOs are used in by the kernel and userspace to represent both paged and physica
 They are the standard method of sharing memory between processes, as well as between the kernel and
 userspace.
 
-VMOs are created with [vmo_create](../syscalls/vmo_create.md) and basic I/O can be
-performed on them with [vmo_read](../syscalls/vmo_read.md) and [vmo_write](../syscalls/vmo_write.md).
-A VMO's size may be set using [vmo_set_size](../syscalls/vmo_set_size.md).
-Conversely, [vmo_get_size](../syscalls/vmo_get_size.md) will retrieve a VMO's current size.
+VMOs are created with [`zx_vmo_create()`] and basic I/O can be
+performed on them with [`zx_vmo_read()`] and [`zx_vmo_write()`].
+A VMO's size may be set using [`zx_vmo_set_size()`].
+Conversely, [`zx_vmo_get_size()`] will retrieve a VMO's current size.
 
 The size of a VMO will be rounded up to the next page size boundary by the kernel.
 
-Pages are committed (allocated) for VMOs on demand through [vmo_read](../syscalls/vmo_read.md), [vmo_write](../syscalls/vmo_write.md), or by writing to a mapping of the VMO created using [vmar_map](../syscalls/vmar_map.md). Pages can be committed and decommitted from a VMO manually by calling
-[vmo_op_range](../syscalls/vmo_op_range.md) with the *ZX_VMO_OP_COMMIT* and *ZX_VMO_OP_DECOMMIT*
-operations, but this should be considered a low level operation. [vmo_op_range](../syscalls/vmo_op_range.md) can also be used for cache and locking operations against pages a VMO holds.
+Pages are committed (allocated) for VMOs on demand through [`zx_vmo_read()`], [`zx_vmo_write()`], or by writing to a mapping of the VMO created using [`zx_vmar_map()`]. Pages can be committed and decommitted from a VMO manually by calling
+[`zx_vmo_op_range()`] with the **ZX_VMO_OP_COMMIT** and **ZX_VMO_OP_DECOMMIT**
+operations, but this should be considered a low level operation. [`zx_vmo_op_range()`] can also be used for cache and locking operations against pages a VMO holds.
 
 Processes with special purpose use cases involving cache policy can use
-[vmo_set_cache_policy](../syscalls/vmo_set_cache_policy.md) to change the policy of a given VMO.
+[`zx_vmo_set_cache_policy()`] to change the policy of a given VMO.
 This use case typically applies to device drivers.
 
 ## SYSCALLS
 
-+ [vmo_create](../syscalls/vmo_create.md) - create a new vmo
-+ [vmo_read](../syscalls/vmo_read.md) - read from a vmo
-+ [vmo_write](../syscalls/vmo_write.md) - write to a vmo
-+ [vmo_get_size](../syscalls/vmo_get_size.md) - obtain the size of a vmo
-+ [vmo_set_size](../syscalls/vmo_set_size.md) - adjust the size of a vmo
-+ [vmo_op_range](../syscalls/vmo_op_range.md) - perform an operation on a range of a vmo
-+ [vmo_set_cache_policy](../syscalls/vmo_set_cache_policy.md) - set the caching policy for pages held by a vmo
+ - [`zx_vmo_create()`] - create a new vmo
+ - [`zx_vmo_read()`] - read from a vmo
+ - [`zx_vmo_write()`] - write to a vmo
+ - [`zx_vmo_get_size()`] - obtain the size of a vmo
+ - [`zx_vmo_set_size()`] - adjust the size of a vmo
+ - [`zx_vmo_op_range()`] - perform an operation on a range of a vmo
+ - [`zx_vmo_set_cache_policy()`] - set the caching policy for pages held by a vmo
 
 <br>
 
-+ [vmar_map](../syscalls/vmar_map.md) - map a VMO into a process
-+ [vmar_unmap](../syscalls/vmar_unmap.md) - unmap memory from a process
+ - [`zx_vmar_map()`] - map a VMO into a process
+ - [`zx_vmar_unmap()`] - unmap memory from a process
+
+[`zx_vmar_map()`]: ../syscalls/vmar_map.md
+[`zx_vmar_unmap()`]: ../syscalls/vmar_unmap.md
+[`zx_vmo_create()`]: ../syscalls/vmo_create.md
+[`zx_vmo_get_size()`]: ../syscalls/vmo_get_size.md
+[`zx_vmo_op_range()`]: ../syscalls/vmo_op_range.md
+[`zx_vmo_read()`]: ../syscalls/vmo_read.md
+[`zx_vmo_set_cache_policy()`]: ../syscalls/vmo_set_cache_policy.md
+[`zx_vmo_set_size()`]: ../syscalls/vmo_set_size.md
+[`zx_vmo_write()`]: ../syscalls/vmo_write.md

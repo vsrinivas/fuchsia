@@ -20,9 +20,16 @@ to userspace processes.
 
 ## SYSCALLS
 
-+ [interrupt_create](../syscalls/interrupt_create.md) - Create an interrupt handle
-+ [interrupt_destroy](../syscalls/interrupt_destroy.md) - Destroy an interrupt handle
-+ [interrupt_bind](../syscalls/interrupt_bind.md) - Bind an interrupt vector to interrupt handle
-+ [interrupt_wait](../syscalls/interrupt_wait.md) - Wait for an interrupt on an interrupt handle
-+ [interrupt_trigger](../syscalls/interrupt_trigger.md) - Triggers a virtual interrupt on an interrupt handle
-+ [interrupt_ack](../syscalls/interrupt_ack.md) - Acknowledge an interrupt and re-arm it
+ - [`zx_interrupt_create()`] - Create an interrupt handle
+ - [`zx_interrupt_destroy()`] - Destroy an interrupt handle
+ - [`zx_interrupt_bind()`] - Bind an interrupt vector to interrupt handle
+ - [`zx_interrupt_wait()`] - Wait for an interrupt on an interrupt handle
+ - [`zx_interrupt_trigger()`] - Triggers a virtual interrupt on an interrupt handle
+ - [`zx_interrupt_ack()`] - Acknowledge an interrupt and re-arm it
+
+[`zx_interrupt_ack()`]: ../syscalls/interrupt_ack.md
+[`zx_interrupt_bind()`]: ../syscalls/interrupt_bind.md
+[`zx_interrupt_create()`]: ../syscalls/interrupt_create.md
+[`zx_interrupt_destroy()`]: ../syscalls/interrupt_destroy.md
+[`zx_interrupt_trigger()`]: ../syscalls/interrupt_trigger.md
+[`zx_interrupt_wait()`]: ../syscalls/interrupt_wait.md

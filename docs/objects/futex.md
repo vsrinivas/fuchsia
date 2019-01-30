@@ -47,10 +47,8 @@ waiting on. The kernel does not currently modify the value of
 so). It is up to userspace code to correctly atomically modify this
 value across threads in order to build mutexes and so on.
 
-See the [futex_wait](../syscalls/futex_wait.md),
-[futex_wake](../syscalls/futex_wake.md),
-[futex_requeue](../syscalls/futex_requeue.md), and
-[futex_get_owner](../syscalls/futex_get_owner.md) man pages for more details.
+See the [`zx_futex_wait()`], [`zx_futex_wake()`], [`zx_futex_requeue()`], and
+[`zx_futex_get_owner()`] man pages for more details.
 
 ## RIGHTS
 
@@ -126,9 +124,10 @@ the futex should be, or **ZX_HANDLE_INVALID** if there should be no owner.
 Ownership of a futex may be transferred by the kernel on behalf of the user
 during a wake operation or a requeue operation.  In the case of a requeue
 operation, the target of the transfer is the wake_futex, not the requeue_futex.
-Ownership transfer only takes place when using the zx_futex_wake_single_owner or
-zx_futex_requeue_single_owner variants of the wake/requeue operations.  The
-single_owner variants of these operations will release exactly one waiter, and
+Ownership transfer only takes place when using the
+[`zx_futex_wake_single_owner()`] or [`zx_futex_requeue_single_owner()`]
+variants of the wake/requeue operations.  The `single_owner` variants of
+these operations will release exactly one waiter, and
 assign ownership of the futex to the released thread.
 
 + If there are _no_ waiters during the wake operation, then there is already no
@@ -170,7 +169,14 @@ assign ownership of the futex to the released thread.
 
 ## SYSCALLS
 
-+ [futex_wait](../syscalls/futex_wait.md)
-+ [futex_wake](../syscalls/futex_wake.md)
-+ [futex_requeue](../syscalls/futex_requeue.md)
-+ [futex_get_owner](../syscalls/futex_get_owner.md)
+ - [`zx_futex_wait()`]
+ - [`zx_futex_wake()`]
+ - [`zx_futex_requeue()`]
+ - [`zx_futex_get_owner()`]
+
+[`zx_futex_get_owner()`]: ../syscalls/futex_get_owner.md
+[`zx_futex_requeue()`]: ../syscalls/futex_requeue.md
+[`zx_futex_requeue_single_owner()`]: ../syscalls/futex_requeue_single_owner.md
+[`zx_futex_wait()`]: ../syscalls/futex_wait.md
+[`zx_futex_wake()`]: ../syscalls/futex_wake.md
+[`zx_futex_wake_single_owner()`]: ../syscalls/futex_wake_single_owner.md

@@ -15,34 +15,34 @@ VMARs are used by the kernel and userspace to represent the allocation of an
 address space.
 
 Every process starts with a single VMAR (the root VMAR) that spans the entire
-address space (see [process_create](../syscalls/process_create.md)).  Each VMAR
+address space (see [`zx_process_create()`]).  Each VMAR
 can be logically divided up into any number of non-overlapping parts, each
 representing a child VMARs, a virtual memory mapping, or a gap.  Child VMARs
-are created using [vmar_allocate](../syscalls/vmar_allocate.md).  VM mappings
-are created using [vmar_map](../syscalls/vmar_map.md).
+are created using [`zx_vmar_allocate()`].  VM mappings
+are created using [`zx_vmar_map()`].
 
 VMARs have a hierarchical permission model for allowable mapping permissions.
 For example, the root VMAR allows read, write, and executable mapping.  One
 could create a child VMAR that only allows read and write mappings, in which
 it would be illegal to create a child that allows executable mappings.
 
-When a VMAR is created using vmar_allocate, its parent VMAR retains a reference
+When a VMAR is created using [`zx_vmar_allocate()`], its parent VMAR retains a reference
 to it.  Because of this, if all handles to the child VMAR are closed, the child
 and its descendants will remain active in the address space.  In order to
-disconnect the child from the address space, [vmar_destroy](../syscalls/vmar_destroy.md)
+disconnect the child from the address space, [`zx_vmar_destroy()`]
 must be called on a handle to the child.
 
 By default, all allocations of address space are randomized.  At VMAR
 creation time, the caller can choose which randomization algorithm is used.
 The default allocator attempts to spread allocations widely across the full
 width of the VMAR.  The alternate allocator, selected with
-*ZX_VM_COMPACT*, attempts to keep allocations close together within the
+**ZX_VM_COMPACT**, attempts to keep allocations close together within the
 VMAR, but at a random location within the range.  It is recommended to use
 the default allocator.
 
 VMARs optionally support a fixed-offset mapping mode (called specific mapping).
 This mode can be used to create guard pages or ensure the relative locations of
-mappings.  Each VMAR may have the *ZX_VM_CAN_MAP_SPECIFIC* permission,
+mappings.  Each VMAR may have the **ZX_VM_CAN_MAP_SPECIFIC** permission,
 regardless of whether or not its parent VMAR had that permission.
 
 ## EXAMPLE
@@ -91,12 +91,19 @@ zx_status_t map_with_guard(zx_handle_t vmar, size_t before, size_t after,
 
 ## SEE ALSO
 
-+ [vm_object](vm_object.md) - Virtual Memory Objects
+ - [vm_object](vm_object.md) - Virtual Memory Objects
 
 ## SYSCALLS
 
-+ [vmar_allocate](../syscalls/vmar_allocate.md) - create a new child VMAR
-+ [vmar_map](../syscalls/vmar_map.md) - map a VMO into a process
-+ [vmar_unmap](../syscalls/vmar_unmap.md) - unmap a memory region from a process
-+ [vmar_protect](../syscalls/vmar_protect.md) - adjust memory access permissions
-+ [vmar_destroy](../syscalls/vmar_destroy.md) - destroy a VMAR and all of its children
+ - [`zx_vmar_allocate()`] - create a new child VMAR
+ - [`zx_vmar_map()`] - map a VMO into a process
+ - [`zx_vmar_unmap()`] - unmap a memory region from a process
+ - [`zx_vmar_protect()`] - adjust memory access permissions
+ - [`zx_vmar_destroy()`] - destroy a VMAR and all of its children
+
+[`zx_process_create()`]: ../syscalls/process_create.md
+[`zx_vmar_allocate()`]: ../syscalls/vmar_allocate.md
+[`zx_vmar_destroy()`]: ../syscalls/vmar_destroy.md
+[`zx_vmar_map()`]: ../syscalls/vmar_map.md
+[`zx_vmar_protect()`]: ../syscalls/vmar_protect.md
+[`zx_vmar_unmap()`]: ../syscalls/vmar_unmap.md

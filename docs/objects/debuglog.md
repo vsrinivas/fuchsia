@@ -19,6 +19,10 @@ processes in the future.
 
 ## SYSCALLS
 
-+ [debuglog_create](../syscalls/debuglog_create.md) - create a kernel managed debuglog reader or writer
-+ [debuglog_write](../syscalls/debuglog_write.md) - write log entry to debuglog
-+ [debuglog_read](../syscalls/debuglog_read.md) - read log entries from debuglog
+ - [`zx_debuglog_create()`] - create a kernel managed debuglog reader or writer
+ - [`zx_debuglog_write()`] - write log entry to debuglog
+ - [`zx_debuglog_read()`] - read log entries from debuglog
+
+[`zx_debuglog_create()`]: ../syscalls/debuglog_create.md
+[`zx_debuglog_read()`]: ../syscalls/debuglog_read.md
+[`zx_debuglog_write()`]: ../syscalls/debuglog_write.md

@@ -25,11 +25,14 @@ controlled as a single entity.
 
 ## SYSCALLS
 
-+ [job_create](../syscalls/job_create.md) - create a new child job.
-+ [process_create](../syscalls/process_create.md) - create a new process
-  within a job.
-+ [job_set_policy](../syscalls/job_set_policy.md) - set policy for
-  new processes in the job.
-+ [task_bind_exception_port](../syscalls/task_bind_exception_port.md) -
-  attach an exception port to a task
-+ [task_kill](../syscalls/task_kill.md) - cause a task to stop running.
+ - [`zx_job_create()`] - create a new child job.
+ - [`zx_process_create()`] - create a new process within a job.
+ - [`zx_job_set_policy()`] - set policy for new processes in the job.
+ - [`zx_task_bind_exception_port()`] - attach an exception port to a task
+ - [`zx_task_kill()`] - cause a task to stop running.
+
+[`zx_job_create()`]: ../syscalls/job_create.md
+[`zx_job_set_policy()`]: ../syscalls/job_set_policy.md
+[`zx_process_create()`]: ../syscalls/process_create.md
+[`zx_task_bind_exception_port()`]: ../syscalls/task_bind_exception_port.md
+[`zx_task_kill()`]: ../syscalls/task_kill.md

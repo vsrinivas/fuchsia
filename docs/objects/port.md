@@ -17,6 +17,10 @@ TODO
 
 ## SYSCALLS
 
-+ [port_create](../syscalls/port_create.md) - create a port
-+ [port_queue](../syscalls/port_queue.md) - send a packet to a port
-+ [port_wait](../syscalls/port_wait.md) - wait for packets to arrive on a port
+ - [`zx_port_create()`] - create a port
+ - [`zx_port_queue()`] - send a packet to a port
+ - [`zx_port_wait()`] - wait for packets to arrive on a port
+
+[`zx_port_create()`]: ../syscalls/port_create.md
+[`zx_port_queue()`]: ../syscalls/port_queue.md
+[`zx_port_wait()`]: ../syscalls/port_wait.md

@@ -13,17 +13,17 @@ amount of byte data and some number of handles.
 
 Channels maintain an ordered queue of messages to be delivered in either
 direction. A message consists of some amount of data and some number of handles.
-A call to *zx_channel_write()* enqueues one message, and a call to
-*zx_channel_read()* dequeues one message (if any are queued). A thread can block
-until messages are pending via *zx_object_wait_one()* or other waiting
+A call to [`zx_channel_write()`] enqueues one message, and a call to
+[`zx_channel_read()`] dequeues one message (if any are queued). A thread can block
+until messages are pending via [`zx_object_wait_one()`] or other waiting
 mechanisms.
 
-Alternatively, a call to *zx_channel_call()* enqueues a message in one
+Alternatively, a call to [`zx_channel_call()`] enqueues a message in one
 direction of the channel, waits for a corresponding response, and
 dequeues the response message. In call mode, corresponding responses
 are identified via the first 4 bytes of the message, called the
 transaction ID. The kernel supplies distinct transaction IDs (always with the
-high bit set) for messages written with *zx_channel_call()*.
+high bit set) for messages written with [`zx_channel_call()`].
 
 The process of sending a message via a channel has two steps. The first is to
 atomically write the data into the channel and move ownership of all handles in
@@ -50,16 +50,22 @@ the last remaining handle is stripped of the **ZX_RIGHT_DUPLICATE** right.
 
 ## SYSCALLS
 
-+ [channel_call](../syscalls/channel_call.md) - synchronously send a message and receive a reply
-+ [channel_create](../syscalls/channel_create.md) - create a new channel
-+ [channel_read](../syscalls/channel_read.md) - receive a message from a channel
-+ [channel_write](../syscalls/channel_write.md) - write a message to a channel
+ - [`zx_channel_call()`] - synchronously send a message and receive a reply
+ - [`zx_channel_create()`] - create a new channel
+ - [`zx_channel_read()`] - receive a message from a channel
+ - [`zx_channel_write()`] - write a message to a channel
 
 <br>
 
-+ [object_wait_one](../syscalls/object_wait_one.md) - wait for signals on one object
+ - [`zx_object_wait_one()`] - wait for signals on one object
 
 ## SEE ALSO
 
 + [Zircon concepts](../concepts.md)
 + [Handles](../handles.md)
+
+[`zx_channel_call()`]: ../syscalls/channel_call.md
+[`zx_channel_create()`]: ../syscalls/channel_create.md
+[`zx_channel_read()`]: ../syscalls/channel_read.md
+[`zx_channel_write()`]: ../syscalls/channel_write.md
+[`zx_object_wait_one()`]: ../syscalls/object_wait_one.md

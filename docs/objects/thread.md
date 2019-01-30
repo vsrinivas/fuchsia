@@ -48,16 +48,16 @@ C11 or POSIX might require threads to be joined.
 
 ## SYSCALLS
 
-+ [`zx_thread_create()`] - create a new thread within a process
-+ [`zx_thread_exit()`] - exit the current thread
-+ [`zx_thread_read_state()`] - read register state from a thread
-+ [`zx_thread_start()`] - cause a new thread to start executing
-+ [`zx_thread_write_state()`] - modify register state of a thread
+ - [`zx_thread_create()`] - create a new thread within a process
+ - [`zx_thread_exit()`] - exit the current thread
+ - [`zx_thread_read_state()`] - read register state from a thread
+ - [`zx_thread_start()`] - cause a new thread to start executing
+ - [`zx_thread_write_state()`] - modify register state of a thread
 
 <br>
 
-+ [`zx_task_bind_exception_port()`] - attach an exception port to a task
-+ [`zx_task_kill()`] - cause a task to stop running
+ - [`zx_task_bind_exception_port()`] - attach an exception port to a task
+ - [`zx_task_kill()`] - cause a task to stop running
 
 [`zx_futex_wake_handle_close_thread_exit()`]: ../syscalls/futex_wake_handle_close_thread_exit.md
 [`zx_object_get_child()`]: ../syscalls/object_get_child.md

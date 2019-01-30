@@ -14,19 +14,23 @@ for performing DMA.
 PMTs are obtained by [pinning memory with a BTI object](../syscalls/bti_pin.md).
 It is valid for the device associated with the BTI to access the memory represented
 by the PMT for as long as the PMT object is around.  When the PMT object is
-destroyed, either via **zx_handle_close**(), **zx_pmt_unpin**(), or process
+destroyed, either via [`zx_handle_close()`], [`zx_pmt_unpin()`], or process
 termination, access to the represented memory becomes illegal (this is
 enforced by hardware on systems with the capability to do so, such as IOMMUs).
 
-If a PMT object is destroyed by means other than **zx_pmt_unpin**(), the
+If a PMT object is destroyed by means other than [`zx_pmt_unpin()`], the
 underlying memory is *quarantined*.  See
 [bus_transaction_initiator](bus_transaction_initiator.md) for more details.
 
 ## SEE ALSO
 
-+ [bus_transaction_initiator](bus_transaction_initiator.md) - Bus Transaction Initiators
+ - [bus_transaction_initiator](bus_transaction_initiator.md) - Bus Transaction Initiators
 
 ## SYSCALLS
 
-+ [bti_pin](../syscalls/bti_pin.md) - pin memory and grant access to it to the BTI
-+ [pmt_unpin](../syscalls/pmt_unpin.md) - revoke access and unpin memory
+ - [`zx_bti_pin()`] - pin memory and grant access to it to the BTI
+ - [`zx_pmt_unpin()`] - revoke access and unpin memory
+
+[`zx_bti_pin()`]: ../syscalls/bti_pin.md
+[`zx_handle_close()`]: ../syscalls/handle_close.md
+[`zx_pmt_unpin()`]: ../syscalls/pmt_unpin.md

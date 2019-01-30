@@ -17,6 +17,10 @@ TODO
 
 ## SYSCALLS
 
-+ [fifo_create](../syscalls/fifo_create.md) - create a new fifo
-+ [fifo_read](../syscalls/fifo_read.md) - read data from a fifo
-+ [fifo_write](../syscalls/fifo_write.md) - write data to a fifo
+ - [`zx_fifo_create()`] - create a new fifo
+ - [`zx_fifo_read()`] - read data from a fifo
+ - [`zx_fifo_write()`] - write data to a fifo
+
+[`zx_fifo_create()`]: ../syscalls/fifo_create.md
+[`zx_fifo_read()`]: ../syscalls/fifo_read.md
+[`zx_fifo_write()`]: ../syscalls/fifo_write.md

@@ -23,7 +23,7 @@ is granted access to. The range covers *base* up to but not including *base* +
 **ZX_RSRC_KIND_ROOT**, **ZX_RSRC_KIND_HYPERVISOR**, **ZX_RSRC_KIND_MMIO**,
 **ZX_RSRC_KIND_IOPORT**, **ZX_RSRC_KIND_IRQ**, **ZX_RSRC_KIND_VMEX**, and
 **ZX_RSRC_KIND_SMC**. New resources may be created with a root resource by
-calling [resource_create](../syscalls/resource_create.md). An initial root
+calling [`zx_resource_create()`]. An initial root
 resource is created by the kernel during boot and handed off to the first
 userspace process started by userboot.
 
@@ -47,8 +47,12 @@ out more fine-grained resources to other drivers.
 
 ## SYSCALLS
 
-[interrupt_create](../syscalls/interrupt_create.md),
-[ioports_request](../syscalls/ioports_request.md),
-[resource_create](../syscalls/resource_create.md),
-[vmo_create_physical](../syscalls/vmo_create_physical.md)
+ - [`zx_interrupt_create()`]
+ - [`zx_ioports_request()`]
+ - [`zx_resource_create()`]
+ - [`zx_vmo_create_physical()`]
 
+[`zx_interrupt_create()`]: ../syscalls/interrupt_create.md
+[`zx_ioports_request()`]: ../syscalls/ioports_request.md
+[`zx_resource_create()`]: ../syscalls/resource_create.md
+[`zx_vmo_create_physical()`]: ../syscalls/vmo_create_physical.md
