@@ -58,6 +58,11 @@ fuchsia::ledger::PageSnapshotPtr PageClient::NewSnapshot(
 void PageClient::OnChange(fuchsia::ledger::PageChange page,
                           fuchsia::ledger::ResultState result_state,
                           OnChangeCallback callback) {
+  // NOTE: |result_state| can indicate that this change notification is
+  // partial: if a single FIDL message cannot contain the entire change
+  // notification, the Ledger will break the notification into multiple chunks.
+  // This is OK here because we break the notification down even further into
+  // per-key calls to OnPageChange() and OnPageDelete().
   for (auto& entry : page.changed_entries) {
     // Remove key prefix maybe?
     OnPageChange(to_string(entry.key), std::move(entry.value));
