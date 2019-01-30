@@ -62,20 +62,20 @@ interface RadioInterfaceLayer {
   ///
   /// Implementation Detail: current services speak QMI but others will most likely speak other
   /// binary formats.
-  100: ConnectTransport(handle<channel> channel) -> (bool success);
+  ConnectTransport(handle<channel> channel) -> (bool success);
 
   /// Retrieve the identity of the modem (currently |imei| only).
   // TODO(NET-1781): 200: GetDeviceIdentity() -> (string imei) error (RilError err);
-  200: GetDeviceIdentity() -> (GetDeviceIdentityReturn imei);
+  GetDeviceIdentity() -> (GetDeviceIdentityReturn imei);
 
   /// Power state of the radio. Currently on On or Off.
   // TODO(NET-1781): 201: RadioPowerStatus() -> (RadioPowerState state) error (RilError err);
-  201: RadioPowerStatus() -> (RadioPowerStatusReturn state);
+  RadioPowerStatus() -> (RadioPowerStatusReturn state);
 
   /// Activate a network connection.
-  202: StartNetwork(string apn) -> (StartNetworkReturn state);
+  StartNetwork(string apn) -> (StartNetworkReturn state);
 
   /// Network settings known to the modem.
-  203: GetNetworkSettings() -> (GetNetworkSettingsReturn state);
+  GetNetworkSettings() -> (GetNetworkSettingsReturn state);
 };
 
