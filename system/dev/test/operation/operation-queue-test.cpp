@@ -67,7 +67,6 @@ using UnownedOperationQueue = operation::UnownedOperationQueue<UnownedOperation,
                                                                CallbackTraits, void>;
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
-constexpr size_t kOpSize = Operation::OperationSize(kParentOpSize);
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
@@ -78,7 +77,7 @@ bool TrivialLifetimeTest() {
 
 bool SingleOperationTest() {
     BEGIN_TEST;
-    std::optional<Operation> operation = Operation::Alloc(kOpSize);
+    std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
     ASSERT_TRUE(operation.has_value());
 
     OperationQueue queue;
@@ -94,7 +93,7 @@ bool MultipleOperationTest() {
     OperationQueue queue;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<Operation> operation = Operation::Alloc(kOpSize);
+        std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
         queue.push(std::move(*operation));
     }
@@ -111,7 +110,7 @@ bool ReleaseTest() {
     OperationQueue queue;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<Operation> operation = Operation::Alloc(kOpSize);
+        std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
         queue.push(std::move(*operation));
     }
@@ -129,12 +128,10 @@ bool MultipleLayerTest() {
 
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = FirstLayerOp::OperationSize(kBaseOpSize);
-    constexpr size_t kSecondLayerOpSize = SecondLayerOp::OperationSize(kFirstLayerOpSize);
 
     OperationQueue queue;
     for (size_t i = 0; i < 10; i++) {
-        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kSecondLayerOpSize,
-                                                                      kFirstLayerOpSize);
+        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kFirstLayerOpSize);
         ASSERT_TRUE(operation.has_value());
         queue.push(std::move(*operation));
     }
@@ -177,12 +174,10 @@ bool MultipleLayerWithStorageTest() {
 
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = FirstLayerOp::OperationSize(kBaseOpSize);
-    constexpr size_t kSecondLayerOpSize = SecondLayerOp::OperationSize(kFirstLayerOpSize);
 
     operation::OperationQueue<SecondLayerOp, TestOpTraits, uint64_t> queue;
     for (size_t i = 0; i < 10; i++) {
-        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kSecondLayerOpSize,
-                                                                      kFirstLayerOpSize);
+        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kFirstLayerOpSize);
         ASSERT_TRUE(operation.has_value());
         *operation->private_storage() = i;
         EXPECT_EQ(*operation->private_storage(), i);
@@ -229,12 +224,10 @@ bool MultipleLayerWithCallbackTest() {
 
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = FirstLayerOp::OperationSize(kBaseOpSize);
-    constexpr size_t kSecondLayerOpSize = SecondLayerOp::OperationSize(kFirstLayerOpSize);
 
     operation::OperationQueue<SecondLayerOp, TestOpTraits, uint64_t> queue;
     for (size_t i = 0; i < 10; i++) {
-        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kSecondLayerOpSize,
-                                                                      kFirstLayerOpSize);
+        std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kFirstLayerOpSize);
         ASSERT_TRUE(operation.has_value());
         *operation->private_storage() = i;
         EXPECT_EQ(*operation->private_storage(), i);

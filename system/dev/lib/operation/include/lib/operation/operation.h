@@ -173,8 +173,8 @@ public:
     using OperationType = typename OperationTraits::OperationType;
 
     // Creates a new operation with payload space of data_size.
-    static std::optional<D> Alloc(size_t op_size,
-                                  size_t parent_op_size = sizeof(OperationType)) {
+    static std::optional<D> Alloc(size_t parent_op_size) {
+        const size_t op_size = BaseClass::OperationSize(parent_op_size);
         OperationType* op = OperationTraits::Alloc(op_size);
         if (op == nullptr) {
             return std::nullopt;

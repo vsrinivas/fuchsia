@@ -66,11 +66,10 @@ struct UnownedOperation : public operation::UnownedOperation<UnownedOperation, T
 };
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
-constexpr size_t kOpSize = Operation::OperationSize(kParentOpSize);
 
 bool AllocTest() {
     BEGIN_TEST;
-    std::optional<Operation> op = Operation::Alloc(kOpSize);
+    std::optional<Operation> op = Operation::Alloc(kParentOpSize);
     EXPECT_TRUE(op.has_value());
     END_TEST;
 }
@@ -83,8 +82,7 @@ bool PrivateStorageTest() {
           using BaseClass::BaseClass;
     };
 
-    constexpr size_t kOperationSize = Private::OperationSize(kParentOpSize);
-    auto operation = Private::Alloc(kOperationSize);
+    auto operation = Private::Alloc(kParentOpSize);
     ASSERT_TRUE(operation.has_value());
     *operation->private_storage() = 1001;
     ASSERT_EQ(*operation->private_storage(), 1001);
@@ -98,15 +96,13 @@ bool MultipleSectionTest() {
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
     constexpr size_t kSecondLayerOpSize =
         UnownedOperation::OperationSize(kFirstLayerOpSize);
-    constexpr size_t kThirdLayerOpSize =
-        UnownedOperation::OperationSize(kSecondLayerOpSize);
 
-    std::optional<Operation> operation = Operation::Alloc(kThirdLayerOpSize);
+    std::optional<Operation> operation = Operation::Alloc(kSecondLayerOpSize);
     ASSERT_TRUE(operation.has_value());
 
     UnownedOperation operation2(operation->take(), nullptr, nullptr, kFirstLayerOpSize);
-    UnownedOperation operation3(operation2.take(), nullptr, nullptr, kSecondLayerOpSize);
-    operation = Operation(operation3.take(), kBaseOpSize);
+    UnownedOperation operation3(operation2.take(), nullptr, nullptr, kBaseOpSize);
+    operation = Operation(operation3.take(), kSecondLayerOpSize);
 
     END_TEST;
 }
@@ -115,20 +111,18 @@ bool CallbackTest() {
     BEGIN_TEST;
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
-    constexpr size_t kSecondLayerOpSize =
-        UnownedOperation::OperationSize(kFirstLayerOpSize);
 
     bool called = false;
     auto callback = [](void* ctx, zx_status_t st, TestOp* operation) -> void {
         *static_cast<bool*>(ctx) = true;
         // We take ownership.
-        Operation unused(operation, kBaseOpSize);
+        Operation unused(operation, kFirstLayerOpSize);
     };
     TestOpCallback cb = callback;
-    std::optional<Operation> operation = Operation::Alloc(kSecondLayerOpSize);
+    std::optional<Operation> operation = Operation::Alloc(kFirstLayerOpSize);
     ASSERT_TRUE(operation.has_value());
 
-    UnownedOperation operation2(operation->take(), &cb, &called, kFirstLayerOpSize);
+    UnownedOperation operation2(operation->take(), &cb, &called, kBaseOpSize);
     operation2.Complete(ZX_OK);
     EXPECT_TRUE(called);
 
@@ -139,22 +133,20 @@ bool AutoCallbackTest() {
     BEGIN_TEST;
     constexpr size_t kBaseOpSize = sizeof(TestOp);
     constexpr size_t kFirstLayerOpSize = Operation::OperationSize(kBaseOpSize);
-    constexpr size_t kSecondLayerOpSize =
-        UnownedOperation::OperationSize(kFirstLayerOpSize);
 
     bool called = false;
     auto callback = [](void* ctx, zx_status_t st, TestOp* operation) {
         *static_cast<bool*>(ctx) = true;
         // We take ownership.
-        Operation unused(operation, kBaseOpSize);
+        Operation unused(operation, kFirstLayerOpSize);
     };
     TestOpCallback cb = callback;
 
-    std::optional<Operation> operation = Operation::Alloc(kSecondLayerOpSize);
+    std::optional<Operation> operation = Operation::Alloc(kFirstLayerOpSize);
     ASSERT_TRUE(operation.has_value());
 
     {
-        UnownedOperation operation2(operation->take(), &cb, &called, kFirstLayerOpSize);
+        UnownedOperation operation2(operation->take(), &cb, &called, kBaseOpSize);
     }
     EXPECT_TRUE(called);
 

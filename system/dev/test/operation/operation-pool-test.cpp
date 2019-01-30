@@ -66,7 +66,6 @@ struct UnownedOperation : public operation::UnownedOperation<UnownedOperation, T
 using OperationPool = operation::OperationPool<Operation, TestOpTraits, void>;
 
 constexpr size_t kParentOpSize = sizeof(TestOp);
-constexpr size_t kOpSize = Operation::OperationSize(kParentOpSize);
 
 bool TrivialLifetimeTest() {
     BEGIN_TEST;
@@ -76,7 +75,7 @@ bool TrivialLifetimeTest() {
 
 bool SingleOperationTest() {
     BEGIN_TEST;
-    std::optional<Operation> operation = Operation::Alloc(kOpSize);
+    std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
     ASSERT_TRUE(operation.has_value());
 
     OperationPool pool;
@@ -92,7 +91,7 @@ bool MultipleOperationTest() {
     OperationPool pool;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<Operation> operation = Operation::Alloc(kOpSize);
+        std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
         pool.push(std::move(*operation));
     }
@@ -109,7 +108,7 @@ bool ReleaseTest() {
     OperationPool pool;
 
     for (size_t i = 0; i < 10; i++) {
-        std::optional<Operation> operation = Operation::Alloc(kOpSize);
+        std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
         pool.push(std::move(*operation));
     }
