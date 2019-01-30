@@ -15,7 +15,7 @@ use wlan_rsn::{
 use crate::{
     MacAddr, MlmeRequest,
     ap::{
-        Context, Tokens,
+        Context,
         aid::{self, AssociationId},
         authenticator::Authenticator,
         event::{self, ClientEvent, Event},
@@ -42,8 +42,7 @@ impl RemoteClient {
         }
     }
 
-    pub fn handle_timeout<T: Tokens>(&mut self, event_id: EventId, event: ClientEvent,
-                                     ctx: &mut Context<T>) {
+    pub fn handle_timeout(&mut self, event_id: EventId, event: ClientEvent, ctx: &mut Context) {
         match event {
             ClientEvent::KeyExchangeTimeout { attempt }
                 if triggered(&self.key_exchange_timeout, event_id) => {
@@ -64,8 +63,7 @@ impl RemoteClient {
         }
     }
 
-    pub fn handle_eapol_ind<T: Tokens>(&mut self, ind: fidl_mlme::EapolIndication,
-                                       ctx: &mut Context<T>)
+    pub fn handle_eapol_ind(&mut self, ind: fidl_mlme::EapolIndication, ctx: &mut Context)
         -> Result<(), failure::Error> {
 
         let authenticator = match self.authenticator.as_mut() {
@@ -87,7 +85,7 @@ impl RemoteClient {
         Ok(())
     }
 
-    pub fn initiate_key_exchange<T: Tokens>(&mut self, ctx: &mut Context<T>, attempt: u32) {
+    pub fn initiate_key_exchange(&mut self, ctx: &mut Context, attempt: u32) {
         let event_id = self.schedule_timer(ClientEvent::KeyExchangeTimeout { attempt }, ctx);
         self.key_exchange_timeout.replace(event_id);
         match self.authenticator.as_mut() {
@@ -102,12 +100,11 @@ impl RemoteClient {
         }
     }
 
-    fn schedule_timer<T: Tokens>(&self, event: ClientEvent, ctx: &mut Context<T>) -> EventId {
+    fn schedule_timer(&self, event: ClientEvent, ctx: &mut Context) -> EventId {
         ctx.timer.schedule(Event::Client { addr: self.addr.clone(), event })
     }
 
-    fn process_authenticator_updates<T: Tokens>(&mut self, update_sink: &UpdateSink,
-                                                ctx: &mut Context<T>) {
+    fn process_authenticator_updates(&mut self, update_sink: &UpdateSink, ctx: &mut Context) {
         for update in update_sink {
             match update {
                 SecAssocUpdate::TxEapolKeyFrame(frame) => {
@@ -139,7 +136,7 @@ impl RemoteClient {
         }
     }
 
-    fn send_key<T: Tokens>(&mut self, key: &Key, ctx: &mut Context<T>) {
+    fn send_key(&mut self, key: &Key, ctx: &mut Context) {
         let set_key_descriptor = match key {
             Key::Ptk(ptk) => {
                 fidl_mlme::SetKeyDescriptor {
@@ -231,8 +228,6 @@ mod tests {
             event::Event,
             test_utils::MockAuthenticator,
             TimeStream,
-            UserSink,
-            UserStream,
         },
         DeviceInfo,
         MacAddr,
@@ -249,7 +244,7 @@ mod tests {
     #[test]
     fn test_remote_client_key_handshake() {
         let (mut remote_client, mock_auth) = remote_client();
-        let (mut ctx, mut mlme_stream, _, _) = make_env();
+        let (mut ctx, mut mlme_stream, _) = make_env();
 
         // Return EAPOL key frame when Authenticator is initiated.
         let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
@@ -324,7 +319,7 @@ mod tests {
     #[test]
     fn test_remote_client_key_handshake_timeout() {
         let (mut remote_client, mock_auth) = remote_client();
-        let (mut ctx, mut mlme_stream, _, mut time_stream) = make_env();
+        let (mut ctx, mut mlme_stream, mut time_stream) = make_env();
 
         let update = SecAssocUpdate::TxEapolKeyFrame(test_utils::eapol_key_frame());
         mock_auth.set_initiate_results(vec![update]);
@@ -366,7 +361,7 @@ mod tests {
     #[test]
     fn test_remote_client_ignore_timeout_if_key_handshake_succeeds() {
         let (mut remote_client, mock_auth) = remote_client();
-        let (mut ctx, mut mlme_stream, _, mut time_stream) = make_env();
+        let (mut ctx, mut mlme_stream, mut time_stream) = make_env();
 
         let update = SecAssocUpdate::Status(SecAssocStatus::EssSaEstablished);
         mock_auth.set_initiate_results(vec![update]);
@@ -399,7 +394,7 @@ mod tests {
     #[test]
     fn test_remote_client_handle_eapol_ind_invalid() {
         let (mut remote_client, _) = remote_client();
-        let (mut ctx, _, _, _) = make_env();
+        let (mut ctx, _, _) = make_env();
 
         let eapol_ind = fidl_mlme::EapolIndication {
             src_addr: CLIENT_ADDR,
@@ -455,27 +450,19 @@ mod tests {
         (remote_client, MockAuthenticatorController { mock_initiate, mock_on_eapol_frame })
     }
 
-    fn make_env() -> (Context<FakeTokens>, MlmeStream, UserStream<FakeTokens>, TimeStream) {
+    fn make_env() -> (Context, MlmeStream, TimeStream) {
         let device_info = DeviceInfo {
             addr: AP_ADDR,
             bands: vec![],
         };
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let (user_sink, user_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
-        let ctx = Context::<FakeTokens> {
+        let ctx = Context {
             device_info,
             mlme_sink: MlmeSink::new(mlme_sink),
-            user_sink: UserSink::new(user_sink),
             timer,
         };
-        (ctx, mlme_stream, user_stream, time_stream)
-    }
-
-    struct FakeTokens;
-    impl Tokens for FakeTokens {
-        type StartToken = i32;
-        type StopToken = i32;
+        (ctx, mlme_stream, time_stream)
     }
 
     struct MockAuthenticatorController {

@@ -13,7 +13,7 @@ mod test_utils;
 use failure::{bail, ensure};
 use fidl_fuchsia_wlan_common::{self as fidl_common};
 use fidl_fuchsia_wlan_mlme::{self as fidl_mlme, MlmeEvent};
-use futures::channel::mpsc;
+use futures::channel::{mpsc, oneshot};
 use log::{debug, info, error, warn};
 use wlan_common::channel::{Channel, Cbw};
 use wlan_rsn::{
@@ -31,6 +31,7 @@ use crate::ap::{
     rsn::{create_wpa2_psk_rsne, is_valid_rsne_subset},
 };
 use crate::{DeviceInfo, MacAddr, MlmeRequest, Ssid};
+use crate::responder::Responder;
 use crate::sink::MlmeSink;
 use crate::timer::{self, EventId, TimedEvent, Timer};
 use std::boxed::Box;
@@ -39,14 +40,6 @@ use std::sync::{Arc, Mutex};
 const DEFAULT_BEACON_PERIOD: u16 = 100;
 const DEFAULT_DTIM_PERIOD: u8 = 1;
 
-// A token is an opaque value that identifies a particular request from a user.
-// To avoid parameterizing over many different token types, we introduce a helper
-// trait that enables us to group them into a single generic parameter.
-pub trait Tokens {
-    type StartToken;
-    type StopToken;
-}
-
 #[derive(Clone, Debug, PartialEq)]
 pub struct Config {
     pub ssid: Ssid,
@@ -54,27 +47,21 @@ pub struct Config {
     pub channel: u8
 }
 
-mod internal {
-    pub type UserSink<T> = crate::sink::UnboundedSink<super::UserEvent<T>>;
-}
-use self::internal::*;
-
-pub type UserStream<T> = mpsc::UnboundedReceiver<UserEvent<T>>;
 pub type TimeStream = timer::TimeStream<Event>;
 
-enum State<T: Tokens> {
+enum State {
     Idle {
-        ctx: Context<T>,
+        ctx: Context,
     },
     Starting {
-        ctx: Context<T>,
+        ctx: Context,
         ssid: Ssid,
         rsn_cfg: Option<RsnCfg>,
-        token: T::StartToken,
+        responder: Responder<StartResult>,
         start_timeout: EventId,
     },
     Started {
-        bss: InfraBss<T>,
+        bss: InfraBss,
     }
 }
 
@@ -84,22 +71,21 @@ struct RsnCfg {
     rsne: Rsne,
 }
 
-struct InfraBss<T: Tokens> {
+struct InfraBss {
     ssid: Ssid,
     rsn_cfg: Option<RsnCfg>,
     client_map: remote_client::Map,
-    ctx: Context<T>,
+    ctx: Context,
 }
 
-pub struct Context<T: Tokens> {
+pub struct Context {
     device_info: DeviceInfo,
     mlme_sink: MlmeSink,
-    user_sink: UserSink<T>,
     timer: Timer<Event>,
 }
 
-pub struct ApSme<T: Tokens> {
-    state: Option<State<T>>,
+pub struct ApSme {
+    state: Option<State>,
 }
 
 #[derive(Debug, PartialEq)]
@@ -114,51 +100,35 @@ pub enum StartResult {
     DfsUnsupported,
 }
 
-// A message from the Ap to a user or a group of listeners
-#[derive(Debug, PartialEq)]
-pub enum UserEvent<T: Tokens> {
-    StartComplete {
-        token: T::StartToken,
-        result: StartResult,
-    },
-    StopComplete {
-        token: T::StopToken,
-    }
-}
-
-impl<T: Tokens> ApSme<T> {
-    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, UserStream<T>, TimeStream) {
+impl ApSme {
+    pub fn new(device_info: DeviceInfo) -> (Self, crate::MlmeStream, TimeStream) {
         let (mlme_sink, mlme_stream) = mpsc::unbounded();
-        let (user_sink, user_stream) = mpsc::unbounded();
         let (timer, time_stream) = timer::create_timer();
         let sme = ApSme {
             state: Some(State::Idle {
                 ctx: Context {
                     device_info,
                     mlme_sink: MlmeSink::new(mlme_sink),
-                    user_sink: UserSink::new(user_sink),
                     timer,
                 }
             }),
         };
-        (sme, mlme_stream, user_stream, time_stream)
+        (sme, mlme_stream, time_stream)
     }
 
-    pub fn on_start_command(&mut self, config: Config, token: T::StartToken){
-        self.state = self.state.take().map(|mut state| match state {
+    pub fn on_start_command(&mut self, config: Config) -> oneshot::Receiver<StartResult> {
+        let (responder, receiver) = Responder::new();
+        self.state = self.state.take().map(|state| match state {
             State::Idle { mut ctx } => {
                 if let Err(result) = validate_config(&config) {
-                    ctx.user_sink.send(UserEvent::StartComplete { token, result });
+                    responder.respond(result);
                     return State::Idle { ctx };
                 }
                 let rsn_cfg_result = create_rsn_cfg(&config.ssid[..], &config.password[..]);
                 match rsn_cfg_result {
                     Err(e) => {
                         error!("error configuring RSN: {}", e);
-                        ctx.user_sink.send(UserEvent::StartComplete {
-                            token,
-                            result: StartResult::InternalError,
-                        });
+                        responder.respond(StartResult::InternalError);
                         State::Idle { ctx }
                     },
                     Ok(rsn_cfg) => {
@@ -170,39 +140,34 @@ impl<T: Tokens> ApSme<T> {
                             ctx,
                             ssid: config.ssid,
                             rsn_cfg,
-                            token,
+                            responder,
                             start_timeout,
                         }
                     }
                 }
             },
-            State::Starting { ref mut ctx, .. } => {
-                ctx.user_sink.send(UserEvent::StartComplete {
-                    token,
-                    result: StartResult::PreviousStartInProgress,
-                });
-                state
+            s@ State::Starting { .. } => {
+                responder.respond(StartResult::PreviousStartInProgress);
+                s
             },
-            State::Started { bss: InfraBss { ref mut ctx, .. } } => {
-                let result = StartResult::AlreadyStarted;
-                ctx.user_sink.send(UserEvent::StartComplete { token, result });
-                state
+            s@ State::Started { .. } => {
+                responder.respond(StartResult::AlreadyStarted);
+                s
             }
         });
+        receiver
     }
 
-    pub fn on_stop_command(&mut self, token: T::StopToken) {
-        self.state = self.state.take().map(|mut state| match state {
-            State::Idle { ref mut ctx, .. } => {
-                ctx.user_sink.send(UserEvent::StopComplete { token });
-                state
+    pub fn on_stop_command(&mut self) -> oneshot::Receiver<()> {
+        let (stop_responder, receiver) = Responder::new();
+        self.state = self.state.take().map(|state| match state {
+            s@ State::Idle { .. } => {
+                stop_responder.respond(());
+                s
             },
-            State::Starting { ctx, token: start_token, .. } => {
-                ctx.user_sink.send(UserEvent::StartComplete {
-                    token: start_token,
-                    result: StartResult::Canceled,
-                });
-                ctx.user_sink.send(UserEvent::StopComplete { token });
+            State::Starting { ctx, responder: start_responder, .. } => {
+                start_responder.respond(StartResult::Canceled);
+                stop_responder.respond(());
                 State::Idle { ctx }
             },
             State::Started { bss } => {
@@ -210,14 +175,15 @@ impl<T: Tokens> ApSme<T> {
                 bss.ctx.mlme_sink.send(MlmeRequest::Stop(req));
                 // Currently, MLME doesn't send any response back. We simply assume
                 // that the stop request succeeded immediately
-                bss.ctx.user_sink.send(UserEvent::StopComplete { token });
+                stop_responder.respond(());
                 State::Idle { ctx: bss.ctx }
             }
         });
+        receiver
     }
 }
 
-impl<T: Tokens> super::Station for ApSme<T> {
+impl super::Station for ApSme {
     type Event = Event;
 
     fn on_mlme_event(&mut self, event: MlmeEvent) {
@@ -227,12 +193,12 @@ impl<T: Tokens> super::Station for ApSme<T> {
                 warn!("received MlmeEvent while ApSme is idle {:?}", event);
                 state
             },
-            State::Starting { ctx, ssid, rsn_cfg, token, start_timeout } => match event {
+            State::Starting { ctx, ssid, rsn_cfg, responder, start_timeout } => match event {
                 MlmeEvent::StartConf { resp } =>
-                    handle_start_conf(resp, ctx, ssid, rsn_cfg, token),
+                    handle_start_conf(resp, ctx, ssid, rsn_cfg, responder),
                 _ => {
                     warn!("received MlmeEvent while ApSme is starting {:?}", event);
-                    State::Starting { ctx, ssid, rsn_cfg, token, start_timeout }
+                    State::Starting { ctx, ssid, rsn_cfg, responder, start_timeout }
                 },
             },
             State::Started { ref mut bss } => {
@@ -267,19 +233,16 @@ impl<T: Tokens> super::Station for ApSme<T> {
         self.state = self.state.take().map(|mut state| match state {
             State::Idle { .. } => state,
             State::Starting { start_timeout, ctx,
-                              token, ssid, rsn_cfg } => match timed_event.event {
+                              responder, ssid, rsn_cfg } => match timed_event.event {
                 Event::Sme { event } => match event {
                     SmeEvent::StartTimeout if start_timeout == timed_event.id => {
                         warn!("Timed out waiting for MLME to start");
-                        ctx.user_sink.send(UserEvent::StartComplete {
-                            token,
-                            result: StartResult::TimedOut,
-                        });
+                        responder.respond(StartResult::TimedOut);
                         State::Idle { ctx }
                     }
-                    _ => State::Starting { start_timeout, ctx, token, ssid, rsn_cfg },
+                    _ => State::Starting { start_timeout, ctx, responder, ssid, rsn_cfg },
                 }
-                _ => State::Starting { start_timeout, ctx, token, ssid, rsn_cfg },
+                _ => State::Starting { start_timeout, ctx, responder, ssid, rsn_cfg },
             },
             State::Started { ref mut bss } => {
                 bss.handle_timeout(timed_event);
@@ -300,14 +263,11 @@ fn validate_config(config: &Config) -> Result<(), StartResult> {
     }
 }
 
-fn handle_start_conf<T: Tokens>(conf: fidl_mlme::StartConfirm, ctx: Context<T>, ssid: Ssid,
-                                rsn_cfg: Option<RsnCfg>, token: T::StartToken) -> State<T> {
+fn handle_start_conf(conf: fidl_mlme::StartConfirm, ctx: Context, ssid: Ssid,
+                     rsn_cfg: Option<RsnCfg>, responder: Responder<StartResult>) -> State {
     match conf.result_code {
         fidl_mlme::StartResultCodes::Success => {
-            ctx.user_sink.send(UserEvent::StartComplete {
-                token,
-                result: StartResult::Success,
-            });
+            responder.respond(StartResult::Success);
             State::Started {
                 bss: InfraBss {
                     ssid,
@@ -319,16 +279,13 @@ fn handle_start_conf<T: Tokens>(conf: fidl_mlme::StartConfirm, ctx: Context<T>, 
         },
         result_code => {
             error!("failed to start BSS: {:?}", result_code);
-            ctx.user_sink.send(UserEvent::StartComplete {
-                token,
-                result: StartResult::InternalError,
-            });
+            responder.respond(StartResult::InternalError);
             State::Idle { ctx }
         }
     }
 }
 
-impl<T: Tokens> InfraBss<T> {
+impl InfraBss {
     fn handle_auth_ind(&mut self, ind: fidl_mlme::AuthenticateIndication) {
         if self.client_map.remove_client(&ind.peer_sta_address).is_some() {
             warn!("client {:?} authenticates while still associated; removed client from map",
@@ -550,7 +507,7 @@ mod tests {
 
     #[test]
     fn authenticate_while_sme_is_idle() {
-        let (mut sme, mut mlme_stream, _, _) = create_sme();
+        let (mut sme, mut mlme_stream, _) = create_sme();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
@@ -562,8 +519,8 @@ mod tests {
 
     #[test]
     fn ap_starts_success() {
-        let (mut sme, mut mlme_stream, mut user_stream, _) = create_sme();
-        sme.on_start_command(unprotected_config(), 10);
+        let (mut sme, mut mlme_stream, _) = create_sme();
+        let mut receiver = sme.on_start_command(unprotected_config());
 
         let msg = mlme_stream.try_next().unwrap().expect("expect mlme message");
         if let MlmeRequest::Start(start_req) = msg {
@@ -577,86 +534,76 @@ mod tests {
             panic!("expect start AP request to MLME");
         }
 
-        match user_stream.try_next() {
-            Err(e) => assert_eq!(e.description(), "receiver channel is empty"),
-            _ => panic!("unexpected event in user stream"),
-        }
-
+        assert_eq!(Ok(None), receiver.try_recv());
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
-        verify_start_complete(&mut user_stream, 10, StartResult::Success);
+        assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
     }
 
     #[test]
     fn ap_starts_timeout() {
-        let (mut sme, _, mut user_stream, mut time_stream) = create_sme();
-        sme.on_start_command(unprotected_config(), 10);
+        let (mut sme, _, mut time_stream) = create_sme();
+        let mut receiver = sme.on_start_command(unprotected_config());
 
         let (_, event) = time_stream.try_next().unwrap().expect("expect timer message");
         sme.on_timeout(event);
 
-        let msg = user_stream.try_next().unwrap().expect("expect user message");
-        if let UserEvent::StartComplete { token, result } = msg {
-            assert_eq!(token, 10);
-            assert_eq!(result, StartResult::TimedOut);
-        } else {
-            panic!("expect start complete message to user");
-        }
+        assert_eq!(Ok(Some(StartResult::TimedOut)), receiver.try_recv());
     }
 
     #[test]
     fn ap_starts_fails() {
-        let (mut sme, _, mut user_stream, _) = create_sme();
-        sme.on_start_command(unprotected_config(), 10);
+        let (mut sme, _, _) = create_sme();
+        let mut receiver = sme.on_start_command(unprotected_config());
 
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::NotSupported));
-        verify_start_complete(&mut user_stream, 10, StartResult::InternalError);
+        assert_eq!(Ok(Some(StartResult::InternalError)), receiver.try_recv());
     }
 
     #[test]
     fn start_req_while_ap_is_starting() {
-        let (mut sme, _, mut user_stream, _) = create_sme();
-        sme.on_start_command(unprotected_config(), 10);
+        let (mut sme, _, _) = create_sme();
+        let mut receiver_one = sme.on_start_command(unprotected_config());
 
         // While SME is starting, any start request receives an error immediately
-        sme.on_start_command(unprotected_config(), 11);
-        verify_start_complete(&mut user_stream, 11, StartResult::PreviousStartInProgress);
+        let mut receiver_two = sme.on_start_command(unprotected_config());
+        assert_eq!(Ok(Some(StartResult::PreviousStartInProgress)), receiver_two.try_recv());
 
         // Start confirmation for first request should still have an affect
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
-        verify_start_complete(&mut user_stream, 10, StartResult::Success);
+        assert_eq!(Ok(Some(StartResult::Success)), receiver_one.try_recv());
     }
 
     #[test]
     fn ap_stops_while_idle() {
-        let (mut sme, _, mut user_stream, _) = create_sme();
-        sme.on_stop_command(10);
-        verify_stop_complete(&mut user_stream, 10);
+        let (mut sme, _, _) = create_sme();
+        let mut receiver = sme.on_stop_command();
+        assert_eq!(Ok(Some(())), receiver.try_recv());
     }
 
     #[test]
     fn stop_req_while_ap_is_starting() {
-        let (mut sme, _, mut user_stream, _) = create_sme();
-        sme.on_start_command(unprotected_config(), 10);
-        sme.on_stop_command(11);
-        verify_start_complete(&mut user_stream, 10, StartResult::Canceled);
-        verify_stop_complete(&mut user_stream, 11);
+        let (mut sme, _, _) = create_sme();
+        let mut start_receiver = sme.on_start_command(unprotected_config());
+        let mut stop_receiver = sme.on_stop_command();
+        assert_eq!(Ok(Some(StartResult::Canceled)), start_receiver.try_recv());
+        assert_eq!(Ok(Some(())), stop_receiver.try_recv());
     }
 
     #[test]
     fn ap_stops_after_started() {
-        let (mut sme, mut mlme_stream, mut user_stream, _) = start_unprotected_ap();
-        sme.on_stop_command(10);
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
+        let mut receiver = sme.on_stop_command();
 
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::Stop(stop_req) => assert_eq!(stop_req.ssid, SSID.to_vec()),
             _ => panic!("expect stop AP request to MLME"),
         }
-        verify_stop_complete(&mut user_stream, 10);
+        assert_eq!(Ok(Some(())), receiver.try_recv());
     }
 
     #[test]
     fn client_authenticates_supported_authentication_type() {
-        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
@@ -664,7 +611,7 @@ mod tests {
 
     #[test]
     fn client_authenticates_unsupported_authentication_type() {
-        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         let auth_ind = client.create_auth_ind(fidl_mlme::AuthenticationTypes::FastBssTransition);
         sme.on_mlme_event(auth_ind);
@@ -673,7 +620,7 @@ mod tests {
 
     #[test]
     fn client_associates_unprotected_network() {
-        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         sme.on_mlme_event(client.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
         client.verify_auth_resp(&mut mlme_stream, fidl_mlme::AuthenticateResultCodes::Success);
@@ -684,7 +631,7 @@ mod tests {
 
     #[test]
     fn client_associates_valid_rsne() {
-        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _) = start_protected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
@@ -695,7 +642,7 @@ mod tests {
 
     #[test]
     fn client_associates_invalid_rsne() {
-        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _) = start_protected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
@@ -706,7 +653,7 @@ mod tests {
 
     #[test]
     fn rsn_handshake_timeout() {
-        let (mut sme, mut mlme_stream, _, mut time_stream) = start_protected_ap();
+        let (mut sme, mut mlme_stream, mut time_stream) = start_protected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
 
@@ -733,7 +680,7 @@ mod tests {
 
     #[test]
     fn client_restarts_authentication_flow() {
-        let (mut sme, mut mlme_stream, _, _) = start_unprotected_ap();
+        let (mut sme, mut mlme_stream, _) = start_unprotected_ap();
         let client = Client::default();
         client.authenticate_and_drain_mlme(&mut sme, &mut mlme_stream);
         client.associate_and_drain_mlme(&mut sme, &mut mlme_stream, None);
@@ -747,7 +694,7 @@ mod tests {
 
     #[test]
     fn multiple_clients_associate() {
-        let (mut sme, mut mlme_stream, _, _) = start_protected_ap();
+        let (mut sme, mut mlme_stream, _) = start_protected_ap();
         let client1 = Client::default();
         let client2 = Client { addr: CLIENT_ADDR2 };
 
@@ -774,26 +721,6 @@ mod tests {
         }
     }
 
-    fn verify_start_complete(user_stream: &mut UserStream<FakeTokens>,
-                             expected_token: <FakeTokens as Tokens>::StartToken,
-                             expected_start_result: StartResult) {
-        let msg = user_stream.try_next().unwrap().expect("expect user message");
-        if let UserEvent::StartComplete { token, result } = msg {
-            assert_eq!(token, expected_token);
-            assert_eq!(result, expected_start_result);
-        } else {
-            panic!("expect start complete message to user");
-        }
-    }
-
-    fn verify_stop_complete(user_stream: &mut UserStream<FakeTokens>,
-                            expected_token: <FakeTokens as Tokens>::StartToken) {
-        match user_stream.try_next().unwrap().expect("expect user message") {
-            UserEvent::StopComplete { token } => assert_eq!(token, expected_token),
-            _ => panic!("expect stop complete message to user"),
-        }
-    }
-
     struct Client {
         addr: MacAddr
     }
@@ -804,7 +731,7 @@ mod tests {
         }
 
         fn authenticate_and_drain_mlme(&self,
-                                       sme: &mut ApSme<FakeTokens>,
+                                       sme: &mut ApSme,
                                        mlme_stream: &mut crate::MlmeStream) {
             sme.on_mlme_event(self.create_auth_ind(fidl_mlme::AuthenticationTypes::OpenSystem));
 
@@ -817,7 +744,7 @@ mod tests {
         }
 
         fn associate_and_drain_mlme(&self,
-                                    sme: &mut ApSme<FakeTokens>,
+                                    sme: &mut ApSme,
                                     mlme_stream: &mut crate::MlmeStream,
                                     rsne: Option<Vec<u8>>) {
             sme.on_mlme_event(self.create_assoc_ind(rsne));
@@ -896,22 +823,18 @@ mod tests {
         }
     }
 
-    fn start_protected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
-                                TimeStream) {
+    fn start_protected_ap() -> (ApSme, crate::MlmeStream, TimeStream) {
         start_ap(true)
     }
 
-    fn start_unprotected_ap() -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
-                                  TimeStream) {
+    fn start_unprotected_ap() -> (ApSme, crate::MlmeStream, TimeStream) {
         start_ap(false)
     }
 
-    fn start_ap(protected: bool) -> (ApSme<FakeTokens>, crate::MlmeStream, UserStream<FakeTokens>,
-                                     TimeStream) {
-
-        let (mut sme, mut mlme_stream, mut event_stream, mut time_stream) = create_sme();
+    fn start_ap(protected: bool) -> (ApSme, crate::MlmeStream, TimeStream) {
+        let (mut sme, mut mlme_stream, mut time_stream) = create_sme();
         let config = if protected { protected_config() } else { unprotected_config() };
-        sme.on_start_command(config, 10);
+        let mut receiver = sme.on_start_command(config);
         match mlme_stream.try_next().unwrap().expect("expect mlme message") {
             MlmeRequest::Start(..) => {} // expected path
             _ => panic!("expect start AP to MLME"),
@@ -919,23 +842,15 @@ mod tests {
         // drain time stream
         while let Ok(..) = time_stream.try_next() {}
         sme.on_mlme_event(create_start_conf(fidl_mlme::StartResultCodes::Success));
-        match event_stream.try_next().unwrap().expect("expect user event message") {
-            UserEvent::StartComplete { .. } => {} // expected path
-            _ => panic!("expect start complete messsage to user"),
-        }
-        (sme, mlme_stream, event_stream, time_stream)
+
+        assert_eq!(Ok(Some(StartResult::Success)), receiver.try_recv());
+        (sme, mlme_stream, time_stream)
     }
 
-    fn create_sme() -> (ApSme<FakeTokens>, MlmeStream, UserStream<FakeTokens>, TimeStream) {
+    fn create_sme() -> (ApSme, MlmeStream, TimeStream) {
         ApSme::new(DeviceInfo {
             addr: AP_ADDR,
             bands: vec![],
         })
-    }
-
-    struct FakeTokens;
-    impl Tokens for FakeTokens {
-        type StartToken = i32;
-        type StopToken = i32;
     }
 }
