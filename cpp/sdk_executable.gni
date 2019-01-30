@@ -10,7 +10,7 @@ import("//build/sdk/sdk_atom.gni")
 # allow the resulting binary to be included in an SDK.
 #
 #   category (required)
-#     Publication level of the library in SDKs.
+#     Publication level of the executable in SDKs.
 #     See //build/sdk/sdk_atom.gni.
 #
 #   sdk_deps (optional)
