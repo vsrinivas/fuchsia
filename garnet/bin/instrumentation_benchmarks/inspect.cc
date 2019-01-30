@@ -26,6 +26,7 @@ using component::UIntMetric;
 using component::DoubleMetric;
 using component::CallbackMetric;
 using component::Property;
+using component::Object;
 
 const char kValue[] = "value";
 const int kSmallPropertySize = 8;
@@ -417,7 +418,110 @@ bool TestCallbackPropertySet(perftest::RepeatState* state) {
   return true;
 }
 
-// TODO(maybe): Profile ToFidl() of callback Property, with big/small string/vector?
+bool TestObjectLifecycle(perftest::RepeatState* state) {
+  state->DeclareStep("Create");
+  state->DeclareStep("Destroy");
+  while (state->KeepRunning()) {
+    auto item = Object::Make("a_name");
+    state->NextStep();
+  }
+  return true;
+}
+
+bool TestObjectParenting(perftest::RepeatState* state) {
+  auto parent = Object::Make("parent");
+  auto first_child = Object::Make("first");
+  auto second_child = Object::Make("second");
+  state->DeclareStep("AllocateChildren");
+  state->DeclareStep("AddFirstChild");
+  state->DeclareStep("AddSecondChild");
+  state->DeclareStep("GetFirstChild");
+  state->DeclareStep("GetInvalidChild");
+  state->DeclareStep("RemoveSecondChild");
+  state->DeclareStep("RemoveFirstChild");
+  state->DeclareStep("RemoveInvalidChild");
+  while (state->KeepRunning()) {
+    state->NextStep();
+    parent->SetChild(first_child);
+    state->NextStep();
+    parent->SetChild(second_child);
+    state->NextStep();
+    perftest::DoNotOptimize(parent->GetChild("first"));
+    state->NextStep();
+    perftest::DoNotOptimize(parent->GetChild("invalid"));
+    state->NextStep();
+    parent->TakeChild("second");
+    state->NextStep();
+    parent->TakeChild("first");
+    state->NextStep();
+    parent->TakeChild("invalid");
+  }
+  return true;
+}
+
+bool TestObjectMetricOperations(perftest::RepeatState* state) {
+  auto parent = Object::Make("parent");
+  state->DeclareStep("CreateMetric");
+  state->DeclareStep("Set");
+  state->DeclareStep("Add");
+  state->DeclareStep("Sub");
+  state->DeclareStep("Remove");
+  state->DeclareStep("RemoveMissing");
+  while (state->KeepRunning()) {
+    Metric metric = IntMetric(10);
+    state->NextStep();
+    parent->SetMetric("metric", std::move(metric));
+    state->NextStep();
+    parent->AddMetric("metric", 1);
+    state->NextStep();
+    parent->SubMetric("metric", 1);
+    state->NextStep();
+    parent->RemoveMetric("metric");
+    state->NextStep();
+    parent->RemoveMetric("not_there");
+  }
+  return true;
+}
+
+bool TestObjectPropertyOperations(perftest::RepeatState* state) {
+  auto parent = Object::Make("parent");
+  state->DeclareStep("CreateProperty");
+  state->DeclareStep("Set");
+  state->DeclareStep("Remove");
+  state->DeclareStep("RemoveMissing");
+  while (state->KeepRunning()) {
+    Property property = Property("data");
+    state->NextStep();
+    parent->SetProperty("property", std::move(property));
+    state->NextStep();
+    parent->RemoveMetric("property");
+    state->NextStep();
+    parent->RemoveMetric("not_there");
+  }
+  return true;
+}
+
+bool TestObjectChildrenCallback(perftest::RepeatState* state) {
+  auto parent = Object::Make("parent");
+  state->DeclareStep("SetCallback");
+  state->DeclareStep("RemoveCallback");
+  while (state->KeepRunning()) {
+    parent->SetChildrenCallback([] (auto vector) { });
+    state->NextStep();
+    parent->ClearChildrenCallback();
+  }
+  // TODO(maybe): Test non-empty objects?
+  return true;
+}
+
+bool TestObjectToFidl(perftest::RepeatState* state) {
+  auto parent = Object::Make("parent");
+  while (state->KeepRunning()) {
+    perftest::DoNotOptimize(parent->ToFidl());
+  }
+  // TODO(maybe): Test non-empty objects?
+  return true;
+}
 
 // /pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks -p
 
@@ -510,6 +614,13 @@ void RegisterTests() {
 
   perftest::RegisterTest("Expose/CallbackProperty/Lifecycle", TestCallbackPropertyLifecycle);
   perftest::RegisterTest("Expose/CallbackProperty/Set", TestCallbackPropertySet);
+
+  perftest::RegisterTest("Expose/Object/Lifecycle", TestObjectLifecycle);
+  perftest::RegisterTest("Expose/Object/Parenting", TestObjectParenting);
+  perftest::RegisterTest("Expose/Object/MetricOperations", TestObjectMetricOperations);
+  perftest::RegisterTest("Expose/Object/PropertyOperations", TestObjectPropertyOperations);
+  perftest::RegisterTest("Expose/Object/ToFidl", TestObjectToFidl);
+  perftest::RegisterTest("Expose/Object/ChildrenCallback", TestObjectChildrenCallback);
 }
 PERFTEST_CTOR(RegisterTests);
 
