@@ -20,8 +20,13 @@ template("test") {
     forward_variables_from(invoker, "*")
     testonly = true
     if (is_linux || is_mac) {
+      # Write runtime dependencies to the root out dir of the base host
+      # toolchain so that the file may be found by cross-referencing with
+      # $root_build_dir/host_tests.json.
       test_name = get_path_info(target_name, "name")
-      write_runtime_deps = "$target_out_dir/$test_name.$test_data_ext"
+      host_out_dir = get_label_info(":$target_name(${toolchain_variant.base})",
+                                    "target_out_dir")
+      write_runtime_deps = "$host_out_dir/$test_name.$test_data_ext"
     }
   }
 }
