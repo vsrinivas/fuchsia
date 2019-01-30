@@ -530,6 +530,41 @@ bool interfaces_and_request_of_interfaces() {
     END_TEST;
 }
 
+bool recursive_opt_request() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct WebMessage {
+  request<MessagePort>? opt_message_port;
+};
+
+interface MessagePort {
+  PostMessage(WebMessage message) -> (bool success);
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto web_message = library.LookupStruct("WebMessage");
+  EXPECT_NONNULL(web_message);
+  EXPECT_EQ(web_message->typeshape.Size(), 4);
+  EXPECT_EQ(web_message->typeshape.Alignment(), 4);
+  EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+
+  auto message_port = library.LookupInterface("MessagePort");
+  EXPECT_NONNULL(message_port);
+  EXPECT_EQ(message_port->methods.size(), 1);
+  auto& post_message = message_port->methods[0];
+  auto post_message_request = post_message.maybe_request;
+  EXPECT_NONNULL(post_message_request);
+  EXPECT_EQ(post_message_request->typeshape.Size(), 24);
+  EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
+  EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+
+  END_TEST;
+}
+
 } // namespace
 
 BEGIN_TEST_CASE(max_bytes_tests);
@@ -543,4 +578,5 @@ RUN_TEST(strings);
 RUN_TEST(arrays);
 RUN_TEST(xunions);
 RUN_TEST(interfaces_and_request_of_interfaces);
+RUN_TEST(recursive_opt_request);
 END_TEST_CASE(max_bytes_tests);
