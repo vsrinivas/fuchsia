@@ -1,0 +1,73 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "sysmem-assistant"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/fidl/fuchsia-hardware-tee",
+    "//zircon/public/fidl/fuchsia-sysmem:fuchsia-sysmem_c",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/tee-client-api",
+  ]
+}
+
+package("sysmem-assistant") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "sysmem-assistant"
+
+  meta = [
+    {
+      path = rebase_path("meta/sysmem-assistant.cmx")
+      dest = "sysmem-assistant.cmx"
+    },
+  ]
+}
+
+declare_args() {
+  # The secmem TA must be obtained elsewhere and put into the firmware
+  # directory.
+  have_secmem_ta = false
+}
+
+package("ta-image") {
+  deprecated_system_image = true
+
+  if (have_secmem_ta) {
+    secmem_ta_uuid = "2c1a33c0-44cc-11e5-bc3b-0002a5d5c51b"
+    libraries = [
+      {
+        source = rebase_path("firmware/$secmem_ta_uuid.ta")
+        name = "firmware/$secmem_ta_uuid.ta"
+      },
+    ]
+  }
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "sysmem_assistant_config"
+
+  # Don't launch without a TA to use.
+  if (have_secmem_ta) {
+    resources = [
+      {
+        dest = "sysmgr/sysmem-assistant.config"
+        path = rebase_path("sysmem-assistant.config")
+      },
+    ]
+  }
+}

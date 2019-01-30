@@ -9,4 +9,5 @@ fuchsia_packages = []
 board_packages = [
   # Include all drivers for now.
   "garnet/packages/prod/drivers",
+  "garnet/packages/prod/sysmem-assistant",
 ]
