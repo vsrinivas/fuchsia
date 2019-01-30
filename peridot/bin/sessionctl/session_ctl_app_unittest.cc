@@ -101,6 +101,46 @@ TEST_F(SessionCtlAppTest, AddMod) {
   EXPECT_EQ(1, test_executor_.execute_count());
 }
 
+TEST_F(SessionCtlAppTest, AddModWeb) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "add_mod", "https://www.google.com"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+
+  // Assert the story and the mod were added with default story and mod names
+  auto story_data = GetStoryData("www.google.com");
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ("www.google.com", story_data->story_name);
+  EXPECT_EQ("www.google.com",
+            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ("https://www.google.com",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
+TEST_F(SessionCtlAppTest, AddModExoticScheme) {
+  // Add a mod
+  auto command_line = fxl::CommandLineFromInitializerList(
+      {"sessionctl", "add_mod", "foobar-pkg://mod_url?q=bad+wolf"});
+  SessionCtlApp sessionctl = CreateSessionCtl(command_line);
+  RunLoopUntilCommandExecutes([&] {
+    return sessionctl.ExecuteCommand(kAddModCommandString, command_line);
+  });
+
+  // Assert the story and the mod were added with default story and mod names
+  auto story_data = GetStoryData("mod_url");
+  ASSERT_TRUE(story_data);
+  EXPECT_EQ("mod_url", story_data->story_name);
+  EXPECT_EQ("mod_url",
+            test_executor_.last_commands().at(0).add_mod().mod_name.at(0));
+  EXPECT_EQ("foobar-pkg://mod_url?q=bad+wolf",
+            test_executor_.last_commands().at(0).add_mod().intent.handler);
+  EXPECT_EQ(1, test_executor_.execute_count());
+}
+
 TEST_F(SessionCtlAppTest, AddModOverrideDefaults) {
   // Add a mod
   auto command_line = fxl::CommandLineFromInitializerList(

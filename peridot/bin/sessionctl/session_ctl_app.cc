@@ -89,9 +89,19 @@ std::string SessionCtlApp::ExecuteAddModCommand(
       story_name = match[1];
     }
   } else {
-    // Replace mod url short name with full package path
-    mod_url =
-        fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
+    // https://tools.ietf.org/html/rfc3986#section-3.1
+    std::regex url_regex("[a-zA-Z][a-zA-Z0-9+-.]+://([^/?#]+)");
+    std::smatch match;
+    if (std::regex_search(mod_url, match, url_regex)) {
+      // Extract the domain from the url and use it as the mod and
+      // story name
+      mod_name = match[1];
+      story_name = match[1];
+    } else {
+      // Replace mod url short name with full package path
+      mod_url =
+          fxl::StringPrintf(kFuchsiaPkgPath, mod_url.c_str(), mod_url.c_str());
+    }
   }
 
   // If the following options aren't specified, their respective values will
