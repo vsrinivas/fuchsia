@@ -97,6 +97,7 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
             LaunchService {
                 name: String::from("fuchsia.net.SocketProvider"),
                 url: String::from(NETSTACK_URL),
+                arguments: None,
             },
         ],
         // pass the endpoint's proxy to create a virtual device
@@ -140,10 +141,7 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
     let (comp_controller, comp_controller_req) =
         fidl::endpoints::create_proxy::<ComponentControllerMarker>()?;
     launcher.create_component(&mut linfo, Some(comp_controller_req))?;
-    Ok(Env {
-        controller: comp_controller,
-        _endpoint: ep,
-    })
+    Ok(Env { controller: comp_controller, _endpoint: ep })
 }
 
 async fn wait_for_component(component: &ComponentControllerProxy) -> Result<(), Error> {
@@ -182,15 +180,9 @@ async fn create_network() -> Result<NetworkProxy, Error> {
     let netctx = client::connect_to_service::<NetworkContextMarker>()?;
     let (netm, netm_server_end) = fidl::endpoints::create_proxy::<NetworkManagerMarker>()?;
     netctx.get_network_manager(netm_server_end)?;
-    let config = NetworkConfig {
-        latency: None,
-        packet_loss: None,
-        reorder: None,
-    };
+    let config = NetworkConfig { latency: None, packet_loss: None, reorder: None };
     let (_, network) = await!(netm.create_network(NETWORK_NAME, config))?;
-    let network = network
-        .ok_or_else(|| format_err!("can't create network"))?
-        .into_proxy()?;
+    let network = network.ok_or_else(|| format_err!("can't create network"))?.into_proxy()?;
     Ok(network)
 }
 
@@ -202,14 +194,8 @@ async fn prepare_env() -> Result<(), Error> {
     let bus = common::BusConnection::new("root")?;
 
     println!("Starting server...");
-    let server = await!(spawn_env(
-        &net,
-        SpawnOptions {
-            env_name: "server",
-            ip: server_ip,
-            remote: None
-        }
-    ))?;
+    let server =
+        await!(spawn_env(&net, SpawnOptions { env_name: "server", ip: server_ip, remote: None }))?;
 
     let () = await!(bus
         .wait_for_event(common::SERVER_READY)
@@ -220,11 +206,7 @@ async fn prepare_env() -> Result<(), Error> {
 
     let client = await!(spawn_env(
         &net,
-        SpawnOptions {
-            env_name: "client",
-            ip: client_ip,
-            remote: Some(server_ip)
-        }
+        SpawnOptions { env_name: "client", ip: client_ip, remote: Some(server_ip) }
     ))?;
     let () = await!(wait_for_component(&client.controller)
         .on_timeout(TIMEOUT.seconds().after_now(), || Err(format_err!(
