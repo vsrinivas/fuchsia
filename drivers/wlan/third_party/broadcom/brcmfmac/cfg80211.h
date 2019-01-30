@@ -137,13 +137,18 @@ enum brcmf_profile_fwsup {
  *
  * @bssid: bssid of joined/joining ibss.
  * @sec: security information.
- * @key: key information
+ * @key: key information.
+ * @use_fwsup: use firmware supplicant.
+ * @beacon_period: in AP mode, beacon period in TUs.
  */
 struct brcmf_cfg80211_profile {
     uint8_t bssid[ETH_ALEN];
     struct brcmf_cfg80211_security sec;
     struct brcmf_wsec_key key[BRCMF_MAX_DEFAULT_KEYS];
     enum brcmf_profile_fwsup use_fwsup;
+
+    // AP-specific
+    uint32_t beacon_period;
 };
 
 /**

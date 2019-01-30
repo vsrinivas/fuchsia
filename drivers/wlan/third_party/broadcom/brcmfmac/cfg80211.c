@@ -1328,6 +1328,33 @@ static zx_status_t brcmf_set_sharedkey(struct net_device* ndev,
 }
 #endif // FIGURE_THIS_OUT_LATER
 
+// Retrieve information about the station with the specified MAC address. Note that
+// association ID is only available when operating in AP mode (for our clients).
+static zx_status_t brcmf_cfg80211_get_station(struct net_device* ndev, const uint8_t* mac,
+                                              struct brcmf_sta_info_le* sta_info_le) {
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+    zx_status_t err = ZX_OK;
+
+    brcmf_dbg(TRACE, "Enter, MAC %" PRId64 "\n", *(uint64_t*)mac & 0xffffffffffff);
+    if (!check_vif_up(ifp->vif)) {
+        return ZX_ERR_IO;
+    }
+
+    memset(sta_info_le, 0, sizeof(*sta_info_le));
+    memcpy(sta_info_le, mac, ETH_ALEN);
+
+    // First, see if we have a TDLS peer
+    err = brcmf_fil_iovar_data_get(ifp, "tdls_sta_info", sta_info_le, sizeof(*sta_info_le));
+    if (err != ZX_OK) {
+        err = brcmf_fil_iovar_data_get(ifp, "sta_info", sta_info_le, sizeof(*sta_info_le));
+        if (err != ZX_OK) {
+            brcmf_err("GET STA INFO failed, %d\n", err);
+        }
+    }
+    brcmf_dbg(TRACE, "Exit\n");
+    return err;
+}
+
 void brcmf_return_assoc_result(struct net_device* ndev, uint8_t result_code) {
     wlanif_assoc_confirm_t conf;
 
@@ -1890,194 +1917,6 @@ static zx_status_t brcmf_cfg80211_config_default_mgmt_key(struct wiphy* wiphy,
     brcmf_dbg(INFO, "Not supported\n");
 
     return ZX_ERR_NOT_SUPPORTED;
-}
-
-static void brcmf_convert_sta_flags(uint32_t fw_sta_flags, struct station_info* si) {
-    struct nl80211_sta_flag_update* sfu;
-
-    brcmf_dbg(TRACE, "flags %08x\n", fw_sta_flags);
-    si->filled |= BIT(NL80211_STA_INFO_STA_FLAGS);
-    sfu = &si->sta_flags;
-    sfu->mask = BIT(NL80211_STA_FLAG_WME) | BIT(NL80211_STA_FLAG_AUTHENTICATED) |
-                BIT(NL80211_STA_FLAG_ASSOCIATED) | BIT(NL80211_STA_FLAG_AUTHORIZED);
-    if (fw_sta_flags & BRCMF_STA_WME) {
-        sfu->set |= BIT(NL80211_STA_FLAG_WME);
-    }
-    if (fw_sta_flags & BRCMF_STA_AUTHE) {
-        sfu->set |= BIT(NL80211_STA_FLAG_AUTHENTICATED);
-    }
-    if (fw_sta_flags & BRCMF_STA_ASSOC) {
-        sfu->set |= BIT(NL80211_STA_FLAG_ASSOCIATED);
-    }
-    if (fw_sta_flags & BRCMF_STA_AUTHO) {
-        sfu->set |= BIT(NL80211_STA_FLAG_AUTHORIZED);
-    }
-}
-
-static void brcmf_fill_bss_param(struct brcmf_if* ifp, struct station_info* si) {
-    struct {
-        uint32_t len;
-        struct brcmf_bss_info_le bss_le;
-    } * buf;
-    uint16_t capability;
-    zx_status_t err;
-
-    buf = calloc(1, WL_BSS_INFO_MAX);
-    if (!buf) {
-        return;
-    }
-
-    buf->len = WL_BSS_INFO_MAX;
-    err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_BSS_INFO, buf, WL_BSS_INFO_MAX);
-    if (err != ZX_OK) {
-        brcmf_err("Failed to get bss info (%d)\n", err);
-        goto out_kfree;
-    }
-    si->filled |= BIT(NL80211_STA_INFO_BSS_PARAM);
-    si->bss_param.beacon_interval = buf->bss_le.beacon_period;
-    si->bss_param.dtim_period = buf->bss_le.dtim_period;
-    capability = buf->bss_le.capability;
-    if (capability & IEEE80211_HT_STBC_PARAM_DUAL_CTS_PROT) {
-        si->bss_param.flags |= BSS_PARAM_FLAGS_CTS_PROT;
-    }
-    if (capability & WLAN_CAPABILITY_SHORT_PREAMBLE) {
-        si->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_PREAMBLE;
-    }
-    if (capability & WLAN_CAPABILITY_SHORT_SLOT_TIME) {
-        si->bss_param.flags |= BSS_PARAM_FLAGS_SHORT_SLOT_TIME;
-    }
-
-out_kfree:
-    free(buf);
-}
-
-static zx_status_t brcmf_cfg80211_get_station(struct wiphy* wiphy, struct net_device* ndev,
-                                              const uint8_t* mac, struct station_info* sinfo) {
-    struct brcmf_if* ifp = ndev_to_if(ndev);
-    struct brcmf_scb_val_le scb_val;
-    zx_status_t err = ZX_OK;
-    struct brcmf_sta_info_le sta_info_le;
-    uint32_t sta_flags;
-    uint32_t is_tdls_peer;
-    int32_t total_rssi;
-    int32_t count_rssi;
-    int rssi;
-    uint32_t i;
-
-    brcmf_dbg(TRACE, "Enter, MAC %pM\n", mac);
-    if (!check_vif_up(ifp->vif)) {
-        return ZX_ERR_IO;
-    }
-
-    memset(&sta_info_le, 0, sizeof(sta_info_le));
-    memcpy(&sta_info_le, mac, ETH_ALEN);
-    err = brcmf_fil_iovar_data_get(ifp, "tdls_sta_info", &sta_info_le, sizeof(sta_info_le));
-    is_tdls_peer = err == ZX_OK;
-    if (err != ZX_OK) {
-        err = brcmf_fil_iovar_data_get(ifp, "sta_info", &sta_info_le, sizeof(sta_info_le));
-        if (err != ZX_OK) {
-            brcmf_err("GET STA INFO failed, %d\n", err);
-            goto done;
-        }
-    }
-    brcmf_dbg(TRACE, "version %d\n", sta_info_le.ver);
-    sinfo->filled = BIT(NL80211_STA_INFO_INACTIVE_TIME);
-    sinfo->inactive_time = sta_info_le.idle * 1000;
-    sta_flags = sta_info_le.flags;
-    brcmf_convert_sta_flags(sta_flags, sinfo);
-    sinfo->sta_flags.mask |= BIT(NL80211_STA_FLAG_TDLS_PEER);
-    if (is_tdls_peer) {
-        sinfo->sta_flags.set |= BIT(NL80211_STA_FLAG_TDLS_PEER);
-    } else {
-        sinfo->sta_flags.set &= ~BIT(NL80211_STA_FLAG_TDLS_PEER);
-    }
-    if (sta_flags & BRCMF_STA_ASSOC) {
-        sinfo->filled |= BIT(NL80211_STA_INFO_CONNECTED_TIME);
-        sinfo->connected_time = sta_info_le.in;
-        brcmf_fill_bss_param(ifp, sinfo);
-    }
-    if (sta_flags & BRCMF_STA_SCBSTATS) {
-        sinfo->filled |= BIT(NL80211_STA_INFO_TX_FAILED);
-        sinfo->tx_failed = sta_info_le.tx_failures;
-        sinfo->filled |= BIT(NL80211_STA_INFO_TX_PACKETS);
-        sinfo->tx_packets = sta_info_le.tx_pkts;
-        sinfo->tx_packets += sta_info_le.tx_mcast_pkts;
-        sinfo->filled |= BIT(NL80211_STA_INFO_RX_PACKETS);
-        sinfo->rx_packets = sta_info_le.rx_ucast_pkts;
-        sinfo->rx_packets += sta_info_le.rx_mcast_pkts;
-        if (sinfo->tx_packets) {
-            sinfo->filled |= BIT(NL80211_STA_INFO_TX_BITRATE);
-            sinfo->txrate.legacy = sta_info_le.tx_rate / 100;
-        }
-        if (sinfo->rx_packets) {
-            sinfo->filled |= BIT(NL80211_STA_INFO_RX_BITRATE);
-            sinfo->rxrate.legacy = sta_info_le.rx_rate / 100;
-        }
-        if (sta_info_le.ver >= 4) {
-            sinfo->filled |= BIT(NL80211_STA_INFO_TX_BYTES);
-            sinfo->tx_bytes = sta_info_le.tx_tot_bytes;
-            sinfo->filled |= BIT(NL80211_STA_INFO_RX_BYTES);
-            sinfo->rx_bytes = sta_info_le.rx_tot_bytes;
-        }
-        total_rssi = 0;
-        count_rssi = 0;
-        for (i = 0; i < BRCMF_ANT_MAX; i++) {
-            if (sta_info_le.rssi[i]) {
-                sinfo->chain_signal_avg[count_rssi] = sta_info_le.rssi[i];
-                sinfo->chain_signal[count_rssi] = sta_info_le.rssi[i];
-                total_rssi += sta_info_le.rssi[i];
-                count_rssi++;
-            }
-        }
-        if (count_rssi) {
-            sinfo->filled |= BIT(NL80211_STA_INFO_CHAIN_SIGNAL);
-            sinfo->chains = count_rssi;
-
-            sinfo->filled |= BIT(NL80211_STA_INFO_SIGNAL);
-            total_rssi /= count_rssi;
-            sinfo->signal = total_rssi;
-        } else if (brcmf_test_bit_in_array(BRCMF_VIF_STATUS_CONNECTED, &ifp->vif->sme_state)) {
-            memset(&scb_val, 0, sizeof(scb_val));
-            err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_RSSI, &scb_val, sizeof(scb_val));
-            if (err != ZX_OK) {
-                brcmf_err("Could not get rssi (%d)\n", err);
-                goto done;
-            } else {
-                rssi = scb_val.val;
-                sinfo->filled |= BIT(NL80211_STA_INFO_SIGNAL);
-                sinfo->signal = rssi;
-                brcmf_dbg(CONN, "RSSI %d dBm\n", rssi);
-            }
-        }
-    }
-done:
-    brcmf_dbg(TRACE, "Exit\n");
-    return err;
-}
-
-static zx_status_t brcmf_cfg80211_dump_station(struct wiphy* wiphy, struct net_device* ndev,
-                                                int idx, uint8_t* mac, struct station_info* sinfo) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_if* ifp = ndev_to_if(ndev);
-    zx_status_t err;
-
-    brcmf_dbg(TRACE, "Enter, idx %d\n", idx);
-
-    if (idx == 0) {
-        cfg->assoclist.count = BRCMF_MAX_ASSOCLIST;
-        err = brcmf_fil_cmd_data_get(ifp, BRCMF_C_GET_ASSOCLIST, &cfg->assoclist,
-                                     sizeof(cfg->assoclist));
-        if (err != ZX_OK) {
-            brcmf_err("BRCMF_C_GET_ASSOCLIST unsupported, err=%d\n", err);
-            cfg->assoclist.count = 0;
-            return ZX_ERR_NOT_SUPPORTED;
-        }
-    }
-    if (idx < (int)cfg->assoclist.count) {
-        memcpy(mac, cfg->assoclist.mac[idx], ETH_ALEN);
-        return brcmf_cfg80211_get_station(wiphy, ndev, mac, sinfo);
-    }
-    return ZX_ERR_NOT_FOUND;
 }
 
 static zx_status_t brcmf_cfg80211_set_power_mgmt(struct wiphy* wiphy, struct net_device* ndev,
@@ -3742,6 +3581,7 @@ static uint8_t brcmf_cfg80211_start_ap(struct net_device* ndev, wlanif_start_req
         brcmf_err("Beacon Interval Set Error, %s\n", zx_status_get_string(status));
         goto fail;
     }
+    ifp->vif->profile.beacon_period = req->beacon_period;
 
     status = brcmf_fil_cmd_int_set(ifp, BRCMF_C_SET_DTIMPRD, req->dtim_period);
     if (status != ZX_OK) {
@@ -3884,36 +3724,24 @@ static zx_status_t brcmf_cfg80211_change_beacon(struct wiphy* wiphy, struct net_
     return err;
 }
 
-static zx_status_t brcmf_cfg80211_del_station(struct wiphy* wiphy, struct net_device* ndev,
-                                              struct station_del_parameters* params) {
-    struct brcmf_cfg80211_info* cfg = wiphy_to_cfg(wiphy);
-    struct brcmf_scb_val_le scbval;
+// Deauthenticate with specified STA. The reason provided should be from WLAN_DEAUTH_REASON_*
+static zx_status_t brcmf_cfg80211_del_station(struct net_device* ndev, uint8_t* mac,
+                                              uint8_t reason) {
+    brcmf_dbg(TRACE, "Enter: reason: %d\n", reason);
+
     struct brcmf_if* ifp = ndev_to_if(ndev);
-    zx_status_t err;
-
-    if (!params->mac) {
-        return ZX_ERR_IO_NOT_PRESENT;
-    }
-
-    brcmf_dbg(TRACE, "Enter %pM\n", params->mac);
-
-    if (ifp->vif == cfg->p2p.bss_idx[P2PAPI_BSSCFG_DEVICE].vif) {
-        ifp = cfg->p2p.bss_idx[P2PAPI_BSSCFG_PRIMARY].vif->ifp;
-    }
-    if (!check_vif_up(ifp->vif)) {
-        return ZX_ERR_IO;
-    }
-
-    memcpy(&scbval.ea, params->mac, ETH_ALEN);
-    scbval.val = params->reason_code;
-    err =
-        brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON, &scbval, sizeof(scbval));
-    if (err != ZX_OK) {
-        brcmf_err("SCB_DEAUTHENTICATE_FOR_REASON failed %d\n", err);
+    struct brcmf_scb_val_le scbval;
+    memset(&scbval, 0, sizeof(scbval));
+    memcpy(&scbval.ea, mac, ETH_ALEN);
+    scbval.val = reason;
+    zx_status_t status = brcmf_fil_cmd_data_set(ifp, BRCMF_C_SCB_DEAUTHENTICATE_FOR_REASON,
+                                                &scbval, sizeof(scbval));
+    if (status != ZX_OK) {
+        brcmf_err("SCB_DEAUTHENTICATE_FOR_REASON failed %s\n", zx_status_get_string(status));
     }
 
     brcmf_dbg(TRACE, "Exit\n");
-    return err;
+    return status;
 }
 
 static zx_status_t brcmf_cfg80211_change_station(struct wiphy* wiphy, struct net_device* ndev,
@@ -4259,8 +4087,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .change_virtual_intf = brcmf_cfg80211_change_iface,
     .scan = brcmf_cfg80211_scan,
     .set_wiphy_params = brcmf_cfg80211_set_wiphy_params,
-    .get_station = brcmf_cfg80211_get_station,
-    .dump_station = brcmf_cfg80211_dump_station,
     .set_tx_power = brcmf_cfg80211_set_tx_power,
     .get_tx_power = brcmf_cfg80211_get_tx_power,
     .add_key = brcmf_cfg80211_add_key,
@@ -4278,7 +4104,6 @@ static struct cfg80211_ops brcmf_cfg80211_ops = {
     .flush_pmksa = brcmf_cfg80211_flush_pmksa,
     .stop_ap = brcmf_cfg80211_stop_ap,
     .change_beacon = brcmf_cfg80211_change_beacon,
-    .del_station = brcmf_cfg80211_del_station,
     .change_station = brcmf_cfg80211_change_station,
     .sched_scan_start = brcmf_cfg80211_sched_scan_start,
     .sched_scan_stop = brcmf_cfg80211_sched_scan_stop,
@@ -4411,9 +4236,41 @@ void brcmf_hook_auth_req(void* ctx, wlanif_auth_req_t* req) {
     ndev->if_callbacks->auth_conf(ndev->if_callback_cookie, &response);
 }
 
+// In AP mode, receive a response from wlanif confirming that a client was successfully
+// authenticated.
 void brcmf_hook_auth_resp(void* ctx, wlanif_auth_resp_t* ind) {
+    struct net_device* ndev = ctx;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+
+    if (!brcmf_is_apmode(ifp->vif)) {
+        brcmf_err("Received AUTHENTICATE.response but not in AP mode - ignoring\n");
+        return;
+    }
+
+    if (ind->result_code == WLAN_AUTH_RESULT_SUCCESS) {
+        brcmf_dbg(CONN, "Successfully authenticated client %" PRId64 "\n",
+                  *(uint64_t*)ind->peer_sta_address & 0xffffffffffff);
+        return;
+    }
+
+    uint8_t reason;
+    switch (ind->result_code) {
+    case WLAN_AUTH_RESULT_REFUSED:
+    case WLAN_AUTH_RESULT_REJECTED:
+        reason = WLAN_DEAUTH_REASON_NOT_AUTHENTICATED;
+        break;
+    case WLAN_AUTH_RESULT_FAILURE_TIMEOUT:
+        reason = WLAN_DEAUTH_REASON_TIMEOUT;
+        break;
+    case WLAN_AUTH_RESULT_ANTI_CLOGGING_TOKEN_REQUIRED:
+    case WLAN_AUTH_RESULT_FINITE_CYCLIC_GROUP_NOT_SUPPORTED:
+    default:
+        reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
+        break;
+    }
+    brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
 }
 
 // Respond to a MLME-DEAUTHENTICATE.request message. Note that we are required to respond with a
@@ -4451,8 +4308,41 @@ void brcmf_hook_assoc_req(void* ctx, wlanif_assoc_req_t* req) {
 }
 
 void brcmf_hook_assoc_resp(void* ctx, wlanif_assoc_resp_t* ind) {
+    struct net_device* ndev = ctx;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
+
     brcmf_dbg(TRACE, "Enter");
-    brcmf_err("Unimplemented\n");
+
+    if (!brcmf_is_apmode(ifp->vif)) {
+        brcmf_err("Received ASSOCIATE.response but not in AP mode - ignoring\n");
+        return;
+    }
+
+    if (ind->result_code == WLAN_ASSOC_RESULT_SUCCESS) {
+        brcmf_dbg(CONN, "Successfully associated client %" PRId64 "\n",
+                  *(uint64_t*)ind->peer_sta_address & 0xffffffffffff);
+        return;
+    }
+
+    uint8_t reason;
+    switch(ind->result_code) {
+    case WLAN_ASSOC_RESULT_REFUSED_NOT_AUTHENTICATED:
+        reason = WLAN_DEAUTH_REASON_NOT_AUTHENTICATED;
+        break;
+    case WLAN_ASSOC_RESULT_REFUSED_CAPABILITIES_MISMATCH:
+        reason = WLAN_DEAUTH_REASON_INVALID_RSNE_CAPABILITIES;
+        break;
+    case WLAN_ASSOC_RESULT_REFUSED_REASON_UNSPECIFIED:
+    case WLAN_ASSOC_RESULT_REFUSED_EXTERNAL_REASON:
+    case WLAN_ASSOC_RESULT_REFUSED_AP_OUT_OF_MEMORY:
+    case WLAN_ASSOC_RESULT_REFUSED_BASIC_RATES_MISMATCH:
+    case WLAN_ASSOC_RESULT_REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED:
+    case WLAN_ASSOC_RESULT_REFUSED_TEMPORARILY:
+    default:
+        reason = WLAN_DEAUTH_REASON_UNSPECIFIED;
+        break;
+    }
+    brcmf_cfg80211_del_station(ndev, ind->peer_sta_address, reason);
 }
 
 void brcmf_hook_disassoc_req(void* ctx, wlanif_disassoc_req_t* req) {
@@ -4996,10 +4886,9 @@ static zx_status_t brcmf_bss_connect_done(struct brcmf_cfg80211_info* cfg, struc
 static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cfg,
                                                   struct net_device* ndev,
                                                   const struct brcmf_event_msg* e, void* data) {
-    static int generation;
     uint32_t event = e->event_code;
     uint32_t reason = e->reason;
-    struct station_info sinfo;
+    struct brcmf_if* ifp = ndev_to_if(ndev);
 
     brcmf_dbg(CONN, "event %s (%u), reason %d\n", brcmf_fweh_event_name(event), event, reason);
     if (event == BRCMF_E_LINK && reason == BRCMF_E_REASON_LINK_BSSCFG_DIS &&
@@ -5009,21 +4898,81 @@ static zx_status_t brcmf_notify_connect_status_ap(struct brcmf_cfg80211_info* cf
         return ZX_OK;
     }
 
-    if (((event == BRCMF_E_ASSOC_IND) || (event == BRCMF_E_REASSOC_IND)) &&
-            (reason == BRCMF_E_STATUS_SUCCESS)) {
-        memset(&sinfo, 0, sizeof(sinfo));
-        if (!data) {
-            brcmf_err("No IEs present in ASSOC/REASSOC_IND");
+    // Client has authenticated
+    if ((event == BRCMF_E_AUTH_IND) && (reason == BRCMF_E_STATUS_SUCCESS)) {
+        wlanif_auth_ind_t auth_ind_params;
+        memset(&auth_ind_params, 0, sizeof(auth_ind_params));
+        memcpy(auth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+        // We always authenticate as an open system for WPA
+        auth_ind_params.auth_type = WLAN_AUTH_TYPE_OPEN_SYSTEM;
+        ndev->if_callbacks->auth_ind(ndev->if_callback_cookie, &auth_ind_params);
+
+    // Client has associated
+    } else if (((event == BRCMF_E_ASSOC_IND) || (event == BRCMF_E_REASSOC_IND)) &&
+               (reason == BRCMF_E_STATUS_SUCCESS)) {
+        if (data == NULL || e->datalen == 0) {
+            brcmf_err("Received ASSOC_IND with no IEs\n");
             return ZX_ERR_INVALID_ARGS;
         }
-        sinfo.assoc_req_ies = data;
-        sinfo.assoc_req_ies_len = e->datalen;
-        generation++;
-        sinfo.generation = generation;
-        cfg80211_new_sta(ndev, e->addr, &sinfo);
-    } else if ((event == BRCMF_E_DISASSOC_IND) || (event == BRCMF_E_DEAUTH_IND) ||
-               (event == BRCMF_E_DEAUTH)) {
-        cfg80211_del_sta(ndev, e->addr);
+
+        const struct brcmf_tlv* ssid_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_SSID);
+        if (ssid_ie == NULL) {
+            brcmf_err("Received ASSOC_IND with no SSID IE\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (ssid_ie->len > WLAN_MAX_SSID_LEN) {
+            brcmf_err("Received ASSOC_IND with invalid SSID IE\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        const struct brcmf_tlv* rsn_ie = brcmf_parse_tlvs(data, e->datalen, WLAN_IE_TYPE_RSNE);
+        if (rsn_ie && rsn_ie->len > WLAN_RSNE_MAX_LEN) {
+            brcmf_err("Received ASSOC_IND with invalid RSN IE\n");
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        wlanif_assoc_ind_t assoc_ind_params;
+        memset(&assoc_ind_params, 0, sizeof(assoc_ind_params));
+        memcpy(assoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+
+        // Unfortunately, we have to ask the firmware to provide the associated station's
+        // listen interval.
+        struct brcmf_sta_info_le sta_info;
+        uint8_t mac[ETH_ALEN];
+        memcpy(mac, e->addr, ETH_ALEN);
+        brcmf_cfg80211_get_station(ndev, mac, &sta_info);
+        // convert from ms to beacon periods
+        assoc_ind_params.listen_interval = sta_info.listen_interval_inms /
+                                           ifp->vif->profile.beacon_period;
+
+        // Extract the SSID from the IEs
+        assoc_ind_params.ssid.len = ssid_ie->len;
+        memcpy(assoc_ind_params.ssid.data, ssid_ie->data, ssid_ie->len);
+
+        // Extract the RSN information from the IEs
+        if (rsn_ie != NULL) {
+            assoc_ind_params.rsne_len = rsn_ie->len;
+            memcpy(assoc_ind_params.rsne, rsn_ie->data, rsn_ie->len);
+        }
+
+        ndev->if_callbacks->assoc_ind(ndev->if_callback_cookie, &assoc_ind_params);
+
+    // Client has disassociated
+    } else if (event == BRCMF_E_DISASSOC_IND) {
+        wlanif_disassoc_indication_t disassoc_ind_params;
+        memset(&disassoc_ind_params, 0, sizeof(disassoc_ind_params));
+        memcpy(disassoc_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+        disassoc_ind_params.reason_code = e->reason;
+        ndev->if_callbacks->disassoc_ind(ndev->if_callback_cookie, &disassoc_ind_params);
+
+    // Client has deauthenticated
+    } else if ((event == BRCMF_E_DEAUTH_IND) || (event == BRCMF_E_DEAUTH)) {
+        wlanif_deauth_indication_t deauth_ind_params;
+        memset(&deauth_ind_params, 0, sizeof(deauth_ind_params));
+        memcpy(deauth_ind_params.peer_sta_address, e->addr, ETH_ALEN);
+        deauth_ind_params.reason_code = e->reason;
+        ndev->if_callbacks->deauth_ind(ndev->if_callback_cookie, &deauth_ind_params);
     }
     return ZX_OK;
 }
@@ -5167,6 +5116,7 @@ static void brcmf_init_conf(struct brcmf_cfg80211_conf* conf) {
 
 static void brcmf_register_event_handlers(struct brcmf_cfg80211_info* cfg) {
     brcmf_fweh_register(cfg->pub, BRCMF_E_LINK, brcmf_notify_connect_status);
+    brcmf_fweh_register(cfg->pub, BRCMF_E_AUTH_IND, brcmf_notify_connect_status);
     brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH_IND, brcmf_notify_connect_status);
     brcmf_fweh_register(cfg->pub, BRCMF_E_DEAUTH, brcmf_notify_connect_status);
     brcmf_fweh_register(cfg->pub, BRCMF_E_DISASSOC_IND, brcmf_notify_connect_status);
