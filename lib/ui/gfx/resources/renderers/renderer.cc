@@ -136,7 +136,7 @@ std::vector<escher::Object> Renderer::Visitor::GenerateClipperDisplayList(
   const escher::MaterialPtr kNoMaterial;
   VisitorContext clipper_context(kNoMaterial, context_.opacity,
                                  context_.disable_clipping,
-                                 /* batch_gpu_uploader= */ nullptr);
+                                 context_.batch_gpu_uploader);
 
   // The node's children and imports must be clipped by the
   // Shapes/ShapeNodes amongst the node's parts.  First gather the
@@ -247,7 +247,6 @@ void Renderer::Visitor::Visit(RoundedRectangleShape* r) { FXL_CHECK(false); }
 void Renderer::Visitor::Visit(MeshShape* r) { FXL_CHECK(false); }
 
 void Renderer::Visitor::Visit(Material* r) {
-  FXL_DCHECK(context_.batch_gpu_uploader);
   r->UpdateEscherMaterial(context_.batch_gpu_uploader);
 }
 
