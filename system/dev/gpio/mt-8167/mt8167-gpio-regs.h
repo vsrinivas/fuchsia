@@ -11,13 +11,14 @@
 template <>
 template <>
 __WEAK uint16_t ddk::MmioBuffer::Read<uint16_t>(zx_off_t offs) const {
-    return Read<uint16_t>(offs);
+    return *reinterpret_cast<volatile uint16_t*>(ptr_ + offs);
 }
 
 template <>
 template <>
 __WEAK void ddk::MmioBuffer::Write<uint16_t>(uint16_t val, zx_off_t offs) const {
-    Write<uint16_t>(val, offs);
+    *reinterpret_cast<volatile uint16_t*>(ptr_ + offs) = val;
+    hw_mb();
 }
 
 namespace {
