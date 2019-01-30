@@ -17,7 +17,7 @@ use {
 /// Rounds `x` up if necessary so that it is a multiple of `align`.
 pub fn round_up_to_align(x: usize, align: usize) -> usize {
     if align == 0 {
-        0
+        x
     } else {
         ((x + align - 1) / align) * align
     }
@@ -181,6 +181,21 @@ impl<'a> Encoder<'a> {
         f(self)?;
         self.offset = old_offset;
         Ok(())
+    }
+
+    /// Append bytes to the very end (out-of-line) of the buffer.
+    pub fn append_bytes(&mut self, bytes: &[u8]) {
+        let new_len = round_up_to_align(self.buf.len(), 8);
+        self.buf.resize(new_len, 0);
+        self.buf.extend_from_slice(bytes);
+    }
+
+    /// Append handles to the buffer.
+    pub fn append_handles(&mut self, handles: &mut [zx::Handle]) {
+        self.handles.reserve(handles.len());
+        for handle in handles {
+            self.handles.push(take_handle(handle));
+        }
     }
 }
 
@@ -1667,6 +1682,146 @@ macro_rules! fidl_union {
     }
 }
 
+/// A macro which declares a new FIDL union as a Rust enum and implements the
+/// FIDL encoding and decoding traits for it.
+#[macro_export]
+macro_rules! fidl_xunion {
+    (
+        name: $name:ident,
+        members: [$(
+            $member_name:ident {
+                ty: $member_ty:ty,
+                tag: $member_tag:expr,
+            },
+        )*],
+    ) => {
+        #[derive(Debug, PartialEq)]
+        pub enum $name {
+            $(
+                $member_name ( $member_ty ),
+            )*
+            #[doc(hidden)]
+            __UnknownVariant {
+                tag: u32,
+                bytes: Vec<u8>,
+                handles: Vec<zx::Handle>,
+            },
+        }
+
+        impl $name {
+            fn member_index(&self) -> u32 {
+                match *self {
+                    $(
+                        $name::$member_name(_) => $member_tag,
+                    )*
+                    $name::__UnknownVariant { tag, .. } => tag,
+                }
+            }
+        }
+
+        impl $crate::encoding::Encodable for $name {
+            fn inline_align(&self) -> usize { 8 }
+            fn inline_size(&self) -> usize { 24 }
+
+            fn encode(&mut self, encoder: &mut $crate::encoding::Encoder) -> $crate::Result<()> {
+                let mut member_index = self.member_index();
+                // Encode tag
+                fidl_encode!(&mut member_index, encoder)?;
+                // Reserved
+                fidl_encode!(&mut 0u32, encoder)?;
+                encoder.recurse(|encoder| {
+                    match self {
+                        $(
+                            $name::$member_name ( val ) => encode_in_envelope(&mut Some(val), encoder),
+                        )*
+                        $name::__UnknownVariant { tag: _, bytes, handles } => {
+                            // Throw the raw data from the unrecognized variant
+                            // back onto the wire. This will allow correct proxies even in
+                            // the event that they don't yet recognize this union variant.
+                            fidl_encode!(&mut (bytes.len() as u32), encoder)?;
+                            fidl_encode!(&mut (handles.len() as u32), encoder)?;
+                            fidl_encode!(&mut ALLOC_PRESENT_U64, encoder)?;
+                            encoder.append_bytes(bytes);
+                            encoder.append_handles(handles);
+                            Ok(())
+                        },
+                    }
+                })
+            }
+        }
+
+        impl $crate::encoding::Decodable for $name {
+            fn inline_align() -> usize { 8 }
+            fn inline_size() -> usize { 24 }
+
+            fn new_empty() -> Self {
+                #![allow(unreachable_code)]
+                $(
+                    return $name::$member_name(fidl_new_empty!($member_ty));
+                )*
+                $name::__UnknownVariant { tag: 0, bytes: vec![], handles: vec![] }
+            }
+
+            fn decode(&mut self, decoder: &mut $crate::encoding::Decoder) -> $crate::Result<()> {
+                #![allow(unused)]
+                let mut tag: u32 = 0;
+                fidl_decode!(&mut tag, decoder)?;
+
+                let mut _reserved: u32 = 0;
+                fidl_decode!(&mut _reserved, decoder)?;
+
+                let mut num_bytes: u32 = 0;
+                fidl_decode!(&mut num_bytes, decoder)?;
+
+                let mut num_handles: u32 = 0;
+                fidl_decode!(&mut num_handles, decoder)?;
+
+                let mut present: u64 = 0;
+                fidl_decode!(&mut present, decoder)?;
+                if present != $crate::encoding::ALLOC_PRESENT_U64 {
+                    return Err($crate::Error::Invalid);
+                }
+
+                decoder.read_out_of_line(num_bytes as usize, |decoder| {
+                    decoder.recurse(|decoder| {
+                        match tag {
+                            $(
+                                $member_tag => {
+                                    if let $name::$member_name(_) = self {
+                                        // Do nothing, read the value into the object
+                                    } else {
+                                        // Initialize `self` to the right variant
+                                        *self = $name::$member_name(fidl_new_empty!($member_ty));
+                                    }
+                                    if let $name::$member_name(val) = self {
+                                        fidl_decode!(val, decoder)?;
+                                    } else {
+                                        unreachable!()
+                                    }
+                                }
+                            )*
+                            tag => {
+                                let bytes = decoder.next_slice(num_bytes as usize)?.to_vec();
+                                let mut handles = Vec::with_capacity(num_handles as usize);
+                                for _ in 0..num_handles {
+                                    handles.push(decoder.take_handle()?);
+                                }
+                                *self = $name::__UnknownVariant { tag, bytes, handles };
+                            }
+                        }
+                        Ok(())
+                    })
+                })
+            }
+        }
+
+        impl $crate::encoding::AutonullContainer for $name {
+            fn inline_align() -> usize { 8 }
+            fn inline_size() -> usize { 24 }
+        }
+    }
+}
+
 /// Header for transactional FIDL messages
 #[derive(Copy, Clone, Debug, Eq, PartialEq)]
 pub struct TransactionHeader {
@@ -2333,7 +2488,8 @@ mod test {
         }
     }
 
-    struct SimpleTable {
+    #[derive(Debug, PartialEq)]
+    pub struct SimpleTable {
         x: Option<i64>,
         y: Option<i64>,
     }
@@ -2352,7 +2508,8 @@ mod test {
         },
     }
 
-    struct TableWithStringAndVector {
+    #[derive(Debug, PartialEq)]
+    pub struct TableWithStringAndVector {
         foo: Option<String>,
         bar: Option<i32>,
         baz: Option<Vec<u8>>,
@@ -2458,6 +2615,152 @@ mod test {
             SimpleTable { x: None, y: None },
             empty_table,
         )
+    }
+
+    #[derive(Debug, PartialEq)]
+    pub struct Int64Struct {
+        x: u64,
+    }
+    fidl_struct! {
+        name: Int64Struct,
+        members: [
+            x {
+                ty: u64,
+                offset: 0,
+            },
+        ],
+        size: 8,
+        align: 8,
+    }
+
+    fidl_union! {
+        name: SimpleUnion,
+        members: [
+            I32 {
+                ty: i32,
+                offset: 4,
+            },
+            I64 {
+                ty: i64,
+                offset: 8,
+            },
+            S {
+                ty: Int64Struct,
+                offset: 8,
+            },
+            Os {
+                ty: Option<Box<Int64Struct>>,
+                offset: 8,
+            },
+            Str {
+                ty: String,
+                offset: 8,
+            },
+        ],
+        size: 24,
+        align: 8,
+    }
+
+    fidl_xunion! {
+        name: TestSampleXUnion,
+        members: [
+            U {
+                ty: u32,
+                tag: 0x29df47a5,
+            },
+            Su {
+                ty: SimpleUnion,
+                tag: 0x6f317664,
+            },
+            St {
+                ty: SimpleTable,
+                tag: 3,
+            },
+        ],
+    }
+
+    fidl_xunion! {
+        name: TestSampleXUnionExpanded,
+        members: [
+            SomethinElse {
+                ty: zx::Handle,
+                tag: 55,
+            },
+        ],
+    }
+
+    #[test]
+    fn xunion_golden_u() {
+        let xunion_u_bytes = &[
+            0xa5, 0x47, 0xdf, 0x29, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+            0x08, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+            0xef, 0xbe, 0xad, 0xde, 0x00, 0x00, 0x00, 0x00, // content + padding
+        ];
+
+        encode_assert_bytes(
+            TestSampleXUnion::U(0xdeadbeef),
+            xunion_u_bytes,
+        )
+    }
+
+    #[test]
+    fn xunion_golden_su() {
+        let xunion_su_bytes = &[
+            0x64, 0x76, 0x31, 0x6f, 0x00, 0x00, 0x00, 0x00, // xunion discriminator + padding
+            0x20, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // num bytes + num handles
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // presence indicator
+            // secondary object 0
+            0x04, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // union discriminant + padding
+            0x05, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, // string size
+            0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, // string present
+            // secondary object 1
+            b'h', b'e', b'l', b'l', b'o', 0x00, 0x00, 0x00, // string "hello" + padding
+        ];
+
+        encode_assert_bytes(
+            TestSampleXUnion::Su(SimpleUnion::Str("hello".to_string())),
+            xunion_su_bytes,
+        )
+    }
+
+    #[test]
+    fn xunion_unknown_variant_transparent_passthrough() {
+        let handle = zx::Handle::from(zx::Port::create().expect("Port creation failed"));
+        let raw_handle = handle.raw_handle();
+
+        let mut input = TestSampleXUnionExpanded::SomethinElse(handle);
+        // encode expanded and decode as xunion w/ missing variant
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut input)
+            .expect("Encoding TestSampleXUnionExpanded failed");
+
+        let mut intermediate_missing_variant = TestSampleXUnion::new_empty();
+        Decoder::decode_into(buf, handle_buf, &mut intermediate_missing_variant)
+            .expect("Decoding TestSampleXUnion failed");
+
+        // Ensure we've recorded the unknown variant
+        if let TestSampleXUnion::__UnknownVariant { .. } = intermediate_missing_variant {
+            // ok
+        } else {
+            panic!("unexpected variant")
+        }
+
+        let buf = &mut Vec::new();
+        let handle_buf = &mut Vec::new();
+        Encoder::encode(buf, handle_buf, &mut intermediate_missing_variant)
+            .expect("encoding unknown variant failed");
+
+        let mut out = TestSampleXUnionExpanded::new_empty();
+        Decoder::decode_into(buf, handle_buf, &mut out)
+            .expect("Decoding final output failed");
+
+        if let TestSampleXUnionExpanded::SomethinElse(handle_out) = out {
+            assert_eq!(raw_handle, handle_out.raw_handle());
+        } else {
+            panic!("wrong final variant")
+        }
     }
 
     #[test]
