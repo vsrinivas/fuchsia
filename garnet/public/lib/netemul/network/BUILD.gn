@@ -48,6 +48,9 @@ source_set("network_service") {
   deps = [
     ":ethertap",
     "//garnet/public/lib/netemul/fidl:network",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fbl",
     "//zircon/public/lib/fdio",
   ]
 }

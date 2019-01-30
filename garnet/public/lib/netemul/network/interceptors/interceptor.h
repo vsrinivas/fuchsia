@@ -14,6 +14,10 @@ namespace netemul {
 
 class InterceptPacket {
  public:
+  InterceptPacket(const void* data, size_t len, data::Consumer::Ptr origin)
+      : data_(len), origin_(std::move(origin)) {
+    memcpy(data_.data(), data, len);
+  }
   InterceptPacket(std::vector<uint8_t> data, data::Consumer::Ptr origin)
       : data_(std::move(data)), origin_(std::move(origin)) {}
   InterceptPacket(InterceptPacket&& other) = default;

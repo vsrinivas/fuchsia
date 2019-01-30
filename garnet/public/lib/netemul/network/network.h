@@ -46,6 +46,9 @@ class Network : public fuchsia::netemul::network::Network {
   // ClosedCallback is called when all bindings to the service are gone
   void SetClosedCallback(ClosedCallback cb);
 
+  // returns true if network config is valid.
+  static bool CheckConfig(const Config& config);
+
  protected:
   friend NetworkManager;
 

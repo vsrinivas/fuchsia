@@ -5,6 +5,9 @@
 #include "network.h"
 #include <lib/fxl/memory/weak_ptr.h>
 #include "fake_endpoint.h"
+#include "interceptors/latency.h"
+#include "interceptors/packet_loss.h"
+#include "interceptors/reorder.h"
 #include "network_context.h"
 
 namespace netemul {
@@ -19,17 +22,68 @@ class NetworkBus : public data::BusConsumer {
 
   void Consume(const void* data, size_t len,
                const data::Consumer::Ptr& sender) override {
-    // TODO(brunodalbo) implement network condition interceptors
-    // before flooding everyone, we will pass every packet through the data
-    // interceptors
-    // [...]
-    ForwardData(data, len, sender);
+    if (interceptors_.empty()) {
+      ForwardData(data, len, sender);
+    } else {
+      interceptors_.back()->Intercept(InterceptPacket(data, len, sender));
+    }
   }
 
   std::vector<data::Consumer::Ptr>& sinks() { return sinks_; }
   std::vector<FakeEndpoint::Ptr>& fake_endpoints() { return fake_endpoints_; }
 
+  void UpdateConfiguration(const Network::Config& config) {
+    // first, flush all packets that are currently in interceptors:
+    for (auto& i : interceptors_) {
+      auto packets = i->Flush();
+      for (auto& packet : packets) {
+        ForwardData(packet.data().data(), packet.data().size(),
+                    packet.origin());
+      }
+    }
+    // clear all interceptors
+    interceptors_.clear();
+
+    // rebuild interceptors based on configuration
+
+    // reordering interceptor:
+    if (config.has_reorder()) {
+      interceptors_.emplace_back(new interceptor::Reorder(
+          config.reorder()->store_buff, zx::msec(config.reorder()->tick),
+          MakeInterceptorCallback()));
+    }
+    // latency interceptor:
+    if (config.has_latency()) {
+      interceptors_.emplace_back(new interceptor::Latency(
+          config.latency()->average, config.latency()->std_dev,
+          MakeInterceptorCallback()));
+    }
+    // packet loss interceptor:
+    if (config.has_packet_loss()) {
+      if (config.packet_loss()->is_random_rate()) {
+        interceptors_.emplace_back(new interceptor::PacketLoss(
+            config.packet_loss()->random_rate(), MakeInterceptorCallback()));
+      }
+    }
+  }
+
  private:
+  Interceptor::ForwardPacketCallback MakeInterceptorCallback() {
+    if (interceptors_.empty()) {
+      // if no interceptors inside just forward packet
+      return [this](InterceptPacket packet) {
+        ForwardData(packet.data().data(), packet.data().size(),
+                    packet.origin());
+      };
+    } else {
+      // if interceptors already have members, point onto the back for chaining
+      auto* next = interceptors_.back().get();
+      return [this, next](InterceptPacket packet) {
+        next->Intercept(std::move(packet));
+      };
+    }
+  }
+
   void ForwardData(const void* data, size_t len,
                    const data::Consumer::Ptr& sender) {
     for (auto i = sinks_.begin(); i != sinks_.end();) {
@@ -49,6 +103,7 @@ class NetworkBus : public data::BusConsumer {
   fxl::WeakPtrFactory<data::BusConsumer> weak_ptr_factory_;
   std::vector<data::Consumer::Ptr> sinks_;
   std::vector<FakeEndpoint::Ptr> fake_endpoints_;
+  std::vector<std::unique_ptr<Interceptor>> interceptors_;
 };
 
 }  // namespace impl
@@ -64,9 +119,10 @@ Network::Network(NetworkContext* context, std::string name,
       closed_callback_(*this);
     }
   });
+  bus_->UpdateConfiguration(config_);
 }
 
-Network::~Network() {}
+Network::~Network() = default;
 
 void Network::Bind(fidl::InterfaceRequest<FNetwork> req) {
   bindings_.AddBinding(this, std::move(req), parent_->dispatcher());
@@ -82,18 +138,12 @@ void Network::GetName(Network::GetNameCallback callback) { callback(name_); }
 
 void Network::SetConfig(fuchsia::netemul::network::NetworkConfig config,
                         Network::SetConfigCallback callback) {
-  // we may want to validate the configuration and return errors in some cases:
+  if (!CheckConfig(config)) {
+    callback(ZX_ERR_INVALID_ARGS);
+    return;
+  }
   config_ = std::move(config);
-  // TODO(brunodalbo) actually implement bad network emulation
-  if (config_.has_reorder()) {
-    fprintf(stderr, "Network reorder emulation not implemented\n");
-  }
-  if (config_.has_latency()) {
-    fprintf(stderr, "Network latency emulation not implemented\n");
-  }
-  if (config_.has_packet_loss()) {
-    fprintf(stderr, "Network packet loss not implemented\n");
-  }
+  bus_->UpdateConfiguration(config_);
   callback(ZX_OK);
 }
 
@@ -159,6 +209,22 @@ void Network::CreateFakeEndpoint(
 
 void Network::SetClosedCallback(Network::ClosedCallback cb) {
   closed_callback_ = std::move(cb);
+}
+
+bool Network::CheckConfig(const Config& config) {
+  if (config.has_packet_loss()) {
+    if (config.packet_loss()->is_random_rate()) {
+      // random rate packet loss must be unsigned byte less or equal to 100
+      if (config.packet_loss()->random_rate() > 100) {
+        return false;
+      }
+    } else {
+      // non random-rate packet loss not supported.
+      return false;
+    }
+  }
+
+  return true;
 }
 
 }  // namespace netemul

@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <unordered_set>
 #include "lib/component/cpp/testing/test_with_environment.h"
 #include "lib/netemul/network/ethernet_client.h"
 #include "lib/netemul/network/fake_endpoint.h"
@@ -20,7 +21,7 @@
 namespace netemul {
 namespace testing {
 
-static const EthernetConfig TestEthBuffConfig = {.buff_size = 2048, .nbufs = 4};
+static const EthernetConfig TestEthBuffConfig = {.buff_size = 512, .nbufs = 10};
 
 using component::testing::EnclosingEnvironment;
 using component::testing::EnvironmentServices;
@@ -35,6 +36,9 @@ class NetworkServiceTest : public TestWithEnvironment {
   using FFakeEndpoint = FakeEndpoint::FFakeEndpoint;
   using NetworkSetup = NetworkContext::NetworkSetup;
   using EndpointSetup = NetworkContext::EndpointSetup;
+  using LossConfig = fuchsia::netemul::network::LossConfig;
+  using ReorderConfig = fuchsia::netemul::network::ReorderConfig;
+  using LatencyConfig = fuchsia::netemul::network::LatencyConfig;
 
  protected:
   void SetUp() override {
@@ -124,6 +128,58 @@ class NetworkServiceTest : public TestWithEnvironment {
   void CreateEndpoint(const char* name,
                       fidl::SynchronousInterfacePtr<FEndpoint>* netout) {
     CreateEndpoint(name, netout, GetDefaultEndpointConfig());
+  }
+
+  void CreateSimpleNetwork(
+      Network::Config config,
+      fidl::InterfaceHandle<NetworkContext::FSetupHandle>* setup_handle,
+      std::unique_ptr<EthernetClient>* eth1,
+      std::unique_ptr<EthernetClient>* eth2) {
+    fidl::SynchronousInterfacePtr<FNetworkContext> context;
+    GetNetworkContext(context.NewRequest());
+    zx_status_t status;
+    std::vector<NetworkSetup> net_setup;
+    auto& net1 = net_setup.emplace_back();
+    net1.name = "net";
+    net1.config = std::move(config);
+    auto& ep1_setup = net1.endpoints.emplace_back();
+    ep1_setup.name = "ep1";
+    auto& ep2_setup = net1.endpoints.emplace_back();
+    ep2_setup.name = "ep2";
+
+    ASSERT_OK(context->Setup(std::move(net_setup), &status, setup_handle));
+    ASSERT_OK(status);
+    fidl::InterfaceHandle<Endpoint::FEndpoint> ep1_handle, ep2_handle;
+    ASSERT_OK(endp_manager_->GetEndpoint("ep1", &ep1_handle));
+    ASSERT_OK(endp_manager_->GetEndpoint("ep2", &ep2_handle));
+    ASSERT_TRUE(ep1_handle.is_valid());
+    ASSERT_TRUE(ep2_handle.is_valid());
+
+    auto ep1 = ep1_handle.BindSync();
+    auto ep2 = ep2_handle.BindSync();
+    // start ethernet clients on both endpoints:
+    fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> eth1_h;
+    fidl::InterfaceHandle<fuchsia::hardware::ethernet::Device> eth2_h;
+    ASSERT_OK(ep1->GetEthernetDevice(&eth1_h));
+    ASSERT_TRUE(eth1_h.is_valid());
+    ASSERT_OK(ep2->GetEthernetDevice(&eth2_h));
+    ASSERT_TRUE(eth2_h.is_valid());
+    // create both ethernet clients
+    *eth1 = std::make_unique<EthernetClient>(dispatcher(), eth1_h.Bind());
+    *eth2 = std::make_unique<EthernetClient>(dispatcher(), eth2_h.Bind());
+
+    bool eth_ready = false;
+    // configure both ethernet clients:
+    (*eth1)->Setup(TestEthBuffConfig, [&eth_ready](zx_status_t status) {
+      ASSERT_OK(status);
+      eth_ready = true;
+    });
+    WAIT_FOR_OK_AND_RESET(eth_ready);
+    (*eth2)->Setup(TestEthBuffConfig, [&eth_ready](zx_status_t status) {
+      ASSERT_OK(status);
+      eth_ready = true;
+    });
+    WAIT_FOR_OK_AND_RESET(eth_ready);
   }
 
   void TearDown() override {
@@ -723,6 +779,147 @@ TEST_F(NetworkServiceTest, NetworkContext) {
   ASSERT_FALSE(ep1_h.is_valid());
   ASSERT_OK(endp_manager_->GetEndpoint("ep2", &ep2_h));
   ASSERT_FALSE(ep2_h.is_valid());
+}
+
+TEST_F(NetworkServiceTest, CreateNetworkWithInvalidConfig) {
+  StartServices();
+  Network::Config config;
+  LossConfig loss;
+  loss.set_random_rate(101);
+  config.set_packet_loss(std::move(loss));
+  zx_status_t status;
+  fidl::InterfaceHandle<Network::FNetwork> net;
+  ASSERT_OK(
+      net_manager_->CreateNetwork("net", std::move(config), &status, &net));
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+  ASSERT_FALSE(net.is_valid());
+}
+
+TEST_F(NetworkServiceTest, NetworkSetInvalidConfig) {
+  StartServices();
+  fidl::SynchronousInterfacePtr<Network::FNetwork> net;
+  CreateNetwork("net", &net);
+
+  Network::Config config;
+  LossConfig loss;
+  loss.set_random_rate(101);
+  config.set_packet_loss(std::move(loss));
+  zx_status_t status;
+  ASSERT_OK(net->SetConfig(std::move(config), &status));
+  ASSERT_EQ(status, ZX_ERR_INVALID_ARGS);
+}
+
+TEST_F(NetworkServiceTest, NetworkConfigChains) {
+  StartServices();
+  constexpr int packet_count = 3;
+  std::unique_ptr<EthernetClient> eth1, eth2;
+  fidl::InterfaceHandle<NetworkContext::FSetupHandle> setup_handle;
+  Network::Config config;
+  config.mutable_packet_loss()->set_random_rate(0);
+  config.mutable_latency()->average = 5;
+  config.mutable_latency()->std_dev = 0;
+  config.mutable_reorder()->store_buff = packet_count;
+  config.mutable_reorder()->tick = 0;
+
+  CreateSimpleNetwork(std::move(config), &setup_handle, &eth1, &eth2);
+  ASSERT_TRUE(eth1 && eth2);
+
+  std::unordered_set<uint8_t> received;
+  zx::time after;
+  eth2->SetDataCallback([&received, &after](const void* data, size_t len) {
+    EXPECT_EQ(len, 1ul);
+    received.insert(*reinterpret_cast<const uint8_t*>(data));
+    after = zx::clock::get_monotonic();
+  });
+
+  auto bef = zx::clock::get_monotonic();
+  for (uint8_t i = 0; i < packet_count; i++) {
+    ASSERT_OK(eth1->Send(&i, 1));
+  }
+
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&received]() { return received.size() == packet_count; }, zx::sec(2)));
+  for (uint8_t i = 0; i < packet_count; i++) {
+    EXPECT_TRUE(received.find(i) != received.end());
+  }
+  auto diff = (after - bef).to_msecs();
+  // Check that measured latency is at least greater than the configured
+  // one.
+  // We don't do upper bound checking because it's not very CQ friendly.
+  EXPECT_TRUE(diff >= 5)
+      << "Total latency should be greater than configured latency, but got "
+      << diff;
+}
+
+TEST_F(NetworkServiceTest, NetworkConfigChanges) {
+  StartServices();
+  constexpr int reorder_threshold = 3;
+  constexpr int packet_count = 5;
+  std::unique_ptr<EthernetClient> eth1, eth2;
+  fidl::InterfaceHandle<NetworkContext::FSetupHandle> setup_handle;
+  Network::Config config;
+  config.mutable_reorder()->store_buff = reorder_threshold;
+  config.mutable_reorder()->tick = 0;
+
+  // start with creating a network with a reorder threshold lower than the sent
+  // packet count
+  CreateSimpleNetwork(std::move(config), &setup_handle, &eth1, &eth2);
+  ASSERT_TRUE(eth1 && eth2 && setup_handle.is_valid());
+
+  std::unordered_set<uint8_t> received;
+  eth2->SetDataCallback([&received](const void* data, size_t len) {
+    EXPECT_EQ(len, 1ul);
+    received.insert(*reinterpret_cast<const uint8_t*>(data));
+  });
+
+  for (uint8_t i = 0; i < packet_count; i++) {
+    ASSERT_OK(eth1->Send(&i, 1));
+  }
+
+  // wait until |reorder_threshold| is hit
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&received]() { return received.size() == reorder_threshold; },
+      zx::sec(2)));
+  for (uint8_t i = 0; i < reorder_threshold; i++) {
+    EXPECT_TRUE(received.find(i) != received.end());
+  }
+  received.clear();
+
+  // change the configuration to packet loss 0:
+  Network::Config config_packet_loss;
+  config_packet_loss.mutable_packet_loss()->set_random_rate(0);
+  fidl::InterfaceHandle<Network::FNetwork> net_handle;
+  ASSERT_OK(net_manager_->GetNetwork("net", &net_handle));
+  ASSERT_TRUE(net_handle.is_valid());
+  auto net = net_handle.BindSync();
+  zx_status_t status;
+  ASSERT_OK(net->SetConfig(std::move(config_packet_loss), &status));
+  ASSERT_OK(status);
+  // upon changing the configuration, all other remaining packets should've been
+  // flushed check that by waiting for the remaining packets: wait until
+  // |reorder_threshold| is hit
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&received]() {
+        return received.size() == packet_count - reorder_threshold;
+      },
+      zx::sec(2)));
+  for (uint8_t i = reorder_threshold; i < packet_count; i++) {
+    EXPECT_TRUE(received.find(i) != received.end());
+  }
+
+  received.clear();
+  // go again to verify that the configuration changed into packet loss with 0%
+  // loss:
+  for (uint8_t i = 0; i < packet_count; i++) {
+    ASSERT_OK(eth1->Send(&i, 1));
+  }
+  // wait until |packet_count| is hit
+  ASSERT_TRUE(RunLoopWithTimeoutOrUntil(
+      [&received]() { return received.size() == packet_count; }, zx::sec(2)));
+  for (uint8_t i = 0; i < packet_count; i++) {
+    EXPECT_TRUE(received.find(i) != received.end());
+  }
+  received.clear();
 }
 
 }  // namespace testing

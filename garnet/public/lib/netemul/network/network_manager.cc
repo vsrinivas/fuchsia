@@ -22,8 +22,9 @@ void NetworkManager::ListNetworks(
 zx_status_t NetworkManager::CreateNetwork(
     std::string name, netemul::Network::Config config,
     fidl::InterfaceRequest<netemul::Network::FNetwork> req) {
-  if (name.empty()) {
+  if (name.empty() || !Network::CheckConfig(config)) {
     // empty name not allowed
+    // invalid config will cause invalid args.
     return ZX_ERR_INVALID_ARGS;
   } else if (nets_.find(name) == nets_.end()) {  // no network with same name
     // create new network
