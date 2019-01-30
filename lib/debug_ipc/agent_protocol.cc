@@ -75,12 +75,7 @@ void Serialize(const Module& module, MessageWriter* writer) {
   writer->WriteString(module.build_id);
 }
 
-void Serialize(const SymbolTable& symbols, MessageWriter* writer) {
-  writer->WriteString(symbols.build_id);
-  Serialize(symbols.symbols, writer);
-}
-
-void Serialize(const SymbolTable::Symbol& symbol, MessageWriter* writer) {
+void Serialize(const ElfSymbol& symbol, MessageWriter* writer) {
   writer->WriteString(symbol.name);
   writer->WriteUint64(symbol.value);
 }
@@ -410,7 +405,7 @@ bool ReadRequest(MessageReader* reader, SymbolTablesRequest* request,
 void WriteReply(const SymbolTablesReply& reply, uint32_t transaction_id,
                 MessageWriter* writer) {
   writer->WriteHeader(MsgHeader::Type::kSymbolTables, transaction_id);
-  Serialize(reply.symbol_tables, writer);
+  Serialize(reply.symbols, writer);
 }
 
 // JobFilter ------------------------------------------------------------------

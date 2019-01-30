@@ -37,9 +37,7 @@ DebuggedProcess::DebuggedProcess(DebugAgent* debug_agent, zx_koid_t koid,
                          &kMagicValue, sizeof(kMagicValue));
 }
 
-DebuggedProcess::~DebuggedProcess() {
-  DetachFromProcess();
-}
+DebuggedProcess::~DebuggedProcess() { DetachFromProcess(); }
 
 void DebuggedProcess::DetachFromProcess() {
   // 1. Remove installed breakpoints.
@@ -346,10 +344,11 @@ void DebuggedProcess::OnModules(debug_ipc::ModulesReply* reply) {
     GetModulesForProcess(process_, dl_debug_addr_, &reply->modules);
 }
 
-void DebuggedProcess::OnSymbolTables(debug_ipc::SymbolTablesReply* reply) {
-  // Modules can only be read after the debug state is set.
-  if (dl_debug_addr_)
-    GetSymbolTablesForProcess(process_, dl_debug_addr_, &reply->symbol_tables);
+void DebuggedProcess::OnSymbolTables(
+    const debug_ipc::SymbolTablesRequest& request,
+    debug_ipc::SymbolTablesReply* reply) {
+  GetSymbolTableFromProcess(process_, request.base, request.build_id,
+                            &reply->symbols);
 }
 
 void DebuggedProcess::OnWriteMemory(

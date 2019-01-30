@@ -241,9 +241,16 @@ struct ModulesReply {
 
 struct SymbolTablesRequest {
   uint64_t process_koid = 0;
+  uint64_t base = 0;  // Load address of the module.
+
+  // If we give an invalid base we'll either fault, which should be graceful
+  // through the ReadMemory interface, read a bad header, which we can detect,
+  // or we'll find a different module. We can use the build ID to check against
+  // the last case.
+  std::string build_id;
 };
 struct SymbolTablesReply {
-  std::vector<SymbolTable> symbol_tables;
+  std::vector<ElfSymbol> symbols;
 };
 
 // Request to set filter.

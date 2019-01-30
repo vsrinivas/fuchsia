@@ -191,7 +191,7 @@ struct BreakpointStats {
 
 struct AddressRange {
   uint64_t begin = 0;
-  uint64_t end = 0;   // Non-inclusive.
+  uint64_t end = 0;  // Non-inclusive.
 };
 
 struct ProcessWatchpointSetings {
@@ -223,15 +223,9 @@ struct Module {
   std::string build_id;
 };
 
-// Information on the linkage symbol table for a module.
-struct SymbolTable {
-  struct Symbol {
-    std::string name;
-    uint64_t value = 0;
-  };
-
-  std::string build_id;
-  std::vector<Symbol> symbols;
+struct ElfSymbol {
+  std::string name;
+  uint64_t value = 0;
 };
 
 struct AddressRegion {
@@ -241,7 +235,7 @@ struct AddressRegion {
   uint64_t depth;
 };
 
-// ReadRegisters -------------------------------------------------------------------
+// ReadRegisters ---------------------------------------------------------------
 
 // Value representing a particular register.
 struct Register {

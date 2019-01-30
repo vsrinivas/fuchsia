@@ -375,8 +375,8 @@ void DebugAgent::UnregisterBreakpoint(Breakpoint* bp, zx_koid_t process_koid,
     proc->UnregisterBreakpoint(bp, address);
 }
 
-zx_status_t DebugAgent::RegisterWatchpoint(Watchpoint* wp,
-    zx_koid_t process_koid,
+zx_status_t DebugAgent::RegisterWatchpoint(
+    Watchpoint* wp, zx_koid_t process_koid,
     const debug_ipc::AddressRange& range) {
   DebuggedProcess* process = GetDebuggedProcess(process_koid);
   if (!process) {
@@ -430,7 +430,7 @@ void DebugAgent::OnSymbolTables(const debug_ipc::SymbolTablesRequest& request,
                                 debug_ipc::SymbolTablesReply* reply) {
   DebuggedProcess* proc = GetDebuggedProcess(request.process_koid);
   if (proc)
-    proc->OnSymbolTables(reply);
+    proc->OnSymbolTables(request, reply);
 }
 
 DebuggedProcess* DebugAgent::GetDebuggedProcess(zx_koid_t koid) {

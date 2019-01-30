@@ -83,13 +83,7 @@ bool Deserialize(MessageReader* reader, Module* module) {
   return true;
 }
 
-bool Deserialize(MessageReader* reader, SymbolTable* symbols) {
-  if (!reader->ReadString(&symbols->build_id))
-    return false;
-  return Deserialize(reader, &symbols->symbols);
-}
-
-bool Deserialize(MessageReader* reader, SymbolTable::Symbol* symbol) {
+bool Deserialize(MessageReader* reader, ElfSymbol* symbol) {
   if (!reader->ReadString(&symbol->name))
     return false;
   if (!reader->ReadUint64(&symbol->value))
@@ -491,7 +485,7 @@ bool ReadReply(MessageReader* reader, SymbolTablesReply* reply,
     return false;
   *transaction_id = header.transaction_id;
 
-  Deserialize(reader, &reply->symbol_tables);
+  Deserialize(reader, &reply->symbols);
   return true;
 }
 

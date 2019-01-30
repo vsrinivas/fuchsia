@@ -293,34 +293,38 @@ zx_status_t GetModulesForProcess(const zx::process& process,
       });
 }
 
-zx_status_t GetSymbolTablesForProcess(
-    const zx::process& process, uint64_t dl_debug_addr,
-    std::vector<debug_ipc::SymbolTable>* symtabs) {
-  return WalkModules(
-      process, dl_debug_addr,
-      [symtabs](const zx::process& process, uint64_t base, uint64_t lmap) {
-        debug_ipc::SymbolTable symtab;
-        symtab.build_id = debug_ipc::ExtractBuildID(process, base);
+zx_status_t GetSymbolTableFromProcess(
+    const zx::process& process, uint64_t elf_addr, const std::string& build_id,
+    std::vector<debug_ipc::ElfSymbol>* symbols) {
+  auto elf = ElfLib::Create(
+      std::make_unique<ProcessMemoryAccessor>(&process, elf_addr));
 
-        auto elf = ElfLib::Create(
-            std::make_unique<ProcessMemoryAccessor>(&process, base));
+  if (!elf) {
+    return ZX_ERR_BAD_STATE;
+  }
 
-        if (elf) {
-          if (auto syms = elf->GetAllSymbols()) {
-            for (const auto& sym : *syms) {
-              debug_ipc::SymbolTable::Symbol ipc_sym;
+  auto got_build_id = debug_ipc::ExtractBuildID(process, elf_addr);
 
-              ipc_sym.name = sym.first;
-              ipc_sym.value = sym.second.st_value;
+  if (got_build_id != build_id) {
+    return ZX_ERR_BAD_STATE;
+  }
 
-              symtab.symbols.push_back(std::move(ipc_sym));
-            }
-          }
-        }
+  auto syms = elf->GetAllSymbols();
 
-        symtabs->push_back(std::move(symtab));
-        return true;
-      });
+  if (!syms) {
+    return ZX_ERR_BAD_STATE;
+  }
+
+  for (const auto& sym : *syms) {
+    debug_ipc::ElfSymbol ipc_sym;
+
+    ipc_sym.name = sym.first;
+    ipc_sym.value = sym.second.st_value;
+
+    symbols->push_back(std::move(ipc_sym));
+  }
+
+  return ZX_OK;
 }
 
 std::vector<zx_info_maps_t> GetProcessMaps(const zx::process& process) {

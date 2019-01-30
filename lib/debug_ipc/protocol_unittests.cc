@@ -452,44 +452,20 @@ TEST(Protocol, SymbolTablesRequest) {
 
 TEST(Protocol, SymbolTablesReply) {
   SymbolTablesReply initial;
-  initial.symbol_tables.resize(2);
-  initial.symbol_tables[0].build_id = "abcdefghijkl";
-  initial.symbol_tables[0].symbols.resize(2);
-  initial.symbol_tables[0].symbols[0].name = "somefunc";
-  initial.symbol_tables[0].symbols[0].value = 0xbeefUL;
-  initial.symbol_tables[0].symbols[1].name = "wompwomp";
-  initial.symbol_tables[0].symbols[1].value = 0xb0efUL;
-  initial.symbol_tables[1].build_id = "h4sh3s";
-  initial.symbol_tables[1].symbols.resize(2);
-  initial.symbol_tables[1].symbols[0].name = "phresh";
-  initial.symbol_tables[1].symbols[0].value = 0xf00dUL;
-  initial.symbol_tables[1].symbols[1].name = "ackermann";
-  initial.symbol_tables[1].symbols[1].value = 0xb0b0b0b0UL;
+  initial.symbols.resize(2);
+  initial.symbols[0].name = "somefunc";
+  initial.symbols[0].value = 0xbeefUL;
+  initial.symbols[1].name = "wompwomp";
+  initial.symbols[1].value = 0xb0efUL;
 
   SymbolTablesReply second;
   ASSERT_TRUE(SerializeDeserializeReply(initial, &second));
 
-  EXPECT_EQ(2u, second.symbol_tables.size());
-  EXPECT_EQ(initial.symbol_tables[0].build_id,
-            second.symbol_tables[0].build_id);
-  EXPECT_EQ(initial.symbol_tables[0].symbols[0].name,
-            second.symbol_tables[0].symbols[0].name);
-  EXPECT_EQ(initial.symbol_tables[0].symbols[0].value,
-            second.symbol_tables[0].symbols[0].value);
-  EXPECT_EQ(initial.symbol_tables[0].symbols[1].name,
-            second.symbol_tables[0].symbols[1].name);
-  EXPECT_EQ(initial.symbol_tables[0].symbols[1].value,
-            second.symbol_tables[0].symbols[1].value);
-  EXPECT_EQ(initial.symbol_tables[1].build_id,
-            second.symbol_tables[1].build_id);
-  EXPECT_EQ(initial.symbol_tables[1].symbols[0].name,
-            second.symbol_tables[1].symbols[0].name);
-  EXPECT_EQ(initial.symbol_tables[1].symbols[0].value,
-            second.symbol_tables[1].symbols[0].value);
-  EXPECT_EQ(initial.symbol_tables[1].symbols[1].name,
-            second.symbol_tables[1].symbols[1].name);
-  EXPECT_EQ(initial.symbol_tables[1].symbols[1].value,
-            second.symbol_tables[1].symbols[1].value);
+  EXPECT_EQ(2u, second.symbols.size());
+  EXPECT_EQ(initial.symbols[0].name, second.symbols[0].name);
+  EXPECT_EQ(initial.symbols[0].value, second.symbols[0].value);
+  EXPECT_EQ(initial.symbols[1].name, second.symbols[1].name);
+  EXPECT_EQ(initial.symbols[1].value, second.symbols[1].value);
 }
 
 // ASpace ----------------------------------------------------------------------
@@ -568,7 +544,7 @@ TEST(Protocol, WriteMemoryRequest) {
   WriteMemoryRequest initial;
   initial.process_koid = 91823765;
   initial.address = 0x3468234;
-  initial.data = { 0, 1, 2, 3, 4, 5};
+  initial.data = {0, 1, 2, 3, 4, 5};
 
   WriteMemoryRequest second;
   ASSERT_TRUE(SerializeDeserializeRequest(initial, &second));
