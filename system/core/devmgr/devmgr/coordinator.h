@@ -371,7 +371,9 @@ public:
     }
     void set_dmctl_socket(zx::socket dmctl_socket) { dmctl_socket_ = std::move(dmctl_socket); }
 
+    fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() { return drivers_; }
     const fbl::DoublyLinkedList<Driver*, Driver::Node>& drivers() const { return drivers_; }
+    fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() { return devices_; }
     const fbl::DoublyLinkedList<Device*, Device::AllDevicesNode>& devices() const {
         return devices_;
     }

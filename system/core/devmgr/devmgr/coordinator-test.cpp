@@ -4,10 +4,15 @@
 
 #include <set>
 
+#include <fbl/algorithm.h>
+#include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
+#include <lib/fidl/coding.h>
 #include <unittest/unittest.h>
+#include <zircon/fidl.h>
 
 #include "coordinator.h"
+#include "devmgr.h"
 
 namespace devmgr {
     zx::channel fs_clone(const char* path) {
@@ -116,6 +121,7 @@ bool bind_drivers() {
 
     zx_status_t status = coordinator.InitializeCoreDevices();
     ASSERT_EQ(ZX_OK, status);
+    coordinator.set_running(true);
 
     std::set<const devmgr::Driver*> drivers;
     auto callback = [&coordinator, &drivers](devmgr::Driver* drv, const char* version) {
@@ -132,10 +138,88 @@ bool bind_drivers() {
     END_TEST;
 }
 
+bool bind_devices() {
+    BEGIN_TEST;
+
+    async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
+    devmgr::Coordinator coordinator(default_config(loop.dispatcher()));
+
+    zx_status_t status = coordinator.InitializeCoreDevices();
+    ASSERT_EQ(ZX_OK, status);
+
+    // Initialize devfs.
+    devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
+    status = devmgr::devfs_publish(&coordinator.root_device(), &coordinator.test_device());
+    ASSERT_EQ(ZX_OK, status);
+    coordinator.set_running(true);
+
+    // Add the device.
+    zx::channel local, remote;
+    status = zx::channel::create(0, &local, &remote);
+    ASSERT_EQ(ZX_OK, status);
+    status = coordinator.AddDevice(&coordinator.test_device(), std::move(local),
+                                   nullptr /* props_data */, 0 /* props_count */,
+                                   "mock-device", ZX_PROTOCOL_TEST, nullptr /* driver_path */,
+                                   nullptr /* args */, false /* invisible */,
+                                   zx::channel() /* client_remote */);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(1, coordinator.devices().size_slow());
+
+    // Add the driver.
+    devmgr::find_loadable_drivers("/boot/driver/test",
+                                  fit::bind_member(&coordinator,
+                                                   &devmgr::Coordinator::DriverAdded));
+    loop.RunUntilIdle();
+    ASSERT_FALSE(coordinator.drivers().is_empty());
+
+    // Bind the device to a fake devhost.
+    devmgr::Device* dev = &coordinator.devices().front();
+    devmgr::Devhost host;
+    dev->host = &host;
+    status = coordinator.BindDevice(dev, "/boot/driver/test/mock-device.so");
+    ASSERT_EQ(ZX_OK, status);
+
+    // Wait for the BindDriver request.
+    zx_signals_t pending;
+    status = remote.wait_one(ZX_CHANNEL_READABLE, zx::time::infinite(), &pending);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
+
+    // Read the BindDriver request.
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    uint32_t actual_bytes;
+    uint32_t actual_handles;
+    status = remote.read(0, bytes, sizeof(bytes), &actual_bytes, handles, fbl::count_of(handles),
+                         &actual_handles);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_LT(0, actual_bytes);
+    ASSERT_EQ(1, actual_handles);
+    status = zx_handle_close(handles[0]);
+    ASSERT_EQ(ZX_OK, status);
+
+    // Validate the BindDriver request.
+    auto hdr = reinterpret_cast<fidl_message_header_t*>(bytes);
+    ASSERT_EQ(fuchsia_device_manager_ControllerBindDriverOrdinal, hdr->ordinal);
+    status = fidl_decode(&fuchsia_device_manager_ControllerBindDriverRequestTable, bytes,
+                         actual_bytes, handles, actual_handles, nullptr);
+    ASSERT_EQ(ZX_OK, status);
+    auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
+    ASSERT_STR_EQ("/boot/driver/test/mock-device.so", req->driver_path.data);
+
+    // Reset the fake devhost connection.
+    dev->host = nullptr;
+    remote.reset();
+    loop.RunUntilIdle();
+
+    END_TEST;
+}
+
 BEGIN_TEST_CASE(coordinator_tests)
 RUN_TEST(initialize_core_devices)
 RUN_TEST(open_virtcon)
 RUN_TEST(dump_state)
 RUN_TEST(find_loadable_drivers)
 RUN_TEST(bind_drivers)
+RUN_TEST(bind_devices)
 END_TEST_CASE(coordinator_tests)
