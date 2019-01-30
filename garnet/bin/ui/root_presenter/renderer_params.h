@@ -20,6 +20,7 @@ struct RendererParams {
   std::optional<fuchsia::ui::gfx::RenderFrequency> render_frequency;
   std::optional<fuchsia::ui::gfx::ShadowTechnique> shadow_technique;
   std::optional<bool> clipping_enabled;
+  std::optional<bool> debug_enabled;
 };
 
 }  // namespace root_presenter

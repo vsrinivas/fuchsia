@@ -159,6 +159,12 @@ void App::HACK_SetRendererParams(
             << "Presenter::HACK_SetRendererParams: Setting render frequency to "
             << fidl::ToUnderlying(param.render_frequency());
         continue;
+      case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
+        renderer_params_.debug_enabled = param.enable_debugging();
+        FXL_LOG(INFO)
+            << "Presenter::HACK_SetRendererParams: Setting debug enabled to "
+            << param.enable_debugging();
+        continue;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
     }

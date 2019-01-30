@@ -481,6 +481,12 @@ void Renderer::SetDisableClipping(bool disable_clipping) {
   session()->Enqueue(NewSetDisableClippingCmd(id(), disable_clipping));
 }
 
+void Renderer::SetEnableDebugging(bool enable_debugging) {
+  auto param = fuchsia::ui::gfx::RendererParam();
+  param.set_enable_debugging(enable_debugging);
+  SetParam(std::move(param));
+}
+
 Layer::Layer(Session* session) : Resource(session) {
   session->Enqueue(NewCreateLayerCmd(id()));
 }

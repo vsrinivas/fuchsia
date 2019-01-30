@@ -59,6 +59,9 @@ class Renderer : public Resource {
     return shadow_technique_;
   }
 
+  void set_enable_debugging(bool enable) { enable_debugging_ = enable; }
+  bool enable_debugging() const { return enable_debugging_; }
+
  private:
   // Context for a Visitor.
   // The VisitorContext is only valid during a Visitor pass, and should not be
@@ -138,6 +141,7 @@ class Renderer : public Resource {
   ::fuchsia::ui::gfx::ShadowTechnique shadow_technique_ =
       ::fuchsia::ui::gfx::ShadowTechnique::SCREEN_SPACE;
   bool disable_clipping_ = false;
+  bool enable_debugging_ = false;
 
   FXL_DISALLOW_COPY_AND_ASSIGN(Renderer);
 };

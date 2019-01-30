@@ -803,6 +803,14 @@ void Presentation2::SetRendererParams(
           continue;
         }
         break;
+      case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
+        if (renderer_params_override_.debug_enabled.has_value()) {
+          FXL_LOG(WARNING)
+              << "Presentation2::SetRendererParams: Cannot change "
+                 "debug enabled, default was overriden in root_presenter";
+          continue;
+        }
+        break;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         continue;
     }

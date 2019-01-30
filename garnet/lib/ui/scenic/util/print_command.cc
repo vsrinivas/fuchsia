@@ -252,6 +252,10 @@ std::ostream& operator<<(std::ostream& stream,
           stream << "Continuous";
           break;
       }
+      break;
+    case RendererParam::Tag::kEnableDebugging:
+      stream << "enable_debugging=" << command.param.enable_debugging();
+      break;
     case RendererParam::Tag::Invalid:
       stream << "Invalid";
       break;

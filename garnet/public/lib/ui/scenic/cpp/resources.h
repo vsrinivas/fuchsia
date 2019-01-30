@@ -550,6 +550,9 @@ class Renderer final : public Resource {
   // NOTE: disabling clipping only has a visual effect; hit-testing is not
   // affected.
   void SetDisableClipping(bool disable_clipping);
+
+  // Set whether debug visualization is enabled for this renderer.
+  void SetEnableDebugging(bool enable_debugging);
 };
 
 // Represents a layer resource in a session.

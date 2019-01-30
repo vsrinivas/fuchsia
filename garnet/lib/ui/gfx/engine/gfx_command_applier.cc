@@ -805,6 +805,9 @@ bool GfxCommandApplier::ApplySetRendererParamCmd(
             command.param.render_frequency() ==
             fuchsia::ui::gfx::RenderFrequency::CONTINUOUSLY);
         return true;
+      case fuchsia::ui::gfx::RendererParam::Tag::kEnableDebugging:
+        renderer->set_enable_debugging(command.param.enable_debugging());
+        return true;
       case fuchsia::ui::gfx::RendererParam::Tag::Invalid:
         session->error_reporter()->ERROR()
             << "scenic_impl::gfx::GfxCommandApplier::"
