@@ -61,12 +61,21 @@ class MockHidDecoder : public HidDecoder {
   void Send(const HidAmbientLightSimple& light);
   // There must not be a pending report that has not been |Read|.
   void Send(const HidButtons& buttons);
+  // There must not be a pending report that has not been |Read|.
+  void Send(const Touchscreen::Report& touchscreen);
   // Emulates device removal. There must not be a pending report that has not
   // been |Read|.
   void Close();
 
  private:
-  enum class ReportType { kNone, kLegacy, kGamepad, kLight, kButtons };
+  enum class ReportType {
+    kNone = 0,
+    kLegacy,
+    kGamepad,
+    kLight,
+    kButtons,
+    kTouchscreen
+  };
 
   struct Report {
     ReportType type;
@@ -82,6 +91,7 @@ class MockHidDecoder : public HidDecoder {
       HidGamepadSimple gamepad;
       HidAmbientLightSimple light;
       HidButtons buttons;
+      Touchscreen::Report touchscreen;
     };
   };
 

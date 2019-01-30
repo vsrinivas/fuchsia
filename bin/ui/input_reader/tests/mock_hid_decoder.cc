@@ -31,6 +31,7 @@ const std::string& MockHidDecoder::name() const { return kDeviceName; }
 bool MockHidDecoder::Init() {
   std::pair<Protocol, bool> result = init_handler_();
   protocol_ = result.first;
+  report_.type = ReportType::kNone;
   return result.second;
 }
 
@@ -69,12 +70,12 @@ bool MockHidDecoder::Read(HidButtons* data) {
 }
 
 bool MockHidDecoder::Read(Touchscreen::Report* report) {
-  // TODO(TC-319): Implement
-  return true;
+  return MockRead(ReportType::kTouchscreen, report_.touchscreen, report);
 }
 
 bool MockHidDecoder::SetDescriptor(Touchscreen::Descriptor* touch_desc) {
-  // TODO(TC-319): Implement
+  // It isn't necessary to set a mock descriptor since we don't actually
+  // check this data.
   return true;
 }
 
@@ -104,6 +105,13 @@ void MockHidDecoder::Send(const HidButtons& buttons) {
   FXL_CHECK(report_.type == ReportType::kNone);
   report_.type = ReportType::kButtons;
   report_.buttons = buttons;
+  Signal();
+}
+
+void MockHidDecoder::Send(const Touchscreen::Report& touchscreen) {
+  FXL_CHECK(report_.type == ReportType::kNone);
+  report_.type = ReportType::kTouchscreen;
+  report_.touchscreen = touchscreen;
   Signal();
 }
 

@@ -158,4 +158,57 @@ TEST_F(ReaderInterpreterInputTest, LightSensorTest) {
   EXPECT_EQ(42, last_report_.sensor->scalar());
 }
 
+TEST_F(ReaderInterpreterInputTest, TouchpadTest) {
+  fxl::WeakPtr<MockHidDecoder> device =
+      AddDevice(HidDecoder::Protocol::Touchpad);
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(0, report_count_);
+
+  {
+    // Touchpads use the touchscreen driver behind the scenes, so we
+    // must send touchscreen reports.
+    Touchscreen::Report touchpad_rpt{};
+    touchpad_rpt.contact_count = 1;
+    touchpad_rpt.contacts[0].id = 1;
+    touchpad_rpt.contacts[0].x = 10;
+    touchpad_rpt.contacts[0].y = 20;
+    device->Send(touchpad_rpt);
+    RunLoopUntilIdle();
+
+    touchpad_rpt.contacts[0].x = 15;
+    touchpad_rpt.contacts[0].y = 10;
+    device->Send(touchpad_rpt);
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(2, report_count_);
+  ASSERT_TRUE(last_report_.mouse);
+  EXPECT_TRUE(last_report_.mouse->rel_x = 5);
+  EXPECT_TRUE(last_report_.mouse->rel_y = -10);
+}
+
+TEST_F(ReaderInterpreterInputTest, TouchscreenTest) {
+  fxl::WeakPtr<MockHidDecoder> device = AddDevice(HidDecoder::Protocol::Touch);
+
+  RunLoopUntilIdle();
+  EXPECT_EQ(0, report_count_);
+
+  {
+    Touchscreen::Report touchscreen_rpt{};
+    touchscreen_rpt.contact_count = 1;
+    touchscreen_rpt.contacts[0].id = 1;
+    touchscreen_rpt.contacts[0].x = 10;
+    touchscreen_rpt.contacts[0].y = 20;
+    device->Send(touchscreen_rpt);
+    RunLoopUntilIdle();
+  }
+
+  EXPECT_EQ(1, report_count_);
+  ASSERT_TRUE(last_report_.touchscreen);
+  fuchsia::ui::input::Touch touch = last_report_.touchscreen->touches.at(0);
+  EXPECT_TRUE(touch.finger_id = 1);
+  EXPECT_TRUE(touch.x = 10);
+  EXPECT_TRUE(touch.y = 20);
+}
 }  // namespace mozart
