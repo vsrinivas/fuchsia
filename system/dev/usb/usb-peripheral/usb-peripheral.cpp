@@ -19,7 +19,9 @@
 #include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/function.h>
 #include <ddk/protocol/usb/modeswitch.h>
+#include <ddk/usb-peripheral-config.h>
 #include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/device/usb-peripheral.h>
@@ -53,7 +55,6 @@ zx_status_t UsbPeripheral::Init() {
     if (!dci_.is_valid()) {
         return ZX_ERR_NOT_SUPPORTED;
     }
-
     // Starting USB mode is determined from device metadata.
     // We read initial value and store it in dev->usb_mode, but do not actually
     // enable it until after all of our functions have bound.
@@ -80,12 +81,44 @@ zx_status_t UsbPeripheral::Init() {
     }
 
     dci_.SetInterface(this, &usb_dci_interface_ops_);
-
-#if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
-    // Set compile time configuration, if we have one.
-    SetDefaultConfig();
-#endif
-
+    size_t metasize = 0;
+    status = device_get_metadata_size(parent(), DEVICE_METADATA_USB_CONFIG, &metasize);
+    if (status != ZX_OK) {
+        return ZX_OK;
+    }
+    constexpr auto alignment = []() {
+        return alignof(UsbConfig) > __STDCPP_DEFAULT_NEW_ALIGNMENT__
+                   ? alignof(UsbConfig)
+                   : __STDCPP_DEFAULT_NEW_ALIGNMENT__;
+    }();
+    fbl::AllocChecker ac;
+    UsbConfig* config = reinterpret_cast<UsbConfig*>(
+        new (std::align_val_t(alignment), &ac) unsigned char[metasize]);
+    if (!ac.check()) {
+        return ZX_OK;
+    }
+    fbl::AutoCall call([=]() { delete[] reinterpret_cast<char*>(config); });
+    const uint32_t key = DEVICE_METADATA_USB_CONFIG;
+    status = device_get_metadata(parent(), key, config, metasize, &metasize);
+    if (status != ZX_OK) {
+        return ZX_OK;
+    }
+    device_desc_.idVendor = config->vid;
+    device_desc_.idProduct = config->pid;
+    status = AllocStringDesc(config->manufacturer, &device_desc_.iManufacturer);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = AllocStringDesc(config->product, &device_desc_.iProduct);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = AllocStringDesc(config->serial, &device_desc_.iSerialNumber);
+    if (status != ZX_OK) {
+        return status;
+    }
+    SetDefaultConfig(reinterpret_cast<FunctionDescriptor*>(config->functions),
+                     (metasize - sizeof(UsbConfig)) / sizeof(FunctionDescriptor));
     return ZX_OK;
 }
 
@@ -146,7 +179,7 @@ zx_status_t UsbPeripheral::ValidateFunction(fbl::RefPtr<UsbFunction> function, v
             return ZX_ERR_INVALID_ARGS;
         }
         header = reinterpret_cast<const usb_descriptor_header_t*>(
-                                        reinterpret_cast<const uint8_t*>(header) + header->bLength);
+            reinterpret_cast<const uint8_t*>(header) + header->bLength);
     }
 
     return ZX_OK;
@@ -686,21 +719,35 @@ zx_status_t UsbPeripheral::MsgSetMode(uint32_t mode, fidl_txn_t* txn) {
 }
 
 static fuchsia_hardware_usb_peripheral_Device_ops_t fidl_ops = {
-    .SetDeviceDescriptor = [](void* ctx, const DeviceDescriptor* desc, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetDeviceDescriptor(desc, txn); },
-    .AllocStringDesc = [](void* ctx, const char* name_data, size_t name_size, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAllocStringDesc(name_data,
-                                                                                 name_size, txn); },
-    .AddFunction = [](void* ctx, const FunctionDescriptor* desc, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAddFunction(desc, txn); },
-    .BindFunctions = [](void* ctx, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgBindFunctions(txn); },
-    .ClearFunctions = [](void* ctx, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgClearFunctions(txn); },
-    .GetMode = [](void* ctx, fidl_txn_t* txn) {
-                return reinterpret_cast<UsbPeripheral*>(ctx)->MsgGetMode(txn); },
-    .SetMode = [](void* ctx, uint32_t mode, fidl_txn_t* txn) {
-                    return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetMode(mode, txn); },
+    .SetDeviceDescriptor =
+        [](void* ctx, const DeviceDescriptor* desc, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetDeviceDescriptor(desc, txn);
+        },
+    .AllocStringDesc =
+        [](void* ctx, const char* name_data, size_t name_size, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAllocStringDesc(name_data, name_size,
+                                                                             txn);
+        },
+    .AddFunction =
+        [](void* ctx, const FunctionDescriptor* desc, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgAddFunction(desc, txn);
+        },
+    .BindFunctions =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgBindFunctions(txn);
+        },
+    .ClearFunctions =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgClearFunctions(txn);
+        },
+    .GetMode =
+        [](void* ctx, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgGetMode(txn);
+        },
+    .SetMode =
+        [](void* ctx, uint32_t mode, fidl_txn_t* txn) {
+            return reinterpret_cast<UsbPeripheral*>(ctx)->MsgSetMode(mode, txn);
+        },
 };
 
 zx_status_t UsbPeripheral::DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn) {
@@ -718,8 +765,7 @@ void UsbPeripheral::DdkRelease() {
     delete this;
 }
 
-#if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
-zx_status_t UsbPeripheral::SetDefaultConfig() {
+zx_status_t UsbPeripheral::SetDefaultConfig(FunctionDescriptor* descriptors, size_t length) {
     device_desc_.bLength = sizeof(usb_device_descriptor_t),
     device_desc_.bDescriptorType = USB_DT_DEVICE;
     device_desc_.bcdUSB = htole16(0x0200);
@@ -727,55 +773,24 @@ zx_status_t UsbPeripheral::SetDefaultConfig() {
     device_desc_.bDeviceSubClass = 0;
     device_desc_.bDeviceProtocol = 0;
     device_desc_.bMaxPacketSize0 = 64;
-    device_desc_.idVendor = htole16(USB_DEVICE_VID);
-    device_desc_.idProduct = htole16(USB_DEVICE_PID);
     device_desc_.bcdDevice = htole16(0x0100);
-    device_desc_.iManufacturer = 0;
-    device_desc_.iProduct = 0;
-    device_desc_.iSerialNumber = 0;
     device_desc_.bNumConfigurations = 1;
 
     zx_status_t status = ZX_OK;
-
-#ifdef USB_DEVICE_MANUFACTURER
-    status = AllocStringDesc(USB_DEVICE_MANUFACTURER, &device_desc_.iManufacturer);
-    if (status != ZX_OK) return status;
-#endif
-#ifdef USB_DEVICE_PRODUCT
-    status = AllocStringDesc(USB_DEVICE_PRODUCT, &device_desc_.iProduct);
-    if (status != ZX_OK) return status;
-#endif
-#ifdef USB_DEVICE_SERIAL
-    status = AllocStringDesc(USB_DEVICE_SERIAL, &device_desc_.iSerialNumber);
-    if (status != ZX_OK) return status;
-#endif
-
-    FunctionDescriptor function_desc;
-    if (strcasecmp(USB_DEVICE_FUNCTIONS, "cdc") == 0) {
-        function_desc.interface_class = USB_CLASS_COMM;
-        function_desc.interface_subclass = USB_CDC_SUBCLASS_ETHERNET;
-        function_desc.interface_protocol = 0;
-    } else if (strcasecmp(USB_DEVICE_FUNCTIONS, "ums") == 0) {
-        function_desc.interface_class = USB_CLASS_MSC;
-        function_desc.interface_subclass = USB_SUBCLASS_MSC_SCSI;
-        function_desc.interface_protocol = USB_PROTOCOL_MSC_BULK_ONLY;
-    } else if (strcasecmp(USB_DEVICE_FUNCTIONS, "test") == 0) {
-        function_desc.interface_class = USB_CLASS_VENDOR;
-        function_desc.interface_subclass = 0;
-        function_desc.interface_protocol = 0;
-    } else {
-        zxlogf(ERROR, "%s: unknown function %s\n", __func__, USB_DEVICE_FUNCTIONS);
-        return ZX_ERR_INVALID_ARGS;
+    for (size_t i = 0; i < length; i++) {
+        status = AddFunction(descriptors + i);
+        if (status != ZX_OK) {
+            return status;
+        }
     }
 
-    status = AddFunction(&function_desc);
-    if (status != ZX_OK) return status;
+    if (status != ZX_OK)
+        return status;
 
     return BindFunctions();
 }
-#endif // defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
 
-static zx_driver_ops_t ops = [](){
+static zx_driver_ops_t ops = []() {
     zx_driver_ops_t ops = {};
     ops.version = DRIVER_OPS_VERSION;
     ops.bind = UsbPeripheral::Create;

@@ -14,6 +14,8 @@
 
 #include <threads.h>
 
+#include <ddk/usb-peripheral-config.h>
+
 namespace board_mt8167 {
 
 // BTI IDs for our devices
@@ -68,6 +70,7 @@ private:
     gpio_impl_protocol_t gpio_impl_;
     pdev_board_info_t board_info_;
     thrd_t thread_;
+    UsbConfig* usb_config_;
 };
 
 } // namespace board_mt8167

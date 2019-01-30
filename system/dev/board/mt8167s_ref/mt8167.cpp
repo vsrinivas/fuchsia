@@ -140,6 +140,7 @@ zx_status_t Mt8167::Start() {
 }
 
 void Mt8167::DdkRelease() {
+    delete[] reinterpret_cast<char*>(usb_config_);
     delete this;
 }
 

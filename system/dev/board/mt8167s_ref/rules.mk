@@ -42,6 +42,8 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/c \
 
+MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-usb-peripheral
+
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-gpio \
     system/banjo/ddk-protocol-gpioimpl \

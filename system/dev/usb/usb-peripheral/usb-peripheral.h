@@ -151,11 +151,7 @@ private:
                               size_t length, size_t* out_actual);
     zx_status_t SetConfiguration(uint8_t configuration);
     zx_status_t SetInterface(uint8_t interface, uint8_t alt_setting);
-
-// TODO(voydanoff) move default configuration to device metadata.
-#if defined(USB_DEVICE_VID) && defined(USB_DEVICE_PID) && defined(USB_DEVICE_FUNCTIONS)
-    zx_status_t SetDefaultConfig();
-#endif
+    zx_status_t SetDefaultConfig(FunctionDescriptor* descriptors, size_t length);
 
     // Our parent's DCI protocol.
     const ddk::UsbDciProtocolClient dci_;
