@@ -31,11 +31,11 @@ build/
 buildtools/
 compile_commands.json
 cscope.*
-docs/
 garnet/
 go/pkg
 infra/
 integration/
+old/
 out/
 peridot/
 prebuilt/
