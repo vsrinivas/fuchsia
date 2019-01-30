@@ -33,7 +33,6 @@ typedef struct pciroot_ctx {
     ACPI_HANDLE acpi_object;
     ACPI_DEVICE_INFO acpi_device_info;
     struct pci_platform_info info;
-    zx_device_t* zxdev;
 } pciroot_ctx_t;
 
 zx_status_t pci_init(zx_device_t* parent, ACPI_HANDLE object, ACPI_DEVICE_INFO* info, publish_acpi_device_ctx_t* ctx);

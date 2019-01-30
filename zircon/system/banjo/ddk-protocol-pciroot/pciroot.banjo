@@ -64,9 +64,9 @@ interface Pciroot {
     /// Write 32 bytes to config space for device at bdf |address| offset |offset|.
     ConfigWrite32(zircon.hw.pci.PciBdf address, uint16 offset, uint32 value) -> (zx.status s);
     /// Placeholder methods for MSI configuration. May be removed.
-    MsiAllocBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
-    MsiFreeBlock(MsiBlock block) -> (zx.status s);
-    MsiMaskUnmask(uint64 msi_id, bool mask) -> (zx.status s);
+    AllocMsiBlock(uint64 requested_irqs, bool can_target_64bit) -> (zx.status s, MsiBlock block);
+    FreeMsiBlock(MsiBlock block) -> (zx.status s);
+    MaskUnmaskMsi(uint64 msi_id, bool mask) -> (zx.status s);
     /// Request address space reservations from platform bus to use for mapping bars / bridges
     /// TODO(cja): parameters/return are not finalized.
     GetAddressSpace(usize len, PciAddressSpace type, bool low) -> (zx.status s, zx.paddr base);

@@ -274,24 +274,6 @@ zx_status_t pci_get_segment_mcfg_alloc(unsigned segment_group, pci_mcfg_allocati
     return ZX_ERR_NOT_FOUND;
 }
 
-static zx_protocol_device_t pciroot_device_ops = {
-    .version = DEVICE_OPS_VERSION,
-    .get_protocol = nullptr,
-    .open = nullptr,
-    .open_at = nullptr,
-    .close = nullptr,
-    .unbind = nullptr,
-    .release = nullptr,
-    .read = nullptr,
-    .write = nullptr,
-    .get_size = nullptr,
-    .ioctl = nullptr,
-    .suspend = nullptr,
-    .resume = nullptr,
-    .rxrpc = nullptr,
-    .message = nullptr,
-};
-
 zx_status_t pci_init_bookkeeping(void) {
     zx_status_t status;
     auto region_pool = RegionAllocator::RegionPool::Create(PAGE_SIZE);
@@ -427,20 +409,6 @@ zx_status_t pci_init(zx_device_t* parent,
         }
     }
 
-    device_add_args_t args = {
-        .version = DEVICE_ADD_ARGS_VERSION,
-        .name = dev_ctx->name,
-        .ctx = dev_ctx.get(),
-        .ops = &pciroot_device_ops,
-        .props = nullptr,
-        .prop_count = 0,
-        .proto_id = ZX_PROTOCOL_PCIROOT,
-        .proto_ops = get_pciroot_ops(),
-        .proxy_args = nullptr,
-        .flags = 0,
-        .client_remote = ZX_HANDLE_INVALID,
-    };
-
     // These are cached here to work around dev_ctx potentially going out of scope
     // after device_add in the event that unbind/release are called from the DDK. See
     // the below TODO for more information.
@@ -448,7 +416,7 @@ zx_status_t pci_init(zx_device_t* parent,
     uint8_t last_pci_bbn = dev_ctx->info.start_bus_num;
     memcpy(name, dev_ctx->name, sizeof(name));
 
-    status = device_add(parent, &args, &dev_ctx->zxdev);
+    status = Pciroot::Create(std::move(dev_ctx), parent, name);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s failed to add pciroot device for '%s': %d\n",
                kLogTag, dev_ctx->name, status);

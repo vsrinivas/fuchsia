@@ -56,6 +56,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/hid \
     system/ulib/pci \
     system/ulib/region-alloc \
+    system/ulib/zx \
     system/ulib/zxcpp \
     third_party/ulib/acpica \
     third_party/ulib/chromiumos-platform-ec \
