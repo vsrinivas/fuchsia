@@ -121,16 +121,4 @@
 // CLK offsets.
 #define HHI_MIPI_ISP_CLK_CNTL               (0x70 << 2)
 #define HHI_MIPI_CSI_PHY_CLK_CNTL           (0xD0 << 2)
-#define HHI_CSI_PHY_CNTL0                   (0xD3 << 2)
-#define HHI_CSI_PHY_CNTL1                   (0x114 << 2)
 
-// Power domain.
-#define AO_RTI_GEN_PWR_SLEEP0               (0x3a << 2)
-#define AO_RTI_GEN_PWR_ISO0                 (0x3b << 2)
-
-// Memory PD.
-#define HHI_ISP_MEM_PD_REG0                 (0x45 << 2)
-#define HHI_ISP_MEM_PD_REG1                 (0x46 << 2)
-
-// Reset
-#define RESET4_LEVEL                        0x90

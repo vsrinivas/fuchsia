@@ -10,8 +10,8 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
 #include <ddktl/pdev.h>
-#include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/isp.h>
+#include <ddktl/protocol/ispimpl.h>
 #include <fbl/unique_ptr.h>
 #include <threads.h>
 
@@ -30,7 +30,7 @@ public:
     DISALLOW_COPY_AND_ASSIGN_ALLOW_MOVE(ArmIspDevice);
 
     explicit ArmIspDevice(zx_device_t* parent)
-        : IspDeviceType(parent) {}
+        : IspDeviceType(parent), pdev_(parent) {}
 
     ~ArmIspDevice();
 
@@ -41,10 +41,22 @@ public:
     void DdkUnbind();
 
     // ZX_PROTOCOL_ISP ops.
-    void IspDummyCall() {};
+    void IspDummyCall(){};
 
 private:
     void ShutDown();
+    zx_status_t InitPdev(zx_device_t* parent);
+
+    void PowerUpIsp();
+    void IspHWReset(bool reset);
+    zx_status_t InitIsp();
+
+    std::optional<ddk::MmioBuffer> power_mmio_;
+    std::optional<ddk::MmioBuffer> memory_pd_mmio_;
+    std::optional<ddk::MmioBuffer> hiu_mmio_;
+    std::optional<ddk::MmioBuffer> reset_mmio_;
+
+    ddk::PDev pdev_;
 };
 
 } // namespace camera

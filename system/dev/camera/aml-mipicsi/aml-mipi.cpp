@@ -29,40 +29,12 @@ constexpr uint32_t kAphy0 = 1;
 constexpr uint32_t kCsiHost0 = 2;
 constexpr uint32_t kMipiAdap = 3;
 constexpr uint32_t kHiu = 4;
-constexpr uint32_t kPowerDomain = 5;
-constexpr uint32_t kMemoryDomain = 6;
-constexpr uint32_t kReset = 7;
 
 // CLK Shifts & Masks
 constexpr uint32_t kClkMuxMask = 0xfff;
 constexpr uint32_t kClkEnableShift = 8;
 
 } // namespace
-
-void AmlMipiDevice::IspHWReset(bool reset) {
-    if (reset) {
-        reset_mmio_->ClearBits32(1 << 1, RESET4_LEVEL);
-    } else {
-        reset_mmio_->SetBits32(1 << 1, RESET4_LEVEL);
-    }
-}
-
-void AmlMipiDevice::PowerUpIsp() {
-    // set bit[18-19]=0
-    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_SLEEP0);
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(5)));
-
-    // set bit[18-19]=0
-    power_mmio_->ClearBits32(1 << 18 | 1 << 19, AO_RTI_GEN_PWR_ISO0);
-
-    // MEM_PD_REG0 set 0
-    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG0);
-    // MEM_PD_REG1 set 0
-    memory_pd_mmio_->Write32(0, HHI_ISP_MEM_PD_REG1);
-
-    hiu_mmio_->Write32(0x5b446585, HHI_CSI_PHY_CNTL0);
-    hiu_mmio_->Write32(0x803f4321, HHI_CSI_PHY_CNTL1);
-}
 
 void AmlMipiDevice::InitMipiClock() {
     // clear existing values
@@ -112,24 +84,6 @@ zx_status_t AmlMipiDevice::InitPdev(zx_device_t* parent) {
     }
 
     status = pdev_.MapMmio(kHiu, &hiu_mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = pdev_.MapMmio(kPowerDomain, &power_mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = pdev_.MapMmio(kMemoryDomain, &memory_pd_mmio_);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
-        return status;
-    }
-
-    status = pdev_.MapMmio(kReset, &reset_mmio_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s: pdev_.MapMmio failed %d\n", __func__, status);
         return status;
@@ -226,17 +180,9 @@ void AmlMipiDevice::MipiCsi2Init(const mipi_info_t* info) {
 zx_status_t AmlMipiDevice::MipiCsiInit(const mipi_info_t* mipi_info,
                                        const mipi_adap_info_t* adap_info) {
 
-    // The ISP and MIPI module is in same power domain.
-    // So if we don't call the power sequence of ISP, the mipi module
-    // won't work and it will block accesses to the  mipi register block.
-    PowerUpIsp();
-
     // Setup MIPI CSI PHY CLK to 200MHz.
     // Setup MIPI ISP CLK to 667MHz.
     InitMipiClock();
-
-    IspHWReset(true);
-    IspHWReset(false);
 
     // Initialize the PHY.
     MipiPhyInit(mipi_info);

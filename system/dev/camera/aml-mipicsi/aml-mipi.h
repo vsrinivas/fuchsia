@@ -83,10 +83,8 @@ private:
     void AdapReaderStart(const mipi_adap_info_t* info);
     void AdapFrontEndStart(const mipi_adap_info_t* info);
 
-    // MIPI & ISP Power and clock APIs.
+    // MIPI clock.
     void InitMipiClock();
-    void PowerUpIsp();
-    void IspHWReset(bool reset);
 
     // Debug.
     void DumpCsiPhyRegs();
@@ -103,9 +101,6 @@ private:
     std::optional<ddk::MmioBuffer> csi_host0_mmio_;
     std::optional<ddk::MmioBuffer> mipi_adap_mmio_;
     std::optional<ddk::MmioBuffer> hiu_mmio_;
-    std::optional<ddk::MmioBuffer> power_mmio_;
-    std::optional<ddk::MmioBuffer> memory_pd_mmio_;
-    std::optional<ddk::MmioBuffer> reset_mmio_;
 
     ddk::PDev pdev_;
     ddk::MipiCsiProtocolClient self_protocol_;

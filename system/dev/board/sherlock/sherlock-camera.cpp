@@ -50,21 +50,6 @@ constexpr pbus_mmio_t mipi_mmios[] = {
         .base = T931_HIU_BASE,
         .length = T931_HIU_LENGTH,
     },
-    // Power domain
-    {
-        .base = T931_POWER_DOMAIN_BASE,
-        .length = T931_POWER_DOMAIN_LENGTH,
-    },
-    // Memory PD
-    {
-        .base = T931_MEMORY_PD_BASE,
-        .length = T931_MEMORY_PD_LENGTH,
-    },
-    // Reset
-    {
-        .base = T931_RESET_BASE,
-        .length = T931_RESET_LENGTH,
-    },
 };
 
 constexpr camera_sensor_t isp_mipi[] = {
@@ -116,6 +101,29 @@ constexpr pbus_i2c_channel_t sensor_i2c[] = {
     {
         .bus_id = SHERLOCK_I2C_3,
         .address = 0x36,
+    },
+};
+
+constexpr pbus_mmio_t isp_mmios[] = {
+    // HIU for clocks.
+    {
+        .base = T931_HIU_BASE,
+        .length = T931_HIU_LENGTH,
+    },
+    // Power domain
+    {
+        .base = T931_POWER_DOMAIN_BASE,
+        .length = T931_POWER_DOMAIN_LENGTH,
+    },
+    // Memory PD
+    {
+        .base = T931_MEMORY_PD_BASE,
+        .length = T931_MEMORY_PD_LENGTH,
+    },
+    // Reset
+    {
+        .base = T931_RESET_BASE,
+        .length = T931_RESET_LENGTH,
     },
 };
 
@@ -177,6 +185,8 @@ static pbus_dev_t isp_dev = []() {
     dev.vid = PDEV_VID_ARM;
     dev.pid = PDEV_PID_ISP;
     dev.did = PDEV_DID_ARM_MALI_IV009;
+    dev.mmio_list = isp_mmios;
+    dev.mmio_count = countof(isp_mmios);
     dev.metadata_list = isp_metadata;
     dev.metadata_count = countof(isp_metadata);
     dev.child_list = &isp_children;
