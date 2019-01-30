@@ -1029,8 +1029,7 @@ zx_status_t Coordinator::BindDevice(Device* dev, fbl::StringPiece drvlibname) {
                                dev->props.get(), dev->prop_count, autobind)) {
                 log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
                     drv.name.data(), dev->name.data());
-                AttemptBind(&drv, dev);
-                return ZX_OK;
+                return AttemptBind(&drv, dev);
             }
         }
     }
@@ -1491,7 +1490,7 @@ static fuchsia_device_manager_Coordinator_ops_t fidl_ops = {
 };
 
 zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
-    uint8_t msg[8192];
+    uint8_t msg[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t hin[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t msize = sizeof(msg);
     uint32_t hcount = fbl::count_of(hin);
@@ -1771,21 +1770,23 @@ void Coordinator::HandleNewDevice(Device* dev) {
     // If the device has a proxy, we actually want to wait for the proxy device to be
     // created and connect to that.
     if (dev->client_remote.is_valid() && !(dev->flags & DEV_CTX_MUST_ISOLATE)) {
-        zx_status_t r;
-        if ((r = devfs_connect(dev, std::move(dev->client_remote))) != ZX_OK) {
-            log(ERROR, "devcoord: devfs_connnect: %d\n", r);
+        zx_status_t status = devfs_connect(dev, std::move(dev->client_remote));
+        if (status != ZX_OK) {
+            log(ERROR, "devcoord: devfs_connnect: %d\n", status);
         }
     }
     for (auto& drv : drivers_) {
-        if (dc_is_bindable(&drv, dev->protocol_id,
-                           dev->props.get(), dev->prop_count, true)) {
-            log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n",
-                drv.name.data(), dev->name.data());
-
-            AttemptBind(&drv, dev);
-            if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
-                break;
-            }
+        if (!dc_is_bindable(&drv, dev->protocol_id, dev->props.get(), dev->prop_count, true)) {
+            continue;
+        }
+        log(SPEW, "devcoord: drv='%s' bindable to dev='%s'\n", drv.name.data(), dev->name.data());
+        zx_status_t status = AttemptBind(&drv, dev);
+        if (status != ZX_OK) {
+            log(ERROR, "devcoord: failed to bind drv='%s' to dev='%s': %d\n", drv.name.data(),
+                dev->name.data(), status);
+        }
+        if (!(dev->flags & DEV_CTX_MULTI_BIND)) {
+            break;
         }
     }
 }
@@ -1981,32 +1982,33 @@ void Coordinator::DriverAddedSys(Driver* drv, const char* version) {
 // BindDriver is called when a new driver becomes available to
 // the Coordinator.  Existing devices are inspected to see if the
 // new driver is bindable to them (unless they are already bound).
-void Coordinator::BindDriver(Driver* drv) {
-    if (running_) {
-        printf("devcoord: driver '%s' added\n", drv->name.data());
-    }
+zx_status_t Coordinator::BindDriver(Driver* drv) {
     if (is_root_driver(drv)) {
-        AttemptBind(drv, &root_device_);
+        return AttemptBind(drv, &root_device_);
     } else if (is_misc_driver(drv)) {
-        AttemptBind(drv, &misc_device_);
+        return AttemptBind(drv, &misc_device_);
     } else if (is_test_driver(drv)) {
-        AttemptBind(drv, &test_device_);
-    } else if (running_) {
-        for (auto& dev : devices_) {
-            if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD |
-                             DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
-                // if device is already bound or being destroyed or invisible, skip it
-                continue;
-            }
-            if (dc_is_bindable(drv, dev.protocol_id,
-                               dev.props.get(), dev.prop_count, true)) {
-                log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n",
-                    drv->name.data(), dev.name.data());
-
-                AttemptBind(drv, &dev);
-            }
+        return AttemptBind(drv, &test_device_);
+    } else if (!running_) {
+        return ZX_ERR_UNAVAILABLE;
+    }
+    printf("devcoord: driver '%s' added\n", drv->name.data());
+    for (auto& dev : devices_) {
+        if (dev.flags & (DEV_CTX_BOUND | DEV_CTX_DEAD |
+                            DEV_CTX_ZOMBIE | DEV_CTX_INVISIBLE)) {
+            // If device is already bound or being destroyed or invisible, skip it.
+            continue;
+        } else if (!dc_is_bindable(drv, dev.protocol_id, dev.props.get(), dev.prop_count, true)) {
+            // If the driver is not bindable to the device, skip it.
+            continue;
+        }
+        log(INFO, "devcoord: drv='%s' bindable to dev='%s'\n", drv->name.data(), dev.name.data());
+        zx_status_t status = AttemptBind(drv, &dev);
+        if (status != ZX_OK) {
+            return status;
         }
     }
+    return ZX_OK;
 }
 
 static int system_driver_loader(void* arg) {

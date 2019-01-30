@@ -334,7 +334,7 @@ public:
                                 uint32_t length);
 
     zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
-    void BindDriver(Driver* drv);
+    zx_status_t BindDriver(Driver* drv);
 
     zx_status_t HandleDeviceRead(Device* dev);
 
