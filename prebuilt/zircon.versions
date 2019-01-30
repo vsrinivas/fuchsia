@@ -42,16 +42,16 @@ fuchsia/third_party/qemu/mac-amd64
 	PWYIo8mW5T21MA0l4lRPahWJqGLqhgXK2Jwev2rpTuYC
 
 fuchsia/tools/symbolize/linux-amd64
-	git_revision:7140d924a314402c36bae66f34d0e77587ffb825
-	SwHX3C5v2LnsRsgyeDIWzYFqEtZuCDMEZLMijVEq-LYC
+	git_revision:5e5a9e55af0926d9ce08c9da9cf46dc3f9eabc1b
+	kUhR8L_LOTUCQrTRV6fYzfGg34TfH4bE5svn-MtJgH0C
 
 fuchsia/tools/symbolize/linux-arm64
-	git_revision:7140d924a314402c36bae66f34d0e77587ffb825
-	Exa4kWl84z96Z6I-8_Gextd6SFCh24YK5KE-zxVSVg0C
+	git_revision:5e5a9e55af0926d9ce08c9da9cf46dc3f9eabc1b
+	aqRgSMgX8TWwtiMyX9nvK7_EIih8P-UAh45bNWrrqd8C
 
 fuchsia/tools/symbolize/mac-amd64
-	git_revision:7140d924a314402c36bae66f34d0e77587ffb825
-	nbAOdkuJPdzfD6QHmu4_b0ha4BoZKxtLenz7RJkfM6QC
+	git_revision:5e5a9e55af0926d9ce08c9da9cf46dc3f9eabc1b
+	thXJRw7zK9vxNt3Hgvb1H_3zW38KiooUcw4TKG9FIQUC
 
 fuchsia_internal/firmware/bluetooth/bcm4345c4
 	git_revision:1e41b7d6f96f09558a36a636de2819068cd71ea0
