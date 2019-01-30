@@ -216,7 +216,7 @@ TEST_F(ImagePipeTest, PresentImagesInOrder) {
 
 // Call Present with an image with an offset into its memory, and expect no
 // error.
-TEST_F(ImagePipeTest, PresentImagesWithOffset) {
+TEST_F(ImagePipeTest, DISABLED_PresentImagesWithOffset) {
   ImagePipePtr image_pipe =
       fxl::MakeRefCounted<ImagePipeThatCreatesDummyImages>(
           session_.get(), this, update_scheduler_.get());

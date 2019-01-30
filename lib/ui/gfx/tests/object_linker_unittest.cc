@@ -264,7 +264,7 @@ TEST_F(ObjectLinkerTest, InitializingLinkTwiceCausesDeath) {
       "");
 }
 
-TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeers) {
+TEST_F(ObjectLinkerTest, DISABLED_InitializeLinksMatchingPeers) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestExportObj export_obj;
@@ -346,7 +346,8 @@ TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeers) {
   fail_on_disconnect_called = true;
 }
 
-TEST_F(ObjectLinkerTest, InitializeLinksMatchingPeersWithImportBeforeExport) {
+TEST_F(ObjectLinkerTest,
+       DISABLED_InitializeLinksMatchingPeersWithImportBeforeExport) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestExportObj export_obj;
@@ -482,7 +483,8 @@ TEST_F(ObjectLinkerTest, InitializeDoesNotLinkNonMatchingPeers) {
   // |import_link| dies now.  No disconnect callback should be called.
 }
 
-TEST_F(ObjectLinkerTest, EarlyImportTokenDeathCausesExportDisconnection) {
+TEST_F(ObjectLinkerTest,
+       DISABLED_EarlyImportTokenDeathCausesExportDisconnection) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestExportObj export_obj;
@@ -516,7 +518,7 @@ TEST_F(ObjectLinkerTest, EarlyImportTokenDeathCausesExportDisconnection) {
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
-TEST_F(ObjectLinkerTest, ImportTokenDeathCausesExportDisconnection) {
+TEST_F(ObjectLinkerTest, DISABLED_ImportTokenDeathCausesExportDisconnection) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestExportObj export_obj;
@@ -550,7 +552,8 @@ TEST_F(ObjectLinkerTest, ImportTokenDeathCausesExportDisconnection) {
   EXPECT_EQ(0u, object_linker_.UnresolvedExportCount());
 }
 
-TEST_F(ObjectLinkerTest, EarlyExportTokenDeathCausesImportDisconnection) {
+TEST_F(ObjectLinkerTest,
+       DISABLED_EarlyExportTokenDeathCausesImportDisconnection) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestImportObj import_obj;
@@ -584,7 +587,7 @@ TEST_F(ObjectLinkerTest, EarlyExportTokenDeathCausesImportDisconnection) {
   EXPECT_EQ(0u, object_linker_.UnresolvedImportCount());
 }
 
-TEST_F(ObjectLinkerTest, ExportTokenDeathCausesImportDisconnection) {
+TEST_F(ObjectLinkerTest, DISABLED_ExportTokenDeathCausesImportDisconnection) {
   zx::eventpair export_token, import_token;
   EXPECT_EQ(ZX_OK, zx::eventpair::create(0, &export_token, &import_token));
   TestImportObj import_obj;

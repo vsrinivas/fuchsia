@@ -5,6 +5,7 @@
     "sandbox": {
         "features": [ "vulkan" ],
         "services": [
+            "fuchsia.ui.input.ImeService",
             "fuchsia.vulkan.loader.Loader"
         ]
     }

@@ -153,7 +153,7 @@ TEST_F(ResourceLinkerTest, CannotImportWithDeadDestinationHandles) {
   ASSERT_FALSE(did_resolve);
 }
 
-TEST_F(ResourceLinkerTest, CanImportWithDeadSourceHandle) {
+TEST_F(ResourceLinkerTest, DISABLED_CanImportWithDeadSourceHandle) {
   zx::eventpair destination;
   zx::eventpair source_out;
   {
