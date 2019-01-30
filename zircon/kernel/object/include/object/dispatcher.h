@@ -115,7 +115,7 @@ public:
     }
 
     // Must be called under the handle table lock.
-    uint32_t current_handle_count() const TA_REQ(Handle::ArenaLock::Get()) {
+    uint32_t current_handle_count() const TA_REQ_SHARED(Handle::ArenaLock::Get()) {
         return handle_count_;
     }
 

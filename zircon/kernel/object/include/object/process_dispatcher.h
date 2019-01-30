@@ -6,6 +6,7 @@
 
 #pragma once
 
+#include <kernel/brwlock.h>
 #include <kernel/event.h>
 #include <kernel/thread.h>
 #include <object/dispatcher.h>
@@ -87,7 +88,7 @@ public:
     // it belongs to this process. Use |skip_policy = true| for testing that
     // a handle is valid without potentially triggering a job policy exception.
     Handle* GetHandleLocked(
-        zx_handle_t handle_value, bool skip_policy = false) TA_REQ(handle_table_lock_);
+        zx_handle_t handle_value, bool skip_policy = false) TA_REQ_SHARED(handle_table_lock_);
 
     // Adds |handle| to this process handle list. The handle->process_id() is
     // set to this process id().
@@ -168,7 +169,7 @@ public:
     // returning the error value.
     template <typename T>
     zx_status_t ForEachHandle(T func) const {
-        Guard<fbl::Mutex> guard{&handle_table_lock_};
+        Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
         for (const auto& handle : handles_) {
             const Dispatcher* dispatcher = handle.dispatcher().get();
             zx_status_t s = func(MapHandleToValue(&handle), handle.rights(),
@@ -181,7 +182,7 @@ public:
     }
 
     // accessors
-    Lock<fbl::Mutex>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
+    Lock<BrwLock>* handle_table_lock() TA_RET_CAP(handle_table_lock_) {
         return &handle_table_lock_;
     }
     FutexContext* futex_context() { return &futex_context_; }
@@ -335,7 +336,7 @@ private:
     fbl::RefPtr<VmAspace> aspace_;
 
     // our list of handles
-    mutable DECLARE_MUTEX(ProcessDispatcher) handle_table_lock_; // protects |handles_|.
+    mutable DECLARE_BRWLOCK(ProcessDispatcher) handle_table_lock_; // protects |handles_|.
     fbl::DoublyLinkedList<Handle*> handles_ TA_GUARDED(handle_table_lock_);
 
     FutexContext futex_context_;

@@ -50,7 +50,7 @@ zx_status_t sys_object_wait_one(zx_handle_t handle_value,
 
     auto up = ProcessDispatcher::GetCurrent();
     {
-        Guard<fbl::Mutex> guard{up->handle_table_lock()};
+        Guard<BrwLock, BrwLock::Reader> guard{up->handle_table_lock()};
 
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
@@ -128,7 +128,7 @@ zx_status_t sys_object_wait_many(user_inout_ptr<zx_wait_item_t> user_items, size
     zx_status_t result = ZX_OK;
     size_t num_added = 0;
     {
-        Guard<fbl::Mutex> guard{up->handle_table_lock()};
+        Guard<BrwLock, BrwLock::Reader> guard{up->handle_table_lock()};
 
         for (; num_added != count; ++num_added) {
             Handle* handle = up->GetHandleLocked(items[num_added].handle);
@@ -189,7 +189,7 @@ zx_status_t sys_object_wait_async(zx_handle_t handle_value, zx_handle_t port_han
         return status;
 
     {
-        Guard<fbl::Mutex> guard{up->handle_table_lock()};
+        Guard<BrwLock, BrwLock::Reader> guard{up->handle_table_lock()};
         Handle* handle = up->GetHandleLocked(handle_value);
         if (!handle)
             return ZX_ERR_BAD_HANDLE;

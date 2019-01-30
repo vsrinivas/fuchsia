@@ -89,14 +89,14 @@ void* Handle::Alloc(const fbl::RefPtr<Dispatcher>& dispatcher,
                     const char* what, uint32_t* base_value) {
     size_t outstanding_handles;
     {
-        Guard<fbl::Mutex> guard{ArenaLock::Get()};
+        Guard<BrwLock, BrwLock::Writer> guard{ArenaLock::Get()};
         void* addr = arena_.Alloc();
         outstanding_handles = arena_.DiagnosticCount();
         if (likely(addr)) {
             if (outstanding_handles > kHighHandleCount) {
                 // TODO: Avoid calling this for every handle after
                 // kHighHandleCount; printfs are slow and we're
-                // holding the mutex.
+                // holding the lock.
                 printf("WARNING: High handle count: %zu handles\n",
                        outstanding_handles);
             }
@@ -186,7 +186,7 @@ void Handle::Delete() {
 
     bool zero_handles = false;
     {
-        Guard<fbl::Mutex> guard{ArenaLock::Get()};
+        Guard<BrwLock, BrwLock::Writer> guard{ArenaLock::Get()};
         zero_handles = disp->decrement_handle_count();
         arena_.Free(this);
     }
@@ -202,7 +202,7 @@ void Handle::Delete() {
 Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
     uintptr_t handle_addr = IndexToHandle(value & kHandleIndexMask);
     {
-        Guard<fbl::Mutex> guard{ArenaLock::Get()};
+        Guard<BrwLock, BrwLock::Reader> guard{ArenaLock::Get()};
         if (unlikely(!arena_.in_range(handle_addr)))
             return nullptr;
     }
@@ -212,16 +212,16 @@ Handle* Handle::FromU32(uint32_t value) TA_NO_THREAD_SAFETY_ANALYSIS {
 
 uint32_t Handle::Count(const fbl::RefPtr<const Dispatcher>& dispatcher) {
     // Handle::ArenaLock also guards Dispatcher::handle_count_.
-    Guard<fbl::Mutex> guard{ArenaLock::Get()};
+    Guard<BrwLock, BrwLock::Reader> guard{ArenaLock::Get()};
     return dispatcher->current_handle_count();
 }
 
 size_t Handle::diagnostics::OutstandingHandles() {
-    Guard<fbl::Mutex> guard{ArenaLock::Get()};
+    Guard<BrwLock, BrwLock::Reader> guard{ArenaLock::Get()};
     return arena_.DiagnosticCount();
 }
 
 void Handle::diagnostics::DumpTableInfo() {
-    Guard<fbl::Mutex> guard{ArenaLock::Get()};
+    Guard<BrwLock, BrwLock::Reader> guard{ArenaLock::Get()};
     arena_.Dump();
 }

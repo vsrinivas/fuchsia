@@ -24,6 +24,7 @@
 // TA_REL(x)                    function releases the mutex |x|
 // TA_REL_SHARED(x)             function releases the shared for reading mutex |x|
 // TA_REQ(x)                    function requires that the caller hold the mutex |x|
+// TA_REQ_SHARED(x)             function requires that the caller hold the mutex |x| for shared reading
 // TA_EXCL(x)                   function requires that the caller not be holding the mutex |x|
 // TA_RET_CAP(x)                function returns a reference to the mutex |x|
 // TA_SCOPED_CAP                type represents a scoped or RAII-style wrapper around a capability
@@ -45,6 +46,7 @@
 #define TA_REL(...) THREAD_ANNOTATION(release_capability(__VA_ARGS__))
 #define TA_REL_SHARED(...) THREAD_ANNOTATION(release_shared_capability(__VA_ARGS__))
 #define TA_REQ(...) THREAD_ANNOTATION(requires_capability(__VA_ARGS__))
+#define TA_REQ_SHARED(...) THREAD_ANNOTATION(requires_shared_capability(__VA_ARGS__))
 #define TA_EXCL(...) THREAD_ANNOTATION(locks_excluded(__VA_ARGS__))
 #define TA_RET_CAP(x) THREAD_ANNOTATION(lock_returned(x))
 #define TA_SCOPED_CAP THREAD_ANNOTATION(scoped_lockable)

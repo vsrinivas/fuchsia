@@ -12,6 +12,7 @@
 #include <fbl/macros.h>
 #include <fbl/mutex.h>
 #include <fbl/ref_ptr.h>
+#include <kernel/brwlock.h>
 #include <kernel/lockdep.h>
 #include <stdint.h>
 #include <zircon/types.h>
@@ -79,9 +80,9 @@ private:
 // A Handle is how a specific process refers to a specific Dispatcher.
 class Handle final : public fbl::DoublyLinkedListable<Handle*> {
 public:
-    // The handle arena's mutex. This is public since it protects
+    // The handle arena's lock. This is public since it protects
     // other things like |Dispatcher::handle_count_|.
-    DECLARE_SINGLETON_MUTEX(ArenaLock);
+    LOCK_DEP_SINGLETON_LOCK(ArenaLock, BrwLock);
 
     // Returns the Dispatcher to which this instance points.
     const fbl::RefPtr<Dispatcher>& dispatcher() const { return dispatcher_; }

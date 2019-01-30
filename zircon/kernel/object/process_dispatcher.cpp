@@ -402,7 +402,7 @@ void ProcessDispatcher::FinishDeadTransition() {
 
     fbl::DoublyLinkedList<Handle*> to_clean;
     {
-        Guard<fbl::Mutex> guard{&handle_table_lock_};
+        Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
         for (auto& handle : handles_) {
             handle.set_process_id(ZX_KOID_INVALID);
         }
@@ -469,7 +469,7 @@ Handle* ProcessDispatcher::GetHandleLocked(zx_handle_t handle_value,
 }
 
 void ProcessDispatcher::AddHandle(HandleOwner handle) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
     AddHandleLocked(ktl::move(handle));
 }
 
@@ -479,7 +479,7 @@ void ProcessDispatcher::AddHandleLocked(HandleOwner handle) {
 }
 
 HandleOwner ProcessDispatcher::RemoveHandle(zx_handle_t handle_value) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Writer> guard{&handle_table_lock_};
     return RemoveHandleLocked(handle_value);
 }
 
@@ -513,7 +513,7 @@ zx_status_t ProcessDispatcher::RemoveHandles(user_in_ptr<const zx_handle_t> user
             return status;
 
         {
-            Guard<fbl::Mutex> guard{handle_table_lock()};
+            Guard<BrwLock, BrwLock::Writer> guard{handle_table_lock()};
             for (size_t ix = 0; ix != chunk_size; ++ix) {
                 if (handles[ix] == ZX_HANDLE_INVALID)
                     continue;
@@ -530,7 +530,7 @@ zx_status_t ProcessDispatcher::RemoveHandles(user_in_ptr<const zx_handle_t> user
 }
 
 zx_koid_t ProcessDispatcher::GetKoidForHandle(zx_handle_t handle_value) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
         return ZX_KOID_INVALID;
@@ -540,7 +540,7 @@ zx_koid_t ProcessDispatcher::GetKoidForHandle(zx_handle_t handle_value) {
 zx_status_t ProcessDispatcher::GetDispatcherInternal(zx_handle_t handle_value,
                                                      fbl::RefPtr<Dispatcher>* dispatcher,
                                                      zx_rights_t* rights) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
         return ZX_ERR_BAD_HANDLE;
@@ -555,7 +555,7 @@ zx_status_t ProcessDispatcher::GetDispatcherWithRightsInternal(zx_handle_t handl
                                                                zx_rights_t desired_rights,
                                                                fbl::RefPtr<Dispatcher>* dispatcher_out,
                                                                zx_rights_t* out_rights) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
     Handle* handle = GetHandleLocked(handle_value);
     if (!handle)
         return ZX_ERR_BAD_HANDLE;
@@ -871,12 +871,12 @@ const char* StateToString(ProcessDispatcher::State state) {
 }
 
 bool ProcessDispatcher::IsHandleValid(zx_handle_t handle_value) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
     return (GetHandleLocked(handle_value) != nullptr);
 }
 
 bool ProcessDispatcher::IsHandleValidNoPolicyCheck(zx_handle_t handle_value) {
-    Guard<fbl::Mutex> guard{&handle_table_lock_};
+    Guard<BrwLock, BrwLock::Reader> guard{&handle_table_lock_};
     return (GetHandleLocked(handle_value, true) != nullptr);
 }
 
