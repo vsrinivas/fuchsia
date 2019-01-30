@@ -92,6 +92,10 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
                 name: String::from("fuchsia.net.LegacySocketProvider"),
                 url: String::from(NETSTACK_URL),
             },
+            LaunchService {
+                name: String::from("fuchsia.net.SocketProvider"),
+                url: String::from(NETSTACK_URL),
+            },
         ],
         // pass the endpoint's proxy to create a virtual device
         devices: vec![VirtualDevice {
