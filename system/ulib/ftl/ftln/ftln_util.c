@@ -770,7 +770,7 @@ int FtlnFormat(FTLN ftl, ui32 meta_block) {
 //       Input: ftl = pointer to FTL control block
 //
 void FtlnStateRst(FTLN ftl) {
-    int n;
+    ui32 n;
 
     ftl->high_bc = 0;
     ftl->high_bc_mblk = ftl->resume_vblk = (ui32)-1;
@@ -871,7 +871,8 @@ static void flush_bstat(CFTLN ftl, int* blk0, int* blke, int b, char* type) {
 //       Input: ftl = pointer to FTL control block
 //
 void FtlnBlkStats(CFTLN ftl) {
-    int b, free0 = -1, freee, vol0 = -1, vole;
+    int free0 = -1, freee, vol0 = -1, vole;
+    ui32 b;
 
     printf(
         "\nBLOCK STATS: %u blocks, %u pages per block, curr free "

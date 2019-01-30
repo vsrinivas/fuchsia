@@ -79,7 +79,7 @@ static int get_page_status(CNDM ndm, ui32 pn) {
 
     // Perform CRC on page. The 4 CRC bytes are in the page header.
     // First perform CRC on all but the 4 CRC bytes.
-    for (crc = CRC32_START, i = 0; i < ndm->page_size; ++i) {
+    for (crc = CRC32_START, i = 0; (ui32)i < ndm->page_size; ++i) {
         if (i == HDR_CRC_LOC)
             i = CTRL_DATA_START;
         crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
@@ -175,7 +175,7 @@ static ui32 get_free_ctrl_blk(NDM ndm) {
 //       Input: ndm = pointer to NDM control block
 //
 static void set_frst_ndm_block(NDM ndm) {
-    int i;
+    ui32 i;
 
     // There must be enough good (non-initial bad) blocks before the cut
     // off point to hold all the virtual blocks. Find the lowest offset

@@ -46,7 +46,6 @@ MODULE_COMPILEFLAGS := \
     -I$(LOCAL_DIR)/inc/kprivate \
 
 MODULE_CFLAGS := \
-    -Wno-sign-compare \
     -DNDM_DEBUG=1 \
 
 ifeq ($(call TOBOOL,$(USE_CLANG)),false)

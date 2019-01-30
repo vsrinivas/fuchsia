@@ -450,15 +450,15 @@ static int recycle_possible(CFTLN ftl, ui32 b) {
     if (!IS_MAP_BLK(ftl->bdata[b])) {
         ui32 avail_blk_pgs, map_pgs;
 
-        // If free volume page list is empty or on the prospective block,
-        // need new free volume block.
-        if ((ftl->free_vpn == (ui32)-1) || (ftl->free_vpn / ftl->pgs_per_blk == b))
+        if ((ftl->free_vpn == (ui32)-1) || (ftl->free_vpn / ftl->pgs_per_blk == b)) {
+            // If free volume page list is empty or on the prospective block,
+            // need new free volume block.
             ++needed_free;
-
-        // Else if the number of free volume pages is less than the number
-        // of used pages on prospective block, need another volume block.
-        else if (free_vol_list_pgs(ftl) < used)
+        } else if ((ui32)free_vol_list_pgs(ftl) < used) {
+            // Else if the number of free volume pages is less than the number
+            // of used pages on prospective block, need another volume block.
             ++needed_free;
+        }
 
         // Assume each volume page transfer updates a separate map page
         // (worst case). Add the number of dirty cached map pages. If this
@@ -1058,7 +1058,7 @@ int FtlnRecNeeded(CFTLN ftl, int wr_cnt) {
         vblks_req = (wr_cnt - free_pgs + ftl->pgs_per_blk - 1) / ftl->pgs_per_blk;
 
     // Need recycle if number of required blocks is more than is free.
-    return mblks_req + vblks_req + FTLN_MIN_FREE_BLKS > ftl->num_free_blks;
+    return (ui32)(mblks_req + vblks_req + FTLN_MIN_FREE_BLKS) > ftl->num_free_blks;
 }
 
 // FtlnRecycleMapBlk: Recycle one map block
@@ -1181,7 +1181,7 @@ int FtlnMetaWr(FTLN ftl, ui32 type) {
 //     Returns: 0 on success, -1 on error
 //
 int FtlnRecCheck(FTLN ftl, int wr_cnt) {
-    int count = 0;
+    ui32 count = 0;
 
     // Set errno and return -1 if fatal I/O error occurred.
     if (ftl->flags & FTLN_FATAL_ERR)
