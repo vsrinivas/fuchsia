@@ -227,7 +227,7 @@ registered trace providers and activates them if needed.
 
 What happens when a trace provider's trace buffer becomes full while a trace
 is running depends on the buffering mode.
-See [Buffering Modes](#Buffering Modes) below.
+See [Buffering Modes](#Buffering-Modes) below.
 
 When tracing finishes, the trace manager asks all of the active trace providers
 to stop tracing then waits a short time for them to acknowledge that they
@@ -239,7 +239,7 @@ can often recover partial data even when trace providers terminate abnormally
 as long as they managed to store some data into their trace buffers.
 Note that in streaming mode the trace manager only needs to save the
 currently active rolling buffer.
-See [Buffering Modes](#Buffering Modes) below.
+See [Buffering Modes](#Buffering-Modes) below.
 
 The trace manager delivers the resulting trace archive to its client through
 a socket.  This data is guaranteed to be well-formed according to the
