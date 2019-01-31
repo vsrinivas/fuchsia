@@ -15,6 +15,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
+    system/ulib/fidl \
     system/ulib/zx \
     system/ulib/zxcpp \
 
@@ -25,5 +26,8 @@ MODULE_LIBS := \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-display-controller \
+    system/banjo/ddk-protocol-sysmem \
+
+MODULE_FIDL_LIBS := system/fidl/fuchsia-sysmem
 
 include make/module.mk

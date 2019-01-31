@@ -16,6 +16,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/amlogiccanvas.h>
+#include <ddk/protocol/sysmem.h>
 #include <ddk/debug.h>
 
 #include <ddktl/protocol/display/controller.h>
@@ -65,13 +66,9 @@ public:
                                              size_t display_count);
     uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
-    zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
     zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
-                                                                    uint32_t collection) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+                                                                    uint32_t collection);
 
     // Required functions for DeviceType
     void DdkUnbind();
@@ -101,6 +98,7 @@ private:
     pdev_protocol_t                     pdev_ = {};
     gpio_protocol_t                     gpio_ = {};
     amlogic_canvas_protocol_t           canvas_ = {};
+    sysmem_protocol_t                   sysmem_ = {};
 
     // Board Info
     pdev_board_info_t                   board_info_;

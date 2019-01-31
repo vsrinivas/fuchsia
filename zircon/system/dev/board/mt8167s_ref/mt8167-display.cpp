@@ -38,6 +38,9 @@ zx_status_t Mt8167::DisplayInit() {
             .mode = ZX_INTERRUPT_MODE_EDGE_HIGH,
         },
     };
+    const uint32_t display_protocols[] = {
+        ZX_PROTOCOL_SYSMEM,
+    };
 
     pbus_dev_t display_dev = {};
     display_dev.name = "display";
@@ -49,6 +52,8 @@ zx_status_t Mt8167::DisplayInit() {
     display_dev.bti_count = countof(display_btis);
     display_dev.irq_list = display_irqs;
     display_dev.irq_count = countof(display_irqs);
+    display_dev.protocol_list = display_protocols;
+    display_dev.protocol_count = countof(display_protocols);
 
     zx_status_t status = pbus_.DeviceAdd(&display_dev);
     if (status != ZX_OK) {

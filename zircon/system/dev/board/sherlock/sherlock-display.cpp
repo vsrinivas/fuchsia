@@ -85,6 +85,7 @@ static const pbus_i2c_channel_t display_i2c_channels[] = {
 };
 
 static const uint32_t display_protocols[] = {
+    ZX_PROTOCOL_SYSMEM,
     ZX_PROTOCOL_AMLOGIC_CANVAS,
 };
 

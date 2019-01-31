@@ -17,8 +17,9 @@
 
 #include <ddk/debug.h>
 #include <ddk/driver.h>
-#include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/gpio.h>
+#include <ddk/protocol/platform/device.h>
+#include <ddk/protocol/sysmem.h>
 
 #include <ddktl/device.h>
 #include <ddktl/protocol/display/controller.h>
@@ -60,13 +61,9 @@ public:
                                           size_t display_count);
     uint32_t DisplayControllerImplComputeLinearStride(uint32_t width, zx_pixel_format_t format);
     zx_status_t DisplayControllerImplAllocateVmo(uint64_t size, zx::vmo* vmo_out);
-    zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+    zx_status_t DisplayControllerImplGetSysmemConnection(zx::channel connection);
     zx_status_t DisplayControllerImplSetBufferCollectionConstraints(const image_t* config,
-                                                                    uint32_t collection) {
-        return ZX_ERR_NOT_SUPPORTED;
-    }
+                                                                    uint32_t collection);
 
     // Required functions for DeviceType
     void DdkUnbind();
@@ -75,6 +72,8 @@ private:
     zx_status_t SetupDisplayInterface();
     int VSyncThread();
     void PopulateAddedDisplayArgs(added_display_args_t* args);
+
+    sysmem_protocol_t sysmem_ = {};
 
     std::atomic_bool vsync_shutdown_flag_ = false;
 

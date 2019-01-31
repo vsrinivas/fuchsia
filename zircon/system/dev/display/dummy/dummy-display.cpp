@@ -6,6 +6,7 @@
 #include <ddk/binding.h>
 #include <ddk/platform-defs.h>
 #include <fbl/auto_call.h>
+#include <fuchsia/sysmem/c/fidl.h>
 
 namespace dummy_display {
 #define DISP_ERROR(fmt, ...) zxlogf(ERROR, "[%s %d]" fmt, __func__, __LINE__, ##__VA_ARGS__)
@@ -134,6 +135,62 @@ zx_status_t DummyDisplay::DisplayControllerImplAllocateVmo(uint64_t size, zx::vm
     return zx::vmo::create(size, 0, vmo_out);
 }
 
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+zx_status_t DummyDisplay::DisplayControllerImplGetSysmemConnection(zx::channel connection) {
+    zx_status_t status = sysmem_connect(&sysmem_, connection.release());
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not connect to sysmem\n");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
+// part of ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL ops
+zx_status_t DummyDisplay::DisplayControllerImplSetBufferCollectionConstraints(
+    const image_t* config, zx_unowned_handle_t collection) {
+    fuchsia_sysmem_BufferCollectionConstraints constraints = {};
+    constraints.usage.display = fuchsia_sysmem_displayUsageLayer;
+    constraints.has_buffer_memory_constraints = true;
+    fuchsia_sysmem_BufferMemoryConstraints& buffer_constraints =
+        constraints.buffer_memory_constraints;
+    buffer_constraints.min_size_bytes = 0;
+    buffer_constraints.max_size_bytes = 0xffffffff;
+    buffer_constraints.physically_contiguous_required = false;
+    buffer_constraints.secure_required = false;
+    buffer_constraints.secure_permitted = false;
+    constraints.image_format_constraints_count = 1;
+    fuchsia_sysmem_ImageFormatConstraints& image_constraints =
+        constraints.image_format_constraints[0];
+    image_constraints.pixel_format.type = fuchsia_sysmem_PixelFormatType_BGRA32;
+    image_constraints.color_spaces_count = 1;
+    image_constraints.color_space[0].type = fuchsia_sysmem_ColorSpaceType_SRGB;
+    image_constraints.min_coded_width = 0;
+    image_constraints.max_coded_width = 0xffffffff;
+    image_constraints.min_coded_height = 0;
+    image_constraints.max_coded_height = 0xffffffff;
+    image_constraints.min_bytes_per_row = 0;
+    image_constraints.max_bytes_per_row = 0xffffffff;
+    image_constraints.max_coded_width_times_coded_height = 0xffffffff;
+    image_constraints.layers = 1;
+    image_constraints.coded_width_divisor = 1;
+    image_constraints.coded_height_divisor = 1;
+    image_constraints.bytes_per_row_divisor = 1;
+    image_constraints.start_offset_divisor = 1;
+    image_constraints.display_width_divisor = 1;
+    image_constraints.display_height_divisor = 1;
+
+    zx_status_t status = fuchsia_sysmem_BufferCollectionSetConstraints(collection, true,
+                                                                       &constraints);
+
+    if (status != ZX_OK) {
+        DISP_ERROR("Failed to set constraints");
+        return status;
+    }
+
+    return ZX_OK;
+}
+
 void DummyDisplay::DdkUnbind() {
     DdkRemove();
 }
@@ -179,6 +236,12 @@ int DummyDisplay::VSyncThread() {
 
 zx_status_t DummyDisplay::Bind() {
     zx_status_t status;
+
+    status = device_get_protocol(parent_, ZX_PROTOCOL_SYSMEM, &sysmem_);
+    if (status != ZX_OK) {
+        DISP_ERROR("Could not get Display SYSMEM protocol\n");
+        return status;
+    }
 
     // Setup Display Interface
     status = SetupDisplayInterface();
