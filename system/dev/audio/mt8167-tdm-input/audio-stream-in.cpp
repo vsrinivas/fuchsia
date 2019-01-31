@@ -23,7 +23,7 @@ constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNu
                                                                  PAGE_SIZE);
 
 Mt8167AudioStreamIn::Mt8167AudioStreamIn(zx_device_t* parent)
-    : SimpleAudioStream(parent, true /* is input */) {
+    : SimpleAudioStream(parent, true /* is input */), pdev_(parent) {
 }
 
 zx_status_t Mt8167AudioStreamIn::Init() {
@@ -58,47 +58,44 @@ zx_status_t Mt8167AudioStreamIn::Init() {
 }
 
 zx_status_t Mt8167AudioStreamIn::InitPdev() {
-    pdev_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status) {
-        return status;
+    if (!pdev_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
-    pdev_ = ddk::PDev(&pdev);
 
-    clk_ = pdev_->GetClk(0);
-    if (!clk_) {
+    clk_ = pdev_.GetClk(0);
+    if (!clk_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_reset_ = pdev_->GetGpio(0);
-    if (!codec_reset_) {
+    codec_reset_ = pdev_.GetGpio(0);
+    if (!codec_reset_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_ = Tlv320adc::Create(pdev, 0); // ADC for TDM in.
+    codec_ = Tlv320adc::Create(pdev_, 0); // ADC for TDM in.
     if (!codec_) {
         zxlogf(ERROR, "%s could not get Tlv320adc\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    status = pdev_->GetBti(0, &bti_);
+    zx_status_t status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti %d\n", __func__, status);
         return status;
     }
 
     std::optional<ddk::MmioBuffer> mmio_audio, mmio_clk, mmio_pll;
-    status = pdev_->MapMmio(0, &mmio_audio);
+    status = pdev_.MapMmio(0, &mmio_audio);
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_->MapMmio(1, &mmio_clk);
+    status = pdev_.MapMmio(1, &mmio_clk);
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_->MapMmio(2, &mmio_pll);
+    status = pdev_.MapMmio(2, &mmio_pll);
     if (status != ZX_OK) {
         return status;
     }
@@ -111,9 +108,9 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
 
     // Reset Codec. "After all power supplies are at their specified values, the RESET pin must
     // be driven low for at least 10 ns".
-    codec_reset_->Write(0); // Reset.
+    codec_reset_.Write(0); // Reset.
     zx_nanosleep(zx_deadline_after(ZX_NSEC(10)));
-    codec_reset_->Write(1); // Set to "not reset".
+    codec_reset_.Write(1); // Set to "not reset".
 
     codec_->Init();
 
@@ -124,7 +121,7 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
                          pinned_ring_buffer_.region(0).size);
 
     // Configure XO and PLLs for interface aud1.
-    clk_->Enable(0); // 0 is the index, enables board_mt8167::kClkAud1.
+    clk_.Enable(0); // 0 is the index, enables board_mt8167::kClkAud1.
 
     // Power up by clearing the power down bit.
     CLK_SEL_9::Get().ReadFrom(&*mmio_clk).set_apll12_div2_pdn(0).WriteTo(&*mmio_clk);   // I2S3.

@@ -15,9 +15,9 @@ namespace audio {
 
 class Tas5720 {
 public:
-    static fbl::unique_ptr<Tas5720> Create(const pdev_protocol_t& pdev, uint32_t index);
+    static fbl::unique_ptr<Tas5720> Create(ddk::PDev pdev, uint32_t index);
 
-    explicit Tas5720(i2c_protocol_t i2c)
+    explicit Tas5720(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}
     bool ValidGain(float gain);
     zx_status_t SetGain(float gain);
@@ -39,7 +39,7 @@ private:
     zx_status_t ReadReg(uint8_t reg, uint8_t* value);
     zx_status_t SetStandby(bool stdby);
 
-    i2c_protocol_t i2c_;
+    ddk::I2cChannel i2c_;
     float current_gain_ = 0;
 };
 } // namespace audio

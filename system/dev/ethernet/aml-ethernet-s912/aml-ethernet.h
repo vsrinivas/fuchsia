@@ -53,8 +53,8 @@ private:
     zx_status_t Bind();
 
     ddk::PDev pdev_;
-    std::optional<ddk::I2cChannel> i2c_;
-    std::optional<ddk::GpioProtocolClient> gpios_[GPIO_COUNT];
+    ddk::I2cChannel i2c_;
+    ddk::GpioProtocolClient gpios_[GPIO_COUNT];
 
     std::optional<ddk::MmioBuffer> periph_mmio_;
     std::optional<ddk::MmioBuffer> hhi_mmio_;

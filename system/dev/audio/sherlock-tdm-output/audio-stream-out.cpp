@@ -21,44 +21,41 @@ constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNu
                                                                  PAGE_SIZE);
 
 SherlockAudioStreamOut::SherlockAudioStreamOut(zx_device_t* parent)
-    : SimpleAudioStream(parent, false) {
+    : SimpleAudioStream(parent, false), pdev_(parent) {
 }
 
 zx_status_t SherlockAudioStreamOut::InitPdev() {
-    pdev_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status) {
-        return status;
+    if (!pdev_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
-    pdev_ = ddk::PDev(&pdev);
 
-    audio_fault_ = pdev_->GetGpio(0);
-    audio_en_ = pdev_->GetGpio(1);
+    audio_fault_ = pdev_.GetGpio(0);
+    audio_en_ = pdev_.GetGpio(1);
 
-    if (!audio_fault_ || !audio_en_) {
+    if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_tweeters_ = Tas5760::Create(pdev, 0);
+    codec_tweeters_ = Tas5760::Create(pdev_, 0);
     if (!codec_tweeters_) {
         zxlogf(ERROR, "%s could not get tas5760\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
-    codec_woofer_ = Tas5720::Create(pdev, 1);
+    codec_woofer_ = Tas5720::Create(pdev_, 1);
     if (!codec_woofer_) {
         zxlogf(ERROR, "%s could not get tas5720\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    status = pdev_->GetBti(0, &bti_);
+    zx_status_t status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
 
     std::optional<ddk::MmioBuffer> mmio;
-    status = pdev_->MapMmio(0, &mmio);
+    status = pdev_.MapMmio(0, &mmio);
     if (status != ZX_OK) {
         return status;
     }
@@ -69,21 +66,21 @@ zx_status_t SherlockAudioStreamOut::InitPdev() {
     }
 
     // Drive strength settings
-    status = pdev_->MapMmio(1, &mmio);
+    status = pdev_.MapMmio(1, &mmio);
     if (status != ZX_OK) {
         return status;
     }
     // Strength 1 for sclk (bit 14, GPIOZ(7)) and lrclk (bit 12, GPIOZ(6)),
     // GPIO offsets are in 4 bytes units.
     mmio->SetBits<uint32_t>((1 << 14) | (1 << 12), 4 * T931_PAD_DS_REG4A);
-    status = pdev_->MapMmio(2, &mmio);
+    status = pdev_.MapMmio(2, &mmio);
     if (status != ZX_OK) {
         return status;
     }
     // Strength 1 for mclk (bit 18,  GPIOAO(9)), GPIO offsets are in 4 bytes units.
     mmio->SetBit<uint32_t>(18, 4 * T931_AO_PAD_DS_A);
 
-    audio_en_->Write(1); // SOC_AUDIO_EN.
+    audio_en_.Write(1); // SOC_AUDIO_EN.
 
     codec_tweeters_->Init(); // No slot setting, always uses L+R.
     codec_woofer_->Init(0);  // Use TDM slot 0.
@@ -210,7 +207,7 @@ zx_status_t SherlockAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmt
 
 void SherlockAudioStreamOut::ShutdownHook() {
     aml_audio_->Shutdown();
-    audio_en_->Write(0);
+    audio_en_.Write(0);
 }
 
 zx_status_t SherlockAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {

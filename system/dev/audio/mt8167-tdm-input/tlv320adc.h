@@ -15,7 +15,7 @@ namespace mt8167 {
 
 class Tlv320adc {
 public:
-    static std::unique_ptr<Tlv320adc> Create(pdev_protocol_t& pdev, uint32_t i2c_index);
+    static std::unique_ptr<Tlv320adc> Create(ddk::PDev pdev, uint32_t i2c_index);
 
     explicit Tlv320adc(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}

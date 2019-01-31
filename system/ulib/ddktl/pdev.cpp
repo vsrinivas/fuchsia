@@ -5,7 +5,6 @@
 #include <ddktl/pdev.h>
 
 #include <ddk/debug.h>
-#include <optional>
 
 namespace ddk {
 
@@ -33,34 +32,34 @@ zx_status_t PDev::MapMmio(uint32_t index, std::optional<MmioBuffer>* mmio) {
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, mmio);
 }
 
-std::optional<I2cChannel> PDev::GetI2c(uint32_t index) {
+I2cChannel PDev::GetI2c(uint32_t index) {
     i2c_protocol_t i2c;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_I2C, index, &i2c, sizeof(i2c), &actual);
     if (res != ZX_OK || actual != sizeof(i2c)) {
         return {};
     }
-    return std::optional<I2cChannel>(&i2c);
+    return I2cChannel(&i2c);
 }
 
-std::optional<GpioProtocolClient> PDev::GetGpio(uint32_t index) {
+GpioProtocolClient PDev::GetGpio(uint32_t index) {
     gpio_protocol_t gpio;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_GPIO, index, &gpio, sizeof(gpio), &actual);
     if (res != ZX_OK || actual != sizeof(gpio)) {
         return {};
     }
-    return std::optional<GpioProtocolClient>(&gpio);
+    return GpioProtocolClient(&gpio);
 }
 
-std::optional<ClkProtocolClient> PDev::GetClk(uint32_t index) {
+ClkProtocolClient PDev::GetClk(uint32_t index) {
     clk_protocol_t clk;
     size_t actual;
     zx_status_t res = GetProtocol(ZX_PROTOCOL_CLK, index, &clk, sizeof(clk), &actual);
     if (res != ZX_OK || actual != sizeof(clk)) {
         return {};
     }
-    return std::optional<ClkProtocolClient>(&clk);
+    return ClkProtocolClient(&clk);
 }
 
 } // namespace ddk

@@ -28,9 +28,9 @@ namespace eth {
 #define MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE 0x03
 
 void AmlEthernet::EthBoardResetPhy() {
-    gpios_[PHY_RESET]->Write(0);
+    gpios_[PHY_RESET].Write(0);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
-    gpios_[PHY_RESET]->Write(1);
+    gpios_[PHY_RESET].Write(1);
     zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
 }
 
@@ -42,14 +42,14 @@ zx_status_t AmlEthernet::InitPdev() {
     zx_status_t status;
     for (uint32_t i = 0; i < countof(gpios_); i++) {
         gpios_[i] = pdev_.GetGpio(i);
-        if (!gpios_[i]) {
+        if (!gpios_[i].is_valid()) {
             return ZX_ERR_NO_RESOURCES;
         }
     }
 
     // I2c for MCU messages.
     i2c_ = pdev_.GetI2c(0);
-    if (!i2c_) {
+    if (!i2c_.is_valid()) {
         return ZX_ERR_NO_RESOURCES;
     }
 
@@ -72,7 +72,7 @@ zx_status_t AmlEthernet::InitPdev() {
 
 zx_status_t AmlEthernet::Bind() {
     // Set reset line to output
-    gpios_[PHY_RESET]->ConfigOut(0);
+    gpios_[PHY_RESET].ConfigOut(0);
 
     // Initialize AMLogic peripheral registers associated with dwmac.
     //Sorry about the magic...rtfm
@@ -92,7 +92,7 @@ zx_status_t AmlEthernet::Bind() {
 
     // WOL reset enable to MCU
     uint8_t write_buf[2] = {MCU_I2C_REG_BOOT_EN_WOL, MCU_I2C_REG_BOOT_EN_WOL_RESET_ENABLE};
-    zx_status_t status = i2c_->WriteSync(write_buf, sizeof(write_buf));
+    zx_status_t status = i2c_.WriteSync(write_buf, sizeof(write_buf));
     if (status) {
         zxlogf(ERROR, "aml-ethernet: WOL reset enable to MCU failed: %d\n", status);
         return status;

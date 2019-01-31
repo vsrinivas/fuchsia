@@ -27,13 +27,10 @@ constexpr uint8_t kRegDigitalClipper1     = 0x11;
 // clang-format on
 
 // static
-fbl::unique_ptr<Tas5760> Tas5760::Create(const pdev_protocol_t& pdev, uint32_t index) {
-    size_t actual;
-    i2c_protocol_t i2c;
-    zx_status_t status = pdev_get_protocol(&pdev, ZX_PROTOCOL_I2C, index, &i2c,
-                                           sizeof(i2c_protocol_t), &actual);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s pdev_get_protocol failed %d\n", __FUNCTION__, status);
+fbl::unique_ptr<Tas5760> Tas5760::Create(ddk::PDev pdev, uint32_t index) {
+    auto i2c = pdev.GetI2c(index);
+    if (!i2c.is_valid()) {
+        zxlogf(ERROR, "%s pdev_get_protocol failed\n", __func__);
         return nullptr;
     }
 
@@ -108,10 +105,10 @@ zx_status_t Tas5760::WriteReg(uint8_t reg, uint8_t value) {
     uint8_t write_buf[2];
     write_buf[0] = reg;
     write_buf[1] = value;
-    return i2c_write_sync(&i2c_, write_buf, 2);
+    return i2c_.WriteSync(write_buf, 2);
 }
 
 zx_status_t Tas5760::ReadReg(uint8_t reg, uint8_t* value) {
-    return i2c_write_read_sync(&i2c_, &reg, 1, value, 1);
+    return i2c_.WriteReadSync(&reg, 1, value, 1);
 }
 } // audio

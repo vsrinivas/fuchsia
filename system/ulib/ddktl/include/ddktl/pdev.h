@@ -44,9 +44,9 @@ public:
         return PDevProtocolClient::GetBti(index, out);
     }
 
-    std::optional<I2cChannel> GetI2c(uint32_t index);
-    std::optional<GpioProtocolClient> GetGpio(uint32_t index);
-    std::optional<ClkProtocolClient> GetClk(uint32_t index);
+    I2cChannel GetI2c(uint32_t index);
+    GpioProtocolClient GetGpio(uint32_t index);
+    ClkProtocolClient GetClk(uint32_t index);
 };
 
 } // namespace ddk

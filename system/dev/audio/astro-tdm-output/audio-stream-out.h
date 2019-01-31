@@ -22,8 +22,6 @@
 
 #include <soc/aml-common/aml-tdm-audio.h>
 
-#include <optional>
-
 #include "tas27xx.h"
 
 namespace audio {
@@ -62,7 +60,7 @@ private:
 
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
 
-    std::optional<ddk::PDev> pdev_;
+    ddk::PDev pdev_;
 
     fbl::unique_ptr<Tas27xx> codec_;
 
@@ -70,8 +68,8 @@ private:
     fzl::PinnedVmo pinned_ring_buffer_;
 
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    std::optional<ddk::GpioProtocolClient> audio_en_;
-    std::optional<ddk::GpioProtocolClient> audio_fault_;
+    ddk::GpioProtocolClient audio_en_;
+    ddk::GpioProtocolClient audio_fault_;
 
     zx::bti bti_;
 };

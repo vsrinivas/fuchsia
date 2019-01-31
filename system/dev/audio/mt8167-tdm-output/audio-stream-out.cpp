@@ -23,53 +23,50 @@ constexpr size_t kRingBufferSize = fbl::round_up<size_t, size_t>(48000 * 2 * kNu
                                                                  PAGE_SIZE);
 
 Mt8167AudioStreamOut::Mt8167AudioStreamOut(zx_device_t* parent)
-    : SimpleAudioStream(parent, false) {
+    : SimpleAudioStream(parent, false), pdev_(parent) {
 }
 
 zx_status_t Mt8167AudioStreamOut::InitPdev() {
-    pdev_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status) {
-        return status;
+    if (!pdev_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
-    pdev_ = ddk::PDev(&pdev);
 
-    clk_ = pdev_->GetClk(0);
-    if (!clk_) {
+    clk_ = pdev_.GetClk(0);
+    if (!clk_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
-    clk_->Enable(0); // board_mt8167::kClkAud1, disables clk gating.
+    clk_.Enable(0); // board_mt8167::kClkAud1, disables clk gating.
 
-    codec_reset_ = pdev_->GetGpio(0);
-    codec_mute_ = pdev_->GetGpio(1);
-    if (!codec_reset_ || !codec_mute_) {
+    codec_reset_ = pdev_.GetGpio(0);
+    codec_mute_ = pdev_.GetGpio(1);
+    if (!codec_reset_.is_valid() || !codec_mute_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_ = Tas5782::Create(pdev, 0);
+    codec_ = Tas5782::Create(pdev_, 0);
     if (!codec_) {
         zxlogf(ERROR, "%s could not get tas5782\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    status = pdev_->GetBti(0, &bti_);
+    zx_status_t status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti %d\n", __func__, status);
         return status;
     }
 
     std::optional<ddk::MmioBuffer> mmio_audio, mmio_clk, mmio_pll;
-    status = pdev_->MapMmio(0, &mmio_audio);
+    status = pdev_.MapMmio(0, &mmio_audio);
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_->MapMmio(1, &mmio_clk);
+    status = pdev_.MapMmio(1, &mmio_clk);
     if (status != ZX_OK) {
         return status;
     }
-    status = pdev_->MapMmio(2, &mmio_pll);
+    status = pdev_.MapMmio(2, &mmio_pll);
     if (status != ZX_OK) {
         return status;
     }
@@ -81,10 +78,10 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return ZX_ERR_NO_MEMORY;
     }
 
-    codec_reset_->Write(0); // Reset.
+    codec_reset_.Write(0); // Reset.
     // Delay to be safe.  Not in the datasheet, from similar codecs.
     zx_nanosleep(zx_deadline_after(ZX_NSEC(10)));
-    codec_reset_->Write(1); // Set to "not reset".
+    codec_reset_.Write(1); // Set to "not reset".
     // Delay to be safe.  Not in the datasheet, from similar codecs.
     zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
 
@@ -180,8 +177,8 @@ zx_status_t Mt8167AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtRe
 }
 
 void Mt8167AudioStreamOut::ShutdownHook() {
-    codec_mute_->Write(0); // Set to "mute".
-    codec_reset_->Write(0); // Keep the codec in reset.
+    codec_mute_.Write(0); // Set to "mute".
+    codec_reset_.Write(0); // Keep the codec in reset.
     mt_audio_->Shutdown();
 }
 

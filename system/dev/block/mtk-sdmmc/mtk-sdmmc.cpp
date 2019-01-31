@@ -140,32 +140,28 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
         return status;
     }
 
-    std::optional<ddk::GpioProtocolClient> reset_gpio;
+    ddk::GpioProtocolClient reset_gpio;
     if (dev_info.gpio_count > 0) {
         reset_gpio = pdev.GetGpio(0);
-        if (!reset_gpio) {
+        if (!reset_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get reset GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;
         }
-    } else {
-        reset_gpio.emplace();
     }
 
-    std::optional<ddk::GpioProtocolClient> power_en_gpio;
+    ddk::GpioProtocolClient power_en_gpio;
     if (dev_info.gpio_count > 1) {
         power_en_gpio = pdev.GetGpio(1);
-        if (!power_en_gpio) {
+        if (!power_en_gpio.is_valid()) {
             zxlogf(ERROR, "%s: Failed to get power enable GPIO\n", __FILE__);
             return ZX_ERR_NO_RESOURCES;
         }
-    } else {
-        power_en_gpio.emplace();
     }
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, *std::move(mmio), std::move(bti),
-                                                        info, std::move(irq), *reset_gpio,
-                                                        *power_en_gpio, dev_info, config));
+                                                        info, std::move(irq), reset_gpio,
+                                                        power_en_gpio, dev_info, config));
 
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkSdmmc alloc failed\n", __FILE__);

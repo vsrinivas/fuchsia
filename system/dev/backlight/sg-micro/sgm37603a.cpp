@@ -48,20 +48,20 @@ zx_status_t Sgm37603a::Create(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    std::optional<ddk::I2cChannel> i2c = pdev.GetI2c(0);
-    if (!i2c) {
+    ddk::I2cChannel i2c = pdev.GetI2c(0);
+    if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    std::optional<ddk::GpioProtocolClient> reset_gpio = pdev.GetGpio(0);
-    if (!reset_gpio) {
+    ddk::GpioProtocolClient reset_gpio = pdev.GetGpio(0);
+    if (!reset_gpio.is_valid()) {
         zxlogf(ERROR, "%s: Failed to get GPIO\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, *i2c, *reset_gpio));
+    fbl::unique_ptr<Sgm37603a> device(new (&ac) Sgm37603a(parent, i2c, reset_gpio));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Sgm37603a alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;

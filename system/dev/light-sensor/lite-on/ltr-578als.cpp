@@ -91,8 +91,8 @@ zx_status_t Ltr578Als::Create(zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    std::optional<ddk::I2cChannel> i2c = pdev.GetI2c(0);
-    if (!i2c) {
+    ddk::I2cChannel i2c = pdev.GetI2c(0);
+    if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
@@ -105,7 +105,7 @@ zx_status_t Ltr578Als::Create(zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, *i2c, std::move(port)));
+    fbl::unique_ptr<Ltr578Als> device(new (&ac) Ltr578Als(parent, i2c, std::move(port)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Ltr578Als alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;

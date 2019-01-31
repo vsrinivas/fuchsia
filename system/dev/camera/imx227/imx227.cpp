@@ -39,12 +39,10 @@ zx_status_t Imx227Device::InitPdev(zx_device_t* parent) {
     }
 
     for (uint32_t i = 0; i < countof(gpios_); i++) {
-        std::optional<ddk::GpioProtocolClient> gpio;
-        gpio = pdev_.GetGpio(i);
-        if (!gpio) {
+        gpios_[i] = pdev_.GetGpio(i);
+        if (!gpios_[i].is_valid()) {
             return ZX_ERR_NO_RESOURCES;
         }
-        gpios_[i] = *gpio;
         // Set the GPIO to output and set initial value to 0.
         gpios_[i].ConfigOut(0);
     }

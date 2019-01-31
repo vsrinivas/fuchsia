@@ -15,7 +15,7 @@ namespace mt8167 {
 
 class Tas5782 {
 public:
-    static std::unique_ptr<Tas5782> Create(pdev_protocol_t& pdev, uint32_t i2c_index);
+    static std::unique_ptr<Tas5782> Create(ddk::PDev pdev, uint32_t i2c_index);
 
     explicit Tas5782(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}

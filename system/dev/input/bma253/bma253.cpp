@@ -73,8 +73,8 @@ zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
         return ZX_ERR_NO_RESOURCES;
     }
 
-    std::optional<ddk::I2cChannel> i2c = pdev.GetI2c(0);
-    if (!i2c) {
+    ddk::I2cChannel i2c = pdev.GetI2c(0);
+    if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s: Failed to get I2C\n", __FILE__);
         return ZX_ERR_NO_RESOURCES;
     }
@@ -87,7 +87,7 @@ zx_status_t Bma253::Create(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<Bma253> device(new (&ac) Bma253(parent, *i2c, std::move(port)));
+    fbl::unique_ptr<Bma253> device(new (&ac) Bma253(parent, i2c, std::move(port)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: Bma253 alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;

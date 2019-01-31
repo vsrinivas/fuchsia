@@ -63,14 +63,14 @@ private:
 
     uint32_t us_per_notification_ = 0;
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
-    std::optional<ddk::PDev> pdev_ TA_GUARDED(domain_->token());
+    ddk::PDev pdev_ TA_GUARDED(domain_->token());
     fbl::unique_ptr<Tas5760> codec_tweeters_ TA_GUARDED(domain_->token());
     fbl::unique_ptr<Tas5720> codec_woofer_ TA_GUARDED(domain_->token());
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
     fbl::unique_ptr<AmlTdmDevice> aml_audio_;
-    std::optional<ddk::GpioProtocolClient> audio_en_ TA_GUARDED(domain_->token());
-    std::optional<ddk::GpioProtocolClient> audio_fault_ TA_GUARDED(domain_->token());
+    ddk::GpioProtocolClient audio_en_ TA_GUARDED(domain_->token());
+    ddk::GpioProtocolClient audio_fault_ TA_GUARDED(domain_->token());
     zx::bti bti_ TA_GUARDED(domain_->token());
 };
 

@@ -16,44 +16,41 @@ namespace astro {
 constexpr size_t RB_SIZE = fbl::round_up<size_t, size_t>(48000 * 2 * 2u, PAGE_SIZE);
 
 AstroAudioStreamOut::AstroAudioStreamOut(zx_device_t* parent)
-    : SimpleAudioStream(parent, false) {
+    : SimpleAudioStream(parent, false), pdev_(parent) {
 }
 
 zx_status_t AstroAudioStreamOut::InitPDev() {
-    pdev_protocol_t pdev;
-    zx_status_t status = device_get_protocol(parent(), ZX_PROTOCOL_PDEV, &pdev);
-    if (status) {
-        return status;
+    if (!pdev_.is_valid()) {
+        return ZX_ERR_NO_RESOURCES;
     }
-    pdev_ = ddk::PDev(&pdev);
 
-    audio_fault_ = pdev_->GetGpio(0);
-    audio_en_ = pdev_->GetGpio(1);
+    audio_fault_ = pdev_.GetGpio(0);
+    audio_en_ = pdev_.GetGpio(1);
 
-    if (!audio_fault_ || !audio_en_) {
+    if (!audio_fault_.is_valid() || !audio_en_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate gpio\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    auto i2c = pdev_->GetI2c(0);
-    if (!i2c) {
+    auto i2c = pdev_.GetI2c(0);
+    if (!i2c.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate i2c\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
-    codec_ = Tas27xx::Create(*std::move(i2c));
+    codec_ = Tas27xx::Create(std::move(i2c));
     if (!codec_) {
         zxlogf(ERROR, "%s could not get tas27xx\n", __func__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    status = pdev_->GetBti(0, &bti_);
+    zx_status_t status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
         zxlogf(ERROR, "%s could not obtain bti - %d\n", __func__, status);
         return status;
     }
 
     std::optional<ddk::MmioBuffer> mmio;
-    status = pdev_->MapMmio(0, &mmio);
+    status = pdev_.MapMmio(0, &mmio);
     if (status != ZX_OK) {
         return status;
     }
@@ -65,7 +62,7 @@ zx_status_t AstroAudioStreamOut::InitPDev() {
     }
 
     //Enable Codec
-    audio_en_->Write(1);
+    audio_en_.Write(1);
 
     codec_->Init();
 
@@ -176,7 +173,7 @@ zx_status_t AstroAudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtReq
 
 void AstroAudioStreamOut::ShutdownHook() {
     aml_audio_->Shutdown();
-    audio_en_->Write(0);
+    audio_en_.Write(0);
 }
 
 zx_status_t AstroAudioStreamOut::SetGain(const audio_proto::SetGainReq& req) {

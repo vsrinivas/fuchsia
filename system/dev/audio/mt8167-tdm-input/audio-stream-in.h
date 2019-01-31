@@ -48,13 +48,13 @@ private:
 
     uint32_t us_per_notification_ = 0;
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
-    std::optional<ddk::PDev> pdev_ TA_GUARDED(domain_->token());
-    std::optional<ddk::ClkProtocolClient> clk_;
+    ddk::PDev pdev_ TA_GUARDED(domain_->token());
+    ddk::ClkProtocolClient clk_;
     std::unique_ptr<Tlv320adc> codec_;
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
     std::unique_ptr<MtAudioInDevice> mt_audio_;
-    std::optional<ddk::GpioProtocolClient> codec_reset_ TA_GUARDED(domain_->token());
+    ddk::GpioProtocolClient codec_reset_ TA_GUARDED(domain_->token());
     zx::bti bti_ TA_GUARDED(domain_->token());
 };
 } // namespace mt8167
