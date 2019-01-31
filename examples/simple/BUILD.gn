@@ -6,7 +6,6 @@ import("//build/fidl/fidl.gni")
 import("//peridot/build/executable_package.gni")
 
 executable_package("simple_agent") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -30,7 +29,6 @@ executable_package("simple_agent") {
 }
 
 executable_package("simple_module") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {

@@ -5,7 +5,6 @@
 import("//peridot/build/executable_package.gni")
 
 executable_package("swap_module1") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -26,7 +25,6 @@ executable_package("swap_module1") {
 }
 
 executable_package("swap_module2") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -64,7 +62,6 @@ source_set("module") {
 }
 
 executable_package("swap_recipe") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
