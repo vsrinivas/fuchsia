@@ -8,6 +8,7 @@
 #include <netdb.h>
 #include <poll.h>
 #include <stdarg.h>
+#include <sys/param.h>
 #include <stdlib.h>
 #include <string.h>
 #include <sys/socket.h>
@@ -523,9 +524,10 @@ int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     }
 
     int16_t out_code;
+    uint8_t buf[sizeof(struct sockaddr_storage)];
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetSockName(
-        socket->socket, &out_code, (uint8_t*)addr, *len, &actual);
+        socket->socket, &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -533,6 +535,7 @@ int getsockname(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     if (out_code) {
         return ERRNO(out_code);
     }
+    memcpy(addr, buf, MIN(*len, actual));
     *len = actual;
     return out_code;
 }
@@ -550,9 +553,10 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     }
 
     int16_t out_code;
+    uint8_t buf[sizeof(struct sockaddr_storage)];
     size_t actual;
     zx_status_t status = fuchsia_net_SocketControlGetPeerName(
-        socket->socket, &out_code, (uint8_t*)addr, *len, &actual);
+        socket->socket, &out_code, buf, sizeof(buf), &actual);
     fdio_release(io);
     if (status != ZX_OK) {
         return ERROR(status);
@@ -560,6 +564,7 @@ int getpeername(int fd, struct sockaddr* restrict addr, socklen_t* restrict len)
     if (out_code) {
         return ERRNO(out_code);
     }
+    memcpy(addr, buf, MIN(*len, actual));
     *len = actual;
     return out_code;
 }
