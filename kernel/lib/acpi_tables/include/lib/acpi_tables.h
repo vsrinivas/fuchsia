@@ -40,7 +40,7 @@ public:
     AcpiTables(const AcpiTableProvider* tables)
         : tables_(tables) {}
 
-    // Initialize the APIC Tables subsystem, this is seperate from initializing
+    // Initialize the APIC Tables subsystem, this is separate from initializing
     // the whole APIC subsystem and generally happens much earlier. Argument is
     // ignored.
     static void Initialize(uint32_t);
@@ -79,7 +79,7 @@ private:
     zx_status_t NumInMadt(uint8_t type, uint32_t* count) const;
 
     // For each subtable of type run visitor.
-    // We can't take a std::function for the visitor because that can use dyamic
+    // We can't take a std::function for the visitor because that can use dynamic
     // memory.
     template <typename V>
     zx_status_t ForEachInMadt(uint8_t type, V visitor) const;

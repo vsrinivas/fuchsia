@@ -286,7 +286,7 @@ cleanup_mutex:
     return status;
 }
 
-// Unplug a single CPU.  Must be called while hodling the hotplug lock
+// Unplug a single CPU.  Must be called while holding the hotplug lock
 static zx_status_t mp_unplug_cpu_mask_single_locked(cpu_num_t cpu_id) {
     // Wait for |cpu_id| to complete any in-progress DPCs and terminate its DPC thread.  Later, once
     // nothing is running on it, we'll migrate its queued DPCs to another CPU.
