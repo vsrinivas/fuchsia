@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <dispatcher-pool/dispatcher-thread-pool.h>
 #include <fbl/auto_call.h>
 #include <fbl/auto_lock.h>
@@ -500,15 +501,28 @@ void UsbAudioDevice::DdkRelease() {
     auto reference = fbl::internal::MakeRefPtrNoAdopt(this);
 }
 
+static zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {
+    return UsbAudioDevice::DriverBind(device);
+}
+
+static void usb_audio_driver_release(void*) {
+    dispatcher::ThreadPool::ShutdownAll();
+}
+
+static zx_driver_ops_t driver_ops = [](){
+    zx_driver_ops_t ops = {};
+    ops.version = DRIVER_OPS_VERSION;
+    ops.bind = usb_audio_device_bind;
+    ops.release = usb_audio_driver_release;
+    return ops;
+}();
+
 }  // namespace usb
 }  // namespace audio
 
-extern "C" {
-zx_status_t usb_audio_device_bind(void* ctx, zx_device_t* device) {
-    return audio::usb::UsbAudioDevice::DriverBind(device);
-}
-
-void usb_audio_driver_release(void*) {
-    dispatcher::ThreadPool::ShutdownAll();
-}
-}  // extern "C"
+ZIRCON_DRIVER_BEGIN(usb_audio, audio::usb::driver_ops, "zircon", "0.1", 4)
+    BI_ABORT_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_USB),
+    BI_ABORT_IF(NE, BIND_USB_CLASS, USB_CLASS_AUDIO),
+    BI_ABORT_IF(NE, BIND_USB_SUBCLASS, USB_SUBCLASS_AUDIO_CONTROL),
+    BI_MATCH_IF(EQ, BIND_USB_PROTOCOL, 0),
+ZIRCON_DRIVER_END(usb_audio)
