@@ -846,7 +846,7 @@ void Spaces(int num) {
 //  In/Outputs: *blk0 = first consecutive block number or -1
 //              *blke = end consecutive block number
 //
-static void flush_bstat(CFTLN ftl, int* blk0, int* blke, int b, char* type) {
+static void flush_bstat(CFTLN ftl, int* blk0, int* blke, int b, const char* type) {
     if (*blk0 == -1)
         *blk0 = *blke = b;
     else if (*blke + 1 == b)

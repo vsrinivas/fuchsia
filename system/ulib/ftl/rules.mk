@@ -48,14 +48,4 @@ MODULE_COMPILEFLAGS := \
 MODULE_CFLAGS := \
     -DNDM_DEBUG=1 \
 
-ifeq ($(call TOBOOL,$(USE_CLANG)),false)
-# gcc:
-MODULE_CFLAGS += -Wno-discarded-qualifiers
-endif
-
-ifeq ($(call TOBOOL,$(USE_CLANG)),true)
-# clang:
-MODULE_CFLAGS += -Wno-incompatible-pointer-types-discards-qualifiers
-endif
-
 include make/module.mk

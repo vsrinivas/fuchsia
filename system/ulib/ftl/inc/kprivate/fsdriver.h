@@ -94,7 +94,7 @@ extern "C" {
 /* Macro Definitions                                                   */
 /***********************************************************************/
 #if FS_ASSERT
-void AssertError(int line, char* file);
+void AssertError(int line, const char* file);
 #define PF_DEBUG
 #define PfAssert(c)                          \
     do {                                     \

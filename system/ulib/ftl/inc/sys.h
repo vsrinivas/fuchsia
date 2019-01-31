@@ -159,7 +159,7 @@ ui64 SysCounter64(void);
 void SysMon(void);
 void SysShell(void);
 void cliLabel(char* banner);
-void AssertError(int line, char* file);
+void AssertError(int line, const char* file);
 void SyncCache(void);
 void dCacheInval(const volatile void* base, long length);
 void dCacheStore(const volatile void* base, long length);
