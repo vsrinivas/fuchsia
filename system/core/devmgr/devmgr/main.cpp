@@ -800,9 +800,25 @@ int main(int argc, char** argv) {
     for (char** e = environ; *e != nullptr; e++) {
         printf("cmdline: %s\n", *e);
     }
+    if (devmgr::getenv_bool("devmgr.verbose", false)) {
+        devmgr::log_flags |= LOG_ALL;
+    }
 
     devmgr::DevmgrArgs args;
     ParseArgs(argc, argv, &args);
+    // Set up the default values for our arguments if they weren't given.
+    if (args.driver_search_paths.size() == 0) {
+        args.driver_search_paths.push_back("/boot/driver");
+    }
+    if (args.sys_device_driver == nullptr) {
+        // x86 platforms use acpi as the system device
+        // all other platforms use the platform bus
+#if defined(__x86_64__)
+        args.sys_device_driver = "/boot/driver/bus-acpi.so";
+#else
+        args.sys_device_driver = "/boot/driver/platform-bus.so";
+#endif
+    }
 
     g_handles.root_job = zx::job::default_job();
     g_handles.root_job->set_property(ZX_PROP_NAME, "root", 4);
@@ -813,6 +829,8 @@ int main(int argc, char** argv) {
     config.dispatcher = loop.dispatcher();
     config.require_system = require_system;
     config.asan_drivers = devmgr::getenv_bool("devmgr.devhost.asan", false);
+    config.suspend_fallback = devmgr::getenv_bool("devmgr.suspend-timeout-fallback", false);
+    config.suspend_debug = devmgr::getenv_bool("devmgr.suspend-timeout-debug", false);
     zx_status_t status = fetch_root_resource(&config.root_resource);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
@@ -835,7 +853,16 @@ int main(int argc, char** argv) {
     }
 
     devmgr::Coordinator coordinator(std::move(config));
+    status = coordinator.InitializeCoreDevices(args.sys_device_driver);
+    if (status != ZX_OK) {
+        log(ERROR, "devmgr: failed to initialize core devices\n");
+        return 1;
+    }
+
     devmgr::devfs_init(&coordinator.root_device(), loop.dispatcher());
+    devfs_publish(&coordinator.root_device(), &coordinator.misc_device());
+    devfs_publish(&coordinator.root_device(), &coordinator.sys_device());
+    devfs_publish(&coordinator.root_device(), &coordinator.test_device());
 
     // Check if whatever launched devmgr gave a channel to be connected to /dev.
     // This is for use in tests to let the test environment see devfs.
@@ -894,8 +921,37 @@ int main(int argc, char** argv) {
         coordinator.set_loader_service(loader_service.get());
     }
 
-    coordinator_setup(&coordinator, std::move(args));
+    for (const char* path : args.driver_search_paths) {
+        devmgr::find_loadable_drivers(
+            path, fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
+    }
+    for (const char* driver : args.load_drivers) {
+        devmgr::load_driver(driver,
+                            fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAddedInit));
+    }
 
+    // Special case early handling for the ramdisk boot
+    // path where /system is present before the coordinator
+    // starts.  This avoids breaking the "priority hack" and
+    // can be removed once the real driver priority system
+    // exists.
+    if (coordinator.system_available()) {
+        coordinator.ScanSystemDrivers();
+    }
+
+    if (coordinator.require_system() && !coordinator.system_loaded()) {
+        printf(
+            "devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
+    } else {
+        coordinator.UseFallbackDrivers();
+    }
+
+    coordinator.PrepareProxy(&coordinator.sys_device());
+    coordinator.PrepareProxy(&coordinator.test_device());
+    // Initial bind attempt for drivers enumerated at startup.
+    coordinator.BindDrivers();
+
+    coordinator.set_running(true);
     status = loop.Run();
     fprintf(stderr, "devmgr: coordinator exited unexpectedly: %d\n", status);
     return status == ZX_OK ? 0 : 1;

@@ -242,6 +242,10 @@ struct CoordinatorConfig {
     bool require_system;
     // Whether we require ASan drivers.
     bool asan_drivers;
+    // Whether to reboot the device when suspend does not finish on time.
+    bool suspend_fallback;
+    // Whether to print out debugging when suspend does not finish on time.
+    bool suspend_debug;
 };
 
 class Coordinator {
@@ -254,7 +258,7 @@ public:
     explicit Coordinator(CoordinatorConfig config);
     ~Coordinator();
 
-    zx_status_t InitializeCoreDevices();
+    zx_status_t InitializeCoreDevices(const char* sys_device_driver);
     zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
     bool InSuspend() const;
 
@@ -295,8 +299,13 @@ public:
     const zx::event& fshost_event() const { return config_.fshost_event; }
     async_dispatcher_t* dispatcher() const { return config_.dispatcher; }
     bool require_system() const { return config_.require_system; }
+    bool suspend_fallback() const { return config_.suspend_fallback; }
+    bool suspend_debug() const { return config_.suspend_debug; }
 
     void set_running(bool running) { running_ = running; }
+    bool system_available() const { return system_available_; }
+    void set_system_available(bool system_available) { system_available_ = system_available; }
+    bool system_loaded() const { return system_loaded_; }
     void set_loader_service(DevhostLoaderService* loader_service) {
         loader_service_ = loader_service;
     }
@@ -319,18 +328,13 @@ public:
 
     SuspendContext& suspend_context() { return suspend_context_; }
     const SuspendContext& suspend_context() const { return suspend_context_; }
-    bool suspend_fallback() const { return suspend_fallback_; }
-    void set_suspend_fallback(bool suspend_fallback) { suspend_fallback_ = suspend_fallback; }
-    bool suspend_debug() const { return suspend_debug_; }
-    void set_suspend_debug(bool suspend_debug) { suspend_debug_ = suspend_debug; }
-    bool system_available() const { return system_available_; }
-    void set_system_available(bool system_available) { system_available_ = system_available; }
-    bool system_loaded() const { return system_loaded_; }
 
 private:
     CoordinatorConfig config_;
     bool running_ = false;
     bool launched_first_devhost_ = false;
+    bool system_available_ = false;
+    bool system_loaded_ = false;
     DevhostLoaderService* loader_service_ = nullptr;
 
     // Channel for creating new virtual consoles.
@@ -365,11 +369,6 @@ private:
 
     fbl::DoublyLinkedList<fbl::unique_ptr<Metadata>, Metadata::Node> published_metadata_;
 
-    bool suspend_fallback_ = false;
-    bool suspend_debug_ = false;
-    bool system_available_ = false;
-    bool system_loaded_ = false;
-
     void DmPrintf(const char* fmt, ...) const;
     void DumpDevice(const Device* dev, size_t indent) const;
     void DumpDeviceProps(const Device* dev) const;
@@ -392,8 +391,6 @@ private:
     void BindSystemDrivers();
     void DriverAddedSys(Driver* drv, const char* version);
 };
-
-void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
 
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
                     size_t prop_count, bool autobind);

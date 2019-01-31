@@ -180,7 +180,7 @@ bool Coordinator::InSuspend() const {
     return suspend_context().flags() == SuspendContext::Flags::kSuspend;
 }
 
-zx_status_t Coordinator::InitializeCoreDevices() {
+zx_status_t Coordinator::InitializeCoreDevices(const char* sys_device_driver) {
     fbl::AllocChecker ac;
     {
         root_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE | DEV_CTX_MULTI_BIND;
@@ -215,6 +215,10 @@ zx_status_t Coordinator::InitializeCoreDevices() {
         sys_device_.parent = &root_device_;
         sys_device_.flags = DEV_CTX_IMMORTAL | DEV_CTX_MUST_ISOLATE;
         sys_device_.name = fbl::String("sys", &ac);
+        if (!ac.check()) {
+            return ZX_ERR_NO_MEMORY;
+        }
+        sys_device_.libname = fbl::String(sys_device_driver, &ac);
         if (!ac.check()) {
             return ZX_ERR_NO_MEMORY;
         }
@@ -2039,73 +2043,6 @@ void Coordinator::BindDrivers() {
 
 void Coordinator::UseFallbackDrivers() {
     drivers_.splice(drivers_.end(), fallback_drivers_);
-}
-
-void coordinator_setup(Coordinator* coordinator, DevmgrArgs args) {
-    log(INFO, "devmgr: coordinator_setup()\n");
-
-    // Set up the default values for our arguments if they weren't given.
-    if (args.driver_search_paths.size() == 0) {
-        args.driver_search_paths.push_back("/boot/driver");
-    }
-    if (args.sys_device_driver == nullptr) {
-        // x86 platforms use acpi as the system device
-        // all other platforms use the platform bus
-#if defined(__x86_64__)
-        args.sys_device_driver = "/boot/driver/bus-acpi.so";
-#else
-        args.sys_device_driver = "/boot/driver/platform-bus.so";
-#endif
-    }
-
-    if (getenv_bool("devmgr.verbose", false)) {
-        log_flags |= LOG_ALL;
-    }
-
-    coordinator->set_suspend_fallback(getenv_bool("devmgr.suspend-timeout-fallback", false));
-    coordinator->set_suspend_debug(getenv_bool("devmgr.suspend-timeout-debug", false));
-
-    zx_status_t status = coordinator->InitializeCoreDevices();
-    if (status != ZX_OK) {
-        log(ERROR, "devmgr: failed to initialize core devices\n");
-        return;
-    }
-
-    devfs_publish(&coordinator->root_device(), &coordinator->misc_device());
-    devfs_publish(&coordinator->root_device(), &coordinator->sys_device());
-    devfs_publish(&coordinator->root_device(), &coordinator->test_device());
-
-    for (const char* path : args.driver_search_paths) {
-        find_loadable_drivers(path, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
-    }
-    for (const char* driver : args.load_drivers) {
-        load_driver(driver, fit::bind_member(coordinator, &Coordinator::DriverAddedInit));
-    }
-
-    // Special case early handling for the ramdisk boot
-    // path where /system is present before the coordinator
-    // starts.  This avoids breaking the "priority hack" and
-    // can be removed once the real driver priority system
-    // exists.
-    if (coordinator->system_available()) {
-        coordinator->ScanSystemDrivers();
-    }
-
-    coordinator->sys_device().libname = args.sys_device_driver;
-    coordinator->PrepareProxy(&coordinator->sys_device());
-    coordinator->PrepareProxy(&coordinator->test_device());
-
-    if (coordinator->require_system() && !coordinator->system_loaded()) {
-        printf(
-            "devcoord: full system required, ignoring fallback drivers until /system is loaded\n");
-    } else {
-        coordinator->UseFallbackDrivers();
-    }
-
-    // Initial bind attempt for drivers enumerated at startup.
-    coordinator->BindDrivers();
-
-    coordinator->set_running(true);
 }
 
 } // namespace devmgr

@@ -19,6 +19,7 @@ zx::channel fs_clone(const char* path) {
 }
 } // namespace devmgr
 
+static constexpr char kSystemDriverPath[] = "/boot/driver/platform-bus.so";
 static constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 
 static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) {
@@ -34,7 +35,7 @@ bool initialize_core_devices() {
 
     devmgr::Coordinator coordinator(default_config(nullptr));
 
-    zx_status_t status = coordinator.InitializeCoreDevices();
+    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
     END_TEST;
@@ -77,7 +78,7 @@ bool dump_state() {
 
     devmgr::Coordinator coordinator(default_config(nullptr));
 
-    zx_status_t status = coordinator.InitializeCoreDevices();
+    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
     zx::socket client, server;
@@ -120,7 +121,7 @@ bool bind_drivers() {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::Coordinator coordinator(default_config(loop.dispatcher()));
 
-    zx_status_t status = coordinator.InitializeCoreDevices();
+    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
     coordinator.set_running(true);
 
@@ -143,7 +144,7 @@ bool bind_devices() {
     async::Loop loop(&kAsyncLoopConfigNoAttachToThread);
     devmgr::Coordinator coordinator(default_config(loop.dispatcher()));
 
-    zx_status_t status = coordinator.InitializeCoreDevices();
+    zx_status_t status = coordinator.InitializeCoreDevices(kSystemDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
     // Initialize devfs.
@@ -164,8 +165,8 @@ bool bind_devices() {
     ASSERT_EQ(1, coordinator.devices().size_slow());
 
     // Add the driver.
-    devmgr::load_driver(
-        kDriverPath, fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+    devmgr::load_driver(kDriverPath,
+                        fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
     loop.RunUntilIdle();
     ASSERT_FALSE(coordinator.drivers().is_empty());
 
