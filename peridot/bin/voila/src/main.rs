@@ -6,16 +6,19 @@
 
 use carnelian::{App, AppAssistant, ViewAssistant, ViewAssistantContext, ViewAssistantPtr};
 use failure::{Error, ResultExt};
+use fidl::encoding::OutOfLine;
 use fidl::endpoints::create_endpoints;
 use fidl_fuchsia_modular::AppConfig;
+use fidl_fuchsia_modular_auth::{Account, IdentityProvider};
 use fidl_fuchsia_modular_internal::{SessionmgrMarker, UserContextMarker};
 use fidl_fuchsia_ui_gfx::{self as gfx, ColorRgba};
 use fidl_fuchsia_ui_viewsv1token::ViewOwnerMarker;
-use fuchsia_app::client::{App as LaunchedApp, Launcher};
+use fuchsia_app::client::{App as LaunchedApp, LaunchOptions, Launcher};
 use fuchsia_async as fasync;
 use fuchsia_scenic::{Circle, EntityNode, ImportNode, Material, Rectangle, SessionPtr, ShapeNode};
-use log::warn;
+use log::{info, warn};
 use parking_lot::Mutex;
+use rand::Rng;
 use std::collections::BTreeMap;
 use std::{any::Any, cell::RefCell};
 
@@ -60,19 +63,41 @@ struct ReplicaData {
 
 impl VoilaViewAssistant {
     fn create_replica(
-        &mut self, key: u32, url: &str, session: &SessionPtr,
+        &mut self, key: u32, profile_id: &str, url: &str, session: &SessionPtr,
         view_container: &fidl_fuchsia_ui_viewsv1::ViewContainerProxy, import_node: &ImportNode,
     ) -> Result<(), Error> {
-        let app = Launcher::new()?.launch(url.to_string(), None)?;
+        let replica_random_number = rand::thread_rng().gen_range(1, 1000000);
+        let replica_id = format!("voila-r{}", replica_random_number.to_string());
+        info!("Voila: creating a replica {}", replica_id);
+
+        // Configure disk directory.
+        let data_origin = format!("/data/voila/{}", replica_id);
+        std::fs::create_dir_all(data_origin.clone())?;
+        let mut launch_options = LaunchOptions::new();
+        launch_options
+            .add_dir_to_namespace("/data".to_string(), std::fs::File::open(data_origin)?)?;
+
+        // Launch an instance of sessionmgr for the replica.
+        let app = Launcher::new()?.launch_with_options(url.to_string(), None, launch_options)?;
         let sessionmgr = app.connect_to_service(SessionmgrMarker)?;
+
+        // Set up the emulated account.
+        let mut account = Account {
+            id: replica_id.clone(),
+            identity_provider: IdentityProvider::Dev,
+            display_name: replica_id.clone(),
+            image_url: "https://example.com".to_string(),
+            url: "https://example.com".to_string(),
+            profile_id: profile_id.to_string(),
+        };
 
         // Set up shell configs.
         let mut session_shell_config = AppConfig {
-            url: "ermine_session_shell".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/ermine#meta/ermine.cmx".to_string(),
             args: None,
         };
         let mut story_shell_config = AppConfig {
-            url: "mondrian".to_string(),
+            url: "fuchsia-pkg://fuchsia.com/mondrian#meta/mondrian.cmx".to_string(),
             args: None,
         };
 
@@ -92,18 +117,19 @@ impl VoilaViewAssistant {
         // Set up UserContext.
         let (user_context_client, user_context_server) = create_endpoints::<UserContextMarker>()?;
         let user_context = UserContext {};
-        let stream = user_context_server.into_stream()?;
-
+        let user_context_stream = user_context_server.into_stream()?;
         fasync::spawn(
             async move {
-                await!(user_context.handle_requests_from_stream(stream)).unwrap_or_else(|err| {
-                    warn!("Error handling UserContext request channel: {:?}", err);
-                })
+                await!(user_context.handle_requests_from_stream(user_context_stream))
+                    .unwrap_or_else(|err| {
+                        warn!("Error handling UserContext request channel: {:?}", err);
+                    })
             },
         );
+
         sessionmgr
             .initialize(
-                None, /* account */
+                Some(OutOfLine(&mut account)),
                 &mut session_shell_config,
                 &mut story_shell_config,
                 None, /* ledger_token_manager */
@@ -142,8 +168,11 @@ impl ViewAssistant for VoilaViewAssistant {
         });
         self.circle_node.set_material(&material);
 
+        let profile_random_number = rand::thread_rng().gen_range(1, 1000000);
+        let profile_id = format!("voila-p{}", profile_random_number.to_string());
         self.create_replica(
             1,
+            &profile_id,
             "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
             context.session,
             context.view_container,
@@ -151,6 +180,7 @@ impl ViewAssistant for VoilaViewAssistant {
         )?;
         self.create_replica(
             2,
+            &profile_id,
             "fuchsia-pkg://fuchsia.com/sessionmgr#meta/sessionmgr.cmx",
             context.session,
             context.view_container,

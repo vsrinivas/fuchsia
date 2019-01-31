@@ -3,6 +3,9 @@
         "binary": "bin/app"
     },
     "sandbox": {
+        "features": [
+            "persistent-storage"
+        ],
         "services": [
             "fuchsia.sys.Environment",
             "fuchsia.sys.Launcher",

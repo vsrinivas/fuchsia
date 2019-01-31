@@ -20,11 +20,13 @@ rustc_binary("bin") {
     "//garnet/public/rust/fuchsia-async",
     "//garnet/public/rust/fuchsia-scenic",
     "//peridot/public/fidl/fuchsia.modular:fuchsia.modular-rustc",
+    "//peridot/public/fidl/fuchsia.modular.auth:fuchsia.modular.auth-rustc",
     "//peridot/public/fidl/fuchsia.modular.internal:fuchsia.modular.internal-rustc",
     "//third_party/rust-crates/rustc_deps:failure",
     "//third_party/rust-crates/rustc_deps:futures-preview",
     "//third_party/rust-crates/rustc_deps:log",
     "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:rand",
   ]
   with_unit_tests = true
 }
