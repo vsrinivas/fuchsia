@@ -27,6 +27,7 @@
         "garnet/packages/prod/drivers",
         "garnet/packages/prod/far",
         "garnet/packages/prod/fonts",
+        "garnet/packages/prod/fonts_minimal",
         "garnet/packages/prod/fortune",
         "garnet/packages/prod/guest_runner",
         "garnet/packages/prod/insntrace",
