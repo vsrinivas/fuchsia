@@ -27,7 +27,6 @@
 **/Cargo.lock
 **/Cargo.toml
 /.cipd
-buildtools/
 compile_commands.json
 cscope.*
 garnet/
