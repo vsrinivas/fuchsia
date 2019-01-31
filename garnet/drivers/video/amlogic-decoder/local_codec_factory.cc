@@ -18,6 +18,7 @@
 namespace {
 
 struct CodecAdapterFactory {
+  bool is_enabled;
   fuchsia::mediacodec::CodecDescription description;
 
   // This typedef is just for local readability here, not for use outside this
@@ -36,6 +37,7 @@ struct CodecAdapterFactory {
 // LocalCodecFactory code.
 const CodecAdapterFactory kCodecFactories[] = {
     {
+        true,  // is_enabled
         fuchsia::mediacodec::CodecDescription{
             .codec_type = fuchsia::mediacodec::CodecType::DECODER,
             // TODO(dustingreen): See TODO comments on this field in
@@ -61,6 +63,7 @@ const CodecAdapterFactory kCodecFactories[] = {
         },
     },
     {
+        false,  // is_enabled
         fuchsia::mediacodec::CodecDescription{
             .codec_type = fuchsia::mediacodec::CodecType::DECODER,
             // TODO(dustingreen): See TODO comments on this field in
@@ -86,6 +89,7 @@ const CodecAdapterFactory kCodecFactories[] = {
         },
     },
     {
+        false,  // is_enabled
         fuchsia::mediacodec::CodecDescription{
             .codec_type = fuchsia::mediacodec::CodecType::DECODER,
             // TODO(dustingreen): See TODO comments on this field in
@@ -166,6 +170,9 @@ void LocalCodecFactory::Bind(zx::channel server_endpoint) {
   // immediately upon creation of the local CodecFactory.
   fidl::VectorPtr<fuchsia::mediacodec::CodecDescription> codec_descriptions;
   for (const CodecAdapterFactory& factory : kCodecFactories) {
+    if (!factory.is_enabled) {
+      continue;
+    }
     codec_descriptions.push_back(fidl::Clone(factory.description));
   }
   factory_binding_.events().OnCodecList(std::move(codec_descriptions));
@@ -176,6 +183,9 @@ void LocalCodecFactory::CreateDecoder(
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder) {
   const CodecAdapterFactory* factory = nullptr;
   for (const CodecAdapterFactory& candidate_factory : kCodecFactories) {
+    if (!candidate_factory.is_enabled) {
+      continue;
+    }
     if (candidate_factory.description.mime_type ==
         video_decoder_params.input_details.mime_type) {
       factory = &candidate_factory;
