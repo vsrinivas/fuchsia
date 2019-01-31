@@ -37,7 +37,6 @@ executable("bin") {
 }
 
 package("timezone") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

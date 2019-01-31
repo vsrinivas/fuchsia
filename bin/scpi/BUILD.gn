@@ -49,7 +49,6 @@ executable("scpi_unittests") {
 }
 
 package("scpi") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

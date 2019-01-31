@@ -5,7 +5,6 @@
 import("//build/package.gni")
 
 package("token_manager_factory") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "//garnet/bin/auth/token_manager_factory:token_manager_factory",
@@ -22,7 +21,6 @@ package("token_manager_factory") {
 }
 
 package("account_manager") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "//garnet/bin/auth/account_manager:account_manager",
@@ -39,7 +37,6 @@ package("account_manager") {
 }
 
 package("account_handler") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "//garnet/bin/auth/account_handler:account_handler",

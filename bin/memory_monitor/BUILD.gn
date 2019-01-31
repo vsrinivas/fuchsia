@@ -38,7 +38,6 @@ executable("bin") {
 }
 
 package("memory_monitor") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

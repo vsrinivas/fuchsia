@@ -20,7 +20,6 @@ executable("bin") {
 }
 
 package("trace_stress") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {

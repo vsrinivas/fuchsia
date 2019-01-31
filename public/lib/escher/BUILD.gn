@@ -16,7 +16,6 @@ declare_args() {
 }
 
 package("escher_tests") {
-  deprecated_bare_package_url = "//build"
 
   testonly = true
 

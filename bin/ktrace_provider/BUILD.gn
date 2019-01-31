@@ -31,7 +31,6 @@ executable("bin") {
 }
 
 package("ktrace_provider") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

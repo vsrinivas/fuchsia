@@ -22,7 +22,6 @@ executable("bin") {
 }
 
 package("vulkan_loader") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

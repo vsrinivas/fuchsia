@@ -38,7 +38,6 @@ executable("bin") {
 }
 
 package("cpuperf_provider") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

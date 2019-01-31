@@ -33,7 +33,6 @@ rustc_binary("font_server") {
 }
 
 package("fonts") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":font_server",

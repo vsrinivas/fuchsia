@@ -33,7 +33,6 @@ executable("bin") {
 }
 
 package("example_camera_client") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",

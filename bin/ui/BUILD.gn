@@ -12,7 +12,6 @@ declare_args() {
 }
 
 package("scenic_tests") {
-  deprecated_bare_package_url = "//build"
 
   testonly = true
 
@@ -104,7 +103,6 @@ package("scenic_tests") {
 }
 
 package("root_presenter") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "root_presenter",
@@ -128,7 +126,6 @@ package("root_presenter") {
 }
 
 package("ime_service") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "ime",
@@ -158,7 +155,6 @@ test_package("ime_service_tests") {
 }
 
 package("view_manager") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "view_manager",
@@ -175,7 +171,6 @@ package("view_manager") {
 }
 
 package("scenic") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "scenic",
@@ -206,7 +201,6 @@ package("scenic") {
 }
 
 package("screencap") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -223,7 +217,6 @@ package("screencap") {
 }
 
 package("snapshot") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -240,7 +233,6 @@ package("snapshot") {
 }
 
 package("gltf_export") {
-  deprecated_bare_package_url = "//build"
 
   meta = [
     {
@@ -305,7 +297,6 @@ package("scenic_tools") {
 }
 
 package("set_renderer_params") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     "set_renderer_params_HACK:set_renderer_params",

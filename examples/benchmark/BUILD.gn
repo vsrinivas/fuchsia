@@ -19,7 +19,6 @@ executable("benchmark_example") {
 }
 
 package("benchmark") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":benchmark_example",

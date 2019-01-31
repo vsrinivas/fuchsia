@@ -59,7 +59,6 @@ executable("bin") {
 }
 
 package("overnetstack") {
-  deprecated_bare_package_url = "//build"
 
   deps = [
     ":bin",
