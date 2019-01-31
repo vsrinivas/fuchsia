@@ -167,7 +167,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
     vmoid_t compressed_vmoid;
     status = blobfs_->AttachVmo(compressed_mapper.vmo(), &compressed_vmoid);
     if (status != ZX_OK) {
-        FS_TRACE_ERROR("Failed to attach commpressed VMO to blkdev: %d\n", status);
+        FS_TRACE_ERROR("Failed to attach compressed VMO to blkdev: %d\n", status);
         return status;
     }
 
@@ -235,7 +235,7 @@ zx_status_t Blob::InitCompressed(CompressionAlgorithm algorithm) {
         return ZX_ERR_IO_DATA_INTEGRITY;
     }
 
-    blobfs_->LocalMetrics().UdpateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
+    blobfs_->LocalMetrics().UpdateMerkleDecompress(compressed_blocks * kBlobfsBlockSize,
                                                    inode_.blob_size, read_time, ticker.End());
     return ZX_OK;
 }

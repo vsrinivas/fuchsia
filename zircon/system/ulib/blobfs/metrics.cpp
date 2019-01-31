@@ -91,7 +91,7 @@ void BlobfsMetrics::UpdateMerkleDiskRead(uint64_t size, const fs::Duration& dura
     }
 }
 
-void BlobfsMetrics::UdpateMerkleDecompress(uint64_t size_compressed,
+void BlobfsMetrics::UpdateMerkleDecompress(uint64_t size_compressed,
                                            uint64_t size_uncompressed,
                                            const fs::Duration& read_duration,
                                            const fs::Duration& decompress_duration) {

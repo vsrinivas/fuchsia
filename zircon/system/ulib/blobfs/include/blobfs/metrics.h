@@ -57,7 +57,7 @@ public:
 
     // Updates aggregate information about decompressing blobs from storage
     // since mounting.
-    void UdpateMerkleDecompress(uint64_t size_compressed, uint64_t size_uncompressed,
+    void UpdateMerkleDecompress(uint64_t size_compressed, uint64_t size_uncompressed,
                                 const fs::Duration& read_duration,
                                 const fs::Duration& decompress_duration);
 
