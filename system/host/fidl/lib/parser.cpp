@@ -952,9 +952,6 @@ Parser::ParseTableDeclaration(std::unique_ptr<raw::AttributeList> attributes, AS
     if (!Ok())
         Fail();
 
-    if (members.empty())
-        return Fail("Tables must have at least one member");
-
     return std::make_unique<raw::TableDeclaration>(scope.GetSourceElement(),
                                                    std::move(attributes), std::move(identifier),
                                                    std::move(members));

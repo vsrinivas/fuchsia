@@ -55,6 +55,9 @@ struct HandleTableVector {
   vector<TableWithOneHandle>:8 sv;
 };
 
+table TableWithNoMembers {
+};
+
 table TableWithOneBool {
   1: bool b;
 };
@@ -129,6 +132,10 @@ static bool simple_tables(void) {
 
     MaxHandlesLibrary test_library;
     EXPECT_TRUE(test_library.Compile());
+
+    auto no_members = test_library.LookupTable("TableWithNoMembers");
+    EXPECT_NONNULL(no_members);
+    EXPECT_EQ(no_members->typeshape.MaxHandles(), 0);
 
     auto one_bool = test_library.LookupTable("TableWithOneBool");
     EXPECT_NONNULL(one_bool);

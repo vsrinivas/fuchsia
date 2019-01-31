@@ -99,8 +99,8 @@ table Foo {
 };
 )FIDL"));
 
-    // Empty tables not allowed.
-    EXPECT_FALSE(Compiles(R"FIDL(
+    // Empty tables are allowed.
+    EXPECT_TRUE(Compiles(R"FIDL(
 library fidl.test.tables;
 
 table Foo {

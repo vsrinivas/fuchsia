@@ -88,6 +88,9 @@ struct AnArray {
   array<int64>:5 a;
 };
 
+table TableWithNoMembers {
+};
+
 table TableWithOneBool {
   1: bool b;
 };
@@ -257,6 +260,11 @@ static bool simple_tables() {
 
     MaxBytesLibrary test_library;
     EXPECT_TRUE(test_library.Compile());
+
+    auto no_members = test_library.LookupTable("TableWithNoMembers");
+    EXPECT_NONNULL(no_members);
+    EXPECT_EQ(no_members->typeshape.Size(), 16);
+    EXPECT_EQ(no_members->typeshape.MaxOutOfLine(), 0);
 
     auto one_bool = test_library.LookupTable("TableWithOneBool");
     EXPECT_NONNULL(one_bool);
