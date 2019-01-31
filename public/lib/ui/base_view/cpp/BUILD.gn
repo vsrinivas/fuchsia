@@ -6,8 +6,6 @@ source_set("cpp") {
   sources = [
     "base_view.cc",
     "base_view.h",
-    "embedded_view_utils.cc",
-    "embedded_view_utils.h",
     "v1_base_view.cc",
     "v1_base_view.h",
     "view_provider_component.cc",

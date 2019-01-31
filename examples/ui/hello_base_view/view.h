@@ -43,7 +43,7 @@ class ShadertoyEmbedderView : public scenic::BaseView {
   scenic::EntityNode node_;
   scenic::ShapeNode background_;
 
-  scenic::EmbeddedViewInfo embedded_view_info_;
+  scenic::BaseView::EmbeddedViewInfo embedded_view_info_;
   std::unique_ptr<scenic::ViewHolder> view_holder_;
 
   bool focused_;

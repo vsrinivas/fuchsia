@@ -12,7 +12,6 @@
 
 #include "lib/component/cpp/startup_context.h"
 #include "lib/svc/cpp/services.h"
-#include "lib/ui/base_view/cpp/embedded_view_utils.h"
 #include "lib/ui/scenic/cpp/resources.h"
 #include "lib/ui/scenic/cpp/session.h"
 
@@ -91,6 +90,48 @@ class BaseView : private fuchsia::ui::scenic::SessionListener {
   // This should be used to implement cleanup policies to release resources
   // associated with the view (including the object itself).
   void SetReleaseHandler(fit::function<void(zx_status_t)> callback);
+
+  // Serves as the return value for LaunchAppAndCreateView(), below.
+  struct EmbeddedViewInfo {
+    // Controls the launched app.  The app will be destroyed if this connection
+    // is closed.
+    fuchsia::sys::ComponentControllerPtr controller;
+
+    // Services provided by the launched app.  Must not be destroyed
+    // immediately, otherwise the |view_provider| connection may not be
+    // established.
+    component::Services app_services;
+
+    // ViewProvider service obtained from the app via |app_services|.  Must not
+    // be destroyed immediately, otherwise the call to CreateView() might not
+    // be processed.
+    fuchsia::ui::app::ViewProviderPtr view_provider;
+
+    // A token that can be used to create a ViewHolder; the corresponding token
+    // was provided to |view_provider| via ViewProvider.CreateView().  The
+    // launched app is expected to create a View, which will be connected to
+    // the ViewHolder created with this token.
+    zx::eventpair view_holder_token;
+
+    // Handle to services provided by ViewProvider.CreateView().
+    fidl::InterfaceHandle<fuchsia::sys::ServiceProvider>
+        services_from_child_view;
+
+    // Interface request for services provided to ViewProvider.CreateView();
+    // the caller of LaunchAppAndCreateView() may choose to attach this request
+    // to a ServiceProvider implementation.
+    fidl::InterfaceRequest<fuchsia::sys::ServiceProvider>
+        services_to_child_view;
+  };
+
+  // Launch a component and connect to its ViewProvider service, passing it the
+  // necessary information to attach itself as a child view.  Populates the
+  // returned EmbeddedViewInfo, which the caller can use to embed the child.
+  // For example, an interface to a ViewProvider is obtained, a pair of
+  // zx::eventpairs is created, CreateView is called, etc.  This encapsulates
+  // the boilerplate the the client would otherwise write themselves.
+  EmbeddedViewInfo LaunchComponentAndCreateView(
+      std::string component_url, std::vector<std::string> component_args = {});
 
   // Invalidates the scene, causing |OnSceneInvalidated()| to be invoked
   // during the next frame.
