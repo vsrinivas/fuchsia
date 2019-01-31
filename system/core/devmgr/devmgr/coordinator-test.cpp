@@ -205,6 +205,19 @@ bool bind_devices() {
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
     ASSERT_STR_EQ("/boot/driver/test/mock-device.so", req->driver_path.data);
 
+    // Write the BindDriver response.
+    memset(bytes, 0, sizeof(bytes));
+    auto resp = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverResponse*>(bytes);
+    resp->hdr.ordinal = fuchsia_device_manager_ControllerBindDriverOrdinal;
+    resp->status = ZX_OK;
+    status = fidl_encode(&fuchsia_device_manager_ControllerBindDriverResponseTable, bytes,
+                         sizeof(*resp), handles, fbl::count_of(handles), &actual_handles, nullptr);
+    ASSERT_EQ(ZX_OK, status);
+    ASSERT_EQ(0, actual_handles);
+    status = remote.write(0, bytes, sizeof(*resp), nullptr, 0);
+    ASSERT_EQ(ZX_OK, status);
+    loop.RunUntilIdle();
+
     // Reset the fake devhost connection.
     dev->host = nullptr;
     remote.reset();
