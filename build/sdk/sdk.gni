@@ -1,0 +1,284 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/json/validate_json.gni")
+import("sdk_molecule.gni")
+
+declare_args() {
+  # Whether to build SDK tarballs.
+  build_sdk_archives = false
+}
+
+# A collection of elements to be published in an SDK.
+#
+# Parameters
+#
+#   name (optional)
+#     Name of the SDK.
+#     Defaults to the target's name.
+#
+#   category (required)
+#     Describes the minimum category that atoms in this SDK must have.
+#     See //build/sdk/sdk_atom.gni for possible values.
+#
+#   export (optional)
+#     Whether to export the contents of this SDK to the output directory.
+#     This is useful when an SDK-like file structure is needed as part of the
+#     build, for example to port a language runtime which would otherwise rely
+#     on an official SDK.
+#     Defaults to false.
+
+template("sdk") {
+  assert(defined(invoker.category), "Must define an SDK category")
+
+  main_target_name = target_name
+  generation_target_name = "${target_name}_molecule"
+  copy_target_name = "${target_name}_copy"
+  verification_target_name = "${target_name}_manifest_verify"
+  meta_target_name = "${target_name}_meta"
+  verify_meta_target_name = "${target_name}_meta_verify"
+  archive_manifest_target_name = "${target_name}_archive_manifest"
+  archive_target_name = "${target_name}_archive"
+
+  if (!is_fuchsia) {
+    assert(false, "SDKs can only target Fuchsia")
+  }
+  target_triple = target_cpu
+  if (host_cpu == "x64") {
+    host_triple_cpu = "x86_64"
+  } else if (host_cpu == "arm64") {
+    host_triple_cpu = "aarch64"
+  } else {
+    assert(false, "Unrecognized host CPU: $host_cpu")
+  }
+  if (host_os == "linux") {
+    host_triple_os = "linux-gnu"
+  } else if (host_os == "mac") {
+    host_triple_os = "apple-darwin"
+  } else if (host_os == "fuchsia") {
+    host_triple_os = "fuchsia"
+  } else {
+    assert(false, "Unrecognized host OS: $host_os")
+  }
+  host_triple = "$host_triple_cpu-$host_triple_os"
+
+  # Generates the manifest.
+  sdk_molecule(generation_target_name) {
+    forward_variables_from(invoker, "*", [ "export" ])
+
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ "//build/sdk:schemas" ]
+
+    category = invoker.category
+  }
+
+  sdk_name = target_name
+  if (defined(invoker.name)) {
+    sdk_name = invoker.name
+  }
+  final_manifest_file = "$root_out_dir/sdk/manifest/$sdk_name"
+
+  # Copies the manifest to a central location.
+  copy(copy_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    sources = [
+      "$target_gen_dir/$generation_target_name.sdk",
+    ]
+
+    outputs = [
+      final_manifest_file,
+    ]
+
+    deps = [
+      ":$generation_target_name",
+    ]
+  }
+
+  # Verifies that the manifest is valid.
+  validate_json(verification_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    data = final_manifest_file
+
+    schema = "//build/sdk/manifest_schema.json"
+
+    deps = [
+      ":$copy_target_name",
+    ]
+  }
+
+  sdk_meta_file = "$target_gen_dir/$sdk_name.sdk_meta.json"
+
+  # Generates a metadata file describing the various parts of the SDK.
+  action(meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = "//build/sdk/generate_meta.py"
+
+    inputs = [
+      final_manifest_file,
+    ]
+
+    outputs = [
+      sdk_meta_file,
+    ]
+
+    args = [
+      "--manifest",
+      rebase_path(final_manifest_file),
+      "--meta",
+      rebase_path(sdk_meta_file),
+      "--target-arch",
+      target_triple,
+      "--host-arch",
+      host_triple,
+    ]
+
+    public_deps = [
+      ":$copy_target_name",
+      ":$verification_target_name",
+    ]
+  }
+
+  # Verifies that the manifest metadata is valid.
+  validate_json(verify_meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    data = sdk_meta_file
+
+    schema = "//build/sdk/meta/manifest.json"
+
+    public_deps = [
+      ":$meta_target_name",
+    ]
+  }
+
+  archive_manifest_file = "$target_gen_dir/$sdk_name.archive_manifest"
+
+  additional_archive_files = [
+    {
+      source = sdk_meta_file
+      dest = "meta/manifest.json"
+    },
+  ]
+
+  # From the manifest file representing the SDK, generates a list of the files
+  # going into the final archive.
+  action(archive_manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    script = "//build/sdk/generate_archive_manifest.py"
+
+    sources = [
+      "//build/sdk/sdk_common.py",
+    ]
+
+    inputs = [
+      final_manifest_file,
+    ]
+
+    outputs = [
+      archive_manifest_file,
+    ]
+
+    args = [
+      "--manifest",
+      rebase_path(final_manifest_file),
+      "--output",
+      rebase_path(archive_manifest_file),
+    ]
+
+    foreach(file, additional_archive_files) {
+      inputs += [ file.source ]
+      args += [
+        "--mapping",
+        file.dest,
+        rebase_path(file.source),
+      ]
+    }
+
+    public_deps = [
+      ":$verify_meta_target_name",
+    ]
+  }
+
+  if (build_sdk_archives) {
+    # Generates the final archive.
+    final_archive = "$root_out_dir/sdk/archive/$sdk_name.tar.gz"
+
+    compiled_action(archive_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      tool = "//build/tools/tar_maker"
+
+      inputs = [
+        archive_manifest_file,
+      ]
+
+      outputs = [
+        final_archive,
+      ]
+
+      args = [
+        "-manifest",
+        rebase_path(archive_manifest_file),
+        "-output",
+        rebase_path(final_archive),
+      ]
+
+      deps = [
+        ":$archive_manifest_target_name",
+      ]
+    }
+  } else {
+    group(archive_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+
+      deps = [
+        ":$archive_manifest_target_name",
+      ]
+    }
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    deps = [
+      ":$archive_target_name",
+    ]
+  }
+
+  if (defined(invoker.export) && invoker.export) {
+    stamp_file = "$target_gen_dir/$target_name.exported"
+
+    action("${target_name}_export") {
+      script = "//build/sdk/export_sdk.py"
+
+      inputs = [
+        archive_manifest_file,
+      ]
+
+      outputs = [
+        stamp_file,
+      ]
+
+      args = [
+        "--out-dir",
+        rebase_path("$root_out_dir/sdk/exported/$sdk_name"),
+        "--stamp-file",
+        rebase_path(stamp_file),
+        "--manifest",
+        rebase_path(archive_manifest_file),
+      ]
+
+      deps = [
+        ":$archive_manifest_target_name",
+      ]
+    }
+  }
+}

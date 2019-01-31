@@ -1,0 +1,307 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cmx/cmx.gni")
+import("//build/images/manifest.gni")
+
+# Defines a fuchsia component.
+#
+# This template is used to define a unit of component.
+# A component always has a manifest defining that component.
+#
+# Parameters
+#
+#   manifest (required)
+#     [path] Defines the manifest source path for this component.
+#
+#   manifest_dest (optional)
+#     [path] Defines the destination of the component manifest within the assembled package.
+#
+#     If not provided, defaults to "meta/<manifest>.cmx" if manifest was .cmx, and "meta/<manifest>.cm" if manfiest was .cml.
+#
+#   binary (required)
+#     [path] The path to the the primary binary for the component.
+#
+#   loadable_modules (optional)
+#     [list of scopes] Defines the loadable modules in the package.  These
+#     are produced by `loadable_module()` GN targets, and are typically
+#     placed in the `lib/` directory of the assembled packaged.
+#
+#     Entries in a scope in the loadable_modules list:
+#
+#       name (required)
+#         [string] Name of the loadable_module.
+#
+#       dest (optional, default: "lib")
+#         [string] Location the lib will be placed in the package.
+#
+#   resources (optional)
+#     [list of scopes] Defines the resources for this component. A resource is a
+#     data file that may be produced by the build system, checked in to a
+#     source repository, or produced by another system that runs before the
+#     build. Resources are placed in the `data/` directory of the assembled
+#     package.
+#
+#     Entries in a scope in the resources list:
+#
+#       path (required)
+#         [path] Location of resource in source or build directory. If the
+#         resource is checked in, this will typically be specified as a
+#         path relative to the BUILD.gn file containing the `package()`
+#         target. If the resource is generated, this will typically be
+#         specified relative to `$target_gen_dir`.
+#
+#       dest (required)
+#         [path] Location the resource will be placed within `data/`.
+#
+#   test (optional)
+#     [bool] Should be true if this component is test.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   data_deps (optional)
+#   visibility (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+#
+template("fuchsia_component") {
+  if (current_toolchain == target_toolchain) {
+    component_label = get_label_info(":$target_name", "label_with_toolchain")
+    forward_variables_from(invoker, [ "testonly" ])
+    component = {
+      forward_variables_from(invoker,
+                             [
+                               "binary",
+                               "data_deps",
+                               "deps",
+                               "public_deps",
+                               "loadable_modules",
+                               "resources",
+                               "visibility",
+                               "manifest",
+                               "manifest_dest",
+                               "test",
+                             ])
+      assert(defined(manifest),
+             "Component $component_label should define manifest")
+      manifest_extension = get_path_info(manifest, "extension")
+      assert(
+          manifest_extension == "cmx" || manifest_extension == "cml",
+          "Component $component_label's manifest $manifest should have extension .cmx or .cml")
+      if (!defined(manifest_dest)) {
+        if (manifest_extension == "cmx") {
+          manifest_dest = "meta/" + get_path_info(manifest, "file")
+        } else {
+          manifest_dest = "meta/" + get_path_info(manifest, "name") + ".cm"
+        }
+      } else {
+        manifest_dest_extension = get_path_info(manifest_dest, "extension")
+        if (manifest_extension == "cmx") {
+          assert(
+              manifest_dest_extension == "cmx",
+              "Component $component_label's manifest_dest $manifest_dest should have extension .cmx")
+        } else {
+          assert(
+              manifest_dest_extension == "cm",
+              "Component $component_label's manifest_dest $manifest_dest should have extension .cm")
+        }
+      }
+
+      # remove this check once we support dart and flutter
+      assert(defined(binary), "Component $component_label should define binary")
+      if (!defined(deps)) {
+        deps = []
+      }
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      if (!defined(test)) {
+        test = false
+      }
+      if (!defined(loadable_modules)) {
+        loadable_modules = []
+      }
+      if (!defined(manifest)) {
+        manifest = rebase_path("meta/${name}.cmx")
+      }
+      if (!defined(resources)) {
+        resources = []
+      }
+    }
+
+    component_manifest = []
+    if (get_path_info(component.manifest, "extension") == "cmx") {
+      validate = "validate_" + target_name + "_" +
+                 get_path_info(component.manifest_dest, "file")
+
+      cmx_validate(validate) {
+        data = component.manifest
+
+        # the cmx file may be generated by one of this component's dependencies,
+        # but we don't know which one, so depend on all package deps here.
+        deps = component.deps
+        public_deps = component.public_deps
+      }
+      component.deps += [ ":$validate" ]
+
+      # Collect the component's primary manifest.
+      component_manifest += [
+        {
+          dest = component.manifest_dest
+          source = rebase_path(component.manifest)
+        },
+      ]
+    } else if (get_path_info(component.manifest, "extension") == "cml") {
+      compiled = "compiled_" + target_name + "_" +
+                 get_path_info(component.manifest_dest, "file")
+
+      cm_compile(compiled) {
+        data = component.manifest
+
+        # the cm file may be generated by one of this component's dependencies,
+        # but we don't know which one, so depend on all package deps here.
+        deps = component.deps
+        public_deps = component.public_deps
+      }
+      component.deps += [ ":$compiled" ]
+      compiled_outputs = get_target_outputs(":$compiled")
+
+      # Collect the component's primary manifest.
+      component_manifest += [
+        {
+          dest = component.manifest_dest
+          source = rebase_path(compiled_outputs[0])
+        },
+      ]
+    }
+
+    bin_dir = "bin/"
+    if (component.test) {
+      bin_dir = "test/"
+    }
+    component_manifest += [
+      {
+        dest = bin_dir + get_path_info(component.binary, "file")
+        source = rebase_path(component.binary, "", root_out_dir)
+      },
+    ]
+    foreach(module, component.loadable_modules) {
+      component_manifest += [
+        {
+          if (defined(module.dest)) {
+            dest = module.dest
+          } else {
+            dest = "lib"
+          }
+          dest += "/${module.name}"
+          source = rebase_path(module.name, "", root_out_dir)
+        },
+      ]
+    }
+    foreach(resource, component.resources) {
+      component_manifest += [
+        {
+          dest = "data/${resource.dest}"
+          source = rebase_path(resource.path)
+        },
+      ]
+    }
+
+    # Collect all the arguments describing input manifest files
+    # and all the entries we've just synthesized in `component_manifest`.
+    manifest_sources = []
+    manifest_args = []
+    foreach(entry, component_manifest) {
+      manifest_sources += [ entry.source ]
+      manifest_args += [ "--entry=${entry.dest}=${entry.source}" ]
+    }
+
+    # Generate component build manifest with all its dynamically linked libraries
+    # resolved.
+    generate_manifest("${target_name}.manifest") {
+      sources = manifest_sources
+      args = manifest_args
+      deps = component.deps
+      public_deps = component.public_deps
+    }
+
+    group(target_name) {
+      public_deps = [
+        ":${target_name}.manifest",
+      ]
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "deps",
+                               "testonly",
+                             ])
+    }
+
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
+  }
+}
+
+# Defines fuchsia test component.
+#
+# This template is used to define a unit of test component.
+# A component always has a manifest defining that component.
+#
+# Parameters
+#
+#   binary (required)
+#     [path] The path to the the primary binary for the component.
+#            This is also be used to infer your manifest source and
+#            destination path.
+#
+#   manifest (optional)
+#     see fuchsia_component()
+#     Would be infered from binary name if not specified.
+#
+#
+#   loadable_modules (optional)
+#     see fuchsia_component()
+#
+#   resources (optional)
+#     see fuchsia_component()
+#
+#   deps (optional)
+#   public_deps (optional)
+#   data_deps (optional)
+#   visibility (optional)
+#     Usual GN meanings.
+#
+template("fuchsia_test_component") {
+  forward_variables_from(invoker,
+                         [
+                           "binary",
+                           "manifest",
+                         ])
+
+  # remove this check once we support dart and flutter
+  assert(defined(binary), "Component $target_name should define binary")
+  fuchsia_component(target_name) {
+    testonly = true
+    test = true
+    name = get_path_info(binary, "file")
+    if (!defined(manifest)) {
+      manifest = rebase_path("meta/${name}.cmx")
+    }
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "loadable_modules",
+                             "resources",
+                             "visibility",
+                           ])
+  }
+}

@@ -1,0 +1,102 @@
+{
+  "description": "Schema for a build-generated SDK manifest",
+  "type": "object",
+  "properties": {
+    "atoms": {
+      "description": "The set of all atoms in the current manifest, forming a complete dependency graph",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/atom"
+      }
+    },
+    "ids": {
+      "description": "IDs of the main atoms in this manifest (as opposed to dependencies)",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/atomId"
+      }
+    }
+  },
+  "required": [
+      "atoms",
+      "ids"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "atomId": {
+      "description": "Unique identifier for an atom",
+      "type": "string",
+      "pattern": "^sdk://([a-z][a-z0-9-_\\.]+)(/([a-z][a-z0-9-_\\.]+))*$"
+    },
+    "atom": {
+      "description": "An SDK artifact",
+      "type": "object",
+      "properties": {
+        "id": {
+          "description": "The atom's unique identifier",
+          "$ref": "#/definitions/atomId"
+        },
+        "gn-label": {
+          "description": "Label of the GN target which generated the atom",
+          "type": "string"
+        },
+        "meta": {
+          "description": "Path to the atom's metadata file in the SDK",
+          "type": "string"
+        },
+        "category": {
+          "description": "Publication level of this atom",
+          "type": "string",
+          "enum": [
+            "excluded",
+            "experimental",
+            "internal",
+            "partner",
+            "public"
+          ]
+        },
+        "files": {
+          "description": "Paths to files making up the atom, relative to the SDK root",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomFile"
+          }
+        },
+        "deps": {
+          "description": "The ids of the atoms this atom directly depends on",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/atomId"
+          }
+        }
+      },
+      "required": [
+        "category",
+        "deps",
+        "files",
+        "id",
+        "gn-label"
+      ],
+      "additionalProperties": false
+    },
+    "atomFile": {
+      "description": "Description of a file pertaining to an atom",
+      "type": "object",
+      "properties": {
+        "source": {
+          "description": "Path to the source file",
+          "type": "string"
+        },
+        "destination": {
+          "description": "Destination path of the file relative to the SDK root",
+          "type": "string"
+        }
+      },
+      "required": [
+        "source",
+        "destination"
+      ],
+      "additionalProperties": false
+    }
+  }
+}

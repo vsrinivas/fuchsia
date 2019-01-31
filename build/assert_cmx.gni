@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+#
+
+template("assert_cmx") {
+  package_meta = []
+  if (defined(invoker.meta)) {
+    package_meta = invoker.meta
+  }
+
+  found_cmx = false
+
+  # deprecated_system_image are not fuchsia packages. Skip.
+  if (invoker.deprecated_system_image) {
+    found_cmx = true
+  }
+
+  # Tests don't launch as components by default, so no cmx is required.
+  if (defined(invoker.testonly) && invoker.testonly) {
+    found_cmx = true
+  }
+
+  # Unmigrated targets are whitelisted.
+  if (defined(invoker.deprecated_no_cmx)) {
+    found_cmx = true
+  }
+
+  # Packages that only contain shell binaries are allowed.
+  if (defined(invoker.binaries)) {
+    bins = []
+    foreach(binary, invoker.binaries) {
+      if (defined(binary.shell) && binary.shell) {
+        bins += [ binary ]
+      }
+    }
+    if (bins == invoker.binaries) {
+      found_cmx = true
+    }
+  }
+
+  # Packages that only contain data are allowed.
+  if (!defined(invoker.binaries) && !defined(invoker.binary)) {
+    found_cmx = true
+  }
+
+  foreach(item, package_meta) {
+    dest = item.path
+    if (defined(item.dest)) {
+      dest = item.dest
+    }
+    if (get_path_info(dest, "extension") == "cmx") {
+      found_cmx = true
+    }
+  }
+
+  assert(
+      found_cmx == true,
+      "No cmx found in package $target_name. Please add cmx to your component. " + "See https://fuchsia.googlesource.com/docs/+/master/the-book/" + "package_metadata.md#Component-manifest. " + "Also see go/cmx-everywhere for the migration design.")
+}

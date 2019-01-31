@@ -1,0 +1,983 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# The GN files in //third_party/flutter all use $flutter_root/
+# in place of // to refer to the root of the flutter source tree.
+flutter_root = "//third_party/flutter"
+
+declare_args() {
+  # Debug build.
+  is_debug = true
+}
+
+if (target_os == "") {
+  target_os = "fuchsia"
+}
+if (target_cpu == "") {
+  target_cpu = host_cpu
+}
+target_platform = "${target_os}-${target_cpu}"
+if (current_cpu == "") {
+  current_cpu = target_cpu
+}
+if (current_os == "") {
+  current_os = target_os
+}
+current_platform = "${current_os}-${current_cpu}"
+
+host_platform = "${host_os}-${host_cpu}"
+
+if (target_os == "fuchsia") {
+  target_toolchain = "//build/toolchain/fuchsia:${target_cpu}"
+} else {
+  assert(false, "Target OS not supported")
+}
+
+if (host_os == "linux" || host_os == "mac") {
+  host_toolchain = "//build/toolchain:host_${host_cpu}"
+} else {
+  assert(false, "Host OS not supported")
+}
+
+set_default_toolchain(target_toolchain)
+
+# Some projects expect a default value for sources_assignment_filter.
+sources_assignment_filter = []
+
+declare_args() {
+  # *This should never be set as a build argument.*
+  # It exists only to be set in `toolchain_args`.
+  # See //build/toolchain/clang_toolchain.gni for details.
+  # This variable is a scope giving details about the current toolchain:
+  #     `toolchain_variant.base`
+  #         [label] The "base" toolchain for this variant, *often the
+  #         right thing to use in comparisons, not `current_toolchain`.*
+  #         This is the toolchain actually referenced directly in GN
+  #         source code.  If the current toolchain is not
+  #         `shlib_toolchain` or a variant toolchain, this is the same
+  #         as `current_toolchain`.  In one of those derivative
+  #         toolchains, this is the toolchain the GN code probably
+  #         thought it was in.  This is the right thing to use in a test
+  #         like `toolchain_variant.base == target_toolchain`, rather
+  #         rather than comparing against `current_toolchain`.
+  #     `toolchain_variant.name`
+  #         [string] The name of this variant, as used in `variant` fields
+  #         in [`select_variant`](#select_variant) clauses.  In the base
+  #         toolchain and its `shlib_toolchain`, this is `""`.
+  #     `toolchain_variant.suffix`
+  #         [string] This is "-${toolchain_variant.name}", "" if name is empty.
+  #     `toolchain_variant.is_pic_default`
+  #         [bool] This is true in `shlib_toolchain`.
+  # The other fields are the variant's effects as defined in
+  # [`known_variants`](#known_variants).
+  toolchain_variant = {
+    base = target_toolchain  # default toolchain
+  }
+}
+
+if (!defined(toolchain_variant.name)) {
+  # Default values describe the "null variant".
+  # All the optional fields (except `toolchain_args`) are canonicalized
+  # to their default/empty values so the code below doesn't need to have
+  # `defined(toolchain_variant.field)` checks all over.
+  toolchain_variant.name = ""
+  toolchain_variant.suffix = ""
+  toolchain_variant.configs = []
+  toolchain_variant.remove_common_configs = []
+  toolchain_variant.remove_shared_configs = []
+  toolchain_variant.deps = []
+  toolchain_variant.is_pic_default = false
+}
+
+is_android = false
+is_fuchsia = false
+is_fuchsia_host = false
+is_ios = false
+is_linux = false
+is_mac = false
+is_win = false
+is_clang = true
+is_component_build = false
+is_official_build = false
+
+# This is set to allow third party projects to configure their GN build based
+# on the knowledge that they're being built in the Fuchsia tree. In the
+# subproject this can be tested with
+#   `if (defined(is_fuchsia_tree) && is_fuchsia_tree) { ... }`
+# thus allowing configuration without requiring all users of the subproject to
+# set this variable.
+is_fuchsia_tree = true
+
+if (current_os == "fuchsia") {
+  is_fuchsia = true
+} else if (current_os == "linux") {
+  is_linux = true
+} else if (current_os == "mac") {
+  is_mac = true
+}
+
+# Some library targets may be built as different type depending on the target
+# platform. This variable specifies the default library type for each target.
+if (is_fuchsia) {
+  default_library_type = "shared_library"
+} else {
+  default_library_type = "static_library"
+}
+
+# When we are in a variant of host_toolchain, change the value of
+# host_toolchain so that `if (current_toolchain == host_toolchain)` tests
+# still match, since that is the conventional way to detect being in host
+# context.  This means that any "...($host_toolchain)" label references
+# from inside a variant of host_toolchain will refer to the variant
+# (current_toolchain rather than host_toolchain).  To handle this, the
+# `executable()` template below will define its target in other variant
+# toolchains as a copy of the real executable.
+if (toolchain_variant.base == host_toolchain) {
+  is_fuchsia_host = true
+  host_toolchain += toolchain_variant.suffix
+}
+
+# References should use `"label($shlib_toolchain)"` rather than
+# `"label(${target_toolchain}-shared)"` or anything else.
+shlib_toolchain = "${toolchain_variant.base}${toolchain_variant.suffix}-shared"
+
+# All binary targets will get this list of configs by default.
+default_common_binary_configs = [
+  "//build/config:compiler",
+  "//build/config:relative_paths",
+  "//build/config:default_frame_pointers",
+  "//build/config:default_include_dirs",
+  "//build/config:default_symbols",
+  "//build/config:default_warnings",
+  "//build/config:no_exceptions",
+  "//build/config:no_rtti",
+  "//build/config:symbol_visibility_hidden",
+]
+
+if (is_debug) {
+  default_common_binary_configs += [ "//build/config:debug" ]
+} else {
+  default_common_binary_configs += [ "//build/config:release" ]
+}
+
+if (is_fuchsia) {
+  default_common_binary_configs += [
+    "//build/config/fuchsia:icf",
+    "//build/config/fuchsia:thread_safety_annotations",
+    "//build/config/fuchsia:werror",
+
+    # TODO(mcgrathr): Perhaps restrict this to only affected code.
+    # For now, safest to do it everywhere.
+    "//build/config/fuchsia:zircon_asserts",
+  ]
+}
+
+default_common_binary_configs += [ "//build/config/lto:default" ]
+
+# Add and remove configs specified by the variant.
+default_common_binary_configs += toolchain_variant.configs
+default_common_binary_configs -= toolchain_variant.remove_common_configs
+
+default_shared_library_configs = default_common_binary_configs + [
+                                   "//build/config:shared_library_config",
+                                   "//build/config:symbol_no_undefined",
+                                 ]
+default_shared_library_configs -= toolchain_variant.remove_shared_configs
+
+default_executable_configs = default_common_binary_configs + [
+                               "//build/config:executable_config",
+                               "//build/config:default_libs",
+                             ]
+default_executable_deps = [ "//build/config/scudo:default_for_executable" ]
+
+if (toolchain_variant.is_pic_default) {
+  default_common_binary_configs += [ "//build/config:shared_library_config" ]
+}
+
+# Apply that default list to the binary target types.
+set_defaults("source_set") {
+  configs = default_common_binary_configs
+}
+set_defaults("static_library") {
+  configs = default_common_binary_configs
+}
+set_defaults("shared_library") {
+  configs = default_shared_library_configs
+}
+set_defaults("loadable_module") {
+  configs = default_shared_library_configs
+}
+set_defaults("executable") {
+  configs = default_executable_configs
+}
+
+if (is_fuchsia) {
+  if (!toolchain_variant.is_pic_default) {
+    # In the main toolchain, shared_library just redirects to the same
+    # target in the -shared toolchain.
+    template("shared_library") {
+      group(target_name) {
+        public_deps = [
+          ":$target_name(${current_toolchain}-shared)",
+        ]
+        forward_variables_from(invoker,
+                               [
+                                 "testonly",
+                                 "visibility",
+                               ])
+
+        # Mark all variables as not needed to suppress errors for unused
+        # variables.  The other variables normally passed to shared_library
+        # are actually used by the shared_library instantiation in the
+        # -shared toolchain, so any going truly unused will be caught there.
+        not_needed(invoker, "*")
+      }
+    }
+  } else {
+    # In the -shared toolchain, shared_library is just its normal self,
+    # but if the invoker constrained the visibility, we must make sure
+    # the dependency from the main toolchain is still allowed.
+    template("shared_library") {
+      shared_library(target_name) {
+        # Explicitly forward visibility, implicitly forward everything
+        # else.  Forwarding "*" doesn't recurse into nested scopes (to
+        # avoid copying all globals into each template invocation), so
+        # won't pick up file-scoped variables.  Normally this isn't too
+        # bad, but visibility is commonly defined at the file scope.
+        # Explicitly forwarding visibility and then excluding it from the
+        # "*" set works around this problem.  See http://crbug.com/594610
+        # for rationale on why this GN behavior is not considered a bug.
+        forward_variables_from(invoker, [ "visibility" ])
+        forward_variables_from(invoker, "*", [ "visibility" ])
+        if (defined(visibility)) {
+          visibility += [ ":$target_name" ]
+        }
+      }
+    }
+  }
+}
+
+# This is the basic "asan" variant.  Others start with this and modify.
+# See `known_variants` (below) for the meaning of fields in this scope.
+_asan_variant = {
+  configs = [ "//build/config/sanitizers:asan" ]
+  if (host_os != "fuchsia") {
+    host_only = {
+      # On most systems (not Fuchsia), the sanitizer runtimes are normally
+      # linked statically and so `-shared` links do not include them.
+      # Using `-shared --no-undefined` with sanitized code will get
+      # undefined references for the sanitizer runtime calls generated by
+      # the compiler.  It shouldn't do much harm, since the non-variant
+      # builds will catch the real undefined reference bugs.
+      remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+    }
+  }
+  toolchain_args = {
+    # -fsanitize=scudo is incompatible with -fsanitize=address.
+    use_scudo = false
+  }
+}
+
+declare_args() {
+  # List of variants that will form the basis for variant toolchains.
+  # To make use of a variant, set [`select_variant`](#select_variant).
+  #
+  # Normally this is not set as a build argument, but it serves to
+  # document the available set of variants.
+  # See also [`universal_variants`](#universal_variants).
+  # Only set this to remove all the default variants here.
+  # To add more, set [`extra_variants`](#extra_variants) instead.
+  #
+  # Each element of the list is one variant, which is a scope defining:
+  #
+  #   `configs` (optional)
+  #       [list of labels] Each label names a config that will be
+  #       automatically used by every target built in this variant.
+  #       For each config `${label}`, there must also be a target
+  #       `${label}_deps`, which each target built in this variant will
+  #       automatically depend on.  The `variant()` template is the
+  #       recommended way to define a config and its `_deps` target at
+  #       the same time.
+  #
+  #   `remove_common_configs` (optional)
+  #   `remove_shared_configs` (optional)
+  #       [list of labels] This list will be removed (with `-=`) from
+  #       the `default_common_binary_configs` list (or the
+  #       `default_shared_library_configs` list, respectively) after
+  #       all other defaults (and this variant's configs) have been
+  #       added.
+  #
+  #   `deps` (optional)
+  #       [list of labels] Added to the deps of every target linked in
+  #       this variant (as well as the automatic `${label}_deps` for
+  #       each label in configs).
+  #
+  #   `name` (required if configs is omitted)
+  #       [string] Name of the variant as used in
+  #       [`select_variant`](#select_variant) elements' `variant` fields.
+  #       It's a good idea to make it something concise and meaningful when
+  #       seen as e.g. part of a directory name under `$root_build_dir`.
+  #       If name is omitted, configs must be nonempty and the simple names
+  #       (not the full label, just the part after all `/`s and `:`s) of these
+  #       configs will be used in toolchain names (each prefixed by a "-"),
+  #       so the list of config names forming each variant must be unique
+  #       among the lists in `known_variants + extra_variants`.
+  #
+  #   `toolchain_args` (optional)
+  #       [scope] Each variable defined in this scope overrides a
+  #       build argument in the toolchain context of this variant.
+  #
+  #   `host_only` (optional)
+  #   `target_only` (optional)
+  #       [scope] This scope can contain any of the fields above.
+  #       These values are used only for host or target, respectively.
+  #       Any fields included here should not also be in the outer scope.
+  #
+  known_variants = [
+    {
+      configs = [ "//build/config/lto" ]
+    },
+    {
+      configs = [ "//build/config/lto:thinlto" ]
+    },
+
+    {
+      configs = [ "//build/config/profile" ]
+    },
+
+    {
+      configs = [ "//build/config/scudo" ]
+    },
+
+    {
+      configs = [ "//build/config/sanitizers:ubsan" ]
+    },
+    {
+      configs = [
+        "//build/config/sanitizers:ubsan",
+        "//build/config/sanitizers:sancov",
+      ]
+    },
+
+    _asan_variant,
+    {
+      forward_variables_from(_asan_variant, "*")
+      configs += [ "//build/config/sanitizers:sancov" ]
+    },
+    {
+      name = "asan_no_detect_leaks"
+      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
+      toolchain_args = {
+        forward_variables_from(_asan_variant.toolchain_args, "*")
+        asan_default_options = "detect_leaks=0"
+      }
+    },
+
+    # Fuzzer variants for various sanitizers,  -fsanitize=fuzzer results
+    # in undefined symbols in shared objects that are satisfied in the final,
+    # statically linked fuzzer.
+    {
+      # TODO(aarongreen): TC-264: Clang emits new/new[]/delete/delete[] into
+      # libfuzzer's static libc++.  Remove this when fixed.
+      forward_variables_from(_asan_variant, "*", [ "toolchain_args" ])
+      toolchain_args = {
+        forward_variables_from(_asan_variant.toolchain_args, "*")
+        asan_default_options = "alloc_dealloc_mismatch=0"
+      }
+      configs += [ "//build/config/sanitizers:fuzzer" ]
+      remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+    },
+    {
+      configs = [
+        "//build/config/sanitizers:ubsan",
+        "//build/config/sanitizers:fuzzer",
+      ]
+      remove_shared_configs = [ "//build/config:symbol_no_undefined" ]
+    },
+  ]
+
+  # Additional variant toolchain configs to support.
+  # This is just added to [`known_variants`](#known_variants).
+  extra_variants = []
+
+  # List of "universal" variants, in addition to
+  # [`known_variants`](#known_variants).  Normally this is not set as a
+  # build argument, but it serves to document the available set of
+  # variants.  These are treated just like
+  # [`known_variants`](#known_variants), but as well as being variants by
+  # themselves, these are also combined with each of
+  # [`known_variants`](#known_variants) to form additional variants,
+  # e.g. "asan-debug" or "ubsan-sancov-release".
+  universal_variants = []
+
+  # Only one of "debug" and "release" is really available as a universal
+  # variant in any given build (depending on the global setting of
+  # `is_debug`).  But this gets evaluated separately in every toolchain, so
+  # e.g. in the "release" toolchain the sense of `if (is_debug)` tests is
+  # inverted and this would list only "debug" as an available variant.  The
+  # selection logic in `variant_target()` can only work if the value of
+  # `universal_variants` it sees includes the current variant.
+  if (is_debug) {
+    universal_variants += [
+      {
+        name = "release"
+        configs = []
+        toolchain_args = {
+          is_debug = false
+        }
+      },
+    ]
+  } else {
+    universal_variants += [
+      {
+        name = "debug"
+        configs = []
+        toolchain_args = {
+          is_debug = true
+        }
+      },
+    ]
+  }
+
+  # List of short names for commonly-used variant selectors.  Normally this
+  # is not set as a build argument, but it serves to document the available
+  # set of short-cut names for variant selectors.  Each element of this list
+  # is a scope where `.name` is the short name and `.select_variant` is a
+  # a list that can be spliced into [`select_variant`](#select_variant).
+  select_variant_shortcuts = [
+    {
+      name = "host_asan"
+      select_variant = []
+      select_variant = [
+        {
+          variant = "asan_no_detect_leaks"
+          host = true
+          dir = [
+            # TODO(TO-565): The yasm host tools have leaks.
+            "//third_party/yasm",
+
+            # TODO(TO-666): replace futiltiy & cgpt with 1p tools
+            "//third_party/vboot_reference",
+            "//garnet/tools/vboot_reference",
+          ]
+        },
+        {
+          variant = "asan"
+          host = true
+        },
+      ]
+    },
+
+    # TODO(TC-241): Remove this when TC-241 is fixed.  For now, don't
+    # apply ASan to drivers because all drivers (and nothing else)
+    # use -static-libstdc++ and so hit the TC-241 problem.
+    {
+      name = "asan"
+      select_variant = []
+      select_variant = [
+        {
+          target_type = [ "driver_module" ]
+          variant = false
+        },
+        {
+          variant = "asan"
+          host = false
+        },
+      ]
+    },
+  ]
+}
+
+# Now elaborate the fixed shortcuts with implicit shortcuts for
+# each known variant.  The shortcut is just the name of the variant
+# and selects for `host=false`.
+_select_variant_shortcuts = select_variant_shortcuts
+foreach(variant, known_variants) {
+  if (defined(variant.name)) {
+    variant = variant.name
+  } else {
+    # This is how GN spells "let".
+    foreach(configs, [ variant.configs ]) {
+      variant = ""
+      foreach(config, configs) {
+        config = get_label_info(config, "name")
+        if (variant == "") {
+          variant = config
+        } else {
+          variant += "-$config"
+        }
+      }
+    }
+  }
+  _select_variant_shortcuts += [
+    {
+      name = variant
+      select_variant = []
+      select_variant = [
+        {
+          variant = name
+          host = false
+        },
+      ]
+    },
+  ]
+  foreach(universal_variant, universal_variants) {
+    _select_variant_shortcuts += [
+      {
+        name = "${variant}-${universal_variant.name}"
+        select_variant = []
+        select_variant = [
+          {
+            variant = name
+            host = false
+          },
+        ]
+      },
+    ]
+  }
+}
+foreach(variant, universal_variants) {
+  variant = variant.name
+  _select_variant_shortcuts += [
+    {
+      name = variant
+      select_variant = []
+      select_variant = [
+        {
+          variant = name
+          host = false
+        },
+      ]
+    },
+  ]
+}
+
+declare_args() {
+  # List of "selectors" to request variant builds of certain targets.
+  # Each selector specifies matching criteria and a chosen variant.
+  # The first selector in the list to match a given target determines
+  # which variant is used for that target.
+  #
+  # Each selector is either a string or a scope.  A shortcut selector is
+  # a string; it gets expanded to a full selector.  A full selector is a
+  # scope, described below.
+  #
+  # A string selector can match a name in
+  # [`select_variant_shortcuts`](#select_variant_shortcuts).  If it's not a
+  # specific shortcut listed there, then it can be the name of any variant
+  # described in [`known_variants`](#known_variants) and
+  # [`universal_variants`](#universal_variants) (and combinations thereof).
+  # A `selector` that's a simple variant name selects for every binary
+  # built in the target toolchain: `{ host=false variant=selector }`.
+  #
+  # If a string selector contains a slash, then it's `"shortcut/filename"`
+  # and selects only the binary in the target toolchain whose `output_name`
+  # matches `"filename"`, i.e. it adds `output_name=["filename"]` to each
+  # selector scope that the shortcut's name alone would yield.
+  #
+  # The scope that forms a full selector defines some of these:
+  #
+  #     variant (required)
+  #         [string or `false`] The variant that applies if this selector
+  #         matches.  This can be `false` to choose no variant, or a string
+  #         that names the variant.  See
+  #         [`known_variants`](#known_variants) and
+  #         [`universal_variants`](#universal_variants).
+  #
+  # The rest below are matching criteria.  All are optional.
+  # The selector matches if and only if all of its criteria match.
+  # If none of these is defined, then the selector always matches.
+  #
+  # The first selector in the list to match wins and then the rest of
+  # the list is ignored.  So construct more complex rules by using a
+  # "blacklist" selector with `variant=false` before a catch-all or
+  # "whitelist" selector that names a variant.
+  #
+  # Each "[strings]" criterion is a list of strings, and the criterion
+  # is satisfied if any of the strings matches against the candidate string.
+  #
+  #     host
+  #         [boolean] If true, the selector matches in the host toolchain.
+  #         If false, the selector matches in the target toolchain.
+  #
+  #     testonly
+  #         [boolean] If true, the selector matches targets with testonly=true.
+  #         If false, the selector matches in targets without testonly=true.
+  #
+  #     target_type
+  #         [strings]: `"executable"`, `"loadable_module"`, or `"driver_module"`
+  #
+  #     output_name
+  #         [strings]: target's `output_name` (default: its `target name`)
+  #
+  #     label
+  #         [strings]: target's full label with `:` (without toolchain suffix)
+  #
+  #     name
+  #         [strings]: target's simple name (label after last `/` or `:`)
+  #
+  #     dir
+  #         [strings]: target's label directory (`//dir` for `//dir:name`).
+  select_variant = []
+
+  # *This should never be set as a build argument.*
+  # It exists only to be set in `toolchain_args`.
+  # See //build/toolchain/clang_toolchain.gni for details.
+  select_variant_canonical = []
+}
+
+# Do this only once, in the default toolchain context.    Then
+# clang_toolchain_suite will just pass the results through to every
+# other toolchain via toolchain_args so the work is not repeated.
+if (toolchain_variant.base == target_toolchain && current_cpu == target_cpu &&
+    current_os == target_os && toolchain_variant.name == "" &&
+    !toolchain_variant.is_pic_default) {
+  assert(select_variant_canonical == [],
+         "`select_variant_canonical` cannot be set as a build argument")
+
+  foreach(selector, select_variant) {
+    if (selector != "$selector") {
+      # It's a scope, not a string.  Just use it as is.
+      select_variant_canonical += [ selector ]
+    } else {
+      # It's a string, not a scope.  Expand the shortcut.
+      # If there is a slash, this is "shortcut/output_name".
+      # If not, it's just "shortcut".
+      foreach(file, [ get_path_info(selector, "file") ]) {
+        if (file == selector) {
+          file = ""
+        } else {
+          selector = get_path_info(selector, "dir")
+        }
+        foreach(shortcut, _select_variant_shortcuts) {
+          # file=true stands in for "break".
+          if (file != true && selector == shortcut.name) {
+            # Found the matching shortcut.
+            if (file == "") {
+              # It applies to everything, so just splice it in directly.
+              select_variant_canonical += shortcut.select_variant
+            } else {
+              # Add each of the shortcut's clauses amended with the
+              # output_name constraint.
+              foreach(clause, shortcut.select_variant) {
+                select_variant_canonical += [
+                  {
+                    forward_variables_from(clause, "*")
+                    output_name = [ file ]
+                  },
+                ]
+              }
+            }
+            file = true
+          }
+        }
+        assert(file == true,
+               "unknown shortcut `${selector}` used in `select_variant`")
+      }
+    }
+  }
+}
+
+template("variant_target") {
+  target_type = target_name
+  target_name = invoker.target_name
+  target_invoker = {
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "_target_type",
+                             "target_name",
+                             "visibility",
+                           ])
+
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+  }
+
+  # target_type is the real GN target type that builds the thing.
+  # selector_target_type is the name matched against target_type selectors.
+  if (defined(invoker._target_type)) {
+    selector_target_type = invoker._target_type
+  } else {
+    selector_target_type = target_type
+  }
+
+  target_label = get_label_info(":$target_name", "label_no_toolchain")
+
+  # These are not actually used in all possible if branches below,
+  # so defang GN's extremely sensitive "unused variable" errors.
+  not_needed([
+               "selector_target_type",
+               "target_invoker",
+               "target_label",
+               "target_type",
+             ])
+
+  target_variant = false
+  if (select_variant_canonical != []) {
+    # See if there is a selector that matches this target.
+    selected = false
+    foreach(selector, select_variant_canonical) {
+      # The first match wins.
+      # GN's loops don't have "break", so do nothing on later iterations.
+      if (!selected) {
+        # Expand the selector so we don't have to do a lot of defined(...)
+        # tests below.
+        select = {
+        }
+        select = {
+          target_type = []
+          output_name = []
+          label = []
+          name = []
+          dir = []
+          forward_variables_from(selector, "*")
+        }
+
+        selected = true
+        if (selected && defined(selector.host)) {
+          selected = current_toolchain == host_toolchain == selector.host
+        }
+
+        if (selected && defined(selector.testonly)) {
+          selected = (defined(target_invoker.testonly) &&
+                      target_invoker.testonly) == selector.testonly
+        }
+
+        if (selected && select.target_type != []) {
+          selected = false
+          candidate = selector_target_type
+          foreach(try, select.target_type) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.output_name != []) {
+          selected = false
+          candidate = target_invoker.output_name
+          foreach(try, select.output_name) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.label != []) {
+          selected = false
+          candidate = target_label
+          foreach(try, select.label) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.name != []) {
+          selected = false
+          candidate = get_label_info(target_label, "name")
+          foreach(try, select.name) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && select.dir != []) {
+          selected = false
+          candidate = get_label_info(target_label, "dir")
+          foreach(try, select.dir) {
+            if (try == candidate) {
+              selected = true
+            }
+          }
+        }
+
+        if (selected && selector.variant != false) {
+          target_variant = "-${selector.variant}"
+        }
+      }
+    }
+  }
+  if (target_variant == false) {
+    target_variant = ""
+  }
+
+  builder_toolchain = toolchain_variant.base + target_variant
+  if (invoker._variant_shared) {
+    builder_toolchain += "-shared"
+  }
+
+  if (current_toolchain == builder_toolchain) {
+    # This is the toolchain selected to actually build this target.
+    target(target_type, target_name) {
+      deps = []
+      forward_variables_from(target_invoker, "*")
+      deps += toolchain_variant.deps
+      foreach(config, toolchain_variant.configs) {
+        # Expand the label so it always has a `:name` part.
+        config = get_label_info(config, "label_no_toolchain")
+        deps += [ "${config}_deps" ]
+      }
+      if (defined(visibility)) {
+        # Other toolchains will define this target as a group or copy
+        # rule that depends on this toolchain's definition.  If the
+        # invoker constrained the visibility, make sure those
+        # dependencies from other toolchains are still allowed.
+        visibility += [ ":${target_name}" ]
+      }
+    }
+  } else if (current_toolchain == shlib_toolchain) {
+    # Don't copy from a variant into a -shared toolchain, because nobody
+    # looks for an executable or loadable_module there.  Instead, just
+    # forward any deps to the real target.
+    group(target_name) {
+      forward_variables_from(target_invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":${target_name}" ]
+      }
+      deps = [
+        ":${target_name}(${builder_toolchain})",
+      ]
+    }
+  } else {
+    # When some variant was selected, then this target in all other
+    # toolchains is actually just this copy rule.  The target is built in
+    # the selected variant toolchain, but then copied to its usual name in
+    # $root_out_dir so that things can find it there.
+    copy_vars = {
+      forward_variables_from(target_invoker,
+                             [
+                               "testonly",
+                               "visibility",
+                             ])
+      if (defined(visibility)) {
+        visibility += [ ":${target_name}" ]
+      }
+
+      deps = [
+        ":${target_name}(${builder_toolchain})",
+      ]
+      variant_out_dir = get_label_info(deps[0], "root_out_dir")
+
+      full_output_name = target_invoker.output_name
+      if (defined(target_invoker.output_extension) &&
+          target_invoker.output_extension != "") {
+        full_output_name += ".${target_invoker.output_extension}"
+      }
+
+      sources = [
+        "$variant_out_dir/$full_output_name",
+      ]
+      outputs = [
+        "$root_out_dir/$full_output_name",
+      ]
+    }
+
+    # In the host toolchain, make a symlink rather than a hard link
+    # (which is what "copy" rules really do).  Host tools are built with
+    # an embedded shared library lookup path based on $ORIGIN on Linux
+    # (//build/config/linux:compiler) and the equivalent @loader_path on
+    # macOS (//build/config/mac:mac_dynamic_flags).  The dynamic linker
+    # translates this to "the directory containing the executable".
+    # With hard links, this gets the directory used to invoke the
+    # executable, which is host_toolchain's $root_out_dir.  With
+    # symlinks, it instead gets the directory containing the actual
+    # executable file, which is builder_toolchain's $root_out_dir.
+    # Hence the program uses the variant builds of shared libraries that
+    # go with the variant build of the executable, rather using than the
+    # vanilla host_toolchain builds with the variant executable.
+    if (current_toolchain == host_toolchain) {
+      action(target_name) {
+        forward_variables_from(copy_vars, "*")
+        script = "/bin/ln"
+        args = [
+          "-snf",
+          rebase_path(sources[0], get_path_info(outputs[0], "dir")),
+          rebase_path(outputs[0]),
+        ]
+      }
+    } else {
+      # For Fuchsia, //build/gn/variant.py depends on hard links to
+      # identify the variants.
+      copy(target_name) {
+        forward_variables_from(copy_vars, "*")
+      }
+    }
+  }
+}
+
+template("executable") {
+  _executable_name = target_name
+  _variant_shared = false
+  variant_target("executable") {
+    deps = []
+    target_name = _executable_name
+
+    # TODO(aarongreen): This shouldn't be required, but without it the
+    # fuzzers fail to link.  Investigate and remove when resolved.
+    if (defined(invoker._target_type)) {
+      _target_type = invoker._target_type
+    }
+
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+
+    deps += default_executable_deps
+  }
+}
+
+template("loadable_module") {
+  _module_name = target_name
+  _variant_shared = true
+  variant_target("loadable_module") {
+    target_name = _module_name
+    if (defined(invoker._target_type)) {
+      _target_type = invoker._target_type
+    }
+
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+    if (!defined(output_extension)) {
+      output_extension = "so"
+    }
+  }
+}
+
+# Some targets we share with Chromium declare themselves to be components,
+# which means they can build either as shared libraries or as static libraries.
+# We build them as static libraries.
+template("component") {
+  if (!defined(invoker.sources)) {
+    # When there are no sources defined, use a source set to avoid creating
+    # an empty static library (which generally don't work).
+    _component_mode = "source_set"
+  } else {
+    _component_mode = "static_library"
+  }
+
+  target(_component_mode, target_name) {
+    # Explicitly forward visibility, implicitly forward everything else.
+    # See comment in template("shared_library") above for details.
+    forward_variables_from(invoker, [ "visibility" ])
+    forward_variables_from(invoker, "*", [ "visibility" ])
+  }
+}
+
+set_defaults("component") {
+  configs = default_common_binary_configs
+}

@@ -1,0 +1,68 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/toolchain/variant.gni")
+
+config("frame_pointers") {
+  cflags = [ "-fno-omit-frame-pointer" ]
+  ldflags = cflags
+}
+
+declare_args() {
+  # Default [AddressSanitizer](https://llvm.org/docs/AddressSanitizer.html)
+  # options (before the `ASAN_OPTIONS` environment variable is read at
+  # runtime).  This can be set as a build argument to affect most "asan"
+  # variants in `known_variants` (which see), or overridden in
+  # toolchain_args in one of those variants.  Note that setting this
+  # nonempty may conflict with programs that define their own
+  # `__asan_default_options` C function.
+  asan_default_options = ""
+}
+
+variant("asan") {
+  common_flags = [ "-fsanitize=address" ]
+
+  # ASan wants frame pointers because it captures stack traces
+  # on allocations and such, not just on errors.
+  configs = [ ":frame_pointers" ]
+
+  if (asan_default_options != "") {
+    deps = [
+      ":asan_default_options",
+    ]
+  }
+}
+
+if (asan_default_options != "") {
+  source_set("asan_default_options") {
+    visibility = [ ":*" ]
+    sources = [
+      "asan_default_options.c",
+    ]
+    defines = [ "ASAN_DEFAULT_OPTIONS=\"${asan_default_options}\"" ]
+
+    # On Fuchsia, the ASan runtime is dynamically linked and needs to have
+    # the __asan_default_options symbol exported.  On systems where the
+    # ASan runtime is statically linked, it doesn't matter either way.
+    configs -= [ "//build/config:symbol_visibility_hidden" ]
+  }
+}
+
+variant("ubsan") {
+  common_flags = [ "-fsanitize=undefined" ]
+}
+
+variant("fuzzer") {
+  common_flags = [ "-fsanitize=fuzzer" ]
+
+  # TODO (TC-251): This shouldn't be necessary, but libzircon isn't currently
+  # linked into libFuzzer on Fuchsia.
+  if (is_fuchsia) {
+    libs = [ "zircon" ]
+  }
+}
+
+variant("sancov") {
+  common_flags = [ "-fsanitize-coverage=trace-pc-guard" ]
+}

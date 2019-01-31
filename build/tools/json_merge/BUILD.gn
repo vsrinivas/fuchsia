@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/host.gni")
+import("//build/test.gni")
+
+source_set("srcs") {
+  sources = [
+    "json_merge.cc",
+    "json_merge.h",
+  ]
+
+  public_deps = [
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("json_merge") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":srcs",
+  ]
+}
+
+test("json_merge_test") {
+  sources = [
+    "test.cc",
+  ]
+
+  deps = [
+    ":srcs",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+install_host_tools("install") {
+  deps = [
+    ":json_merge",
+  ]
+
+  outputs = [
+    "json_merge",
+  ]
+}

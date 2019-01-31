@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/test_spec.gni")
+
+# This declares a test executable.
+#
+# The parameters are precisely those of an `executable`.
+#
+template("test") {
+  if (is_linux || is_mac) {
+    test_spec("${target_name}_spec") {
+      name = invoker.target_name
+      location = "$root_out_dir/${invoker.target_name}"
+    }
+  }
+
+  executable(target_name) {
+    forward_variables_from(invoker, "*")
+    testonly = true
+    if (is_linux || is_mac) {
+      # Write runtime dependencies to the root out dir of the base host
+      # toolchain so that the file may be found by cross-referencing with
+      # $root_build_dir/host_tests.json.
+      test_name = get_path_info(target_name, "name")
+      host_out_dir = get_label_info(":$target_name(${toolchain_variant.base})",
+                                    "target_out_dir")
+      write_runtime_deps = "$host_out_dir/$test_name.$test_data_ext"
+    }
+  }
+}
+
+set_defaults("test") {
+  configs = default_executable_configs
+}

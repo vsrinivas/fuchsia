@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines an alias for an SDK element.
+#
+# Parameters
+#
+#   atom
+#     The label of the aliased atom.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+
+template("sdk_atom_alias") {
+  assert(defined(invoker.atom), "Must define an atom to alias")
+
+  # This template simply copies the output files of the sdk_atom template to
+  # the correct location.
+
+  atom_gen_dir = get_label_info(invoker.atom, "target_gen_dir")
+  atom_name = get_label_info(invoker.atom, "name")
+
+  group_deps = []
+
+  copy_meta_target_name = "${target_name}_copy_meta"
+  group_deps += [ ":$copy_meta_target_name" ]
+  copy(copy_meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    sources = [
+      "$atom_gen_dir/$atom_name.meta.json",
+    ]
+
+    outputs = [
+      "$target_gen_dir/$target_name.meta.json",
+    ]
+
+    deps = [
+      invoker.atom,
+    ]
+  }
+
+  copy_manifest_target_name = "${target_name}_copy_manifest"
+  group_deps += [ ":$copy_manifest_target_name" ]
+  copy(copy_manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    sources = [
+      "$atom_gen_dir/$atom_name.sdk",
+    ]
+
+    outputs = [
+      "$target_gen_dir/$target_name.sdk",
+    ]
+
+    deps = [
+      invoker.atom,
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    public_deps = group_deps
+
+    if (defined(invoker.non_sdk_deps)) {
+      public_deps += invoker.non_sdk_deps
+    }
+  }
+}

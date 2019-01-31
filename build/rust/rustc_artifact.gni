@@ -1,0 +1,369 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/rust/config.gni")  # for rust_config
+import("//build/sdk/sdk_atom.gni")
+import("//build/testing/test_spec.gni")
+
+template("rustc_third_party_artifact") {
+  # Dummy build target to match the one in rustc_artifact
+  build_target_name = "${target_name}_build"
+  action(build_target_name) {
+    script = "//build/rust/write_3p_crate_dep_info.py"
+    forward_variables_from(invoker, [ "crate_name" ])
+
+    out_info_path = "${target_out_dir}/${target_name}_info.json"
+
+    args = [
+      # This is a slight lie to the end user-- the crate name that
+      # users provide and that appears in Cargo.toml is the package name,
+      # which may be different than the crate name (the thing given to
+      # --extern). One example of this is the rust-crypto crate,
+      # whose real crate name is crypto, but which is published under
+      # the package name rust-crypto.
+      "--package-name",
+      crate_name,
+      "--output",
+      rebase_path(out_info_path),
+    ]
+    outputs = [
+      out_info_path,
+    ]
+  }
+
+  group(target_name) {
+    public_deps = [
+      ":${build_target_name}",
+    ]
+  }
+}
+
+# Defines a Rust artifact to be built directly with rustc (rather than using cargo)
+#
+# Only for internal use, supporting rustc_library and rustc_binary.
+#
+# The arguments are the same as for rustc_library and rustc_binary, with the exception
+# of `type`, which must be one of bin/lib/staticlib/proc-macro. This is used to determine
+# the kind of artifact that is produced by rustc.
+template("rustc_artifact") {
+  assert(defined(invoker.type),
+         "Must specify an artifact type (bin/lib/staticlib/proc-macro)")
+  type = invoker.type
+
+  # bin: executable binary application
+  # lib: intermediate artifact to be used in other Rust programs
+  # staticlib: a statically-linked system library, generally used for linking Rust into C
+  # proc-macro: a procedural macro (such as a custom-derive)
+  assert(
+      type == "bin" || type == "lib" || type == "staticlib" ||
+          type == "proc-macro",
+      "Artifact type must be one of: \"bin\", \"lib\", \"staticlib\", or \"proc-macro\"")
+  if (type == "lib") {
+    # For now, lib == rlib, but this could change in future versions of rustc.
+    # If/when this changes, we will likely want to transition manually rather
+    # than being automatically changed as a result of a toolchain upgrade.
+    type = "rlib"
+  }
+
+  if (defined(invoker.name)) {
+    package_name = invoker.name
+  } else {
+    package_name = target_name
+  }
+
+  crate_name = string_replace(package_name, "-", "_")
+
+  if (defined(invoker.version)) {
+    version = invoker.version
+  } else {
+    version = "0.1.0"
+  }
+
+  assert(defined(invoker.edition), "Must specify an edition. Preferably 2018")
+  edition = invoker.edition
+
+  group_deps = []
+
+  if (type == "bin") {
+    if (defined(invoker.with_lto)) {
+      with_lto = invoker.with_lto
+    } else if (rust_lto != "unset") {
+      with_lto = rust_lto
+    } else if (is_debug) {
+      with_lto = "none"
+    } else {
+      # Release builds default to "thin" lto
+      with_lto = "thin"
+    }
+  } else {
+    with_lto = "none"
+  }
+  assert(with_lto == "none" || with_lto == "thin" || with_lto == "fat",
+         "with_lto was neither none, thin, or fat")
+
+  # Determine the prefix and extension for the output file based on the crate type
+  if (type == "bin") {
+    prefix = ""
+    extension = ""
+    root_file = "src/main.rs"
+  } else if (type == "rlib") {
+    prefix = "lib"
+    extension = ".rlib"
+    root_file = "src/lib.rs"
+  } else if (type == "staticlib") {
+    prefix = "staticlib"
+    extension = ".a"
+    root_file = "src/lib.rs"
+  } else if (type == "proc-macro") {
+    prefix = "lib"
+    root_file = "src/lib.rs"
+  }
+
+  third_party_build = "//third_party/rust-crates/rustc_deps:build-third-party"
+  third_party_deps_data = "${root_out_dir}/rust_third_party/deps_data.json"
+  first_party_crate_root = "${root_out_dir}/rust_crates"
+  if (defined(invoker.output_file_override)) {
+    output_filename = invoker.output_file_override
+  } else {
+    output_filename = "${prefix}${crate_name}${extension}"
+  }
+  output_file = "${first_party_crate_root}/$output_filename"
+  output_depfile = "${first_party_crate_root}/${prefix}${crate_name}.d"
+  test_output_file = "${root_out_dir}/${crate_name}_${invoker.type}_test"
+
+  build_target_name = "${target_name}_build"
+  group_deps += [ ":${build_target_name}" ]
+
+  with_unit_tests = defined(invoker.with_unit_tests) && invoker.with_unit_tests
+
+  # If host-side tests are present, record metadata for testing instruction.
+  if (with_unit_tests && (is_linux || is_mac)) {
+    test_spec("${target_name}_spec") {
+      name = invoker.target_name
+      location = test_output_file
+    }
+  }
+
+  # Iterate through the deps collecting a list of the outputs
+  # of their build targets, which will be passed to rustc as
+  # `--extern` crates.
+  dep_info_paths = []
+  if (defined(invoker.deps)) {
+    foreach(dep, invoker.deps) {
+      dep_target_name = get_label_info(dep, "name")
+      dep_dir = get_label_info(dep, "dir")
+      dep_build_target = "${dep_dir}:${dep_target_name}_build"
+      dep_out_dir = get_label_info(dep_build_target, "target_out_dir")
+      dep_info_path = "${dep_out_dir}/${dep_target_name}_build_info.json"
+      dep_info_paths += [
+        "--dep-data",
+        rebase_path(dep_info_path),
+      ]
+    }
+  }
+
+  if (defined(invoker.source_root)) {
+    root_file = invoker.source_root
+  }
+  root_file = rebase_path(root_file)
+
+  cargo_toml_dir = "$target_gen_dir/$target_name"
+
+  # Declare the action target that performs the build itself
+  action(build_target_name) {
+    script = "//build/rust/build_rustc_target.py"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ third_party_build ]
+    inputs = [
+      root_file,
+    ]
+    depfile = output_depfile
+
+    if (defined(invoker.non_rust_deps)) {
+      public_deps = invoker.non_rust_deps
+    }
+
+    out_info_path = "${target_out_dir}/${target_name}_info.json"
+
+    args = [
+      "--crate-root",
+      rebase_path(root_file),
+      "--cargo-toml-dir",
+      rebase_path(cargo_toml_dir),
+      "--crate-type",
+      type,
+      "--crate-name",
+      crate_name,
+      "--package-name",
+      package_name,
+      "--depfile",
+      rebase_path(output_depfile),
+      "--root-out-dir",
+      rebase_path(root_out_dir),
+      "--output-file",
+      rebase_path(output_file),
+      "--test-output-file",
+      rebase_path(test_output_file),
+      "--first-party-crate-root",
+      rebase_path(first_party_crate_root),
+      "--third-party-deps-data",
+      rebase_path(third_party_deps_data),
+      "--out-info",
+      rebase_path(out_info_path),
+      "--version",
+      version,
+      "--edition",
+      edition,
+      "--warnings",
+      rust_warnings,
+    ]
+
+    args += rust_build_args
+    deps += rust_build_deps
+    inputs += rust_build_inputs
+
+    if (with_lto != "none") {
+      args += [
+        "--lto",
+        with_lto,
+      ]
+    }
+    if (with_unit_tests) {
+      args += [ "--with-unit-tests" ]
+    }
+
+    args += dep_info_paths
+    outputs = [
+      output_file,
+      out_info_path,
+    ]
+    if (with_unit_tests) {
+      outputs += [ test_output_file ]
+    }
+  }
+
+  # Copy binaries and staticlibs out of rust_crates/* into the root dir
+  # TODO(cramertj) remove and replace with writing directly to the root
+  # dir once all existing build rules have moved off of using rust_crates/*
+  if (type == "bin" || type == "staticlib") {
+    copy_target_name = "${target_name}_copy"
+    group_deps += [ ":${copy_target_name}" ]
+    output_path = "${root_out_dir}/${prefix}${crate_name}${extension}"
+    copy(copy_target_name) {
+      forward_variables_from(invoker, [ "testonly" ])
+      deps = [
+        ":${build_target_name}",
+      ]
+      sources = [
+        output_file,
+      ]
+      outputs = [
+        output_path,
+      ]
+    }
+
+    # if appropriate, create an SDK atom for the binary/staticlib that we just
+    # copied
+    if (type == "bin" && defined(invoker.sdk_category) &&
+        invoker.sdk_category != "excluded" && !is_fuchsia &&
+        !(defined(invoker.test) && invoker.test)) {
+      output_name = target_name
+      file_base = "tools/$output_name"
+
+      sdk_atom("${target_name}_sdk") {
+        id = "sdk://tools/${output_name}"
+
+        category = invoker.sdk_category
+
+        meta = {
+          dest = "${file_base}-meta.json"
+          schema = "host_tool"
+          value = {
+            type = "host_tool"
+            name = output_name
+            root = "tools"
+            files = [ file_base ]
+          }
+        }
+
+        files = [
+          {
+            source = output_path
+            dest = file_base
+          },
+        ]
+
+        if (defined(invoker.sdk_deps)) {
+          deps = invoker.sdk_deps
+        }
+
+        non_sdk_deps = [ ":$copy_target_name" ]
+      }
+    }
+  }
+
+  cargo_toml_target_name = "${target_name}_cargo"
+  group_deps += [ ":${cargo_toml_target_name}" ]
+  action(cargo_toml_target_name) {
+    script = "//build/rust/write_cargo_toml.py"
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                           ])
+    if (!defined(deps)) {
+      deps = []
+    }
+    deps += [ third_party_build ]
+    if (defined(invoker.non_rust_deps)) {
+      public_deps = invoker.non_rust_deps
+    }
+    args = [
+      "--out-dir",
+      rebase_path(cargo_toml_dir),
+      "--source-root",
+      root_file,
+      "--package-name",
+      package_name,
+      "--crate-name",
+      crate_name,
+      "--crate-type",
+      type,
+      "--version",
+      version,
+      "--edition",
+      edition,
+      "--third-party-deps-data",
+      rebase_path(third_party_deps_data),
+    ]
+
+    if (with_lto != "none") {
+      args += [
+        "--lto",
+        with_lto,
+      ]
+    }
+
+    # list of paths to info about crate dependencies
+    args += dep_info_paths
+    outputs = [
+      "${cargo_toml_dir}/Cargo.toml",
+    ]
+  }
+
+  group(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    public_deps = group_deps
+  }
+}

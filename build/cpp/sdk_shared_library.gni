@@ -1,0 +1,293 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_atom_alias.gni")
+
+# A shared library that can be exported to an SDK in binary form.
+#
+# Parameters
+#
+#   category (required)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   no_headers (optional)
+#     Whether to include the library's headers in the SDK.
+#     Defaults to false.
+#
+#   sdk_name (optional)
+#     Name of the library in the SDK.
+#     Defaults to the library's output name.
+#
+#   include_base (optional)
+#     Path to the root directory for includes.
+#     Defaults to ".".
+#
+#   runtime_deps (optional)
+#     List of labels representing the library's runtime dependencies. This is
+#     only needed for runtime dependencies inherited from private dependencies.
+#     Note that these labels should represent SDK targets.
+
+# The defaults for a sdk_shared_library should match that of a shared_library.
+set_defaults("sdk_shared_library") {
+  configs = default_shared_library_configs
+}
+
+template("sdk_shared_library") {
+  assert(defined(invoker.category), "Must define an SDK category")
+
+  main_target_name = target_name
+  metadata_target_name = "${target_name}_sdk_metadata"
+  manifest_target_name = "${target_name}_sdk_manifest"
+  sdk_target_name = "${target_name}_sdk"
+
+  shared_library(main_target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "category",
+                             "include_base",
+                             "no_headers",
+                             "runtime_deps",
+                             "sdk_name",
+                           ])
+
+    if (defined(visibility)) {
+      visibility += [ ":$manifest_target_name" ]
+    }
+
+    # Prebuilt shared libraries are eligible for inclusion in the SDK. We do not
+    # want to dynamically link against libc++.so because we let clients bring
+    # their own toolchain, which might have a different C++ Standard Library or
+    # a different C++ ABI entirely.
+    #
+    # Adding this linker flag keeps us honest about not commiting to a specific
+    # C++ ABI. If this flag is causing your library to not to compile, consider
+    # whether your library really ought to be in the SDK. If so, consider
+    # including your library in the SDK as source rather than precompiled. If
+    # you do require precompilation, you probably need to find a way not to
+    # depend on dynamically linking C++ symbols because C++ does not have a
+    # sufficiently stable ABI for the purposes of our SDK.
+    # TODO(TC-46): statically link against libc++ if necessary.
+    if (!defined(ldflags)) {
+      ldflags = []
+    }
+    ldflags += [ "-nostdlib++" ]
+
+    # Request that the runtime deps be written out to a file. This file will be
+    # used later to verify that all runtime deps are available in the SDK.
+    write_runtime_deps = "$target_out_dir/$target_name.runtime_deps"
+  }
+
+  output_name = target_name
+  if (defined(invoker.output_name)) {
+    output_name = invoker.output_name
+  }
+
+  if (defined(invoker.sdk_name)) {
+    atom_name = invoker.sdk_name
+  } else {
+    atom_name = output_name
+  }
+
+  no_headers = defined(invoker.no_headers) && invoker.no_headers
+
+  # Base path for source files of this library in SDKs.
+  file_base = "pkg/$atom_name"
+
+  # Base path for binaries of this library in SDKs.
+  prebuilt_base = "arch/$target_cpu"
+
+  # Identify dependencies and their metadata files.
+  sdk_deps = []
+  sdk_metas = []
+
+  # If a prebuilt library is only provided for packaging purposes (by not
+  # exposing headers) then its dependencies need not be included in an SDK.
+  if (defined(invoker.public_deps) && !no_headers) {
+    foreach(dep, invoker.public_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+    }
+  }
+
+  # Runtime deps are already SDK targets.
+  if (defined(invoker.runtime_deps)) {
+    sdk_deps += invoker.runtime_deps
+  }
+  foreach(sdk_dep, sdk_deps) {
+    gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+    name = get_label_info(sdk_dep, "name")
+    sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+  }
+
+  # Process headers.
+  all_headers = []
+  if ((defined(invoker.public) || defined(invoker.sources)) && !no_headers) {
+    if (defined(invoker.public)) {
+      all_headers += invoker.public
+    } else {
+      foreach(source_file, invoker.sources) {
+        extension = get_path_info(source_file, "extension")
+        if (extension == "h") {
+          all_headers += [ source_file ]
+        }
+      }
+    }
+  }
+  sdk_headers = []
+  sdk_files = []
+  foreach(header, all_headers) {
+    include_base = "include"
+    if (defined(invoker.include_base)) {
+      include_base = invoker.include_base
+    }
+    destination = rebase_path(header, include_base)
+    header_dest = "$file_base/include/$destination"
+    sdk_headers += [ header_dest ]
+    sdk_files += [
+      {
+        source = header
+        dest = header_dest
+      },
+    ]
+  }
+
+  # Add binaries.
+  shared_out_dir = get_label_info(":bogus($shlib_toolchain)", "root_out_dir")
+  lib_name = "lib$output_name.so"
+  link_lib = "$prebuilt_base/lib/$lib_name"
+  dist_lib = "$prebuilt_base/dist/$lib_name"
+  sdk_files += [
+    {
+      # TODO(TO-791): put ABI stubs under lib/, not the full thing.
+      source = "$shared_out_dir/$lib_name"
+      dest = link_lib
+    },
+    {
+      source = "$shared_out_dir/$lib_name"
+      dest = dist_lib
+    },
+  ]
+
+  metadata_file = "$target_gen_dir/$metadata_target_name.sdk_meta.json"
+  debug_mapping_file = "$target_gen_dir/$metadata_target_name.mappings.txt"
+  debug_lib_file = "$shared_out_dir/lib.unstripped/$lib_name"
+
+  action(metadata_target_name) {
+    script = "//build/cpp/gen_sdk_prebuilt_meta_file.py"
+
+    inputs = sdk_metas + [ debug_lib_file ]
+
+    outputs = [
+      debug_mapping_file,
+      metadata_file,
+    ]
+
+    args = [
+             "--out",
+             rebase_path(metadata_file),
+             "--name",
+             atom_name,
+             "--root",
+             file_base,
+             "--include-dir",
+             "$file_base/include",
+             "--deps",
+           ] + sdk_metas + [ "--headers" ] + sdk_headers +
+           [
+             "--arch",
+             target_cpu,
+             "--lib-link",
+             link_lib,
+             "--lib-dist",
+             dist_lib,
+             "--lib-debug-file",
+             rebase_path(debug_lib_file),
+             "--debug-mapping",
+             rebase_path(debug_mapping_file),
+           ]
+
+    deps = sdk_deps + [ ":$main_target_name" ]
+  }
+
+  sdk_atom(manifest_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    id = "sdk://pkg/$atom_name"
+
+    category = invoker.category
+
+    meta = {
+      source = metadata_file
+      dest = "$file_base/meta.json"
+      schema = "cc_prebuilt_library"
+    }
+
+    files = sdk_files
+
+    file_list = debug_mapping_file
+
+    deps = sdk_deps
+
+    non_sdk_deps = [
+      ":$main_target_name",
+      ":$metadata_target_name",
+    ]
+
+    # Explicitly add non-public dependencies, in case some of the source files
+    # are generated.
+    if (defined(invoker.deps)) {
+      non_sdk_deps += invoker.deps
+    }
+  }
+
+  shared_gen_dir = get_label_info(":bogus($shlib_toolchain)", "target_out_dir")
+  runtime_deps_file = "$shared_gen_dir/$target_name.runtime_deps"
+  sdk_manifest_file = "$target_gen_dir/$manifest_target_name.sdk"
+  verify_target_name = "${target_name}_verify"
+
+  # Verify that the SDK manifest for this target includes all of the expected
+  # runtime dependencies.
+  # TODO(DX-498): also check that everything in there is either prebuilt or
+  # headers only.
+  action(verify_target_name) {
+    script = "//build/cpp/verify_runtime_deps.py"
+
+    inputs = [
+      sdk_manifest_file,
+      runtime_deps_file,
+    ]
+
+    stamp_file = "$target_gen_dir/$target_name.stamp"
+
+    outputs = [
+      stamp_file,
+    ]
+
+    args = [
+      "--stamp",
+      rebase_path(stamp_file),
+      "--manifest",
+      rebase_path(sdk_manifest_file),
+      "--runtime-deps-file",
+      rebase_path(runtime_deps_file),
+      "--root-out-dir",
+      rebase_path(root_out_dir),
+    ]
+
+    deps = [
+      ":$main_target_name",
+      ":$manifest_target_name",
+    ]
+  }
+
+  sdk_atom_alias(sdk_target_name) {
+    atom = ":$manifest_target_name"
+
+    non_sdk_deps = [ ":$verify_target_name" ]
+  }
+}

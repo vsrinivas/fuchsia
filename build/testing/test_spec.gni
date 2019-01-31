@@ -1,0 +1,227 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/testing/environments.gni")
+import("//build/testing/platforms.gni")
+
+# Extension identifying a test spec JSON file.
+_test_spec_ext = "spec.json"
+
+# Extension identifying the runtime dependencies of a test.
+test_data_ext = "spec.data"
+
+# Describes the target device environment in which a test should run. This
+# specification is written in JSON to the build directory, to be aggregated
+# at test-time.
+#
+# Parameters
+#
+#   name (required)
+#     [string] The test's name.
+#
+#   location (required)
+#     [string]: Unique reference to a test, e.g., a filesystem path or a
+#     fuchsia URI.
+#
+#   output_dir (required for fuchsia; else is optional)
+#     [string]: Directory where the test spec will be written.
+#
+#   environments (optional, default: QEMU for fuchsia; else a VM)
+#     [list of scopes] Device environments in which the test should run.
+#
+#     Each scope in $environments contains:
+#
+#       dimensions (required)
+#         [scope] Dimensions of bots to target. Valid dimensions are
+#         element-wise subsets of the test platform entries defined in
+#         //build/testing/platforms.gni.
+#
+#       label (optional)
+#         [string] A key on which tests may be grouped. Tests with a given
+#         label will be run (1) together, and (2) only with support from the
+#         Infrastructure team. Labels are used as an escape hatch from the
+#         default testing pipeline for special tests or environments.
+#
+template("test_spec") {
+  # A canonical target name is the name of the test itself; however that name
+  # must be reserved for the actual test target in the expansion of other
+  # templates that give both a test and its spec. With that in mind,
+  # `test_name` is provided as a parameter, and the choice of an alternative
+  # target name does not ultimately matter.
+  not_needed([ "target_name" ])
+
+  assert(defined(invoker.name), "name must be defined.")
+  assert(defined(invoker.location), "location must be defined.")
+  forward_variables_from(invoker,
+                         [
+                           "environments",
+                           "output_dir",
+                         ])
+
+  # Set default environments: QEMU for a fuchsia test, and VMs for linux and mac
+  # tests.
+  if (is_fuchsia) {
+    assert(defined(invoker.output_dir), "output_dir must be defined.")
+    envs_specified = defined(environments)
+
+    if (!envs_specified) {
+      environments = [ qemu_env ]
+    }
+
+    if (current_cpu == "x64" && !envs_specified) {
+      # TODO(joshuaseaton): This is temporary until we are confident that all
+      # tests that need to specify hardware are doing so.
+      environments += [ nuc_env ]
+    } else if (current_cpu == "arm64" && !envs_specified) {
+      # TODO(IN-571): Remove after vim2s are ready to be targeted.
+      environments += [ vim2_env ]
+    }
+  } else if (is_linux || is_mac) {
+    if (defined(output_dir)) {
+      assert(output_dir == target_out_dir,
+             "tests specs must be written to target_out_dir")
+    } else {
+      output_dir = target_out_dir
+    }
+
+    if (!defined(environments)) {
+      if (is_linux) {
+        environments = [ linux_env ]
+      } else if (is_mac) {
+        environments = [ mac_env ]
+      }
+    }
+  } else {
+    assert(false, "$current_os not supported")
+  }
+
+  foreach(env, environments) {
+    empty_scope = {  # Clear from previous iteration
+    }
+    assert(defined(env.dimensions) && env.dimensions != empty_scope,
+           "each environment must specify dimensions")
+  }
+
+  # Call "expanding" the operation that takes a scope
+  # {
+  #  x = a
+  #  y = b
+  #  z = c
+  #  ...
+  # }
+  # and converts it to a list [{x=a}, {y=b}, {z=c},...].
+  #
+  # Expand each scope of test platform dimensions and group them by architecture
+  # (i.e., cpu). The same thing is done below with each environment's dimensions
+  # scope to more easily compare.
+  target_platform_dims = []
+  other_platform_dims = []
+  foreach(platform, test_platforms) {
+    platform_dims = []  # Clear from previous iteration.
+    foreach(key, all_dimension_keys) {
+      platform_dims += [
+        {
+          forward_variables_from(platform, [ key ])
+        },
+      ]
+    }
+
+    # Empty scopes may have been introduced to platform_dims, corresponding to
+    # non-existent keys;
+    # Add and then subtract an empty scope to remove them.
+    empty_dim = {  # Clear from previous iteration.
+    }
+    platform_dims += [ empty_dim ]
+    platform_dims -= [ empty_dim ]
+
+    if (!defined(platform.cpu) || platform.cpu == current_cpu) {
+      target_platform_dims += [ platform_dims ]
+    } else {
+      other_platform_dims += [ platform_dims ]
+    }
+  }
+
+  target_envs = []
+  foreach(env, environments) {
+    dims = []  # Clear from previous iteration.
+    if (defined(env.dimensions)) {
+      foreach(key, all_dimension_keys) {
+        dims += [
+          {
+            forward_variables_from(env.dimensions, [ key ])
+          },
+        ]
+      }
+    }
+    empty_dim = {  # Clear from previous iteration.
+    }
+    dims += [ empty_dim ]
+    dims -= [ empty_dim ]
+
+    # Check if the environment's dimensions match those of a platform of the
+    # target architecture; if a match, include the environment among the
+    # test spec's.
+    # Note that in GN "A is a subset of B" is equivalent to `A + B - B == []`.
+    match = false
+    foreach(platform_dims, target_platform_dims) {
+      if (dims + platform_dims - platform_dims == []) {
+        match = true
+        target_envs += [ env ]
+      }
+    }
+
+    # If the environment's dimensions do not match a target architecture, ensure
+    # that they match those of a platform of another architecture.
+    if (!match) {
+      foreach(platform_dims, other_platform_dims) {
+        match = match || dims + platform_dims - platform_dims == []
+      }
+      if (!match) {
+        print("Could not match environment specifications for '$target_name':")
+        print("$env")
+        assert(
+            match,
+            "Consult //build/testing/platforms.gni for all allowable specifications")
+      }
+    }
+  }
+
+  test_spec = {
+    test = {
+      name = get_label_info(":${invoker.name}", "label_no_toolchain")
+      location = invoker.location
+      if (is_linux || is_mac) {
+        # Trim leading //.
+        location = rebase_path(location, root_build_dir)
+      }
+      os = current_os
+      cpu = current_cpu
+    }
+    environments = []  # Clear from above.
+    environments = target_envs
+  }
+
+  foreach(env, target_envs) {
+    dims = []  # Clear from previous iteration.
+    dims = env.dimensions
+
+    # TODO(IN-571): Delete this block once vim2s are ready to be targeted.
+    if (defined(dims.device_type) && dims.device_type == "Khadas Vim2 Max") {
+      assert(defined(env.label) && env.label == "vim2",
+             "vim2s may not yet be targeted.")
+    }
+
+    # TODO(IN-819): Delete this block once Linux VMs and Macs are ready to be
+    # targeted.
+    if (defined(dims.os)) {
+      assert(defined(env.label) && env.label == "host",
+             "Linux VMs or Macs may not yet be targeted for tests.")
+    }
+  }
+
+  # We take the basename just to make sure no other path components are given
+  # in the name, for which we have no guarantees.
+  test_name = get_path_info(invoker.name, "name")
+  write_file("${output_dir}/${test_name}.${_test_spec_ext}", test_spec, "json")
+}

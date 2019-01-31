@@ -1,0 +1,98 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Generate a group of packages
+#
+# Parameters
+#   deps (required)
+#     List of packages or package_groups to depend on.
+#
+#   testonly (optional)
+#   visibilty (optional)
+
+template("package_group") {
+  pkg_target_name = target_name
+
+  response_files = [
+    "system",
+    "blob",
+    "pkgsvr_index",
+    "amber_index",
+  ]
+
+  intermediate_targets = []
+  forward_variables_from(invoker,
+                         [
+                           "testonly",
+                           "visibility",
+                         ])
+
+  foreach(rsp, response_files) {
+    rsp_name = "${pkg_target_name}.${rsp}.rsp"
+    action(rsp_name) {
+      visibility = [
+        ":$pkg_target_name",
+        "//build/images:$rsp",
+        "//build/images:$rsp.manifest",
+        "//build/images:update_packages.manifest",
+      ]
+      script = "//build/cat.sh"
+      output_name = "${target_out_dir}/${rsp_name}"
+      outputs = [
+        output_name,
+      ]
+      args = [ rebase_path(output_name) ]
+      inputs = []
+      deps = []
+
+      foreach(pkg_label, invoker.deps) {
+        pkg_target_name = get_label_info(pkg_label, "name")
+        pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+        pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.${rsp}.rsp"
+        args += [ rebase_path(pkg_rspfile) ]
+        inputs += [ pkg_rspfile ]
+        if (rsp == "system") {
+          deps += [ pkg_label ]
+        } else {
+          deps += [ get_label_info(pkg_label, "dir") +
+                    ":${pkg_target_name}.${rsp}.rsp" ]
+        }
+      }
+    }
+
+    intermediate_targets += [ ":${rsp_name}" ]
+  }
+
+  manifest_target_name = pkg_target_name + ".manifest"
+
+  action(manifest_target_name) {
+    visibility = [
+      ":$pkg_target_name",
+      "//build/images:ids.txt",
+    ]
+    script = "//build/cat.sh"
+    output_name = "${target_out_dir}/${manifest_target_name}.ids.txt"
+    args = [ rebase_path(output_name) ]
+    inputs = []
+    deps = []
+
+    foreach(pkg_label, invoker.deps) {
+      pkg_target_name = get_label_info(pkg_label, "name")
+      pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+      pkg_ids = "$pkg_target_out_dir/${pkg_target_name}.manifest.ids.txt"
+      args += [ rebase_path(pkg_ids) ]
+      inputs += [ pkg_ids ]
+      deps +=
+          [ get_label_info(pkg_label, "dir") + ":${pkg_target_name}.manifest" ]
+    }
+    outputs = [
+      output_name,
+    ]
+  }
+  intermediate_targets += [ ":${manifest_target_name}" ]
+
+  group(pkg_target_name) {
+    public_deps = intermediate_targets
+  }
+}

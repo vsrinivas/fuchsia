@@ -1,0 +1,261 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zircon.gni")
+
+declare_args() {
+  # Manifest files describing target libraries from toolchains.
+  # Can be either // source paths or absolute system paths.
+  toolchain_manifests = [
+    # clang_prefix is relative to root_build_dir.
+    rebase_path("${clang_prefix}/../lib/${clang_target}.manifest",
+                "",
+                root_build_dir),
+  ]
+
+  # Manifest files describing extra libraries from a Zircon build
+  # not included in `zircon_boot_manifests`, such as an ASan build.
+  # Can be either // source paths or absolute system paths.
+  #
+  # Since Zircon manifest files are relative to a Zircon source directory
+  # rather than to the directory containing the manifest, these are assumed
+  # to reside in a build directory that's a direct subdirectory of the
+  # Zircon source directory and thus their contents can be taken as
+  # relative to `get_path_info(entry, "dir") + "/.."`.
+  # TODO(mcgrathr): Make Zircon manifests self-relative too and then
+  # merge this and toolchain_manifests into generic aux_manifests.
+  if (zircon_use_asan) {
+    zircon_aux_manifests = [ "$zircon_build_abi_dir/bootfs.manifest" ]
+  } else {
+    zircon_aux_manifests = [ "$zircon_asan_build_dir/bootfs.manifest" ]
+  }
+
+  # Manifest files describing files to go into the `/boot` filesystem.
+  # Can be either // source paths or absolute system paths.
+  # `zircon_boot_groups` controls which files are actually selected.
+  #
+  # Since Zircon manifest files are relative to a Zircon source directory
+  # rather than to the directory containing the manifest, these are assumed
+  # to reside in a build directory that's a direct subdirectory of the
+  # Zircon source directory and thus their contents can be taken as
+  # relative to `get_path_info(entry, "dir") + "/.."`.
+  zircon_boot_manifests = [ "$zircon_build_dir/bootfs.manifest" ]
+
+  # Extra args to globally apply to the manifest generation script.
+  extra_manifest_args = []
+}
+
+# Action target that generates a response file in GN's "shlex" format.
+#
+# Parameters
+#
+#   output_name (optional, default: target_name)
+#     [path] Response file to write (if relative, relative to target_out_dir).
+#
+#   response_file_contents (required)
+#   data_deps (optional)
+#   deps (optional)
+#   public_deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+#
+template("generate_response_file") {
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "data_deps",
+                             "deps",
+                             "public_deps",
+                             "output_name",
+                             "response_file_contents",
+                             "testonly",
+                             "visibility",
+                           ])
+    if (!defined(output_name)) {
+      output_name = target_name
+    }
+    outputs = [
+      "$target_out_dir/$output_name",
+    ]
+    assert(
+        defined(response_file_contents),
+        "generate_response_file(\"${target_name}\") must define response_file_contents")
+
+    if (response_file_contents == []) {
+      # GN doesn't allow an empty response file.
+      script = "/bin/cp"
+      args = [
+        "-f",
+        "/dev/null",
+      ]
+    } else {
+      script = "/bin/ln"
+      args = [
+        "-f",
+        "{{response_file_name}}",
+      ]
+    }
+    args += rebase_path(outputs, root_build_dir)
+  }
+}
+
+# Action target that generates a manifest file in the `target=/abs/file`
+# format used by `zbi`, `blobfs`, etc.  ELF files in the manifest have
+# their dynamic linking details examined and other necessary ELF files
+# implicitly added to the manifest.  All such files have their build IDs
+# and unstripped files recorded in a build ID map (`ids.txt` file).
+# Outputs: $target_out_dir/$target_name, $target_out_dir/$target_name.ids.txt
+#
+# Parameters
+#
+#   args (required)
+#     [list of strings] Additional arguments to finalize_manifests.py;
+#     `sources` should list any files directly referenced.
+#
+#   bootfs_manifest (optional)
+#     [string] Output a separate manifest file for the Zircon BOOTFS.  This
+#     manifest will get the `bootfs_zircon_groups` selections, while the
+#     main manifest will get `zircon_groups` and the other entries
+#     indicated by `args`.  The main output manifest will assume that
+#     libraries from the BOOTFS are available and not duplicate them.
+#
+#   bootfs_zircon_groups (required with `bootfs_manifest`)
+#     [string] Comma-separated list of Zircon manifest groups to include
+#     in `bootfs_manifest`.
+#
+#   zircon_groups (optional, default: "")
+#     [string] Comma-separated list of Zircon manifest groups to include.
+#     If this is "", then the Zircon manifest only provides binaries
+#     to satisfy dependencies.
+#
+#   deps (optional)
+#   sources (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+#
+template("generate_manifest") {
+  assert(defined(invoker.args),
+         "generate_manifest(\"${target_name}\") requires args")
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                             "visibility",
+                             "zircon_groups",
+                           ])
+    if (!defined(sources)) {
+      sources = []
+    }
+    if (!defined(zircon_groups)) {
+      zircon_groups = ""
+    }
+    manifest_file = "$target_out_dir/$target_name"
+    depfile = "${manifest_file}.d"
+    build_id_file = "${manifest_file}.ids.txt"
+    stripped_dir = "${manifest_file}.stripped"
+
+    script = "//build/images/finalize_manifests.py"
+    inputs = rebase_path([
+                           "elfinfo.py",
+                           "manifest.py",
+                           "variant.py",
+                         ],
+                         "",
+                         "//build/images")
+    outputs = [
+      manifest_file,
+      build_id_file,
+    ]
+    args = extra_manifest_args + [
+             "--depfile=" + rebase_path(depfile, root_build_dir),
+             "--build-id-file=" + rebase_path(build_id_file, root_build_dir),
+             "--stripped-dir=" + rebase_path(stripped_dir, root_build_dir),
+             "@{{response_file_name}}",
+           ]
+    response_file_contents = []
+
+    # First the toolchain and Zircon manifests are pure auxiliaries:
+    # they just supply libraries that might satisfy dependencies.
+    sources += toolchain_manifests
+    foreach(manifest, toolchain_manifests) {
+      manifest_cwd = get_path_info(rebase_path(manifest), "dir")
+      response_file_contents += [
+        "--cwd=$manifest_cwd",
+        "--manifest=" + rebase_path(manifest),
+      ]
+    }
+    sources += zircon_aux_manifests + zircon_boot_manifests
+    foreach(manifest, zircon_aux_manifests + zircon_boot_manifests) {
+      manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
+      response_file_contents += [
+        "--cwd=$manifest_cwd",
+        "--manifest=" + rebase_path(manifest),
+      ]
+    }
+
+    manifests = []
+
+    if (defined(invoker.bootfs_manifest)) {
+      assert(
+          defined(invoker.bootfs_zircon_groups),
+          "generate_manifest with bootfs_manifest needs bootfs_zircon_groups")
+      outputs += [ invoker.bootfs_manifest ]
+      manifests += [
+        {
+          output = invoker.bootfs_manifest
+          groups = invoker.bootfs_zircon_groups
+        },
+      ]
+
+      # Elide both devhost variants from the Zircon input manifest.
+      # Each variant will be included if there is a driver that needs it.
+      # That way we can tell whether both variants are actually in use.
+      response_file_contents += [
+        "--exclude=bin/devhost",
+        "--exclude=bin/devhost.asan",
+      ]
+    }
+
+    manifests += [
+      {
+        output = manifest_file
+        groups = zircon_groups
+      },
+    ]
+
+    foreach(manifest, manifests) {
+      response_file_contents +=
+          [ "--output=" + rebase_path(manifest.output, root_build_dir) ]
+      if (manifest.groups != "") {
+        # The boot manifests were already listed as auxiliaries, but now
+        # list them again with selected groups to go in the output.  This
+        # means the script processes these manifests twice, but we can't
+        # just omit them as auxiliaries because dependencies from the
+        # binaries selected here have to be found by target name in a
+        # previously-processed manifest.
+        response_file_contents += [ "--groups=${manifest.groups}" ]
+        sources += zircon_boot_manifests
+        foreach(manifest, zircon_boot_manifests) {
+          manifest_cwd = get_path_info(rebase_path(manifest), "dir") + "/.."
+          response_file_contents += [
+            "--cwd=$manifest_cwd",
+            "--manifest=" + rebase_path(manifest),
+          ]
+        }
+      }
+    }
+
+    response_file_contents += [ "--groups=all" ]
+
+    # Now further `--manifest` or `--entry` arguments in invoker.args will
+    # contribute to the output manifest.
+    response_file_contents += [ "--cwd=." ] + invoker.args
+  }
+}

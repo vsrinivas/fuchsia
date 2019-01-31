@@ -1,0 +1,238 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zbi.gni")
+import("//build/images/boot.gni")
+import("//build/images/custom_signing.gni")
+import("//build/images/json.gni")
+import("//build/images/manifest.gni")
+
+declare_args() {
+  # List of kernel command line arguments to bake into the Zedboot image.
+  # See //zircon/docs/kernel_cmdline.md and
+  # [`zedboot_devmgr_config`](#zedboot_devmgr_config).
+  zedboot_cmdline_args = []
+
+  # Files containing additional kernel command line arguments to bake into
+  # the Zedboot image.  The contents of these files (in order) come after any
+  # arguments directly in [`zedboot_cmdline_args`](#zedboot_cmdline_args).
+  # These can be GN `//` source pathnames or absolute system pathnames.
+  zedboot_cmdline_files = []
+
+  # List of arguments to populate /boot/config/devmgr in the Zedboot image.
+  zedboot_devmgr_config = [ "netsvc.netboot=true" ]
+}
+
+# This parallels the `images` list in //build/images/BUILD.gn, which see.
+zedboot_images = []
+
+# Construct a minimal manifest containing only the few user binaries
+# that constitute zedboot, and the libraries they depend on.
+# TODO(mcgrathr): This could be made smaller by constraining the drivers
+# included, but we don't currently have a good way to determine the
+# subset that is useful to Zedboot.
+zedboot_binary_patterns = [
+  # These are the core things needed for booting (local and netboot).
+  "bin/bootsvc",
+  "bin/devmgr",
+  "bin/dlog",
+  "bin/fshost",
+  "bin/netsvc",
+  "bin/pwrbtn-monitor",
+  "bin/svchost",
+  "bin/virtual-console",
+  "driver/*",  # Drivers automagically cause devhost to be brought in.
+
+  # These are needed for installer runs.
+  "bin/blobfs",
+  "bin/install-disk-image",
+  "bin/minfs",
+  "bin/mount",
+
+  # These are useful for debugging.
+  "bin/dd",
+  "bin/driverctl",
+  "bin/fsck*",
+  "bin/gpt",
+  "bin/killall",
+  "bin/lsblk",
+  "bin/lsdev",
+  "bin/lsusb",
+  "bin/mkfs*",
+  "bin/nand-util",
+  "bin/netdump",
+  "bin/ping",
+  "bin/ps",
+  "bin/sh",
+  "bin/umount",
+  "bin/unbind",
+]
+
+generate_manifest("zedboot.manifest") {
+  visibility = [ ":*" ]
+  args = []
+  foreach(pattern, zedboot_binary_patterns) {
+    args += [ "--binary=" + pattern ]
+  }
+}
+manifest_outputs = get_target_outputs(":zedboot.manifest")
+manifest_file = manifest_outputs[0]
+
+action("devmgr_config.txt") {
+  visibility = [ ":zbi" ]
+
+  script = "../manifest.py"
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  foreach(entry, zedboot_devmgr_config) {
+    args += [ "--entry=$entry" ]
+  }
+}
+
+zbi("zbi") {
+  output_name = "zedboot"
+  deps = [
+    ":devmgr_config.txt",
+    ":zedboot.manifest",
+  ]
+  inputs = [
+    "${zircon_build_dir}/kernel.zbi",
+    manifest_file,
+  ]
+  manifest = [
+    {
+      outputs = [
+        "config/devmgr",
+      ]
+      sources = get_target_outputs(":devmgr_config.txt")
+    },
+  ]
+  cmdline = zedboot_cmdline_args
+  cmdline_inputs = zedboot_cmdline_files
+}
+
+zedboot_images += [
+  {
+    deps = [
+      ":zbi",
+    ]
+    public = [
+      "IMAGE_ZEDBOOT_ZBI",
+      "IMAGE_ZIRCONR_ZBI",
+    ]
+    json = {
+      name = "zircon-r"
+      type = "zbi"
+      if (custom_signing_script == "") {
+        bootserver_pave = [ "--zirconr" ]
+      }
+    }
+  },
+]
+
+if (custom_signing_script != "") {
+  custom_signed_zbi("signed") {
+    output_name = "zedboot.zbi"
+    deps = [
+      ":zbi",
+    ]
+    zbi = get_target_outputs(":zbi")
+  }
+
+  zedboot_images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      public = [
+        "IMAGE_ZIRCONR_SIGNEDZBI",
+      ]
+      json = {
+        name = "zircon-r.signed"
+        type = "zbi.signed"
+        bootserver_pave = [
+          "--zirconr",
+
+          # TODO(ZX-2625): `dm reboot-recovery` boots from
+          # zircon-b instead of zircon-r, so put it there too.
+          "--zirconb",
+        ]
+      }
+    },
+  ]
+}
+
+if (target_cpu != "arm64") {
+  vboot("vboot") {
+    output_name = "zedboot"
+    deps = [
+      ":zbi",
+    ]
+  }
+
+  zedboot_images += [
+    {
+      deps = [
+        ":vboot",
+      ]
+      public = [
+        "IMAGE_ZEDBOOT_VBOOT",
+      ]
+      json = {
+        name = "zedboot"
+        type = "vboot"
+      }
+    },
+  ]
+
+  esp("esp") {
+    output_name = "zedboot"
+    cmdline = "efi_cmdline.txt"
+    deps = [
+      ":zbi",
+    ]
+    zedboot_zbi_outputs = get_target_outputs(":zbi")
+    zedboot = zedboot_zbi_outputs[0]
+  }
+  zedboot_images += [
+    {
+      deps = [
+        ":esp",
+      ]
+      public = [
+        "IMAGE_ZEDBOOT_ESP",
+      ]
+      json = {
+        name = "zedboot-efi"
+        type = "blk"
+      }
+    },
+  ]
+}
+
+group("zedboot") {
+  deps = [
+    ":zbi",
+  ]
+  if (target_cpu != "arm64") {
+    deps += [
+      ":esp",
+      ":vboot",
+    ]
+  }
+  if (custom_signing_script != "") {
+    deps += [ ":signed" ]
+  }
+}
+
+write_images_manifest("zedboot-manifest") {
+  images = zedboot_images
+  outputs = [
+    "$root_build_dir/zedboot_images.json",
+    "$root_build_dir/zedboot_image_paths.sh",
+  ]
+}

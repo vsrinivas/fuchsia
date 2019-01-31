@@ -1,0 +1,61 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+assert(current_toolchain == host_toolchain,
+       "LLVM TableGen should only be referenced from the host toolchain.")
+
+executable("tablegen") {
+  sources = [
+    "AsmMatcherEmitter.cpp",
+    "AsmWriterEmitter.cpp",
+    "AsmWriterInst.cpp",
+    "Attributes.cpp",
+    "CTagsEmitter.cpp",
+    "CallingConvEmitter.cpp",
+    "CodeEmitterGen.cpp",
+    "CodeGenDAGPatterns.cpp",
+    "CodeGenHwModes.cpp",
+    "CodeGenInstruction.cpp",
+    "CodeGenMapTable.cpp",
+    "CodeGenRegisters.cpp",
+    "CodeGenSchedule.cpp",
+    "CodeGenTarget.cpp",
+    "DAGISelEmitter.cpp",
+    "DAGISelMatcher.cpp",
+    "DAGISelMatcherEmitter.cpp",
+    "DAGISelMatcherGen.cpp",
+    "DAGISelMatcherOpt.cpp",
+    "DFAPacketizerEmitter.cpp",
+    "DisassemblerEmitter.cpp",
+    "FastISelEmitter.cpp",
+    "FixedLenDecoderEmitter.cpp",
+    "GlobalISelEmitter.cpp",
+    "InfoByHwMode.cpp",
+    "InstrDocsEmitter.cpp",
+    "InstrInfoEmitter.cpp",
+    "IntrinsicEmitter.cpp",
+    "OptParserEmitter.cpp",
+    "PseudoLoweringEmitter.cpp",
+    "RISCVCompressInstEmitter.cpp",
+    "RegisterBankEmitter.cpp",
+    "RegisterInfoEmitter.cpp",
+    "SDNodeProperties.cpp",
+    "SearchableTableEmitter.cpp",
+    "SubtargetEmitter.cpp",
+    "SubtargetFeatureInfo.cpp",
+    "TableGen.cpp",
+    "Types.cpp",
+    "X86DisassemblerTables.cpp",
+    "X86EVEX2VEXTablesEmitter.cpp",
+    "X86FoldTablesEmitter.cpp",
+    "X86ModRMFilters.cpp",
+    "X86RecognizableInstr.cpp",
+  ]
+
+  deps = [
+    "../../lib/TableGen",
+  ]
+
+  libs = [ "dl" ]
+}

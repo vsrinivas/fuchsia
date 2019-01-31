@@ -1,0 +1,83 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+
+declare_args() {
+  # The size in bytes of the FVM partition image to create. Normally this is
+  # computed to be just large enough to fit the blob and data images. The
+  # default value is "", which means to size based on inputs. Specifying a size
+  # that is too small will result in build failure.
+  fvm_image_size = ""
+
+  # The size of the FVM partition images "slice size". The FVM slice size is a
+  # minimum size of a particular chunk of a partition that is stored within
+  # FVM. A very small slice size may lead to decreased throughput. A very large
+  # slice size may lead to wasted space. The selected default size of 8mb is
+  # selected for conservation of space, rather than performance.
+  fvm_slice_size = "8388608"
+}
+
+# Build an FVM partition
+#
+# Parameters
+#
+#   args (optional)
+#     [list of strings] Additional arguments to pass to the FVM tool.
+#
+#   output_name (required)
+#     [string] The filename to produce.
+#
+#   partitions (required)
+#     [list of scopes] a list of partitions to be included
+#       dep (required)
+#         [label] The label must be defined earlier in the same file.
+#       type (required)
+#         [string] A partition type accepted by fvm (e.g. blob, data, data-unsafe)
+#
+#   deps (optional)
+#   testonly (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+template("generate_fvm") {
+  zircon_tool_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "deps",
+                             "visibility",
+                           ])
+    tool = "fvm"
+    outputs = [
+      invoker.output_name,
+    ]
+    args = rebase_path(outputs, root_build_dir)
+    if (defined(invoker.args)) {
+      args += invoker.args
+    }
+    sources = []
+    if (!defined(deps)) {
+      deps = []
+    }
+    foreach(part, invoker.partitions) {
+      args += [ "--${part.type}" ]
+      deps += [ part.dep ]
+      sources += get_target_outputs(part.dep)
+      args += rebase_path(get_target_outputs(part.dep), root_build_dir)
+    }
+  }
+}
+
+fvm_slice_args = [
+  "--slice",
+  fvm_slice_size,
+]
+
+fvm_create_args = [ "create" ] + fvm_slice_args
+
+fvm_sparse_args = [
+                    "sparse",
+                    "--compress",
+                    "lz4",
+                  ] + fvm_slice_args

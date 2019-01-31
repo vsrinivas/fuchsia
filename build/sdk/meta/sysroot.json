@@ -1,0 +1,101 @@
+{
+  "description": "The sysroot",
+  "type": "object",
+  "allOf": [
+    {
+      "$ref": "common.json#/definitions/sdk_element"
+    },
+    {
+      "properties": {
+        "type": {
+          "description": "Marker for this type of element",
+          "type": "string",
+          "enum": [
+            "sysroot"
+          ]
+        },
+        "name": {
+          "description": "Always 'sysroot'",
+          "type": "string",
+          "enum": [
+            "sysroot"
+          ]
+        },
+        "versions": {
+          "description": "The various versions of the sysroot, per architecture",
+          "type": "object",
+          "properties": {
+            "x64": {
+              "description": "x64 version",
+              "$ref": "#/definitions/version"
+            },
+            "arm64": {
+              "description": "arm64 version",
+              "$ref": "#/definitions/version"
+            }
+          },
+          "additionalProperties": false,
+          "minProperties": 1,
+          "maxProperties": 2
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "versions"
+      ]
+    }
+  ],
+  "definitions": {
+    "version": {
+      "description": "Sysroot files for a given architecture",
+      "type": "object",
+      "properties": {
+        "root": {
+          "description": "Path to the root of the sysroot",
+          "$ref": "common.json#/definitions/file"
+        },
+        "headers": {
+          "description": "List of public headers",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "include_dir": {
+          "description": "Path to the base directory for includes",
+          "$ref": "common.json#/definitions/file"
+        },
+        "link_libs": {
+          "description": "List of link-time libraries",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "dist_libs": {
+          "description": "List of libraries for inclusion in packages",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        },
+        "debug_libs": {
+          "description": "List of libraries for debugging",
+          "type": "array",
+          "items": {
+            "$ref": "common.json#/definitions/file"
+          }
+        }
+      },
+      "required": [
+        "root",
+        "headers",
+        "include_dir",
+        "link_libs",
+        "dist_libs",
+        "debug_libs"
+      ]
+    }
+  }
+}

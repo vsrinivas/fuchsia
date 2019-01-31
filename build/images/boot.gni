@@ -1,0 +1,193 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zircon.gni")
+
+# Build a "kernel partition" target for ChromeOS targets.
+#
+# Parameters
+#
+#   deps (required)
+#     [list of one label] Must be a `zbi()` target defined earlier in the file.
+#
+#   output_name (optional, default: `target_name`)
+#   output_extension (optional, default: `".vboot"`)
+#     [string] Determines the file name, in `root_out_dir`.
+#
+template("vboot") {
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".vboot"
+  }
+  output_file = "$root_out_dir/$output_file"
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//garnet/tools/vboot_reference:futility"
+    outputs = [
+      output_file,
+    ]
+
+    vboot_dir = "//third_party/vboot_reference"
+    kernel_keyblock = "$vboot_dir/tests/devkeys/kernel.keyblock"
+    private_keyblock = "$vboot_dir/tests/devkeys/kernel_data_key.vbprivk"
+    inputs = [
+      kernel_keyblock,
+      private_keyblock,
+    ]
+
+    assert(defined(deps), "vboot() requires deps")
+    zbi = []
+    foreach(label, deps) {
+      zbi += get_target_outputs(label)
+    }
+    inputs += zbi
+    assert(zbi == [ zbi[0] ], "vboot() requires exactly one zbi() in deps")
+
+    # The CrOS bootloader supports Multiboot (with `--flags 0x2` below).
+    # The Multiboot trampoline is the "kernel" (`--vmlinuz` switch) and the
+    # ZBI is the RAM disk (`--bootloader` switch).
+    assert(current_cpu == "x64")
+    kernel = "${zircon_build_dir}/multiboot.bin"
+    inputs += [ kernel ]
+
+    args = [
+      "vbutil_kernel",
+      "--pack",
+      rebase_path(output_file),
+      "--keyblock",
+      rebase_path(kernel_keyblock),
+      "--signprivate",
+      rebase_path(private_keyblock),
+      "--bootloader",
+      rebase_path(zbi[0]),
+      "--vmlinuz",
+      rebase_path(kernel),
+      "--version",
+      "1",
+      "--flags",
+      "0x2",
+    ]
+  }
+}
+
+# Build an "EFI System Partition" target for EFI targets.
+#
+# Parameters
+#
+#   deps (optional)
+#     [list of labels] Targets that generate the other inputs.
+#
+#   output_name (optional, default: `target_name`)
+#   output_extension (optional, default: `".esp.blk"`)
+#     [string] Determines the file name, in `root_out_dir`.
+#
+#   bootdata_bin (optional)
+#     [path] Must be a ramdisk that compliments zircon_bin.
+#
+#   zircon_bin (optional)
+#     [path] A zircon kernel.
+#
+#   zedboot (optional)
+#     [label] A Zedboot `zbi()` target.
+#
+#   cmdline (optional)
+#     [path] A bootloader (Gigaboot) cmdline file to include in the EFI root.
+#
+template("esp") {
+  if (defined(invoker.output_name)) {
+    output_file = invoker.output_name
+  } else {
+    output_file = target_name
+  }
+  if (defined(invoker.output_extension)) {
+    if (invoker.output_extension != "") {
+      output_file += ".${invoker.output_extension}"
+    }
+  } else {
+    output_file += ".esp.blk"
+  }
+  output_file = "$root_out_dir/$output_file"
+
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "testonly",
+                             "visibility",
+                           ])
+
+    tool = "//garnet/go/src/make-efi"
+    mkfs_msdosfs_bin = "$zircon_tools_dir/mkfs-msdosfs"
+
+    outputs = [
+      output_file,
+    ]
+    inputs = [
+      mkfs_msdosfs_bin,
+    ]
+    args = [
+      "--output",
+      rebase_path(output_file),
+      "--mkfs",
+      rebase_path(mkfs_msdosfs_bin),
+    ]
+
+    if (defined(invoker.zircon_bin)) {
+      args += [
+        "--zircon",
+        rebase_path(invoker.zircon_bin),
+      ]
+      inputs += [ invoker.zircon_bin ]
+    }
+
+    if (defined(invoker.bootdata_bin)) {
+      args += [
+        "--bootdata",
+        rebase_path(invoker.bootdata_bin),
+      ]
+      inputs += [ invoker.bootdata_bin ]
+    }
+
+    if (defined(invoker.zedboot)) {
+      args += [
+        "--zedboot",
+        rebase_path(invoker.zedboot),
+      ]
+      inputs += [ invoker.zedboot ]
+    }
+
+    if (defined(invoker.cmdline)) {
+      args += [
+        "--cmdline",
+        rebase_path(invoker.cmdline),
+      ]
+    }
+
+    if (target_cpu == "x64") {
+      gigaboot_bin = "${zircon_build_dir}/bootloader/bootx64.efi"
+      args += [
+        "--efi-bootloader",
+        rebase_path(gigaboot_bin),
+      ]
+      inputs += [ gigaboot_bin ]
+    }
+  }
+}

@@ -1,0 +1,52 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Individual test environments ###
+
+qemu_env = {
+  dimensions = {
+    device_type = "QEMU"
+  }
+}
+
+nuc_env = {
+  dimensions = {
+    device_type = "Intel NUC Kit NUC7i5DNHE"
+  }
+}
+
+vim2_env = {
+  dimensions = {
+    device_type = "Khadas Vim2 Max"
+  }
+  # TODO(IN-571): Delete after bring-up.
+  label = "vim2"
+}
+
+linux_env = {
+  dimensions = {
+    os = "Linux"
+  }
+  # TODO(IN-819): Delete after bring-up.
+  label = "host"
+}
+
+mac_env = {
+  dimensions = {
+    os = "Mac"
+  }
+  # TODO(IN-819): Delete after bring-up.
+  label = "host"
+}
+
+
+### Select environment lists ###
+
+# The basic, freely usable test environments supported by the infrastructure.
+basic_envs = [ qemu_env ]
+if (current_cpu == "x64") {
+  basic_envs += [ nuc_env ]
+} else if (current_cpu == "arm64") {
+  basic_envs += [ vim2_env ]
+}

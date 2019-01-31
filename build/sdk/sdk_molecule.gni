@@ -1,0 +1,72 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Defines a group of SDK elements.
+#
+# Parameters
+#
+#   category (optional)
+#     Describes the minimum category that atoms in this molecule must have.
+#     See //build/sdk/sdk_atom.gni for possible values.
+#
+#   deps (optional)
+#     List of GN labels referencing the elements of this group.
+#     These labels must point to "sdk_atom" or "sdk_molecule" targets.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+
+template("sdk_molecule") {
+  gn_deps = []
+  if (defined(invoker.non_sdk_deps)) {
+    gn_deps = invoker.non_sdk_deps
+  }
+
+  dep_manifests = []
+  if (defined(invoker.deps)) {
+    gn_deps += invoker.deps
+    foreach(dep, invoker.deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+    }
+  }
+
+  # Builds a manifest representing members of the group.
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "assert_no_deps",
+                             "testonly",
+                           ])
+
+    manifest = "$target_gen_dir/$target_name.sdk"
+
+    script = "//build/sdk/create_molecule_manifest.py"
+
+    deps = gn_deps
+
+    inputs = dep_manifests + [
+               # Imported by the action's script.
+               "//build/sdk/sdk_common.py",
+             ]
+
+    outputs = [
+      manifest,
+    ]
+
+    args = [
+             "--out",
+             rebase_path(manifest),
+             "--deps",
+           ] + dep_manifests
+
+    if (defined(invoker.category)) {
+      args += [
+        "--category",
+        invoker.category,
+      ]
+    }
+  }
+}

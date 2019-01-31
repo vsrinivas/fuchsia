@@ -1,0 +1,156 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/zircon.gni")
+import("//build/gn/packages.gni")
+import("//build/images/manifest.gni")
+import("//build/packages/package_internal.gni")
+
+# Generate a signed, sealed package file from a prebuilt archive.
+#
+# Parameters
+#
+#   archive (required)
+#     Path to archive containing a package.
+#
+#   package_name (optional)
+#     Name of the package.
+#     Defaults to the target's name.
+#
+#   testonly (optional)
+#   visibility (optional)
+#     Usual GN meanings.
+#
+template("prebuilt_package") {
+  pkg_target_name = target_name
+  pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
+  pkg_name = target_name
+  if (defined(invoker.package_name)) {
+    pkg_name = invoker.package_name
+  }
+
+  meta_dir = target_out_dir + "/" + pkg_name + ".meta"
+  blobs_json = "$meta_dir/blobs.json"
+
+  action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    archive = invoker.archive
+
+    script = "//build/packages/prebuilt_package.py"
+
+    manifest = "$target_out_dir/$pkg_name.manifest"
+    system_rsp = "$target_out_dir/$pkg_name.system.rsp"
+    ids_txt = "$target_out_dir/$pkg_name.final.manifest.ids.txt"
+    meta_merkle = "$meta_dir/meta.far.merkle"
+
+    args = [
+      "--pm-tool",
+      rebase_path("$root_out_dir/host_$host_cpu/pm"),
+      "--name",
+      pkg_name,
+      "--archive",
+      rebase_path(archive),
+      "--workdir",
+      rebase_path(meta_dir, root_build_dir),
+      "--manifest",
+      rebase_path(manifest, root_build_dir),
+      "--system-rsp",
+      rebase_path(system_rsp, root_build_dir),
+      "--ids-txt",
+      rebase_path(ids_txt, root_build_dir),
+    ]
+    inputs = [
+      archive,
+    ]
+    outputs = [
+      manifest,
+      ids_txt,
+      system_rsp,
+      blobs_json,
+      meta_merkle,
+    ]
+
+    deps = [
+      "//garnet/go/src/pm:pm_bin($host_toolchain)",
+    ]
+  }
+
+  group(target_name + ".manifest") {
+    public_deps = [
+      ":$pkg_target_name",
+    ]
+  }
+
+  group(target_name + ".final.manifest.ids.txt") {
+    public_deps = [
+      ":$pkg_target_name",
+    ]
+  }
+
+  generate_response_file("${pkg_target_name}.blobs.rsp") {
+    response_file_contents = ["--input=" + rebase_path(blobs_json, root_build_dir)]
+  }
+
+  pkg = {
+    package_name = target_name
+    package_version = 0
+  }
+
+  generate_system_index(target_name + ".system_index.rsp") {
+    deprecated_system_image = false
+    meta_target = ":$pkg_target_name"
+
+    foreach(name, available_packages) {
+      if (name == pkg_label) {
+        package_set = "available"
+      }
+    }
+    foreach(name, preinstall_packages) {
+      if (name == pkg_label) {
+        package_set = "preinstall"
+      }
+    }
+    foreach(name, monolith_packages) {
+      if (name == pkg_label) {
+        package_set = "monolith"
+      }
+    }
+
+    package_name = pkg.package_name
+    package_version = pkg.package_version
+    blobs_json = blobs_json
+  }
+
+  generate_response_file("${pkg_target_name}.shell_commands.rsp") {
+    response_file_contents = []
+  }
+
+  foreach(index,
+          [
+            {
+              name = "pkgsvr_index"
+              file = "meta.far.merkle"
+            },
+            {
+              name = "amber_index"
+              file = "meta.far"
+            },
+          ]) {
+    generate_index("${pkg_target_name}.${index.name}.rsp") {
+      deprecated_system_image = false
+      index_file = "${meta_dir}/${index.file}"
+      package_name = pkg.package_name
+      package_version = pkg.package_version
+      pkg_label = pkg_label
+      deps = [
+        ":$pkg_target_name",
+      ]
+    }
+  }
+}

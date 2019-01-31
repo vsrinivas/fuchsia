@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: changes to this file will require updating cipd.versions, which
+# can be done by running `./cipd ensure-file-resolve -ensure-file cipd.ensure`
+# from this directory.
+
+$ResolvedVersions cipd.versions
+
+# This tells CIPD to fix up manually deleted files.
+$ParanoidMode CheckPresence
+
+$VerifiedPlatform linux-amd64
+$VerifiedPlatform mac-amd64
+
+# Linux sysroot
+@Subdir third_party/sysroot/linux-x64
+fuchsia/sysroot/linux-amd64 git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283
+
+@Subdir third_party/sysroot/linux-arm64
+fuchsia/sysroot/linux-arm64 git_revision:a4aaacde9d37ccf91a0f8dc8267cb7ad5d9be283

@@ -1,0 +1,58 @@
+{
+  "definitions": {
+    "file": {
+      "description": "Path to a file from the root of the SDK",
+      "type": "string"
+    },
+    "sdk_element": {
+      "description": "Base type for SDK elements",
+      "type": "object",
+      "properties": {
+        "type": {
+          "description": "The type of the element",
+          "type": "string"
+        },
+        "name": {
+          "description": "The name of the element",
+          "type": "string"
+        },
+        "root": {
+          "description": "The root of the element in the SDK",
+          "type": "string"
+        },
+        "files": {
+          "description": "The list of files pertaining to the element",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/file"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "root",
+        "type"
+      ]
+    },
+    "banjo_library_name": {
+      "description": "Name of a BANJO library",
+      "type": "string"
+    },
+    "fidl_library_name": {
+      "description": "Name of a FIDL library",
+      "type": "string"
+    },
+    "cc_library_name": {
+      "description": "Name of a C/C++ library",
+      "type": "string"
+    },
+    "target_arch": {
+      "description": "Target architecture",
+      "type": "string",
+      "enum": [
+        "arm64",
+        "x64"
+      ]
+    }
+  }
+}

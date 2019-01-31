@@ -1,0 +1,400 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/sdk.gni")
+import("//build/dart/dart.gni")
+import("//build/dart/toolchain.gni")
+import("//build/sdk/sdk_atom.gni")
+import("//third_party/flutter/lib/ui/dart_ui.gni")
+import("//topaz/public/dart-pkg/fuchsia/sdk_ext.gni")
+import("//topaz/public/dart-pkg/zircon/sdk_ext.gni")
+import("//topaz/public/lib/ui/flutter/sdk_ext/sdk_ext.gni")
+
+# Defines a Dart library
+#
+# Parameters
+#
+#   sources
+#     The list of all sources in this library.
+#     These sources must be within source_dir.
+#
+#   package_root (optional)
+#     Path to the directory hosting the library.
+#     This is useful for generated content, and can be ignored otherwise.
+#     Defaults to ".".
+#
+#   package_name (optional)
+#     Name of the Dart package. This is used as an identifier in code that
+#     depends on this library.
+#
+#   infer_package_name (optional)
+#     Infer the package name based on the path to the package.
+#
+#     NOTE: Exactly one of package_name or infer_package_name must be set.
+#
+#   source_dir (optional)
+#     Path to the directory containing the package sources, relative to
+#     package_root.
+#     Defaults to "lib".
+#
+#   deps (optional)
+#     List of labels for Dart libraries this library depends on.
+#
+#   non_dart_deps (optional)
+#     List of labels this library depends on that are not Dart libraries. This
+#     includes things like actions that generate Dart code. It typically doesn't
+#     need to be set.
+#     Note that these labels *must* have an explicit toolchain attached.
+#
+#   disable_analysis (optional)
+#     Prevents analysis from being run on this target.
+#
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   extra_sources (optional)
+#     Additional sources to consider for analysis.
+#
+# Example of usage:
+#
+#   dart_library("baz") {
+#     package_name = "foo.bar.baz"
+#
+#     sources = [
+#       "blah.dart",
+#     ]
+#
+#     deps = [
+#       "//foo/bar/owl",
+#     ]
+#   }
+
+if (current_toolchain == dart_toolchain) {
+  template("dart_library") {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    if (defined(invoker.package_name)) {
+      package_name = invoker.package_name
+    } else if (defined(invoker.infer_package_name) &&
+               invoker.infer_package_name) {
+      # Compute a package name from the label:
+      #   //foo/bar --> foo.bar
+      #   //foo/bar:blah --> foo.bar._blah
+      #   //garnet/public/foo/bar --> foo.bar
+      # Strip public directories.
+      full_dir = get_label_info(":$target_name", "dir")
+      foreach(sdk_dir, sdk_dirs) {
+        full_dir = string_replace(full_dir, "$sdk_dir/", "")
+      }
+      package_name = full_dir
+      package_name = string_replace(package_name, "//", "")
+      package_name = string_replace(package_name, "/", ".")
+
+      # If the last directory name does not match the target name, add the
+      # target name to the resulting package name.
+      name = get_label_info(":$target_name", "name")
+      last_dir = get_path_info(full_dir, "name")
+      if (last_dir != name) {
+        package_name = "$package_name._$name"
+      }
+    } else {
+      assert(false, "Must specify either a package_name or infer_package_name")
+    }
+
+    dart_deps = []
+    if (defined(invoker.deps)) {
+      foreach(dep, invoker.deps) {
+        dart_deps += [ get_label_info(dep, "label_no_toolchain") ]
+      }
+    }
+
+    package_root = "."
+    if (defined(invoker.package_root)) {
+      package_root = invoker.package_root
+    }
+
+    source_dir = "$package_root/lib"
+    if (defined(invoker.source_dir)) {
+      source_dir = "$package_root/${invoker.source_dir}"
+    }
+
+    assert(defined(invoker.sources), "Sources must be defined")
+    source_file = "$target_gen_dir/$target_name.sources"
+    rebased_sources = []
+    foreach(source, invoker.sources) {
+      rebased_source_dir = rebase_path(source_dir)
+      rebased_sources += [ "$rebased_source_dir/$source" ]
+    }
+    if (defined(invoker.extra_sources)) {
+      foreach(source, invoker.extra_sources) {
+        rebased_sources += [ rebase_path(source) ]
+      }
+    }
+    write_file(source_file, rebased_sources, "list lines")
+
+    # Dependencies of the umbrella group for the targets in this file.
+    group_deps = []
+
+    dot_packages_file = "$target_gen_dir/$target_name.packages"
+    dot_packages_target_name = "${target_name}_dot_packages"
+    group_deps += [ ":$dot_packages_target_name" ]
+
+    # Creates a .packages file listing dependencies of this library.
+    action(dot_packages_target_name) {
+      script = "//build/dart/gen_dot_packages.py"
+
+      deps = []
+      package_files = []
+      foreach(dep, dart_deps) {
+        deps += [ "${dep}_dot_packages" ]
+        dep_gen_dir = get_label_info(dep, "target_gen_dir")
+        dep_name = get_label_info(dep, "name")
+        package_files += [ "$dep_gen_dir/$dep_name.packages" ]
+      }
+      if (defined(invoker.non_dart_deps)) {
+        public_deps = invoker.non_dart_deps
+      }
+
+      sources = package_files + [
+                  # Require a manifest file, allowing the analysis service to identify the
+                  # package.
+                  "$package_root/pubspec.yaml",
+                ]
+
+      outputs = [
+        dot_packages_file,
+      ]
+
+      args = [
+               "--out",
+               rebase_path(dot_packages_file),
+               "--source-dir",
+               rebase_path(source_dir),
+               "--package-name",
+               package_name,
+               "--deps",
+             ] + rebase_path(package_files)
+    }
+
+    # Don't run the analyzer if it is explicitly disabled or if we are using
+    # a custom-built Dart SDK in a cross-build.
+    with_analysis =
+        (!defined(invoker.disable_analysis) || !invoker.disable_analysis) &&
+        (use_prebuilt_dart_sdk || host_cpu == target_cpu)
+    if (with_analysis) {
+      options_file = "$package_root/analysis_options.yaml"
+      invocation_file = "$target_gen_dir/$target_name.analyzer.sh"
+      invocation_target_name = "${target_name}_analysis_runner"
+      group_deps += [ ":$invocation_target_name" ]
+
+      dart_analyzer_binary = "$dart_sdk/bin/dartanalyzer"
+
+      # Creates a script which can be used to manually perform analysis.
+      # TODO(BLD-256): remove this target.
+      action(invocation_target_name) {
+        script = "//build/dart/gen_analyzer_invocation.py"
+
+        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
+
+        inputs = [
+          dart_analyzer_binary,
+          dot_packages_file,
+          options_file,
+          source_file,
+        ]
+
+        outputs = [
+          invocation_file,
+        ]
+
+        args = [
+          "--out",
+          rebase_path(invocation_file),
+          "--source-file",
+          rebase_path(source_file),
+          "--dot-packages",
+          rebase_path(dot_packages_file),
+          "--dartanalyzer",
+          rebase_path(dart_analyzer_binary),
+          "--dart-sdk",
+          rebase_path(dart_sdk),
+          "--options",
+          rebase_path(options_file),
+          "--package-name",
+          package_name,
+        ]
+      }
+
+      analysis_target_name = "${target_name}_analysis"
+      group_deps += [ ":$analysis_target_name" ]
+
+      # Runs analysis on the sources.
+      action(analysis_target_name) {
+        script = "//build/dart/run_analysis.py"
+
+        depfile = "$target_gen_dir/$target_name.analysis.d"
+
+        output_file = "$target_gen_dir/$target_name.analyzed"
+
+        pool = "//build/dart:dart_pool($dart_toolchain)"
+
+        inputs = [
+                   dart_analyzer_binary,
+                   dot_packages_file,
+                   options_file,
+                   source_file,
+                 ] + rebased_sources
+
+        outputs = [
+          output_file,
+        ]
+
+        args = [
+          "--source-file",
+          rebase_path(source_file),
+          "--dot-packages",
+          rebase_path(dot_packages_file),
+          "--dartanalyzer",
+          rebase_path(dart_analyzer_binary),
+          "--dart-sdk",
+          rebase_path(dart_sdk),
+          "--options",
+          rebase_path(options_file),
+          "--stamp",
+          rebase_path(output_file),
+          "--depname",
+          rebase_path(output_file, root_build_dir),
+          "--depfile",
+          rebase_path(depfile),
+        ]
+
+        deps = dart_sdk_deps + [ ":$dot_packages_target_name" ]
+      }
+    }
+
+    group(target_name) {
+      # dart_deps are added here to ensure they are fully built.
+      # Up to this point, only the targets generating .packages had been
+      # depended on.
+      deps = dart_deps
+
+      public_deps = group_deps
+    }
+
+    ################################################
+    # SDK support
+    #
+
+    if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+      assert(
+          defined(invoker.package_name),
+          "Dart libraries published in SDKs must have an explicit package name")
+
+      assert(
+          !defined(invoker.extra_sources),
+          "Extra sources can not be included in SDKs: put them in source_dir")
+
+      # Dependencies that should normally be included in any SDK containing this
+      # target.
+      sdk_deps = []
+
+      # Path to SDK metadata files for first-party dependencies.
+      sdk_metas = []
+
+      # Path to Dart manifest files for third-party dependencies.
+      third_party_pubspecs = []
+      if (defined(invoker.deps)) {
+        sorted_deps =
+            exec_script("//build/dart/sdk/sort_deps.py", invoker.deps, "scope")
+        foreach(dep, sorted_deps.local) {
+          full_label = get_label_info(dep, "label_no_toolchain")
+          sdk_dep = "${full_label}_sdk"
+          sdk_deps += [ sdk_dep ]
+
+          gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+          name = get_label_info(sdk_dep, "name")
+          sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+        }
+        foreach(dep, sorted_deps.third_party) {
+          path = get_label_info(dep, "dir")
+          third_party_pubspecs += [ rebase_path("$path/pubspec.yaml") ]
+        }
+      }
+
+      file_base = "dart/${invoker.package_name}"
+
+      sdk_sources = []
+      sdk_source_mappings = []
+      foreach(source, rebased_sources) {
+        relative_source = rebase_path(source, source_dir)
+        dest = "$file_base/lib/$relative_source"
+        sdk_sources += [ dest ]
+        sdk_source_mappings += [
+          {
+            source = source
+            dest = dest
+          },
+        ]
+      }
+
+      metadata_target_name = "${target_name}_sdk_metadata"
+      metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
+      action(metadata_target_name) {
+        script = "//build/dart/sdk/gen_meta_file.py"
+
+        inputs = sdk_metas + third_party_pubspecs
+
+        outputs = [
+          metadata_file,
+        ]
+
+        args = [
+          "--out",
+          rebase_path(metadata_file),
+          "--name",
+          package_name,
+          "--root",
+          file_base,
+        ]
+        args += [ "--specs" ] + sdk_metas
+        args += [ "--sources" ] + sdk_sources
+        args += [ "--third-party-specs" ] + third_party_pubspecs
+
+        deps = sdk_deps
+      }
+
+      sdk_atom("${target_name}_sdk") {
+        id = "sdk://dart/${invoker.package_name}"
+
+        category = invoker.sdk_category
+
+        meta = {
+          source = metadata_file
+          dest = "$file_base/meta.json"
+          schema = "dart_library"
+        }
+
+        deps = sdk_deps
+
+        non_sdk_deps = [ ":$metadata_target_name" ]
+        if (defined(invoker.non_dart_deps)) {
+          non_sdk_deps += invoker.non_dart_deps
+        }
+
+        files = sdk_source_mappings
+      }
+    }
+  }
+} else {  # Not the Dart toolchain.
+  template("dart_library") {
+    group(target_name) {
+      not_needed(invoker, "*")
+
+      public_deps = [
+        ":$target_name($dart_toolchain)",
+      ]
+    }
+  }
+}

@@ -1,0 +1,6 @@
+{
+    "labels": [
+        "//build/images:netboot",
+        "//build/images:netboot-script"
+    ]
+}

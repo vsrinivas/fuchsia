@@ -1,0 +1,252 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/compiler.gni")
+
+declare_args() {
+  if (is_fuchsia) {
+    # Controls whether the compiler emits full stack frames for function calls.
+    # This reduces performance but increases the ability to generate good
+    # stack traces, especially when we have bugs around unwind table generation.
+    # It applies only for Fuchsia targets (see below where it is unset).
+    #
+    # TODO(ZX-2361): Theoretically unwind tables should be good enough so we can
+    # remove this option when the issues are addressed.
+    enable_frame_pointers = is_debug
+  }
+}
+
+# No frame pointers for host compiles.
+if (!is_fuchsia) {
+  enable_frame_pointers = false
+}
+
+config("compiler") {
+  asmflags = []
+  cflags = [ "-fcolor-diagnostics" ]
+  cflags_c = []
+  cflags_cc = [ "-fvisibility-inlines-hidden" ]
+  cflags_objc = []
+  cflags_objcc = [ "-fvisibility-inlines-hidden" ]
+  ldflags = []
+  defines = []
+  configs = []
+
+  if (current_os == "fuchsia") {
+    configs += [ "//build/config/fuchsia:compiler" ]
+  } else {
+    cflags_c += [ "-std=c11" ]
+    cflags_cc += [
+      "-std=c++17",
+      "-stdlib=libc++",
+    ]
+    if (current_os == "linux") {
+      configs += [ "//build/config/linux:compiler" ]
+    } else if (current_os == "mac") {
+      configs += [ "//build/config/mac:compiler" ]
+    }
+  }
+
+  # Linker on macOS does not support `color-diagnostics`
+  if (current_os != "mac") {
+    ldflags += [ "-Wl,--color-diagnostics" ]
+  }
+
+  asmflags += cflags
+  asmflags += cflags_c
+}
+
+config("relative_paths") {
+  # Make builds independent of absolute file path.  The file names
+  # embedded in debugging information will be expressed as relative to
+  # the build directory, e.g. "../.." for an "out/subdir" under //.
+  # This is consistent with the file names in __FILE__ expansions
+  # (e.g. in assertion messages), which the compiler doesn't provide a
+  # way to remap.  That way source file names in logging and
+  # symbolization can all be treated the same way.  This won't go well
+  # if root_build_dir is not a subdirectory //, but there isn't a better
+  # option to keep all source file name references uniformly relative to
+  # a single root.
+  absolute_path = rebase_path("//.")
+  relative_path = rebase_path("//.", root_build_dir)
+  cflags = [
+    # This makes sure that the DW_AT_comp_dir string (the current
+    # directory while running the compiler, which is the basis for all
+    # relative source file names in the DWARF info) is represented as
+    # relative to //.
+    "-fdebug-prefix-map=$absolute_path=$relative_path",
+
+    # This makes sure that include directories in the toolchain are
+    # represented as relative to the build directory (because that's how
+    # we invoke the compiler), rather than absolute.  This can affect
+    # __FILE__ expansions (e.g. assertions in system headers).  We
+    # normally run a compiler that's someplace within the source tree
+    # (//buildtools/...), so its absolute installation path will have a
+    # prefix matching absolute_path and hence be mapped to relative_path
+    # in the debugging information, so this should actually be
+    # superfluous for purposes of the debugging information.
+    "-no-canonical-prefixes",
+  ]
+}
+
+config("debug") {
+  cflags = [ "-O0" ]
+  ldflags = cflags
+}
+
+config("release") {
+  defines = [ "NDEBUG=1" ]
+  cflags = [
+    "-O3",
+    "-fdata-sections",
+    "-ffunction-sections",
+  ]
+  ldflags = cflags
+  if (current_os == "mac") {
+    ldflags += [ "-Wl,-dead_strip" ]
+  } else {
+    ldflags += [ "-Wl,--gc-sections" ]
+  }
+}
+
+config("exceptions") {
+  cflags_cc = [ "-fexceptions" ]
+  cflags_objcc = cflags_cc
+}
+
+config("no_exceptions") {
+  cflags_cc = [ "-fno-exceptions" ]
+  cflags_objcc = cflags_cc
+}
+
+config("rtti") {
+  cflags_cc = [ "-frtti" ]
+  cflags_objcc = cflags_cc
+}
+
+config("no_rtti") {
+  cflags_cc = [ "-fno-rtti" ]
+  cflags_objcc = cflags_cc
+}
+
+config("default_include_dirs") {
+  include_dirs = [
+    "//",
+    root_gen_dir,
+  ]
+}
+
+config("minimal_symbols") {
+  cflags = [ "-gline-tables-only" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("symbols") {
+  cflags = [ "-g3" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("no_symbols") {
+  cflags = [ "-g0" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+# Default symbols.
+config("default_symbols") {
+  if (symbol_level == 0) {
+    configs = [ ":no_symbols" ]
+  } else if (symbol_level == 1) {
+    configs = [ ":minimal_symbols" ]
+  } else if (symbol_level == 2) {
+    configs = [ ":symbols" ]
+  } else {
+    assert(symbol_level >= 0 && symbol_level <= 2)
+  }
+}
+
+config("default_frame_pointers") {
+  if (enable_frame_pointers) {
+    configs = [ ":frame_pointers" ]
+  } else {
+    configs = [ ":no_frame_pointers" ]
+  }
+}
+
+config("frame_pointers") {
+  cflags = [ "-fno-omit-frame-pointer" ]
+}
+
+config("no_frame_pointers") {
+  cflags = [ "-fomit-frame-pointer" ]
+}
+
+config("default_warnings") {
+  cflags = [
+    "-Wall",
+    "-Wextra",
+    "-Wno-unused-parameter",
+  ]
+  if (current_os == "fuchsia") {
+    cflags += [
+      # TODO(TO-99): Remove once all the cases of unused 'this' lamda capture
+      # have been removed from our codebase.
+      "-Wno-unused-lambda-capture",
+
+      # TODO(TO-100): Remove once comparator types provide const call operator.
+      "-Wno-user-defined-warnings",
+    ]
+  }
+}
+
+config("symbol_visibility_hidden") {
+  cflags = [ "-fvisibility=hidden" ]
+}
+
+config("symbol_no_undefined") {
+  if (current_os == "mac") {
+    ldflags = [ "-Wl,-undefined,error" ]
+  } else {
+    ldflags = [ "-Wl,--no-undefined" ]
+  }
+}
+
+config("shared_library_config") {
+  configs = []
+  cflags = []
+
+  if (current_os == "fuchsia") {
+    configs += [ "//build/config/fuchsia:shared_library_config" ]
+  } else if (current_os == "linux") {
+    cflags += [ "-fPIC" ]
+  } else if (current_os == "mac") {
+    configs += [ "//build/config/mac:mac_dynamic_flags" ]
+  }
+}
+
+config("executable_config") {
+  configs = []
+
+  if (current_os == "fuchsia") {
+    configs += [
+      "//build/config/fuchsia:executable_config",
+      "//build/config/fuchsia:fdio_config",
+    ]
+  } else if (current_os == "mac") {
+    configs += [
+      "//build/config/mac:mac_dynamic_flags",
+      "//build/config/mac:mac_executable_flags",
+    ]
+  }
+}
+
+config("default_libs") {
+  configs = []
+
+  if (current_os == "mac") {
+    configs += [ "//build/config/mac:default_libs" ]
+  }
+}

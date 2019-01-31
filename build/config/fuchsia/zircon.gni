@@ -1,0 +1,105 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+
+declare_args() {
+  # Where to find Zircon's host-side tools that are run as part of the build.
+  zircon_tools_dir = "//out/build-zircon/tools"
+
+  # Zircon build directory for `target_cpu`, containing link-time `.so.abi`
+  # files that GN `deps` on //zircon/public libraries will link against.
+  # This should not be a sanitizer build.
+  zircon_build_abi_dir = "//out/build-zircon/build-$target_cpu"
+
+  # Zircon build directory for `target_cpu`, containing `.manifest` and
+  # `.zbi` files for Zircon's BOOTFS and kernel.  This provides the kernel
+  # and Zircon components used in the boot image.  It also provides the
+  # Zircon shared libraries used at runtime in Fuchsia packages.
+  #
+  # If left `""` (the default), then this is computed from
+  # [`zircon_build_abi_dir`](#zircon_build_abi_dir) and
+  # [`zircon_use_asan`](#zircon_use_asan).
+  zircon_build_dir = ""
+
+  # Zircon `USE_ASAN=true` build directory for `target_cpu` containing
+  # `bootfs.manifest` with libraries and `devhost.asan`.
+  #
+  # If left `""` (the default), then this is computed from
+  # [`zircon_build_dir`](#zircon_build_dir) and
+  # [`zircon_use_asan`](#zircon_use_asan).
+  zircon_asan_build_dir = ""
+
+  # Set this if [`zircon_build_dir`](#zircon_build_dir) was built with
+  # `USE_ASAN=true`, e.g. `//scripts/build-zircon.sh -A`.  This mainly
+  # affects the defaults for [`zircon_build_dir`](#zircon_build_dir) and
+  # [`zircon_build_abi_dir`](#zircon_build_abi_dir).  It also gets noticed
+  # by //scripts/fx commands that rebuild Zircon so that they use `-A`
+  # again next time.
+  zircon_use_asan = false
+
+  # Path to `make` binary. By default, `make` is assumed to be in the
+  # path. Used in the script that generates the Zircon build rules. N.B. this
+  # path is *not* rebased, just used as is.
+  zircon_make_path = "make"
+}
+
+if (zircon_build_dir == "") {
+  zircon_build_dir = zircon_build_abi_dir
+  if (zircon_use_asan) {
+    zircon_build_dir += "-asan"
+  }
+}
+
+# If zircon_use_asan is true, then zircon_build_dir has the ASan bits.
+# Otherwise, they need to be found elsewhere.
+if (zircon_asan_build_dir == "" && !zircon_use_asan) {
+  zircon_asan_build_dir = "${zircon_build_dir}-asan"
+}
+
+# Template for running a Zircon host tool as part of the build.
+# This is a thin wrapper to define an `action()` target.
+#
+# Parameters
+#
+#     tool (required)
+#         [string] The name of the tool, like "mkbootfs".
+#
+#     args (required)
+#         [list of strings] The arguments to pass the tool.
+#         The tool runs with `root_build_dir` as its current directory,
+#         so any file names should be made either absolute or relative
+#         to `root_build_dir` using `rebase_path()`.
+#
+# All other parameters are exactly as for `action()`, except
+# that `script` is replaced with `tool`.
+#
+template("zircon_tool_action") {
+  assert(defined(invoker.tool), "zircon_tool_action() requires `tool`")
+  assert(defined(invoker.args), "zircon_tool_action() requires `args`")
+  _tool = "$zircon_tools_dir/${invoker.tool}"
+  action(target_name) {
+    inputs = []
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "args",
+                             "script",
+                             "tool",
+                             "testonly",
+                             "visibility",
+                           ])
+    script = "//build/gn_run_binary.sh"
+    inputs += [ _tool ]
+    args = [
+             clang_prefix,
+             rebase_path(_tool, root_build_dir),
+           ] + invoker.args
+  }
+}

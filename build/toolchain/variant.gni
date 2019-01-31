@@ -1,0 +1,44 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Template to define a config for use in the `known_variants` list.
+# `variant` is used just like `config`, but it also accepts two other
+# optional parameters:
+#
+#   common_flags
+#     This is a shorthand for appending the same thing to cflags,
+#     asmflags, and ldflags.  Most flags that affect code generation
+#     should be used uniformly in compilation, assembly, and linking.
+#     If cflags, asmflags, or ldflags is also specified, common_flags
+#     will be appended to it.
+#
+#   deps
+#     This lists labels that will be automatically added to the deps list
+#     of each executable target built in this variant.
+#
+template("variant") {
+  config(target_name) {
+    asmflags = []
+    cflags = []
+    ldflags = []
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "common_flags",
+                             "deps",
+                           ])
+    if (defined(invoker.common_flags)) {
+      asmflags += invoker.common_flags
+      cflags += invoker.common_flags
+      ldflags += invoker.common_flags
+    }
+  }
+  group("${target_name}_deps") {
+    # Propagate it as public_deps so that targets in deps can have
+    # public_configs that will be applied to variant executables.
+    if (defined(invoker.deps)) {
+      public_deps = invoker.deps
+    }
+  }
+}

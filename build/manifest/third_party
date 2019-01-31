@@ -1,0 +1,33 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <imports>
+    <localimport file="minimal"/>
+  </imports>
+  <projects>
+    <project name="third_party/mako"
+             path="third_party/mako"
+             remote="https://fuchsia.googlesource.com/third_party/mako"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="e6b41d232315660de544a7a692e58acddd2e612c"/>
+    <project name="third_party/python/mock"
+             path="third_party/python/mock"
+             remote="https://fuchsia.googlesource.com/third_party/python/testing-cabal/mock"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="8c19ef6c95004524cb9f0b170a1aff6f47ade764"/>
+    <project name="third_party/pytoml"
+             path="third_party/pytoml"
+             remote="https://fuchsia.googlesource.com/third_party/pytoml"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="8641351699f44401232786cd9f320ac373c3a02e"/>
+    <project name="third_party/pyyaml"
+             path="third_party/pyyaml"
+             remote="https://fuchsia.googlesource.com/third_party/pyyaml"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="7f118278ff09fc2deea32b429cffc38856bf6992"/>
+    <project name="third_party/rapidjson"
+             path="third_party/rapidjson"
+             remote="https://fuchsia.googlesource.com/third_party/rapidjson"
+             revision="32d07c55db1bb6c2ae17cba4033491a667647753"
+             gerrithost="https://fuchsia-review.googlesource.com"/>
+  </projects>
+</manifest>

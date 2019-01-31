@@ -1,0 +1,58 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/config/sysroot.gni")
+
+config("compiler") {
+  cflags = []
+  cflags_c = []
+  cflags_cc = []
+  ldflags = [
+    "-static-libstdc++",
+
+    # Generate build ID for all binaries so we can use the .build-id directory
+    # scheme for debugging information. This flag is enabled by default for our
+    # toolchain and many native host toolchains, but we set it explicitly to
+    # support arbitrary host toolchains.
+    "-Wl,--build-id",
+
+    # Set rpath to find dynamically linked libraries placed next to executables
+    # in the host build directory.
+    "-Wl,-rpath=\$ORIGIN/",
+  ]
+  if (host_os == "mac") {
+    # TODO(TC-325): When building binaries for Linux on macOS, we need to use
+    # lld as a linker, hence this flag. This is not needed on Linux since our
+    # Clang is configured to use lld as a default linker, but we cannot use the
+    # same option on macOS since default linker is currently a per-toolchain,
+    # not a per-target option and on macOS, Clang should default to ld64. We
+    # should change Clang to make the default linker a per-target option.
+    ldflags += [ "-fuse-ld=lld" ]
+  }
+  configs = [
+    ":sysroot",
+    ":target",
+  ]
+
+  # TODO(TC-74) The implicitly linked static libc++.a depends on these.
+  libs = [
+    "dl",
+    "pthread",
+  ]
+  lib_dirs = [ rebase_path("//buildtools/${host_platform}/clang/lib") ]
+  asmflags = cflags + cflags_c
+}
+
+config("sysroot") {
+  cflags = [ "--sysroot=$sysroot" ]
+  ldflags = cflags
+  asmflags = cflags
+}
+
+config("target") {
+  cflags = [ "--target=$clang_target" ]
+  asmflags = cflags
+  ldflags = cflags
+}

@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Runs the LLVM tablegen tool.
+#
+# Inputs
+#
+#  source (required)
+#    [string] Source file
+#
+#  output (required)
+#    [string] Output file. LLVM normally expects to #include these files. Put
+#    them in $target_gen_dir/<path_to_original>/<name>.gen. The target_gen_dir
+#    will be automatically added to the include path.
+#
+#  args (required)
+#    [string list] What do to. Usually this include something like "-gen-..."
+#
+# Note: CMake function definition for tablegen is in
+# cmake/modules/TableGen.cmake
+template("tablegen") {
+  compiled_action("${target_name}_action") {
+    tool = "//third_party/llvm/utils/TableGen:tablegen"
+
+    inputs = [
+      invoker.source,
+    ]
+    outputs = [
+      invoker.output,
+    ]
+    args = invoker.args + [
+             "-I=" + rebase_path("//third_party/llvm/include", root_build_dir),
+             rebase_path(invoker.source, root_build_dir),
+             "-o",
+             rebase_path(invoker.output, root_build_dir),
+           ]
+  }
+
+  source_set(target_name) {
+    deps = [
+      ":${target_name}_action",
+    ]
+    #public_configs = [ ":target_gen_dir_include" ]
+  }
+}

@@ -1,0 +1,112 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Write an image manfiest at `gn gen` time.
+#
+# Parameters
+#
+#   outputs (required)
+#     [list of two files] The first output is JSON, the second sh variables.
+#
+#   images (required)
+#     [list of scopes] See below.
+#
+# Each scope in $images contains:
+#
+#   default (optional)
+#     [bool] Include image in the default group (default: true).
+#     It is preferred that very large images that are rarely used are not
+#     in the default group.  Absence of a value is equivalent to true.
+#
+#   deps (required)
+#     [list of labels] Target that generates the image file.
+#     If `sources` is not specified, this must be an action in this file,
+#     and that action must produce a valid ZBI as the first declared output.
+#
+#   installer (optional)
+#     [string] Put this image into the installer image under this name.
+#
+#   public (optional)
+#     [list of strings] Each is "IMAGE_{NAME}_{TYPE}" where `TYPE` can be:
+#     `SPARSE` (sparse FVM), `RAW` (block image for any FS), `ZBI`
+#     (bootable zircon image), `RAM` (ramdisk without kernel--obsolete),
+#     `VBOOT` (ZBI in a vboot container).  "IMAGE_{NAME}_{TYPE}={FILE}"
+#     will be written out (with `FILE` relative to `root_build_dir`), to be
+#     consumed by //scripts and various tools to find the relevant images.
+#
+#   json (optional)
+#     [scope] Content for images.json; `path` is added automatically.
+#     Other fields should match TODO(mcgrathr): some JSON schema.
+#     Standard fields not properly documented in a schema yet:
+#       path (required)
+#         [file] Path relative to $root_build_dir where the image is found.
+#         Also serves as the Ninja command-line target argument to build it.
+#       name (required)
+#         [string] A simple identifier for the image.
+#       type (required)
+#         [string] Type of image: "zbi", "blk", "kernel", "vboot"
+#       bootserver_pave (optional)
+#         [string] The command-line switch to `bootserver` that should
+#         precede this file's name.  The presence of this field implies
+#         that this image is needed for paving via Zedboot.  The value ""
+#         means this image is the primary ZBI, which is not preceded by a
+#         switch on the `bootserver` command line.
+#       bootserver_netboot (optional)
+#         [string] The command-line switch to `bootserver` that should
+#         precede this file's name.  The presence of this field implies
+#         that this image is needed for netbooting via Zedboot.  The value ""
+#         means this image is the primary ZBI, which is not preceded by a
+#         switch on the `bootserver` command line.
+#       archive (optional; default: false)
+#         [boolean] This image should be included in a build archive.
+#         Implied by the presence of `bootserver`.
+#
+#   sdk (optional)
+#     [string] Put this image into the SDK under this name.
+#
+#   sources (optional)
+#     [list of files] The image file.
+#
+#   updater (optional)
+#     [string] Put this image into the update manifest under this name.
+#
+template("write_images_manifest") {
+  not_needed([ "target_name" ])  # Seriously.
+  images_json = []
+  image_paths = []
+  foreach(image, invoker.images) {
+    image_sources = []
+    if (defined(image.sources)) {
+      image_sources += image.sources
+    } else {
+      foreach(label, image.deps) {
+        image_sources += get_target_outputs(label)
+      }
+    }
+    image_file = rebase_path(image_sources[0], root_build_dir)
+
+    if (defined(image.json)) {
+      images_json += [
+        {
+          forward_variables_from(image.json, "*")
+          path = image_file
+        },
+      ]
+    }
+
+    if (defined(image.public)) {
+      foreach(name, image.public) {
+        image_paths += [ "${name}=${image_file}" ]
+      }
+    }
+  }
+
+  outputs = invoker.outputs
+  assert(outputs == [
+           outputs[0],
+           outputs[1],
+         ])
+  write_file(outputs[0], images_json, "json")
+  write_file(outputs[1], image_paths)
+}

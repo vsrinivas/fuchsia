@@ -1,0 +1,153 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zircon.gni")
+import("//build/config/sysroot.gni")
+import("//build/toolchain/ccache.gni")
+
+assert(current_os == "fuchsia")
+
+config("werror") {
+  if (!use_ccache) {
+    cflags = [
+      "-Werror",
+
+      # Declarations marked as deprecated should cause build failures, rather
+      # they should emit warnings to notify developers about the use of
+      # deprecated interfaces.
+      "-Wno-error=deprecated-declarations",
+
+      # Do not add additional -Wno-error to this config.
+    ]
+  }
+}
+
+config("icf") {
+  # This changes C/C++ semantics and might be incompatible with third-party
+  # code that relies on function pointers comparison.
+  ldflags = [ "-Wl,--icf=all" ]
+}
+
+# ccache, at least in some configurations, caches preprocessed content. This
+# means that by the time the compiler sees it, macros are unrolled. A number
+# of gcc and clang diagnostics are conditioned on whether the source is part
+# of a macro or not. This is because a "reasonable" looking macro invocation
+# may end up doing something silly internally. This can mean self assignment
+# and tautological comparisons, since macros are not typed. Macros also tend
+# to over-parenthesize, and so on. This particular list of options was found
+# via trial and error, and might be the best way of keeping the build quiet.
+config("ccache") {
+  cflags = [
+    "-Wno-error",
+    "-Qunused-arguments",
+    "-Wno-parentheses-equality",
+    "-Wno-self-assign",
+    "-Wno-tautological-compare",
+    "-Wno-unused-command-line-argument",
+  ]
+  asmflags = cflags
+}
+
+config("compiler") {
+  cflags = []
+  cflags_c = [ "-std=c11" ]
+  cflags_cc = [ "-std=c++17" ]
+  ldflags = [
+    "-Wl,--threads",
+    "-Wl,--pack-dyn-relocs=relr",
+  ]
+  configs = [
+    ":compiler_sysroot",
+    ":compiler_target",
+    ":compiler_cpu",
+    ":toolchain_version_stamp",
+  ]
+  if (use_ccache) {
+    configs += [ ":ccache" ]
+  }
+  asmflags = cflags + cflags_c
+}
+
+config("toolchain_version_stamp") {
+  # We want to force a recompile and relink of the world whenever our toolchain changes since
+  # artifacts from an older version of the toolchain may or may not be compatible with newer ones.
+  # To achieve this, we insert a synthetic define into the compile line.
+  cipd_version = read_file(
+          "//buildtools/${host_platform}/clang/.versions/clang.cipd_version",
+          "json")
+  defines = [ "TOOLCHAIN_VERSION=${cipd_version.instance_id}" ]
+}
+
+config("compiler_sysroot") {
+  # The sysroot for Fuchsia is part of Zircon build which is pointed to by the sysroot variable.
+  cflags = [ "--sysroot=${sysroot}" ]
+  ldflags = cflags
+  asmflags = cflags
+}
+
+config("compiler_target") {
+  cflags = [ "--target=$clang_target" ]
+  asmflags = cflags
+  ldflags = cflags
+}
+
+config("compiler_cpu") {
+  cflags = []
+  if (current_cpu == "x64") {
+    cflags += [
+      "-march=x86-64",
+      "-mcx16",
+    ]
+  }
+  ldflags = cflags
+  asmflags = cflags
+
+  if (current_cpu == "arm64") {
+    ldflags += [ "-Wl,--fix-cortex-a53-843419" ]
+  }
+}
+
+config("shared_library_config") {
+  cflags = [ "-fPIC" ]
+}
+
+config("fdio_config") {
+  libs = [ "fdio" ]
+
+  # TODO(pylaligand): find a better way to let executables link in fdio.
+  # Ideally their dependencies should be set up in such a way that it would get
+  # inherited from them.
+  lib_dirs = [ "$zircon_build_dir/system/ulib/fdio" ]
+}
+
+config("executable_config") {
+}
+
+config("thread_safety_annotations") {
+  cflags_cc = [ "-Wthread-safety" ]
+  defines = [ "_LIBCPP_ENABLE_THREAD_SAFETY_ANNOTATIONS" ]
+}
+
+config("enable_zircon_asserts") {
+  defines = [ "ZX_DEBUGLEVEL=2" ]
+}
+
+declare_args() {
+  zircon_asserts = is_debug
+}
+
+config("zircon_asserts") {
+  if (zircon_asserts) {
+    configs = [ ":enable_zircon_asserts" ]
+  }
+}
+
+config("no_cpp_standard_library") {
+  ldflags = [ "-nostdlib++" ]
+}
+
+config("static_cpp_standard_library") {
+  ldflags = [ "-static-libstdc++" ]
+}

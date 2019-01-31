@@ -1,0 +1,67 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+# Merge one or more json files.
+#
+# If any input is not a valid JSON, the merge operation will fail. Consequently
+# you can "merge" one JSON file to perform validation.
+# If any two inputs overlap in key space, the merge operation will fail.
+# Optionally the merged output can be minified. Consequently you can "merge"
+# one JSON file to perform minification.
+#
+# Parameters
+#
+#   sources (required)
+#     [files list] One or more JSON files to merge.
+#
+#   minify (optional)
+#     [boolean] Whether to minify the result.
+#     Minified JSON is functionally equivalent but less readable to humans.
+#
+#   testonly (optional)
+#   visibility (optional)
+#     Standard GN meaning.
+#
+# Example of usage:
+#
+#   json_merge("merged.json") {
+#     sources = [ "one.json", "two.json" ]
+#     minify = true
+#   }
+template("json_merge") {
+  compiled_action(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "sources",
+                             "testonly",
+                             "visibility",
+                             "minify",
+                           ])
+
+    tool = "//build/tools/json_merge"
+
+    merged_output = "$target_out_dir/$target_name"
+    outputs = [
+      merged_output,
+    ]
+
+    args = []
+    foreach(source, sources) {
+      args += [
+        "--input",
+        rebase_path(source, root_build_dir),
+      ]
+    }
+    args += [
+      "--output",
+      rebase_path(merged_output, root_build_dir),
+    ]
+    if (defined(minify) && minify) {
+      args += [ "--minify" ]
+    }
+  }
+}

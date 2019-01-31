@@ -1,0 +1,225 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/json/validate_json.gni")
+
+# Defines an SDK element.
+#
+# Outputs
+#
+#   $target_gen_dir/$target_name.sdk
+#     A manifest describing what files pertain to the atom and which other atoms
+#     are required by this atom.
+#
+#   $target_gen_dir/$target_name.meta.json
+#     A metadata file describing the atom.
+#     This file is included in the final SDK and used to e.g. drive the
+#     inclusion of the atom in a different build system.
+#
+# Parameters
+#
+#   id
+#     Identifier of this element within SDKs.
+#     The identifier should represent the canonical base path of the element
+#     within SDKs according to the standard layout (https://fuchsia.googlesource.com/docs/+/master/development/sdk/layout.md).
+#     For an element at $ROOT/pkg/foo, the id should be "sdk://pkg/foo".
+#
+#   category
+#     Describes the availability of the element.
+#     Possible values, from most restrictive to least restrictive:
+#       - excluded     : the atom may not be included in SDKs;
+#       - experimental : the atom is available with no quality guarantee;
+#       - internal     : the atom is exposed within the Fuchsia tree;
+#       - partner      : the atom may be used by select partners;
+#       - public       : the atom may be included in published SDKs.
+#
+#   meta
+#     Scope describing the element's metadata file.
+#     See the "Metadata scope" section for how to populate this attribute.
+#
+#   files
+#     List of scopes describing the contents of this element.
+#     See the "File scopes" section for how to describe files.
+#
+#   file_list
+#     Path to a file containing file mappings.
+#     Each line in the file should contain a "dest=source" mapping, similarly to
+#     file scopes.
+#
+#   deps (optional)
+#     List of GN labels for other SDK elements this element depends on at build
+#     time.
+#     These labels must point to "sdk_atom" targets.
+#
+#   non_sdk_deps (optional)
+#     List of GN labels which this target needs built.
+#
+# Metadata scope
+#
+# This scope describes a metadata file to be added to the SDK element. Its
+# supported attributes are:
+#
+#   source (optional)
+#     Path to the metadata file.
+#
+#   value (optional)
+#     Scope representing the metadata contents.
+#
+#     NOTE: Exactly one of `source` or `value` must be set.
+#
+#   dest (required)
+#     Path to the metadata file in the SDK, relatively to the SDK root
+#
+#   schema (required)
+#     Name of the schema for this file, ignoring the extension.
+#     Metadata files are hosted under //build/sdk/meta.
+#     If the metadata file conforms to //build/sdk/meta/foo.json, the
+#     present attribute should have a value of "foo".
+#
+# File scopes
+#
+# Each scope describes a file to be added to the SDK element. The supported
+# attributes are:
+#
+#   source (required)
+#     Path to the original file.
+#     This path may be absolute or relative to the target's directory.
+#
+#   dest (required)
+#     Destination path of the file relative to the SDK root.
+
+template("sdk_atom") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  category = invoker.category
+
+  assert(defined(invoker.id), "Must define an SDK ID")
+
+  assert(defined(invoker.meta), "Must specify some metadata")
+  meta = invoker.meta
+
+  gn_deps = []
+  if (defined(invoker.non_sdk_deps)) {
+    gn_deps = invoker.non_sdk_deps
+  }
+
+  dep_manifests = []
+  if (defined(invoker.deps)) {
+    gn_deps += invoker.deps
+    foreach(dep, invoker.deps) {
+      gen_dir = get_label_info(dep, "target_gen_dir")
+      name = get_label_info(dep, "name")
+      dep_manifests += [ rebase_path("$gen_dir/$name.sdk") ]
+    }
+  }
+
+  assert(defined(invoker.files), "An atom must specify some files")
+  file_args = []
+  file_inputs = []
+  foreach(file, invoker.files) {
+    assert(defined(file.source), "File $file does not specify a source.")
+    assert(defined(file.dest), "File $file does not specify a destination.")
+    file_inputs += [ file.source ]
+    source = rebase_path(file.source)
+    file_args += [
+      "--file",
+      file.dest,
+      source,
+    ]
+  }
+
+  meta_target_name = "${target_name}_meta"
+  meta_content = invoker.meta
+  meta_file = "$target_gen_dir/$target_name.meta.json"
+
+  if (defined(meta_content.value)) {
+    # Directly write the value into a file in the output directory.
+    write_file(meta_file, meta_content.value, "json")
+    meta_deps = gn_deps
+  } else {
+    meta_copy_target_name = "${target_name}_meta_copy"
+    assert(defined(meta_content.source), "Meta scope needs a source or value")
+
+    # Copy the file to a canonical location for access by other rules.
+    # TODO(DX-497): instead, make sure that all atoms generate their metadata
+    # file in the right location.
+    copy(meta_copy_target_name) {
+      sources = [
+        meta_content.source,
+      ]
+
+      outputs = [
+        meta_file,
+      ]
+
+      deps = gn_deps
+    }
+
+    meta_deps = [ ":$meta_copy_target_name" ]
+  }
+
+  # Verify that the metadata complies with the specified schema.
+  validate_json(meta_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    data = meta_file
+    schema = "//build/sdk/meta/${meta_content.schema}.json"
+    sources = [
+      # This file is imported by all schemas.
+      "//build/sdk/meta/common.json",
+    ]
+    public_deps = meta_deps
+  }
+
+  # Add the metadata file to the set of files to include in SDKs.
+  meta_source = rebase_path(meta_file)
+  file_args += [
+    "--file",
+    meta.dest,
+    meta_source,
+  ]
+
+  # Builds a manifest representing this element.
+  action(target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    manifest = "$target_gen_dir/$target_name.sdk"
+    depfile = "$manifest.d"
+
+    script = "//build/sdk/create_atom_manifest.py"
+
+    public_deps = gn_deps + [ ":$meta_target_name" ]
+
+    inputs = dep_manifests + file_inputs + [
+               # Imported by the action's script.
+               "//build/sdk/sdk_common.py",
+             ]
+
+    outputs = [
+      manifest,
+    ]
+
+    args = [
+             "--id",
+             invoker.id,
+             "--out",
+             rebase_path(manifest, root_build_dir),
+             "--depfile",
+             rebase_path(depfile),
+             "--gn-label",
+             get_label_info(":$target_name", "label_with_toolchain"),
+             "--category",
+             category,
+             "--meta",
+             meta.dest,
+             "--deps",
+           ] + dep_manifests + file_args
+
+    if (defined(invoker.file_list)) {
+      args += [
+        "--file-list",
+        rebase_path(invoker.file_list),
+      ]
+    }
+  }
+}

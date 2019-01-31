@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/banjo/toolchain.gni")
+
+# Declares a BANJO library.
+#
+# Depending on the toolchain in which this targets is expanded, it will yield
+# different results:
+#   - in the BANJO toolchain, it will compile its source files into an
+#     intermediate representation consumable by language bindings generators;
+#   - in the target or shared toolchain, this will produce a source_set
+#     containing C/C++ bindings.
+#
+# Parameters
+#
+#   sources (required)
+#     List of paths to library source files.
+#
+#   name (optional)
+#     Name of the library.
+#     Defaults to the target's name.
+#
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+
+template("banjo") {
+  if (defined(invoker.sdk_category)) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
+  if (current_toolchain == banjo_toolchain) {
+    import("//build/banjo/banjo_library.gni")
+
+    banjo_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (is_fuchsia) {
+    import("//build/c/banjo_c.gni")
+
+    banjo_c_target(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    assert(false,
+           "Unable to process BANJO target in toolchain $current_toolchain.")
+  }
+}
+
+template("banjo_dummy") {
+  if (defined(invoker.sdk_category)) {
+    not_needed(invoker, [ "sdk_category" ])
+  }
+  if (current_toolchain == banjo_toolchain) {
+    import("//build/banjo/banjo_library.gni")
+
+    banjo_dummy_library(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else if (is_fuchsia) {
+    import("//build/c/banjo_c.gni")
+
+    banjo_dummy_c_target(target_name) {
+      forward_variables_from(invoker, "*")
+    }
+  } else {
+    assert(false,
+           "Unable to process BANJO target in toolchain $current_toolchain.")
+  }
+}

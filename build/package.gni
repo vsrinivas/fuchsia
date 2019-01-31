@@ -1,0 +1,844 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/assert_cmx.gni")
+import("//build/cmx/cmx.gni")
+import("//build/compiled_action.gni")
+import("//build/gn/packages.gni")
+import("//build/images/manifest.gni")
+import("//build/json/validate_json.gni")
+import("//build/package/component.gni")
+import("//build/packages/package_internal.gni")
+import("//build/testing/test_spec.gni")
+
+declare_args() {
+  # The package key to use for signing Fuchsia packages made by the
+  # `package()` template (and the `system_image` packge).  If this
+  # doesn't exist yet when it's needed, it will be generated.  New
+  # keys can be generated with the `pm -k FILE genkey` host command.
+  system_package_key = "//build/development.key"
+}
+
+# Generate a signed, sealed package file from a manifest.
+#
+# Parameters
+#
+#   manifest (required)
+#     [label] A generate_manifest() target defined earlier in the same file.
+#     This provides the contents for the package.
+#
+#   deps (optional)
+#   test (optional)
+#   visibility (optional)
+#     Same as for any GN `action()` target.
+
+template("pm_build_package") {
+  compiled_action(target_name) {
+    tool = "//garnet/go/src/pm:pm_bin"
+    tool_output_name = "pm"
+
+    deps = []
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                             "visibility",
+                           ])
+    pkg_manifest_outputs = get_target_outputs(invoker.manifest)
+    pkg_manifest_file = pkg_manifest_outputs[0]
+    pkg_out_dir = "$target_out_dir/$target_name"
+
+    deps += [
+      "//build/images:system_package_key_check",
+      invoker.manifest,
+    ]
+
+    inputs = [
+      pkg_manifest_file,
+      system_package_key,
+    ]
+
+    depfile = "$pkg_out_dir/meta.far.d"
+
+    outputs = [
+      # produced by seal, must be listed first because of depfile rules.
+      "$pkg_out_dir/meta.far",
+
+      # update
+      "$pkg_out_dir/meta/contents",
+
+      # sign
+      "$pkg_out_dir/meta/pubkey",
+      "$pkg_out_dir/meta/signature",
+
+      # seal
+      "$pkg_out_dir/meta.far.merkle",
+
+      # package blob manifest
+      "$pkg_out_dir/blobs.json",
+    ]
+
+    args = [
+      "-k",
+      rebase_path(system_package_key, root_build_dir),
+      "-o",
+      rebase_path(pkg_out_dir, root_build_dir),
+      "-m",
+      rebase_path(pkg_manifest_file, root_build_dir),
+      "build",
+      "-depfile",
+      "-blobsfile",
+    ]
+  }
+}
+
+# Defines a package
+#
+# The package template is used to define a unit of related code and data.
+# A package always has a name (defaulting to the target name) and lists of
+# scopes describing the components of the package.
+#
+# Parameters
+#
+#   deprecated_system_image (optional, default `false`)
+#     [bool] If true, the package is stored in the /system filesystem image
+#     rather than in a Fuchsia package.
+#
+#     TODO(PKG-46): Will be removed entirely eventually.
+#
+#     If this package uses the `drivers` parameter,
+#     `deprecated_system_image` must be set to `true` because we are not
+#     yet sophisticated enough to load drivers out of packages.
+#
+#   meta (optional)
+#     [list of scopes] Defines the metadata entries in the package. A metadata
+#     entry is typically a source file and is placed in the `meta/` directory of
+#     the assembled package.
+#
+#     Requires `deprecated_system_image` to be `false`.
+#
+#     Entries in a scope in the meta list:
+#
+#       path (required)
+#         [path] Location of entry in source or build directory. If the
+#         resource is checked in, this will typically be specified as a
+#         path relative to the BUILD.gn file containing the `package()`
+#         target. If the resource is generated, this will typically be
+#         specified relative to `$target_gen_dir`.
+#
+#       dest (required)
+#         [path] Location the resource will be placed within `meta/`.
+#
+#   binary (optional, *DEPRECATED*)
+#     [string] The path to the the primary binary for the package, relative to
+#     `$root_out_dir`. The binary will be placed in the assembled package at
+#     `bin/app` and will be executed by default when running the package.
+#
+#     Requires `deprecated_system_image` to be `false`.
+#
+#   binaries (optional)
+#     [list of scopes] Defines the binaries in the package. A binary is
+#     typically produced by the build system and is placed in the `bin/`
+#     directory of the assembled package.
+#
+#     Entries in a scope in the binaries list:
+#
+#       name (required)
+#         [string] Name of the binary.
+#
+#       source (optional)
+#         [path] Location of the binary in the build directory if it is not
+#         at `$root_out_dir/$name`.
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `bin/`.
+#
+#       shell (optional)
+#         [boolean] (default: false) When true, the binary is runnable from the shell.
+#         Shell binaries are run in the shell namespace and are not run as components.
+#
+#   components (optional)
+#     [list of fuchsia_component targets] Defines all the components this
+#     package should include in assembled package.
+#
+#     Requires `deprecated_system_image` to be `false`.
+#
+#   tests (optional)
+#     [list of scopes] Defines the test binaries in the package. A test is
+#     typically produced by the build system and is placed in the `test/`
+#     directory of the assembled package.
+#
+#     Entries in a scope in the tests list:
+#
+#       name (required)
+#         [string] Name of the test.
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `test/`.
+#
+#       disabled (optional)
+#         [bool] Whether to disable the test on continuous integration
+#         jobs. This can be used when a test is temporarily broken, or if
+#         it is too flaky or slow for CI. The test will also be skipped by
+#         the `runtests` command.
+#
+#       environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#         [list of scopes] Device environments in which the test should run.
+#
+#         Each scope in $environments contains:
+#
+#           dimensions (required)
+#             [scope] Dimensions of bots to target. Valid dimensions are
+#             element-wise subsets of the test platform entries defined in
+#             //build/testing/platforms.gni.
+#
+#           label (optional)
+#             [string] A key on which tests may be grouped. Tests with a given
+#             label will be run (1) together, and (2) only with support from
+#             the Infrastructure team. Labels are used as an escape hatch from
+#             the default testing pipeline for special tests or environments.
+#
+#   drivers (optional)
+#     [list of scopes] Defines the drivers in the package. A driver is
+#     typically produced by the build system and is placed in the `driver/`
+#     directory of the assembled package.
+#
+#     Requires `deprecated_system_image` to be `true`.
+#
+#     Entries in a scope in the drivers list:
+#
+#       name (required)
+#         [string] Name of the driver.
+#
+#   loadable_modules (optional)
+#     [list of scopes] Defines the loadable modules in the package.  These
+#     are produced by `loadable_module()` GN targets, and are typically
+#     placed in the `lib/` directory of the assembled packaged.
+#
+#     Entries in a scope in the loadable_modules list:
+#
+#       name (required)
+#         [string] Name of the loadable_module.
+#
+#       dest (optional, default: "lib")
+#         [string] Location the binary will be placed in the package.
+#
+#   libraries (optional, *DEPRECATED*)
+#     [list of scopes] Defines the (shared) libraries in the package. A library
+#     is placed in the `lib/` directory of the assembled package.
+#
+#     This is deprecated but is necessary in some `system_image` packages
+#     that install libraries used by things that don't properly isolate
+#     their dependencies.  Do not use it unless you are sure you have to.
+#
+#     Entries in a scope in the libraries list:
+#
+#       name (required)
+#         [string] Name of the library
+#
+#       source (optional)
+#         [path] Location of the binary in the build directory if it is not at
+#         `$root_out_dir/$name`
+#
+#       dest (optional)
+#         [path] Location the binary will be placed within `lib/`
+#
+#   resources (optional)
+#     [list of scopes] Defines the resources in the package. A resource is a
+#     data file that may be produced by the build system, checked in to a
+#     source repository, or produced by another system that runs before the
+#     build. Resources are placed in the `data/` directory of the assembled
+#     package.
+#
+#     Entries in a scope in the resources list:
+#
+#       path (required)
+#         [path] Location of resource in source or build directory. If the
+#         resource is checked in, this will typically be specified as a
+#         path relative to the BUILD.gn file containing the `package()`
+#         target. If the resource is generated, this will typically be
+#         specified relative to `$target_gen_dir`.
+#
+#       dest (required)
+#         [path] Location the resource will be placed within `data/`.
+#
+#   extra (optional)
+#     [list of paths] Manifest files containing extra entries, which
+#     might be generated by the build.
+#
+#   deps (optional)
+#   public_deps (optional)
+#   data_deps (optional)
+#   testonly (optional)
+#     Usual GN meanings.
+#
+template("package") {
+  if (current_toolchain == target_toolchain) {
+    forward_variables_from(invoker, [ "testonly" ])
+    pkg_target_name = target_name
+    pkg = {
+      package_version = "0"  # placeholder
+      forward_variables_from(invoker,
+                             [
+                               "binaries",
+                               "binary",
+                               "components",
+                               "data_deps",
+                               "deprecated_system_image",
+                               "deprecated_bare_package_url",
+                               "deps",
+                               "public_deps",
+                               "drivers",
+                               "extra",
+                               "libraries",
+                               "loadable_modules",
+                               "meta",
+                               "package_name",
+                               "resources",
+                               "visibility",
+                               "tests",
+                             ])
+      if (!defined(binaries)) {
+        binaries = []
+      }
+      if (!defined(deprecated_system_image)) {
+        deprecated_system_image = false
+      }
+      if (!defined(deps)) {
+        deps = []
+      }
+      if (!defined(components)) {
+        components = []
+      }
+      if (!defined(data_deps)) {
+        data_deps = []
+      }
+      if (!defined(public_deps)) {
+        public_deps = []
+      }
+      if (!defined(extra)) {
+        extra = []
+      }
+      if (!defined(drivers)) {
+        drivers = []
+      }
+      if (!defined(loadable_modules)) {
+        loadable_modules = []
+      }
+      if (!defined(libraries)) {
+        libraries = []
+      }
+      if (!defined(meta)) {
+        meta = []
+      }
+      if (!defined(package_name)) {
+        package_name = pkg_target_name
+      }
+      if (defined(deprecated_bare_package_url)) {
+        deps += [ "${deprecated_bare_package_url}:bare_package_url_whitelist" ]
+      }
+      if (components == []) {
+        assert_cmx(package_name) {
+          forward_variables_from(invoker, "*")
+        }
+      }
+      foreach(component, components) {
+        deps += [ component ]
+      }
+      if (!defined(resources)) {
+        resources = []
+      }
+      if (!defined(tests)) {
+        tests = []
+      }
+      package_set = ""
+    }
+
+    pkg_label = get_label_info(":$pkg_target_name", "label_no_toolchain")
+    pkg_desc = "Package ${pkg_label} (${pkg.package_name}):"
+    if (pkg.deprecated_system_image) {
+      assert(pkg.meta == [],
+             "$pkg_desc deprecated_system_image incompatible with meta")
+      assert(pkg.components == [],
+             "$pkg_desc deprecated_system_image incompatible with components")
+      assert(!defined(pkg.binary),
+             "$pkg_desc deprecated_system_image incompatible with binary")
+    } else {
+      assert(pkg.drivers == [],
+             "$pkg_desc drivers requires deprecated_system_image")
+      assert(pkg.libraries == [],
+             "$pkg_desc libraries requires deprecated_system_image")
+      if (defined(pkg.binary)) {
+        pkg.binaries += [
+          {
+            name = "app"
+            source = pkg.binary
+          },
+        ]
+      }
+    }
+
+    # Validate .cmx files
+    foreach(meta, pkg.meta) {
+      if (get_path_info(meta.dest, "extension") == "cmx") {
+        validate = "validate_" + pkg_target_name + "_" +
+                   get_path_info(meta.dest, "file")
+        cmx_validate(validate) {
+          data = meta.path
+
+          # the cmx file may be generated by one of this package's dependencies,
+          # but we don't know which one, so depend on all package deps here.
+          deps = pkg.deps
+        }
+        pkg.deps += [ ":$validate" ]
+      }
+    }
+
+    # cmx_format will minify cmx files in non-debug builds, and pretty-print cmx
+    # files in debug builds
+    meta_with_formatted_cmx = []
+    foreach(meta, pkg.meta) {
+      if (get_path_info(meta.dest, "extension") == "cmx") {
+        format =
+            "format_" + pkg_target_name + "_" + get_path_info(meta.dest, "file")
+
+        # TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
+        if (defined(pkg.deprecated_bare_package_url)) {
+          merged_deprecated_bare_package_url =
+              "merged_deprecated_bare_package_url_" + pkg_target_name + "_" +
+              get_path_info(meta.dest, "file")
+          cmx_merge(merged_deprecated_bare_package_url) {
+            sources = [
+              meta.path,
+              rebase_path("//build/deprecated_bare_package_url"),
+            ]
+            deps = pkg.deps
+          }
+          merged_deprecated_bare_package_url_outputs = []
+          merged_deprecated_bare_package_url_outputs =
+              get_target_outputs(":$merged_deprecated_bare_package_url")
+          merged_deprecated_bare_package_url_path =
+              merged_deprecated_bare_package_url_outputs[0]
+          pkg.deps += [ ":$merged_deprecated_bare_package_url" ]
+          cmx_format(format) {
+            data = rebase_path(merged_deprecated_bare_package_url_path)
+            deps = pkg.deps
+          }
+        } else {
+          cmx_format(format) {
+            data = rebase_path(meta.path)
+            deps = pkg.deps
+          }
+        }
+        formatted_outputs = []
+        formatted_outputs = get_target_outputs(":$format")
+        meta.path = formatted_outputs[0]
+        pkg.deps += [ ":$format" ]
+      }
+      meta_with_formatted_cmx += [ meta ]
+    }
+
+    shell_binaries = []
+
+    # Collect the package's primary manifest.  For a system_image package,
+    # this is its contributions to the /system manifest.  For an isolated
+    # package, this is the manifest for the package's `pkg/` filesystem.
+    pkg_manifest = []
+    foreach(meta, meta_with_formatted_cmx) {
+      pkg_manifest += [
+        {
+          dest = "meta/${meta.dest}"
+          source = rebase_path(meta.path)
+        },
+      ]
+    }
+    foreach(binary, pkg.binaries) {
+      if (defined(binary.dest)) {
+        dest = binary.dest
+      } else {
+        dest = binary.name
+      }
+      dest = "bin/${dest}"
+      if (defined(binary.shell) && binary.shell) {
+        shell_binaries += [ dest ]
+      }
+
+      pkg_manifest += [
+        {
+          dest = dest
+
+          if (defined(binary.source)) {
+            source = binary.source
+          } else {
+            source = binary.name
+          }
+          source = rebase_path(source, "", root_out_dir)
+        },
+      ]
+    }
+    foreach(test, pkg.tests) {
+      is_disabled = defined(test.disabled) && test.disabled
+      pkg_manifest += [
+        {
+          if (defined(test.dest)) {
+            dest = test.dest
+          } else {
+            dest = test.name
+          }
+          if (is_disabled) {
+            dest = "disabled/${dest}"
+          }
+          dest = "test/${dest}"
+          source = rebase_path(test.name, "", root_out_dir)
+
+          if (!is_disabled) {
+            test_spec("${test.name}.spec") {
+              name = test.name
+              if (pkg.deprecated_system_image) {
+                location = "/system/$dest"
+              } else {
+                location = "/pkgfs/packages/${pkg.package_name}/${pkg.package_version}/$dest"
+              }
+
+              # Encode the package name in the output directory to disambiguate
+              # during post-processing - cross-referencing with packages.json -
+              # whether a given test spec came from a package that was actually
+              # included in the build.
+              output_dir = "$target_out_dir/$pkg_target_name"
+
+              forward_variables_from(test, [ "environments" ])
+            }
+          }
+        },
+      ]
+    }
+    foreach(module, pkg.loadable_modules) {
+      pkg_manifest += [
+        {
+          if (defined(module.dest)) {
+            dest = module.dest
+          } else {
+            dest = "lib"
+          }
+          dest += "/${module.name}"
+          source = rebase_path(module.name, "", root_out_dir)
+        },
+      ]
+    }
+    foreach(driver, pkg.drivers) {
+      pkg_manifest += [
+        {
+          dest = "driver/${driver.name}"
+          source = rebase_path(driver.name, "", root_out_dir)
+        },
+      ]
+    }
+    foreach(resource, pkg.resources) {
+      pkg_manifest += [
+        {
+          dest = "data/${resource.dest}"
+          source = rebase_path(resource.path)
+        },
+      ]
+    }
+
+    # TODO(mcgrathr): Remove this when we can!  Packages installing
+    # libraries in the system image is all kinds of wrong.
+    foreach(library, pkg.libraries) {
+      pkg_manifest += [
+        {
+          if (defined(library.dest)) {
+            dest = library.dest
+          } else {
+            dest = library.name
+          }
+          dest = "lib/${dest}"
+          if (defined(library.source)) {
+            source = library.source
+          } else {
+            # TODO(mcgrathr): This breaks when everything is a variant so
+            # that only this here is using the non-variant shlib build.
+            source = get_label_info(shlib_toolchain, "name")
+            source += "/${library.name}"
+          }
+          source = rebase_path(source, "", root_out_dir)
+        },
+      ]
+    }
+
+    # Collect all the arguments describing input manifest files
+    # and all the entries we've just synthesized in `pkg_manifest`.
+    manifest_sources = pkg.extra
+    manifest_args = []
+    foreach(manifest_file, pkg.extra) {
+      manifest_file = rebase_path(manifest_file, root_build_dir)
+      manifest_args += [ "--manifest=${manifest_file}" ]
+    }
+    manifest_args += [ "--entry-manifest=${pkg_label}" ]
+    foreach(entry, pkg_manifest) {
+      manifest_sources += [ entry.source ]
+      manifest_args += [ "--entry=${entry.dest}=${entry.source}" ]
+    }
+
+    # An empty package() target doesn't actually generate a package at all.
+    # Conveniently, an empty system_image package has exactly that effect.
+    if (manifest_sources == [] && pkg.components == []) {
+      pkg.deprecated_system_image = true
+    }
+
+    if (pkg.deprecated_system_image) {
+      # Dummy target to deposit an empty ids.txt file for
+      # //build/images:ids.txt to collect.
+      action("${pkg_target_name}.final.manifest.ids.txt") {
+        script = "/bin/cp"
+
+        # Add sources and deps so that the package gets rebuilt whenever they
+        # change.
+        sources = manifest_sources
+        data_deps = pkg.data_deps
+        deps = pkg.deps
+        public_deps = pkg.public_deps
+        outputs = [
+          "$target_out_dir/${target_name}",
+        ]
+        args = [
+                 "-f",
+                 "/dev/null",
+               ] + rebase_path(outputs, root_build_dir)
+      }
+    } else {
+      # Synthesize the meta/package file.
+      pkg_meta_package = "${pkg_target_name}_meta_package.json"
+      action(pkg_meta_package) {
+        visibility = [ ":${pkg_target_name}.manifest" ]
+        script = "//build/gn/write_package_json.py"
+        outputs = [
+          "$target_out_dir/$pkg_meta_package",
+        ]
+        args = [
+          "--name",
+          pkg.package_name,
+          "--version",
+          pkg.package_version,
+          rebase_path(pkg_meta_package, root_build_dir, target_out_dir),
+        ]
+      }
+
+      generate_manifest("${pkg_target_name}.manifest") {
+        sources = manifest_sources + get_target_outputs(":$pkg_meta_package")
+        args = manifest_args +
+               [ "--entry=meta/package=" +
+                 rebase_path(pkg_meta_package, "", target_out_dir) ]
+        deps = pkg.deps + [ ":$pkg_meta_package" ]
+        public_deps = pkg.public_deps
+      }
+
+      final_manifest = "${pkg_target_name}.final.manifest"
+      final_manifest_ids = "${final_manifest}.ids.txt"
+
+      # TODO(CF-224): clean this up when gn has metadata support for templates
+      # merge all package ids and component ids in a single file.
+      action(final_manifest_ids) {
+        script = "/usr/bin/sort"
+        output_name = "${target_out_dir}/${final_manifest_ids}"
+        outputs = [
+          output_name,
+        ]
+        manifest_id = "$target_out_dir/${pkg_target_name}.manifest.ids.txt"
+        args = [
+          "-u",
+          "-o",
+          rebase_path(output_name),
+          rebase_path(manifest_id),
+        ]
+        inputs = [
+          manifest_id,
+        ]
+        deps = [
+          ":${pkg_target_name}.manifest",
+        ]
+
+        foreach(component, pkg.components) {
+          deps += [ component ]
+          component_name = get_label_info(component, "name")
+          dir = get_label_info(component, "target_out_dir")
+          manifest_file = "${dir}/${component_name}.manifest.ids.txt"
+          inputs += [ manifest_file ]
+          args += [ rebase_path(manifest_file) ]
+        }
+      }
+
+      # Merge all component and package manifests in single file
+      action(final_manifest) {
+        script = "//build/cat.py"
+        output_name = "${target_out_dir}/${final_manifest}"
+        outputs = [
+          output_name,
+        ]
+        visibility = [ "*" ]
+
+        pmx = "$target_out_dir/${pkg_target_name}.manifest"
+        args = [
+          "-o",
+          rebase_path(output_name),
+          "-i",
+          rebase_path("$target_out_dir/${pkg_target_name}.manifest"),
+        ]
+        inputs = [
+          pmx,
+        ]
+        deps = [
+          ":${final_manifest_ids}",
+          ":${pkg_target_name}.manifest",
+        ]
+
+        foreach(component, pkg.components) {
+          deps += [ component ]
+          component_name = get_label_info(component, "name")
+          dir = get_label_info(component, "target_out_dir")
+          manifest_file = "${dir}/${component_name}.manifest"
+          inputs += [ manifest_file ]
+          args += [
+            "-i",
+            rebase_path(manifest_file),
+          ]
+        }
+      }
+
+      # Next generate a signed, sealed package file.
+      pm_build_package("${pkg_target_name}.meta") {
+        manifest = ":$final_manifest"
+      }
+
+      # Clear it so we don't put anything into the system image.
+      manifest_args = []
+    }
+
+    generate_response_file(pkg_target_name) {
+      if (defined(pkg.visibility)) {
+        visibility = pkg.visibility + [
+                       "//build/gn:packages",
+                       "//build/images:system_image.manifest",
+                     ]
+      }
+      if (pkg.deprecated_system_image) {
+        deps = pkg.deps + [ ":${pkg_target_name}.final.manifest.ids.txt" ]
+      } else {
+        deps = pkg.deps + [ ":${pkg_target_name}.final.manifest" ]
+      }
+      data_deps = pkg.data_deps
+      public_deps = pkg.public_deps
+      output_name = "${pkg_target_name}.system.rsp"
+      response_file_contents = manifest_args
+    }
+
+    # TODO(raggi): once /system is removed, the blobs rsp's can be removed, as
+    # all packages would produce a blobs.json.
+    generate_response_file("${pkg_target_name}.blobs.rsp") {
+      if (pkg.deprecated_system_image) {
+        # A system_image package has no blobs of its own.
+        response_file_contents = []
+      } else {
+        # A real package needs blobs for all its contents and for its
+        # synthesized meta.far file.
+        deps = [
+          ":${pkg_target_name}.meta",
+        ]
+        response_file_contents = [
+          "--input",
+          rebase_path("${pkg_target_name}.meta/blobs.json",
+                      root_build_dir,
+                      target_out_dir),
+        ]
+      }
+    }
+
+    generate_response_file("${pkg_target_name}.shell_commands.rsp") {
+      response_file_contents = []
+
+      foreach(binary, shell_binaries) {
+        response_file_contents += [
+          # TODO(CF-105): fuchsia-pkg URIs should always have a variant (add /${pkg.package_version}).
+          "--uri",
+          "fuchsia-pkg://fuchsia.com/${pkg.package_name}#${binary}",
+        ]
+      }
+    }
+
+    # Determine why this package is being built.
+    if (!pkg.deprecated_system_image) {
+      foreach(name, available_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "available"
+        }
+      }
+      foreach(name, preinstall_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "preinstall"
+        }
+      }
+      foreach(name, monolith_packages) {
+        if (name == pkg_label) {
+          pkg.package_set = "monolith"
+        }
+      }
+    }
+
+    generate_system_index("${pkg_target_name}.system_index.rsp") {
+      deprecated_system_image = pkg.deprecated_system_image
+      meta_target = ":${pkg_target_name}.meta"
+      package_set = pkg.package_set
+      package_name = pkg.package_name
+      package_version = pkg.package_version
+      blobs_json = "${pkg_target_name}.meta/blobs.json"
+    }
+
+    # A real package needs has a pkgsvr index entry mapping its package
+    # name and version to its meta.far file's merkleroot.
+    # The amber index is the same, but needs the meta.far filename
+    # in the build, rather than its merkleroot.
+    # TODO(mcgrathr): Make amber publish use pkgsvr index directly.
+    foreach(index,
+            [
+              {
+                name = "pkgsvr_index"
+                file = "meta.far.merkle"
+              },
+              {
+                name = "amber_index"
+                file = "meta.far"
+              },
+            ]) {
+      generate_index("${pkg_target_name}.${index.name}.rsp") {
+        deprecated_system_image = pkg.deprecated_system_image
+        if (!deprecated_system_image) {
+          deps = [
+            ":${pkg_target_name}.manifest",
+            ":${pkg_target_name}.meta",
+          ]
+        }
+        index_file = "${pkg_target_name}.meta/${index.file}"
+        package_name = pkg.package_name
+        package_version = pkg.package_version
+        pkg_label = pkg_label
+        if (defined(testonly)) {
+          testonly = testonly
+        }
+      }
+    }
+  } else {
+    group(target_name) {
+      forward_variables_from(invoker,
+                             [
+                               "public_deps",
+                               "deps",
+                               "testonly",
+                             ])
+    }
+
+    # Suppress unused variable warnings.
+    not_needed(invoker, "*")
+  }
+}

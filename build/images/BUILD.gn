@@ -1,0 +1,1679 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/config/fuchsia/zbi.gni")
+import("//build/config/fuchsia/zircon.gni")
+import("//build/gn/packages.gni")
+import("//build/images/boot.gni")
+import("//build/images/custom_signing.gni")
+import("//build/images/fvm.gni")
+import("//build/images/json.gni")
+import("//build/images/manifest.gni")
+import("//build/images/max_fvm_size.gni")
+import("//build/package.gni")
+import("//build/sdk/sdk_atom.gni")
+import("//build/sdk/sdk_molecule.gni")
+import("//garnet/build/pkgfs.gni")
+import("//garnet/go/src/pm/pm.gni")
+
+declare_args() {
+  # Groups to include from the Zircon /boot manifest into /boot.
+  # This is either "all" or a comma-separated list of one or more of:
+  #   core -- necessary to boot
+  #   misc -- utilities in /bin
+  #   test -- test binaries in /bin and /test
+  zircon_boot_groups = "core"
+
+  # Path to manifest file containing data to place into the initial /data
+  # partition.
+  data_partition_manifest = ""
+}
+
+declare_args() {
+  # Groups to include from the Zircon /boot manifest into /system
+  # (instead of into /boot like Zircon's own bootdata.bin does).
+  # Should not include any groups that are also in zircon_boot_groups,
+  # which see.  If zircon_boot_groups is "all" then this should be "".
+  # **TODO(mcgrathr)**: _Could default to "" for `!is_debug`, or "production
+  # build".  Note including `"test"` here places all of Zircon's tests into
+  # `/system/test`, which means that Fuchsia bots run those tests too._
+  zircon_system_groups = "misc,test"
+  if (zircon_boot_groups == "all") {
+    zircon_system_groups = ""
+  }
+}
+
+if (zircon_boot_groups == "all") {
+  assert(zircon_system_groups == "",
+         "zircon_boot_groups already has everything")
+} else {
+  assert(zircon_system_groups != "all" && zircon_system_groups != "core",
+         "zircon_system_groups cannot include core (or all)")
+}
+
+# This will collect a list of scopes describing each image exported.
+# See json.gni.
+images = [
+  {
+    sources = [
+      "$root_build_dir/args.gn",
+    ]
+    json = {
+      name = "buildargs"
+      type = "gn"
+      archive = true
+    }
+    deps = []
+  },
+  {
+    sources = [
+      "//.jiri_root/update_history/latest",
+    ]
+    json = {
+      name = "jiri_snapshot"
+      type = "xml"
+      archive = true
+    }
+    deps = []
+  },
+  {
+    json = {
+      name = "bootserver"
+      type = "exe.$host_platform"
+      archive = true
+    }
+    sources = [
+      "$zircon_tools_dir/bootserver",
+    ]
+    deps = []
+  },
+]
+
+# Write a JSON metadata file about the packages in the build.
+_packages_json = {
+  _all = []
+  monolith = []
+  foreach(pkg, monolith_packages) {
+    monolith += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  preinstall = []
+  foreach(pkg, preinstall_packages) {
+    preinstall += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  available = []
+  foreach(pkg, available_packages) {
+    available += [ get_label_info(pkg, "name") ]
+    _all += [ pkg ]
+    _all -= [ pkg ]
+    _all += [ pkg ]
+  }
+  packages = []
+  foreach(pkg, _all) {
+    packages += [
+      {
+        dir = get_label_info(pkg, "dir")
+        name = get_label_info(pkg, "name")
+        build_dir =
+            rebase_path(get_label_info(pkg, "target_out_dir"), root_build_dir)
+      },
+    ]
+  }
+}
+write_file("$root_build_dir/packages.json",
+           {
+             forward_variables_from(_packages_json, "*", [ "_all" ])
+           },
+           "json")
+
+###
+### shell-commands package
+###
+### TODO(CF-223)
+### shell-commands is a Fuchsia package that aggregates all binaries from all
+### "available" Fuchsia packages producing "#!resolve URI" trampolines. This
+### package is a solution to enable the shell to resolve command line
+### programs out of ephemeral packages.
+
+# create-shell-commands performs two actions:
+#   - create trampoline scripts ("#!resolve COMMAND-URI") for each command.
+#   - produce a manifest that contains references to all of the trampolines.
+action("create-shell-commands") {
+  testonly = true
+  script = "create-shell-commands.py"
+  outputs = [
+    "$target_out_dir/shell-commands-extra.manifest",
+  ]
+  args = [
+    "--trampoline-dir",
+    rebase_path(target_out_dir + "/commands", root_build_dir),
+    "--output-manifest",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+  deps = []
+  sources = []
+
+  foreach(pkg_label, available_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    if (pkg_target_name != "shell-commands") {
+      pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+      cmd_rspfile = "$pkg_target_out_dir/${pkg_target_name}.shell_commands.rsp"
+      deps += [ "${pkg_label}.shell_commands.rsp" ]
+      sources += [ cmd_rspfile ]
+      args += [ "@" + rebase_path(cmd_rspfile, root_build_dir) ]
+    }
+  }
+}
+
+package("shell-commands") {
+  testonly = true
+  extra = get_target_outputs(":create-shell-commands")
+  deps = [
+    ":create-shell-commands",
+  ]
+}
+
+###
+### Fuchsia system image.  This aggregates contributions from all the
+### package() targets enabled in the build.
+###
+
+pm_binary_label = "//garnet/go/src/pm:pm_bin($host_toolchain)"
+pm_out_dir = get_label_info(pm_binary_label, "root_out_dir")
+pm_binary = "$pm_out_dir/pm"
+
+# This just runs `pm -k $system_package_key genkey` if the file doesn't exist.
+# Every package() target depends on this.
+action("system_package_key_check") {
+  visibility = [ "*" ]
+  deps = [
+    pm_binary_label,
+  ]
+  outputs = [
+    "$target_out_dir/system_package_key_check_ok.stamp",
+  ]
+  script = "//build/gn_run_binary.sh"
+  inputs = [
+    "system_package_key_check.py",
+    pm_binary,
+  ]
+  args =
+      [ clang_prefix ] + rebase_path(inputs + outputs + [ system_package_key ])
+}
+
+# The pkgsvr index is a manifest mapping `package_name/package_version` to
+# the merkleroot of the package's meta.far file.
+pkgsvr_index = "$target_out_dir/pkgsvr_index"
+
+action("pkgsvr_index") {
+  visibility = [
+    ":system_image.manifest",
+    ":update_packages.manifest",
+  ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--contents" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, monolith_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+}
+
+# preinstall.manifest is a manifest of files that are a pkgfs "dynamic index"
+# populated inside /pkgfs/packages that are {name}/{version} containing the
+# merkleroot of the meta.far of that package.
+action("preinstall.manifest") {
+  visibility = [ ":data.blk" ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--rewrite=*=pkgfs_index/packages/{target}={source}" ]
+  outputs = [
+    # The output is in the root build dir in order to avoid a complex rewrite
+    # of the source path. The minfs tool this is passed to interprets source
+    # locations relative to the manifest.
+    "$root_build_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, preinstall_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_meta_far_merkle = update_meta_dir + "/meta.far.merkle"
+  args += [
+    "--entry",
+    "update/0=" + rebase_path(update_meta_far_merkle, root_build_dir),
+  ]
+  deps += [ ":update.meta" ]
+}
+
+# The /boot and /system manifests have to be generated in concert.  Things
+# like drivers going into /system can affect what needs to go into /boot.
+boot_manifest = "$target_out_dir/boot.manifest"
+
+# The system_image "package" manifest is everything that appears in /system.
+generate_manifest("system_image.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  # Create the /boot manifest that gets packed into BOOTFS in the ZBI.
+  # /system manifest files can assume that the /boot files are visible at
+  # runtime, so dependencies already in /boot won't be copied into /system.
+  bootfs_manifest = boot_manifest
+  bootfs_zircon_groups = zircon_boot_groups
+
+  # Collect whatever we want from Zircon that didn't go into /boot.
+  zircon_groups = zircon_system_groups
+
+  # Now each package() target in the build contributes manifest entries.
+  # For system_image packages, these contain binaries that need their
+  # references resolved from the auxiliary manifests or /boot (above).
+  args = []
+  deps = []
+  sources = []
+  foreach(pkg_label, monolith_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_system_rsp = "$pkg_target_out_dir/${pkg_target_name}.system.rsp"
+    deps += [ pkg_label ]
+    sources += [ pkg_system_rsp ]
+    args += [ "@" + rebase_path(pkg_system_rsp, root_build_dir) ]
+  }
+
+  args += [ "--entry-manifest=" +
+            get_label_info(":$target_name", "label_no_toolchain") ]
+
+  # Add the meta/package JSON file that makes this the "system_image" package.
+  json = "system_meta_package.json"
+  sources += [ json ]
+  args += [ "--entry=meta/package=" + rebase_path(json, root_build_dir) ]
+
+  # Add the static packages (pkgsvr) index.
+  deps += [ ":pkgsvr_index" ]
+  sources += [ pkgsvr_index ]
+  args += [ "--entry=data/static_packages=" +
+            rebase_path(pkgsvr_index, root_build_dir) ]
+}
+
+system_manifest_outputs = get_target_outputs(":system_image.manifest")
+assert(boot_manifest == system_manifest_outputs[2])
+system_build_id_map = system_manifest_outputs[1]
+
+# Generate, sign, and seal the system_image package file.
+pm_build_package("system_image.meta") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = ":system_image.manifest"
+}
+
+# Now generate the blob manifest.  This lists all the source files
+# that need to go into the blobfs image.  That is everything from the
+# system_image manifest, everything from each package manifest, and
+# all the synthesized meta.far files.
+blob_manifest = "$root_build_dir/blob.manifest"
+
+action("blob.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  outputs = [
+    blob_manifest,
+  ]
+  depfile = blob_manifest + ".d"
+  deps = [
+    ":system_image.meta",
+    ":update.meta",
+  ]
+  inputs = []
+  script = "blob_manifest.py"
+  args = [ "@{{response_file_name}}" ]
+
+  response_file_contents = [
+    "--output=" + rebase_path(blob_manifest, root_build_dir),
+    "--depfile=" + rebase_path(depfile, root_build_dir),
+    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json",
+                             root_build_dir),
+    "--input=" +
+        rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
+  ]
+  foreach(pkg_label, monolith_packages + preinstall_packages) {
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_blobs_rsp = "${pkg_target_out_dir}/${pkg_target_name}.blobs.rsp"
+    deps += [ "${pkg_label}.blobs.rsp" ]
+    inputs += [ pkg_blobs_rsp ]
+    response_file_contents +=
+        [ "@" + rebase_path(pkg_blobs_rsp, root_build_dir) ]
+  }
+}
+
+# Pack up all the blobs!
+zircon_tool_action("blob.blk") {
+  visibility = [ ":*" ]
+  testonly = true
+  deps = [
+    ":blob.manifest",
+  ]
+  blob_image_path = "$target_out_dir/$target_name"
+  blob_size_list = "$root_build_dir/blob.sizes"
+  outputs = [
+    blob_image_path,
+    # This should be an output too, but the generate_fvm template assumes that all
+    # outputs of these actions are inputs to the fvm tool.
+    # blob_size_list
+  ]
+  depfile = blob_image_path + ".d"
+  inputs = [
+    blob_manifest,
+  ]
+  tool = "blobfs"
+  args = [
+    "--depfile",
+    "--sizes",
+    rebase_path(blob_size_list, root_build_dir),
+    "--compress",
+    rebase_path(blob_image_path, root_build_dir),
+    "create",
+    "--manifest",
+    rebase_path(blob_manifest, root_build_dir),
+  ]
+}
+images += [
+  {
+    deps = [
+      ":blob.blk",
+    ]
+    public = [
+      "IMAGE_BLOB_RAW",
+    ]
+    json = {
+      name = "blob"
+      type = "blk"
+    }
+  },
+]
+
+###
+### Zircon Boot Images
+###
+
+declare_args() {
+  # List of arguments to add to /boot/config/devmgr.
+  # These come after synthesized arguments to configure blobfs and pkgfs.
+  devmgr_config = []
+
+  # List of kernel command line arguments to bake into the boot image.
+  # See also //zircon/docs/kernel_cmdline.md and
+  # [`devmgr_config`](#devmgr_config).
+  kernel_cmdline_args = []
+
+  # Files containing additional kernel command line arguments to bake into
+  # the boot image.  The contents of these files (in order) come after any
+  # arguments directly in [`kernel_cmdline_args`](#kernel_cmdline_args).
+  # These can be GN `//` source pathnames or absolute system pathnames.
+  kernel_cmdline_files = []
+
+  # List of extra manifest entries for files to add to the BOOTFS.
+  # Each entry can be a "TARGET=SOURCE" string, or it can be a scope
+  # with `sources` and `outputs` in the style of a copy() target:
+  # `outputs[0]` is used as `TARGET` (see `gn help source_expansion`).
+  bootfs_extra = []
+
+  # List of kernel images to include in the update (OTA) package.
+  # If no list is provided, all built kernels are included. The names in the
+  # list are strings that must match the filename to be included in the update
+  # package.
+  update_kernels = []
+}
+
+images += [
+  {
+    # This is the file to give QEMU's `-kernel` switch with a complete
+    # ZBI (some `IMAGE_*_ZBI` file) for its `-initrd` switch.
+    public = [
+      "IMAGE_QEMU_KERNEL_RAW",
+    ]
+    json = {
+      name = "qemu-kernel"
+      type = "kernel"
+    }
+    sdk = "qemu-kernel.bin"
+    deps = []
+    if (current_cpu == "arm64") {
+      sources = [
+        "$zircon_build_dir/qemu-boot-shim.bin",
+      ]
+    } else if (current_cpu == "x64") {
+      sources = [
+        "$zircon_build_dir/multiboot.bin",
+      ]
+    }
+  },
+]
+
+# Generate the /boot/config/devmgr file.  This looks like a kernel command
+# line file, but is read by devmgr (in addition to kernel command line
+# arguments), not by the kernel or boot loader.
+action("devmgr_config.txt") {
+  visibility = [ ":fuchsia" ]
+  testonly = true
+
+  script = "manifest.py"
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+
+  pkgfs = "bin/" + pkgfs_binary_name
+  pkgfs_label = pkgfs_package_label + ".meta"
+  pkgfs_pkg_out_dir = get_label_info(pkgfs_label, "target_out_dir") + "/" +
+                      get_label_info(pkgfs_label, "name")
+  pkgfs_blob_manifest = "$pkgfs_pkg_out_dir/meta/contents"
+  system_image_merkleroot = "$target_out_dir/system_image.meta/meta.far.merkle"
+
+  deps = [
+    ":system_image.meta",
+    pkgfs_label,
+  ]
+  sources = [
+    pkgfs_blob_manifest,
+    system_image_merkleroot,
+  ]
+
+  args = [
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+
+    # Start with the fixed options.
+    "--entry=devmgr.require-system=true",
+  ]
+
+  # Add the pkgfs command line, embedding the merkleroot of the system image.
+  args += [
+    "--contents",
+    "--rewrite=*=zircon.system.pkgfs.cmd={target}+{source}",
+    "--entry=${pkgfs}=" + rebase_path(system_image_merkleroot, root_build_dir),
+    "--no-contents",
+    "--reset-rewrite",
+  ]
+
+  # Embed the pkgfs blob manifest with the "zircon.system.pkgfs.file."
+  # prefix on target file names.
+  args += [
+    "--rewrite=*=zircon.system.pkgfs.file.{target}={source}",
+    "--manifest=" + rebase_path(pkgfs_blob_manifest, root_build_dir),
+    "--reset-rewrite",
+  ]
+
+  foreach(entry, devmgr_config) {
+    args += [ "--entry=$entry" ]
+  }
+
+  # If there were any ASan drivers in the build, bin/devhost.asan
+  # should have been brought into the boot manifest.  devmgr needs to
+  # be told to use it in case there are ASan drivers in /system but
+  # none in /boot.  If there were any non-ASan drivers in the build,
+  # bin/devhost.asan will load them and needs to know to moderate the
+  # checking for interacting with uninstrumented code.
+  deps += [ ":system_image.manifest" ]
+  sources += [ boot_manifest ]
+  args += [
+    "--include=bin/devhost.asan",
+    "--include=bin/devhost",
+    "--rewrite=bin/devhost.asan=devmgr.devhost.asan=true",
+    "--rewrite=bin/devhost=devhost.asan.strict=false",
+    "--manifest=" + rebase_path(boot_manifest, root_build_dir),
+  ]
+}
+
+# The main bootable image, which requires `blob.blk` to appear on some
+# attached storage device at runtime.
+zbi("fuchsia") {
+  testonly = true
+  deps = [
+    ":devmgr_config.txt",
+    ":system_image.manifest",
+  ]
+  inputs = [
+    "${zircon_build_dir}/kernel.zbi",
+    boot_manifest,
+  ]
+  manifest = [
+    {
+      outputs = [
+        "config/devmgr",
+      ]
+      sources = get_target_outputs(":devmgr_config.txt")
+    },
+  ]
+  cmdline = kernel_cmdline_args
+  cmdline_inputs = kernel_cmdline_files
+  manifest += bootfs_extra
+}
+images += [
+  {
+    deps = [
+      ":fuchsia",
+    ]
+    sdk = "fuchsia.zbi"
+    updater = "zbi"
+    json = {
+      name = "zircon-a"
+      type = "zbi"
+
+      # TODO(IN-892): Although we wish to minimize the usage of mexec (ZX-2069),
+      # the infrastructure currently requires it for vim2 lifecycle management.
+      # (`fastboot continue` does not continue back to fuchsia after paving and
+      # rebooting in the case we do not mexec a kernel.)
+      bootserver_pave = [ "--boot" ]
+
+      if (custom_signing_script == "") {
+        bootserver_pave += [
+          "--zircona",
+          # TODO(ZX-2625): `dm reboot-recovery` boots from zircon-b instead of
+          # zircon-r, so for now zedboot is being paved to this slot.
+          # "--zirconb",
+        ]
+      }
+    }
+    public = [
+      "IMAGE_ZIRCONA_ZBI",
+
+      # TODO(mcgrathr): The complete ZBI can be used with a separate
+      # kernel too, the kernel image in it will just be ignored.  So
+      # just use the primary ZBI for this until all uses are
+      # converted to using the ZBI alone.  Then remove this as
+      # IMAGE_BOOT_RAM variable should no longer be in use.
+      "IMAGE_BOOT_RAM",
+    ]
+  },
+]
+
+if (custom_signing_script != "") {
+  custom_signed_zbi("signed") {
+    output_name = "fuchsia.zbi"
+    testonly = true
+    deps = [
+      ":fuchsia",
+    ]
+    zbi = get_target_outputs(":fuchsia")
+  }
+  images += [
+    {
+      deps = [
+        ":signed",
+      ]
+      sdk = "fuchsia.zbi.signed"
+      updater = "zbi.signed"
+      json = {
+        name = "zircon-a.signed"
+        type = "zbi.signed"
+        bootserver_pave = [ "--zircona" ]
+      }
+      public = [
+        "IMAGE_ZIRCONA_SIGNEDZBI",
+      ]
+    },
+  ]
+  if (use_vbmeta) {
+    images += [
+      {
+        deps = [
+          ":signed",
+        ]
+        sources = [
+          "$root_out_dir/fuchsia.zbi.vbmeta",
+        ]
+        json = {
+          name = "zircon-a.vbmeta"
+          type = "vbmeta"
+          bootserver_pave = [ "--vbmetaa" ]
+        }
+        public = [
+          "IMAGE_VBMETAA_RAW",
+        ]
+      },
+    ]
+  }
+}
+
+# The updater also wants the zedboot zbi as recovery.
+images += [
+  {
+    deps = [
+      "zedboot:zbi",
+    ]
+    sources = [
+      "$root_out_dir/zedboot.zbi",
+    ]
+    updater = "zedboot"
+  },
+]
+
+if (custom_signing_script != "") {
+  images += [
+    {
+      deps = [
+        "zedboot:signed",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.zbi.signed",
+      ]
+      updater = "zedboot.signed"
+    },
+  ]
+}
+
+###
+### Complete images for booting and installing the whole system.
+###
+
+declare_args() {
+  # Build boot images that prefer Zedboot over local boot (only for EFI).
+  always_zedboot = false
+}
+
+# data.blk creates minfs data partition containing the preinstall package
+# index. The partition is included in fvm.blk and fvm.sparse.blk.
+# To increase the size of the data partition, increase the total size of the
+# fvm images using |fvm_image_size|.
+zircon_tool_action("data.blk") {
+  testonly = true
+  tool = "minfs"
+  data_image_path = "$target_out_dir/$target_name"
+  outputs = [
+    data_image_path,
+  ]
+  depfile = data_image_path + ".d"
+  deps = [
+    ":preinstall.manifest",
+  ]
+  preinstall_manifest = get_target_outputs(deps[0])
+  args = [
+    "--depfile",
+    rebase_path(data_image_path, root_build_dir),
+    "create",
+    "--manifest",
+    rebase_path(preinstall_manifest[0], root_build_dir),
+  ]
+  if (data_partition_manifest != "") {
+    args += [
+      "--manifest",
+      rebase_path(data_partition_manifest),
+    ]
+  }
+}
+images += [
+  {
+    public = [
+      "IMAGE_DATA_RAW",
+    ]
+    json = {
+      name = "data"
+      type = "blk"
+    }
+    deps = [
+      ":data.blk",
+    ]
+  },
+]
+
+# Record the maximum allowable FVM size in the build directory for later steps
+# to check against.
+max_fvm_size_file = "$root_build_dir/max_fvm_size.txt"
+write_file(max_fvm_size_file, max_fvm_size)
+
+# fvm.blk creates an FVM partition image containing the blob partition produced
+# by blob.blk and the data partition produced by data.blk. fvm.blk is primarily
+# invoked and used by the qemu run, via `fx run`.
+generate_fvm("fvm.blk") {
+  testonly = true
+  output_name = "$target_out_dir/fvm.blk"
+  args = fvm_create_args
+  if (fvm_image_size != "") {
+    args += [
+      "--length",
+      fvm_image_size,
+    ]
+  }
+  partitions = [
+    {
+      type = "blob"
+      dep = ":blob.blk"
+    },
+    {
+      type = "data"
+      dep = ":data.blk"
+    },
+  ]
+}
+images += [
+  {
+    deps = [
+      ":fvm.blk",
+    ]
+    json = {
+      name = "storage-full"
+      type = "blk"
+    }
+    sdk = "fvm.blk"
+    public = [
+      "IMAGE_FVM_RAW",
+    ]
+  },
+]
+
+# fvm.sparse.blk creates a sparse FVM partition image containing the blob
+# partition produced by blob.blk and the data partition produced by data.blk.
+# fvm.sparse.blk is primarily invoked and used by the paver boot, via `fx
+# pave`.
+generate_fvm("fvm.sparse.blk") {
+  testonly = true
+  output_name = "$target_out_dir/fvm.sparse.blk"
+  deps = [
+    ":blob.blk",
+    ":data.blk",
+  ]
+  args = fvm_sparse_args
+  partitions = [
+    {
+      type = "blob"
+      dep = ":blob.blk"
+    },
+    {
+      type = "data"
+      dep = ":data.blk"
+    },
+  ]
+}
+images += [
+  {
+    deps = [
+      ":fvm.sparse.blk",
+    ]
+    json = {
+      name = "storage-sparse"
+      type = "blk"
+      bootserver_pave = [ "--fvm" ]
+    }
+    installer = "fvm.sparse.blk"
+    sdk = "fvm.sparse.blk"
+    public = [
+      "IMAGE_FVM_SPARSE",
+    ]
+  },
+]
+
+# This rolls the primary ZBI together with a compressed RAMDISK image of
+# fvm.blk into a fat ZBI that boots the full system without using any real
+# storage.  The system decompresses the fvm.blk image into memory and then
+# sees that RAM disk just as if it were a real disk on the device.
+zbi("netboot") {
+  testonly = true
+  deps = [
+    ":fuchsia",
+    ":fvm.blk",
+  ]
+  inputs = get_target_outputs(":fuchsia")
+  ramdisk_inputs = get_target_outputs(":fvm.blk")
+}
+images += [
+  {
+    default = false
+    json = {
+      bootserver_netboot = [ "--boot" ]
+      name = "netboot"
+      type = "zbi"
+    }
+    public = [
+      "IMAGE_NETBOOT_ZBI",
+
+      # TODO(mcgrathr): The complete ZBI can be used with a separate kernel
+      # too, the kernel image in it will just be ignored.  So just use the
+      # primary ZBI for this until all uses are converted to using the ZBI
+      # alone.  Then remove this as IMAGE_BOOT_RAM variable should no
+      # longer be in use.
+      "IMAGE_NETBOOT_RAM",
+    ]
+    deps = [
+      ":netboot",
+    ]
+  },
+]
+
+if (target_cpu != "arm64") {
+  # ChromeOS vboot images.
+  vboot("vboot") {
+    testonly = true
+    output_name = "fuchsia"
+    deps = [
+      ":fuchsia",
+    ]
+  }
+  images += [
+    {
+      json = {
+        name = "zircon-vboot"
+        type = "vboot"
+        bootserver_pave = [ "--kernc" ]
+      }
+      deps = [
+        ":vboot",
+      ]
+      installer = "zircon.vboot"
+      sdk = "zircon.vboot"
+      updater = "kernc"
+      public = [
+        "IMAGE_ZIRCON_VBOOT",
+      ]
+    },
+  ]
+
+  # The installer also wants the zedboot vboot image.
+  images += [
+    {
+      deps = [
+        "zedboot:vboot",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.vboot",
+      ]
+      installer = "zedboot.vboot"
+    },
+  ]
+
+  # EFI ESP images.
+  esp("esp") {
+    output_name = "fuchsia"
+    testonly = true
+    if (always_zedboot) {
+      cmdline = "zedboot/efi_cmdline.txt"
+    } else {
+      cmdline = "efi_local_cmdline.txt"
+    }
+  }
+  images += [
+    {
+      deps = [
+        ":esp",
+      ]
+      json = {
+        name = "efi"
+        type = "blk"
+        bootserver_pave = [ "--efi" ]
+      }
+      installer = "local.esp.blk"
+      sdk = "local.esp.blk"
+      updater = "efi"
+      public = [
+        "IMAGE_ESP_RAW",
+      ]
+    },
+    {
+      deps = [
+        "zedboot:esp",
+      ]
+      sources = [
+        "$root_out_dir/zedboot.esp.blk",
+      ]
+      installer = "zedboot.esp.blk"
+    },
+  ]
+}
+
+installer_label = "//garnet/bin/installer:install-fuchsia"
+installer_out_dir = get_label_info(installer_label, "root_out_dir")
+installer_path = "$installer_out_dir/install-fuchsia"
+
+action("installer.manifest") {
+  script = "manifest.py"
+  outputs = [
+    "$target_out_dir/installer.manifest",
+  ]
+  args = [
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--output-cwd=" + rebase_path(target_out_dir, root_build_dir),
+    "--entry=install-fuchsia=" + rebase_path(installer_path, root_build_dir),
+  ]
+  foreach(image, images) {
+    if (defined(image.installer)) {
+      image_sources = []
+      if (defined(image.sources)) {
+        image_sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          image_sources += get_target_outputs(label)
+        }
+      }
+      assert(image_sources == [ image_sources[0] ])
+      args += [ "--entry=${image.installer}=" +
+                rebase_path(image_sources[0], root_build_dir) ]
+    }
+  }
+}
+
+# installer.blk is a minfs partition image that includes all of the
+# images required to install a Fuchsia build.
+zircon_tool_action("installer") {
+  testonly = true
+  tool = "minfs"
+  deps = [
+    ":installer.manifest",
+    installer_label,
+  ]
+  outputs = [
+    "$target_out_dir/installer.blk",
+  ]
+  sources = []
+  foreach(image, images) {
+    if (defined(image.installer)) {
+      deps += image.deps
+      if (defined(image.sources)) {
+        sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          sources += get_target_outputs(label)
+        }
+      }
+    }
+  }
+  depfile = "$target_out_dir/installer.blk.d"
+  args = [
+    "--depfile",
+    rebase_path(outputs[0], root_build_dir),
+    "create",
+    "--manifest",
+  ]
+  args += rebase_path(get_target_outputs(deps[0]), root_build_dir)
+}
+images += [
+  {
+    default = false
+    public = [
+      "IMAGE_INSTALLER_RAW",
+    ]
+    deps = [
+      ":installer",
+    ]
+  },
+]
+
+group("images") {
+  testonly = true
+  deps = [
+    ":ids.txt",
+    ":paver-script",
+    "zedboot",
+  ]
+}
+
+group("default-images") {
+  testonly = true
+  deps = []
+  foreach(image, images) {
+    if (!defined(image.default) || image.default) {
+      deps += image.deps
+    }
+  }
+}
+
+###
+### Paver script and archives using those images and zedboot's images.
+###
+
+paver_targets = [
+  {
+    name = "paver-script"
+    outputs = [
+      "$root_build_dir/pave.sh",
+    ]
+    switch = "--pave="
+    json = {
+      name = "pave"
+      type = "sh"
+    }
+  },
+  {
+    name = "netboot-script"
+    outputs = [
+      "$root_build_dir/netboot.sh",
+    ]
+    switch = "--netboot="
+    json = {
+      name = "netboot"
+      type = "sh"
+    }
+  },
+]
+foreach(format,
+        [
+          "tgz",
+          "zip",
+        ]) {
+  paver_targets += [
+    {
+      name = "archive-$format"
+      outputs = [
+        "$root_build_dir/build-archive.$format",
+      ]
+      switch = "--archive="
+      json = {
+        name = "archive"
+        type = "$format"
+      }
+    },
+    {
+      name = "symbol-archive-$format"
+      outputs = [
+        "$root_build_dir/symbol-archive.$format",
+      ]
+      switch = "--symbol-archive="
+      json = {
+        name = "symbol-archive"
+        type = "$format"
+      }
+    },
+  ]
+}
+
+foreach(target, paver_targets) {
+  images += [
+    {
+      path = rebase_path(target.outputs, root_build_dir)
+      path = path[0]
+      json = target.json
+      deps = [
+        ":${target.name}",
+      ]
+    },
+  ]
+  action(target.name) {
+    deps = [
+      ":default-images",
+      ":netboot",
+      "zedboot",
+    ]
+    testonly = true
+    sources = [
+      "$root_build_dir/images.json",
+      "$root_build_dir/zedboot_images.json",
+    ]
+    outputs = target.outputs
+    depfile = "${outputs[0]}.d"
+    script = "pack-images.py"
+    args = [
+      "--depfile=" + rebase_path(depfile, root_build_dir),
+      target.switch + rebase_path(outputs[0], root_build_dir),
+    ]
+    args += rebase_path(sources, root_build_dir)
+  }
+}
+
+###
+### Amber updates.
+###
+
+# update_packages.manifest contains the same entries as the pkgsvr_index but
+# additionally includes the system_image package.
+action("update_packages.manifest") {
+  visibility = [ ":update.manifest" ]
+  testonly = true
+
+  script = "manifest.py"
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args = [
+    "--contents",
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+  deps = []
+  sources = []
+
+  deps += [ ":system_image.meta" ]
+  args += [ "--entry=system_image/0=" +
+            rebase_path("$target_out_dir/system_image.meta/meta.far.merkle",
+                        root_build_dir) ]
+
+  foreach(pkg_label, monolith_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.pkgsvr_index.rsp"
+    deps += [ "${pkg_label}.pkgsvr_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+}
+
+# The update package manifest contains the pkgsvr_index and the target
+# system kernel images.
+action("update.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+
+  update_manifest = [
+    {
+      target = "packages"
+      deps = [
+        ":update_packages.manifest",
+      ]
+    },
+
+    # Add the meta/package JSON file that makes this the "update" package.
+    {
+      target = "meta/package"
+      sources = [
+        "update_package.json",
+      ]
+    },
+  ]
+
+  foreach(image, images) {
+    if (defined(image.updater)) {
+      if (update_kernels == []) {
+        update_manifest += [
+          {
+            target = image.updater
+            forward_variables_from(image,
+                                   [
+                                     "deps",
+                                     "sources",
+                                   ])
+          },
+        ]
+      } else {
+        foreach(kernel, update_kernels) {
+          if (image.updater == kernel) {
+            update_manifest += [
+              {
+                target = image.updater
+                forward_variables_from(image,
+                                       [
+                                         "deps",
+                                         "sources",
+                                       ])
+              },
+            ]
+          }
+        }
+      }
+    }
+  }
+
+  script = "manifest.py"
+
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+
+  args = [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+
+  foreach(entry, update_manifest) {
+    entry_source = ""
+    if (defined(entry.deps)) {
+      deps += entry.deps
+    }
+
+    if (defined(entry.sources)) {
+      # TODO(BLD-354): We should only have single source
+      sources = []
+      sources += entry.sources
+      entry_source = sources[0]
+    } else if (defined(entry.deps)) {
+      foreach(label, entry.deps) {
+        # TODO(BLD-354): We should only have single output
+        dep_outputs = []
+        dep_outputs += get_target_outputs(label)
+        entry_source = dep_outputs[0]
+      }
+    }
+    entry_source = rebase_path(entry_source, root_build_dir)
+    args += [ "--entry=${entry.target}=${entry_source}" ]
+  }
+}
+
+pm_build_package("update.meta") {
+  visibility = [ ":*" ]
+  testonly = true
+  manifest = ":update.manifest"
+}
+
+# XXX(raggi): The following manifests retain the "meta/" files, resulting in
+# them being added as blobs, which they should not be. A likely better solution
+# here is to teach pm_build_package to produce either a blob manifest or a
+# manifest.py --contents compatible response file that excludes these files.
+
+action("update.sources.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  script = "manifest.py"
+  deps = [
+    ":update.manifest",
+  ]
+  outputs = [
+    "$target_out_dir/update.sources.manifest",
+  ]
+  update_manifests = get_target_outputs(deps[0])
+  args = [
+    "--sources",
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--manifest=" + rebase_path(update_manifests[0]),
+  ]
+}
+
+# The amber index is the index of all requested packages, naming each meta.far
+# file instead of its merkleroot. Additionally the amber_index has the system
+# package itself, and the system update package.
+amber_index = "$target_out_dir/amber_index"
+
+action("amber_index") {
+  visibility = [ ":amber_publish_index" ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--absolute" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, available_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.amber_index.rsp"
+    deps += [ "${pkg_label}.amber_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+
+  system_image_meta_dir =
+      get_label_info(":system_image.meta", "target_out_dir") +
+      "/system_image.meta"
+  system_image_meta_far = system_image_meta_dir + "/meta.far"
+  args += [
+    "--entry",
+    "system_image/0=" + rebase_path(system_image_meta_far, root_build_dir),
+  ]
+  deps += [ ":system_image.meta" ]
+
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_meta_far = update_meta_dir + "/meta.far"
+  args += [
+    "--entry",
+    "update/0=" + rebase_path(update_meta_far, root_build_dir),
+  ]
+  deps += [ ":update.meta" ]
+}
+
+# The system index is the index of all available packages, naming each blobs.json
+# file instead of its merkleroot, and including a tag of the package set the
+# package is a part of (monolith/preinstall/available). Additionally the
+# system_index has the system package itself, and the system update package.
+system_index = "$target_out_dir/system_index"
+
+action("system_index") {
+  visibility = [ ":system_snapshot" ]
+  testonly = true
+
+  script = "manifest.py"
+  args = [ "--absolute" ]
+  outputs = [
+    "$target_out_dir/$target_name",
+  ]
+  args += [ "--output=" + rebase_path(outputs[0], root_build_dir) ]
+  sources = []
+  deps = []
+  foreach(pkg_label, available_packages) {
+    # Find the response file written by package().
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_rspfile = "$pkg_target_out_dir/${pkg_target_name}.system_index.rsp"
+    deps += [ "${pkg_label}.system_index.rsp" ]
+    sources += [ pkg_rspfile ]
+    args += [ "@" + rebase_path(pkg_rspfile, root_build_dir) ]
+  }
+
+  system_image_meta_dir =
+      get_label_info(":system_image.meta", "target_out_dir") +
+      "/system_image.meta"
+  system_image_blobs_json = system_image_meta_dir + "/blobs.json"
+  args += [
+    "--entry",
+    "system_image/0#monolith=" +
+        rebase_path(system_image_blobs_json, root_build_dir),
+  ]
+  deps += [ ":system_image.meta" ]
+
+  update_meta_dir =
+      get_label_info(":update.meta", "target_out_dir") + "/update.meta"
+  update_blobs_json = update_meta_dir + "/blobs.json"
+  args += [
+    "--entry",
+    "update/0#monolith=" + rebase_path(update_blobs_json, root_build_dir),
+  ]
+  deps += [ ":update.meta" ]
+}
+
+compiled_action("system_snapshot") {
+  tool = "//garnet/go/src/pm:pm_bin"
+  tool_output_name = "pm"
+
+  visibility = [ ":updates" ]
+  testonly = true
+
+  deps = [
+    ":system_index",
+  ]
+
+  inputs = [
+    system_index,
+  ]
+
+  outputs = [
+    "$target_out_dir/system.snapshot",
+  ]
+
+  args = [
+    "snapshot",
+    "--manifest",
+    rebase_path(inputs[0], root_build_dir),
+    "--output",
+    rebase_path(outputs[0], root_build_dir),
+  ]
+}
+
+# Available blob manifest is a manifest of merkleroot=source_path for all blobs
+# in all packages produced by the build, including the system image and the
+# update package.
+available_blob_manifest = "$root_build_dir/available_blobs.manifest"
+action("available_blobs.manifest") {
+  visibility = [ ":*" ]
+  testonly = true
+  outputs = [
+    available_blob_manifest,
+  ]
+  depfile = available_blob_manifest + ".d"
+  deps = [
+    ":system_image.meta",
+    ":update.meta",
+  ]
+  inputs = []
+  script = "blob_manifest.py"
+  args = [ "@{{response_file_name}}" ]
+
+  response_file_contents = [
+    "--output=" + rebase_path(available_blob_manifest, root_build_dir),
+    "--depfile=" + rebase_path(depfile, root_build_dir),
+    "--input=" + rebase_path("$target_out_dir/system_image.meta/blobs.json",
+                             root_build_dir),
+    "--input=" +
+        rebase_path("$target_out_dir/update.meta/blobs.json", root_build_dir),
+  ]
+  foreach(pkg_label, available_packages) {
+    pkg_target_name = get_label_info(pkg_label, "name")
+    pkg_target_out_dir = get_label_info(pkg_label, "target_out_dir")
+    pkg_blobs_rsp = "${pkg_target_out_dir}/${pkg_target_name}.blobs.rsp"
+    deps += [ "${pkg_label}.blobs.rsp" ]
+    inputs += [ pkg_blobs_rsp ]
+    response_file_contents +=
+        [ "@" + rebase_path(pkg_blobs_rsp, root_build_dir) ]
+  }
+}
+
+# Populate the repository directory with content ID-named copies.
+action("amber_publish_blobs") {
+  testonly = true
+  outputs = [
+    "$amber_repository_dir.stamp",
+  ]
+  deps = [
+    ":available_blobs.manifest",
+  ]
+  inputs = []
+  foreach(dep, deps) {
+    inputs += get_target_outputs(dep)
+  }
+  script = "manifest.py"
+  args = [
+    "--copy-contentaddr",
+    "--output=" + rebase_path(amber_repository_blobs_dir),
+    "--stamp=" + rebase_path("$amber_repository_dir.stamp"),
+  ]
+  foreach(manifest, inputs) {
+    args += [ "--manifest=" + rebase_path(manifest, root_build_dir) ]
+  }
+}
+
+# Sign and publish the package index.
+pm_publish("amber_publish_index") {
+  testonly = true
+  deps = [
+    ":amber_index",
+  ]
+  inputs = [
+    amber_index,
+  ]
+}
+
+group("updates") {
+  testonly = true
+  deps = [
+    ":amber_publish_blobs",
+    ":amber_publish_index",
+    ":ids.txt",
+    ":system_snapshot",
+  ]
+}
+
+###
+### Build ID maps.
+###
+
+# Combine the /boot, /system, and package build ID maps into one.
+# Nothing in the build uses this, but top-level targets always update
+# it so that debugging tools can rely on it.
+action("ids.txt") {
+  testonly = true
+
+  deps = [
+    ":kernel-ids.txt",
+    ":system_image.manifest",
+    ":zircon-asan-build-id",
+    ":zircon-build-id",
+  ]
+  sources = [
+    "$target_out_dir/kernel-ids.txt",
+    system_build_id_map,
+  ]
+
+  foreach(pkg_label, available_packages) {
+    # Find the ids.txt file written by package().
+    manifest = get_label_info(pkg_label, "label_no_toolchain") +
+               ".final.manifest.ids.txt"
+    manifest_target_name = get_label_info(manifest, "name")
+    manifest_target_out_dir = get_label_info(manifest, "target_out_dir")
+    deps += [ manifest ]
+    sources += [ "$manifest_target_out_dir/${manifest_target_name}" ]
+  }
+
+  script = "/usr/bin/sort"
+  outputs = [
+    "$root_out_dir/ids.txt",
+  ]
+  args = [
+           "-u",
+           "-o",
+         ] + rebase_path(outputs + sources, root_build_dir)
+}
+
+# The vDSO doesn't appear in any package and so doesn't get into any
+# ids.txt file produced by generate_manifest().  But it appears in memory
+# at runtime and in backtraces, so it should be in the aggregated ids.txt
+# for symbolization.  The vDSO doesn't appear in zircon_boot_manifests, so
+# fetching it out of Zircon's own ids.txt by name is the only thing to do.
+# Likewise for the kernel itself, whose build ID is useful to have in the map.
+action("kernel-ids.txt") {
+  script = "manifest.py"
+  sources = [
+    "$zircon_build_dir/ids.txt",
+  ]
+  outputs = [
+    "$target_out_dir/kernel-ids.txt",
+  ]
+  args = [
+    "--separator= ",
+    "--output=" + rebase_path(outputs[0], root_build_dir),
+    "--include-source=*/libzircon.so",
+    "--include-source=*/zircon.elf",
+    "--manifest=" + rebase_path(sources[0], root_build_dir),
+  ]
+}
+
+# TODO(TC-303): This is a temporary hack to get all of Zircon's debug files
+# into the $root_build_dir/.build-id hierarchy.  The Zircon build produces
+# its own .build-id hierarchy under $zircon_build_dir, but using its ids.txt
+# is the simpler way to populate the one in this build.  When ids.txt is fully
+# obsolete, hopefully Zircon will be in the unified build anyway.
+foreach(target,
+        [
+          {
+            name = "zircon-build-id"
+            sources = [
+              "$zircon_build_dir/ids.txt",
+            ]
+          },
+          {
+            name = "zircon-asan-build-id"
+            sources = [
+              "$zircon_asan_build_dir/ids.txt",
+            ]
+          },
+        ]) {
+  action(target.name) {
+    visibility = [ ":ids.txt" ]
+    script = "//scripts/build_id_conv.py"
+    sources = target.sources
+    outputs = [
+      "$root_build_dir/${target_name}.stamp",
+    ]
+    args =
+        [ "--stamp=" + rebase_path(outputs[0], root_build_dir) ] +
+        rebase_path(sources + [ "$root_build_dir/.build-id" ], root_build_dir)
+  }
+}
+
+images += [
+  {
+    deps = [
+      ":ids.txt",
+    ]
+    json = {
+      name = "build-id"
+      type = "txt"
+    }
+  },
+]
+
+write_images_manifest("images-manifest") {
+  outputs = [
+    "$root_build_dir/images.json",
+    "$root_build_dir/image_paths.sh",
+  ]
+}
+
+###
+### SDK
+###
+
+sdk_images = []
+
+foreach(image, images) {
+  if (defined(image.sdk)) {
+    image_target_name = "${image.sdk}_sdk"
+    sdk_images += [ ":$image_target_name" ]
+    sdk_atom(image_target_name) {
+      id = "sdk://images/${image.sdk}"
+      category = "partner"
+      testonly = true
+
+      file_content = "target/$target_cpu/${image.sdk}"
+      meta = {
+        dest = "images/${image.sdk}-meta.json"
+        schema = "image"
+        value = {
+          type = "image"
+          name = "${image.sdk}"
+          root = "images"
+          file = {
+            if (target_cpu == "x64") {
+              x64 = file_content
+            } else if (target_cpu == "arm64") {
+              arm64 = file_content
+            } else {
+              assert(false, "Unsupported target architecture: $target_cpu")
+            }
+          }
+        }
+      }
+
+      image_sources = []
+      if (defined(image.sources)) {
+        image_sources += image.sources
+      } else {
+        foreach(label, image.deps) {
+          image_sources += get_target_outputs(label)
+        }
+      }
+
+      files = [
+        {
+          source = image_sources[0]
+          dest = "target/$target_cpu/${image.sdk}"
+        },
+      ]
+
+      non_sdk_deps = image.deps
+    }
+  }
+}
+
+sdk_molecule("images_sdk") {
+  testonly = true
+
+  deps = sdk_images
+}

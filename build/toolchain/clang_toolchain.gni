@@ -1,0 +1,565 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+import("//build/toolchain/ccache.gni")
+import("//build/toolchain/goma.gni")
+
+# Each toolchain must define "stamp" and "copy" tools,
+# but they are always the same in every toolchain.
+stamp_command = "touch {{output}}"
+stamp_description = "STAMP {{output}}"
+
+# We use link instead of copy; the way "copy" tool is being used is
+# compatible with links since Ninja is tracking changes to the source.
+copy_command = "ln -f {{source}} {{output}} 2>/dev/null || (rm -rf {{output}} && cp -af {{source}} {{output}})"
+copy_description = "COPY {{source}} {{output}}"
+
+# Defines a Clang-based toolchain.
+#
+# Parameters
+#
+#   toolchain_cpu
+#     Required: Value of "current_cpu" inside this toolchain.
+#
+#   toolchain_os
+#     Required: Value of "current_os" inside this toolchain.
+#
+#   toolchain_args
+#     Optional: Scope specifying build arguments to override in this
+#     toolchain context.
+#     NOTE! Do not use this in the toolchain used as the default toolchain.
+#     It will have no effect, and you will be confused.
+#
+#   use_strip
+#     Required: Whether to strip binaries, leaving unstripped ones
+#     in lib.unstripped and exe.unstripped subdirectories.
+#
+#   prefix
+#     Optional: The path from which "cc", "cxx", "ar", "ld" and
+#     "strip" will be found (unless overridden).  If not given,
+#     prefix defaults to $clang_prefix.
+#
+#   cc
+#   cxx
+#   ar
+#   ld
+#   strip
+#     Optional: Override default tool names.
+#
+#   use_ccache, use_goma
+#     Optional: Override the global setting, useful to opt out of
+#     ccache/goma in a particular toolchain.
+#
+#   deps
+#     Optional: Dependencies of this toolchain.
+#
+#   propagates_configs
+#     Optional: public_configs should escape this toolchain via deps
+#
+template("clang_toolchain") {
+  toolchain(target_name) {
+    assert(defined(invoker.toolchain_cpu),
+           "clang_toolchain() must specify a \"toolchain_cpu\"")
+    assert(defined(invoker.toolchain_os),
+           "clang_toolchain() must specify a \"toolchain_os\"")
+
+    compiler_prefix = ""
+    if (defined(invoker.use_goma)) {
+      use_goma = invoker.use_goma
+    }
+    if (use_goma) {
+      compiler_prefix = "$goma_dir/gomacc "
+    } else {
+      if (defined(invoker.use_ccache)) {
+        use_ccache = invoker.use_ccache
+      }
+      if (use_ccache) {
+        compiler_prefix = "ccache "
+      }
+    }
+
+    prefix = clang_prefix
+    if (defined(invoker.prefix)) {
+      prefix = invoker.prefix
+    }
+
+    # Set all tools to defaults
+    cc = compiler_prefix + "${prefix}/clang"
+    cxx = compiler_prefix + "${prefix}/clang++"
+    ar = "${prefix}/llvm-ar"
+    ld = cxx
+
+    forward_variables_from(invoker, [ "use_strip" ])
+    if (use_strip) {
+      if (invoker.toolchain_os == "mac") {
+        strip = "xcrun strip"
+      } else {
+        strip = "${prefix}/llvm-objcopy"
+      }
+    }
+
+    # Override any tools as requested by the invoker
+    if (defined(invoker.cc)) {
+      cc = compiler_prefix + invoker.cc
+    }
+    if (defined(invoker.cxx)) {
+      cxx = compiler_prefix + invoker.cxx
+    }
+    forward_variables_from(invoker,
+                           [
+                             "ar",
+                             "deps",
+                             "ld",
+                             "propagates_configs",
+                             "strip",
+                           ])
+
+    # These library switches can apply to all tools below.
+    lib_switch = "-l"
+    lib_dir_switch = "-L"
+
+    tool("cc") {
+      depfile = "{{output}}.d"
+      command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CC {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("cxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_cc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "CXX {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("asm") {
+      depfile = "{{output}}.d"
+      command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{asmflags}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "ASM {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("objc") {
+      depfile = "{{output}}.d"
+      command = "$cc -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "OBJC {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("objcxx") {
+      depfile = "{{output}}.d"
+      command = "$cxx -MD -MF $depfile {{defines}} {{include_dirs}} {{cflags}} {{cflags_c}} {{cflags_objcc}} -c {{source}} -o {{output}}"
+      depsformat = "gcc"
+      description = "OBJCXX {{output}}"
+      outputs = [
+        "{{source_out_dir}}/{{target_output_name}}.{{source_name_part}}.o",
+      ]
+    }
+
+    tool("alink") {
+      rspfile = "{{output}}.rsp"
+      command =
+          "rm -f {{output}} && $ar {{arflags}} rcsD {{output}} @\"$rspfile\""
+      description = "AR {{output}}"
+      rspfile_content = "{{inputs}}"
+      outputs = [
+        "{{output_dir}}/{{target_output_name}}{{output_extension}}",
+      ]
+      default_output_dir = "{{target_out_dir}}"
+      default_output_extension = ".a"
+      output_prefix = "lib"
+    }
+
+    tool("solink") {
+      outname = "{{target_output_name}}{{output_extension}}"
+      outfile = "{{output_dir}}/$outname"
+      rspfile = "$outfile.rsp"
+      unstripped_outfile = outfile
+      if (use_strip) {
+        unstripped_outfile = "{{output_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+      }
+      if (invoker.toolchain_os == "mac") {
+        command = "$ld -shared {{ldflags}} -Wl,-install_name,@rpath/\"{{target_output_name}}{{output_extension}}\" -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
+        rspfile_content = "{{inputs_newline}}"
+        default_output_extension = ".dylib"
+      } else {
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
+        rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
+        default_output_extension = ".so"
+      }
+      if (use_strip) {
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
+              " --build-id-link-input=.debug" + " --build-id-link-output=" +
+              " \"$unstripped_outfile\" \"$outfile\""
+        }
+      }
+      description = "SOLINK $outfile"
+      default_output_dir = "{{root_out_dir}}"
+      output_prefix = "lib"
+      outputs = [
+        outfile,
+      ]
+      if (outfile != unstripped_outfile) {
+        outputs += [ unstripped_outfile ]
+      }
+    }
+
+    tool("solink_module") {
+      outname = "{{target_output_name}}{{output_extension}}"
+      outfile = "{{output_dir}}/$outname"
+      rspfile = "$outfile.rsp"
+      if (use_strip) {
+        unstripped_outfile = "{{root_out_dir}}/lib.unstripped/{{target_output_name}}{{output_extension}}"
+      } else {
+        unstripped_outfile = outfile
+      }
+      if (invoker.toolchain_os == "mac") {
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{libs}} {{solibs}}"
+        rspfile_content = "{{inputs_newline}}"
+        default_output_extension = ".dylib"
+      } else {
+        command = "$ld -shared {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,-soname=\"$outname\" @\"$rspfile\""
+        rspfile_content = "-Wl,--whole-archive {{inputs}} {{solibs}} -Wl,--no-whole-archive {{libs}}"
+        default_output_extension = ".so"
+      }
+      if (use_strip) {
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip -x \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && $strip --strip-all" + " --build-id-link-dir=.build-id" +
+              " --build-id-link-input=.debug" + " --build-id-link-output=" +
+              " \"$unstripped_outfile\" \"$outfile\""
+        }
+      }
+      description = "SOLINK $outfile"
+      default_output_dir = "{{root_out_dir}}"
+      outputs = [
+        outfile,
+      ]
+      if (outfile != unstripped_outfile) {
+        outputs += [ unstripped_outfile ]
+      }
+    }
+
+    tool("link") {
+      outfile = "{{output_dir}}/{{target_output_name}}{{output_extension}}"
+      rspfile = "$outfile.rsp"
+      unstripped_outfile = outfile
+      if (use_strip) {
+        unstripped_outfile = "{{root_out_dir}}/exe.unstripped/{{target_output_name}}{{output_extension}}"
+      }
+      if (invoker.toolchain_os == "mac") {
+        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,-filelist,\"$rspfile\" {{solibs}} {{libs}}"
+        rspfile_content = "{{inputs_newline}}"
+      } else {
+        command = "$ld {{ldflags}} -o \"$unstripped_outfile\" -Wl,--Map=\"$unstripped_outfile.map\" -Wl,--start-group @\"$rspfile\" {{solibs}} -Wl,--end-group {{libs}}"
+        rspfile_content = "{{inputs}}"
+      }
+      if (use_strip) {
+        if (invoker.toolchain_os == "mac") {
+          command += " && $strip \"$unstripped_outfile\" -o \"$outfile\""
+        } else {
+          command +=
+              " && " + "$strip --strip-sections" +
+              " --build-id-link-dir=.build-id" +
+              " --build-id-link-input=.debug" + " --build-id-link-output=" +
+              " \"$unstripped_outfile\" \"$outfile\""
+        }
+      }
+      description = "LINK $outfile"
+      default_output_dir = "{{root_out_dir}}"
+      outputs = [
+        outfile,
+      ]
+      if (outfile != unstripped_outfile) {
+        outputs += [ unstripped_outfile ]
+      }
+    }
+
+    tool("stamp") {
+      command = stamp_command
+      description = stamp_description
+    }
+    tool("copy") {
+      command = copy_command
+      description = copy_description
+    }
+
+    # When invoking this toolchain not as the default one, these args will be
+    # passed to the build. They are ignored when this is the default toolchain.
+    toolchain_args = {
+      current_cpu = invoker.toolchain_cpu
+      current_os = invoker.toolchain_os
+
+      # These values need to be passed through unchanged.
+      target_os = target_os
+      target_cpu = target_cpu
+
+      if (defined(invoker.toolchain_args)) {
+        # The invoker isn't allowed to fiddle with the essential settings.
+        forward_variables_from(invoker.toolchain_args,
+                               "*",
+                               [
+                                 "current_cpu",
+                                 "current_os",
+                                 "target_os",
+                                 "target_cpu",
+                               ])
+      }
+    }
+  }
+}
+
+# Private subroutine of clang_toolchain_suite(), below.
+template("_clang_toolchain_variant") {
+  this_variant = invoker.this_variant
+  this_invoker = invoker.this_invoker
+  not_needed([ "this_invoker" ])
+
+  # Every toolchain needs the global select_variant_canonical passed
+  # down explicitly via toolchain_args.  See BUILDCONFIG.gn.
+  pass_through_canonical = select_variant_canonical
+
+  clang_toolchain(target_name) {
+    forward_variables_from(invoker.clang_toolchain_args, "*")
+    toolchain_args = {
+      # GN's "can't overwrite a nonempty scope/list" rule also applies
+      # to shadowing bindings in inner scopes.  Since there is always
+      # a global binding of `toolchain_variant` that is being shadowed
+      # here, we have to set it to the empty scope first.
+      toolchain_variant = {
+      }
+      toolchain_variant = {
+        forward_variables_from(this_variant, "*")
+        is_pic_default = invoker.this_pic_default
+      }
+      if (defined(this_variant.toolchain_args)) {
+        forward_variables_from(this_variant.toolchain_args, "*")
+      }
+      if (defined(this_invoker.toolchain_args)) {
+        forward_variables_from(this_invoker.toolchain_args, "*")
+      }
+
+      # See comment above.
+      select_variant_canonical = []
+      select_variant_canonical = pass_through_canonical
+    }
+  }
+}
+
+# Defines a standard suite of Clang-based toolchains.
+#
+# Parameters
+#
+#   with_shared:
+#     Optional: If this toolchain will have a "-shared" companion.
+#     (Each variant toolchain has its own "-shared" companion.)
+#     Pre-set to true.  Set this to false if either no shared libraries
+#     are used in this toolchain, or it's used to build nothing but
+#     shared libraries anyway.
+#
+# See clang_toolchain for others.  Most parameters are just forwarded there.
+#
+template("clang_toolchain_suite") {
+  # First get a canonicalized, flat list of variant specs that includes the
+  # null variant.  Canonical variants don't have `host_only`/`target_only` but
+  # instead take the body of one or the other, have [] for any missing list
+  # fields, have .suffix as well as .name (or implied .name), and have .base.
+  is_host = defined(invoker.toolchain_os) && invoker.toolchain_os == host_os
+  not_needed([ "is_host" ])
+  variants = []
+  foreach(variant, [ false ] + known_variants) {
+    variants += [
+      {
+        base = get_label_info(":$target_name", "label_no_toolchain")
+        configs = []
+        remove_common_configs = []
+        remove_shared_configs = []
+        deps = []
+        if (variant == false) {
+          name = ""
+          suffix = ""
+        } else {
+          if (is_host) {
+            if (defined(variant.host_only)) {
+              forward_variables_from(variant.host_only, "*")
+            }
+          } else {
+            if (defined(variant.target_only)) {
+              forward_variables_from(variant.target_only, "*")
+            }
+          }
+          forward_variables_from(variant,
+                                 "*",
+                                 [
+                                   "host_only",
+                                   "target_only",
+                                 ])
+          if (!defined(name)) {
+            name = ""
+            assert(configs != [],
+                   "variant with no name must include nonempty configs")
+            foreach(config, configs) {
+              if (name != "") {
+                name += "-"
+              }
+              name += get_label_info(config, "name")
+            }
+          }
+          suffix = "-$name"
+        }
+      },
+    ]
+  }
+
+  # Now elaborate the list with all the universal variant combinations.
+  # Each universal variant becomes its own standalone variant when
+  # combined with the null variant.
+  # TODO(crbug.com/818525): The `+ []` works around a bug that crashes
+  # GN with heap-use-after-free: the no-op `+` forces a copy of the list
+  # in `variants`; without it, GN uses the same std::vector object in
+  # the looping logic that it mutates in place for `variants +=`.
+  foreach(variant, variants + []) {
+    foreach(universal_variant, universal_variants) {
+      variants += [
+        {
+          forward_variables_from(variant, "*", [ "toolchain_args" ])
+          toolchain_args = {
+            if (defined(variant.toolchain_args)) {
+              forward_variables_from(variant.toolchain_args, "*")
+            }
+            if (defined(universal_variant.toolchain_args)) {
+              forward_variables_from(universal_variant.toolchain_args, "*")
+            }
+          }
+          if (name == "") {
+            name = universal_variant.name
+          } else {
+            name += "-${universal_variant.name}"
+          }
+          suffix += "-${universal_variant.name}"
+          configs += universal_variant.configs
+          if (defined(universal_variant.remove_common_configs)) {
+            remove_common_configs += universal_variant.remove_common_configs
+          }
+          if (defined(universal_variant.remove_shared_configs)) {
+            remove_shared_configs += universal_variant.remove_shared_configs
+          }
+          if (defined(universal_variant.deps)) {
+            deps += universal_variant.deps
+          }
+        },
+      ]
+    }
+  }
+
+  # Exclude the arguments that are for us or are verboten.
+  invoker_clang_toolchain_args = {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "toolchain_args",
+                             "toolchain_variant",
+                             "with_shared",
+                             "variants",
+                           ])
+  }
+  not_needed([ "invoker_clang_toolchain_args" ])
+
+  # Build up an array of boolean that's parallel to `select_variant`.
+  # Below, we'll set `selectors_used[i]` to true when `select_variant[i]`
+  # matches the name of some variant.
+  selectors_used = []
+  i = 0
+  foreach(selector, select_variant_canonical) {
+    selectors_used += [ false ]
+    i = i + 1
+  }
+
+  foreach(variant, variants) {
+    # Figure out if this variant is actually used.  Don't bother to define
+    # toolchains for variants that are never used.  This cuts down on extra
+    # GN processing so `gn gen` is faster.  More importantly, it ensures
+    # that there isn't a toolchain defined using toolchain_args build
+    # arguments whose declare_args() block hasn't been imported because
+    # it's defined in a BUILD.gn file containing only configs that are
+    # never referenced by any target if the variant is never selected.
+    variant_used = variant.name == ""
+    if (!variant_used) {
+      i = 0
+      foreach(selector, select_variant_canonical) {
+        assert(defined(selector.variant),
+               "`select_variant` clause missing `variant` field: $selector")
+        if (selector.variant == variant.name) {
+          variant_used = true
+          selectors_used[i] = true
+        } else if (selector.variant == false) {
+          selectors_used[i] = true
+        }
+        i = i + 1
+      }
+    }
+
+    if (variant_used) {
+      _clang_toolchain_variant("${target_name}${variant.suffix}") {
+        clang_toolchain_args = invoker_clang_toolchain_args
+        this_variant = variant
+        this_invoker = invoker
+        this_pic_default = false
+      }
+      if (invoker.with_shared) {
+        _clang_toolchain_variant("${target_name}${variant.suffix}-shared") {
+          clang_toolchain_args = {
+            forward_variables_from(invoker_clang_toolchain_args, "*")
+            propagates_configs = true
+          }
+          this_variant = variant
+          this_invoker = invoker
+          this_pic_default = true
+        }
+      }
+    }
+  }
+
+  i = 0
+  foreach(selector, select_variant_canonical) {
+    assert(selectors_used[i],
+           "unknown variant in `select_variant` clause: ${selector}")
+    i = i + 1
+  }
+  not_needed([ "selectors_used" ])
+}
+
+set_defaults("clang_toolchain_suite") {
+  with_shared = true
+}
+
+template("clang_host_toolchain_suite") {
+  not_needed([ "invoker" ])
+  clang_toolchain_suite(target_name) {
+    toolchain_cpu = host_cpu
+    toolchain_os = host_os
+
+    with_shared = false
+    use_strip = false
+  }
+}

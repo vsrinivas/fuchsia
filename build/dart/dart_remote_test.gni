@@ -1,0 +1,96 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/dart/dart.gni")
+import("//build/dart/dart_library.gni")
+import("//build/dart/toolchain.gni")
+
+# Defines a Dart test suite that requires connecting to a remote target.
+#
+# Parameters
+#
+#   sources (required)
+#     The list of test files, which must be within source_dir.
+#
+#   source_dir (optional)
+#     Directory containing the test sources. Defaults to "test".
+#
+#   deps (optional)
+#     List of labels for Dart libraries this suite depends on.
+#
+#   disable_analysis (optional)
+#     Prevents analysis from being run on this target.
+#
+# Example of usage:
+#
+#   dart_host_to_target_test("baz_test") {
+#     source_dir = "."
+#     sources = [ "foo_bar_baz_test.dart" ]
+#     deps = [
+#       "//foo/baz",
+#       "//third_party/dart-pkg/pub/test",
+#     ]
+#   }
+template("dart_remote_test") {
+  main_target_name = target_name
+  library_target_name = "${target_name}_library"
+
+  sources_dir = "test"
+  if (defined(invoker.source_dir)) {
+    sources_dir = invoker.source_dir
+  }
+
+  dart_library(library_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "disable_analysis",
+                           ])
+
+    infer_package_name = true
+
+    source_dir = sources_dir
+
+    assert(defined(invoker.sources))
+
+    sources = invoker.sources
+  }
+
+  dart_target_gen_dir =
+      get_label_info(":bogus($dart_toolchain)", "target_gen_dir")
+
+  dot_packages_file = "$dart_target_gen_dir/$library_target_name.packages"
+
+  if (current_toolchain == host_toolchain) {
+    invocation_file = "$root_out_dir/$target_name"
+  } else {
+    invocation_file = "$target_gen_dir/$target_name"
+  }
+
+  action(main_target_name) {
+    script = "//build/dart/gen_remote_test_invocation.py"
+
+    testonly = true
+
+    outputs = [
+      invocation_file,
+    ]
+
+    args = [
+             "--out",
+             rebase_path(invocation_file),
+             "--sources",
+           ] + rebase_path(invoker.sources, "", sources_dir) +
+           [
+             "--dot-packages",
+             rebase_path(dot_packages_file),
+             "--dart-binary",
+             rebase_path(prebuilt_dart),
+           ]
+
+    deps = [
+      ":$library_target_name",
+    ]
+  }
+}

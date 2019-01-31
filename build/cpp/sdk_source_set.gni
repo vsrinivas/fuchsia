@@ -1,0 +1,178 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# A source set that can be exported to an SDK.
+#
+# An equivalent to the built-in source_set which adds an SDK atom declaration to
+# allow the set to be included in an SDK as sources.
+#
+# Parameters
+#
+#   category (required)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_name (required)
+#     Name of the library in the SDK.
+#
+#   source_dir (optional)
+#     If set, path to the base directory of the sources.
+#     This is useful if the sources are generated and therefore not hosted
+#     directly under the directory where the GN rules are declared.
+#
+#   include_base (optional)
+#     Path to the root directory for includes.
+#     Defaults to "include".
+
+template("sdk_source_set") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.sdk_name), "Must define an SDK name")
+
+  main_target_name = target_name
+  sdk_target_name = "${target_name}_sdk"
+
+  source_set(main_target_name) {
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "category",
+                             "include_base",
+                             "sdk_name",
+                             "source_dir",
+                           ])
+
+    if (defined(visibility)) {
+      visibility += [ ":$sdk_target_name" ]
+    }
+  }
+
+  # Identify dependencies and their metadata files.
+  sdk_metas = []
+  sdk_deps = []
+  if (defined(invoker.public_deps)) {
+    foreach(dep, invoker.public_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+
+      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+      name = get_label_info(sdk_dep, "name")
+      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    }
+  }
+
+  # Sort headers vs. sources.
+  all_headers = []
+  all_sources = []
+  source_headers_are_public = true
+  if (defined(invoker.public)) {
+    source_headers_are_public = false
+    all_headers += invoker.public
+  }
+  if (defined(invoker.sources)) {
+    foreach(source_file, invoker.sources) {
+      extension = get_path_info(source_file, "extension")
+      if (source_headers_are_public && extension == "h") {
+        all_headers += [ source_file ]
+      } else {
+        all_sources += [ source_file ]
+      }
+    }
+  } else {
+    not_needed([ "source_headers_are_public" ])
+  }
+
+  # Determine destinations in the SDK for headers and sources.
+  file_base = "pkg/${invoker.sdk_name}"
+  sdk_headers = []
+  sdk_sources = []
+  sdk_files = []
+  foreach(header, all_headers) {
+    include_base = "include"
+    if (defined(invoker.include_base)) {
+      include_base = invoker.include_base
+    }
+    relative_destination = rebase_path(header, include_base)
+    destination = "$file_base/include/$relative_destination"
+    sdk_headers += [ destination ]
+    sdk_files += [
+      {
+        source = header
+        dest = destination
+      },
+    ]
+  }
+  foreach(source, all_sources) {
+    sdk_sources += [ "$file_base/$source" ]
+    sdk_files += [
+      {
+        source = source
+        dest = "$file_base/$source"
+      },
+    ]
+  }
+
+  metadata_target_name = "${target_name}_sdk_metadata"
+  metadata_file = "$target_gen_dir/$target_name.sdk_meta.json"
+
+  action(metadata_target_name) {
+    script = "//build/cpp/gen_sdk_sources_meta_file.py"
+
+    inputs = sdk_metas
+
+    outputs = [
+      metadata_file,
+    ]
+
+    args = [
+      "--out",
+      rebase_path(metadata_file),
+      "--name",
+      invoker.sdk_name,
+      "--root",
+      file_base,
+      "--include-dir",
+      "$file_base/include",
+    ]
+    args += [ "--deps" ] + sdk_metas
+    args += [ "--sources" ] + sdk_sources
+    args += [ "--headers" ] + sdk_headers
+
+    deps = sdk_deps
+  }
+
+  sdk_atom(sdk_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "source_dir",
+                             "testonly",
+                           ])
+
+    id = "sdk://pkg/${invoker.sdk_name}"
+    category = invoker.category
+
+    meta = {
+      source = metadata_file
+      dest = "$file_base/meta.json"
+      schema = "cc_source_library"
+    }
+
+    files = sdk_files
+
+    deps = sdk_deps
+
+    non_sdk_deps = [
+      ":$main_target_name",
+      ":$metadata_target_name",
+    ]
+
+    # Explicitly add non-public dependencies, in case some of the source files
+    # are generated.
+    if (defined(invoker.deps)) {
+      non_sdk_deps += invoker.deps
+    }
+  }
+}

@@ -1,0 +1,22 @@
+/.jiri/
+*.pyc
+
+*~
+*.DS_Store
+
+# Thumbnails
+._*
+
+# swap
+[._]*.s[a-w][a-z]
+[._]s[a-w][a-z]
+# session
+Session.vim
+# temporary
+.netrwhist
+*~
+
+cipd.gni
+.cipd/*
+last-update
+third_party/

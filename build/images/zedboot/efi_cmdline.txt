@@ -1,0 +1,2 @@
+bootloader.default=zedboot
+bootloader.timeout=1

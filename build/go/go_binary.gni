@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_build.gni")
+
+# A template for an action that creates a Fuchsia Go binary.
+#
+# Parameters
+#
+#   sdk_category (optional)
+#     Publication level of the library in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_deps (optional)
+#     List of labels representing elements that should be added to SDKs
+#     alongside the present binary.
+#     Labels in the list must represent SDK-ready targets.
+
+template("go_binary") {
+  go_build(target_name) {
+    forward_variables_from(invoker, "*")
+  }
+}

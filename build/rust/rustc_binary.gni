@@ -1,0 +1,78 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_artifact.gni")
+
+# Defines a Rust binary
+#
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file. If not specified, it is
+#     assumed to be the same as the target name.
+#
+#   version (optional)
+#     Semver version of the crate as seen on crates.io.
+#
+#   edition
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". If unsure, choose "2018".
+#
+#   deps (optional)
+#     List of rust_library GN targets on which this crate depends.
+#     Third party crates can be included through paths like
+#     "//third_party/rust-crates/rustc_deps:<cratename>",
+#
+#   non_rust_deps (optional)
+#     List of non-rust_library GN targets on which this crate depends.
+#
+#   with_unit_tests (optional)
+#     Builds unit tests associated with the binary. This will create a
+#     `<name>_bin_test` test file in the output directory.
+#
+#   sdk_category (optional)
+#     If this field is set, this rust binary will be included in SDK builds for
+#     the provided category. See //build/sdk/sdk_atom.gni for available
+#     categories.
+#
+#   source_root (optional)
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
+#     and should only be changed when absolutely necessary
+#     (such as in the case of generated code).
+#
+#   with_lto (optional)
+#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
+#     "fat". This value takes precedence over GN args or the default value for the
+#     type of build (debug or release).
+#
+# Example of usage:
+#
+#   rustc_binary("foo") {
+#     deps = [
+#       "//garnet/public/rust/bar",
+#       "//third_party/rust-crates/rustc_deps:clap",
+#       "//third_party/rust-crates/rustc_deps:serde",
+#       "//third_party/rust-crates/rustc_deps:slab",
+#     ]
+#     with_unit_tests = true
+#   }
+template("rustc_binary") {
+  rustc_artifact(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "name",
+                             "version",
+                             "edition",
+                             "deps",
+                             "non_rust_deps",
+                             "with_unit_tests",
+                             "source_root",
+                             "testonly",
+                             "with_lto",
+                             "sdk_category",
+                           ])
+    type = "bin"
+  }
+}

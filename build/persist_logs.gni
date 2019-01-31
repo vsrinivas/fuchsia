@@ -1,0 +1,105 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+declare_args() {
+  persist_logs = is_debug
+}
+
+# Adds a config to persist logs to disk
+#
+# The persist_logs template is used to generate a config for sysmgr that runs an
+# instance of log_listener. This instance will be configured to listen for (and
+# ignore) specific tags, and to write logs it finds into a target file.
+#
+# The file the logs are written to is located at /data/logs.${target_name}
+#
+# Once this section is added, the name provided will need to be pointed at by
+# something in the gn packages descriptions (e.g. //garnet/packages)
+#
+# Parameters
+#
+#   log_tags (optional):
+#     [list of strings] Logs with these tags will be written to the log file.
+#
+#   ignore_log_tags (optional):
+#     [list of strings] Logs with these tags will NOT be written to the log
+#     file, even if the log has tags included in the "log_tags" section.
+#
+#   max_disk_usage (optional):
+#       [string] This persist_logs usage will be guaranteed to not use more than
+#       this amount of bytes on disk space. The default is 64,000.
+#
+# Example:
+#
+#   persist_logs("amber_logs") {
+#     log_tags = [ "amber" ]
+#     ignore_log_tags = [ "klog" ]
+#     max_disk_usage = "10000"
+#   }
+
+template("persist_logs") {
+  forward_variables_from(invoker,
+                         [
+                           "log_tags",
+                           "ignore_log_tags",
+                           "max_disk_usage",
+                         ])
+
+  pkg_resources = []
+  pkg_deps = []
+
+  if (!defined(log_tags)) {
+    log_tags = []
+  }
+  if (!defined(ignore_log_tags)) {
+    ignore_log_tags = []
+  }
+
+  name = target_name
+  logs_action_name = "logs/${target_name}"
+  output_file = "$target_out_dir/${target_name}_log_listener.config"
+
+  action(logs_action_name) {
+    script = "//build/gn/gen_persistent_log_config.py"
+    outputs = [
+      output_file,
+    ]
+    args = [ name ] + rebase_path(outputs, root_build_dir)
+    if (log_tags != []) {
+      args += [ "--tags" ]
+      foreach(tag, invoker.log_tags) {
+        args += [ tag ]
+      }
+    }
+    if (ignore_log_tags != []) {
+      args += [ "--ignore-tags" ]
+      foreach(ignore_tag, ignore_log_tags) {
+        args += [ ignore_tag ]
+      }
+    }
+    if (defined(max_disk_usage)) {
+      args += [
+        "--file-capacity",
+        max_disk_usage,
+      ]
+    }
+  }
+
+  if (persist_logs) {
+    pkg_resources = [
+      {
+        dest = "sysmgr/${target_name}_log_listener.config"
+        path = output_file
+      },
+    ]
+    pkg_deps = [ ":$logs_action_name" ]
+  }
+  package(target_name) {
+    deprecated_system_image = true
+    resources = pkg_resources
+    deps = pkg_deps
+  }
+}

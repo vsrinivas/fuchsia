@@ -1,0 +1,66 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/sdk/sdk_atom.gni")
+
+# A prebuilt host executable which can be bundled in an SDK.
+#
+#   prebuilt (required)
+#     Label of the prebuilt executable.
+#
+#   category (required)
+#     Publication level of the executable in SDKs.
+#     See //build/sdk/sdk_atom.gni.
+#
+#   sdk_deps (optional)
+#     List of labels representing elements that should be added to SDKs
+#     alongside the present binary.
+#     Labels in the list must represent SDK-ready targets.
+
+template("sdk_prebuilt_executable") {
+  assert(defined(invoker.category), "Must define an SDK category")
+  assert(defined(invoker.prebuilt), "Must set the path")
+  if (is_fuchsia) {
+    assert(false, "Only valid for host tools")
+  }
+
+  main_target_name = target_name
+
+  group(main_target_name) {
+    # No-op target, only used to abide by naming conventions.
+  }
+
+  tool_name = get_path_info(invoker.prebuilt, "file")
+  file_base = "tools/$tool_name"
+
+  sdk_atom("${target_name}_sdk") {
+    id = "sdk://tools/$tool_name"
+
+    category = invoker.category
+
+    meta = {
+      dest = "$file_base-meta.json"
+      schema = "host_tool"
+      value = {
+        type = "host_tool"
+        name = tool_name
+        root = "tools"
+        files = [ file_base ]
+      }
+    }
+
+    files = [
+      {
+        source = invoker.prebuilt
+        dest = file_base
+      },
+    ]
+
+    if (defined(invoker.sdk_deps)) {
+      deps = invoker.sdk_deps
+    }
+
+    non_sdk_deps = [ ":$main_target_name" ]
+  }
+}

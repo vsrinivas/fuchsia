@@ -1,0 +1,160 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_artifact.gni")
+
+# Defines a Rust procedural macro
+#
+# Parameters
+#
+#   name
+#     Name of the crate as defined in its manifest file. If not specified, it is
+#     assumed to be the same as the target name.
+#
+#   version (optional)
+#     Semver version of the crate as seen on crates.io.
+#
+#   edition
+#     Edition of the Rust language to be used.
+#     Options are "2015" and "2018". If unsure, choose "2018".
+#
+#   deps (optional)
+#     List of rust_library GN targets on which this crate depends.
+#     Third party crates can be included through paths like
+#     "//third_party/rust-crates/rustc_deps:<cratename>".
+#
+#   source_root (optional)
+#     Location of the crate root (e.g. `src/main.rs` or `src/lib.rs`).
+#     This defaults to `./src/main.rs` for binaries and `./src/lib.rs` for libraries,
+#     and should only be changed when absolutely necessary
+#     (such as in the case of generated code).
+#
+#   with_lto (optional)
+#     Force LTO to be enabled/disabled for the binary. Values are "none", "thin" and
+#     "fat". This value takes precedence over GN args or the default value for the
+#     type of build (debug or release).
+#
+# Example of usage:
+#
+#   rustc_macro("foo") {
+#     deps = [
+#       "//garnet/public/rust/bar",
+#       "//third_party/rust-crates/rustc_deps:serde",
+#       "//third_party/rust-crates/rustc_deps:slab",
+#     ]
+#   }
+template("rustc_macro") {
+  # Compiling procedural macros is... a bit awkward.
+  #
+  # Even though they're provided to crates that use them as if they were normal
+  # external crates, they're actually '.so's that are compiled for the host machine,
+  # and then linked into the compiler, so they and all their dependencies should
+  # be built for the host target.
+  #
+  # Once this is done, the resulting artifacts are copied into the Fuchsia target
+  # directories to act as if they had been built for Fuchsia. In order to avoid
+  # conflicts, the outputs of the original (host) artifact are built with a
+  # `_proc_macro` suffix added onto the end, which is removed when they're copied
+  # into the final target directory.
+  proc_macro_target = "${target_name}_proc_macro"
+  proc_macro_host_target = ":${proc_macro_target}($host_toolchain)"
+
+  if (defined(invoker.name)) {
+    rustc_artifact_name = invoker.name
+  } else {
+    rustc_artifact_name = target_name
+  }
+
+  crate_name = string_replace(rustc_artifact_name, "-", "_")
+
+  if (host_os == "mac") {
+    macro_extension = ".dylib"
+  } else {
+    macro_extension = ".so"
+  }
+
+  # The actual host-target build of the proc macro crate.
+  rustc_artifact(proc_macro_target) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "version",
+                             "edition",
+                             "source_root",
+                             "testonly",
+                             "with_lto",
+                           ])
+    name = rustc_artifact_name
+    type = "proc-macro"
+    output_file_override = "lib${crate_name}_proc_macro${macro_extension}"
+  }
+
+  # Copy the generated Cargo.toml
+  copy_cargo_toml_target = "${target_name}_copy_cargo_toml"
+  proc_macro_target_gen_dir =
+      get_label_info(proc_macro_host_target, "target_gen_dir")
+  copy(copy_cargo_toml_target) {
+    visibility = [ ":${target_name}" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      proc_macro_host_target,
+    ]
+    sources = [
+      "$proc_macro_target_gen_dir/$proc_macro_target/Cargo.toml",
+    ]
+    outputs = [
+      "$target_gen_dir/$target_name/Cargo.toml",
+    ]
+  }
+
+  # Copy the generated _build_info.json which provides data about the target that
+  # was built.
+  copy_out_info_target = "${target_name}_copy_info"
+  out_info_path = "$target_out_dir/${rustc_artifact_name}_build_info.json"
+  proc_macro_target_out_dir =
+      get_label_info(proc_macro_host_target, "target_out_dir")
+  copy(copy_out_info_target) {
+    visibility = [ ":${target_name}" ]
+    forward_variables_from(invoker, [ "testonly" ])
+    deps = [
+      proc_macro_host_target,
+    ]
+    sources = [
+      "$proc_macro_target_out_dir/${proc_macro_target}_build_info.json",
+    ]
+    outputs = [
+      out_info_path,
+    ]
+  }
+
+  # Copy the generated `.so`.
+  copy_binary_target = "${target_name}_copy_binary"
+  proc_macro_target_root_out_dir =
+      get_label_info(proc_macro_host_target, "root_out_dir")
+  proc_macro_target_out_bin_path = "$proc_macro_target_root_out_dir/rust_crates/lib${crate_name}_proc_macro${macro_extension}"
+  out_bin_path =
+      "${root_out_dir}/rust_crates/lib${crate_name}${macro_extension}"
+  copy(copy_binary_target) {
+    visibility = [ ":${target_name}" ]
+    forward_variables_from(invoker, [ "testonly " ])
+    deps = [
+      proc_macro_host_target,
+    ]
+    sources = [
+      proc_macro_target_out_bin_path,
+    ]
+    outputs = [
+      out_bin_path,
+    ]
+  }
+
+  # Group all of the `copy` targets into one group which is publicly exposed.
+  group(target_name) {
+    deps = [
+      ":$copy_binary_target",
+      ":$copy_cargo_toml_target",
+      ":$copy_out_info_target",
+    ]
+  }
+}

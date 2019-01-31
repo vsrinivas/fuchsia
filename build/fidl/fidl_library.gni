@@ -1,0 +1,250 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/fidl/toolchain.gni")
+import("//build/json/validate_json.gni")
+import("//build/sdk/sdk_atom.gni")
+
+# Generates some representation of a FIDL library that's consumable by Language
+# bindings generators.
+#
+# The parameters for this template are defined in //build/fidl/fidl.gni. The
+# relevant parameters in this template are:
+#   - name;
+#   - sdk_category;
+#   - sources.
+
+template("fidl_library") {
+  assert(
+      current_toolchain == fidl_toolchain,
+      "This template can only be used in the FIDL toolchain $fidl_toolchain.")
+
+  assert(defined(invoker.sources), "A FIDL library requires some sources.")
+
+  library_name = target_name
+  if (defined(invoker.name)) {
+    library_name = invoker.name
+  }
+
+  response_file = "$target_gen_dir/$target_name.args"
+  fidl_stem = "$target_gen_dir/$target_name.fidl"
+  json_representation = "$fidl_stem.json"
+  c_stem = string_replace(library_name, ".", "/") + "/c/fidl"
+  c_client = "$root_gen_dir/$c_stem.client.c"
+  c_header = "$root_gen_dir/$c_stem.h"
+  c_server = "$root_gen_dir/$c_stem.server.c"
+  coding_tables = "$fidl_stem.tables.cc"
+
+  main_target_name = target_name
+  response_file_target_name = "${target_name}_response_file"
+  compilation_target_name = "${target_name}_compile"
+  verification_target_name = "${target_name}_verify"
+
+  all_deps = []
+  if (defined(invoker.deps)) {
+    all_deps += invoker.deps
+  }
+  if (defined(invoker.public_deps)) {
+    all_deps += invoker.public_deps
+  }
+
+  action(response_file_target_name) {
+    visibility = [ ":*" ]
+
+    script = "//build/fidl/gen_response_file.py"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "public_deps",
+                             "sources",
+                             "testonly",
+                           ])
+
+    libraries = "$target_gen_dir/$main_target_name.libraries"
+
+    outputs = [
+      response_file,
+      libraries,
+    ]
+
+    args = [
+             "--out-response-file",
+             rebase_path(response_file, root_build_dir),
+             "--out-libraries",
+             rebase_path(libraries, root_build_dir),
+             "--json",
+             rebase_path(json_representation, root_build_dir),
+             "--c-client",
+             rebase_path(c_client, root_build_dir),
+             "--c-header",
+             rebase_path(c_header, root_build_dir),
+             "--c-server",
+             rebase_path(c_server, root_build_dir),
+             "--tables",
+             rebase_path(coding_tables, root_build_dir),
+             "--name",
+             library_name,
+             "--sources",
+           ] + rebase_path(sources, root_build_dir)
+
+    if (all_deps != []) {
+      dep_libraries = []
+
+      foreach(dep, all_deps) {
+        gen_dir = get_label_info(dep, "target_gen_dir")
+        name = get_label_info(dep, "name")
+        dep_libraries += [ "$gen_dir/$name.libraries" ]
+      }
+
+      inputs = dep_libraries
+
+      args += [ "--dep-libraries" ] + rebase_path(dep_libraries, root_build_dir)
+    }
+  }
+
+  compiled_action(compilation_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+
+    visibility = [ ":*" ]
+
+    tool = "//zircon/public/tool/fidlc"
+
+    inputs = [
+      response_file,
+    ]
+
+    outputs = [
+      c_client,
+      c_header,
+      c_server,
+      coding_tables,
+      json_representation,
+    ]
+
+    rebased_response_file = rebase_path(response_file, root_build_dir)
+
+    args = [ "@$rebased_response_file" ]
+
+    deps = [
+      ":$response_file_target_name",
+    ]
+  }
+
+  validate_json(verification_target_name) {
+    forward_variables_from(invoker, [ "testonly" ])
+    visibility = [ ":*" ]
+    data = json_representation
+    schema = "//zircon/system/host/fidl/schema.json"
+    deps = [
+      ":$compilation_target_name",
+    ]
+  }
+
+  group(main_target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "testonly",
+                             "visibility",
+                           ])
+
+    public_deps = [
+      ":$compilation_target_name",
+      ":$response_file_target_name",
+    ]
+
+    deps = [
+      ":$verification_target_name",
+    ]
+  }
+
+  if (defined(invoker.sdk_category) && invoker.sdk_category != "excluded") {
+    library_name = target_name
+    if (defined(invoker.name)) {
+      library_name = invoker.name
+    }
+
+    # Process sources.
+    file_base = "fidl/$library_name"
+    all_files = []
+    sdk_sources = []
+    foreach(source, invoker.sources) {
+      relative_source = rebase_path(source, ".")
+      if (string_replace(relative_source, "..", "bogus") != relative_source) {
+        # If the source file is not within the same directory, just use the file
+        # name.
+        relative_source = get_path_info(source, "file")
+      }
+      destination = "$file_base/$relative_source"
+      sdk_sources += [ destination ]
+      all_files += [
+        {
+          source = rebase_path(source)
+          dest = destination
+        },
+      ]
+    }
+
+    # Identify metadata for dependencies.
+    sdk_metas = []
+    sdk_deps = []
+    foreach(dep, all_deps) {
+      full_label = get_label_info(dep, "label_no_toolchain")
+      sdk_dep = "${full_label}_sdk"
+      sdk_deps += [ sdk_dep ]
+      gen_dir = get_label_info(sdk_dep, "target_gen_dir")
+      name = get_label_info(sdk_dep, "name")
+      sdk_metas += [ rebase_path("$gen_dir/$name.meta.json") ]
+    }
+
+    # Generate the library metadata.
+    meta_file = "$target_gen_dir/${target_name}.sdk_meta.json"
+    meta_target_name = "${target_name}_meta"
+
+    action(meta_target_name) {
+      script = "//build/fidl/gen_sdk_meta.py"
+
+      inputs = sdk_metas
+
+      outputs = [
+        meta_file,
+      ]
+
+      args = [
+               "--out",
+               rebase_path(meta_file),
+               "--name",
+               library_name,
+               "--root",
+               file_base,
+               "--specs",
+             ] + sdk_metas + [ "--sources" ] + sdk_sources
+
+      deps = sdk_deps
+    }
+
+    sdk_atom("${target_name}_sdk") {
+      id = "sdk://fidl/$library_name"
+
+      category = invoker.sdk_category
+
+      meta = {
+        source = meta_file
+        dest = "$file_base/meta.json"
+        schema = "fidl_library"
+      }
+
+      files = all_files
+
+      non_sdk_deps = [ ":$meta_target_name" ]
+
+      deps = []
+      foreach(dep, all_deps) {
+        label = get_label_info(dep, "label_no_toolchain")
+        deps += [ "${label}_sdk" ]
+      }
+    }
+  }
+}
