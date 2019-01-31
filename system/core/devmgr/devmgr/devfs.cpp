@@ -12,6 +12,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
+#include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fs/connection.h>

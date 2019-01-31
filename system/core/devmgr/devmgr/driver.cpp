@@ -13,8 +13,7 @@
 #include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "../shared/log.h"
-#include "coordinator.h"
-#include "devmgr.h"
+#include "driver.h"
 
 #include <driver-info/driver-info.h>
 

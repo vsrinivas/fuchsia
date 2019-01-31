@@ -6,13 +6,11 @@
 
 #include <ddk/binding.h>
 #include <ddk/device.h>
-#include <ddk/driver.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
 #include <fbl/unique_ptr.h>
 #include <fbl/vector.h>
 #include <lib/async/cpp/wait.h>
-#include <lib/fit/function.h>
 #include <lib/zx/channel.h>
 #include <lib/zx/event.h>
 #include <lib/zx/job.h>
@@ -23,6 +21,7 @@
 #include <utility>
 
 #include "device.h"
+#include "driver.h"
 #include "metadata.h"
 
 namespace devmgr {
@@ -208,27 +207,6 @@ private:
 #define DEV_CTX_INVISIBLE     0x80
 
 // clang-format on
-
-struct Driver {
-    Driver() = default;
-
-    fbl::String name;
-    fbl::unique_ptr<const zx_bind_inst_t[]> binding;
-    // Binding size in number of bytes, not number of entries
-    // TODO: Change it to number of entries
-    uint32_t binding_size = 0;
-    uint32_t flags = 0;
-    zx::vmo dso_vmo;
-
-    fbl::DoublyLinkedListNodeState<Driver*> node;
-    struct Node {
-        static fbl::DoublyLinkedListNodeState<Driver*>& node_state(Driver& obj) { return obj.node; }
-    };
-
-    fbl::String libname;
-};
-
-#define DRIVER_NAME_LEN_MAX 64
 
 zx_status_t devfs_publish(Device* parent, Device* dev);
 void devfs_unpublish(Device* dev);
@@ -416,11 +394,6 @@ private:
 };
 
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);
-
-using DriverLoadCallback = fit::function<void(Driver* driver, const char* version)>;
-
-void load_driver(const char* path, DriverLoadCallback func);
-void find_loadable_drivers(const char* path, DriverLoadCallback func);
 
 bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
                     size_t prop_count, bool autobind);

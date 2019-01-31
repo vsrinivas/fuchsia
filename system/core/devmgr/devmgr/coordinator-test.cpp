@@ -2,8 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <set>
-
+#include <ddk/driver.h>
 #include <fbl/algorithm.h>
 #include <fuchsia/device/manager/c/fidl.h>
 #include <lib/async-loop/cpp/loop.h>
@@ -19,6 +18,8 @@ zx::channel fs_clone(const char* path) {
     return zx::channel();
 }
 } // namespace devmgr
+
+static constexpr char kDriverPath[] = "/boot/driver/test/mock-device.so";
 
 static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) {
     devmgr::CoordinatorConfig config;
@@ -99,7 +100,7 @@ bool dump_state() {
     END_TEST;
 }
 
-bool find_loadable_drivers() {
+bool load_driver() {
     BEGIN_TEST;
 
     bool found_driver = false;
@@ -107,7 +108,7 @@ bool find_loadable_drivers() {
         delete drv;
         found_driver = true;
     };
-    devmgr::find_loadable_drivers("/boot/driver/test", callback);
+    devmgr::load_driver(kDriverPath, callback);
     ASSERT_TRUE(found_driver);
 
     END_TEST;
@@ -123,17 +124,15 @@ bool bind_drivers() {
     ASSERT_EQ(ZX_OK, status);
     coordinator.set_running(true);
 
-    std::set<const devmgr::Driver*> drivers;
-    auto callback = [&coordinator, &drivers](devmgr::Driver* drv, const char* version) {
-        drivers.insert(drv);
+    devmgr::Driver* driver;
+    auto callback = [&coordinator, &driver](devmgr::Driver* drv, const char* version) {
+        driver = drv;
         return coordinator.DriverAdded(drv, version);
     };
-    devmgr::find_loadable_drivers("/boot/driver/test", callback);
+    devmgr::load_driver(kDriverPath, callback);
     loop.RunUntilIdle();
-    ASSERT_FALSE(coordinator.drivers().is_empty());
-    for (const devmgr::Driver& drv : coordinator.drivers()) {
-        ASSERT_TRUE(drivers.find(&drv) != drivers.end());
-    }
+    ASSERT_EQ(1, coordinator.drivers().size_slow());
+    ASSERT_EQ(driver, &coordinator.drivers().front());
 
     END_TEST;
 }
@@ -165,8 +164,8 @@ bool bind_devices() {
     ASSERT_EQ(1, coordinator.devices().size_slow());
 
     // Add the driver.
-    devmgr::find_loadable_drivers(
-        "/boot/driver/test", fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
+    devmgr::load_driver(
+        kDriverPath, fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
     loop.RunUntilIdle();
     ASSERT_FALSE(coordinator.drivers().is_empty());
 
@@ -174,7 +173,7 @@ bool bind_devices() {
     devmgr::Device* dev = &coordinator.devices().front();
     devmgr::Devhost host;
     dev->host = &host;
-    status = coordinator.BindDevice(dev, "/boot/driver/test/mock-device.so");
+    status = coordinator.BindDevice(dev, kDriverPath);
     ASSERT_EQ(ZX_OK, status);
 
     // Wait for the BindDriver request.
@@ -203,7 +202,7 @@ bool bind_devices() {
                          actual_bytes, handles, actual_handles, nullptr);
     ASSERT_EQ(ZX_OK, status);
     auto req = reinterpret_cast<fuchsia_device_manager_ControllerBindDriverRequest*>(bytes);
-    ASSERT_STR_EQ("/boot/driver/test/mock-device.so", req->driver_path.data);
+    ASSERT_STR_EQ(kDriverPath, req->driver_path.data);
 
     // Write the BindDriver response.
     memset(bytes, 0, sizeof(bytes));
@@ -230,7 +229,7 @@ BEGIN_TEST_CASE(coordinator_tests)
 RUN_TEST(initialize_core_devices)
 RUN_TEST(open_virtcon)
 RUN_TEST(dump_state)
-RUN_TEST(find_loadable_drivers)
+RUN_TEST(load_driver)
 RUN_TEST(bind_drivers)
 RUN_TEST(bind_devices)
 END_TEST_CASE(coordinator_tests)
