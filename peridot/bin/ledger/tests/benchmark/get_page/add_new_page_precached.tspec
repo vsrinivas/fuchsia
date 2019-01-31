@@ -1,0 +1,25 @@
+{
+  "test_suite_name": "fuchsia.ledger.get_page",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/get_page.cmx",
+  "args": ["--requests-count=50", "--wait-for-cached-page"],
+  "categories": ["benchmark", "ledger"],
+  "duration": 120,
+  "measure": [
+    {
+      "type": "duration",
+      "output_test_name": "precached_page/get_page",
+      "event_name": "get page",
+      "event_category": "benchmark",
+      "expected_sample_count": 50,
+      "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "new_page/precache_db",
+      "event_name": "prepare_cached_db",
+      "event_category": "ledger",
+      "expected_sample_count": 50,
+      "split_first": true
+    }
+  ]
+}

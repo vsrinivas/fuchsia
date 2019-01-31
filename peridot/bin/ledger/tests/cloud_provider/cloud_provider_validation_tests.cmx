@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/disabled/cloud_provider_validation_tests"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.ledger.cloud.CloudProvider"
+        ]
+    }
+}

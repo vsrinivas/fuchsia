@@ -1,0 +1,111 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+using fuchsia.modular.auth;
+using fuchsia.ui.viewsv1token;
+using fuchsia.sys;
+
+// Given by the |Basemgr| to the |BaseShell| at Initialize() so the
+// |BaseShell| can get information about the users of this device from the
+// |Basemgr|, and act on the provided information (including extending the
+// user database).
+interface UserProvider {
+    // Adds information of a user that can be used to authenticate her/him to this
+    // device. Once successfully added, the user can login to the same device via
+    // Login().
+    //
+    // |identity_provider| is the identity provider to use for identification.
+    //
+    // |device_name| is what the user wants to name the device. If null or empty
+    // the device's current hostname will be used.
+    //
+    // |account| is NULL if there was an error during identification and
+    // |error_code| is set.
+    1: AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
+           -> (fuchsia.modular.auth.Account? account, string? error_code);
+
+    // Removes information of a user from the local user database.
+    //
+    // |account_id| is received from either AddUser() or PreviousUsers().
+    2: RemoveUser(string account_id) -> (string? error_code);
+
+    // Uses the credentials provided in AddUser() to start a user session. This
+    // would mean syncing with the user's ledger instance and displaying a user
+    // shell with all of the user's stories.
+    // TODO(alhaad): In the future, we want to protect Login() with a password,
+    // Android lock pattern, etc.
+    3: Login(UserLoginParams user_login_params);
+
+    // List of all users who have authenticated to this device in the past.
+    4: PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
+};
+
+// Used to specify arguments to log into a user session.
+struct UserLoginParams {
+    // |account_id| is received from either AddUser() or PreviousUsers(). It
+    // can be NULL which means logging-in in an incognito mode.
+    string? account_id;
+
+    // |view_owner| is the view given to the |SessionShell| started for the newly
+    // logged-in user.
+    request<fuchsia.ui.viewsv1token.ViewOwner> view_owner;
+
+    // Services provided by the |BaseShell| that can be offered to the
+    // |SessionShell| that is being logged into.
+    fuchsia.sys.ServiceProvider? services;
+
+    // If login fails, |user_controller| is closed.
+    request<UserController> user_controller;
+};
+
+// Provided by the |Basemgr| to the |BaseShell| when it authenticates a
+// new user. This interface provides control to a logged-in user's life cycle,
+// and the life of this interface is bound to a user being logged in.
+//
+// An interface similar to this one, |UserContext|, is provided to the user
+// shell. It also contains a method to request logout. The difference is of
+// level of ownership and control:
+//
+// - A controller interface to one component instance is given to a component
+//   instance which has control over the life cycle of the first component
+//   instance. As such, the controller interface can be used by the controlling
+//   component to change the life cycle of the controlled component.
+//
+// - A context interface to one component instance is given to a component
+//   instance whose life cycle is controlled by the first component instance. As
+//   such, the context interface can be used by the controlled component to
+//   request a change to its life cycle (among other functions).
+//
+// In general, the separation of a service |Foo| implemented by a component, and
+// the service |FooController| given to the client of that component (rather
+// than |Foo| directly) is a hallmark of inversion of control that pervades the
+// design of our services.
+interface UserController {
+    // Logs out a user by tearing down its sessionmgr. Returns once the
+    // Sessionmgr has been torn down. This also triggers OnLogout() for
+    // |UserWatcher|s.
+    1: Logout() -> ();
+
+    // Registers a watcher for the user's life cycle events.
+    2: Watch(UserWatcher watcher);
+
+    // Stops the currently running session shell and starts the one specified by
+    // |session_shell_config|. This operation stops all stories before starting
+    // the new shell.
+    3: SwapSessionShell(AppConfig session_shell_config) -> ();
+};
+
+// Implemented by a |BaseShell| implementation in order to receive
+// notification about life cycle changes of a logged in user.
+interface UserWatcher {
+    // Called when a user has logged out, either by UserController.Logout() or by
+    // UserContext.Logout(). By the time this event is processed by a watcher, the
+    // Sessionmgr may already be torn down.
+    //
+    // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
+    // possible to UserProvider.Login() the same user.
+    1: OnLogout();
+};

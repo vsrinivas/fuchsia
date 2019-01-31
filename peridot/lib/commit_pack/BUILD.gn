@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+flatbuffer("commit_pack_flatbuffer") {
+  sources = [
+    "//peridot/public/fidl/fuchsia.ledger.cloud/serialized_commits.fbs",
+  ]
+}
+
+source_set("commit_pack") {
+  sources = [
+    "commit_pack.cc",
+    "commit_pack.h",
+  ]
+
+  deps = [
+    ":commit_pack_flatbuffer",
+    "//peridot/lib/convert",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "commit_pack_unittest.cc",
+  ]
+
+  deps = [
+    ":commit_pack",
+    "//third_party/googletest:gtest",
+  ]
+}

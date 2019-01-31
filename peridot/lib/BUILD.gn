@@ -1,0 +1,41 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+executable("peridot_lib_unittests") {
+  testonly = true
+
+  deps = [
+    "//peridot/lib/commit_pack:unittests",
+    "//peridot/lib/convert:unittests",
+    "//peridot/lib/fidl:unittests",
+    "//peridot/lib/firebase:unittests",
+    "//peridot/lib/firebase_auth:unittests",
+    "//peridot/lib/firebase_auth/testing:unittests",
+    "//peridot/lib/ledger_client:unittests",
+    "//peridot/lib/module_manifest:unittests",
+    "//peridot/lib/rng:unittests",
+    "//peridot/lib/scoped_tmpfs:unittests",
+    "//peridot/lib/session_shell_settings:unittests",
+    "//peridot/lib/socket:unittests",
+    "//peridot/lib/util:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+fidl("maxwell_internal") {
+  cpp_legacy_callbacks = true
+
+  name = "fuchsia.maxwell.internal"
+
+  sources = [
+    "module_manifest_source/fidl/module_package_indexer.fidl",
+  ]
+
+  deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}

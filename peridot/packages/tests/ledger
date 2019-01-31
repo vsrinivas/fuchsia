@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "peridot/packages/prod/cloud_provider_firestore",
+        "peridot/packages/prod/ledger"
+    ],
+    "packages": [
+        "//peridot/bin/ledger:ledger_tests",
+        "//peridot/bin/ledger:ledger_fuzzers",
+        "//peridot/bin/ledger/testing/ledger_test_instance_provider:ledger_test_instance_provider"
+    ]
+}

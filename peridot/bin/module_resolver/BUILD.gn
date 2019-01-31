@@ -1,0 +1,75 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
+
+executable_package("module_resolver") {
+  meta = [
+    {
+      path = "meta/module_resolver.cmx"
+      dest = "module_resolver.cmx"
+    },
+  ]
+
+  sources = [
+    "module_resolver_main.cc",
+  ]
+
+  deps = [
+    ":local_module_resolver",
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/module_manifest_source:firebase_source",
+    "//peridot/lib/module_manifest_source:module_package_source",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//peridot/public/lib/entity/cpp:json",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+tests_package("module_resolver_unittests") {
+  deps = [
+    ":local_module_resolver_unittest",
+  ]
+}
+
+source_set("local_module_resolver") {
+  sources = [
+    "local_module_resolver.cc",
+    "local_module_resolver.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/module_manifest_source",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/context/cpp:context_helper",
+    "//peridot/public/lib/entity/cpp:json",
+  ]
+}
+
+executable("local_module_resolver_unittest") {
+  testonly = true
+
+  sources = [
+    "local_module_resolver_unittest.cc",
+  ]
+
+  deps = [
+    ":local_module_resolver",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/testing:entity_resolver_fake",
+    "//peridot/public/lib/entity/cpp:json",
+    "//third_party/googletest:gtest_main",
+  ]
+}

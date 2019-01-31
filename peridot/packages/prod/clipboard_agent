@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//peridot/bin/agents/clipboard:clipboard_agent"
+    ]
+}

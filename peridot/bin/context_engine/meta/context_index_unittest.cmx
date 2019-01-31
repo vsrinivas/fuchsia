@@ -1,0 +1,8 @@
+{
+  "program": {
+    "binary": "test/context_index_unittest"
+  },
+  "sandbox": {
+    "services": []
+  }
+}

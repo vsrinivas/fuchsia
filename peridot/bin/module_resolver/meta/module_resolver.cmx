@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.modular.ComponentContext",
+            "fuchsia.modular.IntelligenceServices",
+            "fuchsia.net.oldhttp.HttpService"
+        ],
+        "system": [
+            "data/initial_module_packages"
+        ]
+    }
+}

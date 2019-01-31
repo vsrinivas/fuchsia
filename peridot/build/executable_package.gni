@@ -1,0 +1,56 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# A package() that just contains a single binary created as an executable()
+# under the name of the rule. We currently prefer packages with single binaries,
+# because only such binaries can be executed directly from the package name in
+# appmgr.
+template("executable_package") {
+  binary_rule = "${target_name}_bin"
+  binary_name = target_name
+
+  executable(binary_rule) {
+    output_name = "${binary_name}"
+    forward_variables_from(invoker,
+                           [
+                             "sources",
+                             "deps",
+                             "public_deps",
+                             "testonly",
+                           ])
+  }
+
+  package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "deprecated_system_image",
+                             "public_deps",
+                             "testonly",
+                             "meta",
+                             "tests",
+                             "resources",
+                             "deprecated_bare_package_url",
+                           ])
+    if (defined(deps)) {
+      deps += [ ":${binary_rule}" ]
+    } else {
+      deps = [
+        ":${binary_rule}",
+      ]
+    }
+
+    if (!defined(deprecated_system_image) || !deprecated_system_image) {
+      binary = binary_name
+    } else {
+      binaries = [
+        {
+          name = binary_name
+        },
+      ]
+    }
+  }
+}

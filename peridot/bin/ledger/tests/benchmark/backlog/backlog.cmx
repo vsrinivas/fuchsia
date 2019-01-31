@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/ledger_benchmark_backlog"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

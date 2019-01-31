@@ -1,0 +1,26 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("context_helper") {
+  sources = [
+    "context_helper.cc",
+    "context_helper.h",
+  ]
+
+  deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("context_metadata_builder") {
+  sources = [
+    "context_metadata_builder.cc",
+    "context_metadata_builder.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}

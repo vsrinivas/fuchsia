@@ -1,0 +1,89 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/cloud_provider_firestore/*" ]
+
+executable("app") {
+  output_name = "cloud_provider_firestore"
+
+  sources = [
+    "app.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rng:system",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "cloud_provider_impl.cc",
+    "cloud_provider_impl.h",
+    "credentials_provider.h",
+    "credentials_provider_impl.cc",
+    "credentials_provider_impl.h",
+    "device_set_impl.cc",
+    "device_set_impl.h",
+    "factory_impl.cc",
+    "factory_impl.h",
+    "grpc_status.cc",
+    "grpc_status.h",
+    "page_cloud_impl.cc",
+    "page_cloud_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/fidl",
+    "//peridot/bin/cloud_provider_firestore/firestore",
+    "//peridot/bin/cloud_provider_firestore/include",
+    "//peridot/lib/firebase_auth",
+    "//peridot/lib/rng",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//third_party/grpc:grpc++",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/app:serialization_version",
+    "//peridot/lib/commit_pack",
+    "//peridot/lib/convert",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "cloud_provider_impl_unittest.cc",
+    "credentials_provider_impl_unittest.cc",
+    "device_set_impl_unittest.cc",
+    "factory_impl_unittest.cc",
+    "page_cloud_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//garnet/public/lib/gtest",
+    "//peridot/bin/cloud_provider_firestore/app/testing",
+    "//peridot/bin/cloud_provider_firestore/firestore/testing",
+    "//peridot/lib/convert",
+    "//peridot/lib/firebase_auth/testing",
+    "//peridot/lib/rng:testing",
+    "//third_party/protobuf:protobuf_full",
+  ]
+}

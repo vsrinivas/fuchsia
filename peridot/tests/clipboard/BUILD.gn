@@ -1,0 +1,40 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("clipboard_test_module") {
+  testonly = true
+
+  sources = [
+    "clipboard_test_module.cc",
+  ]
+
+  meta = [
+    {
+      path = "meta/clipboard_test_module.cmx"
+      dest = "clipboard_test_module.cmx"
+    },
+  ]
+
+  deps = [
+    ":defs",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}

@@ -1,0 +1,18 @@
+{
+    "imports": [
+        "garnet/packages/config/mdns",
+        "garnet/packages/config/netconnector",
+        "garnet/packages/prod/cobalt_client",
+        "garnet/packages/prod/mdns",
+        "garnet/packages/prod/mdns-util",
+        "garnet/packages/prod/netconnector",
+        "peridot/packages/prod/clipboard_agent",
+        "peridot/packages/prod/cloud_provider_firestore",
+        "peridot/packages/prod/ledger",
+        "peridot/packages/prod/maxwell",
+        "peridot/packages/prod/modular",
+        "peridot/packages/prod/module_resolver",
+        "peridot/packages/prod/sessionctl",
+        "peridot/packages/prod/story_info"
+    ]
+}

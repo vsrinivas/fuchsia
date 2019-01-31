@@ -1,0 +1,48 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
+# TODO(prathyushk): Refactor this once the GN feature discussed below
+# is available.
+# https://groups.google.com/a/chromium.org/d/msg/gn-dev/zoVnBgjLgnQ/9yzGr7r3BAAJ
+#
+# This source_set depends on including the generated ledger Cobalt
+# config as a resource. See peridot/bin/ledger/BUILD.gn for an example.
+source_set("firebase_auth") {
+  sources = [
+    "firebase_auth.h",
+    "firebase_auth_impl.cc",
+    "firebase_auth_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/lib/backoff",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/cobalt/cpp:cobalt_logger",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rng",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "firebase_auth_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":firebase_auth",
+    "//garnet/public/lib/backoff/testing",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/firebase_auth/testing",
+  ]
+}

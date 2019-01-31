@@ -1,0 +1,27 @@
+{
+    "program": {
+      "binary": "bin/app"
+    },
+    "sandbox": {
+      "services": [
+        "fuchsia.modular.ComponentContext",
+        "fuchsia.modular.ModuleContext",
+        "fuchsia.testing.runner.TestRunner",
+        "fuchsia.testing.runner.TestRunnerStore"
+      ]
+    },
+    "facets": {
+        "fuchsia.module": {
+            "@version": 2,
+            "binary": "bin/app",
+            "composition_pattern": "ticker",
+            "intent_filters": [
+                {
+                    "action": "com.google.fuchsia.common.null",
+                    "parameters": []
+                }
+            ],
+            "suggestion_headline": "Null module"
+        }
+    }
+}

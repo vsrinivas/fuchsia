@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "page_sync_empty_impl.cc",
+    "page_sync_empty_impl.h",
+  ]
+
+  public_deps = [
+    "//peridot/bin/ledger/sync_coordinator/public",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

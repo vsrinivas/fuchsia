@@ -1,0 +1,26 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("module_package_indexer") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/lib:maxwell_internal",
+    "//peridot/lib/module_manifest_source:package_util",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+  ]
+
+  meta = [
+    {
+      path = "meta/module_package_indexer.cmx"
+      dest = "module_package_indexer.cmx"
+    },
+  ]
+}

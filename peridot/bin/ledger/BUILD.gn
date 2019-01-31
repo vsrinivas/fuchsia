@@ -1,0 +1,205 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/package.gni")
+import("//build/testing/secret_spec.gni")
+import("//peridot/bin/ledger/testing/sync_params.gni")
+
+visibility = [ "//peridot/*" ]
+
+package("ledger") {
+  deps = [
+    "app",
+    "cobalt:ledger_metrics_registry",
+  ]
+
+  binary = "ledger"
+
+  meta = [
+    {
+      path = rebase_path("meta/ledger.cmx")
+      dest = "ledger.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
+      dest = "ledger_cobalt_config.pb"
+    },
+    {
+      path = rebase_path(
+              get_label_info("cobalt:ledger_metrics_registry",
+                             "target_gen_dir") + "/ledger_metrics_registry.pb")
+      dest = "firebase_auth_cobalt_config.pb"
+    },
+  ]
+}
+
+package("ledger_tests") {
+  testonly = true
+
+  deps = [
+    ":ledger_e2e_sync_credentials",
+    ":ledger_unittests",
+    "//peridot/bin/cloud_provider_firestore:tests",
+    "//peridot/bin/ledger/tests/cloud_provider",
+    "//peridot/bin/ledger/tests/e2e_local",
+    "//peridot/bin/ledger/tests/e2e_sync",
+    "//peridot/bin/ledger/tests/integration",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("tests/ledger_unittests.cmx")
+      dest = "ledger_unittests.cmx"
+    },
+    {
+      path = rebase_path("tests/integration/ledger_integration_tests.cmx")
+      dest = "ledger_integration_tests.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_local/ledger_e2e_local.cmx")
+      dest = "ledger_e2e_local.cmx"
+    },
+    {
+      path = rebase_path("tests/e2e_sync/ledger_e2e_sync.cmx")
+      dest = "ledger_e2e_sync.cmx"
+    },
+    {
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_firestore/cloud_provider_firestore_unittests.cmx")
+      dest = "cloud_provider_firestore_unittests.cmx"
+    },
+    {
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_firestore/validation/validation_firestore.cmx")
+      dest = "validation_firestore.cmx"
+    },
+    {
+      # This test must be started by validation_firestore and will fail if started on its own.
+      path = rebase_path(
+              "tests/cloud_provider/cloud_provider_validation_tests.cmx")
+      dest = "cloud_provider_validation_tests.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "ledger_unittests"
+    },
+    {
+      name = "ledger_integration_tests"
+    },
+    {
+      name = "ledger_e2e_local"
+    },
+    {
+      name = "cloud_provider_firestore_unittests"
+    },
+
+    {
+      name = "ledger_e2e_sync"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+    },
+    {
+      name = "launch_validation_tests_firestore"
+
+      # This test needs additional configuration and should not run by default.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+    },
+    {
+      name = "cloud_provider_validation_tests"
+
+      # This test must be started by validation_firestore and will fail if started on its own.
+      # Marking it as disabled puts the binary in `test/disabled/` under the
+      # package directory.
+      disabled = true
+    },
+  ]
+
+  resources = []
+  if (ledger_sync_credentials_file != "") {
+    resources += [
+      {
+        path = ledger_sync_credentials_file
+        dest = "sync_credentials.json"
+      },
+    ]
+  }
+}
+
+secret_spec("ledger_e2e_sync_credentials") {
+  key_name = "ledger-tests-remote"
+
+  ciphertext_file = "ledger_e2e_sync_credentials.ciphertext"
+}
+
+config("ledger_config") {
+  asmflags = []
+
+  cflags = [
+    # Remove when enabled globally by TO-99.
+    "-Wunused-lambda-capture",
+
+    # Remove when enabled globally by TO-100.
+    "-Wuser-defined-warnings",
+
+    # Warn about unreachable code.
+    "-Wunreachable-code",
+  ]
+
+  ldflags = [
+    # Use a 1M stack.
+    "-Wl,-z,stack-size=0x100000",
+  ]
+}
+
+executable("ledger_unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/fxl:fxl_printers",
+    "//peridot/bin/ledger/app:unittests",
+    "//peridot/bin/ledger/cache:unittests",
+    "//peridot/bin/ledger/cloud_sync/impl:unittests",
+    "//peridot/bin/ledger/coroutine:unittests",
+    "//peridot/bin/ledger/coroutine/context:unittests",
+    "//peridot/bin/ledger/encryption/impl:unittests",
+    "//peridot/bin/ledger/encryption/primitives:unittests",
+    "//peridot/bin/ledger/environment:unittests",
+    "//peridot/bin/ledger/fidl/error_notifier:unittests",
+    "//peridot/bin/ledger/filesystem:unittests",
+    "//peridot/bin/ledger/lock:unittests",
+    "//peridot/bin/ledger/p2p_provider/impl:unittests",
+    "//peridot/bin/ledger/p2p_sync/impl:unittests",
+    "//peridot/bin/ledger/storage/impl:unittests",
+    "//peridot/bin/ledger/storage/impl/btree:unittests",
+    "//peridot/bin/ledger/storage/public:unittests",
+    "//peridot/bin/ledger/storage/testing:unittests",
+    "//peridot/bin/ledger/sync_helper:unittests",
+    "//peridot/bin/ledger/testing:unittests",
+    "//peridot/bin/ledger/testing/netconnector:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  configs += [ ":ledger_config" ]
+}
+
+fuzz_package("ledger_fuzzers") {
+  targets = [ "//peridot/bin/ledger/storage/impl/btree:encoding_fuzzer" ]
+  sanitizers = [
+    "asan",
+    "ubsan",
+  ]
+}

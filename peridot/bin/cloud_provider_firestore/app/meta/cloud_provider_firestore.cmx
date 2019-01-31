@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.net.LegacySocketProvider",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.cobalt.LoggerFactory"
+        ]
+    }
+}

@@ -1,0 +1,46 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("primitives") {
+  sources = [
+    "encrypt.cc",
+    "encrypt.h",
+    "hash.cc",
+    "hash.h",
+    "hmac.cc",
+    "hmac.h",
+    "kdf.cc",
+    "kdf.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rng",
+    "//peridot/third_party/modp_b64",
+    "//third_party/boringssl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+  sources = [
+    "crypto_test_util.cc",
+    "encrypt_unittest.cc",
+    "hmac_unittest.cc",
+    "kdf_unittest.cc",
+  ]
+
+  deps = [
+    ":primitives",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rng:testing",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

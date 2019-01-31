@@ -1,0 +1,44 @@
+{
+  "test_suite_name": "fuchsia.ledger.put_entry",
+  "app": "fuchsia-pkg://fuchsia.com/ledger_benchmarks#meta/put.cmx",
+  "args": [
+    "--entry-count=100", "--transaction-size=0", "--key-size=100",
+    "--value-size=1000", "--refs=on"
+  ],
+  "categories": ["benchmark", "ledger"],
+  "duration": 60,
+  "measure": [
+    {
+      "type": "duration",
+      "output_test_name": "reference/put",
+      "event_name": "put",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "reference/create_reference",
+      "event_name": "create_reference",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "reference/put_reference",
+      "event_name": "put_reference",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    },
+    {
+      "type": "duration",
+      "output_test_name": "reference/local_change_notification",
+      "event_name": "local_change_notification",
+      "event_category": "benchmark",
+      "expected_sample_count": 100,
+      "split_first": true
+    }
+  ]
+}

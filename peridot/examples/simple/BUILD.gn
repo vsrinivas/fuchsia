@@ -1,0 +1,61 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
+
+executable_package("simple_agent") {
+
+  meta = [
+    {
+      path = "meta/simple_agent.cmx"
+      dest = "simple_agent.cmx"
+    },
+  ]
+
+  sources = [
+    "simple_agent.cc",
+    "simple_impl.cc",
+    "simple_impl.h",
+  ]
+
+  deps = [
+    ":interfaces",
+    "//garnet/public/lib/component/cpp",
+    "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("simple_module") {
+
+  meta = [
+    {
+      path = "meta/simple_module.cmx"
+      dest = "simple_module.cmx"
+    },
+  ]
+
+  sources = [
+    "simple_module.cc",
+  ]
+
+  deps = [
+    ":interfaces",
+    "//garnet/public/lib/component/cpp",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/message_queue/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+fidl("interfaces") {
+  cpp_legacy_callbacks = true
+
+  name = "fuchsia.modular.examples.simple"
+
+  sources = [
+    "simple.fidl",
+  ]
+}

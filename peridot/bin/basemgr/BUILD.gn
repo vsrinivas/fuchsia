@@ -1,0 +1,170 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+declare_args() {
+  # Whether basemgr should automatically login as a guest user.
+  auto_login_to_guest = false
+}
+
+flatbuffer("users") {
+  sources = [
+    "users.fbs",
+  ]
+}
+
+executable_package("basemgr") {
+  meta = [
+    {
+      path = "meta/basemgr.cmx"
+      dest = "basemgr.cmx"
+    },
+  ]
+
+  sources = [
+    "basemgr_impl.cc",
+    "basemgr_impl.h",
+    "basemgr_settings.cc",
+    "basemgr_settings.h",
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/fidl/fuchsia.devicesettings",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/basemgr/cobalt",
+    "//peridot/lib/common:async_holder",
+    "//peridot/lib/common:names",
+    "//peridot/lib/common:teardown",
+    "//peridot/lib/fidl:app_client",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/fidl:environment",
+    "//peridot/lib/ledger_client:constants",
+    "//peridot/lib/session_shell_settings",
+    "//peridot/lib/util:filesystem",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  public_deps = [
+    "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                  "//peridot/bin/basemgr/cobalt:basemgr_metrics_registry",
+                  "target_gen_dir") + "/basemgr_metrics_registry.pb")
+      dest = "basemgr_metrics_registry.pb"
+    },
+  ]
+}
+
+tests_package("basemgr_unittests") {
+  deps = [
+    ":user_controller_impl_unittest",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "user_controller_impl.cc",
+    "user_controller_impl.h",
+    "user_provider_impl.cc",
+    "user_provider_impl.h",
+  ]
+
+  deps = [
+    ":users",
+    "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/common:async_holder",
+    "//peridot/lib/common:names",
+    "//peridot/lib/common:teardown",
+    "//peridot/lib/common:xdr",
+    "//peridot/lib/fidl:app_client",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/fidl:environment",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/util:filesystem",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//zircon/public/lib/trace",
+  ]
+
+  if (auto_login_to_guest) {
+    public_configs = [ ":auto_login_to_guest" ]
+  }
+}
+
+executable_package("dev_base_shell") {
+
+  meta = [
+    {
+      path = "meta/dev_base_shell.cmx"
+      dest = "dev_base_shell.cmx"
+    },
+  ]
+
+  sources = [
+    "dev_base_shell.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("user_controller_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "user_controller_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing:fake_launcher",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/fidl:clone",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+config("auto_login_to_guest") {
+  defines = [ "AUTO_LOGIN_TO_GUEST" ]
+}

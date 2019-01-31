@@ -1,0 +1,46 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//peridot/bin/ledger/fidl/error_notifier/error_notifier.gni")
+
+source_set("error_notifier") {
+  sources = [
+    "error_notifier_binding.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/sync_helper",
+    "//zircon/public/lib/fit",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+error_notifier_fidl("error_notifier_fidl_test") {
+  testonly = true
+
+  fidl_target = "//peridot/bin/ledger/fidl/error_notifier/fidl"
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "error_notifier_binding_unittest.cc",
+  ]
+
+  deps = [
+    ":error_notifier",
+    ":error_notifier_fidl_test",
+    "//garnet/public/lib/callback",
+    "//peridot/bin/ledger/fidl/error_notifier/fidl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-testutils",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

@@ -1,0 +1,68 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# We follow these conventions for the organization of the sources, build rules,
+# and packages here:
+#
+# 1. All the binaries used in tests are run through a basemgr invocation
+#    configured in modular_tests.json. It usually does not ever make sense to
+#    run a test component binary directly, especially not as a test. Therefore,
+#    all binaries are deployed in their own packages, so that they are not run
+#    automatically by roller scripts. Instead, only the run_modular_tests.sh
+#    script is present in /system/test/, which then invokes the test runner,
+#    which in turn invokes all the test component binaries in the right
+#    configuration.
+#
+# 2. The component binary as well as its package is named with a prefix that
+#    tells the test it belongs to, followed by "_test", optionally followed by a
+#    name component indicating its function if there are multiple components of
+#    the same type in a single test, followed a suffix indicating the component
+#    type. This way, all components belonging to the same test are
+#    lexicographically sorted together.
+#
+# 3. Common components shared between tests are named after their function
+#    followed by a suffix indicating the component type.
+#
+# 4. The suffix that indicates the component type (i.e. the primary service
+#    provided by the component) is:
+#
+#    - _module -- Module
+#    - _agent -- Agent
+#    - _session_shell -- SessionShell
+#    - _base_shell -- BaseShell
+#    - _story_shell -- StoryShell
+#    - _service -- FIDL interfaces
+#
+# 5. The main sources of the components are named like the binaries they create.
+#
+#
+# HOW TO ADD A NEW INTEGRATION TEST
+#
+# 1. Add a new subdirectory with rules for the test components (session shells,
+#    modules, agents). Define all test components as executable_package()s.
+#
+# 2. Add the newly defined packages for all test components to
+#    //peridot/packages/tests/modular.
+#
+# 3. Add an entry for the test to modular_tests.json.
+
+import("//build/package.gni")
+
+package("modular_tests") {
+  testonly = true
+
+  tests = [
+    {
+      name = rebase_path("run_modular_tests.sh")
+      dest = "run_modular_tests.sh"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("modular_tests.json")
+      dest = "modular_tests.json"
+    },
+  ]
+}

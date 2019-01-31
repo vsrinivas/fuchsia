@@ -1,0 +1,23 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.modular.internal") {
+  cpp_legacy_callbacks = true
+
+  sources = [
+    "basemgr_debug.fidl",
+    "sessionmgr.fidl",
+    "story_data.fidl",
+  ]
+  deps = [
+    "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+  ]
+}

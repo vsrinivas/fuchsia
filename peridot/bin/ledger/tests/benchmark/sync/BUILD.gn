@@ -1,0 +1,38 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+group("sync") {
+  testonly = true
+
+  public_deps = [
+    ":ledger_benchmark_sync",
+  ]
+}
+
+executable("ledger_benchmark_sync") {
+  testonly = true
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/cloud_provider_firestore/testing",
+    "//peridot/bin/ledger/testing:get_ledger",
+    "//peridot/bin/ledger/testing:lib",
+    "//peridot/lib/convert",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  sources = [
+    "sync.cc",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

@@ -1,0 +1,25 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("impl") {
+  sources = [
+    "ledger_sync_impl.cc",
+    "ledger_sync_impl.h",
+    "page_sync_impl.cc",
+    "page_sync_impl.h",
+    "sync_watcher_converter.cc",
+    "sync_watcher_converter.h",
+    "user_sync_impl.cc",
+    "user_sync_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/sync_coordinator/public",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

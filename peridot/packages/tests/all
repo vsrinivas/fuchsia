@@ -1,0 +1,14 @@
+{
+    "imports": [
+        "garnet/packages/testing/run_test_component",
+        "peridot/packages/tests/bup",
+        "peridot/packages/tests/ledger",
+        "peridot/packages/tests/leveldb",
+        "peridot/packages/tests/maxwell_integration_tests",
+        "peridot/packages/tests/maxwell_unittests",
+        "peridot/packages/tests/modular_integration_tests",
+        "peridot/packages/tests/modular_unittests",
+        "peridot/packages/tests/peridot_tests",
+        "peridot/packages/tests/re2"
+    ]
+}

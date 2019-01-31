@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.net.oldhttp.HttpService": "http"
+            },
+            "system-services": [
+                "fuchsia.net.SocketProvider",
+                "fuchsia.netstack.Netstack",
+                "fuchsia.net.stack.Stack"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/disabled/ledger_e2e_sync"
+    },
+    "sandbox": {
+        "features": [],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

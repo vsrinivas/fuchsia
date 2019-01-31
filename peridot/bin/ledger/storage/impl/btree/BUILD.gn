@@ -1,0 +1,117 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+group("btree") {
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "builder.cc",
+    "builder.h",
+    "diff.cc",
+    "diff.h",
+    "encoding.cc",
+    "encoding.h",
+    "entry_change_iterator.h",
+    "iterator.cc",
+    "iterator.h",
+    "synchronous_storage.cc",
+    "synchronous_storage.h",
+    "tree_node.cc",
+    "tree_node.h",
+  ]
+
+  public_deps = [
+    "//peridot/bin/ledger/coroutine",
+  ]
+
+  deps = [
+    ":internal",
+    ":tree_node_storage",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/encryption/primitives",
+    "//peridot/bin/ledger/storage/impl:object_identifier_lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/lib/convert",
+    "//third_party/murmurhash",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+flatbuffer("tree_node_storage") {
+  sources = [
+    "tree_node.fbs",
+  ]
+
+  public_deps = [
+    "//peridot/bin/ledger/storage/impl:object_identifier",
+  ]
+
+  extra_configs = [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("internal") {
+  sources = [
+    "internal_helper.cc",
+    "internal_helper.h",
+  ]
+
+  public_deps = [
+    "//peridot/bin/ledger/storage/public",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "btree_utils_unittest.cc",
+    "diff_unittest.cc",
+    "encoding_unittest.cc",
+    "tree_node_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    ":tree_node_storage",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/encryption/fake",
+    "//peridot/bin/ledger/encryption/primitives",
+    "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/impl:object_identifier_lib",
+    "//peridot/bin/ledger/storage/impl:test_utils",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/testing",
+    "//peridot/bin/ledger/testing:lib",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+fuzz_target("encoding_fuzzer") {
+  sources = [
+    "encoding_fuzztest.cc",
+  ]
+  deps = [
+    ":lib",
+    "//peridot/bin/ledger/storage/public",
+  ]
+  corpora =
+      [ "848002de6109d94118c57d79b2a8c0cfbd16ba8691bb390e3eb7437089ad99cc" ]
+}

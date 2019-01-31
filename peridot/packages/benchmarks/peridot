@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/benchmarks/buildbot",
+        "peridot/packages/benchmarks/ledger"
+    ],
+    "packages": [
+        "//peridot/tests/benchmarks:peridot_benchmarks"
+    ]
+}

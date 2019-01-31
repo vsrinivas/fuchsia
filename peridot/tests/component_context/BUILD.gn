@@ -1,0 +1,127 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//peridot/build/executable_package.gni")
+
+executable_package("component_context_test_module") {
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/component_context_test_module.cmx"
+      dest = "component_context_test_module.cmx"
+    },
+  ]
+
+  sources = [
+    "component_context_test_module.cc",
+  ]
+
+  deps = [
+    ":component_context_test_service",
+    ":defs",
+    "//garnet/public/lib/callback",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/public/lib/message_queue/cpp",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("component_context_test_one_agent") {
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/component_context_test_one_agent.cmx"
+      dest = "component_context_test_one_agent.cmx"
+    },
+  ]
+
+  sources = [
+    "component_context_test_one_agent.cc",
+  ]
+
+  deps = [
+    ":component_context_test_service",
+    ":defs",
+    "//garnet/public/lib/fsl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/public/lib/message_queue/cpp",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("component_context_test_two_agent") {
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/component_context_test_two_agent.cmx"
+      dest = "component_context_test_two_agent.cmx"
+    },
+  ]
+
+  sources = [
+    "component_context_test_two_agent.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("component_context_test_unstoppable_agent") {
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/component_context_test_unstoppable_agent.cmx"
+      dest = "component_context_test_unstoppable_agent.cmx"
+    },
+  ]
+
+  sources = [
+    "component_context_test_unstoppable_agent.cc",
+  ]
+
+  deps = [
+    ":defs",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//peridot/public/lib/integration_testing/cpp",
+    "//peridot/tests/common:defs",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+fidl("component_context_test_service") {
+  testonly = true
+  cpp_legacy_callbacks = true
+
+  name = "test.peridot.tests.componentcontext"
+
+  sources = [
+    "component_context_test_service.fidl",
+  ]
+}
+
+source_set("defs") {
+  testonly = true
+
+  sources = [
+    "defs.h",
+  ]
+}

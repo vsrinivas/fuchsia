@@ -1,0 +1,42 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+/// Metadata that define the runtime properties of a Module.
+struct ModuleManifest {
+    /// The relative path from the root of the package where the Module executable
+    /// file can be found.
+    /// TODO(MF-94): Extract a module's URL from its cmx manifest instead of
+    /// here.
+    string binary;
+
+    /// A human-readable string that can be used when suggesting this Module.
+    string? suggestion_headline;
+
+    /// A list of intents that this module is able to handle.
+    vector<IntentFilter>? intent_filters;
+
+    /// Identifies the pattern with which to compose this module with others.
+    string? composition_pattern;
+
+    /// Defines the color of the placeholder widget used while the module loads.
+    string? placeholder_color;
+};
+
+/// This struct is used to describe an intent that a module is able to handle.
+struct IntentFilter {
+    /// The action this module is able to handle.
+    string action;
+
+    /// Includes the name and types of entities for the parameters required to
+    /// execute specified [action].
+    vector<ParameterConstraint> parameter_constraints;
+};
+
+struct ParameterConstraint {
+    string name;
+    /// The entity type that is valid for this parameter.
+    string type;
+};

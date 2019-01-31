@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "shell"
+        ],
+        "services": [
+            "fuchsia.modular.ModuleContext",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.testing.runner.TestRunner",
+            "fuchsia.testing.runner.TestRunnerStore"
+        ]
+    }
+}

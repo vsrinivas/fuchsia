@@ -1,0 +1,30 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+namespace p2p_provider;
+
+// Handshake. Gives the host_name of the device. Will be the first message
+// once a connection is established.
+table Handshake {
+  version: ushort;
+  host_name: [ubyte];
+}
+
+table Message {
+  data: [ubyte];
+}
+
+union EnvelopeMessage {
+  Handshake,
+  Message,
+}
+
+// Envelope is the type of messages sent between devices. It contains either a
+// handshake, internal to the P2P provider, or a payload from the
+// synchronization layer.
+table Envelope {
+  message: EnvelopeMessage;
+}
+
+root_type Envelope;

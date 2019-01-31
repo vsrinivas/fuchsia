@@ -1,0 +1,157 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//peridot/bin/ledger/*",
+  "//peridot/bin/cloud_provider_firestore/validation",
+]
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "data_generator.cc",
+    "data_generator.h",
+    "fake_disk_cleanup_manager.h",
+    "get_page_ensure_initialized.cc",
+    "get_page_ensure_initialized.h",
+    "inspect.cc",
+    "inspect.h",
+    "ledger_matcher.cc",
+    "ledger_matcher.h",
+    "page_data_generator.cc",
+    "page_data_generator.h",
+    "quit_on_error.cc",
+    "quit_on_error.h",
+    "run_with_tracing.cc",
+    "run_with_tracing.h",
+    "sync_params.cc",
+    "sync_params.h",
+    "test_with_environment.cc",
+    "test_with_environment.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/timekeeper:testing",
+    "//peridot/bin/ledger/app:lib",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/storage/public:public",
+    "//peridot/lib/convert",
+    "//peridot/lib/firebase_auth/testing:service_account",
+    "//peridot/lib/rng:testing",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.net.oldhttp",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/coroutine",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/lib/firebase_auth/testing",
+    "//peridot/lib/firebase_auth/testing:json_schema",
+    "//peridot/lib/firebase_auth/testing:service_account",
+    "//third_party/boringssl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("ledger_instance_factory") {
+  testonly = true
+
+  sources = [
+    "blocking_callback_waiter.cc",
+    "blocking_callback_waiter.h",
+    "ledger_app_instance_factory.cc",
+    "ledger_app_instance_factory.h",
+    "loop_controller.h",
+    "loop_controller_real_loop.cc",
+    "loop_controller_real_loop.h",
+    "loop_controller_test_loop.cc",
+    "loop_controller_test_loop.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/fidl_helpers",
+    "//peridot/lib/scoped_tmpfs",
+    "//peridot/public/fidl/fuchsia.ledger",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/convert",
+    "//third_party/googletest:gtest",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+# TODO(https://fuchsia.atlassian.net/projects/LE/issues/LE-607): Consider moving to benchmarks/.
+source_set("get_ledger") {
+  testonly = true
+
+  sources = [
+    "get_ledger.cc",
+    "get_ledger.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/filesystem",
+    "//peridot/lib/convert",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/callback",
+    "//peridot/bin/ledger/fidl",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "blocking_callback_waiter_unittest.cc",
+    "ledger_matcher_unittest.cc",
+  ]
+
+  deps = [
+    ":ledger_instance_factory",
+    ":lib",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

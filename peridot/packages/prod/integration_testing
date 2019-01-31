@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "garnet/packages/prod/test_runner",
+        "peridot/packages/prod/modular"
+    ],
+    "packages": [
+        "//peridot/bin/basemgr:dev_base_shell",
+        "//peridot/bin/sessionmgr/story_runner:dev_story_shell",
+        "//peridot/bin/test_driver:test_driver_module",
+        "//peridot/bin/token_manager:dev_token_manager",
+        "//peridot/bin/sessionmgr:dev_session_shell"
+    ]
+}

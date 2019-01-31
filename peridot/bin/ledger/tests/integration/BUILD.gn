@@ -1,0 +1,83 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+executable("integration") {
+  output_name = "ledger_integration_tests"
+
+  testonly = true
+
+  sources = [
+    "integration_test_tests.cc",
+    "ledger_app_instance_factory_integration.cc",
+    "merging_tests.cc",
+    "page_mutation_tests.cc",
+    "page_snapshot_tests.cc",
+    "page_tests.cc",
+    "page_watcher_tests.cc",
+  ]
+
+  deps = [
+    ":integration_lib",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/timekeeper:testing",
+    "//peridot/bin/ledger/app:lib",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/fidl:error_notifier",
+    "//peridot/bin/ledger/p2p_provider/impl",
+    "//peridot/bin/ledger/p2p_provider/public",
+    "//peridot/bin/ledger/p2p_sync/impl",
+    "//peridot/bin/ledger/p2p_sync/public",
+    "//peridot/bin/ledger/storage/fake:lib",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/testing:ledger_instance_factory",
+    "//peridot/bin/ledger/testing:lib",
+    "//peridot/bin/ledger/testing/cloud_provider",
+    "//peridot/bin/ledger/testing/netconnector",
+    "//peridot/bin/ledger/tests/integration/sync",
+    "//peridot/lib/convert",
+    "//peridot/lib/firebase_auth/testing",
+    "//peridot/lib/socket",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular.auth",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("integration_lib") {
+  testonly = true
+
+  sources = [
+    "integration_test.cc",
+    "integration_test.h",
+    "test_utils.cc",
+    "test_utils.h",
+  ]
+
+  deps = [
+    "//peridot/lib/convert",
+    "//peridot/lib/socket",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/ledger/testing:ledger_instance_factory",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/async-testutils",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

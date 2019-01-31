@@ -1,0 +1,10 @@
+{
+    "packages": [
+        "//peridot/examples/simple:simple_agent",
+        "//peridot/examples/simple:simple_module",
+        "//peridot/examples/swap_cpp:swap_module1",
+        "//peridot/examples/swap_cpp:swap_module2",
+        "//peridot/examples/swap_cpp:swap_recipe",
+        "//peridot/examples/todo_cpp:todo_cpp"
+    ]
+}

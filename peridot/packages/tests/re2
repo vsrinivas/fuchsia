@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//third_party/re2:re2_tests"
+    ]
+}

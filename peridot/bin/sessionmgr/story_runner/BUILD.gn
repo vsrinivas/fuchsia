@@ -1,0 +1,146 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
+
+hermetic_tests_package("story_runner_unittests") {
+  deps = [
+    ":link_impl_unittest",
+    ":story_controller_impl_unittest",  # incomplete, for now.
+  ]
+}
+
+# NOTE: We are in the process of deconstructing story_runner into its
+# constituent components. Please see MF-85.
+source_set("story_runner") {
+  sources = [
+    "link_impl.cc",
+    "link_impl.h",
+    "module_context_impl.cc",
+    "module_context_impl.h",
+    "module_controller_impl.cc",
+    "module_controller_impl.h",
+    "ongoing_activity_impl.cc",
+    "ongoing_activity_impl.h",
+    "story_controller_impl.cc",
+    "story_controller_impl.h",
+    "story_entity_provider.cc",
+    "story_entity_provider.h",
+    "story_provider_impl.cc",
+    "story_provider_impl.h",
+    "story_shell_context_impl.cc",
+    "story_shell_context_impl.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/ui/snapshot:snapshot_loader",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/basemgr/cobalt",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/bin/sessionmgr:component_context",
+    "//peridot/bin/sessionmgr:focus",
+    "//peridot/bin/sessionmgr:presentation_provider",
+    "//peridot/bin/sessionmgr/agent_runner",
+    "//peridot/bin/sessionmgr/message_queue",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:find_modules_call",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:get_types_from_entity_call",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:initialize_chain_call",
+    "//peridot/bin/sessionmgr/storage:constants_and_utils",
+    "//peridot/bin/sessionmgr/story/model",
+    "//peridot/bin/sessionmgr/story/systems:story_visibility_system",
+    "//peridot/lib/common:names",
+    "//peridot/lib/common:teardown",
+    "//peridot/lib/fidl:app_client",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:environment",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/lib/fidl:proxy",
+    "//peridot/lib/ledger_client:operations",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/lib/ledger_client:types",
+    "//peridot/lib/module_manifest:module_facet_reader",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/util",
+    "//peridot/lib/util:debug",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//peridot/public/lib/async/cpp:operation",
+    "//peridot/public/lib/context/cpp:context_helper",
+    "//peridot/public/lib/entity/cpp:json",
+    "//peridot/public/lib/fostr/fidl/fuchsia.modular",
+  ]
+
+  deps = [
+    "//peridot/bin/sessionmgr/storage",
+    "//peridot/bin/sessionmgr/story:system",
+    "//peridot/bin/sessionmgr/story/model",
+    "//peridot/bin/sessionmgr/story/model:noop_story_model_storage",
+    "//peridot/bin/sessionmgr/story/model:story_model_owner",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("dev_story_shell") {
+  meta = [
+    {
+      path = "meta/dev_story_shell.cmx"
+      dest = "dev_story_shell.cmx"
+    },
+  ]
+  sources = [
+    "dev_story_shell.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/fidl:view_host",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("story_controller_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "story_controller_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//peridot/lib/fidl:clone",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("link_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "link_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":story_runner",
+    "//peridot/bin/sessionmgr/agent_runner",
+    "//peridot/lib/fidl:clone",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/entity/cpp:json",
+    "//third_party/googletest:gtest_main",
+  ]
+}

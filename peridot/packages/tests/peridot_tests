@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//peridot:peridot_tests"
+    ]
+}

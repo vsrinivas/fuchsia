@@ -1,0 +1,96 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+enum ExecuteStatus {
+    OK = 0;
+
+    // Encountered an invalid command.
+    INVALID_COMMAND = 1;
+
+    // The |story_id| provided does not exist or is not visible
+    // to this client.
+    INVALID_STORY_ID = 2;
+
+    // A story must contain at least one mod, and the commands given
+    // either don't add one, or remove the last one.
+    STORY_MUST_HAVE_MODS = 3;
+
+    // The mod name specified in AddMod, RemoveMod or SendModCommand
+    // was not found, or is invalid.
+    INVALID_MOD = 4;
+
+    // Resolution of the intent provided in AddMod returned zero results.
+    NO_MODULES_FOUND = 5;
+
+    // Some error happened while executing the command.
+    INTERNAL_ERROR = 6;
+};
+
+struct ExecuteResult {
+    ExecuteStatus status;
+    string? story_id;
+    string? error_message;
+};
+
+// Enables control of a session. A session, conceptually, is a single
+// full-screen experience of a Fuchsia device. A device can run multiple
+// sessions (ie, when one device powers multiple kiosks); that said, sessions
+// are siloed from each other.
+//
+// A session, concretely, is a collection of stories, their state, the modules
+// within them, any agents that run to support the mods and the various UI
+// shells (session and story shells).
+[Discoverable]
+interface PuppetMaster {
+    // Requests a capability to control a story by name. The name acts as the
+    // story's unique ID.  Calling ControlStory() for the same story name will
+    // control the same story.
+    //
+    // The story name, as well as modification to the story, are durable and
+    // persist across device reboots. This allows the client to assign its own
+    // identifiers to stories. Clients wishing to guarantee a new story is
+    // created should generate a UUIDv4 or similar.
+    //
+    // |request| is closed if control cannot be granted.
+    //
+    // TODO(thatguy): We want story names to be scoped to the client's namespace.
+    ControlStory(string story_name, request<StoryPuppetMaster> request);
+
+    // Deletes a story associated to |story_name|.
+    DeleteStory(string story_name) -> ();
+
+    // Returns a list of all the names of stories in the session.
+    GetStories() -> (vector<string> story_names);
+};
+
+struct WatchSessionOptions {
+    // FIDL doens't allow empty structs. We want this struct to exist in the API
+    // for future session watching options.
+    int32 placeholder;
+};
+
+interface StoryPuppetMaster {
+    // Enqueues the given |commands| in the order they are given.
+    // Can be called as many times as necessary to specify the full
+    // set of changes to the story.
+    //
+    // To execute all enqueued commands, call Execute().
+    Enqueue(vector<StoryCommand> commands);
+
+    // Executes the commands enqueued so far by Enqueue() in order and as
+    // a batch: no other commands from other clients will be interleaved.
+    //
+    // If an error occurs, execution is stopped and an error code
+    // and message are returned in |result|.
+    Execute() -> (ExecuteResult result);
+
+    // If this story is new, sets the options for its creation. Must be called
+    // before the first call to Execute(). Any subsequent calls (either on the
+    // same channel or on a new StoryPuppetMaster for an existing story) are
+    // ignored. Some StoryOptions can be changed through specific story commands.
+    // See story_command.fidl for details.
+    SetCreateOptions(StoryOptions story_options);
+};

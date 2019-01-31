@@ -1,0 +1,30 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+source_set("public") {
+  sources = [
+    "ledger_sync.h",
+    "page_sync.h",
+    "sync_state_watcher.cc",
+    "sync_state_watcher.h",
+    "user_config.h",
+    "user_sync.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/encryption/public",
+    "//peridot/bin/ledger/fidl/include",
+    "//peridot/bin/ledger/filesystem",
+    "//peridot/bin/ledger/storage/public",
+  ]
+
+  deps = [
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

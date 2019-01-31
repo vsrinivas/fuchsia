@@ -1,0 +1,27 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/toolchain.gni")
+
+group("services") {
+  deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+group("just_fidl") {
+  deps = [
+    "//peridot/public/fidl/fuchsia.modular($fidl_toolchain)",
+  ]
+}
+
+executable("peridot_public_lib_unittests") {
+  testonly = true
+
+  deps = [
+    "async/cpp:unittests",
+    "entity/cpp:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}

@@ -1,0 +1,66 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
+
+executable_package("clipboard_agent") {
+
+  meta = [
+    {
+      path = "meta/clipboard_agent.cmx"
+      dest = "clipboard_agent.cmx"
+    },
+  ]
+
+  sources = [
+    "clipboard_agent.cc",
+  ]
+
+  deps = [
+    ":clipboard_sources",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/lib/app_driver/cpp:agent_driver",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+source_set("clipboard_sources") {
+  sources = [
+    "clipboard_impl.cc",
+    "clipboard_impl.h",
+    "clipboard_storage.cc",
+    "clipboard_storage.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/ledger_client:page_client",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("clipboard_impl_unittest") {
+  testonly = true
+
+  sources = [
+    "clipboard_impl_unittest.cc",
+  ]
+
+  deps = [
+    ":clipboard_sources",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+tests_package("clipboard_unittests") {
+  deps = [
+    ":clipboard_impl_unittest",
+  ]
+}

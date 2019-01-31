@@ -1,0 +1,16 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// Top-level service provider interface that vends services to read and write
+// context data.
+[Discoverable]
+interface ContextEngine {
+    1: GetReader(ComponentScope client_info, request<ContextReader> request);
+
+    2: GetWriter(ComponentScope client_info, request<ContextWriter> request);
+
+    3: GetContextDebug(request<ContextDebug> request);
+};

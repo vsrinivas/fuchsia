@@ -1,0 +1,77 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+import("//peridot/build/tests_package.gni")
+
+executable_package("sessionctl") {
+  # We do this only to have `sessionctl` appear in the shell's
+  # PATH. When a solution to this is available, remove this line
+  # and uncomment the "meta =" stanza below.
+  deprecated_system_image = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/rapidjson",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+  ]
+
+  # meta = [
+  #   {
+  #     path = "meta/sessionctl.cmx"
+  #     dest = "sessionctl.cmx"
+  #   },
+  # ]
+}
+
+source_set("lib") {
+  sources = [
+    "logger.cc",
+    "logger.h",
+    "session_ctl_app.cc",
+    "session_ctl_app.h",
+    "session_ctl_constants.h",
+  ]
+
+  deps = [
+    "//peridot/lib/rapidjson",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/fidl/fuchsia.modular.internal",
+    "//peridot/public/lib/async/cpp:future",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("sessionctl_unittest") {
+  testonly = true
+
+  sources = [
+    "session_ctl_app_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//peridot/bin/sessionmgr/puppet_master:puppet_master_impl",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:test_story_command_executor",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+tests_package("sessionctl_unittests") {
+  deps = [
+    ":sessionctl_unittest",
+  ]
+}

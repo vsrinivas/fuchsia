@@ -1,0 +1,80 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+# A variant of package() that only contains test executables. The test
+# executables are specified as the build products of the deps. A tests_package()
+# is always testonly = true. The deps are expected to be executable()s.
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
+template("tests_package") {
+  computed_tests = []
+  foreach(dep, invoker.deps) {
+    computed_tests += [
+      {
+        name = get_label_info(dep, "name")
+        if (defined(invoker.environments)) {
+          environments = invoker.environments
+        }
+      },
+    ]
+  }
+
+  package(target_name) {
+    testonly = true
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "meta",
+                             "resources",
+                           ])
+    tests = computed_tests
+  }
+}
+
+# A variant of test_package() that only contains test executables. It computes
+# the value of the 'tests' paremeter from 'deps'.
+#
+# This variant, as described in
+# https://fuchsia.git.corp.google.com/docs/+/master/development/tests/test_component.md,
+# requires a .cmx file for each test.
+#
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
+template("hermetic_tests_package") {
+  computed_tests = []
+  foreach(dep, invoker.deps) {
+    computed_tests += [
+      {
+        name = get_label_info(dep, "name")
+        if (defined(invoker.environments)) {
+          environments = invoker.environments
+        }
+      },
+    ]
+  }
+
+  test_package(target_name) {
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "meta",
+                             "resources",
+                           ])
+    tests = computed_tests
+  }
+}

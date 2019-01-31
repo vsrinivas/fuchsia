@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "peridot/packages/prod/ledger"
+    ],
+    "packages": [
+        "//peridot/bin/ledger/tests/benchmark:ledger_benchmarks"
+    ]
+}

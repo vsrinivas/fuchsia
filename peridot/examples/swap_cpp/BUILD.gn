@@ -1,0 +1,84 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("swap_module1") {
+
+  meta = [
+    {
+      path = "meta/swap_module1.cmx"
+      dest = "swap_module1.cmx"
+    },
+  ]
+
+  sources = [
+    "swap_module1.cc",
+  ]
+  deps = [
+    ":module",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+executable_package("swap_module2") {
+
+  meta = [
+    {
+      path = "meta/swap_module2.cmx"
+      dest = "swap_module2.cmx"
+    },
+  ]
+
+  sources = [
+    "swap_module2.cc",
+  ]
+  deps = [
+    ":module",
+    "//peridot/public/lib/app_driver/cpp:app_driver",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+source_set("module") {
+  sources = [
+    "module.cc",
+    "module.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/fidl:single_service_app",
+  ]
+
+  deps = [
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+  ]
+}
+
+executable_package("swap_recipe") {
+
+  meta = [
+    {
+      path = "meta/swap_recipe.cmx"
+      dest = "swap_recipe.cmx"
+    },
+  ]
+
+  sources = [
+    "swap_recipe.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}

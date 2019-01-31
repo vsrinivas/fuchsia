@@ -1,0 +1,98 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// Sessionmgr passes a connection to this service to the SessionShell so it can
+// operate on stories for the user. It is also passed to other services that
+// monitor or manipulate stories, specifically the maxwell services.
+//
+// Closing a |StoryProvider| connection has no effect on the state of the
+// framework.
+[Discoverable]
+interface StoryProvider {
+    // Returns a list of existing stories. If |watcher| is provided, the client will
+    // be notified of story changes (new stories, deleted stories, runtime
+    // state changes).
+    4: GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
+
+    // Requests detailed information about the given story. If the story doesn't
+    // exist, returns null.
+    5: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+
+    // Obtains a controller for a previously created story identified by its story
+    // ID. Obtaining the controller doesn't run it yet. If the story doesn't
+    // exist, the interface request is closed.
+    6: GetController(string story_id, request<StoryController> request);
+
+    // Returns info of known stories.
+    // DEPRECATED: In favor of GetStories().
+    7: PreviousStories() -> (vector<StoryInfo> story_infos);
+
+    // Registers a watcher for changes in the story collection.
+    // DEPRECATED: In favor of GetStories().
+    9: Watch(StoryProviderWatcher watcher);
+
+    // Registers a watcher for ongoing story activity. Upon registration,
+    // StoryActivityWatcher.OnStoryActivity() will be called to update clients
+    // with the initial data. See StoryActivityWatcher for motivations.
+    10: WatchActivity(StoryActivityWatcher watcher);
+};
+
+// Implemented by clients of StoryProvider.
+interface StoryProviderWatcher {
+    // Called in three different situations:
+    //
+    //  * Immediately when a new watcher is registered with one OnChange()
+    //    invocation with the current infor and state of each story known on the
+    //    current device.
+    //
+    //  * Every time a change to StoryInfo is applied to the record of the story
+    //    kept on the current device, including a new story created on another
+    //    device becoming known on this device for the first time.
+    //
+    //  * Every time the StoryState of the story changes on this device. The
+    //    StoryState on another device of a story known on this device is not made
+    //    known on this device.
+    //
+    //  * Every time the StoryVisibilityState of the story changes on this device.
+    //    The StoryVisibilityState on another device of a story known on this
+    //    device is not made known on this device.
+    //
+    //    I.e. if the story is started or stopped on *another* device, it does
+    //    *not* cause an OnChange() call on *this* device. Cf. OnDelete() below.
+    //
+    // The ID of the story the notifications are about are part of StoryInfo.
+    //
+    // |story_state| is STOPPED if the story was just created or just became known
+    // on this device and was not yet started on the current device. It's RUNNING
+    // when the story is started on the current device.
+    //
+    // |story_visibility_state| is DEFAULT until a mod on the current device
+    // requests for the visibility state to be changed.
+    1: OnChange(StoryInfo story_info, StoryState story_state,
+                StoryVisibilityState story_visibility_state);
+
+    // Called when a story record is permanently deleted. The deletion could
+    // have originated on this or on another device.
+    //
+    // If the story is running on this device at the time it is deleted,
+    // OnChange() will not be called first.
+    2: OnDelete(string story_id);
+};
+
+// Implemented by clients of StoryProvider in order to inform them about ongoing
+// activities in stories. |activities| is the entire list of ongoing activities
+// (represented by its type) within the story by the given |story_id|. If
+// |activities| is empty, it means that there is no ongoing activity within the
+// story.
+//
+// Clients can expect this event whenever there is a newly started/stopped
+// ongoing activity, as well as when the client first registers for updates
+// via StoryProvider.WatchActivity(). |activities| can contain duplicate
+// OngoingActivityType's, ex. if a story is playing 2 videos at once.
+interface StoryActivityWatcher {
+    1: OnStoryActivityChange(string story_id,
+                             vector<OngoingActivityType> activities);
+};

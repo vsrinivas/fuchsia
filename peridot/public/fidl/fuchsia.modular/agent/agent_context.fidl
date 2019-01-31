@@ -1,0 +1,71 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+using fuchsia.auth;
+
+/// An instance of this service is exposed to agents in their namespace.
+/// |AgentContext| allows an agent to schedule tasks which run in response to
+/// triggers. Triggers are conditions such as a message arriving on a
+/// MessageQueue.
+[Discoverable]
+interface AgentContext {
+    /// DEPRECATED: ComponentContext is now available in the
+    /// namespace/environment for Modules.
+    1: GetComponentContext(request<ComponentContext> request);
+
+    /// Connects to an EntityReferenceFactory for this Agent. Entity references
+    /// obtained from this EntityReferenceFactory will be resolved back to this
+    /// Agent.
+    4: GetEntityReferenceFactory(request<EntityReferenceFactory> request);
+
+    /// Schedules a task described in |task_info|. When this task is scheduled to
+    /// run, Agent.RunTask() is called.
+    ///
+    /// TODO(MI4-962): Add a callback to task scheduling.
+    5: ScheduleTask(TaskInfo task_info);
+
+    /// No new runs of this task will be scheduled.
+    6: DeleteTask(string task_id);
+
+    /// The auth token manager this Agent may use for accessing external services.
+    7: GetTokenManager(request<fuchsia.auth.TokenManager> request);
+};
+
+/// Used to describe a task to the framework.
+struct TaskInfo {
+    /// An agent provided task id that can be used later to refer to this task.
+    string task_id;
+
+    /// The condition that would cause this task to get scheduled.
+    TriggerCondition trigger_condition;
+
+    /// If set to true, the trigger condition will be persisted on the user's
+    /// ledger and will be available across reboots and devices.
+    bool persistent;
+};
+
+/// Describes the condition that needs to be met for a task to become scheduled.
+/// This is not yet complete and will be extended or changed.
+union TriggerCondition {
+    /// Triggers when there is a new message on a message queue.
+    ///
+    /// |message_on_queue| is the name of the message queue to be watched. This
+    /// means that only the component that originally obtained the message queue
+    /// will be able to observe new message events.
+    string message_on_queue;
+
+    /// Triggers when a message queue is deleted.
+    ///
+    /// |queue_deleted| is the token for the message queue that is to be watched.
+    /// This allows both message queue readers and writers to watch for queue
+    /// deletions.
+    string queue_deleted;
+
+    /// Fires an inexact repeating alarm every |alarm_in_seconds| seconds that'll
+    /// satisfy this trigger condition. The first alarm fires in
+    /// |alarm_in_seconds| seconds.
+    uint32 alarm_in_seconds;
+};

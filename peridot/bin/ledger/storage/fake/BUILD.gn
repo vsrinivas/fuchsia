@@ -1,0 +1,50 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/ledger/*" ]
+
+group("fake") {
+  testonly = true
+
+  deps = [
+    ":lib",
+  ]
+}
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "fake_commit.cc",
+    "fake_commit.h",
+    "fake_db.cc",
+    "fake_db.h",
+    "fake_db_factory.cc",
+    "fake_db_factory.h",
+    "fake_journal.cc",
+    "fake_journal.h",
+    "fake_journal_delegate.cc",
+    "fake_journal_delegate.h",
+    "fake_object.cc",
+    "fake_object.h",
+    "fake_page_storage.cc",
+    "fake_page_storage.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/environment",
+    "//peridot/bin/ledger/storage/public",
+    "//peridot/bin/ledger/storage/testing",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//peridot/bin/ledger/encryption/fake",
+    "//peridot/bin/ledger/encryption/primitives",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}

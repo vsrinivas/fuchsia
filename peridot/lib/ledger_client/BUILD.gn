@@ -1,0 +1,118 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("ledger_client") {
+  deps = [
+    ":constants",
+    ":operations",
+    ":page_client",
+    ":promise",
+    ":types",
+  ]
+}
+
+source_set("constants") {
+  sources = [
+    "constants.h",
+  ]
+}
+
+source_set("operations") {
+  sources = [
+    "operations.h",
+  ]
+
+  public_deps = [
+    ":page_client",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:json_xdr",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("page_client") {
+  sources = [
+    "ledger_client.cc",
+    "ledger_client.h",
+    "page_client.cc",
+    "page_client.h",
+    "page_id.cc",
+    "page_id.h",
+  ]
+
+  deps = [
+    ":status",
+    ":types",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/fidl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/fidl:clone",
+    "//peridot/public/fidl/fuchsia.ledger",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+source_set("promise") {
+  sources = [
+    "promise.h",
+  ]
+
+  public_deps = [
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/public/fidl/fuchsia.ledger",
+  ]
+}
+
+source_set("status") {
+  sources = [
+    "status.cc",
+    "status.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/public/fidl/fuchsia.ledger",
+  ]
+}
+
+source_set("types") {
+  sources = [
+    "types.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+  ]
+}
+
+group("unittests") {
+  testonly = true
+
+  deps = [
+    ":page_client_unittest",
+  ]
+}
+
+source_set("page_client_unittest") {
+  testonly = true
+
+  sources = [
+    "page_client_unittest.cc",
+  ]
+
+  deps = [
+    ":page_client",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/fidl:array_to_string",
+    "//peridot/lib/testing:test_with_ledger",
+    "//peridot/public/lib/async/cpp:operation",
+    "//third_party/googletest:gtest",
+  ]
+}

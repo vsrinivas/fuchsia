@@ -1,0 +1,15 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+namespace storage;
+
+// The identifier of an object. This contains the digest of the object, as well
+// as the information needed to hide its name and encrypt its content.
+table ObjectIdentifierStorage {
+  key_index: uint;
+  deletion_scope_id: uint;
+  object_digest: [ubyte];
+}
+
+root_type ObjectIdentifierStorage;

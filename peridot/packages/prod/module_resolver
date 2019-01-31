@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//peridot/bin/module_resolver",
+        "//peridot/bin/module_resolver/module_package_indexer"
+    ]
+}

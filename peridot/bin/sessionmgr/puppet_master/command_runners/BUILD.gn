@@ -1,0 +1,209 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("command_runner") {
+  sources = [
+    "command_runner.cc",
+    "command_runner.h",
+  ]
+
+  public_deps = [
+    "//peridot/bin/sessionmgr/storage",
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+}
+
+source_set("set_link_value_command_runner") {
+  sources = [
+    "set_link_value_command_runner.cc",
+    "set_link_value_command_runner.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:set_link_value_call",
+  ]
+
+  public_deps = [
+    ":command_runner",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("set_link_value_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_link_value_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_link_value_command_runner",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("add_mod_command_runner") {
+  sources = [
+    "add_mod_command_runner.cc",
+    "add_mod_command_runner.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/sessionmgr/puppet_master/command_runners/operation_calls:add_mod_call",
+    "//peridot/lib/module_manifest:module_facet_reader",
+  ]
+
+  public_deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("add_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "add_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":add_mod_command_runner",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:entity_resolver_fake",
+    "//peridot/lib/testing:module_facet_reader_fake",
+    "//peridot/lib/testing:module_resolver_fake",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("remove_mod_command_runner") {
+  sources = [
+    "remove_mod_command_runner.cc",
+    "remove_mod_command_runner.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("remove_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "remove_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":remove_mod_command_runner",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("set_focus_state_command_runner") {
+  sources = [
+    "set_focus_state_command_runner.cc",
+    "set_focus_state_command_runner.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+
+  public_deps = [
+    ":command_runner",
+  ]
+}
+
+executable("set_focus_state_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_focus_state_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_focus_state_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("focus_mod_command_runner") {
+  sources = [
+    "focus_mod_command_runner.cc",
+    "focus_mod_command_runner.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
+  deps = [
+    ":command_runner",
+  ]
+}
+
+executable("focus_mod_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "focus_mod_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":focus_mod_command_runner",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("set_kind_of_proto_story_option_command_runner") {
+  sources = [
+    "set_kind_of_proto_story_option_command_runner.cc",
+    "set_kind_of_proto_story_option_command_runner.h",
+  ]
+
+  public_deps = [
+    "//peridot/public/fidl/fuchsia.modular",
+  ]
+
+  deps = [
+    ":command_runner",
+    "//peridot/public/lib/async/cpp:operation",
+  ]
+}
+
+executable("set_kind_of_proto_story_option_command_runner_unittest") {
+  testonly = true
+
+  sources = [
+    "set_kind_of_proto_story_option_command_runner_unittest.cc",
+  ]
+
+  deps = [
+    ":set_kind_of_proto_story_option_command_runner",
+    "//garnet/public/lib/gtest",
+    "//peridot/lib/testing:test_with_session_storage",
+    "//third_party/googletest:gtest_main",
+  ]
+}

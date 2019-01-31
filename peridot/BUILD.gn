@@ -1,0 +1,22 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//peridot/build/tests_package.gni")
+
+config("internal") {
+  include_dirs = [
+    ".",
+    "$root_gen_dir/peridot",
+  ]
+}
+
+# All peridot tests that can run as test binaries in a package, and are not
+# associated with the package of a binary already anyway.
+tests_package("peridot_tests") {
+  deps = [
+    "//peridot/lib:peridot_lib_unittests",
+    "//peridot/public/lib:peridot_public_lib_unittests",
+  ]
+}

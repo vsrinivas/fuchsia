@@ -1,0 +1,39 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
+source_set("socket") {
+  sources = [
+    "socket_drainer_client.cc",
+    "socket_drainer_client.h",
+    "socket_pair.h",
+    "socket_writer.cc",
+    "socket_writer.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/callback",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "socket_drainer_client_unittest.cc",
+    "socket_writer_unittest.cc",
+  ]
+
+  deps = [
+    ":socket",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+}

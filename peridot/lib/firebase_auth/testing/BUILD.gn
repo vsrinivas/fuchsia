@@ -1,0 +1,130 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_token_manager.cc",
+    "fake_token_manager.h",
+    "test_firebase_auth.cc",
+    "test_firebase_auth.h",
+    "test_token_manager.cc",
+    "test_token_manager.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.auth",
+    "//peridot/lib/firebase_auth",
+    "//peridot/lib/rng",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/convert",
+  ]
+
+  configs += [ "//peridot/bin/ledger:ledger_config" ]
+}
+
+source_set("service_account_provider") {
+  testonly = true
+
+  sources = [
+    "service_account_token_manager.cc",
+    "service_account_token_manager.h",
+    "service_account_token_minter.cc",
+    "service_account_token_minter.h",
+  ]
+
+  public_deps = [
+    ":service_account",
+    "//garnet/public/fidl/fuchsia.auth",
+    "//garnet/public/lib/callback",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/network_wrapper",
+  ]
+
+  deps = [
+    ":json_schema",
+    "//garnet/public/lib/fsl",
+    "//peridot/lib/base64url",
+    "//peridot/lib/convert",
+    "//third_party/boringssl",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("json_schema") {
+  sources = [
+    "json_schema.cc",
+    "json_schema.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("service_account") {
+  testonly = true
+
+  sources = [
+    "credentials.cc",
+    "credentials.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/boringssl",
+    "//third_party/rapidjson",
+  ]
+
+  deps = [
+    ":json_schema",
+  ]
+}
+
+source_set("service_account_test_constants") {
+  testonly = true
+
+  sources = [
+    "service_account_test_constants.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "credentials_unittest.cc",
+    "json_schema_unittest.cc",
+    "service_account_test_util.cc",
+    "service_account_test_util.h",
+    "service_account_token_manager_unittest.cc",
+    "service_account_token_minter_unittest.cc",
+  ]
+
+  deps = [
+    ":json_schema",
+    ":service_account",
+    ":service_account_provider",
+    ":service_account_test_constants",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/network_wrapper:fake",
+    "//third_party/googletest:gtest",
+    "//third_party/rapidjson",
+  ]
+}

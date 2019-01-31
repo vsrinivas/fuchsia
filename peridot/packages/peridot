@@ -1,0 +1,6 @@
+{
+    "imports": [
+        "garnet/packages/garnet",
+        "peridot/packages/prod/all"
+    ]
+}

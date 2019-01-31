@@ -1,0 +1,78 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//peridot/build/executable_package.gni")
+
+executable_package("modular_benchmark_story_module") {
+
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/modular_benchmark_story_module.cmx"
+      dest = "modular_benchmark_story_module.cmx"
+    },
+  ]
+
+  sources = [
+    "modular_benchmark_story_module.cc",
+  ]
+  deps = [
+    ":tracing_waiter",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/app_driver/cpp:module_driver",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable_package("modular_benchmark_story_session_shell") {
+
+  testonly = true
+
+  meta = [
+    {
+      path = "meta/modular_benchmark_story_session_shell.cmx"
+      dest = "modular_benchmark_story_session_shell.cmx"
+    },
+  ]
+
+  deps = [
+    ":tracing_waiter",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//peridot/lib/common:names",
+    "//peridot/lib/fidl:single_service_app",
+    "//peridot/lib/rapidjson",
+    "//peridot/lib/testing:component_main",
+    "//peridot/lib/testing:session_shell_impl",
+    "//peridot/public/fidl/fuchsia.modular",
+    "//peridot/public/lib/integration_testing/cpp",
+  ]
+
+  sources = [
+    "modular_benchmark_story_session_shell.cc",
+  ]
+}
+
+source_set("tracing_waiter") {
+  sources = [
+    "tracing_waiter.cc",
+    "tracing_waiter.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}

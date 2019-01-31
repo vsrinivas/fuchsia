@@ -1,0 +1,49 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/flatbuffers/flatbuffer.gni")
+
+visibility = [
+  "//peridot/bin/*",
+  "//peridot/lib/*",
+]
+
+source_set("convert") {
+  sources = [
+    "convert.cc",
+    "convert.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//third_party/flatbuffers",
+    "//third_party/leveldb",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+flatbuffer("byte_storage_test") {
+  testonly = true
+
+  sources = [
+    "bytes_test.fbs",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "collection_view_unittest.cc",
+    "convert_unittest.cc",
+  ]
+
+  deps = [
+    ":byte_storage_test",
+    ":convert",
+    "//third_party/googletest:gtest",
+  ]
+}

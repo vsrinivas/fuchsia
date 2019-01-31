@@ -1,0 +1,25 @@
+{
+    "program": {
+      "binary": "bin/app"
+    },
+    "sandbox": {
+      "services": [
+        "fuchsia.modular.ComponentContext",
+        "fuchsia.modular.ModuleContext",
+        "fuchsia.testing.runner.TestRunner",
+        "fuchsia.testing.runner.TestRunnerStore"
+      ]
+    },
+    "facets": {
+        "fuchsia.module": {
+            "@version": 2,
+            "intent_filters": [
+                {
+                    "action": "com.google.fuchsia.common.active",
+                    "parameters": []
+                }
+            ],
+            "suggestion_headline": "Active module"
+        }
+    }
+}

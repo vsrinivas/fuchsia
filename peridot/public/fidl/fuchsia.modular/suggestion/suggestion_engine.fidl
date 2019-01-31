@@ -1,0 +1,15 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.modular;
+
+// Administrative interface for Suggestion Engine.
+[Discoverable]
+interface SuggestionEngine {
+    // Registers a component that produces suggestions.
+    1: RegisterProposalPublisher(string url, request<ProposalPublisher> publisher);
+
+    // Registers a component that produces suggestions based on a query.
+    2: RegisterQueryHandler(string url, QueryHandler query_handler);
+};
