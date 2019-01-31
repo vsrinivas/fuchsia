@@ -1,0 +1,29 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.serial;
+
+using zx;
+
+struct SerialPortInfo {
+    uint32 serial_class;
+    /// Vendor and product ID of hardware attached to this serial port,
+    /// or zero if not applicable.
+    uint32 serial_vid;
+    uint32 serial_pid;
+};
+
+/// High level serial protocol for use by client drivers.
+/// When used with the platform device protocol, "port" will be relative to
+/// the list of serial ports assigned to your device rather than the global
+/// list of serial ports.
+[Layout = "ddk-protocol"]
+interface Serial {
+    GetInfo() -> (zx.status s, SerialPortInfo info);
+    /// Configures the given serial port.
+    Config(uint32 baud_rate, uint32 flags) -> (zx.status s);
+    /// Returns a socket that can be used for reading and writing data
+    /// from the given serial port.
+    OpenSocket() -> (zx.status s, handle<socket> @handle);
+};

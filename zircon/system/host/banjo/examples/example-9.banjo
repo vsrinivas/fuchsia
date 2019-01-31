@@ -1,0 +1,26 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.example9;
+
+enum EchoMe {
+    zero = 0;
+    one = 1;
+};
+
+struct EchoMore {
+    uint32 first;
+    uint64 second;
+};
+
+interface Echo {
+    Echo32(uint32 uint32) -> (uint32 response);
+    Echo64(uint64 uint64) -> (uint64 response);
+    EchoEnum(EchoMe req) -> (EchoMe response);
+    EchoHandle(handle req) -> (handle response);
+    EchoChannel(handle<channel> req) -> (handle<channel> response);
+    EchoStruct(EchoMore req) -> (EchoMore response);
+};
+
+const EchoMe favorite_echo = zero;

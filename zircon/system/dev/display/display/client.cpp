@@ -1,0 +1,1689 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <ddk/debug.h>
+#include <fbl/auto_lock.h>
+#include <lib/async/cpp/task.h>
+#include <lib/edid/edid.h>
+#include <lib/fidl/cpp/builder.h>
+#include <lib/fidl/cpp/message.h>
+#include <math.h>
+#include <utility>
+#include <zircon/device/display-controller.h>
+#include <zircon/pixelformat.h>
+
+#include "client.h"
+
+#define SELECT_TABLE_CASE(NAME) case NAME ## Ordinal: table = &NAME ## RequestTable; break
+#define HANDLE_REQUEST_CASE(NAME)                                                                  \
+    case fuchsia_hardware_display_Controller##NAME##Ordinal: {                                     \
+        auto req = reinterpret_cast<const fuchsia_hardware_display_Controller##NAME##Request*>(    \
+            msg.bytes().data());                                                                   \
+        Handle##NAME(req, &builder, &out_type);                                                    \
+        break;                                                                                     \
+    }
+
+namespace {
+
+zx_status_t decode_message(fidl::Message* msg) {
+    zx_status_t res;
+    const fidl_type_t* table = nullptr;
+    switch (msg->ordinal()) {
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportVmoImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerImportEvent);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerReleaseEvent);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCreateLayer);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerDestroyLayer);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayMode);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayColorConversion);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetDisplayLayers);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryPosition);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerPrimaryAlpha);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerCursorPosition);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerColorConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetLayerImage);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerCheckConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerApplyConfig);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerEnableVsync);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerSetVirtconMode);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerComputeLinearImageStride);
+        SELECT_TABLE_CASE(fuchsia_hardware_display_ControllerAllocateVmo);
+    }
+    if (table != nullptr) {
+        const char* err;
+        if ((res = msg->Decode(table, &err)) != ZX_OK) {
+            zxlogf(INFO, "Error decoding message %d: %s\n", msg->ordinal(), err);
+        }
+    } else {
+        zxlogf(INFO, "Unknown fidl ordinal %d\n", msg->ordinal());
+        res = ZX_ERR_NOT_SUPPORTED;
+    }
+    return res;
+}
+
+bool frame_contains(const frame_t& a, const frame_t& b) {
+    return b.x_pos < a.width
+            && b.y_pos < a.height
+            && b.x_pos + b.width <= a.width
+            && b.y_pos + b.height <= a.height;
+}
+
+// We allocate some variable sized stack allocations based on the number of
+// layers, so we limit the total number of layers to prevent blowing the stack.
+static constexpr uint64_t kMaxLayers = 65536;
+
+static constexpr uint32_t kInvalidLayerType = UINT32_MAX;
+
+uint32_t calculate_refresh_rate_e2(const edid::timing_params_t params) {
+    double total_pxls =
+            (params.horizontal_addressable + params.horizontal_blanking) *
+            (params.vertical_addressable + params.vertical_blanking);
+    double pixel_clock_hz = params.pixel_freq_10khz * 1000 * 10;
+    return static_cast<uint32_t>(round(100 * pixel_clock_hz / total_pxls));
+}
+
+// Removes and invokes EarlyRetire on all entries before end.
+static void do_early_retire(list_node_t* list, display::image_node_t* end = nullptr) {
+    display::image_node_t* node;
+    while ((node = list_peek_head_type(list, display::image_node_t, link)) != end) {
+        node->self->EarlyRetire();
+        node->self.reset();
+        list_remove_head(list);
+    }
+}
+
+static void populate_image(const fuchsia_hardware_display_ImageConfig& image, image_t* image_out) {
+    static_assert(offsetof(image_t, width) == offsetof(fuchsia_hardware_display_ImageConfig, width),
+                  "Struct mismatch");
+    static_assert(offsetof(image_t, height) ==
+                      offsetof(fuchsia_hardware_display_ImageConfig, height),
+                  "Struct mismatch");
+    static_assert(offsetof(image_t, pixel_format) ==
+                      offsetof(fuchsia_hardware_display_ImageConfig, pixel_format),
+                  "Struct mismatch");
+    static_assert(sizeof(image_plane_t) == sizeof(fuchsia_hardware_display_ImagePlane),
+                  "Struct mismatch");
+    static_assert(offsetof(image_t, type) == offsetof(fuchsia_hardware_display_ImageConfig, type),
+                  "Struct mismatch");
+    memcpy(image_out, &image, sizeof(fuchsia_hardware_display_ImageConfig));
+}
+
+static void populate_fidl_string(fidl_string_t* dest, fidl::Builder* dest_builder,
+                                 const char* src, uint32_t n) {
+    dest->data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
+    dest->size = strnlen(src, n - 1) + 1;
+    char* ptr = dest_builder->NewArray<char>(static_cast<uint32_t>(dest->size));
+    snprintf(ptr, dest->size, "%s", src);
+}
+
+} // namespace
+
+namespace display {
+
+void Client::HandleControllerApi(async_dispatcher_t* dispatcher, async::WaitBase* self,
+                                 zx_status_t status, const zx_packet_signal_t* signal) {
+    if (status != ZX_OK) {
+        zxlogf(INFO, "Unexpected status async status %d\n", status);
+        ZX_DEBUG_ASSERT(false);
+        return;
+    } else if (signal->observed & ZX_CHANNEL_PEER_CLOSED) {
+        zxlogf(TRACE, "Client closed\n");
+        TearDown();
+        return;
+    }
+
+    ZX_DEBUG_ASSERT(signal->observed & ZX_CHANNEL_READABLE);
+
+    zx_handle_t in_handle;
+    uint8_t in_byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
+    fidl::Message msg(fidl::BytePart(in_byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES),
+                      fidl::HandlePart(&in_handle, 1));
+    status = msg.Read(server_handle_, 0);
+    api_wait_.Begin(controller_->loop().dispatcher());
+
+    if (status != ZX_OK) {
+        zxlogf(TRACE, "Channel read failed %d\n", status);
+        return;
+    } else if ((status = decode_message(&msg)) != ZX_OK) {
+        return;
+    }
+
+    uint8_t out_byte_buffer[ZX_CHANNEL_MAX_MSG_BYTES];
+    fidl::Builder builder(out_byte_buffer, ZX_CHANNEL_MAX_MSG_BYTES);
+    zx_handle_t out_handle = ZX_HANDLE_INVALID;
+    bool has_out_handle = false;
+    const fidl_type_t* out_type = nullptr;
+
+    switch (msg.ordinal()) {
+    HANDLE_REQUEST_CASE(ImportVmoImage);
+    HANDLE_REQUEST_CASE(ReleaseImage);
+    HANDLE_REQUEST_CASE(ImportEvent);
+    HANDLE_REQUEST_CASE(ReleaseEvent);
+    HANDLE_REQUEST_CASE(CreateLayer);
+    HANDLE_REQUEST_CASE(DestroyLayer);
+    HANDLE_REQUEST_CASE(SetDisplayMode);
+    HANDLE_REQUEST_CASE(SetDisplayColorConversion);
+    HANDLE_REQUEST_CASE(SetDisplayLayers);
+    HANDLE_REQUEST_CASE(SetLayerPrimaryConfig);
+    HANDLE_REQUEST_CASE(SetLayerPrimaryPosition);
+    HANDLE_REQUEST_CASE(SetLayerPrimaryAlpha);
+    HANDLE_REQUEST_CASE(SetLayerCursorConfig);
+    HANDLE_REQUEST_CASE(SetLayerCursorPosition);
+    HANDLE_REQUEST_CASE(SetLayerColorConfig);
+    HANDLE_REQUEST_CASE(SetLayerImage);
+    HANDLE_REQUEST_CASE(CheckConfig);
+    HANDLE_REQUEST_CASE(ApplyConfig);
+    HANDLE_REQUEST_CASE(EnableVsync);
+    HANDLE_REQUEST_CASE(SetVirtconMode);
+    HANDLE_REQUEST_CASE(ComputeLinearImageStride);
+    case fuchsia_hardware_display_ControllerAllocateVmoOrdinal: {
+        auto r = reinterpret_cast<const fuchsia_hardware_display_ControllerAllocateVmoRequest*>(
+            msg.bytes().data());
+        HandleAllocateVmo(r, &builder, &out_handle, &has_out_handle, &out_type);
+        break;
+    }
+    default:
+        zxlogf(INFO, "Unknown ordinal %d\n", msg.ordinal());
+    }
+
+    fidl::BytePart resp_bytes = builder.Finalize();
+    if (resp_bytes.actual() != 0) {
+        ZX_DEBUG_ASSERT(out_type != nullptr);
+
+        fidl::Message resp(std::move(resp_bytes),
+                           fidl::HandlePart(&out_handle, 1, has_out_handle ? 1 : 0));
+        resp.header() = msg.header();
+
+        const char* err_msg;
+        ZX_DEBUG_ASSERT_MSG(resp.Validate(out_type, &err_msg) == ZX_OK,
+                            "Error validating fidl response \"%s\"\n", err_msg);
+        if ((status = resp.Write(server_handle_, 0)) != ZX_OK) {
+            zxlogf(ERROR, "Error writing response message %d\n", status);
+        }
+    }
+}
+
+void Client::HandleImportVmoImage(
+    const fuchsia_hardware_display_ControllerImportVmoImageRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerImportVmoImageResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerImportVmoImageResponseTable;
+
+    zx::vmo vmo(req->vmo);
+
+    image_t dc_image;
+    dc_image.height = req->image_config.height;
+    dc_image.width = req->image_config.width;
+    dc_image.pixel_format = req->image_config.pixel_format;
+    dc_image.type = req->image_config.type;
+    for (uint32_t i = 0; i < fbl::count_of(dc_image.planes); i++) {
+        dc_image.planes[i].byte_offset = req->image_config.planes[i].byte_offset;
+        dc_image.planes[i].bytes_per_row = req->image_config.planes[i].bytes_per_row;
+    }
+
+    zx::vmo dup_vmo;
+    resp->res = vmo.duplicate(ZX_RIGHT_SAME_RIGHTS, &dup_vmo);
+    if (resp->res == ZX_OK) {
+        resp->res = controller_->dc()->ImportVmoImage(&dc_image, std::move(dup_vmo), req->offset);
+    }
+
+    if (resp->res == ZX_OK) {
+        fbl::AllocChecker ac;
+        auto image = fbl::AdoptRef(new (&ac) Image(controller_, dc_image, std::move(vmo)));
+        if (!ac.check()) {
+            controller_->dc()->ReleaseImage(&dc_image);
+
+            resp->res = ZX_ERR_NO_MEMORY;
+            return;
+        }
+
+        image->id = next_image_id_++;
+        resp->image_id = image->id;
+        images_.insert(std::move(image));
+    }
+}
+
+void Client::HandleReleaseImage(const fuchsia_hardware_display_ControllerReleaseImageRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto image = images_.find(req->image_id);
+    if (!image.IsValid()) {
+        return;
+    }
+
+    if (CleanUpImage(&(*image))) {
+        ApplyConfig();
+    }
+}
+
+void Client::HandleImportEvent(const fuchsia_hardware_display_ControllerImportEventRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    zx::event event(req->event);
+    zx_status_t status = ZX_ERR_INVALID_ARGS;
+    bool success = false;
+
+    fbl::AutoLock lock(&fence_mtx_);
+
+    // TODO(stevensd): it would be good for this not to be able to fail due to allocation failures
+    if (req->id != INVALID_ID) {
+        auto fence = fences_.find(req->id);
+        if (!fence.IsValid()) {
+            fbl::AllocChecker ac;
+            auto new_fence = fbl::AdoptRef(new (&ac) Fence(this, controller_->loop().dispatcher(),
+                                                           req->id, std::move(event)));
+            if (ac.check() && new_fence->CreateRef()) {
+                fences_.insert_or_find(std::move(new_fence));
+                success = true;
+            }
+        } else {
+            success = fence->CreateRef();
+        }
+    }
+
+    if (!success) {
+        zxlogf(ERROR, "Failed to import event#%ld (%d)\n", req->id, status);
+        TearDown();
+    }
+}
+
+void Client::HandleReleaseEvent(const fuchsia_hardware_display_ControllerReleaseEventRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    // Hold a ref to prevent double locking if this destroys the fence.
+    auto fence_ref = GetFence(req->id);
+    if (fence_ref) {
+        fbl::AutoLock lock(&fence_mtx_);
+        fences_.find(req->id)->ClearRef();
+    }
+}
+
+void Client::HandleCreateLayer(const fuchsia_hardware_display_ControllerCreateLayerRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerCreateLayerResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerCreateLayerResponseTable;
+
+    if (layers_.size() == kMaxLayers) {
+        resp->res = ZX_ERR_NO_RESOURCES;
+        return;
+    }
+
+    fbl::AllocChecker ac;
+    auto new_layer = fbl::make_unique_checked<Layer>(&ac);
+    if (!ac.check()) {
+        resp->res = ZX_ERR_NO_MEMORY;
+        return;
+    }
+    resp->layer_id = next_layer_id++;
+
+    memset(&new_layer->pending_layer_, 0, sizeof(layer_t));
+    memset(&new_layer->current_layer_, 0, sizeof(layer_t));
+    new_layer->config_change_ = false;
+    new_layer->pending_node_.layer = new_layer.get();
+    new_layer->current_node_.layer = new_layer.get();
+    new_layer->current_display_id_ = INVALID_DISPLAY_ID;
+    new_layer->id = resp->layer_id;
+    new_layer->current_layer_.type = kInvalidLayerType;
+    new_layer->pending_layer_.type = kInvalidLayerType;
+
+    layers_.insert(std::move(new_layer));
+
+    resp->res = ZX_OK;
+}
+
+void Client::HandleDestroyLayer(const fuchsia_hardware_display_ControllerDestroyLayerRequest* req,
+                                fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(ERROR, "Tried to destroy invalid layer %ld\n", req->layer_id);
+        TearDown();
+        return;
+    }
+    if (layer->current_node_.InContainer() || layer->pending_node_.InContainer()) {
+        zxlogf(ERROR, "Destroyed layer %ld which was in use\n", req->layer_id);
+        TearDown();
+        return;
+    }
+
+    auto destroyed = layers_.erase(req->layer_id);
+    if (destroyed->pending_image_) {
+        destroyed->pending_image_->DiscardAcquire();
+    }
+    do_early_retire(&destroyed->waiting_images_);
+    if (destroyed->displayed_image_) {
+        fbl::AutoLock lock(controller_->mtx());
+        destroyed->displayed_image_->StartRetire();
+    }
+}
+
+void Client::HandleSetDisplayMode(
+    const fuchsia_hardware_display_ControllerSetDisplayModeRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display_id);
+    if (!config.IsValid()) {
+        return;
+    }
+
+    fbl::AutoLock lock(controller_->mtx());
+    const fbl::Vector<edid::timing_params_t>* edid_timings;
+    const display_params_t* params;
+    controller_->GetPanelConfig(req->display_id, &edid_timings, &params);
+
+    if (edid_timings) {
+        for (auto timing : *edid_timings) {
+            if (timing.horizontal_addressable == req->mode.horizontal_resolution
+                    && timing.vertical_addressable == req->mode.vertical_resolution
+                    && timing.vertical_refresh_e2 == req->mode.refresh_rate_e2) {
+                Controller::PopulateDisplayMode(timing, &config->pending_.mode);
+                pending_config_valid_ = false;
+                config->display_config_change_ = true;
+                return;
+            }
+        }
+        zxlogf(ERROR, "Invalid display mode\n");
+    } else {
+        zxlogf(ERROR, "Failed to find edid when setting display mode\n");
+    }
+
+    TearDown();
+}
+
+void Client::HandleSetDisplayColorConversion(
+    const fuchsia_hardware_display_ControllerSetDisplayColorConversionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display_id);
+    if (!config.IsValid()) {
+        return;
+    }
+
+    config->pending_.cc_flags = 0;
+    if (!isnan(req->preoffsets[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_PREOFFSET;
+        memcpy(config->pending_.cc_preoffsets, req->preoffsets, sizeof(req->preoffsets));
+        static_assert(sizeof(req->preoffsets) == sizeof(config->pending_.cc_preoffsets), "");
+    }
+
+    if (!isnan(req->coefficients[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_COEFFICIENTS;
+        memcpy(config->pending_.cc_coefficients, req->coefficients, sizeof(req->coefficients));
+        static_assert(sizeof(req->coefficients) == sizeof(config->pending_.cc_coefficients), "");
+    }
+
+    if (!isnan(req->postoffsets[0])) {
+        config->pending_.cc_flags |= COLOR_CONVERSION_POSTOFFSET;
+        memcpy(config->pending_.cc_postoffsets, req->postoffsets, sizeof(req->postoffsets));
+        static_assert(sizeof(req->postoffsets) == sizeof(config->pending_.cc_postoffsets), "");
+    }
+
+    config->display_config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetDisplayLayers(
+    const fuchsia_hardware_display_ControllerSetDisplayLayersRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto config = configs_.find(req->display_id);
+    if (!config.IsValid()) {
+        return;
+    }
+
+    config->pending_layer_change_ = true;
+    config->pending_layers_.clear();
+    uint64_t* layer_ids = static_cast<uint64_t*>(req->layer_ids.data);
+    for (uint64_t i = req->layer_ids.count - 1; i != UINT64_MAX; i--) {
+        auto layer = layers_.find(layer_ids[i]);
+        if (!layer.IsValid() || layer->pending_node_.InContainer()) {
+            zxlogf(ERROR, "Tried to reuse an in-use layer\n");
+            TearDown();
+            return;
+        }
+        layer->pending_layer_.z_index = static_cast<uint32_t>(i);
+        config->pending_layers_.push_front(&layer->pending_node_);
+    }
+    config->pending_.layer_count = static_cast<int32_t>(req->layer_ids.count);
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerPrimaryConfig(
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(ERROR, "SetLayerPrimaryConfig on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    layer->pending_layer_.type = LAYER_TYPE_PRIMARY;
+    primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
+
+    populate_image(req->image_config, &primary_layer->image);
+
+    // Initialize the src_frame and dest_frame with the default, full-image frame.
+    frame_t new_frame = {
+        .x_pos = 0, .y_pos = 0,
+        .width = req->image_config.width, .height = req->image_config.height,
+    };
+    memcpy(&primary_layer->src_frame, &new_frame, sizeof(frame_t));
+    memcpy(&primary_layer->dest_frame, &new_frame, sizeof(frame_t));
+
+    primary_layer->transform_mode = FRAME_TRANSFORM_IDENTITY;
+
+    layer->pending_image_config_gen_++;
+    layer->pending_image_ = nullptr;
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerPrimaryPosition(
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryPositionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
+        zxlogf(ERROR, "SetLayerPrimaryPosition on invalid layer\n");
+        TearDown();
+        return;
+    }
+    if (req->transform > fuchsia_hardware_display_Transform_ROT_90_REFLECT_Y) {
+        zxlogf(ERROR, "Invalid transform %d\n", req->transform);
+        TearDown();
+        return;
+    }
+    primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
+
+    static_assert(sizeof(fuchsia_hardware_display_Frame) == sizeof(frame_t), "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, x_pos) == offsetof(frame_t, x_pos),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, y_pos) == offsetof(frame_t, y_pos),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, width) == offsetof(frame_t, width),
+                  "Struct mismatch");
+    static_assert(offsetof(fuchsia_hardware_display_Frame, height) == offsetof(frame_t, height),
+                  "Struct mismatch");
+
+    memcpy(&primary_layer->src_frame, &req->src_frame, sizeof(frame_t));
+    memcpy(&primary_layer->dest_frame, &req->dest_frame, sizeof(frame_t));
+    primary_layer->transform_mode = static_cast<uint8_t>(req->transform);
+
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerPrimaryAlpha(
+    const fuchsia_hardware_display_ControllerSetLayerPrimaryAlphaRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_PRIMARY) {
+        zxlogf(ERROR, "SetLayerPrimaryAlpha on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    if (req->mode > fuchsia_hardware_display_AlphaMode_HW_MULTIPLY ||
+        (!isnan(req->val) && (req->val < 0 || req->val > 1))) {
+        zxlogf(ERROR, "Invalid args %d %f\n", req->mode, req->val);
+        TearDown();
+        return;
+    }
+
+    primary_layer_t* primary_layer = &layer->pending_layer_.cfg.primary;
+
+    static_assert(fuchsia_hardware_display_AlphaMode_DISABLE == ALPHA_DISABLE, "Bad constant");
+    static_assert(fuchsia_hardware_display_AlphaMode_PREMULTIPLIED == ALPHA_PREMULTIPLIED,
+                  "Bad constant");
+    static_assert(fuchsia_hardware_display_AlphaMode_HW_MULTIPLY == ALPHA_HW_MULTIPLY,
+                  "Bad constant");
+
+    primary_layer->alpha_mode = req->mode;
+    primary_layer->alpha_layer_val = req->val;
+
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerCursorConfig(
+    const fuchsia_hardware_display_ControllerSetLayerCursorConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(ERROR, "SetLayerCursorConfig on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    layer->pending_layer_.type = LAYER_TYPE_CURSOR;
+    layer->pending_cursor_x_ = layer->pending_cursor_y_ = 0;
+
+
+    cursor_layer_t* cursor_layer = &layer->pending_layer_.cfg.cursor;
+    populate_image(req->image_config, &cursor_layer->image);
+
+    layer->pending_image_config_gen_++;
+    layer->pending_image_ = nullptr;
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerCursorPosition(
+    const fuchsia_hardware_display_ControllerSetLayerCursorPositionRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid() || layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
+        zxlogf(ERROR, "SetLayerCursorPosition on invalid layer\n");
+        TearDown();
+        return;
+    }
+
+    layer->pending_cursor_x_ = req->x;
+    layer->pending_cursor_y_ = req->y;
+
+    layer->config_change_ = true;
+}
+
+void Client::HandleSetLayerColorConfig(
+    const fuchsia_hardware_display_ControllerSetLayerColorConfigRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(ERROR, "SetLayerColorConfig on invalid layer\n");
+        return;
+    }
+
+    if (req->color_bytes.count != ZX_PIXEL_FORMAT_BYTES(req->pixel_format)) {
+        zxlogf(ERROR, "SetLayerColorConfig with invalid color bytes\n");
+        TearDown();
+        return;
+    }
+    // Increase the size of the static array when large color formats are introduced
+    ZX_ASSERT(req->color_bytes.count <= sizeof(layer->pending_color_bytes_));
+
+    layer->pending_layer_.type = LAYER_TYPE_COLOR;
+    color_layer_t* color_layer = &layer->pending_layer_.cfg.color;
+
+    color_layer->format = req->pixel_format;
+    memcpy(layer->pending_color_bytes_, req->color_bytes.data, sizeof(layer->pending_color_bytes_));
+
+    layer->pending_image_ = nullptr;
+    layer->config_change_ = true;
+    pending_config_valid_ = false;
+}
+
+void Client::HandleSetLayerImage(const fuchsia_hardware_display_ControllerSetLayerImageRequest* req,
+                                 fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto layer = layers_.find(req->layer_id);
+    if (!layer.IsValid()) {
+        zxlogf(ERROR, "SetLayerImage ordinal with invalid layer\n");
+        TearDown();
+        return;
+    }
+    if (layer->pending_layer_.type != LAYER_TYPE_PRIMARY &&
+        layer->pending_layer_.type != LAYER_TYPE_CURSOR) {
+        zxlogf(ERROR, "SetLayerImage ordinal with bad layer type\n");
+        TearDown();
+        return;
+    }
+    auto image = images_.find(req->image_id);
+    if (!image.IsValid() || !image->Acquire()) {
+        zxlogf(ERROR, "SetLayerImage ordinal with %s image\n", !image.IsValid() ? "invl" : "busy");
+        TearDown();
+        return;
+    }
+    image_t* cur_image = layer->pending_layer_.type == LAYER_TYPE_PRIMARY ?
+            &layer->pending_layer_.cfg.primary.image : &layer->pending_layer_.cfg.cursor.image;
+    if (!image->HasSameConfig(*cur_image)) {
+        zxlogf(ERROR, "SetLayerImage with mismatch layer config\n");
+        if (image.IsValid()) {
+            image->DiscardAcquire();
+        }
+        TearDown();
+        return;
+    }
+
+    if (layer->pending_image_) {
+        layer->pending_image_->DiscardAcquire();
+    }
+
+    layer->pending_image_ = image.CopyPointer();
+    layer->pending_wait_event_id_ = req->wait_event_id;
+    layer->pending_signal_event_id_ = req->signal_event_id;
+}
+
+void Client::HandleCheckConfig(const fuchsia_hardware_display_ControllerCheckConfigRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    *resp_table = &fuchsia_hardware_display_ControllerCheckConfigResponseTable;
+
+    pending_config_valid_ = CheckConfig(resp_builder);
+
+    if (req->discard) {
+        // Go through layers and release any pending resources they claimed
+        for (auto& layer : layers_) {
+            layer.pending_image_config_gen_ = layer.current_image_config_gen_;
+            if (layer.pending_image_) {
+                layer.pending_image_->DiscardAcquire();
+                layer.pending_image_ = nullptr;
+            }
+            if (layer.config_change_) {
+                layer.pending_layer_ = layer.current_layer_;
+                layer.config_change_ = false;
+
+                layer.pending_cursor_x_ = layer.current_cursor_x_;
+                layer.pending_cursor_y_ = layer.current_cursor_y_;
+            }
+
+            memcpy(layer.pending_color_bytes_,layer.current_color_bytes_,
+                   sizeof(layer.pending_color_bytes_));
+        }
+        // Reset each config's pending layers to their current layers. Clear
+        // all displays first in case layers were moved between displays.
+        for (auto& config : configs_) {
+            config.pending_layers_.clear();
+        }
+        for (auto& config : configs_) {
+            fbl::SinglyLinkedList<layer_node_t*> current_layers;
+            for (auto& layer_node : config.current_layers_) {
+                current_layers.push_front(&layer_node.layer->pending_node_);
+            }
+            while (!current_layers.is_empty()) {
+                auto layer = current_layers.pop_front();
+                config.pending_layers_.push_front(layer);
+            }
+            config.pending_layer_change_ = false;
+
+            config.pending_ = config.current_;
+            config.display_config_change_ = false;
+        }
+        pending_config_valid_ = true;
+    }
+}
+
+void Client::HandleApplyConfig(const fuchsia_hardware_display_ControllerApplyConfigRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    if (!pending_config_valid_) {
+        pending_config_valid_ = CheckConfig(nullptr);
+        if (!pending_config_valid_) {
+            zxlogf(INFO, "Tried to apply invalid config\n");
+            return;
+        }
+    }
+
+    // First go through and reset any current layer lists that are changing, so
+    // we don't end up trying to put an image into two lists.
+    for (auto& display_config : configs_) {
+        if (display_config.pending_layer_change_) {
+            while (!display_config.current_layers_.is_empty()) {
+                display_config.current_layers_.pop_front();
+            }
+        }
+    }
+
+    for (auto& display_config : configs_) {
+        if (display_config.display_config_change_) {
+            display_config.current_ = display_config.pending_;
+            display_config.display_config_change_ = false;
+        }
+
+        // Update any image layers. This needs to be done before migrating layers, as
+        // that needs to know if there are any waiting images.
+        for (auto layer_node : display_config.pending_layers_) {
+            Layer* layer = layer_node.layer;
+            // If the layer's image configuration changed, get rid of any current images
+            if (layer->pending_image_config_gen_ != layer->current_image_config_gen_) {
+                layer->current_image_config_gen_ = layer->pending_image_config_gen_;
+
+                if (layer->pending_image_ == nullptr) {
+                    zxlogf(ERROR, "Tried to apply configuration with missing image\n");
+                    TearDown();
+                    return;
+                }
+
+                while (!list_is_empty(&layer->waiting_images_)) {
+                    do_early_retire(&layer->waiting_images_);
+                }
+                if (layer->displayed_image_ != nullptr) {
+                    {
+                        fbl::AutoLock lock(controller_->mtx());
+                        layer->displayed_image_->StartRetire();
+                    }
+                    layer->displayed_image_ = nullptr;
+                }
+            }
+
+            if (layer->pending_image_) {
+                auto wait_fence = GetFence(layer->pending_wait_event_id_);
+                if (wait_fence && wait_fence->InContainer()) {
+                    zxlogf(ERROR, "Tried to wait with a busy event\n");
+                    TearDown();
+                    return;
+                }
+                layer_node.layer->pending_image_->PrepareFences(
+                        std::move(wait_fence),
+                        GetFence(layer->pending_signal_event_id_));
+                {
+                    fbl::AutoLock lock(controller_->mtx());
+                    list_add_tail(&layer->waiting_images_, &layer->pending_image_->node.link);
+                    layer->pending_image_->node.self = std::move(layer->pending_image_);
+                }
+            }
+        }
+
+        // If there was a layer change, update the current layers list.
+        if (display_config.pending_layer_change_) {
+            fbl::SinglyLinkedList<layer_node_t*> new_current;
+            for (auto layer_node : display_config.pending_layers_) {
+                new_current.push_front(&layer_node.layer->current_node_);
+            }
+
+            while (!new_current.is_empty()) {
+                // Don't migrate images between displays if there are pending images. See
+                // Controller::ApplyConfig for more details.
+                auto* layer = new_current.pop_front();
+                if (layer->layer->current_display_id_ != display_config.id
+                        && layer->layer->displayed_image_
+                        && !list_is_empty(&layer->layer->waiting_images_)) {
+                    {
+                        fbl::AutoLock lock(controller_->mtx());
+                        layer->layer->displayed_image_->StartRetire();
+                    }
+                    layer->layer->displayed_image_ = nullptr;
+
+                    // This doesn't need to be reset anywhere, since we really care about the last
+                    // display this layer was shown on. Ignoring the 'null' display could cause
+                    // unusual layer changes to trigger this unnecessary, but that's not wrong.
+                    layer->layer->current_display_id_ = display_config.id;
+                }
+                layer->layer->current_layer_.z_index = layer->layer->pending_layer_.z_index;
+
+                display_config.current_layers_.push_front(layer);
+            }
+            display_config.pending_layer_change_ = false;
+            display_config.pending_apply_layer_change_ = true;
+        }
+
+        // Apply any pending configuration changes to active layers.
+        for (auto layer_node : display_config.current_layers_) {
+            Layer* layer = layer_node.layer;
+            if (layer->config_change_) {
+                layer->current_layer_ = layer->pending_layer_;
+                layer->config_change_ = false;
+
+                image_t* new_image_config = nullptr;
+                if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
+                    new_image_config = &layer->current_layer_.cfg.primary.image;
+                } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
+                    new_image_config = &layer->current_layer_.cfg.cursor.image;
+
+                    layer->current_cursor_x_ = layer->pending_cursor_x_;
+                    layer->current_cursor_y_ = layer->pending_cursor_y_;
+
+                    display_mode_t* mode = &display_config.current_.mode;
+                    layer->current_layer_.cfg.cursor.x_pos =
+                            fbl::clamp(layer->current_cursor_x_,
+                                       -static_cast<int32_t>(new_image_config->width) + 1,
+                                       static_cast<int32_t>(mode->h_addressable) - 1);
+                    layer->current_layer_.cfg.cursor.y_pos =
+                            fbl::clamp(layer->current_cursor_y_,
+                                       -static_cast<int32_t>(new_image_config->height) + 1,
+                                       static_cast<int32_t>(mode->v_addressable) - 1);
+                } else if (layer->current_layer_.type == LAYER_TYPE_COLOR) {
+                    memcpy(layer->current_color_bytes_, layer->pending_color_bytes_,
+                           sizeof(layer->current_color_bytes_));
+                    layer->current_layer_.cfg.color.color_list = layer->current_color_bytes_;
+                    layer->current_layer_.cfg.color.color_count = 4;
+                } else {
+                    // type is validated in ::CheckConfig, so something must be very wrong.
+                    ZX_ASSERT(false);
+                }
+
+                if (new_image_config && layer->displayed_image_) {
+                    new_image_config->handle = layer->displayed_image_->info().handle;
+                }
+            }
+        }
+    }
+    // Overflow doesn't matter, since stamps only need to be unique until
+    // the configuration is applied with vsync.
+    client_apply_count_++;
+
+    ApplyConfig();
+}
+
+void Client::HandleEnableVsync(const fuchsia_hardware_display_ControllerEnableVsyncRequest* req,
+                               fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    fbl::AutoLock lock(controller_->mtx());
+    proxy_->EnableVsync(req->enable);
+}
+
+void Client::HandleSetVirtconMode(
+    const fuchsia_hardware_display_ControllerSetVirtconModeRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    if (!is_vc_) {
+        zxlogf(ERROR, "Illegal non-virtcon ownership\n");
+        TearDown();
+        return;
+    }
+    controller_->SetVcMode(req->mode);
+}
+
+void Client::HandleComputeLinearImageStride(
+    const fuchsia_hardware_display_ControllerComputeLinearImageStrideRequest* req,
+    fidl::Builder* resp_builder, const fidl_type_t** resp_table) {
+    auto resp =
+        resp_builder->New<fuchsia_hardware_display_ControllerComputeLinearImageStrideResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerComputeLinearImageStrideResponseTable;
+    resp->stride = controller_->dc()->ComputeLinearStride(req->width, req->pixel_format);
+}
+
+void Client::HandleAllocateVmo(const fuchsia_hardware_display_ControllerAllocateVmoRequest* req,
+                               fidl::Builder* resp_builder, zx_handle_t* handle_out,
+                               bool* has_handle_out, const fidl_type_t** resp_table) {
+    auto resp = resp_builder->New<fuchsia_hardware_display_ControllerAllocateVmoResponse>();
+    *resp_table = &fuchsia_hardware_display_ControllerAllocateVmoResponseTable;
+
+    zx::vmo vmo;
+    resp->res = controller_->dc()->AllocateVmo(req->size, &vmo);
+    *has_handle_out = resp->res == ZX_OK;
+    *handle_out = vmo.release();
+    resp->vmo = *has_handle_out ? FIDL_HANDLE_PRESENT : FIDL_HANDLE_ABSENT;
+}
+
+bool Client::CheckConfig(fidl::Builder* resp_builder) {
+    const display_config_t* configs[configs_.size()];
+    layer_t* layers[layers_.size()];
+    uint32_t layer_cfg_results[layers_.size()];
+    uint32_t* display_layer_cfg_results[configs_.size()];
+    memset(layer_cfg_results, 0, layers_.size() * sizeof(uint32_t));
+
+    fuchsia_hardware_display_ControllerCheckConfigResponse* resp = nullptr;
+    if (resp_builder) {
+        resp = resp_builder->New<fuchsia_hardware_display_ControllerCheckConfigResponse>();
+        resp->res = fuchsia_hardware_display_ConfigResult_OK;
+        resp->ops.count = 0;
+        resp->ops.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+    }
+
+    bool config_fail = false;
+    int config_idx = 0;
+    int layer_idx = 0;
+    for (auto& display_config : configs_) {
+        if (display_config.pending_layers_.is_empty()) {
+            continue;
+        }
+
+        // Put this display's display_config_t* into the compact array
+        configs[config_idx] = &display_config.pending_;
+
+        // Set the index in the primary result array with this display's layer result array
+        display_layer_cfg_results[config_idx++] = layer_cfg_results + layer_idx;
+
+        // Create this display's compact layer_t* array
+        display_config.pending_.layer_list = layers + layer_idx;
+
+        // Frame used for checking that each layer's dest_frame lies entirely
+        // within the composed output.
+        frame_t display_frame = {
+            .x_pos = 0, .y_pos = 0,
+            .width = display_config.pending_.mode.h_addressable,
+            .height = display_config.pending_.mode.v_addressable,
+        };
+
+        // Do any work that needs to be done to make sure that the pending layer_t structs
+        // are up to date, and validate that the configuration doesn't violate any API
+        // constraints.
+        for (auto& layer_node : display_config.pending_layers_) {
+            layers[layer_idx++] = &layer_node.layer->pending_layer_;
+
+            bool invalid = false;
+            if (layer_node.layer->pending_layer_.type == LAYER_TYPE_PRIMARY) {
+                primary_layer_t* layer = &layer_node.layer->pending_layer_.cfg.primary;
+                // Frame for checking that the layer's src_frame lies entirely
+                // within the source image.
+                frame_t image_frame = {
+                    .x_pos = 0, .y_pos = 0,
+                    .width = layer->image.width, .height = layer->image.height,
+                };
+                invalid = (!frame_contains(image_frame, layer->src_frame)
+                        || !frame_contains(display_frame, layer->dest_frame));
+
+                if (!invalid) {
+                    invalid = true;
+                    for (auto fmt : display_config.pixel_formats_) {
+                        if (fmt == layer->image.pixel_format) {
+                            invalid = false;
+                            break;
+                        }
+                    }
+                }
+            } else if (layer_node.layer->pending_layer_.type == LAYER_TYPE_CURSOR) {
+                invalid = true;
+                auto& cursor_cfg = layer_node.layer->pending_layer_.cfg.cursor;
+                for (auto& cursor_info : display_config.cursor_infos_) {
+                    if (cursor_info.format == cursor_cfg.image.pixel_format) {
+                        invalid = false;
+                        break;
+                    }
+                }
+            } else if (layer_node.layer->pending_layer_.type == LAYER_TYPE_COLOR) {
+                // There aren't any API constraints on valid colors.
+                layer_node.layer->pending_layer_.cfg.color.color_list =
+                        layer_node.layer->pending_color_bytes_;
+                layer_node.layer->pending_layer_.cfg.color.color_count = 4;
+            } else {
+                invalid = true;
+            }
+
+            if (invalid) {
+                // Continue to the next display, since there's nothing more to check for this one.
+                config_fail = true;
+                break;
+            }
+        }
+    }
+
+    if (config_fail) {
+        if (resp) {
+            resp->res = fuchsia_hardware_display_ConfigResult_INVALID_CONFIG;
+        }
+        // If the config is invalid, there's no point in sending it to the impl driver.
+        return false;
+    }
+
+    size_t layer_cfg_results_count;
+    uint32_t display_cfg_result =
+        controller_->dc()->CheckConfiguration(configs, config_idx, display_layer_cfg_results,
+                                              &layer_cfg_results_count);
+
+    if (display_cfg_result != CONFIG_DISPLAY_OK) {
+        if (resp) {
+            resp->res = display_cfg_result == CONFIG_DISPLAY_TOO_MANY
+                            ? fuchsia_hardware_display_ConfigResult_TOO_MANY_DISPLAYS
+                            : fuchsia_hardware_display_ConfigResult_UNSUPPORTED_DISPLAY_MODES;
+        }
+        return false;
+    }
+
+    bool layer_fail = false;
+    for (int i = 0; i < config_idx && !layer_fail; i++) {
+        for (unsigned j = 0; j < configs[i]->layer_count && !layer_fail; j++) {
+            if (display_layer_cfg_results[i][j]) {
+                layer_fail = true;
+            }
+        }
+    }
+
+    // Return unless we need to finish constructing the response
+    if (!layer_fail) {
+        return true;
+    } else if (!resp_builder) {
+        return false;
+    }
+    resp->res = fuchsia_hardware_display_ConfigResult_UNSUPPORTED_CONFIG;
+
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_USE_PRIMARY) ==
+                      CLIENT_USE_PRIMARY,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_MERGE_BASE) ==
+                      CLIENT_MERGE_BASE,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_MERGE_SRC) ==
+                      CLIENT_MERGE_SRC,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_FRAME_SCALE) ==
+                      CLIENT_FRAME_SCALE,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_SRC_FRAME) ==
+                      CLIENT_SRC_FRAME,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_TRANSFORM) ==
+                      CLIENT_TRANSFORM,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_COLOR_CONVERSION) ==
+                      CLIENT_COLOR_CONVERSION,
+                  "Const mismatch");
+    static_assert((1 << fuchsia_hardware_display_ClientCompositionOpcode_CLIENT_ALPHA) ==
+                      CLIENT_ALPHA,
+                  "Const mismatch");
+    constexpr uint32_t kAllErrors = (CLIENT_ALPHA << 1) - 1;
+
+
+    layer_idx = 0;
+    for (auto& display_config : configs_) {
+        if (display_config.pending_layers_.is_empty()) {
+            continue;
+        }
+
+        bool seen_base = false;
+        for (auto& layer_node : display_config.pending_layers_) {
+            uint32_t err = kAllErrors & layer_cfg_results[layer_idx];
+            // Fixup the error flags if the driver impl incorrectly set multiple MERGE_BASEs
+            if (err & CLIENT_MERGE_BASE) {
+                if (seen_base) {
+                    err &= ~CLIENT_MERGE_BASE;
+                    err |= CLIENT_MERGE_SRC;
+                } else {
+                    seen_base = true;
+                    err &= ~CLIENT_MERGE_SRC;
+                }
+            }
+
+            for (uint8_t i = 0; i < 32; i++) {
+                if (err & (1 << i)) {
+                    auto op = resp_builder->New<fuchsia_hardware_display_ClientCompositionOp>();
+                    op->display_id = display_config.id;
+                    op->layer_id = layer_node.layer->id;
+                    op->opcode = i;
+                    resp->ops.count++;
+                }
+            }
+            layer_idx++;
+        }
+    }
+    return false;
+}
+
+void Client::ApplyConfig() {
+    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+
+    bool config_missing_image = false;
+    layer_t* layers[layers_.size()];
+    int layer_idx = 0;
+    for (auto& display_config : configs_) {
+        display_config.current_.layer_count = 0;
+        display_config.current_.layer_list = layers + layer_idx;
+        display_config.vsync_layer_count_ = 0;
+
+        // Displays with no current layers are filtered out in Controller::ApplyConfig,
+        // after it updates its own image tracking logic.
+
+        for (auto layer_node : display_config.current_layers_) {
+            // Find the newest image which has become ready
+            Layer* layer = layer_node.layer;
+            image_node_t* node = list_peek_tail_type(&layer->waiting_images_, image_node_t, link);
+            while (node != nullptr && !node->self->IsReady()) {
+                node = list_prev_type(&layer->waiting_images_, &node->link, image_node_t, link);
+            }
+            if (node != nullptr) {
+                if (layer->displayed_image_ != nullptr) {
+                    // Start retiring the image which had been displayed
+                    fbl::AutoLock lock(controller_->mtx());
+                    layer->displayed_image_->StartRetire();
+                } else {
+                    // Turning on a new layer is a (pseudo) layer change
+                    display_config.pending_apply_layer_change_ = true;
+                }
+
+                // Drop any images older than node.
+                do_early_retire(&layer->waiting_images_, node);
+
+                layer->displayed_image_ = std::move(node->self);
+                list_remove_head(&layer->waiting_images_);
+
+                uint64_t handle = layer->displayed_image_->info().handle;
+                if (layer->current_layer_.type == LAYER_TYPE_PRIMARY) {
+                    layer->current_layer_.cfg.primary.image.handle = handle;
+                } else if (layer->current_layer_.type == LAYER_TYPE_CURSOR) {
+                    layer->current_layer_.cfg.cursor.image.handle = handle;
+                } else {
+                    // type is validated in ::CheckConfig, so something must be very wrong.
+                    ZX_ASSERT(false);
+                }
+            }
+
+            if (is_vc_) {
+                if (layer->displayed_image_) {
+                    // If the virtcon is displaying an image, set it as the kernel's framebuffer
+                    // vmo. If the virtcon is displaying images on multiple displays, this ends
+                    // executing multiple times, but the extra work is okay since the virtcon
+                    // shouldn't be flipping images.
+                    console_fb_display_id_ = display_config.id;
+
+                    auto fb = layer->displayed_image_;
+                    uint32_t stride = controller_->dc()->ComputeLinearStride(
+                        fb->info().width, fb->info().pixel_format);
+                    uint32_t size = fb->info().height *
+                            ZX_PIXEL_FORMAT_BYTES(fb->info().pixel_format) * stride;
+                    zx_framebuffer_set_range(get_root_resource(),
+                                       fb->vmo().get(), size, fb->info().pixel_format,
+                                       fb->info().width, fb->info().height, stride);
+                } else if (console_fb_display_id_ == display_config.id) {
+                    // If this display doesnt' have an image but it was the display which had the
+                    // kernel's framebuffer, make the kernel drop the reference. Note that this
+                    // executes when tearing down the virtcon client.
+                    zx_framebuffer_set_range(get_root_resource(), ZX_HANDLE_INVALID, 0, 0, 0, 0, 0);
+                    console_fb_display_id_ = -1;
+                }
+            }
+
+            display_config.current_.layer_count++;
+            layers[layer_idx++] = &layer->current_layer_;
+            if (layer->current_layer_.type != LAYER_TYPE_COLOR) {
+                display_config.vsync_layer_count_++;
+                if (layer->displayed_image_ == nullptr) {
+                    config_missing_image = true;
+                }
+            }
+        }
+    }
+
+    if (!config_missing_image && is_owner_) {
+        DisplayConfig* dc_configs[configs_.size()];
+        int dc_idx = 0;
+        for (auto& c : configs_) {
+            dc_configs[dc_idx++] = &c;
+        }
+        controller_->ApplyConfig(dc_configs, dc_idx, is_vc_, client_apply_count_);
+    }
+}
+
+void Client::SetOwnership(bool is_owner) {
+    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+
+    is_owner_ = is_owner;
+
+    fuchsia_hardware_display_ControllerClientOwnershipChangeEvent msg = {};
+    msg.hdr.ordinal = fuchsia_hardware_display_ControllerClientOwnershipChangeOrdinal;
+    msg.has_ownership = is_owner;
+
+    zx_status_t status = zx_channel_write(server_handle_, 0, &msg, sizeof(msg), nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "Error writing remove message %d\n", status);
+    }
+
+    ApplyConfig();
+}
+
+void Client::OnDisplaysChanged(const uint64_t* displays_added, size_t added_count,
+                               const uint64_t* displays_removed, size_t removed_count) {
+    ZX_DEBUG_ASSERT(controller_->current_thread_is_loop());
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
+    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    fidl::Builder builder(bytes, ZX_CHANNEL_MAX_MSG_BYTES);
+    auto req = builder.New<fuchsia_hardware_display_ControllerDisplaysChangedEvent>();
+    zx_status_t status;
+    req->hdr = {};
+    req->hdr.ordinal = fuchsia_hardware_display_ControllerDisplaysChangedOrdinal;
+    req->added.count = 0;
+    req->added.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+    req->removed.count = 0;
+    req->removed.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+    for (unsigned i = 0; i < removed_count; i++) {
+        // TODO(stevensd): Delayed removal can cause conflicts if the driver reuses
+        // display ids. Move display id generation into the core driver.
+        if (configs_.find(displays_removed[i]).IsValid()) {
+            req->removed.count++;
+        }
+    }
+
+    for (unsigned i = 0; i < added_count; i++) {
+        fbl::AllocChecker ac;
+        auto config = fbl::make_unique_checked<DisplayConfig>(&ac);
+        if (!ac.check()) {
+            zxlogf(WARN, "Out of memory when processing hotplug\n");
+            continue;
+        }
+
+        config->id = displays_added[i];
+
+        if (!controller_->GetSupportedPixelFormats(config->id,
+                                                   &config->pixel_formats_)) {
+            zxlogf(WARN, "Failed to get pixel formats when processing hotplug\n");
+            continue;
+        }
+
+        if (!controller_->GetCursorInfo(config->id, &config->cursor_infos_)) {
+            zxlogf(WARN, "Failed to get cursor info when processing hotplug\n");
+            continue;
+        }
+
+        const fbl::Vector<edid::timing_params_t>* edid_timings;
+        const display_params_t* params;
+        if (!controller_->GetPanelConfig(config->id, &edid_timings, &params)) {
+            // This can only happen if the display was already disconnected.
+            zxlogf(WARN, "No config when adding display\n");
+            continue;
+        }
+        req->added.count++;
+
+        config->current_.display_id = config->id;
+        config->current_.layer_list = nullptr;
+        config->current_.layer_count = 0;
+
+        if (edid_timings) {
+            Controller::PopulateDisplayMode((*edid_timings)[0], &config->current_.mode);
+        } else {
+            config->current_.mode = {};
+            config->current_.mode.h_addressable = params->width;
+            config->current_.mode.v_addressable = params->height;
+        }
+
+        config->current_.cc_flags = 0;
+
+        config->pending_ = config->current_;
+
+        configs_.insert(std::move(config));
+    }
+
+    // We need 2 loops, since we need to make sure we allocate the
+    // correct size array in the fidl response.
+    fuchsia_hardware_display_Info* coded_configs = nullptr;
+    if (req->added.count > 0) {
+        coded_configs = builder.NewArray<fuchsia_hardware_display_Info>(
+            static_cast<uint32_t>(req->added.count));
+    }
+
+    for (unsigned i = 0; i < added_count; i++) {
+        auto config = configs_.find(displays_added[i]);
+        if (!config.IsValid()) {
+            continue;
+        }
+
+        const fbl::Vector<edid::timing_params>* edid_timings;
+        const display_params_t* params;
+        controller_->GetPanelConfig(config->id, &edid_timings, &params);
+
+        coded_configs[i].id = config->id;
+        coded_configs[i].pixel_format.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        coded_configs[i].modes.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+        coded_configs[i].cursor_configs.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+        if (edid_timings) {
+            coded_configs[i].modes.count = edid_timings->size();
+            for (auto timing : *edid_timings) {
+                auto mode = builder.New<fuchsia_hardware_display_Mode>();
+
+                mode->horizontal_resolution = timing.horizontal_addressable;
+                mode->vertical_resolution = timing.vertical_addressable;
+                mode->refresh_rate_e2 = timing.vertical_refresh_e2;
+            }
+        } else {
+            coded_configs[i].modes.count = 1;
+            auto mode = builder.New<fuchsia_hardware_display_Mode>();
+            mode->horizontal_resolution = params->width;
+            mode->vertical_resolution = params->height;
+            mode->refresh_rate_e2 = params->refresh_rate_e2;
+        }
+
+        static_assert(sizeof(zx_pixel_format_t) == sizeof(int32_t), "Bad pixel format size");
+        coded_configs[i].pixel_format.count = config->pixel_formats_.size();
+        memcpy(builder.NewArray<zx_pixel_format_t>(
+                        static_cast<uint32_t>(config->pixel_formats_.size())),
+               config->pixel_formats_.get(),
+               sizeof(zx_pixel_format_t) * config->pixel_formats_.size());
+
+        static_assert(offsetof(cursor_info_t, width) ==
+                          offsetof(fuchsia_hardware_display_CursorInfo, width),
+                      "Bad struct");
+        static_assert(offsetof(cursor_info_t, height) ==
+                          offsetof(fuchsia_hardware_display_CursorInfo, height),
+                      "Bad struct");
+        static_assert(offsetof(cursor_info_t, format) ==
+                          offsetof(fuchsia_hardware_display_CursorInfo, pixel_format),
+                      "Bad struct");
+        static_assert(sizeof(cursor_info_t) <= sizeof(fuchsia_hardware_display_CursorInfo),
+                      "Bad size");
+        coded_configs[i].cursor_configs.count = config->cursor_infos_.size();
+        auto coded_cursor_configs = builder.NewArray<fuchsia_hardware_display_CursorInfo>(
+            static_cast<uint32_t>(config->cursor_infos_.size()));
+        for (unsigned i = 0; i < config->cursor_infos_.size(); i++) {
+            memcpy(&coded_cursor_configs[i], &config->cursor_infos_[i], sizeof(cursor_info_t));
+        }
+
+        const char* manufacturer_name = "";
+        const char* monitor_name = "";
+        const char* monitor_serial = "";
+        if (!controller_->GetDisplayIdentifiers(displays_added[i], &manufacturer_name,
+                                                &monitor_name, &monitor_serial)) {
+            zxlogf(ERROR, "Failed to get display identifiers\n");
+            ZX_DEBUG_ASSERT(false);
+        }
+
+        populate_fidl_string(&coded_configs[i].manufacturer_name, &builder, manufacturer_name,
+                             fuchsia_hardware_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_name, &builder, monitor_name,
+                             fuchsia_hardware_display_identifierMaxLen);
+        populate_fidl_string(&coded_configs[i].monitor_serial, &builder, monitor_serial,
+                             fuchsia_hardware_display_identifierMaxLen);
+    }
+
+    if (req->removed.count > 0) {
+        auto removed_ids = builder.NewArray<uint64_t>(static_cast<uint32_t>(req->removed.count));
+        uint32_t idx = 0;
+        for (unsigned i = 0; i < removed_count; i++) {
+            auto display = configs_.erase(displays_removed[i]);
+            if (display) {
+                display->pending_layers_.clear();
+                display->current_layers_.clear();
+                removed_ids[idx++] = display->id;
+            }
+        }
+    }
+
+    if (req->added.count > 0 || req->removed.count > 0) {
+        fidl::Message msg(builder.Finalize(), fidl::HandlePart());
+        const char* err;
+        ZX_DEBUG_ASSERT_MSG(
+            msg.Validate(&fuchsia_hardware_display_ControllerDisplaysChangedEventTable, &err) ==
+                ZX_OK,
+            "Failed to validate \"%s\"", err);
+
+        if ((status = msg.Write(server_handle_, 0)) != ZX_OK) {
+            zxlogf(ERROR, "Error writing remove message %d\n", status);
+        }
+    }
+}
+
+fbl::RefPtr<FenceReference> Client::GetFence(uint64_t id) {
+    if (id == INVALID_ID) {
+        return nullptr;
+    }
+    fbl::AutoLock lock(&fence_mtx_);
+    auto fence = fences_.find(id);
+    return fence.IsValid() ? fence->GetReference() : nullptr;
+}
+
+void Client::OnFenceFired(FenceReference* fence) {
+    for (auto& layer: layers_) {
+        image_node_t* waiting;
+        list_for_every_entry(&layer.waiting_images_, waiting, image_node_t, link) {
+            waiting->self->OnFenceReady(fence);
+        }
+    }
+    ApplyConfig();
+}
+
+void Client::OnRefForFenceDead(Fence* fence) {
+    fbl::AutoLock lock(&fence_mtx_);
+    if (fence->OnRefDead()) {
+        fences_.erase(fence->id);
+    }
+}
+
+void Client::TearDown() {
+    ZX_DEBUG_ASSERT(controller_->loop().GetState() == ASYNC_LOOP_SHUTDOWN
+            || controller_->current_thread_is_loop());
+    pending_config_valid_ = false;
+
+    // Teardown stops events from the channel, but not from the ddk, so we
+    // need to make sure we don't try to teardown multiple times.
+    if (!IsValid()) {
+        return;
+    }
+
+    if (api_wait_.object() != ZX_HANDLE_INVALID) {
+        api_wait_.Cancel();
+        api_wait_.set_object(ZX_HANDLE_INVALID);
+    }
+    server_handle_ = ZX_HANDLE_INVALID;
+
+    CleanUpImage(nullptr);
+
+    // Use a temporary list to prevent double locking when resetting
+    fbl::SinglyLinkedList<fbl::RefPtr<Fence>> fences;
+    {
+        fbl::AutoLock lock(&fence_mtx_);
+        while (!fences_.is_empty()) {
+            fences.push_front(fences_.erase(fences_.begin()));
+        }
+    }
+    while (!fences.is_empty()) {
+        fences.pop_front()->ClearRef();
+    }
+
+    for (auto& config : configs_) {
+        config.pending_layers_.clear();
+        config.current_layers_.clear();
+    }
+
+    // The layer's images have already been handled in CleanUpImageLayerState
+    layers_.clear();
+
+    ApplyConfig();
+
+    proxy_->OnClientDead();
+}
+
+bool Client::CleanUpImage(Image* image) {
+    // Clean up any fences associated with the image
+    {
+        fbl::AutoLock lock(controller_->mtx());
+        if (image) {
+            image->ResetFences();
+        } else {
+            for (auto& image : images_) {
+                image.ResetFences();
+            }
+        }
+    }
+
+    // Clean up any layer state associated with the images
+    bool current_config_change = false;
+    for (auto& layer : layers_) {
+        if (layer.pending_image_ && (image == nullptr || layer.pending_image_.get() == image)) {
+            layer.pending_image_->DiscardAcquire();
+            layer.pending_image_ = nullptr;
+        }
+        if (image == nullptr) {
+            do_early_retire(&layer.waiting_images_, nullptr);
+        } else {
+            image_node_t* waiting;
+            list_for_every_entry(&layer.waiting_images_, waiting, image_node_t, link) {
+                if (waiting->self.get() == image) {
+                    list_delete(&waiting->link);
+                    waiting->self->EarlyRetire();
+                    waiting->self.reset();
+                    break;
+                }
+            }
+        }
+        if (layer.displayed_image_ && (image == nullptr || layer.displayed_image_.get() == image)) {
+            {
+                fbl::AutoLock lock(controller_->mtx());
+                layer.displayed_image_->StartRetire();
+            }
+            layer.displayed_image_ = nullptr;
+
+            if (layer.current_node_.InContainer()) {
+                current_config_change = true;
+            }
+        }
+    }
+
+    // Clean up the image id map
+    if (image) {
+        images_.erase(*image);
+    } else {
+        images_.clear();
+    }
+
+    return current_config_change;
+}
+
+zx_status_t Client::Init(zx_handle_t server_handle) {
+    zx_status_t status;
+
+    api_wait_.set_object(server_handle);
+    api_wait_.set_trigger(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED);
+    if ((status = api_wait_.Begin(controller_->loop().dispatcher())) != ZX_OK) {
+        // Clear the object, since that's used to detect whether or not api_wait_ is inited.
+        api_wait_.set_object(ZX_HANDLE_INVALID);
+        zxlogf(ERROR, "Failed to start waiting %d\n", status);
+        return status;
+    }
+
+    server_handle_ = server_handle;
+    mtx_init(&fence_mtx_, mtx_plain);
+
+    return ZX_OK;
+}
+
+Client::Client(Controller* controller, ClientProxy* proxy, bool is_vc)
+        : controller_(controller), proxy_(proxy), is_vc_(is_vc) { }
+
+Client::~Client() {
+    ZX_DEBUG_ASSERT(server_handle_ == ZX_HANDLE_INVALID);
+}
+
+void ClientProxy::SetOwnership(bool is_owner) {
+    auto task = new async::Task();
+    task->set_handler([client_handler = &handler_, is_owner]
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK && client_handler->IsValid()) {
+                client_handler->SetOwnership(is_owner);
+            }
+
+            delete task;
+
+    });
+    task->Post(controller_->loop().dispatcher());
+}
+
+void ClientProxy::OnDisplaysChanged(const uint64_t* displays_added,
+                                    size_t added_count, const uint64_t* displays_removed,
+                                    size_t removed_count) {
+    handler_.OnDisplaysChanged(displays_added, added_count, displays_removed, removed_count);
+}
+
+void ClientProxy::ReapplyConfig() {
+    fbl::AllocChecker ac;
+    auto task = new (&ac) async::Task();
+    if (!ac.check()) {
+        zxlogf(WARN, "Failed to reapply config\n");
+        return;
+    }
+
+    task->set_handler([client_handler = &handler_]
+                       (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+            if (status == ZX_OK && client_handler->IsValid()) {
+                client_handler->ApplyConfig();
+            }
+
+            delete task;
+
+    });
+    task->Post(controller_->loop().dispatcher());
+}
+
+void ClientProxy::OnDisplayVsync(uint64_t display_id, zx_time_t timestamp,
+                                 uint64_t* image_ids, size_t count) {
+    ZX_DEBUG_ASSERT(mtx_trylock(controller_->mtx()) == thrd_busy);
+
+    if (!enable_vsync_) {
+        return;
+    }
+    uint32_t size = static_cast<uint32_t>(sizeof(fuchsia_hardware_display_ControllerVsyncEvent) +
+                                          sizeof(uint64_t) * count);
+    uint8_t data[size];
+
+    fuchsia_hardware_display_ControllerVsyncEvent* msg =
+        reinterpret_cast<fuchsia_hardware_display_ControllerVsyncEvent*>(data);
+    msg->hdr = {};
+    msg->hdr.ordinal = fuchsia_hardware_display_ControllerVsyncOrdinal;
+    msg->display_id = display_id;
+    msg->timestamp = timestamp;
+    msg->images.count = count;
+    msg->images.data = reinterpret_cast<void*>(FIDL_ALLOC_PRESENT);
+
+    memcpy(msg + 1, image_ids, sizeof(uint64_t) * count);
+
+    zx_status_t status = server_handle_.write(0, data, size, nullptr, 0);
+    if (status != ZX_OK) {
+        zxlogf(WARN, "Failed to send vsync event %d\n", status);
+    }
+}
+
+void ClientProxy::OnClientDead() {
+    controller_->OnClientDead(this);
+    // After OnClientDead, there won't be any more vsync calls. Since that is the only use of
+    // the channel off of the loop thread, there's no need to worry about synchronization.
+    server_handle_.reset();
+}
+
+void ClientProxy::Close() {
+    if (controller_->current_thread_is_loop()) {
+        handler_.TearDown();
+    } else {
+        mtx_t mtx;
+        mtx_init(&mtx, mtx_plain);
+        cnd_t cnd;
+        cnd_init(&cnd);
+        bool done = false;
+
+        mtx_lock(&mtx);
+        auto task = new async::Task();
+        task->set_handler([client_handler = &handler_,
+                           cnd_ptr = &cnd, mtx_ptr = &mtx, done_ptr = &done]
+                           (async_dispatcher_t* dispatcher, async::Task* task, zx_status_t status) {
+                mtx_lock(mtx_ptr);
+
+                client_handler->TearDown();
+
+                *done_ptr = true;
+                cnd_signal(cnd_ptr);
+                mtx_unlock(mtx_ptr);
+
+                delete task;
+        });
+        if (task->Post(controller_->loop().dispatcher()) != ZX_OK) {
+            // Tasks only fail to post if the looper is dead. That shouldn't actually
+            // happen, but if it does then it's safe to call Reset on this thread anyway.
+            delete task;
+            handler_.TearDown();
+        } else {
+            while (!done) {
+                cnd_wait(&cnd, &mtx);
+            }
+        }
+        mtx_unlock(&mtx);
+    }
+}
+
+zx_status_t ClientProxy::DdkIoctl(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                             size_t out_len, size_t* actual) {
+    switch (op) {
+    case IOCTL_DISPLAY_CONTROLLER_GET_HANDLE: {
+        if (out_len != sizeof(zx_handle_t)) {
+            return ZX_ERR_INVALID_ARGS;
+        }
+
+        if (client_handle_.get() == ZX_HANDLE_INVALID) {
+            return ZX_ERR_ALREADY_BOUND;
+        }
+
+        *reinterpret_cast<zx_handle_t*>(out_buf) = client_handle_.release();
+        *actual = sizeof(zx_handle_t);
+        return ZX_OK;
+    }
+    default:
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+zx_status_t ClientProxy::DdkClose(uint32_t flags) {
+    Close();
+    return ZX_OK;
+}
+
+void ClientProxy::DdkRelease() {
+    delete this;
+}
+
+zx_status_t ClientProxy::Init() {
+    zx_status_t status;
+    if ((status = zx_channel_create(0, server_handle_.reset_and_get_address(),
+                                    client_handle_.reset_and_get_address())) != ZX_OK) {
+        zxlogf(ERROR, "Failed to create channels %d\n", status);
+        return status;
+    }
+
+    return handler_.Init(server_handle_.get());
+}
+
+ClientProxy::ClientProxy(Controller* controller, bool is_vc)
+        : ClientParent(controller->zxdev()),
+          controller_(controller), is_vc_(is_vc), handler_(controller_, this, is_vc_) {}
+
+ClientProxy::~ClientProxy() { }
+
+} // namespace display

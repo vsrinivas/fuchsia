@@ -1,0 +1,24 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.amlogiccanvas;
+
+using zx;
+
+struct CanvasInfo {
+    uint32 height;
+    uint32 stride_bytes;
+    uint32 wrap;
+    uint32 blkmode;
+    uint32 endianness;
+};
+
+[Layout = "ddk-protocol"]
+interface AmlogicCanvas {
+    /// Configures a canvas.
+    /// Adds a framebuffer to the canvas lookup table.
+    Config(handle<vmo> vmo, usize offset, CanvasInfo info) -> (zx.status s, uint8 canvas_idx);
+    /// Frees up a canvas.
+    Free(uint8 canvas_idx) -> (zx.status s);
+};

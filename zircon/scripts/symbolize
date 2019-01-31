@@ -1,0 +1,85 @@
+#!/usr/bin/env bash
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+function usage {
+    echo "usage: $0 [options] [-- <symbolizer args>]"
+    echo "-a <arch>           : arm64, or x64"
+    echo "-C                  : use Clang build"
+    echo "-A                  : use ASan build"
+    echo "-P                  : use profile build"
+    echo "-L                  : use LTO build"
+    echo "-l                  : use ThinLTO build"
+    echo "-X                  : use XRay build"
+    echo "-o <dir>            : build directory"
+    echo "-i <file>           : ids.txt file"
+    echo "-h for help"
+    echo "all arguments after -- are passed to the symbolizer directly"
+    exit 1
+}
+
+ARCH=x64
+CLANG=0
+ASAN=0
+BUILDDIR=
+IDSTXT=
+LTO=0
+THINLTO=0
+PROFILE=0
+XRAY=0
+ZIRCON_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
+PREBUILT_DIR="${ZIRCON_ROOT}/prebuilt/downloads"
+
+if [[ -z "$LLVM_SYMBOLIZER" ]]; then
+  readonly LLVM_SYMBOLIZER="${PREBUILT_DIR}/clang/bin/llvm-symbolizer"
+fi
+
+readonly SYMBOLIZE="${PREBUILT_DIR}/symbolize"
+
+
+while getopts "a:CAPLlXo:i:h" FLAG
+do
+    case $FLAG in
+        a)   ARCH=$OPTARG;;
+        C)   CLANG=1;;
+        A)   ASAN=1;;
+        P)   PROFILE=1;;
+        L)   LTO=1;;
+        l)   THINLTO=1;;
+        X)   XRAY=1;;
+        o)   BUILDDIR=$OPTARG;;
+        i)   IDSTXT=$OPTARG;;
+        h)   usage;;
+        [?]) echo unrecognized option
+             usage;;
+    esac
+done
+shift $((OPTIND-1))
+
+if [[ -z "$IDSTXT" ]]; then
+    if [[ -n "$BUILDDIR" ]]; then
+        IDSTXT="${BUILDDIR}/ids.txt"
+    else
+        BUILD_SUFFIX=
+        if (( $ASAN )); then
+            BUILD_SUFFIX=-asan
+        elif (( $CLANG )); then
+            BUILD_SUFFIX=-clang
+        elif (( $LTO )); then
+            BUILD_SUFFIX=-lto
+        elif (( $THINLTO )); then
+            BUILD_SUFFIX=-thinlto
+        elif (( $PROFILE )); then
+            BUILD_SUFFIX=-profile
+        elif (( $XRAY )); then
+            BUILD_SUFFIX=-xray
+        fi
+        IDSTXT="${ZIRCON_ROOT}/build-${ARCH}${BUILD_SUFFIX}/ids.txt"
+    fi
+fi
+
+exec "$SYMBOLIZE" -llvm-symbolizer "$LLVM_SYMBOLIZER" -ids "$IDSTXT" "$@"

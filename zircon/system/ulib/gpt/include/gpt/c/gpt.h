@@ -1,0 +1,56 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef LIB_GPT_GPT_H_
+#define LIB_GPT_GPT_H_
+
+#include <stdbool.h>
+#include <stdint.h>
+#include <unistd.h>
+
+#include <zircon/compiler.h>
+#include <zircon/device/block.h>
+#include <zircon/hw/gpt.h>
+
+__BEGIN_CDECLS
+typedef gpt_entry_t gpt_partition_t;
+static_assert(sizeof(gpt_partition_t) == GPT_ENTRY_SIZE, "unexpected gpt entry size");
+
+// Helpers for translating the |name| field of "gpt_partition_t".
+// Assumes UTF-16LE.
+// Assumes all code points are less than or equal to U+007F, and
+// discards any upper bits, forcing all inputs to be in this
+// range.
+//
+// |len| refers to the length of the input string, in chars.
+void cstring_to_utf16(uint16_t* dst, const char* src, size_t len);
+// |len| refers to the length of the input string, in 16-bit pairs.
+char* utf16_to_cstring(char* dst, const uint16_t* src, size_t len);
+
+// converts GUID to a string
+void uint8_to_guid_string(char* dst, const uint8_t* src);
+
+// determines whether guid is system guid
+bool gpt_is_sys_guid(uint8_t* guid, ssize_t len);
+
+// determines whether guid is data guid
+bool gpt_is_data_guid(uint8_t* guid, ssize_t len);
+
+// determines whether guid is install guid
+bool gpt_is_install_guid(uint8_t* guid, ssize_t len);
+
+// determines whether guid is efi guid
+bool gpt_is_efi_guid(uint8_t* guid, ssize_t len);
+
+void gpt_set_debug_output_enabled(bool enabled);
+
+// Return the human-readable version of the type GUID.
+const char* gpt_guid_to_type(const char* guid);
+
+// Sort an array of gpt_partition_t pointers in-place based on the values of
+// gpt_partition_t->first.
+void gpt_sort_partitions(gpt_partition_t** partitions, size_t count);
+
+__END_CDECLS
+#endif // LIB_GPT_GPT_H_

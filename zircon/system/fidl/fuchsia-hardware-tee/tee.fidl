@@ -1,0 +1,111 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.tee;
+
+using zx;
+
+// Trusted Execution Environment (TEE) Interface
+
+// UUID identifiers are used to identify the TEE Operating System and individual Trusted
+// Applications. This structure matches the UUID type as defined by RFC4122.
+struct Uuid {
+    uint32 time_low;
+    uint16 time_mid;
+    uint16 time_hi_and_version;
+    array<uint8>:8 clock_seq_and_node;
+};
+
+struct OsRevision {
+    uint32 major;
+    uint32 minor;
+};
+
+struct OsInfo {
+    Uuid uuid;
+    OsRevision revision;
+    bool is_global_platform_compliant;
+};
+
+// Operation Parameters
+//
+// Communication with the TEE OS and Trusted Applications is performed using opaque parameters.
+// These parameters can be a mix of small values (Value type) or a buffer reference (Buffer type).
+// A parameter will be tagged as either an input, output or both (inout).
+enum Direction : uint32 {
+    INPUT = 0;
+    OUTPUT = 1;
+    INOUT = 2;
+};
+
+// None is an empty parameter type that is used as a placeholder for elements in the parameter set
+// that are not used.
+struct None {};
+
+struct Buffer {
+    Direction direction;
+    // The VMO is allowed to be null for situations where the TEE allows for buffer size checks.
+    // For example, if the operation to be performed needs an output buffer, but the user cannot
+    // calculate how large that output buffer should be, they can attempt the operation with a
+    // null vmo and the Trusted Application will populate the size field so that the operation can
+    // be performed again with an appropriately sized buffer.
+    handle<vmo>? vmo;
+    uint64 offset;
+    uint64 size;
+};
+
+struct Value {
+    Direction direction;
+    uint64 a;
+    uint64 b;
+    uint64 c;
+};
+
+union Parameter {
+    None none;
+    Buffer buffer;
+    Value value;
+};
+
+struct ParameterSet {
+    uint16 count;
+    array<Parameter>:4 parameters;
+};
+
+// Each operation must flow through the device driver and the trusted operating system before
+// reaching the trusted application (and back). The ReturnOrigin indicates which layer provided the
+// return code.
+enum ReturnOrigin : uint32 {
+    COMMUNICATION = 0;
+    TRUSTED_OS = 1;
+    TRUSTED_APPLICATION = 2;
+};
+
+// The Result of an operation will include a return code, the origin of the result, and the return
+// of the parameter set. The returned parameter set will be a copy of the input parameter set, but
+// with the INOUT and OUTPUT parameters updated. If the parameter is a Buffer, it will update the
+// Buffer.size to the number of bytes written.
+struct Result {
+    uint64 return_code;
+    ReturnOrigin return_origin;
+    ParameterSet parameter_set;
+};
+
+[Layout = "Simple"]
+interface Device {
+    // Obtain information about the TEE OS
+    1 : GetOsInfo() -> (OsInfo info);
+
+    // Initiates a communication session with the specified trusted application.
+    2 : OpenSession(Uuid trusted_app, ParameterSet parameter_set)
+        -> (uint32 session_id, Result result);
+
+    // Requests the trusted application perform the provided command. The command is unique to the
+    // trusted application.
+    3 : InvokeCommand(uint32 session_id, uint32 command_id, ParameterSet parameter_set)
+        -> (Result result);
+
+    // Closes an established session.
+    4 : CloseSession(uint32 session_id) -> ();
+};

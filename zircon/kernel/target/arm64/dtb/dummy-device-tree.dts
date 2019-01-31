@@ -1,0 +1,11 @@
+/dts-v1/;
+
+// This is a dummy Linux device tree, just needed to make some bootloaders
+// that expect a device tree happy.
+/ {
+    model = "dummy";
+
+    // We need these nodes so bootloaders can add extra information here.
+    chosen {};
+    memory {};
+};

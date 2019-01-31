@@ -1,0 +1,112 @@
+#!/bin/bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Test the "basic configuration" parameters for jitterentropy.
+#
+# The parameters in question are pseudorandom loop counts and data processing. For more details, see
+# docs/jitterentropy/config-basic.md.
+#
+# This script tests two axes:
+#     loop counts: { pseudorandom, max, min}
+#     data processing: { on, off}
+#
+# The loop counts axis is reflected in the values of 'kernel.jitterentropy.ml' and
+# 'kernel.jitterentropy.ll'. For pseudorandom, both are set to 0. For max, both are set to the
+# maximum values that pseudorandom can output, namely 'ml = 128' and 'll = 16'. For min, both are
+# set to the minimum values that pseudorandom can output, namely 'ml = 1' and 'll = 1'.
+#
+# The data processing axis is reflected in the value of 'kernel.jitterentropy.raw'. When data
+# processing is on, 'raw = false' and when data processing is off, 'raw = true'.
+#
+# This script requires an output directory, passed as the first (and only) non-option command line
+# argument. There are also a number of options, described in the HELP function below.
+
+set -e -u
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../../.." && pwd )"
+
+# Print help message and exit
+function HELP {
+    echo "$0 [options] <output-dir>" >&2
+    echo >&2
+    echo "Jitterentropy-specific options:" >&2
+    echo "    -c <count>  : jitterentropy block count [default: 1024]" >&2
+    echo "    -i <iters>  : times to repeat tests [default: 10]" >&2
+    echo "    -s <size>   : jitterentropy block size [default: 64]" >&2
+    echo "                : (this replaces the '-s <source>' option below; this" >&2
+    echo "                : script always uses jitterentropy as its source)" >&2
+    echo >&2
+    "$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test -h -h
+    exit 1
+}
+
+BLOCK_COUNT=1024
+BLOCK_SIZE=64
+ITERS=10
+PASSTHROUGH_ARGS=()
+
+# separate out our options from the repeat-boot-test options
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -c)
+            if [[ $# -lt 2 ]]; then echo "-c missing count" >&2; HELP; fi
+            BLOCK_COUNT="$2"
+            shift 2
+            ;;
+        -h)
+            HELP
+            ;;
+        -i)
+            if [[ $# -lt 2 ]]; then echo "-i missing iters" >&2; HELP; fi
+            ITERS="$2"
+            shift 2
+            ;;
+        -s)
+            if [[ $# -lt 2 ]]; then echo "-s missing size" >&2; HELP; fi
+            BLOCK_SIZE="$2"
+            shift 2
+            ;;
+        *)
+            PASSTHROUGH_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+BASE_CMDLINE="kernel.jitterentropy.bc=$BLOCK_COUNT kernel.jitterentropy.bs=$BLOCK_SIZE"
+
+AXIS_1=(
+    "kernel.jitterentropy.ml=0 kernel.jitterentropy.ll=0"
+    "kernel.jitterentropy.ml=128 kernel.jitterentropy.ll=16"
+    "kernel.jitterentropy.ml=1 kernel.jitterentropy.ll=1"
+)
+
+AXIS_2=(
+    "kernel.jitterentropy.raw=true"
+    "kernel.jitterentropy.raw=false"
+)
+
+# build the cmdlines
+readarray -t CMDLINES < <(
+    for ((i = 0; i < ITERS; i++)); do
+        for v1 in "${AXIS_1[@]}"; do for v2 in "${AXIS_2[@]}"; do
+            CMDLINE="$BASE_CMDLINE $v1 $v2"
+            echo "$CMDLINE"
+        done; done
+    done
+)
+
+# run the tests
+
+# The unholy incantation around PASSTHOROUGH_ARGS comes from here:
+#     https://stackoverflow.com/a/7577209
+# TL;DR: In bash, an array is only considered 'set' if it has at least one item. without the
+# nonsense below, if PASSTHROUGH_ARGS is empty (which is legitimate!), then `set -u` will throw.
+"$ZIRCONDIR"/scripts/entropy-test/repeat-boot-test \
+    "${PASSTHROUGH_ARGS[@]+"${PASSTHROUGH_ARGS[@]}"}" \
+    -s "jitterentropy" -- "${CMDLINES[@]}"

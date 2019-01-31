@@ -1,0 +1,96 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.logger;
+
+using zx;
+
+enum LogLevelFilter : int8 {
+    NONE = -1;
+    INFO = 0;
+    WARN = 1;
+    ERROR = 2;
+    FATAL = 3;
+};
+
+// Max tags that can be passed to filter by listener.
+const uint8 MAX_TAGS = 5;
+
+// Max tag length that can be passed to filter by listener.
+const uint8 MAX_TAG_LEN_BYTES = 63;
+
+struct LogFilterOptions {
+    bool filter_by_pid;
+    uint64 pid;
+
+    bool filter_by_tid;
+    uint64 tid;
+
+    // If more than zero, logs would be filtered based on verbosity and
+    // |min_severity| would be ignored.
+    uint8 verbosity;
+
+    LogLevelFilter min_severity;
+
+    // If non-empty, return all messages which contain at least one specified
+    // tag.  If empty, messages will not be filtered by tag.
+    // Passed tags should not be more than |MAX_TAG_LEN_BYTES| bytes in length
+    // and max tags can be |MAX_TAGS|.
+    // Listener would be discarded if the limit is not followed.
+    vector<string>:MAX_TAGS tags;
+};
+
+// Max tags that will be attached to a LogMessage.
+const uint8 MAX_TAGS_PER_LOG_MESSAGE = 5;
+
+struct LogMessage {
+    uint64 pid;
+    uint64 tid;
+    // Nanoseconds since the system was powered on, aka ZX_CLOCK_MONOTONIC.
+    // https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md#supported-clock-ids
+    zx.time time;
+    int32 severity;
+
+    // See //zircon/system/ulib/syslog/include/syslog/wire_format.h. As messages
+    // can be served out of order, this should only be logged if more than last
+    // count.
+    uint32 dropped_logs;
+    vector<string>:MAX_TAGS_PER_LOG_MESSAGE tags;
+    string msg;
+};
+
+// Interface for LogListener to register to listen to logs.
+[Discoverable]
+interface Log {
+    // Listens to new log entries by calling Log() on |log_listener|.
+    // A null |options| indicates no filtering is requested.
+    1: Listen(LogListener log_listener, LogFilterOptions? options);
+
+    // Dumps all cached logs by calling LogMany() followed by Done() on
+    // |log_listener|.
+    // A null |options| indicates no filtering is requested.
+    2: DumpLogs(LogListener log_listener, LogFilterOptions? options);
+};
+
+// Interface to get and listen to socket from syslogger
+[Discoverable]
+interface LogSink {
+    // Client connects to send logs over socket
+    1: Connect(handle<socket> socket);
+};
+
+const uint64 MAX_LOG_MANY_SIZE_BYTES = 16384;
+
+interface LogListener {
+    // Called for single messages.
+    1: Log(LogMessage log);
+
+    // Called when |Log| service is serving cached logs.
+    // Max logs size per call is |MAX_LOG_MANY_SIZE_BYTES| bytes.
+    2: LogMany(vector<LogMessage> log);
+
+    // Called in the case |DumpLogs()| function of |Log| service was called and
+    // all cached logs have been dispatched to this listener.
+    3: Done();
+};

@@ -1,0 +1,163 @@
+{
+  "description": "Schema for the list of Zircon syscalls",
+  "type": "object",
+  "properties": {
+    "syscalls": {
+      "description": "The Zircon syscall methods",
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/syscall"
+      }
+    }
+  },
+  "required": [
+    "syscalls"
+  ],
+  "additionalProperties": false,
+  "definitions": {
+    "syscall": {
+      "description": "A syscall method",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The method name, which is a valid C identifier",
+          "type": "string"
+        },
+        "attributes": {
+          "description": "Metadata about the method",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/methodAttribute"
+          }
+        },
+        "arguments": {
+          "description": "The method's parameters",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/argument"
+          }
+        },
+        "return_type": {
+          "description": "Return type of the method",
+          "$ref": "#/definitions/objectType"
+        }
+      },
+      "required": [
+        "name",
+        "attributes",
+        "arguments",
+        "return_type"
+      ],
+      "additionalProperties": false
+    },
+    "methodAttribute": {
+      "description": "A method attribute",
+      "type": "string",
+      "enum": [
+        "blocking",
+        "const",
+        "deprecated",
+        "internal",
+        "noreturn",
+        "test_category1",
+        "test_category2",
+        "vdsocall",
+        "*"
+      ]
+    },
+    "argument": {
+      "description": "A method parameter",
+      "type": "object",
+      "properties": {
+        "name": {
+          "description": "The parameter's name",
+          "type": "string"
+        },
+        "type": {
+          "description": "The object type of this parameter",
+          "$ref": "#/definitions/objectType"
+        },
+        "is_array": {
+          "description": "Whether the parameter is an array of objects",
+          "type": "boolean"
+        },
+        "array_multipliers": {
+          "description": "For an array, the parameters to multiply in order to compute the array's size",
+          "type": "array",
+          "items": {
+            "type": "string"
+          }
+        },
+        "array_count": {
+          "description": "An array's size",
+          "type": "integer"
+        },
+        "attributes": {
+          "description": "Some metadata about the parameter",
+          "type": "array",
+          "items": {
+            "$ref": "#/definitions/parameterAttribute"
+          }
+        }
+      },
+      "required": [
+        "name",
+        "type",
+        "is_array",
+        "attributes"
+      ],
+      "additionalProperties": false
+    },
+    "objectType": {
+      "description": "An object's type",
+      "type": "string",
+      "enum": [
+        "any",
+        "bool",
+        "char",
+        "int",
+        "int32_t",
+        "int64_t",
+        "size_t",
+        "uint16_t",
+        "uint32_t",
+        "uint64_t",
+        "uint8_t",
+        "uintptr_t",
+        "void",
+        "zx_channel_call_args_t",
+        "zx_duration_t",
+        "zx_futex_t",
+        "zx_handle_info_t",
+        "zx_handle_t",
+        "zx_paddr_t",
+        "zx_pci_bar_t",
+        "zx_pci_init_arg_t",
+        "zx_pcie_device_info_t",
+        "zx_port_packet_t",
+        "zx_profile_info_t",
+        "zx_rights_t",
+        "zx_signals_t",
+        "zx_status_t",
+        "zx_system_powerctl_arg_t",
+        "zx_time_t",
+        "zx_vaddr_t",
+        "zx_wait_item_t"
+      ]
+    },
+    "parameterAttribute": {
+      "description": "A parameter attribute",
+      "type": "string",
+      "enum": [
+        "features",
+        "handle_acquire",
+        "handle_release",
+        "handle_release_always",
+        "optional",
+        "IN",
+        "INOUT",
+        "OUT"
+      ]
+    }
+  }
+}

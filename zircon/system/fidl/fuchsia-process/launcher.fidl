@@ -1,0 +1,148 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.process;
+
+using fuchsia.io;
+using zx;
+
+struct HandleInfo {
+    // The handle to use for this argument.
+    handle handle;
+
+    // Process argument identifier, from <zircon/processargs.h>.
+    uint32 id;
+};
+
+struct NameInfo {
+    // Path at which to install the associated directory.
+    //
+    // Must be an absolute path (i.e., start with '/').
+    string path;
+
+    // The associated directory.
+    fuchsia.io.Directory directory;
+};
+
+struct LaunchInfo {
+    // The executable to run in the process.
+    handle<vmo> executable;
+
+    // The job in which to create the process.
+    handle<job> job;
+
+    // The name to assign to the created process.
+    string name;
+};
+
+struct LaunchResult {
+    // A status code describing the result of the launch.
+    zx.status status;
+
+    // A string describing the failure.
+    //
+    // Non-null when |status| is an error.
+    string? error_message;
+
+    // The process that was launched.
+    //
+    // Present when |status| is ZX_OK.
+    handle<process>? process;
+};
+
+struct ProcessStartData {
+    // The process that was created.
+    handle<process> process;
+
+    // The vmar object that was created when the process was created.
+    //
+    // See <https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/process_create.md>.
+    handle<vmar> root_vmar;
+
+    // The initial thread for the process.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    handle<thread> thread;
+
+    // The address of the initial entry point in the process.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 entry;
+
+    // The stack pointer value for the initial thread of the process.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 sp;
+
+    // The bootstrap channel to pass to the process on startup.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    handle<channel> bootstrap;
+
+    // The base address of the vDSO to pass to the process on startup.
+    //
+    // Should be passed to |zx_process_start| when starting the process.
+    uint64 vdso_base;
+
+    // The base load address of the ELF file loaded.
+    //
+    // Most often used by debuggers or other tools that inspect the process.
+    uint64 base;
+};
+
+struct CreateWithoutStartingResult {
+    // A status code describing the result of the launch.
+    zx.status status;
+
+    // A string describing the failure.
+    //
+    // Non-null when |status| is an error.
+    string? error_message;
+
+    // Data describing the process that was created.
+    //
+    // Non-null when |status| is ZX_OK.
+    ProcessStartData? data;
+};
+
+[Discoverable]
+interface Launcher {
+    // Creates and starts the process described by |info|.
+    //
+    // After processing this message, the |Launcher| is reset to its initial
+    // state and is ready to launch another process.
+    1: Launch(LaunchInfo info) -> (LaunchResult result);
+
+    // Creates the process described by |info| but does not start it.
+    //
+    // After processing this message, the |Launcher| is reset to its initial
+    // state and is ready to launch another process.
+    //
+    // The caller is responsible for calling |zx_process_start| using the data
+    // in |ProcessStartData| to actually start the process.
+    2: CreateWithoutStarting(LaunchInfo info) -> (CreateWithoutStartingResult result);
+
+    // Adds the given arguments to the command-line for the process.
+    //
+    // Calling this method multiple times concatenattes the arguments.
+    10: AddArgs(vector<string> args);
+
+    // Adds the given variables to the environment variables for the process.
+    //
+    // Calling this method multiple times concatenates the variables.
+    11: AddEnvirons(vector<string> environ);
+
+    // Adds the given names to the namespace for the process.
+    //
+    // The paths in the namespace must be non-overlapping. See
+    // <https://fuchsia.googlesource.com/docs/+/master/the-book/namespaces.md> for details.
+    //
+    // Calling this method multiple times concatenates the names.
+    12: AddNames(vector<NameInfo> names);
+
+    // Adds the given handles to the startup handles for the process.
+    //
+    // Calling this method multiple times concatenates the handles.
+    13: AddHandles(vector<HandleInfo> handles);
+};

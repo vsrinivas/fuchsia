@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This file is used by scripts/download-prebuilt to control cipd.  When
+# cipd is not available, it uses zircon.versions instead to deduce URLs to
+# download directly from Google Storage.
+#
+# NOTE! NOTE! NOTE!  After changing this file in any way, always run
+# `scripts/download-prebuilt --resolve` to update the zircon.versions file
+# with specific instance IDs for each version listed here.  CIPD and
+# scripts/download-prebuilt both rely on the generated zircon.versions file
+# for exactly what to download and for content signatures to verify.
+
+$ResolvedVersions zircon.versions
+
+# This tells CIPD to fix up manually deleted files.
+$ParanoidMode CheckPresence
+
+# This tells CIPD to complain if ${...} references can't cover all of these.
+$VerifiedPlatform linux-amd64
+$VerifiedPlatform linux-arm64
+$VerifiedPlatform mac-amd64
+
+# Clang
+@Subdir clang
+fuchsia/clang/${platform} git_revision:f81edba34ddf2e70300baa227b136dcdb8aecb6e
+
+# GCC
+@Subdir gcc
+fuchsia/gcc/${os}-${arch=amd64} git_revision:fb02152947d8ef666961e3b8b6527ed39de18334,653a4ab26cb08800c45b8c3446c3753d6f2102df
+
+# sysroot
+@Subdir sysroot
+fuchsia/sysroot/${os=linux}-${arch} git_revision:a96053c799a0f1ad0b7e8ab8199edbfa18adcbb6
+
+# Symbolizer tool.  This is a standalone executable, not a subdirectory.
+@Subdir
+fuchsia/tools/symbolize/${platform} git_revision:5e5a9e55af0926d9ce08c9da9cf46dc3f9eabc1b
+
+# QEMU
+@Subdir qemu
+fuchsia/third_party/qemu/${platform} git_revision:533bf2563d0213a7e002d9fcde75519d30ffa70f

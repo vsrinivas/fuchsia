@@ -1,0 +1,56 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.mipicsi;
+using ddk.protocol.ispimpl;
+using zx;
+
+struct MipiInfo {
+    // Number of channels used.
+    uint32 channel;
+    // Number of lanes used.
+    uint32 lanes;
+    // Used to program MIPI_PHY_THS_SETTLE. No documentation.
+    uint32 ui_value;
+    // MIPI CSI Version.
+    uint32 csi_version;
+};
+
+/// Values for Image Formats.
+enum ImageFormat : uint32 {
+    AM_RAW6 = 0x1;
+    AM_RAW7 = 0x2;
+    AM_RAW8 = 0x3;
+    AM_RAW10 = 0x4;
+    AM_RAW12 = 0x5;
+    AM_RAW14 = 0x6;
+};
+
+/// Values for different MIPI modes.
+enum MipiModes : uint32 {
+    DDR_MODE = 0x0;
+    // Direct mode.
+    DIR_MODE = 0x1;
+    // Dual Overlay mode?
+    DOL_MODE = 0x2;
+};
+
+/// Values for virtual channel.
+enum MipiPath : uint32 {
+    PATH0 = 0x0;
+    PATH1 = 0x1;
+};
+
+struct MipiAdapInfo {
+    ddk.protocol.ispimpl.ImageResolution resolution;
+    ImageFormat format;
+    MipiModes mode;
+    MipiPath path;
+};
+
+[Layout = "ddk-protocol"]
+interface MipiCsi {
+    Init(MipiInfo mipi_info, MipiAdapInfo adap_info) -> (zx.status s);
+    DeInit() -> (zx.status s);
+};

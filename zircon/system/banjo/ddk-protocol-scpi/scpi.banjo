@@ -1,0 +1,32 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.scpi;
+
+using zx;
+
+const uint32 MAX_DVFS_OPPS = 16;
+
+[Layout = "Packed"]
+struct ScpiOppEntry {
+    uint32 freq_hz;
+    uint32 volt_mv;
+};
+
+[Layout = "Packed"]
+struct ScpiOpp {
+    array<ScpiOppEntry>:MAX_DVFS_OPPS opp;
+    /// In usecs.
+    uint32 latency;
+    uint32 count;
+};
+
+[Layout = "ddk-protocol"]
+interface Scpi {
+    GetSensor(string name) -> (zx.status s, uint32 sensor_id);
+    GetSensorValue(uint32 sensor_id) -> (zx.status s, uint32 sensor_value);
+    GetDvfsInfo(uint8 power_domain) -> (zx.status s, ScpiOpp opps);
+    GetDvfsIdx(uint8 power_domain) -> (zx.status s, uint16 index);
+    SetDvfsIdx(uint8 power_domain, uint16 index) -> (zx.status s);
+};

@@ -1,0 +1,63 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ldsvc;
+
+using zx;
+
+// See //zircon/docs/program_loading.md for a more complete
+// description of this and related process bootstrapping protocols, and
+// for specifics about the default global loader service's
+// interpretation of names, paths, and configurations.
+
+// WARNING: This interface is manually implemented in libldmsg.a. Please
+// update that implementation if you change this protocol.
+
+[Layout = "Simple"]
+interface Loader {
+    // Cleanly shutdown the connection to the Loader service.
+    1: Done();
+
+    // The dynamic linker sends |object_name| and gets back a VMO
+    // handle containing the file.
+    2: LoadObject(string:1024 object_name) -> (zx.status rv, handle<vmo>? object);
+
+    // The program loader sends the script |interpreter_name| from
+    // hashbang and gets back a VMO to execute in place of the script.
+    3: LoadScriptInterpreter(string:1024 interpreter_name) -> (zx.status rv, handle<vmo>? object);
+
+    // The dynamic linker sends a |config| identifying its load
+    // configuration.  This is intended to affect how later
+    // |LoadObject| requests decide what particular implementation
+    // file to supply for a given name.
+    4: Config(string:1024 config) -> (zx.status rv);
+
+    // Obtain a new loader service connection.
+    5: Clone(request<Loader> loader) -> (zx.status rv);
+
+    // The program runtime sends a string naming a |data_sink| and
+    // transfers the sole handle to a VMO containing the |data| it
+    // wants published there.  The |data_sink| string identifies a
+    // type of data, and the VMO's object name can specifically
+    // identify the data set in this VMO.  The client must transfer
+    // the only handle to the VMO (which prevents the VMO being
+    // resized without the receiver's knowledge), but it might still
+    // have the VMO mapped in and continue to write data to it.  Code
+    // instrumentation runtimes use this to deliver large binary trace
+    // results.
+    //
+    // This is intended to be a developer-oriented feature and might
+    // not ordinarily be available in production runs.
+    7: DebugPublishDataSink(string:1024 data_sink, handle<vmo> data) -> (zx.status rv);
+
+    // The program runtime names a |config_name| referring to a debug
+    // configuration of some kind and gets back a VMO to read
+    // configuration data from.  The sanitizer runtimes use this to
+    // allow large options text to be stored in a file rather than
+    // passed directly in environment strings.
+    //
+    // This is intended to be a developer-oriented feature and might
+    // not ordinarily be available in production runs.
+    8: DebugLoadConfig(string:1024 config_name) -> (zx.status rv, handle<vmo>? config);
+};

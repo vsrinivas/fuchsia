@@ -1,0 +1,53 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.device.test;
+
+using zx;
+
+/// The path which can be used to open the control device
+const string CONTROL_DEVICE = "/dev/test/test";
+
+/// Returns the result summary of a test run
+struct TestReport {
+    /// Total number of tests
+    uint32 test_count;
+    /// Number of successful tests
+    uint32 success_count;
+    /// Number of failed tests
+    uint32 failure_count;
+};
+
+/// Interface for controlling a device created via RootDevice.CreateDevice
+[Layout = "Simple"]
+interface Device {
+    /// Set a socket to stream test output to.
+    SetOutputSocket(handle<socket> sock);
+
+    /// Set a channel for the test to use in a test-specific manner.
+    SetChannel(handle<channel> chan);
+
+    /// Execute the tests for this device.  Test output will be streamed to
+    /// the socket set by SetOutputSocket().  Returns the status from the test.
+    RunTests() -> (zx.status status, TestReport report);
+    /// Unload this device.
+    Destroy();
+};
+
+/// Maximum device name len.  This value must match ZX_DEVICE_NAME_MAX.
+const uint32 MAX_DEVICE_NAME_LEN = 31;
+
+/// Maximum device path len
+const uint32 MAX_DEVICE_PATH_LEN = 1024;
+
+/// Interface for creating devices within a devhost.
+[Layout = "Simple"]
+interface RootDevice {
+    /// Create a device with the given |name| that is a child of this device.
+    /// If |name| contains a trailing ".so", it will be removed.
+    ///
+    /// On success, |path| will be the filesystem path of the new device.
+    CreateDevice(string:MAX_DEVICE_NAME_LEN name)
+                -> (zx.status status, string:MAX_DEVICE_PATH_LEN? path);
+};

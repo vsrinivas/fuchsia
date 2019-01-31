@@ -1,0 +1,148 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.ethernet;
+
+using zx;
+
+const uint32 ETH_MAC_SIZE = 6; // bytes
+const uint32 ETH_MTU_SIZE = 1500; // bytes
+const uint32 ETH_FRAME_MAX_HDR_SIZE = 18; // bytes. MAC Dest(6) + MAC Src(6) + 802.1Q tag(4) + Ethertype(2)
+const uint32 ETH_FRAME_MAX_SIZE = 1518;
+
+/// The ethermac interface supports both synchronous and asynchronous transmissions using the
+/// proto->queue_tx() and ifc->complete_tx() methods.
+///
+/// Receive operations are supported with the ifc->recv() interface.
+// TODO: implement netbuf-based receive operations by implementing proto->queue_rx() and
+// ifc->complete_rx()
+///
+/// The FEATURE_WLAN flag indicates a device that supports wlan operations.
+///
+/// The FEATURE_SYNTH flag indicates a device that is not backed by hardware.
+///
+/// The FEATURE_DMA flag indicates that the device can copy the buffer data using DMA and will ensure
+/// that physical addresses are provided in netbufs.
+enum EthmacFeature : uint32 {
+    WLAN = 0x1;
+    SYNTH = 0x2;
+    DMA = 0x4;
+};
+
+const uint32 ETHMAC_STATUS_ONLINE = 0x1;
+
+struct EthmacInfo {
+    uint32 features;
+    uint32 mtu;
+    array<uint8>:ETH_MAC_SIZE mac;
+    array<uint8>:2 reserved0;
+    uint64 netbuf_size;
+    array<uint32>:2 reserved1;
+};
+
+/// Note that this struct may have a private section encoded after it. Allocator much call parent
+/// device's |Query| to get the correct size.
+struct EthmacNetbuf {
+    /// Provided by the generic ethernet driver.
+    vector<voidptr> data;
+    /// Only used if ETHMAC_FEATURE_DMA is available.
+    zx.paddr phys;
+    uint16 reserved;
+    uint32 flags;
+};
+
+[Layout = "ddk-interface"]
+interface EthmacIfc {
+    /// Value with bits set from the |ETHMAC_STATUS_*| flags
+    Status(uint32 status) -> ();
+
+    Recv(vector<voidptr> data, uint32 flags) -> ();
+
+    /// complete_tx() is called to return ownership of a netbuf to the generic ethernet driver.
+    /// Return status indicates queue state:
+    ///   ZX_OK: Packet has been enqueued.
+    ///   Other: Packet could not be enqueued.
+    /// Upon a return of ZX_OK, the packet has been enqueued, but no information is returned as to
+    /// the completion state of the transmission itself.
+    CompleteTx(EthmacNetbuf? netbuf, zx.status status) -> ();
+};
+
+struct EthDevMetadata {
+    uint32 vid;
+    uint32 pid;
+    uint32 did;
+};
+
+/// Indicates that additional data is available to be sent after this call finishes. Allows a ethmac
+/// driver to batch tx to hardware if possible.
+const uint32 ETHMAC_TX_OPT_MORE = 1;
+
+/// SETPARAM_ values identify the parameter to set. Each call to set_param()
+/// takes an int32_t |value| and voidptr* |data| which have meaning specific to
+/// the parameter being set.
+
+/// |value| is bool. |data| is unused.
+const uint32 ETHMAC_SETPARAM_PROMISC = 1;
+
+/// |value| is bool. |data| is unused.
+const uint32 ETHMAC_SETPARAM_MULTICAST_PROMISC = 2;
+
+const int32 ETHMAC_MULTICAST_FILTER_OVERFLOW = -1;
+
+/// |value| is number of addresses, or ETHMAC_MULTICAST_FILTER_OVERFLOW for "too many to count."
+/// |data| is |value|*6 bytes of MAC addresses. Caller retains ownership.
+/// If |value| is _OVERFLOW, |data| is ignored.
+const uint32 ETHMAC_SETPARAM_MULTICAST_FILTER = 3;
+
+const uint32 ETHMAC_SETPARAM_DUMP_REGS = 4;
+
+/// The ethernet midlayer will never call ethermac_protocol
+/// methods from multiple threads simultaneously, but it
+/// can call send() methods at the same time as non-send
+/// methods.
+[Layout = "ddk-protocol"]
+interface Ethmac {
+    /// Obtain information about the ethermac device and supported features
+    /// Safe to call at any time.
+    Query(uint32 options) -> (zx.status s, EthmacInfo info);
+
+    /// Shut down a running ethermac
+    /// Safe to call if the ethermac is already stopped.
+    Stop() -> ();
+
+    /// Start ethermac running with ifc_virt
+    /// Callbacks on ifc may be invoked from now until stop() is called
+    Start(EthmacIfc ifc) -> (zx.status s);
+
+    /// Request transmission of the packet in netbuf. Return status indicates queue state:
+    ///   ZX_ERR_SHOULD_WAIT: Packet is being enqueued.
+    ///   ZX_OK: Packet has been enqueued.
+    ///   Other: Packet could not be enqueued.
+    ///
+    /// In the SHOULD_WAIT case the driver takes ownership of the netbuf and must call complete_tx()
+    /// to return it once the enqueue is complete. complete_tx() may be used to return the packet
+    /// before transmission itself completes, but MUST NOT be called from within the queue_tx()
+    /// implementation.
+    ///
+    /// queue_tx() may be called at any time after start() is called including from multiple threads
+    /// simultaneously.
+    QueueTx(uint32 options, EthmacNetbuf? netbuf) -> (zx.status s);
+
+    /// Request a settings change for the driver. Return status indicates disposition:
+    ///   ZX_OK: Request has been handled.
+    ///   ZX_ERR_NOT_SUPPORTED: Driver does not support this setting.
+    ///   Other: Error trying to support this request.
+    ///
+    /// |value| and |data| usage are defined for each |param|; see comments above.
+    ///
+    /// set_param() may be called at any time after start() is called including from multiple threads
+    /// simultaneously.
+    SetParam(uint32 param, int32 value, vector<voidptr> data) -> (zx.status s);
+
+    /// Get the BTI handle (needed to pin DMA memory) for this device.
+    /// This method is only valid on devices that advertise ETHMAC_FEATURE_DMA
+    /// The caller does *not* take ownership of the BTI handle and must never close
+    /// the handle.
+    GetBti() -> (handle<bti> bti);
+};

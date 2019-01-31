@@ -1,0 +1,108 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.sdmmc;
+
+using zx;
+
+enum SdmmcVoltage : uint8 {
+    V330 = 0;
+    V180 = 1;
+    MAX = 2;
+};
+
+enum SdmmcBusWidth : uint8 {
+    ONE = 0;
+    FOUR = 1;
+    EIGHT = 2;
+    MAX = 3;
+};
+
+enum SdmmcTiming : uint8 {
+    LEGACY = 0;
+    HS = 1;
+    HSDDR = 2;
+    HS200 = 3;
+    HS400 = 4;
+    SDR12 = 5;
+    SDR25 = 6;
+    SDR50 = 7;
+    SDR104 = 8;
+    DDR50 = 9;
+    MAX = 10;
+};
+
+/// number of pages per request - 2M per request
+/// matches DMA_DESC_COUNT in dev/block/sdhci
+/// (PAGE_SIZE / sizeof(zx_paddr_t))
+const uint64 SDMMC_PAGES_COUNT = 512;
+
+/// sdmmc requests. one per command
+struct SdmmcReq {
+    uint32 cmd_idx;
+    uint32 cmd_flags;
+    uint32 arg;
+
+    /// data command parameters
+    uint16 blockcount;
+    uint16 blocksize;
+    bool use_dma;
+    /// Used if use_dma is true
+    handle<vmo> dma_vmo;
+    /// Used if use_dma is false
+    vector<voidptr>? virt;
+    /// offset into dma_vmo or virt
+    uint64 buf_offset;
+    handle pmt;
+    bool probe_tuning_cmd;
+
+    /// response data
+    array<uint32>:4 response;
+
+    /// status
+    zx.status status;
+};
+
+enum SdmmcHostCap : uint64 {
+    BUS_WIDTH_8 = 0x1;
+    ADMA2 = 0x2;
+    SIXTY_FOUR_BIT = 0x4;
+    VOLTAGE_330 = 0x8;
+    AUTO_CMD12 = 0x10;
+};
+
+enum SdmmcHostPrefs : uint64 {
+    DISABLE_HS400 = 0x1;
+    DISABLE_HS200 = 0x2;
+};
+
+struct SdmmcHostInfo {
+    /// Controller capabilities
+    uint64 caps;
+    /// Maximum data request size
+    uint64 max_transfer_size;
+    uint64 max_transfer_size_non_dma;
+    /// Host specific preferences
+    uint64 prefs;
+};
+
+[Layout = "ddk-protocol"]
+interface Sdmmc {
+    /// Get host info.
+    HostInfo() -> (zx.status s, SdmmcHostInfo info);
+    /// Set signal voltage.
+    SetSignalVoltage(SdmmcVoltage voltage) -> (zx.status s);
+    /// Set bus width.
+    SetBusWidth(SdmmcBusWidth bus_width) -> (zx.status s);
+    /// Set bus frequency.
+    SetBusFreq(uint32 bus_freq) -> (zx.status s);
+    /// Set mmc timing.
+    SetTiming(SdmmcTiming timing) -> (zx.status s);
+    /// Issue a hw reset.
+    HwReset() -> ();
+    /// Perform tuning.
+    PerformTuning(uint32 cmd_idx) -> (zx.status s);
+    /// Issue a request.
+    Request(SdmmcReq? req) -> (zx.status s);
+};

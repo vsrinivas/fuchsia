@@ -1,0 +1,8 @@
+#include "libc.h"
+#include <stdarg.h>
+#include <stdio.h>
+#include <wchar.h>
+
+int vwscanf(const wchar_t* restrict fmt, va_list ap) {
+    return vfwscanf(stdin, fmt, ap);
+}

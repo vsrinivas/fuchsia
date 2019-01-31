@@ -1,0 +1,40 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.gpio;
+
+using zx;
+
+/// Flags for `ConfigIn`.
+const uint32 GPIO_PULL_DOWN = 0x0;
+const uint32 GPIO_PULL_UP = 0x1;
+const uint32 GPIO_NO_PULL = 0x2;
+const uint32 GPIO_PULL_MASK = 0x3;
+
+/// Values for `SetPolarity`.
+enum GpioPolarity : uint32 {
+    LOW = 0x0;
+    HIGH = 0x1;
+};
+
+[Layout = "ddk-protocol"]
+interface Gpio {
+    /// Configures a GPIO for input.
+    ConfigIn(uint32 flags) -> (zx.status s);
+    /// Configures a GPIO for output.
+    ConfigOut(uint8 initial_value) -> (zx.status s);
+    /// Configures the GPIO pin for an alternate function (I2C, SPI, etc)
+    /// the interpretation of "function" is platform dependent.
+    SetAltFunction(uint64 function) -> (zx.status s);
+    /// Reads the current value of a GPIO (0 or 1).
+    Read()-> (zx.status s, uint8 value);
+    /// Sets the current value of the GPIO (any non-zero value maps to 1).
+    Write(uint8 value) -> (zx.status s);
+    /// Gets an interrupt object pertaining to a particular GPIO pin.
+    GetInterrupt(uint32 flags) -> (zx.status s, handle<interrupt> irq);
+    /// Release the interrupt.
+    ReleaseInterrupt()-> (zx.status s);
+    /// Set GPIO polarity.
+    SetPolarity(GpioPolarity polarity) -> (zx.status s);
+};

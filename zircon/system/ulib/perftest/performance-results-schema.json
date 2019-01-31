@@ -1,0 +1,35 @@
+{
+  "$schema": "http://json-schema.org/draft-06/schema#",
+  "title": "Performance Results",
+  "description": "Results from performance tests (AKA benchmarks).",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "properties": {
+      "label": { "type": "string" },
+      "unit": { "type": "string" },
+      "samples": {
+        "type": "array",
+        "items": {
+          "$ref": "#/definitions/sample"
+        }
+      }
+    },
+    "additionalProperties": false,
+    "required": ["label", "unit", "samples"]
+  },
+  "definitions": {
+    "sample": {
+      "type": "object",
+      "properties": {
+        "label": { "type": "string" },
+        "values": {
+          "type": "array",
+          "items": { "type": "number" }
+        }
+      },
+      "additionalProperties": false,
+      "required": ["values"]
+    }
+  }
+}

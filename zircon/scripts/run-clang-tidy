@@ -1,0 +1,94 @@
+#!/usr/bin/env bash
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# This script will run the checkers in the Fuchsia module of Clang-tidy on
+# Zircon. It requires either a prebuilt Clang toolchan or a Clang toolchain
+# built from official Clang repository. For instructions on how to obtain a
+# prebuilt toolchain or build the toolchain from scratch, please refer to
+# document at
+# https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
+
+set -eu
+
+# Path to toolchain
+TOOLCHAIN_PREFIX=""
+
+function func_help {
+  echo "USAGE: clang-tidy-zircon <options> [files ...]"
+  echo ""
+  echo "Make sure that you generate the compile_commands.json file with the "
+  echo "-c flag (or USE_CLANG=true if using make directly)."
+  echo "options:"
+  echo ""
+  echo "-p <toolchain prefix>     : path to the directory containing bin/clang"
+  echo "-h                        : for help"
+  exit 1
+}
+
+SOURCE="${BASH_SOURCE[0]}"
+while [ -h "$SOURCE" ]; do # resolve $SOURCE until the file is no longer a symlink
+  SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+  SOURCE="$(readlink "$SOURCE")"
+  # if $SOURCE was a relative symlink, we need to resolve it relative to the
+  # path where the symlink file was located
+  [[ "$SOURCE" != /* ]] && SOURCE="$SCRIPT_DIR/$SOURCE"
+done
+SCRIPT_DIR="$( cd -P "$( dirname "$SOURCE" )" && pwd )"
+ZIRCON_ROOT="$SCRIPT_DIR/.."
+
+# Read args from command line
+while getopts "p:t:hn" opt; do
+  case $opt in
+    p) TOOLCHAIN_PREFIX="$OPTARG";;
+    h) func_help;;
+    \?)
+      echo "Invalid option"
+      func_help
+  esac
+done
+shift $((OPTIND -1))
+
+# Determine the clang prefix
+if [ -z "$TOOLCHAIN_PREFIX" ]; then
+  # User did not provide toolchain prefix
+  # Assume user prefer prebuilt toolchain
+  PREBUILT_DIR="$ZIRCON_ROOT/prebuilt/downloads/clang"
+  if [ ! -d "$PREBUILT_DIR" ]; then
+    echo "Toolchain prefix is not defined and prebuilt toolchain has not yet been downloaded."
+    echo "Abort!"
+    exit -1
+  fi
+  TOOLCHAIN_PREFIX="$PREBUILT_DIR"
+fi
+
+# Change dir to zircon
+cd "$ZIRCON_ROOT"
+# Check the prebuilt clang-tidy binary
+CLANGTIDY="$TOOLCHAIN_PREFIX/bin/clang-tidy"
+if [ ! -f "$CLANGTIDY" ]; then
+  echo "$CLANGTIDY not found in prebuilts."
+  echo "Ensure the toolchain prefix includes the clang-tidy binary."
+  echo ""
+  exit 0
+fi
+
+cd "$ZIRCON_ROOT"
+# Check compile_commands.json
+COMPILE_COMMANDS="$ZIRCON_ROOT/compile_commands.json"
+if [ ! -f "$COMPILE_COMMANDS" ]; then
+  echo "compile_commands.json missing, see "
+  echo "https://fuchsia.googlesource.com/zircon/+/master/docs/editors.md for "
+  echo "instructions on how to generate it (make sure you use the "
+  echo "USE_CLANG=true option when building zircon)."
+  exit -1
+fi
+
+# Due to a bug in clang-tidy (https://bugs.llvm.org/show_bug.cgi?id=34900),
+# the checks have to be specified here instead of in the .clang-tidy file
+# if we're not running clang-analyzer-* checks.
+$CLANGTIDY -checks="-*,fuchsia-*" $@

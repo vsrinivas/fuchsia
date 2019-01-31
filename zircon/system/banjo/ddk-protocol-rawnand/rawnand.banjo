@@ -1,0 +1,23 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.rawnand;
+
+using zircon.device.nand;
+using zx;
+
+[Layout = "ddk-protocol"]
+interface RawNand {
+    /// Read one nand page with hwecc.
+    ReadPageHwecc(uint32 nandpage) -> (zx.status s, vector<voidptr> data, vector<voidptr> oob,
+                                       uint32 ecc_correct);
+
+    /// Write one nand page with hwecc.
+    WritePageHwecc(vector<voidptr> data, vector<voidptr> oob, uint32 nandpage) -> (zx.status s);
+
+    /// Erase nand block.
+    EraseBlock(uint32 nandpage) -> (zx.status s);
+
+    GetNandInfo() -> (zx.status s, zircon.device.nand.NandInfo info);
+};

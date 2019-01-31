@@ -1,0 +1,59 @@
+#!/usr/bin/env bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Build Zircon with entropy collection tests enabled.
+#
+# This script internally calls `scripts/make-parallel`, but it passes through
+# some extra arguments to the build.
+#
+# Invocation mostly matches `make`, i.e.:
+#
+#     scripts/entropy-test/make-parallel <target>
+#
+# The exception to this is the '-l' flag. If passed, this script strips it out,
+# and uses the '-l' argument as the length of entropy test to run (this is used
+# to set ENTROPY_COLLECTOR_TEST_MAXLEN). That means you can't pass the '-l' flag
+# through to `make` (used to set a max load average for parallel builds). Oh
+# well.
+
+set -e -u
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+function HELP {
+    echo "$0 [options] <project>" >&2
+    echo >&2
+    echo "    <project> : zircon project, e.g. x86" >&2
+    echo >&2
+    echo "Options:" >&2
+    echo "    -l <len>  : value to pass to ENTROPY_COLLECTOR_TEST_MAXLEN" >&2
+    echo "              : (default: 1048576; no suffixes like '1M' allowed)" >&2
+    exit 1
+}
+
+LENGTH=1048576
+PASSTHOUGH_ARGS=()
+
+while [[ $# -gt 0 ]]; do
+    case "$1" in
+        -l)
+            if [[ $# -lt 2 ]]; then echo "-l missing len" >&2; HELP; fi
+            LENGTH="$2"
+            shift 2
+            ;;
+        *)
+            PASSTHOUGH_ARGS+=("$1")
+            shift
+            ;;
+    esac
+done
+
+DEFINES="ENABLE_ENTROPY_COLLECTOR_TEST=1 ENTROPY_COLLECTOR_TEST_MAXLEN=$LENGTH"
+
+cd "$ZIRCONDIR"
+exec scripts/make-parallel "${PASSTHOUGH_ARGS[@]}" EXTERNAL_DEFINES="$DEFINES"

@@ -1,0 +1,629 @@
+#!/usr/bin/env python
+
+# Copyright 2018 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+"""
+This tool uses the contents of the abigen-generated syscalls/definitions.json
+to update docs/syscalls/.
+
+It is not run automatically as part of the build for now (to allow confirmation
+of what it does). So it should be run manually after updating syscalls.abigen
+and building zircon, followed by uploading the changes to docs/ as a CL.
+
+It updates the signature, synopsis, and rights annotations, and corrects some
+formatting.
+"""
+
+import argparse
+import json
+import os
+import re
+import subprocess
+import sys
+
+SCRIPT_DIR = os.path.abspath(os.path.dirname(__file__))
+
+STANDARD_COMMENT = '<!-- Updated by update-docs-from-abigen, do not edit. -->'
+STANDARD_BLOCK_HEADER = ['', STANDARD_COMMENT, '']
+
+REFERENCES_COMMENT = \
+        '<!-- References updated by update-docs-from-abigen, do not edit. -->'
+
+
+def parse_args():
+    parser = argparse.ArgumentParser(
+        description=__doc__,
+        formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument(
+        '--json',
+        default=os.path.normpath(
+            os.path.join(SCRIPT_DIR, os.pardir, 'build-x64', 'gen', 'global',
+                         'include', 'zircon', 'syscalls', 'definitions.json')),
+        help='path to abigen .json output')
+    parser.add_argument(
+        '--docroot',
+        default=os.path.normpath(
+            os.path.join(SCRIPT_DIR, os.pardir, 'docs', 'syscalls')),
+        help='root of docs/syscalls/ to be updated')
+    parser.add_argument(
+        '--generate-missing',
+        default=False,
+        action="store_true",
+        help='if set, generate stubs for any syscalls that are missing')
+    parser.add_argument('name', nargs='*', help='only generate these syscalls')
+    return parser.parse_args()
+
+
+def break_into_sentences(stream):
+    """Partition on '.' to break into chunks. '.' can't appear elsewhere
+    in the input stream."""
+    sentences = []
+    cur = []
+    for tok in stream:
+        cur.append(tok)
+        if tok == '.':
+            sentences.append(cur)
+            cur = []
+    assert not cur, cur
+    return sentences
+
+
+def match_sentence_form(sentence, arg_names):
+    """Matches a known sentence form, returning a format string and a dict for
+    substitution. The values in dict are converted to markdown format.
+
+    Certain TERMINALS are special:
+    - ARG must appear in arg_names
+    - RIGHT must be a valid ZX_RIGHT_
+    - TYPE must be a valid ZX_OBJ_TYPE_
+    - RSRC must be a valid ZX_RSRC_KIND_
+
+    VALUE is a generic unchecked value type, used for masks, options, etc.
+    """
+    sentence_forms = [
+        ['None', '.'],
+        ['ARG', 'must', 'have', 'RIGHT', '.'],
+        ['ARG', 'must', 'have', 'resource', 'kind', 'RSRC', '.'],
+        ['ARG', 'must', 'be', 'of', 'type', 'TYPE', '.'],
+        [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE', 'and', 'have', 'RIGHT1',
+            'and', 'have', 'RIGHT2', '.'
+        ],
+        [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE', 'and', 'have', 'RIGHT',
+            '.'
+        ],
+        [
+            'ARG', 'must', 'be', 'of', 'type', 'TYPE1', 'or', 'TYPE2', 'and',
+            'have', 'RIGHT', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have', 'RIGHT',
+            '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'have',
+            'resource', 'kind', 'RSRC', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', '.'
+        ],
+        [
+            'If', 'ARG1', 'is', 'VALUE', ',', 'ARG2', 'must', 'be', 'of',
+            'type', 'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+        [
+            'If', 'ARG1', '&', 'VALUE', ',', 'ARG2', 'must', 'be', 'of', 'type',
+            'TYPE', 'and', 'have', 'RIGHT', '.'
+        ],
+        ['Every', 'entry', 'of', 'ARG', 'must', 'have', 'RIGHT', '.'],
+        [
+            'Every', 'entry', 'of', 'ARG', 'must', 'have', 'a',
+            'WAITITEMMEMBER', 'field', 'with', 'RIGHT', '.'
+        ],
+
+        # TODO(ZX-2399) TODO(scottmg): This is a hack specifically for
+        # zx_channel_call_args_t. Trying to make a pseudo-generic case (that
+        # handles the length from wr_num_handles, etc.) for this doesn't seem
+        # worth the trouble at the moment, since it's only checking that the
+        # handles have TRANSFER anyway. Revisit if/when there's more instances
+        # like this.
+        ['All', 'wr_handles', 'of', 'ARG', 'must', 'have', 'RIGHT', '.'],
+    ]
+
+    all_rights = set([
+        'ZX_RIGHT_NONE',
+        'ZX_RIGHT_DUPLICATE',
+        'ZX_RIGHT_TRANSFER',
+        'ZX_RIGHT_READ',
+        'ZX_RIGHT_WRITE',
+        'ZX_RIGHT_EXECUTE',
+        'ZX_RIGHT_MAP',
+        'ZX_RIGHT_GET_PROPERTY',
+        'ZX_RIGHT_SET_PROPERTY',
+        'ZX_RIGHT_ENUMERATE',
+        'ZX_RIGHT_DESTROY',
+        'ZX_RIGHT_SET_POLICY',
+        'ZX_RIGHT_GET_POLICY',
+        'ZX_RIGHT_SIGNAL',
+        'ZX_RIGHT_SIGNAL_PEER',
+        'ZX_RIGHT_WAIT',
+        'ZX_RIGHT_INSPECT',
+        'ZX_RIGHT_MANAGE_JOB',
+        'ZX_RIGHT_MANAGE_PROCESS',
+        'ZX_RIGHT_MANAGE_THREAD',
+        'ZX_RIGHT_APPLY_PROFILE',
+    ])
+
+    all_types = set([
+        'ZX_OBJ_TYPE_PROCESS',
+        'ZX_OBJ_TYPE_THREAD',
+        'ZX_OBJ_TYPE_VMO',
+        'ZX_OBJ_TYPE_CHANNEL',
+        'ZX_OBJ_TYPE_EVENT',
+        'ZX_OBJ_TYPE_PORT',
+        'ZX_OBJ_TYPE_INTERRUPT',
+        'ZX_OBJ_TYPE_PCI_DEVICE',
+        'ZX_OBJ_TYPE_LOG',
+        'ZX_OBJ_TYPE_SOCKET',
+        'ZX_OBJ_TYPE_RESOURCE',
+        'ZX_OBJ_TYPE_EVENTPAIR',
+        'ZX_OBJ_TYPE_JOB',
+        'ZX_OBJ_TYPE_VMAR',
+        'ZX_OBJ_TYPE_FIFO',
+        'ZX_OBJ_TYPE_GUEST',
+        'ZX_OBJ_TYPE_VCPU',
+        'ZX_OBJ_TYPE_TIMER',
+        'ZX_OBJ_TYPE_IOMMU',
+        'ZX_OBJ_TYPE_BTI',
+        'ZX_OBJ_TYPE_PROFILE',
+        'ZX_OBJ_TYPE_PMT',
+        'ZX_OBJ_TYPE_SUSPEND_TOKEN',
+        'ZX_OBJ_TYPE_PAGER',
+    ])
+
+    all_rsrcs = set([
+        'ZX_RSRC_KIND_MMIO',
+        'ZX_RSRC_KIND_IRQ',
+        'ZX_RSRC_KIND_IOPORT',
+        'ZX_RSRC_KIND_HYPERVISOR',
+        'ZX_RSRC_KIND_ROOT',
+        'ZX_RSRC_KIND_VMEX',
+        'ZX_RSRC_KIND_SMC',
+    ])
+
+    # There's only two structs in zircon/types.h, so hardcoding this here is
+    # a bit stinky, but probably OK.
+    members_of_zx_wait_item_t = set([
+        'handle',
+        'waitfor',
+        'pending',
+    ])
+
+    for form in sentence_forms:
+        result_fmt = ''
+        result_values = {}
+        for f, s in zip(form, sentence):
+            # Literal match.
+            if s == f:
+                if f == '.' or f == ',' or f == '->':
+                    result_fmt += f
+                elif f == '[':
+                    result_fmt += '\['
+                else:
+                    result_fmt += ' ' + f
+            elif f.startswith('ARG'):
+                if s not in arg_names:
+                    break
+                else:
+                    result_values[f] = '*' + s + '*'
+                    result_fmt += ' %(' + f + ')s'
+            elif f.startswith('VALUE'):
+                # TODO(scottmg): Worth checking these in some way?
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('RIGHT'):
+                if s not in all_rights:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('RSRC'):
+                if s not in all_rsrcs:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('TYPE'):
+                if s not in all_types:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '**' + s + '**'
+            elif f.startswith('WAITITEMMEMBER'):
+                if s not in members_of_zx_wait_item_t:
+                    break
+                result_fmt += ' %(' + f + ')s'
+                result_values[f] = '*' + s + '*'
+            else:
+                break
+        else:
+            if result_fmt[0] == ' ':
+                result_fmt = result_fmt[1:]
+            return result_fmt, result_values
+    else:
+        return None, None
+
+
+def to_markdown(req, arguments, warn):
+    """Parses a few known forms of rules (see match_sentence_forms).
+
+    Converts |req| to formatted markdown.
+    """
+    sentences = break_into_sentences(req)
+
+    if not sentences:
+        rights = ['TODO(ZX-2399)', '']
+    else:
+        rights = []
+    for sentence in sentences:
+        match_fmt, match_values = match_sentence_form(
+            sentence, [x['name'] for x in arguments])
+        if not match_fmt:
+            warn('failed to parse: ' + repr(sentence))
+            raise SystemExit(1)
+        else:
+            rights.append(match_fmt % match_values)
+            rights.append('')
+
+    return STANDARD_BLOCK_HEADER + rights
+
+
+def find_block(lines, name):
+    """Finds a .md block with the given name, and returns (start, end) line
+    indices.
+    """
+    start_index = -1
+    end_index = -1
+    for i, line in enumerate(lines):
+        if line == '## ' + name:
+            start_index = i + 1
+        elif ((start_index >= 0 and line.startswith('## ')) or
+              line == REFERENCES_COMMENT):
+            end_index = i
+            break
+    return start_index, end_index
+
+
+def update_rights(lines, syscall_data, warn):
+    """Updates the RIGHTS block of the .md file in lines.
+    """
+    rights_start_index, rights_end_index = find_block(lines, 'RIGHTS')
+    if rights_start_index == -1 or rights_end_index == -1:
+        warn('did not find RIGHTS section, skipping update')
+        return
+
+    lines[rights_start_index:rights_end_index] = to_markdown(
+        syscall_data['requirements'], syscall_data['arguments'], warn)
+
+
+def make_name_block(syscall_data):
+    start = syscall_data['name'] + ' - '
+    desc = ''
+    for x in syscall_data['top_description']:
+        # TODO(scottmg): This is gross, we should change the abigen parser to
+        # give us a string instead of tokens.
+        if x in (',', '.', '-', '/', '\'', ')'):
+            desc += x
+        else:
+            if desc and desc[-1] not in ('-', '/', '\'', '('):
+                desc += ' '
+            desc += x
+    if not desc:
+        desc = 'TODO(ZX-3106)'
+    return STANDARD_BLOCK_HEADER + [start + desc, '']
+
+
+def update_name(lines, syscall_data, warn):
+    """Updates the NAME block of the .md file in lines.
+    """
+    name_start_index, name_end_index = find_block(lines, 'NAME')
+    if name_start_index == -1 or name_end_index == -1:
+        warn('did not find NAME section, skipping update')
+        return
+
+    lines[name_start_index:name_end_index] = make_name_block(syscall_data)
+
+
+def make_synopsis_block(syscall_data, warn):
+    headers = set([
+        '#include <zircon/syscalls.h>',
+    ])
+    extra_headers = {}
+    for arg in syscall_data['arguments']:
+        if arg['type'] == 'zx_port_packet_t':
+            headers.add('#include <zircon/syscalls/port.h>')
+        elif (arg['type'] == 'zx_smc_parameters_t' or
+              arg['type'] == 'zx_smc_result_t'):
+            headers.add('#include <zircon/syscalls/smc.h>')
+    header = ['```'] + sorted(list(headers)) + ['']
+
+    def format_arg(x):
+        ret = ''
+        if 'IN' in x['attributes']:
+            ret += 'const '
+        if x['type'] == 'any':
+            ret += 'void '
+        else:
+            ret += x['type'] + ' '
+        if x['is_array']:
+            ret += ' * '
+        ret += ' ' + x['name']
+        return ret
+
+    no_return = ''
+    if 'noreturn' in syscall_data['attributes']: no_return = '[[noreturn]]'
+
+    to_format = (no_return + syscall_data['return_type'] + ' zx_' +
+                 syscall_data['name'] + '(')
+    args = ','.join(format_arg(x) for x in syscall_data['arguments'])
+    if not args:
+        args = 'void'
+    to_format += args + ');'
+
+    CLANG_FORMAT_PATH = os.path.join(SCRIPT_DIR, os.pardir, 'prebuilt',
+                                     'downloads', 'clang', 'bin',
+                                     'clang-format')
+    clang_format = subprocess.Popen([
+        CLANG_FORMAT_PATH,
+        '-style={BasedOnStyle: Google, BinPackParameters: false}'
+    ],
+                                    stdin=subprocess.PIPE,
+                                    stdout=subprocess.PIPE)
+    formatted, _ = clang_format.communicate(to_format)
+    if clang_format.returncode != 0:
+        warn('formatting synopsis failed, skipping update')
+        return None
+
+    footer = [
+        '```',
+        '',
+    ]
+    return STANDARD_BLOCK_HEADER + header + [formatted] + footer
+
+
+def update_synopsis(lines, syscall_data, warn):
+    """Updates the SYNOPSIS block of the .md file in lines.
+    """
+    start_index, end_index = find_block(lines, 'SYNOPSIS')
+    if start_index == -1 or end_index == -1:
+        warn('did not find SYNOPSIS section, skipping update')
+        return
+
+    syn = make_synopsis_block(syscall_data, warn)
+    if not syn:
+        return
+    lines[start_index:end_index] = syn
+
+
+def update_title(lines, syscall_data, _):
+    """Updates the main title of the .md file given by |filename|.
+    """
+    correct_title = '# zx_' + syscall_data['name']
+    if lines[0] != correct_title:
+        lines[0] = correct_title
+
+
+def generate_stub(md):
+    """Makes a mostly-empty file that can then be filled out by later update
+    functions."""
+
+    stub = '''\
+# zx_xyz
+
+## NAME
+
+## SYNOPSIS
+
+## DESCRIPTION
+
+TODO(ZX-3106)
+
+## RIGHTS
+
+## RETURN VALUE
+
+TODO(ZX-3106)
+
+## ERRORS
+
+TODO(ZX-3106)
+
+## SEE ALSO
+
+TODO(ZX-3106)
+'''
+    with open(md, 'wb') as f:
+        f.write(stub)
+
+
+def check_for_orphans(syscalls, root):
+    """Checks for any .md files that have been orphaned (no longer have an
+    associated abigen entry.)
+    """
+    orphan_count = 0
+    names = set([x['name'] for x in syscalls])
+    for md in os.listdir(root):
+        if not md.endswith('.md'):
+            print >> sys.stderr, 'warning: non .md file %s' % md
+        name = md[:-3]
+        if name not in names:
+            orphan_count += 1
+            print >> sys.stderr, 'warning: %s has no entry in syscalls' % md
+    return orphan_count
+
+
+# A few concept docs that are linked in SEE ALSO sections.
+SEE_ALSO_CONCEPTS = {
+    'rights': '../rights.md',
+    'exceptions': '../exceptions.md',
+    'futex objects': '../objects/futex.md'
+}
+
+def make_see_also_block(referenced_syscalls, concepts, extra):
+    """Makes a formatted SEE ALSO block given a list of syscall names.
+    """
+    result = []
+
+    for concept in sorted(concepts):
+        path = SEE_ALSO_CONCEPTS[concept]
+        result.append(' - [' + concept + '](' + path + ')')
+
+    for sc in sorted(referenced_syscalls):
+        # References to these will be done later by update_syscall_references().
+        result.append(' - [`zx_' + sc + '()`]')
+
+    if extra:
+        extra += ['']
+
+    # No comment header here, because people are still editing this by hand,
+    # we're only canonicalizing it.
+    return [''] + extra + result + ['']
+
+
+def update_seealso(lines, syscall, all_syscall_names, warn):
+    """Rewrites 'SEE ALSO' block to canonical format.
+    """
+    start_index, end_index = find_block(lines, 'SEE ALSO')
+    if start_index == -1:
+        return
+
+    referenced = set()
+    concepts = set()
+    extra = []
+    for line in lines[start_index:end_index]:
+        if not line or line == STANDARD_COMMENT:
+            continue
+
+        handled = False
+        for concept in SEE_ALSO_CONCEPTS:
+            if '[' + concept + ']' in line:
+                concepts.add(concept)
+                handled = True
+        if handled:
+            continue
+
+        for sc in all_syscall_names:
+            old = '[' + sc + ']'
+            new = '[`zx_' + sc + '()`]'
+            if old in line or new in line:
+                referenced.add(sc)
+                break
+        else:
+            warn('unrecognized "see also", keeping before syscalls: ' + line)
+            extra.append(line)
+
+    lines[start_index:end_index] = make_see_also_block(referenced, concepts,
+                                                       extra)
+
+
+SYSCALL_RE = {}
+
+
+def update_syscall_references(lines, syscall, all_syscall_names, warn):
+    """Attempts to update all syscall references to a canonical format, and
+    linkifies them to their corresponding syscall.
+
+    TODO(ZX-3106): It'd be nice to do the references from outside of
+    docs/syscalls/ into syscalls too, in a similar style.
+    """
+
+    text = '\n'.join(lines)
+
+    # Precompile these regexes as it takes measurable time.
+    if not SYSCALL_RE:
+        for sc in all_syscall_names:
+            # Look for **zx_stuff()** and [`zx_stuff()`], with both "zx_" and
+            # the () being optional.
+            SYSCALL_RE[sc] = re.compile(
+                r'\*{2}(?:zx_)?' + sc + r'(?:\(\))?\*{2}(?:\(\))?'
+                r'|'
+                r'(?:\[)`(?:zx_)?' + sc + r'(?:\(\))?`(?:\])?(\(\))?')
+
+    referred_to = set()
+    for sc in all_syscall_names:
+        scre = SYSCALL_RE[sc]
+        self = sc == syscall['name']
+        repl = '`zx_' + sc + '()`'
+        # Don't link to ourselves.
+        if not self:
+            repl = '[' + repl + ']'
+        text, count = scre.subn(repl, text)
+        if count and not self:
+            referred_to.add(sc)
+
+    lines[:] = text.splitlines()
+
+    if REFERENCES_COMMENT not in lines:
+        lines.extend(['', REFERENCES_COMMENT])
+    start_index = lines.index(REFERENCES_COMMENT)
+
+    references = []
+    for ref in sorted(referred_to):
+        references.append('[`zx_' + ref + '()`]: ' + ref + '.md')
+    lines[start_index:] = [REFERENCES_COMMENT, ''] + references
+
+    # Drop references section if it's empty to not be noisy.
+    if lines[-3:] == ['', REFERENCES_COMMENT, '']:
+        lines[:] = lines[:-3]
+
+
+def main():
+    args = parse_args()
+    inf = os.path.relpath(args.json)
+    outf = os.path.relpath(args.docroot)
+    print 'using %s as input and updating %s...' % (inf, outf)
+    data = json.loads(open(inf, 'rb').read())
+    missing_count = 0
+    all_syscall_names = set(x['name'] for x in data['syscalls'])
+    for syscall in data['syscalls']:
+        name = syscall['name']
+        if args.name and name not in args.name:
+            continue
+        md = os.path.join(outf, name + '.md')
+
+        if not os.path.exists(md) and args.generate_missing:
+            generate_stub(md)
+
+        if not os.path.exists(md):
+            print >> sys.stderr, (
+                'warning: %s not found for updating, skipping update' % md)
+            missing_count += 1
+        else:
+            with open(md, 'rb') as f:
+                lines = f.read().splitlines()
+
+            assert (lines)
+
+            def warn(msg):
+                print >> sys.stderr, 'warning: %s: %s' % (md, msg)
+
+            update_title(lines, syscall, warn)
+            update_name(lines, syscall, warn)
+            update_synopsis(lines, syscall, warn)
+            update_rights(lines, syscall, warn)
+            update_seealso(lines, syscall, all_syscall_names, warn)
+            update_syscall_references(lines, syscall, all_syscall_names, warn)
+
+            with open(md, 'wb') as f:
+                f.write('\n'.join(lines) + '\n')
+
+    if missing_count > 0:
+        print >> sys.stderr, 'warning: %d missing .md files' % missing_count
+    missing_count += check_for_orphans(data['syscalls'], outf)
+    return missing_count
+
+
+if __name__ == '__main__':
+    sys.exit(main())

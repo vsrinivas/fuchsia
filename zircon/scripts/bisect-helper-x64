@@ -1,0 +1,38 @@
+#!/usr/bin/env bash
+
+# Copyright 2016 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Use this to use git bisect with prebuilt binary artifacts. To use, first copy the script somewhere
+# outside of the source tree (so git bisect won't mess with it) then run the following commands:
+#   git bisect start <bad> <good>
+#   git bisect run PATH_TO/bisect-helper <optional additional args to run-zircon>
+# The script will download the prebuilt zircon.bin associated with each commit, if it exists, and
+# start it up in qemu. After qemu exits, the script will ask if the build is good or bad.  Type 'y'
+# or 'n' and the bisect will proceed.
+
+set -e
+
+readonly SCRIPT_DIR="$1"
+
+readonly TEMP_DIR="$(mktemp -d)"
+trap "rm -rf -- "${TEMP_DIR}"" EXIT
+readonly CURRENT_COMMIT="$(git rev-parse HEAD)"
+readonly ZIRCON_BIN_URL="https://storage-download.googleapis.com/fuchsia-build/zircon/pc-x86-64/zircon.bin/${CURRENT_COMMIT}"
+readonly DOWNLOAD_STATUS="$(curl -s -w %{http_code} --progress-bar --output "${TEMP_DIR}/zircon.bin" "${ZIRCON_BIN_URL}")"
+if [[ "${DOWNLOAD_STATUS}" != 200 ]]; then
+    echo "Could not find prebuilt at ${ZIRCON_BIN_URL}: ${DOWNLOAD_STATUS}"
+    exit 125  # could not evaluate this commit, no prebuilt available
+fi
+"${SCRIPT_DIR}/run-zircon-x64" -o "${TEMP_DIR}"
+
+echo "Did it work? y/n"
+read RESULT
+if [[ "${RESULT}" == y ]]; then
+    exit 0
+else
+    exit 1
+fi

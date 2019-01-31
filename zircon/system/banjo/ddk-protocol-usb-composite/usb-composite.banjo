@@ -1,0 +1,19 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.composite;
+
+using zircon.hw.usb;
+using zx;
+
+[Layout = "ddk-protocol"]
+interface UsbComposite {
+    /// Returns the length of the additional descriptor list.
+    GetAdditionalDescriptorLength() -> (usize length);
+    /// Returns the USB descriptors following the interface's existing descriptors.
+    GetAdditionalDescriptorList() -> (zx.status s, vector<uint8> desc);
+    /// Marks the interface as claimed and appends the interface descriptor to the
+    /// interface's existing descriptors.
+    ClaimInterface(zircon.hw.usb.UsbInterfaceDescriptor desc, uint32 length) -> (zx.status s);
+};

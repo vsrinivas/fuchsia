@@ -1,0 +1,193 @@
+#!/bin/bash
+
+# Copyright 2017 The Fuchsia Authors
+#
+# Use of this source code is governed by a MIT-style
+# license that can be found in the LICENSE file or at
+# https://opensource.org/licenses/MIT
+
+# Run multiple early-boot entropy collector tests, with different kernel cmdlines.
+#
+# This script listens on stdin for Zircon cmdlines. For each line passed to stdin, a new early boot
+# test is run with that line passed as the kernel cmdline.
+
+# This script requires an output directory, passed as the first (and only) non-option command line
+# argument. There are also a number of options, described in the HELP function below.
+
+set -e -u
+CDPATH=
+ZIRCONDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )/../.." && pwd )"
+
+# Print help message and exit
+function HELP {
+    if [[ $HELPFLAG -lt 2 ]]; then
+        echo "Usage: $0 [options] -- <cmdline1> <cmdline2> ..." >&2
+        echo >&2
+        echo "Repeatedly runs boot tests, using each provided cmdline in turn" >&2
+        echo "Mind your shell escapes when calling this script." >&2
+    fi
+    echo "Mandatory options (if omitted, you will be prompted):" >&2
+    echo "    -n <name>   : nodename (only mandatory for non-qemu (netboot) targets)" >&2
+    echo "    -o <dir>    : output directory" >&2
+    echo "    -s <source> : entropy source to test: hw_rng, jitterentropy" >&2
+    echo "    -t <target> : qemu-x86, qemu-arm64, pc, hikey960, odroidc2, or rpi3" >&2
+    echo >&2
+    echo "Optional options (if omitted, default as specified):" >&2
+    echo "    -b <dir>    : build directory [default: autodetected from -t]" >&2
+    echo "    -h          : show help then terminate" >&2
+    if [[ $HELPFLAG -lt 2 ]]; then
+        echo "                : if passed twice, only print options (meant for" >&2
+        echo "                : use by scripts that call $0)" >&2
+    fi
+    echo "    -l <len>    : bytes of data to collect  [default: 1024*1024]" >&2
+    echo "    -r          : Use release build [default: false]" >&2
+    exit 1
+}
+
+# build-related options
+ARCH=
+BUILDDIR=
+BUILD_ARGS=
+BUILD_LEN=$((1024*1024))
+BUILD_PROJECT=
+BUILDDIR_SUFFIX=
+HELPFLAG=0
+METHOD=
+LEN=$((1024*1024))
+NODENAME=
+OUTDIR=
+SOURCE=
+TARGET=
+
+while getopts "b:hl:n:o:rs:t:" FLAG; do
+    case "$FLAG" in
+        b) BUILDDIR="$OPTARG";;
+        h) HELPFLAG=$((HELPFLAG + 1));;
+        l)
+            LEN="$OPTARG"
+            if [[ $LEN -gt $BUILD_LEN ]]; then BUILD_LEN="$LEN"; fi
+            ;;
+        n) NODENAME="$OPTARG";;
+        o) OUTDIR="$OPTARG";;
+        r)
+            BUILDDIR_SUFFIX+="-release"
+            BUILD_ARGS+="DEBUG=0 "
+            ;;
+        s) SOURCE="$OPTARG";;
+        t) TARGET="$OPTARG";;
+        \?)
+            echo "unrecognized option" >&2
+            HELP
+            ;;
+    esac
+done
+
+if (( $HELPFLAG )); then
+    HELP
+fi
+
+
+LASTOPT=$((OPTIND-1))
+if [[ $LASTOPT -lt 1 || ${!LASTOPT} != "--" ]]; then
+    echo "didn't see '--' at end of options" >&2
+    HELP
+else
+    shift $((OPTIND-1))
+fi
+
+if [[ -z $OUTDIR ]]; then
+    echo -n "output directory: " >&2
+    read -r OUTDIR
+fi
+if [[ ! -d $OUTDIR ]]; then
+    echo "missing output directory (tried '$OUTDIR')" >&2
+    HELP
+fi
+
+# prompt for SOURCE if needed
+if [[ -z $SOURCE ]]; then
+    echo "choose entropy source:" >&2
+    select SOURCE in "hw_rng" "jitterentropy"; do
+        if [[ -n $SOURCE ]]; then break; fi
+    done
+fi
+if ! [[ $SOURCE = "hw_rng" || $SOURCE = "jitterentropy" ]]; then
+    echo "unrecognized source '$SOURCE'" >&2
+    HELP
+fi
+# handle the TARGET variable
+if [[ -z $TARGET ]]; then
+    echo "choose target:" >&2
+    select TARGET in "qemu-x86" "qemu-arm64" "pc" "hikey960" "odroidc2" "rpi3"; do
+        if [[ -n $TARGET ]]; then break; fi
+    done
+fi
+case "$TARGET" in
+    qemu-x86)
+        ARCH="x86"
+        BUILD_PROJECT="x86"
+        METHOD=qemu
+        ;;
+    qemu-arm64)
+        ARCH="arm64"
+        BUILD_PROJECT="arm64"
+        METHOD=qemu
+        ;;
+    pc)
+        ARCH="x86"
+        BUILD_PROJECT="x86"
+        METHOD=netboot
+        ;;
+    hikey960 | odroidc2 | rpi3)
+        ARCH="arm64"
+        BUILD_PROJECT="$TARGET"
+        METHOD=netboot
+        ;;
+    *)
+        echo "unrecognized target '$TARGET'" >&2
+        HELP
+        ;;
+esac
+if [[ -z $BUILDDIR ]]; then
+    BUILDDIR="$ZIRCONDIR/build-$BUILD_PROJECT$BUILDDIR_SUFFIX"
+fi
+
+# build Zircon
+(
+    cd "$ZIRCONDIR"
+    scripts/entropy-test/make-parallel -l "$BUILD_LEN" $BUILD_ARGS "$BUILD_PROJECT"
+) || exit 1
+
+# choose nodename (after build, since we need netls)
+if [[ $METHOD = netboot && -z $NODENAME ]]; then
+    readarray -t NODENAMES < <($BUILDDIR/tools/netls --nowait --timeout=1000 |
+        sed 's/^\s*device\s\+//;s/\s\+([a-fA-F0-9:/]\+)\s*$//')
+    echo "choose device to run on:" >&2
+    select NODENAME in "${NODENAMES[@]}"; do
+        if [[ -n $NODENAME ]]; then break; fi
+    done
+fi
+
+# NODENAME is magic: if omitted, we don't pass -n to run-boot-test.
+# So, make NODENAME split into either 0 or 2 words when passed unquoted.
+if [[ -n $NODENAME ]]; then
+    NODENAME="$(printf -- "-n %q" "$NODENAME")"
+fi
+
+# run the tests
+for CMDLINE in "$@"; do
+    STATUS="bad"
+    for ((tries = 0; tries < 5; tries++)); do
+        # $NODENAME is intentionally not quoted. See above.
+        if "$ZIRCONDIR"/scripts/entropy-test/run-boot-test -a "$ARCH" -c "$CMDLINE" -l "$LEN" \
+            -m "$METHOD" $NODENAME  -o "$BUILDDIR" -s "$SOURCE" "$OUTDIR"; then
+            STATUS="good"
+            break
+        fi
+    done
+    if [[ $STATUS != "good" ]]; then
+        echo "Failed too many times. Aborting." >&2
+        echo "Failed cmdline: $CMDLINE" >&2
+        exit 1
+    fi
+done

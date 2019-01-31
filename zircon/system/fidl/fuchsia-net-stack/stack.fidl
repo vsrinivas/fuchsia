@@ -1,0 +1,183 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.stack;
+
+using fuchsia.net;
+using fuchsia.hardware.ethernet;
+
+enum PresenceStatus {
+    /// The interface is added.
+    ADDED = 1;
+    /// The interface is removed.
+    REMOVED = 2;
+};
+
+enum PhysicalStatus {
+    /// The link is not attached to the medium.
+    DOWN = 1;
+    /// The link is attached to the medium.
+    UP = 2;
+};
+
+enum EnablementStatus {
+    /// The interface is administratively disabled.
+    DISABLED = 1;
+    /// The interface is administratively enabled.
+    ENABLED = 2;
+};
+
+union InterfaceStatus {
+    PresenceStatus presence;
+    PhysicalStatus physical;
+    EnablementStatus enablement;
+};
+
+struct InterfaceAddress {
+    /// The IP address of the interface.
+    fuchsia.net.IpAddress ipAddress;
+
+    /// The length of the network portion of the interface IP address.
+    uint8 prefixLen;
+};
+
+struct InterfaceInfo {
+    /// An opaque identifier for the interface, assigned by the stack.
+    /// This identifier will never be 0, and will not be reused even if the device is removed and
+    /// subsequently re-added. It is not stable across netstack instances.
+    uint64 id;
+
+    /// All info of an interface except the interface name.
+    InterfaceProperties properties;
+};
+
+struct InterfaceProperties {
+    /// The topological path to the device, representing a stable identifier for the interface
+    /// hardware.
+    string path;
+
+    /// The MAC address of the interface, if available.
+    fuchsia.hardware.ethernet.MacAddress? mac;
+
+    /// The maximum transmission unit for the interface in bytes.
+    uint32 mtu;
+
+    /// The features present on the interface, as a bitfield. Valid flags are
+    /// fuchsia.hardware.ethernet.INFO_FEATURE_*.
+    uint32 features;
+
+    /// The enablement status of the interface.
+    EnablementStatus enablementStatus;
+
+    /// The physcial link status of the interface.
+    PhysicalStatus physicalStatus;
+
+    /// The list of addresses currently assigned to the interface.
+    vector<InterfaceAddress> addresses;
+};
+
+/// A ForwardingDestination represents either the device that should transmit a packet or the address
+/// of the next hop in the route.
+union ForwardingDestination {
+    /// The opaque identifier of the device to which packets should be forwarded.
+    uint64 deviceId;
+
+    /// The IP address of the next hop, used to look up the next forwarding entry.
+    fuchsia.net.IpAddress nextHop;
+};
+
+/// An entry in the forwarding table for the network stack.
+struct ForwardingEntry {
+    /// The subnet is the key for the entry in the table.
+    fuchsia.net.Subnet subnet;
+
+    /// The destination that will receive the forwarded packet.
+    ForwardingDestination destination;
+};
+
+struct InterfaceStatusChange {
+    /// The opaque identifier of the device that had its status change.
+    uint64 id;
+
+    /// The new status.
+    InterfaceStatus status;
+};
+
+union InterfaceAddressDiff {
+    InterfaceAddress added;
+    InterfaceAddress removed;
+};
+
+struct InterfaceAddressChange {
+    /// The opaque identifier of the device that had its address change.
+    uint64 id;
+
+    /// The diff representing the address change.
+    InterfaceAddressDiff diff;
+};
+
+enum ErrorType {
+    INTERNAL = 1;
+    NOT_SUPPORTED = 2;
+    INVALID_ARGS = 3;
+    BAD_STATE = 4;
+    TIME_OUT = 5;
+    NOT_FOUND = 6;
+    ALREADY_EXISTS = 7;
+    IO = 8;
+};
+
+struct Error {
+    ErrorType type;
+};
+
+[Discoverable]
+interface Stack {
+    /// Add an Ethernet interface to the network stack. On success, returns the identifier assigned
+    /// by the stack for use in subsequent calls.
+    AddEthernetInterface(string topological_path, fuchsia.hardware.ethernet.Device device) -> (Error? err, uint64 id);
+
+    /// Remove an Ethernet interface from the network stack.
+    DelEthernetInterface(uint64 id) -> (Error? err);
+
+    /// List all the interfaces available in the network stack.
+    ListInterfaces() -> (vector<InterfaceInfo> ifs);
+
+    /// Retrieve info about a specific interface.
+    GetInterfaceInfo(uint64 id) -> (InterfaceInfo? info, Error? err);
+
+    /// Enable the interface. Packets may be processed by the stack after this call is processed.
+    EnableInterface(uint64 id) -> (Error? err);
+
+    /// Disable the interface. The stack will no longer process packets after this call.
+    DisableInterface(uint64 id) -> (Error? err);
+
+    /// Add an address to the interface. If the interface already has an address of a given type that
+    /// does not allow duplicates, this method will return an error.
+    AddInterfaceAddress(uint64 id, InterfaceAddress addr) -> (Error? err);
+
+    /// Remove the address from the interface. If the address is not assigned to the interface, an
+    /// error is returned.
+    DelInterfaceAddress(uint64 id, fuchsia.net.IpAddress addr) -> (Error? err);
+
+    /// List all the entries in the forwarding table for the network stack.
+    GetForwardingTable() -> (vector<ForwardingEntry> table);
+
+    /// Add a new entry to the forwarding table. If the table already contains an entry with the same
+    /// subnet, an error is returned. The entry may be deleted using DelForwardingEntry first.
+    AddForwardingEntry(ForwardingEntry entry) -> (Error? err);
+
+    /// Removes the forwarding entry with the given subnet. This will not affect any overlapping
+    /// subnets (superset or subset) so the subnet must exactly match an entry in the forwarding
+    /// table. If no entry for the subnet exists, an error is returned.
+    DelForwardingEntry(fuchsia.net.Subnet subnet) -> (Error? err);
+
+    /// Events
+
+    /// A status change event is triggered whenever an interface's status changes.
+    -> OnInterfaceStatusChange(InterfaceStatusChange info);
+
+    /// An address change event is triggered whenever an interface's addresses change.
+    -> OnInterfaceAddressChange(InterfaceAddressChange info);
+};

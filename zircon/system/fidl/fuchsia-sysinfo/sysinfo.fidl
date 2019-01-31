@@ -1,0 +1,38 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sysinfo;
+
+using zx;
+
+const uint8 SYSINFO_BOARD_NAME_LEN = 32;
+
+enum InterruptControllerType {
+    UNKNOWN = 0;
+    APIC = 1;
+    GIC_V2 = 2;
+    GIC_V3 = 3;
+};
+
+struct InterruptControllerInfo {
+    InterruptControllerType type;
+};
+
+[Layout = "Simple"]
+interface Device {
+    // Return the root job handle.
+    1: GetRootJob() -> (zx.status status, handle<job>? job);
+
+    // Return the root resource (with only ZX_RIGHT_ENUMERATE and ZX_RIGHT_TRANSFER).
+    2: GetRootResource() -> (zx.status status, handle<resource>? resource);
+
+    // Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
+    3: GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
+
+    // Return the board name for the platform we are running on.
+    4: GetBoardName() -> (zx.status status, string:SYSINFO_BOARD_NAME_LEN? name);
+
+    // Return interrupt controller information.
+    5: GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
+};

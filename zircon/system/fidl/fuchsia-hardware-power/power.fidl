@@ -1,0 +1,70 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.power;
+using zx;
+
+enum PowerType : uint8 {
+    AC = 0;
+    BATTERY = 1;
+};
+
+const uint8 POWER_STATE_ONLINE = 0x1;
+const uint8 POWER_STATE_DISCHARGING = 0x2;
+const uint8 POWER_STATE_CHARGING = 0x4;
+const uint8 POWER_STATE_CRITICAL = 0x8;
+
+struct SourceInfo {
+    PowerType type;
+    uint8 state;
+};
+
+enum BatteryUnit {
+    // Milliwatts
+    MW = 0;
+    // Milliamps
+    MA = 1;
+};
+
+struct BatteryInfo {
+    // capacity unit. all voltage fields are in millivolts
+    BatteryUnit unit;
+    // nominal capacity of a new battery
+    uint32 design_capacity;
+    // predicted battery capacity when fully charged
+    uint32 last_full_capacity;
+    // nominal voltage of a new battery
+    uint32 design_voltage;
+    // capacity when the device will generate a warning notification
+    uint32 capacity_warning;
+    // capacity when the device will generate a low battery notification
+    uint32 capacity_low;
+    // the smallest increment the battery is capable of measuring between the
+    // low and warning capacities
+    uint32 capacity_granularity_low_warning;
+    // the smallest increment the battery is capable of measuring between the low
+    // and warning capacities
+    uint32 capacity_granularity_warning_full;
+
+    // below fields are in units specified the |unit| field.
+    // charging/discharging rate in the capacity unit. positive is charging,
+    // negative is discharging
+    int32 present_rate;
+    uint32 remaining_capacity;
+    uint32 present_voltage;
+};
+
+[Layout = "Simple"]
+interface Source {
+    // Get device info.
+    1: GetPowerInfo() -> (zx.status status, SourceInfo info);
+
+    // Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
+    // asserted when power_info_t.state is changed. It is deasserted when the
+    // state is read via |GetPowerInfo|.
+    2: GetStateChangeEvent() -> (zx.status status, handle<event> handle);
+
+    // Get battery info. Only supported if type == PowerType::BATTERY.
+    3: GetBatteryInfo() -> (zx.status status, BatteryInfo info);
+};

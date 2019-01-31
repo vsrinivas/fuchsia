@@ -1,0 +1,4 @@
+library zircon.hw.pci;
+
+struct PciBdf {
+};

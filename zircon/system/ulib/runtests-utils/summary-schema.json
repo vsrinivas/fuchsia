@@ -1,0 +1,49 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+
+    "type": "object",
+    "properties": {
+        "tests": {
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/test"
+            }
+        },
+        "outputs": {
+            "type": "object",
+            "properties": {
+                "syslog_file": { "type": "string" }
+            },
+        }
+    },
+    "required": ["tests"],
+
+    "definitions": {
+        "test": {
+            "type": "object",
+            "properties": {
+                "name": { "type": "string" },
+                "output_file": { "type": "string" },
+                "result": {
+                    "type": "string",
+                    "enum": ["PASS", "FAIL"]
+                },
+                "koid": { "type": "integer" },
+                "data_sinks": {
+                    "type": "object",
+                    "additionalProperties": {
+                        "type": "array",
+                        "items": {
+                            "type": "object",
+                            "properties": {
+                                "dump_file": { "type": "string" }
+                            },
+                            "required": [ "dump_file" ]
+                        }
+                    }
+                }
+            },
+            "required": [ "name", "output_file", "result" ]
+        }
+    }
+}

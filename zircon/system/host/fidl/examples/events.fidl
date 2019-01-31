@@ -1,0 +1,11 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.examples.events;
+
+interface AnimalPlanet {
+    1: Dog(string s, bool b);
+    2: Cat(string s) -> (bool b);
+    3: -> Bird(string s, bool b);
+};

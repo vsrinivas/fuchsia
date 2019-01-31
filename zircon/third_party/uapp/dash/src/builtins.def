@@ -1,0 +1,53 @@
+# 1 "builtins.def.in"
+# 1 "<built-in>"
+# 1 "<command-line>"
+# 1 "/usr/include/stdc-predef.h" 1 3 4
+# 1 "<command-line>" 2
+# 1 "builtins.def.in"
+# 58 "builtins.def.in"
+breakcmd -s break -s continue
+cdcmd -u cd chdir
+commandcmd -u command
+dotcmd -s .
+echocmd echo
+evalcmd -ns eval
+execcmd -s exec
+exitcmd -s exit
+exportcmd -as export -as readonly
+falsecmd -u false
+getoptscmd -u getopts
+hashcmd hash
+jobscmd -u jobs
+localcmd -as local
+printfcmd printf
+pwdcmd pwd
+readcmd -u read
+returncmd -s return
+setcmd -s set
+shiftcmd -s shift
+timescmd -s times
+trapcmd -s trap
+truecmd -s : -u true
+typecmd type
+umaskcmd -u umask
+unaliascmd -u unalias
+unsetcmd -s unset
+waitcmd -u wait
+aliascmd -au alias
+
+
+
+testcmd test [
+
+
+zxc_ls -w ls
+zxc_mv_or_cp -w cp mv
+zxc_mkdir -w mkdir
+zxc_rm -w rm
+
+
+zxc_dump dump
+zxc_list list
+zxc_msleep msleep
+zxc_dm dm
+zxc_k k

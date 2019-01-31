@@ -1,0 +1,102 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.block.volume;
+using zx;
+using fuchsia.hardware.block.partition as partition;
+
+// VolumeInfo describes characteristics of either a single Volume, or all
+// Volumes combined.
+struct VolumeInfo {
+    // Size of a single slice, in bytes.
+    uint64 slice_size;
+
+    // Number of addressable slices.
+    uint64 vslice_count;
+
+    // Total number of allocatable slices.
+    uint64 pslice_total_count;
+
+    // Total number of currently allocated slices.
+    uint64 pslice_allocated_count;
+};
+
+// Indicates that the partition should be created as inactive, implying that it
+// will be destroyed on reboot (unless activated by a call to "Activate").
+const uint32 AllocatePartitionFlagInactive = 0x00000001;
+
+// VolumeManager controls a collection of Volumes.
+[Layout = "Simple"]
+interface VolumeManager {
+    // Allocates a virtual partition with the requested features.
+    //
+    // |slice_count| is the number of slices initially allocated to the partition, at
+    // offset zero. The number of slices allocated to a new partition must be at least one.
+    // |type| and |value| indicate type and instance GUIDs for the partition, respectively.
+    // |name| indicates the name of the new partition.
+    AllocatePartition(uint64 slice_count, partition.GUID type,
+                      partition.GUID instance, string:partition.NAME_LENGTH name,
+                      uint32 flags) -> (zx.status status);
+
+    // Gets slice size information about all volumes.
+    Query() -> (zx.status status, VolumeInfo? info);
+
+    // Atomically marks a vpartition (by instance GUID) as inactive, while finding
+    // another partition (by instance GUID) and marking it as active.
+    //
+    // If the "old" partition does not exist, the GUID is ignored.
+    // If the "old" partition is the same as the "new" partition, the "old"
+    // GUID is ignored.
+    // If the "new" partition does not exist, |ZX_ERR_NOT_FOUND| is returned.
+    //
+    // This function does not destroy the "old" partition, it just marks it as
+    // inactive -- to reclaim that space, the "old" partition must be explicitly
+    // destroyed.  This destruction can also occur automatically when the FVM driver
+    // is rebound (i.e., on reboot).
+    //
+    // This function may be useful for A/B updates within the FVM,
+    // since it will allow activating updated partitions.
+    Activate(partition.GUID old_guid, partition.GUID new_guid) -> (zx.status status);
+};
+
+// An arbitrary cap on the number of slices which may be requested when querying
+// for allocation information from a volume.
+const uint32 MAX_SLICE_REQUESTS = 16;
+
+// VsliceRange describes a range of virtual slices: start, length, and allocated status.
+//
+// These ranges are returned in an ordered container, which implicitly describes the
+// starting offset, starting from the "index zero" slice.
+struct VsliceRange {
+    // True if the virtual slices are allocated, false otherwise.
+    bool allocated;
+
+    // The number of contiguous virtual slices.
+    uint64 count;
+};
+
+// Volume is a partition which may access virtually-mapped blocks within a device.
+[Layout = "Simple"]
+interface Volume : partition.Partition {
+    // Gets slice size information about the parent volume.
+    Query() -> (zx.status status, VolumeInfo? info);
+
+    // Returns the number of contiguous allocated (or unallocated) vslices
+    // starting from each vslice.
+    //
+    // TODO(smklein): Replace array with vector; doing so would be non-simple.
+    QuerySlices(vector<uint64>:MAX_SLICE_REQUESTS start_slices)
+      -> (zx.status status, array<VsliceRange>:MAX_SLICE_REQUESTS response, uint64 response_count);
+
+    // Extends the mapping of this partition.
+    Extend(uint64 start_slice, uint64 slice_count) -> (zx.status status);
+
+    // Shrinks a virtual partition. Returns |ZX_OK| if ANY slices are
+    // freed, even if part of the requested range contains unallocated slices.
+    Shrink(uint64 start_slice, uint64 slice_count) -> (zx.status status);
+
+    // Destroys the current partition, removing it from the VolumeManager, and
+    // freeing all underlying storage.
+    Destroy() -> (zx.status status);
+};

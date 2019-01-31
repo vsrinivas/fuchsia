@@ -1,0 +1,47 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.hci;
+
+using zx;
+using ddk.protocol.usb.bus;
+using ddk.protocol.usb.request;
+using zircon.hw.usb;
+using zircon.hw.usb.hub;
+
+[Layout="ddk-protocol"]
+interface UsbHci {
+    /// Queues a USB request with the HCI driver.
+    RequestQueue(ddk.protocol.usb.request.UsbRequest? usb_request,
+                 ddk.protocol.usb.request.UsbRequestComplete? complete_cb) -> ();
+    /// Registers callbacks to the USB bus driver with the HCI driver.
+    SetBusInterface(ddk.protocol.usb.bus.UsbBusInterface bus_intf) -> ();
+    /// Returns the maximum number of USB devices that might be connected to the controller.
+    GetMaxDeviceCount() -> (usize count);
+    /// Enables or disables an endpoint using parameters derived from |ep_desc|.
+    EnableEndpoint(uint32 device_id, zircon.hw.usb.UsbEndpointDescriptor ep_desc,
+                   zircon.hw.usb.UsbSsEpCompDescriptor ss_com_desc, bool enable) -> (zx.status s);
+    /// Returns the current frame (in milliseconds), used for isochronous transfers.
+    GetCurrentFrame() -> (uint64 frame);
+    /// Used by the USB hub driver to configure a newly enumerated USB hub.
+    ConfigureHub(uint32 device_id, zircon.hw.usb.UsbSpeed speed,
+                 zircon.hw.usb.hub.UsbHubDescriptor desc) -> (zx.status s);
+    /// Used by the USB hub driver to notify the HCI driver when a new device is attached.
+    HubDeviceAdded(uint32 device_id, uint32 port, zircon.hw.usb.UsbSpeed speed) -> (zx.status s);
+    /// Used by the USB hub driver to notify the HCI driver when a device has been removed.
+    HubDeviceRemoved(uint32 device_id, uint32 port) -> (zx.status s);
+    /// Used by the USB hub driver to notify the HCI driver when a device has been reset.
+    HubDeviceReset(uint32 device_id, uint32 port) -> (zx.status s);
+    /// Resets an endpoint on the specified device.
+    ResetEndpoint(uint32 device_id, uint8 ep_address) -> (zx.status s);
+    /// Resets the specified device.
+    ResetDevice(uint32 hub_address, uint32 device_id) -> (zx.status s);
+    /// Returns the maximum size of a packet that can be queued on the specified endpoint.
+    GetMaxTransferSize(uint32 device_id, uint8 ep_address) -> (usize size);
+    /// Cancels all transactions currently queued on the specified endpoint.
+    CancelAll(uint32 device_id, uint8 ep_address) -> (zx.status s);
+    /// Returns the size needed for a |usb_request_t|, including private storage needed by the
+    /// HCI driver.
+    GetRequestSize() -> (usize size);
+};

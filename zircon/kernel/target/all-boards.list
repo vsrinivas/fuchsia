@@ -1,0 +1,8 @@
+[arm64]
+gauss
+hikey960
+qemu
+vim2
+imx8mevk
+[x64]
+pc

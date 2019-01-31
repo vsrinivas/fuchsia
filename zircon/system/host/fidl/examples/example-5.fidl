@@ -1,0 +1,37 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.examples.example5;
+
+struct Point {
+    uint64 x;
+};
+
+union NotAPoint {
+    uint64 x;
+    uint32 y;
+    uint16 z;
+};
+
+enum Enum {
+    x = 23;
+};
+
+enum Enum2 : uint64 {
+    enum_0 = 0;
+    enum_1 = 23;
+};
+
+enum Enum23 : int32 {
+    enum_3 = 0;
+    enum_4 = -23;
+};
+
+[Discoverable]
+interface Thing {
+    1: one_function(string s, bool b) -> ();
+    0x2: two_function(string s, bool b);
+    3: three_function(string s, request<Thing> r);
+    4: four_function(string s, request<Thing> r) -> (handle<channel> r);
+};

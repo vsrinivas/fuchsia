@@ -1,0 +1,111 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.ispimpl;
+using zx;
+
+// This structure represents image resolution.
+struct ImageResolution {
+    uint32 width;
+    uint32 height;
+};
+
+// A sensor can support several different predefined modes.
+struct SensorMode {
+    // Frames per milliseconds. NOTE: (Reference code has fps * 256)
+    uint32 fpms;
+    // Resolution of the mode.
+    ImageResolution resolution;
+    // How many exposures this mode supports.
+    uint8 exposures;
+    // The wdr mode.
+    uint8 wdr_mode;
+    // Bit depth of data from sensor.
+    uint8 bits;
+    // Lane count.
+    uint8 lanes;
+    // MBps per lane.
+    uint32 mbps;
+    // The setting idx in seq.
+    uint8 idx;
+    // The setting bayer pattern
+    uint8 bayer;
+};
+
+struct SensorInfo {
+    // Total resolution of the image with blanking.
+    ImageResolution total;
+    // Active resolution without blanking.
+    ImageResolution active;
+    // Actual pixels per line after scaling/binning.
+    uint32 pixels_per_line;
+    // Maximum analog gain value in log2 format.
+    int32 again_log2_max;
+    // Maximum digital gain value in log2 format.
+    int32 dgain_log2_max;
+    // Precision of the gain - If required gain step
+    // is less then this do not try to allocate it.
+    int32 again_accuracy;
+    // Minimum integration time for the sensor in lines.
+    uint32 integration_time_min;
+    // Maximum integration time for the sensor in lines
+    // without dropping fps.
+    uint32 integration_time_max;
+    // Maximum integration time for long in lines.
+    uint32 integration_time_long_max;
+    // Maximum possible integration time for the sensor in lines.
+    uint32 integration_time_limit;
+    // Limit of integration time for non-flickering light source.
+    uint16 day_light_integration_time_max;
+    // Delay to apply integration time in frames.
+    uint8 integration_time_apply_delay;
+    // Select which WDR exposure channel gain
+    // is delayed 0-none, 1-long, 2-medium, 3-short
+    //  (only 0 and 1 implemented)
+    uint8 isp_exposure_channel_delay;
+    // Used for image stabilization.
+    int32 xoffset;
+    // Used for image stabilization.
+    int32 yoffset;
+    // Number of lines per second used for antiflicker.
+    uint32 lines_per_second;
+    // Number of different exposures supported by the sensor.
+    int32 sensor_exp_number;
+    // Current mode. This value is from the range [ 0 : countof(supported_modes) - 1 ].
+    uint8 mode;
+    // sensor setting bayer pattern.
+    uint8 bayer;
+};
+
+[Layout = "ddk-interface"]
+interface IspCallbacks {
+    // Initializes the Camera Sensor.
+    Init() -> (zx.status s);
+    // De-Initializes the Camera Sensor.
+    DeInit() -> ();
+    // Sets the Camera Sensor Mode to one of the supported modes.
+    SetMode(uint8 mode) -> (zx.status s);
+    // Start streaming from the camera sensor.
+    StartStreaming() -> ();
+    // Stop steaming.
+    StopStreaming() -> ();
+    // Change Analog Gain.
+    SetAnalogGain(int32 gain) -> (int32 gain);
+    // Change Digital Gain.
+    SetDigitalGain(int32 gain) -> (int32 gain);
+    // Set Integration Time.
+    SetIntegrationTime(int32 int_time, int32 int_time_M, int32 int_time_L) -> ();
+    // Update the sensor with new parameters.
+    Update() -> (zx.status s);
+    // Gets the Sensor Parameters.
+    GetInfo() -> (zx.status s, SensorInfo info);
+    // Get the supported modes.
+    // GetSupportedModes() ->()
+};
+
+[Layout = "ddk-protocol"]
+interface IspImpl {
+    RegisterCallbacks(IspCallbacks cb) -> (zx.status s);
+    DeRegisterCallbacks() -> (zx.status s);
+};

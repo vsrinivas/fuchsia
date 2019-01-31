@@ -1,0 +1,41 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.bus;
+
+using zx;
+using ddk.driver;
+using ddk.protocol.usb.hub;
+using zircon.hw.usb;
+using zircon.hw.usb.hub;
+
+enum UsbSpeed : uint32 {
+};
+
+[Layout = "ddk-protocol"]
+interface UsbBus {
+    /// Configures a new hub based on its USB hub descriptor.
+    ConfigureHub(ddk.driver.ZxDevice? hub_device, UsbSpeed speed,
+                 zircon.hw.usb.hub.UsbHubDescriptor desc) -> (zx.status s);
+    /// Informs the USB bus that a new device has been added.
+    DeviceAdded(ddk.driver.ZxDevice? hub_device, uint32 port, UsbSpeed speed) -> (zx.status s);
+    /// Informs the USB bus that a device has been removed.
+    DeviceRemoved(ddk.driver.ZxDevice? hub_device, uint32 port) -> (zx.status s);
+    /// Used by USB hub driver to register its USB hub protocol with the USB bus driver.
+    SetHubInterface(ddk.driver.ZxDevice? usb_device, ddk.protocol.usb.hub.UsbHubInterface hub)
+-> (zx.status s);
+};
+
+/// Interface for use by the HCI controller to use to notify when devices are added and removed.
+[Layout = "ddk-interface"]
+interface UsbBusInterface {
+    /// Notifies the USB bus driver that a new device has been added.
+    AddDevice(uint32 device_id, uint32 hub_id, UsbSpeed speed) -> (zx.status s);
+    /// Notifies the USB bus driver that a device has been removed.
+    RemoveDevice(uint32 device_id) -> (zx.status s);
+    /// Used by the HCI controller to reset a port on a USB hub.
+    ResetPort(uint32 hub_id, uint32 port, bool enumerating) -> (zx.status s);
+    /// Used by the HCI controller to reinitialize a device after it has been reset.
+    ReinitializeDevice(uint32 device_id) -> (zx.status s);
+};

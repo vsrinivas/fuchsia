@@ -1,0 +1,78 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.usb.request;
+
+using ddk.physiter;
+using zircon.hw.usb;
+using zx;
+
+/// Should be set by the requestor.
+struct UsbHeader {
+    /// Frame number for scheduling isochronous transfers.
+    uint64 frame;
+    uint32 device_id;
+    /// bEndpointAddress from endpoint descriptor.
+    uint8 ep_address;
+    /// Number of bytes to transfer.
+    zx.off length;
+    /// Send zero length packet if length is multiple of max packet size.
+    bool send_zlp;
+};
+
+/// Response data.
+/// (Filled in by processor before |UsbRequestComplete()| is called)
+struct UsbResponse {
+    /// Status of transaction.
+    zx.status status;
+    /// Number of bytes actually transferred (on success).
+    zx.off actual;
+};
+
+struct UsbRequest {
+    UsbHeader header;
+
+    /// For control transactions.
+    zircon.hw.usb.UsbSetup setup;
+
+    /// VMO handle for payload.
+    handle<vmo> vmo_handle;
+    usize size;
+    /// Offset of the start of data from first page address of the vmo.
+    zx.off offset;
+    /// Mapped address of the first page of the vmo.
+    /// Add offset to get actual data.
+    uint64 virt;
+
+    handle pmt;
+    /// Phys addresses of the payload.
+    vector<zx.paddr>? phys;
+
+    vector<ddk.physiter.PhysIterSgEntry>? sg;
+
+    UsbResponse response;
+
+    /// usb_request_release() frees the request if this is true.
+    bool release_frees;
+
+    usize alloc_size;
+
+    /// Set by the requester if the callback should be skipped on successful completion.
+    /// This is useful for isochronous requests, where the requester does not care about
+    /// most callbacks.
+    /// The requester is in charge of keeping track of the order of queued requests and
+    /// requeuing silently completed requests.
+    ///
+    /// If the requester receives a success callback, they may assume requests queued
+    /// prior to it at the same endpoint have silently completed.
+    /// If the requester receives an error callback, they will receive an additional
+    /// callback when the request queued prior to the erroneous request completes, if any.
+    /// This is as errors are reported as soon as possible rather than preserving queue order.
+    bool cb_on_error_only;
+};
+
+[Layout="ddk-callback"]
+interface UsbRequestComplete {
+    Callback(UsbRequest? req) -> ();
+};

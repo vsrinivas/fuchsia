@@ -1,0 +1,230 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <algorithm>
+#include <ctime>
+
+#include "generator.h"
+#include "header_generator.h"
+#include "vdso_wrapper_generator.h"
+
+#include "abigen_generator.h"
+
+using std::map;
+using std::string;
+using std::vector;
+
+const map<string, string> user_attrs = {
+    {"noreturn", "__NO_RETURN"},
+    {"const", "__CONST"},
+    {"deprecated", "__DEPRECATE"},
+
+    // All vDSO calls are "leaf" in the sense of the GCC attribute.
+    // It just means they can't ever call back into their callers'
+    // own translation unit.  No vDSO calls make callbacks at all.
+    {"*", "__LEAF_FN"},
+};
+
+const map<string, string> kernel_attrs = {
+    {"noreturn", "__NO_RETURN"},
+};
+
+static TestWrapper test_wrapper;
+static BlockingRetryWrapper blocking_wrapper;
+static vector<CallWrapper*> wrappers = {&test_wrapper, &blocking_wrapper};
+
+static VdsoWrapperGenerator vdso_wrapper_generator(
+    "_zx_",        // wrapper function name
+    "SYSCALL_zx_", // syscall implementation name
+    wrappers);
+
+static KernelBranchGenerator kernel_branch;
+
+static KernelWrapperGenerator kernel_wrappers(
+    "sys_",     // function prefix
+    "wrapper_", // wrapper prefix
+    "ZX_SYS_"); // syscall numbers constant prefix
+
+static bool skip_nothing(const Syscall&) {
+    return false;
+}
+
+static bool skip_internal(const Syscall& sc) {
+    return sc.is_internal();
+}
+
+static bool skip_vdso(const Syscall& sc) {
+    return sc.is_vdso();
+}
+
+static HeaderGenerator user_header(
+    "extern ", // function prefix
+    {
+        {"zx_", skip_internal},
+        {"_zx_", skip_internal},
+    },
+    "void", // no-args special type
+    false,  // wrap pointers
+    user_attrs);
+
+static HeaderGenerator vdso_header(
+    "__LOCAL extern ", // function prefix
+    {
+        {"VDSO_zx_", skip_nothing},
+        {"SYSCALL_zx_", skip_vdso},
+    },
+    "void", // no-args special type
+    false,
+    user_attrs);
+
+static HeaderGenerator kernel_header(
+    "",
+    {
+        {"sys_", skip_vdso},
+    },
+    "",
+    true,
+    kernel_attrs);
+
+static VDsoAsmGenerator vdso_asm_generator(
+    "m_syscall", // syscall macro name
+    "zx_",       // syscall name prefix
+    wrappers);
+
+static SyscallNumbersGenerator syscall_num_generator("#define ZX_SYS_");
+
+static RustBindingGenerator rust_binding_generator;
+static TraceInfoGenerator trace_generator;
+static CategoryGenerator category_generator;
+static JsonGenerator json_generator;
+
+const map<string, Generator&> type_to_generator = {
+    // The user header, pure C.
+    {"user-header", user_header},
+
+    // The vDSO-internal header, pure C.  (VDsoHeaderC)
+    {"vdso-header", vdso_header},
+
+    // The kernel header, C++.
+    {"kernel-header", kernel_header},
+
+    // The kernel assembly branches and jump table.
+    {"kernel-branch", kernel_branch},
+
+    // The kernel C++ wrappers.
+    {"kernel-wrappers", kernel_wrappers},
+
+    //  The assembly file for x86-64.
+    {"x86-asm", vdso_asm_generator},
+
+    //  The assembly include file for ARM64.
+    {"arm-asm", vdso_asm_generator},
+
+    // A C header defining ZX_SYS_* syscall number macros.
+    {"numbers", syscall_num_generator},
+
+    // The trace subsystem data, to be interpreted as an array of structs.
+    {"trace", trace_generator},
+
+    // Rust bindings.
+    {"rust", rust_binding_generator},
+
+    // vDSO wrappers for additional behaviour in user space.
+    {"vdso-wrappers", vdso_wrapper_generator},
+
+    // Category list.
+    {"category", category_generator},
+
+    // JSON list of syscalls.
+    {"json", json_generator},
+};
+
+const map<string, string> type_to_default_suffix = {
+    {"user-header", ".user.h"},
+    {"vdso-header", ".vdso.h"},
+    {"kernel-header", ".kernel.h"},
+    {"kernel-branch", ".kernel-branch.S"},
+    {"kernel-wrappers", ".kernel-wrappers.inc"},
+    {"x86-asm", ".x86-64.S"},
+    {"arm-asm", ".arm64.S"},
+    {"numbers", ".syscall-numbers.h"},
+    {"trace", ".trace.inc"},
+    {"rust", ".rs"},
+    {"vdso-wrappers", ".vdso-wrappers.inc"},
+    {"category", ".category.inc"},
+    {"json", ".json"},
+};
+
+const map<string, string>& get_type_to_default_suffix() {
+    return type_to_default_suffix;
+}
+
+const map<string, Generator&>& get_type_to_generator() {
+    return type_to_generator;
+}
+
+bool AbigenGenerator::AddSyscall(Syscall&& syscall) {
+    if (!syscall.validate())
+        return false;
+
+    syscall.requirements = pending_requirements_;
+    pending_requirements_.clear();
+
+    syscall.top_description = pending_top_description_;
+    pending_top_description_ = TopDescription();
+
+    syscall.assign_index(&next_index_);
+    calls_.emplace_back(std::move(syscall));
+    return true;
+}
+
+bool AbigenGenerator::Generate(const map<string, string>& type_to_filename) {
+    for (auto& entry : type_to_filename) {
+        if (!generate_one(entry.second, type_to_generator.at(entry.first), entry.first))
+            return false;
+    }
+    return true;
+}
+
+bool AbigenGenerator::verbose() const {
+    return verbose_;
+}
+
+void AbigenGenerator::AppendRequirement(Requirement&& req) {
+    pending_requirements_.emplace_back(req);
+}
+
+void AbigenGenerator::SetTopDescription(TopDescription&& td) {
+    pending_top_description_ = std::move(td);
+}
+
+bool AbigenGenerator::generate_one(
+    const string& output_file, Generator& generator, const string& type) {
+    std::ofstream ofile;
+    ofile.open(output_file.c_str(), std::ofstream::out);
+
+    if (!generator.header(ofile)) {
+        print_error("i/o error", output_file);
+        return false;
+    }
+
+    if (!std::all_of(calls_.begin(), calls_.end(),
+                     [&generator, &ofile](const Syscall& sc) {
+                         return generator.syscall(ofile, sc);
+                     })) {
+        print_error("generation failed", output_file);
+        return false;
+    }
+
+    if (!generator.footer(ofile)) {
+        print_error("i/o error", output_file);
+        return false;
+    }
+
+    return true;
+}
+
+void AbigenGenerator::print_error(const char* what, const string& file) {
+    fprintf(stderr, "error: %s for %s\n", what, file.c_str());
+}

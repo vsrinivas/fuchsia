@@ -1,0 +1,8 @@
+Source: https://chromium.googlesource.com/chromiumos/platform/ec
+Git Commit: 2be8b69ddac0001638ca548b23c6cb50f71830b7
+License: 3-Clause BSD
+
+This is a partial import of the ChromiumOS EC code, to simplify implementing a CrOS EC driver.
+
+Changes:
+- Moved files around to fit Zircon organization

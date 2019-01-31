@@ -1,0 +1,15 @@
+Source: https://git.linaro.org/toolchain/cortex-strings.git
+Revision: eb80ac77a6cdb3509d885d23d1dd343803381176
+License: BSD 3-clause
+
+NOTE: kernel/arch/arm64/user_copy.S has intimate knowledge of the
+src/aarch64/memcpy.S code and must be adjusted if that code changes.
+
+Modifications:
+- Kept only src/aarch64, removed everything else.
+- sed -i 's/\.2d\[/.d[/' src/aarch64/*.S
+  This works around https://bugs.llvm.org//show_bug.cgi?id=34488
+  by making the code use the official syntax, not a variant GAS accepts.
+- The no-neon directory is taken from an earlier revision of the same repo:
+  bc654e7a594385071b42db3c9c94bd0fd5fe0da5
+  It contains only a subset of src/aarch64 from that revision.

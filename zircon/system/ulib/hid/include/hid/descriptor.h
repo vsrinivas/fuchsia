@@ -1,0 +1,246 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+// This header contains elements that may be used to construct Human Interface
+// Device (HID) descriptors, as defined by the USB Implementers Forum.
+//
+// The macros defined here expand to comma-separated byte values, and are
+// suitable for use in array definitions.  E.g.
+//
+// // This is a HID Descriptor that defines a Mouse with no buttons and two
+// // relative positional axes.
+// uint8_t hid_descriptor[] = {
+//     HID_USAGE_PAGE(1), // Generic Desktop
+//     HID_USAGE(2),      // Mouse
+//     HID_COLLECTION_APPLICATION,
+//         HID_USAGE(1),  // Pointer
+//         HID_COLLECTION_PHYSICAL,
+//         HID_LOGICAL_MIN(-127),
+//         HID_LOGICAL_MAX(-127),
+//         HID_REPORT_SIZE(8),
+//         HID_REPORT_COUNT(1),
+//         HID_USAGE(0x30), // X
+//         HID_INPUT(0x6), // Data Variable Relative
+//         HID_USAGE(0x31), // Y
+//         HID_INPUT(0x6), // Data Variable Relative
+//         HID_END_COLLECTION,
+//     HID_END_COLLECTION,
+// };
+//
+// Future Work:
+// - Define nice shorthands for the argument to Input/Output/Feature
+// - Define commonly used usage pages and usages
+// - Define units element and commonly used units
+// - Support Long Items
+
+// clang-format off
+#define _HID_LOW8(v) (unsigned char)(v)
+#define _HID_SECOND8(v) (unsigned char)((v) >> 8)
+#define _HID_THIRD8(v) (unsigned char)((v) >> 16)
+#define _HID_HIGH8(v) (unsigned char)((v) >> 24)
+#define _HID_MAIN_VAL(bTag, v) (((bTag) << 4) | 0x1), _HID_LOW8(v)
+#define _HID_MAIN_VAL16(bTag, v) (((bTag) << 4) | 0x2), _HID_LOW8(v), _HID_SECOND8(v)
+
+#define _HID_GLOBAL_VAL(bTag, v) (((bTag) << 4) | 0x5), _HID_LOW8(v)
+#define _HID_GLOBAL_VAL16(bTag, v) (((bTag) << 4) | 0x6), _HID_LOW8(v), _HID_SECOND8(v)
+#define _HID_GLOBAL_VAL32(bTag, v) (((bTag) << 4) | 0x7), _HID_LOW8(v), _HID_SECOND8(v), \
+                                     _HID_THIRD8(v), _HID_HIGH8(v)
+
+#define _HID_LOCAL_VAL(bTag, v) (((bTag) << 4) | 0x9), _HID_LOW8(v)
+#define _HID_LOCAL_VAL16(bTag, v) (((bTag) << 4) | 0xa), _HID_LOW8(v), _HID_SECOND8(v)
+
+// Main HID items
+#define  HID_INPUT(v)        _HID_MAIN_VAL(0x8,    v)
+#define  HID_INPUT16(v)      _HID_MAIN_VAL16(0x8,  v)
+#define  HID_OUTPUT(v)       _HID_MAIN_VAL(0x9,    v)
+#define  HID_OUTPUT16(v)     _HID_MAIN_VAL16(0x9,  v)
+#define  HID_FEATURE(v)      _HID_MAIN_VAL(0xb,    v)
+#define  HID_FEATURE16(v)    _HID_MAIN_VAL16(0xb,  v)
+#define  HID_COLLECTION(v)   _HID_MAIN_VAL(0xa,    v)
+#define  HID_END_COLLECTION  0xc0
+
+#define  HID_COLLECTION_PHYSICAL        HID_COLLECTION(0)
+#define  HID_COLLECTION_APPLICATION     HID_COLLECTION(1)
+#define  HID_COLLECTION_LOGICAL         HID_COLLECTION(2)
+#define  HID_COLLECTION_REPORT          HID_COLLECTION(3)
+#define  HID_COLLECTION_NAMED_ARRAY     HID_COLLECTION(4)
+#define  HID_COLLECTION_USAGE_SWITCH    HID_COLLECTION(5)
+#define  HID_COLLECTION_USAGE_MODIFIER  HID_COLLECTION(6)
+
+// Global HID items
+#define  HID_USAGE_PAGE(v)      _HID_GLOBAL_VAL(0x0,    v)
+#define  HID_USAGE_PAGE16(v)    _HID_GLOBAL_VAL16(0x0,  v)
+#define  HID_LOGICAL_MIN(v)     _HID_GLOBAL_VAL(0x1,    v)
+#define  HID_LOGICAL_MIN16(v)   _HID_GLOBAL_VAL16(0x1,  v)
+#define  HID_LOGICAL_MIN32(v)   _HID_GLOBAL_VAL32(0x1,  v)
+#define  HID_LOGICAL_MAX(v)     _HID_GLOBAL_VAL(0x2,    v)
+#define  HID_LOGICAL_MAX16(v)   _HID_GLOBAL_VAL16(0x2,  v)
+#define  HID_LOGICAL_MAX32(v)   _HID_GLOBAL_VAL32(0x2,  v)
+#define  HID_PHYSICAL_MIN(v)    _HID_GLOBAL_VAL(0x3,    v)
+#define  HID_PHYSICAL_MIN16(v)  _HID_GLOBAL_VAL16(0x3,  v)
+#define  HID_PHYSICAL_MIN32(v)  _HID_GLOBAL_VAL32(0x3,  v)
+#define  HID_PHYSICAL_MAX(v)    _HID_GLOBAL_VAL(0x4,    v)
+#define  HID_PHYSICAL_MAX16(v)  _HID_GLOBAL_VAL16(0x4,  v)
+#define  HID_PHYSICAL_MAX32(v)  _HID_GLOBAL_VAL32(0x4,  v)
+#define  HID_UNIT_EXPONENT(v)   _HID_GLOBAL_VAL(0x5,    (v) & 0xf)
+#define  HID_REPORT_SIZE(v)     _HID_GLOBAL_VAL(0x7,    v)
+#define  HID_REPORT_ID(v)       _HID_GLOBAL_VAL(0x8,    v)
+#define  HID_REPORT_COUNT(v)    _HID_GLOBAL_VAL(0x9,    v)
+#define  HID_PUSH               0xa4
+#define  HID_POP                0xb4
+
+// Local HID items
+#define  HID_USAGE(v)      _HID_LOCAL_VAL(0x0,    v)
+#define  HID_USAGE16(v)    _HID_LOCAL_VAL16(0x0,  v)
+#define  HID_USAGE_MIN(v)  _HID_LOCAL_VAL(0x1,    v)
+#define  HID_USAGE_MAX(v)  _HID_LOCAL_VAL(0x2,    v)
+
+// Input/Output/Feature Items
+#define HID_Data_Arr_Abs  0x00
+#define HID_Const_Arr_Abs 0x01
+#define HID_Data_Var_Abs  0x02
+#define HID_Const_Var_Abs 0x03
+#define HID_Data_Var_Rel  0x06
+
+// Sensor Data
+#define  HID_USAGE_SENSOR_DATA(a,b) a|b
+
+#define  HID_USAGE_SENSOR_DATA_MOD_NONE                          0x00
+#define  HID_USAGE_SENSOR_DATA_MOD_CHANGE_SENSITIVITY_ABS        0x10
+#define  HID_USAGE_SENSOR_DATA_MOD_MAX                           0x20
+#define  HID_USAGE_SENSOR_DATA_MOD_MIN                           0x30
+#define  HID_USAGE_SENSOR_DATA_MOD_ACCURACY                      0x40
+#define  HID_USAGE_SENSOR_DATA_MOD_RESOLUTION                    0x50
+#define  HID_USAGE_SENSOR_DATA_MOD_THRESHOLD_HIGH                0x60
+#define  HID_USAGE_SENSOR_DATA_MOD_THRESHOLD_LOW                 0x70
+#define  HID_USAGE_SENSOR_DATA_MOD_CALIBRATION_OFFSET            0x80
+#define  HID_USAGE_SENSOR_DATA_MOD_CALIBRATION_MULTIPLIER        0x90
+#define  HID_USAGE_SENSOR_DATA_MOD_REPORT_INTERVAL               0xA0
+#define  HID_USAGE_SENSOR_DATA_MOD_FREQUENCY_MAX                 0xB0
+#define  HID_USAGE_SENSOR_DATA_MOD_PERIOD_MAX                    0xC0
+#define  HID_USAGE_SENSOR_DATA_MOD_CHANGE_SENSITIVITY_RANGE_PCT  0xD0
+#define  HID_USAGE_SENSOR_DATA_MOD_CHANGE_SENSITIVITY_REL_PCT    0xE0
+
+// Sensor Units
+#define  HID_SENSOR_UNITS(v)                                 _HID_GLOBAL_VAL(0x6, v)
+#define  HID_SENSOR_UNITS16(v)                               _HID_GLOBAL_VAL16(0x6, v)
+#define  HID_SENSOR_UNITS32(v)                               _HID_GLOBAL_VAL32(0x6, v)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_NOT_SPECIFIED        HID_SENSOR_UNITS(0)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_LUX                  HID_SENSOR_UNITS32(0x010000E1)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_KELVIN               HID_SENSOR_UNITS32(0x00010001)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_FAHRENHEIT           HID_SENSOR_UNITS32(0x00010003)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_PASCAL               HID_SENSOR_UNITS16(0xE1F1)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_NEWTON               HID_SENSOR_UNITS16(0xE111)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_METERS_PER_SECOND    HID_SENSOR_UNITS16(0xF011)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_METERS_PER_SEC_SQRD  HID_SENSOR_UNITS16(0xE011)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_FARAD                HID_SENSOR_UNITS32(0x00204FE1)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_AMPERE               HID_SENSOR_UNITS32(0x00100001)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_WATT                 HID_SENSOR_UNITS16(0xD121)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_HENRY                HID_SENSOR_UNITS32(0x00E0E121)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_OHM                  HID_SENSOR_UNITS32(0x00E0D121)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_VOLT                 HID_SENSOR_UNITS32(0x00F0D121)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_HERTZ                HID_SENSOR_UNITS16(0xF001)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_DEGREES              HID_SENSOR_UNITS(0x14)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_DEGREES_PER_SECOND   HID_SENSOR_UNITS16(0xF014)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_DEGREES_PER_SEC_SQRD HID_SENSOR_UNITS16(0xE014)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_RADIANS              HID_SENSOR_UNITS(0x12)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_RADIANS_PER_SECOND   HID_SENSOR_UNITS16(0xF012)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_RADIANS_PER_SEC_SQRD HID_SENSOR_UNITS16(0xE012)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_SECOND               HID_SENSOR_UNITS16(0x1001)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_GAUSS                HID_SENSOR_UNITS32(0x00F0E101)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_GRAM                 HID_SENSOR_UNITS16(0x0101)
+#define  HID_USAGE_SENSOR_GENERIC_UNITS_CENTIMETER           HID_SENSOR_UNITS(0x11)
+
+// Sensor State
+#define  HID_USAGE_SENSOR_STATE                              HID_USAGE16(0x0201)
+#define  HID_USAGE_SENSOR_STATE_UNKNOWN                      HID_USAGE16(0x0800)
+#define  HID_USAGE_SENSOR_STATE_READY                        HID_USAGE16(0x0801)
+#define  HID_USAGE_SENSOR_STATE_NOT_AVAILABLE                HID_USAGE16(0x0802)
+#define  HID_USAGE_SENSOR_STATE_NO_DATA                      HID_USAGE16(0x0803)
+#define  HID_USAGE_SENSOR_STATE_INITIALIZING                 HID_USAGE16(0x0804)
+#define  HID_USAGE_SENSOR_STATE_ACCESS_DENIED                HID_USAGE16(0x0805)
+#define  HID_USAGE_SENSOR_STATE_ERROR                        HID_USAGE16(0x0806)
+
+#define  HID_USAGE_SENSOR_STATE_UNKNOWN_VAL                  0x00
+#define  HID_USAGE_SENSOR_STATE_READY_VAL                    0x01
+#define  HID_USAGE_SENSOR_STATE_NOT_AVAILABLE_VAL            0x02
+#define  HID_USAGE_SENSOR_STATE_NO_DATA_VAL                  0x03
+#define  HID_USAGE_SENSOR_STATE_INITIALIZING_VAL             0x04
+#define  HID_USAGE_SENSOR_STATE_ACCESS_DENIED_VAL            0x05
+#define  HID_USAGE_SENSOR_STATE_ERROR_VAL                    0x06
+
+// Event Usages
+#define  HID_USAGE_SENSOR_EVENT                                  HID_USAGE16(0x0202)
+
+#define  HID_USAGE_SENSOR_EVENT_UNKNOWN                          HID_USAGE16(0x0810)
+#define  HID_USAGE_SENSOR_EVENT_STATE_CHANGED                    HID_USAGE16(0x0811)
+#define  HID_USAGE_SENSOR_EVENT_PROPERTY_CHANGED                 HID_USAGE16(0x0812)
+#define  HID_USAGE_SENSOR_EVENT_DATA_UPDATED                     HID_USAGE16(0x0813)
+#define  HID_USAGE_SENSOR_EVENT_POLL_RESPONSE                    HID_USAGE16(0x0814)
+#define  HID_USAGE_SENSOR_EVENT_CHANGE_SENSITIVITY               HID_USAGE16(0x0815)
+#define  HID_USAGE_SENSOR_EVENT_MAX_REACHED                      HID_USAGE16(0x0816)
+#define  HID_USAGE_SENSOR_EVENT_MIN_REACHED                      HID_USAGE16(0x0817)
+#define  HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD      HID_USAGE16(0x0818)
+#define  HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_DOWNWARD    HID_USAGE16(0x0819)
+#define  HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_UPWARD       HID_USAGE16(0x081A)
+#define  HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD     HID_USAGE16(0x081B)
+#define  HID_USAGE_SENSOR_EVENT_ZERO_THRESHOLD_CROSS_UPWARD      HID_USAGE16(0x081C)
+#define  HID_USAGE_SENSOR_EVENT_ZERO_THRESHOLD_CROSS_DOWNWARD    HID_USAGE16(0x081D)
+#define  HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED                  HID_USAGE16(0x081E)
+#define  HID_USAGE_SENSOR_EVENT_FREQUENCY_EXCEEDED               HID_USAGE16(0x081F)
+#define  HID_USAGE_SENSOR_EVENT_COMPLEX_TRIGGER                  HID_USAGE16(0x0820)
+
+#define  HID_USAGE_SENSOR_EVENT_UNKNOWN_VAL                              0x00
+#define  HID_USAGE_SENSOR_EVENT_STATE_CHANGED_VAL                        0x01
+#define  HID_USAGE_SENSOR_EVENT_PROPERTY_CHANGED_VAL                     0x02
+#define  HID_USAGE_SENSOR_EVENT_DATA_UPDATED_VAL                         0x03
+#define  HID_USAGE_SENSOR_EVENT_POLL_RESPONSE_VAL                        0x04
+#define  HID_USAGE_SENSOR_EVENT_CHANGE_SENSITIVITY_VAL                   0x05
+#define  HID_USAGE_SENSOR_EVENT_MAX_REACHED_VAL                          0x06
+#define  HID_USAGE_SENSOR_EVENT_MIN_REACHED_VAL                          0x07
+#define  HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_UPWARD_VAL          0x08
+#define  HID_USAGE_SENSOR_EVENT_HIGH_THRESHOLD_CROSS_DOWNWARD_VAL        0x09
+#define  HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_UPWARD_VAL           0x0A
+#define  HID_USAGE_SENSOR_EVENT_LOW_THRESHOLD_CROSS_DOWNWARD_VAL         0x0B
+#define  HID_USAGE_SENSOR_EVENT_ZERO_THRESHOLD_CROSS_UPWARD_VAL          0x0C
+#define  HID_USAGE_SENSOR_EVENT_ZERO_THRESHOLD_CROSS_DOWNWARD_VAL        0x0D
+#define  HID_USAGE_SENSOR_EVENT_PERIOD_EXCEEDED_VAL                      0x0E
+#define  HID_USAGE_SENSOR_EVENT_FREQUENCY_EXCEEDED_VAL                   0x0F
+#define  HID_USAGE_SENSOR_EVENT_COMPLEX_TRIGGER_VAL                      0x10
+
+// Property usages
+#define  HID_USAGE_SENSOR_PROPERTY                              HID_USAGE16(0x0300)
+#define  HID_USAGE_SENSOR_PROPERTY_FRIENDLY_NAME                HID_USAGE16(0x0301)
+#define  HID_USAGE_SENSOR_PROPERTY_PERSISTENT_UNIQUE_ID         HID_USAGE16(0x0302)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_STATUS                HID_USAGE16(0x0303)
+#define  HID_USAGE_SENSOR_PROPERTY_MINIMUM_REPORT_INTERVAL      HID_USAGE16(0x0304)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_MANUFACTURER          HID_USAGE16(0x0305)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_MODEL                 HID_USAGE16(0x0306)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_SERIAL_NUMBER         HID_USAGE16(0x0307)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_DESCRIPTION           HID_USAGE16(0x0308)
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_CONNECTION_TYPE       HID_USAGE16(0x0309)
+
+#define  HID_USAGE_SENSOR_PROPERTY_SENSOR_DEVICE_PATH                   HID_USAGE16(0x030A)
+#define  HID_USAGE_SENSOR_PROPERTY_HARDWARE_REVISION                    HID_USAGE16(0x030B)
+#define  HID_USAGE_SENSOR_PROPERTY_FIRMWARE_VERSION                     HID_USAGE16(0x030C)
+#define  HID_USAGE_SENSOR_PROPERTY_RELEASE_DATE                         HID_USAGE16(0x030D)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORT_INTERVAL                      HID_USAGE16(0x030E)
+#define  HID_USAGE_SENSOR_PROPERTY_CHANGE_SENSITIVITY_ABS               HID_USAGE16(0x030F)
+#define  HID_USAGE_SENSOR_PROPERTY_CHANGE_SENSITIVITY_RANGE_PCT         HID_USAGE16(0x0310)
+#define  HID_USAGE_SENSOR_PROPERTY_CHANGE_SENSITIVITY_REL_PCT           HID_USAGE16(0x0311)
+#define  HID_USAGE_SENSOR_PROPERTY_ACCURACY                             HID_USAGE16(0x0312)
+#define  HID_USAGE_SENSOR_PROPERTY_RESOLUTION                           HID_USAGE16(0x0313)
+#define  HID_USAGE_SENSOR_PROPERTY_RANGE_MAXIMUM                        HID_USAGE16(0x0314)
+#define  HID_USAGE_SENSOR_PROPERTY_RANGE_MINIMUM                        HID_USAGE16(0x0315)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE                      HID_USAGE16(0x0316)
+
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_NO_EVENTS                    HID_USAGE16(0x0840)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_ALL_EVENTS                   HID_USAGE16(0x0841)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_THRESHOLD_EVENTS             HID_USAGE16(0x0842)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_NO_EVENTS_WAKE               HID_USAGE16(0x0843)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_ALL_EVENTS_WAKE              HID_USAGE16(0x0844)
+#define  HID_USAGE_SENSOR_PROPERTY_REPORTING_STATE_THRESHOLD_EVENTS_WAKE        HID_USAGE16(0x0845)
+// clang-format on

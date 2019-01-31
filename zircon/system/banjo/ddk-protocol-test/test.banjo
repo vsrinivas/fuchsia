@@ -1,0 +1,39 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library ddk.protocol.test;
+
+using zx;
+
+struct TestReport {
+    uint32 n_tests;
+    uint32 n_success;
+    uint32 n_failed;
+};
+
+[Layout = "ddk-callback"]
+interface TestFunc {
+    Callback() -> (zx.status s, TestReport report);
+};
+
+[Layout = "ddk-protocol"]
+interface Test {
+    /// Sets test output socket.
+    SetOutputSocket(handle<socket> @handle) -> ();
+
+    /// Gets test output socket.
+    GetOutputSocket() -> (handle<socket> h);
+
+    /// Gets test channel.  This has per-test meaning.
+    GetChannel() -> (handle<channel>? h);
+
+    /// Sets test function.
+    SetTestFunc(TestFunc func) -> ();
+
+    /// Run tests, calls the function set in |SetTestFunc|.
+    RunTests() -> (zx.status s, TestReport report);
+
+    /// Calls `device_remove()`.
+    Destroy() -> ();
+};

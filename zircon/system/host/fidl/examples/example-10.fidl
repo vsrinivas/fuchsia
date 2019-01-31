@@ -1,0 +1,14 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.examples.example10;
+
+[Discoverable]
+interface Thing {
+    1: one_function(string s, bool b) -> ();
+    [ Selector = "Furshlugginer" ]
+    two_function(string s, bool b);
+    three_function(string s, request<Thing> r);
+    four_function(string s, request<Thing> r) -> (handle<channel> r);
+};

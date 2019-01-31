@@ -1,0 +1,24 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.examples.example9;
+
+enum EchoMe {
+    zero = 0;
+    one = 1;
+};
+
+struct EchoMore {
+    uint32 first;
+    uint64 second;
+};
+
+interface Echo {
+    1: Echo32(uint32 uint32) -> (uint32 response);
+    2: Echo64(uint64 uint64) -> (uint64 response);
+    3: EchoEnum(EchoMe req) -> (EchoMe response);
+    4: EchoHandle(handle req) -> (handle response);
+    5: EchoChannel(handle<channel> req) -> (handle<channel> response);
+    6: EchoStruct(EchoMore req) -> (EchoMore response);
+};

@@ -1,0 +1,21 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library banjo.examples.ordinals;
+
+using zx;
+
+interface Foo {
+    SomeMethod();
+    SomeMethodWithAResponse() -> ();
+    -> SomeEvent(zx.status response);
+};
+
+interface Bar {
+    DoIt();
+};
+
+interface FooAndBarWaitTheresMore : Foo, Bar {
+    MoreMoreMore();
+};

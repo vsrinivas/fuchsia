@@ -1,0 +1,12 @@
+This is a simple example of reading/writing messages back and forth.
+
+The program assumes that it starts up with a handle value to a channel and
+that something on the other end of that channel is sending some number of
+Echo calls along the pipe. The program:
+*) waits for the channel to be readable
+*) reads an incoming message
+*) validates that it seems sane
+*) formats a reply message
+*) sends the reply
+*) goes back to waiting
+until the channel peer is closed or any other error is encountered.

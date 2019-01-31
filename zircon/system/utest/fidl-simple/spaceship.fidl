@@ -1,0 +1,64 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.spaceship;
+
+using zx;
+
+// StarData is 16 bytes, all inline.
+struct StarData {
+    array<uint8>:16 data;
+};
+
+// PlanetData is 4 bytes, all inline.
+struct PlanetData {
+    array<uint8>:4 data;
+};
+
+// AstrologicalData is 20 bytes long, i.e. tag of 4 bytes + max(4, 16).
+union AstrologicalData {
+    StarData star;
+    PlanetData planet;
+};
+
+[Layout = "Simple"]
+interface AstrometricsListener {
+    1: OnNova();
+};
+
+enum Alert {
+    GREEN = 1;
+    YELLOW = 2;
+    RED = 3;
+};
+
+struct FuelLevel {
+    uint32 reaction_mass;
+};
+
+struct ZxTypes {
+    zx.status a;
+    zx.time b;
+    zx.duration c;
+    zx.koid d;
+    zx.vaddr e;
+    zx.paddr f;
+    zx.paddr32 g;
+    zx.off h;
+};
+
+const uint32 MaxStarsAdjustHeading = 64;
+const uint32 MaxStarsScanForLifeforms = 64;
+
+[Layout = "Simple"]
+interface SpaceShip {
+    1: AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
+    2: ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
+    3: SetAstrometricsListener(AstrometricsListener listener);
+    4: SetDefenseCondition(Alert alert);
+    5: GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
+    6: AddFuelTank(FuelLevel? level) -> (uint32 consumed);
+    7: ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
+    8: ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
+};

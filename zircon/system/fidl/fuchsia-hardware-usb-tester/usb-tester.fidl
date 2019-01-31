@@ -1,0 +1,87 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.hardware.usb.tester;
+
+using zx;
+
+const uint32 MAX_SG_SEGMENTS = 256;
+const uint64 MAX_PACKETS = 256;
+
+enum DataPatternType : uint8 {
+    CONSTANT = 1;
+    RANDOM = 2;
+};
+
+struct BulkTestParams {
+    /// The type of data to transfer.
+    DataPatternType data_pattern;
+    /// Total number of bytes to transfer.
+    uint64 len;
+};
+
+struct PacketOptions {
+    /// Whether to request a callback for the transfer.
+    bool set_cb;
+    /// Whether we want the transfer to fail with an error.
+    bool set_error;
+    /// Whether to expect a callback for the transfer.
+    bool expect_cb;
+};
+
+struct IsochTestParams {
+    /// The type of data to transfer.
+    DataPatternType data_pattern;
+    /// The number of packets to send.
+    uint64 num_packets;
+    /// Number of bytes in each packet.
+    uint16 packet_size;
+
+    /// Optional array of additional options for the OUT packets.
+    // TODO(jocelyndang): A vector would break the current requirement for a simple C binding.
+    array<PacketOptions>:MAX_PACKETS packet_opts;
+    /// Number of entries in |packet_opts|. This can be less than |num_packets|,
+    /// in which case defaults will be chosen for the remaining packets.
+    /// Any entries provided after |num_packets| will be ignored.
+    uint64 packet_opts_len;
+};
+
+struct SgEntry {
+    /// Number of bytes in the scatter gather entry.
+    uint64 length;
+    /// Offset in bytes from the start of the data buffer.
+    uint64 offset;
+};
+
+struct SgList {
+    // A vector would break the current requirement for a simple C binding.
+    array<SgEntry>:MAX_SG_SEGMENTS entries;
+    /// Number of entries in the scatter gather list.
+    uint64 len;
+};
+
+struct IsochResult {
+    /// Number of packets loopbacked successfully.
+    uint64 num_passed;
+    /// Number of packets transferred to each EP.
+    uint64 num_packets;
+};
+
+[Layout = "Simple"]
+interface Device {
+    /// Resets the device to firmware loader mode.
+    1: SetModeFwloader() -> (zx.status s);
+
+    /// Performs a data loopback on the bulk endpoint of the test device.
+    /// Returns ZX_OK if the loopback succeeded.
+    2: BulkLoopback(BulkTestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
+
+    /// Performs a data loopback on the isochronous endpoint of the test device.
+    /// Returns ZX_OK if no fatal error occurred during the loopback, and also returns the result
+    /// of the transfers. Isochronous transfers are not guaranteed to all succeed.
+    3: IsochLoopback(IsochTestParams params) -> (zx.status s, IsochResult result);
+
+    /// Returns the test firmware version in the form major_version.minor_version.
+    4: GetVersion() -> (uint8 major_version, uint8 minor_version);
+};

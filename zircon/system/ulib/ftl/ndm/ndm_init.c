@@ -1,0 +1,1334 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include "ndmp.h"
+
+#if INC_NDM
+#include <kprivate/fsprivate.h>
+
+// Symbol Definitions
+#define NDM_META_BLKS 2  // blocks reserved for internal use
+
+// Global Variable Declarations
+CircLink NdmDevs;
+SEM NdmSem;
+static int NdmSemCount;
+#if NV_NDM_CTRL_STORE
+static ui8 NdmDevCnt;
+#endif
+
+// Local Function Definitions
+
+// get_page_status: Examine page to see if it is an NDM control page
+//
+//      Inputs: ndm = pointer to NDM control block
+//              pn = page to examine
+//
+//     Returns: -1 if I/O error, NDM_CTRL_BLOCK (2) if control page,
+//              or NDM_REG_BLOCK (3) if ECC, CRC, sig, or flag fails
+//
+static int get_page_status(CNDM ndm, ui32 pn) {
+    int i, j, status;
+    ui32 crc;
+
+    // Read spare area to check page type. Use read_decode_spare() if
+    // decode is 'free', to avoid second read. Return -1 if I/O error,
+    // regular block if ECC error.
+    if (FLAG_IS_CLR(ndm->flags, FSF_FREE_SPARE_ECC)) {
+        status = ndm->read_spare(pn, ndm->spare_buf, ndm->dev);
+    } else {
+        status = ndm->read_decode_spare(pn, ndm->spare_buf, ndm->dev);
+        if (status == -1)
+            return NDM_REG_BLOCK;
+    }
+    if (status < 0)
+        return FsError(EIO);
+
+    // Block is regular block if regular page mark is not cleared.
+    if (ONES_UI8(ndm->spare_buf[EB_REG_MARK]) >= 7)
+        return NDM_REG_BLOCK;
+
+    // If not done already, read decode spare area. Return -1 if fatal
+    // error, regular block if ECC error.
+    if (FLAG_IS_CLR(ndm->flags, FSF_FREE_SPARE_ECC)) {
+        status = ndm->read_decode_spare(pn, ndm->spare_buf, ndm->dev);
+        if (status == -2)
+            return FsError(EIO);
+        else if (status == -1)
+            return NDM_REG_BLOCK;
+    }
+
+    // Check signature in spare area to ensure this is a control page.
+    for (i = j = 0; i < CTRL_SIG_SZ; ++i) {
+        // Skip the bad block mark in extra bytes.
+        if (i == EB_BBLOCK_MARK)
+            ++j;
+
+        // Block is regular block if signature is invalid.
+        if (ndm->spare_buf[i + j] != CTRL_SIG[i])
+            return NDM_REG_BLOCK;
+    }
+
+    // Read main data. Return -1 if fatal err, regular block if ECC err.
+    status = ndm->read_page(pn, ndm->main_buf, ndm->spare_buf, ndm->dev);
+    if (status == -2)
+        return FsError(EIO);
+    else if (status == -1)
+        return NDM_REG_BLOCK;
+
+    // Perform CRC on page. The 4 CRC bytes are in the page header.
+    // First perform CRC on all but the 4 CRC bytes.
+    for (crc = CRC32_START, i = 0; (ui32)i < ndm->page_size; ++i) {
+        if (i == HDR_CRC_LOC)
+            i = CTRL_DATA_START;
+        crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
+    }
+
+    // Now run the CRC bytes through the CRC encoding.
+    for (i = HDR_CRC_LOC; i < CTRL_DATA_START; ++i) //lint !e850
+        crc = CRC32_UPDATE(crc, ndm->main_buf[i]);
+
+    // If the CRC does not match, page is not control page.
+    if (crc != CRC32_FINAL)
+        return NDM_REG_BLOCK;
+
+    // Valid signature found. This is a control block.
+    return NDM_CTRL_BLOCK;
+}
+
+// format_status: Check if NDM device is formatted
+//
+//      Inputs: ndm = pointer to NDM control block
+//
+//     Returns: TRUE if formatted, FALSE unformatted, -1 if error
+//
+static int format_status(NDM ndm) {
+    ui32 b;
+    int status;
+
+    // Search reserved good blocks for control info, starting from end.
+    for (b = ndm->num_dev_blks - 1;; --b) {
+        ui32 pn = b * ndm->pgs_per_blk;
+
+        // Get block's initial good/bad status. Return -1 if error.
+        status = ndm->is_block_bad(pn, ndm->dev);
+        if (status < 0)
+            return FsError(EIO);
+
+        // If good, check block's first page for control information.
+        if (status == FALSE) {
+            // Get page status. Return -1 if error.
+            status = get_page_status(ndm, pn);
+            if (status == -1)
+                return -1;
+
+            // If control info found, device is formatted. Return TRUE.
+            if (status == NDM_CTRL_BLOCK) {
+#if NDM_DEBUG
+                printf("NDM formatted - block #%u has control info!\n", b);
+#endif
+                PfAssert(ndm->ctrl_blk0 == (ui32)-1);
+                ndm->ctrl_blk0 = b;
+                return TRUE;
+            }
+        }
+
+        // Return FALSE if no metadata in range used for control blocks.
+        if (b == ndm->num_dev_blks - NDM_META_BLKS - ndm->max_bad_blks)
+            return FALSE;
+    }
+}
+
+// get_free_ctrl_blk: Get next free block reserved for replacing bad
+//              control blocks (starts at highest and goes down)
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: Block number of free block or (ui32)-1 if none left
+//
+static ui32 get_free_ctrl_blk(NDM ndm) {
+    ui32 free_b = ndm->free_ctrl_blk;
+
+    // Move free control block pointer one down, if any free blocks left.
+    if (free_b != (ui32)-1) {
+        ui32 b = free_b - 1;
+
+        // Skip past initial bad blocks.
+        while (b >= ndm->free_virt_blk && ndmInitBadBlock(ndm, b)) --b;
+
+        // If above the blocks reserved for swapping bad virtual blocks,
+        // update the free control block pointer. Else fail.
+        if (b >= ndm->free_virt_blk)
+            ndm->free_ctrl_blk = b;
+        else
+            ndm->free_virt_blk = ndm->free_ctrl_blk = (ui32)-1;
+    }
+
+    // Return free control block number or -1.
+    return free_b;
+}
+
+// set_frst_ndm_block: Compute the cutoff point between virtual area
+//              and the NDM reserved area
+//
+//       Input: ndm = pointer to NDM control block
+//
+static void set_frst_ndm_block(NDM ndm) {
+    ui32 i;
+
+    // There must be enough good (non-initial bad) blocks before the cut
+    // off point to hold all the virtual blocks. Find the lowest offset
+    // past the virtual block count that satisfies this.
+    for (i = 0;; ++i) {
+        // If the offset reaches the number of initially bad blocks, then
+        // there are definitely num_vblks good blocks below this cutoff.
+        if (i == ndm->num_bad_blks)
+            break;
+
+        // 'i' is the number of initial bad blocks preceding the indexed
+        // initial bad block. Break when the number of volume blocks and
+        // skipped bad blocks is less than the indexed initial bad block.
+        if (ndm->num_vblks + i < ndm->init_bad_blk[i])
+            break;
+    }
+
+    // The cutoff point is num_vblks plus the determined offset.
+    ndm->frst_reserved = ndm->num_vblks + i;
+}
+
+// init_ibad_list: Initialize list of initially bad blocks
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on error
+//
+static int init_ibad_list(NDM ndm) {
+    int status;
+    ui32 b;
+
+    // Build the initial bad block map by scanning all blocks in order
+    // from lowest to highest. Supports "skip bad block" programming.
+    ndm->num_bad_blks = 0;
+    for (b = 0; b < ndm->num_dev_blks; ++b) {
+        // Get block's initial good/bad status. Return -1 if error.
+        status = ndm->is_block_bad(b * ndm->pgs_per_blk, ndm->dev);
+        if (status < 0)
+            return FsError(EIO);
+
+        // Check if block is an initial bad block.
+        if (status == TRUE) {
+            // If too many bad blocks encountered, error. Return -1.
+            if (ndm->num_bad_blks >= ndm->max_bad_blks)
+                return FsError(EINVAL);
+
+            // Add block to initial bad blocks array and increment bad count.
+            ndm->init_bad_blk[ndm->num_bad_blks] = b;
+#if NDM_DEBUG
+            printf("init_ibad_lis: adding block #%u to init_bad_blk[%u]\n", b, ndm->num_bad_blks);
+#endif
+            ++ndm->num_bad_blks;
+        }
+    }
+
+    // Set the last initial bad block entry to the device block count.
+    ndm->init_bad_blk[ndm->num_bad_blks] = ndm->num_dev_blks;
+#if NDM_DEBUG
+    printf("init_ibad_lis: LAST init_bad_blk[%u] = %u\n", ndm->num_bad_blks, ndm->num_dev_blks);
+#endif
+
+    // Return success.
+    return 0;
+}
+
+//  ndm_format: Format previously unformatted device
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on error
+//
+static int ndm_format(NDM ndm) {
+    ui32 b;
+
+#if NV_NDM_CTRL_STORE
+    // Invalidate the saved first page of NDM control information.
+    NvNdmCtrlPgWr(0);
+#endif
+
+    // Build the initial bad block map by scanning all blocks in order.
+    if (init_ibad_list(ndm))
+        return -1;
+
+    // Compute the cutoff between virtual blocks and reserved blocks.
+    set_frst_ndm_block(ndm);
+
+    // Set the free control block (last good block) and free volume
+    // block (first good block after cutoff) pointers.
+    for (b = ndm->frst_reserved; b < ndm->num_dev_blks; ++b) {
+        // If initial bad block, skip it.
+        if (ndmInitBadBlock(ndm, b))
+            continue;
+
+        // If first free block pointer is not set, set it.
+        if (ndm->free_virt_blk == (ui32)-1)
+            ndm->free_virt_blk = b;
+
+        // Set the last good block as the start of the metadata blocks.
+        ndm->free_ctrl_blk = b;
+    }
+
+    // The last two good free blocks are used for control information.
+    ndm->ctrl_blk0 = get_free_ctrl_blk(ndm);
+    ndm->ctrl_blk1 = get_free_ctrl_blk(ndm);
+    if (ndm->ctrl_blk1 == (ui32)-1)
+        return FsError(ENOSPC);
+#if NDM_DEBUG
+    printf("NDM ctrl_blk0=%u, ctrl_blk1=%u\n", ndm->ctrl_blk0, ndm->ctrl_blk1);
+#endif
+
+    // Begin the first control write on ctrl_blk0.
+    ndm->next_ctrl_start = ndm->ctrl_blk0 * ndm->pgs_per_blk;
+
+    // Write initial control information and return status.
+    ndm->xfr_tblk = (ui32)-1;
+    return ndmWrCtrl(ndm);
+}
+
+// find_last_ctrl_info: Find last valid control information
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 if found, -1 otherwise
+//
+static int find_last_ctrl_info(NDM ndm) {
+    ui32 b, p, high_seq = (ui32)-1, curr_seq;
+    ui32 p_beg, p_end, last_ctrl_p = 0, ctrl_pages = 0;
+    ui16 curr_p, last_p;
+    int page_status;
+
+#if NV_NDM_CTRL_STORE
+    // Check if number of first control information page has been saved.
+    p = NvNdmCtrlPgRd();
+    if (p) {
+        // Get the page status. If I/O error, return -1.
+        page_status = get_page_status(ndm, p);
+        if (page_status == -1)
+            return -1;
+
+        // Check if it is a control page.
+        if (page_status == NDM_CTRL_BLOCK) {
+            // Check if it is the last page of a control information write.
+            curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+            ctrl_pages = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+            if (curr_p == ctrl_pages) {
+                // Read its (the highest) sequence number and use this page.
+                high_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
+                last_ctrl_p = p;
+            }
+        }
+    }
+
+    // If last control page not known from NVRAM, search all reserved
+    // blocks for it: from ctrl_blk0 (highest block w/control info) to
+    // num_vblks.
+    if (last_ctrl_p == 0)
+#endif
+    {
+        for (b = ndm->ctrl_blk0; b >= ndm->num_vblks; --b) {
+            // Get first and last page numbers to search.
+            p_beg = b * ndm->pgs_per_blk;
+            p_end = p_beg + ndm->pgs_per_blk - 1;
+
+            // Check if not block that format_status() found metadata on.
+            if (b != ndm->ctrl_blk0) {
+                // Get status of block's first page. If error, return -1.
+                page_status = get_page_status(ndm, p_beg);
+                if (page_status == -1)
+                    return -1;
+
+                // Skip block if its first page is not a control page.
+                if (page_status != NDM_CTRL_BLOCK)
+                    continue;
+            }
+
+            // Search block from end to beginning for last control page.
+            for (p = p_end; p >= p_beg; --p) {
+                // Get the page status. If error, return -1.
+                page_status = get_page_status(ndm, p);
+                if (page_status == -1)
+                    return -1;
+
+                // If page is not control page, skip it.
+                if (page_status != NDM_CTRL_BLOCK)
+                    continue;
+
+                // If this is not the last page of a control info, skip it.
+                curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+                last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+                if (curr_p != last_p)
+                    continue;
+
+                // Read current sequence number.
+                curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
+
+                // If first 'last page' found or most recent, remember it.
+                if (high_seq == (ui32)-1 || curr_seq > high_seq) {
+                    // Remember its sequence number and first/last page numbers.
+                    high_seq = curr_seq;
+                    last_ctrl_p = p;
+                    ctrl_pages = last_p;
+#if NDM_DEBUG
+                    printf(
+                        "find_ctrl: seq #%u, last = %u (block = %u), "
+                        "# pages = %u\n",
+                        high_seq, last_ctrl_p, last_ctrl_p / ndm->pgs_per_blk, ctrl_pages);
+#endif
+                }
+
+                // Break to search next block.
+                break;
+            }
+        }
+    }
+
+    // If no last control page found, no control information on device.
+    if (high_seq == (ui32)-1)
+        return -1;
+
+    // Save information found so far.
+    ndm->last_ctrl_page = last_ctrl_p;
+    ndm->ctrl_pages = ctrl_pages;
+    ndm->ctrl_seq = high_seq;
+
+    // If control information is only one page, finish (success!) here.
+    if (ctrl_pages == 1) {
+        ndm->frst_ctrl_page = last_ctrl_p;
+        return 0;
+    }
+
+    // Search for first page of latest control info in block with last.
+    p_end = (last_ctrl_p / ndm->pgs_per_blk) * ndm->pgs_per_blk;
+    for (p = last_ctrl_p - 1; p >= p_end; --p) {
+        // Get the page status. If error, return -1.
+        page_status = get_page_status(ndm, p);
+        if (page_status == -1)
+            return -1;
+
+        // If page is not control page, skip it.
+        if (page_status != NDM_CTRL_BLOCK)
+            continue;
+
+        // If matching first control page found, return success.
+        curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
+        curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+        last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+        if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
+#if NDM_DEBUG
+            printf("find_ctrl: first = %u (block = %u)\n", p, p / ndm->pgs_per_blk);
+#endif
+            ndm->frst_ctrl_page = p;
+            return 0;
+        }
+    }
+
+    // First page wasn't found, scan all other NDM reserved blocks.
+    for (b = ndm->ctrl_blk0; b >= ndm->num_vblks; --b) {
+        // Skip the scanned block.
+        if (b == last_ctrl_p / ndm->pgs_per_blk)
+            continue;
+
+        // Get first and last page numbers to search.
+        p_beg = b * ndm->pgs_per_blk;
+        p_end = p_beg + ndm->pgs_per_blk - 1;
+
+        // Start scanning the pages in the block.
+        for (p = p_beg; p <= p_end; ++p) {
+            // Get the page status. If error, return -1.
+            page_status = get_page_status(ndm, p);
+            if (page_status == -1)
+                return -1;
+
+            // If page is not control page, skip it.
+            if (page_status != NDM_CTRL_BLOCK)
+                continue;
+
+            // If first control page found, return success.
+            curr_seq = RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]);
+            curr_p = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+            last_p = RD16_LE(&ndm->main_buf[HDR_LAST_LOC]);
+            if (curr_p == 1 && curr_seq == high_seq && last_p == ctrl_pages) {
+#if NDM_DEBUG
+                printf("find_ctrl: first = %u (block = %u)\n", p, p / ndm->pgs_per_blk);
+#endif
+                ndm->frst_ctrl_page = p;
+                return 0;
+            }
+        }
+    }
+
+    // First control page not found, return -1.
+    return -1;
+}
+
+// is_next_ctrl_page: Determine if page is next in control sequence
+//
+//      Inputs: ndm = pointer to NDM control block
+//              pn = page to analyze
+//              curr_num = current number in control sequence
+//
+//     Returns: NDM_CTRL_BLOCK iff page next one, NDM_REG_BLOCK if
+//              not, -1 on error
+//
+static int is_next_ctrl_page(CNDM ndm, ui32 pn, ui16 curr_num) {
+    int page_status;
+
+    // Get the page status.
+    page_status = get_page_status(ndm, pn);
+    if (page_status != NDM_CTRL_BLOCK)
+        return page_status;
+
+    // Read page in. Return -1 if error (ECC or fatal).
+    if (ndm->read_page(pn, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
+        return FsError(EIO);
+
+    // Determine if this is the next control page in sequence.
+    if (RD16_LE(&ndm->main_buf[HDR_CURR_LOC]) == curr_num + 1 &&
+        RD16_LE(&ndm->main_buf[HDR_LAST_LOC]) == ndm->ctrl_pages &&
+        RD32_LE(&ndm->main_buf[HDR_SEQ_LOC]) == ndm->ctrl_seq)
+        return NDM_CTRL_BLOCK;
+
+    // Else this is a regular block.
+    return NDM_REG_BLOCK;
+}
+
+// get_next_ctrl_page: Retrieve next page in control info
+//
+//      Inputs: ndm = pointer to NDM control block
+//              curr_p = current control page
+//
+//     Returns: Next control page, -1 on error
+//
+static ui32 get_next_ctrl_page(CNDM ndm, ui32 curr_p) {
+    ui16 curr_num;
+    ui32 p, p_end;
+    int page_status;
+
+    // Retrieve current number in control info sequence.
+    curr_num = RD16_LE(&ndm->main_buf[HDR_CURR_LOC]);
+
+    // If there's no next control page according to header, return -1.
+    if (curr_num >= ndm->ctrl_pages)
+        return (ui32)FsError(EINVAL);
+
+    // Look for page in same block first.
+    for (p = curr_p + 1; p % ndm->pgs_per_blk; ++p) {
+        page_status = is_next_ctrl_page(ndm, p, curr_num);
+        if (page_status == NDM_CTRL_BLOCK)
+            return p;
+        else if (page_status == -1)
+            return (ui32)-1;
+    }
+
+    // Get first and last page numbers in opposing control block.
+    if (curr_p / ndm->pgs_per_blk == ndm->ctrl_blk0)
+        p = ndm->ctrl_blk1 * ndm->pgs_per_blk;
+    else
+        p = ndm->ctrl_blk0 * ndm->pgs_per_blk;
+    p_end = p + ndm->pgs_per_blk - 1;
+
+    // Search second control block for next control page.
+    do {
+        page_status = is_next_ctrl_page(ndm, p, curr_num);
+        if (page_status == NDM_CTRL_BLOCK)
+            return p;
+        else if (page_status == -1)
+            return (ui32)-1;
+    } while (++p <= p_end);
+
+    // At this point, no next page can be found.
+    return (ui32)FsError(EINVAL);
+}
+
+// check_next_read: If next read spans control pages, adjust the
+//                  current control information pointers
+//
+//       Input: ndm = pointer to NDM control block
+//   In/Output:curr_loc = current location in control page
+//   In/Output:pn = current control page
+//   In/Output:ctrl_pages = control pages read so far
+//       Input:  size = size of next read in bytes
+//
+//     Returns: 0 on success, -1 on failure
+//
+static int check_next_read(CNDM ndm, ui32* curr_loc, ui32* pn, ui32* ctrl_pages, ui32 size) {
+    // If next read goes past end of current control page, read next.
+    if (*curr_loc + size > ndm->page_size) {
+        // Figure out where the next page is.
+        *pn = get_next_ctrl_page(ndm, *pn);
+        if (*pn == (ui32)-1)
+            return -1;
+
+        // Reset current control location to beginning of the next page.
+        *curr_loc = CTRL_DATA_START;
+        *ctrl_pages += 1;
+
+        // Read the next page. Return -1 if error (ECC or fatal).
+        if (ndm->read_page(*pn, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
+            return FsError(EIO);
+#if NDM_DEBUG
+        printf("read_ctrl: READ page #%u\n", *pn);
+#endif
+    }
+
+    // Return success.
+    return 0;
+}
+
+// read_ctrl_info: Read the NDM control information
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on failure
+//
+static int read_ctrl_info(NDM ndm) {
+    ui32 bn, vbn, i, curr_loc = CTRL_DATA_START, ctrl_pages = 1;
+    ui32 p = ndm->frst_ctrl_page;
+
+    // Read the first control page. Return -1 if error (ECC or fatal).
+    if (ndm->read_page(p, ndm->main_buf, ndm->spare_buf, ndm->dev) < 0)
+        return FsError(EIO);
+#if NDM_DEBUG
+    printf("read_ctrl: READ page #%u\n", p);
+#endif
+
+    // Ensure the number of blocks and block size are correct.
+    if (ndm->num_dev_blks != RD32_LE(&ndm->main_buf[curr_loc]))
+        return FsError(EINVAL);
+    curr_loc += sizeof(ui32);
+    if (ndm->block_size != RD32_LE(&ndm->main_buf[curr_loc]))
+        return FsError(EINVAL);
+    curr_loc += sizeof(ui32);
+
+    // Retrieve the control block pointers.
+    ndm->ctrl_blk0 = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+    ndm->ctrl_blk1 = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+
+    // Retrieve free_virt_blk pointer.
+    ndm->free_virt_blk = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+
+    // Retrieve free_ctrl_blk pointer.
+    ndm->free_ctrl_blk = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+
+#if NDM_DEBUG
+    printf("read_ctrl info:\n");
+    printf("  -> ctrl_seq    = %u\n", ndm->ctrl_seq);
+    printf("  -> ctrl_blk0   = %u\n", ndm->ctrl_blk0);
+    printf("  -> ctrl_blk1   = %u\n", ndm->ctrl_blk1);
+    printf("  -> free_virt_blk = %u\n", ndm->free_virt_blk);
+    printf("  -> free_ctrl_blk = %u\n", ndm->free_ctrl_blk);
+#endif
+
+    // Retrieve the transfer to block (if any).
+    ndm->xfr_tblk = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+
+    // If a bad block was being transferred, retrieve all other relevant
+    // information about it so that the transfer can be redone.
+    if (ndm->xfr_tblk != (ui32)-1) {
+        // Retrieve the physical bad block being transferred.
+        ndm->xfr_fblk = RD32_LE(&ndm->main_buf[curr_loc]);
+        curr_loc += sizeof(ui32);
+
+        // Retrieve the page offset of bad page in bad block.
+        ndm->xfr_bad_po = RD32_LE(&ndm->main_buf[curr_loc]);
+        curr_loc += sizeof(ui32);
+
+        // Skip obsolete full/partial transfer flag.
+        ++curr_loc;
+
+#if NDM_DEBUG
+        printf("  -> xfr_tblk       = %u\n", ndm->xfr_tblk);
+        printf("  -> xfr_fblk       = %u\n", ndm->xfr_fblk);
+        printf("  -> xfr_bad_po     = %u\n", ndm->xfr_bad_po);
+#endif
+    }
+
+#if NDM_DEBUG
+    else
+        puts("  -> xfr_tblk       = -1");
+#endif
+
+    // Retrieve the number of partitions.
+    ndm->num_partitions = RD32_LE(&ndm->main_buf[curr_loc]);
+    curr_loc += sizeof(ui32);
+#if NDM_DEBUG
+    printf("  -> num_partitions = %u\n", ndm->num_partitions);
+    printf("read_ctrl: init_bad_blk[]\n");
+#endif
+
+    // Retrieve the initial bad blocks map.
+    for (ndm->num_bad_blks = i = 0;; ++i) {
+        // If too many initial bad blocks, error.
+        if (ndm->num_bad_blks > ndm->max_bad_blks)
+            return FsError(EINVAL);
+
+        // If next read spans control pages, adjust. Return -1 if error.
+        if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, sizeof(ui32)))
+            return -1;
+
+        // Retrieve the next initial bad block.
+        bn = RD32_LE(&ndm->main_buf[curr_loc]);
+        curr_loc += sizeof(ui32);
+
+#if NDM_DEBUG
+        printf("    [%u] = %u\n", i, bn);
+#endif
+
+        // Store block in initial bad block map and check for end of map.
+        ndm->init_bad_blk[i] = bn;
+        if (bn == ndm->num_dev_blks)
+            break;
+
+        // Adjust running count of bad blocks to account for this one.
+        ++ndm->num_bad_blks;
+    }
+
+#if NDM_DEBUG
+    puts("read_ctrl: run_bad_blk[]");
+#endif
+
+    // Retrieve running bad blocks map.
+    for (ndm->num_rbb = 0;; ++ndm->num_rbb) {
+        // If too many bad blocks, error.
+        if (ndm->num_bad_blks > ndm->max_bad_blks)
+            return FsError(EINVAL);
+
+        // If next read spans control pages, adjust. Return -1 if error.
+        if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, 2 * sizeof(ui32)))
+            return -1;
+
+        // Retrieve the next running bad block pair.
+        vbn = RD32_LE(&ndm->main_buf[curr_loc]);
+        curr_loc += sizeof(ui32);
+        bn = RD32_LE(&ndm->main_buf[curr_loc]);
+        curr_loc += sizeof(ui32);
+
+        // If end of running blocks reached, stop.
+        if (vbn == (ui32)-1 && bn == (ui32)-1)
+            break;
+
+        // Store bad block pair in running block map.
+        ndm->run_bad_blk[ndm->num_rbb].key = vbn;
+        ndm->run_bad_blk[ndm->num_rbb].val = bn;
+
+#if NDM_DEBUG
+        printf("    [%u] key = %u, val = %u\n", ndm->num_rbb, vbn, bn);
+#endif
+
+        // Adjust running count of bad blocks to account for this one.
+        ++ndm->num_bad_blks;
+    }
+
+    // Retrieve the NDM partitions if any.
+    if (ndm->num_partitions) {
+        // If not already done, allocate memory for partitions table.
+        if (ndm->partitions == NULL) {
+            ndm->partitions = FsCalloc(ndm->num_partitions, sizeof(NDMPartition));
+            if (ndm->partitions == NULL)
+                return -1;
+        }
+
+#if NDM_DEBUG
+        puts("read_ctrl: partitions[]");
+#endif
+
+        // Read partitions from the control information one at a time.
+        for (i = 0; i < ndm->num_partitions; ++i) {
+#if NDM_PART_USER
+            ui32 j;
+#endif
+
+            // If next read spans control pages, adjust. Return -1 if error.
+            if (check_next_read(ndm, &curr_loc, &p, &ctrl_pages, sizeof(NDMPartition)))
+                return -1;
+
+            // Retrieve the next partition. Read partition first block.
+            ndm->partitions[i].first_block = RD32_LE(&ndm->main_buf[curr_loc]);
+            curr_loc += sizeof(ui32);
+
+            // Read partition number of blocks.
+            ndm->partitions[i].num_blocks = RD32_LE(&ndm->main_buf[curr_loc]);
+            curr_loc += sizeof(ui32);
+
+#if NDM_PART_USER
+            // Read the user defined ui32s.
+            for (j = 0; j < NDM_PART_USER; ++j) {
+                ndm->partitions[i].user[j] = RD32_LE(&ndm->main_buf[curr_loc]);
+                curr_loc += sizeof(ui32);
+            }
+#endif
+
+            // Read the partition name.
+            strncpy(ndm->partitions[i].name, (char*)&ndm->main_buf[curr_loc],
+                    NDM_PART_NAME_LEN - 1);
+            curr_loc += NDM_PART_NAME_LEN;
+
+            // Read the partition type.
+            ndm->partitions[i].type = ndm->main_buf[curr_loc++];
+
+#if NDM_DEBUG
+            printf(" partition[%2u]:\n", i);
+            printf("   - name        = %s\n", ndm->partitions[i].name);
+            printf("   - first block = %u\n", ndm->partitions[i].first_block);
+            printf("   - num blocks  = %u\n", ndm->partitions[i].num_blocks);
+#if NDM_PART_USER
+            for (j = 0; j < NDM_PART_USER; ++j)
+                printf("   - user[%u]     = %u\n", j, ndm->partitions[i].user[j]);
+#endif
+            printf("   - type        = ");
+            switch (ndm->partitions[i].type) {
+                case 0:
+                    puts("NONE");
+                    break;
+                case FFS_VOL:
+                    puts("FFS");
+                    break;
+                case FAT_VOL:
+                    puts("FAT");
+                    break;
+                default:
+                    printf("%u\n", ndm->partitions[i].type);
+                    break;
+            }
+#endif // NDM_DEBUG
+        }
+    }
+
+    // Check that number of read pages agrees with recorded one.
+    if (ctrl_pages != ndm->ctrl_pages || p != ndm->last_ctrl_page)
+        return FsError(EINVAL);
+
+    // Return success.
+    return 0;
+}
+
+// recover_bad_blk: Recover from an unexpected power down while a bad
+//              block was being transferred
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on failure
+//
+static int recover_bad_blk(NDM ndm) {
+    ui32 i, bpn;
+    int rc;
+
+    // Ensure the 'transfer from' block value is valid.
+    if (ndm->xfr_fblk >= ndm->num_dev_blks)
+        return FsError(EINVAL);
+
+    // Ensure the 'transfer to' block value is valid.
+    if (ndm->xfr_tblk < ndm->frst_reserved || ndm->xfr_tblk >= ndm->free_virt_blk)
+        return FsError(EINVAL);
+
+    // Erase the 'transfer to' block. Return if fatal error.
+    rc = ndm->erase_block(ndm->xfr_tblk * ndm->pgs_per_blk, ndm->dev);
+    if (rc == -2)
+        return FsError(EIO);
+
+    // Check if block erase command failed.
+    if (rc < 0) {
+        // Adjust bad block count. If too many, error.
+        if (++ndm->num_bad_blks > ndm->max_bad_blks)
+            return FsError(ENOSPC);
+
+        // Find running list entry with this 'transfer from/to' block pair.
+        for (i = 0;; ++i) {
+            if (i == ndm->num_rbb)
+                return FsError(EINVAL);
+            if (ndm->run_bad_blk[i].key == ndm->xfr_fblk &&
+                ndm->run_bad_blk[i].val == ndm->xfr_tblk)
+                break;
+        }
+
+        // Invalidate the 'transfer to' block since it's bad now.
+        ndm->run_bad_blk[i].val = (ui32)-1;
+
+        // Add new bad block list entry with this 'transfer to' block.
+        ndm->run_bad_blk[ndm->num_rbb].key = ndm->xfr_tblk;
+        ndm->run_bad_blk[ndm->num_rbb].val = (ui32)-1;
+        ++ndm->num_rbb;
+    }
+
+    // Else erase was successful. Adjust free block pointer.
+    else {
+        PfAssert(ndm->free_virt_blk == (ui32)-1 || ndm->xfr_tblk + 1 == ndm->free_virt_blk);
+        ndm->free_virt_blk = ndm->xfr_tblk;
+    }
+
+    // Reset 'transfer to' block pointer.
+    ndm->xfr_tblk = (ui32)-1;
+
+    // Figure out bad page number on bad block.
+    bpn = ndm->xfr_fblk * ndm->pgs_per_blk + ndm->xfr_bad_po;
+
+    // Mark block bad and do bad block recovery for write failure.
+    return ndmMarkBadBlock(ndm, bpn, WRITE_PAGE);
+}
+
+//    init_ndm: Initialize an NDM by reading the flash
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on failure
+//
+static int init_ndm(NDM ndm) {
+    int is_formatted, wr_metadata;
+    ui32 ctrl_blk;
+
+    // Analyze device to see if it is formatted. Return -1 if error.
+    is_formatted = format_status(ndm);
+    if (is_formatted < 0)
+        return -1;
+
+    // If device not NDM formatted, scan and format it. Return status.
+    if (!is_formatted)
+        return ndm_format(ndm);
+
+    // Else device is NDM formatted. Find latest control information.
+    if (find_last_ctrl_info(ndm))
+        return -1;
+
+    // Read the control information. Return -1 if error.
+    PfAssert(ndm->ctrl_blk1 == (ui32)-1);
+    if (read_ctrl_info(ndm))
+        return -1;
+
+    // Set flag if configured to write metadata at every startup to
+    // ensure control block reads don't create read-disturb errors.
+    wr_metadata = FLAG_IS_SET(ndm->flags, FSF_NDM_INIT_WRITE);
+
+    // Match the block the control information was found on with either
+    // ctrl_blk0 or ctrl_blk1, pick other block for next control write.
+    ctrl_blk = ndm->last_ctrl_page / ndm->pgs_per_blk;
+    if (ctrl_blk == ndm->ctrl_blk0)
+        ctrl_blk = ndm->ctrl_blk1;
+    else if (ctrl_blk == ndm->ctrl_blk1)
+        ctrl_blk = ndm->ctrl_blk0;
+
+    // Else this must be the first start from a preprogrammed image.
+    else {
+        // Fail start-up if image's running bad block count is non-zero.
+        if (ndm->num_rbb)
+            return FsError(ENXIO);
+
+        // Redo the initial bad block list for our device.
+        if (init_ibad_list(ndm))
+            return -1;
+
+        // Request first metadata write and have it on ctrl_blk0.
+        ctrl_blk = ndm->ctrl_blk0;
+        wr_metadata = TRUE;
+    }
+
+    // Assign starting control write page number.
+    ndm->next_ctrl_start = ctrl_blk * ndm->pgs_per_blk;
+
+    // Compute the cutoff between virtual blocks and reserved blocks.
+    set_frst_ndm_block(ndm);
+
+    // Ensure even lowest running bad block lies in reserved area.
+    if (ndm->run_bad_blk[0].val < ndm->frst_reserved)
+        return -1;
+
+    // If in the middle of transferring a bad block, continue transfer.
+    if (ndm->xfr_tblk != (ui32)-1)
+        return recover_bad_blk(ndm);
+
+    // Write NDM control information if needed.
+    if (wr_metadata) {
+        ndm->xfr_tblk = (ui32)-1;
+        return ndmWrCtrl(ndm);
+    } else
+        return 0;
+}
+
+// ndm_xfr_page: Substitute if driver does not supply transfer_page()
+//
+//     Inputs: old_pn = old page number
+//             new_pn = new page number
+//             buf = pointer to temperary buffer for page data
+//             old_spare = buffer to hold old page spare contents
+//             new_spare = buffer to hold new page spare contents
+//             encode_spare = flag to encode/not encode spare bytes
+//                            1 through 14 (FTL encodes/FFS does not)
+//             ndm_ptr = pointer to TargetNDM control block
+//
+//    Returns: 0 on success, -2 on fatal error, -1 on chip error,
+//             1 on ECC decode error
+//
+static int ndm_xfr_page(ui32 old_pn, ui32 new_pn, ui8* buf, ui8* old_spare, ui8* new_spare,
+                        int encode_spare, void* ndm_ptr) {
+    int status;
+    NDM ndm = ndm_ptr;
+
+    // Read page data. Return is 1, 0, -2, or -1.
+    status = ndm->read_page(old_pn, buf, old_spare, ndm->dev);
+
+    // Error check: return 1 for ECC decode error, else -2 fatal error.
+    if (status < 0) {
+        if (status == -1)
+            return 1;
+        FsError(EIO);
+        return -2;
+    }
+
+    // Write data page to flash and return status.
+    return ndm->write_page(new_pn, buf, new_spare, encode_spare, ndm->dev);
+}
+
+// Global Function Definitions
+
+//   NdmModule: NDM interface to software object manager
+//
+//       Input: req = module request code
+//              ... = additional parameters specific to request
+//
+void* NdmModule(int req, ...) {
+    switch (req) {
+        case kInitMod: {
+            // Initialize the devices list.
+            CIRC_LIST_INIT(&NdmDevs);
+
+            // Create the NDM global synchronization semaphore.
+            NdmSem = semCreate("NDM_SEM", 1, OS_FIFO);
+            if (NdmSem == NULL)
+                return (void*)-1;
+        }
+    }
+
+    return NULL;
+}
+
+//   ndmAddDev: Create a new NDM
+//
+//       Input: dvr = pointer to NDM driver control block
+//
+//     Returns: New NDM control block on success, NULL on error
+//
+NDM ndmAddDev(const NDMDrvr* dvr) {
+    char sem_name[9];
+    uint eb_alloc_sz;
+    NDM ndm;
+
+#if NV_NDM_CTRL_STORE
+    // Can only use one NDM device with NVRAM control page storage.
+    if (NdmDevCnt > 0) {
+        FsError(EINVAL);
+        return NULL;
+    }
+#endif
+
+    // Error if unsupported flash type.
+    if (dvr->type != NDM_MLC && dvr->type != NDM_SLC) {
+        FsError(EINVAL);
+        return NULL;
+    }
+
+#if !INC_FFS_NDM_MLC && !INC_FTL_NDM_MLC
+    // Error if type is NDM_MLC and no MLC support is enabled.
+    if (dvr->type == NDM_MLC) {
+        FsError(EINVAL);
+        return NULL;
+    }
+#endif
+
+#if !INC_FFS_NDM_SLC && !INC_FTL_NDM_SLC
+    // Error if type is NDM_SLC and no SLC support is enabled.
+    if (dvr->type == NDM_SLC) {
+        FsError(EINVAL);
+        return NULL;
+    }
+#endif
+
+#if OS_PARM_CHECK
+    // Ensure NDM driver flags are valid.
+    if (dvr->flags &
+        ~(FSF_MULTI_ACCESS | FSF_TRANSFER_PAGE | FSF_FREE_SPARE_ECC | FSF_NDM_INIT_WRITE)) {
+        FsError(EINVAL);
+        return NULL;
+    }
+#endif
+
+    // Check for valid number of blocks.
+    if (dvr->num_blocks <= dvr->max_bad_blocks + NDM_META_BLKS) {
+        FsError(EINVAL);
+        return NULL;
+    }
+
+    // Check for valid page size (multiple of 512).
+    if (dvr->page_size == 0 || dvr->page_size % 512) {
+        FsError(EINVAL);
+        return NULL;
+    }
+
+    // Check for valid spare bytes size.
+    if (dvr->eb_size > dvr->page_size || dvr->eb_size < 16) {
+        FsError(EINVAL);
+        return NULL;
+    }
+
+    // Allocate space for TargetNDM control block.
+    ndm = FsCalloc(1, sizeof(struct ndm));
+    if (ndm == NULL)
+        return NULL;
+
+    // Acquire exclusive access to global NDM semaphore.
+    semPend(NdmSem, WAIT_FOREVER);
+
+    // Add device to list of NDM devices.
+    CIRC_LIST_APPEND(&ndm->link, &NdmDevs);
+
+    // Set the number of virtual blocks.
+    ndm->num_vblks = dvr->num_blocks - dvr->max_bad_blocks - NDM_META_BLKS;
+
+    // Set the other driver dependent variables.
+    ndm->num_dev_blks = dvr->num_blocks;
+    ndm->max_bad_blks = dvr->max_bad_blocks;
+    ndm->block_size = dvr->block_size;
+    ndm->page_size = dvr->page_size;
+    ndm->eb_size = dvr->eb_size;
+    ndm->flags = dvr->flags;
+
+    // Allocate memory for initial and running bad blocks arrays.
+    ndm->init_bad_blk = FsMalloc((ndm->max_bad_blks + 1) * sizeof(ui32));
+    if (ndm->init_bad_blk == NULL)
+        goto ndmAddDev_err;
+    ndm->run_bad_blk = FsMalloc((ndm->max_bad_blks + 1) * sizeof(Pair));
+    if (ndm->run_bad_blk == NULL)
+        goto ndmAddDev_err;
+
+    // Initialize the initial and running bad block arrays.
+    memset(ndm->init_bad_blk, 0xFF, (ndm->max_bad_blks + 1) * sizeof(ui32));
+    memset(ndm->run_bad_blk, 0xFF, (ndm->max_bad_blks + 1) * sizeof(Pair));
+
+    // Create the access semaphore.
+    sprintf(sem_name, "NDM_S%03d", NdmSemCount++);
+    ndm->sem = semCreate(sem_name, 1, OS_FIFO);
+    if (ndm->sem == NULL)
+        goto ndmAddDev_err;
+
+    // Ensure spare area buffers allocated by NDM are cache aligned.
+    eb_alloc_sz = ndm->eb_size;
+#if CACHE_LINE_SIZE
+    eb_alloc_sz = ((eb_alloc_sz + CACHE_LINE_SIZE - 1) / CACHE_LINE_SIZE) * CACHE_LINE_SIZE;
+#endif
+
+    // Allocate memory for page main and spare data buffers.
+    ndm->main_buf = FsAalloc(ndm->page_size + 2 * eb_alloc_sz);
+    if (ndm->main_buf == NULL)
+        goto ndmAddDev_err;
+    ndm->spare_buf = ndm->main_buf + ndm->page_size;
+    ndm->tmp_spare = ndm->spare_buf + eb_alloc_sz;
+
+    // Initialize all other NDM variables.
+    ndm->ctrl_blk0 = ndm->ctrl_blk1 = (ui32)-1;
+    ndm->frst_ctrl_page = ndm->last_ctrl_page = (ui32)-1;
+    ndm->free_virt_blk = ndm->free_ctrl_blk = (ui32)-1;
+    ndm->ctrl_seq = (ui32)-1;
+    ndm->pgs_per_blk = ndm->block_size / ndm->page_size;
+    ndm->xfr_tblk = ndm->xfr_fblk = ndm->xfr_bad_po = (ui32)-1;
+    ndm->last_wr_vbn = ndm->last_wr_pbn = (ui32)-1;
+    ndm->last_rd_vbn = ndm->last_rd_pbn = (ui32)-1;
+
+    // Install driver callback routine function pointers.
+    ndm->write_page = dvr->write_data_and_spare;
+    ndm->read_page = dvr->read_decode_data;
+    ndm->read_decode_spare = dvr->read_decode_spare;
+    ndm->read_spare = dvr->read_spare;
+    ndm->page_blank = dvr->data_and_spare_erased;
+#if INC_FTL_NDM
+    ndm->check_page = dvr->data_and_spare_check;
+#endif
+    ndm->erase_block = dvr->erase_block;
+    ndm->is_block_bad = dvr->is_block_bad;
+    ndm->dev = dvr->dev;
+
+#if INC_FFS_NDM_MLC || INC_FTL_NDM_MLC
+    // The 'pair_offset' driver function does not take a page/address.
+    ndm->pair_offset = dvr->pair_offset;
+#endif
+
+    // If driver supplies transfer page function, use it.
+    if (FLAG_IS_SET(dvr->flags, FSF_TRANSFER_PAGE)) {
+        ndm->dev_ndm = ndm->dev;
+        ndm->xfr_page = dvr->transfer_page;
+    }
+
+    // Else use internal read-page/write-page substitute.
+    else {
+        ndm->dev_ndm = ndm;
+        ndm->xfr_page = ndm_xfr_page;
+    }
+
+    // If driver read/write pages supplied, use them directly.
+    if (FLAG_IS_SET(dvr->flags, FSF_MULTI_ACCESS)) {
+        ndm->read_pages = dvr->read_pages;
+        ndm->write_pages = dvr->write_pages;
+    }
+
+    // Set the device type.
+    ndm->dev_type = dvr->type;
+
+    // Initialize the NDM.
+    if (init_ndm(ndm))
+        goto ndmAddDev_err;
+
+#if NV_NDM_CTRL_STORE
+    // Account for NVRAM routine use.
+    ++NdmDevCnt;
+#endif
+
+    // Release exclusive access to NDM and return success.
+    semPostBin(NdmSem);
+    return ndm;
+
+// Error exit.
+ndmAddDev_err:
+    CIRC_NODE_REMOVE(&ndm->link);
+    if (ndm->init_bad_blk)
+        FsFree(ndm->init_bad_blk);
+    if (ndm->run_bad_blk)
+        FsFree(ndm->run_bad_blk);
+    if (ndm->sem)
+        semDelete(&ndm->sem);
+    if (ndm->main_buf)
+        FsAfreeClear(&ndm->main_buf);
+    if (ndm->partitions)
+        FsFree(ndm->partitions);
+    FsFree(ndm);
+    semPostBin(NdmSem);
+    return NULL;
+}
+
+//   ndmDelDev: Delete (uninitialize) the NDM
+//
+//       Input: ndm = pointer to NDM control block
+//
+//     Returns: 0 on success, -1 on failure
+//
+int ndmDelDev(NDM ndm) {
+    CircLink* circ;
+    int saved_errno;
+
+    // Acquire exclusive access to global NDM semaphore.
+    semPend(NdmSem, WAIT_FOREVER);
+
+    // Ensure the device is on the device list.
+    for (circ = CIRC_LIST_HEAD(&NdmDevs);; circ = circ->next_bck) {
+        // If the device was not found, return error.
+        if (CIRC_LIST_AT_END(circ, &NdmDevs)) {
+            semPostBin(NdmSem);
+            return FsError(ENOENT);
+        }
+
+        // If device found, stop looking.
+        if (ndm == (void*)circ)
+            break;
+    }
+
+    // Remove device from list of devices.
+    CIRC_NODE_REMOVE(&ndm->link);
+
+    // Release exclusive access to global NDM semaphore.
+    semPostBin(NdmSem);
+
+    // Remove all volumes from device.
+    saved_errno = errno;
+    (void)ndmDelVols(ndm);
+    errno = saved_errno;
+
+    // Free the initial and running bad block maps.
+    FsFree(ndm->init_bad_blk);
+    FsFree(ndm->run_bad_blk);
+
+    // Free the partitions table.
+    if (ndm->partitions)
+        FsFree(ndm->partitions);
+
+    // Free the region semaphore, temporary space, and control block.
+    semDelete(&ndm->sem);
+    FsAfreeClear(&ndm->main_buf);
+    FsFree(ndm);
+
+#if NV_NDM_CTRL_STORE
+    // Decrement NDM device count.
+    --NdmDevCnt;
+#endif
+
+    // Return success.
+    return 0;
+}
+
+// ndmInitBadBlock: Check if a block is in initial bad block map
+//
+//      Inputs: ndm = pointer to NDM control block
+//              b = block to check
+//
+//     Returns: TRUE iff initial bad block, FALSE otherwise
+//
+int ndmInitBadBlock(CNDM ndm, ui32 b) {
+    ui32 i;
+
+    // Loop over list of initially bad blocks.
+    for (i = 0; i <= ndm->max_bad_blks; ++i) {
+        // If end of map, stop.
+        if (ndm->init_bad_blk[i] == ndm->num_dev_blks)
+            break;
+
+        // If block found in map, it's initial bad block.
+        if (ndm->init_bad_blk[i] == b)
+            return TRUE;
+    }
+
+    // Return FALSE. Block is not an initial bad block.
+    return FALSE;
+}
+
+#if RDBACK_CHECK
+//   ndmCkMeta: Read-back verify the TargetNDM metadata
+//
+//       Input: ndm0 = pointer to NDM control block
+//
+void ndmCkMeta(NDM ndm0) {
+    int rc;
+    NDM ndm1;
+
+    // Allocate TargetNDM control block for metadata comparison.
+    ndm1 = FsCalloc(1, sizeof(struct ndm));
+    if (ndm1 == NULL)
+        exit(-1);
+
+    // Copy initialized (not read) structure values.
+    memcpy(ndm1, ndm0, sizeof(struct ndm));
+
+    // Read the latest control info into temporary control block, using
+    // - if any - previously allocated partition memory.
+    rc = read_ctrl_info(ndm1);
+    if (rc)
+        exit(-1);
+
+    // Compare control block used for writing with one used for reading.
+    rc = memcmp(ndm1, ndm0, sizeof(struct ndm));
+    if (rc)
+        exit(-1);
+
+    // Free allocated TargetNDM test control block.
+    free(ndm1);
+}
+#endif // RDBACK_CHECK
+#endif // INC_NDM

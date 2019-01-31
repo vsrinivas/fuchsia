@@ -1,0 +1,1192 @@
+{
+    "$schema": "http://json-schema.org/draft-04/schema#",
+    "description": "See https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/json-ir.md",
+    "type": "object",
+    "required": [
+        "version",
+        "name",
+        "const_declarations",
+        "enum_declarations",
+        "interface_declarations",
+        "struct_declarations",
+        "table_declarations",
+        "union_declarations",
+        "xunion_declarations",
+        "declaration_order",
+        "declarations",
+        "library_dependencies"
+    ],
+    "properties": {
+        "version": {
+            "description": "Version of the JSON IR schema",
+            "$ref": "#/definitions/version"
+        },
+        "name": {
+            "description": "Name of the library",
+            "$ref": "#/definitions/library-identifier"
+        },
+        "const_declarations": {
+            "description": "List of constants",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/const"
+            }
+        },
+        "enum_declarations": {
+            "description": "List of enumerations",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/enum"
+            }
+        },
+        "interface_declarations": {
+            "description": "List of interfaces",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/interface"
+            }
+        },
+        "struct_declarations": {
+            "description": "List of structures",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/struct"
+            }
+        },
+        "table_declarations": {
+            "description": "List of tables",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/table"
+            }
+        },
+        "union_declarations": {
+            "description": "List of unions",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/union"
+            }
+        },
+        "xunion_declarations": {
+            "description": "List of extensible unions",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/xunion"
+            }
+        },
+        "declaration_order": {
+            "description": "List of declarations in declaration order",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/compound-identifier"
+            }
+        },
+        "declarations": {
+            "description": "List of declarations and their types",
+            "$ref": "#/definitions/declarations-map"
+        },
+        "library_dependencies": {
+            "description": "List of dependencies on other libraries",
+            "type": "array",
+            "items": {
+                "$ref": "#/definitions/library"
+            }
+        }
+    },
+    "definitions": {
+        "const": {
+            "description": "Definition of a constant declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "value"
+            ],
+            "properties": {
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the constant declaration",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Fully qualified name of the constant",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "type": {
+                    "description": "Type of the constant",
+                    "$ref": "#/definitions/type"
+                },
+                "value": {
+                    "description": "Value of the constant",
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "enum": {
+            "description": "Definition of an enum declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "type",
+                "members"
+            ],
+            "properties": {
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the enum declaration",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Fully qualified name of the enum",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "type": {
+                    "description": "Type of the enum",
+                    "$ref": "#/definitions/integer-type"
+                },
+                "members": {
+                    "description": "List of enum members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/enum-member"
+                    }
+                }
+            }
+        },
+        "enum-member": {
+            "description": "Definition of an enum member",
+            "type": "object",
+            "required": [
+                "name",
+                "value"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of the enum member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the enum member",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "value": {
+                    "description": "Value of the enum member",
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "interface": {
+            "description": "Definition of an interface declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "methods"
+            ],
+            "properties": {
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the interface declaration",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of the interface",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "methods": {
+                    "description": "List of methods and events",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method"
+                    }
+                }
+            }
+        },
+        "interface-method": {
+            "description": "Definition of a method or event",
+            "type": "object",
+            "required": [
+                "ordinal",
+  	        "generated_ordinal",
+                "name",
+                "has_request",
+                "has_response"
+            ],
+            "properties": {
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the method or event",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "ordinal": {
+                    "description": "Ordinal number of the interface method",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "generated_ordinal": {
+                    "description": "Ordinal number that would be automatically generated for the interface method",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "name": {
+                    "description": "Name of the interface method",
+                    "$ref": "#/definitions/identifier"
+                },
+                "has_request": {
+                    "description": "Flag indicating that interface method has a request component",
+                    "type": "boolean"
+                },
+                "maybe_request": {
+                    "description": "Optional list of interface method request parameters",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    }
+                },
+                "maybe_request_size": {
+                    "description": "Size of interface method request parameters, if any present",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_request_alignment": {
+                    "description": "Alignment of interface method request parameters, if any present",
+                    "$ref": "#/definitions/count"
+                },
+                "has_response": {
+                    "description": "Flag indicating that interface method has a response component",
+                    "type": "boolean"
+                },
+                "maybe_response": {
+                    "description": "Optional list of interface method response parameters",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/interface-method-parameter"
+                    }
+                },
+                "maybe_response_size": {
+                    "description": "Size of interface method response parameters, if any present",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_response_alignment": {
+                    "description": "Alignment of interface method response parameters, if any present",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "interface-method-parameter": {
+            "description": "Definition of parameter or return of a method or event",
+            "type": "object",
+            "required": [
+                "type",
+                "name",
+                "size",
+                "max_out_of_line",
+                "alignment",
+                "offset"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Type of the parameter or return",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of the parameter or return",
+                    "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "description": "Size of the parameter or return",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of the parameter or return",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of the parameter or return",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "struct": {
+            "description": "Definition of a struct declaration",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size",
+                "max_out_of_line"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the struct",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of attributes of the struct declaration",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of struct",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "anonymous": {
+                    "description": "Flag indicating that struct is anonymous",
+                    "type": "boolean"
+                },
+                "members": {
+                    "description": "List of struct members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/struct-member"
+                    }
+                },
+                "size": {
+                    "description": "Size of struct",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line struct payload",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "struct-member": {
+            "description": "Definition of a struct member",
+            "type": "object",
+            "required": [
+                "type",
+                "name",
+                "size",
+                "max_out_of_line",
+                "alignment",
+                "offset"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Type of the struct member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of struct member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "description": "Size of struct member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of the struct member",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of the struct member",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of struct member attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "maybe_default_value": {
+                    "description": "Optional default value for struct member",
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "table": {
+            "description": "Definition of a table",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size",
+                "max_out_of_line"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the table",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of table attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of table",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "members": {
+                    "description": "List of table members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/table-member"
+                    }
+                },
+                "size": {
+                    "description": "Size of table",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload for the entire table. Note that this value is computed without considering future member additions, otherwise it would always be pegged at the maximum. Bindings should take this into consideration when using max_out_of_line.",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "table-member": {
+            "description": "Definition of a table member",
+            "type": "object",
+            "required": [
+                "ordinal",
+                "reserved"
+            ],
+            "properties": {
+                "reserved": {
+                    "description": "Flag indicating that field is reserved",
+                    "type": "boolean"
+                },
+                "type": {
+                    "description": "Type of table member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of table member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "ordinal": {
+                    "description": "Ordinal value of table member",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "size": {
+                    "description": "Size of table member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of table member",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of table member",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_default_value": {
+                    "description": "Optional default value for table member",
+                    "$ref": "#/definitions/constant"
+                }
+            }
+        },
+        "union": {
+            "description": "Definition of a union",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size",
+                "max_out_of_line",
+                "alignment"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the union",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of union attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of union",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "members": {
+                    "description": "List of union members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/union-member"
+                    }
+                },
+                "size": {
+                    "description": "Size of union",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of union",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "union-member": {
+            "description": "Definition of a union member",
+            "type": "object",
+            "required": [
+                "type",
+                "name",
+                "size",
+                "max_out_of_line",
+                "alignment",
+                "offset"
+            ],
+            "properties": {
+                "type": {
+                    "description": "Type of union member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of union member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "description": "Size of union member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of union member",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of union member",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of union member attributes",
+                    "$ref": "#/definitions/attributes-list"
+                }
+            }
+        },
+        "xunion": {
+            "description": "Definition of an extensible union",
+            "type": "object",
+            "required": [
+                "name",
+                "members",
+                "size",
+                "max_out_of_line",
+                "alignment"
+            ],
+            "properties": {
+                "max_handles": {
+                    "description": "Maximum number of handles present in the extensible union",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of extensible union attributes",
+                    "$ref": "#/definitions/attributes-list"
+                },
+                "name": {
+                    "description": "Name of extensible union",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "members": {
+                    "description": "List of extensible union members",
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/xunion-member"
+                    }
+                },
+                "size": {
+                    "description": "Size of extensible union",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of extensible union",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "xunion-member": {
+            "description": "Definition of an extensible union member",
+            "type": "object",
+            "required": [
+                "ordinal",
+                "type",
+                "name",
+                "size",
+                "max_out_of_line",
+                "alignment",
+                "offset"
+            ],
+            "properties": {
+                "ordinal": {
+                    "description": "Ordinal value of extensible union member",
+                    "$ref": "#/definitions/ordinal"
+                },
+                "type": {
+                    "description": "Type of extensible union member",
+                    "$ref": "#/definitions/type"
+                },
+                "name": {
+                    "description": "Name of extensible union member",
+                    "$ref": "#/definitions/identifier"
+                },
+                "size": {
+                    "description": "Size of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "max_out_of_line": {
+                    "description": "Maximum size of the out-of-line payload",
+                    "$ref": "#/definitions/count"
+                },
+                "alignment": {
+                    "description": "Alignment of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "offset": {
+                    "description": "Offset of extensible union member",
+                    "$ref": "#/definitions/count"
+                },
+                "maybe_attributes": {
+                    "description": "Optional list of extensible union member attributes",
+                    "$ref": "#/definitions/attributes-list"
+                }
+            }
+        },
+        "declarations-map": {
+            "description": "Definition of declarations of a library",
+            "type": "object",
+            "patternProperties": {
+                ".*": {
+                    "type": "string",
+                    "enum": [
+                        "const",
+                        "enum",
+                        "interface",
+                        "struct",
+                        "table",
+                        "union",
+                        "xunion"
+                    ]
+                }
+            }
+        },
+        "library": {
+            "description": "Definition of library",
+            "type": "object",
+            "required": [
+                "name",
+                "declarations"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Name of library",
+                    "$ref": "#/definitions/library-identifier"
+                },
+                "declarations": {
+                    "description": "Declarations of library",
+                    "$ref": "#/definitions/declarations-map"
+                }
+            }
+        },
+        "type": {
+            "description": "Definition of type",
+            "oneOf": [
+                {
+                    "description": "Selection of array type",
+                    "$ref": "#/definitions/array-type"
+                },
+                {
+                    "description": "Selection of vector type",
+                    "$ref": "#/definitions/vector-type"
+                },
+                {
+                    "description": "Selection of string type",
+                    "$ref": "#/definitions/string-type"
+                },
+                {
+                    "description": "Selection of handle type",
+                    "$ref": "#/definitions/handle-type"
+                },
+                {
+                    "description": "Selection of request type",
+                    "$ref": "#/definitions/request-type"
+                },
+                {
+                    "description": "Selection of primitive type",
+                    "$ref": "#/definitions/primitive-type"
+                },
+                {
+                    "description": "Selection of identifier type",
+                    "$ref": "#/definitions/identifier-type"
+                }
+            ]
+        },
+        "array-type": {
+            "description": "Definition of array type",
+            "type": "object",
+            "required": [
+                "kind",
+                "element_type",
+                "element_count"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as array type",
+                    "type": "string",
+                    "enum": [
+                        "array"
+                    ]
+                },
+                "element_type": {
+                    "description": "Element type of array type",
+                    "$ref": "#/definitions/type"
+                },
+                "element_count": {
+                    "description": "Number of elements in array type",
+                    "$ref": "#/definitions/count"
+                }
+            }
+        },
+        "vector-type": {
+            "description": "Definition of vector type",
+            "type": "object",
+            "required": [
+                "kind",
+                "element_type",
+                "nullable"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as vector type",
+                    "type": "string",
+                    "enum": [
+                        "vector"
+                    ]
+                },
+                "element_type": {
+                    "description": "Element type of vector type",
+                    "$ref": "#/definitions/type"
+                },
+                "maybe_element_count": {
+                    "description": "Optional number of maximum elements in vector type",
+                    "$ref": "#/definitions/count"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of vector type",
+                    "type": "boolean"
+                }
+            }
+        },
+        "string-type": {
+            "description": "Definition of string type",
+            "type": "object",
+            "required": [
+                "kind",
+                "nullable"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as string type",
+                    "type": "string",
+                    "enum": [
+                        "string"
+                    ]
+                },
+                "maybe_element_count": {
+                    "description": "Optional size of string, in bytes",
+                    "$ref": "#/definitions/count"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of string type",
+                    "type": "boolean"
+                }
+            }
+        },
+        "handle-type": {
+            "description": "Definition of a handle type",
+            "type": "object",
+            "required": [
+                "kind",
+                "subtype",
+                "nullable"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as handle type",
+                    "type": "string",
+                    "enum": [
+                        "handle"
+                    ]
+                },
+                "subtype": {
+                    "description": "Sub-type of handle type",
+                    "$ref": "#/definitions/handle-subtype"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of handle type",
+                    "type": "boolean"
+                }
+            }
+        },
+        "request-type": {
+            "description": "Definition of a request type",
+            "type": "object",
+            "required": [
+                "kind",
+                "subtype",
+                "nullable"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as request type",
+                    "type": "string",
+                    "enum": [
+                        "request"
+                    ]
+                },
+                "subtype": {
+                    "description": "Interface name of request type",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of request type",
+                    "type": "boolean"
+                }
+            }
+        },
+        "attributes-list": {
+            "description": "Definition of an attribute list",
+            "type": "array",
+            "items": {
+                "description": "List of attributes",
+                "$ref": "#/definitions/attribute"
+            }
+        },
+        "attribute": {
+            "description": "Definition of an attribute list element",
+            "type": "object",
+            "required": [
+                "name",
+                "value"
+            ],
+            "properties": {
+                "name": {
+                    "description": "Attribute name",
+                    "type": "string"
+                },
+                "value": {
+                    "description": "Attribute value",
+                    "type": "string"
+                }
+            }
+        },
+        "primitive-type": {
+            "description": "Definition of primitive type",
+            "type": "object",
+            "required": [
+                "kind",
+                "subtype"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as primitive type",
+                    "type": "string",
+                    "enum": [
+                        "primitive"
+                    ]
+                },
+                "subtype": {
+                    "description": "Sub-type of the primitive type",
+                    "$ref": "#/definitions/primitive-subtype"
+                }
+            }
+        },
+        "identifier-type": {
+            "description": "Definition of an identifier type",
+            "type": "object",
+            "required": [
+                "kind",
+                "identifier",
+                "nullable"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of base type as identifier type",
+                    "type": "string",
+                    "enum": [
+                        "identifier"
+                    ]
+                },
+                "identifier": {
+                    "description": "Identifier type name",
+                    "$ref": "#/definitions/compound-identifier"
+                },
+                "nullable": {
+                    "description": "Flag indicating nullability of identifier type",
+                    "type": "boolean"
+                }
+            }
+        },
+        "constant": {
+            "description": "Definition of a constant value",
+            "oneOf": [
+                {
+                    "description": "Selection of a constant value (using an identifier)",
+                    "$ref": "#/definitions/identifier-constant"
+                },
+                {
+                    "description": "Selection of a constant value (using a literal)",
+                    "$ref": "#/definitions/literal-constant"
+                }
+            ]
+        },
+        "identifier-constant": {
+            "description": "Definition of a constant value (using an identifier)",
+            "type": "object",
+            "required": [
+                "kind",
+                "identifier"
+            ],
+            "properties": {
+                "kind": {
+                "description": "Selection of constant value using an identifier",
+                    "type": "string",
+                    "enum": [
+                        "identifier"
+                    ]
+                },
+                "identifier": {
+                    "description": "Identifier used as constant value",
+                    "$ref": "#/definitions/compound-identifier"
+                }
+            }
+        },
+        "literal-constant": {
+            "description": "Definition of a constant value (using a literal)",
+            "type": "object",
+            "required": [
+                "kind",
+                "literal"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of constant value using a literal",
+                    "type": "string",
+                    "enum": [
+                        "literal"
+                    ]
+                },
+                "literal": {
+                    "description": "Literal used as constant value",
+                    "$ref": "#/definitions/literal"
+                }
+            }
+        },
+        "literal": {
+            "description": "Definition of literal type",
+            "oneOf": [
+                {
+                    "description": "Selection of string literal type",
+                    "$ref": "#/definitions/string-literal"
+                },
+                {
+                    "description": "Selection of numeric literal type",
+                    "$ref": "#/definitions/numeric-literal"
+                },
+                {
+                    "description": "Selection of boolean true literal type",
+                    "$ref": "#/definitions/true-literal"
+                },
+                {
+                    "description": "Selection of boolean false literal type",
+                    "$ref": "#/definitions/false-literal"
+                },
+                {
+                    "description": "Selection of default literal type",
+                    "$ref": "#/definitions/default-literal"
+                }
+            ]
+        },
+        "string-literal": {
+            "description": "Definition of string literal",
+            "type": "object",
+            "required": [
+                "kind",
+                "value"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of string literal type",
+                    "type": "string",
+                    "enum": [
+                        "string"
+                    ]
+                },
+                "value": {
+                    "description": "String literal value",
+                    "type": "string"
+                }
+            }
+        },
+        "numeric-literal": {
+            "description": "Definition of numeric literal",
+            "type": "object",
+            "required": [
+                "kind",
+                "value"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of numeric literal",
+                    "type": "string",
+                    "enum": [
+                        "numeric"
+                    ]
+                },
+                "value": {
+                    "type": "string"
+                }
+            }
+        },
+        "true-literal": {
+            "description": "Definition of boolean true literal",
+            "type": "object",
+            "required": [
+                "kind"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of boolean true literal type",
+                    "type": "string",
+                    "enum": [
+                        "true"
+                    ]
+                }
+            }
+        },
+        "false-literal": {
+            "description": "Definition of boolean false literal",
+            "type": "object",
+            "required": [
+                "kind"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of boolean false literal type",
+                    "type": "string",
+                    "enum": [
+                        "false"
+                    ]
+                }
+            }
+        },
+        "default-literal": {
+            "description": "Definition of default literal",
+            "type": "object",
+            "required": [
+                "kind"
+            ],
+            "properties": {
+                "kind": {
+                    "description": "Selection of default literal type",
+                    "type": "string",
+                    "enum": [
+                        "default"
+                    ]
+                }
+            }
+        },
+        "handle-subtype": {
+            "description": "Definition of handle sub-type",
+            "type": "string",
+            "enum": [
+                "handle",
+                "process",
+                "thread",
+                "vmo",
+                "channel",
+                "event",
+                "port",
+                "interrupt",
+                "debuglog",
+                "socket",
+                "resource",
+                "eventpair",
+                "job",
+                "vmar",
+                "fifo",
+                "guest",
+                "timer",
+                "bti",
+                "profile"
+            ]
+        },
+        "primitive-subtype": {
+            "description": "Definition of primitive sub-type",
+            "oneOf": [
+                {
+                    "description": "Selection of non-integer primitive sub-type",
+                    "type": "string",
+                    "enum": [
+                        "bool",
+                        "float32",
+                        "float64"
+                    ]
+                },
+                {
+                    "description": "Selection of integer primitive sub-type",
+                    "$ref": "#/definitions/integer-type"
+                }
+            ]
+        },
+        "integer-type": {
+            "description": "Definition of integer primitive sub-type",
+            "type": "string",
+            "enum": [
+                "int8",
+                "int16",
+                "int32",
+                "int64",
+                "uint8",
+                "uint16",
+                "uint32",
+                "uint64"
+            ]
+        },
+        "ordinal": {
+            "description": "Definition of ordinal",
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 4294967295
+        },
+        "count": {
+            "description": "Definition of count",
+            "type": "integer",
+            "minimum": 0,
+            "maximum": 4294967295
+        },
+        "compound-identifier": {
+            "description": "Definition of compound identifier",
+            "type": "string",
+            "pattern": "([_A-Za-z][_A-Za-z0-9]*-)*[_A-Za-z][_A-Za-z0-9]*/[_A-Za-z][_A-Za-z0-9]*"
+        },
+        "identifier": {
+            "description": "Definition of identifier",
+            "type": "string",
+            "pattern": "^[A-Za-z]([_A-Za-z0-9]*[A-Za-z0-9])?$"
+        },
+        "library-identifier": {
+            "description": "Definition of library identifier",
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9]*(\\.[a-z][a-z0-9]*)*$"
+        },
+        "version": {
+            "description": "Definition of version regex",
+            "type": "string",
+            "pattern": "^[0-9]+\\.[0-9]+\\.[0-9]+$"
+        }
+    },
+    "additionalProperties": false
+}
