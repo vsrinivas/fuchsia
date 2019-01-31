@@ -44,16 +44,23 @@ bool IsBodyAligned(const Packet& pkt) {
     return rx != nullptr && rx->rx_flags & WLAN_RX_INFO_FLAGS_FRAME_BODY_PADDING_4;
 }
 
-rust_mlme_buffer_t IntoRustMlmeBuffer(fbl::unique_ptr<Packet> packet) {
+rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
     auto* pkt = packet.release();
-    return rust_mlme_buffer_t {
+    return rust_mlme_in_buf_t {
             .data = pkt->data(),
             .len = pkt->len(),
             .raw = pkt,
-            .return_buffer = [](void *raw) {
-                fbl::unique_ptr<Packet>(static_cast<Packet *>(raw)).reset();
+            .free_buffer = [](void *raw) {
+                fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset();
             },
     };
+}
+
+fbl::unique_ptr<Packet> FromRustOutBuf(rust_mlme_out_buf_t buf) {
+    if (!buf.raw) { return {}; }
+    auto pkt = fbl::unique_ptr<Packet>(static_cast<Packet*>(buf.raw));
+    pkt->set_len(buf.written_bytes);
+    return pkt;
 }
 
 void LogAllocationFail(Buffer::Size size) {

@@ -385,7 +385,7 @@ zx_status_t Station::HandleAuthentication(MgmtFrame<Authentication>&& frame) {
 
     auto pkt = frame.Take();
     bool body_aligned = IsBodyAligned(*pkt);
-    rust_mlme_buffer_t buf = IntoRustMlmeBuffer(std::move(pkt));
+    auto buf = IntoRustInBuf(std::move(pkt));
     zx_status_t status = rust_mlme_is_valid_open_auth_resp(buf, body_aligned);
     if (status == ZX_OK) {
         state_ = WlanState::kAuthenticated;

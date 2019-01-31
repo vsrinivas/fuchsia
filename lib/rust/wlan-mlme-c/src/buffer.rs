@@ -4,21 +4,20 @@
 
 use {
     failure::{ensure, Error},
-    std::{ffi::c_void, ops::Deref, ptr, slice},
+    std::{ffi::c_void, ops::{Deref, DerefMut}, ptr, slice},
 };
 
 #[repr(C)]
 pub struct BufferProvider {
-    // Acquire a buffer with a given minimum length from the provider.
-    // The provider must release the underlying buffer's ownership and transfer it to this crate.
-    // The buffer will be returned via the `return_buffer` callback when it's no longer used.
-    take_buffer: unsafe extern "C" fn(min_len: usize) -> Buffer,
+    /// Acquire a `InBuf` with a given minimum length from the provider.
+    /// The provider must release the underlying buffer's ownership and transfer it to this crate.
+    /// The buffer will be returned via the `free_buffer` callback when it's no longer used.
+    take_buffer: unsafe extern "C" fn(min_len: usize) -> InBuf,
 }
 
 impl BufferProvider {
-    pub fn take_buffer(&self, min_len: usize) -> Result<Buffer, Error> {
+    pub fn take_buffer(&self, min_len: usize) -> Result<InBuf, Error> {
         // Resulting buffer is checked for null pointers.
-        // The buffer is guaranteed to be released whenever it goes out of scope.
         let buf = unsafe { (self.take_buffer)(min_len) };
         ensure!(!buf.raw.is_null(), "buffer's raw ptr must not be null");
         ensure!(!buf.data.is_null(), "buffer's data ptr must not be null");
@@ -26,29 +25,31 @@ impl BufferProvider {
     }
 }
 
+/// An input buffer will always be returned to its original owner when no longer being used.
+/// An input buffer is used for every buffer handed from C++ to Rust.
 #[derive(Debug)]
 #[repr(C)]
-pub struct Buffer {
-    // Returns the buffer's ownership. The buffer will no longer be used and can be freed safely.
-    return_buffer: unsafe extern "C" fn(raw: *mut c_void),
-    // Pointer to the buffer's underlying data structure.
+pub struct InBuf {
+    /// Returns the buffer's ownership and free it.
+    free_buffer: unsafe extern "C" fn(raw: *mut c_void),
+    /// Pointer to the buffer's underlying data structure.
     raw: *mut c_void,
-    // Pointer to the start of the buffer's data portion and its length.
+    /// Pointer to the start of the buffer's data portion and its length.
     data: *mut u8,
     len: usize,
 }
 
-impl Drop for Buffer {
+impl Drop for InBuf {
     fn drop(&mut self) {
         if !self.raw.is_null() {
             // A buffer can never be dropped twice as it'll be reset once dropped.
-            unsafe { (self.return_buffer)(self.raw) };
+            unsafe { (self.free_buffer)(self.raw) };
             self.reset();
         }
     }
 }
 
-impl Buffer {
+impl InBuf {
     pub fn as_slice(&self) -> &[u8] {
         if self.data.is_null() {
             &[]
@@ -59,6 +60,16 @@ impl Buffer {
         }
     }
 
+    pub fn as_mut_slice(&mut self) -> &mut [u8] {
+        if self.data.is_null() {
+            &mut []
+        } else {
+            // `data` pointer is never null. This could still be problematic if the buffer was
+            // already destroyed, however, that's out of this code's control.
+            unsafe { slice::from_raw_parts_mut(self.data, self.len) }
+        }
+    }
+
     fn reset(&mut self) {
         self.raw = ptr::null_mut();
         self.data = ptr::null_mut();
@@ -66,7 +77,7 @@ impl Buffer {
     }
 }
 
-impl Deref for Buffer {
+impl Deref for InBuf {
     type Target = [u8];
 
     fn deref(&self) -> &[u8] {
@@ -74,17 +85,46 @@ impl Deref for Buffer {
     }
 }
 
+impl DerefMut for InBuf {
+    fn deref_mut(&mut self) -> &mut [u8] {
+        self.as_mut_slice()
+    }
+}
+
+
+/// An output buffer requires its owner to manage the underlying buffer's memory themselves.
+/// An output buffer is used for every buffer handed from Rust to C++.
+#[derive(Debug)]
+#[repr(C)]
+pub struct OutBuf {
+    /// Pointer to the buffer's underlying data structure.
+    raw: *mut c_void,
+    /// Pointer to the start of the buffer's data portion and the amount of bytes written.
+    data: *mut u8,
+    written_bytes: usize,
+}
+
+impl OutBuf {
+    fn from(buf: InBuf, written_bytes: usize) -> Self {
+        OutBuf {
+            raw: buf.raw,
+            data: buf.data,
+            written_bytes,
+        }
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use {super::*, std::ptr};
 
-    extern "C" fn default_return_buffer(_raw: *mut c_void) {}
+    extern "C" fn default_free_buffer(_raw: *mut c_void) {}
 
     #[test]
     fn return_out_of_scope_buffer() {
         static mut RETURNED_RAW_BUFFER: *mut c_void = ptr::null_mut();
 
-        unsafe extern "C" fn assert_return_buffer(raw: *mut c_void) {
+        unsafe extern "C" fn assert_free_buffer(raw: *mut c_void) {
             // Safe, this is a function specific static field.
             unsafe {
                 RETURNED_RAW_BUFFER = raw;
@@ -93,8 +133,8 @@ mod tests {
 
         // Once buffer goes out of scope the raw pointer should be returned to the provider.
         {
-            Buffer {
-                return_buffer: assert_return_buffer,
+            InBuf {
+                free_buffer: assert_free_buffer,
                 raw: 42 as *mut c_void,
                 data: ptr::null_mut(),
                 len: 0,
@@ -109,8 +149,8 @@ mod tests {
 
     #[test]
     fn as_slice_null_data() {
-        let buf = Buffer {
-            return_buffer: default_return_buffer,
+        let buf = InBuf {
+            free_buffer: default_free_buffer,
             raw: 42 as *mut c_void,
             data: ptr::null_mut(),
             len: 10,
@@ -121,13 +161,52 @@ mod tests {
     #[test]
     fn as_slice() {
         let mut data = [0u8, 1, 2, 3];
-        let buf = Buffer {
-            return_buffer: default_return_buffer,
+        let buf = InBuf {
+            free_buffer: default_free_buffer,
             raw: 42 as *mut c_void,
             data: data.as_mut_ptr(),
             len: data.len(),
         };
         assert_eq!(buf.as_slice(), &data[..]);
+        assert_eq!(&buf[..], &data[..]);
+    }
+
+    #[test]
+    fn as_mut_slice_null_data() {
+        let mut buf = InBuf {
+            free_buffer: default_free_buffer,
+            raw: 42 as *mut c_void,
+            data: ptr::null_mut(),
+            len: 10,
+        };
+        assert_eq!(buf.as_mut_slice(), []);
+    }
+
+    #[test]
+    fn as_mut_slice() {
+        let mut data = [0u8, 1, 2, 3];
+        let mut buf = InBuf {
+            free_buffer: default_free_buffer,
+            raw: 42 as *mut c_void,
+            data: data.as_mut_ptr(),
+            len: data.len(),
+        };
+        assert_eq!(buf.as_mut_slice(), &data[..]);
+        assert_eq!(&buf[..], &data[..]);
+    }
+
+    #[test]
+    fn from_in_buf() {
+        let inbuf = InBuf {
+            free_buffer: default_free_buffer,
+            raw: 42 as *mut c_void,
+            data: 43 as *mut u8,
+            len: 20,
+        };
+        let outbuf = OutBuf::from(inbuf, 10);
+        assert_eq!(42 as *mut c_void, outbuf.raw);
+        assert_eq!(43 as *mut u8, outbuf.data);
+        assert_eq!(10, outbuf.written_bytes);
     }
 
 }

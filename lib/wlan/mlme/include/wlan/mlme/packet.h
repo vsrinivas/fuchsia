@@ -256,7 +256,8 @@ class Packet : public fbl::DoublyLinkedListable<fbl::unique_ptr<Packet>> {
     uint16_t ext_offset_ = 0;
 };
 
-rust_mlme_buffer_t IntoRustMlmeBuffer(fbl::unique_ptr<Packet> packet);
+rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet);
+fbl::unique_ptr<Packet> FromRustOutBuf(rust_mlme_out_buf_t buf);
 bool IsBodyAligned(const Packet& pkt);
 
 class PacketQueue {

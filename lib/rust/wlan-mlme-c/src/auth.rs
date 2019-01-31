@@ -3,14 +3,14 @@
 // found in the LICENSE file.
 
 use {
-    crate::buffer::Buffer,
+    crate::buffer::InBuf,
     fuchsia_zircon as zx,
     log::error,
     wlan_mlme::{auth, common::mac},
 };
 
 #[no_mangle]
-pub extern "C" fn rust_mlme_is_valid_open_auth_resp(buf: Buffer, has_body_aligned: bool) -> i32 {
+pub extern "C" fn rust_mlme_is_valid_open_auth_resp(buf: InBuf, has_body_aligned: bool) -> i32 {
     match mac::MacFrame::parse(&buf[..], has_body_aligned) {
         Some(mac::MacFrame::Mgmt { mgmt_hdr, body, .. }) => {
             let fc = mac::FrameControl(mgmt_hdr.frame_ctrl());
