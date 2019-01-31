@@ -113,7 +113,7 @@ auto DoImportantThingsInParallel() {
   auto promise2 = InitializeFrobinatorAsync();
   return fit::join_promises(std::move(promise1), std::move(promise2))
       .and_then([](std::tuple<fit::result<std::string>, fit::result<Frobinator>> results) {
-        return fit::ok(results.get<0>.value() + results.get<1>.value().GetFrobinatorSummary());
+        return fit::ok(std::get<0>(results).value() + std::get<1>(results).value().GetFrobinatorSummary());
       });
 }
 ```
