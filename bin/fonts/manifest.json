@@ -1,184 +1,32 @@
 {
   "families": [
     {
+      "family": "Material Icons",
+      "aliases": [
+        "MaterialIcons"
+      ],
+      "fallback": false,
+      "fonts": [
+        {
+          "asset": "fonts/MaterialIcons-Regular.ttf"
+        }
+      ]
+    },
+    {
       "family": "Roboto",
-      "fallback_group": "sans-serif",
       "fallback": true,
+      "fallback_group": "sans-serif",
       "fonts": [
         {
           "asset": "fonts/Roboto-Regular.ttf"
-        },
-        {
-          "asset": "fonts/Roboto-Italic.ttf",
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/Roboto-Thin.ttf",
-          "weight": 100
-        },
-        {
-          "asset": "fonts/Roboto-ThinItalic.ttf",
-          "weight": 100,
-          "slant": "italic"
         },
         {
           "asset": "fonts/Roboto-Light.ttf",
           "weight": 300
         },
         {
-          "asset": "fonts/Roboto-LightItalic.ttf",
-          "weight": 300,
-          "slant": "italic"
-        },
-        {
           "asset": "fonts/Roboto-Medium.ttf",
           "weight": 500
-        },
-        {
-          "asset": "fonts/Roboto-MediumItalic.ttf",
-          "weight": 500,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/Roboto-Bold.ttf",
-          "weight": 700
-        },
-        {
-          "asset": "fonts/Roboto-BoldItalic.ttf",
-          "weight": 700,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/Roboto-Black.ttf",
-          "weight": 900
-        },
-        {
-          "asset": "fonts/Roboto-BlackItalic.ttf",
-          "weight": 900,
-          "slant": "italic"
-        }
-      ]
-    },
-    {
-      "family": "Roboto Condensed",
-      "aliases": ["RobotoCondensed"],
-      "fallback_group": "sans-serif",
-      "fallback": true,
-      "fonts": [
-        {
-          "asset": "fonts/RobotoCondensed-Regular.ttf",
-          "width": 3
-        },
-        {
-          "asset": "fonts/RobotoCondensed-Italic.ttf",
-          "width": 3,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoCondensed-Light.ttf",
-          "width": 3,
-          "weight": 300
-        },
-        {
-          "asset": "fonts/RobotoCondensed-LightItalic.ttf",
-          "width": 3,
-          "weight": 300,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoCondensed-Bold.ttf",
-          "width": 3,
-          "weight": 700
-        },
-        {
-          "asset": "fonts/RobotoCondensed-BoldItalic.ttf",
-          "width": 3,
-          "weight": 700,
-          "slant": "italic"
-        }
-      ]
-    },
-    {
-      "family": "Roboto Mono",
-      "aliases": ["RobotoMono"],
-      "fallback_group": "monospace",
-      "fallback": true,
-      "fonts": [
-        {
-          "asset": "fonts/RobotoMono-Regular.ttf"
-        },
-        {
-          "asset": "fonts/RobotoMono-Italic.ttf",
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoMono-Thin.ttf",
-          "weight": 100
-        },
-        {
-          "asset": "fonts/RobotoMono-ThinItalic.ttf",
-          "weight": 100,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoMono-Light.ttf",
-          "weight": 300
-        },
-        {
-          "asset": "fonts/RobotoMono-LightItalic.ttf",
-          "weight": 300,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoMono-Medium.ttf",
-          "weight": 500
-        },
-        {
-          "asset": "fonts/RobotoMono-MediumItalic.ttf",
-          "weight": 500,
-          "slant": "italic"
-        },
-        {
-          "asset": "fonts/RobotoMono-Bold.ttf",
-          "weight": 700
-        },
-        {
-          "asset": "fonts/RobotoMono-BoldItalic.ttf",
-          "weight": 700,
-          "slant": "italic"
-        }
-      ]
-    },
-    {
-      "family": "Roboto Slab",
-      "aliases": ["RobotoSlab"],
-      "fallback_group": "serif",
-      "fallback": true,
-      "fonts": [
-        {
-          "asset": "fonts/RobotoSlab-Regular.ttf"
-        },
-        {
-          "asset": "fonts/RobotoSlab-Thin.ttf",
-          "weight": 100
-        },
-        {
-          "asset": "fonts/RobotoSlab-Light.ttf",
-          "weight": 300
-        },
-        {
-          "asset": "fonts/RobotoSlab-Bold.ttf",
-          "weight": 700
-        }
-      ]
-    },
-    {
-      "family": "Material Icons",
-      "aliases": ["MaterialIcons"],
-      "fallback": true,
-      "fonts": [
-        {
-          "asset": "fonts/MaterialIcons-Regular.ttf"
         }
       ]
     }

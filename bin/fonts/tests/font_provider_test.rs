@@ -76,18 +76,18 @@ async fn test_basic() -> Result<(), Error> {
         Some("Roboto".to_string())
     ))
     .context("Failed to load Roboto")?;
-    let roboto_slab = await!(get_font_info_basic(
+    let material_icons = await!(get_font_info_basic(
         &font_provider,
-        Some("Roboto Slab".to_string())
+        Some("Material Icons".to_string())
     ))
-    .context("Failed to load Roboto Slab")?;
+    .context("Failed to load Material Icons")?;
 
     // Roboto should be returned by default.
     assert!(default == roboto);
 
-    // Roboto Slab request should return a different font.
-    assert!(default.vmo_koid != roboto_slab.vmo_koid);
-    assert!(default.buffer_id != roboto_slab.buffer_id);
+    // Material Icons request should return a different font.
+    assert!(default.vmo_koid != material_icons.vmo_koid);
+    assert!(default.buffer_id != material_icons.buffer_id);
 
     Ok(())
 }
@@ -220,12 +220,12 @@ async fn test_fallback_group() -> Result<(), Error> {
 async fn test_get_family_info() -> Result<(), Error> {
     let (_app, font_provider) = start_provider_with_default_fonts()?;
 
-    let family_info = await!(font_provider.get_family_info("robotoslab"))?;
+    let family_info = await!(font_provider.get_family_info("materialicons"))?;
 
     assert!(family_info.is_some());
     let family_info = family_info.unwrap();
 
-    assert!(family_info.name == "Roboto Slab");
+    assert!(family_info.name == "Material Icons");
     assert!(family_info.styles.len() > 0);
 
     Ok(())
