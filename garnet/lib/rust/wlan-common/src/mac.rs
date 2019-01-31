@@ -7,6 +7,7 @@ use {
     bitfield::bitfield,
     byteorder::{BigEndian, ByteOrder, LittleEndian},
     num::{One, Unsigned},
+    std::{marker::PhantomData, ops::Deref},
     zerocopy::{AsBytes, ByteSlice, FromBytes, LayoutVerified, Unaligned},
 };
 
@@ -98,18 +99,14 @@ bitfield! {
 
     pub value, _: 31,0;
 }
-
-impl HtControl {
-    pub fn from_bytes(bytes: &[u8]) -> Option<HtControl> {
-        if bytes.len() < 4 {
-            None
-        } else {
-            Some(HtControl(LittleEndian::read_u32(bytes)))
-        }
+impl<T: Deref<Target = RawHtControl>> From<T> for HtControl {
+    fn from(bytes: T) -> HtControl {
+        HtControl(LittleEndian::read_u32(&bytes[..]))
     }
 }
 
 // IEEE Std 802.11-2016, 9.4.1.4
+type RawCapabilityInfo = [u8; 2];
 bitfield! {
     pub struct CapabilityInfo(u16);
     impl Debug;
@@ -132,16 +129,40 @@ bitfield! {
 
     pub value, _: 15, 0;
 }
-
-impl CapabilityInfo {
-    pub fn from_bytes(bytes: &[u8]) -> Option<CapabilityInfo> {
-        if bytes.len() < 4 {
-            None
-        } else {
-            Some(CapabilityInfo(LittleEndian::read_u16(bytes)))
-        }
+impl<T: Deref<Target = RawCapabilityInfo>> From<T> for CapabilityInfo {
+    fn from(bytes: T) -> CapabilityInfo {
+        CapabilityInfo(LittleEndian::read_u16(&bytes[..]))
     }
 }
+
+// IEEE Std 802.11-2016, 9.2.4.5.1, Table 9-6
+bitfield! {
+    pub struct QosControl(u16);
+    impl Debug;
+
+    pub tid, set_tid: 3, 0;
+    pub eosp, set_eosp: 4;
+    pub ack_policy, set_ack_policy: 6, 5;
+    pub amsdu_present, set_amsdu_present: 7;
+
+    // TODO(hahnr): Support various interpretations for remaining 8 bits.
+
+    pub value, _: 15, 0;
+}
+impl<T: Deref<Target = RawQosControl>> From<T> for QosControl {
+    fn from(bytes: T) -> QosControl {
+        QosControl(LittleEndian::read_u16(&bytes[..]))
+    }
+}
+
+#[derive(PartialEq, Eq)]
+pub struct Presence<T: ?Sized>(bool, PhantomData<T>);
+
+pub trait OptionalField {
+    const PRESENT: Presence<Self> = Presence::<Self>(true, PhantomData);
+    const ABSENT: Presence<Self> = Presence::<Self>(false, PhantomData);
+}
+impl<T: ?Sized> OptionalField for T {}
 
 // IEEE Std 802.11-2016, 9.3.3.2
 #[repr(C, packed)]
@@ -183,12 +204,17 @@ impl MgmtHdr {
 
     /// Returns the length in bytes of a mgmt header including all its fixed and optional
     /// fields (if they are present).
-    pub fn len(has_ht_ctrl: bool) -> usize {
+    pub fn len(has_ht_ctrl: Presence<HtControl>) -> usize {
         let mut bytes = std::mem::size_of::<DataHdr>();
-        bytes += if has_ht_ctrl { std::mem::size_of::<RawHtControl>() } else { 0 };
+        bytes += match has_ht_ctrl {
+            HtControl::PRESENT => std::mem::size_of::<RawHtControl>(),
+            HtControl::ABSENT => 0,
+        };
         bytes
     }
 }
+
+pub type Addr4 = MacAddr;
 
 // IEEE Std 802.11-2016, 9.3.2.1
 #[repr(C, packed)]
@@ -230,11 +256,24 @@ impl DataHdr {
 
     /// Returns the length in bytes of a data header including all its fixed and optional
     /// fields (if they are present).
-    pub fn len(has_addr4: bool, has_qos_ctrl: bool, has_ht_ctrl: bool) -> usize {
+    pub fn len(
+        has_addr4: Presence<Addr4>,
+        has_qos_ctrl: Presence<QosControl>,
+        has_ht_ctrl: Presence<HtControl>,
+    ) -> usize {
         let mut bytes = std::mem::size_of::<DataHdr>();
-        bytes += if has_addr4 { std::mem::size_of::<MacAddr>() } else { 0 };
-        bytes += if has_qos_ctrl { std::mem::size_of::<RawQosControl>() } else { 0 };
-        bytes += if has_ht_ctrl { std::mem::size_of::<RawHtControl>() } else { 0 };
+        bytes += match has_addr4 {
+            Addr4::PRESENT => std::mem::size_of::<MacAddr>(),
+            Addr4::ABSENT => 0,
+        };
+        bytes += match has_qos_ctrl {
+            QosControl::PRESENT => std::mem::size_of::<RawQosControl>(),
+            QosControl::ABSENT => 0,
+        };
+        bytes += match has_ht_ctrl {
+            HtControl::PRESENT => std::mem::size_of::<RawHtControl>(),
+            HtControl::ABSENT => 0,
+        };
         bytes
     }
 }
@@ -280,7 +319,11 @@ impl<B: ByteSlice> MacFrame<B> {
 
                 // Skip optional padding if body alignment is used.
                 let body = if body_aligned {
-                    let full_hdr_len = MgmtHdr::len(ht_ctrl.is_some());
+                    let full_hdr_len = MgmtHdr::len(if ht_ctrl.is_some() {
+                        HtControl::PRESENT
+                    } else {
+                        HtControl::ABSENT
+                    });
                     skip_body_alignment_padding(full_hdr_len, body)?
                 } else {
                     body
@@ -299,8 +342,11 @@ impl<B: ByteSlice> MacFrame<B> {
 
                 // Skip optional padding if body alignment is used.
                 let body = if body_aligned {
-                    let full_hdr_len =
-                        DataHdr::len(addr4.is_some(), qos_ctrl.is_some(), ht_ctrl.is_some());
+                    let full_hdr_len = DataHdr::len(
+                        if addr4.is_some() { Addr4::PRESENT } else { Addr4::ABSENT },
+                        if qos_ctrl.is_some() { QosControl::PRESENT } else { QosControl::ABSENT },
+                        if ht_ctrl.is_some() { HtControl::PRESENT } else { HtControl::ABSENT },
+                    );
                     skip_body_alignment_padding(full_hdr_len, body)?
                 } else {
                     body
@@ -370,7 +416,7 @@ pub struct BeaconHdr {
     pub timestamp: [u8; 8],
     pub beacon_interval: [u8; 2],
     // IEEE Std 802.11-2016, 9.4.1.4
-    pub capabilities: [u8; 2],
+    pub capabilities: RawCapabilityInfo,
 }
 // Safe: see macro explanation.
 unsafe_impl_zerocopy_traits!(BeaconHdr);
@@ -784,20 +830,20 @@ mod tests {
 
     #[test]
     fn mgmt_hdr_len() {
-        assert_eq!(MgmtHdr::len(false), 24);
-        assert_eq!(MgmtHdr::len(true), 28);
+        assert_eq!(MgmtHdr::len(HtControl::ABSENT), 24);
+        assert_eq!(MgmtHdr::len(HtControl::PRESENT), 28);
     }
 
     #[test]
     fn data_hdr_len() {
-        assert_eq!(DataHdr::len(false, false, false), 24);
-        assert_eq!(DataHdr::len(true, false, false), 30);
-        assert_eq!(DataHdr::len(false, true, false), 26);
-        assert_eq!(DataHdr::len(false, false, true), 28);
-        assert_eq!(DataHdr::len(true, true, false), 32);
-        assert_eq!(DataHdr::len(false, true, true), 30);
-        assert_eq!(DataHdr::len(true, false, true), 34);
-        assert_eq!(DataHdr::len(true, true, true), 36);
+        assert_eq!(DataHdr::len(Addr4::ABSENT, QosControl::ABSENT, HtControl::ABSENT), 24);
+        assert_eq!(DataHdr::len(Addr4::PRESENT, QosControl::ABSENT, HtControl::ABSENT), 30);
+        assert_eq!(DataHdr::len(Addr4::ABSENT, QosControl::PRESENT, HtControl::ABSENT), 26);
+        assert_eq!(DataHdr::len(Addr4::ABSENT, QosControl::ABSENT, HtControl::PRESENT), 28);
+        assert_eq!(DataHdr::len(Addr4::PRESENT, QosControl::PRESENT, HtControl::ABSENT), 32);
+        assert_eq!(DataHdr::len(Addr4::ABSENT, QosControl::PRESENT, HtControl::PRESENT), 30);
+        assert_eq!(DataHdr::len(Addr4::PRESENT, QosControl::ABSENT, HtControl::PRESENT), 34);
+        assert_eq!(DataHdr::len(Addr4::PRESENT, QosControl::PRESENT, HtControl::PRESENT), 36);
     }
 
     #[test]
