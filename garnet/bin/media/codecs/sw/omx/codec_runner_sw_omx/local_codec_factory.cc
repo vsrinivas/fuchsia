@@ -60,12 +60,6 @@ LocalCodecFactory::LocalCodecFactory(async_dispatcher_t* fidl_dispatcher,
 
 void LocalCodecFactory::CreateDecoder(
     fuchsia::mediacodec::CreateDecoder_Params decoder_params,
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder_request) {
-    // No longer supported, Omx users should switch to StreamProcessor.
-}
-
-void LocalCodecFactory::CreateDecoder2(
-    fuchsia::mediacodec::CreateDecoder_Params decoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) {
   CreateCommon(std::move(decoder_request),
                fuchsia::mediacodec::CodecType::DECODER,
@@ -74,6 +68,12 @@ void LocalCodecFactory::CreateDecoder2(
                    codec_runner::CodecRunner* codec_runner) mutable {
                  codec_runner->SetDecoderParams(std::move(decoder_params));
                });
+}
+
+void LocalCodecFactory::CreateDecoder2(
+    fuchsia::mediacodec::CreateDecoder_Params decoder_params,
+    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder_request) {
+  CreateDecoder(std::move(decoder_params), std::move(decoder_request));
 }
 
 void LocalCodecFactory::CreateEncoder(

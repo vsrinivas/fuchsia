@@ -73,14 +73,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
       std::unique_ptr<fuchsia::mediacodec::CreateEncoder_Params> encoder_params,
       fidl::InterfaceRequest<fuchsia::media::StreamProcessor> codec_request);
 
-  // TODO(rjascani): Remove after soft transition
-  CodecImpl(std::unique_ptr<CodecAdmission> codec_admission,
-            async_dispatcher_t* shared_fidl_dispatcher,
-            thrd_t shared_fidl_thread,
-            std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params>
-                video_decoder_params,
-            fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request);
-
   ~CodecImpl();
 
   // This is only intended for use by LocalCodecFactory in creating the
@@ -248,99 +240,6 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
     bool failure_seen_ = false;
   };
 
-  // TODO(rjascani): Remove after soft transition complete.
-  // This looks scary because it is. The vtables of Codec/Codec_EventSender and
-  // StreamProcessor/StreamProcessor_EventSender *should* match. At least for
-  // the duration of this soft transition.
-  class BindingWrapper {
-   public:
-    // The Codec and StreamProcessor vtable entries must line up perfectly for
-    // this to work as intended. The intent is for Codec dispatching code to
-    // dispatch to StreamProcessor Stub methods, despite the lack of base class
-    // in common. This is temporary.
-    BindingWrapper(
-        CodecImpl* codec_impl,
-        ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> request)
-        : stream_interface_request_(std::move(request)),
-          codec_interface_request_(),
-          stream_binding_(codec_impl),
-          codec_binding_(reinterpret_cast<fuchsia::mediacodec::Codec*>(
-              static_cast<fuchsia::media::StreamProcessor*>(codec_impl))) {
-      ZX_DEBUG_ASSERT(stream_interface_request_);
-    }
-
-    BindingWrapper(CodecImpl* codec_impl,
-                   ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> request)
-        : stream_interface_request_(),
-          codec_interface_request_(std::move(request)),
-          stream_binding_(codec_impl),
-          codec_binding_(reinterpret_cast<fuchsia::mediacodec::Codec*>(
-              static_cast<fuchsia::media::StreamProcessor*>(codec_impl))) {
-      ZX_DEBUG_ASSERT(codec_interface_request_);
-    }
-
-    zx_status_t Bind(async_dispatcher_t* dispatcher = nullptr) {
-      ZX_DEBUG_ASSERT(!!stream_interface_request_ ^ !!codec_interface_request_);
-      if (stream_interface_request_.is_valid()) {
-        return stream_binding_.Bind(std::move(stream_interface_request_),
-                                    dispatcher);
-      } else {
-        return codec_binding_.Bind(std::move(codec_interface_request_),
-                                   dispatcher);
-      }
-    }
-
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> Unbind() {
-      if (stream_binding_.is_bound()) {
-        return stream_binding_.Unbind();
-      } else {
-        return ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>(
-            codec_binding_.Unbind().TakeChannel());
-      }
-    }
-
-    void set_error_handler(fit::function<void(zx_status_t)> error_handler) {
-      ZX_DEBUG_ASSERT(stream_interface_request_.is_valid() ||
-                      codec_interface_request_.is_valid());
-      if (stream_interface_request_.is_valid()) {
-        stream_binding_.set_error_handler(std::move(error_handler));
-      } else {
-        codec_binding_.set_error_handler(std::move(error_handler));
-      }
-    }
-
-    fuchsia::media::StreamProcessor_EventSender& events() {
-      if (stream_binding_.is_bound()) {
-        return stream_binding_.events();
-      } else {
-        // Force calling to the Codec_EventSender vtable despite the caller
-        // believing it's calling StreamProcessor_EventSender. This is
-        // temporary.
-        return reinterpret_cast<fuchsia::media::StreamProcessor_EventSender&>(
-            static_cast<fuchsia::mediacodec::Codec_EventSender&>(
-                codec_binding_.events()));
-      }
-    }
-
-    bool is_bound() const {
-      return stream_binding_.is_bound() || codec_binding_.is_bound();
-    }
-
-   private:
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
-        stream_interface_request_;
-    ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec>
-        codec_interface_request_;
-
-    ::fidl::Binding<fuchsia::media::StreamProcessor, CodecImpl*>
-        stream_binding_;
-    // When used, this binding will dispatch per Codec interface message
-    // ordinals, but the actual dispatch is forced to call via the vtable of a
-    // StreamProcessor instead of a Codec. This only works because the vtable
-    // entries line up perfectly. This is temporary.
-    ::fidl::Binding<fuchsia::mediacodec::Codec> codec_binding_;
-  };
-
   // While we list this first in the member variables to hint that this gets
   // destructed last, the actual mechanism of destruction of the CodecAdmission
   // is via posting to the shared_fidl_thread(), because if we add more stuff in
@@ -433,17 +332,16 @@ class CodecImpl : public fuchsia::media::StreamProcessor,
 
   // Held here temporarily until DeviceFidl is ready to handle errors so we can
   // bind.
-  /* fidl::InterfaceRequest<fuchsia::media::StreamProcessor> */
-  /*     tmp_interface_request_; */
+  fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
+      tmp_interface_request_;
 
   // This binding doesn't channel-own this CodecImpl.  The DeviceFidl owns all
   // the CodecImpl(s).  The DeviceFidl will SetErrorHandler() such that its
   // ownership drops if the channel fails.  The CodecImpl takes care of cleaning
   // itself up before calling the DeviceFidl's error handler, so that CodecImpl
   // is ready for destruction by the time DeviceFidl's error handler is called.
-  /* fidl::Binding<fuchsia::media::StreamProcessor, CodecImpl*> binding_; */
+  fidl::Binding<fuchsia::media::StreamProcessor, CodecImpl*> binding_;
 
-  BindingWrapper binding_;
   // This is the zx::channel we get indirectly from binding_.Unbind() (we only
   // need the zx::channel part).  We delay closing the Codec zx::channel until
   // after removing the concurrency tally in ~CodecAdmission, so that a Codec

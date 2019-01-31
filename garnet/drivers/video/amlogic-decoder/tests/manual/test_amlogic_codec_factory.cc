@@ -81,7 +81,7 @@ void test_factory() {
            .promise_separate_access_units_on_input = true,
            .require_hw = true,
        }]() mutable {
-        codec_factory->CreateDecoder2(std::move(params), std::move(request));
+        codec_factory->CreateDecoder(std::move(params), std::move(request));
       });
 
   // Use FIDL thread to check that codec can communicate to the driver

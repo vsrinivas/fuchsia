@@ -289,8 +289,8 @@ static void use_video_decoder(
       main_loop->dispatcher(),
       [&codec_factory, codec_client_request = codec_client.GetTheRequestOnce(),
        mime_type]() mutable {
-        VLOGF("before codec_factory->CreateDecoder2() (async)\n");
-        codec_factory->CreateDecoder2(
+        VLOGF("before codec_factory->CreateDecoder() (async)\n");
+        codec_factory->CreateDecoder(
             fuchsia::mediacodec::CreateDecoder_Params{
                 .input_details.format_details_version_ordinal = 0,
                 .input_details.mime_type = mime_type,

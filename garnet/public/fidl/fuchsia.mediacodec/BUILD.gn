@@ -8,8 +8,6 @@ fidl("fuchsia.mediacodec") {
   sdk_category = "partner"
 
   sources = [
-    "codec.fidl",
-    "codec_common.fidl",
     "codec_factory.fidl",
   ]
 

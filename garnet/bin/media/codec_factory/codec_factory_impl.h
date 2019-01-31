@@ -23,9 +23,9 @@ class CodecFactoryImpl : public fuchsia::mediacodec::CodecFactory {
                               zx::channel request);
 
   // See .fidl file comments.
-  void CreateDecoder(
-      fuchsia::mediacodec::CreateDecoder_Params params,
-      ::fidl::InterfaceRequest<fuchsia::mediacodec::Codec> decoder) override;
+  void CreateDecoder(fuchsia::mediacodec::CreateDecoder_Params params,
+                     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>
+                         decoder) override;
 
   void CreateDecoder2(fuchsia::mediacodec::CreateDecoder_Params params,
                       ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor>

@@ -250,7 +250,7 @@ void use_aac_decoder(async::Loop* main_loop,
       [&codec_factory, create_params = std::move(create_params),
        codec_client_request = codec_client.GetTheRequestOnce()]() mutable {
         VLOGF("before codec_factory->CreateDecoder() (async)\n");
-        codec_factory->CreateDecoder2(std::move(create_params),
+        codec_factory->CreateDecoder(std::move(create_params),
                                      std::move(codec_client_request));
       });
   VLOGF("before codec_client.Start()...\n");

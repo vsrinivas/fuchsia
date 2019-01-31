@@ -139,32 +139,6 @@ uint32_t BufferCountFromPortSettings(
 
 }  // namespace
 
-// TODO(rjascani): Remove after soft transition complete.
-CodecImpl::CodecImpl(
-    std::unique_ptr<CodecAdmission> codec_admission,
-    async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
-    std::unique_ptr<fuchsia::mediacodec::CreateDecoder_Params> decoder_params,
-    fidl::InterfaceRequest<fuchsia::mediacodec::Codec> codec_request)
-    // The parameters to CodecAdapter constructor here aren't important.
-    : CodecAdapter(lock_, this),
-      codec_admission_(std::move(codec_admission)),
-      shared_fidl_dispatcher_(shared_fidl_dispatcher),
-      shared_fidl_thread_(shared_fidl_thread),
-      // TODO(dustingreen): Maybe have another parameter for encoder params, or
-      // maybe separate constructor.
-      decoder_params_(std::move(decoder_params)),
-      binding_(this, std::move(codec_request)),
-      stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
-  // For now, decoder_params is required.
-  //
-  // TODO(dustingreen): Make decoder_params || encoder_params required.
-  ZX_DEBUG_ASSERT(decoder_params_);
-  // This is the binding_'s error handler, not the owner_error_handler_ which
-  // is related but separate.
-  binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
-  initial_input_format_details_ = &decoder_params_->input_details;
-}
-
 CodecImpl::CodecImpl(
     std::unique_ptr<CodecAdmission> codec_admission,
     async_dispatcher_t* shared_fidl_dispatcher, thrd_t shared_fidl_thread,
@@ -198,10 +172,11 @@ CodecImpl::CodecImpl(
       // maybe separate constructor.
       decoder_params_(std::move(decoder_params)),
       encoder_params_(std::move(encoder_params)),
-      // tmp_interface_request_(std::move(codec_request)),
-      binding_(this, std::move(codec_request)),
+      tmp_interface_request_(std::move(codec_request)),
+      binding_(this),
       stream_control_loop_(&kAsyncLoopConfigNoAttachToThread) {
   ZX_DEBUG_ASSERT(!!decoder_params_ ^ !!encoder_params_);
+  ZX_DEBUG_ASSERT(tmp_interface_request_);
   // This is the binding_'s error handler, not the owner_error_handler_ which
   // is related but separate.
   binding_.set_error_handler([this](zx_status_t status) { this->Unbind(); });
@@ -249,8 +224,7 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
   // Up to once only.  No re-use.
   ZX_DEBUG_ASSERT(!was_bind_async_called_);
   ZX_DEBUG_ASSERT(!binding_.is_bound());
-  // TODO(rjascani): Uncomment after soft transition complete.
-  // ZX_DEBUG_ASSERT(tmp_interface_request_);
+  ZX_DEBUG_ASSERT(tmp_interface_request_);
   was_bind_async_called_ = true;
 
   zx_status_t start_thread_result = stream_control_loop_.StartThread(
@@ -293,17 +267,13 @@ void CodecImpl::BindAsync(fit::closure error_handler) {
     // of that dispatching would tend to land in FailLocked().  The concurrency
     // is just worth keeping in mind for the rest of the current lambda is all.
     PostToSharedFidl([this] {
-      // TODO(rjascani): Uncomment after soft transition complete.
-      // zx_status_t bind_result =
-      // binding_.Bind(std::move(tmp_interface_request_),
-      //                                        shared_fidl_dispatcher_);
-      zx_status_t bind_result = binding_.Bind(shared_fidl_dispatcher_);
+      zx_status_t bind_result = binding_.Bind(std::move(tmp_interface_request_),
+                                              shared_fidl_dispatcher_);
       if (bind_result != ZX_OK) {
         Fail("binding_.Bind() failed");
         return;
       }
-      // TODO(rjascani): Uncomment after soft transition complete.
-      // ZX_DEBUG_ASSERT(!tmp_interface_request_);
+      ZX_DEBUG_ASSERT(!tmp_interface_request_);
     });
 
     input_constraints_ =

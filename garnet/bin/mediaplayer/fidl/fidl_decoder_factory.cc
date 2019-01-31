@@ -45,7 +45,7 @@ void FidlDecoderFactory::CreateDecoder(
   decoder_params.require_hw = true;
 
   fuchsia::media::StreamProcessorPtr decoder;
-  codec_factory_->CreateDecoder2(std::move(decoder_params),
+  codec_factory_->CreateDecoder(std::move(decoder_params),
                                 decoder.NewRequest());
   FXL_DCHECK(decoder);
 
