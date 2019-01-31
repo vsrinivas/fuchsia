@@ -1,0 +1,23 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### listen for kernel logs.
+
+## This command delegates to the Zircon `loglistener` binary.
+## This will listen to the device specified with `fx set-device`; otherwise
+## one of the devices on the link-local network.
+
+set -e
+set -o pipefail
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+if [[ $# > 0 && $1 = "--raw" ]]; then
+  shift
+  exec "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)"
+else
+  "${ZIRCON_TOOLS_DIR}/loglistener" "$(get-device-name)" | fx-symbolize
+fi

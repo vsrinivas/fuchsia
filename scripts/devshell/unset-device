@@ -1,0 +1,21 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### unset the default device to interact with
+
+## usage: fx unset-device
+##
+## Unset the default device to work with. See "fx set-device" for more
+## information.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-standard-switches "$@"
+fx-config-read
+
+if [[ -n "${FUCHSIA_BUILD_DIR}" ]]; then
+  rm -f "${FUCHSIA_BUILD_DIR}.device"
+fi

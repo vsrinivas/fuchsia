@@ -1,0 +1,2 @@
+local -a disks=( ${(f)$(fx list-usb-disks |sed -e 's/:/\\:/g' -e 's/ - /:/')} )
+_describe "USB Disk" disks

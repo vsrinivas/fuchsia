@@ -1,0 +1,185 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### runs source formatters on modified files
+
+## Usage: fx format-code
+##           [--help] [--dry-run] [--verbose] [--all]
+##           [--files=FILES,[FILES ...]]
+##           [--target=GN_TARGET]
+##           [--git]
+##
+##   --help    Prints this message
+##   --dry-run Stops the program short of running the formatters
+##   --all     Formats all code in the git repo under the current working
+##             directory.
+##   --files   Allows the user to specify files.  Files are comma separated.
+##             Globs are dealt with by bash; fx format-code "--files=foo/*" will
+##             work as expected.
+##    --target Allows the user to specify a gn target.
+##    --git    The default; it uses `git diff-index` against the newest parent
+##             commit in the upstream branch (or against HEAD if no such commit
+##             is found).  Files that are locally modified, staged or touched by
+##             any commits introduced on the local branch are formatted.
+##    --remove-ordinals (temporary)
+##             Removes ordinals from FIDL files.  This option will be removed
+##             when ordinals are no longer legal in FIDL files.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+function usage() {
+  fx-command-help
+}
+
+function zap-commas() {
+  echo $1 | tr ',' '\n'
+}
+
+function get-diff-base() {
+  local upstream=$(git rev-parse --abbrev-ref --symbolic-full-name "@{u}" 2>/dev/null)
+  if [[ -z "${upstream}" ]]; then
+    upstream="origin/master"
+  fi
+  local local_commit=$(git rev-list HEAD ^${upstream} --  2>/dev/null | tail -1)
+  if [[ -z "${local_commit}" ]]; then
+    printf "HEAD"
+  else
+    git rev-parse "${local_commit}"^
+  fi
+}
+
+function format-cmd() {
+  if [ -f $1 ]; then
+    case $1 in
+      *.cc) printf "${CLANG_CMD}" ;;
+      *.cmx) printf "${JSON_FMT_CMD}" ;;
+      *.cpp) printf "${CLANG_CMD}" ;;
+      *.dart) printf "${DART_CMD}" ;;
+      *.fidl) printf "${FIDL_CMD}" ;;
+      *.gn) printf "${GN_CMD}" ;;
+      *.gni) printf "${GN_CMD}" ;;
+      *.go) printf "${GO_CMD}" ;;
+      *.h) printf "${CLANG_CMD}" ;;
+      *.hh) printf "${CLANG_CMD}" ;;
+      *.hpp) printf "${CLANG_CMD}" ;;
+      *.ts) printf "${CLANG_CMD}" ;;
+      *.rs) printf "${RUST_FMT_CMD}" ;;
+    esac
+  fi
+}
+
+function hg-cmd() {
+  [[ $1 =~ .*\.h ]] && printf "${FIX_HEADER_GUARDS_CMD}"
+}
+
+# Removes leading //, resolves to absolute path, and resolves globs.  The first
+# argument is a path prefix, and the remaining arguments are relative to that
+# path prefix.
+function canonicalize() {
+  local root_dir="$1"
+  shift
+  for fileglob in "${@}"; do
+    # // means it comes from gn, [^/]* means it is relative
+    if [[ "${fileglob}" = //* || "${fileglob}" = [^/]* ]]; then
+      local dir="${root_dir}"/
+    else
+      local dir=""
+    fi
+    for file in "${dir}"${fileglob#"//"}; do
+      echo "${file}"
+    done
+  done
+}
+
+DRY_RUN=
+VERBOSE=
+REMOVE_ORDINALS=
+
+fx-config-read
+
+for ARG in "$@"; do
+  case "${ARG}" in
+    --verbose) VERBOSE="1" ;;
+    --dry-run) DRY_RUN="1" ;;
+    --all) FILES=$(canonicalize "${PWD}" $(git ls-files)) ;;
+    --git) ;; # We'll figure this out later
+    --files=*) FILES=$(canonicalize "${PWD}" $(zap-commas "${ARG#--files=}")) ;;
+    --target=*) FILES=$(canonicalize "${FUCHSIA_DIR}" \
+        $(fx-buildtool-run gn desc \
+            "${FUCHSIA_OUT_DIR}/${FUCHSIA_ARCH}" "${ARG#--target=}" sources)) &&
+        RUST_ENTRY_POINT=$(canonicalize "${FUCHSIA_DIR}" \
+            $(fx rustfmt --print-sources ${ARG#--target=})) ;;
+# TODO(FIDL-372): Remove support for --remove-ordinals
+    --remove-ordinals) REMOVE_ORDINALS="1" ;;
+    --help) usage && exit 1 ;;
+    *) usage && printf "Unknown flag %s\n" "${ARG}" && exit 1 ;;
+  esac
+done
+
+if [ -z "${FILES+x}" ]; then
+  FILES=$(canonicalize $(git rev-parse --show-toplevel) \
+    $(git diff-index --name-only $(get-diff-base)))
+fi
+
+if [[ -n "${VERBOSE}" ]]; then
+  printf "Files to be formatted:\n%s\n" "${FILES}"
+fi
+
+declare BUILDTOOLS_ROOT="${FUCHSIA_DIR}"/buildtools
+declare HOST_OS=$(uname | tr '[:upper:]' '[:lower:]')
+
+[[ "${HOST_OS}" == "darwin" ]] && HOST_OS="mac"
+case $(uname -m) in
+  x86_64) HOST_ARCH="x64" ;;
+  aarch64) HOST_ARCH="arm64" ;;
+  *) echo "Unknown arch $(uname -m)" && exit 1 ;;
+esac
+
+declare HOST_PLATFORM="${HOST_OS}-${HOST_ARCH}"
+
+declare CLANG_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/clang/bin/clang-format -style=file -fallback-style=Google -sort-includes -i"
+declare DART_CMD="${FUCHSIA_DIR}/topaz/tools/prebuilt-dart-sdk/${HOST_PLATFORM}/bin/dartfmt -w"
+declare FIDL_BIN="${ZIRCON_TOOLS_DIR}"/fidl-format
+if [[ -z "${REMOVE_ORDINALS}" ]]; then
+  declare FIDL_CMD="${FIDL_BIN} -i"
+else
+  declare FIDL_CMD="${FIDL_BIN} -i --remove-ordinals"
+fi
+declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
+declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -w"
+declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
+declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml --unstable-features --skip-children"
+declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml"
+
+declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
+
+# If there is a FIDL file to fix, and we don't have a copy of fidl-format,
+# generate one.
+for file in ${FILES}; do
+  if [[ ${file} =~ .*\.fidl ]]; then
+    if [[ ! -x "${FIDL_BIN}" ]]; then
+       printf "fidl-format not found: attempting to build it\n"
+       fx-command-run build-zircon -l
+       break
+     fi
+  fi
+done
+
+[[ -n "${DRY_RUN}" ]] && exit
+
+[[ -n "${RUST_ENTRY_POINT}" ]] && ${RUST_ENTRY_POINT_FMT_CMD} "${RUST_ENTRY_POINT}"
+
+for file in ${FILES}; do
+  # Git reports deleted files, which we don't want to try to format
+  [[ ! -f "${file}" ]] && continue
+
+  # Format the file
+  declare fcmd=$(format-cmd ${file})
+  [[ -n "${fcmd}" ]] && ${fcmd} "${file}"
+  declare hgcmd=$(hg-cmd ${file})
+  [[ -n "${hgcmd}" ]] && ${hgcmd} "${file}"
+done

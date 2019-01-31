@@ -1,0 +1,64 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### reboot a target fuchsia system
+
+## usage: fx reboot [-r|--recovery] [-b|--bootloader]
+##   -r|--recovery   Reboot into recovery image
+##   -b|--bootloader Reboot into bootloader
+##
+## This will reboot the device specified with `fx set-device`; otherwise
+## one of the devices on the link-local network.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage() {
+    fx-command-help
+}
+
+reboot_type="reboot"
+while [[ "$1" =~ ^- ]]; do
+  case "$1" in
+  -h|--help)
+    usage
+    exit 0
+    ;;
+  -r|--recovery)
+    reboot_type="reboot-recovery"
+    ;;
+  -b|--bootloader)
+    reboot_type="reboot-bootloader"
+    ;;
+  *)
+    break
+  esac
+  shift
+done
+
+if [[ $# -gt 1 ]]; then
+  usage
+  exit 1
+fi
+
+# If the OS X firewall is enabled, add timeout so users can click the network connection warning
+# dialog.
+if [[ "$(uname -s)" = "Darwin" ]] &&
+   [[ "$("/usr/libexec/ApplicationFirewall/socketfilterfw" "--getglobalstate" | grep -i -c "enabled" || echo -n 0)" = "1" ]]; then
+  timeout_flag="--timeout=3000"
+else
+  timeout_flag="--nowait"
+fi
+
+device=$(get-device-name)
+if [[ -z ${device} ]] &&
+   [[ $("${ZIRCON_TOOLS_DIR}/netls" "${timeout_flag}" | grep -i -c "device ") > "1" ]] ; then
+  echo "Rebooting some device... Consider using \`fx set-device\` if you have multiple devices."
+else
+  echo "Rebooting ${device}..."
+fi
+"${ZIRCON_TOOLS_DIR}/netruncmd" "${timeout_flag}" "${device}" "dm ${reboot_type}"

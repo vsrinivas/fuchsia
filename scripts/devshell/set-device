@@ -1,0 +1,49 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### set the default device to interact with
+
+## usage: fx set-device [<device-name>]
+##
+## fx set-device is used to specify the default device to target for various
+## fx commands, such as serve, syslog, and so on.
+## A device is set within the scope of a build directory (i.e. out/arm64 may
+## have a different pair set than out/x64).
+##
+## If no device name is given, set-device will attempt to discover devices. If
+## one device is found, that device is set as the default for the current build
+## directory. If more than one device is found, the user must select one and
+## provide it to a subsequent invocation of the command.
+##
+## To unset, use `fx unset-device`.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-standard-switches "$@"
+fx-config-read
+
+device="$1"
+if [[ -z "$device" ]]; then
+  devices="$("${ZIRCON_TOOLS_DIR}/netls" | awk '/device /{print $2}')"
+  if [[ "$(echo "$devices" | wc -l)" -gt 2 ]]; then
+    echo 2>&1 "Multiple devices found, please pick one from the list:"
+    echo "${devices}"
+    exit 1
+  fi
+  if [[ -z "${devices}" ]]; then
+    echo 2>&1 "No devices discovered, please supply a device name"
+    exit 1
+  fi
+  device="${devices}"
+fi
+
+if [[ ! -d "${FUCHSIA_BUILD_DIR}" ]]; then
+  echo 2>&1 "Build directory ${FUCHSIA_BUILD_DIR} does not exist, run \"fx set\" first."
+  exit 1
+fi
+
+echo "New default device: ${device}"
+echo "$device" > "${FUCHSIA_BUILD_DIR}.device"

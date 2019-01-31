@@ -1,0 +1,199 @@
+#!/usr/bin/env python
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+"""Runs clang-tidy on modified files.
+
+The tool uses `git diff-index` against the newest parent commit in the upstream
+branch (or against HEAD if no such commit is found) in order to find the files
+to be formatted. In result, the tool lints files that are locally modified,
+staged or touched by any commits introduced on the local branch.
+"""
+
+import argparse
+import multiprocessing
+import os
+import platform
+import re
+import subprocess
+import sys
+
+import git_utils
+import paths
+
+clang_os = "linux"
+if platform.platform().startswith("Darwin"):
+    clang_os = "mac"
+CLANG_TIDY_TOOL = os.path.join(paths.BUILDTOOLS_ROOT,
+                               "%s-x64" % clang_os, "clang", "bin",
+                               "clang-tidy")
+NINJA_TOOL = os.path.join(paths.BUILDTOOLS_ROOT, "ninja")
+
+
+def find_ancestor_with(filepath, relpath):
+    """Returns the lowest ancestor of |filepath| that contains |relpath|."""
+    cur_dir_path = os.path.abspath(os.path.dirname(filepath))
+    while True:
+        if os.path.exists(os.path.join(cur_dir_path, relpath)):
+            return cur_dir_path
+
+        next_dir_path = os.path.dirname(cur_dir_path)
+        if next_dir_path != cur_dir_path:
+            cur_dir_path = next_dir_path
+        else:
+            return None
+
+
+def get_out_dir(args):
+    if args.out_dir:
+        out_dir = args.out_dir
+
+        if not os.path.isabs(out_dir):
+            out_dir = os.path.join(paths.FUCHSIA_ROOT, out_dir)
+
+        if not os.path.isdir(out_dir):
+            print out_dir + " is not a directory"
+            sys.exit(-1)
+        return out_dir
+
+    if os.environ.get("FUCHSIA_BUILD_DIR"):
+        return os.environ.get("FUCHSIA_BUILD_DIR")
+
+    fuchsia_dir = os.environ.get("FUCHSIA_DIR", paths.FUCHSIA_ROOT)
+    fuchsia_config_file = os.path.join(fuchsia_dir, '.config')
+    if os.path.isfile(fuchsia_config_file):
+        fuchsia_config = open(fuchsia_config_file).read()
+        m = re.search(r'FUCHSIA_BUILD_DIR=[\'"]([^\s\'"]*)', fuchsia_config)
+        if m:
+            return os.path.join(fuchsia_dir, m.group(1))
+
+    print("Couldn't find the output directory, pass --out-dir " +
+          "(absolute or relative to Fuchsia root) or set FUCHSIA_BUILD_DIR.")
+    sys.exit(-1)
+
+
+def generate_db(out_dir):
+    cmd = [NINJA_TOOL, "-C", out_dir, "-t", "compdb", "cc", "cxx"]
+    db = subprocess.check_output(
+        cmd, cwd=paths.FUCHSIA_ROOT, universal_newlines=True)
+
+    # Strip away `gomacc` from the compile commands. This seems to fix problems
+    # with clang-tidy not being able to load system headers.
+    db = re.sub("\"/[\S]+/gomacc ", "\"", db)
+
+    with open(os.path.join(out_dir, "compile_commands.json"), "w+") as db_file:
+        db_file.write(db)
+
+
+def go(args):
+    out_dir = get_out_dir(args)
+
+    # generate the compilation database
+    generate_db(out_dir)
+
+    # Find the files to be checked.
+    if args.all:
+        files = git_utils.get_all_files()
+    else:
+        files = git_utils.get_diff_files()
+
+    filtered_files = []
+    for file_path in files:
+        # Skip deleted files.
+        if not os.path.isfile(file_path):
+            if args.verbose:
+                print "skipping " + file_path + " (deleted)"
+            continue
+
+        # Skip files with parent directories containing .nolint
+        if find_ancestor_with(file_path, ".nolint"):
+            if args.verbose:
+                print "skipping " + file_path + " (.nolint)"
+            continue
+        filtered_files.append(file_path)
+
+    if args.verbose:
+        print
+        print "Files to be checked:"
+        for file in filtered_files:
+            print " - " + file
+        if not filtered_files:
+            print " (no files)"
+        print
+
+    # change the working directory to Fuchsia root.
+    os.chdir(paths.FUCHSIA_ROOT)
+
+    # It's not safe to run in parallel with "--fix", as clang-tidy traverses and
+    # fixes header files, and we might end up with concurrent writes to the same
+    # header file.
+    if args.no_parallel or args.fix:
+        parallel_jobs = 1
+    else:
+        parallel_jobs = multiprocessing.cpu_count()
+        print("Running " + str(parallel_jobs) +
+              " jobs in parallel, pass --no-parallel to disable")
+
+    jobs = set()
+
+    for file_path in filtered_files:
+        _, extension = os.path.splitext(file_path)
+        if extension == ".cc":
+            relpath = os.path.relpath(file_path)
+            cmd = [CLANG_TIDY_TOOL, "-p", out_dir, relpath]
+            if args.checks:
+                cmd.append("-checks=" + args.checks)
+            if args.fix:
+                cmd.append("-fix")
+            if not args.verbose:
+                cmd.append("-quiet")
+
+            if args.verbose:
+                print "checking " + file_path + ": " + str(cmd)
+            jobs.add(subprocess.Popen(cmd))
+            if len(jobs) >= parallel_jobs:
+                os.wait()
+                jobs.difference_update(
+                    [job for job in jobs if job.poll() is not None])
+    for job in jobs:
+        if job.poll() is None:
+            job.wait()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Lint modified files.")
+    parser.add_argument(
+        "--all",
+        dest="all",
+        action="store_true",
+        default=False,
+        help="process all files in the repo under current working directory")
+    parser.add_argument(
+        "--fix",
+        dest="fix",
+        action="store_true",
+        default=False,
+        help="automatically generate fixes when possible")
+    parser.add_argument("--checks", help="overrides the list of checks to use")
+    parser.add_argument(
+        "--out-dir",
+        help="Output directory, needed to generate compilation db for clang.")
+    parser.add_argument(
+        "--no-parallel",
+        action="store_true",
+        default=False,
+        help="Process one file at a time")
+    parser.add_argument(
+        "--verbose",
+        dest="verbose",
+        action="store_true",
+        default=False,
+        help="tell me what you're doing")
+    args = parser.parse_args()
+    go(args)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

@@ -1,0 +1,93 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Visual tests for //scripts/devshell/lib/style.sh
+
+# This is not an automated unit test.
+# It prints stylized text describing the style to be shown, so a tester
+# can validate the expected style is rendered.
+
+# Note that some terminals do not support all terminal styles.
+# For instance, italic may not render as italic on MacOS.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../devshell/lib >/dev/null 2>&1 && pwd)"/style.sh || exit $?
+
+runtest() {
+  command="$1"; shift
+  "${command}" "$@" "${command} $*"
+}
+
+style::stylize --help
+style::echo --blue $'------------------'
+style::printf --help
+style::echo --blue $'------------------'
+style::error --help
+style::echo --blue $'------------------'
+style::link --help
+style::echo --blue $'----- colors -----'
+style::echo --help colors
+style::echo --blue $'--- attributes ---'
+style::echo --help attributes
+style::echo --blue $'------------------'
+
+runtest style::echo --bold
+runtest style::echo --bold --color cyan
+runtest style::echo --faint --color green
+runtest style::echo --italic --color magenta
+runtest style::echo --underline --color dark_blue
+runtest style::echo --blink --color light_gray
+runtest style::echo --pink --background dark_cyan
+runtest style::echo --italic --dark_magenta italic "this style may not work in some terminals:"
+
+style::printf --bold '%10s %6s\n' Item Cost
+style::printf '%10s %6s\n'        ---- ----
+style::printf --purple --background white  '%10s $%6.2f\n' beans 2.90 franks 9.35 cola 7.99 tiramasu 24.50
+
+style::cat --background dark_yellow --black << EOF
+Now is the time for all good
+people to come to the
+aid of their country and world.
+EOF
+
+style::cat --background cyan --color black --indent 4 << EOF
+Now is the time for all good
+people to come to the
+aid of their country and world.
+EOF
+
+style::info 'INFO: Info here'
+style::warning 'WARNING: Watch out!'
+style::error 'ERROR: What went wrong now?'
+style::link 'http://wikipedia.com'
+
+STYLE_WARNING='--stderr --blink --dark_yellow'
+style::warning 'WARNING: Customized warning style, still to stderr! :-)'
+
+STYLE_TO_TTY_ONLY=true  # default is false
+style::echo --bold --red "STYLE_TO_TTY_ONLY=$STYLE_TO_TTY_ONLY"
+style::echo --stderr --bold --red '
+This should still display in bold red, but on stderr' >/dev/null
+
+style::echo --color cyan --faint "
+This will not be styled. It doesn't print directly to the tty" | cat
+
+style::echo --stderr --color cyan --faint "
+This will not be styled. stderr doesn't print directly to the tty" 2>&1 | cat
+
+STYLE_TO_TTY_ONLY=false
+style::echo --bold --red "STYLE_TO_TTY_ONLY=$STYLE_TO_TTY_ONLY"
+style::echo --color cyan --faint "
+This will be styled even though it doesn't print directly to the tty." | cat
+
+style::echo --stderr --color cyan --faint "
+This will be styled even though stderr doesn't print directly to the tty" 2>&1 | cat
+
+# Three flags for the same thing:
+echo "This is $(style::echo -f      --bold --yellow LOUD) and soft."
+echo "This is $(style::echo --force --bold --yellow LOUD) and soft."
+echo "This is $(style::echo --tty   --bold --yellow LOUD) and soft."
+
+style::printf --blod --green 'Bad style' 2>/dev/null || echo "Bad style, Error status: $?"
+style::printf --faint --orange 'No orange' 2>/dev/null || echo "No orange! Error status: $?"

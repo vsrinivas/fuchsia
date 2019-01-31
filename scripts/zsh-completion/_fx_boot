@@ -1,0 +1,14 @@
+_arguments -S \
+  '-1[only boot once, then exit]' \
+  '-a[only boot device with this IPv6 address]:size:' \
+  '-b[tftp block size (default=1024, ignored with --netboot)]:size:' \
+  '-i[number of microseconds between packets (default=20, ignored with --tftp)]:msecs:' \
+  '-n[only boot device with this nodename]:nodename:__fx_nodename' \
+  '-w[tftp window size (default=1024, ignored with --netboot)]:size:' \
+  '--netboot[use the netboot protocol]' \
+  '--tftp[use the tftp protocol (default)]' \
+  '--nocolor[disable ANSI color (false)]' \
+  '1::kernel:_files' \
+  '2::ramdisk:_files'
+
+# TODO: complete kernel args?

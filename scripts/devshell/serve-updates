@@ -1,0 +1,129 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start the update server and attach to a running fuchsia device
+## usage: fx serve-updates [-v] [-l host[:port]]
+##   -l host:port for "pm serve" to listen on
+##   -v verbose (do not suppress `pm serve` output)
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help serve-updates
+}
+
+fx-standard-switches "$@"
+set -- "${FX_ARGV[@]}"
+
+serve_flags=()
+verbose=false
+very_verbose=false
+while (($#)); do
+  case "$1" in
+    -l)
+      shift
+      serve_flags+=(-l "$1")
+      ;;
+    -v|--verbose)
+      if $verbose; then
+        very_verbose=true
+      else
+        verbose=true
+      fi
+      ;;
+    -vv)
+      verbose=true
+      very_verbose=true
+      ;;
+    *)
+      echo "Unrecognized option: $1"
+      usage
+      exit 1
+      ;;
+  esac
+  shift
+done
+
+if [[ "${verbose}" != true ]]; then
+  serve_flags+=("-q")
+fi
+
+pm_srv_pid=
+cleanup() {
+  if [[ -n "${pm_srv_pid}" ]]; then
+    if kill -0 "${pm_srv_pid}" 2> /dev/null; then
+      kill -TERM "${pm_srv_pid}" 2> /dev/null
+      wait "${pm_srv_pid}" 2> /dev/null
+    fi
+  fi
+}
+trap cleanup EXIT
+
+log() {
+  # This format matches bootserver so that `fx serve` ui is easier to read.
+  echo "$(date '+%Y-%m-%d %H:%M:%S') [serve-updates] $@"
+}
+
+log_verbose() {
+  if [[ "$very_verbose" == true ]]; then
+    log "$@"
+  fi
+}
+
+if [[ -z "${pm_srv_pid}" ]]; then
+  "${FUCHSIA_BUILD_DIR}/host_x64/pm" serve -d "${FUCHSIA_BUILD_DIR}/amber-files/repository" "${serve_flags[@]}" &
+  pm_srv_pid=$!
+fi
+
+# Allow a little slack for pm serve to startup, that way the first kill -0 will catch a dead server
+sleep 0.1
+if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
+  log "Server died, exiting"
+  wait
+  exit $?
+fi
+
+log "Discovery..."
+
+# State is used to prevent too much output
+state="discover"
+while true; do
+  if ! kill -0 "${pm_srv_pid}" 2> /dev/null; then
+    log "Server died, exiting"
+    pm_srv_pid=
+    exit 1
+  fi
+  
+  fx-command-run shell -o ConnectionAttempts=1 -o ConnectTimeout=1 echo >/dev/null 2>&1
+  ping_result=$?
+
+  if [[ "$state" == "discover" && "$ping_result" == 0 ]]; then
+    log "Device up"
+    state="config"
+  fi
+
+  if [[ "$state" == "config" ]]; then
+    log "Registering devhost as update source"
+    if fx-command-run add-update-source; then
+      log "Ready to push packages!"
+      state="ready"
+    else
+      log "Device lost while configuring update source"
+      state="discover"
+    fi
+  fi
+
+  if [[ "$state" == "ready" ]]; then
+    if [[ "$ping_result" != 0 ]]; then
+      log "Device lost"
+      state="discover"
+    else
+      sleep 1
+    fi
+  fi
+done
+
+# See EXIT trap above for cleanup that occurs

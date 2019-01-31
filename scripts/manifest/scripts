@@ -1,0 +1,13 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<manifest>
+  <imports>
+    <localimport file="minimal"/>
+  </imports>
+  <projects>
+    <project name="third_party/pytoml"
+             path="third_party/pytoml"
+             remote="https://fuchsia.googlesource.com/third_party/pytoml"
+             gerrithost="https://fuchsia-review.googlesource.com"
+             revision="8641351699f44401232786cd9f320ac373c3a02e"/>
+  </projects>
+</manifest>

@@ -1,0 +1,170 @@
+#!/usr/bin/env python
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### view commits not yet published to global integration
+
+import argparse
+from argparse import RawTextHelpFormatter
+import base64
+from datetime import datetime, timedelta, tzinfo
+import json
+import sys
+import urllib2
+import xml.etree.ElementTree as xml
+
+
+PETALS = [
+    'topaz',
+    'peridot',
+    'garnet',
+    'zircon',
+    'build',
+    'buildtools',
+    'scripts',
+]
+
+
+# Authors whose commits are not displayed.
+IGNORED_AUTHORS = [
+    'skia-fuchsia-autoroll@skia-buildbots.google.com.iam.gserviceaccount.com',
+    'third-party-roller',
+    'topaz-roller',
+    'peridot-roller',
+    'garnet-roller',
+    'zircon-roller',
+]
+
+
+def http_get(url):
+    """Fetches the content at a given URL."""
+    try:
+        target = urllib2.urlopen(url)
+        return target.read()
+    finally:
+        if target:
+            target.close()
+
+
+def get_published_commit_for(petal):
+    """Returns the pinned revision of a petal in global integration."""
+    url = ('https://fuchsia.googlesource.com/integration/+/master/%s/minimal?format=TEXT'
+           % petal)
+    content = http_get(url)
+    content = base64.b64decode(content)
+    manifest = xml.fromstring(content)
+    nodes = manifest.findall('./projects/project[@name="%s"]' % petal)
+    return (petal, nodes[0].get('revision'))
+
+
+def get_published_commits():
+    """Returns the published revision of all the petals."""
+    return [get_published_commit_for(petal) for petal in PETALS]
+
+
+def get_commits(petal, revision):
+    """Returns the commits in the given petal up to a given commit."""
+    url = 'https://fuchsia.googlesource.com/%s/+log/master?format=JSON' % petal
+    def get_more(result, start=None):
+        get_url = url
+        if start:
+            get_url = '%s&s=%s' % (url, start)
+        content = http_get(get_url)
+        # Remove the anti-XSSI header.
+        content = content[5:]
+        data = json.loads(content)
+        for commit in data['log']:
+            if commit['commit'] == revision:
+                return
+            result.append(commit)
+        get_more(result, start=data['next'])
+    result = []
+    get_more(result)
+    return result
+
+
+def filter_commit(commit):
+    """Returns True if a commit should be listed."""
+    return commit['author']['name'] not in IGNORED_AUTHORS
+
+
+class MyTimezone(tzinfo):
+    """Simple timezone implementation, since for some reason Python 2.7 doesn't
+       provide one.
+       """
+
+    def __init__(self, data=None):
+        self.data = data if data else '+0000'
+
+    def utcoffset(self, dt):
+        hours = int(self.data[1:3])
+        minutes = int(self.data[3:5])
+        delta = timedelta(hours=hours, minutes=minutes)
+        if self.data[0] == '-':
+            delta = -delta
+        return delta
+
+    def tzname(self, dt):
+        return 'Bogus'
+
+    def dst(self, dt):
+        return timedelta(0)
+
+
+def get_time_since(timestamp):
+    """Returns a string describing the amount of time elapsed since the given
+       timestamp.
+       Timestamp format: Sat Feb 10 03:17:06 2018 +0000
+       """
+    timestamp_no_tz = timestamp[:-6]
+    date_no_tz = datetime.strptime(timestamp_no_tz, '%a %b %d %H:%M:%S %Y')
+    date = date_no_tz.replace(tzinfo=MyTimezone(timestamp[-5:]))
+    now = datetime.utcnow().replace(tzinfo=MyTimezone())
+    delta = now - date
+    if delta.days >= 1:
+        return '>1d'
+    hours = delta.seconds / 3600
+    if hours >= 1:
+        return '%sh' % hours
+    minutes = (delta.seconds % 3600) / 60
+    return '%sm' % minutes
+
+
+def print_commits(petal, commits, print_all=False):
+    """Prints the given commits in a user=pleasing format."""
+    commit_filter = (lambda c: c) if print_all else filter_commit
+    commits = filter(commit_filter, commits)
+    if commits:
+        timestamp = commits[-1]['committer']['time']
+        elapsed_time = get_time_since(timestamp)
+    else:
+        elapsed_time = ''
+    print('--------------')
+    print('| %s | %s' % ('{:^10}'.format(petal), elapsed_time))
+    print('--------------')
+    for commit in commits:
+        print('%s | %s | %s' % (commit['commit'][:7],
+                                commit['author']['name'][:15].ljust(15),
+                                commit['message'].splitlines()[0]))
+    if not commits:
+        print('None')
+
+
+def main():
+    parser = argparse.ArgumentParser(formatter_class=RawTextHelpFormatter,
+        description="""Displays the commits not yet published to global integration.""")
+    parser.add_argument('--all',
+                        help='Whether to print all commits, including rollers',
+                        action='store_true')
+    args = parser.parse_args()
+
+    for (petal, published_commit) in get_published_commits():
+        commits = get_commits(petal, published_commit)
+        print_commits(petal, commits, print_all=args.all)
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

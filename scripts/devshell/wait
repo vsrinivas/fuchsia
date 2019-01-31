@@ -1,0 +1,22 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### wait for a shell to become available
+
+## usage: fx wait
+##
+## Attempts to SSH to the target repeatedly until the target becomes
+## available.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+device_addr=""
+until [[ -n "${device_addr}" ]]; do
+  device_addr="$(get-fuchsia-device-addr 2>/dev/null)"
+done
+until fx-command-run ssh "${device_addr}" \
+  -o ConnectionAttempts=1 -o ConnectTimeout=1 echo >/dev/null 2>&1; do
+  echo -n
+done

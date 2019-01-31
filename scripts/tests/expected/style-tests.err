@@ -1,0 +1,104 @@
+
+Usage: style::stylize <command> [style options] [command parameters]
+
+<command> is any command with output to stylize, followed by style options,
+and then the command's normal parameters.
+
+style options include:
+  --bold, --faint, --underline, etc.
+  --color <color_name>
+  --background <color_name>
+  --indent <spaces_count>
+  --stderr (output to standard error instead of standard out)
+
+  echo "This is $(style::echo -f --bold LOUD) and soft."
+
+command parameters are those supported by the stylized command.
+
+Use style::stylize --help colors for a list of colors or backgrounds
+Use style::stylize --help attributes for a list of style attribute flags
+
+Usage: style::printf [style options] [command parameters]
+
+style options include:
+  --bold, --faint, --underline, etc.
+  --color <color_name>
+  --background <color_name>
+  --indent <spaces_count>
+  --stderr (output to standard error instead of standard out)
+
+  echo "This is $(style::echo -f --bold LOUD) and soft."
+
+command parameters are those supported by the 'printf' command.
+
+Use style::printf --help colors for a list of colors or backgrounds
+Use style::printf --help attributes for a list of style attribute flags
+
+Usage: style::error [style options] [command parameters]
+
+Default style options for style::error:
+  [1;91m"--stderr --bold --color red"[0m
+
+style options include:
+  --bold, --faint, --underline, etc.
+  --color <color_name>
+  --background <color_name>
+  --indent <spaces_count>
+  --stderr (output to standard error instead of standard out)
+
+  echo "This is $(style::echo -f --bold LOUD) and soft."
+
+command parameters are those supported by the echo command.
+
+Use style::error --help colors for a list of colors or backgrounds
+Use style::error --help attributes for a list of style attribute flags
+
+Usage: style::link [style options] [command parameters]
+
+Default style options for style::link:
+  [4;34m"--underline --color dark_blue"[0m
+
+style options include:
+  --bold, --faint, --underline, etc.
+  --color <color_name>
+  --background <color_name>
+  --indent <spaces_count>
+  --stderr (output to standard error instead of standard out)
+
+  echo "This is $(style::echo -f --bold LOUD) and soft."
+
+command parameters are those supported by the echo command.
+
+Use style::link --help colors for a list of colors or backgrounds
+Use style::link --help attributes for a list of style attribute flags
+black
+blue
+cyan
+dark_blue
+dark_cyan
+dark_green
+dark_magenta
+dark_red
+dark_yellow
+default
+gray
+green
+light_gray
+magenta
+pink
+purple
+red
+white
+yellow
+--blink
+--bold
+--faint
+--italic
+--reset
+--underline
+[1;32mINFO: Info here[0m
+[1;33mWARNING: Watch out![0m
+[1;91mERROR: What went wrong now?[0m
+[5;33mWARNING: Customized warning style, still to stderr! :-)[0m
+
+This should still display in bold red, but on stderr

@@ -1,0 +1,85 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### compare all built Fuchsia packages with a prior package snapshot
+
+## usage: fx delta [[--name|-n NAME] | [--source|-s PATH]] [--build] [--help-delta] [DELTA_ARGS...]
+##
+## Compare metadata of all Fuchsia packages with a prior package snapshot.
+##   --name|-n NAME   Set the NAME of the source package snapshot (Default: "system")
+##   --source|-s PATH Read the source snapshot from the specified PATH (Default: $FUCHSIA_BUILD_DIR/snapshots/$NAME.snapshot)
+##   --help-delta     Show command line help for "pm delta"
+##   --build          Build the current package snapshot before comparing it to the previously saved snapshot
+##   DELTA_ARGS       Unknown arguments are passed through to "pm delta"
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+pm_bin="${FUCHSIA_BUILD_DIR}/host_x64/pm"
+
+function usage {
+  fx-command-help delta
+
+  echo
+  "${pm_bin}" delta --help
+}
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  snapshot_dir="$FUCHSIA_BUILD_DIR/snapshots"
+  target_path="$FUCHSIA_BUILD_DIR/obj/build/images/system.snapshot"
+
+  build=0
+  delta_args=()
+  source_name=
+  source_path=
+  while [[ $# -ne 0 ]]; do
+    case "$1" in
+      --build)
+        build=1
+        ;;
+      -n|--name)
+        source_name="$2"
+        shift
+        ;;
+      -s|--source)
+        source_path="$2"
+        shift
+        ;;
+      --help-delta)
+        usage
+        exit 0
+        ;;
+      *)
+        delta_args+=("$1")
+    esac
+    shift
+  done
+
+  if [[ -n "${source_name}" && -n "${source_path}" ]]; then
+    echo >&2 "Source name and source path can not both specified"
+    usage
+    exit 1
+  elif [[ -z "${source_name}" ]]; then
+    source_name="system"
+  fi
+
+  if [[ -z "${source_path}" ]]; then
+    source_path="${snapshot_dir}/${source_name}.snapshot"
+  fi
+
+  if [[ "${build}" -ne 0 ]]; then
+    fx-command-run build system_snapshot || {
+      echo >&2 "Build of current package state failed, bailing out"
+      exit 1
+    }
+  fi
+
+  "${pm_bin}" delta "${delta_args[@]}" "${source_path}" "${target_path}"
+}
+
+main "$@"

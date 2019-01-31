@@ -1,0 +1,4 @@
+_arguments \
+  {-r,--recovery}'[Reboot into recovery image]' \
+  {-b,--bootloader}'[Reboot into bootloader]' \
+  '::nodename:__fx_nodename'

@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/pkg_dep"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

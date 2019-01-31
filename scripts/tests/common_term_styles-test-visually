@@ -1,0 +1,32 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Visual tests for //scripts/devshell/lib/common_term_styles.sh
+
+# This is not an automated unit test.
+# It prints stylized to demonstrate the styles on a terminal.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../devshell/lib >/dev/null 2>&1 && pwd)"/style.sh || exit $?
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")"/../devshell/lib >/dev/null 2>&1 && pwd)"/common_term_styles.sh || exit $?
+
+runtest() {
+  command="$1"; shift
+  echo "${command}" "$@"
+  ${command} "$@"
+}
+
+runtest info 'This is informational'
+runtest warn 'This is your last warning'
+runtest error 'Danger! Danger Will Robinson!'
+runtest details <<EOF
+This detail will be
+indented from the error.
+and could have a link like $(link 'https://some/url/here')
+EOF
+runtest code <<EOF
+for ( line in lines_of_code ) {
+  print "this is the demon of code style"
+end
+EOF

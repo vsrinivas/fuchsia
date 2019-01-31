@@ -1,0 +1,13 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### Google Compute Engine commands
+
+## See `fx gce help` for more imformation.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+"${FUCHSIA_DIR}/scripts/gce/gce" "$@"

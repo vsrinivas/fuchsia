@@ -1,0 +1,86 @@
+#compdef fx
+
+__fx_nodename() {
+  # TODO: allow configuration of node names with zstyle
+  local -a nodenames=( $(${fuchsia_dir}/out/build-zircon/tools/netls | awk '/device/ { print $2; }') )
+  _describe 'nodename' nodenames
+}
+
+__fx_amber_package() {
+  # packages are directories in the build dir under amber-files/repository/targets
+  _values $(cd ${fuchsia_build_dir}/amber-files/repository/targets >/dev/null 2>&1 && echo *(/))
+}
+
+__fx_build_dir() {
+  # build dirs are directories under out/ with an args.gn
+  compadd $(cd ${fuchsia_dir} >/dev/null 2>&1; echo out/*/args.gn(N:h))
+}
+
+__fx_gn_target() {
+  # use a cache of "gn ls" that's updated when build.ninja changes.
+  local -r absolute_build_dir="${fuchsia_dir}/${fuchsia_build_dir}"
+  local -r targets_file="${absolute_build_dir}/.gn_ls"
+  local -r ninja_file="${absolute_build_dir}/build.ninja"
+  if [ ! -e "${targets_file}" -o ${ninja_file} -nt ${targets_file} ]; then
+    local -r tmp_targets_file="$(mktemp -p "${absolute_build_dir}")"
+    "${fuchsia_dir}/buildtools/gn" ls "${absolute_build_dir}" > "${tmp_targets_file}"
+    mv "${tmp_targets_file}" "${targets_file}"
+  fi
+  _values $(cat ${absolute_build_dir}/.gn_ls)
+}
+
+_fx() {
+  typeset -A opt_args
+
+  local fuchsia_dir="${FUCHSIA_DIR}"
+  if [[ -z "${fuchsia_dir}" ]]; then
+    fuchsia_dir="$(pwd)"
+    while [[ ! -d "${fuchsia_dir}/.jiri_root" ]]; do
+      fuchsia_dir="$(dirname "${fuchsia_dir}")"
+      if [[ "${fuchsia_dir}" == "/" ]]; then
+        _message -r "Cannot find Fuchsia source tree containing $(pwd)"
+        return
+      fi
+    done
+  fi
+
+  # list of commands based on //scripts/devshell/
+  # each file is read to find the description line (starts with "### ").
+  local -a commands lines
+  local desc command
+  for command in ${fuchsia_dir}/scripts/devshell/*(.); do
+    lines=("${(f)$(<${command})}")
+    desc=${${lines[${lines[(i)\#\#\# *]}]}#????}
+    commands+=("${command#*devshell/}:${desc}")
+  done
+  commands+=("gn:invoke the gn command")
+  commands+=("ninja:invoke the ninja command")
+
+  _arguments \
+    "--config[config file]:filename:_files" \
+    "--dir[build directory]:directory:_files -/" \
+    "-x[print commands]" \
+    "1: :{_describe 'command' commands}" \
+    "*:: :->args"
+
+  if [[ $state != "args" ]]; then
+    return
+  fi
+
+  # get the config file location from --config, $FUCHSIA_CONFIG or ${fuchsia_dir}/.config
+  typeset -l fuchsia_config="${opt_args[--config]:-${FUCHSIA_CONFIG:-${fuchsia_dir}/.config}}"
+  # if a config file is found read the build dir into a local variable
+  typeset -l fuchsia_build_dir=
+  if [[ -e ${fuchsia_config} ]]; then
+    fuchsia_build_dir="$(source ${fuchsia_config};echo ${FUCHSIA_BUILD_DIR})"
+  fi
+
+  # look for a completion function
+  local f
+  f=_fx_$words[1]
+  if [[ -e ${fuchsia_dir}/scripts/zsh-completion/$f ]]; then
+    autoload $f; $f
+  fi
+}
+
+_fx

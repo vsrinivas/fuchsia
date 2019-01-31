@@ -1,0 +1,42 @@
+[94m------------------[0m
+[94m------------------[0m
+[94m------------------[0m
+[94m----- colors -----[0m
+[94m--- attributes ---[0m
+[94m------------------[0m
+[1mstyle::echo --bold[0m
+[1;96mstyle::echo --bold --color cyan[0m
+[2;92mstyle::echo --faint --color green[0m
+[3;95mstyle::echo --italic --color magenta[0m
+[4;34mstyle::echo --underline --color dark_blue[0m
+[5;37mstyle::echo --blink --color light_gray[0m
+[95;46mstyle::echo --pink --background dark_cyan[0m
+[3;35mitalic this style may not work in some terminals: style::echo --italic --dark_magenta italic this style may not work in some terminals:[0m
+[1m      Item   Cost[0m
+[m      ----   ----[0m
+[35;107m     beans $  2.90[0m
+[35;107m    franks $  9.35[0m
+[35;107m      cola $  7.99[0m
+[35;107m  tiramasu $ 24.50[0m
+[43;30mNow is the time for all good[0m
+[43;30mpeople to come to the[0m
+[43;30maid of their country and world.[0m
+[106;30m    Now is the time for all good[0m
+[106;30m    people to come to the[0m
+[106;30m    aid of their country and world.[0m
+[4;34mhttp://wikipedia.com[0m
+STYLE_TO_TTY_ONLY=true
+
+This will not be styled. It doesn't print directly to the tty
+
+This will not be styled. stderr doesn't print directly to the tty
+[1;91mSTYLE_TO_TTY_ONLY=false[0m
+[96;2m[0m
+[96;2mThis will be styled even though it doesn't print directly to the tty.[0m
+[96;2m[0m
+[96;2mThis will be styled even though stderr doesn't print directly to the tty[0m
+This is [m-f --bold --yellow LOUD[0m and soft.
+This is [m--force --bold --yellow LOUD[0m and soft.
+This is [m--tty --bold --yellow LOUD[0m and soft.
+Bad style, Error status: 2
+No orange! Error status: 2

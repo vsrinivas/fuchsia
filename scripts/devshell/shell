@@ -1,0 +1,34 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### start a remote interactive shell in the target device
+
+## usage: fx shell [-h|--help] [<command>]
+##
+## Creates an SSH connection with a device and executes a command.
+##
+## Arguments:
+##   -h|--help    Print out this message.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+esac
+
+device_addr="$(get-fuchsia-device-addr)"
+if [[ -z "${device_addr}" ]]; then
+  echo >&2 "Device not found"
+  exit 1
+fi
+# Note: I know there are people who don't like the host-key message, but DO NOT
+# apply -q here, it silences error messages and makes network and configuration
+# failures much harder to diagnose when helping people. The control master will
+# mean you only get one per TCP socket, which is once per newly booted host.
+# It's not a huge burden compared to end user support.
+fx-command-exec ssh "${device_addr}" "$@"

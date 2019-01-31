@@ -1,0 +1,92 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### build a test package and run on target.
+### PKG_TARGET is fully qualified or under fuchsia-pkg://fuchsia.com/
+
+## usage: fx run-test [-t|--test <test_name>] PKG_TARGET -- [-args -to -test]
+## Builds the specified test package (e.g., appmgr_integration_tests), copies it to the
+## target, and executes it.
+##
+## If using this command, please run 'fx build' again before paving your device
+## because 'fx build updates' used by this script does not build images so it
+## can leave paver in weird state.
+## Arguments:
+##   -t|--test    Test to run. If not specified, it will run all tests in PKG_TARGET.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help run-test
+}
+
+
+function main {
+  all_args="$@"
+  test_args="${all_args#* -- }"
+
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  test=""
+  target=""
+
+  while (($#)); do
+    case $1 in
+      -t|--test)
+        shift  # name
+        if [[ -z "$1" ]]; then
+          echo "Missing parameter: <test_name>" >&2
+          usage
+          exit 1
+        fi
+        test="$1"
+        ;;
+      --)
+        break
+        ;;
+      *)
+        if [[ "$target" == "" ]]; then
+          target="$1"
+        else
+          usage
+          exit 1
+        fi
+        ;;
+    esac
+    shift  # value
+  done
+
+  if [[ $target == "" ]]; then
+    usage
+    return 1
+  fi
+
+  if [[ -z "$(pgrep -f "amber-files/repository")" ]]; then
+    echo "WARNING: It looks like amber-srv is not running."
+    echo "WARNING: You probably need to start \"fx serve-updates\""
+    exit 1
+  fi
+
+  echo -e "Building ..."
+  # build all packages as there is no way to only build one and push it to
+  # update repository.
+  fx-command-run build updates
+  echo -e "\nPush package to device"
+  fx-command-run push-package "${target}"
+
+  if [[ "${test}" == "" ]]; then
+    echo -e "\nRun all tests in ${target}"
+    fx-command-run shell runtests "pkgfs/packages/${target}/0/test" -- "$test_args"
+  else
+    fx-command-run shell runtests -t ${test} "pkgfs/packages/${target}/0/test" -- "$test_args"
+  fi
+}
+
+
+main "$@"

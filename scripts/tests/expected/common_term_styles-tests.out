@@ -1,0 +1,20 @@
+info This is informational
+[1;32m[0m
+[1;32mINFO: This is informational[0m
+[1;32m[0m
+warn This is your last warning
+[1;33m[0m
+[1;33mWARNING: This is your last warning[0m
+[1;33m[0m
+error Danger! Danger Will Robinson!
+[1;91m[0m
+[1;91mERROR: Danger! Danger Will Robinson![0m
+[1;91m[0m
+details
+[m  This detail will be[0m
+[m  indented from the error.[0m
+[m  and could have a link like [4;34mhttps://some/url/here[0m[0m
+code
+[1;95m    for ( line in lines_of_code ) {[0m
+[1;95m      print "this is the demon of code style"[0m
+[1;95m    end[0m

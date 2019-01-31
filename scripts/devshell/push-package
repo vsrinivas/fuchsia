@@ -1,0 +1,72 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### push packages to a device
+
+## usage: fx push-package [pkg1 pkg2 ...]
+##
+## Push packages to a device. One or more package names may be supplied. If no
+## package name is suppled all packages in the build output will be pushed. The
+## target must be reachable from the host and must already know how to reach
+## the host package server (e.g. fx serve must be running).
+##
+## See https://fuchsia.googlesource.com/docs/+/master/development/workflows/package_update.md
+## for more information about using this workflow.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help push-package
+}
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  # if the second arg is set, but 0-length, publish nothing
+  if [[ $# -eq 1 ]] && [[ -z "${1}" ]]; then
+    exit 0
+  fi
+
+  local all_pkgs=($("${FUCHSIA_DIR}/scripts/list-available-packages.py" --build-dir "${FUCHSIA_BUILD_DIR}"))
+
+  # pkgs is the last argument
+  local pkgs=()
+
+  if [[ $# -eq 0 ]]; then
+    pkgs=("${all_pkgs[@]}")
+  else
+    for pkg in "$@"; do
+      for p in "${all_pkgs[@]}"; do
+        if [[ "$p" == "$pkg" ]]; then
+          pkgs+=("$p")
+          continue 2
+        fi
+      done
+      # TODO(BLD-338): Remove "package_name" from error message
+      echo >&2 "Package $pkg will not be pushed. It is not part of the current build, is not a package, overrides 'package_name=\"...\"' or has 'deprecated_system_image=true'."
+      exit 1
+    done
+  fi
+
+  # The target doesn't support expansions, and a local expansion makes a command
+  # too long to spawn, so sending a loop makes things work ok.
+  local cmd="
+    code=0;
+    for c in ${pkgs[@]}; do
+      amber_ctl get_up -n \"\${c}\" -v 0 || code=\$((\$code + \$?));
+      manifest_path=\"/pkgfs/packages/\${c}/0/meta/module.json\";
+      if [ -s \"\$manifest_path\" ]; then
+        run fuchsia-pkg://fuchsia.com/module_package_indexer#meta/module_package_indexer.cmx \"\${c}\" 0;
+      fi
+    done;
+    exit \$code
+  "
+
+  fx-command-run shell "${cmd}"
+}
+
+main "$@"

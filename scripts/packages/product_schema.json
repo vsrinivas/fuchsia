@@ -1,0 +1,29 @@
+{
+  "description": "Schema for a build product file",
+  "type": "object",
+  "properties": {
+    "monolith": {
+      "description": "A list of paths to build package files to include in the OTA and image builds",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "preinstall": {
+      "description": "A list of paths to build package files to preload in images (but not OTA)",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    },
+    "available": {
+      "description": "A list of paths to build package files to build for installation",
+      "type": "array",
+      "items": {
+        "type": "string"
+      }
+    }
+  },
+  "minProperties": 1,
+  "additionalProperties": false
+}

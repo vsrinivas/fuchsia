@@ -1,0 +1,77 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### take a snapshot of all built Fuchsia packages
+
+## usage: fx save-package-stats [--build] [[--name|-n NAME] | [OUTPUT_PATH]]
+##
+## Save a snapshot of metadata of all Fuchsia packages for later analysis.
+##   --build          Build the current package snapshot before saving it
+##   --name|-n NAME   Set the NAME of the package snapshot (Default: "system")
+##   OUTPUT_PATH      Write the snapshot at the specified OUTPUT_PATH (Default: $FUCHSIA_BUILD_DIR/snapshots/$NAME.snapshot)
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+function usage {
+  fx-command-help save-package-stats
+}
+
+function main {
+  fx-standard-switches "$@"
+  set -- "${FX_ARGV[@]}"
+
+  snapshot_dir="$FUCHSIA_BUILD_DIR/snapshots"
+
+  build=0
+  target_name=
+  output_path=
+  while [[ $# -ne 0 ]]; do
+    case "$1" in
+      --build)
+        build=1
+        ;;
+      -n|--name)
+        target_name="$2"
+        shift
+        ;;
+      *)
+        if [[ -z "${output_path}" ]]; then
+          output_path="$1"
+        else
+          echo >&2 "Multiple output paths specified"
+          usage
+          exit 1
+        fi
+    esac
+    shift
+  done
+
+  if [[ -n "${target_name}" && -n "${output_path}" ]]; then
+    echo >&2 "Output name and output path can not both specified"
+    usage
+    exit 1
+  elif [[ -z "${target_name}" ]]; then
+    target_name="system"
+  fi
+
+  if [[ -z "${output_path}" ]]; then
+    mkdir -p "$snapshot_dir" || exit 1
+    output_path="${snapshot_dir}/${target_name}.snapshot"
+  fi
+
+  if [[ "${build}" -ne 0 ]]; then
+    fx-command-run build system_snapshot || {
+      echo >&2 "Build of current package state failed, bailing out"
+      exit 1
+    }
+  fi
+
+  cp \
+    "${FUCHSIA_BUILD_DIR}/obj/build/images/system.snapshot" \
+    "${output_path}"
+}
+
+main "$@"

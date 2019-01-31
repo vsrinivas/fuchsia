@@ -1,0 +1,20 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### symbolize backtraces and program locations provided as input on stdin
+
+## This tool takes in log output from either zx_log or syslog and processes
+## the results to make the symbolizer markup in them human readable.
+## Anything that is not valid marked up is left alone. This is similar
+## to how c++filt works for demangling C++ symbols.
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+if [[ $# > 1 && "$1" = "-i" ]]; then
+  fx-symbolize "$2"
+else
+  fx-symbolize
+fi

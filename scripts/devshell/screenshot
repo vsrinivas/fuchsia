@@ -1,0 +1,73 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### takes a screenshot and copies it to the host
+
+## usage: fx screenshot [--landscape] [--png] [--trim] [-o <screencap_file>]
+##
+## This command invokes Fuchsia's screencap tool to create a screenshot.
+## The result is written to screencap.ppm or screencap.png. To write to
+## another filename, use the -o parameter.
+## The --trim, --landscape and --png commands require ImageMagick to be
+## installed.  Unrecognized parameters will be passed to ssh.
+##
+## -o FILENAME     Write to the given filename instead of screencap.ppm
+## --png           Create a .png file instead of a .ppm file
+## --trim          Remove black borders
+## --landscape     Rotate image ninety degrees
+##
+## Example usage:
+##   fx screenshot --trim --png --landscape
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+OUT=screencap.ppm
+png_command=cat
+enable_trim=0
+enable_landscape=0
+while [[ $# -ne 0 ]]; do
+  case $1 in
+  -h|--help)
+    fx-command-help
+    exit 0
+    ;;
+  -o|--out)
+    shift
+    OUT=$1
+    ;;
+  --png)
+    OUT=${OUT%.*}.png
+    png_command=pnmtopng
+    ;;
+  --landscape)
+    enable_landscape=1
+    ;;
+  --trim)
+    enable_trim=1
+    ;;
+  *)
+    break
+    ;;
+  esac
+  shift
+done
+
+fx-command-run shell "$@" screencap | $png_command > "$OUT"
+mog_opts=
+if [[ $enable_trim -ne 0 ]]; then
+  mog_opts="$mog_opts -trim +repage"
+fi
+if [[ $enable_landscape -ne 0 ]]; then
+  mog_opts="$mog_opts -rotate 90"
+fi
+if [[ ! -z $mog_opts ]]; then
+  # Also add a black border so it's easier to see the image when
+  # pasted into the bug database.
+  mogrify -bordercolor black -border 3 $mog_opts $OUT
+fi
+

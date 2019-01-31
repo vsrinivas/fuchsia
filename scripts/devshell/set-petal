@@ -1,0 +1,63 @@
+#!/bin/bash
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### configure jiri to manage a specific petal
+
+## usage: fx set-petal zircon|garnet|peridot|topaz
+## Configures jiri to fetch the source code for the given petal and its
+## dependencies.
+
+set -e
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+
+if [[ "$#" -ne 1 ]]; then
+  fx-command-help
+  exit 1
+fi
+
+petal="$1"
+
+if [[ "${petal}" != "zircon" ]] &&
+   [[ "${petal}" != "garnet" ]] &&
+   [[ "${petal}" != "peridot" ]] &&
+   [[ "${petal}" != "topaz" ]]; then
+  fx-command-help
+  exit 1
+fi
+
+# If jiri is not found which will return an err which will cause bash to exit.
+# "|| echo" catches that.
+jiri=$(which jiri || echo)
+if [[ -z ${jiri} ]]; then
+  jiri="${FUCHSIA_DIR}/.jiri_root/bin/jiri"
+  if [[ ! -f ${jiri} ]]; then
+    echo >&2 "error: Cannot find \"jiri\" in your PATH nor at ${jiri}."
+    exit 1
+  fi
+fi
+
+cd "${FUCHSIA_DIR}"
+rm -f -- "${FUCHSIA_DIR}/.jiri_manifest"
+"${jiri}" import -name=integration topaz/topaz "https://fuchsia.googlesource.com/integration"
+"${jiri}" override "${petal}" "https://fuchsia.googlesource.com/${petal}"
+
+echo "Configured jiri for ${petal}. Run these commands to update your build:"
+
+if [[ "${petal}" == "zircon" ]]; then
+cat <<END
+ * jiri update -gc     # Updates your source tree to contain ${petal} and
+                       # removes unneeded repositories.
+
+ * cd zircon && scripts/build-zircon-<arch>  # Acutally builds ${petal}.
+END
+else
+cat <<END
+ * jiri update -gc     # Updates your source tree to contain ${petal} and
+                       # removes unneeded repositories.
+ * fx set x64          # Updates your build directory to build ${petal}.
+ * fx full-build       # Actually builds ${petal}
+END
+fi

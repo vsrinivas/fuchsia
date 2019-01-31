@@ -1,0 +1,6 @@
+{
+    "program": {
+        "data": "data/dart_with_unused_dependencies"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/dart_jit_runner#meta/dart_jit_runner.cmx"
+}

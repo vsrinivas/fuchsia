@@ -1,0 +1,6 @@
+_arguments \
+    '--help[Print help message.]' \
+    '--timeout=[Set discovery timeout to <msec>]:msec' \
+    '--nowait[Do not wait for first packet before timing out.]' \
+    '--fuchsia[Use fuchsia link local addresses.]' \
+    '::nodename:'

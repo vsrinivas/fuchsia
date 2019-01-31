@@ -1,0 +1,47 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### runs a single remote test target through //scripts/run-dart-action.py
+
+## usage: fx dart-remote-test
+##            [-h|--help] <target-pattern>
+##
+## Attempts to run a test targeting a remote fuchsia device.
+##
+## This command requires Topaz in order to run. An example would be to run
+## this command against //topaz/example/test/driver_mod_example/* to run
+## all dart_remote_test targets.
+##
+## Arguments:
+##   -h|--help    Print out this message.
+
+DEVSHELL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"
+VERBOSE=false
+source "${DEVSHELL_DIR}"/lib/vars.sh || exit $?
+fx-config-read
+
+case $1 in
+  -h|--help)
+  fx-command-help
+  exit 0
+  ;;
+esac
+
+TARGET_PATTERN="$1"
+shift
+if [ -z "$TARGET_PATTERN" ]; then
+  echo "Expected a target pattern"
+  fx-command-help
+  exit 1
+fi
+
+IP_ADDR_LINK_LOCAL="$(get-fuchsia-device-addr)"
+SSH_CONFIG="${FUCHSIA_BUILD_DIR}/ssh-keys/ssh_config"
+RUN_DART_ACTION="${FUCHSIA_DIR}/scripts/run-dart-action.py"
+"${RUN_DART_ACTION}" target-test \
+  --tree="${TARGET_PATTERN}" \
+  --out="${FUCHSIA_BUILD_DIR}" \
+  "${IP_ADDR_LINK_LOCAL}" \
+  "${SSH_CONFIG}"

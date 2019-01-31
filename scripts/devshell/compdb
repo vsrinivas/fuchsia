@@ -1,0 +1,60 @@
+#!/bin/bash
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+### generate a compilation database for the current build configuration
+
+## usage: fx compdb <-z>
+##        -z|--zircon to additonally generate compile_commands.json for Zircon
+##        -z option also concatenates the two compile_commands.json
+
+source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+fx-config-read
+
+generate_zircon () {
+    zirc_compdb=$(which compiledb || echo)
+    if [[ -z ${zirc_compdb} ]]; then
+        echo "Could not find compiledb, cannot generate Zircon compile_commands.json"
+        exit
+    fi
+
+    ( cd ${FUCHSIA_DIR}/zircon; "${FUCHSIA_DIR}/scripts/build-zircon.sh" -t "${FUCHSIA_ARCH}" -n | compiledb -o compile_commands.json -n) \
+    || echo "An unknown error has occurred"     #TODO what errors could this be?
+}
+
+main () {
+    zirc=0 #boolean for if compiledb has been run
+
+    case $1 in
+        -z|--zircon)
+            zirc=1
+        ;;
+        -h|--help)
+            echo "Script to generate compile_commands.json files"
+            echo "-z|--zircon to additonally generate compile_commands.json for Zircon"
+            echo "-z option also concatenates the two compile_commands.json"
+            echo
+            exit
+        ;;
+    esac
+
+    source "$(cd "$(dirname "${BASH_SOURCE[0]}")" >/dev/null 2>&1 && pwd)"/lib/vars.sh || exit $?
+    fx-config-read
+
+    fx-try-locked "${FUCHSIA_DIR}/buildtools/gn" gen "${FUCHSIA_BUILD_DIR}" --export-compile-commands
+    ln -sf "${FUCHSIA_BUILD_DIR}/compile_commands.json" "${FUCHSIA_DIR}/compile_commands.json"
+
+
+    if [[ $zirc -eq 1 ]]; then
+        generate_zircon
+        #concatenate the two files together by making a tmp file and then removing it when done
+
+        ${FUCHSIA_DIR}/scripts/editors/cat_compile_commands.py ${FUCHSIA_DIR}/zircon/compile_commands.json \
+        ${FUCHSIA_DIR}/out/${FUCHSIA_ARCH}/compile_commands.json > ${FUCHSIA_DIR}/compile_commands-tmp.json \
+        && cp ${FUCHSIA_DIR}/compile_commands-tmp.json ${FUCHSIA_DIR}/compile_commands.json \
+        && rm ${FUCHSIA_DIR}/compile_commands-tmp.json
+    fi
+}
+
+main "$@"
