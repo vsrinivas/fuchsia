@@ -15,3 +15,17 @@ executable("netstack_getaddrinfo_test") {
     "//third_party/googletest:gtest_main",
   ]
 }
+
+executable("netstack_getsockname_test") {
+  testonly = true
+
+  sources = [
+    "getsocknametest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}

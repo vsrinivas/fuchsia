@@ -8,7 +8,8 @@ package("netstack_tests") {
   testonly = true
 
   deps = [
-    "//garnet/go/src/netstack/tests/automated/netstack_getaddrinfo_test",
+    "//garnet/go/src/netstack/tests/automated:netstack_getaddrinfo_test",
+    "//garnet/go/src/netstack/tests/automated:netstack_getsockname_test",
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
     "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
   ]
@@ -19,6 +20,9 @@ package("netstack_tests") {
     },
     {
       name = "netstack_getaddrinfo_test"
+    },
+    {
+      name = "netstack_getsockname_test"
     },
     {
       name = "netstack_gonet_test"
