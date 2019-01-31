@@ -163,7 +163,7 @@ zx_status_t MtkSdmmc::Create(void* ctx, zx_device_t* parent) {
     }
 
     fbl::AllocChecker ac;
-    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, std::move(*mmio), std::move(bti),
+    fbl::unique_ptr<MtkSdmmc> device(new (&ac) MtkSdmmc(parent, *std::move(mmio), std::move(bti),
                                                         info, std::move(irq), *reset_gpio,
                                                         *power_en_gpio, dev_info, config));
 

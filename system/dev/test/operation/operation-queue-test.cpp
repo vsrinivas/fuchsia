@@ -82,7 +82,7 @@ bool SingleOperationTest() {
 
     OperationQueue queue;
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    queue.push(std::move(*operation));
+    queue.push(*std::move(operation));
     EXPECT_TRUE(queue.pop() != std::nullopt);
     EXPECT_TRUE(queue.pop() == std::nullopt);
     END_TEST;
@@ -95,7 +95,7 @@ bool MultipleOperationTest() {
     for (size_t i = 0; i < 10; i++) {
         std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
-        queue.push(std::move(*operation));
+        queue.push(*std::move(operation));
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -112,7 +112,7 @@ bool ReleaseTest() {
     for (size_t i = 0; i < 10; i++) {
         std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
-        queue.push(std::move(*operation));
+        queue.push(*std::move(operation));
     }
 
     queue.Release();
@@ -133,7 +133,7 @@ bool MultipleLayerTest() {
     for (size_t i = 0; i < 10; i++) {
         std::optional<SecondLayerOp> operation = SecondLayerOp::Alloc(kFirstLayerOpSize);
         ASSERT_TRUE(operation.has_value());
-        queue.push(std::move(*operation));
+        queue.push(*std::move(operation));
     }
 
     UnownedOperationQueue queue2;
@@ -181,7 +181,7 @@ bool MultipleLayerWithStorageTest() {
         ASSERT_TRUE(operation.has_value());
         *operation->private_storage() = i;
         EXPECT_EQ(*operation->private_storage(), i);
-        queue.push(std::move(*operation));
+        queue.push(*std::move(operation));
     }
 
     operation::UnownedOperationQueue<FirstLayerOp, TestOpTraits, CallbackTraits, char> queue2;
@@ -231,7 +231,7 @@ bool MultipleLayerWithCallbackTest() {
         ASSERT_TRUE(operation.has_value());
         *operation->private_storage() = i;
         EXPECT_EQ(*operation->private_storage(), i);
-        queue.push(std::move(*operation));
+        queue.push(*std::move(operation));
     }
 
     auto callback = [](void* ctx, zx_status_t status, TestOp* operation) {

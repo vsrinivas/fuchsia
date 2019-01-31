@@ -80,7 +80,7 @@ bool SingleOperationTest() {
 
     OperationPool pool;
     EXPECT_TRUE(pool.pop() == std::nullopt);
-    pool.push(std::move(*operation));
+    pool.push(*std::move(operation));
     EXPECT_TRUE(pool.pop() != std::nullopt);
     EXPECT_TRUE(pool.pop() == std::nullopt);
     END_TEST;
@@ -93,7 +93,7 @@ bool MultipleOperationTest() {
     for (size_t i = 0; i < 10; i++) {
         std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
-        pool.push(std::move(*operation));
+        pool.push(*std::move(operation));
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -110,7 +110,7 @@ bool ReleaseTest() {
     for (size_t i = 0; i < 10; i++) {
         std::optional<Operation> operation = Operation::Alloc(kParentOpSize);
         ASSERT_TRUE(operation.has_value());
-        pool.push(std::move(*operation));
+        pool.push(*std::move(operation));
     }
 
     pool.Release();

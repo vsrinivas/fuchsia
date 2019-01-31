@@ -83,7 +83,7 @@ zx_status_t AmlPcieDevice::InitMmios() {
         zxlogf(ERROR, "aml_pcie: failed to pin DBI, st = %d\n", st);
         return st;
     }
-    dbi_pinned_ = std::move(*mmio_pinned);
+    dbi_pinned_ = *std::move(mmio_pinned);
 
     st = pdev_map_mmio_buffer(&pdev_, kCfgMmio,
                               ZX_CACHE_POLICY_UNCACHED_DEVICE, &mmio);
@@ -184,9 +184,9 @@ zx_status_t AmlPcieDevice::Init() {
     if (st != ZX_OK) return st;
 
     pcie_ = fbl::make_unique<AmlPcie>(
-        std::move(*dbi_),
-        std::move(*cfg_),
-        std::move(*rst_),
+        *std::move(dbi_),
+        *std::move(cfg_),
+        *std::move(rst_),
         1   // Single Lane PCIe
     );
 

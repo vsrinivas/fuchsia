@@ -184,7 +184,7 @@ zx_status_t Allocator::ReserveNodes(uint64_t num_nodes, fbl::Vector<ReservedNode
             out_nodes->reset();
             return ZX_ERR_NO_SPACE;
         }
-        out_nodes->push_back(std::move(*node));
+        out_nodes->push_back(*std::move(node));
     }
     return ZX_OK;
 }

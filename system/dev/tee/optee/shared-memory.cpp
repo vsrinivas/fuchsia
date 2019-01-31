@@ -67,7 +67,7 @@ zx_status_t SharedMemoryManager::Create(zx_paddr_t shared_mem_start,
         secure_world_paddr + shared_mem_offset,
         shared_mem_size,
         std::move(secure_world_memory),
-        std::move(*pinned)));
+        *std::move(pinned)));
 
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;

@@ -75,7 +75,7 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     }
 
     // I2S2 corresponds to I2S_8CH.
-    mt_audio_ = MtAudioOutDevice::Create(std::move(*mmio_audio), MtAudioOutDevice::I2S2);
+    mt_audio_ = MtAudioOutDevice::Create(*std::move(mmio_audio), MtAudioOutDevice::I2S2);
     if (mt_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create device\n", __FUNCTION__);
         return ZX_ERR_NO_MEMORY;

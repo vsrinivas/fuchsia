@@ -200,7 +200,7 @@ zx_status_t NandDevice::WorkerThread() {
         // between each io.
         std::optional<Transaction> txn = txn_queue_.pop();
         if (txn) {
-            DoIo(std::move(*txn));
+            DoIo(*std::move(txn));
         } else {
             // Clear the "RECEIVED" flag under the lock.
             worker_event_.signal(kNandTxnReceived, 0);

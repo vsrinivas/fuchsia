@@ -113,9 +113,9 @@ zx_status_t Gt92xxDevice::Create(zx_device_t* device) {
         return ZX_ERR_NO_RESOURCES;
     }
     auto goodix_dev = fbl::make_unique<Gt92xxDevice>(device,
-                                                     std::move(*i2c),
-                                                     std::move(*intr),
-                                                     std::move(*reset));
+                                                     *std::move(i2c),
+                                                     *std::move(intr),
+                                                     *std::move(reset));
 
     status = goodix_dev->Init();
     if (status != ZX_OK) {

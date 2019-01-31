@@ -79,8 +79,8 @@ zx_status_t SherlockAudioStreamIn::InitPDev() {
         return status;
     }
 
-    pdm_ = AmlPdmDevice::Create(std::move(*mmio0),
-                                std::move(*mmio1),
+    pdm_ = AmlPdmDevice::Create(*std::move(mmio0),
+                                *std::move(mmio1),
                                 HIFI_PLL,
                                 7,   // clk_div for mclk = T931_HIFI_PLL_RATE/clk_div = 219.43 MHz.
                                 499, // clk_div for pdm_dclk = T931_HIFI_PLL_RATE/clk_div = 3.07MHz.

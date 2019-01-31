@@ -72,7 +72,7 @@ namespace usb {
 //     request = usb::Request::Alloc(op_size, DATA_SIZE, EP_ADDRESS, parent_req_size);
 //
 //     if (!request) return ZX_ERR_NO_MEMORY;
-//     pool.add(std::move(*request));
+//     pool.add(*std::move(request));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////

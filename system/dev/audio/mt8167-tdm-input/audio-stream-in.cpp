@@ -103,7 +103,7 @@ zx_status_t Mt8167AudioStreamIn::InitPdev() {
         return status;
     }
 
-    mt_audio_ = MtAudioInDevice::Create(std::move(*mmio_audio), MtAudioInDevice::I2S3);
+    mt_audio_ = MtAudioInDevice::Create(*std::move(mmio_audio), MtAudioInDevice::I2S3);
     if (mt_audio_ == nullptr) {
         zxlogf(ERROR, "%s failed to create device\n", __FUNCTION__);
         return ZX_ERR_NO_MEMORY;

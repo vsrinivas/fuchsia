@@ -28,7 +28,7 @@ bool SingleRequestTest() {
 
     usb::RequestQueue<void> queue;
     EXPECT_TRUE(queue.pop() == std::nullopt);
-    queue.push(std::move(*request));
+    queue.push(*std::move(request));
     EXPECT_TRUE(queue.pop() != std::nullopt);
     EXPECT_TRUE(queue.pop() == std::nullopt);
     END_TEST;
@@ -42,7 +42,7 @@ bool MultipleRequestTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
-        queue.push(std::move(*request));
+        queue.push(*std::move(request));
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -61,7 +61,7 @@ bool MoveTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
-        queue1.push(std::move(*request));
+        queue1.push(*std::move(request));
     }
 
     queue2 = std::move(queue1);
@@ -82,7 +82,7 @@ bool ReleaseTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
-        queue.push(std::move(*request));
+        queue.push(*std::move(request));
     }
 
     queue.Release();
@@ -104,7 +104,7 @@ bool MultipleLayerTest() {
         std::optional<SecondLayerReq> request;
         ASSERT_EQ(SecondLayerReq::Alloc(&request, 0, 0, kFirstLayerReqSize),
                   ZX_OK);
-        queue.push(std::move(*request));
+        queue.push(*std::move(request));
     }
 
     usb::UnownedRequestQueue<void> queue2;
@@ -143,7 +143,7 @@ bool MultipleLayerWithStorageTest() {
                   ZX_OK);
         *request->private_storage() = i;
         EXPECT_EQ(*request->private_storage(), i);
-        queue.push(std::move(*request));
+        queue.push(*std::move(request));
     }
 
     usb::UnownedRequestQueue<char> queue2;
@@ -185,7 +185,7 @@ bool MultipleLayerWithCallbackTest() {
                   ZX_OK);
         *request->private_storage() = i;
         EXPECT_EQ(*request->private_storage(), i);
-        queue.push(std::move(*request));
+        queue.push(*std::move(request));
     }
 
     auto callback = [](void* ctx, usb_request_t* request) {

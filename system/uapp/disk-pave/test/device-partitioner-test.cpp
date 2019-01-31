@@ -239,7 +239,7 @@ public:
         ASSERT_EQ(fs_mgmt::RamNandCtl::Create(&ctl), ZX_OK);
         std::optional<fs_mgmt::RamNand> ram_nand;
         ASSERT_EQ(fs_mgmt::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
-        device->reset(new SkipBlockDevice(std::move(ctl), std::move(*ram_nand),
+        device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand),
                                           std::move(mapper)));
         END_HELPER;
     }

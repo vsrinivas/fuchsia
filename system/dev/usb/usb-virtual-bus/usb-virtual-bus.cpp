@@ -127,7 +127,7 @@ int UsbVirtualBus::Thread() {
         // special case endpoint zero
         for (auto request = eps_[0].host_reqs.pop(); request; request = eps_[0].host_reqs.pop()) {
             // Handle control requests outside of the lock to avoid deadlock.
-            HandleControl(std::move(*request));
+            HandleControl(*std::move(request));
         }
 
         for (unsigned i = 1; i < USB_MAX_EPS; i++) {
@@ -167,7 +167,7 @@ int UsbVirtualBus::Thread() {
                     ep->req_offset = 0;
                 } else {
                     ep->req_offset = offset;
-                    ep->host_reqs.push_next(std::move(*req));
+                    ep->host_reqs.push_next(*std::move(req));
                 }
 
                 device_req->Complete(ZX_OK, length);

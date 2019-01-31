@@ -27,7 +27,7 @@ bool SingleRequestTest() {
 
     usb::RequestPool pool;
     EXPECT_TRUE(pool.Get(kReqSize) == std::nullopt);
-    pool.Add(std::move(*request));
+    pool.Add(*std::move(request));
     EXPECT_TRUE(pool.Get(kReqSize + 1) == std::nullopt);
     EXPECT_TRUE(pool.Get(kReqSize) != std::nullopt);
     EXPECT_TRUE(pool.Get(kReqSize) == std::nullopt);
@@ -42,7 +42,7 @@ bool MultipleRequestTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
-        pool.Add(std::move(*request));
+        pool.Add(*std::move(request));
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -61,7 +61,7 @@ bool MultipleSizeTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, size),
                   ZX_OK);
-        pool.Add(std::move(*request));
+        pool.Add(*std::move(request));
     }
 
     for (size_t i = 0; i < 10; i++) {
@@ -80,7 +80,7 @@ bool ReleaseTest() {
         std::optional<Request> request;
         ASSERT_EQ(Request::Alloc(&request, 0, 0, kParentReqSize),
                   ZX_OK);
-        pool.Add(std::move(*request));
+        pool.Add(*std::move(request));
     }
 
     pool.Release();

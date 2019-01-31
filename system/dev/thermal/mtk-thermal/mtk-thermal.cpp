@@ -125,8 +125,8 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
-        parent, std::move(*mmio), std::move(*fuse_mmio), std::move(*pll_mmio),
-        std::move(*pmic_mmio), clk, info, thermal_info, std::move(port), std::move(irq)));
+        parent, *std::move(mmio), *std::move(fuse_mmio), *std::move(pll_mmio),
+        *std::move(pmic_mmio), clk, info, thermal_info, std::move(port), std::move(irq)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;

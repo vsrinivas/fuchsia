@@ -57,7 +57,7 @@ namespace block {
 //     request = block::Operation::Alloc(op_size, parent_op_size);
 //
 //     if (!request) return ZX_ERR_NO_MEMORY;
-//     pool.add(std::move(*request));
+//     pool.add(*std::move(request));
 // }
 //
 ///////////////////////////////////////////////////////////////////////////////
