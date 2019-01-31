@@ -262,13 +262,7 @@ interface CodecFactory {
     // because finding the Codec is allowed to be fully async, so we don't
     // necessarily yet know on return from this method which Codec will be
     // selected, if any.
-    [Transitional]
     CreateDecoder(
-        CreateDecoder_Params decoder_params,
-        request<fuchsia.media.StreamProcessor> decoder);
-
-    [Transitional]
-    CreateDecoder2(
         CreateDecoder_Params decoder_params,
         request<fuchsia.media.StreamProcessor> decoder);
 

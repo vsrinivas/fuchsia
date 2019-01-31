@@ -153,12 +153,6 @@ void CodecFactoryImpl::CreateDecoder(
   // fine, but make sure.
 }
 
-void CodecFactoryImpl::CreateDecoder2(
-    fuchsia::mediacodec::CreateDecoder_Params params,
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> decoder) {
-  CreateDecoder(std::move(params), std::move(decoder));
-}
-
 void CodecFactoryImpl::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {

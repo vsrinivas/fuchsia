@@ -227,12 +227,6 @@ void LocalCodecFactory::CreateDecoder(
       });
 }
 
-void LocalCodecFactory::CreateDecoder2(
-    fuchsia::mediacodec::CreateDecoder_Params video_decoder_params,
-    ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> video_decoder) {
-  CreateDecoder(std::move(video_decoder_params), std::move(video_decoder));
-}
-
 void LocalCodecFactory::CreateEncoder(
     fuchsia::mediacodec::CreateEncoder_Params encoder_params,
     ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request) {

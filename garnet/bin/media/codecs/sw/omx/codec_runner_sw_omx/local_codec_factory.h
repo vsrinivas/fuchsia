@@ -62,11 +62,6 @@ class LocalCodecFactory : public fuchsia::mediacodec::CodecFactory {
       ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> audio_decoder)
       override;
 
-  virtual void CreateDecoder2(
-      fuchsia::mediacodec::CreateDecoder_Params audio_decoder_params,
-      ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> audio_decoder)
-      override;
-
   virtual void CreateEncoder(
       fuchsia::mediacodec::CreateEncoder_Params encoder_params,
       ::fidl::InterfaceRequest<fuchsia::media::StreamProcessor> encoder_request)
