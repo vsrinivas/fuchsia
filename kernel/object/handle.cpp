@@ -24,7 +24,6 @@ constexpr size_t kHighHandleCount = (kMaxHandleCount * 7) / 8;
 KCOUNTER(handle_count_made, "kernel.handles.made");
 KCOUNTER(handle_count_duped, "kernel.handles.duped");
 KCOUNTER(handle_count_live, "kernel.handles.live");
-KCOUNTER_MAX(handle_count_max_live, "kernel.handles.max_live");
 
 // Masks for building a Handle's base_value, which ProcessDispatcher
 // uses to create zx_handle_t values.
@@ -120,7 +119,6 @@ HandleOwner Handle::Make(fbl::RefPtr<Dispatcher> dispatcher,
         return nullptr;
     kcounter_add(handle_count_made, 1);
     kcounter_add(handle_count_live, 1);
-    kcounter_max_counter(handle_count_max_live, handle_count_live);
     return HandleOwner(new (addr) Handle(ktl::move(dispatcher),
                                          rights, base_value));
 }
@@ -141,7 +139,6 @@ HandleOwner Handle::Dup(Handle* source, zx_rights_t rights) {
         return nullptr;
     kcounter_add(handle_count_duped, 1);
     kcounter_add(handle_count_live, 1);
-    kcounter_max_counter(handle_count_max_live, handle_count_live);
     return HandleOwner(new (addr) Handle(source, rights, base_value));
 }
 

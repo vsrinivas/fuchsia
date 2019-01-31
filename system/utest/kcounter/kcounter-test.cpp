@@ -84,16 +84,15 @@ bool test_counters() {
                                                const counters::Descriptor& b) {
                                            return strcmp(a.name, b.name) < 0;
                                        });
-        return (result.first == desc->end() ? nullptr :
-                &desc->descriptor_table[result.first - desc->begin()]);
+        return (result.first == result.second) ?
+            nullptr : &desc->descriptor_table[result.first - desc->begin()];
     };
 
     constexpr counters::Descriptor kExpected[] = {
+        {"kernel.counters.magic", counters::Type::kSum},
         {"kernel.handles.duped", counters::Type::kSum},
         {"kernel.handles.live", counters::Type::kSum},
         {"kernel.handles.made", counters::Type::kSum},
-        {"kernel.handles.max_live", counters::Type::kMax},
-        {"kernel.counters.magic", counters::Type::kSum},
     };
     for (const auto& ref : kExpected) {
         auto found = find(ref);
@@ -111,7 +110,7 @@ bool test_counters() {
                 case counters::Type::kSum:
                     value += cpu_value;
                     break;
-                case counters::Type::kMax:
+                case counters::Type::kMax:  // Not used, see ZX-3337.
                     value = std::max(value, cpu_value);
                     break;
                 }

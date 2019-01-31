@@ -25,17 +25,12 @@
 // Kernel counters public API:
 // 1- define a new counter.
 //      KCOUNTER(counter_name, "<counter name>");
-//      KCOUNTER_MAX(counter_name, "<counter name>");
 //
 // 2- counters start at zero, increment the counter:
 //      kcounter_add(counter_name, 1);
-//    or
-//      kcounter_max(counter_name, value);
 //
 // By default with KCOUNTER, the `kcounter` presentation will calculate a
-// sum() across cores rather than summing. KCOUNTER_MAX() calculates the max()
-// of the counters across cores.
-//
+// sum() across cores rather than summing.
 //
 // Naming the counters
 // The naming convention is "kernel.subsystem.thing_or_action"
@@ -96,13 +91,28 @@ private:
     static int64_t arena_page_end_[] __asm__("kcounters_arena_page_end");
 };
 
-class CounterBase {
+class Counter {
 public:
-    explicit constexpr CounterBase(const counters::Descriptor* desc) :
+    explicit constexpr Counter(const counters::Descriptor* desc) :
         desc_(desc) { }
 
     int64_t Value() const {
         return *Slot();
+    }
+
+    void Add(int64_t delta) const {
+#if defined(__aarch64__)
+        // Use a relaxed atomic load/store for arm64 to avoid a potentially
+        // nasty race between the regular load/store operations for a +1.
+        // Relaxed atomic load/stores are about as efficient as a regular
+        // load/store.
+        atomic_add_64_relaxed(Slot(), delta);
+#else
+        // x86 can do the add in a single non atomic instruction, so the data
+        // loss of a preemption in the middle of this sequence is fairly
+        // minimal.
+        *Slot() += delta;
+#endif
     }
 
 protected:
@@ -120,38 +130,6 @@ private:
     const counters::Descriptor* desc_;
 };
 
-struct CounterSum : public CounterBase {
-    explicit constexpr CounterSum(const counters::Descriptor* desc) :
-        CounterBase(desc) { }
-    void Add(int64_t delta) const {
-#if defined(__aarch64__)
-        // Use a relaxed atomic load/store for arm64 to avoid a potentially
-        // nasty race between the regular load/store operations for a +1.
-        // Relaxed atomic load/stores are about as efficient as a regular
-        // load/store.
-        atomic_add_64_relaxed(Slot(), delta);
-#else
-        // x86 can do the add in a single non atomic instruction, so the data
-        // loss of a preemption in the middle of this sequence is fairly
-        // minimal.
-        *Slot() += delta;
-#endif
-    }
-};
-
-struct CounterMax : public CounterBase {
-    explicit constexpr CounterMax(const counters::Descriptor* desc) :
-        CounterBase(desc) { }
-    void Update(int64_t value) const {
-        // TODO(travisg|scottmg): Revisit, consider more efficient arm-specific
-        // instruction sequence here.
-        int64_t prev_value = atomic_load_64_relaxed(Slot());
-        while (prev_value < value &&
-               !atomic_cmpxchg_64_relaxed(Slot(), &prev_value, value))
-            ;
-    }
-};
-
 // Define the descriptor and reserve the arena space for the counters.
 // Because of -fdata-sections, each kcounter_arena_* array will be
 // placed in a .bss.kcounter.* section; kernel.ld recognizes those names
@@ -164,21 +142,11 @@ struct CounterMax : public CounterBase {
     namespace { \
     __USED int64_t kcounter_arena_##var[SMP_MAX_CPUS] __asm__("kcounter." name); \
     alignas(counters::Descriptor) __USED __SECTION("kcountdesc." name) const counters::Descriptor kcounter_desc_##var{name, counters::Type::k##type}; \
-    constexpr Counter##type var(&kcounter_desc_##var); \
+    constexpr Counter var(&kcounter_desc_##var); \
     }  // anonymous namespace
 
 #define KCOUNTER(var, name) KCOUNTER_DECLARE(var, name, Sum)
-#define KCOUNTER_MAX(var, name) KCOUNTER_DECLARE(var, name, Max)
 
-static inline void kcounter_add(const CounterSum& counter, int64_t delta) {
+static inline void kcounter_add(const Counter& counter, int64_t delta) {
     counter.Add(delta);
-}
-
-static inline void kcounter_max(const CounterMax& counter, int64_t value) {
-    counter.Update(value);
-}
-
-static inline void kcounter_max_counter(const CounterMax& counter,
-                                        const CounterBase& other) {
-    counter.Update(other.Value());
 }

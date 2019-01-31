@@ -116,8 +116,6 @@
 
 #define LOCAL_TRACE 0
 
-KCOUNTER_MAX(max_allocation, "kernel.heap.max_allocation");
-
 // Use HEAP_ENABLE_TESTS to enable internal testing. The tests are not useful
 // when the target system is up. By that time we have done hundreds of allocations
 // already.
@@ -904,9 +902,6 @@ void* cmpct_alloc(size_t size) {
     if (size == 0u) {
         return NULL;
     }
-
-    kcounter_max(max_allocation, size);
-
     // Large allocations are no longer allowed. See ZX-1318 for details.
     if (size > (HEAP_LARGE_ALLOC_BYTES - sizeof(header_t))) {
         return NULL;
