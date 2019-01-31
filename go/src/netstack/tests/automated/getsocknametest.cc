@@ -11,10 +11,10 @@
 
 TEST(GetSockNameTest, Localhost) {
   int sockfd = socket(AF_INET6, SOCK_STREAM, 0);
-  ASSERT_GE(sockfd, 0);
+  ASSERT_GE(sockfd, 0) << strerror(errno);
 
   struct sockaddr sa;
   socklen_t len = sizeof(sa);
-  ASSERT_GE(getsockname(sockfd, &sa, &len), 0);
+  ASSERT_EQ(getsockname(sockfd, &sa, &len), 0) << strerror(errno);
   ASSERT_EQ(sa.sa_family, AF_INET6);
 }
