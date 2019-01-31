@@ -22,5 +22,7 @@ if $INTERNAL_ACCESS; then
   ENSURE_FILES+=("${SCRIPT_ROOT}/cipd_internal.ensure")
 fi
 
+cd "${BUILD_ROOT}"
+
 (sed '/^\$/!d' "${ENSURE_FILES[@]}" && sed '/^\$/d' "${ENSURE_FILES[@]}") |
   ${CIPD} ensure -ensure-file - -root ${BUILD_ROOT} -log-level warning
