@@ -11,6 +11,7 @@ import (
 	"reflect"
 	"runtime"
 	"sync"
+	"syscall"
 	"syscall/zx"
 	"syscall/zx/fdio"
 	"syscall/zx/fidl"
@@ -112,15 +113,15 @@ func (ios *iostate) loopWrite() error {
 				case obs&LOCAL_SIGNAL_CLOSING != 0:
 					return nil
 				}
-			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			case zx.ErrCanceled:
 				return nil
 			default:
-				return err
+				panic(err)
 			}
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+		case zx.ErrPeerClosed:
 			return nil
 		default:
-			return err
+			panic(err)
 		}
 
 		var opts tcpip.WriteOptions
@@ -404,12 +405,15 @@ func (ios *iostate) loopRead() error {
 					ios.wq.EventUnregister(&outEntry)
 
 					ios.incomingAssertedMu.Lock()
-					switch err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING); mxerror.Status(err) {
-					case zx.ErrOk, zx.ErrPeerClosed:
+					err := ios.dataHandle.Handle().SignalPeer(0, mxnet.MXSIO_SIGNAL_INCOMING)
+					ios.incomingAssertedMu.Unlock()
+					switch mxerror.Status(err) {
+					case zx.ErrOk:
+					case zx.ErrBadHandle, zx.ErrPeerClosed:
+						return nil
 					default:
 						panic(err)
 					}
-					ios.incomingAssertedMu.Unlock()
 					continue
 				case <-outCh:
 					// We became connected; the next Read will reflect this.
@@ -426,7 +430,9 @@ func (ios *iostate) loopRead() error {
 				}
 
 				switch err := ios.dataHandle.Handle().SignalPeer(0, signals); mxerror.Status(err) {
-				case zx.ErrOk, zx.ErrBadHandle:
+				case zx.ErrOk:
+				case zx.ErrBadHandle, zx.ErrPeerClosed:
+					return nil
 				default:
 					panic(err)
 				}
@@ -502,15 +508,15 @@ func (ios *iostate) loopRead() error {
 					case obs&LOCAL_SIGNAL_CLOSING != 0:
 						return nil
 					}
-				case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+				case zx.ErrBadHandle, zx.ErrCanceled:
 					return nil
 				default:
-					return err
+					panic(err)
 				}
-			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			case zx.ErrBadHandle, zx.ErrPeerClosed:
 				return nil
 			default:
-				return err
+				panic(err)
 			}
 		}
 	}
@@ -521,14 +527,15 @@ func (ios *iostate) loopControl() error {
 	defer func() {
 		if synthesizeClose {
 			if code, err := ios.Close(); err != nil {
-				log.Printf("synethsize close failed: %v", err)
+				log.Printf("synethsize close failed: %s", err)
 			} else if code != 0 {
-				log.Printf("synethsize close failed: %d", code)
+				log.Printf("synethsize close failed: %s", syscall.Errno(code))
 
-				if err := ios.dataHandle.Close(); err != nil {
-					log.Printf("dataHandle.Close() failed: %v", err)
-				}
 			}
+		}
+
+		if err := ios.dataHandle.Close(); err != nil {
+			log.Printf("dataHandle.Close() failed: %s", err)
 		}
 	}()
 
@@ -568,14 +575,14 @@ func (ios *iostate) loopControl() error {
 		case zx.ErrOk:
 		case zx.ErrBadState:
 			return nil // This side of the socket is closed.
-		case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+		case zx.ErrPeerClosed:
 			return nil
 		case zx.ErrShouldWait:
 			obs, err := zxwait.Wait(zx.Handle(ios.dataHandle),
 				zx.SignalSocketControlReadable|zx.SignalSocketPeerClosed|LOCAL_SIGNAL_CLOSING,
 				zx.TimensecInfinite)
 			switch mxerror.Status(err) {
-			case zx.ErrBadHandle, zx.ErrCanceled, zx.ErrPeerClosed:
+			case zx.ErrCanceled:
 				return nil
 			case zx.ErrOk:
 				switch {
@@ -588,10 +595,10 @@ func (ios *iostate) loopControl() error {
 					return nil
 				}
 			default:
-				return err
+				panic(err)
 			}
 		default:
-			return err
+			panic(err)
 		}
 	}
 }
@@ -1417,6 +1424,9 @@ func (ios *iostate) Close() (int16, error) {
 	}
 
 	ios.ep.Close()
+
+	// NB: we can't wait for loopRead to finish here because the dataHandle
+	// may be full, and loopRead will never exit.
 
 	return 0, nil
 }
