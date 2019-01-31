@@ -1,0 +1,5 @@
+/.cipd_client*
+/.versions
+/linux-x64/
+/mac-x64/
+*.DS_Store

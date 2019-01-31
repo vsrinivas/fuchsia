@@ -1,0 +1,48 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Note: changes to this file will require updating fuchsia.versions, which
+# can be done by running `./cipd ensure-file-resolve -ensure-file fuchsia.ensure`
+# from this directory.
+
+$VerifiedPlatform linux-amd64
+$VerifiedPlatform mac-amd64
+
+$ParanoidMode CheckPresence
+$ResolvedVersions fuchsia.versions
+
+# GN
+gn/gn/${platform} git_revision:45314e29d54cc2e4a6501eaec860f1b09740eb9c
+
+# Ninja
+infra/ninja/${platform} version:1.8.2
+
+# Breakpad
+fuchsia/tools/breakpad/${os=linux}-${arch} git_revision:9eac2058b70615519b2c4d8c6bdbfca1bd079e39
+
+# dump_breakpad_symbols
+fuchsia/tools/dump_breakpad_symbols/${os=linux}-${arch} git_revision:078c34aaee784ec4737e5fe71c0392d54de0f02d
+
+# godepfile
+fuchsia/tools/godepfile/${platform} git_revision:6922d7833617841e853a0be52a285f6cd07a0a10
+
+# CMake
+@Subdir cmake
+infra/cmake/${platform} version:3.10.0
+
+# Clang
+@Subdir clang
+fuchsia/clang/${platform} git_revision:f81edba34ddf2e70300baa227b136dcdb8aecb6e
+
+# Go
+@Subdir go
+fuchsia/go/${platform} git_revision:b8bd7d94a2ae6c80ab8b6ed5900d3eeba8a777c3
+
+# Rust
+@Subdir rust
+fuchsia/rust/${platform} git_revision:0b1669d96cee9dec9035a50fdf0a967a68605f98
+
+# QEMU
+@Subdir qemu
+fuchsia/qemu/${platform} git_revision:0f0027d617976b4cbb7b937d5836f8ef0ac25ba1
