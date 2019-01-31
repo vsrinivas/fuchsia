@@ -5,6 +5,7 @@
                 "fuchsia.net.oldhttp.HttpService": "http"
             },
             "system-services": [
+                "fuchsia.net.LegacySocketProvider",
                 "fuchsia.netstack.Netstack",
                 "fuchsia.net.stack.Stack"
             ]
