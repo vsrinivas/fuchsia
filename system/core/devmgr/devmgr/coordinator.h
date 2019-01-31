@@ -270,7 +270,6 @@ class Coordinator {
 public:
     Coordinator(const Coordinator&) = delete;
     Coordinator& operator=(const Coordinator&) = delete;
-
     Coordinator(Coordinator&&) = delete;
     Coordinator& operator=(Coordinator&&) = delete;
 
@@ -278,38 +277,25 @@ public:
     ~Coordinator();
 
     zx_status_t InitializeCoreDevices();
-
-    zx_status_t OpenVirtcon(zx::channel virtcon_receiver) const;
-
-    void DmPrintf(const char* fmt, ...) const;
-    zx_status_t HandleDmctlWrite(size_t len, const char* cmd);
-
-    const Driver* LibnameToDriver(const fbl::String& libname) const;
-    zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
-
     zx_status_t SetBootdata(const zx::unowned_vmo& vmo);
-
     bool InSuspend() const;
 
-    void DumpDevice(const Device* dev, size_t indent) const;
-    void DumpState() const;
-    void DumpDeviceProps(const Device* dev) const;
-    void DumpGlobalDeviceProps() const;
-    void DumpDrivers() const;
+    void ScanSystemDrivers();
+    void BindDrivers();
+    void UseFallbackDrivers();
+    void DriverAdded(Driver* drv, const char* version);
+    void DriverAddedInit(Driver* drv, const char* version);
+    zx_status_t LibnameToVmo(const fbl::String& libname, zx::vmo* out_vmo) const;
 
-    zx_status_t GetTopoPath(const Device* dev, char* out, size_t max) const;
-
-    zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
-    void ReleaseDevhost(Devhost* dh);
-    void ReleaseDevice(Device* dev);
-
+    // Used to implement fuchsia::device::manager::Coordinator.
     zx_status_t AddDevice(Device* parent, zx::channel rpc, const uint64_t* props_data,
                           size_t props_count, fbl::StringPiece name, uint32_t protocol_id,
                           fbl::StringPiece driver_path, fbl::StringPiece args, bool invisible,
                           zx::channel client_remote);
-    zx_status_t MakeVisible(Device* dev);
     zx_status_t RemoveDevice(Device* dev, bool forced);
-
+    zx_status_t MakeVisible(Device* dev);
+    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
+    zx_status_t GetTopologicalPath(const Device* dev, char* out, size_t max) const;
     zx_status_t LoadFirmware(Device* dev, const char* path, zx::vmo* vmo, size_t* size);
 
     zx_status_t GetMetadata(Device* dev, uint32_t type, void* buffer, size_t buflen,
@@ -318,30 +304,14 @@ public:
     zx_status_t AddMetadata(Device* dev, uint32_t type, const void* data, uint32_t length);
     zx_status_t PublishMetadata(Device* dev, const char* path, uint32_t type, const void* data,
                                 uint32_t length);
-
-    zx_status_t BindDevice(Device* dev, fbl::StringPiece drvlibname);
-    zx_status_t BindDriver(Driver* drv);
+    zx_status_t DmCommand(size_t len, const char* cmd);
+    zx_status_t DmOpenVirtcon(zx::channel virtcon_receiver) const;
+    void DmMexec(zx::vmo kernel, zx::vmo bootdata);
 
     zx_status_t HandleDeviceRead(Device* dev);
-
-    zx_status_t PrepareProxy(Device* dev);
-    zx_status_t AttemptBind(const Driver* drv, Device* dev);
-
     void HandleNewDevice(Device* dev);
-
-    void ScanSystemDrivers();
-    void BindSystemDrivers();
-    void BindDrivers();
-    void UseFallbackDrivers();
-
-    void Mexec(zx::vmo kernel, zx::vmo bootdata);
-
-    void Suspend(uint32_t flags);
-    void BuildSuspendList();
-
-    void DriverAdded(Driver* drv, const char* version);
-    void DriverAddedInit(Driver* drv, const char* version);
-    void DriverAddedSys(Driver* drv, const char* version);
+    zx_status_t PrepareProxy(Device* dev);
+    void DumpState() const;
 
     const zx::resource& root_resource() const { return config_.root_resource; }
     const zx::event& fshost_event() const { return config_.fshost_event; }
@@ -370,11 +340,11 @@ public:
     Device& test_device() { return test_device_; }
 
     SuspendContext& suspend_context() { return suspend_context_; }
+    const SuspendContext& suspend_context() const { return suspend_context_; }
     bool suspend_fallback() const { return suspend_fallback_; }
     void set_suspend_fallback(bool suspend_fallback) { suspend_fallback_ = suspend_fallback; }
     bool suspend_debug() const { return suspend_debug_; }
     void set_suspend_debug(bool suspend_debug) { suspend_debug_ = suspend_debug; }
-
     bool system_available() const { return system_available_; }
     void set_system_available(bool system_available) { system_available_ = system_available; }
     bool system_loaded() const { return system_loaded_; }
@@ -422,8 +392,27 @@ private:
     bool system_available_ = false;
     bool system_loaded_ = false;
 
+    void DmPrintf(const char* fmt, ...) const;
+    void DumpDevice(const Device* dev, size_t indent) const;
+    void DumpDeviceProps(const Device* dev) const;
+    void DumpGlobalDeviceProps() const;
+    void DumpDrivers() const;
+
+    void BuildSuspendList();
     void Suspend(SuspendContext ctx);
+    void Suspend(uint32_t flags);
+
     fbl::unique_ptr<Driver> ValidateDriver(fbl::unique_ptr<Driver> drv);
+    const Driver* LibnameToDriver(const fbl::String& libname) const;
+
+    zx_status_t NewDevhost(const char* name, Devhost* parent, Devhost** out);
+    void ReleaseDevhost(Devhost* dh);
+    void ReleaseDevice(Device* dev);
+
+    zx_status_t BindDriver(Driver* drv);
+    zx_status_t AttemptBind(const Driver* drv, Device* dev);
+    void BindSystemDrivers();
+    void DriverAddedSys(Driver* drv, const char* version);
 };
 
 void coordinator_setup(Coordinator* coordinator, DevmgrArgs args);

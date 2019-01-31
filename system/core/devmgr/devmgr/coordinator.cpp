@@ -177,7 +177,7 @@ Coordinator::~Coordinator() {
 }
 
 bool Coordinator::InSuspend() const {
-    return suspend_context_.flags() == SuspendContext::Flags::kSuspend;
+    return suspend_context().flags() == SuspendContext::Flags::kSuspend;
 }
 
 zx_status_t Coordinator::InitializeCoreDevices() {
@@ -242,7 +242,7 @@ zx_status_t Coordinator::InitializeCoreDevices() {
     return ZX_OK;
 }
 
-zx_status_t Coordinator::OpenVirtcon(zx::channel virtcon_receiver) const {
+zx_status_t Coordinator::DmOpenVirtcon(zx::channel virtcon_receiver) const {
     zx_handle_t raw_virtcon_receiver = virtcon_receiver.release();
     return virtcon_channel_.write(0, nullptr, 0, &raw_virtcon_receiver, 1);
 }
@@ -263,7 +263,7 @@ void Coordinator::DmPrintf(const char* fmt, ...) const {
     }
 }
 
-zx_status_t Coordinator::HandleDmctlWrite(size_t len, const char* cmd) {
+zx_status_t Coordinator::DmCommand(size_t len, const char* cmd) {
     if (len == 4) {
         if (!memcmp(cmd, "dump", 4)) {
             DumpState();
@@ -527,7 +527,7 @@ static const char* get_devhost_bin(bool asan_drivers) {
 
 zx_handle_t get_service_root();
 
-zx_status_t Coordinator::GetTopoPath(const Device* dev, char* out, size_t max) const {
+zx_status_t Coordinator::GetTopologicalPath(const Device* dev, char* out, size_t max) const {
     // TODO: Remove VLA.
     char tmp[max];
     char* path = tmp + max - 1;
@@ -1087,7 +1087,7 @@ zx_status_t Coordinator::GetMetadata(Device* dev, uint32_t type, void* buffer, s
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
     char path[fuchsia_device_manager_PATH_MAX];
-    zx_status_t status = GetTopoPath(dev, path, sizeof(path));
+    zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
     if (status != ZX_OK) {
         return status;
     }
@@ -1122,7 +1122,7 @@ zx_status_t Coordinator::GetMetadataSize(Device* dev, uint32_t type, size_t* siz
 
     // if no metadata is found, check list of metadata added via device_publish_metadata()
     char path[fuchsia_device_manager_PATH_MAX];
-    zx_status_t status = GetTopoPath(dev, path, sizeof(path));
+    zx_status_t status = GetTopologicalPath(dev, path, sizeof(path));
     if (status != ZX_OK) {
         return status;
     }
@@ -1156,7 +1156,7 @@ zx_status_t Coordinator::AddMetadata(Device* dev, uint32_t type, const void* dat
 zx_status_t Coordinator::PublishMetadata(Device* dev, const char* path, uint32_t type,
                                          const void* data, uint32_t length) {
     char caller_path[fuchsia_device_manager_PATH_MAX];
-    zx_status_t status = GetTopoPath(dev, caller_path, sizeof(caller_path));
+    zx_status_t status = GetTopologicalPath(dev, caller_path, sizeof(caller_path));
     if (status != ZX_OK) {
         return status;
     }
@@ -1279,7 +1279,7 @@ static zx_status_t fidl_GetTopologicalPath(void* ctx, fidl_txn_t* txn) {
 
     auto dev = static_cast<Device*>(ctx);
     zx_status_t status;
-    if ((status = dev->coordinator->GetTopoPath(dev, path, sizeof(path))) != ZX_OK) {
+    if ((status = dev->coordinator->GetTopologicalPath(dev, path, sizeof(path))) != ZX_OK) {
         return fuchsia_device_manager_CoordinatorGetTopologicalPath_reply(txn, status, nullptr, 0);
     }
     return fuchsia_device_manager_CoordinatorGetTopologicalPath_reply(txn, ZX_OK, path,
@@ -1361,14 +1361,14 @@ static zx_status_t fidl_DmCommand(void* ctx, zx_handle_t raw_log_socket, const c
         dev->coordinator->set_dmctl_socket(std::move(log_socket));
     }
 
-    zx_status_t status = dev->coordinator->HandleDmctlWrite(command_size, command_data);
+    zx_status_t status = dev->coordinator->DmCommand(command_size, command_data);
     dev->coordinator->set_dmctl_socket(zx::socket());
     return fuchsia_device_manager_CoordinatorDmCommand_reply(txn, status);
 }
 
 static zx_status_t fidl_DmOpenVirtcon(void* ctx, zx_handle_t raw_vc_receiver) {
     auto dev = static_cast<Device*>(ctx);
-    return dev->coordinator->OpenVirtcon(zx::channel(raw_vc_receiver));
+    return dev->coordinator->DmOpenVirtcon(zx::channel(raw_vc_receiver));
 }
 
 static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t raw_bootdata) {
@@ -1439,7 +1439,7 @@ static zx_status_t fidl_DmMexec(void* ctx, zx_handle_t raw_kernel, zx_handle_t r
         return ZX_ERR_INTERNAL;
     }
 
-    dev->coordinator->Mexec(std::move(kernel), std::move(bootdata));
+    dev->coordinator->DmMexec(std::move(kernel), std::move(bootdata));
     return ZX_OK;
 }
 
@@ -1549,8 +1549,8 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
         if (resp->status != ZX_OK) {
             log(ERROR, "devcoord: rpc: suspend '%s' status %d\n", dev->name.data(), resp->status);
         }
-        suspend_context_.set_status(resp->status);
-        ContinueSuspend(&suspend_context_, root_resource());
+        suspend_context().set_status(resp->status);
+        ContinueSuspend(&suspend_context(), root_resource());
         break;
     }
     default:
@@ -1787,22 +1787,22 @@ static void append_suspend_list(SuspendContext* ctx, Devhost* dh) {
 
 // Returns the devhost at the front of the queue.
 void Coordinator::BuildSuspendList() {
-    auto& devhosts = suspend_context_.devhosts();
+    auto& devhosts = suspend_context().devhosts();
 
     // sys_device must suspend last as on x86 it invokes
     // ACPI S-state transition
     devhosts.push_front(sys_device_.proxy->host);
-    append_suspend_list(&suspend_context_, sys_device_.proxy->host);
+    append_suspend_list(&suspend_context(), sys_device_.proxy->host);
 
     devhosts.push_front(root_device_.proxy->host);
-    append_suspend_list(&suspend_context_, root_device_.proxy->host);
+    append_suspend_list(&suspend_context(), root_device_.proxy->host);
 
     devhosts.push_front(misc_device_.proxy->host);
-    append_suspend_list(&suspend_context_, misc_device_.proxy->host);
+    append_suspend_list(&suspend_context(), misc_device_.proxy->host);
 
     // test devices do not (yet) participate in suspend
 
-    suspend_context_.set_dh(&devhosts.front());
+    suspend_context().set_dh(&devhosts.front());
 }
 
 static int suspend_timeout_thread(void* arg) {
@@ -1831,30 +1831,30 @@ void Coordinator::Suspend(SuspendContext ctx) {
     if (!sys_device_.proxy || !root_device_.proxy || !misc_device_.proxy) {
         return;
     }
-    if (suspend_context_.flags() == SuspendContext::Flags::kSuspend) {
+    if (suspend_context().flags() == SuspendContext::Flags::kSuspend) {
         return;
     }
     // Move the socket in to prevent the rpc handler from closing the handle.
-    suspend_context_ = std::move(ctx);
+    suspend_context() = std::move(ctx);
     BuildSuspendList();
 
-    if (suspend_fallback_ || suspend_debug_) {
+    if (suspend_fallback() || suspend_debug()) {
         thrd_t t;
-        int ret = thrd_create_with_name(&t, suspend_timeout_thread, &suspend_context_,
+        int ret = thrd_create_with_name(&t, suspend_timeout_thread, &suspend_context(),
                                         "devcoord-suspend-timeout");
         if (ret != thrd_success) {
             log(ERROR, "devcoord: can't create suspend timeout thread\n");
         }
     }
 
-    process_suspend_list(&suspend_context_);
+    process_suspend_list(&suspend_context());
 }
 
 void Coordinator::Suspend(uint32_t flags) {
     Suspend(SuspendContext(this, SuspendContext::Flags::kSuspend, flags, std::move(dmctl_socket_)));
 }
 
-void Coordinator::Mexec(zx::vmo kernel, zx::vmo bootdata) {
+void Coordinator::DmMexec(zx::vmo kernel, zx::vmo bootdata) {
     Suspend(SuspendContext(this, SuspendContext::Flags::kSuspend, DEVICE_SUSPEND_FLAG_MEXEC,
                            zx::socket(), std::move(kernel), std::move(bootdata)));
 }
@@ -1993,14 +1993,6 @@ zx_status_t Coordinator::BindDriver(Driver* drv) {
     return ZX_OK;
 }
 
-static int system_driver_loader(void* arg) {
-    auto coordinator = static_cast<Coordinator*>(arg);
-    find_loadable_drivers("/system/driver",
-                          fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
-    async::PostTask(coordinator->dispatcher(), [coordinator] { coordinator->BindSystemDrivers(); });
-    return 0;
-}
-
 void Coordinator::ScanSystemDrivers() {
     if (system_loaded_) {
         return;
@@ -2010,7 +2002,15 @@ void Coordinator::ScanSystemDrivers() {
     // This avoids deadlocks between the devhosts hosting the block devices that
     // these drivers may be served from and the devcoordinator loading them.
     thrd_t t;
-    int ret = thrd_create_with_name(&t, system_driver_loader, this, "system-driver-loader");
+    auto callback = [](void* arg) {
+        auto coordinator = static_cast<Coordinator*>(arg);
+        find_loadable_drivers("/system/driver",
+                              fit::bind_member(coordinator, &Coordinator::DriverAddedSys));
+        async::PostTask(coordinator->dispatcher(),
+                        [coordinator] { coordinator->BindSystemDrivers(); });
+        return 0;
+    };
+    int ret = thrd_create_with_name(&t, callback, this, "system-driver-loader");
     if (ret == thrd_success) {
         thrd_detach(t);
     }

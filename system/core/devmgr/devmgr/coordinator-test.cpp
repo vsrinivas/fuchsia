@@ -52,7 +52,7 @@ bool open_virtcon() {
     zx::channel sender, receiver;
     status = zx::channel::create(0, &sender, &receiver);
     ASSERT_EQ(ZX_OK, status);
-    status = coordinator.OpenVirtcon(std::move(sender));
+    status = coordinator.DmOpenVirtcon(std::move(sender));
     ASSERT_EQ(ZX_OK, status);
 
     zx_signals_t signals;
