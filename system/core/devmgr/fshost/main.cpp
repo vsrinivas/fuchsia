@@ -48,16 +48,15 @@ namespace {
 
 #define LAST_PANIC_FILEPATH "log/last-panic.txt"
 
-constexpr uint32_t kFsDirFlags = ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |
-                                 ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
+constexpr uint32_t kFsDirFlags =
+    ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE;
 
 struct BootdataRamdisk : public fbl::SinglyLinkedListable<fbl::unique_ptr<BootdataRamdisk>> {
 public:
     explicit BootdataRamdisk(zx::vmo vmo) : vmo_(std::move(vmo)) {}
 
-    zx::vmo TakeRamdisk() {
-        return std::move(vmo_);
-    }
+    zx::vmo TakeRamdisk() { return std::move(vmo_); }
+
 private:
     zx::vmo vmo_;
 };
@@ -104,12 +103,11 @@ zx_status_t SetupBootfsVmo(const fbl::unique_ptr<FsManager>& root, uint32_t n, z
     }
     bootfs::Parser bfs;
     if (bfs.Init(zx::unowned_vmo(bootfs_vmo)) == ZX_OK) {
-        bfs.Parse([&root, vmo](const bootfs_entry_t *entry) -> zx_status_t {
-                      // printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
-                      root.get()->SystemfsAddFile(entry->name, vmo, entry->data_off,
-                                                  entry->data_len);
-                      return ZX_OK;
-                  });
+        bfs.Parse([&root, vmo](const bootfs_entry_t* entry) -> zx_status_t {
+            // printf("bootfs: %s @%zd (%zd bytes)\n", path, off, len);
+            root.get()->SystemfsAddFile(entry->name, vmo, entry->data_off, entry->data_len);
+            return ZX_OK;
+        });
     }
     root->SystemfsSetReadonly(getenv("zircon.system.writable") == nullptr);
     return ZX_OK;
@@ -202,9 +200,9 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             case BOOTDATA_BOOTFS_SYSTEM: {
                 const char* errmsg;
                 zx_handle_t bootfs_vmo;
-                status = decompress_bootdata(zx_vmar_root_self(), vmo.get(),
-                                             off, bootdata.length + sizeof(bootdata_t),
-                                             &bootfs_vmo, &errmsg);
+                status =
+                    decompress_bootdata(zx_vmar_root_self(), vmo.get(), off,
+                                        bootdata.length + sizeof(bootdata_t), &bootfs_vmo, &errmsg);
                 if (status < 0) {
                     printf("devmgr: failed to decompress bootdata: %s\n", errmsg);
                 } else {
@@ -215,13 +213,11 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
             case BOOTDATA_RAMDISK: {
                 const char* errmsg;
                 zx_handle_t ramdisk_vmo;
-                status = decompress_bootdata(
-                    zx_vmar_root_self(), vmo.get(),
-                    off, bootdata.length + sizeof(bootdata_t),
-                    &ramdisk_vmo, &errmsg);
+                status = decompress_bootdata(zx_vmar_root_self(), vmo.get(), off,
+                                             bootdata.length + sizeof(bootdata_t), &ramdisk_vmo,
+                                             &errmsg);
                 if (status != ZX_OK) {
-                    printf("fshost: failed to decompress bootdata: %s\n",
-                           errmsg);
+                    printf("fshost: failed to decompress bootdata: %s\n", errmsg);
                 } else {
                     auto ramdisk = fbl::make_unique<BootdataRamdisk>(zx::vmo(ramdisk_vmo));
                     ramdisk_list->push_front(std::move(ramdisk));
@@ -243,7 +239,8 @@ void SetupBootfs(const fbl::unique_ptr<FsManager>& root,
 // Setup the loader service to be used by all processes spawned by devmgr.
 void setup_loader_service(zx::channel devmgr_loader) {
     loader_service_t* svc;
-    zx_status_t status = loader_service_create_fs(nullptr, &svc);;
+    zx_status_t status = loader_service_create_fs(nullptr, &svc);
+    ;
     if (status != ZX_OK) {
         fprintf(stderr, "fshost: failed to create loader service %d\n", status);
     }
@@ -366,8 +363,8 @@ int main(int argc, char** argv) {
 
     // Initialize connections to external service managers, and begin
     // monitoring the |fshost_event| for a termination event.
-    root->InitializeConnections(std::move(fs_root), std::move(devfs_root),
-                                std::move(svc_root), std::move(fshost_event));
+    root->InitializeConnections(std::move(fs_root), std::move(devfs_root), std::move(svc_root),
+                                std::move(fshost_event));
     g_fshost = root.get();
 
     // If we have a "/system" ramdisk, start higher level services.

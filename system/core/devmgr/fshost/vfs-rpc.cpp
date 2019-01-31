@@ -9,20 +9,20 @@
 #include <sys/stat.h>
 #include <threads.h>
 
+#include <fbl/algorithm.h>
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_lock.h>
+#include <fbl/unique_ptr.h>
+#include <fs/vfs.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/async/cpp/wait.h>
-#include <fs/vfs.h>
+#include <lib/fdio/debug.h>
+#include <lib/fdio/io.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
 #include <zircon/processargs.h>
 #include <zircon/syscalls.h>
 #include <zircon/thread_annotations.h>
-#include <lib/fdio/debug.h>
-#include <lib/fdio/io.h>
-#include <fbl/algorithm.h>
-#include <fbl/alloc_checker.h>
-#include <fbl/auto_lock.h>
-#include <fbl/unique_ptr.h>
 
 #include <utility>
 
@@ -44,8 +44,8 @@ zx_status_t AddVmofile(fbl::RefPtr<memfs::VnodeDir> vnb, const char* path, zx_ha
             if (path[0] == 0) {
                 return ZX_ERR_INVALID_ARGS;
             }
-            return vnb->vfs()->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)),
-                                             vmo, off, len);
+            return vnb->vfs()->CreateFromVmo(vnb.get(), fbl::StringPiece(path, strlen(path)), vmo,
+                                             off, len);
         } else {
             if (nextpath == path) {
                 return ZX_ERR_INVALID_ARGS;
@@ -87,9 +87,8 @@ FsManager::FsManager() {
 
     for (unsigned n = 0; n < fbl::count_of(kMountPoints); n++) {
         fbl::StringPiece pathout;
-        status = root_vfs_.Open(global_root_, &mount_nodes[n],
-                                fbl::StringPiece(kMountPoints[n]), &pathout,
-                                ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR);
+        status = root_vfs_.Open(global_root_, &mount_nodes[n], fbl::StringPiece(kMountPoints[n]),
+                                &pathout, ZX_FS_RIGHT_READABLE | ZX_FS_FLAG_CREATE, S_IFDIR);
         ZX_ASSERT(status == ZX_OK);
     }
 
@@ -138,10 +137,8 @@ zx_status_t FsManager::InitializeConnections(zx::channel root, zx::channel devfs
         printf("fshost: cannot create global root\n");
     }
 
-    connections_ = fbl::make_unique<FshostConnections>(std::move(devfs_root),
-                                                       std::move(svc_root),
-                                                       std::move(fs_root),
-                                                       std::move(fshost_event));
+    connections_ = fbl::make_unique<FshostConnections>(std::move(devfs_root), std::move(svc_root),
+                                                       std::move(fs_root), std::move(fshost_event));
     // Now that we've initialized our connection to the outside world,
     // monitor for external shutdown events.
     WatchExit();
@@ -166,10 +163,8 @@ zx_status_t FsManager::ServeRoot(zx::channel* out) {
 }
 
 void FsManager::WatchExit() {
-    global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher,
-                                        async::Wait* wait,
-                                        zx_status_t status,
-                                        const zx_packet_signal_t* signal) {
+    global_shutdown_.set_handler([this](async_dispatcher_t* dispatcher, async::Wait* wait,
+                                        zx_status_t status, const zx_packet_signal_t* signal) {
         root_vfs_.UninstallAll(ZX_TIME_INFINITE);
         system_vfs_.UninstallAll(ZX_TIME_INFINITE);
         connections_->Event().signal(0, FSHOST_SIGNAL_EXIT_DONE);
@@ -199,8 +194,7 @@ zx_status_t FsManager::LocalMount(memfs::VnodeDir* parent, const char* name,
     if ((status = ServeVnode(subtree, std::move(server))) != ZX_OK) {
         return status;
     }
-    return parent->vfs()->InstallRemote(std::move(vn),
-                                        fs::MountChannel(std::move(client)));
+    return parent->vfs()->InstallRemote(std::move(vn), fs::MountChannel(std::move(client)));
 }
 
 } // namespace devmgr

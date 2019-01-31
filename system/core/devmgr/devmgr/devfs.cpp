@@ -2,15 +2,15 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "coordinator.h"
-#include "devmgr.h"
 #include "../shared/async-loop-owned-rpc-handler.h"
 #include "../shared/log.h"
+#include "coordinator.h"
+#include "devmgr.h"
 
+#include <zircon/device/vfs.h>
 #include <zircon/fidl.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
-#include <zircon/device/vfs.h>
 
 #include <fbl/intrusive_double_list.h>
 #include <fbl/string.h>
@@ -42,7 +42,9 @@ fbl::unique_ptr<Devnode> devfs_mkdir(Devnode* parent, const fbl::String& name);
 #define PNMAX 16
 const char* proto_name(uint32_t id, char buf[PNMAX]) {
     switch (id) {
-#define DDK_PROTOCOL_DEF(tag, val, name, flags) case val: return name;
+#define DDK_PROTOCOL_DEF(tag, val, name, flags)                                                    \
+    case val:                                                                                      \
+        return name;
 #include <ddk/protodefs.h>
     default:
         snprintf(buf, PNMAX, "proto-%08x", id);
@@ -69,8 +71,7 @@ struct Watcher : fbl::DoublyLinkedListable<fbl::unique_ptr<Watcher>> {
 };
 
 Watcher::Watcher(Devnode* dn, zx::channel ch, uint32_t mask)
-    : devnode(dn), handle(std::move(ch)), mask(mask) {
-}
+    : devnode(dn), handle(std::move(ch)), mask(mask) {}
 
 class DcIostate : public AsyncLoopOwnedRpcHandler<DcIostate> {
 public:
@@ -80,7 +81,8 @@ public:
     // Claims ownership of |*h| on success
     static zx_status_t Create(Devnode* dn, async_dispatcher_t* dispatcher, zx::channel* h);
 
-    static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie, async_dispatcher_t* dispatcher);
+    static zx_status_t DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie,
+                                        async_dispatcher_t* dispatcher);
 
     static void HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* dispatcher,
                           async::WaitBase* wait, zx_status_t status,
@@ -94,7 +96,7 @@ public:
     // Remove this DcIostate from its devnode
     void DetachFromDevnode();
 
- private:
+private:
     uint64_t readdir_ino_ = 0;
 
     // pointer to our devnode, nullptr if it has been removed
@@ -157,7 +159,7 @@ struct ProtocolInfo {
 };
 
 ProtocolInfo proto_infos[] = {
-#define DDK_PROTOCOL_DEF(tag, val, name, flags) { name, nullptr, val, flags },
+#define DDK_PROTOCOL_DEF(tag, val, name, flags) {name, nullptr, val, flags},
 #include <ddk/protodefs.h>
 };
 
@@ -215,8 +217,7 @@ bool devnode_is_local(Devnode* dn) {
 // Notify a single watcher about the given operation and path.  On failure,
 // frees the watcher.  This can only be called on a watcher that has not yet
 // been added to a Devnode's watchers list.
-void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher,
-                         const fbl::String& name, unsigned op) {
+void devfs_notify_single(fbl::unique_ptr<Watcher>* watcher, const fbl::String& name, unsigned op) {
     size_t len = name.length();
     if (!*watcher || len > fuchsia_io_MAX_FILENAME) {
         return;
@@ -261,7 +262,7 @@ void devfs_notify(Devnode* dn, const fbl::String& name, unsigned op) {
     // convert to mask
     op = (1u << op);
 
-    for (auto itr = dn->watchers.begin(); itr != dn->watchers.end(); ) {
+    for (auto itr = dn->watchers.begin(); itr != dn->watchers.end();) {
         auto& cur = *itr;
         // Advance the iterator now instead of at the end of the loop because we
         // may erase the current element from the list.
@@ -293,7 +294,7 @@ zx_status_t devfs_watch(Devnode* dn, zx::channel h, uint32_t mask) {
             if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
                 continue;
             }
-            //TODO: send multiple per write
+            // TODO: send multiple per write
             devfs_notify_single(&watcher, child.name, fuchsia_io_WATCH_EVENT_EXISTING);
         }
         devfs_notify_single(&watcher, "", fuchsia_io_WATCH_EVENT_IDLE);
@@ -376,8 +377,7 @@ zx_status_t devfs_readdir(Devnode* dn, uint64_t* ino_inout, void* data, size_t l
         }
         ino = child.ino;
         auto vdirent = reinterpret_cast<vdirent_t*>(ptr);
-        zx_status_t r = fill_dirent(vdirent, len, ino, child.name,
-                                    VTYPE_TO_DTYPE(V_TYPE_DIR));
+        zx_status_t r = fill_dirent(vdirent, len, ino, child.name, VTYPE_TO_DTYPE(V_TYPE_DIR));
         if (r < 0) {
             break;
         }
@@ -408,7 +408,7 @@ again:
     }
     for (auto& child : dn->children) {
         if (!strcmp(child.name.c_str(), name)) {
-            if(child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
+            if (child.device && (child.device->flags & DEV_CTX_INVISIBLE)) {
                 continue;
             }
             dn = &child;
@@ -426,7 +426,8 @@ again:
     return ZX_ERR_NEXT;
 }
 
-void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, char* path, uint32_t flags) {
+void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, char* path,
+                uint32_t flags) {
     zx::channel ipc(h);
     h = ZX_HANDLE_INVALID;
 
@@ -457,7 +458,7 @@ void devfs_open(Devnode* dirdn, async_dispatcher_t* dispatcher, zx_handle_t h, c
             r = ZX_OK;
         }
     } else {
-        path = (char*) ".";
+        path = (char*)".";
     }
 
     if (r != ZX_OK) {
@@ -507,8 +508,7 @@ void devfs_remove(Devnode* dn) {
     }
 
     // notify own file watcher
-    if ((dn->device == nullptr) ||
-        !(dn->device->flags & DEV_CTX_INVISIBLE)) {
+    if ((dn->device == nullptr) || !(dn->device->flags & DEV_CTX_INVISIBLE)) {
         devfs_notify(dn, "", fuchsia_io_WATCH_EVENT_DELETED);
     }
 
@@ -517,8 +517,7 @@ void devfs_remove(Devnode* dn) {
         if (dn->device->self == dn) {
             dn->device->self = nullptr;
 
-            if ((dn->device->parent != nullptr) &&
-                (dn->device->parent->self != nullptr) &&
+            if ((dn->device->parent != nullptr) && (dn->device->parent->self != nullptr) &&
                 !(dn->device->flags & DEV_CTX_INVISIBLE)) {
                 devfs_notify(dn->device->parent->self, dn->name, fuchsia_io_WATCH_EVENT_REMOVED);
             }
@@ -546,9 +545,7 @@ void devfs_remove(Devnode* dn) {
 
 } // namespace
 
-Devnode::Devnode(fbl::String name)
-    : name(std::move(name)) {
-}
+Devnode::Devnode(fbl::String name) : name(std::move(name)) {}
 
 Devnode::~Devnode() {
     devfs_remove(this);
@@ -620,8 +617,7 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
     }
 
     if ((dev->protocol_id == ZX_PROTOCOL_TEST_PARENT) ||
-        (dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) ||
-        (dev->protocol_id == ZX_PROTOCOL_MISC)) {
+        (dev->protocol_id == ZX_PROTOCOL_MISC_PARENT) || (dev->protocol_id == ZX_PROTOCOL_MISC)) {
         // misc devices are singletons, not a class
         // in the sense of other device classes.
         // They do not get aliases in /dev/class/misc/...
@@ -647,8 +643,7 @@ zx_status_t devfs_publish(Device* parent, Device* dev) {
                 }
             }
             return ZX_ERR_ALREADY_EXISTS;
-got_name:
-            ;
+        got_name:;
         }
 
         fbl::unique_ptr<Devnode> dnlink = devfs_mknode(dev, name);
@@ -689,8 +684,8 @@ zx_status_t devfs_connect(Device* dev, zx::channel client_remote) {
     if (!client_remote.is_valid()) {
         return ZX_ERR_BAD_HANDLE;
     }
-    fuchsia_io_DirectoryOpen(dev->hrpc.get(), 0 /* flags */, 0 /* mode */,
-                             ".", 1, client_remote.release());
+    fuchsia_io_DirectoryOpen(dev->hrpc.get(), 0 /* flags */, 0 /* mode */, ".", 1,
+                             client_remote.release());
     return ZX_OK;
 }
 
@@ -699,23 +694,21 @@ zx_status_t devfs_connect(Device* dev, zx::channel client_remote) {
 
 // Decode the incoming request, returning an error and consuming
 // all handles on error.
-#define DECODE_REQUEST(MSG, METHOD)                                     \
-    do {                                                                \
-        zx_status_t r;                                                  \
-        if ((r = fidl_decode_msg(&fuchsia_io_ ## METHOD ##RequestTable, \
-                                 msg, nullptr)) != ZX_OK) {                \
-            return r;                                                   \
-        }                                                               \
-    } while(0);
+#define DECODE_REQUEST(MSG, METHOD)                                                                \
+    do {                                                                                           \
+        zx_status_t r;                                                                             \
+        if ((r = fidl_decode_msg(&fuchsia_io_##METHOD##RequestTable, msg, nullptr)) != ZX_OK) {    \
+            return r;                                                                              \
+        }                                                                                          \
+    } while (0);
 
 // Define a variable |request| from the incoming method, of
 // the requested type.
-#define DEFINE_REQUEST(MSG, METHOD)                     \
-    fuchsia_io_ ## METHOD ## Request* request =         \
-        (fuchsia_io_ ## METHOD ## Request*) MSG->bytes;
+#define DEFINE_REQUEST(MSG, METHOD)                                                                \
+    fuchsia_io_##METHOD##Request* request = (fuchsia_io_##METHOD##Request*)MSG->bytes;
 
-
-zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie, async_dispatcher_t* dispatcher) {
+zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* cookie,
+                                        async_dispatcher_t* dispatcher) {
     auto ios = static_cast<DcIostate*>(cookie);
     Devnode* dn = ios->devnode_;
     if (dn == nullptr) {
@@ -813,7 +806,7 @@ zx_status_t DcIostate::DevfsFidlHandler(fidl_msg_t* msg, fidl_txn_t* txn, void* 
         DECODE_REQUEST(msg, DirectoryAdminQueryFilesystem);
         fuchsia_io_FilesystemInfo info;
         memset(&info, 0, sizeof(info));
-        strlcpy((char*) info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
+        strlcpy((char*)info.name, "devfs", fuchsia_io_MAX_FS_NAME_BUFFER);
         return fuchsia_io_DirectoryAdminQueryFilesystem_reply(txn, ZX_OK, &info);
     }
     case fuchsia_io_NodeIoctlOrdinal: {
@@ -837,9 +830,10 @@ void DcIostate::HandleRpc(fbl::unique_ptr<DcIostate> ios, async_dispatcher_t* di
     }
 
     if (signal->observed & ZX_CHANNEL_READABLE) {
-        status = fs::ReadMessage(wait->object(), [&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
-            return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
-        });
+        status = fs::ReadMessage(
+            wait->object(), [&ios, dispatcher](fidl_msg_t* msg, fs::FidlConnection* txn) {
+                return DcIostate::DevfsFidlHandler(msg, txn->Txn(), ios.get(), dispatcher);
+            });
         if (status == ZX_OK) {
             ios->BeginWait(std::move(ios), dispatcher);
             return;

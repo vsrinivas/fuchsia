@@ -35,6 +35,8 @@ namespace devmgr {
 #define MAX_ENVP 16
 #define CHILD_JOB_RIGHTS (ZX_RIGHTS_BASIC | ZX_RIGHT_MANAGE_JOB | ZX_RIGHT_MANAGE_PROCESS)
 
+// clang-format off
+
 static struct {
     const char* mount;
     const char* name;
@@ -54,17 +56,17 @@ static struct {
     { "/tmp",       "tmp",       FS_TMP },
 };
 
+// clang-format on
+
 void devmgr_disable_appmgr_services() {
     FSTAB[1].flags = 0;
 }
 
-zx_status_t devmgr_launch(
-    const zx::job& job, const char* name,
-    zx_status_t (*load)(void*, launchpad_t*, const char*), void* ctx,
-    int argc, const char* const* argv,
-    const char** initial_envp, int stdiofd,
-    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx::process* out_proc, uint32_t flags) {
+zx_status_t devmgr_launch(const zx::job& job, const char* name,
+                          zx_status_t (*load)(void*, launchpad_t*, const char*), void* ctx,
+                          int argc, const char* const* argv, const char** initial_envp, int stdiofd,
+                          const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+                          zx::process* out_proc, uint32_t flags) {
     zx_status_t status;
     const char* envp[MAX_ENVP + 1];
     unsigned envn = 0;
@@ -96,7 +98,7 @@ zx_status_t devmgr_launch(
     launchpad_set_environ(lp, envp);
 
     // create namespace based on FS_* flags
-    const char* nametable[fbl::count_of(FSTAB)] = { };
+    const char* nametable[fbl::count_of(FSTAB)] = {};
     uint32_t count = 0;
     zx_handle_t h;
     for (unsigned n = 0; n < fbl::count_of(FSTAB); n++) {
@@ -126,8 +128,7 @@ zx_status_t devmgr_launch(
     zx::process proc;
     const char* errmsg;
     if ((status = launchpad_go(lp, proc.reset_and_get_address(), &errmsg)) < 0) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
-               argv[0], name, errmsg, status);
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
     } else {
         if (out_proc != nullptr) {
             *out_proc = std::move(proc);
@@ -137,12 +138,11 @@ zx_status_t devmgr_launch(
     return status;
 }
 
-zx_status_t devmgr_launch_cmdline(
-    const char* me, const zx::job& job, const char* name,
-    zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
-    const char* cmdline,
-    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx::process* proc, uint32_t flags) {
+zx_status_t devmgr_launch_cmdline(const char* me, const zx::job& job, const char* name,
+                                  zx_status_t (*load)(void* ctx, launchpad_t*, const char* file),
+                                  void* ctx, const char* cmdline, const zx_handle_t* handles,
+                                  const uint32_t* types, size_t hcount, zx::process* proc,
+                                  uint32_t flags) {
 
     // Get the full commandline by splitting on '+'.
     char* buf = strdup(cmdline);
@@ -165,13 +165,12 @@ zx_status_t devmgr_launch_cmdline(
     }
     printf("...\n");
 
-    zx_status_t status = devmgr_launch(
-        job, name, load, ctx, argc, (const char* const*)argv, nullptr, -1,
-        handles, types, hcount, proc, flags);
+    zx_status_t status = devmgr_launch(job, name, load, ctx, argc, (const char* const*)argv,
+                                       nullptr, -1, handles, types, hcount, proc, flags);
 
     free(buf);
 
     return status;
 }
 
-} // namespace
+} // namespace devmgr

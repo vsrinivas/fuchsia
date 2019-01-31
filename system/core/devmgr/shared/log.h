@@ -9,6 +9,8 @@
 
 namespace devmgr {
 
+// clang-format off
+
 #define LOG_ERROR    0x001
 #define LOG_INFO     0x002
 #define LOG_TRACE    0x004
@@ -21,8 +23,14 @@ namespace devmgr {
 #define LOG_DEVLC    0x200
 #define LOG_ALL      0x3ff
 
+// clang-format on
+
 extern uint32_t log_flags;
 
-#define log(flag, fmt...) do { if (LOG_##flag & ::devmgr::log_flags) printf(fmt); } while (0)
+#define log(flag, fmt...)                                                                          \
+    do {                                                                                           \
+        if (LOG_##flag & ::devmgr::log_flags)                                                      \
+            printf(fmt);                                                                           \
+    } while (0)
 
 } // namespace devmgr

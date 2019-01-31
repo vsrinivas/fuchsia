@@ -26,7 +26,7 @@ struct ProxyIostate;
 #define DEV_MAGIC 'MDEV'
 
 // This needs to be a struct, not a class, to match the public definition
-struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_device>  {
+struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_device> {
     ~zx_device() = default;
 
     zx_device(const zx_device&) = delete;
@@ -42,48 +42,32 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
         return ops->open_at(ctx, dev_out, path, flags);
     }
 
-    zx_status_t CloseOp(uint32_t flags) {
-        return ops->close(ctx, flags);
-    }
+    zx_status_t CloseOp(uint32_t flags) { return ops->close(ctx, flags); }
 
-    void UnbindOp() {
-        ops->unbind(ctx);
-    }
+    void UnbindOp() { ops->unbind(ctx); }
 
-    void ReleaseOp() {
-        ops->release(ctx);
-    }
+    void ReleaseOp() { ops->release(ctx); }
 
-    zx_status_t SuspendOp(uint32_t flags) {
-        return ops->suspend(ctx, flags);
-    }
+    zx_status_t SuspendOp(uint32_t flags) { return ops->suspend(ctx, flags); }
 
-    zx_status_t ResumeOp(uint32_t flags) {
-        return ops->resume(ctx, flags);
-    }
+    zx_status_t ResumeOp(uint32_t flags) { return ops->resume(ctx, flags); }
 
-    zx_status_t ReadOp(void* buf, size_t count, zx_off_t off,
-                       size_t* actual) {
+    zx_status_t ReadOp(void* buf, size_t count, zx_off_t off, size_t* actual) {
         return ops->read(ctx, buf, count, off, actual);
     }
 
-    zx_status_t WriteOp(const void* buf, size_t count,
-                        zx_off_t off, size_t* actual) {
+    zx_status_t WriteOp(const void* buf, size_t count, zx_off_t off, size_t* actual) {
         return ops->write(ctx, buf, count, off, actual);
     }
 
-    zx_off_t GetSizeOp() {
-        return ops->get_size(ctx);
-    }
+    zx_off_t GetSizeOp() { return ops->get_size(ctx); }
 
-    zx_status_t IoctlOp(uint32_t op, const void* in_buf, size_t in_len,
-                        void* out_buf, size_t out_len, size_t* out_actual) {
+    zx_status_t IoctlOp(uint32_t op, const void* in_buf, size_t in_len, void* out_buf,
+                        size_t out_len, size_t* out_actual) {
         return ops->ioctl(ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
     }
 
-    zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) {
-        return ops->message(ctx, msg, txn);
-    }
+    zx_status_t MessageOp(fidl_msg_t* msg, fidl_txn_t* txn) { return ops->message(ctx, msg, txn); }
 
     uintptr_t magic = DEV_MAGIC;
 
@@ -113,8 +97,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     // for the parent's device_list
     fbl::DoublyLinkedListNodeState<zx_device*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(
-            zx_device& obj) {
+        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(zx_device& obj) {
             return obj.node;
         }
     };
@@ -125,8 +108,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     // list node for the defer_device_list
     fbl::DoublyLinkedListNodeState<zx_device*> defer;
     struct DeferNode {
-        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(
-            zx_device& obj) {
+        static fbl::DoublyLinkedListNodeState<zx_device*>& node_state(zx_device& obj) {
             return obj.defer;
         }
     };
@@ -140,6 +122,7 @@ struct zx_device : fbl::RefCountedUpgradeable<zx_device>, fbl::Recyclable<zx_dev
     devmgr::ProxyIostate* proxy_ios TA_GUARDED(proxy_ios_lock) = nullptr;
 
     char name[ZX_DEVICE_NAME_MAX + 1] = {};
+
 private:
     zx_device() = default;
 
@@ -153,6 +136,8 @@ private:
 // fields which it may fill out after init and before device_add() is called,
 // and the ctx field which may be used to store driver-specific data.
 
+// clang-format off
+
 #define DEV_FLAG_DEAD           0x00000001  // being deleted
 #define DEV_FLAG_VERY_DEAD      0x00000002  // safe for ref0 and release()
 #define DEV_FLAG_UNBINDABLE     0x00000004  // nobody may bind to this device
@@ -163,6 +148,8 @@ private:
 #define DEV_FLAG_INVISIBLE      0x00000200  // device not visible via devfs
 #define DEV_FLAG_UNBOUND        0x00000400  // informed that it should self-delete asap
 #define DEV_FLAG_WANTS_REBIND   0x00000800  // when last child goes, rebind this device
+
+// clang-format on
 
 zx_status_t device_bind(const fbl::RefPtr<zx_device_t>& dev, const char* drv_libname);
 zx_status_t device_unbind(const fbl::RefPtr<zx_device_t>& dev);

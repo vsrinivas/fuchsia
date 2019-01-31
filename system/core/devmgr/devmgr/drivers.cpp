@@ -10,11 +10,11 @@
 #include <string.h>
 #include <unistd.h>
 
-#include "coordinator.h"
-#include "devmgr.h"
 #include "../shared/env.h"
 #include "../shared/fdio.h"
 #include "../shared/log.h"
+#include "coordinator.h"
+#include "devmgr.h"
 
 #include <driver-info/driver-info.h>
 
@@ -34,8 +34,7 @@ bool is_driver_disabled(const char* name) {
     return devmgr::getenv_bool(opt, false);
 }
 
-void found_driver(zircon_driver_note_payload_t* note,
-                  const zx_bind_inst_t* bi, void* cookie) {
+void found_driver(zircon_driver_note_payload_t* note, const zx_bind_inst_t* bi, void* cookie) {
     auto context = static_cast<const AddContext*>(cookie);
 
     // ensure strings are terminated
@@ -66,7 +65,7 @@ void found_driver(zircon_driver_note_payload_t* note,
     drv->name.Set(note->name);
 
 #if VERBOSE_DRIVER_LOAD
-    printf("found driver: %s\n", (char*) cookie);
+    printf("found driver: %s\n", (char*)cookie);
     printf("        name: %s\n", note->name);
     printf("      vendor: %s\n", note->vendor);
     printf("     version: %s\n", note->version);
@@ -90,7 +89,7 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
     if (dir == nullptr) {
         return;
     }
-    AddContext context = { "", std::move(func) };
+    AddContext context = {"", std::move(func)};
 
     struct dirent* de;
     while ((de = readdir(dir)) != nullptr) {
@@ -126,14 +125,14 @@ void find_loadable_drivers(const char* path, DriverLoadCallback func) {
 }
 
 void load_driver(const char* path, DriverLoadCallback func) {
-    //TODO: check for duplicate driver add
+    // TODO: check for duplicate driver add
     int fd;
     if ((fd = open(path, O_RDONLY)) < 0) {
         printf("devcoord: cannot open '%s'\n", path);
         return;
     }
 
-    AddContext context = { path, std::move(func) };
+    AddContext context = {path, std::move(func)};
     zx_status_t status = di_read_driver_info(fd, &context, found_driver);
     close(fd);
 

@@ -35,9 +35,7 @@ public:
     // the owned channels as connections.
     zx_status_t CreateNamespace();
 
-    const zx::event& Event() const {
-        return event_;
-    }
+    const zx::event& Event() const { return event_; }
 
 private:
     zx::channel devfs_root_;
@@ -52,25 +50,19 @@ class FsManager {
 public:
     FsManager();
 
-    const FshostConnections& GetConnections() const {
-        return *connections_.get();
-    }
+    const FshostConnections& GetConnections() const { return *connections_.get(); }
 
     // Created a named VmoFile in "/system". Ownership of |vmo| assumed global.
     zx_status_t SystemfsAddFile(const char* path, zx_handle_t vmo, zx_off_t off, size_t len);
 
     // Signal that "/system" has been mounted.
-    void FuchsiaStart() const {
-        connections_->Event().signal(0, FSHOST_SIGNAL_READY);
-    }
+    void FuchsiaStart() const { connections_->Event().signal(0, FSHOST_SIGNAL_READY); }
 
     // Create "/system", and mount it within the global root.
     zx_status_t MountSystem();
 
     // Identifies if "/system" has already been mounted.
-    bool IsSystemMounted() const {
-        return systemfs_root_ != nullptr;
-    }
+    bool IsSystemMounted() const { return systemfs_root_ != nullptr; }
 
     // Set the "/system" VFS filesystem to become readonly.
     void SystemfsSetReadonly(bool value);
@@ -102,9 +94,8 @@ private:
     zx_status_t LocalMount(memfs::VnodeDir* parent, const char* name,
                            fbl::RefPtr<memfs::VnodeDir>& subtree);
 
-    static constexpr const char* kMountPoints[] = {
-        "/bin", "/data", "/volume", "/system", "/install", "/blob", "/pkgfs"
-    };
+    static constexpr const char* kMountPoints[] = {"/bin",     "/data", "/volume", "/system",
+                                                   "/install", "/blob", "/pkgfs"};
     fbl::RefPtr<fs::Vnode> mount_nodes[fbl::count_of(kMountPoints)];
 
     // The Root VFS manages the following filesystems:

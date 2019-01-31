@@ -7,8 +7,8 @@
 #include <lib/fidl/cpp/message.h>
 #include <lib/fidl/cpp/message_part.h>
 
-#include "coordinator.h"
 #include "../shared/log.h"
+#include "coordinator.h"
 
 namespace devmgr {
 
@@ -30,9 +30,9 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
                                   const char* args, zx::handle rpc_proxy) {
     size_t driver_path_size = dev->libname.size();
     size_t args_size = strlen(args);
-    uint32_t wr_num_bytes = static_cast<uint32_t>(
-            sizeof(fuchsia_device_manager_ControllerCreateDeviceRequest) +
-            FIDL_ALIGN(driver_path_size) + FIDL_ALIGN(args_size));
+    uint32_t wr_num_bytes =
+        static_cast<uint32_t>(sizeof(fuchsia_device_manager_ControllerCreateDeviceRequest) +
+                              FIDL_ALIGN(driver_path_size) + FIDL_ALIGN(args_size));
     FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
     fidl::Builder builder(wr_bytes, wr_num_bytes);
 
@@ -57,7 +57,7 @@ zx_status_t dh_send_create_device(Device* dev, Devhost* dh, zx::channel rpc, zx:
     req->proxy_args.data = reinterpret_cast<char*>(FIDL_ALLOC_PRESENT);
     memcpy(args_data, args, args_size);
 
-    zx_handle_t handles[3] = { rpc.release(), driver.release() };
+    zx_handle_t handles[3] = {rpc.release(), driver.release()};
     uint32_t num_handles = 2;
 
     if (rpc_proxy.is_valid()) {
@@ -79,9 +79,9 @@ zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t pr
     req->hdr.txid = 1;
 
     req->rpc = FIDL_HANDLE_PRESENT;
-    req->protocol_id  = protocol_id;
+    req->protocol_id = protocol_id;
 
-    zx_handle_t handles[] = { rpc.release() };
+    zx_handle_t handles[] = {rpc.release()};
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
     return msg.Write(dh->hrpc(), 0);
@@ -90,7 +90,7 @@ zx_status_t dh_send_create_device_stub(Devhost* dh, zx::channel rpc, uint32_t pr
 zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver) {
     size_t libname_size = strlen(libname);
     uint32_t wr_num_bytes = static_cast<uint32_t>(
-            sizeof(fuchsia_device_manager_ControllerBindDriverRequest) + FIDL_ALIGN(libname_size));
+        sizeof(fuchsia_device_manager_ControllerBindDriverRequest) + FIDL_ALIGN(libname_size));
     FIDL_ALIGNDECL char wr_bytes[wr_num_bytes];
     fidl::Builder builder(wr_bytes, wr_num_bytes);
 
@@ -107,7 +107,7 @@ zx_status_t dh_send_bind_driver(Device* dev, const char* libname, zx::vmo driver
 
     req->driver = FIDL_HANDLE_PRESENT;
 
-    zx_handle_t handles[] = { driver.release() };
+    zx_handle_t handles[] = {driver.release()};
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
     return msg.Write(dev->hrpc.get(), 0);
@@ -125,7 +125,7 @@ zx_status_t dh_send_connect_proxy(const Device* dev, zx::channel proxy) {
 
     req->shadow = FIDL_HANDLE_PRESENT;
 
-    zx_handle_t handles[] = { proxy.release() };
+    zx_handle_t handles[] = {proxy.release()};
     fidl::Message msg(builder.Finalize(),
                       fidl::HandlePart(handles, fbl::count_of(handles), fbl::count_of(handles)));
     return msg.Write(dev->hrpc.get(), 0);
@@ -145,6 +145,5 @@ zx_status_t dh_send_suspend(const Device* dev, uint32_t flags) {
     fidl::Message msg(builder.Finalize(), fidl::HandlePart(nullptr, 0));
     return msg.Write(dev->hrpc.get(), 0);
 }
-
 
 } // namespace devmgr

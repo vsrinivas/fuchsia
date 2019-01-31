@@ -13,8 +13,8 @@ namespace devmgr {
 // FidlTxn must not outlive the channel it is given
 class FidlTxn {
 public:
-    FidlTxn(zx::unowned_channel channel, uint32_t txid) : channel_(channel), txid_(txid) { }
-    FidlTxn(const zx::channel& channel, uint32_t txid) : channel_(channel), txid_(txid) { }
+    FidlTxn(zx::unowned_channel channel, uint32_t txid) : channel_(channel), txid_(txid) {}
+    FidlTxn(const zx::channel& channel, uint32_t txid) : channel_(channel), txid_(txid) {}
 
     FidlTxn& operator=(const FidlTxn&) = delete;
     FidlTxn(const FidlTxn&) = delete;
@@ -25,8 +25,7 @@ public:
     zx_status_t Reply(const fidl_msg_t* msg) {
         auto hdr = static_cast<fidl_message_header_t*>(msg->bytes);
         hdr->txid = txid_;
-        return channel_->write(0, msg->bytes, msg->num_bytes,
-                               msg->handles, msg->num_handles);
+        return channel_->write(0, msg->bytes, msg->num_bytes, msg->handles, msg->num_handles);
     }
 
     static zx_status_t FidlReply(fidl_txn_t* reply, const fidl_msg_t* msg) {
@@ -39,7 +38,7 @@ public:
 private:
     // Due to the implementation of FidlReply, it is important that this be the
     // first member variable.
-    fidl_txn_t txn_ = { .reply = FidlTxn::FidlReply };
+    fidl_txn_t txn_ = {.reply = FidlTxn::FidlReply};
 
     // Reply channel
     const zx::unowned_channel channel_;

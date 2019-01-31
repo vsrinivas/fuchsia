@@ -4,8 +4,8 @@
 
 #pragma once
 
-#include <lib/async/cpp/wait.h>
 #include <fbl/unique_ptr.h>
+#include <lib/async/cpp/wait.h>
 #include <lib/zx/channel.h>
 
 #include <utility>
@@ -33,8 +33,7 @@ public:
 
     // Variant of BeginWait that conditionally consumes |conn|.  On failure,
     // |*conn| is untouched.
-    static zx_status_t BeginWait(fbl::unique_ptr<T>* conn,
-                                 async_dispatcher_t* dispatcher) {
+    static zx_status_t BeginWait(fbl::unique_ptr<T>* conn, async_dispatcher_t* dispatcher) {
         zx_status_t status = (*conn)->wait_.Begin(dispatcher);
         if (status == ZX_OK) {
             __UNUSED auto ptr = conn->release();
@@ -45,8 +44,7 @@ public:
     // Begins waiting in |dispatcher| on |conn->wait|.  This transfers ownership
     // of |conn| to the dispatcher.  The dispatcher returns ownership when the
     // handler is invoked.
-    static zx_status_t BeginWait(fbl::unique_ptr<T> conn,
-                                 async_dispatcher_t* dispatcher) {
+    static zx_status_t BeginWait(fbl::unique_ptr<T> conn, async_dispatcher_t* dispatcher) {
         return BeginWait(&conn, dispatcher);
     }
 
@@ -58,9 +56,7 @@ public:
         T::HandleRpc(std::move(self), dispatcher, wait, status, signal);
     }
 
-    zx::unowned_channel channel() {
-        return zx::unowned_channel(wait_.object());
-    }
+    zx::unowned_channel channel() { return zx::unowned_channel(wait_.object()); }
 
     // Sets the channel to the given handle and returns the old value
     zx::channel set_channel(zx::channel h) {
@@ -70,7 +66,8 @@ public:
     }
 
     using WaitType = async::WaitMethod<AsyncLoopOwnedRpcHandler<T>,
-          &AsyncLoopOwnedRpcHandler<T>::HandleRpcEntry>;
+                                       &AsyncLoopOwnedRpcHandler<T>::HandleRpcEntry>;
+
 private:
     WaitType wait_{this, ZX_HANDLE_INVALID, ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED};
 };

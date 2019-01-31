@@ -13,9 +13,8 @@ Device::Device(Coordinator* coord)
     : coordinator(coord), publish_task([this] { coordinator->HandleNewDevice(this); }) {}
 
 // Handle inbound messages from devhost to devices
-void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
-                      async::WaitBase* wait, zx_status_t status,
-                      const zx_packet_signal_t* signal) {
+void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                       zx_status_t status, const zx_packet_signal_t* signal) {
     if (status != ZX_OK) {
         log(ERROR, "devcoord: Device::HandleRpc aborting, saw status %d\n", status);
         return;
@@ -25,8 +24,8 @@ void Device::HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
         zx_status_t r;
         if ((r = dev->coordinator->HandleDeviceRead(dev)) < 0) {
             if (r != ZX_ERR_STOP) {
-                log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n",
-                    dev, dev->name.data(), r);
+                log(ERROR, "devcoord: device %p name='%s' rpc status: %d\n", dev, dev->name.data(),
+                    r);
             }
             dev->coordinator->RemoveDevice(dev, true);
             // Do not start waiting again on this device's channel again

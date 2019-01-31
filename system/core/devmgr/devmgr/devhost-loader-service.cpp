@@ -13,8 +13,8 @@
 #include <lib/fdio/io.h>
 #include <lib/fit/defer.h>
 
-#include "coordinator.h"
 #include "../shared/fdio.h"
+#include "coordinator.h"
 
 namespace {
 

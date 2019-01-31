@@ -14,23 +14,19 @@ namespace devmgr {
 struct Metadata {
     fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>>& node_state(
-            Metadata& obj) {
+        static fbl::DoublyLinkedListNodeState<fbl::unique_ptr<Metadata>>&
+        node_state(Metadata& obj) {
             return obj.node;
         }
     };
 
     uint32_t type;
     uint32_t length;
-    bool has_path;      // zero terminated string starts at data[length]
+    bool has_path; // zero terminated string starts at data[length]
 
-    char* Data() {
-        return reinterpret_cast<char*>(this + 1);
-    }
+    char* Data() { return reinterpret_cast<char*>(this + 1); }
 
-    const char* Data() const {
-        return reinterpret_cast<const char*>(this + 1);
-    }
+    const char* Data() const { return reinterpret_cast<const char*>(this + 1); }
 
     static zx_status_t Create(size_t data_len, fbl::unique_ptr<Metadata>* out) {
         uint8_t* buf = new uint8_t[sizeof(Metadata) + data_len];
@@ -46,11 +42,9 @@ struct Metadata {
     // Implement a custom delete to deal with the allocation mechanism used in
     // Create().  Since the ctor is private, all Metadata* will come from
     // Create().
-    void operator delete(void* ptr) {
-        delete [] reinterpret_cast<uint8_t*>(ptr);
-    }
+    void operator delete(void* ptr) { delete[] reinterpret_cast<uint8_t*>(ptr); }
 
- private:
+private:
     Metadata() = default;
 
     Metadata(const Metadata&) = delete;

@@ -43,9 +43,8 @@ struct Device {
     }
 
     // TODO(teisenbe/kulakowski): Make this take a RefPtr
-    static void HandleRpc(Device* dev, async_dispatcher_t* dispatcher,
-                          async::WaitBase* wait, zx_status_t status,
-                          const zx_packet_signal_t* signal);
+    static void HandleRpc(Device* dev, async_dispatcher_t* dispatcher, async::WaitBase* wait,
+                          zx_status_t status, const zx_packet_signal_t* signal);
 
     Coordinator* coordinator;
     zx::channel hrpc;
@@ -78,18 +77,14 @@ struct Device {
     // list-of-children
     fbl::DoublyLinkedListNodeState<Device*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
-            return obj.node;
-        }
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) { return obj.node; }
     };
 
     // listnode for this device in its devhost's
     // list-of-devices
     fbl::DoublyLinkedListNodeState<Device*> dhnode;
     struct DevhostNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
             return obj.dhnode;
         }
     };
@@ -100,8 +95,7 @@ struct Device {
     // listnode for this device in the all devices list
     fbl::DoublyLinkedListNodeState<Device*> anode;
     struct AllDevicesNode {
-        static fbl::DoublyLinkedListNodeState<Device*>& node_state(
-            Device& obj) {
+        static fbl::DoublyLinkedListNodeState<Device*>& node_state(Device& obj) {
             return obj.anode;
         }
     };
@@ -112,9 +106,7 @@ struct Device {
     fbl::unique_ptr<zx_device_prop_t[]> props;
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const {
-        ++refcount_;
-    }
+    void AddRef() const { ++refcount_; }
 
     // Returns true when the last reference has been released.
     bool Release() const {

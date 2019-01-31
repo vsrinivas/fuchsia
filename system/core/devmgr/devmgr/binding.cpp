@@ -2,9 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
-#include <ddk/binding.h>
 
 #include <stdio.h>
 
@@ -102,8 +102,7 @@ bool is_bindable(BindProgramContext* ctx) {
             case OP_GOTO: {
                 uint32_t label = BINDINST_PA(inst);
                 while (++ip < end) {
-                    if ((BINDINST_OP(ip->op) == OP_LABEL) &&
-                        (BINDINST_PA(ip->op) == label)) {
+                    if ((BINDINST_OP(ip->op) == OP_LABEL) && (BINDINST_PA(ip->op) == label)) {
                         goto next_instruction;
                     }
                 }
@@ -120,7 +119,7 @@ bool is_bindable(BindProgramContext* ctx) {
             }
         }
 
-next_instruction:
+    next_instruction:
         ip++;
     }
 
@@ -132,9 +131,8 @@ next_instruction:
 
 namespace devmgr {
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
-                    zx_device_prop_t* props, size_t prop_count,
-                    bool autobind) {
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
+                    size_t prop_count, bool autobind) {
     if (drv->binding_size == 0) {
         return false;
     }

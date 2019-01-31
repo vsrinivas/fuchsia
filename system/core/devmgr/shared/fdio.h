@@ -10,6 +10,8 @@
 
 namespace devmgr {
 
+// clang-format off
+
 // Signals for synchronizing between devmgr and fshost during fshost launch
 #define FSHOST_SIGNAL_READY      ZX_USER_SIGNAL_0  // Signalled by fshost
 #define FSHOST_SIGNAL_EXIT       ZX_USER_SIGNAL_1  // Signalled by devmgr
@@ -30,26 +32,24 @@ namespace devmgr {
 #define FS_BIN      0x1000
 #define FS_ALL      0xFFFF
 
-#define FS_FOR_FSPROC  (FS_SVC)
-#define FS_FOR_APPMGR  (FS_ALL & (~FS_HUB))
+// clang-format on
 
-#define FS_DIR_FLAGS \
-    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN |\
-    ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+#define FS_FOR_FSPROC (FS_SVC)
+#define FS_FOR_APPMGR (FS_ALL & (~FS_HUB))
 
-zx_status_t devmgr_launch(
-    const zx::job& job, const char* name,
-    zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
-    int argc, const char* const* argv,
-    const char** envp, int stdiofd,
-    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx::process* proc_out, uint32_t flags);
-zx_status_t devmgr_launch_cmdline(
-    const char* me, const zx::job& job, const char* name,
-    zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
-    const char* cmdline,
-    const zx_handle_t* handles, const uint32_t* types, size_t hcount,
-    zx::process* proc_out, uint32_t flags);
+#define FS_DIR_FLAGS                                                                               \
+    (ZX_FS_RIGHT_READABLE | ZX_FS_RIGHT_ADMIN | ZX_FS_FLAG_DIRECTORY | ZX_FS_FLAG_NOREMOTE)
+
+zx_status_t devmgr_launch(const zx::job& job, const char* name,
+                          zx_status_t (*load)(void* ctx, launchpad_t*, const char* file), void* ctx,
+                          int argc, const char* const* argv, const char** envp, int stdiofd,
+                          const zx_handle_t* handles, const uint32_t* types, size_t hcount,
+                          zx::process* proc_out, uint32_t flags);
+zx_status_t devmgr_launch_cmdline(const char* me, const zx::job& job, const char* name,
+                                  zx_status_t (*load)(void* ctx, launchpad_t*, const char* file),
+                                  void* ctx, const char* cmdline, const zx_handle_t* handles,
+                                  const uint32_t* types, size_t hcount, zx::process* proc_out,
+                                  uint32_t flags);
 
 void devmgr_disable_appmgr_services();
 

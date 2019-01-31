@@ -45,8 +45,8 @@
 #include "../shared/fdio.h"
 #include "../shared/log.h"
 #include "coordinator.h"
-#include "devmgr.h"
 #include "devhost-loader-service.h"
+#include "devmgr.h"
 
 namespace {
 
@@ -128,13 +128,12 @@ zx_status_t fetch_root_resource(zx::resource* root_resource) {
         zx_take_startup_handle(DEVMGR_LAUNCHER_ROOT_RESOURCE_CHANNEL_HND));
     if (!root_resource_channel) {
         fprintf(stderr, "devmgr: did not receive root resource channel, assuming test "
-            "environment and continuing\n");
+                        "environment and continuing\n");
         return ZX_OK;
     }
     uint32_t actual_handles = 0;
-    zx_status_t status = root_resource_channel.read(0, nullptr, 0, nullptr,
-                                                    root_resource->reset_and_get_address(), 1,
-                                                    &actual_handles);
+    zx_status_t status = root_resource_channel.read(
+        0, nullptr, 0, nullptr, root_resource->reset_and_get_address(), 1, &actual_handles);
     if (status != ZX_OK) {
         return status;
     }
@@ -151,8 +150,8 @@ int fuchsia_starter(void* arg) {
     zx::time deadline = zx::deadline_after(zx::sec(appmgr_timeout));
 
     do {
-        zx_status_t status = coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline,
-                                                                   nullptr);
+        zx_status_t status =
+            coordinator->fshost_event().wait_one(FSHOST_SIGNAL_READY, deadline, nullptr);
         if (status == ZX_ERR_TIMED_OUT) {
             if (g_handles.appmgr_server.is_valid()) {
                 if (coordinator->require_system()) {
@@ -296,13 +295,13 @@ int pwrbtn_monitor_starter(void* arg) {
     if ((status = zx::debuglog::create(zx::resource(), 0, &debuglog) < 0)) {
         launchpad_abort(lp, status, "devmgr: cannot create debuglog handle");
     } else {
-        launchpad_add_handle(lp, debuglog.release(), PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
+        launchpad_add_handle(lp, debuglog.release(),
+                             PA_HND(PA_FDIO_LOGGER, FDIO_FLAG_USE_FOR_STDIO | 0));
     }
 
     const char* errmsg;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
-               argv[0], name, errmsg, status);
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
@@ -313,7 +312,8 @@ void start_console_shell() {
     // start a shell on the kernel console if it isn't already running a shell
     if (!devmgr::getenv_bool("kernel.shell", false)) {
         thrd_t t;
-        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) == thrd_success) {
+        if ((thrd_create_with_name(&t, console_starter, nullptr, "console-starter")) ==
+            thrd_success) {
             thrd_detach(t);
         }
     }
@@ -332,9 +332,9 @@ zx_status_t fuchsia_create_job() {
     const zx_policy_basic_t fuchsia_job_policy[] = {
         {.condition = ZX_POL_NEW_PROCESS, .policy = ZX_POL_ACTION_DENY}};
 
-    status = g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC,
-                                              fuchsia_job_policy,
-                                              fbl::count_of(fuchsia_job_policy));
+    status =
+        g_handles.fuchsia_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, fuchsia_job_policy,
+                                         fbl::count_of(fuchsia_job_policy));
     if (status != ZX_OK) {
         printf("devmgr: unable to set policy fuchsia job: %d (%s)\n", status,
                zx_status_get_string(status));
@@ -367,7 +367,8 @@ zx_status_t svchost_start(bool require_system) {
         return status;
     }
 
-    status = fdio_service_connect_at(g_handles.appmgr_client.get(), "svc", appmgr_svc_req.release());
+    status =
+        fdio_service_connect_at(g_handles.appmgr_client.get(), "svc", appmgr_svc_req.release());
     if (status != ZX_OK) {
         return status;
     }
@@ -426,8 +427,7 @@ zx_status_t svchost_start(bool require_system) {
 
     const char* errmsg = nullptr;
     if ((status = launchpad_go(lp, nullptr, &errmsg)) < 0) {
-        printf("devmgr: launchpad %s (%s) failed: %s: %d\n",
-               argv[0], name, errmsg, status);
+        printf("devmgr: launchpad %s (%s) failed: %s: %d\n", argv[0], name, errmsg, status);
     } else {
         printf("devmgr: launch %s (%s) OK\n", argv[0], name);
     }
@@ -651,8 +651,8 @@ int service_starter(void* arg) {
         }
 
         zx::debuglog debuglog;
-        status = zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE,
-                                      &debuglog);
+        status =
+            zx::debuglog::create(coordinator->root_resource(), ZX_LOG_FLAG_READABLE, &debuglog);
         if (status == ZX_OK) {
             handles[handle_count] = debuglog.release();
             types[handle_count] = PA_HND(PA_USER0, 1);
@@ -741,10 +741,10 @@ zx_status_t CreateDevhostJob(const zx::job& root_job, zx::job* devhost_job_out) 
         return status;
     }
     static const zx_policy_basic_t policy[] = {
-        { ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION },
+        {ZX_POL_BAD_HANDLE, ZX_POL_ACTION_EXCEPTION},
     };
-    status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE,
-                                    ZX_JOB_POL_BASIC, &policy, fbl::count_of(policy));
+    status = devhost_job.set_policy(ZX_JOB_POL_RELATIVE, ZX_JOB_POL_BASIC, &policy,
+                                    fbl::count_of(policy));
     if (status != ZX_OK) {
         log(ERROR, "devcoord: zx_job_set_policy() failed\n");
         return status;
@@ -818,7 +818,7 @@ int main(int argc, char** argv) {
         fprintf(stderr, "devmgr: did not receive root resource: %d\n", status);
         return 1;
     }
-    //TODO: limit to enumerate rights
+    // TODO: limit to enumerate rights
     status = g_handles.root_job->duplicate(ZX_RIGHT_SAME_RIGHTS, &config.sysinfo_job);
     if (status != ZX_OK) {
         fprintf(stderr, "devmgr: failed to duplicate root job for sysinfo: %d\n", status);

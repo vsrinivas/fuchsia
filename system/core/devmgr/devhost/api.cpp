@@ -4,9 +4,9 @@
 
 #include <zircon/compiler.h>
 
+#include "devhost.h"
 #include <ddk/debug.h>
 #include <ddk/device.h>
-#include "devhost.h"
 
 #include <stdarg.h>
 #include <stdio.h>
@@ -20,12 +20,10 @@ using namespace devmgr;
 //
 // Driver code MUST NOT directly call devhost_* APIs
 
-
 // LibDriver Device Interface
 
-#define ALLOWED_FLAGS (\
-    DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE |\
-    DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE)
+#define ALLOWED_FLAGS                                                                              \
+    (DEVICE_ADD_NON_BINDABLE | DEVICE_ADD_INSTANCE | DEVICE_ADD_MUST_ISOLATE | DEVICE_ADD_INVISIBLE)
 
 __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* parent,
                                             device_add_args_t* args, zx_device_t** out) {
@@ -83,8 +81,8 @@ __EXPORT zx_status_t device_add_from_driver(zx_driver_t* drv, zx_device_t* paren
         }
 
         if (args->flags & DEVICE_ADD_MUST_ISOLATE) {
-            r = devhost_device_add(dev, parent_ref, args->props, args->prop_count,
-                                   args->proxy_args, std::move(client_remote));
+            r = devhost_device_add(dev, parent_ref, args->props, args->prop_count, args->proxy_args,
+                                   std::move(client_remote));
         } else if (args->flags & DEVICE_ADD_INSTANCE) {
             dev->flags |= DEV_FLAG_INSTANCE | DEV_FLAG_UNBINDABLE;
             r = devhost_device_add(dev, parent_ref, nullptr, 0, nullptr,
@@ -134,7 +132,6 @@ __EXPORT void device_make_visible(zx_device_t* dev) {
     devhost_make_visible(dev_ref);
 }
 
-
 __EXPORT const char* device_get_name(zx_device_t* dev) {
     return dev->name;
 }
@@ -166,25 +163,22 @@ __EXPORT void device_state_clr_set(zx_device_t* dev, zx_signals_t clearflag, zx_
     dev->event.signal(clearflag, setflag);
 }
 
-
 __EXPORT zx_off_t device_get_size(zx_device_t* dev) {
     return dev->ops->get_size(dev->ctx);
 }
 
-__EXPORT zx_status_t device_read(zx_device_t* dev, void* buf, size_t count,
-                                 zx_off_t off, size_t* actual) {
+__EXPORT zx_status_t device_read(zx_device_t* dev, void* buf, size_t count, zx_off_t off,
+                                 size_t* actual) {
     return dev->ops->read(dev->ctx, buf, count, off, actual);
 }
 
-__EXPORT zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count,
-                                  zx_off_t off, size_t* actual) {
+__EXPORT zx_status_t device_write(zx_device_t* dev, const void* buf, size_t count, zx_off_t off,
+                                  size_t* actual) {
     return dev->ops->write(dev->ctx, buf, count, off, actual);
 }
 
-__EXPORT zx_status_t device_ioctl(zx_device_t* dev, uint32_t op,
-                                  const void* in_buf, size_t in_len,
-                                  void* out_buf, size_t out_len,
-                                  size_t* out_actual) {
+__EXPORT zx_status_t device_ioctl(zx_device_t* dev, uint32_t op, const void* in_buf, size_t in_len,
+                                  void* out_buf, size_t out_len, size_t* out_actual) {
     return dev->ops->ioctl(dev->ctx, op, in_buf, in_len, out_buf, out_len, out_actual);
 }
 
@@ -198,8 +192,8 @@ __EXPORT zx_handle_t get_root_resource() {
     return root_resource_handle;
 }
 
-__EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path,
-                                   zx_handle_t* fw, size_t* size) {
+__EXPORT zx_status_t load_firmware(zx_device_t* dev, const char* path, zx_handle_t* fw,
+                                   size_t* size) {
     ApiAutoLock lock;
     fbl::RefPtr<zx_device_t> dev_ref(dev);
     return devhost_load_firmware(dev_ref, path, fw, size);
@@ -230,29 +224,28 @@ zx_status_t device_close(fbl::RefPtr<zx_device_t> dev, uint32_t flags) {
     return devhost_device_close(std::move(dev), flags);
 }
 
-__EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type,
-                                         void* buf, size_t buflen, size_t* actual) {
+__EXPORT zx_status_t device_get_metadata(zx_device_t* dev, uint32_t type, void* buf, size_t buflen,
+                                         size_t* actual) {
     ApiAutoLock lock;
     auto dev_ref = fbl::WrapRefPtr(dev);
     return devhost_get_metadata(dev_ref, type, buf, buflen, actual);
 }
 
-__EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type,
-                                                size_t* out_size) {
+__EXPORT zx_status_t device_get_metadata_size(zx_device_t* dev, uint32_t type, size_t* out_size) {
     ApiAutoLock lock;
     auto dev_ref = fbl::WrapRefPtr(dev);
     return devhost_get_metadata_size(dev_ref, type, out_size);
 }
 
-__EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type,
-                                         const void* data, size_t length) {
+__EXPORT zx_status_t device_add_metadata(zx_device_t* dev, uint32_t type, const void* data,
+                                         size_t length) {
     ApiAutoLock lock;
     auto dev_ref = fbl::WrapRefPtr(dev);
     return devhost_add_metadata(dev_ref, type, data, length);
 }
 
-__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path,
-                                             uint32_t type, const void* data, size_t length) {
+__EXPORT zx_status_t device_publish_metadata(zx_device_t* dev, const char* path, uint32_t type,
+                                             const void* data, size_t length) {
     ApiAutoLock lock;
     auto dev_ref = fbl::WrapRefPtr(dev);
     return devhost_publish_metadata(dev_ref, path, type, data, length);

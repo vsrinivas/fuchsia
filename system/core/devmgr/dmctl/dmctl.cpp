@@ -31,8 +31,7 @@ public:
     zx_status_t DdkMessage(fidl_msg_t* msg, fidl_txn_t* txn);
 };
 
-Dmctl::Dmctl(zx_device_t* parent) : DmctlBase(parent) {
-}
+Dmctl::Dmctl(zx_device_t* parent) : DmctlBase(parent) {}
 
 zx_status_t Dmctl::Bind(void* ctx, zx_device_t* parent) {
     auto dev = fbl::make_unique<Dmctl>(parent);
@@ -53,7 +52,7 @@ zx_status_t Dmctl::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t*
     const zx::channel& rpc = *zxdev()->rpc;
     zx_status_t status, call_status;
     status = fuchsia_device_manager_CoordinatorDmCommand(
-            rpc.get(), ZX_HANDLE_INVALID, static_cast<const char*>(buf), count, &call_status);
+        rpc.get(), ZX_HANDLE_INVALID, static_cast<const char*>(buf), count, &call_status);
     if (status != ZX_OK) {
         return status;
     } else if (call_status != ZX_OK) {
@@ -64,15 +63,15 @@ zx_status_t Dmctl::DdkWrite(const void* buf, size_t count, zx_off_t off, size_t*
 }
 
 static zx_status_t fidl_ExecuteCommand(void* ctx, zx_handle_t raw_log_socket,
-                                       const char* command_data, size_t command_size, fidl_txn_t* txn) {
+                                       const char* command_data, size_t command_size,
+                                       fidl_txn_t* txn) {
     zx::socket log_socket(raw_log_socket);
     auto zxdev = static_cast<zx_device_t*>(ctx);
     const zx::channel& rpc = *zxdev->rpc;
 
     zx_status_t status, call_status;
-    status = fuchsia_device_manager_CoordinatorDmCommand(
-            rpc.get(), log_socket.release(), command_data, command_size,
-            &call_status);
+    status = fuchsia_device_manager_CoordinatorDmCommand(rpc.get(), log_socket.release(),
+                                                         command_data, command_size, &call_status);
     if (status == ZX_OK) {
         status = call_status;
     }
@@ -117,5 +116,4 @@ zx_driver_ops_t dmctl_driver_ops = []() {
 } // namespace
 
 ZIRCON_DRIVER_BEGIN(dmctl, dmctl_driver_ops, "zircon", "0.1", 1)
-    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT),
-ZIRCON_DRIVER_END(dmctl)
+BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_MISC_PARENT), ZIRCON_DRIVER_END(dmctl)

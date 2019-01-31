@@ -15,10 +15,10 @@
 #include "devmgr.h"
 
 namespace devmgr {
-    zx::channel fs_clone(const char* path) {
-        return zx::channel();
-    }
+zx::channel fs_clone(const char* path) {
+    return zx::channel();
 }
+} // namespace devmgr
 
 static devmgr::CoordinatorConfig default_config(async_dispatcher_t* dispatcher) {
     devmgr::CoordinatorConfig config;
@@ -158,17 +158,15 @@ bool bind_devices() {
     status = zx::channel::create(0, &local, &remote);
     ASSERT_EQ(ZX_OK, status);
     status = coordinator.AddDevice(&coordinator.test_device(), std::move(local),
-                                   nullptr /* props_data */, 0 /* props_count */,
-                                   "mock-device", ZX_PROTOCOL_TEST, nullptr /* driver_path */,
-                                   nullptr /* args */, false /* invisible */,
-                                   zx::channel() /* client_remote */);
+                                   nullptr /* props_data */, 0 /* props_count */, "mock-device",
+                                   ZX_PROTOCOL_TEST, nullptr /* driver_path */, nullptr /* args */,
+                                   false /* invisible */, zx::channel() /* client_remote */);
     ASSERT_EQ(ZX_OK, status);
     ASSERT_EQ(1, coordinator.devices().size_slow());
 
     // Add the driver.
-    devmgr::find_loadable_drivers("/boot/driver/test",
-                                  fit::bind_member(&coordinator,
-                                                   &devmgr::Coordinator::DriverAdded));
+    devmgr::find_loadable_drivers(
+        "/boot/driver/test", fit::bind_member(&coordinator, &devmgr::Coordinator::DriverAdded));
     loop.RunUntilIdle();
     ASSERT_FALSE(coordinator.drivers().is_empty());
 

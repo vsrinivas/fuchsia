@@ -37,20 +37,17 @@ public:
     };
 
     struct AllDevhostsNode {
-        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
-            Devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) {
             return obj.anode_;
         }
     };
     struct SuspendNode {
-        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
-            Devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) {
             return obj.snode_;
         }
     };
     struct Node {
-        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(
-            Devhost& obj) {
+        static fbl::DoublyLinkedListNodeState<Devhost*>& node_state(Devhost& obj) {
             return obj.node_;
         }
     };
@@ -69,9 +66,7 @@ public:
     fbl::DoublyLinkedList<Devhost*, Node>& children() { return children_; }
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const {
-        ++refcount_;
-    }
+    void AddRef() const { ++refcount_; }
 
     // Returns true when the last reference has been released.
     bool Release() const {
@@ -114,18 +109,12 @@ public:
 
     SuspendContext() = default;
 
-    SuspendContext(Coordinator* coordinator,
-                   Flags flags, uint32_t sflags, zx::socket socket,
-                   zx::vmo kernel = zx::vmo(),
-                   zx::vmo bootdata = zx::vmo()) :
-        coordinator_(coordinator), flags_(flags), sflags_(sflags),
-        socket_(std::move(socket)), kernel_(std::move(kernel)),
-        bootdata_(std::move(bootdata)) {
-    }
+    SuspendContext(Coordinator* coordinator, Flags flags, uint32_t sflags, zx::socket socket,
+                   zx::vmo kernel = zx::vmo(), zx::vmo bootdata = zx::vmo())
+        : coordinator_(coordinator), flags_(flags), sflags_(sflags), socket_(std::move(socket)),
+          kernel_(std::move(kernel)), bootdata_(std::move(bootdata)) {}
 
-    ~SuspendContext() {
-        devhosts_.clear();
-    }
+    ~SuspendContext() { devhosts_.clear(); }
 
     SuspendContext(SuspendContext&&) = default;
     SuspendContext& operator=(SuspendContext&&) = default;
@@ -149,14 +138,10 @@ public:
     const zx::vmo& bootdata() const { return bootdata_; }
 
     // Close the socket whose ownership was handed to this SuspendContext.
-    void CloseSocket() {
-        socket_.reset();
-    }
+    void CloseSocket() { socket_.reset(); }
 
     // The AddRef and Release functions follow the contract for fbl::RefPtr.
-    void AddRef() const {
-        ++count_;
-    }
+    void AddRef() const { ++count_; }
 
     // Returns true when the last message reference has been released.
     bool Release() const {
@@ -186,6 +171,8 @@ private:
     zx::vmo kernel_;
     zx::vmo bootdata_;
 };
+
+// clang-format off
 
 // This device is never destroyed
 #define DEV_CTX_IMMORTAL      0x01
@@ -220,6 +207,8 @@ private:
 // return to this state once made visible.
 #define DEV_CTX_INVISIBLE     0x80
 
+// clang-format on
+
 struct Driver {
     Driver() = default;
 
@@ -233,10 +222,7 @@ struct Driver {
 
     fbl::DoublyLinkedListNodeState<Driver*> node;
     struct Node {
-        static fbl::DoublyLinkedListNodeState<Driver*>& node_state(
-            Driver& obj) {
-            return obj.node;
-        }
+        static fbl::DoublyLinkedListNodeState<Driver*>& node_state(Driver& obj) { return obj.node; }
     };
 
     fbl::String libname;
@@ -447,9 +433,8 @@ using DriverLoadCallback = fit::function<void(Driver* driver, const char* versio
 void load_driver(const char* path, DriverLoadCallback func);
 void find_loadable_drivers(const char* path, DriverLoadCallback func);
 
-bool dc_is_bindable(const Driver* drv, uint32_t protocol_id,
-                    zx_device_prop_t* props, size_t prop_count,
-                    bool autobind);
+bool dc_is_bindable(const Driver* drv, uint32_t protocol_id, zx_device_prop_t* props,
+                    size_t prop_count, bool autobind);
 
 // Methods for composing FIDL RPCs to the devhosts
 zx_status_t dh_send_remove_device(const Device* dev);
