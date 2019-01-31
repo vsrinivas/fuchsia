@@ -8,7 +8,6 @@
             "fuchsia.netemul.network.NetworkContext",
             "fuchsia.netemul.bus.BusManager",
             "fuchsia.netstack.Netstack",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider"
         ]
     }

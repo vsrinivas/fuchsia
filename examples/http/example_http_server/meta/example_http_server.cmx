@@ -7,7 +7,6 @@
             "persistent-storage"
         ],
         "services": [
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.logger.LogSink"
         ]

@@ -2,7 +2,6 @@
     "facets": {
         "fuchsia.test": {
             "system-services": [
-                "fuchsia.net.LegacySocketProvider",
                 "fuchsia.net.SocketProvider"
             ]
         }
@@ -18,7 +17,6 @@
             "system-temp"
         ],
         "services": [
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

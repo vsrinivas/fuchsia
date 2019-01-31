@@ -11,7 +11,6 @@
             "packages"
         ],
         "services": [
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.net.oldhttp.HttpService"
         ]

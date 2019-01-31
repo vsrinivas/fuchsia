@@ -3,7 +3,6 @@
         "fuchsia.test": {
             "system-services": [
                 "fuchsia.netstack.Netstack",
-                "fuchsia.net.LegacySocketProvider",
                 "fuchsia.net.SocketProvider",
                 "fuchsia.net.Connectivity",
                 "fuchsia.net.stack.Stack"
@@ -19,7 +18,6 @@
             "class/ethernet"
         ],
         "services": [
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider",
             "fuchsia.sys.Environment",
             "fuchsia.sys.Loader"

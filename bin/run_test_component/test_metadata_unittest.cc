@@ -246,7 +246,6 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
     "fuchsia.test": {
       "system-services": [
         "fuchsia.net.Connectivity",
-        "fuchsia.net.LegacySocketProvider",
         "fuchsia.net.SocketProvider",
         "fuchsia.net.stack.Stack",
         "fuchsia.netstack.Netstack"
@@ -257,14 +256,12 @@ TEST_F(TestMetadataTest, ValidSystemServices) {
   {
     TestMetadata tm;
     EXPECT_TRUE(ParseFrom(&tm, json));
-    EXPECT_EQ(tm.system_services().size(), 5u);
-    EXPECT_THAT(
-        tm.system_services(),
-        ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
-                               fuchsia::net::LegacySocketProvider::Name_,
-                               fuchsia::net::SocketProvider::Name_,
-                               fuchsia::net::stack::Stack::Name_,
-                               fuchsia::netstack::Netstack::Name_));
+    EXPECT_EQ(tm.system_services().size(), 4u);
+    EXPECT_THAT(tm.system_services(),
+                ::testing::ElementsAre(fuchsia::net::Connectivity::Name_,
+                                       fuchsia::net::SocketProvider::Name_,
+                                       fuchsia::net::stack::Stack::Name_,
+                                       fuchsia::netstack::Netstack::Name_));
   }
 
   json = CreateManifestJson(R"(

@@ -13,7 +13,6 @@
         ],
         "services": [
             "fuchsia.logger.LogSink",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider"
         ],
         "system": [

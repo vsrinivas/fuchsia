@@ -9,7 +9,6 @@
         ],
         "services": [
             "fuchsia.process.Launcher",
-            "fuchsia.net.LegacySocketProvider",
             "fuchsia.net.SocketProvider"
         ]
     }

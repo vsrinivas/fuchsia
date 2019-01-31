@@ -90,11 +90,6 @@ async fn spawn_env(network: &NetworkProxy, options: SpawnOptions) -> Result<Env,
                 arguments: None,
             },
             LaunchService {
-                name: String::from("fuchsia.net.LegacySocketProvider"),
-                url: String::from(NETSTACK_URL),
-                arguments: None,
-            },
-            LaunchService {
                 name: String::from("fuchsia.net.SocketProvider"),
                 url: String::from(NETSTACK_URL),
                 arguments: None,
