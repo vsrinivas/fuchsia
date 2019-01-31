@@ -30,18 +30,6 @@
 namespace mt_usb {
 using namespace board_mt8167; // Hardware registers.
 
-// Internal context for USB requests
-typedef struct {
-     // callback to the upper layer
-     usb_request_complete_t complete_cb;
-     // for queueing requests internally
-     list_node_t node;
-} mt_usb_req_internal_t;
-
-#define USB_REQ_TO_INTERNAL(req) \
-    ((mt_usb_req_internal_t *)((uintptr_t)(req) + sizeof(usb_request_t)))
-#define INTERNAL_TO_USB_REQ(ctx) ((usb_request_t *)((uintptr_t)(ctx) - sizeof(usb_request_t)))
-
 
 MtUsb::Endpoint* MtUsb::EndpointFromAddress(uint8_t addr) {
     size_t ep_num = addr & USB_ENDPOINT_NUM_MASK;
@@ -57,7 +45,7 @@ MtUsb::Endpoint* MtUsb::EndpointFromAddress(uint8_t addr) {
     }
 }
 
-zx_status_t MtUsb::Create(zx_device_t* parent) {
+zx_status_t MtUsb::Create(void* ctx, zx_device_t* parent) {
     pdev_protocol_t pdev;
 
     auto status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev);
@@ -81,28 +69,17 @@ zx_status_t MtUsb::Create(zx_device_t* parent) {
     return ZX_OK;
 }
 
-void MtUsb::InitEndpoint(Endpoint* ep, uint8_t ep_num, EpDirection direction) {
-    ep->ep_num = ep_num;
-    ep->direction = direction;
-
-    fbl::AutoLock lock(&ep->lock);
-
-    list_initialize(&ep->queued_reqs);
-    list_initialize(&ep->complete_reqs);
-    ep->current_req = nullptr;
-}
-
-void MtUsb::InitEndpoints() {
+zx_status_t MtUsb::Init() {
     for (uint8_t i = 0; i < countof(out_eps_); i++) {
-        InitEndpoint(&out_eps_[i], static_cast<uint8_t>(i + 1), EP_OUT);
+        auto& ep = out_eps_[i];
+        ep.ep_num = i;
+        ep.direction = EP_OUT;
     }
     for (uint8_t i = 0; i < countof(in_eps_); i++) {
-        InitEndpoint(&in_eps_[i], static_cast<uint8_t>(i + 1), EP_IN);
+        auto& ep = in_eps_[i];
+        ep.ep_num = i;
+        ep.direction = EP_IN;
     }
-}
-
-zx_status_t MtUsb::Init() {
-    InitEndpoints();
 
     auto status = pdev_.MapMmio(0, &usb_mmio_);
     if (status != ZX_OK) {
@@ -415,9 +392,8 @@ void MtUsb::HandleEndpointTxLocked(Endpoint* ep) {
                 zxlogf(ERROR, "%s: usb_request_mmap failed %d\n", __func__, status);
                 req->response.status = status;
                 req->response.actual = 0;
+                ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
                 ep->current_req = nullptr;
-                auto* req_int = USB_REQ_TO_INTERNAL(req);
-                list_add_tail(&ep->complete_reqs, &req_int->node);
             } else {
                 auto buffer = static_cast<uint8_t*>(vaddr);
                 if (write_length > ep->max_packet_size) {
@@ -434,9 +410,8 @@ void MtUsb::HandleEndpointTxLocked(Endpoint* ep) {
         } else {
             req->response.status = ZX_OK;
             req->response.actual = req->header.length;
+            ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
             ep->current_req = nullptr;
-            auto* req_int = USB_REQ_TO_INTERNAL(req);
-            list_add_tail(&ep->complete_reqs, &req_int->node);
         }
     }
 
@@ -468,9 +443,8 @@ void MtUsb::HandleEndpointRxLocked(Endpoint* ep) {
             zxlogf(ERROR, "%s: usb_request_mmap failed %d\n", __func__, status);
             req->response.status = status;
             req->response.actual = 0;
+            ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
             ep->current_req = nullptr;
-            auto* req_int = USB_REQ_TO_INTERNAL(req);
-            list_add_tail(&ep->complete_reqs, &req_int->node);
         } else {
             auto buffer = static_cast<uint8_t*>(vaddr);
             length -= ep->cur_offset;
@@ -489,9 +463,8 @@ void MtUsb::HandleEndpointRxLocked(Endpoint* ep) {
             if (actual < length || ep->cur_offset == req->header.length) {
                 req->response.status = ZX_OK;
                 req->response.actual = ep->cur_offset;
+                ep->complete_reqs.push(Request(ep->current_req, sizeof(usb_request_t)));
                 ep->current_req = nullptr;
-                auto* req_int = USB_REQ_TO_INTERNAL(req);
-                list_add_tail(&ep->complete_reqs, &req_int->node);
             }
         }
     }
@@ -502,14 +475,8 @@ void MtUsb::HandleEndpointRxLocked(Endpoint* ep) {
 }
 
 void MtUsb::EpQueueNextLocked(Endpoint* ep) {
-    __UNUSED auto* mmio = usb_mmio();
-    mt_usb_req_internal_t* req_int;
-
-    if (ep->current_req == nullptr &&
-        (req_int = list_remove_head_type(&ep->queued_reqs, mt_usb_req_internal_t, node))
-                != nullptr) {
-        usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-        ep->current_req = req;
+    if (ep->current_req == nullptr && !ep->queued_reqs.is_empty()) {
+        auto req = ep->queued_reqs.pop();
         ep->cur_offset = 0;
 
         if (ep->direction == EP_IN) {
@@ -700,20 +667,17 @@ int MtUsb::IrqThread() {
                 if (ep_tx & (1 << (i + 1))) {
                     Endpoint* ep = &in_eps_[i];
                     // requests to complete outside of the lock
-                    list_node_t complete_reqs;
+                    RequestQueue complete_reqs;
 
                     {
                         fbl::AutoLock lock(&ep->lock);
                         HandleEndpointTxLocked(ep);
-                        list_move(&ep->complete_reqs, &complete_reqs);
+                        complete_reqs = std::move(ep->complete_reqs);
                     }
                     // Requests must be completed outside of the lock.
-                    mt_usb_req_internal_t* req_int;
-                    while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
-                                                            node))) {
-                        usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete(req, req->response.status, req->response.actual,
-                                             &req_int->complete_cb);
+                    for (auto req = complete_reqs.pop(); req; req = complete_reqs.pop()) {
+                        const auto& response = req->request()->response;
+                        req->Complete(response.status, response.actual);
                     }
                 }
             }
@@ -723,20 +687,17 @@ int MtUsb::IrqThread() {
             for (unsigned i = 0; i <=countof(out_eps_); i++) {
                 if (ep_rx & (1 << (i + 1))) {
                     Endpoint* ep = &out_eps_[i];
-                    list_node_t complete_reqs;
+                    RequestQueue complete_reqs;
 
                     {
                         fbl::AutoLock lock(&ep->lock);
                         HandleEndpointRxLocked(ep);
-                        list_move(&ep->complete_reqs, &complete_reqs);
+                        complete_reqs = std::move(ep->complete_reqs);
                     }
                     // Requests must be completed outside of the lock.
-                    mt_usb_req_internal_t* req_int;
-                    while ((req_int = list_remove_head_type(&complete_reqs, mt_usb_req_internal_t,
-                                                            node))) {
-                        usb_request_t* req = INTERNAL_TO_USB_REQ(req_int);
-                        usb_request_complete(req, req->response.status, req->response.actual,
-                                             &req_int->complete_cb);
+                    for (auto req = complete_reqs.pop(); req; req = complete_reqs.pop()) {
+                        const auto& response = req->request()->response;
+                        req->Complete(response.status, response.actual);
                     }
                 }
             }
@@ -767,9 +728,7 @@ void MtUsb::UsbDciRequestQueue(usb_request_t* req, const usb_request_complete_t*
         return;
     }
 
-    auto* req_int = USB_REQ_TO_INTERNAL(req);
-    req_int->complete_cb = *cb;
-    list_add_tail(&ep->queued_reqs, &req_int->node);
+    ep->queued_reqs.push(Request(req, *cb, sizeof(usb_request_t)));
     EpQueueNextLocked(ep);
 }
 
@@ -924,18 +883,13 @@ zx_status_t MtUsb::UsbDciEpClearStall(uint8_t ep_address) {
 }
 
 size_t MtUsb::UsbDciGetRequestSize() {
-    return sizeof(usb_request_t) + sizeof(mt_usb_req_internal_t);
-}
-
-
-zx_status_t mt_usb_bind(void* ctx, zx_device_t* parent) {
-    return MtUsb::Create(parent);
+    return Request::RequestSize(sizeof(usb_request_t));
 }
 
 static zx_driver_ops_t driver_ops = [](){
     zx_driver_ops_t ops;
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = mt_usb_bind;
+    ops.bind = MtUsb::Create;
     return ops;
 }();
 

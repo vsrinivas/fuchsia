@@ -13,7 +13,7 @@
 #include <fbl/unique_ptr.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>
-#include <zircon/listnode.h>
+#include <usb/request-cpp.h>
 #include <zircon/hw/usb.h>
 
 #include <threads.h>
@@ -28,7 +28,7 @@ public:
     explicit MtUsb(zx_device_t* parent, pdev_protocol_t* pdev)
         : MtUsbType(parent), pdev_(pdev) {}
 
-    static zx_status_t Create(zx_device_t* parent);
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
 
     // Device protocol implementation.
     void DdkUnbind();
@@ -61,6 +61,9 @@ private:
         EP_IN,
     };
 
+    using Request = usb::UnownedRequest<void>;
+    using RequestQueue = usb::UnownedRequestQueue<void>;
+
     // This represents a non-control USB endpoint.
     // Endpoint zero is handled separately.
     struct Endpoint {
@@ -75,10 +78,10 @@ private:
         uint16_t max_packet_size;
 
         // Requests waiting to be processed.
-        list_node_t queued_reqs __TA_GUARDED(lock);
+        RequestQueue queued_reqs __TA_GUARDED(lock);
         // request currently being processed.
         usb_request_t* current_req __TA_GUARDED(lock) = nullptr;
-        list_node_t complete_reqs __TA_GUARDED(lock);
+        RequestQueue complete_reqs __TA_GUARDED(lock);
 
         // Offset into current_req during read and write.
         size_t cur_offset;
@@ -87,8 +90,6 @@ private:
     };
 
     zx_status_t Init();
-    void InitEndpoint(Endpoint* ep, uint8_t ep_num, EpDirection direction);
-    void InitEndpoints();
     void InitPhy();
     int IrqThread();
 
@@ -149,7 +150,3 @@ private:
 };
 
 } // namespace mt_usb
-
-__BEGIN_CDECLS
-zx_status_t mt_usb_bind(void* ctx, zx_device_t* parent);
-__END_CDECLS
