@@ -181,7 +181,7 @@ zx_status_t ScsiDevice::WorkerThread() {
                 /*target=*/target,
                 /*lun=*/lun, {&cdb, sizeof(cdb)}, {}, {});
             if (status == ZX_OK) {
-                scsi::Disk::Create(device_, /*target=*/target, /*lun=*/lun);
+                scsi::Disk::Create(this, device_, /*target=*/target, /*lun=*/lun);
             }
         }
     }

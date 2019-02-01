@@ -9,9 +9,10 @@
 
 namespace scsi {
 
-zx_status_t Disk::Create(zx_device_t* parent, uint8_t target, uint16_t lun) {
+zx_status_t Disk::Create(Controller* controller, zx_device_t* parent, uint8_t target,
+                         uint16_t lun) {
     fbl::AllocChecker ac;
-    auto* const disk = new (&ac) scsi::Disk(parent, /*target=*/target, /*lun=*/lun);
+    auto* const disk = new (&ac) scsi::Disk(controller, parent, /*target=*/target, /*lun=*/lun);
     if (!ac.check()) {
         return ZX_ERR_NO_MEMORY;
     }
@@ -26,8 +27,9 @@ zx_status_t Disk::Bind() {
     return DdkAdd(tag_);
 }
 
-Disk::Disk(zx_device_t* parent, uint8_t target, uint16_t lun)
-    : DeviceType(parent), target_(target), lun_(lun) {
+Disk::Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun)
+    : DeviceType(parent), controller_(controller), target_(target), lun_(lun) {
+    (void) controller_;
     snprintf(tag_, sizeof(tag_), "scsi-disk-%d-%d", target_, lun_);
 }
 

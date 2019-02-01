@@ -4,6 +4,7 @@
 
 #pragma once
 
+#include "scsilib_controller.h"
 #include <ddk/device.h>
 #include <ddk/driver.h>
 #include <ddk/protocol/block.h>
@@ -124,10 +125,14 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
   public:
     // Public so that we can use make_unique.
     // Clients should use Disk::Create().
-    Disk(zx_device_t* parent, uint8_t target, uint16_t lun);
+    Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun);
 
     // Create a Disk at a specific target/lun.
-    static zx_status_t Create(zx_device_t* parent, uint8_t target, uint16_t lun);
+    // |controller| is a pointer to the scsi::Controller this disk is attached to.
+    // |controller| must outlast Disk.
+    // This disk does not take ownership of or any references on |controller|.
+    static zx_status_t Create(Controller* controller, zx_device_t* parent, uint8_t target,
+                              uint16_t lun);
 
     const char* tag() const { return tag_; }
 
@@ -152,6 +157,7 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
   private:
     zx_status_t Bind();
 
+    Controller* const controller_;
     char tag_[24];
     const uint8_t target_;
     const uint16_t lun_;
