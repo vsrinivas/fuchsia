@@ -20,6 +20,7 @@
 #include <utility>
 
 #include "scsilib.h"
+#include "scsilib_controller.h"
 #include "trace.h"
 
 #define LOCAL_TRACE 0
@@ -34,34 +35,75 @@ void ScsiDevice::FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t targe
     req->lun[3] = static_cast<uint8_t>(lun) & 0xff;
 }
 
-zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t* cdb,
-                                           size_t cdb_length) {
+zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun,
+                                           struct iovec cdb,
+                                           struct iovec data_out,
+                                           struct iovec data_in) {
+    fbl::AutoLock lock(&lock_);
+    // virtio-scsi requests have a 'request' region, an optional data-out region, a 'response'
+    // region, and an optional data-in region. Allocate and fill them and then execute the request.
+    const auto request_offset = 0ull;
+    const auto data_out_offset = request_offset + sizeof(struct virtio_scsi_req_cmd);
+    const auto response_offset = data_out_offset + data_out.iov_len;
+    const auto data_in_offset = response_offset + sizeof(struct virtio_scsi_resp_cmd);
+    // If data_in fits within request_buffers_, all the regions of this request will fit.
+    if (data_in_offset + data_in.iov_len >= request_buffers_.size) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
     uint8_t* const request_buffers_addr =
         reinterpret_cast<uint8_t*>(io_buffer_virt(&request_buffers_));
-    auto* const req = reinterpret_cast<struct virtio_scsi_req_cmd*>(request_buffers_addr);
-    auto* const resp = reinterpret_cast<struct virtio_scsi_resp_cmd*>(
-        request_buffers_addr + sizeof(struct virtio_scsi_req_cmd));
+    auto* const request =
+        reinterpret_cast<struct virtio_scsi_req_cmd*>(request_buffers_addr + request_offset);
+    auto* const data_out_region =
+        reinterpret_cast<uint8_t*>(request_buffers_addr + data_out_offset);
+    auto* const response =
+        reinterpret_cast<struct virtio_scsi_resp_cmd*>(request_buffers_addr + response_offset);
+    auto* const data_in_region =
+        reinterpret_cast<uint8_t*>(request_buffers_addr + data_in_offset);
 
-    memset(req, 0, sizeof(*req));
-    memcpy(&req->cdb, cdb, cdb_length);
-    FillLUNStructure(req, /*target=*/target, /*lun=*/lun);
+    memset(request, 0, sizeof(*request));
+    memset(response, 0, sizeof(*response));
+    memcpy(&request->cdb, cdb.iov_base, cdb.iov_len);
+    FillLUNStructure(request, /*target=*/target, /*lun=*/lun);
 
-    // virtio-scsi requests have a 'request' region, a data-out region, a
-    // 'response' region, and a data-in region. Allocate and fill them
-    // and then execute the request.
-    //
-    // TODO: Currently only allocates two regions, request/response.
-    // Add more so we can support most SCSI commands.
+    uint16_t descriptor_chain_length = 2;
+    if (data_out.iov_len) {
+        descriptor_chain_length++;
+    }
+    if (data_in.iov_len) {
+        descriptor_chain_length++;
+    }
+
     uint16_t id = 0;
-    auto request_desc = request_queue_.AllocDescChain(/*count=*/2, &id);
-    request_desc->addr = io_buffer_phys(&request_buffers_);
-    request_desc->len = sizeof(*req);
+    uint16_t next_id;
+    auto request_desc = request_queue_.AllocDescChain(/*count=*/descriptor_chain_length, &id);
+    request_desc->addr = io_buffer_phys(&request_buffers_) + request_offset;
+    request_desc->len = sizeof(*request);
     request_desc->flags = VRING_DESC_F_NEXT;
+    next_id = request_desc->next;
 
-    auto response_desc = request_queue_.DescFromIndex(request_desc->next);
-    response_desc->addr = io_buffer_phys(&request_buffers_) + sizeof(*req);
-    response_desc->len = sizeof(*resp);
+    if (data_out.iov_len) {
+        memcpy(data_out_region, data_out.iov_base, data_out.iov_len);
+        auto data_out_desc = request_queue_.DescFromIndex(next_id);
+        data_out_desc->addr = io_buffer_phys(&request_buffers_) + data_out_offset;
+        data_out_desc->len = static_cast<uint32_t>(data_out.iov_len);
+        data_out_desc->flags = VRING_DESC_F_NEXT;
+        next_id = data_out_desc->next;
+    }
+
+    auto response_desc = request_queue_.DescFromIndex(next_id);
+    response_desc->addr = io_buffer_phys(&request_buffers_) + response_offset;
+    response_desc->len = sizeof(*response);
     response_desc->flags = VRING_DESC_F_WRITE;
+
+    if (data_in.iov_len) {
+        response_desc->flags |= VRING_DESC_F_NEXT;
+        auto data_in_desc = request_queue_.DescFromIndex(response_desc->next);
+        data_in_desc->addr = io_buffer_phys(&request_buffers_) + data_in_offset;
+        data_in_desc->len = static_cast<uint32_t>(data_in.iov_len);
+        data_in_desc->flags = VRING_DESC_F_WRITE;
+    }
 
     request_queue_.SubmitChain(id);
     request_queue_.Kick();
@@ -96,15 +138,26 @@ zx_status_t ScsiDevice::ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t
     }
 
     // If there was either a transport or SCSI level error, return a failure.
-    if (resp->response || resp->status) {
+    if (response->response || response->status) {
         return ZX_ERR_INTERNAL;
+    }
+
+    // Copy data-in region to the caller.
+    if (data_in.iov_len) {
+        memcpy(data_in.iov_base, data_in_region, data_in.iov_len);
     }
 
     return ZX_OK;
 }
 
 zx_status_t ScsiDevice::WorkerThread() {
-    fbl::AutoLock lock(&lock_);
+    uint16_t max_target;
+    uint32_t max_lun;
+    {
+        fbl::AutoLock lock(&lock_);
+        max_target = config_.max_target;
+        max_lun = config_.max_lun;
+    }
 
     // Execute TEST UNIT READY on every possible target to find potential disks.
     // TODO(ZX-2314): For SCSI-3 targets, we could optimize this by using REPORT LUNS.
@@ -119,14 +172,14 @@ zx_status_t ScsiDevice::WorkerThread() {
     //
     // TODO(ZX-2314): Move probe sequence to ScsiLib -- have it call down into LLDs to execute
     // commands.
-    for (uint8_t target = 0u; target <= config_.max_target; target++) {
-        for (uint16_t lun = 0u; lun <= config_.max_lun; lun++) {
+    for (uint8_t target = 0u; target <= max_target; target++) {
+        for (uint16_t lun = 0u; lun <= max_lun; lun++) {
             scsi::TestUnitReadyCDB cdb = {};
             cdb.opcode = scsi::Opcode::TEST_UNIT_READY;
 
             auto status = ExecuteCommandSync(
                 /*target=*/target,
-                /*lun=*/lun, reinterpret_cast<uint8_t*>(&cdb), sizeof(cdb));
+                /*lun=*/lun, {&cdb, sizeof(cdb)}, {}, {});
             if (status == ZX_OK) {
                 scsi::Disk::Create(device_, /*target=*/target, /*lun=*/lun);
             }

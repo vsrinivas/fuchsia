@@ -11,14 +11,16 @@
 #include <stdlib.h>
 
 #include "backends/backend.h"
+#include "scsilib_controller.h"
 #include <lib/sync/completion.h>
+#include <sys/uio.h>
 #include <virtio/scsi.h>
 #include <zircon/compiler.h>
 #include <zircon/thread_annotations.h>
 
 namespace virtio {
 
-class ScsiDevice : public Device {
+class ScsiDevice : public Device, public scsi::Controller {
 public:
     enum Queue {
         CONTROL = 0,
@@ -43,8 +45,8 @@ public:
     static void FillLUNStructure(struct virtio_scsi_req_cmd* req, uint8_t target, uint16_t lun);
 
 private:
-    zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, uint8_t* cdb, size_t cdb_length)
-        TA_REQ(lock_);
+    zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
+                                           struct iovec data_out, struct iovec data_in) override;
 
     zx_status_t WorkerThread();
 
