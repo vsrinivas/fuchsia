@@ -6,24 +6,23 @@ library fuchsia.hardware.usb.device;
 
 using zx;
 
-const uint32 DEVICE_DESC_SIZE = 18;         /// sizeof(usb_device_descriptor_t)
-const uint32 MAX_CONFIG_DESC_SIZE = 65536;  /// UINT16_MAX
-const uint32 MAX_STRING_DESC_SIZE = 384;    /// See GetStringDescriptor description below
-
+const uint32 DEVICE_DESC_SIZE = 18; /// sizeof(usb_device_descriptor_t)
+const uint32 MAX_CONFIG_DESC_SIZE = 65536; /// UINT16_MAX
+const uint32 MAX_STRING_DESC_SIZE = 384; /// See GetStringDescriptor description below
 [Layout = "Simple"]
 interface Device {
     /// Returns the speed of the USB device as a usb_speed_t value.
-    1: GetDeviceSpeed() -> (uint32 speed);
+    GetDeviceSpeed() -> (uint32 speed);
 
     /// Returns the device's USB device descriptor.
-    2: GetDeviceDescriptor() -> (array<uint8>:DEVICE_DESC_SIZE desc);
+    GetDeviceDescriptor() -> (array<uint8>:DEVICE_DESC_SIZE desc);
 
     /// Returns the total size of the USB configuration descriptor for the given configuration.
-    3: GetConfigurationDescriptorSize(uint8 config) -> (zx.status s, uint16 size);
+    GetConfigurationDescriptorSize(uint8 config) -> (zx.status s, uint16 size);
 
     /// Returns the device's USB configuration descriptor for the given configuration.
-    4: GetConfigurationDescriptor(uint8 config) -> (zx.status s,
-                                                    vector<uint8>:MAX_CONFIG_DESC_SIZE desc);
+    GetConfigurationDescriptor(uint8 config) -> (zx.status s,
+                                                 vector<uint8>:MAX_CONFIG_DESC_SIZE desc);
 
     /// Fetches a string descriptor from the USB device.
     //
@@ -43,24 +42,24 @@ interface Device {
     //
     /// The worst case size for a UTF-8 encoded string descriptor payload should be
     /// 378 bytes (126 UTF-16 code units with a worst case expansion factor of 3)
-    5: GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s,
-                                                              vector<uint8>:MAX_STRING_DESC_SIZE desc,
-                                                              uint16 actual_lang_id);
+    GetStringDescriptor(uint8 desc_id, uint16 lang_id) -> (zx.status s,
+                                                           vector<uint8>:MAX_STRING_DESC_SIZE desc,
+                                                           uint16 actual_lang_id);
 
     /// Selects an alternate setting for an interface on a USB device.
-    6: SetInterface(uint8 interface_number, uint8 alt_setting) -> (zx.status s);
+    SetInterface(uint8 interface_number, uint8 alt_setting) -> (zx.status s);
 
     /// Returns an implementation specific device ID for a USB device.
     /// For informational purposes only.
-    7: GetDeviceId() -> (uint32 device_id);
+    GetDeviceId() -> (uint32 device_id);
 
     /// Returns the implementation specific device ID for the hub that a USB device is connected to.
     /// For informational purposes only.
-    8: GetHubDeviceId() -> (uint32 hub_device_id);
+    GetHubDeviceId() -> (uint32 hub_device_id);
 
     /// Returns the device's current configuration.
-    9: GetConfiguration() -> (uint8 configuration);
+    GetConfiguration() -> (uint8 configuration);
 
     /// Sets the device's current configuration.
-    10: SetConfiguration(uint8 configuration) -> (zx.status s);
+    SetConfiguration(uint8 configuration) -> (zx.status s);
 };

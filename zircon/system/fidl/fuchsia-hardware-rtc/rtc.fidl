@@ -18,8 +18,8 @@ struct Time {
 [Layout = "Simple"]
 interface Device {
     // Get the current RTC time
-    1: Get() -> (Time rtc);
+    Get() -> (Time rtc);
 
     // Set the RTC time
-    2: Set(Time rtc) -> (zx.status status);
+    Set(Time rtc) -> (zx.status status);
 };

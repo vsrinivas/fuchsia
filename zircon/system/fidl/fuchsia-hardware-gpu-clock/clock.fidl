@@ -8,5 +8,5 @@ using zx;
 
 [Layout = "Simple"]
 interface Clock {
-    1: SetFrequencySource(uint32 source) -> (zx.status s);
+    SetFrequencySource(uint32 source) -> (zx.status s);
 };

@@ -71,17 +71,17 @@ struct IsochResult {
 [Layout = "Simple"]
 interface Device {
     /// Resets the device to firmware loader mode.
-    1: SetModeFwloader() -> (zx.status s);
+    SetModeFwloader() -> (zx.status s);
 
     /// Performs a data loopback on the bulk endpoint of the test device.
     /// Returns ZX_OK if the loopback succeeded.
-    2: BulkLoopback(BulkTestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
+    BulkLoopback(BulkTestParams params, SgList? out_ep_sg, SgList? in_ep_sg) -> (zx.status s);
 
     /// Performs a data loopback on the isochronous endpoint of the test device.
     /// Returns ZX_OK if no fatal error occurred during the loopback, and also returns the result
     /// of the transfers. Isochronous transfers are not guaranteed to all succeed.
-    3: IsochLoopback(IsochTestParams params) -> (zx.status s, IsochResult result);
+    IsochLoopback(IsochTestParams params) -> (zx.status s, IsochResult result);
 
     /// Returns the test firmware version in the form major_version.minor_version.
-    4: GetVersion() -> (uint8 major_version, uint8 minor_version);
+    GetVersion() -> (uint8 major_version, uint8 minor_version);
 };

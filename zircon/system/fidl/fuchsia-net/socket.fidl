@@ -67,11 +67,11 @@ struct AddrInfo {
 // after Chromium rolls.
 [Discoverable, Layout = "Simple"]
 interface LegacySocketProvider {
-    1: OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
-           -> (handle<socket>? s, int32 status);
+    OpenSocket(SocketDomain domain, SocketType type, SocketProtocol protocol)
+        -> (handle<socket>? s, int32 status);
     // TODO(FIDL-323): use vector<AddInfo>:4.
-    2: GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
-           -> (AddrInfoStatus status, uint32 nres, array<AddrInfo>:4 res);
+    GetAddrInfo(string:256? node, string:256? service, AddrInfoHints? hints)
+        -> (AddrInfoStatus status, uint32 nres, array<AddrInfo>:4 res);
 };
 
 // Chosen to match `sizeof(struct sockaddr_storage)`.

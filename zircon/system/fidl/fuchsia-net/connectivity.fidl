@@ -6,5 +6,5 @@ library fuchsia.net;
 
 [Discoverable]
 interface Connectivity {
-    1: -> OnNetworkReachable(bool reachable);
+    -> OnNetworkReachable(bool reachable);
 };

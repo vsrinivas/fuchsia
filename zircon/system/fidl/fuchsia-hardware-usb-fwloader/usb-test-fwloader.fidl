@@ -19,8 +19,8 @@ enum PrebuiltType : uint8 {
 [Layout = "Simple"]
 interface Device {
     /// Loads the prebuilt firmware onto the USB test device, and renumerates as the new device.
-    1: LoadPrebuiltFirmware(PrebuiltType prebuilt_type) -> (zx.status s);
+    LoadPrebuiltFirmware(PrebuiltType prebuilt_type) -> (zx.status s);
 
     /// Loads the firmware onto the USB test device, and renumerates as the new device.
-    2: LoadFirmware(fuchsia.mem.Buffer firmware) -> (zx.status s);
+    LoadFirmware(fuchsia.mem.Buffer firmware) -> (zx.status s);
 };

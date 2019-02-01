@@ -33,19 +33,19 @@ const uint32 MAX_STRING_LENGTH = 127;
 [Layout = "Simple"]
 interface Device {
     // Sets the device's USB device descriptor.
-    1: SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status s);
+    SetDeviceDescriptor(DeviceDescriptor desc) -> (zx.status s);
     // Sets a string descriptor a string in the USB device descriptor.
-    2: AllocStringDesc(string:MAX_STRING_LENGTH name) -> (zx.status s, uint8 index);
+    AllocStringDesc(string:MAX_STRING_LENGTH name) -> (zx.status s, uint8 index);
     // Adds a new function to the USB current configuration.
     // Must be called before BindFunctions or after ClearFunctions.
-    3: AddFunction(FunctionDescriptor desc) -> (zx.status s);
+    AddFunction(FunctionDescriptor desc) -> (zx.status s);
     // Tells the device to create child devices for the configuration's interfaces.
-    4: BindFunctions() -> (zx.status s);
+    BindFunctions() -> (zx.status s);
     // Tells the device to remove the child devices for the configuration's interfaces
     // and reset the list of functions to empty.
-    5: ClearFunctions() -> (zx.status s);
+    ClearFunctions() -> (zx.status s);
     // Returns the current USB mode.
-    6: GetMode() -> (zx.status s, uint32 mode);
+    GetMode() -> (zx.status s, uint32 mode);
     // Sets the current USB mode.
-    7: SetMode(uint32 mode) -> (zx.status s);
+    SetMode(uint32 mode) -> (zx.status s);
 };

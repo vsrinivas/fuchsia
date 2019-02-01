@@ -6,7 +6,7 @@ library fuchsia.hardware.i2c;
 
 using zx;
 
-const uint32 MAX_TRANSFER_SIZE = 8196;  // More than enough for I2C
+const uint32 MAX_TRANSFER_SIZE = 8196; // More than enough for I2C
 
 enum SegmentType {
     /// Flags the end of a serialized list of segments.
@@ -28,6 +28,6 @@ struct Segment {
 [Layout = "Simple"]
 interface Device {
     /// Send and receive data on the I2C device.
-    1: SlaveTransfer(vector<uint8>:MAX_TRANSFER_SIZE in) -> (zx.status s,
-       vector<uint8>:MAX_TRANSFER_SIZE out);
+    SlaveTransfer(vector<uint8>:MAX_TRANSFER_SIZE in) -> (zx.status s,
+                                                          vector<uint8>:MAX_TRANSFER_SIZE out);
 };

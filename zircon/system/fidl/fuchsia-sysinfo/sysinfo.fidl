@@ -22,17 +22,17 @@ struct InterruptControllerInfo {
 [Layout = "Simple"]
 interface Device {
     // Return the root job handle.
-    1: GetRootJob() -> (zx.status status, handle<job>? job);
+    GetRootJob() -> (zx.status status, handle<job>? job);
 
     // Return the root resource (with only ZX_RIGHT_ENUMERATE and ZX_RIGHT_TRANSFER).
-    2: GetRootResource() -> (zx.status status, handle<resource>? resource);
+    GetRootResource() -> (zx.status status, handle<resource>? resource);
 
     // Return the hypervisor resource (with only ZX_RIGHT_TRANSFER).
-    3: GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
+    GetHypervisorResource() -> (zx.status status, handle<resource>? resource);
 
     // Return the board name for the platform we are running on.
-    4: GetBoardName() -> (zx.status status, string:SYSINFO_BOARD_NAME_LEN? name);
+    GetBoardName() -> (zx.status status, string:SYSINFO_BOARD_NAME_LEN? name);
 
     // Return interrupt controller information.
-    5: GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
+    GetInterruptControllerInfo() -> (zx.status status, InterruptControllerInfo? info);
 };

@@ -58,13 +58,13 @@ struct BatteryInfo {
 [Layout = "Simple"]
 interface Source {
     // Get device info.
-    1: GetPowerInfo() -> (zx.status status, SourceInfo info);
+    GetPowerInfo() -> (zx.status status, SourceInfo info);
 
     // Get an event to receive state change notifications on. ZX_USER_SIGNAL_0 is
     // asserted when power_info_t.state is changed. It is deasserted when the
     // state is read via |GetPowerInfo|.
-    2: GetStateChangeEvent() -> (zx.status status, handle<event> handle);
+    GetStateChangeEvent() -> (zx.status status, handle<event> handle);
 
     // Get battery info. Only supported if type == PowerType::BATTERY.
-    3: GetBatteryInfo() -> (zx.status status, BatteryInfo info);
+    GetBatteryInfo() -> (zx.status status, BatteryInfo info);
 };

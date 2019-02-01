@@ -11,5 +11,5 @@ const uint32 DEBUG_STREAM_ID_RESERVED = 0;
 [Layout = "Simple"]
 interface Device {
     /// Sets the device instance stream ID for reading and writing from. The ID must be non-zero.
-    1: SetStream(uint32 stream_id) -> (zx.status s);
+    SetStream(uint32 stream_id) -> (zx.status s);
 };

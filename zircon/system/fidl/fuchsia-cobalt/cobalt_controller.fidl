@@ -15,7 +15,7 @@ interface Controller {
     // failure. The response occurs only after that procedure is completed. A
     // return value of true indicates that all Observations were successfully
     // sent. A return value of false indicates otherwise.
-    1: RequestSendSoon() -> (bool success);
+    RequestSendSoon() -> (bool success);
 
     // The Cobalt FIDL service will block, not processing any further FIDL
     // requests or responses, on either this interface or the Logger interface,
@@ -26,10 +26,10 @@ interface Controller {
     // is possible that the worker thread is currently waiting for the next
     // scheduled send time and so the empty state will not be achieved prior
     // that time.
-    2: BlockUntilEmpty(uint32 max_wait_seconds) -> ();
+    BlockUntilEmpty(uint32 max_wait_seconds) -> ();
 
     // These diagnostic stats are mostly useful in a testing environment but
     // may possibly prove useful in production also.
-    3: GetNumSendAttempts() -> (uint32 num);
-    4: GetFailedSendAttempts() -> (uint32 num);
+    GetNumSendAttempts() -> (uint32 num);
+    GetFailedSendAttempts() -> (uint32 num);
 };

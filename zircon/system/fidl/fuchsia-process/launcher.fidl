@@ -112,7 +112,7 @@ interface Launcher {
     //
     // After processing this message, the |Launcher| is reset to its initial
     // state and is ready to launch another process.
-    1: Launch(LaunchInfo info) -> (LaunchResult result);
+    Launch(LaunchInfo info) -> (LaunchResult result);
 
     // Creates the process described by |info| but does not start it.
     //
@@ -121,17 +121,17 @@ interface Launcher {
     //
     // The caller is responsible for calling |zx_process_start| using the data
     // in |ProcessStartData| to actually start the process.
-    2: CreateWithoutStarting(LaunchInfo info) -> (CreateWithoutStartingResult result);
+    CreateWithoutStarting(LaunchInfo info) -> (CreateWithoutStartingResult result);
 
     // Adds the given arguments to the command-line for the process.
     //
     // Calling this method multiple times concatenattes the arguments.
-    10: AddArgs(vector<string> args);
+    AddArgs(vector<string> args);
 
     // Adds the given variables to the environment variables for the process.
     //
     // Calling this method multiple times concatenates the variables.
-    11: AddEnvirons(vector<string> environ);
+    AddEnvirons(vector<string> environ);
 
     // Adds the given names to the namespace for the process.
     //
@@ -139,10 +139,10 @@ interface Launcher {
     // <https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/namespaces.md> for details.
     //
     // Calling this method multiple times concatenates the names.
-    12: AddNames(vector<NameInfo> names);
+    AddNames(vector<NameInfo> names);
 
     // Adds the given handles to the startup handles for the process.
     //
     // Calling this method multiple times concatenates the handles.
-    13: AddHandles(vector<HandleInfo> handles);
+    AddHandles(vector<HandleInfo> handles);
 };

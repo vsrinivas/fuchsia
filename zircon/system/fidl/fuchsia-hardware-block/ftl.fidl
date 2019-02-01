@@ -9,5 +9,5 @@ using zx;
 [Layout = "Simple"]
 interface Ftl {
     // Discards previous contents and reinitializes the device.
-    1: Format() -> (zx.status status);
+    Format() -> (zx.status status);
 };

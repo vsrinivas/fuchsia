@@ -20,7 +20,7 @@ interface Resolver {
     // For example, the resolver might locate the given |name| inside a package
     // and return the executable binary from the package as well as a shared
     // library loader scoped to that package.
-    1: Resolve(string:MAX_RESOLVE_NAME name) -> (zx.status status,
-                                                 handle<vmo>? executable,
-                                                 fuchsia.ldsvc.Loader? ldsvc);
+    Resolve(string:MAX_RESOLVE_NAME name) -> (zx.status status,
+                                              handle<vmo>? executable,
+                                              fuchsia.ldsvc.Loader? ldsvc);
 };
