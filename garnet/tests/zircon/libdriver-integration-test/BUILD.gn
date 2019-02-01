@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+executable("tests") {
+  testonly = true
+
+  output_name = "libdriver-integration-test"
+
+  sources = [
+    "action-list.cc",
+    "basic-lifecycle-test.cc",
+    "integration-test.cc",
+    "main.cc",
+    "mock-device.cc",
+    "mock-device-hooks.cc",
+    "root-mock-device.cc",
+  ]
+
+  deps = [
+    ":mock-device",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/devmgr-integration-test",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fit",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io",
+    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test",
+    "//zircon/public/fidl/fuchsia-device-test:fuchsia-device-test_c",
+    "//garnet/public/lib/async_promise",
+    "//garnet/public/lib/gtest",
+  ]
+}
+
+package("libdriver-integration-test") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "libdriver-integration-test"
+    },
+  ]
+}
+
+fidl("mock-device") {
+  name = "fuchsia.device.mock"
+
+  sources = [
+    "//zircon/system/dev/test/mock-device/mock-device.fidl",
+  ]
+
+  deps = [ ]
+}

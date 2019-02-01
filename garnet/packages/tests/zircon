@@ -1,5 +1,6 @@
 {
     "packages": [
-        "//garnet/tests/zircon:zircon_fuzzers"
+        "//garnet/tests/zircon:zircon_fuzzers",
+        "//garnet/tests/zircon/libdriver-integration-test:libdriver-integration-test"
     ]
 }

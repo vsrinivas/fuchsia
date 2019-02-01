@@ -1,0 +1,61 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <string>
+#include <vector>
+
+#include <lib/fit/bridge.h>
+#include <lib/fit/promise.h>
+#include <fuchsia/device/mock/cpp/fidl.h>
+
+namespace libdriver_integration_test {
+
+// Forward-declaration
+class MockDevice;
+
+// Represents an ordered list of actions to perform.
+class ActionList {
+public:
+    using Action = fuchsia::device::mock::Action;
+
+    ActionList();
+    ~ActionList();
+
+    ActionList(ActionList&&) = default;
+    ActionList& operator=(ActionList&&) = default;
+
+    ActionList(const ActionList&) = delete;
+    ActionList& operator=(const ActionList&) = delete;
+
+    const std::vector<Action>& actions() const { return actions_; }
+
+    // Consume this action list
+    void Take(std::vector<Action>* actions,
+              std::map<uint64_t, fit::completer<void, std::string>>* local_action_map);
+
+    // Methods for adding to the stored actions
+    void AppendAction(Action action);
+    void AppendAddMockDevice(async_dispatcher_t* dispatcher,
+                             const std::string& parent_path, std::string name,
+                             std::unique_ptr<MockDevice>* new_device_out,
+                             fit::promise<void, std::string>* add_done_out);
+    void AppendAddMockDevice(async_dispatcher_t* dispatcher,
+                             const std::string& parent_path, std::string name,
+                             fit::completer<void, std::string> add_done,
+                             std::unique_ptr<MockDevice>* new_device_out);
+    void AppendRemoveDevice(fit::promise<void, std::string>* remove_done_out);
+    void AppendRemoveDevice(fit::completer<void, std::string> remove_done);
+    void AppendReturnStatus(zx_status_t status);
+private:
+    std::vector<Action> actions_;
+
+    // Map of locally assigned action IDs to completers for them.  These will be
+    // remapped by MockDevice::FinalizeActionList.
+    std::map<uint64_t, fit::completer<void, std::string>> local_action_map_;
+    uint64_t next_action_id_ = 0;
+};
+
+} // namespace libdriver_integration_test
