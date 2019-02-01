@@ -10,6 +10,7 @@ namespace name {
 
 class OlderSimpleUnion;
 class NewerSimpleUnion;
+class EmptyUnion;
 
 class OlderSimpleUnion {
  public:
@@ -162,6 +163,52 @@ inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
 }
 
 using NewerSimpleUnionPtr = ::std::unique_ptr<NewerSimpleUnion>;
+
+class EmptyUnion {
+ public:
+ static const fidl_type_t* FidlType;
+
+ EmptyUnion();
+  ~EmptyUnion();
+
+  EmptyUnion(EmptyUnion&&);
+  EmptyUnion& operator=(EmptyUnion&&);
+
+  enum Tag : fidl_xunion_tag_t {
+    Empty = 0,
+  };
+
+  static inline ::std::unique_ptr<EmptyUnion> New() { return ::std::make_unique<EmptyUnion>(); }
+
+  void Encode(::fidl::Encoder* encoder, size_t offset);
+  static void Decode(::fidl::Decoder* decoder, EmptyUnion* value, size_t offset);
+  zx_status_t Clone(EmptyUnion* result) const;
+
+  bool empty() const { return tag_ == Tag::Empty; }
+
+  Tag Which() const { return Tag(tag_); }
+
+ private:
+  friend bool operator==(const EmptyUnion& lhs, const EmptyUnion& rhs);
+  void Destroy();
+  void EnsureStorageInitialized(::fidl_xunion_tag_t tag);
+
+  ::fidl_xunion_tag_t tag_ = Tag::Empty;
+  union {
+  };
+};
+
+bool operator==(const EmptyUnion& lhs, const EmptyUnion& rhs);
+inline bool operator!=(const EmptyUnion& lhs, const EmptyUnion& rhs) {
+  return !(lhs == rhs);
+}
+
+inline zx_status_t Clone(const ::test::name::EmptyUnion& value,
+                         ::test::name::EmptyUnion* result) {
+  return value.Clone(result);
+}
+
+using EmptyUnionPtr = ::std::unique_ptr<EmptyUnion>;
 }  // namespace name
 }  // namespace test
 namespace fidl {
@@ -180,5 +227,13 @@ struct CodingTraits<::test::name::NewerSimpleUnion>
 
 inline zx_status_t Clone(const ::test::name::NewerSimpleUnion& value,
                          ::test::name::NewerSimpleUnion* result) {
+  return ::test::name::Clone(value, result);
+}
+template <>
+struct CodingTraits<::test::name::EmptyUnion>
+    : public EncodableCodingTraits<::test::name::EmptyUnion, 24> {};
+
+inline zx_status_t Clone(const ::test::name::EmptyUnion& value,
+                         ::test::name::EmptyUnion* result) {
   return ::test::name::Clone(value, result);
 }}  // namespace fidl

@@ -10,6 +10,14 @@
   "union_declarations": [],
   "xunion_declarations": [
     {
+      "name": "test.name/EmptyUnion",
+      "members": [],
+      "size": 24,
+      "max_out_of_line": 0,
+      "alignment": 8,
+      "max_handles": 0
+    },
+    {
       "name": "test.name/OlderSimpleUnion",
       "members": [
         {
@@ -94,9 +102,11 @@
   ],
   "declaration_order": [
     "test.name/OlderSimpleUnion",
-    "test.name/NewerSimpleUnion"
+    "test.name/NewerSimpleUnion",
+    "test.name/EmptyUnion"
   ],
   "declarations": {
+    "test.name/EmptyUnion": "xunion",
     "test.name/OlderSimpleUnion": "xunion",
     "test.name/NewerSimpleUnion": "xunion"
   }

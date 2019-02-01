@@ -172,6 +172,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
 
   value->EnsureStorageInitialized(xunion->tag);
 
+{{ if len .Members }}
   const size_t envelope_offset = decoder->GetOffset(xunion->envelope.data);
 
   switch (value->tag_) {
@@ -190,6 +191,7 @@ void {{ .Name }}::Decode(::fidl::Decoder* decoder, {{ .Name }}* value, size_t of
          that. */ -}}
     break;
   }
+{{ end }}
 }
 
 zx_status_t {{ .Name }}::Clone({{ .Name }}* result) const {

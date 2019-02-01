@@ -1,5 +1,7 @@
 library test.name;
 
+xunion EmptyUnion {};
+
 xunion OlderSimpleUnion {
   int64 i;
   float32 f;
