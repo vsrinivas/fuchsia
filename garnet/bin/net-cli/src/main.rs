@@ -9,6 +9,7 @@ use failure::{Error, ResultExt};
 use fdio;
 use fidl_fuchsia_hardware_ethernet as zx_eth;
 use fidl_fuchsia_net as net;
+use fidl_fuchsia_net_filter::{self as filter, FilterMarker, FilterProxy};
 use fidl_fuchsia_net_stack::{self as netstack, StackMarker, StackProxy};
 use fidl_fuchsia_net_stack_ext as pretty;
 use fuchsia_app::client::connect_to_service;
@@ -26,11 +27,13 @@ fn main() -> Result<(), Error> {
     let opt = Opt::from_args();
     let mut exec = fasync::Executor::new().context("error creating event loop")?;
     let stack = connect_to_service::<StackMarker>().context("failed to connect to netstack")?;
+    let filter = connect_to_service::<FilterMarker>().context("failed to connect to netfilter")?;
 
     let fut = async {
         match opt {
             Opt::If(cmd) => await!(do_if(cmd, stack)),
             Opt::Fwd(cmd) => await!(do_fwd(cmd, stack)),
+            Opt::Filter(cmd) => await!(do_filter(cmd, filter)),
         }
     };
     exec.run_singlethreaded(fut)
@@ -181,4 +184,97 @@ fn parse_ip_addr(addr: &str) -> Result<net::IpAddress, Error> {
             Ok(net::IpAddress::Ipv6(net::IPv6Address { addr: ipv6.octets() }))
         }
     }
+}
+
+async fn do_filter(cmd: opts::FilterCmd, filter: FilterProxy) -> Result<(), Error> {
+    match cmd {
+        FilterCmd::Enable => {
+            let status = await!(filter.enable(true)).context("error getting response")?;
+            println!("{:?}", status);
+        }
+        FilterCmd::Disable => {
+            let status = await!(filter.enable(false)).context("error getting response")?;
+            println!("{:?}", status);
+        }
+        FilterCmd::IsEnabled => {
+            let is_enabled = await!(filter.is_enabled()).context("error getting response")?;
+            println!("{:?}", is_enabled);
+        }
+        FilterCmd::GetRules => {
+            let (rules, generation, status) =
+                await!(filter.get_rules()).context("error getting response")?;
+            if status == filter::Status::Ok {
+                println!("{:?} (generation {})", rules, generation);
+            } else {
+                eprintln!("{:?}", status);
+            }
+        }
+        FilterCmd::SetRules { rules } => {
+            let (_cur_rules, generation, status) =
+                await!(filter.get_rules()).context("error getting response")?;
+            if status != filter::Status::Ok {
+                println!("{:?}", status);
+                return Ok(());
+            }
+            match netfilter::parser::parse_str_to_rules(&rules) {
+                Ok(mut rules) => {
+                    let status = await!(filter.update_rules(&mut rules.iter_mut(), generation))
+                        .context("error getting response")?;
+                    println!("{:?}", status);
+                }
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+        FilterCmd::GetNatRules => {
+            let (rules, generation, status) =
+                await!(filter.get_nat_rules()).context("error getting response")?;
+            if status == filter::Status::Ok {
+                println!("{:?} (generation {})", rules, generation);
+            } else {
+                eprintln!("{:?}", status);
+            }
+        }
+        FilterCmd::SetNatRules { rules } => {
+            let (_cur_rules, generation, status) =
+                await!(filter.get_nat_rules()).context("error getting response")?;
+            if status != filter::Status::Ok {
+                println!("{:?}", status);
+                return Ok(());
+            }
+            match netfilter::parser::parse_str_to_nat_rules(&rules) {
+                Ok(mut rules) => {
+                    let status = await!(filter.update_nat_rules(&mut rules.iter_mut(), generation))
+                        .context("error getting response")?;
+                    println!("{:?}", status);
+                }
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+        FilterCmd::GetRdrRules => {
+            let (rules, generation, status) =
+                await!(filter.get_rdr_rules()).context("error getting response")?;
+            if status == filter::Status::Ok {
+                println!("{:?} (generation {})", rules, generation);
+            } else {
+                eprintln!("{:?}", status);
+            }
+        }
+        FilterCmd::SetRdrRules { rules } => {
+            let (_cur_rules, generation, status) =
+                await!(filter.get_rdr_rules()).context("error getting response")?;
+            if status != filter::Status::Ok {
+                println!("{:?}", status);
+                return Ok(());
+            }
+            match netfilter::parser::parse_str_to_rdr_rules(&rules) {
+                Ok(mut rules) => {
+                    let status = await!(filter.update_rdr_rules(&mut rules.iter_mut(), generation))
+                        .context("error getting response")?;
+                    println!("{:?}", status);
+                }
+                Err(e) => eprintln!("{:?}", e),
+            }
+        }
+    }
+    Ok(())
 }

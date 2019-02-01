@@ -19,6 +19,7 @@ use fidl_fuchsia_net_policy::{ObserverMarker, ObserverRequestStream};
 use fuchsia_app::server::ServicesServer;
 use fuchsia_async as fasync;
 use fuchsia_syslog::{fx_log_err, fx_log_info};
+use fuchsia_zircon::DurationNum;
 use futures::lock::Mutex;
 use futures::{self, StreamExt, TryFutureExt, TryStreamExt};
 use serde_derive::Deserialize;
@@ -35,11 +36,19 @@ pub struct DnsConfig {
 }
 
 #[derive(Debug, Deserialize)]
+pub struct FilterConfig {
+    pub rules: Vec<String>,
+    pub nat_rules: Vec<String>,
+    pub rdr_rules: Vec<String>,
+}
+
+#[derive(Debug, Deserialize)]
 struct Config {
     pub device_name: Option<String>,
     pub dns_config: DnsConfig,
     #[serde(deserialize_with = "matchers::InterfaceSpec::parse_as_tuples")]
     pub rules: Vec<matchers::InterfaceSpec>,
+    pub filter_config: FilterConfig,
 }
 
 impl Config {
@@ -67,11 +76,58 @@ fn derive_device_name(interfaces: Vec<fidl_fuchsia_netstack::NetInterface>) -> O
 
 static DEVICE_NAME_KEY: &str = "DeviceName";
 
+// We use Compare-And-Swap (CAS) protocol to update filter rules. $get_rules returns the current
+// generation number. $update_rules will send it with new rules to make sure we are updating the
+// intended generation. If the generation number doesn't match, $update_rules will return a
+// GenerationMismatch error, then we have to restart from $get_rules.
+
+const FILTER_CAS_RETRY_MAX: i32 = 3;
+const FILTER_CAS_RETRY_INTERVAL_MILLIS: i64 = 500;
+
+macro_rules! cas_filter_rules {
+    ($filter:ident, $get_rules:ident, $update_rules:ident, $rules:expr) => {
+        for retry in 0..FILTER_CAS_RETRY_MAX {
+            let (_, generation, status) = await!($filter.$get_rules())?;
+            if status != fidl_fuchsia_net_filter::Status::Ok {
+                let () =
+                    Err(failure::format_err!("{} failed: {:?}", stringify!($get_rules), status))?;
+            }
+            let status = await!($filter.$update_rules(&mut $rules.iter_mut(), generation))
+                .context("error getting response")?;
+            match status {
+                fidl_fuchsia_net_filter::Status::Ok => {
+                    break;
+                }
+                fidl_fuchsia_net_filter::Status::ErrGenerationMismatch
+                    if retry < FILTER_CAS_RETRY_MAX - 1 =>
+                {
+                    await!(fuchsia_async::Timer::new(
+                        FILTER_CAS_RETRY_INTERVAL_MILLIS.millis().after_now()
+                    ));
+                }
+                _ => {
+                    let () = Err(failure::format_err!(
+                        "{} failed: {:?}",
+                        stringify!($update_rules),
+                        status
+                    ))?;
+                }
+            }
+        }
+    };
+}
+
 fn main() -> Result<(), failure::Error> {
     fuchsia_syslog::init_with_tags(&["netcfg"])?;
     fx_log_info!("Started");
-    let Config { device_name, dns_config: DnsConfig { servers }, rules: default_config_rules } =
-        Config::load("/pkg/data/default.json")?;
+
+    let Config {
+        device_name,
+        dns_config: DnsConfig { servers },
+        rules: default_config_rules,
+        filter_config,
+    } = Config::load("/pkg/data/default.json")?;
+
     let mut persisted_interface_config =
         interface::FileBackedConfig::load(&"/data/net_interfaces.cfg.json")?;
     let mut executor = fuchsia_async::Executor::new().context("could not create executor")?;
@@ -87,6 +143,29 @@ fn main() -> Result<(), failure::Error> {
         fidl_fuchsia_devicesettings::DeviceSettingsManagerMarker,
     >()
     .context("could not connect to device settings manager")?;
+    let filter = fuchsia_app::client::connect_to_service::<fidl_fuchsia_net_filter::FilterMarker>()
+        .context("could not connect to filter")?;
+
+    let filter_setup = async {
+        if !filter_config.rules.is_empty() {
+            let mut rules = netfilter::parser::parse_str_to_rules(&filter_config.rules.join(""))
+                .map_err(|e| failure::format_err!("could not parse filter rules: {:?}", e))?;
+            cas_filter_rules!(filter, get_rules, update_rules, rules);
+        }
+        if !filter_config.nat_rules.is_empty() {
+            let mut nat_rules =
+                netfilter::parser::parse_str_to_nat_rules(&filter_config.nat_rules.join(""))
+                    .map_err(|e| failure::format_err!("could not parse nat rules: {:?}", e))?;
+            cas_filter_rules!(filter, get_nat_rules, update_nat_rules, nat_rules);
+        }
+        if !filter_config.rdr_rules.is_empty() {
+            let mut rdr_rules =
+                netfilter::parser::parse_str_to_rdr_rules(&filter_config.rdr_rules.join(""))
+                    .map_err(|e| failure::format_err!("could not parse nat rules: {:?}", e))?;
+            cas_filter_rules!(filter, get_rdr_rules, update_rdr_rules, rdr_rules);
+        }
+        Ok(())
+    };
 
     let mut servers = servers
         .into_iter()
@@ -259,7 +338,10 @@ fn main() -> Result<(), failure::Error> {
         .start()
         .context("error starting netcfg services server")?;
 
-    let (_success, (), ()) =
-        executor.run_singlethreaded(device_name.try_join3(ethernet_device, fidl_service_fut))?;
+    let (_success, (), (), ()) = executor.run_singlethreaded(device_name.try_join4(
+        filter_setup,
+        ethernet_device,
+        fidl_service_fut,
+    ))?;
     Ok(())
 }

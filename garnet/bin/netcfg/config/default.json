@@ -4,5 +4,10 @@
   },
   "rules": [
     [ ["all", "all"], ["ip_address", "dhcp"] ]
-  ]
+  ],
+  "filter_config": {
+    "rules": [],
+    "nat_rules": [],
+    "rdr_rules": []
+  }
 }

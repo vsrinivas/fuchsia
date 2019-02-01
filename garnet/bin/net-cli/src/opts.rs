@@ -13,6 +13,10 @@ pub enum Opt {
     #[structopt(name = "fwd")]
     /// commands for forwarding tables
     Fwd(FwdCmd),
+
+    #[structopt(name = "filter")]
+    /// commands for packet filter
+    Filter(FilterCmd),
 }
 
 #[derive(StructOpt, Clone, Debug)]
@@ -127,4 +131,35 @@ pub enum FwdCmd {
         /// routing prefix for this forwarding rule
         prefix: u8,
     },
+}
+
+#[derive(StructOpt, Clone, Debug)]
+pub enum FilterCmd {
+    #[structopt(name = "enable")]
+    /// enable the packet filter
+    Enable,
+    #[structopt(name = "disable")]
+    /// disable the packet filter
+    Disable,
+    #[structopt(name = "is_enabled")]
+    /// is the packet filter enabled?
+    IsEnabled,
+    #[structopt(name = "get_rules")]
+    /// get filter rules
+    GetRules,
+    #[structopt(name = "set_rules")]
+    /// set filter rules (see the netfilter::parser library for the rules format)
+    SetRules { rules: String },
+    #[structopt(name = "get_nat_rules")]
+    /// get nat rules
+    GetNatRules,
+    #[structopt(name = "set_nat_rules")]
+    /// set nat rules (see the netfilter::parser library for the NAT rules format)
+    SetNatRules { rules: String },
+    #[structopt(name = "get_rdr_rules")]
+    /// get rdr rules
+    GetRdrRules,
+    #[structopt(name = "set_rdr_rules")]
+    /// set rdr rules (see the netfilter::parser library for the RDR rules format)
+    SetRdrRules { rules: String },
 }

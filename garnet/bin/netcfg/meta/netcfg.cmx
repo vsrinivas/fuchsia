@@ -12,6 +12,7 @@
         "services": [
             "fuchsia.devicesettings.DeviceSettingsManager",
             "fuchsia.logger.LogSink",
+            "fuchsia.net.filter.Filter",
             "fuchsia.net.stack.Stack",
             "fuchsia.netstack.Netstack",
             "fuchsia.netstack.ResolverAdmin"

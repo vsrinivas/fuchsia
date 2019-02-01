@@ -69,6 +69,7 @@
         "garnet/packages/tests/mime_sniffer",
         "garnet/packages/tests/netcfg_tests",
         "garnet/packages/tests/netemul",
+        "garnet/packages/tests/netfilter",
         "garnet/packages/tests/netstack",
         "garnet/packages/tests/network_time",
         "garnet/packages/tests/network",
