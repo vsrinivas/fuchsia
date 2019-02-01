@@ -16,13 +16,8 @@ import xml.etree.ElementTree as xml
 
 
 PETALS = [
-    'topaz',
-    'peridot',
-    'garnet',
-    'zircon',
-    'build',
-    'buildtools',
-    'scripts',
+    ('topaz', 'https://fuchsia.googlesource.com/integration/+/master/topaz/minimal?format=TEXT'),
+    ('fuchsia', 'https://fuchsia.googlesource.com/integration/+/master/stem?format=TEXT'),
 ]
 
 
@@ -49,13 +44,13 @@ def http_get(url):
 
 def get_published_commit_for(petal):
     """Returns the pinned revision of a petal in global integration."""
-    url = ('https://fuchsia.googlesource.com/integration/+/master/%s/minimal?format=TEXT'
-           % petal)
+    name = petal[0]
+    url = petal[1]
     content = http_get(url)
     content = base64.b64decode(content)
     manifest = xml.fromstring(content)
-    nodes = manifest.findall('./projects/project[@name="%s"]' % petal)
-    return (petal, nodes[0].get('revision'))
+    nodes = manifest.findall('./projects/project[@name="%s"]' % name)
+    return (name, nodes[0].get('revision'))
 
 
 def get_published_commits():
