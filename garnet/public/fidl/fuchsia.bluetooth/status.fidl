@@ -31,7 +31,8 @@ struct Error {
     // ErrorCode.PROTOCOL_ERROR.
     uint32 protocol_error_code;
 
-    // Human-readable description of the error.
+    // Debug descriptioon of an error. This provides additional debugging information for an error
+    // and is not intended to be displayed in user interfaces.
     string? description;
 };
 
