@@ -184,7 +184,7 @@ bool bind_devices() {
     ASSERT_TRUE(pending & ZX_CHANNEL_READABLE);
 
     // Read the BindDriver request.
-    uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
+    FIDL_ALIGNDECL uint8_t bytes[ZX_CHANNEL_MAX_MSG_BYTES];
     zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
     uint32_t actual_bytes;
     uint32_t actual_handles;
