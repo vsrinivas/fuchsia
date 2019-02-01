@@ -48,6 +48,14 @@ public:
     // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name.
     zx_status_t RemoveEntry(fbl::StringPiece name);
 
+    // An extension of |RemoveEntry| which additionally verifies
+    // that the target vnode is |vn|.
+    //
+    // Returns |ZX_OK| on success.
+    // Returns |ZX_ERR_NOT_FOUND| if there is no node with the given name/vn
+    // pair.
+    zx_status_t RemoveEntry(fbl::StringPiece name, fs::Vnode* vn);
+
     // Removes all directory entries.
     void RemoveAllEntries();
 

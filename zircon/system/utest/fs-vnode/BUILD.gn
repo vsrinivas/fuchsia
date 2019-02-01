@@ -10,6 +10,7 @@ test("fs-vnode") {
     "remote-dir-tests.cpp",
     "service-tests.cpp",
     "teardown-tests.cpp",
+    "tracked-remote-dir-tests.cpp",
     "vmo-file-tests.cpp",
   ]
   deps = [

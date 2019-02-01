@@ -127,6 +127,20 @@ zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name) {
     return ZX_ERR_NOT_FOUND;
 }
 
+zx_status_t PseudoDir::RemoveEntry(fbl::StringPiece name, fs::Vnode* vn) {
+    fbl::AutoLock lock(&mutex_);
+
+    auto it = entries_by_name_.find(name);
+    if (it != entries_by_name_.end() && it->node().get() == vn) {
+        entries_by_name_.erase(it);
+        entries_by_id_.erase(it->id());
+        Notify(name, fuchsia_io_WATCH_EVENT_REMOVED);
+        return ZX_OK;
+    }
+
+    return ZX_ERR_NOT_FOUND;
+}
+
 void PseudoDir::RemoveAllEntries() {
     fbl::AutoLock lock(&mutex_);
 

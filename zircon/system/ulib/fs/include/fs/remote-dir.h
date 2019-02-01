@@ -24,7 +24,7 @@ namespace fs {
 // This class is thread-safe.
 class RemoteDir : public Vnode {
 public:
-    // Binds to a remotely hosted directory using the specified RIO client
+    // Binds to a remotely hosted directory using the specified FIDL client
     // channel endpoint.  The channel must be valid.
     RemoteDir(zx::channel remote_dir_client);
 
