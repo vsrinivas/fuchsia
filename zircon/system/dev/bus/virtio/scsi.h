@@ -12,6 +12,7 @@
 
 #include "backends/backend.h"
 #include "scsilib_controller.h"
+#include <fbl/auto_lock.h>
 #include <lib/sync/completion.h>
 #include <sys/uio.h>
 #include <virtio/scsi.h>
@@ -46,7 +47,8 @@ public:
 
 private:
     zx_status_t ExecuteCommandSync(uint8_t target, uint16_t lun, struct iovec cdb,
-                                           struct iovec data_out, struct iovec data_in) override;
+                                   struct iovec data_out, struct iovec data_in) override
+        TA_EXCL(lock_);
 
     zx_status_t WorkerThread();
 

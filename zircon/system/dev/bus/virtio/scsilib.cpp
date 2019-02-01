@@ -96,9 +96,33 @@ zx_status_t Disk::Bind() {
     return DdkAdd(tag_);
 }
 
+void Disk::BlockImplQueue(block_op_t* op, block_impl_queue_callback completion_cb,
+                          void* cookie) {
+    if ((op->command & BLOCK_OP_MASK) != BLOCK_OP_READ) {
+        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, op);
+        return;
+    }
+
+    void* data = calloc(op->rw.length, block_size_);
+    Read16CDB cdb = {};
+    cdb.opcode = Opcode::READ_16;
+    cdb.logical_block_address = htobe64(op->rw.offset_dev);
+    cdb.transfer_length = htonl(op->rw.length);
+
+    auto status = controller_->ExecuteCommandSync(/*target=*/target_, /*lun=*/lun_,
+        /*cdb=*/{&cdb, sizeof(cdb)},
+        /*data_out=*/{nullptr, 0},
+        /*data_in=*/{data, op->rw.length * block_size_});
+    // TODO(ZX-2314): Pass VMO directly to ExecuteCommandSync to skip this copy.
+    if (status == ZX_OK) {
+        status = zx_vmo_write(op->rw.vmo, data, op->rw.offset_vmo, op->rw.length * block_size_);
+    }
+    free(data);
+    completion_cb(cookie, status, op);
+}
+
 Disk::Disk(Controller* controller, zx_device_t* parent, uint8_t target, uint16_t lun)
     : DeviceType(parent), controller_(controller), target_(target), lun_(lun) {
-    (void) controller_;
     snprintf(tag_, sizeof(tag_), "scsi-disk-%d-%d", target_, lun_);
 }
 

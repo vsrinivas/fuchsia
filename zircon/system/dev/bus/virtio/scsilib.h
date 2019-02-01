@@ -141,6 +141,20 @@ static_assert(sizeof(ReportLunsParameterDataHeader) == 16, "Report LUNs Header m
 // Count the number of addressable LUNs attached to a target.
 uint32_t CountLuns(Controller* controller, uint8_t target);
 
+struct Read16CDB {
+    Opcode opcode;
+    // dpo_fua(4) - DPO - Disable Page Out
+    // dpo_fua(3) - FUA - Force Unit Access
+    uint8_t dpo_fua;
+    // Network byte order
+    uint64_t logical_block_address;
+    uint32_t transfer_length;
+    uint8_t reserved;
+    uint8_t control;
+} __PACKED;
+
+static_assert(sizeof(Read16CDB) == 16, "Read 16 CDB must be 16 bytes");
+
 class Disk;
 using DeviceType = ddk::Device<Disk, ddk::GetSizable, ddk::Unbindable>;
 
@@ -175,11 +189,10 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
         info_out->block_count = blocks_;
         info_out->max_transfer_size = block_size_;  // TODO(ZX-2314): Correct this size.
         info_out->flags = (removable_) ? BLOCK_FLAG_REMOVABLE : 0;
+        info_out->flags |= BLOCK_FLAG_READONLY;
     }
     void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
-                        void* cookie) {
-        completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, operation);
-    }
+                        void* cookie);
 
     Disk(const Disk&) = delete;
     Disk& operator=(const Disk&) = delete;
