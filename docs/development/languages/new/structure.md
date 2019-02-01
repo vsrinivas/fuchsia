@@ -101,7 +101,7 @@ the language runtime.
 The [FIDL compiler](https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/)
 has a single frontend that is used for all languages and multiple backends that
 support a diverse assortment of languages. The frontend produces a
-[JSON intermediate format](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/json-ir.md)
+[JSON intermediate format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/json-ir.md)
 that is consumed by the language-specific backends.
 
 You should create a new backend for the FIDL compiler for your language. The
@@ -117,9 +117,9 @@ The generated FIDL code varies substantially from one language to another.
 Typically the generated code will contain the following types of code:
 
 * Data structure definitions that represent the data structures defined in the
-  [FIDL language](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/language.md).
+  [FIDL language](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/language.md).
 * A codec that can serialize and deserialize these data structure into and from
-  the [FIDL wire format](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/wire-format/index.md).
+  the [FIDL wire format](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/reference/wire-format/index.md).
 * Stub objects that represent the server end of a FIDL interfaces. Typically,
   stub object have a *dispatch* method that deserializes a message read from a
   Zircon channel and perform an indirect jump into an implementation of the
