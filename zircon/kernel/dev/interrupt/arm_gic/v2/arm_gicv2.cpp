@@ -33,7 +33,6 @@
 #define LOCAL_TRACE 0
 
 #include <arch/arm64.h>
-#define iframe arm64_iframe_short
 #define IFRAME_PC(frame) ((frame)->elr)
 
 static spin_lock_t gicd_lock;
@@ -258,7 +257,7 @@ static unsigned int gic_remap_interrupt(unsigned int vector) {
     return vector;
 }
 
-static void gic_handle_irq(struct iframe* frame) {
+static void gic_handle_irq(iframe_short_t* frame) {
     // get the current vector
     uint32_t iar = GICREG(0, GICC_IAR);
     unsigned int vector = iar & 0x3ff;
@@ -295,7 +294,7 @@ static void gic_handle_irq(struct iframe* frame) {
     ktrace_tiny(TAG_IRQ_EXIT, (vector << 8) | cpu);
 }
 
-static void gic_handle_fiq(struct iframe* frame) {
+static void gic_handle_fiq(iframe_short_t* frame) {
     PANIC_UNIMPLEMENTED;
 }
 

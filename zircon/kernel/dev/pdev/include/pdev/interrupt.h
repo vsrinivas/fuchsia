@@ -36,8 +36,8 @@ struct pdev_interrupt_ops {
     zx_status_t (*send_ipi)(cpu_mask_t target, mp_ipi_t ipi);
     void (*init_percpu_early)(void);
     void (*init_percpu)(void);
-    void (*handle_irq)(iframe* frame);
-    void (*handle_fiq)(iframe* frame);
+    void (*handle_irq)(iframe_short_t* frame);
+    void (*handle_fiq)(iframe_short_t* frame);
     void (*shutdown)(void);
     void (*shutdown_cpu)(void);
     bool (*msi_is_supported)(void);

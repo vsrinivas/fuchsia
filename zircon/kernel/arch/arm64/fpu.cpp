@@ -104,7 +104,7 @@ __NO_SAFESTACK void arm64_fpu_context_switch(struct thread* oldthread,
 }
 
 /* called because of a fpu instruction used exception */
-void arm64_fpu_exception(struct arm64_iframe_long* iframe, uint exception_flags) {
+void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags) {
     LTRACEF("cpu %u, thread %s, flags 0x%x\n", arch_curr_cpu_num(), get_current_thread()->name, exception_flags);
 
     /* only valid to be called if exception came from lower level */

@@ -65,8 +65,11 @@ typedef struct {
     arm64_cache_desc_t level_inst_type[7];
 } arm64_cache_info_t;
 
-/* exception handling */
-struct arm64_iframe_long {
+// exception handling
+// This is the main struct used by architecture-independent code.
+// It can be forward declared thus this is the "real" type and
+// arm64_iframe_t is the alias.
+struct iframe_t {
     uint64_t r[30];
     uint64_t lr;
     uint64_t usp;
@@ -76,7 +79,8 @@ struct arm64_iframe_long {
     uint64_t pad2[1]; // Keep structure multiple of 16-bytes for stack alignment.
 };
 
-struct arm64_iframe_short {
+// This is an arm-specific iframe for IRQs.
+struct iframe_short_t {
     uint64_t r[20];
     // pad the short frame out so that it has the same general shape and size as a long
     uint64_t pad[10];
@@ -87,10 +91,13 @@ struct arm64_iframe_short {
     uint64_t pad2[2];
 };
 
-static_assert(sizeof(struct arm64_iframe_long) == sizeof(struct arm64_iframe_short), "");
+static_assert(sizeof(iframe_t) == sizeof(iframe_short_t), "");
+
+// Lots of the code uses this name.
+typedef struct iframe_t arm64_iframe_t;
 
 struct arch_exception_context {
-    struct arm64_iframe_long* frame;
+    struct iframe_t* frame;
     uint64_t far;
     uint32_t esr;
 };
@@ -98,17 +105,14 @@ struct arch_exception_context {
 struct thread;
 extern void arm64_el1_exception_base(void);
 void arm64_el3_to_el1(void);
-void arm64_sync_exception(struct arm64_iframe_long* iframe, uint exception_flags, uint32_t esr);
-void arm64_thread_process_pending_signals(struct arm64_iframe_long* iframe);
+void arm64_sync_exception(arm64_iframe_t* iframe, uint exception_flags, uint32_t esr);
+void arm64_thread_process_pending_signals(arm64_iframe_t* iframe);
 
-typedef struct arm64_iframe_long iframe_t;
-typedef struct arm64_iframe_short iframe;
-
-void platform_irq(iframe* frame);
-void platform_fiq(iframe* frame);
+void platform_irq(iframe_short_t* frame);
+void platform_fiq(iframe_short_t* frame);
 
 /* fpu routines */
-void arm64_fpu_exception(struct arm64_iframe_long* iframe, uint exception_flags);
+void arm64_fpu_exception(arm64_iframe_t* iframe, uint exception_flags);
 void arm64_fpu_context_switch(struct thread* oldthread, struct thread* newthread);
 
 uint64_t arm64_get_boot_el(void);

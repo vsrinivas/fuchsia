@@ -33,7 +33,7 @@ zx_status_t arch_get_general_regs(struct thread* thread, zx_thread_state_general
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    struct arm64_iframe_long* in = thread->arch.suspended_general_regs;
+    arm64_iframe_t* in = thread->arch.suspended_general_regs;
     DEBUG_ASSERT(in);
 
     static_assert(sizeof(in->r) == sizeof(out->r), "");
@@ -54,7 +54,7 @@ zx_status_t arch_set_general_regs(struct thread* thread, const zx_thread_state_g
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
 
-    struct arm64_iframe_long* out = thread->arch.suspended_general_regs;
+    arm64_iframe_t* out = thread->arch.suspended_general_regs;
     DEBUG_ASSERT(out);
 
     static_assert(sizeof(out->r) == sizeof(in->r), "");
@@ -74,7 +74,7 @@ zx_status_t arch_get_single_step(struct thread* thread, bool* single_step) {
     // ZX-563 (registers aren't available in synthetic exceptions)
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
-    struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
+    arm64_iframe_t* regs = thread->arch.suspended_general_regs;
 
     const bool mdscr_ss_enable = !!(regs->mdscr & kMdscrSSMask);
     const bool spsr_ss_enable = !!(regs->spsr & kSSMaskSPSR);
@@ -90,7 +90,7 @@ zx_status_t arch_set_single_step(struct thread* thread, bool single_step) {
     // ZX-563 (registers aren't available in synthetic exceptions)
     if (thread->arch.suspended_general_regs == nullptr)
         return ZX_ERR_NOT_SUPPORTED;
-    struct arm64_iframe_long* regs = thread->arch.suspended_general_regs;
+    arm64_iframe_t* regs = thread->arch.suspended_general_regs;
     if (single_step) {
         regs->mdscr |= kMdscrSSMask;
         regs->spsr |= kSSMaskSPSR;

@@ -46,7 +46,7 @@ struct arch_thread {
     // Nullptr if not suspended or not stopped in an exception.
     // TODO(ZX-563): Also nullptr for synthetic exceptions that don't provide
     // them yet.
-    struct arm64_iframe_long* suspended_general_regs;
+    struct iframe_t* suspended_general_regs;
 
     // Point to the current cpu pointer when the thread is running, used to
     // restore x18 on exception entry. Swapped on context switch.

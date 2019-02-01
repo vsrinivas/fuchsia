@@ -25,7 +25,7 @@ __BEGIN_CDECLS
 
 #define X86_8BYTE_MASK 0xFFFFFFFF
 
-struct x86_64_iframe {
+struct iframe_t {
     uint64_t rdi, rsi, rbp, rbx, rdx, rcx, rax;    // pushed by common handler
     uint64_t r8, r9, r10, r11, r12, r13, r14, r15; // pushed by common handler
     uint64_t vector;                               // pushed by stub
@@ -34,8 +34,7 @@ struct x86_64_iframe {
     uint64_t user_sp, user_ss;                     // pushed by interrupt
 };
 
-typedef struct x86_64_iframe x86_iframe_t;
-typedef struct x86_64_iframe iframe_t;
+typedef struct iframe_t x86_iframe_t;
 
 void x86_exception_handler(x86_iframe_t* frame);
 void platform_irq(x86_iframe_t* frame);

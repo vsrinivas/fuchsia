@@ -76,10 +76,10 @@ static void default_init_percpu_early() {
 static void default_init_percpu() {
 }
 
-static void default_handle_irq(iframe* frame) {
+static void default_handle_irq(iframe_short_t* frame) {
 }
 
-static void default_handle_fiq(iframe* frame) {
+static void default_handle_fiq(iframe_short_t* frame) {
 }
 
 static void default_shutdown() {
@@ -189,11 +189,11 @@ void interrupt_init_percpu() {
     intr_ops->init_percpu();
 }
 
-void platform_irq(iframe* frame) {
+void platform_irq(iframe_short_t* frame) {
     intr_ops->handle_irq(frame);
 }
 
-void platform_fiq(iframe* frame) {
+void platform_fiq(iframe_short_t* frame) {
     intr_ops->handle_fiq(frame);
 }
 
