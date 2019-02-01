@@ -22,6 +22,9 @@ library("fvm") {
 
     # <fvm/fvm.h> has #include <gpt/gpt.h>.
     "$zx/system/ulib/gpt:headers",
+
+    # <fvm/sparse-reader.h> has #include <lz4/lz4frame.h>.
+    "$zx/third_party/ulib/lz4:headers",
   ]
   if (is_fuchsia) {
     deps += [
