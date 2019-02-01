@@ -5,6 +5,7 @@
 group("bluetooth") {
   deps = [
     "bt-hci-broadcom",
+    "bt-hci-mediatek",
     "bt-transport-uart",
     "bt-transport-usb",
   ]

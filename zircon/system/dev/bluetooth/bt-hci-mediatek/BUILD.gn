@@ -1,0 +1,32 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("$zx/public/gn/firmware.gni")
+
+driver("bt-hci-mediatek") {
+  sources = [
+    "bt-hci-mediatek.cpp",
+  ]
+  deps = [
+    "$zx/system/banjo/ddk-protocol-bt-hci",
+    "$zx/system/banjo/ddk-protocol-sdio",
+    "$zx/system/ulib/ddk",
+    "$zx/system/ulib/ddktl",
+    "$zx/system/ulib/fbl",
+    "$zx/system/ulib/fzl",
+    "$zx/system/ulib/sync",
+    "$zx/system/ulib/zx",
+    "$zx/system/ulib/zxcpp",
+    "$zx/system/ulib/zircon",
+  ]
+  data_deps = [
+    ":firmware",
+  ]
+}
+
+firmware("firmware") {
+  sources = [
+    "$firmware_dir/bluetooth/mt7668/mt7668_patch_e2_hdr.bin",
+  ]
+}
