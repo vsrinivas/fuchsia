@@ -10,12 +10,12 @@ const uint64 MAX_STRING_SIZE = 12000;
 const uint64 MAX_KEY_SIZE = 256;
 
 // ValueType encodes a type for a field in the store
-enum ValueType: uint8 {
-    INT_VAL    = 1;
-    FLOAT_VAL  = 2;
-    BOOL_VAL   = 3;
+enum ValueType : uint8 {
+    INT_VAL = 1;
+    FLOAT_VAL = 2;
+    BOOL_VAL = 3;
     STRING_VAL = 4;
-    BYTES_VAL  = 5;
+    BYTES_VAL = 5;
 };
 
 // ListItem is returned when a series of keys are being listed.
@@ -42,41 +42,41 @@ union Value {
 
 // The iterator returned when a series of keys are being listed. Returns an
 // empty vector when there are no more remaining ListItems.
-interface ListIterator{
-    1: GetNext() -> (vector<ListItem> keys);
+interface ListIterator {
+    GetNext() -> (vector<ListItem> keys);
 };
 
 // The iterator returned when a series of keys are being read. Returns an
 // empty vector when there are no more remaining KeyValues.
-interface GetIterator{
-    1: GetNext() -> (vector<KeyValue> kvs);
+interface GetIterator {
+    GetNext() -> (vector<KeyValue> kvs);
 };
 
 // The interface returned when a new accessor is created.
 interface StoreAccessor {
     // Gets a single value from the store.
-    1: GetValue(string:MAX_KEY_SIZE key) -> (Value? val);
+    GetValue(string:MAX_KEY_SIZE key) -> (Value? val);
 
     // Sets a single value in the store. Overwrites existing values. Commit()
     // must be called for this change to take effect.
-    2: SetValue(string:MAX_KEY_SIZE key, Value val);
+    SetValue(string:MAX_KEY_SIZE key, Value val);
 
     // Deletes a single value in the store. Does nothing if the value doesn't
     // exist. Commit() must be called for this change to take effect.
-    3: DeleteValue(string:MAX_KEY_SIZE key);
+    DeleteValue(string:MAX_KEY_SIZE key);
 
     // Lists all keys under a given prefix.
-    4: ListPrefix(string:MAX_KEY_SIZE prefix, request<ListIterator> it);
+    ListPrefix(string:MAX_KEY_SIZE prefix, request<ListIterator> it);
 
     // Reads the values of all keys under a given prefix.
-    5: GetPrefix(string:MAX_KEY_SIZE prefix, request<GetIterator> it);
+    GetPrefix(string:MAX_KEY_SIZE prefix, request<GetIterator> it);
 
     // Deletes the all keys under a given prefix.
-    6: DeletePrefix(string:MAX_KEY_SIZE prefix);
+    DeletePrefix(string:MAX_KEY_SIZE prefix);
 
     // Atomically causes all of the state modifications that happened in this
     // accessor to take place.
-    8: Commit();
+    Commit();
 };
 
 // Interface used to interact with a given client's key/value store
@@ -86,14 +86,15 @@ interface Store {
     // which client service's store is to be accessed. In the future this will
     // be deprecated in favor of component monikers, and each client will only
     // be able to access its own store.
-    1: Identify(string:MAX_KEY_SIZE name);
+    Identify(string:MAX_KEY_SIZE name);
 
     // Creates a accessor for interacting with the store. The resulting
     // interface can be used to inspect and modify the state of the store.
-    2: CreateAccessor(bool read_only, request<StoreAccessor> accessor_request);
+    CreateAccessor(bool read_only, request<StoreAccessor> accessor_request);
 };
 
 // Interface used to interact with a given client's key/value store. The bytes
 // type is disabled in this store.
 [Discoverable]
-interface SecureStore : Store { };
+interface SecureStore : Store {
+};

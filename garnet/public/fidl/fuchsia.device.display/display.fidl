@@ -8,9 +8,9 @@ library fuchsia.device.display;
 interface Manager {
     // Retrieves the current brightness of the display. The brightness is
     // specified as a percentage of the maximum brightness.
-    1: GetBrightness() -> (bool success, float64 brightness);
+    GetBrightness() -> (bool success, float64 brightness);
 
     // Sets the brightness of the display. The brightness is specified a
     // percentage of the maximum brightness.
-    2: SetBrightness(float64 brightness) -> (bool success);
+    SetBrightness(float64 brightness) -> (bool success);
 };

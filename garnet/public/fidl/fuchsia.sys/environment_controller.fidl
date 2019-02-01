@@ -13,19 +13,19 @@ library fuchsia.sys;
 //
 // Typically obtained via |Environment.CreateNestedEnvironment|.
 interface EnvironmentController {
-  // Terminates the environment.
-  //
-  // When an |Environment| is terminated, all applications launched
-  // in the environment (and in all transitively nested environments) are also
-  // killed.
-  1: Kill() -> ();
+    // Terminates the environment.
+    //
+    // When an |Environment| is terminated, all applications launched
+    // in the environment (and in all transitively nested environments) are also
+    // killed.
+    Kill() -> ();
 
-  // Decouples the lifetime of the environment from this controller.
-  //
-  // After calling |Detach|, the environment will not be implicitly killed when
-  // this interface is closed.
-  2: Detach();
+    // Decouples the lifetime of the environment from this controller.
+    //
+    // After calling |Detach|, the environment will not be implicitly killed when
+    // this interface is closed.
+    Detach();
 
-  // Event that is triggered when the environment is created.
-  3: -> OnCreated();
+    // Event that is triggered when the environment is created.
+    -> OnCreated();
 };

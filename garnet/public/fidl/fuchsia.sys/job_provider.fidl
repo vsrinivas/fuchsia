@@ -9,6 +9,6 @@ library fuchsia.sys;
 // to explicitly identify the realm below.
 [Discoverable]
 interface JobProvider {
-  // Gets the root job associated with the realm.
-  1: GetJob() -> (handle<job> job);
+    // Gets the root job associated with the realm.
+    GetJob() -> (handle<job> job);
 };

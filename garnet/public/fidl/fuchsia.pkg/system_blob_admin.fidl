@@ -10,7 +10,7 @@ using zx;
 interface SystemBlobAdmin {
     /// Allows blobs from old system versions to be garbage collected. The current system blobs
     /// will not be collected.
-    1: ReleaseRetainedBlobs();
+    ReleaseRetainedBlobs();
 
     /// Adds the blobs listed in the |retention_index| blob to the retention list. This should be
     /// called during a system upgrade with the new system blob in order to make sure they are not
@@ -23,5 +23,5 @@ interface SystemBlobAdmin {
     /// * |ZX_OK| if the blobs were successfully retained.
     /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
     /// * |ZX_ERR_NOT_FOUND| if the |retention_index| could not be found on the local system.
-    2: RetainBlobs(BlobId retention_index) -> (zx.status status);
+    RetainBlobs(BlobId retention_index) -> (zx.status status);
 };

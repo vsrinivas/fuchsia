@@ -6,10 +6,10 @@ library fuchsia.test.echos;
 
 [Discoverable]
 interface EchoExposedByParent {
-  1: Echo(int64 value) -> (int64 response);
+    Echo(int64 value) -> (int64 response);
 };
 
 [Discoverable]
 interface EchoHiddenByParent {
-  1: Echo(int64 value) -> (int64 response);
+    Echo(int64 value) -> (int64 response);
 };

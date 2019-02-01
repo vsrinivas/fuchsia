@@ -8,15 +8,15 @@ using fuchsia.overnet.protocol;
 
 [Discoverable]
 interface Overnet {
-    1: ListPeers() -> (vector<Peer> peers);
+    ListPeers() -> (vector<Peer> peers);
     // TODO(ctiller): remove this, and move to something that looks way more like an explicit registry.
-    2: RegisterService(string service_name, ServiceProvider provider);
-    3: ConnectToService(fuchsia.overnet.protocol.NodeId node, 
-                        string service_name, handle<channel> chan);
+    RegisterService(string service_name, ServiceProvider provider);
+    ConnectToService(fuchsia.overnet.protocol.NodeId node,
+                     string service_name, handle<channel> chan);
 };
 
 interface ServiceProvider {
-    1: ConnectToService(string service_name, handle<channel> chan);
+    ConnectToService(string service_name, handle<channel> chan);
 };
 
 struct Peer {

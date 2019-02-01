@@ -16,16 +16,16 @@ using fuchsia.ui.viewsv1;
 interface TouchDispatcher {
     // Sends the client a touch pointer event received from the current active
     // fuchsia.ui.policy.Presentation.
-    1: -> OnInputEvent(fuchsia.ui.input.PointerEvent event);
+    -> OnInputEvent(fuchsia.ui.input.PointerEvent event);
 
     // Notify the client that the active presentation has changed. Clients should use
     // this to invalidate any previous gesture detection state and store a reference to
     // the current active view represented through the ViewTreeToken.
-    2: -> OnPresentationChangedEvent(fuchsia.ui.viewsv1.ViewTreeToken token);
+    -> OnPresentationChangedEvent(fuchsia.ui.viewsv1.ViewTreeToken token);
 
     // Return a simulated pointer event to the active presentation to process through the regular
     // input pipeline.
-    3: SendSimulatedPointerEvent(fuchsia.ui.input.PointerEvent event);
+    SendSimulatedPointerEvent(fuchsia.ui.input.PointerEvent event);
 };
 
 [Discoverable]
@@ -49,15 +49,15 @@ interface InputReceiver {
     // reconnect upon being set active, as that is when the presentation can receive raw inputs.
     // Registration must be done to specify the ViewTree of the currently connected presentation
     // for hit tests.
-    1: RegisterPresentation(fuchsia.ui.viewsv1.ViewTreeToken token);
+    RegisterPresentation(fuchsia.ui.viewsv1.ViewTreeToken token);
 
     // Send an input event to the input receiver to process. No-op if the presentation client
     // did not reconnect and register beforehand.
-    2: SendInputEvent(fuchsia.ui.input.InputEvent event);
+    SendInputEvent(fuchsia.ui.input.InputEvent event);
 
     // Sends back an input event to the presentation client for the client to process through
     // the regular input event processing pipeline.
     // TODO(SCN-866): Figure out how to make sure valid orderings of input events are
     // returned.
-    3: -> OnReturnInputEvent(fuchsia.ui.input.InputEvent event);
+    -> OnReturnInputEvent(fuchsia.ui.input.InputEvent event);
 };

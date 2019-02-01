@@ -5,19 +5,19 @@
 library fidl.test.before;
 
 interface AddMethod {
-    1: ExistingMethod();
+    ExistingMethod();
 };
 
 interface RemoveMethod {
-    1: ExistingMethod();
-    2: OldMethod();
+    ExistingMethod();
+    OldMethod();
 };
 
 interface AddEvent {
-    1: ExistingMethod();
+    ExistingMethod();
 };
 
 interface RemoveEvent {
-    1: ExistingMethod();
-    2: -> OldEvent();
+    ExistingMethod();
+    -> OldEvent();
 };

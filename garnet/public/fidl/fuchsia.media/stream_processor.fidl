@@ -1147,9 +1147,9 @@ interface StreamProcessor {
     // The scope of error_detected_during is from the start to the end of this
     // output_packet.
     -> OnOutputPacket(
-        Packet output_packet,
-        bool error_detected_before,
-        bool error_detected_during);
+           Packet output_packet,
+           bool error_detected_before,
+           bool error_detected_during);
 
     // RecycleOutputPacket()
     //
@@ -1194,8 +1194,8 @@ interface StreamProcessor {
     // The error_detected_before bool has the same semantics as the
     // error_detected_before bool in OnOutputPacket().
     -> OnOutputEndOfStream(
-        uint64 stream_lifetime_ordinal,
-        bool error_detected_before);
+           uint64 stream_lifetime_ordinal,
+           bool error_detected_before);
 
     //
     // Stream specific messages:

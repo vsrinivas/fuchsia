@@ -22,7 +22,7 @@ interface RepositoryManager {
     /// * |ZX_OK| if the repository was added.
     /// * |ZX_ERR_ALREADY_EXISTS| if the repository already exists.
     /// * |ZX_ERR_INVALID_ARGS| if the repository is malformed.
-    1: Add(RepositoryConfig repo) -> (zx.status status);
+    Add(RepositoryConfig repo) -> (zx.status status);
 
     /// Remove a repository.
     ///
@@ -36,7 +36,7 @@ interface RepositoryManager {
     /// * Returns |ZX_OK| if the repository was removed.
     /// * Returns |ZX_ERR_INVALID_ARGS| if the |repo_url| is malformed.
     /// * Returns |ZX_ERR_NOT_FOUND| if the repository does not exist.
-    2: Remove(string repo_url) -> (zx.status status);
+    Remove(string repo_url) -> (zx.status status);
 
     /// Add a mirror to a repository. This will overwrite the mirror if it already exists.
     ///
@@ -49,7 +49,7 @@ interface RepositoryManager {
     /// * |ZX_ERR_ALREADY_EXISTS| if the mirror for this repository already exists.
     /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror| is malformed.
     /// * |ZX_ERR_NOT_FOUND| if the repository does not exist.
-    3: AddMirror(string repo_url, MirrorConfig mirror) -> (zx.status status);
+    AddMirror(string repo_url, MirrorConfig mirror) -> (zx.status status);
 
     /// Remove a mirror from a repository.
     ///
@@ -64,13 +64,13 @@ interface RepositoryManager {
     /// * |ZX_OK| if the mirror was removed.
     /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
     /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
-    4: RemoveMirror(string repo_url, string mirror_url) -> (zx.status status);
+    RemoveMirror(string repo_url, string mirror_url) -> (zx.status status);
 
     /// Return an iterator over all repositories.
     ///
     /// Arguments:
     /// |iterator| is a request for an iterator.
-    5: List(request<RepositoryIterator> iterator);
+    List(request<RepositoryIterator> iterator);
 
     /// Log into the mirror specified by the mirror url.
     ///
@@ -82,7 +82,7 @@ interface RepositoryManager {
     /// * |ZX_OK| and a |code| if the if mirror is configured for authentication, or null if not.
     /// * |ZX_ERR_INVALID_ARGS| if the |repo_url| or the |mirror_url| is malformed.
     /// * |ZX_ERR_NOT_FOUND| if the repository or mirror does not exist.
-    6: Login(string repo_url, string mirror_url) -> (zx.status status, OAuth2DeviceCode? code);
+    Login(string repo_url, string mirror_url) -> (zx.status status, OAuth2DeviceCode? code);
 };
 
 /// Describes the configuration necessary to connect to a repository and it's mirrors.
@@ -161,5 +161,5 @@ interface RepositoryIterator {
     /// Return Values:
     /// * a vector of |RepositoryConfig| repositories. Will return an empty vector when there are
     ///   no more repositories.
-    1: Next() -> (vector<RepositoryConfig> repos);
+    Next() -> (vector<RepositoryConfig> repos);
 };

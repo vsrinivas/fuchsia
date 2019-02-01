@@ -22,28 +22,28 @@ using fuchsia.ui.gfx;
 // rendered by the GLSL code; this is the responsibility of |ShadertoyFactory|,
 // which is used to create Shadertoy instances.
 interface Shadertoy {
-  // Set whether rendering is paused or not.
-  1: SetPaused(bool paused);
+    // Set whether rendering is paused or not.
+    SetPaused(bool paused);
 
-  // Set the GLSL shader code for the Shadertoy.  Return true if compilation was
-  // successful and false otherwise.
-  // TODO: provide better error reporting when compilation fails.
-  2: SetShaderCode(string glsl) -> (bool successful);
+    // Set the GLSL shader code for the Shadertoy.  Return true if compilation was
+    // successful and false otherwise.
+    // TODO: provide better error reporting when compilation fails.
+    SetShaderCode(string glsl) -> (bool successful);
 
-  // Corresponds to Shadertoy's 'iResolution' shader parameter.
-  3: SetResolution(uint32 width, uint32 height);
+    // Corresponds to Shadertoy's 'iResolution' shader parameter.
+    SetResolution(uint32 width, uint32 height);
 
-  // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
-  // interpreted as follows:
-  // i_mouse.xy:
-  //   - the position of the last mouse-down event
-  // i_mouse.zw
-  //   - (when mouse is down) the current position of the mouse
-  //   - (when mouse is up) the position of the last mouse-up event
-  4: SetMouse(fuchsia.ui.gfx.vec4 i_mouse);
+    // Corresponds to Shadertoy's 'iMouse' shader parameter.  The value is
+    // interpreted as follows:
+    // i_mouse.xy:
+    //   - the position of the last mouse-down event
+    // i_mouse.zw
+    //   - (when mouse is down) the current position of the mouse
+    //   - (when mouse is up) the position of the last mouse-up event
+    SetMouse(fuchsia.ui.gfx.vec4 i_mouse);
 
-  // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
-  // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
-  // TODO: implement cubemap support.
-  5: SetImage(uint32 channel, request<fuchsia.images.ImagePipe> image_pipe);
+    // Corresponds to Shadertoy's 'iChannel0..3' parameters.  Currently only 2D
+    // samplers are supported (no cubemaps).  |channel| must be one of 0, 1, 2, 3.
+    // TODO: implement cubemap support.
+    SetImage(uint32 channel, request<fuchsia.images.ImagePipe> image_pipe);
 };

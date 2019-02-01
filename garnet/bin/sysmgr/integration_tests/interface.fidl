@@ -6,5 +6,5 @@ library test.sysmgr;
 
 [Discoverable]
 interface Interface {
-  1: Ping() -> (string magic);
+    Ping() -> (string magic);
 };

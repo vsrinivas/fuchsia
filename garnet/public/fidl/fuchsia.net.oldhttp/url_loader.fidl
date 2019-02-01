@@ -5,30 +5,30 @@
 library fuchsia.net.oldhttp;
 
 struct URLLoaderStatus {
-  // If the loader has failed due to a network level error, this field will be
-  // set.
-  HttpError? error;
+    // If the loader has failed due to a network level error, this field will be
+    // set.
+    HttpError? error;
 
-  // Set to true if the URLLoader is still working. Set to false once an error
-  // is encountered or the response body is completely copied to the response
-  // body stream.
-  bool is_loading;
+    // Set to true if the URLLoader is still working. Set to false once an error
+    // is encountered or the response body is completely copied to the response
+    // body stream.
+    bool is_loading;
 
-  // TODO(darin): Add further details about the stages of loading (e.g.,
-  // "resolving host") that happen prior to receiving bytes.
+    // TODO(darin): Add further details about the stages of loading (e.g.,
+    // "resolving host") that happen prior to receiving bytes.
 };
 
 interface URLLoader {
-  // Loads the given |request|, asynchronously producing |response|. Consult
-  // |response| to determine if the request resulted in an error, was
-  // redirected, or has a response body to be consumed.
-  1: Start(URLRequest request) -> (URLResponse response);
+    // Loads the given |request|, asynchronously producing |response|. Consult
+    // |response| to determine if the request resulted in an error, was
+    // redirected, or has a response body to be consumed.
+    Start(URLRequest request) -> (URLResponse response);
 
-  // If the request passed to |Start| had |auto_follow_redirects| set to false,
-  // then upon receiving an URLResponse with a non-NULL |redirect_url| field,
-  // |FollowRedirect| may be called to load the URL indicated by the redirect.
-  2: FollowRedirect() -> (URLResponse response);
+    // If the request passed to |Start| had |auto_follow_redirects| set to false,
+    // then upon receiving an URLResponse with a non-NULL |redirect_url| field,
+    // |FollowRedirect| may be called to load the URL indicated by the redirect.
+    FollowRedirect() -> (URLResponse response);
 
-  // Query status about the URLLoader.
-  3: QueryStatus() -> (URLLoaderStatus status);
+    // Query status about the URLLoader.
+    QueryStatus() -> (URLLoaderStatus status);
 };

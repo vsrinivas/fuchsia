@@ -160,7 +160,7 @@ interface Loader {
     // and return the final response as a reply to this message. To cancel the
     // request, either close the loader interface or close the peer to the |event|
     // included in the |request|.
-    1: Fetch(Request request) -> (Response response);
+    Fetch(Request request) -> (Response response);
 
     // Initiate the given HTTP request and return all intermediate responses to
     // the given client.
@@ -168,7 +168,7 @@ interface Loader {
     // Unlike |Fetch|, |Start| does not automatically follow all redirects.
     // Instead, each individual response along the redirect chain is delivered to
     // the |LoaderClient|.
-    2: Start(Request request, LoaderClient client);
+    Start(Request request, LoaderClient client);
 };
 
 // A client interface used with |Loader.Start|.
@@ -180,5 +180,5 @@ interface LoaderClient {
     // If the server has requested a redirect, then |redirect| will be non-null
     // and describe the target the server requested. To follow the redirect, reply
     // to this message. To not follow the redirect, close the underlying channel.
-    1: OnResponse(Response response, RedirectTarget? redirect) -> ();
+    OnResponse(Response response, RedirectTarget? redirect) -> ();
 };

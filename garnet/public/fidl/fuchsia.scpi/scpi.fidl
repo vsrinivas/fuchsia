@@ -9,21 +9,21 @@ const uint32 MAX_DVFS_OPPS = 16;
 
 enum Status {
     // the call completed successfully
-    OK                    = 0;
+    OK = 0;
     // failed to get the DVFS operating
     // points information
-    ERR_DVFS_INFO         = 1;
+    ERR_DVFS_INFO = 1;
     // failed to get the dvfs opp index
     // which is set currently
-    ERR_DVFS_OPP_IDX      = 2;
+    ERR_DVFS_OPP_IDX = 2;
     // failed to get the temperature
-    ERR_TEMPERATURE       = 3;
+    ERR_TEMPERATURE = 3;
     // failed to get the fan level
-    ERR_FAN_LEVEL         = 4;
+    ERR_FAN_LEVEL = 4;
     // failed to get cpu stats info
-    ERR_CPU_STATS         = 5;
+    ERR_CPU_STATS = 5;
     // failed to get memory stat info
-    ERR_MEM_STATS         = 6;
+    ERR_MEM_STATS = 6;
 };
 
 struct DvfsOpp {
@@ -53,6 +53,6 @@ struct SystemStatus {
 
 [Discoverable]
 interface SystemController {
-  1: GetDvfsInfo(uint32 power_domain) -> (Status err, vector<DvfsOpp> opps);
-  2: GetSystemStatus() -> (Status err, SystemStatus sys_status);
+    GetDvfsInfo(uint32 power_domain) -> (Status err, vector<DvfsOpp> opps);
+    GetSystemStatus() -> (Status err, SystemStatus sys_status);
 };

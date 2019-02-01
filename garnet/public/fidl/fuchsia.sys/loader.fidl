@@ -8,5 +8,5 @@ library fuchsia.sys;
 [Discoverable]
 interface Loader {
     // LoadUrl a package by url.
-    1: LoadUrl(string url) -> (Package? package);
+    LoadUrl(string url) -> (Package? package);
 };

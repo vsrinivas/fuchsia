@@ -6,5 +6,5 @@ library fuchsia.zircon.benchmarks;
 
 // Example interface for testing performance of round trips.
 interface RoundTripService {
-  1: RoundTripTest(uint32 arg) -> (uint32 result);
+    RoundTripTest(uint32 arg) -> (uint32 result);
 };

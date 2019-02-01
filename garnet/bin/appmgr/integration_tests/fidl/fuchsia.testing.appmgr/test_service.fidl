@@ -7,13 +7,13 @@ library fuchsia.testing.appmgr;
 // An interface for a test service.
 [Discoverable]
 interface TestService {
-  // Returns a nice message.
-  1: GetMessage() -> (string message);
+    // Returns a nice message.
+    GetMessage() -> (string message);
 };
 
 // Another interface for a test service.
 [Discoverable]
 interface TestService2 {
-  // Returns a nice message.
-  1: GetMessage() -> (string message);
+    // Returns a nice message.
+    GetMessage() -> (string message);
 };

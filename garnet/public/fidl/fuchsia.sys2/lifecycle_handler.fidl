@@ -22,5 +22,5 @@ interface LifecycleHandler {
     // TODO(CP-154): Add a link to wherever we intend to document how
     // to configure the system's timeout.  We currently expect it to be on
     // the order of seconds.  TBD.
-    1: Stop() -> ();
+    Stop() -> ();
 };

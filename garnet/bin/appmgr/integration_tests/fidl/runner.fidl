@@ -5,30 +5,30 @@
 library test.component.mockrunner;
 
 struct ComponentInfo {
-  uint64 unique_id;
-  string url;
+    uint64 unique_id;
+    string url;
 };
 
 // interface to control the fake component created by MockRunner.
 interface MockComponent {
-  1: Kill(uint64 errorcode);
-  2: ConnectToService(string service_name, handle<channel> channel);
+    Kill(uint64 errorcode);
+    ConnectToService(string service_name, handle<channel> channel);
 
-  // Set backend service directory which can be used by |PublishService| to
-  // publish mock services.
-  3: SetServiceDirectory(handle<channel> channel);
+    // Set backend service directory which can be used by |PublishService| to
+    // publish mock services.
+    SetServiceDirectory(handle<channel> channel);
 
-  // Publishes |service_name| and connects to |backend service directory| when
-  // request comes in.
-  4: PublishService(string service_name) -> ();
+    // Publishes |service_name| and connects to |backend service directory| when
+    // request comes in.
+    PublishService(string service_name) -> ();
 };
 
 interface MockRunner {
-  1: Crash();
-  2: ConnectToComponent(uint64 id, request<MockComponent> req);
+    Crash();
+    ConnectToComponent(uint64 id, request<MockComponent> req);
 
-  101: -> OnComponentCreated(ComponentInfo info);
-  102: -> OnComponentKilled(uint64 id);
+    -> OnComponentCreated(ComponentInfo info);
+    -> OnComponentKilled(uint64 id);
 };
 
 // This interface will help mock runners register themselves so that tests can
@@ -37,5 +37,5 @@ interface MockRunner {
 // Mock runners should register to this service when started.
 [Discoverable]
 interface MockRunnerRegistry {
-    1: Register(MockRunner runner);
+    Register(MockRunner runner);
 };

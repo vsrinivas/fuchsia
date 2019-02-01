@@ -3,40 +3,39 @@
 // found in the LICENSE file.
 library fuchsia.devicesettings;
 
-enum Status: uint8 {
-  ok = 1;
-  errNotSet = 2;
-  errInvalidSetting = 3;
-  errRead = 4;
-  errIncorrectType = 5;
-  errUnknown = 6;
+enum Status : uint8 {
+    ok = 1;
+    errNotSet = 2;
+    errInvalidSetting = 3;
+    errRead = 4;
+    errIncorrectType = 5;
+    errUnknown = 6;
 };
 
-enum ValueType: uint8 {
-  number = 1;
-  text = 2;
+enum ValueType : uint8 {
+    number = 1;
+    text = 2;
 };
-
 
 // Manager interface used to manage settings
 [Discoverable]
 interface DeviceSettingsManager {
-  1: GetInteger(string key) -> (int64 val, Status s);
+    GetInteger(string key) -> (int64 val, Status s);
 
-  2: GetString(string key) -> (string val, Status s);
+    GetString(string key) -> (string val, Status s);
 
-  // Returns false on database error and true on success.
-  3: SetInteger(string key, int64 val) -> (bool result);
+    // Returns false on database error and true on success.
+    SetInteger(string key, int64 val) -> (bool result);
 
-  // Returns false on database error and true on success.
-  4: SetString(string key, string val) -> (bool result);
+    // Returns false on database error and true on success.
+    SetString(string key, string val) -> (bool result);
 
-  // Register a watcher to be called when a setting changes
-  // Returns Status::ok, Status::errInvalidSetting or Status::errUnknown
-  5: Watch(string key, DeviceSettingsWatcher watcher) -> (Status s);
+    // Register a watcher to be called when a setting changes
+    // Returns Status::ok, Status::errInvalidSetting or Status::errUnknown
+    Watch(string key, DeviceSettingsWatcher watcher) -> (Status s);
 };
 
 // A watcher for device settings changes
 interface DeviceSettingsWatcher {
-  1: OnChangeSettings(ValueType type);
+    OnChangeSettings(ValueType type);
 };

@@ -5,7 +5,7 @@
 library fidl.test.frobinator;
 
 interface Frobinator {
-  1: Frob(string value);
-  2: Grob(string value) -> (string value);
-  3: -> Hrob(string value);
+    Frob(string value);
+    Grob(string value) -> (string value);
+    -> Hrob(string value);
 };

@@ -19,7 +19,7 @@ interface Realm {
     //
     // |child_name| must be the name of an already declared child in the realm.
     // |binding| is bound to the child.
-    1: BindChild(string child_name, request<ComponentBinding> binding);
+    BindChild(string child_name, request<ComponentBinding> binding);
 
     // TODO(CP-154): Dynamically add/remove children in collections.
     // Perhaps have a way to control their durability.
@@ -63,7 +63,7 @@ interface Realm {
 // of the component manager itself.
 interface ComponentBinding {
     // Gets a directory containing objects exported by the child.
-    1: GetExports(request<fuchsia.io.Directory> exports);
+    GetExports(request<fuchsia.io.Directory> exports);
 
     // TODO(CP-154): Provide a mechanism to apply hints to a binding to
     // modulate its retention and resource allocation characteristics.

@@ -8,6 +8,6 @@ using fidl.examples.echo;
 
 [Discoverable]
 interface Example {
-  1: Request(request<fidl.examples.echo.Echo> iface);
-//  2: Push(fidl.examples.echo.Echo iface) -> ();
+    Request(request<fidl.examples.echo.Echo> iface);
+    //  Push(fidl.examples.echo.Echo iface) -> ();
 };

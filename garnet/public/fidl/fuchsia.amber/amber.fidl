@@ -187,5 +187,5 @@ interface Control {
 interface Events {
     // Event that is triggered when an update failed because blobfs is out of
     // storage.
-    1: -> OnOutOfSpace();
+    -> OnOutOfSpace();
 };

@@ -100,11 +100,11 @@ struct FamilyInfo {
 [Discoverable]
 interface Provider {
     // Returns font that matches specified |request|.
-    1: GetFont(Request request) -> (Response? response);
+    GetFont(Request request) -> (Response? response);
 
     // Returns information for the specified font family or null if there is
     // no family with the specified name. This function respects family name
     // aliases and ignores case, so request for "robotoSLAB" will return
     // FamilyInfo for "Roboto Slab".
-    2: GetFamilyInfo(string:128 family) -> (FamilyInfo? family_info);
+    GetFamilyInfo(string:128 family) -> (FamilyInfo? family_info);
 };

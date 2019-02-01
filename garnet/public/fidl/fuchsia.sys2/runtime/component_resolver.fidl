@@ -32,6 +32,6 @@ interface ComponentResolver {
     // - |ZX_ERR_NOT_FOUND|: The component does not exist.
     // - |ZX_ERR_UNAVAILABLE|: The resolver was unable to retrieve or parse
     //   the component's resources.
-    1: Resolve(string component_uri)
-           -> (zx.status status, Component component);
+    Resolve(string component_uri)
+        -> (zx.status status, Component component);
 };

@@ -5,24 +5,24 @@
 library fuchsia.sys;
 
 enum TerminationReason {
-  // The channel closed without giving a termination reason.
-  UNKNOWN = 0;
-  // Component ran and exited with a given return_code.
-  EXITED = 1;
-  // The given URL given to launch was invalid.
-  URL_INVALID = 2;
-  // The requested package could not be found.
-  PACKAGE_NOT_FOUND = 3;
-  // An internal error happened during the launch process.
-  INTERNAL_ERROR = 4;
-  // Process creation failed.
-  PROCESS_CREATION_ERROR = 5;
-  // A Runner failed to start.
-  RUNNER_FAILED = 6;
-  // A Runner terminated while attempting to run a component.
-  RUNNER_TERMINATED = 7;
-  // Attempted to use an unsupported feature.
-  UNSUPPORTED = 8;
+    // The channel closed without giving a termination reason.
+    UNKNOWN = 0;
+    // Component ran and exited with a given return_code.
+    EXITED = 1;
+    // The given URL given to launch was invalid.
+    URL_INVALID = 2;
+    // The requested package could not be found.
+    PACKAGE_NOT_FOUND = 3;
+    // An internal error happened during the launch process.
+    INTERNAL_ERROR = 4;
+    // Process creation failed.
+    PROCESS_CREATION_ERROR = 5;
+    // A Runner failed to start.
+    RUNNER_FAILED = 6;
+    // A Runner terminated while attempting to run a component.
+    RUNNER_TERMINATED = 7;
+    // Attempted to use an unsupported feature.
+    UNSUPPORTED = 8;
 };
 
 // An interface for controlling components.
@@ -34,32 +34,32 @@ enum TerminationReason {
 //
 // Typically obtained via |Launcher.CreateComponent|.
 interface ComponentController {
-  // Terminates the component.
-  //
-  // This ComponentController connection is closed when the component has
-  // terminated.
-  1: Kill();
+    // Terminates the component.
+    //
+    // This ComponentController connection is closed when the component has
+    // terminated.
+    Kill();
 
-  // Decouples the lifetime of the component from this controller.
-  //
-  // After calling |Detach|, the component will not be implicitly killed when
-  // this interface is closed.
-  2: Detach();
+    // Decouples the lifetime of the component from this controller.
+    //
+    // After calling |Detach|, the component will not be implicitly killed when
+    // this interface is closed.
+    Detach();
 
-  // DEPRECATED: Use OnTerminated instead of Wait().
-  // 3: Wait()
+    // DEPRECATED: Use OnTerminated instead of Wait().
+    // 3: Wait()
 
-  // Event that is triggered when the component is terminated.
-  //
-  // This event provides the return code of the process and reason for
-  // its termination. The return_code is only valid if the termination
-  // reason is EXITED. If the termination reason is not EXITED, the
-  // return code is guaranteed not to be 0.
-  4: -> OnTerminated(int64 return_code, TerminationReason termination_reason);
+    // Event that is triggered when the component is terminated.
+    //
+    // This event provides the return code of the process and reason for
+    // its termination. The return_code is only valid if the termination
+    // reason is EXITED. If the termination reason is not EXITED, the
+    // return code is guaranteed not to be 0.
+    -> OnTerminated(int64 return_code, TerminationReason termination_reason);
 
-  // Event that is triggered when the component's output directory is mounted.
-  //
-  // This event will not be triggered for every component, only those that
-  // serve a directory over their PA_DIRECTORY_REQUEST handle.
-  5: -> OnDirectoryReady();
+    // Event that is triggered when the component's output directory is mounted.
+    //
+    // This event will not be triggered for every component, only those that
+    // serve a directory over their PA_DIRECTORY_REQUEST handle.
+    -> OnDirectoryReady();
 };

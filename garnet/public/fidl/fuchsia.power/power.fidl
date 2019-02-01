@@ -5,51 +5,51 @@
 library fuchsia.power;
 
 enum Status {
-  OK = 0;
-  NotAvailable = 1;
+    OK = 0;
+    NotAvailable = 1;
 };
 
 // Provides battery status
 struct BatteryStatus {
-  // Error status
-  Status status;
+    // Error status
+    Status status;
 
-  // If battery is present
-  bool batteryPresent;
+    // If battery is present
+    bool batteryPresent;
 
-  // If battery is charging
-  bool charging;
+    // If battery is charging
+    bool charging;
 
-  // If battery is dis-charging
-  bool discharging;
+    // If battery is dis-charging
+    bool discharging;
 
-  // If battery is at critical level
-  bool critical;
+    // If battery is at critical level
+    bool critical;
 
-  // If power cable is plugged in
-  bool powerAdapterOnline;
+    // If power cable is plugged in
+    bool powerAdapterOnline;
 
-  // To distinguish between latest and stale status
-  int64 timestamp;
+    // To distinguish between latest and stale status
+    int64 timestamp;
 
-  // Battery level in percentage
-  float32 level;
+    // Battery level in percentage
+    float32 level;
 
-  // Remaining Battery life in hours. It is negative when battery is not discharging
-  float32 remainingBatteryLife;
+    // Remaining Battery life in hours. It is negative when battery is not discharging
+    float32 remainingBatteryLife;
 };
 
 // Manager Interface used to manage power
 [Discoverable]
 interface PowerManager {
-  // Gets battery status
-  1: GetBatteryStatus() -> (BatteryStatus status);
+    // Gets battery status
+    GetBatteryStatus() -> (BatteryStatus status);
 
-  // watcher called when battery status changes
-  2: Watch(PowerManagerWatcher watcher);
+    // watcher called when battery status changes
+    Watch(PowerManagerWatcher watcher);
 };
 
 // Watcher on battery status
 interface PowerManagerWatcher {
-  1: OnChangeBatteryStatus(BatteryStatus battery_status);
+    OnChangeBatteryStatus(BatteryStatus battery_status);
 };

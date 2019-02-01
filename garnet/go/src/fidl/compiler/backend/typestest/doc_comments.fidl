@@ -45,5 +45,5 @@ interface Interface {
     /// method comment #1
     ///
     /// method comment #3
-    1: Method();
+    Method();
 };

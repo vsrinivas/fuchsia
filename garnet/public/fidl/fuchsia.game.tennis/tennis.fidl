@@ -6,8 +6,8 @@ library fuchsia.game.tennis;
 
 [Discoverable]
 interface TennisService {
-    1: GetState() -> (GameState state);
-    2: RegisterPaddle(string player_name, Paddle paddle);
+    GetState() -> (GameState state);
+    RegisterPaddle(string player_name, Paddle paddle);
 };
 
 struct GameState {
@@ -24,8 +24,8 @@ struct GameState {
 };
 
 interface Paddle {
-    1: NewGame(bool is_player_2);
-    2: -> Up();
-    3: -> Down();
-    4: -> Stop();
+    NewGame(bool is_player_2);
+    -> Up();
+    -> Down();
+    -> Stop();
 };

@@ -5,61 +5,61 @@
 library fuchsia.net.filter;
 
 enum Status {
-  ok = 0;
-  err_internal = 1;
-  err_generation_mismatch = 2;
-  err_bad_rule = 3;
+    ok = 0;
+    err_internal = 1;
+    err_generation_mismatch = 2;
+    err_bad_rule = 3;
 };
 
 [Discoverable]
 interface Filter {
-  /// Enable enables the filter if true is passed.
-  /// It disables the filter if false is passed.
-  1: Enable(bool enabled) -> (Status status);
+    /// Enable enables the filter if true is passed.
+    /// It disables the filter if false is passed.
+    Enable(bool enabled) -> (Status status);
 
-  /// IsEnabled returns true if the filter is enabled.
-  2: IsEnabled() -> (bool enabled);
+    /// IsEnabled returns true if the filter is enabled.
+    IsEnabled() -> (bool enabled);
 
-  /// GetRules gets the current rules. They do not include NAT or RDR rules.
-  /// (use GetNATRules or GetRDRRules instead).
-  ///
-  /// GetRules also returns a generation number associated with the current
-  /// rules.
-  3: GetRules() -> (vector<Rule> rules, uint32 generation, Status status);
+    /// GetRules gets the current rules. They do not include NAT or RDR rules.
+    /// (use GetNATRules or GetRDRRules instead).
+    ///
+    /// GetRules also returns a generation number associated with the current
+    /// rules.
+    GetRules() -> (vector<Rule> rules, uint32 generation, Status status);
 
-  /// UpdateRules updates the current rules. It does not update NAT or RDR rules
-  /// (use UpdateNATRules or UpdateRDRRules instead).
-  ///
-  /// UpdateRules takes a generation number that is previously returned from
-  /// GetRules. To successfully update the current rules, the generation number
-  /// passed to UpdateRules needs to be up-to-date.
-  ///
-  /// If somebody else has updated the rules since the previous GetRules, the
-  /// generation number won't match and err_generation_mismatch will be returned.
-  4: UpdateRules(vector<Rule> rules, uint32 generation) -> (Status status);
+    /// UpdateRules updates the current rules. It does not update NAT or RDR rules
+    /// (use UpdateNATRules or UpdateRDRRules instead).
+    ///
+    /// UpdateRules takes a generation number that is previously returned from
+    /// GetRules. To successfully update the current rules, the generation number
+    /// passed to UpdateRules needs to be up-to-date.
+    ///
+    /// If somebody else has updated the rules since the previous GetRules, the
+    /// generation number won't match and err_generation_mismatch will be returned.
+    UpdateRules(vector<Rule> rules, uint32 generation) -> (Status status);
 
-  /// GetNATRules gets the current NAT rules.
-  ///
-  /// It also returns a generation number that can be passed to UpdateNATRules.
-  ///
-  5: GetNATRules() -> (vector<NAT> rules, uint32 generation, Status status);
+    /// GetNATRules gets the current NAT rules.
+    ///
+    /// It also returns a generation number that can be passed to UpdateNATRules.
+    ///
+    GetNATRules() -> (vector<NAT> rules, uint32 generation, Status status);
 
-  /// UpdateNATRules updates the current NAT rules.
-  ///
-  /// It takes a generation number that is returned from GetNATRules. To
-  /// successfully update the current rules, the generation number passed to
-  /// UpdateNATRules needs to be up-to-date.
-  6: UpdateNATRules(vector<NAT> rules, uint32 generation) -> (Status status);
+    /// UpdateNATRules updates the current NAT rules.
+    ///
+    /// It takes a generation number that is returned from GetNATRules. To
+    /// successfully update the current rules, the generation number passed to
+    /// UpdateNATRules needs to be up-to-date.
+    UpdateNATRules(vector<NAT> rules, uint32 generation) -> (Status status);
 
-  /// GetRDRRules gets the current RDR rules.
-  ///
-  /// It also returns a generation number that can be passed to UpdateRDRRules.
-  7: GetRDRRules() -> (vector<RDR> rules, uint32 generation, Status status);
+    /// GetRDRRules gets the current RDR rules.
+    ///
+    /// It also returns a generation number that can be passed to UpdateRDRRules.
+    GetRDRRules() -> (vector<RDR> rules, uint32 generation, Status status);
 
-  /// UpdateRDRRules updates the previous RDR rules with new rules.
-  ///
-  /// It takes a generation number that is returned from GetRDRRules. To
-  /// successfully update the current rules, the generation number passed to
-  /// UpdateRDRRules needs to be up-to-date.
-  8: UpdateRDRRules(vector<RDR> rules, uint32 generation) -> (Status status);
+    /// UpdateRDRRules updates the previous RDR rules with new rules.
+    ///
+    /// It takes a generation number that is returned from GetRDRRules. To
+    /// successfully update the current rules, the generation number passed to
+    /// UpdateRDRRules needs to be up-to-date.
+    UpdateRDRRules(vector<RDR> rules, uint32 generation) -> (Status status);
 };

@@ -5,25 +5,25 @@
 library fidl.test.during;
 
 interface AddMethod {
-    1: ExistingMethod();
+    ExistingMethod();
     [Transitional]
-    2: NewMethod();
+    NewMethod();
 };
 
 interface RemoveMethod {
-    1: ExistingMethod();
+    ExistingMethod();
     [Transitional]
-    2: OldMethod();
+    OldMethod();
 };
 
 interface AddEvent {
-    1: ExistingMethod();
+    ExistingMethod();
     [Transitional]
-    2: -> NewEvent();
+    -> NewEvent();
 };
 
 interface RemoveEvent {
-    1: ExistingMethod();
+    ExistingMethod();
     [Transitional]
-    2: -> OldEvent();
+    -> OldEvent();
 };

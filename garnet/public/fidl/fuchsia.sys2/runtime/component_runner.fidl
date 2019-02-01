@@ -27,8 +27,8 @@ interface ComponentRunner {
     // The caller of this method takes responsibility for binding client
     // connections and controlling the lifetime of the newly started
     // component instance through the requested |controller|.
-    1: Start(ComponentStartInfo start_info,
-             request<ComponentController> controller);
+    Start(ComponentStartInfo start_info,
+          request<ComponentController> controller);
 };
 
 // Parameters for starting a new component instance.
@@ -79,12 +79,12 @@ interface ComponentController {
     //
     // After stopping the component instance, the server should report
     // an epitaph then close its endpoint of the controller interface.
-    1: Stop();
+    Stop();
 
     // Binds a client to the component instance's |exports| directory
     // if it has one.  If the instance does not offer exports, then the
     // controller should close the |exports| interface request.
     //
     // The |client_moniker| identifies the client to the component instance.
-    2: Bind(Moniker client_moniker, request<fuchsia.io.Directory> exports);
+    Bind(Moniker client_moniker, request<fuchsia.io.Directory> exports);
 };

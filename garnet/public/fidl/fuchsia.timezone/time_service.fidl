@@ -8,7 +8,7 @@ library fuchsia.timezone;
 [Discoverable]
 interface TimeService {
 
-  /// Requests an immediate update of the time from network.
-  1: Update(uint8 num_retries)
-      -> (bool successful);
+    /// Requests an immediate update of the time from network.
+    Update(uint8 num_retries)
+        -> (bool successful);
 };

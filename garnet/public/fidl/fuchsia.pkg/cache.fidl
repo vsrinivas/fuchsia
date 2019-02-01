@@ -31,13 +31,13 @@ interface PackageCache {
     /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find a blob.
     /// * |ZX_ERR_NO_SPACE| if there is no space available to store the package.
     /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download a blob.
-    1: Fetch(
-           BlobId meta_far_blob_id,
-           uint64 meta_far_length,
-           vector<string> selectors,
-           BlobFetcher fetcher,
-           request<fuchsia.io.Directory>? dir
-           ) -> (zx.status status);
+    Fetch(
+        BlobId meta_far_blob_id,
+        uint64 meta_far_length,
+        vector<string> selectors,
+        BlobFetcher fetcher,
+        request<fuchsia.io.Directory>? dir
+        ) -> (zx.status status);
 
     /// Opens the package, or error out if it is not present on the local system.
     ///
@@ -50,11 +50,11 @@ interface PackageCache {
     /// Return Values:
     /// * |ZX_OK| if the package was successfully opened.
     /// * |ZX_ERR_NOT_FOUND| if the package does not exist.
-    2: Open(
-           BlobId meta_far_blob_id,
-           vector<string> selectors,
-           request<fuchsia.io.Directory> dir
-           ) -> (zx.status status);
+    Open(
+        BlobId meta_far_blob_id,
+        vector<string> selectors,
+        request<fuchsia.io.Directory> dir
+        ) -> (zx.status status);
 };
 
 /// The |BlobFetcher| is an abstract interface that is provided by a |PackageResolver| to the
@@ -74,5 +74,5 @@ interface BlobFetcher {
     /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
     /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find the blob.
     /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download the blob.
-    1: FetchBlob(BlobId blob, fuchsia.io.File file) -> (zx.status status);
+    FetchBlob(BlobId blob, fuchsia.io.File file) -> (zx.status status);
 };
