@@ -7,11 +7,11 @@ Fuchsia.
 
 *** note
 NOTE: The Fuchsia source includes
-[Zircon](https://fuchsia.googlesource.com/zircon/+/master/README.md),
+[Zircon](/zircon/README.md),
 the core platform that underpins Fuchsia.
 The Fuchsia build process will build Zircon as a side-effect;
 to work on Zircon only, read and follow Zircon's
-[Getting Started](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md)
+[Getting Started](/zircon/docs/getting_started.md)
 doc.
 ***
 
@@ -40,12 +40,12 @@ sudo apt-get install build-essential curl git python unzip
 
 ## Get the Source
 
-Follow [the instructions to get the Fuchsia source](/development/source_code/README.md)
+Follow [the instructions to get the Fuchsia source](development/source_code/README.md)
 and then return to this document.
 
 ## Build Fuchsia
 
-Note: A quick overview of the basic build-and-pave workflow can be found [here](/development/workflows/build_and_pave_quickstart.md).
+Note: A quick overview of the basic build-and-pave workflow can be found [here](development/workflows/build_and_pave_quickstart.md).
 
 ### Build
 
@@ -104,14 +104,16 @@ To override the default behaviors, pass flags to `fx set`:
 ### Installing and booting from hardware
 
 To get Fuchsia running on hardware requires using the paver, which these
-[instructions](/development/workflows/paving.md) will help you get up and running with.
+[instructions](development/workflows/paving.md) will help you get up and running
+with.
 
-Note: A quick overview of the basic build-and-pave workflow can be found [here](/development/workflows/build_and_pave_quickstart.md).
+Note: A quick overview of the basic build-and-pave workflow can be found
+[here](development/workflows/build_and_pave_quickstart.md).
 
 ### Boot from QEMU
 
 If you don't have the supported hardware, you can run Fuchsia under emulation
-using [QEMU](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/qemu.md).
+using [QEMU](/zircon/docs/qemu.md).
 Fuchsia includes prebuilt binaries for QEMU under `buildtools/qemu`.
 
 The `fx run` command will launch Zircon within QEMU, using the locally built
@@ -146,8 +148,8 @@ fx run -g
 
 #### Enabling Network
 
-First, [configure](https://fuchsia.googlesource.com/zircon/+/master/docs/qemu.md#Enabling-Networking-under-QEMU)
-a virtual interface for QEMU's use.
+First, [configure](/zircon/docs/qemu.md#Enabling-Networking-under-QEMU) a
+virtual interface for QEMU's use.
 
 Once this is done you can add the `-N` and `-u` flags to `fx run`:
 
@@ -179,9 +181,8 @@ dm shutdown
 
 Almost everything that exists on a Fuchsia system is stored in a Fuchsia
 package. A typical development
-[workflow](/development/workflows/package_update.md)
-involves re-building and pushing Fuchsia packages to a development device or
-QEMU virtual device.
+[workflow](development/workflows/package_update.md) involves re-building and
+pushing Fuchsia packages to a development device or QEMU virtual device.
 
 Make a change to the rolldice binary in `garnet/bin/rolldice/src/main.rs`.
 
@@ -222,16 +223,15 @@ Note: to select tabs, you may need to enter "console mode". See the next section
 
 QEMU does not support Vulkan and therefore cannot run our graphics stack.
 
-Most graphical components in Fuchsia use the
-[Mozart](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/) system compositor. You can launch
-such components, commonly found in `/system/apps`, like this:
+Most graphical components in Fuchsia use the [Mozart](/garnet/bin/ui/) system
+compositor. You can launch such components, commonly found in `/system/apps`,
+like this:
 
 ```
 launch spinning_square_view
 ```
 
-Source code for Mozart example apps is
-[here](https://fuchsia.googlesource.com/garnet/+/master/examples/ui).
+Source code for Mozart example apps is [here](/garnet/examples/ui).
 
 When you launch something that uses Mozart, uses hardware-accelerated graphics, or if you build
 the [default](https://fuchsia.googlesource.com/topaz/+/master/packages/default) package (which will
@@ -268,8 +268,9 @@ You may wish to peruse the [testing FAQ](development/workflows/testing_faq.md).
 
 ## Additional helpful documents
 
-* [Fuchsia documentation](/README.md) hub
+* [Fuchsia documentation](README.md) hub
 * Working with Zircon - [copying files, network booting, log viewing, and
-more](https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md#Copying-files-to-and-from-Zircon)
-* [Information on the system bootstrap component](https://fuchsia.googlesource.com/garnet/+/master/bin/sysmgr/).
-* [Workflow tips](development/workflows/workflow_tips.md) that help increase productivity.
+more](/zircon/docs/getting_started.md#Copying-files-to-and-from-Zircon)
+* [Information on the system bootstrap component](/garnet/bin/sysmgr/).
+* [Workflow tips](development/workflows/workflow_tips.md) that help increase
+  productivity.
