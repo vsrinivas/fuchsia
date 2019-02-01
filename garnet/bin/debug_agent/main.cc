@@ -49,7 +49,7 @@ class SocketConnection {
 };
 
 bool SocketConnection::Accept(int server_fd) {
-  sockaddr_in addr;
+  sockaddr_in6 addr;
   memset(&addr, 0, sizeof(addr));
 
   socklen_t addrlen = sizeof(addr);
