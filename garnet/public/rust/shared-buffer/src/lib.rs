@@ -129,10 +129,7 @@ impl SharedBufferInner {
             unsafe { ptr::copy_nonoverlapping(base, dst.as_mut_ptr(), to_copy) };
             to_copy
         } else {
-            panic!(
-                "byte offset {} out of range for SharedBuffer of length {}",
-                offset, self.len
-            );
+            panic!("byte offset {} out of range for SharedBuffer of length {}", offset, self.len);
         }
     }
 
@@ -147,31 +144,19 @@ impl SharedBufferInner {
             unsafe { ptr::copy_nonoverlapping(src.as_ptr(), base, to_copy) };
             to_copy
         } else {
-            panic!(
-                "byte offset {} out of range for SharedBuffer of length {}",
-                offset, self.len
-            );
+            panic!("byte offset {} out of range for SharedBuffer of length {}", offset, self.len);
         }
     }
 
     fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferInner {
         let range = canonicalize_range_infallible(self.len, range);
-        SharedBufferInner {
-            buf: offset_from(self.buf, range.start),
-            len: range.end - range.start,
-        }
+        SharedBufferInner { buf: offset_from(self.buf, range.start), len: range.end - range.start }
     }
 
     fn split_at(&self, idx: usize) -> (SharedBufferInner, SharedBufferInner) {
         assert!(idx <= self.len, "split index out of bounds");
-        let a = SharedBufferInner {
-            buf: self.buf,
-            len: idx,
-        };
-        let b = SharedBufferInner {
-            buf: offset_from(self.buf, idx),
-            len: self.len - idx,
-        };
+        let a = SharedBufferInner { buf: self.buf, len: idx };
+        let b = SharedBufferInner { buf: offset_from(self.buf, idx), len: self.len - idx };
         (a, b)
     }
 }
@@ -185,11 +170,7 @@ impl SharedBufferInner {
 fn overlap(offset: usize, copy_len: usize, range_len: usize) -> Option<usize> {
     if offset > range_len {
         None
-    } else if offset
-        .checked_add(copy_len)
-        .map(|sum| sum <= range_len)
-        .unwrap_or(false)
-    {
+    } else if offset.checked_add(copy_len).map(|sum| sum <= range_len).unwrap_or(false) {
         // if 'offset + copy_len' overflows usize, then 'offset + copy_len >
         // range_len', so we unwrap_or(false)
         Some(copy_len)
@@ -292,9 +273,7 @@ impl SharedBuffer {
         // or process already so they are visible without having to call the
         // acquire_writes method.
         fence(Ordering::Acquire);
-        SharedBuffer {
-            inner: SharedBufferInner { buf, len },
-        }
+        SharedBuffer { inner: SharedBufferInner { buf, len } }
     }
 
     /// Read bytes from the buffer.
@@ -458,10 +437,7 @@ impl SharedBuffer {
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice<'a, R: RangeBounds<usize>>(&'a self, range: R) -> SharedBufferSlice<'a> {
-        SharedBufferSlice {
-            inner: self.inner.slice(range),
-            _marker: PhantomData,
-        }
+        SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
     /// Create a mutable slice of the original `SharedBuffer`.
@@ -477,12 +453,10 @@ impl SharedBuffer {
     /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice_mut<'a, R: RangeBounds<usize>>(
-        &'a mut self, range: R,
+        &'a mut self,
+        range: R,
     ) -> SharedBufferSliceMut<'a> {
-        SharedBufferSliceMut {
-            inner: self.inner.slice(range),
-            _marker: PhantomData,
-        }
+        SharedBufferSliceMut { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
     /// Create two non-overlapping slices of the original `SharedBuffer`.
@@ -498,14 +472,8 @@ impl SharedBuffer {
     #[inline]
     pub fn split_at<'a>(&'a self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
-        let a = SharedBufferSlice {
-            inner: a,
-            _marker: PhantomData,
-        };
-        let b = SharedBufferSlice {
-            inner: b,
-            _marker: PhantomData,
-        };
+        let a = SharedBufferSlice { inner: a, _marker: PhantomData };
+        let b = SharedBufferSlice { inner: b, _marker: PhantomData };
         (a, b)
     }
 
@@ -521,17 +489,12 @@ impl SharedBuffer {
     /// `split_at_mut` panics if `idx > self.len()`.
     #[inline]
     pub fn split_at_mut<'a>(
-        &'a mut self, idx: usize,
+        &'a mut self,
+        idx: usize,
     ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
         let (a, b) = self.inner.split_at(idx);
-        let a = SharedBufferSliceMut {
-            inner: a,
-            _marker: PhantomData,
-        };
-        let b = SharedBufferSliceMut {
-            inner: b,
-            _marker: PhantomData,
-        };
+        let a = SharedBufferSliceMut { inner: a, _marker: PhantomData };
+        let b = SharedBufferSliceMut { inner: b, _marker: PhantomData };
         (a, b)
     }
 
@@ -672,10 +635,7 @@ impl<'a> SharedBufferSlice<'a> {
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
-        SharedBufferSlice {
-            inner: self.inner.slice(range),
-            _marker: PhantomData,
-        }
+        SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
     /// Split this `SharedBufferSlice` in two.
@@ -691,14 +651,8 @@ impl<'a> SharedBufferSlice<'a> {
     #[inline]
     pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
-        let a = SharedBufferSlice {
-            inner: a,
-            _marker: PhantomData,
-        };
-        let b = SharedBufferSlice {
-            inner: b,
-            _marker: PhantomData,
-        };
+        let a = SharedBufferSlice { inner: a, _marker: PhantomData };
+        let b = SharedBufferSlice { inner: b, _marker: PhantomData };
         (a, b)
     }
 
@@ -874,10 +828,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice<R: RangeBounds<usize>>(&self, range: R) -> SharedBufferSlice<'a> {
-        SharedBufferSlice {
-            inner: self.inner.slice(range),
-            _marker: PhantomData,
-        }
+        SharedBufferSlice { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
     /// Create a mutable slice of the original `SharedBufferSliceMut`.
@@ -893,10 +844,7 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// is nonsensical (its lower bound is larger than its upper bound).
     #[inline]
     pub fn slice_mut<R: RangeBounds<usize>>(&mut self, range: R) -> SharedBufferSliceMut<'a> {
-        SharedBufferSliceMut {
-            inner: self.inner.slice(range),
-            _marker: PhantomData,
-        }
+        SharedBufferSliceMut { inner: self.inner.slice(range), _marker: PhantomData }
     }
 
     /// Split this `SharedBufferSliceMut` into two immutable slices.
@@ -912,14 +860,8 @@ impl<'a> SharedBufferSliceMut<'a> {
     #[inline]
     pub fn split_at(&self, idx: usize) -> (SharedBufferSlice<'a>, SharedBufferSlice<'a>) {
         let (a, b) = self.inner.split_at(idx);
-        let a = SharedBufferSlice {
-            inner: a,
-            _marker: PhantomData,
-        };
-        let b = SharedBufferSlice {
-            inner: b,
-            _marker: PhantomData,
-        };
+        let a = SharedBufferSlice { inner: a, _marker: PhantomData };
+        let b = SharedBufferSlice { inner: b, _marker: PhantomData };
         (a, b)
     }
 
@@ -935,17 +877,12 @@ impl<'a> SharedBufferSliceMut<'a> {
     /// `split_at_mut` panics if `idx > self.len()`.
     #[inline]
     pub fn split_at_mut(
-        &mut self, idx: usize,
+        &mut self,
+        idx: usize,
     ) -> (SharedBufferSliceMut<'a>, SharedBufferSliceMut<'a>) {
         let (a, b) = self.inner.split_at(idx);
-        let a = SharedBufferSliceMut {
-            inner: a,
-            _marker: PhantomData,
-        };
-        let b = SharedBufferSliceMut {
-            inner: b,
-            _marker: PhantomData,
-        };
+        let a = SharedBufferSliceMut { inner: a, _marker: PhantomData };
+        let b = SharedBufferSliceMut { inner: b, _marker: PhantomData };
         (a, b)
     }
 
