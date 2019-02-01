@@ -2,7 +2,9 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <ddk/binding.h>
 #include <ddk/debug.h>
+#include <ddk/driver.h>
 #include <ddk/trace/event.h>
 #include <fbl/auto_lock.h>
 #include <lib/async/cpp/task.h>
@@ -885,3 +887,16 @@ zx_status_t display_controller_bind(void* ctx, zx_device_t* parent) {
 
     return core->Bind(&core);
 }
+
+static zx_driver_ops_t display_controller_ops = {
+    .version = DRIVER_OPS_VERSION,
+    .init = nullptr,
+    .bind = display_controller_bind,
+    .create = nullptr,
+    .release = nullptr,
+};
+
+// clang-format off
+ZIRCON_DRIVER_BEGIN(display_controller, display_controller_ops, "zircon", "0.1", 1)
+    BI_MATCH_IF(EQ, BIND_PROTOCOL, ZX_PROTOCOL_DISPLAY_CONTROLLER_IMPL),
+ZIRCON_DRIVER_END(display_controller)

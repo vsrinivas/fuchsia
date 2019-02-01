@@ -9,7 +9,6 @@ MODULE := $(LOCAL_DIR)
 MODULE_TYPE := driver
 
 MODULE_SRCS := \
-    $(LOCAL_DIR)/bind.c \
     $(LOCAL_DIR)/client.cpp \
     $(LOCAL_DIR)/controller.cpp \
     $(LOCAL_DIR)/fence.cpp \
