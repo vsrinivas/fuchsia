@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+usage() {
+  cat <<EOF
+git follow-log -h
+        print help
+git follow-log <path> [<git-log options>]
+        produce git-log output for all objects under <path>
+        additional options for git-log can be provided later. only a subset
+        of git-log options will work.
+EOF
+  exit 1
+}
+
+git_follow_log() {
+  test $# -eq 0 && usage
+  while [ $# -gt 0 ]; do
+    arg="$1"
+    case "$arg" in
+    -h|--help|help)
+    usage
+    ;;
+    *)
+    if [ "$have_path" == true ]; then
+      args+=("$arg")
+    else
+      have_path=true
+      path="$arg"
+    fi
+    ;;
+    esac
+    shift
+  done
+  for p in $(git log --name-only --pretty=format: "$path" | sort -u); do
+    git --no-pager log --follow --no-abbrev-commit --format=%H -- ":(top)$p"
+  done | git log --stdin --no-walk=sorted "$@"
+}
+
+git_follow_log "$@"
