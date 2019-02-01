@@ -23,4 +23,4 @@ if $INTERNAL_ACCESS; then
 fi
 
 (sed '/^\$/!d' "${ENSURE_FILES[@]}" && sed '/^\$/d' "${ENSURE_FILES[@]}") |
-  ${CIPD} ensure -ensure-file garnet/cipd.ensure -root ${GARNET_ROOT} -log-level warning
+  ${CIPD} ensure -ensure-file - -root ${GARNET_ROOT} -log-level warning
