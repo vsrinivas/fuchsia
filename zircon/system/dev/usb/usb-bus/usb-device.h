@@ -102,13 +102,24 @@ private:
 
     using Request = usb::Request<void>;
     using UnownedRequest = usb::UnownedRequest<void>;
+    using UnownedRequestList = usb::UnownedRequestList<void>;
     using UnownedRequestQueue = usb::UnownedRequestQueue<void>;
+
+    struct Endpoint {
+        UnownedRequestList pending_reqs __TA_GUARDED(lock);
+        fbl::Mutex lock;
+    };
 
     zx_status_t Init();
 
     int CallbackThread();
     void StartCallbackThread();
     void StopCallbackThread();
+
+    Endpoint* GetEndpoint(uint8_t ep_address);
+    // Updates the endpoint state with the completed request.
+    // Returns true if a callback is required.
+    bool UpdateEndpoint(usb_request_t* completed_req);
 
     void RequestComplete(usb_request_t* req);
     static void ControlComplete(void* ctx, usb_request_t* req);
@@ -140,6 +151,8 @@ private:
     bool resetting_ __TA_GUARDED(state_lock_) = false;
     // mutex that protects the resetting state member
     fbl::Mutex state_lock_;
+
+    Endpoint eps_[USB_MAX_EPS];
 
     // thread for calling client's usb request complete callback
     thrd_t callback_thread_ = 0;

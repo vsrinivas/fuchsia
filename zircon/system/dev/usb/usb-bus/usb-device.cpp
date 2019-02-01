@@ -89,19 +89,64 @@ void UsbDevice::StopCallbackThread() {
     thrd_join(callback_thread_, nullptr);
 }
 
+UsbDevice::Endpoint* UsbDevice::GetEndpoint(uint8_t ep_address) {
+    uint8_t index = 0;
+    if (ep_address > 0) {
+        index = static_cast<uint8_t>(2 * (ep_address & ~USB_ENDPOINT_DIR_MASK));
+        if ((ep_address & USB_ENDPOINT_DIR_MASK) == USB_ENDPOINT_OUT) {
+            index--;
+        }
+    }
+    return index < USB_MAX_EPS ? &eps_[index] : nullptr;
+}
+
+bool UsbDevice::UpdateEndpoint(usb_request_t* completed_req) {
+    auto* ep = GetEndpoint(completed_req->header.ep_address);
+    if (!ep) {
+        zxlogf(ERROR, "could not find endpoint with address 0x%x\n",
+               completed_req->header.ep_address);
+        // This should never happen, but we should probably still do a callback.
+        return true;
+    }
+
+    fbl::AutoLock lock(&ep->lock);
+
+    auto unowned = UnownedRequest(completed_req, parent_req_size_, /* allow_destruct */ false);
+
+    std::optional<size_t> idx = ep->pending_reqs.find(&unowned);
+    if (idx.has_value()) {
+        bool erase = ep->pending_reqs.erase(&unowned);
+        if (!erase) {
+            zxlogf(ERROR, "failed to erase req %p\n", unowned.request());
+            // This should never happen, but we should probably still do a callback.
+            return true;
+        }
+    } else {
+        zxlogf(ERROR, "could not find completed req %p in pending list of endpoint: 0x%x\n",
+               unowned.request(), completed_req->header.ep_address);
+        // This should never happen, but we should probably still do a callback.
+        return true;
+    }
+
+    if (completed_req->cb_on_error_only && completed_req->response.status == ZX_OK) {
+        return false;
+    }
+    return true;
+}
+
 // usb request completion for the requests passed down to the HCI driver
 void UsbDevice::RequestComplete(usb_request_t* req) {
-    fbl::AutoLock lock(&callback_lock_);
-
-    if (req->cb_on_error_only && req->response.status == ZX_OK) {
+    bool do_callback = UpdateEndpoint(req);
+    if (!do_callback) {
         return;
     }
+
+    fbl::AutoLock lock(&callback_lock_);
 
     // move original request to completed_reqs list so it can be completed on the callback_thread
     completed_reqs_.push(UnownedRequest(req, parent_req_size_));
     sync_completion_signal(&callback_thread_completion_);
 }
-
 
 void UsbDevice::SetHubInterface(const usb_hub_interface_t* hub_intf) {
     if (hub_intf) {
@@ -280,6 +325,17 @@ void UsbDevice::UsbRequestQueue(usb_request_t* req, const usb_request_complete_t
 
     // Save client's callback in private storage.
     UnownedRequest request(req, *complete_cb, parent_req_size_);
+
+    auto* ep = GetEndpoint(req->header.ep_address);
+    if (!ep) {
+        zxlogf(ERROR, "could not find endpoint with address 0x%x\n", req->header.ep_address);
+    }
+
+    {
+        // RequestQueue may callback before it returns, so make sure to release the endpoint lock.
+        fbl::AutoLock lock(&ep->lock);
+        ep->pending_reqs.push_back(&request);
+    }
 
     // Queue with our callback instead.
     hci_.RequestQueue(request.take(), &complete);

@@ -65,7 +65,7 @@ struct UsbRequest {
     /// requeuing silently completed requests.
     ///
     /// If the requester receives a success callback, they may assume requests queued
-    /// prior to it at the same endpoint have silently completed.
+    /// prior to it at the same endpoint have silently completed successfully.
     /// If the requester receives an error callback, they will receive an additional
     /// callback when the request queued prior to the erroneous request completes, if any.
     /// This is as errors are reported as soon as possible rather than preserving queue order.
