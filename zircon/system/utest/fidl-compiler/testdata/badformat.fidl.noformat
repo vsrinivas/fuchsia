@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 // This is the library
-      library foo;           
+      library test;           
 
 using something.or.another as thing;
 
