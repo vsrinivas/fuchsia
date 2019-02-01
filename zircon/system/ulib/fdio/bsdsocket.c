@@ -321,9 +321,10 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
 
     if (len) {
         int16_t out_code;
+        uint8_t buf[sizeof(struct sockaddr_storage)];
         size_t actual;
         zx_status_t status = fuchsia_net_SocketControlGetPeerName(
-            accepted, &out_code, (uint8_t*)addr, *len, &actual);
+            accepted, &out_code, buf, sizeof(buf), &actual);
         if (status != ZX_OK) {
             zx_handle_close(accepted);
             fdio_release_reserved(nfd);
@@ -334,6 +335,7 @@ int accept4(int fd, struct sockaddr* restrict addr, socklen_t* restrict len,
             fdio_release_reserved(nfd);
             return ERRNO(out_code);
         }
+        memcpy(addr, buf, MIN(*len, actual));
         *len = actual;
     }
 

@@ -2,6 +2,20 @@
 # Use of this source code is governed by a BSD-style license that can be
 # found in the LICENSE file.
 
+executable("netstack_accept_test") {
+  testonly = true
+
+  sources = [
+    "accepttest.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
 executable("netstack_getaddrinfo_test") {
   testonly = true
 

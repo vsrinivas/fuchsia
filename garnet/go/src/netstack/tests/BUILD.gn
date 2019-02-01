@@ -6,6 +6,7 @@ import("//build/test/test_package.gni")
 
 test_package("netstack_tests") {
   deps = [
+    "//garnet/go/src/netstack/tests/automated:netstack_accept_test",
     "//garnet/go/src/netstack/tests/automated:netstack_getaddrinfo_test",
     "//garnet/go/src/netstack/tests/automated:netstack_getsockname_test",
     "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
@@ -13,6 +14,9 @@ test_package("netstack_tests") {
   ]
 
   tests = [
+    {
+      name = "netstack_accept_test"
+    },
     {
       name = "netstack_loopback_test"
     },

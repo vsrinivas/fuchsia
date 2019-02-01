@@ -16,5 +16,6 @@ TEST(GetSockNameTest, Localhost) {
   struct sockaddr sa;
   socklen_t len = sizeof(sa);
   ASSERT_EQ(getsockname(sockfd, &sa, &len), 0) << strerror(errno);
+  ASSERT_GT(len, sizeof(sa));
   ASSERT_EQ(sa.sa_family, AF_INET6);
 }

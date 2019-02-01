@@ -1,5 +1,6 @@
 *~
 .*.sw?
+.build_lock
 .checkstyle
 .cipd/
 .classpath
