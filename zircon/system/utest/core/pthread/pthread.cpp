@@ -19,9 +19,12 @@
 
 static pthread_mutex_t mutex = PTHREAD_MUTEX_INITIALIZER;
 static pthread_cond_t cond = PTHREAD_COND_INITIALIZER;
-// This is accessed by by both the cond_threads, and the main
-// thread. The latter does so not under the mutex.
+
+// These are accessed by by both the cond_threads, and the main thread. The latter does so without
+// holding the mutex.
 static std::atomic_int thread_waked = 0;
+static std::atomic_int ready_count = 0;
+
 static int thread_with_lock = 0;
 
 static void log(const char* str) {
@@ -84,8 +87,10 @@ static void* mutex_thread_3(void* arg) {
 static void* cond_thread1(void* arg) {
     pthread_mutex_lock(&mutex);
     log("thread 1 waiting on condition\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     log("thread 1 waiting again\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
@@ -96,8 +101,10 @@ static void* cond_thread1(void* arg) {
 static void* cond_thread2(void* arg) {
     pthread_mutex_lock(&mutex);
     log("thread 2 waiting on condition\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     log("thread 2 waiting again\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
@@ -108,8 +115,10 @@ static void* cond_thread2(void* arg) {
 static void* cond_thread3(void* arg) {
     pthread_mutex_lock(&mutex);
     log("thread 3 waiting on condition\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     log("thread 3 waiting again\n");
+    ready_count.fetch_add(1);
     pthread_cond_wait(&cond, &mutex);
     thread_waked.fetch_add(1);
     pthread_mutex_unlock(&mutex);
@@ -133,6 +142,19 @@ static bool poll_waked_threads(int expected_count) {
     return false;
 }
 
+// Poll |var| until it has reached or exceeded |value|, then acquire and release |mutex|.
+//
+// The purose of this function is to allow the caller to wait until |value| threads have entered a
+// condition wait protected by |mutex|. For this to work, |var| must be incremented while holding
+// the |mutex| before issuing the cond wait.
+static void wait_for_count(const std::atomic_int& var, int value, pthread_mutex_t* mutex) {
+    while (var.load() < value) {
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    }
+    pthread_mutex_lock(mutex);
+    pthread_mutex_unlock(mutex);
+}
+
 bool pthread_test(void) {
 
     BEGIN_TEST;
@@ -148,12 +170,17 @@ bool pthread_test(void) {
     pthread_create(&thread2, NULL, cond_thread2, NULL);
     pthread_create(&thread3, NULL, cond_thread3, NULL);
 
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(300)));
+    // Wait for all 3 to reach the first cond wait before broadcasting.
+    wait_for_count(ready_count, 3, &mutex);
+    ready_count.store(0);
 
     log("calling pthread_cond_broadcast\n");
     pthread_cond_broadcast(&cond);
 
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(100)));
+    // Wait until they all reach the second cond wait before signaling one at a time.
+    wait_for_count(ready_count, 3, &mutex);
+    ready_count.store(0);
+
     log("calling pthread_cond_signal\n");
     pthread_cond_signal(&cond);
     EXPECT_TRUE(poll_waked_threads(1), "Exactly 1 process should have woken up");
@@ -337,10 +364,7 @@ static bool pthread_getstack_other_thread_explicit_size() {
 }
 
 BEGIN_TEST_CASE(pthread_tests)
-
-// Flaky test. Disabled. See ZX-3374.
-// RUN_TEST(pthread_test)
-
+RUN_TEST(pthread_test)
 RUN_TEST(pthread_self_main_thread_test)
 RUN_TEST(pthread_big_stack_size)
 RUN_TEST(pthread_getstack_main_thread)
