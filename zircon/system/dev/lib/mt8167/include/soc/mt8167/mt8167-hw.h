@@ -71,6 +71,9 @@
 #define MT8167_PMIC_WRAP_BASE                               0x1000f000
 #define MT8167_PMIC_WRAP_SIZE                               0x1000
 
+#define MT8167_INFRACFG_BASE                                0x10001000
+#define MT8167_INFRACFG_SIZE                                0x1000
+
 // Display Subsystem
 #define MT8167_MSYS_CFG_BASE                                0x14000000
 #define MT8167_MSYS_CFG_SIZE                                0x1000

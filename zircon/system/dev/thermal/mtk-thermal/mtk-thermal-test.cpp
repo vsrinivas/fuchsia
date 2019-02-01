@@ -16,14 +16,12 @@
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
 
-#include "mtk-thermal-reg.h"
-
 namespace {
 
 constexpr size_t kThermalRegCount = MT8167_THERMAL_SIZE / sizeof(uint32_t);
-constexpr size_t kFuseRegCount = MT8167_FUSE_SIZE / sizeof(uint32_t);
 constexpr size_t kPllRegCount = MT8167_AP_MIXED_SYS_SIZE / sizeof(uint32_t);
 constexpr size_t kPmicWrapRegCount = MT8167_PMIC_WRAP_SIZE / sizeof(uint32_t);
+constexpr size_t kInfraCfgRegCount = MT8167_INFRACFG_SIZE / sizeof(uint32_t);
 
 template <typename T>
 ddk_mock::MockMmioReg& GetMockReg(ddk_mock::MockMmioRegRegion& registers) {
@@ -155,18 +153,21 @@ private:
 class MtkThermalTest : public MtkThermal {
 public:
     MtkThermalTest(mmio_buffer_t dummy_mmio, const ddk::ClkProtocolClient& clk, uint32_t clk_count,
-                   const thermal_device_info_t& thermal_info, zx::port port)
+                   const thermal_device_info_t& thermal_info, zx::port port,
+                   TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse,
+                   TempCalibration2 cal2_fuse)
         : MtkThermal(nullptr, ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio),
                      ddk::MmioBuffer(dummy_mmio), ddk::MmioBuffer(dummy_mmio), clk, clk_count,
-                     thermal_info, std::move(port), zx::interrupt()),
+                     thermal_info, std::move(port), zx::interrupt(), cal0_fuse, cal1_fuse,
+                     cal2_fuse),
           mock_thermal_regs_(thermal_reg_array_, sizeof(uint32_t), MT8167_THERMAL_SIZE),
-          mock_fuse_regs_(fuse_reg_array_, sizeof(uint32_t), MT8167_FUSE_SIZE),
           mock_pll_regs_(pll_reg_array_, sizeof(uint32_t), MT8167_AP_MIXED_SYS_SIZE),
-          mock_pmic_wrap_regs_(pmic_wrap_reg_array_, sizeof(uint32_t), MT8167_PMIC_WRAP_SIZE) {
+          mock_pmic_wrap_regs_(pmic_wrap_reg_array_, sizeof(uint32_t), MT8167_PMIC_WRAP_SIZE),
+          mock_infracfg_regs_(infracfg_reg_array_, sizeof(uint32_t), MT8167_INFRACFG_SIZE) {
         mmio_ = ddk::MmioBuffer(mock_thermal_regs_.GetMmioBuffer());
-        fuse_mmio_ = ddk::MmioBuffer(mock_fuse_regs_.GetMmioBuffer());
         pll_mmio_ = ddk::MmioBuffer(mock_pll_regs_.GetMmioBuffer());
         pmic_mmio_ = ddk::MmioBuffer(mock_pmic_wrap_regs_.GetMmioBuffer());
+        infracfg_mmio_ = ddk::MmioBuffer(mock_infracfg_regs_.GetMmioBuffer());
     }
 
     static bool Create(const thermal_device_info_t thermal_info, zx::port port,
@@ -175,16 +176,25 @@ public:
         dummy_mmio.vaddr = &dummy_mmio;
         dummy_mmio.size = sizeof(dummy_mmio);
 
+        TempCalibration0 cal0_fuse;
+        cal0_fuse.set_reg_value(kCal0Fuse);
+
+        TempCalibration1 cal1_fuse;
+        cal1_fuse.set_reg_value(kCal1Fuse);
+
+        TempCalibration2 cal2_fuse;
+        cal2_fuse.set_reg_value(kCal2Fuse);
+
         fbl::AllocChecker ac;
         test->reset(new (&ac) MtkThermalTest(dummy_mmio, ddk::ClkProtocolClient(), 0, thermal_info,
-                                             std::move(port)));
+                                             std::move(port), cal0_fuse, cal1_fuse, cal2_fuse));
         return ac.check();
     }
 
     ddk_mock::MockMmioRegRegion& thermal_regs() { return mock_thermal_regs_; }
-    ddk_mock::MockMmioRegRegion& fuse_regs() { return mock_fuse_regs_; }
     ddk_mock::MockMmioRegRegion& pll_regs() { return mock_pll_regs_; }
     ddk_mock::MockMmioRegRegion& pmic_wrap_regs() { return mock_pmic_wrap_regs_; }
+    ddk_mock::MockMmioRegRegion& infracfg_regs() { return mock_infracfg_regs_; }
 
     FunctionMock<void, uint16_t, uint32_t>& mock_PmicWrite() { return mock_pmic_write_; }
     FunctionMock<uint32_t>& mock_GetTemperature() { return mock_get_temperature_; }
@@ -194,10 +204,6 @@ public:
     void VerifyAll() {
         for (size_t i = 0; i < kThermalRegCount; i++) {
             mock_thermal_regs_[i].VerifyAndClear();
-        }
-
-        for (size_t i = 0; i < kFuseRegCount; i++) {
-            mock_fuse_regs_[i].VerifyAndClear();
         }
 
         for (size_t i = 0; i < kPllRegCount; i++) {
@@ -269,6 +275,11 @@ public:
     }
 
 private:
+    // These were taken from a real device.
+    static constexpr uint32_t kCal0Fuse = 0x29389d67;
+    static constexpr uint32_t kCal1Fuse = 0x805f84a9;
+    static constexpr uint32_t kCal2Fuse = 0x4eaad600;
+
     zx_status_t WaitForInterrupt() override {
         while (!thread_stop_) {
             {
@@ -288,14 +299,14 @@ private:
     }
 
     ddk_mock::MockMmioReg thermal_reg_array_[kThermalRegCount];
-    ddk_mock::MockMmioReg fuse_reg_array_[kFuseRegCount];
     ddk_mock::MockMmioReg pll_reg_array_[kPllRegCount];
     ddk_mock::MockMmioReg pmic_wrap_reg_array_[kPmicWrapRegCount];
+    ddk_mock::MockMmioReg infracfg_reg_array_[kInfraCfgRegCount];
 
     ddk_mock::MockMmioRegRegion mock_thermal_regs_;
-    ddk_mock::MockMmioRegRegion mock_fuse_regs_;
     ddk_mock::MockMmioRegRegion mock_pll_regs_;
     ddk_mock::MockMmioRegRegion mock_pmic_wrap_regs_;
+    ddk_mock::MockMmioRegRegion mock_infracfg_regs_;
 
     FunctionMock<void, uint16_t, uint32_t> mock_pmic_write_;
     FunctionMock<uint32_t> mock_get_temperature_;

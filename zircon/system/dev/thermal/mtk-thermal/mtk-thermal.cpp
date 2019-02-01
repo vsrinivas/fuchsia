@@ -14,8 +14,6 @@
 #include <zircon/rights.h>
 #include <zircon/threads.h>
 
-#include "mtk-thermal-reg.h"
-
 namespace {
 
 constexpr uint32_t kTsCon1Addr = 0x10018604;
@@ -102,6 +100,12 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
         return status;
     }
 
+    std::optional<ddk::MmioBuffer> infracfg_mmio;
+    if ((status = pdev.MapMmio(4, &infracfg_mmio)) != ZX_OK) {
+        zxlogf(ERROR, "%s: MapMmio failed\n", __FILE__);
+        return status;
+    }
+
     thermal_device_info_t thermal_info;
     size_t actual;
     status = device_get_metadata(parent, THERMAL_CONFIG_METADATA, &thermal_info,
@@ -125,8 +129,11 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
-        parent, std::move(*mmio), std::move(*fuse_mmio), std::move(*pll_mmio),
-        std::move(*pmic_mmio), clk, info.clk_count, thermal_info, std::move(port), std::move(irq)));
+        parent, std::move(*mmio), std::move(*pll_mmio), std::move(*pmic_mmio),
+        std::move(*infracfg_mmio), clk, info.clk_count, thermal_info, std::move(port),
+        std::move(irq), TempCalibration0::Get().ReadFrom(&(*fuse_mmio)),
+        TempCalibration1::Get().ReadFrom(&(*fuse_mmio)),
+        TempCalibration2::Get().ReadFrom(&(*fuse_mmio))));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
@@ -259,51 +266,42 @@ void MtkThermal::PmicWrite(uint16_t data, uint32_t addr) {
 }
 
 uint32_t MtkThermal::RawToTemperature(uint32_t raw, uint32_t sensor) {
-    // TODO(bradenkell): Read and store these in Init().
-    auto cal0 = TempCalibration0::Get().ReadFrom(&fuse_mmio_);
-    auto cal1 = TempCalibration1::Get().ReadFrom(&fuse_mmio_);
-    auto cal2 = TempCalibration2::Get().ReadFrom(&fuse_mmio_);
-
-    int32_t vts = cal2.get_vts3();
+    int32_t vts = cal2_fuse_.get_vts3();
     if (sensor == 0) {
-        vts = cal0.get_vts0();
+        vts = cal0_fuse_.get_vts0();
     } else if (sensor == 1) {
-        vts = cal0.get_vts1();
+        vts = cal0_fuse_.get_vts1();
     } else if (sensor == 2) {
-        vts = cal2.get_vts2();
+        vts = cal2_fuse_.get_vts2();
     }
 
     // See misc/mediatek/thermal/mt8167/mtk_ts_cpu.c in the Linux kernel source.
-    int32_t gain = 10000 + FixedPoint(cal1.get_adc_gain());
-    int32_t vts_with_gain = RawWithGain(vts - cal1.get_adc_offset(), gain);
-    int32_t slope = cal0.slope_sign() == 0 ? cal0.slope() : -cal0.slope();
+    int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
+    int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
+    int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
 
-    int32_t temp_c = ((RawWithGain(raw - cal1.get_adc_offset(), gain) - vts_with_gain) * 5) / 6;
-    temp_c = (temp_c * 100) / (165 + (cal1.id() == 0 ? 0 : slope));
-    return cal0.temp_offset() - temp_c + kKelvinOffset;
+    int32_t temp_c = ((RawWithGain(raw - cal1_fuse_.get_adc_offset(), gain) - vts_with_gain) * 5) / 6;
+    temp_c = (temp_c * 100) / (165 + (cal1_fuse_.id() == 0 ? 0 : slope));
+    return cal0_fuse_.temp_offset() - temp_c + kKelvinOffset;
 }
 
 uint32_t MtkThermal::TemperatureToRaw(uint32_t temp, uint32_t sensor) {
-    auto cal0 = TempCalibration0::Get().ReadFrom(&fuse_mmio_);
-    auto cal1 = TempCalibration1::Get().ReadFrom(&fuse_mmio_);
-    auto cal2 = TempCalibration2::Get().ReadFrom(&fuse_mmio_);
-
-    int32_t vts = cal2.get_vts3();
+    int32_t vts = cal2_fuse_.get_vts3();
     if (sensor == 0) {
-        vts = cal0.get_vts0();
+        vts = cal0_fuse_.get_vts0();
     } else if (sensor == 1) {
-        vts = cal0.get_vts1();
+        vts = cal0_fuse_.get_vts1();
     } else if (sensor == 2) {
-        vts = cal2.get_vts2();
+        vts = cal2_fuse_.get_vts2();
     }
 
-    int32_t gain = 10000 + FixedPoint(cal1.get_adc_gain());
-    int32_t vts_with_gain = RawWithGain(vts - cal1.get_adc_offset(), gain);
-    int32_t slope = cal0.slope_sign() == 0 ? cal0.slope() : -cal0.slope();
+    int32_t gain = 10000 + FixedPoint(cal1_fuse_.get_adc_gain());
+    int32_t vts_with_gain = RawWithGain(vts - cal1_fuse_.get_adc_offset(), gain);
+    int32_t slope = cal0_fuse_.slope_sign() == 0 ? cal0_fuse_.slope() : -cal0_fuse_.slope();
 
-    int32_t temp_c = kKelvinOffset + cal0.temp_offset() - temp;
-    temp_c = (temp_c * (165 + (cal1.id() == 0 ? 0 : slope))) / 100;
-    return TempWithoutGain(((temp_c * 6) / 5) + vts_with_gain, gain) + cal1.get_adc_offset();
+    int32_t temp_c = kKelvinOffset + cal0_fuse_.temp_offset() - temp;
+    temp_c = (temp_c * (165 + (cal1_fuse_.id() == 0 ? 0 : slope))) / 100;
+    return TempWithoutGain(((temp_c * 6) / 5) + vts_with_gain, gain) + cal1_fuse_.get_adc_offset();
 }
 
 uint32_t MtkThermal::GetRawHot(uint32_t temp) {
@@ -384,14 +382,20 @@ zx_status_t MtkThermal::SetDvfsOpp(const dvfs_info_t* opp) {
         return ZX_ERR_INVALID_ARGS;
     }
 
-    // TODO(bradenkell): Switch to a stable PLL before changing the frequency, and wait for the PLL
-    //                   to be stable before switching back.
+    // Switch to a stable clock before changing the ARMPLL frequency.
+    auto infra_mux = InfraCfgClkMux::Get().ReadFrom(&infracfg_mmio_);
+    infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClk26M).WriteTo(&infracfg_mmio_);
+
+    armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+
+    // Wait for the PLL to stabilize.
+    zx::nanosleep(zx::deadline_after(zx::usec(20)));
 
     if (new_freq > old_freq) {
         PmicWrite(vproc.reg_value(), vproc.reg_addr());
-        armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+        infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
     } else {
-        armpll.set_frequency(new_freq).WriteTo(&pll_mmio_);
+        infra_mux.set_ifr_mux_sel(InfraCfgClkMux::kIfrClkArmPll).WriteTo(&infracfg_mmio_);
         PmicWrite(vproc.reg_value(), vproc.reg_addr());
     }
 

@@ -28,6 +28,10 @@ constexpr pbus_mmio_t thermal_mmios[] = {
     {
         .base = MT8167_PMIC_WRAP_BASE,
         .length = MT8167_PMIC_WRAP_SIZE
+    },
+    {
+        .base = MT8167_INFRACFG_BASE,
+        .length = MT8167_INFRACFG_SIZE
     }
 };
 

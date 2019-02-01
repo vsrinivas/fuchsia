@@ -16,6 +16,8 @@
 #include <lib/zx/port.h>
 #include <zircon/device/thermal.h>
 
+#include "mtk-thermal-reg.h"
+
 namespace thermal {
 
 class MtkThermal;
@@ -39,14 +41,16 @@ public:
 
 protected:
     // Visible for testing.
-    MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer fuse_mmio,
-               ddk::MmioBuffer pll_mmio, ddk::MmioBuffer pmic_mmio,
+    MtkThermal(zx_device_t* parent, ddk::MmioBuffer mmio, ddk::MmioBuffer pll_mmio,
+               ddk::MmioBuffer pmic_mmio, ddk::MmioBuffer infracfg_mmio,
                const ddk::ClkProtocolClient& clk, uint32_t clk_count,
-               const thermal_device_info_t& thermal_info, zx::port port, zx::interrupt irq)
-        : DeviceType(parent), mmio_(std::move(mmio)), fuse_mmio_(std::move(fuse_mmio)),
-          pll_mmio_(std::move(pll_mmio)), pmic_mmio_(std::move(pmic_mmio)), clk_(clk),
+               const thermal_device_info_t& thermal_info, zx::port port, zx::interrupt irq,
+               TempCalibration0 cal0_fuse, TempCalibration1 cal1_fuse, TempCalibration2 cal2_fuse)
+        : DeviceType(parent), mmio_(std::move(mmio)), pll_mmio_(std::move(pll_mmio)),
+          pmic_mmio_(std::move(pmic_mmio)), infracfg_mmio_(std::move(infracfg_mmio)), clk_(clk),
           clk_count_(clk_count), thermal_info_(thermal_info), port_(std::move(port)),
-          irq_(std::move(irq)) {}
+          irq_(std::move(irq)), cal0_fuse_(cal0_fuse), cal1_fuse_(cal1_fuse),
+          cal2_fuse_(cal2_fuse) {}
 
     virtual void PmicWrite(uint16_t data, uint32_t addr);
 
@@ -61,9 +65,9 @@ protected:
     int JoinThread() { return thrd_join(thread_, nullptr); }
 
     ddk::MmioBuffer mmio_;
-    ddk::MmioBuffer fuse_mmio_;
     ddk::MmioBuffer pll_mmio_;
     ddk::MmioBuffer pmic_mmio_;
+    ddk::MmioBuffer infracfg_mmio_;
 
 private:
     uint32_t RawToTemperature(uint32_t raw, uint32_t sensor);
@@ -82,6 +86,9 @@ private:
     zx::interrupt irq_;
     thrd_t thread_;
     fbl::Mutex dvfs_lock_;
+    const TempCalibration0 cal0_fuse_;
+    const TempCalibration1 cal1_fuse_;
+    const TempCalibration2 cal2_fuse_;
 };
 
 }  // namespace thermal
