@@ -10,28 +10,28 @@ using fuchsia.mem;
 interface Entity {
     /// Returns the types associated with this entity. Each entry in |types|
     /// references a well-known content type.
-    1: GetTypes() -> (vector<string> types);
+    GetTypes() -> (vector<string> types);
 
     /// Given one of the types returned from |GetTypes()| above, returns
     /// associated short-form data, or null if the type is absent from
     /// |GetTypes()|.
-    2: GetData(string type) -> (fuchsia.mem.Buffer? data);
+    GetData(string type) -> (fuchsia.mem.Buffer? data);
 
     /// Sets the data for a particular type. This will precipitate an |OnUpdated|
     /// event with the associated type.
-    3: WriteData(string type, fuchsia.mem.Buffer data)
-           -> (EntityWriteStatus status);
+    WriteData(string type, fuchsia.mem.Buffer data)
+        -> (EntityWriteStatus status);
 
     /// Gets the entity reference for this entity, which can be persisted and
     /// then later used to locate this entity. These references are weak
     /// references and are not sufficient to keep the entity alive.
-    4: GetReference() -> (string entity_reference);
+    GetReference() -> (string entity_reference);
 
     /// Begins watching for data changes on a particular type. The watcher
     /// immediately fires |OnUpdated| with the current value for the requested
     /// type (or null if the type is not present). Closing the |Entity| interface
     /// does not close the watcher.
-    5: Watch(string type, EntityWatcher watcher);
+    Watch(string type, EntityWatcher watcher);
 };
 
 interface EntityWatcher {
@@ -40,7 +40,7 @@ interface EntityWatcher {
     /// from absent to present at most once, as there is no deletion.
     ///
     /// No deduplication is performed.
-    1: OnUpdated(fuchsia.mem.Buffer? data);
+    OnUpdated(fuchsia.mem.Buffer? data);
 };
 
 enum EntityWriteStatus {

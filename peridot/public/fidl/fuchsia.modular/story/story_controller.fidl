@@ -13,60 +13,60 @@ using fuchsia.ui.viewsv1token;
 // does not change.
 interface StoryController {
     // Gets information associated with the story.
-    1: GetInfo() -> (StoryInfo info, StoryState state);
+    GetInfo() -> (StoryInfo info, StoryState state);
 
     // Requests to run the story controlled by this |StoryController| instance.
     // When the story starts, if not yet running, the view of the newly started
     // story shell will be passed in a call to SessionShell.AttachView().
-    14: RequestStart();
+    RequestStart();
 
     // Requests to stop the story controlled by this |StoryController|. If Start()
     // requests are pending when this request is issued, the request is queued
     // until the Start() requests complete. Before stopping the story, a snapshot
     // of the story will be taken and saved. Returns when the story is stopped.
-    4: Stop() -> ();
+    Stop() -> ();
 
     // Creates a new view with the given |view_owner| request to display
     // snapshots. Takes a snapshot for the story controlled by this
     // |StoryController| and then loads the snapshot to the created view such that
     // it is rendered. The callback will be invoked once the view has been created
     // and the snapshot has been loaded.
-    13: TakeAndLoadSnapshot(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> ();
+    TakeAndLoadSnapshot(request<fuchsia.ui.viewsv1token.ViewOwner> view_owner) -> ();
 
     // Registers a watcher for changes of the story state.
     //
     // Note that stories can stop themselves at any time and it is advisable
     // for the holder of a StoryController to provide a watcher.
-    5: Watch(StoryWatcher watcher);
+    Watch(StoryWatcher watcher);
 
     // DEPRECATED
-    7: GetActiveModules() -> (vector<ModuleData> module_data);
+    GetActiveModules() -> (vector<ModuleData> module_data);
 
     // DEPRECATED
-    8: GetModules() -> (vector<ModuleData> module_data);
+    GetModules() -> (vector<ModuleData> module_data);
 
     // DEPRECATED
     // (metadata about, and requesting changes to runtime state).
-    9: GetModuleController(vector<string> module_path, request<ModuleController> request);
+    GetModuleController(vector<string> module_path, request<ModuleController> request);
 
     // DEPRECATED: MI4-1084
-    10: GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
+    GetActiveLinks(StoryLinksWatcher? watcher) -> (vector<LinkPath> link_data);
 
     // DEPRECATED
-    11: GetLink(LinkPath link_path, request<Link> link);
+    GetLink(LinkPath link_path, request<Link> link);
 };
 
 // Implemented by the client calling StoryController.Watch().
 interface StoryWatcher {
     // Called with the current state right after registration, and subsequently
     // when the state changes.
-    1: OnStateChange(StoryState new_state);
+    OnStateChange(StoryState new_state);
 
     // DEPRECATED
-    2: OnModuleAdded(ModuleData module_data);
+    OnModuleAdded(ModuleData module_data);
 
     // DEPRECATED
-    3: OnModuleFocused(vector<string> module_path);
+    OnModuleFocused(vector<string> module_path);
 };
 
 // Implemented by the client calling StoryController.GetActiveLinks().
@@ -87,5 +87,5 @@ interface StoryLinksWatcher {
     //
     // This is EXPERIMENTAL. We certainly can make this simpler once we know it is
     // what we need.
-    1: OnNewLink(LinkPath link_path);
+    OnNewLink(LinkPath link_path);
 };

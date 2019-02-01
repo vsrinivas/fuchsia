@@ -10,7 +10,7 @@ library fuchsia.modular;
 // TODO(alhaad): Add interfaces for modifying Agents for the user.
 interface AgentProvider {
     // Registers a listener for changes in the list of agents.
-    1: Watch(AgentProviderWatcher watcher);
+    Watch(AgentProviderWatcher watcher);
 };
 
 // This interface is implemented by clients of AgentProvider and is updated
@@ -19,5 +19,5 @@ interface AgentProviderWatcher {
     // Gives a full list of all agents that are running or scheduled to run.
     // TODO(alhaad): This currently only contains the URL of the agents. It should
     // contain more state information.
-    1: OnUpdate(vector<string> agent_urls);
+    OnUpdate(vector<string> agent_urls);
 };

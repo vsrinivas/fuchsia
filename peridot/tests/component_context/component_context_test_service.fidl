@@ -12,5 +12,5 @@ library test.peridot.tests.componentcontext;
 interface ComponentContextTestService {
     // Send |message_to_send| to the message queue backed by
     // |message_queue_token|.
-    1: SendToMessageQueue(string message_queue_token, string message_to_send);
+    SendToMessageQueue(string message_queue_token, string message_to_send);
 };

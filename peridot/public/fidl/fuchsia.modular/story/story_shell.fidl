@@ -19,7 +19,7 @@ using fuchsia.ui.viewsv1token;
 // by the sessionmgr being terminated, or by the system shutting down.
 [Discoverable] // Created by story shell applications.
 interface StoryShell {
-    1: Initialize(StoryShellContext story_shell_context);
+    Initialize(StoryShellContext story_shell_context);
 
     // Adds a new Surface and its corresponding view to be displayed by the
     // StoryShell. More context that allows the story shell to decide how
@@ -27,35 +27,35 @@ interface StoryShell {
     // focus is obviously missing.
     // |view_connection| the new view and the associated Surface ID.
     // |surface_info| metadata relating to the Surface.
-    2: AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    AddSurface(ViewConnection view_connection, SurfaceInfo surface_info);
 
     // Focuses the surface with surface_id, bringing it to the foreground.
-    3: FocusSurface(string surface_id);
+    FocusSurface(string surface_id);
 
     // Defocuses the surface with surface_id, dismissing it to the background.
-    4: DefocusSurface(string surface_id) -> ();
+    DefocusSurface(string surface_id) -> ();
 
     // Adds a container, with corresponding container layouts to the story.
     // Optionally provide a parent_id to connect to, if omitted adds the
     // Container node as the root of a new tree in the Story
     // DEPRECATED
-    5: AddContainer(string containerName, string? parentId,
-                    SurfaceRelation relation, // relation of container to parent
-                    vector<ContainerLayout> layout,
-                    vector<ContainerRelationEntry> relationships,
-                    vector<ContainerView> views);
+    AddContainer(string containerName, string? parentId,
+                 SurfaceRelation relation, // relation of container to parent
+                 vector<ContainerLayout> layout,
+                 vector<ContainerRelationEntry> relationships,
+                 vector<ContainerView> views);
 
     // Notify when a Surface is focused in the story. The focus could be from
     // a user interaction or requested by the framework through
     // StoryController#FocusModule.
     // EXPERIMENTAL
-    6: -> OnSurfaceFocused(string surface_id);
+    -> OnSurfaceFocused(string surface_id);
 
     // Remove the Surface with surface_id from the StoryShell entirely. This is
     // final. The Surface is removed from the graph. If necessary, the
     // associated Surface is defocused. There is no expectation that
     // DefocusSurface is called before this.
-    7: RemoveSurface(string surface_id);
+    RemoveSurface(string surface_id);
 
     // Reconnect the view in viewConnection.
     //
@@ -66,7 +66,7 @@ interface StoryShell {
     // disconnected view is to be shown again, ReconnectView is called.
     //
     // E.g. called in response to StoryShell calling RequestView().
-    8: ReconnectView(ViewConnection view_connection);
+    ReconnectView(ViewConnection view_connection);
 
     // Update the surface
     // This is called when the intent is to update the surface metadata in the
@@ -76,7 +76,7 @@ interface StoryShell {
     //
     // E.g called when an intent resolves to a module that is known by the
     // caller to already be running, to update associated metadata.
-    9: UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
+    UpdateSurface(ViewConnection view_connection, SurfaceInfo surface_info);
 };
 
 // A pair mapping the view owner to surface ID
@@ -122,26 +122,26 @@ struct ContainerView {
 interface StoryShellContext {
     // Requests a Presentation connection from the SessionShell. See
     // SessionShellPresenationProvider in session_shell.fidl.
-    1: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
+    GetPresentation(request<fuchsia.ui.policy.Presentation> request);
 
     // Starts watching Story shell's visual state.
-    2: WatchVisualState(StoryVisualStateWatcher watcher);
+    WatchVisualState(StoryVisualStateWatcher watcher);
 
     // Gets a Link instance that the story shell can use for persisting metadata.
-    3: GetLink(request<Link> request);
+    GetLink(request<Link> request);
 
     // Requests a view for a Surface.
     // Requests that a view for |surface_id| is provided through
     // StoryShell.ReconnectView().
-    4: RequestView(string surface_id);
+    RequestView(string surface_id);
 
     // Notification that the Surface is no longer on screen.
-    5: OnSurfaceOffScreen(string surface_id);
+    OnSurfaceOffScreen(string surface_id);
 };
 
 // Implemented by StoryShell to get notified about visual state changes.
 interface StoryVisualStateWatcher {
-    1: OnVisualStateChange(StoryVisualState visual_state);
+    OnVisualStateChange(StoryVisualState visual_state);
 };
 
 // Defines the visual state of the Story shell.

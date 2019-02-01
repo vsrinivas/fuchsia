@@ -8,5 +8,5 @@ library test.peridot.lib.fidl.appclient;
 
 [Discoverable]
 interface TerminateService {
-    1: Terminate();
+    Terminate();
 };

@@ -18,15 +18,15 @@ struct Config {
 
 [Discoverable]
 interface Factory {
-  // Creates a cloud provider instance using the given |config|.
-  //
-  // Parameters:
-  // |config| configuration
-  // |token_manager| is used to get the appropriate auth tokens
-  //     associated with user for whom the cloud provider is running.
-  1: GetCloudProvider(
-                Config config,
-                fuchsia.auth.TokenManager? token_manager,
-                request<fuchsia.ledger.cloud.CloudProvider> cloud_provider)
-      -> (fuchsia.ledger.cloud.Status status);
+    // Creates a cloud provider instance using the given |config|.
+    //
+    // Parameters:
+    // |config| configuration
+    // |token_manager| is used to get the appropriate auth tokens
+    //     associated with user for whom the cloud provider is running.
+    GetCloudProvider(
+        Config config,
+        fuchsia.auth.TokenManager? token_manager,
+        request<fuchsia.ledger.cloud.CloudProvider> cloud_provider)
+        -> (fuchsia.ledger.cloud.Status status);
 };

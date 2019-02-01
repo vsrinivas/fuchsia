@@ -14,24 +14,24 @@ using fuchsia.auth;
 interface AgentContext {
     /// DEPRECATED: ComponentContext is now available in the
     /// namespace/environment for Modules.
-    1: GetComponentContext(request<ComponentContext> request);
+    GetComponentContext(request<ComponentContext> request);
 
     /// Connects to an EntityReferenceFactory for this Agent. Entity references
     /// obtained from this EntityReferenceFactory will be resolved back to this
     /// Agent.
-    4: GetEntityReferenceFactory(request<EntityReferenceFactory> request);
+    GetEntityReferenceFactory(request<EntityReferenceFactory> request);
 
     /// Schedules a task described in |task_info|. When this task is scheduled to
     /// run, Agent.RunTask() is called.
     ///
     /// TODO(MI4-962): Add a callback to task scheduling.
-    5: ScheduleTask(TaskInfo task_info);
+    ScheduleTask(TaskInfo task_info);
 
     /// No new runs of this task will be scheduled.
-    6: DeleteTask(string task_id);
+    DeleteTask(string task_id);
 
     /// The auth token manager this Agent may use for accessing external services.
-    7: GetTokenManager(request<fuchsia.auth.TokenManager> request);
+    GetTokenManager(request<fuchsia.auth.TokenManager> request);
 };
 
 /// Used to describe a task to the framework.

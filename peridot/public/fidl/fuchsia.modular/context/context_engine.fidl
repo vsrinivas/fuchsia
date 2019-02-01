@@ -8,9 +8,9 @@ library fuchsia.modular;
 // context data.
 [Discoverable]
 interface ContextEngine {
-    1: GetReader(ComponentScope client_info, request<ContextReader> request);
+    GetReader(ComponentScope client_info, request<ContextReader> request);
 
-    2: GetWriter(ComponentScope client_info, request<ContextWriter> request);
+    GetWriter(ComponentScope client_info, request<ContextWriter> request);
 
-    3: GetContextDebug(request<ContextDebug> request);
+    GetContextDebug(request<ContextDebug> request);
 };

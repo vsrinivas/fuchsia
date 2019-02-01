@@ -18,5 +18,5 @@ interface IntentHandler {
     // Handles the provided intent. Any links referenced in the intent parameters
     // will be in the namespace of the handling component, and can be retrieved via
     // |ModuleContext.GetLink|.
-    1: HandleIntent(Intent intent);
+    HandleIntent(Intent intent);
 };

@@ -24,22 +24,22 @@ interface EntityProvider {
     ///
     /// If the cookie cannot be resolved, the provider should produce an empty
     /// vector.
-    1: GetTypes(string cookie) -> (vector<string> types);
+    GetTypes(string cookie) -> (vector<string> types);
 
     /// Given one of the types returned from |GetTypes()| above, returns
     /// associated short-form data, or null if the type is absent from
     /// |GetTypes()|.
     ///
     /// If the cookie cannot be resolved, the provider should return null.
-    2: GetData(string cookie, string type) -> (fuchsia.mem.Buffer? data);
+    GetData(string cookie, string type) -> (fuchsia.mem.Buffer? data);
 
     /// Sets the data for a particular type. This must precipitate an |OnUpdate|
     /// event with the associated type.
     ///
     /// If the cookie cannot be resolved, the provider should no-op with
     /// |EntityWriteStatus::READ_ONLY|.
-    3: WriteData(string cookie, string type, fuchsia.mem.Buffer data)
-           -> (EntityWriteStatus status);
+    WriteData(string cookie, string type, fuchsia.mem.Buffer data)
+        -> (EntityWriteStatus status);
 
     /// Begins watching for data changes on a particular type. The watcher must
     /// immediately fire |OnUpdated| with the current value for the requested
@@ -54,5 +54,5 @@ interface EntityProvider {
     ///
     /// If the cookie cannot be resolved, the provider should emit a single event
     /// with null data.
-    5: Watch(string cookie, string type, EntityWatcher watcher);
+    Watch(string cookie, string type, EntityWatcher watcher);
 };

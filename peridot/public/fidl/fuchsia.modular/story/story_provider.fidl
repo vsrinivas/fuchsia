@@ -15,29 +15,29 @@ interface StoryProvider {
     // Returns a list of existing stories. If |watcher| is provided, the client will
     // be notified of story changes (new stories, deleted stories, runtime
     // state changes).
-    4: GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
+    GetStories(StoryProviderWatcher? watcher) -> (vector<StoryInfo> story_infos);
 
     // Requests detailed information about the given story. If the story doesn't
     // exist, returns null.
-    5: GetStoryInfo(string story_id) -> (StoryInfo? story_info);
+    GetStoryInfo(string story_id) -> (StoryInfo? story_info);
 
     // Obtains a controller for a previously created story identified by its story
     // ID. Obtaining the controller doesn't run it yet. If the story doesn't
     // exist, the interface request is closed.
-    6: GetController(string story_id, request<StoryController> request);
+    GetController(string story_id, request<StoryController> request);
 
     // Returns info of known stories.
     // DEPRECATED: In favor of GetStories().
-    7: PreviousStories() -> (vector<StoryInfo> story_infos);
+    PreviousStories() -> (vector<StoryInfo> story_infos);
 
     // Registers a watcher for changes in the story collection.
     // DEPRECATED: In favor of GetStories().
-    9: Watch(StoryProviderWatcher watcher);
+    Watch(StoryProviderWatcher watcher);
 
     // Registers a watcher for ongoing story activity. Upon registration,
     // StoryActivityWatcher.OnStoryActivity() will be called to update clients
     // with the initial data. See StoryActivityWatcher for motivations.
-    10: WatchActivity(StoryActivityWatcher watcher);
+    WatchActivity(StoryActivityWatcher watcher);
 };
 
 // Implemented by clients of StoryProvider.
@@ -71,15 +71,15 @@ interface StoryProviderWatcher {
     //
     // |story_visibility_state| is DEFAULT until a mod on the current device
     // requests for the visibility state to be changed.
-    1: OnChange(StoryInfo story_info, StoryState story_state,
-                StoryVisibilityState story_visibility_state);
+    OnChange(StoryInfo story_info, StoryState story_state,
+             StoryVisibilityState story_visibility_state);
 
     // Called when a story record is permanently deleted. The deletion could
     // have originated on this or on another device.
     //
     // If the story is running on this device at the time it is deleted,
     // OnChange() will not be called first.
-    2: OnDelete(string story_id);
+    OnDelete(string story_id);
 };
 
 // Implemented by clients of StoryProvider in order to inform them about ongoing
@@ -93,6 +93,6 @@ interface StoryProviderWatcher {
 // via StoryProvider.WatchActivity(). |activities| can contain duplicate
 // OngoingActivityType's, ex. if a story is playing 2 videos at once.
 interface StoryActivityWatcher {
-    1: OnStoryActivityChange(string story_id,
-                             vector<OngoingActivityType> activities);
+    OnStoryActivityChange(string story_id,
+                          vector<OngoingActivityType> activities);
 };

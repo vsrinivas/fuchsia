@@ -8,5 +8,5 @@ library fuchsia.modular.examples.simple;
 interface Simple {
     // Provides the Simple interface with a message queue to which
     // messages will be written periodically.
-    1: SetMessageQueue(string queue_token);
+    SetMessageQueue(string queue_token);
 };

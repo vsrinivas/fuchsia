@@ -19,10 +19,10 @@ interface ContextReader {
     //
     // The subscription will continue to stay active as long as the |listener|
     // handle is not closed.
-    1: Subscribe(ContextQuery query, ContextListener listener);
+    Subscribe(ContextQuery query, ContextListener listener);
 
     // Returns the current context state matching |query|.
-    2: Get(ContextQuery query) -> (ContextUpdate update);
+    Get(ContextQuery query) -> (ContextUpdate update);
 };
 
 struct ContextQuery {
@@ -66,7 +66,7 @@ interface ContextListener {
     // updates would not be propagated. If this becomes an issue, allowing
     // clients to opt for delta-updates instead of state snapshots would suffice,
     // albeit also add some complexity to client implementations.
-    1: OnContextUpdate(ContextUpdate update);
+    OnContextUpdate(ContextUpdate update);
 };
 
 struct ContextUpdate {

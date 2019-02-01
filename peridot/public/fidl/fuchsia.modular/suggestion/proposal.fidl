@@ -79,5 +79,5 @@ interface ProposalListener {
     //
     // |proposal_id| The identifier of the accepted proposal.
     // |story_id| The identifier of the created story, if a story was created.
-    1: OnProposalAccepted(string proposal_id, string? story_id);
+    OnProposalAccepted(string proposal_id, string? story_id);
 };

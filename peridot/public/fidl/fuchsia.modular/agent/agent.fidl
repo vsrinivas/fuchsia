@@ -40,7 +40,7 @@ interface Agent {
     /// is the identifier for the component which called
     /// |ComponentContext.ConnectToAgent()|. The |services| are provided to that
     /// component.
-    1: Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
+    Connect(string requestor_url, request<fuchsia.sys.ServiceProvider> services);
 
     /// Called when some task identified by |task_id| is scheduled to run. The task
     /// was first posted by this Agent using |AgentContext.ScheduleTask()|. The
@@ -54,5 +54,5 @@ interface Agent {
     /// down the entire Agent instance. Instead, we should cap task length with
     /// strategies like budgets. Also, the Task should likely have its own
     /// connection that allows for more signalling.
-    2: RunTask(string task_id) -> ();
+    RunTask(string task_id) -> ();
 };

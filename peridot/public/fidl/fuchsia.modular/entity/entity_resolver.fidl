@@ -19,5 +19,5 @@ interface EntityResolver {
     // through an EntityProvider service it exposes. Thus, any Agent that wishes
     // to use EntityReferenceFactory to dispense entity references through its
     // agent services MUST also implement the EntityProvider service.
-    1: ResolveEntity(string entity_reference, request<Entity> entity_request);
+    ResolveEntity(string entity_reference, request<Entity> entity_request);
 };

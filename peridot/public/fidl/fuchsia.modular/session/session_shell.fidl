@@ -9,7 +9,6 @@ using fuchsia.speech;
 using fuchsia.ui.policy;
 using fuchsia.ui.viewsv1token;
 
-
 // This interface is implemented by a session shell and is used by the
 // sessionmgr to hand to the session shell views of stories, or to notify that
 // the view of a story is about to be closed.
@@ -45,7 +44,7 @@ interface SessionShell {
 // This is a struct rather than a naked string to allow for future evolution of
 // the identifier without changing the |SessionShell| API itself.
 struct ViewIdentifier {
-  string story_id;
+    string story_id;
 };
 
 // This interface allows a |SessionShell| to request capabilities from its
@@ -55,22 +54,22 @@ struct ViewIdentifier {
 interface SessionShellContext {
     // The account associated with the currently logged-in user. It's NULL if
     // logged into GUEST mode.
-    1: GetAccount() -> (fuchsia.modular.auth.Account? account);
-    2: GetAgentProvider(request<AgentProvider> request);
-    3: GetComponentContext(request<ComponentContext> request);
-    4: GetDeviceName() -> (string device_name);
-    5: GetFocusController(request<FocusController> request);
-    6: GetFocusProvider(request<FocusProvider> request);
-    8: GetLink(request<Link> request);
-    9: GetPresentation(request<fuchsia.ui.policy.Presentation> request);
-    10: GetSpeechToText(request<fuchsia.speech.SpeechToText> request);
-    11: GetStoryProvider(request<StoryProvider> request);
-    12: GetSuggestionProvider(request<SuggestionProvider> request);
-    13: GetVisibleStoriesController(request<VisibleStoriesController> request);
+    GetAccount() -> (fuchsia.modular.auth.Account? account);
+    GetAgentProvider(request<AgentProvider> request);
+    GetComponentContext(request<ComponentContext> request);
+    GetDeviceName() -> (string device_name);
+    GetFocusController(request<FocusController> request);
+    GetFocusProvider(request<FocusProvider> request);
+    GetLink(request<Link> request);
+    GetPresentation(request<fuchsia.ui.policy.Presentation> request);
+    GetSpeechToText(request<fuchsia.speech.SpeechToText> request);
+    GetStoryProvider(request<StoryProvider> request);
+    GetSuggestionProvider(request<SuggestionProvider> request);
+    GetVisibleStoriesController(request<VisibleStoriesController> request);
 
     // Requests logout of the user. This causes the basemgr to tear down the
     // |Sessionmgr| instance of the user.
-    16: Logout();
+    Logout();
 };
 
 // Session shell provides this service to the framework which may plumb it to
@@ -84,9 +83,9 @@ interface SessionShellContext {
 interface SessionShellPresentationProvider {
     // When a StoryShell calls StoryShellContext.GetPresentation(), this request
     // arrives here.
-    1: GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);
+    GetPresentation(string story_id, request<fuchsia.ui.policy.Presentation> request);
 
     // When a StoryShell calls StoryShellContext.WatchVisualState(), this request
     // arrives here.
-    2: WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
+    WatchVisualState(string story_id, StoryVisualStateWatcher watcher);
 };

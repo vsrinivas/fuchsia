@@ -24,23 +24,23 @@ interface UserProvider {
     //
     // |account| is NULL if there was an error during identification and
     // |error_code| is set.
-    1: AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
-           -> (fuchsia.modular.auth.Account? account, string? error_code);
+    AddUser(fuchsia.modular.auth.IdentityProvider identity_provider)
+        -> (fuchsia.modular.auth.Account? account, string? error_code);
 
     // Removes information of a user from the local user database.
     //
     // |account_id| is received from either AddUser() or PreviousUsers().
-    2: RemoveUser(string account_id) -> (string? error_code);
+    RemoveUser(string account_id) -> (string? error_code);
 
     // Uses the credentials provided in AddUser() to start a user session. This
     // would mean syncing with the user's ledger instance and displaying a user
     // shell with all of the user's stories.
     // TODO(alhaad): In the future, we want to protect Login() with a password,
     // Android lock pattern, etc.
-    3: Login(UserLoginParams user_login_params);
+    Login(UserLoginParams user_login_params);
 
     // List of all users who have authenticated to this device in the past.
-    4: PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
+    PreviousUsers() -> (vector<fuchsia.modular.auth.Account> accounts);
 };
 
 // Used to specify arguments to log into a user session.
@@ -87,15 +87,15 @@ interface UserController {
     // Logs out a user by tearing down its sessionmgr. Returns once the
     // Sessionmgr has been torn down. This also triggers OnLogout() for
     // |UserWatcher|s.
-    1: Logout() -> ();
+    Logout() -> ();
 
     // Registers a watcher for the user's life cycle events.
-    2: Watch(UserWatcher watcher);
+    Watch(UserWatcher watcher);
 
     // Stops the currently running session shell and starts the one specified by
     // |session_shell_config|. This operation stops all stories before starting
     // the new shell.
-    3: SwapSessionShell(AppConfig session_shell_config) -> ();
+    SwapSessionShell(AppConfig session_shell_config) -> ();
 };
 
 // Implemented by a |BaseShell| implementation in order to receive
@@ -107,5 +107,5 @@ interface UserWatcher {
     //
     // TODO(vardhan): Make a guarantee that once OnLogout() is invoked, it is
     // possible to UserProvider.Login() the same user.
-    1: OnLogout();
+    OnLogout();
 };

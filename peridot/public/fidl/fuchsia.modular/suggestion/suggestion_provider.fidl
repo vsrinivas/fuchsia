@@ -18,14 +18,14 @@ interface SuggestionProvider {
     //
     // Any user interactions received by the client should be forwarded to the
     // SuggestionService by calling NotifyInteraction().
-    1: SubscribeToInterruptions(InterruptionListener listener);
+    SubscribeToInterruptions(InterruptionListener listener);
 
     // Creates a subscription to "Next" Suggestions, with changes sent to
     // |listener|. A maximum of |count| suggestions will be returned. To
     // change the count, call this method again with a new count.
     //
     // Closing the the |listener| pipe terminates the subscription.
-    2: SubscribeToNext(NextListener listener, int32 count);
+    SubscribeToNext(NextListener listener, int32 count);
 
     // Must be called when the user initiates a query for suggestions, perhaps
     // as an “Ask” or a scoped suggestion. Results are sent to |listener|. Changes
@@ -34,16 +34,16 @@ interface SuggestionProvider {
     //
     // Closing the |listener| pipe signals to the SuggestionService that the query
     // has been completed or canceled.
-    3: Query(QueryListener listener, UserInput query, int32 count);
+    Query(QueryListener listener, UserInput query, int32 count);
 
     // Notifies the suggestion engine that the user has interacted with the given
     // Suggestion in the manner described in |interaction|.
-    4: NotifyInteraction(string suggestion_uuid, Interaction interaction);
+    NotifyInteraction(string suggestion_uuid, Interaction interaction);
 
     // Creates a subscription to a "navigation" suggestion.
     // Like an interruption, the navigation based suggestion will be provided as
     // soon as it's available.
-    6: SubscribeToNavigation(NavigationListener listener);
+    SubscribeToNavigation(NavigationListener listener);
 };
 
 // The navigation action requested to be performed
@@ -62,32 +62,32 @@ enum NavigationAction {
 
 interface NavigationListener {
     // Notifies the user interface to perform the navigation requested
-    1: OnNavigation(NavigationAction action);
+    OnNavigation(NavigationAction action);
 };
 
 interface InterruptionListener {
     // Notifies the user interface to interrupt the user
-    1: OnInterrupt(Suggestion suggestion);
+    OnInterrupt(Suggestion suggestion);
 };
 
 interface NextListener {
     // Notifies the user interface that the passive suggestion results have been
     // updated. This is called every time the suggestion results change.
-    1: OnNextResults(vector<Suggestion> suggestions);
+    OnNextResults(vector<Suggestion> suggestions);
 
     // Notifies the user interface when processing is occurring on the passive
     // suggestions, which may result in additions or re-ranking.  The UI may
     // wish to show a spinner during this time.
-    2: OnProcessingChange(bool processing);
+    OnProcessingChange(bool processing);
 };
 
 interface QueryListener {
     // Notifies the user interface that new suggestion results are available.
     // This may be called multiple times if the suggestion results are updated.
-    1: OnQueryResults(vector<Suggestion> suggestions);
+    OnQueryResults(vector<Suggestion> suggestions);
 
     // Notifies the user interface that query processing is completed.
-    2: OnQueryComplete();
+    OnQueryComplete();
 };
 
 enum InteractionType {
@@ -165,7 +165,7 @@ enum SpeechStatus {
 // be part of the callback on |Query|.
 interface FeedbackListener {
     // Called every time the internal |SpeechStatus| changes.
-    1: OnStatusChanged(SpeechStatus status);
+    OnStatusChanged(SpeechStatus status);
 
     // TODO(rosswang): OnAudioResponse method (or fold it into OnTextResponse),
     // once it becomes trivial for SysUI to implement it. This would allow SysUI
@@ -175,5 +175,5 @@ interface FeedbackListener {
 
     // Receives a text representation of the spoken response. This method is
     // called at the beginning of the |RESPONDING| phase.
-    2: OnTextResponse(string response_text);
+    OnTextResponse(string response_text);
 };

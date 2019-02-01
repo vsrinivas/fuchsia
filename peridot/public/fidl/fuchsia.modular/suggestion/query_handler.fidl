@@ -27,5 +27,5 @@ interface QueryHandler {
     // ProposalPublisher to make persistent Proposals. However, these
     // proposals may be subject to more stringent filtering by the Suggestion
     // Engine. TODO(rosswang): spec/revisit.
-    1: OnQuery(UserInput query) -> (QueryResponse response);
+    OnQuery(UserInput query) -> (QueryResponse response);
 };

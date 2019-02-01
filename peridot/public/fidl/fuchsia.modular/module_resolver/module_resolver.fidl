@@ -18,7 +18,7 @@ interface ModuleResolver {
     //
     // TODO(thatguy): Offer some kind of fallback instruction/option to clients
     // in the case of no results.
-    1: FindModules(FindModulesQuery query) -> (FindModulesResponse response);
+    FindModules(FindModulesQuery query) -> (FindModulesResponse response);
 
     // Find modules that satisfy the constraints specified in |query|. Module
     // resolution for this method is done by matching only the requested types
@@ -28,12 +28,12 @@ interface ModuleResolver {
     // Each module result in the response will provide a mapping from the
     // constraint names in |query| to the parameter names of a module result. If
     // no results could be found, |response.results| will be empty.
-    2: FindModulesByTypes(FindModulesByTypesQuery query)
-           -> (FindModulesByTypesResponse response);
+    FindModulesByTypes(FindModulesByTypesQuery query)
+        -> (FindModulesByTypesResponse response);
 
     // If |module_id| could not be found or does not have a manifest, returns a
     // null |contents|.
-    3: GetModuleManifest(string module_id) -> (ModuleManifest? contents);
+    GetModuleManifest(string module_id) -> (ModuleManifest? contents);
 };
 
 // Mirrors the information present in a Intent. Where a Intent is meant to

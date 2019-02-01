@@ -9,9 +9,9 @@ library fuchsia.modular;
 [Discoverable]
 interface Clipboard {
     // Pushes |text| onto the clipboard.
-    1: Push(string text);
+    Push(string text);
 
     // Peeks at the current topmost item on the clipboard and returns
     // it, or null if no such item exists.
-    2: Peek() -> (string? text);
+    Peek() -> (string? text);
 };

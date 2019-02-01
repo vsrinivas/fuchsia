@@ -10,10 +10,10 @@ library fuchsia.modular;
 interface IntelligenceServices {
     // These are just here for illustrative purposes, and are not a complete
     // list.
-    1: GetContextReader(request<ContextReader> context_reader);
-    2: GetContextWriter(request<ContextWriter> context_writer);
+    GetContextReader(request<ContextReader> context_reader);
+    GetContextWriter(request<ContextWriter> context_writer);
 
-    3: GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
+    GetProposalPublisher(request<ProposalPublisher> proposal_publisher);
 
-    4: RegisterQueryHandler(QueryHandler query_handler);
+    RegisterQueryHandler(QueryHandler query_handler);
 };
