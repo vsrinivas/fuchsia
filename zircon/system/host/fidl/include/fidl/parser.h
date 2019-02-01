@@ -28,7 +28,7 @@ private:
 
     // ASTScope is a tool to track the start and end source location of each
     // node automatically.  The parser associates each node with the start and
-    // end of its source location.  It also tracks the "gap" is between the the
+    // end of its source location.  It also tracks the "gap" in between the
     // start and the previous interesting source element.  As we walk the tree,
     // we create ASTScope objects that can track the beginning and end of the
     // text associated with the Node being built.  The ASTScope object then

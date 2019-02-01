@@ -304,6 +304,9 @@ void XUnionDeclaration::Accept(TreeVisitor& visitor) {
 
 void File::Accept(TreeVisitor& visitor) {
     SourceElementMark sem(visitor, *this);
+    if (attributes != nullptr) {
+        visitor.OnAttributeList(attributes);
+    }
     visitor.OnCompoundIdentifier(library_name);
     for (auto& i : using_list) {
         visitor.OnUsing(i);

@@ -13,6 +13,10 @@ namespace raw {
 void DeclarationOrderTreeVisitor::OnFile(std::unique_ptr<File> const& element) {
     OnSourceElementStart(*element);
 
+    if (element->attributes != nullptr) {
+        OnAttributeList(element->attributes);
+    }
+
     OnCompoundIdentifier(element->library_name);
     for (auto i = element->using_list.begin();
          i != element->using_list.end();
