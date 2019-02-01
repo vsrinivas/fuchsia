@@ -1518,9 +1518,11 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
     }
 
     // TODO: Check txid on the message
-    switch (hdr->ordinal) {
-    case fuchsia_device_manager_ControllerBindDriverOrdinal:
-    case fuchsia_device_manager_ControllerBindDriverGenOrdinal: {
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
+    uint32_t ordinal = hdr->ordinal;
+    if (ordinal == fuchsia_device_manager_ControllerBindDriverOrdinal ||
+        ordinal == fuchsia_device_manager_ControllerBindDriverGenOrdinal) {
         const char* err_msg = nullptr;
         r = fidl_decode_msg(&fuchsia_device_manager_ControllerBindDriverResponseTable, &fidl_msg,
                             &err_msg);
@@ -1536,10 +1538,8 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
                 resp->status);
         }
         // TODO: try next driver, clear BOUND flag
-        break;
-    }
-    case fuchsia_device_manager_ControllerSuspendOrdinal:
-    case fuchsia_device_manager_ControllerSuspendGenOrdinal: {
+    } else if (ordinal == fuchsia_device_manager_ControllerSuspendOrdinal ||
+               ordinal == fuchsia_device_manager_ControllerSuspendGenOrdinal) {
         const char* err_msg = nullptr;
         r = fidl_decode_msg(&fuchsia_device_manager_ControllerSuspendResponseTable, &fidl_msg,
                             &err_msg);
@@ -1555,9 +1555,7 @@ zx_status_t Coordinator::HandleDeviceRead(Device* dev) {
         }
         suspend_context().set_status(resp->status);
         ContinueSuspend(&suspend_context(), root_resource());
-        break;
-    }
-    default:
+    } else {
         log(ERROR, "devcoord: rpc: dev '%s' received wrong unexpected reply %08x\n",
             dev->name.data(), hdr->ordinal);
         zx_handle_close_many(fidl_msg.handles, fidl_msg.num_handles);

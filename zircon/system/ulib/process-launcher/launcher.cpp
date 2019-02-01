@@ -88,26 +88,28 @@ zx_status_t LauncherImpl::ReadAndDispatchMessage(fidl::MessageBuffer* buffer) {
         return status;
     if (!message.has_header())
         return ZX_ERR_INVALID_ARGS;
-    switch (message.ordinal()) {
-    case fuchsia_process_LauncherLaunchOrdinal:
-    case fuchsia_process_LauncherLaunchGenOrdinal:
+    // This is an if statement because, depending on the state of the ordinal
+    // migration, GenOrdinal and Ordinal may be the same value.  See FIDL-372
+    uint32_t ordinal = message.ordinal();
+    if (ordinal == fuchsia_process_LauncherLaunchOrdinal ||
+        ordinal == fuchsia_process_LauncherLaunchGenOrdinal) {
         return Launch(buffer, std::move(message));
-    case fuchsia_process_LauncherCreateWithoutStartingOrdinal:
-    case fuchsia_process_LauncherCreateWithoutStartingGenOrdinal:
+    } else if (ordinal == fuchsia_process_LauncherCreateWithoutStartingOrdinal ||
+               ordinal == fuchsia_process_LauncherCreateWithoutStartingGenOrdinal) {
         return CreateWithoutStarting(buffer, std::move(message));
-    case fuchsia_process_LauncherAddArgsOrdinal:
-    case fuchsia_process_LauncherAddArgsGenOrdinal:
+    } else if (ordinal == fuchsia_process_LauncherAddArgsOrdinal ||
+               ordinal == fuchsia_process_LauncherAddArgsGenOrdinal) {
         return AddArgs(std::move(message));
-    case fuchsia_process_LauncherAddEnvironsOrdinal:
-    case fuchsia_process_LauncherAddEnvironsGenOrdinal:
+    } else if (ordinal == fuchsia_process_LauncherAddEnvironsOrdinal ||
+               ordinal == fuchsia_process_LauncherAddEnvironsGenOrdinal) {
         return AddEnvirons(std::move(message));
-    case fuchsia_process_LauncherAddNamesOrdinal:
-    case fuchsia_process_LauncherAddNamesGenOrdinal:
+    } else if (ordinal == fuchsia_process_LauncherAddNamesOrdinal ||
+               ordinal == fuchsia_process_LauncherAddNamesGenOrdinal) {
         return AddNames(std::move(message));
-    case fuchsia_process_LauncherAddHandlesOrdinal:
-    case fuchsia_process_LauncherAddHandlesGenOrdinal:
+    } else if (ordinal == fuchsia_process_LauncherAddHandlesOrdinal ||
+               ordinal == fuchsia_process_LauncherAddHandlesGenOrdinal) {
         return AddHandles(std::move(message));
-    default:
+    } else {
         fprintf(stderr, "launcher: error: Unknown message ordinal: %d\n", message.ordinal());
         return ZX_ERR_NOT_SUPPORTED;
     }
