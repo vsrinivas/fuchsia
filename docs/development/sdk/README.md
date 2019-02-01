@@ -75,4 +75,4 @@ for more details.
 
 
 [backend]: https://fuchsia.googlesource.com/build/+/master/sdk/README.md
-[frontends]: https://fuchsia.googlesource.com/scripts/+/master/sdk/README.md
+[frontends]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/sdk/README.md

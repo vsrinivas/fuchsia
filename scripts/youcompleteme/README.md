@@ -25,7 +25,7 @@ Search the Google intranet for "YouCompleteMe" for installation instructions.
 ### Vim
 
 The general [Vim Fuchsia instructions](
-https://fuchsia.googlesource.com/scripts/+/master/vim/README.md) will do this
+https://fuchsia.googlesource.com/fuchsia/+/master/scripts/vim/README.md) will do this
 automatically.
 
 The setup will use a compilation database (and the clangd backend if you are a

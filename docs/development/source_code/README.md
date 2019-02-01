@@ -16,7 +16,7 @@ This script will bootstrap a development environment for by first creating
 directories `fuchsia`.
 
 ```
-curl -s "https://fuchsia.googlesource.com/scripts/+/master/bootstrap?format=TEXT" | base64 --decode | bash
+curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?format=TEXT" | base64 --decode | bash
 ```
 
 This script will set up your development environment to track the HEAD of the

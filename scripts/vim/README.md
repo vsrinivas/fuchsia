@@ -39,7 +39,7 @@
 1. Install YouCompleteMe (ycm)
 
    Optionally [install YouCompleteMe](
-   https://fuchsia.googlesource.com/scripts/+/master/youcompleteme/README.md)
+   https://fuchsia.googlesource.com/fuchsia/+/master/scripts/youcompleteme/README.md)
    for fancy completion, source navigation and inline errors.
 
    If it's installed, `fuchsia.vim` will configure it properly.
