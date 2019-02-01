@@ -72,8 +72,6 @@ private:
     ddk::IommuProtocolClient iommu_;
     ddk::GpioImplProtocolClient gpio_impl_;
     thrd_t thread_;
-
-    bool enable_gpio_test_;
 };
 
 } //namespace vim

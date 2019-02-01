@@ -100,31 +100,29 @@ zx_status_t Vim::GpioInit() {
         return ZX_ERR_INTERNAL;
     }
 
-    if (enable_gpio_test_) {
-        const pbus_gpio_t gpio_test_gpios[] = {
-            {
-                // SYS_LED
-                .gpio = S912_GPIOAO(9),
-            },
-            {
-                // GPIO PIN
-                .gpio = S912_GPIOAO(2),
-            },
-        };
+    const pbus_gpio_t gpio_test_gpios[] = {
+        {
+            // SYS_LED
+            .gpio = S912_GPIOAO(9),
+        },
+        {
+            // GPIO PIN
+            .gpio = S912_GPIOAO(2),
+        },
+    };
 
-        pbus_dev_t gpio_test_dev = {};
-        gpio_test_dev.name = "vim-gpio-test";
-        gpio_test_dev.vid = PDEV_VID_GENERIC;
-        gpio_test_dev.pid = PDEV_PID_GENERIC;
-        gpio_test_dev.did = PDEV_DID_GPIO_TEST;
-        gpio_test_dev.gpio_list = gpio_test_gpios;
-        gpio_test_dev.gpio_count = countof(gpio_test_gpios);
+    pbus_dev_t gpio_test_dev = {};
+    gpio_test_dev.name = "vim-gpio-test";
+    gpio_test_dev.vid = PDEV_VID_GENERIC;
+    gpio_test_dev.pid = PDEV_PID_GENERIC;
+    gpio_test_dev.did = PDEV_DID_GPIO_TEST;
+    gpio_test_dev.gpio_list = gpio_test_gpios;
+    gpio_test_dev.gpio_count = countof(gpio_test_gpios);
 
-        status = pbus_.DeviceAdd(&gpio_test_dev);
-        if (status != ZX_OK) {
-            zxlogf(ERROR, "GpioInit could not add gpio_test_dev: %d\n", status);
-            return status;
-        }
+    status = pbus_.DeviceAdd(&gpio_test_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "GpioInit could not add gpio_test_dev: %d\n", status);
+        return status;
     }
 
     return ZX_OK;

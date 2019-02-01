@@ -90,39 +90,42 @@ int Vim::Thread() {
     pdev_board_info_t info;
 
     // Fetch the board info so that we can distinguish between the "vim2" and
-    // "vim2-machina" boards. The latter of which has fewer devices available
-    // to Zircon.
+    // "vim2-machina" boards. The latter of which does not initialize devices.
     status = pbus_.GetBoardInfo(&info);
     if (status != ZX_OK) {
         zxlogf(ERROR, "Thread: GetBoardInfo failed: %d\n", status);
         return -1;
     }
-    enable_gpio_test_ = (info.pid == PDEV_PID_VIM2);
+
+    if (info.pid == PDEV_PID_VIM2_MACHINA) {
+        return ZX_OK;
+    }
 
     // Start protocol drivers before adding platform devices.
     // Sysmem is started early so zx_vmo_create_contiguous() works.
-
     if ((status = SysmemInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: SysmemInit failed: %d\n", status);
         return -1;
     }
+
     if ((status = GpioInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: GpioInit failed: %d\n", status);
         return -1;
     }
+
     if ((status = I2cInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: I2cInit failed: %d\n", status);
         return -1;
     }
+
     if ((status = ClkInit()) != ZX_OK) {
         zxlogf(ERROR, "Thread: ClkInit failed: %d\n", status);
         return -1;
     }
-    if (info.pid == PDEV_PID_VIM2) {
-        if ((status = CanvasInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: CanvasInit failed: %d\n", status);
-            return -1;
-        }
+
+    if ((status = CanvasInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: CanvasInit failed: %d\n", status);
+        return -1;
     }
 
     // Start platform devices.
@@ -146,47 +149,45 @@ int Vim::Thread() {
         return -1;
     }
 
-    if (info.pid == PDEV_PID_VIM2) {
-        if ((status = UsbInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: UsbInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = UsbInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: UsbInit failed: %d\n", status);
+        return -1;
+    }
 
-        if ((status = MaliInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: MaliInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = MaliInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: MaliInit failed: %d\n", status);
+        return -1;
+    }
 
-        if ((status = ThermalInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: ThermalInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = ThermalInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: ThermalInit failed: %d\n", status);
+        return -1;
+    }
 
-        if ((status = DisplayInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: DisplayInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = DisplayInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: DisplayInit failed: %d\n", status);
+        return -1;
+    }
 
-        if ((status = VideoInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: VideoInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = VideoInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: VideoInit failed: %d\n", status);
+        return -1;
+    }
 
-        if ((status = Led2472gInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: Led2472gInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = Led2472gInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: Led2472gInit failed: %d\n", status);
+        return -1;
+    }
 
-        // Remove this when not needed for testing any longer
-        if ((status = pbus_.DeviceAdd(&tee_dev)) != ZX_OK) {
-            zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);
-            return -1;
-        }
+    // Remove this when not needed for testing any longer
+    if ((status = pbus_.DeviceAdd(&tee_dev)) != ZX_OK) {
+        zxlogf(ERROR, "vim_start_thread, could not add tee_dev: %d\n", status);
+        return -1;
+    }
 
-        if ((status = RtcInit()) != ZX_OK) {
-            zxlogf(ERROR, "Thread: RtcInit failed: %d\n", status);
-            return -1;
-        }
+    if ((status = RtcInit()) != ZX_OK) {
+        zxlogf(ERROR, "Thread: RtcInit failed: %d\n", status);
+        return -1;
     }
 
     return ZX_OK;
