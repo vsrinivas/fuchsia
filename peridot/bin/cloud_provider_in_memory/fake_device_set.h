@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_DEVICE_SET_H_
-#define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_DEVICE_SET_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_DEVICE_SET_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_DEVICE_SET_H_
 
 #include <set>
 #include <string>
@@ -13,8 +13,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
-#include "peridot/bin/ledger/testing/cloud_provider/types.h"
 
 namespace ledger {
 
@@ -57,4 +57,4 @@ class FakeDeviceSet : public cloud_provider::DeviceSet {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_DEVICE_SET_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_DEVICE_SET_H_

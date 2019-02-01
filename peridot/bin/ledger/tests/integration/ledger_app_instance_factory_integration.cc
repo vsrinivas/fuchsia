@@ -17,14 +17,14 @@
 #include <lib/timekeeper/test_loop_test_clock.h>
 
 #include "gtest/gtest.h"
+#include "peridot/bin/cloud_provider_in_memory/fake_cloud_provider.h"
+#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/app/ledger_repository_factory_impl.h"
 #include "peridot/bin/ledger/fidl/error_notifier.h"
 #include "peridot/bin/ledger/fidl_helpers/bound_interface_set.h"
 #include "peridot/bin/ledger/p2p_provider/impl/p2p_provider_impl.h"
 #include "peridot/bin/ledger/p2p_sync/impl/user_communicator_impl.h"
 #include "peridot/bin/ledger/p2p_sync/public/user_communicator_factory.h"
-#include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
-#include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/bin/ledger/testing/ledger_app_instance_factory.h"
 #include "peridot/bin/ledger/testing/loop_controller_test_loop.h"
 #include "peridot/bin/ledger/testing/netconnector/netconnector_factory.h"

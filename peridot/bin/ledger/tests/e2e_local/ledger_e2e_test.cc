@@ -20,12 +20,12 @@
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
+#include "peridot/bin/cloud_provider_in_memory/fake_cloud_provider.h"
+#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/app/serialization_version.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
 #include "peridot/bin/ledger/filesystem/detached_path.h"
 #include "peridot/bin/ledger/filesystem/directory_reader.h"
-#include "peridot/bin/ledger/testing/cloud_provider/fake_cloud_provider.h"
-#include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/lib/scoped_tmpfs/scoped_tmpfs.h"
 
 namespace test {

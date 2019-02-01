@@ -1,0 +1,21 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+visibility = [ "//peridot/bin/cloud_provider_in_memory/*" ]
+
+executable("validation") {
+  output_name = "launch_validation_tests_in_memory"
+  testonly = true
+
+  sources = [
+    "launch.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//peridot/bin/ledger/tests/cloud_provider/launcher",
+    "//peridot/public/fidl/fuchsia.ledger.cloud",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

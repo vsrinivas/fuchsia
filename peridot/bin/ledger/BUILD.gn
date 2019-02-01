@@ -47,6 +47,8 @@ package("ledger_tests") {
     ":ledger_e2e_sync_credentials",
     ":ledger_unittests",
     "//peridot/bin/cloud_provider_firestore:tests",
+    "//peridot/bin/cloud_provider_in_memory",
+    "//peridot/bin/cloud_provider_in_memory:tests",
     "//peridot/bin/ledger/tests/cloud_provider",
     "//peridot/bin/ledger/tests/e2e_local",
     "//peridot/bin/ledger/tests/e2e_sync",
@@ -81,7 +83,13 @@ package("ledger_tests") {
       dest = "validation_firestore.cmx"
     },
     {
-      # This test must be started by validation_firestore and will fail if started on its own.
+      path = rebase_path(
+              "//peridot/bin/cloud_provider_in_memory/validation/validation_in_memory.cmx")
+      dest = "validation_in_memory.cmx"
+    },
+    {
+      # This test must be started by validation_firestore or
+      # validation_in_memory and will fail if started on its own.
       path = rebase_path(
               "tests/cloud_provider/cloud_provider_validation_tests.cmx")
       dest = "cloud_provider_validation_tests.cmx"
@@ -101,7 +109,9 @@ package("ledger_tests") {
     {
       name = "cloud_provider_firestore_unittests"
     },
-
+    {
+      name = "launch_validation_tests_in_memory"
+    },
     {
       name = "ledger_e2e_sync"
 

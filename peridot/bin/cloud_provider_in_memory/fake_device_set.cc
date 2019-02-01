@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/cloud_provider/fake_device_set.h"
+#include "peridot/bin/cloud_provider_in_memory/fake_device_set.h"
 
 #include "peridot/lib/convert/convert.h"
 
@@ -33,9 +33,15 @@ void FakeDeviceSet::SetFingerprint(std::vector<uint8_t> fingerprint,
 }
 
 void FakeDeviceSet::SetWatcher(
-    std::vector<uint8_t> /*fingerprint*/,
+    std::vector<uint8_t> fingerprint,
     fidl::InterfaceHandle<cloud_provider::DeviceSetWatcher> watcher,
     SetWatcherCallback callback) {
+  // TODO(ppi): for the cloud provider to be useful for Voila, we need
+  // to support multiple watchers.
+  if (fingerprints_.count(convert::ToString(fingerprint)) == 0) {
+    callback(cloud_provider::Status::NOT_FOUND);
+    return;
+  }
   watcher_ = watcher.Bind();
   callback(cloud_provider::Status::OK);
 

@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include "peridot/bin/ledger/testing/cloud_provider/fake_page_cloud.h"
+#include "peridot/bin/cloud_provider_in_memory/fake_page_cloud.h"
 
 #include <functional>
 
@@ -52,10 +52,9 @@ bool TokenToPosition(const std::unique_ptr<cloud_provider::Token>& token,
   return true;
 }
 
-uint64_t GetVectorSignature(const std::vector<uint8_t>& vector,
-                            uint32_t seed) {
-  return murmurhash(reinterpret_cast<const char*>(vector.data()),
-                    vector.size(), seed);
+uint64_t GetVectorSignature(const std::vector<uint8_t>& vector, uint32_t seed) {
+  return murmurhash(reinterpret_cast<const char*>(vector.data()), vector.size(),
+                    seed);
 }
 
 uint64_t GetCommitsSignature(
@@ -199,9 +198,10 @@ void FakePageCloud::AddCommits(cloud_provider::CommitPack commits,
 void FakePageCloud::GetCommits(
     std::unique_ptr<cloud_provider::Token> min_position_token,
     GetCommitsCallback callback) {
-  if (MustReturnError(GetVectorSignature(
-          min_position_token ? min_position_token->opaque_id : std::vector<uint8_t>(),
-          kGetCommitsSeed))) {
+  if (MustReturnError(GetVectorSignature(min_position_token
+                                             ? min_position_token->opaque_id
+                                             : std::vector<uint8_t>(),
+                                         kGetCommitsSeed))) {
     callback(cloud_provider::Status::NETWORK_ERROR, nullptr, nullptr);
     return;
   }
@@ -272,6 +272,8 @@ void FakePageCloud::SetWatcher(
     fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
     SetWatcherCallback callback) {
   // TODO(qsr): Inject errors here when LE-438 is fixed.
+  // TODO(ppi): for the cloud provider to be useful for Voila, we need
+  // to support multiple watchers.
   auto watcher_ptr = watcher.Bind();
 
   size_t first_pending_commit_index;

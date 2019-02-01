@@ -2,8 +2,8 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#ifndef PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
-#define PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
+#ifndef PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
+#define PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
 
 #include <fuchsia/ledger/cloud/cpp/fidl.h>
 #include <lib/callback/auto_cleanable.h>
@@ -12,8 +12,8 @@
 #include <lib/fit/function.h>
 #include <lib/fxl/macros.h>
 
+#include "peridot/bin/cloud_provider_in_memory/types.h"
 #include "peridot/bin/ledger/fidl/include/types.h"
-#include "peridot/bin/ledger/testing/cloud_provider/types.h"
 #include "peridot/lib/commit_pack/commit_pack.h"
 
 namespace ledger {
@@ -38,8 +38,7 @@ class FakePageCloud : public cloud_provider::PageCloud {
                   GetCommitsCallback callback) override;
   void AddObject(std::vector<uint8_t> id, fuchsia::mem::Buffer data,
                  AddObjectCallback callback) override;
-  void GetObject(std::vector<uint8_t> id,
-                 GetObjectCallback callback) override;
+  void GetObject(std::vector<uint8_t> id, GetObjectCallback callback) override;
   void SetWatcher(
       std::unique_ptr<cloud_provider::Token> min_position_token,
       fidl::InterfaceHandle<cloud_provider::PageCloudWatcher> watcher,
@@ -63,4 +62,4 @@ class FakePageCloud : public cloud_provider::PageCloud {
 
 }  // namespace ledger
 
-#endif  // PERIDOT_BIN_LEDGER_TESTING_CLOUD_PROVIDER_FAKE_PAGE_CLOUD_H_
+#endif  // PERIDOT_BIN_CLOUD_PROVIDER_IN_MEMORY_FAKE_PAGE_CLOUD_H_
