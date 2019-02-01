@@ -136,11 +136,12 @@ def main():
     parser = argparse.ArgumentParser(
             description=('Checks that packages in a given layer are properly '
                          'formatted and organized'))
-    layer_group = parser.add_mutually_exclusive_group(required=True)
-    layer_group.add_argument('--layer',
+    parser.add_argument('--layer',
                              help='Name of the layer to analyze',
+                             nargs='+',
                              choices=['garnet', 'peridot', 'topaz'])
-    layer_group.add_argument('--vendor-layer',
+    parser.add_argument('--vendor-layer',
+                             nargs='+',
                              help='Name of the vendor layer to analyze')
     parser.add_argument('--json-validator',
                         help='Path to the JSON validation tool',
@@ -148,38 +149,38 @@ def main():
     args = parser.parse_args()
 
     os.chdir(FUCHSIA_ROOT)
+    layers = []
     if args.layer:
-        layer = args.layer
-        packages_base = os.path.join(layer, 'packages')
-    else:
-        layer = args.vendor_layer
-        packages_base = os.path.join('vendor', layer, 'packages')
+        layers.extend([(layer, os.path.join(layer, 'packages')) for layer in args.layer])
+    if args.vendor_layer:
+        layers.extend([(layer, os.path.join('vendor', layer, 'packages')) for layer in args.vendor_layer])
 
+    for layer, packages_base in layers:
     # List all packages files.
-    packages = []
-    for dirpath, dirnames, filenames in os.walk(packages_base):
-        packages.extend([os.path.join(dirpath, f) for f in filenames if f != 'README.md'])
+        packages = []
+        for dirpath, dirnames, filenames in os.walk(packages_base):
+            packages.extend([os.path.join(dirpath, f) for f in filenames if f != 'README.md'])
 
-    if not check_json(packages):
-        return False
+        if not check_json(packages):
+            return False
 
-    schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
-    if not check_schema(packages, args.json_validator, schema):
-        return False
+        schema = os.path.join(SCRIPT_DIR, 'package_schema.json')
+        if not check_schema(packages, args.json_validator, schema):
+            return False
 
-    deps = dict([(p, get_package_imports(p)) for p in packages])
+        deps = dict([(p, get_package_imports(p)) for p in packages])
 
-    if not check_deps_exist(deps):
-        return False
+        if not check_deps_exist(deps):
+            return False
 
-    if not check_all(packages_base, deps, layer):
-        return False
+        if not check_all(packages_base, deps, layer):
+            return False
 
-    if not check_no_fuchsia_packages_in_all(packages):
-        return False
+        if not check_no_fuchsia_packages_in_all(packages):
+            return False
 
-    if not check_root(packages_base, layer):
-        return False
+        if not check_root(packages_base, layer):
+            return False
 
     return True
 
