@@ -29,7 +29,6 @@
 /.cipd
 compile_commands.json
 cscope.*
-garnet/
 go/pkg
 infra/
 integration/
