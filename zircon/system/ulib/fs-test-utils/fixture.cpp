@@ -13,7 +13,7 @@
 #include <fbl/string_printf.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
 #include <lib/async-loop/cpp/loop.h>
 #include <lib/memfs/memfs.h>
@@ -70,7 +70,7 @@ zx_status_t MountMemFs(async::Loop* loop) {
 zx_status_t MakeRamdisk(const FixtureOptions& options, ramdisk_client_t** out_ramdisk) {
     ZX_DEBUG_ASSERT(options.use_ramdisk);
     if (options.use_ramdisk) {
-        zx_status_t result = create_ramdisk(options.ramdisk_block_size,
+        zx_status_t result = ramdisk_create(options.ramdisk_block_size,
                                             options.ramdisk_block_count, out_ramdisk);
         if (result != ZX_OK) {
             LOG_ERROR(result,

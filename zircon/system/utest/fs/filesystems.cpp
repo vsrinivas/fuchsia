@@ -15,7 +15,7 @@
 #include <fvm/fvm.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/device/device.h>
 
@@ -70,7 +70,7 @@ void setup_fs_test(test_disk_t disk, fs_test_type_t test_class) {
     }
 
     if (!use_real_disk) {
-        if (create_ramdisk(disk.block_size, disk.block_count, &test_ramdisk) != ZX_OK) {
+        if (ramdisk_create(disk.block_size, disk.block_count, &test_ramdisk) != ZX_OK) {
             fprintf(stderr, "[FAILED]: Could not create ramdisk for test\n");
             exit(-1);
         }

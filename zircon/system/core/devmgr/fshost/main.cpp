@@ -7,7 +7,6 @@
 #include <fbl/function.h>
 #include <fbl/intrusive_single_list.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/ramdisk.h>
 #include <launchpad/launchpad.h>
 #include <lib/bootfs/parser.h>
 #include <lib/fdio/namespace.h>
@@ -18,6 +17,7 @@
 #include <lib/zx/event.h>
 #include <lib/zx/vmo.h>
 #include <loader-service/loader-service.h>
+#include <ramdevice-client/ramdisk.h>
 
 #include <zircon/boot/bootdata.h>
 #include <zircon/device/vfs.h>
@@ -129,7 +129,7 @@ zx_status_t MiscDeviceAdded(int dirfd, int event, const char* fn, void* cookie) 
         }
 
         struct ramdisk_client* client;
-        if (create_ramdisk_from_vmo(ramdisk_vmo.release(), &client) != ZX_OK) {
+        if (ramdisk_create_from_vmo(ramdisk_vmo.release(), &client) != ZX_OK) {
             printf("fshost: failed to create ramdisk from BOOTDATA_RAMDISK\n");
         } else {
             printf("fshost: BOOTDATA_RAMDISK attached\n");

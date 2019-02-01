@@ -33,7 +33,7 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/fvm.h>
 #include <fvm/fvm-check.h>
@@ -72,7 +72,7 @@ int StartFVMTest(uint64_t blk_size, uint64_t blk_count, uint64_t slice_size,
     ssize_t r;
     disk_path_out[0] = 0;
     if (!use_real_disk) {
-        if (create_ramdisk(blk_size, blk_count, &test_ramdisk)) {
+        if (ramdisk_create(blk_size, blk_count, &test_ramdisk)) {
             fprintf(stderr, "fvm: Could not create ramdisk\n");
             goto fail;
         }
@@ -533,7 +533,7 @@ bool TestTooSmall() {
 
     uint64_t blk_size = 512;
     uint64_t blk_count = (1 << 15);
-    ASSERT_GE(create_ramdisk(blk_size, blk_count, &test_ramdisk), 0);
+    ASSERT_GE(ramdisk_create(blk_size, blk_count, &test_ramdisk), 0);
     const char* ramdisk_path = ramdisk_get_path(test_ramdisk);
     int fd = open(ramdisk_path, O_RDWR);
     ASSERT_GT(fd, 0);
@@ -556,7 +556,7 @@ bool TestLarge() {
     char fvm_path[PATH_MAX];
     uint64_t blk_size = 512;
     uint64_t blk_count = 8 * (1 << 20);
-    ASSERT_GE(create_ramdisk(blk_size, blk_count, &test_ramdisk), 0);
+    ASSERT_GE(ramdisk_create(blk_size, blk_count, &test_ramdisk), 0);
     const char* ramdisk_path = ramdisk_get_path(test_ramdisk);
 
     fbl::unique_fd fd(open(ramdisk_path, O_RDWR));

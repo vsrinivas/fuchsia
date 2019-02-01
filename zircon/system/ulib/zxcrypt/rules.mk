@@ -20,15 +20,15 @@ MODULE_LIBS := \
     system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
-    third_party/ulib/uboringssl \
     system/ulib/ddk \
     system/ulib/elf-search \
     system/ulib/fbl \
-    system/ulib/fs-management \
     system/ulib/pretty \
+    system/ulib/ramdevice-client \
     system/ulib/sync \
     system/ulib/zx \
-    system/ulib/zxcpp
+    system/ulib/zxcpp \
+    third_party/ulib/uboringssl \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-block

@@ -13,7 +13,7 @@
 
 #include <fbl/algorithm.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fuchsia/minfs/c/fidl.h>
 #include <fvm/fvm.h>

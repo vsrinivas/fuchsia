@@ -8,9 +8,9 @@
 #include <stdlib.h>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/ram-nand.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/fdio.h>
+#include <ramdevice-client/ramnand.h>
 #include <unittest/unittest.h>
 
 #include <utility>
@@ -27,7 +27,7 @@ fuchsia_hardware_nand_RamNandInfo BuildConfig() {
 class NandDevice {
   public:
       explicit NandDevice(const fuchsia_hardware_nand_RamNandInfo& config = BuildConfig()) {
-          if (fs_mgmt::RamNand::Create(&config, &ram_nand_) == ZX_OK) {
+          if (ramdevice_client::RamNand::Create(&config, &ram_nand_) == ZX_OK) {
               // caller_ want's to own the device, so we re-open it even though
               // ram_nand_ already has it open.
               fbl::unique_fd device(dup(ram_nand_->fd().get()));
@@ -43,7 +43,7 @@ class NandDevice {
 
   private:
 
-    std::optional<fs_mgmt::RamNand> ram_nand_;
+    std::optional<ramdevice_client::RamNand> ram_nand_;
     fzl::FdioCaller caller_;
     DISALLOW_COPY_ASSIGN_AND_MOVE(NandDevice);
 };

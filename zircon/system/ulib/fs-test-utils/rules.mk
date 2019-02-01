@@ -37,6 +37,7 @@ MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
     system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/sync \
     system/ulib/trace-engine \
     system/ulib/zircon \

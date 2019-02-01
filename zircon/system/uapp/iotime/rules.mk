@@ -16,8 +16,8 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync
 
 MODULE_LIBS := \
-    system/ulib/fs-management \
     system/ulib/fdio \
+    system/ulib/ramdevice-client \
     system/ulib/zircon \
     system/ulib/c
 

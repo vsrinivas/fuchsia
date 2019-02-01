@@ -42,11 +42,12 @@ MODULE_FIDL_LIBS := \
 
 MODULE_LIBS := \
     system/ulib/async.default \
-    system/ulib/fs-management \
-    system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \
+    system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/trace-engine \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 include make/module.mk

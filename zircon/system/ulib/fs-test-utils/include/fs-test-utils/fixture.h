@@ -12,9 +12,9 @@
 #include <fbl/string.h>
 #include <fbl/vector.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
 #include <fvm/fvm.h>
 #include <lib/zx/time.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>

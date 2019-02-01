@@ -23,17 +23,17 @@ zx_status_t wait_for_device(const char* path, zx_duration_t timeout);
 
 // Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
-zx_status_t create_ramdisk(uint64_t blk_size, uint64_t blk_count, ramdisk_client_t** out);
+zx_status_t ramdisk_create(uint64_t blk_size, uint64_t blk_count, ramdisk_client_t** out);
 
 // Creates a ramdisk and returns the full path to the ramdisk's block interface in ramdisk_path_out.
 // This path should be at least PATH_MAX characters long.
-zx_status_t create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count,
+zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      const uint8_t* type_guid, size_t guid_len,
                                      ramdisk_client_t** out);
 
 // Same but uses an existing VMO as the ramdisk.
 // The handle is always consumed, and must be the only handle to this VMO.
-zx_status_t create_ramdisk_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
+zx_status_t ramdisk_create_from_vmo(zx_handle_t vmo, ramdisk_client_t** out);
 
 // Returns the file descriptor to the block device interface of the client.
 //
@@ -70,7 +70,7 @@ zx_status_t ramdisk_set_flags(const ramdisk_client_t* client, uint32_t flags);
 // Rebinds a ramdisk.
 zx_status_t ramdisk_rebind(ramdisk_client_t* client);
 
-// Destroys a ramdisk, given the "ramdisk_client" returned from "create_ramdisk".
+// Destroys a ramdisk, given the "ramdisk_client" returned from "ramdisk_create".
 zx_status_t ramdisk_destroy(ramdisk_client_t* client);
 
 __END_CDECLS

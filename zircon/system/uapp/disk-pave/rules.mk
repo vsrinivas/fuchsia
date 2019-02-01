@@ -19,18 +19,19 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/disk-pave.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/ulib/gpt \
     system/ulib/block-client \
     system/ulib/chromeos-disk-setup \
+    system/ulib/ddk \
+    system/ulib/digest \
+    system/ulib/fbl \
     system/ulib/fs \
     system/ulib/fs-management \
     system/ulib/fvm \
     system/ulib/fzl \
-    system/ulib/ddk \
-    system/ulib/zx \
-    system/ulib/fbl \
-    system/ulib/digest \
+    system/ulib/gpt \
+    system/ulib/ramdevice-client \
     system/ulib/sync \
+    system/ulib/zx \
     system/ulib/zxcpp \
     third_party/ulib/cksum \
     third_party/ulib/uboringssl \
@@ -84,6 +85,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/fs-management \
     system/ulib/fzl \
     system/ulib/gpt \
+    system/ulib/ramdevice-client \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \

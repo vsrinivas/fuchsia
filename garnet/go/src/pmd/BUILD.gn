@@ -31,7 +31,10 @@ foreach(testpkg, test_packages) {
     deps = [
       ":pmd",
     ]
-    non_go_deps = [ "//zircon/public/lib/fs-management" ]
+    non_go_deps = [
+      "//zircon/public/lib/fs-management",
+      "//zircon/public/lib/ramdevice-client",
+    ]
   }
 }
 

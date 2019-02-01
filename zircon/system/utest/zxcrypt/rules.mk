@@ -25,6 +25,7 @@ MODULE_LIBS := \
     system/ulib/crypto \
     system/ulib/digest \
     system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/unittest \
     system/ulib/zxcrypt \
 

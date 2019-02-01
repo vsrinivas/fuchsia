@@ -2,7 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
-#include <fs-management/ram-nand.h>
+#include <ramdevice-client/ramnand.h>
 
 #include <fcntl.h>
 #include <limits.h>
@@ -26,7 +26,7 @@ constexpr char kBasePath[] = "/dev/misc/nand-ctl";
 
 } // namespace
 
-namespace fs_mgmt {
+namespace ramdevice_client {
 
 zx_status_t RamNandCtl::Create(fbl::RefPtr<RamNandCtl>* out) {
     devmgr_launcher::Args args;
@@ -150,4 +150,4 @@ RamNand::~RamNand() {
     }
 }
 
-} // namespace fs_mgmt
+} // namespace ramdevice_client

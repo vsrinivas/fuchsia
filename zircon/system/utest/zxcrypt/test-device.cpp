@@ -21,7 +21,7 @@
 #include <fbl/unique_fd.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fvm/fvm.h>
 #include <lib/fdio/debug.h>
@@ -287,7 +287,7 @@ bool TestDevice::CreateRamdisk(size_t device_size, size_t block_size) {
     ASSERT_TRUE(ac.check());
     memset(as_read_.get(), 0, block_size);
 
-    ASSERT_EQ(create_ramdisk(block_size, count, &ramdisk_), ZX_OK);
+    ASSERT_EQ(ramdisk_create(block_size, count, &ramdisk_), ZX_OK);
 
     block_size_ = block_size;
     block_count_ = count;

@@ -10,7 +10,7 @@
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
 #include <fs-test-utils/unittest.h>
 #include <unittest/unittest.h>

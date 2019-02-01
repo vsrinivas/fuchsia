@@ -9,7 +9,7 @@
 #include <fbl/string_buffer.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fs-management/ram-nand.h>
+#include <ramdevice-client/ramnand.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 
 // The nand device that will be used as the parent of the broker device. This
@@ -48,7 +48,7 @@ class ParentDevice {
     uint32_t FirstBlock() const { return config_.first_block; }
 
   private:
-    std::optional<fs_mgmt::RamNand> ram_nand_;
+    std::optional<ramdevice_client::RamNand> ram_nand_;
     fbl::unique_fd device_;
     TestConfig config_;
     fbl::StringBuffer<PATH_MAX> path_;

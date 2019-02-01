@@ -3,7 +3,7 @@
 // found in the LICENSE file.
 
 #include <fbl/auto_call.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/assert.h>
 #include <zircon/device/device.h>
@@ -330,7 +330,7 @@ bool LibGptTest::InitDisk(const char* disk_path) {
 
 bool LibGptTest::InitRamDisk() {
     BEGIN_HELPER;
-    ASSERT_EQ(create_ramdisk(GetBlockSize(), GetBlockCount(), &ramdisk_),
+    ASSERT_EQ(ramdisk_create(GetBlockSize(), GetBlockCount(), &ramdisk_),
               ZX_OK, "Could not create ramdisk");
     strlcpy(disk_path_, ramdisk_get_path(ramdisk_), sizeof(disk_path_));
     fd_.reset(open(disk_path_, O_RDWR));

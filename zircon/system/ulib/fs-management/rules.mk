@@ -14,17 +14,12 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/launch.cpp \
     $(LOCAL_DIR)/mkfs.cpp \
     $(LOCAL_DIR)/mount.cpp \
-    $(LOCAL_DIR)/ram-nand.cpp \
-    $(LOCAL_DIR)/ramdisk.cpp \
 
 MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/fvm \
     system/ulib/fs \
-    system/ulib/devmgr-integration-test \
-    system/ulib/devmgr-launcher \
     system/ulib/digest \
-    system/ulib/ddk \
     system/ulib/gpt \
     system/ulib/fs \
     system/ulib/fzl \
@@ -40,8 +35,6 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
-    system/fidl/fuchsia-hardware-nand \
-    system/fidl/fuchsia-hardware-ramdisk \
 
 MODULE_EXPORT := so
 MODULE_SO_NAME := fs-management

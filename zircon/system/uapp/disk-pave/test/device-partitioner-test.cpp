@@ -12,10 +12,10 @@
 #include <fbl/string.h>
 #include <fbl/string_piece.h>
 #include <fbl/unique_ptr.h>
-#include <fs-management/ram-nand.h>
-#include <fs-management/ramdisk.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/vmo-mapper.h>
+#include <ramdevice-client/ramnand.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/boot/image.h>
 #include <zircon/device/device.h>
@@ -182,7 +182,7 @@ public:
     static bool Create(const uint8_t* guid, fbl::unique_ptr<BlockDevice>* device) {
         BEGIN_HELPER;
         ramdisk_client_t* client;
-        ASSERT_EQ(create_ramdisk_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
+        ASSERT_EQ(ramdisk_create_with_guid(kBlockSize, kBlockCount, guid, ZBI_PARTITION_GUID_LEN,
                                            &client),
                   ZX_OK);
         ASSERT_TRUE(InsertTestDevices(ramdisk_get_path(client)));
@@ -235,10 +235,10 @@ public:
 
         fuchsia_hardware_nand_RamNandInfo info = kNandInfo;
         info.vmo = dup.release();
-        fbl::RefPtr<fs_mgmt::RamNandCtl> ctl;
-        ASSERT_EQ(fs_mgmt::RamNandCtl::Create(&ctl), ZX_OK);
-        std::optional<fs_mgmt::RamNand> ram_nand;
-        ASSERT_EQ(fs_mgmt::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
+        fbl::RefPtr<ramdevice_client::RamNandCtl> ctl;
+        ASSERT_EQ(ramdevice_client::RamNandCtl::Create(&ctl), ZX_OK);
+        std::optional<ramdevice_client::RamNand> ram_nand;
+        ASSERT_EQ(ramdevice_client::RamNand::Create(ctl, &info, &ram_nand), ZX_OK);
         device->reset(new SkipBlockDevice(std::move(ctl), *std::move(ram_nand),
                                           std::move(mapper)));
         END_HELPER;
@@ -249,12 +249,12 @@ public:
     ~SkipBlockDevice() = default;
 
 private:
-    SkipBlockDevice(fbl::RefPtr<fs_mgmt::RamNandCtl> ctl, fs_mgmt::RamNand ram_nand,
+    SkipBlockDevice(fbl::RefPtr<ramdevice_client::RamNandCtl> ctl, ramdevice_client::RamNand ram_nand,
                     fzl::VmoMapper mapper)
         : ctl_(std::move(ctl)), ram_nand_(std::move(ram_nand)), mapper_(std::move(mapper)) {}
 
-    fbl::RefPtr<fs_mgmt::RamNandCtl> ctl_;
-    fs_mgmt::RamNand ram_nand_;
+    fbl::RefPtr<ramdevice_client::RamNandCtl> ctl_;
+    ramdevice_client::RamNand ram_nand_;
     fzl::VmoMapper mapper_;
 };
 

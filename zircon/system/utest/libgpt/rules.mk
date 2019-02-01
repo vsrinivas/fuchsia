@@ -16,17 +16,17 @@ MODULE_NAME := libgpt-test
 
 MODULE_STATIC_LIBS := \
     system/ulib/gpt \
+    system/ulib/fbl \
     system/ulib/zx \
     system/ulib/zxcpp \
-    system/ulib/fbl \
     third_party/ulib/cksum
 
 MODULE_LIBS := \
-    system/ulib/zircon \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-ramdisk \

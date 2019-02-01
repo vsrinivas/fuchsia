@@ -164,6 +164,7 @@ MODULE_LIBS := \
     system/ulib/launchpad \
     system/ulib/fdio \
     system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/trace-engine \
     system/ulib/zircon \
     system/ulib/c

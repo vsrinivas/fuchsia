@@ -25,7 +25,7 @@
 #include <fbl/mutex.h>
 #include <fbl/unique_fd.h>
 #include <fbl/unique_ptr.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <lib/fdio/watcher.h>
 #include <lib/fzl/fifo.h>
@@ -47,9 +47,9 @@ static ramdisk_client_t* GetRamdisk(uint64_t blk_size, uint64_t blk_count,
                                     const uint8_t* guid = nullptr,
                                     size_t guid_len = 0) {
     ramdisk_client_t* ramdisk = nullptr;
-    zx_status_t rc = guid ? create_ramdisk_with_guid(blk_size, blk_count, guid,
+    zx_status_t rc = guid ? ramdisk_create_with_guid(blk_size, blk_count, guid,
                                                      guid_len, &ramdisk)
-                          : create_ramdisk(blk_size, blk_count, &ramdisk);
+                          : ramdisk_create(blk_size, blk_count, &ramdisk);
     if (rc != ZX_OK) {
         return nullptr;
     }
@@ -113,7 +113,7 @@ static bool RamdiskTestWaitForDevice(void) {
     char path[PATH_MAX];
     char mod[PATH_MAX];
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(512, 64, &ramdisk), ZX_OK);
+    ASSERT_EQ(ramdisk_create(512, 64, &ramdisk), ZX_OK);
     strlcpy(path, ramdisk_get_path(ramdisk), sizeof(path));
 
     // Null path/zero timeout
@@ -184,7 +184,7 @@ static bool RamdiskTestVmo(void) {
     ASSERT_EQ(zx::vmo::create(256 * PAGE_SIZE, 0, &vmo), ZX_OK);
 
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk_from_vmo(vmo.release(), &ramdisk), ZX_OK);
+    ASSERT_EQ(ramdisk_create_from_vmo(vmo.release(), &ramdisk), ZX_OK);
     int block_fd = ramdisk_get_block_fd(ramdisk);
 
     uint8_t buf[PAGE_SIZE * 2];
@@ -213,7 +213,7 @@ static bool RamdiskTestFilesystem(void) {
 
     // Make a ramdisk
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(PAGE_SIZE / 2, 512, &ramdisk), ZX_OK);
+    ASSERT_EQ(ramdisk_create(PAGE_SIZE / 2, 512, &ramdisk), ZX_OK);
     int block_fd = ramdisk_get_block_fd(ramdisk);
     char ramdisk_path[PATH_MAX];
     strlcpy(ramdisk_path, ramdisk_get_path(ramdisk), sizeof(ramdisk_path));
@@ -295,7 +295,7 @@ static bool RamdiskTestRebind(void) {
 
     // Make a ramdisk
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(PAGE_SIZE / 2, 512, &ramdisk), ZX_OK);
+    ASSERT_EQ(ramdisk_create(PAGE_SIZE / 2, 512, &ramdisk), ZX_OK);
     int block_fd = ramdisk_get_block_fd(ramdisk);
 
     // Rebind the ramdisk driver

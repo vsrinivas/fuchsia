@@ -10,9 +10,9 @@
 #include <stdlib.h>
 
 #include <fbl/unique_fd.h>
-#include <fs-management/ram-nand.h>
 #include <fuchsia/hardware/nand/c/fidl.h>
 #include <lib/fzl/owned-vmo-mapper.h>
+#include <ramdevice-client/ramnand.h>
 #include <zircon/status.h>
 #include <zircon/syscalls.h>
 
@@ -173,8 +173,8 @@ int main(int argc, char** argv) {
         return -1;
     }
 
-    std::optional<fs_mgmt::RamNand> ram_nand;
-    if (fs_mgmt::RamNand::Create(&ram_nand_config, &ram_nand) != ZX_OK) {
+    std::optional<ramdevice_client::RamNand> ram_nand;
+    if (ramdevice_client::RamNand::Create(&ram_nand_config, &ram_nand) != ZX_OK) {
         printf("Unable to load device\n");
         return -1;
     }

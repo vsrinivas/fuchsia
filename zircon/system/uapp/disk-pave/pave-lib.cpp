@@ -18,7 +18,7 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fuchsia/hardware/skipblock/c/fidl.h>
 #include <fvm/fvm-sparse.h>
 #include <fvm/sparse-reader.h>

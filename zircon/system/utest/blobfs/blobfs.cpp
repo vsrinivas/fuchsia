@@ -28,7 +28,6 @@
 #include <fbl/vector.h>
 #include <fs-management/fvm.h>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
 #include <fuchsia/hardware/ramdisk/c/fidl.h>
 #include <fuchsia/io/c/fidl.h>
 #include <fvm/fvm.h>
@@ -36,6 +35,7 @@
 #include <lib/fdio/io.h>
 #include <lib/fzl/fdio.h>
 #include <lib/memfs/memfs.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/device/device.h>
 #include <zircon/device/vfs.h>
@@ -241,7 +241,7 @@ bool BlobfsTest::Init(FsTestState state) {
         blk_size_ = gRealDiskInfo.blk_size;
         blk_count_ = gRealDiskInfo.blk_count;
     } else {
-        ASSERT_EQ(create_ramdisk(blk_size_, blk_count_, &ramdisk_), ZX_OK,
+        ASSERT_EQ(ramdisk_create(blk_size_, blk_count_, &ramdisk_), ZX_OK,
                   "Blobfs: Could not create ramdisk");
         strlcpy(device_path_, ramdisk_get_path(ramdisk_), sizeof(device_path_));
     }

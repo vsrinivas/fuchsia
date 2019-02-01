@@ -10,7 +10,7 @@
 #include <string.h>
 
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <unittest/unittest.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>

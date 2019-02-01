@@ -16,7 +16,7 @@ MODULE_NAME := biotime-test
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/unittest \
     system/ulib/zircon \
 

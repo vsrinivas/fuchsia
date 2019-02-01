@@ -7,9 +7,11 @@
 package ramdisk
 
 // #cgo CFLAGS: -I${SRCDIR}/../../../../../zircon/system/ulib/fs-management/include
+// #cgo CFLAGS: -I${SRCDIR}/../../../../../zircon/system/ulib/ramdevice-client/include
 // #cgo LDFLAGS: -lfs-management
-// #include <fs-management/ramdisk.h>
+// #cgo LDFLAGS: -lramdevice-client
 // #include <fs-management/mount.h>
+// #include <ramdevice-client/ramdisk.h>
 // #include <fcntl.h>
 //
 // int blobfs_mount(char *dpath, char *path) {
@@ -37,7 +39,7 @@ func New(size int) (*Ramdisk, error) {
 }
 
 func (r *Ramdisk) Create(blkSz uint64, blkCnt uint64) error {
-	n := C.create_ramdisk(C.uint64_t(blkSz), C.uint64_t(blkCnt), &r.ramdisk_client)
+	n := C.ramdisk_create(C.uint64_t(blkSz), C.uint64_t(blkCnt), &r.ramdisk_client)
 	if n == 0 {
 		runtime.SetFinalizer(r, finalizeRamdisk)
 		return nil

@@ -27,7 +27,6 @@ MODULE_COMPILEFLAGS := \
     -Isystem/ulib/unittest/include \
     -Isystem/ulib/bitmap/include \
     -Isystem/ulib/fs/include \
-    -Isystem/ulib/fs-management/include \
     -Isystem/ulib/fzl/include \
     -Isystem/ulib/minfs/include \
     -Isystem/ulib/fbl/include \

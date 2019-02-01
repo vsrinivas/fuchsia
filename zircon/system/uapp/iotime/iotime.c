@@ -10,7 +10,7 @@
 #include <unistd.h>
 
 #include <block-client/client.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/device/block.h>
 #include <zircon/syscalls.h>
 #include <zircon/time.h>
@@ -179,7 +179,7 @@ int main(int argc, char** argv) {
             fprintf(stderr, "ramdisk only supported for block\n");
             goto done;
         }
-        zx_status_t status = create_ramdisk(512, total / 512, &ramdisk);
+        zx_status_t status = ramdisk_create(512, total / 512, &ramdisk);
         if (status != ZX_OK) {
             fprintf(stderr, "error: cannot create %zu-byte ramdisk\n", total);
             goto done;

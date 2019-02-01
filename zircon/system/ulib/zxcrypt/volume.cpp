@@ -26,10 +26,10 @@
 #include <fbl/unique_ptr.h>
 #include <memory>
 #include <fs-management/mount.h>
-#include <fs-management/ramdisk.h>
 #include <lib/fdio/debug.h>
 #include <lib/sync/completion.h>
 #include <lib/zx/vmo.h>
+#include <ramdevice-client/ramdisk.h>
 #include <zircon/compiler.h>
 #include <zircon/device/block.h>
 #include <zircon/errors.h>

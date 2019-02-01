@@ -78,6 +78,7 @@ MODULE_LIBS := \
     system/ulib/fs-management \
     system/ulib/launchpad \
     system/ulib/memfs \
+    system/ulib/ramdevice-client \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \

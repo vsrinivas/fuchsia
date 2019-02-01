@@ -26,7 +26,6 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/c \
     system/ulib/fdio \
-    system/ulib/fs-management \
     system/ulib/zircon \
 
 include make/module.mk

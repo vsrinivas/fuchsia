@@ -17,18 +17,19 @@ MODULE_NAME := ramdisk-test
 MODULE_STATIC_LIBS := \
     system/ulib/block-client \
     system/ulib/sync \
-    system/ulib/zx \
-    system/ulib/zxcpp \
     system/ulib/fbl \
     system/ulib/fs \
     system/ulib/fzl \
+    system/ulib/zx \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/c \
-    system/ulib/fs-management \
-    system/ulib/zircon \
     system/ulib/fdio \
+    system/ulib/fs-management \
+    system/ulib/ramdevice-client \
     system/ulib/unittest \
+    system/ulib/zircon \
 
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-ramdisk \

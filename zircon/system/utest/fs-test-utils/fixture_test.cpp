@@ -10,7 +10,7 @@
 #include <fbl/function.h>
 #include <fbl/string.h>
 #include <fbl/unique_fd.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <fs-test-utils/fixture.h>
 #include <unittest/unittest.h>
 #include <zircon/device/block.h>
@@ -232,7 +232,7 @@ bool UseBlockDeviceIsOk() {
 
     // Create a Ramdisk which will be passed as the 'block_device'.
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
+    ASSERT_EQ(ramdisk_create(options.ramdisk_block_size,
                              options.ramdisk_block_count, &ramdisk),
               ZX_OK);
     options.block_device_path = ramdisk_get_path(ramdisk);
@@ -280,7 +280,7 @@ bool UseBlockDeviceWithFvmIsOk() {
 
     // Create a Ramdisk which will be passed as the 'block_device'.
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
+    ASSERT_EQ(ramdisk_create(options.ramdisk_block_size,
                              options.ramdisk_block_count, &ramdisk),
               ZX_OK);
     options.block_device_path = ramdisk_get_path(ramdisk);
@@ -334,7 +334,7 @@ bool SkipFormatIsOk() {
 
     // Create a Ramdisk which will be passed as the 'block_device'.
     ramdisk_client_t* ramdisk = nullptr;
-    ASSERT_EQ(create_ramdisk(options.ramdisk_block_size,
+    ASSERT_EQ(ramdisk_create(options.ramdisk_block_size,
                              options.ramdisk_block_count, &ramdisk),
               ZX_OK);
     options.block_device_path = ramdisk_get_path(ramdisk);

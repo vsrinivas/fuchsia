@@ -16,7 +16,7 @@
 #include <lib/devmgr-integration-test/fixture.h>
 #include <zircon/compiler.h>
 
-namespace fs_mgmt {
+namespace ramdevice_client {
 
 class RamNand;
 
@@ -92,4 +92,4 @@ private:
     fbl::RefPtr<RamNandCtl> parent_;
 };
 
-} // namespace fs_mgmt
+} // namespace ramdevice_client

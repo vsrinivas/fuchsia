@@ -4,7 +4,7 @@
 
 #include <fbl/auto_call.h>
 #include <fbl/vector.h>
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 #include <lib/fdio/spawn.h>
 #include <lib/zx/process.h>
 #include <unittest/unittest.h>
@@ -18,7 +18,7 @@ namespace {
 // returns a success status.
 bool run_biotime(fbl::Vector<const char*>&& args) {
     ramdisk_client_t* ramdisk;
-    ASSERT_EQ(create_ramdisk(1024, 100, &ramdisk), ZX_OK);
+    ASSERT_EQ(ramdisk_create(1024, 100, &ramdisk), ZX_OK);
     auto ac = fbl::MakeAutoCall([&] {
         EXPECT_EQ(ramdisk_destroy(ramdisk), 0);
     });

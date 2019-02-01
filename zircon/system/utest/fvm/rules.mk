@@ -41,6 +41,7 @@ MODULE_LIBS := \
     system/ulib/fdio \
     system/ulib/fs-management \
     system/ulib/memfs \
+    system/ulib/ramdevice-client \
     system/ulib/trace-engine \
     system/ulib/unittest \
     system/ulib/zircon \

@@ -36,7 +36,7 @@
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
 
-#include <fs-management/ramdisk.h>
+#include <ramdevice-client/ramdisk.h>
 
 #define RAMCTL_PATH "/dev/misc/ramctl"
 #define BLOCK_EXTENSION "block"
@@ -272,7 +272,7 @@ static const fuchsia_hardware_ramdisk_GUID* fidl_guid(const uint8_t* type_guid) 
     return reinterpret_cast<const fuchsia_hardware_ramdisk_GUID*>(type_guid);
 }
 
-static zx_status_t create_ramdisk_with_guid_internal(uint64_t blk_size, uint64_t blk_count,
+static zx_status_t ramdisk_create_with_guid_internal(uint64_t blk_size, uint64_t blk_count,
                                                      const uint8_t* type_guid,
                                                      ramdisk_client** out) {
     zx::channel ramctl;
@@ -304,20 +304,20 @@ static zx_status_t create_ramdisk_with_guid_internal(uint64_t blk_size, uint64_t
     return ZX_OK;
 }
 
-zx_status_t create_ramdisk(uint64_t blk_size, uint64_t blk_count, ramdisk_client** out) {
-    return create_ramdisk_with_guid_internal(blk_size, blk_count, nullptr, out);
+zx_status_t ramdisk_create(uint64_t blk_size, uint64_t blk_count, ramdisk_client** out) {
+    return ramdisk_create_with_guid_internal(blk_size, blk_count, nullptr, out);
 }
 
-zx_status_t create_ramdisk_with_guid(uint64_t blk_size, uint64_t blk_count,
+zx_status_t ramdisk_create_with_guid(uint64_t blk_size, uint64_t blk_count,
                                      const uint8_t* type_guid, size_t guid_len,
                                      ramdisk_client** out) {
     if (type_guid == nullptr || guid_len < ZBI_PARTITION_GUID_LEN) {
         return ZX_ERR_INVALID_ARGS;
     }
-    return create_ramdisk_with_guid_internal(blk_size, blk_count, type_guid, out);
+    return ramdisk_create_with_guid_internal(blk_size, blk_count, type_guid, out);
 }
 
-zx_status_t create_ramdisk_from_vmo(zx_handle_t raw_vmo, ramdisk_client** out) {
+zx_status_t ramdisk_create_from_vmo(zx_handle_t raw_vmo, ramdisk_client** out) {
     zx::vmo vmo(raw_vmo);
     zx::channel ramctl;
     zx_status_t status = open_ramctl(&ramctl);
