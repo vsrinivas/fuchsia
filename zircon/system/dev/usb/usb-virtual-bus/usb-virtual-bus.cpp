@@ -492,20 +492,21 @@ zx_status_t UsbVirtualBus::MsgEnable(fidl_txn_t* txn) {
 
 zx_status_t UsbVirtualBus::MsgDisable(fidl_txn_t* txn) {
     SetConnected(false);
-
-    fbl::AutoLock lock(&lock_);
-
-    // Use release() here to avoid double free of these objects.
-    // devmgr will handle freeing them.
-    auto* host = host_.release();
+    UsbVirtualHost* host;
+    UsbVirtualDevice* device;
+    {
+        fbl::AutoLock lock(&lock_);
+        // Use release() here to avoid double free of these objects.
+        // devmgr will handle freeing them.
+        host = host_.release();
+        device = device_.release();
+    }
     if (host) {
         host->DdkRemove();
     }
-    auto* device = device_.release();
     if (device) {
         device->DdkRemove();
     }
-
     return fuchsia_usb_virtualbus_BusDisable_reply(txn, ZX_OK);
 }
 
