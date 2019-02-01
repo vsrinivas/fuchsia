@@ -152,8 +152,8 @@ fi
 declare GN_CMD="${BUILDTOOLS_ROOT}/gn format"
 declare GO_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/go/bin/gofmt -w"
 declare JSON_FMT_CMD="${FUCHSIA_DIR}"/scripts/style/json-fmt.py
-declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml --unstable-features --skip-children"
-declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/garnet/rustfmt.toml"
+declare RUST_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml --unstable-features --skip-children"
+declare RUST_ENTRY_POINT_FMT_CMD="${BUILDTOOLS_ROOT}/${HOST_PLATFORM}/rust/bin/rustfmt --config-path=${FUCHSIA_DIR}/rustfmt.toml"
 
 declare FIX_HEADER_GUARDS_CMD="${FUCHSIA_DIR}/scripts/style/check-header-guards.py --fix"
 
