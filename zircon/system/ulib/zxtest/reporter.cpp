@@ -2,6 +2,7 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include <inttypes.h>
 #include <stdio.h>
 
 #include <utility>
@@ -78,7 +79,7 @@ void Reporter::OnIterationStart(const Runner& runner, int iteration) {
         fprintf(stream_, "\nRepeating all tests (iteration %d) . . .\n\n", iteration);
     }
 
-    fprintf(stream_, "[==========] Running %lu test%s from %lu test case%s.\n",
+    fprintf(stream_, "[==========] Running %zu test%s from %zu test case%s.\n",
             runner.summary().active_test_count, Pluralize(runner.summary().active_test_count),
             runner.summary().active_test_case_count,
             Pluralize(runner.summary().active_test_case_count));
@@ -100,7 +101,7 @@ void Reporter::OnTestCaseStart(const TestCase& test_case) {
         return;
     }
 
-    fprintf(stream_, "[----------] %lu test%s from %s\n", test_case.MatchingTestCount(),
+    fprintf(stream_, "[----------] %zu test%s from %s\n", test_case.MatchingTestCount(),
             Pluralize(test_case.MatchingTestCount()), test_case.name().c_str());
 }
 
@@ -115,7 +116,7 @@ void Reporter::OnTestStart(const TestCase& test_case, const TestInfo& test) {
 }
 
 void Reporter::OnAssertion(const Assertion& assertion) {
-    fprintf(stream_, "%s:%ld: error: Failure:\n%s\n    Expected: %s\n",
+    fprintf(stream_, "%s:%" PRIi64 ": error: Failure:\n%s\n    Expected: %s\n",
             assertion.location().filename, assertion.location().line_number,
             assertion.description().c_str(), assertion.expected().c_str());
     // When it is not a literal.
@@ -138,7 +139,7 @@ void Reporter::OnTestSkip(const TestCase& test_case, const TestInfo& test) {
 
     int64_t elapsed_time = timers_.test.GetElapsedTime();
     iteration_summary_.skipped++;
-    fprintf(stream_, "[  SKIPPED ] %s.%s  (%ld ms)\n", test_case.name().c_str(),
+    fprintf(stream_, "[  SKIPPED ] %s.%s  (%" PRIi64 " ms)\n", test_case.name().c_str(),
             test.name().c_str(), elapsed_time);
 }
 
@@ -153,7 +154,7 @@ void Reporter::OnTestFailure(const TestCase& test_case, const TestInfo& test) {
     sprintf(buffer, "%s.%s", test_case.name().c_str(), test.name().c_str());
     iteration_summary_.failed++;
     iteration_summary_.failed_tests.push_back(buffer);
-    fprintf(stream_, "[  FAILED  ] %s.%s (%ld ms)\n", test_case.name().c_str(),
+    fprintf(stream_, "[  FAILED  ] %s.%s (%" PRIi64 " ms)\n", test_case.name().c_str(),
             test_case.name().c_str(), elapsed_time);
 }
 
@@ -165,7 +166,7 @@ void Reporter::OnTestSuccess(const TestCase& test_case, const TestInfo& test) {
 
     int64_t elapsed_time = timers_.test.GetElapsedTime();
     iteration_summary_.passed++;
-    fprintf(stream_, "[       OK ] %s.%s (%ld ms)\n", test_case.name().c_str(), test.name().c_str(),
+    fprintf(stream_, "[       OK ] %s.%s (%" PRIi64 " ms)\n", test_case.name().c_str(), test.name().c_str(),
             elapsed_time);
 }
 
@@ -176,7 +177,7 @@ void Reporter::OnTestCaseEnd(const TestCase& test_case) {
     }
 
     int64_t elapsed_time = timers_.test_case.GetElapsedTime();
-    fprintf(stream_, "[----------] %lu test%s from %s (%ld ms total)\n\n",
+    fprintf(stream_, "[----------] %zu test%s from %s (%" PRIi64 " ms total)\n\n",
             test_case.MatchingTestCount(), Pluralize(test_case.MatchingTestCount()),
             test_case.name().c_str(), elapsed_time);
 }
@@ -197,26 +198,26 @@ void Reporter::OnIterationEnd(const Runner& runner, int iteration) {
     }
 
     int64_t elapsed_time = timers_.iteration.GetElapsedTime();
-    fprintf(stream_, "[==========] %ld test%s from %lu test case%s ran (%ld ms total).\n",
+    fprintf(stream_, "[==========] %zd test%s from %zu test case%s ran (%" PRIi64 " ms total).\n",
             runner.summary().active_test_count, Pluralize(runner.summary().active_test_count),
             runner.summary().active_test_case_count,
             Pluralize(runner.summary().active_test_case_count), elapsed_time);
     if (iteration_summary_.passed > 0) {
-        fprintf(stream_, "[  PASSED  ] %lu test%s\n", iteration_summary_.passed,
+        fprintf(stream_, "[  PASSED  ] %" PRIu64 " test%s\n", iteration_summary_.passed,
                 Pluralize(iteration_summary_.passed));
     }
     if (iteration_summary_.skipped > 0) {
-        fprintf(stream_, "[  SKIPPED ] %lu test%s\n", iteration_summary_.skipped,
+        fprintf(stream_, "[  SKIPPED ] %" PRIu64 " test%s\n", iteration_summary_.skipped,
                 Pluralize(iteration_summary_.skipped));
     }
     if (iteration_summary_.failed > 0) {
-        fprintf(stream_, "[  FAILED  ] %lu test%s, listed below:\n", iteration_summary_.failed,
+        fprintf(stream_, "[  FAILED  ] %" PRIu64 " test%s, listed below:\n", iteration_summary_.failed,
                 Pluralize(iteration_summary_.failed));
         if (iteration_summary_.failed_tests.size() > 0) {
             for (auto& failed_test : iteration_summary_.failed_tests) {
                 fprintf(stream_, "[  FAILED  ] %s\n", failed_test.c_str());
             }
-            fprintf(stream_, "%ld FAILED TEST%s\n", iteration_summary_.failed,
+            fprintf(stream_, "%" PRIi64 " FAILED TEST%s\n", iteration_summary_.failed,
                     Pluralize(iteration_summary_.failed, /*capitalize*/ true));
         }
     }

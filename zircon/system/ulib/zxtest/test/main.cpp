@@ -4,6 +4,7 @@
 
 #include "test-registry.h"
 
+#include <cinttypes>
 #include <cstdio>
 
 #include <zircon/compiler.h>
@@ -22,13 +23,13 @@ int main(int argc, char** argv) {
         test_timer.Reset();
         fprintf(stdout, "[ RUN      ] ZxTestSmokeTest.%s\n", test.name);
         test.test_fn();
-        fprintf(stdout, "[       OK ] ZxTestSmokeTest.%s (%ld ms)\n", test.name,
+        fprintf(stdout, "[       OK ] ZxTestSmokeTest.%s (%" PRIi64 " ms)\n", test.name,
                 test_timer.GetElapsedTime());
     }
-    fprintf(stdout, "[----------] %lu tests from ZxTestSmokeTest (%ld ms total)\n\n",
+    fprintf(stdout, "[----------] %lu tests from ZxTestSmokeTest (%" PRIi64 " ms total)\n\n",
             countof(zxtest::test::kRegisteredTests), test_case_timer.GetElapsedTime());
     fprintf(stdout, "[----------] Global test environment tear-down.\n");
-    fprintf(stdout, "[==========] %ld tests from 1 test case ran (%ld ms total).\n",
+    fprintf(stdout, "[==========] %ld tests from 1 test case ran (%" PRIi64 " ms total).\n",
             countof(zxtest::test::kRegisteredTests), iteration_timer.GetElapsedTime());
     fprintf(stdout, "[  PASSED  ] %lu tests\n", countof(zxtest::test::kRegisteredTests));
     return 0;
