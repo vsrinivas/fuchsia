@@ -29,26 +29,8 @@ const (
 func TestNicName(t *testing.T) {
 	ns := newNetstack(t)
 
-	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &ethernetext.Device{
-		TB:                t,
-		GetInfoImpl:       func() (ethernet.Info, error) { return ethernet.Info{}, nil },
-		SetClientNameImpl: func(string) (int32, error) { return 0, nil },
-		GetFifosImpl: func() (int32, *ethernet.Fifos, error) {
-			return int32(zx.ErrOk), &ethernet.Fifos{
-				TxDepth: 1,
-			}, nil
-		},
-		GetStatusImpl: func() (uint32, error) {
-			return uint32(eth.LinkUp), nil
-		},
-		SetIoBufferImpl: func(zx.VMO) (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-		StartImpl: func() (int32, error) {
-			return int32(zx.ErrOk), nil
-		},
-	})
-
+	d := deviceForAddEth(ethernet.Info{}, t)
+	ifs, err := ns.addEth("/fake/ethernet/device", netstack.InterfaceConfig{Name: testDeviceName}, &d)
 	if err != nil {
 		t.Fatal(err)
 	}
