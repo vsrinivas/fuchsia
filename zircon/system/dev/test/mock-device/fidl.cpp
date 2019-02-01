@@ -16,7 +16,7 @@ namespace mock_device {
 
 namespace {
 
-template <typename Response>
+template <typename MessageType>
 zx_status_t ParseActions(const fidl_type_t* type, fidl::Message* msg,
                          fbl::Array<const fuchsia_device_mock_Action>* actions_out) {
     const char* err_out = nullptr;
@@ -25,15 +25,41 @@ zx_status_t ParseActions(const fidl_type_t* type, fidl::Message* msg,
         printf("mock-device: Failed to decode: %s\n", err_out);
         return status;
     }
-    auto resp = msg->GetBytesAs<Response>();
-    auto array = fbl::make_unique<fuchsia_device_mock_Action[]>(resp->actions.count);
-    memcpy(array.get(), resp->actions.data,
-           resp->actions.count * sizeof(fuchsia_device_mock_Action));
-    actions_out->reset(array.release(), resp->actions.count);
+    auto payload = msg->GetBytesAs<MessageType>();
+    auto array = fbl::make_unique<fuchsia_device_mock_Action[]>(payload->actions.count);
+    memcpy(array.get(), payload->actions.data,
+           payload->actions.count * sizeof(fuchsia_device_mock_Action));
+    actions_out->reset(array.release(), payload->actions.count);
     return ZX_OK;
 }
 
 } // namespace
+
+zx_status_t WaitForPerformActions(const zx::channel& c,
+                                  fbl::Array<const fuchsia_device_mock_Action>* actions_out) {
+    zx_signals_t signals;
+    zx_status_t status = c.wait_one(ZX_CHANNEL_READABLE | ZX_CHANNEL_PEER_CLOSED,
+                                    zx::time::infinite(), &signals);
+    if (status != ZX_OK) {
+        return status;
+    }
+    if (!(signals & ZX_CHANNEL_READABLE)) {
+        return ZX_ERR_STOP;
+    }
+
+    FIDL_ALIGNDECL uint8_t request_buf[ZX_CHANNEL_MAX_MSG_BYTES];
+    zx_handle_t handles[ZX_CHANNEL_MAX_MSG_HANDLES];
+    fidl::Message request(fidl::BytePart(request_buf, sizeof(request_buf)),
+                          fidl::HandlePart(handles, fbl::count_of(handles)));
+    status = request.Read(c.get(), 0);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    return ParseActions<fuchsia_device_mock_MockDeviceThreadPerformActionsRequest>(
+            &fuchsia_device_mock_MockDeviceThreadPerformActionsRequestTable,
+            &request, actions_out);
+}
 
 zx_status_t BindHook(const zx::channel& c, const fuchsia_device_mock_HookInvocation& record,
                      fbl::Array<const fuchsia_device_mock_Action>* actions_out) {

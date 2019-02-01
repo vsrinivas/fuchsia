@@ -7,6 +7,7 @@
 #include <ddk/binding.h>
 #include <ddk/device.h>
 #include <ddk/driver.h>
+#include <ddk/protocol/test.h>
 #include <ddktl/device.h>
 #include <fbl/array.h>
 #include <fbl/auto_lock.h>
@@ -17,7 +18,7 @@
 #include <lib/zx/vmo.h>
 #include <zircon/assert.h>
 #include <zircon/process.h>
-#include <ddk/protocol/test.h>
+#include <zircon/status.h>
 #include <zircon/thread_annotations.h>
 #include <zircon/types.h>
 
@@ -93,7 +94,7 @@ struct ProcessActionsContext {
 
     bool has_hook_status = false;
     // OUT: What should be returned by the hook
-    zx_status_t hook_status = ZX_ERR_INTERNAL;;
+    zx_status_t hook_status = ZX_ERR_INTERNAL;
     // IN: A buffer that can be written to by actions (nullptr if none)
     void* associated_buf = nullptr;
     size_t associated_buf_count = 0;
@@ -115,7 +116,19 @@ MockDevice::MockDevice(zx_device_t* device, zx::channel controller)
 
 int MockDevice::ThreadFunc(void* raw_arg) {
     auto arg = fbl::unique_ptr(static_cast<ThreadFuncArg*>(raw_arg));
-    // TODO(teisenbe): Implement MockDeviceThread here
+
+    while (true) {
+        fbl::Array<const fuchsia_device_mock_Action> actions;
+        zx_status_t status = WaitForPerformActions(arg->channel, &actions);
+        if (status != ZX_OK) {
+            ZX_ASSERT_MSG(status == ZX_ERR_STOP, "MockDevice thread exiting: %s\n",
+                          zx_status_get_string(status));
+            break;
+        }
+        ProcessActionsContext ctx(arg->channel, false, arg->dev, arg->dev->zxdev());
+        status = ProcessActions(std::move(actions), &ctx);
+        ZX_ASSERT(status == ZX_OK);
+    }
     return 0;
 }
 
