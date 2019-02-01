@@ -18,8 +18,6 @@ namespace component {
 
 constexpr char kSandbox[] = "sandbox";
 constexpr char kProgram[] = "program";
-// TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
-constexpr char kDeprecatedBarePackageUrl[] = "deprecated-bare-package-url";
 
 CmxMetadata::CmxMetadata() = default;
 CmxMetadata::~CmxMetadata() = default;
@@ -35,25 +33,11 @@ bool CmxMetadata::ParseFromFileAt(int dirfd, const std::string& file,
     json_parser->ReportError("File is not a JSON object.");
     return false;
   }
-  ParseDeprecatedBarePackageUrl(document, json_parser);
   ParseSandboxMetadata(document, json_parser);
   runtime_meta_.ParseFromDocument(document, json_parser);
   ParseProgramMetadata(document, json_parser);
   facet_parser_.Parse(document, json_parser);
   return !json_parser->HasError();
-}
-
-void CmxMetadata::ParseDeprecatedBarePackageUrl(
-    const rapidjson::Document& document, json::JSONParser* json_parser) {
-  auto package_url = document.FindMember(kDeprecatedBarePackageUrl);
-  if (package_url == document.MemberEnd()) {
-    deprecated_bare_package_url_ = false;
-  } else if (!package_url->value.IsBool()) {
-    deprecated_bare_package_url_ = false;
-    json_parser->ReportError("'deprecated-bare-package-url' is not a bool.");
-  } else {
-    deprecated_bare_package_url_ = package_url->value.GetBool();
-  }
 }
 
 const rapidjson::Value& CmxMetadata::GetFacet(const std::string& key) {

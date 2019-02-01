@@ -55,7 +55,6 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
       "services": [ "fuchsia.MyService" ]
   },
   "runner": "dart_runner",
-  "deprecated-bare-package-url": true,
   "facets": {
     "some_key": "some_value"
   },
@@ -75,8 +74,6 @@ TEST_F(CmxMetadataTest, ParseMetadata) {
 
   EXPECT_FALSE(cmx.runtime_meta().IsNull());
   EXPECT_EQ(cmx.runtime_meta().runner(), "dart_runner");
-
-  EXPECT_TRUE(cmx.deprecated_bare_package_url());
 
   const auto& some_value = cmx.GetFacet("some_key");
   ASSERT_TRUE(some_value.IsString());

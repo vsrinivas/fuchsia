@@ -102,8 +102,6 @@ package("fonts") {
 # TODO(sergeyu): Once PKG-47 is fixed it will be possible to separate fonts
 #                packages from font_server.
 package("fonts_minimal") {
-  deprecated_bare_package_url = "//build"
-
   deps = [
     ":font_server",
   ]

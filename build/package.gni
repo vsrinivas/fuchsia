@@ -287,7 +287,6 @@ template("package") {
                                "components",
                                "data_deps",
                                "deprecated_system_image",
-                               "deprecated_bare_package_url",
                                "deps",
                                "public_deps",
                                "drivers",
@@ -335,9 +334,6 @@ template("package") {
       }
       if (!defined(package_name)) {
         package_name = pkg_target_name
-      }
-      if (defined(deprecated_bare_package_url)) {
-        deps += [ "${deprecated_bare_package_url}:bare_package_url_whitelist" ]
       }
       if (components == []) {
         assert_cmx(package_name) {
@@ -403,34 +399,9 @@ template("package") {
       if (get_path_info(meta.dest, "extension") == "cmx") {
         format =
             "format_" + pkg_target_name + "_" + get_path_info(meta.dest, "file")
-
-        # TODO(CF-156): Remove this logic once all URLs are fuchsia-pkg.
-        if (defined(pkg.deprecated_bare_package_url)) {
-          merged_deprecated_bare_package_url =
-              "merged_deprecated_bare_package_url_" + pkg_target_name + "_" +
-              get_path_info(meta.dest, "file")
-          cmx_merge(merged_deprecated_bare_package_url) {
-            sources = [
-              meta.path,
-              rebase_path("//build/deprecated_bare_package_url"),
-            ]
-            deps = pkg.deps
-          }
-          merged_deprecated_bare_package_url_outputs = []
-          merged_deprecated_bare_package_url_outputs =
-              get_target_outputs(":$merged_deprecated_bare_package_url")
-          merged_deprecated_bare_package_url_path =
-              merged_deprecated_bare_package_url_outputs[0]
-          pkg.deps += [ ":$merged_deprecated_bare_package_url" ]
-          cmx_format(format) {
-            data = rebase_path(merged_deprecated_bare_package_url_path)
-            deps = pkg.deps
-          }
-        } else {
-          cmx_format(format) {
-            data = rebase_path(meta.path)
-            deps = pkg.deps
-          }
+        cmx_format(format) {
+          data = rebase_path(meta.path)
+          deps = pkg.deps
         }
         formatted_outputs = []
         formatted_outputs = get_target_outputs(":$format")
