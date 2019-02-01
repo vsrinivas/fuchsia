@@ -4,6 +4,7 @@
 
 #include <ddk/debug.h>
 #include <ddk/device.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
 
@@ -100,6 +101,7 @@ zx_status_t Vim::GpioInit() {
         return ZX_ERR_INTERNAL;
     }
 
+#if USE_GPIO_TEST
     const pbus_gpio_t gpio_test_gpios[] = {
         {
             // SYS_LED
@@ -124,6 +126,43 @@ zx_status_t Vim::GpioInit() {
         zxlogf(ERROR, "GpioInit could not add gpio_test_dev: %d\n", status);
         return status;
     }
+#else
+    const pbus_gpio_t light_gpios[] = {
+        {
+            // SYS_LED
+            .gpio = S912_GPIOAO(9),
+        },
+    };
+
+    using light_name = char[ZX_MAX_NAME_LEN];
+    static const light_name light_names[] = {
+        "SYS_LED"
+    };
+
+    static const pbus_metadata_t light_metadata[] = {
+        {
+            .type = DEVICE_METADATA_NAME,
+            .data_buffer = &light_names,
+            .data_size = sizeof(light_names),
+        },
+    };
+
+    pbus_dev_t light_dev = {};
+    light_dev.name = "gpio-light";
+    light_dev.vid = PDEV_VID_GENERIC;
+    light_dev.pid = PDEV_PID_GENERIC;
+    light_dev.did = PDEV_DID_GPIO_LIGHT;
+    light_dev.gpio_list = light_gpios;
+    light_dev.gpio_count = countof(light_gpios);
+    light_dev.metadata_list = light_metadata;
+    light_dev.metadata_count = countof(light_metadata);
+
+    status = pbus_.DeviceAdd(&light_dev);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "GpioInit could not add gpio_light_dev: %d\n", status);
+        return status;
+    }
+#endif
 
     return ZX_OK;
 }

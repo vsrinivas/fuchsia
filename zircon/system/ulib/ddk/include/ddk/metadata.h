@@ -48,8 +48,14 @@ static_assert(DEVICE_METADATA_PARTITION_MAP == ZBI_TYPE_DRV_PARTITION_MAP, "");
 #define DEVICE_METADATA_GUID_MAP                  0x44495547 // GUID
 #define DEVICE_METADATA_GUID_MAP_MAX_ENTRIES      8
 
+// list of buttons_button_config_t
 #define DEVICE_METADATA_BUTTONS_BUTTONS           0x424E5442 // BTNB
+
+// list of buttons_gpio_config_t
 #define DEVICE_METADATA_BUTTONS_GPIOS             0x474E5442 // BTNG
+
+// list of char[ZX_MAX_NAME_LEN]
+#define DEVICE_METADATA_NAME                      0x454D414E // NAME
 
 // Metadata types that have least significant byte set to lowercase 'd'
 // signify private driver data.

@@ -38,6 +38,7 @@ __BEGIN_CDECLS;
 #define PDEV_DID_BOSCH_BMA253       25  // Bosch BMA253 acceleration sensor
 #define PDEV_DID_SG_MICRO_SGM37603A 26  // SG Micro SGM37603A backlight driver
 #define PDEV_DID_SYSMEM             27  // Sysmem driver
+#define PDEV_DID_GPIO_LIGHT         28  // Driver for controlling lights via GPIOs
 
 // QEMU emulator
 #define PDEV_VID_QEMU               1
