@@ -83,6 +83,9 @@ zx_status_t Launch(Args args, zx::job* devmgr_job, zx::channel* devfs_root) {
         argv.push_back("--sys-device-driver");
         argv.push_back(args.sys_device_driver);
     }
+    if (!args.launch_svchost) {
+        argv.push_back("--no-launch-svchost");
+    }
     argv.push_back(nullptr);
 
     fbl::Vector<fdio_spawn_action_t> actions;

@@ -25,13 +25,15 @@ struct Args {
     // An absolute path (in devmgr's view of the filesystem) for which driver
     // should be bound to the sys_device (the top-level device for most
     // devices).  If nullptr, this uses devmgr's default.
-    const char* sys_device_driver;
+    const char* sys_device_driver = nullptr;
     // VMO containing ZBI passed in from bootloader. Devmgr will simply
     // forward this along to the sys_device as well as the fs_host.
     zx::vmo bootdata;
     // If valid, the FD to give to devmgr as stdin/stdout/stderr.  Otherwise
     // inherits from the caller of Launch().
     fbl::unique_fd stdio;
+    // Select whether or not to launch svchost
+    bool launch_svchost = true;
 };
 
 // Launches an isolated devmgr, passing the given |args| to it.

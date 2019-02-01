@@ -687,11 +687,13 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         kDriverSearchPath,
         kLoadDriver,
         kSysDeviceDriver,
+        kNoLaunchSvchost,
     };
     option options[] = {
         {"driver-search-path", required_argument, nullptr, kDriverSearchPath},
         {"load-driver", required_argument, nullptr, kLoadDriver},
         {"sys-device-driver", required_argument, nullptr, kSysDeviceDriver},
+        {"no-launch-svchost", no_argument, nullptr, kNoLaunchSvchost},
     };
 
     auto print_usage_and_exit = [options]() {
@@ -724,6 +726,9 @@ void ParseArgs(int argc, char** argv, devmgr::DevmgrArgs* out) {
         case kSysDeviceDriver:
             check_not_duplicated(out->sys_device_driver);
             out->sys_device_driver = optarg;
+            break;
+        case kNoLaunchSvchost:
+            out->launch_svchost = false;
             break;
         default:
             print_usage_and_exit();
@@ -885,10 +890,12 @@ int main(int argc, char** argv) {
 
     zx::channel::create(0, &g_handles.appmgr_client, &g_handles.appmgr_server);
 
-    status = svchost_start(require_system);
-    if (status != ZX_OK) {
-        fprintf(stderr, "devmgr: failed to start svchost: %d", status);
-        return 1;
+    if (args.launch_svchost) {
+        status = svchost_start(require_system);
+        if (status != ZX_OK) {
+            fprintf(stderr, "devmgr: failed to start svchost: %d", status);
+            return 1;
+        }
     }
 
     devmgr_vfs_init(&coordinator);
