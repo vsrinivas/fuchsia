@@ -507,7 +507,8 @@ pub trait ParseBuffer: AsRef<[u8]> {
     ///
     /// [`P::parse`]: ParsablePacket::parse
     fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error>;
 
     /// Creates a `Buf` of a byte slice which is equivalent to this buffer.
@@ -555,7 +556,8 @@ pub trait ParseBufferMut: ParseBuffer + AsMut<[u8]> {
     ///
     /// [`P::parse_mut`]: ParsablePacket::parse_mut
     fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error>;
 
     /// Creates a `Buf` of a mutable byte slice which is equivalent to this
@@ -775,10 +777,7 @@ pub trait BufferMut: Buffer + ParseBufferMut {
         self.grow_back_zero(builder.footer_len());
 
         let body = builder.header_len()..(builder.header_len() + body_len);
-        builder.serialize(SerializeBuffer {
-            buf: self.as_mut(),
-            body,
-        });
+        builder.serialize(SerializeBuffer { buf: self.as_mut(), body });
     }
 }
 
@@ -1014,19 +1013,11 @@ pub struct ParseMetadata {
 
 impl ParseMetadata {
     pub fn from_packet(header_len: usize, body_len: usize, footer_len: usize) -> ParseMetadata {
-        ParseMetadata {
-            header_len,
-            body_len,
-            footer_len,
-        }
+        ParseMetadata { header_len, body_len, footer_len }
     }
 
     pub fn from_inner_packet(len: usize) -> ParseMetadata {
-        ParseMetadata {
-            header_len: len,
-            body_len: 0,
-            footer_len: 0,
-        }
+        ParseMetadata { header_len: len, body_len: 0, footer_len: 0 }
     }
 }
 
@@ -1182,7 +1173,8 @@ impl<'a> ParseBuffer for &'a [u8] {
         take_back(self, n);
     }
     fn parse_with<'b, ParseArgs, P: ParsablePacket<&'b [u8], ParseArgs>>(
-        &'b mut self, args: ParseArgs,
+        &'b mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         P::parse(self, args)
     }
@@ -1202,7 +1194,8 @@ impl<'a> ParseBuffer for &'a mut [u8] {
         take_back_mut(self, n);
     }
     fn parse_with<'b, ParseArgs, P: ParsablePacket<&'b [u8], ParseArgs>>(
-        &'b mut self, args: ParseArgs,
+        &'b mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         P::parse(self, args)
     }
@@ -1214,7 +1207,8 @@ impl<'a> ParseBuffer for &'a mut [u8] {
 
 impl<'a> ParseBufferMut for &'a mut [u8] {
     fn parse_with_mut<'b, ParseArgs, P: ParsablePacket<&'b mut [u8], ParseArgs>>(
-        &'b mut self, args: ParseArgs,
+        &'b mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         P::parse(self, args)
     }
@@ -1320,10 +1314,7 @@ fn take_back_mut<'a>(bytes: &mut &'a mut [u8], n: usize) -> &'a mut [u8] {
 fn canonicalize_range<R: RangeBounds<usize>>(len: usize, range: &R) -> Range<usize> {
     let lower = canonicalize_lower_bound(range.start_bound());
     let upper = canonicalize_upper_bound(len, range.end_bound()).expect("range out of bounds");
-    assert!(
-        lower <= upper,
-        "invalid range: upper bound precedes lower bound"
-    );
+    assert!(lower <= upper, "invalid range: upper bound precedes lower bound");
     lower..upper
 }
 
@@ -1491,7 +1482,8 @@ mod tests {
         N: Fn(u8) -> B,
         A: Fn(&B, usize, usize, usize, usize, &[u8]),
     >(
-        new_buf: N, assert: A,
+        new_buf: N,
+        assert: A,
     ) -> B {
         let mut at_once = new_buf(10);
         let mut separately = new_buf(10);
@@ -1510,7 +1502,12 @@ mod tests {
     // 2, ..., n - 1].
     fn test_buffer<B: Buffer, F: Fn(u8) -> B>(new_buf: F) {
         fn assert<B: Buffer>(
-            buf: &B, cap: usize, len: usize, pfx: usize, sfx: usize, contents: &[u8],
+            buf: &B,
+            cap: usize,
+            len: usize,
+            pfx: usize,
+            sfx: usize,
+            contents: &[u8],
         ) {
             assert_eq!(buf.len(), len);
             assert_eq!(buf.capacity(), cap);

@@ -3,13 +3,13 @@
 // found in the LICENSE file.
 
 ///! Serialization.
-
 use std::cmp;
 use std::ops::{Range, RangeBounds};
 
-use crate::{canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, Buffer,
-            BufferMut, BufferView, BufferViewMut, ParsablePacket, ParseBuffer, ParseBufferMut,
-            SerializeBuffer};
+use crate::{
+    canonicalize_range, take_back, take_back_mut, take_front, take_front_mut, Buffer, BufferMut,
+    BufferView, BufferViewMut, ParsablePacket, ParseBuffer, ParseBufferMut, SerializeBuffer,
+};
 
 /// Either of two buffers.
 ///
@@ -63,7 +63,8 @@ where
         call_method_on_either!(self, parse)
     }
     fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         call_method_on_either!(self, parse_with, args)
     }
@@ -81,7 +82,8 @@ where
         call_method_on_either!(self, parse_mut)
     }
     fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         call_method_on_either!(self, parse_with_mut, args)
     }
@@ -175,18 +177,12 @@ impl<B: AsRef<[u8]>> Buf<B> {
     /// nonsensical (the end precedes the start).
     pub fn new<R: RangeBounds<usize>>(buf: B, range: R) -> Buf<B> {
         let len = buf.as_ref().len();
-        Buf {
-            buf,
-            range: canonicalize_range(len, &range),
-        }
+        Buf { buf, range: canonicalize_range(len, &range) }
     }
 
     // in a separate method so it can be used in testing
     pub(crate) fn buffer_view(&mut self) -> BufView {
-        BufView {
-            buf: self.buf.as_ref(),
-            range: &mut self.range,
-        }
+        BufView { buf: self.buf.as_ref(), range: &mut self.range }
     }
 }
 
@@ -211,7 +207,8 @@ impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
         self.range.end -= n;
     }
     fn parse_with<'a, ParseArgs, P: ParsablePacket<&'a [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
         P::parse(self.buffer_view(), args)
     }
@@ -223,15 +220,10 @@ impl<B: AsRef<[u8]>> ParseBuffer for Buf<B> {
 
 impl<B: AsRef<[u8]> + AsMut<[u8]>> ParseBufferMut for Buf<B> {
     fn parse_with_mut<'a, ParseArgs, P: ParsablePacket<&'a mut [u8], ParseArgs>>(
-        &'a mut self, args: ParseArgs,
+        &'a mut self,
+        args: ParseArgs,
     ) -> Result<P, P::Error> {
-        P::parse(
-            BufViewMut {
-                buf: self.buf.as_mut(),
-                range: &mut self.range,
-            },
-            args,
-        )
+        P::parse(BufViewMut { buf: self.buf.as_mut(), range: &mut self.range }, args)
     }
     fn as_buf_mut(&mut self) -> Buf<&mut [u8]> {
         Buf::new(self.buf.as_mut(), self.range.clone())
@@ -473,11 +465,7 @@ pub trait Serializer: Sized {
     /// other packets. It is equivalent to calling `serialize` with a
     /// `SerializationConstraints` of all zeros.
     fn serialize_outer(self) -> Self::Buffer {
-        self.serialize(SerializeConstraints {
-            prefix_len: 0,
-            min_body_len: 0,
-            suffix_len: 0,
-        })
+        self.serialize(SerializeConstraints { prefix_len: 0, min_body_len: 0, suffix_len: 0 })
     }
 
     /// Encapsulate this `Serializer` in another packet, producing a new
@@ -491,10 +479,7 @@ pub trait Serializer: Sized {
     /// - Serialize `builder` into the buffer as the next layer of the packet
     /// - Return the buffer
     fn encapsulate<B: PacketBuilder>(self, builder: B) -> EncapsulatingSerializer<B, Self> {
-        EncapsulatingSerializer {
-            builder,
-            inner: self,
-        }
+        EncapsulatingSerializer { builder, inner: self }
     }
 }
 
@@ -542,11 +527,7 @@ impl<B, Buf, F> InnerSerializer<B, Buf, F> {
     /// `get_buf` is a function which accepts a `usize` and produces a buffer of
     /// that length.
     pub fn new(builder: B, buffer: Buf, get_buf: F) -> InnerSerializer<B, Buf, F> {
-        InnerSerializer {
-            builder,
-            buf: buffer,
-            get_buf,
-        }
+        InnerSerializer { builder, buf: buffer, get_buf }
     }
 }
 
@@ -574,13 +555,10 @@ impl<B, Buf> InnerSerializer<B, Buf, ()> {
     /// `new_vec` is like `new`, except that its `get_buf` function is
     /// automatically set to allocate a new `Vec` on the heap.
     pub fn new_vec(
-        builder: B, buffer: Buf,
+        builder: B,
+        buffer: Buf,
     ) -> InnerSerializer<B, Buf, impl FnOnce(usize) -> crate::Buf<Vec<u8>>> {
-        InnerSerializer {
-            builder,
-            buf: buffer,
-            get_buf: |n| crate::Buf::new(vec![0; n], ..),
-        }
+        InnerSerializer { builder, buf: buffer, get_buf: |n| crate::Buf::new(vec![0; n], ..) }
     }
 }
 
@@ -594,13 +572,8 @@ where
     type Buffer = Either<Buf, O>;
 
     fn serialize(self, c: SerializeConstraints) -> Either<Buf, O> {
-        let InnerSerializer {
-            builder,
-            mut buf,
-            get_buf,
-        } = self;
-        let total_len =
-            c.prefix_len + cmp::max(c.min_body_len, builder.bytes()) + c.suffix_len;
+        let InnerSerializer { builder, mut buf, get_buf } = self;
+        let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes()) + c.suffix_len;
 
         let mut buf = if buf.capacity() >= total_len {
             buf.reset();
@@ -660,8 +633,7 @@ where
 
     fn serialize(self, c: SerializeConstraints) -> O {
         let FnSerializer { builder, get_buf } = self;
-        let total_len =
-            c.prefix_len + cmp::max(c.min_body_len, builder.bytes()) + c.suffix_len;
+        let total_len = c.prefix_len + cmp::max(c.min_body_len, builder.bytes()) + c.suffix_len;
 
         let mut buf = get_buf(total_len);
         buf.shrink(c.prefix_len..(c.prefix_len + builder.bytes()));
@@ -702,10 +674,7 @@ impl<B, F> BufferSerializer<B, F> {
     ///
     /// `get_buf` accepts a `usize`, and produces a buffer of that length.
     pub fn new(buffer: B, get_buf: F) -> BufferSerializer<B, F> {
-        BufferSerializer {
-            buf: buffer,
-            get_buf,
-        }
+        BufferSerializer { buf: buffer, get_buf }
     }
 }
 
@@ -796,7 +765,10 @@ mod tests {
     #[test]
     fn test_buffer_serializer_and_inner_serializer() {
         fn verify_buffer_serializer<B: BufferMut>(
-            buffer: B, prefix_len: usize, suffix_len: usize, min_body_len: usize,
+            buffer: B,
+            prefix_len: usize,
+            suffix_len: usize,
+            min_body_len: usize,
         ) {
             let old_len = buffer.len();
             let mut old_body = Vec::with_capacity(old_len);
@@ -811,19 +783,23 @@ mod tests {
         }
 
         fn verify_inner_serializer(
-            body: &[u8], buf_len: usize, prefix_len: usize, suffix_len: usize, min_body_len: usize,
+            body: &[u8],
+            buf_len: usize,
+            prefix_len: usize,
+            suffix_len: usize,
+            min_body_len: usize,
         ) {
-            let buffer =
-                InnerSerializer::new_vec(body, Buf::new(vec![0; buf_len], ..)).serialize(SerializeConstraints {
-                    prefix_len,
-                    suffix_len,
-                    min_body_len,
-                });
+            let buffer = InnerSerializer::new_vec(body, Buf::new(vec![0; buf_len], ..))
+                .serialize(SerializeConstraints { prefix_len, suffix_len, min_body_len });
             verify(buffer, body, prefix_len, suffix_len, min_body_len);
         }
 
         fn verify<B: Buffer>(
-            buffer: B, body: &[u8], prefix_len: usize, suffix_len: usize, min_body_len: usize,
+            buffer: B,
+            body: &[u8],
+            prefix_len: usize,
+            suffix_len: usize,
+            min_body_len: usize,
         ) {
             assert_eq!(buffer.as_ref(), body);
             assert!(buffer.prefix_len() >= prefix_len);
