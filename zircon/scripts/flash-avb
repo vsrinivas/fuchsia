@@ -40,4 +40,6 @@ fi
 BOOT_IMG="${BUILD_DIR}/${BOARD}-boot.img"
 VBMETA_IMG="${BUILD_DIR}/${BOARD}-vbmeta.img"
 
-fastboot flash boot_a "${BOOT_IMG}" && fastboot flash vbmeta_a "${VBMETA_IMG}" && fastboot reboot
+fastboot flash boot_a "${BOOT_IMG}" && fastboot flash vbmeta_a "${VBMETA_IMG}" && \
+fastboot flash boot_b "${BOOT_IMG}" && fastboot flash vbmeta_b "${VBMETA_IMG}" && \
+fastboot reboot
