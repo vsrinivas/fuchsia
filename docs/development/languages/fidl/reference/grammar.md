@@ -58,7 +58,7 @@ library-header = ( attribute-list ) , "library" , compound-identifier , ";" ;
 
 using-list = ( using | using-declaration )* ;
 
-using-declaration = "using" , IDENTIFIER ,  "=" , primitive-type , ";" ;
+using-declaration = "using" , IDENTIFIER ,  "=" , type-constructor , ";" ; [NOTE 1]
 
 declaration-list = ( declaration , ";" )* ;
 
@@ -66,84 +66,89 @@ compound-identifier = IDENTIFIER ( "." , IDENTIFIER )* ;
 
 using = "using" , compound-identifier , ( "as" , IDENTIFIER ) , ";" ;
 
-declaration = const-declaration | enum-declaration | interface-declaration |
-              struct-declaration | union-declaration | table-declaration ;
+declaration = const-declaration | enum-declaration | interface-declaration
+            | struct-declaration | table-declaration | union-declaration | xunion-declaration ;
 
-const-declaration = ( attribute-list ) , "const" , type , IDENTIFIER , "=" , constant ;
+const-declaration = ( attribute-list ) , "const" , type-constructor , IDENTIFIER , "=" , constant ;
 
-enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , integer-type ) ,
-                   "{" , ( enum-member , ";" )+ , "}" ;
+enum-declaration = ( attribute-list ) , "enum" , IDENTIFIER , ( ":" , type-constructor ) ,
+                   "{" , ( enum-member , ";" )+ , "}" ; [NOTE 2]
 
-enum-member = IDENTIFIER , ( "=" , enum-member-value ) ;
+enum-member = ( attribute-list ) , IDENTIFIER , ( "=" , enum-member-value ) ;
 
-enum-member-value = IDENTIFIER | NUMERIC-LITERAL ;
+enum-member-value = IDENTIFIER | literal ; [NOTE 3]
 
 interface-declaration = ( attribute-list ) , "interface" , IDENTIFIER ,
                         ( ":" , super-interface-list ) , "{" , ( interface-method , ";" )*  , "}" ;
 
 super-interface-list = compound-identifier
-                     | compound-identifier , "," , super-interface-list
+                     | compound-identifier , "," , super-interface-list ;
 
-interface-method = ordinal , ":" , interface-parameters
+interface-method = ( attribute-list ) , ordinal , ":" , interface-parameters ,
+                   ( "error" , type-constructor );
 
 interface-parameters = IDENTIFIER , parameter-list , ( "->" , parameter-list )
-                     | "->" , IDENTIFIER , parameter-list
+                     | "->" , IDENTIFIER , parameter-list ;
 
-parameter-list = "(" , ( parameters ) , ")" ;
+parameter-list = "(" , ( parameter ( "," , parameter )+ ) , ")" ; 
 
-parameters = parameter | parameter , "," , parameters ;
-
-parameter = type , IDENTIFIER ;
+parameter = type-constructor , IDENTIFIER ;
 
 struct-declaration = ( attribute-list ) , "struct" , IDENTIFIER , "{" , ( struct-field , ";" )* , "}" ;
 
-struct-field = type , IDENTIFIER , ( "=" , constant ) ;
+struct-field = ( attribute-list ) , type-constructor , IDENTIFIER , ( "=" , constant ) ;
 
 union-declaration = ( attribute-list ) , "union" , IDENTIFIER , "{" , ( union-field , ";" )+ , "}" ;
 
-union-field = type , IDENTIFIER ;
+xunion-declaration = ( attribute-list ) , "xunion" , IDENTIFIER , "{" , ( union-field , ";" )* , "}" ;
 
-table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( table-field , ";" )* , "}" ;
+union-field = ( attribute-list ) , type-constructor , IDENTIFIER ;
 
-table-field = table-field-ordinal , table-field-declaration ;
+table-declaration = ( attribute-list ) , "table" , IDENTIFIER , "{" , ( ( attribute-list ) , table-field , ";" )* , "}" ;
+
+table-field = ( attribute-list ) , ( table-field-ordinal ) , table-field-declaration ;
 
 table-field-ordinal = ordinal , ":" ;
 
 table-field-declaration = struct-field | "reserved" ;
 
-attribute-list = "[" , attributes, "]" ;
+attribute-list = "[" , attributes , "]" ;
 
 attributes = attribute | attribute , "," , attributes ;
 
-attribute = IDENTIFIER , ( "=", STRING-LITERAL ) ;
+attribute = IDENTIFIER , ( "=" , STRING-LITERAL ) ;
 
-type = identifier-type | array-type | vector-type | string-type | handle-type
-                       | request-type | primitive-type ;
-
-identifier-type = compound-identifier , ( "?" ) ;
-
-array-type = "array" , "<" , type , ">" , ":" , constant ;
-
-vector-type = "vector" , "<" , type , ">" , ( ":" , constant ) , ( "?" ) ;
-
-string-type = "string" , ( ":" , constant ) , ( "?" ) ;
+type-constructor = compound-identifier ( "<" type-constructor ">" ) , (  type-constraint ) , ( "?" )
+                 | handle-type ;
 
 handle-type = "handle" , ( "<" , handle-subtype , ">" ) , ( "?" ) ;
 
-handle-subtype = "process" | "thread" | "vmo" | "channel" | "event" | "port" |
-                 "interrupt" | "debuglog" | "socket" | "resource" | "eventpair" |
-                 "job" | "vmar" | "fifo" | "guest" | "timer" ;
+handle-subtype = "bti" | "channel" | "debuglog" | "event" | "eventpair"
+               | "fifo" | "guest" | "interrupt" | "job" | "port" | "process"
+               | "profile" | "resource" | "socket" | "thread" | "timer"
+               | "vmar" | "vmo" ;
 
-request-type = "request" , "<" , compound-identifier , ">" , ( "?" ) ;
-
-primitive-type = integer-type | "bool" | "float32" | "float64" ;
-
-integer-type = "int8" | "int16" | "int32" | "int64" |
-               "uint8" | "uint16" | "uint32" | "uint64" ;
+type-constraint = ":" , constant ;
 
 constant = compound-identifier | literal ;
 
 ordinal = NUMERIC-LITERAL ;
 
-literal = STRING-LITERAL | NUMERIC-LITERAL | TRUE | FALSE ;
+literal = STRING-LITERAL | NUMERIC-LITERAL | "true" | "false" ;
 ```
+----------
+
+### NOTE 1
+The `using-declaration` allows the more liberal `type-constructor`
+in the grammar, but the compiler limits this to
+[primitives](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/language.md#primitives)
+
+### NOTE 2
+The `enum-declaration` allows the more liberal `type-constructor` in the
+grammar, but the compiler limits this to signed or unsigned integer types,
+see [primitives](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/reference/language.md#primitives).
+
+### NOTE 3
+The `enum-member-value` allows the more liberal `literal`
+in the grammar, but the compiler limits this to `NUMERIC-LITERAL` later.
+
