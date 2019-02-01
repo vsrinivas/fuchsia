@@ -479,6 +479,60 @@ bool vmar_remap_test() {
     END_TEST;
 }
 
+// Tests that ZX_VM_MAP_RANGE works with pager vmos (i.e. maps in backed regions
+// but doesn't try to pull in new regions).
+bool vmar_map_range_test() {
+    BEGIN_TEST;
+
+    UserPager pager;
+
+    ASSERT_TRUE(pager.Init());
+
+    // Create a vmo with 2 pages. Supply the first page but not the second.
+    Vmo* vmo;
+    ASSERT_TRUE(pager.CreateVmo(2, &vmo));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 0, 1));
+
+    // Map the vmo. This shouldn't block or generate any new page requests.
+    uint64_t ptr;
+    TestThread t([vmo, &ptr]() -> bool {
+        ASSERT_EQ(zx::vmar::root_self()->map(0, vmo->vmo(), 0, 2 * ZX_PAGE_SIZE,
+                                             ZX_VM_PERM_READ | ZX_VM_MAP_RANGE, &ptr), ZX_OK);
+        return true;
+    });
+
+    ASSERT_TRUE(t.Start());
+    ASSERT_TRUE(t.Wait());
+
+    uint64_t offset, length;
+    ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+    // Verify the buffer contents. This should generate a new request for
+    // the second page, which we want to fulfill.
+    TestThread t2([vmo, &ptr]() -> bool {
+        uint8_t data[2 * ZX_PAGE_SIZE];
+        vmo->GenerateBufferContents(data, 2, 0);
+
+        return memcmp(data, reinterpret_cast<uint8_t*>(ptr), 2 * ZX_PAGE_SIZE) == 0;
+    });
+
+    ASSERT_TRUE(t2.Start());
+
+    ASSERT_TRUE(pager.WaitForPageRead(vmo, 1, 1, ZX_TIME_INFINITE));
+    ASSERT_TRUE(pager.SupplyPages(vmo, 1, 1));
+
+    ASSERT_TRUE(t2.Wait());
+
+    // After the verification is done, make sure there are no unexpected
+    // page requests.
+    ASSERT_FALSE(pager.GetPageReadRequest(vmo, 0, &offset, &length));
+
+    // Cleanup the mapping we created.
+    zx::vmar::root_self()->unmap(ptr, 2 * ZX_PAGE_SIZE);
+
+    END_TEST;
+}
+
 // Tests that detaching results in a complete request.
 bool detach_page_complete_test() {
     BEGIN_TEST;
@@ -1332,6 +1386,7 @@ RUN_TEST(successive_vmo_test);
 RUN_TEST(multiple_concurrent_vmo_test);
 RUN_TEST(vmar_unmap_test);
 RUN_TEST(vmar_remap_test);
+RUN_TEST(vmar_map_range_test);
 END_TEST_CASE(pager_read_tests)
 
 // Tests focused on lifecycle of pager and paged vmos.

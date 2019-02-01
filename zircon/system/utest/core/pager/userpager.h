@@ -39,6 +39,7 @@ public:
 
     uint64_t GetKey() const { return base_val_; }
     uintptr_t GetBaseAddr() const { return base_addr_; }
+    const zx::vmo& vmo() const { return vmo_; }
 
     fbl::unique_ptr<Vmo> Clone();
 
