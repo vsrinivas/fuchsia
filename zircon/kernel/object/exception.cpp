@@ -144,7 +144,7 @@ enum handler_status_t {
 // handler processed the exception.
 
 static handler_status_t exception_handler_worker(uint exception_type,
-                                                 arch_exception_context_t* context,
+                                                 const arch_exception_context_t* context,
                                                  ThreadDispatcher* thread,
                                                  bool* out_processed) {
     *out_processed = false;
@@ -216,10 +216,11 @@ static handler_status_t exception_handler_worker(uint exception_type,
 // TODO(dje): Support unwinding from this exception and introducing a different
 // exception?
 zx_status_t dispatch_user_exception(uint exception_type,
-                                    arch_exception_context_t* context) {
+                                    const arch_exception_context_t* context) {
     LTRACEF("type %u, context %p\n", exception_type, context);
 
-    ThreadDispatcher* thread = ThreadDispatcher::GetCurrent();
+    thread_t* lk_thread = get_current_thread();
+    ThreadDispatcher* thread = lk_thread->user_thread;
     if (unlikely(!thread)) {
         // The current thread is not a user thread; bail.
         return ZX_ERR_BAD_STATE;
@@ -228,9 +229,12 @@ zx_status_t dispatch_user_exception(uint exception_type,
     // From now until the exception is resolved the thread is in an exception.
     ThreadDispatcher::AutoBlocked by(ThreadDispatcher::Blocked::EXCEPTION);
 
+    arch_install_context_regs(lk_thread, context);
     bool processed;
-    handler_status_t hstatus = exception_handler_worker(exception_type, context,
-                                                        thread, &processed);
+    handler_status_t hstatus =
+        exception_handler_worker(exception_type, context, thread, &processed);
+    arch_remove_context_regs(lk_thread);
+
     switch (hstatus) {
         case HS_RESUME:
             return ZX_OK;

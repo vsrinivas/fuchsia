@@ -59,7 +59,6 @@ KCOUNTER(exceptions_unknown, "kernel.exceptions.unknown");
 static zx_status_t try_dispatch_user_data_fault_exception(
     zx_excp_type_t type, struct arm64_iframe_long* iframe,
     uint32_t esr, uint64_t far) {
-    thread_t* thread = get_current_thread();
     arch_exception_context_t context = {};
     DEBUG_ASSERT(iframe != nullptr);
     context.frame = iframe;
@@ -67,10 +66,7 @@ static zx_status_t try_dispatch_user_data_fault_exception(
     context.far = far;
 
     arch_enable_ints();
-    DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
-    thread->arch.suspended_general_regs = iframe;
     zx_status_t status = dispatch_user_exception(type, &context);
-    thread->arch.suspended_general_regs = nullptr;
     arch_disable_ints();
     return status;
 }
@@ -470,8 +466,19 @@ void arch_fill_in_exception_context(const arch_exception_context_t* arch_context
 }
 
 zx_status_t arch_dispatch_user_policy_exception(void) {
-    struct arm64_iframe_long frame = {};
     arch_exception_context_t context = {};
-    context.frame = &frame;
     return dispatch_user_exception(ZX_EXCP_POLICY_ERROR, &context);
+}
+
+void arch_install_context_regs(thread_t* thread, const arch_exception_context_t* context) {
+    // TODO(ZX-563): |context->frame| will be nullptr for exceptions that
+    // don't (yet) provide the registers.
+    if (context->frame) {
+        DEBUG_ASSERT(thread->arch.suspended_general_regs == nullptr);
+        thread->arch.suspended_general_regs = context->frame;
+    }
+}
+
+void arch_remove_context_regs(thread_t* thread) {
+    thread->arch.suspended_general_regs = nullptr;
 }

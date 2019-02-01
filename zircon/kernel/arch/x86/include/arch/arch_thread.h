@@ -28,9 +28,11 @@ struct arch_thread {
     uint32_t general_regs_source;
 
     // Debugger access to userspace general regs while suspended or stopped
-    // in an exception.
+    // in an exception. See the description of X86_GENERAL_REGS_* for usage.
     // The regs are saved on the stack and then a pointer is stored here.
-    // NULL if not suspended or stopped in an exception.
+    // Nullptr if not suspended or not stopped in an exception.
+    // TODO(ZX-563): Also nullptr for synthetic exceptions that don't provide
+    // them yet.
     union {
         void *gregs;
         x86_syscall_general_regs_t *syscall;
