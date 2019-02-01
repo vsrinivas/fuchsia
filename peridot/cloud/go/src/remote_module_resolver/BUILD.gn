@@ -21,17 +21,17 @@ go_library("remote_module_resolver_lib") {
 go_library("gojsonpointer") {
   name = "github.com/xeipuuv/gojsonpointer"
   source_dir =
-      "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonpointer"
+      "//third_party/golibs/github.com/xeipuuv/gojsonpointer"
 }
 go_library("gojsonreference") {
   name = "github.com/xeipuuv/gojsonreference"
   source_dir =
-      "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonreference"
+      "//third_party/golibs/github.com/xeipuuv/gojsonreference"
 }
 go_library("gojsonschema") {
   name = "github.com/xeipuuv/gojsonschema"
   source_dir =
-      "//peridot/cloud/third_party/golibs/github.com/xeipuuv/gojsonschema"
+      "//third_party/golibs/github.com/xeipuuv/gojsonschema"
 }
 
 go_binary("remote_module_resolver") {
