@@ -366,6 +366,10 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
         return device_remove(dev);
     }
 
+    zx_status_t DdkGetMetadataSize(uint32_t type, size_t* out_size) {
+        return device_get_metadata_size(zxdev(), type, out_size);
+    }
+
     zx_status_t DdkGetMetadata(uint32_t type, void* buf, size_t buf_len, size_t* actual) {
         return device_get_metadata(zxdev(), type, buf, buf_len, actual);
     }
