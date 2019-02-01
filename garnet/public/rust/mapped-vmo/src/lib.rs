@@ -21,21 +21,18 @@ impl Mapping {
     pub fn create(size: usize, flags: VmarFlags) -> Result<Self, zx::Status> {
         let vmo = zx::Vmo::create(size as u64)?;
         let addr = zx::Vmar::root_self().map(0, &vmo, 0, size, flags)?;
-        Ok(Mapping {
-            addr,
-            size,
-        })
+        Ok(Mapping { addr, size })
     }
 
     /// Create a Mapping from an existing Vmo and map it in the root
     /// address space.
-    pub fn create_from_vmo(vmo: &zx::Vmo, size: usize, flags: VmarFlags) ->
-        Result<Self, zx::Status> {
+    pub fn create_from_vmo(
+        vmo: &zx::Vmo,
+        size: usize,
+        flags: VmarFlags,
+    ) -> Result<Self, zx::Status> {
         let addr = zx::Vmar::root_self().map(0, vmo, 0, size, flags)?;
-        Ok(Mapping {
-            addr,
-            size,
-        })
+        Ok(Mapping { addr, size })
     }
 
     /// Return the size of the mapping.
@@ -65,9 +62,7 @@ impl Mapping {
 
 impl Drop for Mapping {
     fn drop(&mut self) {
-        unsafe {
-            self.release()
-        }
+        unsafe { self.release() }
     }
 }
 
@@ -83,21 +78,18 @@ impl MappedVmo {
     pub fn create(size: usize, flags: VmarFlags) -> Result<Self, zx::Status> {
         let vmo = zx::Vmo::create(size as u64)?;
         let mapping = Mapping::create_from_vmo(&vmo, size, flags)?;
-        Ok(MappedVmo {
-            vmo,
-            mapping,
-        })
+        Ok(MappedVmo { vmo, mapping })
     }
 
     /// Create a MappedVmo from an existing Vmo and map it in the root
     /// address space.
-    pub fn create_from_vmo(vmo: zx::Vmo, size: usize, flags: VmarFlags) ->
-        Result<Self, zx::Status> {
+    pub fn create_from_vmo(
+        vmo: zx::Vmo,
+        size: usize,
+        flags: VmarFlags,
+    ) -> Result<Self, zx::Status> {
         let mapping = Mapping::create_from_vmo(&vmo, size, flags)?;
-        Ok(MappedVmo {
-            vmo,
-            mapping,
-        })
+        Ok(MappedVmo { vmo, mapping })
     }
 
     /// Resizes the Vmo and initializes a new mapping.
@@ -139,10 +131,8 @@ impl MappedVmo {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use {
-        fuchsia_zircon as zx,
-        std::slice,
-    };
+    use fuchsia_zircon as zx;
+    use std::slice;
 
     const PAGE_SIZE: usize = 4096;
 
