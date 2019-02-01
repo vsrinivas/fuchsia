@@ -7,28 +7,6 @@
 #include <hw/sdmmc.h>
 #include <hwreg/bitfields.h>
 
-// Define weak specialization methods that can be overridden in tests. There is a slight performance
-// hit as doing this prevents the MMIO accesses from being inlined.
-
-template <>
-template <>
-__WEAK uint8_t ddk::MmioBuffer::Read<uint8_t>(zx_off_t offs) const {
-    return *reinterpret_cast<volatile uint8_t*>(ptr_ + offs);
-}
-
-template <>
-template <>
-__WEAK uint32_t ddk::MmioBuffer::Read<uint32_t>(zx_off_t offs) const {
-    return *reinterpret_cast<volatile uint32_t*>(ptr_ + offs);
-}
-
-template <>
-template <>
-__WEAK void ddk::MmioBuffer::Write<uint32_t>(uint32_t val, zx_off_t offs) const {
-    *reinterpret_cast<volatile uint32_t*>(ptr_ + offs) = val;
-    hw_mb();
-}
-
 namespace sdmmc {
 
 class MsdcCfg : public hwreg::RegisterBase<MsdcCfg, uint32_t> {

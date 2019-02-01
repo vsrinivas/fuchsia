@@ -9,7 +9,7 @@
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
 #include <ddk/protocol/platform/bus.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <lib/focaltech/focaltech.h>

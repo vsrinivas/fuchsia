@@ -8,7 +8,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <optional>
 #include <threads.h>

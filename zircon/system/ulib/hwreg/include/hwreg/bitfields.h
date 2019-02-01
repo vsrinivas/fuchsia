@@ -8,7 +8,7 @@
 #include <hwreg/mmio.h>
 
 #ifndef _KERNEL
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #endif
 #include <limits.h>
 #include <stdint.h>

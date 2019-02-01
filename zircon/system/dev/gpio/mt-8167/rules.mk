@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/binding.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -24,6 +25,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
+    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
@@ -43,7 +45,6 @@ MODULE_NAME := mtk-gpio-test
 MODULE_TYPE := usertest
 
 MODULE_SRCS += \
-    $(LOCAL_DIR)/test-overrides.cpp \
     $(LOCAL_DIR)/mt8167-gpio-test.cpp \
     $(LOCAL_DIR)/mt8167-gpio.cpp \
 

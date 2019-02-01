@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/i2cimpl.h>
 
 #include <fbl/vector.h>

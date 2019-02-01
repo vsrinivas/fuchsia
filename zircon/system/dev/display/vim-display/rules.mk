@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/vpp.cpp \
 
 MODULE_STATIC_LIBS := system/dev/audio/lib/simple-audio-stream \
+                      system/dev/lib/mmio \
                       system/ulib/audio-driver-proto \
                       system/ulib/audio-proto-utils \
                       system/ulib/ddk \

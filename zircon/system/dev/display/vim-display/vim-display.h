@@ -10,7 +10,7 @@
 #include <ddk/protocol/amlogiccanvas.h>
 #include <ddk/protocol/display/controller.h>
 #include <ddk/protocol/gpio.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>

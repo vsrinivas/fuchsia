@@ -4,19 +4,16 @@
 
 #pragma once
 
-#include <ddk/mmio-buffer.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/vector.h>
 #include <unittest/unittest.h>
-
-void mmio_fake_read(uintptr_t base, size_t size, zx_off_t off, void* value);
-void mmio_fake_write(uintptr_t base, size_t size, const void* value, zx_off_t off);
 
 namespace ddk_mock {
 
 // Mocks a single MMIO register. This class is intended to be used with a ddk::MmioBuffer;
-// operations on an instance of that class will be directed to the mock through mmio_fake_read and
-// mmio_fake_write if TEST_MMIO_FAKE is defined. The base address used by the MmioBuffer should be
-// an array of MockMmioReg objects. See the following example test:
+// operations on an instance of that class will be directed to the mock if the mock-mmio-reg library
+// is a dependency of the test. The base address used by the MmioBuffer should be an array of
+// MockMmioReg objects. See the following example test:
 //
 // ddk_mock::MockMmioReg register_array[number_of_registers];
 // ddk_mock::MockMmioRegRegion mock_registers(register_array, register_size, number_of_registers);

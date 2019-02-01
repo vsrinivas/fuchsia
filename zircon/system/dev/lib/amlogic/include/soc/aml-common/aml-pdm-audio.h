@@ -5,7 +5,7 @@
 #pragma once
 
 #include <assert.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/unique_ptr.h>
 #include <soc/aml-common/aml-audio-regs.h>
 

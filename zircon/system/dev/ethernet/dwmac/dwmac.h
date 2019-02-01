@@ -8,7 +8,7 @@
 #include <ddk/device.h>
 #include <ddk/protocol/test.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/ethernet.h>
 #include <ddktl/protocol/ethernet/board.h>

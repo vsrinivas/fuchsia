@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <zircon/types.h>
 
 zx_status_t PllSetRate(ddk::MmioBuffer* mmio);

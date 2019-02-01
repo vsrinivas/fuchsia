@@ -11,7 +11,7 @@
 #include <ddk/protocol/gpio.h>
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <dev/pci/designware/atu-cfg.h>
 #include <fbl/unique_ptr.h>
 

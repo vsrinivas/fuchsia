@@ -10,7 +10,7 @@
 #include <ddk/protocol/intelgpucore.h>
 #include <ddk/protocol/pci.h>
 #include <ddk/protocol/i2cimpl.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 
 #include <fbl/unique_ptr.h>

@@ -8,7 +8,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 
 #include <fbl/algorithm.h>
 

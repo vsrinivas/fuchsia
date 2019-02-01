@@ -5,7 +5,7 @@
 #pragma once
 
 #include <climits>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/intrusive_double_list.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/bti.h>

@@ -5,7 +5,7 @@
 #include <ddk/debug.h>
 #include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <hw/reg.h>
 #include <lib/zx/handle.h>

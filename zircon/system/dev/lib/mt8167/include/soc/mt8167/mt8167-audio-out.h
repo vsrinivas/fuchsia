@@ -8,7 +8,7 @@
 #include <memory>
 #include <utility>
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 
 class MtAudioOutDevice {
 

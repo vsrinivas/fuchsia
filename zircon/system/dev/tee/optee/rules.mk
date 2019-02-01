@@ -19,6 +19,7 @@ MODULE_SRCS := \
 MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-tee
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

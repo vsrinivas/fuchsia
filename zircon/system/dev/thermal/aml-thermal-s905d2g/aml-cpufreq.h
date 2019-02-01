@@ -5,7 +5,7 @@
 #pragma once
 
 #include <ddk/platform-defs.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/clk.h>
 #include <hwreg/mmio.h>

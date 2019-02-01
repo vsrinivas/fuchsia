@@ -9,7 +9,7 @@
 #include <ddk/protocol/serialimpl.h>
 #include <ddk/protocol/serial.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/serialimpl.h>
 
 #include <fbl/function.h>

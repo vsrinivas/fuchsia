@@ -14,6 +14,7 @@ MODULE_SRCS += \
 MODULE_NAME := libhwreg-test
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

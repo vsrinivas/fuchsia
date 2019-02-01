@@ -7,7 +7,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <lib/zx/interrupt.h>
 #include <lib/zx/bti.h>
 #include <threads.h>

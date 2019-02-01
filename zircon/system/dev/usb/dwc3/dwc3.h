@@ -10,7 +10,7 @@
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/usb/dci.h>
 #include <ddk/protocol/usb/modeswitch.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/mutex.h>
 #include <lib/zx/handle.h>
 #include <lib/zx/interrupt.h>

@@ -4,7 +4,7 @@
 
 #pragma once
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <dev/pci/designware/dw-pcie.h>
 #include <fbl/unique_ptr.h>
 

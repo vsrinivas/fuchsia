@@ -6,7 +6,7 @@
 
 #include <ddk/protocol/platform/bus.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpioimpl.h>
 #include <ddktl/protocol/platform/device.h>
 #include <fbl/array.h>

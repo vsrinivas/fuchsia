@@ -19,6 +19,7 @@ MODULE_LIBS := \
   system/ulib/zircon \
 
 MODULE_STATIC_LIBS := \
+  system/dev/lib/mmio \
   system/ulib/audio-proto-utils \
   system/ulib/audio-driver-proto \
   system/ulib/ddk \

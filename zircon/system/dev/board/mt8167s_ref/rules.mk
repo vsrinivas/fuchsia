@@ -29,6 +29,7 @@ MODULE_SRCS := \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/focaltech \
+    system/dev/lib/mmio \
     system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \

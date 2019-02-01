@@ -6,7 +6,7 @@
 
 #include <stdint.h>
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/unique_ptr.h>
 #include <zircon/types.h>
 

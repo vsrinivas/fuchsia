@@ -11,7 +11,7 @@
 #if __cplusplus
 
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 #include <fbl/unique_ptr.h>
 #include <lib/zx/vmo.h>

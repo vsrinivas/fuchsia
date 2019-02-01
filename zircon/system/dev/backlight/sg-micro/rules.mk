@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/sgm37603a.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -47,6 +48,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/sgm37603a-test.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/dev/lib/mock-i2c \
     system/ulib/ddk \
     system/ulib/ddktl \

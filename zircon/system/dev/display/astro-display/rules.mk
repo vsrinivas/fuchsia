@@ -20,6 +20,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/astro-display.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/bitmap \
     system/ulib/sync \
     system/ulib/ddk \

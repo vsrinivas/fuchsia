@@ -14,6 +14,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-pcie.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/dev/pci/designware \
     system/ulib/ddk \
     system/ulib/ddktl \

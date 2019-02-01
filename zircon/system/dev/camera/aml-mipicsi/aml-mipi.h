@@ -9,7 +9,7 @@
 #include <ddk/protocol/platform/bus.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/ispimpl.h>
 #include <ddktl/protocol/mipicsi.h>

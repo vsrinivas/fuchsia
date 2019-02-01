@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-mailbox.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -44,6 +45,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/aml-scpi.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

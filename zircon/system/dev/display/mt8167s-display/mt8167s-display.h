@@ -12,7 +12,7 @@
 
 #include <ddk/debug.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/display/controller.h>
 
 #include <fbl/auto_lock.h>

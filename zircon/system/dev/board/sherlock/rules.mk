@@ -31,6 +31,7 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     system/dev/lib/amlogic \
     system/dev/lib/broadcom \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

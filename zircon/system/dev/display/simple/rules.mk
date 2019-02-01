@@ -7,6 +7,7 @@ LOCAL_DIR := $(GET_LOCAL_DIR)
 LOCAL_SRCS := $(LOCAL_DIR)/simple-display.cpp \
 
 LOCAL_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

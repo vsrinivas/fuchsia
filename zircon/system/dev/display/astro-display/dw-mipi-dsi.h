@@ -8,7 +8,7 @@
 #include <zircon/compiler.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddk/protocol/platform-device-lib.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 
 #include "common.h"
 #include "dw-mipi-dsi-reg.h"

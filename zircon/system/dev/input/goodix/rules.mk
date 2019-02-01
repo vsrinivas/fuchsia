@@ -12,6 +12,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/gt92xx.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/hid \

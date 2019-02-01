@@ -10,7 +10,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <zircon/assert.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/unique_ptr.h>
 #include <optional>
 #include "common.h"

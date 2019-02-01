@@ -10,7 +10,7 @@
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/mailbox.h>
 #include <hw/reg.h>

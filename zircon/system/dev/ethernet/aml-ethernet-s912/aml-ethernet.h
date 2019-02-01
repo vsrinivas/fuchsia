@@ -5,7 +5,7 @@
 #include <ddk/device.h>
 #include <ddktl/device.h>
 #include <ddktl/i2c-channel.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/pdev.h>
 #include <ddktl/protocol/ethernet/board.h>
 #include <ddktl/protocol/gpio.h>

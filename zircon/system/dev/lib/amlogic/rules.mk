@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-pdm-audio.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/fbl \
     system/ulib/fzl \
     system/ulib/ddk \

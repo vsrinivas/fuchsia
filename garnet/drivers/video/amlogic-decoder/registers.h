@@ -7,7 +7,7 @@
 
 #include <hwreg/bitfields.h>
 #include <ddk/mmio-buffer.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 
 template <class RegType>
 class TypedRegisterAddr;

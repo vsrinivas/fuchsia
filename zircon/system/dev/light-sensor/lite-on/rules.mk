@@ -13,6 +13,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/ltr-578als.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -49,6 +50,7 @@ MODULE_SRCS += \
 
 MODULE_STATIC_LIBS := \
     system/dev/lib/fake_ddk \
+    system/dev/lib/mmio \
     system/dev/lib/mock-hidbus-ifc \
     system/dev/lib/mock-i2c \
     system/ulib/ddk \

@@ -14,6 +14,7 @@ MODULE_SRCS += \
 	$(LOCAL_DIR)/pio.cpp
 
 MODULE_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/fbl \
     system/ulib/hwreg \
     system/ulib/ddk \

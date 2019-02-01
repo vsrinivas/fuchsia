@@ -4,7 +4,7 @@
 
 #include "mt8167-gpio.h"
 
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <fbl/auto_call.h>
 #include <lib/fake_ddk/fake_ddk.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>

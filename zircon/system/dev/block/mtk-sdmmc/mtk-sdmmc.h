@@ -10,7 +10,7 @@
 #include <ddk/phys-iter.h>
 #include <ddk/protocol/platform/device.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/gpio.h>
 #include <ddktl/protocol/sdmmc.h>
 #include <fbl/auto_lock.h>

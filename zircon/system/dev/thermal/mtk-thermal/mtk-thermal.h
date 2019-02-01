@@ -8,7 +8,7 @@
 
 #include <ddk/protocol/platform-device-lib.h>
 #include <ddktl/device.h>
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <ddktl/protocol/clk.h>
 #include <ddktl/protocol/empty-protocol.h>
 #include <fbl/mutex.h>

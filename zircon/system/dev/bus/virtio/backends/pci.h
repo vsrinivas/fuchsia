@@ -5,7 +5,7 @@
 #pragma once
 
 #include "backend.h"
-#include <ddktl/mmio.h>
+#include <lib/mmio/mmio.h>
 #include <optional>
 #include <zircon/thread_annotations.h>
 

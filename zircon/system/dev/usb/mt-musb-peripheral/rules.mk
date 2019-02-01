@@ -12,6 +12,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/mt-usb.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/dev/lib/operation \
     system/dev/lib/usb \
     system/ulib/ddk \

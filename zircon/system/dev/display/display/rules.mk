@@ -16,6 +16,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/image.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/async.cpp \
     system/ulib/async \
     system/ulib/async-loop.cpp \

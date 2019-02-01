@@ -12,6 +12,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/mtk-sdmmc.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \
@@ -25,6 +26,7 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
+    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
@@ -43,16 +45,13 @@ MODULE_NAME := mtk-sdmmc-test
 
 MODULE_TYPE := usertest
 
-MODULE_DEFINES := DRIVER_TEST=1
-
 MODULE_SRCS += \
     $(LOCAL_DIR)/mtk-sdmmc.cpp \
     $(LOCAL_DIR)/mtk-sdmmc-test.cpp \
-    $(LOCAL_DIR)/test-overrides.cpp \
 
 MODULE_STATIC_LIBS := \
-    system/dev/lib/mt8167 \
     system/dev/lib/mock-mmio-reg \
+    system/dev/lib/mt8167 \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \

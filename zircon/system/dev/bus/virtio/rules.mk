@@ -29,6 +29,7 @@ MODULE_SRCS := \
 MODULE_FIDL_LIBS := system/fidl/fuchsia-hardware-vsock
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/async \
     system/ulib/async.cpp \
     system/ulib/async-loop \

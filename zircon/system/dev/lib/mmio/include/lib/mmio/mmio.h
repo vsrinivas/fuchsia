@@ -17,11 +17,6 @@
 #include <zircon/assert.h>
 #include <zircon/process.h>
 
-#ifdef TEST_MMIO_FAKE
-extern void mmio_fake_read(uintptr_t base, size_t size, zx_off_t off, void* value);
-extern void mmio_fake_write(uintptr_t base, size_t size, const void* value, zx_off_t off);
-#endif  // TEST_MMIO_FAKE
-
 namespace ddk {
 
 // Usage Notes:
@@ -253,13 +248,7 @@ public:
     T Read(zx_off_t offs) const {
         ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
-#ifdef TEST_MMIO_FAKE
-        T val;
-        mmio_fake_read(ptr_, sizeof(T), offs, &val);
-        return val;
-#else
         return *reinterpret_cast<volatile T*>(ptr_ + offs);
-#endif  // TEST_MMIO_FAKE
     }
 
     template <typename T>
@@ -271,12 +260,8 @@ public:
     void Write(T val, zx_off_t offs) const {
         ZX_DEBUG_ASSERT(offs + sizeof(T) <= mmio_.size);
         ZX_DEBUG_ASSERT(ptr_);
-#ifdef TEST_MMIO_FAKE
-        mmio_fake_write(ptr_, sizeof(T), &val, offs);
-#else
         *reinterpret_cast<volatile T*>(ptr_ + offs) = val;
         hw_mb();
-#endif  // TEST_MMIO_FAKE
     }
 
     template <typename T>

@@ -18,6 +18,7 @@ MODULE_SRCS += \
     $(LOCAL_DIR)/aml-cpufreq.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/mmio \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/zxcpp \

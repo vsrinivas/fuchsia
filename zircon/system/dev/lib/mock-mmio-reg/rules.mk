@@ -8,14 +8,6 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_SRCS := $(LOCAL_DIR)/mock-mmio-reg.cpp
-
-MODULE_STATIC_LIBS := \
-    system/ulib/ddk \
-    system/ulib/fbl \
-
-MODULE_LIBS := \
-    system/ulib/c \
-    system/ulib/unittest \
+MODULE_SRCS := $(LOCAL_DIR)/empty.cpp
 
 include make/module.mk
