@@ -1,0 +1,121 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.images;
+
+// ImagePipe is a mechanism for streaming shared images between a producer
+// and a consumer which may be running in different processes.
+//
+// Conceptually, the image pipe maintains a table of image resources supplied
+// by the producer into which graphical content may be stored as well as a
+// presentation queue containing a sequence of images which the producer has
+// asked the consumer to present.
+//
+// The presentation queue is initially empty.
+//
+// Each entry in the presentation queue consists of an image together with a
+// pair of optional synchronization fences:
+// - Acquire fence: signaled by the producer when the image is ready to be consumed
+// - Release fence: signaled by the consumer when the image is free to be freed or
+//   modified by the producer
+//
+// The producer performs the following sequence of steps to present content:
+// - Allocate and add some number of images (often 2 or 3) to the image pipe
+//   to establish a pool using |AddImage()|.
+// - Obtain the next available image from the pool.
+// - Ask the consumer to enqueue an image for presentation and provide fences
+//   using |PresentImage()|.
+// - Start rendering the image.
+// - Signal the image's acquire fence when rendering is complete.
+// - Loop to present more image, listen for signals on release fences to recycle
+//   images back into the pool.
+//
+// The consumer performs the following sequence of steps for each image which
+// is enqueued in the presentation queue:
+// - Await signals on the image's acquire fence.
+// - If the fence wait cannot be satisfied or if some other error is detected,
+//   close the image pipe.
+//   Otherwise, begin presenting the image's content.
+// - Retire the previously presented image (if any) from the presentation queue
+//   and signal its release fence when no longer needed.
+// - Continue presenting the same image until the next one is ready.  Loop.
+//
+// If the producer wants to close the image pipe, it should:
+// - Close its side of the connection.
+// - Wait on all release fences for buffers that it has submitted with
+//   |PresentImage()|.
+// - Proceed with resource cleanup.
+//
+// When the consumer detects the image pipe has closed, it should:
+// - Stop using/presenting any images from the pipe.
+// - Unmap all VMOs associated with the images in the pipe.
+// - Close all handles to the VMOs.
+// - Signal all release fences for presented and queued buffers.
+// - Close all handles to fences.
+// - Close its side of the connection.
+//
+// When either party detects that a fence has been abandoned (remotely closed
+// without being signaled) it should assume that the associated image is in
+// an indeterminate state.  This will typically happen when the other party
+// (or one of its delegates) has crashed.  The safest course of action is to
+// close the image pipe, release all resources which were shared with the
+// other party, and re-establish the connection to recover.
+interface ImagePipe {
+    // Adds an image resource to image pipe.
+    //
+    // The |memory| is the handle of a memory object which contains the image
+    // data.  It is valid to create multiple images backed by the same memory
+    // object; they may even overlap.  Consumers must detect this and handle
+    // it accordingly.  The |offset_bytes| indicates the offset within the
+    // memory object at which the image data begins.  The |size_bytes|
+    // indicates the amount of memory from |memory| that should be utilized.
+    // The type of memory stored in the VMO is |memory_type| (e.g. GPU memory,
+    // host memory).
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| is already registered
+    // - |image_info| represents a format not supported by the consumer
+    // - |memory| is not a handle for a readable VMO
+    // - the image data expected at |offset_bytes| according to the |image_info|
+    //   exceeds the memory object's bounds
+    1: AddImage(uint32 image_id, ImageInfo image_info,
+                handle<vmo> memory, uint64 offset_bytes, uint64 size_bytes, MemoryType memory_type);
+
+    // Removes an image resource from the pipe.
+    //
+    // The |image_id| is detached from the image resource and is free to be
+    // reused to add a new image resource.
+    //
+    // Removing an image from the image pipe does not affect the presentation
+    // queue or the currently presented image.
+    //
+    // The producer must wait for all release fences associated with the image to
+    // be signaled before freeing or modifying the underlying memory object since
+    // the image may still be in use in the presentation queue.
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| does not reference a currently registered image resource
+    2: RemoveImage(uint32 image_id);
+
+    // Enqueues the specified image for presentation by the consumer.
+    //
+    // The |acquire_fences| are a set of fences which must all be signaled by the
+    // producer before the consumer presents the image.
+    // The |release_fences| are set of fences which must all be signaled by the
+    // consumer before it is safe for the producer to free or modify the image.
+    // |presentation_time| specifies the time on or after which the
+    // client would like the enqueued operations should take visible effect
+    // (light up pixels on the screen), expressed in nanoseconds in the
+    // |CLOCK_MONOTONIC| timebase.  Desired presentation times must be
+    // monotonically non-decreasing.
+    //
+    // |presentation_info| returns timing information about the submitted frame
+    // and future frames (see presentation_info.fidl).
+    //
+    // The following errors will cause the connection to be closed:
+    // - |image_id| does not reference a currently registered image resource
+    3: PresentImage(uint32 image_id, uint64 presentation_time,
+                    vector<handle<event>> acquire_fences, vector<handle<event>> release_fences)
+           -> (PresentationInfo presentation_info);
+};

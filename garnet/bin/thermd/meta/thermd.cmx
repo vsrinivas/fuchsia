@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+	    "fuchsia.sys.Launcher",
+	    "fuchsia.tracelink.Registry"
+	],
+        "dev": [ "misc", "class/thermal", "class/gpu-thermal" ]
+    }
+}

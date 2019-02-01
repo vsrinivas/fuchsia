@@ -1,0 +1,80 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+executable("cobalt_encoder_unittests") {
+  testonly = true
+
+  deps = [
+    "//third_party/cobalt/encoder:unittests",
+  ]
+}
+
+package("cobalt_tests") {
+  testonly = true
+
+  deps = [
+    ":cobalt_encoder_unittests",
+    "app:app",
+    "app:cobalt_app_unittests",
+    "testapp:cobalt_testapp",
+    "testapp:generate_legacy_testapp_metrics",
+    "testapp:generate_testapp_metrics",
+    "utils:cobalt_utils_unittests",
+  ]
+
+  binaries = [
+    {
+      name = "cobalt_testapp"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info("testapp:generate_legacy_testapp_metrics",
+                             "target_gen_dir") + "/legacy_cobalt_metrics.pb")
+      dest = "legacy_cobalt_metrics.pb"
+    },
+    {
+      path =
+          rebase_path(get_label_info("testapp:generate_testapp_metrics",
+                                     "target_gen_dir") + "/cobalt_metrics.pb")
+      dest = "cobalt_metrics.pb"
+    },
+  ]
+
+  tests = [
+    {
+      name = "cobalt_app_unittests"
+    },
+
+    {
+      name = "cobalt_utils_unittests"
+
+      disabled = true
+    },
+
+    {
+      name = "cobalt_encoder_unittests"
+    },
+
+    {
+      name = rebase_path("testapp/cobalt_testapp_no_network.sh")
+      dest = "cobalt_testapp_no_network"
+    },
+
+    {
+      name = rebase_path("testapp/cobalt_testapp_no_environment.sh")
+      dest = "cobalt_testapp_no_environment"
+
+      # We don't want to run this version cobalt_testapp in the Garnet
+      # CI/CQ  because it uses the real network. We run cobalt_testap_no_network
+      # instead. This version is run in the stand-alone cobalt_client CI.
+      disabled = true
+    },
+  ]
+}

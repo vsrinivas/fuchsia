@@ -1,0 +1,26 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.netstack.Netstack",
+                "fuchsia.net.SocketProvider",
+                "fuchsia.net.Connectivity",
+                "fuchsia.net.stack.Stack"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/netstack_integration_test"
+    },
+    "sandbox": {
+        "dev": [
+            "misc/tapctl",
+            "class/ethernet"
+        ],
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

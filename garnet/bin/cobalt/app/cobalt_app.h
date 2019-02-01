@@ -1,0 +1,97 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef GARNET_BIN_COBALT_APP_COBALT_APP_H_
+#define GARNET_BIN_COBALT_APP_COBALT_APP_H_
+
+#include <stdlib.h>
+
+#include <chrono>
+#include <fstream>
+#include <string>
+
+#include <fuchsia/cobalt/cpp/fidl.h>
+#include <lib/async/cpp/task.h>
+
+#include "garnet/bin/cobalt/app/cobalt_controller_impl.h"
+#include "garnet/bin/cobalt/app/logger_factory_impl.h"
+#include "garnet/bin/cobalt/app/system_data_updater_impl.h"
+#include "garnet/bin/cobalt/app/timer_manager.h"
+#include "lib/component/cpp/startup_context.h"
+#include "lib/network_wrapper/network_wrapper_impl.h"
+#include "third_party/cobalt/config/client_config.h"
+#include "third_party/cobalt/config/project_configs.h"
+#include "third_party/cobalt/encoder/client_secret.h"
+#include "third_party/cobalt/encoder/file_observation_store.h"
+#include "third_party/cobalt/encoder/send_retryer.h"
+#include "third_party/cobalt/encoder/shipping_manager.h"
+#include "third_party/cobalt/encoder/shuffler_client.h"
+#include "third_party/cobalt/logger/encoder.h"
+#include "third_party/cobalt/logger/observation_writer.h"
+
+namespace cobalt {
+
+class CobaltApp {
+ public:
+  // |dispatcher| The async_t to be used for all asynchronous operations.
+  //
+  // |schedule_interval| The scheduling interval provided to
+  //                     encoder::UploadScheduler.
+  //
+  // |min_interval| The minimum interval provided to encoder::UploadScheduler.
+  //
+  // |initial_interval| The scheduling interval that is the starting point for
+  //                    the exponentially increasing interval value used in
+  //                    encoder::UploadScheduler.
+  //
+  // |product_name| A product name to override the one used in the
+  //                ObservationMetadata.
+  CobaltApp(async_dispatcher_t* dispatcher,
+            std::chrono::seconds schedule_interval,
+            std::chrono::seconds min_interval,
+            std::chrono::seconds initial_interval,
+            const std::string& product_name);
+
+ private:
+  static encoder::ClientSecret getClientSecret();
+
+  encoder::SystemData system_data_;
+
+  std::unique_ptr<component::StartupContext> context_;
+
+  encoder::ShufflerClient shuffler_client_;
+  encoder::send_retryer::SendRetryer send_retryer_;
+  network_wrapper::NetworkWrapperImpl network_wrapper_;
+  encoder::FileObservationStore legacy_observation_store_;
+  encoder::FileObservationStore observation_store_;
+  util::EncryptedMessageMaker legacy_encrypt_to_analyzer_;
+  util::EncryptedMessageMaker legacy_encrypt_to_shuffler_;
+  util::EncryptedMessageMaker encrypt_to_analyzer_;
+  util::EncryptedMessageMaker encrypt_to_shuffler_;
+  encoder::LegacyShippingManager legacy_shipping_manager_;
+  encoder::ClearcutV1ShippingManager clearcut_shipping_manager_;
+  TimerManager timer_manager_;
+
+  logger::Encoder logger_encoder_;
+  logger::ObservationWriter observation_writer_;
+
+  std::shared_ptr<config::ClientConfig> client_config_;
+  std::shared_ptr<config::ProjectConfigs> project_configs_;
+
+  std::unique_ptr<fuchsia::cobalt::Controller> controller_impl_;
+  fidl::BindingSet<fuchsia::cobalt::Controller> controller_bindings_;
+
+  std::unique_ptr<fuchsia::cobalt::LoggerFactory> logger_factory_impl_;
+  fidl::BindingSet<fuchsia::cobalt::LoggerFactory> logger_factory_bindings_;
+
+  std::unique_ptr<fuchsia::cobalt::SystemDataUpdater> system_data_updater_impl_;
+  fidl::BindingSet<fuchsia::cobalt::SystemDataUpdater>
+      system_data_updater_bindings_;
+
+  FXL_DISALLOW_COPY_AND_ASSIGN(CobaltApp);
+};
+
+}  // namespace cobalt
+
+#endif  // GARNET_BIN_COBALT_APP_COBALT_APP_H_

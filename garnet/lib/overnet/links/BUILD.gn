@@ -1,0 +1,108 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+
+###############################################################################
+# AGGREGATE LIBRARIES
+
+source_set("lib") {
+  public_deps = [
+    ":packet_link",
+    ":packet_nub",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  deps = [
+    ":packet_link_test",
+    ":packet_nub_test",
+  ]
+}
+
+###############################################################################
+
+# packet_link
+source_set("packet_link") {
+  sources = [
+    "packet_link.cc",
+    "packet_link.h",
+  ]
+  public_deps = [
+    "//garnet/lib/overnet/routing:router",
+  ]
+  deps = [
+    "//garnet/lib/overnet/environment:trace",
+    "//garnet/lib/overnet/packet_protocol",
+  ]
+}
+
+source_set("packet_link_test") {
+  testonly = true
+  sources = [
+    "packet_link_test.cc",
+  ]
+  deps = [
+    ":packet_link",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# packet_nub
+source_set("packet_nub") {
+  sources = [
+    "packet_nub.h",
+  ]
+  public_deps = [
+    ":packet_link",
+  ]
+  deps = [
+    "//garnet/lib/overnet/environment:timer",
+    "//garnet/lib/overnet/labels:node_id",
+    "//garnet/lib/overnet/vocabulary:slice",
+  ]
+}
+
+source_set("packet_nub_fuzzer_lib") {
+  testonly = true
+  sources = [
+    "packet_nub_fuzzer.h",
+    "packet_nub_fuzzer.cc",
+  ]
+  public_deps = [
+    ":packet_nub",
+  ]
+  deps = [
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+  ]
+}
+
+source_set("packet_nub_test") {
+  testonly = true
+  sources = [
+    "packet_nub_test.cc",
+  ]
+  deps = [
+    ":packet_nub",
+    "//garnet/lib/overnet/testing:test_timer",
+    "//garnet/lib/overnet/testing:trace_cout",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+fuzz_target("packet_nub_fuzzer") {
+  testonly = true
+  sources = [
+    "packet_nub_fuzzer_main.cc",
+  ]
+  deps = [
+    ":packet_nub_fuzzer_lib",
+  ]
+}

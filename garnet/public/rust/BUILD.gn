@@ -1,0 +1,86 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("rust-crates-tests") {
+  testonly = true
+
+  deps = [
+    "fdio",
+    "fuchsia-archive",
+    "fuchsia-async",
+    "fuchsia-cobalt",
+    "fuchsia-component",
+    "fuchsia-cprng",
+    "fuchsia-framebuffer",
+    "fuchsia-hyper",
+    "fuchsia-inspect",
+    "fuchsia-merkle",
+    "fuchsia-syslog",
+    "fuchsia-syslog",
+    "fuchsia-trace",
+    "fuchsia-vfs/fuchsia-vfs-pseudo-fs",
+    "fuchsia-zircon",
+    "mapped-vmo",
+    "mundane",
+    "packet",
+    "shared-buffer",
+    "zerocopy",
+  ]
+
+  tests = [
+    {
+      name = "fdio_lib_test"
+    },
+    {
+      name = "fuchsia_archive_lib_test"
+    },
+    {
+      name = "fuchsia_async_lib_test"
+    },
+    {
+      name = "fuchsia_cobalt_lib_test"
+    },
+    {
+      name = "fuchsia_cprng_lib_test"
+    },
+    {
+      name = "fuchsia_hyper_lib_test"
+    },
+    {
+      name = "fuchsia_inspect_lib_test"
+    },
+    {
+      name = "fuchsia_merkle_lib_test"
+    },
+    {
+      name = "fuchsia_syslog_lib_test"
+    },
+    {
+      name = "fuchsia_trace_lib_test"
+    },
+    {
+      name = "fuchsia_vfs_pseudo_fs_lib_test"
+    },
+    {
+      name = "fuchsia_zircon_lib_test"
+    },
+    {
+      name = "mapped_vmo_lib_test"
+    },
+    {
+      name = "mundane_lib_test"
+    },
+    {
+      name = "packet_lib_test"
+    },
+    {
+      name = "shared_buffer_lib_test"
+    },
+    {
+      name = "zerocopy_lib_test"
+    },
+  ]
+}

@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/recovery_netstack:recovery_netstack_tests"
+    ]
+}

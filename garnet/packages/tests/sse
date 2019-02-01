@@ -1,0 +1,5 @@
+{
+    "host_tests": [
+        "//garnet/go/src/sse:sse_test"
+    ]
+}

@@ -1,0 +1,146 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+executable("unit_tests") {
+  testonly = true
+  output_name = "magma_unit_tests"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":magma_platform_tests",
+    ":magma_system_tests",
+    ":magma_util_tests",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("magma_system_tests") {
+  testonly = true
+
+  sources = [
+    "test_magma_driver.cc",
+    "test_magma_system_buffer.cc",
+    "test_magma_system_connection.cc",
+    "test_magma_system_context.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/helper:command_buffer_helper",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests/mock:msd",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("magma_util_tests") {
+  testonly = true
+
+  sources = [
+    "test_address_space_allocator.cc",
+    "test_inflight_list.cc",
+    "test_macros.cc",
+    "test_register_bitfields.cc",
+    "test_semaphore_port.cc",
+    "test_status.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util:allocator",
+    "$magma_build_root/src/magma_util:inflight_list",
+    "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util:semaphore_port",
+    "$zircon_build_root/public/lib/fdio",
+    "$zircon_build_root/public/lib/zx",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("magma_platform_tests") {
+  testonly = true
+  sources = [
+    "test_platform_connection.cc",
+    "test_platform_event.cc",
+    "test_platform_futex.cc",
+    "test_platform_handle.cc",
+    "test_platform_port.cc",
+    "test_platform_random.cc",
+    "test_platform_semaphore.cc",
+    "test_platform_sysmem_connection.cc",
+    "test_platform_thread.cc",
+  ]
+  deps = [
+    "$magma_build_root/src/magma_util/platform:client_connection",
+    "$magma_build_root/src/magma_util/platform:connection",
+    "$magma_build_root/src/magma_util/platform:event",
+    "$magma_build_root/src/magma_util/platform:futex",
+    "$magma_build_root/src/magma_util/platform:handle",
+    "$magma_build_root/src/magma_util/platform:port",
+    "$magma_build_root/src/magma_util/platform:random",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/magma_util/platform:sysmem_connection",
+    "$magma_build_root/src/magma_util/platform:thread",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# Requires hardware
+source_set("magma_platform_hardware_tests") {
+  testonly = true
+
+  sources = [
+    "test_mmio.cc",
+    "test_platform_buffer.cc",
+    "test_platform_bus_mapper.cc",
+    "test_platform_interrupt.cc",
+  ]
+
+  if (target_cpu == "arm64") {
+    sources += [ "test_platform_device.cc" ]
+  } else if (target_cpu == "x64") {
+    sources += [ "test_platform_pci_device.cc" ]
+  }
+
+  deps = [
+    "$magma_build_root/include:magma_abi",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:bus_mapper",
+    "$magma_build_root/src/magma_util/platform:device",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests/mock:mmio",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# Requires hardware
+source_set("msd_abi_conformance_tests") {
+  testonly = true
+
+  sources = [
+    "test_magma_system_multithread.cc",
+    "test_msd_buffer.cc",
+    "test_msd_context.cc",
+    "test_msd_device.cc",
+    "test_msd_driver.cc",
+    "test_msd_semaphore.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util/platform:buffer",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/src/sys_driver",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "//third_party/googletest:gtest",
+  ]
+}

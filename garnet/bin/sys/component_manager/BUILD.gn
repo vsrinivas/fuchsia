@@ -1,0 +1,61 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+rustc_binary("bin") {
+  name = "component_manager"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:url",
+    "//zircon/public/fidl/fuchsia-io:fuchsia-io-rustc",
+  ]
+}
+
+package("component_manager") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "rust_crates/component_manager"
+      dest = "component_manager"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/component_manager.cmx")
+      dest = "component_manager.cmx"
+    },
+  ]
+}
+
+test_package("component_manager_tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "component_manager_bin_test"
+      dest = "component_manager_tests"
+    },
+  ]
+}

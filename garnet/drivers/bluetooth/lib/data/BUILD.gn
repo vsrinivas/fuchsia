@@ -1,0 +1,57 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("data") {
+  sources = [
+    "domain.cc",
+    "domain.h",
+    "l2cap_socket_channel_relay.cc",
+    "l2cap_socket_factory.cc",
+    "rfcomm_socket_channel_relay.cc",
+    "rfcomm_socket_factory.cc",
+    "socket_channel_relay.cc",
+    "socket_channel_relay.h",
+    "socket_factory.cc",
+    "socket_factory.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/l2cap",
+    "//garnet/drivers/bluetooth/lib/rfcomm",
+  ]
+}
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_domain.cc",
+    "fake_domain.h",
+  ]
+
+  public_deps = [
+    ":data",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "domain_unittest.cc",
+    "socket_channel_relay_unittest.cc",
+    "socket_factory_unittest.cc",
+  ]
+
+  deps = [
+    ":data",
+    "//garnet/drivers/bluetooth/lib/l2cap:testing",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+}

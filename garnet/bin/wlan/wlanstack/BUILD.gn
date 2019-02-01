@@ -1,0 +1,91 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+
+metrics_registry("wlan_metrics_registry") {
+  # This ID must match the Cobalt config from
+  # //third_party/cobalt_config/projects.yaml
+  project_id = 106
+}
+
+rustc_binary("bin") {
+  name = "wlanstack2"
+  with_unit_tests = true
+  edition = "2018"
+
+  # with_lto = "fat"
+
+  deps = [
+    "//garnet/lib/rust/eapol",
+    "//garnet/lib/rust/fuchsia-wlan-dev",
+    "//garnet/lib/rust/wlan-common",
+    "//garnet/lib/rust/wlan-sme",
+    "//garnet/lib/rust/wlantap-client",
+    "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//garnet/lib/wlan/fidl:service-rustc",
+    "//garnet/lib/wlan/fidl:sme-rustc",
+    "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.minstrel:fuchsia.wlan.minstrel-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.stats:fuchsia.wlan.stats-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-cobalt",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//zircon/public/fidl/fuchsia-cobalt:fuchsia-cobalt-rustc",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
+package("wlanstack2") {
+  deps = [
+    ":bin",
+    ":wlan_metrics_registry",
+  ]
+
+  binary = "rust_crates/wlanstack2"
+
+  meta = [
+    {
+      path = rebase_path("meta/wlanstack2.cmx")
+      dest = "wlanstack2.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(":wlan_metrics_registry", "target_gen_dir") +
+              "/wlan_metrics_registry.pb")
+      dest = "wlan_metrics_registry.pb"
+    },
+  ]
+}
+
+package("wlanstack2-tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "wlanstack2_bin_test"
+      dest = "wlanstack2_bin_test"
+    },
+  ]
+}

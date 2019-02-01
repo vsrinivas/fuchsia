@@ -1,0 +1,13 @@
+{
+    "packages": [
+        "//garnet/drivers/wlan/wlan:wlan_drivers_tests",
+        "//garnet/lib/rust/wlan-common:wlan-common-tests",
+        "//garnet/lib/rust/wlan-mlme:wlan-mlme-tests",
+        "//garnet/lib/rust/wlan-rsn:wlan-rsn-tests",
+        "//garnet/lib/rust/wlan-sme:wlan-sme-tests",
+        "//garnet/lib/wlan/mlme/tests:wlan_tests",
+        "//garnet/bin/wlan/wlancfg:wlancfg-tests",
+        "//garnet/bin/wlan/wlanstack:wlanstack2-tests",
+        "//garnet/bin/wlan/wlantool:wlantool2-tests"
+    ]
+}

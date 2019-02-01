@@ -1,0 +1,193 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/go/toolchain.gni")
+import("//build/host.gni")
+import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+
+go_library("metrics_lib") {
+  name = "metrics"
+  source_dir = "metrics"
+  deps = [
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
+  ]
+}
+
+go_library("lib") {
+  name = "amber"
+  deps = [
+    "//garnet/go/src/merkle",
+    "//garnet/go/src/sse",
+    "//garnet/public/fidl/fuchsia.amber($go_toolchain)",
+    "//garnet/public/fidl/fuchsia.sys($go_toolchain)",
+    "//garnet/public/go/third_party:github.com/flynn/go-tuf",
+    "//garnet/public/go/third_party:github.com/rjw57/oauth2device",
+    "//garnet/public/go/third_party:golang.org/x/oauth2",
+    "//garnet/public/lib/component/go/src/app",
+    "//garnet/public/lib/syslog/go/src/syslog",
+    "//zircon/public/fidl/fuchsia-cobalt($go_toolchain)",
+    "//zircon/public/fidl/fuchsia-mem($go_toolchain)",
+  ]
+}
+
+metrics_registry("cobalt_sw_delivery_registry") {
+  project_id = 108
+  use_target_name = true
+}
+
+package("amber") {
+  deps = [
+    ":cobalt_sw_delivery_registry",
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    {
+      name = "pkgsvr"
+      source = "grand_unified_binary"
+    },
+    {
+      name = "amber"
+      source = "grand_unified_binary"
+    },
+    {
+      name = "system_updater"
+      source = "grand_unified_binary"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("keys/root_sig.json")
+      dest = "keys"
+    },
+    {
+      path = rebase_path(
+              get_label_info(":cobalt_sw_delivery_registry", "target_gen_dir") +
+              "/cobalt_sw_delivery_registry.pb")
+      dest = "cobalt_config.pb"
+    },
+    {
+      path = rebase_path("system_updater/images")
+      dest = "images"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/amber.cmx")
+      dest = "amber.cmx"
+    },
+    {
+      path = rebase_path("//garnet/bin/appmgr/legacy_flat_exported_dir")
+      dest = "legacy_flat_exported_dir"
+    },
+    {
+      path = rebase_path("//garnet/go/src/pmd/meta/pkgsvr.cmx")
+      dest = "pkgsvr.cmx"
+    },
+    {
+      path = rebase_path(
+              "//garnet/go/src/amber/system_updater/meta/system_updater.cmx")
+      dest = "system_updater.cmx"
+    },
+  ]
+}
+
+package("amber_tools") {
+  deps = [
+    "//garnet/go/src/grand_unified_binary",
+  ]
+
+  binaries = [
+    # TODO(raggi): remove the underscore version of the command name once all
+    # docs and scripts have been updated.
+    {
+      name = "amber_ctl"
+      source = "grand_unified_binary"
+      shell = true
+    },
+    {
+      name = "amberctl"
+      source = "grand_unified_binary"
+      shell = true
+    },
+  ]
+}
+
+test_targets = [
+  {
+    name = "amber_source_test"
+    gopkg = "amber/source"
+  },
+  {
+    name = "amber_urlscope_test"
+    gopkg = "amber/urlscope"
+  },
+  {
+    name = "amber_control_server_test"
+    gopkg = "amber/control_server"
+  },
+]
+foreach(test, test_targets) {
+  go_test(test.name) {
+    gopackage = test.gopkg
+
+    deps = [
+      ":lib",
+      "//garnet/go/src/pmd",
+      "//garnet/public/go/third_party:github.com/google/go-cmp",
+    ]
+  }
+}
+
+package("amber_tests") {
+  testonly = true
+
+  deps = []
+  tests = []
+
+  foreach(test, test_targets) {
+    deps += [ ":${test.name}" ]
+    tests += [
+      {
+        name = test.name
+      },
+    ]
+  }
+}
+
+package("test_config") {
+  deprecated_system_image = true
+  package_name = "amber_test_config"
+  testonly = true
+
+  resources = [
+    {
+      dest = "amber/test_sources/test1/config.json"
+      path = rebase_path("etc/sources/test1/config.json")
+    },
+    {
+      dest = "amber/test_sources/test2/config.json"
+      path = rebase_path("etc/sources/test2/config.json")
+    },
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "amber_config"
+  resources = [
+    {
+      dest = "sysmgr/amber.config"
+      path = rebase_path("startup.config")
+    },
+  ]
+}

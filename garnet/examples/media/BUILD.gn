@@ -1,0 +1,193 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+# We have a separate package for each example to clarify the dependencies of
+# each example.
+
+package("fx") {
+  deps = [
+    "fx",
+  ]
+
+  binaries = [
+    {
+      name = "fx"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("fx/meta/fx.cmx")
+      dest = "fx.cmx"
+    },
+  ]
+}
+
+package("simple_sine") {
+  deps = [
+    "simple_sine",
+  ]
+
+  binaries = [
+    {
+      name = "simple_sine"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("simple_sine/meta/simple_sine.cmx")
+      dest = "simple_sine.cmx"
+    },
+  ]
+}
+
+package("simple_sine_sync") {
+  deps = [
+    "simple_sine_sync",
+  ]
+
+  binaries = [
+    {
+      name = "simple_sine_sync"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("simple_sine_sync/meta/simple_sine_sync.cmx")
+      dest = "simple_sine_sync.cmx"
+    },
+  ]
+}
+
+package("tones") {
+  deps = [
+    "tones",
+  ]
+
+  binaries = [
+    {
+      name = "tones"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("tones/meta/tones.cmx")
+      dest = "tones.cmx"
+    },
+  ]
+}
+
+package("tts") {
+  deps = [
+    "tts",
+  ]
+
+  binaries = [
+    {
+      name = "tts"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("tts/meta/tts.cmx")
+      dest = "tts.cmx"
+    },
+  ]
+}
+
+package("use_media_decoder") {
+  testonly = true
+
+  deps = [
+    "use_media_decoder",
+  ]
+
+  binaries = [
+    {
+      name = "use_media_decoder"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_media_decoder.cmx")
+      dest = "use_media_decoder.cmx"
+    },
+  ]
+}
+
+#
+# Tests that run on CQ
+#
+
+package("use_aac_decoder_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_aac_decoder_test",
+  ]
+
+  tests = [
+    {
+      name = "use_aac_decoder_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("use_media_decoder/test/test_audio.adts")
+      dest = "media_test_data/test_audio.adts"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("use_media_decoder/meta/use_aac_decoder_test.cmx")
+      dest = "use_aac_decoder_test.cmx"
+    },
+  ]
+}
+
+# TODO(perley): Take the wav_recorder utility and strip
+#               it down to a minimal simple_cap example
+
+#
+# Tests that don't run on CQ yet.
+#
+
+package("use_h264_decoder_test") {
+  testonly = true
+
+  deps = [
+    "//garnet/examples/media/use_media_decoder:use_h264_decoder_test",
+  ]
+
+  tests = [
+    {
+      # Should pass when run manually on VIM2, fails otherwise.
+      name = "use_h264_decoder_test"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear.h264")
+      dest = "media_test_data/bear.h264"
+    },
+  ]
+}

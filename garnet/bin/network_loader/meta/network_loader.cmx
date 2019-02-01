@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.oldhttp.HttpService",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

@@ -1,0 +1,110 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.fonts;
+
+using fuchsia.mem;
+
+enum Slant {
+    UPRIGHT = 1;
+    ITALIC = 2;
+    OBLIQUE = 3;
+};
+
+enum FallbackGroup {
+    NONE = 0;
+    SERIF = 1;
+    SANS_SERIF = 2;
+    MONOSPACE = 3;
+    CURSIVE = 4;
+    FANTASY = 5;
+};
+
+// Disables font fallback. The service won't try to search fallback font set if
+// there is no requested font family or if it doesn't contain requested
+// character.
+const uint32 REQUEST_FLAG_NO_FALLBACK = 1;
+
+// Disables approximate style matching. The service will only return font that
+// matches the requested style exactly.
+const uint32 REQUEST_FLAG_EXACT_MATCH = 2;
+
+struct Request {
+    // Desired font family name, e.g. "Roboto". Font family search is
+    // case-insensitive. In case when there is no specified family or the
+    // specified family doesn't have glyph for the requested |character| then
+    // a font from another family may be returned. This behavior can be disabled
+    // using REQUEST_FLAG_NO_FALLBACK.
+    string:128? family;
+
+    // For example, 400 is normal, 700 is bold.
+    uint32 weight = 400;
+
+    // Numeric values matching OS/2 & Windows Metrics usWidthClass table.
+    // https://www.microsoft.com/typography/otspec/os2.htm
+    // For example, 5 is normal.
+    uint32 width = 5;
+
+    Slant slant = UPRIGHT;
+
+    // BCP47 language tags in order of preference. See
+    // https://tools.ietf.org/html/bcp47 .
+    vector<string:35>:8? language;
+
+    // Codepoint for the character that must be present in the returned font or 0.
+    // Caller that specify this field are expected to extract character set from
+    // the result and cache it in order to avoid calling the API more than
+    // necessary.
+    uint32 character = 0;
+
+    // Fallback group preference. Caller can leave this field set to NONE. In
+    // that case the font provider will use fallback group of the specified font
+    // family.
+    FallbackGroup fallback_group = NONE;
+
+    uint32 flags = 0;
+};
+
+struct Response {
+    fuchsia.mem.Buffer buffer;
+
+    // Buffer identifier for the buffer. Responses with the same buffer_id are
+    // guaranteed to contain the same data in the buffer. Clients may use this
+    // value to detect if they already have the font cached in parsed form.
+    uint32 buffer_id;
+
+    // Font index within `buffer`. Used for font formats that may contain more
+    // than one font per file, e.g. TTC (TrueType Collection).
+    uint32 font_index;
+};
+
+struct Style {
+    uint32 weight;
+    uint32 width;
+    Slant slant;
+};
+
+// Information about font family that can be requested using GetFamilyInfo().
+struct FamilyInfo {
+    // Canonical font family name. Note that this may be different from the
+    // value passed to GetFamilyInfo() because GetFamilyInfo() also resolves
+    // font aliases and ignores case. For example GetFamilyInfo("robotoslab")
+    // will FamilyInfo.name = "Robot Slab".
+    string:128 name;
+
+    // Unordered list of all available styles in the family.
+    vector<Style>:300 styles;
+};
+
+[Discoverable]
+interface Provider {
+    // Returns font that matches specified |request|.
+    1: GetFont(Request request) -> (Response? response);
+
+    // Returns information for the specified font family or null if there is
+    // no family with the specified name. This function respects family name
+    // aliases and ignores case, so request for "robotoSLAB" will return
+    // FamilyInfo for "Roboto Slab".
+    2: GetFamilyInfo(string:128 family) -> (FamilyInfo? family_info);
+};

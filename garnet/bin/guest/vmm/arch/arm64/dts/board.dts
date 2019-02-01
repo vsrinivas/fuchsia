@@ -1,0 +1,96 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+// See: https://elinux.org/Device_Tree_Usage
+/dts-v1/;
+
+/ {
+  model = "Machina";
+  interrupt-parent = <&gic>;
+  #address-cells = <2>;
+  #size-cells = <2>;
+
+  chosen {
+    // Will be populated at run-time.
+  };
+
+  cpus {
+    #address-cells = <1>;
+    #size-cells = <0>;
+    // CPU list will be populated at run-time.
+  };
+
+  psci {
+    compatible = "arm,psci";
+    method = "smc";
+    cpu_on = <0xc4000003>;
+  };
+
+  timer {
+    compatible = "arm,armv8-timer";
+    always-on;
+    interrupts = <1 13 4>, // PHYS-SECURE-PPI     29 HIGH/CPU-0
+                 <1 14 4>, // PHYS-NON-SECURE-PPI 30 HIGH/CPU-0
+                 <1 11 4>, // VIRT-PPI            27 HIGH/CPU-0
+                 <1 10 4>; // HYP-PPI             26 HIGH/CPU-0
+  };
+
+  pclk: clock {
+    compatible = "fixed-clock";
+    clock-frequency = <0x16e3600>;
+    clock-output-names = "clk24mhz";
+    #clock-cells = <0>;
+  };
+
+  gic: interrupt-controller {
+    interrupt-controller;
+    #address-cells = <0>;
+    ranges;
+    #interrupt-cells = <3>;
+    // Interrupt controller is populated at run-time.
+  };
+
+  pci {
+    device_type = "pci";
+    compatible = "pci-host-ecam-generic";
+    reg = <0x8 0x08100000 0 0x100000>;
+    bus-range = <0 0>;
+    ranges = <0x2000000 0x8 0x08201000 0x8 0x08201000 0 0xff000>;
+    interrupt-map-mask = <0xf800 0 0 1>;
+    interrupt-map = <0x0000 0 0 1 &gic 0 0 4>,  // HIGH MID LOW WIRE GIC SPI 32 HIGH/CPU-0
+                    <0x0800 0 0 1 &gic 0 1 4>,  // HIGH MID LOW WIRE GIC SPI 33 HIGH/CPU-0
+                    <0x1000 0 0 1 &gic 0 2 4>,  // HIGH MID LOW WIRE GIC SPI 34 HIGH/CPU-0
+                    <0x1800 0 0 1 &gic 0 3 4>,  // HIGH MID LOW WIRE GIC SPI 35 HIGH/CPU-0
+                    <0x2000 0 0 1 &gic 0 4 4>,  // HIGH MID LOW WIRE GIC SPI 36 HIGH/CPU-0
+                    <0x2800 0 0 1 &gic 0 5 4>,  // HIGH MID LOW WIRE GIC SPI 37 HIGH/CPU-0
+                    <0x3000 0 0 1 &gic 0 6 4>,  // HIGH MID LOW WIRE GIC SPI 38 HIGH/CPU-0
+                    <0x3800 0 0 1 &gic 0 7 4>,  // HIGH MID LOW WIRE GIC SPI 39 HIGH/CPU-0
+                    <0x4000 0 0 1 &gic 0 8 4>,  // HIGH MID LOW WIRE GIC SPI 40 HIGH/CPU-0
+                    <0x4800 0 0 1 &gic 0 9 4>,  // HIGH MID LOW WIRE GIC SPI 41 HIGH/CPU-0
+                    <0x5000 0 0 1 &gic 0 10 4>, // HIGH MID LOW WIRE GIC SPI 42 HIGH/CPU-0
+                    <0x5800 0 0 1 &gic 0 11 4>, // HIGH MID LOW WIRE GIC SPI 43 HIGH/CPU-0
+                    <0x6000 0 0 1 &gic 0 12 4>, // HIGH MID LOW WIRE GIC SPI 44 HIGH/CPU-0
+                    <0x6800 0 0 1 &gic 0 13 4>, // HIGH MID LOW WIRE GIC SPI 45 HIGH/CPU-0
+                    <0x7000 0 0 1 &gic 0 14 4>, // HIGH MID LOW WIRE GIC SPI 46 HIGH/CPU-0
+                    <0x7800 0 0 1 &gic 0 15 4>; // HIGH MID LOW WIRE GIC SPI 47 HIGH/CPU-0
+    #address-cells = <3>;
+    #size-cells = <2>;
+    #interrupt-cells = <1>;
+  };
+
+  serial {
+    compatible = "arm,pl011", "arm,primecell";
+    arm,primecell-periphid = <0x00341011>;
+    reg = <0x8 0x08300000 0 0x1000>;
+    clock-names = "apb_pclk";
+    clocks = <&pclk>;
+    interrupts = <0 79 4>; // SPI 111 HIGH/CPU-0
+  };
+
+  rtc {
+    compatible = "arm,pl031", "arm,primecell";
+    arm,primecell-periphid = <0x00041031>;
+    reg = <0x8 0x08301000 0 0x1000>;
+  };
+};

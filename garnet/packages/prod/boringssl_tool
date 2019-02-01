@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//third_party/boringssl:boringssl_tool"
+    ]
+}

@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/guest/pkg/guest_package.gni")
+
+declare_args() {
+  # Package the rootfs as a QCOW image (as opposed to a flat file).
+  debian_guest_qcow = true
+}
+
+if (target_cpu == "x64") {
+  image_dir = "debian-x86"
+  arch_cmdline = "earlycon=uart,io,0x3f8"
+} else if (target_cpu == "arm64") {
+  image_dir = "debian-arm64"
+  arch_cmdline = "earlycon=pl011,0x808300000"
+} else {
+  panic("Unsupported architecture ${target_cpu}")
+}
+
+guest_package("debian_guest") {
+  cmdline = "${arch_cmdline} root=/dev/vda rw"
+  linux = "${image_dir}/vmlinuz"
+  ramdisk = "${image_dir}/initrd.img"
+
+  disk_name = "filesystem.img"
+  if (debian_guest_qcow) {
+    disk_path = rebase_path("${image_dir}/rootfs.qcow2")
+    disk_options = "ro,qcow,volatile"
+  } else {
+    disk_path = rebase_path("${image_dir}/rootfs.img")
+    disk_options = "ro,volatile"
+  }
+  resources = [
+    {
+      path = disk_path
+      dest = disk_name
+    },
+  ]
+  block_devices = [ "/guest/data/${disk_name},${disk_options}" ]
+}

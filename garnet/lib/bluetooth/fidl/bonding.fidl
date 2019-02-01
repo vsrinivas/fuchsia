@@ -1,0 +1,80 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.host;
+
+struct SecurityProperties {
+    bool authenticated;
+    bool secure_connections;
+    uint8 encryption_key_size;
+};
+
+struct Key {
+    // The security properties of this link under which this key was exchanged.
+    SecurityProperties security_properties;
+
+    // 128 bit key
+    array<uint8>:16 value;
+};
+
+// Represents a LE Long-Term Key. The |ediv| and |rand| fields are zero if
+// distributed using LE Secure Connections pairing.
+struct LTK {
+    Key key;
+    uint8 key_size;
+    uint16 ediv;
+    uint64 rand;
+};
+
+// The preferred LE connection parameters of the peer.
+struct LEConnectionParameters {
+    uint16 connection_interval;
+    uint16 connection_latency;
+    uint16 supervision_timeout;
+};
+
+enum AddressType : uint8 {
+    LE_PUBLIC = 0;
+    LE_RANDOM = 1;
+    BREDR = 2;
+};
+
+struct LEData {
+    // The identity address of the peer. If |resolvable| is true, then this is the
+    // resolved private address (and the |irk| is present).
+    string address;
+    AddressType address_type;
+
+    // The peer’s preferred connection parameters, if known.
+    LEConnectionParameters? connection_parameters;
+
+    // Known GATT service UUIDs.
+    vector<string> services;
+
+    // The LE long-term key. Present if the link was encrypted.
+    LTK? ltk;
+
+    // Identity Resolving Key used to generate and resolve random addresses.
+    Key? irk;
+
+    // Connection Signature Resolving Key used for data signing without encryption.
+    Key? csrk;
+};
+
+struct BondingData {
+    // The identifier that uniquely identifies this device.
+    string identifier;
+
+    // The local Bluetooth identity address that this bond is associated with.
+    string local_address;
+
+    // The name of the device, if any.
+    string? name;
+
+    // Bonding data that is present when this device is paired on the LE transport.
+    LEData? le;
+
+    // Bonding data that is present when this device is paired on the BR/EDR transport.
+    // TODO(armansito): Add BR/EDR data.
+};

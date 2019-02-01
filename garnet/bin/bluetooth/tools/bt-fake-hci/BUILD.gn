@@ -1,0 +1,21 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bt-fake-hci") {
+  name = "bt_fake_hci"
+  with_unit_tests = true
+  edition= "2018"
+
+  deps = [
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:rand",
+  ]
+}

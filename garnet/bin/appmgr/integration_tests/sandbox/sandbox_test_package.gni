@@ -1,0 +1,52 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# A test that exercises component functionality.
+# See CP-42 for more context.
+#
+#
+# Additional parameters
+#
+#   environments (optional, default: [ { dimensions = { device_type = "QEMU" } } ])
+#     [list of scopes] Device environments in which the tests should run. See
+#     //build/package.gni for more details.
+#
+template("sandbox_test_package") {
+  binary_rule = "${target_name}_bin"
+  binary_name = target_name
+
+  executable(binary_rule) {
+    testonly = true
+    output_name = "${binary_name}"
+    forward_variables_from(invoker,
+                           "*",
+                           [
+                             "environments",
+                             "output_name",
+                             "target_name",
+                             "testonly",
+                           ])
+  }
+
+  package(target_name) {
+    testonly = true
+    meta = [
+      {
+        path = "meta/${target_name}.cmx"
+        dest = "${target_name}.cmx"
+      },
+    ]
+    deps = [
+      ":${binary_rule}",
+    ]
+    tests = [
+      {
+        name = binary_name
+        forward_variables_from(invoker, [ "environments" ])
+      },
+    ]
+  }
+}

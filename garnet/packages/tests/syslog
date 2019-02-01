@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/public/lib/syslog/cpp:tests",
+        "//garnet/go/src/syslog_tests:syslog_gotests"
+    ]
+}

@@ -1,0 +1,32 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_library("testing") {
+  with_unit_tests = true
+  edition = "2018"
+}
+
+rustc_binary("testing_integration_test") {
+  deps = [ ":testing" ]
+  edition = "2018"
+  source_root = "tests/integration_test.rs"
+}
+
+rustc_binary("testing_integration_test_two") {
+  deps = [ ":testing" ]
+  edition = "2018"
+  source_root = "tests/integration_test_two.rs"
+}
+
+group("testing-tests") {
+  public_deps = [
+    ":testing",
+    ":testing_integration_test",
+    ":testing_integration_test_two",
+  ]
+}

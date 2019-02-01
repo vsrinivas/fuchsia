@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/prod/vulkan"
+    ],
+    "packages": [
+        "//garnet/bin/ui:ime_service",
+        "//garnet/bin/ui:scenic",
+        "//garnet/bin/ui:root_presenter",
+        "//garnet/bin/ui:view_manager"
+    ]
+}

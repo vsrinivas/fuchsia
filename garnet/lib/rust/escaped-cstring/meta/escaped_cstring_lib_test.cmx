@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/escaped_cstring_lib_test"
+    }
+}

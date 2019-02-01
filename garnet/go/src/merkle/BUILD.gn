@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+import("//build/package.gni")
+
+go_library("merkle") {
+  name = "fuchsia.googlesource.com/merkle"
+}
+
+go_test("go_merkle_test") {
+  gopackage = "fuchsia.googlesource.com/merkle"
+
+  deps = [
+    ":merkle",
+  ]
+}
+
+package("go_merkle_tests") {
+  testonly = true
+
+  deps = [
+    ":go_merkle_test",
+  ]
+
+  tests = [
+    {
+      name = "go_merkle_test"
+    },
+  ]
+}

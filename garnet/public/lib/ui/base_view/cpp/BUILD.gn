@@ -1,0 +1,31 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "base_view.cc",
+    "base_view.h",
+    "v1_base_view.cc",
+    "v1_base_view.h",
+    "view_provider_component.cc",
+    "view_provider_component.h",
+    "view_provider_service.cc",
+    "view_provider_service.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/ui/gfx/cpp",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//zircon/public/lib/trace",
+  ]
+}

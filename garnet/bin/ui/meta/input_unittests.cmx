@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "test/input_unittests"
+    },
+    "sandbox": {
+        "features": [ "vulkan" ],
+        "services": [
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

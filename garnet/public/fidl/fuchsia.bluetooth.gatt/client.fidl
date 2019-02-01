@@ -1,0 +1,120 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.gatt;
+
+using fuchsia.bluetooth;
+
+interface RemoteService {
+    // Returns the characteristics and characteristic descriptors that belong to
+    // this service.
+    DiscoverCharacteristics() -> (fuchsia.bluetooth.Status status, vector<Characteristic> characteristics);
+
+    // Reads the value of the characteristic with |id| and returns it in the
+    // reply. If |status| indicates an error |value| will be empty.
+    //
+    // If the characteristic has a long value (i.e. larger than the current MTU)
+    // this method will return only the first (MTU - 1) bytes of the value. Use
+    // ReadLongCharacteristic() to read larger values or starting at a non-zero
+    // offset.
+    ReadCharacteristic(uint64 id) -> (fuchsia.bluetooth.Status status, vector<uint8> value);
+
+    // Reads the complete value of a characteristic with the given |id|. This
+    // procedure should be used if the characteristic is known to have a value
+    // that can not be read in a single request.
+    //
+    // Returns up to |max_bytes| octets of the characteristic value starting at
+    // the given |offset|.
+    //
+    // This may return an error if:
+    //   a. |max_bytes| is 0;
+    //   b. The |offset| is invalid;
+    //   c. The characteristic does not have a long value;
+    //   d. The server does not support the long read procedure.
+    ReadLongCharacteristic(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, vector<uint8> value);
+
+    // Writes |value| to the characteristic with |id|. The ATT protocol method is
+    // selected based on the input parameters and properties of the
+    // characteristic:
+    //
+    //   a. If |value| fits within a single ATT request (based on the current MTU)
+    //      and |offset| is 0, the "Write Characteristic Value" procedure will be
+    //      used.
+    //   b. If |value| is value cannot fit within a single ATT request or a
+    //      non-zero |offset| is requested, the "Write Long Characteristic Value"
+    //      procedure will be used.
+    //   c. If the characteristic does not claim to support the selected
+    //      procedure, the request will fail with ErrorCode.NotSupported.
+    WriteCharacteristic(uint64 id, uint16 offset, vector<uint8> value) -> (fuchsia.bluetooth.Status status);
+
+    // Writes |value| to the characteristic with |id| without soliciting an
+    // acknowledgement from the peer. This method has no response and its delivery
+    // cannot be confirmed.
+    WriteCharacteristicWithoutResponse(uint64 id, vector<uint8> value);
+
+    // Reads the value of the characteristic descriptor with |id| and returns it
+    // in the reply. If |status| indicates an error, |value| can be ignored.
+    //
+    // If the descriptor has a long value (i.e. larger than the current MTU)
+    // this method will return only the first (MTU - 1) bytes of the value. Use
+    // ReadLongDescriptor() to read larger values or starting at a non-zero
+    // offset.
+    ReadDescriptor(uint64 id) -> (fuchsia.bluetooth.Status status, vector<uint8> value);
+
+    // Reads the complete value of a characteristic descriptor with the given |id|.
+    // This procedure should be used if the descriptor is known to have a value
+    // that can not be read in a single request.
+    //
+    // Returns up to |max_bytes| octets of the characteristic value starting at
+    // the given |offset|.
+    //
+    // This may return an error if:
+    //   a. |max_bytes| is 0;
+    //   b. The |offset| is invalid;
+    //   c. The server does not support the long read procedure.
+    ReadLongDescriptor(uint64 id, uint16 offset, uint16 max_bytes) -> (fuchsia.bluetooth.Status status, vector<uint8> value);
+
+    // Writes |value| to the characteristic descriptor with |id|. This operation
+    // may return an error if:
+    //   a. The size of |value| exceeds the current MTU.
+    //   b. |id| refers to an internally reserved descriptor type (e.g. the Client
+    //      Characteristic Configuration descriptor).
+    WriteDescriptor(uint64 id, vector<uint8> value) -> (fuchsia.bluetooth.Status status);
+
+    // Subscribe or unsubscribe to notifications/indications from the characteristic with
+    // the given |id|. Notifications or indications will be enabled if |enable| is
+    // true or disabled if |enable| is false and they have been enabled for this
+    // client.
+    //
+    // Either notifications or indications will be enabled depending on
+    // characteristic properties. Indications will be preferred if they are
+    // supported.
+    //
+    // This operation fails if the characteristic does not have the "notify" or
+    // "indicate" property or does not contain a Client Characteristic
+    // Configuration descriptor.
+    //
+    // On success, the OnCharacteristicValueUpdated event will be sent whenever
+    // the peer sends a notification or indication. The local host will
+    // automically confirm indications.
+    NotifyCharacteristic(uint64 id, bool enable) -> (fuchsia.bluetooth.Status status);
+
+    // Events:
+    // Called when a characteristic value notification or indication is received.
+    -> OnCharacteristicValueUpdated(uint64 id, vector<uint8> value);
+};
+
+interface Client {
+    // Enumerates services found on the peer that this Client represents. Results
+    // can be restricted by specifying a list of UUIDs in |uuids|. The returned
+    // ServiceInfo structures will contain only basic information about each
+    // service and the |characteristics| and |includes| fields will be null.
+    //
+    // To further interact with services, clients must obtain a RemoteService
+    // handle by calling ConnectToService().
+    ListServices(vector<string>? uuids) -> (fuchsia.bluetooth.Status status, vector<ServiceInfo> services);
+
+    // Connects the RemoteService with the given identifier.
+    ConnectToService(uint64 id, request<RemoteService> service);
+};

@@ -1,0 +1,32 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+
+rustc_library("tuf") {
+  edition = "2018"
+  with_unit_tests = true
+
+  source_root = "../../../../third_party/rust-mirrors/rust-tuf/src/lib.rs"
+
+  deps = [
+    "//third_party/rust-crates/rustc_deps:chrono",
+    "//third_party/rust-crates/rustc_deps:data-encoding",
+    "//third_party/rust-crates/rustc_deps:derp",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:http",
+    "//third_party/rust-crates/rustc_deps:hyper",
+    "//third_party/rust-crates/rustc_deps:itoa",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:maplit",
+    "//third_party/rust-crates/rustc_deps:ring",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//third_party/rust-crates/rustc_deps:untrusted",
+    "//third_party/rust-crates/rustc_deps:url",
+  ]
+}

@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/mediaplayer_test_util"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.mediaplayer.Player",
+            "fuchsia.ui.viewsv1.ViewManager",
+            "fuchsia.ui.scenic.Scenic"
+        ]
+    }
+}

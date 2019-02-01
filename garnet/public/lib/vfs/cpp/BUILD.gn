@@ -1,0 +1,71 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+source_set("cpp") {
+  sources = [
+    "connection.cc",
+    "connection.h",
+    "directory.cc",
+    "directory.h",
+    "file.cc",
+    "file.h",
+    "flags.h",
+    "internal/directory_connection.cc",
+    "internal/directory_connection.h",
+    "internal/file_connection.cc",
+    "internal/file_connection.h",
+    "internal/node_connection.cc",
+    "internal/node_connection.h",
+    "node.cc",
+    "node.h",
+    "pseudo_file.cc",
+    "pseudo_file.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-io",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+test("vfs_cpp_unittests") {
+  sources = [
+    "file_unittest.cc",
+    "pseudo_file_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+fuchsia_test_component("vfs_cpp_unittests_component") {
+  deps = [
+    ":vfs_cpp_unittests",
+  ]
+  binary = "vfs_cpp_unittests"
+}
+
+# TODO(IN-933): Convert back to package
+test_package("vfs_cpp_tests") {
+  deps = [
+    ":vfs_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "vfs_cpp_unittests"
+    },
+  ]
+}

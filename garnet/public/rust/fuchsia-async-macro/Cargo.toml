@@ -1,0 +1,20 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+[package]
+name = "fuchsia-async-macro"
+version = "0.1.0"
+edition = "2018"
+license-file = "LICENSE"
+authors = ["rust-fuchsia@fuchsia.com"]
+description = "Procedural macros for writing async entry points in fuchsia"
+repository = "https://fuchsia.googlesource.com"
+
+[dependencies]
+proc-macro2 = "0.4"
+syn = { version = "0.15", features = ["full"]}
+quote = "0.6"
+
+[lib]
+proc-macro=true

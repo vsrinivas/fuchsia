@@ -1,0 +1,107 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+
+package("escher_waterfall") {
+
+  deps = [
+    "waterfall",
+  ]
+
+  binary = "waterfall"
+
+  meta = [
+    {
+      path = rebase_path("meta/escher_examples.cmx")
+      dest = "escher_waterfall.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps +
+                image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+  resources =
+      vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+}
+
+package("escher_waterfall2") {
+
+  deps = [
+    "waterfall2",
+    "//third_party/vulkan_loader_and_validation_layers/layers",
+  ]
+
+  binary = "waterfall2"
+
+  meta = [
+    {
+      path = rebase_path("meta/escher_examples.cmx")
+      dest = "escher_waterfall2.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps +
+                image_pipe_swapchain_fb.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules +
+                     image_pipe_swapchain_fb.loadable_modules
+
+  resources = [
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/default_position.vert"
+          dest = "shaders/model_renderer/default_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/main.frag"
+          dest = "shaders/model_renderer/main.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
+          dest = "shaders/model_renderer/main.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/shadow_map_generation.frag"
+          dest = "shaders/model_renderer/shadow_map_generation.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/shadow_map_lighting.frag"
+          dest = "shaders/model_renderer/shadow_map_lighting.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/model_renderer/wobble_position.vert"
+          dest = "shaders/model_renderer/wobble_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/common/use.glsl"
+          dest = "shaders/paper/common/use.glsl"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/frag/main_ambient_light.frag"
+          dest = "shaders/paper/frag/main_ambient_light.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/frag/main_point_light.frag"
+          dest = "shaders/paper/frag/main_point_light.frag"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/compute_model_space_position.vert"
+          dest = "shaders/paper/vert/compute_model_space_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/compute_world_space_position.vert"
+          dest = "shaders/paper/vert/compute_world_space_position.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/main_shadow_volume_extrude.vert"
+          dest = "shaders/paper/vert/main_shadow_volume_extrude.vert"
+      },
+      {
+          path = "//garnet/public/lib/escher/shaders/paper/vert/vertex_attributes.vert"
+          dest = "shaders/paper/vert/vertex_attributes.vert"
+      },
+  ] + vulkan_validation_layers.resources + image_pipe_swapchain_fb.resources
+}

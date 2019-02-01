@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/package.gni")
+
+go_library("ota-test-app_lib") {
+  name = "ota-test-app"
+}
+
+go_binary("ota-test-app") {
+  gopackage = "ota-test-app"
+  deps = [
+    ":ota-test-app_lib",
+  ]
+}
+
+package("ota-test-package") {
+  package_name = "ota-test-package"
+
+  deps = [
+    ":ota-test-app",
+  ]
+
+  binary = "ota-test-app"
+
+  meta = [
+    {
+      path = rebase_path("meta/ota-test-package.cmx")
+      dest = "ota-test-package.cmx"
+    },
+  ]
+}
+
+package("ota-test-system") {
+  deprecated_system_image = true
+  package_name = "ota-test-system"
+  deps = [
+    ":ota-test-app",
+  ]
+  binaries = [
+    {
+      name = "ota-test-app"
+    },
+  ]
+}

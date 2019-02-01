@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/test_with_environment_example_test"
+    },
+    "sandbox": {
+        "services" : ["fuchsia.sys.Environment", "fuchsia.sys.Loader"]
+    }
+}

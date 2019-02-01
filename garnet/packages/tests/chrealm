@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/chrealm"
+    ],
+    "packages": [
+        "//garnet/bin/chrealm/integration_tests:chrealm_integrationtests",
+        "//garnet/bin/chrealm/integration_tests:chrealm_test_get_message"
+    ]
+}

@@ -1,0 +1,11 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library fuchsia.pkg;
+
+/// BlobId is a content-addressed merkle root that describes an artifact that is tracked by the
+/// packaging system.
+struct BlobId {
+    array<uint8>:32 merkle_root;
+};

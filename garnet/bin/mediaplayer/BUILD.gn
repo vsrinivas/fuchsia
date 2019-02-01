@@ -1,0 +1,188 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+package("mediaplayer") {
+  deps = [
+    ":mediaplayer_bin",
+  ]
+
+  binaries = [
+    {
+      name = "mediaplayer"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediaplayer.cmx")
+      dest = "mediaplayer.cmx"
+    },
+  ]
+}
+
+executable("mediaplayer_bin") {
+  output_name = "mediaplayer"
+
+  sources = [
+    "main.cc",
+    "player_impl.cc",
+    "player_impl.h",
+    "source_impl.cc",
+    "source_impl.h",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/core",
+    "//garnet/bin/mediaplayer/decode",
+    "//garnet/bin/mediaplayer/demux",
+    "//garnet/bin/mediaplayer/fidl",
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/bin/mediaplayer/graph_create",
+    "//garnet/bin/mediaplayer/render",
+    "//garnet/bin/mediaplayer/util",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("mediaplayer_test_util_bin") {
+  output_name = "mediaplayer_test_util"
+
+  sources = [
+    "test/command_queue.cc",
+    "test/command_queue.h",
+    "test/mediaplayer_test_util_params.cc",
+    "test/mediaplayer_test_util_params.h",
+    "test/mediaplayer_test_util_view.cc",
+    "test/mediaplayer_test_util_view.h",
+    "test/test_util_main.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("mediaplayer_test_util") {
+  binaries = [
+    {
+      name = "mediaplayer_test_util"
+    },
+  ]
+
+  testonly = true
+
+  deps = [
+    ":mediaplayer_test_util_bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediaplayer_test_util.cmx")
+      dest = "mediaplayer_test_util.cmx"
+    },
+  ]
+}
+
+executable("tests") {
+  output_name = "mediaplayer_tests"
+
+  testonly = true
+
+  sources = [
+    "test/command_queue.cc",
+    "test/command_queue.h",
+    "test/fakes/fake_audio.h",
+    "test/fakes/fake_audio_renderer.cc",
+    "test/fakes/fake_audio_renderer.h",
+    "test/fakes/fake_image_pipe.cc",
+    "test/fakes/fake_image_pipe.h",
+    "test/fakes/fake_scenic.cc",
+    "test/fakes/fake_scenic.h",
+    "test/fakes/fake_session.cc",
+    "test/fakes/fake_session.h",
+    "test/fakes/fake_view.cc",
+    "test/fakes/fake_view.h",
+    "test/fakes/fake_view_manager.cc",
+    "test/fakes/fake_view_manager.h",
+    "test/fakes/fake_wav_reader.cc",
+    "test/fakes/fake_wav_reader.h",
+    "test/fakes/packet_info.cc",
+    "test/fakes/packet_info.h",
+    "test/mediaplayer_tests.cc",
+    "test/sink_feeder.cc",
+    "test/sink_feeder.h",
+  ]
+
+  deps = [
+    ":mediaplayer_bin",
+    "//garnet/bin/mediaplayer/graph",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/url",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("mediaplayer_tests") {
+  deps = [
+    ":tests",
+    "//garnet/bin/mediaplayer/core:tests",
+    "//garnet/bin/mediaplayer/demux:tests",
+    "//garnet/bin/mediaplayer/util:tests",
+  ]
+
+  tests = [
+    {
+      name = "mediaplayer_demux_tests"
+    },
+
+    {
+      name = "mediaplayer_tests"
+    },
+
+    {
+      name = "mediaplayer_util_tests"
+    },
+
+    {
+      name = "mediaplayer_core_tests"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              "../../test_data/media/third_party/chromium_media_test_data/bear-1280x720.mp4")
+      dest = "media_test_data/bear.mp4"
+    },
+  ]
+}

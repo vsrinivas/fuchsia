@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/examples/mediaplayer:mediaplayer_examples"
+    ]
+}

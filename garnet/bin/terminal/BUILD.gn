@@ -1,0 +1,61 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "terminal"
+  edition = "2018"
+
+  with_lto = "fat"
+
+  deps = [
+    "third_party/term-model",
+    "//garnet/public/fidl/fuchsia.images:fuchsia.images-rustc",
+    "//garnet/public/fidl/fuchsia.math:fuchsia.math-rustc",
+    "//garnet/public/fidl/fuchsia.ui.app:fuchsia.ui.app-rustc",
+    "//garnet/public/fidl/fuchsia.ui.gfx:fuchsia.ui.gfx-rustc",
+    "//garnet/public/fidl/fuchsia.ui.scenic:fuchsia.ui.scenic-rustc",
+    "//garnet/public/fidl/fuchsia.ui.input:fuchsia.ui.input-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1:fuchsia.ui.viewsv1-rustc",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token:fuchsia.ui.viewsv1token-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-scenic",
+    "//garnet/public/rust/fuchsia-ui",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//garnet/public/rust/shared-buffer",
+    "//garnet/bin/terminal/third_party/term-model",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}
+
+package("terminal") {
+  meta = [
+    {
+      path = rebase_path("meta/terminal.cmx")
+      dest = "terminal.cmx"
+    },
+  ]
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/terminal"
+}
+
+package("tiles_with_terminal_config") {
+  deprecated_system_image = true
+  resources = [
+    {
+      dest = "sysmgr/tiles_with_terminal.config"
+      path = rebase_path("config/tiles_with_terminal.config")
+    },
+  ]
+}

@@ -1,0 +1,38 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_library.gni")
+import("//build/test/test_package.gni")
+
+rustc_library("cm_fidl") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//garnet/lib/rust/cm_json",
+    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust-crates/rustc_deps:json5",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:regex",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:valico",
+  ]
+
+  non_rust_deps = [ "//garnet/lib/rust/cm_json:cm_schema_json" ]
+}
+
+test_package("cm_fidl_tests") {
+  deps = [
+    ":cm_fidl",
+  ]
+
+  tests = [
+    {
+      name = "cm_fidl_lib_test"
+      dest = "cm_fidl_tests"
+    },
+  ]
+}

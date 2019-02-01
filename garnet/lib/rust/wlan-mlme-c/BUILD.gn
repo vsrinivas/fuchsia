@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_staticlib.gni")
+
+rustc_staticlib("wlan-mlme-c") {
+  name = "wlan_mlme_c"
+  version = "0.1.0"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/wlan-mlme",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:log",
+  ]
+  non_rust_deps = []
+
+  public = [
+    "bindings.h",
+  ]
+}
+
+package("wlan-mlme-c-tests") {
+  testonly = true
+
+  deps = [
+    ":wlan-mlme-c",
+  ]
+
+  tests = [
+    {
+      name = "wlan_mlme_c_staticlib_test"
+    },
+  ]
+}

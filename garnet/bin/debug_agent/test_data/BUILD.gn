@@ -1,0 +1,82 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# Targets meant for helping zxdb development. See README.md
+
+# Test .so ---------------------------------------------------------------------
+
+source_set("debug_agent_test_so_lib") {
+  testonly = true
+
+  public = [
+    "test_so_symbols.h",
+  ]
+
+  sources = [
+    "breakpoint_test_so.cc",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "x64_write_register_test_so.cc",
+    ]
+  }
+}
+
+shared_library("debug_agent_test_so") {
+  testonly = true
+  public_deps = [ ":debug_agent_test_so_lib" ]
+}
+
+loadable_module("debug_agent_test_loadable_module") {
+  testonly = true
+  output_name = "debug_agent_test_so"
+  public_deps = [ ":debug_agent_test_so_lib" ]
+}
+
+# Text Executables -------------------------------------------------------------
+
+executable("breakpoint_test_exe") {
+  testonly = true
+  output_name = "breakpoint_test_exe"
+  sources = [ "breakpoint_test_exe.cc" ]
+  deps = [ ":debug_agent_test_so" ]
+}
+
+if (current_cpu == "x64") {
+  executable("write_register_test_exe") {
+    testonly = true
+    output_name = "write_register_test_exe"
+    sources = [ "x64_write_register_test_exe.cc" ]
+    deps  = [ ":debug_agent_test_so" ]
+  }
+}
+
+# Helper utilities -------------------------------------------------------------
+
+executable("process_spawner") {
+  testonly = true
+  output_name = "process_spawner"
+
+  sources = [
+    "process_spawner.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("process_loop") {
+  testonly = true
+  output_name = "process_loop"
+
+  sources = [
+    "process_loop.cc"
+  ]
+}

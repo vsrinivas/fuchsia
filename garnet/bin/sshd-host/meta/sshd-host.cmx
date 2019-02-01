@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/sshd-host"
+    },
+    "sandbox": {
+        "features": [
+            "shell",
+            "build-info"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

@@ -1,0 +1,136 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  magma_build_root = "//garnet/lib/magma"
+  expat_build_root = "//third_party/expat"
+  msd_intel_gen_build_root = "//garnet/drivers/gpu/msd-intel-gen"
+  glm_build_root = "//third_party/glm"
+  zircon_build_root = "//zircon"
+
+  magma_python_path = rebase_path("//third_party/mako")
+
+  # Enable this to include fuchsia tracing capability
+  magma_enable_tracing = true
+
+  # Enable this to have the msd include a suite of tests and invoke them
+  # automatically when the driver starts.
+  magma_enable_developer_build = false
+
+  build_msd_arm_mali = target_cpu == "arm64"
+  build_vsl_gc = target_cpu == "arm64"
+  build_intel_gen = target_cpu == "x64"
+
+  prebuilt_libvulkan_arm_path = ""
+
+  # Target environments with an Intel GPU.
+  intel_gpu_envs = [
+    {
+      dimensions = {
+        device_type = "Intel NUC Kit NUC7i5DNHE"
+      }
+    },
+  ]
+}
+
+declare_args() {
+  # General hardware environments for magma tests to target.
+  magma_hardware_envs = intel_gpu_envs
+}
+
+declare_args() {
+  # Mesa doesn't properly handle loader-less operation;
+  # their GetInstanceProcAddr implementation returns 0 for some interfaces.
+  # On ARM there may be multiple libvulkan_arms, so they can't all be linked
+  # to.
+  use_vulkan_loader_for_tests = true
+
+  # This is a list of targets that will be built as vulkan ICDS. If more than one
+  # target is given then use_vulkan_loader_for_tests must be set to true, as
+  # otherwise tests won't know which libvulkan to use.
+  build_libvulkan = []
+
+  if (build_intel_gen) {
+    mesa_build_root = "//third_party/mesa"
+    build_libvulkan += [ "//third_party/mesa:magma_vulkan" ]
+  }
+}
+
+have_prebuilt_libvulkan_arm = prebuilt_libvulkan_arm_path != ""
+have_libvulkan = build_libvulkan != [] || have_prebuilt_libvulkan_arm
+
+template("magma_pci_entry") {
+  source_set(target_name) {
+    assert(defined(invoker.pci_vendor_id), "pci_vendor_id not defined")
+    if (!defined(invoker.test_entry)) {
+      test_entry = false
+    } else {
+      testonly = true
+    }
+
+    forward_variables_from(invoker, "*")
+
+    sources = [
+      "//garnet/lib/magma/src/sys_driver/pci_entry.cc",
+    ]
+    defines = [ "MAGMA_PCI_VENDOR_ID=" + pci_vendor_id ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [ "//zircon/public/lib/ddk" ]
+
+    if (!test_entry) {
+      deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
+    } else {
+      deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pci" ]
+    }
+  }
+}
+
+template("magma_pdev_entry") {
+  source_set(target_name) {
+    assert(defined(invoker.pdev_device_id), "pdev_device_id not defined")
+    if (!defined(invoker.test_entry)) {
+      test_entry = false
+    } else {
+      testonly = true
+    }
+
+    forward_variables_from(invoker, "*")
+
+    sources = [
+      "//garnet/lib/magma/src/sys_driver/pdev_entry.cc",
+    ]
+    defines = [ "MAGMA_PDEV_DEVICE_ID=" + pdev_device_id ]
+
+    if (!defined(invoker.deps)) {
+      deps = []
+    }
+
+    deps += [ "//zircon/public/lib/ddk" ]
+
+    if (!test_entry) {
+      deps += [ "//garnet/lib/magma/src/sys_driver:entry" ]
+    } else {
+      deps += [ "//garnet/lib/magma/src/sys_driver:test_entry_pdev" ]
+    }
+  }
+}
+
+template("magma_vulkan_icd") {
+  shared_library(target_name) {
+    forward_variables_from(invoker, "*")
+    if (!is_debug) {
+      version_script =
+          rebase_path("//garnet/lib/magma/scripts/libvulkan.version")
+      if (!defined(invoker.inputs)) {
+        inputs = []
+      }
+      inputs += [ version_script ]
+      ldflags += [ "-Wl,--version-script=$version_script" ]
+    }
+  }
+}

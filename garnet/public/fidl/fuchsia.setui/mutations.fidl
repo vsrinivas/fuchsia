@@ -1,0 +1,60 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.setui;
+
+/// operations supported by string settings.
+enum StringOperation {
+    UPDATE = 1;
+};
+
+/// Configuration for string mutations.
+struct StringMutation {
+    StringOperation operation;
+    string value;
+};
+
+/// Operations supported by account settings.
+enum AccountOperation {
+    ADD = 1;
+};
+
+/// Configuration for account mutations.
+struct AccountMutation {
+    AccountOperation operation;
+};
+
+/// Operations supported by wireless settings.
+enum WirelessOperation {
+    CONNECT = 1;
+    DISCONNECT = 2;
+};
+
+/// Configuration for wireless mutations.
+struct WirelessMutation {
+    WirelessOperation operation;
+    int64 network_id;
+    string password;
+};
+
+/// Configuration for time zone mutation.
+struct TimeZoneMutation {
+    TimeZoneInfo value;
+};
+
+/// Container for setting mutations.
+union Mutation {
+    AccountMutation account_mutation_value;
+    StringMutation string_mutation_value;
+    WirelessMutation wireless_mutation_value;
+    TimeZoneMutation time_zone_mutation_value;
+};
+
+struct AccountMutationHandles {
+    handle<eventpair> view_holder_token;
+};
+
+union MutationHandles {
+    AccountMutationHandles account_handles;
+};

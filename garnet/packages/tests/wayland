@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/experimental/wayland_bridge"
+    ],
+    "packages": [
+        "//garnet/bin/wayland:wayland_tests"
+    ]
+}

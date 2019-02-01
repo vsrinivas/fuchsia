@@ -1,0 +1,34 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.timezone;
+
+// TODO(US-384): Update protocol for more stuctured data: timezone names,
+// standard timezone codenames, and DST start/end information
+// (see go/garnet-time).
+//
+// For more information on the ICU timezone ID format, see:
+// http://userguide.icu-project.org/datetime
+[Discoverable]
+interface Timezone {
+  // Returns local timezone offset (in minutes from UTC. Can be negative) for
+  // the supplied number of milliseconds since the Unix epoch. Returns a
+  // non-zero DST offset when appropriate.
+  1: GetTimezoneOffsetMinutes(int64 milliseconds_since_epoch)
+      -> (int32 local_offset_minutes, int32 dst_offset_minutes);
+
+  // Sets the timezone for the machine based on an ICU ID.
+  2: SetTimezone(string timezone_id) -> (bool status);
+
+  // Gets the timezone ID string.
+  3: GetTimezoneId() -> (string timezone_id);
+
+  // Watches for updates to the timezone ID.
+  4: Watch(TimezoneWatcher watcher);
+};
+
+interface TimezoneWatcher {
+  // When the timezone changes, returns the new timezone ID.
+  1: OnTimezoneOffsetChange(string timezone_id);
+};

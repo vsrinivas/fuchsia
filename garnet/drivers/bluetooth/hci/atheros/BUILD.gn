@@ -1,0 +1,121 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
+
+driver_module("driver") {
+  output_name = "bt-hci-atheros"
+
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "logging.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib/gap",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+}
+
+if (internal_access) {
+  copy("btatheros-firmware") {
+    sources = [
+      "firmware/nvm_00130300.bin",
+      "firmware/nvm_00130302.bin",
+      "firmware/nvm_usb_00000200.bin",
+      "firmware/nvm_usb_00000201.bin",
+      "firmware/nvm_usb_00000300.bin",
+      "firmware/nvm_usb_00000302.bin",
+      "firmware/rampatch_00130300.bin",
+      "firmware/rampatch_00130302.bin",
+      "firmware/rampatch_usb_00000200.bin",
+      "firmware/rampatch_usb_00000201.bin",
+      "firmware/rampatch_usb_00000300.bin",
+      "firmware/rampatch_usb_00000302.bin",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/{{source_file_part}}",
+    ]
+  }
+}
+
+package("atheros") {
+  deprecated_system_image = true
+
+  deps = [
+    ":driver",
+  ]
+
+  drivers = [
+    {
+      name = "bt-hci-atheros.so"
+    },
+  ]
+
+  if (internal_access) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":btatheros-firmware($shlib_toolchain)",
+    ]
+
+    libraries = [
+      {
+        name = "firmware/nvm_usb_00000200.bin"
+      },
+      {
+        name = "firmware/nvm_usb_00000302.bin"
+      },
+      {
+        name = "firmware/nvm_00130300.bin"
+      },
+      {
+        name = "firmware/nvm_usb_00000201.bin"
+      },
+      {
+        name = "firmware/nvm_00130302.bin"
+      },
+      {
+        name = "firmware/nvm_usb_00000300.bin"
+      },
+      {
+        name = "firmware/rampatch_usb_00000200.bin"
+      },
+      {
+        name = "firmware/rampatch_usb_00000302.bin"
+      },
+      {
+        name = "firmware/rampatch_00130300.bin"
+      },
+      {
+        name = "firmware/rampatch_usb_00000201.bin"
+      },
+      {
+        name = "firmware/rampatch_00130302.bin"
+      },
+      {
+        name = "firmware/rampatch_usb_00000300.bin"
+      },
+    ]
+  }
+}

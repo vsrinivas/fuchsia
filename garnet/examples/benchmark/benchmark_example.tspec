@@ -1,0 +1,23 @@
+{
+  "test_suite_name": "fuchsia.benchmark_example",
+  "app": "fuchsia-pkg://fuchsia.com/benchmark#meta/benchmark.cmx",
+  "args": [],
+  "categories": ["benchmark"],
+  "measure": [
+    {
+      "type": "duration",
+      "expected_sample_count": 1000,
+      "event_name": "example_event",
+      "event_category": "benchmark",
+      "output_test_name": "example (benchmark)"
+    },
+    {
+      "type": "time_between",
+      "split_first": true,
+      "first_event_name": "task_end",
+      "first_event_category": "benchmark",
+      "second_event_name": "task_start",
+      "second_event_category": "benchmark"
+    }
+  ]
+}

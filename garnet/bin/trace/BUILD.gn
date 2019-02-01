@@ -1,0 +1,106 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "trace"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":trace_app",
+  ]
+}
+
+source_set("trace_app") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "command.cc",
+    "command.h",
+    "commands/list_categories.cc",
+    "commands/list_categories.h",
+    "commands/record.cc",
+    "commands/record.h",
+    "results_export.cc",
+    "results_export.h",
+    "results_output.cc",
+    "results_output.h",
+    "tracer.cc",
+    "tracer.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/measure",
+    "//garnet/lib/trace_converters:chromium",
+    "//garnet/public/fidl/fuchsia.tracing",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/zlib:zfstream",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/trace-reader",
+  ]
+
+  deps = [
+    ":spec",
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("spec") {
+  sources = [
+    "spec.cc",
+    "spec.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/measure",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//third_party/rapidjson",
+  ]
+}
+
+source_set("unittests") {
+  testonly = true
+
+  sources = [
+    "spec_unittest.cc",
+  ]
+
+  deps = [
+    ":spec",
+    ":trace_app",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+package("trace") {
+  deprecated_system_image = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "trace"
+    },
+  ]
+
+  # If your build includes the target trace tool, your $host_tools_dir
+  # contains the utilities to work with traces copied from the target.
+  data_deps = [
+    "//garnet/bin/traceutil",
+  ]
+}

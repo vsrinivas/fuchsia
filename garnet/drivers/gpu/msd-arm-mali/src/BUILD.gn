@@ -1,0 +1,90 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+declare_args() {
+  # Enable all 8 cores, which is faster but emits more heat.
+  msd_arm_enable_all_cores = true
+
+  # With this flag set the system tries to use cache coherent memory if the
+  # GPU supports it.
+  msd_arm_enable_cache_coherency = true
+
+  # In protected mode, faults don't return as much information so they're much harder to debug. To
+  # work around that, add a mode where protected atoms are executed in non-protected mode and
+  # vice-versa.
+  #
+  # NOTE: The memory security ranges should also be set (in TrustZone) to the opposite of normal, so
+  # that non-protected mode accesses can only access protected memory and vice versa.  Also,
+  # growable memory faults won't work in this mode, so larger portions of growable memory should
+  # precommitted (which is not done by default).
+  msd_arm_enable_protected_debug_swap_mode = false
+}
+
+source_set("src") {
+  public_configs = [ "..:msd_src_include_config" ]
+  sources = [
+    "address_manager.cc",
+    "address_manager.h",
+    "address_space.cc",
+    "address_space.h",
+    "device_request.h",
+    "entry_stubs.cc",
+    "gpu_features.h",
+    "gpu_mapping.cc",
+    "gpu_mapping.h",
+    "job_scheduler.cc",
+    "job_scheduler.h",
+    "msd_arm_atom.cc",
+    "msd_arm_atom.h",
+    "msd_arm_buffer.cc",
+    "msd_arm_buffer.h",
+    "msd_arm_connection.cc",
+    "msd_arm_connection.h",
+    "msd_arm_context.h",
+    "msd_arm_device.cc",
+    "msd_arm_device.h",
+    "msd_arm_driver.cc",
+    "msd_arm_driver.h",
+    "msd_arm_semaphore.cc",
+    "msd_arm_semaphore.h",
+    "performance_counters.cc",
+    "performance_counters.h",
+    "power_manager.cc",
+    "power_manager.h",
+    "registers.h",
+  ]
+
+  defines = []
+  if (msd_arm_enable_all_cores) {
+    defines += [ "MSD_ARM_ENABLE_ALL_CORES" ]
+  }
+
+  if (msd_arm_enable_cache_coherency) {
+    defines += [ "MSD_ARM_ENABLE_CACHE_COHERENCY" ]
+  }
+
+  if (msd_arm_enable_protected_debug_swap_mode) {
+    defines += [ "ENABLE_PROTECTED_DEBUG_SWAP_MODE" ]
+  }
+
+  # Don't depend on shared libraries besides libzircon.so, libc.c, and
+  # libdriver.so.
+  deps = [
+    "../include",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util:command_buffer",
+    "//garnet/lib/magma/src/magma_util:registers",
+    "//garnet/lib/magma/src/magma_util:thread",
+    "//garnet/lib/magma/src/magma_util/platform:barriers",
+    "//garnet/lib/magma/src/magma_util/platform:bus_mapper",
+    "//garnet/lib/magma/src/magma_util/platform:device",
+    "//garnet/lib/magma/src/magma_util/platform:event",
+    "//garnet/lib/magma/src/magma_util/platform:port",
+    "//garnet/lib/magma/src/magma_util/platform:semaphore",
+    "//garnet/lib/magma/src/magma_util/platform:trace",
+    "//zircon/public/lib/fbl",
+  ]
+}

@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "bin/log_listener"
+    },
+    "sandbox": {
+        "features": [ "persistent-storage" ],
+        "services": [ "fuchsia.logger.Log" ]
+    }
+}

@@ -1,0 +1,41 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("wlanif-test-driver") {
+  output_name = "wlanif-test"
+
+  sources = [
+    "binding.c",
+  ]
+
+  deps = [
+    "//garnet/drivers/wlan/lib",
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+}
+
+
+package("wlanif-test") {
+  deprecated_system_image = true
+
+  deps = [
+    ":wlanif-test-driver",
+  ]
+
+  drivers = [ {
+        name = "wlanif-test.so"
+      } ]
+}

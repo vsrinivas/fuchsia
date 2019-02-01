@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/mdns"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netstack.Netstack"
+        ]
+    }
+}

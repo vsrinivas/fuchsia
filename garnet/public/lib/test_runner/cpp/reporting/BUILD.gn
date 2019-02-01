@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("reporting") {
+  testonly = true
+
+  sources = [
+    "gtest_listener.cc",
+    "gtest_listener.h",
+    "reporter.cc",
+    "reporter.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fidl/cpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/lib/component/cpp",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -1,0 +1,17 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.scenic;
+
+using fuchsia.ui.gfx;
+using fuchsia.ui.input;
+using fuchsia.ui.vectorial;
+using fuchsia.ui.views;
+
+union Command {
+    fuchsia.ui.gfx.Command gfx;
+    fuchsia.ui.vectorial.Command vectorial;
+    fuchsia.ui.views.Command views;
+    fuchsia.ui.input.Command input;
+};

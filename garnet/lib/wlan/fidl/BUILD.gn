@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fidl") {
+  name = "fuchsia.wlan.device"
+
+  sources = [
+    "phy.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
+  ]
+}
+
+fidl("sme") {
+  name = "fuchsia.wlan.sme"
+
+  sources = [
+    "sme.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
+  ]
+}
+
+fidl("service") {
+  name = "fuchsia.wlan.device.service"
+
+  sources = [
+    "service.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
+    "//garnet/public/fidl/fuchsia.wlan.minstrel",
+    "//garnet/public/fidl/fuchsia.wlan.stats",
+    ":fidl",
+    ":sme",
+  ]
+}
+
+fidl("wlantap") {
+  name = "fuchsia.wlan.tap"
+
+  sources = [
+    "wlantap.fidl",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.common",
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
+    ":fidl",
+  ]
+}

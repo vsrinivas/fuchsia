@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet:deprecated_build_info",
+        "//garnet:build-info"
+   ]
+}

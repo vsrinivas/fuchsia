@@ -1,0 +1,32 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("fidl") {
+  with_unit_tests = true
+  edition = "2018"
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:slab",
+  ]
+}
+
+package("rust_fidl_tests") {
+  testonly = true
+  deps = [
+    ":fidl",
+  ]
+  tests = [
+    {
+      name = "fidl_lib_test"
+    },
+  ]
+}

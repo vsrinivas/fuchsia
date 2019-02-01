@@ -1,0 +1,95 @@
+{
+  "services": [
+  {
+    "name": "DMS",
+    "type": "0x02",
+    "message_structure": "standard",
+    "result_structure": "standard",
+    "messages": [
+      {
+        "name": "GetDeviceManufacturer",
+        "type": "0x0021",
+        "version": "1.0",
+        "request": [ ],
+        "response": [
+          {
+            "param": "device_manufacturer",
+            "id": "0x01"
+          }
+        ]
+      },
+      {
+        "name": "GetDeviceSerialNumbers",
+        "type": "0x0025",
+        "version": "1.0",
+        "request": [ ],
+        "response": [
+          {
+            "param": "esn",
+            "id": "0x10"
+          },
+          {
+            "param": "imei",
+            "id": "0x11"
+          },
+          {
+            "param": "meid",
+            "id": "0x12"
+          },
+          {
+            "param": "imeisv_svn",
+            "id": "0x13"
+          }
+        ]
+      },
+      {
+        "name": "GetPowerState",
+        "type": "0x0026",
+        "version": "1.0",
+        "request": [ ],
+        "response": [
+          {
+            "param": "power",
+            "id": "0x01",
+            "size": 2,
+            "subparams": [
+              {
+                "size": 1,
+                "param": "power_status"
+              },
+              {
+                "size": 1,
+                "param": "battery_lvl"
+              }
+            ]
+          }
+        ]
+      },
+      {
+        "name": "GetOperatingMode",
+        "type": "0x002D",
+        "version": "1.0",
+        "request": [ ],
+        "response": [
+          {
+            "param": "operating_mode",
+            "id": "0x01",
+            "size": 1
+          },
+          {
+            "param": "offline_reason",
+            "id": "0x10",
+            "optional": true,
+            "size": 2
+          },
+          {
+            "param": "hardware_controlled_mode",
+            "id": "0x11",
+            "optional": true,
+            "size": 1
+          }
+        ]
+      }
+    ]
+  }]
+}

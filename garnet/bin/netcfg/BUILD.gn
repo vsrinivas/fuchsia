@@ -1,0 +1,90 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
+    "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/fidl_fuchsia_net_stack_ext",
+    "//garnet/lib/rust/fidl_fuchsia_netstack_ext",
+    "//garnet/public/fidl/fuchsia.devicesettings:fuchsia.devicesettings-rustc",
+    "//garnet/public/fidl/fuchsia.net.dns:fuchsia.net.dns-rustc",
+    "//garnet/public/fidl/fuchsia.net.policy:fuchsia.net.policy-rustc",
+    "//garnet/public/fidl/fuchsia.netstack:fuchsia.netstack-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+  ]
+
+  name = "netcfg"
+}
+
+package("netcfg") {
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/netcfg"
+
+  meta = [
+    {
+      path = rebase_path("meta/netcfg.cmx")
+      dest = "netcfg.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("config/default.json")
+      dest = "default.json"
+    },
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "netcfg_config"
+  resources = [
+    {
+      dest = "sysmgr/netcfg.config"
+      path = rebase_path("netcfg.config")
+    },
+  ]
+}
+
+package("netcfg_tests") {
+  testonly = true
+  deps = [
+    ":bin",
+  ]
+  tests = [
+    {
+      name = "netcfg_bin_test"
+      dest = "netcfg_bin_test"
+    },
+  ]
+}

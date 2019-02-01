@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/overnet/overnetstack",
+        "//garnet/bin/overnet/onet"
+    ]
+}

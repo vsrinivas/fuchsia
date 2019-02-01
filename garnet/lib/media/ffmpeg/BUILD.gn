@@ -1,0 +1,115 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+declare_args() {
+  # Use a prebuilt ffmpeg binary rather than building it locally.  See
+  # //garnet/lib/media/ffmpeg/README.md for details.  This is ignored when
+  # building in variant builds for which there is no prebuilt.  In that
+  # case, ffmpeg is always built from source so as to be built with the
+  # selected variant's config.  When this is false (either explicitly or in
+  # a variant build) then //third_party/ffmpeg must be in the source tree,
+  # which requires:
+  # `jiri import -name garnet manifest/ffmpeg https://fuchsia.googlesource.com/garnet`
+  use_prebuilt_ffmpeg = true
+}
+
+ffmpeg_prebuilts = [
+  "",
+  "debug",
+  "release",
+  "asan",
+  "lto",
+  "profile",
+  "thinlto",
+  "ubsan",
+]
+
+if (ffmpeg_prebuilts + [ toolchain_variant.name ] -
+    [ toolchain_variant.name ] == ffmpeg_prebuilts) {
+  use_prebuilt_ffmpeg = false
+}
+
+group("ffmpeg") {
+  visibility = [
+    "//garnet/bin/mediaplayer/ffmpeg",
+    "//garnet/bin/media/codecs/sw/ffmpeg:codec_runner_sw_ffmpeg",
+  ]
+
+  if (use_prebuilt_ffmpeg) {
+    public_deps = [
+      ":prebuilt_ffmpeg($shlib_toolchain)",
+    ]
+  } else {
+    deps = [
+      "//third_party/ffmpeg",
+    ]
+    public_configs = [ "//third_party/ffmpeg:ffmpeg_dependent_config" ]
+  }
+}
+
+if (use_prebuilt_ffmpeg) {
+  assert(
+      ffmpeg_prebuilts + [ toolchain_variant.name ] -
+          [ toolchain_variant.name ] != ffmpeg_prebuilts,
+      "Set use_prebuilt_ffmpeg=false when selecting variants outside $ffmpeg_prebuilts for ffmpeg clients.")
+
+  group("prebuilt_ffmpeg") {
+    deps = [
+      ":prebuilt_libffmpeg_copy",
+      ":prebuilt_libffmpeg_debug_copy",
+    ]
+
+    public_configs = [ ":prebuilt_ffmpeg_config" ]
+  }
+
+  variant_prefix = toolchain_variant.name
+  if (variant_prefix == "debug" || variant_prefix == "release") {
+    variant_prefix = ""
+  }
+  if (variant_prefix != "") {
+    variant_prefix += "/"
+  }
+
+  prebuilt_dir = "prebuilt/arch/$current_cpu"
+  libffmpeg = "$prebuilt_dir/lib/${variant_prefix}libffmpeg.so"
+  libffmpeg_debug = "$prebuilt_dir/debug/${variant_prefix}libffmpeg.so"
+
+  copy("prebuilt_libffmpeg_copy") {
+    visibility = [ ":prebuilt_ffmpeg" ]
+    sources = [
+      libffmpeg,
+    ]
+    outputs = [
+      "$root_out_dir/libffmpeg.so",
+    ]
+  }
+
+  copy("prebuilt_libffmpeg_debug_copy") {
+    visibility = [ ":prebuilt_ffmpeg" ]
+    sources = [
+      libffmpeg_debug,
+    ]
+    outputs = [
+      "$root_out_dir/lib.unstripped/libffmpeg.so",
+    ]
+  }
+
+  config("prebuilt_ffmpeg_config") {
+    visibility = [ ":prebuilt_ffmpeg" ]
+
+    ffmpeg_include = "prebuilt/pkg/ffmpeg/include"
+    if (current_cpu == "x64") {
+      ffmpeg_config = "max"
+    } else {
+      ffmpeg_config = "default"
+    }
+
+    include_dirs = [
+      ffmpeg_include,
+      "$ffmpeg_include/fuchsia/config/$ffmpeg_config/$current_cpu",
+    ]
+
+    libs = get_target_outputs(":prebuilt_libffmpeg_copy")
+  }
+}

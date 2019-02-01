@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/config/network"
+    ],
+    "packages": [
+        "//garnet/bin/mdns/service:mdns_config"
+    ]
+}

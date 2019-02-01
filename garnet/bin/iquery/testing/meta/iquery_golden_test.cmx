@@ -1,0 +1,15 @@
+{
+  "program": {
+    "binary": "test/iquery_golden_test"
+  },
+  "sandbox": {
+    "features": [ "shell" ],
+    "services": [
+      "fuchsia.process.Launcher",
+      "fuchsia.process.Resolver",
+      "fuchsia.sys.Environment",
+      "fuchsia.sys.Launcher",
+      "fuchsia.sys.Loader"
+    ]
+  }
+}

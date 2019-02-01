@@ -1,0 +1,66 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#ifndef GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
+#define GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_
+
+#include "garnet/bin/guest/integration/enclosed_guest.h"
+
+#include <fbl/type_info.h>
+#include <lib/fxl/logging.h>
+
+// GuestTest creates a static EnclosedGuest to be shared across all tests in a
+// test fixture. Each translation unit that uses GuestTest must instantiate
+// enclosed_guest_ for each derivation of EnclosedGuest it uses. For example:
+//    template <class T>
+//    T* GuestTest<T>::enclosed_guest_ = nullptr;
+template <class T>
+class GuestTest : public ::testing::Test {
+ public:
+  static void SetUpTestCase() {
+    FXL_LOG(INFO) << "Guest: " << fbl::TypeInfo<T>::Name();
+    enclosed_guest_ = new T();
+    ASSERT_EQ(enclosed_guest_->Start(), ZX_OK);
+  }
+
+  static void TearDownTestCase() {
+    enclosed_guest_->Stop();
+    delete enclosed_guest_;
+  }
+
+ protected:
+  void SetUp() {
+    // An assertion failure in SetUpTestCase doesn't prevent tests from running,
+    // so we need to check that it succeeded here.
+    ASSERT_TRUE(enclosed_guest_->Ready()) << "Guest setup failed";
+  }
+
+  static zx_status_t Execute(const std::string& message,
+                             std::string* result = nullptr) {
+    return enclosed_guest_->Execute(message, result);
+  }
+
+  static zx_status_t RunUtil(const std::string& util, const std::string& args,
+                             std::string* result = nullptr) {
+    return enclosed_guest_->RunUtil(util, args, result);
+  }
+
+  GuestKernel GetGuestKernel() { return enclosed_guest_->GetGuestKernel(); }
+
+  uint32_t GetGuestCid() { return enclosed_guest_->GetGuestCid(); }
+
+  void GetHostVsockEndpoint(
+      fidl::InterfaceRequest<fuchsia::guest::HostVsockEndpoint> endpoint) {
+    enclosed_guest_->GetHostVsockEndpoint(std::move(endpoint));
+  }
+
+  T* GetEnclosedGuest() { return enclosed_guest_; }
+
+  const T* GetEnclosedGuest() const { return enclosed_guest_; }
+
+ private:
+  static T* enclosed_guest_;
+};
+
+#endif  // GARNET_BIN_GUEST_INTEGRATION_GUEST_TEST_H_

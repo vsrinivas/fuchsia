@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/logger"
+    ],
+    "packages": [
+        "//garnet/bin/logger:logger_tests",
+        "//garnet/bin/logger/tests:logger_integration_tests"
+    ]
+}

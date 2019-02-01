@@ -1,0 +1,197 @@
+// Copyright 2013 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netstack;
+
+using fuchsia.net;
+using fuchsia.hardware.ethernet;
+using zx;
+
+enum Protocol {
+    UNSPECIFIED = 0;
+    UDP = 1;
+    TCP = 2;
+};
+
+enum Status {
+    OK = 0;
+    UNKNOWN_ERROR = 1;
+    DNS_ERROR = 2;
+    PARSE_ERROR = 3;
+    IPV4_ONLY = 4;
+    UNKNOWN_INTERFACE = 5;
+};
+
+struct NetErr {
+    Status status;
+    string message;
+};
+
+struct NetTrafficStats {
+    // See network interface stats in Linux for future ideas:
+    // https://chromium.googlesource.com/native_client/linux-headers-for-nacl/+/2dc04f8190a54defc0d59e693fa6cff3e8a916a9/include/linux/if_link.h#7
+
+    uint64 pkts_total;
+    uint64 pkts_echo_req; // request
+    uint64 pkts_echo_rep; // reply
+    uint64 pkts_echo_req_v6; // request
+    uint64 pkts_echo_rep_v6; // reply
+
+    uint64 bytes_total;
+};
+
+struct NetInterfaceStats {
+    // Placeholder for all statistics regarding the network interface,
+    // including, but not limited to traffic itself.
+
+    int64 up_since; // Unix epoch.
+
+    NetTrafficStats rx;
+    NetTrafficStats tx;
+};
+
+struct IpStats {
+    uint64 packets_received;
+    uint64 invalid_addresses_received;
+    uint64 packets_delivered;
+    uint64 packets_sent;
+    uint64 outgoing_packet_errors;
+};
+
+struct TcpStats {
+    uint64 active_connection_openings;
+    uint64 passive_connection_openings;
+    uint64 failed_connection_attempts;
+    uint64 valid_segments_received;
+    uint64 invalid_segments_received;
+    uint64 segments_sent;
+    uint64 resets_sent;
+};
+
+struct UdpStats {
+    uint64 packets_received;
+    uint64 unknown_port_errors;
+    uint64 receive_buffer_errors;
+    uint64 malformed_packets_received;
+    uint64 packets_sent;
+};
+
+// Mirrors tcpip.Stats in third_party/netstack/tcpip/tcpip.go.
+struct AggregateStats {
+    uint64 unknown_protocol_received_packets;
+    uint64 malformed_received_packets;
+    uint64 dropped_packets;
+    IpStats ip_stats;
+    TcpStats tcp_stats;
+    UdpStats udp_stats;
+};
+
+struct InterfaceConfig {
+    string name;
+    IpAddressConfig ip_address_config;
+};
+
+union IpAddressConfig {
+    fuchsia.net.Subnet static_ip;
+    bool dhcp;
+};
+
+// https://linux.die.net/man/7/netdevice
+struct NetInterface {
+    uint32 id;
+    uint32 flags;
+    uint32 features;
+    uint32 configuration;
+    string name;
+    fuchsia.net.IpAddress addr;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress broadaddr;
+    vector<fuchsia.net.Subnet> ipv6addrs;
+    vector<uint8> hwaddr;
+};
+
+// Flags for NetInterface.flags.
+const uint32 NetInterfaceFlagUp = 0x01; // Set if the interface is up.
+const uint32 NetInterfaceFlagDhcp = 0x02; // Set if DHCP is enabled.
+
+struct RouteTableEntry {
+    fuchsia.net.IpAddress destination;
+    fuchsia.net.IpAddress netmask;
+    fuchsia.net.IpAddress gateway;
+    uint32 nicid;
+};
+
+struct SocketAddress {
+    fuchsia.net.IpAddress addr;
+    uint16 port;
+};
+
+[Discoverable]
+interface Netstack {
+    // Finds the port number from a given service name and protocol. [service] can be a
+    // number like "42", or a service name like "http". If [protocol] is UNSPECIFIED,
+    // the service is checked for TCP first, then UDP.
+    GetPortForService(string service, Protocol protocol) -> (uint16 port);
+
+    // Finds the IP address for a given host name and port. This may issue network
+    // requests via DNS to look up domain names. E.g.
+    // GetAddress("example.com", 80) -> [{142.42.42.1}]
+    GetAddress(string address, uint16 port) -> (vector<SocketAddress> addresses, NetErr err);
+
+    // Returns the list of registered network interfaces.
+    GetInterfaces() -> (vector<NetInterface> interfaces);
+
+    // DEPRECATED: see devicesettings.fidl
+    // Returns the netstack's node name.
+    // 5: GetNodeName() -> (string node_name);
+
+    // Don't use this for read-modify-write.  Use StartRouteTableTransaction instead.
+    GetRouteTable() -> (vector<RouteTableEntry> rt);
+
+    // TODO (porce): Separate interfaces.
+    GetStats(uint32 nicid) -> (NetInterfaceStats stats);
+
+    // Get stats for all NICs on the stack.
+    GetAggregateStats() -> (AggregateStats stats);
+
+    // Sets the status (up or down) for the interface with the given nicid.
+    SetInterfaceStatus(uint32 nicid, bool enabled);
+
+    // DEPRECATED: Use StartRouteTableTransaction and SetRouteTable from there.
+    // 9: SetRouteTable(vector<RouteTableEntry> rt);
+
+    // Sets the address for the interface with the given nicid.
+    // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    SetInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
+
+    // Removes the address for the interface with the given nicid.
+    // Masks off addr.PrefixLen bits from addr.Addr to set the subnet.
+    RemoveInterfaceAddress(uint32 nicid, fuchsia.net.IpAddress addr, uint8 prefixLen) -> (NetErr result);
+
+    SetDhcpClientStatus(uint32 nicid, bool enabled) -> (NetErr result);
+
+    BridgeInterfaces(vector<uint32> nicids) -> (NetErr result);
+
+    // TODO(NET-1263): remove once we can use the ResolverAdmin interface
+    SetNameServers(vector<fuchsia.net.IpAddress> servers);
+
+    AddEthernetDevice(string topological_path, InterfaceConfig interfaceConfig, fuchsia.hardware.ethernet.Device device) -> (uint32 nicid);
+
+    // Begin a route transaction for atomically getting and setting the route
+    // table.  Returns true if a transaction can be started.
+    StartRouteTableTransaction(request<RouteTableTransaction> routeTableTransaction) -> (zx.status status);
+
+    -> OnInterfacesChanged(vector<NetInterface> interfaces);
+};
+
+// When Commit is called, the most recent SetRouteTable will be
+// committed to the route tables.  Commit may be called multiple times.
+[Discoverable]
+interface RouteTableTransaction {
+    GetRouteTable() -> (vector<RouteTableEntry> rt);
+
+    SetRouteTable(vector<RouteTableEntry> rt);
+
+    Commit() -> (zx.status status);
+};

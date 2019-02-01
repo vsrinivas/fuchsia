@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/device_settings:device_settings_manager"
+    ]
+}

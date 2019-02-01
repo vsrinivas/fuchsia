@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/examples/scenic",
+        "garnet/packages/tests/scenic"
+    ],
+    "packages": [
+        "//garnet/tests/benchmarks:garnet_benchmarks"
+    ]
+}

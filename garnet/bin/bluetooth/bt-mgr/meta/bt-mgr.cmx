@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.bluetooth.bredr.Profile",
+            "fuchsia.bluetooth.control.Control",
+            "fuchsia.bluetooth.gatt.Server",
+            "fuchsia.bluetooth.le.Central",
+            "fuchsia.bluetooth.le.Peripheral",
+            "fuchsia.bluetooth.snoop.Snoop",
+            "fuchsia.logger.LogSink",
+            "fuchsia.sys.Launcher"
+        ]
+    }
+}

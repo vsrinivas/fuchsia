@@ -1,0 +1,44 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("model") {
+  sources = [
+    "config.cc",
+    "config.h",
+    "endpoint.cc",
+    "endpoint.h",
+    "environment.cc",
+    "environment.h",
+    "launch_app.cc",
+    "launch_app.h",
+    "launch_service.cc",
+    "launch_service.h",
+    "network.cc",
+    "network.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json:json",
+    "//garnet/public/lib/pkg_url",
+    "//third_party/rapidjson",
+  ]
+}
+
+executable("model_unittest") {
+  testonly = true
+  sources = [
+    "model_unittest.cc",
+  ]
+
+  deps = [
+    ":model",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//third_party/rapidjson",
+  ]
+}

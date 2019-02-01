@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet"
+        ],
+        "features": [
+            "persistent-storage"
+        ],
+        "services": [
+            "fuchsia.devicesettings.DeviceSettingsManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.net.stack.Stack"
+        ]
+    }
+}

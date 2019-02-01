@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/tts"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tts.TtsService"
+        ]
+    }
+}

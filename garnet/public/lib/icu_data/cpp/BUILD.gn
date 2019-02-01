@@ -1,0 +1,16 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "icu_data.cc",
+    "icu_data.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//third_party/icu",
+    "//zircon/public/lib/zx",
+  ]
+}

@@ -1,0 +1,13 @@
+use_small_heuristics = "Max"
+condense_wildcard_suffixes = true
+fn_args_density = "Compressed"
+fn_single_line = true
+where_single_line = true
+format_strings = true
+normalize_comments = true
+reorder_impl_items = true
+use_field_init_shorthand = true
+format_doc_comments = true
+wrap_comments = true
+overflow_delimited_expr = true
+edition = "2018"

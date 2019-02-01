@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/msd_intel_gen_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan",
+            "system-temp"
+        ]
+    }
+}

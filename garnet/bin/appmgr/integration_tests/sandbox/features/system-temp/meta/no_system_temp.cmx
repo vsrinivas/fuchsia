@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/no_system_temp"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

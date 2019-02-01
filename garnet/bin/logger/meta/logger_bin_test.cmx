@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/logger_bin_test"
+    }
+}

@@ -1,0 +1,119 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+declare_args() {
+  # Default values for the guest network configuration.
+  #
+  # These are currently hard-coded to match what is setup in the virtio-net
+  # device.
+  #
+  # See //garnet/bin/guest/vmm/device/virtio_net.cc for more details.
+  biscotti_ip = "10.0.0.2"
+  biscotti_gateway = "10.0.0.1"
+  biscotti_netmask = "255.255.255.0"
+}
+
+config("biscotti_net_config") {
+  defines = [
+    "BISCOTTI_IP_DEFAULT=\"" + biscotti_ip + "\"",
+    "BISCOTTI_GATEWAY_DEFAULT=\"" + biscotti_gateway + "\"",
+    "BISCOTTI_NETMASK_DEFAULT=\"" + biscotti_netmask + "\"",
+  ]
+}
+
+package("config") {
+  deprecated_system_image = true
+  package_name = "linux_runner_config"
+  resources = [
+    {
+      dest = "appmgr/scheme_map/linux_scheme.config"
+      path = rebase_path("config/linux_scheme.config")
+    },
+  ]
+}
+
+source_set("lib") {
+  sources = [
+    "guest.cc",
+    "guest.h",
+    "linux_component.cc",
+    "linux_component.h",
+    "linux_runner.cc",
+    "linux_runner.h",
+    "log_collector.cc",
+    "log_collector.h",
+  ]
+  public_configs = [ ":biscotti_net_config" ]
+  public_deps = [
+    ":protos",
+    "//garnet/public/fidl/fuchsia.ui.app",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/bin/wayland/fidl:fuchsia.wayland",
+    "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/guest",
+    "//third_party/grpc:grpc++",
+    "//third_party/protobuf:protobuf_lite",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+  ]
+}
+
+proto_library("protos") {
+  sources = [
+    "../third_party/protos/common.proto",
+    "../third_party/protos/tremplin.proto",
+    "../third_party/protos/container_guest.proto",
+    "../third_party/protos/container_host.proto",
+    "../third_party/protos/vm_guest.proto",
+    "../third_party/protos/vm_host.proto",
+  ]
+
+  generate_python = false
+  cc_generator_options = "lite"
+  generator_plugin_suffix = ".grpc.pb"
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+
+  import_dirs = [
+    "//garnet/bin/guest/pkg/biscotti_guest/third_party/protos",
+    "//third_party/protobuf/src",
+  ]
+  deps = [
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+executable("bin") {
+  output_name = "biscotti"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+  ]
+}
+
+package("biscotti") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "biscotti"
+
+  meta = [
+    {
+      path = rebase_path("biscotti.cmx")
+      dest = "biscotti.cmx"
+    },
+  ]
+}

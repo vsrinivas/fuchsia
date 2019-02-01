@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [
+            "root-ssl-certificates",
+            "persistent-storage"
+        ],
+        "pkgfs": [
+            "packages"
+        ],
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.net.oldhttp.HttpService"
+        ]
+    }
+}

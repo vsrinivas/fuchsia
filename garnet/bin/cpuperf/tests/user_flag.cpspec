@@ -1,0 +1,17 @@
+// Test USER,PC flags to the x86 counters.
+{
+  "config_name": "user-flag",
+  "events": [
+    {
+      "group_name": "arch",
+      "event_name": "instructions_retired",
+      "rate": 10000,
+      "flags": [ "user", "pc" ]
+    }
+  ],
+  "buffer_size_in_mb": 16,
+  "duration": 1,
+  "num_iterations": 1,
+  "output_path_prefix": "/data/cpuperf-test",
+  "session_result_spec_path": "/data/cpuperf-test.cpsession"
+}

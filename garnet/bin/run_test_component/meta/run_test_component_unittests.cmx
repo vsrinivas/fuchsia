@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/run_test_component_unittests"
+    },
+    "sandbox": {
+      "services": [],
+      "features": [ "system-temp" ]
+    }
+}

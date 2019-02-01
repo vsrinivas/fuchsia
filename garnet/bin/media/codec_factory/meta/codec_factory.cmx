@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/codec_factory"
+    },
+    "sandbox": {
+        "dev": [
+            "class/media-codec"
+        ],
+        "features": [],
+        "services": [
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

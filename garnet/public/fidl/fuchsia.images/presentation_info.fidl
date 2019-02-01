@@ -1,0 +1,27 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.images;
+
+// Information returned by methods such as |ImagePipe.PresentImage()| and
+// |Session.Present()|, when the consumer begins preparing the first frame
+// which includes the presented content.
+struct PresentationInfo {
+  // The actual time at which the enqueued operations are anticipated to take
+  // visible effect, expressed in nanoseconds in the |CLOCK_MONOTONIC|
+  // timebase.
+  //
+  // This value increases monotonically with each new frame, typically in
+  // increments of the |presentation_interval|.
+  uint64 presentation_time;
+
+  // The nominal amount of time which is anticipated to elapse between
+  // successively presented frames, expressed in nanoseconds.  When rendering
+  // to a display, the interval will typically be derived from the display
+  // refresh rate.
+  //
+  // This value is non-zero.  It may vary from time to time, such as when
+  // changing display modes.
+  uint64 presentation_interval;
+};

@@ -1,0 +1,5 @@
+{
+    "host_tests": [
+        "//garnet/bin/zxdb:zxdb_tests"
+    ]
+}

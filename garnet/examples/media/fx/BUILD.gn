@@ -1,0 +1,21 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("fx") {
+  sources = [
+    "fx.cpp",
+  ]
+
+  deps = [
+    "//garnet/lib/media/wav_writer",
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/audio-utils",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fzl",
+  ]
+}

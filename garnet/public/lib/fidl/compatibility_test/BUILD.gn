@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+fidl("compatibility_test_service") {
+  name = "fidl.test.compatibility"
+
+  sources = [
+    "compatibility_test_service.fidl",
+  ]
+}
+
+source_set("echo_client_app") {
+  sources = [
+    "echo_client_app.cc",
+    "echo_client_app.h",
+  ]
+  deps = [
+    ":compatibility_test_service",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/zx",
+  ]
+}

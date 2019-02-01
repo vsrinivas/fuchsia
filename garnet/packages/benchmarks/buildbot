@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/testing/runbenchmarks",
+        "//garnet/bin/catapult_converter"
+    ]
+}

@@ -1,0 +1,71 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+executable("msd_arm_mali_nonhardware_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  public_deps = [
+    ":tests_not_requiring_hardware",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/ddk",
+  ]
+}
+
+source_set("tests_not_requiring_hardware") {
+  testonly = true
+
+  sources = [
+    "test_address_manager.cc",
+    "test_address_space.cc",
+    "test_buffer.cc",
+    "test_connection.cc",
+    "test_job_scheduler.cc",
+    "test_performance_counters.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+    "//garnet/lib/magma/tests/mock:bus_mapper",
+  ]
+}
+
+# These tests require ARM Mali graphics hardware to run.  They can be
+# run inside the test build of the driver.
+source_set("tests_requiring_hardware") {
+  testonly = true
+
+  sources = [
+    "test_command_buffer.cc",
+    "test_device.cc",
+    "test_power_manager.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+  ]
+}
+
+group("test_deps") {
+  testonly = true
+
+  public_deps = [
+    "../../include",
+    "//garnet/drivers/gpu/msd-arm-mali/src",
+    "//garnet/lib/magma/include:msd_abi",
+    "//garnet/lib/magma/src/magma_util",
+    "//garnet/lib/magma/src/magma_util/platform:port",
+    "//garnet/lib/magma/src/sys_driver:sys_driver",
+    "//garnet/lib/magma/tests/helper:command_buffer_helper",
+    "//garnet/lib/magma/tests/helper:platform_device_helper",
+    "//garnet/lib/magma/tests/mock:mmio",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fbl",
+  ]
+}

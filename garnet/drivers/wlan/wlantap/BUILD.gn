@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("wlantap_driver") {
+  output_name = "wlantap"
+
+  sources = [
+    "binding.c",
+    "utils.cpp",
+    "utils.h",
+    "wlantap-ctl.cpp",
+    "wlantap-mac.cpp",
+    "wlantap-mac.h",
+    "wlantap-phy.cpp",
+    "wlantap-phy.h",
+  ]
+
+  deps = [
+    "//garnet/drivers/wlan/lib",
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/fidl:wlantap",
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+}
+
+package("wlantap") {
+  deprecated_system_image = true
+
+  deps = [
+    ":wlantap_driver",
+  ]
+
+  drivers = [
+    {
+      name = "wlantap.so"
+    },
+  ]
+}

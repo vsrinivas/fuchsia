@@ -1,0 +1,129 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.netemul.network;
+using fuchsia.hardware.ethernet;
+using zx;
+
+/// Provides emulated latency configuration.
+struct LatencyConfig {
+    /// Average latency, in ms.
+    uint64 average;
+    /// Latency standard deviation, in ms.
+    uint64 std_dev;
+};
+
+// Note: Loss config is a union to be able to provide other models of packet loss.
+/// Provides emulated packet loss configuration.
+union LossConfig {
+    /// Rate of packet loss expressed as independent drop probability [0-100].
+    uint8 random_rate;
+};
+
+/// Provides emulated packet reordering configuration.
+struct ReorderConfig {
+    /// Size of buffer, in packets, to store and forward with randomized order.
+    uint32 store_buff;
+    /// Tick/deadline in ms to empty buffer, regardless of full state.
+    /// 0 will cause buffer to flush only when full (dangerous).
+    uint64 tick;
+};
+
+/// Used to configure a network with emulated adversity conditions.
+table NetworkConfig {
+    /// Latency configuration.
+    1: LatencyConfig latency;
+    /// Packet loss configuration.
+    2: LossConfig packet_loss;
+    /// Packet reordering configuration.
+    3: ReorderConfig reorder;
+};
+
+/// Manages virtual networks.
+interface NetworkManager {
+    /// Lists emulated networks by name.
+    ListNetworks() -> (vector<string> nets);
+    /// Creates a new network with given name and config.
+    CreateNetwork(string name, NetworkConfig config) -> (zx.status status, Network? net);
+    /// Gets a handle to a network.
+    GetNetwork(string name) -> (Network? net);
+};
+
+/// Backing of an emulated endpoint.
+enum EndpointBacking {
+    /// Endpoint backed by ethertap device.
+    ETHERTAP = 1;
+};
+
+/// Configuration used to create an endpoint.
+struct EndpointConfig {
+    /// Fake ethernet mtu.
+    uint16 mtu;
+    /// Fake ethernet mac address, if not provided will be set to randomized local mac,
+    /// using endpoint name as seed.
+    fuchsia.hardware.ethernet.MacAddress? mac;
+    /// Backing type of emulated endpoint.
+    EndpointBacking backing;
+};
+
+/// Manages virtual endpoints.
+interface EndpointManager {
+    /// Lists endpoints by name.
+    ListEndpoints() -> (vector<string> endp);
+    /// Creates endpoint with given name and config.
+    CreateEndpoint(string name, EndpointConfig config) -> (zx.status status, Endpoint? endpoint);
+    /// Gets a handle to an endpoint.
+    GetEndpoint(string name) -> (Endpoint? endpoint);
+};
+
+/// Fake endpoint can be added to a network to snoop or inject packets.
+interface FakeEndpoint {
+    /// Write Data packet to network.
+    Write(vector<uint8> data);
+    /// Called when network receives a data packet.
+    -> OnData(vector<uint8> data);
+};
+
+/// Virtual network.
+interface Network {
+    /// Gets network configuration.
+    GetConfig() -> (NetworkConfig config);
+    /// Gets network name.
+    GetName() -> (string name);
+    /// Updates network configuration.
+    SetConfig(NetworkConfig config) -> (zx.status status);
+    /// Attaches endpoint with given name to network.
+    AttachEndpoint(string name) -> (zx.status status);
+    /// Removes endpoint with given name from network.
+    RemoveEndpoint(string name) -> (zx.status status);
+    /// Injects a fake endpoint.
+    CreateFakeEndpoint(request<FakeEndpoint> ep);
+};
+
+/// Simple interface to serve devices over fidl.
+interface DeviceProxy {
+    /// Fulfills the device request.
+    ServeDevice(handle<channel> req);
+};
+
+/// Virtual ethernet endpoint.
+interface Endpoint {
+    // Gets endpoint configuration.
+    GetConfig() -> (EndpointConfig config);
+    /// Gets endpoint name.
+    GetName() -> (string name);
+    /// Sends link up or down signal
+    SetLinkUp(bool up) -> ();
+    /// Opens channel with zircon ethernet device.
+    GetEthernetDevice() -> (fuchsia.hardware.ethernet.Device device);
+    /// Gets a proxy to open requests with zircon ethernet device.
+    GetProxy(request<DeviceProxy> proxy);
+};
+
+/// Main entry point to manage virtual networks and endpoints.
+[Discoverable]
+interface NetworkContext {
+    GetNetworkManager(request<NetworkManager> net_manager);
+    GetEndpointManager(request<EndpointManager> endp_manager);
+};

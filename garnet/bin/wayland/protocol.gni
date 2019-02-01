@@ -1,0 +1,73 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+import("//build/rust/rustc_library.gni")
+
+# Generates a rust library for a given wayland protocol.xml file. The protocol
+# will be built as a crate with the same name as the target.
+#
+#   protocol (required)
+#     The path to the XML protocol specification to be scanned.
+#
+#   deps (optional, default = [])
+#     Additional protocol dependencies for this protocol. These labels should
+#     correspond another `wayland_protocol` target.
+#
+# Ex:
+#    wayland_protocol("base") {
+#        protocol = "base_protocol.xml"
+#    }
+#
+#    wayland_protocol("derived") {
+#        protocol = "derived_protocol.xml"
+#        deps = [ ":base" ]
+#    }
+#
+template("wayland_protocol") {
+  assert(defined(invoker.protocol), "protocol must be defined for $target_name")
+  target_crate_root = "$target_gen_dir/$target_name.rs"
+  if (defined(invoker.deps)) {
+    protocol_deps = invoker.deps
+  } else {
+    protocol_deps = []
+  }
+
+  # Generate the rust sources using the scanner.
+  compiled_action("gen_${target_name}_source") {
+    tool = "//garnet/bin/wayland/scanner"
+    sources = [
+      invoker.protocol,
+    ]
+    outputs = [
+      target_crate_root,
+    ]
+    args = [
+      "-i",
+      rebase_path(invoker.protocol),
+      "-o",
+      rebase_path(target_crate_root),
+    ]
+    foreach(dep, protocol_deps) {
+      args += [
+        "-d",
+        get_label_info(dep, "name"),
+      ]
+    }
+  }
+
+  # Build the library.
+  rustc_library(target_name) {
+    edition = "2018"
+    non_rust_deps = [ ":gen_${target_name}_source" ]
+    deps = [
+      "//garnet/bin/wayland/core",
+      "//garnet/public/rust/fuchsia-zircon",
+      "//third_party/rust-crates/rustc_deps:bitflags",
+      "//third_party/rust-crates/rustc_deps:failure",
+    ]
+    deps += protocol_deps
+    source_root = target_crate_root
+  }
+}

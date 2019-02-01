@@ -1,0 +1,89 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("overnet_fuchsia_compatibility") {
+  sources = [
+    "fuchsia_port.h",
+  ]
+
+  deps = [
+    "//garnet/lib/overnet",
+  ]
+}
+
+executable("overnetstack_unittests") {
+  testonly = true
+
+  sources = [
+    "run_all_tests.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.overnet",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+executable("bin") {
+  output_name = "overnetstack"
+
+  sources = [
+    "bound_channel.cc",
+    "bound_channel.h",
+    "main.cc",
+    "mdns.cc",
+    "mdns.h",
+    "overnet_app.cc",
+    "overnet_app.h",
+    "service.cc",
+    "service.h",
+    "udp_nub.h",
+  ]
+
+  deps = [
+    ":overnet_fuchsia_compatibility",
+    "//garnet/lib/overnet",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.overnet",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.mdns",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("overnetstack") {
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "overnetstack"
+
+  meta = [
+    {
+      path = rebase_path("meta/overnetstack.cmx")
+      dest = "overnetstack.cmx"
+    },
+  ]
+}
+
+package("overnetstack_tests") {
+  testonly = true
+
+  deps = [
+    ":overnetstack_unittests",
+  ]
+
+  tests = [
+    {
+      name = "overnetstack_unittests"
+    },
+  ]
+}

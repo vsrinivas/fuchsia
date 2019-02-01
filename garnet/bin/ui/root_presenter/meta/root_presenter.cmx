@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/input"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ],
+        "system": [
+            "data/root_presenter"
+        ]
+    }
+}

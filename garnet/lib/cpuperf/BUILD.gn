@@ -1,0 +1,46 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+static_library("cpuperf") {
+  sources = [
+    "buffer_reader.cc",
+    "buffer_reader.h",
+    "events.cc",
+    "events.h",
+    "file_reader.cc",
+    "file_reader.h",
+    "reader.cc",
+    "reader.h",
+    "records.cc",
+    "records.h",
+    "types.cc",
+    "types.h",
+    "writer.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/zircon-internal",
+  ]
+
+  # arm64 support will come later
+  if (is_fuchsia && current_cpu == "x64") {
+    sources += [
+      "controller.cc",
+      "controller.h",
+      "device_reader.cc",
+      "device_reader.h",
+    ]
+
+    public_deps += [
+      "//zircon/public/lib/zx",
+    ]
+  }
+
+  if (!is_fuchsia) {
+    public_deps += [ "//zircon/system/public" ]
+  }
+}

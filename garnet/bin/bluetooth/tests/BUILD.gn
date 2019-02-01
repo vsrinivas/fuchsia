@@ -1,0 +1,39 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+# TODO(BLD-338): Rename target to the less-redundant "tests" when target names
+# no longer have to match package names.
+test_package("bluetooth-tests") {
+  deps = [
+    ":bt-host-unittests",
+    "integration",
+  ]
+
+  tests = [
+    {
+      name = "bt-host-unittests"
+    },
+    {
+      name = "rust_crates/host_integration"
+      dest = "bt-host-integration-tests"
+    },
+    {
+      name = "rust_crates/host_lifecycle"
+      dest = "bt-host-lifecycle-tests"
+    },
+  ]
+}
+
+executable("bt-host-unittests") {
+  testonly = true
+
+  deps = [
+    "//garnet/drivers/bluetooth/lib:tests",
+    "//garnet/drivers/bluetooth/lib/testing:gtest_main",
+    "//third_party/googletest:gtest",
+  ]
+}

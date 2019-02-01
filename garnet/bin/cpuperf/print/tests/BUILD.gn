@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_library.gni")
+import("//build/go/go_test.gni")
+
+go_library("raw_printer_test_lib") {
+  name = "cpuperf/printer/tests"
+
+  deps = [
+  ]
+}
+
+go_test("cpuperf_raw_printer_test") {
+  gopackage = "cpuperf/printer/tests"
+  deps = [":raw_printer_test_lib"]
+  non_go_deps = ["..:host_cpuperf_print"]
+}

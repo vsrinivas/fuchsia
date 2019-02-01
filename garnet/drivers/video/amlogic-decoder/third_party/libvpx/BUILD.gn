@@ -1,0 +1,17 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("include_config") {
+  include_dirs = [ "." ]
+}
+
+source_set("libvpx") {
+  sources = [
+    "vp9/common/vp9_enums.h",
+    "vp9/common/vp9_loopfilter.c",
+    "vp9/common/vp9_loopfilter.h",
+    "vp9/common/vp9_seg_common.h",
+  ]
+  public_configs = [ ":include_config" ]
+}

@@ -1,0 +1,115 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("cpuperf_tests_bin") {
+  testonly = true
+  output_name = "cpuperf_tests"
+
+  deps = [
+    "//garnet/bin/cpuperf:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("cpuperf_integration_tests") {
+  testonly = true
+  output_name = "cpuperf_integration_tests"
+
+  sources = [
+    "integration_tests.cc",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "fixed_counters.cc",
+      "last_branch.cc",
+      "os_flag.cc",
+      "programmable_counters.cc",
+      "run_test.cc",
+      "run_test.h",
+      "tally.cc",
+      "user_flag.cc",
+      "value_records.cc",
+      "verify_test.cc",
+      "verify_test.h",
+    ]
+  }
+
+  deps = [
+    "//garnet/bin/cpuperf:session_result_spec",
+    "//garnet/bin/cpuperf:session_spec",
+    "//garnet/lib/cpuperf",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("cpuperf_tests") {
+
+  testonly = true
+
+  deps = [
+    ":cpuperf_integration_tests",
+    ":cpuperf_tests_bin",
+  ]
+
+  tests = [
+    {
+      name = "cpuperf_integration_tests"
+    },
+    {
+      name = "cpuperf_tests"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cpuperf_integration_tests.cmx")
+      dest = "cpuperf_integration_tests.cmx"
+    },
+  ]
+
+  resources = []
+
+  if (current_cpu == "x64") {
+    resources += [
+      {
+        path = rebase_path("fixed_counters.cpspec")
+        dest = "fixed_counters.cpspec"
+      },
+      {
+        path = rebase_path("last_branch.cpspec")
+        dest = "last_branch.cpspec"
+      },
+      {
+        path = rebase_path("os_flag.cpspec")
+        dest = "os_flag.cpspec"
+      },
+      {
+        path = rebase_path("gen_printer_test_data.cpspec")
+        dest = "gen_printer_test_data.cpspec"
+      },
+      {
+        path = rebase_path("programmable_counters.cpspec")
+        dest = "programmable_counters.cpspec"
+      },
+      {
+        path = rebase_path("tally.cpspec")
+        dest = "tally.cpspec"
+      },
+      {
+        path = rebase_path("user_flag.cpspec")
+        dest = "user_flag.cpspec"
+      },
+      {
+        path = rebase_path("value_records.cpspec")
+        dest = "value_records.cpspec"
+      },
+    ]
+  }
+}

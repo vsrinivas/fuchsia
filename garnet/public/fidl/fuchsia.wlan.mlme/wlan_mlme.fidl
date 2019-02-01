@@ -1,0 +1,949 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.mlme;
+
+using fuchsia.wlan.common;
+
+// Stub types for communicating between the wlan service and the MLME drivers. Based on the 802.11
+// MLME SAP interface (IEEE Std 802.11-2016 section 6.3).
+
+// TODO(NET-631): restore the commented out enum aliases
+
+// MLME-SCAN.request (IEEE Std 802.11-2016 6.3.3.2)
+
+enum BSSTypes {
+    INFRASTRUCTURE = 1;
+    PERSONAL = 2;
+    INDEPENDENT = 3;
+    MESH = 4;
+    ANY_BSS = 5;
+    //LAST = ANY_BSS;
+};
+
+enum ScanTypes {
+    ACTIVE = 1;
+    PASSIVE = 2;
+    //LAST = PASSIVE;
+};
+
+struct ScanRequest {
+    uint64 txn_id;
+    BSSTypes bss_type;
+    array<uint8>:6 bssid;
+    vector<uint8>:32 ssid;
+    ScanTypes scan_type;
+    uint32 probe_delay; // in TimeUnits
+    vector<uint8>? channel_list;
+    uint32 min_channel_time; // in TimeUnits
+    uint32 max_channel_time; // in TimeUnits
+    // RequestInformation
+    vector<vector<uint8>:32>? ssid_list;
+    // ChannelUsage
+    // AccessNetworkType
+    // HESSID
+    // Mesh ID
+    // DiscoveryMode
+    // VendorSpecificInfo
+};
+
+// MLME-SCAN.confirm (IEEE Std 802.11-2016 6.3.3.3)
+
+// IEEE Std 802.11-2016, 9.4.1.4
+struct CapabilityInfo {
+    bool ess;
+    bool ibss;
+    bool cf_pollable;
+    bool cf_poll_req;
+    bool privacy;
+    bool short_preamble;
+    bool spectrum_mgmt;
+    bool qos;
+    bool short_slot_time;
+    bool apsd;
+    bool radio_msmt;
+    bool delayed_block_ack;
+    bool immediate_block_ack;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.56
+
+enum ChanWidthSet : uint8 {
+    TWENTY_ONLY = 0;
+    TWENTY_FORTY = 1;
+};
+
+enum SmPowerSave : uint8 {
+    STATIC = 0;
+    DYNAMIC = 1;
+    RESERVED = 2;
+    DISABLED = 3;
+};
+
+enum MaxAmsduLen : uint8 {
+    OCTETS_3839 = 0;
+    OCTETS_7935 = 1;
+};
+
+struct HtCapabilityInfo {
+    bool ldpc_coding_cap;
+    uint8 chan_width_set; // see enum ChanWidthSet
+    uint8 sm_power_save; // see enum SmPowerSave
+    bool greenfield;
+    bool short_gi_20;
+    bool short_gi_40;
+    bool tx_stbc;
+    uint8 rx_stbc;
+    bool delayed_block_ack;
+    uint8 max_amsdu_len; // see enum MaxAmsduLen
+    bool dsss_in_40;
+    bool intolerant_40;
+    bool lsig_txop_protect;
+};
+
+enum MinMpduStartSpacing : uint8 {
+    NO_RESTRICT = 0;
+    QUARTER_USEC = 1;
+    HALF_USEC = 2;
+    ONE_USEC = 3;
+    TWO_USEC = 4;
+    FOUR_USEC = 5;
+    EIGHT_USEC = 6;
+    SIXTEEN_USEC = 7;
+};
+
+struct AmpduParams {
+    uint8 exponent;
+    uint8 min_start_spacing; // see enum MinMpduStartSpacing
+};
+
+// SupportedMcsSet
+// IEEE Std 802.11-2016, 9.4.2.56.4 Table 9-164
+struct SupportedMcsSet {
+    // Names are deviated from //garnet/lib/wlan/common/include/wlan/common/element.h's class SupportedMcsSet
+    uint64 rx_mcs_set; // bitmask indicating MCS 0-63 support
+    // MCS 64-76 not supported
+    uint16 rx_highest_rate; // Mbps
+    bool tx_mcs_set_defined;
+    bool tx_rx_diff;
+    uint8 tx_max_ss; // Actual count, different from IEEE spec
+    bool tx_ueqm; // Transmit Unequal Modulation
+};
+
+// HtExtCapabilities
+// IEEE Std 802.11-2016, 9.4.2.56.5 Table 9-165
+enum PcoTransitionTime : uint8 {
+    PCO_RESERVED = 0; // Often translated as "No transition".
+    PCO_400_USEC = 1;
+    PCO_1500_USEC = 2;
+    PCO_5000_USEC = 3;
+};
+
+enum McsFeedback : uint8 {
+    MCS_NOFEEDBACK = 0;
+    MCS_RESERVED = 1;
+    MCS_UNSOLICIED = 2;
+    MCS_BOTH = 3;
+};
+
+struct HtExtCapabilities {
+    bool pco;
+    uint8 pco_transition; // see enum PcoTransitionTime
+    uint8 mcs_feedback; // see enum McsFeedback
+    bool htc_ht_support;
+    bool rd_responder;
+};
+
+// TxBfCapability
+// IEEE Std 802.11-2016, 9.4.2.56.6 Table 9-166
+enum Calibration : uint8 {
+    CALIBRATION_NONE = 0;
+    CALIBRATION_RESPOND_NOINITIATE = 1;
+    CALIBRATION_RESERVED = 2;
+    CALIBRATION_RESPOND_INITIATE = 3;
+};
+
+enum Feedback : uint8 {
+    // Shared for csi_feedback, noncomp_feedback, comp_feedback
+    FEEDBACK_NONE = 0;
+    FEEDBACK_DELAYED = 1;
+    FEEDBACK_IMMEDIATE = 2;
+    FEEDBACK_DELAYED_IMMEDIATE = 3;
+};
+
+enum MinGroup : uint8 {
+    MIN_GROUP_ONE = 0; // Meaning no grouping
+    MIN_GROUP_ONE_TWO = 1;
+    MIN_GROUP_ONE_FOUR = 2;
+    MIN_GROUP_ONE_TWO_FOUR = 3;
+};
+
+struct TxBfCapability {
+    bool implicit_rx;
+    bool rx_stag_sounding;
+    bool tx_stag_sounding;
+    bool rx_ndp;
+    bool tx_ndp;
+    bool implicit;
+    uint8 calibration; // see enum Calibration
+    bool csi; // Explicit CsI Transmit Beamforming
+    bool noncomp_steering; // Explicit Noncompressed Steering
+    bool comp_steering; // Explicit Compressed Steering
+    uint8 csi_feedback; // see enum Feedback
+    uint8 noncomp_feedback; // see enum Feedback
+    uint8 comp_feedback; // see enum Feedback
+    uint8 min_grouping; // see enum MinGroup
+    uint8 csi_antennas; // Actual count, different from IEEE spec
+    uint8 noncomp_steering_ants; // Actual count, different from IEEE spec
+    uint8 comp_steering_ants; // Actual count, different from IEEE spec
+    uint8 csi_rows; // Actual count, different from IEEE spec
+    uint8 chan_estimation; // Actual count, different from IEEE spec
+};
+
+// IEEE Std 802.11-2016, 9.4.2.56.7 Table 9-167
+struct AselCapability {
+    bool asel;
+    bool csi_feedback_tx_asel; // Explicit CSI Feedback Based Transmit ASEL
+    bool ant_idx_feedback_tx_asel;
+    bool explicit_csi_feedback;
+    bool antenna_idx_feedback;
+    bool rx_asel;
+    bool tx_sounding_ppdu;
+};
+
+struct HtCapabilities {
+    // Note, a minimum granuality of adding fields selectively is
+    // a group of BitField structure, as defined in element.h
+    HtCapabilityInfo ht_cap_info;
+    AmpduParams ampdu_params;
+    SupportedMcsSet mcs_set;
+    HtExtCapabilities ht_ext_cap;
+    TxBfCapability txbf_cap;
+    AselCapability asel_cap;
+};
+
+// HT Operation Element
+// IEEE Std 802.11-2016 9.4.2.57 Table 9-168
+
+// HTOperationInfo
+enum SecChanOffset : uint8 {
+    SECONDARY_NONE = 0; // No secondary channel
+    SECONDARY_ABOVE = 1; // Secondary channel is above the primary channel
+    RESERVED = 2;
+    SECONDARY_BELOW = 3; // Secondary channel is below the primary channel
+};
+
+enum StaChanWidth : uint8 {
+    TWENTY = 0; // 20 MHz
+    ANY = 1; // Any in the Supported Channel Width set
+};
+
+enum HtProtect : uint8 {
+    NONE = 0;
+    NONMEMBER = 1;
+    TWENTY_MHZ = 2;
+    NON_HT_MIXED = 3;
+};
+
+struct HTOperationInfo {
+    uint8 secondary_chan_offset; // see enum SecChanOffset
+    uint8 sta_chan_width; // see enum StaChanWidth
+    bool rifs_mode;
+    uint8 ht_protect; // see enum HtProtect
+    bool nongreenfield_present; // Nongreenfield HT STAs present
+    bool obss_non_ht; // OBSS Non-HT STAs present
+    uint8 center_freq_seg2; // VHT
+    bool dual_beacon;
+    bool dual_cts_protect;
+    bool stbc_beacon;
+    bool lsig_txop_protect;
+    bool pco_active;
+    bool pco_phase;
+};
+
+struct HtOperation {
+    uint8 primary_chan; // Primary 20 MHz channel.
+    HTOperationInfo ht_op_info;
+    SupportedMcsSet basic_mcs_set;
+};
+
+enum MaxMpduLen : uint8 {
+    OCTETS_3895 = 0;
+    OCTETS_7991 = 1;
+    OCTETS_11454 = 2;
+};
+
+enum VhtLinkAdaptation : uint8 {
+    NO_FEEDBACK = 0;
+    // 1 reserved
+    UNSOLICITED = 2;
+    BOTH = 3;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.158.2
+struct VhtCapabilitiesInfo {
+    uint8 max_mpdu_len; // see enum MaxMpduLen
+    uint8 supported_cbw_set;
+    bool rx_ldpc;
+    bool sgi_cbw80;
+    bool sgi_cbw160;
+    bool tx_stbc;
+    uint8 rx_stbc; // number of spatial streams supported. [0, 4] are valid. [5, 7] are reserved.
+    bool su_bfer;
+    bool su_bfee;
+    uint8 bfee_sts; // Maximum number of STS - 1, if su_bfee is true. Reserved otherwise.
+    uint8 num_sounding;
+    bool mu_bfer;
+    bool mu_bfee;
+    bool txop_ps;
+    bool htc_vht;
+    uint8 max_ampdu_exp;
+    uint8 link_adapt; // see enum VhtLinkAdaptation
+    bool rx_ant_pattern;
+    bool tx_ant_pattern;
+    uint8 ext_nss_bw;
+};
+
+enum VhtMcs : uint8 {
+    SET_0_TO_7 = 0;
+    SET_0_TO_8 = 1;
+    SET_0_TO_9 = 2;
+    SET_NONE = 3;
+};
+
+// IEEE Std 802.11-2016 9.4.2.158.3
+struct VhtMcsNss {
+    array<uint8>:8 rx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
+    uint16 rx_max_data_rate; // Mbps
+    uint8 max_nsts;
+
+    array<uint8>:8 tx_max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
+    uint16 tx_max_data_rate; // Mbps
+    bool ext_nss_bw;
+};
+
+// IEEE Std 802.11-2016, Figure 9-562
+struct BasicVhtMcsNss {
+    array<uint8>:8 max_mcs; // idx 0 for ss1, .. idx 7 for ss8. See enum VhtMcs
+};
+
+// IEEE Std 802.11-2016 9.5.2.158
+struct VhtCapabilities {
+    VhtCapabilitiesInfo vht_cap_info;
+    VhtMcsNss vht_mcs_nss;
+};
+
+// IEEE Std 802.11-2016 deprecates the use of CBW_160, CBW_80P80
+enum VhtCbw : uint8 {
+    CBW_20_40 = 0;
+    CBW_80_160_80P80 = 1;
+    CBW_160 = 2;
+    CBW_80P80 = 3;
+};
+
+// IEEE Std 802.11-2016 9.5.2.159
+struct VhtOperation {
+    uint8 vht_cbw; // see enum VhtCbw
+    uint8 center_freq_seg0; // channel number
+    uint8 center_freq_seg1; // channel number
+    BasicVhtMcsNss basic_mcs;
+};
+
+// IEEE Std 802.11-2016 6.3.3.3.2
+struct BSSDescription {
+    array<uint8>:6 bssid;
+
+    vector<uint8>:32 ssid;
+
+    BSSTypes bss_type;
+    uint16 beacon_period; // in TU
+    uint8 dtim_period;
+    uint64 timestamp;
+    uint64 local_time;
+
+    CapabilityInfo cap;
+    vector<uint8> basic_rate_set; // in 0.5 Mbps, valid value: 1-127. See Table 9-78 for 126, 127.
+    vector<uint8> op_rate_set; // in 0.5 Mbps, valid value: 1-127. See Table 9-78 for 126, 127.
+    vector<uint8>? country;
+
+    // TODO(hahnr): This field represents an IE and should thus be named RSNE.
+    vector<uint8>? rsn;
+
+    int16 rcpi_dbmh; // 0.5 step dBm. Do not use encoding from IEEE Std 802.11-2016 9.4.2.38.
+    int16 rsni_dbh; // 0.5 step dB.  Do not use encoding from IEEE Std 802.11-2016 9.4.2.41.
+
+    HtCapabilities? ht_cap;
+    HtOperation? ht_op;
+
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
+
+    // List up non-standard, Fuchsia only parameters
+    fuchsia.wlan.common.WlanChan chan;
+    int8 rssi_dbm; // dBm
+};
+
+enum ScanResultCodes {
+    SUCCESS = 0;
+    NOT_SUPPORTED = 1;
+    INVALID_ARGS = 2;
+    INTERNAL_ERROR = 3;
+};
+
+struct ScanResult {
+    uint64 txn_id;
+    BSSDescription bss;
+};
+
+struct ScanEnd {
+    uint64 txn_id;
+    ScanResultCodes code;
+};
+
+// MLME-JOIN.request (IEEE Std 802.11-2016, 6.3.4.2)
+
+struct JoinRequest {
+    BSSDescription selected_bss;
+    uint32 join_failure_timeout;
+    uint32 nav_sync_delay;
+    vector<uint16> op_rate_set;
+
+    // Combined with what MLME knows about the device capabilities,
+    // following parameters determine what to be advertised to the peer
+    // (in AssociationRequest). Effectively this way replaces the following
+    // fields originally defined in MLME-JOIN.request
+    // - Capability Information
+    // - HT Capabilities
+    // - VHT Capabilities
+    // - Extended Capabilities
+    fuchsia.wlan.common.PHY phy;
+    fuchsia.wlan.common.CBW cbw;
+};
+
+// MLME-JOIN.confirm (IEEE Std 802.11-2016, 6.3.4.3)
+
+enum JoinResultCodes {
+    SUCCESS = 0;
+    JOIN_FAILURE_TIMEOUT = 1;
+    //LAST = JOIN_FAILURE_TIMEOUT;
+};
+
+struct JoinConfirm {
+    JoinResultCodes result_code;
+};
+
+// MLME-AUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.5.2)
+
+enum AuthenticationTypes {
+    OPEN_SYSTEM = 1;
+    SHARED_KEY = 2;
+    FAST_BSS_TRANSITION = 3;
+    SAE = 4;
+    //LAST = SAE;
+};
+
+struct AuthenticateRequest {
+    array<uint8>:6 peer_sta_address;
+    AuthenticationTypes auth_type;
+    uint32 auth_failure_timeout;
+
+    // etc
+};
+
+// MLME-AUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.5.3)
+
+enum AuthenticateResultCodes {
+    SUCCESS = 0;
+    REFUSED = 1;
+    ANTI_CLOGGING_TOKEN_REQUIRED = 2;
+    FINITE_CYCLIC_GROUP_NOT_SUPPORTED = 3;
+    AUTHENTICATION_REJECTED = 4;
+    AUTH_FAILURE_TIMEOUT = 5;
+    //LAST = AUTH_FAILURE_TIMEOUT;
+};
+
+struct AuthenticateConfirm {
+    array<uint8>:6 peer_sta_address;
+    AuthenticationTypes auth_type;
+    AuthenticateResultCodes result_code;
+
+    // etc
+};
+
+// MLME-AUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.5.4)
+
+struct AuthenticateIndication {
+    array<uint8>:6 peer_sta_address;
+    AuthenticationTypes auth_type;
+
+    // etc
+};
+
+// MLME-AUTHENTICATE.response (IEEE Std 802.11-2016, 6.3.5.5)
+
+struct AuthenticateResponse {
+    array<uint8>:6 peer_sta_address;
+    AuthenticateResultCodes result_code;
+
+    // etc
+};
+
+// MLME-DEAUTHENTICATE.request (IEEE Std 802.11-2016, 6.3.6.2)
+
+// IEEE Std 802.11-2016, 9.4.1.7, Table 9-45
+enum ReasonCode : uint16 {
+    // 0 Reserved
+    UNSPECIFIED_REASON = 1;
+    INVALID_AUTHENTICATION = 2;
+    LEAVING_NETWORK_DEAUTH = 3;
+    REASON_INACTIVITY = 4;
+    NO_MORE_STAS = 5;
+    INVALID_CLASS2_FRAME = 6;
+    INVALID_CLASS3_FRAME = 7;
+    LEAVING_NETWORK_DISASSOC = 8;
+    NOT_AUTHENTICATED = 9;
+    UNACCEPTABLE_POWER_CA = 10;
+    UNACCEPTABLE_SUPPORTED_CHANNELS = 11;
+    BSS_TRANSITION_DISASSOC = 12;
+    REASON_INVALID_ELEMENT = 13;
+    MIC_FAILURE = 14;
+    FOURWAY_HANDSHAKE_TIMEOUT = 15;
+    GK_HANDSHAKE_TIMEOUT = 16;
+    HANDSHAKE_ELEMENT_MISMATCH = 17;
+    REASON_INVALID_GROUP_CIPHER = 18;
+    REASON_INVALID_PAIRWISE_CIPHER = 19;
+    REASON_INVALID_AKMP = 20;
+    UNSUPPORTED_RSNE_VERSION = 21;
+    INVALID_RSNE_CAPABILITIES = 22;
+    IEEE802_1_X_AUTH_FAILED = 23;
+    REASON_CIPHER_OUT_OF_POLICY = 24;
+    TDLS_PEER_UNREACHABLE = 25;
+    TDLS_UNSPECIFIED_REASON = 26;
+    SSP_REQUESTED_DISASSOC = 27;
+    NO_SSP_ROAMING_AGREEMENT = 28;
+    BAD_CIPHER_OR_AKM = 29;
+    NOT_AUTHORIZED_THIS_LOCATION = 30;
+    SERVICE_CHANGE_PRECLUDES_TS = 31;
+    UNSPECIFIED_QOS_REASON = 32;
+    NOT_ENOUGH_BANDWIDTH = 33;
+    MISSING_ACKS = 34;
+    EXCEEDED_TXOP = 35;
+    STA_LEAVING = 36;
+    // Values 37 and 38 are overloaded but should be clear from context.
+    END_TS_BA_DLS = 37;
+    UNKNOWN_TS_BA = 38;
+    TIMEOUT = 39;
+    // 40-44 Reserved
+    PEERKEY_MISMATCH = 45;
+    PEER_INITIATED = 46;
+    AP_INITIATED = 47;
+    REASON_INVALID_FT_ACTION_FRAME_COUNT = 48;
+    REASON_INVALID_PMKID = 49;
+    REASON_INVALID_MDE = 50;
+    REASON_INVALID_FTE = 51;
+    MESH_PEERING_CANCELED = 52;
+    MESH_MAX_PEERS = 53;
+    MESH_CONFIGURATION_POLICY_VIOLATION = 54;
+    MESH_CLOSE_RCVD = 55;
+    MESH_MAX_RETRIES = 56;
+    MESH_CONFIRM_TIMEOUT = 57;
+    MESH_INVALID_GTK = 58;
+    MESH_INCONSISTENT_PARAMETERS = 59;
+    MESH_INVALID_SECURITY_CAPABILITY = 60;
+    MESH_PATH_ERROR_NO_PROXY_INFORMATION = 61;
+    MESH_PATH_ERROR_NO_FORWARDING_INFORMATION = 62;
+    MESH_PATH_ERROR_DESTINATION_UNREACHABLE = 63;
+    MAC_ADDRESS_ALREADY_EXISTS_IN_MBSS = 64;
+    MESH_CHANNEL_SWITCH_REGULATORY_REQUIREMENTS = 65;
+    MESH_CHANNEL_SWITCH_UNSPECIFIED = 66;
+    // 67 - 65535 Reserved
+};
+
+struct DeauthenticateRequest {
+    array <uint8>:6 peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    ReasonCode reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-DEAUTHENTICATE.confirm (IEEE Std 802.11-2016, 6.3.6.3)
+
+struct DeauthenticateConfirm {
+    array <uint8>:6 peer_sta_address;
+};
+
+// MLME-DEAUTHENTICATE.indication (IEEE Std 802.11-2016, 6.3.6.4)
+
+struct DeauthenticateIndication {
+    array<uint8>:6 peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    ReasonCode reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-ASSOCIATE.request (IEEE Std 802.11-2016, 6.3.7.2)
+
+struct AssociateRequest {
+    array<uint8>:6 peer_sta_address;
+    // TODO(hahnr): This field represents an IE and should thus be named RSNE.
+    vector<uint8>? rsn;
+
+    // etc
+};
+
+// MLME-ASSOCIATE.confrm (IEEE Std 802.11-2016, 6.3.7.3)
+
+enum AssociateResultCodes {
+    SUCCESS = 0;
+    REFUSED_REASON_UNSPECIFIED = 1;
+    REFUSED_NOT_AUTHENTICATED = 2;
+    REFUSED_CAPABILITIES_MISMATCH = 3;
+    REFUSED_EXTERNAL_REASON = 4;
+    REFUSED_AP_OUT_OF_MEMORY = 5;
+    REFUSED_BASIC_RATES_MISMATCH = 6;
+    REJECTED_EMERGENCY_SERVICES_NOT_SUPPORTED = 7;
+    REFUSED_TEMPORARILY = 8;
+};
+
+struct AssociateConfirm {
+    AssociateResultCodes result_code;
+    // CapabilityInformation
+    uint16 association_id;
+
+    // etc
+};
+
+// MLME-ASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.7.4)
+
+struct AssociateIndication {
+    array<uint8>:6 peer_sta_address;
+    // CapabilityInformation
+    uint16 listen_interval;
+    vector<uint8>? ssid;
+    // OperationalRateSet
+    // BSSMembershipSelectorSet
+    vector<uint8>? rsn;
+
+    // etc
+};
+
+// MLME-ASSOCIATE.response (IEEE Std 802.11-2016, 6.3.7.5)
+
+struct AssociateResponse {
+    array<uint8>:6 peer_sta_address;
+    AssociateResultCodes result_code;
+    uint16 association_id;
+
+    // etc
+};
+
+// MLME-DISASSOCIATE.request (IEEE Std 802.11-2016, 6.3.9.1)
+
+struct DisassociateRequest {
+    array<uint8>:6 peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-DISASSOCIATE.confirm (IEEE Std 802.11-2016, 6.3.9.2)
+
+struct DisassociateConfirm {
+    int32 status;
+};
+
+// MLME-DISASSOCIATE.indication (IEEE Std 802.11-2016, 6.3.9.3)
+
+struct DisassociateIndication {
+    array<uint8>:6 peer_sta_address;
+    // TODO(tkilbourn): define a ReasonCode enum for FIDL
+    uint16 reason_code;
+    // VendorSpecificInfo
+};
+
+// MLME-RESET.request (IEEE Std 802.11-2016, 6.3.10.2)
+
+struct ResetRequest {
+    array<uint8>:6 sta_address;
+    bool set_default_mib;
+};
+
+// MLME-START.request (IEEE Std 802.11-2016, 6.3.11.2)
+
+// See dot11CountryString of IEEE Std 802.11-2016, Annex C
+const uint8 countryEnvironAll = 32;        // an ASCII ' ' character
+const uint8 countryEnvironOutdoor = 79;    // an ASCII 'O' character
+const uint8 countryEnvironIndoor = 73;     // an ASCII 'I' character
+const uint8 countryEnvironNonCountry = 88; // an ASCII 'X' character
+
+// Information derived from Country Element, IEEE Std 802.11-2016, 9.4.2.9.
+struct Country {
+    array<uint8>:2 alpha2; // ISO 3116-1
+
+    // countryEnviron constant from above
+    // or Operating Class Table number from IEEE Std 802.11-2016 Annex D.
+    uint8 suffix;
+};
+
+struct StartRequest {
+    vector<uint8>:32 ssid;
+    BSSTypes bss_type;
+    uint16 beacon_period; // in TU
+    uint8 dtim_period;
+
+    // PHY parameter sets
+    uint8 channel;
+
+    // TODO(porce): Conditionally present. See IEEE Std 802.11-2016, 10.2, 11.8, 11.10.
+    // See also dot11MultiDomainCapabilityActivated.
+    Country country;
+
+    vector<uint8>:32 mesh_id;
+
+    // TODO(hahnr): Add additional elements.
+
+    // Although MLME-START.request is used to start a BSS, IEEE does not include an RSNE in this
+    // primitive. However, IEEE doesn't define any other primitive to configure the RSN after its
+    // BSS was started. The RSNE must be available when the BSS is started, and thus, this is the
+    // right place to transfer the RSNE to the MLME.
+    vector<uint8>? rsne;
+
+    // Combined with what MLME knows about the device capabilities,
+    // following parameters determine what to be advertised to the peer
+    // (in Beacons/ProbeResponse/AssociationResponse). Effectively this way replaces the following
+    // fields originally defined in MLME-START.request.
+    // TODO(WLAN-909): Replace phy and cbw with full-fledged parameters below.
+    // - Capability Information
+    // - HT Capabilities
+    // - HT Operation
+    // - VHT Capabilities
+    // - VHT Operation
+    // - Extended Capabilities
+    fuchsia.wlan.common.PHY phy;
+    fuchsia.wlan.common.CBW cbw;
+};
+
+// MLME-START.confirm (IEEE Std 802.11-2016, 6.3.11.3)
+
+enum StartResultCodes {
+    SUCCESS = 0;
+    BSS_ALREADY_STARTED_OR_JOINED = 1;
+    RESET_REQUIRED_BEFORE_START = 2;
+    NOT_SUPPORTED = 3;
+    INTERNAL_ERROR = 4;
+};
+
+struct StartConfirm {
+    StartResultCodes result_code;
+};
+
+// MLME-STOP.request (IEEE Std 802.11-2016, 6.3.12.2)
+
+struct StopRequest {
+    vector<uint8>:32 ssid;
+};
+
+enum StopResultCodes {
+    SUCCESS = 0;
+    BSS_ALREADY_STOPPED = 1;
+    INTERNAL_ERROR = 2;
+};
+
+struct StopConfirm {
+    StopResultCodes result_code;
+};
+
+// MLME-SETKEYS.request (IEEE Std 802.11-2016 6.3.19.1)
+
+enum KeyType {
+    GROUP = 1;
+    PAIRWISE = 2;
+    PEER_KEY = 3;
+    IGTK = 4;
+};
+
+struct SetKeyDescriptor {
+    // Specs specify a bit string, we use byte array.
+    vector<uint8> key;
+    uint16 key_id;
+    KeyType key_type;
+    array<uint8>:6 address;
+    array<uint8>:8 rsc;
+    array<uint8>:3 cipher_suite_oui;
+    uint8 cipher_suite_type;
+};
+
+struct SetKeysRequest {
+    vector<SetKeyDescriptor> keylist;
+};
+
+// MLME-DELETEKEYS.request (IEEE Std 802.11-2016 6.3.20.1)
+
+struct DeleteKeyDescriptor {
+    uint16 key_id;
+    KeyType key_type;
+    array<uint8>:6 address;
+};
+
+struct DeleteKeysRequest {
+    vector<DeleteKeyDescriptor> keylist;
+};
+
+// MLME-EAPOL.request (IEEE Std 802.11-2016 6.3.22.1)
+
+struct EapolRequest {
+    array<uint8>:6 src_addr;
+    array<uint8>:6 dst_addr;
+    vector<uint8> data;
+};
+
+// MLME-EAPOL.confirm (IEEE Std 802.11-2016 6.3.22.2)
+
+enum EapolResultCodes {
+    SUCCESS = 0;
+    TRANSMISSION_FAILURE = 1;
+    //LAST = TRANSMISSION_FAILURE;
+};
+
+struct EapolConfirm {
+    EapolResultCodes result_code;
+};
+
+// IEEE Std 802.11-2016, 9.4.2.98
+struct MeshConfiguration {
+    uint8 active_path_sel_proto_id;
+    uint8 active_path_sel_metric_id;
+    uint8 congest_ctrl_method_id;
+    uint8 sync_method_id;
+    uint8 auth_proto_id;
+    uint8 mesh_formation_info;
+    uint8 mesh_capability;
+};
+
+// Fields that are common between the MPM Open and Confirm actions
+struct MeshPeeringCommon {
+    array<uint8>:6 peer_sta_address;
+    uint16 protocol_id;
+    uint16 local_link_id;
+    vector<uint8>:32 mesh_id;
+    vector<uint8> rates;
+    MeshConfiguration mesh_config;
+    HtCapabilities? ht_cap;
+    HtOperation? ht_op;
+    VhtCapabilities? vht_cap;
+    VhtOperation? vht_op;
+};
+
+// IEEE Std 802.11-2016, 9.6.16.2.2
+struct MeshPeeringOpenAction {
+    MeshPeeringCommon common;
+};
+
+// IEEE Std 802.11-2016, 9.6.16.3.2
+struct MeshPeeringConfirmAction {
+    MeshPeeringCommon common;
+    uint16 aid;
+    uint16 peer_link_id;
+};
+
+struct MeshPeeringParams {
+    array<uint8>:6 peer_sta_address;
+    uint16 local_aid;
+    vector<uint8> rates;
+    // TODO(gbonik): HT/VHT caps
+};
+
+// Because these methods rely on an external entity to provide a response, events are used instead
+// of return values.
+interface MLME {
+    // ==== 01xxxx: scanning ====
+    // We deviate from the spec here in order to support incremental scan
+    // results easily. We could stay closer to 802.11ai, but the protocol
+    // that is described there is more difficult to implement correctly.
+
+    // Initiate a scan transaction. The caller is responsible for filling
+    // the `txn_id` field in `req` with a unique number that will be used
+    // to identify the transaction.
+    //
+    // Zero or more `OnScanResult` events with a matching `txn_id` will be sent
+    // in response.
+    //
+    // At the end on the transaction, whether it is successful or not,
+    // a `OnScanEnd` event with a matching `txn_id` is guaranteed to be sent
+    // in response (unless the channel is closed first).
+    //
+    // After `OnScanEnd`, no further events with the same `txn_id` shall be sent.
+    StartScan(ScanRequest req);
+
+    // An incremental scan result containing information about a single BSS.
+    // Only one event per unique BSSID per transaction will be sent.
+    -> OnScanResult(ScanResult result);
+
+    // An event that signals the end of a scan transaction.
+    -> OnScanEnd(ScanEnd end);
+
+    // ====
+
+    JoinReq(JoinRequest req);
+    -> JoinConf(JoinConfirm resp);
+
+    AuthenticateReq(AuthenticateRequest req);
+    -> AuthenticateConf(AuthenticateConfirm resp);
+
+    -> AuthenticateInd(AuthenticateIndication ind);
+    AuthenticateResp(AuthenticateResponse resp);
+
+    DeauthenticateReq(DeauthenticateRequest req);
+    -> DeauthenticateConf(DeauthenticateConfirm resp);
+
+    -> DeauthenticateInd(DeauthenticateIndication ind);
+
+    AssociateReq(AssociateRequest req);
+    -> AssociateConf(AssociateConfirm resp);
+
+    -> AssociateInd(AssociateIndication ind);
+    AssociateResp(AssociateResponse resp);
+
+    DisassociateReq(DisassociateRequest req);
+    -> DisassociateConf(DisassociateConfirm resp);
+
+    -> DisassociateInd(DisassociateIndication ind);
+
+    ResetReq(ResetRequest req);
+
+    StartReq(StartRequest req);
+    -> StartConf(StartConfirm resp);
+
+    StopReq(StopRequest req);
+    -> StopConf(StopConfirm resp);
+
+    SetKeysReq(SetKeysRequest req);
+
+    DeleteKeysReq(DeleteKeysRequest req);
+
+    EapolReq(EapolRequest req);
+    -> EapolConf(EapolConfirm resp);
+
+    // The following are extensions to the 802.11 MLME SAP interface.
+
+    // ==== 90xxxx: Mesh ===
+    -> IncomingMpOpenAction(MeshPeeringOpenAction action);
+    SendMpOpenAction(MeshPeeringOpenAction action);
+    SendMpConfirmAction(MeshPeeringConfirmAction action);
+
+    MeshPeeringEstablished(MeshPeeringParams peering);
+
+    -> SignalReport(SignalReportIndication ind);
+
+    -> EapolInd(EapolIndication ind);
+    SetControlledPort(SetControlledPortRequest req);
+
+    QueryDeviceInfo() -> (DeviceInfo info);
+
+    StatsQueryReq();
+    -> StatsQueryResp(StatsQueryResponse resp);
+
+    ListMinstrelPeers() -> (MinstrelListResponse resp);
+    GetMinstrelStats(MinstrelStatsRequest req) -> (MinstrelStatsResponse resp);
+};

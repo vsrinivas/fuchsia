@@ -1,0 +1,135 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+
+fidl("interface") {
+  name = "test.sysmgr"
+  sources = [
+    "interface.fidl",
+  ]
+}
+
+executable("test_sysmgr_service") {
+  testonly = true
+
+  sources = [
+    "test_sysmgr_service.cc",
+  ]
+
+  deps = [
+    ":interface",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("mock_resolver") {
+  testonly = true
+
+  sources = [
+    "mock_resolver.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.pkg",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("service_startup_test") {
+  testonly = true
+
+  sources = [
+    "service_startup_test.cc",
+  ]
+
+  deps = [
+    ":interface",
+    "//garnet/bin/appmgr:appmgr_for_test",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+  ]
+}
+
+executable("package_updating_loader_test") {
+  testonly = true
+
+  sources = [
+    "package_updating_loader_test.cc",
+  ]
+
+  deps = [
+    ":interface",
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("integration_tests") {
+  testonly = true
+  package_name = "sysmgr_integration_tests"
+
+  deps = [
+    ":mock_resolver",
+    ":package_updating_loader_test",
+    ":service_startup_test",
+    ":test_sysmgr_service",
+  ]
+
+  binaries = [
+    {
+      name = "mock_resolver"
+    },
+    {
+      name = "test_sysmgr_service"
+    },
+  ]
+
+  tests = [
+    {
+      name = "service_startup_test"
+    },
+    {
+      name = "package_updating_loader_test"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/test_sysmgr_service.cmx")
+      dest = "test_sysmgr_service.cmx"
+    },
+    {
+      path = rebase_path("meta/mock_resolver.cmx")
+      dest = "mock_resolver.cmx"
+    },
+    {
+      path = rebase_path("meta/service_startup_test.cmx")
+      dest = "service_startup_test.cmx"
+    },
+    {
+      path = rebase_path("meta/package_updating_loader_test.cmx")
+      dest = "package_updating_loader_test.cmx"
+    },
+  ]
+}

@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("tests") {
+  testonly = true
+
+  output_name = "chrealm_integration_test"
+
+  sources = [
+    "chrealm_integration_test.cc",
+  ]
+
+  deps = [
+    "fidl/fuchsia.testing.chrealm",
+    "//garnet/bin/appmgr:lib",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("get_message_client_bin") {
+  output_name = "get_message_client"
+
+  sources = [
+    "get_message_client.cc",
+  ]
+
+  deps = [
+    "fidl/fuchsia.testing.chrealm",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("chrealm_test_get_message") {
+  deps = [
+    ":get_message_client_bin",
+  ]
+
+  binary = "get_message_client"
+
+  meta = [
+    {
+      path = rebase_path("chrealm_test_get_message.cmx")
+      dest = "chrealm_test_get_message.cmx"
+    },
+  ]
+}
+
+test_package("chrealm_integrationtests") {
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "chrealm_integration_test"
+    },
+  ]
+}

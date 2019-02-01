@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("a11y_toggler") {
+  output_name = "a11y_toggler"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.accessibility",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}

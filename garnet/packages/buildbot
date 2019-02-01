@@ -1,0 +1,12 @@
+{
+    "imports": [
+        "garnet/packages/experimental/disabled/tennis",
+        "garnet/packages/config/amber",
+        "garnet/packages/config/network",
+        "garnet/packages/config/openssh_keys",
+        "garnet/packages/config/thermd",
+        "garnet/packages/config/wlan",
+        "build/packages/shell-commands",
+        "garnet/packages/all"
+    ]
+}

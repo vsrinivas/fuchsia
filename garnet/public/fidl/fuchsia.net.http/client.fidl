@@ -1,0 +1,184 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.http;
+
+using fuchsia.mem;
+
+// An error occurred during the HTTP transaction.
+struct Error {
+    // The numerical error code.
+    //
+    // These error codes coorespond to
+    // <https://fuchsia.googlesource.com/garnet/+/master/bin/network/net_error_list.h>
+    int32 code;
+
+    // A textual description of the error in en-US.
+    string? description;
+};
+
+// An HTTP header field.
+struct Header {
+    // The name of the header field.
+    vector<uint8> name;
+
+    // The value of the header field.
+    vector<uint8> value;
+};
+
+// The body of either an HTTP request or an HTTP response.
+union Body {
+    // A buffer that will contain the complete request or response body.
+    fuchsia.mem.Buffer buffer;
+
+    // A socket that will contain the streaming request or response body.
+    handle<socket> stream;
+};
+
+// Specify the cache behavior of the request.
+enum CacheMode {
+    // Default behavior.
+    DEFAULT = 0;
+
+    // The HTTP request will bypass the local cache and will have a
+    // 'Cache-Control: nocache' header added in that causes any proxy servers
+    // to also not satisfy the request from their cache.  This has the effect
+    // of forcing a full end-to-end fetch.
+    BYPASS_CACHE = 1;
+
+    // The HTTP request will fail if it cannot serve the requested resource
+    // from the cache (or some equivalent local store).
+    ONLY_FROM_CACHE = 2;
+};
+
+// Specify the mechanism used to return the response body.
+//
+// Streaming the response can be more efficient if the response body is large
+// and can be processed incrementally (e.g., by an image decoder).
+//
+// Buffering the response can be more efficient if the response body is in cache
+// and the cache entry can be directly mapped into the resulting buffer.
+enum ResponseBodyMode {
+    // The complete response body should be returned in the |buffer| field of
+    // the response body.
+    //
+    // The loader MAY abort the transation if the buffer size exceeds an
+    // implementation-defined limit.
+    BUFFER = 0;
+
+    // The response body should be streamed through the |stream| field of the
+    // response body.
+    STREAM = 1;
+};
+
+// An HTTP request.
+struct Request {
+    // The HTTP method if applicable.
+    string method = "GET";
+
+    // The URL to load.
+    vector<uint8> url;
+
+    // Additional HTTP request headers.
+    vector<Header>? headers;
+
+    // The payload for the request body. For HTTP requests, the method must be set
+    // to "POST" or "PUT". If a buffer is used for the body, a Content-Length
+    // header will automatically be added.
+    Body? body;
+
+    // The loader will cancel the request if the peer for this event is closed.
+    //
+    // When this happens, the loader will send a Response with the appropriate
+    // error code.
+    handle<eventpair>? event;
+
+    // The cache behavior for the request.
+    CacheMode cache_mode = DEFAULT;
+
+    // The response body mode.
+    ResponseBodyMode response_body_mode = BUFFER;
+};
+
+// A description of the redirect the server requested.
+//
+// The semantics of an HTTP redirect vary according to the status code use to
+// generate the redirect. This structure ensures that the loader and its client
+// agree on the interpretation of the redirect response from the server.
+struct RedirectTarget {
+    // The HTTP method the server suggested for the redirect.
+    string method;
+
+    // The URL the server suggested for the redirect.
+    vector<uint8> url;
+
+    // The referrer the server suggested for the redirect.
+    vector<uint8> referrer;
+};
+
+// A response to an HTTP request.
+struct Response {
+    // If the response resulted in a network level error, this field will be set.
+    Error? error;
+
+    // The response body.
+    Body? body;
+
+    // The final URL of the response, after redirects have been followed.
+    vector<uint8>? url;
+
+    // The HTTP status code.
+    //
+    // 0 if not applicable.
+    uint32 status_code;
+
+    // The HTTP status line.
+    string? status_line;
+
+    // The HTTP response headers.
+    vector<Header>? headers;
+
+    // The MIME type of the response body.
+    string? mime_type;
+
+    // The character set of the response body.
+    string? charset;
+};
+
+// An HTTP loader.
+//
+// The loader can service many HTTP requests concurrently. The loader tracks all
+// the outstanding requests and will cancel them all if the client closes the
+// loader interface.
+[Discoverable]
+interface Loader {
+    // Initiate the given HTTP request, follow redirects, and return the final
+    // response.
+    //
+    // The loader will follow redirects (up to an implementation-defined limit)
+    // and return the final response as a reply to this message. To cancel the
+    // request, either close the loader interface or close the peer to the |event|
+    // included in the |request|.
+    1: Fetch(Request request) -> (Response response);
+
+    // Initiate the given HTTP request and return all intermediate responses to
+    // the given client.
+    //
+    // Unlike |Fetch|, |Start| does not automatically follow all redirects.
+    // Instead, each individual response along the redirect chain is delivered to
+    // the |LoaderClient|.
+    2: Start(Request request, LoaderClient client);
+};
+
+// A client interface used with |Loader.Start|.
+//
+// Closing the underlying channel will cancel the associated HTTP transaction.
+interface LoaderClient {
+    // Called by the loader when the loader receives an HTTP response.
+    //
+    // If the server has requested a redirect, then |redirect| will be non-null
+    // and describe the target the server requested. To follow the redirect, reply
+    // to this message. To not follow the redirect, close the underlying channel.
+    1: OnResponse(Response response, RedirectTarget? redirect) -> ();
+};

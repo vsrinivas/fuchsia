@@ -1,0 +1,81 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+executable("msd_intel_gen_nonhardware_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+  ]
+
+  public_deps = [
+    ":nonhardware_tests",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+# These tests don't require Intel graphics hardware to run, so they
+# can be run under QEMU.
+source_set("nonhardware_tests") {
+  testonly = true
+
+  sources = [
+    "test_buffer.cc",
+    "test_cache_config.cc",
+    "test_connection.cc",
+    "test_context.cc",
+    "test_engine_command_streamer.cc",
+    "test_hardware_status_page.cc",
+    "test_instructions.cc",
+    "test_ppgtt.cc",
+    "test_progress.cc",
+    "test_render_init_batch.cc",
+    "test_ringbuffer.cc",
+    "test_scheduler.cc",
+    "test_semaphore.cc",
+    "test_sequencer.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+  ]
+}
+
+# These tests do require Intel graphics hardware to run.  They can be
+# run inside the test build of the driver.
+source_set("hardware_tests") {
+  testonly = true
+
+  sources = [
+    "test_command_buffer.cc",
+    "test_device.cc",
+    "test_exec.cc",
+    "test_forcewake.cc",
+  ]
+
+  deps = [
+    ":test_deps",
+  ]
+}
+
+group("test_deps") {
+  testonly = true
+
+  public_deps = [
+    "$magma_build_root/include:msd_abi",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:registers",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "$magma_build_root/tests/helper:command_buffer_helper",
+    "$magma_build_root/tests/helper:platform_device_helper",
+    "$magma_build_root/tests/mock:bus_mapper",
+    "$magma_build_root/tests/mock:mmio",
+    "$msd_intel_gen_build_root/src",
+    "$msd_intel_gen_build_root/tests/mock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/fit",
+  ]
+}

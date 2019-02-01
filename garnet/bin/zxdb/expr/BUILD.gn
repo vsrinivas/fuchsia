@@ -1,0 +1,87 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("expr") {
+  sources = [
+    "cast.cc",
+    "cast.h",
+    "eval_operators.cc",
+    "eval_operators.h",
+    "expr.cc",
+    "expr.h",
+    "expr_eval_context.h",
+    "expr_node.cc",
+    "expr_node.h",
+    "expr_parser.cc",
+    "expr_parser.h",
+    "expr_token.h",
+    "expr_tokenizer.cc",
+    "expr_tokenizer.h",
+    "expr_value.cc",
+    "expr_value.h",
+    "expr_value_source.h",
+    "find_variable.cc",
+    "find_variable.h",
+    "found_member.cc",
+    "found_member.h",
+    "found_variable.cc",
+    "found_variable.h",
+    "format_expr_value_options.h",
+    "identifier.cc",
+    "identifier.h",
+    "index_walker.cc",
+    "index_walker.h",
+    "resolve_array.cc",
+    "resolve_array.h",
+    "resolve_collection.cc",
+    "resolve_collection.h",
+    "resolve_ptr_ref.cc",
+    "resolve_ptr_ref.h",
+    "symbol_eval_context.cc",
+    "symbol_eval_context.h",
+    "symbol_variable_resolver.cc",
+    "symbol_variable_resolver.h",
+    "template_type_extractor.cc",
+    "template_type_extractor.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/zxdb/common",
+    "//garnet/bin/zxdb/symbols",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "cast_unittest.cc",
+    "eval_operators_unittest.cc",
+    "expr_node_unittest.cc",
+    "expr_parser_unittest.cc",
+    "expr_tokenizer_unittest.cc",
+    "find_variable_unittest.cc",
+    "identifier_unittest.cc",
+    "index_walker_unittest.cc",
+    "mock_expr_eval_context.cc",
+    "mock_expr_eval_context.h",
+    "mock_expr_node.cc",
+    "mock_expr_node.h",
+    "resolve_array_unittest.cc",
+    "resolve_collection_unittest.cc",
+    "resolve_ptr_ref_unittest.cc",
+    "symbol_eval_context_unittest.cc",
+    "symbol_variable_resolver_unittest.cc",
+    "template_type_extractor_unittest.cc",
+  ]
+
+  deps = [
+    ":expr",
+    "//garnet/bin/zxdb/common:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
+    "//garnet/third_party/llvm:LLVMBinaryFormat",
+    "//third_party/googletest:gtest",
+  ]
+}

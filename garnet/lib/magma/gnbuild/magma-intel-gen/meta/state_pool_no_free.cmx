@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/state_pool_no_free"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ]
+    }
+}

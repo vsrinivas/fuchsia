@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+executable("vkext") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+    "vk_ext_scanout.cc",
+    "vk_external_semaphore_fuchsia.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util/platform:semaphore",
+    "//third_party/googletest:gtest",
+  ]
+
+  if (use_vulkan_loader_for_tests) {
+    deps += [ "//third_party/vulkan_loader_and_validation_layers:vulkan" ]
+  } else {
+    deps += [ "$magma_build_root/tests/vulkan_shim" ]
+  }
+}

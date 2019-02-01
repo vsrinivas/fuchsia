@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/vulkan:image-pipe-swapchain-tests"
+    ]
+}

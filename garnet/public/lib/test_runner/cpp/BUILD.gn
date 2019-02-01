@@ -1,0 +1,30 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "scope.cc",
+    "scope.h",
+    "test_runner.cc",
+    "test_runner.h",
+    "test_runner_store_impl.cc",
+    "test_runner_store_impl.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fsl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-default",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/fidl/fuchsia.testing.runner",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-cpp",
+  ]
+}

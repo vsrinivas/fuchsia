@@ -1,0 +1,58 @@
+{
+  "services": [{
+    "name": "CTL",
+    "type": "0x00",
+    "message_structure": "control",
+    "result_structure": "standard",
+    "messages": [
+      {
+        "name": "SetInstanceId",
+        "type": "0x0020",
+        "version": "1.0",
+        "request": [
+          {
+            "param": "host_driver",
+            "id": "0x01",
+            "size": 1
+          }
+        ],
+        "response": [
+          {
+            "param": "link_id",
+            "id": "0x01",
+            "size": 2
+          }
+        ]
+      },
+      {
+        "name": "GetClientId",
+        "type": "0x0022",
+        "version": "1.0",
+        "request": [
+          {
+            "param": "svc_type",
+            "id": "0x01",
+            "size": 1
+          }
+        ],
+        "response": [
+          {
+            "param": "client_id",
+            "id": "0x01",
+            "size": 2,
+            "subparams": [
+              {
+                "size": 1,
+                "param": "svc_type"
+              },
+              {
+                "size": 1,
+                "param": "client_id"
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }]
+}

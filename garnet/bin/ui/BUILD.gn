@@ -1,0 +1,337 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+import("//build/test/test_package.gni")
+
+declare_args() {
+  # Include the vulkan validation layers in scenic.
+  scenic_enable_vulkan_validation = is_debug
+}
+
+package("scenic_tests") {
+
+  testonly = true
+
+  deps = [
+    "input/tests",
+    "input_reader/tests",
+    "presentation_mode/tests",
+    "view_manager/tests",
+    "//garnet/lib/ui/gfx/tests",
+    "//garnet/lib/ui/input/tests",
+    "//garnet/lib/ui/scenic/tests",
+    "//garnet/public/lib/ui/geometry/cpp:tests",
+  ]
+
+  tests = [
+    {
+      name = "gfx_apptests"
+    },
+    {
+      name = "gfx_pixeltests"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+      ]
+    },
+    {
+      name = "gfx_unittests"
+    },
+    {
+      name = "geometry_util_unittests"
+    },
+    {
+      name = "input_apptests"
+    },
+    {
+      name = "input_unittests"
+    },
+    {
+      name = "input_tool_unittests"
+    },
+    {
+      name = "presentation_mode_unittests"
+    },
+    {
+      name = "scenic_unittests"
+    },
+    {
+      name = "view_manager_apptests"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/scenic_tests.cmx")
+      dest = "scenic_tests.cmx"
+    },
+    {
+      path = rebase_path("meta/gfx_apptests.cmx")
+      dest = "gfx_apptests.cmx"
+    },
+    {
+      path = rebase_path("meta/gfx_pixeltests.cmx")
+      dest = "gfx_pixeltests.cmx"
+    },
+    {
+      path = rebase_path("meta/gfx_unittests.cmx")
+      dest = "gfx_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/input_unittests.cmx")
+      dest = "input_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/scenic_unittests.cmx")
+      dest = "scenic_unittests.cmx"
+    },
+    {
+      path = rebase_path("meta/view_manager_apptests.cmx")
+      dest = "view_manager_apptests.cmx"
+    },
+  ]
+
+  public_deps = vulkan_validation_layers.public_deps
+  loadable_modules = vulkan_validation_layers.loadable_modules
+  resources = vulkan_validation_layers.resources
+}
+
+package("root_presenter") {
+
+  deps = [
+    "root_presenter",
+  ]
+
+  binary = "root_presenter"
+
+  resources = [
+    {
+      path = rebase_path("root_presenter/resources/cursor32.png")
+      dest = "cursor32.png"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("root_presenter/meta/root_presenter.cmx")
+      dest = "root_presenter.cmx"
+    },
+  ]
+}
+
+package("ime_service") {
+
+  deps = [
+    "ime",
+  ]
+
+  binary = "ime_service"
+
+  meta = [
+    {
+      path = rebase_path("ime/meta/ime_service.cmx")
+      dest = "ime_service.cmx"
+    },
+  ]
+}
+
+test_package("ime_service_tests") {
+  deps = [
+    "ime",
+  ]
+
+  tests = [
+    {
+      name = "ime_service_bin_test"
+      dest = "ime_service_unittests"
+    },
+  ]
+}
+
+package("view_manager") {
+
+  deps = [
+    "view_manager",
+  ]
+
+  binary = "view_manager"
+
+  meta = [
+    {
+      path = rebase_path("view_manager/meta/view_manager.cmx")
+      dest = "view_manager.cmx"
+    },
+  ]
+}
+
+package("scenic") {
+
+  deps = [
+    "scenic",
+  ]
+
+  binary = "scenic"
+
+  meta = [
+    {
+      path = rebase_path("scenic/meta/scenic.cmx")
+      dest = "scenic.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = "//garnet/public/lib/escher/shaders/model_renderer/main.vert"
+      dest = "shaders/model_renderer/main.vert"
+    },
+  ]
+
+  # If configured, include the vulkan validation layers.
+  if (scenic_enable_vulkan_validation) {
+    loadable_modules = vulkan_validation_layers.loadable_modules
+    public_deps = vulkan_validation_layers.public_deps
+    resources += vulkan_validation_layers.resources
+  }
+}
+
+package("screencap") {
+
+  meta = [
+    {
+      path = rebase_path("screencap/meta/screencap.cmx")
+      dest = "screencap.cmx"
+    },
+  ]
+
+  deps = [
+    "screencap",
+  ]
+
+  binary = "screencap"
+}
+
+package("snapshot") {
+
+  meta = [
+    {
+      path = rebase_path("snapshot/meta/snapshot.cmx")
+      dest = "snapshot.cmx"
+    },
+  ]
+
+  deps = [
+    "snapshot",
+  ]
+
+  binary = "snapshot"
+}
+
+package("gltf_export") {
+
+  meta = [
+    {
+      path = rebase_path("gltf_export/meta/gltf_export.cmx")
+      dest = "gltf_export.cmx"
+    },
+  ]
+
+  deps = [
+    "gltf_export",
+  ]
+
+  binary = "gltf_export"
+}
+
+package("scenic_tools") {
+  deps = [
+    "gltf_export",
+    "input",
+    "present_view",
+    "print_input",
+    "screencap",
+    "set_renderer_params_HACK:set_renderer_params",
+    "set_root_view",
+    "snapshot",
+  ]
+
+  binaries = [
+    {
+      name = "gltf_export"
+      shell = true
+    },
+    {
+      name = "input"
+      shell = true
+    },
+    {
+      name = "set_root_view"
+      shell = true
+    },
+    {
+      name = "set_renderer_params"
+      shell = true
+    },
+    {
+      name = "present_view"
+      shell = true
+    },
+    {
+      name = "print_input"
+      shell = true
+    },
+    {
+      name = "screencap"
+      shell = true
+    },
+    {
+      name = "snapshot"
+      shell = true
+    },
+  ]
+}
+
+package("set_renderer_params") {
+
+  deps = [
+    "set_renderer_params_HACK:set_renderer_params",
+  ]
+
+  binaries = [
+    {
+      name = "set_renderer_params"
+    },
+  ]
+
+  meta = [
+    {
+      path =
+          rebase_path("set_renderer_params_HACK/meta/set_renderer_params.cmx")
+      dest = "set_renderer_params.cmx"
+    },
+  ]
+}
+
+package("set_root_view") {
+  deps = [
+    "set_root_view",
+  ]
+
+  binaries = [
+    {
+      name = "set_root_view"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("set_root_view/meta/set_root_view.cmx")
+      dest = "set_root_view.cmx"
+    },
+  ]
+}

@@ -1,0 +1,19 @@
+{
+    "program": {
+        "binary": "bin/audio_core"
+    },
+    "sandbox": {
+        "dev": [
+            "class/audio-input",
+            "class/audio-output"
+        ],
+        "features": [
+            "system-temp",
+            "persistent-storage"
+        ],
+        "services": [],
+        "system": [
+            "data/media"
+        ]
+    }
+}

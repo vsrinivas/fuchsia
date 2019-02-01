@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+package("tennis_example_ai") {
+  deps = [
+    ":tennis_example_ai_bin",
+  ]
+
+  binary = "rust_crates/tennis_example_ai"
+
+  meta = [
+    {
+      path = rebase_path("meta/tennis_example_ai.cmx")
+      dest = "tennis_example_ai.cmx"
+    },
+  ]
+}
+
+rustc_binary("tennis_example_ai_bin") {
+  name = "tennis_example_ai"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.game.tennis:fuchsia.game.tennis-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}

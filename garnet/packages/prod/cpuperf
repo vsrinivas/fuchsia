@@ -1,0 +1,8 @@
+{
+    "labels": [
+        "//garnet/bin/cpuperf/print:host_cpuperf_print"
+    ],
+    "packages": [
+        "//garnet/bin/cpuperf"
+    ]
+}

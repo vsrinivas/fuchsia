@@ -1,0 +1,58 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("run_integration_tests") {
+  deprecated_system_image = true
+
+  deps = [
+    "report_result",
+    "run_integration_tests",
+  ]
+
+  binaries = [
+    {
+      name = "report_result"
+    },
+    {
+      name = "run_integration_tests"
+    },
+  ]
+}
+
+package("run_test") {
+  deprecated_system_image = true
+
+  deps = [
+    "run_test",
+  ]
+
+  binaries = [
+    {
+      name = "run_test"
+    },
+  ]
+}
+
+package("test_runner_tests") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    "test",
+  ]
+
+  tests = [
+    {
+      name = "fake_command"
+    },
+    {
+      name = "fake_failing_test"
+    },
+    {
+      name = "fake_passing_test"
+    },
+  ]
+}

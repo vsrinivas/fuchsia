@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/netconnector"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.mdns.Controller",
+            "fuchsia.net.SocketProvider",
+            "fuchsia.netconnector.NetConnector",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.sys.Environment"
+        ]
+    }
+}

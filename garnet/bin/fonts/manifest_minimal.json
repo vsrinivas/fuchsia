@@ -1,0 +1,31 @@
+{
+  "families": [
+    {
+      "family": "Material Icons",
+      "aliases": ["MaterialIcons"],
+      "fallback": true,
+      "fonts": [
+        {
+          "asset": "fonts/MaterialIcons-Regular.ttf",
+        }
+      ]
+    },
+    {
+      "family": "Roboto",
+      "fallback": true,
+      "fonts": [
+        {
+          "asset": "fonts/Roboto-Regular.ttf"
+        },
+        {
+          "asset": "fonts/Roboto-Light.ttf",
+          "weight": 300
+        },
+        {
+          "asset": "fonts/Roboto-Medium.ttf",
+          "weight": 500
+        }
+      ]
+    }
+  ]
+}

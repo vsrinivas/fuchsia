@@ -1,0 +1,11 @@
+{
+    "imports": [
+        "garnet/packages/prod/sbase",
+        "garnet/packages/prod/vim"
+    ],
+    "packages": [
+        "//garnet/bin/cowsay",
+        "//garnet/bin/time",
+        "//garnet/bin/uname"
+    ]
+}

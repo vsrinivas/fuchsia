@@ -1,0 +1,65 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_shared_library.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+
+sdk_shared_library("svc") {
+  category = "partner"
+
+  sources = [
+    "dir.cc",
+    "dir.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fs",
+  ]
+
+  include_base = "//garnet/public"
+
+  public_configs = [ "//garnet/public:config" ]
+
+  runtime_deps = [
+    "//zircon/public/lib/fdio:fdio_sdk",
+    "//zircon/public/lib/trace-engine:trace-engine_sdk",
+  ]
+}
+
+test("svc_unittests") {
+  sources = [
+    "dir_unittest.cc",
+  ]
+
+  deps = [
+    ":svc",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("package") {
+  testonly = true
+  deprecated_system_image = true
+
+  package_name = "svc"
+
+  deps = [
+    ":svc_unittests",
+  ]
+
+  tests = [
+    {
+      name = "svc_unittests"
+    },
+  ]
+}

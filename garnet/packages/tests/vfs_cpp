@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/public/lib/vfs/cpp:vfs_cpp_tests"
+    ]
+}

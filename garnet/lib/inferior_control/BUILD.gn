@@ -1,0 +1,120 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+# A framework for running subprocesses ("inferiors") under debugger-like
+# control.
+static_library("inferior_control") {
+  sources = [
+    "arch.h",
+    "breakpoint.cc",
+    "breakpoint.h",
+    "exception_port.cc",
+    "exception_port.h",
+    "io_loop.cc",
+    "io_loop.h",
+    "memory_process.cc",
+    "memory_process.h",
+    "process.cc",
+    "process.h",
+    "registers.cc",
+    "registers.h",
+    "server.cc",
+    "server.h",
+    "thread.cc",
+    "thread.h",
+  ]
+
+  if (current_cpu == "x64") {
+    sources += [
+      "arch_amd64.cc",
+      "arch_x86.h",
+      "breakpoint_amd64.cc",
+      "registers_amd64.cc",
+      "registers_amd64.h",
+    ]
+  } else if (current_cpu == "arm64") {
+    sources += [
+      "arch_arm64.cc",
+      "breakpoint_arm64.cc",
+      "registers_arm64.cc",
+      "registers_arm64.h",
+    ]
+  } else {
+    sources += [
+      "arch_default.cc",
+      "breakpoint_default.cc",
+      "registers_default.cc",
+    ]
+  }
+
+  deps = [
+    "//garnet/lib/debugger_utils",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_deps = [
+    "//garnet/lib/process",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+  ]
+
+  include_dirs = [ ".." ]
+}
+
+executable("tests") {
+  testonly = true
+  output_name = "inferior_control_tests"
+
+  sources = [
+    "io_loop_unittest.cc",
+    "process_unittest.cc",
+    "test_server.cc",
+    "test_server.h",
+  ]
+
+  deps = [
+    ":inferior_control",
+    "//garnet/lib/debugger_utils",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("test_helper") {
+  testonly = true
+  output_name = "inferior_control_test_helper"
+
+  sources = [
+    "test_helper.cc",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+package("inferior_control_tests") {
+  testonly = true
+
+  deps = [
+    ":test_helper",
+    ":tests",
+  ]
+
+  binaries = [
+    {
+      name = "inferior_control_test_helper"
+    },
+  ]
+
+  tests = [
+    {
+      name = "inferior_control_tests"
+    },
+  ]
+}

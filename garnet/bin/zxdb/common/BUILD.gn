@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This library contains some low-level helpers that need to be shared between
+# the "client" and "symbols", but which doesn't below in the symbol library
+# itself.
+static_library("common") {
+  public = [
+    "address_range.h",
+    "address_ranges.h",
+    "command_line_parser.h",
+    "err.h",
+    "file_util.h",
+    "host_util.h",
+    "regex.h",
+    "string_util.h",
+  ]
+
+  sources = [
+    "address_range.cc",
+    "address_ranges.cc",
+    "command_line_parser.cc",
+    "err.cc",
+    "file_util.cc",
+    "host_util.cc",
+    "regex.cc",
+    "string_util.cc",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("test_support") {
+  sources = [
+    "test_with_loop.h",
+  ]
+  public_deps = [
+    "//garnet/lib/debug_ipc/helper",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "address_ranges_unittest.cc",
+    "command_line_parser_unittest.cc",
+    "file_util_unittest.cc",
+    "regex_unittest.cc",
+  ]
+
+  deps = [
+    ":common",
+    "//third_party/googletest:gtest",
+  ]
+}

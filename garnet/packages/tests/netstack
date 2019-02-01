@@ -1,0 +1,17 @@
+{
+    "imports": [
+        "garnet/packages/prod/netstack"
+    ],
+    "packages": [
+        "//garnet/bin/netstack_tests:netstack_integration_tests",
+        "//garnet/bin/netstack_tests/test_filter_client:test_filter_client",
+        "//garnet/go/src/netstack:netstack_gotests",
+        "//garnet/go/src/netstack/tests:netstack_manual_tests",
+        "//garnet/go/src/netstack/tests:netstack_tests"
+    ],
+    "host_tests": [
+        "//garnet/go/src/netstack/dns:netstack_dns_test",
+        "//garnet/go/src/netstack/link/bridge:netstack_link_bridge_test",
+        "//garnet/go/src/netstack/util:netstack_util_test"
+    ]
+}

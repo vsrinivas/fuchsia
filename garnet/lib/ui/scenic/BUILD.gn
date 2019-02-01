@@ -1,0 +1,35 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("scenic") {
+  sources = [
+    "command_dispatcher.cc",
+    "command_dispatcher.h",
+    "event_reporter.cc",
+    "event_reporter.h",
+    "forward_declarations.h",
+    "scenic.cc",
+    "scenic.h",
+    "session.cc",
+    "session.h",
+    "system.cc",
+    "system.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/ui/scenic/util",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//zircon/public/lib/fit",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input/cpp",
+]
+}

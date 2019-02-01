@@ -1,0 +1,7 @@
+Name: convert_mozilla_certdata.go
+URL: https://github.com/agl/extract-nss-root-certs
+Upstream git: https://github.com/agl/extract-nss-root-certs.git
+License: Apache 2.0
+Description:
+
+A tool to convert Mozilla's certdata.txt into PEM format.

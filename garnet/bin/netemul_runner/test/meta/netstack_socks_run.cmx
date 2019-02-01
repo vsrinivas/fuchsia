@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/netstack_socks"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.netemul.environment.ManagedEnvironment",
+            "fuchsia.netemul.network.NetworkContext",
+            "fuchsia.netemul.bus.BusManager",
+            "fuchsia.netstack.Netstack",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

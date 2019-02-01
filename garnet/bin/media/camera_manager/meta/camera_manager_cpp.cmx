@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/camera_manager_cpp"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "features": [],
+        "services": []
+    }
+}

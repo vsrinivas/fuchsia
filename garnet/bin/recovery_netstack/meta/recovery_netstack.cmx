@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/recovery_netstack"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ],
+        "dev": [
+            "class/ethernet"
+        ]
+    }
+}

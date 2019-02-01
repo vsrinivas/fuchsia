@@ -1,0 +1,70 @@
+# Copyright 2015 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("root_presenter") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "display_rotater.cc",
+    "display_rotater.h",
+    "display_size_switcher.cc",
+    "display_size_switcher.h",
+    "display_usage_switcher.cc",
+    "display_usage_switcher.h",
+    "displays/display_configuration.cc",
+    "displays/display_configuration.h",
+    "displays/display_metrics.h",
+    "displays/display_model.cc",
+    "displays/display_model.h",
+    "main.cc",
+    "perspective_demo_mode.cc",
+    "perspective_demo_mode.h",
+    "presentation.h",
+    "presentation1.cc",
+    "presentation1.h",
+    "presentation2.cc",
+    "presentation2.h",
+    "presentation_switcher.cc",
+    "presentation_switcher.h",
+  ]
+
+  deps = [
+    ":renderer_params",
+    "//garnet/bin/ui/input_reader",
+    "//garnet/bin/ui/presentation_mode",
+    "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.policy",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1token",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//garnet/public/lib/ui/views/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  include_dirs = [ "//third_party/glm" ]
+
+  defines = [ "GLM_ENABLE_EXPERIMENTAL" ]
+}
+
+source_set("renderer_params") {
+  sources = [
+    "renderer_params.cc",
+    "renderer_params.h",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fxl",
+  ]
+}

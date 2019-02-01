@@ -1,0 +1,143 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+
+package("magma-test-build-only") {
+  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    "unit_tests",
+  ]
+
+  if (have_libvulkan || use_vulkan_loader_for_tests) {
+    deps += [
+      "benchmark",
+      "vkcube",
+      "vkext",
+      "vkloop",
+      "vkpriority",
+      "vkreadback",
+    ]
+  }
+
+  if (build_intel_gen) {
+    deps += [
+      "$mesa_build_root:tests",
+      "$msd_intel_gen_build_root:msd_intel_test",
+      "$msd_intel_gen_build_root:tests",
+      "//garnet/drivers/gpu/msd-intel-gen/tests/integration",
+    ]
+  }
+  if (build_msd_arm_mali) {
+    deps += [
+      "//garnet/drivers/gpu/msd-arm-mali:msd_arm_test",
+      "//garnet/drivers/gpu/msd-arm-mali:tests",
+      "//garnet/drivers/gpu/msd-arm-mali/tests/integration",
+    ]
+  }
+  if (build_vsl_gc) {
+    deps += [ "//garnet/drivers/gpu/msd-vsl-gc:msd_vsl_test" ]
+  }
+}
+
+test_package("magma_nonhardware_tests") {
+  deps = [
+    "unit_tests",
+  ]
+
+  tests = [
+    {
+      name = "magma_unit_tests"
+    },
+  ]
+}
+
+test_package("magma_abi_conformance_tests") {
+  deps = [
+    "integration",
+  ]
+
+  tests = [
+    {
+      name = "magma_abi_conformance_tests"
+      environments = magma_hardware_envs
+    },
+  ]
+}
+
+package("vulkan-tests") {
+  testonly = true
+
+  if (have_libvulkan || use_vulkan_loader_for_tests) {
+    deps = [
+      "benchmark",
+      "vkext",
+      "vkloop",
+      "vkpriority",
+      "vkreadback",
+    ]
+    loadable_modules = vulkan_validation_layers.loadable_modules
+    resources = vulkan_validation_layers.resources
+    public_deps = vulkan_validation_layers.public_deps
+
+    tests = [
+      {
+        name = "magma_memcpy"
+        environments = magma_hardware_envs
+      },
+      {
+        name = "vkreadback"
+        environments = magma_hardware_envs
+      },
+      {
+        name = "vkloop"
+
+        # TODO(MA-530): re-enable once working again.
+        disabled = true
+      },
+      {
+        name = "vkext"
+        environments = magma_hardware_envs
+      },
+      {
+        name = "vkcopy"
+        environments = magma_hardware_envs
+      },
+      {
+        name = "vkpriority"
+
+        # No available hardware to run it on; cannot run with an Intel GPU.
+        disabled = true
+      },
+    ]
+
+    meta = [
+      {
+        path = rebase_path("meta/vkext.cmx")
+        dest = "vkext.cmx"
+      },
+      {
+        path = rebase_path("meta/vkreadback.cmx")
+        dest = "vkreadback.cmx"
+      },
+      {
+        path = rebase_path("meta/vkpriority.cmx")
+        dest = "vkpriority.cmx"
+      },
+      {
+        path = rebase_path("meta/vkloop.cmx")
+        dest = "vkloop.cmx"
+      },
+      {
+        path = rebase_path("meta/vkcopy.cmx")
+        dest = "vkcopy.cmx"
+      },
+    ]
+  }
+}

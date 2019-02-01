@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "test/gfx_unittests"
+    },
+    "sandbox": {
+        "features": [ "vulkan" ],
+        "services": [
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

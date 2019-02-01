@@ -1,0 +1,81 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.telephony.ril;
+
+/// Power State of the radio
+enum RadioPowerState: uint8 {
+  OFF = 0x00;
+  ON  = 0x01;
+};
+
+enum RilError: uint8 {
+  /// The radio on this interface is unavailable.
+  NO_RADIO = 0x01;
+  /// The request required a SIM card and none are unavailable.
+  NO_SIM = 0x02;
+};
+
+union RadioPowerStatusReturn {
+    RadioPowerState result;
+    RilError error;
+};
+
+union GetDeviceIdentityReturn {
+    /// International Mobile Equipment Identity (14 digits)
+    string imei;
+    RilError error;
+};
+
+interface NetworkConnection {
+  1: Stop() -> (bool success);
+};
+
+union StartNetworkReturn {
+    NetworkConnection conn;
+    RilError error;
+};
+
+// currently only ipv4 stuff, to drastically change
+struct NetworkSettings {
+    uint32 ip_v4_addr;
+    uint32 ip_v4_subnet;
+    uint32 ip_v4_gateway;
+    uint32 ip_v4_dns;
+    uint32 mtu;
+};
+
+union GetNetworkSettingsReturn {
+    NetworkSettings settings;
+    RilError error;
+};
+
+/// The Standard Fuchsia RIL (FRIL)
+interface RadioInterfaceLayer {
+  /// Hand a transport |channel| to the RIL service connecting it to the modem. Most
+  /// modems will require this to be the first method called, since they are dependent
+  /// on this. If a connection is already active, it will return false. If the channel
+  /// is set successfully, it will return true.
+  ///
+  /// Called globaly per-modem, not per client connection.
+  ///
+  /// Implementation Detail: current services speak QMI but others will most likely speak other
+  /// binary formats.
+  ConnectTransport(handle<channel> channel) -> (bool success);
+
+  /// Retrieve the identity of the modem (currently |imei| only).
+  // TODO(NET-1781): 200: GetDeviceIdentity() -> (string imei) error (RilError err);
+  GetDeviceIdentity() -> (GetDeviceIdentityReturn imei);
+
+  /// Power state of the radio. Currently on On or Off.
+  // TODO(NET-1781): 201: RadioPowerStatus() -> (RadioPowerState state) error (RilError err);
+  RadioPowerStatus() -> (RadioPowerStatusReturn state);
+
+  /// Activate a network connection.
+  StartNetwork(string apn) -> (StartNetworkReturn state);
+
+  /// Network settings known to the modem.
+  GetNetworkSettings() -> (GetNetworkSettingsReturn state);
+};
+

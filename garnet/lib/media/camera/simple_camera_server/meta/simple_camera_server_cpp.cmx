@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/camera"
+        ],
+        "features": [],
+        "services": []
+    }
+}

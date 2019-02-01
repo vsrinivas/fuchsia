@@ -1,0 +1,73 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# This library is shared between the client and agent code. You should depend
+# on it via one of those targets.
+static_library("shared") {
+  visibility = [ ":*" ]
+  sources = [
+    "message_reader.cc",
+    "message_reader.h",
+    "message_writer.cc",
+    "protocol.cc",
+    "protocol.h",
+    "protocol_helpers.cc",
+    "protocol_helpers.h",
+    "register_desc.cc",
+    "register_desc.h",
+    "records.cc",
+    "records.h",
+    "records_utils.cc",
+    "records_utils.h",
+    "register_test_support.cc",
+    "register_test_support.h",
+    "message_writer.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+static_library("agent") {
+  sources = [
+    "agent_protocol.cc",
+    "agent_protocol.h",
+  ]
+
+  public_deps = [
+    ":shared",
+  ]
+}
+
+static_library("client") {
+  sources = [
+    "client_protocol.cc",
+    "client_protocol.h",
+  ]
+
+  public_deps = [
+    ":shared",
+  ]
+}
+
+# Unit tests for this directory. These are intended to be referenced by unit
+# test targets for the consumers of this library.
+source_set("tests") {
+  testonly = true
+  sources = [
+    "message_unittests.cc",
+    "protocol_unittests.cc",
+    "records_unittest.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest",
+  ]
+
+  public_deps = [
+    ":agent",
+    ":client",
+  ]
+}

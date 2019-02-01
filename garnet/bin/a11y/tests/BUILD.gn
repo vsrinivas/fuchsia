@@ -1,0 +1,36 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+group("tests") {
+  testonly = true
+
+  public_deps = [
+    ":a11y_manager_apptests",
+  ]
+}
+
+executable("a11y_manager_apptests") {
+  output_name = "a11y_manager_apptests"
+
+  testonly = true
+
+  sources = [
+    "semantic_tree_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/a11y/a11y_manager:lib",
+    "//garnet/bin/a11y/tests/mocks",
+    "//garnet/public/fidl/fuchsia.accessibility",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+
+  # This is a dependency of the semantic tree to perform certain matrix transform operations.
+  include_dirs = [ "//third_party/glm" ]
+}

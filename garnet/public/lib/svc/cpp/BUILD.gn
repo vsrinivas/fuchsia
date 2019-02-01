@@ -1,0 +1,29 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "service_namespace.cc",
+    "service_namespace.h",
+    "service_provider_bridge.cc",
+    "service_provider_bridge.h",
+    "services.cc",
+    "services.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fdio",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}

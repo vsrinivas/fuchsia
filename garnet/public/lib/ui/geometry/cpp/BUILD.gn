@@ -1,0 +1,32 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("cpp") {
+  sources = [
+    "formatting.cc",
+    "formatting.h",
+    "geometry_util.cc",
+    "geometry_util.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.math",
+  ]
+}
+
+executable("tests") {
+  output_name = "geometry_util_unittests"
+
+  testonly = true
+
+  sources = [
+    "tests/geometry_util_unittests.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest_main",
+  ]
+}

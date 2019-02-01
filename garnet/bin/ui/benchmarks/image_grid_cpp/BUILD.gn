@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("bin") {
+  output_name = "image_grid_cpp"
+
+  sources = [
+    "image_grid_view.cc",
+    "image_grid_view.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/ui/scenic/util:rk4_spring_simulation",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+}
+
+package("image_grid_cpp") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "image_grid_cpp"
+
+  meta = [
+    {
+      path = rebase_path("image_grid_cpp.cmx")
+      dest = "image_grid_cpp.cmx"
+    },
+  ]
+}

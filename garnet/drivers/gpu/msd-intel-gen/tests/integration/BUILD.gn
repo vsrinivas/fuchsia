@@ -1,0 +1,32 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+group("integration") {
+  testonly = true
+
+  public_deps = [
+    ":msd_intel_gen_integration_tests",
+  ]
+}
+
+executable("msd_intel_gen_integration_tests") {
+  testonly = true
+
+  sources = [
+    "main.cc",
+    "test_hang_recovery.cc",
+    "test_shutdown.cc",
+  ]
+
+  deps = [
+    "$magma_build_root/fidl",
+    "$magma_build_root/src/libmagma",
+    "$magma_build_root/src/magma_util",
+    "$magma_build_root/src/magma_util:inflight_list",
+    "$zircon_build_root/public/lib/fdio",
+    "//third_party/googletest:gtest",
+  ]
+}

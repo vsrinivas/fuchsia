@@ -1,0 +1,675 @@
+
+Iteration 0
+==============
+
+Trace 0
+--------
+0018: Time: 13087321725916
+0024: PC: Event 0x801, aspace 0xe87c000, pc 0x154fa9a5bb06
+0038: Value: Event 0x101c, 47
+0044: LastBranch: Event 0x801, aspace 0xe87c000, 32 branches
+0354: Time: 13087321767046
+0360: PC: Event 0x801, aspace 0xe87c000, pc 0x154fa99de0c0
+0374: Value: Event 0x101c, 47
+0380: LastBranch: Event 0x801, aspace 0xe87c000, 32 branches
+0690: Time: 13087321794870
+069c: PC: Event 0x801, aspace 0xe87c000, pc 0x154fa99cda50
+06b0: Value: Event 0x101c, 47
+06bc: LastBranch: Event 0x801, aspace 0xe87c000, 32 branches
+09cc: Time: 13087321842894
+09d8: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+09ec: Value: Event 0x101c, 47
+09f8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+0d08: Time: 13087345435082
+0d14: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+0d28: Value: Event 0x101c, 47
+0d34: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1044: Time: 13087374603330
+1050: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+1064: Value: Event 0x101c, 47
+1070: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+1380: Time: 13087489889866
+138c: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+13a0: Value: Event 0x101c, 47
+13ac: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+16bc: Time: 13087546172862
+16c8: PC: Event 0x801, aspace 0x7100000, pc 0xffffffff0012ebaa
+16dc: Value: Event 0x101c, 47
+16e8: LastBranch: Event 0x801, aspace 0x7100000, 32 branches
+19f8: Time: 13087546310864
+1a04: PC: Event 0x801, aspace 0xc67b000, pc 0x675923344aad
+1a18: Value: Event 0x101c, 47
+1a24: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1d34: Time: 13087546477644
+1d40: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+1d54: Value: Event 0x101c, 47
+1d60: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+2070: Time: 13087546677834
+207c: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+2090: Value: Event 0x101c, 47
+209c: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+23ac: Time: 13087546843674
+23b8: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132664
+23cc: Value: Event 0x101c, 47
+23d8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+26e8: Time: 13087546997350
+26f4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+2708: Value: Event 0x101c, 47
+2714: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+2a24: Time: 13087547197460
+2a30: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+2a44: Value: Event 0x101c, 47
+2a50: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+2d60: Time: 13087547363196
+2d6c: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+2d80: Value: Event 0x101c, 47
+2d8c: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+309c: Time: 13087547517106
+30a8: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+30bc: Value: Event 0x101c, 47
+30c8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+33d8: Time: 13087547717110
+33e4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+33f8: Value: Event 0x101c, 47
+3404: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+3714: Time: 13087547882832
+3720: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+3734: Value: Event 0x101c, 47
+3740: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+3a50: Time: 13087548036740
+3a5c: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+3a70: Value: Event 0x101c, 47
+3a7c: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+3d8c: Time: 13087548236954
+3d98: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+3dac: Value: Event 0x101c, 47
+3db8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+40c8: Time: 13087548403540
+40d4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+40e8: Value: Event 0x101c, 47
+40f4: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+4404: Time: 13087548557436
+4410: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+4424: Value: Event 0x101c, 47
+4430: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+4740: Time: 13087548757464
+474c: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+4760: Value: Event 0x101c, 47
+476c: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+4a7c: Time: 13087549107490
+4a88: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+4a9c: Value: Event 0x101c, 47
+4aa8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+4db8: Time: 13087551703652
+4dc4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+4dd8: Value: Event 0x101c, 47
+4de4: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+50f4: Time: 13087572359194
+5100: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+5114: Value: Event 0x101c, 47
+5120: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+5430: Time: 13087605195120
+543c: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+5450: Value: Event 0x101c, 47
+545c: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+576c: Time: 13087720481118
+5778: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+578c: Value: Event 0x101c, 47
+5798: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+5aa8: Time: 13087727191296
+5ab4: PC: Event 0x801, aspace 0xc67b000, pc 0x4c51f000b6de
+5ac8: Value: Event 0x101c, 47
+5ad4: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+5de4: Time: 13087811665728
+5df0: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+5e04: Value: Event 0x101c, 47
+5e10: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+6120: Time: 13087912640316
+612c: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+6140: Value: Event 0x101c, 47
+614c: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+645c: Time: 13087989512686
+6468: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+647c: Value: Event 0x101c, 47
+6488: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+6798: Time: 13088097541468
+67a4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff00132805
+67b8: Value: Event 0x101c, 47
+67c4: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+6ad4: Time: 13088181664034
+6ae0: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+6af4: Value: Event 0x101c, 47
+6b00: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+6e10: Time: 13088258527764
+6e1c: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+6e30: Value: Event 0x101c, 47
+6e3c: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+714c: Time: 13088335400046
+7158: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+716c: Value: Event 0x101c, 47
+7178: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+7488: Time: 13088450687576
+7494: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+74a8: Value: Event 0x101c, 47
+74b4: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+77c4: Time: 13088527559074
+77d0: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+77e4: Value: Event 0x101c, 47
+77f0: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+7b00: Time: 13088642846628
+7b0c: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+7b20: Value: Event 0x101c, 47
+7b2c: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+7e3c: Time: 13088719718716
+7e48: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+7e5c: Value: Event 0x101c, 47
+7e68: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+8178: Time: 13088835006380
+8184: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+8198: Value: Event 0x101c, 47
+81a4: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+84b4: Time: 13088911878296
+84c0: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+84d4: Value: Event 0x101c, 47
+84e0: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+87f0: Time: 13089027166392
+87fc: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+8810: Value: Event 0x101c, 47
+881c: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+8b2c: Time: 13089104037262
+8b38: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff00151018
+8b4c: Value: Event 0x101c, 47
+8b58: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+8e68: Time: 13089142465798
+8e74: PC: Event 0x801, aspace 0x7247000, pc 0xaa559a0af73
+8e88: Value: Event 0x101c, 47
+8e94: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+91a4: Time: 13089219334258
+91b0: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+91c4: Value: Event 0x101c, 47
+91d0: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+94e0: Time: 13089334621504
+94ec: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+9500: Value: Event 0x101c, 47
+950c: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+981c: Time: 13089372100488
+9828: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0013240f
+983c: Value: Event 0x101c, 47
+9848: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+9b58: Time: 13089372300072
+9b64: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+9b78: Value: Event 0x101c, 47
+9b84: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+9e94: Time: 13089372465768
+9ea0: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+9eb4: Value: Event 0x101c, 47
+9ec0: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+a1d0: Time: 13089372620020
+a1dc: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+a1f0: Value: Event 0x101c, 47
+a1fc: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+a50c: Time: 13089372819668
+a518: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+a52c: Value: Event 0x101c, 47
+a538: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+a848: Time: 13089372985634
+a854: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+a868: Value: Event 0x101c, 47
+a874: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+ab84: Time: 13089373089500
+ab90: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+aba4: Value: Event 0x101c, 47
+abb0: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+aec0: Time: 13089373289260
+aecc: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+aee0: Value: Event 0x101c, 47
+aeec: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+b1fc: Time: 13089373456186
+b208: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0016cbe5
+b21c: Value: Event 0x101c, 47
+b228: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+b538: Time: 13089373609920
+b544: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+b558: Value: Event 0x101c, 47
+b564: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+b874: Time: 13089373810370
+b880: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+b894: Value: Event 0x101c, 47
+b8a0: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+bbb0: Time: 13089373976568
+bbbc: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+bbd0: Value: Event 0x101c, 47
+bbdc: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+beec: Time: 13089374130576
+bef8: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+bf0c: Value: Event 0x101c, 47
+bf18: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+c228: Time: 13089374331102
+c234: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+c248: Value: Event 0x101c, 47
+c254: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+c564: Time: 13089374497072
+c570: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+c584: Value: Event 0x101c, 47
+c590: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+c8a0: Time: 13089374651398
+c8ac: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+c8c0: Value: Event 0x101c, 47
+c8cc: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+cbdc: Time: 13089375358104
+cbe8: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+cbfc: Value: Event 0x101c, 47
+cc08: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+cf18: Time: 13089380546806
+cf24: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+cf38: Value: Event 0x101c, 47
+cf44: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+d254: Time: 13089398304546
+d260: PC: Event 0x801, aspace 0xc67b000, pc 0x4c51f000b6de
+d274: Value: Event 0x101c, 47
+d280: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+d590: Time: 13089463664850
+d59c: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+d5b0: Value: Event 0x101c, 47
+d5bc: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+d8cc: Time: 13089565212860
+d8d8: PC: Event 0x801, aspace 0x7247000, pc 0xffffffff0012dd88
+d8ec: Value: Event 0x101c, 47
+d8f8: LastBranch: Event 0x801, aspace 0x7247000, 32 branches
+dc08: Time: 13089600667446
+dc14: PC: Event 0x801, aspace 0x7100000, pc 0xffffffff00117103
+dc28: Value: Event 0x101c, 47
+dc34: LastBranch: Event 0x801, aspace 0x7100000, 32 branches
+df44: Time: 13089601476924
+df50: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0013240f
+df64: Value: Event 0x101c, 47
+df70: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+e280: Time: 13089601582490
+e28c: PC: Event 0x801, aspace 0xc67b000, pc 0x67592331968b
+e2a0: Value: Event 0x101c, 47
+e2ac: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+e5bc: Time: 13089601750858
+e5c8: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+e5dc: Value: Event 0x101c, 47
+e5e8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+e8f8: Time: 13089601950904
+e904: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+e918: Value: Event 0x101c, 47
+e924: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+ec34: Time: 13089602116558
+ec40: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+ec54: Value: Event 0x101c, 47
+ec60: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+ef70: Time: 13089602270428
+ef7c: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+ef90: Value: Event 0x101c, 47
+ef9c: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+f2ac: Time: 13089602470498
+f2b8: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+f2cc: Value: Event 0x101c, 47
+f2d8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+f5e8: Time: 13089602636262
+f5f4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+f608: Value: Event 0x101c, 47
+f614: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+f924: Time: 13089602790080
+f930: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+f944: Value: Event 0x101c, 47
+f950: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+fc60: Time: 13089602990324
+fc6c: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+fc80: Value: Event 0x101c, 47
+fc8c: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+ff9c: Time: 13089603155910
+ffa8: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00106ea0
+ffbc: Value: Event 0x101c, 47
+ffc8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+102d8: Time: 13089603493970
+102e4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+102f8: Value: Event 0x101c, 47
+10304: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+10614: Time: 13089606085852
+10620: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+10634: Value: Event 0x101c, 47
+10640: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+10950: Time: 13089625852564
+1095c: PC: Event 0x801, aspace 0x15321000, pc 0xffffffff0012eb73
+10970: Value: Event 0x101c, 47
+1097c: LastBranch: Event 0x801, aspace 0x15321000, 32 branches
+10c8c: Time: 13089625912680
+10c98: Count: Event 0x801, 3849
+10ca4: Value: Event 0x101c, 47
+
+Trace 1
+--------
+0018: Time: 13087322386580
+0024: PC: Event 0x801, aspace 0x6a6e000, pc 0xffffffff00132805
+0038: LastBranch: Event 0x801, aspace 0x6a6e000, 32 branches
+0348: Time: 13087682058534
+0354: PC: Event 0x801, aspace 0x271000, pc 0xffffffff00116499
+0368: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+0678: Time: 13089372115356
+0684: PC: Event 0x801, aspace 0xc67b000, pc 0x6759233fd3a0
+0698: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+09a8: Time: 13089372147992
+09b4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0018002e
+09c8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+0cd8: Time: 13089374348796
+0ce4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+0cf8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+1008: Time: 13089600646392
+1014: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+1028: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+1338: Time: 13089600749708
+1344: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+1358: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+1668: Time: 13089600950408
+1674: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff00132805
+1688: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1998: Time: 13089601116200
+19a4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0016cbe5
+19b8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1cc8: Time: 13089601271146
+1cd4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+1ce8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+1ff8: Time: 13089601470828
+2004: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+2018: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+2328: Time: 13089601526528
+2334: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+2348: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+2658: Time: 13089601581928
+2664: PC: Event 0x801, aspace 0xc67b000, pc 0x67592333ca64
+2678: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+2988: Time: 13089625873548
+2994: PC: Event 0x801, aspace 0x5024000, pc 0xffffffff00160279
+29a8: LastBranch: Event 0x801, aspace 0x5024000, 32 branches
+2cb8: Time: 13089625912010
+2cc4: Count: Event 0x801, 8117
+
+Trace 2
+--------
+0018: Time: 13087321652376
+0024: PC: Event 0x801, aspace 0x4f46000, pc 0x7219ff24e6b4
+0038: LastBranch: Event 0x801, aspace 0x4f46000, 32 branches
+0348: Time: 13087321680456
+0354: PC: Event 0x801, aspace 0x4f46000, pc 0x5a99dc595346
+0368: LastBranch: Event 0x801, aspace 0x4f46000, 32 branches
+0678: Time: 13087321697492
+0684: PC: Event 0x801, aspace 0x4f46000, pc 0x7219ff24ea0e
+0698: LastBranch: Event 0x801, aspace 0x4f46000, 32 branches
+09a8: Time: 13087321719462
+09b4: PC: Event 0x801, aspace 0x4f46000, pc 0x5a99dc5e85a5
+09c8: LastBranch: Event 0x801, aspace 0x4f46000, 32 branches
+0cd8: Time: 13087321738408
+0ce4: PC: Event 0x801, aspace 0x4f46000, pc 0x7219ff24ea0b
+0cf8: LastBranch: Event 0x801, aspace 0x4f46000, 32 branches
+1008: Time: 13087544918564
+1014: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012dd88
+1028: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+1338: Time: 13087544949748
+1344: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+1358: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+1668: Time: 13087544972462
+1674: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+1688: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+1998: Time: 13087544994834
+19a4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+19b8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+1cc8: Time: 13087545017360
+1cd4: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+1ce8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+1ff8: Time: 13087545039936
+2004: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+2018: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+2328: Time: 13087545063228
+2334: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0010648c
+2348: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+2658: Time: 13087545085912
+2664: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+2678: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+2988: Time: 13087545108546
+2994: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00173ad0
+29a8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+2cb8: Time: 13087545130944
+2cc4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+2cd8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+2fe8: Time: 13087545153448
+2ff4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebc1
+3008: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+3318: Time: 13087545176642
+3324: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0015d242
+3338: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+3648: Time: 13087545198988
+3654: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0017ffe9
+3668: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+3978: Time: 13087545221400
+3984: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+3998: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+3ca8: Time: 13087545243842
+3cb4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00180298
+3cc8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+3fd8: Time: 13087545266386
+3fe4: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859ba18
+3ff8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+4308: Time: 13087545289768
+4314: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+4328: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+4638: Time: 13087545312204
+4644: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0010648c
+4658: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+4968: Time: 13087545334702
+4974: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+4988: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+4c98: Time: 13087545357304
+4ca4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+4cb8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+4fc8: Time: 13087545379734
+4fd4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0010648c
+4fe8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+52f8: Time: 13087545402840
+5304: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+5318: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+5628: Time: 13087545425560
+5634: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+5648: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+5958: Time: 13087545447976
+5964: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+5978: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+5c88: Time: 13087545470502
+5c94: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+5ca8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+5fb8: Time: 13087545492992
+5fc4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+5fd8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+62e8: Time: 13087545516000
+62f4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+6308: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+6618: Time: 13087545538584
+6624: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+6638: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+6948: Time: 13087545561096
+6954: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00173ad0
+6968: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+6c78: Time: 13087545583490
+6c84: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+6c98: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+6fa8: Time: 13087545609372
+6fb4: PC: Event 0x801, aspace 0x4d5a000, pc 0x5ca7f2df5cab
+6fc8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+72d8: Time: 13087545629604
+72e4: PC: Event 0x801, aspace 0x4d5a000, pc 0x5ca7f2e18f29
+72f8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+7608: Time: 13087546179120
+7614: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff001395f0
+7628: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+7938: Time: 13087546228052
+7944: PC: Event 0x801, aspace 0xc67b000, pc 0x67592337c091
+7958: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+7c68: Time: 13087556607196
+7c74: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+7c88: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+7f98: Time: 13087776052590
+7fa4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012dd88
+7fb8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+82c8: Time: 13087776077638
+82d4: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+82e8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+85f8: Time: 13087776100224
+8604: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+8618: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+8928: Time: 13087776122528
+8934: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+8948: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+8c58: Time: 13087776145036
+8c64: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+8c78: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+8f88: Time: 13087776167552
+8f94: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+8fa8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+92b8: Time: 13087776190470
+92c4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+92d8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+95e8: Time: 13087776213102
+95f4: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+9608: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+9918: Time: 13087776235628
+9924: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00173ad0
+9938: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+9c48: Time: 13087776257986
+9c54: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+9c68: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+9f78: Time: 13087776280364
+9f84: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebc1
+9f98: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+a2a8: Time: 13087776303452
+a2b4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0015d242
+a2c8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+a5d8: Time: 13087776325904
+a5e4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0017ffe9
+a5f8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+a908: Time: 13087776348284
+a914: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+a928: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+ac38: Time: 13087776370772
+ac44: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00180298
+ac58: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+af68: Time: 13087776393244
+af74: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859ba18
+af88: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+b298: Time: 13087776416450
+b2a4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+b2b8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+b5c8: Time: 13087776438856
+b5d4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+b5e8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+b8f8: Time: 13087776461332
+b904: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+b918: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+bc28: Time: 13087776483776
+bc34: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+bc48: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+bf58: Time: 13087776506170
+bf64: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0010648c
+bf78: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+c288: Time: 13087776529452
+c294: PC: Event 0x801, aspace 0x4d5a000, pc 0x402ed859b6ee
+c2a8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+c5b8: Time: 13087776551942
+c5c4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0016cad8
+c5d8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+c8e8: Time: 13087776574278
+c8f4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff00106490
+c908: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+cc18: Time: 13087776597248
+cc24: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0014b0fb
+cc38: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+cf48: Time: 13088237407182
+cf54: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012dd88
+cf68: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+d278: Time: 13088467830240
+d284: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012edc3
+d298: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+d5a8: Time: 13088928640800
+d5b4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012dd88
+d5c8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+d8d8: Time: 13089106266506
+d8e4: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0013240f
+d8f8: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+dc08: Time: 13089372082880
+dc14: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ebaa
+dc28: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+df38: Time: 13089372176018
+df44: PC: Event 0x801, aspace 0x7100000, pc 0xffffffff00186411
+df58: LastBranch: Event 0x801, aspace 0x7100000, 32 branches
+e268: Time: 13089600592536
+e274: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0014f811
+e288: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+e598: Time: 13089600630674
+e5a4: PC: Event 0x801, aspace 0xc67b000, pc 0x675923323bda
+e5b8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+e8c8: Time: 13089600668580
+e8d4: PC: Event 0x801, aspace 0xc67b000, pc 0x67592332393c
+e8e8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+ebf8: Time: 13089601451672
+ec04: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0013240f
+ec18: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+ef28: Time: 13089601480724
+ef34: PC: Event 0x801, aspace 0xc67b000, pc 0x675923412ea7
+ef48: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+f258: Time: 13089601522474
+f264: PC: Event 0x801, aspace 0xc67b000, pc 0x675923457234
+f278: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+f588: Time: 13089601548320
+f594: PC: Event 0x801, aspace 0xc67b000, pc 0x4c51f000ba23
+f5a8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+f8b8: Time: 13089619880802
+f8c4: PC: Event 0x801, aspace 0x4d5a000, pc 0xffffffff0012ed87
+f8d8: LastBranch: Event 0x801, aspace 0x4d5a000, 32 branches
+fbe8: Time: 13089625914174
+fbf4: Count: Event 0x801, 1418
+
+Trace 3
+--------
+0018: Time: 13087545656892
+0024: PC: Event 0x801, aspace 0x7100000, pc 0x4f365354685b
+0038: LastBranch: Event 0x801, aspace 0x7100000, 32 branches
+0348: Time: 13087546223010
+0354: PC: Event 0x801, aspace 0xc67b000, pc 0x6759233459a7
+0368: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+0678: Time: 13087727161396
+0684: PC: Event 0x801, aspace 0x271000, pc 0xffffffff0011648e
+0698: LastBranch: Event 0x801, aspace 0x271000, 32 branches
+09a8: Time: 13089105646210
+09b4: PC: Event 0x801, aspace 0x7246000, pc 0xffffffff001170f3
+09c8: LastBranch: Event 0x801, aspace 0x7246000, 32 branches
+0cd8: Time: 13089372096414
+0ce4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0012edc3
+0cf8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1008: Time: 13089600511894
+1014: PC: Event 0x801, aspace 0x10674000, pc 0x7f37d10079b
+1028: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+1338: Time: 13089600548178
+1344: PC: Event 0x801, aspace 0x10674000, pc 0xffffffff00159d64
+1358: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+1668: Time: 13089600575848
+1674: PC: Event 0x801, aspace 0x10674000, pc 0xffffffff001170f3
+1688: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+1998: Time: 13089600612920
+19a4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0014f811
+19b8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1cc8: Time: 13089600683206
+1cd4: PC: Event 0x801, aspace 0xc67b000, pc 0xffffffff0016cad8
+1ce8: LastBranch: Event 0x801, aspace 0xc67b000, 32 branches
+1ff8: Time: 13089601557690
+2004: PC: Event 0x801, aspace 0x10674000, pc 0xffffffff001d3dcc
+2018: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+2328: Time: 13089601589652
+2334: PC: Event 0x801, aspace 0x10674000, pc 0x7f37d1006e8
+2348: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+2658: Time: 13089601613452
+2664: PC: Event 0x801, aspace 0x10674000, pc 0xffffffff0016d65c
+2678: LastBranch: Event 0x801, aspace 0x10674000, 32 branches
+2988: Time: 13089625913648
+2994: Count: Event 0x801, 4580
+

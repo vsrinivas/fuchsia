@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/cobalt/app:cobalt",
+        "//garnet/bin/cobalt/system-metrics:cobalt_system_metrics"
+    ]
+}

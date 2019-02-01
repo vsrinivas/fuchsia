@@ -1,0 +1,73 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.gpu.magma;
+
+using zx;
+
+[Layout = "Simple"]
+interface Device {
+    // Get a parameter.
+    Query(uint64 query_id) -> (uint64 result);
+
+    // Get the magma ipc channels.
+    Connect(uint64 client_id) -> (handle<channel> primary_channel, handle<channel> notification_channel);
+
+    // Dumps driver and hardware state.
+    DumpState(uint32 dump_type);
+
+    // For testing only.
+    TestRestart();
+};
+
+// Primary declarations.
+const uint32 kReceiveBufferSize = 2048;
+
+interface Primary {
+    // Imports a buffer for use in the system driver.
+    ImportBufferFIDL(handle<vmo> buffer);
+
+    // Destroys the buffer with |buffer_id| within this connection.
+    ReleaseBufferFIDL(zx.koid buffer_id);
+
+    // Imports an object for use in the system driver.
+    ImportObjectFIDL(handle object, uint32 object_type);
+
+    // Destroys the object with |object_id| within this connection.
+    ReleaseObjectFIDL(zx.koid object_id, uint32 object_type);
+
+    // Creates context |context_id|.
+    CreateContextFIDL(uint32 context_id);
+
+    // Destroys context |context_id|.
+    DestroyContextFIDL(uint32 context_id);
+
+    // Submits a command buffer for execution on the GPU.
+    // Note that the buffer referred to by |command_buffer| must contain a valid
+    // magma_system_command_buffer and all associated data structures
+    // Transfers ownership of |command_buffer|.
+    ExecuteCommandBufferFIDL(handle command_buffer, uint32 context_id);
+
+    // Submits a series of commands for execution on the GPU without using a command buffer.
+    ExecuteImmediateCommandsFIDL(uint32 context_id,
+                                 vector<uint8>:kReceiveBufferSize command_data,
+                                 vector<uint64>? semaphores);
+
+    // Retrieve the current magma error status.
+    GetErrorFIDL() -> (int32 magma_status);
+
+    // Maps |page_count| pages of |buffer| from |page_offset| onto the GPU in the connection's
+    // address space at |gpu_va|.  |flags| is a set of flags from MAGMA_GPU_MAP_FLAGS that
+    // specify how the GPU can access the buffer.
+    MapBufferGpuFIDL(zx.koid buffer_id, uint64 gpu_va, uint64 page_offset,
+                     uint64 page_count, uint64 flags);
+
+    // Releases the mapping at |gpu_va| from the GPU.
+    // Buffers will also be implicitly unmapped when released.
+    UnmapBufferGpuFIDL(zx.koid buffer_id, uint64 gpu_va);
+
+    // Ensures that |page_count| pages starting at |page_offset| from the beginning of the
+    // buffer are backed by physical memory.
+    CommitBufferFIDL(zx.koid buffer_id, uint64 page_offset, uint64 page_count);
+};

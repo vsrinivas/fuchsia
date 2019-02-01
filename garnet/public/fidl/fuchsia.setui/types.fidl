@@ -1,0 +1,136 @@
+library fuchsia.setui;
+
+enum SettingType {
+    UNKNOWN = 0;
+    TIME_ZONE = 1;
+    CONNECTIVITY = 2;
+    WIRELESS = 3;
+};
+
+union SettingData {
+    string string_value;
+
+    /// The data returned by the time zone service for getting or setting
+    /// time zones.
+    TimeZoneInfo time_zone_value;
+
+    /// The current connected state. (read-only)
+    ConnectedState connectivity;
+
+    /// The wireless state (read-only).
+    WirelessState wireless;
+};
+
+struct TimeZoneInfo {
+    /// The current time zone. Will be absent if no time zone is currently set.
+    /// To update the time zone, set this value.
+    TimeZone? current;
+
+    /// An ordered list of the available time zones.
+    vector<TimeZone> available;
+};
+
+struct TimeZone {
+    /// The underlying ID value; shouldn't be displayed to the end user.
+    string id;
+
+    /// The user visible description of the time zone.
+    string name;
+
+    /// List of sample locations for which the time zone is valid.
+    vector<string> region;
+};
+
+enum ConnectionStatus {
+    UNKNOWN = 0;
+
+    /// The connection is at a resting disconnected state.
+    DISCONNECTED = 1;
+
+    /// The connection is being established.
+    CONNECTING = 2;
+
+    /// The connection is active.
+    CONNECTED = 3;
+
+    /// The connection is in the process of being disconnected.
+    DISCONNECTING = 4;
+};
+
+enum WirelessSecurity {
+    UNKNOWN = 0;
+
+    /// The network is open and requires no password.
+    UNSECURED = 1;
+
+    /// The network is protected by a password.
+    SECURED = 2;
+};
+
+enum WpaAuth {
+    UNKNOWN = 0;
+    NONE_OPEN = 1;
+    NONE_WEP = 2;
+    NONE_WEP_SHARED = 3;
+    IEEE8021X = 4;
+    WPA_PSK = 5;
+    WPA_EAP = 6;
+    WPA2_PSK = 7;
+    WPA2_EAP = 8;
+};
+
+enum WpaCipher {
+    UNKNOWN = 0;
+    NONE = 1;
+    WEP = 2;
+    TKIP = 3;
+    CCMP = 4;
+};
+
+struct WirelessAccessPoint {
+    /// The associated bssid.
+    vector<uint8> bssid;
+
+    // Frequency
+    int32 frequency;
+
+    /// The connection strength of the access point. (read-only)
+    int32 rssi;
+
+    /// The current connection state of the access point.
+    ConnectionStatus status;
+};
+
+struct WirelessNetwork {
+    /// The underlying ID value; shouldn't be displayed to the end user.
+    /// (internal / read-only)
+    int64 internal_id;
+
+    /// The published identifier for the access point. (read-only)
+    string ssid;
+
+    /// The auth configuration for the access point.
+    WpaAuth wpa_auth;
+
+    /// The cipher configuration for the access point.
+    WpaCipher wpa_cipher;
+
+    vector<WirelessAccessPoint> access_points;
+};
+
+struct WirelessState {
+    /// The available access points to connect to.
+    vector<WirelessNetwork> wireless_networks;
+};
+
+enum Reachability {
+    UNKNOWN = 0;
+
+    /// we have access to the wide area network.
+    WAN = 1;
+};
+
+struct ConnectedState {
+    /// The current level of connection access.
+    Reachability reachability;
+};

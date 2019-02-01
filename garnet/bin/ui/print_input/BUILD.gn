@@ -1,0 +1,17 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("print_input") {
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/ui/input_reader",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/input",
+    "//garnet/public/lib/ui/input/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

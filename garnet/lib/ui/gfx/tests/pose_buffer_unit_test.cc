@@ -1,0 +1,75 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#include <zircon/syscalls.h>
+
+#include "garnet/lib/ui/gfx/tests/vk_session_test.h"
+#include "lib/ui/gfx/util/time.h"
+#include "lib/ui/scenic/cpp/commands.h"
+#include "public/lib/escher/test/gtest_vulkan.h"
+
+#include "gtest/gtest.h"
+
+namespace scenic_impl {
+namespace gfx {
+namespace test {
+
+using PoseBufferTest = VkSessionTest;
+
+VK_TEST_F(PoseBufferTest, Validation) {
+  const ResourceId invalid_id = 0;
+  const ResourceId scene_id = 1;
+  const ResourceId camera_id = 2;
+  const ResourceId memory_id = 3;
+  const ResourceId buffer_id = 4;
+
+  ASSERT_TRUE(Apply(scenic::NewCreateSceneCmd(scene_id)));
+  ASSERT_TRUE(Apply(scenic::NewCreateCameraCmd(camera_id, scene_id)));
+
+  uint64_t vmo_size = PAGE_SIZE;
+  zx::vmo vmo;
+  zx_status_t status = zx::vmo::create(vmo_size, 0u, &vmo);
+  ASSERT_EQ(ZX_OK, status);
+
+  zx_clock_t base_time = dispatcher_clock_now();
+  uint64_t time_interval = 1024 * 1024;  // 1 ms
+  uint32_t num_entries = 1;
+
+  ASSERT_TRUE(Apply(scenic::NewCreateMemoryCmd(
+      memory_id, std::move(vmo), vmo_size,
+      fuchsia::images::MemoryType::VK_DEVICE_MEMORY)));
+  ASSERT_TRUE(
+      Apply(scenic::NewCreateBufferCmd(buffer_id, memory_id, 0, vmo_size)));
+
+  // Actual Tests
+
+  // Basic case: all arguments valid
+  EXPECT_TRUE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, buffer_id, num_entries, base_time, time_interval)));
+
+  // Invalid base time 1 second in the future
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, buffer_id, num_entries, base_time + 1024 * 1024 * 1024,
+      time_interval)));
+
+  // Invalid buffer id
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, invalid_id, num_entries, base_time, time_interval)));
+
+  // Invalid camera id
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      invalid_id, buffer_id, num_entries, base_time, time_interval)));
+
+  // num_entries too small
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, buffer_id, 0, base_time, time_interval)));
+
+  // num_entries too large
+  EXPECT_FALSE(Apply(scenic::NewSetCameraPoseBufferCmd(
+      camera_id, buffer_id, UINT32_MAX, base_time, time_interval)));
+}
+
+}  // namespace test
+}  // namespace gfx
+}  // namespace scenic_impl

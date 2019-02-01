@@ -1,0 +1,19 @@
+#Copyright 2017 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
+
+executable("simple_sine_sync") {
+  sources = [
+    "main.cc",
+    "simple_sine_sync.cc",
+    "simple_sine_sync.h",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fzl",
+  ]
+}

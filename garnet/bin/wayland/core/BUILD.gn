@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/compiled_action.gni")
+import("//build/rust/rustc_library.gni")
+
+rustc_library("core") {
+  edition = "2018"
+  name = "fuchsia_wayland_core"
+  with_unit_tests = true
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}
+
+group("tests") {
+  public_deps = [
+    ":core",
+  ]
+}

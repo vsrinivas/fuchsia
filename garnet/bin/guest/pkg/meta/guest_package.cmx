@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "runner": "fuchsia-pkg://fuchsia.com/guest_runner#meta/guest_runner.cmx",
+    "sandbox": {
+        "services": [
+            "fuchsia.guest.vmm.LaunchInfoProvider"
+        ]
+    }
+}

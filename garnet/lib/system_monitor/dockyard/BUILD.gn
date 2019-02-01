@@ -1,0 +1,48 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//third_party/protobuf/proto_library.gni")
+
+source_set("lib") {
+  sources = [
+    "dockyard.cc",
+    "dockyard.h",
+    "test_sample_generator.cc",
+    "test_sample_generator.h",
+  ]
+  public_deps = [
+    ":protos",
+  ]
+}
+
+proto_library("protos") {
+  sources = [
+    "../protos/dockyard.proto",
+  ]
+
+  generate_python = false
+  cc_generator_options = "lite"
+  generator_plugin_suffix = ".grpc.pb"
+  generator_plugin_label = "//third_party/grpc:grpc_cpp_plugin"
+
+  import_dirs = [
+    #"//garnet/lib/system_monitor/protos",
+  ]
+  deps = [
+    "//third_party/grpc:grpc++",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "dockyard_unittests.cc",
+  ]
+
+  deps = [
+     ":lib",
+     "//third_party/googletest:gtest",
+  ]
+}

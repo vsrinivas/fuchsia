@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/lib/mime_sniffer:mime_sniffer_unittests"
+    ]
+}

@@ -1,0 +1,10 @@
+{
+    "imports": [
+        "garnet/packages/prod/debugserver"
+    ],
+    "packages": [
+        "//garnet/bin/debugserver:debugserver_tests",
+        "//garnet/lib/inferior_control:inferior_control_tests",
+        "//garnet/lib/debugger_utils:debugger_utils_tests"
+    ]
+}

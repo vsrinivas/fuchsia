@@ -1,0 +1,102 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+// Manages a set of payload buffers for a stream.
+[FragileBase]
+interface StreamBufferSet {
+    // Adds a payload buffer for stream packets. StreamPacket structs reference
+    // a payload buffer by ID using the StreamPacket.payload_buffer_id field.
+    AddPayloadBuffer(uint32 id, handle<vmo> payload_buffer);
+
+    // Removes a payload buffer.
+    RemovePayloadBuffer(uint32 id);
+};
+
+// Consumes a stream of packets.
+[FragileBase]
+interface StreamSink {
+    // Sends a packet to this object. The response is sent when this object is
+    // done with the associated payload memory.
+    SendPacket(StreamPacket packet) -> ();
+
+    // Sends a packet to this object. This interface doesn't define how the client
+    // knows when the sink is done with the associated payload memory. The
+    // inheriting interface must define that.
+    SendPacketNoReply(StreamPacket packet);
+
+    // Indicates the stream has ended.
+    EndOfStream();
+
+    // Discards packets previously sent via SendPacket or SendPacketNoReply.
+    DiscardAllPackets() -> ();
+    DiscardAllPacketsNoReply();
+};
+
+// Produces a stream of packets.
+[FragileBase]
+interface StreamSource {
+    // Delivers a packet produced by this object. Each packet delivered via this
+    // event must be released with a call to ReleasePacket.
+    -> OnPacketProduced(StreamPacket packet);
+
+    // Indicates that the stream has ended.
+    -> OnEndOfStream();
+
+    // Releases a packet delivered via OnPacketProduced.
+    ReleasePacket(StreamPacket packet);
+
+    // Discards queued packets.
+    DiscardAllPackets() -> ();
+    DiscardAllPacketsNoReply();
+};
+
+// A StreamSink that uses StreamBufferSet for buffer management.
+interface SimpleStreamSink : StreamSink, StreamBufferSet {
+    ////////////////////////////////////////////////////////////////////////////
+    // StreamBufferSet methods
+
+    ////////////////////////////////////////////////////////////////////////////
+    // StreamSink methods
+};
+
+// Describes a packet consumed by StreamSink or produced by StreamSource.
+struct StreamPacket {
+    // Time at which the packet is to be presented, according to the presentation
+    // clock.
+    int64 pts = NO_TIMESTAMP;
+
+    // ID of the payload buffer used for this packet. When this struct is used
+    // with StreamBufferSet, this field is the ID of a payload buffer provided
+    // via StreamBufferSet.AddPayloadBuffer. Other interfaces may define other
+    // semantics for this field.
+    uint32 payload_buffer_id;
+
+    // Offset of the packet payload in the payload buffer.
+    uint64 payload_offset;
+
+    // Size in bytes of the payload.
+    uint64 payload_size;
+
+    // A collection of flags (see constants below) describing properties of this
+    // packet.
+    uint32 flags = 0;
+
+    // The buffer configuration associated with this packet. The semantics of
+    // this field depend on the interface with which this struct is used.
+    // In many contexts, this field is not used.
+    uint64 buffer_config = 0;
+
+    // The stream associated with this packet. The semantics of this field
+    // depend on the interface with which this struct is used. In many
+    // contexts, this field is not used.
+    uint64 stream_id = 0;
+};
+
+const uint32 STREAM_PACKET_FLAG_KEY_FRAME = 0x01;
+const uint32 STREAM_PACKET_FLAG_DROPPABLE = 0x02;
+const uint32 STREAM_PACKET_FLAG_DISCONTINUITY = 0x04;
+
+const int64 NO_TIMESTAMP = 0x7fffffffffffffff;

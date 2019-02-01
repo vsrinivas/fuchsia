@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller",
+            "class/input"
+        ],
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

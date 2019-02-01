@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/netstack_getsockname_test"
+    },
+    "sandbox": {
+        "services" : [
+            "fuchsia.net.SocketProvider"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.SocketProvider"
+            ]
+        }
+    }
+}

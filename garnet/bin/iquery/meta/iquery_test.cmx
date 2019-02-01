@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/iquery_test"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

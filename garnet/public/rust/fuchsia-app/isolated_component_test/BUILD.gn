@@ -1,0 +1,102 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+
+fidl("echos") {
+  name = "fuchsia.test.echos"
+
+  sources = [
+    "echos.fidl",
+  ]
+}
+
+rustc_binary("fuchsia_app_test_outer_component_bin") {
+  name = "fuchsia_app_test_outer_component"
+  edition = "2018"
+  deps = [
+    ":echos-rustc",
+    "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+  source_root = "fuchsia_app_test_outer_component.rs"
+}
+
+test_package("fuchsia_app_test_outer_component") {
+  deps = [
+    ":fuchsia_app_test_outer_component_bin",
+  ]
+
+  tests = [
+    {
+      name = "fuchsia_app_test_outer_component"
+    },
+  ]
+}
+
+rustc_binary("fuchsia_app_test_middle_component_bin") {
+  name = "fuchsia_app_test_middle_component"
+  edition = "2018"
+  deps = [
+    ":echos-rustc",
+    "//garnet/public/fidl/fuchsia.sys:fuchsia.sys-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+  source_root = "fuchsia_app_test_middle_component.rs"
+}
+
+package("fuchsia_app_test_middle_component") {
+  deps = [
+    ":fuchsia_app_test_middle_component_bin",
+  ]
+
+  binary = "rust_crates/fuchsia_app_test_middle_component"
+
+  meta = [
+    {
+      path = rebase_path("meta/fuchsia_app_test_middle_component.cmx")
+      dest = "fuchsia_app_test_middle_component.cmx"
+    },
+  ]
+}
+
+rustc_binary("fuchsia_app_test_inner_component_bin") {
+  name = "fuchsia_app_test_inner_component"
+  edition = "2018"
+  deps = [
+    ":echos-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
+  source_root = "fuchsia_app_test_inner_component.rs"
+}
+
+package("fuchsia_app_test_inner_component") {
+  deps = [
+    ":fuchsia_app_test_inner_component_bin",
+  ]
+
+  binary = "rust_crates/fuchsia_app_test_inner_component"
+
+  meta = [
+    {
+      path = rebase_path("meta/fuchsia_app_test_inner_component.cmx")
+      dest = "fuchsia_app_test_inner_component.cmx"
+    },
+  ]
+}

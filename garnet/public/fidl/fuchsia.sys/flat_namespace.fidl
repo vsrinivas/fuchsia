@@ -1,0 +1,15 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys;
+
+struct FlatNamespace {
+  // The mount point for each of the directories below.
+  //
+  // For example, ["/pkg", "/svc"].
+  vector<string> paths;
+
+  // The directories mounted at each path in the namespace.
+  vector<handle<channel>> directories;
+};

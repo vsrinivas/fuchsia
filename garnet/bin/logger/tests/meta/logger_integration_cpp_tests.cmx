@@ -1,0 +1,19 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.logger.Log": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx",
+                "fuchsia.logger.LogSink": "fuchsia-pkg://fuchsia.com/logger#meta/logger.cmx"
+            }
+        }
+    },
+    "program": {
+        "binary": "test/logger_integration_cpp_tests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.logger.Log"
+        ]
+    }
+}

@@ -1,0 +1,10 @@
+{
+  "packages": [
+    "//garnet/bin/telephony/modem-mgr",
+    "//garnet/bin/telephony/ril-qmi",
+    "//garnet/bin/telephony/ril-qmi:ril-qmi-tests",
+    "//garnet/bin/telephony/tools/ril-ctl",
+    "//garnet/drivers/telephony/qmi-fake-transport",
+    "//garnet/drivers/telephony/qmi-usb-transport"
+  ]
+}

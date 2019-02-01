@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/two_providers_two_engines_test_app"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.TraceController"
+        ]
+    }
+}

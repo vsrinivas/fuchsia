@@ -1,0 +1,135 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.sme;
+
+using fuchsia.wlan.common;
+
+struct BssInfo {
+    array<uint8>:6 bssid;
+    vector<uint8>:32 ssid;
+    int8 rx_dbm;
+    uint8 channel;
+    bool protected;
+    bool compatible;
+};
+
+struct EssInfo {
+    BssInfo best_bss;
+};
+
+enum ScanErrorCode {
+    NOT_SUPPORTED = 1;
+    INTERNAL_ERROR = 2;
+};
+
+struct ScanError {
+    ScanErrorCode code;
+    string message;
+};
+
+interface ScanTransaction {
+    // Can be called several times to deliver incremental scan results
+    -> OnResult(vector<EssInfo> aps);
+    -> OnFinished();
+    -> OnError(ScanError error);
+};
+
+struct ScanRequest {
+    uint8 timeout; // seconds
+    fuchsia.wlan.common.ScanType scan_type;
+};
+
+enum ConnectResultCode {
+    // Connected successfully
+    SUCCESS = 0;
+    // The request was superseded by another connect or disconnect command
+    CANCELED = 1;
+    // Failed to join for some reason
+    FAILED = 2;
+    // Failed to join due to bad credentials
+    BAD_CREDENTIALS = 3;
+    // TODO(hahnr): Add result code for attempting to join an incompatible network
+};
+
+interface ConnectTransaction {
+    // Could add more events here to notify the client of the progress
+    -> OnFinished(ConnectResultCode code);
+};
+
+struct RadioConfig {
+    bool override_phy;
+    fuchsia.wlan.common.PHY phy;
+    bool override_cbw;
+    fuchsia.wlan.common.CBW cbw;
+    bool override_primary_chan;
+    uint8 primary_chan;
+};
+
+struct ConnectRequest {
+    vector<uint8>:32 ssid;
+    vector<uint8>:64 password;
+
+    RadioConfig radio_cfg;
+    fuchsia.wlan.common.ScanType scan_type;
+};
+
+struct ClientStatusResponse {
+    BssInfo? connected_to;
+    // If non-empty, this is the SSID we are currently trying to connect to
+    vector<uint8>:32 connecting_to_ssid;
+};
+
+interface ClientSme {
+    Scan(ScanRequest req, request<ScanTransaction> txn);
+    Connect(ConnectRequest req, request<ConnectTransaction>? txn);
+    Disconnect() -> ();
+    Status() -> (ClientStatusResponse resp);
+};
+
+struct ApConfig {
+    vector<uint8>:32 ssid;
+    vector<uint8>:64 password;
+    uint8 channel;
+};
+
+enum StartApResultCode {
+    // TODO(porce): Fix naming style.
+    SUCCESS = 0;
+    ALREADY_STARTED = 1;
+    INTERNAL_ERROR = 2;
+    CANCELED = 3;
+    TIMED_OUT = 4;
+    PREVIOUS_START_IN_PROGRESS = 5;
+    INVALID_ARGUMENTS = 6;
+    DFS_UNSUPPORTED = 7;
+};
+
+interface ApSme {
+    Start(ApConfig config) -> (StartApResultCode code);
+    Stop() -> ();
+};
+
+struct MeshConfig {
+    vector<uint8>:32 mesh_id;
+    uint8 channel;
+};
+
+enum JoinMeshResultCode {
+    SUCCESS = 0;
+    CANCELED = 1;
+    INTERNAL_ERROR = 2;
+    INVALID_ARGUMENTS = 3;
+    DFS_UNSUPPORTED = 4;
+};
+
+enum LeaveMeshResultCode {
+    SUCCESS = 0;
+    INTERNAL_ERROR = 1;
+};
+
+interface MeshSme {
+    Join(MeshConfig config) -> (JoinMeshResultCode code);
+    Leave() -> (LeaveMeshResultCode code);
+};

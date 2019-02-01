@@ -1,0 +1,106 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+source_set("lib") {
+  testonly = true
+
+  sources = [
+    "env_config.cc",
+    "env_config.h",
+    "run_test_component.cc",
+    "run_test_component.h",
+    "test_metadata.cc",
+    "test_metadata.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/cmx",
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
+  ]
+}
+
+executable("bin") {
+  testonly = true
+  output_name = "run_test_component"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//zircon/public/fidl/fuchsia-logger",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("run_test_component") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      # Deprecated binary name
+      name = "run_test_component"
+      shell = true
+    },
+    {
+      name = "run-test-component"
+      source = "run_test_component"
+      shell = true
+    },
+  ]
+
+  resources = [
+    {
+      dest = "environment.config"
+      path = rebase_path("environment.config")
+    },
+  ]
+}
+
+executable("test_bin") {
+  testonly = true
+  output_name = "run_test_component_unittests"
+
+  sources = [
+    "env_config_unittest.cc",
+    "run_test_component_unittest.cc",
+    "test_metadata_unittest.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("run_test_component_unittests") {
+  deps = [
+    ":test_bin",
+  ]
+
+  tests = [
+    {
+      name = "run_test_component_unittests"
+    },
+  ]
+}

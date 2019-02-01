@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/config/services"
+    ],
+    "packages": [
+        "//garnet/bin/kernel_crash_checker:config"
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "run"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

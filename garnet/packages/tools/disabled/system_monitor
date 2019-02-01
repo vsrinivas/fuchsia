@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/system_monitor/harvester:system_monitor_harvester"
+    ]
+}

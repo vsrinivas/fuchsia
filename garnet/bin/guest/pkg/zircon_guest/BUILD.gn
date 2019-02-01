@@ -1,0 +1,37 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/bin/guest/pkg/guest_package.gni")
+
+package("services_config") {
+  # This package must be part of the system image (of the guest) so that it
+  # exists before sysmgr comes up.
+  deprecated_system_image = true
+  resources = [
+    {
+      path = rebase_path("services.config")
+      dest = "sysmgr/services.config"
+    },
+  ]
+}
+
+guest_package("zircon_guest") {
+  deps = [
+    "//build/images/guest:guest",
+    "//build/images/guest:guest_fvm",
+  ]
+  zircon = "$root_out_dir/guest.zbi"
+
+  cmdline = "console.path=/dev/class/console/virtio-console"
+
+  disk_filename = "filesystem.fvm"
+  fvm = "$root_out_dir/guest_fvm.blk"
+  resources = [
+    {
+      path = rebase_path(fvm)
+      dest = "${disk_filename}"
+    },
+  ]
+  block_devices = [ "/guest/data/${disk_filename},ro" ]
+}

@@ -1,0 +1,73 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys;
+
+// Maximum length for an environment label.
+const uint32 kLabelMaxLength = 32;
+
+struct EnvironmentOptions {
+  // True if this environment should inherit services provided by the
+  // parent environment.
+  bool inherit_parent_services;
+  // True if components in this environment can share a runner provided
+  // by the parent environment. If false, a new runner will be started
+  // in this environment for components.
+  bool allow_parent_runners;
+  // True if this environment should be killed first in out of memory
+  // situations by setting the ZX_PROP_JOB_KILL_ON_OOM property on this
+  // environment's job.
+  bool kill_on_oom;
+};
+
+// An interface for managing a set of applications.
+//
+// Applications run inside environments, which provide ambient services and
+// support for their lifecycle.
+[Discoverable] interface Environment {
+  // Creates a new environment nested inside this environment.
+  //
+  // When applications are created inside the nested environment using the
+  // environment's |Launcher|, the environment requests the
+  // environment services from |host_directory| before passing those services to
+  // the newly created application in its |StartupInfo|.
+  //
+  // The |controller| can be used to control the lifecycle of the created
+  // environment. Note that by default the environment will be killed
+  // automatically when the |EnvironmentController|'s interface is closed. You
+  // can use |EnvironmentController.Detach| to disable this behavior.
+  //
+  // |label| defines the new environment's label/name. It must be unique within
+  // the parent environment (though not globally) and is used for isolating
+  // separate environments. It can also be used for diagnostic purposes. The
+  // label will be truncated if it is longer than |kLabelMaxLength|.
+  //
+  // |additional_services|, which may be empty, contains a list of services
+  // that the environment provides, which are hosted by
+  // |additional_services.host_directory|. If |options.inherit_parent_services|
+  // is false, |host_directory| must provide a |Loader| service if it wishes to
+  // allow new components to be loaded in the new environment.
+  //
+  // |options| provides additional options, see |EnvironmentOptions| for
+  // details.
+  1: CreateNestedEnvironment(request<Environment> environment,
+                             request<EnvironmentController> controller,
+                             string label,
+                             ServiceList? additional_services,
+                             EnvironmentOptions options);
+
+  // Gets the Launcher associated with this environment.
+  //
+  // Applications created using this application launcher will be given the
+  // environment services provided by this environment's |host_directory|.
+  2: GetLauncher(request<Launcher> launcher);
+
+  // Gets a superset of services provided by this environment's
+  // |host_directory|.
+  3: GetServices(request<ServiceProvider> services);
+
+  // Gets a superset of services provided by this environment's
+  // |host_directory|.
+  4: GetDirectory(handle<channel> directory_request);
+};

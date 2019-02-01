@@ -1,0 +1,110 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+test_package("netstack_tests") {
+  deps = [
+    "//garnet/go/src/netstack/tests/automated:netstack_getaddrinfo_test",
+    "//garnet/go/src/netstack/tests/automated:netstack_getsockname_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_gonet_test",
+    "//garnet/go/src/netstack/tests/automated/netstack_loopback_test",
+  ]
+
+  tests = [
+    {
+      name = "netstack_loopback_test"
+    },
+    {
+      name = "netstack_getaddrinfo_test"
+    },
+    {
+      name = "netstack_getsockname_test"
+    },
+    {
+      name = "netstack_gonet_test"
+    },
+  ]
+}
+
+package("netstack_manual_tests") {
+  testonly = true
+
+  deps = [
+    "//garnet/go/src/netstack/tests/manual:closetest",
+    "//garnet/go/src/netstack/tests/manual:getaddrinfo_test",
+    "//garnet/go/src/netstack/tests/manual:gethostbyname_test",
+    "//garnet/go/src/netstack/tests/manual:keepalivetest",
+    "//garnet/go/src/netstack/tests/manual:mctest",
+    "//garnet/go/src/netstack/tests/manual:nbiotest",
+    "//garnet/go/src/netstack/tests/manual:passfdtest",
+    "//garnet/go/src/netstack/tests/manual:polltest",
+    "//garnet/go/src/netstack/tests/manual:selecttest",
+    "//garnet/go/src/netstack/tests/manual:sockettest",
+    "//garnet/go/src/netstack/tests/manual:sockopttest",
+    "//garnet/go/src/netstack/tests/manual:udptest",
+  ]
+
+  binaries = [
+    {
+      name = "closetest"
+      shell = true
+    },
+
+    {
+      name = "getaddrinfo_test"
+      shell = true
+    },
+
+    {
+      name = "gethostbyname_test"
+      shell = true
+    },
+
+    {
+      name = "keepalivetest"
+      shell = true
+    },
+
+    {
+      name = "mctest"
+      shell = true
+    },
+
+    {
+      name = "nbiotest"
+      shell = true
+    },
+
+    {
+      name = "passfdtest"
+      shell = true
+    },
+
+    {
+      name = "polltest"
+      shell = true
+    },
+
+    {
+      name = "selecttest"
+      shell = true
+    },
+
+    {
+      name = "sockettest"
+      shell = true
+    },
+
+    {
+      name = "sockopttest"
+      shell = true
+    },
+
+    {
+      name = "udptest"
+      shell = true
+    },
+  ]
+}

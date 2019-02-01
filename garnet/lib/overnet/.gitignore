@@ -1,0 +1,10 @@
+BUILD.bazel
+WORKSPACE
+.bazelrc
+bazel-bin
+bazel-genfiles
+bazel-out
+bazel-overnet
+bazel-testlogs
+fuzz-*.log
+corpora

@@ -1,0 +1,8 @@
+{
+    "host_tests": [
+        "//garnet/go/src/pm:pm_build_test",
+        "//garnet/go/src/pm:pm_cmd_pm_genkey_test",
+        "//garnet/go/src/pm:pm_keys_test",
+        "//garnet/go/src/pm:pm_repo_test"
+    ]
+}

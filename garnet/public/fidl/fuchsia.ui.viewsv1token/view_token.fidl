@@ -1,0 +1,12 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.viewsv1token;
+
+// A view owner allows linking its associated view into a view hierarchy.
+//
+// This interface is only intended to be used as a token, analogous to how
+// Scenic View/ViewHolder resources use eventpairs as tokens.
+interface ViewOwner {
+};

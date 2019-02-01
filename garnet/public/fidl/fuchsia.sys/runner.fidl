@@ -1,0 +1,78 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys;
+
+using fuchsia.mem;
+
+// Information given to components at startup.
+//
+// For ELF binaries, this information is provided in the initialization message
+// given to libc by fuchsia.process.Launcher.
+struct StartupInfo {
+  // The launch info for the to start.
+  LaunchInfo launch_info;
+
+  // The namespace in which to run the component.
+  FlatNamespace flat_namespace;
+
+  // Key string value string map of the component's program metadata, obtained
+  // from its component manifest.
+  vector<ProgramMetadata>? program_metadata;
+
+  // TODO(abarth): Add more fields to this struct relating to component and
+  // environment identity.
+};
+
+// Program information about a component.
+struct ProgramMetadata {
+  // Key for program metadata pair. E.g. "binary" for an ELF binary component,
+  // or "data" for a flutter/dart component.
+  string key;
+
+  // Value for program metadata pair. E.g. "bin/app" for a "binary" key, or
+  // "data/foo" for a flutter/dart component.
+  string value;
+};
+
+// A binary representation of a component.
+//
+// Typically provided to |Runner.StartComponent| when starting a
+// component.
+struct Package {
+  // A read-only binary representation of the component. For example, if the
+  // component is intended to run in the Dart virtual machine, this data might
+  // contain a dartx package.
+  fuchsia.mem.Buffer? data;
+
+  // A directory containing the contents of the package. For example, if the
+  // component is stored in pkgfs, this directory will be the pkgfs directory
+  // containing the package.
+  handle<channel>? directory;
+
+  // Resolved URL of the component. This is the url specified in startup_info
+  // after following redirects and resolving relative paths.
+  string resolved_url;
+};
+
+// An interface for running components.
+//
+// Typically exposed by components that provide execution environments for
+// particular classes of programs. For example, the Dart virtual machine exposes
+// this interface to run Dart programs.
+[Discoverable]
+interface Runner {
+  // Execute the given component.
+  //
+  // Upon startup, the component is to be given the information in
+  // |startup_info|, but the mechanism by which the component receives that
+  // information is up to the component runner.
+  //
+  // The |controller| interface request typically originates from the
+  // |Launcher.CreateComponent| message that caused this
+  // component to be started.
+  1: StartComponent(Package package,
+                    StartupInfo startup_info,
+                    request<ComponentController>? controller);
+};

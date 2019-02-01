@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/net_ctl"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.net.policy.Observer"
+        ]
+    }
+}

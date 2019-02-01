@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/stash:stash",
+        "//garnet/bin/stash_ctl:stash_ctl"
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/device_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

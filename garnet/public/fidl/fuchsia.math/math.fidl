@@ -1,0 +1,79 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.math;
+
+struct Point {
+    int32 x;
+    int32 y;
+};
+
+struct PointF {
+    float32 x;
+    float32 y;
+};
+
+struct Point3F {
+    float32 x;
+    float32 y;
+    float32 z;
+};
+
+struct Size {
+    int32 width;
+    int32 height;
+};
+
+struct SizeF {
+    float32 width;
+    float32 height;
+};
+
+struct Rect {
+    int32 x;
+    int32 y;
+    int32 width;
+    int32 height;
+};
+
+struct RectF {
+    float32 x;
+    float32 y;
+    float32 width;
+    float32 height;
+};
+
+struct RRectF {
+    float32 x;
+    float32 y;
+    float32 width;
+    float32 height;
+    float32 top_left_radius_x;
+    float32 top_left_radius_y;
+    float32 top_right_radius_x;
+    float32 top_right_radius_y;
+    float32 bottom_left_radius_x;
+    float32 bottom_left_radius_y;
+    float32 bottom_right_radius_x;
+    float32 bottom_right_radius_y;
+};
+
+struct Transform {
+    // Row major order.
+    array<float32>:16 matrix;
+};
+
+struct Inset {
+    int32 top;
+    int32 right;
+    int32 bottom;
+    int32 left;
+};
+
+struct InsetF {
+    float32 top;
+    float32 right;
+    float32 bottom;
+    float32 left;
+};

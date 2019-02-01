@@ -1,0 +1,120 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("console") {
+  sources = [
+    "actions.cc",
+    "actions.h",
+    "analyze_memory.cc",
+    "analyze_memory.h",
+    "command.cc",
+    "command.h",
+    "command_group.h",
+    "command_line_options.cc",
+    "command_line_options.h",
+    "command_parser.cc",
+    "command_parser.h",
+    "command_utils.cc",
+    "command_utils.h",
+    "console.cc",
+    "console.h",
+    "console_context.cc",
+    "console_context.h",
+    "console_main.cc",
+    "console_main.h",
+    "format_context.cc",
+    "format_context.h",
+    "format_frame.cc",
+    "format_frame.h",
+    "format_memory.cc",
+    "format_memory.h",
+    "format_register.cc",
+    "format_register.h",
+    "format_register_arm64.cc",
+    "format_register_arm64.h",
+    "format_register_x64.cc",
+    "format_register_x64.h",
+    "format_settings.cc",
+    "format_settings.h",
+    "format_table.cc",
+    "format_table.h",
+    "format_value.cc",
+    "format_value.h",
+    "format_value_process_context_impl.cc",
+    "format_value_process_context_impl.h",
+    "input_location_parser.cc",
+    "input_location_parser.h",
+    "line_input.cc",
+    "line_input.h",
+    "nouns.cc",
+    "nouns.h",
+    "output_buffer.cc",
+    "output_buffer.h",
+    "source_util.cc",
+    "source_util.h",
+    "string_formatters.cc",
+    "string_formatters.h",
+    "string_util.cc",
+    "string_util.h",
+    "switch_record.h",
+    "verbs.cc",
+    "verbs.h",
+    "verbs_breakpoint.cc",
+    "verbs_control.cc",
+    "verbs_memory.cc",
+    "verbs_process.cc",
+    "verbs_shared.cc",
+    "verbs_symbol.cc",
+    "verbs_system.cc",
+    "verbs_thread.cc",
+  ]
+
+  deps = []
+  public_deps = [
+    "//garnet/bin/zxdb/client",
+    "//garnet/bin/zxdb/expr",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+
+  if (current_toolchain != host_toolchain) {
+    deps += [
+      "//garnet/public/lib/fxl",
+      "//zircon/public/lib/fdio",
+      "//zircon/public/lib/zx",
+    ]
+  }
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "actions_unittest.cc",
+    "analyze_memory_unittest.cc",
+    "command_parser_unittest.cc",
+    "command_utils_unittest.cc",
+    "format_context_unittest.cc",
+    "format_frame_unittest.cc",
+    "format_memory_unittest.cc",
+    "format_register_unittest.cc",
+    "format_settings_unittest.cc",
+    "format_table_unittest.cc",
+    "format_value_unittest.cc",
+    "input_location_parser_unittest.cc",
+    "line_input_unittest.cc",
+    "mock_format_value_process_context.cc",
+    "mock_format_value_process_context.h",
+    "string_formatters_unittest.cc",
+    "string_util_unittest.cc",
+    "source_util_unittest.cc",
+  ]
+
+  deps = [
+    ":console",
+    "//garnet/bin/zxdb/client:test_support",
+    "//garnet/bin/zxdb/common:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
+    "//third_party/googletest:gtest",
+  ]
+}

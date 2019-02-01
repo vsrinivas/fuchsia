@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/ethernet",
+            "misc"
+        ],
+        "services": [
+            "fuchsia.guest.vmm.LaunchInfoProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

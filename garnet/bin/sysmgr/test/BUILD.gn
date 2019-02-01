@@ -1,0 +1,33 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("config_test") {
+  testonly = true
+  output_name = "config_test"
+  sources = [
+    "config_test.cc",
+  ]
+  deps = [
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+package("sysmgr_tests") {
+  testonly = true
+
+  deps = [
+    ":config_test",
+  ]
+
+  tests = [
+    {
+      name = "config_test"
+    },
+  ]
+}

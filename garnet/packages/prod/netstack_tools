@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/netstack"
+    ],
+    "packages": [
+        "//garnet/go/src/netstack:netstack_tools"
+    ]
+}

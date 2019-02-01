@@ -1,0 +1,167 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//build/test/test_package.gni")
+
+executable("bin") {
+  output_name = "mdns"
+
+  sources = [
+    "address_prober.cc",
+    "address_prober.h",
+    "address_responder.cc",
+    "address_responder.h",
+    "dns_formatting.cc",
+    "dns_formatting.h",
+    "dns_message.cc",
+    "dns_message.h",
+    "dns_reading.cc",
+    "dns_reading.h",
+    "dns_writing.cc",
+    "dns_writing.h",
+    "host_name_resolver.cc",
+    "host_name_resolver.h",
+    "instance_prober.cc",
+    "instance_prober.h",
+    "instance_requestor.cc",
+    "instance_requestor.h",
+    "instance_responder.cc",
+    "instance_responder.h",
+    "main.cc",
+    "mdns.cc",
+    "mdns.h",
+    "mdns_addresses.cc",
+    "mdns_addresses.h",
+    "mdns_agent.h",
+    "mdns_fidl_util.cc",
+    "mdns_fidl_util.h",
+    "mdns_interface_transceiver.cc",
+    "mdns_interface_transceiver.h",
+    "mdns_interface_transceiver_v4.cc",
+    "mdns_interface_transceiver_v4.h",
+    "mdns_interface_transceiver_v6.cc",
+    "mdns_interface_transceiver_v6.h",
+    "mdns_names.cc",
+    "mdns_names.h",
+    "mdns_service_impl.cc",
+    "mdns_service_impl.h",
+    "mdns_transceiver.cc",
+    "mdns_transceiver.h",
+    "packet_reader.cc",
+    "packet_reader.h",
+    "packet_writer.cc",
+    "packet_writer.h",
+    "prober.cc",
+    "prober.h",
+    "reply_address.cc",
+    "reply_address.h",
+    "resource_renewer.cc",
+    "resource_renewer.h",
+  ]
+
+  deps = [
+    "//garnet/bin/media/util",
+    "//garnet/lib/inet",
+    "//garnet/public/fidl/fuchsia.mdns",
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fostr",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+test("tests") {
+  output_name = "mdns_tests"
+
+  sources = [
+    "dns_message.cc",
+    "dns_message.h",
+    "dns_reading.cc",
+    "dns_reading.h",
+    "packet_reader.cc",
+    "packet_reader.h",
+    "test/dns_reading_test.cc",
+  ]
+
+  deps = [
+    "//garnet/lib/inet",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("mdns") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "mdns"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mdns.cmx")
+      dest = "mdns.cmx"
+    },
+  ]
+}
+
+package("mdns_config") {
+  deprecated_system_image = true
+  resources = [
+    {
+      dest = "sysmgr/mdns.config"
+      path = rebase_path("service.config")
+    },
+  ]
+}
+
+test_package("mdns_tests") {
+  deps = [
+    ":tests",
+  ]
+
+  tests = [
+    {
+      name = "mdns_tests"
+    },
+  ]
+}
+
+fuzz_target("packet_reader_fuzzer") {
+  testonly = true
+  sources = [
+    "dns_message.cc",
+    "dns_message.h",
+    "dns_reading.cc",
+    "dns_reading.h",
+    "packet_reader.cc",
+    "packet_reader.h",
+    "packet_reader_fuzzer.cc",
+  ]
+  deps = [
+    "//garnet/lib/inet",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+fuzz_package("mdns_fuzzers") {
+  targets = [ ":packet_reader_fuzzer" ]
+  sanitizers = [
+    "asan",
+    "ubsan",
+  ]
+}

@@ -1,0 +1,13 @@
+# Copyright 2019 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# pkgfs.gni provides a stable contract between //garnet and //build to tell
+# //build/images in particular where to find the pkgsvr binary. This file
+# primarily exists to aid in transitions where pkgsvr source or packages are
+# moved/changed.
+
+# The label that will produce a package containing bin/pkgsvr, the pkgfs binary.
+pkgfs_package_label = "//garnet/go/src/amber:amber"
+# The name of the binary withing the pkgfs package that hosts pkgfs (pkgsvr).
+pkgfs_binary_name = "pkgsvr"

@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/device_settings"
+    ],
+    "packages": [
+        "//garnet/go/src/device_settings:device_settings_gotests"
+    ]
+}

@@ -1,0 +1,53 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "logger"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:libc",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:timebomb",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+fuchsia_component("logger_component") {
+  manifest = rebase_path("meta/logger.cmx")
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/logger"
+}
+
+package("logger") {
+  components = [ ":logger_component" ]
+}
+
+fuchsia_test_component("logger_test_component") {
+  deps = [
+    ":bin",
+  ]
+  binary = "logger_bin_test"
+}
+
+package("logger_tests") {
+  testonly = true
+  components = [ ":logger_test_component" ]
+}

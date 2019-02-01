@@ -1,0 +1,66 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "stash_ctl"
+  with_unit_tests = true
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.stash:fuchsia.stash-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//zircon/public/fidl/fuchsia-mem:fuchsia-mem-rustc",
+  ]
+}
+
+package("stash_ctl") {
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "stash_ctl"
+      path = "rust_crates/stash_ctl"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/stash_ctl.cmx")
+      dest = "stash_ctl.cmx"
+    },
+  ]
+}
+
+package("stash_ctl_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "stash_ctl_bin_test"
+    },
+  ]
+}

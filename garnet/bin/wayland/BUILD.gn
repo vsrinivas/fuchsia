@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+test_package("wayland_tests") {
+  deps = [
+    "bridge:tests",
+    "core:tests",
+    "scanner:tests",
+  ]
+  tests = [
+    {
+      name = "test_wayland_bridge_test_lib_test"
+    },
+    {
+      name = "wayland_scanner_front_end_test_lib_test"
+    },
+    {
+      name = "wayland_scanner_back_end_test_lib_test"
+    },
+    {
+      name = "fuchsia_wayland_core_lib_test"
+    },
+  ]
+}

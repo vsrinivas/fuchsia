@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "boot": [ "log" ],
+        "services": [
+            "fuchsia.crash.Analyzer",
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.Connectivity"
+        ]
+    }
+}

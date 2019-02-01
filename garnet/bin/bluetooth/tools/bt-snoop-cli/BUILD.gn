@@ -1,0 +1,38 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "bt_snoop_cli"
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:clap",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:structopt",
+  ]
+}
+
+package("bt-snoop-cli") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/bt_snoop_cli"
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-snoop-cli.cmx")
+      dest = "bt-snoop-cli.cmx"
+    },
+  ]
+}

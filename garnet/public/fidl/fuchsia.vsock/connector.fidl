@@ -1,0 +1,50 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.vsock;
+
+using zx;
+using fuchsia.hardware.vsock;
+
+/// Collection of objects that represent an open connection.
+struct ConnectionTransport {
+    /// |data| socket that is ultimately given to the underlying vsock driver and
+    /// is where all incoming data can be received from.
+    handle<socket> data;
+    /// |Connection| interface that is retained by a vsock service that can be
+    /// used to manipulate the state of a connection or perform more complex
+    /// operations than just sending and receiving on a socket.
+    request<Connection> con;
+};
+
+/// Interface for manipulating the state of an active connection.
+interface Connection {
+    /// Trigger asynchronous shutdown. The underlying channel will be closed
+    /// once shutdown is complete. Shutdown has an implicit barrier as any already
+    /// queued sends will complete, but any additional sends will generate errors
+    Shutdown();
+    /// Send a VMO. The reply indicates that the VMO send has finished and that
+    /// data may be queued on the socket again without causing races.
+    SendVmo(handle<vmo> vmo, uint64 off, uint64 len) -> (zx.status status);
+};
+
+/// Interface presented by a listener to accept or reject connections
+interface Acceptor {
+    /// The response is either a |ConnectionTransport| to indicate that the connection
+    /// is accepted, or none to indicate that it should be rejected.
+    Accept(fuchsia.hardware.vsock.Addr addr) -> (ConnectionTransport? con);
+};
+
+/// Exposed by a service that can act as a bridge to the underlying vsock driver and
+/// provides the ability for listeners to be multiplexed by port and manages dynamic
+/// port allocation for outbound connections.
+[Discoverable]
+interface Connector {
+    /// Attempt to establish a connection to the specified remote cid/port pair.
+    /// No local port is specified as an ephemeral one will automatically be allocated.
+    Connect(uint32 remote_cid, uint32 remote_port, ConnectionTransport con) -> (zx.status status, uint32 local_port);
+    /// Registers a listener for a local port. There can only be one listener for
+    /// a single port at a time.
+    Listen(uint32 local_port, Acceptor acceptor) -> (zx.status status);
+};

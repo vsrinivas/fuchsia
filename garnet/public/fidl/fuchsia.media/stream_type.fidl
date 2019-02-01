@@ -1,0 +1,118 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.media;
+
+using fuchsia.images;
+
+// Describes the type of an elementary stream.
+struct StreamType {
+    // Medium-specific type information.
+    MediumSpecificStreamType medium_specific;
+
+    // Encoding (see constants below).
+    string encoding;
+
+    // Encoding-specific parameters.
+    vector<uint8>? encoding_parameters;
+};
+
+// A union of all medium-specific stream type structs.
+union MediumSpecificStreamType {
+    AudioStreamType audio;
+    VideoStreamType video;
+    TextStreamType text;
+    SubpictureStreamType subpicture;
+};
+
+const string MEDIA_ENCODING_UNSUPPORTED = "fuchsia.media.unsupported";
+
+const string AUDIO_ENCODING_AAC = "fuchsia.media.aac";
+const string AUDIO_ENCODING_AMRNB = "fuchsia.media.amrnb";
+const string AUDIO_ENCODING_AMRWB = "fuchsia.media.amrwb";
+const string AUDIO_ENCODING_APTX = "fuchsia.media.aptx";
+const string AUDIO_ENCODING_FLAC = "fuchsia.media.flac";
+const string AUDIO_ENCODING_GSMMS = "fuchsia.media.gsmms";
+const string AUDIO_ENCODING_LPCM = "fuchsia.media.lpcm";
+const string AUDIO_ENCODING_MP3 = "fuchsia.media.mp3";
+const string AUDIO_ENCODING_PCMALAW = "fuchsia.media.pcmalaw";
+const string AUDIO_ENCODING_PCMMULAW = "fuchsia.media.pcmmulaw";
+const string AUDIO_ENCODING_SBC = "fuchsia.media.sbc";
+const string AUDIO_ENCODING_VORBIS = "fuchsia.media.vorbis";
+
+const string VIDEO_ENCODING_H263 = "fuchsia.media.h263";
+const string VIDEO_ENCODING_H264 = "fuchsia.media.h264";
+const string VIDEO_ENCODING_MPEG4 = "fuchsia.media.mpeg4";
+const string VIDEO_ENCODING_THEORA = "fuchsia.media.theora";
+const string VIDEO_ENCODING_UNCOMPRESSED = "fuchsia.media.uncompressed_video";
+const string VIDEO_ENCODING_VP3 = "fuchsia.media.vp3";
+const string VIDEO_ENCODING_VP8 = "fuchsia.media.vp8";
+const string VIDEO_ENCODING_VP9 = "fuchsia.media.vp9";
+
+///////////////////////////////////////////////////////////////////////////////
+// Audio
+
+// Describes the type of an audio elementary stream.
+struct AudioStreamType {
+    AudioSampleFormat sample_format;
+    uint32 channels;
+    uint32 frames_per_second;
+    // TODO(mpuryear): Add channel config.
+};
+
+enum AudioSampleFormat {
+    // 8-bit unsigned samples, sample size 1 byte.
+    UNSIGNED_8 = 1;
+
+    // 16-bit signed samples, host-endian, sample size 2 bytes.
+    SIGNED_16 = 2;
+
+    // 24-bit signed samples in 32 bits, host-endian, sample size 4 bytes.
+    SIGNED_24_IN_32 = 3;
+
+    // 32-bit floating-point samples, sample size 4 bytes.
+    FLOAT = 4;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Video
+
+// Describes the type of a video elementary stream.
+struct VideoStreamType {
+    fuchsia.images.PixelFormat pixel_format;
+    // TODO(dalesat): Use fuchsia.images.ColorSpace.
+    ColorSpace color_space;
+    uint32 width;
+    uint32 height;
+    uint32 coded_width;
+    uint32 coded_height;
+    uint32 pixel_aspect_ratio_width;
+    uint32 pixel_aspect_ratio_height;
+    uint32 stride;
+};
+
+// TODO(dalesat): Replace with fuchsia.images.ColorSpace.
+enum ColorSpace {
+    UNKNOWN = 0;
+    NOT_APPLICABLE = 1;
+    JPEG = 2;
+    HD_REC709 = 3;
+    SD_REC601 = 4;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Text
+
+struct TextStreamType {
+    // TODO(dalesat): Define.
+    uint8 dummy;
+};
+
+///////////////////////////////////////////////////////////////////////////////
+// Subpicture
+
+struct SubpictureStreamType {
+    // TODO(dalesat): Define.
+    uint8 dummy;
+};

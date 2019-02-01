@@ -1,0 +1,51 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("process") {
+  sources = [
+    "process_builder.cc",
+    "process_builder.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-process",
+    "//zircon/public/lib/zx",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "process_unittests"
+
+  sources = [
+    "process_builder_unittest.cc",
+  ]
+
+  deps = [
+    ":process",
+    "//garnet/public/lib/component/cpp/testing",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("process_unittests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+  ]
+
+  tests = [
+    {
+      name = "process_unittests"
+    },
+  ]
+}

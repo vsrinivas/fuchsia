@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/drivers/video/amlogic-decoder:test_amlogic_codec_factory_package",
+        "//garnet/examples/media:use_h264_decoder_test"
+    ]
+}

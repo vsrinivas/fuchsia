@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/developer/tiles",
+        "//garnet/bin/developer/tiles_ctl"
+    ]
+}

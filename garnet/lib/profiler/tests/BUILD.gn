@@ -1,0 +1,85 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+gperftools_src_root = "//third_party/gperftools/src/tests/"
+
+executable("stacktrace_unittest") {
+  #  testonly = true
+
+  sources = [
+    rebase_path("stacktrace_unittest.cc", ".", gperftools_src_root),
+  ]
+
+  deps = [
+    "//garnet/lib/profiler:profiler_static",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+source_set("testutil") {
+  sources = [
+    rebase_path("testutil.cc", ".", gperftools_src_root),
+  ]
+  deps = [
+    "//garnet/lib/profiler:profiler_static",
+  ]
+}
+
+executable("profiler_unittest") {
+  #  testonly = true
+
+  sources = [
+    rebase_path("profiler_unittest.cc", ".", gperftools_src_root),
+  ]
+
+  deps = [
+    ":testutil",
+    "//garnet/lib/profiler:profiler_static",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+executable("profiledata_unittest") {
+  #  testonly = true
+
+  sources = [
+    rebase_path("profiledata_unittest.cc", ".", gperftools_src_root),
+  ]
+
+  deps = [
+    ":testutil",
+    "//garnet/lib/profiler:profiler_static",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+  ]
+}
+
+package("profiler_tests") {
+  #  testonly = true
+  deprecated_system_image = true
+
+  deps = [
+    ":profiledata_unittest",
+    ":profiler_unittest",
+    ":stacktrace_unittest",
+  ]
+
+  # Tests will live inside /pkgfs/system/test/
+
+  binaries = [
+    {
+      name = "stacktrace_unittest"
+    },
+    {
+      name = "profiler_unittest"
+    },
+    {
+      name = "profiledata_unittest"
+    },
+  ]
+}

@@ -1,0 +1,78 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be found
+// in the LICENSE file.
+
+library fuchsia.pkg;
+
+using fuchsia.io;
+using zx;
+
+/// Manages the system package cache.
+///
+/// This interface is intended to be implemented by the package manager component and used by
+/// package resolver components.
+[Discoverable]
+interface PackageCache {
+    /// Fetches the package using the provided |fetcher|, unless it is already
+    /// present on the local system.
+    ///
+    /// Arguments:
+    /// * |meta_far_blob_id| is the blob id for the package's meta.far.
+    /// * |meta_far_length| is the length in bytes of the package's meta.far.
+    /// * |selectors| are the package selectors (TODO: link to docs).
+    /// * |fetcher| is the fetcher that will download the blobs for this package.
+    /// * |dir| is an optional request for a directory that will be resolved when the package has
+    ///   been successfully cached.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the package was successfully cached.
+    /// * |ZX_ERR_ACCESS_DENIED| if the fetcher does not have permission to download a blob.
+    /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
+    /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find a blob.
+    /// * |ZX_ERR_NO_SPACE| if there is no space available to store the package.
+    /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download a blob.
+    1: Fetch(
+           BlobId meta_far_blob_id,
+           uint64 meta_far_length,
+           vector<string> selectors,
+           BlobFetcher fetcher,
+           request<fuchsia.io.Directory>? dir
+           ) -> (zx.status status);
+
+    /// Opens the package, or error out if it is not present on the local system.
+    ///
+    /// Arguments:
+    /// * |meta_far_blob_id| is the blob id for the package's meta.far.
+    /// * |selectors| are the package selectors (TODO: link to docs).
+    /// * |dir| is a request for a directory that will be resolved when the package has been
+    ///   successfully cached.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if the package was successfully opened.
+    /// * |ZX_ERR_NOT_FOUND| if the package does not exist.
+    2: Open(
+           BlobId meta_far_blob_id,
+           vector<string> selectors,
+           request<fuchsia.io.Directory> dir
+           ) -> (zx.status status);
+};
+
+/// The |BlobFetcher| is an abstract interface that is provided by a |PackageResolver| to the
+/// |PackageCache| to fetch one or more blobs.
+interface BlobFetcher {
+    /// Fetches a blob.
+    ///
+    /// Arugments:
+    /// * |blob| is the merkle root for the blob.
+    /// * |file| is the file the blob should be written into. This file must already be truncated
+    ///   to the correct size by the caller. Implementations must not attempt to truncate the file.
+    ///
+    /// Return Values:
+    /// * |ZX_OK| if successful.
+    /// * |ZX_ERR_ACCESS_DENIED| if the fetcher does not have permission to download the blob.
+    /// * |ZX_ERR_IO_DATA_INTEGRITY| is returned if the blob is corrupt.
+    /// * |ZX_ERR_IO| if there is some other unspecified error during I/O.
+    /// * |ZX_ERR_NOT_FOUND| if the fetcher is not able to find the blob.
+    /// * |ZX_ERR_UNAVAILABLE| if the fetcher is currently unable to download the blob.
+    1: FetchBlob(BlobId blob, fuchsia.io.File file) -> (zx.status status);
+};

@@ -1,0 +1,64 @@
+// Copyright 2015 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.viewsv1;
+
+using fuchsia.sys;
+using fuchsia.ui.viewsv1token;
+
+// A view is a graphical user interface component which is responsible
+// for drawing and supporting user interactions in the area of the screen
+// that it occupies.
+//
+// A view may also act as a container for other views (known as the
+// view's children) which it may freely layout and position anywhere
+// within its bounds to form a composite user interface.  The hierarchy
+// of views thus formed is called a view tree.
+//
+// LIFECYCLE
+//
+// Use |ViewManager.CreateView()| to create a view.  The application
+// uses the |View| interface to manage the view's content and implements
+// the |ViewListener| interface to handle events.
+//
+// To destroy a view, simply close the |View| channel.
+//
+// ADDING CHILD VIEWS
+//
+// Use |GetContainer()| to obtain an interface for manipulating child views.
+//
+// See |ViewContainer| for more information.
+interface View {
+    // Gets a service provider to access services which are associated with
+    // the view.
+    // The view service provider is private to the view and should not be
+    // shared with anyone else.
+    GetServiceProvider(request<fuchsia.sys.ServiceProvider> service_provider);
+
+    // This is a way for an app to offer services that are associated with a
+    // particular view. Used to expose services to the compositor
+    //
+    // In particular this should be used to let know which view is implementing
+    // the ability to show an IME
+    //
+    // |service_names| should contain a list of service names as defined with the
+    // FIDL syntax [Discoverable]
+    //
+    // The list of services will be used by the compositor to filter service
+    // providers when looking for a particular service.
+    OfferServiceProvider(fuchsia.sys.ServiceProvider service_provider,
+                         vector<string> service_names);
+
+    // Gets an interface for managing the view's children.
+    GetContainer(request<ViewContainer> container);
+};
+
+// An interface clients may implement to receive events from a view.
+interface ViewListener {
+    // Called when the view receives new properties from its ancestors.
+    // Initially the view has no properties so this method will be called
+    // as soon as properties first become available and whenever they change
+    // thereafter.
+    OnPropertiesChanged(ViewProperties properties) -> ();
+};

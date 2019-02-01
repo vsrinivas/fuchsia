@@ -1,0 +1,18 @@
+{
+    "program": {
+        "binary": "test/account_manager_integration_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.auth.account.AccountManager"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.auth.account.AccountManager": "fuchsia-pkg://fuchsia.com/account_manager#meta/account_manager.cmx"
+            }
+        }
+    }
+}

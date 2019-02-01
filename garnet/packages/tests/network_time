@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/network_time"
+    ],
+    "packages": [
+        "//garnet/bin/network_time:network_time_tests",
+        "//garnet/bin/network_time/test:system_time_updater_test"
+    ]
+}

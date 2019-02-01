@@ -1,0 +1,35 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("network") {
+  name = "fuchsia.netemul.network"
+  sources = [
+    "network.fidl",
+  ]
+
+  deps = [
+    "//zircon/public/fidl/fuchsia-hardware-ethernet",
+  ]
+}
+
+fidl("environment") {
+  name = "fuchsia.netemul.environment"
+  sources = [
+    "environment.fidl",
+  ]
+
+  deps = [
+    ":network",
+    "//garnet/public/fidl/fuchsia.sys",
+  ]
+}
+
+fidl("bus") {
+  name = "fuchsia.netemul.bus"
+  sources = [
+    "bus.fidl",
+  ]
+}

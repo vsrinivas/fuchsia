@@ -1,0 +1,31 @@
+// Copyright 2016 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys;
+
+// An interface for controlling an environment.
+//
+// Closing this interface implicitly kills the controlled environment unless
+// the |Detach| method has been called.
+//
+// If the environment is destroyed, this interface will be closed.
+//
+// Typically obtained via |Environment.CreateNestedEnvironment|.
+interface EnvironmentController {
+  // Terminates the environment.
+  //
+  // When an |Environment| is terminated, all applications launched
+  // in the environment (and in all transitively nested environments) are also
+  // killed.
+  1: Kill() -> ();
+
+  // Decouples the lifetime of the environment from this controller.
+  //
+  // After calling |Detach|, the environment will not be implicitly killed when
+  // this interface is closed.
+  2: Detach();
+
+  // Event that is triggered when the environment is created.
+  3: -> OnCreated();
+};

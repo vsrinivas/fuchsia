@@ -1,0 +1,112 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.tap;
+
+using fuchsia.wlan.device;
+using fuchsia.wlan.mlme;
+using fuchsia.wlan.common;
+
+struct WlantapPhyConfig {
+    fuchsia.wlan.device.PhyInfo phy_info;
+    string name;
+    bool quiet;
+};
+
+// See wlan_rx_info_t
+struct WlanRxInfo {
+    uint32 rx_flags;
+    uint32 valid_fields;
+    uint16 phy;
+    uint32 data_rate;
+    fuchsia.wlan.common.WlanChan chan;
+    uint8 mcs;
+    int8 rssi_dbm;
+    int16 rcpi_dbmh;
+    int16 snr_dbh;
+};
+
+// See wlan_tx_info_t
+struct WlanTxInfo {
+    uint32 tx_flags;
+    uint32 valid_fields;
+    uint16 tx_vector_idx;
+    uint16 phy;
+    uint8 cbw;
+    uint8 mcs;
+};
+
+struct WlanTxPacket {
+    vector<uint8> data;
+    WlanTxInfo info;
+};
+
+// See wlan_bss_config_t
+struct WlanBssConfig {
+    array<uint8>:6 bssid;
+    uint8 bss_type;
+    bool remote;
+};
+
+// See wlan_key_config_t
+struct WlanKeyConfig {
+    uint8 protection;
+    array<uint8>:3 cipher_oui;
+    uint8 cipher_type;
+    uint8 key_type;
+    array<uint8>:6 peer_addr;
+    uint8 key_idx;
+    vector<uint8>:32 key;
+};
+
+// See wlan_tx_status_entry
+struct WlanTxStatusEntry {
+    uint16 tx_vec_idx;
+    uint8 attempts;
+};
+
+// See wlan_tx_status
+struct WlanTxStatus {
+    array<uint8>:6 peer_addr;
+    array<WlanTxStatusEntry>:8 tx_status_entries;
+    bool success;
+};
+
+interface WlantapPhy {
+    // wlanmac_ifc_t callbacks
+    Rx(uint16 wlanmac_id, vector<uint8> data, WlanRxInfo info);
+    Status(uint16 wlanmac_id, uint32 st);
+    ReportTxStatus(uint16 wlanmac_id, WlanTxStatus txs);
+    // wlanmac_protocol_ops_t
+    -> Tx(TxArgs args);
+    -> SetChannel(SetChannelArgs args);
+    -> ConfigureBss(ConfigureBssArgs args);
+    // TODO: ConfigureBeacon
+    -> SetKey(SetKeyArgs args);
+    -> WlanmacStart(WlanmacStartArgs args);
+};
+
+struct TxArgs {
+    uint16 wlanmac_id;
+    WlanTxPacket packet;
+};
+
+struct SetChannelArgs {
+    uint16 wlanmac_id;
+    fuchsia.wlan.common.WlanChan chan;
+};
+
+struct ConfigureBssArgs {
+    uint16 wlanmac_id;
+    WlanBssConfig config;
+};
+
+struct SetKeyArgs {
+    uint16 wlanmac_id;
+    WlanKeyConfig config;
+};
+
+struct WlanmacStartArgs {
+    uint16 wlanmac_id;
+};

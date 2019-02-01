@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/use_media_decoder"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.mediacodec.CodecFactory",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager"
+        ]
+    }
+}

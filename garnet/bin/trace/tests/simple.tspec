@@ -1,0 +1,10 @@
+// Run a simple test.
+// This is used in conjunction with the two-providers test to verify
+// graceful handling of this errant situation.
+{
+  "test_name": "simple",
+  "app": "fuchsia-pkg://fuchsia.com/trace_tests#meta/basic_integration_test_app.cmx",
+  "categories": [ "trace:test" ],
+  "buffer_size_in_mb": 1,
+  "buffering_mode": "oneshot"
+}

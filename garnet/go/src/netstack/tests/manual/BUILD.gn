@@ -1,0 +1,185 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("sockettest") {
+  testonly = true
+
+  sources = [
+    "sockettest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("keepalivetest") {
+  testonly = true
+
+  sources = [
+    "keepalivetest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("mctest") {
+  testonly = true
+
+  sources = [
+    "mctest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("nbiotest") {
+  testonly = true
+
+  sources = [
+    "nbiotest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("polltest") {
+  testonly = true
+
+  sources = [
+    "polltest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("selecttest") {
+  testonly = true
+
+  sources = [
+    "selecttest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("udptest") {
+  testonly = true
+
+  sources = [
+    "udptest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("connect_twice_test") {
+  testonly = true
+
+  sources = [
+    "connect_twice_test.c",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+executable("closetest") {
+  testonly = true
+
+  sources = [
+    "closetest.c",
+  ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+
+  libs = [ "zircon" ]
+}
+
+executable("sockopttest") {
+  testonly = true
+
+  sources = [
+    "sockopttest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("passfdtest") {
+  testonly = true
+
+  sources = [
+    "passfdtest.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("gethostbyname_test") {
+  testonly = true
+
+  sources = [
+    "gethostbyname_test.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}
+
+executable("getaddrinfo_test") {
+  testonly = true
+
+  sources = [
+    "getaddrinfo_test.c",
+  ]
+
+  libs = [ "zircon" ]
+
+  deps = [
+    "//zircon/public/lib/fdio",
+  ]
+}

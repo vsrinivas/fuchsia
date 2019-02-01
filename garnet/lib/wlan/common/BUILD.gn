@@ -1,0 +1,56 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("wlan_common_config") {
+  include_dirs = [ "include" ]
+}
+
+source_set("common") {
+  sources = [
+    "band.cpp",
+    "channel.cpp",
+    "element.cpp",
+    "element_splitter.cpp",
+    "energy.cpp",
+    "include/wlan/common/action_frame.h",
+    "include/wlan/common/bitfield.h",
+    "include/wlan/common/band.h",
+    "include/wlan/common/buffer_reader.h",
+    "include/wlan/common/buffer_writer.h",
+    "include/wlan/common/channel.h",
+    "include/wlan/common/cipher.h",
+    "include/wlan/common/element.h",
+    "include/wlan/common/element_id.h",
+    "include/wlan/common/energy.h",
+    "include/wlan/common/logging.h",
+    "include/wlan/common/mac_frame.h",
+    "include/wlan/common/macaddr.h",
+    "include/wlan/common/moving_average.h",
+    "include/wlan/common/parse_element.h",
+    "include/wlan/common/stats.h",
+    "include/wlan/common/tx_vector.h",
+    "include/wlan/common/write_element.h",
+    "mac_frame.cpp",
+    "macaddr.cpp",
+    "parse_mac_header.cpp",
+    "parse_element.cpp",
+    "tim_element.cpp",
+    "tx_vector.cpp",
+    "write_element.cpp",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.wlan.mlme",
+    "//garnet/public/fidl/fuchsia.wlan.stats",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ ":wlan_common_config" ]
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+
+  deps = [
+    "//garnet/lib/wlan/protocol",
+  ]
+}

@@ -1,0 +1,270 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("trace_tests_bin") {
+  testonly = true
+
+  output_name = "trace_tests"
+
+  deps = [
+    "//garnet/bin/trace:unittests",
+    "//garnet/lib/measure:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+source_set("run_test") {
+  testonly = true
+
+  sources = [
+    "run_test.cc",
+    "run_test.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+source_set("integration_test_utils") {
+  testonly = true
+
+  sources = [
+    "integration_test_utils.cc",
+    "integration_test_utils.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+# Same as "integration_test_utils" except uses trace-with-static-engine.
+# This is done in order to ensure trace-engine-static is used.
+source_set("integration_test_utils_with_trace_with_static_engine") {
+  testonly = true
+
+  sources = [
+    "integration_test_utils.cc",
+    "integration_test_utils.h",
+  ]
+
+  public_deps = [
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//third_party/rapidjson",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider-with-static-engine",
+    "//zircon/public/lib/trace-with-static-engine",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("trace_integration_tests") {
+  testonly = true
+  output_name = "trace_integration_tests"
+
+  sources = [
+    "trace_integration_tests.cc",
+  ]
+
+  deps = [
+    ":run_test",
+    "//garnet/public/lib/component/cpp",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("run_integration_test") {
+  testonly = true
+  output_name = "run_integration_test"
+
+  sources = [
+    "run_integration_test.cc",
+  ]
+
+  deps = [
+    ":run_test",
+    "//garnet/public/lib/component/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("basic_integration_test_app") {
+  testonly = true
+  output_name = "basic_integration_test_app"
+
+  sources = [
+    "basic_integration_tests.cc",
+    "basic_integration_tests.h",
+    "fill_buffer_integration_test.cc",
+    "integration_test_main.cc",
+    "simple_integration_test.cc",
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    "//garnet/lib/measure",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("two_providers_one_engine") {
+  testonly = true
+  output_name = "two_providers_one_engine"
+
+  sources = [
+    "two_providers_one_engine.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+shared_library("self_contained_provider") {
+  testonly = true
+
+  sources = [
+    "self_contained_provider.cc",
+    "self_contained_provider.h",
+  ]
+
+  deps = [
+    ":integration_test_utils_with_trace_with_static_engine",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider-fdio-connect",
+    "//zircon/public/lib/trace-provider-with-static-engine",
+    "//zircon/public/lib/trace-with-static-engine",
+  ]
+}
+
+executable("two_providers_two_engines_test_app") {
+  testonly = true
+  output_name = "two_providers_two_engines_test_app"
+
+  sources = [
+    "integration_test_main.cc",
+    "self_contained_provider.h",
+    "two_providers_two_engines.cc",
+  ]
+
+  deps = [
+    ":integration_test_utils",
+    ":self_contained_provider",
+    "//garnet/bin/trace:spec",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("trace_tests") {
+
+  testonly = true
+
+  deps = [
+    ":basic_integration_test_app",
+    ":run_integration_test",
+    ":trace_integration_tests",
+    ":trace_tests_bin",
+    ":two_providers_one_engine",
+    ":two_providers_two_engines_test_app",
+  ]
+
+  tests = [
+    {
+      name = "trace_integration_tests"
+    },
+    {
+      name = "trace_tests"
+    },
+  ]
+
+  binaries = [
+    {
+      name = "basic_integration_test_app"
+    },
+    {
+      name = "run_integration_test"
+    },
+    {
+      name = "two_providers_one_engine"
+    },
+    {
+      name = "two_providers_two_engines_test_app"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/basic_integration_test_app.cmx")
+      dest = "basic_integration_test_app.cmx"
+    },
+    {
+      path = rebase_path("meta/run_integration_test.cmx")
+      dest = "run_integration_test.cmx"
+    },
+    {
+      path = rebase_path("meta/trace_integration_tests.cmx")
+      dest = "trace_integration_tests.cmx"
+    },
+    {
+      path = rebase_path("meta/two_providers_two_engines_test_app.cmx")
+      dest = "two_providers_two_engines_test_app.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("oneshot.tspec")
+      dest = "oneshot.tspec"
+    },
+    {
+      path = rebase_path("circular.tspec")
+      dest = "circular.tspec"
+    },
+    {
+      path = rebase_path("streaming.tspec")
+      dest = "streaming.tspec"
+    },
+    {
+      path = rebase_path("simple.tspec")
+      dest = "simple.tspec"
+    },
+    {
+      path = rebase_path("two_providers_two_engines.tspec")
+      dest = "two_providers_two_engines.tspec"
+    },
+  ]
+}

@@ -1,0 +1,47 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.mediasession;
+
+using zx;
+using fuchsia.mediaplayer;
+
+struct PlaybackStatus {
+    /// Total duration of playing media. 0 if not known or not applicable.
+    zx.duration duration;
+    PlaybackState playback_state;
+    /// A playback function that describes the position and rate of play through
+    /// the media.
+    // TODO(turnage): move this type to fuchsia.media
+    fuchsia.mediaplayer.TimelineFunction playback_function;
+    RepeatMode repeat_mode;
+    bool shuffle_on;
+    /// Whether a media item exists after the playing one in queue (e.g. a next
+    /// song in an album or next video in a playlist.)
+    bool has_next_item;
+    /// Whether a media item preceded the playing one in queue.
+    bool has_prev_item;
+    Error? error;
+};
+
+enum PlaybackState {
+    STOPPED = 0;
+    PLAYING = 1;
+    PAUSED = 2;
+    ERROR = 3;
+};
+
+struct Error {
+    uint32 code;
+    string description;
+};
+
+enum RepeatMode {
+    /// No repeat.
+    OFF = 0;
+    /// Repeat the relevant group of media (e.g. playlist).
+    GROUP = 1;
+    /// Repeat the currently playing media.
+    SINGLE = 2;
+};

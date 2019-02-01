@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/inspect_unittests"
+    ]
+}

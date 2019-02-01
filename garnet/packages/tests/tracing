@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/tracing"
+    ],
+    "packages": [
+        "//garnet/bin/trace/tests:trace_tests",
+        "//garnet/bin/trace_stress"
+    ]
+}

@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/bt-gap-unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.stash.Store"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.stash.Store": "fuchsia-pkg://fuchsia.com/stash#meta/stash_tests.cmx"
+            }
+        }
+    }
+}

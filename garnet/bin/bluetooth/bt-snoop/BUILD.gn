@@ -1,0 +1,60 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "bt_snoop"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/lib/rust/fuchsia-bluetooth",
+    "//garnet/public/fidl/fuchsia.bluetooth:fuchsia.bluetooth-rustc",
+    "//garnet/public/fidl/fuchsia.bluetooth.snoop:fuchsia.bluetooth.snoop-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+    "//third_party/rust-crates/rustc_deps:structopt",
+  ]
+}
+
+package("bt-snoop") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/bt_snoop"
+
+  meta = [
+    {
+      path = rebase_path("meta/bt-snoop.cmx")
+      dest = "bt-snoop.cmx"
+    },
+  ]
+}
+
+package("tests") {
+  testonly = true
+
+  package_name = "bt-snoop-tests"
+
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "bt_snoop_bin_test"
+      dest = "bt-snoop-unittests"
+    },
+  ]
+}

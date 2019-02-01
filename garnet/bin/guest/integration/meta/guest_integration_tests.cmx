@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/guest_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

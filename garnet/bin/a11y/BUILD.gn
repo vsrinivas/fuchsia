@@ -1,0 +1,80 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("a11y_tests") {
+  testonly = true
+
+  deps = [
+    "tests",
+  ]
+
+  tests = [
+    {
+      name = "a11y_manager_apptests"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_manager_apptests.cmx")
+      dest = "a11y_manager_apptests.cmx"
+    },
+  ]
+}
+
+package("a11y_manager") {
+  deps = [
+    "a11y_manager",
+  ]
+
+  binaries = [
+    {
+      name = "a11y_manager"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_manager.cmx")
+      dest = "a11y_manager.cmx"
+    },
+  ]
+}
+
+package("a11y_toggler") {
+  deps = [
+    "//garnet/bin/a11y/a11y_toggler:a11y_toggler",
+  ]
+
+  binaries = [
+    {
+      name = "a11y_toggler"
+      shell = true
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/a11y_toggler.cmx")
+      dest = "a11y_toggler.cmx"
+    },
+  ]
+}
+
+package("talkback") {
+  deps = [
+    "talkback",
+  ]
+
+  binary = "talkback"
+
+  meta = [
+    {
+      path = rebase_path("meta/talkback.cmx")
+      dest = "talkback.cmx"
+    },
+  ]
+}

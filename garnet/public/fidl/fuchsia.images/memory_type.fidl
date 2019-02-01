@@ -1,0 +1,15 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.images;
+
+// Specifies the type of VMO's memory.
+enum MemoryType {
+  // VMO is regular host CPU memory.
+  HOST_MEMORY = 0;
+
+  // VMO can be imported as a VkDeviceMemory by calling VkAllocateMemory with a
+  // VkImportMemoryFuchsiaHandleInfoKHR wrapped in a VkMemoryAllocateInfo.
+  VK_DEVICE_MEMORY = 1;
+};

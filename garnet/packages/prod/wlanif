@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/drivers/wlan/wlanif",
+        "//garnet/drivers/wlan/wlan"
+    ]
+}

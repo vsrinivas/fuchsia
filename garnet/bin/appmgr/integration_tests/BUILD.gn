@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+import("//build/test/test_package.gni")
+
+executable("realm_tests") {
+  testonly = true
+
+  output_name = "appmgr_realm_integration_tests"
+
+  sources = [
+    "mock_runner_registry.cc",
+    "mock_runner_registry.h",
+    "realm_integration_test.cc",
+    "realm_runner_integration_test.cc",
+  ]
+
+  deps = [
+    "fidl:test.component.mockrunner",
+    "mock_runner:appmgr_mock_runner",
+    "//garnet//examples/fidl/services:echo2",
+    "//garnet/bin/appmgr:lib",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("hub_tests") {
+  testonly = true
+
+  output_name = "appmgr_hub_integration_tests"
+
+  sources = [
+    "hub_integration_test.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/sysmgr:lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+test_package("appmgr_integration_tests") {
+  deps = [
+    ":hub_tests",
+    ":realm_tests",
+  ]
+
+  tests = [
+    {
+      name = "appmgr_realm_integration_tests"
+    },
+    {
+      name = "appmgr_hub_integration_tests"
+    },
+  ]
+}

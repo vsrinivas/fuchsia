@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/crashpad/test:crashpad_analyzer_tests",
+        "//third_party/crashpad:crashpad_test"
+    ]
+}

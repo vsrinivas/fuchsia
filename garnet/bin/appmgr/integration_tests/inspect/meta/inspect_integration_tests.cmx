@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/inspect_integration_tests"
+    },
+    "sandbox": {
+        "features": [ "shell" ],
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Launcher",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

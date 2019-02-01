@@ -1,0 +1,71 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+# This DFX exists for test purposes, to validate the DFX interface.
+loadable_module("audio_dfx") {
+  testonly = true
+
+  sources = [
+    "audio_device_fx.h",
+    "lib/dfx_base.cc",
+    "lib/dfx_base.h",
+    "lib/dfx_delay.cc",
+    "lib/dfx_delay.h",
+    "lib/dfx_rechannel.h",
+    "lib/dfx_swap.h",
+    "lib/lib_dfx.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+# This standalone test expects to find a audio_dfx.so in this package.
+executable("test_bin") {
+  testonly = true
+  output_name = "audio_dfx_tests"
+
+  sources = [
+    "audio_device_fx.h",
+    "lib/dfx_base.h",
+    "lib/dfx_delay.h",
+    "lib/dfx_rechannel.h",
+    "lib/dfx_swap.h",
+    "test/audio_dfx_tests.cc",
+  ]
+
+  libs = [ "zircon" ]
+
+  # We include mixer_lib to use its fx_loader, to directly test it and FX libs.
+  deps = [
+    "//garnet/bin/media/audio_core/mixer:audio_mixer_lib",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+test_package("audio_dfx_tests") {
+  deps = [
+    ":audio_dfx",
+    ":test_bin",
+  ]
+
+  loadable_modules = [
+    {
+      # This test-only library is hosted in the audio_dfx_tests process.
+      name = "audio_dfx.so"
+    },
+  ]
+
+  tests = [
+    {
+      name = "audio_dfx_tests"
+    },
+  ]
+}

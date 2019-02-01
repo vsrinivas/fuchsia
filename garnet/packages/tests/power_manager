@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/prod/power_manager"
+    ],
+    "packages": [
+        "//garnet/bin/power_manager:power_manager_tests",
+        "//garnet/go/src/power_manager:power_manager_gotests"
+    ]
+}

@@ -1,0 +1,5 @@
+{
+  "packages": [
+    "//garnet/bin/media/frank_media_config:frank_media_config"
+  ]
+}

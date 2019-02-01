@@ -1,0 +1,32 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package/component.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "logger_integration"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-syslog-listener",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+    "//third_party/rust-crates/rustc_deps:rand",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+    "//zircon/public/fidl/fuchsia-logger:fuchsia-logger-rustc",
+  ]
+}
+
+fuchsia_test_component("test_component") {
+  binary = "logger_integration_bin_test"
+  deps = [
+    ":bin",
+  ]
+}

@@ -1,0 +1,68 @@
+// Copyright 2018 The Chromium Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.filter;
+
+using fuchsia.net;
+
+/// Direction is which way (Incoming or Outgoing) a packet is moving in the stack.
+enum Direction {
+    incoming = 0;
+    outgoing = 1;
+};
+
+enum Action {
+    pass = 0;
+    drop = 1;
+    drop_reset = 2;
+};
+
+enum SocketProtocol {
+    ip = 0;
+    icmp = 1;
+    tcp = 6;
+    udp = 17;
+    ipv6 = 41;
+    icmpv6 = 58;
+};
+
+/// Rule describes the conditions and the action of a rule.
+struct Rule {
+    Action action;
+    Direction direction;
+    /// If true, no more rules will be tested.
+    bool quick;
+    SocketProtocol proto;
+    fuchsia.net.Subnet? src_subnet;
+    /// If true, matches any address that is NOT contained in the subnet.
+    bool src_subnet_invert_match;
+    uint16 src_port;
+    fuchsia.net.Subnet? dst_subnet;
+    /// If true, matches any address that is NOT contained in the subnet.
+    bool dst_subnet_invert_match;
+    uint16 dst_port;
+    uint32 nic;
+    bool log;
+    bool keepState;
+};
+
+/// NAT is a special rule for Network Address Translation, which rewrites
+/// the address of an outgoing packet.
+struct NAT {
+    SocketProtocol proto;
+    fuchsia.net.Subnet src_subnet;
+    fuchsia.net.IpAddress new_src_addr;
+    uint32 nic;
+};
+
+/// RDR is a special rule for Redirector, which forwards an incoming packet
+/// to a machine inside the firewall.
+struct RDR {
+    SocketProtocol proto;
+    fuchsia.net.IpAddress dst_addr;
+    uint16 dst_port;
+    fuchsia.net.IpAddress new_dst_addr;
+    uint16 new_dst_port;
+    uint32 nic;
+};

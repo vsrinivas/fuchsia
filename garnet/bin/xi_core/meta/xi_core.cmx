@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.policy.Presenter"
+        ]
+    }
+}

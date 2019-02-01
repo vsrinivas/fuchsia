@@ -1,0 +1,26 @@
+{
+  "results": {
+    "standard": {
+      "MalformedMsg":            "0x0001",
+      "NoMemory":                "0x0002",
+      "Internal":                "0x0003",
+      "Aborted":                 "0x0004",
+      "ClientIdsExhausted":      "0x0005",
+      "UnabortableTransaction":  "0x0006",
+      "InvalidClientId":         "0x0007",
+      "NoEffect":                "0x001A",
+      "InvalidServiceType":      "0x001F",
+      "InvalidArg":              "0x0030"
+    }
+  },
+  "structures": [
+    {
+      "type": "standard",
+      "transaction_len": 2
+    },
+    {
+      "type": "control",
+      "transaction_len": 1
+    }
+  ]
+}

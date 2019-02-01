@@ -1,0 +1,95 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+config("wlan_config") {
+  include_dirs = [ "." ]
+}
+
+driver_module("wlan_driver") {
+  output_name = "wlan"
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "minstrel.cpp",
+    "minstrel.h",
+    "probe_sequence.cpp",
+    "probe_sequence.h",
+    "proxy_helpers.h",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/mlme",
+    "//garnet/lib/wlan/protocol",
+    "//garnet/public/lib/component/cpp:environment_services",
+    "//garnet/public/lib/svc/cpp",
+    "//zircon/public/banjo/ddk-protocol-ethernet",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/ddktl",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [
+    "//build/config/fuchsia:enable_zircon_asserts",
+    "//build/config/fuchsia:static_cpp_standard_library",
+  ]
+}
+
+executable("wlan_minstrel_unittest") {
+  testonly = true
+  sources = [
+    "minstrel.cpp",
+    "minstrel.h",
+    "probe_sequence.cpp",
+    "probe_sequence.h",
+    "tests/minstrel_unittest.cpp",
+    "tests/probe_sequence_unittest.cpp",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/mlme",
+    "//garnet/lib/wlan/mlme/tests:test_main",
+    "//garnet/lib/wlan/protocol",
+    "//garnet/public/lib/timekeeper:testing",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/fbl",
+  ]
+
+  configs += [ "//garnet/lib/wlan/mlme/tests:wlan_mlme_tests_config" ]
+}
+
+package("wlan_drivers_tests") {
+  testonly = true
+  deprecated_system_image = true
+  deps = [
+    ":wlan_minstrel_unittest",
+  ]
+  tests = [
+    {
+      name = "wlan_minstrel_unittest"
+    },
+  ]
+}
+
+package("wlan") {
+  deprecated_system_image = true
+
+  deps = [
+    ":wlan_driver",
+  ]
+
+  drivers = [
+    {
+      name = "wlan.so"
+    },
+  ]
+}

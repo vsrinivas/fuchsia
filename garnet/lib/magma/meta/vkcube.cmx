@@ -1,0 +1,16 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/display-controller"
+        ],
+        "features": [
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}

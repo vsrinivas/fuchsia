@@ -1,0 +1,43 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/package.gni")
+
+rustc_binary("bin") {
+  name = "modem_mgr"
+  edition = "2018"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.telephony.manager:fuchsia.telephony.manager-rustc",
+    "//garnet/public/fidl/fuchsia.telephony.ril:fuchsia.telephony.ril-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/lib/rust/qmi",
+    "//garnet/public/rust/fdio",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-vfs/fuchsia-vfs-watcher",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:parking_lot",
+  ]
+}
+
+package("modem-mgr") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/modem_mgr"
+
+  meta = [
+    {
+      path = rebase_path("meta/modem-mgr.cmx")
+      dest = "modem_mgr.cmx"
+    },
+  ]
+}

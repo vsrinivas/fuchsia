@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "test/ime_service_unittests"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.logger.LogSink"
+        ]
+    }
+}

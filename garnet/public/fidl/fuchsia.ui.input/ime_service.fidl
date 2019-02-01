@@ -1,0 +1,25 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.input;
+
+// The service provided by an IME
+[Discoverable]
+interface ImeService {
+    GetInputMethodEditor(KeyboardType keyboard_type,
+                         InputMethodAction action,
+                         TextInputState initial_state,
+                         InputMethodEditorClient client,
+                         request<InputMethodEditor> editor);
+    ShowKeyboard();
+    HideKeyboard();
+    InjectInput(InputEvent event);
+};
+
+// Onscreen keyboard containers connect to this to know when a keyboard
+// should be shown or hidden.
+[Discoverable]
+interface ImeVisibilityService {
+    -> OnKeyboardVisibilityChanged(bool visible);
+};

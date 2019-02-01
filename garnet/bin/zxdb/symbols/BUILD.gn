@@ -1,0 +1,235 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/clang/clang.gni")
+
+static_library("symbols") {
+  # The client library one directory up instantiates the "Impl" classes using
+  # the non-public headers.
+  friend = [
+    ":*",
+    "//garnet/bin/zxdb/client/*",
+  ]
+
+  public = [
+    "arch.h",
+    "array_type.h",
+    "base_type.h",
+    "code_block.h",
+    "collection.h",
+    "data_member.h",
+    "dwarf_expr_eval.h",
+    "enumeration.h",
+    "file_line.h",
+    "function.h",
+    "function_type.h",
+    "inherited_from.h",
+    "input_location.h",
+    "lazy_symbol.h",
+    "line_details.h",
+    "loaded_module_symbols.h",
+    "location.h",
+    "member_ptr.h",
+    "modified_type.h",
+    "module_symbol_index.h",
+    "module_symbol_index_node.h",
+    "module_symbol_status.h",
+    "module_symbols.h",
+    "namespace.h",
+    "process_symbols.h",
+    "resolve_options.h",
+    "symbol.h",
+    "symbol_context.h",
+    "symbol_data_provider.h",
+    "symbol_factory.h",
+    "symbol_utils.h",
+    "system_symbols.h",
+    "target_symbols.h",
+    "type.h",
+    "type_utils.h",
+    "value.h",
+    "variable.h",
+    "variable_location.h",
+    "visit_scopes.h",
+  ]
+
+  sources = [
+    "arch.cc",
+    "array_type.cc",
+    "base_type.cc",
+    "build_id_index.cc",
+    "build_id_index.h",
+    "code_block.cc",
+    "collection.cc",
+    "data_member.cc",
+    "dwarf_die_decoder.cc",
+    "dwarf_die_decoder.h",
+    "dwarf_expr_eval.cc",
+    "dwarf_symbol_factory.cc",
+    "dwarf_symbol_factory.h",
+    "enumeration.cc",
+    "file_line.cc",
+    "find_line.cc",
+    "find_line.h",
+    "function.cc",
+    "function_type.cc",
+    "inherited_from.cc",
+    "lazy_symbol.cc",
+    "line_details.cc",
+    "line_table.h",
+    "line_table_impl.cc",
+    "line_table_impl.h",
+    "loaded_module_symbols.cc",
+    "location.cc",
+    "member_ptr.cc",
+    "modified_type.cc",
+    "module_symbol_index.cc",
+    "module_symbol_index_node.cc",
+    "module_symbols.cc",
+    "module_symbols_impl.cc",
+    "module_symbols_impl.h",
+    "namespace.cc",
+    "process_symbols.cc",
+    "symbol.cc",
+    "symbol_utils.cc",
+    "system_symbols.cc",
+    "target_symbols.cc",
+    "type.cc",
+    "type_utils.cc",
+    "value.cc",
+    "variable.cc",
+    "variable_location.cc",
+    "visit_scopes.cc",
+  ]
+
+  # This library can not use any part of the debugger other than the "common"
+  # base helpers.
+  public_deps = [
+    "//garnet/bin/zxdb/common",
+    "//garnet/lib/debug_ipc:client",
+    "//garnet/lib/debug_ipc/helper",
+    "//garnet/public/lib/fxl",
+  ]
+
+  deps = [
+    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+  ]
+
+  if (is_mac) {
+    # This is necessary to find "c++fs" on Mac.
+    # See https://reviews.llvm.org/D45639
+    lib_dirs = [ rebase_path("${clang_prefix}/../lib", ".", root_build_dir) ]
+  }
+
+  libs = [
+    # For the C++17 filesystem API. Currently this isn't in libc++ by
+    # default. If it gets added in the future, we can remove this.
+    "c++fs",
+  ]
+}
+
+static_library("test_support") {
+  testonly = true
+
+  sources = [
+    "mock_line_table.cc",
+    "mock_line_table.h",
+    "mock_module_symbols.cc",
+    "mock_module_symbols.h",
+    "mock_symbol_data_provider.cc",
+    "mock_symbol_data_provider.h",
+    "process_symbols_test_setup.cc",
+    "process_symbols_test_setup.h",
+    "type_test_support.cc",
+    "type_test_support.h",
+    "variable_test_support.cc",
+    "variable_test_support.h",
+  ]
+
+  deps = [
+    ":symbols",
+    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+  ]
+}
+
+# Copies the test libraries for zxdb tests to use when run on Linux or Mac.
+default_shared_out_dir =
+    get_label_info("//anything(${default_toolchain}-shared)", "root_out_dir")
+copy("copy_test_so") {
+  sources = [
+    "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
+    "test_data/libsymbol_test_so.targetso",
+  ]
+
+  # Use a ".targetso" extension because this isn't a library that can actually
+  # loaded on the host platform.
+  outputs = [
+    "$root_out_dir/test_data/zxdb/{{source_name_part}}.targetso",
+  ]
+
+  deps = [
+    "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
+  ]
+}
+
+# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
+# $root_build_dir/host_tests/.
+if (current_toolchain == default_toolchain) {
+  copy("copy_test_so_deprecated") {
+    sources = [
+      "$default_shared_out_dir/lib.unstripped/libzxdb_symbol_test.so",
+      "test_data/libsymbol_test_so.targetso",
+    ]
+
+    # Use a ".targetso" extension because this isn't a library that can actually
+    # loaded on the host platform.
+    outputs = [
+      "$root_build_dir/host_tests/test_data/zxdb/{{source_name_part}}.targetso",
+    ]
+
+    deps = [
+      "test_data:zxdb_symbol_test(${default_toolchain}-shared)",
+    ]
+  }
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "build_id_index_unittest.cc",
+    "code_block_unittest.cc",
+    "dwarf_expr_eval_unittest.cc",
+    "dwarf_symbol_factory_unittest.cc",
+    "dwarf_test_util.cc",
+    "dwarf_test_util.h",
+    "find_line_unittest.cc",
+    "function_type_unittest.cc",
+    "member_ptr_unittest.cc",
+    "mock_symbol_data_provider_unittest.cc",
+    "modified_type_unittest.cc",
+    "module_symbol_index_node_unittest.cc",
+    "module_symbol_index_unittest.cc",
+    "module_symbols_impl_unittest.cc",
+    "process_symbols_unittest.cc",
+    "symbol_utils_unittest.cc",
+    "test_symbol_module.cc",
+    "type_utils_unittest.cc",
+    "variable_location_unittest.cc",
+    "visit_scopes_unittest.cc",
+  ]
+
+  deps = [
+    ":symbols",
+    ":test_support",
+    "//garnet/bin/zxdb/common:test_support",
+    "//garnet/third_party/llvm:LLVMDebugInfoDWARF",
+    "//third_party/googletest:gtest",
+  ]
+
+  data_deps = [
+    ":copy_test_so",
+    ":copy_test_so_deprecated($default_toolchain)",
+  ]
+}

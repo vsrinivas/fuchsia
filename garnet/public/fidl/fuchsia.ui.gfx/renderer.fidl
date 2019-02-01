@@ -1,0 +1,35 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.gfx;
+
+// These are all of the types of parameters that can be set to configure a
+// |Renderer|.
+union RendererParam {
+    ShadowTechnique shadow_technique;
+    RenderFrequency render_frequency;
+};
+
+// Represents the shadow algorithm that the |Renderer| should use when lighting
+// the scene.
+enum ShadowTechnique {
+    // No shadows.
+    UNSHADOWED = 0;
+    // Default.  Screen-space, depth-buffer based shadows; SSDO-ish.
+    SCREEN_SPACE = 1;
+    // Basic shadow map.
+    SHADOW_MAP = 2;
+    // Moment shadow map (see http://momentsingraphics.de).
+    MOMENT_SHADOW_MAP = 3;
+    // Stencil shadow volume.
+    STENCIL_SHADOW_VOLUME = 4;
+};
+
+enum RenderFrequency {
+    // Render only on when requested (i.e. when something triggers it).
+    // Default behavior.
+    WHEN_REQUESTED = 0;
+    // Render one frame after another regardless of it it's needed.
+    CONTINUOUSLY = 1;
+};

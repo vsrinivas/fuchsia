@@ -1,0 +1,88 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/compiled_action.gni")
+import("//build/rust/rustc_library.gni")
+import("//build/rust/rustc_binary.gni")
+
+# Generate the rust sources using the gen.
+compiled_action("gen_qmi_protocol_source") {
+  tool = "//garnet/lib/telephony/qmi-protocol:qmigen"
+  output = "$target_gen_dir/qmi-protocol.rs"
+  sources = [
+    "protocol/common.json",
+    "protocol/ctl.json",
+    "protocol/dms.json",
+    "protocol/wds.json",
+    "protocol/wda.json"
+  ]
+  outputs = [ output ]
+  args = ["-i"] + rebase_path(sources) + ["-o"] + [rebase_path(output)]
+}
+
+# Build the library.
+rustc_library("qmi-protocol") {
+  edition = "2018"
+
+  non_rust_deps = [ ":gen_qmi_protocol_source" ]
+  deps = [
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:bytes",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
+  source_root = "$target_gen_dir/qmi-protocol.rs"
+}
+
+if (host_toolchain == current_toolchain) {
+  rustc_binary("qmigen") {
+    edition = "2018"
+    deps = [
+      "//third_party/rust-crates/rustc_deps:serde",
+      "//third_party/rust-crates/rustc_deps:serde_derive",
+      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust-crates/rustc_deps:failure",
+    ]
+  }
+
+  rustc_library("qmigen_lib") {
+    edition = "2018"
+    deps = [
+      "//third_party/rust-crates/rustc_deps:serde",
+      "//third_party/rust-crates/rustc_deps:serde_derive",
+      "//third_party/rust-crates/rustc_deps:serde_json",
+      "//third_party/rust-crates/rustc_deps:failure",
+    ]
+  }
+
+  rustc_library("qmigen_unittests") {
+    edition = "2018"
+    with_unit_tests = true
+    testonly = true
+
+    deps = [
+      ":qmigen",
+      "//third_party/rust-crates/rustc_deps:pretty_assertions",
+      ":qmigen_lib($host_toolchain)",
+    ]
+    source_root = "tests/codegen_tests.rs"
+  }
+
+  copy("qmi_host_tests") {
+    testonly = true
+
+    sources = [
+      "$root_out_dir/qmigen_unittests_lib_test",
+    ]
+
+    outputs = [
+      "$root_out_dir/qmi_host_tests",
+    ]
+
+    public_deps = [
+      ":qmigen_unittests($host_toolchain)",
+    ]
+  }
+}
+

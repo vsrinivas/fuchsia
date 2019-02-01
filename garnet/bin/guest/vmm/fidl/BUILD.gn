@@ -1,0 +1,28 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.guest.device") {
+  sources = [
+    "device.fidl",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.guest",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//zircon/public/fidl/fuchsia-io",
+  ]
+}
+
+fidl("fuchsia.guest.vmm") {
+  sources = [
+    "launch_info_provider.fidl",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.guest",
+  ]
+}

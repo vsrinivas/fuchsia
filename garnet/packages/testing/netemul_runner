@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/netemul_runner/runner:netemul_runner",
+        "//garnet/bin/netemul_runner:netemul_sandbox"
+    ]
+}

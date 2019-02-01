@@ -1,0 +1,15 @@
+{
+  "exclusions": [
+    "fuchsia.math/Point",
+    "fuchsia.math/PointF",
+    "fuchsia.math/Point3F",
+    "fuchsia.math/Rect",
+    "fuchsia.math/RectF",
+    "fuchsia.math/RRectF",
+    "fuchsia.math/Size",
+    "fuchsia.math/SizeF",
+    "fuchsia.math/Inset",
+    "fuchsia.math/InsetF",
+    "fuchsia.math/Transform"
+  ]
+}

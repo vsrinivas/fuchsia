@@ -1,0 +1,96 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+declare_args() {
+  # Whether the component loader should automatically update packages.
+  auto_update_packages = true
+}
+
+source_set("lib") {
+  sources = [
+    "app.cc",
+    "app.h",
+    "config.cc",
+    "config.h",
+    "delegating_loader.cc",
+    "delegating_loader.h",
+    "package_updating_loader.cc",
+    "package_updating_loader.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/loader",
+    "//garnet/public/fidl/fuchsia.pkg",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//garnet/public/lib/svc/cpp",
+    "//third_party/rapidjson",
+  ]
+
+  if (auto_update_packages) {
+    public_configs = [ ":update_packages_config" ]
+  }
+}
+
+executable("bin") {
+  output_name = "sysmgr"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+fuchsia_component("sysmgr_component") {
+  manifest = rebase_path("meta/sysmgr.cmx")
+  deps = [
+    ":bin",
+  ]
+
+  binary = "sysmgr"
+}
+
+package("sysmgr") {
+  components = [ ":sysmgr_component" ]
+}
+
+template("config_package") {
+  package(target_name) {
+    deprecated_system_image = true
+    resources = [
+      {
+        dest = "sysmgr/${invoker.name}"
+        path = rebase_path("config/${invoker.name}")
+      },
+    ]
+  }
+}
+
+config_package("network_config") {
+  name = "network.config"
+}
+
+config_package("services_config") {
+  name = "services.config"
+}
+
+config_package("router_config") {
+  name = "router.config"
+}
+
+config("update_packages_config") {
+  defines = [ "AUTO_UPDATE_PACKAGES" ]
+}

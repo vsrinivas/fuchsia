@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+source_set("bus_service") {
+  sources = [
+    "bus.cc",
+    "bus.h",
+    "bus_manager.cc",
+    "bus_manager.h",
+  ]
+
+  deps = [
+    "//garnet/public/lib/netemul/fidl:bus",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/fzl",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("bus_test_bin") {
+  testonly = true
+
+  output_name = "bus_test"
+
+  sources = [
+    "bus_unittest.cc",
+  ]
+
+  deps = [
+    ":bus_service",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//zircon/public/lib/fzl",
+  ]
+}

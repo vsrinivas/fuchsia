@@ -1,0 +1,40 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "intl_wisdom_client.cc",
+    "intl_wisdom_client.h",
+  ]
+
+  public_deps = [
+    "//garnet/examples/intl/fidl:wisdom",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//third_party/icu:icu",
+  ]
+}
+
+executable("intl_wisdom_client") {
+  output_name = "intl_wisdom_client"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/examples/intl/fidl:wisdom",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/icu_data/cpp",
+    "//garnet/public/lib/svc/cpp",
+    "//third_party/icu:icu",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}

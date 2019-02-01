@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/tones"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.Audio"
+        ]
+    }
+}

@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("fdt_config") {
+  include_dirs = [ "." ]
+  cflags = [ "-Wno-sign-compare" ]
+}
+
+source_set("fdt") {
+  sources = [
+    "fdt.c",
+    "fdt.h",
+    "fdt_addresses.c",
+    "fdt_empty_tree.c",
+    "fdt_overlay.c",
+    "fdt_ro.c",
+    "fdt_rw.c",
+    "fdt_strerror.c",
+    "fdt_sw.c",
+    "fdt_wip.c",
+    "libfdt.h",
+    "libfdt_env.h",
+    "libfdt_internal.h",
+  ]
+  public_configs = [ ":fdt_config" ]
+}

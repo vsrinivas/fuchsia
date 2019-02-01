@@ -1,0 +1,8 @@
+{
+    "labels": [
+        "//garnet/bin/auth:token_manager_factory"
+    ],
+    "packages": [
+        "//garnet/bin/auth:token_manager_factory"
+    ]
+}

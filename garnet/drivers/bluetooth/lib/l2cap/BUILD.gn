@@ -1,0 +1,107 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+# Basic target with protocol definitions and no logic, suitable for test
+# emulation.
+source_set("definitions") {
+  sources = [
+    "l2cap.h",
+  ]
+
+  public_deps = [
+    "//garnet/drivers/bluetooth/lib/hci:definitions",
+    "//garnet/drivers/bluetooth/lib/sm:definitions",
+  ]
+}
+
+static_library("l2cap") {
+  sources = [
+    "bredr_command_handler.cc",
+    "bredr_command_handler.h",
+    "bredr_dynamic_channel.cc",
+    "bredr_dynamic_channel.h",
+    "bredr_signaling_channel.cc",
+    "bredr_signaling_channel.h",
+    "channel.cc",
+    "channel.h",
+    "channel_manager.cc",
+    "channel_manager.h",
+    "dynamic_channel.cc",
+    "dynamic_channel.h",
+    "dynamic_channel_registry.cc",
+    "dynamic_channel_registry.h",
+    "fragmenter.cc",
+    "fragmenter.h",
+    "le_signaling_channel.cc",
+    "le_signaling_channel.h",
+    "logical_link.cc",
+    "logical_link.h",
+    "pdu.cc",
+    "pdu.h",
+    "recombiner.cc",
+    "recombiner.h",
+    "scoped_channel.cc",
+    "scoped_channel.h",
+    "sdu.h",
+    "signaling_channel.cc",
+    "signaling_channel.h",
+  ]
+
+  public_deps = [
+    ":definitions",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
+  ]
+}
+
+source_set("testing") {
+  testonly = true
+
+  sources = [
+    "fake_channel.cc",
+    "fake_channel.h",
+    "fake_channel_test.cc",
+    "fake_channel_test.h",
+    "fake_signaling_channel.cc",
+    "fake_signaling_channel.h",
+  ]
+
+  public_deps = [
+    ":l2cap",
+    "//garnet/drivers/bluetooth/lib/common",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+
+  sources = [
+    "bredr_command_handler_unittest.cc",
+    "bredr_dynamic_channel_unittest.cc",
+    "bredr_signaling_channel_unittest.cc",
+    "channel_unittest.cc",
+    "channel_manager_unittest.cc",
+    "dynamic_channel_registry_unittest.cc",
+    "fragmenter_unittest.cc",
+    "le_signaling_channel_unittest.cc",
+    "pdu_unittest.cc",
+    "recombiner_unittest.cc",
+    "scoped_channel_unittest.cc",
+    "signaling_channel_unittest.cc",
+  ]
+
+  deps = [
+    ":l2cap",
+    ":testing",
+    "//garnet/drivers/bluetooth/lib/hci",
+    "//garnet/drivers/bluetooth/lib/testing",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gtest",
+  ]
+}

@@ -1,0 +1,58 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.wlan.ap.policy;
+
+using fuchsia.net;
+using fuchsia.wlan.common;
+
+[Discoverable]
+interface ApPolicy {
+  OpenControlChannels(Requests requests, request<StateUpdates> updates);
+};
+
+
+interface Requests {
+  StartAccessPoint(AccessPointParams params) -> (Status request_status);
+  StopAccessPoint(vector<uint8> ssid) -> (Status request_status);
+};
+
+
+interface StateUpdates {
+  -> OnAccessPointStatusChange(ApState ap_state, ApState previous_ap_state);
+  -> OnAccessPointClientUpdate(ApBand ap_band, int32 frequency, vector<ApClient> clients);
+};
+
+struct Status {
+  fuchsia.wlan.common.RequestStatus status;
+  string message;
+};
+
+
+struct AccessPointParams {
+  vector<uint8> ssid; // 0 - 32 bytes
+  vector<uint8> passphrase; // 8 - 63 char
+  ApBand band;
+};
+
+
+enum ApBand {
+  BAND_ANY = 0;    // allows the band to switch depending on device
+                   // operating mode and environment
+  BAND_2_4GHZ = 1; // restricted to 2.4ghz bands only
+  BAND_5GHZ = 2;   // restricted to 5ghz bands only
+};
+
+
+enum ApState {
+  STARTING = 0;     // confirmation that the softap interface will attempt to be
+                    // created (this can take seconds on some devices)
+  UP = 1;
+  DOWN = 2;
+};
+
+
+struct ApClient {
+  fuchsia.net.MacAddress mac;
+};

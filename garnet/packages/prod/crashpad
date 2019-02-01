@@ -1,0 +1,7 @@
+{
+    "packages": [
+        "//garnet/bin/crashpad:crashpad_analyzer",
+        "//third_party/crashpad:crashpad_database_util"
+    ]
+}
+

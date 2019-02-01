@@ -1,0 +1,10 @@
+{
+    "labels": [
+        "//garnet/bin/auth:account_manager",
+        "//garnet/bin/auth:account_handler"
+    ],
+    "packages": [
+        "//garnet/bin/auth:account_manager",
+        "//garnet/bin/auth:account_handler"
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/dev_auth_provider_iotid"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.logger.LogSink" ]
+    }
+}

@@ -1,0 +1,42 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    ":unittests",
+  ]
+}
+
+executable("unittests") {
+  testonly = true
+  output_name = "input_unittests"
+  sources = [
+    "coordinate_transform_test.cc",
+    "focus_avoidance_test.cc",
+    "hard_keyboard_delivery_test.cc",
+    "import_node_test.cc",
+    "mouse_delivery_test.cc",
+    "util.cc",
+    "util.h",
+  ]
+  deps = [
+    "//garnet/lib/ui/gfx",
+    "//garnet/lib/ui/gfx/tests:testing_deps",
+    "//garnet/lib/ui/input",
+    "//garnet/lib/ui/scenic/tests:testing_deps",
+    "//garnet/public/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//garnet/public/lib/ui/input/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest",
+    "//zircon/public/fidl/fuchsia-hardware-display",
+    "//zircon/public/lib/hid",
+  ]
+}

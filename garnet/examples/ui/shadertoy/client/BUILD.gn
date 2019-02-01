@@ -1,0 +1,35 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("client") {
+  output_name = "shadertoy_client"
+
+  sources = [
+    "glsl_strings.cc",
+    "glsl_strings.h",
+    "main.cc",
+    "view.cc",
+    "view.h",
+  ]
+
+  deps = [
+    "//garnet/examples/ui/shadertoy/service",
+    "//garnet/examples/ui/shadertoy/service/services",
+    "//garnet/public/fidl/fuchsia.ui.gfx",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/ui/base_view/cpp",
+    "//garnet/public/lib/ui/input/cpp",
+    "//garnet/public/lib/ui/scenic/cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+
+  include_dirs = [
+    "//third_party/glm",
+    "//lib",
+  ]
+}

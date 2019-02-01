@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "test/bt-host-integration-tests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/bt-host",
+            "test/test"
+        ],
+        "system": [
+            "driver/bt-hci-fake.so"
+        ]
+    }
+}

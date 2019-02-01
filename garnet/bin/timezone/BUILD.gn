@@ -1,0 +1,60 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "timezone.cc",
+    "timezone.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/fidl/fuchsia.timezone",
+    "//third_party/icu",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("bin") {
+  output_name = "timezone"
+
+  sources = [
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+package("timezone") {
+
+  deps = [
+    ":bin",
+  ]
+
+  binary = "timezone"
+
+  meta = [
+    {
+      path = rebase_path("meta/timezone.cmx")
+      dest = "timezone.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path("//third_party/icu/common/icudtl.dat")
+      dest = "icudtl.dat"
+    },
+  ]
+}

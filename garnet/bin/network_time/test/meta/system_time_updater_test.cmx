@@ -1,0 +1,25 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "system-services": [
+                "fuchsia.net.SocketProvider"
+            ]
+        }
+    },
+    "program": {
+        "binary": "test/system_time_updater_test"
+    },
+    "sandbox": {
+        "dev": [
+            "class/rtc/000"
+        ],
+        "features": [
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.net.SocketProvider",
+            "fuchsia.sys.Environment",
+            "fuchsia.sys.Loader"
+        ]
+    }
+}

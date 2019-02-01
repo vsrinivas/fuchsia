@@ -1,0 +1,9 @@
+Source: https://fuchsia.googlesource.com/third_party/vulkan_loader_and_validation_layers
+Git Commit: eea5b890a411d2d92f9cb8125acd08bc24bb0b0c
+License: Apache 2.0
+
+Copies function declarations from vulkan.h (from Fuchsia mirror of the Khronos
+vulkan_loader_and_validation_layers repo), and adds stub implementations.  The
+purpose is to provide a null implementation of Vulkan which will fail any
+attempt to create a VkInstances or VkDevice; this is useful for running host
+tests on test servers that have not been configured with Vulkan.

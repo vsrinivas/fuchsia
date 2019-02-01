@@ -1,0 +1,8 @@
+{
+    "labels": [
+        "//garnet/go/src/pm:host"
+    ],
+    "packages": [
+        "//garnet/go/src/pm"
+    ]
+}

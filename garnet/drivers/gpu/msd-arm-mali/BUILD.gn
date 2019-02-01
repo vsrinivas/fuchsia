@@ -1,0 +1,58 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+ARM_MALI_DEVICE_ID = "PDEV_DID_ARM_MALI"
+
+driver_module("msd_arm") {
+  output_name = "libmsd_arm"
+
+  deps = [
+    ":msd_arm_entry",
+    "src",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+driver_module("msd_arm_test") {
+  testonly = true
+  output_name = "libmsd_arm_test"
+
+  deps = [
+    ":msd_arm_test_entry",
+    "src",
+    "tests:gtest",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+magma_pdev_entry("msd_arm_entry") {
+  pdev_device_id = ARM_MALI_DEVICE_ID
+}
+
+magma_pdev_entry("msd_arm_test_entry") {
+  pdev_device_id = ARM_MALI_DEVICE_ID
+  test_entry = true
+}
+
+group("tests") {
+  testonly = true
+  public_deps = [
+    "tests/unit_tests:msd_arm_mali_nonhardware_tests",
+  ]
+}
+
+config("msd_tests_include_config") {
+  include_dirs = [ "tests" ]
+}
+
+config("msd_src_include_config") {
+  include_dirs = [ "src" ]
+}

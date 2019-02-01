@@ -1,0 +1,29 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.during;
+
+interface AddMethod {
+    1: ExistingMethod();
+    [Transitional]
+    2: NewMethod();
+};
+
+interface RemoveMethod {
+    1: ExistingMethod();
+    [Transitional]
+    2: OldMethod();
+};
+
+interface AddEvent {
+    1: ExistingMethod();
+    [Transitional]
+    2: -> NewEvent();
+};
+
+interface RemoveEvent {
+    1: ExistingMethod();
+    [Transitional]
+    2: -> OldEvent();
+};

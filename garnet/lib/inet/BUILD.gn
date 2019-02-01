@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+static_library("inet") {
+  sources = [
+    "ip_address.cc",
+    "ip_address.h",
+    "ip_port.cc",
+    "ip_port.h",
+    "socket_address.cc",
+    "socket_address.h",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.netstack",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/fidl/fuchsia-net",
+  ]
+}

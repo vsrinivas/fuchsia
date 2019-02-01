@@ -1,0 +1,97 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+executable("config_unittest") {
+  testonly = true
+
+  output_name = "config_unittest"
+
+  sources = [
+    "config_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/crashpad:crashpad_analyzer_files",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("crashpad_analyzer_impl_unittest") {
+  testonly = true
+
+  output_name = "crashpad_analyzer_impl_unittest"
+
+  sources = [
+    "crashpad_analyzer_impl_unittest.cc",
+  ]
+
+  deps = [
+    "//garnet/bin/crashpad:crashpad_analyzer_files",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/syslog/cpp",
+    "//third_party/googletest:gmock",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/fidl/fuchsia-crash",
+    "//zircon/public/fidl/fuchsia-mem",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+test_package("crashpad_analyzer_tests") {
+  deps = [
+    ":config_unittest",
+    ":crashpad_analyzer_impl_unittest",
+  ]
+
+  tests = [
+    {
+      name = "config_unittest"
+    },
+    {
+      name = "crashpad_analyzer_impl_unittest"
+    },
+  ]
+
+  resources = [
+    # needed for config_unittest
+    {
+      path = "configs/valid_no_upload.json"
+      dest = "valid_config_no_upload.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/valid_upload.json"
+      dest = "valid_config_upload.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/valid_no_upload_spurious_server.json"
+      dest = "valid_config_no_upload_spurious_server.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/bad_schema_spurious_field.json"
+      dest = "bad_schema_spurious_field_config.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/bad_schema_missing_required_field.json"
+      dest = "bad_schema_missing_required_field_config.json"
+    },
+
+    # needed for config_unittest
+    {
+      path = "configs/bad_schema_missing_server.json"
+      dest = "bad_schema_missing_server_config.json"
+    },
+  ]
+}

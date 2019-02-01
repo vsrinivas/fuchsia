@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/kernel_crash_checker"
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "bin/intl_wisdom_server"
+    },
+    "sandbox": {
+        "services": []
+    }
+}

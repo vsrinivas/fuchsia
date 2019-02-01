@@ -1,0 +1,34 @@
+{
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.tracelink.Registry": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=2"
+                ],
+                "fuchsia.tracing.TraceController": [
+                    "fuchsia-pkg://fuchsia.com/trace_manager#meta/trace_manager.cmx",
+                    "--verbose=2"
+                ]
+            }
+        }
+    },
+    "program": {
+        "binary": "test/trace_integration_tests"
+    },
+    "sandbox": {
+        "features": [
+            "persistent-storage",
+            "system-temp"
+        ],
+        "services": [
+            "fuchsia.process.Launcher",
+            "fuchsia.sys.Launcher",
+            "fuchsia.tracelink.Registry",
+            "fuchsia.tracing.TraceController"
+        ],
+        "system": [
+            "bin"
+        ]
+    }
+}

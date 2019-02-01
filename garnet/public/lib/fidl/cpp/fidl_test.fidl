@@ -1,0 +1,74 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.misc;
+
+struct Int64Struct {
+    int64 x;
+};
+
+struct HasOptionalFieldStruct {
+    Int64Struct? x;
+};
+
+struct Has2OptionalFieldStruct {
+    Int64Struct? x;
+    Int64Struct? y;
+};
+
+struct Empty {
+};
+
+struct EmptyStructSandwich {
+    string before;
+    Empty e;
+    string after;
+};
+
+union SimpleUnion {
+    int32 i32;
+    int64 i64;
+    Int64Struct s;
+    Int64Struct? os;
+    string str;
+};
+
+table SimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+};
+
+// A variant of SimpleTable that has just the first few fields.
+// Think of this as an older variant of that type!
+table OlderSimpleTable {
+    1: int64 x;
+    2: reserved;
+};
+
+// A variant of SimpleTable that has some additional new fields.
+// Think of this as an newer variant of that type!
+table NewerSimpleTable {
+    1: int64 x;
+    2: reserved;
+    3: reserved;
+    4: reserved;
+    5: int64 y;
+    6: int64 z;
+    7: reserved;
+};
+
+xunion SampleXUnion {
+    int32 i;
+    SimpleUnion su;
+    SimpleTable st;
+};
+
+struct XUnionContainer {
+    string before;
+    SampleXUnion? xu;
+    string after;
+};

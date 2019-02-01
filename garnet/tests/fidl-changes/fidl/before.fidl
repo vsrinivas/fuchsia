@@ -1,0 +1,23 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fidl.test.before;
+
+interface AddMethod {
+    1: ExistingMethod();
+};
+
+interface RemoveMethod {
+    1: ExistingMethod();
+    2: OldMethod();
+};
+
+interface AddEvent {
+    1: ExistingMethod();
+};
+
+interface RemoveEvent {
+    1: ExistingMethod();
+    2: -> OldEvent();
+};

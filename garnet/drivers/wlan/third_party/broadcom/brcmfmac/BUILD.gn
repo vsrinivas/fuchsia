@@ -1,0 +1,190 @@
+#
+# Copyright (c) 2018 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+import("//garnet/tools/cipd.gni")
+
+source_set("brcmfmac_srcs") {
+  defines = [
+    "CONFIG_BRCMFMAC_USB=1",
+    "CONFIG_BRCMFMAC_SDIO=1",
+    "CONFIG_BRCMFMAC_PCIE=1",
+    "CONFIG_BRCMFMAC_DBG=1",
+    "ENABLE_DRIVER_TRACING=true",
+  ]
+
+  sources = [
+    "bcdc.c",
+    "bcdc.h",
+    "bcmsdh.c",
+    "binding.c",
+    "btcoex.c",
+    "btcoex.h",
+    "bus.h",
+    "cfg80211.c",
+    "cfg80211.h",
+    "chip.c",
+    "chip.h",
+    "common.c",
+    "common.h",
+    "commonring.c",
+    "commonring.h",
+    "core.c",
+    "core.h",
+    "d11.c",
+    "debug.c",
+    "debug.h",
+    "device.c",
+    "device.h",
+    "feature.c",
+    "feature.h",
+    "firmware.c",
+    "firmware.h",
+    "flowring.c",
+    "flowring.h",
+    "fweh.c",
+    "fweh.h",
+    "fwil.c",
+    "fwil.h",
+    "fwil_types.h",
+    "fwsignal.c",
+    "fwsignal.h",
+    "linuxisms.c",
+    "linuxisms.h",
+    "msgbuf.c",
+    "msgbuf.h",
+    "netbuf.c",
+    "netbuf.h",
+    "of.c",
+    "of.h",
+    "p2p.c",
+    "p2p.h",
+    "pcie.c",
+    "pcie.h",
+    "pno.c",
+    "pno.h",
+    "proto.c",
+    "proto.h",
+    "sdio.c",
+    "sdio.h",
+    "usb.c",
+    "usb.h",
+    "utils.c",
+    "vendor.c",
+    "vendor.h",
+    "workqueue.c",
+    "workqueue.h",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-ethernet",
+    "//zircon/public/banjo/ddk-protocol-gpio",
+    "//zircon/public/banjo/ddk-protocol-pci",
+    "//zircon/public/banjo/ddk-protocol-sdio",
+    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/broadcom",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/trace",
+    "//zircon/public/lib/trace-engine",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+driver_module("brcmfmac_driver") {
+  output_name = "brcmfmac"
+  deps = [
+    ":brcmfmac_srcs",
+  ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+if (internal_access) {
+  # Firmware files from git.kernel.org/pub/scm/linux/kernel/git/firmware/linux-firmware.git
+  copy("brcmfmac-firmware-copy") {
+    sources = [
+      "firmware/brcmfmac43242a.bin",
+      "firmware/brcmfmac43455-sdio.bin",
+      "firmware/brcmfmac43455-sdio.txt",
+      "firmware/brcmfmac4356-pcie.bin",
+      "firmware/brcmfmac4356-sdio.bin",
+      "firmware/brcmfmac4356-sdio.txt",
+      "firmware/brcmfmac4359-sdio.bin",
+      "firmware/brcmfmac4359-sdio.txt",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/brcmfmac/{{source_file_part}}",
+    ]
+  }
+}
+
+package("brcmfmac") {
+  deprecated_system_image = true
+
+  deps = [
+    ":brcmfmac_driver",
+  ]
+
+  drivers = [
+    {
+      name = "brcmfmac.so"
+    },
+  ]
+
+  if (internal_access) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":brcmfmac-firmware-copy($shlib_toolchain)",
+    ]
+
+    libraries = [
+      {
+        name = "firmware/brcmfmac/brcmfmac4356-pcie.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4356-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4356-sdio.txt"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4359-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac4359-sdio.txt"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac43455-sdio.bin"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac43455-sdio.txt"
+      },
+      {
+        name = "firmware/brcmfmac/brcmfmac43242a.bin"
+      },
+    ]
+  }
+}

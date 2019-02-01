@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/run/test:run_tests",
+	"//garnet/bin/run/test:run_test_exiter"
+    ]
+}

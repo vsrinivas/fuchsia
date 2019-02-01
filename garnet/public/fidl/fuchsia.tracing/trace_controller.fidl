@@ -1,0 +1,64 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.tracing;
+
+// The controller interface used by the trace tool to start/stop tracing.
+[Discoverable]
+interface TraceController {
+  // Requests to start tracing with the specified |options|.
+  //
+  // The trace controller acknowledges the request when all
+  // registered providers have been started or after |options.start_timeout_milliseconds| milliseconds.
+  //
+  // The trace controller emits trace data to |output| as a sequence of
+  // binary formatted trace records.  Traces obtained from different providers
+  // are delimited by metadata records within the stream.
+  //
+  // The trace controller is responsible for lightly validating the structure of
+  // trace records as it copies them from trace buffers into the output.
+  // In particular, it must verify the size of each record header to ensure
+  // that the framing of trace records in the data stream is maintained.
+  //
+  // The trace controller does not validate the contents of the trace records
+  // themselves.  For example, it should not try to check argument lengths in
+  // events.  This ensures that the trace format can be extended without needing
+  // to modify the trace controller.
+  1: StartTracing(TraceOptions options, handle<socket> output) -> ();
+
+  // Requests to stop tracing.
+  //
+  // The trace controller continues to transfer any remaining data to the
+  // output until finished, then closes the output.
+  2: StopTracing();
+
+  // Gets the known categories.
+  3: GetKnownCategories() -> (vector<KnownCategory> categories);
+};
+
+struct KnownCategory {
+  string:100 name;
+  string description;
+};
+
+// This is a copy of tracelink.fidl:BufferingMode.
+enum BufferingMode : uint8 {
+  ONESHOT = 0;
+  CIRCULAR = 1;
+  STREAMING = 2;
+};
+
+// Provides options for the trace.
+struct TraceOptions {
+  // The trace categories to record, or an empty array for all.
+  vector<string:100>:100 categories;
+
+  // Suggested size of trace buffer which each provider should receive.
+  uint32 buffer_size_megabytes_hint = 4;
+
+  // Acknowledge start request after at most |start_timeout_milliseconds|.
+  uint64 start_timeout_milliseconds = 5000;
+
+  BufferingMode buffering_mode = ONESHOT;
+};

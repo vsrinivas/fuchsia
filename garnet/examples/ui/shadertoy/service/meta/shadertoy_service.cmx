@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "features": [ "vulkan" ],
+        "services": [
+          "fuchsia.tracelink.Registry",
+          "fuchsia.vulkan.loader.Loader"
+        ]
+    }
+}
+

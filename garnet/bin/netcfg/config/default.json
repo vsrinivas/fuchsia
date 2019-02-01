@@ -1,0 +1,8 @@
+{
+  "dns_config": {
+    "servers": ["8.8.8.8"]
+  },
+  "rules": [
+    [ ["all", "all"], ["ip_address", "dhcp"] ]
+  ]
+}

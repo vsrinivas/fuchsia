@@ -1,0 +1,135 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.text;
+
+/// Lists the TextPoints for selection and other related ranges, at a particular
+/// revision number. Any time the revision number is incremented, all these TextPoints
+/// become invalid, and a new TextFieldState is sent through OnUpdate.
+struct TextFieldState {
+  /// The start and end of the entire text field.
+  TextRange document;
+
+  /// The currently selected range of text.
+  TextSelection? selection;
+
+  /// The range that indicates the text that is being composed, or currently
+  /// receiving suggestions from the keyboard. It should be displayed in some
+  /// distinct way, such as underlined.
+  TextRange? composition;
+
+  /// Some keyboards, notably Japanese, give the user buttons to highlight just a
+  /// subset of the composition string for suggestions. It must be equal to or a subset
+  /// of the composition range. If the composition range changes, the TextField may
+  /// discard this and require the keyboard to create a new one.
+  TextRange? composition_highlight;
+
+  /// A dead key is a key combination you press before another key to add diacritical
+  /// marks, accents, or other changes to the second key. After the first key, a
+  /// highlighted character indicates that the next character will be different. This
+  /// range is that highlighted character. If the selection moves away from this
+  /// highlight range, or if the contents of the highlight range change, the TextField
+  /// may discard this and require the keyboard to create a new one.
+  TextRange? dead_key_highlight;
+
+  /// This number is increased any time content in the text field is changed, if the
+  /// selection is changed, or if anything else about the state is changed.
+  uint64 revision;
+};
+
+/// Indicates errors that can occur with various TextField methods. Until FIDL supports
+/// result return types, if TextError has any value except OK, the client must ignore
+/// all other return data from that method.
+enum TextError {
+  // Once FIDL supports Result return types, this option can be removed.
+  OK = 0;
+
+  /// Indicates the revision number passed to the method is no longer valid.
+  BAD_REVISION = 1;
+
+  /// Indicates an edit would be valid, but custom text field code does not allow that change
+  /// to be made, like inserting number into a text field.
+  INVALID_EDIT = 2;
+
+  /// Bad request entirely, like an unknown point that doesn't match the edits revision.
+  /// Indicates a bug with client code.
+  BAD_REQUEST = 3;
+
+  /// For a contents() request, indicates there is no text between the two points that is known.
+  /// (If only a substring is known, it should be returned, with the `start` TextPoint set
+  /// appropriately). For a distance() request, indicates the number of characters between the
+  /// two points is unknowably large.
+  UNKNOWABLE = 4;
+};
+
+
+/// Represents a text field or other kind of editing interface that wants to receive text input
+/// from the operating system. This interface is also what is passed to a keyboard to allow it
+/// to read state and make changes to text fields.
+///
+/// All editing methods must happen within an edit transaction. The edits aren't
+/// applied until CommitEdit is called. **This isn't a lock!** The TextField
+/// can still apply edits on its side, which would increase the current revision
+/// number. When CommitEdit is called, the edits are only run if the revision
+/// number passed to BeginEdit is still valid. TextField implementations can
+/// assume that there will only be one client at a time; they don't need to
+/// keep track of a separate transaction list for each client.
+interface TextField {
+  /// Any time the revision number increments, this event fires, with the latest version of
+  /// the state. It also fires when a new client connects to the service, so it can get an
+  /// initial state without waiting for an edit.
+  -> OnUpdate(TextFieldState state);
+
+  // READ METHODS
+
+  /// Returns a new point that is `offset` grapheme clusters away from `oldPoint`
+  PointOffset(TextPoint old_point, int64 offset, uint64 revision) -> (TextPoint new_point, TextError error);
+
+  /// Returns number of grapheme clusters between two points. If the point range.start is after
+  /// range.end, then the range is considered `inverted` and distance will be negative.
+  /// For all points A and B, pointOffset(A, distance(A, B)) == B
+  Distance(TextRange range, uint64 revision) -> (int64 distance, TextError error);
+
+  /// Returns string of grapheme clusters between two points
+  Contents(TextRange range, uint64 revision) -> (string contents, TextPoint start, TextError error);
+
+  // TRANSACTION METHODS
+
+  /// Starts a transaction. If it's called a second time with no CommitEdit()
+  /// call, the changes from the first uncommitted transaction are discarded as
+  /// though AbortEdit() was called.
+  BeginEdit(uint64 revision);
+
+  /// If the transaction's revision number (from BeginEdit) is still current,
+  /// runs all edit commands queued in this transaction. If not, returns
+  /// BAD_REVISION.
+  CommitEdit() -> (TextError error);
+
+  /// Discards the current transaction.
+  AbortEdit();
+
+  // EDITING METHODS — used within a transaction
+
+  /// Replaces text in the range with new_text. It's the client's
+  /// responsibility to make sure new_text isn't too long for a FIDL message;
+  /// if it is, the client should break up the string into separate replace
+  /// calls.
+  Replace(TextRange range, string new_text);
+
+  /// Sets the selection range.
+  SetSelection(TextSelection selection);
+
+  /// Sets the composition range and the composition highlight range. For more info,
+  /// see TextState's comments.
+  SetComposition(TextRange composition_range, TextRange? highlight_range);
+
+  /// Clears both the composition range, and the composition highlight range.
+  ClearComposition();
+
+  /// Sets the dead key highlight range. For more info, see TextState's comments.
+  SetDeadKeyHighlight(TextRange range);
+
+  /// Clears the dead key highlight range.
+  ClearDeadKeyHighlight();
+};

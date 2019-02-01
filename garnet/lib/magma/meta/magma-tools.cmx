@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/magma_info"
+    },
+    "sandbox": {
+        "features": [
+            "vulkan"
+        ]
+    }
+}

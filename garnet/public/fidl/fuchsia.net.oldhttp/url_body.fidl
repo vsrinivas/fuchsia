@@ -1,0 +1,14 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.net.oldhttp;
+
+using fuchsia.mem;
+
+union URLBody {
+  // A socket that will contain the streaming request or response body.
+  handle<socket> stream;
+  // A shared buffer that will contain the complete request or response body.
+  fuchsia.mem.Buffer buffer;
+};

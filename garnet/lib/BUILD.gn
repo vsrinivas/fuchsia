@@ -1,0 +1,46 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+executable("unittests") {
+  testonly = true
+  output_name = "garnet_lib_unittests"
+
+  deps = [
+    "//garnet/public/lib/backoff:unittests",
+    "//garnet/public/lib/callback:unittests",
+    "//garnet/public/lib/cobalt/cpp:unittests",
+    "//garnet/public/lib/gtest:unittests",
+    "//garnet/public/lib/netconnector/cpp:unittests",
+    "//garnet/public/lib/network_wrapper:unittests",
+    "//garnet/public/lib/timekeeper:unittests",
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("garnet_lib_tests") {
+  testonly = true
+
+  deps = [
+    ":unittests",
+    "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
+  ]
+
+  tests = [
+    {
+      name = "garnet_lib_unittests"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(
+              get_label_info(
+                  "//garnet/public/lib/cobalt/cpp:test_metrics_registry",
+                  "target_gen_dir") + "/test_metrics_registry.pb")
+      dest = "test_metrics_registry.pb"
+    },
+  ]
+}

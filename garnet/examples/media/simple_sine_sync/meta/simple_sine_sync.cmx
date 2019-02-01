@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/simple_sine_sync"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.media.Audio"
+        ]
+    }
+}

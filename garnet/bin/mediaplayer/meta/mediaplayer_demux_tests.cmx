@@ -1,0 +1,5 @@
+{
+    "program": {
+        "binary": "test/mediaplayer_demux_tests"
+    }
+}

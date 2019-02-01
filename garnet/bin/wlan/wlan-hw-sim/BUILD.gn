@@ -1,0 +1,75 @@
+#Copyright 2018 The Fuchsia Authors.All rights reserved.
+#Use of this source code is governed by a BSD - style license that can be
+#found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+import("//build/test/test_package.gni")
+rustc_binary("bin") {
+  name = "wlan_hw_sim"
+  with_unit_tests = true
+  with_lto = "fat"
+  edition = "2018"
+
+  deps = [
+    "//garnet/lib/rust/ethernet",
+    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
+    "//garnet/lib/rust/wlantap-client",
+    "//garnet/lib/wlan/fidl:fidl-rustc",
+    "//garnet/lib/wlan/fidl:service-rustc",
+    "//garnet/lib/wlan/fidl:sme-rustc",
+    "//garnet/lib/wlan/fidl:wlantap-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.common:fuchsia.wlan.common-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.mlme:fuchsia.wlan.mlme-rustc",
+    "//garnet/public/fidl/fuchsia.wlan.service:fuchsia.wlan.service-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:bitfield",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:hex",
+    "//third_party/rust-crates/rustc_deps:pin-utils",
+  ]
+}
+
+package("wlan-hw-sim") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "rust_crates/wlan_hw_sim"
+
+  meta = [
+    {
+      path = rebase_path("meta/wlan-hw-sim.cmx")
+      dest = "wlan-hw-sim.cmx"
+    },
+  ]
+}
+
+test_package("wlan-hw-sim-tests") {
+  deps = [
+    ":bin",
+  ]
+
+  tests = [
+    {
+      name = "wlan_hw_sim_bin_test"
+      environments = [
+        {
+          dimensions = {
+            device_type = "Intel NUC Kit NUC7i5DNHE"
+          }
+        },
+        {
+          dimensions = {
+            device_type = "QEMU"
+          }
+        },
+      ]
+    },
+  ]
+}

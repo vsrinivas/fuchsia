@@ -1,0 +1,8 @@
+{
+    "imports": [
+        "garnet/packages/prod/magma"
+    ],
+    "packages": [
+        "//garnet/bin/vulkan_loader"
+    ]
+}

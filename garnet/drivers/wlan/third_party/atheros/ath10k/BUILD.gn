@@ -1,0 +1,202 @@
+#
+# Copyright (c) 2018 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
+
+driver_module("ath10k_driver") {
+  output_name = "ath10k"
+
+  sources = [
+    "ahb.h",
+    "bitarr.c",
+    "bmi.c",
+    "bmi.h",
+    "ce.c",
+    "ce.h",
+    "core.c",
+    "core.h",
+    "debug.h",
+    "hif.h",
+    "htc.c",
+    "htc.h",
+    "htt.c",
+    "htt.h",
+    "htt_rx.c",
+    "htt_tx.c",
+    "hw.c",
+    "hw.h",
+    "ieee80211.h",
+    "mac.c",
+    "mac.h",
+    "macros.h",
+    "msg_buf.c",
+    "msg_buf.h",
+    "p2p.h",
+    "pci.c",
+    "pci.h",
+    "rx_desc.h",
+    "sparse_array.c",
+    "sparse_array.h",
+    "swap.c",
+    "swap.h",
+    "targaddrs.h",
+    "testmode.h",
+    "thermal.h",
+    "txrx.c",
+    "txrx.h",
+    "utils.c",
+    "utils.h",
+    "wmi-ops.h",
+    "wmi-tlv.c",
+    "wmi-tlv.h",
+    "wmi.c",
+    "wmi.h",
+    "wow.h",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-pci",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zircon-internal",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+}
+
+if (internal_access) {
+  all_fw_files = [
+    "QCA4019/hw1.0/board-2.bin",
+    "QCA4019/hw1.0/firmware-5.bin",
+    "QCA6174/hw2.1/board-2.bin",
+    "QCA6174/hw2.1/board.bin",
+    "QCA6174/hw2.1/firmware-5.bin",
+    "QCA6174/hw3.0/board-2.bin",
+    "QCA6174/hw3.0/board.bin",
+    "QCA6174/hw3.0/firmware-4.bin",
+    "QCA6174/hw3.0/firmware-6.bin",
+    "QCA9377/hw1.0/board-2.bin",
+    "QCA9377/hw1.0/board.bin",
+    "QCA9377/hw1.0/firmware-5.bin",
+    "QCA9887/hw1.0/board.bin",
+    "QCA9887/hw1.0/firmware-5.bin",
+    "QCA9888/hw2.0/board-2.bin",
+    "QCA9888/hw2.0/firmware-5.bin",
+    "QCA988X/hw2.0/board.bin",
+    "QCA988X/hw2.0/firmware-4.bin",
+    "QCA988X/hw2.0/firmware-5.bin",
+    "QCA9984/hw1.0/board-2.bin",
+    "QCA9984/hw1.0/firmware-5.bin",
+    "QCA99X0/hw2.0/board.bin",
+    "QCA99X0/hw2.0/firmware-5.bin",
+  ]
+
+  foreach(fw_file, all_fw_files) {
+    copy("ath10k-firmware-copy-" + fw_file) {
+      sources = [
+        "firmware/" + fw_file,
+      ]
+      outputs = [
+        "$root_out_dir/firmware/ath10k/" + fw_file,
+      ]
+    }
+  }
+}
+
+package("ath10k") {
+  deprecated_system_image = true
+
+  deps = [
+    ":ath10k_driver",
+  ]
+
+  drivers = [
+    {
+      name = "ath10k.so"
+    },
+  ]
+
+  if (internal_access) {
+    libraries = []
+
+    foreach(fw_file, all_fw_files) {
+      deps += [
+        # The copy step has to be in the shared-library toolchain to use the
+        # expected output directory, since we treat firmware blobs as if they
+        # were libraries which always use the shared-library toolchain to build.
+        ":ath10k-firmware-copy-" + fw_file + "($shlib_toolchain)",
+      ]
+
+      libraries += [
+        {
+          name = "firmware/ath10k/" + fw_file
+        },
+      ]
+    }
+  }
+}
+
+executable("sparse_array_tests") {
+  output_name = "sparse_array_tests"
+  testonly = true
+  sources = [
+    "sparse_array.c",
+    "sparse_array.h",
+    "sparse_array_tests.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+executable("bitarr_tests") {
+  output_name = "bitarr_tests"
+  testonly = true
+  sources = [
+    "bitarr.c",
+    "bitarr.h",
+    "bitarr_tests.cc",
+  ]
+
+  deps = [
+    "//third_party/googletest:gtest_main",
+  ]
+}
+
+package("ath10k_test") {
+  testonly = true
+
+  package_name = "ath10k_test"
+
+  deps = [
+    ":bitarr_tests",
+    ":sparse_array_tests",
+  ]
+
+  tests = [
+    {
+      name = "sparse_array_tests"
+    },
+    {
+      name = "bitarr_tests"
+    },
+  ]
+}

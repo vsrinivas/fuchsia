@@ -1,0 +1,221 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+static_library("client") {
+  friend = [
+    ":tests",
+    ":test_support",
+  ]
+
+  public = [
+    "arch_info.h",
+    "breakpoint.h",
+    "breakpoint_location.h",
+    "breakpoint_observer.h",
+    "breakpoint_settings.h",
+    "client_object.h",
+    "disassembler.h",
+    "finish_physical_frame_thread_controller.h",
+    "finish_thread_controller.h",
+    "frame.h",
+    "frame_fingerprint.h",
+    "job.h",
+    "job_context.h",
+    "memory_dump.h",
+    "process.h",
+    "process_observer.h",
+    "register.h",
+    "register_dwarf.h",
+    "session.h",
+    "setting_schema.h",
+    "setting_schema_definition.h",
+    "setting_store.h",
+    "setting_store_observer.h",
+    "setting_value.h",
+    "stack.h",
+    "step_mode.h",
+    "step_over_thread_controller.h",
+    "step_thread_controller.h",
+    "system.h",
+    "system_observer.h",
+    "target.h",
+    "target_observer.h",
+    "thread.h",
+    "thread_controller.h",
+    "thread_observer.h",
+    "until_thread_controller.h",
+  ]
+
+  sources = [
+    "arch_info.cc",
+    "breakpoint.cc",
+    "breakpoint_action.cc",
+    "breakpoint_impl.cc",
+    "breakpoint_impl.h",
+    "breakpoint_location.cc",
+    "breakpoint_location_impl.cc",
+    "breakpoint_location_impl.h",
+    "client_object.cc",
+    "disassembler.cc",
+    "finish_physical_frame_thread_controller.cc",
+    "finish_thread_controller.cc",
+    "frame.cc",
+    "frame_fingerprint.cc",
+    "frame_impl.cc",
+    "frame_impl.h",
+    "frame_symbol_data_provider.cc",
+    "frame_symbol_data_provider.h",
+    "job.cc",
+    "job_context.cc",
+    "job_context_impl.cc",
+    "job_context_impl.h",
+    "job_impl.cc",
+    "job_impl.h",
+    "memory_dump.cc",
+    "minidump_remote_api.cc",
+    "minidump_remote_api.h",
+    "process.cc",
+    "process_impl.cc",
+    "process_impl.h",
+    "register.cc",
+    "register.h",
+    "register_dwarf.cc",
+    "register_dwarf.h",
+    "remote_api.cc",
+    "remote_api.h",
+    "remote_api_impl.cc",
+    "remote_api_impl.h",
+    "session.cc",
+    "session.h",
+    "setting_schema.cc",
+    "setting_schema_definition.cc",
+    "setting_store.cc",
+    "setting_value.cc",
+    "stack.cc",
+    "step_over_thread_controller.cc",
+    "step_thread_controller.cc",
+    "system.cc",
+    "system_impl.cc",
+    "system_impl.h",
+    "target.cc",
+    "target_impl.cc",
+    "target_impl.h",
+    "thread.cc",
+    "thread_controller.cc",
+    "thread_impl.cc",
+    "thread_impl.h",
+    "until_thread_controller.cc",
+  ]
+
+  public_deps = [
+    "//garnet/bin/zxdb/common",
+    "//garnet/bin/zxdb/expr",
+    "//garnet/bin/zxdb/symbols",
+    "//garnet/lib/debug_ipc:client",
+    "//garnet/lib/debug_ipc/helper",
+    "//garnet/public/lib/fxl",
+    "//garnet/third_party/llvm:LLVMAArch64Desc",
+    "//garnet/third_party/llvm:LLVMAArch64Disassembler",
+    "//garnet/third_party/llvm:LLVMX86Desc",
+    "//garnet/third_party/llvm:LLVMX86Disassembler",
+  ]
+
+  deps = [
+    "//garnet/third_party/llvm:LLVMMC",
+    "//garnet/third_party/llvm:LLVMObject",
+    "//third_party/crashpad/client",
+    "//third_party/crashpad/compat",
+    "//third_party/crashpad/snapshot",
+    "//third_party/crashpad/third_party/mini_chromium:base",
+    "//third_party/crashpad/util",
+  ]
+}
+
+source_set("test_support") {
+  testonly = true
+  sources = [
+    "mock_frame.cc",
+    "mock_frame.h",
+    "mock_process.cc",
+    "mock_process.h",
+    "mock_remote_api.cc",
+    "mock_remote_api.h",
+    "remote_api_test.cc",
+    "remote_api_test.h",
+    "thread_impl_test_support.cc",
+    "thread_impl_test_support.h",
+  ]
+
+  public_deps = [
+    ":client",
+    "//garnet/bin/zxdb/symbols:test_support",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+copy("copy_test_data") {
+  sources = [
+    "test_example_minidump.dmp",
+    "test_example_minidump_with_aspace.dmp",
+  ]
+
+  outputs = [
+    "$root_out_dir/test_data/zxdb/{{source_file_part}}",
+  ]
+}
+
+# TODO(IN-819): Delete once zxdb_tests is no longer being run out of
+# $root_build_dir/host_tests/.
+copy("copy_test_data_deprecated") {
+  sources = [
+    "test_example_minidump.dmp",
+    "test_example_minidump_with_aspace.dmp",
+  ]
+
+  outputs = [
+    "$root_build_dir/host_tests/test_data/zxdb/{{source_file_part}}",
+  ]
+}
+
+source_set("tests") {
+  testonly = true
+  sources = [
+    "breakpoint_impl_unittest.cc",
+    "disassembler_unittest.cc",
+    "finish_physical_frame_thread_controller_unittest.cc",
+    "finish_thread_controller_unittest.cc",
+    "frame_fingerprint_unittest.cc",
+    "frame_impl_unittest.cc",
+    "memory_dump_unittest.cc",
+    "minidump_unittest.cc",
+    "process_impl_unittest.cc",
+    "register_unittest.cc",
+    "session_unittest.cc",
+    "setting_schema_unittest.cc",
+    "setting_store_unittest.cc",
+    "setting_value_unittest.cc",
+    "stack_unittest.cc",
+    "step_over_thread_controller_unittest.cc",
+    "step_thread_controller_unittest.cc",
+    "string_util_unittest.cc",
+    "target_impl_unittest.cc",
+    "thread_controller_test.cc",
+    "thread_controller_test.h",
+    "thread_impl_unittest.cc",
+  ]
+
+  data_deps = [
+    ":copy_test_data",
+    ":copy_test_data_deprecated",
+  ]
+
+  deps = [
+    ":client",
+    ":test_support",
+    "//garnet/bin/zxdb/common:test_support",
+    "//garnet/bin/zxdb/symbols:test_support",
+    "//garnet/bin/zxdb/symbols:tests",
+    "//third_party/googletest:gtest",
+  ]
+}

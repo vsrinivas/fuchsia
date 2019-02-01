@@ -1,0 +1,7 @@
+{
+    "packages": [
+        "//garnet/drivers/wlan/realtek/rtl88xx",
+        "//garnet/drivers/wlan/wlan",
+        "//garnet/drivers/wlan/wlanphy"
+    ]
+}

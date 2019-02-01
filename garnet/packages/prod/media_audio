@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/media:audio",
+        "//garnet/bin/media:audio_core"
+    ]
+}

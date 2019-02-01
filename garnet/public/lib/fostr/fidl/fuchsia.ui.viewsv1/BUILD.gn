@@ -1,0 +1,27 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/public/build/fostr/fostr_fidl.gni")
+
+fostr_fidl("fuchsia.ui.viewsv1") {
+  fidl_target = "//garnet/public/fidl/fuchsia.ui.viewsv1"
+
+  additional_include = "lib/ui/views/cpp/formatting.h"
+
+  amendments_path =
+      "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1/amendments.json"
+
+  public_deps = [
+    "//garnet/public/lib/ui/views/cpp",
+  ]
+
+  deps = [
+    "//garnet/public/lib/fostr/fidl/fuchsia.math",
+    "//garnet/public/lib/fostr/fidl/fuchsia.sys",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.gfx",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.scenic",
+    "//garnet/public/lib/fostr/fidl/fuchsia.ui.viewsv1token",
+  ]
+}

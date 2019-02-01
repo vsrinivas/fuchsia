@@ -1,0 +1,66 @@
+// Basic cpu and memory stats, reported in "tally mode".
+{
+  "config_name": "printer-test",
+  "events": [
+    {
+      "group_name": "fixed",
+      "event_name": "instructions_retired",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "fixed",
+      "event_name": "unhalted_reference_cycles",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "llc_references",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "llc_misses",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "branch_instructions_retired",
+      "flags": [ "os", "user" ]
+    },
+    {
+      "group_name": "arch",
+      "event_name": "branch_misses_retired",
+      "flags": [ "os", "user" ]
+    },
+    {
+      // This one is used to get CPUPERF_RECORD_VALUE records.
+      "group_name": "misc",
+      "event_name": "memory_bytes_read"
+    },
+    {
+      // This one is used to get CPUPERF_RECORD_VALUE records.
+      "group_name": "misc",
+      "event_name": "memory_bytes_written"
+    },
+    {
+      // This one is used to get CPUPERF_RECORD_VALUE records.
+      "group_name": "misc",
+      "event_name": "memory_gt_requests"
+    },
+    {
+      // This one is used to get CPUPERF_RECORD_VALUE records.
+      "group_name": "misc",
+      "event_name": "memory_ia_requests"
+    },
+    {
+      // This one is used to get CPUPERF_RECORD_VALUE records.
+      "group_name": "misc",
+      "event_name": "memory_io_requests"
+    }
+  ],
+  "buffer_size_in_mb": 1,
+  "duration": 1,
+  "num_iterations": 100,
+  "output_path_prefix": "/tmp/cpuperf-test",
+  "session_result_spec_path": "/tmp/cpuperf-test.cpsession"
+}

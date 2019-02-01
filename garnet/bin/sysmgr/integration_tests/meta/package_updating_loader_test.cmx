@@ -1,0 +1,9 @@
+{
+    "program": {
+        "binary": "test/package_updating_loader_test"
+    },
+    "sandbox": {
+        "services": [ "fuchsia.sys.Launcher", "fuchsia.sys.Environment" ],
+        "pkgfs": [ "packages" ]
+    }
+}

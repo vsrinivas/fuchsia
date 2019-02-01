@@ -1,0 +1,5 @@
+{
+    "packages": [
+        "//garnet/bin/timezone/test:timezone_tests"
+    ]
+}

@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "dev": [
+            "class/rtc/000"
+        ],
+        "services": [
+            "fuchsia.logger.LogSink",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

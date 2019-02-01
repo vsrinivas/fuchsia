@@ -1,0 +1,327 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/magma/gnbuild/magma.gni")
+
+config("platform_include_config") {
+  include_dirs = [ "." ]
+}
+
+config("tracing") {
+  if (magma_enable_tracing) {
+    defines = [ "MAGMA_ENABLE_TRACING" ]
+  }
+}
+
+source_set("address_range") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util",
+  ]
+
+  sources = [
+    "platform_address_range.h",
+  ]
+
+  deps = [
+    "zircon:address_range",
+  ]
+
+  allow_circular_includes_from = [ "zircon:address_range" ]
+}
+
+source_set("barriers") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_barriers.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/ddk",
+  ]
+}
+
+source_set("buffer_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_buffer.h",
+  ]
+}
+
+source_set("buffer") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer_header",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  deps = [
+    "zircon:buffer",
+  ]
+}
+
+source_set("bus_mapper") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":buffer",
+    ":handle",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_bus_mapper.h",
+  ]
+
+  deps = [
+    "zircon:bus_mapper",
+  ]
+
+  allow_circular_includes_from = [ "zircon:bus_mapper" ]
+}
+
+source_set("handle") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_handle.h",
+  ]
+
+  deps = [
+    "zircon:handle",
+  ]
+
+  allow_circular_includes_from = [ "zircon:handle" ]
+}
+
+source_set("device") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":handle",
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_device.h",
+    "platform_mmio.h",
+    "platform_pci_device.h",
+  ]
+
+  deps = [
+    "zircon:device",
+  ]
+
+  allow_circular_includes_from = [ "zircon:device" ]
+}
+
+source_set("random_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_random.h",
+  ]
+}
+
+group("random") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":random_header",
+  ]
+
+  deps = [
+    "zircon:random",
+  ]
+}
+
+source_set("mmio") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    "$magma_build_root/src/magma_util:common",
+  ]
+
+  sources = [
+    "platform_mmio.h",
+  ]
+}
+
+source_set("futex") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_futex.h",
+  ]
+
+  deps = [
+    "zircon:futex",
+  ]
+
+  allow_circular_includes_from = [ "zircon:futex" ]
+}
+
+source_set("connection_header") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "platform_connection_client.h",
+  ]
+
+  public_deps = [
+    ":buffer",
+    ":event",
+    ":object",
+    ":semaphore",
+    ":thread",
+    "$magma_build_root/src/magma_util:common",
+    "//garnet/lib/magma/include:magma_abi",
+    "//garnet/lib/magma/include:msd_abi",
+  ]
+}
+
+source_set("client_connection") {
+  public_deps = [
+    ":connection_header",
+  ]
+  deps = [
+    "zircon:client_connection",
+  ]
+}
+
+source_set("connection") {
+  public_deps = [
+    ":connection_header",
+  ]
+  deps = [
+    "zircon:connection",
+  ]
+}
+
+source_set("thread_header") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_thread.h",
+  ]
+}
+
+source_set("thread") {
+  public_configs = [ ":platform_include_config" ]
+
+  public_deps = [
+    ":thread_header",
+  ]
+
+  deps = [
+    "zircon:thread",
+  ]
+}
+
+source_set("event") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_event.h",
+  ]
+
+  deps = [
+    "zircon:event",
+  ]
+
+  allow_circular_includes_from = [ "zircon:event" ]
+}
+
+source_set("object") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_object.h",
+  ]
+
+  deps = [
+    "zircon:object",
+  ]
+
+  allow_circular_includes_from = [ "zircon:object" ]
+}
+
+source_set("semaphore") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_semaphore.h",
+  ]
+
+  deps = [
+    ":object",
+    "zircon:semaphore",
+  ]
+
+  allow_circular_includes_from = [ "zircon:semaphore" ]
+}
+
+source_set("port") {
+  public_configs = [ ":platform_include_config" ]
+
+  sources = [
+    "platform_port.h",
+  ]
+
+  deps = [
+    ":object",
+    "zircon:port",
+  ]
+
+  allow_circular_includes_from = [ "zircon:port" ]
+}
+
+source_set("trace") {
+  public_configs = [
+    ":platform_include_config",
+    ":tracing",
+  ]
+
+  sources = [
+    "platform_trace.h",
+  ]
+
+  public_deps = [
+    "zircon:trace",
+    "//zircon/public/lib/fit",
+  ]
+
+  allow_circular_includes_from = [ "zircon:trace" ]
+}
+
+source_set("sysmem_connection_header") {
+  public_configs = [ "$magma_build_root:magma_src_include_config" ]
+
+  sources = [
+    "platform_sysmem_connection.h",
+  ]
+
+  public_deps = [
+    ":buffer",
+    "$magma_build_root/src/magma_util:common",
+    "//garnet/lib/magma/include:magma_abi",
+  ]
+}
+
+source_set("sysmem_connection") {
+  public_deps = [
+    ":sysmem_connection_header",
+  ]
+  deps = [
+    "zircon:sysmem_connection",
+  ]
+}

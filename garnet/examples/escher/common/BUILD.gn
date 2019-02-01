@@ -1,0 +1,87 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//garnet/lib/vulkan/image_pipe_swapchain.gni")
+
+static_library("common") {
+  sources = [
+    "demo.cc",
+    "demo_harness.cc",
+  ]
+  deps = [
+    "//garnet/public/lib/fxl",
+    "//third_party/shaderc/third_party/glslang",
+    "//third_party/shaderc/third_party/glslang:SPIRV",
+    "//third_party/shaderc/third_party/glslang:glslang-default-resource-limits",
+  ]
+  public_deps = [
+    ":headers",
+  ]
+  libs = [
+    "dl",
+    "pthread",
+  ]
+  include_dirs = [
+    "//lib",
+    "//third_party/glm",
+  ]
+
+  if (is_fuchsia) {
+    deps += [ ":demo_harness_fuchsia" ]
+  }
+  if (is_linux) {
+    deps += [ ":demo_harness_linux" ]
+  }
+}
+
+source_set("demo_harness_fuchsia") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo_harness_fuchsia.cc",
+    "demo_harness_fuchsia.h",
+  ]
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/lib/vulkan:image_pipe_swapchain",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/trace-provider",
+  ]
+  public_deps = [
+    ":headers",
+    "//garnet/bin/ui/input_reader",
+  ]
+}
+
+source_set("demo_harness_linux") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo_harness_linux.cc",
+    "demo_harness_linux.h",
+  ]
+  deps = [
+    "//third_party/glfw",
+  ]
+  public_deps = [
+    ":headers",
+  ]
+  libs = [
+    "X11",
+    "Xinerama",
+    "Xcursor",
+    "Xrandr",
+  ]
+  include_dirs = [ "//third_party/glfw/include" ]
+}
+
+source_set("headers") {
+  visibility = [ ":*" ]
+  sources = [
+    "demo.h",
+    "demo_harness.h",
+  ]
+  public_deps = [
+    "//garnet/public/lib/escher",
+  ]
+}

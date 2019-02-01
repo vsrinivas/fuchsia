@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/lib/cmx:cmx_unittests",
+        "//garnet/public/lib/cmx_facet_parser:cmx_facet_parser_unittests"
+    ]
+}

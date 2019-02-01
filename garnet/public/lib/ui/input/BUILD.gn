@@ -1,0 +1,27 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("input") {
+  sources = [
+    "device_state.cc",
+    "device_state.h",
+    "input_device_impl.cc",
+    "input_device_impl.h",
+  ]
+
+  deps = [
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-default",
+  ]
+
+  public_deps = [
+    "//garnet/public/fidl/fuchsia.math",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/hid",
+    "//zircon/public/lib/zx",
+  ]
+}

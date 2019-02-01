@@ -1,0 +1,5 @@
+{
+    "labels": [
+        "//garnet/public/lib/escher/build_linux:examples"
+    ]
+}

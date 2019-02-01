@@ -1,0 +1,52 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//third_party/cobalt_config/metrics_registry.gni")
+import("//third_party/protobuf/proto_library.gni")
+
+executable("system-metrics") {
+  output_name = "cobalt_system_metrics_bin"
+
+  sources = [
+    "system_metrics_main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//zircon/public/fidl/fuchsia-cobalt",
+    "//zircon/public/fidl/fuchsia-sysinfo:fuchsia-sysinfo_c",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+metrics_registry("cobalt_system_metrics_registry") {
+  project_id = 102
+}
+
+package("cobalt_system_metrics") {
+  deps = [
+    ":cobalt_system_metrics_registry",
+    ":system-metrics",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/cobalt_system_metrics.cmx")
+      dest = "cobalt_system_metrics.cmx"
+    },
+  ]
+
+  resources = [
+    {
+      path = rebase_path(get_label_info(":cobalt_system_metrics_registry",
+                                        "target_gen_dir") +
+                         "/cobalt_system_metrics_registry.pb")
+      dest = "cobalt_system_metrics_registry.pb"
+    },
+  ]
+
+  binary = "cobalt_system_metrics_bin"
+}

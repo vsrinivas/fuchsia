@@ -1,0 +1,178 @@
+{
+  "version": "0.0.1",
+  "name": "test.name",
+  "library_dependencies": [],
+  "const_declarations": [
+    {
+      "name": "test.name/C",
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " const comment #1\n\n const comment #3\n"
+        }
+      ],
+      "type": {
+        "kind": "primitive",
+        "subtype": "int32"
+      },
+      "value": {
+        "kind": "literal",
+        "literal": {
+          "kind": "numeric",
+          "value": "4"
+        }
+      }
+    }
+  ],
+  "enum_declarations": [],
+  "interface_declarations": [
+    {
+      "name": "test.name/Interface",
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " interface comment #1\n\n interface comment #3\n"
+        }
+      ],
+      "methods": [
+        {
+          "ordinal": 1061382220,
+          "generated_ordinal": 1,
+          "name": "Method",
+          "has_request": true,
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " method comment #1\n\n method comment #3\n"
+            }
+          ],
+          "maybe_request": [],
+          "maybe_request_size": 16,
+          "maybe_request_alignment": 8,
+          "has_response": false
+        }
+      ]
+    }
+  ],
+  "struct_declarations": [
+    {
+      "name": "test.name/Struct",
+      "anonymous": false,
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " struct comment #1\n\n struct comment #3\n"
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "Field",
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " struct member comment #1\n\n struct member comment #3\n"
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 0,
+          "max_handles": 0
+        }
+      ],
+      "size": 4,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
+    }
+  ],
+  "table_declarations": [
+    {
+      "name": "test.name/Table",
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " table comment #1\n\n table comment #3\n"
+        }
+      ],
+      "members": [
+        {
+          "ordinal": 1,
+          "reserved": false,
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "Field",
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " table field comment #1\n\n table field comment #3\n"
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "max_handles": 0
+        }
+      ],
+      "size": 16,
+      "max_out_of_line": 24,
+      "alignment": 8,
+      "max_handles": 0
+    }
+  ],
+  "union_declarations": [
+    {
+      "name": "test.name/Union",
+      "maybe_attributes": [
+        {
+          "name": "Doc",
+          "value": " union comment #1\n\n union comment #3\n"
+        }
+      ],
+      "members": [
+        {
+          "type": {
+            "kind": "primitive",
+            "subtype": "int32"
+          },
+          "name": "Field",
+          "maybe_attributes": [
+            {
+              "name": "Doc",
+              "value": " union member comment #1\n\n union member comment #3\n"
+            }
+          ],
+          "size": 4,
+          "max_out_of_line": 0,
+          "alignment": 4,
+          "offset": 4
+        }
+      ],
+      "size": 8,
+      "max_out_of_line": 0,
+      "alignment": 4,
+      "max_handles": 0
+    }
+  ],
+  "xunion_declarations": [],
+  "declaration_order": [
+    "test.name/Interface",
+    "test.name/Struct",
+    "test.name/Union",
+    "test.name/Table",
+    "test.name/C"
+  ],
+  "declarations": {
+    "test.name/C": "const",
+    "test.name/Interface": "interface",
+    "test.name/Struct": "struct",
+    "test.name/Table": "table",
+    "test.name/Union": "union"
+  }
+}

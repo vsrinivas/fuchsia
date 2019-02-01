@@ -1,0 +1,44 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/test/test_package.gni")
+
+test_package("netemul_sandbox_test") {
+  deps = [
+    "//garnet/bin/netemul_runner/model:model_unittest",
+    "//garnet/bin/netemul_runner/test/env_build",
+    "//garnet/bin/netemul_runner/test/netstack_socks",
+    "//garnet/bin/netemul_runner/test/svc_list",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/svc_list_run.cmx")
+      dest = "svc_list_run.cmx"
+    },
+    {
+      path = rebase_path("meta/netstack_socks_run.cmx")
+      dest = "netstack_socks_run.cmx"
+    },
+    {
+      path = rebase_path("meta/env_build_run.cmx")
+      dest = "env_build_run.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "svc_list"
+    },
+    {
+      name = "netstack_socks"
+    },
+    {
+      name = "env_build"
+    },
+    {
+      name = "model_unittest"
+    },
+  ]
+}

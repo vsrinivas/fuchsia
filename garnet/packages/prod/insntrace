@@ -1,0 +1,8 @@
+{
+    "labels": [
+        "//garnet/bin/insntrace:host_insntrace_print"
+    ],
+    "packages": [
+        "//garnet/bin/insntrace"
+    ]
+}

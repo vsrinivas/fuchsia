@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "bin/fx"
+    },
+    "sandbox": {
+        "dev": [
+            "class/audio-input"
+        ],
+        "services": [
+            "fuchsia.media.Audio"
+        ]
+    }
+}

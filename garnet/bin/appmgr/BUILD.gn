@@ -1,0 +1,160 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+source_set("lib") {
+  sources = [
+    "component_controller_impl.cc",
+    "component_controller_impl.h",
+    "debug_info_retriever.cc",
+    "debug_info_retriever.h",
+    "dynamic_library_loader.cc",
+    "dynamic_library_loader.h",
+    "environment_controller_impl.cc",
+    "environment_controller_impl.h",
+    "hub/component_hub.cc",
+    "hub/component_hub.h",
+    "hub/hub.cc",
+    "hub/hub.h",
+    "hub/hub_info.cc",
+    "hub/hub_info.h",
+    "hub/realm_hub.cc",
+    "hub/realm_hub.h",
+    "job_provider_impl.cc",
+    "job_provider_impl.h",
+    "namespace.cc",
+    "namespace.h",
+    "namespace_builder.cc",
+    "namespace_builder.h",
+    "realm.cc",
+    "realm.h",
+    "runner_holder.cc",
+    "runner_holder.h",
+    "scheme_map.cc",
+    "scheme_map.h",
+    "service_provider_dir_impl.cc",
+    "service_provider_dir_impl.h",
+    "system_objects_directory.cc",
+    "system_objects_directory.h",
+    "util.cc",
+    "util.h",
+  ]
+
+  public_deps = [
+    "//garnet/lib/cmx",
+    "//garnet/lib/loader",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/backoff",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/json",
+    "//garnet/public/lib/pkg_url",
+    "//garnet/public/lib/svc/cpp",
+    "//third_party/rapidjson",
+    "//zircon/public/fidl/fuchsia-process",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/inspector",
+    "//zircon/public/lib/loader-service",
+    "//zircon/public/lib/trace-provider",
+    "//zircon/public/lib/zx",
+  ]
+
+  defines = [ "_ALL_SOURCE=1" ]
+}
+
+source_set("appmgr_for_test") {
+  testonly = true
+
+  sources = [
+    "appmgr.cc",
+    "appmgr.h",
+  ]
+
+  public_deps = [
+    ":lib",
+    "//garnet/public/fidl/fuchsia.sys",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fxl",
+    "//zircon/public/lib/fs",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("bin") {
+  output_name = "appmgr"
+
+  sources = [
+    "appmgr.cc",
+    "appmgr.h",
+    "main.cc",
+  ]
+
+  deps = [
+    ":lib",
+    "//garnet/public/lib/component/cpp:environment_services",
+  ]
+}
+
+executable("tests") {
+  testonly = true
+
+  output_name = "appmgr_unittests"
+
+  sources = [
+    "appmgr_unittest.cc",
+    "component_controller_unittest.cc",
+    "hub/hub_holder_unittest.cc",
+    "namespace_builder_unittest.cc",
+    "namespace_unittest.cc",
+    "scheme_map_unittest.cc",
+    "service_provider_dir_unittest.cc",
+    "util_unittest.cc",
+  ]
+
+  deps = [
+    ":appmgr_for_test",
+    ":lib",
+    "//garnet/examples/fidl/services:echo2",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//garnet/public/lib/gtest",
+    "//third_party/googletest:gmock",
+  ]
+}
+
+package("appmgr") {
+  deprecated_system_image = true
+
+  deps = [
+    ":bin",
+  ]
+  binaries = [
+    {
+      name = "appmgr"
+    },
+  ]
+  resources = [
+    {
+      dest = "appmgr/scheme_map/default.config"
+      path = rebase_path("scheme_map.config")
+    },
+  ]
+}
+
+package("appmgr_unittests") {
+  testonly = true
+
+  deps = [
+    ":tests",
+  ]
+  tests = [
+    {
+      name = "appmgr_unittests"
+    },
+  ]
+}

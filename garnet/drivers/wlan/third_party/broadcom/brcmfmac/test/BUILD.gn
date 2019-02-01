@@ -1,0 +1,82 @@
+# Copyright (c) 2018 The Fuchsia Authors.
+#
+# Permission to use, copy, modify, and/or distribute this software for any
+# purpose with or without fee is hereby granted, provided that the above
+# copyright notice and this permission notice appear in all copies.
+#
+# THE SOFTWARE IS PROVIDED "AS IS" AND THE AUTHOR DISCLAIMS ALL WARRANTIES
+# WITH REGARD TO THIS SOFTWARE INCLUDING ALL IMPLIED WARRANTIES OF
+# MERCHANTABILITY AND FITNESS. IN NO EVENT SHALL THE AUTHOR BE LIABLE FOR
+# ANY SPECIAL, DIRECT, INDIRECT, OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
+# WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
+# ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT OF
+# OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+
+import("//build/package.gni")
+
+executable("workqueue_test") {
+  output_name = "workqueue_test"
+  testonly = true
+
+  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
+
+  sources = [
+    "workqueue_test.cc",
+  ]
+
+  deps = [
+    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_srcs",
+    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+executable("netbuf_test") {
+  output_name = "netbuf_test"
+  testonly = true
+
+  defines = [ "CONFIG_BRCMFMAC_DBG=1" ]
+
+  sources = [
+    "netbuf_test.cc",
+  ]
+
+  deps = [
+    "//garnet/drivers/wlan/third_party/broadcom/brcmfmac:brcmfmac_srcs",
+    "//garnet/lib/wlan/protocol",
+    "//third_party/googletest:gtest_main",
+    "//third_party/googletest:gtest_main",
+    "//zircon/public/lib/async-loop",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+package("brcmfmac_test") {
+  testonly = true
+
+  package_name = "brcmfmac_test"
+
+  deps = [
+    ":netbuf_test",
+    ":workqueue_test",
+  ]
+
+  tests = [
+    {
+      name = "workqueue_test"
+    },
+    {
+      name = "netbuf_test"
+    },
+  ]
+}

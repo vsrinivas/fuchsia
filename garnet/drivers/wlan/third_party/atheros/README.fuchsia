@@ -1,0 +1,8 @@
+Source: https://git.kernel.org/pub/scm/linux/kernel/git/torvalds/linux.git
+Git Commit: aae4e7a8bc44722fe70d58920a36916b1043195e
+License: ISC
+
+Only the drivers/net/wireless/ath and drivers/net/wireless/ath/ath10k directories were imported.
+
+Modifications:
+ - added LICENSE and README.fuchsia

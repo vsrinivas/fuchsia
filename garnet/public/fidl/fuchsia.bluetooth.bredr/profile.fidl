@@ -1,0 +1,50 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.bluetooth.bredr;
+
+using fuchsia.bluetooth;
+
+// Possible security levels for services.
+// See BT spec v5.0, Vol 3, Part C, Section 5.2.2.8 for detailed descriptions.
+enum SecurityLevel {
+    NONE = 0; // Only allowed for specific services.
+    ENCRYPTION_OPTIONAL = 1; // MITM protection not required, min user interaction
+    ENCRYPTION_REQUIRED = 2; // Encryption required, MITM protection not required
+    MITM_PROTECTED = 3; // MITM Protection & Encryption required. Interaction okay
+    HIGH_STRENGTH = 4; // 128-bit or equivalent key required using FIPS algorithms
+};
+
+[Discoverable]
+interface Profile {
+    // Register a service. This service will be registered and discoverable with
+    // the Service Discovery Protocol server.
+    // The |security_level| provided here will be required before a connection is
+    // established.
+    // If |devices| is true, connections to the service's channels will create a
+    // device instead of producing an OnConnected event.
+    // Returns |status| for success or error.
+    // If successful, a unique |service_id| is returned to identify this service.
+    AddService(ServiceDefinition definition, SecurityLevel sec_level, bool devices)
+        -> (fuchsia.bluetooth.Status status, uint64 service_id);
+
+    // Removes a previously-registered service, disconnecting all clients.
+    RemoveService(uint64 service_id);
+
+    // Connect a channel to the connected remote device |remote_id| using the
+    // protocol and channel listed. For L2CAP, dynamic PSMs can be specified.
+    // See the defined PSMs in `service.fidl`
+    // Returns the channel after it has been connected. |status| will indicate
+    // an error if the channel could not be connected.
+    ConnectL2cap(string remote_id, uint16 psm)
+        -> (fuchsia.bluetooth.Status status, handle<socket> channel);
+
+    // Produced when a protocol channel is connected for this profile.
+    // |channel| contains the channel connected to, and information about the
+    // protocol is provided in |protocol|. All protocols supported internally will
+    // be handled, for example an RFCOMM socket will be provided instead of an
+    // L2CAP socket if the services protocol descriptor includes it.
+    -> OnConnected(string device_id, uint64 service_id,
+                   handle<socket> channel, ProtocolDescriptor protocol);
+};

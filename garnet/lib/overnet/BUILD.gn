@@ -1,0 +1,97 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fuzzing/fuzzer.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+
+source_set("overnet") {
+  public_deps = [
+    "datagram_stream:lib",
+    "endpoint:lib",
+    "environment:lib",
+    "labels:lib",
+    "links:lib",
+    "packet_protocol:lib",
+    "protocol:lib",
+    "routing:lib",
+    "vocabulary:lib",
+  ]
+}
+
+test("overnet_unittests") {
+  deps = [
+    "datagram_stream:tests",
+    "endpoint:tests",
+    "environment:tests",
+    "labels:tests",
+    "links:tests",
+    "packet_protocol:tests",
+    "protocol:tests",
+    "routing:tests",
+    "testing:run_all_tests",
+    "testing:tests",
+    "vocabulary:tests",
+  ]
+
+  # TODO(ctiller): remove after IN-819 is fixed
+  if (is_linux || is_mac) {
+    deps += [ ":hackhackhack_broken_fostr_on_host" ]
+  }
+}
+
+package("overnet_tests") {
+  testonly = true
+
+  deps = [
+    ":overnet_unittests",
+  ]
+
+  tests = [
+    {
+      name = "overnet_unittests"
+    },
+  ]
+}
+
+# TODO(ctiller): remove after IN-819 is fixed
+if (is_linux) {
+  copy("hackhackhack_broken_fostr_on_host") {
+    deps = [
+      "//garnet/public/lib/fostr:fostr_shared",
+    ]
+    sources = [
+      "$root_out_dir/libfostr_shared.so",
+    ]
+    outputs = [
+      "$root_build_dir/host_tests/libfostr_shared.so",
+    ]
+  }
+} else if (is_mac) {
+  copy("hackhackhack_broken_fostr_on_host") {
+    deps = [
+      "//garnet/public/lib/fostr:fostr_shared",
+    ]
+    sources = [
+      "$root_out_dir/libfostr_shared.dylib",
+    ]
+    outputs = [
+      "$root_build_dir/host_tests/libfostr_shared.dylib",
+    ]
+  }
+}
+
+fuzz_package("overnet_fuzzers") {
+  targets = [
+    "datagram_stream:linearizer_fuzzer",
+    "datagram_stream:receive_mode_fuzzer",
+    "links:packet_nub_fuzzer",
+    "packet_protocol:packet_protocol_fuzzer",
+    "protocol:routable_message_fuzzer",
+    "routing:routing_table_fuzzer",
+    "vocabulary:internal_list_fuzzer",
+  ]
+  sanitizers = [ "asan" ]
+  fuzz_host = true
+}

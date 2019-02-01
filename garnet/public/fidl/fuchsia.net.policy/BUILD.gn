@@ -1,0 +1,19 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.net.policy") {
+  name = "fuchsia.net.policy"
+
+  sources = [
+    "policy.fidl",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-hardware-ethernet",
+    "//zircon/public/fidl/fuchsia-net",
+    "//zircon/public/fidl/fuchsia-net-stack",
+  ]
+}

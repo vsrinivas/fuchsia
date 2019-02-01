@@ -1,0 +1,14 @@
+// Copyright 2017 The Chromium OS Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+syntax = "proto3";
+
+option cc_enable_arenas = true;
+
+// Common definitions used by both host and guest messages.
+package vm_tools;
+
+// gRPC requires that every RPC has an argument and a return value.  This empty
+// message is used when an argument or return value is not required.
+message EmptyMessage {}

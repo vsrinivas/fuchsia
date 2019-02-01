@@ -1,0 +1,249 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/cpp/sdk_source_set.gni")
+import("//build/fidl/fidl.gni")
+import("//build/package.gni")
+import("//build/test.gni")
+
+sdk_source_set("cpp") {
+  category = "partner"
+
+  sdk_name = "fidl_cpp"
+
+  sources = [
+    "binding.h",
+    "binding_set.h",
+    "enum.h",
+    "interface_ptr.h",
+    "interface_ptr_set.h",
+    "internal/header.h",
+    "internal/implementation.h",
+    "internal/message_handler.cc",
+    "internal/message_handler.h",
+    "internal/message_reader.cc",
+    "internal/message_reader.h",
+    "internal/pending_response.cc",
+    "internal/pending_response.h",
+    "internal/proxy.cc",
+    "internal/proxy.h",
+    "internal/proxy_controller.cc",
+    "internal/proxy_controller.h",
+    "internal/stub.cc",
+    "internal/stub.h",
+    "internal/stub_controller.cc",
+    "internal/stub_controller.h",
+    "internal/weak_stub_controller.cc",
+    "internal/weak_stub_controller.h",
+    "optional.h",
+    "thread_safe_binding_set.h",
+  ]
+
+  include_base = "//garnet/public"
+
+  public_deps = [
+    ":cpp_sync",
+    "//zircon/public/lib/async",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+sdk_source_set("cpp_sync") {
+  category = "partner"
+
+  sdk_name = "fidl_cpp_sync"
+
+  sources = [
+    "interface_handle.h",
+    "interface_request.h",
+    "internal/synchronous_proxy.cc",
+    "internal/synchronous_proxy.h",
+    "synchronous_interface_ptr.h",
+  ]
+
+  include_base = "//garnet/public"
+
+  public_configs = [ "//garnet/public:config" ]
+
+  public_deps = [
+    ":cpp_base",
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fidl-async",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/zx",
+  ]
+}
+
+sdk_source_set("cpp_base") {
+  category = "partner"
+
+  sdk_name = "fidl_cpp_base"
+
+  sources = [
+    "array.h",
+    "clone.cc",
+    "clone.h",
+    "coding_traits.cc",
+    "coding_traits.h",
+    "comparison.h",
+    "decoder.cc",
+    "decoder.h",
+    "encoder.cc",
+    "encoder.h",
+    "internal/logging.cc",
+    "internal/logging.h",
+    "object_coding.h",
+    "string.cc",
+    "string.h",
+    "traits.h",
+    "vector.h",
+  ]
+
+  include_base = "//garnet/public"
+
+  public_configs = [ "//garnet/public:config" ]
+
+  public_deps = [
+    "//zircon/public/lib/fidl",
+    "//zircon/public/lib/fit",
+  ]
+
+  if (is_fuchsia) {
+    public_deps += [
+      "//zircon/public/lib/fidl-async",
+      "//zircon/public/lib/zx",
+    ]
+  }
+}
+
+source_set("test_support") {
+  testonly = true
+
+  public = [
+    "test/async_loop_for_test.h",
+  ]
+
+  public_deps = [
+    "//zircon/public/lib/async",
+  ]
+}
+
+fidl("fidl_test") {
+  name = "fidl.test.misc"
+
+  testonly = true
+
+  sources = [
+    "fidl_test.fidl",
+  ]
+}
+
+source_set("host_test_sources") {
+  testonly = true
+
+  sources = [
+    "array_unittest.cc",
+    "clone_unittest.cc",
+    "fidl_test.cc",
+    "object_coding_unittest.cc",
+    "roundtrip_test.cc",
+    "string_unittest.cc",
+    "vector_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp_base",
+    ":fidl_test",
+    "//third_party/googletest:gtest",
+  ]
+}
+
+source_set("test_sources") {
+  testonly = true
+
+  # TODO(jamesr): Make this an sdk source set
+  # sdk_name = "fidl_cpp_tests"
+  # include_base = "//garnet/public"
+
+  sources = [
+    "binding_set_unittest.cc",
+    "binding_unittest.cc",
+    "interface_handle_unittest.cc",
+    "interface_ptr_set_unittest.cc",
+    "interface_ptr_unittest.cc",
+    "interface_request_unittest.cc",
+    "internal/message_reader_unittest.cc",
+    "internal/proxy_controller_unittest.cc",
+    "internal/stub_controller_unittest.cc",
+    "synchronous_interface_ptr_unittest.cc",
+    "thread_safe_binding_set_unittest.cc",
+  ]
+
+  deps = [
+    ":cpp",
+    ":fidl_test",
+    ":test_support",
+    "//garnet/public/lib/fidl/cpp/test",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop",
+  ]
+
+  public_configs = [ "//garnet/public:config" ]
+}
+
+executable("fidl_cpp_unittests") {
+  testonly = true
+
+  sources = [
+    "test/async_loop_for_test.cc",
+  ]
+
+  deps = [
+    ":host_test_sources",
+    ":test_sources",
+    ":test_support",
+    "//garnet/public/lib/fidl/cpp/test",
+    "//garnet/public/lib/fxl/test:gtest_main",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fbl",
+  ]
+}
+
+package("fidl_tests") {
+  testonly = true
+
+  deps = [
+    ":fidl_cpp_unittests",
+  ]
+
+  tests = [
+    {
+      name = "fidl_cpp_unittests"
+    },
+  ]
+}
+
+if (is_linux || is_mac) {
+  test("fidl_cpp_host_unittests") {
+    deps = [
+      ":host_test_sources",
+      "//garnet/public/lib/fxl/test:gtest_main",
+      "//third_party/googletest:gtest",
+    ]
+  }
+}
+# group("host_tests") {
+#   deps = [
+#     ":fidl_cpp_host_unittests($host_toolchain)",
+#   ]
+#   testonly = true
+# }

@@ -1,0 +1,84 @@
+// Copyright 2017 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.ui.policy;
+
+using fuchsia.ui.gfx;
+using fuchsia.ui.input;
+
+// |Presentation.CaptureKeyboardEvent| will consume this listener interface and
+// call |OnEvent| when the registered keyboard event occurs.
+interface KeyboardCaptureListenerHACK {
+  1: OnEvent(fuchsia.ui.input.KeyboardEvent event);
+};
+
+// |Presentation.CapturePointerEvent| will consume this listener interface and
+// call |OnEvent| when a pointer event occurs.
+interface PointerCaptureListenerHACK {
+  1: OnPointerEvent(fuchsia.ui.input.PointerEvent event);
+};
+
+// Allows clients of Presenter.Present() to control a presentation.
+// Experimental.
+[Discoverable]
+interface Presentation {
+  // Enable or disable clipping for the Scenic renderer associated with the
+  // presentation.
+  1: EnableClipping(bool enabled);
+
+  2: UseOrthographicView();
+  3: UsePerspectiveView();
+
+  // Set parameters such as the shadow algorithm used to render the scene.
+  // NOTE: a single param would be better than an array; see TO-529.
+  4: SetRendererParams(vector<fuchsia.ui.gfx.RendererParam> params);
+
+  // Override the intended usage of the display.
+  5: SetDisplayUsage(DisplayUsage usage);
+
+  // Rotates the display.
+  11: SetDisplayRotation(float32 display_rotation_degrees, bool animate);
+
+  // Override the dimensions of the display. Values must be less than the actual
+  // size of the display. If either of the values are 0, then they are ignored
+  // and the actual size of the display is used.
+  7: SetDisplaySizeInMm(float32 width_in_mm, float32 height_in_mm);
+
+  // This call exists so that base shell can capture hotkeys and do special
+  // things with it (e.g., switch a session shell). Phase and modifiers are always
+  // matched, and valid (non-zero) code points are matched. If there is no
+  // valid code point, the filter will match against the hid usage value.
+  // The full KeyboardEvent is supplied to |listener|'s OnEvent.
+  // TODO: Figure out the feasibility of this feature and the best place to put
+  // it.
+  6: CaptureKeyboardEventHACK(fuchsia.ui.input.KeyboardEvent event_to_capture,
+                              KeyboardCaptureListenerHACK listener);
+
+  // This call exists so that base shell can capture pointer events.
+  // TODO: Figure out the feasibility of this feature and the best place to put
+  // it. This call will be replaced by gesture disambiguation system in future.
+  10: CapturePointerEventsHACK(PointerCaptureListenerHACK listener);
+
+  // TODO(SCN-650): Determine better place for PresentationMode API.
+  8: GetPresentationMode() -> (PresentationMode mode);
+  9: SetPresentationModeListener(PresentationModeListener listener);
+};
+
+// Screen modes that can be detected via sensor data.
+// N.B. We use accelerometers to measure gravity when at rest, so detection is
+// limited to earth-relative orientations.
+enum PresentationMode {
+  CLOSED = 0;
+  LAPTOP = 1;
+  TABLET = 2;
+  TENT = 3;
+};
+
+// Tell client that the screen mode has changed, according to sensors.
+// N.B. There can be a race where the actual mode continues to change, after
+// the listener has been notified. The client must call GetPresentationMode(),
+// which will return the latest detected mode.
+interface PresentationModeListener {
+  1: OnModeChanged();
+};

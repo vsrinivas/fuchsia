@@ -1,0 +1,15 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.test.echos;
+
+[Discoverable]
+interface EchoExposedByParent {
+  1: Echo(int64 value) -> (int64 response);
+};
+
+[Discoverable]
+interface EchoHiddenByParent {
+  1: Echo(int64 value) -> (int64 response);
+};

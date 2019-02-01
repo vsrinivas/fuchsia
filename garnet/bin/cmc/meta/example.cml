@@ -1,0 +1,43 @@
+// This is a v2 component manifest.
+{
+  "program": {
+    "binary": "bin/example",
+  },
+  "use": [
+    {
+      "service": "/fonts/CoolFonts",
+      "as": "/svc/fuchsia.fonts.Provider",
+    },
+  ],
+  "expose": [
+    {
+      "directory": "/volumes/blobfs",
+      "from": "self",
+    },
+  ],
+  "offer": [
+    {
+      "service": "/svc/fuchsia.logger.Log",
+      "from": "#logger",
+      "targets": [
+        {
+          "to": "#netstack",
+        },
+      ],
+    },
+  ],
+  "children": [
+    {
+      "name": "logger",
+      "uri": "fuchsia-pkg://fuchsia.com/logger/stable#meta/logger.cm",
+    },
+    {
+      "name": "netstack",
+      "uri": "fuchsia-pkg://fuchsia.com/netstack/stable#meta/netstack.cm",
+    },
+  ],
+  "facets": {
+    "author": "Fuchsia",
+    "year": 2018,
+  }
+}

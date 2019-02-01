@@ -1,0 +1,22 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("input") {
+  sources = [
+    "input_system.cc",
+    "input_system.h",
+    "view_id.cc",
+    "view_id.h",
+  ]
+
+  deps = [
+    "//garnet/lib/ui/gfx",
+    "//garnet/lib/ui/scenic",
+    "//garnet/public/lib/escher",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fxl",
+    "//garnet/public/lib/ui/geometry/cpp",
+    "//garnet/public/lib/ui/input/cpp",
+  ]
+}

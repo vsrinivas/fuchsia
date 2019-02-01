@@ -1,0 +1,13 @@
+{
+    "imports": [
+        "garnet/packages/prod/scenic"
+    ],
+    "packages": [
+        "//garnet/bin/ui:scenic_tests",
+        "//garnet/bin/ui:ime_service_tests",
+        "//garnet/bin/ui/benchmarks/image_grid_cpp",
+        "//garnet/bin/ui/tests/performance:scenic_benchmarks",
+        "//garnet/bin/ui/tests/performance:vulkan_is_supported",
+        "//garnet/lib/ui/gfx/tests:mock_pose_buffer_provider"
+    ]
+}

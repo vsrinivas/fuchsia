@@ -1,0 +1,15 @@
+{
+    "program": {
+        "binary": "bin/system_updater"
+    },
+    "sandbox": {
+        "features": [ "shell", "persistent-storage" ],
+        "pkgfs": [ "packages" ],
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.cobalt.LoggerFactory",
+            "fuchsia.logger.LogSink",
+            "fuchsia.process.Launcher"
+        ]
+    }
+}

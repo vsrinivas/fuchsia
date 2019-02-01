@@ -1,0 +1,17 @@
+{
+    "program": {
+        "binary": "test/test_wayland_bridge_test_lib_test"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Launcher"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.ui.viewsv1.ViewManager": "fuchsia-pkg://fuchsia.com/view_manager#meta/view_manager.cmx"
+            }
+        }
+    }
+}

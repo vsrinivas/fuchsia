@@ -1,0 +1,79 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/compiled_action.gni")
+
+amber_repository_dir = "$root_out_dir/amber-files"
+
+# Directory containing developer signing keys.
+amber_keys_dir = "//garnet/go/src/amber/keys"
+
+# Directory containing files named by their merkleroot content IDs in
+# ASCII hex.  The //build/image:pm_publish_blobs target populates
+# this with copies of build products, but never removes old files.
+amber_repository_blobs_dir = "$amber_repository_dir/repository/blobs"
+
+template("pm_publish") {
+  # These files are copied from amber_keys_dir into $amber_repository_dir/keys.
+
+  copy("keys") {
+    sources = [
+      "$amber_keys_dir/snapshot.json",
+      "$amber_keys_dir/targets.json",
+      "$amber_keys_dir/timestamp.json",
+    ]
+
+    outputs = [
+      "$amber_repository_dir/keys/{{source_file_part}}"
+    ]
+  }
+
+  copy("root_manifest") {
+    sources = [
+      "$amber_keys_dir/root_manifest.json"
+    ]
+
+    outputs = [
+      "$amber_repository_dir/repository/root.json"
+    ]
+  }
+
+  compiled_action(target_name) {
+
+    tool = "//garnet/go/src/pm:pm_bin"
+    tool_output_name = "pm"
+
+    forward_variables_from(invoker,
+                           [
+                             "deps",
+                             "data_deps",
+                             "inputs",
+                             "testonly",
+                             "visibility",
+                           ])
+    deps += [
+      ":keys",
+      ":root_manifest",
+    ]
+
+    assert(inputs == [ inputs[0] ],
+           "pm_publish(\"$target_name\") requires exactly one input")
+
+    outputs = [
+      "$amber_repository_dir/repository/snapshot.json",
+      "$amber_repository_dir/repository/targets.json",
+      "$amber_repository_dir/repository/timestamp.json",
+    ]
+
+    args = [
+      "publish",
+      "-r",
+      rebase_path(amber_repository_dir, root_build_dir),
+      "-ps",
+      "-f",
+      rebase_path(inputs[0]),
+      "-vt",
+    ]
+  }
+}

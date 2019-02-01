@@ -1,0 +1,68 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "recovery_netstack"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "core:netstack-core",
+    "//garnet/lib/rust/ethernet",
+    "//garnet/lib/rust/fidl_fuchsia_net_ext",
+    "//garnet/lib/rust/fidl_fuchsia_hardware_ethernet_ext",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:byteorder",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:libc",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//zircon/public/fidl/fuchsia-net-stack:fuchsia-net-stack-rustc",
+    "//zircon/public/fidl/fuchsia-net:fuchsia-net-rustc",
+    "//zircon/public/fidl/fuchsia-hardware-ethernet:fuchsia-hardware-ethernet-rustc",
+  ]
+}
+
+package("recovery_netstack") {
+
+  deps = [
+    ":bin",
+  ]
+
+  binaries = [
+    {
+      name = "recovery_netstack"
+    },
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/recovery_netstack.cmx")
+      dest = "recovery_netstack.cmx"
+    },
+  ]
+}
+
+package("recovery_netstack_tests") {
+  testonly = true
+  deps = [
+    ":bin",
+    "core:netstack-core",
+  ]
+  tests = [
+    {
+      name = "recovery_netstack_bin_test"
+    },
+    {
+      name = "netstack_core_lib_test"
+    },
+  ]
+}

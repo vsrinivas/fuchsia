@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/lib/magma/gnbuild/magma-intel-gen",
+        "//garnet/lib/magma/gnbuild/magma-arm-mali"
+    ]
+}

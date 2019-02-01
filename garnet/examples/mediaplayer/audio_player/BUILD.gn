@@ -1,0 +1,24 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+executable("audio_player") {
+  sources = [
+    "audio_player.cc",
+    "audio_player.h",
+    "audio_player_params.cc",
+    "audio_player_params.h",
+    "main.cc",
+  ]
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.media",
+    "//garnet/public/fidl/fuchsia.mediaplayer",
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/media/timeline",
+    "//garnet/public/lib/url",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/fit",
+  ]
+}

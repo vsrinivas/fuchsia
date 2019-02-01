@@ -1,0 +1,16 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.simplecamera;
+
+using fuchsia.images;
+
+// Simple camera interface.  This will be deprecated when
+// CameraManager replaces it.
+[Discoverable]
+interface SimpleCamera {
+  // Connect to a camera using the first enumerated format.
+  // The device opened will be /dev/class/camera/camera_id
+  1: ConnectToCamera(uint32 camera_id, fuchsia.images.ImagePipe image_pipe);
+};

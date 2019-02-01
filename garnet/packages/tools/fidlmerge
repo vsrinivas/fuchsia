@@ -1,0 +1,5 @@
+{
+    "labels": [
+        "//garnet/go/src/fidlmerge:host"
+    ]
+}

@@ -1,0 +1,8 @@
+{
+    "packages": [
+        "//garnet/examples/overnet/echo/client:overnet-echo-client",
+        "//garnet/examples/overnet/echo/server:overnet-echo-server",
+        "//garnet/examples/overnet/interface_passing/client:overnet-interface-passing-client",
+        "//garnet/examples/overnet/interface_passing/server:overnet-interface-passing-server"
+    ]
+}

@@ -1,0 +1,88 @@
+// Copyright 2016 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.testing.runner;
+
+struct TestResult {
+  string name;
+  int64 elapsed;
+  bool failed;
+  string message;
+};
+
+// This service is included in the Environment of multi-process tests
+// that are launched by the test runner harness. Test processes can connect to
+// this service to log failures, signal crashes, and signal completion.
+// The empty return acknowledges that the connection to TestRunner was
+// successful.
+[Discoverable]
+interface TestRunner {
+  // Tells the test runner how to identify this test program.
+  1: Identify(string program_name) -> ();
+
+  // Tells the test runner that a paritcular test case finished. May be called
+  // multiple times.
+  2: ReportResult(TestResult result);
+
+  // Tells the test runner that a particular test case failed, with the supplied
+  // message. May be called multiple times. When |Teardown()| is called, the
+  // test program ends as a failure.
+  //
+  // |Fail()| is deprecated in favor of |ReportResult|.
+  3: Fail(string log_message);
+
+  // Either this method, |Teardown()| or |WillTerminate()| must be invoked
+  // before closing the connection to this interface; otherwise the TestRunner
+  // service will assume that the connection broke due to the test crashing.
+  // The test runner will send a reply back as an acknowledgement when it starts
+  // processing this method.
+  4: Done() -> ();
+
+  // Signals that the test program is complete and the entire test harness
+  // should be torn down. The test will be declared a failure if |Fail()| was
+  // ever called, or if |ReportResult()| was ever called where |failed| is true.
+  // Otherwise the test will be declared successful. The test runner will send a
+  // reply back as an acknowledgement when it starts processing this method.
+  5: Teardown() -> ();
+
+  // Signals that this process expects to be terminated within the time
+  // specified. If it is not killed that is a failure. A test that calls this
+  // should not call |Done()| or |Teardown()|.
+  6: WillTerminate(float64 withinSeconds);
+
+  // Declare how many test points this test is expected to pass to complete.
+  7: SetTestPointCount(int64 count);
+
+  // Signals that a test point has been passed.
+  8: PassTestPoint();
+};
+
+// This service is included in the Environment of the test runner
+// harness, along with TestRunner. This service represents a producer-consumer
+// queue that is shared between all of its clients; clients can use it to signal
+// events across different processes. Producers can queue values associated to a
+// key, and consumers can get values out of the queue (or block until a value is
+// available).
+//
+// Two example use cases:
+//
+// A module testing the persistence of its 'Ledger' between reinflations can use
+// this queue to Put() some state and Get() the state in a subsequent run, and
+// assert that the ledger data it sees in its subsequent runs matches the state
+// saved in previous runs.
+//
+// An test agent can Put() a "connected" key when it receives a connection, and
+// a test module that requested the agent can Get() that "connected" key to
+// assert that it was able to connect to the right agent.
+[Discoverable]
+interface TestRunnerStore {
+  // This will store |key| with value |value| and respond back. Subsequent
+  // Put()s to |key| are queued up until they are read by a |Get()|.
+  1: Put(string key, string value) -> ();
+
+  // Get() will return the next queued value associated with the |key|. If there
+  // are no values queued for key, this method will not return until one has
+  // been Put().
+  2: Get(string key) -> (string value);
+};

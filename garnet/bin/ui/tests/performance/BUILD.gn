@@ -1,0 +1,64 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/go/go_binary.gni")
+import("//build/go/go_library.gni")
+import("//build/go/toolchain.gni")
+import("//build/package.gni")
+import("//third_party/vulkan_loader_and_validation_layers/layers/layers.gni")
+
+package("vulkan_is_supported") {
+  testonly = true
+
+  deps = [
+    "vulkan_is_supported",
+  ]
+  binary = "vulkan_is_supported"
+
+  meta = [
+    {
+      path = rebase_path("vulkan_is_supported/meta/vulkan_is_supported.cmx")
+      dest = "vulkan_is_supported.cmx"
+    },
+  ]
+}
+
+package("scenic_benchmarks") {
+  testonly = true
+
+  deps = [
+    ":process_scenic_trace",
+  ]
+
+  binaries = [
+    {
+      name = "gfx_benchmarks_standalone.sh"
+      source = rebase_path("gfx_benchmarks_standalone.sh")
+    },
+    {
+      name = "process_scenic_trace"
+    },
+    {
+      name = "run_scenic_benchmark.sh"
+      source = rebase_path("run_scenic_benchmark.sh")
+    },
+  ]
+}
+
+go_library("process_scenic_trace_lib") {
+  name = "process_scenic_trace"
+  deps = [
+    "//garnet/go/src/benchmarking",
+  ]
+}
+
+go_binary("process_scenic_trace") {
+  output_name = "process_scenic_trace"
+
+  gopackage = "process_scenic_trace"
+
+  deps = [
+    ":process_scenic_trace_lib",
+  ]
+}

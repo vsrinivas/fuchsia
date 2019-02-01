@@ -1,0 +1,24 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+source_set("mocks") {
+  testonly = true
+
+  sources = [
+    "mock_semantics_provider.cc",
+    "mock_semantics_provider.h",
+  ]
+
+  deps = [
+    "//garnet/bin/a11y/talkback:lib",
+    "//garnet/public/fidl/fuchsia.accessibility",
+    "//garnet/public/fidl/fuchsia.ui.input",
+    "//garnet/public/fidl/fuchsia.ui.viewsv1",
+    "//garnet/public/lib/component/cpp/testing",
+    "//garnet/public/lib/fidl/cpp",
+    "//garnet/public/lib/fsl",
+    "//garnet/public/lib/fxl",
+    "//third_party/googletest:gtest",
+  ]
+}

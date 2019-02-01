@@ -1,0 +1,18 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.telephony.manager;
+
+using fuchsia.telephony.ril;
+
+/// Primary Telephony management interface
+[Discoverable]
+interface Manager {
+  /// Returns whether or not a modem is currently available on the system.
+  IsAvailable() -> (bool available);
+
+  /// Get access to a RIL
+  // TODO(bwb): get per modem, not just first one on the system
+  GetRilHandle(request<fuchsia.telephony.ril.RadioInterfaceLayer> ril_iface) -> (bool status);
+};

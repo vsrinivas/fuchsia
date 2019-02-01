@@ -1,0 +1,14 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.ui.input.ImeService",
+            "fuchsia.ui.scenic.Scenic",
+            "fuchsia.ui.viewsv1.ViewManager",
+            "fuchsia.ui.viewsv1.ViewSnapshot"
+        ]
+    }
+}

@@ -1,0 +1,24 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include "rapidjson/document.h"
+
+struct ConverterArgs {
+  // These parameters are copied into the Catapult histogram file.  See the
+  // README.md file for the meanings of these parameters.
+  int64_t timestamp = 0;
+  const char* masters = nullptr;
+  const char* bots = nullptr;
+  const char* log_url = nullptr;
+
+  // Generate deterministic GUIDs instead of random GUIDs.  This is used
+  // only for testing.
+  bool use_test_guids = false;
+};
+
+void Convert(rapidjson::Document* input, rapidjson::Document* output,
+             const ConverterArgs* args);
+int ConverterMain(int argc, char** argv);

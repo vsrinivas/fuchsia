@@ -1,0 +1,81 @@
+# Copyright 2017 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+import("//garnet/tools/cipd.gni")
+
+driver_module("ralink_driver") {
+  output_name = "ralink"
+
+  sources = [
+    "binding.c",
+    "device.cpp",
+    "device.h",
+    "driver.cpp",
+    "ralink.h",
+    "register.h",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/fidl",
+    "//garnet/lib/wlan/mlme",
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/lib/async-cpp",
+    "//zircon/public/lib/async-loop-cpp",
+    "//zircon/public/lib/bitmap",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/fit",
+    "//zircon/public/lib/sync",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+  ]
+
+  configs += [ "//build/config/fuchsia:enable_zircon_asserts" ]
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+if (internal_access) {
+  copy("ralink-firmware") {
+    sources = [
+      "firmware/rt2870.bin",
+    ]
+    outputs = [
+      "$root_out_dir/firmware/rt2870.bin",
+    ]
+  }
+}
+
+package("ralink") {
+  deprecated_system_image = true
+
+  deps = [
+    ":ralink_driver",
+  ]
+
+  drivers = [
+    {
+      name = "ralink.so"
+    },
+  ]
+
+  if (internal_access) {
+    deps += [
+      # The copy step has to be in the shared-library toolchain to use the
+      # expected output directory, since we treat firmware blobs as if they
+      # were libraries which always use the shared-library toolchain to build.
+      ":ralink-firmware($shlib_toolchain)",
+    ]
+
+    libraries = [
+      {
+        name = "firmware/rt2870.bin"
+      },
+    ]
+  }
+}

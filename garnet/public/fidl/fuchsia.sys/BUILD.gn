@@ -1,0 +1,25 @@
+# Copyright 2016 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.sys") {
+  sdk_category = "partner"
+
+  sources = [
+    "component_controller.fidl",
+    "environment.fidl",
+    "environment_controller.fidl",
+    "flat_namespace.fidl",
+    "job_provider.fidl",
+    "launcher.fidl",
+    "loader.fidl",
+    "runner.fidl",
+    "service_provider.fidl",
+  ]
+
+  public_deps = [
+    "//zircon/public/fidl/fuchsia-mem",
+  ]
+}

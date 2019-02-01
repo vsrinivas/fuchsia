@@ -1,0 +1,29 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+
+package("runmany") {
+  deps = [
+    ":runn",
+  ]
+
+  binaries = [
+    {
+      name = "runmany"
+      shell = true
+    },
+  ]
+}
+
+executable("runn") {
+  output_name = "runmany"
+  sources = [
+    "src/runmany.c",
+  ]
+  deps = [
+    "//zircon/public/lib/fdio",
+    "//zircon/public/lib/zx",
+  ]
+}

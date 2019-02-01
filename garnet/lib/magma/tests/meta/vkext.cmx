@@ -1,0 +1,21 @@
+{
+    "program": {
+        "binary": "test/vkext"
+    },
+    "sandbox": {
+        "features": [
+            "system-temp",
+            "vulkan"
+        ],
+        "services": [
+            "fuchsia.vulkan.loader.Loader"
+        ]
+    },
+    "facets": {
+        "fuchsia.test": {
+            "injected-services": {
+                "fuchsia.vulkan.loader.Loader": "fuchsia-pkg://fuchsia.com/vulkan_loader#meta/vulkan_loader.cmx"
+            }
+        }
+    }
+}

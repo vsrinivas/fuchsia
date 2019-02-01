@@ -1,0 +1,63 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+config("config") {
+  defines = [ "NO_LIBDEXFILE_SUPPORT" ]
+  include_dirs = [
+    "fuchsia",
+    "include",
+  ]
+}
+
+static_library("libunwindstack") {
+  public_configs = [ ":config" ]
+
+  sources = [
+    "ArmExidx.cpp",
+    "DwarfCfa.cpp",
+    "DwarfEhFrameWithHdr.cpp",
+    "DwarfMemory.cpp",
+    "DwarfOp.cpp",
+    "DwarfSection.cpp",
+    "Elf.cpp",
+    "ElfInterface.cpp",
+    "ElfInterfaceArm.cpp",
+    "fuchsia/LogFuchsia.cpp",
+    "fuchsia/MapsFuchsia.cpp",
+    "fuchsia/MemoryFuchsia.cpp",
+    "Global.cpp",
+    "JitDebug.cpp",
+    "MapInfo.cpp",
+    "Symbols.cpp",
+    "Unwinder.cpp",
+
+    # These files are Android-specific and aren't compiled for Fuchsia.
+    #"DexFile.cpp",
+    #"DexFiles.cpp",
+    #"LocalUnwinder.cpp",
+    #"Log.cpp",
+    #"Maps.cpp",
+    #"Memory.cpp",
+    #"RegsArm64.cpp",
+    #"RegsArm.cpp",
+    #"Regs.cpp",
+    #"RegsMips64.cpp",
+    #"RegsMips.cpp",
+    #"RegsX86_64.cpp",
+    #"RegsX86.cpp",
+  ]
+
+  if (target_cpu == "x64") {
+    sources += [ "fuchsia/RegsFuchsiaX86_64.cpp" ]
+  } else if (target_cpu == "arm64") {
+    sources += [ "fuchsia/RegsFuchsiaArm64.cpp" ]
+  }
+
+  # This project does some locking but doesn't annotate usage.
+  configs -= [ "//build/config/fuchsia:thread_safety_annotations" ]
+
+  deps = [
+    "//garnet/public/lib/fxl",
+  ]
+}

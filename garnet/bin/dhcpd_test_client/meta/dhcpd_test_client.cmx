@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/app"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.tracelink.Registry",
+            "fuchsia.net.SocketProvider"
+        ]
+    }
+}

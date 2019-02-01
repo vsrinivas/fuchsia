@@ -1,0 +1,6 @@
+{
+    "packages": [
+        "//garnet/bin/bluetooth/bt-snoop",
+        "//garnet/bin/bluetooth/tools"
+    ]
+}

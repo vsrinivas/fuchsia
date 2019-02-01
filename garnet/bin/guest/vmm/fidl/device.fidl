@@ -1,0 +1,136 @@
+// Copyright 2018 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.guest.device;
+
+using fuchsia.guest;
+using fuchsia.io;
+using fuchsia.ui.gfx;
+using fuchsia.ui.input;
+using zx;
+
+// The following EVENT_* constants indicate which user signal is associated with an event.
+// The value 0 is ZX_USER_SIGNAL_0, 1 is ZX_USER_SIGNAL_1 etc.
+
+// Set a flag to inspect queues on the next interrupt.
+const uint32 EVENT_SET_QUEUE = 0;
+// Set a flag to inspect configs on the next interrupt.
+const uint32 EVENT_SET_CONFIG = 1;
+// If a flag is set, send an interrupt to the device.
+const uint32 EVENT_SET_INTERRUPT = 2;
+
+// Contains the details of a device trap.
+struct Trap {
+    // The address of the device trap. This must be page-aligned.
+    zx.gpaddr addr;
+
+    // The size of the device trap. This must be a multiple of the page size.
+    uint64 size;
+};
+
+// Contains the basic information required to start execution of a device.
+struct StartInfo {
+    // The trap associated with a device. It is up to the device to set this
+    // trap during device setup.
+    Trap trap;
+
+    // The guest associated with a device. This handle should be used to setup
+    // device traps, and then be released before device operation begins.
+    handle<guest>? guest;
+
+    // The event associated with a device interrupt. This is how the device will
+    // notify the guest of events it should process.
+    //
+    // The meaning of the different signals that can be raised on the event are
+    // documented by the EVENT_* constants above.
+    handle<event> event;
+
+    // The VMO used to represent guest physical memory.
+    handle<vmo> vmo;
+};
+
+[FragileBase]
+interface VirtioDevice {
+    // Configure a |queue| for the device. This specifies the |size| and the
+    // guest physical addresses of the queue: |desc|, |avail|, and |used|.
+    ConfigureQueue(uint16 queue, uint16 size, zx.gpaddr desc, zx.gpaddr avail,
+                   zx.gpaddr used) -> ();
+
+    // Notify a |queue| for the device. Primarily used for black-box testing.
+    NotifyQueue(uint16 queue);
+
+    // Ready a device. This provides the set of |negotiated_features| that the
+    // driver and device have agreed upon.
+    Ready(uint32 negotiated_features) -> ();
+};
+
+[Discoverable]
+interface VirtioBalloon : VirtioDevice {
+    // Start the balloon device.
+    Start(StartInfo start_info) -> ();
+
+    // Get memory statistics from the balloon device.
+    GetMemStats() -> (zx.status status,
+                      vector<fuchsia.guest.MemStat>? mem_stats);
+};
+
+[Discoverable]
+interface VirtioBlock : VirtioDevice {
+    // Start the block device.
+    Start(StartInfo start_info,
+          string:fuchsia.guest.MAX_BLOCK_DEVICE_ID_SIZE id,
+          fuchsia.guest.BlockMode mode, fuchsia.guest.BlockFormat format,
+          fuchsia.io.File file) -> (uint64 size);
+};
+
+[Discoverable]
+interface VirtioConsole : VirtioDevice {
+    // Start the console device. This uses |socket| to handle input and output.
+    Start(StartInfo start_info, handle<socket> socket) -> ();
+};
+
+// Provides a way for VirtioInput to listen to view events.
+[Discoverable]
+interface ViewListener {
+    // Called when a View's size is changed.
+    OnSizeChanged(fuchsia.ui.gfx.vec3 size);
+
+    // Called when a View receives input events.
+    OnInputEvent(fuchsia.ui.input.InputEvent event);
+};
+
+[Discoverable]
+interface VirtioGpu : VirtioDevice {
+    // Start the GPU device.
+    Start(StartInfo start_info, ViewListener? view_listener) -> ();
+
+    // Called when a device's configuration is changed.
+    -> OnConfigChanged();
+};
+
+[Discoverable]
+interface VirtioInput : VirtioDevice {
+    // Start the input device.
+    Start(StartInfo start_info) -> ();
+};
+
+[Discoverable]
+interface VirtioNet : VirtioDevice {
+    // Start the net device.
+    Start(StartInfo start_info) -> ();
+};
+
+[Discoverable]
+interface VirtioRng : VirtioDevice {
+    // Start the RNG device.
+    Start(StartInfo start_info) -> ();
+};
+
+[Discoverable]
+interface VirtioWayland : VirtioDevice {
+    // Start the wayland device.
+    Start(StartInfo start_info,
+          handle<vmar> vmar,
+          fuchsia.guest.WaylandDispatcher dispatcher) -> ();
+};

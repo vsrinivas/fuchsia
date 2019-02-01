@@ -1,0 +1,62 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+rustc_binary("bin") {
+  name = "mediasession"
+  edition = "2018"
+  with_unit_tests = true
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.mediaplayer:fuchsia.mediaplayer-rustc",
+    "//garnet/public/fidl/fuchsia.mediasession:fuchsia.mediasession-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//garnet/public/rust/fuchsia-syslog",
+    "//garnet/public/rust/fuchsia-zircon",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+    "//third_party/rust-crates/rustc_deps:log",
+    "//third_party/rust-crates/rustc_deps:rand",
+  ]
+}
+
+package("mediasession_tests") {
+  testonly = true
+
+  deps = [
+    ":bin",
+  ]
+
+  meta = [
+    {
+      path = rebase_path("meta/mediasession_tests.cmx")
+      dest = "mediasession_tests.cmx"
+    },
+  ]
+
+  tests = [
+    {
+      name = "mediasession_bin_test"
+    },
+  ]
+}
+
+package("mediasession") {
+  deps = [
+    ":bin",
+  ]
+
+  binary = "mediasession"
+
+  meta = [
+    {
+      path = rebase_path("meta/mediasession.cmx")
+      dest = "mediasession.cmx"
+    },
+  ]
+}

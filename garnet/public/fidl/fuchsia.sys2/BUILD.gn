@@ -1,0 +1,33 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/fidl/fidl.gni")
+
+fidl("fuchsia.sys2") {
+  sdk_category = "partner"
+
+  deps = [
+    "//garnet/public/fidl/fuchsia.data",
+    "//zircon/public/fidl/fuchsia-io",
+  ]
+
+  sources = [
+    "constants.fidl",
+    "decls/capability.fidl",
+    "decls/child_decl.fidl",
+    "decls/component_decl.fidl",
+    "decls/expose_decl.fidl",
+    "decls/offer_decl.fidl",
+    "decls/relative_id.fidl",
+    "decls/use_decl.fidl",
+    "lifecycle_handler.fidl",
+    "moniker.fidl",
+    "realm.fidl",
+    "runtime/component.fidl",
+    "runtime/component_namespace.fidl",
+    "runtime/component_resolver.fidl",
+    "runtime/component_runner.fidl",
+    "runtime/package.fidl",
+  ]
+}

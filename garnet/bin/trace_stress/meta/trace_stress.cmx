@@ -1,0 +1,11 @@
+{
+    "program": {
+        "binary": "bin/trace_stress"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.sys.Environment",
+            "fuchsia.tracelink.Registry"
+        ]
+    }
+}

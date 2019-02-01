@@ -1,0 +1,10 @@
+{
+    "program": {
+        "binary": "bin/mdns-util"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.mdns.Controller"
+        ]
+    }
+}

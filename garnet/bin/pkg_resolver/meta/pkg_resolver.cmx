@@ -1,0 +1,12 @@
+{
+    "program": {
+        "binary": "bin/pkg_resolver"
+    },
+    "sandbox": {
+        "services": [
+            "fuchsia.amber.Control",
+            "fuchsia.logger.LogSink",
+            "fuchsia.pkg.PackageCache"
+        ]
+    }
+}

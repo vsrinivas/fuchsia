@@ -1,0 +1,13 @@
+{
+    "program": {
+        "binary": "test/magma_unit_tests"
+    },
+    "sandbox": {
+        "dev": [
+            "class/sysmem"
+        ],
+        "features": [
+            "system-temp"
+        ]
+    }
+}

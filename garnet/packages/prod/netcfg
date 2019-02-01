@@ -1,0 +1,9 @@
+{
+    "imports": [
+        "garnet/packages/config/services"
+    ],
+    "packages": [
+        "//garnet/bin/netcfg",
+        "//garnet/bin/netcfg:config"
+    ]
+}

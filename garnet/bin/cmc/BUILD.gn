@@ -1,0 +1,99 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/rust/rustc_binary.gni")
+import("//build/host.gni")
+import("//build/package.gni")
+import("//build/package/component.gni")
+
+rustc_binary("cmc") {
+  name = "cmc"
+  with_unit_tests = true
+  edition = "2018"
+
+  sdk_category = "partner"
+
+  deps = [
+    "//garnet/lib/rust/cm_json",
+    "//third_party/rust-crates/rustc_deps:clap",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:lazy_static",
+    "//third_party/rust-crates/rustc_deps:regex",
+    "//third_party/rust-crates/rustc_deps:serde",
+    "//third_party/rust-crates/rustc_deps:serde_derive",
+    "//third_party/rust-crates/rustc_deps:serde_json",
+    "//third_party/rust-crates/rustc_deps:structopt",
+    "//third_party/rust-crates/rustc_deps:tempfile",
+  ]
+
+  non_rust_deps = [
+    "//garnet/lib/rust/cm_json:cm_schema_json"
+  ]
+}
+
+rustc_binary("cmc_integration_test_bin") {
+  name = "cmc_integration_test"
+  edition = "2018"
+  source_root = "tests/integration_test.rs"
+  deps = [
+    "//garnet/lib/rust/cm_fidl",
+    "//garnet/public/fidl/fuchsia.data:fuchsia.data-rustc",
+    "//garnet/public/fidl/fuchsia.sys2:fuchsia.sys2-rustc",
+    "//third_party/rust-crates/rustc_deps:failure",
+  ]
+}
+
+rustc_binary("example_bin") {
+  name = "example"
+  edition = "2018"
+  source_root = "tests/example.rs"
+}
+
+fuchsia_component("example_component") {
+  manifest = rebase_path("meta/example.cml")
+  deps = [
+    ":example_bin",
+  ]
+  binary = "example"
+  testonly = true
+}
+
+fuchsia_component("cmc_integration_test_component") {
+  manifest = rebase_path("meta/cmc_integration_test.cmx")
+  deps = [
+    ":cmc_integration_test_bin",
+  ]
+
+  resources = [
+    {
+      if (is_debug) {
+        path = rebase_path("tests/golden_debug.cm")
+      } else {
+        path = rebase_path("tests/golden_release.cm")
+      }
+      dest = "golden.cm"
+    }
+  ]
+
+  binary = "cmc_integration_test"
+  test = true
+}
+
+package("cmc_integration_test") {
+  components = [
+    ":example_component",
+    ":cmc_integration_test_component"
+  ]
+  testonly = true
+}
+
+install_host_tools("install") {
+  deps = [
+    ":cmc",
+  ]
+
+  outputs = [
+    "cmc",
+  ]
+}

@@ -1,0 +1,19 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+library fuchsia.sys2;
+
+/// Declares a capability used by a component, which was offered to the
+/// component’s environment.
+table UseDecl {
+    /// The type of capability used.
+    1: CapabilityType type;
+
+    /// The path of a capability offered to the component.
+    2: string:MAX_PATH_LENGTH source_path;
+
+    /// The path where the capability should be installed in the component's
+    /// namespace.
+    3: string:MAX_PATH_LENGTH target_path;
+};

@@ -1,0 +1,133 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be
+# found in the LICENSE file.
+
+import("//build/package.gni")
+import("//build/rust/rustc_binary.gni")
+
+executable("fidl_compatibility_test") {
+  testonly = true
+
+  sources = [
+    "compatibility_test.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
+    "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+    "//garnet/public/lib/fidl/cpp",
+    "//third_party/googletest:gtest",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+executable("compatibility_test_server_cpp_bin") {
+  output_name = "compatibility_test_server_cpp"
+
+  sources = [
+    "compatibility_test_server_cpp.cc",
+  ]
+
+  deps = [
+    "//garnet/public/lib/component/cpp",
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service",
+    "//garnet/public/lib/fidl/compatibility_test:echo_client_app",
+    "//garnet/public/lib/fidl/cpp",
+    "//zircon/public/lib/async-default",
+    "//zircon/public/lib/async-loop-cpp",
+  ]
+}
+
+rustc_binary("compatibility_test_server_rust_bin") {
+  name = "compatibility_test_server_rust"
+  edition = "2018"
+  source_root = "compatibility_test_server_rust.rs"
+
+  deps = [
+    "//garnet/public/lib/fidl/compatibility_test:compatibility_test_service-rustc",
+    "//garnet/public/lib/fidl/rust/fidl",
+    "//garnet/public/rust/fuchsia-app",
+    "//garnet/public/rust/fuchsia-async",
+    "//third_party/rust-crates/rustc_deps:failure",
+    "//third_party/rust-crates/rustc_deps:futures-preview",
+  ]
+}
+
+copy("run_fidl_compatibility_test_garnet_sh") {
+  sources = [
+    "run_fidl_compatibility_test_garnet.sh",
+  ]
+  outputs = [
+    "${root_build_dir}/run_fidl_compatibility_test_garnet.sh",
+  ]
+}
+
+package("fidl_compatibility_test_server_cpp") {
+
+  deps = [
+    ":compatibility_test_server_cpp_bin",
+  ]
+
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_server_cpp.cmx"
+      dest = "fidl_compatibility_test_server_cpp.cmx"
+    },
+  ]
+
+  testonly = true
+
+  binary = "compatibility_test_server_cpp"
+}
+
+package("fidl_compatibility_test_server_rust") {
+
+  deps = [
+    ":compatibility_test_server_rust_bin",
+  ]
+
+  meta = [
+    {
+      path = "meta/fidl_compatibility_test_server_rust.cmx"
+      dest = "fidl_compatibility_test_server_rust.cmx"
+    },
+  ]
+
+  testonly = true
+
+  binary = "rust_crates/compatibility_test_server_rust"
+}
+
+# The test binary that gets invoked by shell scripts.
+package("fidl_compatibility_test_bin") {
+  package_name = "fidl_compatibility_test_bin"
+
+  deps = [
+    ":fidl_compatibility_test",
+  ]
+
+  testonly = true
+
+  # Declare it as a binary so humans and automation don't try to run it
+  # directly as a test, which would fail.
+  binary = "fidl_compatibility_test"
+}
+
+# Contains the shell script that runs the test binary.
+package("package") {
+  package_name = "fidl_compatibility_test"
+
+  deps = [
+    ":run_fidl_compatibility_test_garnet_sh",
+  ]
+
+  testonly = true
+
+  tests = [
+    {
+      name = "run_fidl_compatibility_test_garnet.sh"
+    },
+  ]
+}

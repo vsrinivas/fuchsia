@@ -1,0 +1,59 @@
+# Copyright 2018 The Fuchsia Authors. All rights reserved.
+# Use of this source code is governed by a BSD-style license that can be found
+# in the LICENSE file.
+
+import("//build/config/fuchsia/rules.gni")
+import("//build/package.gni")
+
+driver_module("rtl88xx_driver") {
+  output_name = "rtl88xx"
+
+  sources = [
+    "binding.c",
+    "bus.cc",
+    "bus.h",
+    "bus_util.h",
+    "device.cc",
+    "device.h",
+    "register.h",
+    "rtl8821c_device.cc",
+    "rtl8821c_device.h",
+    "rtl88xx_registers.h",
+    "usb_bus.cc",
+    "usb_bus.h",
+    "wlan_mac.cc",
+    "wlan_mac.h",
+    "wlan_phy.cc",
+    "wlan_phy.h",
+  ]
+
+  deps = [
+    "//garnet/lib/wlan/common",
+    "//garnet/lib/wlan/protocol",
+    "//zircon/public/banjo/ddk-protocol-usb",
+    "//zircon/public/lib/ddk",
+    "//zircon/public/lib/driver",
+    "//zircon/public/lib/fbl",
+    "//zircon/public/lib/usb",
+    "//zircon/public/lib/zx",
+    "//zircon/system/public",
+  ]
+
+  configs -= [ "//build/config/fuchsia:no_cpp_standard_library" ]
+  configs += [ "//build/config/fuchsia:static_cpp_standard_library" ]
+}
+
+package("rtl88xx") {
+  # Fuchsia does not yet support loading drivers out of packages.
+  deprecated_system_image = true
+
+  deps = [
+    ":rtl88xx_driver",
+  ]
+
+  drivers = [
+    {
+      name = "rtl88xx.so"
+    },
+  ]
+}
