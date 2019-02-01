@@ -167,7 +167,8 @@ private:
         };
     }
 
-    bool LookupHandleSubtype(const raw::Identifier* identifier, types::HandleSubtype* subtype_out);
+    bool LookupHandleSubtype(const raw::Identifier* identifier,
+                             std::unique_ptr<types::HandleSubtype>* out_handle_subtype);
 
     decltype(nullptr) Fail();
     decltype(nullptr) Fail(StringView message);
@@ -191,13 +192,7 @@ private:
 
     std::unique_ptr<raw::Using> ParseUsing();
 
-    std::unique_ptr<raw::IdentifierType> ParseIdentifierType();
-    std::unique_ptr<raw::ArrayType> ParseArrayType();
-    std::unique_ptr<raw::VectorType> ParseVectorType();
-    std::unique_ptr<raw::StringType> ParseStringType();
-    std::unique_ptr<raw::HandleType> ParseHandleType();
-    std::unique_ptr<raw::RequestHandleType> ParseRequestHandleType();
-    std::unique_ptr<raw::Type> ParseType();
+    std::unique_ptr<raw::TypeConstructor> ParseTypeConstructor();
 
     std::unique_ptr<raw::ConstDeclaration>
     ParseConstDeclaration(std::unique_ptr<raw::AttributeList> attributes, ASTScope&);

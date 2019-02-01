@@ -36,6 +36,7 @@ std::string NameFlatTypeKind(flat::Type::Kind kind);
 std::string NameUnionTag(StringView union_name, const flat::Union::Member& member);
 std::string NameXUnionTag(StringView xunion_name, const flat::XUnion::Member& member);
 std::string NameFlatConstant(const flat::Constant* constant);
+std::string NameFlatTypeConstructor(const flat::TypeConstructor* type_ctor);
 std::string NameFlatType(const flat::Type* type);
 std::string NameFlatCType(const flat::Type* type, flat::Decl::Kind decl_kind);
 std::string NameInterface(const flat::Interface& interface);

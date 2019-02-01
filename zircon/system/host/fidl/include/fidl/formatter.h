@@ -105,6 +105,7 @@ public:
 
     virtual void OnEnumDeclaration(std::unique_ptr<EnumDeclaration> const& element) override {
         OnBlankLineRequiringNode();
+        ScopedBool mem(is_enum_decl_, true);
         TreeVisitor::OnEnumDeclaration(element);
     }
 
@@ -167,11 +168,11 @@ public:
         TreeVisitor::OnXUnionMember(element);
     }
 
-    virtual void OnType(std::unique_ptr<Type> const& element) override {
+    virtual void OnTypeConstructor(std::unique_ptr<TypeConstructor> const& element) override {
         ScopedIncrement si(nested_type_depth_);
-        ScopedBool before_colon(blank_space_before_colon_, false);
-        ScopedBool after_colon(blank_space_after_colon_, false);
-        TreeVisitor::OnType(element);
+        ScopedBool before_colon(blank_space_before_colon_, is_enum_decl_);
+        ScopedBool after_colon(blank_space_after_colon_, is_enum_decl_);
+        TreeVisitor::OnTypeConstructor(element);
     }
 
     virtual void OnFile(std::unique_ptr<File> const& element) override;
@@ -384,6 +385,7 @@ private:
         blank_line_respecting_node_ = true;
     }
 
+    bool is_enum_decl_ = false;
     bool is_member_decl_ = false;
 
     // Does the current member have an explicit ordinal?

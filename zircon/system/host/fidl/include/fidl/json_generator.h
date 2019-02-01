@@ -76,13 +76,13 @@ private:
 
     void Generate(const raw::Identifier& value);
     void Generate(const raw::Literal& value);
-    void Generate(const raw::Type& value);
+    void Generate(const raw::TypeConstructor& value);
     void Generate(const raw::Attribute& value);
     void Generate(const raw::AttributeList& value);
     void Generate(const raw::Ordinal& value);
 
     void Generate(const flat::Name& value);
-    void Generate(const flat::Type& value);
+    void Generate(const flat::Type* value);
     void Generate(const flat::Constant& value);
     void Generate(const flat::Const& value);
     void Generate(const flat::Enum& value);

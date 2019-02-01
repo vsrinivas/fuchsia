@@ -547,7 +547,46 @@ bool recursive_opt_request() {
 library example;
 
 struct WebMessage {
-  request<MessagePort>? opt_message_port;
+  request<MessagePort>? opt_message_port_req;
+};
+
+interface MessagePort {
+  PostMessage(WebMessage message) -> (bool success);
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto web_message = library.LookupStruct("WebMessage");
+  EXPECT_NONNULL(web_message);
+  EXPECT_EQ(web_message->typeshape.Size(), 4);
+  EXPECT_EQ(web_message->typeshape.Alignment(), 4);
+  EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(web_message->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(web_message->typeshape.Depth(), 0);
+
+  auto message_port = library.LookupInterface("MessagePort");
+  EXPECT_NONNULL(message_port);
+  EXPECT_EQ(message_port->methods.size(), 1);
+  auto& post_message = message_port->methods[0];
+  auto post_message_request = post_message.maybe_request;
+  EXPECT_NONNULL(post_message_request);
+  EXPECT_EQ(post_message_request->typeshape.Size(), 24);
+  EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
+  EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(post_message_request->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(post_message_request->typeshape.Depth(), 0);
+
+  END_TEST;
+}
+
+bool recursive_opt_interface() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct WebMessage {
+  MessagePort? opt_message_port;
 };
 
 interface MessagePort {
@@ -797,12 +836,50 @@ enum Priority {
   EXPECT_NONNULL(diff_entry);
   EXPECT_EQ(diff_entry->typeshape.Size(), 40);
   EXPECT_EQ(diff_entry->typeshape.Alignment(), 8);
-  // TODO(FIDL-457): max out-of-line should be 256 + 3 * (16 + 16) = 352.
-  EXPECT_EQ(diff_entry->typeshape.MaxOutOfLine(), 304);
+  EXPECT_EQ(diff_entry->typeshape.MaxOutOfLine(), 352);
   // TODO(FIDL-457): max 3 handles, since each Value has one.
   EXPECT_EQ(buffer->typeshape.MaxHandles(), 1);
-  // TODO(FIDL-457): depth should be 2.
-  EXPECT_EQ(diff_entry->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(diff_entry->typeshape.Depth(), 2);
+
+  END_TEST;
+}
+
+bool interface_child_and_parent() {
+  BEGIN_TEST;
+
+  SharedAmongstLibraries shared;
+  TestLibrary parent_library("parent.fidl", R"FIDL(
+library parent;
+
+[FragileBase]
+interface Parent {
+  Sync() -> ();
+};
+)FIDL", &shared);
+  ASSERT_TRUE(parent_library.Compile());
+
+  TestLibrary child_library("child.fidl", R"FIDL(
+library child;
+
+using parent;
+
+interface Child : parent.Parent {
+};
+)FIDL", &shared);
+  ASSERT_TRUE(child_library.AddDependentLibrary(std::move(parent_library)));
+  ASSERT_TRUE(child_library.Compile());
+
+  auto child = child_library.LookupInterface("Child");
+  EXPECT_NONNULL(child);
+  EXPECT_EQ(child->all_methods.size(), 1);
+  auto& sync = child->all_methods[0];
+  auto sync_request = sync->maybe_request;
+  EXPECT_NONNULL(sync_request);
+  EXPECT_EQ(sync_request->typeshape.Size(), 16);
+  EXPECT_EQ(sync_request->typeshape.Alignment(), 8);
+  EXPECT_EQ(sync_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(sync_request->typeshape.MaxHandles(), 0);
+  EXPECT_EQ(sync_request->typeshape.Depth(), 0);
 
   END_TEST;
 }
@@ -821,10 +898,12 @@ RUN_TEST(arrays);
 RUN_TEST(xunions);
 RUN_TEST(interfaces_and_request_of_interfaces);
 RUN_TEST(recursive_opt_request);
+RUN_TEST(recursive_opt_interface);
 RUN_TEST(recursive_struct);
 RUN_TEST(recursive_struct_with_handles);
 RUN_TEST(co_recursive_struct);
 RUN_TEST(co_recursive_struct_with_handles);
 RUN_TEST(co_recursive_struct2);
 RUN_TEST(struct_two_deep);
+RUN_TEST(interface_child_and_parent);
 END_TEST_CASE(max_bytes_tests);

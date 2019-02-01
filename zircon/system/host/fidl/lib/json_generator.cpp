@@ -290,54 +290,51 @@ void JSONGenerator::Generate(const flat::Constant& value) {
     });
 }
 
-void JSONGenerator::Generate(const flat::Type& value) {
+void JSONGenerator::Generate(const flat::Type* value) {
     GenerateObject([&]() {
-        GenerateObjectMember("kind", NameFlatTypeKind(value.kind), Position::kFirst);
+        GenerateObjectMember("kind", NameFlatTypeKind(value->kind), Position::kFirst);
 
-        switch (value.kind) {
+        switch (value->kind) {
         case flat::Type::Kind::kArray: {
-            auto type = static_cast<const flat::ArrayType*>(&value);
+            auto type = static_cast<const flat::ArrayType*>(value);
             GenerateObjectMember("element_type", type->element_type);
-            auto element_count = static_cast<const flat::Size&>(type->element_count->Value());
-            GenerateObjectMember("element_count", element_count.value);
+            GenerateObjectMember("element_count", type->element_count->value);
             break;
         }
         case flat::Type::Kind::kVector: {
-            auto type = static_cast<const flat::VectorType*>(&value);
+            auto type = static_cast<const flat::VectorType*>(value);
             GenerateObjectMember("element_type", type->element_type);
-            auto element_count = static_cast<const flat::Size&>(type->element_count->Value());
-            if (element_count < flat::Size::Max())
-                GenerateObjectMember("maybe_element_count", element_count.value);
+            if (*type->element_count < flat::Size::Max())
+                GenerateObjectMember("maybe_element_count", type->element_count->value);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::kString: {
-            auto type = static_cast<const flat::StringType*>(&value);
-            auto max_size = static_cast<const flat::Size&>(type->max_size->Value());
-            if (max_size < flat::Size::Max())
-                GenerateObjectMember("maybe_element_count", max_size.value);
+            auto type = static_cast<const flat::StringType*>(value);
+            if (*type->max_size < flat::Size::Max())
+                GenerateObjectMember("maybe_element_count", type->max_size->value);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::kHandle: {
-            auto type = static_cast<const flat::HandleType*>(&value);
+            auto type = static_cast<const flat::HandleType*>(value);
             GenerateObjectMember("subtype", type->subtype);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::kRequestHandle: {
-            auto type = static_cast<const flat::RequestHandleType*>(&value);
-            GenerateObjectMember("subtype", type->name);
+            auto type = static_cast<const flat::RequestHandleType*>(value);
+            GenerateObjectMember("subtype", type->interface_type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
         }
         case flat::Type::Kind::kPrimitive: {
-            auto type = static_cast<const flat::PrimitiveType*>(&value);
+            auto type = static_cast<const flat::PrimitiveType*>(value);
             GenerateObjectMember("subtype", type->subtype);
             break;
         }
         case flat::Type::Kind::kIdentifier: {
-            auto type = static_cast<const flat::IdentifierType*>(&value);
+            auto type = static_cast<const flat::IdentifierType*>(value);
             GenerateObjectMember("identifier", type->name);
             GenerateObjectMember("nullable", type->nullability);
             break;
@@ -377,7 +374,7 @@ void JSONGenerator::Generate(const flat::Const& value) {
         GenerateObjectMember("name", value.name, Position::kFirst);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
-        GenerateObjectMember("type", value.type);
+        GenerateObjectMember("type", value.type_ctor->type);
         GenerateObjectMember("value", value.value);
     });
 }
@@ -452,7 +449,7 @@ void JSONGenerator::Generate(const flat::Struct& value) {
 
 void JSONGenerator::Generate(const flat::Struct::Member& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::kFirst);
+        GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
         GenerateObjectMember("name", value.name);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
@@ -484,7 +481,7 @@ void JSONGenerator::Generate(const flat::Table::Member& value) {
         GenerateObjectMember("ordinal", *value.ordinal, Position::kFirst);
         if (value.maybe_used) {
             GenerateObjectMember("reserved", false);
-            GenerateObjectMember("type", value.maybe_used->type);
+            GenerateObjectMember("type", value.maybe_used->type_ctor->type);
             GenerateObjectMember("name", value.maybe_used->name);
             if (value.maybe_used->attributes)
                 GenerateObjectMember("maybe_attributes", value.maybe_used->attributes);
@@ -515,7 +512,7 @@ void JSONGenerator::Generate(const flat::Union& value) {
 
 void JSONGenerator::Generate(const flat::Union::Member& value) {
     GenerateObject([&]() {
-        GenerateObjectMember("type", value.type, Position::kFirst);
+        GenerateObjectMember("type", value.type_ctor->type, Position::kFirst);
         GenerateObjectMember("name", value.name);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
@@ -542,7 +539,7 @@ void JSONGenerator::Generate(const flat::XUnion& value) {
 void JSONGenerator::Generate(const flat::XUnion::Member& value) {
     GenerateObject([&]() {
         GenerateObjectMember("ordinal", value.ordinal, Position::kFirst);
-        GenerateObjectMember("type", value.type);
+        GenerateObjectMember("type", value.type_ctor->type);
         GenerateObjectMember("name", value.name);
         if (value.attributes)
             GenerateObjectMember("maybe_attributes", value.attributes);
