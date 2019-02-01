@@ -38,6 +38,31 @@ pub fn write_open_auth_frame<B: ByteSliceMut>(
     Ok(w.written_bytes())
 }
 
+/// Fills a given buffer with a deauth frame which will be sent from client to AP.
+/// Fails if the given buffer is too short.
+/// Returns the amount of bytes written to the buffer.
+pub fn write_deauth_frame<B: ByteSliceMut>(
+    buf: B,
+    bssid: MacAddr,
+    client_addr: MacAddr,
+    seq_ctrl: u16,
+    reason_code: mac::ReasonCode,
+) -> Result<usize, Error> {
+    let (mut mgmt_hdr, mut w) = BufferWriter::new(buf).reserve_zeroed::<mac::MgmtHdr>()?;
+    let mut fc = mac::FrameControl(0);
+    fc.set_frame_type(mac::FRAME_TYPE_MGMT);
+    fc.set_frame_subtype(mac::MGMT_SUBTYPE_DEAUTH);
+    mgmt_hdr.set_frame_ctrl(fc.value());
+    mgmt_hdr.addr1 = bssid;
+    mgmt_hdr.addr2 = client_addr;
+    mgmt_hdr.addr3 = bssid;
+    mgmt_hdr.set_seq_ctrl(seq_ctrl);
+
+    let (mut deauth_hdr, w) = w.reserve_zeroed::<mac::DeauthHdr>()?;
+    deauth_hdr.set_reason_code(reason_code as u16);
+    Ok(w.written_bytes())
+}
+
 /// Fills a given buffer with a null-data frame which will be send from a client to an AP.
 /// Fails if the given buffer is too short.
 /// Returns the amount of bytes written to the buffer.
@@ -83,6 +108,29 @@ mod tests {
                 0, 0, // Auth Algorithm Number
                 1, 0, // Auth Txn Seq Number
                 0, 0, // Status code
+            ],
+            buf
+        );
+    }
+
+    #[test]
+    fn deauth_frame() {
+        let mut buf = [99u8; 26];
+        let written_bytes =
+            write_deauth_frame(&mut buf[..], [1; 6], [2; 6], 42, mac::ReasonCode::Timeout)
+                .expect("failed writing frame");
+        assert_eq!(26, written_bytes);
+        assert_eq!(
+            [
+                // Mgmt header
+                0b11000000, 0, // Frame Control
+                0, 0, // Duration
+                1, 1, 1, 1, 1, 1, // addr1
+                2, 2, 2, 2, 2, 2, // addr2
+                1, 1, 1, 1, 1, 1, // addr3
+                42, 0, // Sequence Control
+                // Deauth body
+                0x27, 0 // Reason code
             ],
             buf
         );
