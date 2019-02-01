@@ -125,8 +125,8 @@ zx_status_t MtkThermal::Create(void* context, zx_device_t* parent) {
 
     fbl::AllocChecker ac;
     fbl::unique_ptr<MtkThermal> device(new (&ac) MtkThermal(
-        parent, *std::move(mmio), *std::move(fuse_mmio), *std::move(pll_mmio),
-        *std::move(pmic_mmio), clk, info, thermal_info, std::move(port), std::move(irq)));
+        parent, std::move(*mmio), std::move(*fuse_mmio), std::move(*pll_mmio),
+        std::move(*pmic_mmio), clk, info.clk_count, thermal_info, std::move(port), std::move(irq)));
     if (!ac.check()) {
         zxlogf(ERROR, "%s: MtkThermal alloc failed\n", __FILE__);
         return ZX_ERR_NO_MEMORY;
@@ -250,29 +250,7 @@ zx_status_t MtkThermal::Init() {
         .set_msrctl3(TempMsrCtl0::kSample4Drop2)
         .WriteTo(&mmio_);
 
-    return thrd_status_to_zx_status(thrd_create_with_name(
-        &thread_,
-        [](void* arg) -> int {
-            return reinterpret_cast<MtkThermal*>(arg)->Thread();
-        },
-        this,
-        "mtk-thermal-thread"
-    ));
-}
-
-uint16_t MtkThermal::PmicRead(uint32_t addr) {
-    while (PmicReadData::Get().ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateIdle) {}
-
-    PmicCmd::Get().FromValue(0).set_write(0).set_addr(addr).WriteTo(&pmic_mmio_);
-
-    auto pmic_read = PmicReadData::Get().FromValue(0);
-    while (pmic_read.ReadFrom(&pmic_mmio_).status() != PmicReadData::kStateValid) {}
-
-    uint16_t ret = static_cast<uint16_t>(pmic_read.data());
-
-    PmicValidClear::Get().ReadFrom(&pmic_mmio_).set_valid_clear(1).WriteTo(&pmic_mmio_);
-
-    return ret;
+    return StartThread();
 }
 
 void MtkThermal::PmicWrite(uint16_t data, uint32_t addr) {
@@ -577,12 +555,15 @@ int MtkThermal::Thread() {
     TempMsrCtl1::Get().ReadFrom(&mmio_).resume_real().WriteTo(&mmio_);
 
     while (1) {
-        if (irq_.wait(nullptr) != ZX_OK) {
+        zx_status_t status = WaitForInterrupt();
+        if (status == ZX_ERR_CANCELED) {
+            return thrd_success;
+        } else if (status != ZX_OK) {
             zxlogf(ERROR, "%s: IRQ wait failed\n", __FILE__);
             return thrd_error;
         }
 
-        auto status = TempMonIntStatus::Get().ReadFrom(&mmio_);
+        auto int_status = TempMonIntStatus::Get().ReadFrom(&mmio_);
 
         auto int_enable = TempMonInt::Get().ReadFrom(&mmio_);
         uint32_t int_enable_old = int_enable.reg_value();
@@ -593,20 +574,20 @@ int MtkThermal::Thread() {
         temp = GetTemperature();
         TempMsrCtl1::Get().ReadFrom(&mmio_).pause_real().WriteTo(&mmio_);
 
-        if (status.stage_3()) {
+        if (int_status.stage_3()) {
             trip_pt = thermal_info_.num_trip_points - 1;
             if (SetDvfsOpp(&dvfs_safe_opp) != ZX_OK) {
                 zxlogf(ERROR, "%s: Failed to set safe operating point\n", __FILE__);
                 return thrd_error;
             }
-        } else if (status.hot_0() || status.hot_1() || status.hot_2()) {
+        } else if (int_status.hot_0() || int_status.hot_1() || int_status.hot_2()) {
             // Skip to the appropriate trip point for the current temperature.
             for (; trip_pt < thermal_info_.num_trip_points - 1; trip_pt++) {
                 if (temp < trip_pts[trip_pt + 1].up_temp) {
                     break;
                 }
             }
-        } else if (status.cold_0() || status.cold_1() || status.cold_2()) {
+        } else if (int_status.cold_0() || int_status.cold_1() || int_status.cold_2()) {
             for (; trip_pt > 0; trip_pt--) {
                 if (temp > trip_pts[trip_pt - 1].down_temp) {
                     break;
@@ -625,6 +606,31 @@ int MtkThermal::Thread() {
     }
 
     return thrd_success;
+}
+
+zx_status_t MtkThermal::WaitForInterrupt() {
+    return irq_.wait(nullptr);
+}
+
+zx_status_t MtkThermal::StartThread() {
+    return thrd_status_to_zx_status(thrd_create_with_name(
+        &thread_,
+        [](void* arg) -> int {
+            return reinterpret_cast<MtkThermal*>(arg)->Thread();
+        },
+        this,
+        "mtk-thermal-thread"
+    ));
+}
+
+void MtkThermal::StopThread() {
+    irq_.destroy();
+    JoinThread();
+}
+
+void MtkThermal::DdkRelease() {
+    StopThread();
+    delete this;
 }
 
 }  // namespace thermal

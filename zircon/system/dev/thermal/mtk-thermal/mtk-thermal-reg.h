@@ -5,6 +5,7 @@
 #pragma once
 
 #include <hwreg/bitfields.h>
+#include <lib/mmio/mmio.h>
 
 namespace thermal {
 
@@ -58,13 +59,6 @@ public:
 
     DEF_FIELD(18, 16, status);
     DEF_FIELD(15, 0, data);
-};
-
-class PmicValidClear : public hwreg::RegisterBase<PmicValidClear, uint32_t> {
-public:
-    static auto Get() { return hwreg::RegisterAddr<PmicValidClear>(0xa8); }
-
-    DEF_BIT(0, valid_clear);
 };
 
 class TempMonCtl0 : public hwreg::RegisterBase<TempMonCtl0, uint32_t> {
