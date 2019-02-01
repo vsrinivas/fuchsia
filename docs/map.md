@@ -4,9 +4,6 @@ Repository structure
 ```
 //docs
   README.md               # welcome message, table of contents
-  CODE_OF_CONDUCT.md      # rules and expectations for contributors
-  CONTRIBUTING.md         # lay out the ground rules for contributing, redirect
-                          # development folder
   getting_in_touch.md     # how and why to get in touch with the Fuchsia team
   values/                 # various bits about project culture
   development/            # how to develop in the Fuchsia tree?
