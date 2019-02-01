@@ -174,6 +174,7 @@ __BEGIN_CDECLS;
 // Test
 #define PDEV_VID_TEST               17
 #define PDEV_PID_PBUS_TEST          1
+#define PDEV_PID_INTEGRATION_TEST   2
 
 #define PDEV_DID_TEST_PARENT        1
 #define PDEV_DID_TEST_CHILD_1       2

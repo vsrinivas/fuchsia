@@ -514,13 +514,28 @@ zx_status_t PlatformBus::Init(zx::vmo zbi) {
       }
     }
 
+    // Add board driver metadata if available.
+    const void* data;
+    uint32_t length;
+    status = GetZbiMetadata(DEVICE_METADATA_BOARD_PRIVATE, 0, &data, &length);
+    if (status != ZX_OK) {
+        length = 0;
+    }
+
     // Then we attach the platform-bus device below it.
     zx_device_prop_t props[] = {
         {BIND_PLATFORM_DEV_VID, 0, board_info_.vid},
         {BIND_PLATFORM_DEV_PID, 0, board_info_.pid},
     };
 
-    return DdkAdd("platform", 0, props, fbl::count_of(props));
+    status = DdkAdd("platform", DEVICE_ADD_INVISIBLE, props, fbl::count_of(props));
+    if (status == ZX_OK && length != 0) {
+        if (DdkAddMetadata(DEVICE_METADATA_BOARD_PRIVATE, data, length) != ZX_OK) {
+            zxlogf(WARN, "%s failed to add metadata for board driver\n", __func__);
+        }
+    }
+    DdkMakeVisible();
+    return status;
 }
 
 zx_status_t platform_bus_create(void* ctx, zx_device_t* parent, const char* name,

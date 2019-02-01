@@ -125,6 +125,7 @@ typedef struct {
     macro(ZBI_TYPE_FRAMEBUFFER, "FRAMEBUFFER", ".bin") \
     macro(ZBI_TYPE_DRV_MAC_ADDRESS, "DRV_MAC_ADDRESS", ".bin") \
     macro(ZBI_TYPE_DRV_PARTITION_MAP, "DRV_PARTITION_MAP", ".bin") \
+    macro(ZBI_TYPE_DRV_BOARD_PRIVATE, "DRV_BOARD_PRIVATE", ".bin") \
     macro(ZBI_TYPE_BOOT_CONFIG, "BOOT_CONFIG", ".bin") \
     macro(ZBI_TYPE_BOOT_VERSION, "BOOT_VERSION", ".bin")
 
@@ -602,6 +603,10 @@ typedef struct {
 #define ZBI_TYPE_DRV_PARTITION_MAP      (0x5452506D) // mPRT
 #define ZBI_PARTITION_NAME_LEN          (32)
 #define ZBI_PARTITION_GUID_LEN          (16)
+
+// Private information for the board driver.
+#define ZBI_TYPE_DRV_BOARD_PRIVATE      (0x524F426D) // mBOR
+
 #ifndef __ASSEMBLER__
 typedef struct {
     // GUID specifying the format and use of data stored in the partition.

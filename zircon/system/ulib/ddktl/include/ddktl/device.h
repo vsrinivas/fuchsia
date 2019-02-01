@@ -367,11 +367,15 @@ class Device : public ::ddk::internal::base_device, public Mixins<D>... {
     }
 
     zx_status_t DdkGetMetadataSize(uint32_t type, size_t* out_size) {
-        return device_get_metadata_size(zxdev(), type, out_size);
+        // Uses parent() instead of zxdev() as metadata is usually checked
+        // before DdkAdd(). There are few use cases to actually call it on self.
+        return device_get_metadata_size(parent(), type, out_size);
     }
 
     zx_status_t DdkGetMetadata(uint32_t type, void* buf, size_t buf_len, size_t* actual) {
-        return device_get_metadata(zxdev(), type, buf, buf_len, actual);
+        // Uses parent() instead of zxdev() as metadata is usually checked
+        // before DdkAdd(). There are few use cases to actually call it on self.
+        return device_get_metadata(parent(), type, buf, buf_len, actual);
     }
 
     zx_status_t DdkAddMetadata(uint32_t type, const void* data, size_t length) {
