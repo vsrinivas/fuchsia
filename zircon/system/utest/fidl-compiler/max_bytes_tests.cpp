@@ -559,6 +559,7 @@ interface MessagePort {
   EXPECT_EQ(web_message->typeshape.Size(), 4);
   EXPECT_EQ(web_message->typeshape.Alignment(), 4);
   EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(web_message->typeshape.Depth(), 0);
 
   auto message_port = library.LookupInterface("MessagePort");
   EXPECT_NONNULL(message_port);
@@ -569,6 +570,30 @@ interface MessagePort {
   EXPECT_EQ(post_message_request->typeshape.Size(), 24);
   EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
   EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(post_message_request->typeshape.Depth(), 0);
+
+  END_TEST;
+}
+
+bool recursive_struct() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct TheStruct {
+  TheStruct? opt_one_more;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto the_struct = library.LookupStruct("TheStruct");
+  EXPECT_NONNULL(the_struct);
+  EXPECT_EQ(the_struct->typeshape.Size(), 8);
+  EXPECT_EQ(the_struct->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(the_struct->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(the_struct->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
 
   END_TEST;
 }
@@ -587,4 +612,5 @@ RUN_TEST(arrays);
 RUN_TEST(xunions);
 RUN_TEST(interfaces_and_request_of_interfaces);
 RUN_TEST(recursive_opt_request);
+RUN_TEST(recursive_struct);
 END_TEST_CASE(max_bytes_tests);
