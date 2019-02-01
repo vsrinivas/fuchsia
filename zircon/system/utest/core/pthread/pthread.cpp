@@ -337,7 +337,10 @@ static bool pthread_getstack_other_thread_explicit_size() {
 }
 
 BEGIN_TEST_CASE(pthread_tests)
-RUN_TEST(pthread_test)
+
+// Flaky test. Disabled. See ZX-3374.
+// RUN_TEST(pthread_test)
+
 RUN_TEST(pthread_self_main_thread_test)
 RUN_TEST(pthread_big_stack_size)
 RUN_TEST(pthread_getstack_main_thread)
