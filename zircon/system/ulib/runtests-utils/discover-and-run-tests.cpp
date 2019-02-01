@@ -137,13 +137,31 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
     int watchdog_timeout_seconds = -1;
     const char* test_list_path = nullptr;
 
-    int c;
-    // getopt uses global state, reset it.
-    optind = 1;
-    // Starting with + means don't modify |argv|.
-    static const char* kOptString = "+qvsmlpSMLPaht:o:f:w:";
-    while ((c = getopt(argc, const_cast<char* const*>(argv), kOptString)) != -1) {
-        switch (c) {
+    int optind = 1;
+    while (optind < argc) {
+        // Implementing our own opt parsing here is less effort that fixing up
+        // the behavior across three different getopt implementations on macos,
+        // linux and zircon, even with this comment. The breaking requirement is
+        // to parse globs at any position in argv.
+        fbl::String arg(argv[optind++]);
+
+        if (arg.length() == 0) {
+            continue;
+        }
+
+        if (arg == "--") {
+            for (; optind < argc; ++optind) {
+                test_args.push_back(argv[optind]);
+            }
+            break;
+        }
+
+        if (arg.length() < 2 || arg.data()[0] != '-') {
+            test_dir_globs.push_back(std::move(arg));
+            continue;
+        }
+
+        switch (arg.data()[1]) {
         case 'q':
             verbosity = 0;
             break;
@@ -181,16 +199,32 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         case 'h':
             return Usage(argv[0], default_test_dirs);
         case 't':
-            ParseTestNames(optarg, &basename_whitelist);
+            if (optind > argc) {
+                fprintf(stderr, "Missing argument for -t\n");
+                return EXIT_FAILURE;
+            }
+            ParseTestNames(argv[optind++], &basename_whitelist);
             break;
         case 'o':
-            output_dir = optarg;
+            if (optind > argc) {
+                fprintf(stderr, "Missing argument for -o\n");
+                return EXIT_FAILURE;
+            }
+            output_dir = argv[optind++];
             break;
         case 'f':
-            test_list_path = optarg;
+            if (optind > argc) {
+                fprintf(stderr, "Missing argument for -f\n");
+                return EXIT_FAILURE;
+            }
+            test_list_path = argv[optind++];
             break;
         case 'w': {
-            const char* timeout_str = optarg;
+            if (optind > argc) {
+                fprintf(stderr, "Missing argument for -w\n");
+                return EXIT_FAILURE;
+            }
+            const char* timeout_str = argv[optind++];
             char* end;
             long timeout = strtol(timeout_str, &end, 0);
             if (*timeout_str == '\0' || *end != '\0' || timeout < 0 || timeout > INT_MAX) {
@@ -203,21 +237,6 @@ int DiscoverAndRunTests(const RunTestFn& RunTest, int argc, const char* const* a
         default:
             return Usage(argv[0], default_test_dirs);
         }
-    }
-    // Treat the rest of the argv array as a list of directory globs,
-    // until a `--` arg is encountered, after which point all arguments should
-    // be forwarded on to the binaries under test.
-    int i = optind;
-    for (; i < argc; ++i) {
-        fbl::String arg(argv[i]);
-        if (arg == "--") {
-            break;
-        }
-        test_dir_globs.push_back(std::move(arg));
-    }
-    i++; // Skip "--" itself
-    for (; i < argc; ++i) {
-        test_args.push_back(argv[i]);
     }
 
     if (test_list_path && !test_dir_globs.is_empty()) {
