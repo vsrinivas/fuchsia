@@ -72,10 +72,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
 
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "too few bytes for header"
-            ))?;
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         if buffer.len() < 48 {
             // The minimum frame size (not including the Frame Check Sequence
             // (FCS) footer, which we do not handle in this code) is 60 bytes.
@@ -97,29 +94,16 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for EthernetFrame<B> {
                 buffer.take_obj_front::<[u8; 2]>().unwrap(),
                 buffer.into_rest(),
             ),
-            _ => (
-                None,
-                buffer.take_obj_front::<[u8; 2]>().unwrap(),
-                buffer.into_rest(),
-            ),
+            _ => (None, buffer.take_obj_front::<[u8; 2]>().unwrap(), buffer.into_rest()),
         };
 
-        let frame = EthernetFrame {
-            hdr_prefix,
-            tag,
-            ethertype,
-            body,
-        };
+        let frame = EthernetFrame { hdr_prefix, tag, ethertype, body };
 
         let et = NetworkEndian::read_u16(&*frame.ethertype);
         if (et > 1500 && et < 1536) || (et <= 1500 && et as usize != frame.body.len()) {
             // EtherType values between 1500 and 1536 are disallowed, and values
             // of 1500 and below are used to indicate the body length.
-            return debug_err!(
-                Err(ParseError::Format),
-                "invalid ethertype number: {:x}",
-                et
-            );
+            return debug_err!(Err(ParseError::Format), "invalid ethertype number: {:x}", et);
         }
         Ok(frame)
     }
@@ -193,11 +177,7 @@ pub struct EthernetFrameBuilder {
 impl EthernetFrameBuilder {
     /// Construct a new `EthernetFrameBuilder`.
     pub fn new(src_mac: Mac, dst_mac: Mac, ethertype: EtherType) -> EthernetFrameBuilder {
-        EthernetFrameBuilder {
-            src_mac,
-            dst_mac,
-            ethertype: ethertype as u16,
-        }
+        EthernetFrameBuilder { src_mac, dst_mac, ethertype: ethertype as u16 }
     }
 }
 
@@ -239,23 +219,14 @@ impl PacketBuilder for EthernetFrameBuilder {
             let hdr_prefix = header
                 .take_obj_front_zero::<HeaderPrefix>()
                 .expect("too few bytes for Ethernet header");
-            let ethertype = header
-                .take_obj_front_zero::<[u8; 2]>()
-                .expect("too few bytes for Ethernet header");
-            EthernetFrame {
-                hdr_prefix,
-                tag: None,
-                ethertype,
-                body,
-            }
+            let ethertype =
+                header.take_obj_front_zero::<[u8; 2]>().expect("too few bytes for Ethernet header");
+            EthernetFrame { hdr_prefix, tag: None, ethertype, body }
         };
 
         let total_len = frame.total_frame_len();
         if total_len < 60 {
-            panic!(
-                "total frame size of {} bytes is below minimum frame size of 60",
-                total_len
-            );
+            panic!("total frame size of {} bytes is below minimum frame size of 60", total_len);
         }
 
         frame.hdr_prefix.src_mac = self.src_mac.bytes();
@@ -347,22 +318,13 @@ mod tests {
 
         // a correct length results in success
         NetworkEndian::write_u16(&mut buf[12..], 1000);
-        assert_eq!(
-            (&mut buf[..])
-                .parse::<EthernetFrame<_>>()
-                .unwrap()
-                .ethertype(),
-            None
-        );
+        assert_eq!((&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(), None);
 
         // an unrecognized EtherType is returned numerically
         let mut buf = [0u8; 1014];
         NetworkEndian::write_u16(&mut buf[12..], 1536);
         assert_eq!(
-            (&mut buf[..])
-                .parse::<EthernetFrame<_>>()
-                .unwrap()
-                .ethertype(),
+            (&mut buf[..]).parse::<EthernetFrame<_>>().unwrap().ethertype(),
             Some(Err(1536))
         );
     }

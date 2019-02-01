@@ -92,19 +92,24 @@ pub trait ArpDevice<P: PType + Eq + Hash>: Sized {
     /// and a `Serializer`. It computes the routing information, serializes the
     /// request in a device layer frame, and sends it.
     fn send_arp_frame<D: EventDispatcher, S: Serializer>(
-        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
+        ctx: &mut Context<D>,
+        device_id: u64,
+        dst: Self::HardwareAddr,
+        body: S,
     );
 
     /// Get a mutable reference to a device's ARP state.
     fn get_arp_state<D: EventDispatcher>(
-        ctx: &mut Context<D>, device_id: u64,
+        ctx: &mut Context<D>,
+        device_id: u64,
     ) -> &mut ArpState<P, Self>;
 
     /// Get the protocol address of this interface.
     fn get_protocol_addr<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64) -> Option<P>;
 
     fn get_hardware_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>, device_id: u64,
+        ctx: &mut Context<D>,
+        device_id: u64,
     ) -> Self::HardwareAddr;
 }
 
@@ -118,7 +123,8 @@ pub fn handle_timeout<D: EventDispatcher>(ctx: &mut Context<D>, id: ArpTimerId<I
 }
 
 fn handle_timeout_inner<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
-    ctx: &mut Context<D>, id: ArpTimerId<P>,
+    ctx: &mut Context<D>,
+    id: ArpTimerId<P>,
 ) {
     send_arp_request::<D, P, AD>(ctx, id.device_id, id.ip_addr);
 }
@@ -136,7 +142,10 @@ pub fn receive_arp_packet<
     AD: ArpDevice<P>,
     B: BufferMut,
 >(
-    ctx: &mut Context<D>, device_id: u64, src_addr: AD::HardwareAddr, dst_addr: AD::HardwareAddr,
+    ctx: &mut Context<D>,
+    device_id: u64,
+    src_addr: AD::HardwareAddr,
+    dst_addr: AD::HardwareAddr,
     mut buffer: B,
 ) {
     // TODO(wesleyac) Add support for gratuitous ARP and probe/announce.
@@ -188,19 +197,15 @@ pub fn receive_arp_packet<
         // to send a response).
 
         if addressed_to_me || table.lookup(packet.sender_protocol_address()).is_some() {
-            table.insert(
-                packet.sender_protocol_address(),
-                packet.sender_hardware_address(),
-            );
+            table.insert(packet.sender_protocol_address(), packet.sender_hardware_address());
             // Since we just got the protocol -> hardware address mapping, we can cancel a timeout
             // to resend a request.
-            ctx.dispatcher
-                .cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
-                    DeviceLayerTimerId::ArpIpv4(ArpTimerId {
-                        device_id: device_id,
-                        ip_addr: packet.sender_protocol_address().addr(),
-                    }),
-                )));
+            ctx.dispatcher.cancel_timeout(TimerId(TimerIdInner::DeviceLayer(
+                DeviceLayerTimerId::ArpIpv4(ArpTimerId {
+                    device_id: device_id,
+                    ip_addr: packet.sender_protocol_address().addr(),
+                }),
+            )));
         }
         if addressed_to_me && packet.operation() == ArpOp::Request {
             let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
@@ -228,17 +233,17 @@ pub fn receive_arp_packet<
 
 /// Look up the hardware address for a network protocol address.
 pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
-    ctx: &mut Context<D>, device_id: u64, local_addr: AD::HardwareAddr, lookup_addr: P,
+    ctx: &mut Context<D>,
+    device_id: u64,
+    local_addr: AD::HardwareAddr,
+    lookup_addr: P,
 ) -> Option<AD::HardwareAddr> {
     // TODO(joshlf): Figure out what to do if a frame can't be sent right now
     // because it needs to wait for an ARP reply. Where do we put those frames?
     // How do we associate them with the right ARP reply? How do we retreive
     // them when we get that ARP reply? How do we time out so we don't hold onto
     // a stale frame forever?
-    let result = AD::get_arp_state(ctx, device_id)
-        .table
-        .lookup(lookup_addr)
-        .cloned();
+    let result = AD::get_arp_state(ctx, device_id).table.lookup(lookup_addr).cloned();
 
     // Send an ARP Request if the address is not in our cache
     if result.is_none() {
@@ -249,7 +254,9 @@ pub fn lookup<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
 }
 
 fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
-    ctx: &mut Context<D>, device_id: u64, lookup_addr: P,
+    ctx: &mut Context<D>,
+    device_id: u64,
+    lookup_addr: P,
 ) {
     if let Some(sender_protocol_addr) = AD::get_protocol_addr(ctx, device_id) {
         let self_hw_addr = AD::get_hardware_addr(ctx, device_id);
@@ -274,17 +281,13 @@ fn send_arp_request<D: EventDispatcher, P: PType + Eq + Hash, AD: ArpDevice<P>>(
         // TODO(wesleyac): maxretries
         ctx.dispatcher.schedule_timeout(
             Duration::from_secs(20),
-            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(
-                ArpTimerId {
-                    device_id: device_id,
-                    ip_addr: lookup_addr.addr(),
-                },
-            ))),
+            TimerId(TimerIdInner::DeviceLayer(DeviceLayerTimerId::ArpIpv4(ArpTimerId {
+                device_id: device_id,
+                ip_addr: lookup_addr.addr(),
+            }))),
         );
 
-        AD::get_arp_state(ctx, device_id)
-            .table
-            .set_waiting(lookup_addr);
+        AD::get_arp_state(ctx, device_id).table.set_waiting(lookup_addr);
     } else {
         // RFC 826 does not specify what to do if we don't have a local address, but there is no
         // reasonable way to send an ARP request without one (as the receiver will cache our local
@@ -313,9 +316,7 @@ pub struct ArpState<P: PType + Hash + Eq, D: ArpDevice<P>> {
 
 impl<P: PType + Hash + Eq, D: ArpDevice<P>> Default for ArpState<P, D> {
     fn default() -> Self {
-        ArpState {
-            table: ArpTable::default(),
-        }
+        ArpState { table: ArpTable::default() }
     }
 }
 
@@ -348,9 +349,7 @@ impl<H, P: Hash + Eq> ArpTable<H, P> {
 
 impl<H, P: Hash + Eq> Default for ArpTable<H, P> {
     fn default() -> Self {
-        ArpTable {
-            table: HashMap::default(),
-        }
+        ArpTable { table: HashMap::default() }
     }
 }
 
@@ -378,12 +377,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr(
-            &mut ctx,
-            dev_id.id,
-            TEST_LOCAL_IPV4,
-            Subnet::new(TEST_LOCAL_IPV4, 24),
-        );
+        set_ip_addr(&mut ctx, dev_id.id, TEST_LOCAL_IPV4, Subnet::new(TEST_LOCAL_IPV4, 24));
 
         lookup::<DummyEventDispatcher, Ipv4Addr, EthernetArpDevice>(
             &mut ctx,
@@ -427,12 +421,7 @@ mod tests {
         let dev_id = state.device.add_ethernet_device(TEST_LOCAL_MAC);
         let dispatcher = DummyEventDispatcher::default();
         let mut ctx: Context<DummyEventDispatcher> = Context::new(state, dispatcher);
-        set_ip_addr(
-            &mut ctx,
-            dev_id.id,
-            TEST_LOCAL_IPV4,
-            Subnet::new(TEST_LOCAL_IPV4, 24),
-        );
+        set_ip_addr(&mut ctx, dev_id.id, TEST_LOCAL_IPV4, Subnet::new(TEST_LOCAL_IPV4, 24));
 
         let mut buf = ArpPacketBuilder::new(
             ArpOp::Request,
@@ -491,10 +480,7 @@ mod tests {
         let mut t: ArpTable<Mac, Ipv4Addr> = ArpTable::default();
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 1])), None);
         t.insert(Ipv4Addr::new([10, 0, 0, 1]), Mac::new([1, 2, 3, 4, 5, 6]));
-        assert_eq!(
-            *t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(),
-            Mac::new([1, 2, 3, 4, 5, 6])
-        );
+        assert_eq!(*t.lookup(Ipv4Addr::new([10, 0, 0, 1])).unwrap(), Mac::new([1, 2, 3, 4, 5, 6]));
         assert_eq!(t.lookup(Ipv4Addr::new([10, 0, 0, 2])), None);
     }
 }

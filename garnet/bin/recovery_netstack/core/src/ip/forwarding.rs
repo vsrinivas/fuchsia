@@ -66,18 +66,12 @@ pub struct ForwardingTable<I: Ip> {
 impl<I: Ip> ForwardingTable<I> {
     pub fn add_route(&mut self, subnet: Subnet<I::Addr>, next_hop: I::Addr) {
         debug!("adding route: {} -> {}", subnet, next_hop);
-        self.entries.push(Entry {
-            subnet,
-            dest: EntryDest::Remote { next_hop },
-        });
+        self.entries.push(Entry { subnet, dest: EntryDest::Remote { next_hop } });
     }
 
     pub fn add_device_route(&mut self, subnet: Subnet<I::Addr>, device: DeviceId) {
         debug!("adding device route: {} -> {}", subnet, device);
-        self.entries.push(Entry {
-            subnet,
-            dest: EntryDest::Local { device },
-        });
+        self.entries.push(Entry { subnet, dest: EntryDest::Local { device } });
     }
 
     /// Look up an address in the table.
@@ -116,27 +110,16 @@ impl<I: Ip> ForwardingTable<I> {
         let best_match = self
             .entries
             .iter()
-            .filter_map(|e| {
-                if e.subnet.contains(address) {
-                    Some(e)
-                } else {
-                    None
-                }
-            })
+            .filter_map(|e| if e.subnet.contains(address) { Some(e) } else { None })
             .max_by_key(|e| e.subnet.prefix());
 
         match best_match {
-            Some(Entry {
-                dest: EntryDest::Local { device },
-                ..
-            }) => Some(Destination {
-                next_hop: address,
-                device: *device,
-            }),
-            Some(Entry {
-                dest: EntryDest::Remote { next_hop },
-                ..
-            }) => self.lookup_helper(*next_hop),
+            Some(Entry { dest: EntryDest::Local { device }, .. }) => {
+                Some(Destination { next_hop: address, device: *device })
+            }
+            Some(Entry { dest: EntryDest::Remote { next_hop }, .. }) => {
+                self.lookup_helper(*next_hop)
+            }
             None => None,
         }
     }

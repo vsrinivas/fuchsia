@@ -79,10 +79,7 @@ impl<A: IpAddr> Listener<A> {
     ///
     /// The destination is treated as the local address/port.
     fn from_packet<B: ByteSlice>(dst_ip: A, packet: &UdpPacket<B>) -> Listener<A> {
-        Listener {
-            addr: dst_ip,
-            port: packet.dst_port(),
-        }
+        Listener { addr: dst_ip, port: packet.dst_port() }
     }
 }
 
@@ -109,27 +106,28 @@ pub trait UdpEventDispatcher {
 
     /// Receive a UDP packet for a connection.
     fn receive_udp_from_conn(&mut self, conn: &Self::UdpConn, body: &[u8]) {
-        log_unimplemented!(
-            (),
-            "UdpEventDispatcher::receive_udp_from_conn: not implemented"
-        );
+        log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_conn: not implemented");
     }
 
     /// Receive a UDP packet for a listener.
     fn receive_udp_from_listen<A: IpAddr>(
-        &mut self, listener: &Self::UdpListener, src_ip: A, dst_ip: A,
-        src_port: Option<NonZeroU16>, body: &[u8],
+        &mut self,
+        listener: &Self::UdpListener,
+        src_ip: A,
+        dst_ip: A,
+        src_port: Option<NonZeroU16>,
+        body: &[u8],
     ) {
-        log_unimplemented!(
-            (),
-            "UdpEventDispatcher::receive_udp_from_listen: not implemented"
-        );
+        log_unimplemented!((), "UdpEventDispatcher::receive_udp_from_listen: not implemented");
     }
 }
 
 /// Receive a UDP packet in an IP packet.
 pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: B,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    mut buffer: B,
 ) {
     println!("received udp packet: {:x?}", buffer.as_mut());
     let packet = if let Ok(packet) =
@@ -169,19 +167,13 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 ///
 /// `send_udp_conn` panics if `conn` is not associated with a connection for this IP version.
 pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
-    ctx: &mut Context<D>, conn: &D::UdpConn, body: B,
+    ctx: &mut Context<D>,
+    conn: &D::UdpConn,
+    body: B,
 ) {
     let state = get_inner_state::<_, I::Addr>(ctx.state());
-    let Conn {
-        local_addr,
-        local_port,
-        remote_addr,
-        remote_port,
-    } = state
-        .conns
-        .get_by_conn(conn)
-        .expect("transport::udp::send_udp_conn: no such conn")
-        .clone();
+    let Conn { local_addr, local_port, remote_addr, remote_port } =
+        state.conns.get_by_conn(conn).expect("transport::udp::send_udp_conn: no such conn").clone();
 
     crate::ip::send_ip_packet_from(
         ctx,
@@ -209,8 +201,12 @@ pub fn send_udp_conn<D: EventDispatcher, I: Ip, B: BufferMut>(
 /// `send_udp_listener` panics if `listener` is not associated with a listener
 /// for this IP version.
 pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, listener: &D::UdpListener, local_addr: A, remote_addr: A,
-    remote_port: NonZeroU16, body: B,
+    ctx: &mut Context<D>,
+    listener: &D::UdpListener,
+    local_addr: A,
+    remote_addr: A,
+    remote_port: NonZeroU16,
+    body: B,
 ) {
     if !crate::ip::is_local_addr(ctx, local_addr) {
         // TODO(joshlf): Return error.
@@ -229,13 +225,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
             // otherwise.
             addrs
                 .iter()
-                .find_map(|addr| {
-                    if addr.addr == local_addr {
-                        Some(addr.port)
-                    } else {
-                        None
-                    }
-                })
+                .find_map(|addr| if addr.addr == local_addr { Some(addr.port) } else { None })
                 .ok_or_else(|| unimplemented!())
         })
         .or_else(|| {
@@ -246,10 +236,7 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
             // state.listeners. This is OK since we already check that
             // local_addr is a local address in the if block above (we would do
             // it here, but it results in conflicting lifetimes).
-            state
-                .wildcard_listeners
-                .get_by_listener(listener)
-                .map(|ports| Ok(ports[0]))
+            state.wildcard_listeners.get_by_listener(listener).map(|ports| Ok(ports[0]))
             // We didn't find the listener in either map, so we panic.
         })
         .expect("transport::udp::send_udp_listener: no such listener");
@@ -291,8 +278,12 @@ pub fn send_udp_listener<D: EventDispatcher, A: IpAddr, B: BufferMut>(
 ///
 /// `connect_udp` panics if `conn` is already in use.
 pub fn connect_udp<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, conn: D::UdpConn, local_addr: Option<A>, local_port: Option<NonZeroU16>,
-    remote_addr: A, remote_port: NonZeroU16,
+    ctx: &mut Context<D>,
+    conn: D::UdpConn,
+    local_addr: Option<A>,
+    local_port: Option<NonZeroU16>,
+    remote_addr: A,
+    remote_port: NonZeroU16,
 ) {
     let (ipv4_state, ipv6_state) = get_inner_states(ctx.state());
     if ipv4_state.conns.get_by_conn(&conn).is_some()
@@ -310,16 +301,8 @@ pub fn connect_udp<D: EventDispatcher, A: IpAddr>(
 
     let local_addr = local_addr.unwrap_or(default_local);
     if let Some(local_port) = local_port {
-        let c = Conn {
-            local_addr,
-            local_port,
-            remote_addr,
-            remote_port,
-        };
-        let listener = Listener {
-            addr: local_addr,
-            port: local_port,
-        };
+        let c = Conn { local_addr, local_port, remote_addr, remote_port };
+        let listener = Listener { addr: local_addr, port: local_port };
         let state = get_inner_state(ctx.state());
         if state.conns.get_by_addr(&c).is_some() || state.listeners.get_by_addr(&listener).is_some()
         {
@@ -348,19 +331,16 @@ pub fn connect_udp<D: EventDispatcher, A: IpAddr>(
 ///
 /// `listen_udp` panics if `listener` is already in use.
 pub fn listen_udp<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, listener: D::UdpListener, addrs: Vec<A>, port: NonZeroU16,
+    ctx: &mut Context<D>,
+    listener: D::UdpListener,
+    addrs: Vec<A>,
+    port: NonZeroU16,
 ) {
     let (ipv4_state, ipv6_state) = get_inner_states(ctx.state());
     if ipv4_state.listeners.get_by_listener(&listener).is_some()
-        || ipv4_state
-            .wildcard_listeners
-            .get_by_listener(&listener)
-            .is_some()
+        || ipv4_state.wildcard_listeners.get_by_listener(&listener).is_some()
         || ipv6_state.listeners.get_by_listener(&listener).is_some()
-        || ipv6_state
-            .wildcard_listeners
-            .get_by_listener(&listener)
-            .is_some()
+        || ipv6_state.wildcard_listeners.get_by_listener(&listener).is_some()
     {
         panic!("transport::udp::listen_udp: listener already in use");
     }
@@ -381,13 +361,9 @@ pub fn listen_udp<D: EventDispatcher, A: IpAddr>(
                 return;
             }
         }
-        state.listeners.insert(
-            listener,
-            addrs
-                .into_iter()
-                .map(|addr| Listener { addr, port })
-                .collect(),
-        );
+        state
+            .listeners
+            .insert(listener, addrs.into_iter().map(|addr| Listener { addr, port }).collect());
     }
 }
 
@@ -408,10 +384,7 @@ fn get_inner_state<D: EventDispatcher, A: IpAddr>(
 
 fn get_inner_states<D: EventDispatcher>(
     state: &mut StackState<D>,
-) -> (
-    &mut UdpStateInner<D, Ipv4Addr>,
-    &mut UdpStateInner<D, Ipv6Addr>,
-) {
+) -> (&mut UdpStateInner<D, Ipv4Addr>, &mut UdpStateInner<D, Ipv6Addr>) {
     let state = &mut state.transport.udp;
     (&mut state.ipv4, &mut state.ipv6)
 }

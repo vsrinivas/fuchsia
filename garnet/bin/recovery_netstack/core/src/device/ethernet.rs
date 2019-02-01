@@ -154,12 +154,7 @@ pub struct EthernetDeviceState {
 impl EthernetDeviceState {
     /// Construct a new `EthernetDeviceState`.
     pub fn new(mac: Mac) -> EthernetDeviceState {
-        EthernetDeviceState {
-            mac,
-            ipv4_addr: None,
-            ipv6_addr: None,
-            ipv4_arp: ArpState::default(),
-        }
+        EthernetDeviceState { mac, ipv4_addr: None, ipv6_addr: None, ipv4_arp: ArpState::default() }
     }
 }
 
@@ -186,7 +181,10 @@ impl EthernetIpExt for Ipv6 {
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new Ethernet frame and sends it.
 pub fn send_ip_frame<D: EventDispatcher, A, S>(
-    ctx: &mut Context<D>, device_id: u64, local_addr: A, body: S,
+    ctx: &mut Context<D>,
+    device_id: u64,
+    local_addr: A,
+    body: S,
 ) where
     A: IpAddr,
     S: Serializer,
@@ -216,14 +214,9 @@ pub fn send_ip_frame<D: EventDispatcher, A, S>(
     if let Some(dst_mac) = A::lookup_dst_mac(ctx, device_id, local_addr) {
         let src_mac = get_device_state(ctx, device_id).mac;
         let buffer = body
-            .encapsulate(EthernetFrameBuilder::new(
-                src_mac,
-                dst_mac,
-                A::Version::ETHER_TYPE,
-            ))
+            .encapsulate(EthernetFrameBuilder::new(src_mac, dst_mac, A::Version::ETHER_TYPE))
             .serialize_outer();
-        ctx.dispatcher()
-            .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }
 }
 
@@ -268,7 +261,8 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device_id: u64, b
 
 /// Get the IP address associated with this device.
 pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, device_id: u64,
+    ctx: &mut Context<D>,
+    device_id: u64,
 ) -> Option<(A, Subnet<A>)> {
     specialize_ip_addr!(
         fn get_ip_addr(state: &EthernetDeviceState) -> Option<(Self, Subnet<Self>)> {
@@ -281,7 +275,10 @@ pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
 
 /// Set the IP address associated with this device.
 pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, device_id: u64, addr: A, subnet: Subnet<A>,
+    ctx: &mut Context<D>,
+    device_id: u64,
+    addr: A,
+    subnet: Subnet<A>,
 ) {
     // TODO(joshlf): Perform any other necessary setup
     specialize_ip_addr!(
@@ -294,7 +291,8 @@ pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
 }
 
 fn get_device_state<D: EventDispatcher>(
-    ctx: &mut Context<D>, device_id: u64,
+    ctx: &mut Context<D>,
+    device_id: u64,
 ) -> &mut EthernetDeviceState {
     ctx.state()
         .device
@@ -311,24 +309,27 @@ impl ArpDevice<Ipv4Addr> for EthernetArpDevice {
     const BROADCAST: Mac = Mac::BROADCAST;
 
     fn send_arp_frame<D: EventDispatcher, S: Serializer>(
-        ctx: &mut Context<D>, device_id: u64, dst: Self::HardwareAddr, body: S,
+        ctx: &mut Context<D>,
+        device_id: u64,
+        dst: Self::HardwareAddr,
+        body: S,
     ) {
         let src = get_device_state(ctx, device_id).mac;
-        let buffer = body
-            .encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp))
-            .serialize_outer();
-        ctx.dispatcher()
-            .send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
+        let buffer =
+            body.encapsulate(EthernetFrameBuilder::new(src, dst, EtherType::Arp)).serialize_outer();
+        ctx.dispatcher().send_frame(DeviceId::new_ethernet(device_id), buffer.as_ref());
     }
 
     fn get_arp_state<D: EventDispatcher>(
-        ctx: &mut Context<D>, device_id: u64,
+        ctx: &mut Context<D>,
+        device_id: u64,
     ) -> &mut ArpState<Ipv4Addr, Self> {
         &mut get_device_state(ctx, device_id).ipv4_arp
     }
 
     fn get_protocol_addr<D: EventDispatcher>(
-        ctx: &mut Context<D>, device_id: u64,
+        ctx: &mut Context<D>,
+        device_id: u64,
     ) -> Option<Ipv4Addr> {
         get_device_state(ctx, device_id).ipv4_addr.map(|x| x.0)
     }

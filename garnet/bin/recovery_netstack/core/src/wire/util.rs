@@ -42,10 +42,7 @@ mod checksum {
     impl Checksum {
         /// Initialize a new checksum.
         pub fn new() -> Self {
-            Checksum {
-                sum: 0,
-                trailing_byte: None,
-            }
+            Checksum { sum: 0, trailing_byte: None }
         }
 
         /// Add bytes to the checksum.
@@ -385,10 +382,7 @@ mod options {
             // - O::parse could be non-deterministic
             let mut idx = 0;
             while next::<O>(bytes.deref(), &mut idx)?.is_some() {}
-            Ok(Options {
-                bytes,
-                _marker: PhantomData,
-            })
+            Ok(Options { bytes, _marker: PhantomData })
         }
     }
 
@@ -421,11 +415,7 @@ mod options {
         /// were validated in `parse`, then so long as `from_kind` and
         /// `from_data` are deterministic, the iterator is infallible.
         pub fn iter(&'a self) -> OptionIter<'a, O> {
-            OptionIter {
-                bytes: &self.bytes,
-                idx: 0,
-                _marker: PhantomData,
-            }
+            OptionIter { bytes: &self.bytes, idx: 0, _marker: PhantomData }
         }
     }
 
@@ -446,7 +436,8 @@ mod options {
     }
 
     fn next<'a, O>(
-        bytes: &'a [u8], idx: &mut usize,
+        bytes: &'a [u8],
+        idx: &mut usize,
     ) -> Result<Option<O::Output>, OptionParseErr<O::Error>>
     where
         O: OptionImpl<'a>,

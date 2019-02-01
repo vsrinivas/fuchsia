@@ -29,9 +29,7 @@ pub struct IcmpEchoRequest {
 
 impl IcmpEchoRequest {
     pub fn reply(self) -> IcmpEchoReply {
-        IcmpEchoReply {
-            id_seq: self.id_seq,
-        }
+        IcmpEchoReply { id_seq: self.id_seq }
     }
 }
 

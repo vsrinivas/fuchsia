@@ -154,16 +154,13 @@ impl EventDispatcher for DummyEventDispatcher {
         // There is the invariant that there can only be one timer event per TimerId, so we only
         // need to remove at most one element from timer_events.
 
-        match self
-            .timer_events
-            .iter()
-            .find_map(|(instant, event_timer_id)| {
-                if *event_timer_id == id {
-                    Some(*instant)
-                } else {
-                    None
-                }
-            }) {
+        match self.timer_events.iter().find_map(|(instant, event_timer_id)| {
+            if *event_timer_id == id {
+                Some(*instant)
+            } else {
+                None
+            }
+        }) {
             Some(instant) => {
                 self.timer_events.remove(&instant);
                 Some(instant)

@@ -72,7 +72,8 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv4Addr>> for Icmpv4Packet<B
     }
 
     fn parse<BV: BufferView<B>>(
-        mut buffer: BV, args: IcmpParseArgs<Ipv4Addr>,
+        mut buffer: BV,
+        args: IcmpParseArgs<Ipv4Addr>,
     ) -> Result<Self, ParseError> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
@@ -139,20 +140,8 @@ impl_icmp_message!(
     Icmpv4DestUnreachableCode,
     OriginalPacket<B>
 );
-impl_icmp_message!(
-    Ipv4,
-    IcmpEchoRequest,
-    EchoRequest,
-    IcmpUnusedCode,
-    OriginalPacket<B>
-);
-impl_icmp_message!(
-    Ipv4,
-    IcmpEchoReply,
-    EchoReply,
-    IcmpUnusedCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv4, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalPacket<B>);
+impl_icmp_message!(Ipv4, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
   Icmpv4RedirectCode,
@@ -171,13 +160,7 @@ pub struct Icmpv4Redirect {
 
 impl_from_bytes_as_bytes_unaligned!(Icmpv4Redirect);
 
-impl_icmp_message!(
-    Ipv4,
-    Icmpv4Redirect,
-    Redirect,
-    Icmpv4RedirectCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv4, Icmpv4Redirect, Redirect, Icmpv4RedirectCode, OriginalPacket<B>);
 
 create_net_enum! {
   Icmpv4TimeExceededCode,
@@ -185,13 +168,7 @@ create_net_enum! {
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
 
-impl_icmp_message!(
-    Ipv4,
-    IcmpTimeExceeded,
-    TimeExceeded,
-    Icmpv4TimeExceededCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv4, IcmpTimeExceeded, TimeExceeded, Icmpv4TimeExceededCode, OriginalPacket<B>);
 
 #[derive(Copy, Clone, Debug)]
 #[repr(C, packed)]
@@ -249,12 +226,7 @@ pub struct Icmpv4TimestampReply(Timestamp);
 impl_from_bytes_as_bytes_unaligned!(Icmpv4TimestampRequest);
 impl_from_bytes_as_bytes_unaligned!(Icmpv4TimestampReply);
 
-impl_icmp_message!(
-    Ipv4,
-    Icmpv4TimestampRequest,
-    TimestampRequest,
-    IcmpUnusedCode
-);
+impl_icmp_message!(Ipv4, Icmpv4TimestampRequest, TimestampRequest, IcmpUnusedCode);
 impl_icmp_message!(Ipv4, Icmpv4TimestampReply, TimestampReply, IcmpUnusedCode);
 
 create_net_enum! {
@@ -293,7 +265,9 @@ mod tests {
     use crate::wire::ipv4::{Ipv4Packet, Ipv4PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv4, B>>(
-        src_ip: Ipv4Addr, dst_ip: Ipv4Addr, icmp: &IcmpPacket<Ipv4, B, M>,
+        src_ip: Ipv4Addr,
+        dst_ip: Ipv4Addr,
+        icmp: &IcmpPacket<Ipv4, B, M>,
         builder: Ipv4PacketBuilder,
     ) -> Vec<u8> {
         icmp.message_body
@@ -309,7 +283,8 @@ mod tests {
         M: for<'a> IcmpMessage<Ipv4, &'a [u8]>,
         F: for<'a> FnOnce(&IcmpPacket<Ipv4, &'a [u8], M>),
     >(
-        mut req: &[u8], check: F,
+        mut req: &[u8],
+        check: F,
     ) {
         let orig_req = &req[..];
 
@@ -348,10 +323,7 @@ mod tests {
     fn test_parse_and_serialize_timestamp_request() {
         use crate::wire::testdata::icmp_timestamp::*;
         test_parse_and_serialize::<Icmpv4TimestampRequest, _>(REQUEST_IP_PACKET_BYTES, |icmp| {
-            assert_eq!(
-                icmp.message().0.timestamps.origin_timestamp(),
-                ORIGIN_TIMESTAMP
-            );
+            assert_eq!(icmp.message().0.timestamps.origin_timestamp(), ORIGIN_TIMESTAMP);
             assert_eq!(icmp.message().0.timestamps.tx_timestamp(), RX_TX_TIMESTAMP);
             assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);
             assert_eq!(icmp.message().0.id_seq.seq(), SEQUENCE_NUM);
@@ -362,10 +334,7 @@ mod tests {
     fn test_parse_and_serialize_timestamp_reply() {
         use crate::wire::testdata::icmp_timestamp::*;
         test_parse_and_serialize::<Icmpv4TimestampReply, _>(RESPONSE_IP_PACKET_BYTES, |icmp| {
-            assert_eq!(
-                icmp.message().0.timestamps.origin_timestamp(),
-                ORIGIN_TIMESTAMP
-            );
+            assert_eq!(icmp.message().0.timestamps.origin_timestamp(), ORIGIN_TIMESTAMP);
             // TODO: Assert other values here?
             // TODO: Check value of recv_timestamp and tx_timestamp
             assert_eq!(icmp.message().0.id_seq.id(), IDENTIFIER);

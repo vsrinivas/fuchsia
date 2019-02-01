@@ -98,9 +98,8 @@ impl Header {
 pub fn peek_message_type<MessageType: TryFrom<u8>>(
     bytes: &[u8],
 ) -> Result<MessageType, ParseError> {
-    let (header, _) = LayoutVerified::<_, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
-        debug_err_fn!(ParseError::Format, "too few bytes for header"),
-    )?;
+    let (header, _) = LayoutVerified::<_, Header>::new_unaligned_from_prefix(bytes)
+        .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     MessageType::try_from(header.msg_type).or_else(|_| {
         Err(debug_err!(
             ParseError::NotSupported,
@@ -353,16 +352,15 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
     }
 
     fn parse<BV: BufferView<B>>(
-        mut buffer: BV, args: IcmpParseArgs<I::Addr>,
+        mut buffer: BV,
+        args: IcmpParseArgs<I::Addr>,
     ) -> Result<Self, ParseError> {
-        let header = buffer.take_obj_front::<Header>().ok_or_else(debug_err_fn!(
-            ParseError::Format,
-            "too few bytes for header"
-        ))?;
-        let message = buffer.take_obj_front::<M>().ok_or_else(debug_err_fn!(
-            ParseError::Format,
-            "too few bytes for packet"
-        ))?;
+        let header = buffer
+            .take_obj_front::<Header>()
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
+        let message = buffer
+            .take_obj_front::<M>()
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for packet"))?;
         let message_body = buffer.into_rest();
         if !M::Body::EXPECTS_BODY && !message_body.is_empty() {
             return debug_err!(Err(ParseError::Format), "unexpected message body");
@@ -389,12 +387,7 @@ impl<B: ByteSlice, I: IcmpIpExt, M: IcmpMessage<I, B>> ParsablePacket<B, IcmpPar
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
         let message_body = M::Body::parse(message_body)?;
-        Ok(IcmpPacket {
-            header,
-            message,
-            message_body,
-            _marker: PhantomData,
-        })
+        Ok(IcmpPacket { header, message, message_body, _marker: PhantomData })
     }
 }
 
@@ -415,12 +408,7 @@ impl<I: IcmpIpExt, B: ByteSlice, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
 
     /// Construct a builder with the same contents as this packet.
     pub fn builder(&self, src_ip: I::Addr, dst_ip: I::Addr) -> IcmpPacketBuilder<I, B, M> {
-        IcmpPacketBuilder {
-            src_ip,
-            dst_ip,
-            code: self.code(),
-            msg: *self.message(),
-        }
+        IcmpPacketBuilder { src_ip, dst_ip, code: self.code(), msg: *self.message() }
     }
 }
 
@@ -430,7 +418,11 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacket<I, B, M> {
     /// `compute_checksum` returns `None` if the version is IPv6 and the total
     /// ICMP packet length overflows a u32.
     fn compute_checksum(
-        header: &Header, message: &[u8], message_body: &[u8], src_ip: I::Addr, dst_ip: I::Addr,
+        header: &Header,
+        message: &[u8],
+        message_body: &[u8],
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
     ) -> Option<u16> {
         let mut c = Checksum::new();
         if I::VERSION.is_v6() {
@@ -491,14 +483,12 @@ pub struct IcmpPacketBuilder<I: IcmpIpExt, B, M: IcmpMessage<I, B>> {
 impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> IcmpPacketBuilder<I, B, M> {
     /// Construct a new `IcmpPacketBuilder`.
     pub fn new(
-        src_ip: I::Addr, dst_ip: I::Addr, code: M::Code, msg: M,
+        src_ip: I::Addr,
+        dst_ip: I::Addr,
+        code: M::Code,
+        msg: M,
     ) -> IcmpPacketBuilder<I, B, M> {
-        IcmpPacketBuilder {
-            src_ip,
-            dst_ip,
-            code,
-            msg,
-        }
+        IcmpPacketBuilder { src_ip, dst_ip, code, msg }
     }
 }
 
@@ -531,12 +521,10 @@ impl<I: IcmpIpExt, B, M: IcmpMessage<I, B>> PacketBuilder for IcmpPacketBuilder<
         );
         // SECURITY: Use _zero constructors to ensure we zero memory to prevent
         // leaking information from packets previously stored in this buffer.
-        let mut header = prefix
-            .take_obj_front_zero::<Header>()
-            .expect("too few bytes for ICMP message");
-        let mut message = prefix
-            .take_obj_front_zero::<M>()
-            .expect("too few bytes for ICMP message");
+        let mut header =
+            prefix.take_obj_front_zero::<Header>().expect("too few bytes for ICMP message");
+        let mut message =
+            prefix.take_obj_front_zero::<M>().expect("too few bytes for ICMP message");
         *message = self.msg;
         header.set_msg_type(M::TYPE);
         header.code = self.code.into();

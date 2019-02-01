@@ -57,7 +57,10 @@ struct FourTuple<A: IpAddr> {
 
 /// Receive a TCP segment in an IP packet.
 pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, mut buffer: B,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    mut buffer: B,
 ) {
     println!("received tcp packet: {:x?}", buffer.as_mut());
     let segment = if let Ok(segment) =
@@ -70,10 +73,7 @@ pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
     };
 
     if segment.syn() {
-        let _key = TwoTuple {
-            local_ip: dst_ip,
-            local_port: segment.dst_port(),
-        };
+        let _key = TwoTuple { local_ip: dst_ip, local_port: segment.dst_port() };
     // TODO(joshlf): Lookup and handle
     } else {
         let _key = FourTuple {

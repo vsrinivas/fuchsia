@@ -147,7 +147,9 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     /// If there was previously a timer with that ID, return the time at which is was scheduled to
     /// fire.
     fn schedule_timeout(
-        &mut self, duration: std::time::Duration, id: TimerId,
+        &mut self,
+        duration: std::time::Duration,
+        id: TimerId,
     ) -> Option<std::time::Instant>;
 
     /// Schedule a callback to be invoked at a specific time.
@@ -158,7 +160,9 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
     /// If there was previously a timer with that ID, return the time at which is was scheduled to
     /// fire.
     fn schedule_timeout_instant(
-        &mut self, time: std::time::Instant, id: TimerId,
+        &mut self,
+        time: std::time::Instant,
+        id: TimerId,
     ) -> Option<std::time::Instant>;
 
     /// Cancel a timeout.
@@ -171,7 +175,10 @@ pub trait EventDispatcher: DeviceLayerEventDispatcher + TransportLayerEventDispa
 /// Set the IP address for a device.
 // TODO(wesleyac): A real error type
 pub fn set_ip_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>, device: DeviceId, addr: std::net::IpAddr, subnet: types::Subnet,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: std::net::IpAddr,
+    subnet: types::Subnet,
 ) -> Result<(), ()> {
     match (addr, subnet.addr(), subnet.prefix_len()) {
         (std::net::IpAddr::V4(ip), std::net::IpAddr::V4(subnet_addr), prefix_len) => {
@@ -198,14 +205,17 @@ pub fn set_ip_addr<D: EventDispatcher>(
 
 /// Get the IP addresses for a device.
 pub fn get_ip_addr<D: EventDispatcher>(
-    ctx: &mut Context<D>, device: DeviceId,
+    ctx: &mut Context<D>,
+    device: DeviceId,
 ) -> (Option<std::net::Ipv4Addr>, Option<std::net::Ipv6Addr>) {
     unimplemented!();
 }
 
 /// Add a route to send all packets addressed to a specific subnet to a specific device.
 pub fn add_device_route<D: EventDispatcher>(
-    ctx: &mut Context<D>, subnet: types::Subnet, device: DeviceId,
+    ctx: &mut Context<D>,
+    subnet: types::Subnet,
+    device: DeviceId,
 ) {
     match subnet.addr() {
         std::net::IpAddr::V4(addr) => {

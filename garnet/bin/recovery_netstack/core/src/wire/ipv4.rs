@@ -107,10 +107,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         let total_len = buffer.len();
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "too few bytes for header"
-            ))?;
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let hdr_bytes = (hdr_prefix.ihl() * 4) as usize;
         if hdr_bytes < HEADER_PREFIX_SIZE {
             return debug_err!(Err(ParseError::Format), "invalid IHL: {}", hdr_prefix.ihl());
@@ -128,9 +125,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
         }
         let body = if (hdr_prefix.total_length() as usize) < total_len {
             // This unwrap is safe because of the check against total_len.
-            let body = buffer
-                .take_back(hdr_prefix.total_length() as usize - hdr_bytes)
-                .unwrap();
+            let body = buffer.take_back(hdr_prefix.total_length() as usize - hdr_bytes).unwrap();
             // Discard the padding left by the previous layer.
             buffer.into_rest();
             body
@@ -141,11 +136,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv4Packet<B> {
             return debug_err!(Err(ParseError::NotSupported), "fragmentation not supported");
         };
 
-        let packet = Ipv4Packet {
-            hdr_prefix,
-            options,
-            body,
-        };
+        let packet = Ipv4Packet { hdr_prefix, options, body };
         if packet.compute_header_checksum() != packet.hdr_prefix.hdr_checksum() {
             return debug_err!(Err(ParseError::Checksum), "invalid checksum");
         }
@@ -379,11 +370,7 @@ impl Ipv4PacketBuilder {
     ///
     /// `fragment_offset` panics if `fragment_offset` is greater than 2^13 - 1.
     pub fn fragment_offset(&mut self, fragment_offset: u16) {
-        assert!(
-            fragment_offset < 1 << 13,
-            "invalid fragment offset: {}",
-            fragment_offset
-        );
+        assert!(fragment_offset < 1 << 13, "invalid fragment offset: {}", fragment_offset);
         self.frag_off = fragment_offset;
     }
 }
@@ -412,28 +399,19 @@ impl PacketBuilder for Ipv4PacketBuilder {
 
         // SECURITY: Use _zero constructor to ensure we zero memory to prevent
         // leaking information from packets previously stored in this buffer.
-        let hdr_prefix = header
-            .take_obj_front_zero::<HeaderPrefix>()
-            .expect("too few bytes for IPv4 header");
+        let hdr_prefix =
+            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for IPv4 header");
         // create a 0-byte slice for the options since we don't support
         // serializing options yet (NET-955)
         let options =
             Options::parse(&mut [][..]).expect("parsing an empty options slice should not fail");
-        let mut packet = Ipv4Packet {
-            hdr_prefix,
-            options,
-            body,
-        };
+        let mut packet = Ipv4Packet { hdr_prefix, options, body };
 
         packet.hdr_prefix.version_ihl = (4u8 << 4) | 5;
         packet.hdr_prefix.dscp_ecn = (self.dscp << 2) | self.ecn;
         let total_len = packet.total_packet_len();
         if total_len >= 1 << 16 {
-            panic!(
-                "packet length of {} exceeds maximum of {}",
-                total_len,
-                1 << 16 - 1,
-            );
+            panic!("packet length of {} exceeds maximum of {}", total_len, 1 << 16 - 1,);
         }
         NetworkEndian::write_u16(&mut packet.hdr_prefix.total_len, total_len as u16);
         NetworkEndian::write_u16(&mut packet.hdr_prefix.id, self.id);
@@ -610,9 +588,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (5 << 4) | 5;
         assert_eq!(
-            (&hdr_prefix_to_bytes(hdr_prefix)[..])
-                .parse::<Ipv4Packet<_>>()
-                .unwrap_err(),
+            (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
             ParseError::Format
         );
 
@@ -621,9 +597,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (4 << 4) | 4;
         assert_eq!(
-            (&hdr_prefix_to_bytes(hdr_prefix)[..])
-                .parse::<Ipv4Packet<_>>()
-                .unwrap_err(),
+            (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
             ParseError::Format
         );
 
@@ -632,9 +606,7 @@ mod tests {
         let mut hdr_prefix = new_hdr_prefix();
         hdr_prefix.version_ihl = (4 << 4) | 6;
         assert_eq!(
-            (&hdr_prefix_to_bytes(hdr_prefix)[..])
-                .parse::<Ipv4Packet<_>>()
-                .unwrap_err(),
+            (&hdr_prefix_to_bytes(hdr_prefix)[..]).parse::<Ipv4Packet<_>>().unwrap_err(),
             ParseError::Format
         );
     }
@@ -654,9 +626,7 @@ mod tests {
         builder.mf_flag(true);
         builder.fragment_offset(0x0607);
 
-        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
-            .encapsulate(builder)
-            .serialize_outer();
+        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer();
         assert_eq!(
             buf.as_ref(),
             [

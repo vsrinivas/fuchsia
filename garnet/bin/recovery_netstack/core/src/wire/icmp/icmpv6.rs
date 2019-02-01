@@ -79,7 +79,8 @@ impl<B: ByteSlice> ParsablePacket<B, IcmpParseArgs<Ipv6Addr>> for Icmpv6Packet<B
     }
 
     fn parse<BV: BufferView<B>>(
-        mut buffer: BV, args: IcmpParseArgs<Ipv6Addr>,
+        mut buffer: BV,
+        args: IcmpParseArgs<Ipv6Addr>,
     ) -> Result<Self, ParseError> {
         macro_rules! mtch {
             ($buffer:expr, $args:expr, $($variant:ident => $type:ty,)*) => {
@@ -127,21 +128,9 @@ create_net_enum! {
     Redirect: REDIRECT = 137,
 }
 
-impl_icmp_message!(
-    Ipv6,
-    IcmpEchoRequest,
-    EchoRequest,
-    IcmpUnusedCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv6, IcmpEchoRequest, EchoRequest, IcmpUnusedCode, OriginalPacket<B>);
 
-impl_icmp_message!(
-    Ipv6,
-    IcmpEchoReply,
-    EchoReply,
-    IcmpUnusedCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv6, IcmpEchoReply, EchoReply, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
   Icmpv6DestUnreachableCode,
@@ -169,13 +158,7 @@ pub struct Icmpv6PacketTooBig {
 }
 
 impl_from_bytes_as_bytes_unaligned!(Icmpv6PacketTooBig);
-impl_icmp_message!(
-    Ipv6,
-    Icmpv6PacketTooBig,
-    PacketTooBig,
-    IcmpUnusedCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv6, Icmpv6PacketTooBig, PacketTooBig, IcmpUnusedCode, OriginalPacket<B>);
 
 create_net_enum! {
   Icmpv6TimeExceededCode,
@@ -183,13 +166,7 @@ create_net_enum! {
   FragmentReassemblyTimeExceeded: FRAGMENT_REASSEMBLY_TIME_EXCEEDED = 1,
 }
 
-impl_icmp_message!(
-    Ipv6,
-    IcmpTimeExceeded,
-    TimeExceeded,
-    Icmpv6TimeExceededCode,
-    OriginalPacket<B>
-);
+impl_icmp_message!(Ipv6, IcmpTimeExceeded, TimeExceeded, Icmpv6TimeExceededCode, OriginalPacket<B>);
 
 create_net_enum! {
   Icmpv6ParameterProblemCode,
@@ -224,7 +201,9 @@ mod tests {
     use crate::wire::ipv6::{Ipv6Packet, Ipv6PacketBuilder};
 
     fn serialize_to_bytes<B: ByteSlice, M: IcmpMessage<Ipv6, B>>(
-        src_ip: Ipv6Addr, dst_ip: Ipv6Addr, icmp: &IcmpPacket<Ipv6, B, M>,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        icmp: &IcmpPacket<Ipv6, B, M>,
         builder: Ipv6PacketBuilder,
     ) -> Vec<u8> {
         icmp.message_body
@@ -240,7 +219,8 @@ mod tests {
         M: for<'a> IcmpMessage<Ipv6, &'a [u8]>,
         F: for<'a> FnOnce(&IcmpPacket<Ipv6, &'a [u8], M>),
     >(
-        mut req: &[u8], check: F,
+        mut req: &[u8],
+        check: F,
     ) {
         let orig_req = &req[..];
 

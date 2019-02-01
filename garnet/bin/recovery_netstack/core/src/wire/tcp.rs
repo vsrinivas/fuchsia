@@ -112,10 +112,7 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, TcpParseArgs<A>> for TcpSegment<
 
         let hdr_prefix = buffer
             .take_obj_front::<HeaderPrefix>()
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "too few bytes for header"
-            ))?;
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let hdr_bytes = (hdr_prefix.data_offset() * 4) as usize;
         if hdr_bytes < hdr_prefix.bytes().len() {
             return debug_err!(
@@ -126,16 +123,9 @@ impl<B: ByteSlice, A: IpAddr> ParsablePacket<B, TcpParseArgs<A>> for TcpSegment<
         }
         let options = buffer
             .take_front(hdr_bytes - hdr_prefix.bytes().len())
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "data offset larger than buffer"
-            ))?;
+            .ok_or_else(debug_err_fn!(ParseError::Format, "data offset larger than buffer"))?;
         let options = Options::parse(options).map_err(|_| ParseError::Format)?;
-        let segment = TcpSegment {
-            hdr_prefix,
-            options,
-            body: buffer.into_rest(),
-        };
+        let segment = TcpSegment { hdr_prefix, options, body: buffer.into_rest() };
 
         if segment.hdr_prefix.src_port() == 0 || segment.hdr_prefix.dst_port() == 0 {
             return debug_err!(Err(ParseError::Format), "zero source or destination port");
@@ -302,8 +292,13 @@ impl<A: IpAddr> TcpSegmentBuilder<A> {
     ///
     /// If `ack_num` is `Some`, then the ACK flag will be set.
     pub fn new(
-        src_ip: A, dst_ip: A, src_port: NonZeroU16, dst_port: NonZeroU16, seq_num: u32,
-        ack_num: Option<u32>, window_size: u16,
+        src_ip: A,
+        dst_ip: A,
+        src_port: NonZeroU16,
+        dst_port: NonZeroU16,
+        seq_num: u32,
+        ack_num: Option<u32>,
+        window_size: u16,
     ) -> TcpSegmentBuilder<A> {
         let flags = if ack_num.is_some() { 1 << 4 } else { 0 };
         TcpSegmentBuilder {
@@ -365,18 +360,13 @@ impl<A: IpAddr> PacketBuilder for TcpSegmentBuilder<A> {
 
         // SECURITY: Use _zero constructor to ensure we zero memory to prevent
         // leaking information from packets previously stored in this buffer.
-        let hdr_prefix = header
-            .take_obj_front_zero::<HeaderPrefix>()
-            .expect("too few bytes for TCP header");
+        let hdr_prefix =
+            header.take_obj_front_zero::<HeaderPrefix>().expect("too few bytes for TCP header");
         // create a 0-byte slice for the options since we don't support
         // serializing options yet (NET-955)
         let options =
             Options::parse(&mut [][..]).expect("parsing an empty options slice should not fail");
-        let mut segment = TcpSegment {
-            hdr_prefix,
-            options,
-            body,
-        };
+        let mut segment = TcpSegment { hdr_prefix, options, body };
 
         NetworkEndian::write_u16(&mut segment.hdr_prefix.src_port, self.src_port);
         NetworkEndian::write_u16(&mut segment.hdr_prefix.dst_port, self.dst_port);
@@ -394,12 +384,10 @@ impl<A: IpAddr> PacketBuilder for TcpSegmentBuilder<A> {
         let segment_len = segment.total_segment_len();
         // This ignores the checksum field in the header, so it's fine that we
         // haven't set it yet, and so it could be filled with arbitrary bytes.
-        let checksum = segment
-            .compute_checksum(self.src_ip, self.dst_ip)
-            .expect(&format!(
-                "total TCP segment length of {} bytes overflows length field of pseudo-header",
-                segment_len
-            ));
+        let checksum = segment.compute_checksum(self.src_ip, self.dst_ip).expect(&format!(
+            "total TCP segment length of {} bytes overflows length field of pseudo-header",
+            segment_len
+        ));
         NetworkEndian::write_u16(&mut segment.hdr_prefix.checksum, checksum);
     }
 }
@@ -488,10 +476,7 @@ mod options {
                     } else {
                         let ts_val = NetworkEndian::read_u32(&data);
                         let ts_echo_reply = NetworkEndian::read_u32(&data[4..]);
-                        Ok(Some(TcpOption::Timestamp {
-                            ts_val,
-                            ts_echo_reply,
-                        }))
+                        Ok(Some(TcpOption::Timestamp { ts_val, ts_echo_reply }))
                     }
                 }
                 _ => Ok(None),
@@ -522,9 +507,8 @@ mod tests {
     const TEST_DST_IPV4: Ipv4Addr = Ipv4Addr::new([5, 6, 7, 8]);
     const TEST_SRC_IPV6: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-    const TEST_DST_IPV6: Ipv6Addr = Ipv6Addr::new([
-        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-    ]);
+    const TEST_DST_IPV6: Ipv6Addr =
+        Ipv6Addr::new([17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
     #[test]
     fn test_parse_serialize_full() {
@@ -558,10 +542,7 @@ mod tests {
         assert_eq!(segment.ack_num().is_some(), TCP_ACK_FLAG);
         assert_eq!(segment.fin(), TCP_FIN_FLAG);
         assert_eq!(segment.syn(), TCP_SYN_FLAG);
-        assert_eq!(
-            segment.iter_options().collect::<Vec<_>>().as_slice(),
-            TCP_OPTIONS
-        );
+        assert_eq!(segment.iter_options().collect::<Vec<_>>().as_slice(), TCP_OPTIONS);
         assert_eq!(segment.body(), TCP_BODY);
 
         // TODO(joshlf): Uncomment once we support serializing options
@@ -661,9 +642,7 @@ mod tests {
         builder.rst(true);
         builder.syn(true);
 
-        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9])
-            .encapsulate(builder)
-            .serialize_outer();
+        let mut buf = (&[0, 1, 2, 3, 3, 4, 5, 7, 8, 9]).encapsulate(builder).serialize_outer();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),

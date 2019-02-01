@@ -105,9 +105,8 @@ impl Header {
 /// so `peek_arp_types` succeeding does not guarantee that a subsequent call to
 /// `parse` will also succeed.
 pub fn peek_arp_types<B: ByteSlice>(bytes: B) -> Result<(ArpHardwareType, EtherType), ParseError> {
-    let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes).ok_or_else(
-        debug_err_fn!(ParseError::Format, "too few bytes for header"),
-    )?;
+    let (header, _) = LayoutVerified::<B, Header>::new_unaligned_from_prefix(bytes)
+        .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
     let hw = ArpHardwareType::from_u16(header.hardware_protocol()).ok_or_else(debug_err_fn!(
         ParseError::NotSupported,
         "unrecognized hardware protocol: {:x}",
@@ -243,10 +242,9 @@ where
     }
 
     fn parse<BV: BufferView<B>>(mut buffer: BV, args: ()) -> Result<Self, ParseError> {
-        let header = buffer.take_obj_front::<Header>().ok_or_else(debug_err_fn!(
-            ParseError::Format,
-            "too few bytes for header"
-        ))?;
+        let header = buffer
+            .take_obj_front::<Header>()
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         let body = buffer
             .take_obj_front::<Body<HwAddr, ProtoAddr>>()
             .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for body"))?;
@@ -337,8 +335,11 @@ pub struct ArpPacketBuilder<HwAddr, ProtoAddr> {
 impl<HwAddr, ProtoAddr> ArpPacketBuilder<HwAddr, ProtoAddr> {
     /// Construct a new `ArpPacketBuilder`.
     pub fn new(
-        operation: ArpOp, sender_hardware_addr: HwAddr, sender_protocol_addr: ProtoAddr,
-        target_hardware_addr: HwAddr, target_protocol_addr: ProtoAddr,
+        operation: ArpOp,
+        sender_hardware_addr: HwAddr,
+        sender_protocol_addr: ProtoAddr,
+        target_hardware_addr: HwAddr,
+        target_protocol_addr: ProtoAddr,
     ) -> ArpPacketBuilder<HwAddr, ProtoAddr> {
         ArpPacketBuilder {
             op: operation,
@@ -365,9 +366,8 @@ where
 
         // SECURITY: Use _zero constructors to ensure we zero memory to prevent
         // leaking information from packets previously stored in this buffer.
-        let mut header = buffer
-            .take_obj_front_zero::<Header>()
-            .expect("not enough bytes for an ARP packet");
+        let mut header =
+            buffer.take_obj_front_zero::<Header>().expect("not enough bytes for an ARP packet");
         let mut body = buffer
             .take_obj_front_zero::<Body<HwAddr, ProtoAddr>>()
             .expect("not enough bytes for an ARP packet");
@@ -375,10 +375,7 @@ where
             .set_hardware_protocol(<HwAddr as HType>::htype(), <HwAddr as HType>::hlen())
             .set_network_protocol(<ProtoAddr as PType>::ptype(), <ProtoAddr as PType>::plen())
             .set_op_code(self.op);
-        body.set_sha(self.sha)
-            .set_spa(self.spa)
-            .set_tha(self.tha)
-            .set_tpa(self.tpa);
+        body.set_sha(self.sha).set_spa(self.spa).set_tha(self.tha).set_tpa(self.tpa);
     }
 }
 
@@ -488,10 +485,7 @@ mod tests {
         .serialize_outer();
         assert_eq!(
             AsRef::<[u8]>::as_ref(&buf),
-            &[
-                0, 1, 8, 0, 6, 4, 0, 1, 0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 5, 6, 7,
-                8,
-            ]
+            &[0, 1, 8, 0, 6, 4, 0, 1, 0, 1, 2, 3, 4, 5, 1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 5, 6, 7, 8,]
         );
         let packet = buf.parse::<ArpPacket<_, Mac, Ipv4Addr>>().unwrap();
         assert_eq!(packet.sender_hardware_address(), TEST_SENDER_MAC);
@@ -526,18 +520,12 @@ mod tests {
         // Test that an incorrect hardware address len is rejected.
         let mut header = new_header();
         header.hlen = 7;
-        assert_eq!(
-            peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(),
-            ParseError::Format
-        );
+        assert_eq!(peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(), ParseError::Format);
 
         // Test that an incorrect protocol address len is rejected.
         let mut header = new_header();
         header.plen = 5;
-        assert_eq!(
-            peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(),
-            ParseError::Format
-        );
+        assert_eq!(peek_arp_types(&header_to_bytes(header)[..]).unwrap_err(), ParseError::Format);
     }
 
     #[test]
@@ -550,9 +538,8 @@ mod tests {
         // Assert that parsing a particular header results in an error.
         fn assert_header_err(header: Header, err: ParseError) {
             let mut buf = [0; 28];
-            *LayoutVerified::<_, Header>::new_unaligned_from_prefix(&mut buf[..])
-                .unwrap()
-                .0 = header;
+            *LayoutVerified::<_, Header>::new_unaligned_from_prefix(&mut buf[..]).unwrap().0 =
+                header;
             assert_err(&buf[..], err);
         }
 

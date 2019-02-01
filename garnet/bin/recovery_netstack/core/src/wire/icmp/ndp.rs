@@ -27,13 +27,7 @@ pub struct RouterSolicitation {
     _reserved: [u8; 4],
 }
 impl_from_bytes_as_bytes_unaligned!(RouterSolicitation);
-impl_icmp_message!(
-    Ipv6,
-    RouterSolicitation,
-    RouterSolicitation,
-    IcmpUnusedCode,
-    Options<B>
-);
+impl_icmp_message!(Ipv6, RouterSolicitation, RouterSolicitation, IcmpUnusedCode, Options<B>);
 
 /// An NDP Router Advertisment.
 #[derive(Copy, Clone, Debug)]
@@ -46,13 +40,7 @@ pub struct RouterAdvertisment {
     retransmit_timer: [u8; 4],
 }
 impl_from_bytes_as_bytes_unaligned!(RouterAdvertisment);
-impl_icmp_message!(
-    Ipv6,
-    RouterAdvertisment,
-    RouterAdvertisment,
-    IcmpUnusedCode,
-    Options<B>
-);
+impl_icmp_message!(Ipv6, RouterAdvertisment, RouterAdvertisment, IcmpUnusedCode, Options<B>);
 
 impl RouterAdvertisment {
     pub fn router_lifetime(&self) -> u16 {
@@ -76,13 +64,7 @@ pub struct NeighborSolicitation {
     target_address: Ipv6Addr,
 }
 impl_from_bytes_as_bytes_unaligned!(NeighborSolicitation);
-impl_icmp_message!(
-    Ipv6,
-    NeighborSolicitation,
-    NeighborSolicitation,
-    IcmpUnusedCode,
-    Options<B>
-);
+impl_icmp_message!(Ipv6, NeighborSolicitation, NeighborSolicitation, IcmpUnusedCode, Options<B>);
 
 /// An NDP Neighbor Advertisment.
 #[derive(Copy, Clone, Debug)]
@@ -93,13 +75,7 @@ pub struct NeighborAdvertisment {
     target_address: Ipv6Addr,
 }
 impl_from_bytes_as_bytes_unaligned!(NeighborAdvertisment);
-impl_icmp_message!(
-    Ipv6,
-    NeighborAdvertisment,
-    NeighborAdvertisment,
-    IcmpUnusedCode,
-    Options<B>
-);
+impl_icmp_message!(Ipv6, NeighborAdvertisment, NeighborAdvertisment, IcmpUnusedCode, Options<B>);
 
 /// An ICMPv6 Redirect Message.
 #[derive(Copy, Clone, Debug)]
@@ -203,9 +179,9 @@ pub mod options {
                         prefix,
                     })
                 }
-                Some(NdpOptionType::RedirectedHeader) => NdpOption::RedirectedHeader {
-                    original_packet: &data[6..],
-                },
+                Some(NdpOptionType::RedirectedHeader) => {
+                    NdpOption::RedirectedHeader { original_packet: &data[6..] }
+                }
                 Some(NdpOptionType::Mtu) => NdpOption::MTU { mtu: &data[2..] },
                 None => return Ok(None),
             }))

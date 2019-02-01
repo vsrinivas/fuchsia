@@ -105,7 +105,11 @@ pub trait TransportLayerEventDispatcher: UdpEventDispatcher {}
 /// is supported, the packet is delivered to that protocol, and
 /// `receive_ip_packet` returns `true`. Otherwise, it returns `false`.
 pub fn receive_ip_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, buffer: B,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    buffer: B,
 ) -> bool {
     match proto {
         IpProto::Tcp => {
@@ -205,9 +209,6 @@ impl<C: Eq + Hash, A: Eq + Hash> ConnAddrMap<C, A> {
 
 impl<A: Eq + Hash, C: Eq + Hash> Default for ConnAddrMap<A, C> {
     fn default() -> ConnAddrMap<A, C> {
-        ConnAddrMap {
-            conn_to_addr: HashMap::default(),
-            addr_to_conn: HashMap::default(),
-        }
+        ConnAddrMap { conn_to_addr: HashMap::default(), addr_to_conn: HashMap::default() }
     }
 }

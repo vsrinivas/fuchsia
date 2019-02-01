@@ -15,7 +15,10 @@ use crate::{Context, EventDispatcher};
 
 /// Receive an ICMP message in an IP packet.
 pub fn receive_icmp_packet<D: EventDispatcher, A: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, buffer: B,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    buffer: B,
 ) -> bool {
     trace!("receive_icmp_packet({}, {})", src_ip, dst_ip);
 
@@ -124,29 +127,13 @@ mod tests {
         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
 
         receive_icmp_packet(&mut ctx, src, dst, Buf::new(&mut bytes[20..], ..));
-        assert_eq!(
-            ctx.state()
-                .test_counters
-                .get("receive_icmp_packet::echo_request"),
-            &1
-        );
+        assert_eq!(ctx.state().test_counters.get("receive_icmp_packet::echo_request"), &1);
 
         // Check that the echo request was replied to.
         assert_eq!(ctx.state().test_counters.get("send_ip_packet"), &1);
-        assert_eq!(
-            ctx.state().test_counters.get("send_ip_packet::loopback"),
-            &1
-        );
-        assert_eq!(
-            ctx.state().test_counters.get("dispatch_receive_ip_packet"),
-            &1
-        );
-        assert_eq!(
-            ctx.state()
-                .test_counters
-                .get("receive_icmp_packet::echo_reply"),
-            &1
-        );
+        assert_eq!(ctx.state().test_counters.get("send_ip_packet::loopback"), &1);
+        assert_eq!(ctx.state().test_counters.get("dispatch_receive_ip_packet"), &1);
+        assert_eq!(ctx.state().test_counters.get("receive_icmp_packet::echo_reply"), &1);
     }
 
     #[test]
@@ -159,28 +146,12 @@ mod tests {
         let mut bytes = REQUEST_IP_PACKET_BYTES.to_owned();
 
         receive_icmp_packet(&mut ctx, src, dst, Buf::new(&mut bytes[40..], ..));
-        assert_eq!(
-            ctx.state()
-                .test_counters
-                .get("receive_icmp_packet::echo_request"),
-            &1
-        );
+        assert_eq!(ctx.state().test_counters.get("receive_icmp_packet::echo_request"), &1);
 
         // Check that the echo request was replied to.
         assert_eq!(ctx.state().test_counters.get("send_ip_packet"), &1);
-        assert_eq!(
-            ctx.state().test_counters.get("send_ip_packet::loopback"),
-            &1
-        );
-        assert_eq!(
-            ctx.state().test_counters.get("dispatch_receive_ip_packet"),
-            &1
-        );
-        assert_eq!(
-            ctx.state()
-                .test_counters
-                .get("receive_icmp_packet::echo_reply"),
-            &1
-        );
+        assert_eq!(ctx.state().test_counters.get("send_ip_packet::loopback"), &1);
+        assert_eq!(ctx.state().test_counters.get("dispatch_receive_ip_packet"), &1);
+        assert_eq!(ctx.state().test_counters.get("receive_icmp_packet::echo_reply"), &1);
     }
 }

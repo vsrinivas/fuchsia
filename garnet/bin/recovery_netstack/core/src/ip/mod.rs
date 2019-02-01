@@ -42,7 +42,11 @@ struct IpLayerStateInner<I: Ip> {
 }
 
 fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
-    ctx: &mut Context<D>, proto: IpProto, src_ip: I, dst_ip: I, mut buffer: B,
+    ctx: &mut Context<D>,
+    proto: IpProto,
+    src_ip: I,
+    dst_ip: I,
+    mut buffer: B,
 ) -> bool {
     increment_counter!(ctx, "dispatch_receive_ip_packet");
     match proto {
@@ -55,7 +59,9 @@ fn dispatch_receive_ip_packet<D: EventDispatcher, I: IpAddr, B: BufferMut>(
 
 /// Receive an IP packet from a device.
 pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
-    ctx: &mut Context<D>, device: DeviceId, mut buffer: B,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    mut buffer: B,
 ) {
     trace!("receive_ip_packet({})", device);
     let mut packet = if let Ok(packet) = buffer.parse_mut::<<I as IpExt<_>>::Packet>() {
@@ -71,10 +77,7 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         // the loopback address, which is illegal. Loopback traffic is handled
         // explicitly in send_ip_packet. TODO(joshlf): Do something with ICMP
         // here?
-        debug!(
-            "got packet from remote host for loopback address {}",
-            packet.dst_ip()
-        );
+        debug!("got packet from remote host for loopback address {}", packet.dst_ip());
     } else if deliver(ctx, device, packet.dst_ip()) {
         trace!("receive_ip_packet: delivering locally");
         // TODO(joshlf):
@@ -116,10 +119,7 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
         }
     } else {
         // TODO(joshlf): Do something with ICMP here?
-        debug!(
-            "received IP packet with no known route to destination {}",
-            packet.dst_ip()
-        );
+        debug!("received IP packet with no known route to destination {}", packet.dst_ip());
     }
 }
 
@@ -130,7 +130,8 @@ pub fn receive_ip_packet<D: EventDispatcher, B: BufferMut, I: Ip>(
 /// it returns the IP address of the interface specified by the route, or `None`
 /// if the interface has no IP address.
 pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, remote: A,
+    ctx: &mut Context<D>,
+    remote: A,
 ) -> Option<A> {
     let route = lookup_route(&ctx.state().ip, remote)?;
     crate::device::get_ip_addr(ctx, route.device).map(|(addr, _)| addr)
@@ -142,7 +143,9 @@ pub fn local_address_for_remote<D: EventDispatcher, A: IpAddr>(
 // - dst_ip is equal to the broadcast address of the subnet set on the device
 // - dst_ip is equal to the global broadcast address
 fn deliver<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, device: DeviceId, dst_ip: A,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    dst_ip: A,
 ) -> bool {
     // TODO(joshlf):
     // - This implements a strict host model (in which we only accept packets
@@ -164,7 +167,8 @@ fn deliver<D: EventDispatcher, A: IpAddr>(
 
 // Should we forward this packet, and if so, to whom?
 fn forward<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, dst_ip: A,
+    ctx: &mut Context<D>,
+    dst_ip: A,
 ) -> Option<Destination<A::Version>> {
     specialize_ip_addr!(
         fn forwarding_enabled(state: &IpLayerState) -> bool {
@@ -193,7 +197,9 @@ fn lookup_route<A: IpAddr>(state: &IpLayerState, dst_ip: A) -> Option<Destinatio
 
 /// Add a route to the forwarding table.
 pub fn add_device_route<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, subnet: Subnet<A>, device: DeviceId,
+    ctx: &mut Context<D>,
+    subnet: Subnet<A>,
+    device: DeviceId,
 ) {
     specialize_ip_addr!(
         fn generic_add_route(state: &mut IpLayerState, subnet: Subnet<Self>, device: DeviceId) {
@@ -219,7 +225,10 @@ pub fn is_local_addr<D: EventDispatcher, A: IpAddr>(ctx: &mut Context<D>, addr: 
 /// the computed destination address. The callback returns a
 /// `SerializationRequest`, which is serialized in a new IP packet and sent.
 pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
-    ctx: &mut Context<D>, dst_ip: A, proto: IpProto, get_body: F,
+    ctx: &mut Context<D>,
+    dst_ip: A,
+    proto: IpProto,
+    get_body: F,
 ) where
     A: IpAddr,
     S: Serializer,
@@ -272,7 +281,11 @@ pub fn send_ip_packet<D: EventDispatcher, A, S, F>(
 /// eagress over the interface associated with that source address. If this
 /// restriction cannot be met, a "no route to host" error is returned.
 pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
-    ctx: &mut Context<D>, src_ip: A, dst_ip: A, proto: IpProto, body: S,
+    ctx: &mut Context<D>,
+    src_ip: A,
+    dst_ip: A,
+    proto: IpProto,
+    body: S,
 ) where
     A: IpAddr,
     S: Serializer,
@@ -295,7 +308,12 @@ pub fn send_ip_packet_from<D: EventDispatcher, A, S>(
 /// send to or from a loopback IP address. If either `src_ip` or `dst_ip` are in
 /// the loopback subnet, `send_ip_packet_from_device` will panic.
 pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
-    ctx: &mut Context<D>, device: DeviceId, src_ip: A, dst_ip: A, next_hop: A, proto: IpProto,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    src_ip: A,
+    dst_ip: A,
+    next_hop: A,
+    proto: IpProto,
     body: S,
 ) where
     A: IpAddr,
@@ -322,16 +340,7 @@ pub fn send_ip_packet_from_device<D: EventDispatcher, A, S>(
             }
         }
     );
-    A::serialize(
-        ctx,
-        device,
-        src_ip,
-        dst_ip,
-        next_hop,
-        DEFAULT_TTL,
-        proto,
-        body,
-    )
+    A::serialize(ctx, device, src_ip, dst_ip, next_hop, DEFAULT_TTL, proto, body)
 }
 
 // An `Ip` extension trait for internal use.

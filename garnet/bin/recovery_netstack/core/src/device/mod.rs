@@ -26,10 +26,7 @@ pub struct DeviceId {
 
 impl DeviceId {
     fn new_ethernet(id: u64) -> DeviceId {
-        DeviceId {
-            id,
-            protocol: DeviceProtocol::Ethernet,
-        }
+        DeviceId { id, protocol: DeviceProtocol::Ethernet }
     }
 
     #[allow(missing_docs)]
@@ -96,10 +93,7 @@ impl DeviceLayerState {
 // interface, which does not allow for IDs of zero.
 impl Default for DeviceLayerState {
     fn default() -> DeviceLayerState {
-        DeviceLayerState {
-            next_id: 1,
-            ethernet: HashMap::new(),
-        }
+        DeviceLayerState { next_id: 1, ethernet: HashMap::new() }
     }
 }
 
@@ -131,7 +125,10 @@ pub trait DeviceLayerEventDispatcher {
 /// `SerializationRequest`. It computes the routing information and serializes
 /// the request in a new device layer frame and sends it.
 pub fn send_ip_frame<D: EventDispatcher, A, S>(
-    ctx: &mut Context<D>, device: DeviceId, local_addr: A, body: S,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    local_addr: A,
+    body: S,
 ) where
     A: IpAddr,
     S: Serializer,
@@ -150,7 +147,8 @@ pub fn receive_frame<D: EventDispatcher>(ctx: &mut Context<D>, device: DeviceId,
 
 /// Get the IP address and subnet associated with this device.
 pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, device: DeviceId,
+    ctx: &mut Context<D>,
+    device: DeviceId,
 ) -> Option<(A, Subnet<A>)> {
     match device.protocol {
         DeviceProtocol::Ethernet => self::ethernet::get_ip_addr(ctx, device.id),
@@ -159,7 +157,10 @@ pub fn get_ip_addr<D: EventDispatcher, A: IpAddr>(
 
 /// Set the IP address and subnet associated with this device.
 pub fn set_ip_addr<D: EventDispatcher, A: IpAddr>(
-    ctx: &mut Context<D>, device: DeviceId, addr: A, subnet: Subnet<A>,
+    ctx: &mut Context<D>,
+    device: DeviceId,
+    addr: A,
+    subnet: Subnet<A>,
 ) {
     assert!(subnet.contains(addr));
     match device.protocol {

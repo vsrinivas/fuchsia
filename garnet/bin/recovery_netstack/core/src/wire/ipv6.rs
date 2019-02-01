@@ -88,11 +88,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
 
     fn parse_metadata(&self) -> ParseMetadata {
         let header_len = self.fixed_hdr.bytes().len()
-            + self
-                .extension_hdrs
-                .as_ref()
-                .map(|hdrs| hdrs.len())
-                .unwrap_or(0);
+            + self.extension_hdrs.as_ref().map(|hdrs| hdrs.len()).unwrap_or(0);
         ParseMetadata::from_packet(header_len, self.body.len(), 0)
     }
 
@@ -100,16 +96,9 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
         let total_len = buffer.len();
         let fixed_hdr = buffer
             .take_obj_front::<FixedHeader>()
-            .ok_or_else(debug_err_fn!(
-                ParseError::Format,
-                "too few bytes for header"
-            ))?;
+            .ok_or_else(debug_err_fn!(ParseError::Format, "too few bytes for header"))?;
         // TODO(tkilbourn): support extension headers
-        let packet = Ipv6Packet {
-            fixed_hdr,
-            extension_hdrs: None,
-            body: buffer.into_rest(),
-        };
+        let packet = Ipv6Packet { fixed_hdr, extension_hdrs: None, body: buffer.into_rest() };
         if packet.fixed_hdr.version() != 6 {
             return debug_err!(
                 Err(ParseError::Format),
@@ -118,10 +107,7 @@ impl<B: ByteSlice> ParsablePacket<B, ()> for Ipv6Packet<B> {
             );
         }
         if packet.body.len() != packet.fixed_hdr.payload_len() as usize {
-            return debug_err!(
-                Err(ParseError::Format),
-                "payload length does not match header"
-            );
+            return debug_err!(Err(ParseError::Format), "payload length does not match header");
         }
         Ok(packet)
     }
@@ -229,7 +215,10 @@ pub struct Ipv6PacketBuilder {
 impl Ipv6PacketBuilder {
     /// Construct a new `Ipv6PacketBuilder`.
     pub fn new(
-        src_ip: Ipv6Addr, dst_ip: Ipv6Addr, hop_limit: u8, proto: IpProto,
+        src_ip: Ipv6Addr,
+        dst_ip: Ipv6Addr,
+        hop_limit: u8,
+        proto: IpProto,
     ) -> Ipv6PacketBuilder {
         Ipv6PacketBuilder {
             ds: 0,
@@ -295,15 +284,10 @@ impl PacketBuilder for Ipv6PacketBuilder {
         let mut header = &mut header;
 
         // TODO(tkilbourn): support extension headers
-        let fixed_hdr = header
-            .take_obj_front_zero::<FixedHeader>()
-            .expect("too few bytes for IPv6 header");
+        let fixed_hdr =
+            header.take_obj_front_zero::<FixedHeader>().expect("too few bytes for IPv6 header");
         let extension_hdrs = None;
-        let mut packet = Ipv6Packet {
-            fixed_hdr,
-            extension_hdrs,
-            body,
-        };
+        let mut packet = Ipv6Packet { fixed_hdr, extension_hdrs, body };
 
         packet.fixed_hdr.version_tc_flowlabel = [
             (6u8 << 4) | self.ds >> 2,
@@ -314,11 +298,7 @@ impl PacketBuilder for Ipv6PacketBuilder {
         let payload_len = packet.payload_len();
         debug!("serialize: payload_len={}", payload_len);
         if payload_len >= 1 << 16 {
-            panic!(
-                "packet length of {} exceeds maximum of {}",
-                payload_len,
-                1 << 16 - 1,
-            );
+            panic!("packet length of {} exceeds maximum of {}", payload_len, 1 << 16 - 1,);
         }
         NetworkEndian::write_u16(&mut packet.fixed_hdr.payload_len, payload_len as u16);
         packet.fixed_hdr.next_hdr = self.proto;
@@ -336,9 +316,8 @@ mod tests {
 
     const DEFAULT_SRC_IP: Ipv6Addr =
         Ipv6Addr::new([1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]);
-    const DEFAULT_DST_IP: Ipv6Addr = Ipv6Addr::new([
-        17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32,
-    ]);
+    const DEFAULT_DST_IP: Ipv6Addr =
+        Ipv6Addr::new([17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32]);
 
     // TODO(tkilbourn): add IPv6 versions of TCP and UDP parsing
 
@@ -383,9 +362,7 @@ mod tests {
         let mut fixed_hdr = new_fixed_hdr();
         fixed_hdr.version_tc_flowlabel[0] = 0x50;
         assert_eq!(
-            (&fixed_hdr_to_bytes(fixed_hdr)[..])
-                .parse::<Ipv6Packet<_>>()
-                .unwrap_err(),
+            (&fixed_hdr_to_bytes(fixed_hdr)[..]).parse::<Ipv6Packet<_>>().unwrap_err(),
             ParseError::Format
         );
 
@@ -393,9 +370,7 @@ mod tests {
         let mut fixed_hdr = new_fixed_hdr();
         NetworkEndian::write_u16(&mut fixed_hdr.payload_len[..], 2);
         assert_eq!(
-            (&fixed_hdr_to_bytes(fixed_hdr)[..])
-                .parse::<Ipv6Packet<_>>()
-                .unwrap_err(),
+            (&fixed_hdr_to_bytes(fixed_hdr)[..]).parse::<Ipv6Packet<_>>().unwrap_err(),
             ParseError::Format
         );
     }
@@ -411,9 +386,7 @@ mod tests {
         builder.ds(0x12);
         builder.ecn(3);
         builder.flowlabel(0x10405);
-        let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-            .encapsulate(builder)
-            .serialize_outer();
+        let mut buf = (&[0, 1, 2, 3, 4, 5, 6, 7, 8, 9]).encapsulate(builder).serialize_outer();
         // assert that we get the literal bytes we expected
         assert_eq!(
             buf.as_ref(),

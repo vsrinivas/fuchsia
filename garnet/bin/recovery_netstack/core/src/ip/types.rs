@@ -90,10 +90,8 @@ impl Ip for Ipv4 {
 
     // https://tools.ietf.org/html/rfc5735#section-3
     const LOOPBACK_ADDRESS: Ipv4Addr = Ipv4Addr::new([127, 0, 0, 1]);
-    const LOOPBACK_SUBNET: Subnet<Ipv4Addr> = Subnet {
-        network: Ipv4Addr::new([127, 0, 0, 0]),
-        prefix: 8,
-    };
+    const LOOPBACK_SUBNET: Subnet<Ipv4Addr> =
+        Subnet { network: Ipv4Addr::new([127, 0, 0, 0]), prefix: 8 };
     type Addr = Ipv4Addr;
 }
 

@@ -120,10 +120,8 @@ pub mod tls_client_hello {
     pub const TCP_PSH_FLAG: bool = true;
     pub const TCP_FIN_FLAG: bool = false;
     pub const TCP_SYN_FLAG: bool = false;
-    pub const TCP_OPTIONS: &[TcpOption] = &[TcpOption::Timestamp {
-        ts_val: 644_726_309,
-        ts_echo_reply: 2_960_127_454,
-    }];
+    pub const TCP_OPTIONS: &[TcpOption] =
+        &[TcpOption::Timestamp { ts_val: 644_726_309, ts_echo_reply: 2_960_127_454 }];
     pub const TCP_BODY_RANGE: Range<usize> = 32..557;
     pub const TCP_BODY: &[u8] = &[
         0x16, 0x03, 0x01, 0x02, 0x08, 0x01, 0x00, 0x02, 0x04, 0x03, 0x03, 0x0f, 0x88, 0xf6, 0x67,
