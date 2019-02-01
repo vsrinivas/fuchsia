@@ -1,0 +1,35 @@
+# Global approvers
+#
+# Someone should be a global approver if they commonly make large-scale changes
+# across the whole codebase. For example, people who maintain the various
+# languages, toolchains, and other build system components often should be
+# global approvers. Additionally, the set of global approvers should have good
+# coverage across the world to support contributors in every timezone.
+#
+# Code reviews should be sent to a global approver if the change manipulates
+# the root directory or has broad (typically mechanical) impact across the
+# codebase. If the change manipulates a specific part of the codebase, the code
+# review should be sent to a more specific approver. Global approvers should
+# use their judgement as to when to redirect review requests to more specific
+# approvers.
+#
+# The list of global approvers will change over time as the set of people
+# making large-scale changes evolves over time. Please do not take it
+# personally if you are added or removed from this list. This list is not a
+# "honor role" of respected contributors. It is a list of people who often make
+# certain kinds of changes to the codebase.
+
+abarth@google.com
+abdulla@google.com
+cramertj@google.com
+ianloic@google.com
+jamesr@google.com
+jeffbrown@google.com
+jeremymanson@google.com
+kulakowski@google.com
+mcgrathr@google.com
+phosek@google.com
+pylaligand@google.com
+qsr@google.com
+raggi@google.com
+thatguy@google.com
