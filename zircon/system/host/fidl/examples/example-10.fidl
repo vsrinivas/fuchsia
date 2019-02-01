@@ -6,7 +6,7 @@ library fidl.examples.example10;
 
 [Discoverable]
 interface Thing {
-    1: one_function(string s, bool b) -> ();
+    one_function(string s, bool b) -> ();
     [ Selector = "Furshlugginer" ]
     two_function(string s, bool b);
     three_function(string s, request<Thing> r);

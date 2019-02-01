@@ -15,10 +15,10 @@ struct EchoMore {
 };
 
 interface Echo {
-    1: Echo32(uint32 uint32) -> (uint32 response);
-    2: Echo64(uint64 uint64) -> (uint64 response);
-    3: EchoEnum(EchoMe req) -> (EchoMe response);
-    4: EchoHandle(handle req) -> (handle response);
-    5: EchoChannel(handle<channel> req) -> (handle<channel> response);
-    6: EchoStruct(EchoMore req) -> (EchoMore response);
+    Echo32(uint32 uint32) -> (uint32 response);
+    Echo64(uint64 uint64) -> (uint64 response);
+    EchoEnum(EchoMe req) -> (EchoMe response);
+    EchoHandle(handle req) -> (handle response);
+    EchoChannel(handle<channel> req) -> (handle<channel> response);
+    EchoStruct(EchoMore req) -> (EchoMore response);
 };

@@ -7,5 +7,5 @@ library fidl.examples.libraryb;
 using fidl.examples.librarya;
 
 interface View {
-    1: MoveTo(fidl.examples.librarya.Point p);
+    MoveTo(fidl.examples.librarya.Point p);
 };

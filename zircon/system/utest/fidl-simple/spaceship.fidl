@@ -24,7 +24,7 @@ union AstrologicalData {
 
 [Layout = "Simple"]
 interface AstrometricsListener {
-    1: OnNova();
+    OnNova();
 };
 
 enum Alert {
@@ -53,12 +53,12 @@ const uint32 MaxStarsScanForLifeforms = 64;
 
 [Layout = "Simple"]
 interface SpaceShip {
-    1: AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
-    2: ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
-    3: SetAstrometricsListener(AstrometricsListener listener);
-    4: SetDefenseCondition(Alert alert);
-    5: GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
-    6: AddFuelTank(FuelLevel? level) -> (uint32 consumed);
-    7: ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
-    8: ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
+    AdjustHeading(vector<uint32>:MaxStarsAdjustHeading stars) -> (int8 result);
+    ScanForLifeforms() -> (vector<uint32>:MaxStarsScanForLifeforms lifesigns);
+    SetAstrometricsListener(AstrometricsListener listener);
+    SetDefenseCondition(Alert alert);
+    GetFuelRemaining(handle<eventpair>? cancel) -> (zx.status status, FuelLevel? level);
+    AddFuelTank(FuelLevel? level) -> (uint32 consumed);
+    ScanForTensorLifeforms() -> (array<array<array<uint32>:3>:5>:8 lifesigns);
+    ReportAstrologicalData(AstrologicalData data) -> (zx.status status);
 };

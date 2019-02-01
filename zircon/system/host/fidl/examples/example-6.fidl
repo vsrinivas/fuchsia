@@ -7,5 +7,5 @@ library fidl.examples.example6;
 const int32 x = 23;
 
 interface Hello {
-    10243: Say(string req) -> (string response);
+    Say(string req) -> (string response);
 };

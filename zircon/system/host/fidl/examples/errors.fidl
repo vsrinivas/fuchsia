@@ -11,8 +11,8 @@ enum ErrorCode : int32 {
 };
 
 interface EpicFail {
-    1: IntegerError(string x) -> (string y) error int32;
-    2: UnsignedError(string x) -> (string y) error uint32;
-    3: EnumError(string x) -> (string y) error ErrorCode;
-    4: EmptyResult(string x) -> () error ErrorCode;
+    IntegerError(string x) -> (string y) error int32;
+    UnsignedError(string x) -> (string y) error uint32;
+    EnumError(string x) -> (string y) error ErrorCode;
+    EmptyResult(string x) -> () error ErrorCode;
 };
