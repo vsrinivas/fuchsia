@@ -26,7 +26,7 @@ interface Light {
     // Returns a board specific name for the light.
     // For example, "mute" for a microphone mute indicator light, "bluetooth" for
     // Bluetooth pairing light, etc.
-    GetName() -> (string:LIGHT_NAME_LEN? name);
+    GetName(uint32 index) -> (zx.status status, string:LIGHT_NAME_LEN? name);
 
     // Returns the number of physical lights.
     // This will typically be 1 for a simple LED, but may be greater than one for an array of LEDs
@@ -35,7 +35,7 @@ interface Light {
     GetCount() -> (uint32 count);
 
     // Returns true if the light with given index
-    HasCapability(uint32 index, Capability capability) -> (bool has);
+    HasCapability(uint32 index, Capability capability) -> (zx.status status, bool has);
 
     // Returns the current value (zero or non-zero for simple lights, or 0 - 255 for lights
     // that support brightness). Returns error for RGB lights.
