@@ -724,9 +724,9 @@ mod tests {
         }
         {
             buf = [0xFFu8; 8];
-            let (lv, suffix) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(
-                &mut buf[..],
-            ).unwrap();
+            let (lv, suffix) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(&mut buf[..])
+                    .unwrap();
             assert!(suffix.is_empty());
             test_new_helper_unaligned(lv);
         }
@@ -739,9 +739,9 @@ mod tests {
         }
         {
             buf = [0xFFu8; 8];
-            let (prefix, lv) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
-                &mut buf[..],
-            ).unwrap();
+            let (prefix, lv) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(&mut buf[..])
+                    .unwrap();
             assert!(prefix.is_empty());
             test_new_helper_unaligned(lv);
         }
@@ -806,9 +806,9 @@ mod tests {
         }
         {
             buf = [0xFFu8; 16];
-            let (lv, suffix) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(
-                &mut buf[..],
-            ).unwrap();
+            let (lv, suffix) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(&mut buf[..])
+                    .unwrap();
             // assert that the suffix wasn't zeroed
             assert_eq!(suffix, &[0xFF; 8]);
             test_new_helper_unaligned(lv);
@@ -822,9 +822,9 @@ mod tests {
         }
         {
             buf = [0xFFu8; 16];
-            let (prefix, lv) = LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(
-                &mut buf[..],
-            ).unwrap();
+            let (prefix, lv) =
+                LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(&mut buf[..])
+                    .unwrap();
             // assert that the prefix wasn't zeroed
             assert_eq!(prefix, &[0xFF; 8]);
             test_new_helper_unaligned(lv);
@@ -857,15 +857,11 @@ mod tests {
         assert!(LayoutVerified::<_, u64>::new_from_suffix(&buf.buf[..]).is_none());
         assert!(LayoutVerified::<_, u64>::new_from_suffix_zeroed(&mut buf.buf[..]).is_none());
         assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix(&buf.buf[..]).is_none());
-        assert!(
-            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(&mut buf.buf[..])
-                .is_none()
-        );
+        assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_prefix_zeroed(&mut buf.buf[..])
+            .is_none());
         assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix(&buf.buf[..]).is_none());
-        assert!(
-            LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(&mut buf.buf[..])
-                .is_none()
-        );
+        assert!(LayoutVerified::<_, [u8; 8]>::new_unaligned_from_suffix_zeroed(&mut buf.buf[..])
+            .is_none());
 
         // fail because the alignment is insufficient
 
