@@ -141,11 +141,16 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     void DdkRelease() { delete this; }
 
     // ddk::GetSizable functions.
-    zx_off_t DdkGetSize() { return 0; }
+    zx_off_t DdkGetSize() { return blocks_ * block_size_; }
 
     // ddk::BlockImplProtocol functions.
     // TODO(ZX-2314): Implement these two functions.
-    void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {}
+    void BlockImplQuery(block_info_t* info_out, size_t* block_op_size_out) {
+        info_out->block_size = block_size_;
+        info_out->block_count = blocks_;
+        info_out->max_transfer_size = block_size_;  // TODO(ZX-2314): Correct this size.
+        info_out->flags = (removable_) ? BLOCK_FLAG_REMOVABLE : 0;
+    }
     void BlockImplQueue(block_op_t* operation, block_impl_queue_callback completion_cb,
                         void* cookie) {
         completion_cb(cookie, ZX_ERR_NOT_SUPPORTED, operation);
@@ -161,6 +166,10 @@ class Disk : public DeviceType, public ddk::BlockImplProtocol<Disk, ddk::base_pr
     char tag_[24];
     const uint8_t target_;
     const uint16_t lun_;
+
+    bool removable_;
+    uint64_t blocks_;
+    uint32_t block_size_;
 };
 
 } // namespace scsi
