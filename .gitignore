@@ -17,7 +17,7 @@
 .packages
 .project
 .pydevproject
-.ssh/
+.ssh
 .vscode
 *.iml
 *.orig
