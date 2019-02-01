@@ -30,7 +30,6 @@
 namespace mt_usb {
 using namespace board_mt8167; // Hardware registers.
 
-
 MtUsb::Endpoint* MtUsb::EndpointFromAddress(uint8_t addr) {
     size_t ep_num = addr & USB_ENDPOINT_NUM_MASK;
     if (ep_num == 0 || ep_num > NUM_EPS) {
@@ -72,12 +71,12 @@ zx_status_t MtUsb::Create(void* ctx, zx_device_t* parent) {
 zx_status_t MtUsb::Init() {
     for (uint8_t i = 0; i < countof(out_eps_); i++) {
         auto& ep = out_eps_[i];
-        ep.ep_num = i;
+        ep.ep_num = static_cast<uint8_t>(i + 1);
         ep.direction = EP_OUT;
     }
     for (uint8_t i = 0; i < countof(in_eps_); i++) {
         auto& ep = in_eps_[i];
-        ep.ep_num = i;
+        ep.ep_num = static_cast<uint8_t>(i + 1);
         ep.direction = EP_IN;
     }
 
@@ -475,8 +474,11 @@ void MtUsb::HandleEndpointRxLocked(Endpoint* ep) {
 }
 
 void MtUsb::EpQueueNextLocked(Endpoint* ep) {
-    if (ep->current_req == nullptr && !ep->queued_reqs.is_empty()) {
-        auto req = ep->queued_reqs.pop();
+    std::optional<Request> req;
+
+    if (ep->current_req == nullptr &&
+        (req = ep->queued_reqs.pop()).has_value()) {
+        ep->current_req = req->take();
         ep->cur_offset = 0;
 
         if (ep->direction == EP_IN) {
