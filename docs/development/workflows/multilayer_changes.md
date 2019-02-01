@@ -20,7 +20,7 @@ revisions, you have two choices:
 
 ## Changes that span projects
 
-Fuchsia is divided into a number of [projects][layers]. Each project views the
+Fuchsia is divided into a number of projects. Each project views the
 previous projects at pinned revisions, which means changes that land in one
 project are not immediately visible to the upper projects.
 
@@ -77,4 +77,3 @@ Only Google developers can make hard transitions.  See internal documentation fo
 instructions.
 
 [getting-source]: /development/source_code/README.md "Getting source"
-[layers]: /development/source_code/layers.md "Layers"

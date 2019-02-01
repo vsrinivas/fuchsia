@@ -20,7 +20,7 @@ curl -s "https://fuchsia.googlesource.com/fuchsia/+/master/scripts/bootstrap?for
 ```
 
 This script will set up your development environment to track the HEAD of the
-`topaz` repository. If you wish to track a different repository at HEAD, you can
+`fuchsia` repository. If you wish to track a different repository at HEAD, you can
 use the `fx set-petal` command.
 
 ### Setting up environment variables

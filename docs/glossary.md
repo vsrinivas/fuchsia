@@ -199,12 +199,6 @@ as slices into a virtual block address space. The FVM partitions provide a block
 filesystems to interact with it in a manner largely consistent with a regular block device. -
 [Filesystems](the-book/filesystems.md)
 
-#### **Garnet**
-
-Garnet is one of the four layers of the Fuchsia codebase.
-- [The Fuchsia layer cake](development/source_code/layers.md)
-- [Source](https://fuchsia.googlesource.com/garnet/+/master)
-
 #### **GN**
 
 GN is a meta-build system which generates build files so that Fuchsia can be built with [Ninja]
@@ -326,12 +320,6 @@ build package](#GN).
 A tool in Zircon that installs partition images to internal storage of a device.
 - [Guide for installing Fuchsia with paver](/development/workflows/paving.md).
 
-#### **Peridot**
-
-Peridot is one of the four layers of the Fuchsia codebase.
-- [The Fuchsia layer cake](development/source_code/layers.md)
-- [Source](https://fuchsia.googlesource.com/peridot/+/master)
-
 #### **Realm**
 
 Synonym for [environment](#environment).
@@ -373,12 +361,6 @@ terminals.
 
 The replaceable set of software functionality that works in conjunction with devices to create an environment in which people can interact with mods, agents and suggestions.
 
-#### **Topaz**
-
-Topaz is one of the four layers of the Fuchsia codebase.
-- [The Fuchsia layer cake](development/source_code/layers.md)
-- [Source](https://fuchsia.googlesource.com/topaz/+/master)
-
 #### **vDSO**
 
 The vDSO is a Virtual Shared Library -- it is provided by the [Zircon](#Zircon) kernel and does not
@@ -413,10 +395,9 @@ completing the installation Zedboot will reboot into the newly installed system.
 Zircon is the [microkernel](https://en.wikipedia.org/wiki/Microkernel) and lowest level userspace
 components (driver runtime environment, core drivers, libc, etc) at the core of Fuchsia.  In a
 traditional monolithic kernel, many of the userspace components of Zircon would be part of the
-kernel itself. Zircon is also one of the four layers of the Fuchsia codebase.
+kernel itself.
 - [Zircon Documentation](https://fuchsia.googlesource.com/zircon/+/master/README.md)
 - [Zircon Concepts](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md)
-- [The Fuchsia layer cake](development/source_code/layers.md)
 - [Source](https://fuchsia.googlesource.com/zircon/+/master)
 
 #### **ZX**
