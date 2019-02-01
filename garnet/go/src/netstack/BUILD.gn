@@ -6,6 +6,7 @@ import("//build/go/go_library.gni")
 import("//build/go/go_test.gni")
 import("//build/go/toolchain.gni")
 import("//build/package.gni")
+import("//build/test/test_package.gni")
 
 package("netstack") {
   deps = [
@@ -54,9 +55,7 @@ package("netstack_tools") {
   ]
 }
 
-package("netstack_gotests") {
-  testonly = true
-
+test_package("netstack_gotests") {
   deps = [
     ":netstack_connectivity_test",
     ":netstack_fidlconv_test",
@@ -65,8 +64,6 @@ package("netstack_gotests") {
     ":netstack_netiface_test",
     ":netstack_test",
     "netstack_service_test",
-    "//garnet/go/src/netstack/ifconfig:netstack_ifconfig_test",
-    "//garnet/go/src/netstack/netstat:netstack_netstat_test",
     "//garnet/go/src/netstack/util:netstack_util_test",
   ]
 
@@ -87,22 +84,34 @@ package("netstack_gotests") {
       name = "netstack_filter_test"
     },
     {
-      name = "netstack_ifconfig_test"
-    },
-    {
       name = "netstack_link_eth_test"
     },
     {
       name = "netstack_netiface_test"
     },
     {
-      name = "netstack_netstat_test"
-    },
-    {
       name = "netstack_test"
     },
     {
       name = "netstack_util_test"
+    },
+  ]
+}
+
+package("netstack_non_component_gotests") {
+  testonly = true
+
+  deps = [
+    "//garnet/go/src/netstack/ifconfig:netstack_ifconfig_test",
+    "//garnet/go/src/netstack/netstat:netstack_netstat_test",
+  ]
+
+  tests = [
+    {
+      name = "netstack_ifconfig_test"
+    },
+    {
+      name = "netstack_netstat_test"
     },
   ]
 }

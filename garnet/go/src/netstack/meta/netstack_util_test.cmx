@@ -1,0 +1,8 @@
+{
+    "program": {
+        "binary": "test/netstack_util_test"
+    },
+    "sandbox": {
+        "services": []
+    }
+}
