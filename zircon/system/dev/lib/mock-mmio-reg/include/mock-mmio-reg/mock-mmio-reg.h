@@ -6,7 +6,7 @@
 
 #include <lib/mmio/mmio.h>
 #include <fbl/vector.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace ddk_mock {
 
@@ -54,22 +54,17 @@ public:
 
     // Writes to the mocked register. This method is expected to be called (indirectly) by the code
     // under test.
-    bool Write(uint64_t value) {
-        BEGIN_HELPER;
-
+    void Write(uint64_t value) {
         last_value_ = value;
 
         if (write_expectations_index_ >= write_expectations_.size()) {
-            return true;
+            return;
         }
 
         MmioExpectation& exp = write_expectations_[write_expectations_index_++];
-        if (exp.match == MmioExpectation::Match::kAny) {
-            return true;
+        if (exp.match != MmioExpectation::Match::kAny) {
+            EXPECT_EQ(exp.value, value);
         }
-
-        EXPECT_EQ(exp.value, value);
-        END_HELPER;
     }
 
     // Matches a register read and returns the specified value.
@@ -135,12 +130,10 @@ public:
 
     // Removes all expectations and resets the default value. The presence of any outstanding
     // expectations causes a test failure.
-    bool VerifyAndClear() {
-        BEGIN_HELPER;
+    void VerifyAndClear() {
         EXPECT_GE(read_expectations_index_, read_expectations_.size());
         EXPECT_GE(write_expectations_index_, write_expectations_.size());
         Clear();
-        END_HELPER;
     }
 
 private:

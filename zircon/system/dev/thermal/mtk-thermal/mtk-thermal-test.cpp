@@ -12,9 +12,9 @@
 #include <lib/sync/completion.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
 #include <soc/mt8167/mt8167-hw.h>
-#include <unittest/unittest.h>
 #include <zircon/syscalls/port.h>
 #include <zircon/thread_annotations.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -72,15 +72,11 @@ public:
 
     bool HasExpectations() const { return has_expectations_; }
 
-    bool VerifyAndClear() {
-        BEGIN_HELPER;
-
+    void VerifyAndClear() {
         EXPECT_EQ(expectation_index_, expectations_.size());
 
         expectations_.reset();
         expectation_index_ = 0;
-
-        END_HELPER;
     }
 
 private:
@@ -89,16 +85,12 @@ private:
         std::tuple<Ts...> args;
     };
 
-    bool CallHelper(R* ret, Ts... args) {
-        BEGIN_HELPER;
-
+    void CallHelper(R* ret, Ts... args) {
         ASSERT_LT(expectation_index_, expectations_.size());
 
         Expectation exp = expectations_[expectation_index_++];
         EXPECT_TRUE(exp.args == std::make_tuple(args...));
         *ret = exp.ret_value;
-
-        END_HELPER;
     }
 
     bool has_expectations_ = false;
@@ -124,25 +116,17 @@ public:
 
     bool HasExpectations() const { return has_expectations_; }
 
-    bool VerifyAndClear() {
-        BEGIN_HELPER;
-
+    void VerifyAndClear() {
         ASSERT_EQ(expectation_index_, expectations_.size());
 
         expectations_.reset();
         expectation_index_ = 0;
-
-        END_HELPER;
     }
 
 private:
-    bool CallHelper(Ts... args) {
-        BEGIN_HELPER;
-
+    void CallHelper(Ts... args) {
         ASSERT_LT(expectation_index_, expectations_.size());
         EXPECT_TRUE(expectations_[expectation_index_++] == std::make_tuple(args...));
-
-        END_HELPER;
     }
 
     bool has_expectations_ = false;
@@ -319,9 +303,7 @@ private:
     fbl::Mutex interrupt_count_lock_;
 };
 
-bool TestTripPoints() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, TripPoints) {
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.critical_temp = CToKTenths(50);
@@ -356,18 +338,14 @@ bool TestTripPoints() {
     test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
     GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-    EXPECT_EQ(ZX_OK, test->StartThread());
+    EXPECT_OK(test->StartThread());
 
     test->TriggerInterrupts(4);
-    test->VerifyAll();
     test->StopThread();
-
-    END_TEST;
+    test->VerifyAll();
 }
 
-bool TestCriticalTemperature() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, CriticalTemperature) {
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.critical_temp = CToKTenths(50);
@@ -390,18 +368,14 @@ bool TestCriticalTemperature() {
     test->mock_SetDvfsOpp().ExpectCall(ZX_OK, 0, BIG_CLUSTER_POWER_DOMAIN);
     GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(critical_int);
 
-    EXPECT_EQ(ZX_OK, test->StartThread());
+    EXPECT_OK(test->StartThread());
 
     test->TriggerInterrupts(1);
     test->StopThread();
     test->VerifyAll();
-
-    END_TEST;
 }
 
-bool TestInitialTripPoint() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, InitialTripPoint) {
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.critical_temp = CToKTenths(50);
@@ -415,17 +389,13 @@ bool TestInitialTripPoint() {
     test->mock_GetTemperature().ExpectCall(CToKTenths(45));
     test->mock_SetTripPoint().ExpectCall(ZX_OK, 2);
 
-    EXPECT_EQ(ZX_OK, test->StartThread());
+    EXPECT_OK(test->StartThread());
 
     test->StopThread();
     test->VerifyAll();
-
-    END_TEST;
 }
 
-bool TestTripPointJumpMultiple() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, TripPointJumpMultiple) {
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 5;
     thermal_info.critical_temp = CToKTenths(100);
@@ -476,18 +446,14 @@ bool TestTripPointJumpMultiple() {
     test->mock_SetTripPoint().ExpectCall(ZX_OK, 0);
     GetMockReg<TempMonIntStatus>(test->thermal_regs()).ExpectRead(down_int);
 
-    EXPECT_EQ(ZX_OK, test->StartThread());
+    EXPECT_OK(test->StartThread());
 
     test->TriggerInterrupts(8);
     test->StopThread();
     test->VerifyAll();
-
-    END_TEST;
 }
 
-bool TestSetTripPoint() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, SetTripPoint) {
     thermal_device_info_t thermal_info;
     thermal_info.num_trip_points = 3;
     thermal_info.trip_point_info[0] = TripPoint(20, 2);
@@ -495,15 +461,15 @@ bool TestSetTripPoint() {
     thermal_info.trip_point_info[2] = TripPoint(40, 0);
 
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     fbl::unique_ptr<MtkThermalTest> test;
     ASSERT_TRUE(MtkThermalTest::Create(thermal_info, std::move(port), &test));
 
     size_t actual = 0;
-    ASSERT_EQ(ZX_OK, test->DdkIoctl(IOCTL_THERMAL_GET_STATE_CHANGE_PORT, nullptr, 0,
-                                    port.reset_and_get_address(), sizeof(zx_handle_t*), &actual));
-    ASSERT_EQ(sizeof(zx_handle_t*), actual);
+    ASSERT_OK(test->DdkIoctl(IOCTL_THERMAL_GET_STATE_CHANGE_PORT, nullptr, 0,
+                             port.reset_and_get_address(), sizeof(zx_handle_t), &actual));
+    ASSERT_EQ(sizeof(zx_handle_t), actual);
 
     GetMockReg<TempHotThreshold>(test->thermal_regs()).ExpectWrite();
     GetMockReg<TempColdThreshold>(test->thermal_regs()).ExpectWrite();
@@ -511,35 +477,35 @@ bool TestSetTripPoint() {
     test->SetTripPoint(0);
 
     zx_port_packet_t packet;
-    ASSERT_EQ(ZX_OK, port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
+    ASSERT_OK(port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
     EXPECT_EQ(ZX_PKT_TYPE_USER, packet.type);
     EXPECT_EQ(0, packet.key);
 
     EXPECT_NE(0, GetMockReg<TempHotThreshold>(test->thermal_regs()).Read());
     EXPECT_EQ(0xfff, GetMockReg<TempColdThreshold>(test->thermal_regs()).Read());
 
-    test->VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(test->VerifyAll());
 
     GetMockReg<TempHotThreshold>(test->thermal_regs()).ExpectWrite();
     GetMockReg<TempColdThreshold>(test->thermal_regs()).ExpectWrite();
 
     test->SetTripPoint(1);
 
-    ASSERT_EQ(ZX_OK, port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
+    ASSERT_OK(port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
     EXPECT_EQ(ZX_PKT_TYPE_USER, packet.type);
     EXPECT_EQ(1, packet.key);
 
     EXPECT_NE(0, GetMockReg<TempHotThreshold>(test->thermal_regs()).Read());
     EXPECT_NE(0, GetMockReg<TempColdThreshold>(test->thermal_regs()).Read());
 
-    test->VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(test->VerifyAll());
 
     GetMockReg<TempHotThreshold>(test->thermal_regs()).ExpectWrite();
     GetMockReg<TempColdThreshold>(test->thermal_regs()).ExpectWrite();
 
     test->SetTripPoint(2);
 
-    ASSERT_EQ(ZX_OK, port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
+    ASSERT_OK(port.wait(zx::deadline_after(zx::duration::infinite()), &packet));
     EXPECT_EQ(ZX_PKT_TYPE_USER, packet.type);
     EXPECT_EQ(2, packet.key);
 
@@ -547,13 +513,9 @@ bool TestSetTripPoint() {
     EXPECT_NE(0, GetMockReg<TempColdThreshold>(test->thermal_regs()).Read());
 
     test->VerifyAll();
-
-    END_TEST;
 }
 
-bool TestDvfsOpp() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, DvfsOpp) {
     thermal_device_info_t thermal_info;
     thermal_info.opps[BIG_CLUSTER_POWER_DOMAIN].count = 3;
     thermal_info.opps[BIG_CLUSTER_POWER_DOMAIN].opp[0] = {598'000'000, 1'150'000};
@@ -585,12 +547,12 @@ bool TestDvfsOpp() {
     uint32_t domain = BIG_CLUSTER_POWER_DOMAIN;
     uint32_t opp_out;
     size_t actual = 0;
-    EXPECT_EQ(ZX_OK, test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
-                                    sizeof(opp_out), &actual));
+    EXPECT_OK(test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
+                             sizeof(opp_out), &actual));
     EXPECT_EQ(sizeof(opp_out), actual);
     EXPECT_EQ(opp.op_idx, opp_out);
 
-    test->VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(test->VerifyAll());
 
     test->mock_PmicWrite().ExpectCall(voltage_to_step(1'200'000), 0x110);
 
@@ -599,14 +561,13 @@ bool TestDvfsOpp() {
         .ExpectWrite(frequency_to_reg_value(1'040'000'000));
 
     opp = {2, BIG_CLUSTER_POWER_DOMAIN};
-    EXPECT_EQ(ZX_OK,
-              test->DdkIoctl(IOCTL_THERMAL_SET_DVFS_OPP, &opp, sizeof(opp), nullptr, 0, nullptr));
-    EXPECT_EQ(ZX_OK, test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
-                                    sizeof(opp_out), &actual));
+    EXPECT_OK(test->DdkIoctl(IOCTL_THERMAL_SET_DVFS_OPP, &opp, sizeof(opp), nullptr, 0, nullptr));
+    EXPECT_OK(test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
+                             sizeof(opp_out), &actual));
     EXPECT_EQ(sizeof(opp_out), actual);
     EXPECT_EQ(opp.op_idx, opp_out);
 
-    test->VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(test->VerifyAll());
 
     test->mock_PmicWrite().ExpectCall(voltage_to_step(1150000), 0x110);
 
@@ -615,21 +576,16 @@ bool TestDvfsOpp() {
         .ExpectWrite(frequency_to_reg_value(598'000'000));
 
     opp = {0, BIG_CLUSTER_POWER_DOMAIN};
-    EXPECT_EQ(ZX_OK,
-              test->DdkIoctl(IOCTL_THERMAL_SET_DVFS_OPP, &opp, sizeof(opp), nullptr, 0, nullptr));
-    EXPECT_EQ(ZX_OK, test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
-                                    sizeof(opp_out), &actual));
+    EXPECT_OK(test->DdkIoctl(IOCTL_THERMAL_SET_DVFS_OPP, &opp, sizeof(opp), nullptr, 0, nullptr));
+    EXPECT_OK(test->DdkIoctl(IOCTL_THERMAL_GET_DVFS_OPP, &domain, sizeof(domain), &opp_out,
+                             sizeof(opp_out), &actual));
     EXPECT_EQ(sizeof(opp_out), actual);
     EXPECT_EQ(opp.op_idx, opp_out);
 
     test->VerifyAll();
-
-    END_TEST;
 }
 
-bool TestDvfsOppVoltageRange() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, DvfsOppVoltageRange) {
     thermal_device_info_t thermal_info;
     thermal_info.opps[BIG_CLUSTER_POWER_DOMAIN].count = 1;
     thermal_info.opps[BIG_CLUSTER_POWER_DOMAIN].opp[0] = {1'000'000'000, 100'000};
@@ -650,13 +606,9 @@ bool TestDvfsOppVoltageRange() {
     ASSERT_TRUE(MtkThermalTest::Create(thermal_info, zx::port(), &test));
     EXPECT_NE(ZX_OK,
               test->DdkIoctl(IOCTL_THERMAL_SET_DVFS_OPP, &opp, sizeof(opp), nullptr, 0, nullptr));
-
-    END_TEST;
 }
 
-bool TestPmicWrite() {
-    BEGIN_TEST;
-
+TEST(ThermalTest, PmicWrite) {
     fbl::unique_ptr<MtkThermalTest> test;
     ASSERT_TRUE(MtkThermalTest::Create({}, zx::port(), &test));
 
@@ -669,7 +621,7 @@ bool TestPmicWrite() {
     GetMockReg<PmicCmd>(test->pmic_wrap_regs()).ExpectWrite(0xce8761df);
 
     test->PmicWrite(0x61df, 0x4e87);
-    test->VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(test->VerifyAll());
 
     GetMockReg<PmicReadData>(test->pmic_wrap_regs())
         .ExpectRead(0x00060000)
@@ -679,22 +631,10 @@ bool TestPmicWrite() {
 
     test->PmicWrite(0x504f, 0x7374);
     test->VerifyAll();
-
-    END_TEST;
 }
 
 }  // namespace thermal
 
 int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : 1;
+    return RUN_ALL_TESTS(argc, argv);
 }
-
-BEGIN_TEST_CASE(MtkThermalTests)
-RUN_TEST_SMALL(thermal::TestTripPoints)
-RUN_TEST_SMALL(thermal::TestCriticalTemperature)
-RUN_TEST_SMALL(thermal::TestInitialTripPoint)
-RUN_TEST_SMALL(thermal::TestTripPointJumpMultiple)
-RUN_TEST_SMALL(thermal::TestDvfsOpp)
-RUN_TEST_SMALL(thermal::TestDvfsOppVoltageRange)
-RUN_TEST_SMALL(thermal::TestPmicWrite)
-END_TEST_CASE(MtkThermalTests)

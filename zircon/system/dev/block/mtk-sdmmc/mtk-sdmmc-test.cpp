@@ -6,6 +6,7 @@
 
 #include <fbl/auto_call.h>
 #include <mock-mmio-reg/mock-mmio-reg.h>
+#include <zxtest/zxtest.h>
 
 namespace {
 
@@ -89,34 +90,28 @@ void VerifyAll(ddk_mock::MockMmioReg* registers) {
     }
 }
 
-bool TestSetBusWidth() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, SetBusWidth) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
 
     GetMockReg<SdcCfg>(mock_regs).ExpectWrite(
         SdcCfg().set_bus_width(SdcCfg::kBusWidth4).reg_value());
-    EXPECT_EQ(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_FOUR), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_FOUR));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     GetMockReg<SdcCfg>(mock_regs).ExpectWrite(
         SdcCfg().set_bus_width(SdcCfg::kBusWidth1).reg_value());
-    EXPECT_EQ(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_ONE), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_ONE));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     GetMockReg<SdcCfg>(mock_regs).ExpectWrite(
         SdcCfg().set_bus_width(SdcCfg::kBusWidth8).reg_value());
-    EXPECT_EQ(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_EIGHT), ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcSetBusWidth(SDMMC_BUS_WIDTH_EIGHT));
     mock_regs.VerifyAll();
-
-    END_TEST;
 }
 
-bool TestSetBusFreq() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, SetBusFreq) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
@@ -131,8 +126,8 @@ bool TestSetBusFreq() {
                          .reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetBusFreq(400000), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusFreq(400000));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // DDR 1 MHz: Use divider value 25.
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeDdr);
@@ -142,8 +137,8 @@ bool TestSetBusFreq() {
         .ExpectWrite(msdc_cfg.set_card_ck_div(25).reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetBusFreq(1000000), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusFreq(1000000));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // SDR 200 MHz: No divider.
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeDiv).set_card_ck_div(50);
@@ -155,8 +150,8 @@ bool TestSetBusFreq() {
                          .reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetBusFreq(200000000), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusFreq(200000000));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // HS400 mode @ 200 MHz: No divider.
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeHs400);
@@ -166,8 +161,8 @@ bool TestSetBusFreq() {
         .ExpectWrite(msdc_cfg.set_hs400_ck_mode(1).reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetBusFreq(200000000), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetBusFreq(200000000));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // HS400 mode @ 10 MHz: Use divider value 3.
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeHs400).set_hs400_ck_mode(1);
@@ -179,15 +174,11 @@ bool TestSetBusFreq() {
                          .reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetBusFreq(10000000), ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcSetBusFreq(10000000));
     mock_regs.VerifyAll();
-
-    END_TEST;
 }
 
-bool TestSetTiming() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, SetTiming) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
@@ -200,8 +191,8 @@ bool TestSetTiming() {
         .ExpectWrite(msdc_cfg.set_card_ck_mode(MsdcCfg::kCardCkModeDdr).reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HSDDR), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HSDDR));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeDiv);
     GetMockReg<MsdcCfg>(mock_regs)
@@ -211,8 +202,8 @@ bool TestSetTiming() {
         .ExpectWrite(msdc_cfg.set_card_ck_mode(MsdcCfg::kCardCkModeHs400).reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HS400), ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HS400));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     msdc_cfg.set_reg_value(0).set_card_ck_mode(MsdcCfg::kCardCkModeHs400);
     GetMockReg<MsdcCfg>(mock_regs)
@@ -222,15 +213,11 @@ bool TestSetTiming() {
         .ExpectWrite(msdc_cfg.set_card_ck_mode(MsdcCfg::kCardCkModeDiv).reg_value())
         .ExpectRead(msdc_cfg.set_card_ck_stable(1).reg_value());
 
-    EXPECT_EQ(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HS200), ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcSetTiming(SDMMC_TIMING_HS200));
     mock_regs.VerifyAll();
-
-    END_TEST;
 }
 
-bool TestRequest() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, Request) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
@@ -240,7 +227,7 @@ bool TestRequest() {
     // Set card_ck_stable so Init() can call SdmmcSetBusFreq() without hanging.
     GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
     sdmmc.Init();
-    mock_regs.VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // Command with no response.
     sdmmc_req_t req;
@@ -254,9 +241,9 @@ bool TestRequest() {
     GetMockReg<SdcArg>(mock_regs).ExpectWrite(req.arg);
     GetMockReg<SdcCmd>(mock_regs).ExpectWrite(req.cmd_idx);
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
-    mock_regs.VerifyAll();
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // Command with response R1.
     req.cmd_idx = 19;
@@ -271,10 +258,10 @@ bool TestRequest() {
                                                   .reg_value());
     GetMockReg<SdcResponse>(0, mock_regs).ExpectRead(0x1234abcd);
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0x1234abcd);
-    mock_regs.VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // Command with response R2.
     req.cmd_idx = 22;
@@ -291,20 +278,16 @@ bool TestRequest() {
     GetMockReg<SdcResponse>(2, mock_regs).ExpectRead(0x1234abcd);
     GetMockReg<SdcResponse>(3, mock_regs).ExpectRead(0xfedcba98);
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0x0a0a0a0a);
     EXPECT_EQ(req.response[1], 0x50505050);
     EXPECT_EQ(req.response[2], 0x1234abcd);
     EXPECT_EQ(req.response[3], 0xfedcba98);
     mock_regs.VerifyAll();
-
-    END_TEST;
 }
 
-bool TestReadPolled() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, ReadPolled) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
@@ -313,7 +296,7 @@ bool TestReadPolled() {
 
     GetMockReg<MsdcCfg>(mock_regs).ReadReturns(MsdcCfg().set_card_ck_stable(1).reg_value());
     sdmmc.Init();
-    mock_regs.VerifyAll();
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // Single block read.
     constexpr uint8_t single_block_data[16] = {0x12, 0xc2, 0x1c, 0x63, 0x54, 0x51, 0x7e, 0xf3,
@@ -354,11 +337,11 @@ bool TestReadPolled() {
         GetMockReg<MsdcRxData>(mock_regs).ExpectRead(single_block_data[i]);
     }
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0x80dcd8ff);
-    EXPECT_BYTES_EQ(single_block_data, single_block_buf, sizeof(single_block_data), "");
-    mock_regs.VerifyAll();
+    EXPECT_BYTES_EQ(single_block_data, single_block_buf, sizeof(single_block_data));
+    ASSERT_NO_FATAL_FAILURES(mock_regs.VerifyAll());
 
     // Multi block read.
     constexpr uint8_t multi_block_data[64] = {0x99, 0x5b, 0xd9, 0x80, 0x35, 0x5e, 0xb9, 0x92,
@@ -413,18 +396,14 @@ bool TestReadPolled() {
         GetMockReg<MsdcRxData>(mock_regs).ExpectRead(multi_block_data[i]);
     }
 
-    EXPECT_EQ(sdmmc.SdmmcRequest(&req), ZX_OK);
-    EXPECT_EQ(req.status, ZX_OK);
+    EXPECT_OK(sdmmc.SdmmcRequest(&req));
+    EXPECT_OK(req.status);
     EXPECT_EQ(req.response[0], 0xaa30091e);
-    EXPECT_BYTES_EQ(multi_block_data, multi_block_buf, sizeof(multi_block_data), "");
+    EXPECT_BYTES_EQ(multi_block_data, multi_block_buf, sizeof(multi_block_data));
     mock_regs.VerifyAll();
-
-    END_TEST;
 }
 
-bool TestProtocol() {
-    BEGIN_TEST;
-
+TEST(SdmmcTest, Protocol) {
     ddk_mock::MockMmioReg reg_array[kRegisterCount];
     ddk_mock::MockMmioRegRegion mock_regs(reg_array, sizeof(uint32_t), kRegisterCount);
     MtkSdmmcTest sdmmc(mock_regs);
@@ -432,30 +411,19 @@ bool TestProtocol() {
     ASSERT_EQ(sdmmc.ddk_proto_id_, ZX_PROTOCOL_SDMMC);
 
     sdmmc_protocol_ops_t* ops = reinterpret_cast<sdmmc_protocol_ops_t*>(sdmmc.ddk_proto_ops_);
-    EXPECT_NE(ops, nullptr);
-    ASSERT_NE(ops->host_info, nullptr);
-    ASSERT_NE(ops->set_signal_voltage, nullptr);
-    ASSERT_NE(ops->set_bus_width, nullptr);
-    ASSERT_NE(ops->set_bus_freq, nullptr);
-    ASSERT_NE(ops->set_timing, nullptr);
-    ASSERT_NE(ops->hw_reset, nullptr);
-    ASSERT_NE(ops->perform_tuning, nullptr);
-    ASSERT_NE(ops->request, nullptr);
-
-    END_TEST;
+    ASSERT_NOT_NULL(ops);
+    EXPECT_NOT_NULL(ops->host_info);
+    EXPECT_NOT_NULL(ops->set_signal_voltage);
+    EXPECT_NOT_NULL(ops->set_bus_width);
+    EXPECT_NOT_NULL(ops->set_bus_freq);
+    EXPECT_NOT_NULL(ops->set_timing);
+    EXPECT_NOT_NULL(ops->hw_reset);
+    EXPECT_NOT_NULL(ops->perform_tuning);
+    EXPECT_NOT_NULL(ops->request);
 }
 
 }  // namespace sdmmc
 
 int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : 1;
+    return RUN_ALL_TESTS(argc, argv);
 }
-
-BEGIN_TEST_CASE(MtkSdmmcTests)
-RUN_TEST_SMALL(sdmmc::TestSetBusWidth)
-RUN_TEST_SMALL(sdmmc::TestSetBusFreq)
-RUN_TEST_SMALL(sdmmc::TestSetTiming)
-RUN_TEST_SMALL(sdmmc::TestRequest)
-RUN_TEST_SMALL(sdmmc::TestReadPolled)
-RUN_TEST_SMALL(sdmmc::TestProtocol)
-END_TEST_CASE(MtkSdmmcTests)

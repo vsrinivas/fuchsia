@@ -25,7 +25,6 @@ MODULE_STATIC_LIBS := \
 MODULE_LIBS := \
     system/ulib/driver \
     system/ulib/c \
-    system/ulib/unittest \
     system/ulib/zircon \
 
 MODULE_BANJO_LIBS := \
@@ -59,6 +58,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/zx \
     system/ulib/zxcpp \
+    system/ulib/zxtest \
 
 MODULE_LIBS := \
     system/ulib/driver \
