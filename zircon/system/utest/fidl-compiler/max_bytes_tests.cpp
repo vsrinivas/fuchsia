@@ -11,6 +11,8 @@
 
 #include "test_library.h"
 
+// TODO(FIDL-458): Merge with max_handle_tests.
+
 namespace {
 
 class MaxBytesLibrary : public TestLibrary {
@@ -559,6 +561,7 @@ interface MessagePort {
   EXPECT_EQ(web_message->typeshape.Size(), 4);
   EXPECT_EQ(web_message->typeshape.Alignment(), 4);
   EXPECT_EQ(web_message->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(web_message->typeshape.MaxHandles(), 1);
   EXPECT_EQ(web_message->typeshape.Depth(), 0);
 
   auto message_port = library.LookupInterface("MessagePort");
@@ -570,6 +573,7 @@ interface MessagePort {
   EXPECT_EQ(post_message_request->typeshape.Size(), 24);
   EXPECT_EQ(post_message_request->typeshape.Alignment(), 8);
   EXPECT_EQ(post_message_request->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(post_message_request->typeshape.MaxHandles(), 1);
   EXPECT_EQ(post_message_request->typeshape.Depth(), 0);
 
   END_TEST;
@@ -593,7 +597,212 @@ struct TheStruct {
   EXPECT_EQ(the_struct->typeshape.Alignment(), 8);
   // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
   EXPECT_EQ(the_struct->typeshape.MaxOutOfLine(), 0);
+  // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
+  EXPECT_EQ(the_struct->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
   EXPECT_EQ(the_struct->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  END_TEST;
+}
+
+bool recursive_struct_with_handles() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct TheStruct {
+  handle<vmo> some_handle;
+  TheStruct? opt_one_more;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto the_struct = library.LookupStruct("TheStruct");
+  EXPECT_NONNULL(the_struct);
+  EXPECT_EQ(the_struct->typeshape.Size(), 16);
+  EXPECT_EQ(the_struct->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(the_struct->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(the_struct->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(the_struct->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  END_TEST;
+}
+
+bool co_recursive_struct() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct A {
+    B? foo;
+};
+
+struct B {
+    A? bar;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto struct_a = library.LookupStruct("A");
+  EXPECT_NONNULL(struct_a);
+  EXPECT_EQ(struct_a->typeshape.Size(), 8);
+  EXPECT_EQ(struct_a->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_a->typeshape.MaxOutOfLine(), 16);
+  // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
+  EXPECT_EQ(struct_a->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_a->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  auto struct_b = library.LookupStruct("B");
+  EXPECT_NONNULL(struct_b);
+  EXPECT_EQ(struct_b->typeshape.Size(), 8);
+  EXPECT_EQ(struct_b->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_b->typeshape.MaxOutOfLine(), 8);
+  // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
+  EXPECT_EQ(struct_b->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_b->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  END_TEST;
+}
+
+bool co_recursive_struct_with_handles() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct A {
+    handle a;
+    B? foo;
+};
+
+struct B {
+    handle b;
+    A? bar;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto struct_a = library.LookupStruct("A");
+  EXPECT_NONNULL(struct_a);
+  EXPECT_EQ(struct_a->typeshape.Size(), 16);
+  EXPECT_EQ(struct_a->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_a->typeshape.MaxOutOfLine(), 32);
+  EXPECT_EQ(struct_a->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_a->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  auto struct_b = library.LookupStruct("B");
+  EXPECT_NONNULL(struct_b);
+  EXPECT_EQ(struct_b->typeshape.Size(), 16);
+  EXPECT_EQ(struct_b->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_b->typeshape.MaxOutOfLine(), 16);
+  EXPECT_EQ(struct_b->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_b->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  END_TEST;
+}
+
+bool co_recursive_struct2() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct Foo {
+    Bar b;
+};
+
+struct Bar {
+    Foo? f;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto struct_foo = library.LookupStruct("Foo");
+  EXPECT_NONNULL(struct_foo);
+  EXPECT_EQ(struct_foo->typeshape.Size(), 8);
+  EXPECT_EQ(struct_foo->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_foo->typeshape.MaxOutOfLine(), 0);
+  // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
+  EXPECT_EQ(struct_foo->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_foo->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  auto struct_bar = library.LookupStruct("Bar");
+  EXPECT_NONNULL(struct_bar);
+  EXPECT_EQ(struct_bar->typeshape.Size(), 8);
+  EXPECT_EQ(struct_bar->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): Imprecision here, max out-ofline should be infinite.
+  EXPECT_EQ(struct_bar->typeshape.MaxOutOfLine(), 0);
+  // TODO(FIDL-457): Incorrectly saturating, there are no handles here.
+  EXPECT_EQ(struct_bar->typeshape.MaxHandles(), std::numeric_limits<uint32_t>::max());
+  EXPECT_EQ(struct_bar->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
+
+  END_TEST;
+}
+
+bool struct_two_deep() {
+  BEGIN_TEST;
+
+  TestLibrary library(R"FIDL(
+library example;
+
+struct DiffEntry {
+    vector<uint8>:256 key;
+
+    Value? base;
+    Value? left;
+    Value? right;
+};
+
+struct Value {
+    Buffer? value;
+    Priority priority;
+};
+
+struct Buffer {
+    handle<vmo> vmo;
+    uint64 size;
+};
+
+enum Priority {
+    EAGER = 0;
+    LAZY = 1;
+};
+)FIDL");
+  ASSERT_TRUE(library.Compile());
+
+  auto buffer = library.LookupStruct("Buffer");
+  EXPECT_NONNULL(buffer);
+  EXPECT_EQ(buffer->typeshape.Size(), 16);
+  EXPECT_EQ(buffer->typeshape.Alignment(), 8);
+  EXPECT_EQ(buffer->typeshape.MaxOutOfLine(), 0);
+  EXPECT_EQ(buffer->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(buffer->typeshape.Depth(), 0);
+
+  auto value = library.LookupStruct("Value");
+  EXPECT_NONNULL(value);
+  EXPECT_EQ(value->typeshape.Size(), 16);
+  EXPECT_EQ(value->typeshape.Alignment(), 8);
+  EXPECT_EQ(value->typeshape.MaxOutOfLine(), 16);
+  EXPECT_EQ(buffer->typeshape.MaxHandles(), 1);
+  EXPECT_EQ(value->typeshape.Depth(), 1);
+
+  auto diff_entry = library.LookupStruct("DiffEntry");
+  EXPECT_NONNULL(diff_entry);
+  EXPECT_EQ(diff_entry->typeshape.Size(), 40);
+  EXPECT_EQ(diff_entry->typeshape.Alignment(), 8);
+  // TODO(FIDL-457): max out-of-line should be 256 + 3 * (16 + 16) = 352.
+  EXPECT_EQ(diff_entry->typeshape.MaxOutOfLine(), 304);
+  // TODO(FIDL-457): max 3 handles, since each Value has one.
+  EXPECT_EQ(buffer->typeshape.MaxHandles(), 1);
+  // TODO(FIDL-457): depth should be 2.
+  EXPECT_EQ(diff_entry->typeshape.Depth(), std::numeric_limits<uint32_t>::max());
 
   END_TEST;
 }
@@ -613,4 +822,9 @@ RUN_TEST(xunions);
 RUN_TEST(interfaces_and_request_of_interfaces);
 RUN_TEST(recursive_opt_request);
 RUN_TEST(recursive_struct);
+RUN_TEST(recursive_struct_with_handles);
+RUN_TEST(co_recursive_struct);
+RUN_TEST(co_recursive_struct_with_handles);
+RUN_TEST(co_recursive_struct2);
+RUN_TEST(struct_two_deep);
 END_TEST_CASE(max_bytes_tests);
