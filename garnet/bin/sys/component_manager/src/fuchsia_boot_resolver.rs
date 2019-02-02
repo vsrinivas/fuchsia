@@ -74,7 +74,10 @@ impl Resolver for FuchsiaBootResolver {
 
 #[cfg(test)]
 mod tests {
-    use {super::*, fuchsia_async as fasync};
+    use {
+        super::*, fidl_fuchsia_data as fdata, fidl_fuchsia_sys2::ComponentDecl,
+        fuchsia_async as fasync,
+    };
 
     #[test]
     fn hello_world_test() {
@@ -86,6 +89,25 @@ mod tests {
                     "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm"
                 ))
                 .unwrap();
+                assert_eq!(
+                    "fuchsia-boot:///pkg#meta/component_manager_tests_hello_world.cm",
+                    component.resolved_uri.unwrap()
+                );
+                let program = fdata::Dictionary {
+                    entries: vec![fdata::Entry {
+                        key: "binary".to_string(),
+                        value: Some(Box::new(fdata::Value::Str("bin/hello_world".to_string()))),
+                    }],
+                };
+                let component_decl = ComponentDecl {
+                    program: Some(program),
+                    uses: None,
+                    exposes: None,
+                    offers: None,
+                    facets: None,
+                    children: None,
+                };
+                assert_eq!(component_decl, component.decl.unwrap());
                 assert_eq!("fuchsia-boot:///pkg", component.package.unwrap().package_uri.unwrap());
             },
         );
