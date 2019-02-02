@@ -43,6 +43,8 @@ function fx-update-path {
     tools_dirs="${build_dir}/tools:${tools_dirs}"
   fi
 
+  export PATH="$(__patched_path "${FUCHSIA_DIR}/scripts/git" "${FUCHSIA_DIR}/scripts/git")"
+
   export PATH="$(__patched_path \
       "${FUCHSIA_OUT_DIR}/[^/]*-[^/]*/tools" \
       "${tools_dirs}"
