@@ -72,6 +72,13 @@ test_package("component_manager_tests") {
     },
   ]
 
+  meta = [
+    {
+      path = rebase_path("meta/component_manager_tests_hello_world.cml")
+      dest = "component_manager_tests_hello_world.cm"
+    },
+  ]
+
   binaries = [
     {
       name = "hello_world"
