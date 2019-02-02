@@ -94,11 +94,15 @@ VmObjectPaged::~VmObjectPaged() {
         });
 
     // free all of the pages attached to us
-    page_list_.FreeAllPages();
+    list_node_t list;
+    list_initialize(&list);
+    page_list_.RemoveAllPages(&list);
 
     if (page_source_) {
         page_source_->Close();
     }
+
+    pmm_free(&list);
 }
 
 zx_status_t VmObjectPaged::Create(uint32_t pmm_alloc_flags,
@@ -769,7 +773,13 @@ zx_status_t VmObjectPaged::DecommitRange(uint64_t offset, uint64_t len) {
     // unmap all of the pages in this range on all the mapping regions
     RangeChangeUpdateLocked(start, page_aligned_len);
 
-    page_list_.FreePages(start, end);
+    list_node_t list;
+    list_initialize(&list);
+    page_list_.RemovePages(start, end, &list);
+
+    guard.Release();
+
+    pmm_free(&list);
 
     return ZX_OK;
 }
@@ -908,6 +918,9 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
     DEBUG_ASSERT(IS_PAGE_ALIGNED(s));
 
+    list_node_t free_list;
+    list_initialize(&free_list);
+
     // see if we're shrinking or expanding the vmo
     if (s < size_) {
         // shrinking
@@ -923,7 +936,7 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
         // unmap all of the pages in this range on all the mapping regions
         RangeChangeUpdateLocked(start, len);
 
-        page_list_.FreePages(start, end);
+        page_list_.RemovePages(start, end, &free_list);
     } else if (s > size_) {
         // expanding
         // figure the starting and ending page offset that is affected
@@ -937,6 +950,9 @@ zx_status_t VmObjectPaged::Resize(uint64_t s) {
 
     // save bytewise size
     size_ = s;
+
+    guard.Release();
+    pmm_free(&free_list);
 
     return ZX_OK;
 }

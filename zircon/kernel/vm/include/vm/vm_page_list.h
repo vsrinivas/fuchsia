@@ -222,12 +222,16 @@ public:
 
     zx_status_t AddPage(vm_page*, uint64_t offset);
     vm_page* GetPage(uint64_t offset);
-    // Removes the page at |offset| from the list. Returns true if a page was
-    // present, false otherwise.  If a page was removed, returns it in |page|.
+    // Removes the page at |offset| from the list. Returns true if a page was present,
+    // false otherwise. If a page was removed, returns it in |page|. The caller now owns
+    // the pages.
     bool RemovePage(uint64_t offset, vm_page** page);
-    size_t FreeAllPages();
-    // Frees all pages in the range [start_offset, end_offset).
-    void FreePages(uint64_t start_offset, uint64_t end_offset);
+    // Removes all pages from this list and puts them on |removed_pages|. The caller
+    // now owns the pages.
+    size_t RemoveAllPages(list_node_t* removed_pages);
+    // Removes all pages in the range [start_offset, end_offset) and puts them
+    // on |removed_pages|. The caller now owns the pages.
+    void RemovePages(uint64_t start_offset, uint64_t end_offset, list_node_t* remove_page);
     bool IsEmpty();
 
     // Takes the pages in the range [offset, length) out of this page list.

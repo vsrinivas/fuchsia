@@ -176,7 +176,10 @@ bool VmPageList::RemovePage(uint64_t offset, vm_page_t** page_out) {
     }
 }
 
-void VmPageList::FreePages(uint64_t start_offset, uint64_t end_offset) {
+void VmPageList::RemovePages(uint64_t start_offset, uint64_t end_offset,
+                             list_node_t* removed_pages) {
+    DEBUG_ASSERT(removed_pages);
+
     // Find the first node with a start after start_offset; if start_offset
     // is in a node, it'll be in the one before that one.
     auto start = --list_.upper_bound(start_offset);
@@ -187,13 +190,10 @@ void VmPageList::FreePages(uint64_t start_offset, uint64_t end_offset) {
     // end_offset falls in the middle of a node, this finds the next node.
     const auto end = list_.lower_bound(end_offset);
 
-    list_node list;
-    list_initialize(&list);
-
     // Visitor function which moves the pages from the VmPageListNode
     // to the accumulation list.
-    auto per_page_func = [&list](vm_page*& p, uint64_t offset) {
-        list_add_tail(&list, &p->queue_node);
+    auto per_page_func = [&removed_pages](vm_page*& p, uint64_t offset) {
+        list_add_tail(removed_pages, &p->queue_node);
         p = nullptr;
         return ZX_ERR_NEXT;
     };
@@ -207,15 +207,12 @@ void VmPageList::FreePages(uint64_t start_offset, uint64_t end_offset) {
             list_.erase(cur);
         }
     }
-
-    pmm_free(&list);
 }
 
-size_t VmPageList::FreeAllPages() {
+size_t VmPageList::RemoveAllPages(list_node_t* removed_pages) {
     LTRACEF("%p\n", this);
 
-    list_node list;
-    list_initialize(&list);
+    DEBUG_ASSERT(removed_pages);
 
     size_t count = 0;
 
@@ -223,7 +220,7 @@ size_t VmPageList::FreeAllPages() {
     auto per_page_func = [&](vm_page*& p, uint64_t offset) {
 
         // add the page to our list and null out the inner node
-        list_add_tail(&list, &p->queue_node);
+        list_add_tail(removed_pages, &p->queue_node);
         p = nullptr;
         count++;
         return ZX_ERR_NEXT;
@@ -231,9 +228,6 @@ size_t VmPageList::FreeAllPages() {
 
     // walk the tree in order, freeing all the pages on every node
     ForEveryPage(per_page_func);
-
-    // return all the pages to the pmm at once
-    pmm_free(&list);
 
     // empty the tree
     list_.clear();

@@ -1070,40 +1070,30 @@ static bool vmpl_add_remove_page_test() {
 static bool vmpl_free_pages_test() {
     BEGIN_TEST;
 
-    vm_page_t* first_page = nullptr;
-    vm_page_t* last_page = nullptr;
-
     VmPageList pl;
     constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
+    vm_page_t test_pages[kCount] = {};
+
     for (uint32_t i = 0; i < kCount; i++) {
-        paddr_t pa;
-        vm_page_t* page;
-
-        zx_status_t status = pmm_alloc_page(0, &page, &pa);
-        ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
-        ASSERT_NONNULL(page, "pmm_alloc single page");
-        ASSERT_NE(0u, pa, "pmm_alloc single page");
-
-        pl.AddPage(page, i * PAGE_SIZE);
-
-        if (i == 0) {
-            first_page = page;
-        } else if (i == kCount - 1) {
-            last_page = page;
-        }
+        pl.AddPage(test_pages + i, i * PAGE_SIZE);
     }
 
-    pl.FreePages(PAGE_SIZE, (kCount - 1) * PAGE_SIZE);
+    list_node_t list;
+    list_initialize(&list);
+    pl.RemovePages(PAGE_SIZE, (kCount - 1) * PAGE_SIZE, &list);
+    for (unsigned i = 1; i < kCount - 2; i++) {
+        EXPECT_TRUE(list_in_list(&test_pages[i].queue_node), "Not in free list");
+    }
 
     for (uint32_t i = 0; i < kCount; i++) {
         vm_page* remove_page;
         bool res = pl.RemovePage(i * PAGE_SIZE, &remove_page);
         if (i == 0) {
             EXPECT_TRUE(res, "missing page\n");
-            EXPECT_EQ(first_page, remove_page, "unexpected page\n");
+            EXPECT_EQ(test_pages, remove_page, "unexpected page\n");
         } else if (i == kCount - 1) {
             EXPECT_TRUE(res, "missing page\n");
-            EXPECT_EQ(last_page, remove_page, "unexpected page\n");
+            EXPECT_EQ(test_pages + kCount - 1, remove_page, "unexpected page\n");
         } else {
             EXPECT_FALSE(res, "extra page\n");
         }
@@ -1116,21 +1106,20 @@ static bool vmpl_free_pages_test() {
 static bool vmpl_free_pages_last_page_test() {
     BEGIN_TEST;
 
-    paddr_t pa;
-    vm_page_t* page;
-
-    zx_status_t status = pmm_alloc_page(0, &page, &pa);
-    ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
-    ASSERT_NONNULL(page, "pmm_alloc single page");
-    ASSERT_NE(0u, pa, "pmm_alloc single page");
+    vm_page_t page{};
 
     VmPageList pl;
-    pl.AddPage(page, 0);
+    pl.AddPage(&page, 0);
 
-    EXPECT_EQ(page, pl.GetPage(0), "unexpected page\n");
+    EXPECT_EQ(&page, pl.GetPage(0), "unexpected page\n");
 
-    pl.FreePages(0, PAGE_SIZE);
+    list_node_t list;
+    list_initialize(&list);
+    pl.RemoveAllPages(&list);
     EXPECT_TRUE(pl.IsEmpty(), "not empty\n");
+
+    EXPECT_EQ(list_length(&list), 1u, "too many pages");
+    EXPECT_EQ(list_remove_head_type(&list, vm_page_t, queue_node), &page, "wrong page");
 
     END_TEST;
 }
@@ -1138,22 +1127,20 @@ static bool vmpl_free_pages_last_page_test() {
 static bool vmpl_near_last_offset_free() {
     BEGIN_TEST;
 
-    for (uint64_t addr = 0xfffffffffff00000; addr != 0; addr += 0x1000) {
-        paddr_t pa;
-        vm_page_t* page;
+    vm_page_t page = {};
 
-        zx_status_t status = pmm_alloc_page(0, &page, &pa);
-        ASSERT_EQ(ZX_OK, status, "pmm_alloc single page");
-        ASSERT_NONNULL(page, "pmm_alloc single page");
-        ASSERT_NE(0u, pa, "pmm_alloc single page");
-
+    for (uint64_t addr = 0xfffffffffff00000; addr != 0; addr += PAGE_SIZE) {
         VmPageList pl;
-        if (pl.AddPage(page, addr) == ZX_OK) {
-            EXPECT_EQ(page, pl.GetPage(addr), "unexpected page\n");
-            pl.FreeAllPages();
+        if (pl.AddPage(&page, addr) == ZX_OK) {
+            EXPECT_EQ(&page, pl.GetPage(addr), "unexpected page\n");
+
+            list_node_t list;
+            list_initialize(&list);
+            pl.RemoveAllPages(&list);
+
+            EXPECT_EQ(list_length(&list), 1u, "too many pages");
+            EXPECT_EQ(list_remove_head_type(&list, vm_page_t, queue_node), &page, "wrong page");
             EXPECT_TRUE(pl.IsEmpty(), "non-empty list\n");
-        } else {
-            pmm_free_page(page);
         }
     }
 
@@ -1217,7 +1204,7 @@ static bool vmpl_take_all_pages_test() {
 
     VmPageList pl;
     constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
-    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    vm_page_t test_pages[kCount] = {};
     for (uint32_t i = 0; i < kCount; i++) {
         pl.AddPage(test_pages + i, i * PAGE_SIZE);
     }
@@ -1239,7 +1226,7 @@ static bool vmpl_take_middle_pages_test() {
 
     VmPageList pl;
     constexpr uint32_t kCount = 3 * VmPageListNode::kPageFanOut;
-    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    vm_page_t test_pages[kCount] = {};
     for (uint32_t i = 0; i < kCount; i++) {
         pl.AddPage(test_pages + i, i * PAGE_SIZE);
     }
@@ -1270,7 +1257,7 @@ static bool vmpl_take_gap_test() {
     VmPageList pl;
     constexpr uint32_t kCount = VmPageListNode::kPageFanOut;
     constexpr uint32_t kGapSize = 2;
-    vm_page_t test_pages[VmPageListNode::kPageFanOut] = {};
+    vm_page_t test_pages[kCount] = {};
     for (uint32_t i = 0; i < kCount; i++) {
         uint64_t offset = (i * (kGapSize + 1)) * PAGE_SIZE;
         pl.AddPage(test_pages + i, offset);
