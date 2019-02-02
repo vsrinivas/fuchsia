@@ -24,7 +24,7 @@
 #include <soc/mt8167/mt8167-audio-out.h>
 #include <zircon/thread_annotations.h>
 
-#include "tas5782.h"
+#include "codec.h"
 
 namespace audio {
 namespace mt8167 {
@@ -61,7 +61,7 @@ private:
     fbl::RefPtr<dispatcher::Timer> notify_timer_;
     ddk::PDev pdev_ TA_GUARDED(domain_->token());
     ddk::ClkProtocolClient clk_;
-    std::unique_ptr<Tas5782> codec_;
+    std::unique_ptr<Codec> codec_;
     zx::vmo ring_buffer_vmo_ TA_GUARDED(domain_->token());
     fzl::PinnedVmo pinned_ring_buffer_ TA_GUARDED(domain_->token());
     std::unique_ptr<MtAudioOutDevice> mt_audio_;

@@ -11,6 +11,7 @@ MODULE_TYPE := driver
 MODULE_SRCS += \
     $(LOCAL_DIR)/audio-stream-out.cpp \
     $(LOCAL_DIR)/tas5782.cpp \
+    $(LOCAL_DIR)/tas5805.cpp \
 
 MODULE_LIBS := \
   system/ulib/c \

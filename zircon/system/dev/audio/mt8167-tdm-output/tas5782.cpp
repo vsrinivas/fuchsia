@@ -56,7 +56,7 @@ zx_status_t Tas5782::SetGain(float gain) {
     return status;
 }
 
-bool Tas5782::ValidGain(float gain) {
+bool Tas5782::ValidGain(float gain) const {
     return (gain <= kMaxGain) && (gain >= kMinGain);
 }
 

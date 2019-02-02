@@ -7,7 +7,9 @@
 #include <ddk/debug.h>
 #include <ddk/device.h>
 #include <ddk/platform-defs.h>
+#include <ddk/metadata.h>
 #include <ddk/protocol/gpio.h>
+#include <ddktl/metadata/audio.h>
 #include <fbl/algorithm.h>
 #include <hwreg/bitfields.h>
 #include <soc/mt8167/mt8167-clk.h>
@@ -37,6 +39,11 @@ public:
 };
 
 zx_status_t Mt8167::AudioInit() {
+    if (board_info_.pid != PDEV_PID_MEDIATEK_8167S_REF &&
+        board_info_.pid != PDEV_PID_CLEO) {
+        // We only support the boards listed above.
+        return ZX_ERR_NOT_SUPPORTED;
+    }
     constexpr pbus_mmio_t mmios[] = {
         {
             .base = MT8167_AUDIO_BASE,
@@ -59,24 +66,10 @@ zx_status_t Mt8167::AudioInit() {
         },
     };
 
-    constexpr pbus_gpio_t gpios_out[] = {
-        {
-            .gpio = MT8167_GPIO107_MSDC1_DAT1, // ~AMP_RESET.
-        },
-        {
-            .gpio = MT8167_GPIO108_MSDC1_DAT2, // ~AMP_MUTE.
-        },
-    };
     static constexpr pbus_bti_t btis_out[] = {
         {
             .iommu_index = 0,
             .bti_id = BTI_AUDIO_OUT,
-        },
-    };
-    static constexpr pbus_i2c_channel_t i2cs_out[] = {
-        {
-            .bus_id = 2,
-            .address = 0x48,
         },
     };
 
@@ -98,6 +91,18 @@ zx_status_t Mt8167::AudioInit() {
         },
     };
 
+    metadata::Codec out_codec = metadata::Codec::Tas5782; // Default to PDEV_PID_MEDIATEK_8167S_REF.
+    if (board_info_.pid == PDEV_PID_CLEO) {
+        out_codec = metadata::Codec::Tas5805;
+    }
+    pbus_metadata_t out_metadata[] = {
+        {
+            .type = DEVICE_METADATA_PRIVATE,
+            .data_buffer = &out_codec,
+            .data_size = sizeof(out_codec),
+        },
+    };
+
     pbus_dev_t dev_out = {};
     dev_out.name = "mt8167-audio-out";
     dev_out.vid = PDEV_VID_MEDIATEK;
@@ -107,12 +112,47 @@ zx_status_t Mt8167::AudioInit() {
     dev_out.mmio_count = countof(mmios);
     dev_out.clk_list = clks;
     dev_out.clk_count = countof(clks);
-    dev_out.gpio_list = gpios_out;
-    dev_out.gpio_count = countof(gpios_out);
     dev_out.bti_list = btis_out;
     dev_out.bti_count = countof(btis_out);
-    dev_out.i2c_channel_list = i2cs_out;
-    dev_out.i2c_channel_count = countof(i2cs_out);
+    dev_out.metadata_list = out_metadata;
+    dev_out.metadata_count = countof(out_metadata);
+
+    pbus_gpio_t mt8167s_ref_gpios_out[] = {
+        {
+            .gpio = MT8167_GPIO107_MSDC1_DAT1, // ~AMP_RESET.
+        },
+        {
+            .gpio = MT8167_GPIO108_MSDC1_DAT2, // ~AMP_MUTE.
+        },
+    };
+    // No reset/mute on Cleo.
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        dev_out.gpio_list = mt8167s_ref_gpios_out;
+        dev_out.gpio_count = countof(mt8167s_ref_gpios_out);
+    } else {
+        dev_out.gpio_list = nullptr;
+        dev_out.gpio_count = 0;
+    }
+
+    pbus_i2c_channel_t mt8167s_ref_i2cs_out[] = {
+        {
+            .bus_id = 2,
+            .address = 0x48,
+        },
+    };
+    pbus_i2c_channel_t cleo_i2cs_out[] = {
+        {
+            .bus_id = 2,
+            .address = 0x2C,
+        },
+    };
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        dev_out.i2c_channel_list = mt8167s_ref_i2cs_out;
+        dev_out.i2c_channel_count = countof(mt8167s_ref_i2cs_out);
+    } else {
+        dev_out.i2c_channel_list = cleo_i2cs_out;
+        dev_out.i2c_channel_count = countof(cleo_i2cs_out);
+    }
 
     pbus_dev_t dev_in = {};
     dev_in.name = "mt8167-audio-in";
@@ -139,14 +179,16 @@ zx_status_t Mt8167::AudioInit() {
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO56_I2S_LRCK, MT8167_GPIO56_I2S_8CH_LRCK_FN);
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO25_I2S_BCK, MT8167_GPIO57_I2S_8CH_BCK_FN);
 
-    // ~AMP_RESET.
-    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, MT8167_GPIO_GPIO_FN);
-    gpio_impl_config_out(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, 1); // Set to "not reset".
+    // No reset/mute on Cleo.
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        // ~AMP_RESET.
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, MT8167_GPIO_GPIO_FN);
+        gpio_impl_config_out(&gpio_impl_, MT8167_GPIO107_MSDC1_DAT1, 1); // Set to "not reset".
 
-    // ~AMP_MUTE.
-    gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, MT8167_GPIO_GPIO_FN);
-    gpio_impl_config_out(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, 1); // Set to "not mute".
-
+        // ~AMP_MUTE.
+        gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, MT8167_GPIO_GPIO_FN);
+        gpio_impl_config_out(&gpio_impl_, MT8167_GPIO108_MSDC1_DAT2, 1); // Set to "not mute".
+    }
 
     // Input pin assignments.
     gpio_impl_set_alt_function(&gpio_impl_, MT8167_GPIO100_CMDAT0, MT8167_GPIO100_TDM_RX_MCK_FN);
@@ -185,10 +227,12 @@ zx_status_t Mt8167::AudioInit() {
         zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
         return status;
     }
-    status = pbus_.DeviceAdd(&dev_in);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
-        return status;
+    if (board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
+        status = pbus_.DeviceAdd(&dev_in);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "%s: pbus_.DeviceAdd failed %d\n", __FUNCTION__, status);
+            return status;
+        }
     }
     return ZX_OK;
 }

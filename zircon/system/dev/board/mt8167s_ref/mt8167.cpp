@@ -115,12 +115,8 @@ int Mt8167::Thread() {
     if (BacklightInit() != ZX_OK) {
         zxlogf(ERROR, "BacklightInit() failed\n");
     }
-    // Different boards have different i2c/gpio configs and codecs.
-    if (board_info_.vid == PDEV_VID_MEDIATEK &&
-        board_info_.pid == PDEV_PID_MEDIATEK_8167S_REF) {
-        if (AudioInit() != ZX_OK) {
-            zxlogf(ERROR, "AudioInit() failed\n");
-        }
+    if (AudioInit() != ZX_OK) {
+        zxlogf(ERROR, "AudioInit() failed\n");
     }
 
     return 0;

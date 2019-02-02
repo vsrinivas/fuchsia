@@ -10,8 +10,13 @@
 #include <ddk/binding.h>
 #include <ddk/debug.h>
 #include <ddk/driver.h>
+#include <ddk/metadata.h>
 #include <ddk/platform-defs.h>
+#include <ddktl/metadata/audio.h>
 #include <soc/mt8167/mt8167-clk-regs.h>
+
+#include "tas5782.h"
+#include "tas5805.h"
 
 namespace audio {
 namespace mt8167 {
@@ -31,6 +36,15 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return ZX_ERR_NO_RESOURCES;
     }
 
+    size_t actual = 0;
+    metadata::Codec codec;
+    zx_status_t status = device_get_metadata(parent(), DEVICE_METADATA_PRIVATE, &codec,
+                                             sizeof(metadata::Codec), &actual);
+    if (status != ZX_OK || sizeof(metadata::Codec) != actual) {
+        zxlogf(ERROR, "%s device_get_metadata failed %d\n", __FILE__, status);
+        return status;
+    }
+
     clk_ = pdev_.GetClk(0);
     if (!clk_.is_valid()) {
         zxlogf(ERROR, "%s failed to allocate clk\n", __FUNCTION__);
@@ -38,22 +52,25 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
     }
     clk_.Enable(0); // board_mt8167::kClkAud1, disables clk gating.
 
+    // TODO(andresoportus): Move GPIO control to codecs?
+    // Not all codecs have these GPIOs.
     codec_reset_ = pdev_.GetGpio(0);
     codec_mute_ = pdev_.GetGpio(1);
-    if (!codec_reset_.is_valid() || !codec_mute_.is_valid()) {
-        zxlogf(ERROR, "%s failed to allocate gpio\n", __FUNCTION__);
+
+    if (codec == metadata::Codec::Tas5782) {
+        zxlogf(INFO, "audio: using TAS5782 codec\n");
+        codec_ = Tas5782::Create(pdev_, 0);
+    } else if (codec == metadata::Codec::Tas5805) {
+        zxlogf(INFO, "audio: using TAS5805 codec\n");
+        codec_ = Tas5805::Create(pdev_, 0);
+    } else {
+        zxlogf(ERROR, "%s could not get codec\n", __FUNCTION__);
         return ZX_ERR_NO_RESOURCES;
     }
 
-    codec_ = Tas5782::Create(pdev_, 0);
-    if (!codec_) {
-        zxlogf(ERROR, "%s could not get tas5782\n", __func__);
-        return ZX_ERR_NO_RESOURCES;
-    }
-
-    zx_status_t status = pdev_.GetBti(0, &bti_);
+    status = pdev_.GetBti(0, &bti_);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s could not obtain bti %d\n", __func__, status);
+        zxlogf(ERROR, "%s could not obtain bti %d\n", __FUNCTION__, status);
         return status;
     }
 
@@ -78,13 +95,14 @@ zx_status_t Mt8167AudioStreamOut::InitPdev() {
         return ZX_ERR_NO_MEMORY;
     }
 
-    codec_reset_.Write(0); // Reset.
-    // Delay to be safe.  Not in the datasheet, from similar codecs.
-    zx_nanosleep(zx_deadline_after(ZX_NSEC(10)));
-    codec_reset_.Write(1); // Set to "not reset".
-    // Delay to be safe.  Not in the datasheet, from similar codecs.
-    zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
-
+    if (codec_reset_.is_valid()) {
+        codec_reset_.Write(0); // Reset.
+        // Delay to be safe.
+        zx_nanosleep(zx_deadline_after(ZX_USEC(1)));
+        codec_reset_.Write(1); // Set to "not reset".
+        // Delay to be safe.
+        zx_nanosleep(zx_deadline_after(ZX_MSEC(10)));
+    }
     codec_->Init();
 
     // Initialize the ring buffer
@@ -177,8 +195,12 @@ zx_status_t Mt8167AudioStreamOut::ChangeFormat(const audio_proto::StreamSetFmtRe
 }
 
 void Mt8167AudioStreamOut::ShutdownHook() {
-    codec_mute_.Write(0); // Set to "mute".
-    codec_reset_.Write(0); // Keep the codec in reset.
+    if (codec_mute_.is_valid()) {
+        codec_mute_.Write(0); // Set to "mute".
+    }
+    if (codec_reset_.is_valid()) {
+        codec_reset_.Write(0); // Keep the codec in reset.
+    }
     mt_audio_->Shutdown();
 }
 
@@ -264,17 +286,17 @@ zx_status_t Mt8167AudioStreamOut::InitBuffer(size_t size) {
     status = zx_vmo_create_contiguous(bti_.get(), size, 0,
                                       ring_buffer_vmo_.reset_and_get_address());
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __func__, status);
+        zxlogf(ERROR, "%s failed to allocate ring buffer vmo - %d\n", __FUNCTION__, status);
         return status;
     }
 
     status = pinned_ring_buffer_.Pin(ring_buffer_vmo_, bti_, ZX_VM_PERM_READ | ZX_VM_PERM_WRITE);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __func__, status);
+        zxlogf(ERROR, "%s failed to pin ring buffer vmo - %d\n", __FUNCTION__, status);
         return status;
     }
     if (pinned_ring_buffer_.region_count() != 1) {
-        zxlogf(ERROR, "%s buffer is not contiguous", __func__);
+        zxlogf(ERROR, "%s buffer is not contiguous", __FUNCTION__);
         return ZX_ERR_NO_MEMORY;
     }
 

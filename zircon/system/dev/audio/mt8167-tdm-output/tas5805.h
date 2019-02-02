@@ -15,11 +15,11 @@
 namespace audio {
 namespace mt8167 {
 
-class Tas5782 final : public Codec {
+class Tas5805 final : public Codec {
 public:
-    static std::unique_ptr<Tas5782> Create(ddk::PDev pdev, uint32_t i2c_index);
+    static std::unique_ptr<Tas5805> Create(ddk::PDev pdev, uint32_t i2c_index);
 
-    explicit Tas5782(const ddk::I2cChannel& i2c)
+    explicit Tas5805(const ddk::I2cChannel& i2c)
         : i2c_(i2c) {}
 
     // Implementation of Codec interface.
