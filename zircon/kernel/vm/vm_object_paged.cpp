@@ -887,9 +887,8 @@ bool VmObjectPaged::AnyPagesPinnedLocked(uint64_t offset, size_t len) {
     return found_pinned;
 }
 
-zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
+zx_status_t VmObjectPaged::Resize(uint64_t s) {
     canary_.Assert();
-    DEBUG_ASSERT(lock_.lock().IsHeld());
 
     LTRACEF("vmo %p, size %" PRIu64 "\n", this, s);
 
@@ -902,6 +901,8 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     if (status != ZX_OK) {
         return status;
     }
+
+    Guard<fbl::Mutex> guard{&lock_};
 
     // make sure everything is aligned before we get started
     DEBUG_ASSERT(IS_PAGE_ALIGNED(size_));
@@ -938,12 +939,6 @@ zx_status_t VmObjectPaged::ResizeLocked(uint64_t s) {
     size_ = s;
 
     return ZX_OK;
-}
-
-zx_status_t VmObjectPaged::Resize(uint64_t s) {
-    Guard<fbl::Mutex> guard{&lock_};
-
-    return ResizeLocked(s);
 }
 
 zx_status_t VmObjectPaged::SetParentOffsetLocked(uint64_t offset) {

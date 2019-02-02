@@ -45,7 +45,6 @@ class VmObject : public fbl::RefCounted<VmObject>,
 public:
     // public API
     virtual zx_status_t Resize(uint64_t size) { return ZX_ERR_NOT_SUPPORTED; }
-    virtual zx_status_t ResizeLocked(uint64_t size) TA_REQ(lock_) { return ZX_ERR_NOT_SUPPORTED; }
 
     virtual uint64_t size() const { return 0; }
     virtual uint32_t create_options() const { return 0; }

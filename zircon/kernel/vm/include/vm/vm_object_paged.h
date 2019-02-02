@@ -58,7 +58,6 @@ public:
                                       uint64_t size, fbl::RefPtr<VmObject>* vmo);
 
     zx_status_t Resize(uint64_t size) override;
-    zx_status_t ResizeLocked(uint64_t size) override TA_REQ(lock_);
     uint32_t create_options() const override { return options_; }
     uint64_t size() const override
         // TODO: Figure out whether it's safe to lock here without causing
