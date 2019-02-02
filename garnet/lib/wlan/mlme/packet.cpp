@@ -46,13 +46,12 @@ bool IsBodyAligned(const Packet& pkt) {
 
 rust_mlme_in_buf_t IntoRustInBuf(fbl::unique_ptr<Packet> packet) {
     auto* pkt = packet.release();
-    return rust_mlme_in_buf_t {
-            .data = pkt->data(),
-            .len = pkt->len(),
-            .raw = pkt,
-            .free_buffer = [](void *raw) {
-                fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset();
-            },
+    return rust_mlme_in_buf_t{
+        .data = pkt->data(),
+        .len = pkt->len(),
+        .raw = pkt,
+        .free_buffer =
+            [](void* raw) { fbl::unique_ptr<Packet>(static_cast<Packet*>(raw)).reset(); },
     };
 }
 
@@ -120,6 +119,15 @@ fbl::unique_ptr<Packet> GetWlanPacket(size_t len) {
 fbl::unique_ptr<Packet> GetSvcPacket(size_t len) {
     return GetPacket(len, Packet::Peer::kService);
 }
+
+rust_mlme_buffer_provider_ops_t rust_buffer_provider {
+    .get_buffer = [](size_t min_len) -> rust_mlme_in_buf_t {
+        // Note: Once Rust MLME supports more than sending WLAN frames this needs to change.
+        auto pkt = GetWlanPacket(min_len);
+        ZX_DEBUG_ASSERT(pkt != nullptr);
+        return IntoRustInBuf(std::move(pkt));
+    },
+};
 
 }  // namespace wlan
 

@@ -304,6 +304,8 @@ fbl::unique_ptr<Packet> GetEthPacket(size_t len);
 fbl::unique_ptr<Packet> GetWlanPacket(size_t len);
 fbl::unique_ptr<Packet> GetSvcPacket(size_t len);
 
+extern rust_mlme_buffer_provider_ops_t rust_buffer_provider;
+
 }  // namespace wlan
 
 // Declaration of static slab allocators.

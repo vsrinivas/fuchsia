@@ -833,22 +833,16 @@ zx_status_t Station::SendKeepAliveResponse() {
         return ZX_OK;
     }
 
-    auto packet = GetWlanPacket(DataFrameHeader::max_len());
-    if (packet == nullptr) { return ZX_ERR_NO_RESOURCES; }
+    seq_t seq_num = seq_.Sns1(join_ctx_->bssid())->Next();
+    rust_mlme_out_buf_t out_buf;
+    auto status = rust_mlme_write_keep_alive_resp_frame(
+        rust_buffer_provider, &join_ctx_->bssid().byte, &self_addr().byte, seq_num, &out_buf);
+    if (status != ZX_OK) {
+        errorf("could not write keep alive frame: %d\n", status);
+        return status;
+    }
 
-    BufferWriter w(*packet);
-    auto data_hdr = w.Write<DataFrameHeader>();
-    data_hdr->fc.set_type(FrameType::kData);
-    data_hdr->fc.set_subtype(DataSubtype::kNull);
-    data_hdr->fc.set_to_ds(1);
-    data_hdr->addr1 = join_ctx_->bssid();
-    data_hdr->addr2 = self_addr();
-    data_hdr->addr3 = join_ctx_->bssid();
-    SetSeqNo(data_hdr, &seq_);
-
-    packet->set_len(w.WrittenBytes());
-
-    auto status = SendDataFrame(std::move(packet), true);
+    status = SendDataFrame(FromRustOutBuf(out_buf), true);
     if (status != ZX_OK) {
         errorf("could not send keep alive frame: %d\n", status);
         return status;
