@@ -5,7 +5,7 @@ Microbenchmarks for Inspect library (ExposedObject).
 ## Writing Benchmarks
 
 This uses Zircon's
-[perftest](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/perftest/)
+[perftest](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/perftest/)
 library.
 
 ## Running Benchmarks
@@ -34,4 +34,4 @@ There are two ways to run instrumentation_benchmarks:
   For this, run
   `/pkgfs/packages/instrumentation_benchmarks/0/test/instrumentation_benchmarks`.
 
-[perf test result schema]: https://fuchsia.googlesource.com/docs/+/master/development/benchmarking/results_schema.md
+[perf test result schema]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/benchmarking/results_schema.md

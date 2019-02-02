@@ -70,7 +70,7 @@ are in the entire package. The names double as paths for packaging and paths
 for presentation at runtime. Associated with each path is a hash of the
 content using the merkle root strategy documented as below.
 
-[Merkle Root](https://fuchsia.googlesource.com/docs/+/master/the-book/merkleroot.md)
+[Merkle Root](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/merkleroot.md)
 
 
 ### signature

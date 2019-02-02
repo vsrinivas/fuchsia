@@ -167,7 +167,7 @@ You can refer to the full [fuzzing] instructions for details.
    and end-to-end validation tests
 
 [Google Test]: https://github.com/google/googletest
-[TestLoopFixture]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/gtest/test_loop_fixture.h
+[TestLoopFixture]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/gtest/test_loop_fixture.h
 [IntegrationTest]: /bin/ledger/tests/integration/integration_test.h
 [/bin/ledger/tests/integration]: /bin/ledger/tests/integration
 [Synchronization end-to-end tests]: /bin/ledger/tests/e2e_sync/README.md
@@ -177,4 +177,4 @@ You can refer to the full [fuzzing] instructions for details.
 [testing abstractions]: /bin/ledger/testing/ledger_app_instance_factory.h
 [benchmarks]: /bin/ledger/tests/benchmark/README.md
 [Firestore cloud provider]: /bin/cloud_provider_firestore/README.md#testing
-[fuzzing]: https://fuchsia.googlesource.com/docs/+/master/development/workflows/libfuzzer.md
+[fuzzing]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/libfuzzer.md

@@ -71,6 +71,6 @@ generates the language bindings from the JSON IR.
 The officially supported FIDL language back-ends are:
 
 * C++, Rust, and Go:
-  [fidlgen](https://fuchsia.googlesource.com/garnet/+/master/go/src/fidl/compiler/backend)
+  [fidlgen](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/fidl/compiler/backend)
 * Dart:
   [fidlgen_dart](https://fuchsia.googlesource.com/topaz/+/master/bin/fidlgen_dart)

@@ -643,7 +643,7 @@ It would be desirable to consider an API which allows for localized handling of
 connection errors at the point of method calls (in addition to interface level
 connection error handling as before).
 
-See https://fuchsia-review.git.corp.google.com/#/c/23457/ for one example of how
+See https://fuchsia-review.googlesource.com/#/c/23457/ for one example of how
 a client would otherwise work around the API deficiency.
 
 One approach towards a better API may be constructed by taking advantage of the

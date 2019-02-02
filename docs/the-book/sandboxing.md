@@ -76,8 +76,8 @@ requests, but that is likely to change as the system evolves.
 ## Building a package
 
 To build a package, use the `package()` macro in `gn` defined in
-[`//build/package.gni`](https://fuchsia.googlesource.com/build/+/master/package.gni).
+[`//build/package.gni`](https://fuchsia.googlesource.com/fuchsia/+/master/build/package.gni).
 See the documentation for the `package()` macro for details about including resources.
 
-For examples, see [https://fuchsia.googlesource.com/garnet/+/master/packages/prod/fortune]
-and [https://fuchsia.googlesource.com/garnet/+/master/bin/fortune/BUILD.gn].
+For examples, see [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/packages/prod/fortune]
+and [https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/fortune/BUILD.gn].

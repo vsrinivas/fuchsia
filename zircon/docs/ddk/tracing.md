@@ -138,5 +138,5 @@ viewing with the Chrome trace viewer.
 host$ fx traceutil record --categories=example:example1
 ```
 
-See the [Tracing Usage Guide](https://fuchsia.googlesource.com/garnet/+/master/docs/tracing_usage_guide.md)
+See the [Tracing Usage Guide](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/tracing_usage_guide.md)
 for further info.

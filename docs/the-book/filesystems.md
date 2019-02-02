@@ -199,7 +199,7 @@ intending to satisfy a variety of distinct needs.
 
 ### MemFS: An in-memory filesystem
 
-[MemFS](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/memfs)
+[MemFS](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/memfs)
 is used to implement requests to temporary filesystems like `/tmp`, where files
 exist entirely in RAM, and are not transmitted to an underlying block device.
 This filesystem is also currently used for the “bootfs” protocol, where a
@@ -209,7 +209,7 @@ unwrapped into user-accessible Vnodes at boot (these files are accessible in
 
 ### MinFS: A persistent filesystem
 
-[MinFS](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/minfs/)
+[MinFS](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/minfs/)
 is a simple, traditional filesystem which is capable of storing files
 persistently. Like MemFS, it makes extensive use of the VFS layers mentioned
 earlier, but unlike MemFS, it requires an additional handle to a block device
@@ -220,7 +220,7 @@ filesystems to a namespace from the command line.
 
 ### Blobfs: An immutable, integrity-verifying package storage filesystem
 
-[Blobfs](https://fuchsia.googlesource.com/zircon/+/master/system/uapp/blobfs/)
+[Blobfs](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/blobfs/)
 is a simple, flat filesystem optimized for “write-once, then read-only” [signed
 data](merkleroot.md), such as [application packages](package_metadata.md).
 Other than two small prerequisites (file names which are deterministic, content
@@ -233,7 +233,7 @@ single flat directory of hashes, and blobs can be accessed by operations like
 
 ### ThinFS: A FAT filesystem written in Go
 
-[ThinFS](https://fuchsia.googlesource.com/garnet/+/master/go/src/thinfs/) is an implementation of a
+[ThinFS](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/thinfs/) is an implementation of a
 FAT filesystem in Go. It serves a dual purpose: first, proving that our system
 is actually modular, and capable of using novel filesystems, regardless of
 language or runtime. Secondly, it provides a mechanism for reading a universal

@@ -17,7 +17,7 @@ namespace debug_ipc {
 #pragma pack(push, 8)
 
 // Note: see "ps" source:
-// https://fuchsia.googlesource.com/zircon/+/master/system/uapp/psutils/ps.c
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/psutils/ps.c
 struct ProcessTreeRecord {
   enum class Type : uint32_t { kJob, kProcess };
 

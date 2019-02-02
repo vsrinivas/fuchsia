@@ -204,9 +204,9 @@ channel.
 ### fidl_encode / fidl_encode_msg
 
 Declared in
-[lib/fidl/coding.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/coding.h),
+[lib/fidl/coding.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
 defined in
-[encoding.cpp](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/encoding.cpp).
+[encoding.cpp](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/encoding.cpp).
 
 Encodes and validates exactly **num_bytes** of the object in **bytes** in-place
 by performing a depth-first traversal of the encoding data from **type**
@@ -267,9 +267,9 @@ ranges of data types such as enums and union tags.
 ### fidl_decode / fidl_decode_msg
 
 Declared in
-[lib/fidl/coding.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/coding.h),
+[lib/fidl/coding.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
 defined in
-[decoding.cpp](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/decoding.cpp).
+[decoding.cpp](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/decoding.cpp).
 
 Decodes and validates the object in **bytes** in-place by performing a
 depth-first traversal of the encoding data from **type** to fix up internal
@@ -330,10 +330,10 @@ ranges of data types such as enums and union tags.
 
 Declared in
 [system/ulib/fidl/include/lib/fidl/coding.h](
-https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/coding.h),
+https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/coding.h),
 defined in
 [system/ulib/fidl/validating.cpp](
-https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/validating.cpp).
+https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/validating.cpp).
 
 Validates the object in **bytes** in-place by performing a depth-first
 traversal of the encoding data from **type** to fix up internal
@@ -354,9 +354,9 @@ ranges of data types such as enums and union tags.
 ### fidl_epitaph_write
 
 Declared in
-[lib/fidl/epitaph.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/include/lib/fidl/epitaph.h),
+[lib/fidl/epitaph.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/include/lib/fidl/epitaph.h),
 defined in
-[epitaph.c](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl/epitaph.c).
+[epitaph.c](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl/epitaph.c).
 
 This function sends an epitaph with the given error number down the given
 channel.  An epitaph is a special message, with ordinal 0xFFFFFFFF, which
@@ -551,7 +551,7 @@ pointer on `fidl_msg_t`.
 ### Binding
 
 FIDL also provides `fidl_bind`, defined in
-[lib/fidl/bind.h](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl-async/include/lib/fidl-async/bind.h),
+[lib/fidl/bind.h](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl-async/include/lib/fidl-async/bind.h),
 that binds a generated
 dispatch function to an `async_dispatcher_t`. The `fidl_bind` function creates
 an `async_wait_t` that waits for messages on the channel and calls through the

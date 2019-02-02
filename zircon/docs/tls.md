@@ -317,7 +317,7 @@ explain what happens in the `dlopen` case. When `__tls_get_addr` is called it
 first checks to see if `tls_cnt` is such that the module ID (given by `GOT_s[0]`
 ) is within the `dtv`. If it is then it simply looks up `dtv[GOT_s[0]] + GOT_s[1]`
 but if it isn't something more complicated happens. See the implementation of
-`__tls_get_new` in [dynlink.c](https://fuchsia.googlesource.com/zircon/+/master/third_party/ulib/musl/ldso/dynlink.c).
+`__tls_get_new` in [dynlink.c](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/third_party/ulib/musl/ldso/dynlink.c).
 In a nutshell a sufficiently large space was already allocated for a larger `dtv`
 on a call to `dlopen`. It is an invariant of the system that sufficient space
 will always exist somewhere already allocated. The larger space is then setup to

@@ -21,7 +21,7 @@ In garnet, `Alt`+`Esc` toggles back and forth between the console and graphics.
 ## Getting Started: Exposing a ViewProvider
 
 For an application to draw any UI, it first needs to implement a service to
-expose that UI externally. That interface is called [`ViewProvider`](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app/view_provider.fidl).
+expose that UI externally. That interface is called [`ViewProvider`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app/view_provider.fidl).
 
 First, let's publish our `ViewProvider` interface to our outgoing services. We don't
 do anything with incoming request for a `ViewProvider` yet.
@@ -405,9 +405,9 @@ void OnScenicEvent(std::vector<fuchsia::ui::scenic::Event> events) override {
 Congratulations! You've learned how to create a component that can display some cool content! Here are some next steps:
 
 * Learn to use `BaseView`, which is a class that helps avoid some of the boilerplate we wrote here.
-   * Library: [//garnet/public/lib/ui/base_view/cpp](https://fuchsia.googlesource.com/garnet/+/master/public/lib/ui/base_view/cpp)
-   * Example: [Spinning Square](https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc)
+   * Library: [//garnet/public/lib/ui/base_view/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/base_view/cpp)
+   * Example: [Spinning Square](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/spinning_square/spinning_square_view.cc)
 * Learn to use the Scenic cpp library, which creates an abstraction of a more object-oriented interface to Scenic `Resources`, rather than using `Commands` directly like we have here.
-   * Library: [//garnet/public/lib/ui/scenic/cpp](https://fuchsia.googlesource.com/garnet/+/master/public/lib/ui/scenic/cpp)
-   * Example: [Spinning Square](https://fuchsia.googlesource.com/garnet/+/master/examples/ui/spinning_square/spinning_square_view.cc)
+   * Library: [//garnet/public/lib/ui/scenic/cpp](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/scenic/cpp)
+   * Example: [Spinning Square](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/spinning_square/spinning_square_view.cc)
 * Learn to write an app which draws to textures and then displays those textures through Scenic. [NoodlesView](https://fuchsia.googlesource.com/topaz/+/master/examples/ui/noodles) (and [SkiaView](https://fuchsia.googlesource.com/topaz/+/master/examples/ui/lib/skia_view.cc) which it is built on)

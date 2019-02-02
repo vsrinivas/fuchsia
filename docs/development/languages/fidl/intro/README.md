@@ -22,7 +22,7 @@ This document is a description of the Fuchsia Interface Definition Language
 [API Readability / Style Guide]: ../../../api/fidl.md
 [C Language Bindings]: ../languages/c.md
 [C++ Language Bindings]: ../languages/cpp.md
-[Examples]: https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl/examples
+[Examples]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl/examples
 [Tutorial]: ../tutorial/README.md
 
 [TOC]
@@ -139,11 +139,11 @@ Requirements
 
 ## Where to Find the Code
 
-- [The compiler](https://fuchsia.googlesource.com/zircon/+/master/system/host/fidl)
-- [C bindings](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fidl)
-- [C++ bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/cpp)
+- [The compiler](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/fidl)
+- [C bindings](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fidl)
+- [C++ bindings](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fidl/cpp)
 - [Go bindings](https://fuchsia.googlesource.com/third_party/go/+/master/src/syscall/zx/fidl/)
-- [Rust bindings](https://fuchsia.googlesource.com/garnet/+/master/public/lib/fidl/rust)
+- [Rust bindings](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/fidl/rust)
 
 ## Constituent Parts of Specification
 

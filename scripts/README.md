@@ -35,4 +35,4 @@ package name is supplied to `fx publish`, only that package will be processed.
 If no name is supplied, all the packages made by the build will be included.
 
 [package]: https://fuchsia.googlesource.com/pm/+/master/README.md#structure-of-a-fuchsia-package
-[Merkle Root]: https://fuchsia.googlesource.com/docs/+/master/merkleroot.md
+[Merkle Root]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/merkleroot.md

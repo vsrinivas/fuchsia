@@ -49,7 +49,7 @@ is passed.
 See "Debugging the kernel with GDB" in [QEMU](../qemu.md) for
 documentation on debugging zircon with QEMU+GDB.
 
-[fuchsia-debugging-doc]: https://fuchsia.googlesource.com/docs/+/master/development/workflows/debugging.md
+[fuchsia-debugging-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/workflows/debugging.md
 
 ## Symbolizing the backtraces
 

@@ -86,4 +86,4 @@ the `zircon` tree, you can move the file to its parent directory.
 ## See also
 
 For Fuchsia integration, see
-https://fuchsia.googlesource.com/scripts/+/master/vim/README.md
+https://fuchsia.googlesource.com/fuchsia/+/master/scripts/vim/README.md

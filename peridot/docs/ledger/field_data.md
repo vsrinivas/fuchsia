@@ -24,4 +24,4 @@ Command or 'help': run range -4 0 2
 
 [Cobalt]: https://fuchsia.googlesource.com/cobalt
 [/bin/ledger/cobalt]: /bin/ledger/cobalt/
-[Cobalt client]: https://fuchsia.googlesource.com/garnet/+/master/bin/cobalt/
+[Cobalt client]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/cobalt/

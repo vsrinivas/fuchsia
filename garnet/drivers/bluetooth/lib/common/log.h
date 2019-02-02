@@ -40,7 +40,7 @@
 // included in the log message.
 //
 // (refer to
-// https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md#driver_name_log_flags
+// https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/kernel_cmdline.md#driver_name_log_flags
 // for all supported DDK debug log flags).
 //
 // PRINTF MODE:

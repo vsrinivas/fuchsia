@@ -46,7 +46,7 @@ void Usage() {
            " * `--json JSON_PATH`. If present, this flag instructs `banjoc` to output the\n"
            "   library's intermediate representation at the given path. The intermediate\n"
            "   representation is JSON that conforms to a particular schema (located at\n"
-           "   https://fuchsia.googlesource.com/zircon/+/master/system/host/banjo/schema.json).\n"
+           "   https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/host/banjo/schema.json).\n"
            "   The intermediate representation is used as input to the various backends.\n"
            "\n"
            " * `--name LIBRARY_NAME`. If present, this flag instructs `banjoc` to validate\n"
@@ -67,7 +67,7 @@ void Usage() {
            "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
            "and must be the only argument.\n"
            "\n"
-           "See <https://fuchsia.googlesource.com/zircon/+/master/docs/banjo/compiler.md>\n"
+           "See <https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/banjo/compiler.md>\n"
            "for more information.\n";
     std::cout.flush();
 }

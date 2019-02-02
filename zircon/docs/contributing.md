@@ -2,7 +2,7 @@
 
 At this point in time, Zircon is under heavy, active development, and we're
 not seeking major changes or new features from new contributors, however, if
-you desire to [contribute](https://fuchsia.googlesource.com/docs/+/master/CONTRIBUTING.md), small bugfixes are welcome.
+you desire to [contribute](https://fuchsia.googlesource.com/fuchsia/+/master/docs/CONTRIBUTING.md), small bugfixes are welcome.
 
 Here are some general guidelines for patches to Zircon.  This list is
 incomplete and will be expanded over time.
@@ -123,7 +123,7 @@ incomplete and will be expanded over time.
       all source files in the `system/` tree.
 
 [google-style-guide]: https://google.github.io/styleguide/cppguide.html
-[googlesource-docs]: https://fuchsia.googlesource.com/zircon/+/master/docs/
-[syscall-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md
-[cmdline-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/kernel_cmdline.md
-[h2md-doc]: https://fuchsia.googlesource.com/zircon/+/master/docs/h2md.md
+[googlesource-docs]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/
+[syscall-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md
+[cmdline-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/kernel_cmdline.md
+[h2md-doc]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/h2md.md

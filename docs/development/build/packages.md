@@ -85,8 +85,8 @@ $
 
 
 
-[garnet-packages-source]: https://fuchsia.googlesource.com/garnet/+/master/packages/
-[peridot-packages-source]: https://fuchsia.googlesource.com/peridot/+/master/packages/
+[garnet-packages-source]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/packages/
+[peridot-packages-source]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/packages/
 [topaz-packages-source]: https://fuchsia.googlesource.com/topaz/+/master/packages/
-[preprocess-build-packages-py]: https://fuchsia.googlesource.com/build/+/master/gn/prepreprocess_build_packages.py
+[preprocess-build-packages-py]: https://fuchsia.googlesource.com/fuchsia/+/master/build/gn/prepreprocess_build_packages.py
 [products]: products.md

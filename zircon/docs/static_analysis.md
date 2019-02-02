@@ -8,7 +8,7 @@ This document describes:
 
 ## Steps to run Clang Static Analyzer
 
-Assuming you already obtained a local copy of Fuchsia workspace according to the instructions written in [getting_started.md](https://fuchsia.googlesource.com/docs/+/master/getting_started.md) and the source tree of fuchsia is located at `$LOCAL_DIR/fuchsia` and current working directory is `$LOCAL_DIR/fuchsia/zircon`. The Clang Static Analayzer can be run on Zircon by following commands:
+Assuming you already obtained a local copy of Fuchsia workspace according to the instructions written in [getting_started.md](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md) and the source tree of fuchsia is located at `$LOCAL_DIR/fuchsia` and current working directory is `$LOCAL_DIR/fuchsia/zircon`. The Clang Static Analayzer can be run on Zircon by following commands:
 
 ```sh
 ./scripts/download-prebuilt
@@ -34,7 +34,7 @@ At the time this document is written, all Zircon related checkers are still unde
 
 They are enabled by default when you executed the 'analyze-zircon' script. We will update the 'analyze-zircon' script to enable them by default once they get landed.
 
-In the mean time, if you would like to try ZirconHandleChecker now, you can download the source code of LLVM with Clang and apply the patch from the diffs above and follow the instructions in [toolchain.md](https://fuchsia.googlesource.com/docs/+/master/development/build/toolchain.md) to build your own toolchain. Assuming you have built your own toolchain and it is located at `$LOCAL_TOOLCHAIN_PREFIX` and `$LOCAL_TOOLCHAIN_PREFIX/bin/clang` is the path to the `clang` command. The Clang Static Analyzer can be run with ZirconHandleChecker and other default checkers enabled by following command:
+In the mean time, if you would like to try ZirconHandleChecker now, you can download the source code of LLVM with Clang and apply the patch from the diffs above and follow the instructions in [toolchain.md](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/toolchain.md) to build your own toolchain. Assuming you have built your own toolchain and it is located at `$LOCAL_TOOLCHAIN_PREFIX` and `$LOCAL_TOOLCHAIN_PREFIX/bin/clang` is the path to the `clang` command. The Clang Static Analyzer can be run with ZirconHandleChecker and other default checkers enabled by following command:
 
 ```
 ./scripts/analyze-zircon -p $LOCAL_TOOLCHAIN_PREFIX -m all

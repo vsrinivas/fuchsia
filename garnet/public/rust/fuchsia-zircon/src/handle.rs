@@ -17,7 +17,7 @@ use std::ops::Deref;
 pub struct Koid(sys::zx_koid_t);
 
 /// An object representing a Zircon
-/// [handle](https://fuchsia.googlesource.com/zircon/+/master/docs/handles.md).
+/// [handle](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/handles.md).
 ///
 /// Internally, it is represented as a 32-bit integer, but this wrapper enforces
 /// strict ownership semantics. The `Drop` implementation closes the handle.
@@ -172,21 +172,21 @@ pub trait AsHandleRef {
     }
 
     /// Set and clear userspace-accessible signal bits on an object. Wraps the
-    /// [zx_object_signal](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_signal.md)
+    /// [zx_object_signal](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_handle(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         self.as_handle_ref().signal(clear_mask, set_mask)
     }
 
     /// Waits on a handle. Wraps the
-    /// [zx_object_wait_one](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_one.md)
+    /// [zx_object_wait_one](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_one.md)
     /// syscall.
     fn wait_handle(&self, signals: Signals, deadline: Time) -> Result<Signals, Status> {
         self.as_handle_ref().wait(signals, deadline)
     }
 
     /// Causes packet delivery on the given port when the object changes state and matches signals.
-    /// [zx_object_wait_async](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_async.md)
+    /// [zx_object_wait_async](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_async.md)
     /// syscall.
     fn wait_async_handle(&self, port: &Port, key: u64, signals: Signals, options: WaitAsyncOpts)
         -> Result<(), Status>
@@ -213,7 +213,7 @@ impl<'a, T: HandleBased> AsHandleRef for Unowned<'a, T> {
 /// interface.
 pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
     /// Duplicate a handle, possibly reducing the rights available. Wraps the
-    /// [zx_handle_duplicate](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/handle_duplicate.md)
+    /// [zx_handle_duplicate](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/handle_duplicate.md)
     /// syscall.
     fn duplicate_handle(&self, rights: Rights) -> Result<Self, Status> {
         self.as_handle_ref().duplicate(rights).map(|handle| Self::from(handle))
@@ -221,7 +221,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 
     /// Create a replacement for a handle, possibly reducing the rights available. This invalidates
     /// the original handle. Wraps the
-    /// [zx_handle_replace](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/handle_replace.md)
+    /// [zx_handle_replace](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/handle_replace.md)
     /// syscall.
     fn replace_handle(self, rights: Rights) -> Result<Self, Status> {
         <Self as Into<Handle>>::into(self)
@@ -267,7 +267,7 @@ pub trait HandleBased: AsHandleRef + From<Handle> + Into<Handle> {
 /// A trait implemented by all handles for objects which have a peer.
 pub trait Peered: HandleBased {
     /// Set and clear userspace-accessible signal bits on the object's peer. Wraps the
-    /// [zx_object_signal_peer](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_signal.md)
+    /// [zx_object_signal_peer](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_signal.md)
     /// syscall.
     fn signal_peer(&self, clear_mask: Signals, set_mask: Signals) -> Result<(), Status> {
         let handle = self.raw_handle();
@@ -281,7 +281,7 @@ pub trait Peered: HandleBased {
 /// A trait implemented by all handles for objects which can have a cookie attached.
 pub trait Cookied: HandleBased {
     /// Get the cookie attached to this object, if any. Wraps the
-    /// [zx_object_get_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_get_cookie.md)
+    /// [zx_object_get_cookie](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_get_cookie.md)
     /// syscall.
     fn get_cookie(&self, scope: &HandleRef) -> Result<u64, Status> {
         let mut cookie = 0;
@@ -294,7 +294,7 @@ pub trait Cookied: HandleBased {
 
     /// Attach an opaque cookie to this object with the given scope. The cookie may be read or
     /// changed in future only with the same scope. Wraps the
-    /// [zx_object_set_cookie](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/object_set_cookie.md)
+    /// [zx_object_set_cookie](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_set_cookie.md)
     /// syscall.
     fn set_cookie(&self, scope: &HandleRef, cookie: u64) -> Result<(), Status> {
         let status = unsafe {

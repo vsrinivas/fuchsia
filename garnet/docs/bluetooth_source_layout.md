@@ -1,7 +1,7 @@
 # Bluetooth Source Layout
 
 The [Bluetooth
-System](https://fuchsia.googlesource.com/garnet/+/master/docs/bluetooth_architecture.md)
+System](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/bluetooth_architecture.md)
 comprises many components, such as drivers, profiles, and client
 applications. This document provides an overview of where the various components
 live in the source tree.
@@ -43,6 +43,6 @@ topaz/examples/eddystone_agent/                 # [Eddystone](https://github.com
 zircon/system/dev/bluetooth/                    # bt-transport drivers
 ```
 
-See the [HCI section of the Bluetooth System document](https://fuchsia.googlesource.com/garnet/+/master/docs/bluetooth_architecture.md#hci) for an explanation of how the drivers, such as `bt-transport`, `bt-hci`, and `bt-host`, relate to each other.
+See the [HCI section of the Bluetooth System document](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/bluetooth_architecture.md#hci) for an explanation of how the drivers, such as `bt-transport`, `bt-hci`, and `bt-host`, relate to each other.
 
-See the [Host Bus section of the Bluetooth System document](https://fuchsia.googlesource.com/garnet/+/master/docs/bluetooth_architecture.md#host-bus) for more detail on bt-host.
+See the [Host Bus section of the Bluetooth System document](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/bluetooth_architecture.md#host-bus) for more detail on bt-host.

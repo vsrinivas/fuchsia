@@ -10,7 +10,7 @@
 /// bytes drawn, which is always the size of the buffer provided.
 ///
 /// Wraps the
-/// [zx_cprng_draw](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/cprng_draw.md)
+/// [zx_cprng_draw](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/cprng_draw.md)
 /// syscall.
 pub fn cprng_draw(buffer: &mut [u8]) {
     unsafe { zx_cprng_draw(buffer.as_mut_ptr(), buffer.len()) };

@@ -11,7 +11,7 @@ struct Error {
     // The numerical error code.
     //
     // These error codes coorespond to
-    // <https://fuchsia.googlesource.com/garnet/+/master/bin/network/net_error_list.h>
+    // <https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/network/net_error_list.h>
     int32 code;
 
     // A textual description of the error in en-US.

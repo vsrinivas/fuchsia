@@ -649,7 +649,7 @@ void Realm::CreateComponentFromPackage(
     FXL_LOG(ERROR) << "Component " << package->resolved_url
                    << " does not have a component manifest (a.k.a. cmx file)! "
                    << "Please add a cmx file to your component. "
-                   << "https://fuchsia.googlesource.com/docs/+/master/the-book/"
+                   << "https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/"
                    << "package_metadata.md#Component-manifest.";
     component_request.SetReturnValues(kComponentCreationFailed,
                                       TerminationReason::INTERNAL_ERROR);
@@ -662,7 +662,7 @@ void Realm::CreateComponentFromPackage(
         << "Component " << fp.GetDefaultComponentName()
         << " was launched without using fuchsia-pkg URLs! Use "
         << package->resolved_url << "#" << fp.GetDefaultComponentCmxPath()
-        << " instead. See https://fuchsia.googlesource.com/docs/+/master/"
+        << " instead. See https://fuchsia.googlesource.com/fuchsia/+/master/docs/"
         << "glossary.md#fuchsia_pkg-url for more information. The component "
         << "was not whitelisted to launch with bare package URLs, and it "
         << "cannot be launched!";

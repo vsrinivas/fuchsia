@@ -29,7 +29,7 @@
 #
 # The 'returns (<type>)' is expected unless one of the attributes is 'noreturn'.
 #
-# See <https://fuchsia.googlesource.com/docs/+/master/development/api/system.md>
+# See <https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/api/system.md>
 # for readability guidelines.
 #
 # To help the clang static analyzer identify handle related syscalls, 3

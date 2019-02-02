@@ -32,4 +32,4 @@ Invoking the Fuchsia build with different parameters on the same codebase should
 produce identical files.
 
 
-[zircon-public]: https://fuchsia.googlesource.com/zircon/+/master/public/
+[zircon-public]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/public/

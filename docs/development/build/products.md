@@ -68,7 +68,7 @@ produces this for the build and can be run by hand:
 $ python build/gn/preprocess_products.py --products '["garnet/products/default"]'
 ```
 
-[garnet-products-source]: https://fuchsia.googlesource.com/garnet/+/master/products/
-[peridot-products-source]: https://fuchsia.googlesource.com/peridot/+/master/products/
+[garnet-products-source]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/products/
+[peridot-products-source]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/products/
 [topaz-products-source]: https://fuchsia.googlesource.com/topaz/+/master/products/
-[preprocess-products-py]: https://fuchsia.googlesource.com/build/+/master/gn/preprocess_products.py
+[preprocess-products-py]: https://fuchsia.googlesource.com/fuchsia/+/master/build/gn/preprocess_products.py

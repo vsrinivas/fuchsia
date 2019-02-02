@@ -60,4 +60,4 @@ error!("my msg: {}", 10);
 
 
 ### Reference
-[Rust APIs](https://fuchsia.googlesource.com/garnet/+/master/public/rust/fuchsia-syslog/src/lib.rs)
+[Rust APIs](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/rust/fuchsia-syslog/src/lib.rs)

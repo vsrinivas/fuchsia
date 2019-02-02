@@ -11,7 +11,7 @@
 # built from official Clang repository. For instructions on how to obtain a
 # prebuilt toolchain or build the toolchain from scratch, please refer to
 # document at
-# https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
+# https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/getting_started.md
 
 set -eu
 

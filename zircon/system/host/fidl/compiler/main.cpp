@@ -78,7 +78,7 @@ void Usage() {
            "as a whitespace-delimited list of arguments. Response files cannot be nested,\n"
            "and must be the only argument.\n"
            "\n"
-           "See <https://fuchsia.googlesource.com/zircon/+/master/docs/fidl/compiler.md>\n"
+           "See <https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/fidl/compiler.md>\n"
            "for more information.\n";
     std::cout.flush();
 }

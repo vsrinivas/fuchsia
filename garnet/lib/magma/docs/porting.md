@@ -21,7 +21,7 @@ The Magma team writes new code, supporting only the latest gpu hardware generati
 The gpu vendor supplies and maintains the system driver using the Zircon DDK.
 
 ### Tasks
-* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/platform-bus.md).
+* Initialize hardware: register access, clocks, regulators, interrupts, firmware.  **Note** where the GPU block is agnostic of these concerns, they should be configured in a separate board driver; see Zircon [platform-bus](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/platform-bus.md).
 	* *msd_driver_create*
 	* *msd_driver_configure*
 	* *msd_driver_destroy*

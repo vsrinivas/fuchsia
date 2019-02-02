@@ -57,8 +57,8 @@ device's boot settings may need to be changed to boot from the USB device and
 this is typically device-specific. For the guides listed below, **only** go
 through the steps to set the boot device, don't continue with any instructions on
 creating install media.
-* [Acer Switch Alpha 12](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md)
-* [Intel NUC](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/nuc.md)
+* [Acer Switch Alpha 12](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md)
+* [Intel NUC](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/nuc.md)
 * [Google Pixelbook](/development/hardware/pixelbook.md)
 
 Paving should occur automatically after the device is booted into Zedboot from the

@@ -5,7 +5,7 @@
 // Package far implements Fuchsia archive operations. At this time the optional
 // hash chunks are not written, and only archive writing is supported. The
 // specification for the archive format can be found in
-// https://fuchsia.googlesource.com/docs/+/master/archive_format.md.
+// https://fuchsia.googlesource.com/fuchsia/+/master/docs/archive_format.md.
 package far
 
 import (

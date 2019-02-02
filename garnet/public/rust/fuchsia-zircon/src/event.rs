@@ -9,7 +9,7 @@ use crate::ok;
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [event object](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/event.md).
+/// [event object](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/event.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -20,7 +20,7 @@ impl Cookied for Event {}
 
 impl Event {
     /// Create an event object, an object which is signalable but nothing else. Wraps the
-    /// [zx_event_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/event_create.md)
+    /// [zx_event_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/event_create.md)
     /// syscall.
     pub fn create() -> Result<Event, Status> {
         let mut out = 0;

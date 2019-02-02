@@ -17,7 +17,7 @@ Where does that request go?
 The ‘open’ call is a function, provided by a [standard library](libc.md). For
 C/C++ programs, this will normally be declared in `unistd.h`, which has a
 backing definition in
-[libfdio](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/).
+[libfdio](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/).
 For Go programs, there is an equivalent (but distinct) implementation in the Go
 standard library. For each language and runtime, developers may opt into their
 own definition of “open”.
@@ -51,7 +51,7 @@ over these handles?
 ## Fdio
 
 A library called
-[**fdio**](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fdio/)
+[**fdio**](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fdio/)
 is responsible for providing a unified interface to a variety of resources --
 files, sockets, services, pipes, and more. This layer defines a group of
 functions, such as **read, write, open, close, seek, etc** that may be used on
@@ -75,11 +75,11 @@ need to send a request to a remote server to “please open foo”. How can this
 accomplished? The program has the following tools:
 
   * One or more **handles** representing a connection to the CWD
-  * [zx_channel_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_write.md):
+  * [zx_channel_write](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_write.md):
     A system call which can send bytes and handles (over a channel)
-  * [zx_channel_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_read.md):
+  * [zx_channel_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_read.md):
     A system call which can receive bytes and handles (over a channel)
-  * [zx_object_wait_one](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/object_wait_one.md):
+  * [zx_object_wait_one](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/object_wait_one.md):
     A system call which can wait for a handle to be readable / writable
 
 Using these primitives, the client can write a message to the filesystem server
@@ -95,7 +95,7 @@ an unintended behavior). Additionally, if this protocol allowed the client to
 have arbitrary control over the server, this communication layer would be ripe
 for exploitation.
 
-The [FIDL IO protocol](https://fuchsia.googlesource.com/zircon/+/master/system/fidl/fuchsia-io/io.fidl)
+The [FIDL IO protocol](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/fidl/fuchsia-io/io.fidl)
 describes the wire-format of what these bytes and handles should actually mean
 when transmitted between two entities. The protocol describes things like
 “expected number of handles”, “enumerated operation”, and “data”. In our case,
@@ -191,9 +191,9 @@ they have no obligation to use it. To be a filesystem server, a process must
 merely understand the FIDL wire format. As a consequence, there could be
 any number of “VFS” implementations in a language, but at the time of writing,
 two well-known implementations exist: one written in C++ within the [libfs
-library](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fs/),
+library](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fs/),
 and another written in Go in the [rpc package of
-ThinFS](https://fuchsia.googlesource.com/garnet/+/master/go/src/thinfs/zircon/rpc/rpc.go)]
+ThinFS](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/thinfs/zircon/rpc/rpc.go)]
 
 The VFS layer defines the interface of operations which may be routed to the
 underlying filesystem, including:

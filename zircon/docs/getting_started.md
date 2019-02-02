@@ -4,7 +4,7 @@
 
 *** note
 NOTE: The Fuchsia source includes Zircon. See Fuchsia's
-[Getting Started](https://fuchsia.googlesource.com/docs/+/master/getting_started.md)
+[Getting Started](https://fuchsia.googlesource.com/fuchsia/+/master/docs/getting_started.md)
 doc. Follow this doc to work on only Zircon.
 ***
 
@@ -166,7 +166,7 @@ build of recent-enough Clang with support for `x86_64` and `aarch64` compiled
 in should work.  You'll need a toolchain that also includes the runtime
 libraries.  We normally also use the same build of Clang for the host as well
 as for the `*-fuchsia` targets.  See
-[here](https://fuchsia.googlesource.com/docs/+/master/development/build/toolchain.md)
+[here](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/toolchain.md)
 for details on how we build Clang.
 
 ### Set up `local.mk` for toolchains
@@ -235,7 +235,7 @@ On systems that boot via EFI (such as Acer and NUC), either option is viable.
 On other systems, zirconboot may be the only option for network booting.
 
 ### Via Gigaboot
-The [GigaBoot20x6](https://fuchsia.googlesource.com/zircon/+/master/bootloader) bootloader speaks a simple network boot protocol (over IPV6 UDP)
+The [GigaBoot20x6](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/bootloader) bootloader speaks a simple network boot protocol (over IPV6 UDP)
 which does not require any special host configuration or privileged access to use.
 
 It does this by taking advantage of IPV6 Link Local Addressing and Multicast,
@@ -243,8 +243,8 @@ allowing the device being booted to advertise its bootability and the host to fi
 it and send a system image to it.
 
 If you have a device (for example a Broadwell or Skylake Intel NUC) running
-GigaBoot20x6 first create a USB drive [manually](https://fuchsia.googlesource.com/zircon/+/master/docs/targets/acer12.md#How-to-Create-a-Bootable-USB-Flash-Drive)
-or (Linux only) using the [script](https://fuchsia.googlesource.com/scripts/+/master/build-bootable-usb-gigaboot.sh).
+GigaBoot20x6 first create a USB drive [manually](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/targets/acer12.md#How-to-Create-a-Bootable-USB-Flash-Drive)
+or (Linux only) using the [script](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/build-bootable-usb-gigaboot.sh).
 
 ```
 $BUILDDIR/tools/bootserver $BUILDDIR/zircon.bin

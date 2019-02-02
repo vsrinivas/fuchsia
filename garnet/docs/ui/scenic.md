@@ -60,7 +60,7 @@ which also involves coordinating gesture recognition across clients. _Anim_
 is a yet-to-be created system for coordinating transitions across clients
 as well as offloading animations to Scenic.
 
-[_Escher_](https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/README.md)
+[_Escher_](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/escher/README.md)
 is a Vulkan-based rendering library used by the _Gfx_ system.
 
 _Root Presenter_ is an independent service which is responsible for
@@ -68,7 +68,7 @@ _presenting_ the system's UI; using the Scenic API, it creates the root of a
 Scenic scene graph, embeds the root process's UI, and reads input events
 using its _Input Reader_ library and continually forwards them to Scenic.
 
-Scenic is a client of the [_Vulkan graphics driver_](https://fuchsia.googlesource.com/garnet/+/master/lib/magma/)
+Scenic is a client of the [_Vulkan graphics driver_](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/magma/)
 and the system _Display Driver_.
 
 # Concepts
@@ -219,7 +219,7 @@ TODO: Talk about synchronization.
 
 # Examples of using Scenic
 
-A simple example of using Scenic is the [bouncing ball](https://fuchsia.googlesource.com/garnet/+/master/examples/ui/bouncing_ball/README.md) app.
+A simple example of using Scenic is the [bouncing ball](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/ui/bouncing_ball/README.md) app.
 
 # API Guide
 
@@ -228,38 +228,38 @@ A simple example of using Scenic is the [bouncing ball](https://fuchsia.googleso
 The following files define and document the collection of FIDL interfaces that
 make up Scenic.
 
-* [Scenic top-level interfaces](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
-  * [scenic.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/scenic.fidl)
-  * [session.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/session.fidl)
-  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/events.fidl)
+* [Scenic top-level interfaces](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic) (`fuchsia.ui.scenic`)
+  * [scenic.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/scenic.fidl)
+  * [session.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/session.fidl)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/events.fidl)
 
-* [Gfx](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx) (`fuchsia.ui.gfx`)
-  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/events.fidl)
-  * [resources.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/resources.fidl)
-  * [nodes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/nodes.fidl)
-  * [shapes.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx/shapes.fidl)
-  * [...](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.gfx)
+* [Gfx](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx) (`fuchsia.ui.gfx`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/events.fidl)
+  * [resources.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/resources.fidl)
+  * [nodes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/nodes.fidl)
+  * [shapes.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx/shapes.fidl)
+  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.gfx)
 
-* [Views](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
-  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views/commands.fidl)
-  * [events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.views/events.fidl)
+* [Views](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views) (`fuchsia.ui.views`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views/commands.fidl)
+  * [events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.views/events.fidl)
 
-* [Input](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
-  * [commands.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input/commands.fidl)
-  * [input_events.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input/input_events.fidl)
+* [Input](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input) (`fuchsia.ui.input`)
+  * [commands.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/commands.fidl)
+  * [input_events.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_events.fidl)
 
-* [Policy](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy) (`fuchsia.ui.policy`)
-  * [presenter.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy/presenter.fidl)
-  * [presentation.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy/presentation.fidl)
-  * [...](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.policy)
+* [Policy](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy) (`fuchsia.ui.policy`)
+  * [presenter.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy/presenter.fidl)
+  * [presentation.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy/presentation.fidl)
+  * [...](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.policy)
 
-* [App](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
-  * [view_provider.fidl](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app/view_provider.fidl)
+* [App](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app) (`fuchsia.ui.app`)
+  * [view_provider.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app/view_provider.fidl)
 
-* [experimental] [Sketchy](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
-* [experimental] [Vectorial](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
+* [experimental] [Sketchy](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.sketchy) (`fuchsia.ui.sketchy`)
+* [experimental] [Vectorial](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.vectorial) (`fuchsia.ui.vectorial`)
 
 ## TODO
 

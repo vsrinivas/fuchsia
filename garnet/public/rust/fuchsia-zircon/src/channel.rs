@@ -10,7 +10,7 @@ use fuchsia_zircon_sys as sys;
 use std::mem;
 
 /// An object representing a Zircon
-/// [channel](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md).
+/// [channel](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/channel.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq, Hash)]
@@ -24,7 +24,7 @@ impl Channel {
     /// sides of the channel. Messages written into one maybe read from the opposite.
     ///
     /// Wraps the
-    /// [zx_channel_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_create.md)
+    /// [zx_channel_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_create.md)
     /// syscall.
     pub fn create() -> Result<(Channel, Channel), Status> {
         unsafe {
@@ -40,7 +40,7 @@ impl Channel {
     }
 
     /// Read a message from a channel. Wraps the
-    /// [zx_channel_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_read.md)
+    /// [zx_channel_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_read.md)
     /// syscall.
     ///
     /// If the `MessageBuf` lacks the capacity to hold the pending message,
@@ -87,7 +87,7 @@ impl Channel {
     }
 
     /// Write a message to a channel. Wraps the
-    /// [zx_channel_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_write.md)
+    /// [zx_channel_write](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_write.md)
     /// syscall.
     pub fn write(&self, bytes: &[u8], handles: &mut Vec<Handle>)
             -> Result<(), Status>
@@ -114,7 +114,7 @@ impl Channel {
     /// kernel-generated txid.
     ///
     /// Wraps the
-    /// [zx_channel_call](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/channel_call.md)
+    /// [zx_channel_call](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/channel_call.md)
     /// syscall.
     ///
     /// Note that unlike [`read`][read], the caller must ensure that the MessageBuf has enough

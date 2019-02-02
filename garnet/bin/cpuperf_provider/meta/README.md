@@ -1,2 +1,2 @@
-See [https://fuchsia.googlesource.com/docs/+/master/package_metadata.md] for
+See [https://fuchsia.googlesource.com/fuchsia/+/master/docs/package_metadata.md] for
 documentation about this directory.

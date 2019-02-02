@@ -12,7 +12,7 @@ import sys
 
 class PackageImportsResolver:
     """Recursively resolves imports in build packages. See
-       https://fuchsia.googlesource.com/docs/+/master/development/build/packages.md
+       https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/build/packages.md
        for more information about build packages.
 
        An observer may be used to perform additional work whenever an

@@ -10,7 +10,7 @@ use crate::{AsHandleRef, Handle, HandleBased, HandleRef, Status, Unowned, Vmo};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [virtual memory address region](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_address_region.md).
+/// [virtual memory address region](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_address_region.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]

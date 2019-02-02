@@ -26,7 +26,7 @@ _got_errors=0
 # as a sort of manifest.  It indicates which tests ran, where their output files
 # are located, and whether a test passed or failed.  `runbench_exec` records
 # each run in this summary.  The summary's schema is defined at:
-# https://fuchsia.googlesource.com/zircon/+/master/system/uapp/runtests/summary-schema.json
+# https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/uapp/runtests/summary-schema.json
 _benchmark_summaries=""
 
 # This parses command line arguments:

@@ -5,8 +5,8 @@
 //! Fuchsia-ui Framework
 //!
 //! Fuchsia-ui is a prototype framework for writing
-//! [Fuchsia](https://fuchsia.googlesource.com/docs/+/HEAD/the-book/README.md)
-//! [modules](https://fuchsia.googlesource.com/docs/+/HEAD/glossary.md#module) in
+//! [Fuchsia](https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/README.md)
+//! [modules](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module) in
 //! [Rust](https://www.rust-lang.org/).
 
 #![deny(missing_docs)]

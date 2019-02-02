@@ -112,7 +112,7 @@ For details on the Vulkan conformance test suite, see
 
 The source to Vulkan gfxbench is access-restricted. It should be cloned into third_party.
 
-* https://fuchsia-vendor-internal.git.corp.google.com/gfxbench
+* https://fuchsia-vendor-internal.googlesource.com/gfxbench
 
 ### See Also
 * [Test Strategy](test_strategy.md)

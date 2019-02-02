@@ -456,7 +456,7 @@ side, and an appropriate **ioctl()** handler on the driver side.
 
 Under Fuchsia, this is done differently, by marshalling data through the Fuchsia Interface
 Definition Language
-([**FIDL**](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md)).
+([**FIDL**](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/README.md)).
 
 For more details about FIDL itself, consult the reference above.
 For our purposes here, FIDL:
@@ -515,7 +515,7 @@ interface Number {
 The first line, `library zircon.sample.number;` provides a name for the library that will
 be generated.
 
-Next, `[Layout="Simple"]` generates [simple C bindings](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/languages/c.md#simple-bindings).
+Next, `[Layout="Simple"]` generates [simple C bindings](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/languages/c.md#simple-bindings).
 
 Finally, the `interface` section defines all of the interfaces that are available.
 Each interface is numbered, has a name, and specifies inputs and outputs.
@@ -786,7 +786,7 @@ specification's prototype of the result portion of the interface definition.
 FIDL expressions can certainly be made more complex than what we've shown above.
 For example, nested structures can be used, rather than the simple `uint32`.
 Multiple parameters are allowed for both inputs and outputs. See the
-[FIDL reference](https://fuchsia.googlesource.com/docs/+/master/development/languages/fidl/README.md).
+[FIDL reference](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/fidl/README.md).
 
 ## Registering multiple devices with `/dev/misc/demo-multi`
 

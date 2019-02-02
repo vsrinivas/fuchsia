@@ -11,7 +11,7 @@
 ##
 ## After updating third_party/rust-crates/rustc_deps, the pinned revision of
 ## third_party/rust-crates will need to be updated in garnet/manifest/third_party.
-## See https://fuchsia.googlesource.com/docs/+/master/development/languages/rust/third_party.md
+## See https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/languages/rust/third_party.md
 ## for more details.
 
 set -e

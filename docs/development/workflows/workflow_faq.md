@@ -79,8 +79,8 @@ A: [`jiri`](https://fuchsia.googlesource.com/jiri/+/master/) is source
 management for multiple repositories.
 [`fx`](https://fuchsia.googlesource.com/fuchsia/+/master/scripts/fx) is a convenience
 wrapper for configuring and running the build system (Make for Zircon,
-[GN](https://fuchsia.git.corp.google.com/docs/+/HEAD/glossary.md#gn) and
-[Ninja](https://fuchsia.git.corp.google.com/docs/+/HEAD/glossary.md#ninja) for
+[GN](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#gn) and
+[Ninja](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#ninja) for
 everything else), as well as facilities to help with day-to-day engineering (`fx
 boot`, `fx log`, etc).
 

@@ -21,7 +21,7 @@ files:
 
 * One or more firmware files
 * A license file
-* [README.fuchsia](https://fuchsia.googlesource.com/docs/+/master/development/source_code/README.fuchsia.md)
+* [README.fuchsia](https://fuchsia.googlesource.com/fuchsia/+/master/docs/development/source_code/README.fuchsia.md)
 
 README.fuchsia must contain at least the following directives:
 

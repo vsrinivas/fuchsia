@@ -21,7 +21,7 @@ impl Process {
     /// Similar to `Thread::start`, but is used to start the first thread in a process.
     ///
     /// Wraps the
-    /// [zx_process_start](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/process_start.md)
+    /// [zx_process_start](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_start.md)
     /// syscall.
     pub fn start(
         &self,
@@ -43,7 +43,7 @@ impl Process {
     /// Create a thread inside the current process.
     ///
     /// Wraps the
-    /// [zx_thread_create](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/thread_create.md)
+    /// [zx_thread_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/thread_create.md)
     /// syscall.
     pub fn create_thread(&self, name: &[u8]) -> Result<Thread, Status> {
         let process_raw = self.raw_handle();

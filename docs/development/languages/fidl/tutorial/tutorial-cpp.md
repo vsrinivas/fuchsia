@@ -14,7 +14,7 @@ design and implementation of FIDL, as well as the
 
 We'll use the `echo2.fidl` sample that we discussed in the [FIDL Tutorial](README.md)
 introduction section, by opening
-[//garnet/examples/fidl/services/echo2.fidl](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/services/echo2.fidl).
+[//garnet/examples/fidl/services/echo2.fidl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/services/echo2.fidl).
 
 <!-- NOTE: the code snippets here need to be kept up to date manually by
      copy-pasting from the actual source code. Please update a snippet
@@ -53,7 +53,7 @@ Below are the implementation files created for C++, assuming that your build fla
 ## `Echo` server
 
 The echo server implementation can be found at:
-[//garnet/examples/fidl/echo2_server_cpp/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_server_cpp/).
+[//garnet/examples/fidl/echo2_server_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_server_cpp/).
 
 Find the implementation of the main function, and that of the `Echo` interface.
 
@@ -187,7 +187,7 @@ component might close, crash, be busy, etc.
 
 Let's take a look at the client implementation:
 
-[//garnet/examples/fidl/echo2_client_cpp/](https://fuchsia.googlesource.com/garnet/+/master/examples/fidl/echo2_client_cpp/)
+[//garnet/examples/fidl/echo2_client_cpp/](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/examples/fidl/echo2_client_cpp/)
 
 The structure of the client is similar to that of the server, with a `main`
 function and an `async::Loop`. The difference is that the client immediately

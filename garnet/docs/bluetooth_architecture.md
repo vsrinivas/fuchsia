@@ -37,10 +37,10 @@ devices. On an x86 platform this hierarchy may look like the following:
 
 Generic HCI transport functionality is provided by the `bt-transport` protocol.
 Zircon provides drivers that implement the HCI transport over
-[USB](https://fuchsia.googlesource.com/zircon/+/master/system/dev/bluetooth/bt-transport-usb)
-and [UART](https://fuchsia.googlesource.com/zircon/+/master/system/dev/bluetooth/bt-transport-uart/).
+[USB](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/bluetooth/bt-transport-usb)
+and [UART](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/bluetooth/bt-transport-uart/).
 The transport protocol abstracts the HCI control, ACL, and SCO
-channels (currently as Zircon [channels](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/channel.md)).
+channels (currently as Zircon [channels](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/channel.md)).
 
 A transport driver publishes a bt-transport device (e.g. `/dev/class/bt-transport/000`).
 Each of these devices only represents the transport and not an initialized

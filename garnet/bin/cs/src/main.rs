@@ -240,7 +240,7 @@ struct Opt {
 fn main() -> TraversalResult {
     // Visit the directory /hub and recursively traverse it, outputting
     // information about the component hierarchy.
-    // See https://fuchsia.googlesource.com/docs/+/master/the-book/hub.md for
+    // See https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/hub.md for
     // more information on the Hub directory structure.
     let opt = Opt::from_args();
     let root_realm = Realm::create("/hub")?;

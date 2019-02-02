@@ -93,20 +93,20 @@ also provides core drivers and Fuchsia's libc implementation.
  - Verified boot
  - Updater
 
-[zircon-concepts]: https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md
-[zircon-syscalls]: https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls.md
-[zircon-vdso]: https://fuchsia.googlesource.com/zircon/+/master/docs/vdso.md
-[zircon-ddk]: https://fuchsia.googlesource.com/zircon/+/HEAD/docs/ddk/overview.md
+[zircon-concepts]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md
+[zircon-syscalls]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls.md
+[zircon-vdso]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/vdso.md
+[zircon-ddk]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/overview.md
 [FIDL]: ../development/languages/fidl/README.md
-[framework-story]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/story.md
-[framework-module]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/module.md
-[framework-agent]: https://fuchsia.googlesource.com/peridot/+/master/docs/modular/agent.md
-[ledger]: https://fuchsia.googlesource.com/peridot/+/master/docs/ledger/README.md
-[bluetooth]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/bluetooth/README.md
-[telephony]: https://fuchsia.googlesource.com/garnet/+/HEAD/bin/telephony/README.md
-[magma]: https://fuchsia.googlesource.com/garnet/+/master/lib/magma/
-[escher]: https://fuchsia.googlesource.com/garnet/+/master/public/lib/escher/
-[scenic]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui/scenic.md
-[input-manager]: https://fuchsia.googlesource.com/garnet/+/master/docs/ui/input.md
-[view-manager]: https://fuchsia.googlesource.com/garnet/+/master/bin/ui/view_manager/
+[framework-story]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/story.md
+[framework-module]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/module.md
+[framework-agent]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/modular/agent.md
+[ledger]: https://fuchsia.googlesource.com/fuchsia/+/master/peridot/docs/ledger/README.md
+[bluetooth]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/bluetooth/README.md
+[telephony]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/telephony/README.md
+[magma]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/magma/
+[escher]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/escher/
+[scenic]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/ui/scenic.md
+[input-manager]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/ui/input.md
+[view-manager]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/view_manager/
 [flutter]: https://flutter.io/

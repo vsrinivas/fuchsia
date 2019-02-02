@@ -225,6 +225,6 @@ You likely forgot to run **A** before running **B**.
 [gn-preso]: https://docs.google.com/presentation/d/15Zwb53JcncHfEwHpnG_PoIbbzQ3GQi_cpujYwbpcbZo/
 [ninja-main]: https://ninja-build.org/
 [gn-reference]: https://gn.googlesource.com/gn/+/master/docs/reference.md
-[build-project]: https://fuchsia.googlesource.com/build/+/master/
-[zircon-getting-started]: https://fuchsia.googlesource.com/zircon/+/master/docs/getting_started.md
-[zircon-makefile-options]: https://fuchsia.googlesource.com/zircon/+/master/docs/makefile_options.md
+[build-project]: https://fuchsia.googlesource.com/fuchsia/+/master/build/
+[zircon-getting-started]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/getting_started.md
+[zircon-makefile-options]: https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/makefile_options.md

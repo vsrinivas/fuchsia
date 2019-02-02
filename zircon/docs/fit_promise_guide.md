@@ -2,7 +2,7 @@
 
 Welcome! You probably dislike writing code in C++ that describes multi-step asynchronous operations.
 
-`fit::promise<>` [[1](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fit/include/lib/fit/promise.h)] makes this a bit easier. This guide covers common problems in asynchronous control flow programming and offers common usage patterns which solve those problems in the `fit::promise<>` library.
+`fit::promise<>` [[1](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fit/include/lib/fit/promise.h)] makes this a bit easier. This guide covers common problems in asynchronous control flow programming and offers common usage patterns which solve those problems in the `fit::promise<>` library.
 
 ## What makes asynchronous code challenging?
 
@@ -41,7 +41,7 @@ fit::promise<> p = fit::make_promise([] {
 
 `p` now contains a promise that describes a simple task.
 
-In order to run the promise, it must be scheduled it on an implementation of `fit::executor`. The most commonly used executor is an `async::Executor` [[2](https://fuchsia.googlesource.com/garnet/+/master/public/lib/async_promise/executor.h)] which schedules callbacks on an `async_dispatcher_t`. For the purposes of testing and exploration, there is also  `fit::single_threaded_executor` and its associated method `fit::run_single_threaded()`[[3](https://fuchsia.googlesource.com/zircon/+/master/system/ulib/fit/include/lib/fit/single_threaded_executor.h#72)] which is used here.
+In order to run the promise, it must be scheduled it on an implementation of `fit::executor`. The most commonly used executor is an `async::Executor` [[2](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/async_promise/executor.h)] which schedules callbacks on an `async_dispatcher_t`. For the purposes of testing and exploration, there is also  `fit::single_threaded_executor` and its associated method `fit::run_single_threaded()`[[3](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/ulib/fit/include/lib/fit/single_threaded_executor.h#72)] which is used here.
 
 ```cpp
 // When a promise is scheduled, the `fit::executor` takes ownership of it.

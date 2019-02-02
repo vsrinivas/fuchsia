@@ -207,7 +207,7 @@ impl Time {
     /// Get the current time, from the specific clock id.
     ///
     /// Wraps the
-    /// [zx_clock_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/clock_get.md)
+    /// [zx_clock_get](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/clock_get.md)
     /// syscall.
     pub fn get(clock_id: ClockId) -> Time {
         unsafe { Time(sys::zx_clock_get(clock_id as u32)) }
@@ -216,7 +216,7 @@ impl Time {
     /// Compute a deadline for the time in the future that is the given `Duration` away.
     ///
     /// Wraps the
-    /// [zx_deadline_after](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/deadline_after.md)
+    /// [zx_deadline_after](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/deadline_after.md)
     /// syscall.
     pub fn after(duration: Duration) -> Time {
         unsafe { Time(sys::zx_deadline_after(duration.0)) }
@@ -225,7 +225,7 @@ impl Time {
     /// Sleep until the given time.
     ///
     /// Wraps the
-    /// [zx_nanosleep](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/nanosleep.md)
+    /// [zx_nanosleep](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/nanosleep.md)
     /// syscall.
     pub fn sleep(self) {
         unsafe { sys::zx_nanosleep(self.0); }
@@ -245,7 +245,7 @@ impl Time {
 /// system is asleep.
 ///
 /// Wraps the
-/// [zx_ticks_get](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/ticks_get.md)
+/// [zx_ticks_get](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/ticks_get.md)
 /// syscall.
 pub fn ticks_get() -> u64 {
     unsafe { sys::zx_ticks_get() }
@@ -254,14 +254,14 @@ pub fn ticks_get() -> u64 {
 /// Return the number of high-precision timer ticks in a second.
 ///
 /// Wraps the
-/// [zx_ticks_per_second](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/ticks_per_second.md)
+/// [zx_ticks_per_second](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/ticks_per_second.md)
 /// syscall.
 pub fn ticks_per_second() -> u64 {
     unsafe { sys::zx_ticks_per_second() }
 }
 
 /// An object representing a Zircon timer, such as the one returned by
-/// [zx_timer_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_create.md).
+/// [zx_timer_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/timer_create.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -272,7 +272,7 @@ impl_handle_based!(Timer);
 impl Timer {
     /// Create a timer, an object that can signal when a specified point in time has been reached.
     /// Wraps the
-    /// [zx_timer_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_create.md)
+    /// [zx_timer_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/timer_create.md)
     /// syscall.
     pub fn create(clock_id: ClockId) -> Result<Timer, Status> {
         let mut out = 0;
@@ -285,7 +285,7 @@ impl Timer {
     }
 
     /// Start a one-shot timer that will fire when `deadline` passes. Wraps the
-    /// [zx_timer_set](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_set.md)
+    /// [zx_timer_set](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/timer_set.md)
     /// syscall.
     pub fn set(&self, deadline: Time, slack: Duration) -> Result<(), Status> {
         let status = unsafe {
@@ -295,7 +295,7 @@ impl Timer {
     }
 
     /// Cancels a pending timer that was started with start(). Wraps the
-    /// [zx_timer_cancel](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/timer_cancel.md)
+    /// [zx_timer_cancel](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/timer_cancel.md)
     /// syscall.
     pub fn cancel(&self) -> Result<(), Status> {
         let status = unsafe { sys::zx_timer_cancel(self.raw_handle()) };

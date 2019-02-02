@@ -16,7 +16,7 @@ namespace runtests {
 // If tests are in this path, they can run as a component if corresponding cmx
 // file is present.
 //
-// https://fuchsia.googlesource.com/docs/+/master/the-book/package_metadata.md#component-manifest
+// https://fuchsia.googlesource.com/fuchsia/+/master/docs/the-book/package_metadata.md#component-manifest
 constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 
 // If |path| starts with |kPkgPrefix|, this function will generate corresponding
@@ -29,7 +29,7 @@ constexpr char kPkgPrefix[] = "/pkgfs/packages/";
 // fuchsia-pkg://fuchsia.com/my_tests#meta/test_binary.cmx
 //
 // Code which uses this url:
-// https://fuchsia.googlesource.com/garnet/+/master/bin/appmgr/root_loader.cc
+// https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/appmgr/root_loader.cc
 //
 void TestFileComponentInfo(const fbl::String path,
                            fbl::String* component_url_out,

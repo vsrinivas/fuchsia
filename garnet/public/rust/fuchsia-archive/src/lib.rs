@@ -3,7 +3,7 @@
 //! # Reading, Writing and Listing Fuchsia Archives (FAR) Data
 //!
 //! This crate is a Rust port of the
-//! [Go Far package](https://fuchsia.googlesource.com/garnet/+/master/go/src/far/).
+//! [Go Far package](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/go/src/far/).
 //!
 //! # Example
 //!

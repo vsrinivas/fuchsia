@@ -13,7 +13,7 @@ use crate::{Property, PropertyQuery, PropertyQueryGet, PropertyQuerySet};
 use fuchsia_zircon_sys as sys;
 
 /// An object representing a Zircon
-/// [socket](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Message-Passing_Sockets-and-Channels).
+/// [socket](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md#Message-Passing_Sockets-and-Channels).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -97,7 +97,7 @@ impl Socket {
     /// into one may be read from the other.
     ///
     /// Wraps
-    /// [zx_socket_create](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_create.md).
+    /// [zx_socket_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_create.md).
     pub fn create(sock_opts: SocketOpts) -> Result<(Socket, Socket), Status> {
         unsafe {
             let mut out0 = 0;
@@ -115,7 +115,7 @@ impl Socket {
     /// Return value (on success) is number of bytes actually written.
     ///
     /// Wraps
-    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
+    /// [zx_socket_write](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_write.md).
     pub fn write(&self, bytes: &[u8]) -> Result<usize, Status> {
         self.write_opts(bytes, SocketWriteOpts::default())
     }
@@ -124,7 +124,7 @@ impl Socket {
     /// Return value (on success) is number of bytes actually written.
     ///
     /// Wraps
-    /// [zx_socket_write](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_write.md).
+    /// [zx_socket_write](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_write.md).
     pub fn write_opts(&self, bytes: &[u8], opts: SocketWriteOpts) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
@@ -143,7 +143,7 @@ impl Socket {
     /// Return value (on success) is number of bytes actually read.
     ///
     /// Wraps
-    /// [zx_socket_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_read.md).
+    /// [zx_socket_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_read.md).
     pub fn read(&self, bytes: &mut [u8]) -> Result<usize, Status> {
         self.read_opts(bytes, SocketReadOpts::default())
     }
@@ -152,7 +152,7 @@ impl Socket {
     /// Return value (on success) is number of bytes actually read.
     ///
     /// Wraps
-    /// [zx_socket_read](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_read.md).
+    /// [zx_socket_read](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_read.md).
     pub fn read_opts(&self, bytes: &mut [u8], opts: SocketReadOpts) -> Result<usize, Status> {
         let mut actual = 0;
         let status = unsafe {
@@ -177,7 +177,7 @@ impl Socket {
     /// Close half of the socket, so attempts by the other side to write will fail.
     ///
     /// Implements the `ZX_SOCKET_SHUTDOWN_WRITE` option of
-    /// [zx_socket_shutdown](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/socket_shutdown.md).
+    /// [zx_socket_shutdown](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/socket_shutdown.md).
     pub fn half_close(&self) -> Result<(), Status> {
         let status = unsafe {
             sys::zx_socket_shutdown(

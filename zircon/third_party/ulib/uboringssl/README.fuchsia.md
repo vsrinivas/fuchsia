@@ -15,7 +15,7 @@ Use the [roll_boringssl.go] script in Fuchsia's BoringSSL [package].
 All code under this directory is covered by the same [license] as BoringSSL.
 
 [BoringSSL]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/README.md
-[package]: https://fuchsia.googlesource.com/garnet/+/master/packages/boringssl
+[package]: https://fuchsia.googlesource.com/fuchsia/+/master/garnet/packages/boringssl
 [license]: https://fuchsia.googlesource.com/third_party/boringssl/+/master/LICENSE
 
 [//]: # (UPDATE THE DIGEST WHEN ROLLING BORINGSSL)

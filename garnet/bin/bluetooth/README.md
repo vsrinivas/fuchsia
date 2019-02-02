@@ -17,7 +17,7 @@ Source code shortcuts:
 - [Host Library](../../drivers/bluetooth/lib)
 - [Host Bus Driver](../../drivers/bluetooth/host)
 - [HCI Drivers](../../drivers/bluetooth/hci)
-- [HCI Transport Drivers](https://fuchsia.googlesource.com/zircon/+/master/system/dev/bluetooth?autodive=0)
+- [HCI Transport Drivers](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/system/dev/bluetooth?autodive=0)
 
 For more orientation, see
 - [System Architecture](../../docs/bluetooth_architecture.md)
@@ -59,7 +59,7 @@ bluetooth> list-adapters
 bluetooth>
 ```
 
-We also have a Flutter [module](https://fuchsia.googlesource.com/docs/+/HEAD/glossary.md#module)
+We also have a Flutter [module](https://fuchsia.googlesource.com/fuchsia/+/master/docs/glossary.md#module)
 that acts as a Bluetooth system menu based on this API at
 [topaz/app/bluetooth_settings](https://fuchsia.googlesource.com/topaz/+/master/app/bluetooth_settings/).
 
@@ -136,7 +136,7 @@ driver.bt_transport_usb.log=+trace,+info,+error,+warn
 
 Using `fx set` writes these values into the image, so they will survive a restart.
 
-For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/driver-development.md#logging)
+For more detail on driver logging, see [Zircon driver logging](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/driver-development.md#logging)
 
 #### bin/bt-gap
 

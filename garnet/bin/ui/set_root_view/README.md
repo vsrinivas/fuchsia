@@ -29,5 +29,5 @@ $ killall spinning_square_view
 ## Views V2
 
 Use the
-[`present_view`](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/present_view/README.md)
+[`present_view`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/present_view/README.md)
 tool to launch an application via the Views v2 interface.

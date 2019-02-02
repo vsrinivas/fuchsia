@@ -3,7 +3,7 @@ Magma: Overview
 
 ## Background
 
-Fuchsia is a new open source, micro-kernel-like operating system from Google.  Drivers do not execute inside the Zircon kernel, instead they are privileged user-space processes.  Drivers are built using a stable [DDK](https://fuchsia.googlesource.com/zircon/+/master/docs/ddk/overview.md).
+Fuchsia is a new open source, micro-kernel-like operating system from Google.  Drivers do not execute inside the Zircon kernel, instead they are privileged user-space processes.  Drivers are built using a stable [DDK](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/ddk/overview.md).
 
 Magma is the gpu driver architecture for Fuchsia. There are two driver components: a gpu-specific library loaded into each application’s address space; and the magma system driver that manages the hardware.
 

@@ -30,22 +30,22 @@ There are two packages, each containing an independent binary.
 Some high-level functionality provided by HelloInput:
 
 * Receive low-level input reports from Zircon, via an
-[InputReader](https://fuchsia.googlesource.com/garnet/+/master/bin/ui/input_reader/input_reader.h).
+[InputReader](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/bin/ui/input_reader/input_reader.h).
 * Manage input devices and associated state, via
-[InputDeviceImpl](https://fuchsia.googlesource.com/garnet/+/master/public/lib/ui/input/input_device_impl.h)
+[InputDeviceImpl](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/input/input_device_impl.h)
 and
-[DeviceState](https://fuchsia.googlesource.com/garnet/+/master/public/lib/ui/input/device_state.h).
+[DeviceState](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/ui/input/device_state.h).
 * Transform low-level input report into a FIDL
-[InputEvent](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.input/input_events.fidl)
+[InputEvent](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.input/input_events.fidl)
 struct, via DeviceState.
 
 It forwards InputEvents **to** Scenic to be routed to the correct destination
 based on hit testing. Scenic will send an InputEvent to a
-[View](https://fuchsia.googlesource.com/garnet/+/master/lib/ui/gfx/resources/view.h)
+[View](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/lib/ui/gfx/resources/view.h)
 over its
-[SessionListener](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/session.fidl),
+[SessionListener](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/session.fidl),
 as a
-[session event](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.scenic/events.fidl).
+[session event](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.scenic/events.fidl).
 
 To receive InputEvents **from** Scenic, HelloInput implements the following
 callback, given to its session as the event handler:
@@ -70,7 +70,7 @@ To exercise the multi-View case, HelloInput requests a child program to be
 launched, and sets up a ViewHolder into which the child can vend its View.
 HelloInput requests the child to *create* a View into the provided ViewHolder
 through the
-[ViewProvider](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.ui.app/view_provider.fidl)
+[ViewProvider](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.ui.app/view_provider.fidl)
 interface, implemented by the child.
 
 ### HelloInputChild

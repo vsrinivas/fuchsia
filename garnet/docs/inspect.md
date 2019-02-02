@@ -46,7 +46,7 @@ the future.
 
 # API
 
-## [FIDL](https://fuchsia.googlesource.com/garnet/+/master/public/fidl/fuchsia.inspect/inspect.fidl)
+## [FIDL](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/fidl/fuchsia.inspect/inspect.fidl)
 
 The FIDL interface, `fuchsia.inspect.Inspect`, exposes the following
 operations on an object:
@@ -73,7 +73,7 @@ about the component to the hub. For instance, appmgr exposes
 
 # C++ Interface
 
-## [Object Wrapper](https://fuchsia.googlesource.com/garnet/+/HEAD/public/lib/component/cpp/expose.h)
+## [Object Wrapper](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/component/cpp/expose.h)
 
 Class `Object` is the implementation of an object in C++. It implements
 the `Vnode` and `Inspect` interfaces to expose the object through the
@@ -98,7 +98,7 @@ children and on-demand children provided by callback.
 `Metric` allows for typed addition and subtraction. The `Set*` methods set
 the type of the metric, and arithmetic operations do not modify this type.
 
-## [ObjectDir](https://fuchsia.googlesource.com/garnet/+/HEAD/public/lib/component/cpp/object_dir.h)
+## [ObjectDir](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/component/cpp/object_dir.h)
 
 Class `ObjectDir` is a lightweight wrapper around a refcounted pointer
 to an `Object`. `ObjectDirs` are safe to copy, and provide a stable
@@ -107,7 +107,7 @@ reference to a single object.
 `ObjectDir` simplifies traversing a tree of objects by name and setting
 properties/metrics on those objects with a STL-style wrapper.
 
-## [ExposedObject](https://fuchsia.googlesource.com/garnet/+/HEAD/public/lib/component/cpp/exposed_object.h)
+## [ExposedObject](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/public/lib/component/cpp/exposed_object.h)
 
 Class `ExposedObject` is a base class simplifying management of complex
 persistent hierarchies of objects. It is the recommended implementation

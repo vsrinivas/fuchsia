@@ -74,5 +74,5 @@ This is done by running a frontend. See the [frontend documentation][frontends]
 for more details.
 
 
-[backend]: https://fuchsia.googlesource.com/build/+/master/sdk/README.md
+[backend]: https://fuchsia.googlesource.com/fuchsia/+/master/build/sdk/README.md
 [frontends]: https://fuchsia.googlesource.com/fuchsia/+/master/scripts/sdk/README.md

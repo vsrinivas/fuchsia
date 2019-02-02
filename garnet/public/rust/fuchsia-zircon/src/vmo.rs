@@ -11,7 +11,7 @@ use fuchsia_zircon_sys as sys;
 use std::ptr;
 
 /// An object representing a Zircon
-/// [virtual memory object](https://fuchsia.googlesource.com/zircon/+/master/docs/objects/vm_object.md).
+/// [virtual memory object](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/objects/vm_object.md).
 ///
 /// As essentially a subtype of `Handle`, it can be freely interconverted.
 #[derive(Debug, Eq, PartialEq)]
@@ -26,7 +26,7 @@ impl Vmo {
     /// Wraps the
     /// `zx_vmo_create`
     /// syscall. See the
-    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/zircon/+/master/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
+    /// [Shared Memory: Virtual Memory Objects (VMOs)](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/concepts.md#Shared-Memory_Virtual-Memory-Objects-VMOs)
     /// for more information.
     pub fn create(size: u64) -> Result<Vmo, Status> {
         Vmo::create_with_opts(VmoOptions::from_bits_truncate(0), size)
@@ -96,7 +96,7 @@ impl Vmo {
     /// Perform an operation on a range of a virtual memory object.
     ///
     /// Wraps the
-    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_op_range.md)
+    /// [zx_vmo_op_range](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/vmo_op_range.md)
     /// syscall.
     pub fn op_range(&self, op: VmoOp, offset: u64, size: u64) -> Result<(), Status> {
         let status = unsafe {
@@ -108,7 +108,7 @@ impl Vmo {
     /// Create a new virtual memory object that clones a range of this one.
     ///
     /// Wraps the
-    /// [zx_vmo_clone](https://fuchsia.googlesource.com/zircon/+/master/docs/syscalls/vmo_clone.md)
+    /// [zx_vmo_clone](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/vmo_clone.md)
     /// syscall.
     pub fn clone(&self, offset: u64, size: u64) -> Result<Vmo, Status> {
         let mut out = 0;

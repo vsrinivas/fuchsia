@@ -20,7 +20,7 @@ impl Job {
     /// Create a new job as a child of the current job.
     ///
     /// Wraps the
-    /// [zx_job_create](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/job_create.md)
+    /// [zx_job_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/job_create.md)
     /// syscall.
     pub fn create_child_job(&self) -> Result<Job, Status> {
         let parent_job_raw = self.raw_handle();
@@ -37,7 +37,7 @@ impl Job {
     /// root of the new process's address space.
     ///
     /// Wraps the
-    /// [zx_process_create](https://fuchsia.googlesource.com/zircon/+/HEAD/docs/syscalls/process_create.md)
+    /// [zx_process_create](https://fuchsia.googlesource.com/fuchsia/+/master/zircon/docs/syscalls/process_create.md)
     /// syscall.
     pub fn create_child_process(&self, name: &[u8]) -> Result<(Process, Vmar), Status> {
         let parent_job_raw = self.raw_handle();

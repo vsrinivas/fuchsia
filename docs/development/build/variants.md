@@ -8,7 +8,7 @@ The variants defined so far enable things like
 [LTO](https://llvm.org/docs/LinkTimeOptimization.html).
 
 The GN build argument
-[`select_variant`](https://fuchsia.googlesource.com/garnet/+/master/docs/gen/build_arguments.md#select_variant)
+[`select_variant`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/gen/build_arguments.md#select_variant)
 controls which components are built in which variants.  It applies
 automatically to every `executable`, `loadable_module`, or `driver_module`
 target in GN files.  It's a flexible mechanism in which you give a list of
@@ -42,7 +42,7 @@ fx set x64 --variant={host_asan,asan/cat,asan/ledger}
 The GN code supports much more flexible matching rules than just the binary
 name, but there are no shorthands for those.  To do something more complex,
 set the
-[`select_variant`](https://fuchsia.googlesource.com/garnet/+/master/docs/gen/build_arguments.md#select_variant)
+[`select_variant`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/gen/build_arguments.md#select_variant)
 GN build argument directly.
 
  * You can do this via the `--args` switch to `gn gen` once you have the
@@ -60,5 +60,5 @@ GN build argument directly.
 
 To see the list of variants available and learn more about how to define
 new ones, see the
-[`known_variants`](https://fuchsia.googlesource.com/garnet/+/master/docs/gen/build_arguments.md#known_variants)
+[`known_variants`](https://fuchsia.googlesource.com/fuchsia/+/master/garnet/docs/gen/build_arguments.md#known_variants)
 build argument.
