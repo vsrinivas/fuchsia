@@ -1212,23 +1212,28 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
     // consecutive new pages added to this vmo.
     uint64_t new_pages_start = offset;
     uint64_t new_pages_len = 0;
+    zx_status_t status = ZX_OK;
     while (!pages->IsDone()) {
         vm_page* src_page = pages->Pop();
-        zx_status_t status = AddPageLocked(src_page, offset);
-        if (status == ZX_ERR_ALREADY_EXISTS) {
+        status = AddPageLocked(src_page, offset);
+        if (status == ZX_OK) {
+            new_pages_len += PAGE_SIZE;
+        } else {
             list_add_tail(&free_list, &src_page->queue_node);
 
-            // We hit the end of a run of absent pages, so notify the pager source
-            // of any new pages that were added and reset the tracking variables.
-            if (new_pages_len) {
-                page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
+            if (likely(status == ZX_ERR_ALREADY_EXISTS)) {
+                status = ZX_OK;
+
+                // We hit the end of a run of absent pages, so notify the pager source
+                // of any new pages that were added and reset the tracking variables.
+                if (new_pages_len) {
+                    page_source_->OnPagesSupplied(new_pages_start, new_pages_len);
+                }
+                new_pages_start = offset + PAGE_SIZE;
+                new_pages_len = 0;
+            } else {
+                break;
             }
-            new_pages_start = offset + PAGE_SIZE;
-            new_pages_len = 0;
-        } else if (status == ZX_OK) {
-            new_pages_len += PAGE_SIZE;
-        } else if (status != ZX_OK) {
-            return status;
         }
         offset += PAGE_SIZE;
 
@@ -1242,7 +1247,7 @@ zx_status_t VmObjectPaged::SupplyPages(uint64_t offset, uint64_t len, VmPageSpli
         pmm_free(&free_list);
     }
 
-    return ZX_OK;
+    return status;
 }
 
 zx_status_t VmObjectPaged::InvalidateCache(const uint64_t offset, const uint64_t len) {
