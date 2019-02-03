@@ -4,14 +4,29 @@
 // license that can be found in the LICENSE file or at
 // https://opensource.org/licenses/MIT
 
-#include <assert.h>
 #include <arch/arm64/hypervisor/el2_state.h>
 #include <arch/arm64/hypervisor/gic/gicv2.h>
+#include <assert.h>
+#include <bits.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv2_regs.h>
 #include <vm/pmm.h>
 
 static constexpr uint32_t kNumLrs = 64;
+
+// Check that InterruptState corresponds exactly to the LR state bits.
+static_assert(static_cast<InterruptState>(BITS_SHIFT(0, GICH_LR_ACTIVE_BIT, GICH_LR_PENDING_BIT)) ==
+              InterruptState::INACTIVE);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1 << GICH_LR_PENDING_BIT, GICH_LR_ACTIVE_BIT,
+                                                     GICH_LR_PENDING_BIT)) ==
+              InterruptState::PENDING);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1 << GICH_LR_ACTIVE_BIT, GICH_LR_ACTIVE_BIT,
+                                                     GICH_LR_PENDING_BIT)) ==
+              InterruptState::ACTIVE);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1 << GICH_LR_PENDING_BIT |
+                                                         1 << GICH_LR_ACTIVE_BIT,
+                                                     GICH_LR_ACTIVE_BIT, GICH_LR_PENDING_BIT)) ==
+              InterruptState::PENDING_AND_ACTIVE);
 
 // Representation of GICH registers. For details please refer to ARM Generic Interrupt
 // Controller Architecture Specification Version 2, 5.3 GIC virtual interface control
@@ -94,15 +109,18 @@ static uint32_t gicv2_default_gich_vmcr() {
     return GICH_VMCR_VPMR | GICH_VMCR_VENG0;
 }
 
-static uint64_t gicv2_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
-    uint64_t lr = GICH_LR_PENDING | GICH_LR_PRIORITY(prio) | GICH_LR_VIRTUAL_ID(vector);
+static uint64_t gicv2_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state,
+                                         uint32_t vector) {
+    uint64_t lr = (static_cast<uint64_t>(state) << GICH_LR_PENDING_BIT) | GICH_LR_PRIORITY(prio) |
+                  GICH_LR_VIRTUAL_ID(vector);
     if (hw) {
         lr |= GICH_LR_HARDWARE | GICH_LR_PHYSICAL_ID(vector);
     }
     return lr;
 }
 
-static uint32_t gicv2_get_vector_from_lr(uint64_t lr) {
+static uint32_t gicv2_get_vector_from_lr(uint64_t lr, InterruptState* state) {
+    *state = static_cast<InterruptState>(BITS_SHIFT(lr, GICH_LR_ACTIVE_BIT, GICH_LR_PENDING_BIT));
     return lr & GICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 

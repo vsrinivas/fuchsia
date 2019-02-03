@@ -8,12 +8,28 @@
 #include <arch/arm64/hypervisor/gic/el2.h>
 #include <arch/arm64/hypervisor/gic/gicv3.h>
 #include <arch/ops.h>
+#include <bits.h>
 #include <dev/interrupt/arm_gic_hw_interface.h>
 #include <dev/interrupt/arm_gicv3_regs.h>
 #include <vm/physmap.h>
 
 static constexpr uint32_t kNumAprs = 4;
 static constexpr uint32_t kNumLrs = 16;
+
+// Check that InterruptState corresponds exactly to the LR state bits.
+static_assert(static_cast<InterruptState>(BITS_SHIFT(0ull, ICH_LR_ACTIVE_BIT,
+                                                     ICH_LR_PENDING_BIT)) ==
+              InterruptState::INACTIVE);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1ull << ICH_LR_PENDING_BIT, ICH_LR_ACTIVE_BIT,
+                                                     ICH_LR_PENDING_BIT)) ==
+              InterruptState::PENDING);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1ull << ICH_LR_ACTIVE_BIT, ICH_LR_ACTIVE_BIT,
+                                                     ICH_LR_PENDING_BIT)) ==
+              InterruptState::ACTIVE);
+static_assert(static_cast<InterruptState>(BITS_SHIFT(1ull << ICH_LR_PENDING_BIT |
+                                                         1ull << ICH_LR_ACTIVE_BIT,
+                                                     ICH_LR_ACTIVE_BIT, ICH_LR_PENDING_BIT)) ==
+              InterruptState::PENDING_AND_ACTIVE);
 
 static zx_status_t gicv3_get_gicv(paddr_t* gicv_paddr) {
     // Check for presence of GICv3 virtualisation extensions.
@@ -60,16 +76,18 @@ static void giv3_write_gich_state(IchState* state, uint32_t hcr) {
     arm64_el2_gicv3_write_gich_state(physmap_to_paddr(state), hcr);
 }
 
-static uint64_t gicv3_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
-    uint64_t lr = ICH_LR_PENDING | ICH_LR_GROUP1 | ICH_LR_PRIORITY(prio) |
-        ICH_LR_VIRTUAL_ID(vector);
+static uint64_t gicv3_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state,
+                                         uint32_t vector) {
+    uint64_t lr = (static_cast<uint64_t>(state) << ICH_LR_PENDING_BIT) | ICH_LR_GROUP1 |
+                  ICH_LR_PRIORITY(prio) | ICH_LR_VIRTUAL_ID(vector);
     if (hw) {
         lr |= ICH_LR_HARDWARE | ICH_LR_PHYSICAL_ID(vector);
     }
     return lr;
 }
 
-static uint32_t gicv3_get_vector_from_lr(uint64_t lr) {
+static uint32_t gicv3_get_vector_from_lr(uint64_t lr, InterruptState* state) {
+    *state = static_cast<InterruptState>(BITS_SHIFT(lr, ICH_LR_ACTIVE_BIT, ICH_LR_PENDING_BIT));
     return lr & ICH_LR_VIRTUAL_ID(UINT64_MAX);
 }
 

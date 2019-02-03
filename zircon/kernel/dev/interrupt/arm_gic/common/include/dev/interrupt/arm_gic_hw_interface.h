@@ -7,7 +7,14 @@
 
 #pragma once
 
-#include <zircon/types.h>
+#include <sys/types.h>
+
+enum class InterruptState : uint8_t {
+    INACTIVE = 0,
+    PENDING = 1,
+    ACTIVE = 2,
+    PENDING_AND_ACTIVE = 3,
+};
 
 struct IchState;
 
@@ -17,8 +24,8 @@ struct arm_gic_hw_interface_ops {
     void (*read_gich_state)(IchState* state);
     void (*write_gich_state)(IchState* state, uint32_t hcr);
     uint32_t (*default_gich_vmcr)();
-    uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, uint32_t vector);
-    uint32_t (*get_vector_from_lr)(uint64_t lr);
+    uint64_t (*get_lr_from_vector)(bool hw, uint8_t prio, InterruptState state, uint32_t vector);
+    uint32_t (*get_vector_from_lr)(uint64_t lr, InterruptState* state);
     uint8_t (*get_num_pres)();
     uint8_t (*get_num_lrs)();
 };
@@ -36,10 +43,10 @@ void gic_write_gich_state(IchState* state, uint32_t hcr);
 uint32_t gic_default_gich_vmcr();
 
 // Returns a list register based on the given interrupt vector.
-uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector);
+uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state, uint32_t vector);
 
 // Returns an interrupt vector based on the given list register.
-uint32_t gic_get_vector_from_lr(uint64_t lr);
+uint32_t gic_get_vector_from_lr(uint64_t lr, InterruptState* state);
 
 // Returns the number of preemption bits.
 uint8_t gic_get_num_pres();

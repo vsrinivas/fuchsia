@@ -23,8 +23,8 @@
 
 #include "constants_priv.h"
 
-static constexpr uint32_t kGuestMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE |
-                                           ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
+static constexpr uint32_t kGuestMapFlags =
+    ZX_VM_PERM_READ | ZX_VM_PERM_WRITE | ZX_VM_PERM_EXECUTE | ZX_VM_SPECIFIC;
 static constexpr uint32_t kHostMapFlags = ZX_VM_PERM_READ | ZX_VM_PERM_WRITE;
 // Inject an interrupt with vector 32, the first user defined interrupt vector.
 static constexpr uint32_t kInterruptVector = 32u;
@@ -48,6 +48,10 @@ extern const char vcpu_write_cr0_start[];
 extern const char vcpu_write_cr0_end[];
 extern const char vcpu_wfi_start[];
 extern const char vcpu_wfi_end[];
+extern const char vcpu_wfi_pending_interrupt_start_gicv2[];
+extern const char vcpu_wfi_pending_interrupt_end_gicv2[];
+extern const char vcpu_wfi_pending_interrupt_start_gicv3[];
+extern const char vcpu_wfi_pending_interrupt_end_gicv3[];
 extern const char vcpu_aarch32_wfi_start[];
 extern const char vcpu_aarch32_wfi_end[];
 extern const char vcpu_fp_start[];
@@ -96,38 +100,63 @@ static bool teardown(test_t* test) {
     END_HELPER;
 }
 
-template <zx_status_t (*GetResource)(zx_handle_t, zx_status_t*, zx_handle_t*)>
-static zx_status_t get_resource(zx::resource* resource) {
+// TODO(MAC-246): Convert to C++ FIDL interface.
+static zx_status_t get_sysinfo(zx::channel* sysinfo) {
     fbl::unique_fd fd(open(kSysInfoPath, O_RDWR));
     if (!fd) {
         return ZX_ERR_IO;
     }
 
+    return fdio_get_service_handle(fd.release(), sysinfo->reset_and_get_address());
+}
+
+// TODO(MAC-246): Convert to C++ FIDL interface.
+static zx_status_t get_hypervisor_resource(zx::resource* resource) {
     zx::channel channel;
-    zx_status_t status = fdio_get_service_handle(fd.release(), channel.reset_and_get_address());
+    zx_status_t status = get_sysinfo(&channel);
     if (status != ZX_OK) {
         return status;
     }
 
-    zx_status_t fidl_status =
-        GetResource(channel.get(), &status, resource->reset_and_get_address());
+    zx_status_t fidl_status = fuchsia_sysinfo_DeviceGetHypervisorResource(
+        channel.get(), &status, resource->reset_and_get_address());
     if (fidl_status != ZX_OK) {
         return fidl_status;
     }
     return status;
 }
 
+#ifdef __aarch64__
+
+// TODO(MAC-246): Convert to C++ FIDL interface.
+static zx_status_t get_interrupt_controller_info(fuchsia_sysinfo_InterruptControllerInfo* info) {
+    zx::channel channel;
+    zx_status_t status = get_sysinfo(&channel);
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    zx_status_t fidl_status =
+        fuchsia_sysinfo_DeviceGetInterruptControllerInfo(channel.get(), &status, info);
+    if (fidl_status != ZX_OK) {
+        return fidl_status;
+    }
+    return status;
+}
+
+#endif // __aarch64__
+
 static bool setup(test_t* test, const char* start, const char* end) {
     ASSERT_EQ(zx::vmo::create(VMO_SIZE, 0, &test->vmo), ZX_OK);
-    ASSERT_EQ(zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kHostMapFlags,
-                                         &test->host_addr),
-              ZX_OK);
+    ASSERT_EQ(
+        zx::vmar::root_self()->map(0, test->vmo, 0, VMO_SIZE, kHostMapFlags, &test->host_addr),
+        ZX_OK);
 
     // Add ZX_RIGHT_EXECUTABLE so we can map into guest address space.
     ASSERT_EQ(test->vmo.replace_as_executable(zx::handle(), &test->vmo), ZX_OK);
 
     zx::resource resource;
-    zx_status_t status = get_resource<fuchsia_sysinfo_DeviceGetHypervisorResource>(&resource);
+    zx_status_t status = get_hypervisor_resource(&resource);
     ASSERT_EQ(status, ZX_OK);
     status = zx::guest::create(resource, 0, &test->guest, &test->vmar);
     test->supported = status != ZX_ERR_NOT_SUPPORTED;
@@ -138,10 +167,8 @@ static bool setup(test_t* test, const char* start, const char* end) {
     ASSERT_EQ(status, ZX_OK);
 
     zx_gpaddr_t guest_addr;
-    ASSERT_EQ(test->vmar.map(0, test->vmo, 0, VMO_SIZE, kGuestMapFlags, &guest_addr),
-              ZX_OK);
-    ASSERT_EQ(test->guest.set_trap(ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE,
-                                   zx::port(), 0),
+    ASSERT_EQ(test->vmar.map(0, test->vmo, 0, VMO_SIZE, kGuestMapFlags, &guest_addr), ZX_OK);
+    ASSERT_EQ(test->guest.set_trap(ZX_GUEST_TRAP_MEM, EXIT_TEST_ADDR, PAGE_SIZE, zx::port(), 0),
               ZX_OK);
 
     // Setup the guest.
@@ -177,26 +204,25 @@ static bool setup_and_interrupt(test_t* test, const char* start, const char* end
     test->interrupts_enabled = true;
 
     thrd_t thread;
-    int ret = thrd_create(&thread, [](void* ctx) -> int {
-        test_t* test = static_cast<test_t*>(ctx);
-        return test->vcpu.interrupt(kInterruptVector) == ZX_OK ? thrd_success : thrd_error;
-    },
-                          test);
+    int ret = thrd_create(
+        &thread,
+        [](void* ctx) -> int {
+            test_t* test = static_cast<test_t*>(ctx);
+            return test->vcpu.interrupt(kInterruptVector) == ZX_OK ? thrd_success : thrd_error;
+        },
+        test);
     ASSERT_EQ(ret, thrd_success);
 
     return true;
 }
 
-static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem,
-                                    const zx::vcpu& vcpu) {
+static inline bool exception_thrown(const zx_packet_guest_mem_t& guest_mem, const zx::vcpu& vcpu) {
 #if __x86_64__
     if (guest_mem.inst_len != 12) {
         // Not the expected mov imm, (EXIT_TEST_ADDR) size.
         return true;
     }
-    if (guest_mem.inst_buf[8] == 0 &&
-        guest_mem.inst_buf[9] == 0 &&
-        guest_mem.inst_buf[10] == 0 &&
+    if (guest_mem.inst_buf[8] == 0 && guest_mem.inst_buf[9] == 0 && guest_mem.inst_buf[10] == 0 &&
         guest_mem.inst_buf[11] == 0) {
         return false;
     }
@@ -442,7 +468,7 @@ static bool vcpu_write_cr0() {
     END_TEST;
 }
 
-#endif  // __x86_64__
+#endif // __x86_64__
 
 #ifdef __aarch64__
 
@@ -455,6 +481,40 @@ static bool vcpu_wfi() {
         // The hypervisor isn't supported, so don't run the test.
         return true;
     }
+
+    ASSERT_TRUE(resume_and_clean_exit(&test));
+    ASSERT_TRUE(teardown(&test));
+
+    END_TEST;
+}
+
+static bool vcpu_wfi_pending_interrupt() {
+    BEGIN_TEST;
+
+    fuchsia_sysinfo_InterruptControllerInfo info;
+    ASSERT_EQ(ZX_OK, get_interrupt_controller_info(&info));
+
+    test_t test;
+    switch (info.type) {
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V2:
+        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_start_gicv2,
+                          vcpu_wfi_pending_interrupt_end_gicv2));
+        break;
+    case fuchsia_sysinfo_InterruptControllerType_GIC_V3:
+        ASSERT_TRUE(setup(&test, vcpu_wfi_pending_interrupt_start_gicv3,
+                          vcpu_wfi_pending_interrupt_end_gicv3));
+        break;
+    default:
+        ASSERT_TRUE(false, "Unsupported GIC version");
+    }
+    if (!test.supported) {
+        // The hypervisor isn't supported, so don't run the test.
+        return true;
+    }
+
+    // Inject two interrupts so that there will be one pending when the guest exits on wfi.
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector), ZX_OK);
+    ASSERT_EQ(test.vcpu.interrupt(kInterruptVector + 1), ZX_OK);
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
     ASSERT_TRUE(teardown(&test));
@@ -567,8 +627,7 @@ static bool vcpu_read_write_state() {
 #endif
     };
 
-    ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)),
-              ZX_OK);
+    ASSERT_EQ(test.vcpu.write_state(ZX_VCPU_STATE, &vcpu_state, sizeof(vcpu_state)), ZX_OK);
 
     ASSERT_TRUE(resume_and_clean_exit(&test));
 
@@ -730,7 +789,7 @@ static bool vcpu_vmcall() {
     END_TEST;
 }
 
-#endif  // __x86_64__
+#endif // __x86_64__
 
 static bool guest_set_trap_with_mem() {
     BEGIN_TEST;
@@ -771,8 +830,7 @@ static bool guest_set_trap_with_bell() {
     ASSERT_EQ(zx::port::create(0, &port), ZX_OK);
 
     // Trap on access of TRAP_ADDR.
-    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey),
-              ZX_OK);
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_BELL, TRAP_ADDR, PAGE_SIZE, port, kTrapKey), ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
@@ -801,8 +859,7 @@ static bool guest_set_trap_with_io() {
     }
 
     // Trap on writes to TRAP_PORT.
-    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_IO, TRAP_PORT, 1, zx::port(), kTrapKey),
-              ZX_OK);
+    ASSERT_EQ(test.guest.set_trap(ZX_GUEST_TRAP_IO, TRAP_PORT, 1, zx::port(), kTrapKey), ZX_OK);
 
     zx_port_packet_t packet = {};
     ASSERT_EQ(test.vcpu.resume(&packet), ZX_OK);
@@ -815,7 +872,7 @@ static bool guest_set_trap_with_io() {
 
     END_TEST;
 }
-#endif  // __x86_64__
+#endif // __x86_64__
 
 BEGIN_TEST_CASE(guest)
 RUN_TEST(vcpu_resume)
@@ -825,6 +882,7 @@ RUN_TEST(guest_set_trap_with_mem)
 RUN_TEST(guest_set_trap_with_bell)
 #if __aarch64__
 RUN_TEST(vcpu_wfi)
+RUN_TEST(vcpu_wfi_pending_interrupt)
 RUN_TEST(vcpu_wfi_aarch32)
 RUN_TEST(vcpu_fp)
 RUN_TEST(vcpu_fp_aarch32)

@@ -22,12 +22,12 @@
 
 #define LOCAL_TRACE 0
 
-#define SET_SYSREG(sysreg)                                                      \
-    ({                                                                          \
-        guest_state->system_state.sysreg = reg;                                 \
-        LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg); \
-        next_pc(guest_state);                                                   \
-        ZX_OK;                                                                  \
+#define SET_SYSREG(sysreg)                                                                         \
+    ({                                                                                             \
+        guest_state->system_state.sysreg = reg;                                                    \
+        LTRACEF("guest " #sysreg ": %#lx\n", guest_state->system_state.sysreg);                    \
+        next_pc(guest_state);                                                                      \
+        ZX_OK;                                                                                     \
     })
 
 static constexpr size_t kPageTableLevelShift = 3;
@@ -88,8 +88,8 @@ static bool timer_enabled(GuestState* guest_state) {
 
 void timer_maybe_interrupt(GuestState* guest_state, GichState* gich_state) {
     if (timer_enabled(guest_state) && current_ticks() >= guest_state->cntv_cval_el0 &&
-        !gich_state->active_interrupts.GetOne(kTimerVector)) {
-        gich_state->interrupt_tracker.Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
+        gich_state->GetInterruptState(kTimerVector) == InterruptState::INACTIVE) {
+        gich_state->Track(kTimerVector, hypervisor::InterruptType::PHYSICAL);
     }
 }
 
@@ -102,6 +102,12 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
         thread_reschedule();
         return ZX_OK;
     }
+
+    // If there is already an active interrupt in the list registers, return and handle it.
+    if (gich_state->HasPendingInterrupt()) {
+        return ZX_OK;
+    }
+
     ktrace_vcpu_exit(VCPU_WFI_INSTRUCTION, guest_state->system_state.elr_el2);
     zx_time_t deadline = ZX_TIME_INFINITE;
     if (timer_enabled(guest_state)) {
@@ -110,7 +116,7 @@ static zx_status_t handle_wfi_wfe_instruction(uint32_t iss, GuestState* guest_st
         }
         deadline = cntpct_to_zx_time(guest_state->cntv_cval_el0);
     }
-    return gich_state->interrupt_tracker.Wait(deadline, nullptr);
+    return gich_state->Wait(deadline);
 }
 
 static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
@@ -138,8 +144,8 @@ static zx_status_t handle_smc_instruction(uint32_t iss, GuestState* guest_state,
 static void clean_invalidate_cache(zx_paddr_t table, size_t index_shift) {
     // TODO(abdulla): Make this understand concatenated page tables.
     auto* pte = static_cast<pte_t*>(paddr_to_physmap(table));
-    pte_t page = index_shift > MMU_GUEST_PAGE_SIZE_SHIFT ?
-                 MMU_PTE_L012_DESCRIPTOR_BLOCK : MMU_PTE_L3_DESCRIPTOR_PAGE;
+    pte_t page = index_shift > MMU_GUEST_PAGE_SIZE_SHIFT ? MMU_PTE_L012_DESCRIPTOR_BLOCK
+                                                         : MMU_PTE_L3_DESCRIPTOR_PAGE;
     for (size_t i = 0; i < PAGE_SIZE / sizeof(pte_t); i++) {
         pte_t desc = pte[i] & MMU_PTE_DESCRIPTOR_MASK;
         pte_t paddr = pte[i] & MMU_PTE_OUTPUT_ADDR_MASK;
@@ -249,8 +255,7 @@ static zx_status_t handle_instruction_abort(GuestState* guest_state,
 
 static zx_status_t handle_data_abort(uint32_t iss, GuestState* guest_state,
                                      hypervisor::GuestPhysicalAddressSpace* gpas,
-                                     hypervisor::TrapMap* traps,
-                                     zx_port_packet_t* packet) {
+                                     hypervisor::TrapMap* traps, zx_port_packet_t* packet) {
     zx_vaddr_t guest_paddr = guest_state->hpfar_el2;
     hypervisor::Trap* trap;
     zx_status_t status = traps->FindTrap(ZX_GUEST_TRAP_BELL, guest_paddr, &trap);
@@ -347,11 +352,9 @@ zx_status_t vmexit_handler(uint64_t* hcr, GuestState* guest_state, GichState* gi
     }
     if (status != ZX_OK && status != ZX_ERR_NEXT && status != ZX_ERR_CANCELED) {
         dprintf(CRITICAL, "VM exit handler for %u (%s) in EL%u at %#lx returned %d\n",
-                static_cast<uint32_t>(syndrome.ec),
-                exception_class_name(syndrome.ec),
+                static_cast<uint32_t>(syndrome.ec), exception_class_name(syndrome.ec),
                 BITS_SHIFT(guest_state->system_state.spsr_el2, 3, 2),
-                guest_state->system_state.elr_el2,
-                status);
+                guest_state->system_state.elr_el2, status);
     }
     return status;
 }

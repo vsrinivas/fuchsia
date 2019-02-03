@@ -29,12 +29,12 @@ uint32_t gic_default_gich_vmcr() {
     return gic_ops->default_gich_vmcr();
 }
 
-uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, uint32_t vector) {
-    return gic_ops->get_lr_from_vector(hw, prio, vector);
+uint64_t gic_get_lr_from_vector(bool hw, uint8_t prio, InterruptState state, uint32_t vector) {
+    return gic_ops->get_lr_from_vector(hw, prio, state, vector);
 }
 
-uint32_t gic_get_vector_from_lr(uint64_t lr) {
-    return gic_ops->get_vector_from_lr(lr);
+uint32_t gic_get_vector_from_lr(uint64_t lr, InterruptState* state) {
+    return gic_ops->get_vector_from_lr(lr, state);
 }
 
 uint8_t gic_get_num_pres() {

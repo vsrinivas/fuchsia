@@ -6,6 +6,8 @@
 
 #include "constants_priv.h"
 
+#define ICC_IAR1_EL1 S3_0_C12_C12_0
+
 .set CPACR_EL1_FPEN_NO_TRAP, (3 << 20)
 
 // See ARM ARM Table D1.10.2 for more details.
@@ -19,6 +21,22 @@
 .set SERROR_EXC_OFFSET,      0x180
 
 .set SPSR_M_BIT_ARCH32,      0x010
+
+.set GICC_BASE,              0x800001000
+.set GICC_IAR_OFFSET,        0xc
+
+.macro movlit reg, literal
+mov \reg, #((\literal) & 0xffff)
+.ifne (((\literal) >> 16) & 0xffff)
+movk \reg, #(((\literal) >> 16) & 0xffff), lsl #16
+.endif
+.ifne (((\literal) >> 32) & 0xffff)
+movk \reg, #(((\literal) >> 32) & 0xffff), lsl #32
+.endif
+.ifne (((\literal) >> 48) & 0xffff)
+movk \reg, #(((\literal) >> 48) & 0xffff), lsl #48
+.endif
+.endm
 
 // Define new function 'name'.
 // Local label '1:' used by other macros to compute offsets.
@@ -110,6 +128,33 @@ FUNCTION vcpu_wfi_start
     wfi
     test_complete
 FUNCTION vcpu_wfi_end
+
+// Test wfi handling with pending interrupt in LR (GICv2).
+FUNCTION vcpu_wfi_pending_interrupt_start_gicv2
+    msr daifclr, #2
+    b .
+
+    exception_vector CURRENT_EL_ELx_BASE, IRQ_EXC_OFFSET
+    movlit x0, GICC_BASE
+    // Acknowledge interrupt by reading IAR.
+    ldr w1, [x0, GICC_IAR_OFFSET]
+    wfi
+    test_complete
+FUNCTION vcpu_wfi_pending_interrupt_end_gicv2
+
+// Test wfi handling with pending interrupt in LR (GICv3).
+FUNCTION vcpu_wfi_pending_interrupt_start_gicv3
+    msr daifclr, #2
+    b .
+
+    exception_vector CURRENT_EL_ELx_BASE, IRQ_EXC_OFFSET
+    movlit x0, GICC_BASE
+    // Acknowledge interrupt by reading IAR.
+    mrs x1, ICC_IAR1_EL1
+    dsb sy
+    wfi
+    test_complete
+FUNCTION vcpu_wfi_pending_interrupt_end_gicv3
 
 // Test wfi instruction handling.
 // Execution of WFI at EL0 on AARCH32 is propagated to EL1 / AARCH64.

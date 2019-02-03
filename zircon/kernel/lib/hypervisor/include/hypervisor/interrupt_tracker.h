@@ -16,23 +16,16 @@
 
 namespace hypervisor {
 
-enum class InterruptType {
-    INACTIVE,
-    VIRTUAL,
-    PHYSICAL
+// InterruptBitmap relies on these precise enum values, do not modify without adjusting below.
+enum class InterruptType : uint8_t {
+    INACTIVE = 0,
+    VIRTUAL = 1,
+    PHYSICAL = 2,
 };
-static_assert(
-    static_cast<int>(InterruptType::INACTIVE) == 0 &&
-    static_cast<int>(InterruptType::VIRTUAL) == 1 &&
-    static_cast<int>(InterruptType::PHYSICAL) == 2,
-    "InterruptBitmap relies on these invariants.");
 
-template <uint32_t N>
-class InterruptBitmap {
+template <uint32_t N> class InterruptBitmap {
 public:
-    zx_status_t Init() {
-        return bitmap_.Reset(kNumBits);
-    }
+    zx_status_t Init() { return bitmap_.Reset(kNumBits); }
 
     InterruptType Get(uint32_t vector) const {
         if (vector >= N) {
@@ -93,8 +86,7 @@ private:
 };
 
 // |N| is the maximum number of interrupts to be tracked.
-template <uint32_t N>
-class InterruptTracker {
+template <uint32_t N> class InterruptTracker {
 public:
     zx_status_t Init() {
         event_init(&event_, false, EVENT_FLAG_AUTOUNSIGNAL);

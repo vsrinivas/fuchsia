@@ -7,8 +7,8 @@
 #pragma once
 
 #include <arch/arm64/hypervisor/el2_state.h>
+#include <dev/interrupt/arm_gic_hw_interface.h>
 #include <fbl/ref_ptr.h>
-#include <ktl/unique_ptr.h>
 #include <hypervisor/guest_physical_address_space.h>
 #include <hypervisor/id_allocator.h>
 #include <hypervisor/interrupt_tracker.h>
@@ -16,6 +16,7 @@
 #include <hypervisor/trap_map.h>
 #include <kernel/event.h>
 #include <kernel/spinlock.h>
+#include <ktl/unique_ptr.h>
 #include <zircon/types.h>
 
 static constexpr uint8_t kNumGroups = 2;
@@ -58,11 +59,37 @@ private:
 };
 
 // Stores the state of the GICH across VM exits.
-struct GichState {
+class GichState {
+public:
+    zx_status_t Init();
+
+    bool Pending() { return interrupt_tracker_.Pending(); }
+
+    hypervisor::InterruptType Pop(uint32_t* vector) { return interrupt_tracker_.Pop(vector); }
+
+    void Track(uint32_t vector, hypervisor::InterruptType type) {
+        interrupt_tracker_.Track(vector, type);
+    }
+
+    void Interrupt(uint32_t vector, hypervisor::InterruptType type, bool* signaled) {
+        interrupt_tracker_.Interrupt(vector, type, signaled);
+    }
+
+    zx_status_t Wait(zx_time_t deadline) { return interrupt_tracker_.Wait(deadline, nullptr); }
+
+    InterruptState GetInterruptState(uint32_t vector);
+    bool HasPendingInterrupt();
+    void SetAllInterruptStates(IchState* ich_state);
+
+private:
+    void SetInterruptState(uint32_t vector, InterruptState state);
+
     // Tracks pending interrupts.
-    hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker;
-    // Tracks active interrupts.
-    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumInterrupts>> active_interrupts;
+    hypervisor::InterruptTracker<kNumInterrupts> interrupt_tracker_;
+
+    // Tracks active and pending interrupts.
+    static constexpr uint32_t kNumBits = kNumInterrupts * 2;
+    bitmap::RawBitmapGeneric<bitmap::FixedStorage<kNumBits>> current_interrupts_;
 };
 
 // Loads GICH within a given scope.

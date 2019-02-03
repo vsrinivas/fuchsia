@@ -13,7 +13,7 @@
 typedef struct zx_port_packet zx_port_packet_t;
 
 struct GuestState;
-struct GichState;
+class GichState;
 
 // clang-format off
 
