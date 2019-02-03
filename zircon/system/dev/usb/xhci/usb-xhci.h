@@ -1,0 +1,67 @@
+// Copyright 2019 The Fuchsia Authors. All rights reserved.
+// Use of this source code is governed by a BSD-style license that can be
+// found in the LICENSE file.
+
+#pragma once
+
+#include <ddktl/device.h>
+#include <ddktl/protocol/pci.h>
+#include <ddktl/protocol/platform/device.h>
+#include <ddktl/protocol/usb/hci.h>
+
+#include "xhci.h"
+
+namespace usb_xhci {
+
+class UsbXhci;
+using UsbXhciType = ddk::Device<UsbXhci, ddk::Suspendable, ddk::Unbindable>;
+
+// This is the main class for the USB XHCI host controller driver.
+class UsbXhci : public UsbXhciType,
+                public ddk::UsbHciProtocol<UsbXhci, ddk::base_protocol> {
+public:
+    explicit UsbXhci(zx_device_t* parent)
+        : UsbXhciType(parent), pci_(parent), pdev_(parent) {}
+
+    static zx_status_t Create(void* ctx, zx_device_t* parent);
+
+    // Device protocol implementation.
+    zx_status_t DdkSuspend(uint32_t flags);
+    void DdkUnbind();
+    void DdkRelease();
+
+    // USB HCI protocol implementation.
+    void UsbHciRequestQueue(usb_request_t* usb_request, const usb_request_complete_t* complete_cb);
+    void UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf);
+    size_t UsbHciGetMaxDeviceCount();
+    zx_status_t UsbHciEnableEndpoint(uint32_t device_id, const usb_endpoint_descriptor_t* ep_desc,
+                                     const usb_ss_ep_comp_descriptor_t* ss_com_desc, bool enable);
+    uint64_t UsbHciGetCurrentFrame();
+    zx_status_t UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
+                                   const usb_hub_descriptor_t* desc);
+    zx_status_t UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed);
+    zx_status_t UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port);
+    zx_status_t UsbHciHubDeviceReset(uint32_t device_id, uint32_t port);
+    zx_status_t UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address);
+    zx_status_t UsbHciResetDevice(uint32_t hub_address, uint32_t device_id);
+    size_t UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address);
+    zx_status_t UsbHciCancelAll(uint32_t device_id, uint8_t ep_address);
+    size_t UsbHciGetRequestSize();
+
+private:
+    DISALLOW_COPY_ASSIGN_AND_MOVE(UsbXhci);
+
+    int StartThread();
+    zx_status_t FinishBind();
+    zx_status_t InitPci();
+    zx_status_t InitPdev();
+    zx_status_t Init();
+
+    // Pointer to C struct that represents most of the driver.
+    xhci_t* xhci_ = nullptr;
+
+    ddk::PciProtocolClient pci_;
+    ddk::PDevProtocolClient pdev_;
+};
+
+} // namespace usb_xhci

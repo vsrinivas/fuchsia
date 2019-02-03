@@ -9,6 +9,8 @@
 #include "xhci.h"
 #include "xhci-transfer.h"
 
+namespace usb_xhci {
+
 typedef struct {
     xhci_command_context_t context;
     sync_completion_t completion;
@@ -36,3 +38,5 @@ zx_status_t xhci_send_command(xhci_t* xhci, uint32_t command, uint64_t ptr, uint
 //           searching begins at mmio base.
 // match_cap_id: if non-null, only capabilities with this id will be returned.
 uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_cap_id);
+
+} // namespace usb_xhci

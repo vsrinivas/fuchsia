@@ -8,6 +8,8 @@
 
 #include <hw/reg.h>
 
+namespace usb_xhci {
+
 #define XHCI_READ32(a)      readl(a)
 #define XHCI_WRITE32(a, v)  writel(v, a)
 #define XHCI_READ64(a)      readll(a)
@@ -562,3 +564,5 @@ static inline uint32_t trb_get_type(xhci_trb_t* trb) {
 static inline void trb_set_control(xhci_trb_t* trb, uint32_t type, uint32_t flags) {
     XHCI_WRITE32(&trb->control, ((type << TRB_TYPE_START) & TRB_TYPE_MASK) | flags);
 }
+
+} // namespace usb_xhci

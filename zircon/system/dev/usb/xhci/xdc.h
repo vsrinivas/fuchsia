@@ -15,6 +15,8 @@
 #include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
+namespace usb_xhci {
+
 #define TRANSFER_RING_SIZE     (PAGE_SIZE / sizeof(xhci_trb_t))
 
 // The type and length fields for a string descriptor are one byte each.
@@ -157,3 +159,5 @@ void xdc_endpoint_set_halt_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xdc_
                                   __TA_REQUIRES(xdc->lock);
 void xdc_write_complete(void* ctx, usb_request_t* req);
 void xdc_read_complete(void* ctx, usb_request_t* req);
+
+} // namespace usb_xhci

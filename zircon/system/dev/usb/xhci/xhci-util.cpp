@@ -8,6 +8,8 @@
 
 #include "xhci-util.h"
 
+namespace usb_xhci {
+
 static void xhci_sync_command_callback(void* data, uint32_t cc, xhci_trb_t* command_trb,
                                          xhci_trb_t* event_trb) {
     xhci_sync_command_t* command = (xhci_sync_command_t*)data;
@@ -106,3 +108,5 @@ uint32_t* xhci_get_next_ext_cap(void* mmio, uint32_t* prev_cap, uint32_t* match_
     }
     return nullptr;
 }
+
+} // namespace usb_xhci

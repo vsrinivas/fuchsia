@@ -26,6 +26,8 @@
 #include "xhci-transfer-common.h"
 #include "xhci-trb.h"
 
+namespace usb_xhci {
+
 // choose ring sizes to allow each ring to fit in a single page
 #define COMMAND_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
 #define TRANSFER_RING_SIZE (PAGE_SIZE / sizeof(xhci_trb_t))
@@ -108,10 +110,9 @@ typedef enum {
     XHCI_PDEV,
 } xhci_mode_t;
 
-struct xhci {
-    // the device we implement
-    zx_device_t* zxdev;
+static constexpr uint32_t INTERRUPTER_COUNT = 2;
 
+struct xhci {
     // interface for calling back to usb bus driver
     usb_bus_interface_t bus;
 
@@ -121,7 +122,6 @@ struct xhci {
     // Desired number of interrupters. This may be greater than what is
     // supported by hardware. The actual number of interrupts configured
     // will not exceed this, and is stored in num_interrupts.
-#define INTERRUPTER_COUNT 2
     thrd_t completer_threads[INTERRUPTER_COUNT];
     zx_handle_t irq_handles[INTERRUPTER_COUNT];
     // actual number of interrupts we are using
@@ -255,3 +255,5 @@ void xhci_remove_device(xhci_t* xhci, int slot_id);
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
                         const usb_request_complete_t* complete_cb);
+
+} // namespace usb_xhci

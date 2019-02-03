@@ -8,6 +8,8 @@
 
 #include "xhci-transfer-common.h"
 
+namespace usb_xhci {
+
 void xhci_print_trb(xhci_transfer_ring_t* ring, xhci_trb_t* trb) {
     size_t index = trb - ring->start;
     uint32_t* ptr = (uint32_t *)trb;
@@ -132,3 +134,5 @@ zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state
     }
     return ZX_OK;
 }
+
+} // namespace usb_xhci

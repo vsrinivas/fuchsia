@@ -21,6 +21,7 @@ MODULE_SRCS := \
     $(LOCAL_DIR)/xhci-util.cpp \
 
 MODULE_STATIC_LIBS := \
+    system/dev/lib/usb \
     system/ulib/ddk \
     system/ulib/ddktl \
     system/ulib/fbl \
@@ -29,7 +30,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/sync \
     system/ulib/xdc-server-utils \
     system/ulib/zx \
-    system/dev/lib/usb \
+    system/ulib/zxcpp \
 
 MODULE_LIBS := \
     system/ulib/driver \

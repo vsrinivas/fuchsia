@@ -9,6 +9,8 @@
 
 #include "xhci-trb.h"
 
+namespace usb_xhci {
+
 // cache is coherent on x86
 // state for endpoint's current transfer
 typedef struct {
@@ -35,3 +37,5 @@ void xhci_transfer_state_init(xhci_transfer_state_t* state, usb_request_t* req,
 // if the user should call this function again later.
 zx_status_t xhci_queue_data_trbs(xhci_transfer_ring_t* ring, xhci_transfer_state_t* state,
                                  usb_request_t* req, int interrupter_target, bool isochronous);
+
+} // namespace usb_xhci

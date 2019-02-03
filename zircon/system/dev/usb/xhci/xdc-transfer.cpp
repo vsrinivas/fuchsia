@@ -7,6 +7,8 @@
 #include "xdc.h"
 #include "xdc-transfer.h"
 
+namespace usb_xhci {
+
 // Reads a range of bits from an integer.
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
 
@@ -300,3 +302,5 @@ void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, 
     status = xdc_req_list_add_tail(&poll_state->completed_reqs, req, usb_req_size);
     ZX_DEBUG_ASSERT(status == ZX_OK);
 }
+
+} // namespace usb_xhci

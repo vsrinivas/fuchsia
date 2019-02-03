@@ -12,6 +12,8 @@
 #include "xhci.h"
 #include "xhci-device-manager.h"
 
+namespace usb_xhci {
+
 #define MANUFACTURER_STRING 1
 #define PRODUCT_STRING_2    2
 #define PRODUCT_STRING_3    3
@@ -577,3 +579,5 @@ void xhci_handle_root_hub_change(xhci_t* xhci) {
         }
     }
 }
+
+} // namespace usb_xhci

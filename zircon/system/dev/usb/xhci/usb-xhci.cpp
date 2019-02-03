@@ -2,30 +2,37 @@
 // Use of this source code is governed by a BSD-style license that can be
 // found in the LICENSE file.
 
+#include "usb-xhci.h"
+
 #include <ddk/binding.h>
 #include <ddk/debug.h>
-#include <ddk/driver.h>
 #include <ddk/platform-defs.h>
-#include <ddk/protocol/usb/hci.h>
 #include <ddk/protocol/pci-lib.h>
 
+#include <fbl/alloc_checker.h>
+#include <fbl/auto_call.h>
 #include <hw/arch_ops.h>
 #include <hw/reg.h>
+#include <lib/zx/bti.h>
+#include <lib/zx/interrupt.h>
 #include <zircon/syscalls.h>
 #include <zircon/types.h>
+
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <threads.h>
 
+#include <algorithm>
+#include <memory>
+
+#include "xdc.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-util.h"
 #include "xhci.h"
 
-#ifndef MIN
-#define MIN(a, b) ((a) < (b) ? (a) : (b))
-#endif
+namespace usb_xhci {
 
 #define MAX_SLOTS 255
 
@@ -57,91 +64,78 @@ void xhci_remove_device(xhci_t* xhci, int slot_id) {
     usb_bus_interface_remove_device(&xhci->bus, slot_id);
 }
 
-static void xhci_hci_request_queue(void* ctx, usb_request_t* usb_request,
-                                   const usb_request_complete_t* complete_cb) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    xhci_request_queue(xhci, usb_request, complete_cb);
+void UsbXhci::UsbHciRequestQueue(usb_request_t* usb_request,
+                                 const usb_request_complete_t* complete_cb) {
+    xhci_request_queue(xhci_, usb_request, complete_cb);
 }
 
-static void xhci_set_bus_interface(void* ctx, const usb_bus_interface_t* bus) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-
-    if (bus) {
-        memcpy(&xhci->bus, bus, sizeof(xhci->bus));
+void UsbXhci::UsbHciSetBusInterface(const usb_bus_interface_t* bus_intf) {
+    if (bus_intf) {
+        memcpy(&xhci_->bus, bus_intf, sizeof(xhci_->bus));
         // wait until bus driver has started before doing this
-        xhci_queue_start_root_hubs(xhci);
+        xhci_queue_start_root_hubs(xhci_);
     } else {
-        memset(&xhci->bus, 0, sizeof(xhci->bus));
+        memset(&xhci_->bus, 0, sizeof(xhci_->bus));
     }
 }
 
-static size_t xhci_get_max_device_count(void* ctx) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    // add one to allow device IDs to be 1-based
-    return xhci->max_slots + XHCI_RH_COUNT + 1;
+size_t UsbXhci::UsbHciGetMaxDeviceCount() {
+    return xhci_->max_slots + XHCI_RH_COUNT + 1;
 }
 
-static zx_status_t xhci_enable_ep(void* ctx, uint32_t device_id,
-                                  const usb_endpoint_descriptor_t* ep_desc,
-                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_enable_endpoint(xhci, device_id, ep_desc, ss_comp_desc, enable);
+zx_status_t UsbXhci::UsbHciEnableEndpoint(uint32_t device_id,
+                                          const usb_endpoint_descriptor_t* ep_desc,
+                                          const usb_ss_ep_comp_descriptor_t* ss_com_desc,
+                                          bool enable) {
+    return xhci_enable_endpoint(xhci_, device_id, ep_desc, ss_com_desc, enable);
 }
 
-static uint64_t xhci_get_frame(void* ctx) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_get_current_frame(xhci);
+uint64_t UsbXhci::UsbHciGetCurrentFrame() {
+    return xhci_get_current_frame(xhci_);
 }
 
-static zx_status_t xhci_config_hub(void* ctx, uint32_t device_id, usb_speed_t speed,
-                                   const usb_hub_descriptor_t* descriptor) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_configure_hub(xhci, device_id, speed, descriptor);
+zx_status_t UsbXhci::UsbHciConfigureHub(uint32_t device_id, usb_speed_t speed,
+                                        const usb_hub_descriptor_t* desc) {
+    return xhci_configure_hub(xhci_, device_id, speed, desc);
 }
 
-static zx_status_t xhci_hub_device_added(void* ctx, uint32_t hub_address, uint32_t port,
-                                  usb_speed_t speed) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_enumerate_device(xhci, hub_address, port, speed);
+zx_status_t UsbXhci::UsbHciHubDeviceAdded(uint32_t device_id, uint32_t port, usb_speed_t speed) {
+    return xhci_enumerate_device(xhci_, device_id, port, speed);
 }
 
-static zx_status_t xhci_hub_device_removed(void* ctx, uint32_t hub_address, uint32_t port) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    xhci_device_disconnected(xhci, hub_address, port);
+zx_status_t UsbXhci::UsbHciHubDeviceRemoved(uint32_t device_id, uint32_t port) {
+    xhci_device_disconnected(xhci_, device_id, port);
     return ZX_OK;
 }
 
-static zx_status_t xhci_hub_device_reset(void* ctx, uint32_t hub_address, uint32_t port) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_device_reset(xhci, hub_address, port);
+zx_status_t UsbXhci::UsbHciHubDeviceReset(uint32_t device_id, uint32_t port) {
+    return xhci_device_reset(xhci_, device_id, port);
 }
 
-static zx_status_t xhci_reset_ep(void* ctx, uint32_t device_id, uint8_t ep_address) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_reset_endpoint(xhci, device_id, ep_address);
+zx_status_t UsbXhci::UsbHciResetEndpoint(uint32_t device_id, uint8_t ep_address) {
+    return xhci_reset_endpoint(xhci_, device_id, ep_address);
 }
 
-static zx_status_t xhci_reset_device(void* ctx, uint32_t hub_address, uint32_t device_id) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-
-    auto* slot = &xhci->slots[device_id];
+zx_status_t UsbXhci::UsbHciResetDevice(uint32_t hub_address, uint32_t device_id) {
+    auto* slot = &xhci_->slots[device_id];
     uint32_t port = slot->port;
     if (slot->hub_address == 0) {
         // Convert real port number to virtual root hub number.
-        port = xhci->rh_port_map[port - 1] + 1;
+        port = xhci_->rh_port_map[port - 1] + 1;
     }
     zxlogf(TRACE, "xhci_reset_device slot_id: %u port: %u hub_address: %u\n",
            device_id, port, hub_address);
 
-    return usb_bus_interface_reset_port(&xhci->bus, hub_address, port, /* enumerating */ false);
+    return usb_bus_interface_reset_port(&xhci_->bus, hub_address, port, false);
 }
 
-static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t ep_address) {
+static size_t xhci_get_max_transfer_size(uint8_t ep_address) {
     if (ep_address == 0) {
         // control requests have uint16 length field so we need to support UINT16_MAX
         // we require one setup, status and data event TRB in addition to data transfer TRBs
         // and subtract one more to account for the link TRB
-        static_assert(PAGE_SIZE * (TRANSFER_RING_SIZE - 4) >= UINT16_MAX, "TRANSFER_RING_SIZE too small");
+        static_assert(PAGE_SIZE * (TRANSFER_RING_SIZE - 4) >= UINT16_MAX,
+                      "TRANSFER_RING_SIZE too small");
         return UINT16_MAX;
     }
     // non-control transfers consist of normal transfer TRBs plus one data event TRB
@@ -149,32 +143,17 @@ static size_t xhci_get_max_transfer_size(void* ctx, uint32_t device_id, uint8_t 
     return PAGE_SIZE * (TRANSFER_RING_SIZE - 2);
 }
 
-static zx_status_t xhci_cancel_all(void* ctx, uint32_t device_id, uint8_t ep_address) {
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    return xhci_cancel_transfers(xhci, device_id, xhci_endpoint_index(ep_address));
+size_t UsbXhci::UsbHciGetMaxTransferSize(uint32_t device_id, uint8_t ep_address) {
+    return xhci_get_max_transfer_size(ep_address);
 }
 
-//Returns the public request size plus its private context size.
-static size_t xhci_get_request_size(void* ctx) {
+zx_status_t UsbXhci::UsbHciCancelAll(uint32_t device_id, uint8_t ep_address) {
+    return xhci_cancel_transfers(xhci_, device_id, xhci_endpoint_index(ep_address));
+}
+
+size_t UsbXhci::UsbHciGetRequestSize() {
     return sizeof(xhci_usb_request_internal_t) + sizeof(usb_request_t);
 }
-
-usb_hci_protocol_ops_t xhci_hci_protocol = {
-    .request_queue = xhci_hci_request_queue,
-    .set_bus_interface = xhci_set_bus_interface,
-    .get_max_device_count = xhci_get_max_device_count,
-    .enable_endpoint = xhci_enable_ep,
-    .get_current_frame = xhci_get_frame,
-    .configure_hub = xhci_config_hub,
-    .hub_device_added = xhci_hub_device_added,
-    .hub_device_removed = xhci_hub_device_removed,
-    .hub_device_reset = xhci_hub_device_reset,
-    .reset_endpoint = xhci_reset_ep,
-    .reset_device = xhci_reset_device,
-    .get_max_transfer_size = xhci_get_max_transfer_size,
-    .cancel_all = xhci_cancel_all,
-    .get_request_size = xhci_get_request_size,
-};
 
 void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
                         const usb_request_complete_t* complete_cb) {
@@ -182,8 +161,7 @@ void xhci_request_queue(xhci_t* xhci, usb_request_t* req,
 
     xhci_usb_request_internal_t* req_int = USB_REQ_TO_XHCI_INTERNAL(req);
     req_int->complete_cb = *complete_cb;
-    if (req->header.length > xhci_get_max_transfer_size(xhci->zxdev, req->header.device_id,
-                                                        req->header.ep_address)) {
+    if (req->header.length > xhci_get_max_transfer_size(req->header.ep_address)) {
         status = ZX_ERR_INVALID_ARGS;
     } else {
         status = xhci_queue_transfer(xhci, req);
@@ -206,40 +184,28 @@ static void xhci_shutdown(xhci_t* xhci) {
     }
 }
 
-static zx_status_t xhci_suspend(void* ctx, uint32_t flags) {
-    zxlogf(TRACE, "xhci_suspend %u\n", flags);
-    auto* xhci = static_cast<xhci_t*>(ctx);
-
+zx_status_t UsbXhci::DdkSuspend(uint32_t flags) {
+    zxlogf(TRACE, "UsbXhci::DdkSuspend %u\n", flags);
     // TODO(voydanoff) do different things based on the flags.
     // for now we shutdown the driver in preparation for mexec
-    xhci_shutdown(xhci);
+    xhci_shutdown(xhci_);
 
     return ZX_OK;
 }
 
-static void xhci_unbind(void* ctx) {
-    zxlogf(INFO, "xhci_unbind\n");
-    auto* xhci = static_cast<xhci_t*>(ctx);
-
-    xhci_shutdown(xhci);
-    device_remove(xhci->zxdev);
+void UsbXhci::DdkUnbind() {
+    zxlogf(INFO, "UsbXhci::DdkUnbind\n");
+    xhci_shutdown(xhci_);
+    DdkRemove();
 }
 
-static void xhci_release(void* ctx) {
-    zxlogf(INFO, "xhci_release\n");
-    auto* xhci = static_cast<xhci_t*>(ctx);
-    mmio_buffer_release(&xhci->mmio);
-    zx_handle_close(xhci->cfg_handle);
-    xhci_free(xhci);
+void UsbXhci::DdkRelease() {
+    zxlogf(INFO, "UsbXhci::DdkRelease\n");
+    mmio_buffer_release(&xhci_->mmio);
+    zx_handle_close(xhci_->cfg_handle);
+    xhci_free(xhci_);
+    delete this;
 }
-static zx_protocol_device_t xhci_device_ops = []() {
-    zx_protocol_device_t device;
-    device.version = DEVICE_OPS_VERSION;
-    device.suspend = xhci_suspend,
-    device.unbind = xhci_unbind,
-    device.release = xhci_release;
-    return device;
-}();
 
 typedef struct completer {
     xhci_t *xhci;
@@ -278,130 +244,147 @@ static int completer_thread(void *arg) {
     return 0;
 }
 
-static int xhci_start_thread(void* arg) {
-    xhci_t* xhci = (xhci_t*)arg;
-    zxlogf(TRACE, "xhci_start_thread start\n");
+int UsbXhci::StartThread() {
+    zxlogf(TRACE, "%s start\n", __func__);
+
+    completer_t* completers[xhci_->num_interrupts];
+    uint32_t num_completers_initialized = 0;
+
+    auto cleanup = fbl::MakeAutoCall([this, &completers, num_completers_initialized]() {
+        DdkRemove();
+        free(xhci_);
+        for (uint32_t i = 0; i < num_completers_initialized; i++) {
+            free(completers[i]);
+        }
+    });
 
     zx_status_t status;
-    completer_t* completers[xhci->num_interrupts];
-    uint32_t num_completers_initialized = 0;
-    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
+    for (uint32_t i = 0; i < xhci_->num_interrupts; i++) {
         auto* completer = static_cast<completer_t*>(calloc(1, sizeof(completer_t)));
         if (completer == nullptr) {
-            status = ZX_ERR_NO_MEMORY;
-            goto error_return;
+            return ZX_ERR_NO_MEMORY;
         }
         completers[i] = completer;
         completer->interrupter = i;
-        completer->xhci = xhci;
+        completer->xhci = xhci_;
         // We need a high priority thread for isochronous transfers.
         // If there is only one interrupt available, that thread will need
         // to be high priority.
-        completer->priority = (i == ISOCH_INTERRUPTER || xhci->num_interrupts == 1) ?
+        completer->priority = (i == ISOCH_INTERRUPTER || xhci_->num_interrupts == 1) ?
                               HIGH_PRIORITY : DEFAULT_PRIORITY;
         num_completers_initialized++;
     }
 
     // xhci_start will block, so do this part here instead of in usb_xhci_bind
-    status = xhci_start(xhci);
+    status = xhci_start(xhci_);
+#if defined(__x86_64__)
+    if (status == ZX_OK) {
+        // TODO(jocelyndang): start xdc in a new process.
+        status = xdc_bind(zxdev(), xhci_->bti_handle, xhci_->mmio.vaddr);
+        if (status != ZX_OK) {
+            zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
+        }
+    }
+#endif
+
     if (status != ZX_OK) {
-        goto error_return;
+        return status;
     }
 
-    device_make_visible(xhci->zxdev);
-    for (uint32_t i = 0; i < xhci->num_interrupts; i++) {
-        thrd_create_with_name(&xhci->completer_threads[i], completer_thread, completers[i],
+    DdkMakeVisible();
+    for (uint32_t i = 0; i < xhci_->num_interrupts; i++) {
+        thrd_create_with_name(&xhci_->completer_threads[i], completer_thread, completers[i],
                               "completer_thread");
     }
 
-    zxlogf(TRACE, "xhci_start_thread done\n");
+    zxlogf(TRACE, "%s done\n", __func__);
+    cleanup.cancel();
     return 0;
-
-error_return:
-    device_remove(xhci->zxdev);
-    free(xhci);
-    for (uint32_t i = 0; i < num_completers_initialized; i++) {
-        free(completers[i]);
-    }
-    return status;
 }
 
-static zx_status_t xhci_finish_bind(xhci_t* xhci, zx_device_t* parent) {
-    device_add_args_t args = {};
-    args.version = DEVICE_ADD_ARGS_VERSION;
-    args.name = "xhci";
-    args.ctx = xhci;
-    args.ops = &xhci_device_ops;
-    args.proto_id = ZX_PROTOCOL_USB_HCI;
-    args.proto_ops = &xhci_hci_protocol;
-    args.flags = DEVICE_ADD_INVISIBLE;
-
-    zx_status_t status = device_add(parent, &args, &xhci->zxdev);
+zx_status_t UsbXhci::FinishBind() {
+    auto status = DdkAdd("xhci", DEVICE_ADD_INVISIBLE);
     if (status != ZX_OK) {
         return status;
     }
 
     thrd_t thread;
-    thrd_create_with_name(&thread, xhci_start_thread, xhci, "xhci_start_thread");
+    thrd_create_with_name(&thread,
+                          [](void* arg) -> int {
+                              return reinterpret_cast<UsbXhci*>(arg)->StartThread();
+                          },
+                          reinterpret_cast<void*>(this), "xhci_start_thread");
     thrd_detach(thread);
 
     return ZX_OK;
 }
 
-static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
+zx_status_t UsbXhci::InitPci() {
     zx_handle_t cfg_handle = ZX_HANDLE_INVALID;
-    xhci_t* xhci = nullptr;
     uint32_t num_irq_handles_initialized = 0;
     zx_status_t status;
 
-    xhci = static_cast<xhci_t*>(calloc(1, sizeof(xhci_t)));
-    if (!xhci) {
-        status = ZX_ERR_NO_MEMORY;
-        goto error_return;
+    auto cleanup = fbl::MakeAutoCall([this, num_irq_handles_initialized]() {
+        zx_handle_close(xhci_->bti_handle);
+        for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
+            zx_handle_close(xhci_->irq_handles[i]);
+        }
+        mmio_buffer_release(&xhci_->mmio);
+        zx_handle_close(xhci_->cfg_handle);
+        free(xhci_);
+    });
+
+    xhci_ = static_cast<xhci_t*>(calloc(1, sizeof(xhci_t)));
+    if (!xhci_) {
+        return ZX_ERR_NO_MEMORY;
     }
 
-    status = pci_get_bti(pci, 0, &xhci->bti_handle);
+    zx::bti bti;
+    status = pci_.GetBti(0, &bti);
     if (status != ZX_OK) {
-        goto error_return;
+        return status;
     }
+    xhci_->bti_handle = bti.release();
 
-    /*
-     * eXtensible Host Controller Interface revision 1.1, section 5, xhci
-     * should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
-     */
-    status = pci_map_bar_buffer(pci, 0u, ZX_CACHE_POLICY_UNCACHED, &xhci->mmio);
+    // eXtensible Host Controller Interface revision 1.1, section 5, xhci
+    // should only use BARs 0 and 1. 0 for 32 bit addressing, and 0+1 for 64 bit addressing.
+
+    // TODO(voydanoff) find a C++ way to do this
+    pci_protocol_t pci;
+    pci_.GetProto(&pci);
+    status = pci_map_bar_buffer(&pci, 0u, ZX_CACHE_POLICY_UNCACHED, &xhci_->mmio);
     if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_xhci_bind could not map bar\n");
-        goto error_return;
+        zxlogf(ERROR, "%s could not map bar\n", __func__);
+        return status;
     }
 
     uint32_t irq_cnt;
     irq_cnt = 0;
-    status = pci_query_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
+    status = pci_.QueryIrqMode(ZX_PCIE_IRQ_MODE_MSI, &irq_cnt);
     if (status != ZX_OK) {
         zxlogf(ERROR, "pci_query_irq_mode failed %d\n", status);
-        goto error_return;
+        return status;
     }
 
     // Cap IRQ count at the number of interrupters we want to use and
     // the number of interrupters supported by XHCI.
-    irq_cnt = MIN(irq_cnt, INTERRUPTER_COUNT);
-    irq_cnt = MIN(irq_cnt, xhci_get_max_interrupters(xhci));
+    irq_cnt = std::min(irq_cnt, INTERRUPTER_COUNT);
+    irq_cnt = std::min(irq_cnt, xhci_get_max_interrupters(xhci_));
 
     // select our IRQ mode
     xhci_mode_t mode;
     mode = XHCI_PCI_MSI;
-    status = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_MSI, irq_cnt);
+    status = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_MSI, irq_cnt);
     if (status < 0) {
         zxlogf(ERROR, "MSI interrupts not available, irq_cnt: %d, err: %d\n",
                irq_cnt, status);
-        zx_status_t status_legacy = pci_set_irq_mode(pci, ZX_PCIE_IRQ_MODE_LEGACY, 1);
+        zx_status_t status_legacy = pci_.SetIrqMode(ZX_PCIE_IRQ_MODE_LEGACY, 1);
 
         if (status_legacy < 0) {
             zxlogf(ERROR, "usb_xhci_bind Failed to set IRQ mode to either MSI "
                    "(err = %d) or Legacy (err = %d)\n",
                    status, status_legacy);
-            goto error_return;
+            return status;
         }
 
         mode = XHCI_PCI_LEGACY;
@@ -410,115 +393,125 @@ static zx_status_t usb_xhci_bind_pci(zx_device_t* parent, pci_protocol_t* pci) {
 
     for (uint32_t i = 0; i < irq_cnt; i++) {
         // register for interrupts
-        status = pci_map_interrupt(pci, i, &xhci->irq_handles[i]);
+        zx::interrupt irq;
+        status = pci_.MapInterrupt(i, &irq);
         if (status != ZX_OK) {
             zxlogf(ERROR, "usb_xhci_bind map_interrupt failed %d\n", status);
-            goto error_return;
+            return status;
         }
+        xhci_->irq_handles[i] = irq.release();
         num_irq_handles_initialized++;
     }
-    xhci->cfg_handle = cfg_handle;
+    xhci_->cfg_handle = cfg_handle;
 
     // used for enabling bus mastering
-    memcpy(&xhci->pci, pci, sizeof(pci_protocol_t));
+    pci_.GetProto(&xhci_->pci);
 
-    status = xhci_init(xhci, mode, irq_cnt);
+    status = xhci_init(xhci_, mode, irq_cnt);
     if (status != ZX_OK) {
-        goto error_return;
+        return status;
     }
-    status = xhci_finish_bind(xhci, parent);
+    status = FinishBind();
     if (status != ZX_OK) {
-        goto error_return;
+        return status;
     }
 
+    cleanup.cancel();
     return ZX_OK;
-
-error_return:
-    zx_handle_close(xhci->bti_handle);
-    for (uint32_t i = 0; i < num_irq_handles_initialized; i++) {
-        zx_handle_close(xhci->irq_handles[i]);
-    }
-    mmio_buffer_release(&xhci->mmio);
-    zx_handle_close(xhci->cfg_handle);
-    free(xhci);
-    return status;
 }
 
-
-static zx_status_t usb_xhci_bind_pdev(zx_device_t* parent, pdev_protocol_t* pdev) {
-    zx_handle_t irq_handle = ZX_HANDLE_INVALID;
-    xhci_t* xhci = nullptr;
+zx_status_t UsbXhci::InitPdev() {
     zx_status_t status;
 
-    xhci = static_cast<xhci_t*>(calloc(1, sizeof(xhci_t)));
-    if (!xhci) {
-        status = ZX_ERR_NO_MEMORY;
-        goto error_return;
+    auto cleanup = fbl::MakeAutoCall([this]() {
+        zx_handle_close(xhci_->bti_handle);
+        mmio_buffer_release(&xhci_->mmio);
+        zx_handle_close(xhci_->irq_handles[0]);
+        free(xhci_);
+    });
+
+    xhci_ = static_cast<xhci_t*>(calloc(1, sizeof(xhci_t)));
+    if (!xhci_) {
+        return ZX_ERR_NO_MEMORY;
     }
 
-    status = pdev_get_bti(pdev, 0, &xhci->bti_handle);
+    zx::bti bti;
+    status = pdev_.GetBti(0, &bti);
     if (status != ZX_OK) {
-        goto error_return;
+        return status;
     }
+    xhci_->bti_handle = bti.release();
 
-    status = pdev_map_mmio_buffer(pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
-                                  &xhci->mmio);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_map_mmio failed\n");
-        goto error_return;
-    }
-
-    status = pdev_get_interrupt(pdev, PDEV_IRQ_INDEX, 0, &irq_handle);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "usb_xhci_bind_pdev: pdev_get_interrupt failed\n");
-        goto error_return;
-    }
-
-    xhci->irq_handles[0] = irq_handle;
-
-    status = xhci_init(xhci, XHCI_PDEV, 1);
-    if (status != ZX_OK) {
-        goto error_return;
-    }
-    status = xhci_finish_bind(xhci, parent);
-    if (status != ZX_OK) {
-        goto error_return;
-    }
-
-    return ZX_OK;
-
-error_return:
-    zx_handle_close(xhci->bti_handle);
-    mmio_buffer_release(&xhci->mmio);
-    free(xhci);
-    zx_handle_close(irq_handle);
-    return status;
-}
-
-zx_status_t usb_xhci_bind(void* ctx, zx_device_t* parent) {
-    pci_protocol_t pci;
+    // TODO(voydanoff) find a C++ way to do this
     pdev_protocol_t pdev;
-    zx_status_t status;
-
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PCI, &pci)) == ZX_OK) {
-        return usb_xhci_bind_pci(parent, &pci);
+    pdev_.GetProto(&pdev);
+    status = pdev_map_mmio_buffer(&pdev, PDEV_MMIO_INDEX, ZX_CACHE_POLICY_UNCACHED_DEVICE,
+                                  &xhci_->mmio);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_mmio failed\n", __func__);
+        return status;
     }
-    if ((status = device_get_protocol(parent, ZX_PROTOCOL_PDEV, &pdev)) == ZX_OK) {
-        return usb_xhci_bind_pdev(parent, &pdev);
+
+    zx::interrupt irq;
+    status = pdev_.GetInterrupt(PDEV_IRQ_INDEX, 0, &irq);
+    if (status != ZX_OK) {
+        zxlogf(ERROR, "%s: pdev_map_interrupt failed\n", __func__);
+        return status;
     }
 
-    return status;
+    xhci_->irq_handles[0] = irq.release();
+
+    status = xhci_init(xhci_, XHCI_PDEV, 1);
+    if (status != ZX_OK) {
+        return status;
+    }
+    status = FinishBind();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    cleanup.cancel();
+    return ZX_OK;
 }
 
-static zx_driver_ops_t xhci_driver_ops = [](){
+zx_status_t UsbXhci::Init() {
+    if (pci_.is_valid()) {
+        return InitPci();
+    } else if (pdev_.is_valid()) {
+        return InitPdev();
+    } else {
+        return ZX_ERR_NOT_SUPPORTED;
+    }
+}
+
+zx_status_t UsbXhci::Create(void* ctx, zx_device_t* parent) {
+    fbl::AllocChecker ac;
+    auto dev = std::unique_ptr<UsbXhci>(new (&ac) UsbXhci(parent));
+    if (!ac.check()) {
+        return ZX_ERR_NO_MEMORY;
+    }
+
+    auto status = dev->Init();
+    if (status != ZX_OK) {
+        return status;
+    }
+
+    // devmgr is now in charge of the device.
+    __UNUSED auto* dummy = dev.release();
+    return ZX_OK;
+}
+
+static zx_driver_ops_t driver_ops = [](){
     zx_driver_ops_t ops;
     ops.version = DRIVER_OPS_VERSION;
-    ops.bind = usb_xhci_bind;
+    ops.bind = UsbXhci::Create;
     return ops;
 }();
 
+} // namespace usb_xhci
+
 // clang-format off
-ZIRCON_DRIVER_BEGIN(usb_xhci, xhci_driver_ops, "zircon", "0.1", 9)
+ZIRCON_DRIVER_BEGIN(usb_xhci, usb_xhci::driver_ops, "zircon", "0.1", 9)
     // PCI binding support
     BI_GOTO_IF(NE, BIND_PROTOCOL, ZX_PROTOCOL_PCI, 0),
     BI_ABORT_IF(NE, BIND_PCI_CLASS, 0x0C),

@@ -9,6 +9,10 @@
 
 #include "xhci-hw.h"
 
+namespace usb_xhci {
+
+typedef struct xhci xhci_t;
+
 // used for both command ring and transfer rings
 typedef struct xhci_transfer_ring {
     io_buffer_t buffer;
@@ -65,3 +69,5 @@ static inline zx_paddr_t xhci_event_ring_start_phys(xhci_event_ring_t* ring) {
 static inline zx_paddr_t xhci_event_ring_current_phys(xhci_event_ring_t* ring) {
     return io_buffer_phys(&ring->buffer) + ((ring->current - ring->start) * sizeof(xhci_trb_t));
 }
+
+} // namespace usb_xhci

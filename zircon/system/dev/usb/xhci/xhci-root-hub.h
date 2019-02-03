@@ -9,6 +9,8 @@
 
 #include "xhci-trb.h"
 
+namespace usb_xhci {
+
 // this struct contains state needed for a virtual root hub device
 typedef struct {
     uint8_t num_ports;
@@ -33,3 +35,5 @@ zx_status_t xhci_start_root_hubs(xhci_t* xhci);
 void xhci_stop_root_hubs(xhci_t* xhci);
 zx_status_t xhci_rh_usb_request_queue(xhci_t* xhci, usb_request_t* req, int rh_index);
 void xhci_handle_root_hub_change(xhci_t* xhci);
+
+} // namespace usb_xhci

@@ -8,6 +8,8 @@
 
 #include "xhci.h"
 
+namespace usb_xhci {
+
 typedef struct xhci xhci_t;
 
 typedef void (*xhci_transfer_complete_cb)(zx_status_t result, void* data);
@@ -22,3 +24,5 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb);
 
 zx_status_t xhci_reset_endpoint(xhci_t* xhci, uint32_t slot_id, uint8_t ep_address);
 zx_status_t xhci_cancel_transfers(xhci_t* xhci, uint32_t slot_id, uint32_t ep_index);
+
+} // namespace usb_xhci

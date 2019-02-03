@@ -16,12 +16,13 @@
 #include <threads.h>
 #include <unistd.h>
 
-#include "xdc.h"
 #include "xhci.h"
 #include "xhci-device-manager.h"
 #include "xhci-root-hub.h"
 #include "xhci-transfer.h"
 #include "xhci-util.h"
+
+namespace usb_xhci {
 
 #define ROUNDUP_TO(x, multiple) ((x + multiple - 1) & ~(multiple - 1))
 #define PAGE_ROUNDUP(x) ROUNDUP_TO(x, PAGE_SIZE)
@@ -460,14 +461,6 @@ zx_status_t xhci_start(xhci_t* xhci) {
 
     xhci_start_device_thread(xhci);
 
-#if defined(__x86_64__)
-    // TODO(jocelyndang): start xdc in a new process.
-    zx_status_t status = xdc_bind(xhci->zxdev, xhci->bti_handle, xhci->mmio.vaddr);
-    if (status != ZX_OK) {
-        zxlogf(ERROR, "xhci_start: xdc_bind failed %d\n", status);
-    }
-#endif
-
     return ZX_OK;
 }
 
@@ -704,3 +697,5 @@ void xhci_delete_req_node(xhci_t* xhci, usb_request_t* req) {
     list_node_t* node = (list_node_t*)((uintptr_t)req + node_offset);
     list_delete(node);
 }
+
+} // namespace usb_xhci

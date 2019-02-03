@@ -15,6 +15,8 @@
 #include "xhci-transfer-common.h"
 #include "xhci-util.h"
 
+namespace usb_xhci {
+
 typedef enum {
     ENUMERATE_DEVICE,
     DISCONNECT_DEVICE,
@@ -892,3 +894,5 @@ zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed
 
     return ZX_OK;
 }
+
+} // namespace usb_xhci

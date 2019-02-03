@@ -14,6 +14,8 @@
 #include "xhci-transfer.h"
 #include "xhci-util.h"
 
+namespace usb_xhci {
+
 // reads a range of bits from an integer
 #define READ_FIELD(i, start, bits) (((i) >> (start)) & ((1 << (bits)) - 1))
 
@@ -825,3 +827,5 @@ void xhci_handle_transfer_event(xhci_t* xhci, xhci_trb_t* trb) {
                              &req_int->complete_cb);
     }
 }
+
+} // namespace usb_xhci

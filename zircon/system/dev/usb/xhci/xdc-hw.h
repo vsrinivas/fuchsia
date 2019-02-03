@@ -8,6 +8,8 @@
 
 #include "xhci-hw.h"
 
+namespace usb_xhci {
+
 // clang-format off
 
 // Debug Capability Structure (XHCI Spec, Table 7-16, p. 526)
@@ -121,3 +123,5 @@ static_assert(sizeof(xdc_context_data_t) == 0xC0, "xdc context data wrong size")
 // Device Context Index for the bulk endpoint TRBs.
 #define EP_OUT_DEV_CTX_IDX                2
 #define EP_IN_DEV_CTX_IDX                 3
+
+} // namespace usb_xhci

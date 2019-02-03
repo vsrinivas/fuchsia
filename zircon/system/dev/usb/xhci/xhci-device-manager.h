@@ -8,6 +8,8 @@
 #include <zircon/types.h>
 #include <stdbool.h>
 
+namespace usb_xhci {
+
 typedef struct xhci xhci_t;
 
 zx_status_t xhci_enumerate_device(xhci_t* xhci, uint32_t hub_address, uint32_t port,
@@ -22,3 +24,5 @@ zx_status_t xhci_enable_endpoint(xhci_t* xhci, uint32_t slot_id,
                                  const usb_ss_ep_comp_descriptor_t* ss_comp_desc, bool enable);
 zx_status_t xhci_configure_hub(xhci_t* xhci, uint32_t slot_id, usb_speed_t speed,
                                const usb_hub_descriptor_t* descriptor);
+
+} // namespace usb_xhci

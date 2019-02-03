@@ -6,6 +6,8 @@
 
 #include "xdc.h"
 
+namespace usb_xhci {
+
 // Restarts a stopped transfer ring. All TRBs queued on the transfer ring are
 // converted to NO-OPs, and will attempt to reschedule previously pending requests.
 zx_status_t xdc_restart_transfer_ring_locked(xdc_t* xdc, xdc_endpoint_t* ep)
@@ -20,3 +22,5 @@ bool xdc_has_free_trbs(xdc_t* xdc, bool in);
 // This is called from the xdc_poll thread.
 void xdc_handle_transfer_event_locked(xdc_t* xdc, xdc_poll_state_t* poll_state, xhci_trb_t* trb)
                                       __TA_REQUIRES(xdc->lock);
+
+} // namespace usb_xhci

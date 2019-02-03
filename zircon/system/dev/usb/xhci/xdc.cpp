@@ -21,6 +21,8 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 #endif
 
+namespace usb_xhci {
+
 // String descriptors use UNICODE UTF-16LE encodings.
 #define XDC_MANUFACTURER       u"Google Inc."
 #define XDC_PRODUCT            u"Fuchsia XDC Target"
@@ -1333,3 +1335,5 @@ error_return:
     xdc_free(xdc);
     return status;
 }
+
+} // namespace usb_xhci

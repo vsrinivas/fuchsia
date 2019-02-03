@@ -7,6 +7,10 @@
 
 #include "xhci.h"
 
+namespace usb_xhci {
+
+typedef struct xhci xhci_t;
+
 zx_status_t xhci_transfer_ring_init(xhci_transfer_ring_t* ring, zx_handle_t bti_handle, int count) {
     zx_status_t status = io_buffer_init(&ring->buffer, bti_handle,
                                         count * sizeof(xhci_trb_t),
@@ -151,3 +155,5 @@ xhci_trb_t* xhci_transfer_ring_phys_to_trb(xhci_transfer_ring_t* ring, zx_paddr_
     }
    return ring->start + ((phys - first_trb_phys) / sizeof(xhci_trb_t));
 }
+
+} // namespace usb_xhci
