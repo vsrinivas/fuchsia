@@ -1,5 +1,6 @@
 {
     "imports": [
+        "garnet/packages/examples/scenic",
         "garnet/packages/prod/scenic"
     ],
     "packages": [
