@@ -9,6 +9,7 @@
 #include <stdio.h>
 
 #include <fbl/algorithm.h>
+#include <fuchsia/tracelink/c/fidl.h>
 #include <lib/async/default.h>
 #include <lib/fidl/coding.h>
 #include <lib/zx/process.h>
@@ -20,7 +21,6 @@
 #include <utility>
 
 #include "session.h"
-#include "trace_provider.fidl.h"
 #include "utils.h"
 
 namespace trace {

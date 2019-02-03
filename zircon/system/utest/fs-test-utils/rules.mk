@@ -53,6 +53,7 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
+    system/fidl/fuchsia-tracelink \
 
 MODULE_COMPILEFLAGS := \
     -Isystem/ulib/fs-test/include \

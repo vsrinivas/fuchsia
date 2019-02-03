@@ -62,6 +62,9 @@ MODULE_STATIC_LIBS += \
 
 ifeq ($(call TOBOOL,$(ENABLE_DRIVER_TRACING)),true)
 
+MODULE_FIDL_LIBS += \
+    system/fidl/fuchsia-tracelink \
+
 MODULE_STATIC_LIBS += \
     system/ulib/trace.driver \
     system/ulib/trace-provider

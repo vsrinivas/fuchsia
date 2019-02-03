@@ -25,6 +25,9 @@ MODULE_STATIC_LIBS := \
     system/ulib/fbl \
     system/ulib/zx
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-tracelink \
+
 MODULE_LIBS := \
     system/ulib/async.default \
     system/ulib/c \

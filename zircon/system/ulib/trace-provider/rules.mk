@@ -23,9 +23,6 @@ LOCAL_SRCS := \
     $(LOCAL_DIR)/handler.cpp \
     $(LOCAL_DIR)/provider_impl.cpp \
     $(LOCAL_DIR)/session.cpp \
-    $(LOCAL_DIR)/trace_provider.fidl.client.cpp \
-    $(LOCAL_DIR)/trace_provider.fidl.tables.cpp \
-    $(LOCAL_DIR)/trace_provider.fidl.h \
     $(LOCAL_DIR)/utils.cpp
 
 LOCAL_STATIC_LIBS := \
@@ -35,6 +32,8 @@ LOCAL_STATIC_LIBS := \
     system/ulib/fidl \
     system/ulib/zircon-internal \
     system/ulib/zx
+
+LOCAL_FIDL_LIBS := system/fidl/fuchsia-tracelink
 
 LOCAL_LIBS := \
     system/ulib/c \
@@ -56,6 +55,8 @@ MODULE_SRCS := \
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
     system/ulib/trace-provider.fdio-connect
+
+MODULE_FIDL_LIBS := $(LOCAL_FIDL_LIBS)
 
 MODULE_LIBS := \
     $(LOCAL_LIBS) \
@@ -80,6 +81,8 @@ MODULE_SRCS := $(LOCAL_SRCS)
 
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS)
+
+MODULE_FIDL_LIBS := $(LOCAL_FIDL_LIBS)
 
 MODULE_LIBS := \
     $(LOCAL_LIBS) \
@@ -106,6 +109,8 @@ MODULE_HEADER_DEPS := \
 MODULE_STATIC_LIBS := \
     $(LOCAL_STATIC_LIBS) \
     system/ulib/trace-engine.static
+
+MODULE_FIDL_LIBS := $(LOCAL_FIDL_LIBS)
 
 MODULE_LIBS := $(LOCAL_LIBS)
 

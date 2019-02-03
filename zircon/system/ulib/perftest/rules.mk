@@ -27,6 +27,9 @@ MODULE_LIBS := \
     system/ulib/zircon \
     system/ulib/zx \
 
+MODULE_FIDL_LIBS := \
+    system/fidl/fuchsia-tracelink
+
 MODULE_PACKAGE := src
 
 include make/module.mk

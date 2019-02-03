@@ -49,5 +49,6 @@ MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-ramdisk \
     system/fidl/fuchsia-io \
     system/fidl/fuchsia-mem \
+    system/fidl/fuchsia-tracelink \
 
 include make/module.mk

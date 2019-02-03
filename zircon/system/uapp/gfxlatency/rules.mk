@@ -38,5 +38,6 @@ MODULE_LIBS := \
 MODULE_FIDL_LIBS := \
     system/fidl/fuchsia-hardware-display \
     system/fidl/fuchsia-hardware-input \
+    system/fidl/fuchsia-tracelink \
 
 include make/module.mk
