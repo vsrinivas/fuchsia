@@ -230,7 +230,7 @@ void InitializeScene(zx::eventpair view_token) {
 When we created our Session, we also created a binding to a `SessionListener`. `SessionListener` is how we get events from Scenic, including size change events (sent as ViewProperties) and input events.
 
 For now, we only process ViewPropertiesChanged events. We get our size, and then
-create `Shapes` (in this case, `Rectangles`) for the two nodes in our scene.
+create `Shapes` (in this case, `Rectangle` for the background and `Circle` for the ball) for the two nodes in our scene.
 ``` cpp
 // Note: we implement the SessionListener interface
 class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
@@ -261,6 +261,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
       view_height_ = (vp.bounding_box.max.y - vp.inset_from_max.y) -
                      (vp.bounding_box.min.y + vp.inset_from_min.y);
 
+      // Position is relative to the View's origin system.
       const float center_x = view_width_ * .5f;
       const float center_y = view_height_ * .5f;
 

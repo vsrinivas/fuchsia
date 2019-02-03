@@ -137,6 +137,7 @@ class BouncingBallView : public fuchsia::ui::scenic::SessionListener {
     view_height_ = (vp.bounding_box.max.y - vp.inset_from_max.y) -
                    (vp.bounding_box.min.y + vp.inset_from_min.y);
 
+    // Position is relative to the View's origin system.
     const float center_x = view_width_ * .5f;
     const float center_y = view_height_ * .5f;
 
