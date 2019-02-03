@@ -8,7 +8,6 @@
 #include <fuchsia/netstack/cpp/fidl.h>
 #include <lib/fidl/cpp/binding_set.h>
 
-static constexpr size_t kVmoSize = 1024;
 static constexpr zx::duration kTestTimeout = zx::sec(15);
 
 class MockNetstack : public fuchsia::netstack::Netstack {
@@ -66,8 +65,18 @@ class MockNetstack : public fuchsia::netstack::Netstack {
     return bindings_.GetHandler(this);
   }
 
-  zx_status_t SendPacket(void* packet, size_t length);
-  zx_status_t ReceivePacket(void* packet, size_t length);
+  // Send a ICMP6 neighbor advertisement packet informing the guest that the host is available
+  // over the network.
+  zx_status_t SendAdvertisement() const;
+
+  // Send a packet with UDP headers, including the ethernet and IPv6 headers.
+  zx_status_t SendUdpPacket(void* packet, size_t length) const;
+
+  // Send a raw packet.
+  zx_status_t SendPacket(void* packet, size_t length) const;
+
+  // Receive a raw packet.
+  zx_status_t ReceivePacket(void* packet, size_t length, size_t* actual) const;
 
  private:
   fidl::BindingSet<fuchsia::netstack::Netstack> bindings_;
