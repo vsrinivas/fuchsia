@@ -5,7 +5,7 @@
 
 ### configure jiri to manage a specific petal
 
-## usage: fx set-petal zircon|garnet|peridot|topaz
+## usage: fx set-petal fuchsia|topaz
 ## Configures jiri to fetch the source code for the given petal and its
 ## dependencies.
 
