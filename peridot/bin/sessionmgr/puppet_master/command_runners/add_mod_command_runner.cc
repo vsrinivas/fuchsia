@@ -26,7 +26,7 @@ void AddModCommandRunner::Execute(
   FXL_CHECK(command.is_add_mod());
 
   auto& add_mod = command.add_mod();
-  if (add_mod.mod_name.size() == 0) {
+  if (add_mod.mod_name.size() == 0 && add_mod.mod_name_transitional.is_null()) {
     fuchsia::modular::ExecuteResult result;
     result.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
     result.error_message = "A Module name must be specified";
@@ -36,7 +36,9 @@ void AddModCommandRunner::Execute(
 
   AddModParams params;
   params.parent_mod_path = std::move(add_mod.surface_parent_mod_name);
-  if (add_mod.mod_name.size() == 1) {
+  if (!add_mod.mod_name_transitional.is_null()) {
+    params.mod_name = add_mod.mod_name_transitional;
+  } else if (add_mod.mod_name.size() == 1) {
     params.mod_name = add_mod.mod_name[0];
   } else {
     params.mod_name = add_mod.mod_name.back();

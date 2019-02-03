@@ -47,7 +47,20 @@ struct AddMod {
     // inside the framework, they are vector<string> here as well.
     //
     // Clients should treat the full vector as a single opaque value.
+    //
+    // Clients should provide |mod_name_transitional| instead.
+    // If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Convert to string
     vector<string> mod_name;
+
+    // The name of the mod within the story. This should be used instead of
+    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
+    // a single item. If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Remove
+    string? mod_name_transitional;
+
     Intent intent;
 
     // |surface_relation| defines the visual relationship between this mod and the
@@ -58,7 +71,20 @@ struct AddMod {
 
 // Removes the mod under |mod_name| from the story.
 struct RemoveMod {
+    // The name of the mod within the story.
+    //
+    // Clients should provide |mod_name_transitional| instead.
+    // If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Convert to string
     vector<string> mod_name;
+
+    // The name of the mod within the story. This should be used instead of
+    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
+    // a single item. If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Remove
+    string? mod_name_transitional;
 };
 
 // Sets the value of link at |path| to |value|.
@@ -69,7 +95,20 @@ struct SetLinkValue {
 
 // Instructs the session shell to focus the mod under |mod_name|.
 struct FocusMod {
+    // The name of the mod within the story.
+    //
+    // Clients should provide |mod_name_transitional| instead.
+    // If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Convert to string
     vector<string> mod_name;
+
+    // The name of the mod within the story. This should be used instead of
+    // |mod_name|. If provided, it is equivalent to passing |mod_name| with
+    // a single item. If both are provided, |mod_name| is ignored.
+    //
+    // TODO(MF-148): Remove
+    string? mod_name_transitional;
 };
 
 // Updates the kind_of_proto_story option in a story.

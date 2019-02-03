@@ -7,8 +7,7 @@
 namespace modular {
 
 FocusModCommandRunner::FocusModCommandRunner(
-    fit::function<void(std::string, std::vector<std::string>)>
-        module_focuser)
+    fit::function<void(std::string, std::vector<std::string>)> module_focuser)
     : module_focuser_(std::move(module_focuser)) {}
 
 FocusModCommandRunner::~FocusModCommandRunner() = default;
@@ -19,14 +18,24 @@ void FocusModCommandRunner::Execute(
     std::function<void(fuchsia::modular::ExecuteResult)> done) {
   fuchsia::modular::ExecuteResult result;
 
-  if (command.focus_mod().mod_name.empty()) {
+  auto focus_mod_command = command.focus_mod();
+
+  // Prefer |mod_name_transitional| over |mod_name|
+  std::vector<std::string> mod_name{};
+  if (!focus_mod_command.mod_name_transitional.is_null()) {
+    mod_name.push_back(*focus_mod_command.mod_name_transitional);
+  } else {
+    mod_name = focus_mod_command.mod_name;
+  }
+
+  if (mod_name.empty()) {
     result.status = fuchsia::modular::ExecuteStatus::INVALID_COMMAND;
     result.error_message = "No mod_name provided.";
     done(std::move(result));
     return;
   }
 
-  module_focuser_(story_id, std::move(command.focus_mod().mod_name));
+  module_focuser_(story_id, std::move(mod_name));
 
   result.status = fuchsia::modular::ExecuteStatus::OK;
   done(std::move(result));

@@ -133,6 +133,7 @@ class AddModCommandRunnerTest : public testing::TestWithSessionStorage {
       float surface_emphasis, const fuchsia::modular::Intent& intent) {
     fuchsia::modular::AddMod add_mod;
     add_mod.mod_name = {mod_name};
+    add_mod.mod_name_transitional = mod_name;
     if (!parent_mod_name.empty()) {
       add_mod.surface_parent_mod_name.reset({parent_mod_name});
     }
@@ -652,6 +653,45 @@ TEST_F(AddModCommandRunnerTest, UpdatesModIfItExists) {
         EXPECT_EQ(R"({"@type": "baz"})", *v);
         done = true;
       });
+  RunLoopUntil([&] { return done; });
+}
+
+TEST_F(AddModCommandRunnerTest, AcceptsModNameTransitional) {
+  // Set up command
+  auto intent = CreateEmptyIntent("intent_action", "mod_url");
+  AddJsonParameter(&intent, "param_json", R"({"@type": "foo"})");
+  auto command = MakeAddModCommand("mod", "parent_mod", 0.5, intent);
+
+  // Keep only `mod_name_transitional`
+  command.add_mod().mod_name.clear();
+
+  auto manifest = fuchsia::modular::ModuleManifest::New();
+  manifest->binary = "mod_url";
+  manifest->intent_filters.push_back(MakeIntentFilter(
+      "intent_action",
+      {fuchsia::modular::ParameterConstraint{"param_json", "foo"}}));
+
+  // Set up fake module resolver, set validaiton of GetModuleManifest call, and
+  // a dummy result.
+  {
+    fuchsia::modular::ModuleManifestPtr manifest_out;
+    fidl::Clone(manifest, &manifest_out);
+    fake_module_resolver_->SetManifest(std::move(manifest_out));
+
+    fuchsia::modular::FindModulesResult res;
+    res.module_id = "mod_url";
+    res.manifest = std::move(manifest);
+    fake_module_resolver_->AddFindModulesResult(std::move(res));
+  }
+
+  // Add a mod to begin with.
+  bool done{};
+  runner_->Execute(story_id_, story_storage_.get(), std::move(command),
+                   [&](fuchsia::modular::ExecuteResult result) {
+                     ASSERT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                               result.status);
+                     done = true;
+                   });
   RunLoopUntil([&] { return done; });
 }
 

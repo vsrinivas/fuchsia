@@ -89,5 +89,38 @@ TEST_F(RemoveModCommandRunnerTest, ExecuteNoModuleData) {
   RunLoopUntil([&] { return done; });
 }
 
+TEST_F(RemoveModCommandRunnerTest, ExecuteModNameTransitional) {
+  auto storage = MakeSessionStorage("page");
+  auto runner = MakeRunner();
+  auto story_id = CreateStory(storage.get());
+  auto story_storage = GetStoryStorage(storage.get(), story_id);
+
+  auto mod_name_transitional = "mod";
+  auto mod_name = MakeModulePath(mod_name_transitional);
+  InitModuleData(story_storage.get(), mod_name);
+
+  fuchsia::modular::RemoveMod remove_mod;
+  remove_mod.mod_name_transitional = mod_name_transitional;
+  fuchsia::modular::StoryCommand command;
+  command.set_remove_mod(std::move(remove_mod));
+
+  bool done{};
+  runner->Execute(story_id, story_storage.get(), std::move(command),
+                  [&](fuchsia::modular::ExecuteResult result) {
+                    EXPECT_EQ(fuchsia::modular::ExecuteStatus::OK,
+                              result.status);
+                    done = true;
+                  });
+  RunLoopUntil([&] { return done; });
+
+  done = false;
+  story_storage->ReadModuleData(std::move(mod_name))
+      ->Then([&](fuchsia::modular::ModuleDataPtr module_data) {
+        EXPECT_TRUE(module_data->module_deleted);
+        done = true;
+      });
+  RunLoopUntil([&] { return done; });
+}
+
 }  // namespace
 }  // namespace modular

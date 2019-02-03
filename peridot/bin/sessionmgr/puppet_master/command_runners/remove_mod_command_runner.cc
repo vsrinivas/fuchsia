@@ -22,11 +22,20 @@ class RemoveModCall : public Operation<fuchsia::modular::ExecuteResult> {
  private:
   void Run() override {
     FlowToken flow{this, &result_};
+
+    // Prefer |mod_name_transitional| over |mod_name|
+    std::vector<std::string> mod_name{};
+    if (!command_.mod_name_transitional.is_null()) {
+      mod_name.push_back(*command_.mod_name_transitional);
+    } else {
+      mod_name = command_.mod_name;
+    }
+
     // Set the module data stopped to true, this should notify story
     // controller and perform module teardown.
     story_storage_
         ->UpdateModuleData(
-            command_.mod_name,
+            mod_name,
             [this, flow](fuchsia::modular::ModuleDataPtr* module_data) {
               if (!(*module_data)) {
                 result_.status = fuchsia::modular::ExecuteStatus::INVALID_MOD;
