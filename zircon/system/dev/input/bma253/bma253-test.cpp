@@ -8,15 +8,13 @@
 #include <lib/mock-hidbus-ifc/mock-hidbus-ifc.h>
 #include <lib/mock-i2c/mock-i2c.h>
 #include <lib/sync/completion.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace accel {
 
-bool TestInit() {
-    BEGIN_TEST;
-
+TEST(AccelTest, Init) {
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
@@ -26,19 +24,13 @@ bool TestInit() {
     ddk::I2cChannel i2c(mock_i2c.GetProto());
     Bma253 device(nullptr, std::move(i2c), std::move(port));
 
-    EXPECT_EQ(ZX_OK, device.Init());
-    EXPECT_TRUE(mock_i2c.VerifyAndClear());
-
-    END_TEST;
+    EXPECT_OK(device.Init());
+    mock_i2c.VerifyAndClear();
 }
 
-bool TestInputReport() {
-    BEGIN_TEST;
-
-    BEGIN_TEST;
-
+TEST(AccelTest, InputReport) {
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
@@ -52,7 +44,7 @@ bool TestInputReport() {
 
     bma253_input_rpt_t report;
     size_t actual;
-    EXPECT_EQ(ZX_OK, device.HidbusGetReport(HID_REPORT_TYPE_INPUT, BMA253_RPT_ID_INPUT, &report,
+    EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_INPUT, BMA253_RPT_ID_INPUT, &report,
                                             sizeof(report), &actual));
     EXPECT_EQ(sizeof(report), actual);
 
@@ -62,16 +54,12 @@ bool TestInputReport() {
     EXPECT_EQ(0x390, report.acceleration_z);
     EXPECT_EQ(0x3e, report.temperature);
 
-    EXPECT_TRUE(mock_i2c.VerifyAndClear());
-
-    END_TEST;
+    mock_i2c.VerifyAndClear();
 }
 
-bool TestFeatureReport() {
-    BEGIN_TEST;
-
+TEST(AccelTest, FeatureReport) {
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     mock_i2c::MockI2c mock_i2c;
     ddk::I2cChannel i2c(mock_i2c.GetProto());
@@ -80,7 +68,7 @@ bool TestFeatureReport() {
     bma253_feature_rpt_t report;
     size_t actual;
 
-    EXPECT_EQ(ZX_OK, device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
+    EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
                                             sizeof(report), &actual));
     EXPECT_EQ(sizeof(report), actual);
 
@@ -89,24 +77,20 @@ bool TestFeatureReport() {
 
     report.interval_ms = 1000;
 
-    EXPECT_EQ(ZX_OK, device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
+    EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
                                             sizeof(report)));
 
-    EXPECT_EQ(ZX_OK, device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
+    EXPECT_OK(device.HidbusGetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
                                             sizeof(report), &actual));
     EXPECT_EQ(sizeof(report), actual);
 
     EXPECT_EQ(BMA253_RPT_ID_FEATURE, report.rpt_id);
     EXPECT_EQ(1000, report.interval_ms);
-
-    END_TEST;
 }
 
-bool TestPolling() {
-    BEGIN_TEST;
-
+TEST(AccelTest, Polling) {
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
@@ -127,16 +111,16 @@ bool TestPolling() {
     Bma253 device(nullptr, std::move(i2c), std::move(port));
 
     bma253_feature_rpt_t report = {BMA253_RPT_ID_FEATURE, 1000};
-    EXPECT_EQ(ZX_OK, device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
+    EXPECT_OK(device.HidbusSetReport(HID_REPORT_TYPE_FEATURE, BMA253_RPT_ID_FEATURE, &report,
                                             sizeof(report)));
 
     mock_hidbus_ifc::MockHidbusIfc<bma253_input_rpt_t> mock_ifc;
-    EXPECT_EQ(ZX_OK, device.HidbusStart(mock_ifc.proto()));
+    EXPECT_OK(device.HidbusStart(mock_ifc.proto()));
 
-    EXPECT_EQ(ZX_OK, mock_ifc.WaitForReports(3));
+    EXPECT_OK(mock_ifc.WaitForReports(3));
     device.HidbusStop();
 
-    EXPECT_TRUE(mock_i2c.VerifyAndClear());
+    ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
     ASSERT_EQ(3, mock_ifc.reports().size());
 
@@ -157,15 +141,11 @@ bool TestPolling() {
     EXPECT_EQ(0xf26, mock_ifc.reports()[2].acceleration_y);
     EXPECT_EQ(0x93e, mock_ifc.reports()[2].acceleration_z);
     EXPECT_EQ(0x72, mock_ifc.reports()[2].temperature);
-
-    END_TEST;
 }
 
-bool TestNotImplemented() {
-    BEGIN_TEST;
-
+TEST(AccelTest, NotImplemented) {
     zx::port port;
-    ASSERT_EQ(ZX_OK, zx::port::create(0, &port));
+    ASSERT_OK(zx::port::create(0, &port));
 
     mock_i2c::MockI2c mock_i2c;
     ddk::I2cChannel i2c(mock_i2c.GetProto());
@@ -175,20 +155,10 @@ bool TestNotImplemented() {
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.HidbusSetIdle(0, 0));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.HidbusGetProtocol(nullptr));
     EXPECT_EQ(ZX_ERR_NOT_SUPPORTED, device.HidbusSetProtocol({}));
-
-    END_TEST;
 }
 
 }  // namespace accel
 
 int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : 1;
+    return RUN_ALL_TESTS(argc, argv);
 }
-
-BEGIN_TEST_CASE(Bma253Tests)
-RUN_TEST_SMALL(accel::TestInit)
-RUN_TEST_SMALL(accel::TestInputReport)
-RUN_TEST_SMALL(accel::TestFeatureReport)
-RUN_TEST_SMALL(accel::TestPolling)
-RUN_TEST_SMALL(accel::TestNotImplemented)
-END_TEST_CASE(Bma253Tests)

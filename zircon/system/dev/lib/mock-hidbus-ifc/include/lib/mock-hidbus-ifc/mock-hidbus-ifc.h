@@ -9,8 +9,8 @@
 #include <fbl/mutex.h>
 #include <fbl/vector.h>
 #include <lib/sync/completion.h>
-#include <unittest/unittest.h>
 #include <zircon/thread_annotations.h>
+#include <zxtest/zxtest.h>
 
 namespace mock_hidbus_ifc {
 
@@ -64,9 +64,7 @@ public:
     }
 
 private:
-    bool HidbusIfcIoQueueHelper(const void* buffer, size_t buf_size) {
-        BEGIN_HELPER;
-
+    void HidbusIfcIoQueueHelper(const void* buffer, size_t buf_size) {
         ASSERT_EQ(sizeof(T), buf_size);
 
         {
@@ -75,8 +73,6 @@ private:
         }
 
         sync_completion_signal(&signal_);
-
-        END_HELPER;
     }
 
     const hidbus_ifc_t ifc_;

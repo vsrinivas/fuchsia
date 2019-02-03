@@ -8,17 +8,4 @@ MODULE := $(LOCAL_DIR)
 
 MODULE_TYPE := userlib
 
-MODULE_SRCS := \
-    $(LOCAL_DIR)/mock-i2c.cpp \
-
-MODULE_STATIC_LIBS := \
-    system/ulib/ddk \
-    system/ulib/ddktl \
-    system/ulib/fbl \
-    system/ulib/unittest \
-    system/ulib/zx \
-
-MODULE_BANJO_LIBS := \
-    system/banjo/ddk-protocol-i2c \
-
 include make/module.mk

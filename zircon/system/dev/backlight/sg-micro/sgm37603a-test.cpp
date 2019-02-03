@@ -6,7 +6,7 @@
 
 #include <fbl/vector.h>
 #include <lib/mock-i2c/mock-i2c.h>
-#include <unittest/unittest.h>
+#include <zxtest/zxtest.h>
 
 namespace backlight {
 
@@ -66,9 +66,7 @@ private:
     bool disable_called_ = false;
 };
 
-bool TestEnable() {
-    BEGIN_TEST;
-
+TEST(BacklightTest, Enable) {
     mock_i2c::MockI2c mock_i2c;
     mock_i2c
         .ExpectWriteStop({0x10, 0x03})
@@ -80,47 +78,39 @@ bool TestEnable() {
 
     Sgm37603a test(nullptr, ddk::I2cChannel(mock_i2c.GetProto()),
                    ddk::GpioProtocolClient(mock_gpio.proto()));
-    EXPECT_EQ(ZX_OK, test.EnableBacklight());
+    EXPECT_OK(test.EnableBacklight());
 
-    mock_i2c.VerifyAndClear();
+    ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
     ASSERT_EQ(1, mock_gpio.calls().size());
     EXPECT_EQ(1, mock_gpio.calls()[0]);
-
-    END_TEST;
 }
 
-bool TestDisable() {
-    BEGIN_TEST;
-
+TEST(BacklightTest, Disable) {
     mock_i2c::MockI2c mock_i2c;
     MockGpio mock_gpio;
 
     Sgm37603a test(nullptr, ddk::I2cChannel(mock_i2c.GetProto()),
                    ddk::GpioProtocolClient(mock_gpio.proto()));
-    EXPECT_EQ(ZX_OK, test.DisableBacklight());
+    EXPECT_OK(test.DisableBacklight());
     ASSERT_EQ(1, mock_gpio.calls().size());
     EXPECT_EQ(0, mock_gpio.calls()[0]);
-
-    END_TEST;
 }
 
-bool TestBrightness() {
-    BEGIN_TEST;
-
+TEST(BacklightTest, Brightness) {
     mock_i2c::MockI2c mock_i2c;
     MockSgm37603a test(ddk::I2cChannel(mock_i2c.GetProto()));
 
-    EXPECT_EQ(ZX_OK, test.SetBacklightState(false, 127));
+    EXPECT_OK(test.SetBacklightState(false, 127));
     EXPECT_TRUE(test.disable_called());
 
     test.Reset();
-    mock_i2c.VerifyAndClear();
+    ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
     bool power = true;
     uint8_t brightness = 255;
 
-    EXPECT_EQ(ZX_OK, test.GetBacklightState(&power, &brightness));
+    EXPECT_OK(test.GetBacklightState(&power, &brightness));
     EXPECT_FALSE(power);
     EXPECT_EQ(0, brightness);
 
@@ -128,13 +118,13 @@ bool TestBrightness() {
         .ExpectWriteStop({0x1a, 0})
         .ExpectWriteStop({0x19, 127});
 
-    EXPECT_EQ(ZX_OK, test.SetBacklightState(true, 127));
+    EXPECT_OK(test.SetBacklightState(true, 127));
     EXPECT_TRUE(test.enable_called());
 
     test.Reset();
-    mock_i2c.VerifyAndClear();
+    ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
-    EXPECT_EQ(ZX_OK, test.GetBacklightState(&power, &brightness));
+    EXPECT_OK(test.GetBacklightState(&power, &brightness));
     EXPECT_TRUE(power);
     EXPECT_EQ(127, brightness);
 
@@ -142,27 +132,19 @@ bool TestBrightness() {
         .ExpectWriteStop({0x1a, 0})
         .ExpectWriteStop({0x19, 0});
 
-    EXPECT_EQ(ZX_OK, test.SetBacklightState(true, 0));
+    EXPECT_OK(test.SetBacklightState(true, 0));
     EXPECT_FALSE(test.enable_called());
 
     test.Reset();
-    mock_i2c.VerifyAndClear();
+    ASSERT_NO_FATAL_FAILURES(mock_i2c.VerifyAndClear());
 
-    EXPECT_EQ(ZX_OK, test.GetBacklightState(&power, &brightness));
+    EXPECT_OK(test.GetBacklightState(&power, &brightness));
     EXPECT_TRUE(power);
     EXPECT_EQ(0, brightness);
-
-    END_TEST;
 }
 
 }  // namespace backlight
 
 int main(int argc, char** argv) {
-    return unittest_run_all_tests(argc, argv) ? 0 : 1;
+    return RUN_ALL_TESTS(argc, argv);
 }
-
-BEGIN_TEST_CASE(Sgm37603aTests)
-RUN_TEST_SMALL(backlight::TestEnable)
-RUN_TEST_SMALL(backlight::TestDisable)
-RUN_TEST_SMALL(backlight::TestBrightness)
-END_TEST_CASE(Sgm37603aTests)

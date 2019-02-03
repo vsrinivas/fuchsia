@@ -13,7 +13,7 @@ MODULE_STATIC_LIBS := \
     system/ulib/ddktl \
     system/ulib/fbl \
     system/ulib/sync \
-    system/ulib/unittest \
+    system/ulib/zxtest \
 
 MODULE_BANJO_LIBS := \
     system/banjo/ddk-protocol-hidbus \
