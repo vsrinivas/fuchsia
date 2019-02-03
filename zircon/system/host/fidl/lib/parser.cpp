@@ -547,6 +547,14 @@ std::unique_ptr<raw::InterfaceMethod> Parser::ParseInterfaceMethod(std::unique_p
     auto ordinal = MaybeParseOrdinal();
     if (!Ok())
         return Fail();
+    if (ordinal != nullptr) {
+        // Ordinals are currently ignored.  If we actually found one, we issue a
+        // warning.  This will turn into an error soon.  See FIDL-372.
+        error_reporter_->ReportWarning(scope.GetSourceElement().location(),
+                                       "\nExplicit ordinals are currently ignored. They will be removed from the"
+                                       "\nFIDL language on 11 February 2019.  At that time, this warning will become"
+                                       "\nan error.");
+    }
 
     std::unique_ptr<raw::Identifier> method_name;
     std::unique_ptr<raw::ParameterList> maybe_request;

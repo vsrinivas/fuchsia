@@ -22,7 +22,7 @@ library fidl.test.dupattributes;
 
 [dup = "first", dup = "second"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -44,7 +44,7 @@ library fidl.test.dupattributes;
 /// first
 [Doc = "second"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -88,7 +88,7 @@ library fidl.test.dupattributes;
 
 [Duc = "should be Doc"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -108,7 +108,7 @@ library fidl.test.transportattributes;
 
 [Transport]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -128,7 +128,7 @@ library fidl.test.transportattributes;
 
 [Transport = "Bogus"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -148,7 +148,7 @@ library fidl.test.transportattributes;
 
 [Transport = "Channel"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -167,7 +167,7 @@ library fidl.test.transportattributes;
 
 [Transport = "SocketControl"]
 interface A {
-    1: MethodA();
+    MethodA();
 };
 
 )FIDL");
@@ -215,7 +215,7 @@ table MyTable {
 [Layout = "Simple"]
 interface MyInterface {
     [Layout = "Simple"]
-    1: MyMethod();
+    MyMethod();
 };
 
 )FIDL");
